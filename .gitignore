@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Generated validation reports
+coverage/
+/apps/web/artifacts/document-portal-reliability-benchmark.json
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Packaged license artifacts staged by prepack
+apps/cli/LICENSE
+apps/cli/LICENSING.md
+apps/mcp/LICENSE
+apps/mcp/LICENSING.md
+
+# Retained local screenshots from the source project; not part of zoeydaw.
+.github/assets/library.jpeg
+.github/assets/canvas-overview.jpeg
+.github/assets/agent-mode.jpeg
+.github/assets/agent-in-action.jpeg

@@ -1,0 +1,85 @@
+/**
+ * DragPadToggle — 点击开关的 DragPad。
+ *
+ * 适合 Mute / Solo / Record Arm / Link / Loop / Follow 等二态开关。
+ * 不进 pointer lock，不响应拖动，纯点击翻转。
+ * active 时底色切 `--primary`，和其它拖拉 variant 的 drag 亮色一致。
+ *
+ * 显示优先级：传了 `icon` 就渲染 icon；否则渲染 `labelOn`/`labelOff` 文字。
+ */
+import { useCallback, type ReactNode } from "react";
+import { AutoWidthText } from "../AutoWidthText";
+import { IconSlot } from "#components/controls/IconSlot/index";
+import { DragPadBase } from "../DragPadBase";
+import { useInfoBinding } from "../useInfoBinding";
+
+export interface DragPadToggleProps {
+  value: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+  description?: string;
+  /** 开时文字，默认 "ON"；传 `icon` 时忽略 */
+  labelOn?: string;
+  /** 关时文字，默认 "OFF"；传 `icon` 时忽略 */
+  labelOff?: string;
+  /** 直接渲染一个图标 / 任意 node，取代文字；通常传 `<Repeat className="size-5" />` */
+  icon?: ReactNode;
+  color?: string;
+  disabled?: boolean;
+  mappable?: boolean;
+  className?: string;
+  size?: "default" | "compact";
+}
+
+export function DragPadToggle({
+  value,
+  onChange,
+  label,
+  description,
+  labelOn = "ON",
+  labelOff = "OFF",
+  icon,
+  color,
+  disabled = false,
+  mappable = true,
+  className,
+  size = "default",
+}: DragPadToggleProps) {
+  const textDisplay = value ? labelOn : labelOff;
+  const infoHandlers = useInfoBinding({
+    type: "toggle",
+    description,
+  });
+
+  const handleClick = useCallback(() => {
+    if (!disabled) onChange(!value);
+  }, [disabled, onChange, value]);
+
+  return (
+    <DragPadBase
+      active={value}
+      disabled={disabled}
+      color={color}
+      mappable={mappable}
+      size={size}
+      iconOnly={Boolean(icon)}
+      className={className}
+      onClick={handleClick}
+      aria-label={label}
+      aria-pressed={value}
+      {...infoHandlers}
+    >
+      {icon ? (
+        <IconSlot size={size} className="relative z-10">
+          {icon}
+        </IconSlot>
+      ) : (
+        <span className="relative z-10">
+          <AutoWidthText samples={[labelOn, labelOff]}>
+            {textDisplay}
+          </AutoWidthText>
+        </span>
+      )}
+    </DragPadBase>
+  );
+}

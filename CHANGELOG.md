@@ -1,0 +1,93 @@
+# Changelog
+
+## 0.1.0 - unreleased
+
+- Remove inherited release workflows and obsolete ZoeyMind Windows/macOS document associations from the DAW baseline. Keep legacy screenshots local-only and retain upstream Apache attribution.
+- Quit directly from the native tray instead of emitting an unhandled exit event. Use the zoeydaw browser title and initialize recent projects without a redundant mount effect.
+- Replace fixed-only Arrangement grids with five adaptive density levels, weighted grid tiers and a shared zoom-derived snapping plan through 1/16384. Keep explicit fixed mode and migrate legacy snapshots to version 2 preferences.
+- Use default cursors for timeline bodies and blank lanes, a grab cursor for opaque Clip titles, and translucent lower bodies. Restore Ctrl/Cmd+E Clip Split; Ctrl/Cmd+1 and +2 adjust grid density without moving the camera.
+- Separate a precise row-local insertion cursor from the moving transport. Space starts, stops and replays from the insertion point; only playing draws the full-height line. Use Float64 prototype playhead positions for fine-grid accuracy at distant bars.
+- Distinguish Arrangement and header focus. Lane clicks highlight only the row; header focus colors only the identity area, not routing or mixer controls. Remove selected borders and whole-card overlays, preserve insertion position, and clip row feedback below the rulers.
+- Draw Group child summaries only when folded. Give identity, routing and mixer sections shared Padding and control Gap in expanded and collapsed states, fill only the name segment, and retain a 1px track-local insertion cursor.
+- Resize the top MiniMap vertically through the shared panel separator while retaining the timeline's minimum height.
+- Repaint resized Arrangement, playhead, and meter canvases before composition instead of leaving their cleared backing stores until the next frame.
+- Serialize native MiniMap recenter and final cursor restoration. Keep the cursor hidden until restoration settles and prevent a previous gesture's pending warp from affecting the next drag.
+- Anchor MiniMap body zoom at the pressed horizontal position instead of the frame center. Preserve independent edge resizing and the current vertical zoom direction.
+- Replace the MiniMap debug column with a full-width overview capped at 90px. Retain Group and empty source rows through folding, and render solid Clip bands, track dividers, locators and the transport position.
+- Reuse shared theme colors and their translucent overlay in MiniMap instead of a local palette. Keep dark-theme grid and track separators darker than their surface with the shared muted color, and retain the shared border color in light themes. Preserve Pattern backgrounds and grid density.
+- Use shared grid colors inside Audio, MIDI and Pattern Clip bodies instead of inheriting their fill color. Preserve subdivision opacity, waveform and note colors.
+- Restore complete outer track borders and continuous Group rails over child borders. Keep outer tracks free of Padding and apply shared Padding to each control section. Exclude Group rails from height-adjustment hover feedback and keep shared numeric-control fills square.
+- Align audio fade endpoints with Clip body edges. Show curves and handles only on hover, while retaining fade masks on unhovered Clips and folded title bars.
+- Replace selected Audio, MIDI and Pattern Clip outlines with a pale-blue body fill while retaining original title colors, content and grid visibility. Tint the remaining title when folded.
+- Center shared numeric values and edit inputs. Use a centered solid-circle record-arm icon without extra horizontal padding on square track buttons.
+- Reduce the default drag distance per step and discard overshoot at value boundaries so reverse movement responds immediately. Preserve range sensitivity, Shift fine adjustment and cursor restoration.
+- Keep single clicks in highlighted pre-edit mode without a text cursor or input. Typing starts live editing; double-click reset remains available.
+- Reduce MiniMap body panning to one quarter of its previous distance while preserving vertical zoom and edge resizing.
+- Use a solid-circle transport record icon and a smaller centered CSS circle for track record-arm controls.
+- Use the shared default size for numeric-control library examples instead of compact-only Number examples.
+- Cover the parent-to-child Group rail seam and add a 1px right border without changing the rail width.
+- Remove the track-height handle's hover color bar while preserving its resize cursor and keyboard focus indicator.
+- Fill folded Clip cards to the inside of their track borders.
+- Reserve the empty record-arm slot on Group tracks so activation buttons match ordinary track widths.
+- Widen track meters to the shared compact-control width. Separate stereo channels, mark 0 dB, use a green-to-yellow gradient below unity and red above it, and hold independent peaks for 600ms before a 24 dB/s fall.
+- Widen the track operation area to 304px. Give the identity column 100px and Mixer 32px more room while retaining the 74px routing column, compact stereo meters, and empty Group arm slots.
+- Unify shared DAW controls at the 13px track-control height and 9px text size, including component-library examples. Remove Transport control borders.
+- Align track activation with the half-width volume column and split the other half equally between Solo and record-arm controls, including the empty Group arm slot.
+- Arrange sends in three-column rows and reveal three destinations per available control row.
+- Use 20px Transport controls with 12px text and 14px icons without resizing track controls.
+- Centralize track layout in `TRACK_LAYOUT`. Share one spacing value across identity, Routing, Mixer, monitor buttons and Send grids; derive scoped CSS tokens, collapsed/title heights, resize steps and exact control-row capacity. Remove the tighter Routing gap and the extra Mixer row reservation.
+- Use a 50% theme-derived dark fade mask, with immediate Canvas refresh after stylesheet changes. Show fade curves only over the expanded Clip body, never on title hover.
+- Smooth Fade curves through a circular, two-axis midpoint with four-sided inset limits. Persist midpoint positions and preserve live edits on capture interruption; Esc cancels.
+- Align numbered grid lines with the ruler and let Ctrl+1/Ctrl+2 control the remaining cells. Use a shared translucent dark grid overlay inside Clip and Pattern bodies, including selected and hovered cards.
+- Preview Clip movement with half-transparent active Ghost cards while source cards remain inactive. Invalid destinations retain the last valid preview; one undo restores the move.
+- Allow card-title movement in Automation mode and transfer all automation breakpoints inside each selected Clip's half-open time interval. Keep preview and commit placement aligned, including cross-track moves and copies.
+- Set the playback origin to the card start on title click or move; body clicks retain the row-local cursor origin.
+- Draw a neutral alignment guide at the Ghost's left edge during movement and at the grabbed edge during left/right resizing. Keep it independent of the playing transport cursor; resizing retains the Clip's left start as the playback origin.
+- Give MIDI tracks the same volume and pan controls as Audio tracks. Use the Mixer card background for the stereo-meter center and 0 dB cutouts.
+- Claim Space for transport in capture phase, release focused controls without activating them, ignore held-key repeats, and retain text entry and Enter behavior.
+- Replace playback-follow paging with frame-synchronized center locking in the visible timeline, excluding the operations column.
+- Replace deep relative module imports with web @/ aliases and shared UI private aliases. Enforce the web convention for static and dynamic imports with ESLint.
+- Pivot repository from ZoeyMind mind-map editor to zoeydaw DAW scaffold.
+- Delete multi-tab shell, document portal, recovery snapshot, mind-map renderer, AI / MCP stack.
+- Single-project route structure: `/` home + `/project/:id` left/right layout placeholder.
+- Rust shell slimmed to atomic file write, log config, updater, tray, single-instance.
+- Add an Ableton-style Web Browser prototype with demo categories, scoped search, content filters, expandable presets, favorites, and keyboard navigation. No file, plug-in, or audio integration.
+- Add same-surface resizable Browser columns with clear separators and continuously clipped navigation labels. Keep resource selection empty until chosen and remember it per category.
+- Centralize active-over-hover precedence in shared UI styles, balance global sizing, and replace variable hover messages with component-type help.
+- Add a shared Motion-based `DragPreviewArea` for resource ghosts, animated cancellation, forbidden drop feedback, and reduced-motion support. Resource placement remains disabled in every Panel.
+- Add an interactive arrangement prototype with an adaptive MiniMap, shared timeline scrolling, musical and BPM-aware time rulers, locators, and draggable loop regions.
+- Compose project document, workspace, and transient session state behind one typed adapter API. Split track, clip, transport, automation, history, simulation, and snapshot responsibilities into domain modules.
+- Add grouped and collapsible tracks with name, routing, monitor, mute, solo, record-arm, pan, volume, and simulated stereo level controls.
+- Add audio, MIDI, and pattern clip actors with grid-based creation, selection, move/copy, resizing, duplication, splitting, deletion, and clip editors. Add editable automation points and Live-style A/B/M shortcut distinctions.
+- Move reusable DAW controls into the UI package with shared sizing, measured fixed-width text, persistent icon slots, current-color states, and explicit gesture transactions. Add reusable pan, volume-fader, and calibrated stereo-meter controls.
+- Add versioned per-project browser-local snapshots. Musical data and view preferences persist; playback, live meters, selections, keyboard notes, and undo history do not. Audio output, disk project files, and Rust integration remain disconnected.
+- Preserve audio, MIDI, and pattern source data through clip trim/split/re-extension. Clamp source boundaries before applying gestures so edited projects remain serializable.
+- Synchronize adjustable-control refs after commit, separate input refs from render-state bindings, and keep type-only help available during numeric editing.
+- Grow the timeline from all project content and playback position. Keep hidden group clips in the adaptive MiniMap, fit long arrangements, and render ruler ticks only for the visible range with millisecond labels at high zoom.
+- Register shared font and spacing tokens with the class merger so active colors cannot remove font sizing or change control dimensions. Keep transport emphasis in the shared button variant rather than caller-specific sizes.
+- Keep numeric controls in pre-edit after keyboard activation, then focus live editing on the first typed character. Preserve icons and dimensions across idle, pre-edit, and edit states.
+- Reject extra main outputs and incompatible clip owners before restoring snapshots. Reuse the same ownership policy for clip creation and cross-track moves.
+- Align Header groups left, window-center, and right. Pack groups without overlap as the window narrows, then scroll horizontally without changing control dimensions or typography.
+- Restore compact arrangement track columns and thin background/grid separators. Replace duplicate volume widgets with one filled numeric bar per expanded track and a separate read-only stereo meter.
+- Add Ctrl/Cmd+1 and Ctrl/Cmd+2 grid steps from 1/4 through 16/1. Alternate backgrounds per numbered bar to match the ruler, and align ruler seeking, clip placement, and clip-local overlays to one snap origin.
+- Lock clip and pattern gesture cursors across hovered elements, with release, cancellation, capture-loss, Escape, blur, and unmount cleanup.
+- Add draggable Bézier audio fade length and curvature overlays with bounded, undoable, saved curve metadata. Update the detail preview to use the same geometry; no audio DSP is connected.
+- Make the MiniMap frame resizable one-sided from either edge, like a clip. Body drag still pans horizontally and resizes both sides vertically; double-click still fits.
+- Coordinate simultaneous clip/fade cursors so an earlier gesture cannot be restored after it ends. Close loop-ruler edit transactions on capture loss, blur, and unmount; let numeric-control wheel adjustments take precedence over narrow Header scrolling.
+- Restore MiniMap body pan/zoom, independent edge resizing, cancellation and blur cleanup with stable listeners. Reuse native cursor positioning to keep and restore the drag origin; render overview clips on a canvas.
+- Restore Canvas clip title movement, single-copy Alt dragging, multi-track time ranges, source-preserving trimming, relative fade lengths and separate curve handles. Preview gestures without mutating the document, then commit one undoable command.
+- Restore clip creation, editing, duplication, splitting, deletion and token-based coloring through shared context menus. Keep Pattern painting and MIDI note edits cancellable on capture loss, blur and unmount.
+- Share one track-row geometry between headers, canvas and hit testing. Pin return/main rows, virtualize offscreen headers, reserve space for the clip editor and retain compact gallery controls.
+- Use the existing mock transport clock for playhead telemetry, including signature and loop timing. Grow and recycle prototype meter slots instead of failing after 128 tracks. Remove the superseded preview route and temporary window debug exports.
+- Separate Timeline toolbar, viewport, painter lifecycle and virtual track headers. Split clip, ruler and automation gesture modules and Audio, MIDI and Pattern detail editors.
+- Add versioned clip clipboard operations, relative multi-lane duplication and axis-specific edge autoscroll that recomputes previews without pointer movement.
+- Add locator rename, deletion, navigation and snapped movement, independent loop edges and time-selection looping. Correct locator double-click playback and selected-locator arrow movement.
+- Add automation multi-selection, segment movement, Alt curvature, B drawing and grouped numeric editing. Share envelope interpolation with simulated meters, including flat tails and empty-lane defaults.
+- Add MIDI drawing, erasing, selection, clipboard and keyboard editing. Keep held B mode transient, protect hidden clip selections in Automation mode, and retain surviving clip editors through undo and redo.
+- Fix Base UI context menu activation and StrictMode numeric-editor teardown. Keep editor focus through menu closure and remove the obsolete Escape callback.
+- Keep normal Clip and Pattern activation, creation and rename inside the timeline. Retain prototype detail editors only behind an explicitly labeled temporary menu action.
+- Restore distinct pastel card titles, lighter bodies, clipped MIDI notes and source-aligned single-lane Pattern marks. Fold ordinary tracks to title-only cards and dim content in Automation mode.
+- Add smooth shaded audio fade transitions, four square endpoint controls and diamond curvature controls. Preserve inward boundary offsets through snapshots, clipboard, trims, splits and undo; keep zero-length endpoints usable and edge handles fully visible.
+- Connect Group and child identities with nested ancestor-color rails. Folding a Group preserves its own height, descendant summary, routing and mixer controls while hiding children.
+- Resolve CSS color expressions before Canvas painting so light-dark ink matches DOM contrast in both themes. Preserve caller opacity in waveform and note painters.
+- Keep MIDI preview pitch rows stable while panning. Use outlined fade controls and continuously sloped curve midpoints; keep Automation curves below card titles and hide them on folded ordinary tracks.
