@@ -17,6 +17,7 @@
     "react-i18next": "^15.5.1"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.0",
     "@types/react": "^19.2.14",
     "typescript": "~5.9.2"
   },
