@@ -16,3 +16,11 @@
 | Mutation: accept an output cycle | 1 failing test; restored |
 
 The routing increment does not connect an engine or create a second project state owner.
+
+## Semantic track colors
+
+`ThemeColors` now exposes `meterGood`, `meterWarn`, `meterDanger`, `meterPeak`, `arrangementFadeMask` and `arrangementLine` for both appearances. Existing palette values are unchanged. The initial semantic values preserve the Web prototype's existing meter and surface colors; they do not claim a measured Live meter-color match.
+
+The four coordinator-provided Live frames at `/tmp/live-meter/` are 1280×525 scaled captures. A 4× crop of `(1070,60,150,220)` shows routing input activity but no illuminated output meter bars; yellow/red, peak strips and output-meter separator widths cannot be sampled reliably from these frames. This limitation was reported to the coordinator rather than substituting the input indicator's green.
+
+`bun test src/shared/theme/track-colors.test.ts`: 2 pass, 0 fail. Both appearances provide non-empty parseable native color literals, distinct green/yellow/red levels, a half-opacity fade mask and a line distinct from the peak marker. Full `pnpm exec tsc --noEmit`: 0 diagnostics.
