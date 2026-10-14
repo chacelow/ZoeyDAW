@@ -85,7 +85,7 @@ export function TransportBar({
           height: "100%",
         }}
       >
-        <div style={groupStyle}>
+        <div testId="transport-left" style={groupStyle}>
           <Button size="transport" iconOnly label={labels.toggleBrowser} onClick={onToggleBrowser}>
             ▥
           </Button>
@@ -152,6 +152,9 @@ export function TransportBar({
               style={{
                 width: theme.transportControl["--spacing-control-icon"],
                 height: theme.transportControl["--spacing-control-icon"],
+                color: workspace.metronome
+                  ? theme.colors.primaryForeground
+                  : theme.colors.foreground,
               }}
             />
           </Button>
@@ -165,6 +168,7 @@ export function TransportBar({
               onChange={value => projectActions.setProject({ scaleRoot: value })}
             />
             <DropdownButton
+              testId="transport-scale-mode"
               size="transport"
               value={document_.scaleMode}
               label={labels.scaleMode}
@@ -184,6 +188,7 @@ export function TransportBar({
             format={value => `${Math.round(value)}%`}
           />
           <DropdownButton
+            testId="transport-bar-length"
             size="transport"
             value={meter.barLength}
             label={labels.barLength}
@@ -198,7 +203,7 @@ export function TransportBar({
             onChange={projectActions.setBarLength}
           />
         </div>
-        <div style={groupStyle}>
+        <div testId="transport-center" style={groupStyle}>
           <DragPadToggle
             size="transport"
             value={workspace.follow}
@@ -287,7 +292,7 @@ export function TransportBar({
           />
         </div>
         <div style={{ flexGrow: 1 }} />
-        <div style={groupStyle}>
+        <div testId="transport-right" style={groupStyle}>
           <DragPadToggle
             size="transport"
             value={drawMode}

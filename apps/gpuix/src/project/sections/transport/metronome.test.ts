@@ -15,7 +15,7 @@ test("property: adjacent accepted beats alternate across meters and bar boundari
         sixteenth: 1,
       }
       const phase = metronomePhase(position, numerator, true, true)
-      expect(phase.side).toBe(-metronomePhase(next, numerator, true, true).side)
+      expect(phase.side * metronomePhase(next, numerator, true, true).side).toBe(-1)
       expect(phase.swing).toBe(phase.side)
       expect(metronomePhase(position, numerator, false, true)).toEqual({ side: 0, swing: 0 })
       expect(metronomePhase(position, numerator, true, false)).toEqual({ side: 0, swing: 0 })

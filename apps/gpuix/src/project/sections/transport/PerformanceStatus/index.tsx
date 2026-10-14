@@ -17,6 +17,7 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
       : labels.unavailable
   return (
     <PopupButton
+      testId="transport-engine"
       label={labels.engine}
       side="bottom"
       align="end"

@@ -6,6 +6,7 @@ import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
+import { handleTransportKeyDown } from "../transport"
 import { FooterPanel } from "."
 import { englishFooterLabels } from "./demo-labels"
 import type { FooterView } from "."
@@ -76,5 +77,26 @@ test("footer divider only collapses and expands the fixed-height chain, preservi
     expect(root.renderer.getPaintedText().join(" ")).not.toContain(englishFooterLabels.noTrack)
   } finally {
     root.unmount()
+  }
+})
+
+test("Space on a Footer tab controls playback without switching the editor", () => {
+  const root = createTestRoot({
+    width: 800,
+    height: 400,
+    onKeyDown: event => {
+      handleTransportKeyDown(event)
+    },
+  })
+  try {
+    root.render(<FooterHarness />)
+    const clipTab = root.renderer.findByTestId("motion-tab-clip")
+    if (!clipTab) throw new Error("Missing Clip Edit tab")
+    root.renderer.nativeSimulateKeystrokes(clipTab.id, "space")
+    expect(root.renderer.getPaintedText().join(" ")).not.toContain(englishFooterLabels.noClip)
+    expect(useProjectState.getState().session.playing).toBe(true)
+  } finally {
+    root.unmount()
+    projectActions.stop()
   }
 })
