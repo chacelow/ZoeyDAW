@@ -1,5 +1,5 @@
 import { projectActions, useProjectState } from "../../../../adapters"
-import { deriveGridPlan, noteGridBars } from "../../../../model/grid"
+import { deriveGridPlan } from "../../../../model/grid"
 import { positionToBar } from "../../../../model/types"
 import type { EventPayload } from "@gpuix/react"
 
@@ -70,7 +70,8 @@ export function createTimelineKeyboard({
     },
     down(event: EventPayload): boolean {
       const key = event.key?.toLowerCase()
-      if (!key || focus() === "text") return false
+      const target = focus()
+      if (!key || target === "text" || target === "menu") return false
       const { ctrl = false, cmd = false, alt = false, shift = false } = event.modifiers ?? {}
       const modified = ctrl || cmd
       if ((key === "space" || key === " ") && !modified && !alt) {
@@ -78,8 +79,7 @@ export function createTimelineKeyboard({
         if (!event.isHeld) projectActions.togglePlay()
         return true
       }
-      const target = focus()
-      if (target === "menu" || target === "clip-editor") return false
+      if (target === "clip-editor") return false
       if (claim(event)) return true
       const state = useProjectState.getState()
       if (modified) {
@@ -91,19 +91,7 @@ export function createTimelineKeyboard({
         } else if ((key === "1" || key === "2") && !shift) {
           if (!event.isHeld) projectActions.adjustGrid(key === "2" ? 1 : -1)
         } else if (key === "e" && !shift && !state.session.selectedClipIds.length) {
-          if (!event.isHeld) {
-            const { numerator, denominator } = state.document.transport
-            const plan = deriveGridPlan(
-              state.workspace.grid,
-              state.workspace.pxPerBar,
-              numerator,
-              denominator
-            )
-            projectActions.setGrid({
-              mode: "fixed",
-              bars: Math.max(noteGridBars(256, numerator, denominator), plan.cellBars / 2),
-            })
-          }
+          return true
         } else return false
         return true
       }
@@ -155,14 +143,6 @@ export function createTimelineKeyboard({
         if (!event.isHeld) projectActions.setMode("automationMode", !state.workspace.automationMode)
         return true
       }
-      if (
-        (key === "delete" || key === "backspace") &&
-        !state.workspace.automationMode &&
-        state.session.selectedClipIds.length
-      ) {
-        if (!event.isHeld) projectActions.deleteClips(state.session.selectedClipIds)
-        return true
-      }
       if (key === "left" || key === "right") {
         const { numerator, denominator } = state.document.transport
         const plan = deriveGridPlan(
@@ -202,6 +182,7 @@ export function createTimelineKeyboard({
       return (
         (key === "space" || key === " ") &&
         focus() !== "text" &&
+        focus() !== "menu" &&
         !modifiers?.ctrl &&
         !modifiers?.cmd &&
         !modifiers?.alt

@@ -87,11 +87,13 @@ describe("Arrangement keyboard boundaries", () => {
     expect(useProjectState.getState().session.midiOctave).toBe(octave + 1)
   })
 
-  test("Ctrl+E subdivides independently of pointer state down to 1/256 without seeking", () => {
+  test("Ctrl+1 reaches 1/256 independently of pointer state while unselected Ctrl+E never edits grid", () => {
     projectActions.setMode("computerKeyboard", false)
     projectActions.setGrid({ mode: "fixed", bars: 1 / 4 })
     const position = useProjectState.getState().session.position
-    for (let i = 0; i < 12; i++) expect(keyboard.down(key("e", control))).toBe(true)
+    expect(keyboard.down(key("e", control))).toBe(true)
+    expect(useProjectState.getState().workspace.grid).toEqual({ mode: "fixed", bars: 1 / 4 })
+    for (let i = 0; i < 12; i++) expect(keyboard.down(key("1", control))).toBe(true)
     expect(useProjectState.getState().workspace.grid).toEqual({ mode: "fixed", bars: 1 / 256 })
     expect(useProjectState.getState().session.position).toEqual(position)
     expect(keyboard.down(key("ctrl"))).toBe(false)
