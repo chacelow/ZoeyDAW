@@ -28,6 +28,17 @@ describe("iconMarkup", () => {
     expect(iconMarkup("Metronome")).toBe(markup)
   })
 
+  test("filled lucide icons paint the interior while outlines stay hollow", () => {
+    expect(iconMarkup("Play", 2, true)).toContain('fill="currentColor"')
+    expect(iconMarkup("Play", 2, false)).toContain('fill="none"')
+    expect(iconMarkup("Play", 2, true)).not.toBe(iconMarkup("Play", 2, false))
+  })
+
+  test("filled Phosphor icons use the package's fill asset", () => {
+    expect(iconMarkup("Metronome", 2, true)).not.toBe(iconMarkup("Metronome", 2, false))
+    expect(iconMarkup("Metronome", 2, true)).toContain("currentColor")
+  })
+
   test("an unknown name fails loudly instead of drawing an empty glyph", () => {
     expect(() => iconMarkup("NotARealIcon" as never)).toThrow(RangeError)
   })

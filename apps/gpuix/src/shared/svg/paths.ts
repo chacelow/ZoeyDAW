@@ -50,6 +50,35 @@ export function cubicPath(start: Point, segments: readonly CubicSegment[]): stri
   return context.toString()
 }
 
+/**
+ * Closed region between a cubic Bézier chain and a horizontal baseline: the chain, then straight
+ * to (lastEnd.x, baselineY), back to (start.x, baselineY), closed. Clip fade masks use this so the
+ * mask follows the curve instead of closing along the diagonal between the curve's end points.
+ */
+export function cubicAreaPath(
+  start: Point,
+  segments: readonly CubicSegment[],
+  baselineY: number
+): string {
+  const end = segments.at(-1)?.end ?? start
+  const context = d3path()
+  context.moveTo(start.x, start.y)
+  for (const segment of segments) {
+    context.bezierCurveTo(
+      segment.control1.x,
+      segment.control1.y,
+      segment.control2.x,
+      segment.control2.y,
+      segment.end.x,
+      segment.end.y
+    )
+  }
+  context.lineTo(end.x, baselineY)
+  context.lineTo(start.x, baselineY)
+  context.closePath()
+  return context.toString()
+}
+
 /** Closed polygon (markers, arrows). */
 export function polygonPath(points: readonly Point[]): string {
   const context = d3path()
