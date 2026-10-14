@@ -43,6 +43,7 @@ crates/
 - 组件行为用 `createTestRoot`（`@gpuix/react/testing`），断言布局边界、命中、状态转换；不测源码文本或转发。
 - 原生模块：对真实二进制测试。需要先 `pnpm native:build`。
 - 每个切片至少一次真实窗口运行（`bun --hot <demo>`）并截图/AX 验证；只报告实际运行过的验证。
+- **验证完立刻关闭**自己启动的 demo/窗口/service(用带 `name` 的 service 启动、拿到证据即 `kill`);`worker_done` 前用 `ps` 确认零残留。残留的窗口会占用户本机内存与 GPU。
 
 ## 切片边界与所有权
 

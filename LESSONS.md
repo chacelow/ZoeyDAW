@@ -47,6 +47,13 @@
 - 恢复：被 drop 的 stash 提交仍是悬空对象。`git fsck --no-reflogs --unreachable` 列出悬空提交，按 stash 信息（`git log -1 --format='%H %s' <sha>`）找到，再 `git checkout <sha> -- <路径>`，不要 `stash pop`。
 - 见：`git rev-parse --git-common-dir`；已进入 stash 的未跟踪文件在它的第三个父提交里：`git checkout "stash@{0}^3" -- <路径>`。
 
+## gpuix 迁移：验证用的 demo 必须验证完就关
+
+- 错：`bun --hot <demo>` 启动原生窗口做截图/AX 验证后不关，继续做别的事。
+- 对：用带 `name` 的 bash service 启动（`proc://<name>`），拿到证据立刻 `write proc://<name>/kill`；交付前 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"` 确认零残留。
+- 因：每个 gpuix 窗口是一个常驻 GPU 进程（约 70–130MB RSS）。2026-10-14 并行 worker 同时开着多个 gallery，其中一个跑了 29 分钟无人交互，协调者清理时 `bun` 合计 346MB → 54MB。窗口占用户本机性能，且 `--hot` 会持续监视文件。
+- 见：`.orca-specs/common.md`“进程清理”、[gpuix 架构](docs/architecture/gpuix.md)“测试”。
+
 ## gpuix 迁移：Shell 引号会吞掉长回复
 
 - 错：把含 `$(`、反引号的中文长文本直接放进 `--body "..."` 双引号。
