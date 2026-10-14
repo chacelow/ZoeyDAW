@@ -81,3 +81,58 @@ test("centered native Select anchors to the compact trigger rather than a stretc
   expect(content.y).toBeGreaterThanOrEqual(trigger.y + trigger.height)
   root.unmount()
 })
+
+test("filled select owns the parent width and preserves anchored alignment", async () => {
+  for (const [parentWidth, align] of [
+    [74, "start"],
+    [304, "center"],
+  ] as const) {
+    const root = createTestRoot({ width: 640, height: 400 })
+    root.render(
+      <ThemeProvider>
+        <div testId="parent" style={{ width: parentWidth, marginLeft: 120, marginTop: 100 }}>
+          <DropdownButton
+            testId="fill"
+            label="Filled mode"
+            fill
+            align={align}
+            value="a"
+            onChange={() => {}}
+            items={[
+              { id: "a", label: "Alpha" },
+              { id: "b", label: "Long routing destination" },
+            ]}
+          />
+        </div>
+      </ThemeProvider>
+    )
+    root.renderer.flush()
+    const parent = readOuterBounds(root.renderer, root.renderer.findByTestId("parent"))!
+    const outer = readOuterBounds(root.renderer, root.renderer.findByTestId("fill-root"))!
+    const trigger = readOuterBounds(root.renderer, root.renderer.findByTestId("fill"))!
+    expect(outer.width).toBe(parent.width)
+    expect(trigger.width).toBe(parent.width)
+    root.renderer.nativeSimulateKeystrokes(root.renderer.findByTestId("fill")!.id, "enter")
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await Bun.sleep(10)
+      flushSync(() => {})
+      root.renderer.flush()
+      const content = readOuterBounds(root.renderer, root.renderer.findByTestId("fill-content"))!
+      const delta =
+        align === "center"
+          ? content.x + content.width / 2 - trigger.x - trigger.width / 2
+          : content.x - trigger.x
+      if (Math.abs(delta) <= 0.5) break
+    }
+    const content = readOuterBounds(root.renderer, root.renderer.findByTestId("fill-content"))!
+    expect(
+      Math.abs(
+        align === "center"
+          ? content.x + content.width / 2 - trigger.x - trigger.width / 2
+          : content.x - trigger.x
+      )
+    ).toBeLessThanOrEqual(0.5)
+    expect(content.y).toBeGreaterThanOrEqual(trigger.y + trigger.height)
+    root.unmount()
+  }
+})

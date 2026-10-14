@@ -20,7 +20,7 @@
 
 `layout/sizes.ts` 解析单位、初始化与重排。空间足够时遵守 min/max；空间不足时只放宽可变面板的 minimum，固定面板不缩小。固定区域自身已超过总尺寸的输入抛出 RangeError。所有 maximum 都达到后保留空余，不突破 maximum。
 
-`useElementSize` 是唯一的测量入口。gpuix 0.10.0 没有 onLayout；目前在布局提交、useWindowSize 变化后重测，并每 32ms 读取 last-painted bounds。升级 gpuix 后仅替换这个 hook。拖动使用按下时的约束与尺寸快照，不依赖测量采样；松开后再重排。
+`useElementSize` 是唯一的容器尺寸 owner，只接收固定主干渲染器的 `onLayout` border-box 事件；不再用定时器、窗口尺寸或 `getElementBounds` 采样。事件在 paint 后到达，隐藏未绘制的容器不报告。拖动使用按下时的约束与尺寸快照，尺寸事件不能改变活动拖动的锚点；松开后再重排。
 
 按下、移动、松开都监听同一原生节点，依靠 gpuix pointer capture。没有 onMouseLeave 取消。Esc、元素焦点丢失与注入的窗口失活共用幂等回滚路径。分隔条因折叠而隐藏时提交预览并结束捕获，不把失去节点误判为取消而重新打开面板。
 
@@ -32,7 +32,7 @@ gpuix 0.10.0 没有可用的窗口激活信号，div 的 onBlur 也未在实测�
 
 ## 运行
 
-工作区根目录先运行 `pnpm native:build`。在 `apps/gpuix` 运行：
+工作区根目录先运行 `bash scripts/gpuix-main/build.sh`、`pnpm install --frozen-lockfile` 与 `pnpm native:build`。在 `apps/gpuix` 运行：
 
 ```sh
 pnpm exec tsc --noEmit

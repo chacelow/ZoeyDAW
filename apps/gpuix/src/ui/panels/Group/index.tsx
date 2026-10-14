@@ -121,7 +121,7 @@ export function Group({ orientation, children, style, id, testId }: GroupProps) 
   return (
     <GroupContext.Provider value={state}>
       <div
-        ref={measurement.ref}
+        onLayout={measurement.onLayout}
         role="group"
         testId={testId ?? id}
         style={sx({ width: "100%", height: "100%" }, style, {

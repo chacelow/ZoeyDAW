@@ -3,6 +3,8 @@ packages:
   - packages/*
   - crates/native
 overrides:
+  "@gpuix/native": link:.gpuix-main/packages/native
+  "@gpuix/react": link:.gpuix-main/packages/react
   "@typescript-eslint/eslint-plugin": 8.71.2
   "@typescript-eslint/parser": 8.71.2
   "@typescript-eslint/utils": 8.71.2
