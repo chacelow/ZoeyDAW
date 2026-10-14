@@ -1,4 +1,3 @@
-import { mockMeterLevels } from "../mockMeters"
 import type {
   BackendRequest,
   BackendResult,
@@ -17,9 +16,7 @@ function wrapBar(bar: number, state: BackendState): number {
     : loop.startBar + ((bar - loop.startBar) % (loop.endBar - loop.startBar))
 }
 
-/**
-Deterministic visual backend: no PCM, store, or browser audio ownership.
-*/
+/** Pure-logic test backend. It owns no device, decoder or simulated audio levels. */
 export function createMockProjectBackend(): ProjectBackend {
   let state: BackendState | null = null
   let sessionId = ""
@@ -55,17 +52,8 @@ export function createMockProjectBackend(): ProjectBackend {
       clock: { kind: "musical", bar: position, barsPerSecond },
       playing: state.control.playing,
       recording: state.control.recording,
-      levels: mockMeterLevels(
-        {
-          document: {
-            tracks: state.project.tracks,
-            transport: { numerator: state.project.numerator },
-          },
-          session: { playing: state.control.playing, activeMidiNotes: state.control.heldNotes },
-        },
-        position,
-        now
-      ),
+      levels: Object.fromEntries(state.project.tracks.map(track => [track.id, [-120, -120]])),
+      outputLatencyFrames: null,
     }
   }
 

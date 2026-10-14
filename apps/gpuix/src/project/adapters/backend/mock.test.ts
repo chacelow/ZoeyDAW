@@ -57,7 +57,7 @@ describe("mock project backend", () => {
     expect(JSON.stringify(projected)).not.toContain("Changed label")
   })
 
-  it("owns its clock only during subscriptions and responds to routed signal and loop", () => {
+  it("owns its clock only during subscriptions and wraps the loop", () => {
     jest.useFakeTimers()
     setSystemTime(0)
     const backend = createMockProjectBackend()
@@ -75,7 +75,6 @@ describe("mock project backend", () => {
       frames.push(frame)
     })
     expect(jest.getTimerCount()).toBe(1)
-    expect(frames[0].levels["3-audio"][0]).toBeGreaterThan(-60)
     jest.advanceTimersByTime(1500)
     expect(frames.at(-1)?.clock.bar).toBeCloseTo(1.75)
     stop()

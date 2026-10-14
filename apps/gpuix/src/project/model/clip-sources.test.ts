@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from "bun:test"
-import { mockMeterLevels } from "../adapters/mockMeters"
 import {
   hydrateProject,
   projectActions,
@@ -129,7 +128,7 @@ describe("clip source boundaries", () => {
     expect(pieces[1].sourceOffsetBars).toBe(2)
   })
 
-  it("records and meters the visible position in a trimmed MIDI source", () => {
+  it("records the visible position in a trimmed MIDI source", () => {
     jest.useFakeTimers()
     releaseRuntime = startProjectRuntime()
     projectActions.updateClip("trager-1", { notes: [] })
@@ -145,30 +144,6 @@ describe("clip source boundaries", () => {
         { id: expect.any(String), pitch: 72, startBeat: 4, lengthBeats: 0.25, velocity: 100 },
       ],
     })
-    expect(mockMeterLevels(useProjectState.getState(), 2, 1000).trager[0]).toBeGreaterThan(-60)
-  })
-
-  it("meters MIDI notes again on later authored cycles, including left extension", () => {
-    projectActions.moveClips(["trager-1"], "trager", 8)
-    projectActions.resizeClip("trager-1", "left", 7)
-    projectActions.resizeClip("trager-1", "right", 25)
-    projectActions.togglePlay()
-    const state = useProjectState.getState()
-    expect(mockMeterLevels(state, 9, 1000).trager[0]).toBeGreaterThan(-60)
-    expect(mockMeterLevels(state, 17, 1000).trager[0]).toBeGreaterThan(-60)
-    expect(mockMeterLevels(state, 10.75, 1000).trager[0]).toBe(-60)
-  })
-
-  it("meters repeated Pattern steps in the portion extended left of their source", () => {
-    projectActions.createClip("4-midi", "pattern", 8, 1)
-    const pattern = useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!
-      .clips[0]
-    projectActions.updateClip(pattern.id, { steps: [true, false, false, false] })
-    projectActions.resizeClip(pattern.id, "left", 7)
-    projectActions.togglePlay()
-    const state = useProjectState.getState()
-    expect(mockMeterLevels(state, 7.25, 1000)["4-midi"][0]).toBeGreaterThan(-60)
-    expect(mockMeterLevels(state, 7.3125, 1000)["4-midi"][0]).toBe(-60)
   })
 
   it("keeps decimal trim/move/re-extension offsets nonnegative", () => {
