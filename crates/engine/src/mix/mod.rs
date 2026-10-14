@@ -5,7 +5,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use crate::{
     assets::AudioSource,
     protocol::{BackendClip, BackendProject, TrackKind},
-    transport::{bar_to_frame, Transport, TransportClock},
+    transport::{bar_to_frame, source_offset_frame, Transport, TransportClock},
 };
 
 mod fade;
@@ -130,13 +130,11 @@ impl Mixer {
                 }
                 let Some(id) = &clip.source_id else { continue };
                 let source = sources.get(id).ok_or("missing audio source")?.clone();
-                if source.pcm.is_empty() {
+                let Some(offset) =
+                    source_offset_frame(clock, clip.source_offset_bars, source.pcm.len() as u64)
+                else {
                     continue;
-                }
-                let offset = (clip.source_offset_bars / clock.bars_per_second
-                    * f64::from(clock.sample_rate))
-                .round() as i128;
-                let offset = offset.rem_euclid(source.pcm.len() as i128) as u64;
+                };
                 let start = bar_to_frame(clock, clip.start_bar);
                 let length = frames(clip.length_bars);
                 clips.push(Clip {

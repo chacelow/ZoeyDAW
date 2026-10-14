@@ -63,7 +63,9 @@ Keyboard note input, authored MIDI recording and accepted recording clocks retai
 | `apply(handle, requestJson): string` | `BackendResult` JSON. Missing devices, decoding failures, invalid routing and sample-rate faults return `kind: "rejected"`. |
 | `subscribeTelemetry(handle, callback): void` | Callback receives telemetry JSON. The Rust queue is bounded to one pending sample; callback failures do not panic the engine. |
 | `dispose(handle): void` | Idempotent release; joins the control thread and closes its output stream. |
-| `readPeaks(handle, sourceId, startFrame, endFrame, pixels): Float32Array` | Exact visible-range envelopes, never PCM. Frame coordinates use the device-resampled source rate. |
+| `readPeaks(handle, sourceId, startFrame, endFrame, pixels): Float32Array` | Exact visible-range envelopes, never PCM. Frame coordinates are source-rate frames (the decoded sample rate reported by `sourceInfo`), not device frames. Musical ranges use `readPeaksAtBars`. |
+| `sourceInfo(handle, sourceId): { sampleRate, frames, channels } \| null` | Decoded source metadata; `null` for an unknown source. |
+| `readPeaksAtBars(handle, sourceId, startBar, endBar, pixels, contentOffsetBars): Float32Array` | Peaks for a musical range. Bar-to-frame conversion, the signed content offset and wrapping past the source end all happen in Rust (`source_offset_frame`, shared with the mixer). |
 
 Peak output is channel-major, then pixel-major `[min, max]`: `[leftMin0, leftMax0, …, rightMin0, rightMax0, …]`. Mono sources are duplicated to stereo, so output length is `pixels * 4`. Ranges are half-open, integer and nonnegative; `pixels` is 1–16384. The source bounds crop the requested range; empty pixels contain `[0, 0]`. Local filesystem paths and `file:///` URIs are supported, with Symphonia decoding mono/stereo media and Rubato converting rates off the realtime thread. Unsupported multichannel media is rejected.
 
