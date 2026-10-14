@@ -24,3 +24,18 @@ The routing increment does not connect an engine or create a second project stat
 The four coordinator-provided Live frames at `/tmp/live-meter/` are 1280×525 scaled captures. A 4× crop of `(1070,60,150,220)` shows routing input activity but no illuminated output meter bars; yellow/red, peak strips and output-meter separator widths cannot be sampled reliably from these frames. This limitation was reported to the coordinator rather than substituting the input indicator's green.
 
 `bun test src/shared/theme/track-colors.test.ts`: 2 pass, 0 fail. Both appearances provide non-empty parseable native color literals, distinct green/yellow/red levels, a half-opacity fade mask and a line distinct from the peak marker. Full `pnpm exec tsc --noEmit`: 0 diagnostics.
+
+## Native stereo meters
+
+`meter/TrackMeter.tsx` reads only the injected `TelemetryReader` (`() => BackendTelemetry | null`). Missing tracks and disconnected telemetry remain at the existing B1 display floor. C1's −120 dBFS silence is clamped for display by the shared `meterDb` function; no simulated levels or second transport clock are introduced. Peak state is local, non-serialized and reset on backend session changes. Hold and fall behavior reuse `core/meters/meter-peak.ts`.
+
+`TrackTelemetryProvider` owns one accepted-level subscription for the row surface. `createMeterDecayDriver(FrameSource, now)` lazily shares one frame source across all mounted meters, coalesces repeated telemetry wakes, and stops on silence or last unmount. The currently approved default is a temporary 30fps timer chain; F1's native frame source will replace only that default. Importing the module starts no timer. Zero-dB and stereo cutouts use `theme.colors.card` rather than a contrast outline.
+
+`TrackLabels` is injected, with paired Chinese/English resources in `locales.ts`; no i18n dependency or second language state was added to project components.
+
+### Exercised proof before shared-renderer integration
+
+- `bun test src/project/sections/arrangement/tracks/meter`: 5 pass, 0 fail, 34 assertions.
+- Real C1 window: AX playback changed Stopped → Playing; Audio reported L −23.0 / R −27.0 dBFS, Group L −26.0 / R −28.5, Return L −38.0 / R −45.0. A real authored Clip gain change to 24 dB produced Audio L +1.0 / R −1.8 dBFS while Main remained at low output level.
+- Evidence: `evidence/2026-10-15-real-meter-playing.ax.txt` and `evidence/2026-10-15-real-meter-overload.ax.txt`.
+- The display layout changed during this run; screenshots were black and a display capture reported `InvalidCoordinateFrame`. AX proves the command/telemetry path, not the missing meter pixels. The service was killed after 1m55s; visual meter-state verification remains pending.
