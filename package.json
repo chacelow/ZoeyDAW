@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "pnpm:devPreinstall": "node scripts/gpuix-main/check.mjs",
     "dev": "pnpm --filter @zoeydaw/web dev",
     "build": "pnpm --filter @zoeydaw/web build",
     "check": "ultracite check && pnpm metrics:check",

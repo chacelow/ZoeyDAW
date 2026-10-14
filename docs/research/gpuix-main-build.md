@@ -450,3 +450,49 @@ index 2f865d1..dda6429 100644
 [mac-close]: https://github.com/remorses/zed/blob/c2e9f882030ca95cee55d206512a0a3ee6cd72b0/crates/gpui_macos/src/window.rs#L2893-L2904
 [fork-rule]: https://github.com/remorses/gpuix/blob/6a5c7c142ac32f9eb0caefe0121be995cfc18631/AGENTS.md#L13-L34
 [text-system]: https://github.com/remorses/zed/blob/c2e9f882030ca95cee55d206512a0a3ee6cd72b0/crates/gpui/src/text_system.rs#L413-L451
+
+## 集成
+
+2026-10-15，D1。应用切换到上述固定 SHA 的自建产物，保留 `@gpuix/native` 与 `@gpuix/react` 导入名，没有发布 `@zoeydaw/gpuix-native`。版本唯一来源是 `scripts/gpuix-main/config.json`；上游 package.json 中的 `0.10.0` 不是这次构建的版本身份。
+
+### 解析方案
+
+`build.sh` 拥有 `/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/<SHA>` 的源码、上游锁文件安装、native 二进制、native JS host 与 React dist，并生成本 checkout 的 `.gpuix-main` 符号链接。`.gitignore` 排除该链接，第三方源码与产物不进入仓库。`GPUIX_VENDOR_ROOT` 可改变外置源码位置，不需要改 package.json 或 lockfile。Cargo target 仍须位于 PSSD。
+
+根 `pnpm-workspace.yaml` 只对 `@gpuix/native` 与 `@gpuix/react` 配置 `link:.gpuix-main/packages/...` overrides，所有 renderer 消费者使用同一组包。`apps/gpuix/package.json` 还直接链接 vendor React，使应用、React renderer、react-reconciler 与 Zustand 的 peer React 指向同一 realpath。pnpm 的 [root overrides](https://pnpm.io/settings#overrides) 和 [link 协议](https://pnpm.io/cli/link) 已提供包解析能力，不额外写 loader 或维护另一份 renderer。
+
+| 方案 | 取舍 |
+| --- | --- |
+| 相对 `link:` 与 root overrides，已采用 | 外置构建仍是唯一 owner；内部 `@gpuix/native` 导入无需改名；每个 checkout 只生成一个忽略的链接 |
+| 把 vendor 加成 workspace package | 外置源码变成 workspace 成员，上游 `workspace:^` 与本仓安装生命周期耦合，增加 owner |
+| `file:` 复制包或改成 npm alias | 复制 dist 会增加过期副本；改 native 名称仍须处理 React 内部导入 |
+| 全 workspace 覆写 React，已撤回 | vendor 锁定 19.2.4，而 Web/UI 的 react-dom 为 19.2.8，会产生不匹配；只链接 gpuix 的 React，Web/UI 保留 19.2.8 |
+
+`node scripts/gpuix-main/check.mjs --resolution` 校验真实解析路径，覆盖应用、renderer、react-reconciler、Zustand，并确认保留的 Web/UI React 与 ReactDOM 版本一致。原 A6 `/Volumes/PSSD/code/_vendor/gpuix` 不修改，避免覆盖 PoC 证据。
+
+### 干净 checkout 的安装顺序
+
+前置工具为 Node 22.18 以上、pnpm 10.11.0、Bun、Git 与 Rust 1.97.1，并需要可写的 PSSD。默认 `runtime` 模式不要求完整 Xcode；`precompiled` 模式需要 `xcrun metal`。
+
+```sh
+bash scripts/gpuix-main/build.sh
+pnpm install --frozen-lockfile
+pnpm native:build
+node scripts/gpuix-main/check.mjs --resolution
+```
+
+先构建 vendor，再安装消费者，最后构建本仓 `@zoeydaw/native`。没有 `.gpuix-main` 时，`pnpm:devPreinstall` 在依赖安装前报 `Missing .gpuix-main build link`，并给出 `Run bash scripts/gpuix-main/build.sh before pnpm install --frozen-lockfile.`。该失败路径已实跑，不回落到 npm renderer。
+
+构建只允许固定 SHA、固定 zed SHA 与仓库中的 `patches/close-guard.patch`，拒绝额外 tracked diff、untracked 源码与 dirty zed。已应用的补丁可重复构建，不重复 apply。外置 `.build-lock` 确保同一 vendor 同时只有一个构建 owner；中断留下锁目录时，先确认原构建已结束，再移除空锁目录。`check.mjs` 校验补丁 diff、平台与产物 SHA-256 manifest，拒绝源码或产物发生变化的旧构建。
+
+关闭补丁来自 A6 附录，纳入版本管理后由干净 checkout 应用。它仍只适用于 macOS embedded loop，未实现 Windows/Linux 的跨线程关闭流程、handler 清除或异步确认。`WindowCloseGuard.supported` 没有被改成 true。上游完整 Apache-2.0 LICENSE 与 THIRD_PARTY_NOTICES 原文保存在根 `THIRD_PARTY_NOTICES`。
+
+### 升级到下一个主干 SHA
+
+1. 核对上游 native、JS host、React、zed 子模块、Cargo.lock、bun.lock 与 Rust 工具链变更。
+2. 更新 `config.json` 的两个 SHA。只在新的外置 SHA 目录构建，不覆盖旧目录。
+3. 核对关闭补丁是否已被上游替代；否则在新基线重做并审查补丁，不绕过 dirty 检查。
+4. 运行 `build.sh`。它完成 native、host、React 一起重建，并更新本 checkout 的链接与外置 build manifest。
+5. 运行 frozen install、`pnpm native:build`、`check.mjs --resolution`、gpuix 的 tsc、完整 bun test、ESLint，以及受影响的 Rust check/test。
+6. 逐个运行四个 feature demo、panel gallery、`bun --hot scripts/gpuix-main/probe.mjs` 和带 `--close` 的探针。验证布局事件、Space、红灯与 Cmd+W 的 veto/allow 转换，每个窗口验证后立即关闭。
+7. 更新本报告与第三方 notice；只提交 SHA、补丁、构建与解析配置，不提交源码或二进制。

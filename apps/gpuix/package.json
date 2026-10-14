@@ -9,13 +9,13 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@gpuix/native": "0.10.0",
-    "@gpuix/react": "0.10.0",
+    "@gpuix/native": "link:../../.gpuix-main/packages/native",
+    "@gpuix/react": "link:../../.gpuix-main/packages/react",
     "@zoeydaw/native": "workspace:*",
     "@zoeymind/logger": "workspace:*",
     "@zoeymind/ui": "workspace:*",
     "culori": "^4.0.2",
-    "react": "^19.2.0",
+    "react": "link:../../.gpuix-main/node_modules/react",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
