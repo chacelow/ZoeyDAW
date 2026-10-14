@@ -118,4 +118,43 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo" | grep 
 
 输出为空，零实际窗口或音频进程匹配。过滤只移除检查命令自身，以及另一 worker 的 Orca CLI 问题正文含 `gallery` 造成的文本误命中，不排除真正的 `bun --hot` 或 `cargo run`。所有 `bun test`、Cargo 检查和有限 benchmark 均已结束，未停止其他 worktree 或用户的进程。
 
-API 依据：[Firewheel node contract](https://github.com/billydm/firewheel/blob/main/_autodocs/api-reference/core-node.md)、[Firewheel 0.14.0](https://docs.rs/firewheel/0.14.0/firewheel/)、[Symphonia 0.6.1](https://docs.rs/symphonia/0.6.1/symphonia/)、[Rubato 5.0.1](https://docs.rs/rubato/5.0.1/rubato/)。具体签名以本机 Cargo.lock 对应源码和实际构建结果为准。
+## C2 peak-metadata: sourceInfo 与 musicalPeakReader 契约
+
+2026-10-15。分支 `gpuix-c2-peak-metadata`。暴露源解码采样率与总帧数，并在 `platform/engine.ts` 提供满足 Arrangement 组合契约的 `musicalPeakReader`。
+
+### 1. sourceInfo 契约
+
+```typescript
+export declare function sourceInfo(session: number, sourceId: string): SourceInfo | null
+
+export interface SourceInfo {
+  sampleRate: number
+  frames: number
+  channels: number
+}
+```
+
+- 返回素材解码后的实际采样率（如 44100Hz）、总帧数与声道数。
+- 与设备采样率（如 48000Hz）严格区分：保持源文件解码后的原始参数，不返回重采样后的设备采样率。
+- 会话无效或素材未加载时返回 `null`，不抛出异常。
+- `crates/native` 公共导出仅新增此一个导出；`readPeaks` 签名与 channel-major 布局严格保持。
+
+### 2. musicalPeakReader 契约
+
+```typescript
+export type PeakReader = (
+  sourceId: string,
+  startBar: number,
+  endBar: number,
+  pixels: number,
+  contentOffsetBars?: number
+) => Float32Array
+
+export function musicalPeakReader(session: number, project: MusicalProjectContext): PeakReader
+```
+
+- **小节换算**：复用 `crates/engine` 的 `TransportClock` 语义，以 `barsPerSecond = (bpm * denominator) / (240 * numerator)` 进行小节到秒的换算，并结合 `sourceInfo.sampleRate` 转换为源素材帧坐标。
+- **最小换算实现选型理由**：在 TS 侧直接以 2 行纯算术复用 `bar_to_frame` 语义，不额外增加 napi 导出（遵守 `crates/native` 仅批准 `sourceInfo` 单一新导出的契约门禁），同时消除高频波形渲染中的重复 FFI 调用开销。
+- **循环取模与平移一致性**：对 `(bar - 1 + contentOffsetBars)` 的帧位置采用 `rem_euclid(rawStartFrame, totalFrames)` 循环取模，与 C1 `mix/mod.rs` 的循环读取语义保持完全一致。Clip 在时间线上平移（如移至第 100 小节）时返回完全相同的波形；带符号负 `contentOffsetBars` 正确循环回绕。
+- **跨素材边界分段拼接**：当可见跨度 `frameSpan` 超出素材剩余长度或跨越多轮循环时，按像素比例分段调用 `readPeaks` 并按 channel-major 拼装，确保多小节循环波形连贯无缺。
+- **安全保证**：素材未加载、帧范围越界、无效像素数或参数包含 NaN 时返回零长度或全静音 `Float32Array`，绝不抛出错误，绝不返回 NaN。API 依据：[Firewheel node contract](https://github.com/billydm/firewheel/blob/main/_autodocs/api-reference/core-node.md)、[Firewheel 0.14.0](https://docs.rs/firewheel/0.14.0/firewheel/)、[Symphonia 0.6.1](https://docs.rs/symphonia/0.6.1/symphonia/)、[Rubato 5.0.1](https://docs.rs/rubato/5.0.1/rubato/)。具体签名以本机 Cargo.lock 对应源码和实际构建结果为准。
