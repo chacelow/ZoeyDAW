@@ -33,7 +33,7 @@ export function TrackIdentity({
 }) {
   const { t } = useTrackLabels()
   const theme = useTheme()
-  const ink = theme.appearance === "dark" ? theme.colors.card : theme.colors.foreground
+  const ink = theme.colors.arrangementClipInk
   const automation = useProjectState(state => state.workspace.automationMode)
   const gutter = (railCount + (track.kind === "group" ? 1 : 0)) * theme.project.groupRailWidth
   const focusRing = {

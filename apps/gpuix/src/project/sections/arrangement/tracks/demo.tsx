@@ -159,7 +159,7 @@ function TrackSurface({
         flexDirection: "column",
         width: "100%",
         height: "100%",
-        backgroundColor: theme.colors.card,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
         color: theme.colors.foreground,
       }}
     >
@@ -277,7 +277,7 @@ function TrackSurface({
                   <text
                     style={{
                       fontSize: theme.control["--text-control-track"],
-                      color: theme.colors.card,
+                      color: theme.colors.arrangementClipInk,
                     }}
                   >
                     {clip.label ?? row.track.name}

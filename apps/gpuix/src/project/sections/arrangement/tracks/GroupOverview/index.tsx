@@ -54,7 +54,7 @@ export function GroupOverview({
                 height: rect.height,
                 backgroundColor: trackFill(clip.color ?? descendant.color, theme),
                 borderBottomWidth: 1,
-                borderColor: theme.colors.card,
+                borderColor: theme.colors.arrangementLine,
               }}
             />
           )

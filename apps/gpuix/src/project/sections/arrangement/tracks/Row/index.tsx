@@ -109,7 +109,7 @@ export function TrackRow({
           borderBottomWidth: theme.project.trackBorder / 2,
           borderColor: theme.colors.arrangementLine,
           minWidth: 0,
-          backgroundColor: theme.colors.card,
+          backgroundColor: theme.colors.arrangementSurfaceAlt,
           userSelect: "none",
           focusVisible: focusRing,
         }}
@@ -129,7 +129,7 @@ export function TrackRow({
             backgroundColor:
               selected && surface === "arrangement"
                 ? theme.colors.arrangementSurfaceSelected
-                : theme.colors.card,
+                : theme.colors.arrangementSurface,
             focusVisible: focusRing,
           }}
           onMouseDown={event => {

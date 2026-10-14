@@ -37,12 +37,6 @@ export interface ThemeColors {
   chart5: string
   arrangementClipSelected: string
   arrangementClipPaper: string
-  meterGood: string
-  meterWarn: string
-  meterDanger: string
-  meterPeak: string
-  arrangementFadeMask: string
-  arrangementLine: string
 }
 
 const lightBase: ThemeColors = {
@@ -71,12 +65,6 @@ const lightBase: ThemeColors = {
   chart5: "oklch(76.9% 0.188 70.08deg)",
   arrangementClipSelected: "oklch(87% 0.05 220deg)",
   arrangementClipPaper: "oklch(97% 0.005 90deg)",
-  meterGood: "oklch(60% 0.118 184.704deg)",
-  meterWarn: "oklch(82.8% 0.189 84.429deg)",
-  meterDanger: "oklch(57.7% 0.245 27.325deg)",
-  meterPeak: "oklch(55.6% 0 0deg)",
-  arrangementFadeMask: "oklch(14.5% 0 0deg / 50%)",
-  arrangementLine: "oklch(92.2% 0 0deg)",
 }
 
 const darkBase: ThemeColors = {
@@ -104,12 +92,6 @@ const darkBase: ThemeColors = {
   chart3: "oklch(76.9% 0.188 70.08deg)",
   chart4: "oklch(62.7% 0.265 303.9deg)",
   chart5: "oklch(64.5% 0.246 16.439deg)",
-  meterGood: "oklch(69.6% 0.17 162.48deg)",
-  meterWarn: "oklch(76.9% 0.188 70.08deg)",
-  meterDanger: "oklch(70.4% 0.191 22.216deg)",
-  meterPeak: "oklch(70.8% 0 0deg)",
-  arrangementFadeMask: "oklch(20.5% 0 0deg / 50%)",
-  arrangementLine: "oklch(26.9% 0 0deg)",
 }
 
 export interface DerivedThemeColors extends ThemeColors {

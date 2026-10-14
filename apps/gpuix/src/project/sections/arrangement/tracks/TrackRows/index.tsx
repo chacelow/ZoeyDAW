@@ -168,7 +168,7 @@ export function TrackRows({
             position: "relative",
             width: viewport.width,
             height: viewport.height,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.arrangementSurfaceAlt,
             overflow: "hidden",
           }}
         >

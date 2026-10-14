@@ -24,10 +24,12 @@ function MixerLevel({
   readonly testId: string
 }) {
   const gesture = useProjectEditGesture(onChange)
+  const theme = useTheme()
   return (
     <DragPadBar
       label={label}
       value={value}
+      color={theme.colors.arrangementVolume}
       min={-60}
       max={6}
       step={0.1}
@@ -76,7 +78,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
         gap,
         width:
           theme.project.controlsWidth - theme.project.identityWidth - theme.project.routingWidth,
-        backgroundColor: theme.colors.card,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
         overflow: "hidden",
       }}
     >
@@ -185,6 +187,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 label={`${t("pan")} ${track.name}`}
                 testId={`track-pan-${track.id}`}
                 value={track.pan}
+                color={theme.colors.arrangementVolume}
                 style={{ ...column, width: isMain ? "100%" : "auto" }}
                 {...panGesture}
               />

@@ -52,7 +52,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
         padding: theme.control["--spacing-control-track-gap"],
         gap: theme.control["--spacing-control-track-gap"],
         overflow: "hidden",
-        backgroundColor: theme.colors.card,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
       }}
     >
       {track.collapsed ? (

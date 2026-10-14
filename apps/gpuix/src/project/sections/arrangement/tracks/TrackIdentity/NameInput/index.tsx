@@ -46,7 +46,7 @@ export function TrackNameInput({
         paddingRight: 0,
         borderWidth: 0,
         fontSize: theme.control["--text-control-track"],
-        color: theme.appearance === "dark" ? theme.colors.card : theme.colors.foreground,
+        color: theme.colors.arrangementClipInk,
       }}
     />
   )
