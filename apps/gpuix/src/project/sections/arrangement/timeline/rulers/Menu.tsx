@@ -13,6 +13,7 @@ import { positionToBar } from "@/project/model/types"
 import type { ReactNode } from "react"
 import type { TimelineController } from "../controller"
 import type { TimelineLabels } from "../labels"
+import { adjacentMarker } from "../../core/rulers/geometry"
 
 export type RulerMenuTarget =
   { kind: "marker"; id: string } | { kind: "loop" } | { kind: "ruler"; bar: number }
@@ -35,10 +36,7 @@ export function RulerMenu({
   function seek(direction: -1 | 1) {
     const state = useProjectState.getState()
     const position = positionToBar(state.session.position, state.document.transport.numerator)
-    const sorted = [...state.document.markers].sort((a, b) => direction * (a.bar - b.bar))
-    const next = sorted.find(item =>
-      direction < 0 ? item.bar < position - 1e-6 : item.bar > position + 1e-6
-    )
+    const next = adjacentMarker(state.document.markers, position, direction)
     if (!next) return
     projectActions.seekBar(next.bar)
     owner.sceneStore.setTargetSelection({ kind: "marker", id: next.id, phase: "selected" })

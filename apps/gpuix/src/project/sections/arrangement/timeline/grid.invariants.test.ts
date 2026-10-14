@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { adjustGrid, deriveGridPlan, gridZoomLimit, noteGridBars } from "@/project/model/grid"
 import { createSceneStore } from "../core/scene"
-import { gridLines, numberedRulerPlan, patternRegions } from "../core/rulers/grid-lines"
+import { gridLines, numberedRulerPlan, patternRegions, rulerTicks } from "../core/rulers/grid-lines"
 
 const METERS = [
   { numerator: 4, denominator: 4 },
@@ -12,6 +12,35 @@ const METERS = [
 ]
 
 describe("Music-position grid invariants", () => {
+  test("zoomed-out numbering cannot group Pattern shading into four-bar blocks", () => {
+    const scene = createSceneStore()
+    scene.setViewport({ pxPerBar: 24, scrollX: 0, scrollY: 0, width: 200, height: 200, dpr: 1 })
+    const regions = patternRegions(scene.get())
+    expect(
+      regions
+        .slice(0, 3)
+        .map(region => ({ bar: region.bar, width: region.width, alternate: region.alternate }))
+    ).toEqual([
+      { bar: 1, width: 24, alternate: false },
+      { bar: 2, width: 24, alternate: true },
+      { bar: 3, width: 24, alternate: false },
+    ])
+  })
+
+  test("fine ruler labels cannot leave full-height subdivision lines after Ctrl+2 widens the grid", () => {
+    const scene = createSceneStore()
+    scene.setViewport({ pxPerBar: 800, scrollX: 0, scrollY: 0, width: 1600, height: 200, dpr: 1 })
+    scene.setMusic({ ...scene.get(), grid: { mode: "fixed", bars: 16 } })
+    expect(gridLines(scene.get()).map(line => line.bar)).toEqual([1, 2, 3])
+  })
+
+  test("subpixel Pattern bands are omitted instead of allocating document-wide regions", () => {
+    const scene = createSceneStore()
+    scene.setViewport({ pxPerBar: 0.5, scrollX: 0, scrollY: 0, width: 800, height: 200, dpr: 1 })
+    scene.setMusic({ ...scene.get(), bars: 1e9 })
+    expect(patternRegions(scene.get())).toEqual([])
+  })
+
   test("Live-observed 4/8 numbering contains the half-beat sixteenth hierarchy", () => {
     const plan = numberedRulerPlan(320, 4, 8)
     expect(plan.mode).toBe("sixteenth")
@@ -42,9 +71,15 @@ describe("Music-position grid invariants", () => {
       const lines = gridLines(current)
       const majors = lines.filter(line => line.kind === "major")
       for (let index = 1; index < majors.length; index++) {
-        expect(majors[index].bar - majors[index - 1].bar).toBeCloseTo(plan.stepBars)
+        expect(Number.isInteger(majors[index].bar)).toBe(true)
+        expect(majors[index].bar - majors[index - 1].bar).toBe(1)
+        expect(Math.abs(majors[index].x - majors[index - 1].x - pxPerBar)).toBeLessThanOrEqual(1)
+      }
+      const ticks = rulerTicks(current)
+      for (let index = 1; index < ticks.length; index++) {
+        expect(ticks[index].bar - ticks[index - 1].bar).toBeCloseTo(plan.stepBars)
         expect(
-          Math.abs(majors[index].x - majors[index - 1].x - plan.stepBars * pxPerBar)
+          Math.abs(ticks[index].x - ticks[index - 1].x - plan.stepBars * pxPerBar)
         ).toBeLessThanOrEqual(1)
       }
       const cell = current.gridPlan.cellBars
@@ -61,6 +96,7 @@ describe("Music-position grid invariants", () => {
       expect(regions.reduce((sum, region) => sum + region.width, 0)).toBeCloseTo(800)
       for (let index = 1; index < regions.length; index++) {
         expect(regions[index].alternate).toBe(!regions[index - 1].alternate)
+        expect(regions[index].bar - regions[index - 1].bar).toBe(1)
         expect(regions[index].left).toBeCloseTo(regions[index - 1].left + regions[index - 1].width)
       }
       scene.setMusic({ ...current, grid: { mode: "adaptive", density: "narrowest" } })

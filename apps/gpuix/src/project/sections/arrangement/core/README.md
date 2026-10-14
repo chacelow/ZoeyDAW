@@ -92,8 +92,14 @@ automationCursor(hit: AutomationHit | null, drawMode: boolean): "crosshair" | "g
 
 // rulers/grid-lines.ts
 numberedRulerPlan(pxPerBar: number, numerator: number, denominator?: number): { mode: "sixteenth" | "beat" | "bar"; stepBars: number }
-gridLines(scene: ArrangementScene, left?: number, right?: number): GridLine[]
-patternRegions(scene: ArrangementScene): PatternRegion[] // 编号 Pattern 的明暗区域，跟随编号小节而非细网格；timeline 与 lane 共用
+rulerTicks(scene: ArrangementScene): RulerTick[] // 可读的拍/十六分音符标签，仅供标尺，不产生画布主线
+gridLines(scene: ArrangementScene, left?: number, right?: number): GridLine[] // major 仅整数小节边界；minor 仅 gridPlan.cellBars
+patternRegions(scene: ArrangementScene): PatternRegion[] // 每个整数小节独立交替，和标签 stepBars 无关；小于 1px 的区段不绘制
+RULER_LABEL_SPACING // 集中的可读性阈值；多级 Live 阈值仍未验证
+
+// rulers/geometry.ts
+rulerLabel(bar: number, numerator: number, denominator: number): string
+adjacentMarker(markers: readonly Marker[], position: number, direction: -1 | 1): Marker | null
 
 // viewport/zoom.ts
 zoomAtAnchor(input: ZoomAnchorInput & { nextPxPerBar: number }): MinimapViewport

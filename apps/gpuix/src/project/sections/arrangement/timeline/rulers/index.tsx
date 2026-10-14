@@ -6,7 +6,6 @@ import type { ShapePath } from "@/shared/svg/Shape"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { useProjectState } from "@/project/adapters"
-import { formatAudioMusicalValue } from "@/project/model/audio-editor/musical-value"
 import { timeTickLabel, timeTicks } from "@/project/model/timeline-ticks"
 import {
   BAR_RULER_HEIGHT,
@@ -14,8 +13,8 @@ import {
   MARKER_RULER_HEIGHT,
   TIME_RULER_HEIGHT,
 } from "../../core/layout"
-import { gridLines } from "../../core/rulers/grid-lines"
-import { rulerBar, rulerHit } from "../../core/rulers/geometry"
+import { rulerTicks } from "../../core/rulers/grid-lines"
+import { rulerBar, rulerHit, rulerLabel } from "../../core/rulers/geometry"
 import { timelinePointer } from "../viewport/coordinates"
 import { RulerMenu } from "./Menu"
 import { MarkerEditor } from "./MarkerEditor"
@@ -48,7 +47,7 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
   const [pointer, setPointer] = useState<"default" | "grab" | "grabbing" | "ew-resize">("default")
   const [focused, setFocused] = useState(false)
   const { width, scrollX, pxPerBar } = current.viewport
-  const lines = gridLines(current).filter(line => line.kind === "major")
+  const lines = rulerTicks(current)
   const loopLeft = (current.loop.startBar - 1) * pxPerBar - scrollX
   const loopRight = (current.loop.endBar - 1) * pxPerBar - scrollX
   const loopStart = Math.max(0, loopLeft)
@@ -151,14 +150,7 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
               pointerEvents: "none",
             })}
           >
-            {formatAudioMusicalValue(
-              line.bar - 1,
-              current.transport.numerator,
-              current.transport.denominator,
-              "position"
-            )
-              .replace(/\.1$/, "")
-              .replace(/\.1$/, "")}
+            {rulerLabel(line.bar, current.transport.numerator, current.transport.denominator)}
           </div>
         ))}
         {current.markers

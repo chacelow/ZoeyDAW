@@ -24,6 +24,30 @@ export function numberedRulerPlan(
   }
 }
 
+export interface RulerTick {
+  bar: number
+  x: number
+}
+
+/** Readable labels may subdivide a bar; they never create canvas Pattern lines. */
+export function rulerTicks(scene: ArrangementScene): RulerTick[] {
+  const { pxPerBar, scrollX, width } = scene.viewport
+  if (!(pxPerBar > 0) || !(width > 0)) return []
+  const { stepBars } = numberedRulerPlan(
+    pxPerBar,
+    scene.transport.numerator,
+    scene.transport.denominator
+  )
+  const stepPx = stepBars * pxPerBar
+  const first = Math.max(0, Math.ceil(scrollX / stepPx))
+  const last = Math.min(Math.floor(scene.bars / stepBars), Math.floor((scrollX + width) / stepPx))
+  const ticks: RulerTick[] = []
+  for (let index = first; index <= last; index++) {
+    ticks.push({ bar: 1 + index * stepBars, x: Math.round(index * stepPx - scrollX) + 0.5 })
+  }
+  return ticks
+}
+
 export interface GridLine {
   bar: number
   x: number
@@ -36,33 +60,26 @@ export function gridLines(
   right = scene.viewport.width
 ): GridLine[] {
   const { pxPerBar, scrollX } = scene.viewport
-  if (pxPerBar <= 0 || right < left) return []
-  const { stepBars: majorBars } = numberedRulerPlan(
-    pxPerBar,
-    scene.transport.numerator,
-    scene.transport.denominator
-  )
+  if (!(pxPerBar > 0) || right < left) return []
+  const patternVisible = pxPerBar >= 1
   const { cellBars } = scene.gridPlan
   const cellPx = cellBars * pxPerBar
-  const majorPx = majorBars * pxPerBar
   const lines: GridLine[] = []
   if (cellPx >= 2) {
     const first = Math.max(0, Math.ceil((scrollX + left) / cellPx))
     const last = Math.min(Math.floor(scene.bars / cellBars), Math.floor((scrollX + right) / cellPx))
     for (let cell = first; cell <= last; cell++) {
       const offset = cell * cellBars
-      if (Math.abs(offset / majorBars - Math.round(offset / majorBars)) < 1e-8) continue
+      if (patternVisible && Math.abs(offset - Math.round(offset)) < 1e-8) continue
       lines.push({ bar: 1 + offset, x: Math.round(cell * cellPx - scrollX) + 0.5, kind: "minor" })
     }
   }
-  const first = Math.max(0, Math.ceil((scrollX + left) / majorPx))
-  const last = Math.min(Math.floor(scene.bars / majorBars), Math.floor((scrollX + right) / majorPx))
-  for (let tick = first; tick <= last; tick++) {
-    lines.push({
-      bar: 1 + tick * majorBars,
-      x: Math.round(tick * majorPx - scrollX) + 0.5,
-      kind: "major",
-    })
+  if (patternVisible) {
+    const first = Math.max(0, Math.ceil((scrollX + left) / pxPerBar))
+    const last = Math.min(Math.floor(scene.bars), Math.floor((scrollX + right) / pxPerBar))
+    for (let bar = first; bar <= last; bar++) {
+      lines.push({ bar: 1 + bar, x: Math.round(bar * pxPerBar - scrollX) + 0.5, kind: "major" })
+    }
   }
   return lines
 }
@@ -77,11 +94,8 @@ export interface PatternRegion {
 /** Pattern regions follow numbered bars, never the finer grid cells. */
 export function patternRegions(scene: ArrangementScene): PatternRegion[] {
   const { pxPerBar, scrollX, width } = scene.viewport
-  if (!(pxPerBar > 0) || !(width > 0)) return []
-  const step = Math.max(
-    1,
-    numberedRulerPlan(pxPerBar, scene.transport.numerator, scene.transport.denominator).stepBars
-  )
+  if (!(pxPerBar >= 1) || !(width > 0)) return []
+  const step = 1
   const regionWidth = step * pxPerBar
   const first = Math.max(0, Math.floor(scrollX / regionWidth))
   const last = Math.min(
