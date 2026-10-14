@@ -169,19 +169,19 @@ function TrackSurface({
         style={{ display: "flex", gap, padding: gap, height: toolbarHeight }}
       >
         <Button
-          label={playing ? labels.playing : labels.stopped}
+          label={playing ? gallery.playing : gallery.stopped}
           active={playing}
           onClick={() => projectActions.togglePlay()}
           testId="demo-play"
         >
-          {playing ? labels.playing : labels.stopped}
+          {playing ? gallery.playing : gallery.stopped}
         </Button>
         <Button
-          label={labels.automationMode}
+          label={gallery.automationMode}
           active={workspace.automationMode}
           onClick={() => projectActions.setMode("automationMode", !workspace.automationMode)}
         >
-          {labels.automationMode}
+          {gallery.automationMode}
         </Button>
         <Button
           label={labels.expand}
@@ -218,10 +218,10 @@ function TrackSurface({
           {gallery.meterOverload}
         </Button>
         <Button
-          label={appearance === "dark" ? labels.light : labels.dark}
+          label={appearance === "dark" ? gallery.light : gallery.dark}
           onClick={() => onAppearance(appearance === "dark" ? "light" : "dark")}
         >
-          {appearance === "dark" ? labels.light : labels.dark}
+          {appearance === "dark" ? gallery.light : gallery.dark}
         </Button>
         <Button
           label={language === "en-US" ? "中文" : "English"}
@@ -298,7 +298,7 @@ function TrackSurface({
           padding: gap,
         }}
       >
-        {gallery.backend} {phase}; {playing ? labels.playing : labels.stopped}; {stats}
+        {gallery.backend} {phase}; {playing ? gallery.playing : gallery.stopped}; {stats}
       </text>
     </div>
   )
