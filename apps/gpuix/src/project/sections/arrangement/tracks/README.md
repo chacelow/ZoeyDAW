@@ -39,3 +39,13 @@ The four coordinator-provided Live frames at `/tmp/live-meter/` are 1280×525 sc
 - Real C1 window: AX playback changed Stopped → Playing; Audio reported L −23.0 / R −27.0 dBFS, Group L −26.0 / R −28.5, Return L −38.0 / R −45.0. A real authored Clip gain change to 24 dB produced Audio L +1.0 / R −1.8 dBFS while Main remained at low output level.
 - Evidence: `evidence/2026-10-15-real-meter-playing.ax.txt` and `evidence/2026-10-15-real-meter-overload.ax.txt`.
 - The display layout changed during this run; screenshots were black and a display capture reported `InvalidCoordinateFrame`. AX proves the command/telemetry path, not the missing meter pixels. The service was killed after 1m55s; visual meter-state verification remains pending.
+
+## Track header controls
+
+`TrackIdentity`, `TrackRouting`, `TrackMixer` and `TrackMenu` consume the existing project selectors, commands and session-fenced edit gestures. Names edit inline; ordinary selection does not open another panel. Routing candidates reuse the shared model predicate. Group reserves a non-interactive arm slot, Return exposes Pre/Post and disables its self-send, Main exposes independent cue level/output, and MIDI retains volume/pan by the explicit product decision.
+
+Header geometry uses the shared 304px control column: identity 100px, routing 74px, and the remaining 130px for Mixer. Each region owns its own token padding; the overall header has none. Sends fill three equal-width columns before a new row. Native raster allocation may divide a 97px row as 32/33/32; tests require width conservation and each column within 1px of the ideal fraction.
+
+Native screenshot inspection caught a context-menu host shrinking the composite row to content width. Explicit full-size column/stretch layout on the existing `ContextMenu` root fixed it; the width regression changed from 360px to the full 1000px viewport. Dark-track title ink was corrected to the theme's dark surface color so it remains readable on lightened authored track colors. Initial and repaired images are in `evidence/2026-10-15-initial-width-defect.png` and `evidence/2026-10-15-layout-fixed.png`.
+
+Shared integration still pending at this intermediate commit: A3b's container-width Select, compact numeric icon treatment and ContextMenu keyboard fix. The existing arrow-key regressions are kept failing rather than weakened or skipped.
