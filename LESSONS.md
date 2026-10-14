@@ -80,6 +80,20 @@
 - 错 3：第一个变异（让 `size === collapsed` 的早返回失效）测试仍然全绿。继续排查（对同一组输入逐行 diff 输出）发现输出**完全相同**——这个早返回分支对该输入是冗余的，不是测试漏了。教训：变异不红不等于测试弱，先确认变异是否真的改变了行为（比对输出），再决定是否补用例，别为一个等价变异硬加测试。
 - 对：求解器的语义要与被替换的库对齐再验收。`react-resizable-panels` 4.12.3 的折叠行为是“越过折叠区中点才折叠/弹出”，A4 的求解器实测一致：A 在 delta=-200 到达 min，-260 折叠（中点 -250）；从折叠态展开，delta=40 仍为 0，60 弹到 100。
 
+## gpuix 迁移：写了规范还要保证 Agent 读得到
+
+- 错：把规范写进 `docs/`，只在派发消息里口头告知；没有入口文件指向它，新开的 Agent 与后续会话读不到，规范等于没写。
+- 对：入口文件分层指路。根 `AGENTS.md` 的路由表按「修改范围」指到文档；`apps/gpuix/AGENTS.md` 与各目录就近的 `AGENTS.md`（如 `src/ui`、`src/project/sections`）在 Agent 改到该目录时再指一次；worker 规格 `common.md` 的先读清单同步更新。入口只放指针与触发条件，细则留在被指向的文档，避免入口膨胀。
+- 校验：`node scripts/check-doc-routes.mjs` 检查必读文档都被入口文件链接；新增必读文档时同步加进它的 `required` 列表。该脚本做过变异检查：去掉入口链接会失败。
+- 见：`AGENTS.md`、`apps/gpuix/AGENTS.md`、`scripts/check-doc-routes.mjs`。
+
+## gpuix 迁移：界面必须逐个元素放大看，不能凭一张全屏图或 AX 树
+
+- 错：只用类型检查、测试和一张全屏截图就声称界面完成；间距、居中、尺寸、紧凑感没有逐项核对。
+- 对：画廊里每个控件每个状态各截一张并放大，用 AX bounds 或像素量出尺寸与间距，对照 `CONTROL_METRICS` 与间距 token、Ableton Live 同区域并排看密度；发现问题先改再重新截图；关键截图入 `evidence/`。
+- 因：DAW 是高密度工作站，1px 的间距差和一点松散就会让整体不像专业软件；AX 树只证明语义存在，不证明视觉正确。
+- 见：`docs/architecture/gpuix.md` 的「UI 视觉验收」。
+
 ## gpuix 迁移：渲染器版本用实测与上游活跃度定，不等发布
 
 - 决策（2026-10-14）：采纳固定主干自建，不继续停在 npm 0.10.0，也不等上游发布。
@@ -91,7 +105,7 @@
 
 - 错：`orca orchestration worker-start --worktree new-top-level` 派发切片，客户端侧栏里每个切片都是平级的顶层 workspace，和无关项目混在一起，看不出归属。
 - 对：用 `--worktree new-child`（父为当前协调者所在 worktree `gpuix-migration`），切片在客户端里嵌套在它下面，合并和清理时一目了然。已派出的顶层切片用 `orca worktree set --worktree path:<dir> --parent-worktree path:<父目录>` 补挂，只改 Orca 元数据，不动 git 分支与文件。
-- 注意：`new-child` 默认以协调者当前分支为基线；协调者 HEAD 之后又有合并时，新切片自动带上，不必再指定 `--base-branch`。
+- 注意：`new-child` 的父默认是主仓库 `zoeydaw`，不是协调者所在的 worktree（2026-10-14 实测）；必须在创建后用 `orca worktree set --parent-worktree` 补挂到 `gpuix-migration`。基线分支用 `--base-branch gpuix-migration` 显式指定，才会带上之前所有合并。
 - 2026-10-14：A3 起即为子 worktree，B1、C1 初始为顶层，已补挂。
 
 ## gpuix 迁移：切片合入后立即删 worktree，不复用上下文
