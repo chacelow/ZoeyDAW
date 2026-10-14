@@ -9,6 +9,7 @@ use napi_derive::napi;
 
 mod atomic_file;
 mod cursor;
+mod engine;
 mod external;
 mod log;
 mod settings;
