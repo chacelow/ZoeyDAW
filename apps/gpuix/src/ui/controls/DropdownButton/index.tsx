@@ -43,6 +43,7 @@ export interface DropdownButtonProps<T extends string = string> {
   readonly align?: FloatingAlign
   readonly sideOffset?: number
   readonly matchTriggerWidth?: boolean
+  readonly fill?: boolean
   readonly style?: Props["style"]
   readonly testId?: string
 }
@@ -61,6 +62,7 @@ export function DropdownButton<T extends string = string>({
   align = "start",
   sideOffset = 4,
   matchTriggerWidth = true,
+  fill = false,
   style,
   testId,
 }: DropdownButtonProps<T>) {
@@ -90,7 +92,7 @@ export function DropdownButton<T extends string = string>({
     maxWidth: 320,
     maxHeight: 300,
     overflowY: "scroll",
-    padding: 4,
+    padding: metrics["--spacing-control-track-gap"],
     display: "flex",
     flexDirection: "column",
     borderWidth: 1,
@@ -101,11 +103,12 @@ export function DropdownButton<T extends string = string>({
   const centerOffset = useFloatingCenterOffset({ open, surface, side, align, style: contentStyle })
   return (
     <Select
+      testId={testId ? `${testId}-root` : undefined}
       value={value}
       open={open}
       onOpenChange={setOpen}
       disabled={disabled}
-      style={{ width, flexShrink: 0 }}
+      style={{ width: fill ? "100%" : width, flexShrink: fill ? 1 : 0 }}
       onValueChange={next => {
         const item = choices.find(choice => choice.id === next)
         if (item && !item.disabled) {
@@ -128,15 +131,17 @@ export function DropdownButton<T extends string = string>({
             theme,
             size
           )({ active: open ? "on" : "off", disabled: disabled ? "on" : "off" }),
-          { width, justifyContent: "space-between" },
+          { width: fill ? "100%" : width, justifyContent: "space-between" },
           style
         )}
       >
         {measured.sampleNodes}
         {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
-        <div style={{ flexGrow: 1 }}>
+        <div style={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}>
           {typeof display === "string" ? (
-            <text style={{ whiteSpace: "nowrap" }}>{display.replace(/\r?\n/g, " ")}</text>
+            <text style={{ whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+              {display.replace(/\r?\n/g, " ")}
+            </text>
           ) : (
             display
           )}
@@ -179,7 +184,7 @@ export function DropdownButton<T extends string = string>({
                 style={{
                   fontSize: metrics["--text-control-track"],
                   color: theme.colors.mutedForeground,
-                  padding: 4,
+                  padding: metrics["--spacing-control-track-gap"],
                 }}
               >
                 <text>{item.label}</text>
@@ -199,8 +204,8 @@ export function DropdownButton<T extends string = string>({
                 display: "flex",
                 flexDirection: "row",
                 justifyContent: "space-between",
-                padding: 4,
-                gap: 12,
+                padding: metrics["--spacing-control-track-gap"],
+                gap: metrics["--spacing-control-gap"],
                 minHeight: metrics["--spacing-control-track"],
                 whiteSpace: "normal",
                 fontSize: metrics["--text-control-track"],

@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly revision=6a5c7c142ac32f9eb0caefe0121be995cfc18631
-readonly zed_revision=c2e9f882030ca95cee55d206512a0a3ee6cd72b0
-readonly vendor=/Volumes/PSSD/code/_vendor/gpuix
+readonly script_dir="$(cd "$(dirname "$0")" && pwd)"
+readonly root="$(cd "$script_dir/../.." && pwd)"
+readonly revision="$(node -p "require('$script_dir/config.json').revision")"
+readonly zed_revision="$(node -p "require('$script_dir/config.json').zedRevision")"
+readonly vendor_root="${GPUIX_VENDOR_ROOT:-/Volumes/PSSD/code/_vendor/zoeydaw-gpuix}"
+readonly vendor="$vendor_root/$revision"
+readonly patch="$script_dir/patches/close-guard.patch"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/Volumes/PSSD/code/_vendor/target}"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-6}"
 
@@ -21,8 +25,15 @@ case "${1:-runtime}" in
   *) echo "Usage: bash scripts/gpuix-main/build.sh [runtime|precompiled]" >&2; exit 1 ;;
 esac
 
+mkdir -p "$vendor_root"
+if ! mkdir "$vendor_root/.build-lock"; then
+  echo "Another gpuix build owns $vendor_root/.build-lock; do not build concurrently" >&2
+  echo "After an interrupted build, verify it has stopped before removing the empty lock directory" >&2
+  exit 1
+fi
+trap 'rmdir "$vendor_root/.build-lock"' EXIT
+
 if [ ! -d "$vendor/.git" ]; then
-  mkdir -p /Volumes/PSSD/code/_vendor
   git clone --filter=blob:none https://github.com/remorses/gpuix.git "$vendor"
   git -C "$vendor" checkout --detach "$revision"
 fi
@@ -31,20 +42,36 @@ fi
 }
 git -C "$vendor" submodule update --init --depth 1
 [ "$(git -C "$vendor/zed" rev-parse HEAD)" = "$zed_revision" ]
-# The spike patch may be present locally; make that visible rather than discard it.
-git -C "$vendor" diff --stat
-git -C "$vendor/zed" diff --stat
+[ -z "$(git -C "$vendor" ls-files --others --exclude-standard)" ] || {
+  echo "Refusing untracked gpuix sources" >&2; exit 1;
+}
+# The only permitted source change is the versioned, reviewed close-guard patch.
+if git -C "$vendor" diff --quiet HEAD; then
+  git -C "$vendor" apply "$patch"
+else
+  git -C "$vendor" diff --binary HEAD | diff - "$patch" || {
+    echo "Refusing modified gpuix sources beyond the close-guard patch" >&2; exit 1;
+  }
+fi
+[ -z "$(git -C "$vendor/zed" status --porcelain)" ] || {
+  echo "Refusing modified zed sources" >&2; exit 1;
+}
 mkdir -p "$CARGO_TARGET_DIR"
 pushd "$vendor" >/dev/null
 bun install --frozen-lockfile
 popd >/dev/null
 pushd "$vendor/packages/native" >/dev/null
 rustc -vV
-/usr/bin/time -l bunx napi build --platform --esm --js index.js --release --features "$features" 2>&1 | tee /Volumes/PSSD/code/_vendor/build-reproduce.log
+/usr/bin/time -l bunx napi build --platform --esm --js index.js --release --features "$features" 2>&1 | tee "$vendor_root/build-reproduce.log"
 bun run build:js
-stat -f '%z bytes' gpuix-native.darwin-arm64.node
+stat -f '%z bytes' "gpuix-native.$(node -p 'process.platform + "-" + process.arch').node"
 popd >/dev/null
 pushd "$vendor/packages/react" >/dev/null
 bun run build
 popd >/dev/null
 du -sk "$CARGO_TARGET_DIR"
+if [ -e "$root/.gpuix-main" ] && [ ! -L "$root/.gpuix-main" ]; then
+  echo "Refusing to replace a non-symlink .gpuix-main" >&2; exit 1
+fi
+ln -sfn "$vendor" "$root/.gpuix-main"
+node "$script_dir/check.mjs" --record
