@@ -30,6 +30,7 @@ export function RadioGroup({
   style,
   ...props
 }: RadioGroupProps) {
+  const theme = useTheme()
   const entries = useRef(new Map<string, SelectionEntry>()).current
   return (
     <RadioContext.Provider value={{ value, select: onValueChange, disabled, orientation, entries }}>
@@ -38,7 +39,13 @@ export function RadioGroup({
         role="radiogroup"
         aria-disabled={disabled}
         style={sx(
-          { display: "flex", flexDirection: orientation === "vertical" ? "column" : "row", gap: 6 },
+          {
+            display: "flex",
+            flexDirection: orientation === "vertical" ? "column" : "row",
+            gap: theme.control[
+              orientation === "vertical" ? "--spacing-control-track-gap" : "--spacing-control-gap"
+            ],
+          },
           style
         )}
       >
@@ -71,8 +78,8 @@ export function RadioGroupItem({
     base: {
       display: "flex",
       alignItems: "center",
-      gap: 6,
-      minHeight: theme.control["--spacing-control-track"],
+      gap: theme.control["--spacing-control-gap"],
+      height: theme.control["--spacing-control-track"],
       fontSize: theme.control["--text-control-track"],
       color: theme.colors.foreground,
       cursor: "pointer",
