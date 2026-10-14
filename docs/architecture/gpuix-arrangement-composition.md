@@ -80,7 +80,7 @@ export function TrackRows(props: {
 ```
 
 - **复合轨道行归 `tracks`**：每条轨道是一个整体组件 `TrackRow`（产品规则：左、中、右三段；**Live 实测：车道在左，轨道头在窗口右侧**，头部从左到右是颜色标题条、路由列、Mixer 列，整体很窄）。三段的具体排布以 Live 的观察为准，由 `tracks` 决定；车道槽的位置由 `tracks` 摆放，外层**唯一**的轨道边框与分组外框（含折叠组向下包住子轨、围栏层级在轨道边框之上、高度分隔条不截断围栏）都由 `tracks` 画。中间的车道槽由 `renderLane(row)` 填充，`lane` 只提供行内内容，不画轨道边框。
-- 因此 `lane` 不再单独铺满整块区域：`ArrangementLane` 导出 `LaneRow({ row, scene, viewport, controller, readPeaks, clipboard, labels })`，只渲染**一条轨道的车道内容**（Clip、Pattern、Automation、行内网格线），行的可见范围裁剪与屏外卸载由 `tracks` 的 `TrackRows` 做；`lane` 仍拥有手势 controller（跨行拖动靠 controller 持有的 scene，不靠 DOM）。
+- 因此 `lane` 不再单独铺满整块区域：它导出 `LaneRow`，只渲染**一条轨道的车道内容**（Clip、Pattern、Automation、行内网格线），行的可见范围裁剪与屏外卸载由 `tracks` 的 `TrackRows` 做；`lane` 仍拥有手势 controller（跨行拖动靠 controller 持有的 scene，不靠 DOM）。
 - 屏外只保留 `focusedTrackId` 对应行的表头部分（输入框焦点不丢），其车道内容仍按可见范围卸载。
 - 焦点：`focusedTrackId` 来自 store 的 `session.selectedTrackIds` 与 `trackSelectionSurface`，不靠 JS 轮询查询原生焦点。原生输入焦点由 A3 的 `Input` 控件自己持有；`tracks` 在表头名称编辑态时通过 `onFocusTrack` 报告 id。
 
