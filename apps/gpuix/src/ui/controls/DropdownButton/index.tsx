@@ -7,8 +7,8 @@ import {
   SelectSeparator,
   SelectTrigger,
 } from "@gpuix/react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
 import { useInfoBinding } from "../ControlEnvironment"
 import { useFloatingCenterOffset, useMeasuredTextWidth } from "../useMeasuredTextWidth"

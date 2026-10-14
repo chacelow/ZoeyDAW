@@ -94,6 +94,15 @@
 - 手势预览不是第二份工程数据，不写入快照；提交前不改工程。
 - 滚动时 minimap 固定，轨道表头与其 Pattern 卡片作为整体一起滚动；共用一条横向滚动条。
 
+## 14. 图标、SVG 与导入（写死，由 lint 强制）
+
+- **不手写 SVG**。图标一律来自 [`lucide`](https://lucide.dev) 包（web 一直用 `lucide-react`，同一套图标），通过 `ui/controls/Icon` 的 `<Icon name="Play" />` 绘制；名称是 `IconName` 类型，拼错在编译期报错，运行期未知名称抛 `RangeError`，不会静默画空白。
+- 数据驱动的几何（automation 曲线、波形包络、clip 淡入淡出、标记三角、网格线）用 `@/shared/svg/paths` 生成路径数据（d3-shape / d3-path：`polylinePath` 折线、`cubicPath` 三次贝塞尔链、`polygonPath` 闭合多边形、`segmentsPath` 互不相连的线段），再交给 `@/shared/svg/Shape` 绘制成单色原生 `<svg>`。**不拼接 `M … L …`/`C …` 字符串，不写 `<svg`/`<path` 字面量**；需要的形状函数不存在时，加到 `paths.ts`（带测试与变异检查），不要在切片里自己写。颜色只来自 `style.color`（`currentColor`），不在标记里写颜色。
+- SVG 标记只在 `shared/svg/serialise.ts` 里写一次：所有 `<svg source>` 都经 `serialiseSvg(nodes, { viewBox, attributes })` 生成。gpuix 的 `<svg>` 只接收原始标记并按单色着色，所以颜色一律用 `currentColor`（图标）或 `style.color`，不在标记里写颜色字面量。
+- **跨目录导入用 `@/` 别名**（指向 `apps/gpuix/src`，在 `apps/gpuix/tsconfig.json` 的 `paths` 配置，`tsc`、`bun test`、`bun run`、`eslint` 都已验证可解析）。同目录与向上最多两层保持相对（`./x`、`../x`、`../../x`）；超过两层用 `@/`。`gpuix-layers` 把 `@/…` 与相对路径解析到同一层，别名绕不过分层规则。
+- 机制：`architecture/gpuix-imports` 拦截 ① 任何字符串或模板里的 `<svg`、`<path`、`<circle`、`<rect`、`<polyline`、`<polygon`、`<line`、`<ellipse`，② 超过两层的相对导入（可 `eslint --fix` 自动改成 `@/`）。测试文件不受限；唯一豁免是 `shared/svg/serialise.ts`，在 `eslint.config.js` 里按文件豁免，不放进规则里。
+- 新增图标：直接 `<Icon name="…" />`。先查 lucide；lucide 没有的（例如节拍器 `Metronome`），用 [Phosphor](https://phosphoricons.com) 的包内资源：在 `ui/controls/Icon/index.tsx` 的 `PHOSPHOR_ICONS` 表里加一项，从 `@phosphor-icons/core/assets/regular/<name>.svg` 以 `with { type: "text" }` 导入，不改 `Icon` 之外的任何文件。Phosphor 也没有的图形，先问，不要手画。
+
 ## 13. 验收清单（每个界面切片交付时逐条回答）
 
 | 检查                               | 证据                             |

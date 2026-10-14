@@ -148,7 +148,14 @@ function isTest(file) {
   return /(?:\.|\/)(?:test|spec)\.[cm]?[jt]sx?$|\/__tests__\//u.test(file)
 }
 
+/** `@/` 是 apps/gpuix/src 的别名(见 apps/gpuix/tsconfig.json 的 paths);别名与相对路径指向同一层,不能绕过分层。 */
+const SRC_ALIAS = "@/"
+
 function resolveTarget(file, specifier) {
+  if (specifier.startsWith(SRC_ALIAS)) {
+    const srcRoot = file.slice(0, file.indexOf("/apps/gpuix/src/") + "/apps/gpuix/src".length)
+    return normalized(`${srcRoot}/${specifier.slice(SRC_ALIAS.length)}`)
+  }
   return specifier.startsWith(".")
     ? normalized(path.resolve(path.dirname(file), specifier))
     : specifier

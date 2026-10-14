@@ -4,7 +4,7 @@
  * `clip.label` always wins; otherwise audio clips fall back to the sample
  * file name and MIDI/pattern clips fall back to a kind name.
  */
-import type { Clip } from "../../../shared/model/types"
+import type { Clip } from "@/shared/model/types"
 
 export function clipLabel(clip: Clip): string {
   if (clip.label) {

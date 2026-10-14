@@ -1,8 +1,8 @@
 /** Shared idle/active treatment; Record-arm uses the theme's destructive fill. */
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
-import { sv, sx } from "../../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sv, sx } from "@/shared/theme/style"
 import type { StyleDesc } from "@gpuix/react"
-import type { Theme } from "../../../../shared/theme/ThemeProvider"
+import type { Theme } from "@/shared/theme/ThemeProvider"
 
 export interface ToggleButtonProps {
   readonly label: string

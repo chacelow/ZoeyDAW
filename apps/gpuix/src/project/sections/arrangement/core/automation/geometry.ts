@@ -10,10 +10,10 @@ import {
   clampAutomationValue,
   interpolateAutomation,
   normalizedAutomationValue,
-} from "../../../../model/automation-curve"
-import { TRACK_TITLE_HEIGHT } from "../../../../layout"
+} from "@/project/model/automation-curve"
+import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import type { ArrangementScene } from "../scene"
-import type { AutomationLane, Track } from "../../../../model/types"
+import type { AutomationLane, Track } from "@/project/model/types"
 
 export const AUTOMATION_POINT_RADIUS = 4
 
