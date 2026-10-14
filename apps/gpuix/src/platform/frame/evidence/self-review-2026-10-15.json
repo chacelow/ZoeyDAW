@@ -1,0 +1,41 @@
+{
+  "reviewers": {
+    "standards": "pstack-reviewer F1StandardsReview",
+    "spec": "pstack-reviewer F1SpecReview"
+  },
+  "standards": {
+    "ownedCodeHardBreaches": 0,
+    "fixed": [
+      "Removed unused activation factory and type re-exports from platform/window facade",
+      "Formatted only newly added native callback/helper/test blocks and changed input import",
+      "Documented upstream external-contributor issue-only policy and README prerequisite"
+    ],
+    "acceptedJudgments": [
+      "subscribeApplicationActive and onWindowActiveChange names retain explicitly requested public contracts",
+      "Two explicit subscription owners do not justify a generic abstraction",
+      "Rust isApplicationActive query is retained by explicit coordinator requirement"
+    ],
+    "sharedDocumentationHandoff": [
+      "LESSONS.md sampler description: coordinator ownership",
+      "apps/gpuix/src/ui/panels/README.md activation-signal description: A4/coordinator ownership"
+    ]
+  },
+  "spec": {
+    "finalUnresolvedOwnedFindings": 0,
+    "fixed": [
+      "Restricted cross-start mapping to position=None and fit=snap",
+      "Added exact public position/snapMargin and switch flip/clamp regressions",
+      "Measured original D1 and final native binary: all 14 public cases pixel-identical",
+      "Widening guard mutation fails both public-mode regressions",
+      "Renamed ignored log captures to deliverable txt evidence",
+      "Documented measured Hz, native draw counts, CPU conditions and final hidden-window verification limit",
+      "Documented approved tsc/full-suite baseline exceptions and AX selection evidence alternative"
+    ],
+    "approvedLimits": [
+      "switch center double-half remains unfixed; this correction is snap-only",
+      "Final build hidden-window behavior not re-tested within fixed desktop slot",
+      "SDK popup additional OS window and full unrelated control-state visual matrix not exercised",
+      "MeterDecayDriver/clip-lane timer cutover assigned to respective owners after F1 merge"
+    ]
+  }
+}
