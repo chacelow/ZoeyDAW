@@ -11,6 +11,7 @@
   "dependencies": {
     "@gpuix/native": "link:../../.gpuix-main/packages/native",
     "@gpuix/react": "link:../../.gpuix-main/packages/react",
+    "@phosphor-icons/core": "2.1.1",
     "@zoeydaw/native": "workspace:*",
     "@zoeymind/logger": "workspace:*",
     "@zoeymind/ui": "workspace:*",
