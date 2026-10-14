@@ -33,6 +33,12 @@
   --project-minimap-max-height: 90px;
   --project-timeline-min-height: 160px;
   --project-timeline-auto-scroll-edge: 42px;
+  --project-arrangement-marker-width: 6px;
+  --project-arrangement-marker-height: 4px;
+  --project-arrangement-marker-inset: 2px;
+  --project-arrangement-marker-label-inset: 7px;
+  --project-arrangement-marker-editor-min-width: 60.48px;
+  --project-arrangement-grid-major-line-width: 1px;
 }
 
 .project-transport {

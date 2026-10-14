@@ -31,6 +31,12 @@
     "minimapMinHeight": 32,
     "minimapMaxHeight": 90,
     "timelineMinHeight": 160,
-    "timelineAutoScrollEdge": 42
+    "timelineAutoScrollEdge": 42,
+    "arrangementMarkerWidth": 6,
+    "arrangementMarkerHeight": 4,
+    "arrangementMarkerInset": 2,
+    "arrangementMarkerLabelInset": 7,
+    "arrangementMarkerEditorMinWidth": 60.48,
+    "arrangementGridMajorLineWidth": 1
   }
 }
