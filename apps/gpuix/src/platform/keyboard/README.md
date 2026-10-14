@@ -28,4 +28,4 @@ useEffect(
 
 从仓库根运行 `bun --hot scripts/gpuix-main/probe.mjs`，向探针窗口发送 Space。日志应出现 `windowKeyDown`、`windowKeyUp`，AX 文本变为 `Window key: space`。验证后立即结束该进程。
 
-`keyboard-native.test.tsx` 用真实 `createTestRoot` 验证 button-role host 的 Space 到达窗口订阅，以及 input 的 `stopPropagation()` 阻止同一次按键到达窗口。它验证 renderer 事件链，不替代 A3 Button 的激活策略测试；A3 不在此 worktree。
+`keyboard-native.test.tsx` 在真实 `createTestRoot` 中挂载共享 `Button` 与 `Input`，用 `nativeSimulateKeystrokes` 检查 Button 聚焦时 Space 不改变激活状态且到达窗口订阅，Input 聚焦时 Space 不到达窗口订阅。测试直接锁住控件与窗口之间的事件契约，不在 WindowKeyboard 中替控件屏蔽键盘事件。

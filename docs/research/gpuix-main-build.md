@@ -497,7 +497,7 @@ node scripts/gpuix-main/check.mjs --resolution
 6. 逐个运行四个 feature demo、panel gallery、`bun --hot scripts/gpuix-main/probe.mjs` 和带 `--close` 的探针。验证布局事件、Space、红灯与 Cmd+W 的 veto/allow 转换，每个窗口验证后立即关闭。
 7. 更新本报告与第三方 notice；只提交 SHA、补丁、构建与解析配置，不提交源码或二进制。
 
-### D1 验收记录
+### D1 首轮验收记录，同步新基线前
 
 本轮是 renderer 集成，不是全量控件视觉验收。协调者已批准这一范围，补充要求是保存截图、核对面板 token，并比较 A4、A3 在 npm 与自建 renderer 下的布局。
 
@@ -522,7 +522,7 @@ node scripts/gpuix-main/check.mjs --resolution
 
 `WindowKeyboard` 在 `platform/keyboard` 拥有每个 render root 的订阅，`main.tsx` 注入 `onKeyDown`、`onKeyUp` 并提供 context。取消订阅、消费阻止第二个 section 命令、root 隔离各有行为测试。接入约定见该目录的 README，ui 不 import platform。
 
-补充 `keyboard-native.test.tsx` 的真实 `createTestRoot` 端到端测试，1 pass、5 expect：先原生点击 button-role host，证明状态可切换；焦点在该 host 时按 Space，状态不额外变化，窗口订阅收到 Space；焦点在 input 时，元素 handler 的 `stopPropagation()` 阻止 Space 到达窗口订阅。该测试验证 trailing 事件链，不代替未在本 worktree 的 A3 Button 激活策略测试。窗口订阅不能拦截先运行的元素 handler；业务订阅者仍须判断输入与菜单焦点。没有新增原生消费返回值 API 或修改上游事件系统。
+同步 A3 前，`keyboard-native.test.tsx` 的 native host 端到端测试为 1 pass、5 expect，验证 trailing 事件链。同步 A3 后已删除该手写 host，改为真实共享 `Button` 与 `Input` 的两条永久回归测试；当前红灯与 A3b 归属见末尾交接记录。窗口订阅不能拦截先运行的元素 handler；业务订阅者仍须判断输入与菜单焦点。没有新增原生消费返回值 API 或修改上游事件系统。
 
 ### 真实窗口与探针
 
@@ -638,10 +638,79 @@ A4 比较旧采样版 npm 0.10.0 与 D1 `onLayout` 版自建主干，均打开 C
 ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 ```
 
-```text
-33614 05:43       bun --hot src/gallery/controls.tsx
-```
+最终 stdout 为空，grep 退出码为 1，表示没有匹配的进程；未把这个退出码当成清理失败。
 
-该 PID 属于 `gpuix-a3b-gallery-polish/apps/gpuix`，已用 `lsof -a -p 33614 -d cwd -Fn` 确认，未停止它。D1 比较时也曾按 PID 区分同名窗口，启动的所有 service 均已退出，自有残留为 0。没有启动、重启或停止用户的 Tauri 应用。
+较早核对曾见其它切片的 A3b 画廊 PID 33614，已核实工作目录并保持不动；最终核对时没有任何匹配进程。D1 启动的所有 service 均已退出，自有残留为 0。没有启动、重启或停止用户的 Tauri 应用。
 
 D1 指定的依赖切换、面板测量替换、键盘订阅端口均已实现。未实现的仍是原报告限定的跨平台 close/hideWindow/measureText，以及上面明确列出的其它 owner 的 UI 与快捷键业务；未把它们计入本轮完成能力。
+
+### 同步 ce38c47 后的 A3b 兼容迁移交接
+
+按协调者要求，`df124cd` 合入 `gpuix-migration@ce38c47c5575358b9fbc7a59ba7c5382d30711d5`，包含 C1 真实引擎、E1 剪贴板与 A3 控件。自动合并没有冲突，未手工改 Cargo.lock 或 ui/controls。最新检查结果如下，不把首轮绿灯当成同步后的结果。
+
+| 检查 | 命令 | 同步后结果 |
+| --- | --- | --- |
+| 依赖安装 | `pnpm install --frozen-lockfile` | 通过，lockfile 未重新求解 |
+| 本仓 native | `CARGO_BUILD_JOBS=6 pnpm native:build` | 通过，Rust release 编译 51.13s |
+| 本仓 Rust | `CARGO_BUILD_JOBS=6 cargo check && CARGO_BUILD_JOBS=6 cargo test` | 通过，35 pass、0 fail |
+| GPU app 全套测试 | `cd apps/gpuix && bun test` | 463 pass、2 todo、10 fail，475 tests / 88 files，94,274 expect |
+| GPU app 类型 | `pnpm --dir apps/gpuix exec tsc --noEmit` | 4 个 ui/controls 的 EventPayload→KeyEvent 错误 |
+| lint | `pnpm exec eslint apps/gpuix/src` | 0 error、0 warning |
+| renderer identity | `node scripts/gpuix-main/check.mjs --resolution` | 通过，应用、renderer、reconciler、Zustand 仍共用 vendor React；Web/UI 仍为 19.2.8 |
+
+10 个失败的根因都在新合入的 ui/controls，其中 2 条回归测试位于 D1 的 `platform/keyboard/keyboard-native.test.tsx`。协调者明确决定，D1 先交付自有部分，这些兼容迁移与 Space 策略统一归正在修改同一目录的 A3b。D1 不越界、不放宽测试、不加 renderer 猴补；此处不是全量绿灯交付。
+
+#### readOuterBounds 的 89 处引用
+
+主干 `getElementBounds` 已返回真实 border box。`ui/controls/useMeasuredTextWidth.tsx:13-52` 仍按 0.10 的行为减 padding/边框原点、加 border 尺寸，导致重复补偿。LSP 引用分类如下，全部路径与行号保存在 `scripts/gpuix-main/evidence/compatibility-callers.json`，以 ce38c47 为基准。
+
+| 类别 | 引用数 | 定位 |
+| --- | --- | --- |
+| 声明 | 1 | `useMeasuredTextWidth.tsx:17` |
+| helper 内部调用 | 2 | `useMeasuredTextWidth.tsx:83,160`，文字采样与浮层采样 |
+| 外部生产 import | 3 | `Popover/index.tsx:17`、`Menu/index.tsx:17`、`RadioGroup/keyboard.ts:1` |
+| 外部生产调用 | 4 | `Popover/index.tsx:212`、`Menu/index.tsx:311`、`RadioGroup/keyboard.ts:31,32` |
+| 测试 import 与调用 | 79 | 逐项见 JSON，不能只迁生产代码而让测试继续误读 border box |
+| 合计 | 89 | 不含注释或字面字符串匹配 |
+
+这些补偿使 ControlGroup 相邻命中边界相差 1px、浮层最大宽被读成 306 而非 304、指针锚点被读成 x=175 而非 180。应移除旧补偿、统一真实 border-box 语义，不通过改宽断言或新增版本分支通过测试。
+
+#### useFloatingCenterOffset 的调用点
+
+此函数的注释明确说明它补偿 gpuix 0.10 的 center 对齐。LSP 共 7 处引用，声明 1、import 3、调用 3。迁移时不能只处理 Menu 与 Popover，DropdownButton 也在用它。
+
+| 消费者         | import                        | 调用                           |
+| -------------- | ----------------------------- | ------------------------------ |
+| Menu           | `Menu/index.tsx:17`           | `Menu/index.tsx:389`           |
+| Popover        | `Popover/index.tsx:17`        | `Popover/index.tsx:189`        |
+| DropdownButton | `DropdownButton/index.tsx:14` | `DropdownButton/index.tsx:101` |
+
+#### KeyEvent 类型边界
+
+主干键盘回调是 `KeyEvent`，包含 `defaultPrevented`、`preventDefault()`、`stopPropagation()`。当前四处用宽泛的 `EventPayload` 参数再传给键盘回调，丢掉这些能力。只迁键盘参数的可信类型，不把鼠标 payload 伪装成 KeyEvent，不加 cast 或空方法。
+
+| 文件                        | 参数声明行 | tsc 错误行 |
+| --------------------------- | ---------- | ---------- |
+| `DragPreviewArea/index.tsx` | 129        | 131        |
+| `Menu/index.tsx` 的 trigger | 269        | 271        |
+| `Menu/index.tsx` 的 item    | 534        | 536        |
+| `Popover/index.tsx`         | 115        | 117        |
+
+#### 10 个失败的具体边界
+
+| 失败 | 实际证据 | 归属 |
+| --- | --- | --- |
+| 真实 Button 的 Space 状态 | 点击后 Pressed，Space 后变 Released；`Button/index.tsx:102` 仍对 enter/space 都 activate | A3b Space 策略 |
+| 真实 Input 的 Space 冒泡 | Input 聚焦后窗口订阅收到 `["space"]`；`Input/index.tsx` 没有 printable-key stopPropagation | A3b 输入消费边界 |
+| ControlGroup 相邻命中区 | 左边界终点 23，右边起点 22 | A3b bounds 补偿 |
+| Popover asChild 边缘点击 | 期望最后一次 close，实际未发出；测试点依赖旧 bounds | A3b bounds/命中 |
+| Popover side/align | 左侧定位期望 240，读取 233 | A3b bounds/center 补偿 |
+| Popover intrinsic center | 左侧定位期望 240，读取 233 | A3b bounds/center 补偿 |
+| Popover 大表面夹取 | 最大 304，读取 306 | A3b bounds 补偿 |
+| Menu 指针锚点 | 期望 x≥180，读取 175 | A3b bounds 补偿 |
+| Menu 小视口夹取 | 最大 304，读取 306 | A3b bounds 补偿 |
+| DropdownButton center | 允许误差 0.5，读取 1.5 | A3b bounds/center 补偿 |
+
+真实 Button/Input 测试用 `createTestRoot` 的 `nativeSimulateKeystrokes`，不是复制控件策略的假组件；当前 0 pass、2 fail 是被批准保留的红灯回归。A3b 迁移完成后应直接运行这两条测试与完整套件，不恢复手写 host、不 skip、不放宽断言。旧 Popover 的 Enter/Space 激活断言也须按新的「Space 只播放」产品契约更新，不能继续把 Space 激活当正确行为。
+
+静态 28 节点 bounds 的零差异仍只证明当时列出的默认/展开状态，未覆盖弹层与键盘策略；本次完整测试补上了这个限制。协调者收到本清单后合入 D1，再让 A3b 在同一自建 renderer 上完成迁移。

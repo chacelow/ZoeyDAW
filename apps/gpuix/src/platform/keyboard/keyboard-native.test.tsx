@@ -1,38 +1,31 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { useState } from "react"
+import { ThemeProvider } from "../../shared/theme/ThemeProvider"
+import { Button, Input } from "../../ui/controls"
 import { createWindowKeyboard } from "."
 
-// This native host seam checks renderer delivery, not A3 Button's separate activation policy.
 function KeyboardHosts() {
   const [pressed, setPressed] = useState(false)
   return (
-    <div style={{ display: "flex", flexDirection: "column", width: 320, height: 120 }}>
-      <div
-        role="button"
-        tabIndex={0}
-        testId="keyboard-button"
-        onClick={() => setPressed(value => !value)}
-        onKeyDown={event => {
-          if (event.key === "enter") setPressed(value => !value)
-        }}
-        style={{ width: 120, height: 32 }}
-      >
-        <text>{pressed ? "Pressed" : "Released"}</text>
+    <ThemeProvider>
+      <div style={{ display: "flex", flexDirection: "column", width: 320, height: 120 }}>
+        <Button
+          label="Keyboard button"
+          testId="keyboard-button"
+          active={pressed}
+          onActiveChange={setPressed}
+          style={{ width: 120 }}
+        >
+          {pressed ? "Pressed" : "Released"}
+        </Button>
+        <Input aria-label="Editor" testId="keyboard-input" style={{ width: 120 }} />
       </div>
-      <input
-        aria-label="Editor"
-        testId="keyboard-input"
-        onKeyDown={event => {
-          if (event.key === "space") event.stopPropagation()
-        }}
-        style={{ width: 120, height: 32 }}
-      />
-    </div>
+    </ThemeProvider>
   )
 }
 
-test("native element key handling precedes WindowKeyboard and can stop its delivery", () => {
+test("Space leaves real Button state unchanged and reaches WindowKeyboard", () => {
   const keyboard = createWindowKeyboard()
   const received: string[] = []
   const unsubscribe = keyboard.subscribe("keyDown", event => {
@@ -42,8 +35,7 @@ test("native element key handling precedes WindowKeyboard and can stop its deliv
   try {
     root.render(<KeyboardHosts />)
     const button = root.renderer.findByTestId("keyboard-button")
-    const input = root.renderer.findByTestId("keyboard-input")
-    if (!button || !input) throw new Error("Missing keyboard host")
+    if (!button) throw new Error("Missing keyboard button")
     const bounds = root.renderer.getElementBounds(button.id)
     if (!bounds) throw new Error("Missing button bounds")
     root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
@@ -51,9 +43,26 @@ test("native element key handling precedes WindowKeyboard and can stop its deliv
     root.renderer.nativeSimulateKeystrokes(button.id, "space")
     expect(root.renderer.getAllText()).toContain("Pressed")
     expect(received).toEqual(["space"])
+  } finally {
+    unsubscribe()
+    root.unmount()
+  }
+})
+
+test("Space in real Input does not reach WindowKeyboard", () => {
+  const keyboard = createWindowKeyboard()
+  const received: string[] = []
+  const unsubscribe = keyboard.subscribe("keyDown", event => {
+    received.push(event.key ?? "")
+  })
+  const root = createTestRoot({ width: 320, height: 120, ...keyboard.rootHandlers })
+  try {
+    root.render(<KeyboardHosts />)
+    const input = root.renderer.findByTestId("keyboard-input")
+    if (!input) throw new Error("Missing keyboard input")
     root.renderer.nativeSimulateKeystrokes(input.id, "space")
     expect(root.renderer.getFocusedElementId()).toBe(input.id)
-    expect(received).toEqual(["space"])
+    expect(received).toEqual([])
   } finally {
     unsubscribe()
     root.unmount()
