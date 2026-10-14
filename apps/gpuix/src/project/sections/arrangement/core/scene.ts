@@ -1,5 +1,5 @@
-import { DEFAULT_GRID, deriveGridPlan } from "../../../model/grid"
-import type { GridPlan, GridSettings } from "../../../model/grid"
+import { DEFAULT_GRID, deriveGridPlan } from "@/project/model/grid"
+import type { GridPlan, GridSettings } from "@/project/model/grid"
 import type {
   AutomationLane,
   LoopRegion,
@@ -8,7 +8,7 @@ import type {
   SessionState,
   TimeSelection,
   Track,
-} from "../../../model/types"
+} from "@/project/model/types"
 
 export interface ArrangementViewport {
   pxPerBar: number

@@ -1,4 +1,4 @@
-import * as engine from "../../../platform/engine"
+import * as engine from "@/platform/engine"
 import { validFrame, validResult } from "./connection/protocol"
 import type { BackendResult, BackendTelemetry, ProjectBackend } from "../../model/backend"
 

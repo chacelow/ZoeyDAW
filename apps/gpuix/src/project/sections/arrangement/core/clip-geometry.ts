@@ -4,10 +4,10 @@ import {
   fadeControls,
   fadeCurveProgress,
   fadeBezierSegments,
-} from "../../../model/fades"
-import { TRACK_TITLE_HEIGHT } from "../../../layout"
-import type { FadeBezierSegment } from "../../../model/fades"
-import type { AudioClip, Clip, Track } from "../../../model/types"
+} from "@/project/model/fades"
+import { TRACK_TITLE_HEIGHT } from "@/project/layout"
+import type { FadeBezierSegment } from "@/project/model/fades"
+import type { AudioClip, Clip, Track } from "@/project/model/types"
 import type { ClipRect } from "./layout"
 
 export const RESIZE_EDGE_PX = 6

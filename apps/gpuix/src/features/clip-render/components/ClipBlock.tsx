@@ -8,11 +8,11 @@
  * is nothing to snap back to on release.
  */
 import { memo } from "react"
-import { sx } from "../../../shared/theme/style"
+import { sx } from "@/shared/theme/style"
 import { clipLabel } from "../model/clip-label"
 import { PX_PER_BAR } from "../model/layout"
-import type { Theme } from "../../../shared/theme/ThemeProvider"
-import type { Clip } from "../../../shared/model/types"
+import type { Theme } from "@/shared/theme/ThemeProvider"
+import type { Clip } from "@/shared/model/types"
 import type { EventPayload } from "@gpuix/react"
 
 export type ClipDragKind = "move" | "resize-left" | "resize-right"

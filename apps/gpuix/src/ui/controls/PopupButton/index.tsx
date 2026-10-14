@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { Popover, PopoverContent, PopoverTrigger } from "../Popover"
 import { useInfoBinding } from "../ControlEnvironment"
 import { controlChrome } from "../chrome"

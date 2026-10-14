@@ -12,8 +12,8 @@ import {
 import type { EventPayload, NativeRenderer, Props, PublicInstance } from "@gpuix/react"
 import type { FloatingContentProps } from "@gpuix/react/floating"
 import type { ReactNode, RefObject } from "react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { readOuterBounds, useFloatingCenterOffset } from "../useMeasuredTextWidth"
 
 export interface MenuProps extends Props {

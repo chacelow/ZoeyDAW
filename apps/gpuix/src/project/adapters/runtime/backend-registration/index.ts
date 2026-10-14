@@ -1,5 +1,5 @@
 import { createNativeBackend } from "../../backend/native"
-import type { ProjectBackendFactory } from "../../../model/backend"
+import type { ProjectBackendFactory } from "@/project/model/backend"
 
 interface BackendRegistrationTarget {
   configureProjectBackend: (factory: ProjectBackendFactory) => () => void
