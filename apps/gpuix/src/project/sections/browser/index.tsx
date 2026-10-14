@@ -71,7 +71,15 @@ export function BrowserSplitBody({ navigation, results }: BrowserBodySlots) {
       >
         {navigation}
       </Panel>
-      <PanelDivider orientation="vertical" testId="browser-navigation-divider" />
+      <PanelDivider
+        orientation="vertical"
+        testId="browser-navigation-divider"
+        style={{
+          backgroundColor: theme.colors.muted,
+          borderLeftWidth: 1,
+          borderColor: theme.colors.border,
+        }}
+      />
       <Panel testId="browser-results-panel" minSize={theme.project.browserResultsWidth}>
         {results}
       </Panel>
@@ -205,7 +213,7 @@ export function BrowserPanel({
           aria-label={labels.search}
           placeholder={labels.searchPlaceholder}
           testId="browser-search"
-          onChange={event => browser.setQuery(event.value ?? "")}
+          onValueChange={browser.setQuery}
           style={{ minWidth: 0, flexGrow: 1 }}
           onKeyDown={event => {
             if (event.key === "escape") {
