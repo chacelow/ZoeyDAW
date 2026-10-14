@@ -31,6 +31,7 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
       highlight: {
         on: {
           hover: { backgroundColor: colorMix(theme.colors.muted, 90, theme.colors.foreground) },
+          active: { backgroundColor: colorMix(theme.colors.muted, 74, theme.colors.foreground) },
         },
         off: {},
       },
@@ -39,6 +40,7 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
           backgroundColor: theme.colors.primary,
           color: theme.colors.primaryForeground,
           hover: { backgroundColor: theme.colors.primary, color: theme.colors.primaryForeground },
+          active: { backgroundColor: theme.colors.primary, color: theme.colors.primaryForeground },
         },
         off: {},
       },
@@ -47,7 +49,12 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
         off: {},
       },
       disabled: {
-        on: { opacity: 0.5, cursor: "not-allowed", hover: { backgroundColor: theme.colors.muted } },
+        on: {
+          opacity: 0.5,
+          cursor: "not-allowed",
+          hover: { backgroundColor: theme.colors.muted },
+          active: { backgroundColor: theme.colors.muted },
+        },
         off: {},
       },
       iconOnly: {
