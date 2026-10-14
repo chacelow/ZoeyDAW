@@ -1,5 +1,5 @@
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx, sv } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx, sv } from "@/shared/theme/style"
 import { stopTextShortcutPropagation } from "../keyboard"
 import type { InputProps as NativeInputProps } from "@gpuix/react"
 

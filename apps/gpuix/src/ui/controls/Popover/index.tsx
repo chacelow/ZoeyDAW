@@ -12,8 +12,8 @@ import {
 import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { FloatingContentProps } from "@gpuix/react/floating"
 import type { RefObject } from "react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { readOuterBounds } from "../useMeasuredTextWidth"
 
 export interface PopoverProps extends Props {

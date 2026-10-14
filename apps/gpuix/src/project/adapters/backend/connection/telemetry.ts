@@ -1,4 +1,4 @@
-import type { BackendState, BackendTelemetry } from "../../../model/backend"
+import type { BackendState, BackendTelemetry } from "@/project/model/backend"
 
 export function interpolate(
   frame: BackendTelemetry,

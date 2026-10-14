@@ -17,6 +17,11 @@ function fixture(filename, code, errors) {
 
 tester.run("architecture/gpuix-layers", gpuixLayers, {
   valid: [
+    // 别名指向允许的层。
+    fixture(
+      `${src}/ui/controls/Button/index.tsx`,
+      'import { sx } from "@/shared/theme/style"; void sx'
+    ),
     // 误报回归:工程领域字段 `document` 是属性访问或局部变量,不是 DOM 全局。
     fixture(`${src}/project/model/clip.ts`, "const tracks = get().document.tracks; void tracks"),
     fixture(
@@ -67,6 +72,16 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
     ),
   ],
   invalid: [
+    // `@/` 别名与相对路径指向同一层,不能绕过分层。
+    fixture(
+      `${src}/ui/controls/Button/index.tsx`,
+      'import { get } from "@/project/adapters/context"; void get',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(`${src}/project/model/grid.ts`, 'import { sx } from "@/ui/controls"; void sx', [
+      { messageId: "forbiddenLayer" },
+    ]),
+
     fixture(`${src}/project/model/clip.ts`, 'import { useState } from "react"; void useState', [
       { messageId: "forbiddenPackage" },
     ]),

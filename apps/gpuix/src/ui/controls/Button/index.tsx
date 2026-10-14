@@ -1,5 +1,5 @@
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sv, sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sv, sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
 import { IconSlot } from "../IconSlot"
 import { useInfoBinding } from "../ControlEnvironment"

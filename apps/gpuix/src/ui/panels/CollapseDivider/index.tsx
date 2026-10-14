@@ -1,5 +1,5 @@
 import type { EventPayload } from "@gpuix/react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import { computeLayout } from "../layout/computeLayout"
 import { useDividerDrag } from "../useDividerDrag"
 

@@ -1,5 +1,5 @@
-import { snapBar } from "../../../../model/grid-geometry"
-import type { AutomationPoint } from "../../../../model/types"
+import { snapBar } from "@/project/model/grid-geometry"
+import type { AutomationPoint } from "@/project/model/types"
 
 export function flatLinePoint(
   bar: number,

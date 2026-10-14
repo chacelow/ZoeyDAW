@@ -3,9 +3,9 @@
  *
  * Painters and hit-test both need the same track-row Y positions and clip rects, computed from the scene. Keeping this math in one module keeps draw and input aligned at every zoom and scroll.
  */
-import { visibleTracks } from "../../../model/types"
-import { trackHeight } from "../../../layout"
-import type { Clip, Track } from "../../../model/types"
+import { visibleTracks } from "@/project/model/types"
+import { trackHeight } from "@/project/layout"
+import type { Clip, Track } from "@/project/model/types"
 import type { ArrangementScene } from "./scene"
 
 export const MARKER_RULER_HEIGHT = 17

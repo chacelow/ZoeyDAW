@@ -1,6 +1,6 @@
 import { useMemo } from "react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sv, sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sv, sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
 import { useInfoBinding } from "../ControlEnvironment"
 import { DragPadIcon } from "./icon"

@@ -2,7 +2,7 @@
  * Pan drag control: -1..1, centre-origin fill, mirrors
  * `packages/ui/src/controls/PanControl`'s range and `L/C/R` formatting.
  */
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useRelativeDrag } from "../../hooks/useRelativeDrag"
 import { formatPan, PAN_MAX, PAN_MIN } from "../../model/formatters"
 import { DragControlShell } from "../DragControlShell"

@@ -1,6 +1,6 @@
 /** Numeric pad with one-sided volume fill or a centre-origin pan fill. */
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import type { RelativeDragHandlers } from "../../hooks/useRelativeDrag"
 
 export interface DragControlShellProps {

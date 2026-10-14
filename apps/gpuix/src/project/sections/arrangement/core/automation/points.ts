@@ -1,6 +1,6 @@
-import { clampAutomationValue } from "../../../../model/automation-curve"
-import { snapBar } from "../../../../model/grid-geometry"
-import type { AutomationPoint } from "../../../../model/types"
+import { clampAutomationValue } from "@/project/model/automation-curve"
+import { snapBar } from "@/project/model/grid-geometry"
+import type { AutomationPoint } from "@/project/model/types"
 
 export function sortedPoints(points: readonly AutomationPoint[]): AutomationPoint[] {
   return [...points]

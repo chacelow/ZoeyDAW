@@ -7,7 +7,8 @@
  * rather than a cross-app import, kept in lockstep deliberately so both
  * renderers treat a lane's curve field the same way.
  */
-import type { AutomationPoint } from "../../../shared/model/types"
+import { polylinePath } from "@/shared/svg/paths"
+import type { AutomationPoint } from "@/shared/model/types"
 
 const CURVE_STRENGTH = 4
 
@@ -63,6 +64,13 @@ export interface AutomationCurveLayoutOptions {
   sampleStepPx?: number
 }
 
+function flatPath(y: number, width: number): string {
+  return polylinePath([
+    { x: 0, y },
+    { x: width, y },
+  ])
+}
+
 function valueToY(value: number, height: number): number {
   return (1 - clampAutomationValue(value)) * height
 }
@@ -83,8 +91,7 @@ export function buildAutomationCurveGeometry(
 ): AutomationCurveGeometry {
   const sampleStepPx = Math.max(1, options.sampleStepPx ?? 3)
   if (points.length === 0 || width <= 0 || height <= 0) {
-    const y = valueToY(0.5, height)
-    return { d: `M 0 ${y.toFixed(2)} L ${width.toFixed(2)} ${y.toFixed(2)}`, anchors: [] }
+    return { d: flatPath(valueToY(0.5, height), width), anchors: [] }
   }
   const firstBar = points[0].bar
   const lastBar = points[points.length - 1].bar
@@ -96,20 +103,15 @@ export function buildAutomationCurveGeometry(
   }))
 
   if (barSpan <= 0) {
-    const y = valueToY(points[0].value, height)
-    return { d: `M 0 ${y.toFixed(2)} L ${width.toFixed(2)} ${y.toFixed(2)}`, anchors }
+    return { d: flatPath(valueToY(points[0].value, height), width), anchors }
   }
 
   const stepCount = Math.max(1, Math.ceil(width / sampleStepPx))
-  const commands: string[] = []
+  const samples: Array<{ x: number; y: number }> = []
   for (let step = 0; step <= stepCount; step++) {
     const x = Math.min(width, step * sampleStepPx)
-    const value = automationValueAtBar(
-      points,
-      barSpan > 0 ? firstBar + (x / width) * barSpan : firstBar
-    )
-    const y = valueToY(value, height)
-    commands.push(`${step === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`)
+    const value = automationValueAtBar(points, firstBar + (x / width) * barSpan)
+    samples.push({ x, y: valueToY(value, height) })
   }
-  return { d: commands.join(" "), anchors }
+  return { d: polylinePath(samples), anchors }
 }

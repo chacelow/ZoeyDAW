@@ -9,7 +9,7 @@
  * resolving it to an actual value happens in the component layer via
  * `useTheme()`, per this project's "no colors.ts outside ThemeProvider" rule.
  */
-import type { Clip, Track } from "../../../shared/model/types"
+import type { Clip, Track } from "@/shared/model/types"
 
 export type TrackColorToken = "chart1" | "chart2" | "chart3" | "chart4" | "chart5"
 

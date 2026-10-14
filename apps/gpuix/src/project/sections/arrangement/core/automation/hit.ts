@@ -6,7 +6,7 @@ import {
   automationY,
 } from "./geometry"
 import type { AutomationRow } from "./geometry"
-import type { AutomationPoint } from "../../../../model/types"
+import type { AutomationPoint } from "@/project/model/types"
 import type { ArrangementScene } from "../scene"
 import type { Point } from "../interactions/types"
 
