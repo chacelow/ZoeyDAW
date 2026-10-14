@@ -1,0 +1,12 @@
+f1-input-final [service] — exited — up 21.9s
+ready=true persist=false detached=false exit=1
+[gpuix] created native window
+F1_READY {"mode":"input","pid":18588}
+[gpuix] mount complete
+{"windowKey":"tab","defaultPrevented":false}
+{"windowKey":"tab","defaultPrevented":false}
+{"windowKey":"tab","defaultPrevented":false}
+{"windowKey":"a","defaultPrevented":false}
+2026-10-15 04:04:21.119 bun[18588:51050952] TSM AdjustCapsLockLEDForKeyTransitionHandling - _ISSetPhysicalKeyboardCapsLo
+ckLED Inhibit
+{"windowKey":"tab","defaultPrevented":false}
