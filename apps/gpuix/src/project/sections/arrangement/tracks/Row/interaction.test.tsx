@@ -545,3 +545,12 @@ test("Enter on Solo changes the control without replacing independent header sel
   expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
   expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
 })
+
+test("visible descendants retain their group frame when its parent header is offscreen", () => {
+  const root = mount({ ...viewport, height: 400, scrollY: 70 })
+  expect(root.renderer.findByTestId("track-row-drums-group")).toBeUndefined()
+  const frame = bounds(root, "track-group-frame-drums-group")
+  const lastChild = bounds(root, "track-row-sidechain")
+  expect(frame.y + frame.height).toBe(lastChild.y + lastChild.height)
+  expect(frame.y).toBeLessThan(bounds(root, "track-row-trager").y)
+})

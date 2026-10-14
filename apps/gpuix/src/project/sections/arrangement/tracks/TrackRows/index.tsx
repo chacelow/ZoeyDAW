@@ -61,6 +61,14 @@ export function TrackRows({
     )
     return { rows: visibleRows, ids: new Set(visibleRows.map(row => row.track.id)) }
   }, [rows, bodyTop, bodyBottom, pinnedTop, pinnedViewportTop])
+  const visibleGroupIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const row of visibility.rows) {
+      if (row.track.kind === "group") ids.add(row.track.id)
+      for (const rail of groups.railsByTrackId.get(row.track.id) ?? []) ids.add(rail.group.id)
+    }
+    return ids
+  }, [visibility.rows, groups])
   const reorder = useTrackReorder(visibility.rows, container)
   const normal = rows.filter(row => !isPinnedTrack(row.track))
   const pinned = rows.filter(row => isPinnedTrack(row.track))
@@ -106,7 +114,7 @@ export function TrackRows({
           )
         })}
         {input
-          .filter(row => row.track.kind === "group")
+          .filter(row => row.track.kind === "group" && visibleGroupIds.has(row.track.id))
           .map(row => {
             let last = row
             for (const candidate of input) {

@@ -79,6 +79,8 @@ TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane
 
 `TrackRow` owns the whole track: lane on the left, then colored identity, routing and Mixer on the right, following the observed Live order. It owns the single outer top/bottom border. Group frames span the visible branch, rails are painted above row borders, expanded groups do not duplicate descendant previews, and folded groups render a shared-geometry descendant overview.
 
+Group frame calculation is limited to visible group IDs and the existing model-projected ancestors of visible rows. A parent header can unmount while its frame still wraps visible descendants. This avoids scanning every offscreen group without adding another hierarchy model or shared API.
+
 Visibility and reorder hit candidates share one projection. Return/Main remain bottom-anchored; when they exceed the available height, the pinned viewport is clipped below the reserved top gap and hidden pinned headers unmount. No offscreen lane content is retained solely to preserve an editor.
 
 Native test windows can be smaller than requested: a requested 1200px height was accepted as 1021px after the display change. Behavior tests now obtain the accepted size through `useWindowSize`, just like the real demo, so pinned controls are not falsely tested outside the native hit region.
