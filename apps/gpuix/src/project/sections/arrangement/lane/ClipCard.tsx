@@ -7,7 +7,7 @@ import type { GridLine } from "../core/rulers/grid-lines"
 import { clipLoopTicks, midiPreviewRects, patternPreviewRects } from "./render-projection"
 import type { ClipCard } from "./render-projection"
 import { resolveContentColor, contentFill } from "@/shared/theme/content-color"
-import type { PeakReader } from "@/platform/engine"
+import type { PeakReader } from "@/project/model/backend"
 import { WaveformPreview } from "./WaveformPreview"
 import { ClipFades } from "./ClipFades"
 

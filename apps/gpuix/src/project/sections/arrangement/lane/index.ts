@@ -9,5 +9,5 @@ export type {
   LaneInteractionState,
 } from "./interactions/controller"
 export type { LaneKey, LanePointer } from "./interactions/types"
-export type { PeakReader } from "@/platform/engine"
+export type { PeakReader } from "@/project/model/backend"
 export type { LaneLabels, LaneMessageKey } from "./messages"
