@@ -16,15 +16,22 @@ import { useMemo } from "react"
 import { I18nextProvider } from "react-i18next"
 import { initI18n } from "./setup"
 import type { ReactNode } from "react"
-import type { AppLocaleResources } from "./setup"
+import type { AppLocaleResources, I18nStorage } from "./setup"
 
 export function I18nProvider({
   children,
   resources,
+  storage,
+  initialLanguage,
 }: {
   readonly children: ReactNode
   readonly resources?: AppLocaleResources
+  readonly storage?: I18nStorage
+  readonly initialLanguage?: string
 }) {
-  const i18n = useMemo(() => initI18n(resources), [resources])
+  const i18n = useMemo(
+    () => initI18n(resources, { storage, initialLanguage }),
+    [resources, storage, initialLanguage]
+  )
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
 }

@@ -18,11 +18,11 @@ export { useLocale, useChangeLocale } from "./hooks"
 export {
   SUPPORTED_LOCALES,
   DEFAULT_LOCALE,
-  LOCALE_STORAGE_KEY,
   initI18n,
   i18next,
   type SupportedLocale,
   type AppLocaleResources,
+  type I18nStorage,
 } from "./setup"
 
 // react-i18next 公共 API 直接 re-export, app 不必装 react-i18next
