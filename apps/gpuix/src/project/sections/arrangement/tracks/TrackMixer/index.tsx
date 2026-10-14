@@ -136,6 +136,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 icon={
                   <Icon
                     name="Circle"
+                    filled
                     size={theme.control["--spacing-control-icon"]}
                     color={
                       track.armed ? theme.colors.primaryForeground : theme.colors.mutedForeground
