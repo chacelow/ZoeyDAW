@@ -62,6 +62,15 @@
 - **atomic_file 迁移要对照原实现**：`write_atomically` 的顺序（create_dir_all → 清理陈旧 tmp → create_new 临时文件 → write_all → sync_all → 长度校验 → rename/MoveFileExW(WRITE_THROUGH) → 目录 fsync）与"清理失败只记日志不中断保存"均已与 `src-tauri` 原版逐项核对一致。迁移耐久性代码时照这个清单核。
 - **一个 `.node` 的体积**：A2 加入 `dyn-symbols` 与全部模块后为 1.14MB（仅光标时 496KB）；光标往返仍精确、`cursorPosition` 0.92µs/次，说明该特性不影响已验证路径。
 
+## gpuix 迁移：Bun 的 fake timers 比 Vitest 粗
+
+- 错：以为 `vi.useFakeTimers({ toFake: [...] })` 能原样换成 `jest.useFakeTimers({ toFake: [...] })`。
+- 对：Bun 的 `jest.useFakeTimers()` **忽略 `toFake`**，一律伪造全部定时器。实测：传 `toFake: ["performance","setInterval","clearInterval"]` 后 `setTimeout` 也被伪造了（`jest.advanceTimersByTime` 触发了它）。把选项去掉并在注释里写明，不要假装选择性伪造仍然生效。
+- 因：原 `simulation.test.ts` 伪造 6 种、`clip-sources.test.ts` 只伪造 3 种，迁移后两处语义变宽。A1 的汇报只写了“不支持 `toFake` 类型选项”，没有说明对测试含义的影响。
+- 验证方法（可复用）：**变异检查**。把被改写的测试里的期望值改成错的（例如 `pitch: 72`→`99`），确认它会失败；若仍通过，说明测试已空转。2026-10-14 对 `clip-sources.test.ts` 做过，失败如预期，所以变宽没有让它失效。
+- 另：判断“断言一个不丢”不能只信 worker 汇报，用脚本比对：先把原文件的 `from "vitest"` 规范化成 `bun:test`，再 `diff`，统计只在原文件出现的 `expect(` 行；本次 29 个文件里只有 9 行不同（7 行 `vi.getTimerCount`→`jest.getTimerCount`，2 行是批准的 `structuredClone` 与类型参数）。
+- 另：测试稳定性要三种方式都跑——默认顺序、`--randomize --seed N` 至少两个种子、每个文件单独运行（后者专门抓 preload 全局注册带来的跨文件泄漏）。A1 的 225 个用例三种方式均通过。
+
 ## gpuix 迁移：Shell 引号会吞掉长回复
 
 - 错：把含 `$(`、反引号的中文长文本直接放进 `--body "..."` 双引号。
