@@ -4,7 +4,9 @@
 
 `project/model/track-routing.ts` owns `canRouteTrack(sourceId, destinationId, tracks)` and `routingDestinations(track, tracks)`. Both the routing menu and `adapters/runtime/track-routing.ts` use the same decision. Internal targets must be Group or Main, cannot be the source or its descendant, and cannot close an output cycle. `none` and `external` remain legal terminal destinations. Checking candidates does not alter the document.
 
-2026-10-15 verification:
+Candidate projection builds one ID index and descendant set per source, then shares the same indexed predicate with authored route validation. The component memoizes unchanged inputs; there are no repeated linear track searches inside candidate walks. A standalone 2002-track / 2001-target scenario completed 200 projections in 41.38ms; no before-version timing or speedup factor is claimed. Both descendant and cycle mutations were rerun against this indexed implementation and each failed one test before restoration.
+
+Initial 0.10-renderer verification (not the final main-build gate):
 
 | Command / scenario | Result |
 | --- | --- |

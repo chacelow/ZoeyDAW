@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useTrackLabels } from "../labels"
 import { DropdownButton, DragPadToggle } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -22,8 +23,9 @@ export function TrackRouting({ track }: { readonly track: Track }) {
   const { t } = useTrackLabels()
   const theme = useTheme()
   const tracks = useProjectState(state => state.document.tracks)
+  const destinations = useMemo(() => routingDestinations(track, tracks), [track, tracks])
   const outputs = [
-    ...routingDestinations(track, tracks).map(destination => ({
+    ...destinations.map(destination => ({
       id: destination.id,
       label: destination.name,
     })),
