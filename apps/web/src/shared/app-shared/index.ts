@@ -13,17 +13,12 @@
  * 已删除：云端用户 / 组织 / tRPC / mentions / code-block / analytics / settings-dialog-store。
  */
 
-import type { ReactNode } from "react"
 import { v4 as uuidV4 } from "uuid"
-import {
-  dismissToast as dismissUiToast,
-  toast as uiToast,
-  toastLoading as uiToastLoading,
-  type ToastOptions,
-  type ToastVariant,
-} from "@zoeymind/ui"
+import { toast as uiToast, toastLoading as uiToastLoading } from "@zoeymind/ui"
+import type { ToastOptions, ToastVariant } from "@zoeymind/ui"
+import type { ReactNode } from "react"
 
-export { cn } from "@zoeymind/ui"
+export { cn, dismissToast } from "@zoeymind/ui"
 export const createUUID: () => string = uuidV4
 export const generateUUID: () => string = uuidV4
 
@@ -58,7 +53,6 @@ export const toast = Object.assign(
 
 export const toastLoading = (message: string, id = `loading-${Date.now()}`): string =>
   uiToastLoading(message, id)
-export const dismissToast = dismissUiToast
 
 export function useToast(): { toast: ToastApi } {
   return { toast }
@@ -74,4 +68,6 @@ export { useLoading, useLoadingStore } from "./loading-state"
 export { useSettingsDialog, type SettingsSectionId } from "./settings-dialog-store"
 export { useFeature, useFlags } from "./flags"
 
-export type AppSharedProviderProps = { children: ReactNode }
+export interface AppSharedProviderProps {
+  children: ReactNode
+}

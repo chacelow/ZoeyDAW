@@ -1,12 +1,14 @@
-import { useRef, useState } from "react"
+import { useId, useRef, useState } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { useProjectState } from "@/pages/project/adapters"
 import { positionToBar } from "@/pages/project/model/types"
-import { useMinimapGesture, type MinimapGeometry } from "./useMinimapGesture"
+import { useMinimapGesture } from "./useMinimapGesture"
 import { OverviewCanvas } from "./OverviewCanvas"
+import type { MinimapGeometry } from "./useMinimapGesture"
 
-export function MiniMap(props: MinimapGeometry) {
+export function MiniMap(properties: MinimapGeometry) {
   const { t } = useTranslation()
+  const helpId = useId()
   const tracks = useProjectState(s => s.document.tracks)
   const markers = useProjectState(s => s.document.markers)
   const positionBar = useProjectState(s =>
@@ -14,36 +16,45 @@ export function MiniMap(props: MinimapGeometry) {
   )
   const element = useRef<HTMLDivElement>(null)
   const [cursor, setCursor] = useState<"grab" | "ew-resize">("grab")
-  const gesture = useMinimapGesture(element, props)
-  const viewportBars = Math.min(props.bars, props.viewportWidth / props.pxPerBar)
-  const start = Math.max(0, Math.min(props.bars - viewportBars, props.scrollX / props.pxPerBar))
+  const gesture = useMinimapGesture(element, properties)
+  const viewportBars = Math.min(properties.bars, properties.viewportWidth / properties.pxPerBar)
+  const start = Math.max(
+    0,
+    Math.min(properties.bars - viewportBars, properties.scrollX / properties.pxPerBar)
+  )
   return (
     <div
       ref={element}
       data-minimap
+      role="group"
       aria-label={t("arrangement.minimap")}
-      className="relative h-full min-h-0 select-none overflow-hidden bg-[var(--arrangement-ruler)] touch-none"
+      className="relative h-full min-h-0 touch-none overflow-hidden bg-[var(--arrangement-ruler)] select-none"
       style={{ cursor }}
-      title={t("arrangement.minimapHelp")}
+      aria-describedby={helpId}
       onPointerDown={gesture.pointerDown}
       onPointerMove={event => {
         const next = gesture.pointerMove(event)
-        if (next) setCursor(next)
+        if (next) {
+          setCursor(next)
+        }
       }}
       onDoubleClick={gesture.fit}
     >
-      <OverviewCanvas tracks={tracks} markers={markers} bars={props.bars} />
+      <span id={helpId} className="sr-only">
+        {t("arrangement.minimapHelp")}
+      </span>
+      <OverviewCanvas tracks={tracks} markers={markers} bars={properties.bars} />
       <div
         data-minimap-playhead
-        className="pointer-events-none absolute inset-y-0 w-px bg-foreground"
-        style={{ left: `${((positionBar - 1) / props.bars) * 100}%` }}
+        className="bg-foreground pointer-events-none absolute inset-y-0 w-px"
+        style={{ left: `${((positionBar - 1) / properties.bars) * 100}%` }}
       />
       <div
         data-minimap-viewport
-        className="pointer-events-none absolute inset-y-0 rounded-[2px] border border-muted-foreground bg-overlay"
+        className="border-muted-foreground bg-overlay pointer-events-none absolute inset-y-0 rounded-[2px] border"
         style={{
-          left: `${(start / props.bars) * 100}%`,
-          width: `${(viewportBars / props.bars) * 100}%`,
+          left: `${(start / properties.bars) * 100}%`,
+          width: `${(viewportBars / properties.bars) * 100}%`,
         }}
       />
     </div>

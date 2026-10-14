@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { hydrateProject, projectActions, useProjectState } from "./index"
-import { createMockDocument, createMockWorkspace } from "./fixtures"
 import { parseClipClipboard } from "../model/clip-clipboard"
+import { createMockDocument, createMockWorkspace } from "./fixtures"
+import { hydrateProject, projectActions, useProjectState } from "./index"
 
 beforeEach(() =>
   hydrateProject(
@@ -22,7 +22,7 @@ describe("clip clipboard edits", () => {
       startBar: audio.startBar + 2,
       lengthBars: audio.lengthBars - 2,
       sourceOffsetBars: 2,
-      ...(audio.kind === "audio" ? { fadeInBars: 0, fadeOutBars: 0 } : {}),
+      ...(audio.kind === "audio" && { fadeInBars: 0, fadeOutBars: 0 }),
     }
     const payload = parseClipClipboard(
       JSON.stringify({
@@ -34,7 +34,9 @@ describe("clip clipboard edits", () => {
         ],
       })
     )
-    if (!payload) throw new Error("Invalid clipboard fixture")
+    if (!payload) {
+      throw new Error("Invalid clipboard fixture")
+    }
     const beforeAudio = clips("3-audio").length
     const beforeMidi = clips("4-midi").length
     projectActions.beginEdit()
@@ -51,7 +53,9 @@ describe("clip clipboard edits", () => {
   })
   it("rejects incompatible destination atomically and cuts only one document history entry", () => {
     const payload = projectActions.copyClips(["audio-1"])
-    if (!payload) throw new Error("Missing audio fixture")
+    if (!payload) {
+      throw new Error("Missing audio fixture")
+    }
     const midiCount = clips("4-midi").length
     expect(projectActions.pasteClips("4-midi", 15, payload)).toBe(false)
     expect(clips("4-midi")).toHaveLength(midiCount)

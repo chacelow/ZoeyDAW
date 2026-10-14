@@ -21,16 +21,17 @@ type PluginLog = typeof PluginLogModule
 const LEVEL_ORDER = ["debug", "info", "success", "warn", "error"] as const
 const FLOOR_INDEX = LEVEL_ORDER.indexOf("info")
 
-function isTauriEnv(): boolean {
-  if (typeof window === "undefined") return false
-  return "__TAURI_INTERNALS__" in window
+function isTauriEnvironment(): boolean {
+  return typeof window === "undefined" ? false : "__TAURI_INTERNALS__" in window
 }
 
 function stringifySafe(value: unknown): string {
   if (value instanceof Error) {
     return value.stack ? `${value.message}\n${value.stack}` : value.message
   }
-  if (typeof value === "string") return value
+  if (typeof value === "string") {
+    return value
+  }
   if (typeof value === "number" || typeof value === "boolean" || value == null) {
     return String(value)
   }
@@ -50,11 +51,13 @@ function formatEntry(entry: LogEntry): string {
 let pluginPromise: Promise<PluginLog | null> | null = null
 
 async function getPlugin(): Promise<PluginLog | null> {
-  if (!isTauriEnv()) return null
+  if (!isTauriEnvironment()) {
+    return null
+  }
   if (!pluginPromise) {
-    pluginPromise = import("@tauri-apps/plugin-log").catch(err => {
+    pluginPromise = import("@tauri-apps/plugin-log").catch(error => {
       // 装了但 runtime 拉不起来 — 打到 console, 不阻塞前端.
-      console.warn("[log-sink] plugin-log unavailable:", err)
+      console.warn("[log-sink] plugin-log unavailable:", error)
       return null
     })
   }
@@ -67,24 +70,31 @@ async function getPlugin(): Promise<PluginLog | null> {
  */
 export function createTauriLogSink(): LogSink {
   return (entry: LogEntry) => {
-    if (LEVEL_ORDER.indexOf(entry.level) < FLOOR_INDEX) return
-    if (!isTauriEnv()) return
+    if (LEVEL_ORDER.indexOf(entry.level) < FLOOR_INDEX || !isTauriEnvironment()) {
+      return
+    }
 
     const message = formatEntry(entry)
     void getPlugin().then(plugin => {
-      if (!plugin) return
+      if (!plugin) {
+        return
+      }
       // success 走 info; 其它 1:1 映射.
       switch (entry.level) {
-        case "error":
+        case "error": {
           return plugin.error(message)
-        case "warn":
+        }
+        case "warn": {
           return plugin.warn(message)
-        case "debug":
+        }
+        case "debug": {
           return plugin.debug(message)
+        }
         case "info":
         case "success":
-        default:
+        default: {
           return plugin.info(message)
+        }
       }
     })
   }

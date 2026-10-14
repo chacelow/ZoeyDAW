@@ -12,7 +12,9 @@ export function clampAutomationCurve(curve: number): number {
   return Math.max(MIN_AUTOMATION_CURVE, Math.min(MAX_AUTOMATION_CURVE, curve))
 }
 
-/** Curve belongs to the left breakpoint of a segment; zero is linear. */
+/**
+Curve belongs to the left breakpoint of a segment; zero is linear.
+*/
 export function interpolateAutomation(
   from: number,
   to: number,
@@ -24,24 +26,31 @@ export function interpolateAutomation(
   const eased = Math.abs(bend) < 0.000001 ? t : Math.expm1(bend * t) / Math.expm1(bend)
   return clampAutomationValue(from + (to - from) * eased)
 }
-/** Sorted points are the domain invariant enforced at the adapter and snapshot boundary. */
+/**
+Sorted points are the domain invariant enforced at the adapter and snapshot boundary.
+*/
 export function automationValueAt(
   points: readonly AutomationPoint[],
   bar: number,
   fallback: number
 ): number {
-  if (!points.length) return clampAutomationValue(fallback)
-  if (bar <= points[0].bar) return clampAutomationValue(points[0].value)
-  for (let i = 1; i < points.length; i++) {
-    const left = points[i - 1]
-    const right = points[i]
-    if (bar < right.bar)
+  if (!points.length) {
+    return clampAutomationValue(fallback)
+  }
+  if (bar <= points[0].bar) {
+    return clampAutomationValue(points[0].value)
+  }
+  for (let index = 1; index < points.length; index++) {
+    const left = points[index - 1]
+    const right = points[index]
+    if (bar < right.bar) {
       return interpolateAutomation(
         left.value,
         right.value,
         (bar - left.bar) / (right.bar - left.bar),
         left.curve
       )
+    }
   }
   return clampAutomationValue(points[points.length - 1].value)
 }

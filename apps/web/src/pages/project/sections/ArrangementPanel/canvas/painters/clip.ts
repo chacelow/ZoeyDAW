@@ -1,7 +1,5 @@
-import type { Clip } from "@/pages/project/model/types"
 import { clipLabel } from "@/pages/project/model/clip-label"
-import type { ArrangementScene } from "../scene"
-import { resolveColor, type TokenSet } from "../tokens"
+import { resolveColor } from "../tokens"
 import {
   arrangementBodyBottom,
   arrangementBodyTop,
@@ -9,7 +7,7 @@ import {
   layoutTrackRows,
   pinnedTrackHeight,
 } from "../layout"
-import { clipVisualGeometry, type ClipVisualGeometry } from "../clip-geometry"
+import { clipVisualGeometry } from "../clip-geometry"
 import { paintGroupOverview } from "./group"
 import {
   paintClipLoopTicks,
@@ -19,6 +17,10 @@ import {
 } from "./clip-previews"
 import { paintFade } from "./clip-fades"
 import { paintTimeGrid } from "./grid"
+import type { ClipVisualGeometry } from "../clip-geometry"
+import type { TokenSet } from "../tokens"
+import type { ArrangementScene } from "../scene"
+import type { Clip } from "@/pages/project/model/types"
 
 const NORMAL_PASSES = [false] as const
 const DRAG_PASSES = [false, true] as const
@@ -30,127 +32,136 @@ export interface ClipPainterOptions {
 }
 
 export function paintClips(
-  ctx: CanvasRenderingContext2D,
+  context: CanvasRenderingContext2D,
   scene: ArrangementScene,
   tokens: TokenSet,
   options: ClipPainterOptions
 ): void {
   const { width, height, pxPerBar, scrollX, dpr } = scene.viewport
-  if (width <= 0 || height <= 0 || pxPerBar <= 0) return
+  if (width <= 0 || height <= 0 || pxPerBar <= 0) {
+    return
+  }
   const bodyTop = arrangementBodyTop()
   const bodyBottom = arrangementBodyBottom(height)
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  ctx.save()
-  ctx.beginPath()
-  ctx.rect(0, bodyTop, width, bodyBottom - bodyTop)
-  ctx.clip()
-  ctx.font = "10px ui-sans-serif, system-ui, sans-serif"
-  ctx.textBaseline = "middle"
+  context.setTransform(dpr, 0, 0, dpr, 0, 0)
+  context.save()
+  context.beginPath()
+  context.rect(0, bodyTop, width, bodyBottom - bodyTop)
+  context.clip()
+  context.font = "10px ui-sans-serif, system-ui, sans-serif"
+  context.textBaseline = "middle"
   const rows = layoutTrackRows(scene)
   const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks)
-  ctx.strokeStyle = tokens["--arrangement-line"]
-  ctx.lineWidth = 1
-  ctx.beginPath()
+  context.strokeStyle = tokens["--arrangement-line"]
+  context.lineWidth = 1
+  context.beginPath()
   for (const row of rows) {
-    const pinned = row.track.kind === "main" || row.track.kind === "return"
-    const top = Math.max(row.top, pinned ? pinnedTop : bodyTop)
-    const bottom = Math.min(row.top + row.height, pinned ? bodyBottom : pinnedTop)
-    if (bottom <= top) continue
-    ctx.rect(0.5, Math.round(top) + 0.5, width - 1, Math.round(bottom) - Math.round(top) - 1)
+    const isPinned = row.track.kind === "main" || row.track.kind === "return"
+    const top = Math.max(row.top, isPinned ? pinnedTop : bodyTop)
+    const bottom = Math.min(row.top + row.height, isPinned ? bodyBottom : pinnedTop)
+    if (bottom <= top) {
+      continue
+    }
+    context.rect(0.5, Math.round(top) + 0.5, width - 1, Math.round(bottom) - Math.round(top) - 1)
   }
-  ctx.stroke()
+  context.stroke()
   for (const row of rows) {
-    if (row.top + row.height < bodyTop || row.top > bodyBottom) continue
-    ctx.save()
-    ctx.beginPath()
-    const pinned = row.track.kind === "return" || row.track.kind === "main"
-    ctx.rect(
+    if (row.top + row.height < bodyTop || row.top > bodyBottom) {
+      continue
+    }
+    context.save()
+    context.beginPath()
+    const isPinned = row.track.kind === "return" || row.track.kind === "main"
+    context.rect(
       0,
-      pinned ? pinnedTop : bodyTop,
+      isPinned ? pinnedTop : bodyTop,
       width,
-      Math.max(0, (pinned ? bodyBottom : pinnedTop) - (pinned ? pinnedTop : bodyTop))
+      Math.max(0, (isPinned ? bodyBottom : pinnedTop) - (isPinned ? pinnedTop : bodyTop))
     )
-    ctx.clip()
+    context.clip()
     if (row.track.kind === "group") {
-      paintGroupOverview(ctx, row, scene, tokens)
-      ctx.restore()
+      paintGroupOverview(context, row, scene, tokens)
+      context.restore()
       continue
     }
     const originalClips =
       scene.clipDrag?.source.find(track => track.id === row.track.id)?.clips ?? row.track.clips
     for (const ghost of scene.clipDrag ? DRAG_PASSES : NORMAL_PASSES) {
       for (const clip of ghost ? row.track.clips : originalClips) {
-        if (
-          ghost &&
-          (!clip.id.startsWith("preview-") || !scene.clipDrag?.ids.has(clip.id.slice(8)))
-        )
+        if (ghost && !scene.clipDrag?.ids.has(clip.id)) {
           continue
+        }
         const rect = clipRect(clip, row, pxPerBar, scrollX)
-        if (rect.left + rect.width <= 0 || rect.left >= width) continue
-        const selected =
-          (!scene.clipDrag || ghost) &&
-          (options.selectedClipIds.has(clip.id) ||
-            (clip.id.startsWith("preview-") && options.selectedClipIds.has(clip.id.slice(8))))
-        const hovered =
+        if (rect.left + rect.width <= 0 || rect.left >= width) {
+          continue
+        }
+        const selected = ghost
+          ? !!scene.clipDrag?.ids.has(clip.id)
+          : !scene.clipDrag && options.selectedClipIds.has(clip.id)
+        const isHovered =
           !scene.clipDrag && !options.automationMode && options.hoverClip?.id === clip.id
         const visual = clipVisualGeometry(
           rect,
           clip,
           row.track,
-          !ghost && hovered && options.hoverClip?.region === "body"
+          !ghost && isHovered && options.hoverClip?.region === "body"
         )
         const color = resolveColor(clip.color ?? row.track.color, tokens, tokens["--primary"])
-        ctx.save()
-        ctx.beginPath()
-        ctx.rect(
+        context.save()
+        context.beginPath()
+        context.rect(
           Math.max(0, visual.left),
           visual.top,
           Math.max(0, Math.min(width, visual.left + visual.width) - Math.max(0, visual.left)),
           visual.height
         )
-        ctx.clip()
+        context.clip()
         paintClip(
-          ctx,
+          context,
           clip,
           visual,
           color,
           tokens,
           {
             selected,
-            hovered: hovered && !ghost,
+            hovered: isHovered && !ghost,
             automationMode: options.automationMode,
             ghost,
           },
           width,
           scene
         )
-        ctx.restore()
+        context.restore()
       }
     }
-    ctx.restore()
+    context.restore()
   }
   const selection = scene.timeSelection
   if (selection && selection.endBar > selection.startBar) {
     const start = Math.max(0, (selection.startBar - 1) * pxPerBar - scrollX)
     const end = Math.min(width, (selection.endBar - 1) * pxPerBar - scrollX)
     if (end > start) {
-      ctx.fillStyle = tokens["--primary"]
-      ctx.globalAlpha = 0.2
+      context.fillStyle = tokens["--primary"]
+      context.globalAlpha = 0.2
       for (const row of rows) {
-        if (!selection.trackIds.includes(row.track.id)) continue
-        const pinned = row.track.kind === "return" || row.track.kind === "main"
-        const top = Math.max(bodyTop, row.top, pinned ? pinnedTop : bodyTop)
-        const bottom = Math.min(bodyBottom, row.top + row.height, pinned ? bodyBottom : pinnedTop)
-        if (bottom > top) ctx.fillRect(start, top, end - start, bottom - top)
+        if (!selection.trackIds.includes(row.track.id)) {
+          continue
+        }
+        const isPinned = row.track.kind === "return" || row.track.kind === "main"
+        const top = Math.max(bodyTop, row.top, isPinned ? pinnedTop : bodyTop)
+        const bottom = Math.min(bodyBottom, row.top + row.height, isPinned ? bodyBottom : pinnedTop)
+        if (bottom > top) {
+          context.fillRect(start, top, end - start, bottom - top)
+        }
       }
-      ctx.globalAlpha = 1
+      context.globalAlpha = 1
     }
   }
-  ctx.restore()
+  context.restore()
 }
 
 function paintClip(
-  ctx: CanvasRenderingContext2D,
+  context: CanvasRenderingContext2D,
   clip: Clip,
   g: ClipVisualGeometry,
   color: string,
@@ -160,17 +171,18 @@ function paintClip(
   scene: ArrangementScene
 ): void {
   const { left, top, width, height, bodyTop, bodyHeight, titleHeight } = g
-  const numerator = scene.transport.numerator
+  const { numerator } = scene.transport
   const opacity = state.ghost ? 0.5 : 1
-  ctx.globalAlpha = opacity
-  ctx.fillStyle = state.selected && bodyHeight === 0 ? tokens["--arrangement-clip-selected"] : color
-  ctx.fillRect(left, top, width, titleHeight)
+  context.globalAlpha = opacity
+  context.fillStyle =
+    state.selected && bodyHeight === 0 ? tokens["--arrangement-clip-selected"] : color
+  context.fillRect(left, top, width, titleHeight)
   if (bodyHeight > 0) {
-    ctx.fillStyle = state.selected ? tokens["--arrangement-clip-selected"] : color
-    ctx.globalAlpha = (state.selected ? 0.9 : state.automationMode ? 0.25 : 0.55) * opacity
-    ctx.fillRect(left, bodyTop, width, bodyHeight)
+    context.fillStyle = state.selected ? tokens["--arrangement-clip-selected"] : color
+    context.globalAlpha = (state.selected ? 0.9 : state.automationMode ? 0.25 : 0.55) * opacity
+    context.fillRect(left, bodyTop, width, bodyHeight)
     paintTimeGrid(
-      ctx,
+      context,
       scene,
       tokens["--arrangement-grid-minor"],
       tokens["--arrangement-grid-major"],
@@ -180,34 +192,47 @@ function paintClip(
       Math.min(viewportWidth, left + width),
       0.4 * opacity
     )
-    ctx.fillStyle = tokens["--arrangement-line"]
-    ctx.globalAlpha = (state.automationMode ? 0.14 : 0.3) * opacity
-    ctx.fillRect(left, bodyTop, width, 1)
-    ctx.globalAlpha = (state.automationMode ? 0.4 : 1) * opacity
+    context.fillStyle = tokens["--arrangement-line"]
+    context.globalAlpha = (state.automationMode ? 0.14 : 0.3) * opacity
+    context.fillRect(left, bodyTop, width, 1)
+    context.globalAlpha = (state.automationMode ? 0.4 : 1) * opacity
     const ink = tokens["--arrangement-clip-ink"]
-    if (clip.kind === "audio")
-      paintWaveform(ctx, clip, left, bodyTop, width, bodyHeight, ink, viewportWidth)
-    else if (clip.kind === "midi")
-      paintMidiNotes(ctx, clip, left, bodyTop, width, bodyHeight, ink, numerator, viewportWidth)
-    else paintPatternNotes(ctx, clip, left, bodyTop, width, bodyHeight, ink, viewportWidth)
-    ctx.globalAlpha = (state.automationMode ? 0.4 : 1) * opacity
+    if (clip.kind === "audio") {
+      paintWaveform(context, clip, left, bodyTop, width, bodyHeight, ink, viewportWidth)
+    } else if (clip.kind === "midi") {
+      paintMidiNotes(context, clip, left, bodyTop, width, bodyHeight, ink, numerator, viewportWidth)
+    } else {
+      paintPatternNotes(context, clip, left, bodyTop, width, bodyHeight, ink, viewportWidth)
+    }
+    context.globalAlpha = (state.automationMode ? 0.4 : 1) * opacity
   }
-  if (clip.kind === "audio" && !state.automationMode && !state.ghost)
-    for (const fade of g.fades) paintFade(ctx, fade, g, tokens)
-  ctx.globalAlpha = opacity
-  paintClipLoopTicks(ctx, clip, left, top, width, viewportWidth, tokens["--arrangement-clip-ink"])
-  ctx.fillStyle = tokens["--arrangement-clip-ink"]
-  ctx.save()
-  ctx.beginPath()
-  ctx.rect(left + 2, top, Math.max(0, width - 4), titleHeight)
-  ctx.clip()
-  ctx.fillText(clipLabel(clip), left + 4, top + titleHeight / 2)
-  ctx.restore()
+  if (clip.kind === "audio" && !state.automationMode && !state.ghost) {
+    for (const fade of g.fades) {
+      paintFade(context, fade, g, tokens)
+    }
+  }
+  context.globalAlpha = opacity
+  paintClipLoopTicks(
+    context,
+    clip,
+    left,
+    top,
+    width,
+    viewportWidth,
+    tokens["--arrangement-clip-ink"]
+  )
+  context.fillStyle = tokens["--arrangement-clip-ink"]
+  context.save()
+  context.beginPath()
+  context.rect(left + 2, top, Math.max(0, width - 4), titleHeight)
+  context.clip()
+  context.fillText(clipLabel(clip), left + 4, top + titleHeight / 2)
+  context.restore()
   if (state.hovered && !state.selected) {
-    ctx.strokeStyle = tokens["--foreground"]
-    ctx.globalAlpha = 0.45
-    ctx.strokeRect(left + 0.5, top + 0.5, width - 1, height - 1)
-    ctx.globalAlpha = 1
+    context.strokeStyle = tokens["--foreground"]
+    context.globalAlpha = 0.45
+    context.strokeRect(left + 0.5, top + 0.5, width - 1, height - 1)
+    context.globalAlpha = 1
   }
-  ctx.globalAlpha = 1
+  context.globalAlpha = 1
 }

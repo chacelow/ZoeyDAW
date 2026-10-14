@@ -1,25 +1,27 @@
-import type { AudioClip, Track } from "@/pages/project/model/types"
 import {
   clampFadeCurve,
   DEFAULT_FADE_CURVE,
   FADE_CURVE_VERTICAL_SCALE,
   fadeControls,
 } from "@/pages/project/model/fades"
-import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
 import { clipRect, layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import {
   clipVisualGeometry,
   FADE_HANDLE_PX,
 } from "@/pages/project/sections/ArrangementPanel/canvas/clip-geometry"
+import { beginProjectPreview, finishProjectPreview, setTracksPreview } from "../project-preview"
+import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
+import type { AudioClip } from "@/pages/project/model/types"
 
 export function createFadeGesture(
   context: InteractionContext,
   pointer: CanvasPointer,
   clip: AudioClip,
-  tracks: readonly Track[],
   edge: "in" | "out",
   handle: "length" | "curve"
 ): CanvasGesture {
+  beginProjectPreview(context)
+  const { tracks } = context.getState().document
   const original = fadeControls(clip, edge)
   const other = fadeControls(clip, edge === "in" ? "out" : "in")
   const owner = tracks.find(track => track.clips.some(item => item.id === clip.id))
@@ -75,7 +77,8 @@ export function createFadeGesture(
           patch = start === original.start ? null : { fadeOutBars: original.end - start }
         }
       }
-      context.scene.setPreviewTracks(
+      setTracksPreview(
+        context,
         patch && owner
           ? tracks.map(track =>
               track.id === owner.id
@@ -91,12 +94,7 @@ export function createFadeGesture(
       )
     },
     finish(cancelled) {
-      if (!cancelled && patch) {
-        context.actions.beginEdit()
-        context.actions.updateClip(clip.id, patch)
-        context.actions.endEdit()
-      }
-      context.scene.setPreviewTracks(null)
+      finishProjectPreview(context, cancelled || patch === null)
     },
   }
 }

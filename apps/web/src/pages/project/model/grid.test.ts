@@ -21,13 +21,13 @@ describe("adaptive arrangement grid", () => {
     const near = deriveGridPlan(settings, 128, 4, 4)
     const far = deriveGridPlan(settings, gridZoomLimit(4, 4), 4, 4)
     expect(near.cellBars).toBeGreaterThan(far.cellBars)
-    expect(far).toMatchObject({ cellBars: 1 / 16384, label: "1/16384" })
+    expect(far).toMatchObject({ cellBars: 1 / 16_384, label: "1/16384" })
     expect(far.cellBars * gridZoomLimit(4, 4)).toBe(8)
     expect(settings).toEqual({ mode: "adaptive", density: "narrowest" })
   })
 
   it("retains the finest clip duration in a 32/1 meter", () => {
-    const cell = noteGridBars(16384, 32, 1)
+    const cell = noteGridBars(16_384, 32, 1)
     expect(createClip("audio", 1, cell).lengthBars).toBe(cell)
     expect(createClip("midi", 1, cell).lengthBars).toBe(cell)
   })

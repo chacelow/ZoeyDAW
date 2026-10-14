@@ -6,17 +6,17 @@
  *
  * 外壳 `size-6`,内层 svg 填满槽位。
  */
-import type { ReactNode } from "react";
-import { cn } from "#lib/utils";
+import { cn } from "#lib/utils"
+import type { ReactNode } from "react"
 
 export function IconSlot({
   children,
   className,
   size = "default",
 }: {
-  children: ReactNode;
-  className?: string;
-  size?: "default" | "compact";
+  readonly children: ReactNode
+  readonly className?: string
+  readonly size?: "default" | "compact"
 }) {
   return (
     <span
@@ -26,10 +26,10 @@ export function IconSlot({
           ? "size-control-icon-compact [&>svg]:size-control-icon-compact"
           : "size-control-icon-slot [&>svg]:size-control-icon",
         "flex shrink-0 items-center justify-center text-current [&>svg]:text-current",
-        className,
+        className
       )}
     >
       {children}
     </span>
-  );
+  )
 }

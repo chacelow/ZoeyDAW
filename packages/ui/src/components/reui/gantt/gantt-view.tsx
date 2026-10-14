@@ -1,7 +1,7 @@
 // Title: Gantt View
 // Description: The gantt body - split resizable tree/timeline panes with synced scrolling, multi-column tree, grouped two-row header, day through year scales, zoom, drag-to-pan, lanes, drag and resize.
 
-'use client'
+"use client"
 
 import {
   memo,
@@ -12,8 +12,8 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type RefObject
-} from 'react'
+  type RefObject,
+} from "react"
 import {
   DEFAULT_ROW_ALIGN,
   resolveScheduleMode,
@@ -22,16 +22,16 @@ import {
   useGanttSelector,
   useGanttSettings,
   useGanttViewConfig,
-  type GanttColumn
-} from './gantt'
-import { GanttBar } from './gantt-bar'
+  type GanttColumn,
+} from "./gantt"
+import { GanttBar } from "./gantt-bar"
 import {
   cancelActiveGanttGestures,
   markGestureEnd,
   useGanttGestures,
   useGanttGestureTeardown,
-  wasRecentDrag
-} from './gantt-dnd'
+  wasRecentDrag,
+} from "./gantt-dnd"
 import {
   getDayKey,
   getLaneKey,
@@ -42,17 +42,17 @@ import {
   resolveOffDay,
   toZoned,
   zonedStartOfDay,
-  type GanttLaneMemo
-} from './gantt-lib'
+  type GanttLaneMemo,
+} from "./gantt-lib"
 import type {
   GanttDateRange,
   GanttEvent,
   GanttOccurrence,
   GanttResource,
   GanttResourceReorder,
-  GanttSegment
-} from './gantt-types'
-import { mergeProps } from '@base-ui/react/merge-props'
+  GanttSegment,
+} from "./gantt-types"
+import { mergeProps } from "@base-ui/react/merge-props"
 // Base UI's ScrollArea re-measures its thumb + overflow on mount, viewport
 // resize and scroll, but NOT on a content-size change unless the content sits
 // in a ScrollArea.Content (which carries the content ResizeObserver). ReUI's
@@ -60,8 +60,8 @@ import { mergeProps } from '@base-ui/react/merge-props'
 // panes wrap their scroll content in this Content to keep the scrollbar in
 // sync when rows expand/collapse or tree columns show/hide. (Radix observes
 // content automatically, so its twin needs no equivalent.)
-import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area'
-import { useRender } from '@base-ui/react/use-render'
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area"
+import { useRender } from "@base-ui/react/use-render"
 import {
   addDays,
   addMinutes,
@@ -71,16 +71,16 @@ import {
   startOfMonth,
   startOfQuarter,
   startOfWeek,
-  type Locale
-} from 'date-fns'
+  type Locale,
+} from "date-fns"
 
-import { cn } from '#lib/utils'
-import { Button } from '#components/button'
-import { Checkbox } from '#components/checkbox'
-import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '#components/context-menu'
-import { ScrollArea, ScrollBar } from '#components/scroll-area'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '#components/tooltip'
-import { IconPlaceholder } from './icon-placeholder'
+import { cn } from "#lib/utils"
+import { Button } from "#components/button"
+import { Checkbox } from "#components/checkbox"
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "#components/context-menu"
+import { ScrollArea, ScrollBar } from "#components/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "#components/tooltip"
+import { IconPlaceholder } from "./icon-placeholder"
 
 /** Current time, refreshed on an interval and on tab focus. */
 function useNow(intervalMs = 30_000): Date {
@@ -88,12 +88,12 @@ function useNow(intervalMs = 30_000): Date {
   useEffect(() => {
     const tick = () => setNow(new Date())
     const id = setInterval(tick, intervalMs)
-    document.addEventListener('visibilitychange', tick)
-    window.addEventListener('focus', tick)
+    document.addEventListener("visibilitychange", tick)
+    window.addEventListener("focus", tick)
     return () => {
       clearInterval(id)
-      document.removeEventListener('visibilitychange', tick)
-      window.removeEventListener('focus', tick)
+      document.removeEventListener("visibilitychange", tick)
+      window.removeEventListener("focus", tick)
     }
   }, [intervalMs])
   return now
@@ -113,12 +113,12 @@ function useTodayKey(timeZone: string): string {
       })
     tick()
     const id = setInterval(tick, 60_000)
-    document.addEventListener('visibilitychange', tick)
-    window.addEventListener('focus', tick)
+    document.addEventListener("visibilitychange", tick)
+    window.addEventListener("focus", tick)
     return () => {
       clearInterval(id)
-      document.removeEventListener('visibilitychange', tick)
-      window.removeEventListener('focus', tick)
+      document.removeEventListener("visibilitychange", tick)
+      window.removeEventListener("focus", tick)
     }
   }, [timeZone])
   return key
@@ -155,7 +155,7 @@ function lowestFreeLane(segments: GanttSegment[], startMs: number, endMs: number
  */
 function trackPoint(el: HTMLElement, clientX: number): { fraction: number; offset: number } {
   const rect = el.getBoundingClientRect()
-  const rtl = getComputedStyle(el).direction === 'rtl'
+  const rtl = getComputedStyle(el).direction === "rtl"
   const offset = rtl ? rect.right - clientX : clientX - rect.left
   // `offset` is exact and drives the time maths. `snapped` is the same value
   // biased so that rect start + snapped lands on a WHOLE viewport pixel: the
@@ -164,7 +164,7 @@ function trackPoint(el: HTMLElement, clientX: number): { fraction: number; offse
   const snapped = rtl ? rect.right - Math.round(clientX) : Math.round(clientX) - rect.left
   return {
     fraction: rect.width > 0 ? offset / rect.width : 0,
-    offset: snapped
+    offset: snapped,
   }
 }
 
@@ -193,7 +193,7 @@ const DEFAULT_TREE_PANEL = {
   minWidth: 180,
   maxWidth: 640,
   resizable: true,
-  nameColumnWidth: 208
+  nameColumnWidth: 208,
 }
 const DEFAULT_COLUMN_WIDTH = 96
 const DEFAULT_ZOOM_RANGE = { min: 0.5, max: 3 }
@@ -239,7 +239,7 @@ interface TimelineRowBars {
    */
   draftLane: number | null
   /** Mode this row was packed under; the draft overlay must honour it. */
-  scheduleMode: 'single' | 'multiple'
+  scheduleMode: "single" | "multiple"
   heightRem: number
   /** Gap above the first bar; equal to every other gap in the row. */
   laneOffsetRem: number
@@ -273,14 +273,14 @@ interface TimelineReorderState {
   proposal: GanttResourceReorder | null
 }
 
-interface GanttViewProps extends useRender.ComponentProps<'div'> {
+interface GanttViewProps extends useRender.ComponentProps<"div"> {
   /** Day-scale unit interval in minutes; defaults to the interval view config. */
   interval?: number
 }
 
 /** The pane's scrollable viewport (custom ScrollArea or native host). */
 function getPaneViewport(pane: HTMLElement | null): HTMLElement | null {
-  return pane?.querySelector<HTMLElement>('[data-slot=scroll-area-viewport]') ?? null
+  return pane?.querySelector<HTMLElement>("[data-slot=scroll-area-viewport]") ?? null
 }
 
 /** Distance scrolled from the inline-start edge (RTL reports negative). */
@@ -290,7 +290,7 @@ function getScrollStart(viewport: HTMLElement): number {
 
 /** Write a distance-from-inline-start back as a signed scrollLeft. */
 function setScrollStart(viewport: HTMLElement, value: number) {
-  viewport.scrollLeft = getComputedStyle(viewport).direction === 'rtl' ? -value : value
+  viewport.scrollLeft = getComputedStyle(viewport).direction === "rtl" ? -value : value
 }
 
 function GanttView({ className, render, interval: intervalProp, ...props }: GanttViewProps) {
@@ -298,7 +298,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
   const settings = useGanttSettings()
   const viewConfig = useGanttViewConfig()
   const range = useGanttSelector<unknown, GanttDateRange>(state => state.visibleRange, {
-    isEqual: (a, b) => getRangeKey(a) === getRangeKey(b)
+    isEqual: (a, b) => getRangeKey(a) === getRangeKey(b),
   })
   const occurrences = useGanttSelector<unknown, GanttOccurrence[]>(
     () => instance.api.getOccurrences(),
@@ -312,7 +312,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
             occ.start.getTime() === b[i]?.start.getTime() &&
             occ.end.getTime() === b[i]?.end.getTime() &&
             occ.event === b[i]?.event
-        )
+        ),
     }
   )
 
@@ -338,7 +338,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
   const rangeStartMs = range.start.getTime()
   const rangeEndMs = range.end.getTime()
   const rangeKey = getRangeKey(range)
-  const snapMin = scale === 'day' ? settings.snapDuration : 24 * 60
+  const snapMin = scale === "day" ? settings.snapDuration : 24 * 60
   // day-granular time input so the today highlight rolls over at midnight
   // without the whole grid re-rendering on the 30s now tick
   const todayDayKey = useTodayKey(timeZone)
@@ -367,8 +367,8 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     // day-start ms for the today window checks; recomputed when the day key
     // rolls over (this memo depends on todayDayKey)
     const todayStartMs = zonedStartOfDay(new Date(), timeZone).getTime()
-    if (scale === 'day') {
-      const labelFormat = interval % 60 === 0 ? settings.i18n.formats.timeGutter : 'h:mm'
+    if (scale === "day") {
+      const labelFormat = interval % 60 === 0 ? settings.i18n.formats.timeGutter : "h:mm"
       // walk whole days: infinite scroll can extend the range past one day
       let dayCursor = zonedStartOfDay(range.start, timeZone)
       while (dayCursor.getTime() < rangeEndMs) {
@@ -387,26 +387,26 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
             label: format(time, labelFormat, { locale: settings.locale }),
             ms: time.getTime(),
             weight,
-            isOff: dayOff
+            isOff: dayOff,
           })
           span += weight
         }
         groups.push({
           key: getDayKey(dayCursor, timeZone),
           label: format(zonedDay, settings.i18n.formats.dayTitle, {
-            locale: settings.locale
+            locale: settings.locale,
           }),
-          span
+          span,
         })
         dayCursor = nextDay
       }
       return {
         units,
         groups,
-        unitWidthRem: metrics?.unitWidths?.day ?? Math.max(2.5, 5 * (interval / 60))
+        unitWidthRem: metrics?.unitWidths?.day ?? Math.max(2.5, 5 * (interval / 60)),
       }
     }
-    if (scale === 'quarter') {
+    if (scale === "quarter") {
       // units are week-aligned weeks (lib aligns the range), groups are months
       let cursor = zonedStartOfDay(range.start, timeZone)
       while (cursor.getTime() < rangeEndMs) {
@@ -416,27 +416,27 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         const weight = (next.getTime() - cursor.getTime()) / (7 * 24 * 60 * 60000)
         units.push({
           key: getDayKey(cursor, timeZone),
-          label: format(zoned, 'MMM d', { locale: settings.locale }),
+          label: format(zoned, "MMM d", { locale: settings.locale }),
           ms: cursor.getTime(),
           weight,
-          isToday: todayStartMs >= cursor.getTime() && todayStartMs < next.getTime()
+          isToday: todayStartMs >= cursor.getTime() && todayStartMs < next.getTime(),
         })
-        const monthKey = format(zoned, 'yyyy-MM')
+        const monthKey = format(zoned, "yyyy-MM")
         const lastGroup = groups[groups.length - 1]
         if (lastGroup && lastGroup.key === monthKey) {
           lastGroup.span += weight
         } else {
           groups.push({
             key: monthKey,
-            label: format(zoned, 'MMMM', { locale: settings.locale }),
-            span: weight
+            label: format(zoned, "MMMM", { locale: settings.locale }),
+            span: weight,
           })
         }
         cursor = next
       }
       return { units, groups, unitWidthRem: metrics?.unitWidths?.quarter ?? 8 }
     }
-    if (scale === 'year') {
+    if (scale === "year") {
       // units are calendar months (weight = real duration), groups are quarters
       let cursor: Date = startOfMonth(toZoned(range.start, timeZone))
       while (cursor.getTime() < rangeEndMs) {
@@ -444,24 +444,24 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         // nominal-day units so a month reads ~30 wide; real ms keeps DST months true
         const weight = (next.getTime() - cursor.getTime()) / (24 * 60 * 60000)
         units.push({
-          key: format(cursor, 'yyyy-MM'),
-          label: format(cursor, 'MMM', { locale: settings.locale }),
+          key: format(cursor, "yyyy-MM"),
+          label: format(cursor, "MMM", { locale: settings.locale }),
           ms: cursor.getTime(),
           weight,
-          isToday: todayStartMs >= cursor.getTime() && todayStartMs < next.getTime()
+          isToday: todayStartMs >= cursor.getTime() && todayStartMs < next.getTime(),
         })
         const quarterStart = startOfQuarter(cursor)
-        const quarterKey = format(quarterStart, 'yyyy-QQQ')
+        const quarterKey = format(quarterStart, "yyyy-QQQ")
         const lastGroup = groups[groups.length - 1]
         if (lastGroup && lastGroup.key === quarterKey) {
           lastGroup.span += weight
         } else {
           groups.push({
             key: quarterKey,
-            label: format(quarterStart, 'QQQ yyyy', {
-              locale: settings.locale
+            label: format(quarterStart, "QQQ yyyy", {
+              locale: settings.locale,
             }),
-            span: weight
+            span: weight,
           })
         }
         cursor = next
@@ -477,33 +477,33 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       const weight = (nextDay.getTime() - cursor.getTime()) / (24 * 60 * 60000)
       units.push({
         key: getDayKey(cursor, timeZone),
-        label: format(zoned, 'EEE d', { locale: settings.locale }),
+        label: format(zoned, "EEE d", { locale: settings.locale }),
         ms: cursor.getTime(),
         weight,
         isToday: getDayKey(cursor, timeZone) === todayDayKey,
-        isOff: resolveOffDay(cursor, timeZone, viewConfig.offDays ?? true)
+        isOff: resolveOffDay(cursor, timeZone, viewConfig.offDays ?? true),
       })
       // locale supplies firstWeekContainsDate so W-numbers match the locale's
       // week numbering (ISO in de/fr, US-style otherwise); the explicit
       // weekStartsOn keeps the number aligned with the rendered grid
       const weekNumber = getWeek(zoned, {
         locale: settings.locale,
-        weekStartsOn: settings.weekStartsOn
+        weekStartsOn: settings.weekStartsOn,
       })
       // key + label from the true week start: a range that begins midweek
       // must not split or mislabel its first group (incl. the Jan 1 week)
       const weekStart = startOfWeek(zoned, {
-        weekStartsOn: settings.weekStartsOn
+        weekStartsOn: settings.weekStartsOn,
       })
-      const weekKey = `w-${format(weekStart, 'yyyy-MM-dd')}`
+      const weekKey = `w-${format(weekStart, "yyyy-MM-dd")}`
       const lastGroup = groups[groups.length - 1]
       if (lastGroup && lastGroup.key === weekKey) {
         lastGroup.span += weight
       } else {
         groups.push({
           key: weekKey,
-          label: `${settings.i18n.labels.week(weekNumber)} ${format(weekStart, 'MMM d', { locale: settings.locale })} - ${format(addDays(weekStart, 6), 'd', { locale: settings.locale })}`,
-          span: weight
+          label: `${settings.i18n.labels.week(weekNumber)} ${format(weekStart, "MMM d", { locale: settings.locale })} - ${format(addDays(weekStart, 6), "d", { locale: settings.locale })}`,
+          span: weight,
         })
       }
       cursor = nextDay
@@ -511,7 +511,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     return {
       units,
       groups,
-      unitWidthRem: metrics?.unitWidths?.[scale] ?? (scale === 'week' ? 10 : 4)
+      unitWidthRem: metrics?.unitWidths?.[scale] ?? (scale === "week" ? 10 : 4),
     }
   }, [
     scale,
@@ -524,7 +524,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     settings.weekStartsOn,
     viewConfig.offDays,
     todayDayKey,
-    metrics
+    metrics,
   ])
 
   // Zoom multiplies the minimum unit width; the flex track still fills when
@@ -568,7 +568,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
             index: i,
             center: start + width / 2,
             ms: unit.ms,
-            endMs: unitFractions[i + 1]?.unit.ms ?? unit.ms
+            endMs: unitFractions[i + 1]?.unit.ms ?? unit.ms,
           }
         }
       }
@@ -635,7 +635,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       }
       const dur = Math.max(ev.end.getTime() - ev.start.getTime(), 1)
       agg.total += dur
-      if (typeof ev.progress === 'number') {
+      if (typeof ev.progress === "number") {
         agg.saw = true
         agg.weighted += ev.progress * dur
       }
@@ -690,7 +690,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       return {
         resourceId: slotDraft.resourceId,
         startMs: slotDraft.start.getTime(),
-        endMs: slotDraft.end.getTime()
+        endMs: slotDraft.end.getTime(),
       }
     },
     {
@@ -700,7 +700,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
           b !== null &&
           a.resourceId === b.resourceId &&
           a.startMs === b.startMs &&
-          a.endMs === b.endMs)
+          a.endMs === b.endMs),
     }
   )
 
@@ -741,7 +741,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         continuesBefore: occurrence.start.getTime() < rangeStartMs,
         continuesAfter: occurrence.end.getTime() > rangeEndMs,
         startMin: Math.max((occurrence.start.getTime() - rangeStartMs) / 60000, 0),
-        endMin: Math.min((occurrence.end.getTime() - rangeStartMs) / 60000, totalMin)
+        endMin: Math.min((occurrence.end.getTime() - rangeStartMs) / 60000, totalMin),
       }))
       const mode = resolveScheduleMode(row.resource, scheduleMode)
       packTimedSegments(segments, { mode, preferredLanes: previousLanes })
@@ -749,7 +749,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         nextLanes.set(getLaneKey(segment.occurrence), {
           lane: segment.column ?? 0,
           startMs: segment.occurrence.start.getTime(),
-          endMs: segment.occurrence.end.getTime()
+          endMs: segment.occurrence.end.getTime(),
         })
       }
       const laneCount = segments.reduce(
@@ -765,7 +765,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
 
       // Parent rollup from the subtree's bars: envelope clamped to the range,
       // progress weighted by each bar's full duration
-      let summary: TimelineRowBars['summary'] = null
+      let summary: TimelineRowBars["summary"] = null
       if (row.isGroup && segments.length === 0 && viewConfig.summaryBars) {
         let sumFrom = Infinity
         let sumTo = -Infinity
@@ -781,7 +781,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
             to: sumTo,
             // all-time completion (matches a consumer's tree rollup), not the
             // visible-range slice - task progress is independent of scroll
-            progress: subtreeProgress.get(row.resource.id) ?? null
+            progress: subtreeProgress.get(row.resource.id) ?? null,
           }
         }
       }
@@ -812,17 +812,17 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
                   segments.length === 1
                     ? segments[0].occurrence.event.title
                     : settings.i18n.labels.events(segments.length),
-                startMs: Math.min(...segments.map(s => s.occurrence.start.getTime()))
+                startMs: Math.min(...segments.map(s => s.occurrence.start.getTime())),
               }
             : summary
               ? {
                   from: summary.from,
                   to: summary.to,
                   label: row.resource.title,
-                  startMs: rangeStartMs + summary.from * (rangeEndMs - rangeStartMs)
+                  startMs: rangeStartMs + summary.from * (rangeEndMs - rangeStartMs),
                 }
               : null,
-        summary
+        summary,
       })
     }
     laneMemory.current = nextLanes
@@ -840,7 +840,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     rowPaddingRem,
     laneGapRem,
     minRowRem,
-    scheduleMode
+    scheduleMode,
   ])
 
   // ----- split panes: width state, splitter drag/keyboard, scroll sync -----
@@ -874,7 +874,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     // "single" packs every bar onto lane 0, so that is where the draft goes
     // too and the row never grows. Recorded rather than left null so the
     // placeholder's data-lane still names a real destination.
-    if (base.scheduleMode === 'single') {
+    if (base.scheduleMode === "single") {
       next.set(draftLayout.resourceId, { ...base, draftLane: 0 })
       return next
     }
@@ -884,7 +884,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     next.set(draftLayout.resourceId, {
       ...base,
       draftLane,
-      heightRem: Math.max(base.heightRem, base.laneOffsetRem * 2 + draftBlockRem)
+      heightRem: Math.max(base.heightRem, base.laneOffsetRem * 2 + draftBlockRem),
     })
     return next
   }, [baseRowBars, draftLayout, laneHeightRem, laneGapRem])
@@ -974,10 +974,10 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     const startWidth = clampedTreeWidth
     const splitter = e.currentTarget as HTMLElement
     // in RTL the tree pane sits on the right: pointer deltas invert
-    const dir = getComputedStyle(splitter).direction === 'rtl' ? -1 : 1
-    splitter.setAttribute('data-resizing', '')
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
+    const dir = getComputedStyle(splitter).direction === "rtl" ? -1 : 1
+    splitter.setAttribute("data-resizing", "")
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
     // Live width goes straight to the DOM: a React state write here would
     // re-render every row and bar per pointermove. State commits on release.
     // The container clamp applies live too - the timeline must not collapse
@@ -996,21 +996,21 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     }
     const finish = (ev?: PointerEvent) => {
       if (ev && ev.pointerId !== pointerId) return
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', finish)
-      window.removeEventListener('pointercancel', finish)
-      splitter.removeAttribute('data-resizing')
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", finish)
+      window.removeEventListener("pointercancel", finish)
+      splitter.removeAttribute("data-resizing")
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
       liveTreeWidthRef.current = null
       if (liveWidth !== startWidth) {
         setTreeWidth(liveWidth)
         viewConfigRef.current.treePanel?.onWidthChange?.(liveWidth)
       }
     }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', finish)
-    window.addEventListener('pointercancel', finish)
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", finish)
+    window.addEventListener("pointercancel", finish)
   }
 
   // Both panes scroll vertically; whichever moves drives the other.
@@ -1031,13 +1031,13 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
           target.scrollTop = source.scrollTop
         }
       }
-      source.addEventListener('scroll', onScroll)
-      return () => source.removeEventListener('scroll', onScroll)
+      source.addEventListener("scroll", onScroll)
+      return () => source.removeEventListener("scroll", onScroll)
     }
     const unlinkTree = link(treeViewport, timelineViewport)
     const unlinkTimeline = link(timelineViewport, treeViewport)
     let unforward: (() => void) | null = null
-    if (treeViewport.hasAttribute('data-gantt-native-scroll')) {
+    if (treeViewport.hasAttribute("data-gantt-native-scroll")) {
       // Native mode: the tree's vertical axis is overflow-hidden (its bar
       // would duplicate the timeline's), so vertical wheel intent forwards to
       // the timeline, which mirrors back through the link above. Horizontal
@@ -1048,8 +1048,8 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         timelineViewport.scrollTop += dy
         e.preventDefault()
       }
-      treeViewport.addEventListener('wheel', onWheel, { passive: false })
-      unforward = () => treeViewport.removeEventListener('wheel', onWheel)
+      treeViewport.addEventListener("wheel", onWheel, { passive: false })
+      unforward = () => treeViewport.removeEventListener("wheel", onWheel)
     } else {
       // Custom scrollbars: both panes are real vertical scrollers. The links
       // above mirror on the scroll event, which fires only AFTER the source
@@ -1071,11 +1071,11 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         timelineViewport.scrollTop = next
         treeViewport.scrollTop = next
       }
-      treeViewport.addEventListener('wheel', onWheel, { passive: false })
-      timelineViewport.addEventListener('wheel', onWheel, { passive: false })
+      treeViewport.addEventListener("wheel", onWheel, { passive: false })
+      timelineViewport.addEventListener("wheel", onWheel, { passive: false })
       unforward = () => {
-        treeViewport.removeEventListener('wheel', onWheel)
-        timelineViewport.removeEventListener('wheel', onWheel)
+        treeViewport.removeEventListener("wheel", onWheel)
+        timelineViewport.removeEventListener("wheel", onWheel)
       }
     }
     return () => {
@@ -1095,25 +1095,25 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       if (current) {
         body
           .querySelectorAll(`[data-gantt-row-id="${CSS.escape(current)}"]`)
-          .forEach(el => el.removeAttribute('data-hover'))
+          .forEach(el => el.removeAttribute("data-hover"))
       }
       if (id) {
         body
           .querySelectorAll(`[data-gantt-row-id="${CSS.escape(id)}"]`)
-          .forEach(el => el.setAttribute('data-hover', ''))
+          .forEach(el => el.setAttribute("data-hover", ""))
       }
       current = id
     }
     const onOver = (e: PointerEvent) => {
-      const row = (e.target as HTMLElement | null)?.closest?.('[data-gantt-row-id]')
-      apply(row?.getAttribute('data-gantt-row-id') ?? null)
+      const row = (e.target as HTMLElement | null)?.closest?.("[data-gantt-row-id]")
+      apply(row?.getAttribute("data-gantt-row-id") ?? null)
     }
     const onLeave = () => apply(null)
-    body.addEventListener('pointerover', onOver)
-    body.addEventListener('pointerleave', onLeave)
+    body.addEventListener("pointerover", onOver)
+    body.addEventListener("pointerleave", onLeave)
     return () => {
-      body.removeEventListener('pointerover', onOver)
-      body.removeEventListener('pointerleave', onLeave)
+      body.removeEventListener("pointerover", onOver)
+      body.removeEventListener("pointerleave", onLeave)
       apply(null)
     }
   }, [])
@@ -1130,7 +1130,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     viewConfig.initialCenter instanceof Date
       ? viewConfig.initialCenter.getTime()
       : viewConfig.initialCenter
-  const manageRef = useRef({ key: '', buffered: false, userTook: false })
+  const manageRef = useRef({ key: "", buffered: false, userTook: false })
   useLayoutEffect(() => {
     const key = `${scale}:${anchorMs}:${viewConfig.scrollbars}`
     if (manageRef.current.key !== key) {
@@ -1153,7 +1153,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       waiter?.disconnect()
       waiter = null
       const viewport = getPaneViewport(timelinePaneRef.current)
-      const axis = viewport?.querySelector<HTMLElement>('[data-gantt-axis]')
+      const axis = viewport?.querySelector<HTMLElement>("[data-gantt-axis]")
       if (!viewport || !axis) return
       if (viewport.clientWidth === 0) {
         waiter = new ResizeObserver(() => {
@@ -1166,8 +1166,8 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       if (viewConfig.infiniteScroll && !manageRef.current.buffered) {
         manageRef.current.buffered = true
         extendLockRef.current = true
-        instance.internals.extendRange('before')
-        instance.internals.extendRange('after')
+        instance.internals.extendRange("before")
+        instance.internals.extendRange("after")
         return
       }
       extendLockRef.current = false
@@ -1179,9 +1179,9 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       // navigation right back onto today.
       const active = instance.getState().activeRange
       let target: number
-      if (typeof initialCenter === 'number') {
+      if (typeof initialCenter === "number") {
         target = initialCenter
-      } else if (initialCenter === 'anchor') {
+      } else if (initialCenter === "anchor") {
         target = anchorMs
       } else {
         const nowMs = Date.now()
@@ -1209,7 +1209,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     rangeKey,
     rangeStartMs,
     rangeEndMs,
-    instance
+    instance,
   ])
 
   // ----- infinite scroll: grow the range near an edge, keep the position -----
@@ -1217,7 +1217,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
   // growth, window slides, and zoom changes alike.
   const pendingRestoreRef = useRef<{
     ms: number
-    align: 'start' | 'center'
+    align: "start" | "center"
   } | null>(null)
   const extendLockRef = useRef(false)
   const lastUserScrollRef = useRef(0)
@@ -1239,21 +1239,21 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       const target = e.target as HTMLElement | null
       if (
         target?.closest(
-          '[data-slot=scroll-area-scrollbar], [data-slot=gantt-timeline-header], [data-gantt-native-scroll]'
+          "[data-slot=scroll-area-scrollbar], [data-slot=gantt-timeline-header], [data-gantt-native-scroll]"
         )
       ) {
         markIntent()
       }
     }
-    pane.addEventListener('wheel', markIntent, { passive: true })
-    pane.addEventListener('pointerdown', onPointerDown)
-    pane.addEventListener('touchstart', markIntent, { passive: true })
-    pane.addEventListener('keydown', markIntent)
+    pane.addEventListener("wheel", markIntent, { passive: true })
+    pane.addEventListener("pointerdown", onPointerDown)
+    pane.addEventListener("touchstart", markIntent, { passive: true })
+    pane.addEventListener("keydown", markIntent)
     return () => {
-      pane.removeEventListener('wheel', markIntent)
-      pane.removeEventListener('pointerdown', onPointerDown)
-      pane.removeEventListener('touchstart', markIntent)
-      pane.removeEventListener('keydown', markIntent)
+      pane.removeEventListener("wheel", markIntent)
+      pane.removeEventListener("pointerdown", onPointerDown)
+      pane.removeEventListener("touchstart", markIntent)
+      pane.removeEventListener("keydown", markIntent)
     }
   }, [])
 
@@ -1261,9 +1261,9 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     if (!viewConfig.infiniteScroll) return
     const viewport = getPaneViewport(timelinePaneRef.current)
     if (!viewport) return
-    const tryExtend = (direction: 'before' | 'after') => {
+    const tryExtend = (direction: "before" | "after") => {
       // anchor the left edge as an instant, from the LIVE axis range
-      const axis = viewport.querySelector<HTMLElement>('[data-gantt-axis]')
+      const axis = viewport.querySelector<HTMLElement>("[data-gantt-axis]")
       const liveStart = Number(axis?.dataset.ganttRangeStart)
       const liveEnd = Number(axis?.dataset.ganttRangeEnd)
       if (!axis || Number.isNaN(liveStart) || Number.isNaN(liveEnd)) return
@@ -1271,7 +1271,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       manageRef.current.userTook = true
       pendingRestoreRef.current = {
         ms: liveStart + (getScrollStart(viewport) / viewport.scrollWidth) * (liveEnd - liveStart),
-        align: 'start'
+        align: "start",
       }
       if (!instance.internals.extendRange(direction)) {
         pendingRestoreRef.current = null
@@ -1280,7 +1280,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     }
     // scrollLeft is signed by direction; all edge math runs on the
     // distance-from-inline-start so RTL panes behave identically
-    const isRtl = getComputedStyle(viewport).direction === 'rtl'
+    const isRtl = getComputedStyle(viewport).direction === "rtl"
     const onScroll = () => {
       if (extendLockRef.current) return
       if (performance.now() - lastUserScrollRef.current > 1200) return
@@ -1290,9 +1290,9 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       const fromEnd = viewport.scrollWidth - fromStart - viewport.clientWidth
       const direction =
         fromStart < infiniteEdgePx
-          ? ('before' as const)
+          ? ("before" as const)
           : fromEnd < infiniteEdgePx
-            ? ('after' as const)
+            ? ("after" as const)
             : null
       if (!direction) return
       tryExtend(direction)
@@ -1304,19 +1304,19 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       if (viewport.scrollWidth <= viewport.clientWidth + 8) return
       const towardStart = isRtl ? e.deltaX > 0 : e.deltaX < 0
       if (towardStart && getScrollStart(viewport) <= 0) {
-        tryExtend('before')
+        tryExtend("before")
       } else if (
         !towardStart &&
         getScrollStart(viewport) + viewport.clientWidth >= viewport.scrollWidth - 1
       ) {
-        tryExtend('after')
+        tryExtend("after")
       }
     }
-    viewport.addEventListener('scroll', onScroll)
-    viewport.addEventListener('wheel', onWheel, { passive: true })
+    viewport.addEventListener("scroll", onScroll)
+    viewport.addEventListener("wheel", onWheel, { passive: true })
     return () => {
-      viewport.removeEventListener('scroll', onScroll)
-      viewport.removeEventListener('wheel', onWheel)
+      viewport.removeEventListener("scroll", onScroll)
+      viewport.removeEventListener("wheel", onWheel)
     }
   }, [instance, viewConfig.infiniteScroll, scale, viewConfig.scrollbars, infiniteEdgePx])
 
@@ -1327,20 +1327,20 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     const viewport = getPaneViewport(timelinePaneRef.current)
     if (!viewport) return
     const keyFmt =
-      scale === 'day'
-        ? 'yyyy-MM-dd'
-        : scale === 'week'
+      scale === "day"
+        ? "yyyy-MM-dd"
+        : scale === "week"
           ? "RRRR-'W'II"
-          : scale === 'month'
-            ? 'yyyy-MM'
-            : scale === 'quarter'
-              ? 'yyyy-qqq'
-              : 'yyyy'
+          : scale === "month"
+            ? "yyyy-MM"
+            : scale === "quarter"
+              ? "yyyy-qqq"
+              : "yyyy"
     let raf = 0
-    let lastKey = ''
+    let lastKey = ""
     const measure = () => {
       raf = 0
-      const axis = viewport.querySelector<HTMLElement>('[data-gantt-axis]')
+      const axis = viewport.querySelector<HTMLElement>("[data-gantt-axis]")
       const liveStart = Number(axis?.dataset.ganttRangeStart)
       const liveEnd = Number(axis?.dataset.ganttRangeEnd)
       if (!axis || Number.isNaN(liveStart) || Number.isNaN(liveEnd)) return
@@ -1359,10 +1359,10 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(measure)
     }
-    viewport.addEventListener('scroll', schedule)
+    viewport.addEventListener("scroll", schedule)
     schedule()
     return () => {
-      viewport.removeEventListener('scroll', schedule)
+      viewport.removeEventListener("scroll", schedule)
       if (raf) cancelAnimationFrame(raf)
     }
   }, [instance, scale, timeZone, viewConfig.scrollbars, rangeKey])
@@ -1380,7 +1380,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       !pendingRestoreRef.current &&
       fineCenterRef.current !== null
     ) {
-      pendingRestoreRef.current = { ms: fineCenterRef.current, align: 'center' }
+      pendingRestoreRef.current = { ms: fineCenterRef.current, align: "center" }
     }
     lastZoomRef.current = zoom
     let raf: number | null = null
@@ -1401,7 +1401,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         // clamp: a stale anchor (e.g. an ignored controlled-zoom proposal)
         // must never park the view outside the track
         const fraction = Math.min(Math.max((ms - rangeStartMs) / (rangeEndMs - rangeStartMs), 0), 1)
-        const offset = align === 'center' ? viewport.clientWidth / 2 : 0
+        const offset = align === "center" ? viewport.clientWidth / 2 : 0
         setScrollStart(viewport, Math.max(0, fraction * viewport.scrollWidth - offset))
       }
       extendLockRef.current = false
@@ -1415,7 +1415,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
   /** Keep the view centered on the same instant across a zoom step. */
   const anchorZoomCenter = () => {
     const viewport = getPaneViewport(timelinePaneRef.current)
-    const axis = viewport?.querySelector<HTMLElement>('[data-gantt-axis]')
+    const axis = viewport?.querySelector<HTMLElement>("[data-gantt-axis]")
     if (!viewport || !axis) return
     const liveStart = Number(axis.dataset.ganttRangeStart)
     const liveEnd = Number(axis.dataset.ganttRangeEnd)
@@ -1425,7 +1425,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         liveStart +
         ((getScrollStart(viewport) + viewport.clientWidth / 2) / viewport.scrollWidth) *
           (liveEnd - liveStart),
-      align: 'center'
+      align: "center",
     }
   }
 
@@ -1449,22 +1449,22 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       active = true
       // panning is a user scroll: keep the infinite-scroll gate open
       lastUserScrollRef.current = performance.now()
-      document.body.style.cursor = 'grabbing'
-      document.body.style.userSelect = 'none'
+      document.body.style.cursor = "grabbing"
+      document.body.style.userSelect = "none"
       viewport.scrollLeft = startLeft - dx
     }
     const finish = (ev?: PointerEvent) => {
       if (ev && ev.pointerId !== pointerId) return
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', finish)
-      window.removeEventListener('pointercancel', finish)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", finish)
+      window.removeEventListener("pointercancel", finish)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
       if (active) setIsPanning(false)
     }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', finish)
-    window.addEventListener('pointercancel', finish)
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", finish)
+    window.addEventListener("pointercancel", finish)
   }
 
   // Panning suppresses the placement hints (scroll intent, not create intent)
@@ -1489,10 +1489,10 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     const pane = treePaneRef.current
     if (!container || !pane) return
     const rowEls = Array.from(
-      container.querySelectorAll<HTMLElement>('[data-slot=gantt-row-group]')
+      container.querySelectorAll<HTMLElement>("[data-slot=gantt-row-group]")
     )
-    document.body.style.cursor = 'grabbing'
-    document.body.style.userSelect = 'none'
+    document.body.style.cursor = "grabbing"
+    document.body.style.userSelect = "none"
     let current: TimelineReorderState | null = null
     let lastBoundary = -1
 
@@ -1500,16 +1500,16 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
     // it reads as the row itself moving, not a separate card
     const pointerId = e.pointerId
     const rowEl = (e.currentTarget as HTMLElement).closest<HTMLElement>(
-      '[data-slot=gantt-row-group]'
+      "[data-slot=gantt-row-group]"
     )
-    const overlay = document.createElement('div')
-    overlay.setAttribute('data-slot', 'gantt-drag-overlay')
-    overlay.className = 'bg-background pointer-events-none fixed overflow-hidden opacity-95'
-    overlay.style.zIndex = '100'
+    const overlay = document.createElement("div")
+    overlay.setAttribute("data-slot", "gantt-drag-overlay")
+    overlay.className = "bg-background pointer-events-none fixed overflow-hidden opacity-95"
+    overlay.style.zIndex = "100"
     // body-appended, so it is outside the gantt root that owns the type
     // scale: without adopting the root's resolved metrics the carried row
     // renders at the document default and reads bigger than the row it left
-    const ganttRoot = pane.closest<HTMLElement>('[data-slot=gantt]')
+    const ganttRoot = pane.closest<HTMLElement>("[data-slot=gantt]")
     if (ganttRoot) {
       const rootStyle = getComputedStyle(ganttRoot)
       overlay.style.fontSize = rootStyle.fontSize
@@ -1523,9 +1523,9 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       overlay.style.width = `${rowRect.width}px`
       overlay.style.height = `${rowRect.height}px`
       const clone = rowEl.cloneNode(true) as HTMLElement
-      clone.removeAttribute('data-gantt-row-id')
-      clone.classList.remove('border-b')
-      clone.style.height = '100%'
+      clone.removeAttribute("data-gantt-row-id")
+      clone.classList.remove("border-b")
+      clone.style.height = "100%"
       overlay.appendChild(clone)
     }
     document.body.appendChild(overlay)
@@ -1561,7 +1561,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
             resourceId: dragRow.resource.id,
             parentId,
             index,
-            resources: next
+            resources: next,
           }
         : null
       const valid = !!proposal && (settings.canReorderResource?.(proposal) ?? true)
@@ -1591,17 +1591,17 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         return
       }
       current = nextState
-      document.body.style.cursor = nextState.valid ? 'grabbing' : 'not-allowed'
+      document.body.style.cursor = nextState.valid ? "grabbing" : "not-allowed"
       setReorder(nextState)
     }
     const finish = (commit: boolean) => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onCancelEvent)
-      window.removeEventListener('keydown', onKey)
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+      window.removeEventListener("pointercancel", onCancelEvent)
+      window.removeEventListener("keydown", onKey)
       overlay.remove()
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
       if (commit && current?.proposal && !current.valid) {
         // released on a rejected position (e.g. a pinned row): let the
         // consumer explain it - the destructive indicator already showed live
@@ -1609,8 +1609,8 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       } else if (commit && current?.valid && current.proposal) {
         settings.onResourceReorder?.(current.proposal)
         const announcer = pane
-          .closest<HTMLElement>('[data-slot=gantt]')
-          ?.querySelector<HTMLElement>('[data-slot=gantt-announcer]')
+          .closest<HTMLElement>("[data-slot=gantt]")
+          ?.querySelector<HTMLElement>("[data-slot=gantt-announcer]")
         if (announcer) {
           announcer.textContent = `${dragRow.resource.title}: ${settings.i18n.labels.reorder}`
         }
@@ -1626,12 +1626,12 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
       finish(false)
     }
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') finish(false)
+      if (ev.key === "Escape") finish(false)
     }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onCancelEvent)
-    window.addEventListener('keydown', onKey)
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp)
+    window.addEventListener("pointercancel", onCancelEvent)
+    window.addEventListener("keydown", onKey)
   }, [])
 
   const collapsedIdsRef = useRef(collapsedIds)
@@ -1649,17 +1649,17 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
   }, [])
 
   const loading = useGanttSelector<unknown, boolean>(state => state.loading)
-  const customScrollbars = viewConfig.scrollbars !== 'native'
+  const customScrollbars = viewConfig.scrollbars !== "native"
   const gridLines = resolveTimelineLines(viewConfig.timelineLines)
   const showVerticalLines = gridLines.vertical !== null
   const offDayClassName =
-    (typeof viewConfig.offDays === 'object' && viewConfig.offDays.className) || 'bg-muted/40'
+    (typeof viewConfig.offDays === "object" && viewConfig.offDays.className) || "bg-muted/40"
   // Body texture: default off-days carry a whisper-faint diagonal hatch over
   // a lighter wash (header cells stay flat). A custom offDays.className
   // replaces both surfaces verbatim.
   const offDayBodyClassName =
-    (typeof viewConfig.offDays === 'object' && viewConfig.offDays.className) ||
-    'bg-muted/25 bg-[repeating-linear-gradient(135deg,transparent,transparent_5px,color-mix(in_oklab,var(--color-border)_35%,transparent)_5px,color-mix(in_oklab,var(--color-border)_35%,transparent)_6px)]'
+    (typeof viewConfig.offDays === "object" && viewConfig.offDays.className) ||
+    "bg-muted/25 bg-[repeating-linear-gradient(135deg,transparent,transparent_5px,color-mix(in_oklab,var(--color-border)_35%,transparent)_5px,color-mix(in_oklab,var(--color-border)_35%,transparent)_6px)]"
 
   // Header-only unit lines, and ONE mechanism for every vertical line in the
   // header: positioned spans at calc(fraction% - 1px). A background gradient
@@ -1673,13 +1673,13 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
   // Header label offset = the row cell's ps-3 (0.75rem) left gutter + the
   // toggle/checkbox gutter (w-5 + me-1 = 1.5rem) + the reorder grip (0.875rem)
   // when present, so "Resources" lines up with the row titles below it.
-  const namePaddingStart = reorderEnabled ? '3.125rem' : '2.25rem'
+  const namePaddingStart = reorderEnabled ? "3.125rem" : "2.25rem"
   const treeContent = (
     <div
       className={cn(
-        'flex min-h-full w-max min-w-full flex-col',
+        "flex min-h-full w-max min-w-full flex-col",
         // clearance for the pinned horizontal scrollbar strip
-        customScrollbars && 'pb-2.5'
+        customScrollbars && "pb-2.5"
       )}
     >
       {/* Same 65px height as the two-row timeline header so the panes align.
@@ -1697,7 +1697,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
               className="flex h-full shrink-0 items-center"
               style={{
                 width: treeConfig.nameColumnWidth,
-                paddingInlineStart: namePaddingStart
+                paddingInlineStart: namePaddingStart,
               }}
             >
               <span className="text-muted-foreground truncate font-medium">
@@ -1710,9 +1710,9 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
                 data-slot="gantt-column-header"
                 data-column={column.id}
                 className={cn(
-                  'text-muted-foreground flex h-full shrink-0 items-center px-2 font-medium',
-                  column.align === 'center' && 'justify-center',
-                  column.align === 'end' && 'justify-end',
+                  "text-muted-foreground flex h-full shrink-0 items-center px-2 font-medium",
+                  column.align === "center" && "justify-center",
+                  column.align === "end" && "justify-end",
                   column.className
                 )}
                 style={{ width: column.width ?? DEFAULT_COLUMN_WIDTH }}
@@ -1761,7 +1761,7 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
             onClick={() =>
               settings.onCreateTask?.({
                 parentId: null,
-                index: settings.resources.length
+                index: settings.resources.length,
               })
             }
           >
@@ -1795,8 +1795,8 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
         // grow (not just min-h-full) so the body reaches the bottom of the
         // pane: the columns then run the full height and the empty space
         // below the last row becomes pannable canvas instead of dead area
-        'flex min-h-full w-max min-w-full grow flex-col',
-        customScrollbars && 'pb-2.5'
+        "flex min-h-full w-max min-w-full grow flex-col",
+        customScrollbars && "pb-2.5"
       )}
     >
       {/* Two-row grouped header; also the drag-to-pan surface */}
@@ -1859,10 +1859,10 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
                 unit.isOff && (
                   <span
                     key={unit.key}
-                    className={cn('absolute inset-y-0', offDayClassName)}
+                    className={cn("absolute inset-y-0", offDayClassName)}
                     style={{
                       insetInlineStart: `${start * 100}%`,
-                      width: `${width * 100}%`
+                      width: `${width * 100}%`,
                     }}
                   />
                 )
@@ -1875,9 +1875,9 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
                 data-today={unit.isToday || undefined}
                 data-off={unit.isOff || undefined}
                 className={cn(
-                  'flex min-w-0 items-center justify-center truncate px-1.5 text-center',
-                  'text-muted-foreground',
-                  unit.isToday && 'text-primary font-medium'
+                  "flex min-w-0 items-center justify-center truncate px-1.5 text-center",
+                  "text-muted-foreground",
+                  unit.isToday && "text-primary font-medium"
                 )}
                 style={{ flex: `${unit.weight} 0 0px` }}
               >
@@ -1900,13 +1900,13 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
                 data-slot="gantt-grid-line"
                 data-axis="vertical"
                 className={cn(
-                  'absolute inset-y-0 w-px',
+                  "absolute inset-y-0 w-px",
                   // a dashed rule is a repeating gradient, not a border: the
                   // line is a 1px span, and border-dashed on a zero-width box
                   // paints nothing
-                  gridLines.vertical === 'dashed'
-                    ? 'bg-[repeating-linear-gradient(to_bottom,var(--color-border)_0,var(--color-border)_3px,transparent_3px,transparent_6px)]'
-                    : 'bg-border'
+                  gridLines.vertical === "dashed"
+                    ? "bg-[repeating-linear-gradient(to_bottom,var(--color-border)_0,var(--color-border)_3px,transparent_3px,transparent_6px)]"
+                    : "bg-border"
                 )}
                 style={{ insetInlineStart: `calc(${start * 100}% - 1px)` }}
               />
@@ -1933,20 +1933,20 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
               {unit.isOff && (
                 <span
                   data-off=""
-                  className={cn('absolute inset-y-0', offDayBodyClassName)}
+                  className={cn("absolute inset-y-0", offDayBodyClassName)}
                   style={{
                     insetInlineStart: `${start * 100}%`,
-                    width: `${width * 100}%`
+                    width: `${width * 100}%`,
                   }}
                 />
               )}
-              {unit.isToday && scale !== 'day' && (
+              {unit.isToday && scale !== "day" && (
                 <span
                   data-today=""
                   className="bg-primary/5 absolute inset-y-0"
                   style={{
                     insetInlineStart: `${start * 100}%`,
-                    width: `${width * 100}%`
+                    width: `${width * 100}%`,
                   }}
                 />
               )}
@@ -1964,10 +1964,10 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
                   data-slot="gantt-grid-line"
                   data-axis="vertical"
                   className={cn(
-                    'absolute inset-y-0 w-px',
-                    gridLines.vertical === 'dashed'
-                      ? 'bg-[repeating-linear-gradient(to_bottom,var(--color-border)_0,var(--color-border)_3px,transparent_3px,transparent_6px)]'
-                      : 'bg-border'
+                    "absolute inset-y-0 w-px",
+                    gridLines.vertical === "dashed"
+                      ? "bg-[repeating-linear-gradient(to_bottom,var(--color-border)_0,var(--color-border)_3px,transparent_3px,transparent_6px)]"
+                      : "bg-border"
                   )}
                   style={{ insetInlineStart: `calc(${start * 100}% - 1px)` }}
                 />
@@ -2027,11 +2027,11 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
   )
 
   const defaultProps = {
-    'data-slot': 'gantt-view',
-    'data-scale': scale,
-    'aria-busy': loading || undefined,
+    "data-slot": "gantt-view",
+    "data-scale": scale,
+    "aria-busy": loading || undefined,
     className: cn(
-      'flex min-h-0 flex-1 flex-col overflow-hidden',
+      "flex min-h-0 flex-1 flex-col overflow-hidden",
       viewConfig.classNames?.view,
       className
     ),
@@ -2090,14 +2090,14 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
                   indicator sits above the row carry overlay (z 100) */}
               <span
                 className={cn(
-                  'ms-0.5 size-0 shrink-0 border-y-4 border-s-8 border-y-transparent',
-                  reorder.valid ? 'border-s-primary' : 'border-s-destructive'
+                  "ms-0.5 size-0 shrink-0 border-y-4 border-s-8 border-y-transparent",
+                  reorder.valid ? "border-s-primary" : "border-s-destructive"
                 )}
               />
               <span
                 className={cn(
-                  'h-px min-w-0 flex-1',
-                  reorder.valid ? 'bg-primary' : 'bg-destructive'
+                  "h-px min-w-0 flex-1",
+                  reorder.valid ? "bg-primary" : "bg-destructive"
                 )}
               />
             </div>
@@ -2118,9 +2118,9 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
             tabIndex={0}
             data-slot="gantt-splitter"
             className={cn(
-              'group/gantt-splitter bg-border hover:bg-primary/60 data-resizing:bg-primary relative z-30 w-px shrink-0 cursor-col-resize touch-none outline-none',
-              'focus-visible:ring-ring/50 focus-visible:ring-2',
-              'after:absolute after:inset-y-0 after:-start-1 after:-end-1'
+              "group/gantt-splitter bg-border hover:bg-primary/60 data-resizing:bg-primary relative z-30 w-px shrink-0 cursor-col-resize touch-none outline-none",
+              "focus-visible:ring-ring/50 focus-visible:ring-2",
+              "after:absolute after:inset-y-0 after:-start-1 after:-end-1"
             )}
             onPointerDown={beginSplit}
             onDoubleClick={() => {
@@ -2128,10 +2128,10 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
               treeConfig.onWidthChange?.(treeConfig.width)
             }}
             onKeyDown={e => {
-              if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
                 e.preventDefault()
-                const dir = getComputedStyle(e.currentTarget).direction === 'rtl' ? -1 : 1
-                const delta = (e.key === 'ArrowLeft' ? -16 : 16) * dir
+                const dir = getComputedStyle(e.currentTarget).direction === "rtl" ? -1 : 1
+                const delta = (e.key === "ArrowLeft" ? -16 : 16) * dir
                 const next = clampTree(clampedTreeWidth + delta)
                 setTreeWidth(next)
                 treeConfig.onWidthChange?.(next)
@@ -2291,13 +2291,13 @@ function GanttView({ className, render, interval: intervalProp, ...props }: Gant
           <GanttCustomDragLayer />
         )}
       </div>
-    )
+    ),
   }
 
   return useRender({
-    defaultTagName: 'div',
+    defaultTagName: "div",
     render,
-    props: mergeProps<'div'>(defaultProps, props)
+    props: mergeProps<"div">(defaultProps, props),
   })
 }
 
@@ -2353,23 +2353,23 @@ function GanttCustomDragLayer() {
   const drag = useGanttSelector(state => state.drag)
   if (!drag) return null
   const render =
-    drag.kind === 'move' ? viewConfig.renderDragPreview : viewConfig.renderResizeIndicator
+    drag.kind === "move" ? viewConfig.renderDragPreview : viewConfig.renderResizeIndicator
   if (!render) return null
   return (
     <div
-      data-slot={drag.kind === 'move' ? 'gantt-drag-overlay' : 'gantt-resize-indicator'}
+      data-slot={drag.kind === "move" ? "gantt-drag-overlay" : "gantt-resize-indicator"}
       data-custom=""
       // physical left-0 anchor: positioned by the engine's translate3d from
       // raw clientX (physical); a logical start-0 would break in RTL
       className="pointer-events-none fixed top-0 left-0 z-100 will-change-transform"
-      style={{ visibility: 'hidden' }}
+      style={{ visibility: "hidden" }}
     >
       {render({
         occurrence: drag.occurrence,
         kind: drag.kind,
         start: drag.proposedStart,
         end: drag.proposedEnd,
-        valid: drag.valid
+        valid: drag.valid,
       })}
     </div>
   )
@@ -2386,7 +2386,7 @@ const GanttTreeRow = memo(function GanttTreeRow({
   selected,
   onSelectedChange,
   onGripPointerDown,
-  onToggle
+  onToggle,
 }: {
   row: TimelineRow
   heightRem: number
@@ -2405,7 +2405,7 @@ const GanttTreeRow = memo(function GanttTreeRow({
     resource: row.resource,
     depth: row.depth,
     isGroup: row.isGroup,
-    collapsed: row.collapsed
+    collapsed: row.collapsed,
   }
 
   // consumer-owned right-click menu, same contract as the bar menu
@@ -2415,7 +2415,7 @@ const GanttTreeRow = memo(function GanttTreeRow({
   // its columns on the FIRST schedule's baseline instead of floating them to
   // the middle of a tall row. Every cell's inner box is minRowHeight tall, so
   // a single-lane row renders identically either way.
-  const alignStart = (viewConfig.rowAlign ?? DEFAULT_ROW_ALIGN) === 'start'
+  const alignStart = (viewConfig.rowAlign ?? DEFAULT_ROW_ALIGN) === "start"
 
   const rowNode = (
     <div
@@ -2423,15 +2423,15 @@ const GanttTreeRow = memo(function GanttTreeRow({
       data-gantt-row-id={row.resource.id}
       data-selected={selected || undefined}
       className={cn(
-        'group/gantt-row data-hover:bg-muted/40 data-selected:bg-primary/5 data-selected:data-hover:bg-primary/5 flex border-b',
-        dimmed && 'opacity-50'
+        "group/gantt-row data-hover:bg-muted/40 data-selected:bg-primary/5 data-selected:data-hover:bg-primary/5 flex border-b",
+        dimmed && "opacity-50"
       )}
       style={{ height: `${heightRem}rem` }}
       onClick={
         settings.onResourceClick
           ? (e: React.MouseEvent) => {
               // chrome clicks (chevron, checkbox, grip) are their own actions
-              if ((e.target as HTMLElement).closest('button, [role=checkbox]')) return
+              if ((e.target as HTMLElement).closest("button, [role=checkbox]")) return
               settings.onResourceClick?.(ctx, e)
             }
           : undefined
@@ -2439,7 +2439,7 @@ const GanttTreeRow = memo(function GanttTreeRow({
       onDoubleClick={
         settings.onResourceDoubleClick
           ? (e: React.MouseEvent) => {
-              if ((e.target as HTMLElement).closest('button, [role=checkbox]')) return
+              if ((e.target as HTMLElement).closest("button, [role=checkbox]")) return
               settings.onResourceDoubleClick?.(ctx, e)
             }
           : undefined
@@ -2453,9 +2453,9 @@ const GanttTreeRow = memo(function GanttTreeRow({
           className={cn(
             // ps-3 keeps the row toggles off the left edge (kept in sync with
             // namePaddingStart above so headers stay aligned with row titles)
-            'flex shrink-0 ps-3 pe-3',
-            alignStart ? 'items-start' : 'items-center',
-            row.isGroup && 'font-medium'
+            "flex shrink-0 ps-3 pe-3",
+            alignStart ? "items-start" : "items-center",
+            row.isGroup && "font-medium"
           )}
           style={{ width: nameWidth }}
         >
@@ -2499,10 +2499,10 @@ const GanttTreeRow = memo(function GanttTreeRow({
                   aria-expanded={!row.collapsed}
                   aria-label={row.resource.title}
                   className={cn(
-                    'size-5! aria-expanded:bg-transparent!',
+                    "size-5! aria-expanded:bg-transparent!",
                     row.collapsed
-                      ? 'text-foreground'
-                      : 'text-muted-foreground aria-expanded:text-muted-foreground! hover:text-foreground!'
+                      ? "text-foreground"
+                      : "text-muted-foreground aria-expanded:text-muted-foreground! hover:text-foreground!"
                   )}
                   onClick={() => onToggle(row)}
                 >
@@ -2512,7 +2512,7 @@ const GanttTreeRow = memo(function GanttTreeRow({
                     hugeicons="ArrowRight01Icon"
                     phosphor="CaretRightIcon"
                     remixicon="RiArrowRightSLine"
-                    className={cn('size-3.5 transition-transform', !row.collapsed && 'rotate-90')}
+                    className={cn("size-3.5 transition-transform", !row.collapsed && "rotate-90")}
                     aria-hidden="true"
                   />
                 </Button>
@@ -2527,8 +2527,8 @@ const GanttTreeRow = memo(function GanttTreeRow({
                     }
                     aria-label={row.resource.title}
                     className={cn(
-                      'size-3.5 opacity-0 transition-opacity group-hover/gantt-row:opacity-100 group-data-hover/gantt-row:opacity-100 focus-visible:opacity-100',
-                      selected && 'opacity-100'
+                      "size-3.5 opacity-0 transition-opacity group-hover/gantt-row:opacity-100 group-data-hover/gantt-row:opacity-100 focus-visible:opacity-100",
+                      selected && "opacity-100"
                     )}
                   />
                 )
@@ -2545,17 +2545,17 @@ const GanttTreeRow = memo(function GanttTreeRow({
             data-slot="gantt-tree-column-cell"
             data-column={column.id}
             className={cn(
-              'flex shrink-0 px-2',
-              alignStart ? 'items-start' : 'items-center',
+              "flex shrink-0 px-2",
+              alignStart ? "items-start" : "items-center",
               column.className
             )}
             style={{ width: column.width ?? DEFAULT_COLUMN_WIDTH }}
           >
             <div
               className={cn(
-                'flex w-full min-w-0 items-center',
-                column.align === 'center' && 'justify-center',
-                column.align === 'end' && 'justify-end'
+                "flex w-full min-w-0 items-center",
+                column.align === "center" && "justify-center",
+                column.align === "end" && "justify-end"
               )}
               style={{ height: `${bandRem}rem` }}
             >
@@ -2593,7 +2593,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
   isPanning,
   laneHeightRem,
   laneGapRem,
-  minRowRem
+  minRowRem,
 }: {
   row: TimelineRow
   rowIndex: number
@@ -2602,7 +2602,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
   rangeEndMs: number
   trackWidth: string
   trackRemWidth: number
-  rowBorder: 'solid' | 'dashed' | null
+  rowBorder: "solid" | "dashed" | null
   selected: boolean
   resolveHintStop: (
     fraction: number
@@ -2621,7 +2621,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
   const schedulable = !row.isGroup || viewConfig.parentScheduling
   const heightRem = bars?.heightRem ?? minRowRem
   const laneCount = bars?.laneCount ?? 1
-  const singleTrack = resolveScheduleMode(row.resource, viewConfig.scheduleMode) === 'single'
+  const singleTrack = resolveScheduleMode(row.resource, viewConfig.scheduleMode) === "single"
   // shared with the tree pane so the two can never drift apart
   const laneOffsetRem = bars?.laneOffsetRem ?? (minRowRem - laneHeightRem) / 2
 
@@ -2656,7 +2656,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
   //    actually land on. Lane is a function of TIME only, so moving the pointer
   //    down onto the ring never moves it away from you.
   const hintFreeLane = hintStop ? lowestFreeLane(segments, hintStop.ms, hintStop.endMs) : 0
-  const hintLane = bars?.scheduleMode === 'single' ? 0 : hintFreeLane
+  const hintLane = bars?.scheduleMode === "single" ? 0 : hintFreeLane
   const hintTopRem = Math.min(
     laneOffsetRem + hintLane * (laneHeightRem + laneGapRem) + laneHeightRem / 2,
     Math.max(heightRem - laneHeightRem / 2, laneHeightRem / 2)
@@ -2679,10 +2679,10 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
   const fractionOf = (ms: number) =>
     Math.min(Math.max((ms - rangeStartMs) / (rangeEndMs - rangeStartMs), 0), 1)
 
-  const dragTarget = useGanttSelector<unknown, 'valid' | 'invalid' | null>(state => {
+  const dragTarget = useGanttSelector<unknown, "valid" | "invalid" | null>(state => {
     const drag = state.drag
     if (!drag || drag.proposedResourceId !== row.resource.id) return null
-    return drag.valid ? 'valid' : 'invalid'
+    return drag.valid ? "valid" : "invalid"
   })
   const ghost = useGanttSelector<
     unknown,
@@ -2706,13 +2706,13 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
         valid: drag.valid,
         title: drag.occurrence.event.title,
         kind: drag.kind,
-        occurrenceKey: drag.occurrence.key
+        occurrenceKey: drag.occurrence.key,
       }
     },
     {
       isEqual: (a, b) =>
         a === b ||
-        (a !== null && b !== null && a.from === b.from && a.to === b.to && a.valid === b.valid)
+        (a !== null && b !== null && a.from === b.from && a.to === b.to && a.valid === b.valid),
     }
   )
   const draft = useGanttSelector<
@@ -2733,7 +2733,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
         from: fractionOf(startMs),
         to: fractionOf(endMs),
         startMs,
-        endMs
+        endMs,
       }
     },
     {
@@ -2748,7 +2748,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
           a.startMs === b.startMs &&
           a.endMs === b.endMs &&
           a.from === b.from &&
-          a.to === b.to)
+          a.to === b.to),
     }
   )
 
@@ -2772,7 +2772,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
         false,
         settings.locale
       )
-    : ''
+    : ""
 
   /**
    * The row's create contract, in one place: onSlotClick if the consumer
@@ -2791,7 +2791,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
         start: new Date(stop.ms),
         end: new Date(Math.max(stop.endMs, stop.ms + 1)),
         allDay: false,
-        resourceId: row.resource.id
+        resourceId: row.resource.id,
       })
     }
   }
@@ -2821,23 +2821,23 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
       data-drop-target={dragTarget ?? undefined}
       data-selected={selected || undefined}
       className={cn(
-        'data-hover:bg-muted/30 data-selected:bg-primary/5 data-selected:data-hover:bg-primary/5 relative w-full min-w-0',
+        "data-hover:bg-muted/30 data-selected:bg-primary/5 data-selected:data-hover:bg-primary/5 relative w-full min-w-0",
         // The ring is pointer-events-none, so a cursor set on IT can never be
         // reached - the row is the element actually under the pointer, so the
         // cursor belongs here. Gated on the same flag as the ring: wherever the
         // add affordance shows, the pointer says "add", and nowhere else.
-        hintVisible && 'cursor-crosshair',
+        hintVisible && "cursor-crosshair",
         // horizontal separators mirror the tree node borders across panes.
         // No special case for the last row: the columns run the full height of
         // the pane, so the grid closes on the container edge on its own.
-        rowBorder !== null && 'border-b',
-        rowBorder === 'dashed' && 'border-dashed',
-        dragTarget === 'valid' && 'bg-muted/40',
-        dragTarget === 'invalid' && 'bg-destructive/10'
+        rowBorder !== null && "border-b",
+        rowBorder === "dashed" && "border-dashed",
+        dragTarget === "valid" && "bg-muted/40",
+        dragTarget === "invalid" && "bg-destructive/10"
       )}
       style={{
         height: `${heightRem}rem`,
-        minWidth: trackWidth
+        minWidth: trackWidth,
       }}
       onPointerDown={e => {
         // Opt-in drag-create owns presses on empty schedulable track (the
@@ -2851,7 +2851,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
           // the bare track, or the hint tile that spawns under the cursor -
           // a sub-threshold press still ends as the tile's own click
           (e.target === e.currentTarget ||
-            !!(e.target as HTMLElement).closest?.('[data-slot=gantt-schedule-hint]')) &&
+            !!(e.target as HTMLElement).closest?.("[data-slot=gantt-schedule-hint]")) &&
           !!settings.onSelectSlot
         ) {
           // validate BEFORE claiming the press: on a vetoed slot (e.g. the
@@ -2863,7 +2863,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
               start: new Date(stop.ms),
               end: new Date(Math.max(stop.endMs, stop.ms + 1)),
               allDay: false,
-              resourceId: row.resource.id
+              resourceId: row.resource.id,
             }) ??
               true)
           if (!allowed) return
@@ -2876,7 +2876,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
         // re-render the row for every gesture anywhere on the grid
         const interacting =
           instance.getState().drag !== null || instance.getState().slotDraft !== null
-        if (!showHint || e.pointerType !== 'mouse' || interacting) {
+        if (!showHint || e.pointerType !== "mouse" || interacting) {
           if (hintStop) setHintStop(null)
           return
         }
@@ -2903,7 +2903,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
         // the ring and the glyph across two device pixels, which reads as a
         // furry, smudged dot. -translate-x-1/2 of an even-sized box keeps it on
         // the grid, so the result is crisp.
-        e.currentTarget.style.setProperty('--gantt-hint-x', `${offset}px`)
+        e.currentTarget.style.setProperty("--gantt-hint-x", `${offset}px`)
         const stop = resolveHintStop(fraction)
         // validate placement before offering it: a consumer canSelectSlot
         // veto (e.g. a locked span) hides the hint entirely
@@ -2913,7 +2913,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
             start: new Date(stop.ms),
             end: new Date(Math.max(stop.endMs, stop.ms + 1)),
             allDay: false,
-            resourceId: row.resource.id
+            resourceId: row.resource.id,
           }) ??
             true)
         const next = allowed ? stop : null
@@ -2939,7 +2939,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
             start: new Date(stop.ms),
             end: new Date(Math.max(stop.endMs, stop.ms + 1)),
             allDay: false,
-            resourceId: row.resource.id
+            resourceId: row.resource.id,
           }) ?? true
         if (!allowed) return
         createAt(stop, e)
@@ -2955,7 +2955,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
           a stacking context, and nothing inside escapes the row box - the
           schedule hint deliberately lives OUTSIDE this layer. Browsers
           without support simply ignore it. */}
-      <div className="pointer-events-none absolute inset-0" style={{ contentVisibility: 'auto' }}>
+      <div className="pointer-events-none absolute inset-0" style={{ contentVisibility: "auto" }}>
         {segments.map((segment, segmentIndex) => {
           const from = fractionOf(rangeStartMs + (segment.startMin ?? 0) * 60000)
           const to = fractionOf(rangeStartMs + (segment.endMin ?? 0) * 60000)
@@ -2966,16 +2966,16 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
           // back inside when the bar spans the whole view.
           const barRemWidth = (to - from) * trackRemWidth
           const wantsOutside =
-            viewConfig.barLabel === 'outside' ||
-            (viewConfig.barLabel === 'auto' &&
+            viewConfig.barLabel === "outside" ||
+            (viewConfig.barLabel === "auto" &&
               barRemWidth < (viewConfig.metrics?.autoLabelMin ?? AUTO_LABEL_MIN_REM))
           const placement = !wantsOutside
-            ? 'inside'
+            ? "inside"
             : to <= 0.92
-              ? 'after'
+              ? "after"
               : from >= 0.08
-                ? 'before'
-                : 'inside'
+                ? "before"
+                : "inside"
           // the wrapper carries the drag kind itself (from the row's ghost
           // state, same notify as the bar's own attribute) so the hide rules
           // below use plain attribute selectors instead of :has(), which
@@ -3008,25 +3008,25 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
                 height: `${laneHeightRem}rem`,
                 // one track means every lane is 0, so paint order (not the
                 // lane) is what keeps overlapping bars individually reachable
-                zIndex: segment.occurrence.event.zIndex ?? 10 + (singleTrack ? segmentIndex : lane)
+                zIndex: segment.occurrence.event.zIndex ?? 10 + (singleTrack ? segmentIndex : lane),
               }}
             >
               <GanttBar
                 segment={segment}
-                labelOutside={placement !== 'inside'}
+                labelOutside={placement !== "inside"}
                 rowTitle={row.resource.title}
                 className="h-full"
               />
-              {placement !== 'inside' && (
+              {placement !== "inside" && (
                 <span
                   data-slot="gantt-bar-label"
                   data-placement={placement}
                   className={cn(
-                    'text-foreground pointer-events-none absolute top-1/2 z-10 max-w-60 -translate-y-1/2 truncate font-medium',
+                    "text-foreground pointer-events-none absolute top-1/2 z-10 max-w-60 -translate-y-1/2 truncate font-medium",
                     // one label at a time: the resize ghost carries it while
                     // this bar is the faded placeholder
-                    'group-data-[drag-kind^=resize]/gantt-seg:opacity-0',
-                    placement === 'after' ? 'start-full ms-2' : 'end-full me-2'
+                    "group-data-[drag-kind^=resize]/gantt-seg:opacity-0",
+                    placement === "after" ? "start-full ms-2" : "end-full me-2"
                   )}
                 >
                   {segment.occurrence.event.title}
@@ -3042,7 +3042,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
             className="pointer-events-none absolute top-1/2 -translate-y-1/2"
             style={{
               insetInlineStart: `${bars.summary.from * 100}%`,
-              width: `${Math.max((bars.summary.to - bars.summary.from) * 100, 0.5)}%`
+              width: `${Math.max((bars.summary.to - bars.summary.from) * 100, 0.5)}%`,
             }}
           >
             {viewConfig.renderSummary ? (
@@ -3051,7 +3051,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
                 resource: row.resource,
                 start: new Date(rangeStartMs + bars.summary.from * (rangeEndMs - rangeStartMs)),
                 end: new Date(rangeStartMs + bars.summary.to * (rangeEndMs - rangeStartMs)),
-                progress: bars.summary.progress
+                progress: bars.summary.progress,
               })
             ) : (
               <>
@@ -3092,14 +3092,14 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
               // faint drop-target placeholder (the smooth cursor clone carries
               // the visual); resize shows the event at its new size in its own
               // color with just a dashed border.
-              'pointer-events-none absolute z-40 h-5 rounded-sm border border-dashed font-medium',
-              !ghost.valid && 'border-destructive bg-destructive/10 text-destructive',
+              "pointer-events-none absolute z-40 h-5 rounded-sm border border-dashed font-medium",
+              !ghost.valid && "border-destructive bg-destructive/10 text-destructive",
               ghost.valid &&
-                ghost.kind === 'move' &&
-                'border-(--gantt-event-color)/50 bg-(--gantt-event-color)/8',
+                ghost.kind === "move" &&
+                "border-(--gantt-event-color)/50 bg-(--gantt-event-color)/8",
               ghost.valid &&
-                ghost.kind !== 'move' &&
-                'text-foreground border-(--gantt-event-color)/70 bg-(--gantt-event-color)/22'
+                ghost.kind !== "move" &&
+                "text-foreground border-(--gantt-event-color)/70 bg-(--gantt-event-color)/22"
             )}
             style={
               {
@@ -3109,11 +3109,11 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
                 // in the row put it on no lane at all once a node stacked, so
                 // a 3-lane row showed the drop target floating in the middle.
                 top: `${ghostLaneOffsetRem}rem`,
-                '--gantt-event-color': ghost.color ?? 'var(--color-primary)'
+                "--gantt-event-color": ghost.color ?? "var(--color-primary)",
               } as CSSProperties
             }
           >
-            {ghost.kind !== 'move' && (
+            {ghost.kind !== "move" && (
               // label rides OUTSIDE after the bar, exactly like the resting
               // outside placement - never inside the schedule
               <span className="pointer-events-none absolute start-full top-1/2 ms-2 max-w-60 -translate-y-1/2 truncate whitespace-nowrap">
@@ -3139,7 +3139,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
               // row is the GAP between two lanes), and the real lane height
               // rather than a hardcoded h-5 a consumer's metrics would break
               top: `${draftTopRem}rem`,
-              height: `${laneHeightRem}rem`
+              height: `${laneHeightRem}rem`,
             }}
           >
             {/* the accent tint, over the opaque base rather than over whatever
@@ -3162,7 +3162,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
             // gesture must never hide is what is already booked.
             insetInlineStart: `${draft.to * 100}%`,
             top: `${draftTopRem}rem`,
-            height: `${laneHeightRem}rem`
+            height: `${laneHeightRem}rem`,
           }}
         >
           <span className="bg-foreground text-background absolute start-full top-1/2 ms-2 inline-flex w-max -translate-y-1/2 items-center rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap">
@@ -3198,10 +3198,10 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
           className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2 rtl:translate-x-1/2"
           style={{
             // the live cursor position, written without React (see onPointerMove)
-            insetInlineStart: 'var(--gantt-hint-x, 50%)',
+            insetInlineStart: "var(--gantt-hint-x, 50%)",
             // first track, centred on it - z-30 on this wrapper keeps the dot
             // above every bar, so a busy span still offers the affordance
-            top: `${hintTopRem}rem`
+            top: `${hintTopRem}rem`,
           }}
         >
           {viewConfig.renderScheduleHint ? (
@@ -3210,7 +3210,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
             viewConfig.renderScheduleHint({
               start: new Date(hintStop.ms),
               end: new Date(Math.max(hintStop.endMs, hintStop.ms + 1)),
-              resource: row.resource
+              resource: row.resource,
             })
           ) : (
             <>
@@ -3258,16 +3258,16 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
               <span
                 data-slot="gantt-schedule-hint-bubble"
                 className={cn(
-                  'bg-foreground text-background absolute start-1/2 inline-flex w-max -translate-x-1/2 items-center rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap',
-                  rowIndex === 0 ? 'top-full mt-2' : 'bottom-full mb-2'
+                  "bg-foreground text-background absolute start-1/2 inline-flex w-max -translate-x-1/2 items-center rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap",
+                  rowIndex === 0 ? "top-full mt-2" : "bottom-full mb-2"
                 )}
               >
                 {hintLabel}
                 <span
                   aria-hidden
                   className={cn(
-                    'bg-foreground absolute start-1/2 size-2.5 -translate-x-1/2 rotate-45 rounded-[2px]',
-                    rowIndex === 0 ? '-top-1' : '-bottom-1'
+                    "bg-foreground absolute start-1/2 size-2.5 -translate-x-1/2 rotate-45 rounded-[2px]",
+                    rowIndex === 0 ? "-top-1" : "-bottom-1"
                   )}
                 />
               </span>
@@ -3281,7 +3281,7 @@ const GanttTimelineRow = memo(function GanttTimelineRow({
 
 interface OffscreenChip {
   id: string
-  side: 'start' | 'end'
+  side: "start" | "end"
   top: number
   color?: string
   label: string
@@ -3316,7 +3316,7 @@ function GanttOffscreenChips({
   paneRef,
   occurrences,
   locale,
-  refreshKey
+  refreshKey,
 }: {
   paneRef: RefObject<HTMLDivElement | null>
   occurrences: GanttOccurrence[]
@@ -3334,53 +3334,53 @@ function GanttOffscreenChips({
     const measure = () => {
       raf = 0
       const paneRect = pane.getBoundingClientRect()
-      const header = viewport.querySelector<HTMLElement>('[data-slot=gantt-timeline-header]')
+      const header = viewport.querySelector<HTMLElement>("[data-slot=gantt-timeline-header]")
       const headerBottom = header ? header.getBoundingClientRect().bottom - paneRect.top : 0
       const trackW = viewport.scrollWidth
       const visibleStart = getScrollStart(viewport)
       const visibleEnd = visibleStart + viewport.clientWidth
       // the floating zoom control shares the right edge (higher z); end chips
       // whose row center falls in its band shift left so they stay clickable
-      const zoomEl = pane.querySelector<HTMLElement>('[data-slot=gantt-zoom]')
+      const zoomEl = pane.querySelector<HTMLElement>("[data-slot=gantt-zoom]")
       const zoom = zoomEl
         ? {
             top: zoomEl.getBoundingClientRect().top - paneRect.top - 8,
             bottom: zoomEl.getBoundingClientRect().bottom - paneRect.top + 8,
-            inset: paneRect.right - zoomEl.getBoundingClientRect().left + 8
+            inset: paneRect.right - zoomEl.getBoundingClientRect().left + 8,
           }
         : null
       const next: OffscreenChip[] = []
-      for (const rowEl of viewport.querySelectorAll<HTMLElement>('[data-gantt-row]')) {
-        const from = parseFloat(rowEl.dataset.ganttBarMin ?? '')
-        const to = parseFloat(rowEl.dataset.ganttBarMax ?? '')
+      for (const rowEl of viewport.querySelectorAll<HTMLElement>("[data-gantt-row]")) {
+        const from = parseFloat(rowEl.dataset.ganttBarMin ?? "")
+        const to = parseFloat(rowEl.dataset.ganttBarMax ?? "")
         if (Number.isNaN(from) || Number.isNaN(to)) continue
         const rect = rowEl.getBoundingClientRect()
         const top = rect.top - paneRect.top + rect.height / 2
         if (top < headerBottom + 10 || top > paneRect.height - 16) continue
         const startPx = from * trackW
         const endPx = to * trackW
-        const startMs = parseFloat(rowEl.dataset.ganttBarStartMs ?? '')
+        const startMs = parseFloat(rowEl.dataset.ganttBarStartMs ?? "")
         const base = {
-          id: rowEl.dataset.ganttRowId ?? '',
+          id: rowEl.dataset.ganttRowId ?? "",
           top: Math.round(top),
           color: rowEl.dataset.ganttBarColor,
-          label: rowEl.dataset.ganttBarLabel ?? '',
-          startMs: Number.isNaN(startMs) ? null : startMs
+          label: rowEl.dataset.ganttBarLabel ?? "",
+          startMs: Number.isNaN(startMs) ? null : startMs,
         }
         if (endPx <= visibleStart + 2) {
           next.push({
             ...base,
-            side: 'start',
+            side: "start",
             target: startPx - 24,
-            insetEnd: 14
+            insetEnd: 14,
           })
         } else if (startPx >= visibleEnd - 2) {
           const overlapsZoom = zoom && top >= zoom.top && top <= zoom.bottom
           next.push({
             ...base,
-            side: 'end',
+            side: "end",
             target: endPx - viewport.clientWidth + 24,
-            insetEnd: overlapsZoom ? Math.max(14, zoom.inset) : 14
+            insetEnd: overlapsZoom ? Math.max(14, zoom.inset) : 14,
           })
         }
       }
@@ -3389,12 +3389,12 @@ function GanttOffscreenChips({
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(measure)
     }
-    viewport.addEventListener('scroll', schedule)
+    viewport.addEventListener("scroll", schedule)
     const observer = new ResizeObserver(schedule)
     observer.observe(viewport)
     schedule()
     return () => {
-      viewport.removeEventListener('scroll', schedule)
+      viewport.removeEventListener("scroll", schedule)
       observer.disconnect()
       if (raf) cancelAnimationFrame(raf)
     }
@@ -3408,8 +3408,8 @@ function GanttOffscreenChips({
     const target = Math.max(0, chip.target)
     viewport.scrollTo({
       // chip targets are distances from the inline start; RTL signs them
-      left: getComputedStyle(viewport).direction === 'rtl' ? -target : target,
-      behavior: 'smooth'
+      left: getComputedStyle(viewport).direction === "rtl" ? -target : target,
+      behavior: "smooth",
     })
     // hand keyboard focus to the bar the chip promised (the chip unmounts)
     const bar = viewport.querySelector<HTMLElement>(
@@ -3436,15 +3436,15 @@ function GanttOffscreenChips({
                   className="bg-background text-muted-foreground hover:text-foreground pointer-events-auto absolute flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border shadow-xs"
                   style={{
                     top: chip.top,
-                    ...(chip.side === 'start'
-                      ? { insetInlineStart: '0.5rem' }
-                      : { insetInlineEnd: chip.insetEnd })
+                    ...(chip.side === "start"
+                      ? { insetInlineStart: "0.5rem" }
+                      : { insetInlineEnd: chip.insetEnd }),
                   }}
                   onClick={() => scrollTo(chip)}
                 />
               }
             >
-              {chip.side === 'start' ? (
+              {chip.side === "start" ? (
                 <IconPlaceholder
                   lucide="ChevronLeftIcon"
                   tabler="IconChevronLeft"
@@ -3468,16 +3468,16 @@ function GanttOffscreenChips({
               <span
                 aria-hidden
                 className="ring-background absolute -end-px -top-px size-1.5 rounded-full ring-1"
-                style={{ background: chip.color ?? 'var(--color-primary)' }}
+                style={{ background: chip.color ?? "var(--color-primary)" }}
               />
             </TooltipTrigger>
-            <TooltipContent side={chip.side === 'start' ? 'right' : 'left'}>
+            <TooltipContent side={chip.side === "start" ? "right" : "left"}>
               <div className="font-medium">{chip.label}</div>
               {chip.startMs !== null && (
                 <div className="opacity-80">
                   {/* zoned: the chip must name the same day the grid shows */}
-                  {format(toZoned(new Date(chip.startMs), settings.timeZone), 'MMM d, yyyy', {
-                    locale
+                  {format(toZoned(new Date(chip.startMs), settings.timeZone), "MMM d, yyyy", {
+                    locale,
                   })}
                 </div>
               )}

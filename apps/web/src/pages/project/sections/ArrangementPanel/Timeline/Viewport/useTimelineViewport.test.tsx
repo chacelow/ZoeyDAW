@@ -12,7 +12,9 @@ function frame() {
   const pending = [...frames.values()]
   frames.clear()
   act(() => {
-    for (const callback of pending) callback(performance.now())
+    for (const callback of pending) {
+      callback(performance.now())
+    }
   })
 }
 function Viewport() {

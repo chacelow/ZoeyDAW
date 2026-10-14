@@ -1,16 +1,16 @@
-import { MetalFx } from "metal-fx";
-import { type ComponentProps } from "react";
+import { MetalFx } from "metal-fx"
 
-import { Button } from "./button";
-import { cn } from "./cn";
+import { Button } from "./button"
+import { cn } from "./cn"
+import type { ComponentProps } from "react"
 
-type MetallicButtonProps = ComponentProps<typeof Button> & {
-  metalTheme?: "dark" | "light" | "auto";
-  metalScale?: number;
-  metalPaused?: boolean;
-};
+type MetallicButtonProperties = ComponentProps<typeof Button> & {
+  readonly metalTheme?: "dark" | "light" | "auto"
+  readonly metalScale?: number
+  readonly metalPaused?: boolean
+}
 function supportsWebGL(): boolean {
-  return typeof WebGLRenderingContext !== "undefined";
+  return typeof WebGLRenderingContext !== "undefined"
 }
 
 function MetallicButton({
@@ -19,22 +19,24 @@ function MetallicButton({
   metalTheme = "auto",
   metalScale = 1,
   metalPaused = false,
-  ...props
-}: MetallicButtonProps) {
+  ...properties
+}: MetallicButtonProperties) {
   const button = (
     <Button
       data-slot="metallic-button"
       className={cn(
-        "relative rounded-full border-0 bg-background px-3 text-foreground active:translate-y-0 active:scale-[0.96]",
-        className,
+        "bg-background text-foreground relative rounded-full border-0 px-3 active:translate-y-0 active:scale-[0.96]",
+        className
       )}
-      {...props}
+      {...properties}
     >
       {children}
     </Button>
-  );
+  )
 
-  if (!supportsWebGL()) return button;
+  if (!supportsWebGL()) {
+    return button
+  }
 
   return (
     <MetalFx
@@ -49,8 +51,8 @@ function MetallicButton({
     >
       {button}
     </MetalFx>
-  );
+  )
 }
 
-export { MetallicButton };
-export type { MetallicButtonProps };
+export { MetallicButton }
+export type { MetallicButtonProperties as MetallicButtonProps }

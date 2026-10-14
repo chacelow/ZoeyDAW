@@ -1,27 +1,27 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { useState } from 'react'
-import { KeyIcon, SettingsIcon, UserIcon } from 'lucide-react'
-import { SettingsShell } from './settings-shell'
-import { Button } from './button'
+import { useState } from "react"
+import { KeyIcon, SettingsIcon, UserIcon } from "lucide-react"
+import { SettingsShell } from "./settings-shell"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof SettingsShell> = {
-  title: 'Layout/SettingsShell',
+  title: "Layout/SettingsShell",
   component: SettingsShell,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
 type Story = StoryObj<typeof SettingsShell>
 
 const ITEMS = [
-  { id: 'profile', label: '个人资料', icon: UserIcon },
-  { id: 'account', label: '账号设置', icon: SettingsIcon },
-  { id: 'security', label: '安全', icon: KeyIcon }
+  { id: "profile", label: "个人资料", icon: UserIcon },
+  { id: "account", label: "账号设置", icon: SettingsIcon },
+  { id: "security", label: "安全", icon: KeyIcon },
 ]
 
 function Demo() {
   const [open, setOpen] = useState(false)
-  const [active, setActive] = useState('profile')
+  const [active, setActive] = useState("profile")
   return (
     <>
       <Button onClick={() => setOpen(true)}>打开设置</Button>
@@ -34,7 +34,7 @@ function Demo() {
         activeId={active}
         onActiveChange={setActive}
       >
-        <div className="text-sm text-muted-foreground">当前分区: {active}</div>
+        <div className="text-muted-foreground text-sm">当前分区: {active}</div>
       </SettingsShell>
     </>
   )

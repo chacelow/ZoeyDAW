@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { FolderIcon, ChevronRightIcon } from 'lucide-react'
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from './item'
-import { Button } from './button'
+import { FolderIcon, ChevronRightIcon } from "lucide-react"
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "./item"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Item> = {
-  title: 'Display/Item',
+  title: "Display/Item",
   component: Item,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -16,7 +16,7 @@ export const Default: Story = {
   render: () => (
     <Item className="w-96 gap-3 p-3">
       <ItemMedia>
-        <div className="grid size-8 place-items-center rounded-lg bg-muted">
+        <div className="bg-muted grid size-8 place-items-center rounded-lg">
           <FolderIcon className="size-4" />
         </div>
       </ItemMedia>
@@ -30,5 +30,5 @@ export const Default: Story = {
         </Button>
       </ItemActions>
     </Item>
-  )
+  ),
 }

@@ -16,7 +16,9 @@
  */
 import type { ReactNode } from "react"
 
-/** Compatibility provider; loading state lives in the Zustand store. */
-export function LoadingProvider({ children }: { children: ReactNode }) {
+/**
+Compatibility provider; loading state lives in the Zustand store.
+*/
+export function LoadingProvider({ children }: { readonly children: ReactNode }) {
   return <>{children}</>
 }

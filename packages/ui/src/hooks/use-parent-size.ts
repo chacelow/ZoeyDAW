@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from "react"
 
 /**
  * 用 ResizeObserver 观察一个 wrapper 的父容器实时尺寸。
@@ -28,18 +28,24 @@ export function useParentSize<T extends HTMLElement = HTMLDivElement>(): {
   width: number
   height: number
 } {
-  const ref = useRef<T>(null)
+  const reference = useRef<T>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
 
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const parent = el.parentElement
-    if (!parent) return
+    const element = reference.current
+    if (!element) {
+      return
+    }
+    const parent = element.parentElement
+    if (!parent) {
+      return
+    }
 
     const observer = new ResizeObserver(entries => {
       const entry = entries[0]
-      if (!entry) return
+      if (!entry) {
+        return
+      }
       const { width, height } = entry.contentRect
       setSize({ width, height })
     })
@@ -47,5 +53,5 @@ export function useParentSize<T extends HTMLElement = HTMLDivElement>(): {
     return () => observer.disconnect()
   }, [])
 
-  return { ref, width: size.width, height: size.height }
+  return { ref: reference, width: size.width, height: size.height }
 }

@@ -37,7 +37,7 @@ export function trackIdsUnderPointer(
   const targetId = target instanceof HTMLElement ? target.dataset.trackId : originId
   const first = tracks.findIndex(track => track.id === originId)
   const last = tracks.findIndex(track => track.id === targetId)
-  return first < 0 || last < 0
+  return first === -1 || last === -1
     ? [originId]
     : tracks.slice(Math.min(first, last), Math.max(first, last) + 1).map(track => track.id)
 }

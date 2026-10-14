@@ -9,7 +9,9 @@ describe("clip clipboard boundary", () => {
     const audio = document.tracks.find(track => track.id === "3-audio")
     const midi = document.tracks.find(track => track.id === "4-midi")
     const midiSource = document.tracks.find(track => track.id === "trager")?.clips[0]
-    if (!audio || !midi || !midiSource) throw new Error("Missing clipboard lanes")
+    if (!audio || !midi || !midiSource) {
+      throw new Error("Missing clipboard lanes")
+    }
     const source = {
       ...audio.clips[0],
       startBar: 5.5,
@@ -45,7 +47,9 @@ describe("clip clipboard boundary", () => {
   })
   it("clips fade intervals and inward offsets at a copied source window", () => {
     const audio = document.tracks.find(track => track.id === "3-audio")
-    if (!audio) throw new Error("Missing audio lane")
+    if (!audio) {
+      throw new Error("Missing audio lane")
+    }
     const candidate = {
       ...audio.clips[0],
       fadeInOffsetBars: 1,
@@ -72,7 +76,9 @@ describe("clip clipboard boundary", () => {
   })
   it("rejects malformed versions, forged source fields and duplicate IDs", () => {
     const sample = collectClips(document.tracks, ["audio-1"])
-    if (!sample) throw new Error("Missing clipboard fixture")
+    if (!sample) {
+      throw new Error("Missing clipboard fixture")
+    }
     expect(parseClipClipboard(JSON.stringify({ ...sample, version: 2 }))).toBeNull()
     expect(
       parseClipClipboard(

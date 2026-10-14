@@ -1,13 +1,13 @@
-import { z } from 'zod'
+import { z } from "zod"
 
 /**
  * 创建快照输入验证
  */
 export const createSnapshotSchema = z.object({
-  mindmapId: z.string().cuid('无效的思维导图ID格式'),
-  name: z.string().min(1, '快照名称不能为空').max(100, '快照名称最多100个字符'),
-  description: z.string().max(500, '快照描述最多500个字符').optional(),
-  isAuto: z.boolean().default(false)
+  mindmapId: z.string().cuid("无效的思维导图ID格式"),
+  name: z.string().min(1, "快照名称不能为空").max(100, "快照名称最多100个字符"),
+  description: z.string().max(500, "快照描述最多500个字符").optional(),
+  isAuto: z.boolean().default(false),
 })
 export type CreateSnapshotInput = z.infer<typeof createSnapshotSchema>
 
@@ -15,10 +15,10 @@ export type CreateSnapshotInput = z.infer<typeof createSnapshotSchema>
  * 获取快照列表输入验证
  */
 export const getSnapshotsSchema = z.object({
-  mindmapId: z.string().cuid('无效的思维导图ID格式'),
+  mindmapId: z.string().cuid("无效的思维导图ID格式"),
   includeAuto: z.boolean().default(true), // 是否包含自动快照
-  page: z.number().int().min(1, '页码必须大于0').default(1),
-  limit: z.number().int().min(1, '每页数量必须大于0').max(50, '每页最多50个').default(20)
+  page: z.number().int().min(1, "页码必须大于0").default(1),
+  limit: z.number().int().min(1, "每页数量必须大于0").max(50, "每页最多50个").default(20),
 })
 export type GetSnapshotsInput = z.infer<typeof getSnapshotsSchema>
 
@@ -26,7 +26,7 @@ export type GetSnapshotsInput = z.infer<typeof getSnapshotsSchema>
  * 获取单个快照输入验证
  */
 export const getSnapshotSchema = z.object({
-  snapshotId: z.string().cuid('无效的快照ID格式')
+  snapshotId: z.string().cuid("无效的快照ID格式"),
 })
 export type GetSnapshotInput = z.infer<typeof getSnapshotSchema>
 
@@ -34,7 +34,7 @@ export type GetSnapshotInput = z.infer<typeof getSnapshotSchema>
  * 删除快照输入验证
  */
 export const deleteSnapshotSchema = z.object({
-  snapshotId: z.string().cuid('无效的快照ID格式')
+  snapshotId: z.string().cuid("无效的快照ID格式"),
 })
 export type DeleteSnapshotInput = z.infer<typeof deleteSnapshotSchema>
 
@@ -42,7 +42,7 @@ export type DeleteSnapshotInput = z.infer<typeof deleteSnapshotSchema>
  * 恢复快照输入验证
  */
 export const restoreSnapshotSchema = z.object({
-  snapshotId: z.string().cuid('无效的快照ID格式')
+  snapshotId: z.string().cuid("无效的快照ID格式"),
 })
 export type RestoreSnapshotInput = z.infer<typeof restoreSnapshotSchema>
 

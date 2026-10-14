@@ -1,6 +1,6 @@
 import { PATTERN_STEPS_PER_BAR } from "./types"
-import type { Clip, DocumentState, Track, TrackKind, WorkspaceState } from "./types"
 import { MIN_CLIP_LENGTH_BARS } from "./grid"
+import type { Clip, DocumentState, Track, TrackKind, WorkspaceState } from "./types"
 
 export type DocumentCommand =
   | { type: "transport"; patch: Partial<DocumentState["transport"]> }
@@ -14,11 +14,13 @@ export type DocumentCommand =
 
 export function reduceDocument(document: DocumentState, command: DocumentCommand): DocumentState {
   switch (command.type) {
-    case "transport":
+    case "transport": {
       return { ...document, transport: { ...document.transport, ...command.patch } }
-    case "project":
+    }
+    case "project": {
       return { ...document, ...command.patch }
-    case "loop":
+    }
+    case "loop": {
       return {
         ...document,
         transport: {
@@ -26,10 +28,13 @@ export function reduceDocument(document: DocumentState, command: DocumentCommand
           loop: { ...document.transport.loop, ...command.patch },
         },
       }
-    case "tracks":
+    }
+    case "tracks": {
       return { ...document, tracks: command.tracks }
-    case "markers":
+    }
+    case "markers": {
       return { ...document, markers: command.markers }
+    }
   }
 }
 
@@ -47,7 +52,8 @@ export function uniqueId(prefix: string): string {
 export function createTrack(
   kind: Exclude<TrackKind, "main">,
   tracks: Track[],
-  parentId?: string
+  parentId: string | undefined,
+  heightPx: number
 ): Track {
   const count = tracks.filter(track => track.kind === kind).length + 1
   return {
@@ -64,13 +70,13 @@ export function createTrack(
     output: parentId ?? (kind === "midi" ? "none" : "main"),
     inputChannel: kind === "midi" ? "all" : kind === "audio" ? "1" : undefined,
     outputChannel: kind === "midi" ? "none" : "1-2",
-    ...(kind === "return" ? { returnPost: true } : {}),
+    ...(kind === "return" && { returnPost: true }),
     sends: {},
     clips: [],
-    heightPx: 70,
+    heightPx,
     monitor: "auto",
     automation: [],
-    ...(kind === "group" ? { childTrackIds: [], collapsed: false } : {}),
+    ...(kind === "group" && { childTrackIds: [], collapsed: false }),
   }
 }
 
@@ -81,17 +87,20 @@ export function createClip(kind: Clip["kind"], startBar: number, lengthBars: num
     lengthBars: Math.max(MIN_CLIP_LENGTH_BARS, lengthBars),
   }
   switch (kind) {
-    case "audio":
-      return { ...common, kind, samplePath: "mock://untitled.wav", gainDb: 0 }
-    case "midi":
+    case "audio": {
+      return { ...common, kind, samplePath: "", gainDb: 0 }
+    }
+    case "midi": {
       return { ...common, kind, notes: [], loopBars: common.lengthBars }
-    case "pattern":
+    }
+    case "pattern": {
       return {
         ...common,
         kind,
         patternId: uniqueId("pattern"),
         steps: Array.from({ length: PATTERN_STEPS_PER_BAR }, () => false),
       }
+    }
   }
 }
 
@@ -112,7 +121,9 @@ export function cloneTrack(track: Track): Track {
   }
 }
 
-/** Keeps every copy separate from source objects, including nested note/peak/automation arrays. */
+/**
+Keeps every copy separate from source objects, including nested note/peak/automation arrays.
+*/
 export function mapClips(
   tracks: Track[],
   ids: string[],

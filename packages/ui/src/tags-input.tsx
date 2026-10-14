@@ -1,25 +1,33 @@
-'use client'
+"use client"
 
-import * as React from 'react'
-import { X } from 'lucide-react'
+import * as React from "react"
+import { X } from "lucide-react"
 
-import { cn } from '#lib/utils'
-import { Badge } from '#components/badge'
+import { cn } from "#lib/utils"
+import { Badge } from "#components/badge"
 
 export interface TagsInputProps {
-  /** 当前标签列表 */
-  value: string[]
-  /** 标签变化回调 */
-  onChange: (tags: string[]) => void
-  placeholder?: string
-  disabled?: boolean
-  /** 提交前校验单个标签，返回 false 则拒绝加入 */
-  validate?: (tag: string) => boolean
-  /** 触发"提交为标签"的按键，默认回车与逗号 */
-  addKeys?: string[]
-  className?: string
-  inputClassName?: string
-  'aria-label'?: string
+  /**
+  当前标签列表
+  */
+  readonly value: string[]
+  /**
+  标签变化回调
+  */
+  readonly onChange: (tags: string[]) => void
+  readonly placeholder?: string
+  readonly disabled?: boolean
+  /**
+  提交前校验单个标签，返回 false 则拒绝加入
+  */
+  readonly validate?: (tag: string) => boolean
+  /**
+  触发"提交为标签"的按键，默认回车与逗号
+  */
+  readonly addKeys?: string[]
+  readonly className?: string
+  readonly inputClassName?: string
+  readonly "aria-label"?: string
 }
 
 /**
@@ -34,24 +42,28 @@ function TagsInput({
   placeholder,
   disabled,
   validate,
-  addKeys = ['Enter', ','],
+  addKeys = ["Enter", ","],
   className,
   inputClassName,
-  'aria-label': ariaLabel
+  "aria-label": ariaLabel,
 }: TagsInputProps) {
-  const [input, setInput] = React.useState('')
-  const inputRef = React.useRef<HTMLInputElement>(null)
+  const [input, setInput] = React.useState("")
+  const inputReference = React.useRef<HTMLInputElement>(null)
 
   const addTag = (raw: string): void => {
-    const tag = raw.trim().replace(/,+$/, '').trim()
-    if (!tag) return
-    if (validate && !validate(tag)) return
+    const tag = raw.trim().replace(/,+$/, "").trim()
+    if (!tag) {
+      return
+    }
+    if (validate && !validate(tag)) {
+      return
+    }
     if (value.includes(tag)) {
-      setInput('')
+      setInput("")
       return
     }
     onChange([...value, tag])
-    setInput('')
+    setInput("")
   }
 
   const removeTag = (tag: string): void => onChange(value.filter(t => t !== tag))
@@ -60,8 +72,9 @@ function TagsInput({
     if (addKeys.includes(e.key)) {
       e.preventDefault()
       addTag(input)
-    } else if (e.key === 'Backspace' && input.length === 0 && value.length > 0) {
-      removeTag(value[value.length - 1]!)
+    } else if (e.key === "Backspace" && input.length === 0) {
+      const lastTag = value.at(-1)
+      if (lastTag !== undefined) removeTag(lastTag)
     }
   }
 
@@ -69,9 +82,12 @@ function TagsInput({
     <div
       data-slot="tags-input"
       data-disabled={disabled || undefined}
-      onClick={() => inputRef.current?.focus()}
+      onPointerDown={event => {
+        if (event.target instanceof Element && event.target.closest("button")) return
+        inputReference.current?.focus()
+      }}
       className={cn(
-        'flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 data-disabled:cursor-not-allowed data-disabled:opacity-50 dark:bg-input/30',
+        "border-input focus-within:border-ring focus-within:ring-ring/50 dark:bg-input/30 flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-md border bg-transparent px-2.5 py-1.5 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-within:ring-[3px] data-disabled:cursor-not-allowed data-disabled:opacity-50",
         className
       )}
     >
@@ -87,7 +103,7 @@ function TagsInput({
                 e.stopPropagation()
                 removeTag(tag)
               }}
-              className="rounded-sm text-muted-foreground opacity-70 transition-opacity hover:opacity-100"
+              className="text-muted-foreground rounded-sm opacity-70 transition-opacity hover:opacity-100"
             >
               <X className="size-3" />
             </button>
@@ -95,7 +111,7 @@ function TagsInput({
         </Badge>
       ))}
       <input
-        ref={inputRef}
+        ref={inputReference}
         value={input}
         disabled={disabled}
         aria-label={ariaLabel}
@@ -104,7 +120,7 @@ function TagsInput({
         onBlur={() => addTag(input)}
         placeholder={value.length === 0 ? placeholder : undefined}
         className={cn(
-          'min-w-[80px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed',
+          "placeholder:text-muted-foreground min-w-[80px] flex-1 bg-transparent text-sm outline-none disabled:cursor-not-allowed",
           inputClassName
         )}
       />

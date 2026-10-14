@@ -1,9 +1,10 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
-import { acceptsClip, positionToBar, type Clip } from "@/pages/project/model/types"
-import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
+import { acceptsClip, positionToBar } from "@/pages/project/model/types"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
+import type { Clip } from "@/pages/project/model/types"
+import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
 
 const COLORS = [
   "var(--chart-1)",
@@ -16,14 +17,16 @@ const COLORS = [
 export function ClipMenuItems({
   target,
 }: {
-  target: Extract<CanvasMenuTarget, { kind: "clip" | "clip-lane" }>
+  readonly target: Extract<CanvasMenuTarget, { kind: "clip" | "clip-lane" }>
 }) {
   const { t } = useTranslation()
   if (target.kind === "clip-lane") {
     const track = useProjectState
       .getState()
       .document.tracks.find(item => item.id === target.trackId)
-    if (!track) return null
+    if (!track) {
+      return null
+    }
     const create = (kind: Clip["kind"]) => {
       const selected = useProjectState.getState().session.timeSelection
       const length =
@@ -42,10 +45,12 @@ export function ClipMenuItems({
         .getState()
         .document.tracks.find(item => item.id === track.id)
         ?.clips.at(-1)
-      if (created) {
-        projectActions.selectClips([created.id])
-        arrangementScene.setSelection(new Set([created.id]))
+      if (!created) {
+        return
       }
+
+      projectActions.selectClips([created.id])
+      arrangementScene.setSelection(new Set([created.id]))
     }
     return (
       <>
@@ -84,7 +89,9 @@ export function ClipMenuItems({
     .flatMap(track => track.clips)
     .find(item => item.id === target.clipId)
   const ids = [...target.clipIds]
-  if (!clip) return null
+  if (!clip) {
+    return null
+  }
   const rename = () => {
     arrangementScene.setTargetSelection({ kind: "clip", id: clip.id, phase: "renaming" })
   }
@@ -146,7 +153,7 @@ export function ClipMenuItems({
             key={color}
             type="button"
             aria-label={`${t("arrangement.clipColor")} ${index + 1}`}
-            className="size-5 rounded-sm border border-border"
+            className="border-border size-5 rounded-sm border"
             style={{ background: color }}
             onClick={() => {
               projectActions.beginEdit()

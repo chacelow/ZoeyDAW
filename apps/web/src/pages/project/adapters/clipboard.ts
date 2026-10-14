@@ -1,19 +1,27 @@
-import { acceptsClip, type Clip, type TimeSelection } from "../model/types"
-import { collectClips, parseClipClipboard, type ClipClipboard } from "../model/clip-clipboard"
-import { clipboardMemory } from "./clipboard-memory"
+import { acceptsClip } from "../model/types"
+import { collectClips, parseClipClipboard } from "../model/clip-clipboard"
 import { clipWindow } from "../model/clip-window"
 import { cloneClip } from "../model/reducers"
+import { clipboardMemory } from "./clipboard-memory"
 import { get, session, tracks } from "./context"
+import type { ClipClipboard } from "../model/clip-clipboard"
+import type { Clip, TimeSelection } from "../model/types"
+
+function copyClips(ids: string[], range?: TimeSelection): ClipClipboard | null {
+  const copied = collectClips(get().document.tracks, ids, range)
+  if (copied) {
+    clipboardMemory.write(JSON.stringify(copied))
+  }
+  return copied
+}
 
 export const clipboardActions = {
-  copyClips(ids: string[], range?: TimeSelection) {
-    const copied = collectClips(get().document.tracks, ids, range)
-    if (copied) clipboardMemory.write(JSON.stringify(copied))
-    return copied
-  },
+  copyClips,
   cutClips(ids: string[], range?: TimeSelection) {
-    const copied = this.copyClips(ids, range)
-    if (!copied) return null
+    const copied = copyClips(ids, range)
+    if (!copied) {
+      return null
+    }
     const chosen = new Set(ids)
     tracks(
       get().document.tracks.map(track => ({
@@ -43,29 +51,40 @@ export const clipboardActions = {
     startBar: number,
     source: ClipClipboard | null = clipboardActions.getClipClipboard()
   ) {
-    if (!source || !Number.isFinite(startBar) || startBar < 1) return false
+    if (!source || !Number.isFinite(startBar) || startBar < 1) {
+      return false
+    }
     const current = get().document.tracks
     const lanes = current.filter(track => track.kind === "audio" || track.kind === "midi")
     const first = lanes.findIndex(track => track.id === targetTrackId)
-    if (first < 0 || !source.items.length) return false
+    if (first === -1 || !source.items.length) {
+      return false
+    }
+    const placements: {
+      item: (typeof source.items)[number]
+      destination: (typeof lanes)[number]
+    }[] = []
     for (const item of source.items) {
       const destination = lanes[first + item.trackOffset]
       if (
         !destination ||
         !acceptsClip(destination.kind, item.clip.kind) ||
         !Number.isFinite(startBar + item.barOffset + item.clip.lengthBars)
-      )
+      ) {
         return false
+      }
+      placements.push({ item, destination })
     }
     const additions = new Map<string, Clip[]>()
     const copied: string[] = []
-    for (const item of source.items) {
-      const destination = lanes[first + item.trackOffset]
+    for (const { item, destination } of placements) {
       const clip = { ...cloneClip(item.clip), startBar: startBar + item.barOffset }
       additions.set(destination.id, [...(additions.get(destination.id) ?? []), clip])
       copied.push(clip.id)
     }
-    if (!copied.length) return false
+    if (!copied.length) {
+      return false
+    }
     tracks(
       current.map(track => {
         const added = additions.get(track.id)
@@ -75,7 +94,5 @@ export const clipboardActions = {
     session({ selectedClipIds: copied })
     return true
   },
-  getClipClipboard() {
-    return parseClipClipboard(clipboardMemory.read())
-  },
+  getClipClipboard: () => parseClipClipboard(clipboardMemory.read()),
 }

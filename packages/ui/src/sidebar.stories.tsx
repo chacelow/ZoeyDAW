@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { FileTextIcon, HomeIcon, InboxIcon, SettingsIcon } from 'lucide-react'
+import { FileTextIcon, HomeIcon, InboxIcon, SettingsIcon } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -12,24 +11,25 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger
-} from './sidebar'
+  SidebarTrigger,
+} from "./sidebar"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Sidebar> = {
-  title: 'Layout/Sidebar',
+  title: "Layout/Sidebar",
   component: Sidebar,
-  tags: ['autodocs'],
-  parameters: { layout: 'fullscreen' }
+  tags: ["autodocs"],
+  parameters: { layout: "fullscreen" },
 }
 
 export default meta
 type Story = StoryObj<typeof Sidebar>
 
 const NAV = [
-  { icon: HomeIcon, label: '首页' },
-  { icon: InboxIcon, label: '收件' },
-  { icon: FileTextIcon, label: '文档' },
-  { icon: SettingsIcon, label: '设置' }
+  { icon: HomeIcon, label: "首页" },
+  { icon: InboxIcon, label: "收件" },
+  { icon: FileTextIcon, label: "文档" },
+  { icon: SettingsIcon, label: "设置" },
 ]
 
 export const Default: Story = {
@@ -58,10 +58,10 @@ export const Default: Story = {
       <SidebarInset>
         <header className="flex h-12 items-center gap-2 border-b px-3">
           <SidebarTrigger />
-          <span className="text-sm text-muted-foreground">主内容区</span>
+          <span className="text-muted-foreground text-sm">主内容区</span>
         </header>
-        <div className="p-6 text-sm text-muted-foreground">你的内容会渲染在这里。</div>
+        <div className="text-muted-foreground p-6 text-sm">你的内容会渲染在这里。</div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  ),
 }

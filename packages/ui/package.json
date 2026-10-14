@@ -10,11 +10,17 @@
       "import": "./src/index.ts",
       "types": "./src/index.ts"
     },
-    "./globals.css": "./src/styles/globals.css"
+    "./globals.css": "./src/styles/globals.css",
+    "./metrics": {
+      "import": "./src/controls/metrics/index.ts",
+      "types": "./src/controls/metrics/index.ts"
+    }
   },
   "scripts": {
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "metrics:generate": "node scripts/control-metrics.mjs",
+    "metrics:check": "node scripts/control-metrics.mjs --check"
   },
   "imports": {
     "#components/*": "./src/*.tsx",

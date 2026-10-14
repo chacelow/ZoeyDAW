@@ -15,14 +15,14 @@ import {
   DropdownMenuItem,
   DropdownMenuCheckboxItem,
 } from "@zoeymind/ui"
-import { useTranslation } from "@zoeymind/i18n"
-import { SUPPORTED_LOCALES, type SupportedLocale } from "@zoeymind/i18n"
-import { useLocale, useChangeLocale } from "@zoeymind/i18n"
+import { useTranslation, useLocale, useChangeLocale, SUPPORTED_LOCALES } from "@zoeymind/i18n"
 
 export interface LanguageSwitcherProps {
-  /** 'icon' (默认): 图标按钮; 'text': 纯文本 link */
-  variant?: "icon" | "text"
-  className?: string
+  /**
+  'icon' (默认): 图标按钮; 'text': 纯文本 link
+  */
+  readonly variant?: "icon" | "text"
+  readonly className?: string
 }
 
 export function LanguageSwitcher({ variant = "icon", className }: LanguageSwitcherProps) {
@@ -39,7 +39,7 @@ export function LanguageSwitcher({ variant = "icon", className }: LanguageSwitch
             <button
               type="button"
               className={
-                className ?? "text-xs text-muted-foreground hover:text-foreground hover:underline"
+                className ?? "text-muted-foreground hover:text-foreground text-xs hover:underline"
               }
             >
               {t(`language.${current}`)}
@@ -91,4 +91,4 @@ export function LanguageSwitcher({ variant = "icon", className }: LanguageSwitch
   )
 }
 
-export type { SupportedLocale }
+export { type SupportedLocale } from "@zoeymind/i18n"

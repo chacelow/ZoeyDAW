@@ -1,13 +1,13 @@
-import type { AudioClip, Clip, Track } from "@/pages/project/model/types"
 import {
   clampFadeCurvePosition,
   DEFAULT_FADE_CURVE,
   fadeControls,
   fadeCurveProgress,
   fadeBezierSegments,
-  type FadeBezierSegment,
 } from "@/pages/project/model/fades"
-import { TRACK_TITLE_HEIGHT } from "@/pages/project/model/selectors"
+import { TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
+import type { FadeBezierSegment } from "@/pages/project/model/fades"
+import type { AudioClip, Clip, Track } from "@/pages/project/model/types"
 import type { ClipRect } from "./layout"
 
 export const RESIZE_EDGE_PX = 6
@@ -34,7 +34,9 @@ export interface ClipVisualGeometry {
   fades: readonly FadeVisual[]
 }
 
-/** CSS-pixel projection consumed by both the painter and pointer hit test. */
+/**
+CSS-pixel projection consumed by both the painter and pointer hit test.
+*/
 export function clipVisualGeometry(
   rect: ClipRect,
   clip: Clip,

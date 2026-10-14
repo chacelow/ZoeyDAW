@@ -4,9 +4,9 @@ import { hydrateProject, projectActions, useProjectState } from "@/pages/project
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import { layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
+import { gridZoomLimit } from "@/pages/project/model/grid"
 import { createClipInteractions } from "."
 import type { CanvasPointer } from "../types"
-import { gridZoomLimit } from "@/pages/project/model/grid"
 
 beforeEach(() => {
   hydrateProject(
@@ -70,7 +70,7 @@ it("clicks a Clip body and blank track, retaining an exact row-local insertion",
   expect(useProjectState.getState().session.trackSelectionSurface).toBe("arrangement")
   expect(useProjectState.getState().session.insertionPoint).toEqual({
     trackId: "3-audio",
-    bar: 9 + 2 / 16384,
+    bar: 9 + 2 / 16_384,
   })
   expect(useProjectState.getState().session.timeSelection).toBeNull()
   expect(useProjectState.getState().session.editingClipId).toBeNull()
@@ -80,7 +80,7 @@ it("clicks a Clip body and blank track, retaining an exact row-local insertion",
   expect(useProjectState.getState().session.trackSelectionSurface).toBe("arrangement")
   expect(useProjectState.getState().session.insertionPoint).toEqual({
     trackId: "4-midi",
-    bar: 9 + 4 / 16384,
+    bar: 9 + 4 / 16_384,
   })
 })
 
@@ -129,7 +129,7 @@ it("cancels a range drag without changing the prior anchor or committed time sel
   const { interaction, pointer, row, scene } = setup()
   const audio = row("3-audio")
   const first = pointer(24, audio.top + audio.height - 5)
-  projectActions.setInsertionPoint({ trackId: "3-audio", bar: 9 + 1 / 65536 })
+  projectActions.setInsertionPoint({ trackId: "3-audio", bar: 9 + 1 / 65_536 })
   const previous = { startBar: 2, endBar: 3, trackIds: ["3-audio"] }
   projectActions.setTimeSelection(previous)
   scene.setTimeSelection(previous)
@@ -140,18 +140,18 @@ it("cancels a range drag without changing the prior anchor or committed time sel
   expect(scene.get().timeSelection).toEqual(previous)
   expect(useProjectState.getState().session.insertionPoint).toEqual({
     trackId: "3-audio",
-    bar: 9 + 1 / 65536,
+    bar: 9 + 1 / 65_536,
   })
   const drag = interaction.start(first)!
   drag.move(pointer(104, first.y))
   drag.finish(false)
   expect(useProjectState.getState().session.timeSelection).toEqual({
-    startBar: 9 + 3 / 16384,
-    endBar: 9 + 13 / 16384,
+    startBar: 9 + 3 / 16_384,
+    endBar: 9 + 13 / 16_384,
     trackIds: ["3-audio"],
   })
   expect(useProjectState.getState().session.insertionPoint).toEqual({
     trackId: "3-audio",
-    bar: 9 + 3 / 16384,
+    bar: 9 + 3 / 16_384,
   })
 })

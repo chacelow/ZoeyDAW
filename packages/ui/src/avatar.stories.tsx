@@ -1,33 +1,33 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { CheckIcon } from 'lucide-react'
+import { CheckIcon } from "lucide-react"
 import {
   Avatar,
   AvatarBadge,
   AvatarFallback,
   AvatarGroup,
   AvatarGroupCount,
-  AvatarImage
-} from './avatar'
+  AvatarImage,
+} from "./avatar"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Avatar> = {
-  title: 'Display/Avatar',
+  title: "Display/Avatar",
   component: Avatar,
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
-    size: { control: 'select', options: ['sm', 'default', 'lg'] }
-  }
+    size: { control: "select", options: ["sm", "default", "lg"] },
+  },
 }
 
 export default meta
 type Story = StoryObj<typeof Avatar>
 
 export const Default: Story = {
-  render: args => (
-    <Avatar {...args}>
+  render: arguments_ => (
+    <Avatar {...arguments_}>
       <AvatarImage src="https://github.com/vercel.png" alt="vercel" />
       <AvatarFallback>ZM</AvatarFallback>
     </Avatar>
-  )
+  ),
 }
 
 export const Sizes: Story = {
@@ -43,7 +43,7 @@ export const Sizes: Story = {
         <AvatarFallback>LG</AvatarFallback>
       </Avatar>
     </div>
-  )
+  ),
 }
 
 export const FallbackOnly: Story = {
@@ -51,7 +51,7 @@ export const FallbackOnly: Story = {
     <Avatar>
       <AvatarFallback>CS</AvatarFallback>
     </Avatar>
-  )
+  ),
 }
 
 export const WithBadge: Story = {
@@ -62,7 +62,7 @@ export const WithBadge: Story = {
         <CheckIcon />
       </AvatarBadge>
     </Avatar>
-  )
+  ),
 }
 
 export const Group: Story = {
@@ -79,5 +79,5 @@ export const Group: Story = {
       </Avatar>
       <AvatarGroupCount>+5</AvatarGroupCount>
     </AvatarGroup>
-  )
+  ),
 }

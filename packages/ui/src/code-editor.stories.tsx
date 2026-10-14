@@ -1,19 +1,19 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { useState } from 'react'
-import { CodeEditor } from './code-editor'
+import { useState } from "react"
+import { CodeEditor } from "./code-editor"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof CodeEditor> = {
-  title: 'Data/CodeEditor',
+  title: "Data/CodeEditor",
   component: CodeEditor,
-  tags: ['autodocs'],
-  parameters: { layout: 'padded' }
+  tags: ["autodocs"],
+  parameters: { layout: "padded" },
 }
 
 export default meta
 type Story = StoryObj<typeof CodeEditor>
 
 function Demo() {
-  const [code, setCode] = useState(`def greet(name):\n    print(f"Hello, {name}")\n\ngreet("Zoey")`)
+  const [code, setCode] = useState('def greet(name):\n    print(f"Hello, {name}")\n\ngreet("Zoey")')
   return (
     <div className="w-[560px]">
       <CodeEditor value={code} onChange={setCode} language="python" height="220px" />
@@ -27,11 +27,11 @@ export const ReadOnly: Story = {
   render: () => (
     <div className="w-[560px]">
       <CodeEditor
-        value={'const answer = 42\nconsole.log(answer)'}
+        value={"const answer = 42\nconsole.log(answer)"}
         language="javascript"
         readOnly
         height="140px"
       />
     </div>
-  )
+  ),
 }

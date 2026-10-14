@@ -1,17 +1,17 @@
-import { acceptsClip, positionToBar, type Clip } from "@/pages/project/model/types"
+import { acceptsClip, positionToBar } from "@/pages/project/model/types"
 import { CLIP_CLIPBOARD_TYPE, parseClipClipboard } from "@/pages/project/model/clip-clipboard"
 import { hitTest } from "@/pages/project/sections/ArrangementPanel/canvas/hit-test"
 import { arrangementBodyTop } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { barAtX, snappedBar } from "../coordinates"
-import type { CanvasInteraction, CanvasMenuTarget, InteractionContext } from "../types"
 import { createMoveGesture } from "./move"
 import { createResizeGesture } from "./resize"
 import { createFadeGesture } from "./fade"
 import { createTimeRangeGesture } from "./timeRange"
+import type { CanvasInteraction, CanvasMenuTarget, InteractionContext } from "../types"
 
 export function createClipInteractions(context: InteractionContext): CanvasInteraction {
   const { scene, actions } = context
-  let ownedTarget = false
+  let isOwnedTarget = false
   let pasteTarget: { trackId: string; bar: number } | null = null
   function select(ids: string[]) {
     scene.setSelection(new Set(ids))
@@ -26,22 +26,26 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
       state.session.timeSelection?.startBar ??
       positionToBar(state.session.position, state.document.transport.numerator)
     if (
-      ids.some(id =>
-        state.document.tracks.some(track =>
+      ids.every(id => {
+        return !state.document.tracks.some(track =>
           track.clips.some(
             clip => clip.id === id && bar > clip.startBar && bar < clip.startBar + clip.lengthBars
           )
         )
-      )
+      })
     ) {
-      actions.beginEdit()
-      actions.splitClips(ids, bar)
-      actions.endEdit()
+      return
     }
+
+    actions.beginEdit()
+    actions.splitClips(ids, bar)
+    actions.endEdit()
   }
   function resolvePaste() {
     const state = context.getState()
-    if (pasteTarget) return pasteTarget
+    if (pasteTarget) {
+      return pasteTarget
+    }
     const selected = new Set(selection())
     const track =
       state.document.tracks.find(lane => lane.clips.some(clip => selected.has(clip.id))) ??
@@ -59,7 +63,9 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
   function paste(raw?: string) {
     const target = resolvePaste()
     const parsed = raw === undefined ? actions.getClipClipboard() : parseClipClipboard(raw)
-    if (!target || !parsed) return false
+    if (!target || !parsed) {
+      return false
+    }
     actions.beginEdit()
     const done = actions.pasteClips(target.trackId, target.bar, parsed)
     actions.endEdit()
@@ -78,10 +84,12 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         context.getState().workspace.automationMode
       )
       if (!hit) {
-        if (pointer.y >= 0 && pointer.y < arrangementBodyTop()) return null
+        if (pointer.y >= 0 && pointer.y < arrangementBodyTop()) {
+          return null
+        }
         select([])
         scene.setTargetSelection({ kind: "none" })
-        ownedTarget = true
+        isOwnedTarget = true
         return null
       }
       actions.selectTracks([hit.track.id], "arrangement")
@@ -97,44 +105,36 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
             ? current
             : [hit.clip.id]
         select(next)
-        if (next.includes(hit.clip.id))
+        if (next.includes(hit.clip.id)) {
           scene.setTargetSelection({ kind: "clip", id: hit.clip.id, phase: "selected" })
-        else scene.setTargetSelection({ kind: "none" })
-        ownedTarget = true
+        } else {
+          scene.setTargetSelection({ kind: "none" })
+        }
+        isOwnedTarget = true
         if (hit.kind === "clip-title" || hit.kind === "clip-resize") {
           actions.setTimeSelection(null)
           scene.setTimeSelection(null)
           actions.setInsertionPoint({ trackId: hit.track.id, bar: hit.clip.startBar })
         }
-        if (hit.kind === "clip-title" && !additive && next.includes(hit.clip.id))
+        if (hit.kind === "clip-title" && !additive && next.includes(hit.clip.id)) {
           return createMoveGesture(context, pointer, hit.track, hit.clip.id, [
             hit.clip.id,
             ...next.filter(id => id !== hit.clip.id),
           ])
-        if (hit.kind === "clip-body" && !additive)
+        }
+        if (hit.kind === "clip-body" && !additive) {
           return createTimeRangeGesture(context, pointer, hit.track.id)
-        if (hit.kind === "clip-resize")
-          return createResizeGesture(
-            context,
-            pointer,
-            hit.clip,
-            context.getState().document.tracks,
-            hit.edge
-          )
-        if (hit.kind === "clip-fade" && hit.clip.kind === "audio")
-          return createFadeGesture(
-            context,
-            pointer,
-            hit.clip,
-            context.getState().document.tracks,
-            hit.edge,
-            hit.handle
-          )
-        return null
+        }
+        if (hit.kind === "clip-resize") {
+          return createResizeGesture(context, pointer, hit.clip, hit.edge)
+        }
+        return hit.kind === "clip-fade" && hit.clip.kind === "audio"
+          ? createFadeGesture(context, pointer, hit.clip, hit.edge, hit.handle)
+          : null
       }
       select([])
       scene.setTargetSelection({ kind: "none" })
-      ownedTarget = true
+      isOwnedTarget = true
       return createTimeRangeGesture(context, pointer, hit.track.id)
     },
     hover(pointer) {
@@ -147,9 +147,12 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
       if (hit && "clip" in hit) {
         const region =
           hit.kind === "clip-title" ? "title" : hit.kind === "clip-resize" ? hit.region : "body"
-        if (scene.get().hoverClip?.id !== hit.clip.id || scene.get().hoverClip?.region !== region)
+        if (scene.get().hoverClip?.id !== hit.clip.id || scene.get().hoverClip?.region !== region) {
           scene.setHover({ id: hit.clip.id, region })
-      } else scene.setHover(null)
+        }
+      } else {
+        scene.setHover(null)
+      }
       return hit?.kind === "clip-resize" || (hit?.kind === "clip-fade" && hit.handle !== "curve")
         ? "ew-resize"
         : hit?.kind === "clip-fade"
@@ -165,15 +168,19 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         pointer.y,
         context.getState().workspace.automationMode
       )
-      if (!hit) return false
+      if (!hit) {
+        return false
+      }
       if ("clip" in hit) {
         select([hit.clip.id])
         scene.setTargetSelection({ kind: "clip", id: hit.clip.id, phase: "selected" })
-        ownedTarget = true
+        isOwnedTarget = true
         return true
       }
-      if (hit.track.kind !== "audio" && hit.track.kind !== "midi") return false
-      const kind: Clip["kind"] = hit.track.kind
+      if (hit.track.kind !== "audio" && hit.track.kind !== "midi") {
+        return false
+      }
+      const { kind } = hit.track
       actions.createClip(
         hit.track.id,
         kind,
@@ -213,7 +220,9 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         scene.setTargetSelection({ kind: "clip", id: ids[0], phase: "renaming" })
         return true
       }
-      if (command && (key === "c" || key === "x" || key === "v")) return false
+      if (command && (key === "c" || key === "x" || key === "v")) {
+        return false
+      }
       return false
     },
     copy(event) {
@@ -221,7 +230,9 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         selection(),
         context.getState().session.timeSelection ?? undefined
       )
-      if (!data || !event.clipboardData) return false
+      if (!data || !event.clipboardData) {
+        return false
+      }
       event.clipboardData.setData(CLIP_CLIPBOARD_TYPE, JSON.stringify(data))
       event.clipboardData.setData("text/plain", JSON.stringify(data))
       return true
@@ -229,7 +240,9 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
     cut(event) {
       const ids = selection()
       const data = actions.copyClips(ids, context.getState().session.timeSelection ?? undefined)
-      if (!data || !event.clipboardData) return false
+      if (!data || !event.clipboardData) {
+        return false
+      }
       event.clipboardData.setData(CLIP_CLIPBOARD_TYPE, JSON.stringify(data))
       event.clipboardData.setData("text/plain", JSON.stringify(data))
       actions.beginEdit()
@@ -240,10 +253,11 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
     },
     paste(event) {
       const clipboard = event.clipboardData
-      if (!clipboard) return paste()
+      if (!clipboard) {
+        return paste()
+      }
       const raw = clipboard.getData(CLIP_CLIPBOARD_TYPE) || clipboard.getData("text/plain")
-      if (!raw) return false
-      return paste(raw) || raw.includes('"kind":"clips"')
+      return raw ? paste(raw) || raw.includes('"kind":"clips"') : false
     },
     contextMenu(pointer): CanvasMenuTarget | null {
       const hit = hitTest(
@@ -252,14 +266,16 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         pointer.y,
         context.getState().workspace.automationMode
       )
-      if (!hit) return null
+      if (!hit) {
+        return null
+      }
       pasteTarget = { trackId: hit.track.id, bar: snappedBar(context, barAtX(context, pointer.x)) }
       if ("clip" in hit) {
         const current = selection()
         const ids = current.includes(hit.clip.id) ? current : [hit.clip.id]
         select(ids)
         scene.setTargetSelection({ kind: "clip", id: hit.clip.id, phase: "selected" })
-        ownedTarget = true
+        isOwnedTarget = true
         return { kind: "clip", clipId: hit.clip.id, clipIds: ids }
       }
       return acceptsClip(hit.track.kind, "audio") || acceptsClip(hit.track.kind, "midi")
@@ -268,9 +284,10 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
     },
     deactivate() {
       scene.setHover(null)
-      if (ownedTarget && scene.get().targetSelection.kind === "clip")
+      if (isOwnedTarget && scene.get().targetSelection.kind === "clip") {
         scene.setTargetSelection({ kind: "none" })
-      ownedTarget = false
+      }
+      isOwnedTarget = false
     },
   }
 }

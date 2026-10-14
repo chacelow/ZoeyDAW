@@ -1,3 +1,14 @@
+import { isEditableTarget } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
+import { markDrawModeGesture } from "@/pages/project/sections/ArrangementPanel/Timeline/drawModeKey"
+import { clipboardMemory } from "@/pages/project/adapters/clipboard-memory"
+import { hitTest } from "../hit-test"
+import { arrangementBodyTop } from "../layout"
+import { canvasPointer } from "./coordinates"
+import { createAutoScroll } from "./autoScroll"
+import { createClipInteractions } from "./clip"
+import { createRulerInteractions } from "./rulers"
+import { createAutomationInteractions } from "./automation"
+import { synchronizeProjectScene } from "./project-preview"
 import type {
   CanvasInteraction,
   CanvasMenuTarget,
@@ -5,19 +16,10 @@ import type {
   CanvasPointer,
   InteractionContext,
 } from "./types"
-import { canvasPointer } from "./coordinates"
-import { hitTest } from "../hit-test"
-import { createAutoScroll } from "./autoScroll"
-import { createClipInteractions } from "./clip"
-import { createRulerInteractions } from "./rulers"
-import { createAutomationInteractions } from "./automation"
-import { arrangementBodyTop } from "../layout"
-import { isEditableTarget } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
-import { markDrawModeGesture } from "@/pages/project/sections/ArrangementPanel/Timeline/drawModeKey"
-import { clipboardMemory } from "@/pages/project/adapters/clipboard-memory"
+
 export interface CanvasController {
-  contextTarget(event: MouseEvent): CanvasMenuTarget | null
-  dispose(): void
+  contextTarget: (event: MouseEvent) => CanvasMenuTarget | null
+  dispose: () => void
 }
 
 export function createCanvasController(
@@ -25,6 +27,8 @@ export function createCanvasController(
   setCursor: (cursor: CanvasGesture["cursor"] | null) => void
 ): CanvasController {
   const { element, scene, getState } = context
+  const sessionId = getState().session.editEpoch
+  const isCurrent = () => getState().session.editEpoch === sessionId
   const ruler = createRulerInteractions(context)
   const automation = createAutomationInteractions(context)
   const clip = createClipInteractions(context)
@@ -36,7 +40,9 @@ export function createCanvasController(
     started: boolean
   } | null = null
   const scroll = createAutoScroll(context, pointer => {
-    if (!active) return
+    if (!active || !isCurrent()) {
+      return
+    }
     active.gesture.move(pointer)
     setCursor(active.gesture.cursor)
   })
@@ -48,32 +54,59 @@ export function createCanvasController(
     )
   }
   function layers(pointer: CanvasPointer) {
-    if (pointer.y < arrangementBodyTop()) return [ruler]
-    if (!getState().workspace.automationMode) return [clip]
-    return hitTest(scene.get(), pointer.x, pointer.y, true)?.kind === "clip-title"
-      ? [clip]
-      : [automation]
+    if (pointer.y < arrangementBodyTop()) {
+      return [ruler]
+    }
+    if (!getState().workspace.automationMode) {
+      return [clip]
+    }
+    return [
+      hitTest(scene.get(), pointer.x, pointer.y, true)?.kind === "clip-title" ? clip : automation,
+    ]
   }
   function deactivateOthers(owner: CanvasInteraction) {
-    if (owner !== ruler) ruler.deactivate()
-    if (owner !== automation) automation.deactivate()
-    if (owner !== clip) clip.deactivate()
+    if (owner !== ruler) {
+      ruler.deactivate()
+    }
+    if (owner !== automation) {
+      automation.deactivate()
+    }
+    if (owner !== clip) {
+      clip.deactivate()
+    }
   }
   function finish(cancelled: boolean, pointerId?: number) {
     const current = active
-    if (!current || (pointerId !== undefined && current.pointerId !== pointerId)) return
+    if (!current || (pointerId !== undefined && current.pointerId !== pointerId)) {
+      return
+    }
     active = null
     scroll.stop()
     setCursor(null)
-    current.gesture.finish(cancelled)
-    if (current.pointerId >= 0 && element.hasPointerCapture?.(current.pointerId))
+    if (isCurrent()) {
+      current.gesture.finish(cancelled)
+    } else {
+      scene.setClipDrag(null)
+      scene.setClipResize(null)
+    }
+    if (current.pointerId >= 0 && element.hasPointerCapture?.(current.pointerId)) {
       element.releasePointerCapture(current.pointerId)
+    }
   }
   function onDown(event: PointerEvent) {
-    if (event.defaultPrevented || isProtected(event.target) || event.button !== 0 || active) return
+    if (
+      !isCurrent() ||
+      event.defaultPrevented ||
+      isProtected(event.target) ||
+      event.button !== 0 ||
+      active
+    ) {
+      return
+    }
     markDrawModeGesture()
     const pointer = canvasPointer(element, event)
     element.focus({ preventScroll: true })
+    synchronizeProjectScene(context)
     let owner: CanvasInteraction | null = null
     let gesture: CanvasGesture | null = null
     for (const layer of layers(pointer)) {
@@ -83,88 +116,137 @@ export function createCanvasController(
         break
       }
     }
-    if (owner) deactivateOthers(owner)
-    else if (pointer.y >= arrangementBodyTop()) deactivateOthers(clip)
-    if (!gesture || !owner) return
+    if (owner) {
+      deactivateOthers(owner)
+    } else if (pointer.y >= arrangementBodyTop()) {
+      deactivateOthers(clip)
+    }
+    if (!gesture || !owner) {
+      return
+    }
     active = { gesture, pointerId: pointer.pointerId, start: pointer, owner, started: false }
-    if (pointer.pointerId >= 0) element.setPointerCapture?.(pointer.pointerId)
+    if (pointer.pointerId >= 0) {
+      element.setPointerCapture?.(pointer.pointerId)
+    }
   }
   function onMove(event: PointerEvent) {
+    if (!isCurrent()) {
+      finish(true)
+      return
+    }
     const pointer = canvasPointer(element, event)
     if (!active) {
       let cursor: string | undefined
       for (const layer of layers(pointer)) {
         cursor = layer.hover(pointer)
-        if (cursor) break
+        if (cursor) {
+          break
+        }
       }
       element.style.cursor = cursor ?? ""
       return
     }
-    if (active.pointerId !== pointer.pointerId) return
-    if (!active.started && Math.hypot(pointer.x - active.start.x, pointer.y - active.start.y) < 3)
+    if (active.pointerId !== pointer.pointerId) {
       return
+    }
+    if (!active.started && Math.hypot(pointer.x - active.start.x, pointer.y - active.start.y) < 3) {
+      return
+    }
     if (!active.started) {
       active.started = true
       setCursor(active.gesture.cursor)
-      if (active.gesture.autoScroll) scroll.start(element, pointer, active.gesture.autoScroll)
+      if (active.gesture.autoScroll) {
+        scroll.start(element, pointer, active.gesture.autoScroll)
+      }
     }
     active.gesture.move(pointer)
     setCursor(active.gesture.cursor)
-    if (active.gesture.autoScroll) scroll.update(pointer)
+    if (active.gesture.autoScroll) {
+      scroll.update(pointer)
+    }
   }
   function onDoubleClick(event: MouseEvent) {
-    if (event.defaultPrevented || isProtected(event.target)) return
+    if (!isCurrent() || event.defaultPrevented || isProtected(event.target)) {
+      return
+    }
     const pointer = canvasPointer(element, event)
-    for (const layer of layers(pointer))
+    for (const layer of layers(pointer)) {
       if (layer.doubleClick(pointer)) {
         event.preventDefault()
         break
       }
+    }
   }
   function onKey(event: KeyboardEvent) {
-    if (event.defaultPrevented || isProtected(event.target)) return
-    if (event.code === "Space" || event.key === " ") return
+    if (
+      !isCurrent() ||
+      event.defaultPrevented ||
+      isProtected(event.target) ||
+      event.code === "Space" ||
+      event.key === " "
+    ) {
+      return
+    }
     if (event.key === "Escape" && active) {
       event.preventDefault()
       event.stopImmediatePropagation()
       finish(true)
       return
     }
-    if (!element.contains(document.activeElement) && document.activeElement !== element) return
-    if (active && ["Shift", "Alt", "Control", "Meta"].includes(event.key)) return
-    if (active) finish(true)
-    for (const layer of getState().workspace.automationMode ? [automation] : [ruler, clip])
+    if (!element.contains(document.activeElement) && document.activeElement !== element) {
+      return
+    }
+    if (active && ["Shift", "Alt", "Control", "Meta"].includes(event.key)) {
+      return
+    }
+    if (active) {
+      finish(true)
+    }
+    for (const layer of getState().workspace.automationMode ? [automation] : [ruler, clip]) {
       if (layer.keyDown(event)) {
         event.preventDefault()
         break
       }
+    }
   }
   function onClipboard(event: ClipboardEvent) {
-    if (event.defaultPrevented || isProtected(event.target)) return
-    if (!element.contains(document.activeElement) && document.activeElement !== element) return
-    if (event.type === "paste" && event.clipboardData)
+    if (!isCurrent() || event.defaultPrevented || isProtected(event.target)) {
+      return
+    }
+    if (!element.contains(document.activeElement) && document.activeElement !== element) {
+      return
+    }
+    if (event.type === "paste" && event.clipboardData) {
       clipboardMemory.write(
         event.clipboardData.getData("text/plain") ||
           event.clipboardData.getData("application/x-zoeymind-clips+json") ||
           event.clipboardData.getData("application/x-zoeymind-automation+json")
       )
+    }
     const operation = event.type === "copy" ? "copy" : event.type === "cut" ? "cut" : "paste"
-    const ordered = getState().workspace.automationMode ? [automation] : [clip]
-    if (active) finish(true)
-    for (const layer of ordered)
+    const ordered = [getState().workspace.automationMode ? automation : clip]
+    if (active) {
+      finish(true)
+    }
+    for (const layer of ordered) {
       if (layer[operation]?.(event)) {
         event.preventDefault()
         break
       }
+    }
   }
   function onLeave() {
-    if (active) return
+    if (active) {
+      return
+    }
     element.style.cursor = ""
     scene.setHover(null)
   }
   const onUp = (event: PointerEvent) => {
     const pointer = canvasPointer(element, event)
-    if (active?.started && active.pointerId === pointer.pointerId) active.gesture.move(pointer)
+    if (isCurrent() && active?.started && active.pointerId === pointer.pointerId) {
+      active.gesture.move(pointer)
+    }
     finish(false, pointer.pointerId)
   }
   const onCancel = (event: PointerEvent) =>
@@ -177,14 +259,16 @@ export function createCanvasController(
   element.addEventListener("lostpointercapture", onCancel)
   element.addEventListener("pointerleave", onLeave)
   element.addEventListener("dblclick", onDoubleClick)
-  window.addEventListener("keydown", onKey, true)
-  window.addEventListener("copy", onClipboard, true)
-  window.addEventListener("cut", onClipboard, true)
-  window.addEventListener("paste", onClipboard, true)
+  window.addEventListener("keydown", onKey, { capture: true })
+  window.addEventListener("copy", onClipboard, { capture: true })
+  window.addEventListener("cut", onClipboard, { capture: true })
+  window.addEventListener("paste", onClipboard, { capture: true })
   window.addEventListener("blur", onBlur)
   return {
     contextTarget(event: MouseEvent): CanvasMenuTarget | null {
-      if (event.defaultPrevented || isProtected(event.target)) return null
+      if (!isCurrent() || event.defaultPrevented || isProtected(event.target)) {
+        return null
+      }
       finish(true)
       const pointer = canvasPointer(element, event)
       for (const layer of layers(pointer)) {

@@ -5,7 +5,7 @@ import { projectTrackGroups } from "./track-groups"
 
 describe("track group projection", () => {
   function nestedTracks() {
-    const tracks = createMockDocument().tracks
+    const { tracks } = createMockDocument()
     const outer = tracks.find(track => track.id === "drums-group")!
     const inner = tracks.find(track => track.id === "sidechain")!
     inner.kind = "group"

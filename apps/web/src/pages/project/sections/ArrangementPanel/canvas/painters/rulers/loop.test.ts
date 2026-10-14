@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
-import type { GridTokens } from "../grid"
 import { formatBarBeat, paintLoopRuler } from "./loop"
+import type { GridTokens } from "../grid"
 
 function paintedLabels(pxPerBar: number, numerator: number): string[] {
   const scene = createSceneStore()
@@ -15,7 +15,7 @@ function paintedLabels(pxPerBar: number, numerator: number): string[] {
   })
   scene.setViewport({ pxPerBar, scrollX: 0, scrollY: 0, width: 650, height: 240, dpr: 1 })
   const labels: string[] = []
-  const ctx = {
+  const context = {
     fillRect() {},
     fillText(value: string) {
       labels.push(value)
@@ -37,7 +37,7 @@ function paintedLabels(pxPerBar: number, numerator: number): string[] {
     gridMajor: "",
     primary: "",
   }
-  paintLoopRuler(ctx as unknown as CanvasRenderingContext2D, scene.get(), tokens)
+  paintLoopRuler(context as unknown as CanvasRenderingContext2D, scene.get(), tokens)
   return labels
 }
 

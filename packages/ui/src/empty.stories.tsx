@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { InboxIcon, FileTextIcon } from 'lucide-react'
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from './empty'
-import { Button } from './button'
+import { InboxIcon, FileTextIcon } from "lucide-react"
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./empty"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Empty> = {
-  title: 'Display/Empty',
+  title: "Display/Empty",
   component: Empty,
-  tags: ['autodocs'],
-  parameters: { layout: 'padded' }
+  tags: ["autodocs"],
+  parameters: { layout: "padded" },
 }
 
 export default meta
@@ -24,7 +24,7 @@ export const Default: Story = {
         <EmptyDescription>你没有收到新的通知，稍后再来看看。</EmptyDescription>
       </EmptyHeader>
     </Empty>
-  )
+  ),
 }
 
 export const WithAction: Story = {
@@ -41,5 +41,5 @@ export const WithAction: Story = {
         <Button size="sm">创建项目</Button>
       </EmptyContent>
     </Empty>
-  )
+  ),
 }

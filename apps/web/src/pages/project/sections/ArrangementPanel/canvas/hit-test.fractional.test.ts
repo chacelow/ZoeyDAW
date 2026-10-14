@@ -20,7 +20,9 @@ describe("clip hit geometry at fractional zoom", () => {
     const snapshot = scene.get()
     const row = layoutTrackRows(snapshot).find(item => item.track.id === "3-audio")
     const audio = row?.track.clips.find(clip => clip.id === "audio-1")
-    if (!row || !audio) throw new Error("Missing audio fixture")
+    if (!row || !audio) {
+      throw new Error("Missing audio fixture")
+    }
     const rect = clipRect(audio, row, snapshot.viewport.pxPerBar, snapshot.viewport.scrollX)
     const left = Math.round(rect.left)
     const top = Math.round(rect.top + 1)

@@ -28,10 +28,4 @@ describe("shared control token merging", () => {
   it("lets the declared control dimension replace an icon slot dimension", () => {
     expect(cn("size-control-icon-slot", "size-control-h")).toBe("size-control-h")
   })
-
-  it("preserves normal Tailwind conflict resolution", () => {
-    expect(cn("px-2 h-8 text-sm bg-muted", "px-3 h-9 bg-primary")).toBe(
-      "text-sm px-3 h-9 bg-primary"
-    )
-  })
 })

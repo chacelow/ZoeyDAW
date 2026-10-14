@@ -1,5 +1,5 @@
-import type { WorkspaceState } from "@/pages/project/model/types"
 import { DEFAULT_GRID } from "@/pages/project/model/grid"
+import type { WorkspaceState } from "@/pages/project/model/types"
 
 export function initialWorkspace(): WorkspaceState {
   return {

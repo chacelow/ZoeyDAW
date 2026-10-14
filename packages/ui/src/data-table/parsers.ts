@@ -1,9 +1,9 @@
-import { createParser } from 'nuqs/server'
-import { z } from 'zod'
+import { createParser } from "nuqs/server"
+import { z } from "zod"
 
-import { dataTableConfig } from './config'
+import { dataTableConfig } from "./config"
 
-import type { ExtendedColumnFilter, ExtendedColumnSort } from './types'
+import type { ExtendedColumnFilter, ExtendedColumnSort } from "./types"
 
 /**
  * sort URL 编码: 逗号分隔的 `<colId>:asc|desc` 条目, 例如 `sort=updatedAt:desc,seq:asc`.
@@ -24,21 +24,25 @@ export const getSortingStateParser = <TData>(columnIds?: string[] | Set<string>)
 
   return createParser({
     parse: value => {
-      if (!value) return null
+      if (!value) {
+        return null
+      }
       const items: ExtendedColumnSort<TData>[] = []
-      for (const raw of value.split(',')) {
+      for (const raw of value.split(",")) {
         const m = SORT_ITEM_RE.exec(raw)
-        if (!m) return null
-        const [, id, dir] = m
-        if (validKeys && !validKeys.has(id!)) return null
-        items.push({ id: id!, desc: dir === 'desc' } as ExtendedColumnSort<TData>)
+        const id = m?.[1]
+        const dir = m?.[2]
+        if (!id || !dir || (validKeys && !validKeys.has(id))) {
+          return null
+        }
+        items.push({ id, desc: dir === "desc" } as ExtendedColumnSort<TData>)
       }
       return items
     },
-    serialize: value => value.map(item => `${item.id}:${item.desc ? 'desc' : 'asc'}`).join(','),
+    serialize: value => value.map(item => `${item.id}:${item.desc ? "desc" : "asc"}`).join(","),
     eq: (a, b) =>
       a.length === b.length &&
-      a.every((item, index) => item.id === b[index]?.id && item.desc === b[index]?.desc)
+      a.every((item, index) => item.id === b[index]?.id && item.desc === b[index]?.desc),
   })
 }
 
@@ -47,7 +51,7 @@ const filterItemSchema = z.object({
   value: z.union([z.string(), z.array(z.string())]),
   variant: z.enum(dataTableConfig.filterVariants),
   operator: z.enum(dataTableConfig.operators),
-  filterId: z.string()
+  filterId: z.string(),
 })
 
 export type FilterItemSchema = z.infer<typeof filterItemSchema>
@@ -61,13 +65,13 @@ export const getFiltersStateParser = <TData>(columnIds?: string[] | Set<string>)
         const parsed = JSON.parse(value)
         const result = z.array(filterItemSchema).safeParse(parsed)
 
-        if (!result.success) return null
-
-        if (validKeys && result.data.some(item => !validKeys.has(item.id))) {
+        if (!result.success) {
           return null
         }
 
-        return result.data as ExtendedColumnFilter<TData>[]
+        return validKeys && result.data.some(item => !validKeys.has(item.id))
+          ? null
+          : (result.data as ExtendedColumnFilter<TData>[])
       } catch {
         return null
       }
@@ -81,6 +85,6 @@ export const getFiltersStateParser = <TData>(columnIds?: string[] | Set<string>)
           filter.value === b[index]?.value &&
           filter.variant === b[index]?.variant &&
           filter.operator === b[index]?.operator
-      )
+      ),
   })
 }

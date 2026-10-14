@@ -1,25 +1,25 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Progress } from './progress'
+import { Progress } from "./progress"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Progress> = {
-  title: 'Display/Progress',
+  title: "Display/Progress",
   component: Progress,
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
-    value: { control: { type: 'range', min: 0, max: 100, step: 5 } }
+    value: { control: { type: "range", min: 0, max: 100, step: 5 } },
   },
-  args: { value: 60 }
+  args: { value: 60 },
 }
 
 export default meta
 type Story = StoryObj<typeof Progress>
 
 export const Default: Story = {
-  render: args => (
+  render: arguments_ => (
     <div className="w-72">
-      <Progress {...args} />
+      <Progress {...arguments_} />
     </div>
-  )
+  ),
 }
 
 export const Stages: Story = {
@@ -30,5 +30,5 @@ export const Stages: Story = {
       <Progress value={80} />
       <Progress value={100} />
     </div>
-  )
+  ),
 }

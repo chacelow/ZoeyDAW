@@ -35,16 +35,14 @@ import {
   DropdownButton,
   useInfoBinding,
 } from "@zoeymind/ui"
-import { projectActions, useProjectState } from "@/pages/project/adapters"
+import { projectActions, useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
 import { growTimelineBars, timelineBars } from "@/pages/project/model/selectors"
 import { effectiveDrawMode } from "@/pages/project/model/interaction-mode"
 import { setDrawModeLatched } from "../ArrangementPanel/Timeline/drawModeKey"
 
 export interface TransportBarProps {
-  projectId?: string
-  browserCollapsed?: boolean
-  onBack: () => void
-  onToggleBrowser: () => void
+  readonly onBack: () => void
+  readonly onToggleBrowser: () => void
 }
 
 const SCALE_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] as const
@@ -76,10 +74,12 @@ const BAR_LENGTHS = [
 export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
   const { t } = useTranslation()
   const buttonInfo = useInfoBinding({ type: "button" })
-  const headerRef = useRef<HTMLDivElement>(null)
+  const headerReference = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const header = headerRef.current
-    if (!header) return
+    const header = headerReference.current
+    if (!header) {
+      return
+    }
     const scrollHeader = (event: WheelEvent) => {
       if (
         event.defaultPrevented ||
@@ -87,8 +87,9 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
         event.metaKey ||
         event.deltaX ||
         header.scrollWidth <= header.clientWidth
-      )
+      ) {
         return
+      }
       event.preventDefault()
       header.scrollLeft += event.deltaY
     }
@@ -121,41 +122,42 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
     growTimelineBars(documentBars, Math.max(positionBar, selectionEnd)) + 1
   )
   const lastStop = useRef(0)
-  const setLink = projectActions.setLink
+  const { setLink } = projectActions
   const taps = useRef<number[]>([])
-  const setBpm = projectActions.setBpm
-  const setNumerator = projectActions.setNumerator
-  const setDenominator = projectActions.setDenominator
+  const { setBpm } = projectActions
+  const { setNumerator } = projectActions
+  const { setDenominator } = projectActions
   const setGroove = (value: number) => projectActions.setProject({ groove: value })
-  const setBarLength = projectActions.setBarLength
+  const { setBarLength } = projectActions
   const setScaleRoot = (value: string) => projectActions.setProject({ scaleRoot: value })
   const setScaleMode = (value: string) => projectActions.setProject({ scaleMode: value })
-  const setFollow = projectActions.setFollow
+  const { setFollow } = projectActions
   const setDrawMode = setDrawModeLatched
   const setComputerKeyboard = (value: boolean) => projectActions.setMode("computerKeyboard", value)
   const setPositionBar = (value: number) => projectActions.setPosition({ bar: value })
   const setPositionBeat = (value: number) => projectActions.setPosition({ beat: value })
   const setPositionSixteenth = (value: number) => projectActions.setPosition({ sixteenth: value })
   const setLoop = (value: boolean) => projectActions.setLoop({ enabled: value })
-  const gesture = {
-    onGestureStart: projectActions.beginEdit,
-    onGestureEnd: projectActions.endEdit,
-    onGestureCancel: projectActions.cancelEdit,
-  }
+  const bpmGesture = useProjectEditGesture(setBpm)
+  const numeratorGesture = useProjectEditGesture(setNumerator)
+  const denominatorGesture = useProjectEditGesture(setDenominator)
+  const grooveGesture = useProjectEditGesture(setGroove)
+  const positionBarGesture = useProjectEditGesture(setPositionBar)
+  const positionBeatGesture = useProjectEditGesture(setPositionBeat)
+  const positionSixteenthGesture = useProjectEditGesture(setPositionSixteenth)
 
   return (
     <div
-      ref={headerRef}
+      ref={headerReference}
       data-transport-header
       className="project-transport"
       role="region"
       aria-label={t("project.transport.controls")}
-      tabIndex={0}
     >
       <div className="project-transport-content">
         <div
           data-transport-group="left"
-          className="project-transport-group flex items-center gap-[4px]"
+          className="project-transport-group flex items-center gap-[var(--spacing-control-track-gap)]"
         >
           <Button
             variant="ghost"
@@ -181,12 +183,14 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
             onClick={() => {
               const now = performance.now()
               taps.current = [...taps.current.filter(time => now - time < 2500), now].slice(-5)
-              if (taps.current.length < 2) return
+              if (taps.current.length < 2) {
+                return
+              }
               const intervals = taps.current
                 .slice(1)
                 .map((time, index) => time - taps.current[index])
               projectActions.setBpm(
-                60000 / (intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length)
+                60_000 / (intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length)
               )
             }}
             {...buttonInfo}
@@ -197,8 +201,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
           </Button>
           <DragPadNumber
             value={bpm}
-            onChange={setBpm}
-            {...gesture}
+            {...bpmGesture}
             min={20}
             max={999}
             step={0.01}
@@ -211,8 +214,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
           <ControlGroup label={t("project.transport.sig", "拍号")} separator="slash">
             <DragPadNumber
               value={numerator}
-              onChange={setNumerator}
-              {...gesture}
+              {...numeratorGesture}
               min={1}
               max={16}
               step={1}
@@ -223,8 +225,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
             />
             <DragPadNumber
               value={denominator}
-              onChange={setDenominator}
-              {...gesture}
+              {...denominatorGesture}
               min={1}
               max={32}
               step={1}
@@ -260,8 +261,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
 
           <DragPadNumber
             value={groove}
-            onChange={setGroove}
-            {...gesture}
+            {...grooveGesture}
             min={0}
             max={100}
             step={1}
@@ -278,18 +278,19 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
             description={t("project.transport.barLengthHint", "Follow / loop 的默认时值单位")}
             matchTriggerWidth={false}
             items={BAR_LENGTHS.map(item => {
-              if ("type" in item && item.type === "heading")
+              if ("type" in item && item.type === "heading") {
                 return { type: "heading", id: item.id, label: item.label }
-              if ("type" in item && item.type === "separator")
-                return { type: "separator", id: item.id }
-              return { id: item.id, label: item.label, shortcut: item.shortcut }
+              }
+              return "type" in item && item.type === "separator"
+                ? { type: "separator", id: item.id }
+                : { id: item.id, label: item.label, shortcut: item.shortcut }
             })}
           />
         </div>
 
         <div
           data-transport-group="center"
-          className="project-transport-group flex items-center gap-[4px]"
+          className="project-transport-group flex items-center gap-[var(--spacing-control-track-gap)]"
         >
           <DragPadToggle
             value={follow}
@@ -307,8 +308,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
           >
             <DragPadNumber
               value={positionBar}
-              onChange={setPositionBar}
-              {...gesture}
+              {...positionBarGesture}
               min={1}
               max={barMax}
               step={1}
@@ -319,8 +319,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
             />
             <DragPadNumber
               value={positionBeat}
-              onChange={setPositionBeat}
-              {...gesture}
+              {...positionBeatGesture}
               min={1}
               max={Math.max(1, numerator)}
               step={1}
@@ -331,8 +330,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
             />
             <DragPadNumber
               value={positionSixteenth}
-              onChange={setPositionSixteenth}
-              {...gesture}
+              {...positionSixteenthGesture}
               min={1}
               max={4}
               step={1}
@@ -342,13 +340,13 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
               format={v => String(Math.floor(v))}
             />
           </ControlGroup>
-          <div className="mx-[6px] flex items-center gap-[4px]">
+          <div className="mx-[var(--project-transport-center-margin)] flex items-center gap-[var(--spacing-control-track-gap)]">
             <Button
               variant="ghost"
               size="transport-icon"
               onClick={projectActions.togglePlay}
               {...buttonInfo}
-              aria-label={playing ? t("project.transport.stop") : t("project.transport.play")}
+              aria-label={t(playing ? "project.transport.stop" : "project.transport.play")}
             >
               {playing ? <Pause className="fill-current" /> : <Play className="fill-current" />}
             </Button>
@@ -358,7 +356,9 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
               onClick={() => {
                 const now = performance.now()
                 projectActions.stop()
-                if (now - lastStop.current < 450) projectActions.rewindToStart()
+                if (now - lastStop.current < 450) {
+                  projectActions.rewindToStart()
+                }
                 lastStop.current = now
               }}
               {...buttonInfo}
@@ -389,7 +389,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
 
         <div
           data-transport-group="right"
-          className="project-transport-group flex items-center gap-[4px]"
+          className="project-transport-group flex items-center gap-[var(--spacing-control-track-gap)]"
         >
           <DragPadToggle
             value={drawMode}

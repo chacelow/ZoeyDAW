@@ -1,4 +1,6 @@
-/** Latest-value telemetry for the single-threaded Web prototype, not a native Rust transport. */
+/**
+Latest-value telemetry for the single-threaded Web prototype, not a native Rust transport.
+*/
 const HEADER_BYTES = 24
 const METER_BYTES = 8
 
@@ -15,14 +17,14 @@ export interface MeterFrame {
 }
 
 export interface AudioRingBuffer {
-  readPlayhead(): PlayheadFrame
-  readMeter(trackId: string): MeterFrame
-  writePlayhead(frame: Omit<PlayheadFrame, "revision">): void
-  writeMeter(trackId: string, meter: MeterFrame): void
-  allocateMeter(trackId: string): number
-  freeMeter(trackId: string): void
-  readRevision(): number
-  dispose(): void
+  readPlayhead: () => PlayheadFrame
+  readMeter: (trackId: string) => MeterFrame
+  writePlayhead: (frame: Omit<PlayheadFrame, "revision">) => void
+  writeMeter: (trackId: string, meter: MeterFrame) => void
+  allocateMeter: (trackId: string) => number
+  freeMeter: (trackId: string) => void
+  readRevision: () => number
+  dispose: () => void
 }
 
 interface Options {
@@ -49,7 +51,9 @@ export function createAudioRingBuffer({ maxTracks }: Options = {}): AudioRingBuf
   let nextSlot = 0
 
   function grow() {
-    if (maxTracks !== undefined) throw new Error(`Ring buffer exhausted at ${maxTracks} tracks`)
+    if (maxTracks !== undefined) {
+      throw new Error(`Ring buffer exhausted at ${maxTracks} tracks`)
+    }
     capacity *= 2
     const next = allocate(capacity)
     new Uint8Array(next).set(new Uint8Array(buffer))
@@ -70,9 +74,13 @@ export function createAudioRingBuffer({ maxTracks }: Options = {}): AudioRingBuf
 
   function assignSlot(trackId: string): number {
     const existing = slots.get(trackId)
-    if (existing !== undefined) return existing
+    if (existing !== undefined) {
+      return existing
+    }
     const slot = freed.pop() ?? nextSlot++
-    if (slot >= capacity) grow()
+    if (slot >= capacity) {
+      grow()
+    }
     slots.set(trackId, slot)
     meterFloats[slot * 2] = -Infinity
     meterFloats[slot * 2 + 1] = -Infinity
@@ -81,7 +89,7 @@ export function createAudioRingBuffer({ maxTracks }: Options = {}): AudioRingBuf
 
   return {
     readRevision: () => atomicLoad(cursor),
-    readPlayhead() {
+    readPlayhead: () => {
       return {
         bar: headerBar[0],
         playing: (headerFlags[0] & 1) === 1,
@@ -91,13 +99,17 @@ export function createAudioRingBuffer({ maxTracks }: Options = {}): AudioRingBuf
     },
     readMeter(trackId) {
       const slot = slots.get(trackId)
-      if (slot === undefined) return { left: -Infinity, right: -Infinity }
+      if (slot === undefined) {
+        return { left: -Infinity, right: -Infinity }
+      }
       const base = slot * 2
       return { left: meterFloats[base], right: meterFloats[base + 1] }
     },
     writePlayhead(frame) {
       const flags = (frame.playing ? 1 : 0) | (frame.recording ? 2 : 0)
-      if (headerBar[0] === frame.bar && headerFlags[0] === flags) return
+      if (headerBar[0] === frame.bar && headerFlags[0] === flags) {
+        return
+      }
       headerBar[0] = frame.bar
       headerFlags[0] = flags
       bump()
@@ -107,17 +119,19 @@ export function createAudioRingBuffer({ maxTracks }: Options = {}): AudioRingBuf
       const base = slot * 2
       const left = Math.fround(meter.left)
       const right = Math.fround(meter.right)
-      if (meterFloats[base] === left && meterFloats[base + 1] === right) return
+      if (meterFloats[base] === left && meterFloats[base + 1] === right) {
+        return
+      }
       meterFloats[base] = left
       meterFloats[base + 1] = right
       bump()
     },
-    allocateMeter(trackId) {
-      return assignSlot(trackId)
-    },
+    allocateMeter: trackId => assignSlot(trackId),
     freeMeter(trackId) {
       const slot = slots.get(trackId)
-      if (slot === undefined) return
+      if (slot === undefined) {
+        return
+      }
       slots.delete(trackId)
       freed.push(slot)
       meterFloats[slot * 2] = -Infinity
@@ -140,10 +154,7 @@ function isShared(buffer: ArrayBufferLike): boolean {
 }
 
 function atomicLoad(view: Uint32Array): number {
-  if (typeof Atomics !== "undefined" && isShared(view.buffer)) {
-    return Atomics.load(view, 0)
-  }
-  return view[0]
+  return typeof Atomics !== "undefined" && isShared(view.buffer) ? Atomics.load(view, 0) : view[0]
 }
 
 function atomicStore(view: Uint32Array, value: number): void {

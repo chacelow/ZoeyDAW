@@ -2,20 +2,32 @@
 
 import { useMemo, useRef } from "react"
 
-/** What a pointerdown recorded, read back by the click that ends its gesture. */
+/**
+What a pointerdown recorded, read back by the click that ends its gesture.
+*/
 export interface TapRecord<S> {
-  /** Which input started the gesture. */
+  /**
+  Which input started the gesture.
+  */
   pointerType: string
-  /** What the surface was showing when it started. */
+  /**
+  What the surface was showing when it started.
+  */
   state: S
 }
 
 export interface TapGesture<S> {
-  /** Record the gesture a pointerdown starts, with the state it starts in. */
+  /**
+  Record the gesture a pointerdown starts, with the state it starts in.
+  */
   start: (event: { pointerType: string }, state: S) => void
-  /** Read the record and clear it. `null` when no pointer is behind this click. */
+  /**
+  Read the record and clear it. `null` when no pointer is behind this click.
+  */
   take: () => TapRecord<S> | null
-  /** Drop the record: this gesture will never spend it on a click. */
+  /**
+  Drop the record: this gesture will never spend it on a click.
+  */
   drop: () => void
 }
 
@@ -26,13 +38,10 @@ export interface TapGesture<S> {
  * the control — and whether one did at all, since keyboard activation
  * synthesizes a click with no pointer behind it.
  *
- * State goes in with the record because a click reports that no better: a
- * browser that focuses a control on contact can open the very panel the tap
- * was meant to open, and reading "is it open" at click time then undoes it.
+ * State goes in with the record because a click reports that no better: a browser that focuses a control on contact can open the very panel the tap was meant to open, and reading "is it open" at click time then undoes it.
  * What the gesture started against is what it acts on.
  *
- * The record is spent by one click and dropped by everything else, because a
- * record that outlives its gesture is worse than none:
+ * The record is spent by one click and dropped by everything else, because a record that outlives its gesture is worse than none:
  *
  * - A scroll or an OS gesture takes the touch away — `pointercancel`, no click
  *   ever — and the finger would sit in the record until some later click.

@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
+import { TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
+import { layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { activeAutomationRows, automationX, automationY } from "./geometry"
 import { createAutomationInteractions } from "."
 import type { CanvasPointer, InteractionContext } from "../types"
-import { TRACK_TITLE_HEIGHT } from "@/pages/project/model/selectors"
-import { layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 
 beforeEach(() => {
   hydrateProject(

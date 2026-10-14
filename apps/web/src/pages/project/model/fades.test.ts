@@ -8,7 +8,9 @@ import type { AudioClip } from "./types"
 function clip(): AudioClip {
   const found = useProjectState.getState().document.tracks.find(track => track.id === "3-audio")
     ?.clips[0]
-  if (found?.kind !== "audio") throw new Error("Expected audio fixture")
+  if (found?.kind !== "audio") {
+    throw new Error("Expected audio fixture")
+  }
   return found
 }
 
@@ -30,7 +32,7 @@ describe("audio fade editing", () => {
     const saved = serializeProject()
     hydrateProject(saved)
     expect(clip()).toMatchObject(curves)
-    const id = clip().id
+    const { id } = clip()
     projectActions.duplicateClips([id])
     const copy = useProjectState
       .getState()
@@ -43,11 +45,15 @@ describe("audio fade editing", () => {
       .document.tracks.find(track => track.id === "3-audio")
       ?.clips.filter(item => item.id !== copy?.id)
     expect(pieces).toHaveLength(2)
-    for (const piece of pieces ?? []) expect(piece).toMatchObject(curves)
+    if (pieces != null) {
+      for (const piece of pieces) {
+        expect(piece).toMatchObject(curves)
+      }
+    }
   })
 
   it("bounds fade lengths against each other and curves against the persisted interval", () => {
-    const id = clip().id
+    const { id } = clip()
     projectActions.updateClip(id, { fadeInBars: 999, fadeInCurve: 999, fadeInCurvePosition: 999 })
     expect(clip().fadeInBars).toBe(clip().lengthBars - (clip().fadeOutBars ?? 0))
     expect(clip().fadeInCurve).toBe(1)
@@ -62,7 +68,7 @@ describe("audio fade editing", () => {
     expect(clip().fadeOutCurvePosition).toBe(0.1)
     projectActions.updateClip(id, { fadeInBars: -10 })
     expect(clip().fadeInBars).toBe(0)
-    projectActions.updateClip(id, { fadeInCurve: Number.NaN, fadeInCurvePosition: Number.NaN })
+    projectActions.updateClip(id, { fadeInCurve: NaN, fadeInCurvePosition: NaN })
     expect(clip().fadeInCurve).toBe(1)
     expect(clip().fadeInCurvePosition).toBe(0.9)
     projectActions.updateClip(id, { fadeInBars: 20, fadeOutBars: 20 })
@@ -111,7 +117,7 @@ describe("audio fade editing", () => {
   })
 
   it("persists inward boundaries and rejects overlapping or malformed offsets", () => {
-    const id = clip().id
+    const { id } = clip()
     projectActions.updateClip(id, {
       fadeInOffsetBars: 1,
       fadeInBars: 2,
@@ -136,7 +142,9 @@ describe("audio fade editing", () => {
     for (const bad of [-1, "2", null, Number.MAX_VALUE]) {
       const document = createMockDocument()
       const candidate = document.tracks.find(track => track.id === "3-audio")?.clips[0]
-      if (candidate?.kind !== "audio") throw new Error("Expected audio fixture")
+      if (candidate?.kind !== "audio") {
+        throw new Error("Expected audio fixture")
+      }
       Object.assign(candidate, { fadeOutOffsetBars: bad })
       expect(() =>
         parseProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
@@ -148,7 +156,9 @@ describe("audio fade editing", () => {
     for (const value of [-1.01, 1.01, "0.5", null]) {
       const document = createMockDocument()
       const candidate = document.tracks.find(track => track.id === "3-audio")?.clips[0]
-      if (candidate?.kind !== "audio") throw new Error("Expected audio fixture")
+      if (candidate?.kind !== "audio") {
+        throw new Error("Expected audio fixture")
+      }
       Object.assign(candidate, { fadeOutCurve: value })
       expect(() =>
         parseProject(

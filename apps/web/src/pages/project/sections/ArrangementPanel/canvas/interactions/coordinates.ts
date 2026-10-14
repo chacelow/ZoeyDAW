@@ -1,5 +1,5 @@
-import type { CanvasPointer, InteractionContext } from "./types"
 import { snapBar } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
+import type { CanvasPointer, InteractionContext } from "./types"
 
 export function canvasPointer(
   element: HTMLElement,

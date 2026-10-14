@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/storybook-static
+.agents/
+.claude/
+.github/
+src-tauri/
+apps/web/src/assets
+packages/ui/src/theme/theme-presets.ts
+packages/ui/src/controls/metrics/generated.css
+pnpm-lock.yaml

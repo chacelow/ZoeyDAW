@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,14 +7,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger
-} from './alert-dialog'
-import { Button } from './button'
+  AlertDialogTrigger,
+} from "./alert-dialog"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof AlertDialog> = {
-  title: 'Overlay/AlertDialog',
+  title: "Overlay/AlertDialog",
   component: AlertDialog,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -38,5 +38,5 @@ export const Destructive: Story = {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  ),
 }

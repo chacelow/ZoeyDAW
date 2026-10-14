@@ -1,22 +1,22 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { useState } from 'react'
-import { ConfirmDialog } from './confirm-dialog'
-import { Button } from './button'
+import { useState } from "react"
+import { ConfirmDialog } from "./confirm-dialog"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof ConfirmDialog> = {
-  title: 'Overlay/ConfirmDialog',
+  title: "Overlay/ConfirmDialog",
   component: ConfirmDialog,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
 type Story = StoryObj<typeof ConfirmDialog>
 
-function Demo(props: { variant?: 'default' | 'destructive' }) {
+function Demo(properties: { variant?: "default" | "destructive" }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button variant={props.variant} onClick={() => setOpen(true)}>
+      <Button variant={properties.variant} onClick={() => setOpen(true)}>
         触发确认
       </Button>
       <ConfirmDialog
@@ -24,7 +24,7 @@ function Demo(props: { variant?: 'default' | 'destructive' }) {
         onOpenChange={setOpen}
         title="确认操作"
         description="确定要执行这一操作吗？此步骤会立即生效。"
-        variant={props.variant}
+        variant={properties.variant}
         onConfirm={() => {
           // demo only
         }}

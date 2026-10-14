@@ -5,48 +5,28 @@
  *       data-checked / data-active 等简写变体。各 app 在 index.css 顶部
  *       `@import '@zoeymind/ui/globals.css';` 引入。
  */
+@import "../controls/metrics/generated.css";
 
 @theme inline {
   --color-success: hsl(var(--success));
   --color-warning: hsl(var(--warning));
   --color-overlay: var(--overlay);
 
-  /* Control 度量衡(所有 DAW 控件共用,勿硬编码 h-9/size-6/px-2) */
-  --spacing-control-h: var(--spacing-control-track);
-  --spacing-control-compact: var(--spacing-control-track);
-  --spacing-control-track: 13px;
-  --spacing-control-track-gap: 4px;
-  --spacing-control-track-pad: 1.5px;
-  --spacing-control-pad-x: var(--spacing-control-track-pad);
-  --spacing-control-gap: 2px;
-  --spacing-control-icon-slot: 10px;
-  --spacing-control-icon: 10px;
-  --spacing-control-icon-compact: var(--spacing-control-icon);
-  --spacing-transport-icon: var(--spacing-control-icon);
-  --text-control: var(--text-control-track);
-  --text-control-compact: var(--text-control-track);
-  --text-control-track: 9px;
-  --text-control-compact--line-height: 1;
-  --text-control--line-height: 1; /* leading-none */
   @keyframes accordion-down {
     from {
       height: 0;
     }
+
     to {
-      height: var(
-        --radix-accordion-content-height,
-        var(--accordion-panel-height, auto)
-      );
+      height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
     }
   }
 
   @keyframes accordion-up {
     from {
-      height: var(
-        --radix-accordion-content-height,
-        var(--accordion-panel-height, auto)
-      );
+      height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
     }
+
     to {
       height: 0;
     }
@@ -67,12 +47,14 @@ html.dragpad-dragging * {
   100% {
     opacity: 0;
   }
+
   50% {
     opacity: 0.55;
   }
 }
 
 /* Custom variants */
+
 /* Panels also expose diagnostic data-selected IDs; only semantic list actions inherit hover suppression. */
 @custom-variant hover {
   @media (hover: hover) {
@@ -91,12 +73,10 @@ html.dragpad-dragging * {
           [data-state="on"],
           [role="treeitem"][aria-selected="true"] [data-slot="button"],
           [role="option"][aria-selected="true"] [data-slot="button"],
-          [role="option"][data-selected]:not([data-selected="false"])
-            [data-slot="button"],
+          [role="option"][data-selected]:not([data-selected="false"]) [data-slot="button"],
           [role="row"][aria-selected="true"] [data-slot="button"],
           tr[data-state="selected"] [data-slot="button"],
-          [role="menuitem"][data-active]:not([data-active="false"])
-            [data-slot="button"]
+          [role="menuitem"][data-active]:not([data-active="false"]) [data-slot="button"]
         )
       ) {
       @slot;

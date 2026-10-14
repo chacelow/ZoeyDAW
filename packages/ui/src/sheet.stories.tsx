@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react'
 import {
   Sheet,
   SheetClose,
@@ -7,31 +6,32 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger
-} from './sheet'
-import { Button } from './button'
+  SheetTrigger,
+} from "./sheet"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Sheet> = {
-  title: 'Overlay/Sheet',
+  title: "Overlay/Sheet",
   component: Sheet,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
 type Story = StoryObj<typeof Sheet>
 
-function Demo(props: { side: 'top' | 'right' | 'bottom' | 'left' }) {
+function Demo(properties: { side: "top" | "right" | "bottom" | "left" }) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline">从 {props.side} 打开</Button>
+        <Button variant="outline">从 {properties.side} 打开</Button>
       </SheetTrigger>
-      <SheetContent side={props.side}>
+      <SheetContent side={properties.side}>
         <SheetHeader>
           <SheetTitle>筛选</SheetTitle>
           <SheetDescription>调整列表的筛选条件。</SheetDescription>
         </SheetHeader>
-        <div className="px-4 py-2 text-sm text-muted-foreground">Sheet 内容区。</div>
+        <div className="text-muted-foreground px-4 py-2 text-sm">Sheet 内容区。</div>
         <SheetFooter>
           <SheetClose asChild>
             <Button>确定</Button>

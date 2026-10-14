@@ -1,14 +1,21 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import {
   hydrateProject,
   projectActions,
   serializeProject,
   setProjectStorageId,
+  startProjectRuntime,
   useProjectState,
 } from "../adapters"
 import { createMockDocument, createMockWorkspace } from "../adapters/fixtures"
 import { visibleTracks, positionToBar } from "./types"
+
+let releaseRuntime: (() => void) | undefined
+afterEach(() => {
+  releaseRuntime?.()
+  releaseRuntime = undefined
+})
 
 beforeEach(() => {
   hydrateProject(
@@ -183,6 +190,7 @@ describe("project document and workspace commands", () => {
   })
 
   it("tracks mock keyboard notes without sound and writes armed MIDI notes when recording", () => {
+    releaseRuntime = startProjectRuntime()
     projectActions.noteOn(60)
     expect(useProjectState.getState().session.activeMidiNotes).toEqual([60])
     expect(serializeProject()).not.toContain("activeMidiNotes")
@@ -263,6 +271,7 @@ describe("versioned persistence", () => {
 
   it("scopes browser snapshots by project and leaves state untouched on missing restore", () => {
     setProjectStorageId("snapshot-test-a")
+    releaseRuntime = startProjectRuntime()
     projectActions.setBpm(155)
     projectActions.saveSnapshot()
     expect(useProjectState.getState().session.dirty).toBe(false)

@@ -15,48 +15,50 @@
  *
  * Enter / blur → commit(parse + clamp + quantize);Esc → cancel;非法 / 空 → 保持原值。
  */
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 
-export type InlineEditState = "idle" | "preEdit" | "editing";
+export type InlineEditState = "idle" | "preEdit" | "editing"
 
 export interface UseInlineEditOptions {
-  value: number;
-  onChange: (value: number) => void;
-  min: number;
-  max: number;
-  step?: number;
-  format?: (value: number) => string;
-  parse?: (raw: string) => number;
-  editable?: boolean;
-  disabled?: boolean;
-  onGestureStart?: () => void;
-  onGestureEnd?: () => void;
-  onGestureCancel?: () => void;
+  value: number
+  onChange: (value: number) => void
+  min: number
+  max: number
+  step?: number
+  format?: (value: number) => string
+  parse?: (raw: string) => number
+  editable?: boolean
+  disabled?: boolean
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
+  onGestureCancel?: () => void
 }
 
 export interface UseInlineEditResult {
-  state: InlineEditState;
-  draft: string;
-  setDraft: (next: string) => void;
-  /** click 后进入 preEdit;双击 reset 仍可用。 */
-  beginPreEdit: () => void;
-  resetPreEdit: () => void;
-  commit: () => void;
-  cancel: () => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  state: InlineEditState
+  draft: string
+  setDraft: (next: string) => void
+  /**
+  click 后进入 preEdit;双击 reset 仍可用。
+  */
+  beginPreEdit: () => void
+  resetPreEdit: () => void
+  commit: () => void
+  cancel: () => void
+  inputRef: React.RefObject<HTMLInputElement | null>
 }
 
-/** 判定是否"启动编辑"的字符:数字、小数点、负号、Backspace;其它(方向键 / Tab)不触发。 */
+/**
+判定是否"启动编辑"的字符:数字、小数点、负号、Backspace;其它(方向键 / Tab)不触发。
+*/
 function isEditTrigger(key: string): boolean {
-  if (key.length === 1 && /[0-9.-]/.test(key)) return true;
-  if (key === "Backspace") return true;
-  return false;
+  if (key.length === 1 && /[0-9.-]/.test(key)) {
+    return true
+  }
+  if (key === "Backspace") {
+    return true
+  }
+  return false
 }
 
 export function useInlineEdit({
@@ -73,142 +75,159 @@ export function useInlineEdit({
   onGestureEnd,
   onGestureCancel,
 }: UseInlineEditOptions): UseInlineEditResult {
-  const [state, setState] = useState<InlineEditState>("idle");
-  const [draft, setDraft] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const latestValue = useRef(value);
+  const [state, setState] = useState<InlineEditState>("idle")
+  const [draft, setDraft] = useState("")
+  const inputReference = useRef<HTMLInputElement>(null)
+  const latestValue = useRef(value)
   useLayoutEffect(() => {
-    latestValue.current = value;
-  }, [value]);
-  const originalValue = useRef(value);
-  const editingRef = useRef(false);
+    latestValue.current = value
+  }, [value])
+  const originalValue = useRef(value)
+  const editingReference = useRef(false)
   const beginPreEdit = useCallback(() => {
-    if (!editable || disabled) return;
-    originalValue.current = latestValue.current;
-    setDraft("");
-    setState("preEdit");
-  }, [editable, disabled]);
+    if (!editable || disabled) {
+      return
+    }
+    originalValue.current = latestValue.current
+    setDraft("")
+    setState("preEdit")
+  }, [editable, disabled])
 
   const resetPreEdit = useCallback(() => {
-    if (!editingRef.current) setState("idle");
-  }, []);
+    if (!editingReference.current) {
+      setState("idle")
+    }
+  }, [])
 
   const startEditing = useCallback(
     (nextDraft: string) => {
-      originalValue.current = latestValue.current;
-      editingRef.current = true;
-      onGestureStart?.();
-      setDraft(nextDraft);
-      setState("editing");
+      originalValue.current = latestValue.current
+      editingReference.current = true
+      onGestureStart?.()
+      setDraft(nextDraft)
+      setState("editing")
     },
-    [onGestureStart],
-  );
+    [onGestureStart]
+  )
 
   const commit = useCallback(() => {
-    if (!editingRef.current) return;
-    const raw = draft.trim();
-    const parsed = parse ? parse(raw) : Number.parseFloat(raw);
+    if (!editingReference.current) {
+      return
+    }
+    const raw = draft.trim()
+    const parsed = parse ? parse(raw) : Number.parseFloat(raw)
     if (raw && Number.isFinite(parsed)) {
-      const clamped = Math.min(max, Math.max(min, parsed));
-      const quantized = step > 0 ? Math.round(clamped / step) * step : clamped;
-      const next = Math.min(max, Math.max(min, quantized));
+      const clamped = Math.min(max, Math.max(min, parsed))
+      const quantized = step > 0 ? Math.round(clamped / step) * step : clamped
+      const next = Math.min(max, Math.max(min, quantized))
       if (next !== latestValue.current) {
-        latestValue.current = next;
-        onChange(next);
+        latestValue.current = next
+        onChange(next)
       }
     }
-    editingRef.current = false;
-    onGestureEnd?.();
-    setState("idle");
-  }, [draft, parse, min, max, step, onChange, onGestureEnd]);
+    editingReference.current = false
+    onGestureEnd?.()
+    setState("idle")
+  }, [draft, parse, min, max, step, onChange, onGestureEnd])
 
   const cancel = useCallback(() => {
-    if (editingRef.current) {
-      editingRef.current = false;
-      if (onGestureCancel) onGestureCancel();
-      else if (latestValue.current !== originalValue.current)
-        onChange(originalValue.current);
+    if (editingReference.current) {
+      editingReference.current = false
+      if (onGestureCancel) {
+        onGestureCancel()
+      } else if (latestValue.current !== originalValue.current) {
+        onChange(originalValue.current)
+      }
     }
-    setState("idle");
-  }, [onChange, onGestureCancel]);
-  const cancelGestureRef = useRef(onGestureCancel);
+    setState("idle")
+  }, [onChange, onGestureCancel])
+  const cancelGestureReference = useRef(onGestureCancel)
   useLayoutEffect(() => {
-    cancelGestureRef.current = onGestureCancel;
-  }, [onGestureCancel]);
-  useEffect(
-    () => () => {
-      if (!editingRef.current) return;
-      editingRef.current = false;
-      cancelGestureRef.current?.();
-    },
-    [],
-  );
+    cancelGestureReference.current = onGestureCancel
+  }, [onGestureCancel])
+  useEffect(() => {
+    return () => {
+      if (!editingReference.current) return
+      editingReference.current = false
+      cancelGestureReference.current?.()
+    }
+  }, [])
 
   // preEdit → editing:监听全局按键,首个有效输入字符升级并作为初始 draft。
   useEffect(() => {
-    if (state !== "preEdit") return;
+    if (state !== "preEdit") {
+      return
+    }
 
     const handler = (event: KeyboardEvent) => {
       if (
         event.target instanceof HTMLElement &&
-        (event.target.isContentEditable ||
-          /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName))
-      )
-        return;
+        (event.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName))
+      ) {
+        return
+      }
       if (event.key === "Escape") {
-        event.preventDefault();
-        cancel();
-        return;
+        event.preventDefault()
+        cancel()
+        return
       }
       // double-click 期间的 Enter 也直接升级空编辑态(用户或许想清空重填)
       if (event.key === "Enter") {
-        event.preventDefault();
-        startEditing(
-          format ? format(latestValue.current) : String(latestValue.current),
-        );
-        return;
+        event.preventDefault()
+        startEditing(format ? format(latestValue.current) : String(latestValue.current))
+        return
       }
-      if (!isEditTrigger(event.key)) return;
-      event.preventDefault();
+      if (!isEditTrigger(event.key)) {
+        return
+      }
+      event.preventDefault()
       // 第一个字符:数字/小数点/负号直接作为 draft 起点;Backspace 则起点为"当前值少一位"
       if (event.key === "Backspace") {
-        const current = format
-          ? format(latestValue.current)
-          : String(latestValue.current);
-        startEditing(current.slice(0, -1));
+        const current = format ? format(latestValue.current) : String(latestValue.current)
+        startEditing(current.slice(0, -1))
       } else {
-        startEditing(event.key);
+        startEditing(event.key)
       }
-    };
+    }
 
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [state, format, cancel, startEditing]);
+    document.addEventListener("keydown", handler)
+    return () => document.removeEventListener("keydown", handler)
+  }, [state, format, cancel, startEditing])
 
   // 进入 editing 后 focus input 并把光标放末尾。
   useEffect(() => {
-    if (state === "editing" && inputRef.current) {
-      const el = inputRef.current;
-      el.focus();
-      const len = el.value.length;
-      el.setSelectionRange(len, len);
+    if (!(state === "editing" && inputReference.current)) {
+      return
     }
-  }, [state]);
+
+    const element = inputReference.current
+    element.focus()
+    const length_ = element.value.length
+    element.setSelectionRange(length_, length_)
+  }, [state])
 
   useEffect(() => {
-    if (state !== "editing") return;
-    const raw = draft.trim();
-    if (!raw || raw === "-" || raw === "." || raw === "-.") return;
-    const parsed = parse ? parse(raw) : Number.parseFloat(raw);
-    if (!Number.isFinite(parsed)) return;
-    const clamped = Math.min(max, Math.max(min, parsed));
-    const quantized = step > 0 ? Math.round(clamped / step) * step : clamped;
-    const next = Math.min(max, Math.max(min, quantized));
-    if (next !== latestValue.current) {
-      latestValue.current = next;
-      onChange(next);
+    if (state !== "editing") {
+      return
     }
-  }, [state, draft, parse, min, max, step, onChange]);
+    const raw = draft.trim()
+    if (!raw || raw === "-" || raw === "." || raw === "-.") {
+      return
+    }
+    const parsed = parse ? parse(raw) : Number.parseFloat(raw)
+    if (!Number.isFinite(parsed)) {
+      return
+    }
+    const clamped = Math.min(max, Math.max(min, parsed))
+    const quantized = step > 0 ? Math.round(clamped / step) * step : clamped
+    const next = Math.min(max, Math.max(min, quantized))
+    if (next === latestValue.current) {
+      return
+    }
+
+    latestValue.current = next
+    onChange(next)
+  }, [state, draft, parse, min, max, step, onChange])
 
   return {
     state,
@@ -218,6 +237,6 @@ export function useInlineEdit({
     resetPreEdit,
     commit,
     cancel,
-    inputRef,
-  };
+    inputRef: inputReference,
+  }
 }

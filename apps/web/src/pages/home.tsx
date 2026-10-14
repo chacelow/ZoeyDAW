@@ -23,9 +23,13 @@ interface RecentProject {
 }
 
 function loadRecent(): RecentProject[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") {
+    return []
+  }
   const raw = window.localStorage.getItem(RECENT_PROJECTS_KEY)
-  if (!raw) return []
+  if (!raw) {
+    return []
+  }
   try {
     const parsed = JSON.parse(raw) as RecentProject[]
     return Array.isArray(parsed) ? parsed : []
@@ -35,7 +39,9 @@ function loadRecent(): RecentProject[] {
 }
 
 function saveRecent(list: RecentProject[]): void {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") {
+    return
+  }
   window.localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(list.slice(0, 20)))
 }
 
@@ -72,7 +78,7 @@ export function HomePage() {
       <header className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{t("home.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("app.tagline")}</p>
+          <p className="text-muted-foreground text-sm">{t("app.tagline")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={() => navigate("/library")}>
@@ -86,7 +92,7 @@ export function HomePage() {
       </header>
 
       <section className="flex min-h-0 flex-1 flex-col gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground">{t("home.recent")}</h2>
+        <h2 className="text-muted-foreground text-sm font-medium">{t("home.recent")}</h2>
         {recent.length === 0 ? (
           <Empty>
             <EmptyHeader>
@@ -103,12 +109,14 @@ export function HomePage() {
                   tabIndex={0}
                   onClick={() => openProject(project)}
                   onKeyDown={event => {
-                    if (event.key === "Enter" || event.key === " ") openProject(project)
+                    if (event.key === "Enter" || event.key === " ") {
+                      openProject(project)
+                    }
                   }}
-                  className="cursor-pointer p-4 transition hover:bg-accent/40"
+                  className="hover:bg-accent/40 cursor-pointer p-4 transition"
                 >
                   <div className="font-medium">{project.name}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     {new Date(project.openedAt).toLocaleString()}
                   </div>
                 </Card>

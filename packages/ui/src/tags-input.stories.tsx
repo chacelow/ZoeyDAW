@@ -1,21 +1,21 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { useState } from 'react'
-import { TagsInput } from './tags-input'
+import { useState } from "react"
+import { TagsInput } from "./tags-input"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof TagsInput> = {
-  title: 'Form/TagsInput',
+  title: "Form/TagsInput",
   component: TagsInput,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
 type Story = StoryObj<typeof TagsInput>
 
-function Demo(props: { placeholder?: string; disabled?: boolean }) {
-  const [tags, setTags] = useState<string[]>(['前端', '设计系统'])
+function Demo(properties: { placeholder?: string; disabled?: boolean }) {
+  const [tags, setTags] = useState<string[]>(["前端", "设计系统"])
   return (
     <div className="w-80">
-      <TagsInput value={tags} onChange={setTags} {...props} />
+      <TagsInput value={tags} onChange={setTags} {...properties} />
     </div>
   )
 }

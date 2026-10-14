@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react"
+import { useEffect, useRef } from "react"
 import {
   ChevronDown,
   ChevronLeft,
@@ -16,7 +16,6 @@ import {
   SlidersHorizontal,
   Star,
   X,
-  type LucideIcon,
 } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
 import {
@@ -28,9 +27,11 @@ import {
   rowInteractiveClasses,
   useInfoBinding,
 } from "@zoeymind/ui"
-import type { BrowserKind } from "./browserData"
 import { useBrowser } from "./useBrowser"
 import { BrowserNavigation } from "./BrowserNavigation"
+import type { LucideIcon } from "lucide-react"
+import type { KeyboardEvent, ReactNode } from "react"
+import type { BrowserKind } from "./browserData"
 
 const KIND_ICONS: Record<BrowserKind, LucideIcon> = {
   device: Piano,
@@ -55,34 +56,41 @@ const CONTENT_KINDS: (BrowserKind | "all")[] = [
 ]
 
 export interface BrowserPanelProps {
-  renderBody: (slots: { navigation: ReactNode; results: ReactNode }) => ReactNode
+  readonly renderBody: (slots: { navigation: ReactNode; results: ReactNode }) => ReactNode
 }
 
 export function BrowserPanel({ renderBody }: BrowserPanelProps) {
   const { t } = useTranslation()
   const browser = useBrowser()
-  const treeRef = useRef<HTMLDivElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
+  const treeReference = useRef<HTMLDivElement>(null)
+  const searchReference = useRef<HTMLInputElement>(null)
   const resourceInfo = useInfoBinding({ type: "resources" })
   const searchInfo = useInfoBinding({ type: "search" })
   const filterInfo = useInfoBinding({ type: "filters" })
   const selectedId = browser.selected?.entry.id
 
   useEffect(() => {
-    if (selectedId && treeRef.current?.contains(document.activeElement)) {
+    if (selectedId && treeReference.current?.contains(document.activeElement)) {
       document.getElementById(`browser-entry-${selectedId}`)?.scrollIntoView({ block: "nearest" })
     }
   }, [selectedId])
 
   useEffect(() => {
     function focusSearch(event: globalThis.KeyboardEvent) {
-      if (event.defaultPrevented || document.activeElement?.closest("[role='dialog']")) return
-      if (!searchRef.current?.closest("section")?.getBoundingClientRect().width) return
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
-        event.preventDefault()
-        searchRef.current?.focus()
-        searchRef.current?.select()
+      if (
+        event.defaultPrevented ||
+        document.activeElement?.closest("[role='dialog']") ||
+        !searchReference.current?.closest("section")?.getBoundingClientRect().width
+      ) {
+        return
       }
+      if (!((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f")) {
+        return
+      }
+
+      event.preventDefault()
+      searchReference.current?.focus()
+      searchReference.current?.select()
     }
     window.addEventListener("keydown", focusSearch)
     return () => window.removeEventListener("keydown", focusSearch)
@@ -93,37 +101,55 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
     const row = browser.rows[index]
     let nextIndex = index
     switch (event.key) {
-      case "ArrowDown":
+      case "ArrowDown": {
         nextIndex = Math.min(index + 1, browser.rows.length - 1)
         break
-      case "ArrowUp":
+      }
+      case "ArrowUp": {
         nextIndex = Math.max(index - 1, 0)
         break
-      case "Home":
+      }
+      case "Home": {
         nextIndex = 0
         break
-      case "End":
+      }
+      case "End": {
         nextIndex = browser.rows.length - 1
         break
-      case "ArrowRight":
-        if (row?.expandable && !row.expanded) browser.toggleExpanded(row.entry.id)
-        else if (row?.expanded) nextIndex = index + 1
+      }
+      case "ArrowRight": {
+        if (row?.expandable && !row.expanded) {
+          browser.toggleExpanded(row.entry.id)
+        } else if (row?.expanded) {
+          nextIndex = index + 1
+        }
         break
-      case "ArrowLeft":
-        if (row?.expanded) browser.toggleExpanded(row.entry.id)
-        else if (row?.parentId) browser.setSelectedId(row.parentId)
+      }
+      case "ArrowLeft": {
+        if (row?.expanded) {
+          browser.toggleExpanded(row.entry.id)
+        } else if (row?.parentId) {
+          browser.setSelectedId(row.parentId)
+        }
         break
-      case "Enter":
-        if (row?.expandable) browser.toggleExpanded(row.entry.id)
+      }
+      case "Enter": {
+        if (row?.expandable) {
+          browser.toggleExpanded(row.entry.id)
+        }
         break
-      default:
+      }
+      default: {
         return
+      }
     }
     event.preventDefault()
     event.stopPropagation()
     if (nextIndex !== index) {
       const next = browser.rows[nextIndex]
-      if (next) browser.setSelectedId(next.entry.id)
+      if (next) {
+        browser.setSelectedId(next.entry.id)
+      }
     }
   }
 
@@ -154,9 +180,9 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
           <ChevronRight className="size-5" />
         </Button>
         <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2" />
           <Input
-            ref={searchRef}
+            ref={searchReference}
             value={browser.query}
             onChange={event => browser.setQuery(event.target.value)}
             aria-label={t("project.browser.search")}
@@ -164,13 +190,15 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
             className="h-9 rounded-sm pr-8 pl-8 text-xs md:text-xs"
             {...searchInfo}
             onKeyDown={event => {
-              if (event.key === "Escape") {
-                browser.setQuery("")
-                treeRef.current?.focus()
+              if (event.key !== "Escape") {
+                return
               }
+
+              browser.setQuery("")
+              treeReference.current?.focus()
             }}
           />
-          {browser.query && (
+          {browser.query ? (
             <Button
               variant="ghost"
               size="icon-xs"
@@ -178,12 +206,12 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
               aria-label={t("project.browser.clearSearch")}
               onClick={() => {
                 browser.setQuery("")
-                searchRef.current?.focus()
+                searchReference.current?.focus()
               }}
             >
               <X className="size-4" />
             </Button>
-          )}
+          ) : null}
         </div>
         <Button
           variant="ghost"
@@ -203,9 +231,9 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
           navigation: <BrowserNavigation source={browser.source} onNavigate={browser.navigate} />,
           results: (
             <div className="flex h-full min-w-0 flex-col">
-              {browser.filtersVisible && (
+              {browser.filtersVisible ? (
                 <div className="shrink-0 p-3">
-                  <div className="mb-1.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <div className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px]">
                     <ChevronDown className="size-3" />
                     {t("project.browser.content")}
                   </div>
@@ -224,7 +252,7 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                           "inline-flex h-5 shrink-0 items-center justify-center rounded-full border px-2 text-[10px] font-medium whitespace-nowrap transition-colors",
                           browser.kind === kind
                             ? "border-primary/40 bg-primary/15 text-primary"
-                            : "border-border/60 bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                            : "border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground bg-transparent"
                         )}
                         onClick={() => browser.setKind(kind)}
                       >
@@ -233,8 +261,8 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                     ))}
                   </div>
                 </div>
-              )}
-              {browser.filtersVisible && <Separator />}
+              ) : null}
+              {browser.filtersVisible ? <Separator /> : null}
               <Button
                 variant="ghost"
                 size="sm"
@@ -251,13 +279,15 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
               </Button>
               <Separator />
               <DragPreviewArea
-                ref={treeRef}
+                ref={treeReference}
                 disabledDropLabel={t("project.browser.dropDisabled")}
                 renderPreview={source => {
                   const row = browser.rows.find(
                     row => `browser-entry-${row.entry.id}` === source.id
                   )
-                  if (!row) return null
+                  if (!row) {
+                    return null
+                  }
                   const Icon = KIND_ICONS[row.entry.kind]
                   return (
                     <>
@@ -272,7 +302,7 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                 aria-activedescendant={selectedId ? `browser-entry-${selectedId}` : undefined}
                 onKeyDown={handleTreeKeyDown}
                 {...resourceInfo}
-                className="min-h-0 flex-1 overflow-y-auto p-1 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+                className="focus-visible:ring-ring min-h-0 flex-1 overflow-y-auto p-1 outline-none focus-visible:ring-1 focus-visible:ring-inset"
               >
                 {browser.rows.map(row => {
                   const { entry } = row
@@ -288,36 +318,49 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                       aria-selected={selectedId === entry.id}
                       aria-level={row.depth + 1}
                       aria-expanded={row.expandable ? row.expanded : undefined}
-                      title={entry.name}
                       className={rowInteractiveClasses(
                         { active: selectedId === entry.id },
                         "group/browser-row justify-start gap-1 rounded-sm text-left font-normal"
                       )}
                       style={{ paddingLeft: `calc(var(--spacing) * ${row.depth * 6 + 1})` }}
+                      onKeyDown={event => {
+                        if (event.key !== "Enter" || event.target !== event.currentTarget) {
+                          return
+                        }
+                        event.preventDefault()
+                        event.stopPropagation()
+                        browser.setSelectedId(entry.id)
+                        if (row.expandable) browser.toggleExpanded(entry.id)
+                        treeReference.current?.focus({ preventScroll: true })
+                      }}
                       onClick={event => {
                         browser.setSelectedId(entry.id)
                         if (
                           row.expandable &&
                           event.target instanceof Element &&
                           event.target.closest("[data-browser-disclosure]")
-                        )
+                        ) {
                           browser.toggleExpanded(entry.id)
-                        treeRef.current?.focus({ preventScroll: true })
+                        }
+                        treeReference.current?.focus({ preventScroll: true })
                       }}
                       onDoubleClick={() => {
-                        if (row.expandable) browser.toggleExpanded(entry.id)
+                        if (row.expandable) {
+                          browser.toggleExpanded(entry.id)
+                        }
                       }}
                     >
                       <span
                         data-browser-disclosure
                         className="flex size-5 shrink-0 items-center justify-center"
                       >
-                        {row.expandable &&
-                          (row.expanded ? (
+                        {row.expandable ? (
+                          row.expanded ? (
                             <ChevronDown className="size-4" />
                           ) : (
                             <ChevronRight className="size-4" />
-                          ))}
+                          )
+                        ) : null}
                       </span>
                       <Icon className="size-5 shrink-0" />
                       <span className="min-w-0 flex-1 truncate">{entry.name}</span>
@@ -339,7 +382,7 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                         )}
                         aria-pressed={browser.favorites.has(entry.id)}
                         className={cn(
-                          "shrink-0 opacity-0 group-hover/browser-row:opacity-100 group-focus-within/browser-row:opacity-100",
+                          "shrink-0 opacity-0 group-focus-within/browser-row:opacity-100 group-hover/browser-row:opacity-100",
                           (browser.favorites.has(entry.id) || selectedId === entry.id) &&
                             "opacity-100"
                         )}
@@ -347,7 +390,7 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                         onClick={event => {
                           event.stopPropagation()
                           browser.toggleFavorite(entry.id)
-                          treeRef.current?.focus({ preventScroll: true })
+                          treeReference.current?.focus({ preventScroll: true })
                         }}
                       >
                         <Star
@@ -361,11 +404,11 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                   )
                 })}
                 {browser.rows.length === 0 && (
-                  <div className="flex flex-col items-center gap-3 px-3 py-10 text-center text-muted-foreground">
+                  <div className="text-muted-foreground flex flex-col items-center gap-3 px-3 py-10 text-center">
                     <Search className="size-7" />
                     <p>{t("project.browser.empty")}</p>
                     <p className="text-xs">{t("project.browser.emptyHint")}</p>
-                    {(browser.query || browser.kind !== "all") && (
+                    {browser.query || browser.kind !== "all" ? (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -376,7 +419,7 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                       >
                         {t("project.browser.resetFilters")}
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </DragPreviewArea>

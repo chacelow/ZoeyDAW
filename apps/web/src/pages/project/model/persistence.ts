@@ -1,7 +1,7 @@
-import type { Clip, DocumentState, Track, WorkspaceState } from "./types"
 import { acceptsClip } from "./types"
 import { isGridSettings, isLegacyGridBars } from "./grid"
 import { MAX_AUTOMATION_CURVE, MIN_AUTOMATION_CURVE } from "./automation-curve"
+import type { Clip, DocumentState, Track, WorkspaceState } from "./types"
 
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v)
@@ -14,8 +14,12 @@ const range = (start: unknown, end: unknown) => positive(start) && positive(end)
 function uniqueIds(values: readonly { id?: string }[]): boolean {
   const ids = new Set<string>()
   for (const value of values) {
-    if (value.id === undefined) continue
-    if (ids.has(value.id)) return false
+    if (value.id === undefined) {
+      continue
+    }
+    if (ids.has(value.id)) {
+      return false
+    }
     ids.add(value.id)
   }
   return true
@@ -30,15 +34,17 @@ export function isClip(v: unknown): v is Clip {
     (v.sourceOffsetBars !== undefined && !number(v.sourceOffsetBars)) ||
     (v.label !== undefined && !text(v.label)) ||
     (v.color !== undefined && !text(v.color))
-  )
+  ) {
     return false
+  }
   const sourceOffset = v.sourceOffsetBars ?? 0
   if (
     !number(sourceOffset) ||
     !number(v.startBar + v.lengthBars) ||
     !number(sourceOffset + v.lengthBars)
-  )
+  ) {
     return false
+  }
   if (v.kind === "audio") {
     const fadeIn = v.fadeInBars ?? 0
     const fadeOut = v.fadeOutBars ?? 0
@@ -80,33 +86,30 @@ export function isClip(v: unknown): v is Clip {
           v.waveformPeaks.every(peak => number(peak) && peak >= 0 && peak <= 1)))
     )
   }
-  if (v.kind === "pattern")
-    return (
-      text(v.patternId) &&
-      (v.steps === undefined || (Array.isArray(v.steps) && v.steps.every(bool)))
-    )
-  return (
-    v.kind === "midi" &&
-    (v.loopBars === undefined || positive(v.loopBars)) &&
-    Array.isArray(v.notes) &&
-    v.notes.every(
-      note =>
-        record(note) &&
-        (note.id === undefined || text(note.id)) &&
-        number(note.pitch) &&
-        Number.isInteger(note.pitch) &&
-        note.pitch >= 0 &&
-        note.pitch <= 127 &&
-        number(note.startBeat) &&
-        note.startBeat >= 0 &&
-        positive(note.lengthBeats) &&
-        number(note.velocity) &&
-        Number.isInteger(note.velocity) &&
-        note.velocity >= 0 &&
-        note.velocity <= 127
-    ) &&
-    uniqueIds(v.notes)
-  )
+  return v.kind === "pattern"
+    ? text(v.patternId) &&
+        (v.steps === undefined || (Array.isArray(v.steps) && v.steps.every(bool)))
+    : v.kind === "midi" &&
+        (v.loopBars === undefined || positive(v.loopBars)) &&
+        Array.isArray(v.notes) &&
+        v.notes.every(note => {
+          return (
+            record(note) &&
+            (note.id === undefined || text(note.id)) &&
+            number(note.pitch) &&
+            Number.isInteger(note.pitch) &&
+            note.pitch >= 0 &&
+            note.pitch <= 127 &&
+            number(note.startBeat) &&
+            note.startBeat >= 0 &&
+            positive(note.lengthBeats) &&
+            number(note.velocity) &&
+            Number.isInteger(note.velocity) &&
+            note.velocity >= 0 &&
+            note.velocity <= 127
+          )
+        }) &&
+        uniqueIds(v.notes)
 }
 function isTrack(v: unknown): v is Track {
   return (
@@ -192,64 +195,86 @@ function isDocument(v: unknown): v is DocumentState {
     !Array.isArray(v.tracks) ||
     !v.tracks.every(isTrack) ||
     !Array.isArray(v.markers) ||
-    !v.markers.every(
+    v.markers.some(
       marker =>
-        record(marker) &&
-        text(marker.id) &&
-        positive(marker.bar) &&
-        text(marker.label) &&
-        (marker.color === undefined || text(marker.color))
-    )
-  )
+        !(
+          record(marker) &&
+          text(marker.id) &&
+          positive(marker.bar) &&
+          text(marker.label) &&
+          (marker.color === undefined || text(marker.color))
+        )
+    ) ||
+    !uniqueIds(v.markers)
+  ) {
     return false
-  if (!uniqueIds(v.markers)) return false
+  }
   const byId = new Map(v.tracks.map(track => [track.id, track]))
   if (
     byId.size !== v.tracks.length ||
     byId.get("main")?.kind !== "main" ||
     v.tracks.some(track => track.kind === "main" && track.id !== "main")
-  )
+  ) {
     return false
+  }
   const clipIds = v.tracks.flatMap(track => track.clips.map(clip => clip.id))
-  if (new Set(clipIds).size !== clipIds.length) return false
+  if (new Set(clipIds).size !== clipIds.length) {
+    return false
+  }
   const parentOf = new Map<string, string>()
   for (const track of v.tracks) {
-    if (track.clips.some(clip => !acceptsClip(track.kind, clip.kind))) return false
     if (
+      track.clips.some(clip => !acceptsClip(track.kind, clip.kind)) ||
       Object.keys(track.sends ?? {}).some(id => id === track.id || byId.get(id)?.kind !== "return")
-    )
+    ) {
       return false
+    }
     if (
       track.output !== "none" &&
       track.output !== "external" &&
       !["group", "main"].includes(byId.get(track.output)?.kind ?? "")
-    )
+    ) {
       return false
-    if (track.childTrackIds?.length && track.kind !== "group") return false
-    for (const id of track.childTrackIds ?? []) {
-      if (!byId.has(id) || id === track.id || parentOf.has(id)) return false
-      parentOf.set(id, track.id)
+    }
+    if (track.childTrackIds?.length && track.kind !== "group") {
+      return false
+    }
+    if (track.childTrackIds != null) {
+      for (const id of track.childTrackIds) {
+        if (!byId.has(id) || id === track.id || parentOf.has(id)) {
+          return false
+        }
+        parentOf.set(id, track.id)
+      }
     }
   }
   for (const track of v.tracks) {
     const ancestors = new Set([track.id])
     let parent = parentOf.get(track.id)
     while (parent) {
-      if (ancestors.has(parent)) return false
+      if (ancestors.has(parent)) {
+        return false
+      }
       ancestors.add(parent)
       parent = parentOf.get(parent)
     }
     if (track.output !== "none" && track.output !== "external") {
       const destination = byId.get(track.output)
-      if (destination?.kind === "group" && parentOf.get(track.id) !== destination.id) return false
+      if (destination?.kind === "group" && parentOf.get(track.id) !== destination.id) {
+        return false
+      }
     }
-    if (parentOf.has(track.id) && track.output !== parentOf.get(track.id)) return false
+    if (parentOf.has(track.id) && track.output !== parentOf.get(track.id)) {
+      return false
+    }
     const routed = new Set([track.id])
-    let destination = track.output
-    while (byId.has(destination)) {
-      if (routed.has(destination)) return false
-      routed.add(destination)
-      destination = byId.get(destination)!.output
+    let next = byId.get(track.output)
+    while (next) {
+      if (routed.has(next.id)) {
+        return false
+      }
+      routed.add(next.id)
+      next = byId.get(next.output)
     }
   }
   return true
@@ -278,136 +303,152 @@ export function serializeClip(clip: Clip): Clip {
     kind: clip.kind,
     startBar: clip.startBar,
     lengthBars: clip.lengthBars,
-    ...(clip.sourceOffsetBars === undefined ? {} : { sourceOffsetBars: clip.sourceOffsetBars }),
-    ...(clip.label === undefined ? {} : { label: clip.label }),
-    ...(clip.color === undefined ? {} : { color: clip.color }),
+    ...(clip.sourceOffsetBars !== undefined && { sourceOffsetBars: clip.sourceOffsetBars }),
+    ...(clip.label !== undefined && { label: clip.label }),
+    ...(clip.color !== undefined && { color: clip.color }),
   }
   switch (clip.kind) {
-    case "audio":
+    case "audio": {
       return {
         ...base,
         kind: "audio",
         samplePath: clip.samplePath,
         gainDb: clip.gainDb,
-        ...(clip.fadeInBars === undefined ? {} : { fadeInBars: clip.fadeInBars }),
-        ...(clip.fadeOutBars === undefined ? {} : { fadeOutBars: clip.fadeOutBars }),
-        ...(clip.fadeInOffsetBars === undefined ? {} : { fadeInOffsetBars: clip.fadeInOffsetBars }),
-        ...(clip.fadeOutOffsetBars === undefined
-          ? {}
-          : { fadeOutOffsetBars: clip.fadeOutOffsetBars }),
-        ...(clip.fadeInCurve === undefined ? {} : { fadeInCurve: clip.fadeInCurve }),
-        ...(clip.fadeOutCurve === undefined ? {} : { fadeOutCurve: clip.fadeOutCurve }),
-        ...(clip.fadeInCurvePosition === undefined
-          ? {}
-          : { fadeInCurvePosition: clip.fadeInCurvePosition }),
-        ...(clip.fadeOutCurvePosition === undefined
-          ? {}
-          : { fadeOutCurvePosition: clip.fadeOutCurvePosition }),
+        ...(clip.fadeInBars !== undefined && { fadeInBars: clip.fadeInBars }),
+        ...(clip.fadeOutBars !== undefined && { fadeOutBars: clip.fadeOutBars }),
+        ...(clip.fadeInOffsetBars !== undefined && { fadeInOffsetBars: clip.fadeInOffsetBars }),
+        ...(clip.fadeOutOffsetBars !== undefined && { fadeOutOffsetBars: clip.fadeOutOffsetBars }),
+        ...(clip.fadeInCurve !== undefined && { fadeInCurve: clip.fadeInCurve }),
+        ...(clip.fadeOutCurve !== undefined && { fadeOutCurve: clip.fadeOutCurve }),
+        ...(clip.fadeInCurvePosition !== undefined && {
+          fadeInCurvePosition: clip.fadeInCurvePosition,
+        }),
+        ...(clip.fadeOutCurvePosition !== undefined && {
+          fadeOutCurvePosition: clip.fadeOutCurvePosition,
+        }),
       }
-    case "midi":
+    }
+    case "midi": {
       return {
         ...base,
         kind: "midi",
-        ...(clip.loopBars === undefined ? {} : { loopBars: clip.loopBars }),
-        notes: clip.notes.map(note => ({
-          pitch: note.pitch,
-          startBeat: note.startBeat,
-          lengthBeats: note.lengthBeats,
-          velocity: note.velocity,
-          ...(note.id === undefined ? {} : { id: note.id }),
-        })),
+        ...(clip.loopBars !== undefined && { loopBars: clip.loopBars }),
+        notes: clip.notes.map(note => {
+          return {
+            pitch: note.pitch,
+            startBeat: note.startBeat,
+            lengthBeats: note.lengthBeats,
+            velocity: note.velocity,
+            ...(note.id === undefined ? {} : { id: note.id }),
+          }
+        }),
       }
-    case "pattern":
+    }
+    case "pattern": {
       return {
         ...base,
         kind: "pattern",
         patternId: clip.patternId,
-        ...(clip.steps === undefined ? {} : { steps: [...clip.steps] }),
+        ...(clip.steps !== undefined && { steps: [...clip.steps] }),
       }
+    }
   }
 }
-/** Parse first, then atomically replace state. Unknown keys never cross this boundary. */
+/**
+Parse first, then atomically replace state. Unknown keys never cross this boundary.
+*/
 export function parseProject(json: string): { document: DocumentState; workspace: WorkspaceState } {
   const payload: unknown = JSON.parse(json)
   if (
     !record(payload) ||
     (payload.version !== 1 && payload.version !== 2) ||
     !isDocument(payload.document)
-  )
+  ) {
     throw new Error("Invalid or unsupported project snapshot")
-  const doc = payload.document
+  }
+  const document_ = payload.document
   const rawWorkspace = payload.workspace
   let workspacePayload: unknown = rawWorkspace
   if (payload.version === 1) {
     if (
       !record(rawWorkspace) ||
       !number(rawWorkspace.gridBars) ||
-      !isLegacyGridBars(rawWorkspace.gridBars, doc.transport.numerator, doc.transport.denominator)
-    )
+      !isLegacyGridBars(
+        rawWorkspace.gridBars,
+        document_.transport.numerator,
+        document_.transport.denominator
+      )
+    ) {
       throw new Error("Invalid or unsupported project snapshot")
+    }
     workspacePayload = { ...rawWorkspace, grid: { mode: "fixed", bars: rawWorkspace.gridBars } }
   }
-  if (!isWorkspace(workspacePayload)) throw new Error("Invalid or unsupported project snapshot")
+  if (!isWorkspace(workspacePayload)) {
+    throw new Error("Invalid or unsupported project snapshot")
+  }
   const view = workspacePayload
   return {
     document: {
-      name: doc.name,
-      scaleRoot: doc.scaleRoot,
-      scaleMode: doc.scaleMode,
-      groove: doc.groove,
+      name: document_.name,
+      scaleRoot: document_.scaleRoot,
+      scaleMode: document_.scaleMode,
+      groove: document_.groove,
       transport: {
-        bpm: doc.transport.bpm,
-        numerator: doc.transport.numerator,
-        denominator: doc.transport.denominator,
-        barLength: doc.transport.barLength,
+        bpm: document_.transport.bpm,
+        numerator: document_.transport.numerator,
+        denominator: document_.transport.denominator,
+        barLength: document_.transport.barLength,
         loop: {
-          enabled: doc.transport.loop.enabled,
-          startBar: doc.transport.loop.startBar,
-          endBar: doc.transport.loop.endBar,
+          enabled: document_.transport.loop.enabled,
+          startBar: document_.transport.loop.startBar,
+          endBar: document_.transport.loop.endBar,
         },
       },
-      tracks: doc.tracks.map(track => ({
-        id: track.id,
-        name: track.name,
-        kind: track.kind,
-        color: track.color,
-        solo: track.solo,
-        armed: track.armed,
-        mute: track.mute,
-        volumeDb: track.volumeDb,
-        pan: track.pan,
-        input: track.kind === "audio" && track.input !== "none" ? "external" : track.input,
-        output: track.output,
-        ...(track.kind === "audio"
-          ? {
-              inputChannel:
-                track.inputChannel ?? (["1", "2", "1-2"].includes(track.input) ? track.input : "1"),
-            }
-          : track.inputChannel === undefined
-            ? {}
-            : { inputChannel: track.inputChannel }),
-        ...(track.outputChannel === undefined ? {} : { outputChannel: track.outputChannel }),
-        ...(track.cueOutput === undefined ? {} : { cueOutput: track.cueOutput }),
-        ...(track.cueVolumeDb === undefined ? {} : { cueVolumeDb: track.cueVolumeDb }),
-        ...(track.returnPost === undefined ? {} : { returnPost: track.returnPost }),
-        ...(track.sends === undefined ? {} : { sends: { ...track.sends } }),
-        clips: track.clips.map(serializeClip),
-        heightPx: track.heightPx,
-        ...(track.childTrackIds === undefined ? {} : { childTrackIds: [...track.childTrackIds] }),
-        ...(track.collapsed === undefined ? {} : { collapsed: track.collapsed }),
-        monitor: track.monitor,
-        automation: track.automation.map(lane => ({
-          id: lane.id,
-          parameter: lane.parameter,
-          points: lane.points.map(point => ({
-            id: point.id,
-            bar: point.bar,
-            value: point.value,
-            ...(point.curve === undefined ? {} : { curve: point.curve }),
+      tracks: document_.tracks.map(track => {
+        return {
+          id: track.id,
+          name: track.name,
+          kind: track.kind,
+          color: track.color,
+          solo: track.solo,
+          armed: track.armed,
+          mute: track.mute,
+          volumeDb: track.volumeDb,
+          pan: track.pan,
+          input: track.kind === "audio" && track.input !== "none" ? "external" : track.input,
+          output: track.output,
+          ...(track.kind === "audio"
+            ? {
+                inputChannel:
+                  track.inputChannel ??
+                  (["1", "2", "1-2"].includes(track.input) ? track.input : "1"),
+              }
+            : track.inputChannel === undefined
+              ? {}
+              : { inputChannel: track.inputChannel }),
+          ...(track.outputChannel === undefined ? {} : { outputChannel: track.outputChannel }),
+          ...(track.cueOutput === undefined ? {} : { cueOutput: track.cueOutput }),
+          ...(track.cueVolumeDb === undefined ? {} : { cueVolumeDb: track.cueVolumeDb }),
+          ...(track.returnPost === undefined ? {} : { returnPost: track.returnPost }),
+          ...(track.sends === undefined ? {} : { sends: { ...track.sends } }),
+          clips: track.clips.map(serializeClip),
+          heightPx: track.heightPx,
+          ...(track.childTrackIds === undefined ? {} : { childTrackIds: [...track.childTrackIds] }),
+          ...(track.collapsed === undefined ? {} : { collapsed: track.collapsed }),
+          monitor: track.monitor,
+          automation: track.automation.map(lane => ({
+            id: lane.id,
+            parameter: lane.parameter,
+            points: lane.points.map(point => ({
+              id: point.id,
+              bar: point.bar,
+              value: point.value,
+              ...(point.curve === undefined ? {} : { curve: point.curve }),
+            })),
           })),
-        })),
-      })),
-      markers: doc.markers.map(marker => ({
+        }
+      }),
+      markers: document_.markers.map(marker => ({
         id: marker.id,
         bar: marker.bar,
         label: marker.label,

@@ -6,6 +6,8 @@ export function hasNativeCursor(): boolean {
 }
 
 export function moveWindowCursor(clientX: number, clientY: number): void | Promise<void> {
-  if (!hasNativeCursor()) return
+  if (!hasNativeCursor()) {
+    return
+  }
   return getCurrentWindow().setCursorPosition(new LogicalPosition(clientX, clientY))
 }

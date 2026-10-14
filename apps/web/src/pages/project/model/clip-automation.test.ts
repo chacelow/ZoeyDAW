@@ -72,7 +72,7 @@ describe("automation accompanying Clip moves", () => {
 
   it("matches destination parameters, creates missing lanes, and copies fresh point IDs without removing sources", () => {
     const source = createMockDocument().tracks
-    const target = createTrack("audio", source)
+    const target = createTrack("audio", source, undefined, source[0].heightPx)
     target.id = "other-audio"
     target.automation = [
       {
@@ -110,7 +110,7 @@ describe("automation accompanying Clip moves", () => {
 
   it("moves matching lanes across tracks while leaving unrelated destination automation untouched", () => {
     const source = createMockDocument().tracks
-    const target = createTrack("audio", source)
+    const target = createTrack("audio", source, undefined, source[0].heightPx)
     target.id = "other-audio"
     target.automation = [
       { id: "other-pan", parameter: "pan", points: [{ id: "pan-resident", bar: 24, value: 0.8 }] },

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
+import { createSceneStore } from "./scene"
+import type { ArrangementViewport } from "./scene"
 import type { LoopRegion, Marker, Track } from "@/pages/project/model/types"
-import { createSceneStore, type ArrangementViewport } from "./scene"
 
 const vp = (patch: Partial<ArrangementViewport> = {}): ArrangementViewport => ({
   pxPerBar: 24,
@@ -13,8 +14,8 @@ const vp = (patch: Partial<ArrangementViewport> = {}): ArrangementViewport => ({
 })
 
 const loop: LoopRegion = { enabled: false, startBar: 1, endBar: 5 }
-const markers: ReadonlyArray<Marker> = []
-const tracks: ReadonlyArray<Track> = []
+const markers: readonly Marker[] = []
+const tracks: readonly Track[] = []
 const transport = { bpm: 120, numerator: 4, denominator: 4 }
 const fixedOne = { mode: "fixed", bars: 1 } as const
 
@@ -44,9 +45,9 @@ describe("arrangement scene store", () => {
     const previous = store.get().grid
     store.setViewport(vp({ pxPerBar: 128 }))
     const coarse = store.get().gridPlan.cellBars
-    store.setViewport(vp({ pxPerBar: 131072 }))
+    store.setViewport(vp({ pxPerBar: 131_072 }))
     expect(store.get().grid).toBe(previous)
-    expect(store.get().gridPlan.cellBars).toBe(1 / 16384)
+    expect(store.get().gridPlan.cellBars).toBe(1 / 16_384)
     expect(coarse).toBeGreaterThan(store.get().gridPlan.cellBars)
   })
 
@@ -54,13 +55,13 @@ describe("arrangement scene store", () => {
     const store = createSceneStore()
     store.setPlayback({
       playing: false,
-      insertionPoint: { trackId: "3-audio", bar: 1 + 1 / 16384 },
+      insertionPoint: { trackId: "3-audio", bar: 1 + 1 / 16_384 },
     })
-    expect(store.get().playback.insertionPoint?.bar).toBe(1 + 1 / 16384)
-    const revision = store.get().revision
+    expect(store.get().playback.insertionPoint?.bar).toBe(1 + 1 / 16_384)
+    const { revision } = store.get()
     store.setPlayback({
       playing: false,
-      insertionPoint: { trackId: "3-audio", bar: 1 + 1 / 16384 },
+      insertionPoint: { trackId: "3-audio", bar: 1 + 1 / 16_384 },
     })
     expect(store.get().revision).toBe(revision)
   })
@@ -98,7 +99,7 @@ describe("arrangement scene store", () => {
   it("keeps transient gesture tracks out of the durable music update", () => {
     const store = createSceneStore()
     store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks })
-    const preview: ReadonlyArray<Track> = [
+    const preview: Track[] = [
       {
         id: "preview",
         kind: "audio",
@@ -117,11 +118,15 @@ describe("arrangement scene store", () => {
         automation: [],
       },
     ]
-    store.setPreviewTracks(preview)
+    store.setProjectPreview({
+      kind: "tracks",
+      token: { sessionId: "renderer", id: "gesture" },
+      tracks: preview,
+    })
     expect(store.get().tracks).toBe(preview)
     store.setMusic({ bars: 144, grid: fixedOne, transport, markers, loop, tracks })
     expect(store.get().tracks).toBe(preview)
-    store.setPreviewTracks(null)
+    store.setProjectPreview(null)
     expect(store.get().tracks).toBe(tracks)
     expect(store.get().previewTracks).toBeNull()
   })

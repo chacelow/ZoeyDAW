@@ -8,11 +8,11 @@
  * Key 拼写防护交给 scripts/check-i18n-keys.mjs (Step 7 of i18n refactor plan).
  */
 
-import 'i18next'
+import "i18next"
 
-declare module 'i18next' {
+declare module "i18next" {
   interface CustomTypeOptions {
-    defaultNS: 'translation'
+    defaultNS: "translation"
     returnNull: false
   }
 }

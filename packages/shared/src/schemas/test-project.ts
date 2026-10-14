@@ -1,34 +1,34 @@
-import { z } from 'zod'
+import { z } from "zod"
 
 // ============ 枚举定义 ============
 
-export const TestCaseProjectStatusEnum = z.enum(['ACTIVE', 'ARCHIVED'])
+export const TestCaseProjectStatusEnum = z.enum(["ACTIVE", "ARCHIVED"])
 export const TestCaseStatusEnum = z.enum([
-  'ACTIVE',
-  'PENDING_REVIEW',
-  'REVIEW_PASSED',
-  'REVIEW_FAILED',
-  'ARCHIVED'
+  "ACTIVE",
+  "PENDING_REVIEW",
+  "REVIEW_PASSED",
+  "REVIEW_FAILED",
+  "ARCHIVED",
 ])
-export const VersionStatusEnum = z.enum(['UNRELEASED', 'RELEASED', 'ARCHIVED'])
+export const VersionStatusEnum = z.enum(["UNRELEASED", "RELEASED", "ARCHIVED"])
 // 计划状态根据执行情况自动计算
 // DRAFT 和 ARCHIVED 保留用于兼容旧数据
 export const TestPlanStatusEnum = z.enum([
-  'DRAFT', // 旧状态，等同于 NOT_STARTED
-  'NOT_STARTED', // 所有用例都是未执行状态
-  'IN_PROGRESS', // 有部分用例已执行
-  'COMPLETED', // 所有用例都已执行
-  'OVERDUE', // 已超过计划结束日期但未完成
-  'ARCHIVED' // 旧状态，保留用于兼容
+  "DRAFT", // 旧状态，等同于 NOT_STARTED
+  "NOT_STARTED", // 所有用例都是未执行状态
+  "IN_PROGRESS", // 有部分用例已执行
+  "COMPLETED", // 所有用例都已执行
+  "OVERDUE", // 已超过计划结束日期但未完成
+  "ARCHIVED", // 旧状态，保留用于兼容
 ])
 export const ExecutionStatusEnum = z.enum([
-  'NOT_EXECUTED',
-  'PASSED',
-  'FAILED',
-  'BLOCKED',
-  'SKIPPED'
+  "NOT_EXECUTED",
+  "PASSED",
+  "FAILED",
+  "BLOCKED",
+  "SKIPPED",
 ])
-export const TestWorkspaceMemberRoleEnum = z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'])
+export const TestWorkspaceMemberRoleEnum = z.enum(["OWNER", "ADMIN", "MEMBER", "VIEWER"])
 
 // ============ 类型导出 ============
 
@@ -40,16 +40,12 @@ export type ExecutionStatus = z.infer<typeof ExecutionStatusEnum>
 export type TestWorkspaceMemberRole = z.infer<typeof TestWorkspaceMemberRoleEnum>
 
 export type TestCaseStatusValues =
-  | 'ACTIVE'
-  | 'PENDING_REVIEW'
-  | 'REVIEW_PASSED'
-  | 'REVIEW_FAILED'
-  | 'ARCHIVED'
+  "ACTIVE" | "PENDING_REVIEW" | "REVIEW_PASSED" | "REVIEW_FAILED" | "ARCHIVED"
 
 // 测试用例步骤结构
 export const TestCaseStepSchema = z.object({
   action: z.string(),
-  expected: z.string()
+  expected: z.string(),
 })
 
 export type TestCaseStep = z.infer<typeof TestCaseStepSchema>
@@ -70,13 +66,13 @@ export const TestPlanCaseSnapshotSchema = z.object({
     .array(
       z.object({
         action: z.string(),
-        expected: z.string()
+        expected: z.string(),
       })
     )
     .nullable(),
   moduleName: z.string().nullable(),
   creatorName: z.string().nullable(),
-  snapshotCreatedAt: z.date()
+  snapshotCreatedAt: z.date(),
 })
 
 export type TestPlanCaseSnapshot = z.infer<typeof TestPlanCaseSnapshotSchema>
@@ -89,7 +85,7 @@ export const TestPlanCaseSchema = z.object({
   executionStatus: ExecutionStatusEnum,
   executionNotes: z.string().nullable(),
   createdAt: z.date(),
-  snapshot: TestPlanCaseSnapshotSchema
+  snapshot: TestPlanCaseSnapshotSchema,
 })
 
 export type TestPlanCase = z.infer<typeof TestPlanCaseSchema>
@@ -105,7 +101,7 @@ export const GetAvailableCasesInputSchema = z.object({
   priority: z.number().int().min(1).max(3).optional(),
   status: TestCaseStatusEnum.optional(),
   page: z.number().min(1).default(1),
-  pageSize: z.number().min(1).max(100).default(20)
+  pageSize: z.number().min(1).max(100).default(20),
 })
 
 export type GetAvailableCasesInput = z.infer<typeof GetAvailableCasesInputSchema>
@@ -119,7 +115,7 @@ export const ListPlanCasesInputSchema = z.object({
   priority: z.number().int().min(1).max(3).optional(),
   assignedToIds: z.array(z.string()).optional(),
   page: z.number().min(1).default(1),
-  pageSize: z.number().min(1).max(9999).default(20)
+  pageSize: z.number().min(1).max(9999).default(20),
 })
 
 export type ListPlanCasesInput = z.infer<typeof ListPlanCasesInputSchema>
@@ -128,7 +124,7 @@ export type ListPlanCasesInput = z.infer<typeof ListPlanCasesInputSchema>
 export const AddCasesToPlanInputSchema = z.object({
   testPlanId: z.string().cuid(),
   workspaceId: z.string().cuid(), // 用于权限检查
-  testCaseIds: z.array(z.string().cuid())
+  testCaseIds: z.array(z.string().cuid()),
 })
 
 export type AddCasesToPlanInput = z.infer<typeof AddCasesToPlanInputSchema>
@@ -138,7 +134,7 @@ export const AddCasesByModuleInputSchema = z.object({
   testPlanId: z.string().cuid(),
   workspaceId: z.string().cuid(), // 用于权限检查
   moduleId: z.string().cuid(),
-  includeSubmodules: z.boolean().default(true)
+  includeSubmodules: z.boolean().default(true),
 })
 
 export type AddCasesByModuleInput = z.infer<typeof AddCasesByModuleInputSchema>
@@ -148,7 +144,7 @@ export const UpdateExecutionStatusInputSchema = z.object({
   workspaceId: z.string().cuid(), // 用于权限检查
   planCaseIds: z.array(z.string().cuid()),
   executionStatus: ExecutionStatusEnum,
-  executionNotes: z.string().optional()
+  executionNotes: z.string().optional(),
 })
 
 export type UpdateExecutionStatusInput = z.infer<typeof UpdateExecutionStatusInputSchema>
@@ -159,7 +155,7 @@ export type UpdateExecutionStatusInput = z.infer<typeof UpdateExecutionStatusInp
 export const BatchAssignInputSchema = z.object({
   testPlanId: z.string().cuid(),
   planCaseIds: z.array(z.string().cuid()).min(1),
-  assigneeId: z.string()
+  assigneeId: z.string(),
 })
 
 export type BatchAssignInput = z.infer<typeof BatchAssignInputSchema>
@@ -167,7 +163,7 @@ export type BatchAssignInput = z.infer<typeof BatchAssignInputSchema>
 // 更新单个指派输入
 export const UpdateAssigneeInputSchema = z.object({
   planCaseId: z.string().cuid(),
-  assigneeId: z.string().optional()
+  assigneeId: z.string().optional(),
 })
 
 export type UpdateAssigneeInput = z.infer<typeof UpdateAssigneeInputSchema>
@@ -177,19 +173,19 @@ export interface AssignmentStats {
   total: number
   assigned: number
   unassigned: number
-  byAssignee: Array<{
+  byAssignee: {
     userId: string
     userName: string
     userAvatar: string | null
     count: number
-  }>
+  }[]
 }
 
 // 我的用例列表输入
 export const MyCasesListInputSchema = z.object({
   testPlanId: z.string().cuid(),
   page: z.number().min(1).default(1),
-  pageSize: z.number().min(1).max(100).default(20)
+  pageSize: z.number().min(1).max(100).default(20),
 })
 
 export type MyCasesListInput = z.infer<typeof MyCasesListInputSchema>
@@ -199,7 +195,7 @@ export type MyCasesListInput = z.infer<typeof MyCasesListInputSchema>
 // 批量更新执行状态
 export const BatchUpdateStatusInputSchema = z.object({
   planCaseIds: z.array(z.string().cuid()).min(1),
-  executionStatus: z.enum(['NOT_EXECUTED', 'PASSED', 'FAILED', 'BLOCKED', 'SKIPPED'])
+  executionStatus: z.enum(["NOT_EXECUTED", "PASSED", "FAILED", "BLOCKED", "SKIPPED"]),
 })
 
 export type BatchUpdateStatusInput = z.infer<typeof BatchUpdateStatusInputSchema>
@@ -207,7 +203,7 @@ export type BatchUpdateStatusInput = z.infer<typeof BatchUpdateStatusInputSchema
 // 更新执行备注
 export const UpdateNotesInputSchema = z.object({
   planCaseId: z.string().cuid(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
 })
 
 export type UpdateNotesInput = z.infer<typeof UpdateNotesInputSchema>
@@ -244,18 +240,18 @@ export interface SnapshotCreateOptions {
 // ============ UI 自动化测试 Schemas ============
 
 // UI 测试用例优先级枚举
-export const UITestCasePriorityEnum = z.enum(['P0', 'P1', 'P2', 'P3'])
+export const UITestCasePriorityEnum = z.enum(["P0", "P1", "P2", "P3"])
 export type UITestCasePriority = z.infer<typeof UITestCasePriorityEnum>
 
 // UI 测试用例状态枚举（与 Prisma schema 一致）
-export const UITestCaseStatusEnum = z.enum(['DRAFT', 'ACTIVE', 'DISABLED', 'ARCHIVED'])
+export const UITestCaseStatusEnum = z.enum(["DRAFT", "ACTIVE", "DISABLED", "ARCHIVED"])
 export type UITestCaseStatus = z.infer<typeof UITestCaseStatusEnum>
 
 // ============ UI 测试套件 Schemas（组织用例，树形结构） ============
 
 // 获取 UI 套件列表输入
 export const UITestSuiteListInputSchema = z.object({
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestSuiteListInput = z.infer<typeof UITestSuiteListInputSchema>
 
@@ -268,7 +264,7 @@ export const UITestSuiteCreateInputSchema = z.object({
   sort: z.number().int().optional().default(0),
   // 图片识别阈值配置
   defaultConfidenceThreshold: z.number().min(0).max(1).optional(),
-  defaultMatchThreshold: z.number().min(0).max(1).optional()
+  defaultMatchThreshold: z.number().min(0).max(1).optional(),
 })
 export type UITestSuiteCreateInput = z.infer<typeof UITestSuiteCreateInputSchema>
 
@@ -281,14 +277,14 @@ export const UITestSuiteUpdateInputSchema = z.object({
   sort: z.number().int().optional(),
   // 图片识别阈值配置
   defaultConfidenceThreshold: z.number().min(0).max(1).optional().nullable(),
-  defaultMatchThreshold: z.number().min(0).max(1).optional().nullable()
+  defaultMatchThreshold: z.number().min(0).max(1).optional().nullable(),
 })
 export type UITestSuiteUpdateInput = z.infer<typeof UITestSuiteUpdateInputSchema>
 
 // 删除 UI 套件输入
 export const UITestSuiteDeleteInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestSuiteDeleteInput = z.infer<typeof UITestSuiteDeleteInputSchema>
 
@@ -296,7 +292,7 @@ export type UITestSuiteDeleteInput = z.infer<typeof UITestSuiteDeleteInputSchema
 export const UITestSuiteMoveInputSchema = z.object({
   id: z.string().cuid(),
   workspaceId: z.string().cuid(),
-  newParentId: z.string().cuid().optional().nullable()
+  newParentId: z.string().cuid().optional().nullable(),
 })
 export type UITestSuiteMoveInput = z.infer<typeof UITestSuiteMoveInputSchema>
 
@@ -306,16 +302,16 @@ export const UITestSuiteBatchUpdateSortInputSchema = z.object({
   updates: z.array(
     z.object({
       id: z.string().cuid(),
-      sort: z.number().int()
+      sort: z.number().int(),
     })
-  )
+  ),
 })
 export type UITestSuiteBatchUpdateSortInput = z.infer<typeof UITestSuiteBatchUpdateSortInputSchema>
 
 // 获取 UI 套件详情输入
 export const UITestSuiteGetInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestSuiteGetInput = z.infer<typeof UITestSuiteGetInputSchema>
 
@@ -330,21 +326,21 @@ export const UITestCaseListInputSchema = z.object({
   search: z.string().optional(),
   createdBy: z.string().optional(),
   priority: UITestCasePriorityEnum.optional(),
-  status: UITestCaseStatusEnum.optional()
+  status: UITestCaseStatusEnum.optional(),
 })
 export type UITestCaseListInput = z.infer<typeof UITestCaseListInputSchema>
 
 // 获取 UI 用例详情输入
 export const UITestCaseGetInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestCaseGetInput = z.infer<typeof UITestCaseGetInputSchema>
 
 // 图片识别阈值配置 Schema（可复用）
 export const ThresholdConfigSchema = z.object({
   defaultConfidenceThreshold: z.number().min(0).max(1).optional().nullable(),
-  defaultMatchThreshold: z.number().min(0).max(1).optional().nullable()
+  defaultMatchThreshold: z.number().min(0).max(1).optional().nullable(),
 })
 export type ThresholdConfig = z.infer<typeof ThresholdConfigSchema>
 
@@ -354,10 +350,10 @@ export const UITestCaseCreateInputSchema = z.object({
   suiteId: z.string().cuid().optional().nullable(),
   name: z.string().min(1).max(200),
   description: z.string().optional(),
-  priority: UITestCasePriorityEnum.optional().default('P2'),
+  priority: UITestCasePriorityEnum.optional().default("P2"),
   // 图片识别阈值配置
   defaultConfidenceThreshold: z.number().min(0).max(1).optional(),
-  defaultMatchThreshold: z.number().min(0).max(1).optional()
+  defaultMatchThreshold: z.number().min(0).max(1).optional(),
 })
 export type UITestCaseCreateInput = z.infer<typeof UITestCaseCreateInputSchema>
 
@@ -372,14 +368,14 @@ export const UITestCaseUpdateInputSchema = z.object({
   status: UITestCaseStatusEnum.optional(),
   // 图片识别阈值配置
   defaultConfidenceThreshold: z.number().min(0).max(1).optional().nullable(),
-  defaultMatchThreshold: z.number().min(0).max(1).optional().nullable()
+  defaultMatchThreshold: z.number().min(0).max(1).optional().nullable(),
 })
 export type UITestCaseUpdateInput = z.infer<typeof UITestCaseUpdateInputSchema>
 
 // 删除 UI 用例输入
 export const UITestCaseDeleteInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestCaseDeleteInput = z.infer<typeof UITestCaseDeleteInputSchema>
 
@@ -389,14 +385,14 @@ export type UITestCaseDeleteInput = z.infer<typeof UITestCaseDeleteInputSchema>
 export const UITestPlanListInputSchema = z.object({
   workspaceId: z.string().cuid(),
   page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().max(100).default(50)
+  limit: z.number().int().positive().max(100).default(50),
 })
 export type UITestPlanListInput = z.infer<typeof UITestPlanListInputSchema>
 
 // 获取 UI 计划详情输入
 export const UITestPlanGetInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestPlanGetInput = z.infer<typeof UITestPlanGetInputSchema>
 
@@ -407,7 +403,7 @@ export const UITestPlanCreateInputSchema = z.object({
   description: z.string().optional(),
   // 图片识别阈值配置
   defaultConfidenceThreshold: z.number().min(0).max(1).optional(),
-  defaultMatchThreshold: z.number().min(0).max(1).optional()
+  defaultMatchThreshold: z.number().min(0).max(1).optional(),
 })
 export type UITestPlanCreateInput = z.infer<typeof UITestPlanCreateInputSchema>
 
@@ -419,14 +415,14 @@ export const UITestPlanUpdateInputSchema = z.object({
   description: z.string().optional().nullable(),
   // 图片识别阈值配置
   defaultConfidenceThreshold: z.number().min(0).max(1).optional().nullable(),
-  defaultMatchThreshold: z.number().min(0).max(1).optional().nullable()
+  defaultMatchThreshold: z.number().min(0).max(1).optional().nullable(),
 })
 export type UITestPlanUpdateInput = z.infer<typeof UITestPlanUpdateInputSchema>
 
 // 删除 UI 计划输入
 export const UITestPlanDeleteInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestPlanDeleteInput = z.infer<typeof UITestPlanDeleteInputSchema>
 
@@ -434,7 +430,7 @@ export type UITestPlanDeleteInput = z.infer<typeof UITestPlanDeleteInputSchema>
 export const UITestPlanAddCasesInputSchema = z.object({
   planId: z.string().cuid(),
   workspaceId: z.string().cuid(),
-  caseIds: z.array(z.string().cuid()).min(1)
+  caseIds: z.array(z.string().cuid()).min(1),
 })
 export type UITestPlanAddCasesInput = z.infer<typeof UITestPlanAddCasesInputSchema>
 
@@ -442,7 +438,7 @@ export type UITestPlanAddCasesInput = z.infer<typeof UITestPlanAddCasesInputSche
 export const UITestPlanRemoveCasesInputSchema = z.object({
   planId: z.string().cuid(),
   workspaceId: z.string().cuid(),
-  caseIds: z.array(z.string().cuid()).min(1)
+  caseIds: z.array(z.string().cuid()).min(1),
 })
 export type UITestPlanRemoveCasesInput = z.infer<typeof UITestPlanRemoveCasesInputSchema>
 
@@ -450,7 +446,7 @@ export type UITestPlanRemoveCasesInput = z.infer<typeof UITestPlanRemoveCasesInp
 export const UITestPlanReorderCasesInputSchema = z.object({
   planId: z.string().cuid(),
   workspaceId: z.string().cuid(),
-  caseIds: z.array(z.string().cuid()) // 按顺序排列的用例 ID
+  caseIds: z.array(z.string().cuid()), // 按顺序排列的用例 ID
 })
 export type UITestPlanReorderCasesInput = z.infer<typeof UITestPlanReorderCasesInputSchema>
 
@@ -459,7 +455,7 @@ export const UITestPlanToggleCaseInputSchema = z.object({
   planId: z.string().cuid(),
   workspaceId: z.string().cuid(),
   caseId: z.string().cuid(),
-  isEnabled: z.boolean()
+  isEnabled: z.boolean(),
 })
 export type UITestPlanToggleCaseInput = z.infer<typeof UITestPlanToggleCaseInputSchema>
 
@@ -469,46 +465,46 @@ export type UITestPlanToggleCaseInput = z.infer<typeof UITestPlanToggleCaseInput
 export const AgentCapabilitiesSchema = z.object({
   pythonAvailable: z.boolean(),
   pythonVersion: z.string(),
-  pythonPath: z.string()
+  pythonPath: z.string(),
 })
 export type AgentCapabilities = z.infer<typeof AgentCapabilitiesSchema>
 
 // UI 定位类型枚举（与 Prisma schema 一致）
-export const UILocationTypeEnum = z.enum(['OCR', 'IMAGE', 'SCRIPT'])
+export const UILocationTypeEnum = z.enum(["OCR", "IMAGE", "SCRIPT"])
 export type UILocationType = z.infer<typeof UILocationTypeEnum>
 
 // UI 动作类型枚举（与 Prisma schema 一致）
 export const UIActionTypeEnum = z.enum([
-  'CLICK',
-  'DOUBLE_CLICK',
-  'RIGHT_CLICK',
-  'HOVER',
-  'DRAG',
-  'INPUT',
-  'WAIT',
-  'KEYBOARD',
-  'LAUNCH_APP',
-  'CLOSE_APP',
-  'SCREENSHOT',
-  'ASSERT',
-  'RUN_PYTHON'
+  "CLICK",
+  "DOUBLE_CLICK",
+  "RIGHT_CLICK",
+  "HOVER",
+  "DRAG",
+  "INPUT",
+  "WAIT",
+  "KEYBOARD",
+  "LAUNCH_APP",
+  "CLOSE_APP",
+  "SCREENSHOT",
+  "ASSERT",
+  "RUN_PYTHON",
 ])
 export type UIActionType = z.infer<typeof UIActionTypeEnum>
 
 // 不需要定位器的操作类型（系统定位器）
 export const NO_LOCATOR_ACTION_TYPES: UIActionType[] = [
-  'WAIT',
-  'KEYBOARD',
-  'LAUNCH_APP',
-  'CLOSE_APP',
-  'SCREENSHOT',
-  'ASSERT'
+  "WAIT",
+  "KEYBOARD",
+  "LAUNCH_APP",
+  "CLOSE_APP",
+  "SCREENSHOT",
+  "ASSERT",
 ]
 
 // 获取 UI 测试步骤列表输入
 export const UITestStepListInputSchema = z.object({
   testCaseId: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestStepListInput = z.infer<typeof UITestStepListInputSchema>
 
@@ -541,7 +537,7 @@ export const UITestStepCreateInputSchema = z.object({
   description: z.string().optional().nullable(),
   clearBeforeInput: z.boolean().optional().default(false),
   retryCount: z.number().int().optional().default(3),
-  timeout: z.number().optional().default(10.0)
+  timeout: z.number().optional().default(10),
 })
 export type UITestStepCreateInput = z.infer<typeof UITestStepCreateInputSchema>
 
@@ -573,14 +569,14 @@ export const UITestStepUpdateInputSchema = z.object({
   description: z.string().optional().nullable(),
   clearBeforeInput: z.boolean().optional(),
   retryCount: z.number().int().optional(),
-  timeout: z.number().optional()
+  timeout: z.number().optional(),
 })
 export type UITestStepUpdateInput = z.infer<typeof UITestStepUpdateInputSchema>
 
 // 删除 UI 测试步骤输入
 export const UITestStepDeleteInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestStepDeleteInput = z.infer<typeof UITestStepDeleteInputSchema>
 
@@ -591,9 +587,9 @@ export const UITestStepReorderInputSchema = z.object({
   stepOrders: z.array(
     z.object({
       id: z.string().cuid(),
-      order: z.number().int()
+      order: z.number().int(),
     })
-  )
+  ),
 })
 export type UITestStepReorderInput = z.infer<typeof UITestStepReorderInputSchema>
 
@@ -603,14 +599,14 @@ export type UITestStepReorderInput = z.infer<typeof UITestStepReorderInputSchema
 export const UITestStepLocatorSchema = z.object({
   id: z.string(),
   name: z.string(),
-  locationType: UILocationTypeEnum
+  locationType: UILocationTypeEnum,
 })
 export type UITestStepLocator = z.infer<typeof UITestStepLocatorSchema>
 
 // JSON 值类型（兼容 Prisma 的 JsonValue）
 // 不递归 — Zod 4 + TS 在深递归 union 上会报 "excessively deep" 实例化错误
 // 实务上 actionParams 等存的是单层 object，足够覆盖
-export type JsonValue = string | number | boolean | null | { [k: string]: unknown } | unknown[]
+export type JsonValue = string | number | boolean | unknown[] | Record<string, unknown> | null
 const JsonValueSchema = z.custom<JsonValue>()
 
 // 单个步骤的完整数据
@@ -632,14 +628,14 @@ export const UITestStepSchema = z.object({
   timeout: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  locator: UITestStepLocatorSchema.nullable()
+  locator: UITestStepLocatorSchema.nullable(),
 })
 export type UITestStep = z.infer<typeof UITestStepSchema>
 
 // 步骤列表返回
 export const UITestStepListOutputSchema = z.object({
   success: z.boolean(),
-  data: z.array(UITestStepSchema)
+  data: z.array(UITestStepSchema),
 })
 export type UITestStepListOutput = z.infer<typeof UITestStepListOutputSchema>
 
@@ -647,13 +643,13 @@ export type UITestStepListOutput = z.infer<typeof UITestStepListOutputSchema>
 
 // 获取定位器模块列表输入（返回扁平数据）
 export const UILocatorModuleListInputSchema = z.object({
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UILocatorModuleListInput = z.infer<typeof UILocatorModuleListInputSchema>
 
 // 获取定位器模块树输入（保留兼容）
 export const UILocatorModuleTreeInputSchema = z.object({
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UILocatorModuleTreeInput = z.infer<typeof UILocatorModuleTreeInputSchema>
 
@@ -662,7 +658,7 @@ export const UILocatorModuleCreateInputSchema = z.object({
   workspaceId: z.string().cuid(),
   parentModuleId: z.string().cuid().optional().nullable(),
   name: z.string().min(1).max(100),
-  description: z.string().optional().nullable()
+  description: z.string().optional().nullable(),
 })
 export type UILocatorModuleCreateInput = z.infer<typeof UILocatorModuleCreateInputSchema>
 
@@ -672,14 +668,14 @@ export const UILocatorModuleUpdateInputSchema = z.object({
   workspaceId: z.string().cuid(),
   name: z.string().min(1).max(100).optional(),
   description: z.string().optional().nullable(),
-  parentModuleId: z.string().cuid().optional().nullable()
+  parentModuleId: z.string().cuid().optional().nullable(),
 })
 export type UILocatorModuleUpdateInput = z.infer<typeof UILocatorModuleUpdateInputSchema>
 
 // 删除定位器模块输入
 export const UILocatorModuleDeleteInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UILocatorModuleDeleteInput = z.infer<typeof UILocatorModuleDeleteInputSchema>
 
@@ -687,7 +683,7 @@ export type UILocatorModuleDeleteInput = z.infer<typeof UILocatorModuleDeleteInp
 export const UILocatorModuleMoveInputSchema = z.object({
   id: z.string().cuid(),
   workspaceId: z.string().cuid(),
-  newParentId: z.string().cuid().optional().nullable()
+  newParentId: z.string().cuid().optional().nullable(),
 })
 export type UILocatorModuleMoveInput = z.infer<typeof UILocatorModuleMoveInputSchema>
 
@@ -697,9 +693,9 @@ export const UILocatorModuleBatchUpdateSortInputSchema = z.object({
   updates: z.array(
     z.object({
       id: z.string().cuid(),
-      sort: z.number().int()
+      sort: z.number().int(),
     })
-  )
+  ),
 })
 export type UILocatorModuleBatchUpdateSortInput = z.infer<
   typeof UILocatorModuleBatchUpdateSortInputSchema
@@ -714,7 +710,7 @@ export const UILocatorModuleSchema = z.object({
   description: z.string().nullable(),
   order: z.number(),
   createdAt: z.string(),
-  updatedAt: z.string()
+  updatedAt: z.string(),
 })
 export type UILocatorModule = z.infer<typeof UILocatorModuleSchema>
 
@@ -726,14 +722,14 @@ export const UILocatorModuleListItemSchema = z.object({
   description: z.string().nullable(),
   level: z.number().int(), // 计算得出
   sort: z.number().int(), // 映射自 order
-  itemCount: z.number().int().optional() // 定位器数量
+  itemCount: z.number().int().optional(), // 定位器数量
 })
 export type UILocatorModuleListItem = z.infer<typeof UILocatorModuleListItemSchema>
 
 // 定位器模块列表返回
 export const UILocatorModuleListOutputSchema = z.object({
   success: z.boolean(),
-  data: z.array(UILocatorModuleListItemSchema)
+  data: z.array(UILocatorModuleListItemSchema),
 })
 export type UILocatorModuleListOutput = z.infer<typeof UILocatorModuleListOutputSchema>
 
@@ -752,7 +748,7 @@ export const UILocatorModuleTreeNodeSchema: z.ZodType<UILocatorModuleTreeNode> =
     id: z.string(),
     name: z.string(),
     description: z.string().nullable(),
-    children: z.array(UILocatorModuleTreeNodeSchema)
+    children: z.array(UILocatorModuleTreeNodeSchema),
   })
 ) as unknown as z.ZodType<UILocatorModuleTreeNode>
 
@@ -769,7 +765,7 @@ export const UILocatorConfigSchema = z.object({
   imageClickGrid: z.string().optional().nullable(),
   // SCRIPT 参数（Python 代码）
   code: z.string().optional().nullable(),
-  timeout: z.number().optional().nullable()
+  timeout: z.number().optional().nullable(),
 })
 export type UILocatorConfig = z.infer<typeof UILocatorConfigSchema>
 
@@ -780,14 +776,14 @@ export const UILocatorListInputSchema = z.object({
   search: z.string().optional(),
   locationType: UILocationTypeEnum.optional(),
   page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().max(100).default(50)
+  limit: z.number().int().positive().max(100).default(50),
 })
 export type UILocatorListInput = z.infer<typeof UILocatorListInputSchema>
 
 // 获取单个定位器输入
 export const UILocatorGetInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UILocatorGetInput = z.infer<typeof UILocatorGetInputSchema>
 
@@ -797,7 +793,7 @@ export const UILocatorCreateInputSchema = z.object({
   moduleId: z.string().cuid().optional().nullable(),
   name: z.string().min(1).max(100),
   locationType: UILocationTypeEnum,
-  locationConfig: UILocatorConfigSchema
+  locationConfig: UILocatorConfigSchema,
 })
 export type UILocatorCreateInput = z.infer<typeof UILocatorCreateInputSchema>
 
@@ -808,14 +804,14 @@ export const UILocatorUpdateInputSchema = z.object({
   moduleId: z.string().cuid().optional().nullable(),
   name: z.string().min(1).max(100).optional(),
   locationType: UILocationTypeEnum.optional(),
-  locationConfig: UILocatorConfigSchema.optional()
+  locationConfig: UILocatorConfigSchema.optional(),
 })
 export type UILocatorUpdateInput = z.infer<typeof UILocatorUpdateInputSchema>
 
 // 删除定位器输入
 export const UILocatorDeleteInputSchema = z.object({
   id: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UILocatorDeleteInput = z.infer<typeof UILocatorDeleteInputSchema>
 
@@ -834,18 +830,18 @@ export const UILocatorSchema = z.object({
   module: z
     .object({
       id: z.string(),
-      name: z.string()
+      name: z.string(),
     })
     .nullable(),
   creator: z.object({
     id: z.string(),
-    name: z.string().nullable()
+    name: z.string().nullable(),
   }),
   _count: z
     .object({
-      steps: z.number()
+      steps: z.number(),
     })
-    .optional()
+    .optional(),
 })
 export type UILocator = z.infer<typeof UILocatorSchema>
 
@@ -855,7 +851,7 @@ export const UILocatorListOutputSchema = z.object({
   data: z.array(UILocatorSchema),
   total: z.number(),
   page: z.number(),
-  limit: z.number()
+  limit: z.number(),
 })
 export type UILocatorListOutput = z.infer<typeof UILocatorListOutputSchema>
 
@@ -863,26 +859,26 @@ export type UILocatorListOutput = z.infer<typeof UILocatorListOutputSchema>
 
 // Worker 任务类型枚举
 export const WorkerTaskTypeEnum = z.enum([
-  'click_image',
-  'click_text',
-  'type_text',
-  'key_press',
-  'screenshot',
-  'wait_image',
-  'wait_text',
-  'wait_time',
-  'mouse_move',
-  'mouse_click',
-  'activate_app',
-  'close_app',
-  'grid_click',
-  'image_exists',
-  'text_exists',
-  'get_clipboard',
-  'set_clipboard',
-  'assert_image',
-  'assert_text',
-  'run_python'
+  "click_image",
+  "click_text",
+  "type_text",
+  "key_press",
+  "screenshot",
+  "wait_image",
+  "wait_text",
+  "wait_time",
+  "mouse_move",
+  "mouse_click",
+  "activate_app",
+  "close_app",
+  "grid_click",
+  "image_exists",
+  "text_exists",
+  "get_clipboard",
+  "set_clipboard",
+  "assert_image",
+  "assert_text",
+  "run_python",
 ])
 export type WorkerTaskType = z.infer<typeof WorkerTaskTypeEnum>
 
@@ -892,40 +888,40 @@ export const UI_ACTION_TO_WORKER_TASK: Record<
   { locationType: UILocationType | null; taskType: WorkerTaskType }[]
 > = {
   CLICK: [
-    { locationType: 'OCR', taskType: 'click_text' },
-    { locationType: 'IMAGE', taskType: 'click_image' },
-    { locationType: null, taskType: 'mouse_click' }
+    { locationType: "OCR", taskType: "click_text" },
+    { locationType: "IMAGE", taskType: "click_image" },
+    { locationType: null, taskType: "mouse_click" },
   ],
   DOUBLE_CLICK: [
-    { locationType: 'OCR', taskType: 'click_text' },
-    { locationType: 'IMAGE', taskType: 'click_image' },
-    { locationType: null, taskType: 'mouse_click' }
+    { locationType: "OCR", taskType: "click_text" },
+    { locationType: "IMAGE", taskType: "click_image" },
+    { locationType: null, taskType: "mouse_click" },
   ],
   RIGHT_CLICK: [
-    { locationType: 'OCR', taskType: 'click_text' },
-    { locationType: 'IMAGE', taskType: 'click_image' },
-    { locationType: null, taskType: 'mouse_click' }
+    { locationType: "OCR", taskType: "click_text" },
+    { locationType: "IMAGE", taskType: "click_image" },
+    { locationType: null, taskType: "mouse_click" },
   ],
-  HOVER: [{ locationType: null, taskType: 'mouse_move' }],
-  DRAG: [{ locationType: null, taskType: 'mouse_move' }],
-  INPUT: [{ locationType: null, taskType: 'type_text' }],
+  HOVER: [{ locationType: null, taskType: "mouse_move" }],
+  DRAG: [{ locationType: null, taskType: "mouse_move" }],
+  INPUT: [{ locationType: null, taskType: "type_text" }],
   WAIT: [
-    { locationType: 'IMAGE', taskType: 'wait_image' },
-    { locationType: 'OCR', taskType: 'wait_text' },
-    { locationType: null, taskType: 'wait_time' }
+    { locationType: "IMAGE", taskType: "wait_image" },
+    { locationType: "OCR", taskType: "wait_text" },
+    { locationType: null, taskType: "wait_time" },
   ],
-  KEYBOARD: [{ locationType: null, taskType: 'key_press' }],
-  LAUNCH_APP: [{ locationType: null, taskType: 'activate_app' }],
-  CLOSE_APP: [{ locationType: null, taskType: 'close_app' }],
-  SCREENSHOT: [{ locationType: null, taskType: 'screenshot' }],
+  KEYBOARD: [{ locationType: null, taskType: "key_press" }],
+  LAUNCH_APP: [{ locationType: null, taskType: "activate_app" }],
+  CLOSE_APP: [{ locationType: null, taskType: "close_app" }],
+  SCREENSHOT: [{ locationType: null, taskType: "screenshot" }],
   ASSERT: [
-    { locationType: 'IMAGE', taskType: 'assert_image' },
-    { locationType: 'OCR', taskType: 'assert_text' }
+    { locationType: "IMAGE", taskType: "assert_image" },
+    { locationType: "OCR", taskType: "assert_text" },
   ],
   RUN_PYTHON: [
-    { locationType: 'SCRIPT', taskType: 'run_python' },
-    { locationType: null, taskType: 'run_python' }
-  ]
+    { locationType: "SCRIPT", taskType: "run_python" },
+    { locationType: null, taskType: "run_python" },
+  ],
 }
 
 // 根据 UIActionType 和定位类型获取 WorkerTaskType
@@ -934,11 +930,15 @@ export function getWorkerTaskType(
   locationType: UILocationType | null
 ): WorkerTaskType | null {
   const mappings = UI_ACTION_TO_WORKER_TASK[action]
-  if (!mappings) return null
+  if (!mappings) {
+    return null
+  }
 
   // 优先匹配定位类型
   const exactMatch = mappings.find(m => m.locationType === locationType)
-  if (exactMatch) return exactMatch.taskType
+  if (exactMatch) {
+    return exactMatch.taskType
+  }
 
   // 如果没有精确匹配，使用 null 定位类型的默认映射
   const defaultMatch = mappings.find(m => m.locationType === null)
@@ -947,19 +947,19 @@ export function getWorkerTaskType(
 
 // 所有可用的操作类型
 const ALL_UI_ACTION_TYPES: UIActionType[] = [
-  'CLICK',
-  'DOUBLE_CLICK',
-  'RIGHT_CLICK',
-  'HOVER',
-  'DRAG',
-  'INPUT',
-  'WAIT',
-  'KEYBOARD',
-  'LAUNCH_APP',
-  'CLOSE_APP',
-  'SCREENSHOT',
-  'ASSERT',
-  'RUN_PYTHON'
+  "CLICK",
+  "DOUBLE_CLICK",
+  "RIGHT_CLICK",
+  "HOVER",
+  "DRAG",
+  "INPUT",
+  "WAIT",
+  "KEYBOARD",
+  "LAUNCH_APP",
+  "CLOSE_APP",
+  "SCREENSHOT",
+  "ASSERT",
+  "RUN_PYTHON",
 ]
 
 /**
@@ -977,7 +977,9 @@ export function getAvailableActionsForLocationType(
 
   return ALL_UI_ACTION_TYPES.filter(action => {
     const mappings = UI_ACTION_TO_WORKER_TASK[action]
-    if (!mappings) return false
+    if (!mappings) {
+      return false
+    }
 
     // 精确匹配：只返回明确支持该定位器类型的操作
     // 不再fallback到 locationType === null 的映射，避免 SCRIPT 定位器显示 CLICK 等不相关操作
@@ -994,8 +996,7 @@ export function getCompatibleLocatorTypesForAction(
   action: UIActionType
 ): (UILocationType | null)[] {
   const mappings = UI_ACTION_TO_WORKER_TASK[action]
-  if (!mappings) return []
-  return mappings.map(m => m.locationType)
+  return mappings ? mappings.map(m => m.locationType) : []
 }
 
 /**
@@ -1013,18 +1014,18 @@ export function isActionCompatibleWithLocator(
 export const UITestStepExecuteInputSchema = z.object({
   stepId: z.string().cuid(),
   workspaceId: z.string().cuid(),
-  agentId: z.string().cuid()
+  agentId: z.string().cuid(),
 })
 export type UITestStepExecuteInput = z.infer<typeof UITestStepExecuteInputSchema>
 
 // 执行结果状态
 export const StepExecutionStatusEnum = z.enum([
-  'PENDING',
-  'RUNNING',
-  'SUCCESS',
-  'FAILED',
-  'CANCELLED',
-  'TIMEOUT'
+  "PENDING",
+  "RUNNING",
+  "SUCCESS",
+  "FAILED",
+  "CANCELLED",
+  "TIMEOUT",
 ])
 export type StepExecutionStatus = z.infer<typeof StepExecutionStatusEnum>
 
@@ -1035,7 +1036,7 @@ export const UITestStepExecuteResultSchema = z.object({
   message: z.string().optional(),
   durationMs: z.number().optional(),
   screenshot: z.string().optional(), // Base64 截图
-  result: z.record(z.string(), z.unknown()).optional()
+  result: z.record(z.string(), z.unknown()).optional(),
 })
 export type UITestStepExecuteResult = z.infer<typeof UITestStepExecuteResultSchema>
 
@@ -1044,7 +1045,7 @@ export const UITestTaskCancelInputSchema = z.object({
   taskId: z.string(),
   workspaceId: z.string().cuid(),
   agentId: z.string().cuid(),
-  reason: z.string().optional()
+  reason: z.string().optional(),
 })
 export type UITestTaskCancelInput = z.infer<typeof UITestTaskCancelInputSchema>
 
@@ -1052,19 +1053,19 @@ export type UITestTaskCancelInput = z.infer<typeof UITestTaskCancelInputSchema>
 
 // 执行状态枚举（与 Prisma schema 保持一致）
 export const UIExecutionStatusEnum = z.enum([
-  'PENDING',
-  'RUNNING',
-  'SUCCESS',
-  'FAILED',
-  'SKIPPED',
-  'CANCELLED'
+  "PENDING",
+  "RUNNING",
+  "SUCCESS",
+  "FAILED",
+  "SKIPPED",
+  "CANCELLED",
 ])
 export type UIExecutionStatus = z.infer<typeof UIExecutionStatusEnum>
 
 // ============ Agent 执行状态 Schemas ============
 
 // Agent 执行状态枚举
-export const AgentExecutionStatusEnum = z.enum(['IDLE', 'BUSY', 'PAUSED'])
+export const AgentExecutionStatusEnum = z.enum(["IDLE", "BUSY", "PAUSED"])
 export type AgentExecutionStatus = z.infer<typeof AgentExecutionStatusEnum>
 
 // Agent 执行状态详情
@@ -1073,7 +1074,7 @@ export const AgentExecutionInfoSchema = z.object({
   currentTaskId: z.string().optional(),
   currentTaskType: z.string().optional(),
   taskStartedAt: z.number().optional(),
-  runningTasksCount: z.number()
+  runningTasksCount: z.number(),
 })
 export type AgentExecutionInfo = z.infer<typeof AgentExecutionInfoSchema>
 
@@ -1082,7 +1083,7 @@ export const UIPlanExecuteInputSchema = z.object({
   planId: z.string().cuid(),
   workspaceId: z.string().cuid(),
   agentId: z.string().cuid(),
-  environmentId: z.string().cuid().optional()
+  environmentId: z.string().cuid().optional(),
 })
 export type UIPlanExecuteInput = z.infer<typeof UIPlanExecuteInputSchema>
 
@@ -1091,7 +1092,7 @@ export const UICaseExecuteInputSchema = z.object({
   caseId: z.string().cuid(),
   workspaceId: z.string().cuid(),
   agentId: z.string().cuid(),
-  environmentId: z.string().cuid().optional()
+  environmentId: z.string().cuid().optional(),
 })
 export type UICaseExecuteInput = z.infer<typeof UICaseExecuteInputSchema>
 
@@ -1099,7 +1100,7 @@ export type UICaseExecuteInput = z.infer<typeof UICaseExecuteInputSchema>
 export const UIDebugCaseInputSchema = z.object({
   caseId: z.string().cuid(),
   workspaceId: z.string().cuid(),
-  agentId: z.string().cuid()
+  agentId: z.string().cuid(),
 })
 export type UIDebugCaseInput = z.infer<typeof UIDebugCaseInputSchema>
 
@@ -1110,7 +1111,7 @@ export const UIExecutionListInputSchema = z.object({
   caseId: z.string().cuid().optional(),
   status: UIExecutionStatusEnum.optional(),
   page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(100).default(20)
+  limit: z.number().min(1).max(100).default(20),
 })
 export type UIExecutionListInput = z.infer<typeof UIExecutionListInputSchema>
 
@@ -1131,7 +1132,7 @@ export const UIPlanExecutionSchema = z.object({
   passedCases: z.number(),
   failedCases: z.number(),
   skippedCases: z.number(),
-  createdAt: z.string()
+  createdAt: z.string(),
 })
 export type UIPlanExecution = z.infer<typeof UIPlanExecutionSchema>
 
@@ -1148,7 +1149,7 @@ export const UICaseExecutionSchema = z.object({
   finishedAt: z.string().nullable(),
   durationSeconds: z.number().nullable(),
   retryCount: z.number(),
-  createdAt: z.string()
+  createdAt: z.string(),
 })
 export type UICaseExecution = z.infer<typeof UICaseExecutionSchema>
 
@@ -1163,7 +1164,7 @@ export const UIStepExecutionSchema = z.object({
   screenshot: z.string().nullable(),
   debugInfo: z.record(z.string(), z.unknown()).nullable(),
   executedAt: z.string().nullable(),
-  durationSeconds: z.number().nullable()
+  durationSeconds: z.number().nullable(),
 })
 export type UIStepExecution = z.infer<typeof UIStepExecutionSchema>
 
@@ -1172,14 +1173,14 @@ export const BoundsInfoSchema = z.object({
   x: z.number(),
   y: z.number(),
   width: z.number(),
-  height: z.number()
+  height: z.number(),
 })
 export type BoundsInfo = z.infer<typeof BoundsInfoSchema>
 
 // 位置信息（用于回放时显示点击动画）
 export const PositionInfoSchema = z.object({
   x: z.number(),
-  y: z.number()
+  y: z.number(),
 })
 export type PositionInfo = z.infer<typeof PositionInfoSchema>
 
@@ -1188,7 +1189,7 @@ export const SwipePathInfoSchema = z.object({
   startX: z.number(),
   startY: z.number(),
   endX: z.number(),
-  endY: z.number()
+  endY: z.number(),
 })
 export type SwipePathInfo = z.infer<typeof SwipePathInfoSchema>
 
@@ -1196,19 +1197,19 @@ export type SwipePathInfo = z.infer<typeof SwipePathInfoSchema>
 export const StepExecutionResultDataSchema = z.object({
   stepExecutionId: z.string().optional(),
   stepId: z.string(),
-  status: z.enum(['SUCCESS', 'FAILED', 'SKIPPED']),
+  status: z.enum(["SUCCESS", "FAILED", "SKIPPED"]),
   screenshotBefore: z.string().optional(), // Base64
   screenshotAfter: z.string().optional(), // Base64
   actionType: z.enum([
-    'click',
-    'long_press',
-    'double_click',
-    'input',
-    'swipe',
-    'assert',
-    'wait',
-    'script',
-    'other'
+    "click",
+    "long_press",
+    "double_click",
+    "input",
+    "swipe",
+    "assert",
+    "wait",
+    "script",
+    "other",
   ]),
   targetBounds: BoundsInfoSchema.optional(),
   clickPosition: PositionInfoSchema.optional(),
@@ -1221,8 +1222,8 @@ export const StepExecutionResultDataSchema = z.object({
   durationMs: z.number(),
   errorMessage: z.string().optional(),
   failureReason: z
-    .enum(['NOT_FOUND', 'MULTIPLE_MATCHES', 'ASSERTION_FAILED', 'PARAM_ERROR', 'SYSTEM_ERROR'])
-    .optional()
+    .enum(["NOT_FOUND", "MULTIPLE_MATCHES", "ASSERTION_FAILED", "PARAM_ERROR", "SYSTEM_ERROR"])
+    .optional(),
 })
 export type StepExecutionResultData = z.infer<typeof StepExecutionResultDataSchema>
 
@@ -1231,7 +1232,7 @@ export type StepExecutionResultData = z.infer<typeof StepExecutionResultDataSche
 // 获取测试报告输入
 export const UITestReportInputSchema = z.object({
   planExecutionId: z.string().cuid(),
-  workspaceId: z.string().cuid()
+  workspaceId: z.string().cuid(),
 })
 export type UITestReportInput = z.infer<typeof UITestReportInputSchema>
 
@@ -1246,7 +1247,7 @@ export const UIReportStatisticsSchema = z.object({
   passedSteps: z.number(),
   failedSteps: z.number(),
   totalDuration: z.number(), // 秒
-  avgCaseDuration: z.number() // 秒
+  avgCaseDuration: z.number(), // 秒
 })
 export type UIReportStatistics = z.infer<typeof UIReportStatisticsSchema>
 
@@ -1259,7 +1260,7 @@ export const UIReportCaseSummarySchema = z.object({
   totalSteps: z.number(),
   passedSteps: z.number(),
   failedSteps: z.number(),
-  errorMessage: z.string().nullable()
+  errorMessage: z.string().nullable(),
 })
 export type UIReportCaseSummary = z.infer<typeof UIReportCaseSummarySchema>
 
@@ -1274,7 +1275,7 @@ export const UITestReportSchema = z.object({
   finishedAt: z.string().nullable(),
   statistics: UIReportStatisticsSchema,
   caseSummaries: z.array(UIReportCaseSummarySchema),
-  generatedAt: z.string()
+  generatedAt: z.string(),
 })
 export type UITestReport = z.infer<typeof UITestReportSchema>
 
@@ -1286,7 +1287,7 @@ export type UITestReport = z.infer<typeof UITestReportSchema>
  * - progress: 进度更新
  * - result: 最终结果
  */
-export const ExecutionLogTypeEnum = z.enum(['ack', 'progress', 'result'])
+export const ExecutionLogTypeEnum = z.enum(["ack", "progress", "result"])
 export type ExecutionLogType = z.infer<typeof ExecutionLogTypeEnum>
 
 /**
@@ -1303,7 +1304,7 @@ export const CreateExecutionLogInputSchema = z.object({
   resultJson: z.string().optional().nullable(),
   durationMs: z.number().int().positive().optional().nullable(),
   failureReason: z.string().optional().nullable(),
-  matchLocation: z.string().optional().nullable()
+  matchLocation: z.string().optional().nullable(),
 })
 export type CreateExecutionLogInput = z.infer<typeof CreateExecutionLogInputSchema>
 
@@ -1313,7 +1314,7 @@ export type CreateExecutionLogInput = z.infer<typeof CreateExecutionLogInputSche
 export const ExecutionLogFiltersSchema = z.object({
   taskId: z.string().optional(),
   type: z.string().optional(),
-  stepId: z.string().optional()
+  stepId: z.string().optional(),
 })
 export type ExecutionLogFilters = z.infer<typeof ExecutionLogFiltersSchema>
 
@@ -1326,6 +1327,6 @@ export const GetExecutionLogsInputSchema = z.object({
   type: z.string().optional(),
   stepId: z.string().optional(),
   page: z.number().int().positive().default(1),
-  pageSize: z.number().int().positive().max(1000).default(100)
+  pageSize: z.number().int().positive().max(1000).default(100),
 })
 export type GetExecutionLogsInput = z.infer<typeof GetExecutionLogsInputSchema>

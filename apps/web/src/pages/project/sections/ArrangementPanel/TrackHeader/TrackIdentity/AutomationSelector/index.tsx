@@ -3,7 +3,7 @@ import { DropdownButton } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
 import type { Track } from "@/pages/project/model/types"
 
-export function AutomationSelector({ track }: { track: Track }) {
+export function AutomationSelector({ track }: { readonly track: Track }) {
   const { t } = useTranslation()
   const parameter = useProjectState(
     s => s.session.automationParameters[track.id] ?? track.automation[0]?.parameter ?? "volume"

@@ -15,18 +15,19 @@
  *
  * `icon` prop:卡片最左侧 h-9 图标单元格。
  */
-import { Children, type ReactNode } from "react";
-import { IconSlot } from "../IconSlot/index";
-import { cn } from "#lib/utils";
+import { Children } from "react"
+import { cn } from "#lib/utils"
+import { IconSlot } from "../IconSlot/index"
+import type { ReactNode } from "react"
 
-export type ControlGroupSeparator = "slash" | "dot" | "line" | "none";
+export type ControlGroupSeparator = "slash" | "dot" | "line" | "none"
 
 export interface ControlGroupProps {
-  children: ReactNode;
-  label?: string;
-  className?: string;
-  icon?: ReactNode;
-  separator?: ControlGroupSeparator;
+  readonly children: ReactNode
+  readonly label?: string
+  readonly className?: string
+  readonly icon?: ReactNode
+  readonly separator?: ControlGroupSeparator
 }
 
 export function ControlGroup({
@@ -36,43 +37,42 @@ export function ControlGroup({
   icon,
   separator = "none",
 }: ControlGroupProps) {
-  const items = Children.toArray(children).filter(Boolean);
+  const items = Children.toArray(children).filter(Boolean)
 
   return (
     <div
       role="group"
       aria-label={label}
       className={cn(
-        "inline-flex items-stretch overflow-hidden rounded-sm bg-muted",
+        "bg-muted inline-flex items-stretch overflow-hidden rounded-sm",
         "[&>*]:rounded-none",
-        className,
+        className
       )}
     >
       {icon ? (
-        <IconSlot className="size-control-h bg-muted text-muted-foreground">
-          {icon}
-        </IconSlot>
+        <IconSlot className="size-control-h bg-muted text-muted-foreground">{icon}</IconSlot>
       ) : null}
-      {items.flatMap((child, i) =>
-        i === 0 ? [child] : [<Sep key={`sep-${i}`} kind={separator} />, child],
+      {items.flatMap((child, index) =>
+        index === 0 ? [child] : [<Sep key={`sep-${index}`} kind={separator} />, child]
       )}
     </div>
-  );
+  )
 }
 
-function Sep({ kind }: { kind: ControlGroupSeparator }) {
-  if (kind === "none") return null;
-  if (kind === "line")
-    return (
-      <span aria-hidden className="w-px shrink-0 self-stretch bg-border/60" />
-    );
-  const glyph = kind === "slash" ? "/" : ".";
+function Sep({ kind }: { readonly kind: ControlGroupSeparator }) {
+  if (kind === "none") {
+    return null
+  }
+  if (kind === "line") {
+    return <span aria-hidden className="bg-border/60 w-px shrink-0 self-stretch" />
+  }
+  const glyph = kind === "slash" ? "/" : "."
   return (
     <span
       aria-hidden
-      className="flex shrink-0 select-none items-center bg-muted text-xs leading-none text-muted-foreground"
+      className="bg-muted text-muted-foreground flex shrink-0 items-center text-xs leading-none select-none"
     >
       {glyph}
     </span>
-  );
+  )
 }

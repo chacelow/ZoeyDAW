@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from './input-otp'
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "./input-otp"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof InputOTP> = {
-  title: 'Form/InputOTP',
+  title: "Form/InputOTP",
   component: InputOTP,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -25,7 +25,7 @@ export const SixDigits: Story = {
         <InputOTPSlot index={5} />
       </InputOTPGroup>
     </InputOTP>
-  )
+  ),
 }
 
 export const FourDigits: Story = {
@@ -38,5 +38,5 @@ export const FourDigits: Story = {
         <InputOTPSlot index={3} />
       </InputOTPGroup>
     </InputOTP>
-  )
+  ),
 }

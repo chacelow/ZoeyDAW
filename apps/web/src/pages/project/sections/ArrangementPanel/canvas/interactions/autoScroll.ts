@@ -1,4 +1,3 @@
-import type { CanvasGesture, CanvasPointer, InteractionContext } from "./types"
 import { visibleTracks } from "@/pages/project/model/types"
 import {
   arrangementBodyBottom,
@@ -6,6 +5,7 @@ import {
   maxTrackScrollY,
   pinnedTrackHeight,
 } from "../layout"
+import type { CanvasGesture, CanvasPointer, InteractionContext } from "./types"
 
 export function createAutoScroll(
   context: InteractionContext,
@@ -18,7 +18,9 @@ export function createAutoScroll(
   let axis: Exclude<CanvasGesture["autoScroll"], false> = "both"
   function tick(now: number) {
     frame = 0
-    if (!pointer || !element) return
+    if (!pointer || !element) {
+      return
+    }
     const scene = context.scene.get()
     const rect = element.getBoundingClientRect()
     const x = pointer.clientX - rect.left
@@ -66,7 +68,9 @@ export function createAutoScroll(
       pointer = next
       axis = mode
       last = 0
-      if (!frame) frame = requestAnimationFrame(tick)
+      if (!frame) {
+        frame = requestAnimationFrame(tick)
+      }
     },
     update(next: CanvasPointer) {
       pointer = next
@@ -75,7 +79,9 @@ export function createAutoScroll(
       pointer = null
       element = null
       last = 0
-      if (frame) cancelAnimationFrame(frame)
+      if (frame) {
+        cancelAnimationFrame(frame)
+      }
       frame = 0
     },
   }

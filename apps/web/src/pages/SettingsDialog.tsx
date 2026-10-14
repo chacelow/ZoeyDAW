@@ -6,20 +6,14 @@
  * AI / MCP / 工程偏好等待 DAW 需求成形后再加。
  */
 import { Palette, Languages, FileText, Info } from "lucide-react"
-import { useTranslation } from "@zoeymind/i18n"
-import { SUPPORTED_LOCALES, useChangeLocale, useLocale } from "@zoeymind/i18n"
-import {
-  Label,
-  RadioGroup,
-  RadioGroupItem,
-  SettingsShell,
-  Separator,
-  type SettingsNavItem,
-} from "@zoeymind/ui"
-import { useSettingsDialog, type SettingsSectionId } from "@/shared/app-shared"
+import { useTranslation, SUPPORTED_LOCALES, useChangeLocale, useLocale } from "@zoeymind/i18n"
+import { Label, RadioGroup, RadioGroupItem, SettingsShell, Separator } from "@zoeymind/ui"
+import { useSettingsDialog } from "@/shared/app-shared"
 import { ThemeModeToggle, ThemePresetGrid } from "@/shared/app-shared/ThemeMenu"
+import type { SettingsNavItem } from "@zoeymind/ui"
+import type { SettingsSectionId } from "@/shared/app-shared"
 
-const SECTION_ORDER: SettingsSectionId[] = ["preferences", "editor", "ai", "agent", "about"]
+const SECTION_ORDER = new Set<SettingsSectionId>(["preferences", "editor", "ai", "agent", "about"])
 
 export function SettingsDialog() {
   const { t } = useTranslation()
@@ -36,7 +30,7 @@ export function SettingsDialog() {
   ]
 
   // settings-dialog-store 的 SettingsSectionId 保留了老枚举，这里按位复用避免 store 改动。
-  const activeId = SECTION_ORDER.includes(section) ? section : "preferences"
+  const activeId = SECTION_ORDER.has(section) ? section : "preferences"
 
   return (
     <SettingsShell
@@ -96,7 +90,7 @@ function LogsSection() {
   return (
     <section className="flex flex-col gap-3">
       <Label>{t("settings.sections.logs", "日志")}</Label>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         {t(
           "settings.logsPlaceholder",
           "日志级别和目录控制将在接入 Rust 日志 command 时填入；原有命令仍在 (`get_log_config` / `set_log_level` / `clear_logs`)。"
@@ -111,10 +105,10 @@ function AboutSection() {
   return (
     <section className="flex flex-col gap-3">
       <h3 className="text-base font-medium">{t("app.name", "zoeydaw")}</h3>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         {t("app.tagline", "Web UI DAW")} · {t("about.prototype", "prototype 骨架")}
       </p>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         {t("about.sourceHint", "音频核心、CLAP + VST3 host、Browser、.als 导入等按界面需求迭代。")}
       </p>
       <div className="pt-2">
@@ -122,7 +116,7 @@ function AboutSection() {
           href="https://github.com"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex h-8 items-center rounded-md border px-3 text-xs text-foreground transition-colors hover:bg-muted"
+          className="text-foreground hover:bg-muted inline-flex h-8 items-center rounded-md border px-3 text-xs transition-colors"
         >
           GitHub
         </a>

@@ -13,12 +13,14 @@ export function createMeterPeak(): MeterPeak {
   return { db: METER_MIN_DB, holdUntil: 0, updatedAt: 0 }
 }
 
-export function meterDb(db: number): number {
-  return Number.isNaN(db) ? METER_MIN_DB : Math.max(METER_MIN_DB, Math.min(METER_MAX_DB, db))
+export function meterDb(levelDb: number): number {
+  return Number.isNaN(levelDb)
+    ? METER_MIN_DB
+    : Math.max(METER_MIN_DB, Math.min(METER_MAX_DB, levelDb))
 }
 
-export function advanceMeterPeak(peak: MeterPeak, db: number, now: number): void {
-  const level = meterDb(db)
+export function advanceMeterPeak(peak: MeterPeak, levelDb: number, now: number): void {
+  const level = meterDb(levelDb)
   if (level >= peak.db && level > METER_MIN_DB) {
     peak.db = level
     peak.holdUntil = now + HOLD_MS

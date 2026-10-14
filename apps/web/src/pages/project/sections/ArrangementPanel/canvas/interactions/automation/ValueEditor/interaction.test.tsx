@@ -49,7 +49,9 @@ it("keeps numeric editing focused through StrictMode and moves the selected enve
     </StrictMode>
   )
   const input = view.container.querySelector("input")
-  if (!input) throw new Error("Value editor disappeared during mount")
+  if (!input) {
+    throw new Error("Value editor disappeared during mount")
+  }
   expect(document.activeElement).toBe(input)
   fireEvent.change(input, { target: { value: "-20 dB" } })
   fireEvent.keyDown(input, { key: "Enter" })
@@ -73,7 +75,9 @@ it("Escape cancels typed input without changing the envelope", () => {
     </StrictMode>
   )
   const input = view.container.querySelector("input")
-  if (!input) throw new Error("Value editor disappeared during mount")
+  if (!input) {
+    throw new Error("Value editor disappeared during mount")
+  }
   fireEvent.change(input, { target: { value: "0 dB" } })
   fireEvent.keyDown(input, { key: "Escape" })
   expect(useProjectState.getState().session.canUndo).toBe(false)

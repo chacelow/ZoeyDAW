@@ -11,10 +11,10 @@
  */
 
 // 触发类型增强
-import './types'
+import "./types"
 
-export { I18nProvider } from './I18nProvider'
-export { useLocale, useChangeLocale } from './hooks'
+export { I18nProvider } from "./I18nProvider"
+export { useLocale, useChangeLocale } from "./hooks"
 export {
   SUPPORTED_LOCALES,
   DEFAULT_LOCALE,
@@ -22,8 +22,8 @@ export {
   initI18n,
   i18next,
   type SupportedLocale,
-  type AppLocaleResources
-} from './setup'
+  type AppLocaleResources,
+} from "./setup"
 
 // react-i18next 公共 API 直接 re-export, app 不必装 react-i18next
-export { useTranslation, Trans, withTranslation } from 'react-i18next'
+export { useTranslation, Trans, withTranslation } from "react-i18next"

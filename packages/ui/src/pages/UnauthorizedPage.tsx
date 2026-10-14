@@ -1,15 +1,15 @@
-import { Button } from "../button";
-import { Shield, ArrowLeft, LogIn } from "lucide-react";
+import { Shield, ArrowLeft, LogIn } from "lucide-react"
+import { Button } from "../button"
 
-interface UnauthorizedPageProps {
-  title?: string;
-  description?: string;
-  showBackButton?: boolean;
-  showLoginButton?: boolean;
-  backButtonText?: string;
-  loginButtonText?: string;
-  onBack?: () => void;
-  onLogin?: () => void;
+interface UnauthorizedPageProperties {
+  readonly title?: string
+  readonly description?: string
+  readonly showBackButton?: boolean
+  readonly showLoginButton?: boolean
+  readonly backButtonText?: string
+  readonly loginButtonText?: string
+  readonly onBack?: () => void
+  readonly onLogin?: () => void
 }
 
 /**
@@ -24,49 +24,55 @@ export function UnauthorizedPage({
   loginButtonText = "重新登录",
   onBack,
   onLogin,
-}: UnauthorizedPageProps) {
+}: UnauthorizedPageProperties) {
   const handleBack = () => {
-    if (onBack) onBack();
-    else window.history.back();
-  };
+    if (onBack) {
+      onBack()
+    } else {
+      window.history.back()
+    }
+  }
 
   const handleLogin = () => {
-    if (onLogin) onLogin();
-    else window.location.assign("/login");
-  };
+    if (onLogin) {
+      onLogin()
+    } else {
+      window.location.assign("/login")
+    }
+  }
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-background px-4">
-      <div className="max-w-md w-full text-center space-y-6">
-        <div className="text-8xl md:text-9xl font-bold text-muted-foreground/30 tracking-tighter select-none">
+    <div className="bg-background flex min-h-svh items-center justify-center px-4">
+      <div className="w-full max-w-md space-y-6 text-center">
+        <div className="text-muted-foreground/30 text-8xl font-bold tracking-tighter select-none md:text-9xl">
           401
         </div>
 
         <div className="space-y-2">
-          <div className="flex justify-center mb-3">
-            <div className="size-12 rounded-full bg-destructive/10 flex items-center justify-center">
-              <Shield className="size-6 text-destructive" />
+          <div className="mb-3 flex justify-center">
+            <div className="bg-destructive/10 flex size-12 items-center justify-center rounded-full">
+              <Shield className="text-destructive size-6" />
             </div>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-sm">{description}</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
-          {showBackButton && (
+        <div className="flex flex-col justify-center gap-2 pt-2 sm:flex-row">
+          {showBackButton ? (
             <Button variant="outline" onClick={handleBack} className="gap-2">
               <ArrowLeft className="size-4" />
               {backButtonText}
             </Button>
-          )}
-          {showLoginButton && (
+          ) : null}
+          {showLoginButton ? (
             <Button onClick={handleLogin} className="gap-2">
               <LogIn className="size-4" />
               {loginButtonText}
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
-  );
+  )
 }

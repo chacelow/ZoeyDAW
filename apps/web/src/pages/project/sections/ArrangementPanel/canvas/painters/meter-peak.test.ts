@@ -1,5 +1,5 @@
 import { expect, it } from "vitest"
-import { advanceMeterPeak, createMeterPeak, meterDb } from "./meter-peak"
+import { advanceMeterPeak, createMeterPeak, meterDb as meterDatabase } from "./meter-peak"
 
 it("holds the latest peak, then falls at the same rate regardless of frame intervals", () => {
   const sparse = createMeterPeak()
@@ -36,9 +36,9 @@ it("refreshes sustained peaks, catches new higher peaks, and clears after silenc
 })
 
 it("retains positive dB headroom and treats non-finite telemetry as overload or silence", () => {
-  expect(meterDb(0)).toBe(0)
-  expect(meterDb(3)).toBe(3)
-  expect(meterDb(Infinity)).toBe(6)
-  expect(meterDb(-Infinity)).toBe(-60)
-  expect(meterDb(NaN)).toBe(-60)
+  expect(meterDatabase(0)).toBe(0)
+  expect(meterDatabase(3)).toBe(3)
+  expect(meterDatabase(Infinity)).toBe(6)
+  expect(meterDatabase(-Infinity)).toBe(-60)
+  expect(meterDatabase(NaN)).toBe(-60)
 })

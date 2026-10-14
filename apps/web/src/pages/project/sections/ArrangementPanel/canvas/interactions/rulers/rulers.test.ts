@@ -3,8 +3,8 @@ import { beforeEach, expect, it } from "vitest"
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
-import type { CanvasPointer } from "../types"
 import { createRulerInteractions } from "."
+import type { CanvasPointer } from "../types"
 
 const pointer = (x: number, y: number, shiftKey = false): CanvasPointer => ({
   x,
@@ -48,7 +48,9 @@ function fixture() {
 
 it("previews marker travel, cancels without history, then commits one snapped movement", () => {
   const id = projectActions.addMarker(3)
-  if (!id) throw new Error("Marker creation failed")
+  if (!id) {
+    throw new Error("Marker creation failed")
+  }
   const { scene, interaction } = fixture()
   const start = pointer(64, 8)
   const gesture = interaction.start(start)
@@ -144,7 +146,7 @@ it("clicks the loop body to select its span across editable visible tracks", () 
   const selection = useProjectState.getState().session.timeSelection
   expect(selection).toMatchObject({ startBar: 3, endBar: 7 })
   expect(selection?.trackIds.length).toBeGreaterThan(0)
-  const tracks = useProjectState.getState().document.tracks
+  const { tracks } = useProjectState.getState().document
   expect(
     selection?.trackIds.every(id =>
       tracks.some(track => track.id === id && (track.kind === "audio" || track.kind === "midi"))
@@ -172,7 +174,9 @@ it("nudges a selected loop using grid-sized arrow steps", () => {
 
 it("bypasses marker snapping with Shift and nudges the selected locator without seeking", () => {
   const id = projectActions.addMarker(3)
-  if (!id) throw new Error("Marker creation failed")
+  if (!id) {
+    throw new Error("Marker creation failed")
+  }
   const { interaction } = fixture()
   const drag = interaction.start(pointer(64, 8))
   drag?.move(pointer(72, 8, true))
@@ -203,7 +207,9 @@ it("creates a marker and double-click starts playback without toggling active pl
   expect(interaction.doubleClick(pointer(320, 8))).toBe(true)
   const marker = useProjectState.getState().document.markers.find(item => item.bar === 11)
   expect(marker).toBeDefined()
-  if (!marker) throw new Error("Marker creation failed")
+  if (!marker) {
+    throw new Error("Marker creation failed")
+  }
   const state = useProjectState.getState()
   scene.setMusic({
     bars: 128,
@@ -235,7 +241,9 @@ it("distinguishes marker and loop hit targets at the same bar", () => {
 
 it("uses unsnapped marker travel when workspace snap is off", () => {
   const id = projectActions.addMarker(3)
-  if (!id) throw new Error("Marker creation failed")
+  if (!id) {
+    throw new Error("Marker creation failed")
+  }
   projectActions.setSnap(false)
   const { interaction } = fixture()
   const drag = interaction.start(pointer(64, 8))

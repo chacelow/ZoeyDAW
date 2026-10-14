@@ -8,10 +8,10 @@ import {
   TRACK_REVEAL_THRESHOLD,
   trackControlRows,
   trackHeight,
-} from "./selectors"
+} from "."
 
 describe("track row resize", () => {
-  const tracks = createMockDocument().tracks
+  const { tracks } = createMockDocument()
 
   it("uses the same compact height and reveal step for ordinary, group, return and main tracks", () => {
     for (const track of tracks) {

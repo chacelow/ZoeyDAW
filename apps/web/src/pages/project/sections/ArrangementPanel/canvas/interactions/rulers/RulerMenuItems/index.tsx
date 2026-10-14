@@ -3,23 +3,25 @@ import { ContextMenuItem, ContextMenuSeparator } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
 import { positionToBar } from "@/pages/project/model/types"
 import { MIN_CLIP_LENGTH_BARS } from "@/pages/project/model/grid"
-import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
+import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
 
 export function RulerMenuItems({
   target,
 }: {
-  target: Extract<CanvasMenuTarget, { kind: "marker" | "loop" | "ruler" }>
+  readonly target: Extract<CanvasMenuTarget, { kind: "marker" | "loop" | "ruler" }>
 }) {
   const { t } = useTranslation()
-  const loop = arrangementScene.get().loop
-  if (target.kind === "ruler")
+  const { loop } = arrangementScene.get()
+  if (target.kind === "ruler") {
     return (
       <>
         <ContextMenuItem
           onClick={() => {
             const id = projectActions.addMarker(target.bar)
-            if (id) arrangementScene.setTargetSelection({ kind: "marker", id, phase: "selected" })
+            if (id) {
+              arrangementScene.setTargetSelection({ kind: "marker", id, phase: "selected" })
+            }
           }}
         >
           {t("arrangement.addMarker")}
@@ -67,7 +69,8 @@ export function RulerMenuItems({
         </ContextMenuItem>
       </>
     )
-  if (target.kind === "loop")
+  }
+  if (target.kind === "loop") {
     return (
       <>
         <ContextMenuItem onClick={() => projectActions.setLoop({ enabled: !loop.enabled })}>
@@ -100,6 +103,7 @@ export function RulerMenuItems({
         </ContextMenuItem>
       </>
     )
+  }
   const marker = arrangementScene.get().markers.find(item => item.id === target.markerId)
   function seek(direction: -1 | 1) {
     const state = useProjectState.getState()
@@ -109,10 +113,12 @@ export function RulerMenuItems({
       direction < 0
         ? sorted.reverse().find(item => item.bar < current - 1e-6)
         : sorted.find(item => item.bar > current + 1e-6)
-    if (next) {
-      projectActions.seekBar(next.bar)
-      arrangementScene.setTargetSelection({ kind: "marker", id: next.id, phase: "selected" })
+    if (!next) {
+      return
     }
+
+    projectActions.seekBar(next.bar)
+    arrangementScene.setTargetSelection({ kind: "marker", id: next.id, phase: "selected" })
   }
   return (
     <>
@@ -129,7 +135,9 @@ export function RulerMenuItems({
       </ContextMenuItem>
       <ContextMenuItem
         onClick={() => {
-          if (marker) projectActions.seekBar(marker.bar)
+          if (marker) {
+            projectActions.seekBar(marker.bar)
+          }
         }}
       >
         {t("arrangement.seekMarker")}

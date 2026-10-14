@@ -1,17 +1,16 @@
 /**
- * RAG 数据传输对象（DTO）
- * 统一的 RAG 信息返回格式（前后端共享）
+ * RAG 数据传输对象（DTO） 统一的 RAG 信息返回格式（前后端共享）
  */
 
 /**
  * 文档类型
  */
-export type RAGDocumentType = 'feishu_document' | 'test_case_project' | 'local_file'
+export type RAGDocumentType = "feishu_document" | "test_case_project" | "local_file"
 
 /**
  * Embedding 状态
  */
-export type EmbeddingStatus = 'processing' | 'completed' | 'failed'
+export type EmbeddingStatus = "processing" | "completed" | "failed"
 
 /**
  * RAG 知识库 DTO
@@ -29,7 +28,7 @@ export interface RAGKnowledgeBaseDTO {
   topK: number
   threshold: number
   returnValues: boolean
-  returnMetadata: 'none' | 'all' | 'partial'
+  returnMetadata: "none" | "all" | "partial"
   documentCount: number
   wordCount: number
   createdAt: string
@@ -37,7 +36,7 @@ export interface RAGKnowledgeBaseDTO {
   creatorName?: string
   creatorAvatar?: string | null
   isOwner?: boolean
-  permission?: 'READ' | 'WRITE' | null
+  permission?: "READ" | "WRITE" | null
 }
 
 /**
@@ -72,7 +71,7 @@ export interface RAGConfigDTO {
   topK: number
   threshold: number
   returnValues: boolean
-  returnMetadata: 'none' | 'all' | 'partial'
+  returnMetadata: "none" | "all" | "partial"
   createdAt: string
   updatedAt: string
 }

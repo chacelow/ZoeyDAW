@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@zoeymind/ui/globals.css";
+
 @plugin "@tailwindcss/typography";
 
 /* Dialog overlay 的毛玻璃会模糊整个窗口（含 titlebar），显得像在上方拉了一层 shadow。
@@ -67,39 +68,40 @@ html {
 
 :root {
   color-scheme: light;
+
   --app-titlebar-height: calc(var(--spacing) * 16);
   --radius: 0.5rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(100% 0 0deg);
+  --foreground: oklch(14.5% 0 0deg);
+  --card: oklch(100% 0 0deg);
+  --card-foreground: oklch(14.5% 0 0deg);
+  --popover: oklch(100% 0 0deg);
+  --popover-foreground: oklch(14.5% 0 0deg);
+  --primary: oklch(20.5% 0 0deg);
+  --primary-foreground: oklch(98.5% 0 0deg);
+  --secondary: oklch(97% 0 0deg);
+  --secondary-foreground: oklch(20.5% 0 0deg);
+  --muted: oklch(97% 0 0deg);
+  --muted-foreground: oklch(55.6% 0 0deg);
+  --accent: oklch(97% 0 0deg);
+  --accent-foreground: oklch(20.5% 0 0deg);
+  --destructive: oklch(57.7% 0.245 27.325deg);
+  --border: oklch(92.2% 0 0deg);
+  --input: oklch(92.2% 0 0deg);
+  --ring: oklch(70.8% 0 0deg);
+  --chart-1: oklch(64.6% 0.222 41.116deg);
+  --chart-2: oklch(60% 0.118 184.704deg);
+  --chart-3: oklch(39.8% 0.07 227.392deg);
+  --chart-4: oklch(82.8% 0.189 84.429deg);
+  --chart-5: oklch(76.9% 0.188 70.08deg);
+  --sidebar: oklch(98.5% 0 0deg);
+  --sidebar-foreground: oklch(14.5% 0 0deg);
+  --sidebar-primary: oklch(20.5% 0 0deg);
+  --sidebar-primary-foreground: oklch(98.5% 0 0deg);
+  --sidebar-accent: oklch(97% 0 0deg);
+  --sidebar-accent-foreground: oklch(20.5% 0 0deg);
+  --sidebar-border: oklch(92.2% 0 0deg);
+  --sidebar-ring: oklch(70.8% 0 0deg);
   --editor-shell: color-mix(in oklab, var(--muted) 30%, var(--background));
   --acc-expand: 250ms;
   --acc-collapse: 250ms;
@@ -113,41 +115,46 @@ html {
   --scrollbar-thumb-hover: var(--canvas-scrollbar-hover);
   --acc-chevron: 250ms;
   --acc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --arrangement-surface-selected: color-mix(in oklab, var(--card) 78%, var(--foreground));
+  --arrangement-clip-selected: oklch(87% 0.05 220deg);
+  --arrangement-clip-paper: oklch(97% 0.005 90deg);
+  --arrangement-clip-tint: 32%;
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+
+  --background: oklch(14.5% 0 0deg);
+  --foreground: oklch(98.5% 0 0deg);
+  --card: oklch(20.5% 0 0deg);
+  --card-foreground: oklch(98.5% 0 0deg);
+  --popover: oklch(20.5% 0 0deg);
+  --popover-foreground: oklch(98.5% 0 0deg);
+  --primary: oklch(92.2% 0 0deg);
+  --primary-foreground: oklch(20.5% 0 0deg);
+  --secondary: oklch(26.9% 0 0deg);
+  --secondary-foreground: oklch(98.5% 0 0deg);
+  --muted: oklch(26.9% 0 0deg);
+  --muted-foreground: oklch(70.8% 0 0deg);
+  --accent: oklch(26.9% 0 0deg);
+  --accent-foreground: oklch(98.5% 0 0deg);
+  --destructive: oklch(70.4% 0.191 22.216deg);
+  --border: oklch(100% 0 0deg / 10%);
+  --input: oklch(100% 0 0deg / 15%);
+  --ring: oklch(55.6% 0 0deg);
+  --chart-1: oklch(48.8% 0.243 264.376deg);
+  --chart-2: oklch(69.6% 0.17 162.48deg);
+  --chart-3: oklch(76.9% 0.188 70.08deg);
+  --chart-4: oklch(62.7% 0.265 303.9deg);
+  --chart-5: oklch(64.5% 0.246 16.439deg);
+  --sidebar: oklch(20.5% 0 0deg);
+  --sidebar-foreground: oklch(98.5% 0 0deg);
+  --sidebar-primary: oklch(48.8% 0.243 264.376deg);
+  --sidebar-primary-foreground: oklch(98.5% 0 0deg);
+  --sidebar-accent: oklch(26.9% 0 0deg);
+  --sidebar-accent-foreground: oklch(98.5% 0 0deg);
+  --sidebar-border: oklch(100% 0 0deg / 10%);
+  --sidebar-ring: oklch(55.6% 0 0deg);
   --editor-shell: color-mix(in oklab, var(--muted) 30%, var(--background));
   --canvas-scrollbar: color-mix(in oklab, var(--foreground) 10%, transparent);
   --canvas-scrollbar-hover: color-mix(in oklab, var(--foreground) 18%, transparent);
@@ -166,8 +173,8 @@ html {
 }
 
 [data-chat-markdown] :is(h1, h2, h3, h4, h5, h6) {
-  margin-block: 0.5rem 0.25rem;
   line-height: 1.2;
+  margin-block: 0.5rem 0.25rem;
 }
 
 [data-chat-markdown] [data-streamdown="list-item"] {
@@ -177,8 +184,8 @@ html {
 
 [data-streamdown="table-fullscreen"],
 [data-streamdown="mermaid-fullscreen"] {
-  top: var(--app-titlebar-height);
   z-index: 110;
+  top: var(--app-titlebar-height);
 }
 
 [data-streamdown="mermaid-fullscreen"] [data-streamdown="mermaid-block"],
@@ -190,8 +197,8 @@ html {
 [data-streamdown="mermaid-fullscreen"] svg {
   display: block;
   width: 100%;
-  height: 100%;
   max-width: 100%;
+  height: 100%;
   max-height: 100%;
 }
 
@@ -202,34 +209,40 @@ html {
   grid-template-rows: 0fr;
   transition: grid-template-rows var(--acc-collapse) var(--acc-ease);
 }
+
 .t-acc[data-open="true"] .t-acc-panel {
   grid-template-rows: 1fr;
   transition: grid-template-rows var(--acc-expand) var(--acc-ease);
 }
+
 .t-acc-panel-inner {
   overflow: hidden;
-  opacity: 0;
   filter: blur(2px);
+  opacity: 0;
   transition:
     opacity var(--acc-collapse) var(--acc-ease),
     filter var(--acc-collapse) var(--acc-ease);
 }
+
 .t-acc[data-open="true"] .t-acc-panel-inner {
-  opacity: 1;
   filter: blur(0);
+  opacity: 1;
   transition:
     opacity var(--acc-expand) var(--acc-ease),
     filter var(--acc-expand) var(--acc-ease);
 }
+
 .t-acc-chevron {
   display: inline-flex;
   transform: scaleY(1);
   transform-origin: center;
   transition: transform var(--acc-chevron) var(--acc-ease);
 }
+
 .t-acc-chevron path {
   vector-effect: non-scaling-stroke;
 }
+
 .t-acc[data-open="true"] .t-acc-chevron {
   transform: scaleY(-1);
 }
@@ -259,6 +272,7 @@ html {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -274,8 +288,8 @@ html {
    background 高 4% 对比度，滑块沿用 canvas 的 10% / 18% 状态。
    低优先级 :where() 允许 ScrollArea 和 .no-scrollbar 等显式组件覆盖。 */
 :where(*) {
-  scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
 }
 
 :where(*)::-webkit-scrollbar {
@@ -304,11 +318,12 @@ html {
 
 /* 无滚动条容器 (Firefox / IE / WebKit 全覆盖). 用于 AI 聊天等要滚动但不想露滚动条的场景. */
 .no-scrollbar {
-  scrollbar-width: none;
   -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+
 .no-scrollbar::-webkit-scrollbar {
+  display: none;
   width: 0;
   height: 0;
-  display: none;
 }

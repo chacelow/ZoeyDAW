@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Label } from './label'
-import { Input } from './input'
+import { Label } from "./label"
+import { Input } from "./input"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Label> = {
-  title: 'Form/Label',
+  title: "Form/Label",
   component: Label,
-  tags: ['autodocs'],
-  args: { children: '邮箱' }
+  tags: ["autodocs"],
+  args: { children: "邮箱" },
 }
 
 export default meta
@@ -20,5 +20,5 @@ export const WithInput: Story = {
       <Label htmlFor="input-a">用户名</Label>
       <Input id="input-a" placeholder="zoeymind" />
     </div>
-  )
+  ),
 }

@@ -1,11 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Checkbox } from './checkbox'
-import { Label } from './label'
+import { Checkbox } from "./checkbox"
+import { Label } from "./label"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Checkbox> = {
-  title: 'Form/Checkbox',
+  title: "Form/Checkbox",
   component: Checkbox,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -19,7 +19,7 @@ export const WithLabel: Story = {
       <Checkbox defaultChecked />
       同意用户协议
     </Label>
-  )
+  ),
 }
 
 export const States: Story = {
@@ -46,5 +46,5 @@ export const States: Story = {
         错误态
       </Label>
     </div>
-  )
+  ),
 }

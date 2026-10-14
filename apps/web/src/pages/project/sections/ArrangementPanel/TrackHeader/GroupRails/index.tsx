@@ -1,6 +1,6 @@
 import type { GroupRail } from "@/pages/project/model/track-groups"
 
-export function GroupRails({ rails }: { rails: readonly GroupRail[] }) {
+export function GroupRails({ rails }: { readonly rails: readonly GroupRail[] }) {
   return (
     <div className="arrangement-group-rails" aria-hidden="true">
       {rails.map(({ group, closes }) => (

@@ -11,65 +11,70 @@
  *
  * 定位 props：`align / side / sideOffset / matchTriggerWidth`。
  */
-import { useState, type CSSProperties, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { useState } from "react"
+import { ChevronDown } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "#components/dropdown-menu";
-import { useInfoBinding } from "../DragPad/useInfoBinding";
-import { MappingOverlay } from "../MappingOverlay";
-import { IconSlot } from "../IconSlot/index";
-import { controlInteractiveClasses, rowInteractiveClasses } from "../classes";
-import { AutoWidthText } from "../DragPad/AutoWidthText";
+} from "#components/dropdown-menu"
+import { useInfoBinding } from "../DragPad/useInfoBinding"
+import { MappingOverlay } from "../MappingOverlay"
+import { IconSlot } from "../IconSlot/index"
+import { controlInteractiveClasses, rowInteractiveClasses } from "../classes"
+import { AutoWidthText } from "../DragPad/AutoWidthText"
+import type { CSSProperties, ReactNode } from "react"
 
 export interface DropdownButtonValueItem<T extends string = string> {
-  id: T;
-  label: ReactNode;
-  disabled?: boolean;
-  onSelect?: () => void;
-  /** 右侧键盘快捷键展示（纯显示，不绑定热键） */
-  shortcut?: string;
+  id: T
+  label: ReactNode
+  disabled?: boolean
+  onSelect?: () => void
+  /**
+  右侧键盘快捷键展示（纯显示，不绑定热键）
+  */
+  shortcut?: string
 }
 
 export type DropdownButtonItem<T extends string = string> =
   | DropdownButtonValueItem<T>
   | { type: "heading"; id: string; label: ReactNode }
-  | { type: "separator"; id: string };
+  | { type: "separator"; id: string }
 
 function isHeading<T extends string>(
-  item: DropdownButtonItem<T>,
+  item: DropdownButtonItem<T>
 ): item is { type: "heading"; id: string; label: ReactNode } {
-  return "type" in item && item.type === "heading";
+  return "type" in item && item.type === "heading"
 }
 
 function isSeparator<T extends string>(
-  item: DropdownButtonItem<T>,
+  item: DropdownButtonItem<T>
 ): item is { type: "separator"; id: string } {
-  return "type" in item && item.type === "separator";
+  return "type" in item && item.type === "separator"
 }
 
 export interface DropdownButtonProps<T extends string = string> {
-  value: T;
-  onChange: (value: T) => void;
-  items: DropdownButtonItem<T>[];
-  label: string;
-  description?: string;
-  /** 按钮内显示的文字，默认取当前 value item 的 label */
-  renderValue?: (item: DropdownButtonValueItem<T> | undefined) => ReactNode;
-  color?: string;
-  disabled?: boolean;
-  mappable?: boolean;
-  className?: string;
-  align?: "start" | "center" | "end";
-  side?: "top" | "right" | "bottom" | "left";
-  sideOffset?: number;
-  matchTriggerWidth?: boolean;
-  icon?: ReactNode;
-  size?: "default" | "compact";
+  readonly value: T
+  readonly onChange: (value: T) => void
+  readonly items: DropdownButtonItem<T>[]
+  readonly label: string
+  readonly description?: string
+  /**
+  按钮内显示的文字，默认取当前 value item 的 label
+  */
+  readonly renderValue?: (item: DropdownButtonValueItem<T> | undefined) => ReactNode
+  readonly color?: string
+  readonly disabled?: boolean
+  readonly mappable?: boolean
+  readonly className?: string
+  readonly align?: "start" | "center" | "end"
+  readonly side?: "top" | "right" | "bottom" | "left"
+  readonly sideOffset?: number
+  readonly matchTriggerWidth?: boolean
+  readonly icon?: ReactNode
+  readonly size?: "default" | "compact"
 }
 
 export function DropdownButton<T extends string = string>({
@@ -90,31 +95,26 @@ export function DropdownButton<T extends string = string>({
   icon,
   size = "default",
 }: DropdownButtonProps<T>) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
   const currentValueItem = items.find(
     (item): item is DropdownButtonValueItem<T> =>
-      !isHeading(item) && !isSeparator(item) && item.id === value,
-  );
+      !isHeading(item) && !isSeparator(item) && item.id === value
+  )
   const displayNode = renderValue
     ? renderValue(currentValueItem)
-    : (currentValueItem?.label ?? value);
-  const infoHandlers = useInfoBinding({ type: "dropdown", description });
+    : (currentValueItem?.label ?? value)
+  const infoHandlers = useInfoBinding({ type: "dropdown", description })
   // 收集所有 value-item 的 label 字符串,交给 AutoWidthText 让浏览器实测宽度;
   // 不再 ch 猜,chrome 跟最宽那条标签走。
   const widestLabels: string[] = items
-    .filter(
-      (item): item is DropdownButtonValueItem<T> =>
-        !isHeading(item) && !isSeparator(item),
-    )
-    .map((item) =>
-      typeof item.label === "string" ? item.label : String(item.id),
-    );
+    .filter((item): item is DropdownButtonValueItem<T> => !isHeading(item) && !isSeparator(item))
+    .map(item => (typeof item.label === "string" ? item.label : String(item.id)))
   const triggerStyle: CSSProperties | undefined = color
     ? ({ "--dragpad-color": color } as CSSProperties)
-    : undefined;
+    : undefined
   const contentClassName = matchTriggerWidth
     ? "min-w-[--radix-dropdown-menu-trigger-width] p-1"
-    : "min-w-40 p-1";
+    : "min-w-40 p-1"
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -130,10 +130,10 @@ export function DropdownButton<T extends string = string>({
             {...infoHandlers}
             className={controlInteractiveClasses(
               { active: open, disabled, size },
-              `justify-between gap-2 ${size === "compact" ? "pr-1" : "pr-2.5"} ${className ?? ""}`,
+              `justify-between gap-2 ${size === "compact" ? "pr-1" : "pr-2.5"} ${className ?? ""}`
             )}
           >
-            <span className="flex min-w-0 flex-1 items-center gap-control-gap">
+            <span className="gap-control-gap flex min-w-0 flex-1 items-center">
               {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
               <AutoWidthText samples={widestLabels} className="min-w-0 flex-1">
                 {displayNode}
@@ -150,19 +150,19 @@ export function DropdownButton<T extends string = string>({
         sideOffset={sideOffset}
         className={contentClassName}
       >
-        {items.map((item) => {
+        {items.map(item => {
           if (isHeading(item)) {
             return (
               <div
                 key={item.id}
-                className="px-2 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                className="text-muted-foreground px-2 pt-2 pb-1 text-[10px] font-medium tracking-wide uppercase"
               >
                 {item.label}
               </div>
-            );
+            )
           }
           if (isSeparator(item)) {
-            return <DropdownMenuSeparator key={item.id} className="my-1" />;
+            return <DropdownMenuSeparator key={item.id} className="my-1" />
           }
           return (
             <DropdownMenuItem
@@ -170,24 +170,24 @@ export function DropdownButton<T extends string = string>({
               disabled={item.disabled}
               data-active={item.id === value}
               onClick={() => {
-                item.onSelect?.();
-                onChange(item.id);
+                item.onSelect?.()
+                onChange(item.id)
               }}
               className={rowInteractiveClasses(
                 { active: item.id === value, disabled: item.disabled },
-                "justify-between",
+                "justify-between"
               )}
             >
               <span className="min-w-0 break-words">{item.label}</span>
               {item.shortcut ? (
-                <span className="ml-3 shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                <span className="text-muted-foreground ml-3 shrink-0 text-[10px] tabular-nums">
                   {item.shortcut}
                 </span>
               ) : null}
             </DropdownMenuItem>
-          );
+          )
         })}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

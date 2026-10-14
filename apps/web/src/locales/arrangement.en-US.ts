@@ -1,6 +1,14 @@
 export default {
   automationMode: "Automation mode",
   drawMode: "Draw mode",
+  backendError: {
+    rejected: "The backend rejected the edit. Unconfirmed changes were reverted.",
+    connection: "Backend communication failed. Check the connection.",
+    protocol: "The backend response is incompatible. Check the protocol version.",
+    disposed: "The project connection has ended. Reopen the project.",
+  },
+  backendOpening: "Connecting the project backend…",
+  backendPending: "Synchronizing changes…",
   copy: "Copy",
   cut: "Cut",
   paste: "Paste",
@@ -16,6 +24,10 @@ export default {
   nextMarker: "Next locator",
   clipColor: "Clip color",
   minimap: "Arrangement overview",
+  timeline: "Arrangement timeline",
+  timelineEditor: "Arrangement timeline editor",
+  timelineCanvas: "Tracks, clips and timeline rulers",
+  clipEditor: "Clip editor",
   resizeMinimap: "Resize arrangement overview height",
   minimapHelp:
     "Drag to pan and zoom. Drag either edge to resize that side. Double-click to fit. Escape cancels.",

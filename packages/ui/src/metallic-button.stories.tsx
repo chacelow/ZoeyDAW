@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { SparklesIcon } from "lucide-react";
+import { SparklesIcon } from "lucide-react"
 
-import { MetallicButton } from "./metallic-button";
+import { MetallicButton } from "./metallic-button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof MetallicButton> = {
   title: "Primitives/MetallicButton",
@@ -10,12 +10,12 @@ const meta: Meta<typeof MetallicButton> = {
   args: {
     children: "Zoey Agent",
   },
-};
+}
 
-export default meta;
-type Story = StoryObj<typeof MetallicButton>;
+export default meta
+type Story = StoryObj<typeof MetallicButton>
 
-export const Default: Story = {};
+export const Default: Story = {}
 
 export const WithIcon: Story = {
   args: {
@@ -26,10 +26,10 @@ export const WithIcon: Story = {
       </>
     ),
   },
-};
+}
 
 export const Disabled: Story = {
   args: {
     disabled: true,
   },
-};
+}

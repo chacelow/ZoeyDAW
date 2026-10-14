@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext } from "react"
 
 export type ControlInfo =
   | "number"
@@ -11,17 +11,17 @@ export type ControlInfo =
   | "search"
   | "categories"
   | "resources"
-  | "filters";
+  | "filters"
 
 export interface ControlEnvironment {
-  setInfo?: (info: ControlInfo | null) => void;
-  mappingActive?: boolean;
-  restoreCursor?: (clientX: number, clientY: number) => void | Promise<void>;
-  recenterCursor?: (clientX: number, clientY: number) => void | Promise<void>;
+  setInfo?: (info: ControlInfo | null) => void
+  mappingActive?: boolean
+  restoreCursor?: (clientX: number, clientY: number) => void | Promise<void>
+  recenterCursor?: (clientX: number, clientY: number) => void | Promise<void>
 }
 
-export const Context = createContext<ControlEnvironment>({});
+export const Context = createContext<ControlEnvironment>({})
 
 export function useControlEnvironment() {
-  return useContext(Context);
+  return useContext(Context)
 }

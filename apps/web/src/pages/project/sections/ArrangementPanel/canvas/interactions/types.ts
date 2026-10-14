@@ -37,26 +37,26 @@ export interface CanvasGesture {
   cursor: GestureCursor
   autoScroll: false | "horizontal" | "both"
   commitOnInterrupt?: boolean
-  move(pointer: CanvasPointer): void
-  finish(cancelled: boolean): void
+  move: (pointer: CanvasPointer) => void
+  finish: (cancelled: boolean) => void
 }
 
 export interface InteractionContext {
   element: HTMLElement
   scene: SceneStore
   actions: typeof projectActions
-  getState(): ProjectState
+  getState: () => ProjectState
 }
 
 export interface CanvasInteraction {
-  start(pointer: CanvasPointer): CanvasGesture | null
-  hover(pointer: CanvasPointer): string | undefined
-  doubleClick(pointer: CanvasPointer): boolean
-  keyDown(event: KeyboardEvent): boolean
-  contextMenu(pointer: CanvasPointer): CanvasMenuTarget | null
-  copy?(event: ClipboardEvent): boolean
-  cut?(event: ClipboardEvent): boolean
-  paste?(event: ClipboardEvent): boolean
-  deactivate(): void
-  dispose?(): void
+  start: (pointer: CanvasPointer) => CanvasGesture | null
+  hover: (pointer: CanvasPointer) => string | undefined
+  doubleClick: (pointer: CanvasPointer) => boolean
+  keyDown: (event: KeyboardEvent) => boolean
+  contextMenu: (pointer: CanvasPointer) => CanvasMenuTarget | null
+  copy?: (event: ClipboardEvent) => boolean
+  cut?: (event: ClipboardEvent) => boolean
+  paste?: (event: ClipboardEvent) => boolean
+  deactivate: () => void
+  dispose?: () => void
 }

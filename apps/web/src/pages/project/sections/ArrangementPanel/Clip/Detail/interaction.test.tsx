@@ -17,14 +17,18 @@ function patternSteps() {
     .getState()
     .document.tracks.flatMap(track => track.clips)
     .find(item => item.id === "pattern-test")
-  if (!clip || clip.kind !== "pattern") throw new Error("Missing pattern fixture")
+  if (!clip || clip.kind !== "pattern") {
+    throw new Error("Missing pattern fixture")
+  }
   return clip.steps ?? []
 }
 
 beforeEach(() => {
   const document = createMockDocument()
   const track = document.tracks.find(item => item.id === "trager")
-  if (!track) throw new Error("Missing MIDI track")
+  if (!track) {
+    throw new Error("Missing MIDI track")
+  }
   track.clips.push({
     id: "pattern-test",
     kind: "pattern",
@@ -51,12 +55,18 @@ for (const end of ["lostpointercapture", "blur", "unmount"] as const) {
   it(`rolls back painting and keeps later undo working after ${end}`, () => {
     const view = render(<Editor />)
     const step = view.container.querySelector<HTMLElement>('[data-step-index="0"]')
-    if (!step) throw new Error("Missing step")
+    if (!step) {
+      throw new Error("Missing step")
+    }
     fireEvent.pointerDown(step, { button: 0, pointerId: 1 })
     expect(patternSteps()[0]).toBe(true)
-    if (end === "unmount") view.unmount()
-    else if (end === "blur") fireEvent(window, new Event("blur"))
-    else fireEvent.lostPointerCapture(step.parentElement ?? step, { pointerId: 1 })
+    if (end === "unmount") {
+      view.unmount()
+    } else if (end === "blur") {
+      fireEvent(window, new Event("blur"))
+    } else {
+      fireEvent.lostPointerCapture(step.parentElement ?? step, { pointerId: 1 })
+    }
     expect(patternSteps()[0]).toBe(false)
     projectActions.setBpm(140)
     projectActions.undo()
@@ -68,7 +78,9 @@ it("fills crossed steps on fast painting as one undoable edit", () => {
   const view = render(<Editor />)
   const first = view.container.querySelector<HTMLElement>('[data-step-index="0"]')
   const last = view.container.querySelector<HTMLElement>('[data-step-index="5"]')
-  if (!first || !last) throw new Error("Missing steps")
+  if (!first || !last) {
+    throw new Error("Missing steps")
+  }
   Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => last })
   fireEvent.pointerDown(first, { button: 0, pointerId: 1 })
   fireEvent.pointerMove(first.parentElement ?? first, { pointerId: 1, clientX: 100, clientY: 100 })

@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react'
 import {
   Drawer,
   DrawerClose,
@@ -7,14 +6,15 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger
-} from './drawer'
-import { Button } from './button'
+  DrawerTrigger,
+} from "./drawer"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Drawer> = {
-  title: 'Overlay/Drawer',
+  title: "Overlay/Drawer",
   component: Drawer,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -31,7 +31,7 @@ export const Default: Story = {
           <DrawerTitle>快速筛选</DrawerTitle>
           <DrawerDescription>移动端友好的底部抽屉。</DrawerDescription>
         </DrawerHeader>
-        <div className="px-4 py-2 text-sm text-muted-foreground">Drawer 内容区。</div>
+        <div className="text-muted-foreground px-4 py-2 text-sm">Drawer 内容区。</div>
         <DrawerFooter>
           <Button>应用</Button>
           <DrawerClose asChild>
@@ -40,5 +40,5 @@ export const Default: Story = {
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
-  )
+  ),
 }

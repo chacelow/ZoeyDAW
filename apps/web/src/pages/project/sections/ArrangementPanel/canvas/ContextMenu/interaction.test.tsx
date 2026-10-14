@@ -6,9 +6,9 @@ import { hydrateProject, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
 import { arrangementScene } from "../scene"
 import { AutomationValueEditor } from "../interactions/automation/ValueEditor"
-import { CanvasContextMenu } from "."
 import { ClipNameEditor } from "../interactions/clip/NameEditor"
 import { useSceneSync } from "../useSceneSync"
+import { CanvasContextMenu } from "."
 
 function SceneSync() {
   useSceneSync()
@@ -54,7 +54,7 @@ it("activates Edit value from the real menu and keeps input focus after the popu
           pointId: "peak",
         })}
       >
-        <canvas />
+        <canvas aria-label="Arrangement automation canvas" />
       </CanvasContextMenu>
       <AutomationValueEditor />
     </StrictMode>
@@ -87,7 +87,7 @@ it("creates and renames a Pattern through menus without activating the temporary
             : { kind: "clip-lane", trackId: "4-midi", bar: 5 }
         }}
       >
-        <canvas />
+        <canvas aria-label="Arrangement clip canvas" />
       </CanvasContextMenu>
       <ClipNameEditor />
     </StrictMode>

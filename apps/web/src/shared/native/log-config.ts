@@ -24,13 +24,21 @@ export const LOG_LEVEL_OPTIONS: readonly LogLevel[] = [
 
 export interface LogInfo {
   level: LogLevel
-  /** 本次会话正在写日志的目录 (启动时定住). */
+  /**
+  本次会话正在写日志的目录 (启动时定住).
+  */
   activeDir: string
-  /** 用户配置的自定义目录; null 表示走 OS 默认. */
+  /**
+  用户配置的自定义目录; null 表示走 OS 默认.
+  */
   configuredDir: string | null
-  /** OS 默认日志目录, 用于 UI placeholder / reset. */
+  /**
+  OS 默认日志目录, 用于 UI placeholder / reset.
+  */
   defaultDir: string
-  /** 活跃目录里所有 log 文件的总字节数; 清空 / rotate 后需要 refresh 拿新值. */
+  /**
+  活跃目录里所有 log 文件的总字节数; 清空 / rotate 后需要 refresh 拿新值.
+  */
   sizeBytes: number
 }
 
@@ -38,7 +46,9 @@ export async function getLogConfig(): Promise<LogInfo> {
   return await invoke<LogInfo>("get_log_config")
 }
 
-/** 用系统文件管理器打开本次会话正在写入的日志目录. */
+/**
+用系统文件管理器打开本次会话正在写入的日志目录.
+*/
 export async function openLogDir(): Promise<void> {
   await invoke("open_log_dir")
 }
@@ -55,7 +65,9 @@ export async function setLogDir(dir: string): Promise<void> {
   await invoke("set_log_dir", { dir })
 }
 
-/** 删除 log 目录下所有 .log / rotate 副本; 返回删除的文件数. */
+/**
+删除 log 目录下所有 .log / rotate 副本; 返回删除的文件数.
+*/
 export async function clearLogs(): Promise<number> {
   return await invoke<number>("clear_logs")
 }

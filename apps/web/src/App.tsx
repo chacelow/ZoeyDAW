@@ -1,14 +1,7 @@
 /**
  * 应用根 Provider 栈。
  *
- *   QueryClientProvider → 本地 I/O 查询缓存
- *   I18nProvider        → zh-CN / en-US
- *   ThemeProvider       → light / dark / system
- *   ThemePresetProvider → 品牌配色预设
- *   LoadingProvider     → 全局 loading 遮罩状态
- *   RouterProvider      → / 首页 · /project/:id 单项目视图
- *   <Loading>           → 读 LoadingProvider 渲染遮罩
- *   <Toaster>           → 跟随主题的通知
+ *   QueryClientProvider → 本地 I/O 查询缓存 I18nProvider        → zh-CN / en-US ThemeProvider       → light / dark / system ThemePresetProvider → 品牌配色预设 LoadingProvider     → 全局 loading 遮罩状态 RouterProvider      → / 首页 · /project/:id 单项目视图 <Loading>           → 读 LoadingProvider 渲染遮罩 <Toaster>           → 跟随主题的通知
  */
 import { useEffect } from "react"
 import { RouterProvider } from "react-router-dom"

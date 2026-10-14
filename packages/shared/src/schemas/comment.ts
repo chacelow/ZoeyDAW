@@ -1,32 +1,31 @@
-import { z } from 'zod'
+import { z } from "zod"
 
-// 评论相关的 Zod Schema 定义
-// tRPC 会自动从这些 schema 推导出 TypeScript 类型
+// 评论相关的 Zod Schema 定义 tRPC 会自动从这些 schema 推导出 TypeScript 类型
 
 export const createCommentSchema = z.object({
-  mindmapId: z.string().min(1, '思维导图ID不能为空'),
-  nodeUid: z.string().min(1, '节点UID不能为空'),
-  content: z.string().min(1, '评论内容不能为空').max(1000, '评论内容不能超过1000字符')
+  mindmapId: z.string().min(1, "思维导图ID不能为空"),
+  nodeUid: z.string().min(1, "节点UID不能为空"),
+  content: z.string().min(1, "评论内容不能为空").max(1000, "评论内容不能超过1000字符"),
 })
 
 export const updateCommentSchema = z.object({
-  commentId: z.string().min(1, '评论ID不能为空'),
-  content: z.string().min(1, '评论内容不能为空').max(1000, '评论内容不能超过1000字符')
+  commentId: z.string().min(1, "评论ID不能为空"),
+  content: z.string().min(1, "评论内容不能为空").max(1000, "评论内容不能超过1000字符"),
 })
 
 export const deleteCommentSchema = z.object({
-  commentId: z.string().min(1, '评论ID不能为空')
+  commentId: z.string().min(1, "评论ID不能为空"),
 })
 
 export const getNodeCommentsSchema = z.object({
-  mindmapId: z.string().min(1, '思维导图ID不能为空'),
-  nodeUid: z.string().min(1, '节点UID不能为空'),
+  mindmapId: z.string().min(1, "思维导图ID不能为空"),
+  nodeUid: z.string().min(1, "节点UID不能为空"),
   page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(50).default(20)
+  limit: z.number().min(1).max(50).default(20),
 })
 
 export const getCommentStatsSchema = z.object({
-  mindmapId: z.string().min(1, '思维导图ID不能为空')
+  mindmapId: z.string().min(1, "思维导图ID不能为空"),
 })
 
 // 评论数据类型
@@ -71,8 +70,9 @@ export interface UserInfo {
 }
 
 // 评论统计类型
-export interface CommentStats {
-  [nodeUid: string]: {
+export type CommentStats = Record<
+  string,
+  {
     count: number
     hasUnread?: boolean
     latestComment?: {
@@ -81,7 +81,7 @@ export interface CommentStats {
       createdAt: string
     }
   }
-}
+>
 
 // 导出类型（从 schema 推导）
 export type CreateCommentInput = z.infer<typeof createCommentSchema>

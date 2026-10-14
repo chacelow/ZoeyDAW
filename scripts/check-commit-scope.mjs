@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * check-commit-scope.mjs —— commit-msg 阶段检查, 拦截明显的多目的 commit.
  *
@@ -50,19 +49,19 @@ const CC_TYPES = [
 
 function stripScope(subject) {
   // 把括号里的 scope 挖掉 (scope 里的 、 是合法的, 不算并列)
-  return subject.replace(/\([^)]*\)/g, "")
+  return subject.replaceAll(/\([^)]*\)/g, "")
 }
 
 function main() {
-  const msgFile = process.argv[2]
-  if (!msgFile) {
+  const messageFile = process.argv[2]
+  if (!messageFile) {
     process.stderr.write("用法: check-commit-scope.mjs <commit-msg-file>\n")
     process.exit(1)
   }
-  const raw = fs.readFileSync(msgFile, "utf8")
+  const raw = fs.readFileSync(messageFile, "utf-8")
   // 剔除注释行 (# 开头 git 自动加的说明), 首行拿到 subject
-  const lines = raw.split("\n").filter(line => !line.startsWith("#"))
-  const subject = lines[0] ?? ""
+  const line_ = raw.split("\n").find(line => !line.startsWith("#"))
+  const subject = line_ ?? ""
 
   // 特例放行: revert / merge / fixup / squash 的自动格式
   if (
@@ -78,7 +77,9 @@ function main() {
   const violations = []
 
   for (const rule of MULTI_MARKERS) {
-    if (rule.pattern.test(withoutScope)) violations.push(rule.describe)
+    if (rule.pattern.test(withoutScope)) {
+      violations.push(rule.describe)
+    }
   }
 
   // 中文顿号: 只有 scope 外的才算 (scope 内允许)
@@ -96,12 +97,14 @@ function main() {
     )
   }
 
-  if (violations.length === 0) return
+  if (violations.length === 0) {
+    return
+  }
 
   process.stderr.write("\nBLOCKED: commit 违反单一职责原则.\n\n")
   process.stderr.write(`  subject: ${subject}\n\n`)
-  for (const msg of violations) {
-    process.stderr.write(`  · ${msg}\n`)
+  for (const message of violations) {
+    process.stderr.write(`  · ${message}\n`)
   }
   process.stderr.write(
     "\n请把这个 commit 拆成多个独立 commit, 每个只解决一件事:\n" +

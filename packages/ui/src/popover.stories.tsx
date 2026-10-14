@@ -1,20 +1,20 @@
-import type { Meta, StoryObj } from '@storybook/react'
 import {
   Popover,
   PopoverContent,
   PopoverDescription,
   PopoverHeader,
   PopoverTitle,
-  PopoverTrigger
-} from './popover'
-import { Button } from './button'
-import { Input } from './input'
-import { Label } from './label'
+  PopoverTrigger,
+} from "./popover"
+import { Button } from "./button"
+import { Input } from "./input"
+import { Label } from "./label"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Popover> = {
-  title: 'Overlay/Popover',
+  title: "Overlay/Popover",
   component: Popover,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -36,5 +36,5 @@ export const Default: Story = {
         <Button size="sm">保存</Button>
       </PopoverContent>
     </Popover>
-  )
+  ),
 }

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { createMockDocument } from "@/pages/project/adapters/fixtures"
-import type { LoopRegion, Marker, Track } from "@/pages/project/model/types"
 import { deriveGridPlan } from "@/pages/project/model/grid"
-import type { ArrangementScene } from "../scene"
 import { BAR_RULER_HEIGHT, paintGrid, TIME_RULER_HEIGHT } from "./grid"
+import type { LoopRegion, Marker, Track } from "@/pages/project/model/types"
+import type { ArrangementScene } from "../scene"
 
 const tokens = {
   foreground: "#fff",
@@ -27,9 +27,9 @@ function makeScene(patch?: Partial<ArrangementScene>): ArrangementScene {
     gridPlan: deriveGridPlan({ mode: "fixed", bars: 1 }, 32, 4, 4),
     playback: { playing: false, insertionPoint: null },
     transport: { bpm: 120, numerator: 4, denominator: 4 },
-    markers: [] as ReadonlyArray<Marker>,
+    markers: [] as readonly Marker[],
     loop: { enabled: false, startBar: 1, endBar: 5 } as LoopRegion,
-    tracks: [] as ReadonlyArray<Track>,
+    tracks: [] as readonly Track[],
     previewTracks: null,
     clipDrag: null,
     clipResize: null,
@@ -46,7 +46,7 @@ function makeScene(patch?: Partial<ArrangementScene>): ArrangementScene {
 }
 
 type Call = [name: string, args: unknown[]]
-function recordCtx() {
+function recordContext() {
   const calls: Call[] = []
   const proxy = {
     _calls: calls,
@@ -96,17 +96,18 @@ function recordCtx() {
     "fillText",
   ] as const
   for (const name of methods) {
-    ;(proxy as unknown as Record<string, unknown>)[name] = (...args: unknown[]) =>
-      calls.push([name, args])
+    ;(proxy as unknown as Record<string, unknown>)[name] = (...arguments_: unknown[]) => {
+      calls.push([name, arguments_])
+    }
   }
   return proxy as unknown as CanvasRenderingContext2D & { _calls: Call[] }
 }
 
 describe("grid painter", () => {
   it("reserves distinct marker and loop/bar bands plus the bottom time band", () => {
-    const ctx = recordCtx()
-    paintGrid(ctx, makeScene(), tokens)
-    const fillRects = ctx._calls.filter(c => c[0] === "fillRect").map(c => c[1] as number[])
+    const context = recordContext()
+    paintGrid(context, makeScene(), tokens)
+    const fillRects = context._calls.filter(c => c[0] === "fillRect").map(c => c[1] as number[])
     expect(fillRects.some(r => r[1] === 0 && r[3] === 17)).toBe(true)
     expect(fillRects.some(r => r[1] === 17 && r[3] === 17)).toBe(true)
     expect(
@@ -120,51 +121,56 @@ describe("grid painter", () => {
   })
 
   it("draws marker ticks in the first lane and loop handles only in the second", () => {
-    const ctx = recordCtx()
+    const context = recordContext()
     paintGrid(
-      ctx,
+      context,
       makeScene({
         markers: [{ id: "section", bar: 3, label: "Section" }],
         loop: { enabled: true, startBar: 3, endBar: 6 },
       }),
       tokens
     )
-    const calls = ctx._calls
+    const calls = context._calls
     expect(
       calls.filter(
-        ([name, args]) => name === "fillText" && args[0] === "Section" && args[2] === 17 / 2
+        ([name, arguments_]) =>
+          name === "fillText" && arguments_[0] === "Section" && arguments_[2] === 17 / 2
       )
     ).toHaveLength(1)
     expect(
-      calls.filter(([name, args]) => name === "fillRect" && args[1] === 17 && args[3] === 17)
+      calls.filter(
+        ([name, arguments_]) => name === "fillRect" && arguments_[1] === 17 && arguments_[3] === 17
+      )
     ).toHaveLength(2)
   })
 
   it("highlights only selected track rows when choosing a time span", () => {
-    const tracks = createMockDocument().tracks
+    const { tracks } = createMockDocument()
     const selected = tracks[0]
-    if (!selected) throw new Error("Fixture must contain a group track")
-    const ctx = recordCtx()
+    if (!selected) {
+      throw new Error("Fixture must contain a group track")
+    }
+    const context = recordContext()
     paintGrid(
-      ctx,
+      context,
       makeScene({
         tracks,
         timeSelection: { startBar: 1, endBar: 3, trackIds: [selected.id] },
       }),
       tokens
     )
-    const selectedFills = ctx._calls
-      .filter(([name, args]) => name === "fillRect" && args[2] === 64)
-      .map(([, args]) => args as number[])
+    const selectedFills = context._calls
+      .filter(([name, arguments_]) => name === "fillRect" && arguments_[2] === 64)
+      .map(([, arguments_]) => arguments_ as number[])
     expect(selectedFills).toHaveLength(1)
     expect(selectedFills[0][3]).toBeGreaterThan(0)
     expect(selectedFills[0][3]).toBeLessThanOrEqual(selected.heightPx)
   })
 
   it("paints fine snapped cells at the same one-based origin, bounded by the viewport", () => {
-    const ctx = recordCtx()
+    const context = recordContext()
     paintGrid(
-      ctx,
+      context,
       makeScene({
         grid: { mode: "fixed", bars: 1 / 128 },
         gridPlan: deriveGridPlan({ mode: "fixed", bars: 1 / 128 }, 2048, 4, 4),
@@ -179,19 +185,19 @@ describe("grid painter", () => {
       }),
       tokens
     )
-    const gridLines = ctx._calls.filter(
-      ([name, args]) => name === "moveTo" && args[1] === BAR_RULER_HEIGHT
+    const gridLines = context._calls.filter(
+      ([name, arguments_]) => name === "moveTo" && arguments_[1] === BAR_RULER_HEIGHT
     )
-    expect(gridLines.some(([, args]) => args[0] === 16.5)).toBe(true)
+    expect(gridLines.some(([, arguments_]) => arguments_[0] === 16.5)).toBe(true)
     expect(gridLines.length).toBeLessThan(100)
   })
 
   it("bounds 1/16384 grid raster work at a distant logical scroll", () => {
-    const ctx = recordCtx()
-    const pxPerBar = 131072
-    const cellBars = 1 / 16384
+    const context = recordContext()
+    const pxPerBar = 131_072
+    const cellBars = 1 / 16_384
     paintGrid(
-      ctx,
+      context,
       makeScene({
         bars: 4096,
         grid: { mode: "adaptive", density: "narrowest" },
@@ -207,8 +213,8 @@ describe("grid painter", () => {
       }),
       tokens
     )
-    const lines = ctx._calls.filter(
-      ([name, args]) => name === "moveTo" && args[1] === BAR_RULER_HEIGHT
+    const lines = context._calls.filter(
+      ([name, arguments_]) => name === "moveTo" && arguments_[1] === BAR_RULER_HEIGHT
     )
     expect(lines.length).toBeLessThan(200)
     expect(lines.length).toBeGreaterThan(20)
@@ -242,10 +248,10 @@ describe("grid painter", () => {
   ] as const)(
     "aligns numbered ruler and $density cells at $pxPerBar px/bar",
     ({ pxPerBar, density, width, major, minor }) => {
-      const ctx = recordCtx()
+      const context = recordContext()
       const grid = { mode: "adaptive", density } as const
       paintGrid(
-        ctx,
+        context,
         makeScene({
           grid,
           gridPlan: deriveGridPlan(grid, pxPerBar, 4, 4),
@@ -258,10 +264,17 @@ describe("grid painter", () => {
         [tokens.gridMinor, []],
       ])
       let strokeStyle = ""
-      for (const [name, args] of ctx._calls) {
-        if (name === "strokeStyle=") strokeStyle = String(args[0])
-        if (name === "moveTo" && args[1] === BAR_RULER_HEIGHT && typeof args[0] === "number")
-          lines.get(strokeStyle)?.push(args[0])
+      for (const [name, arguments_] of context._calls) {
+        if (name === "strokeStyle=") {
+          strokeStyle = String(arguments_[0])
+        }
+        if (
+          name === "moveTo" &&
+          arguments_[1] === BAR_RULER_HEIGHT &&
+          typeof arguments_[0] === "number"
+        ) {
+          lines.get(strokeStyle)?.push(arguments_[0])
+        }
       }
       expect(lines.get(tokens.gridMajor)).toEqual(major)
       expect(lines.get(tokens.gridMinor)).toEqual(minor)
@@ -269,27 +282,27 @@ describe("grid painter", () => {
   )
 
   it("skips work when viewport has zero size", () => {
-    const ctx = recordCtx()
+    const context = recordContext()
     paintGrid(
-      ctx,
+      context,
       makeScene({
         viewport: { pxPerBar: 24, scrollX: 0, scrollY: 0, width: 0, height: 200, dpr: 1 },
       }),
       tokens
     )
-    expect(ctx._calls).toHaveLength(0)
+    expect(context._calls).toHaveLength(0)
   })
 
   it("keeps pinned-track highlights below the rulers in a short viewport", () => {
-    const ctx = recordCtx()
+    const context = recordContext()
     const scene = makeScene({
       tracks: createMockDocument().tracks,
       selectedTrackIds: new Set(["main"]),
       timeSelection: { startBar: 1, endBar: 2, trackIds: ["main"] },
       viewport: { pxPerBar: 24, scrollX: 0, scrollY: 0, width: 100, height: 100, dpr: 1 },
     })
-    paintGrid(ctx, scene, tokens)
-    const crossesRuler = ctx._calls.some(
+    paintGrid(context, scene, tokens)
+    const crossesRuler = context._calls.some(
       ([name, [, y, , height]]) =>
         name === "fillRect" &&
         typeof y === "number" &&

@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect } from "react"
-import { useProjectState } from "@/pages/project/adapters"
+import { useEffect, useLayoutEffect, useMemo } from "react"
+import { getEffectiveDocument, useProjectState } from "@/pages/project/adapters"
 import { growTimelineBars, timelineBars } from "@/pages/project/model/selectors"
 import { positionToBar } from "@/pages/project/model/types"
 import { arrangementScene } from "./scene"
@@ -12,6 +12,11 @@ import { arrangementScene } from "./scene"
  */
 export function useSceneSync() {
   const document = useProjectState(s => s.document)
+  const preview = useProjectState(s => s.session.preview)
+  const effective = useMemo(
+    () => getEffectiveDocument({ document, session: { preview } }),
+    [document, preview]
+  )
   const timeSelection = useProjectState(s => s.session.timeSelection)
   const selectedClipIds = useProjectState(s => s.session.selectedClipIds)
   const selectedTrackIds = useProjectState(s => s.session.selectedTrackIds)
@@ -24,7 +29,7 @@ export function useSceneSync() {
   const playing = useProjectState(s => s.session.playing)
   const insertionPoint = useProjectState(s => s.session.insertionPoint)
   useLayoutEffect(() => {
-    const bars = growTimelineBars(timelineBars(document), Math.max(position, selectionEnd))
+    const bars = growTimelineBars(timelineBars(effective), Math.max(position, selectionEnd))
     arrangementScene.setMusic({
       bars,
       grid,
@@ -37,7 +42,14 @@ export function useSceneSync() {
       loop: document.transport.loop,
       tracks: document.tracks,
     })
-  }, [document, grid, position, selectionEnd])
+    arrangementScene.setProjectPreview(preview)
+    if (preview?.kind === "tracks") {
+      return
+    }
+
+    arrangementScene.setClipDrag(null)
+    arrangementScene.setClipResize(null)
+  }, [document, effective, preview, grid, position, selectionEnd])
   useEffect(() => {
     arrangementScene.setPlayback({ playing, insertionPoint })
   }, [playing, insertionPoint])
@@ -55,12 +67,14 @@ export function useSceneSync() {
   }, [automationParameters])
 }
 
-/** Push zoom/scroll from the DOM viewport controller into the scene store. */
+/**
+Push zoom/scroll from the DOM viewport controller into the scene store.
+*/
 export function useViewportSync(input: { pxPerBar: number; scrollX: number; scrollY: number }) {
   useLayoutEffect(() => {
-    const prev = arrangementScene.get().viewport
+    const previous = arrangementScene.get().viewport
     arrangementScene.setViewport({
-      ...prev,
+      ...previous,
       pxPerBar: input.pxPerBar,
       scrollX: input.scrollX,
       scrollY: input.scrollY,

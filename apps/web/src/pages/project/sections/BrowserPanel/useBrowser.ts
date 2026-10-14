@@ -1,11 +1,11 @@
 import { useState } from "react"
-import {
-  BROWSER_ENTRIES,
-  INITIAL_FAVORITES,
-  type BrowserEntry,
-  type BrowserKind,
-  type BrowserSource,
-} from "./browserData"
+import { BROWSER_ENTRIES, INITIAL_FAVORITES } from "./browserData"
+import type { BrowserEntry, BrowserKind, BrowserSource } from "./browserData"
+
+const INITIAL_MATCH: { readonly source: boolean; readonly search: boolean } = Object.freeze({
+  source: false,
+  search: false,
+})
 
 export interface BrowserRow {
   entry: BrowserEntry
@@ -33,19 +33,22 @@ export function useBrowser() {
   const source = history.current
   const selectedId = selection[source]
   const search = query.trim().toLocaleLowerCase()
-  const filtering = search.length > 0 || kind !== "all"
-  const expansionContext = filtering ? `${source}/${kind}/${search}` : "browse"
+  const isFiltering = search.length > 0 || kind !== "all"
+  const expansionContext = isFiltering ? `${source}/${kind}/${search}` : "browse"
 
   function matchesSource(entry: BrowserEntry) {
-    if (source === "all") return true
-    if (source === "favorites") return favorites.has(entry.id)
-    if (source === "purple") return entry.purple
-    return entry.category === source || entry.place === source
+    if (source === "all") {
+      return true
+    }
+    if (source === "favorites") {
+      return favorites.has(entry.id)
+    }
+    return source === "purple" ? entry.purple : entry.category === source || entry.place === source
   }
 
   function filterEntries(
     entries: readonly BrowserEntry[],
-    inherited = { source: false, search: false }
+    inherited = INITIAL_MATCH
   ): BrowserEntry[] {
     return entries
       .flatMap<BrowserEntry>(entry => {
@@ -55,7 +58,9 @@ export function useBrowser() {
           !search ||
           `${entry.name} ${entry.tags.join(" ")}`.toLocaleLowerCase().includes(search)
         const matches = matchesScope && matchesSearch && (kind === "all" || entry.kind === kind)
-        if (entry.kind !== "device") return matches ? [entry] : []
+        if (entry.kind !== "device") {
+          return matches ? [entry] : []
+        }
         const children = filterEntries(entry.children, {
           source: matchesScope,
           search: matchesSearch && matchesScope,
@@ -68,10 +73,13 @@ export function useBrowser() {
   const rows: BrowserRow[] = []
   function addRows(entries: readonly BrowserEntry[], depth: number, parentId: string | null) {
     for (const entry of entries) {
-      const expandable = entry.kind === "device" && entry.children.length > 0
-      const isExpanded = expandable && (expanded[`${expansionContext}/${entry.id}`] ?? filtering)
-      rows.push({ entry, depth, parentId, expandable, expanded: isExpanded })
-      if (entry.kind === "device" && isExpanded) addRows(entry.children, depth + 1, entry.id)
+      const isExpandable = entry.kind === "device" && entry.children.length > 0
+      const isExpanded =
+        isExpandable && (expanded[`${expansionContext}/${entry.id}`] ?? isFiltering)
+      rows.push({ entry, depth, parentId, expandable: isExpandable, expanded: isExpanded })
+      if (entry.kind === "device" && isExpanded) {
+        addRows(entry.children, depth + 1, entry.id)
+      }
     }
   }
   addRows(filterEntries(BROWSER_ENTRIES), 0, null)
@@ -82,19 +90,25 @@ export function useBrowser() {
   }
 
   function navigate(next: BrowserSource) {
-    if (next === source) return
-    setHistory(previous => ({
-      back: [...previous.back, previous.current],
-      current: next,
-      forward: [],
-    }))
+    if (next === source) {
+      return
+    }
+    setHistory(previous => {
+      return {
+        back: [...previous.back, previous.current],
+        current: next,
+        forward: [],
+      }
+    })
     setKind("all")
   }
 
   function travel(direction: "back" | "forward") {
     setHistory(previous => {
       const next = previous[direction].at(-1)
-      if (!next) return previous
+      if (!next) {
+        return previous
+      }
       return direction === "back"
         ? {
             back: previous.back.slice(0, -1),
@@ -112,14 +126,17 @@ export function useBrowser() {
 
   function toggleExpanded(id: string) {
     const key = `${expansionContext}/${id}`
-    setExpanded(previous => ({ ...previous, [key]: !(previous[key] ?? filtering) }))
+    setExpanded(previous => ({ ...previous, [key]: !(previous[key] ?? isFiltering) }))
   }
 
   function toggleFavorite(id: string) {
     setFavorites(previous => {
       const next = new Set(previous)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
       return next
     })
   }
@@ -144,6 +161,6 @@ export function useBrowser() {
     setDescending,
     filtersVisible,
     setFiltersVisible,
-    filtering,
+    filtering: isFiltering,
   }
 }

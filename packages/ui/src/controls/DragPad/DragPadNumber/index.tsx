@@ -4,27 +4,29 @@
  * 宽度由 `AutoWidthText` 的 ghost 样本(浏览器实测)锁定,不再 ch 猜算。
  * 三交互 + inline edit 三态(idle / preEdit / editing)继承 hook 实现。
  */
-import { useMemo, type ReactNode } from "react";
-import { AutoWidthText } from "../AutoWidthText";
-import { DragPadBase } from "../DragPadBase";
-import { IconSlot } from "#components/controls/IconSlot/index";
-import { EditInput } from "../EditInput";
-import { useDragValue, type UseDragValueOptions } from "../useDragValue";
-import { useInfoBinding } from "../useInfoBinding";
-import { useInlineEdit } from "../useInlineEdit";
-import { formatNumericValue } from "../formatNumericValue";
+import { useMemo } from "react"
+import { IconSlot } from "#components/controls/IconSlot/index"
+import { AutoWidthText } from "../AutoWidthText"
+import { DragPadBase } from "../DragPadBase"
+import { EditInput } from "../EditInput"
+import { useDragValue } from "../useDragValue"
+import { useInfoBinding } from "../useInfoBinding"
+import { useInlineEdit } from "../useInlineEdit"
+import { formatNumericValue } from "../formatNumericValue"
+import type { UseDragValueOptions } from "../useDragValue"
+import type { ReactNode } from "react"
 
 export interface DragPadNumberProps extends UseDragValueOptions {
-  label: string;
-  description?: string;
-  format?: (value: number) => string;
-  color?: string;
-  className?: string;
-  editable?: boolean;
-  parse?: (raw: string) => number;
-  size?: "default" | "compact";
-  widthSamples?: string[];
-  icon?: ReactNode;
+  readonly label: string
+  readonly description?: string
+  readonly format?: (value: number) => string
+  readonly color?: string
+  readonly className?: string
+  readonly editable?: boolean
+  readonly parse?: (raw: string) => number
+  readonly size?: "default" | "compact"
+  readonly widthSamples?: string[]
+  readonly icon?: ReactNode
 }
 
 export function DragPadNumber({
@@ -40,12 +42,9 @@ export function DragPadNumber({
   widthSamples = [],
   ...dragOptions
 }: DragPadNumberProps) {
-  const toStr = useMemo(
-    () =>
-      format ??
-      formatNumericValue(dragOptions.min, dragOptions.max, dragOptions.step),
-    [format, dragOptions.min, dragOptions.max, dragOptions.step],
-  );
+  const toString_ = useMemo(() => {
+    return format ?? formatNumericValue(dragOptions.min, dragOptions.max, dragOptions.step)
+  }, [format, dragOptions.min, dragOptions.max, dragOptions.step])
   const {
     state: editState,
     draft,
@@ -61,34 +60,29 @@ export function DragPadNumber({
     min: dragOptions.min,
     max: dragOptions.max,
     step: dragOptions.step,
-    format: toStr,
+    format: toString_,
     parse,
     editable,
     disabled: dragOptions.disabled,
     onGestureStart: dragOptions.onGestureStart,
     onGestureEnd: dragOptions.onGestureEnd,
     onGestureCancel: dragOptions.onGestureCancel,
-  });
+  })
 
-  const { dragging, handlePointerDown, handleClick, handleDoubleClick, ref } =
-    useDragValue({
-      ...dragOptions,
-      attached: editState !== "editing",
-      onClick: beginPreEdit,
-    });
+  const { dragging, handlePointerDown, handleClick, handleDoubleClick, ref } = useDragValue({
+    ...dragOptions,
+    attached: editState !== "editing",
+    onClick: beginPreEdit,
+  })
 
-  const display = toStr(dragOptions.value);
-  const samples = [
-    toStr(dragOptions.min),
-    toStr(dragOptions.max),
-    ...widthSamples,
-  ];
+  const display = toString_(dragOptions.value)
+  const samples = [toString_(dragOptions.min), toString_(dragOptions.max), ...widthSamples]
 
   const infoHandlers = useInfoBinding({
     type: "number",
     description,
     dragging,
-  });
+  })
 
   if (editState === "editing") {
     return (
@@ -104,7 +98,7 @@ export function DragPadNumber({
         icon={icon}
         samples={samples}
       />
-    );
+    )
   }
 
   const mergedClass = [
@@ -113,7 +107,7 @@ export function DragPadNumber({
     className ?? "",
   ]
     .filter(Boolean)
-    .join(" ");
+    .join(" ")
 
   return (
     <DragPadBase
@@ -125,19 +119,19 @@ export function DragPadNumber({
       className={mergedClass}
       onPointerDown={handlePointerDown}
       onClick={handleClick}
-      onDoubleClick={(event) => {
-        handleDoubleClick(event);
-        resetPreEdit();
+      onDoubleClick={event => {
+        handleDoubleClick(event)
+        resetPreEdit()
       }}
       aria-label={label}
       {...infoHandlers}
       onBlur={() => {
-        infoHandlers.onBlur();
-        cancel();
+        infoHandlers.onBlur()
+        cancel()
       }}
     >
       {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
       <AutoWidthText samples={samples}>{display}</AutoWidthText>
     </DragPadBase>
-  );
+  )
 }

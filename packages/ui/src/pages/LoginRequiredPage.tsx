@@ -1,11 +1,11 @@
-import { Button } from "../button";
-import { LogIn, User } from "lucide-react";
+import { LogIn, User } from "lucide-react"
+import { Button } from "../button"
 
-interface LoginRequiredPageProps {
-  title?: string;
-  description?: string;
-  showLoginButton?: boolean;
-  onLogin?: () => void;
+interface LoginRequiredPageProperties {
+  readonly title?: string
+  readonly description?: string
+  readonly showLoginButton?: boolean
+  readonly onLogin?: () => void
 }
 
 /**
@@ -18,38 +18,41 @@ export function LoginRequiredPage({
   description = "请先登录您的账户以访问此功能",
   showLoginButton = true,
   onLogin,
-}: LoginRequiredPageProps) {
+}: LoginRequiredPageProperties) {
   const handleLogin = () => {
-    if (onLogin) onLogin();
-    else window.location.assign("/login");
-  };
+    if (onLogin) {
+      onLogin()
+    } else {
+      window.location.assign("/login")
+    }
+  }
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-background px-4">
-      <div className="max-w-md w-full text-center space-y-6">
-        <div className="text-8xl md:text-9xl font-bold text-muted-foreground/30 tracking-tighter select-none">
+    <div className="bg-background flex min-h-svh items-center justify-center px-4">
+      <div className="w-full max-w-md space-y-6 text-center">
+        <div className="text-muted-foreground/30 text-8xl font-bold tracking-tighter select-none md:text-9xl">
           401
         </div>
 
         <div className="space-y-2">
-          <div className="flex justify-center mb-3">
-            <div className="size-12 rounded-full bg-muted flex items-center justify-center">
-              <User className="size-6 text-muted-foreground" />
+          <div className="mb-3 flex justify-center">
+            <div className="bg-muted flex size-12 items-center justify-center rounded-full">
+              <User className="text-muted-foreground size-6" />
             </div>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-sm">{description}</p>
         </div>
 
-        {showLoginButton && (
+        {showLoginButton ? (
           <div className="flex justify-center pt-2">
             <Button onClick={handleLogin} className="gap-2 px-8">
               <LogIn className="size-4" />
               立即登录
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
-  );
+  )
 }

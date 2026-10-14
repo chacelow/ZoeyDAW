@@ -1,18 +1,18 @@
-import type { Meta, StoryObj } from '@storybook/react'
 import {
   AlignCenterIcon,
   AlignLeftIcon,
   AlignRightIcon,
   BoldIcon,
   ItalicIcon,
-  UnderlineIcon
-} from 'lucide-react'
-import { ToggleGroup, ToggleGroupItem } from './toggle-group'
+  UnderlineIcon,
+} from "lucide-react"
+import { ToggleGroup, ToggleGroupItem } from "./toggle-group"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof ToggleGroup> = {
-  title: 'Form/ToggleGroup',
+  title: "Form/ToggleGroup",
   component: ToggleGroup,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -31,12 +31,12 @@ export const Single: Story = {
         <AlignRightIcon />
       </ToggleGroupItem>
     </ToggleGroup>
-  )
+  ),
 }
 
 export const Multiple: Story = {
   render: () => (
-    <ToggleGroup type="multiple" defaultValue={['bold']}>
+    <ToggleGroup type="multiple" defaultValue={["bold"]}>
       <ToggleGroupItem value="bold" aria-label="加粗">
         <BoldIcon />
       </ToggleGroupItem>
@@ -47,7 +47,7 @@ export const Multiple: Story = {
         <UnderlineIcon />
       </ToggleGroupItem>
     </ToggleGroup>
-  )
+  ),
 }
 
 export const Attached: Story = {
@@ -63,5 +63,5 @@ export const Attached: Story = {
         <AlignRightIcon />
       </ToggleGroupItem>
     </ToggleGroup>
-  )
+  ),
 }

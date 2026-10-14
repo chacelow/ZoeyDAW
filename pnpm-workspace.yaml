@@ -1,5 +1,15 @@
 packages:
   - apps/*
   - packages/*
+overrides:
+  "@typescript-eslint/eslint-plugin": 8.71.2
+  "@typescript-eslint/parser": 8.71.2
+  "@typescript-eslint/utils": 8.71.2
+  "typescript-eslint": 8.71.2
+packageExtensions:
+  ultracite@8.0.1:
+    dependencies:
+      "@typescript-eslint/eslint-plugin": 8.71.2
+      "@typescript-eslint/parser": 8.71.2
 patchedDependencies:
   metal-fx@1.0.4: patches/metal-fx@1.0.4.patch

@@ -37,7 +37,9 @@ it("uses traveled distance rather than pointer event frequency", () => {
   for (const distances of [[40], [4, 10, 25, 40]]) {
     const view = render(<DistanceConsumer />)
     pointer(screen.getByRole("button", { name: "Pan" }), "pointerdown", 600)
-    for (const distance of distances) pointer(document, "pointermove", 600 - distance)
+    for (const distance of distances) {
+      pointer(document, "pointermove", 600 - distance)
+    }
     pointer(document, "pointerup", 560)
     results.push(value())
     view.unmount()

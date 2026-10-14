@@ -1,9 +1,9 @@
-'use client'
+"use client"
 
-import * as React from 'react'
-import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area'
+import * as React from "react"
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area"
 
-import { cn } from '#lib/utils'
+import { cn } from "#lib/utils"
 
 /**
  * 滚动容器 —— 基于 base-ui ScrollArea.
@@ -27,44 +27,53 @@ import { cn } from '#lib/utils'
 const ScrollArea = React.forwardRef<
   HTMLDivElement,
   ScrollAreaPrimitive.Root.Props & {
-    /** 滚动方向。both = 同时纵横两条滚动条（看板等二维滚动场景）。 */
-    orientation?: 'vertical' | 'horizontal' | 'both'
-    /** 填满父容器 —— 自动加 relative h-full w-full min-w-0 min-h-0。父必须有确定尺寸。 */
-    fill?: boolean
-    /** 固定像素尺寸 —— 配合 ResizeObserver 使用，绕过 flex-item min-width:auto 传导坑。 */
-    size?: { width: number; height: number }
+    /**
+    滚动方向。both = 同时纵横两条滚动条（看板等二维滚动场景）。
+    */
+    readonly orientation?: "vertical" | "horizontal" | "both"
+    /**
+    填满父容器 —— 自动加 relative h-full w-full min-w-0 min-h-0。父必须有确定尺寸。
+    */
+    readonly fill?: boolean
+    /**
+    固定像素尺寸 —— 配合 ResizeObserver 使用，绕过 flex-item min-width:auto 传导坑。
+    */
+    readonly size?: { width: number; height: number }
   }
->(function ScrollArea(
-  { className, children, orientation = 'vertical', fill = false, size, style, ...props },
-  ref
-) {
-  const inlineStyle = size ? { ...style, width: size.width, height: size.height } : style
+>(
+  (
+    { className, children, orientation = "vertical", fill = false, size, style, ...properties },
+    reference
+  ) => {
+    const inlineStyle = size ? { ...style, width: size.width, height: size.height } : style
 
-  return (
-    <ScrollAreaPrimitive.Root
-      ref={ref}
-      data-slot="scroll-area"
-      className={cn('relative', fill && 'h-full w-full min-h-0 min-w-0', className)}
-      style={inlineStyle}
-      {...props}
-    >
-      <ScrollAreaPrimitive.Viewport
-        data-slot="scroll-area-viewport"
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+    return (
+      <ScrollAreaPrimitive.Root
+        ref={reference}
+        data-slot="scroll-area"
+        className={cn("relative", fill && "h-full min-h-0 w-full min-w-0", className)}
+        style={inlineStyle}
+        {...properties}
       >
-        {children}
-      </ScrollAreaPrimitive.Viewport>
-      {orientation !== 'horizontal' && <ScrollBar orientation="vertical" />}
-      {orientation !== 'vertical' && <ScrollBar orientation="horizontal" />}
-      <ScrollAreaPrimitive.Corner />
-    </ScrollAreaPrimitive.Root>
-  )
-})
+        <ScrollAreaPrimitive.Viewport
+          data-slot="scroll-area-viewport"
+          className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
+        >
+          {children}
+        </ScrollAreaPrimitive.Viewport>
+        {orientation !== "horizontal" && <ScrollBar orientation="vertical" />}
+        {orientation !== "vertical" && <ScrollBar orientation="horizontal" />}
+        <ScrollAreaPrimitive.Corner />
+      </ScrollAreaPrimitive.Root>
+    )
+  }
+)
+ScrollArea.displayName = "ScrollArea"
 
 function ScrollBar({
   className,
-  orientation = 'vertical',
-  ...props
+  orientation = "vertical",
+  ...properties
 }: ScrollAreaPrimitive.Scrollbar.Props) {
   return (
     <ScrollAreaPrimitive.Scrollbar
@@ -72,14 +81,14 @@ function ScrollBar({
       data-orientation={orientation}
       orientation={orientation}
       className={cn(
-        'flex touch-none p-px transition-colors select-none data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent',
+        "flex touch-none p-px transition-colors select-none data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent",
         className
       )}
-      {...props}
+      {...properties}
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
+        className="bg-border relative flex-1 rounded-full"
       />
     </ScrollAreaPrimitive.Scrollbar>
   )

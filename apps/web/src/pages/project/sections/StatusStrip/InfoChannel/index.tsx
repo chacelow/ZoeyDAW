@@ -1,12 +1,12 @@
 /**
  * InfoChannel — StatusStrip 内嵌的信息展示通道。
  *
- * 优先级：hover info（有则显示）→ 最新 warning → 空占位
- * 全部走 token 色；severity 控制图标和强调色。
+ * 优先级：hover info（有则显示）→ 最新 warning → 空占位 全部走 token 色；severity 控制图标和强调色。
  */
 import { AlertTriangle, CircleAlert, Info } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
-import { useInfoHover, type WarningSeverity } from "@/pages/project/stores/useInfoHover"
+import { useControlInteractions } from "@/shared/control-interactions/index"
+import type { WarningSeverity } from "@/shared/control-interactions/index"
 
 const SEVERITY_ICON: Record<WarningSeverity, typeof Info> = {
   info: Info,
@@ -22,9 +22,9 @@ const SEVERITY_COLOR: Record<WarningSeverity, string> = {
 
 export function InfoChannel() {
   const { t } = useTranslation()
-  const info = useInfoHover(state => state.info)
-  const warnings = useInfoHover(state => state.warnings)
-  const topWarning = warnings[warnings.length - 1]
+  const info = useControlInteractions(state => state.info)
+  const warnings = useControlInteractions(state => state.warnings)
+  const topWarning = warnings.at(-1)
 
   if (info) {
     return (
@@ -32,10 +32,10 @@ export function InfoChannel() {
         data-slot="info-channel"
         className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-xs"
       >
-        <span className="shrink-0 font-medium text-foreground">
+        <span className="text-foreground shrink-0 font-medium">
           {t(`project.info.${info}.title`)}
         </span>
-        <span className="truncate text-muted-foreground">
+        <span className="text-muted-foreground truncate">
           {t(`project.info.${info}.description`)}
         </span>
       </div>

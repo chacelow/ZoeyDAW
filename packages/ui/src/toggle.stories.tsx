@@ -1,16 +1,16 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { BoldIcon, ItalicIcon, UnderlineIcon } from 'lucide-react'
-import { Toggle } from './toggle'
+import { BoldIcon, ItalicIcon, UnderlineIcon } from "lucide-react"
+import { Toggle } from "./toggle"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Toggle> = {
-  title: 'Form/Toggle',
+  title: "Form/Toggle",
   component: Toggle,
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
-    variant: { control: 'select', options: ['default', 'outline'] },
-    size: { control: 'select', options: ['default', 'sm', 'lg'] }
+    variant: { control: "select", options: ["default", "outline"] },
+    size: { control: "select", options: ["default", "sm", "lg"] },
   },
-  args: { children: 'Bold' }
+  args: { children: "Bold" },
 }
 
 export default meta
@@ -24,7 +24,7 @@ export const Variants: Story = {
       <Toggle>Default</Toggle>
       <Toggle variant="outline">Outline</Toggle>
     </div>
-  )
+  ),
 }
 
 export const WithIcon: Story = {
@@ -40,5 +40,5 @@ export const WithIcon: Story = {
         <UnderlineIcon />
       </Toggle>
     </div>
-  )
+  ),
 }

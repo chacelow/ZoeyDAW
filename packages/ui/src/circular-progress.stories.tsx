@@ -1,17 +1,17 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { CircularProgress } from './circular-progress'
+import { CircularProgress } from "./circular-progress"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof CircularProgress> = {
-  title: 'Display/CircularProgress',
+  title: "Display/CircularProgress",
   component: CircularProgress,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
 type Story = StoryObj<typeof CircularProgress>
 
 export const Default: Story = {
-  render: () => <CircularProgress current={40} total={100} size={20} />
+  render: () => <CircularProgress current={40} total={100} size={20} />,
 }
 
 export const Sizes: Story = {
@@ -21,13 +21,13 @@ export const Sizes: Story = {
       <CircularProgress current={60} total={100} size={20} />
       <CircularProgress current={85} total={100} size={28} />
     </div>
-  )
+  ),
 }
 
 export const RatioMode: Story = {
-  render: () => <CircularProgress current={7} total={10} size={20} showPercentage={false} />
+  render: () => <CircularProgress current={7} total={10} size={20} showPercentage={false} />,
 }
 
 export const WithTooltip: Story = {
-  render: () => <CircularProgress current={80} total={100} size={20} tooltip="上下文使用 80%" />
+  render: () => <CircularProgress current={80} total={100} size={20} tooltip="上下文使用 80%" />,
 }

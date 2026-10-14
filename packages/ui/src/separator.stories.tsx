@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Separator } from './separator'
+import { Separator } from "./separator"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Separator> = {
-  title: 'Display/Separator',
+  title: "Display/Separator",
   component: Separator,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -17,7 +17,7 @@ export const Horizontal: Story = {
       <Separator className="my-3" />
       <div className="text-sm">下方内容</div>
     </div>
-  )
+  ),
 }
 
 export const Vertical: Story = {
@@ -29,5 +29,5 @@ export const Vertical: Story = {
       <Separator orientation="vertical" />
       <span>关于</span>
     </div>
-  )
+  ),
 }

@@ -1,4 +1,5 @@
 import { cloneTrack, createTrack } from "../model/reducers"
+import { DEFAULT_TRACK_HEIGHT } from "../layout"
 import { get, session, tracks, updateTrack } from "./context"
 
 export const trackActions = {
@@ -6,10 +7,10 @@ export const trackActions = {
   addTrack(kind: "audio" | "midi" | "group" | "return", parentId?: string) {
     const source = get().document.tracks
     const parent = source.find(track => track.id === parentId && track.kind === "group")
-    const created = createTrack(kind, source, parent?.id)
+    const created = createTrack(kind, source, parent?.id, DEFAULT_TRACK_HEIGHT)
     const index = parent
       ? source.indexOf(parent) + 1 + (parent.childTrackIds?.length ?? 0)
-      : source.findIndex(track => track.kind === "main")
+      : source.findIndex(track => track.id === "main")
     const result = source.map(track =>
       track.id === parent?.id
         ? { ...track, childTrackIds: [...(track.childTrackIds ?? []), created.id] }
@@ -25,10 +26,12 @@ export const trackActions = {
       source
         .find(track => track.id === id)
         ?.childTrackIds?.forEach(child => {
-          if (!doomed.has(child)) {
-            doomed.add(child)
-            descendants(child)
+          if (doomed.has(child)) {
+            return
           }
+
+          doomed.add(child)
+          descendants(child)
         })
     }
     ids.forEach(descendants)
@@ -52,17 +55,21 @@ export const trackActions = {
     const selected = new Set(ids)
     function includeChildren(id: string) {
       for (const child of source.find(track => track.id === id)?.childTrackIds ?? []) {
-        if (!selected.has(child)) {
-          selected.add(child)
-          includeChildren(child)
+        if (selected.has(child)) {
+          continue
         }
+
+        selected.add(child)
+        includeChildren(child)
       }
     }
     ids.forEach(includeChildren)
     const copies = source
       .filter(track => selected.has(track.id) && track.kind !== "main")
       .map(track => ({ sourceId: track.id, copy: cloneTrack(track) }))
-    if (!copies.length) return
+    if (!copies.length) {
+      return
+    }
     const idMap = new Map(copies.map(item => [item.sourceId, item.copy.id]))
     tracks(
       source.flatMap(track => {
@@ -71,9 +78,10 @@ export const trackActions = {
           track.kind === "group" && !selected.has(track.id)
             ? {
                 ...track,
-                childTrackIds: track.childTrackIds?.flatMap(id =>
-                  idMap.has(id) ? [id, idMap.get(id)!] : [id]
-                ),
+                childTrackIds: track.childTrackIds?.flatMap(id => {
+                  const copyId = idMap.get(id)
+                  return copyId === undefined ? [id] : [id, copyId]
+                }),
               }
             : track
         return match
@@ -103,8 +111,13 @@ export const trackActions = {
         !["main", "return", "group"].includes(track.kind) &&
         track.output === "main"
     )
-    if (!chosen.length) return
-    const group = { ...createTrack("group", source), childTrackIds: chosen.map(track => track.id) }
+    if (!chosen.length) {
+      return
+    }
+    const group = {
+      ...createTrack("group", source, undefined, DEFAULT_TRACK_HEIGHT),
+      childTrackIds: chosen.map(track => track.id),
+    }
     const next = source.filter(track => !chosen.includes(track))
     next.splice(
       source.indexOf(chosen[0]),
@@ -117,7 +130,9 @@ export const trackActions = {
   ungroupTrack(id: string) {
     const source = get().document.tracks
     const group = source.find(track => track.id === id && track.kind === "group")
-    if (!group) return
+    if (!group) {
+      return
+    }
     const parentId = group.output
     const promoted = group.childTrackIds ?? []
     tracks(
@@ -142,8 +157,9 @@ export const trackActions = {
       moving.kind === "main" ||
       target.kind === "main" ||
       moving.id === target.id
-    )
+    ) {
       return
+    }
     const branch = new Set([id])
     function collect(parentId: string) {
       for (const child of source.find(track => track.id === parentId)?.childTrackIds ?? []) {
@@ -152,7 +168,9 @@ export const trackActions = {
       }
     }
     collect(id)
-    if (branch.has(targetId)) return
+    if (branch.has(targetId)) {
+      return
+    }
     const movingTracks = source.filter(track => branch.has(track.id))
     const next = source.filter(track => !branch.has(track.id))
     next.splice(
@@ -166,10 +184,16 @@ export const trackActions = {
         : null
     tracks(
       next.map(track => {
-        if (track.id === id) return { ...track, output: parentId ?? "main" }
-        if (!track.childTrackIds || branch.has(track.id)) return track
+        if (track.id === id) {
+          return { ...track, output: parentId ?? "main" }
+        }
+        if (!track.childTrackIds || branch.has(track.id)) {
+          return track
+        }
         const children = track.childTrackIds.filter(child => child !== id)
-        if (track.id === parentId) children.push(id)
+        if (track.id === parentId) {
+          children.push(id)
+        }
         return {
           ...track,
           childTrackIds: children.sort(

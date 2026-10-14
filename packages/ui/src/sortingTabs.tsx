@@ -1,15 +1,16 @@
-import { MotionTabs, type TabOption } from './motionTabs'
+import { MotionTabs } from "./motionTabs"
+import type { TabOption } from "./motionTabs"
 
 export type SortOption = TabOption
 
-interface SortingTabsProps {
-  options: SortOption[]
-  defaultSort?: string
-  onChange?: (sortKey: string) => void
-  className?: string
+interface SortingTabsProperties {
+  readonly options: SortOption[]
+  readonly defaultSort?: string
+  readonly onChange?: (sortKey: string) => void
+  readonly className?: string
 }
 
-export function SortingTabs({ options, defaultSort, onChange, className }: SortingTabsProps) {
+export function SortingTabs({ options, defaultSort, onChange, className }: SortingTabsProperties) {
   return (
     <MotionTabs
       options={options}

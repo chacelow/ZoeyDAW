@@ -1,4 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener"
+
 function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window
 }
@@ -9,7 +10,9 @@ export function resolveExternalHttpUrl(
 ): string | null {
   try {
     const url = new URL(href, baseUrl)
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null
+    }
     return url.origin === new URL(baseUrl).origin ? null : url.href
   } catch {
     return null
@@ -18,14 +21,24 @@ export function resolveExternalHttpUrl(
 
 export function installExternalLinkBoundary(root: Document = document): () => void {
   const handleClick = (event: MouseEvent) => {
-    if (!isTauriRuntime() || event.defaultPrevented || event.button !== 0) return
-    if (!(event.target instanceof Element)) return
+    if (
+      !isTauriRuntime() ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      !(event.target instanceof Element)
+    ) {
+      return
+    }
 
     const anchor = event.target.closest("a[href]")
-    if (!(anchor instanceof HTMLAnchorElement)) return
+    if (!(anchor instanceof HTMLAnchorElement)) {
+      return
+    }
 
     const externalUrl = resolveExternalHttpUrl(anchor.href)
-    if (!externalUrl) return
+    if (!externalUrl) {
+      return
+    }
 
     event.preventDefault()
     void openUrl(externalUrl)

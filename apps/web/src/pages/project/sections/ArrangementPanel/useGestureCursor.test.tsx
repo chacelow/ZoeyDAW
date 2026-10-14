@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react"
 import { afterEach, expect, it } from "vitest"
-import { useGestureCursor, type GestureCursor } from "./useGestureCursor"
+import { useGestureCursor } from "./useGestureCursor"
+import type { GestureCursor } from "./useGestureCursor"
 
-function Owner({ cursor }: { cursor: GestureCursor | null }) {
+function Owner({ cursor }: { readonly cursor: GestureCursor | null }) {
   useGestureCursor(cursor)
   return null
 }

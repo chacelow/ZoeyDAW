@@ -9,6 +9,8 @@ export const ThemePresetContext = createContext<ThemePresetContextValue | undefi
 
 export function useThemePreset(): ThemePresetContextValue {
   const context = useContext(ThemePresetContext)
-  if (!context) throw new Error("useThemePreset must be used within ThemePresetProvider")
+  if (!context) {
+    throw new Error("useThemePreset must be used within ThemePresetProvider")
+  }
   return context
 }

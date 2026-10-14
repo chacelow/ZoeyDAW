@@ -1,22 +1,20 @@
-import * as React from 'react'
+import * as React from "react"
 
-import { useCallbackRef } from './use-callback-ref'
+import { useCallbackRef as useCallbackReference } from "./use-callback-ref"
 
-export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
+export function useDebouncedCallback<T extends (...arguments_: never[]) => unknown>(
   callback: T,
   delay: number
 ) {
-  const handleCallback = useCallbackRef(callback)
-  const debounceTimerRef = React.useRef(0)
-  React.useEffect(() => () => window.clearTimeout(debounceTimerRef.current), [])
+  const handleCallback = useCallbackReference(callback)
+  const debounceTimerReference = React.useRef(0)
+  React.useEffect(() => () => window.clearTimeout(debounceTimerReference.current), [])
 
-  const setValue = React.useCallback(
-    (...args: Parameters<T>) => {
-      window.clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = window.setTimeout(() => handleCallback(...args), delay)
+  return React.useCallback(
+    (...arguments_: Parameters<T>) => {
+      window.clearTimeout(debounceTimerReference.current)
+      debounceTimerReference.current = window.setTimeout(() => handleCallback(...arguments_), delay)
     },
     [handleCallback, delay]
   )
-
-  return setValue
 }

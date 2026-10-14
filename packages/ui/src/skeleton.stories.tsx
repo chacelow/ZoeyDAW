@@ -1,17 +1,17 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Skeleton } from './skeleton'
+import { Skeleton } from "./skeleton"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Skeleton> = {
-  title: 'Display/Skeleton',
+  title: "Display/Skeleton",
   component: Skeleton,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
 type Story = StoryObj<typeof Skeleton>
 
 export const Default: Story = {
-  render: () => <Skeleton className="h-4 w-48" />
+  render: () => <Skeleton className="h-4 w-48" />,
 }
 
 export const CardShape: Story = {
@@ -26,5 +26,5 @@ export const CardShape: Story = {
         </div>
       </div>
     </div>
-  )
+  ),
 }

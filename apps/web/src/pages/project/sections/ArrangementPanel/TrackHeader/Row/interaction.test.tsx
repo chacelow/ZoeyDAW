@@ -10,17 +10,19 @@ import {
   useProjectState,
 } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
-import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP } from "@/pages/project/model/selectors"
+import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP } from "@/pages/project/layout"
 import { TrackHeaderRow } from "."
 
-function Row({ id }: { id: string }) {
+function Row({ id }: { readonly id: string }) {
   const track = useProjectState(state => state.document.tracks.find(item => item.id === id))
   return track ? <TrackHeaderRow track={track} rails={[]} /> : null
 }
 
 function current(id: string) {
   const track = useProjectState.getState().document.tracks.find(item => item.id === id)
-  if (!track) throw new Error(`Missing track ${id}`)
+  if (!track) {
+    throw new Error(`Missing track ${id}`)
+  }
   return track
 }
 
@@ -63,10 +65,14 @@ it("keeps first-row mixer controls when collapsed", () => {
   for (const id of ["sidechain", "a-apply", "main"]) {
     projectActions.updateTrack(id, { collapsed: true })
     const view = render(<Row id={id} />)
-    const row = view.container.querySelector(`[data-track-header="${id}"]`)
-    if (!row) throw new Error(`Missing row ${id}`)
+    const row = view.container.querySelector(`[data-track-header="${CSS.escape(id)}"]`)
+    if (!row) {
+      throw new Error(`Missing row ${id}`)
+    }
     const mixerElement = row.querySelector("section.arrangement-track-mixer")
-    if (!(mixerElement instanceof HTMLElement)) throw new Error(`Missing mixer ${id}`)
+    if (!(mixerElement instanceof HTMLElement)) {
+      throw new TypeError(`Missing mixer ${id}`)
+    }
     const mixer = within(mixerElement)
     if (id === "main") {
       expect(mixer.getByLabelText(/Cue .*Main/)).toBeTruthy()
@@ -141,7 +147,9 @@ it("reveals sends in three-column rows as the track height grows", () => {
 it("migrates an old Audio input channel without losing its hardware route", () => {
   const document = createMockDocument()
   const audio = document.tracks.find(track => track.id === "3-audio")
-  if (!audio) throw new Error("Missing Audio track")
+  if (!audio) {
+    throw new Error("Missing Audio track")
+  }
   audio.input = "2"
   delete audio.inputChannel
   hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
@@ -153,7 +161,7 @@ it("migrates an old Audio input channel without losing its hardware route", () =
 for (const id of ["3-audio", "trager"]) {
   it(`prioritizes routing controls at short expanded height for ${id}`, () => {
     projectActions.updateTrack(id, { heightPx: 35 })
-    const name = current(id).name
+    const { name } = current(id)
     const view = render(<Row id={id} />)
     expect(view.queryByLabelText(`Input ${name}`)).toBeNull()
     expect(view.queryByLabelText(`Input channel ${name}`)).toBeNull()
@@ -170,7 +178,9 @@ for (const id of ["3-audio", "trager"]) {
     expect(view.getByLabelText(`Input ${name}`)).toBeTruthy()
     expect(view.getByLabelText(`Input channel ${name}`)).toBeTruthy()
     expect(view.getByLabelText(`Output channel ${name}`)).toBeTruthy()
-    if (id === "3-audio") expect(view.getByLabelText(`Send A apply ${name}`)).toBeTruthy()
+    if (id === "3-audio") {
+      expect(view.getByLabelText(`Send A apply ${name}`)).toBeTruthy()
+    }
   })
 }
 

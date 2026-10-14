@@ -5,23 +5,27 @@
  * 布局: 品牌 logo + AlertTriangle + 错误 title + 详细说明 + 主/次操作按钮.
  * 只覆盖 titlebar 下方 (top-10 inset-x-0 bottom-0), 与 Loading 一致.
  */
-import { AlertTriangle } from 'lucide-react'
-import type { FC, ReactNode } from 'react'
-import { AnimatedGridPattern } from './animated-grid-pattern'
-import { Button } from './button'
-import { useTheme } from './hooks/useTheme'
+import { AlertTriangle } from "lucide-react"
+import { AnimatedGridPattern } from "./animated-grid-pattern"
+import { Button } from "./button"
+import { useTheme } from "./hooks/useTheme"
+import type { FC, ReactNode } from "react"
 
 export interface LoadErrorScreenProps {
-  title: string
-  description?: string
-  /** 主按钮 (primary): 建议用户点的动作, 通常"重试"/"使用默认模板" */
-  primaryLabel: string
-  onPrimary: () => void
-  /** 次按钮 (outline): 备选动作, 通常"从快照恢复"/"返回列表" */
-  secondaryLabel?: string
-  onSecondary?: () => void
-  className?: string
-  children?: ReactNode
+  readonly title: string
+  readonly description?: string
+  /**
+  主按钮 (primary): 建议用户点的动作, 通常"重试"/"使用默认模板"
+  */
+  readonly primaryLabel: string
+  readonly onPrimary: () => void
+  /**
+  次按钮 (outline): 备选动作, 通常"从快照恢复"/"返回列表"
+  */
+  readonly secondaryLabel?: string
+  readonly onSecondary?: () => void
+  readonly className?: string
+  readonly children?: ReactNode
 }
 
 export const LoadErrorScreen: FC<LoadErrorScreenProps> = ({
@@ -31,18 +35,15 @@ export const LoadErrorScreen: FC<LoadErrorScreenProps> = ({
   onPrimary,
   secondaryLabel,
   onSecondary,
-  className = '',
-  children
+  className = "",
+  children,
 }) => {
   const { resolvedTheme } = useTheme()
 
   return (
     <div
-      className={`
-        fixed inset-x-0 top-10 bottom-0 z-30 flex flex-col items-center justify-center bg-background
-        ${className}
-      `}
-      style={{ isolation: 'isolate' }}
+      className={`bg-background fixed inset-x-0 top-10 bottom-0 z-30 flex flex-col items-center justify-center ${className} `}
+      style={{ isolation: "isolate" }}
     >
       <AnimatedGridPattern
         className="opacity-30"
@@ -52,7 +53,7 @@ export const LoadErrorScreen: FC<LoadErrorScreenProps> = ({
         maxOpacity={0.2}
         duration={3}
       />
-      <div className="relative z-10 flex flex-col items-center max-w-md px-6">
+      <div className="relative z-10 flex max-w-md flex-col items-center px-6">
         <div className="mb-6">
           <img
             src={`/brand/logo-color-${resolvedTheme}.svg`}
@@ -63,25 +64,25 @@ export const LoadErrorScreen: FC<LoadErrorScreenProps> = ({
           />
         </div>
 
-        <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-destructive/10">
-          <AlertTriangle className="size-6 text-destructive" />
+        <div className="bg-destructive/10 mb-4 flex size-12 items-center justify-center rounded-full">
+          <AlertTriangle className="text-destructive size-6" />
         </div>
 
-        <h2 className="mb-2 text-lg font-semibold text-foreground select-text">{title}</h2>
-        {description && (
-          <p className="mb-6 text-center text-sm text-muted-foreground break-words select-text">
+        <h2 className="text-foreground mb-2 text-lg font-semibold select-text">{title}</h2>
+        {description ? (
+          <p className="text-muted-foreground mb-6 text-center text-sm break-words select-text">
             {description}
           </p>
-        )}
+        ) : null}
 
         {children}
 
         <div className="flex flex-wrap items-center justify-center gap-2">
-          {secondaryLabel && onSecondary && (
+          {secondaryLabel && onSecondary ? (
             <Button variant="outline" onClick={onSecondary}>
               {secondaryLabel}
             </Button>
-          )}
+          ) : null}
           <Button onClick={onPrimary}>{primaryLabel}</Button>
         </div>
       </div>

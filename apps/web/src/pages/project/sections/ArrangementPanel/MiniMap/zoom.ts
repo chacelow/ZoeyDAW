@@ -1,4 +1,6 @@
-/** Downward travel shrinks the overview selection; upward travel expands it. */
+/**
+Downward travel shrinks the overview selection; upward travel expands it.
+*/
 export function minimapDragZoom(
   startingPxPerBar: number,
   startingClientY: number,
@@ -47,7 +49,8 @@ export function minimapDragLeftEdge({
   const maxViewportBars = Math.min(bars, viewportWidth / minPxPerBar)
   const requestedLeftBar = originalLeftBar + deltaBars
   const clampedLeftBar = Math.max(
-    Math.max(0, rightBar - maxViewportBars),
+    0,
+    rightBar - maxViewportBars,
     Math.min(rightBar - minViewportBars, requestedLeftBar)
   )
   const newViewportBars = Math.max(minViewportBars, rightBar - clampedLeftBar)

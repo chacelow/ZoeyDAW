@@ -22,10 +22,10 @@ describe("audio ring buffer", () => {
 
   it("keeps 1/16384-note cursor precision at later bars", () => {
     const ring = createAudioRingBuffer()
-    const exact = 129 + 1 / 65536
+    const exact = 129 + 1 / 65_536
     ring.writePlayhead({ bar: exact, playing: true, recording: false })
     expect(ring.readPlayhead().bar).toBe(exact)
-    const oddMeterBar = 257 + 3 / (7 * 16384)
+    const oddMeterBar = 257 + 3 / (7 * 16_384)
     ring.writePlayhead({ bar: oddMeterBar, playing: true, recording: true })
     expect(ring.readPlayhead().bar).toBe(oddMeterBar)
     ring.dispose()
@@ -53,8 +53,9 @@ describe("audio ring buffer", () => {
 it("keeps existing telemetry when the prototype grows beyond 128 tracks", () => {
   const ring = createAudioRingBuffer()
   ring.writePlayhead({ bar: 12.5, playing: true, recording: false })
-  for (let index = 0; index < 300; index++)
+  for (let index = 0; index < 300; index++) {
     ring.writeMeter(`track-${index}`, { left: -12 - index / 100, right: -20 })
+  }
   expect(ring.readPlayhead().bar).toBe(12.5)
   expect(ring.readMeter("track-0")).toEqual({ left: -12, right: -20 })
   expect(ring.readMeter("track-299").left).toBeCloseTo(-14.99)

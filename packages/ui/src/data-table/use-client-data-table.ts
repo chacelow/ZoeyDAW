@@ -14,18 +14,8 @@
  * 客户端过滤 (Y1): `manualFiltering: false` 硬编码, 所有过滤在浏览器内评估。
  */
 
-import * as React from 'react'
+import * as React from "react"
 import {
-  type ColumnDef,
-  type ColumnFiltersState,
-  type FilterFn,
-  type PaginationState,
-  type RowSelectionState,
-  type SortingState,
-  type TableOptions,
-  type TableState,
-  type Updater,
-  type VisibilityState,
   getCoreRowModel,
   getFacetedMinMaxValues,
   getFacetedRowModel,
@@ -33,29 +23,34 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable
-} from '@tanstack/react-table'
-import {
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  type SingleParser,
-  type UseQueryStateOptions,
-  useQueryState,
-  useQueryStates
-} from 'nuqs'
+  useReactTable,
+} from "@tanstack/react-table"
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryState, useQueryStates } from "nuqs"
 
-import { FILTER_FN_BY_VARIANT } from './default-filter-fns'
-import { getSortingStateParser } from './parsers'
-import type { ExtendedColumnSort, FilterVariant, QueryKeys } from './types'
-import { useDebouncedCallback } from './use-debounced-callback'
+import { FILTER_FN_BY_VARIANT } from "./default-filter-fns"
+import { getSortingStateParser } from "./parsers"
+import { useDebouncedCallback } from "./use-debounced-callback"
+import type { SingleParser, UseQueryStateOptions } from "nuqs"
+import type {
+  ColumnDef,
+  ColumnFiltersState,
+  FilterFn,
+  PaginationState,
+  RowSelectionState,
+  SortingState,
+  TableOptions,
+  TableState,
+  Updater,
+  VisibilityState,
+} from "@tanstack/react-table"
+import type { ExtendedColumnSort, FilterVariant, QueryKeys } from "./types"
 
-const PAGE_KEY = 'page'
-const PER_PAGE_KEY = 'perPage'
-const SORT_KEY = 'sort'
-const FILTERS_KEY = 'filters'
-const JOIN_OPERATOR_KEY = 'joinOperator'
-const ARRAY_SEPARATOR = ','
+const PAGE_KEY = "page"
+const PER_PAGE_KEY = "perPage"
+const SORT_KEY = "sort"
+const FILTERS_KEY = "filters"
+const JOIN_OPERATOR_KEY = "joinOperator"
+const ARRAY_SEPARATOR = ","
 const DEBOUNCE_MS = 300
 const THROTTLE_MS = 50
 
@@ -72,24 +67,23 @@ const IS_ARRAY_VARIANT: Record<FilterVariant, boolean> = {
   dateRange: true,
   boolean: true,
   select: true,
-  multiSelect: true
+  multiSelect: true,
 }
 
-interface UseClientDataTableProps<TData>
-  extends Omit<
-    TableOptions<TData>,
-    | 'state'
-    | 'pageCount'
-    | 'getCoreRowModel'
-    | 'manualFiltering'
-    | 'manualPagination'
-    | 'manualSorting'
-  > {
-  initialState?: Omit<Partial<TableState>, 'sorting'> & {
+interface UseClientDataTableProperties<TData> extends Omit<
+  TableOptions<TData>,
+  | "state"
+  | "pageCount"
+  | "getCoreRowModel"
+  | "manualFiltering"
+  | "manualPagination"
+  | "manualSorting"
+> {
+  initialState?: Omit<Partial<TableState>, "sorting"> & {
     sorting?: ExtendedColumnSort<TData>[]
   }
   queryKeys?: Partial<QueryKeys>
-  history?: 'push' | 'replace'
+  history?: "push" | "replace"
   debounceMs?: number
   throttleMs?: number
   clearOnDefault?: boolean
@@ -98,20 +92,20 @@ interface UseClientDataTableProps<TData>
   startTransition?: React.TransitionStartFunction
 }
 
-export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>) {
+export function useClientDataTable<TData>(properties: UseClientDataTableProperties<TData>) {
   const {
     columns,
     initialState,
     queryKeys,
-    history = 'replace',
+    history = "replace",
     debounceMs = DEBOUNCE_MS,
     throttleMs = THROTTLE_MS,
     clearOnDefault = false,
     scroll = false,
     shallow = true,
     startTransition,
-    ...tableProps
-  } = props
+    ...tableProperties
+  } = properties
 
   const pageKey = queryKeys?.page ?? PAGE_KEY
   const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY
@@ -119,7 +113,7 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
   const filtersKey = queryKeys?.filters ?? FILTERS_KEY
   const joinOperatorKey = queryKeys?.joinOperator ?? JOIN_OPERATOR_KEY
 
-  const queryStateOptions = React.useMemo<Omit<UseQueryStateOptions<string>, 'parse'>>(
+  const queryStateOptions = React.useMemo<Omit<UseQueryStateOptions<string>, "parse">>(
     () => ({ history, scroll, shallow, throttleMs, debounceMs, clearOnDefault, startTransition }),
     [history, scroll, shallow, throttleMs, debounceMs, clearOnDefault, startTransition]
   )
@@ -149,7 +143,7 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
 
   const onPaginationChange = React.useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
-      if (typeof updaterOrValue === 'function') {
+      if (typeof updaterOrValue === "function") {
         const next = updaterOrValue(pagination)
         void setPage(next.pageIndex + 1)
         void setPerPage(next.pageSize)
@@ -175,7 +169,7 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
 
   const onSortingChange = React.useCallback(
     (updaterOrValue: Updater<SortingState>) => {
-      if (typeof updaterOrValue === 'function') {
+      if (typeof updaterOrValue === "function") {
         setSorting(updaterOrValue(sorting) as ExtendedColumnSort<TData>[])
       } else {
         setSorting(updaterOrValue as ExtendedColumnSort<TData>[])
@@ -188,12 +182,16 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
   const filterableColumns = React.useMemo(() => {
     const list: { id: string; urlKey: string; isArray: boolean }[] = []
     for (const column of columns) {
-      if (!column.enableColumnFilter) continue
+      if (!column.enableColumnFilter) {
+        continue
+      }
       const columnId = column.id
-      if (!columnId) continue
+      if (!columnId) {
+        continue
+      }
       const variant = column.meta?.variant
       const isArray = variant != null && IS_ARRAY_VARIANT[variant]
-      list.push({ id: columnId, isArray, urlKey: `${isArray ? 'f_' : 'q_'}${columnId}` })
+      list.push({ id: columnId, isArray, urlKey: `${isArray ? "f_" : "q_"}${columnId}` })
     }
     return list
   }, [columns])
@@ -218,13 +216,19 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
   // URL → columnFilters state。URL 里 urlKey (`f_xxx`/`q_xxx`) 反查为 columnId。
   const initialColumnFilters: ColumnFiltersState = React.useMemo(() => {
     const byUrlKey: Record<string, string> = {}
-    for (const c of filterableColumns) byUrlKey[c.urlKey] = c.id
+    for (const c of filterableColumns) {
+      byUrlKey[c.urlKey] = c.id
+    }
 
     const filters: ColumnFiltersState = []
     for (const [urlKey, raw] of Object.entries(filterValues)) {
-      if (raw == null) continue
+      if (raw == null) {
+        continue
+      }
       const columnId = byUrlKey[urlKey]
-      if (!columnId) continue
+      if (!columnId) {
+        continue
+      }
       filters.push({ id: columnId, value: raw })
     }
     return filters
@@ -234,17 +238,21 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
 
   const onColumnFiltersChange = React.useCallback(
     (updaterOrValue: Updater<ColumnFiltersState>) => {
-      setColumnFilters(prev => {
-        const next = typeof updaterOrValue === 'function' ? updaterOrValue(prev) : updaterOrValue
+      setColumnFilters(previous => {
+        const next =
+          typeof updaterOrValue === "function" ? updaterOrValue(previous) : updaterOrValue
         const byColumnId: Record<string, { urlKey: string; isArray: boolean }> = {}
-        for (const c of filterableColumns)
+        for (const c of filterableColumns) {
           byColumnId[c.id] = { urlKey: c.urlKey, isArray: c.isArray }
+        }
 
         const updates: Record<string, string | string[] | null> = {}
         for (const filter of next) {
           const entry = byColumnId[filter.id]
-          if (!entry) continue
-          const value = filter.value
+          if (!entry) {
+            continue
+          }
+          const { value } = filter
           if (value == null || (Array.isArray(value) && value.length === 0)) {
             updates[entry.urlKey] = null
             continue
@@ -252,13 +260,17 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
           if (entry.isArray) {
             updates[entry.urlKey] = Array.isArray(value) ? value.map(String) : [String(value)]
           } else {
-            updates[entry.urlKey] = Array.isArray(value) ? String(value[0] ?? '') : String(value)
+            updates[entry.urlKey] = Array.isArray(value) ? String(value[0] ?? "") : String(value)
           }
         }
-        for (const prevFilter of prev) {
-          if (!next.some(f => f.id === prevFilter.id)) {
-            const entry = byColumnId[prevFilter.id]
-            if (entry) updates[entry.urlKey] = null
+        for (const previousFilter of previous) {
+          if (next.some(f => f.id === previousFilter.id)) {
+            continue
+          }
+
+          const entry = byColumnId[previousFilter.id]
+          if (entry) {
+            updates[entry.urlKey] = null
           }
         }
         debouncedSetFilterValues(updates)
@@ -270,21 +282,23 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
 
   // 装配列: 若列没显式 filterFn 且 meta.variant 存在, 挂 registry 默认 (M3)。
   // 也顺带把 meta.variant 存在的列的 enableColumnFilter 默认置 true, 减少业务侧重复接线。
-  const wiredColumns = React.useMemo<ColumnDef<TData, unknown>[]>(() => {
-    return columns.map(column => {
-      const variant = column.meta?.variant
-      if (!variant && !column.meta?.filterRender) return column as ColumnDef<TData, unknown>
-      const patched: ColumnDef<TData, unknown> = { ...(column as ColumnDef<TData, unknown>) }
-      if (patched.enableColumnFilter == null) patched.enableColumnFilter = true
-      if (patched.filterFn == null && variant) {
-        patched.filterFn = FILTER_FN_BY_VARIANT[variant] as FilterFn<TData>
-      }
-      return patched
-    })
-  }, [columns])
+  const wiredColumns = React.useMemo<ColumnDef<TData, unknown>[]>(
+    () =>
+      columns.map(column => {
+        const variant = column.meta?.variant
+        if (!variant && !column.meta?.filterRender) return column as ColumnDef<TData, unknown>
+        const patched: ColumnDef<TData, unknown> = { ...(column as ColumnDef<TData, unknown>) }
+        if (patched.enableColumnFilter == null) patched.enableColumnFilter = true
+        if (patched.filterFn == null && variant) {
+          patched.filterFn = FILTER_FN_BY_VARIANT[variant] as FilterFn<TData>
+        }
+        return patched
+      }),
+    [columns]
+  )
 
   const table = useReactTable({
-    ...tableProps,
+    ...tableProperties,
     columns: wiredColumns as typeof columns,
     initialState,
     state: {
@@ -292,11 +306,11 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
       sorting,
       columnVisibility,
       rowSelection,
-      columnFilters
+      columnFilters,
     },
     defaultColumn: {
-      ...tableProps.defaultColumn,
-      enableColumnFilter: false
+      ...tableProperties.defaultColumn,
+      enableColumnFilter: false,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
@@ -316,15 +330,15 @@ export function useClientDataTable<TData>(props: UseClientDataTableProps<TData>)
     manualSorting: false,
     manualFiltering: false,
     meta: {
-      ...tableProps.meta,
+      ...tableProperties.meta,
       queryKeys: {
         page: pageKey,
         perPage: perPageKey,
         sort: sortKey,
         filters: filtersKey,
-        joinOperator: joinOperatorKey
-      }
-    }
+        joinOperator: joinOperatorKey,
+      },
+    },
   })
 
   return React.useMemo(

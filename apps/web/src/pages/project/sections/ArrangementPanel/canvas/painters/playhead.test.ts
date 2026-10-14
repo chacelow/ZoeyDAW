@@ -18,7 +18,7 @@ it("paints only the chosen visible row while stopped and a full recording line w
     tracks: document.tracks,
   })
   scene.setViewport({ pxPerBar: 64, scrollX: 8 * 64, scrollY: 0, width: 900, height: 700, dpr: 1 })
-  const lines: Array<{ from: [number, number]; to: [number, number]; color: string }> = []
+  const lines: { from: [number, number]; to: [number, number]; color: string }[] = []
   const fills: string[] = []
   let from: [number, number] = [0, 0]
   let to: [number, number] = [0, 0]
@@ -78,8 +78,12 @@ it("paints only the chosen visible row while stopped and a full recording line w
       ? { ...track, clips: [{ ...audio.clips[0], id: "preview-audio-1", startBar: 11.5 }] }
       : track
   )
-  scene.setClipDrag({ source: document.tracks, ids: new Set(["audio-1"]) })
-  scene.setPreviewTracks(ghostTracks)
+  scene.setClipDrag({ source: document.tracks, ids: new Set(["preview-audio-1"]) })
+  scene.setProjectPreview({
+    kind: "tracks",
+    token: { sessionId: "renderer", id: "move" },
+    tracks: ghostTracks,
+  })
   paintPlayhead(context, scene.get(), ring, tokens)
   paintClipAlignment(context, scene.get(), "gray")
   expect(lines).toEqual([
@@ -96,7 +100,7 @@ it("paints only the chosen visible row while stopped and a full recording line w
   ])
   lines.length = 0
   scene.setClipDrag(null)
-  scene.setPreviewTracks(null)
+  scene.setProjectPreview(null)
   scene.setPlayback({ playing: false, insertionPoint: scene.get().playback.insertionPoint })
   paintPlayhead(context, scene.get(), ring, tokens)
   expect(lines).toEqual([
@@ -104,13 +108,15 @@ it("paints only the chosen visible row while stopped and a full recording line w
   ])
   lines.length = 0
   scene.setClipResize({ id: "audio-1", edge: "left" })
-  scene.setPreviewTracks(
-    document.tracks.map(track =>
+  scene.setProjectPreview({
+    kind: "tracks",
+    token: { sessionId: "renderer", id: "resize" },
+    tracks: document.tracks.map(track =>
       track.id === audio.id
         ? { ...track, clips: [{ ...audio.clips[0], startBar: 11.5, lengthBars: 4 }] }
         : track
-    )
-  )
+    ),
+  })
   paintClipAlignment(context, scene.get(), "gray")
   expect(lines).toEqual([{ from: [160.5, 34], to: [160.5, 682], color: "gray" }])
   lines.length = 0
@@ -118,7 +124,7 @@ it("paints only the chosen visible row while stopped and a full recording line w
   paintClipAlignment(context, scene.get(), "gray")
   expect(lines).toEqual([{ from: [416.5, 34], to: [416.5, 682], color: "gray" }])
   scene.setClipResize(null)
-  scene.setPreviewTracks(null)
+  scene.setProjectPreview(null)
   lines.length = 0
   paintClipAlignment(context, scene.get(), "gray")
   expect(lines).toEqual([])

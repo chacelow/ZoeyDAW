@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { useState } from 'react'
-import type { DateRange } from 'react-day-picker'
-import { Calendar } from './calendar'
+import { useState } from "react"
+import { Calendar } from "./calendar"
+import type { Meta, StoryObj } from "@storybook/react"
+import type { DateRange } from "react-day-picker"
 
 const meta: Meta<typeof Calendar> = {
-  title: 'Data/Calendar',
+  title: "Data/Calendar",
   component: Calendar,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta

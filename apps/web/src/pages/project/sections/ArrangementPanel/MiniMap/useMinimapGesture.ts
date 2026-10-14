@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, type PointerEvent, type RefObject } from "react"
+import { useEffect, useLayoutEffect, useRef } from "react"
 import { hasNativeCursor, moveWindowCursor } from "@/shared/native/cursor"
 import { projectActions } from "@/pages/project/adapters"
 import { minimapDragLeftEdge, minimapDragRightEdge, minimapDragZoom } from "./zoom"
+import type { PointerEvent, RefObject } from "react"
 
 const PAN_DRAG_SCALE = 0.25
 
@@ -16,7 +17,7 @@ export interface MinimapGeometry {
 }
 
 type Mode = "left" | "right" | "body" | "jump"
-type Anchor = {
+interface Anchor {
   mode: Exclude<Mode, "jump">
   pointerId: number
   originX: number
@@ -39,9 +40,12 @@ export function minimapHit(x: number, width: number, geometry: MinimapGeometry):
   const span = Math.min(geometry.bars, geometry.viewportWidth / geometry.pxPerBar)
   const left = (geometry.scrollX / geometry.pxPerBar / geometry.bars) * width
   const right = left + (span / geometry.bars) * width
-  if (x < left - 6 || x > right + 6) return "jump"
-  if (Math.min(Math.abs(x - left), Math.abs(x - right)) <= 6)
+  if (x < left - 6 || x > right + 6) {
+    return "jump"
+  }
+  if (Math.min(Math.abs(x - left), Math.abs(x - right)) <= 6) {
     return Math.abs(x - left) <= Math.abs(x - right) ? "left" : "right"
+  }
   return "body"
 }
 
@@ -61,9 +65,11 @@ export function useMinimapGesture(
 
   useEffect(() => {
     const mounted = element.current
-    if (!mounted) return
-    const el = mounted
-    let disposed = false
+    if (!mounted) {
+      return
+    }
+    const element_ = mounted
+    let isDisposed = false
     function publish(a: Anchor) {
       const p = a.geometry
       const deltaBars = (a.dx * p.bars) / a.width
@@ -76,9 +82,11 @@ export function useMinimapGesture(
         startingScrollX: a.initialScrollX,
         deltaBars,
       }
-      if (a.mode === "left") projectActions.setViewport(minimapDragLeftEdge(input))
-      else if (a.mode === "right") projectActions.setViewport(minimapDragRightEdge(input))
-      else {
+      if (a.mode === "left") {
+        projectActions.setViewport(minimapDragLeftEdge(input))
+      } else if (a.mode === "right") {
+        projectActions.setViewport(minimapDragRightEdge(input))
+      } else {
         const zoom = minimapDragZoom(p.pxPerBar, 0, a.dy, p.minPxPerBar, p.maxPxPerBar)
         const anchorBar =
           (a.initialScrollX + p.viewportWidth * a.zoomAnchorRatio) / p.pxPerBar +
@@ -96,15 +104,19 @@ export function useMinimapGesture(
       }
     }
     function restore(a: Anchor) {
-      if (document.pointerLockElement === el) document.exitPointerLock()
+      if (document.pointerLockElement === element_) {
+        document.exitPointerLock()
+      }
       if (!hasNativeCursor()) {
         document.documentElement.classList.remove("dragpad-dragging")
         return
       }
-      let first = 0,
-        second = 0
+      let first = 0
+      let second = 0
       const show = () => {
-        if (reveal.current !== show) return
+        if (reveal.current !== show) {
+          return
+        }
         cancelAnimationFrame(first)
         cancelAnimationFrame(second)
         reveal.current = null
@@ -114,104 +126,137 @@ export function useMinimapGesture(
       const restored = (a.recenter ?? Promise.resolve()).then(() =>
         moveWindowCursor(a.originX, a.originY)
       )
-      pendingRelease.current = restored.then(
-        () => {
-          pendingRelease.current = null
-          reveal.current = show
-          if (disposed) show()
-          else
-            first = requestAnimationFrame(() => {
-              second = requestAnimationFrame(show)
-            })
-        },
-        () => {
+      pendingRelease.current = restored
+        .catch(() => {
           pendingRelease.current = null
           reveal.current = show
           show()
-        }
-      )
+        })
+        .then(() => {
+          pendingRelease.current = null
+          reveal.current = show
+          if (isDisposed) {
+            show()
+          } else {
+            first = requestAnimationFrame(() => {
+              second = requestAnimationFrame(show)
+            })
+          }
+        })
     }
     function end(cancel: boolean) {
       const a = anchor.current
-      if (!a) return
+      if (!a) {
+        return
+      }
       cancelAnimationFrame(frame.current)
       frame.current = 0
-      if (cancel)
+      if (cancel) {
         projectActions.setViewport({ pxPerBar: a.geometry.pxPerBar, scrollX: a.geometry.scrollX })
-      else if (a.phase === "dragging") publish(a)
+      } else if (a.phase === "dragging") {
+        publish(a)
+      }
       anchor.current = null
-      if (el.hasPointerCapture?.(a.pointerId)) el.releasePointerCapture(a.pointerId)
-      if (a.phase === "dragging") restore(a)
+      if (element_.hasPointerCapture?.(a.pointerId)) {
+        element_.releasePointerCapture(a.pointerId)
+      }
+      if (a.phase === "dragging") {
+        restore(a)
+      }
     }
     finish.current = end
     function move(event: globalThis.PointerEvent) {
       const a = anchor.current
-      if (!a || event.pointerId !== a.pointerId || a.recentering) return
+      if (!a || event.pointerId !== a.pointerId || a.recentering) {
+        return
+      }
       a.geometry.onNavigate()
-      const locked = document.pointerLockElement === el
-      a.dx += locked ? event.movementX : event.clientX - a.lastX
-      a.dy += locked ? event.movementY : event.clientY - a.lastY
+      const isLocked = document.pointerLockElement === element_
+      a.dx += isLocked ? event.movementX : event.clientX - a.lastX
+      a.dy += isLocked ? event.movementY : event.clientY - a.lastY
       a.lastX = event.clientX
       a.lastY = event.clientY
       if (a.phase === "pressed") {
-        if (Math.hypot(a.dx, a.dy) < 3) return
+        if (Math.hypot(a.dx, a.dy) < 3) {
+          return
+        }
         a.phase = "dragging"
         document.documentElement.classList.add("dragpad-dragging")
-        if (!hasNativeCursor() && typeof el.requestPointerLock === "function") {
+        if (!hasNativeCursor() && typeof element_.requestPointerLock === "function") {
           a.lockPending = true
           try {
-            void Promise.resolve(el.requestPointerLock()).then(
-              () => {
+            void Promise.resolve(element_.requestPointerLock())
+              .catch(() => {
                 a.lockPending = false
-                if ((disposed || anchor.current !== a) && document.pointerLockElement === el)
+              })
+              .then(() => {
+                a.lockPending = false
+                if (
+                  (isDisposed || anchor.current !== a) &&
+                  document.pointerLockElement === element_
+                ) {
                   document.exitPointerLock()
-              },
-              () => {
-                a.lockPending = false
-              }
-            )
+                }
+              })
           } catch {
             a.lockPending = false
           }
         }
       }
-      if (!frame.current)
+      if (!frame.current) {
         frame.current = requestAnimationFrame(() => {
           frame.current = 0
-          if (anchor.current !== a) return
-          publish(a)
-          if (hasNativeCursor()) {
-            a.recentering = true
-            a.recenter = Promise.resolve(moveWindowCursor(a.originX, a.originY)).then(
-              () => {
-                if (anchor.current === a) {
-                  a.lastX = a.originX
-                  a.lastY = a.originY
-                }
-                a.recentering = false
-              },
-              () => {
-                a.recentering = false
-              }
-            )
+          if (anchor.current !== a) {
+            return
           }
+          publish(a)
+          if (!hasNativeCursor()) {
+            return
+          }
+
+          a.recentering = true
+          a.recenter = Promise.resolve(moveWindowCursor(a.originX, a.originY))
+            .catch(() => {
+              a.recentering = false
+            })
+            .then(() => {
+              if (anchor.current === a) {
+                a.lastX = a.originX
+                a.lastY = a.originY
+              }
+              a.recentering = false
+            })
         })
+      }
     }
     function up(event: globalThis.PointerEvent) {
-      if (event.pointerId === anchor.current?.pointerId) end(false)
+      if (event.pointerId === anchor.current?.pointerId) {
+        end(false)
+      }
     }
     function cancel(event: globalThis.PointerEvent) {
-      if (event.pointerId === anchor.current?.pointerId) end(true)
+      if (event.pointerId === anchor.current?.pointerId) {
+        end(true)
+      }
     }
     function lost(event: globalThis.PointerEvent) {
-      if (event.target !== el || event.pointerId !== anchor.current?.pointerId) return
-      if (anchor.current.lockPending || document.pointerLockElement === el) return
+      if (
+        event.target !== element_ ||
+        event.pointerId !== anchor.current?.pointerId ||
+        anchor.current.lockPending ||
+        document.pointerLockElement === element_
+      ) {
+        return
+      }
       end(true)
     }
     function lockChanged() {
-      if (document.pointerLockElement === el) {
-        if (!anchor.current) document.exitPointerLock()
-        else anchor.current.lockPending = false
+      if (document.pointerLockElement === element_) {
+        if (anchor.current) {
+          anchor.current.lockPending = false
+        } else {
+          document.exitPointerLock()
+        }
       } else if (
         anchor.current?.phase === "dragging" &&
         !hasNativeCursor() &&
@@ -222,37 +267,47 @@ export function useMinimapGesture(
     }
     const blur = () => end(true)
     const key = (event: KeyboardEvent) => {
-      if (event.key === "Escape") end(true)
+      if (event.key === "Escape") {
+        end(true)
+      }
     }
     window.addEventListener("pointermove", move)
     window.addEventListener("pointerup", up)
     window.addEventListener("pointercancel", cancel)
     window.addEventListener("blur", blur)
     window.addEventListener("keydown", key)
-    el.addEventListener("lostpointercapture", lost)
+    element_.addEventListener("lostpointercapture", lost)
     document.addEventListener("pointerlockchange", lockChanged)
     return () => {
-      disposed = true
+      isDisposed = true
       end(true)
-      if (!pendingRelease.current) reveal.current?.()
+      if (!pendingRelease.current) {
+        reveal.current?.()
+      }
       window.removeEventListener("pointermove", move)
       window.removeEventListener("pointerup", up)
       window.removeEventListener("pointercancel", cancel)
       window.removeEventListener("blur", blur)
       window.removeEventListener("keydown", key)
-      el.removeEventListener("lostpointercapture", lost)
+      element_.removeEventListener("lostpointercapture", lost)
       document.removeEventListener("pointerlockchange", lockChanged)
     }
   }, [element])
 
   return {
     pointerDown(event: PointerEvent<HTMLDivElement>) {
-      if (event.button !== 0 || anchor.current || pendingRelease.current || !element.current) return
+      if (event.button !== 0 || anchor.current || pendingRelease.current || !element.current) {
+        return
+      }
       reveal.current?.()
       const p = latest.current
-      if (p.viewportWidth <= 0) return
+      if (p.viewportWidth <= 0) {
+        return
+      }
       const rect = element.current.getBoundingClientRect()
-      if (rect.width <= 0) return
+      if (rect.width <= 0) {
+        return
+      }
       event.preventDefault()
       p.onNavigate()
       const x = event.clientX - rect.left
@@ -287,13 +342,19 @@ export function useMinimapGesture(
         recenter: null,
       }
       element.current.setPointerCapture?.(event.pointerId)
-      if (mode === "jump") projectActions.setViewport({ scrollX: initialScrollX })
+      if (mode === "jump") {
+        projectActions.setViewport({ scrollX: initialScrollX })
+      }
     },
     pointerMove(event: PointerEvent<HTMLDivElement>) {
-      if (anchor.current) return
-      const el = element.current
-      if (!el) return
-      const rect = el.getBoundingClientRect()
+      if (anchor.current) {
+        return
+      }
+      const element_ = element.current
+      if (!element_) {
+        return
+      }
+      const rect = element_.getBoundingClientRect()
       const mode = minimapHit(event.clientX - rect.left, rect.width, latest.current)
       return mode === "left" || mode === "right" ? "ew-resize" : "grab"
     },

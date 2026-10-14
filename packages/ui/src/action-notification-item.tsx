@@ -12,11 +12,11 @@
  *   │         [接受]  [拒绝]  [忽略]         │
  *   └────────────────────────────────────────┘
  */
-import type { ComponentType, ReactNode } from 'react'
-import { Button } from './button'
-import { cn } from './cn'
+import { Button } from "./button"
+import { cn } from "./cn"
+import type { ComponentType, ReactNode } from "react"
 
-export type ActionNotificationVariant = 'default' | 'destructive' | 'outline' | 'ghost'
+export type ActionNotificationVariant = "default" | "destructive" | "outline" | "ghost"
 
 export interface ActionNotificationAction {
   label: string
@@ -27,14 +27,18 @@ export interface ActionNotificationAction {
 }
 
 export interface ActionNotificationItemProps {
-  /** 左侧图标 (lucide-react 组件). 与 avatar 二选一. */
-  icon?: ComponentType<{ className?: string }>
-  /** 左侧头像 slot (业务方注入 UserAvatarWithCard / OrgAvatar 等). 与 icon 二选一. */
-  avatar?: ReactNode
-  title: ReactNode
-  description?: ReactNode
-  actions: ActionNotificationAction[]
-  className?: string
+  /**
+  左侧图标 (lucide-react 组件). 与 avatar 二选一.
+  */
+  readonly icon?: ComponentType<{ className?: string }>
+  /**
+  左侧头像 slot (业务方注入 UserAvatarWithCard / OrgAvatar 等). 与 icon 二选一.
+  */
+  readonly avatar?: ReactNode
+  readonly title: ReactNode
+  readonly description?: ReactNode
+  readonly actions: ActionNotificationAction[]
+  readonly className?: string
 }
 
 export function ActionNotificationItem({
@@ -43,31 +47,31 @@ export function ActionNotificationItem({
   title,
   description,
   actions,
-  className
+  className,
 }: ActionNotificationItemProps) {
   return (
-    <div className={cn('flex items-start gap-3 px-3 py-2.5', className)}>
+    <div className={cn("flex items-start gap-3 px-3 py-2.5", className)}>
       {avatar ? (
         <div className="mt-0.5 shrink-0">{avatar}</div>
       ) : Icon ? (
-        <div className="mt-0.5 flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <div className="bg-primary/10 text-primary mt-0.5 flex size-8 items-center justify-center rounded-md">
           <Icon className="size-4" />
         </div>
       ) : null}
 
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="text-sm leading-snug">{title}</div>
-        {description && (
-          <div className="text-xs text-muted-foreground leading-snug">{description}</div>
-        )}
+        {description ? (
+          <div className="text-muted-foreground text-xs leading-snug">{description}</div>
+        ) : null}
         {actions.length > 0 && (
           <div className="flex items-center gap-2 pt-0.5">
-            {actions.map((action, i) => (
+            {actions.map((action, index) => (
               <Button
-                key={i}
+                key={index}
                 size="sm"
-                variant={action.variant ?? (i === 0 ? 'default' : 'outline')}
-                className={cn('h-7', action.variant === 'ghost' && 'text-muted-foreground')}
+                variant={action.variant ?? (index === 0 ? "default" : "outline")}
+                className={cn("h-7", action.variant === "ghost" && "text-muted-foreground")}
                 disabled={action.disabled || action.loading}
                 onClick={action.onClick}
               >

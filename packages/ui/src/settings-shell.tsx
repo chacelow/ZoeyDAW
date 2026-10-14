@@ -1,6 +1,6 @@
-import type { ComponentType, ReactNode } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog'
-import { cn } from './cn'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./dialog"
+import { cn } from "./cn"
+import type { ComponentType, ReactNode } from "react"
 
 export interface SettingsNavItem {
   id: string
@@ -9,16 +9,18 @@ export interface SettingsNavItem {
 }
 
 export interface SettingsShellProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: ReactNode
-  description?: ReactNode
-  items: SettingsNavItem[]
-  activeId: string
-  onActiveChange: (id: string) => void
-  children: ReactNode
-  /** 额外加在右侧内容区的 class */
-  contentClassName?: string
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly title: ReactNode
+  readonly description?: ReactNode
+  readonly items: SettingsNavItem[]
+  readonly activeId: string
+  readonly onActiveChange: (id: string) => void
+  readonly children: ReactNode
+  /**
+  额外加在右侧内容区的 class
+  */
+  readonly contentClassName?: string
 }
 
 /**
@@ -37,41 +39,43 @@ export function SettingsShell({
   activeId,
   onActiveChange,
   children,
-  contentClassName
+  contentClassName,
 }: SettingsShellProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader className="space-y-0 border-b px-6 py-4 text-left">
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
 
         <div className="flex h-[520px] overflow-hidden">
-          <nav className="flex w-48 shrink-0 flex-col gap-0.5 overflow-y-auto border-r bg-muted/40 p-2">
+          <nav className="bg-muted/40 flex w-48 shrink-0 flex-col gap-0.5 overflow-y-auto border-r p-2">
             {items.map(item => {
               const Icon = item.icon
-              const active = item.id === activeId
+              const isActive = item.id === activeId
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => onActiveChange(item.id)}
                   data-testid={`settings-nav-${item.id}`}
-                  data-active={active || undefined}
+                  data-active={isActive || undefined}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
-                    active ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'
+                    "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground hover:bg-muted"
                   )}
                 >
-                  {Icon && <Icon className="size-4 shrink-0" />}
+                  {Icon ? <Icon className="size-4 shrink-0" /> : null}
                   <span className="truncate">{item.label}</span>
                 </button>
               )
             })}
           </nav>
 
-          <div className={cn('flex-1 overflow-y-auto px-6 py-5', contentClassName)}>{children}</div>
+          <div className={cn("flex-1 overflow-y-auto px-6 py-5", contentClassName)}>{children}</div>
         </div>
       </DialogContent>
     </Dialog>

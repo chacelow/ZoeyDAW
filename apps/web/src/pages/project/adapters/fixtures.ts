@@ -1,7 +1,9 @@
-import type { DocumentState, Track, WorkspaceState } from "../model/types"
 import { initialDocument } from "../stores/slices/document"
 import { initialWorkspace } from "../stores/slices/workspace"
-/** Derived preview samples from the visible source span; never serialized. */
+import type { DocumentState, Track, WorkspaceState } from "../model/types"
+/**
+Derived preview samples from the visible source span; never serialized.
+*/
 export function mockWaveformPeaks(
   samplePath: string,
   sourceOffsetBars = 0,
@@ -9,7 +11,9 @@ export function mockWaveformPeaks(
 ): number[] | undefined {
   const sourceBars =
     samplePath === "mock://kick.wav" ? 16 : samplePath === "mock://untitled.wav" ? 1 : 0
-  if (!sourceBars) return undefined
+  if (!sourceBars) {
+    return undefined
+  }
   const sampleCount = samplePath === "mock://kick.wav" ? 64 : 32
   const visibleBars = lengthBars ?? sourceBars
   const count = Math.min(2048, Math.max(1, Math.round((visibleBars / sourceBars) * sampleCount)))
@@ -18,9 +22,12 @@ export function mockWaveformPeaks(
     const travel = ((index / count) * visibleBars) % sourceBars
     const sourceBar = (((offset + travel) % sourceBars) + sourceBars) % sourceBars
     const phase = (2 * Math.PI * sourceBar) / sourceBars
-    return samplePath === "mock://kick.wav"
-      ? 0.4 + 0.4 * Math.abs(Math.sin(phase * 7))
-      : 0.4 + 0.3 * Math.sin(phase * 5) ** 2
+    return (
+      0.4 +
+      (samplePath === "mock://kick.wav"
+        ? 0.4 * Math.abs(Math.sin(phase * 7))
+        : 0.3 * Math.sin(phase * 5) ** 2)
+    )
   })
 }
 

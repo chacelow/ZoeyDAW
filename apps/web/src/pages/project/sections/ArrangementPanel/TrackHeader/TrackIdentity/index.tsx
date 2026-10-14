@@ -2,9 +2,9 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
 import { IconSlot } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
-import type { Track } from "@/pages/project/model/types"
 import { TrackNameInput } from "./NameInput"
 import { AutomationSelector } from "./AutomationSelector"
+import type { Track } from "@/pages/project/model/types"
 
 export function TrackIdentity({
   track,
@@ -12,10 +12,10 @@ export function TrackIdentity({
   renaming,
   onRenameEnd,
 }: {
-  track: Track
-  selected: boolean
-  renaming: boolean
-  onRenameEnd: () => void
+  readonly track: Track
+  readonly selected: boolean
+  readonly renaming: boolean
+  readonly onRenameEnd: () => void
 }) {
   const { t } = useTranslation()
   const automation = useProjectState(s => s.workspace.automationMode)
@@ -29,12 +29,12 @@ export function TrackIdentity({
       }}
       aria-label={t("arrangement.trackIdentity")}
     >
-      <div className="arrangement-track-identity-title flex min-w-0 items-center gap-control-track-gap">
+      <div className="arrangement-track-identity-title gap-control-track-gap flex min-w-0 items-center">
         <button
           type="button"
           aria-label={`${t(track.collapsed ? "arrangement.expand" : "arrangement.collapse")} ${track.name}`}
           aria-expanded={!track.collapsed}
-          className="flex size-control-compact shrink-0 items-center justify-center"
+          className="size-control-compact flex shrink-0 items-center justify-center"
           onClick={event => {
             event.stopPropagation()
             projectActions.updateTrack(track.id, { collapsed: !track.collapsed })
@@ -45,12 +45,10 @@ export function TrackIdentity({
         {renaming ? (
           <TrackNameInput track={track} onFinish={onRenameEnd} />
         ) : (
-          <span className="min-w-0 truncate text-xs font-medium" title={track.name}>
-            {track.name}
-          </span>
+          <span className="min-w-0 truncate text-xs font-medium">{track.name}</span>
         )}
       </div>
-      {!track.collapsed && automation && <AutomationSelector track={track} />}
+      {!track.collapsed && automation ? <AutomationSelector track={track} /> : null}
     </section>
   )
 }

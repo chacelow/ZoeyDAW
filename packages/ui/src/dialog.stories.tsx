@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react'
 import {
   Dialog,
   DialogClose,
@@ -7,32 +6,35 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
-} from './dialog'
-import { Button } from './button'
-import { Input } from './input'
-import { Label } from './label'
-import { Textarea } from './textarea'
-import { FormRowGroup, FormRow } from './form-row'
+  DialogTrigger,
+} from "./dialog"
+import { Button } from "./button"
+import { Input } from "./input"
+import { Label } from "./label"
+import { Textarea } from "./textarea"
+import { FormRowGroup, FormRow } from "./form-row"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Dialog> = {
-  title: 'Overlay/Dialog',
+  title: "Overlay/Dialog",
   component: Dialog,
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   parameters: {
     docs: {
       description: {
         component:
-          'Dialog 用于需要输入的编辑/创建。宽度用 `size` prop 分级（sm/md/lg/xl/2xl），不要手写 `sm:max-w-*` 覆盖。一句话确认用 ConfirmDialog / AlertDialog；侧栏详情用 Sheet；移动端用 Drawer。'
-      }
-    }
-  }
+          "Dialog 用于需要输入的编辑/创建。宽度用 `size` prop 分级（sm/md/lg/xl/2xl），不要手写 `sm:max-w-*` 覆盖。一句话确认用 ConfirmDialog / AlertDialog；侧栏详情用 Sheet；移动端用 Drawer。",
+      },
+    },
+  },
 }
 
 export default meta
 type Story = StoryObj<typeof Dialog>
 
-/** 默认 size=sm：重命名 / 单字段小表单 */
+/**
+默认 size=sm：重命名 / 单字段小表单
+*/
 export const 小表单_重命名: Story = {
   render: () => (
     <Dialog>
@@ -52,10 +54,12 @@ export const 小表单_重命名: Story = {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  ),
 }
 
-/** size=lg：中等表单，几个字段 */
+/**
+size=lg：中等表单，几个字段
+*/
 export const 中表单: Story = {
   render: () => (
     <Dialog>
@@ -67,12 +71,12 @@ export const 中表单: Story = {
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
-            <Label>姓名</Label>
-            <Input placeholder="张三" />
+            <Label htmlFor="invite-name">姓名</Label>
+            <Input id="invite-name" placeholder="张三" />
           </div>
           <div className="flex flex-col gap-2">
-            <Label>邮箱</Label>
-            <Input placeholder="zhangsan@example.com" />
+            <Label htmlFor="invite-email">邮箱</Label>
+            <Input id="invite-email" placeholder="zhangsan@example.com" />
           </div>
         </div>
         <DialogFooter>
@@ -81,10 +85,12 @@ export const 中表单: Story = {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  ),
 }
 
-/** size=xl：复杂多字段表单（提 bug / 创建工单），左右排布 horizontal Field */
+/**
+size=xl：复杂多字段表单（提 bug / 创建工单），左右排布 horizontal Field
+*/
 export const 复杂表单_面板级: Story = {
   render: () => (
     <Dialog>
@@ -103,38 +109,40 @@ export const 复杂表单_面板级: Story = {
               <Textarea rows={3} placeholder="详细说明问题现象" />
             </FormRow>
             <FormRow label="复现步骤" hint="逐步操作 + 预期与实际结果">
-              <Textarea rows={4} placeholder={'1. \n2. \n3. \n预期：\n实际：'} />
+              <Textarea rows={4} placeholder={"1. \n2. \n3. \n预期：\n实际："} />
             </FormRow>
           </FormRowGroup>
         </div>
-        <DialogFooter className="m-0 rounded-none border-t bg-muted/30 px-6 py-4">
+        <DialogFooter className="bg-muted/30 m-0 rounded-none border-t px-6 py-4">
           <DialogClose render={<Button variant="outline">取消</Button>} />
           <Button>提交</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  ),
 }
 
-/** 所有 size 对比 */
+/**
+所有 size 对比
+*/
 export const 尺寸对比: Story = {
   render: () => (
     <div className="flex flex-wrap gap-3">
-      {(['sm', 'md', 'lg', 'xl', '2xl'] as const).map(size => (
+      {(["sm", "md", "lg", "xl", "2xl"] as const).map(size => (
         <Dialog key={size}>
           <DialogTrigger render={<Button variant="outline">size={size}</Button>} />
           <DialogContent size={size}>
             <DialogHeader>
               <DialogTitle>size = {size}</DialogTitle>
               <DialogDescription>
-                {size === 'sm' && '重命名 / 单字段小表单（默认）'}
-                {size === 'md' && '略宽的小表单'}
-                {size === 'lg' && '中等表单，几个字段'}
-                {size === 'xl' && '复杂多字段表单（提 bug、创建工单）'}
-                {size === '2xl' && '超大表单 / 双栏内容'}
+                {size === "sm" && "重命名 / 单字段小表单（默认）"}
+                {size === "md" && "略宽的小表单"}
+                {size === "lg" && "中等表单，几个字段"}
+                {size === "xl" && "复杂多字段表单（提 bug、创建工单）"}
+                {size === "2xl" && "超大表单 / 双栏内容"}
               </DialogDescription>
             </DialogHeader>
-            <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground rounded-md border border-dashed p-8 text-center text-sm">
               内容区
             </div>
             <DialogFooter>
@@ -144,5 +152,5 @@ export const 尺寸对比: Story = {
         </Dialog>
       ))}
     </div>
-  )
+  ),
 }

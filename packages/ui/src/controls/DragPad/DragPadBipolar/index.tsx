@@ -1,27 +1,29 @@
 /**
  * DragPadBipolar — 中心 0 左右正负 + 中线,宽度由 ghost sizer 实测锁定。
  */
-import { useMemo, type ReactNode } from "react";
-import { AutoWidthText } from "../AutoWidthText";
-import { IconSlot } from "#components/controls/IconSlot/index";
-import { DragPadBase } from "../DragPadBase";
-import { EditInput } from "../EditInput";
-import { useDragValue, type UseDragValueOptions } from "../useDragValue";
-import { useInfoBinding } from "../useInfoBinding";
-import { useInlineEdit } from "../useInlineEdit";
-import { formatNumericValue } from "../formatNumericValue";
+import { useMemo } from "react"
+import { IconSlot } from "#components/controls/IconSlot/index"
+import { AutoWidthText } from "../AutoWidthText"
+import { DragPadBase } from "../DragPadBase"
+import { EditInput } from "../EditInput"
+import { useDragValue } from "../useDragValue"
+import { useInfoBinding } from "../useInfoBinding"
+import { useInlineEdit } from "../useInlineEdit"
+import { formatNumericValue } from "../formatNumericValue"
+import type { UseDragValueOptions } from "../useDragValue"
+import type { ReactNode } from "react"
 
 export interface DragPadBipolarProps extends UseDragValueOptions {
-  label: string;
-  description?: string;
-  format?: (value: number) => string;
-  color?: string;
-  className?: string;
-  editable?: boolean;
-  parse?: (raw: string) => number;
-  icon?: ReactNode;
-  size?: "default" | "compact";
-  widthSamples?: string[];
+  readonly label: string
+  readonly description?: string
+  readonly format?: (value: number) => string
+  readonly color?: string
+  readonly className?: string
+  readonly editable?: boolean
+  readonly parse?: (raw: string) => number
+  readonly icon?: ReactNode
+  readonly size?: "default" | "compact"
+  readonly widthSamples?: string[]
 }
 
 export function DragPadBipolar({
@@ -37,12 +39,9 @@ export function DragPadBipolar({
   widthSamples = [],
   ...dragOptions
 }: DragPadBipolarProps) {
-  const toStr = useMemo(
-    () =>
-      format ??
-      formatNumericValue(dragOptions.min, dragOptions.max, dragOptions.step),
-    [format, dragOptions.min, dragOptions.max, dragOptions.step],
-  );
+  const toString_ = useMemo(() => {
+    return format ?? formatNumericValue(dragOptions.min, dragOptions.max, dragOptions.step)
+  }, [format, dragOptions.min, dragOptions.max, dragOptions.step])
   const {
     state: editState,
     draft,
@@ -58,37 +57,36 @@ export function DragPadBipolar({
     min: dragOptions.min,
     max: dragOptions.max,
     step: dragOptions.step,
-    format: toStr,
+    format: toString_,
     parse,
     editable,
     disabled: dragOptions.disabled,
     onGestureStart: dragOptions.onGestureStart,
     onGestureEnd: dragOptions.onGestureEnd,
     onGestureCancel: dragOptions.onGestureCancel,
-  });
+  })
 
-  const { dragging, handlePointerDown, handleClick, handleDoubleClick, ref } =
-    useDragValue({
-      ...dragOptions,
-      attached: editState !== "editing",
-      onClick: beginPreEdit,
-    });
+  const { dragging, handlePointerDown, handleClick, handleDoubleClick, ref } = useDragValue({
+    ...dragOptions,
+    attached: editState !== "editing",
+    onClick: beginPreEdit,
+  })
 
-  const mid = (dragOptions.min + dragOptions.max) / 2;
-  const half = (dragOptions.max - dragOptions.min) / 2;
-  const display = toStr(dragOptions.value);
+  const mid = (dragOptions.min + dragOptions.max) / 2
+  const half = (dragOptions.max - dragOptions.min) / 2
+  const display = toString_(dragOptions.value)
   const samples = [
-    toStr(dragOptions.min),
-    toStr(dragOptions.max),
-    toStr(mid),
+    toString_(dragOptions.min),
+    toString_(dragOptions.max),
+    toString_(mid),
     ...widthSamples,
-  ];
-  const normalized = half === 0 ? 0 : (dragOptions.value - mid) / half;
+  ]
+  const normalized = half === 0 ? 0 : (dragOptions.value - mid) / half
   const infoHandlers = useInfoBinding({
     type: "bipolar",
     description,
     dragging,
-  });
+  })
 
   if (editState === "editing") {
     return (
@@ -104,7 +102,7 @@ export function DragPadBipolar({
         icon={icon}
         samples={samples}
       />
-    );
+    )
   }
 
   const mergedClass = [
@@ -113,7 +111,7 @@ export function DragPadBipolar({
     className ?? "",
   ]
     .filter(Boolean)
-    .join(" ");
+    .join(" ")
 
   return (
     <DragPadBase
@@ -125,21 +123,18 @@ export function DragPadBipolar({
       className={mergedClass}
       onPointerDown={handlePointerDown}
       onClick={handleClick}
-      onDoubleClick={(event) => {
-        handleDoubleClick(event);
-        resetPreEdit();
+      onDoubleClick={event => {
+        handleDoubleClick(event)
+        resetPreEdit()
       }}
       aria-label={label}
       {...infoHandlers}
       onBlur={() => {
-        infoHandlers.onBlur();
-        cancel();
+        infoHandlers.onBlur()
+        cancel()
       }}
     >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-hidden rounded-sm"
-      >
+      <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-sm">
         <span
           className="absolute inset-y-0 bg-[color:var(--dragpad-color,var(--primary))] opacity-30"
           style={{
@@ -147,12 +142,12 @@ export function DragPadBipolar({
             width: `${Math.abs(normalized) * 50}%`,
           }}
         />
-        <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-border" />
+        <span className="bg-border absolute inset-y-1 left-1/2 w-px -translate-x-1/2" />
       </span>
       {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
       <span className="relative z-10">
         <AutoWidthText samples={samples}>{display}</AutoWidthText>
       </span>
     </DragPadBase>
-  );
+  )
 }

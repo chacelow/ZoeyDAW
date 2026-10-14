@@ -1,11 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { useState } from 'react'
-import { PreviewMedia, type MediaItem } from './preview-media'
+import { useState } from "react"
+import { PreviewMedia } from "./preview-media"
+import type { MediaItem } from "./preview-media"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof PreviewMedia> = {
-  title: 'Data/PreviewMedia',
+  title: "Data/PreviewMedia",
   component: PreviewMedia,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -21,19 +22,19 @@ const svg = (label: string, hue: number) =>
   )}`
 
 const INITIAL: MediaItem[] = [
-  { id: '1', name: 'hero.png', url: svg('IMG', 210), type: 'image' },
-  { id: '2', name: 'brief.pdf', type: 'file' },
-  { id: '3', name: 'notes.md', type: 'file' }
+  { id: "1", name: "hero.png", url: svg("IMG", 210), type: "image" },
+  { id: "2", name: "brief.pdf", type: "file" },
+  { id: "3", name: "notes.md", type: "file" },
 ]
 
-function Demo(props: { size?: 'sm' | 'md' | 'lg' }) {
+function Demo(properties: { size?: "sm" | "md" | "lg" }) {
   const [items, setItems] = useState(INITIAL)
   return (
     <div className="w-96">
       <PreviewMedia
         items={items}
-        size={props.size}
-        onRemove={index => setItems(prev => prev.filter((_, i) => i !== index))}
+        size={properties.size}
+        onRemove={index => setItems(previous => previous.filter((_, index_) => index_ !== index))}
       />
     </div>
   )

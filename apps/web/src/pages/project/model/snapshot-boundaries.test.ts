@@ -2,8 +2,8 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import { hydrateProject, projectActions, serializeProject, useProjectState } from "../adapters"
 import { createMockDocument, createMockWorkspace, mockWaveformPeaks } from "../adapters/fixtures"
-import type { DocumentState } from "./types"
 import { visibleTracks } from "./types"
+import type { DocumentState } from "./types"
 
 beforeEach(() => {
   hydrateProject(
@@ -21,7 +21,7 @@ describe("snapshot graph and identity boundaries", () => {
     projectActions.updateTrack("4-midi", { output: parentId })
     projectActions.ungroupTrack("drums-group")
 
-    const tracks = useProjectState.getState().document.tracks
+    const { tracks } = useProjectState.getState().document
     const parent = tracks.find(track => track.id === parentId)!
     expect(parent.childTrackIds).toEqual(["trager", "sidechain", "4-midi"])
     expect(tracks.find(track => track.id === "trager")?.output).toBe(parentId)
@@ -30,7 +30,9 @@ describe("snapshot graph and identity boundaries", () => {
 
     projectActions.updateTrack(parentId, { collapsed: true })
     const shown = visibleTracks(useProjectState.getState().document.tracks).map(track => track.id)
-    for (const id of ["trager", "sidechain", "4-midi"]) expect(shown).not.toContain(id)
+    for (const id of ["trager", "sidechain", "4-midi"]) {
+      expect(shown).not.toContain(id)
+    }
     const saved = serializeProject()
     hydrateProject(saved)
     const restored = useProjectState.getState().document.tracks
@@ -40,10 +42,12 @@ describe("snapshot graph and identity boundaries", () => {
       "4-midi",
     ])
     const shownAfterRestore = visibleTracks(restored).map(track => track.id)
-    for (const id of ["trager", "sidechain", "4-midi"]) expect(shownAfterRestore).not.toContain(id)
+    for (const id of ["trager", "sidechain", "4-midi"]) {
+      expect(shownAfterRestore).not.toContain(id)
+    }
   })
 
-  const malformed: Array<[string, (document: DocumentState) => void]> = [
+  const malformed: [string, (document: DocumentState) => void][] = [
     [
       "a route to an ordinary track",
       document => {
@@ -82,7 +86,9 @@ describe("snapshot graph and identity boundaries", () => {
       "overlapping audio fades",
       document => {
         const clip = document.tracks.find(track => track.id === "3-audio")!.clips[0]
-        if (clip.kind !== "audio") throw new Error("Expected audio fixture")
+        if (clip.kind !== "audio") {
+          throw new Error("Expected audio fixture")
+        }
         clip.fadeInBars = 9
         clip.fadeOutBars = 9
       },
@@ -103,7 +109,7 @@ describe("snapshot graph and identity boundaries", () => {
     [
       "duplicate points within a lane",
       document => {
-        const points = document.tracks.find(track => track.id === "3-audio")!.automation[0].points
+        const { points } = document.tracks.find(track => track.id === "3-audio")!.automation[0]
         points.push({ ...points[0] })
       },
     ],
@@ -111,7 +117,9 @@ describe("snapshot graph and identity boundaries", () => {
       "duplicate provided MIDI note IDs within a clip",
       document => {
         const clip = document.tracks.find(track => track.id === "trager")!.clips[0]
-        if (clip.kind !== "midi") throw new Error("Expected MIDI fixture")
+        if (clip.kind !== "midi") {
+          throw new Error("Expected MIDI fixture")
+        }
         clip.notes.push({ ...clip.notes[0] })
       },
     ],
@@ -152,7 +160,7 @@ describe("derived waveform previews", () => {
     const peaks = mockWaveformPeaks("mock://kick.wav", 0.5, 10_000)!
     expect(peaks).toHaveLength(2048)
     expect(peaks[0]).toBeCloseTo(0.4 + 0.4 * Math.abs(Math.sin((2 * Math.PI * 0.5 * 7) / 16)))
-    const middleBar = (0.5 + 5_000) % 16
+    const middleBar = (0.5 + 5000) % 16
     expect(peaks[1024]).toBeCloseTo(
       0.4 + 0.4 * Math.abs(Math.sin((2 * Math.PI * middleBar * 7) / 16))
     )

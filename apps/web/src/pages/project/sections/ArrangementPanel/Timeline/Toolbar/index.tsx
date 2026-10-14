@@ -6,7 +6,13 @@ import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "@/pages/project/model
 import { effectiveDrawMode } from "@/pages/project/model/interaction-mode"
 import { setDrawModeLatched } from "../drawModeKey"
 
-export function Toolbar({ pxPerBar, zoom }: { pxPerBar: number; zoom(direction: -1 | 1): void }) {
+export function Toolbar({
+  pxPerBar,
+  zoom,
+}: {
+  readonly pxPerBar: number
+  readonly zoom: (direction: -1 | 1) => void
+}) {
   const { t } = useTranslation()
   const snap = useProjectState(state => state.workspace.snap)
   const grid = useProjectState(state => state.workspace.grid)
@@ -30,11 +36,13 @@ export function Toolbar({ pxPerBar, zoom }: { pxPerBar: number; zoom(direction: 
       <DropdownButton
         value={grid.mode === "adaptive" ? grid.density : `fixed:${grid.bars}`}
         onChange={value => {
-          if (value.startsWith("fixed:"))
+          if (value.startsWith("fixed:")) {
             projectActions.setGrid({ mode: "fixed", bars: Number(value.slice(6)) })
-          else {
+          } else {
             const density = GRID_DENSITIES.find(candidate => candidate === value)
-            if (density) projectActions.setGrid({ mode: "adaptive", density })
+            if (density) {
+              projectActions.setGrid({ mode: "adaptive", density })
+            }
           }
         }}
         items={[
@@ -48,7 +56,7 @@ export function Toolbar({ pxPerBar, zoom }: { pxPerBar: number; zoom(direction: 
           ...[
             ...fixedGridSteps(numerator, denominator),
             ...(grid.mode === "fixed" &&
-            !fixedGridSteps(numerator, denominator).some(step => step.bars === grid.bars)
+            fixedGridSteps(numerator, denominator).every(step => step.bars !== grid.bars)
               ? [{ bars: grid.bars, label: gridLabel(grid.bars, numerator, denominator) }]
               : []),
           ].map(step => ({
@@ -95,7 +103,7 @@ export function Toolbar({ pxPerBar, zoom }: { pxPerBar: number; zoom(direction: 
       >
         <Plus />
       </Button>
-      <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground">
+      <span className="text-muted-foreground shrink-0 text-[10px] tabular-nums">
         {pxPerBar.toFixed(0)} px/bar
       </span>
       <Button

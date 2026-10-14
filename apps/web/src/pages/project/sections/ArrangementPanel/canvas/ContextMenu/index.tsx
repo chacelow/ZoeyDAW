@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import {
   ContextMenu,
@@ -13,18 +13,19 @@ import {
 } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
 import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "@/pages/project/model/grid"
-import type { CanvasMenuTarget } from "../interactions/types"
 import { arrangementScene } from "../scene"
-import { ClipMenuItems } from "./ClipMenuItems"
 import { RulerMenuItems } from "../interactions/rulers/RulerMenuItems"
 import { AutomationMenuItems } from "../interactions/automation/AutomationMenuItems"
+import { ClipMenuItems } from "./ClipMenuItems"
+import type { ReactNode } from "react"
+import type { CanvasMenuTarget } from "../interactions/types"
 
 export function CanvasContextMenu({
   children,
   getTarget,
 }: {
-  children: ReactNode
-  getTarget(event: MouseEvent): CanvasMenuTarget | null
+  readonly children: ReactNode
+  readonly getTarget: (event: MouseEvent) => CanvasMenuTarget | null
 }) {
   const { t } = useTranslation()
   const [target, setTarget] = useState<CanvasMenuTarget | null>(null)
@@ -48,17 +49,19 @@ export function CanvasContextMenu({
       >
         {children}
       </ContextMenuTrigger>
-      {target && (
+      {target ? (
         <ContextMenuContent
           finalFocus={() => {
             const selected = arrangementScene.get().targetSelection
-            if (selected.kind === "marker" && selected.phase === "renaming")
+            if (selected.kind === "marker" && selected.phase === "renaming") {
               return document.querySelector<HTMLElement>("[data-marker-editor]")
-            if (selected.kind === "clip" && selected.phase === "renaming")
+            }
+            if (selected.kind === "clip" && selected.phase === "renaming") {
               return document.querySelector<HTMLElement>("[data-clip-rename]")
-            if (selected.kind === "automation-value")
-              return document.querySelector<HTMLElement>("[data-automation-value-editor]")
-            return true
+            }
+            return selected.kind === "automation-value"
+              ? document.querySelector<HTMLElement>("[data-automation-value-editor]")
+              : true
           }}
         >
           {target.kind === "clip" || target.kind === "clip-lane" ? (
@@ -92,7 +95,7 @@ export function CanvasContextMenu({
                 {[
                   ...fixedGridSteps(numerator, denominator),
                   ...(grid.mode === "fixed" &&
-                  !fixedGridSteps(numerator, denominator).some(step => step.bars === grid.bars)
+                  fixedGridSteps(numerator, denominator).every(step => step.bars !== grid.bars)
                     ? [{ bars: grid.bars, label: gridLabel(grid.bars, numerator, denominator) }]
                     : []),
                 ].map(step => (
@@ -110,7 +113,7 @@ export function CanvasContextMenu({
             </ContextMenuSubContent>
           </ContextMenuSub>
         </ContextMenuContent>
-      )}
+      ) : null}
     </ContextMenu>
   )
 }

@@ -1,42 +1,25 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type Ref,
-} from "react";
-import { createPortal } from "react-dom";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  type HTMLMotionProps,
-} from "motion/react";
-import { Ban } from "lucide-react";
-import { cn } from "#lib/utils";
+import { useCallback, useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
+import { AnimatePresence, motion, useMotionValue, useReducedMotion } from "motion/react"
+import { Ban } from "lucide-react"
+import { cn } from "#lib/utils"
+import type { HTMLMotionProps } from "motion/react"
+import type { ReactNode, Ref } from "react"
 
 export interface DragPreviewAreaProps extends Omit<
   HTMLMotionProps<"div">,
-  | "ref"
-  | "drag"
-  | "onPan"
-  | "onPanStart"
-  | "onPanEnd"
-  | "onPointerDownCapture"
-  | "onClickCapture"
+  "ref" | "drag" | "onPan" | "onPanStart" | "onPanEnd" | "onPointerDownCapture" | "onClickCapture"
 > {
-  ref?: Ref<HTMLDivElement>;
-  sourceSelector?: string;
-  renderPreview: (source: HTMLElement) => ReactNode;
-  disabledDropLabel: string;
+  readonly ref?: Ref<HTMLDivElement>
+  readonly sourceSelector?: string
+  readonly renderPreview: (source: HTMLElement) => ReactNode
+  readonly disabledDropLabel: string
 }
 
 interface DragPreview {
-  source: HTMLElement;
-  content: ReactNode;
-  origin: { x: number; y: number };
+  source: HTMLElement
+  content: ReactNode
+  origin: { x: number; y: number }
 }
 
 export function DragPreviewArea({
@@ -46,99 +29,108 @@ export function DragPreviewArea({
   disabledDropLabel,
   className,
   children,
-  ...props
+  ...properties
 }: DragPreviewAreaProps) {
-  const [preview, setPreview] = useState<DragPreview | null>(null);
-  const pressedSource = useRef<HTMLElement | null>(null);
-  const dragging = useRef(false);
-  const suppressClick = useRef(false);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const reducedMotion = useReducedMotion();
+  const [preview, setPreview] = useState<DragPreview | null>(null)
+  const pressedSource = useRef<HTMLElement | null>(null)
+  const dragging = useRef(false)
+  const suppressClick = useRef(false)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const reducedMotion = useReducedMotion()
 
   const cancel = useCallback(() => {
-    dragging.current = false;
-    setPreview(null);
-  }, []);
+    dragging.current = false
+    setPreview(null)
+  }, [])
 
   useEffect(() => {
-    if (!preview) return;
-    const { source } = preview;
-    source.setAttribute("data-drag-preview-source-active", "");
-    document.body.classList.add("drag-preview-active");
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        cancel();
-      }
+    if (!preview) {
+      return
     }
-    window.addEventListener("keydown", handleKeyDown, true);
-    window.addEventListener("blur", cancel);
-    window.addEventListener("pointercancel", cancel);
+    const { source } = preview
+    source.setAttribute("data-drag-preview-source-active", "")
+    document.body.classList.add("drag-preview-active")
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+      cancel()
+    }
+    window.addEventListener("keydown", handleKeyDown, { capture: true })
+    window.addEventListener("blur", cancel)
+    window.addEventListener("pointercancel", cancel)
     return () => {
-      source.removeAttribute("data-drag-preview-source-active");
-      document.body.classList.remove("drag-preview-active");
-      window.removeEventListener("keydown", handleKeyDown, true);
-      window.removeEventListener("blur", cancel);
-      window.removeEventListener("pointercancel", cancel);
-    };
-  }, [preview, cancel]);
+      source.removeAttribute("data-drag-preview-source-active")
+      document.body.classList.remove("drag-preview-active")
+      window.removeEventListener("keydown", handleKeyDown, true)
+      window.removeEventListener("blur", cancel)
+      window.removeEventListener("pointercancel", cancel)
+    }
+  }, [preview, cancel])
 
   return (
     <>
       <motion.div
-        {...props}
+        {...properties}
         ref={ref}
-        className={cn(
-          "touch-none [&_[data-drag-preview-source-active]]:opacity-40",
-          className,
-        )}
-        onPointerDownCapture={(event) => {
-          suppressClick.current = false;
-          pressedSource.current = null;
-          if (event.button !== 0 || !(event.target instanceof Element)) return;
-          const source = event.target.closest(sourceSelector);
-          if (
-            !(source instanceof HTMLElement) ||
-            !event.currentTarget.contains(source)
-          )
-            return;
-          const control = event.target.closest(
-            "button, a, input, textarea, select, [data-no-drag]",
-          );
-          if (control && control !== source && source.contains(control)) return;
-          pressedSource.current = source;
+        className={cn("touch-none [&_[data-drag-preview-source-active]]:opacity-40", className)}
+        onPointerDownCapture={event => {
+          suppressClick.current = false
+          pressedSource.current = null
+          if (event.button !== 0 || !(event.target instanceof Element)) {
+            return
+          }
+          const source = event.target.closest(sourceSelector)
+          if (!(source instanceof HTMLElement) || !event.currentTarget.contains(source)) {
+            return
+          }
+          const control = event.target.closest("button, a, input, textarea, select, [data-no-drag]")
+          if (control && control !== source && source.contains(control)) {
+            return
+          }
+          pressedSource.current = source
         }}
-        onPanStart={(event) => {
-          const source = pressedSource.current;
-          if (!source) return;
-          const content = renderPreview(source);
-          if (content === null || content === undefined) return;
-          const rect = source.getBoundingClientRect();
-          dragging.current = true;
-          suppressClick.current = true;
-          x.stop();
-          y.stop();
-          x.set(event.clientX + 12);
-          y.set(event.clientY + 12);
+        onPanStart={event => {
+          const source = pressedSource.current
+          if (!source) {
+            return
+          }
+          const content = renderPreview(source)
+          if (content === null || content === undefined) {
+            return
+          }
+          const rect = source.getBoundingClientRect()
+          dragging.current = true
+          suppressClick.current = true
+          x.stop()
+          y.stop()
+          x.set(event.clientX + 12)
+          y.set(event.clientY + 12)
           setPreview({
             source,
             content,
             origin: { x: rect.left, y: rect.top },
-          });
+          })
         }}
-        onPan={(event) => {
-          if (!dragging.current) return;
-          x.set(event.clientX + 12);
-          y.set(event.clientY + 12);
+        onPan={event => {
+          if (!dragging.current) {
+            return
+          }
+          x.set(event.clientX + 12)
+          y.set(event.clientY + 12)
         }}
         onPanEnd={cancel}
-        onClickCapture={(event) => {
-          if (!suppressClick.current) return;
-          event.preventDefault();
-          event.stopPropagation();
-          suppressClick.current = false;
+        onClickCapture={event => {
+          if (!suppressClick.current) {
+            return
+          }
+          event.preventDefault()
+          event.stopPropagation()
+          suppressClick.current = false
         }}
       >
         {children}
@@ -146,12 +138,12 @@ export function DragPreviewArea({
       {typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence initial={false}>
-            {preview && (
+            {preview ? (
               <motion.div
                 key="drag-preview"
                 data-slot="drag-preview"
                 aria-hidden
-                className="pointer-events-none fixed top-0 left-0 z-[1000] flex min-w-32 max-w-xs items-center gap-2 rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg"
+                className="border-border bg-popover text-popover-foreground pointer-events-none fixed top-0 left-0 z-[1000] flex max-w-xs min-w-32 items-center gap-2 rounded-md border px-3 py-2 text-xs shadow-lg"
                 style={{ x, y }}
                 initial={{ opacity: 0, scale: reducedMotion ? 1 : 0.96 }}
                 animate={{ opacity: 0.85, scale: 1 }}
@@ -172,16 +164,17 @@ export function DragPreviewArea({
               >
                 {preview.content}
                 <span
-                  title={disabledDropLabel}
-                  className="ml-2 flex size-6 shrink-0 items-center justify-center rounded-full bg-popover text-destructive"
+                  role="status"
+                  aria-label={disabledDropLabel}
+                  className="bg-popover text-destructive ml-2 flex size-6 shrink-0 items-center justify-center rounded-full"
                 >
-                  <Ban className="size-5" />
+                  <Ban className="size-5" aria-hidden="true" />
                 </span>
               </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>,
-          document.body,
+          document.body
         )}
     </>
-  );
+  )
 }

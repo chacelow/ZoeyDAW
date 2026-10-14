@@ -4,7 +4,7 @@ export type GridSettings =
   { mode: "adaptive"; density: GridDensity } | { mode: "fixed"; bars: number }
 
 export const DEFAULT_GRID: GridSettings = { mode: "adaptive", density: "medium" }
-export const MAX_NOTE_DENOMINATOR = 16384
+export const MAX_NOTE_DENOMINATOR = 16_384
 export const MIN_CLIP_LENGTH_BARS = 1 / (MAX_NOTE_DENOMINATOR * 32)
 const DENSITY_MIN_WIDTH = [128, 64, 32, 16, 8] as const
 const FIXED_BAR_STEPS = [8, 4, 2, 1] as const
@@ -13,7 +13,9 @@ const FIXED_NOTE_DENOMINATORS = [2, 4, 8, 16, 32] as const
 export interface GridPlan {
   cellBars: number
   label: string
-  /** Bar boundaries, beat boundaries, then the remaining cell boundaries share origin bar 1. */
+  /**
+  Bar boundaries, beat boundaries, then the remaining cell boundaries share origin bar 1.
+  */
   barBars: number
   beatBars: number
   minimumCellPx: number
@@ -28,11 +30,12 @@ export function noteGridBars(
 }
 
 export function gridLabel(bars: number, numerator: number, denominator: number): string {
-  if (bars >= 1) return `${bars} ${bars === 1 ? "Bar" : "Bars"}`
+  if (bars >= 1) {
+    return `${bars} ${bars === 1 ? "Bar" : "Bars"}`
+  }
   const wholeNotes = (bars * numerator) / denominator
   const reciprocal = 1 / wholeNotes
-  if (Number.isInteger(reciprocal)) return `1/${reciprocal}`
-  return `${wholeNotes}`
+  return Number.isInteger(reciprocal) ? `1/${reciprocal}` : `${wholeNotes}`
 }
 
 export function fixedGridSteps(numerator: number, denominator: number) {
@@ -48,7 +51,9 @@ export function fixedGridSteps(numerator: number, denominator: number) {
   )
 }
 
-/** Legacy v1 snapshots stored explicit bar durations, including older bar-based choices. */
+/**
+Legacy v1 snapshots stored explicit bar durations, including older bar-based choices.
+*/
 export function isLegacyGridBars(bars: number, numerator: number, denominator: number): boolean {
   return (
     Number.isFinite(bars) &&
@@ -61,21 +66,24 @@ export function isLegacyGridBars(bars: number, numerator: number, denominator: n
 }
 
 export function isGridSettings(value: unknown): value is GridSettings {
-  if (typeof value !== "object" || value === null) return false
-  if ("mode" in value && value.mode === "adaptive")
+  if (typeof value !== "object" || value === null) {
+    return false
+  }
+  if ("mode" in value && value.mode === "adaptive") {
     return "density" in value && GRID_DENSITIES.some(density => density === value.density)
-  if ("mode" in value && value.mode === "fixed")
-    return (
-      "bars" in value &&
-      typeof value.bars === "number" &&
-      Number.isFinite(value.bars) &&
-      value.bars >= MIN_CLIP_LENGTH_BARS &&
-      value.bars <= 1024
-    )
-  return false
+  }
+  return "mode" in value && value.mode === "fixed"
+    ? "bars" in value &&
+        typeof value.bars === "number" &&
+        Number.isFinite(value.bars) &&
+        value.bars >= MIN_CLIP_LENGTH_BARS &&
+        value.bars <= 1024
+    : false
 }
 
-/** Zoom affects only this projection, never the persisted workspace or its undo history. */
+/**
+Zoom affects only this projection, never the persisted workspace or its undo history.
+*/
 export function deriveGridPlan(
   settings: GridSettings,
   pxPerBar: number,
@@ -100,7 +108,9 @@ export function deriveGridPlan(
       )
       const noteCellBars = noteGridBars(note, numerator, denominator)
       cellBars = noteCellBars * 2 ** Math.max(0, Math.ceil(Math.log2(requiredBars / noteCellBars)))
-      if (cellBars >= 1) cellBars = 2 ** Math.ceil(Math.log2(cellBars))
+      if (cellBars >= 1) {
+        cellBars = 2 ** Math.ceil(Math.log2(cellBars))
+      }
     }
   }
   return {
@@ -139,7 +149,9 @@ export function gridForMeterChange(
   numerator: number,
   denominator: number
 ): GridSettings {
-  if (settings.mode === "adaptive" || settings.bars >= 0.25) return settings
+  if (settings.mode === "adaptive" || settings.bars >= 0.25) {
+    return settings
+  }
   const oldWholeNote = (settings.bars * oldNumerator) / oldDenominator
   return {
     mode: "fixed",
@@ -147,7 +159,9 @@ export function gridForMeterChange(
   }
 }
 
-/** Keep a 1/16384 note at least 8 logical pixels wide at maximum zoom. */
+/**
+Keep a 1/16384 note at least 8 logical pixels wide at maximum zoom.
+*/
 export function gridZoomLimit(numerator: number, denominator: number): number {
   return (8 * MAX_NOTE_DENOMINATOR * numerator) / denominator
 }

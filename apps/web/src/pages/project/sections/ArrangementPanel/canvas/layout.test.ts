@@ -61,7 +61,7 @@ it("anchors each pinned track's bottom while it folds downward", () => {
 })
 
 it("keeps a folded group's compact summary lane while removing child rows", () => {
-  const tracks = createMockDocument().tracks
+  const { tracks } = createMockDocument()
   const group = tracks.find(track => track.id === "drums-group")!
   const child = tracks.find(track => track.id === "trager")!
   const expanded = layoutTrackRowsForViewport(visibleTracks(tracks), 0, 320)
@@ -82,7 +82,7 @@ it("keeps a folded group's compact summary lane while removing child rows", () =
 })
 
 it("folds nested groups independently into compact summary lanes", () => {
-  const tracks = createMockDocument().tracks
+  const { tracks } = createMockDocument()
   const outer = tracks.find(track => track.id === "drums-group")!
   const inner = tracks.find(track => track.id === "sidechain")!
   const leaf = tracks.find(track => track.id === "trager")!
@@ -113,7 +113,9 @@ it("reveals the inspected track when an editor reduces the lane viewport", () =>
   const tracks = visibleTracks(createMockDocument().tracks)
   const next = revealTrackScrollY(tracks, 320, 0, "4-midi")
   const row = layoutTrackRowsForViewport(tracks, next, 320).find(row => row.track.id === "4-midi")
-  if (!row) throw new Error("Missing inspected track")
+  if (!row) {
+    throw new Error("Missing inspected track")
+  }
   expect(row.top).toBeGreaterThanOrEqual(arrangementBodyTop())
   expect(row.top + row.height).toBeLessThanOrEqual(
     arrangementBodyBottom(320) - pinnedTrackHeight(tracks)

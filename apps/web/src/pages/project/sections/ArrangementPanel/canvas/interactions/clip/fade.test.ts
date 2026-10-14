@@ -2,14 +2,15 @@
 import { beforeEach, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
-import type { AudioClip } from "@/pages/project/model/types"
 import { fadeControls } from "@/pages/project/model/fades"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
-import { createFadeGesture } from "./fade"
-import { createResizeGesture } from "./resize"
-import type { CanvasPointer } from "../types"
 import { clipRect, layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { clipVisualGeometry } from "@/pages/project/sections/ArrangementPanel/canvas/clip-geometry"
+import { createFadeGesture } from "./fade"
+import { createMoveGesture } from "./move"
+import { createResizeGesture } from "./resize"
+import type { CanvasPointer } from "../types"
+import type { AudioClip } from "@/pages/project/model/types"
 
 beforeEach(() => {
   hydrateProject(
@@ -21,7 +22,9 @@ it("drags only fade peaks while keeping quiet offsets fixed; cancel restores the
   const initial = useProjectState.getState().document
   const track = initial.tracks.find(item => item.id === "3-audio")
   const clip = track?.clips[0]
-  if (!track || clip?.kind !== "audio") throw new Error("Missing audio fixture")
+  if (!track || clip?.kind !== "audio") {
+    throw new Error("Missing audio fixture")
+  }
   projectActions.updateClip(clip.id, {
     fadeInOffsetBars: 1,
     fadeInBars: 2,
@@ -54,7 +57,9 @@ it("drags only fade peaks while keeping quiet offsets fixed; cancel restores the
   const current = (): AudioClip => {
     const found = useProjectState.getState().document.tracks.find(item => item.id === track.id)
       ?.clips[0]
-    if (found?.kind !== "audio") throw new Error("Missing audio")
+    if (found?.kind !== "audio") {
+      throw new Error("Missing audio")
+    }
     return found
   }
   const before = fadeControls(current(), "in")
@@ -67,13 +72,14 @@ it("drags only fade peaks while keeping quiet offsets fixed; cancel restores the
     },
     pointer,
     current(),
-    state.document.tracks,
     "in",
     "length"
   )
   gesture.move({ ...pointer, x: pointer.x + 32 })
   const preview = scene.get().tracks.find(item => item.id === track.id)?.clips[0]
-  if (preview?.kind !== "audio") throw new Error("Missing preview")
+  if (preview?.kind !== "audio") {
+    throw new Error("Missing preview")
+  }
   expect(fadeControls(preview, "in")).toEqual({ start: before.start, end: before.end + 1 })
   gesture.finish(true)
   expect(scene.get().previewTracks).toBeNull()
@@ -89,7 +95,6 @@ it("drags only fade peaks while keeping quiet offsets fixed; cancel restores the
     },
     pointer,
     current(),
-    useProjectState.getState().document.tracks,
     "out",
     "length"
   )
@@ -105,7 +110,6 @@ it("drags only fade peaks while keeping quiet offsets fixed; cancel restores the
     },
     pointer,
     current(),
-    useProjectState.getState().document.tracks,
     "in",
     "curve"
   )
@@ -125,9 +129,11 @@ it("keeps both quiet fade offsets fixed in the live edge-resize preview", () => 
     fadeOutOffsetBars: 1,
     fadeOutBars: 2,
   })
-  const tracks = useProjectState.getState().document.tracks
+  const { tracks } = useProjectState.getState().document
   const clip = tracks.find(track => track.id === "3-audio")?.clips[0]
-  if (clip?.kind !== "audio") throw new Error("Missing audio fixture")
+  if (clip?.kind !== "audio") {
+    throw new Error("Missing audio fixture")
+  }
   const scene = createSceneStore()
   const state = useProjectState.getState()
   scene.setMusic({
@@ -157,7 +163,10 @@ it("keeps both quiet fade offsets fixed in the live edge-resize preview", () => 
     actions: projectActions,
     getState: useProjectState.getState,
   }
-  const gesture = createResizeGesture(context, pointer, clip, tracks, "left")
+  const gesture = createResizeGesture(context, pointer, clip, "left")
+  if (!gesture) {
+    throw new Error("Missing resize fixture")
+  }
   gesture.move({ ...pointer, x: pointer.x + 64 })
   const preview = scene.get().tracks.find(track => track.id === "3-audio")?.clips[0]
   expect(preview).toMatchObject({
@@ -171,6 +180,41 @@ it("keeps both quiet fade offsets fixed in the live edge-resize preview", () => 
   expect(
     useProjectState.getState().document.tracks.find(track => track.id === "3-audio")?.clips[0]
   ).toMatchObject({ fadeInOffsetBars: 1, fadeOutOffsetBars: 1 })
+})
+
+it("rejects a vanished clip hit without retaining a preview token", () => {
+  const track = useProjectState.getState().document.tracks.find(item => item.id === "3-audio")
+  const clip = track?.clips[0]
+  if (!track || !clip) {
+    throw new Error("Missing audio fixture")
+  }
+  const scene = createSceneStore()
+  const context = {
+    element: document.createElement("div"),
+    scene,
+    actions: projectActions,
+    getState: useProjectState.getState,
+  }
+  const pointer: CanvasPointer = {
+    x: 320,
+    y: 200,
+    clientX: 320,
+    clientY: 200,
+    pointerId: 1,
+    button: 0,
+    shiftKey: false,
+    altKey: false,
+    metaKey: false,
+    ctrlKey: false,
+  }
+  projectActions.deleteClips([clip.id])
+  expect(createMoveGesture(context, pointer, track, clip.id, [clip.id])).toBeNull()
+  expect(createResizeGesture(context, pointer, clip, "left")).toBeNull()
+  expect(useProjectState.getState().session.preview).toBeNull()
+  expect(scene.get().previewTracks).toBeNull()
+  const token = projectActions.beginPreview()
+  expect(token).not.toBeNull()
+  projectActions.cancelPreview(token)
 })
 
 it.each<{ edge: "in" | "out"; height: number }>([
@@ -187,7 +231,9 @@ it.each<{ edge: "in" | "out"; height: number }>([
     const state = useProjectState.getState()
     const track = state.document.tracks.find(item => item.id === "3-audio")!
     const clip = track.clips[0]
-    if (clip.kind !== "audio") throw new Error("Missing audio fixture")
+    if (clip.kind !== "audio") {
+      throw new Error("Missing audio fixture")
+    }
     const scene = createSceneStore()
     scene.setMusic({
       bars: 128,
@@ -221,7 +267,6 @@ it.each<{ edge: "in" | "out"; height: number }>([
       },
       pointer,
       clip,
-      state.document.tracks,
       edge,
       "curve"
     )

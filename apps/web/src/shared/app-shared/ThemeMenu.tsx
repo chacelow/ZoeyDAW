@@ -15,12 +15,11 @@ import {
   ToggleGroup,
   ToggleGroupItem,
   cn,
-  type Theme,
-  type ThemePreset,
   useTheme,
 } from "@zoeymind/ui"
 import { useTranslation } from "@zoeymind/i18n"
 import { useThemePreset } from "./theme-preset-context"
+import type { Theme, ThemePreset } from "@zoeymind/ui"
 
 const THEME_MODES: { mode: Theme; icon: typeof Sun; labelKey: string }[] = [
   { mode: "light", icon: Sun, labelKey: "ui.theme.light" },
@@ -29,40 +28,40 @@ const THEME_MODES: { mode: Theme; icon: typeof Sun; labelKey: string }[] = [
 ]
 
 export interface ThemeMenuProps {
-  variant?: "icon" | "sub" | "inline"
+  readonly variant?: "icon" | "sub" | "inline"
 }
 
-interface PresetOptionProps {
-  preset: ThemePreset
-  active: boolean
-  onSelect: () => void
+interface PresetOptionProperties {
+  readonly preset: ThemePreset
+  readonly active: boolean
+  readonly onSelect: () => void
 }
 
-function PresetOption({ preset, active, onSelect }: PresetOptionProps) {
+function PresetOption({ preset, active, onSelect }: PresetOptionProperties) {
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={active}
       className={cn(
-        "group relative flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg p-1.5 text-left outline-none transition-[background-color,box-shadow] hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
-        active && "bg-accent shadow-sm ring-1 ring-ring/25"
+        "group hover:bg-muted focus-visible:ring-ring/50 relative flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg p-1.5 text-left transition-[background-color,box-shadow] outline-none focus-visible:ring-2",
+        active && "bg-accent ring-ring/25 shadow-sm ring-1"
       )}
     >
-      <span className="flex h-9 w-full overflow-hidden rounded-md shadow-[inset_0_0_0_1px_rgb(0_0_0/0.1)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)]">
+      <span className="flex h-9 w-full overflow-hidden rounded-md shadow-[inset_0_0_0_1px_var(--border)]">
         {preset.preview.map((color, index) => (
           <span key={index} className="flex-1" style={{ backgroundColor: color }} />
         ))}
       </span>
       {active ? (
-        <span className="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+        <span className="bg-primary text-primary-foreground absolute top-2 right-2 flex size-5 items-center justify-center rounded-full shadow-sm">
           <Check aria-hidden="true" />
         </span>
       ) : null}
       <span
         className={cn(
-          "truncate px-0.5 text-xs text-muted-foreground group-hover:text-foreground",
-          active && "font-medium text-foreground"
+          "text-muted-foreground group-hover:text-foreground truncate px-0.5 text-xs",
+          active && "text-foreground font-medium"
         )}
       >
         {preset.label}
@@ -80,12 +79,14 @@ export function ThemeModeToggle() {
       type="single"
       value={theme}
       onValueChange={value => {
-        if (value) setTheme(value as Theme)
+        if (value) {
+          setTheme(value as Theme)
+        }
       }}
       variant="default"
       size="sm"
       spacing={0}
-      className="w-full bg-muted/60 p-1"
+      className="bg-muted/60 w-full p-1"
       aria-label={t("common.themePreset")}
     >
       {THEME_MODES.map(({ mode, icon: Icon, labelKey }) => (
@@ -115,7 +116,7 @@ export function ThemePresetGrid() {
   )
 }
 
-function ThemeContent({ scroll = false }: { scroll?: boolean }) {
+function ThemeContent({ scroll = false }: { readonly scroll?: boolean }) {
   const presets = <ThemePresetGrid />
 
   return (

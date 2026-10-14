@@ -9,16 +9,17 @@
  */
 import { createBrowserRouter } from "react-router-dom"
 import { MainLayout } from "@/components/layouts/main-layout"
-import { RouteErrorFallback } from "./route-error-fallback"
 import { HomePage } from "@/pages/home"
 import { ProjectPage } from "@/pages/project"
 import { ComponentLibraryPage } from "@/pages/library"
 import { NotFoundPage } from "@/pages/not-found"
+import { RouteErrorFallback } from "./route-error-fallback"
+import { ShellTitleBar } from "./ShellTitleBar"
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <MainLayout />,
+    element: <MainLayout titleBar={<ShellTitleBar />} />,
     errorElement: <RouteErrorFallback />,
     children: [
       { index: true, element: <HomePage /> },

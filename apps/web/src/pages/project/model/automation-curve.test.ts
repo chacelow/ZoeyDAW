@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { createMockDocument, createMockWorkspace } from "../adapters/fixtures"
 import {
   automationSourceValue,
   automationValueAt,
@@ -6,7 +7,6 @@ import {
   normalizedAutomationValue,
 } from "./automation-curve"
 import { parseProject, stringifyProject } from "./persistence"
-import { createMockDocument, createMockWorkspace } from "../adapters/fixtures"
 
 describe("automation interpolation", () => {
   it("holds endpoints and bends bounded monotone segments while retaining their exact breakpoints", () => {
@@ -35,7 +35,9 @@ describe("automation interpolation", () => {
   it("round-trips bounded curves and rejects non-finite and out-of-range snapshot curves", () => {
     const document = createMockDocument()
     const lane = document.tracks.find(track => track.id === "3-audio")?.automation[0]
-    if (!lane) throw new Error("Missing automation fixture")
+    if (!lane) {
+      throw new Error("Missing automation fixture")
+    }
     lane.points[0].curve = -0.75
     const workspace = createMockWorkspace()
     const snapshot = stringifyProject(document, workspace)

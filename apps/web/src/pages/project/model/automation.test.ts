@@ -11,10 +11,10 @@ beforeEach(() => {
 describe("automation envelope edits", () => {
   it("replaces a breakpoint at the same musical time instead of creating an ambiguous segment", () => {
     projectActions.setAutomationPoint("3-audio", "3-audio-volume", { bar: 1, value: 0.6 })
-    const points = useProjectState
+    const { points } = useProjectState
       .getState()
       .document.tracks.find(track => track.id === "3-audio")!
-      .automation.find(lane => lane.id === "3-audio-volume")!.points
+      .automation.find(lane => lane.id === "3-audio-volume")!
     expect(points.filter(point => point.bar === 1)).toEqual([{ id: "fade-up", bar: 1, value: 0.6 }])
     projectActions.undo()
     expect(

@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest"
 import { getTitlebarMouseAction, isPhysicalTitlebarTarget } from "./titlebar-drag"
 
 describe("titlebar drag boundary", () => {
+  const physicalChild = {} as Node
+  const portalChild = {} as Node
   const titlebar = {
     contains: (target: Node) => target === physicalChild,
   } as unknown as Node
-  const physicalChild = {} as Node
-  const portalChild = {} as Node
 
   it("accepts elements physically rendered inside the titlebar", () => {
     expect(isPhysicalTitlebarTarget(titlebar, physicalChild)).toBe(true)

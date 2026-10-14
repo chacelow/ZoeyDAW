@@ -19,14 +19,18 @@ function notes() {
     .getState()
     .document.tracks.flatMap(track => track.clips)
     .find(item => item.id === "midi-test")
-  if (clip?.kind !== "midi") throw new Error("Missing MIDI fixture")
+  if (clip?.kind !== "midi") {
+    throw new Error("Missing MIDI fixture")
+  }
   return clip.notes
 }
 
 beforeEach(() => {
   const document = createMockDocument()
   const track = document.tracks.find(item => item.id === "trager")
-  if (!track) throw new Error("Missing MIDI track")
+  if (!track) {
+    throw new Error("Missing MIDI track")
+  }
   track.clips.push({
     id: "midi-test",
     kind: "midi",
@@ -82,7 +86,9 @@ it("cancels note movement on capture loss without changing retained source beats
     configurable: true,
   })
   const retained = view.container.querySelector<HTMLElement>('[data-note-index="0"]')
-  if (!retained) throw new Error("Missing partially visible note")
+  if (!retained) {
+    throw new Error("Missing partially visible note")
+  }
   fireEvent.pointerDown(retained, { button: 0, pointerId: 2, clientX: 50, clientY: 30 })
   fireEvent.pointerMove(grid, { pointerId: 2, clientX: 150, clientY: 30 })
   expect(notes()[0].startBeat).not.toBe(0)
@@ -94,7 +100,9 @@ it("cancels note movement on capture loss without changing retained source beats
 it("keeps native name editing shortcuts and routes MIDI selection/delete to notes", () => {
   const view = render(<Editor />)
   const input = view.container.querySelector<HTMLInputElement>("[data-clip-name]")
-  if (!input) throw new Error("Missing clip name")
+  if (!input) {
+    throw new Error("Missing clip name")
+  }
   fireEvent.focus(input)
   fireEvent.keyDown(input, { key: "a", metaKey: true })
   expect(notes()).toHaveLength(2)
@@ -131,7 +139,9 @@ it("resizes a partially visible source note without discarding its hidden start"
     configurable: true,
   })
   const edge = view.container.querySelector<HTMLElement>('[data-note-index="0"] [data-note-edge]')
-  if (!edge) throw new Error("Missing note resize edge")
+  if (!edge) {
+    throw new Error("Missing note resize edge")
+  }
   fireEvent.pointerDown(edge, { button: 0, pointerId: 4, clientX: 100, clientY: 30 })
   fireEvent.pointerMove(grid, { pointerId: 4, clientX: 150, clientY: 30 })
   fireEvent.pointerUp(grid, { pointerId: 4 })
@@ -152,7 +162,9 @@ it("erases a note in B mode and rolls back on lost capture", () => {
   grid.focus()
   fireEvent.keyDown(grid, { key: "b" })
   const note = view.container.querySelector<HTMLElement>('[data-note-index="1"]')
-  if (!note) throw new Error("Missing note")
+  if (!note) {
+    throw new Error("Missing note")
+  }
   fireEvent.pointerDown(note, { button: 0, pointerId: 5, clientX: 100, clientY: 50 })
   expect(notes()).toHaveLength(1)
   fireEvent.lostPointerCapture(grid, { pointerId: 5 })
@@ -168,7 +180,9 @@ it("moves Shift-selected notes together and restores both with one undo", () => 
   })
   const first = view.container.querySelector<HTMLElement>('[data-note-index="0"]')
   const second = view.container.querySelector<HTMLElement>('[data-note-index="1"]')
-  if (!first || !second) throw new Error("Missing visible notes")
+  if (!first || !second) {
+    throw new Error("Missing visible notes")
+  }
   fireEvent.pointerDown(first, { button: 0, pointerId: 6, clientX: 50, clientY: 30 })
   fireEvent.pointerUp(grid, { pointerId: 6 })
   fireEvent.pointerDown(second, {
@@ -243,4 +257,36 @@ it("duplicates selected notes without changing retained originals", () => {
   expect(new Set(notes().map(note => note.id)).size).toBe(4)
   projectActions.undo()
   expect(notes().map(note => note.startBeat)).toEqual([0, 3])
+})
+
+it("cancels an active note edit on Escape without closing the editor", () => {
+  const view = render(<Editor />)
+  const grid = view.getByRole("grid")
+  Object.defineProperty(grid, "getBoundingClientRect", {
+    value: () => ({ left: 0, top: 0, width: 400, height: 120 }),
+    configurable: true,
+  })
+  const note = view.container.querySelector<HTMLElement>('[data-note-index="1"]')
+  if (!note) {
+    throw new Error("Missing note")
+  }
+  fireEvent.pointerDown(note, { button: 0, pointerId: 9, clientX: 100, clientY: 50 })
+  fireEvent.pointerMove(grid, { pointerId: 9, clientX: 150, clientY: 50 })
+  expect(notes()[1].startBeat).toBe(3.5)
+  fireEvent.keyDown(window, { key: "Escape" })
+  expect(notes()[1].startBeat).toBe(3)
+  expect(view.getByRole("grid")).toBe(grid)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("moves selected notes by keyboard while retaining source-crossing positions", () => {
+  const view = render(<Editor />)
+  const grid = view.getByRole("grid")
+  grid.focus()
+  fireEvent.keyDown(grid, { key: "a", metaKey: true })
+  fireEvent.keyDown(grid, { key: "ArrowUp" })
+  expect(notes().map(note => note.startBeat)).toEqual([0, 3])
+  expect(notes().map(note => note.pitch)).toEqual([73, 65])
+  projectActions.undo()
+  expect(notes().map(note => note.pitch)).toEqual([72, 64])
 })

@@ -12,7 +12,12 @@ configureLogger({ sinks: [createTauriLogSink()] })
 
 initI18n(appLocales)
 
-createRoot(document.getElementById("root")!).render(
+const root = document.querySelector("#root")
+if (!root) {
+  throw new Error("Missing application root #root")
+}
+
+createRoot(root).render(
   <StrictMode>
     <App />
   </StrictMode>

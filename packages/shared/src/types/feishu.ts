@@ -1,4 +1,3 @@
-// @ts-nocheck — vendored shared package, erasable syntax not applicable
 /**
  * 飞书 API 相关类型定义
  *
@@ -71,7 +70,7 @@ export enum FeishuBlockType {
   Divider = 21, // 分割线
   Image = 27, // 图片
   Table = 31, // 表格
-  TableCell = 32 // 表格单元格
+  TableCell = 32, // 表格单元格
 }
 
 /**
@@ -119,10 +118,10 @@ export interface FeishuBlock {
       row_size?: number
       column_size?: number
       column_width?: number[]
-      merge_info?: Array<{
+      merge_info?: {
         row_span: number
         col_span: number
-      }>
+      }[]
     }
     cells?: string[][]
   }
@@ -262,36 +261,46 @@ export interface FeishuUrlPreviewEvent {
  * 检查是否为有效的飞书块
  */
 export function isFeishuBlock(value: unknown): value is FeishuBlock {
-  if (!value || typeof value !== 'object') return false
+  if (!value || typeof value !== "object") {
+    return false
+  }
   const block = value as Record<string, unknown>
-  return typeof block.block_id === 'string' && typeof block.block_type === 'number'
+  return typeof block.block_id === "string" && typeof block.block_type === "number"
 }
 
 /**
  * 检查是否为有效的飞书文档实体
  */
 export function isFeishuDocEntity(value: unknown): value is FeishuDocEntity {
-  if (!value || typeof value !== 'object') return false
-  const doc = value as Record<string, unknown>
-  return typeof doc.docs_token === 'string' && typeof doc.doc_type === 'string'
+  if (!value || typeof value !== "object") {
+    return false
+  }
+  const document_ = value as Record<string, unknown>
+  return typeof document_.docs_token === "string" && typeof document_.doc_type === "string"
 }
 
 /**
  * 从飞书块响应中提取块列表
  */
 export function extractFeishuBlocks(response: FeishuBlocksResponse): FeishuBlock[] {
-  if (response.items) return response.items
-  if (response.data?.items) return response.data.items
-  if (response.result?.data?.items) return response.result.data.items
-  return []
+  if (response.items) {
+    return response.items
+  }
+  if (response.data?.items) {
+    return response.data.items
+  }
+  return response.result?.data?.items ? response.result.data.items : []
 }
 
 /**
  * 从飞书搜索结果中提取文档列表
  */
 export function extractFeishuDocs(response: FeishuDocSearchResult): FeishuDocEntity[] {
-  if (response.docs_entities) return response.docs_entities
-  if (response.data?.docs_entities) return response.data.docs_entities
-  if (response.result?.data?.docs_entities) return response.result.data.docs_entities
-  return []
+  if (response.docs_entities) {
+    return response.docs_entities
+  }
+  if (response.data?.docs_entities) {
+    return response.data.docs_entities
+  }
+  return response.result?.data?.docs_entities ? response.result.data.docs_entities : []
 }

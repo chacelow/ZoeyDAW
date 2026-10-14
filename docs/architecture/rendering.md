@@ -54,19 +54,19 @@ MiniMap 行线、时间线网格及音轨边框共用 `--arrangement-line`。暗
 
 `paintTimeGrid` 同时绘制时间线背景和 Audio、MIDI、Pattern 正文上的网格。主线与 `numberedRulerPlan` 的编号位置共用缩放阈值，其他线只来自当前 Ctrl+1、Ctrl+2 网格单元，不额外叠加固定拍线。正文覆盖层使用共享深色网格 token，细线为 22% 不透明度，编号主线为 40%；标题保持实色，正文选中及 hover 都保留网格。
 
-外层音轨卡片不添加 Padding 或列间 Gap。`model/selectors.ts` 的 `TRACK_LAYOUT` 集中定义 `controlHeight: 13` 和 `spacing: 4`。Timeline 将它们映射为编排范围内的 `--spacing-control-track` 与 `--spacing-control-track-gap`，名称、Routing、Mixer 的四周 Padding、纵向控件间距、监听按钮、Mixer 网格及 Send 网格全部使用同一个 spacing。没有 Routing 独立 2px Gap。折叠高度、卡片标题高度、拖动步长及可见行容量也从该对象派生；修改 spacing 时 DOM 与 Canvas 使用同一组尺寸。当前折叠行 23px，标题 21px，标题距外边缘顶部 5px，收起展开不位移。
+外层音轨卡片不添加 Padding 或列间 Gap。`pages/project/layout` 从公共 `@zoeymind/ui/metrics` 派生 `TRACK_LAYOUT`，Timeline 用同一配置映射 scoped CSS。名称、Routing、Mixer 的 Padding、纵向间距、监听与 Send 网格共享规格；折叠高度、标题高度、拖动步长和行容量也由它派生。度量配置源是 UI `controls/metrics/control-metrics.json`，CSS 由命令生成并检查漂移，不在领域 model 或各视图复制默认数字。
 
-轨道操作区总宽度由 `useTimelineViewport.ts` 的 `CONTROLS_WIDTH = 304` 统一提供给 Header、Canvas 和时间视口计算。名称列为 100px，Routing 列保留 74px，剩余宽度给 Mixer；本轮增加的 48px 分别给名称列 16px 和 Mixer 32px。Group 的录音准备位置保留非交互空槽，不让启用按钮占用；其启用按钮与 Audio、MIDI 等宽。
+操作区总宽度和名称/Routing 列宽来自同一 `PROJECT_METRICS` 配置，`layout` 导出的 `CONTROLS_WIDTH` 统一提供给 Header、Canvas 和视口计算；剩余列宽给 Mixer。Group 的录音准备位置保留非交互空槽，不让启用按钮占用，其启用按钮与 Audio、MIDI 等宽。
 
 Mixer 的首行使用四列网格，启用按钮跨两列，与下方音量控件的半宽对齐；Solo 和录音准备各占一列，Group 空槽同样占一列。Send 使用三列网格，按 Return 顺序横排并换行。`trackControlRows` 先扣除上下边框与 Padding，再按控件高度和 Gap 计算真实容量；Mixer 不再额外减掉一行。Send 容量为 `(rows - 2) * 3`。统一 4px 间距后，70px 高度容纳三行，74px 才容纳四行；Routing 依原优先级逐步显示输入与通道，不缩小 Gap 或裁切控件。
 
 共享数值控件的常态、预编辑态和输入框均居中显示。单击只进入高亮预编辑态，不显示文本光标或输入框；键入才开始编辑，双击复位仍可用。顶部录制使用纯实心圆图标，轨道录音准备使用居中的 CSS 圆点，直径为图标槽的四分之三。方形图标按钮不额外添加横向 Padding。组件库的 Number、Bar、Bipolar 和 Toggle 示例统一使用默认共享尺寸，不单独缩小 Number；宽度仍按数值范围或标签测量并保持稳定，项目轨道中的紧凑尺寸不变。
 
-共享 DAW 控件默认使用 13px 高度、9px 字号、1.5px 横向 Padding 和 10px 图标。Transport 在自身范围内统一使用 20px 高度、12px 字号、14px 图标及图标槽、2px 横向 Padding 和 3px 图文 Gap，中央播放、停止、录制按钮不例外。组件库与轨道不受影响。Transport 内移除控件边框，保留稳定测量宽度与窄窗口横向滚动。
+共享 DAW 控件使用配置中的 default 规格，Transport 在自身范围内使用 transport 规格，中央播放、停止、录制按钮不例外。两种规格由同一度量数据生成，保留当前尺寸差异。Transport 不额外覆盖组件库和轨道，控件无边框、宽度按格式化样本稳定测量；窄窗口保持横向滚动。
 
 项目的 Space 在 window capture 阶段统一切换播放，keydown 与 keyup 均阻止控件原生激活，长按只切换一次。被聚焦的按钮、slider 或 menuitem 在 Space keydown 时释放焦点，避免浏览器残留按压和 focus-visible 样式；文字输入、IME、修饰键组合及 Enter 保留自己的行为。
 
-Follow 通过已有共享 rAF scheduler 读取 `readSimulatedBar()`，不新建播放时钟。播放线到可见时间 Canvas 的中线后，每帧调整 `workspace.scrollX`，使内容连续向左滚动。计算宽度排除 304px 操作栏；停播、关闭 Follow 或手动平移暂停期间不追踪，回跳和滚动边界受原有限制。
+Follow 通过已有共享 rAF scheduler 读取 `readTransportBar()`，不新建播放时钟。播放线到可见时间 Canvas 的中线后，每帧调整 `workspace.scrollX`，使内容连续向左滚动。计算宽度排除 304px 操作栏；停播、关闭 Follow 或手动平移暂停期间不追踪，回跳和滚动边界受原有限制。
 
 `useDragValue` 按累计纵向距离线性调节，默认 `pxPerStep` 为 1，大范围控件仍使用已有 `sensitivity`。Shift 保留十分之一精调速率，滚轮独立于拖动。达到上下限后重置距离锚点，不积累超限距离，反向拖动立即生效。光标隐藏与释放后的原位恢复保持不变。
 
@@ -110,7 +110,7 @@ Locator、Loop 和 Clip 使用区分类型的 `targetSelection`。点击由统�
 
 标记拖动与 Loop 两端拖动使用音乐坐标，横向自动滚动后继续重算预览。Loop 主体拖动保持长度；点击主体选择其跨度。Locator 双击从该位置启动模拟播放，方向键移动选中的 Locator，重命名使用 Cmd/Ctrl+R 或菜单。
 
-自动化拆为命中几何、点、线段、绘制、框选、剪贴板命令和数值编辑模块。点与线段修改先投影到 scene，释放后一次提交；Alt 修改线段曲率。绘制补齐跨过的网格单元。相同插值函数用于绘制和模拟电平，空 lane 与首尾区间均显示真实的持续值。
+自动化拆为命中几何、点、线段、绘制、框选、剪贴板命令和数值编辑模块。点、线段与绘制手势通过 adapter 发布临时工程投影，Canvas 与后端消费同一有效结果，释放后一次提交，Esc 取消。Alt 修改线段曲率，绘制补齐跨过的网格单元。相同插值函数用于绘制和模拟电平，空 lane 与首尾区间均显示真实的持续值。
 
 轻按 B 修改持久绘制偏好。按住 B 使用 session 临时 override，松开恢复，手势撤销历史不夹带临时工具状态。数值输入和重命名覆盖层保留焦点，StrictMode effect 重放不会清除编辑目标。
 
@@ -122,7 +122,7 @@ Locator、Loop 和 Clip 使用区分类型的 `targetSelection`。点击由统�
 
 颜色读取在主题变化时使用一个临时 DOM 探针解析 CSS 颜色，随后移除。Canvas 不直接接收 `light-dark()`，因为它可能拒绝该值并保留先前的填充色；解析后的墨色与 DOM 标题保持一致。卡片、轨道身份区和祖先色带复用局部 paper/tint token，保留工程中的原始颜色数据，不修改全局主题或侧栏调色板。
 
-播放头与电平读取 adapter 的同一模拟走带。`readSimulatedBar()` 在发布位置间插值，并使用拍号与循环边界。模拟 tick 通过 `publishSimulatedBar()` 更新当前播放位置，不覆盖用户插入点。原型槽的播放小节使用 Float64，避免远端小节和细网格下的 Float32 抖动；电平仍为 Float32，槽位可增长并回收删除轨道。它不是已验证的原生共享内存协议。
+播放头、电平、Follow 与模拟录制读取同一 project runtime。`model/backend.ts` 定义后端 port，`adapters/runtime` 按实例拥有工程编辑、确认和生命周期，构造与导入不启动引擎。编辑 token 与 Canvas 使用独立的 `session.editEpoch`，不能用可能为空的 backend sessionId 代替；离线也可编辑与取消。`adapters/backend/connection/` 串行发送完整状态，将协议校验、显示插值与状态协调分开。默认 mock 只有视觉反馈；`audio/project-telemetry.ts` 把其流投影到本地 Float64 播放位置与 Float32 电平槽，不是原生共享内存协议。源与混音/自动化元数据进入后端 DTO，名称、颜色、视口和波形缓存不进入。接入契约见 [Project state adapter](../../apps/web/src/pages/project/adapters/README.md)。
 
 当前 `audio/ring-buffer.ts` 是模拟数据槽，不是已验证的 Rust 与 WebView 共享内存协议。Rust 原生进程不能直接把一个 JS `SharedArrayBuffer` 当作它的内存写入。未来音频线程需先通过实时安全队列把遥测送到非实时发布端，再使用实际验证的 WebView 数据通道传给 UI。当前没有实现这个原生链路。
 

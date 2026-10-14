@@ -1,15 +1,15 @@
-import { useEffect, type RefObject } from "react"
+import { useEffect } from "react"
 import { useProjectState } from "@/pages/project/adapters"
-import { positionToBar } from "@/pages/project/model/types"
 import { arrangementScene } from "../canvas/scene"
 import { arrangementScheduler } from "../canvas/scheduler"
 import { arrangementRingBuffer } from "../canvas/audio/ring-buffer"
-import { startMockAudioEngine } from "../canvas/audio/mock-engine"
+import { attachProjectTelemetry } from "../canvas/audio/project-telemetry"
 import { paintGrid } from "../canvas/painters/grid"
 import { paintClips } from "../canvas/painters/clip"
 import { paintAutomation } from "../canvas/painters/automation"
 import { paintClipAlignment, paintPlayhead } from "../canvas/painters/playhead"
 import { gridTokens, readThemeStamp, readTokens } from "../canvas/tokens"
+import type { RefObject } from "react"
 
 const SCENE_ID = "arrangement-scene"
 const PLAYHEAD_ID = "arrangement-playhead"
@@ -19,57 +19,75 @@ function sizeCanvas(canvas: HTMLCanvasElement, rect: DOMRect, dpr: number) {
   const height = Math.round(rect.height * dpr)
   canvas.style.width = `${rect.width}px`
   canvas.style.height = `${rect.height}px`
-  if (canvas.width !== width) canvas.width = width
-  if (canvas.height !== height) canvas.height = height
+  if (canvas.width !== width) {
+    canvas.width = width
+  }
+  if (canvas.height !== height) {
+    canvas.height = height
+  }
 }
 
-/** Scene and overlay painters share measured dimensions but independent invalidation. */
+/**
+Scene and overlay painters share measured dimensions but independent invalidation.
+*/
 export function useCanvasPainters(
-  bodyRef: RefObject<HTMLDivElement | null>,
-  canvasRef: RefObject<HTMLCanvasElement | null>,
-  playheadRef: RefObject<HTMLCanvasElement | null>
+  bodyReference: RefObject<HTMLDivElement | null>,
+  canvasReference: RefObject<HTMLCanvasElement | null>,
+  playheadReference: RefObject<HTMLCanvasElement | null>
 ) {
-  useEffect(() => startMockAudioEngine(arrangementRingBuffer), [])
+  useEffect(() => attachProjectTelemetry(arrangementRingBuffer), [])
   useEffect(() => {
-    const body = bodyRef.current
-    const canvas = canvasRef.current
-    const playhead = playheadRef.current
-    if (!body || !canvas || !playhead) return
-    const ctx = canvas.getContext("2d")
-    const playheadCtx = playhead.getContext("2d")
-    if (!ctx || !playheadCtx) return
+    const body = bodyReference.current
+    const canvas = canvasReference.current
+    const playhead = playheadReference.current
+    if (!body || !canvas || !playhead) {
+      return
+    }
+    const context = canvas.getContext("2d")
+    const playheadContext = playhead.getContext("2d")
+    if (!context || !playheadContext) {
+      return
+    }
 
     let tokens = readTokens(body)
     let themeStamp = readThemeStamp()
     const paintScene = () => {
       const scene = arrangementScene.get()
-      paintGrid(ctx, scene, gridTokens(tokens))
-      paintClips(ctx, scene, tokens, {
+      paintGrid(context, scene, gridTokens(tokens))
+      paintClips(context, scene, tokens, {
         selectedClipIds: scene.selectedClipIds,
         hoverClip: scene.hoverClip,
         automationMode: useProjectState.getState().workspace.automationMode,
       })
-      if (useProjectState.getState().workspace.automationMode)
-        paintAutomation(ctx, scene, {
+      if (useProjectState.getState().workspace.automationMode) {
+        paintAutomation(context, scene, {
           stroke: tokens["--arrangement-automation"],
           fill: tokens["--arrangement-automation"],
         })
+      }
     }
     const paintPlayheadLayer = () => {
       const scene = arrangementScene.get()
-      paintPlayhead(playheadCtx, scene, arrangementRingBuffer, {
+      paintPlayhead(playheadContext, scene, arrangementRingBuffer, {
         primary: tokens["--primary"],
         recording: tokens["--arrangement-automation"] || tokens["--primary"],
       })
-      paintClipAlignment(playheadCtx, scene, tokens["--muted-foreground"])
-      if (scene.playback.playing) arrangementScheduler.invalidate(PLAYHEAD_ID)
+      paintClipAlignment(playheadContext, scene, tokens["--muted-foreground"])
+      if (scene.playback.playing) {
+        arrangementScheduler.invalidate(PLAYHEAD_ID)
+      }
     }
     let measured = { width: -1, height: -1, dpr: 0 }
     const resize = () => {
       const rect = body.getBoundingClientRect()
       const dpr = window.devicePixelRatio || 1
-      if (measured.width === rect.width && measured.height === rect.height && measured.dpr === dpr)
+      if (
+        measured.width === rect.width &&
+        measured.height === rect.height &&
+        measured.dpr === dpr
+      ) {
         return
+      }
       measured = { width: rect.width, height: rect.height, dpr }
       sizeCanvas(canvas, rect, dpr)
       sizeCanvas(playhead, rect, dpr)
@@ -86,18 +104,8 @@ export function useCanvasPainters(
       arrangementScheduler.invalidate(PLAYHEAD_ID)
     })
     const unsubMode = useProjectState.subscribe((state, previous) => {
-      if (state.workspace.automationMode !== previous.workspace.automationMode)
+      if (state.workspace.automationMode !== previous.workspace.automationMode) {
         arrangementScheduler.invalidate(SCENE_ID)
-      if (
-        state.session.playing !== previous.session.playing ||
-        (!state.session.playing && state.session.position !== previous.session.position)
-      ) {
-        arrangementRingBuffer.writePlayhead({
-          bar: positionToBar(state.session.position, state.document.transport.numerator),
-          playing: state.session.playing,
-          recording: state.session.recording,
-        })
-        arrangementScheduler.invalidate(PLAYHEAD_ID)
       }
     })
     const observer = new ResizeObserver(resize)
@@ -110,7 +118,9 @@ export function useCanvasPainters(
     }
     const themeChange = () => {
       const next = readThemeStamp()
-      if (next === themeStamp) return
+      if (next === themeStamp) {
+        return
+      }
       themeStamp = next
       refreshColors()
     }
@@ -134,5 +144,5 @@ export function useCanvasPainters(
       themeObserver.disconnect()
       stylesheetObserver.disconnect()
     }
-  }, [bodyRef, canvasRef, playheadRef])
+  }, [bodyReference, canvasReference, playheadReference])
 }

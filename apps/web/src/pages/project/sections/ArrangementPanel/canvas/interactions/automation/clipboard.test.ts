@@ -30,7 +30,8 @@ describe("automation clipboard boundary", () => {
       { ...envelope, points: [{ id: "one", bar: 1, value: Infinity }] },
       { ...envelope, points: [{ id: "one", bar: 1, value: 0.5, curve: 2 }] },
       { ...envelope, points: [...envelope.points, ...envelope.points] },
-    ])
+    ]) {
       expect(parseAutomationClipboard(JSON.stringify(changed))).toBeNull()
+    }
   })
 })

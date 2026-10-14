@@ -1,4 +1,4 @@
-import * as culori from 'culori'
+import * as culori from "culori"
 
 /**
  * Convert any color value (hex, oklch, hsl, etc.) to HSL format string.
@@ -6,20 +6,23 @@ import * as culori from 'culori'
  */
 export function colorToHsl(value: string): string {
   const parsed = culori.parse(value)
-  if (!parsed) return value
+  if (!parsed) {
+    return value
+  }
 
-  const hsl = culori.converter('hsl')(parsed)
-  if (!hsl) return value
+  const hsl = culori.converter("hsl")(parsed)
+  if (!hsl) {
+    return value
+  }
 
   const h = hsl.h ?? 0
   const s = (hsl.s ?? 0) * 100
   const l = (hsl.l ?? 0) * 100
-  const alpha = hsl.alpha
+  const { alpha } = hsl
 
-  const formatNumber = (num: number) => {
-    return num % 1 === 0 ? num.toString() : num.toFixed(4)
-  }
-  const alphaSuffix = alpha === undefined || alpha >= 1 ? '' : ` / ${formatNumber(alpha)}`
+  const formatNumber = (number_: number) =>
+    number_ % 1 === 0 ? number_.toString() : number_.toFixed(4)
+  const alphaSuffix = alpha === undefined || alpha >= 1 ? "" : ` / ${formatNumber(alpha)}`
 
   return `hsl(${formatNumber(h)} ${formatNumber(s)}% ${formatNumber(l)}%${alphaSuffix})`
 }
@@ -30,18 +33,21 @@ export function colorToHsl(value: string): string {
  */
 export function colorToHslTuple(value: string): string {
   const parsed = culori.parse(value)
-  if (!parsed) return value
+  if (!parsed) {
+    return value
+  }
 
-  const hsl = culori.converter('hsl')(parsed)
-  if (!hsl) return value
+  const hsl = culori.converter("hsl")(parsed)
+  if (!hsl) {
+    return value
+  }
 
   const h = hsl.h ?? 0
   const s = (hsl.s ?? 0) * 100
   const l = (hsl.l ?? 0) * 100
 
-  const formatNumber = (num: number) => {
-    return num % 1 === 0 ? num.toString() : num.toFixed(4)
-  }
+  const formatNumber = (number_: number) =>
+    number_ % 1 === 0 ? number_.toString() : number_.toFixed(4)
 
   return `${formatNumber(h)} ${formatNumber(s)}% ${formatNumber(l)}%`
 }

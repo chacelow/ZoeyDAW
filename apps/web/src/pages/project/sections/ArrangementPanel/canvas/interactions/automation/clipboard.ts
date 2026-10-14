@@ -25,8 +25,9 @@ export function parseAutomationClipboard(raw: string): AutomationClipboard | nul
     (parsed.parameter !== "volume" && parsed.parameter !== "pan") ||
     !("points" in parsed) ||
     !Array.isArray(parsed.points)
-  )
+  ) {
     return null
+  }
   const ids = new Set<string>()
   const points: AutomationPoint[] = []
   for (const item of parsed.points) {
@@ -50,14 +51,15 @@ export function parseAutomationClipboard(raw: string): AutomationClipboard | nul
           !Number.isFinite(item.curve) ||
           item.curve < -1 ||
           item.curve > 1))
-    )
+    ) {
       return null
+    }
     ids.add(item.id)
     points.push({
       id: item.id,
       bar: item.bar,
       value: item.value,
-      ...("curve" in item && typeof item.curve === "number" ? { curve: item.curve } : {}),
+      ...("curve" in item && typeof item.curve === "number" && { curve: item.curve }),
     })
   }
   points.sort((a, b) => a.bar - b.bar)

@@ -1,25 +1,25 @@
+import { AlertTriangle } from "lucide-react"
+import { useTranslation } from "@zoeymind/i18n"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
-} from './dialog'
-import { Button } from './button'
-import { AlertTriangle } from 'lucide-react'
-import { useTranslation } from '@zoeymind/i18n'
+  DialogTitle,
+} from "./dialog"
+import { Button } from "./button"
 
-interface ConfirmDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  description: string
-  confirmText?: string
-  cancelText?: string
-  variant?: 'default' | 'destructive'
-  onConfirm: () => void | Promise<void>
-  loading?: boolean
+interface ConfirmDialogProperties {
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly title: string
+  readonly description: string
+  readonly confirmText?: string
+  readonly cancelText?: string
+  readonly variant?: "default" | "destructive"
+  readonly onConfirm: () => void | Promise<void>
+  readonly loading?: boolean
 }
 
 export function ConfirmDialog({
@@ -29,16 +29,18 @@ export function ConfirmDialog({
   description,
   confirmText,
   cancelText,
-  variant = 'default',
+  variant = "default",
   onConfirm,
-  loading = false
-}: ConfirmDialogProps) {
+  loading = false,
+}: ConfirmDialogProperties) {
   const { t } = useTranslation()
-  const confirmLabel = confirmText ?? t('common.confirm')
-  const cancelLabel = cancelText ?? t('common.cancel')
+  const confirmLabel = confirmText ?? t("common.confirm")
+  const cancelLabel = cancelText ?? t("common.cancel")
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (loading) return
+    if (loading) {
+      return
+    }
     await onConfirm()
     onOpenChange(false)
   }
@@ -47,10 +49,10 @@ export function ConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          {variant === 'destructive' && (
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex-shrink-0 size-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                <AlertTriangle className="size-5 text-destructive" />
+          {variant === "destructive" && (
+            <div className="mb-2 flex items-center gap-3">
+              <div className="bg-destructive/10 flex size-10 flex-shrink-0 items-center justify-center rounded-full">
+                <AlertTriangle className="text-destructive size-5" />
               </div>
             </div>
           )}
@@ -71,10 +73,10 @@ export function ConfirmDialog({
               type="submit"
               autoFocus
               data-testid="confirm-dialog-confirm"
-              variant={variant === 'destructive' ? 'destructive' : 'default'}
+              variant={variant === "destructive" ? "destructive" : "default"}
               disabled={loading}
             >
-              {loading ? t('ui.confirmDialog.processing') : confirmLabel}
+              {loading ? t("ui.confirmDialog.processing") : confirmLabel}
             </Button>
           </DialogFooter>
         </form>

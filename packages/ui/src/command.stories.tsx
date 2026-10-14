@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { FileTextIcon, HomeIcon, InboxIcon, SettingsIcon } from 'lucide-react'
+import { FileTextIcon, HomeIcon, InboxIcon, SettingsIcon } from "lucide-react"
 import {
   Command,
   CommandEmpty,
@@ -8,13 +7,14 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut
-} from './command'
+  CommandShortcut,
+} from "./command"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Command> = {
-  title: 'Data/Command',
+  title: "Data/Command",
   component: Command,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -51,5 +51,5 @@ export const Default: Story = {
         </CommandGroup>
       </CommandList>
     </Command>
-  )
+  ),
 }

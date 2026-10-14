@@ -1,22 +1,26 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { DropdownButton, DragPadToggle } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
+import { trackControlRows } from "@/pages/project/layout"
 import type { Track } from "@/pages/project/model/types"
-import { trackControlRows } from "@/pages/project/model/selectors"
 
 function canRouteTo(source: Track, destination: Track, tracks: Track[]): boolean {
-  if (destination.kind !== "main" && destination.kind !== "group") return false
+  if (destination.kind !== "main" && destination.kind !== "group") {
+    return false
+  }
   const visited = new Set([source.id])
   let target: Track | undefined = destination
   while (target) {
-    if (visited.has(target.id)) return false
+    if (visited.has(target.id)) {
+      return false
+    }
     visited.add(target.id)
     target = tracks.find(candidate => candidate.id === target?.output)
   }
   return true
 }
 
-export function TrackRouting({ track }: { track: Track }) {
+export function TrackRouting({ track }: { readonly track: Track }) {
   const { t } = useTranslation()
   const tracks = useProjectState(s => s.document.tracks)
   const outputs = [
@@ -32,20 +36,20 @@ export function TrackRouting({ track }: { track: Track }) {
     { id: "1", label: "1" },
     { id: "2", label: "2" },
   ]
-  const main = track.kind === "main"
+  const isMain = track.kind === "main"
   const rows = trackControlRows(track)
   const hasInput = track.kind === "audio" || track.kind === "midi"
-  const showInput = hasInput && rows >= 4
-  const showMonitor = hasInput && (track.kind === "midi" || rows >= 3)
-  const showOutputChannel =
-    !main && (!hasInput || rows >= 5 || (!showInput && (track.kind === "audio" || rows >= 3)))
+  const isShowInput = hasInput && rows >= 4
+  const isShowMonitor = hasInput && (track.kind === "midi" || rows >= 3)
+  const isShowOutputChannel =
+    !isMain && (!hasInput || rows >= 5 || (!isShowInput && (track.kind === "audio" || rows >= 3)))
   return (
     <section
       aria-label={`${t("arrangement.routing")} ${track.name}`}
       className="arrangement-track-routing arrangement-track-controls flex min-w-0 flex-col"
     >
       {track.collapsed ? (
-        main ? (
+        isMain ? (
           <DropdownButton
             size="compact"
             label={`${t("arrangement.output")} ${track.name}`}
@@ -57,7 +61,7 @@ export function TrackRouting({ track }: { track: Track }) {
         ) : null
       ) : (
         <>
-          {showInput && (
+          {isShowInput ? (
             <>
               <DropdownButton
                 size="compact"
@@ -66,9 +70,9 @@ export function TrackRouting({ track }: { track: Track }) {
                 onChange={input => projectActions.updateTrack(track.id, { input })}
                 items={[
                   { id: "none", label: t("arrangement.noInput") },
-                  ...(track.kind === "midi"
-                    ? [{ id: "all", label: t("arrangement.allInputs") }]
-                    : [{ id: "external", label: t("arrangement.externalInput") }]),
+                  track.kind === "midi"
+                    ? { id: "all", label: t("arrangement.allInputs") }
+                    : { id: "external", label: t("arrangement.externalInput") },
                 ]}
                 className="w-full min-w-0"
               />
@@ -98,28 +102,30 @@ export function TrackRouting({ track }: { track: Track }) {
                 className="w-full min-w-0"
               />
             </>
-          )}
-          {showMonitor && (
+          ) : null}
+          {isShowMonitor ? (
             <div
               role="group"
               aria-label={`${t("arrangement.monitor")} ${track.name}`}
-              className="flex min-w-0 gap-control-track-gap"
+              className="gap-control-track-gap flex min-w-0"
             >
-              {(["in", "auto", "off"] satisfies Track["monitor"][]).map(mode => (
-                <DragPadToggle
-                  size="compact"
-                  key={mode}
-                  label={`${t("arrangement.monitor")} ${mode} ${track.name}`}
-                  value={track.monitor === mode}
-                  onChange={() => projectActions.updateTrack(track.id, { monitor: mode })}
-                  labelOn={mode === "auto" ? "Auto" : mode === "in" ? "In" : "Off"}
-                  labelOff={mode === "auto" ? "Auto" : mode === "in" ? "In" : "Off"}
-                  className="min-w-0 px-0"
-                />
-              ))}
+              {(["in", "auto", "off"] satisfies Track["monitor"][]).map(mode => {
+                return (
+                  <DragPadToggle
+                    size="compact"
+                    key={mode}
+                    label={`${t("arrangement.monitor")} ${mode} ${track.name}`}
+                    value={track.monitor === mode}
+                    onChange={() => projectActions.updateTrack(track.id, { monitor: mode })}
+                    labelOn={mode === "auto" ? "Auto" : mode === "in" ? "In" : "Off"}
+                    labelOff={mode === "auto" ? "Auto" : mode === "in" ? "In" : "Off"}
+                    className="min-w-0 px-0"
+                  />
+                )
+              })}
             </div>
-          )}
-          {main && (
+          ) : null}
+          {isMain ? (
             <DropdownButton
               size="compact"
               label={`${t("arrangement.cueOutput")} ${track.name}`}
@@ -128,21 +134,21 @@ export function TrackRouting({ track }: { track: Track }) {
               items={hardwareChannels}
               className="w-full min-w-0"
             />
-          )}
+          ) : null}
           <DropdownButton
             size="compact"
             label={`${t("arrangement.output")} ${track.name}`}
-            value={main ? (track.outputChannel ?? "1-2") : track.output}
+            value={isMain ? (track.outputChannel ?? "1-2") : track.output}
             onChange={value =>
               projectActions.updateTrack(
                 track.id,
-                main ? { outputChannel: value } : { output: value }
+                isMain ? { outputChannel: value } : { output: value }
               )
             }
-            items={main ? hardwareChannels : outputs}
+            items={isMain ? hardwareChannels : outputs}
             className="w-full min-w-0"
           />
-          {showOutputChannel && (
+          {isShowOutputChannel ? (
             <DropdownButton
               size="compact"
               label={`${t("arrangement.outputChannel")} ${track.name}`}
@@ -153,19 +159,19 @@ export function TrackRouting({ track }: { track: Track }) {
               }
               onChange={outputChannel => projectActions.updateTrack(track.id, { outputChannel })}
               items={
-                track.output !== "external"
-                  ? [{ id: "", label: "" }]
-                  : track.kind === "midi"
+                track.output === "external"
+                  ? track.kind === "midi"
                     ? Array.from({ length: 16 }, (_, index) => ({
                         id: String(index + 1),
                         label: String(index + 1),
                       }))
                     : hardwareChannels
+                  : [{ id: "", label: "" }]
               }
               disabled={track.output !== "external"}
               className="w-full min-w-0"
             />
-          )}
+          ) : null}
         </>
       )}
     </section>

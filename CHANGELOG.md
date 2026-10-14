@@ -2,6 +2,18 @@
 
 ## 0.1.0 - unreleased
 
+- Own project runtime state per injected store and acquire backends explicitly. Keep imports/configuration/hydration idle, isolate editing identity from engine sessions, and retain independent recording across temporary-edit teardown.
+- Split Connection into public exports, coordinator, protocol validation and telemetry interpolation; share one dispatch path for opening and queued requests.
+- Scope control hover, warnings and mapping by provider. Isolate gallery demos from the application environment and remove shared UI dependencies on project-private stores; inject the project title at route composition.
+- Derive shared CSS and project display geometry from one public metric configuration, with generated-artifact drift checks. Preserve existing control variants and Panel visuals while making selection/paper colors root-configurable.
+- Separate MIDI note operations from local input lifecycle and rendering; keep keyboard, pointer, clipboard, cancellation and undo behavior.
+- Adopt Ultracite v8 as the shared check/fix/doctor toolchain, retain project architecture/token rules, and replace cross-directory script chains with named package tasks.
+- Preserve MotionTabs external selection resets across repeated user tab changes; synchronize committed callbacks and observer cleanup without changing shared control dimensions.
+- Keep AGENTS.md short and route to setup, module, Panel, prototype and lessons documents instead of embedding all evolving contracts.
+- Add a replaceable project backend port with versioned full-state requests, serialized acknowledgement, preview coalescing, rejection recovery and session-fenced telemetry. Keep the default implementation visual-only; no audio engine dependency is added.
+- Route Canvas previews, continuous controls, commit/cancel and undo/redo through the same runtime. Share accepted playback telemetry across playhead, Follow, meters and prototype recording; isolate gesture tokens and retain independent recording edits.
+- Wait for accepted committed revisions before writing local snapshots. Keep viewport changes out of undo and prevent stale saves, callbacks and component cleanup from affecting another project or edit.
+- Initialize external-backend projects from empty defaults or a registration-owned project seed. Represent unsourced audio clips as silent instead of injecting demo file references.
 - Remove inherited release workflows and obsolete ZoeyMind Windows/macOS document associations from the DAW baseline. Keep legacy screenshots local-only and retain upstream Apache attribution.
 - Quit directly from the native tray instead of emitting an unhandled exit event. Use the zoeydaw browser title and initialize recent projects without a redundant mount effect.
 - Replace fixed-only Arrangement grids with five adaptive density levels, weighted grid tiers and a shared zoom-derived snapping plan through 1/16384. Keep explicit fixed mode and migrate legacy snapshots to version 2 preferences.

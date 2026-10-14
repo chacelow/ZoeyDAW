@@ -1,24 +1,22 @@
 /**
  * useInfoBinding — hover / focus 时推 info 到 Footer Info Panel。
  */
-import { useCallback, useEffect } from "react";
-import {
-  useControlEnvironment,
-  type ControlInfo,
-} from "../ControlEnvironment/useControlEnvironment";
+import { useCallback, useEffect } from "react"
+import { useControlEnvironment } from "../ControlEnvironment/useControlEnvironment"
+import type { ControlInfo } from "../ControlEnvironment/useControlEnvironment"
 
 export interface UseInfoBindingOptions {
-  type: ControlInfo;
-  description?: string;
-  dragging?: boolean;
+  type: ControlInfo
+  description?: string
+  dragging?: boolean
 }
 
 export interface UseInfoBindingResult {
-  "aria-description"?: string;
-  onPointerEnter: () => void;
-  onPointerLeave: () => void;
-  onFocus: () => void;
-  onBlur: () => void;
+  "aria-description"?: string
+  onPointerEnter: () => void
+  onPointerLeave: () => void
+  onFocus: () => void
+  onBlur: () => void
 }
 
 export function useInfoBinding({
@@ -26,19 +24,23 @@ export function useInfoBinding({
   description,
   dragging = false,
 }: UseInfoBindingOptions): UseInfoBindingResult {
-  const { setInfo } = useControlEnvironment();
+  const { setInfo } = useControlEnvironment()
 
   const publish = useCallback(() => {
-    setInfo?.(type);
-  }, [setInfo, type]);
+    setInfo?.(type)
+  }, [setInfo, type])
 
   const clear = useCallback(() => {
-    if (!dragging) setInfo?.(null);
-  }, [setInfo, dragging]);
+    if (!dragging) {
+      setInfo?.(null)
+    }
+  }, [setInfo, dragging])
 
   useEffect(() => {
-    if (dragging) setInfo?.(type);
-  }, [dragging, setInfo, type]);
+    if (dragging) {
+      setInfo?.(type)
+    }
+  }, [dragging, setInfo, type])
 
   return {
     "aria-description": description,
@@ -46,5 +48,5 @@ export function useInfoBinding({
     onPointerLeave: clear,
     onFocus: publish,
     onBlur: clear,
-  };
+  }
 }

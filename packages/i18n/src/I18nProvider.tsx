@@ -12,16 +12,18 @@
  * 初始化是 idempotent (内部 i18next.init() 只跑一次), 多 app / HMR 安全.
  */
 
-import { useMemo, type ReactNode } from 'react'
-import { I18nextProvider } from 'react-i18next'
-import { initI18n, type AppLocaleResources } from './setup'
+import { useMemo } from "react"
+import { I18nextProvider } from "react-i18next"
+import { initI18n } from "./setup"
+import type { ReactNode } from "react"
+import type { AppLocaleResources } from "./setup"
 
 export function I18nProvider({
   children,
-  resources
+  resources,
 }: {
-  children: ReactNode
-  resources?: AppLocaleResources
+  readonly children: ReactNode
+  readonly resources?: AppLocaleResources
 }) {
   const i18n = useMemo(() => initI18n(resources), [resources])
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>

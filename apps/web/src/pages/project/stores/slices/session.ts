@@ -2,6 +2,7 @@ import type { SessionState } from "@/pages/project/model/types"
 
 export function initialSession(): SessionState {
   return {
+    editEpoch: crypto.randomUUID(),
     playing: false,
     recording: false,
     position: { bar: 1, beat: 1, sixteenth: 1 },
@@ -16,6 +17,8 @@ export function initialSession(): SessionState {
     canUndo: false,
     canRedo: false,
     snapshotError: null,
+    preview: null,
+    backend: { phase: "idle", sessionId: "", pending: 0, acceptedRevision: 0, error: null },
     activeMidiNotes: [],
     midiOctave: 4,
     midiVelocity: 100,

@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Button } from './button'
+import { Button } from "./button"
 import {
   Card,
   CardAction,
@@ -7,14 +6,15 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle
-} from './card'
+  CardTitle,
+} from "./card"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Card> = {
-  title: 'Primitives/Card',
+  title: "Primitives/Card",
   component: Card,
-  tags: ['autodocs'],
-  parameters: { layout: 'padded' }
+  tags: ["autodocs"],
+  parameters: { layout: "padded" },
 }
 
 export default meta
@@ -39,5 +39,5 @@ export const Basic: Story = {
         <Button size="sm">创建</Button>
       </CardFooter>
     </Card>
-  )
+  ),
 }

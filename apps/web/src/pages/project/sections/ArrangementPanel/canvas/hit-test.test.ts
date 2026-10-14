@@ -3,15 +3,15 @@ import { createMockDocument, createMockWorkspace } from "@/pages/project/adapter
 import { positionToBar } from "@/pages/project/model/types"
 import { deriveGridPlan } from "@/pages/project/model/grid"
 import { timelineBars } from "@/pages/project/model/selectors"
-import type { ArrangementScene, ArrangementViewport } from "./scene"
 import { hitTest } from "./hit-test"
 import { arrangementBodyTop, clipRect, layoutTrackRows } from "./layout"
 import { clipVisualGeometry } from "./clip-geometry"
+import type { ArrangementScene, ArrangementViewport } from "./scene"
 
 function fixtureScene(partial?: Partial<ArrangementScene>): ArrangementScene {
-  const doc = createMockDocument()
+  const document_ = createMockDocument()
   const workspace = createMockWorkspace()
-  const bars = timelineBars(doc)
+  const bars = timelineBars(document_)
   const viewport: ArrangementViewport = {
     pxPerBar: workspace.pxPerBar,
     scrollX: 0,
@@ -28,18 +28,18 @@ function fixtureScene(partial?: Partial<ArrangementScene>): ArrangementScene {
     gridPlan: deriveGridPlan(
       workspace.grid,
       viewport.pxPerBar,
-      doc.transport.numerator,
-      doc.transport.denominator
+      document_.transport.numerator,
+      document_.transport.denominator
     ),
     playback: { playing: false, insertionPoint: null },
     transport: {
-      bpm: doc.transport.bpm,
-      numerator: doc.transport.numerator,
-      denominator: doc.transport.denominator,
+      bpm: document_.transport.bpm,
+      numerator: document_.transport.numerator,
+      denominator: document_.transport.denominator,
     },
-    markers: doc.markers,
-    loop: doc.transport.loop,
-    tracks: doc.tracks,
+    markers: document_.markers,
+    loop: document_.transport.loop,
+    tracks: document_.tracks,
     previewTracks: null,
     clipDrag: null,
     clipResize: null,
@@ -52,7 +52,7 @@ function fixtureScene(partial?: Partial<ArrangementScene>): ArrangementScene {
     hoverClip: null,
     timeSelection: null,
     ...partial,
-    ...(partial?.viewport ? { viewport: { ...viewport, ...partial.viewport } } : {}),
+    ...(partial?.viewport && { viewport: { ...viewport, ...partial.viewport } }),
   }
 }
 
@@ -65,45 +65,65 @@ describe("arrangement hit-test", () => {
   it("returns a clip body for a point inside a clip rectangle", () => {
     const scene = fixtureScene()
     const audioTrack = scene.tracks.find(t => t.kind === "audio" && t.clips.length > 0)
-    if (!audioTrack) throw new Error("Missing audio track fixture")
+    if (!audioTrack) {
+      throw new Error("Missing audio track fixture")
+    }
     const clip = audioTrack.clips[0]
     const centerBar = clip.startBar + clip.lengthBars / 2
     const x = (centerBar - 1) * scene.viewport.pxPerBar - scene.viewport.scrollX
     const row = layoutTrackRows(scene).find(row => row.track.id === audioTrack.id)
-    if (!row) throw new Error("Missing audio row")
+    if (!row) {
+      throw new Error("Missing audio row")
+    }
     const y = row.top + 28
     const result = hitTest(scene, x, y)
     expect(result).not.toBeNull()
-    if (!result) return
+    if (!result) {
+      return
+    }
     expect(result.kind).toBe("clip-body")
-    if (result.kind === "clip-body") expect(result.clip.id).toBe(clip.id)
+    if (result.kind === "clip-body") {
+      expect(result.clip.id).toBe(clip.id)
+    }
   })
 
   it("prefers the resize edge over the body within six pixels of a clip side", () => {
     const scene = fixtureScene()
     const audioTrack = scene.tracks.find(t => t.kind === "audio" && t.clips.length > 0)
-    if (!audioTrack) throw new Error("Missing audio track fixture")
+    if (!audioTrack) {
+      throw new Error("Missing audio track fixture")
+    }
     const clip = audioTrack.clips[0]
     const leftEdgeX = (clip.startBar - 1) * scene.viewport.pxPerBar - scene.viewport.scrollX + 2
     const row = layoutTrackRows(scene).find(row => row.track.id === audioTrack.id)
-    if (!row) throw new Error("Missing audio row")
+    if (!row) {
+      throw new Error("Missing audio row")
+    }
     const y = row.top + 28
     const result = hitTest(scene, leftEdgeX, y)
     expect(result?.kind).toBe("clip-resize")
-    if (result?.kind === "clip-resize") expect(result.edge).toBe("left")
+    if (result?.kind === "clip-resize") {
+      expect(result.edge).toBe("left")
+    }
   })
 
   it("returns the track lane with a snap bar when the pointer misses every clip", () => {
     const scene = fixtureScene()
     const audio = scene.tracks.find(t => t.kind === "audio")
-    if (!audio) throw new Error("Missing audio track fixture")
+    if (!audio) {
+      throw new Error("Missing audio track fixture")
+    }
     const row = layoutTrackRows(scene).find(row => row.track.id === audio.id)
-    if (!row) throw new Error("Missing audio row")
+    if (!row) {
+      throw new Error("Missing audio row")
+    }
     const y = row.top + 28
     const farRight = (scene.bars - 5) * scene.viewport.pxPerBar
     const result = hitTest(scene, farRight, y)
     expect(result?.kind).toBe("track-lane")
-    if (result?.kind === "track-lane") expect(result.track.id).toBe(audio.id)
+    if (result?.kind === "track-lane") {
+      expect(result.track.id).toBe(audio.id)
+    }
   })
 
   it("ignores stale cursor references by returning null above the body", () => {
@@ -114,7 +134,9 @@ describe("arrangement hit-test", () => {
   it("separates title, body, draggable peaks and curves from fixed quiet anchors", () => {
     const base = fixtureScene({ viewport: { ...fixtureScene().viewport, pxPerBar: 32 } })
     const track = base.tracks.find(item => item.id === "3-audio")
-    if (!track) throw new Error("Missing audio fixture track")
+    if (!track) {
+      throw new Error("Missing audio fixture track")
+    }
     const tracks = base.tracks.map(item =>
       item.id === track.id
         ? {
@@ -140,9 +162,13 @@ describe("arrangement hit-test", () => {
       hoverClip: { id: "audio-1", region: "body" },
     }
     const row = layoutTrackRows(scene).find(item => item.track.id === "3-audio")
-    if (!row) throw new Error("Missing audio fixture row")
+    if (!row) {
+      throw new Error("Missing audio fixture row")
+    }
     const audio = row.track.clips.find(clip => clip.id === "audio-1")
-    if (!audio || audio.kind !== "audio") throw new Error("Missing audio fixture")
+    if (!audio || audio.kind !== "audio") {
+      throw new Error("Missing audio fixture")
+    }
     const rect = clipRect(audio, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
     const geometry = clipVisualGeometry(rect, audio, row.track, true)
     expect(hitTest(scene, rect.left + 150, rect.top + 6)?.kind).toBe("clip-title")
@@ -186,9 +212,13 @@ describe("arrangement hit-test", () => {
     )
     const folded = { ...scene, tracks, hoverClipId: "audio-1" }
     const row = layoutTrackRows(folded).find(row => row.track.id === "3-audio")
-    if (!row) throw new Error("Missing audio fixture row")
+    if (!row) {
+      throw new Error("Missing audio fixture row")
+    }
     const audio = row.track.clips.find(clip => clip.id === "audio-1")
-    if (!audio) throw new Error("Missing audio fixture")
+    if (!audio) {
+      throw new Error("Missing audio fixture")
+    }
     const rect = clipRect(audio, row, folded.viewport.pxPerBar, folded.viewport.scrollX)
     const geometry = clipVisualGeometry(rect, audio, row.track, true)
     expect(geometry.bodyHeight).toBe(0)
@@ -212,7 +242,9 @@ describe("arrangement hit-test", () => {
     const scene = fixtureScene({ hoverClip: { id: "audio-1", region: "body" } })
     const row = layoutTrackRows(scene).find(item => item.track.id === "3-audio")
     const audio = row?.track.clips.find(clip => clip.id === "audio-1")
-    if (!row || audio?.kind !== "audio") throw new Error("Missing audio fixture")
+    if (!row || audio?.kind !== "audio") {
+      throw new Error("Missing audio fixture")
+    }
     audio.fadeInBars = 0
     audio.fadeOutBars = 0
     const geometry = clipVisualGeometry(

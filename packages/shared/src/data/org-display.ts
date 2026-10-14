@@ -13,5 +13,5 @@ export function getOrgDisplayName(org: OrgLike): string {
 }
 
 export function getOrgAvatarLetter(org: OrgLike): string {
-  return (org.name?.charAt(0) ?? '').toUpperCase()
+  return (org.name?.charAt(0) ?? "").toUpperCase()
 }

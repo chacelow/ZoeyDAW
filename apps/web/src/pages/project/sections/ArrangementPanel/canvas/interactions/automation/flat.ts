@@ -1,23 +1,28 @@
 import { snapBar } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
+import { automationBar } from "./geometry"
+import type { AutomationRow } from "./geometry"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
-import { automationBar, type AutomationRow } from "./geometry"
 
-/** A click on the held head/tail or untouched default line materializes one breakpoint. */
+/**
+A click on the held head/tail or untouched default line materializes one breakpoint.
+*/
 export function flatLineGesture(
   context: InteractionContext,
   pointer: CanvasPointer,
   row: AutomationRow,
   value: number
 ): CanvasGesture {
-  let moved = false
+  let isMoved = false
   return {
     cursor: "default",
     autoScroll: false,
     move() {
-      moved = true
+      isMoved = true
     },
     finish(cancelled) {
-      if (cancelled || moved) return
+      if (cancelled || isMoved) {
+        return
+      }
       const state = context.getState()
       const bar = snapBar(
         automationBar(context.scene.get(), pointer.x),

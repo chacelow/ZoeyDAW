@@ -42,7 +42,9 @@ it("renames in the card title through StrictMode, without opening detail, as one
     </StrictMode>
   )
   const input = view.container.querySelector("input")
-  if (!input) throw new Error("Missing in-card rename input")
+  if (!input) {
+    throw new Error("Missing in-card rename input")
+  }
   expect(document.activeElement).toBe(input)
   expect(useProjectState.getState().session.editingClipId).toBeNull()
   fireEvent.change(input, { target: { value: "Verse notes" } })
@@ -62,7 +64,9 @@ it("Escape discards the typed label without changing history or opening detail",
     </StrictMode>
   )
   const input = view.container.querySelector("input")
-  if (!input) throw new Error("Missing in-card rename input")
+  if (!input) {
+    throw new Error("Missing in-card rename input")
+  }
   fireEvent.change(input, { target: { value: "Discard" } })
   fireEvent.keyDown(input, { key: "Escape" })
   expect(useProjectState.getState().session).toMatchObject({ canUndo: false, editingClipId: null })

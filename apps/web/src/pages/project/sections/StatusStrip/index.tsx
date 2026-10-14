@@ -12,19 +12,19 @@ import { useTranslation } from "@zoeymind/i18n"
 import { InfoChannel } from "./InfoChannel"
 
 export interface StatusStripProps {
-  projectId: string
-  footerCollapsed: boolean
-  onToggleFooter: () => void
+  readonly projectId: string
+  readonly footerCollapsed: boolean
+  readonly onToggleFooter: () => void
 }
 
 export function StatusStrip({ footerCollapsed, onToggleFooter }: StatusStripProps) {
   const { t } = useTranslation()
   return (
-    <div className="flex h-9 shrink-0 items-center gap-4 bg-card px-4 text-xs tabular-nums text-muted-foreground">
+    <div className="bg-card text-muted-foreground flex h-9 shrink-0 items-center gap-4 px-4 text-xs tabular-nums">
       <button
         type="button"
         onClick={onToggleFooter}
-        className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm hover:bg-accent hover:text-accent-foreground"
+        className="hover:bg-accent hover:text-accent-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-sm"
         title={t("project.toggleFooter")}
         aria-label={t("project.toggleFooter")}
       >

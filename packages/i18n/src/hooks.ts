@@ -2,13 +2,9 @@
  * i18n 便捷 hooks.
  */
 
-import { useTranslation } from 'react-i18next'
-import {
-  DEFAULT_LOCALE,
-  LOCALE_STORAGE_KEY,
-  SUPPORTED_LOCALES,
-  type SupportedLocale
-} from './setup'
+import { useTranslation } from "react-i18next"
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from "./setup"
+import type { SupportedLocale } from "./setup"
 
 /**
  * 拿当前生效语言 (i18n.resolvedLanguage).
@@ -17,10 +13,9 @@ import {
 export function useLocale(): SupportedLocale {
   const { i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? i18n.language
-  if (SUPPORTED_LOCALES.includes(lang as SupportedLocale)) {
-    return lang as SupportedLocale
-  }
-  return DEFAULT_LOCALE
+  return SUPPORTED_LOCALES.includes(lang as SupportedLocale)
+    ? (lang as SupportedLocale)
+    : DEFAULT_LOCALE
 }
 
 /**
@@ -31,7 +26,7 @@ export function useChangeLocale(): (locale: SupportedLocale) => Promise<void> {
   return async (locale: SupportedLocale) => {
     await i18n.changeLanguage(locale)
     // i18next-browser-languagedetector 已 caches: ['localStorage'], 这里二次确认
-    if (typeof localStorage !== 'undefined') {
+    if (typeof localStorage !== "undefined") {
       localStorage.setItem(LOCALE_STORAGE_KEY, locale)
     }
   }

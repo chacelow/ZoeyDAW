@@ -1,7 +1,7 @@
 // Title: Gantt Lib
 // Description: Pure, React-free calendar math: view ranges, zoned day keys, multi-day segmentation, overlap packing, lane packing, and the event index.
 
-import { expandRecurrence } from './gantt-recurrence'
+import { expandRecurrence } from "./gantt-recurrence"
 import type {
   GanttDateRange,
   GanttEvent,
@@ -9,9 +9,9 @@ import type {
   GanttOffDaysConfig,
   GanttResource,
   GanttScale,
-  GanttSegment
-} from './gantt-types'
-import { TZDate } from '@date-fns/tz'
+  GanttSegment,
+} from "./gantt-types"
+import { TZDate } from "@date-fns/tz"
 import {
   addDays,
   addMonths,
@@ -23,8 +23,8 @@ import {
   startOfMonth,
   startOfQuarter,
   startOfWeek,
-  startOfYear
-} from 'date-fns'
+  startOfYear,
+} from "date-fns"
 
 type WeekStartsOn = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
@@ -48,7 +48,7 @@ function zonedStartOfDay(date: Date, timeZone: string): TZDate {
 
 /** Stable per-day key in the display time zone. */
 function getDayKey(date: Date, timeZone: string): string {
-  return format(toZoned(date, timeZone), 'yyyy-MM-dd')
+  return format(toZoned(date, timeZone), "yyyy-MM-dd")
 }
 
 /** Day length in minutes; 1380/1500 on DST transition days - never assume 1440. */
@@ -76,18 +76,18 @@ function getGanttDateRange(scale: GanttScale, date: Date, opts: ViewRangeOptions
   const { timeZone, weekStartsOn } = opts
   const zoned = toZoned(date, timeZone)
 
-  if (scale === 'week') {
+  if (scale === "week") {
     const start = startOfWeek(zoned, { weekStartsOn })
     const range = { start, end: addWeeks(start, 1) }
     return { activeRange: range, visibleRange: range }
   }
-  if (scale === 'month') {
+  if (scale === "month") {
     // exact month: no outside days on the horizontal axis
     const start = startOfMonth(zoned)
     const range = { start, end: startOfMonth(addMonths(zoned, 1)) }
     return { activeRange: range, visibleRange: range }
   }
-  if (scale === 'quarter') {
+  if (scale === "quarter") {
     // week-aligned so the axis partitions into uniform week units
     const quarterStart = startOfQuarter(zoned)
     const quarterEnd = startOfQuarter(addMonths(zoned, 3))
@@ -96,10 +96,10 @@ function getGanttDateRange(scale: GanttScale, date: Date, opts: ViewRangeOptions
     if (end < quarterEnd) end = addWeeks(end, 1)
     return {
       activeRange: { start: quarterStart, end: quarterEnd },
-      visibleRange: { start, end }
+      visibleRange: { start, end },
     }
   }
-  if (scale === 'year') {
+  if (scale === "year") {
     const start = startOfYear(zoned)
     const range = { start, end: startOfYear(addYears(zoned, 1)) }
     return { activeRange: range, visibleRange: range }
@@ -114,13 +114,13 @@ function stepGanttDate(
   scale: GanttScale,
   date: Date,
   direction: 1 | -1,
-  opts: Pick<ViewRangeOptions, 'timeZone'>
+  opts: Pick<ViewRangeOptions, "timeZone">
 ): Date {
   const zoned = toZoned(date, opts.timeZone)
-  if (scale === 'week') return addWeeks(zoned, direction)
-  if (scale === 'month') return addMonths(zoned, direction)
-  if (scale === 'quarter') return addMonths(zoned, direction * 3)
-  if (scale === 'year') return addYears(zoned, direction)
+  if (scale === "week") return addWeeks(zoned, direction)
+  if (scale === "month") return addMonths(zoned, direction)
+  if (scale === "quarter") return addMonths(zoned, direction * 3)
+  if (scale === "year") return addYears(zoned, direction)
   return addDays(zoned, direction)
 }
 
@@ -137,7 +137,6 @@ function spansMultipleDays(occ: { start: Date; end: Date }): boolean {
   // (exclusive end), so compare against a strictly-later instant.
   return occ.end.getTime() - occ.start.getTime() > 24 * 60 * 60 * 1000
 }
-
 
 /**
  * Identity of a schedule ACROSS time edits. `occurrence.key` embeds the start
@@ -174,7 +173,7 @@ interface PackOptions {
    */
   preferredLanes?: Map<string, GanttLaneMemo>
   /** "single" collapses the row to one track; see GanttScheduleMode. */
-  mode?: 'single' | 'multiple'
+  mode?: "single" | "multiple"
 }
 
 /**
@@ -188,7 +187,7 @@ function packTimedSegments<TData>(
 ): void {
   if (segments.length === 0) return
 
-  if (options.mode === 'single') {
+  if (options.mode === "single") {
     // one track: every schedule shares lane 0 and the row never grows
     for (const seg of segments) {
       seg.column = 0
@@ -217,7 +216,7 @@ function packTimedSegments<TData>(
         seg,
         startMin,
         effEnd: Math.max(endMin, startMin + MIN_PACK_SLOT),
-        lane: -1
+        lane: -1,
       }
     })
     .sort(
@@ -394,7 +393,7 @@ function buildEventIndex<TData>(
           end: occ.end,
           allDay: event.allDay ?? false,
           isRecurring: true,
-          recurrenceIndex: i
+          recurrenceIndex: i,
         })
       })
       continue
@@ -538,7 +537,7 @@ export {
   spansMultipleDays,
   stepGanttDate,
   toZoned,
-  zonedStartOfDay
+  zonedStartOfDay,
 }
 export type {
   BuildIndexOptions,
@@ -547,5 +546,5 @@ export type {
   PackOptions,
   ViewDateRanges,
   ViewRangeOptions,
-  WeekStartsOn
+  WeekStartsOn,
 }

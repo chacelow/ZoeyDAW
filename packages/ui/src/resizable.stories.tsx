@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './resizable'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta = {
-  title: 'Layout/Resizable',
-  tags: ['autodocs'],
-  parameters: { layout: 'padded' }
+  title: "Layout/Resizable",
+  tags: ["autodocs"],
+  parameters: { layout: "padded" },
 }
 
 export default meta
@@ -23,7 +23,7 @@ export const Horizontal: Story = {
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
-  )
+  ),
 }
 
 export const Vertical: Story = {
@@ -39,5 +39,5 @@ export const Vertical: Story = {
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
-  )
+  ),
 }

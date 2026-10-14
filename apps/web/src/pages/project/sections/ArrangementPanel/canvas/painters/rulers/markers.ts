@@ -3,32 +3,34 @@ import type { ArrangementScene } from "@/pages/project/sections/ArrangementPanel
 import type { GridTokens } from "../grid"
 
 export function paintMarkers(
-  ctx: CanvasRenderingContext2D,
+  context: CanvasRenderingContext2D,
   scene: ArrangementScene,
   tokens: GridTokens
 ): void {
   const { width, pxPerBar, scrollX } = scene.viewport
-  ctx.fillStyle = tokens.ruler
-  ctx.fillRect(0, 0, width, MARKER_RULER_HEIGHT)
-  ctx.font = "10px ui-sans-serif, system-ui, sans-serif"
-  ctx.textBaseline = "middle"
-  ctx.fillStyle = tokens.primary
+  context.fillStyle = tokens.ruler
+  context.fillRect(0, 0, width, MARKER_RULER_HEIGHT)
+  context.font = "10px ui-sans-serif, system-ui, sans-serif"
+  context.textBaseline = "middle"
+  context.fillStyle = tokens.primary
   for (const marker of scene.markers) {
     const x = (marker.bar - 1) * pxPerBar - scrollX
-    if (x < -8 || x > width + 8) continue
-    ctx.beginPath()
-    ctx.moveTo(x, MARKER_RULER_HEIGHT - 6)
-    ctx.lineTo(x + 6, MARKER_RULER_HEIGHT - 2)
-    ctx.lineTo(x, MARKER_RULER_HEIGHT - 2)
-    ctx.closePath()
-    ctx.fill()
-    if (scene.targetSelection.kind === "marker" && scene.targetSelection.id === marker.id) {
-      ctx.strokeStyle = tokens.primary
-      ctx.beginPath()
-      ctx.moveTo(x, 1)
-      ctx.lineTo(x, MARKER_RULER_HEIGHT - 1)
-      ctx.stroke()
+    if (x < -8 || x > width + 8) {
+      continue
     }
-    ctx.fillText(marker.label, x + 7, MARKER_RULER_HEIGHT / 2)
+    context.beginPath()
+    context.moveTo(x, MARKER_RULER_HEIGHT - 6)
+    context.lineTo(x + 6, MARKER_RULER_HEIGHT - 2)
+    context.lineTo(x, MARKER_RULER_HEIGHT - 2)
+    context.closePath()
+    context.fill()
+    if (scene.targetSelection.kind === "marker" && scene.targetSelection.id === marker.id) {
+      context.strokeStyle = tokens.primary
+      context.beginPath()
+      context.moveTo(x, 1)
+      context.lineTo(x, MARKER_RULER_HEIGHT - 1)
+      context.stroke()
+    }
+    context.fillText(marker.label, x + 7, MARKER_RULER_HEIGHT / 2)
   }
 }

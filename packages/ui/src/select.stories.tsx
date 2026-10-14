@@ -1,4 +1,3 @@
-import type { Meta, StoryObj } from '@storybook/react'
 import {
   Select,
   SelectContent,
@@ -7,13 +6,14 @@ import {
   SelectLabel,
   SelectSeparator,
   SelectTrigger,
-  SelectValue
-} from './select'
+  SelectValue,
+} from "./select"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Select> = {
-  title: 'Form/Select',
+  title: "Form/Select",
   component: Select,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -23,7 +23,7 @@ export const Default: Story = {
   render: () => (
     <Select defaultValue="apple">
       <SelectTrigger className="w-48">
-        <SelectValue>{value => (value ? String(value) : '选择水果')}</SelectValue>
+        <SelectValue>{value => (value ? String(value) : "选择水果")}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="apple">苹果</SelectItem>
@@ -31,14 +31,14 @@ export const Default: Story = {
         <SelectItem value="orange">橙子</SelectItem>
       </SelectContent>
     </Select>
-  )
+  ),
 }
 
 export const WithGroups: Story = {
   render: () => (
     <Select>
       <SelectTrigger className="w-56">
-        <SelectValue>{value => (value ? String(value) : '选择时区')}</SelectValue>
+        <SelectValue>{value => (value ? String(value) : "选择时区")}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
@@ -54,16 +54,16 @@ export const WithGroups: Story = {
         </SelectGroup>
       </SelectContent>
     </Select>
-  )
+  ),
 }
 
 export const Disabled: Story = {
   render: () => (
     <Select disabled>
       <SelectTrigger className="w-48">
-        <SelectValue>{value => (value ? String(value) : '只读')}</SelectValue>
+        <SelectValue>{value => (value ? String(value) : "只读")}</SelectValue>
       </SelectTrigger>
       <SelectContent />
     </Select>
-  )
+  ),
 }

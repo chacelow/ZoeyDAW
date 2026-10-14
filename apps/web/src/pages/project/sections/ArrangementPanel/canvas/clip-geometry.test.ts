@@ -10,7 +10,9 @@ it.each([0.1, 0.5, 0.9])(
     const document = createMockDocument()
     const track = document.tracks.find(track => track.id === "3-audio")!
     const clip = track.clips[0]
-    if (clip.kind !== "audio") throw new Error("Missing audio fixture")
+    if (clip.kind !== "audio") {
+      throw new Error("Missing audio fixture")
+    }
     clip.fadeInBars = 3
     clip.fadeOutBars = 3
     clip.fadeInCurvePosition = position
@@ -47,7 +49,7 @@ it.each([0.1, 0.5, 0.9])(
         ).toBe(true)
         const sample = (a: number, b: number, c: number, d: number, t: number) =>
           (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t ** 2 * c + t ** 3 * d
-        let start = fade.start
+        let { start } = fade
         let previous = start.y
         let previousSlope = 0
         for (const segment of fade.segments) {
@@ -61,8 +63,11 @@ it.each([0.1, 0.5, 0.9])(
               segment.end.y,
               step / 20
             )
-            if (fade.edge === "in") expect(y).toBeLessThanOrEqual(previous + 1e-8)
-            else expect(y).toBeGreaterThanOrEqual(previous - 1e-8)
+            if (fade.edge === "in") {
+              expect(y).toBeLessThanOrEqual(previous + 1e-8)
+            } else {
+              expect(y).toBeGreaterThanOrEqual(previous - 1e-8)
+            }
             expect(y).toBeGreaterThanOrEqual(geometry.bodyTop - 1e-8)
             expect(y).toBeLessThanOrEqual(geometry.bodyTop + geometry.bodyHeight + 1e-8)
             previous = y

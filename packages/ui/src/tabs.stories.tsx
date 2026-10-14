@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Tabs> = {
-  title: 'Navigation/Tabs',
+  title: "Navigation/Tabs",
   component: Tabs,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -22,7 +22,7 @@ export const Default: Story = {
       <TabsContent value="members">成员列表</TabsContent>
       <TabsContent value="settings">设置面板</TabsContent>
     </Tabs>
-  )
+  ),
 }
 
 export const LineVariant: Story = {
@@ -37,5 +37,5 @@ export const LineVariant: Story = {
       <TabsContent value="b">画布内容</TabsContent>
       <TabsContent value="c">评论内容</TabsContent>
     </Tabs>
-  )
+  ),
 }

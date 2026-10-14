@@ -1,40 +1,40 @@
-'use client'
+"use client"
 
-import type { Table } from '@tanstack/react-table'
-import { Settings2 } from 'lucide-react'
-import * as React from 'react'
-import { useTranslation } from '@zoeymind/i18n'
-import { Button } from '#components/button'
+import { Settings2 } from "lucide-react"
+import * as React from "react"
+import { useTranslation } from "@zoeymind/i18n"
+import { Button } from "#components/button"
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList
-} from '#components/command'
-import { Popover, PopoverContent, PopoverTrigger } from '#components/popover'
-import { cn } from '#lib/utils'
+  CommandList,
+} from "#components/command"
+import { Popover, PopoverContent, PopoverTrigger } from "#components/popover"
+import { cn } from "#lib/utils"
+import type { Table } from "@tanstack/react-table"
 
-interface DataTableViewOptionsProps<TData> extends React.ComponentProps<typeof PopoverContent> {
-  table: Table<TData>
-  disabled?: boolean
+interface DataTableViewOptionsProperties<TData> extends React.ComponentProps<
+  typeof PopoverContent
+> {
+  readonly table: Table<TData>
+  readonly disabled?: boolean
 }
 
 export function DataTableViewOptions<TData>({
   table,
   disabled,
   className,
-  ...props
-}: DataTableViewOptionsProps<TData>) {
+  ...properties
+}: DataTableViewOptionsProperties<TData>) {
   const { t } = useTranslation()
-  const columns = React.useMemo(
-    () =>
-      table
-        .getAllColumns()
-        .filter(column => typeof column.accessorFn !== 'undefined' && column.getCanHide()),
-    [table]
-  )
+  const columns = React.useMemo(() => {
+    return table
+      .getAllColumns()
+      .filter(column => typeof column.accessorFn !== "undefined" && column.getCanHide())
+  }, [table])
 
   return (
     <Popover>
@@ -42,22 +42,22 @@ export function DataTableViewOptions<TData>({
         nativeButton
         render={
           <Button
-            aria-label={t('common.table.toggleColumns')}
+            aria-label={t("common.table.toggleColumns")}
             role="combobox"
             variant="outline"
             className="ml-auto hidden h-8 font-normal lg:flex"
             disabled={disabled}
           >
             <Settings2 className="text-muted-foreground" />
-            {t('common.table.viewColumns')}
+            {t("common.table.viewColumns")}
           </Button>
         }
       />
-      <PopoverContent className={cn('w-44 p-0', className)} {...props}>
+      <PopoverContent className={cn("w-44 p-0", className)} {...properties}>
         <Command>
-          <CommandInput placeholder={t('common.table.searchColumns')} />
+          <CommandInput placeholder={t("common.table.searchColumns")} />
           <CommandList>
-            <CommandEmpty>{t('common.table.noColumnsFound')}</CommandEmpty>
+            <CommandEmpty>{t("common.table.noColumnsFound")}</CommandEmpty>
             <CommandGroup>
               {columns.map(column => (
                 <CommandItem

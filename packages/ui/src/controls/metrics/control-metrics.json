@@ -1,0 +1,32 @@
+{
+  "default": {
+    "--spacing-control-track": 13,
+    "--spacing-control-track-gap": 4,
+    "--spacing-control-track-pad": 1.5,
+    "--spacing-control-gap": 2,
+    "--spacing-control-icon-slot": 10,
+    "--spacing-control-icon": 10,
+    "--text-control-track": 9
+  },
+  "transport": {
+    "--spacing-control-track": 20,
+    "--spacing-control-track-gap": 4,
+    "--spacing-control-track-pad": 2,
+    "--spacing-control-gap": 3,
+    "--spacing-control-icon-slot": 14,
+    "--spacing-control-icon": 14,
+    "--text-control-track": 12
+  },
+  "project": {
+    "panelGap": 7,
+    "panelBorder": 2,
+    "groupRailWidth": 7,
+    "controlsWidth": 304,
+    "identityWidth": 100,
+    "routingWidth": 74,
+    "transportColumnGap": 12,
+    "transportCenterMargin": 6,
+    "defaultTrackHeight": 70,
+    "trackBorder": 2
+  }
+}

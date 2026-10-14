@@ -1,13 +1,16 @@
-import { visibleTracks, type LoopRegion } from "@/pages/project/model/types"
+import { visibleTracks } from "@/pages/project/model/types"
 import { MIN_CLIP_LENGTH_BARS } from "@/pages/project/model/grid"
-import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
+import { beginProjectPreview, finishProjectPreview, setLoopPreview } from "../project-preview"
 import { barAt, movedLoop, rulerBar } from "./geometry"
+import type { LoopRegion } from "@/pages/project/model/types"
+import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
 
 export function loopGesture(
   context: InteractionContext,
   edge: "start" | "end" | "body",
   pointer: CanvasPointer
 ): CanvasGesture {
+  beginProjectPreview(context)
   const original = context.getState().document.transport.loop
   const originBar = barAt(context.scene.get(), pointer.x)
   let preview = original
@@ -36,14 +39,15 @@ export function loopGesture(
         )
         preview = movedLoop(original, edge, bar - anchor, scene.bars + 1)
       }
-      context.scene.setPreviewLoop(preview)
+      setLoopPreview(context, preview)
     },
     finish(cancelled) {
-      context.scene.setPreviewLoop(null)
-      if (cancelled) return
-      if (preview.startBar !== original.startBar || preview.endBar !== original.endBar) {
-        context.actions.setLoop(preview)
-      } else if (edge === "body") {
+      const isChanged = preview.startBar !== original.startBar || preview.endBar !== original.endBar
+      finishProjectPreview(context, cancelled || !isChanged)
+      if (cancelled) {
+        return
+      }
+      if (!isChanged && edge === "body") {
         const trackIds = visibleTracks(context.getState().document.tracks)
           .filter(track => track.kind === "audio" || track.kind === "midi")
           .map(track => track.id)
@@ -62,8 +66,9 @@ export function loopFromSelection(context: InteractionContext): boolean {
     !Number.isFinite(selection.startBar) ||
     !Number.isFinite(selection.endBar) ||
     selection.endBar <= selection.startBar
-  )
+  ) {
     return false
+  }
   const scene = context.scene.get()
   const startBar = Math.max(1, Math.min(scene.bars + 1 - MIN_CLIP_LENGTH_BARS, selection.startBar))
   const endBar = Math.max(

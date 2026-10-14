@@ -13,7 +13,9 @@ let capture: number | null = null
 function flush() {
   const pending = [...frames.values()]
   frames.clear()
-  pending.forEach(callback => callback(16))
+  for (const callback of pending) {
+    callback(performance.now())
+  }
 }
 
 function pointer(target: Element | Window, type: string, x: number, y = 10, pointerId = 1) {
@@ -24,9 +26,11 @@ function pointer(target: Element | Window, type: string, x: number, y = 10, poin
     clientX: x,
     clientY: y,
   })
-  Object.defineProperty(event, "pointerId", { value: pointerId })
-  Object.defineProperty(event, "movementX", { value: 0 })
-  Object.defineProperty(event, "movementY", { value: 0 })
+  Object.defineProperties(event, {
+    pointerId: { value: pointerId },
+    movementX: { value: 0 },
+    movementY: { value: 0 },
+  })
   fireEvent(target, event)
 }
 
@@ -48,10 +52,12 @@ function Harness() {
 
 function mount() {
   const view = render(<Harness />)
-  const el = view.container.querySelector<HTMLDivElement>("[data-minimap]")
-  if (!el) throw new Error("Missing overview")
-  el.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 24)
-  return { ...view, el }
+  const element = view.container.querySelector<HTMLDivElement>("[data-minimap]")
+  if (!element) {
+    throw new Error("Missing overview")
+  }
+  element.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 24)
+  return { ...view, el: element }
 }
 
 beforeEach(() => {
@@ -66,8 +72,8 @@ beforeEach(() => {
       workspace: { ...createMockWorkspace(), pxPerBar: 32, scrollX: 64 },
     })
   )
-  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
-    frames.set(++nextFrame, cb)
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.set(++nextFrame, callback)
     return nextFrame
   })
   vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id))

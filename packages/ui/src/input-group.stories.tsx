@@ -1,17 +1,17 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { SearchIcon, XIcon } from 'lucide-react'
+import { SearchIcon, XIcon } from "lucide-react"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-  InputGroupText
-} from './input-group'
+  InputGroupText,
+} from "./input-group"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof InputGroup> = {
-  title: 'Layout/InputGroup',
+  title: "Layout/InputGroup",
   component: InputGroup,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -25,7 +25,7 @@ export const WithSearchIcon: Story = {
       </InputGroupAddon>
       <InputGroupInput placeholder="搜索导图..." />
     </InputGroup>
-  )
+  ),
 }
 
 export const WithClearButton: Story = {
@@ -38,7 +38,7 @@ export const WithClearButton: Story = {
         </InputGroupButton>
       </InputGroupAddon>
     </InputGroup>
-  )
+  ),
 }
 
 export const WithPrefixText: Story = {
@@ -49,5 +49,5 @@ export const WithPrefixText: Story = {
       </InputGroupAddon>
       <InputGroupInput placeholder="zoey.dev" />
     </InputGroup>
-  )
+  ),
 }

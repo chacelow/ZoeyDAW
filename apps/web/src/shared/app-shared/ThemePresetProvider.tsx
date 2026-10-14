@@ -1,9 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useState } from "react"
 import { useTheme, THEME_PRESET_STORAGE_KEY, THEME_PRESETS, applyThemeOrClear } from "@zoeymind/ui"
-import { ThemePresetContext, type ThemePresetContextValue } from "./theme-preset-context"
+import { ThemePresetContext } from "./theme-preset-context"
+import type { ReactNode } from "react"
+import type { ThemePresetContextValue } from "./theme-preset-context"
 
-interface ThemePresetProviderProps {
-  children: ReactNode
+interface ThemePresetProviderProperties {
+  readonly children: ReactNode
 }
 
 /**
@@ -14,10 +16,12 @@ interface ThemePresetProviderProps {
  * - Clears all managed keys when Default is selected
  * - Re-applies whenever resolvedTheme (light/dark) changes
  */
-export function ThemePresetProvider({ children }: ThemePresetProviderProps): ReactNode {
+export function ThemePresetProvider({ children }: ThemePresetProviderProperties): ReactNode {
   const { resolvedTheme } = useTheme()
   const [presetId, setPresetId] = useState<string>(() => {
-    if (typeof window === "undefined") return ""
+    if (typeof window === "undefined") {
+      return ""
+    }
     try {
       return window.localStorage.getItem(THEME_PRESET_STORAGE_KEY) ?? ""
     } catch {
@@ -40,7 +44,9 @@ export function ThemePresetProvider({ children }: ThemePresetProviderProps): Rea
     try {
       window.localStorage.setItem(THEME_PRESET_STORAGE_KEY, id)
     } catch {
-      /* ignore quota/availability errors */
+      /*
+      ignore quota/availability errors
+      */
     }
   }
 

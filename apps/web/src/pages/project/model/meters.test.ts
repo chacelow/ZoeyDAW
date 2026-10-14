@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { createMockDocument, createMockWorkspace } from "../adapters/fixtures"
 import { mockMeterLevels } from "../adapters/mockMeters"
-import type { ProjectState } from "./types"
 import { initialSession } from "../stores/slices/session"
+import type { ProjectState } from "./types"
 
 function mockState(): ProjectState {
   return {
@@ -71,5 +71,25 @@ describe("mock meter routing", () => {
     expect(levels[child.id][0]).toBeGreaterThan(-60)
     expect(levels[group.id][0]).toBeGreaterThan(-60)
     expect(levels.main[0]).toBeGreaterThan(-60)
+  })
+  it("reads the Pattern step value rather than mere index presence", () => {
+    const state = mockState()
+    const midi = state.document.tracks.find(track => track.id === "4-midi")
+    if (!midi) {
+      throw new Error("Missing MIDI fixture")
+    }
+    midi.clips = [
+      {
+        id: "pattern-meter",
+        kind: "pattern",
+        patternId: "pattern-meter",
+        startBar: 1,
+        lengthBars: 1,
+        steps: [false, true],
+      },
+    ]
+    midi.armed = false
+    expect(mockMeterLevels(state, 1, 1000)[midi.id]).toEqual([-60, -60])
+    expect(mockMeterLevels(state, 1 + 1 / 16, 1000)[midi.id][0]).toBeGreaterThan(-60)
   })
 })

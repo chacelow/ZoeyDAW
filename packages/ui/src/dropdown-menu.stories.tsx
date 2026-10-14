@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { CopyIcon, EditIcon, MoreHorizontalIcon, TrashIcon } from 'lucide-react'
+import { CopyIcon, EditIcon, MoreHorizontalIcon, TrashIcon } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,14 +7,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuTrigger
-} from './dropdown-menu'
-import { Button } from './button'
+  DropdownMenuTrigger,
+} from "./dropdown-menu"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof DropdownMenu> = {
-  title: 'Overlay/DropdownMenu',
+  title: "Overlay/DropdownMenu",
   component: DropdownMenu,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -53,5 +53,5 @@ export const Default: Story = {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  ),
 }

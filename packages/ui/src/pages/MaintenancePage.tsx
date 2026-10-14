@@ -1,14 +1,14 @@
-import { Button } from "../button";
-import { Wrench, RefreshCw, Home } from "lucide-react";
+import { Wrench, RefreshCw, Home } from "lucide-react"
+import { Button } from "../button"
 
-interface MaintenancePageProps {
-  title?: string;
-  description?: string;
-  estimatedTime?: string;
-  showRefreshButton?: boolean;
-  showHomeButton?: boolean;
-  onRefresh?: () => void;
-  onHome?: () => void;
+interface MaintenancePageProperties {
+  readonly title?: string
+  readonly description?: string
+  readonly estimatedTime?: string
+  readonly showRefreshButton?: boolean
+  readonly showHomeButton?: boolean
+  readonly onRefresh?: () => void
+  readonly onHome?: () => void
 }
 
 /**
@@ -22,54 +22,56 @@ export function MaintenancePage({
   showHomeButton = true,
   onRefresh,
   onHome,
-}: MaintenancePageProps) {
+}: MaintenancePageProperties) {
   const handleRefresh = () => {
-    if (onRefresh) onRefresh();
-    else window.location.reload();
-  };
+    if (onRefresh) {
+      onRefresh()
+    } else {
+      window.location.reload()
+    }
+  }
 
   const handleHome = () => {
-    onHome?.();
-  };
+    onHome?.()
+  }
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-background px-4">
-      <div className="max-w-md w-full text-center space-y-6">
+    <div className="bg-background flex min-h-svh items-center justify-center px-4">
+      <div className="w-full max-w-md space-y-6 text-center">
         <div className="flex justify-center">
-          <div className="size-16 rounded-full bg-muted flex items-center justify-center">
-            <Wrench className="size-8 text-muted-foreground animate-pulse" />
+          <div className="bg-muted flex size-16 items-center justify-center rounded-full">
+            <Wrench className="text-muted-foreground size-8 animate-pulse" />
           </div>
         </div>
 
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-sm">{description}</p>
         </div>
 
-        {estimatedTime && (
-          <div className="rounded-md border border-border bg-muted/50 px-3 py-2">
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-foreground">预计完成时间:</strong>{" "}
-              {estimatedTime}
+        {estimatedTime ? (
+          <div className="border-border bg-muted/50 rounded-md border px-3 py-2">
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">预计完成时间:</strong> {estimatedTime}
             </p>
           </div>
-        )}
+        ) : null}
 
-        <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
-          {showRefreshButton && (
+        <div className="flex flex-col justify-center gap-2 pt-2 sm:flex-row">
+          {showRefreshButton ? (
             <Button onClick={handleRefresh} className="gap-2">
               <RefreshCw className="size-4" />
               刷新页面
             </Button>
-          )}
-          {showHomeButton && onHome && (
+          ) : null}
+          {showHomeButton && onHome ? (
             <Button variant="outline" onClick={handleHome} className="gap-2">
               <Home className="size-4" />
               返回首页
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
-  );
+  )
 }

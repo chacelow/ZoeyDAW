@@ -10,27 +10,27 @@
  *   3. fallbackLng = 'zh-CN'
  */
 
-import i18next from 'i18next'
-import LanguageDetector from 'i18next-browser-languagedetector'
-import { initReactI18next } from 'react-i18next'
-import zhCN from './locales/zh-CN'
-import enUS from './locales/en-US'
+import i18next from "i18next"
+import LanguageDetector from "i18next-browser-languagedetector"
+import { initReactI18next } from "react-i18next"
+import zhCN from "./locales/zh-CN"
+import enUS from "./locales/en-US"
 
-export const SUPPORTED_LOCALES = ['zh-CN', 'en-US'] as const
+export const SUPPORTED_LOCALES = ["zh-CN", "en-US"] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
-export const DEFAULT_LOCALE: SupportedLocale = 'zh-CN'
-export const LOCALE_STORAGE_KEY = 'i18nextLng'
+export const DEFAULT_LOCALE: SupportedLocale = "zh-CN"
+export const LOCALE_STORAGE_KEY = "i18nextLng"
 
 /**
  * App-level locale bundles — merged on top of the core namespaces at the top level.
  * Top-level keys (e.g. `mindmap`, `qms`) MUST NOT collide with core (`common`, `auth`, ...).
  */
 export interface AppLocaleResources {
-  'zh-CN': Record<string, unknown>
-  'en-US': Record<string, unknown>
+  "zh-CN": Record<string, unknown>
+  "en-US": Record<string, unknown>
 }
 
-let initialized = false
+let isInitialized = false
 
 /**
  * Initialize the i18next singleton; safe to call multiple times.
@@ -39,8 +39,10 @@ let initialized = false
  * via `addResourceBundle` (deep + overwrite) so HMR-rerendered providers stay consistent.
  */
 export function initI18n(appResources?: AppLocaleResources): typeof i18next {
-  if (initialized) {
-    if (appResources) registerAppResources(appResources)
+  if (isInitialized) {
+    if (appResources) {
+      registerAppResources(appResources)
+    }
     return i18next
   }
 
@@ -49,35 +51,35 @@ export function initI18n(appResources?: AppLocaleResources): typeof i18next {
     .use(initReactI18next)
     .init({
       resources: {
-        'zh-CN': { translation: { ...zhCN, ...(appResources?.['zh-CN'] ?? {}) } },
-        'en-US': { translation: { ...enUS, ...(appResources?.['en-US'] ?? {}) } }
+        "zh-CN": { translation: { ...zhCN, ...appResources?.["zh-CN"] } },
+        "en-US": { translation: { ...enUS, ...appResources?.["en-US"] } },
       },
       fallbackLng: DEFAULT_LOCALE,
       supportedLngs: SUPPORTED_LOCALES,
-      ns: ['translation'],
-      defaultNS: 'translation',
+      ns: ["translation"],
+      defaultNS: "translation",
       // 文案小, 全 bundle 进, 不用 Suspense
       react: { useSuspense: false },
       interpolation: {
         // react 已自动 escape, i18next 不需要再 escape
-        escapeValue: false
+        escapeValue: false,
       },
       detection: {
-        order: ['localStorage', 'navigator'],
+        order: ["localStorage", "navigator"],
         lookupLocalStorage: LOCALE_STORAGE_KEY,
-        caches: ['localStorage']
-      }
+        caches: ["localStorage"],
+      },
     })
 
-  initialized = true
+  isInitialized = true
   return i18next
 }
 
 function registerAppResources(res: AppLocaleResources) {
   // deep=true (merge), overwrite=true (app wins for matching subtrees).
   // Core 与 app 的顶层 namespace 不重叠 (mindmap/qms/kb/projects vs common/auth/...).
-  i18next.addResourceBundle('zh-CN', 'translation', res['zh-CN'], true, true)
-  i18next.addResourceBundle('en-US', 'translation', res['en-US'], true, true)
+  i18next.addResourceBundle("zh-CN", "translation", res["zh-CN"], true, true)
+  i18next.addResourceBundle("en-US", "translation", res["en-US"], true, true)
 }
 
-export { i18next }
+export { default as i18next } from "i18next"

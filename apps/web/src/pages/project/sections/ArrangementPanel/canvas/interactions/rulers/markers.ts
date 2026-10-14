@@ -1,5 +1,6 @@
-import type { Marker } from "@/pages/project/model/types"
+import { beginProjectPreview, finishProjectPreview, setMarkersPreview } from "../project-preview"
 import { rulerBar, barAt } from "./geometry"
+import type { Marker } from "@/pages/project/model/types"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
 
 export function markerGesture(
@@ -7,6 +8,7 @@ export function markerGesture(
   marker: Marker,
   pointer: CanvasPointer
 ): CanvasGesture {
+  beginProjectPreview(context)
   const original = context.getState().document.markers.find(item => item.id === marker.id) ?? marker
   const source = context.getState().document.markers
   const grabOffset = barAt(context.scene.get(), pointer.x) - original.bar
@@ -22,14 +24,13 @@ export function markerGesture(
         context.getState().workspace.snap,
         current.shiftKey
       )
-      context.scene.setPreviewMarkers(
+      setMarkersPreview(
+        context,
         source.map(item => (item.id === marker.id ? { ...item, bar: nextBar } : item))
       )
     },
     finish(cancelled) {
-      context.scene.setPreviewMarkers(null)
-      if (!cancelled && nextBar !== original.bar)
-        context.actions.updateMarker(marker.id, { bar: nextBar })
+      finishProjectPreview(context, cancelled)
     },
   }
 }

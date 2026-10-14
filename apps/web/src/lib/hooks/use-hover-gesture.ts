@@ -10,9 +10,13 @@ interface BoundaryEvent {
 }
 
 export interface HoverGesture {
-  /** True when this enter starts a hover: the pointer arrived resting, not pressing. */
+  /**
+  True when this enter starts a hover: the pointer arrived resting, not pressing.
+  */
   enter: (event: BoundaryEvent) => boolean
-  /** True when this leave ends a hover that entered as one. */
+  /**
+  True when this leave ends a hover that entered as one.
+  */
   leave: (event: BoundaryEvent) => boolean
 }
 
@@ -28,15 +32,9 @@ export interface HoverGesture {
  *   `buttons: 0` and reads as a mouse gliding off. Hover teardown then undid
  *   the tap — the panel the pen had just opened closed under it.
  * - A mouse pressed on the surface and dragged off leaves with `buttons: 1`.
- *   Skipping teardown there strands the surface open: the release happens
- *   outside, and no second leave ever comes.
+ *   Skipping teardown there strands the surface open: the release happens outside, and no second leave ever comes.
  *
- * So the state a hover holds is released by the pointer that took it, whatever
- * the buttons say at the boundary, and a pointer that arrived in contact never
- * took it in the first place. Contact is the exception tracked here, not
- * hover: a leave from a pointer this surface never saw enter — mounted under
- * the cursor, say — still counts, since the alternative is state with no way
- * out.
+ * So the state a hover holds is released by the pointer that took it, whatever the buttons say at the boundary, and a pointer that arrived in contact never took it in the first place. Contact is the exception tracked here, not hover: a leave from a pointer this surface never saw enter — mounted under the cursor, say — still counts, since the alternative is state with no way out.
  */
 export function useHoverGesture(): HoverGesture {
   const contact = useRef(new Set<number>())

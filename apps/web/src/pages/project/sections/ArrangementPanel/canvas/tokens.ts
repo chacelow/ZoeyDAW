@@ -2,8 +2,7 @@
  * Resolve CSS custom properties to concrete color strings for canvas painters.
  *
  * Canvas 2D does not accept CSS variables; painters need resolved color values.
- * This helper reads a reference element once per theme change and feeds painters
- * fresh tokens through the scheduler on repaint.
+ * This helper reads a reference element once per theme change and feeds painters fresh tokens through the scheduler on repaint.
  */
 import type { GridTokens } from "./painters/grid"
 
@@ -69,9 +68,13 @@ export function resolveColor(
   tokens: TokenSet,
   fallback: string
 ): string {
-  if (!color) return fallback
+  if (!color) {
+    return fallback
+  }
   const match = color.match(/^var\((--[a-z0-9-]+)\)$/i)
-  if (!match) return color
+  if (!match) {
+    return color
+  }
   const name = TOKEN_NAMES.find(name => name === match[1])
   return name ? tokens[name] : fallback
 }

@@ -1,27 +1,28 @@
-// 生产 JSON 日志的值规范化：Error 展开 + 敏感字段脱敏。
-// 独立成模块，前后端共用（无 node/browser 专属 API）。
+// 生产 JSON 日志的值规范化：Error 展开 + 敏感字段脱敏。 独立成模块，前后端共用（无 node/browser 专属 API）。
 
-const REDACTED = '[REDACTED]'
+const REDACTED = "[REDACTED]"
 
 /**
- * 把 Error 规范化成可 JSON 序列化的普通对象。
- * Error 的 message/stack/name 是不可枚举属性，Object.assign / JSON.stringify 都拿不到，
- * 直接透传会静默丢失堆栈 —— 生产排障最需要的信息。
+ * 把 Error 规范化成可 JSON 序列化的普通对象。 Error 的 message/stack/name 是不可枚举属性，Object.assign / JSON.stringify 都拿不到， 直接透传会静默丢失堆栈 —— 生产排障最需要的信息。
  */
-export function normalizeError(err: Error): Record<string, unknown> {
+export function normalizeError(error: Error): Record<string, unknown> {
   const out: Record<string, unknown> = {
-    name: err.name,
-    message: err.message
+    name: error.name,
+    message: error.message,
   }
-  if (err.stack) out.stack = err.stack
+  if (error.stack) {
+    out.stack = error.stack
+  }
   // 递归展开 cause（Error.cause，ES2022）
-  if (err.cause !== undefined) {
-    out.cause = err.cause instanceof Error ? normalizeError(err.cause) : err.cause
+  if (error.cause !== undefined) {
+    out.cause = error.cause instanceof Error ? normalizeError(error.cause) : error.cause
   }
   // Error 的自定义可枚举属性（如 code、statusCode）；结构无法静态表达，一次性具名断言。
-  const ownProps = err as unknown as Record<string, unknown>
-  for (const key of Object.keys(err)) {
-    if (!(key in out)) out[key] = ownProps[key]
+  const ownProperties = error as unknown as Record<string, unknown>
+  for (const key of Object.keys(error)) {
+    if (!Object.hasOwn(out, key) && !Object.hasOwn(Object.prototype, key)) {
+      out[key] = ownProperties[key]
+    }
   }
   return out
 }
@@ -35,8 +36,12 @@ export function redact(
   redactKeys: Set<string>,
   seen = new WeakSet<object>()
 ): unknown {
-  if (value === null || typeof value !== 'object') return value
-  if (seen.has(value)) return '[Circular]'
+  if (value === null || typeof value !== "object") {
+    return value
+  }
+  if (seen.has(value)) {
+    return "[Circular]"
+  }
   seen.add(value)
 
   if (Array.isArray(value)) {
@@ -46,11 +51,7 @@ export function redact(
   const source = value as Record<string, unknown>
   const out: Record<string, unknown> = {}
   for (const key of Object.keys(source)) {
-    if (redactKeys.has(key.toLowerCase())) {
-      out[key] = REDACTED
-    } else {
-      out[key] = redact(source[key], redactKeys, seen)
-    }
+    out[key] = redactKeys.has(key.toLowerCase()) ? REDACTED : redact(source[key], redactKeys, seen)
   }
   return out
 }

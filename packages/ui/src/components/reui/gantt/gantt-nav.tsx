@@ -1,48 +1,48 @@
 // Title: Gantt Nav
 // Description: Composable navigation - Today, view selector, prev/next, go-to-date, period title, and a free toolbar slot.
 
-'use client'
+"use client"
 
-import { useState, type ReactNode } from 'react'
-import { useGanttNavigation, useGanttScale, useGanttSettings, useGanttViewConfig } from './gantt'
-import { toZoned } from './gantt-lib'
-import type { GanttScale } from './gantt-types'
-import { mergeProps } from '@base-ui/react/merge-props'
-import { useRender } from '@base-ui/react/use-render'
-import { format } from 'date-fns'
+import { useState, type ReactNode } from "react"
+import { useGanttNavigation, useGanttScale, useGanttSettings, useGanttViewConfig } from "./gantt"
+import { toZoned } from "./gantt-lib"
+import type { GanttScale } from "./gantt-types"
+import { mergeProps } from "@base-ui/react/merge-props"
+import { useRender } from "@base-ui/react/use-render"
+import { format } from "date-fns"
 
-import { cn } from '#lib/utils'
-import { Button } from '#components/button'
-import { Calendar } from '#components/calendar'
+import { cn } from "#lib/utils"
+import { Button } from "#components/button"
+import { Calendar } from "#components/calendar"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuTrigger
-} from '#components/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '#components/popover'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '#components/tooltip'
-import { IconPlaceholder } from './icon-placeholder'
+  DropdownMenuTrigger,
+} from "#components/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "#components/popover"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "#components/tooltip"
+import { IconPlaceholder } from "./icon-placeholder"
 
-const GANTT_SCALES: GanttScale[] = ['day', 'week', 'month', 'quarter', 'year']
+const GANTT_SCALES: GanttScale[] = ["day", "week", "month", "quarter", "year"]
 
 /** Configured nav button variant/size (viewConfig.navButtonVariant/Size). */
 function useNavButtonProps(): {
-  variant: 'ghost' | 'outline' | 'secondary' | 'default'
-  size: 'sm' | 'default'
-  iconSize: 'icon-sm' | 'icon'
+  variant: "ghost" | "outline" | "secondary" | "default"
+  size: "sm" | "default"
+  iconSize: "icon-sm" | "icon"
 } {
   const viewConfig = useGanttViewConfig()
   return {
     variant: viewConfig.navButtonVariant,
     size: viewConfig.navButtonSize,
-    iconSize: viewConfig.navButtonSize === 'sm' ? 'icon-sm' : 'icon'
+    iconSize: viewConfig.navButtonSize === "sm" ? "icon-sm" : "icon",
   }
 }
 
-type NavButtonProps = Omit<useRender.ComponentProps<'button'>, 'children'> & {
+type NavButtonProps = Omit<useRender.ComponentProps<"button">, "children"> & {
   children?: ReactNode
   /**
    * Tooltip policy (the part that usually goes wrong on clickable elements):
@@ -58,7 +58,7 @@ type NavButtonProps = Omit<useRender.ComponentProps<'button'>, 'children'> & {
 /** Hover/focus-visible tooltip wrapper; renders the bare button when disabled. */
 function NavTooltip({
   content,
-  children
+  children,
 }: {
   content: ReactNode | null
   children: React.ReactElement
@@ -164,26 +164,26 @@ function GanttNavNext({ className, render, children, tooltip, ...props }: NavBut
   )
 }
 
-interface GanttTitleProps extends useRender.ComponentProps<'div'> {
+interface GanttTitleProps extends useRender.ComponentProps<"div"> {
   format?: (ctx: { title: string }) => ReactNode
 }
 
 function GanttTitle({ className, render, format: formatTitle, ...props }: GanttTitleProps) {
   const { title } = useGanttNavigation()
   const defaultProps = {
-    'data-slot': 'gantt-title',
-    'aria-live': 'polite' as const,
-    className: cn('min-w-0 truncate text-sm font-semibold', className),
-    children: formatTitle?.({ title }) ?? title
+    "data-slot": "gantt-title",
+    "aria-live": "polite" as const,
+    className: cn("min-w-0 truncate text-sm font-semibold", className),
+    children: formatTitle?.({ title }) ?? title,
   }
   return useRender({
-    defaultTagName: 'div',
+    defaultTagName: "div",
     render,
-    props: mergeProps<'div'>(defaultProps, props)
+    props: mergeProps<"div">(defaultProps, props),
   })
 }
 
-interface GanttScaleSwitcherProps extends Omit<useRender.ComponentProps<'button'>, 'children'> {
+interface GanttScaleSwitcherProps extends Omit<useRender.ComponentProps<"button">, "children"> {
   children?: ReactNode
   /** Hover/focus-visible hint; defaults to the "Select view" label. Pass
    *  null to disable (overlay-opener policy). */
@@ -236,7 +236,7 @@ function GanttScaleSwitcher({
         onOpenChange={(next: boolean, details: { reason?: string }) => {
           // opens are hover-only; the trigger-focus open that follows a
           // menu close is ignored, closes always land
-          if (next && details?.reason !== 'trigger-hover') return
+          if (next && details?.reason !== "trigger-hover") return
           setTipOpen(next)
         }}
       >
@@ -249,7 +249,7 @@ function GanttScaleSwitcher({
                   size={nav.size}
                   data-slot="gantt-scale-switcher"
                   aria-label={labels.selectView}
-                  className={cn('gap-1', className)}
+                  className={cn("gap-1", className)}
                 />
               }
             />
@@ -353,24 +353,24 @@ function GanttDatePicker({ className }: GanttDatePickerProps) {
   )
 }
 
-type GanttToolbarProps = useRender.ComponentProps<'div'>
+type GanttToolbarProps = useRender.ComponentProps<"div">
 
 /** Free slot for consumer toolbar buttons; pure layout shell. */
 function GanttToolbar({ className, render, ...props }: GanttToolbarProps) {
   const viewConfig = useGanttViewConfig()
   const defaultProps = {
-    'data-slot': 'gantt-toolbar',
-    className: cn('flex items-center gap-2', viewConfig.classNames?.toolbar, className),
-    children: props.children
+    "data-slot": "gantt-toolbar",
+    className: cn("flex items-center gap-2", viewConfig.classNames?.toolbar, className),
+    children: props.children,
   }
   return useRender({
-    defaultTagName: 'div',
+    defaultTagName: "div",
     render,
-    props: mergeProps<'div'>(defaultProps, props)
+    props: mergeProps<"div">(defaultProps, props),
   })
 }
 
-interface GanttNavProps extends useRender.ComponentProps<'div'> {}
+interface GanttNavProps extends useRender.ComponentProps<"div"> {}
 
 /**
  * Default composed nav (event-calendar parity): Today, time-period switcher,
@@ -380,12 +380,12 @@ interface GanttNavProps extends useRender.ComponentProps<'div'> {}
 function GanttNav({ className, render, children, ...props }: GanttNavProps) {
   const viewConfig = useGanttViewConfig()
   const defaultProps = {
-    'data-slot': 'gantt-nav',
+    "data-slot": "gantt-nav",
     className: cn(
       // px so the toolbar controls do not hug the container edge; border-b
       // separates the toolbar from the column header below it
-      'flex min-w-0 flex-wrap items-center gap-2 border-b px-3 py-2',
-      viewConfig.stickyNav && 'bg-background sticky top-0 z-30',
+      "flex min-w-0 flex-wrap items-center gap-2 border-b px-3 py-2",
+      viewConfig.stickyNav && "bg-background sticky top-0 z-30",
       viewConfig.classNames?.nav,
       className
     ),
@@ -401,12 +401,12 @@ function GanttNav({ className, render, children, ...props }: GanttNavProps) {
         <GanttTitle />
         <div className="grow" />
       </TooltipProvider>
-    )
+    ),
   }
   return useRender({
-    defaultTagName: 'div',
+    defaultTagName: "div",
     render,
-    props: mergeProps<'div'>(defaultProps, props)
+    props: mergeProps<"div">(defaultProps, props),
   })
 }
 
@@ -419,6 +419,6 @@ export {
   GanttNavToday,
   GanttScaleSwitcher,
   GanttTitle,
-  GanttToolbar
+  GanttToolbar,
 }
 export type { GanttNavProps, GanttScaleSwitcherProps, GanttTitleProps, GanttToolbarProps }

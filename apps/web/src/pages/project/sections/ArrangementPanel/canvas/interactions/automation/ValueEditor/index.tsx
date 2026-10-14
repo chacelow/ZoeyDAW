@@ -8,12 +8,16 @@ import { activeAutomationRows, automationX, automationY } from "../geometry"
 export function AutomationValueEditor() {
   const scene = useSyncExternalStore(arrangementScene.subscribe, arrangementScene.get)
   const selection = scene.targetSelection
-  if (selection.kind !== "automation-value") return null
+  if (selection.kind !== "automation-value") {
+    return null
+  }
   const row = activeAutomationRows(scene).find(
     item => item.track.id === selection.trackId && item.laneId === selection.laneId
   )
   const point = row?.lane?.points.find(item => item.id === selection.pointId)
-  if (!row || !point) return null
+  if (!row || !point) {
+    return null
+  }
   return (
     <ValueInput
       key={`${selection.trackId}:${selection.laneId}:${point.id}`}
@@ -32,7 +36,9 @@ export function AutomationValueEditor() {
 type Parameter = "volume" | "pan"
 function formatValue(parameter: Parameter, value: number): string {
   const source = automationSourceValue(parameter, value)
-  if (parameter === "volume") return source <= -60 ? "−∞ dB" : `${source.toFixed(1)} dB`
+  if (parameter === "volume") {
+    return source <= -60 ? "−∞ dB" : `${source.toFixed(1)} dB`
+  }
   return Math.abs(source) < 0.005
     ? "C"
     : `${source < 0 ? "L" : "R"} ${Math.round(Math.abs(source) * 100)}`
@@ -48,25 +54,27 @@ function ValueInput({
   x,
   y,
 }: {
-  trackId: string
-  laneId: string
-  pointId: string
-  pointIds: readonly string[]
-  parameter: Parameter
-  initial: number
-  x: number
-  y: number
+  readonly trackId: string
+  readonly laneId: string
+  readonly pointId: string
+  readonly pointIds: readonly string[]
+  readonly parameter: Parameter
+  readonly initial: number
+  readonly x: number
+  readonly y: number
 }) {
   const { t } = useTranslation()
   const [value, setValue] = useState(formatValue(parameter, initial))
-  const ref = useRef<HTMLInputElement>(null)
+  const reference = useRef<HTMLInputElement>(null)
   const done = useRef(false)
   useLayoutEffect(() => {
-    ref.current?.focus({ preventScroll: true })
-    ref.current?.select()
+    reference.current?.focus({ preventScroll: true })
+    reference.current?.select()
   }, [pointId, trackId])
   function close(commit: boolean) {
-    if (done.current) return
+    if (done.current) {
+      return
+    }
     done.current = true
     if (commit) {
       const trimmed = value.trim()
@@ -83,10 +91,9 @@ function ValueInput({
             ? -60
             : Number(trimmed.replace(/\s*dB\s*$/i, ""))
       if (trimmed && Number.isFinite(parsed)) {
-        const normalized =
-          parameter === "volume"
-            ? clampAutomationValue((parsed + 60) / 66)
-            : clampAutomationValue((parsed + 1) / 2)
+        const normalized = clampAutomationValue(
+          parameter === "volume" ? (parsed + 60) / 66 : (parsed + 1) / 2
+        )
         const lane = arrangementScene
           .get()
           .tracks.find(track => track.id === trackId)
@@ -97,11 +104,11 @@ function ValueInput({
           projectActions.replaceAutomationPoints(
             trackId,
             laneId,
-            lane.points.map(item =>
-              pointIds.includes(item.id)
+            lane.points.map(item => {
+              return pointIds.includes(item.id)
                 ? { ...item, value: clampAutomationValue(item.value + delta) }
                 : item
-            )
+            })
           )
         }
       }
@@ -111,16 +118,17 @@ function ValueInput({
       selection.kind === "automation-value" &&
       selection.pointId === pointId &&
       selection.trackId === trackId
-    )
+    ) {
       arrangementScene.setTargetSelection({ kind: "automation", trackId, laneId, pointIds })
+    }
   }
   return (
     <input
       data-automation-value-editor=""
-      ref={ref}
+      ref={reference}
       value={value}
       aria-label={t("arrangement.editAutomationValue")}
-      className="absolute z-30 h-control-compact w-24 rounded border border-primary bg-background px-1 text-xs text-foreground outline-none"
+      className="h-control-compact border-primary bg-background text-foreground absolute z-30 w-24 rounded border px-1 text-xs outline-none"
       style={{ left: Math.max(0, x + 8), top: Math.max(0, y - 10) }}
       onChange={event => setValue(event.target.value)}
       onKeyDown={event => {
@@ -129,10 +137,12 @@ function ValueInput({
           event.preventDefault()
           close(true)
         }
-        if (event.key === "Escape") {
-          event.preventDefault()
-          close(false)
+        if (event.key !== "Escape") {
+          return
         }
+
+        event.preventDefault()
+        close(false)
       }}
       onBlur={() => close(true)}
       onPointerDown={event => event.stopPropagation()}

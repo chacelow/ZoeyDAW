@@ -17,10 +17,10 @@ import {
   Square,
   Star,
   Waves,
-  type LucideIcon,
 } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
 import { Button, Separator, cn, rowInteractiveClasses, useInfoBinding } from "@zoeymind/ui"
+import type { LucideIcon } from "lucide-react"
 import type { BrowserSource } from "../browserData"
 
 const SOURCE_GROUPS: { id: string; sources: { id: BrowserSource; icon: LucideIcon }[] }[] = [
@@ -61,8 +61,8 @@ const SOURCE_GROUPS: { id: string; sources: { id: BrowserSource; icon: LucideIco
 ]
 
 export interface BrowserNavigationProps {
-  source: BrowserSource
-  onNavigate: (source: BrowserSource) => void
+  readonly source: BrowserSource
+  readonly onNavigate: (source: BrowserSource) => void
 }
 
 export function BrowserNavigation({ source, onNavigate }: BrowserNavigationProps) {
@@ -71,15 +71,17 @@ export function BrowserNavigation({ source, onNavigate }: BrowserNavigationProps
   return (
     <nav
       aria-label={t("project.browser.navigation")}
-      className="h-full w-full overflow-x-hidden overflow-y-auto p-1 text-foreground"
+      className="text-foreground h-full w-full overflow-x-hidden overflow-y-auto p-1"
       {...infoHandlers}
       onKeyDown={event => {
-        if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return
-        if (!(event.target instanceof HTMLElement)) return
-        const target = event.target
-        const buttons = Array.from(
-          event.currentTarget.querySelectorAll<HTMLButtonElement>("button")
-        )
+        if (
+          !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key) ||
+          !(event.target instanceof HTMLElement)
+        ) {
+          return
+        }
+        const { target } = event
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button")]
         const index = buttons.findIndex(button => button === target.closest("button"))
         const nextIndex =
           event.key === "Home"
@@ -99,7 +101,7 @@ export function BrowserNavigation({ source, onNavigate }: BrowserNavigationProps
       {SOURCE_GROUPS.map((group, index) => (
         <div key={group.id}>
           {index > 0 && <Separator className="my-2" />}
-          <div className="flex min-h-7 items-center gap-2 overflow-hidden px-3 pt-3 pb-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground flex min-h-7 items-center gap-2 overflow-hidden px-3 pt-3 pb-1 text-xs">
             <span className="w-5 shrink-0" aria-hidden />
             <span className="min-w-0 overflow-hidden whitespace-nowrap">
               {t(`project.browser.groups.${group.id}`)}

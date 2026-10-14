@@ -1,4 +1,4 @@
-import { isBrowser } from './colors'
+import { isBrowser } from "./colors"
 
 // 运行时环境判定：前后端共用一份 logger，生产判定必须两端都成立。
 // - Node：process.env.NODE_ENV === 'production'
@@ -9,10 +9,9 @@ import { isBrowser } from './colors'
 const viteMeta = import.meta as unknown as { env?: { PROD?: boolean } }
 
 function detectProduction(): boolean {
-  if (isBrowser) {
-    return viteMeta.env?.PROD === true
-  }
-  return typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
+  return isBrowser
+    ? viteMeta.env?.PROD === true
+    : typeof process !== "undefined" && process.env.NODE_ENV === "production"
 }
 
 export const isProduction = detectProduction()

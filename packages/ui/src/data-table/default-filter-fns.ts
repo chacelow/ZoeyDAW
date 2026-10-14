@@ -1,5 +1,5 @@
-import type { FilterFn } from '@tanstack/react-table'
-import type { FilterVariant } from './types'
+import type { FilterFn } from "@tanstack/react-table"
+import type { FilterVariant } from "./types"
 
 /**
  * Variant → tanstack filterFn 映射 (M3)。
@@ -18,38 +18,50 @@ import type { FilterVariant } from './types'
  */
 
 const textIncludes: FilterFn<unknown> = (row, columnId, value) => {
-  if (value == null || value === '') return true
+  if (value == null || value === "") {
+    return true
+  }
   const cell = row.getValue<unknown>(columnId)
-  if (cell == null) return false
-  return String(cell).toLowerCase().includes(String(value).toLowerCase())
+  return cell == null ? false : String(cell).toLowerCase().includes(String(value).toLowerCase())
 }
 
 const numberEquals: FilterFn<unknown> = (row, columnId, value) => {
-  if (value == null || value === '') return true
+  if (value == null || value === "") {
+    return true
+  }
   const cell = row.getValue<unknown>(columnId)
-  if (cell == null) return false
-  return Number(cell) === Number(value)
+  return cell == null ? false : Number(cell) === Number(value)
 }
 
 const numberInRange: FilterFn<unknown> = (row, columnId, value) => {
-  if (!Array.isArray(value) || value.length !== 2) return true
+  if (!Array.isArray(value) || value.length !== 2) {
+    return true
+  }
   const [min, max] = value as [unknown, unknown]
   const cell = row.getValue<unknown>(columnId)
-  if (cell == null) return false
+  if (cell == null) {
+    return false
+  }
   const n = Number(cell)
-  if (Number.isNaN(n)) return false
-  const lo = min == null || min === '' ? -Infinity : Number(min)
-  const hi = max == null || max === '' ? Infinity : Number(max)
+  if (Number.isNaN(n)) {
+    return false
+  }
+  const lo = min == null || min === "" ? -Infinity : Number(min)
+  const hi = max == null || max === "" ? Infinity : Number(max)
   return n >= lo && n <= hi
 }
 
 function toDate(value: unknown): Date | null {
-  if (value == null || value === '') return null
+  if (value == null || value === "") {
+    return null
+  }
   const d = value instanceof Date ? value : new Date(value as string | number)
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-/** 归零到当地 00:00:00, 用于按日比较。 */
+/**
+归零到当地 00:00:00, 用于按日比较。
+*/
 function startOfDay(d: Date): number {
   const copy = new Date(d)
   copy.setHours(0, 0, 0, 0)
@@ -58,45 +70,59 @@ function startOfDay(d: Date): number {
 
 const dateSameDay: FilterFn<unknown> = (row, columnId, value) => {
   const filterDate = toDate(value)
-  if (!filterDate) return true
+  if (!filterDate) {
+    return true
+  }
   const cellDate = toDate(row.getValue<unknown>(columnId))
-  if (!cellDate) return false
-  return startOfDay(cellDate) === startOfDay(filterDate)
+  return cellDate ? startOfDay(cellDate) === startOfDay(filterDate) : false
 }
 
 const dateInRange: FilterFn<unknown> = (row, columnId, value) => {
-  if (!Array.isArray(value) || value.length !== 2) return true
+  if (!Array.isArray(value) || value.length !== 2) {
+    return true
+  }
   const [from, to] = value as [unknown, unknown]
   const fromDate = toDate(from)
-  const toDateVal = toDate(to)
-  if (!fromDate && !toDateVal) return true
+  const toDateValue = toDate(to)
+  if (!fromDate && !toDateValue) {
+    return true
+  }
   const cellDate = toDate(row.getValue<unknown>(columnId))
-  if (!cellDate) return false
+  if (!cellDate) {
+    return false
+  }
   const cellDay = startOfDay(cellDate)
   const loDay = fromDate ? startOfDay(fromDate) : -Infinity
   // 闭区间：to 视为当日 23:59:59.999，用下一日 00:00:00 - 1 表示，等价于比较到日粒度 `cellDay <= startOfDay(to)`
-  const hiDay = toDateVal ? startOfDay(toDateVal) : Infinity
+  const hiDay = toDateValue ? startOfDay(toDateValue) : Infinity
   return cellDay >= loDay && cellDay <= hiDay
 }
 
 const selectEquals: FilterFn<unknown> = (row, columnId, value) => {
-  if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) return true
+  if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) {
+    return true
+  }
   const cell = row.getValue<unknown>(columnId)
-  if (cell == null) return false
+  if (cell == null) {
+    return false
+  }
   // 支持单值 or 单元素数组两种入参形态。
   const target = Array.isArray(value) ? value[0] : value
   return String(cell) === String(target)
 }
 
 const multiSelectIncludes: FilterFn<unknown> = (row, columnId, value) => {
-  if (!Array.isArray(value) || value.length === 0) return true
-  const cell = row.getValue<unknown>(columnId)
-  if (cell == null) return false
-  // 支持单值列 (cell 是 primitive) 与数组列 (cell 是 array) 两种存储形态。
-  if (Array.isArray(cell)) {
-    return cell.some(c => value.includes(String(c)))
+  if (!Array.isArray(value) || value.length === 0) {
+    return true
   }
-  return value.includes(String(cell))
+  const cell = row.getValue<unknown>(columnId)
+  if (cell == null) {
+    return false
+  }
+  // 支持单值列 (cell 是 primitive) 与数组列 (cell 是 array) 两种存储形态。
+  return Array.isArray(cell)
+    ? cell.some(c => value.includes(String(c)))
+    : value.includes(String(cell))
 }
 
 /**
@@ -111,5 +137,5 @@ export const FILTER_FN_BY_VARIANT = {
   dateRange: dateInRange,
   boolean: selectEquals,
   select: selectEquals,
-  multiSelect: multiSelectIncludes
+  multiSelect: multiSelectIncludes,
 } as const satisfies Record<FilterVariant, FilterFn<unknown>>

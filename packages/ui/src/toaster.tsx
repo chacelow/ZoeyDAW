@@ -1,13 +1,13 @@
-import { useSyncExternalStore } from 'react'
-import {
-  AnimatedToastStack,
-  type AnimatedToast,
-  type ToastInput,
-  type ToastPosition,
-  type ToastStatus
-} from './motion/animated-toast-stack'
+import { useSyncExternalStore } from "react"
+import { AnimatedToastStack } from "./motion/animated-toast-stack"
+import type {
+  AnimatedToast,
+  ToastInput,
+  ToastPosition,
+  ToastStatus,
+} from "./motion/animated-toast-stack"
 
-export type ToastVariant = 'default' | 'destructive' | 'warning' | 'success' | 'info'
+export type ToastVariant = "default" | "destructive" | "warning" | "success" | "info"
 
 export interface ToastAction {
   label: string
@@ -61,16 +61,21 @@ function getServerToastSnapshot() {
 
 function convertVariantToStatus(variant: ToastVariant): ToastStatus {
   switch (variant) {
-    case 'destructive':
-      return 'error'
-    case 'success':
-      return 'success'
-    case 'warning':
-      return 'warning'
-    case 'info':
-      return 'info'
-    default:
-      return 'neutral'
+    case "destructive": {
+      return "error"
+    }
+    case "success": {
+      return "success"
+    }
+    case "warning": {
+      return "warning"
+    }
+    case "info": {
+      return "info"
+    }
+    default: {
+      return "neutral"
+    }
   }
 }
 
@@ -100,14 +105,14 @@ function scheduleToastDismiss(toastToSchedule: AnimatedToast) {
 }
 
 function createToastInput(options: ToastOptions | string): ToastInput {
-  if (typeof options === 'string') {
+  if (typeof options === "string") {
     return {
       description: options,
-      status: 'neutral'
+      status: "neutral",
     }
   }
 
-  const { id, variant = 'default', description, title, duration, action } = options
+  const { id, variant = "default", description, title, duration, action } = options
 
   return {
     id,
@@ -118,9 +123,9 @@ function createToastInput(options: ToastOptions | string): ToastInput {
     action: action
       ? {
           label: action.label,
-          onClick: () => action.onClick()
+          onClick: () => action.onClick(),
         }
-      : undefined
+      : undefined,
   }
 }
 
@@ -134,7 +139,7 @@ function upsertToast(input: ToastInput) {
     ...existingToast,
     ...input,
     id,
-    createdAt
+    createdAt,
   }
 
   const nextSnapshot = existingToast
@@ -156,9 +161,9 @@ export function toastLoading(message: string, id: string) {
   return upsertToast({
     id,
     description: message,
-    status: 'loading',
+    status: "loading",
     duration: LOADING_TOAST_DURATION_MS,
-    dismissible: true
+    dismissible: true,
   })
 }
 
@@ -184,10 +189,10 @@ export function dismissToast(id?: string | number) {
 }
 
 export interface ToasterProps {
-  position?: ToastPosition
+  readonly position?: ToastPosition
 }
 
-export function Toaster({ position = 'bottom-right' }: ToasterProps) {
+export function Toaster({ position = "bottom-right" }: ToasterProps) {
   const toasts = useSyncExternalStore(
     subscribeToToastStore,
     getToastSnapshot,
@@ -202,16 +207,16 @@ export function Toaster({ position = 'bottom-right' }: ToasterProps) {
       onDismiss={dismissToast}
       maxVisible={4}
       classNames={{
-        root: 'z-[100] sm:max-w-md',
+        root: "z-[100] sm:max-w-md",
         surface:
-          'border-border/70 bg-card/95 text-card-foreground shadow-2xl shadow-foreground/10 ring-1 ring-border/40',
-        iconWrap: 'shadow-sm',
-        content: 'min-w-0',
-        title: 'text-card-foreground',
-        description: 'text-muted-foreground',
-        action: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        close: 'hover:bg-muted hover:text-foreground',
-        progress: 'bg-primary/40'
+          "border-border/70 bg-card/95 text-card-foreground shadow-2xl shadow-foreground/10 ring-1 ring-border/40",
+        iconWrap: "shadow-sm",
+        content: "min-w-0",
+        title: "text-card-foreground",
+        description: "text-muted-foreground",
+        action: "bg-primary text-primary-foreground hover:bg-primary/90",
+        close: "hover:bg-muted hover:text-foreground",
+        progress: "bg-primary/40",
       }}
     />
   )

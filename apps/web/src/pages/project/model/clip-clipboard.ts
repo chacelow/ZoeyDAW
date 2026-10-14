@@ -1,6 +1,6 @@
-import type { Clip, Track } from "./types"
 import { isClip, serializeClip } from "./persistence"
 import { clipWindow } from "./clip-window"
+import type { Clip, Track } from "./types"
 
 export const CLIP_CLIPBOARD_TYPE = "application/x-zoeymind-clips+json"
 export interface ClipClipboardItem {
@@ -31,7 +31,9 @@ export function collectClips(
           : []
       })
   )
-  if (!items.length) return null
+  if (!items.length) {
+    return null
+  }
   const minTrack = Math.min(...items.map(item => item.trackOffset))
   const minBar = Math.min(...items.map(item => item.barOffset))
   return {
@@ -62,9 +64,10 @@ export function parseClipClipboard(raw: string): ClipClipboard | null {
     !("items" in value) ||
     !Array.isArray(value.items) ||
     value.items.length === 0 ||
-    value.items.length > 10000
-  )
+    value.items.length > 10_000
+  ) {
     return null
+  }
   const items: ClipClipboardItem[] = []
   const ids = new Set<string>()
   for (const item of value.items) {
@@ -82,8 +85,9 @@ export function parseClipClipboard(raw: string): ClipClipboard | null {
       item.barOffset < 0 ||
       !isClip(item.clip) ||
       ids.has(item.clip.id)
-    )
+    ) {
       return null
+    }
     ids.add(item.clip.id)
     items.push({
       trackOffset: item.trackOffset,
@@ -91,7 +95,7 @@ export function parseClipClipboard(raw: string): ClipClipboard | null {
       clip: serializeClip(item.clip),
     })
   }
-  if (!items.some(item => item.trackOffset === 0) || !items.some(item => item.barOffset === 0))
-    return null
-  return { kind: "clips", version: 1, items }
+  return items.every(item => item.trackOffset !== 0) || items.every(item => item.barOffset !== 0)
+    ? null
+    : { kind: "clips", version: 1, items }
 }

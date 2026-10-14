@@ -4,13 +4,13 @@
  * 结构：Card > CardHeader (title + 可选 description) > CardContent (配置项)。
  * 复刻 ZoeyMind 老 Settings 的 SectionCard，用 @zoeymind/ui 的原语保证样式一致。
  */
-import type { ReactNode } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@zoeymind/ui"
+import type { ReactNode } from "react"
 
 export interface SectionCardProps {
-  title: ReactNode
-  description?: ReactNode
-  children: ReactNode
+  readonly title: ReactNode
+  readonly description?: ReactNode
+  readonly children: ReactNode
 }
 
 export function SectionCard({ title, description, children }: SectionCardProps) {

@@ -10,6 +10,6 @@ it("preserves partial-step activity and wraparound when several source steps sha
 })
 
 it("leaves dense silent patterns empty", () => {
-  expect(patternHasActivity([false, false, false, false], 100.25, 100000)).toBe(false)
+  expect(patternHasActivity([false, false, false, false], 100.25, 100_000)).toBe(false)
   expect(patternHasActivity([], 1, 2)).toBe(false)
 })

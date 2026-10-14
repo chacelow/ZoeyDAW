@@ -6,8 +6,8 @@
  * 用法保持与 reui 源码兼容, gantt 代码文件不需要改.
  */
 
-import * as React from 'react'
-import * as LucideIcons from 'lucide-react'
+import * as React from "react"
+import * as LucideIcons from "lucide-react"
 
 type IconPlaceholderProps = {
   lucide?: string
@@ -18,8 +18,8 @@ type IconPlaceholderProps = {
   className?: string
   size?: number | string
   strokeWidth?: number
-  'aria-hidden'?: boolean | 'true' | 'false'
-  'aria-label'?: string
+  "aria-hidden"?: boolean | "true" | "false"
+  "aria-label"?: string
 }
 
 export function IconPlaceholder({
@@ -30,7 +30,7 @@ export function IconPlaceholder({
   remixicon: _remixicon,
   ...rest
 }: IconPlaceholderProps) {
-  const name = lucide ?? 'CircleIcon'
+  const name = lucide ?? "CircleIcon"
   const Icon = (
     LucideIcons as unknown as Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>>
   )[name]

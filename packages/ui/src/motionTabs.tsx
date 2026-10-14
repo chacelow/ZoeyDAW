@@ -1,26 +1,26 @@
-import { useState, useEffect, useRef } from 'react'
-import { motion } from 'motion/react'
-import { cn } from './cn'
+import { useState, useLayoutEffect, useRef } from "react"
+import { motion } from "motion/react"
+import { cn } from "./cn"
 
-export type TabOption = {
+export interface TabOption {
   key: string
   label: string
   icon?: React.ReactNode
   content?: React.ReactNode
 }
 
-interface MotionTabsProps {
-  options: TabOption[]
-  defaultTab?: string
-  onChange?: (tabKey: string) => void
-  className?: string
-  containerClassName?: string
-  tabClassName?: string
-  activeTabClassName?: string
-  inactiveTabClassName?: string
-  indicatorClassName?: string
-  hoverIndicatorClassName?: string
-  showContent?: boolean
+interface MotionTabsProperties {
+  readonly options: TabOption[]
+  readonly defaultTab?: string
+  readonly onChange?: (tabKey: string) => void
+  readonly className?: string
+  readonly containerClassName?: string
+  readonly tabClassName?: string
+  readonly activeTabClassName?: string
+  readonly inactiveTabClassName?: string
+  readonly indicatorClassName?: string
+  readonly hoverIndicatorClassName?: string
+  readonly showContent?: boolean
 }
 
 export function MotionTabs({
@@ -34,38 +34,58 @@ export function MotionTabs({
   inactiveTabClassName,
   indicatorClassName,
   hoverIndicatorClassName,
-  showContent = true
-}: MotionTabsProps) {
-  const [activeTab, setActiveTab] = useState<string>(defaultTab || options[0]?.key || '')
+  showContent = true,
+}: MotionTabsProperties) {
+  const [selection, setSelection] = useState(() => ({
+    defaultTab,
+    key: defaultTab || options[0]?.key || "",
+  }))
+  if (selection.defaultTab !== defaultTab) {
+    setSelection({ defaultTab, key: defaultTab || selection.key })
+  }
+  const activeTab = selection.key
   const [hoveredTab, setHoveredTab] = useState<string | null>(null)
-  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-
-  useEffect(() => {
-    if (defaultTab && defaultTab !== activeTab) {
-      setActiveTab(defaultTab)
-    }
-  }, [defaultTab, activeTab])
+  const tabReferences = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const [dimensions, setDimensions] = useState({
+    active: { width: 0, x: 0 },
+    hovered: { width: 0, x: 0 },
+  })
 
   const handleTabChange = (tabKey: string) => {
-    setActiveTab(tabKey)
+    setSelection({ defaultTab, key: tabKey })
     onChange?.(tabKey)
   }
 
-  // 获取特定标签的尺寸和位置
-  const getTabDimensions = (key: string) => {
-    const el = tabRefs.current.get(key)
-    if (!el) return { width: 0, x: 0 }
-
-    return {
-      width: el.offsetWidth,
-      x: el.offsetLeft
+  useLayoutEffect(() => {
+    const elements = tabReferences.current
+    const measure = () => {
+      const getDimensions = (key: string | null) => {
+        const element = key ? elements.get(key) : undefined
+        return { width: element?.offsetWidth ?? 0, x: element?.offsetLeft ?? 0 }
+      }
+      const active = getDimensions(activeTab)
+      const hovered = getDimensions(hoveredTab)
+      setDimensions(previous =>
+        previous.active.width === active.width &&
+        previous.active.x === active.x &&
+        previous.hovered.width === hovered.width &&
+        previous.hovered.x === hovered.x
+          ? previous
+          : { active, hovered }
+      )
     }
-  }
+    measure()
+    const observer = new ResizeObserver(measure)
+    for (const element of elements.values()) {
+      observer.observe(element)
+    }
+    return () => observer.disconnect()
+  }, [options, activeTab, hoveredTab])
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn("space-y-2", className)}>
       <div
-        className={cn('flex items-center rounded-lg bg-black/5 p-4 relative', containerClassName)}
+        className={cn("relative flex items-center rounded-lg bg-black/5 p-4", containerClassName)}
       >
         {options.map(option => {
           const isActive = activeTab === option.key
@@ -74,15 +94,19 @@ export function MotionTabs({
             <button
               type="button"
               key={option.key}
-              ref={el => {
-                if (el) tabRefs.current.set(option.key, el)
+              ref={element => {
+                if (element) {
+                  tabReferences.current.set(option.key, element)
+                } else {
+                  tabReferences.current.delete(option.key)
+                }
               }}
               className={cn(
-                'relative z-10 flex items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-all',
-                'hover:text-foreground focus-visible:outline-none',
+                "relative z-10 flex items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-all",
+                "hover:text-foreground focus-visible:outline-none",
                 isActive
-                  ? cn('text-foreground font-semibold', activeTabClassName)
-                  : cn('text-muted-foreground', inactiveTabClassName),
+                  ? cn("text-foreground font-semibold", activeTabClassName)
+                  : cn("text-muted-foreground", inactiveTabClassName),
                 tabClassName
               )}
               onClick={() => handleTabChange(option.key)}
@@ -96,52 +120,44 @@ export function MotionTabs({
         })}
 
         {/* 活动指示器 */}
-        {activeTab && (
+        {activeTab ? (
           <motion.div
             className={cn(
-              'absolute inset-0 z-4 rounded-md bg-white shadow-[0_2px_8px_hsla(var(--foreground)_/_0.06)] my-2',
+              "absolute inset-0 z-4 my-2 rounded-md bg-white shadow-[0_2px_8px_hsla(var(--foreground)_/_0.06)]",
               indicatorClassName
             )}
             initial={false}
-            animate={{
-              ...getTabDimensions(activeTab),
-              width: getTabDimensions(activeTab).width || 0
-            }}
+            animate={dimensions.active}
             transition={{
-              type: 'spring',
+              type: "spring",
               stiffness: 500,
-              damping: 30
+              damping: 30,
             }}
           />
-        )}
+        ) : null}
 
         {/* 悬停指示器 */}
-        {hoveredTab && hoveredTab !== activeTab && (
+        {hoveredTab && hoveredTab !== activeTab ? (
           <motion.div
             className={cn(
-              'absolute inset-0 z-0 rounded-md bg-white/60 my-2',
+              "absolute inset-0 z-0 my-2 rounded-md bg-white/60",
               hoverIndicatorClassName
             )}
             initial={{ opacity: 0 }}
-            animate={{
-              opacity: 1,
-              ...getTabDimensions(hoveredTab),
-              width: getTabDimensions(hoveredTab).width || 0,
-              x: getTabDimensions(hoveredTab).x || 0
-            }}
+            animate={{ opacity: 1, ...dimensions.hovered }}
             transition={{
-              type: 'spring',
+              type: "spring",
               stiffness: 500,
-              damping: 30
+              damping: 30,
             }}
           />
-        )}
+        ) : null}
       </div>
 
       {/* 内容区域 */}
-      {showContent && (
+      {showContent ? (
         <div className="mt-4">{options.find(option => option.key === activeTab)?.content}</div>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -1,13 +1,10 @@
-import {
-  DEFAULT_GRID,
-  deriveGridPlan,
-  type GridPlan,
-  type GridSettings,
-} from "@/pages/project/model/grid"
+import { DEFAULT_GRID, deriveGridPlan } from "@/pages/project/model/grid"
+import type { GridPlan, GridSettings } from "@/pages/project/model/grid"
 import type {
   AutomationLane,
   LoopRegion,
   Marker,
+  ProjectPreview,
   SessionState,
   TimeSelection,
   Track,
@@ -40,9 +37,9 @@ export interface SceneMusic {
   bars: number
   grid: GridSettings
   transport: { bpm: number; numerator: number; denominator: number }
-  markers: ReadonlyArray<Marker>
+  markers: readonly Marker[]
   loop: LoopRegion
-  tracks: ReadonlyArray<Track>
+  tracks: readonly Track[]
 }
 
 export interface ArrangementScene extends SceneMusic {
@@ -50,10 +47,10 @@ export interface ArrangementScene extends SceneMusic {
   gridPlan: GridPlan
   playback: Pick<SessionState, "playing" | "insertionPoint">
   viewport: ArrangementViewport
-  previewTracks: ReadonlyArray<Track> | null
+  previewTracks: readonly Track[] | null
   clipDrag: { source: readonly Track[]; ids: ReadonlySet<string> } | null
   clipResize: { id: string; edge: "left" | "right" } | null
-  previewMarkers: ReadonlyArray<Marker> | null
+  previewMarkers: readonly Marker[] | null
   previewLoop: LoopRegion | null
   selectedClipIds: ReadonlySet<string>
   selectedTrackIds: ReadonlySet<string>
@@ -64,22 +61,20 @@ export interface ArrangementScene extends SceneMusic {
 }
 
 export interface SceneStore {
-  get(): ArrangementScene
-  subscribe(listener: (scene: ArrangementScene) => void): () => void
-  setViewport(viewport: ArrangementViewport): void
-  setMusic(input: SceneMusic): void
-  setPlayback(playback: ArrangementScene["playback"]): void
-  setSelection(ids: ReadonlySet<string>): void
-  setTrackSelection(ids: ReadonlySet<string>): void
-  setPreviewTracks(tracks: ReadonlyArray<Track> | null): void
-  setClipDrag(drag: ArrangementScene["clipDrag"]): void
-  setClipResize(resize: ArrangementScene["clipResize"]): void
-  setPreviewMarkers(markers: ReadonlyArray<Marker> | null): void
-  setPreviewLoop(loop: LoopRegion | null): void
-  setTargetSelection(selection: CanvasTargetSelection): void
-  setAutomationParameters(parameters: ArrangementScene["automationParameters"]): void
-  setHover(hover: ArrangementScene["hoverClip"]): void
-  setTimeSelection(selection: TimeSelection | null): void
+  get: () => ArrangementScene
+  subscribe: (listener: (scene: ArrangementScene) => void) => () => void
+  setViewport: (viewport: ArrangementViewport) => void
+  setMusic: (input: SceneMusic) => void
+  setPlayback: (playback: ArrangementScene["playback"]) => void
+  setSelection: (ids: ReadonlySet<string>) => void
+  setTrackSelection: (ids: ReadonlySet<string>) => void
+  setProjectPreview: (preview: ProjectPreview | null) => void
+  setClipDrag: (drag: ArrangementScene["clipDrag"]) => void
+  setClipResize: (resize: ArrangementScene["clipResize"]) => void
+  setTargetSelection: (selection: CanvasTargetSelection) => void
+  setAutomationParameters: (parameters: ArrangementScene["automationParameters"]) => void
+  setHover: (hover: ArrangementScene["hoverClip"]) => void
+  setTimeSelection: (selection: TimeSelection | null) => void
 }
 
 export function createSceneStore(): SceneStore {
@@ -112,7 +107,9 @@ export function createSceneStore(): SceneStore {
   const listeners = new Set<(scene: ArrangementScene) => void>()
   function bump(next: ArrangementScene) {
     scene = { ...next, revision: scene.revision + 1 }
-    for (const listener of listeners) listener(scene)
+    for (const listener of listeners) {
+      listener(scene)
+    }
   }
   return {
     get: () => scene,
@@ -123,7 +120,9 @@ export function createSceneStore(): SceneStore {
       }
     },
     setViewport(viewport) {
-      if (viewportEquals(scene.viewport, viewport)) return
+      if (viewportEquals(scene.viewport, viewport)) {
+        return
+      }
       bump({
         ...scene,
         viewport,
@@ -141,12 +140,15 @@ export function createSceneStore(): SceneStore {
         previous.playing === playback.playing &&
         previous.insertionPoint?.trackId === playback.insertionPoint?.trackId &&
         previous.insertionPoint?.bar === playback.insertionPoint?.bar
-      )
+      ) {
         return
+      }
       bump({ ...scene, playback })
     },
     setMusic(input) {
-      if (musicEquals(source, input)) return
+      if (musicEquals(source, input)) {
+        return
+      }
       source = input
       bump({
         ...scene,
@@ -162,50 +164,74 @@ export function createSceneStore(): SceneStore {
         loop: scene.previewLoop ?? input.loop,
       })
     },
-    setPreviewTracks(tracks) {
-      if (scene.previewTracks === tracks) return
-      bump({ ...scene, previewTracks: tracks, tracks: tracks ?? source.tracks })
+    setProjectPreview(preview) {
+      const previewTracks = preview?.kind === "tracks" ? preview.tracks : null
+      const previewMarkers = preview?.kind === "markers" ? preview.markers : null
+      const previewLoop = preview?.kind === "loop" ? preview.loop : null
+      if (
+        scene.previewTracks === previewTracks &&
+        scene.previewMarkers === previewMarkers &&
+        scene.previewLoop === previewLoop
+      ) {
+        return
+      }
+      bump({
+        ...scene,
+        previewTracks,
+        previewMarkers,
+        previewLoop,
+        tracks: previewTracks ?? source.tracks,
+        markers: previewMarkers ?? source.markers,
+        loop: previewLoop ?? source.loop,
+      })
     },
     setClipDrag(clipDrag) {
-      if (scene.clipDrag === clipDrag) return
+      if (scene.clipDrag === clipDrag) {
+        return
+      }
       bump({ ...scene, clipDrag })
     },
     setClipResize(clipResize) {
-      if (scene.clipResize?.id === clipResize?.id && scene.clipResize?.edge === clipResize?.edge)
+      if (scene.clipResize?.id === clipResize?.id && scene.clipResize?.edge === clipResize?.edge) {
         return
+      }
       bump({ ...scene, clipResize })
     },
-    setPreviewMarkers(markers) {
-      if (scene.previewMarkers === markers) return
-      bump({ ...scene, previewMarkers: markers, markers: markers ?? source.markers })
-    },
-    setPreviewLoop(loop) {
-      if (scene.previewLoop === loop) return
-      bump({ ...scene, previewLoop: loop, loop: loop ?? source.loop })
-    },
     setTargetSelection(selection) {
-      if (targetEquals(scene.targetSelection, selection)) return
+      if (targetEquals(scene.targetSelection, selection)) {
+        return
+      }
       bump({ ...scene, targetSelection: selection })
     },
     setAutomationParameters(parameters) {
-      if (scene.automationParameters === parameters) return
+      if (scene.automationParameters === parameters) {
+        return
+      }
       bump({ ...scene, automationParameters: parameters })
     },
     setSelection(ids) {
-      if (setEquals(scene.selectedClipIds, ids)) return
+      if (setEquals(scene.selectedClipIds, ids)) {
+        return
+      }
       bump({ ...scene, selectedClipIds: ids })
     },
     setTrackSelection(ids) {
-      if (setEquals(scene.selectedTrackIds, ids)) return
+      if (setEquals(scene.selectedTrackIds, ids)) {
+        return
+      }
       bump({ ...scene, selectedTrackIds: ids })
     },
     setHover(hover) {
-      if (scene.hoverClip?.id === hover?.id && scene.hoverClip?.region === hover?.region) return
+      if (scene.hoverClip?.id === hover?.id && scene.hoverClip?.region === hover?.region) {
+        return
+      }
       bump({ ...scene, hoverClip: hover })
     },
     setTimeSelection(selection) {
       const current = scene.timeSelection
-      if (current === selection) return
+      if (current === selection) {
+        return
+      }
       if (
         current &&
         selection &&
@@ -213,8 +239,9 @@ export function createSceneStore(): SceneStore {
         current.endBar === selection.endBar &&
         current.trackIds.length === selection.trackIds.length &&
         current.trackIds.every((id, index) => id === selection.trackIds[index])
-      )
+      ) {
         return
+      }
       bump({ ...scene, timeSelection: selection })
     },
   }
@@ -245,21 +272,32 @@ function musicEquals(a: SceneMusic, b: SceneMusic): boolean {
 }
 
 function setEquals<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {
-  return a === b || (a.size === b.size && [...a].every(value => b.has(value)))
+  if (a === b) return true
+  if (a.size !== b.size) return false
+  for (const value of a) {
+    if (!b.has(value)) return false
+  }
+  return true
 }
 
 function targetEquals(a: CanvasTargetSelection, b: CanvasTargetSelection): boolean {
-  if (a === b) return true
+  if (a === b) {
+    return true
+  }
   switch (a.kind) {
-    case "none":
+    case "none": {
       return b.kind === "none"
-    case "loop":
+    }
+    case "loop": {
       return b.kind === "loop"
-    case "clip":
+    }
+    case "clip": {
       return b.kind === "clip" && a.id === b.id && a.phase === b.phase
-    case "marker":
+    }
+    case "marker": {
       return b.kind === "marker" && a.id === b.id && a.phase === b.phase
-    case "automation":
+    }
+    case "automation": {
       return (
         b.kind === "automation" &&
         a.trackId === b.trackId &&
@@ -267,7 +305,8 @@ function targetEquals(a: CanvasTargetSelection, b: CanvasTargetSelection): boole
         a.pointIds.length === b.pointIds.length &&
         a.pointIds.every((id, index) => id === b.pointIds[index])
       )
-    case "automation-value":
+    }
+    case "automation-value": {
       return (
         b.kind === "automation-value" &&
         a.trackId === b.trackId &&
@@ -276,6 +315,7 @@ function targetEquals(a: CanvasTargetSelection, b: CanvasTargetSelection): boole
         a.pointIds.length === b.pointIds.length &&
         a.pointIds.every((id, index) => id === b.pointIds[index])
       )
+    }
   }
 }
 

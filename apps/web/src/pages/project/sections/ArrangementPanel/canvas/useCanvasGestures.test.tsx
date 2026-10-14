@@ -2,33 +2,53 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { act, cleanup, fireEvent, render } from "@testing-library/react"
 import { useRef } from "react"
-import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
+import {
+  hydrateProject,
+  projectActions,
+  startProjectRuntime,
+  useProjectState,
+} from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
-import { TRACK_TITLE_HEIGHT } from "@/pages/project/model/selectors"
+import { TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
+import { useArrangementKeyboard } from "../Timeline/useArrangementKeyboard"
 import { arrangementScene } from "./scene"
 import { layoutTrackRows, clipRect } from "./layout"
 import { useCanvasGestures } from "./useCanvasGestures"
-import { useArrangementKeyboard } from "../Timeline/useArrangementKeyboard"
+
+let releaseRuntime: (() => void) | undefined
 
 function Canvas() {
-  const ref = useRef<HTMLDivElement>(null)
-  useCanvasGestures(ref)
-  return <div ref={ref} data-testid="host" data-arrangement-canvas-host />
+  const reference = useRef<HTMLDivElement>(null)
+  useCanvasGestures(reference)
+  return <div ref={reference} data-testid="host" data-arrangement-canvas-host />
 }
 
 function KeyboardCanvas() {
-  const ref = useRef<HTMLDivElement>(null)
-  useCanvasGestures(ref)
+  const reference = useRef<HTMLDivElement>(null)
+  useCanvasGestures(reference)
   useArrangementKeyboard()
-  return <div ref={ref} data-testid="host" data-arrangement-canvas-host tabIndex={0} />
+  return (
+    <div
+      ref={reference}
+      data-testid="host"
+      data-arrangement-canvas-host
+      role="application"
+      aria-label="Arrangement canvas keyboard surface"
+      tabIndex={0}
+    />
+  )
 }
 
 function pointFor(id: string, xOffset: number, yOffset: number) {
   const scene = arrangementScene.get()
   const row = layoutTrackRows(scene).find(row => row.track.clips.some(clip => clip.id === id))
-  if (!row) throw new Error(`No visible clip ${id}`)
+  if (!row) {
+    throw new Error(`No visible clip ${id}`)
+  }
   const clip = row.track.clips.find(clip => clip.id === id)
-  if (!clip) throw new Error(`No clip ${id}`)
+  if (!clip) {
+    throw new Error(`No clip ${id}`)
+  }
   const rect = clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
   return { clientX: rect.left + xOffset, clientY: rect.top + yOffset, pointerId: 7, button: 0 }
 }
@@ -45,7 +65,7 @@ beforeEach(() => {
     JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
   )
   const state = useProjectState.getState()
-  arrangementScene.setPreviewTracks(null)
+  arrangementScene.setProjectPreview(null)
   arrangementScene.setMusic({
     bars: 128,
     grid: state.workspace.grid,
@@ -80,7 +100,9 @@ beforeEach(() => {
 })
 afterEach(() => {
   cleanup()
-  arrangementScene.setPreviewTracks(null)
+  releaseRuntime?.()
+  releaseRuntime = undefined
+  arrangementScene.setProjectPreview(null)
 })
 
 describe("canvas clip gestures", () => {
@@ -108,7 +130,9 @@ describe("canvas clip gestures", () => {
     const host = getByTestId("host")
     const start = pointFor("audio-1", 24, 7)
     const original = clipById("audio-1")
-    if (!original) throw new Error("Missing audio fixture")
+    if (!original) {
+      throw new Error("Missing audio fixture")
+    }
     const baseline = useProjectState.getState().document.tracks.flatMap(track => track.clips).length
     act(() => {
       fireEvent.pointerDown(host, start)
@@ -136,7 +160,9 @@ describe("canvas clip gestures", () => {
     const host = getByTestId("host")
     const edge = pointFor("audio-1", 3, 50)
     const original = clipById("audio-1")
-    if (!original) throw new Error("Missing audio fixture")
+    if (!original) {
+      throw new Error("Missing audio fixture")
+    }
     act(() => {
       fireEvent.pointerDown(host, edge)
       fireEvent.pointerMove(host, { ...edge, clientX: edge.clientX + 2 })
@@ -163,13 +189,17 @@ describe("canvas clip gestures", () => {
     const track = useProjectState
       .getState()
       .document.tracks.find(track => track.clips.some(clip => clip.id === "audio-1"))
-    if (!track) throw new Error("Missing audio fixture")
+    if (!track) {
+      throw new Error("Missing audio fixture")
+    }
     projectActions.createClip(track.id, "audio", 20, 2)
     const added = useProjectState
       .getState()
       .document.tracks.find(item => item.id === track.id)
       ?.clips.at(-1)
-    if (!added) throw new Error("Missing new clip")
+    if (!added) {
+      throw new Error("Missing new clip")
+    }
     arrangementScene.setMusic({
       bars: 128,
       grid: { mode: "fixed", bars: 1 },
@@ -200,7 +230,9 @@ describe("canvas clip gestures", () => {
     const baseline = clipById("audio-1")?.startBar
     const start = pointFor("audio-1", 24, 7)
     const midiRow = layoutTrackRows(arrangementScene.get()).find(row => row.track.id === "4-midi")
-    if (!midiRow) throw new Error("Missing midi row")
+    if (!midiRow) {
+      throw new Error("Missing midi row")
+    }
     act(() => {
       fireEvent.pointerDown(host, start)
       fireEvent.pointerMove(host, {
@@ -219,7 +251,9 @@ describe("canvas clip gestures", () => {
     const target = useProjectState
       .getState()
       .document.tracks.find(track => track.kind === "audio" && track.id !== "3-audio")
-    if (!target) throw new Error("Missing new audio lane")
+    if (!target) {
+      throw new Error("Missing new audio lane")
+    }
     const state = useProjectState.getState()
     arrangementScene.setMusic({
       bars: 128,
@@ -230,7 +264,9 @@ describe("canvas clip gestures", () => {
       tracks: state.document.tracks,
     })
     const row = layoutTrackRows(arrangementScene.get()).find(row => row.track.id === target.id)
-    if (!row) throw new Error("Missing target row")
+    if (!row) {
+      throw new Error("Missing target row")
+    }
     act(() => {
       fireEvent.pointerDown(host, start)
       fireEvent.pointerMove(host, { ...start, clientX: start.clientX + 64, clientY: row.top + 30 })
@@ -331,7 +367,9 @@ it("clamps a selected group at the project start without collapsing its relative
   projectActions.createClip("3-audio", "audio", 20, 2)
   const state = useProjectState.getState()
   const added = state.document.tracks.find(track => track.id === "3-audio")?.clips.at(-1)
-  if (!added) throw new Error("Missing selected clip")
+  if (!added) {
+    throw new Error("Missing selected clip")
+  }
   arrangementScene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 1 },
@@ -387,4 +425,69 @@ it("toggles playback during a clip drag without cancelling its live preview", ()
   expect(clipById("audio-1")?.startBar).toBe(1)
   act(() => fireEvent.pointerUp(host, { ...start, clientX: start.clientX + 64 }))
   expect(clipById("audio-1")?.startBar).toBe(3)
+})
+
+it("retains recorded notes when a clip drag returns to its origin and continues", () => {
+  releaseRuntime = startProjectRuntime()
+  const host = render(<Canvas />).getByTestId("host")
+  const start = pointFor("audio-1", 24, 7)
+  act(() => {
+    projectActions.toggleRecording()
+    projectActions.togglePlay()
+    fireEvent.pointerDown(host, start)
+    fireEvent.pointerMove(host, { ...start, clientX: start.clientX + 128 })
+    projectActions.noteOn(82)
+    fireEvent.pointerMove(host, start)
+    fireEvent.pointerMove(host, { ...start, clientX: start.clientX + 256 })
+    fireEvent.pointerUp(host, { ...start, clientX: start.clientX + 256 })
+  })
+  expect(clipById("audio-1")?.startBar).toBe(9)
+  expect(clipById("trager-1")).toMatchObject({
+    notes: expect.arrayContaining([expect.objectContaining({ pitch: 82 })]),
+  })
+})
+
+it("cancels an active canvas drag when a new project reuses track IDs", () => {
+  const host = render(<Canvas />).getByTestId("host")
+  const start = pointFor("audio-1", 24, 7)
+  act(() => {
+    fireEvent.pointerDown(host, start)
+    fireEvent.pointerMove(host, { ...start, clientX: start.clientX + 128 })
+    fireEvent.pointerMove(host, start)
+  })
+  act(() => {
+    const document = createMockDocument()
+    document.name = "New session"
+    document.tracks = document.tracks.map(track => ({ ...track, clips: [] }))
+    hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
+  })
+  act(() => {
+    fireEvent.pointerMove(host, { ...start, clientX: start.clientX + 256 })
+    fireEvent.pointerUp(host, { ...start, clientX: start.clientX + 256 })
+  })
+  expect(useProjectState.getState().document.name).toBe("New session")
+  expect(useProjectState.getState().document.tracks.flatMap(track => track.clips)).toEqual([])
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("does not restore an old ruler seek into a newly hydrated project", () => {
+  const host = render(<Canvas />).getByTestId("host")
+  act(() => {
+    projectActions.seekBar(20)
+    fireEvent.pointerDown(host, { clientX: 320, clientY: 1, pointerId: 7, button: 0 })
+    fireEvent.pointerMove(host, { clientX: 384, clientY: 1, pointerId: 7, button: 0 })
+  })
+  expect(useProjectState.getState().session.position.bar).not.toBe(20)
+  act(() =>
+    hydrateProject(
+      JSON.stringify({
+        version: 2,
+        document: createMockDocument(),
+        workspace: createMockWorkspace(),
+      })
+    )
+  )
+  act(() => fireEvent.pointerCancel(host, { clientX: 384, clientY: 1, pointerId: 7, button: 0 }))
+  expect(useProjectState.getState().session.position.bar).toBe(1)
+  expect(useProjectState.getState().session.insertionPoint).toBeNull()
 })

@@ -7,8 +7,11 @@ const { openUrl } = vi.hoisted(() => ({ openUrl: vi.fn() }))
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl }))
 function setTauriRuntime(enabled: boolean): void {
   const runtimeWindow = window as Window & { __TAURI_INTERNALS__?: object }
-  if (enabled) runtimeWindow.__TAURI_INTERNALS__ = {}
-  else delete runtimeWindow.__TAURI_INTERNALS__
+  if (enabled) {
+    runtimeWindow.__TAURI_INTERNALS__ = {}
+  } else {
+    delete runtimeWindow.__TAURI_INTERNALS__
+  }
 }
 
 afterEach(() => {

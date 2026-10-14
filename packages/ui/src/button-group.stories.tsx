@@ -1,14 +1,14 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { ButtonGroup, ButtonGroupSeparator, ButtonGroupText } from './button-group'
-import { Button } from './button'
+import { ButtonGroup, ButtonGroupSeparator, ButtonGroupText } from "./button-group"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof ButtonGroup> = {
-  title: 'Layout/ButtonGroup',
+  title: "Layout/ButtonGroup",
   component: ButtonGroup,
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
-    orientation: { control: 'select', options: ['horizontal', 'vertical'] }
-  }
+    orientation: { control: "select", options: ["horizontal", "vertical"] },
+  },
 }
 
 export default meta
@@ -21,7 +21,7 @@ export const Default: Story = {
       <Button variant="outline">中</Button>
       <Button variant="outline">右</Button>
     </ButtonGroup>
-  )
+  ),
 }
 
 export const WithText: Story = {
@@ -32,7 +32,7 @@ export const WithText: Story = {
       <Button variant="outline">邀请</Button>
       <Button variant="outline">复制链接</Button>
     </ButtonGroup>
-  )
+  ),
 }
 
 export const Vertical: Story = {
@@ -42,5 +42,5 @@ export const Vertical: Story = {
       <Button variant="outline">中</Button>
       <Button variant="outline">下</Button>
     </ButtonGroup>
-  )
+  ),
 }

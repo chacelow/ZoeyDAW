@@ -4,19 +4,19 @@
  * This file is the source of truth for this namespace.
  */
 
-import common from './common'
-import language from './language'
-import errors from './errors'
-import auth from './auth'
-import org from './org'
-import onboarding from './onboarding'
-import project from './project'
-import feishu from './feishu'
-import oauth from './oauth'
-import account from './account'
-import orgSettings from './orgSettings'
-import ui from './ui'
-import appLauncher from './appLauncher'
+import common from "./common"
+import language from "./language"
+import errors from "./errors"
+import auth from "./auth"
+import org from "./org"
+import onboarding from "./onboarding"
+import project from "./project"
+import feishu from "./feishu"
+import oauth from "./oauth"
+import account from "./account"
+import orgSettings from "./orgSettings"
+import ui from "./ui"
+import appLauncher from "./appLauncher"
 
 export default {
   common,
@@ -31,5 +31,5 @@ export default {
   account,
   orgSettings,
   ui,
-  appLauncher
+  appLauncher,
 } as const

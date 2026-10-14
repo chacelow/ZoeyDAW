@@ -1,12 +1,24 @@
-import { useMemo, type ReactNode } from "react"
+import { useMemo } from "react"
 import { hasNativeCursor, moveWindowCursor } from "@/shared/native/cursor"
-import { ControlEnvironmentProvider, type ControlEnvironment } from "@zoeymind/ui"
-import { useInfoHover } from "@/pages/project/stores/useInfoHover"
-import { useMappingMode } from "@/pages/project/stores/useMappingMode"
+import { ControlEnvironmentProvider } from "@zoeymind/ui"
+import {
+  ControlInteractionsProvider,
+  useControlInteractions,
+} from "@/shared/control-interactions/index"
+import type { ControlEnvironment } from "@zoeymind/ui"
+import type { ReactNode } from "react"
 
-export function SharedControlBridgeProvider({ children }: { children: ReactNode }) {
-  const setInfo = useInfoHover(state => state.setInfo)
-  const mappingActive = useMappingMode(state => state.active)
+export function SharedControlBridgeProvider({ children }: { readonly children: ReactNode }) {
+  return (
+    <ControlInteractionsProvider>
+      <ControlEnvironmentBridge>{children}</ControlEnvironmentBridge>
+    </ControlInteractionsProvider>
+  )
+}
+
+export function ControlEnvironmentBridge({ children }: { readonly children: ReactNode }) {
+  const setInfo = useControlInteractions(state => state.setInfo)
+  const mappingActive = useControlInteractions(state => state.mappingActive)
   const value = useMemo<ControlEnvironment>(
     () => ({
       setInfo,

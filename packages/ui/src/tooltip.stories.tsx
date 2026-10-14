@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { InfoIcon } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip'
-import { Button } from './button'
+import { InfoIcon } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Tooltip> = {
-  title: 'Overlay/Tooltip',
+  title: "Overlay/Tooltip",
   component: Tooltip,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -24,5 +24,5 @@ export const Default: Story = {
       />
       <TooltipContent>只有创建者可以删除项目</TooltipContent>
     </Tooltip>
-  )
+  ),
 }

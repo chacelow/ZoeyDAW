@@ -5,7 +5,7 @@
  *
  *   root = flex-col bg-background
  *   ├─ TransportBar                    (融背景，无 border 无圆角)
- *   ├─ inner wrapper                   (px/pb/gap = 7px)
+ *   ├─ inner wrapper                   (px/pb/gap = panel-gap token)
  *   │   ├─ Group vertical
  *   │   │   ├─ Panel 78% (top row)
  *   │   │   │   └─ Group horizontal
@@ -30,9 +30,9 @@ import type { ProjectShellApi } from "./useProjectShell"
 import "./project.css"
 
 export interface ProjectLayoutProps {
-  projectId: string
-  shell: ProjectShellApi
-  onBack: () => void
+  readonly projectId: string
+  readonly shell: ProjectShellApi
+  readonly onBack: () => void
 }
 
 export function ProjectLayout({ projectId, shell, onBack }: ProjectLayoutProps) {
@@ -40,7 +40,6 @@ export function ProjectLayout({ projectId, shell, onBack }: ProjectLayoutProps) 
   const {
     activeSection,
     setActiveSection,
-    browserCollapsed,
     footerCollapsed,
     setBrowserCollapsed,
     setFooterCollapsed,
@@ -51,15 +50,10 @@ export function ProjectLayout({ projectId, shell, onBack }: ProjectLayoutProps) 
   } = shell
 
   return (
-    <div className="flex h-full flex-col bg-card text-foreground">
-      <TransportBar
-        projectId={projectId}
-        onBack={onBack}
-        browserCollapsed={browserCollapsed}
-        onToggleBrowser={toggleBrowser}
-      />
+    <div className="bg-card text-foreground flex h-full flex-col">
+      <TransportBar onBack={onBack} onToggleBrowser={toggleBrowser} />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-[7px] px-[7px] pt-[7px] pb-[7px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-[var(--project-panel-gap)] px-[var(--project-panel-gap)] pt-[var(--project-panel-gap)] pb-[var(--project-panel-gap)]">
         <Group orientation="vertical" className="min-h-0 flex-1">
           <Panel defaultSize="78" minSize="40">
             <Group orientation="horizontal" className="h-full min-h-0">
@@ -82,7 +76,7 @@ export function ProjectLayout({ projectId, shell, onBack }: ProjectLayoutProps) 
                         <PanelDivider
                           orientation="vertical"
                           aria-label={t("project.browser.resizeColumns")}
-                          className="bg-transparent before:pointer-events-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:bg-border hover:before:bg-ring focus-visible:before:bg-ring"
+                          className="before:bg-border hover:before:bg-ring focus-visible:before:bg-ring bg-transparent before:pointer-events-none before:absolute before:inset-y-0 before:left-1/2 before:w-px"
                         />
                         <Panel defaultSize="68" minSize={140}>
                           {results}

@@ -1,6 +1,8 @@
 import type { DocumentState } from "@/pages/project/model/types"
 
-/** An empty authored project; demo tracks and clips are supplied only by the mock adapter. */
+/**
+An empty authored project; demo tracks and clips are supplied only by the mock adapter.
+*/
 export function initialDocument(): DocumentState {
   return {
     name: "未命名项目",

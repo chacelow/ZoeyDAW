@@ -25,11 +25,15 @@ export function useMidiKeyboard(): void {
   useEffect(() => {
     const held = new Map<string, number>()
     const release = () => {
-      for (const pitch of held.values()) projectActions.noteOff(pitch)
+      for (const pitch of held.values()) {
+        projectActions.noteOff(pitch)
+      }
       held.clear()
     }
     const unsubscribe = useProjectState.subscribe((state, previous) => {
-      if (previous.workspace.computerKeyboard && !state.workspace.computerKeyboard) release()
+      if (previous.workspace.computerKeyboard && !state.workspace.computerKeyboard) {
+        release()
+      }
     })
     const keyDown = (event: KeyboardEvent) => {
       if (
@@ -40,11 +44,14 @@ export function useMidiKeyboard(): void {
         event.altKey ||
         event.metaKey ||
         event.ctrlKey
-      )
+      ) {
         return
+      }
       const key = event.key.toLowerCase()
       if (key === "m") {
-        if (event.repeat) return
+        if (event.repeat) {
+          return
+        }
         event.preventDefault()
         projectActions.setMode(
           "computerKeyboard",
@@ -52,32 +59,44 @@ export function useMidiKeyboard(): void {
         )
         return
       }
-      if (!useProjectState.getState().workspace.computerKeyboard) return
+      if (!useProjectState.getState().workspace.computerKeyboard) {
+        return
+      }
       if (key === "z" || key === "x") {
-        if (event.repeat) return
+        if (event.repeat) {
+          return
+        }
         event.preventDefault()
         const octave = useProjectState.getState().session.midiOctave
         projectActions.setMidiOctave(octave + (key === "x" ? 1 : -1))
         return
       }
       if (key === "c" || key === "v") {
-        if (event.repeat) return
+        if (event.repeat) {
+          return
+        }
         event.preventDefault()
         const velocity = useProjectState.getState().session.midiVelocity
         projectActions.setMidiVelocity(velocity + (key === "v" ? 10 : -10))
         return
       }
       const semitone = noteKeys[key]
-      if (semitone === undefined || event.repeat || held.has(event.code)) return
+      if (semitone === undefined || event.repeat || held.has(event.code)) {
+        return
+      }
       const pitch = (useProjectState.getState().session.midiOctave + 1) * 12 + semitone
-      if (pitch > 127) return
+      if (pitch > 127) {
+        return
+      }
       event.preventDefault()
       held.set(event.code, pitch)
       projectActions.noteOn(pitch)
     }
     const keyUp = (event: KeyboardEvent) => {
       const pitch = held.get(event.code)
-      if (pitch === undefined) return
+      if (pitch === undefined) {
+        return
+      }
       event.preventDefault()
       held.delete(event.code)
       projectActions.noteOff(pitch)

@@ -38,27 +38,25 @@
  * 两 hook 内部走同一 nuqs URL 状态 (query key 相同), 是幂等的 —— 双读不冲突.
  */
 
-import * as React from 'react'
-import type { ColumnFiltersState, SortingState, Table } from '@tanstack/react-table'
-import {
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  type SingleParser,
-  type UseQueryStateOptions,
-  useQueryState,
-  useQueryStates
-} from 'nuqs'
-import { useDataTable, type UseDataTableProps } from './use-data-table'
-import { getSortingStateParser } from './parsers'
+import * as React from "react"
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryState, useQueryStates } from "nuqs"
+import { useDataTable } from "./use-data-table"
+import { getSortingStateParser } from "./parsers"
+import type { SingleParser, UseQueryStateOptions } from "nuqs"
+import type { UseDataTableProps as UseDataTableProperties } from "./use-data-table"
+import type { ColumnFiltersState, SortingState, Table } from "@tanstack/react-table"
 
 export interface ServerQueryParams {
-  /** 1-based page number. */
+  /**
+  1-based page number.
+  */
   page: number
   pageSize: number
   sortBy?: string
-  sortOrder?: 'asc' | 'desc'
-  /** columnId -> filter value; select-类是 string[], text-类是 string. */
+  sortOrder?: "asc" | "desc"
+  /**
+  columnId -> filter value; select-类是 string[], text-类是 string.
+  */
   filters: Record<string, string | string[]>
   /**
    * 直接改写 URL 的 `page` —— 给无限滚动用（滚到底续接下一页 / 点页码跳页）。
@@ -75,13 +73,21 @@ export interface ServerQueryParams {
 }
 
 export interface UseDataTableQueryParamsProps {
-  /** 可排序的列 id (与 useServerDataTable 传入 columns 的 enableSorting=true 列一致). */
+  /**
+  可排序的列 id (与 useServerDataTable 传入 columns 的 enableSorting=true 列一致).
+  */
   sortableIds?: readonly string[]
-  /** 可过滤的列 id (enableColumnFilter=true 列). */
+  /**
+  可过滤的列 id (enableColumnFilter=true 列).
+  */
   filterableIds?: readonly string[]
-  /** 其中哪些是 select/multiSelect variant (URL 值存为逗号分隔数组). 其余按 text (标量) 读. */
+  /**
+  其中哪些是 select/multiSelect variant (URL 值存为逗号分隔数组). 其余按 text (标量) 读.
+  */
   selectFilterIds?: readonly string[]
-  /** 默认页尺寸. */
+  /**
+  默认页尺寸.
+  */
   defaultPageSize?: number
 }
 
@@ -90,47 +96,50 @@ export interface UseDataTableQueryParamsProps {
  * caller 用返回值发 useQuery, 再把 data 传给 useServerDataTable.
  */
 export function useDataTableQueryParams(
-  props: UseDataTableQueryParamsProps = {}
+  properties: UseDataTableQueryParamsProps = {}
 ): ServerQueryParams {
-  const { sortableIds = [], filterableIds = [], selectFilterIds = [], defaultPageSize = 10 } = props
+  const {
+    sortableIds = [],
+    filterableIds = [],
+    selectFilterIds = [],
+    defaultPageSize = 10,
+  } = properties
 
-  const queryStateOptions: Omit<UseQueryStateOptions<string>, 'parse'> = React.useMemo(
-    () => ({ history: 'replace', scroll: false, shallow: true, clearOnDefault: false }),
+  const queryStateOptions: Omit<UseQueryStateOptions<string>, "parse"> = React.useMemo(
+    () => ({ history: "replace", scroll: false, shallow: true, clearOnDefault: false }),
     []
   )
 
   const [page, setPageState] = useQueryState(
-    'page',
+    "page",
     parseAsInteger.withOptions(queryStateOptions).withDefault(1)
   )
   const [perPage] = useQueryState(
-    'perPage',
+    "perPage",
     parseAsInteger.withOptions(queryStateOptions).withDefault(defaultPageSize)
   )
   const sortableSet = React.useMemo(() => new Set<string>(sortableIds), [sortableIds])
   const [sortState] = useQueryState(
-    'sort',
+    "sort",
     getSortingStateParser<Record<string, unknown>>(sortableSet)
       .withOptions(queryStateOptions)
       .withDefault([])
   )
 
   const filterParsers = React.useMemo(() => {
-    const acc: Record<string, SingleParser<string> | SingleParser<string[]>> = {}
+    const accumulator: Record<string, SingleParser<string> | SingleParser<string[]>> = {}
     for (const id of filterableIds) {
-      if (selectFilterIds.includes(id)) {
-        acc[id] = parseAsArrayOf(parseAsString, ',').withOptions(queryStateOptions)
-      } else {
-        acc[id] = parseAsString.withOptions(queryStateOptions)
-      }
+      accumulator[id] = selectFilterIds.includes(id)
+        ? parseAsArrayOf(parseAsString, ",").withOptions(queryStateOptions)
+        : parseAsString.withOptions(queryStateOptions)
     }
-    return acc
+    return accumulator
   }, [filterableIds, selectFilterIds, queryStateOptions])
 
   const [filterValues] = useQueryStates(filterParsers)
 
   const [, setSortState] = useQueryState(
-    'sort',
+    "sort",
     getSortingStateParser<Record<string, unknown>>(sortableSet)
       .withOptions(queryStateOptions)
       .withDefault([])
@@ -144,8 +153,10 @@ export function useDataTableQueryParams(
   return React.useMemo(() => {
     const filters: Record<string, string | string[]> = {}
     for (const [id, v] of Object.entries(filterValues)) {
-      if (v === null || v === undefined) continue
-      if (typeof v === 'string' || Array.isArray(v)) {
+      if (v === null || v === undefined) {
+        continue
+      }
+      if (typeof v === "string" || Array.isArray(v)) {
         filters[id] = v
       }
     }
@@ -154,19 +165,25 @@ export function useDataTableQueryParams(
       page,
       pageSize: perPage,
       sortBy: first?.id,
-      sortOrder: first ? (first.desc ? 'desc' : 'asc') : undefined,
+      sortOrder: first ? (first.desc ? "desc" : "asc") : undefined,
       filters,
       setPage,
-      setSort
+      setSort,
     }
   }, [page, perPage, sortState, filterValues, setPage, setSort])
 }
 
-export interface UseServerDataTableProps<TData>
-  extends Omit<UseDataTableProps<TData>, 'pageCount' | 'data'> {
-  /** tRPC 当前页数据 (可能 undefined). helper 内部 fallback 到稳定 [] 引用. */
+export interface UseServerDataTableProps<TData> extends Omit<
+  UseDataTableProperties<TData>,
+  "pageCount" | "data"
+> {
+  /**
+  tRPC 当前页数据 (可能 undefined). helper 内部 fallback 到稳定 [] 引用.
+  */
   data: TData[] | undefined
-  /** 后端返回的总行数 (可能 undefined). helper 内部 fallback 到 0. */
+  /**
+  后端返回的总行数 (可能 undefined). helper 内部 fallback 到 0.
+  */
   rowCount: number | undefined
 }
 
@@ -175,13 +192,15 @@ export interface UseServerDataTableReturn<TData> {
   queryParams: ServerQueryParams
 }
 
-/** 稳定空数组引用: never[] 是任意 T[] 的子类型, 单点局部化. */
+/**
+稳定空数组引用: never[] 是任意 T[] 的子类型, 单点局部化.
+*/
 const EMPTY_LIST: never[] = []
 
 export function useServerDataTable<TData>(
-  props: UseServerDataTableProps<TData>
+  properties: UseServerDataTableProps<TData>
 ): UseServerDataTableReturn<TData> {
-  const { data, rowCount, initialState, ...rest } = props
+  const { data, rowCount, initialState, ...rest } = properties
   const pageSizeInitial = initialState?.pagination?.pageSize ?? 10
 
   const rows: TData[] = data ?? EMPTY_LIST
@@ -192,7 +211,7 @@ export function useServerDataTable<TData>(
     ...rest,
     data: rows,
     initialState,
-    pageCount
+    pageCount,
   })
 
   const state: {
@@ -200,12 +219,12 @@ export function useServerDataTable<TData>(
     sorting: SortingState
     columnFilters: ColumnFiltersState
   } = table.getState()
-  const queryParams = React.useMemo<ServerQueryParams>(() => {
+  const queryParameters = React.useMemo<ServerQueryParams>(() => {
     const first = state.sorting[0]
     const filters: Record<string, string | string[]> = {}
     for (const f of state.columnFilters) {
       const v = f.value
-      if (typeof v === 'string' || Array.isArray(v)) {
+      if (typeof v === "string" || Array.isArray(v)) {
         filters[f.id] = v as string | string[]
       }
     }
@@ -213,19 +232,23 @@ export function useServerDataTable<TData>(
       page: state.pagination.pageIndex + 1,
       pageSize: state.pagination.pageSize,
       sortBy: first?.id,
-      sortOrder: first ? (first.desc ? 'desc' : 'asc') : undefined,
+      sortOrder: first ? (first.desc ? "desc" : "asc") : undefined,
       filters,
       // 这一份 queryParams 由 table 状态推导, 故翻页/排序都走 table 自身状态.
       setPage: (next: number) => table.setPageIndex(next - 1),
-      setSort: sort => table.setSorting(sort)
+      setSort: sort => table.setSorting(sort),
     }
   }, [state.pagination, state.sorting, state.columnFilters, table])
 
-  return { table, queryParams }
+  return { table, queryParams: queryParameters }
 }
 
-/** 取 filter value 的首个 (select-类是 string[], 后端多为标量). */
+/**
+取 filter value 的首个 (select-类是 string[], 后端多为标量).
+*/
 export function firstOrUndef(v: string | string[] | undefined): string | undefined {
-  if (v === undefined) return undefined
+  if (v === undefined) {
+    return undefined
+  }
   return Array.isArray(v) ? v[0] : v
 }

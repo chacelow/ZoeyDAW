@@ -7,7 +7,9 @@ export function serializeNotes(notes: readonly MidiNote[]): string {
 }
 
 export function parseNotes(text: string): MidiNote[] | null {
-  if (text.length > 250_000) return null
+  if (text.length > 250_000) {
+    return null
+  }
   let value: unknown
   try {
     value = JSON.parse(text)
@@ -25,8 +27,9 @@ export function parseNotes(text: string): MidiNote[] | null {
     !Array.isArray(value.notes) ||
     value.notes.length === 0 ||
     value.notes.length > 2048
-  )
+  ) {
     return null
+  }
   const notes: MidiNote[] = []
   for (const note of value.notes) {
     if (
@@ -51,8 +54,9 @@ export function parseNotes(text: string): MidiNote[] | null {
       note.velocity < 1 ||
       note.velocity > 127 ||
       ("id" in note && typeof note.id !== "string")
-    )
+    ) {
       return null
+    }
     notes.push({
       pitch: note.pitch,
       startBeat: note.startBeat,

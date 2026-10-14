@@ -1,6 +1,6 @@
-import { colorToHsl } from './color-converter'
-import { getShadowMap } from './shadows'
-import type { ThemePreset, ThemeStyleProps } from './theme-presets'
+import { colorToHsl } from "./color-converter"
+import { getShadowMap } from "./shadows"
+import type { ThemePreset, ThemeStyleProps as ThemeStyleProperties } from "./theme-presets"
 
 /**
  * All CSS variable keys that the theme system manages.
@@ -8,54 +8,54 @@ import type { ThemePreset, ThemeStyleProps } from './theme-presets'
  */
 export const MANAGED_KEYS = [
   // Color tokens
-  'background',
-  'foreground',
-  'card',
-  'card-foreground',
-  'popover',
-  'popover-foreground',
-  'primary',
-  'primary-foreground',
-  'secondary',
-  'secondary-foreground',
-  'muted',
-  'muted-foreground',
-  'accent',
-  'accent-foreground',
-  'destructive',
-  'destructive-foreground',
-  'border',
-  'input',
-  'ring',
-  'chart-1',
-  'chart-2',
-  'chart-3',
-  'chart-4',
-  'chart-5',
-  'sidebar',
-  'sidebar-foreground',
-  'sidebar-primary',
-  'sidebar-primary-foreground',
-  'sidebar-accent',
-  'sidebar-accent-foreground',
-  'sidebar-border',
-  'sidebar-ring',
+  "background",
+  "foreground",
+  "card",
+  "card-foreground",
+  "popover",
+  "popover-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+  "muted",
+  "muted-foreground",
+  "accent",
+  "accent-foreground",
+  "destructive",
+  "destructive-foreground",
+  "border",
+  "input",
+  "ring",
+  "chart-1",
+  "chart-2",
+  "chart-3",
+  "chart-4",
+  "chart-5",
+  "sidebar",
+  "sidebar-foreground",
+  "sidebar-primary",
+  "sidebar-primary-foreground",
+  "sidebar-accent",
+  "sidebar-accent-foreground",
+  "sidebar-border",
+  "sidebar-ring",
   // Non-color tokens
-  'radius',
-  'spacing',
-  'letter-spacing',
-  'font-sans',
-  'font-serif',
-  'font-mono',
+  "radius",
+  "spacing",
+  "letter-spacing",
+  "font-sans",
+  "font-serif",
+  "font-mono",
   // Shadow output keys
-  'shadow-2xs',
-  'shadow-xs',
-  'shadow-sm',
-  'shadow',
-  'shadow-md',
-  'shadow-lg',
-  'shadow-xl',
-  'shadow-2xl'
+  "shadow-2xs",
+  "shadow-xs",
+  "shadow-sm",
+  "shadow",
+  "shadow-md",
+  "shadow-lg",
+  "shadow-xl",
+  "shadow-2xl",
 ] as const
 
 /**
@@ -65,75 +65,78 @@ const COLOR_TOKENS: Record<string, true> = {
   background: true,
   foreground: true,
   card: true,
-  'card-foreground': true,
+  "card-foreground": true,
   popover: true,
-  'popover-foreground': true,
+  "popover-foreground": true,
   primary: true,
-  'primary-foreground': true,
+  "primary-foreground": true,
   secondary: true,
-  'secondary-foreground': true,
+  "secondary-foreground": true,
   muted: true,
-  'muted-foreground': true,
+  "muted-foreground": true,
   accent: true,
-  'accent-foreground': true,
+  "accent-foreground": true,
   destructive: true,
-  'destructive-foreground': true,
+  "destructive-foreground": true,
   border: true,
   input: true,
   ring: true,
-  'chart-1': true,
-  'chart-2': true,
-  'chart-3': true,
-  'chart-4': true,
-  'chart-5': true,
+  "chart-1": true,
+  "chart-2": true,
+  "chart-3": true,
+  "chart-4": true,
+  "chart-5": true,
   sidebar: true,
-  'sidebar-foreground': true,
-  'sidebar-primary': true,
-  'sidebar-primary-foreground': true,
-  'sidebar-accent': true,
-  'sidebar-accent-foreground': true,
-  'sidebar-border': true,
-  'sidebar-ring': true
+  "sidebar-foreground": true,
+  "sidebar-primary": true,
+  "sidebar-primary-foreground": true,
+  "sidebar-accent": true,
+  "sidebar-accent-foreground": true,
+  "sidebar-border": true,
+  "sidebar-ring": true,
 }
 
 /**
  * Apply a theme preset to the document root.
- * Converts color values via culori to HSL, sets non-color tokens verbatim,
- * and composes shadow variables from primitives.
+ * Converts color values via culori to HSL, sets non-color tokens verbatim, and composes shadow variables from primitives.
  */
 export function applyThemePreset(
   preset: ThemePreset,
-  mode: 'light' | 'dark',
+  mode: "light" | "dark",
   root: HTMLElement
 ): void {
-  const styles = mode === 'light' ? preset.styles.light : preset.styles.dark
+  const styles = mode === "light" ? preset.styles.light : preset.styles.dark
 
   // Always clear managed keys first
   clearManagedKeys(root)
 
   // Set color tokens (converted to HSL)
   for (const [key, value] of Object.entries(styles)) {
-    if (COLOR_TOKENS[key]) {
-      const hslValue = colorToHsl(value)
-      root.style.setProperty(`--${key}`, hslValue)
+    if (!Object.hasOwn(COLOR_TOKENS, key)) {
+      continue
     }
+
+    const hslValue = colorToHsl(value)
+    root.style.setProperty(`--${key}`, hslValue)
   }
 
   // Set non-color tokens verbatim
   const nonColorTokens = [
-    'radius',
-    'spacing',
-    'letter-spacing',
-    'font-sans',
-    'font-serif',
-    'font-mono'
+    "radius",
+    "spacing",
+    "letter-spacing",
+    "font-sans",
+    "font-serif",
+    "font-mono",
   ]
   for (const key of nonColorTokens) {
-    if (key in styles) {
-      const rawValue = styles[key as keyof ThemeStyleProps]
-      if (rawValue) {
-        root.style.setProperty(`--${key}`, rawValue)
-      }
+    if (!Object.hasOwn(styles, key)) {
+      continue
+    }
+
+    const rawValue = styles[key as keyof ThemeStyleProperties]
+    if (rawValue) {
+      root.style.setProperty(`--${key}`, rawValue)
     }
   }
 
@@ -159,10 +162,10 @@ export function clearManagedKeys(root: HTMLElement): void {
  */
 export function applyThemeOrClear(
   preset: ThemePreset | undefined,
-  mode: 'light' | 'dark',
+  mode: "light" | "dark",
   root: HTMLElement
 ): void {
-  if (!preset || preset.id === '') {
+  if (!preset || preset.id === "") {
     clearManagedKeys(root)
   } else {
     applyThemePreset(preset, mode, root)

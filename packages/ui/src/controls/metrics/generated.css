@@ -1,0 +1,42 @@
+/* Generated from control-metrics.json by packages/ui/scripts/control-metrics.mjs. Do not edit. */
+@theme inline {
+  --spacing-control-h: var(--spacing-control-track);
+  --spacing-control-compact: var(--spacing-control-track);
+  --spacing-control-track: 13px;
+  --spacing-control-track-gap: 4px;
+  --spacing-control-track-pad: 1.5px;
+  --spacing-control-gap: 2px;
+  --spacing-control-icon-slot: 10px;
+  --spacing-control-icon: 10px;
+  --text-control-track: 9px;
+  --spacing-control-pad-x: var(--spacing-control-track-pad);
+  --spacing-control-icon-compact: var(--spacing-control-icon);
+  --spacing-transport-icon: var(--spacing-control-icon);
+  --text-control: var(--text-control-track);
+  --text-control-compact: var(--text-control-track);
+  --text-control-compact--line-height: 1;
+  --text-control--line-height: 1;
+}
+
+:root {
+  --project-panel-gap: 7px;
+  --project-panel-border: 2px;
+  --project-group-rail-width: 7px;
+  --project-controls-width: 304px;
+  --project-identity-width: 100px;
+  --project-routing-width: 74px;
+  --project-transport-column-gap: 12px;
+  --project-transport-center-margin: 6px;
+  --project-default-track-height: 70px;
+  --project-track-border: 2px;
+}
+
+.project-transport {
+  --spacing-control-track: 20px;
+  --spacing-control-track-gap: 4px;
+  --spacing-control-track-pad: 2px;
+  --spacing-control-gap: 3px;
+  --spacing-control-icon-slot: 14px;
+  --spacing-control-icon: 14px;
+  --text-control-track: 12px;
+}

@@ -3,14 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createScheduler } from "./scheduler"
 
 describe("rAF scheduler", () => {
-  let callbacks: Array<(now: number) => void>
+  let callbacks: ((now: number) => void)[]
   let now: number
 
   beforeEach(() => {
     callbacks = []
     now = 0
-    vi.stubGlobal("requestAnimationFrame", (cb: (t: number) => void) => {
-      callbacks.push(cb)
+    vi.stubGlobal("requestAnimationFrame", (callback: (t: number) => void) => {
+      callbacks.push(callback)
       return callbacks.length
     })
     vi.stubGlobal("cancelAnimationFrame", (id: number) => {
@@ -25,7 +25,9 @@ describe("rAF scheduler", () => {
   function flush(nextNow = now + 16) {
     now = nextNow
     const pending = callbacks.splice(0)
-    for (const cb of pending) cb(now)
+    for (const callback of pending) {
+      callback(now)
+    }
   }
 
   it("paints a registered painter on the next frame and leaves it clean", () => {
@@ -55,7 +57,9 @@ describe("rAF scheduler", () => {
     const s = createScheduler()
     let left = 2
     const paint = vi.fn(() => {
-      if (--left > 0) s.invalidate("a")
+      if (--left > 0) {
+        s.invalidate("a")
+      }
     })
     s.register("a", paint)
     flush()

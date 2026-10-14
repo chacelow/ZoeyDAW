@@ -1,15 +1,18 @@
-import type { AutomationPoint } from "@/pages/project/model/types"
 import { clampAutomationValue } from "@/pages/project/model/automation-curve"
 import { uniqueId } from "@/pages/project/model/reducers"
-import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
-import { automationBar, automationValue, type AutomationRow } from "./geometry"
+import { beginProjectPreview, finishProjectPreview } from "../project-preview"
+import { automationBar, automationValue } from "./geometry"
 import { previewAutomation, sortedPoints } from "./preview"
+import type { AutomationRow } from "./geometry"
+import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
+import type { AutomationPoint } from "@/pages/project/model/types"
 
 export function drawGesture(
   context: InteractionContext,
   pointer: CanvasPointer,
   row: AutomationRow
 ): CanvasGesture {
+  beginProjectPreview(context)
   const grid = context.scene.get().gridPlan.cellBars
   const freehand = pointer.altKey || pointer.metaKey
   const original = row.lane?.points ?? []
@@ -29,8 +32,8 @@ export function drawGesture(
     )
     if (freehand) {
       const samples = Math.max(1, Math.ceil(Math.abs(current.x - last.x) / 3))
-      for (let i = 0; i <= samples; i++) {
-        const fraction = i / samples
+      for (let index = 0; index <= samples; index++) {
+        const fraction = index / samples
         const bar = fromBar + (toBar - fromBar) * fraction
         const existing = painted.get(bar)
         painted.set(bar, {
@@ -40,8 +43,8 @@ export function drawGesture(
         })
       }
       next = sortedPoints([
-        ...original.filter(
-          point => ![...painted.keys()].some(bar => Math.abs(point.bar - bar) < 0.000001)
+        ...original.filter(point =>
+          [...painted.keys()].every(bar => !(Math.abs(point.bar - bar) < 0.000001))
         ),
         ...painted.values(),
       ])
@@ -49,11 +52,9 @@ export function drawGesture(
       const startCell = Math.round((fromBar - 1) / grid)
       const endCell = Math.round((toBar - 1) / grid)
       const direction = Math.sign(endCell - startCell) || 1
-      for (
-        let cell = startCell;
-        direction > 0 ? cell <= endCell : cell >= endCell;
-        cell += direction
-      ) {
+      const cellCount = Math.abs(endCell - startCell)
+      for (let offset = 0; offset <= cellCount; offset++) {
+        const cell = startCell + offset * direction
         const bar = 1 + cell * grid
         const fraction =
           toBar === fromBar
@@ -68,8 +69,8 @@ export function drawGesture(
       }
       const cells = [...painted.values()]
       next = sortedPoints([
-        ...original.filter(
-          point => !cells.some(cell => point.bar >= cell.bar && point.bar < cell.bar + grid)
+        ...original.filter(point =>
+          cells.every(cell => !(point.bar >= cell.bar && point.bar < cell.bar + grid))
         ),
         ...cells.flatMap(cell => {
           const end = Math.min(
@@ -93,8 +94,7 @@ export function drawGesture(
       paint(current)
     },
     finish(cancelled) {
-      context.scene.setPreviewTracks(null)
-      if (!cancelled) context.actions.replaceAutomationPoints(row.track.id, row.laneId, next)
+      finishProjectPreview(context, cancelled)
     },
   }
 }

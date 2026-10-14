@@ -1,11 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { HoverCard, HoverCardContent, HoverCardTrigger } from './hover-card'
-import { Avatar, AvatarFallback } from './avatar'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "./hover-card"
+import { Avatar, AvatarFallback } from "./avatar"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof HoverCard> = {
-  title: 'Overlay/HoverCard',
+  title: "Overlay/HoverCard",
   component: HoverCard,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -29,10 +29,10 @@ export const Default: Story = {
           </Avatar>
           <div>
             <div className="text-sm font-medium">Zoey Mind</div>
-            <div className="text-xs text-muted-foreground">协作愉快</div>
+            <div className="text-muted-foreground text-xs">协作愉快</div>
           </div>
         </div>
       </HoverCardContent>
     </HoverCard>
-  )
+  ),
 }

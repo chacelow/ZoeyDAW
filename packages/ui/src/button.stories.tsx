@@ -1,27 +1,27 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { CheckIcon, Loader2Icon, TrashIcon } from 'lucide-react'
-import { Button } from './button'
+import { CheckIcon, Loader2Icon, TrashIcon } from "lucide-react"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Button> = {
-  title: 'Primitives/Button',
+  title: "Primitives/Button",
   component: Button,
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
     variant: {
-      control: 'select',
-      options: ['default', 'outline', 'secondary', 'ghost', 'destructive', 'link']
+      control: "select",
+      options: ["default", "outline", "secondary", "ghost", "destructive", "link"],
     },
     size: {
-      control: 'select',
-      options: ['default', 'xs', 'sm', 'lg', 'icon', 'icon-xs', 'icon-sm', 'icon-lg']
+      control: "select",
+      options: ["default", "xs", "sm", "lg", "icon", "icon-xs", "icon-sm", "icon-lg"],
     },
-    disabled: { control: 'boolean' }
+    disabled: { control: "boolean" },
   },
   args: {
-    children: 'Button',
-    variant: 'default',
-    size: 'default'
-  }
+    children: "Button",
+    variant: "default",
+    size: "default",
+  },
 }
 
 export default meta
@@ -39,7 +39,7 @@ export const Variants: Story = {
       <Button variant="destructive">Destructive</Button>
       <Button variant="link">Link</Button>
     </div>
-  )
+  ),
 }
 
 export const Sizes: Story = {
@@ -50,7 +50,7 @@ export const Sizes: Story = {
       <Button size="default">default</Button>
       <Button size="lg">lg</Button>
     </div>
-  )
+  ),
 }
 
 export const WithIcon: Story = {
@@ -64,11 +64,11 @@ export const WithIcon: Story = {
         <TrashIcon data-icon="inline-start" />
         Delete
       </Button>
-      <Button size="icon" variant="outline" aria-label="check">
+      <Button size="icon" variant="outline" aria-label="Confirm">
         <CheckIcon />
       </Button>
     </div>
-  )
+  ),
 }
 
 export const Loading: Story = {
@@ -77,9 +77,9 @@ export const Loading: Story = {
       <Loader2Icon data-icon="inline-start" className="animate-spin" />
       Saving
     </Button>
-  )
+  ),
 }
 
 export const Disabled: Story = {
-  args: { disabled: true, children: 'Disabled' }
+  args: { disabled: true, children: "Disabled" },
 }

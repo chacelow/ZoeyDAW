@@ -1,7 +1,20 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { mockMeterLevels } from "../adapters/mockMeters"
-import { beforeEach, describe, expect, it } from "vitest"
-import { hydrateProject, projectActions, serializeProject, useProjectState } from "../adapters"
+import {
+  hydrateProject,
+  projectActions,
+  serializeProject,
+  startProjectRuntime,
+  useProjectState,
+} from "../adapters"
 import { createMockDocument, createMockWorkspace, mockWaveformPeaks } from "../adapters/fixtures"
+
+let releaseRuntime: (() => void) | undefined
+afterEach(() => {
+  releaseRuntime?.()
+  releaseRuntime = undefined
+  vi.useRealTimers()
+})
 
 beforeEach(() => {
   hydrateProject(
@@ -36,7 +49,9 @@ describe("clip source boundaries", () => {
   ])("repeats %s waveform on its own source cycle", (path, cycle) => {
     const peaks = mockWaveformPeaks(path, -cycle / 4, cycle * 2)!
     const half = peaks.length / 2
-    for (let index = 0; index < half; index++) expect(peaks[index]).toBeCloseTo(peaks[index + half])
+    for (let index = 0; index < half; index++) {
+      expect(peaks[index]).toBeCloseTo(peaks[index + half])
+    }
   })
   it("keeps authored MIDI and Pattern cycles while extending from either edge", () => {
     projectActions.moveClips(["trager-1"], "trager", 8)
@@ -115,6 +130,8 @@ describe("clip source boundaries", () => {
   })
 
   it("records and meters the visible position in a trimmed MIDI source", () => {
+    vi.useFakeTimers({ toFake: ["performance", "setInterval", "clearInterval"] })
+    releaseRuntime = startProjectRuntime()
     projectActions.updateClip("trager-1", { notes: [] })
     projectActions.resizeClip("trager-1", "left", 2)
     projectActions.setPosition({ bar: 2, beat: 1, sixteenth: 1 })
@@ -173,7 +190,9 @@ describe("clip source boundaries", () => {
       .getState()
       .document.tracks.find(track => track.id === "3-audio")!.clips
     for (const piece of pieces) {
-      if (piece.kind !== "audio") continue
+      if (piece.kind !== "audio") {
+        continue
+      }
       expect(
         (piece.fadeInOffsetBars ?? 0) +
           (piece.fadeInBars ?? 0) +

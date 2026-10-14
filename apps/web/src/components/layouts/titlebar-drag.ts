@@ -8,6 +8,8 @@ export function getTitlebarMouseAction(
   buttons: number,
   detail: number
 ): TitlebarMouseAction | null {
-  if (buttons !== 1) return null
+  if (buttons !== 1) {
+    return null
+  }
   return detail === 2 ? "toggle-maximize" : "start-dragging"
 }

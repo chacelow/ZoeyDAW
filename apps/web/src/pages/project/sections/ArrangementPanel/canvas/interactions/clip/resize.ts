@@ -1,17 +1,24 @@
-import type { Clip, Track } from "@/pages/project/model/types"
-import { mockWaveformPeaks } from "@/pages/project/adapters/fixtures"
-import { clampFadeIntervals } from "@/pages/project/model/fades"
-import { MIN_CLIP_LENGTH_BARS } from "@/pages/project/model/grid"
-import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
+import { projectClipResize } from "@/pages/project/model/clip-edits"
 import { barAtX, snappedBar } from "../coordinates"
+import { beginProjectPreview, finishProjectPreview, setTracksPreview } from "../project-preview"
+import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
+import type { Clip } from "@/pages/project/model/types"
 
 export function createResizeGesture(
   context: InteractionContext,
   pointer: CanvasPointer,
   clip: Clip,
-  tracks: readonly Track[],
   edge: "left" | "right"
-): CanvasGesture {
+): CanvasGesture | null {
+  beginProjectPreview(context)
+  const { tracks } = context.getState().document
+  const owner = tracks.find(track => track.clips.some(item => item.id === clip.id))
+  const current = owner?.clips.find(item => item.id === clip.id)
+  if (!current) {
+    finishProjectPreview(context, true)
+    return null
+  }
+  clip = current
   const originalEnd = clip.startBar + clip.lengthBars
   const original = edge === "left" ? clip.startBar : originalEnd
   const grabOffset = barAtX(context, pointer.x) - original
@@ -21,32 +28,15 @@ export function createResizeGesture(
     autoScroll: "horizontal",
     move(next) {
       context.scene.setClipResize({ id: clip.id, edge })
-      const minimum = MIN_CLIP_LENGTH_BARS
       const raw = snappedBar(context, barAtX(context, next.x) - grabOffset)
-      bar =
-        edge === "left"
-          ? Math.max(1, Math.min(originalEnd - minimum, raw))
-          : Math.max(clip.startBar + minimum, raw)
+      const preview = projectClipResize(clip, edge, raw)
+      bar = edge === "left" ? preview.startBar : preview.startBar + preview.lengthBars
       if (bar === original) {
-        context.scene.setPreviewTracks(null)
+        setTracksPreview(context, tracks)
         return
       }
-      const trimmed = bar - clip.startBar
-      const length = edge === "left" ? originalEnd - bar : bar - clip.startBar
-      const sourceOffset = (clip.sourceOffsetBars ?? 0) + (edge === "left" ? trimmed : 0)
-      const preview: Clip =
-        clip.kind === "audio"
-          ? clampFadeIntervals({
-              ...clip,
-              startBar: edge === "left" ? bar : clip.startBar,
-              lengthBars: length,
-              sourceOffsetBars: sourceOffset,
-              waveformPeaks: mockWaveformPeaks(clip.samplePath, sourceOffset, length),
-            })
-          : edge === "left"
-            ? { ...clip, startBar: bar, lengthBars: length, sourceOffsetBars: sourceOffset }
-            : { ...clip, lengthBars: length }
-      context.scene.setPreviewTracks(
+      setTracksPreview(
+        context,
         tracks.map(track =>
           track.clips.some(item => item.id === clip.id)
             ? { ...track, clips: track.clips.map(item => (item.id === clip.id ? preview : item)) }
@@ -55,20 +45,16 @@ export function createResizeGesture(
       )
     },
     finish(cancelled) {
-      if (!cancelled && bar !== original) {
-        context.actions.beginEdit()
-        context.actions.resizeClip(clip.id, edge, bar)
-        context.actions.endEdit()
-      }
+      finishProjectPreview(context, cancelled)
       if (!cancelled) {
         const owner = context
           .getState()
           .document.tracks.find(track => track.clips.some(item => item.id === clip.id))
         const resized = owner?.clips.find(item => item.id === clip.id)
-        if (owner && resized)
+        if (owner && resized) {
           context.actions.setInsertionPoint({ trackId: owner.id, bar: resized.startBar })
+        }
       }
-      context.scene.setPreviewTracks(null)
       context.scene.setClipResize(null)
     },
   }

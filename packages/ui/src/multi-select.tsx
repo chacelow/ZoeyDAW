@@ -1,31 +1,31 @@
-import * as React from 'react'
-import { X, Check, ChevronsUpDown } from 'lucide-react'
-import { cn } from './cn'
-import { Badge } from './badge'
-import { Button } from './button'
+import * as React from "react"
+import { X, Check, ChevronsUpDown } from "lucide-react"
+import { useTranslation } from "@zoeymind/i18n"
+import { cn } from "./cn"
+import { Badge } from "./badge"
+import { Button } from "./button"
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList
-} from './command'
-import { Popover, PopoverContent, PopoverTrigger } from './popover'
-import { useTranslation } from '@zoeymind/i18n'
+  CommandList,
+} from "./command"
+import { Popover, PopoverContent, PopoverTrigger } from "./popover"
 
 export interface MultiSelectOption {
   label: string
   value: string
 }
 
-interface MultiSelectProps {
-  options: MultiSelectOption[]
-  selected: string[]
-  onChange: (values: string[]) => void
-  placeholder?: string
-  emptyText?: string
-  className?: string
+interface MultiSelectProperties {
+  readonly options: MultiSelectOption[]
+  readonly selected: string[]
+  readonly onChange: (values: string[]) => void
+  readonly placeholder?: string
+  readonly emptyText?: string
+  readonly className?: string
 }
 
 export function MultiSelect({
@@ -34,12 +34,12 @@ export function MultiSelect({
   onChange,
   placeholder,
   emptyText,
-  className
-}: MultiSelectProps) {
+  className,
+}: MultiSelectProperties) {
   const [open, setOpen] = React.useState(false)
   const { t } = useTranslation()
-  const placeholderText = placeholder ?? t('common.table.filter.selectPlaceholder')
-  const emptyLabel = emptyText ?? t('ui.multiSelect.empty')
+  const placeholderText = placeholder ?? t("common.table.filter.selectPlaceholder")
+  const emptyLabel = emptyText ?? t("ui.multiSelect.empty")
 
   const handleUnselect = (value: string) => {
     onChange(selected.filter(s => s !== value))
@@ -65,9 +65,9 @@ export function MultiSelect({
             role="combobox"
             aria-expanded={open}
             aria-haspopup="listbox"
-            className={cn('w-full justify-between min-h-10 h-auto', className)}
+            className={cn("h-auto min-h-10 w-full justify-between", className)}
           >
-            <div className="flex flex-wrap gap-1 flex-1">
+            <div className="flex flex-1 flex-wrap gap-1">
               {selectedOptions.length > 0 ? (
                 selectedOptions.map(option => (
                   <Badge
@@ -82,9 +82,9 @@ export function MultiSelect({
                     {option.label}
                     <button
                       type="button"
-                      className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      className="ring-offset-background focus:ring-ring ml-1 rounded-full outline-none focus:ring-2 focus:ring-offset-2"
                       onKeyDown={e => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           handleUnselect(option.value)
                         }
                       }}
@@ -98,7 +98,7 @@ export function MultiSelect({
                         handleUnselect(option.value)
                       }}
                     >
-                      <X className="size-3 text-muted-foreground hover:text-foreground" />
+                      <X className="text-muted-foreground hover:text-foreground size-3" />
                     </button>
                   </Badge>
                 ))
@@ -112,7 +112,7 @@ export function MultiSelect({
       />
       <PopoverContent className="w-full p-0" align="start">
         <Command>
-          <CommandInput placeholder={t('common.table.filter.searchOptions')} />
+          <CommandInput placeholder={t("common.table.filter.searchOptions")} />
           <CommandList>
             <CommandEmpty>{emptyLabel}</CommandEmpty>
             <CommandGroup>
@@ -122,10 +122,10 @@ export function MultiSelect({
                   <CommandItem key={option.value} onSelect={() => handleSelect(option.value)}>
                     <div
                       className={cn(
-                        'mr-2 flex size-4 items-center justify-center rounded-sm border border-primary',
+                        "border-primary mr-2 flex size-4 items-center justify-center rounded-sm border",
                         isSelected
-                          ? 'bg-primary text-primary-foreground'
-                          : 'opacity-50 [&_svg]:invisible'
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible"
                       )}
                     >
                       <Check className="size-4" />

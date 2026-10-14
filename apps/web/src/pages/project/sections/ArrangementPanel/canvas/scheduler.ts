@@ -5,16 +5,15 @@
  * {@link RafScheduler.invalidate}; the loop coalesces every invalidation inside
  * a frame into a single paint call. Painters are never re-run while clean.
  *
- * The scheduler owns the rAF handle. Painters never call requestAnimationFrame
- * themselves, so playhead, meters, grid, and clips share one scheduler tick.
+ * The scheduler owns the rAF handle. Painters never call requestAnimationFrame themselves, so playhead, meters, grid, and clips share one scheduler tick.
  */
 export type PaintFn = (deltaMs: number) => void
 
 export interface Scheduler {
-  register(id: string, paint: PaintFn): () => void
-  invalidate(id: string): void
-  invalidateAll(): void
-  dispose(): void
+  register: (id: string, paint: PaintFn) => () => void
+  invalidate: (id: string) => void
+  invalidateAll: () => void
+  dispose: () => void
 }
 
 interface Entry {
@@ -26,10 +25,12 @@ export function createScheduler(): Scheduler {
   const entries = new Map<string, Entry>()
   let frame = 0
   let lastTick = 0
-  let disposed = false
+  let isDisposed = false
 
   function schedule() {
-    if (frame || disposed) return
+    if (frame || isDisposed) {
+      return
+    }
     frame = requestAnimationFrame(tick)
   }
 
@@ -37,14 +38,20 @@ export function createScheduler(): Scheduler {
     frame = 0
     const delta = lastTick === 0 ? 16 : now - lastTick
     lastTick = now
-    let repaintNext = false
+    let isRepaintNext = false
     for (const entry of entries.values()) {
-      if (!entry.dirty) continue
+      if (!entry.dirty) {
+        continue
+      }
       entry.dirty = false
       entry.paint(delta)
-      if (entry.dirty) repaintNext = true
+      if (entry.dirty) {
+        isRepaintNext = true
+      }
     }
-    if (repaintNext) schedule()
+    if (isRepaintNext) {
+      schedule()
+    }
   }
 
   return {
@@ -57,17 +64,23 @@ export function createScheduler(): Scheduler {
     },
     invalidate(id) {
       const entry = entries.get(id)
-      if (!entry) return
+      if (!entry) {
+        return
+      }
       entry.dirty = true
       schedule()
     },
     invalidateAll() {
-      for (const entry of entries.values()) entry.dirty = true
+      for (const entry of entries.values()) {
+        entry.dirty = true
+      }
       schedule()
     },
     dispose() {
-      disposed = true
-      if (frame) cancelAnimationFrame(frame)
+      isDisposed = true
+      if (frame) {
+        cancelAnimationFrame(frame)
+      }
       frame = 0
       entries.clear()
     },

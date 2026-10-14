@@ -27,10 +27,7 @@ export const TOUCH_GESTURE_CONTENT_CLASS = "[-webkit-touch-callout:none] pointer
  * release. Inline, so it wins over the class above and is gone again the
  * moment the gesture ends.
  *
- * For the press gestures a native selection would otherwise steal — a
- * long-press that opens a menu. Elsewhere prefer the classes: a surface that
- * takes selection away for the whole session is a surface whose text nobody
- * can copy.
+ * For the press gestures a native selection would otherwise steal — a long-press that opens a menu. Elsewhere prefer the classes: a surface that takes selection away for the whole session is a surface whose text nobody can copy.
  */
 export function holdSelection(element: HTMLElement) {
   element.style.setProperty("user-select", "none")
@@ -56,7 +53,9 @@ export function capturePointer(element: Element, pointerId: number) {
   }
 }
 
-/** Release a capture taken with `capturePointer`, ignoring a stale pointer. */
+/**
+Release a capture taken with `capturePointer`, ignoring a stale pointer.
+*/
 export function releasePointer(element: Element, pointerId: number) {
   try {
     if (element.hasPointerCapture(pointerId)) {
@@ -68,11 +67,7 @@ export function releasePointer(element: Element, pointerId: number) {
 }
 
 /**
- * Whether this event came from a pointer that is *hovering*: not a touch, and
- * not currently pressed. Which input the user is holding right now is not
- * something a device capability can answer — a touchscreen laptop hovers and
- * taps, and iPadOS reports a fine hovering pointer for a finger — so both
- * paths stay live and each handler branches on the event it was given.
+ * Whether this event came from a pointer that is *hovering*: not a touch, and not currently pressed. Which input the user is holding right now is not something a device capability can answer — a touchscreen laptop hovers and taps, and iPadOS reports a fine hovering pointer for a finger — so both paths stay live and each handler branches on the event it was given.
  *
  * A pen resting on the glass is making contact, not hovering: `buttons` is the
  * tell, and it sends a pen tap down the same route a finger takes.

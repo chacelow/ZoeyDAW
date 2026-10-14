@@ -1,15 +1,17 @@
-'use client'
+"use client"
 
-import type { Table } from '@tanstack/react-table'
-import * as React from 'react'
+import * as React from "react"
 
-import { DataTableViewOptions } from './data-table-view-options'
-import { cn } from '#lib/utils'
+import { cn } from "#lib/utils"
+import { DataTableViewOptions } from "./data-table-view-options"
+import type { Table } from "@tanstack/react-table"
 
-interface DataTableToolbarProps<TData> extends React.ComponentProps<'div'> {
-  table: Table<TData>
-  /** 隐藏右上角 "视图" (列显隐) 按钮。默认 false。 */
-  hideViewOptions?: boolean
+interface DataTableToolbarProperties<TData> extends React.ComponentProps<"div"> {
+  readonly table: Table<TData>
+  /**
+  隐藏右上角 "视图" (列显隐) 按钮。默认 false。
+  */
+  readonly hideViewOptions?: boolean
 }
 
 /**
@@ -25,14 +27,14 @@ export function DataTableToolbar<TData>({
   children,
   className,
   hideViewOptions = false,
-  ...props
-}: DataTableToolbarProps<TData>) {
+  ...properties
+}: DataTableToolbarProperties<TData>) {
   return (
     <div
       role="toolbar"
       aria-orientation="horizontal"
-      className={cn('flex w-full items-center justify-between gap-2 p-1', className)}
-      {...props}
+      className={cn("flex w-full items-center justify-between gap-2 p-1", className)}
+      {...properties}
     >
       <div className="flex flex-1 items-center gap-2">{children}</div>
       {!hideViewOptions && <DataTableViewOptions table={table} align="end" />}

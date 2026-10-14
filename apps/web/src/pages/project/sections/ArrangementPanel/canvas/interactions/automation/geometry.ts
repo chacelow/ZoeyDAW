@@ -1,4 +1,3 @@
-import type { AutomationLane, Track } from "@/pages/project/model/types"
 import {
   arrangementBodyBottom,
   arrangementBodyTop,
@@ -6,14 +5,15 @@ import {
   layoutTrackRows,
   pinnedTrackHeight,
 } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
-import type { ArrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import {
   automationValueAt,
   clampAutomationValue,
   interpolateAutomation,
   normalizedAutomationValue,
 } from "@/pages/project/model/automation-curve"
-import { TRACK_TITLE_HEIGHT } from "@/pages/project/model/selectors"
+import { TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
+import type { ArrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
+import type { AutomationLane, Track } from "@/pages/project/model/types"
 
 export const AUTOMATION_POINT_RADIUS = 4
 
@@ -32,7 +32,9 @@ export function activeAutomationRows(scene: ArrangementScene): AutomationRow[] {
   const bodyBottom = arrangementBodyBottom(scene.viewport.height)
   const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks)
   return layoutTrackRows(scene).flatMap(row => {
-    if (row.track.collapsed || row.height <= TRACK_TITLE_HEIGHT + 4) return []
+    if (row.track.collapsed || row.height <= TRACK_TITLE_HEIGHT + 4) {
+      return []
+    }
     const titleInset =
       row.track.kind === "audio" || row.track.kind === "midi" ? TRACK_TITLE_HEIGHT + 1 : 0
     const top = Math.max(
@@ -40,7 +42,9 @@ export function activeAutomationRows(scene: ArrangementScene): AutomationRow[] {
       isPinnedTrack(row.track) ? pinnedTop : arrangementBodyTop()
     )
     const bottom = Math.min(row.top + row.height, isPinnedTrack(row.track) ? bodyBottom : pinnedTop)
-    if (bottom <= top) return []
+    if (bottom <= top) {
+      return []
+    }
     const parameter =
       scene.automationParameters[row.track.id] ?? row.track.automation[0]?.parameter ?? "volume"
     const lane = row.track.automation.find(item => item.parameter === parameter)

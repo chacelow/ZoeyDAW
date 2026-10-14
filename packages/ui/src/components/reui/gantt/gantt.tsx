@@ -1,7 +1,7 @@
 // Title: Gantt
 // Description: Headless-first gantt - horizontal resource timeline with day-to-year scales, external CRUD contract, and a subscribable store.
 
-'use client'
+"use client"
 
 import {
   createContext,
@@ -12,9 +12,9 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
-  type RefObject
-} from 'react'
-import { mergeGanttI18n, type GanttI18nConfig, type GanttI18nOverrides } from './gantt-i18n'
+  type RefObject,
+} from "react"
+import { mergeGanttI18n, type GanttI18nConfig, type GanttI18nOverrides } from "./gantt-i18n"
 import {
   buildEventIndex,
   defaultEventOrder,
@@ -25,8 +25,8 @@ import {
   stepGanttDate,
   toZoned,
   type GanttIndex,
-  type WeekStartsOn
-} from './gantt-lib'
+  type WeekStartsOn,
+} from "./gantt-lib"
 import type {
   GanttBarId,
   GanttDateRange,
@@ -48,28 +48,28 @@ import type {
   GanttSlotDraft,
   GanttSlotInfo,
   GanttState,
-  GanttUpdateResult
-} from './gantt-types'
-import { mergeProps } from '@base-ui/react/merge-props'
-import { useRender } from '@base-ui/react/use-render'
-import type { Locale } from 'date-fns'
+  GanttUpdateResult,
+} from "./gantt-types"
+import { mergeProps } from "@base-ui/react/merge-props"
+import { useRender } from "@base-ui/react/use-render"
+import type { Locale } from "date-fns"
 
-import { cn } from '#lib/utils'
+import { cn } from "#lib/utils"
 
 const DEFAULT_INTERACTIONS: GanttInteractions = {
   drag: true,
   resize: true,
-  selectSlot: true
+  selectSlot: true,
 }
 
 /** Infinite-scroll growth cap, in whole periods per side. */
 const MAX_RANGE_WINDOW = 12
 
 /** A node holds as many concurrent schedules as it needs unless told otherwise. */
-const DEFAULT_SCHEDULE_MODE: GanttScheduleMode = 'multiple'
+const DEFAULT_SCHEDULE_MODE: GanttScheduleMode = "multiple"
 
 /** Tree label sits on the first schedule's baseline, not the grown row's middle. */
-const DEFAULT_ROW_ALIGN: GanttRowAlign = 'start'
+const DEFAULT_ROW_ALIGN: GanttRowAlign = "start"
 
 /**
  * A node's cardinality: its own override wins over the view-level default.
@@ -238,7 +238,7 @@ interface GanttInternals<TData = unknown> {
    * Grow visibleRange by whole periods for infinite scrolling; resets on
    * date/scale changes. Returns false once the growth cap is reached.
    */
-  extendRange(direction: 'before' | 'after'): boolean
+  extendRange(direction: "before" | "after"): boolean
   /**
    * True when the LAST anchor-date change was an extendRange window slide
    * (not a navigation) - the view keeps its scroll guard across slides.
@@ -286,13 +286,13 @@ function resolveSettings<TData>(options: UseGanttStateOptions<TData>): GanttSett
     i18n: mergeGanttI18n(options.i18n),
     rangeBounds: options.rangeBounds,
     resources: options.resources ?? [],
-    overlap: options.overlap ?? 'allow',
+    overlap: options.overlap ?? "allow",
     getEventPriority,
     // priority-aware default: higher getEventPriority packs/orders first
     eventOrder:
       options.eventOrder ??
       ((a, b) => getEventPriority(b.event) - getEventPriority(a.event) || defaultEventOrder(a, b)),
-    getOccurrences: options.getOccurrences
+    getOccurrences: options.getOccurrences,
   }
 }
 
@@ -319,7 +319,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
   const listeners = new Set<() => void>()
 
   const internal = {
-    scale: initial.defaultScale ?? 'day',
+    scale: initial.defaultScale ?? "day",
     date: initial.defaultDate ?? new Date(),
     events: initial.defaultEvents ?? [],
     selection: initial.defaultSelection ?? EMPTY_SELECTION,
@@ -329,7 +329,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     /** Whole extra periods rendered on each side (infinite scroll). */
     rangeWindow: { before: 0, after: 0 },
     /** Visible-center instant reported by the view; drives the nav title. */
-    viewportCenter: null as Date | null
+    viewportCenter: null as Date | null,
   }
 
   let snapshot: GanttState<TData> | null = null
@@ -358,7 +358,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     const date = options.date ?? internal.date
     const rangeOpts = {
       timeZone: settings.timeZone,
-      weekStartsOn: settings.weekStartsOn
+      weekStartsOn: settings.weekStartsOn,
     }
     const { visibleRange: baseRange, activeRange } = getGanttDateRange(scale, date, rangeOpts)
     // Infinite scroll: widen by whole periods; the anchor period stays put
@@ -375,7 +375,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       }
       visibleRange = {
         start: getGanttDateRange(scale, earlier, rangeOpts).visibleRange.start,
-        end: getGanttDateRange(scale, later, rangeOpts).visibleRange.end
+        end: getGanttDateRange(scale, later, rangeOpts).visibleRange.end,
       }
     }
     snapshot = {
@@ -391,7 +391,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       loading: options.loading ?? false,
       drag: internal.drag,
       slotDraft: internal.slotDraft,
-      viewportCenter: internal.viewportCenter
+      viewportCenter: internal.viewportCenter,
     }
     return snapshot
   }
@@ -407,24 +407,24 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       activeRange: state.activeRange,
       scale: state.scale,
       date: state.date,
-      timeZone: settings.timeZone
+      timeZone: settings.timeZone,
     })
   }
 
-  type ControlledKey = 'scale' | 'date' | 'events' | 'selection' | 'interactions'
+  type ControlledKey = "scale" | "date" | "events" | "selection" | "interactions"
 
   const setField = <K extends ControlledKey>(
     key: K,
-    value: GanttState<TData>[K extends 'events' ? 'events' : K]
+    value: GanttState<TData>[K extends "events" ? "events" : K]
   ) => {
     const controlled = options[key] !== undefined
-    if (key === 'date' || key === 'scale') {
+    if (key === "date" || key === "scale") {
       // value-equal sets are no-ops: they must not touch store state (the
       // controlled path would mutate without notify) nor drop infinite-
       // scroll growth for a navigation that never happened
       const current = getState()[key]
       const same =
-        key === 'date'
+        key === "date"
           ? (current as Date).getTime() === (value as Date).getTime()
           : current === value
       if (same) return
@@ -445,7 +445,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       date: settings.onDateChange as never,
       events: settings.onEventsChange as never,
       selection: settings.onSelectionChange as never,
-      interactions: settings.onInteractionsChange as never
+      interactions: settings.onInteractionsChange as never,
     }
     callbacks[key]?.(value as never)
     if (!controlled) notify()
@@ -461,11 +461,11 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     const result = settings.onEventUpdate?.(update)
     if (result === false) return false
     const adjusted: Partial<GanttEvent<TData>> =
-      result && typeof result === 'object'
+      result && typeof result === "object"
         ? {
             start: result.start ?? update.start,
             end: result.end ?? update.end,
-            allDay: result.allDay ?? update.allDay
+            allDay: result.allDay ?? update.allDay,
           }
         : { start: update.start, end: update.end, allDay: update.allDay }
     if (update.resourceId !== undefined) adjusted.resourceId = update.resourceId
@@ -474,7 +474,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     const next = events.map(event =>
       event.id === update.event.id ? { ...event, ...merged } : event
     )
-    setField('events', next)
+    setField("events", next)
     return true
   }
 
@@ -492,13 +492,13 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     const index = buildEventIndex(state.events, state.visibleRange, {
       timeZone: settings.timeZone,
       eventOrder: settings.eventOrder,
-      getOccurrences: settings.getOccurrences
+      getOccurrences: settings.getOccurrences,
     })
     indexCache = {
       events: state.events,
       rangeKey,
       timeZone: settings.timeZone,
-      index
+      index,
     }
     return index
   }
@@ -516,10 +516,10 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     next() {
       const state = getState()
       setField(
-        'date',
+        "date",
         clampToBounds(
           stepGanttDate(state.scale, state.date, 1, {
-            timeZone: settings.timeZone
+            timeZone: settings.timeZone,
           })
         )
       )
@@ -527,22 +527,22 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     prev() {
       const state = getState()
       setField(
-        'date',
+        "date",
         clampToBounds(
           stepGanttDate(state.scale, state.date, -1, {
-            timeZone: settings.timeZone
+            timeZone: settings.timeZone,
           })
         )
       )
     },
     today() {
-      setField('date', clampToBounds(new Date()))
+      setField("date", clampToBounds(new Date()))
     },
     goTo(date) {
-      setField('date', clampToBounds(date))
+      setField("date", clampToBounds(date))
     },
     setScale(scale) {
-      setField('scale', scale)
+      setField("scale", scale)
     },
     getEvents() {
       return getState().events
@@ -551,10 +551,10 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       return getState().events.find(event => event.id === id)
     },
     setEvents(events) {
-      setField('events', events)
+      setField("events", events)
     },
     addEvent(event) {
-      setField('events', [...getState().events, event])
+      setField("events", [...getState().events, event])
     },
     updateEvent(id, patch) {
       const event = api.getEvent(id)
@@ -576,20 +576,20 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
             start: merged.start,
             end: merged.end,
             allDay: merged.allDay ?? false,
-            source: 'api'
+            source: "api",
           },
           Object.keys(rest).length > 0 ? rest : undefined
         )
         return
       }
       setField(
-        'events',
+        "events",
         getState().events.map(e => (e.id === id ? merged : e))
       )
     },
     removeEvent(id) {
       setField(
-        'events',
+        "events",
         getState().events.filter(event => event.id !== id)
       )
     },
@@ -603,7 +603,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       return buildEventIndex(state.events, range, {
         timeZone: settings.timeZone,
         eventOrder: settings.eventOrder,
-        getOccurrences: settings.getOccurrences
+        getOccurrences: settings.getOccurrences,
       }).occurrences
     },
     findOverlapping({ start, end, excludeEventId }) {
@@ -611,9 +611,9 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     },
     select(partial) {
       const current = getState().selection
-      setField('selection', {
+      setField("selection", {
         eventKeys: partial.eventKeys ?? current.eventKeys,
-        slot: partial.slot !== undefined ? partial.slot : current.slot
+        slot: partial.slot !== undefined ? partial.slot : current.slot,
       })
     },
     selectEvent(key, opts) {
@@ -623,13 +623,13 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
           ? current.eventKeys.filter(k => k !== key)
           : [...current.eventKeys, key]
         : [key]
-      setField('selection', { ...current, eventKeys })
+      setField("selection", { ...current, eventKeys })
     },
     clearSelection() {
-      setField('selection', EMPTY_SELECTION)
+      setField("selection", EMPTY_SELECTION)
     },
     setInteractions(patch) {
-      setField('interactions', { ...getState().interactions, ...patch })
+      setField("interactions", { ...getState().interactions, ...patch })
     },
     getVisibleRange() {
       return getState().visibleRange
@@ -639,7 +639,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     },
     toZoned(date) {
       return toZoned(date, settings.timeZone)
-    }
+    },
   }
 
   const internals: GanttInternals<TData> = {
@@ -669,14 +669,14 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       const state = getState()
       const bounds = settings.rangeBounds
       if (
-        direction === 'before' &&
+        direction === "before" &&
         bounds?.min &&
         state.visibleRange.start.getTime() <= bounds.min.getTime()
       ) {
         return false
       }
       if (
-        direction === 'after' &&
+        direction === "after" &&
         bounds?.max &&
         state.visibleRange.end.getTime() >= bounds.max.getTime()
       ) {
@@ -684,15 +684,15 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       }
       const cap = Math.max(1, settings.maxRangeWindow ?? MAX_RANGE_WINDOW)
       const { before, after } = internal.rangeWindow
-      const grow = direction === 'before' ? before < cap : after < cap
+      const grow = direction === "before" ? before < cap : after < cap
       if (grow) {
         internal.rangeWindow =
-          direction === 'before' ? { before: before + 1, after } : { before, after: after + 1 }
+          direction === "before" ? { before: before + 1, after } : { before, after: after + 1 }
       } else {
         // window is at capacity: SLIDE the anchor one period instead, so
         // travel stays unbounded while the DOM stays bounded
-        const next = stepGanttDate(state.scale, state.date, direction === 'before' ? -1 : 1, {
-          timeZone: settings.timeZone
+        const next = stepGanttDate(state.scale, state.date, direction === "before" ? -1 : 1, {
+          timeZone: settings.timeZone,
         })
         if (options.date !== undefined) {
           // controlled anchor: propose the slide; nothing changes until the
@@ -710,7 +710,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     },
     didAnchorSlide() {
       return lastAnchorChangeWasSlide
-    }
+    },
   }
 
   const instance: GanttInstance<TData> = {
@@ -723,25 +723,25 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
     get settings() {
       return settings
     },
-    internals
+    internals,
   }
 
-  const STATE_KEYS = ['events', 'scale', 'date', 'selection', 'interactions', 'loading'] as const
+  const STATE_KEYS = ["events", "scale", "date", "selection", "interactions", "loading"] as const
   const SETTINGS_KEYS = [
-    'timeZone',
-    'locale',
-    'weekStartsOn',
-    'slotDuration',
-    'snapDuration',
-    'i18n',
-    'rangeBounds',
-    'activation',
-    'maxRangeWindow',
-    'resources',
-    'overlap',
-    'getEventPriority',
-    'eventOrder',
-    'getOccurrences'
+    "timeZone",
+    "locale",
+    "weekStartsOn",
+    "slotDuration",
+    "snapDuration",
+    "i18n",
+    "rangeBounds",
+    "activation",
+    "maxRangeWindow",
+    "resources",
+    "overlap",
+    "getEventPriority",
+    "eventOrder",
+    "getOccurrences",
   ] as const
 
   return {
@@ -778,7 +778,7 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
       return changed
     },
     notify,
-    emitRangeIfChanged
+    emitRangeIfChanged,
   }
 }
 
@@ -816,7 +816,7 @@ const GanttContext =
 function useGantt<TData = unknown>(): GanttInstance<TData> {
   const instance = useContext(GanttContext)
   if (!instance) {
-    throw new Error('useGantt must be used within <Gantt>')
+    throw new Error("useGantt must be used within <Gantt>")
   }
   return instance as GanttInstance<TData>
 }
@@ -834,7 +834,7 @@ function useGanttSelector<TData = unknown, TSelected = unknown>(
   const contextInstance = useContext(GanttContext)
   const instance = options?.calendar ?? contextInstance
   if (!instance) {
-    throw new Error('useGanttSelector needs an <Gantt> ancestor or an explicit `calendar` option')
+    throw new Error("useGanttSelector needs an <Gantt> ancestor or an explicit `calendar` option")
   }
   const isEqual = options?.isEqual ?? Object.is
   const lastRef = useRef<{ value: TSelected } | null>(null)
@@ -883,14 +883,14 @@ function useGanttNavigation(): {
       scale: state.scale,
       visibleRange: state.visibleRange,
       activeRange: state.activeRange,
-      viewportCenter: state.viewportCenter
+      viewportCenter: state.viewportCenter,
     }),
     {
       isEqual: (a, b) =>
         a.date.getTime() === b.date.getTime() &&
         a.scale === b.scale &&
         a.viewportCenter?.getTime() === b.viewportCenter?.getTime() &&
-        getRangeKey(a.visibleRange) === getRangeKey(b.visibleRange)
+        getRangeKey(a.visibleRange) === getRangeKey(b.visibleRange),
     }
   )
   useGanttSettingsVersion(instance)
@@ -901,7 +901,7 @@ function useGanttNavigation(): {
   const titleActive = slice.viewportCenter
     ? getGanttDateRange(slice.scale, slice.viewportCenter, {
         timeZone: settings.timeZone,
-        weekStartsOn: settings.weekStartsOn
+        weekStartsOn: settings.weekStartsOn,
       }).activeRange
     : slice.activeRange
   return {
@@ -910,7 +910,7 @@ function useGanttNavigation(): {
       date: toZoned(titleDate, settings.timeZone),
       activeRange: titleActive,
       visibleRange: slice.visibleRange,
-      locale: settings.locale
+      locale: settings.locale,
     }),
     visibleRange: slice.visibleRange,
     activeRange: slice.activeRange,
@@ -918,7 +918,7 @@ function useGanttNavigation(): {
     prev: instance.api.prev,
     today: instance.api.today,
     goTo: instance.api.goTo,
-    isToday: now >= slice.activeRange.start && now < slice.activeRange.end
+    isToday: now >= slice.activeRange.start && now < slice.activeRange.end,
   }
 }
 
@@ -934,7 +934,7 @@ function useGanttSelection(): {
     selection,
     select: instance.api.select,
     selectEvent: instance.api.selectEvent,
-    clearSelection: instance.api.clearSelection
+    clearSelection: instance.api.clearSelection,
   }
 }
 
@@ -963,7 +963,7 @@ function useGanttOccurrences<TData = unknown>(range?: GanttDateRange): GanttOccu
             occ.key === b[i]?.key &&
             occ.end.getTime() === b[i].end.getTime() &&
             occ.event === b[i].event
-        )
+        ),
     }
   )
 }
@@ -1004,7 +1004,7 @@ function useGanttNodeSchedules<TData = unknown>(nodeId: string): GanttNodeSchedu
     node,
     scheduleMode: resolveScheduleMode(node, viewConfig.scheduleMode),
     schedules,
-    conflicts
+    conflicts,
   }
 }
 
@@ -1049,7 +1049,7 @@ interface GanttColumn {
   /** Fixed column width in px. Default 96. */
   width?: number
   /** Cell content alignment. Default "start". */
-  align?: 'start' | 'center' | 'end'
+  align?: "start" | "center" | "end"
   /** Cell content per row; omit or return null for an empty cell. */
   render?: (ctx: GanttColumnContext) => ReactNode
   /** Extra classes on every cell of this column (header included). */
@@ -1070,7 +1070,7 @@ interface GanttActivationConfig {
 
 /** Layout metrics (rem unless noted); every knob falls back to its default. */
 /** A gridline: false to hide it, true for the default solid stroke, or a style. */
-type GanttGridLine = boolean | 'solid' | 'dashed'
+type GanttGridLine = boolean | "solid" | "dashed"
 
 interface GanttTimelineLines {
   /** Unit boundary lines running down the timeline. Default solid. */
@@ -1081,8 +1081,8 @@ interface GanttTimelineLines {
 
 /** Resolved stroke per axis; null means the axis draws nothing. */
 interface GanttResolvedLines {
-  vertical: 'solid' | 'dashed' | null
-  horizontal: 'solid' | 'dashed' | null
+  vertical: "solid" | "dashed" | null
+  horizontal: "solid" | "dashed" | null
 }
 
 /**
@@ -1090,18 +1090,18 @@ interface GanttResolvedLines {
  * and the row separators can never disagree.
  */
 function resolveTimelineLines(
-  value: GanttTimelineLines | 'vertical' | 'both' | 'none' | undefined
+  value: GanttTimelineLines | "vertical" | "both" | "none" | undefined
 ): GanttResolvedLines {
-  if (value === 'none') return { vertical: null, horizontal: null }
-  if (value === 'vertical') return { vertical: 'solid', horizontal: null }
-  if (value === 'both' || value === undefined) {
-    return { vertical: 'solid', horizontal: 'solid' }
+  if (value === "none") return { vertical: null, horizontal: null }
+  if (value === "vertical") return { vertical: "solid", horizontal: null }
+  if (value === "both" || value === undefined) {
+    return { vertical: "solid", horizontal: "solid" }
   }
   const stroke = (line: GanttGridLine | undefined) =>
-    line === false ? null : line === true || line === undefined ? 'solid' : line
+    line === false ? null : line === true || line === undefined ? "solid" : line
   return {
     vertical: stroke(value.vertical),
-    horizontal: stroke(value.horizontal)
+    horizontal: stroke(value.horizontal),
   }
 }
 
@@ -1131,7 +1131,7 @@ interface GanttMetrics {
 /** Live gesture snapshot handed to the drag/resize indicator render props. */
 interface GanttDragIndicatorProps<TData = unknown> {
   occurrence: GanttOccurrence<TData>
-  kind: 'move' | 'resize-start' | 'resize-end'
+  kind: "move" | "resize-start" | "resize-end"
   /** Proposed (snapped) range of the current gesture step. */
   start: Date
   end: Date
@@ -1191,7 +1191,7 @@ interface GanttViewConfig<TData = unknown> {
    * Scroll implementation for the gantt body: "custom" (default, shadcn
    * ScrollArea) or "native" (browser scrollbars via overflow auto).
    */
-  scrollbars: 'custom' | 'native'
+  scrollbars: "custom" | "native"
   /**
    * Placement hint over empty timeline track: a validated, snapped tile that
    * opens the schedule flow (onSlotClick, else onSelectSlot) at that day.
@@ -1207,7 +1207,7 @@ interface GanttViewConfig<TData = unknown> {
    * wrong for a demo or a report, whose opening composition must not depend on
    * the hour it is viewed at. Those pass an explicit instant.
    */
-  initialCenter: 'now' | 'anchor' | Date
+  initialCenter: "now" | "anchor" | Date
   /**
    * Empty-track presses on schedulable rows start a drag-create gesture that
    * commits through onSelectSlot. Default off: the whole panel drags-to-pan
@@ -1222,9 +1222,9 @@ interface GanttViewConfig<TData = unknown> {
   /** Floating zoom in/out control over the track. Default on. */
   zoomControl: boolean
   /** Nav button variant; all nav buttons follow it. Default "ghost". */
-  navButtonVariant: 'ghost' | 'outline' | 'secondary' | 'default'
+  navButtonVariant: "ghost" | "outline" | "secondary" | "default"
   /** Nav button size; icon buttons use the icon twin. Default "sm". */
-  navButtonSize: 'sm' | 'default'
+  navButtonSize: "sm" | "default"
   /**
    * Off-day (non-working day) marking on day/week/month scales. true =
    * weekends with a muted background; a config object customizes weekdays,
@@ -1253,12 +1253,12 @@ interface GanttViewConfig<TData = unknown> {
    * boundaries only, rows separated by whitespace) and "both" (adds row
    * separators).
    */
-  timelineLines: GanttTimelineLines | 'vertical' | 'both' | 'none'
+  timelineLines: GanttTimelineLines | "vertical" | "both" | "none"
   /**
    * Bar title placement: "inside" (default) renders it in the bar, "outside"
    * beside the bar, "auto" moves it outside only when the bar is too short.
    */
-  barLabel: 'inside' | 'outside' | 'auto'
+  barLabel: "inside" | "outside" | "auto"
   /** Edge chips that scroll to bars outside the visible timeline. Default true. */
   offscreenIndicators: boolean
   /**
@@ -1371,24 +1371,24 @@ interface GanttViewConfig<TData = unknown> {
 const DEFAULT_VIEW_CONFIG: GanttViewConfig = {
   nowIndicator: true,
   interval: 60,
-  scrollbars: 'custom',
+  scrollbars: "custom",
   displayScheduleHint: false,
-  initialCenter: 'now',
+  initialCenter: "now",
   displayCreateTaskHint: false,
   dragCreate: false,
   zoomControl: true,
-  navButtonVariant: 'ghost',
-  navButtonSize: 'sm',
-  timelineLines: 'vertical',
-  barLabel: 'inside',
+  navButtonVariant: "ghost",
+  navButtonSize: "sm",
+  timelineLines: "vertical",
+  barLabel: "inside",
   offscreenIndicators: true,
   infiniteScroll: true,
   stickyNav: false,
   rowCheckboxes: true,
   parentScheduling: false,
   summaryBars: true,
-  scheduleMode: 'multiple',
-  rowAlign: 'start'
+  scheduleMode: "multiple",
+  rowAlign: "start",
 }
 
 const GanttViewConfigContext = createContext<
@@ -1402,57 +1402,58 @@ function useGanttViewConfig<TData = unknown>(): GanttViewConfig<TData> {
 }
 
 const VIEW_CONFIG_KEYS: Array<keyof GanttViewConfig> = [
-  'nowIndicator',
-  'interval',
-  'scrollbars',
-  'displayScheduleHint',
-  'initialCenter',
-  'displayCreateTaskHint',
-  'dragCreate',
-  'zoomControl',
-  'navButtonVariant',
-  'navButtonSize',
-  'offDays',
-  'columns',
-  'columnsMenu',
-  'treePanel',
-  'metrics',
-  'timelineLines',
-  'barLabel',
-  'offscreenIndicators',
-  'infiniteScroll',
-  'zoomRange',
-  'stickyNav',
-  'rowCheckboxes',
-  'selectedRows',
-  'onSelectedRowsChange',
-  'collapsedGroups',
-  'defaultCollapsedGroups',
-  'onCollapsedGroupsChange',
-  'zoom',
-  'defaultZoom',
-  'onZoomChange',
-  'parentScheduling',
-  'summaryBars',
-  'scheduleMode',
-  'rowAlign',
-  'classNames',
-  'renderEvent',
-  'renderEventMenu',
-  'renderResourceLabel',
-  'renderResourceMenu',
-  'renderNoResources',
-  'renderDragPreview',
-  'renderResizeIndicator',
-  'renderScheduleHint',
-  'renderSummary',
-  'getSummaryProgress'
+  "nowIndicator",
+  "interval",
+  "scrollbars",
+  "displayScheduleHint",
+  "initialCenter",
+  "displayCreateTaskHint",
+  "dragCreate",
+  "zoomControl",
+  "navButtonVariant",
+  "navButtonSize",
+  "offDays",
+  "columns",
+  "columnsMenu",
+  "treePanel",
+  "metrics",
+  "timelineLines",
+  "barLabel",
+  "offscreenIndicators",
+  "infiniteScroll",
+  "zoomRange",
+  "stickyNav",
+  "rowCheckboxes",
+  "selectedRows",
+  "onSelectedRowsChange",
+  "collapsedGroups",
+  "defaultCollapsedGroups",
+  "onCollapsedGroupsChange",
+  "zoom",
+  "defaultZoom",
+  "onZoomChange",
+  "parentScheduling",
+  "summaryBars",
+  "scheduleMode",
+  "rowAlign",
+  "classNames",
+  "renderEvent",
+  "renderEventMenu",
+  "renderResourceLabel",
+  "renderResourceMenu",
+  "renderNoResources",
+  "renderDragPreview",
+  "renderResizeIndicator",
+  "renderScheduleHint",
+  "renderSummary",
+  "getSummaryProgress",
 ]
 
 interface GanttProps<TData = unknown>
-  extends UseGanttStateOptions<TData>,
+  extends
+    UseGanttStateOptions<TData>,
     Partial<GanttViewConfig<TData>>,
-    Omit<useRender.ComponentProps<'div'>, 'children' | 'defaultValue'> {
+    Omit<useRender.ComponentProps<"div">, "children" | "defaultValue"> {
   /** Adopt a hoisted useGanttState instance; option props are then ignored. */
   calendar?: GanttInstance<TData>
   /** Imperative escape hatch usable from outside the tree. */
@@ -1461,51 +1462,51 @@ interface GanttProps<TData = unknown>
 }
 
 const OPTION_KEYS: Array<keyof UseGanttStateOptions> = [
-  'events',
-  'defaultEvents',
-  'scale',
-  'defaultScale',
-  'date',
-  'defaultDate',
-  'selection',
-  'defaultSelection',
-  'interactions',
-  'defaultInteractions',
-  'loading',
-  'timeZone',
-  'locale',
-  'weekStartsOn',
-  'slotDuration',
-  'snapDuration',
-  'i18n',
-  'rangeBounds',
-  'activation',
-  'maxRangeWindow',
-  'resources',
-  'overlap',
-  'getEventPriority',
-  'eventOrder',
-  'getOccurrences',
-  'onEventClick',
-  'onEventDoubleClick',
-  'onEventUpdate',
-  'canDropEvent',
-  'onSlotClick',
-  'onSelectSlot',
-  'canSelectSlot',
-  'onCreateTask',
-  'canCreateTask',
-  'onResourceClick',
-  'onResourceDoubleClick',
-  'onRangeChange',
-  'onScaleChange',
-  'onDateChange',
-  'onSelectionChange',
-  'onInteractionsChange',
-  'onEventsChange',
-  'onResourceReorder',
-  'onResourceReorderReject',
-  'canReorderResource'
+  "events",
+  "defaultEvents",
+  "scale",
+  "defaultScale",
+  "date",
+  "defaultDate",
+  "selection",
+  "defaultSelection",
+  "interactions",
+  "defaultInteractions",
+  "loading",
+  "timeZone",
+  "locale",
+  "weekStartsOn",
+  "slotDuration",
+  "snapDuration",
+  "i18n",
+  "rangeBounds",
+  "activation",
+  "maxRangeWindow",
+  "resources",
+  "overlap",
+  "getEventPriority",
+  "eventOrder",
+  "getOccurrences",
+  "onEventClick",
+  "onEventDoubleClick",
+  "onEventUpdate",
+  "canDropEvent",
+  "onSlotClick",
+  "onSelectSlot",
+  "canSelectSlot",
+  "onCreateTask",
+  "canCreateTask",
+  "onResourceClick",
+  "onResourceDoubleClick",
+  "onRangeChange",
+  "onScaleChange",
+  "onDateChange",
+  "onSelectionChange",
+  "onInteractionsChange",
+  "onEventsChange",
+  "onResourceReorder",
+  "onResourceReorderReject",
+  "canReorderResource",
 ]
 
 function shallowEqualRecord(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
@@ -1534,7 +1535,7 @@ function splitOptions<TData>(props: Record<string, unknown>): {
   return {
     options: options as UseGanttStateOptions<TData>,
     viewConfig: viewConfig as unknown as GanttViewConfig<TData>,
-    rest
+    rest,
   }
 }
 
@@ -1568,8 +1569,8 @@ function Gantt<TData = unknown>({
 
   if (calendar && Object.keys(options).length > 0) {
     warnOnce(
-      'calendar-and-options',
-      'both `calendar` and option props were passed; option props are ignored when adopting an instance.'
+      "calendar-and-options",
+      "both `calendar` and option props were passed; option props are ignored when adopting an instance."
     )
   }
 
@@ -1581,27 +1582,27 @@ function Gantt<TData = unknown>({
   }, [apiRef, instance])
 
   const defaultProps = {
-    'data-slot': 'gantt',
+    "data-slot": "gantt",
     // own the foreground (previews and consumer shells may not set body
     // color) and the type scale: every gantt label inherits the root's text
     // size, so one class here (or on the consumer's className) rescales the
     // whole component - e.g. className="text-sm" for a roomier grid
-    className: cn('text-foreground flex min-h-0 min-w-0 flex-col text-xs', className),
+    className: cn("text-foreground flex min-h-0 min-w-0 flex-col text-xs", className),
     children: (
       <>
         {children}
         <div data-slot="gantt-announcer" aria-live="polite" className="sr-only" />
       </>
-    )
+    ),
   }
 
   return (
     <GanttContext.Provider value={instance}>
       <GanttViewConfigContext.Provider value={stableViewConfig}>
         {useRender({
-          defaultTagName: 'div',
+          defaultTagName: "div",
           render,
-          props: mergeProps<'div'>(defaultProps, rest)
+          props: mergeProps<"div">(defaultProps, rest),
         })}
       </GanttViewConfigContext.Provider>
     </GanttContext.Provider>
@@ -1628,7 +1629,7 @@ export {
   useGanttSettings,
   useGanttSettingsVersion,
   useGanttState,
-  useGanttViewConfig
+  useGanttViewConfig,
 }
 export type {
   GanttActivationConfig,
@@ -1652,5 +1653,5 @@ export type {
   GanttTimelineLines,
   GanttTreePanelConfig,
   GanttViewConfig,
-  UseGanttStateOptions
+  UseGanttStateOptions,
 }

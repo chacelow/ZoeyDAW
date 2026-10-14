@@ -1,6 +1,6 @@
 import { effectiveDrawMode } from "@/pages/project/model/interaction-mode"
 import { snapBar } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
-import type { CanvasInteraction, CanvasMenuTarget, InteractionContext } from "../types"
+import { finishProjectPreview, synchronizeProjectScene } from "../project-preview"
 import { automationBar, automationValue } from "./geometry"
 import { hitAutomation } from "./hit"
 import { pointGesture } from "./points"
@@ -9,30 +9,54 @@ import { drawGesture } from "./drawing"
 import { marqueeGesture } from "./selection"
 import { flatLineGesture } from "./flat"
 import { automationClipboardActions, automationKeyDown } from "./commands"
+import type {
+  CanvasInteraction,
+  CanvasMenuTarget,
+  CanvasPointer,
+  InteractionContext,
+} from "../types"
 
 export function createAutomationInteractions(context: InteractionContext): CanvasInteraction {
   const clipboard = automationClipboardActions(context)
+  const resolveHit = (pointer: CanvasPointer) => {
+    synchronizeProjectScene(context)
+    return hitAutomation(context, pointer)
+  }
   return {
     start(pointer) {
-      if (pointer.button !== 0) return null
-      const hit = hitAutomation(context, pointer)
-      if (!hit) return null
+      if (pointer.button !== 0) {
+        return null
+      }
+      const hit = resolveHit(pointer)
+      if (!hit) {
+        return null
+      }
       context.actions.selectTracks([hit.row.track.id], "arrangement")
-      if (effectiveDrawMode(context.getState())) return drawGesture(context, pointer, hit.row)
-      if (hit.kind === "point") return pointGesture(context, pointer, hit.row, hit.point)
-      if (hit.kind === "segment")
+      if (effectiveDrawMode(context.getState())) {
+        return drawGesture(context, pointer, hit.row)
+      }
+      if (hit.kind === "point") {
+        return pointGesture(context, pointer, hit.row, hit.point)
+      }
+      if (hit.kind === "segment") {
         return segmentGesture(context, pointer, hit.row, hit.from, hit.to, hit.near)
-      if (hit.onLine) return flatLineGesture(context, pointer, hit.row, hit.value)
-      return marqueeGesture(context, pointer, hit.row)
+      }
+      return hit.onLine
+        ? flatLineGesture(context, pointer, hit.row, hit.value)
+        : marqueeGesture(context, pointer, hit.row)
     },
     hover(pointer) {
-      const hit = hitAutomation(context, pointer)
-      if (effectiveDrawMode(context.getState()) && hit) return "crosshair"
+      const hit = resolveHit(pointer)
+      if (effectiveDrawMode(context.getState()) && hit) {
+        return "crosshair"
+      }
       return hit?.kind === "point" ? "grab" : hit?.kind === "segment" ? "ns-resize" : undefined
     },
     doubleClick(pointer) {
-      const hit = hitAutomation(context, pointer)
-      if (hit?.kind === "point") return true
+      const hit = resolveHit(pointer)
+      if (hit?.kind === "point") {
+        return true
+      }
       if (hit?.kind === "segment" && pointer.altKey) {
         context.actions.resetAutomationCurve(hit.row.track.id, hit.row.laneId, hit.from.id)
         return true
@@ -57,16 +81,19 @@ export function createAutomationInteractions(context: InteractionContext): Canva
     keyDown: event => automationKeyDown(context, event),
     ...clipboard,
     contextMenu(pointer): CanvasMenuTarget | null {
-      const hit = hitAutomation(context, pointer)
-      if (!hit) return null
-      if (hit.kind === "point")
+      const hit = resolveHit(pointer)
+      if (!hit) {
+        return null
+      }
+      if (hit.kind === "point") {
         return {
           kind: "automation-point",
           trackId: hit.row.track.id,
           laneId: hit.row.laneId,
           pointId: hit.point.id,
         }
-      if (hit.kind === "segment")
+      }
+      if (hit.kind === "segment") {
         return {
           kind: "automation-segment",
           trackId: hit.row.track.id,
@@ -75,6 +102,7 @@ export function createAutomationInteractions(context: InteractionContext): Canva
           bar: automationBar(context.scene.get(), pointer.x),
           value: hit.value,
         }
+      }
       return {
         kind: "automation-lane",
         trackId: hit.row.track.id,
@@ -85,9 +113,12 @@ export function createAutomationInteractions(context: InteractionContext): Canva
     },
     deactivate() {
       const selection = context.scene.get().targetSelection
-      if (selection.kind === "automation" || selection.kind === "automation-value")
+      if (selection.kind === "automation" || selection.kind === "automation-value") {
         context.scene.setTargetSelection({ kind: "none" })
-      context.scene.setPreviewTracks(null)
+      }
+      if (context.getState().session.preview?.kind === "tracks") {
+        finishProjectPreview(context, true)
+      }
     },
   }
 }

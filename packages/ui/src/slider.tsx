@@ -1,6 +1,6 @@
-import { Slider as SliderPrimitive } from '@base-ui/react/slider'
+import { Slider as SliderPrimitive } from "@base-ui/react/slider"
 
-import { cn } from '#lib/utils'
+import { cn } from "#lib/utils"
 
 function Slider({
   className,
@@ -8,7 +8,7 @@ function Slider({
   value,
   min = 0,
   max = 100,
-  ...props
+  ...properties
 }: SliderPrimitive.Root.Props) {
   const _values = Array.isArray(value)
     ? value
@@ -18,23 +18,23 @@ function Slider({
 
   return (
     <SliderPrimitive.Root
-      className={cn('w-full', className)}
+      className={cn("w-full", className)}
       data-slot="slider"
       defaultValue={defaultValue}
       value={value}
       min={min}
       max={max}
       thumbAlignment="edge"
-      {...props}
+      {...properties}
     >
       <SliderPrimitive.Control className="relative flex w-full touch-none items-center py-2 select-none data-disabled:opacity-50">
         <SliderPrimitive.Track
           data-slot="slider-track"
-          className="relative h-1 w-full grow overflow-hidden rounded-full bg-muted select-none"
+          className="bg-muted relative h-1 w-full grow overflow-hidden rounded-full select-none"
         >
           <SliderPrimitive.Indicator
             data-slot="slider-range"
-            className="h-full bg-primary select-none"
+            className="bg-primary h-full select-none"
           />
         </SliderPrimitive.Track>
         {Array.from({ length: _values.length }, (_, index) => (
@@ -42,7 +42,7 @@ function Slider({
             data-slot="slider-thumb"
             key={index}
             index={index}
-            className="relative block size-3 shrink-0 rounded-full border border-ring bg-background ring-ring/50 transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
+            className="border-ring bg-background ring-ring/50 relative block size-3 shrink-0 rounded-full border transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
           />
         ))}
       </SliderPrimitive.Control>

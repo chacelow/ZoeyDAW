@@ -11,38 +11,39 @@
  *       close 事件在时序上**晚于** `dragpad-dragging` class 移除，瞬时检查 class
  *       不够。改成全局 pointerup 时若 drag class 在就设 500ms grace，期间 close 丢弃。
  */
-import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "#components/popover";
-import { useInfoBinding } from "../DragPad/useInfoBinding";
-import { MappingOverlay } from "../MappingOverlay";
-import { controlInteractiveClasses } from "../classes";
+import { useEffect, useRef, useState } from "react"
+import { Popover, PopoverContent, PopoverTrigger } from "#components/popover"
+import { useInfoBinding } from "../DragPad/useInfoBinding"
+import { MappingOverlay } from "../MappingOverlay"
+import { controlInteractiveClasses } from "../classes"
+import type { CSSProperties, ReactNode } from "react"
 
 export interface PopupButtonProps {
-  /** 按钮内显示的内容（通常是当前值的紧凑表示） */
-  trigger: ReactNode;
-  /** popup 内任意 UI */
-  children: ReactNode;
-  label: string;
-  description?: string;
-  color?: string;
-  disabled?: boolean;
-  mappable?: boolean;
-  className?: string;
-  size?: "default" | "compact";
-  contentClassName?: string;
-  align?: "start" | "center" | "end";
-  side?: "top" | "right" | "bottom" | "left";
-  sideOffset?: number;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  /** close grace window (ms) after any DragPad drag ends. 默认 500。 */
-  closeGraceMs?: number;
+  /**
+  按钮内显示的内容（通常是当前值的紧凑表示）
+  */
+  readonly trigger: ReactNode
+  /**
+  popup 内任意 UI
+  */
+  readonly children: ReactNode
+  readonly label: string
+  readonly description?: string
+  readonly color?: string
+  readonly disabled?: boolean
+  readonly mappable?: boolean
+  readonly className?: string
+  readonly size?: "default" | "compact"
+  readonly contentClassName?: string
+  readonly align?: "start" | "center" | "end"
+  readonly side?: "top" | "right" | "bottom" | "left"
+  readonly sideOffset?: number
+  readonly open?: boolean
+  readonly onOpenChange?: (open: boolean) => void
+  /**
+  close grace window (ms) after any DragPad drag ends. 默认 500。
+  */
+  readonly closeGraceMs?: number
 }
 
 export function PopupButton({
@@ -58,28 +59,28 @@ export function PopupButton({
   align = "start",
   side = "bottom",
   sideOffset = 4,
-  open: openProp,
+  open: openProperty,
   onOpenChange,
   closeGraceMs = 500,
   size = "default",
 }: PopupButtonProps) {
-  const [openInternal, setOpenInternal] = useState(false);
-  const open = openProp ?? openInternal;
-  const graceUntilRef = useRef(0);
+  const [openInternal, setOpenInternal] = useState(false)
+  const open = openProperty ?? openInternal
+  const graceUntilReference = useRef(0)
 
   useEffect(() => {
     const handler = () => {
       if (document.documentElement.classList.contains("dragpad-dragging")) {
-        graceUntilRef.current = Date.now() + closeGraceMs;
+        graceUntilReference.current = Date.now() + closeGraceMs
       }
-    };
-    document.addEventListener("pointerup", handler, true);
-    document.addEventListener("pointercancel", handler, true);
+    }
+    document.addEventListener("pointerup", handler, { capture: true })
+    document.addEventListener("pointercancel", handler, { capture: true })
     return () => {
-      document.removeEventListener("pointerup", handler, true);
-      document.removeEventListener("pointercancel", handler, true);
-    };
-  }, [closeGraceMs]);
+      document.removeEventListener("pointerup", handler, true)
+      document.removeEventListener("pointercancel", handler, true)
+    }
+  }, [closeGraceMs])
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
@@ -88,19 +89,22 @@ export function PopupButton({
         typeof document !== "undefined" &&
         document.documentElement.classList.contains("dragpad-dragging")
       ) {
-        return;
+        return
       }
       // 2) class 刚移除、还在 grace window 内：也拦
-      if (Date.now() < graceUntilRef.current) return;
+      if (Date.now() < graceUntilReference.current) {
+        return
+      }
     }
-    if (onOpenChange) onOpenChange(next);
-    else setOpenInternal(next);
-  };
+    if (onOpenChange) {
+      onOpenChange(next)
+    } else {
+      setOpenInternal(next)
+    }
+  }
 
-  const infoHandlers = useInfoBinding({ type: "popup", description });
-  const style = color
-    ? ({ "--dragpad-color": color } as CSSProperties)
-    : undefined;
+  const infoHandlers = useInfoBinding({ type: "popup", description })
+  const style = color ? ({ "--dragpad-color": color } as CSSProperties) : undefined
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -114,10 +118,7 @@ export function PopupButton({
             aria-label={label}
             data-mappable={mappable || undefined}
             {...infoHandlers}
-            className={controlInteractiveClasses(
-              { active: open, disabled, size },
-              className,
-            )}
+            className={controlInteractiveClasses({ active: open, disabled, size }, className)}
           >
             <span className="truncate">{trigger}</span>
             <MappingOverlay mappable={mappable} disabled={disabled} />
@@ -133,5 +134,5 @@ export function PopupButton({
         {children}
       </PopoverContent>
     </Popover>
-  );
+  )
 }

@@ -1,25 +1,50 @@
-import type { ProjectState, Track } from "../model/types"
-import { PATTERN_STEPS_PER_BAR } from "../model/types"
+import { PATTERN_STEPS_PER_BAR } from "@/pages/project/model/types"
 import {
   automationSourceValue,
   automationValueAt,
   normalizedAutomationValue,
-} from "../model/automation-curve"
+} from "@/pages/project/model/automation-curve"
+import type {
+  BackendAudioClip,
+  BackendClipBase,
+  BackendMidiClip,
+  BackendPatternClip,
+  BackendTrack,
+} from "@/pages/project/model/backend"
+
+type MeterClipBase = Pick<BackendClipBase, "id" | "startBar" | "lengthBars"> & {
+  sourceOffsetBars?: number
+}
+type MeterClip =
+  | (Pick<BackendAudioClip, "kind" | "gainDb"> &
+      MeterClipBase & { sourceId?: string | null; waveformPeaks?: readonly number[] })
+  | (Pick<BackendMidiClip, "kind" | "notes"> & MeterClipBase & { loopBars?: number })
+  | (Pick<BackendPatternClip, "kind"> & MeterClipBase & { steps?: readonly boolean[] })
+type MeterTrack = Pick<
+  BackendTrack,
+  "id" | "kind" | "output" | "solo" | "armed" | "mute" | "volumeDb" | "pan" | "automation"
+> & { clips: readonly MeterClip[] }
+export interface MeterSignalInput {
+  document: { tracks: readonly MeterTrack[]; transport: { numerator: number } }
+  session: { playing: boolean; activeMidiNotes: readonly number[] }
+}
 
 const SILENCE = -60
-const amplitude = (db: number) => Math.pow(10, db / 20)
+const amplitude = (levelDb: number) => 10 ** (levelDb / 20)
 const decibels = (value: number) =>
   value > 0 ? Math.max(SILENCE, 20 * Math.log10(value)) : SILENCE
 
-/** Visual-only deterministic signal. No samples are decoded and no audio is emitted. */
+/**
+Visual-only deterministic signal. No samples are decoded and no audio is emitted.
+*/
 export function mockMeterLevels(
-  state: ProjectState,
+  state: MeterSignalInput,
   bar: number,
   now: number
 ): Record<string, [number, number]> {
-  const tracks = state.document.tracks
-  const byId = new Map(tracks.map(track => [track.id, track]))
-  const children = new Map<string, Track[]>()
+  const { tracks } = state.document
+  const byId = new Map<string, MeterTrack>(tracks.map(track => [track.id, track]))
+  const children = new Map<string, MeterTrack[]>()
   for (const track of tracks) {
     const siblings = children.get(track.output) ?? []
     siblings.push(track)
@@ -29,23 +54,30 @@ export function mockMeterLevels(
   const signals = new Map<string, [number, number]>()
   const visiting = new Set<string>()
 
-  function hasSoloDescendant(track: Track): boolean {
+  function hasSoloDescendant(track: MeterTrack): boolean {
     return (children.get(track.id) ?? []).some(child => child.solo || hasSoloDescendant(child))
   }
-  function allowed(track: Track): boolean {
-    if (!soloed.length || track.kind === "main" || track.solo || hasSoloDescendant(track))
+  function allowed(track: MeterTrack): boolean {
+    if (!soloed.length || track.kind === "main" || track.solo || hasSoloDescendant(track)) {
       return true
+    }
     let parent = byId.get(track.output)
     while (parent) {
-      if (parent.solo) return true
+      if (parent.solo) {
+        return true
+      }
       parent = byId.get(parent.output)
     }
     return false
   }
-  function render(track: Track): [number, number] {
+  function render(track: MeterTrack): [number, number] {
     const cached = signals.get(track.id)
-    if (cached) return cached
-    if (visiting.has(track.id)) return [0, 0]
+    if (cached) {
+      return cached
+    }
+    if (visiting.has(track.id)) {
+      return [0, 0]
+    }
     visiting.add(track.id)
     let left = 0
     let right = 0
@@ -56,9 +88,14 @@ export function mockMeterLevels(
     }
     if (state.session.playing && (track.kind === "audio" || track.kind === "midi")) {
       for (const clip of track.clips) {
-        if (bar < clip.startBar || bar >= clip.startBar + clip.lengthBars) continue
+        if (bar < clip.startBar || bar >= clip.startBar + clip.lengthBars) {
+          continue
+        }
         const phase = bar - clip.startBar
         if (clip.kind === "audio") {
+          if (clip.sourceId === null) {
+            continue
+          }
           const peaks = clip.waveformPeaks
           const peak =
             peaks?.[
@@ -94,7 +131,7 @@ export function mockMeterLevels(
                 steps.length) +
                 steps.length) %
                 steps.length
-            ]
+            ] === true
           ) {
             left += 0.45
             right += 0.45

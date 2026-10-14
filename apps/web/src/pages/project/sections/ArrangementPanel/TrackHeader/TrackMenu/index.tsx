@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import {
   ContextMenu,
@@ -9,6 +8,7 @@ import {
   ContextMenuLabel,
 } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
+import type { ReactNode } from "react"
 import type { Track } from "@/pages/project/model/types"
 
 const COLORS = [
@@ -27,14 +27,14 @@ export function TrackMenu({
   onRename,
   children,
 }: {
-  track: Track
-  onRename: () => void
-  children: ReactNode
+  readonly track: Track
+  readonly onRename: () => void
+  readonly children: ReactNode
 }) {
   const { t } = useTranslation()
   const selectedIds = useProjectState(s => s.session.selectedTrackIds)
   const targets = selectedIds.includes(track.id) ? selectedIds : [track.id]
-  const editable = track.kind !== "main"
+  const isEditable = track.kind !== "main"
   return (
     <ContextMenu>
       <ContextMenuTrigger render={<div className="h-full w-full" />}>{children}</ContextMenuTrigger>
@@ -47,12 +47,12 @@ export function TrackMenu({
           {t(track.collapsed ? "arrangement.expand" : "arrangement.collapse")}
         </ContextMenuItem>
         <ContextMenuItem
-          disabled={!editable}
+          disabled={!isEditable}
           onClick={() => projectActions.duplicateTracks(targets)}
         >
           {t("arrangement.duplicate")}
         </ContextMenuItem>
-        <ContextMenuItem disabled={!editable} onClick={() => projectActions.groupTracks(targets)}>
+        <ContextMenuItem disabled={!isEditable} onClick={() => projectActions.groupTracks(targets)}>
           {t("arrangement.group")}
         </ContextMenuItem>
         {track.kind === "group" && (
@@ -63,20 +63,22 @@ export function TrackMenu({
         <ContextMenuSeparator />
         <ContextMenuLabel>{t("arrangement.trackColor")}</ContextMenuLabel>
         <div className="grid grid-cols-8 gap-1 p-1">
-          {COLORS.map((color, index) => (
-            <button
-              key={color}
-              type="button"
-              aria-label={`${t("arrangement.trackColor")} ${index + 1}`}
-              className="size-5 rounded-sm outline-offset-2 focus-visible:outline-2 focus-visible:outline-ring"
-              style={{ background: color }}
-              onClick={() => {
-                projectActions.beginEdit()
-                for (const id of targets) projectActions.updateTrack(id, { color })
-                projectActions.endEdit()
-              }}
-            />
-          ))}
+          {COLORS.map((color, index) => {
+            return (
+              <button
+                key={color}
+                type="button"
+                aria-label={`${t("arrangement.trackColor")} ${index + 1}`}
+                className="focus-visible:outline-ring size-5 rounded-sm outline-offset-2 focus-visible:outline-2"
+                style={{ background: color }}
+                onClick={() => {
+                  projectActions.beginEdit()
+                  for (const id of targets) projectActions.updateTrack(id, { color })
+                  projectActions.endEdit()
+                }}
+              />
+            )
+          })}
         </div>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={() => projectActions.addTrack("audio")}>
@@ -89,7 +91,7 @@ export function TrackMenu({
           {t("arrangement.addGroup")}
         </ContextMenuItem>
         <ContextMenuItem
-          disabled={!editable}
+          disabled={!isEditable}
           variant="destructive"
           onClick={() => projectActions.deleteTracks(targets)}
         >

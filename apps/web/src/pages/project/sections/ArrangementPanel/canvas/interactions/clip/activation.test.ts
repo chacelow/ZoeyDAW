@@ -96,7 +96,9 @@ it("retains the last compatible multi-clip preview across incompatible and absen
     ctrlKey: false,
   }
   const gesture = interaction.start(pointer)
-  if (!gesture) throw new Error("Missing move gesture")
+  if (!gesture) {
+    throw new Error("Missing move gesture")
+  }
   gesture.move({ ...pointer, x: 84 })
   const preview = scene.get().previewTracks
   expect(preview?.find(track => track.id === "trager")?.clips[0]).toMatchObject({ startBar: 2 })

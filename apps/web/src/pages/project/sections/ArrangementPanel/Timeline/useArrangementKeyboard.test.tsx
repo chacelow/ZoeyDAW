@@ -6,7 +6,7 @@ import { hydrateProject, projectActions, useProjectState } from "@/pages/project
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
 import { useArrangementKeyboard } from "./useArrangementKeyboard"
 
-function Keys({ role = "button" }: { role?: "button" | "menuitem" }) {
+function Keys({ role = "button" }: { readonly role?: "button" | "menuitem" }) {
   useArrangementKeyboard()
   const automation = useProjectState(state => state.workspace.automationMode)
   return (
@@ -29,7 +29,7 @@ function Keys({ role = "button" }: { role?: "button" | "menuitem" }) {
       />
       <input aria-label="Search" />
       <textarea aria-label="Notes" />
-      <div contentEditable aria-label="Rename" suppressContentEditableWarning />
+      <div contentEditable role="textbox" aria-label="Rename" suppressContentEditableWarning />
     </>
   )
 }

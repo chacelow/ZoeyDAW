@@ -10,9 +10,12 @@ export function drawModeKeyDown(event: KeyboardEvent): boolean {
     event.ctrlKey ||
     event.metaKey ||
     useProjectState.getState().workspace.computerKeyboard
-  )
+  ) {
     return false
-  if (held || event.repeat) return true
+  }
+  if (held || event.repeat) {
+    return true
+  }
   const original = useProjectState.getState().workspace.drawMode
   held = { original, used: false }
   projectActions.setDrawModeOverride(!original)
@@ -20,7 +23,9 @@ export function drawModeKeyDown(event: KeyboardEvent): boolean {
 }
 
 export function markDrawModeGesture(): void {
-  if (held) held.used = true
+  if (held) {
+    held.used = true
+  }
 }
 
 export function cancelDrawModeKey(): void {
@@ -36,15 +41,21 @@ export function setDrawModeLatched(enabled: boolean): void {
 function releaseDrawModeKey(): void {
   const previous = held
   held = null
-  if (!previous) return
-  if (!previous.used) projectActions.setMode("drawMode", !previous.original)
+  if (!previous) {
+    return
+  }
+  if (!previous.used) {
+    projectActions.setMode("drawMode", !previous.original)
+  }
   projectActions.setDrawModeOverride(null)
 }
 
 export function useDrawModeKeyRelease(): void {
   useEffect(() => {
     const up = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "b") releaseDrawModeKey()
+      if (event.key.toLowerCase() === "b") {
+        releaseDrawModeKey()
+      }
     }
     window.addEventListener("keyup", up)
     window.addEventListener("blur", cancelDrawModeKey)

@@ -30,12 +30,14 @@ export function useProjectShell(): ProjectShellApi {
   const [browserCollapsed, setBrowserCollapsed] = useState(false)
   const [footerCollapsed, setFooterCollapsed] = useState(false)
 
-  const browserHandleRef = useRef<PanelImperativeHandle | null>(null)
-  const footerHandleRef = useRef<PanelImperativeHandle | null>(null)
+  const browserHandleReference = useRef<PanelImperativeHandle | null>(null)
+  const footerHandleReference = useRef<PanelImperativeHandle | null>(null)
 
   const togglePanel = useCallback(
     (handle: PanelImperativeHandle | null, setCollapsed: (v: boolean) => void) => {
-      if (!handle) return
+      if (!handle) {
+        return
+      }
       if (handle.isCollapsed()) {
         handle.expand()
         setCollapsed(false)
@@ -54,9 +56,9 @@ export function useProjectShell(): ProjectShellApi {
     footerCollapsed,
     setBrowserCollapsed,
     setFooterCollapsed,
-    browserHandleRef,
-    footerHandleRef,
-    toggleBrowser: () => togglePanel(browserHandleRef.current, setBrowserCollapsed),
-    toggleFooter: () => togglePanel(footerHandleRef.current, setFooterCollapsed),
+    browserHandleRef: browserHandleReference,
+    footerHandleRef: footerHandleReference,
+    toggleBrowser: () => togglePanel(browserHandleReference.current, setBrowserCollapsed),
+    toggleFooter: () => togglePanel(footerHandleReference.current, setFooterCollapsed),
   }
 }

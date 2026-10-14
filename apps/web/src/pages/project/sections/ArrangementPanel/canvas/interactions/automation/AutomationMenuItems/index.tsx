@@ -1,19 +1,19 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { ContextMenuItem, ContextMenuSeparator } from "@zoeymind/ui"
 import { projectActions } from "@/pages/project/adapters"
-import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
+import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
 
 export function AutomationMenuItems({
   target,
 }: {
-  target: Extract<
+  readonly target: Extract<
     CanvasMenuTarget,
     { kind: "automation-point" | "automation-segment" | "automation-lane" }
   >
 }) {
   const { t } = useTranslation()
-  if (target.kind === "automation-point")
+  if (target.kind === "automation-point") {
     return (
       <>
         <ContextMenuItem
@@ -56,16 +56,17 @@ export function AutomationMenuItems({
         </ContextMenuItem>
       </>
     )
-  if (target.kind === "automation-segment")
+  }
+  if (target.kind === "automation-segment") {
     return (
       <>
         <ContextMenuItem
-          onClick={() =>
-            projectActions.setAutomationPoint(target.trackId, target.laneId, {
+          onClick={() => {
+            return projectActions.setAutomationPoint(target.trackId, target.laneId, {
               bar: target.bar,
               value: target.value,
             })
-          }
+          }}
         >
           {t("arrangement.addAutomationPoint")}
         </ContextMenuItem>
@@ -78,6 +79,7 @@ export function AutomationMenuItems({
         </ContextMenuItem>
       </>
     )
+  }
   return (
     <ContextMenuItem
       onClick={() =>

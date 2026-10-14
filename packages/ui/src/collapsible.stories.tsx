@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { ChevronDownIcon } from 'lucide-react'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible'
-import { Button } from './button'
+import { ChevronDownIcon } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible"
+import { Button } from "./button"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Collapsible> = {
-  title: 'Layout/Collapsible',
+  title: "Layout/Collapsible",
   component: Collapsible,
-  tags: ['autodocs']
+  tags: ["autodocs"],
 }
 
 export default meta
@@ -23,9 +23,9 @@ export const Default: Story = {
           </Button>
         }
       />
-      <CollapsibleContent className="mt-2 px-3 py-2 text-sm text-muted-foreground">
+      <CollapsibleContent className="text-muted-foreground mt-2 px-3 py-2 text-sm">
         这里是折叠展开的内容，可以放任意组件。
       </CollapsibleContent>
     </Collapsible>
-  )
+  ),
 }

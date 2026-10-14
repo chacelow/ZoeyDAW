@@ -1,15 +1,15 @@
-import { DragPadBipolar } from "../DragPad";
+import { DragPadBipolar } from "../DragPad"
 
 export interface PanControlProps {
-  value: number;
-  onChange: (value: number) => void;
-  disabled?: boolean;
-  className?: string;
-  size?: "default" | "compact";
-  label?: string;
-  onGestureStart?: () => void;
-  onGestureEnd?: () => void;
-  onGestureCancel?: () => void;
+  readonly value: number
+  readonly onChange: (value: number) => void
+  readonly disabled?: boolean
+  readonly className?: string
+  readonly size?: "default" | "compact"
+  readonly label?: string
+  readonly onGestureStart?: () => void
+  readonly onGestureEnd?: () => void
+  readonly onGestureCancel?: () => void
 }
 
 export function PanControl({
@@ -31,15 +31,16 @@ export function PanControl({
       max={1}
       step={0.01}
       defaultValue={0}
-      format={(v) =>
-        v === 0 ? "C" : `${v < 0 ? "L" : "R"}${Math.round(Math.abs(v) * 100)}`
-      }
-      parse={(raw) => {
-        const text = raw.trim().toUpperCase();
-        if (text === "C") return 0;
-        if (text.startsWith("L")) return -Number(text.slice(1)) / 100;
-        if (text.startsWith("R")) return Number(text.slice(1)) / 100;
-        return Number(text);
+      format={v => (v === 0 ? "C" : `${v < 0 ? "L" : "R"}${Math.round(Math.abs(v) * 100)}`)}
+      parse={raw => {
+        const text = raw.trim().toUpperCase()
+        if (text === "C") {
+          return 0
+        }
+        if (text.startsWith("L")) {
+          return -Number(text.slice(1)) / 100
+        }
+        return text.startsWith("R") ? Number(text.slice(1)) / 100 : Number(text)
       }}
       widthSamples={["L100", "R100"]}
       onGestureStart={onGestureStart}
@@ -50,5 +51,5 @@ export function PanControl({
       className={className}
       size={size}
     />
-  );
+  )
 }

@@ -1,27 +1,27 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { CheckIcon } from 'lucide-react'
-import { Badge } from './badge'
+import { CheckIcon } from "lucide-react"
+import { Badge } from "./badge"
+import type { Meta, StoryObj } from "@storybook/react"
 
 const meta: Meta<typeof Badge> = {
-  title: 'Primitives/Badge',
+  title: "Primitives/Badge",
   component: Badge,
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
     variant: {
-      control: 'select',
+      control: "select",
       options: [
-        'default',
-        'secondary',
-        'destructive',
-        'success',
-        'warning',
-        'outline',
-        'ghost',
-        'link'
-      ]
-    }
+        "default",
+        "secondary",
+        "destructive",
+        "success",
+        "warning",
+        "outline",
+        "ghost",
+        "link",
+      ],
+    },
   },
-  args: { children: 'Badge' }
+  args: { children: "Badge" },
 }
 
 export default meta
@@ -40,7 +40,7 @@ export const Variants: Story = {
       <Badge variant="outline">Outline</Badge>
       <Badge variant="ghost">Ghost</Badge>
     </div>
-  )
+  ),
 }
 
 export const WithIcon: Story = {
@@ -49,5 +49,5 @@ export const WithIcon: Story = {
       <CheckIcon data-icon="inline-start" />
       Verified
     </Badge>
-  )
+  ),
 }

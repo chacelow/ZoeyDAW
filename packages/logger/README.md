@@ -22,40 +22,40 @@ pnpm install @zoeymind/logger
 ### 基础使用
 
 ```typescript
-import logger from '@zoeymind/logger'
+import logger from "@zoeymind/logger"
 
 // 基本日志输出
-logger.info('应用启动成功')
-logger.success('操作完成')
-logger.warn('这是一个警告')
-logger.error('发生了错误')
-logger.debug('调试信息')
+logger.info("应用启动成功")
+logger.success("操作完成")
+logger.warn("这是一个警告")
+logger.error("发生了错误")
+logger.debug("调试信息")
 ```
 
 ### 自定义配置
 
 ```typescript
-import { createLogger } from '@zoeymind/logger'
+import { createLogger } from "@zoeymind/logger"
 
 const customLogger = createLogger({
   show: true, // 是否显示日志
   showLogo: true, // 是否显示Logo
   showTimestamp: true, // 是否显示时间戳
   showLevel: true, // 是否显示日志级别
-  prefix: 'API', // 日志前缀
+  prefix: "API", // 日志前缀
   colors: {
-    info: '#3b82f6', // 自定义颜色
-    success: '#10b981'
-  }
+    info: "#3b82f6", // 自定义颜色
+    success: "#10b981",
+  },
 })
 
-customLogger.info('自定义配置的日志')
+customLogger.info("自定义配置的日志")
 ```
 
 ### 动态配置
 
 ```typescript
-import logger from '@zoeymind/logger'
+import logger from "@zoeymind/logger"
 
 // 获取当前配置
 const config = logger.getConfig()
@@ -63,7 +63,7 @@ const config = logger.getConfig()
 // 更新配置
 logger.setConfig({
   showTimestamp: false,
-  prefix: 'MyApp'
+  prefix: "MyApp",
 })
 ```
 

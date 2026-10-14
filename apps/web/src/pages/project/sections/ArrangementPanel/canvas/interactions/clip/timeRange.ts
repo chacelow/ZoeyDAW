@@ -1,8 +1,8 @@
-import type { TimeSelection } from "@/pages/project/model/types"
-import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
-import { barAtX, snappedBar } from "../coordinates"
 import { hitTest } from "@/pages/project/sections/ArrangementPanel/canvas/hit-test"
 import { layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
+import { barAtX, snappedBar } from "../coordinates"
+import type { TimeSelection } from "@/pages/project/model/types"
+import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
 
 export function createTimeRangeGesture(
   context: InteractionContext,
@@ -28,10 +28,11 @@ export function createTimeRangeGesture(
         const rows = layoutTrackRows(context.scene.get())
         const first = rows.findIndex(row => row.track.id === trackId)
         const last = rows.findIndex(row => row.track.id === target.track.id)
-        if (first >= 0 && last >= 0)
+        if (first !== -1 && last !== -1) {
           trackIds = rows
             .slice(Math.min(first, last), Math.max(first, last) + 1)
             .map(row => row.track.id)
+        }
       }
       context.scene.setTimeSelection({
         startBar: Math.min(startBar, endBar),

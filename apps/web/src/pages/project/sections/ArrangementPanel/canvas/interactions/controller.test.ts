@@ -3,8 +3,8 @@ import { afterEach, beforeEach, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
 import { createSceneStore } from "../scene"
-import { createCanvasController } from "./controller"
 import { layoutTrackRows } from "../layout"
+import { createCanvasController } from "./controller"
 
 let dispose: (() => void) | undefined
 beforeEach(() => {
@@ -145,13 +145,14 @@ it("copies a clip from its title in automation mode without moving the original"
     ["pointerdown", 60],
     ["pointermove", 84],
     ["pointerup", 84],
-  ] as const)
+  ] as const) {
     element.dispatchEvent(
       new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0, altKey: true })
     )
-  const clips = useProjectState
+  }
+  const { clips } = useProjectState
     .getState()
-    .document.tracks.find(track => track.id === "3-audio")!.clips
+    .document.tracks.find(track => track.id === "3-audio")!
   expect(clip()).toMatchObject({ startBar: 1 })
   expect(clips).toHaveLength(2)
   expect(clips.find(item => item.id !== "audio-1")).toMatchObject({ startBar: 2 })
@@ -174,11 +175,13 @@ it.each(["pointercancel", "lostpointercapture", "blur"])(
     expect(
       scene.get().previewTracks?.find(track => track.id === "3-audio")?.clips[0]
     ).toMatchObject({ startBar: 2 })
-    if (interruption === "blur") window.dispatchEvent(new Event("blur"))
-    else
+    if (interruption === "blur") {
+      window.dispatchEvent(new Event("blur"))
+    } else {
       element.dispatchEvent(
         new MouseEvent(interruption, { bubbles: true, clientX: 130, clientY: -30 })
       )
+    }
     expect(clip()).toMatchObject({ startBar: 2 })
     expect(scene.get().previewTracks).toBeNull()
     projectActions.undo()
@@ -190,8 +193,9 @@ it("continues moving through modifier keys and commits final pointerup coordinat
   const { element, pointer, clip } = createClipController()
   pointer("pointerdown", 60)
   pointer("pointermove", 84)
-  for (const key of ["Shift", "Alt", "Control", "Meta"])
+  for (const key of ["Shift", "Alt", "Control", "Meta"]) {
     element.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key }))
+  }
   pointer("pointerup", 108)
   expect(clip()).toMatchObject({ startBar: 3 })
   projectActions.undo()

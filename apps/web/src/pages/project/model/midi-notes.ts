@@ -2,7 +2,9 @@ import type { MidiNote } from "./types"
 
 const NOTE_GRID_BEATS = 0.25
 
-/** The clip's right edge is exclusive, even when rounding to the nearest grid cell. */
+/**
+The clip's right edge is exclusive, even when rounding to the nearest grid cell.
+*/
 export function midiInsertionBeat({
   horizontalRatio,
   sourceOffsetBeats,
@@ -20,7 +22,9 @@ export function midiInsertionBeat({
   return sourceOffsetBeats + gridCell * NOTE_GRID_BEATS
 }
 
-/** Keep a partially visible note's original position available while moving it. */
+/**
+Keep a partially visible note's original position available while moving it.
+*/
 export function moveMidiNote({
   note,
   originalStartBeat,

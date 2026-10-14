@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react"
-import { projectActions, readSimulatedBar, useProjectState } from "@/pages/project/adapters"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { projectActions, readTransportBar, useProjectState } from "@/pages/project/adapters"
 import { growTimelineBars, timelineBars } from "@/pages/project/model/selectors"
 import { gridZoomLimit } from "@/pages/project/model/grid"
 import { positionToBar, visibleTracks } from "@/pages/project/model/types"
+import { CONTROLS_WIDTH } from "@/pages/project/layout"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import {
   maxTrackScrollY,
@@ -10,38 +11,41 @@ import {
 } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { useViewportSync } from "@/pages/project/sections/ArrangementPanel/canvas/useSceneSync"
 import { arrangementScheduler } from "@/pages/project/sections/ArrangementPanel/canvas/scheduler"
+import type { RefObject } from "react"
 
-export const CONTROLS_WIDTH = 304
-
-function useMeasuredSize(ref: RefObject<HTMLElement | null>) {
+function useMeasuredSize(reference: RefObject<HTMLElement | null>) {
   const [size, setSize] = useState({ width: 0, height: 0 })
   useEffect(() => {
-    const element = ref.current
-    if (!element) return
+    const element = reference.current
+    if (!element) {
+      return
+    }
     const measure = () => {
       const rect = element.getBoundingClientRect()
-      setSize(previous =>
-        previous.width === rect.width && previous.height === rect.height
+      setSize(previous => {
+        return previous.width === rect.width && previous.height === rect.height
           ? previous
           : { width: rect.width, height: rect.height }
-      )
+      })
     }
     const observer = new ResizeObserver(measure)
     observer.observe(element)
     measure()
     return () => observer.disconnect()
-  }, [ref])
+  }, [reference])
   return size
 }
 
-/** Owns viewport measurement, store clamping, wheel input and temporary follow suspension. */
+/**
+Owns viewport measurement, store clamping, wheel input and temporary follow suspension.
+*/
 export function useTimelineViewport(
-  containerRef: RefObject<HTMLDivElement | null>,
-  bodyRef: RefObject<HTMLDivElement | null>,
-  canvasRef: RefObject<HTMLDivElement | null>
+  containerReference: RefObject<HTMLDivElement | null>,
+  bodyReference: RefObject<HTMLDivElement | null>,
+  canvasReference: RefObject<HTMLDivElement | null>
 ) {
-  const { width: containerWidth } = useMeasuredSize(containerRef)
-  const { height: bodyHeight } = useMeasuredSize(bodyRef)
+  const { width: containerWidth } = useMeasuredSize(containerReference)
+  const { height: bodyHeight } = useMeasuredSize(bodyReference)
   const document = useProjectState(state => state.document)
   const visible = useMemo(() => visibleTracks(document.tracks), [document.tracks])
   const positionBar = useProjectState(state =>
@@ -80,41 +84,53 @@ export function useTimelineViewport(
 
   useViewportSync({ pxPerBar, scrollX, scrollY })
   useEffect(() => {
-    if (storedPxPerBar !== pxPerBar || storedScrollX !== scrollX || storedScrollY !== scrollY)
+    if (storedPxPerBar !== pxPerBar || storedScrollX !== scrollX || storedScrollY !== scrollY) {
       projectActions.setViewport({ pxPerBar, scrollX, scrollY })
+    }
   }, [storedPxPerBar, storedScrollX, storedScrollY, pxPerBar, scrollX, scrollY])
 
   useEffect(() => {
-    if (!editingClipId || bodyHeight <= 0) return
+    if (!editingClipId || bodyHeight <= 0) {
+      return
+    }
     const state = useProjectState.getState()
     const track = state.document.tracks.find(item =>
       item.clips.some(clip => clip.id === editingClipId)
     )
-    if (!track) return
+    if (!track) {
+      return
+    }
     const next = revealTrackScrollY(
       visibleTracks(state.document.tracks),
       bodyHeight,
       state.workspace.scrollY,
       track.id
     )
-    if (next !== state.workspace.scrollY) projectActions.setViewport({ scrollY: next })
+    if (next !== state.workspace.scrollY) {
+      projectActions.setViewport({ scrollY: next })
+    }
   }, [editingClipId, bodyHeight])
 
   useEffect(() => {
-    if (!follow || !playing || timeViewportWidth <= 0) return
+    if (!follow || !playing || timeViewportWidth <= 0) {
+      return
+    }
     const id = "timeline-follow"
     const paint = () => {
       const state = useProjectState.getState()
-      if (!state.workspace.follow || !state.session.playing) return
+      if (!state.workspace.follow || !state.session.playing) {
+        return
+      }
       if (performance.now() >= manualPanUntil.current) {
-        const pixel = (readSimulatedBar() - 1) * pxPerBar
+        const pixel = (readTransportBar() - 1) * pxPerBar
         const current = state.workspace.scrollX
         const next = Math.max(
           0,
           Math.min(timelineWidth - timeViewportWidth, pixel - timeViewportWidth / 2)
         )
-        if (next !== current && (pixel < current || pixel >= current + timeViewportWidth / 2))
+        if (next !== current && (pixel < current || pixel >= current + timeViewportWidth / 2)) {
           projectActions.setViewport({ scrollX: next })
+        }
       }
       arrangementScheduler.invalidate(id)
     }
@@ -122,16 +138,22 @@ export function useTimelineViewport(
   }, [follow, playing, pxPerBar, timeViewportWidth, timelineWidth])
 
   useEffect(() => {
-    const element = bodyRef.current
-    if (!element) return
+    const element = bodyReference.current
+    if (!element) {
+      return
+    }
     const onWheel = (event: WheelEvent) => {
-      if (event.defaultPrevented) return
+      if (event.defaultPrevented) {
+        return
+      }
       event.preventDefault()
       const current = arrangementScene.get().viewport
       if (event.ctrlKey || event.metaKey) {
         suspendFollow()
-        const rect = canvasRef.current?.getBoundingClientRect()
-        if (!rect) return
+        const rect = canvasReference.current?.getBoundingClientRect()
+        if (!rect) {
+          return
+        }
         const offset = Math.max(0, Math.min(rect.width, event.clientX - rect.left))
         const next = Math.max(
           minPxPerBar,
@@ -146,7 +168,9 @@ export function useTimelineViewport(
       }
       const dx = event.shiftKey ? event.deltaY + event.deltaX : event.deltaX
       const dy = event.shiftKey ? 0 : event.deltaY
-      if (dx) suspendFollow()
+      if (dx) {
+        suspendFollow()
+      }
       const nextX = Math.max(
         0,
         Math.min(Math.max(0, bars * current.pxPerBar - current.width), current.scrollX + dx)
@@ -155,12 +179,13 @@ export function useTimelineViewport(
         0,
         Math.min(maxTrackScrollY(visible, current.height), current.scrollY + dy)
       )
-      if (nextX !== current.scrollX || nextY !== current.scrollY)
+      if (nextX !== current.scrollX || nextY !== current.scrollY) {
         projectActions.setViewport({ scrollX: nextX, scrollY: nextY })
+      }
     }
     element.addEventListener("wheel", onWheel, { passive: false })
     return () => element.removeEventListener("wheel", onWheel)
-  }, [bodyRef, canvasRef, bars, maxPxPerBar, minPxPerBar, visible, suspendFollow])
+  }, [bodyReference, canvasReference, bars, maxPxPerBar, minPxPerBar, visible, suspendFollow])
 
   const zoom = (direction: -1 | 1) => {
     suspendFollow()

@@ -5,7 +5,7 @@
  */
 
 export default {
-  switch: 'Language',
-  'zh-CN': '简体中文',
-  'en-US': 'English'
+  switch: "Language",
+  "zh-CN": "简体中文",
+  "en-US": "English",
 } as const

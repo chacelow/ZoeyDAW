@@ -16,8 +16,9 @@ export function useArrangementKeyboard() {
         event.ctrlKey ||
         event.isComposing ||
         isEditableTarget(event.target)
-      )
+      ) {
         return
+      }
       event.preventDefault()
       event.stopImmediatePropagation()
       if (event.type === "keydown" && !event.repeat) {
@@ -25,8 +26,9 @@ export function useArrangementKeyboard() {
         if (
           focused instanceof HTMLElement &&
           focused.matches('button,[role="button"],[role="slider"],[role="menuitem"]')
-        )
+        ) {
           focused.blur()
+        }
         projectActions.togglePlay()
       }
     }
@@ -36,14 +38,16 @@ export function useArrangementKeyboard() {
         isEditableTarget(event.target) ||
         (event.target instanceof Element &&
           !!event.target.closest('[data-clip-editor], [role="menu"], [role="menuitem"]'))
-      )
+      ) {
         return
+      }
       if (
         event.target instanceof Element &&
         event.target.closest("button,[role=slider],[role=menuitem]") &&
         event.key === "Enter"
-      )
+      ) {
         return
+      }
       if (event.key === "Escape") {
         projectActions.setEditingClip(null)
         projectActions.cancelEdit()
@@ -56,8 +60,11 @@ export function useArrangementKeyboard() {
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault()
-        if (event.shiftKey) projectActions.redo()
-        else projectActions.undo()
+        if (event.shiftKey) {
+          projectActions.redo()
+        } else {
+          projectActions.undo()
+        }
         return
       }
       if (
@@ -67,7 +74,9 @@ export function useArrangementKeyboard() {
         (event.code === "Digit1" || event.code === "Digit2")
       ) {
         event.preventDefault()
-        if (!event.repeat) projectActions.adjustGrid(event.code === "Digit2" ? 1 : -1)
+        if (!event.repeat) {
+          projectActions.adjustGrid(event.code === "Digit2" ? 1 : -1)
+        }
         return
       }
       if (
@@ -80,28 +89,42 @@ export function useArrangementKeyboard() {
         event.preventDefault()
         return
       }
-      if (event.altKey || event.metaKey || event.ctrlKey) return
+      if (event.altKey || event.metaKey || event.ctrlKey) {
+        return
+      }
       if (event.key === "Home") {
         projectActions.rewindToStart()
         return
       }
-      if (event.repeat) return
+      if (event.repeat) {
+        return
+      }
       const state = useProjectState.getState()
       const mode = state.workspace
       const key = event.key.toLowerCase()
-      if (key === "m") return
-      if (mode.computerKeyboard && (key in noteKeys || ["z", "x", "c", "v"].includes(key))) return
+      if (key === "m") {
+        return
+      }
+      if (
+        mode.computerKeyboard &&
+        (Object.hasOwn(noteKeys, key) || ["z", "x", "c", "v"].includes(key))
+      ) {
+        return
+      }
       if (drawModeKeyDown(event)) {
         event.preventDefault()
         return
       }
-      if (key === "a") projectActions.setMode("automationMode", !mode.automationMode)
+      if (key === "a") {
+        projectActions.setMode("automationMode", !mode.automationMode)
+      }
       if (
         !mode.automationMode &&
         (event.key === "Delete" || event.key === "Backspace") &&
         state.session.selectedClipIds.length
-      )
+      ) {
         projectActions.deleteClips(state.session.selectedClipIds)
+      }
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         event.preventDefault()
         const current = state.session.position
@@ -119,8 +142,8 @@ export function useArrangementKeyboard() {
         )
       }
     }
-    window.addEventListener("keydown", transportSpace, true)
-    window.addEventListener("keyup", transportSpace, true)
+    window.addEventListener("keydown", transportSpace, { capture: true })
+    window.addEventListener("keyup", transportSpace, { capture: true })
     window.addEventListener("keydown", keyDown)
     return () => {
       window.removeEventListener("keydown", transportSpace, true)

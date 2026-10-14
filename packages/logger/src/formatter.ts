@@ -1,11 +1,11 @@
-import type { LogLevel, LoggerConfig, LogMessage } from './types'
-import { applyColor, isBrowser, defaultColors } from './colors'
+import { applyColor, isBrowser, defaultColors } from "./colors"
+import type { LogLevel, LoggerConfig, LogMessage } from "./types"
 
 /**
  * 格式化时间戳
  */
 function formatTimestamp(date: Date): string {
-  return date.toISOString().replace('T', ' ').replace('Z', '')
+  return date.toISOString().replace("T", " ").replace("Z", "")
 }
 
 /**
@@ -13,11 +13,11 @@ function formatTimestamp(date: Date): string {
  */
 function getLevelText(level: LogLevel): string {
   const levelTexts = {
-    debug: 'DEBUG',
-    info: 'INFO',
-    warn: 'WARN',
-    error: 'ERROR',
-    success: 'SUCCESS'
+    debug: "DEBUG",
+    info: "INFO",
+    warn: "WARN",
+    error: "ERROR",
+    success: "SUCCESS",
   }
   return levelTexts[level]
 }
@@ -30,7 +30,7 @@ export function formatMessage(message: LogMessage, config: LoggerConfig): (strin
 
   if (isBrowser) {
     // 浏览器环境格式化
-    let formattedMessage = ''
+    let formattedMessage = ""
     const styles: string[] = []
 
     // 时间戳
@@ -56,10 +56,10 @@ export function formatMessage(message: LogMessage, config: LoggerConfig): (strin
 
     // 前缀
     if (config.prefix || message.prefix) {
-      const prefixText = message.prefix || config.prefix || ''
+      const prefixText = message.prefix || config.prefix || ""
       const [prefixFormatted, prefixStyle] = applyColor(`[${prefixText}]`, colors.prefix) as [
         string,
-        string
+        string,
       ]
       formattedMessage += `${prefixFormatted} `
       styles.push(prefixStyle)
@@ -67,10 +67,10 @@ export function formatMessage(message: LogMessage, config: LoggerConfig): (strin
 
     // 消息内容 - 除了warn和error，其他都用灰白色，字体更小
     const messageColor =
-      message.level === 'warn' || message.level === 'error' ? colors[message.level] : '#9ca3af' // 灰白色
+      message.level === "warn" || message.level === "error" ? colors[message.level] : "#9ca3af" // 灰白色
     const [messageText, messageStyle] = applyColor(message.message, messageColor) as [
       string,
-      string
+      string,
     ]
     // 为消息内容添加小字体样式
     const smallerFontStyle = `${messageStyle}; font-size: 10px;`
@@ -78,39 +78,38 @@ export function formatMessage(message: LogMessage, config: LoggerConfig): (strin
     styles.push(smallerFontStyle)
 
     return [formattedMessage, ...styles]
-  } else {
-    // Node.js环境格式化
-    let formattedMessage = ''
-
-    // 时间戳
-    if (config.showTimestamp) {
-      const timestampText = applyColor(
-        `[${formatTimestamp(message.timestamp)}]`,
-        colors.timestamp
-      ) as string
-      formattedMessage += `${timestampText} `
-    }
-
-    // 日志级别
-    if (config.showLevel) {
-      const levelColor = colors[message.level]
-      const levelText = applyColor(`[${getLevelText(message.level)}]`, levelColor) as string
-      formattedMessage += `${levelText} `
-    }
-
-    // 前缀
-    if (config.prefix || message.prefix) {
-      const prefixText = message.prefix || config.prefix || ''
-      const prefixFormatted = applyColor(`[${prefixText}]`, colors.prefix) as string
-      formattedMessage += `${prefixFormatted} `
-    }
-
-    // 消息内容 - 除了warn和error，其他都用灰白色
-    const messageColor =
-      message.level === 'warn' || message.level === 'error' ? colors[message.level] : '#9ca3af' // 灰白色
-    const coloredMessage = applyColor(message.message, messageColor) as string
-    formattedMessage += coloredMessage
-
-    return [formattedMessage]
   }
+  // Node.js环境格式化
+  let formattedMessage = ""
+
+  // 时间戳
+  if (config.showTimestamp) {
+    const timestampText = applyColor(
+      `[${formatTimestamp(message.timestamp)}]`,
+      colors.timestamp
+    ) as string
+    formattedMessage += `${timestampText} `
+  }
+
+  // 日志级别
+  if (config.showLevel) {
+    const levelColor = colors[message.level]
+    const levelText = applyColor(`[${getLevelText(message.level)}]`, levelColor) as string
+    formattedMessage += `${levelText} `
+  }
+
+  // 前缀
+  if (config.prefix || message.prefix) {
+    const prefixText = message.prefix || config.prefix || ""
+    const prefixFormatted = applyColor(`[${prefixText}]`, colors.prefix) as string
+    formattedMessage += `${prefixFormatted} `
+  }
+
+  // 消息内容 - 除了warn和error，其他都用灰白色
+  const messageColor =
+    message.level === "warn" || message.level === "error" ? colors[message.level] : "#9ca3af" // 灰白色
+  const coloredMessage = applyColor(message.message, messageColor) as string
+  formattedMessage += coloredMessage
+
+  return [formattedMessage]
 }

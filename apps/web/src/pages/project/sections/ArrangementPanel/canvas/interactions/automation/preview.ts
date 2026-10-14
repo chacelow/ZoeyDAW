@@ -1,3 +1,4 @@
+import { setTracksPreview } from "../project-preview"
 import type { AutomationPoint } from "@/pages/project/model/types"
 import type { InteractionContext } from "../types"
 
@@ -9,7 +10,9 @@ export function previewAutomation(
 ) {
   const scene = context.scene.get()
   const tracks = context.getState().document.tracks.map(track => {
-    if (track.id !== trackId) return track
+    if (track.id !== trackId) {
+      return track
+    }
     const existing = track.automation.find(lane => lane.id === laneId)
     const parameter = existing?.parameter ?? scene.automationParameters[trackId] ?? "volume"
     const automation = existing
@@ -17,7 +20,7 @@ export function previewAutomation(
       : [...track.automation, { id: laneId, parameter, points }]
     return { ...track, automation }
   })
-  context.scene.setPreviewTracks(tracks)
+  setTracksPreview(context, tracks)
 }
 
 export function sortedPoints(points: AutomationPoint[]): AutomationPoint[] {

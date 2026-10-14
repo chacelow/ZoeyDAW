@@ -1,9 +1,7 @@
 /**
  * ComponentLibraryPage — `/library` 路由。
  *
- * 一处集中展示本仓所有统一的 DAW 交互组件；审完才在业务代码里推广使用。
- * 分组：DragPad* / DropdownButton / @zoeymind/ui Button 变体。
- * 数值、按钮和开关共用 UI 包的控件尺寸 token。
+ * 一处集中展示本仓所有统一的 DAW 交互组件；审完才在业务代码里推广使用。 分组：DragPad* / DropdownButton / @zoeymind/ui Button 变体。 数值、按钮和开关共用 UI 包的控件尺寸 token。
  */
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -20,11 +18,24 @@ import {
   PopupButton,
   rowInteractiveClasses,
 } from "@zoeymind/ui"
-import { useMappingMode } from "@/pages/project/stores/useMappingMode"
-import { useInfoHover } from "@/pages/project/stores/useInfoHover"
+import { ControlEnvironmentBridge } from "@/components/SharedControlBridge"
+import {
+  ControlInteractionsProvider,
+  useControlInteractions,
+} from "@/shared/control-interactions/index"
 import { ControlSizingDemo } from "./ControlSizingDemo"
 
 export function ComponentLibraryPage() {
+  return (
+    <ControlInteractionsProvider>
+      <ControlEnvironmentBridge>
+        <LibraryContent />
+      </ControlEnvironmentBridge>
+    </ControlInteractionsProvider>
+  )
+}
+
+function LibraryContent() {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -41,7 +52,7 @@ export function ComponentLibraryPage() {
   const [key, setKey] = useState<"major" | "minor" | "dorian">("major")
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-y-auto bg-background p-6 text-foreground">
+    <div className="bg-background text-foreground flex h-full flex-col gap-6 overflow-y-auto p-6">
       <header className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -53,7 +64,7 @@ export function ComponentLibraryPage() {
         </Button>
         <div className="flex min-w-0 flex-col">
           <h1 className="text-lg font-semibold">{t("library.title", "组件库")}</h1>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {t(
               "library.description",
               "DAW 通用交互组件：数值拖动、键盘输入、下拉与开关。控件共用 UI 包的尺寸和颜色 token。"
@@ -287,14 +298,14 @@ export function ComponentLibraryPage() {
         description="点下面的 Mapping 按钮或页首开关 → 所有 mappable 的组件（上面所有 DragPad / DropdownButton）会脉冲高亮，示意可以绑 automation / MIDI。按一下 BPM 看效果。"
       >
         <QuickMappingToggle />
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-muted-foreground text-[11px]">
           mapping 开启时 → 看 BPM / Pan / Volume / Scale 都在 pulse
         </span>
       </Section>
 
       <Section
-        title="StatusStrip Info Channel · 警告 push"
-        description="底部 StatusStrip 中间现在是 InfoChannel：hover 任意 DragPad / DropdownButton / PopupButton 显示其 info；没在 hover 时轮播最新 warning。按下面按钮往 store push 一条 warning，到底部看。"
+        title="控件信息 · 警告 push"
+        description="画廊拥有独立的控件信息与警告：hover 控件查看信息；没有 hover 时显示最新警告，不影响工程底部状态栏。"
       >
         <WarningDemo />
       </Section>
@@ -440,15 +451,15 @@ function Section({
   description,
   children,
 }: {
-  title: string
-  description?: string
-  children: React.ReactNode
+  readonly title: string
+  readonly description?: string
+  readonly children: React.ReactNode
 }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-col">
         <h2 className="text-sm font-medium">{title}</h2>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+        {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
       </div>
       <Separator />
       <div className="flex flex-wrap items-center gap-2">{children}</div>
@@ -456,9 +467,9 @@ function Section({
   )
 }
 
-function ValueEcho({ pairs }: { pairs: [string, string][] }) {
+function ValueEcho({ pairs }: { readonly pairs: [string, string][] }) {
   return (
-    <div className="ml-auto flex items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
+    <div className="text-muted-foreground ml-auto flex items-center gap-3 text-[11px] tabular-nums">
       {pairs.map(([k, v]) => (
         <span key={k}>
           {k}: <span className="text-foreground">{v}</span>
@@ -469,8 +480,8 @@ function ValueEcho({ pairs }: { pairs: [string, string][] }) {
 }
 
 function MappingModeToggle() {
-  const active = useMappingMode(state => state.active)
-  const toggle = useMappingMode(state => state.toggle)
+  const active = useControlInteractions(state => state.mappingActive)
+  const toggle = useControlInteractions(state => state.toggleMapping)
   return (
     <DragPadToggle
       value={active}
@@ -486,8 +497,8 @@ function MappingModeToggle() {
 }
 
 function QuickMappingToggle() {
-  const active = useMappingMode(state => state.active)
-  const toggle = useMappingMode(state => state.toggle)
+  const active = useControlInteractions(state => state.mappingActive)
+  const toggle = useControlInteractions(state => state.toggleMapping)
   return (
     <DragPadToggle
       value={active}
@@ -501,10 +512,11 @@ function QuickMappingToggle() {
 }
 
 function WarningDemo() {
-  const warnings = useInfoHover(state => state.warnings)
-  const pushWarning = useInfoHover(state => state.pushWarning)
-  const dismissWarning = useInfoHover(state => state.dismissWarning)
-  const clearWarnings = useInfoHover(state => state.clearWarnings)
+  const info = useControlInteractions(state => state.info)
+  const warnings = useControlInteractions(state => state.warnings)
+  const pushWarning = useControlInteractions(state => state.pushWarning)
+  const dismissWarning = useControlInteractions(state => state.dismissWarning)
+  const clearWarnings = useControlInteractions(state => state.clearWarnings)
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button
@@ -539,15 +551,16 @@ function WarningDemo() {
       <Button size="control" variant="secondary" onClick={clearWarnings}>
         clear all
       </Button>
-      <span className="text-[11px] text-muted-foreground">
-        现有 {warnings.length} 条；最新在底部 InfoChannel。dismiss by id:
+      <span className="text-muted-foreground text-[11px]">
+        {info ? `控件信息：${info}` : `最新警告：${warnings.at(-1)?.message ?? "无"}`}；现有{" "}
+        {warnings.length} 条。
       </span>
       {warnings.map(w => (
         <button
           key={w.id}
           type="button"
           onClick={() => dismissWarning(w.id)}
-          className="h-7 shrink-0 rounded-sm bg-muted px-2 text-[11px] text-muted-foreground hover:bg-accent"
+          className="bg-muted text-muted-foreground hover:bg-accent h-7 shrink-0 rounded-sm px-2 text-[11px]"
         >
           × {w.id}
         </button>
@@ -565,7 +578,7 @@ function ListDemo() {
   ]
   const [selected, setSelected] = useState("snare")
   return (
-    <div className="flex min-w-[260px] flex-col gap-0.5 rounded-sm bg-muted p-1">
+    <div className="bg-muted flex min-w-[260px] flex-col gap-0.5 rounded-sm p-1">
       {items.map(item => (
         <button
           key={item.id}

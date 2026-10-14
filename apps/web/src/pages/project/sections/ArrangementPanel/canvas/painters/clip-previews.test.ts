@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest"
-import type { MidiClip, PatternClip } from "@/pages/project/model/types"
 import { paintClipLoopTicks, paintMidiNotes, paintPatternNotes } from "./clip-previews"
+import type { MidiClip, PatternClip } from "@/pages/project/model/types"
 
-function paintRectangles(paint: (ctx: CanvasRenderingContext2D) => void): number[][] {
+function paintRectangles(paint: (context: CanvasRenderingContext2D) => void): number[][] {
   const rectangles: number[][] = []
-  const ctx = {
+  const context = {
     globalAlpha: 1,
     fillStyle: "",
-    fillRect: (...values: number[]) => rectangles.push(values),
+    fillRect: (...values: number[]) => {
+      rectangles.push(values)
+    },
   } as unknown as CanvasRenderingContext2D
-  paint(ctx)
+  paint(context)
   return rectangles
 }
 
@@ -24,7 +26,9 @@ const midi: MidiClip = {
 
 describe("clip loop preview", () => {
   it("repeats MIDI notes over authored cycles and wraps signed left extension", () => {
-    const forward = paintRectangles(ctx => paintMidiNotes(ctx, midi, 0, 14, 120, 20, "ink", 4, 120))
+    const forward = paintRectangles(context =>
+      paintMidiNotes(context, midi, 0, 14, 120, 20, "ink", 4, 120)
+    )
     expect(forward.map(rect => [rect[0], rect[2]])).toEqual([
       [5, 5],
       [45, 5],
@@ -37,8 +41,8 @@ describe("clip loop preview", () => {
       lengthBars: 3,
       notes: [{ pitch: 60, startBeat: 5, lengthBeats: 1, velocity: 100 }],
     }
-    const backwards = paintRectangles(ctx =>
-      paintMidiNotes(ctx, extended, 0, 14, 120, 20, "ink", 4, 120)
+    const backwards = paintRectangles(context =>
+      paintMidiNotes(context, extended, 0, 14, 120, 20, "ink", 4, 120)
     )
     expect(backwards.map(rect => [rect[0], rect[2]])).toEqual([
       [10, 10],
@@ -84,8 +88,8 @@ describe("clip loop preview", () => {
       sourceOffsetBars: -0.25,
       steps: [true, false, false, false],
     }
-    const strokes = paintRectangles(ctx =>
-      paintPatternNotes(ctx, pattern, 0, 14, 160, 20, "ink", 160)
+    const strokes = paintRectangles(context =>
+      paintPatternNotes(context, pattern, 0, 14, 160, 20, "ink", 160)
     )
     expect(strokes.map(rect => rect[0])).toEqual([0, 40, 80, 120])
   })

@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
+    "lint": "pnpm --workspace-root check",
+    "lint:fix": "pnpm --workspace-root fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -31,9 +31,6 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.3",
-    "eslint": "^9.17.0",
-    "globals": "^15.15.0",
-    "typescript-eslint": "^8.29.1",
     "tsx": "^4.19.2",
     "typescript": "~5.9.2",
     "vitest": "^4.0.18"

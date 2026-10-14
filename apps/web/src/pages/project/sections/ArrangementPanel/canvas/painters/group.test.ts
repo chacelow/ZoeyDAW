@@ -9,7 +9,9 @@ import { paintGroupOverview } from "./group"
 it("hides child previews when expanded and clips their compact summary when folded", () => {
   const document = createMockDocument()
   const group = document.tracks.find(track => track.id === "drums-group")
-  if (!group) throw new Error("Missing Group")
+  if (!group) {
+    throw new Error("Missing Group")
+  }
   const scene = createSceneStore()
   scene.setMusic({
     bars: 128,
@@ -33,7 +35,9 @@ it("hides child previews when expanded and clips their compact summary when fold
   const tokens = readTokens(window.document.documentElement)
   const row = () => {
     const value = layoutTrackRows(scene.get()).find(item => item.track.id === group.id)
-    if (!value) throw new Error("Missing Group row")
+    if (!value) {
+      throw new Error("Missing Group row")
+    }
     return value
   }
   paintGroupOverview(context, row(), scene.get(), tokens)

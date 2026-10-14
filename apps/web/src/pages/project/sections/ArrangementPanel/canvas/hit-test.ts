@@ -1,4 +1,3 @@
-import type { Clip, Track } from "@/pages/project/model/types"
 import {
   arrangementBodyBottom,
   arrangementBodyTop,
@@ -7,6 +6,7 @@ import {
   pinnedTrackHeight,
 } from "./layout"
 import { clipVisualGeometry, fadeHandleX, FADE_HANDLE_PX, RESIZE_EDGE_PX } from "./clip-geometry"
+import type { Clip, Track } from "@/pages/project/model/types"
 import type { ArrangementScene } from "./scene"
 
 export type HitTarget =
@@ -38,7 +38,9 @@ export function hitTest(
   const { height, pxPerBar, scrollX } = viewport
   const bodyTop = arrangementBodyTop()
   const bodyBottom = arrangementBodyBottom(height)
-  if (pointY < bodyTop || pointY > bodyBottom || pxPerBar <= 0) return null
+  if (pointY < bodyTop || pointY > bodyBottom || pxPerBar <= 0) {
+    return null
+  }
 
   const rows = layoutTrackRows(scene)
   const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks)
@@ -56,24 +58,27 @@ export function hitTest(
       : null
   }
 
-  for (let i = row.track.clips.length - 1; i >= 0; i--) {
-    const clip = row.track.clips[i]
+  for (let index = row.track.clips.length - 1; index >= 0; index--) {
+    const clip = row.track.clips[index]
     const rect = clipRect(clip, row, pxPerBar, scrollX)
-    const visibleFades =
+    const isVisibleFades =
       !automationMode && scene.hoverClip?.id === clip.id && scene.hoverClip.region === "body"
-    const visual = clipVisualGeometry(rect, clip, row.track, visibleFades)
+    const visual = clipVisualGeometry(rect, clip, row.track, isVisibleFades)
     const { left, top, width, height, bodyTop: bodyTopY, bodyHeight } = visual
-    if (pointY < top || pointY >= top + height) continue
-    if (pointX < left || pointX > left + width) continue
+    if (pointY < top || pointY >= top + height || pointX < left || pointX > left + width) {
+      continue
+    }
     const fromLeft = pointX - left
     const fromRight = left + width - pointX
     for (const fade of visual.fades) {
-      if (!fade.handlesVisible || pointY < bodyTopY) continue
+      if (!fade.handlesVisible || pointY < bodyTopY) {
+        continue
+      }
       const peak = fade.edge === "in" ? fade.end : fade.start
       if (
         Math.abs(pointX - fadeHandleX(visual, peak.x)) <= FADE_HANDLE_PX &&
         Math.abs(pointY - peak.y) <= FADE_HANDLE_PX
-      )
+      ) {
         return {
           kind: "clip-fade",
           clip,
@@ -81,18 +86,22 @@ export function hitTest(
           edge: fade.edge,
           handle: "length",
         }
+      }
       if (
         fade.end.x - fade.start.x >= FADE_HANDLE_PX * 2 &&
         Math.abs(pointX - fade.curve.x) <= FADE_HANDLE_PX &&
         Math.abs(pointY - fade.curve.y) <= FADE_HANDLE_PX
-      )
+      ) {
         return { kind: "clip-fade", clip, track: row.track, edge: fade.edge, handle: "curve" }
+      }
     }
     const region = pointY < bodyTopY || bodyHeight === 0 ? "title" : "body"
-    if (fromLeft <= RESIZE_EDGE_PX)
+    if (fromLeft <= RESIZE_EDGE_PX) {
       return { kind: "clip-resize", clip, track: row.track, edge: "left", region }
-    if (fromRight <= RESIZE_EDGE_PX)
+    }
+    if (fromRight <= RESIZE_EDGE_PX) {
       return { kind: "clip-resize", clip, track: row.track, edge: "right", region }
+    }
     return {
       kind: pointY < bodyTopY || bodyHeight === 0 ? "clip-title" : "clip-body",
       clip,

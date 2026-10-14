@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { createMemoryRouter, RouterProvider } from "react-router-dom"
 import { initI18n, I18nProvider } from "@zoeymind/i18n"
 import { ThemeProvider } from "@zoeymind/ui"
 import { appLocales } from "@/locales"
 import { RouteErrorFallback } from "./route-error-fallback"
 
-vi.mock("@/components/layouts/titlebar", () => ({
+vi.mock("@/components/layouts/TitleBar", () => ({
   TitleBar: () => <div data-testid="titlebar" />,
 }))
 
@@ -24,8 +24,15 @@ class ResizeObserverStub {
 describe("RouteErrorFallback", () => {
   beforeAll(async () => {
     vi.stubGlobal("ResizeObserver", ResizeObserverStub)
+    vi.stubGlobal("matchMedia", (media: string) => ({
+      media,
+      matches: false,
+      addEventListener() {},
+      removeEventListener() {},
+    }))
     await initI18n(appLocales).changeLanguage("zh-CN")
   })
+  afterAll(() => vi.unstubAllGlobals())
   it("replaces React Router's default developer error page", async () => {
     const router = createMemoryRouter([
       {

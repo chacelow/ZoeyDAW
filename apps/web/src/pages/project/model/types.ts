@@ -1,3 +1,4 @@
+import type { ProjectRuntimeStatus } from "./backend"
 import type { GridSettings } from "./grid"
 
 export const MIN_TIMELINE_BARS = 128
@@ -28,7 +29,9 @@ export interface ClipBase {
   id: string
   startBar: number
   lengthBars: number
-  /** Source start relative to the retained sample, MIDI notes, or pattern steps. */
+  /**
+  Source start relative to the retained sample, MIDI notes, or pattern steps.
+  */
   sourceOffsetBars?: number
   label?: string
   color?: string
@@ -40,20 +43,28 @@ export interface AudioClip extends ClipBase {
   gainDb: number
   fadeInBars?: number
   fadeOutBars?: number
-  /** Inward displacement of the quiet boundary from the visible left/right edge. */
+  /**
+  Inward displacement of the quiet boundary from the visible left/right edge.
+  */
   fadeInOffsetBars?: number
   fadeOutOffsetBars?: number
-  /** Normalized Bézier bend, -1 to 1; omission uses the shared musical default. */
+  /**
+  Normalized Bézier bend, -1 to 1; omission uses the shared musical default.
+  */
   fadeInCurve?: number
   fadeOutCurve?: number
-  /** Horizontal fraction inside the fade interval, 0.1 to 0.9; omission centers the anchor. */
+  /**
+  Horizontal fraction inside the fade interval, 0.1 to 0.9; omission centers the anchor.
+  */
   fadeInCurvePosition?: number
   fadeOutCurvePosition?: number
 }
 export interface MidiNote {
   id?: string
   pitch: number
-  /** Beat position in the retained source, not the trimmed visible clip. */
+  /**
+  Beat position in the retained source, not the trimmed visible clip.
+  */
   startBeat: number
   lengthBeats: number
   velocity: number
@@ -61,7 +72,9 @@ export interface MidiNote {
 export interface MidiClip extends ClipBase {
   kind: "midi"
   notes: MidiNote[]
-  /** Length of the repeating source cycle; legacy clips use their authored length. */
+  /**
+  Length of the repeating source cycle; legacy clips use their authored length.
+  */
   loopBars?: number
 }
 export interface PatternClip extends ClipBase {
@@ -97,13 +110,17 @@ export interface Track {
   input: string
   output: string
   clips: Clip[]
-  /** Secondary hardware/input channel, independent of the routing destination. */
+  /**
+  Secondary hardware/input channel, independent of the routing destination.
+  */
   inputChannel?: string
   outputChannel?: string
   cueOutput?: string
   cueVolumeDb?: number
   returnPost?: boolean
-  /** Send gain by return track ID; omitted entries are silent. */
+  /**
+  Send gain by return track ID; omitted entries are silent.
+  */
   sends?: Record<string, number>
   heightPx: number
   childTrackIds?: string[]
@@ -149,7 +166,18 @@ export interface TimeSelection {
   endBar: number
   trackIds: string[]
 }
+export interface ProjectEditToken {
+  sessionId: string
+  id: string
+}
+
+export type ProjectPreview =
+  | { kind: "tracks"; token: ProjectEditToken; tracks: Track[] }
+  | { kind: "markers"; token: ProjectEditToken; markers: Marker[] }
+  | { kind: "loop"; token: ProjectEditToken; loop: LoopRegion }
+
 export interface SessionState {
+  editEpoch: string
   playing: boolean
   recording: boolean
   position: Position
@@ -164,6 +192,8 @@ export interface SessionState {
   canUndo: boolean
   canRedo: boolean
   snapshotError: string | null
+  preview: ProjectPreview | null
+  backend: ProjectRuntimeStatus
   activeMidiNotes: number[]
   midiOctave: number
   midiVelocity: number
@@ -180,16 +210,23 @@ export function positionToBar(position: Position, numerator: number): number {
   return position.bar + (position.beat - 1 + (position.sixteenth - 1) / 4) / numerator
 }
 
-/** Tracks remain in document order; collapsed group descendants alone are hidden. */
+/**
+Tracks remain in document order; collapsed group descendants alone are hidden.
+*/
 export function visibleTracks(tracks: Track[]): Track[] {
   const hidden = new Set<string>()
   const byId = new Map(tracks.map(track => [track.id, track]))
   function hide(id: string) {
-    if (hidden.has(id)) return
+    if (hidden.has(id)) {
+      return
+    }
     hidden.add(id)
     byId.get(id)?.childTrackIds?.forEach(hide)
   }
-  for (const track of tracks)
-    if (track.kind === "group" && track.collapsed) track.childTrackIds?.forEach(hide)
+  for (const track of tracks) {
+    if (track.kind === "group" && track.collapsed) {
+      track.childTrackIds?.forEach(hide)
+    }
+  }
   return tracks.filter(track => !hidden.has(track.id))
 }

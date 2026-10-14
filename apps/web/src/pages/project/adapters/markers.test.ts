@@ -13,7 +13,9 @@ it("creates and moves a marker with one undoable document edit", () => {
   const before = useProjectState.getState().document.markers
   const id = projectActions.addMarker(10.25)
   expect(id).toBeDefined()
-  if (!id) throw new Error("Marker creation failed")
+  if (!id) {
+    throw new Error("Marker creation failed")
+  }
   expect(useProjectState.getState().document.markers.find(marker => marker.id === id)?.bar).toBe(
     10.25
   )
@@ -31,8 +33,10 @@ it("creates and moves a marker with one undoable document edit", () => {
 
 it("rejects invalid marker positions and no-op patches without changing history", () => {
   const id = projectActions.addMarker(4)
-  if (!id) throw new Error("Marker creation failed")
-  projectActions.addMarker(Number.NaN)
+  if (!id) {
+    throw new Error("Marker creation failed")
+  }
+  projectActions.addMarker(NaN)
   projectActions.updateMarker(id, { bar: Infinity })
   projectActions.updateMarker(id, { id: "forged", bar: 4 })
   expect(useProjectState.getState().document.markers.find(marker => marker.id === id)?.id).toBe(id)
@@ -43,7 +47,9 @@ it("rejects invalid marker positions and no-op patches without changing history"
 it("deleting a marker is undoable and leaves unrelated markers intact", () => {
   const first = projectActions.addMarker(3)
   const second = projectActions.addMarker(8)
-  if (!first || !second) throw new Error("Marker creation failed")
+  if (!first || !second) {
+    throw new Error("Marker creation failed")
+  }
   projectActions.deleteMarker(first)
   expect(useProjectState.getState().document.markers.some(marker => marker.id === first)).toBe(
     false

@@ -1,12 +1,12 @@
-import type { AudioRingBuffer } from "../audio/ring-buffer"
 import {
   advanceMeterPeak,
   createMeterPeak,
-  meterDb,
+  meterDb as clampDecibels,
   METER_MAX_DB,
   METER_MIN_DB,
-  type MeterPeak,
 } from "./meter-peak"
+import type { MeterPeak } from "./meter-peak"
+import type { AudioRingBuffer } from "../audio/ring-buffer"
 
 export interface MeterTokens {
   background: string
@@ -34,7 +34,7 @@ export function createMeterPaintState(): MeterPaintState {
 }
 
 export function paintMeter(
-  ctx: CanvasRenderingContext2D,
+  context: CanvasRenderingContext2D,
   trackId: string,
   ring: AudioRingBuffer,
   tokens: MeterTokens,
@@ -43,12 +43,14 @@ export function paintMeter(
   now: number
 ): boolean {
   const { width, height, dpr } = geometry
-  if (width <= 0 || height <= 0) return false
+  if (width <= 0 || height <= 0) {
+    return false
+  }
   const meter = ring.readMeter(trackId)
   advanceMeterPeak(state.left, meter.left, now)
   advanceMeterPeak(state.right, meter.right, now)
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  const zeroY = Math.min(height - 1, Math.round(dbY(0, height)))
+  context.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const zeroY = Math.min(height - 1, Math.round(decibelY(0, height)))
   if (
     !state.gradient ||
     state.gradient.height !== height ||
@@ -56,19 +58,29 @@ export function paintMeter(
     state.gradient.good !== tokens.good ||
     state.gradient.warn !== tokens.warn
   ) {
-    const fill = ctx.createLinearGradient(0, height, 0, zeroY)
+    const fill = context.createLinearGradient(0, height, 0, zeroY)
     fill.addColorStop(0, tokens.good)
     fill.addColorStop(0.7, tokens.good)
     fill.addColorStop(1, tokens.warn)
     state.gradient = { height, dpr, good: tokens.good, warn: tokens.warn, fill }
   }
-  ctx.fillStyle = tokens.background
-  ctx.fillRect(0, 0, width, height)
+  context.fillStyle = tokens.background
+  context.fillRect(0, 0, width, height)
 
   const columnW = Math.floor((width - 1) / 2)
-  drawColumn(ctx, 0, columnW, height, zeroY, meter.left, state.left.db, tokens, state.gradient.fill)
   drawColumn(
-    ctx,
+    context,
+    0,
+    columnW,
+    height,
+    zeroY,
+    meter.left,
+    state.left.db,
+    tokens,
+    state.gradient.fill
+  )
+  drawColumn(
+    context,
     columnW + 1,
     width - columnW - 1,
     height,
@@ -78,37 +90,39 @@ export function paintMeter(
     tokens,
     state.gradient.fill
   )
-  ctx.fillStyle = tokens.line
-  ctx.fillRect(columnW, 0, 1, height)
-  ctx.fillRect(0, zeroY, width, 1)
+  context.fillStyle = tokens.line
+  context.fillRect(columnW, 0, 1, height)
+  context.fillRect(0, zeroY, width, 1)
   return state.left.db > METER_MIN_DB || state.right.db > METER_MIN_DB
 }
 
 function drawColumn(
-  ctx: CanvasRenderingContext2D,
+  context: CanvasRenderingContext2D,
   x: number,
   width: number,
   height: number,
   zeroY: number,
   dbfs: number,
-  peakDb: number,
+  peakDatabase: number,
   tokens: MeterTokens,
   gradient: CanvasGradient
 ) {
-  const top = Math.round(dbY(dbfs, height))
+  const top = Math.round(decibelY(dbfs, height))
   const belowZero = Math.max(top, zeroY + 1)
-  ctx.fillStyle = gradient
-  ctx.fillRect(x, belowZero, width, height - belowZero)
+  context.fillStyle = gradient
+  context.fillRect(x, belowZero, width, height - belowZero)
   if (top < zeroY) {
-    ctx.fillStyle = tokens.danger
-    ctx.fillRect(x, top, width, zeroY - top)
+    context.fillStyle = tokens.danger
+    context.fillRect(x, top, width, zeroY - top)
   }
-  if (peakDb > METER_MIN_DB) {
-    ctx.fillStyle = tokens.peak
-    ctx.fillRect(x, Math.min(height - 1, Math.round(dbY(peakDb, height))), width, 1)
+  if (!(peakDatabase > METER_MIN_DB)) {
+    return
   }
+
+  context.fillStyle = tokens.peak
+  context.fillRect(x, Math.min(height - 1, Math.round(decibelY(peakDatabase, height))), width, 1)
 }
 
-function dbY(db: number, height: number): number {
-  return height * (1 - (meterDb(db) - METER_MIN_DB) / (METER_MAX_DB - METER_MIN_DB))
+function decibelY(levelDb: number, height: number): number {
+  return height * (1 - (clampDecibels(levelDb) - METER_MIN_DB) / (METER_MAX_DB - METER_MIN_DB))
 }

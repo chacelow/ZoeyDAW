@@ -1,4 +1,7 @@
 import { useProjectState } from "../stores/useProjectState"
+import { reduceDocument, reduceWorkspace } from "../model/reducers"
+import { reconcileGridForMeterChange } from "./grid"
+import { document, get, session, workspace, setPreciseTransportBar } from "./context"
 import type {
   DocumentState,
   LoopRegion,
@@ -7,31 +10,34 @@ import type {
   TimeSelection,
   WorkspaceState,
 } from "../model/types"
-import { reduceDocument, reduceWorkspace } from "../model/reducers"
-import { reconcileGridForMeterChange } from "./grid"
-import { document, get, session, workspace } from "./context"
 
 export const transportActions = {
   setBpm(bpm: number) {
-    if (Number.isFinite(bpm))
+    if (Number.isFinite(bpm)) {
       document(
         reduceDocument(get().document, {
           type: "transport",
           patch: { bpm: Math.max(20, Math.min(999, bpm)) },
         })
       )
+    }
   },
   setNumerator(numerator: number) {
-    if (!Number.isFinite(numerator)) return
+    if (!Number.isFinite(numerator)) {
+      return
+    }
     const n = Math.max(1, Math.min(32, Math.round(numerator)))
     const previous = get().document.transport
     document(reduceDocument(get().document, { type: "transport", patch: { numerator: n } }))
     reconcileGridForMeterChange(previous.numerator, previous.denominator, n, previous.denominator)
-    if (get().session.position.beat > n)
+    if (get().session.position.beat > n) {
       session({ position: { ...get().session.position, beat: n } })
+    }
   },
   setDenominator(denominator: number) {
-    if (!Number.isFinite(denominator)) return
+    if (!Number.isFinite(denominator)) {
+      return
+    }
     const next = Math.max(1, Math.min(32, Math.round(denominator)))
     const previous = get().document.transport
     document(reduceDocument(get().document, { type: "transport", patch: { denominator: next } }))
@@ -47,13 +53,16 @@ export const transportActions = {
       !Number.isFinite(next.endBar) ||
       next.startBar < 1 ||
       next.endBar <= next.startBar
-    )
+    ) {
       return
+    }
     document(reduceDocument(get().document, { type: "loop", patch: structuredClone(patch) }))
   },
   setPosition(patch: Partial<Position>) {
     const next = { ...get().session.position, ...patch }
-    if (![next.bar, next.beat, next.sixteenth].every(Number.isFinite)) return
+    if (![next.bar, next.beat, next.sixteenth].every(Number.isFinite)) {
+      return
+    }
     session({
       insertionPoint: null,
       position: {
@@ -64,35 +73,54 @@ export const transportActions = {
     })
   },
   seekBar(bar: number) {
-    if (!Number.isFinite(bar)) return
+    if (!Number.isFinite(bar)) {
+      return
+    }
+    setPreciseTransportBar(bar)
     session({ insertionPoint: null, position: positionAtBar(bar) })
   },
   restoreSeek(bar: number, insertionPoint: { trackId: string | null; bar: number } | null) {
-    if (!Number.isFinite(bar)) return
+    if (!Number.isFinite(bar)) {
+      return
+    }
+    setPreciseTransportBar(bar)
     session({ position: positionAtBar(bar), insertionPoint })
   },
   setInsertionPoint(point: { trackId: string | null; bar: number } | null) {
-    if (point && (!Number.isFinite(point.bar) || point.bar < 1)) return
-    if (point?.trackId && !get().document.tracks.some(track => track.id === point.trackId)) return
+    if (point && (!Number.isFinite(point.bar) || point.bar < 1)) {
+      return
+    }
+    if (point?.trackId && get().document.tracks.every(track => track.id !== point.trackId)) {
+      return
+    }
+    if (point && !get().session.playing) {
+      setPreciseTransportBar(point.bar)
+    }
     session({
       insertionPoint: point ? { ...point } : null,
-      ...(!get().session.playing && point ? { position: positionAtBar(point.bar) } : {}),
+      ...(!get().session.playing && point && { position: positionAtBar(point.bar) }),
     })
   },
   togglePlay() {
     const current = get().session
+    if (current.insertionPoint) {
+      setPreciseTransportBar(current.insertionPoint.bar)
+    }
     session({
       playing: !current.playing,
-      ...(current.insertionPoint ? { position: positionAtBar(current.insertionPoint.bar) } : {}),
+      ...(current.insertionPoint && { position: positionAtBar(current.insertionPoint.bar) }),
     })
   },
   stop() {
     const point = get().session.insertionPoint
+    if (point) {
+      setPreciseTransportBar(point.bar)
+    }
     session({
       playing: false,
       recording: false,
       levels: {},
-      ...(point ? { position: positionAtBar(point.bar) } : {}),
+      ...(point && { position: positionAtBar(point.bar) }),
     })
   },
   toggleRecording() {
@@ -111,11 +139,15 @@ export const transportActions = {
     document(reduceDocument(get().document, { type: "project", patch: structuredClone(patch) }))
   },
   setMode(mode: "drawMode" | "automationMode" | "computerKeyboard", enabled: boolean) {
-    if (get().workspace[mode] === enabled) return
+    if (get().workspace[mode] === enabled) {
+      return
+    }
     workspace(reduceWorkspace(get().workspace, { [mode]: enabled }))
   },
   setDrawModeOverride(value: boolean | null) {
-    if (get().session.drawModeOverride === value) return
+    if (get().session.drawModeOverride === value) {
+      return
+    }
     session({ drawModeOverride: value })
   },
   setViewport(patch: Partial<Pick<WorkspaceState, "pxPerBar" | "scrollX" | "scrollY">>) {
@@ -127,8 +159,9 @@ export const transportActions = {
       next.scrollX < 0 ||
       !Number.isFinite(next.scrollY) ||
       next.scrollY < 0
-    )
+    ) {
       return
+    }
     useProjectState.setState({ workspace: reduceWorkspace(get().workspace, patch) })
   },
   selectTracks(ids: string[], surface: SessionState["trackSelectionSurface"]) {
@@ -153,7 +186,7 @@ export const transportActions = {
 
 // Position doubles as the transport's high-precision bar, including fractional sixteenths.
 function positionAtBar(bar: number): Position {
-  const numerator = get().document.transport.numerator
+  const { numerator } = get().document.transport
   const beats = (Math.max(1, bar) - 1) * numerator
   const wholeBeats = Math.floor(beats)
   return {
@@ -161,9 +194,4 @@ function positionAtBar(bar: number): Position {
     beat: (wholeBeats % numerator) + 1,
     sixteenth: 1 + (beats - wholeBeats) * 4,
   }
-}
-
-/** Publish a simulated tick without moving the user's insertion anchor. */
-export function publishSimulatedBar(bar: number): void {
-  if (Number.isFinite(bar)) session({ position: positionAtBar(bar) })
 }
