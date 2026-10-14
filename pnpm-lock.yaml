@@ -129,6 +129,9 @@ importers:
       '@gpuix/react':
         specifier: 0.10.0
         version: 0.10.0(react@19.2.8)
+      '@zoeydaw/native':
+        specifier: workspace:*
+        version: link:../../crates/native
       '@zoeymind/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -289,7 +292,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.10.8
-        version: 3.10.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.13.3)
+        version: 3.10.8(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)
 
   packages/i18n:
     dependencies:
@@ -7820,7 +7823,7 @@ snapshots:
       '@types/react': 19.2.18
       react: 19.2.8
 
-  '@napi-rs/cli@3.10.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.13.3)':
+  '@napi-rs/cli@3.10.8(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)':
     dependencies:
       '@inquirer/prompts': 8.7.3(@types/node@24.13.3)
       '@napi-rs/cross-toolchain': 1.0.3
@@ -7835,8 +7838,8 @@ snapshots:
       typanion: 3.14.0
       typescript: 6.0.3
     optionalDependencies:
-      '@emnapi/core': 1.9.2
-      '@emnapi/runtime': 1.9.2
+      '@emnapi/core': 1.11.2
+      '@emnapi/runtime': 1.11.2
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
       - '@napi-rs/cross-toolchain-arm64-target-armv7'

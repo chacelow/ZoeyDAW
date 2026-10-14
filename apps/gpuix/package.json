@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot src/main.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@gpuix/native": "0.10.0",
     "@gpuix/react": "0.10.0",
+    "@zoeydaw/native": "workspace:*",
     "@zoeymind/ui": "workspace:*",
     "culori": "^4.0.2",
     "react": "^19.2.0"

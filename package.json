@@ -19,7 +19,8 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "icon:generate": "tauri icon apps/web/src/assets/logo-framed.svg --output src-tauri/icons && node -e \"for (const path of ['src-tauri/icons/android', 'src-tauri/icons/ios', 'src-tauri/icons/64x64.png']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "native:build": "pnpm --filter @zoeydaw/native build"
   },
   "engines": {
     "node": ">=22.18.0"

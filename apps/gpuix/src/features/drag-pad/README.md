@@ -9,7 +9,7 @@ gpuix 公共 JS API 没有隐藏、warp 光标或读取屏幕坐标的方法（�
 - **不使用** `CGAssociateMouseAndMouseCursorPosition`（FPS 式 pointer lock，断开光标与硬件移动后读原始 delta）。GPUI macOS 事件源（[events.rs](https://github.com/zed-industries/zed/blob/main/crates/gpui_macos/src/events.rs) 的 `NSMouseMoved` 分支）所有 move 事件都由 `NSEvent.locationInWindow()` 绝对位置构造，没有原始 delta 路径。断开关联会冻结该位置，拖动期间 `mouseMove` 将完全停止触发。
 - 实际方案：`mouseDown` 时读取并保存屏幕光标坐标；确认进入拖动（超过点击阈值）后才隐藏光标；真实光标继续不可见地移动，gpuix 照常通过 pointer capture 收到 move/up；松手时先 warp 回保存的坐标，再显示光标。点击、双击、wheel 不隐藏光标。
 - 锚点必须在 `mouseDown` 读取，不能在首个越过阈值的 `mouseMove` 里读：实测延后读取会锚定到拖动中途的点，而非真实按下位置。
-- 使用 `osascript -l JavaScript`（JXA）而非 `bun:ffi`：`CGEventGetLocation`/`CGPointMake` 按值传递 `CGPoint`，Bun 的 `FFIType` 没有 struct 类型，原始 FFI 读返回值会得到垃圾数据。代价是每次 `mouseDown`（捕获）和每次拖动结束（恢复）各一次同步子进程启动，数十毫秒量级；`mouseMove` 路径不受影响。
+- 实现在 Rust：[`crates/native/src/cursor.rs`](../../../../../crates/native/src/cursor.rs)，经 napi 暴露 `cursorPosition`/`cursorHide`/`cursorRestore`，进程内调用，实测约 2µs/次（此前 `osascript` 子进程约 54ms/次，慢约 2.5 万倍）。`native-cursor.ts` 只做适配。`CGWarpMouseCursorPosition` 只落整数点，所以恢复位置与小数锚点最多相差 0.5pt，已四舍五入到最近点。
 
 来源：[native API](https://github.com/remorses/gpuix/blob/main/_autodocs/api-reference/native-gpuix-renderer.md)、[capture 实现](https://github.com/remorses/gpuix/blob/main/packages/native/src/renderer.rs)。
 
