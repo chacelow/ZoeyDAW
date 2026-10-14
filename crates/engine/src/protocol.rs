@@ -1,4 +1,4 @@
-//! JSON port matching `apps/web/src/pages/project/model/backend.ts`.
+//! JSON port matching `apps/gpuix/src/project/model/backend.ts`.
 
 use std::collections::BTreeMap;
 
@@ -286,6 +286,7 @@ pub struct BackendTelemetry {
     pub playing: bool,
     pub recording: bool,
     pub levels: BTreeMap<String, [f64; 2]>,
+    pub output_latency_frames: Option<u64>,
 }
 
 /// Mirrors the mock backend, not a second document editor. `open` is accepted
@@ -330,7 +331,7 @@ impl SessionFence {
         self.state = None;
     }
 
-    pub fn apply(&mut self, request: &BackendRequest) -> BackendResult {
+    pub fn validate(&self, request: &BackendRequest) -> Result<(), BackendFailureCode> {
         let failure = if self.disposed {
             Some(BackendFailureCode::Disposed)
         } else if request.stage == BackendStage::Open {
@@ -345,10 +346,17 @@ impl SessionFence {
                 || self
                     .last_sequence
                     .is_some_and(|last| request.sequence <= last)
-                || request.base_revision != self.accepted_revision)
+                || request.base_revision != self.accepted_revision
+                || self.state.as_ref().is_some_and(|state| {
+                    request.state.control.seek_generation < state.control.seek_generation
+                }))
                 .then_some(BackendFailureCode::Protocol)
         };
-        if let Some(code) = failure {
+        failure.map_or(Ok(()), Err)
+    }
+
+    pub fn apply(&mut self, request: &BackendRequest) -> BackendResult {
+        if let Err(code) = self.validate(request) {
             return BackendResult::Rejected {
                 session_id: request.session_id.clone(),
                 sequence: request.sequence,

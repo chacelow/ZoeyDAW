@@ -162,6 +162,54 @@ impl PeakPyramid {
                 })
         })
     }
+
+    /// Exact channel-major pixel envelopes. PCM supplies only partial edge bins;
+    /// aligned interiors use the pyramid without requiring a frame-sized base level.
+    pub fn read_pixels(
+        &self,
+        start: u64,
+        end: u64,
+        pixels: usize,
+        frames: usize,
+        sample_at: impl Fn(usize, usize) -> f32,
+    ) -> Result<Vec<f32>, &'static str> {
+        if pixels == 0 || pixels > 16384 || end <= start {
+            return Err("invalid peak range or pixel count");
+        }
+        let width = u64::from(self.levels[0].frames_per_bin);
+        let mut output = Vec::with_capacity(self.levels[0].channels.len() * pixels * 2);
+        for (channel, base) in self.levels[0].channels.iter().enumerate() {
+            let end = end.min(frames as u64).min(base.min.len() as u64 * width);
+            let start = start.min(end);
+            for pixel in 0..pixels {
+                let mut frame = start + ((end - start) as u128 * pixel as u128 / pixels as u128) as u64;
+                let boundary = start + ((end - start) as u128 * (pixel + 1) as u128 / pixels as u128) as u64;
+                let mut low = f32::INFINITY;
+                let mut high = f32::NEG_INFINITY;
+                while frame < boundary {
+                    if frame % width != 0 || boundary - frame < width {
+                        let sample = sample_at(channel, frame as usize);
+                        let sample = if sample.is_nan() { 0.0 } else { sample };
+                        low = low.min(sample);
+                        high = high.max(sample);
+                        frame += 1;
+                        continue;
+                    }
+                    let units = frame / width;
+                    let alignment = if units == 0 { 63 } else { units.trailing_zeros() as usize };
+                    let size = (63 - ((boundary - frame) / width).leading_zeros()) as usize;
+                    let level = &self.levels[alignment.min(size).min(self.levels.len() - 1)];
+                    let index = (frame / u64::from(level.frames_per_bin)) as usize;
+                    low = low.min(level.channels[channel].min[index]);
+                    high = high.max(level.channels[channel].max[index]);
+                    frame += u64::from(level.frames_per_bin);
+                }
+                let envelope = if low.is_infinite() { [0.0, 0.0] } else { [low, high] };
+                output.extend_from_slice(&envelope);
+            }
+        }
+        Ok(output)
+    }
 }
 
 fn channel_peaks(

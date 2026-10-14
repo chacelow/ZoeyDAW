@@ -25,6 +25,7 @@ for (const entry of entries) {
 const required = [
   "docs/architecture/gpuix.md",
   "docs/architecture/gpuix-ui-standards.md",
+  "docs/architecture/gpuix-arrangement-composition.md",
   "docs/research/gpuix-main-build.md",
   "docs/research/engine-playback-graph.md",
   "apps/gpuix/src/project/stores/README.md",
