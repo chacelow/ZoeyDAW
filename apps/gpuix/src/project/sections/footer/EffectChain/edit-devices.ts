@@ -1,5 +1,5 @@
-import { projectActions, useProjectState } from "../../../adapters"
-import type { Device } from "../../../model/devices"
+import { projectActions, useProjectState } from "@/project/adapters"
+import type { Device } from "@/project/model/devices"
 
 export function editDevices(trackId: string, edit: (devices: Device[]) => Device[]): void {
   const track = useProjectState.getState().document.tracks.find(item => item.id === trackId)

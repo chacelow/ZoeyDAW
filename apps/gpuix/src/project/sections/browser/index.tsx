@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef } from "react"
+import { useCallback, useImperativeHandle, useRef } from "react"
 import { useGpuix } from "@gpuix/react"
 import {
   Button,
@@ -8,9 +8,11 @@ import {
   ListRow,
   ScrollArea,
   useInfoBinding,
-} from "../../../ui/controls"
-import { Group, Panel, PanelDivider } from "../../../ui/panels"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
+} from "@/ui/controls"
+import { Group, Panel, PanelDivider } from "@/ui/panels"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { Icon } from "@/ui/controls/Icon"
+import type { IconName } from "@/ui/controls/Icon"
 import type { Props, PublicInstance } from "@gpuix/react"
 import type { ReactNode, Ref } from "react"
 import type { BrowserKind } from "./catalog"
@@ -29,15 +31,15 @@ const CONTENT_KINDS: readonly (BrowserKind | "all")[] = [
   "tuning",
   "template",
 ]
-const KIND_GLYPHS: Readonly<Record<BrowserKind, string>> = {
-  device: "◈",
-  preset: "▤",
-  sample: "≋",
-  midi: "♪",
-  clip: "▣",
-  groove: "♬",
-  tuning: "♯",
-  template: "▱",
+const KIND_ICONS: Readonly<Record<BrowserKind, IconName>> = {
+  device: "Piano",
+  preset: "FileSliders",
+  sample: "FileAudio",
+  midi: "KeyboardMusic",
+  clip: "FileMusic",
+  groove: "Music2",
+  tuning: "SlidersHorizontal",
+  template: "Folder",
 }
 export interface BrowserBodySlots {
   readonly navigation: ReactNode
@@ -89,6 +91,15 @@ export function BrowserPanel({
   const tree = useRef<PublicInstance | null>(null)
   const nodes = useRef(new Map<string, PublicInstance>())
   const resourceInfo = useInfoBinding({ type: "resources" })
+  const { ref: searchInfoRef, ...searchInfo } = useInfoBinding({ type: "search" })
+  const filterInfo = useInfoBinding({ type: "filters" })
+  const bindSearch = useCallback(
+    (node: PublicInstance | null) => {
+      search.current = node
+      searchInfoRef(node)
+    },
+    [searchInfoRef]
+  )
   const selectedId = browser.selected?.entry.id
   useImperativeHandle(
     browserRef,
@@ -177,7 +188,7 @@ export function BrowserPanel({
           disabled={!browser.canGoBack}
           onClick={() => browser.travel("back")}
         >
-          ‹
+          <Icon name="ChevronLeft" color={theme.colors.foreground} />
         </Button>
         <Button
           iconOnly
@@ -185,10 +196,11 @@ export function BrowserPanel({
           disabled={!browser.canGoForward}
           onClick={() => browser.travel("forward")}
         >
-          ›
+          <Icon name="ChevronRight" color={theme.colors.foreground} />
         </Button>
         <Input
-          ref={search}
+          {...searchInfo}
+          ref={bindSearch}
           value={browser.query}
           aria-label={labels.search}
           placeholder={labels.searchPlaceholder}
@@ -211,16 +223,21 @@ export function BrowserPanel({
               if (search.current) renderer?.focusElement?.(search.current.id)
             }}
           >
-            ×
+            <Icon name="X" color={theme.colors.foreground} />
           </Button>
         ) : null}
         <Button
           iconOnly
           label={labels.filters}
           active={browser.filtersVisible}
-          onClick={() => browser.setFiltersVisible(!browser.filtersVisible)}
+          onActiveChange={browser.setFiltersVisible}
         >
-          ≡
+          <Icon
+            name="ListFilter"
+            color={
+              browser.filtersVisible ? theme.colors.primaryForeground : theme.colors.foreground
+            }
+          />
         </Button>
       </div>
       <text
@@ -253,6 +270,7 @@ export function BrowserPanel({
             >
               {browser.filtersVisible ? (
                 <div
+                  {...filterInfo}
                   role="group"
                   aria-label={labels.content}
                   style={{
@@ -268,7 +286,15 @@ export function BrowserPanel({
                       key={kind}
                       active={browser.kind === kind}
                       label={labels.kinds[kind]}
-                      onClick={() => browser.setKind(kind)}
+                      icon={
+                        <Icon
+                          name="Check"
+                          color={
+                            browser.kind === kind ? theme.colors.primaryForeground : "transparent"
+                          }
+                        />
+                      }
+                      onActiveChange={() => browser.setKind(kind)}
                     >
                       {labels.kinds[kind]}
                     </Button>
@@ -278,8 +304,13 @@ export function BrowserPanel({
               <Button
                 label={browser.descending ? labels.descending : labels.ascending}
                 onClick={() => browser.setDescending(!browser.descending)}
+                style={{ justifyContent: "space-between" }}
               >
-                {`${browser.descending ? "↓" : "↑"} ${labels.content}`}
+                <text>{labels.content}</text>
+                <Icon
+                  name={browser.descending ? "ChevronDown" : "ChevronUp"}
+                  color={theme.colors.foreground}
+                />
               </Button>
               <ScrollArea
                 testId="browser-results"
@@ -362,7 +393,10 @@ export function BrowserPanel({
                                         browser.toggleExpanded(row.entry.id)
                                       }}
                                     >
-                                      {row.expanded ? "⌄" : "›"}
+                                      <Icon
+                                        name={row.expanded ? "ChevronDown" : "ChevronRight"}
+                                        color={theme.colors.foreground}
+                                      />
                                     </Button>
                                   ) : (
                                     <div
@@ -374,7 +408,14 @@ export function BrowserPanel({
                                     />
                                   )}
                                   <IconSlot>
-                                    <text aria-hidden="true">{KIND_GLYPHS[row.entry.kind]}</text>
+                                    <Icon
+                                      name={KIND_ICONS[row.entry.kind]}
+                                      color={
+                                        selectedId === row.entry.id
+                                          ? theme.colors.primaryForeground
+                                          : theme.colors.mutedForeground
+                                      }
+                                    />
                                   </IconSlot>
                                 </div>
                               }
@@ -383,9 +424,17 @@ export function BrowserPanel({
                                   iconOnly
                                   label={`${browser.favorites.has(row.entry.id) ? labels.unfavorite : labels.favorite} ${row.entry.name}`}
                                   active={browser.favorites.has(row.entry.id)}
-                                  onClick={() => browser.toggleFavorite(row.entry.id)}
+                                  onActiveChange={() => browser.toggleFavorite(row.entry.id)}
                                 >
-                                  ☆
+                                  <Icon
+                                    name="Star"
+                                    filled={browser.favorites.has(row.entry.id)}
+                                    color={
+                                      browser.favorites.has(row.entry.id)
+                                        ? theme.colors.primaryForeground
+                                        : theme.colors.foreground
+                                    }
+                                  />
                                 </Button>
                               }
                               onClick={event => {
@@ -393,6 +442,8 @@ export function BrowserPanel({
                                 if (event.clickCount === 2 && row.expandable)
                                   browser.toggleExpanded(row.entry.id)
                               }}
+                              onFocus={resourceInfo.onFocus}
+                              onBlur={resourceInfo.onBlur}
                               onKeyDown={event => keyboard(event, row.entry.id)}
                             />
                           ),

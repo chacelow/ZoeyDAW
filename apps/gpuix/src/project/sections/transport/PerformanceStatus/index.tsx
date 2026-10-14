@@ -1,6 +1,6 @@
-import { PopupButton } from "../../../../ui/controls"
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
-import { readProjectTelemetry, useProjectState } from "../../../adapters"
+import { PopupButton } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { readProjectTelemetry, useProjectState } from "@/project/adapters"
 import type { TransportLabels } from "../labels"
 import { formatSampleTime } from "../metronome"
 

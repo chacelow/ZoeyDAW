@@ -1,7 +1,15 @@
-import { Button, DropdownButton } from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { deviceParameterKeys } from "../../../../model/devices"
-import type { Device } from "../../../../model/devices"
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/ui/controls"
+import { Icon } from "@/ui/controls/Icon"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { deviceParameterKeys } from "@/project/model/devices"
+import type { Device } from "@/project/model/devices"
 import type { Props, PublicInstance } from "@gpuix/react"
 import { ParameterControl } from "../ParameterControl"
 import { DeviceDisplay } from "../DeviceDisplay"
@@ -90,9 +98,12 @@ export function DeviceCard({
           iconOnly
           label={`${device.enabled ? labels.bypass : labels.enable} ${name}`}
           active={device.enabled}
-          onClick={onToggle}
+          onActiveChange={onToggle}
         >
-          ◉
+          <Icon
+            name="Power"
+            color={device.enabled ? theme.colors.primaryForeground : theme.colors.foreground}
+          />
         </Button>
         <Button
           iconOnly
@@ -100,15 +111,25 @@ export function DeviceCard({
           aria-expanded={!device.collapsed}
           onClick={onFold}
         >
-          {device.collapsed ? "›" : "⌄"}
+          <Icon
+            name={device.collapsed ? "ChevronRight" : "ChevronDown"}
+            color={theme.colors.foreground}
+          />
         </Button>
         <Button
           {...handleProps}
           ref={registerHandle}
+          iconOnly={device.collapsed}
+          icon={
+            <Icon
+              name="GripVertical"
+              color={selected ? theme.colors.primaryForeground : theme.colors.mutedForeground}
+            />
+          }
           label={`${labels.select} ${name}`}
           active={selected}
           testId={`device-handle-${device.id}`}
-          onClick={onSelect}
+          onActiveChange={onSelect}
           style={{
             flexGrow: device.collapsed ? 0 : 1,
             minWidth: 0,
@@ -116,38 +137,41 @@ export function DeviceCard({
             cursor: dragging ? "grabbing" : "grab",
           }}
         >
-          {device.collapsed ? "⋮" : name}
+          {device.collapsed ? null : name}
         </Button>
         {!device.collapsed ? (
-          <DropdownButton
-            value="actions"
-            label={`${labels.actions} ${name}`}
-            renderValue={() => "⋯"}
-            side="top"
-            align="end"
-            matchTriggerWidth={false}
-            items={[
-              { id: "left", label: labels.moveLeft, disabled: first },
-              { id: "right", label: labels.moveRight, disabled: last },
-              { type: "separator", id: "sep" },
-              { id: "delete", label: labels.delete },
-            ]}
-            onChange={action => {
-              if (action === "left") onMove(-1)
-              else if (action === "right") onMove(1)
-              else if (action === "delete") onDelete()
-            }}
-          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                iconOnly
+                label={`${labels.actions} ${name}`}
+                icon={<Icon name="Ellipsis" color={theme.colors.foreground} />}
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" aria-label={`${labels.actions} ${name}`}>
+              <DropdownMenuItem disabled={first} onSelect={() => onMove(-1)}>
+                {labels.moveLeft}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={last} onSelect={() => onMove(1)}>
+                {labels.moveRight}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onDelete}>{labels.delete}</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
       {device.collapsed ? (
         <text
+          aria-label={name}
           style={{
             color: theme.colors.mutedForeground,
             fontSize: theme.control["--text-control-track"],
+            lineHeight: theme.control["--text-control-track"],
+            textAlign: "center",
           }}
         >
-          {name}
+          {Array.from(name).join("\n")}
         </text>
       ) : (
         <div

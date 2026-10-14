@@ -1,5 +1,5 @@
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx, sv } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx, sv } from "@/shared/theme/style"
 import type { Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 

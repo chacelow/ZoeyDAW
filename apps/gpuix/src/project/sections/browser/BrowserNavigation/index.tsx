@@ -1,7 +1,9 @@
 import { useRef } from "react"
 import { useGpuix } from "@gpuix/react"
-import { ListRow, ScrollArea, useInfoBinding } from "../../../../ui/controls"
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
+import { ListRow, ScrollArea, useInfoBinding } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { Icon } from "@/ui/controls/Icon"
+import type { IconName } from "@/ui/controls/Icon"
 import type { PublicInstance } from "@gpuix/react"
 import type { BrowserSource } from "../catalog"
 import type { BrowserLabels } from "../labels"
@@ -33,6 +35,27 @@ const SOURCE_GROUPS: readonly {
   { id: "places", sources: ["packs", "userLibrary", "currentProject"] },
 ]
 const SOURCES = SOURCE_GROUPS.flatMap(group => group.sources)
+const SOURCE_ICONS: Readonly<Record<BrowserSource, IconName>> = {
+  favorites: "Star",
+  purple: "Square",
+  all: "Library",
+  sounds: "AudioLines",
+  drums: "Drum",
+  instruments: "Piano",
+  audioEffects: "SlidersHorizontal",
+  midiEffects: "KeyboardMusic",
+  modulators: "Waves",
+  max: "Gauge",
+  plugins: "Plug",
+  clips: "FileMusic",
+  samples: "FileAudio",
+  grooves: "Music2",
+  tunings: "SlidersHorizontal",
+  templates: "FileSliders",
+  packs: "Package",
+  userLibrary: "Folder",
+  currentProject: "FolderOpen",
+}
 
 export function BrowserNavigation({
   source,
@@ -74,6 +97,23 @@ export function BrowserNavigation({
               label={labels.sources[id]}
               testId={`browser-source-${id}`}
               selected={source === id}
+              leading={
+                <Icon
+                  name={SOURCE_ICONS[id]}
+                  filled={id === "favorites" || id === "purple"}
+                  color={
+                    id === "favorites"
+                      ? theme.colors.chart5
+                      : id === "purple"
+                        ? theme.colors.chart4
+                        : source === id
+                          ? theme.colors.primaryForeground
+                          : theme.colors.mutedForeground
+                  }
+                />
+              }
+              onFocus={info.onFocus}
+              onBlur={info.onBlur}
               ref={node => {
                 if (node) nodes.current.set(id, node)
                 else nodes.current.delete(id)

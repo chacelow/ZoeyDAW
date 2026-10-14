@@ -1,6 +1,7 @@
-import { Button } from "../../../ui/controls"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import type { ControlInfo } from "../../../ui/controls"
+import { Button } from "@/ui/controls"
+import { Icon } from "@/ui/controls/Icon"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import type { ControlInfo } from "@/ui/controls"
 import type { FooterView } from "../footer"
 
 export interface StatusWarning {
@@ -51,6 +52,7 @@ export function StatusStrip({
       aria-label={labels.views}
       style={{
         display: "flex",
+        flexDirection: "row",
         alignItems: "center",
         flexShrink: 0,
         height: theme.transportControl["--spacing-control-track"],
@@ -69,7 +71,10 @@ export function StatusStrip({
         testId="status-toggle-footer"
         onClick={onToggleFooter}
       >
-        {footerCollapsed ? "⌃" : "⌄"}
+        <Icon
+          name={footerCollapsed ? "ChevronUp" : "ChevronDown"}
+          color={theme.colors.foreground}
+        />
       </Button>
       <div
         role="status"
@@ -77,6 +82,7 @@ export function StatusStrip({
         testId="status-info"
         style={{
           display: "flex",
+          flexDirection: "row",
           alignItems: "center",
           flexGrow: 1,
           minWidth: 0,
@@ -86,13 +92,45 @@ export function StatusStrip({
       >
         {help ? (
           <>
-            <text style={{ color: theme.colors.foreground }}>{help.title}</text>
-            <text style={{ color: theme.colors.mutedForeground }}>{help.description}</text>
+            <text style={{ color: theme.colors.foreground, whiteSpace: "nowrap", flexShrink: 0 }}>
+              {help.title}
+            </text>
+            <text
+              style={{
+                color: theme.colors.mutedForeground,
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+                minWidth: 0,
+                flexGrow: 1,
+              }}
+            >
+              {help.description}
+            </text>
           </>
         ) : warning ? (
-          <text style={{ color }}>
-            {severity === "error" ? "⊗" : severity === "warning" ? "△" : "ⓘ"} {warning.message}
-          </text>
+          <>
+            <Icon
+              name={
+                severity === "error"
+                  ? "CircleAlert"
+                  : severity === "warning"
+                    ? "TriangleAlert"
+                    : "Info"
+              }
+              color={color}
+            />
+            <text
+              style={{
+                color,
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+                minWidth: 0,
+                flexGrow: 1,
+              }}
+            >
+              {warning.message}
+            </text>
+          </>
         ) : null}
       </div>
       <div
@@ -108,7 +146,7 @@ export function StatusStrip({
           label={labels.clip}
           active={!footerCollapsed && view === "clip"}
           testId="status-clip"
-          onClick={() => onViewChange("clip")}
+          onActiveChange={() => onViewChange("clip")}
         >
           {labels.clip}
         </Button>
@@ -116,7 +154,7 @@ export function StatusStrip({
           label={labels.devices}
           active={!footerCollapsed && view === "devices"}
           testId="status-devices"
-          onClick={() => onViewChange("devices")}
+          onActiveChange={() => onViewChange("devices")}
         >
           {labels.devices}
         </Button>

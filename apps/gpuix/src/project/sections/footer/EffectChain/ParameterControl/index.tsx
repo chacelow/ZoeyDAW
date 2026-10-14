@@ -1,12 +1,12 @@
-import { DragPadBar } from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { useProjectEditGesture } from "../../../../adapters"
+import { DragPadBar } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { useProjectEditGesture } from "@/project/adapters"
 import {
   DEVICE_PARAMETERS,
   deviceParameterValue,
   withDeviceParameter,
-} from "../../../../model/devices"
-import type { Device, DeviceParameter } from "../../../../model/devices"
+} from "@/project/model/devices"
+import type { Device, DeviceParameter } from "@/project/model/devices"
 import { editDevices } from "../edit-devices"
 import type { FooterLabels } from "../../labels"
 

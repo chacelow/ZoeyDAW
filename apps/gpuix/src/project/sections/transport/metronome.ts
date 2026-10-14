@@ -1,11 +1,16 @@
 import type { Position } from "../../model/types"
 
+export interface MetronomePhase {
+  readonly side: -1 | 0 | 1
+  readonly swing: number
+}
+
 export function metronomePhase(
   position: Position,
   numerator: number,
   playing: boolean,
   enabled: boolean
-): { side: -1 | 0 | 1; swing: number } {
+): MetronomePhase {
   if (!playing || !enabled) return { side: 0, swing: 0 }
   const ordinal = (position.bar - 1) * numerator + position.beat - 1
   const side = Math.floor(ordinal) % 2 === 0 ? -1 : 1

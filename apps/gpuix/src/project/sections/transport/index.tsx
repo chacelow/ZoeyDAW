@@ -1,12 +1,7 @@
 import { useMemo, useRef } from "react"
-import {
-  Button,
-  ControlGroup,
-  DragPadToggle,
-  DropdownButton,
-  ScrollArea,
-} from "../../../ui/controls"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
+import { Button, ControlGroup, DragPadToggle, DropdownButton, ScrollArea } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { Icon } from "@/ui/controls/Icon"
 import { projectActions, useProjectState } from "../../adapters"
 import { growTimelineBars, timelineBars } from "../../model/selectors"
 import { effectiveDrawMode } from "../../model/interaction-mode"
@@ -14,6 +9,7 @@ import type { TransportLabels } from "./labels"
 import { TransportNumber } from "./TransportNumber"
 import { PerformanceStatus } from "./PerformanceStatus"
 import { metronomePhase, tappedTempo } from "./metronome"
+import { MetronomeIndicator } from "./MetronomeIndicator"
 
 const SCALE_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] as const
 const SCALE_MODES = [
@@ -61,9 +57,15 @@ export function TransportBar({
     session.playing,
     workspace.metronome
   )
-  const swing = reducedMotion ? 0 : phase.swing
   const gap = theme.transportControl["--spacing-control-track-gap"]
-  const groupStyle = { display: "flex", alignItems: "center", gap, flexShrink: 0 } as const
+  const iconSize = theme.transportControl["--spacing-control-icon"]
+  const groupStyle = {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap,
+    flexShrink: 0,
+  } as const
   return (
     <ScrollArea
       orientation="horizontal"
@@ -79,6 +81,7 @@ export function TransportBar({
       <div
         style={{
           display: "flex",
+          flexDirection: "row",
           alignItems: "center",
           gap: theme.project.transportColumnGap,
           minWidth: "100%",
@@ -87,7 +90,7 @@ export function TransportBar({
       >
         <div testId="transport-left" style={groupStyle}>
           <Button size="transport" iconOnly label={labels.toggleBrowser} onClick={onToggleBrowser}>
-            ▥
+            <Icon name="LayoutGrid" size={iconSize} color={theme.colors.foreground} />
           </Button>
           <DragPadToggle
             size="transport"
@@ -144,18 +147,12 @@ export function TransportBar({
             iconOnly
             label={`${labels.metronome} — ${labels.metronomeSilent}`}
             active={workspace.metronome}
-            onClick={() => projectActions.setMetronome(!workspace.metronome)}
+            onActiveChange={projectActions.setMetronome}
           >
-            <svg
-              aria-hidden="true"
-              source={`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 21L10 3H14L19 21Z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M12 20L${12 + swing * 7} 6" stroke="currentColor" stroke-width="2"/><circle cx="5" cy="6" r="3" fill="${phase.side < 0 ? "currentColor" : "none"}" stroke="currentColor"/><circle cx="19" cy="6" r="3" fill="${phase.side > 0 ? "currentColor" : "none"}" stroke="currentColor"/></svg>`}
-              style={{
-                width: theme.transportControl["--spacing-control-icon"],
-                height: theme.transportControl["--spacing-control-icon"],
-                color: workspace.metronome
-                  ? theme.colors.primaryForeground
-                  : theme.colors.foreground,
-              }}
+            <MetronomeIndicator
+              phase={phase}
+              enabled={workspace.metronome}
+              reducedMotion={reducedMotion}
             />
           </Button>
           <ControlGroup label={labels.scale} separator="line">
@@ -185,6 +182,9 @@ export function TransportBar({
             step={1}
             defaultValue={0}
             label={labels.groove}
+            icon={
+              <Icon name="AudioWaveform" size={iconSize} color={theme.colors.mutedForeground} />
+            }
             format={value => `${Math.round(value)}%`}
           />
           <DropdownButton
@@ -209,6 +209,13 @@ export function TransportBar({
             value={workspace.follow}
             onChange={projectActions.setFollow}
             label={labels.follow}
+            icon={
+              <Icon
+                name="Locate"
+                size={iconSize}
+                color={workspace.follow ? theme.colors.primaryForeground : theme.colors.foreground}
+              />
+            }
           />
           <ControlGroup label={labels.position} separator="dot">
             <TransportNumber
@@ -246,9 +253,14 @@ export function TransportBar({
             label={session.playing ? labels.pause : labels.play}
             active={session.playing}
             testId="transport-play"
-            onClick={projectActions.togglePlay}
+            onActiveChange={projectActions.togglePlay}
           >
-            {session.playing ? "Ⅱ" : "▶"}
+            <Icon
+              name={session.playing ? "Pause" : "Play"}
+              filled
+              size={iconSize}
+              color={session.playing ? theme.colors.primaryForeground : theme.colors.foreground}
+            />
           </Button>
           <Button
             size="transport"
@@ -263,7 +275,7 @@ export function TransportBar({
               lastStop.current = now
             }}
           >
-            ■
+            <Icon name="Square" filled size={iconSize} color={theme.colors.foreground} />
           </Button>
           <Button
             size="transport"
@@ -271,24 +283,38 @@ export function TransportBar({
             label={labels.rewind}
             onClick={projectActions.rewindToStart}
           >
-            |◀
+            <Icon name="SkipBack" filled size={iconSize} color={theme.colors.foreground} />
           </Button>
           <Button
             size="transport"
             iconOnly
             label={labels.record}
             active={session.recording}
-            variant="destructive"
+            variant={session.recording ? "destructive" : "ghost"}
             testId="transport-record"
-            onClick={projectActions.toggleRecording}
+            onActiveChange={projectActions.toggleRecording}
           >
-            ●
+            <Icon
+              name="Circle"
+              filled
+              size={iconSize}
+              color={session.recording ? theme.colors.destructive : theme.colors.foreground}
+            />
           </Button>
           <DragPadToggle
             size="transport"
             value={meter.loop.enabled}
             onChange={enabled => projectActions.setLoop({ enabled })}
             label={labels.loop}
+            icon={
+              <Icon
+                name="Repeat"
+                size={iconSize}
+                color={
+                  meter.loop.enabled ? theme.colors.primaryForeground : theme.colors.foreground
+                }
+              />
+            }
           />
         </div>
         <div style={{ flexGrow: 1 }} />
@@ -296,18 +322,39 @@ export function TransportBar({
           <DragPadToggle
             size="transport"
             value={drawMode}
-            onChange={enabled => projectActions.setMode("drawMode", enabled)}
+            onChange={enabled => {
+              projectActions.setDrawModeOverride(null)
+              projectActions.setMode("drawMode", enabled)
+            }}
             label={labels.drawMode}
+            icon={
+              <Icon
+                name="Pencil"
+                size={iconSize}
+                color={drawMode ? theme.colors.primaryForeground : theme.colors.foreground}
+              />
+            }
           />
           <DragPadToggle
             size="transport"
             value={workspace.computerKeyboard}
             onChange={enabled => projectActions.setMode("computerKeyboard", enabled)}
             label={labels.computerKeyboard}
+            icon={
+              <Icon
+                name="Keyboard"
+                size={iconSize}
+                color={
+                  workspace.computerKeyboard
+                    ? theme.colors.primaryForeground
+                    : theme.colors.foreground
+                }
+              />
+            }
           />
           <PerformanceStatus labels={labels} />
           <Button size="transport" iconOnly label={labels.back} onClick={onBack}>
-            ‹
+            <Icon name="ChevronLeft" size={iconSize} color={theme.colors.foreground} />
           </Button>
         </div>
       </div>
