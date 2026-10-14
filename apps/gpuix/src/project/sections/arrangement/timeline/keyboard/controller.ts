@@ -1,7 +1,7 @@
 import { projectActions, useProjectState } from "../../../../adapters"
 import { deriveGridPlan } from "../../../../model/grid"
 import { positionToBar } from "../../../../model/types"
-import type { EventPayload } from "@gpuix/react"
+import type { WindowKeyEvent } from "../../../../../platform/keyboard"
 
 const NOTE_KEYS: Readonly<Record<string, number>> = {
   a: 0,
@@ -24,11 +24,16 @@ const NOTE_KEYS: Readonly<Record<string, number>> = {
 
 export type KeyboardFocus = "text" | "menu" | "control" | "timeline" | "clip-editor"
 
+export type TimelineKeyboardInput = Pick<
+  WindowKeyEvent,
+  "key" | "keyChar" | "isHeld" | "modifiers" | "defaultPrevented"
+>
+
 export interface KeyboardOwner {
   markDrawGesture: () => void
   latchDraw: (enabled: boolean) => void
-  down: (event: EventPayload) => boolean
-  up: (event: EventPayload) => boolean
+  down: (event: TimelineKeyboardInput) => boolean
+  up: (event: TimelineKeyboardInput) => boolean
   deactivate: () => void
   dispose: () => void
 }
@@ -36,7 +41,7 @@ export interface KeyboardOwner {
 export interface TimelineKeyboardDeps {
   focus: () => KeyboardFocus
   blurControl: () => void
-  claim?: (event: EventPayload) => boolean
+  claim?: (event: TimelineKeyboardInput) => boolean
 }
 
 export function createTimelineKeyboard({
@@ -70,10 +75,10 @@ export function createTimelineKeyboard({
       projectActions.setDrawModeOverride(null)
       projectActions.setMode("drawMode", enabled)
     },
-    down(event: EventPayload): boolean {
+    down(event: TimelineKeyboardInput): boolean {
       const key = event.key?.toLowerCase()
       const target = focus()
-      if (!key || target === "text" || target === "menu") return false
+      if (!key || event.defaultPrevented || target === "text" || target === "menu") return false
       const { ctrl = false, cmd = false, alt = false, shift = false } = event.modifiers ?? {}
       const modified = ctrl || cmd
       if ((key === "space" || key === " ") && !modified && !alt) {
@@ -92,6 +97,8 @@ export function createTimelineKeyboard({
           if (!event.isHeld) (shift ? projectActions.redo : projectActions.undo)()
         } else if ((key === "1" || key === "2") && !shift) {
           if (!event.isHeld) projectActions.adjustGrid(key === "2" ? 1 : -1)
+        } else if (key === "4" && !shift) {
+          if (!event.isHeld) projectActions.setSnap(!state.workspace.snap)
         } else if (key === "e" && !shift && !state.session.selectedClipIds.length) {
           return true
         } else return false
@@ -135,6 +142,7 @@ export function createTimelineKeyboard({
         }
       }
       if (key === "b") {
+        if (state.workspace.computerKeyboard) return false
         if (!draw && !event.isHeld) {
           draw = { original: state.workspace.drawMode, used: false }
           projectActions.setDrawModeOverride(!draw.original)
@@ -164,7 +172,7 @@ export function createTimelineKeyboard({
       }
       return false
     },
-    up(event: EventPayload): boolean {
+    up(event: TimelineKeyboardInput): boolean {
       const key = event.key?.toLowerCase()
       if (!key) return false
       const pitch = notes.get(key)

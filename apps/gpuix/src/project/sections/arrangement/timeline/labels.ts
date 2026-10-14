@@ -1,6 +1,11 @@
 import type { GridDensity } from "../../../model/grid"
+import type { BackendFailureCode } from "../../../model/backend"
 
 export interface TimelineLabels {
+  readonly timeline: string
+  readonly backendOpening: string
+  readonly backendPending: string
+  readonly backendErrors: Readonly<Record<BackendFailureCode, string>>
   readonly minimap: string
   readonly musicRuler: string
   readonly timeRuler: string

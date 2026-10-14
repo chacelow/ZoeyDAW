@@ -1,6 +1,15 @@
 import type { TimelineLabels } from "./labels"
 
 export const englishLabels: TimelineLabels = {
+  timeline: "Arrangement timeline",
+  backendOpening: "Opening engine",
+  backendPending: "Applying edit",
+  backendErrors: {
+    rejected: "Engine rejected the edit",
+    connection: "Engine connection failed",
+    protocol: "Engine protocol error",
+    disposed: "Engine session closed",
+  },
   minimap: "Arrangement overview",
   musicRuler: "Music ruler",
   timeRuler: "Time ruler",
@@ -44,6 +53,15 @@ export const englishLabels: TimelineLabels = {
 }
 
 export const chineseLabels: TimelineLabels = {
+  timeline: "编排时间线",
+  backendOpening: "正在打开引擎",
+  backendPending: "正在应用编辑",
+  backendErrors: {
+    rejected: "引擎拒绝了编辑",
+    connection: "引擎连接失败",
+    protocol: "引擎协议错误",
+    disposed: "引擎会话已关闭",
+  },
   minimap: "编排概览",
   musicRuler: "音乐位置标尺",
   timeRuler: "时间标尺",

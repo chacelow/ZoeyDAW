@@ -78,6 +78,7 @@ export function createTimelineController({
 
   function setScroll(x: number, y: number): ArrangementViewport {
     if (!disposed) {
+      viewport.suspendFollow()
       projectActions.setViewport({ scrollX: x, scrollY: y })
       synchronize()
     }
@@ -248,7 +249,8 @@ export function createTimelineController({
     tick(nowMs) {
       if (disposed) return
       autoScroll.tick(nowMs)
-      viewport.follow(readTransportBar())
+      if (!rulers.active && (!minimap || minimap.phase === "idle"))
+        viewport.follow(readTransportBar())
     },
     dispose() {
       if (disposed) return

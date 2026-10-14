@@ -3,14 +3,17 @@ import { projectActions, useProjectState } from "../../../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
 import { initialSession, useProjectState as projectStore } from "../../../../stores/useProjectState"
 import { createTimelineKeyboard } from "./controller"
-import type { KeyboardFocus, KeyboardOwner } from "./controller"
-import type { EventPayload } from "@gpuix/react"
+import type { KeyboardFocus, KeyboardOwner, TimelineKeyboardInput } from "./controller"
 
 let focus: KeyboardFocus = "timeline"
 let keyboard: KeyboardOwner
 
-function key(value: string, modifiers?: EventPayload["modifiers"], isHeld = false): EventPayload {
-  return { elementId: 0, eventType: "keyDown", key: value, modifiers, isHeld }
+function key(
+  value: string,
+  modifiers?: TimelineKeyboardInput["modifiers"],
+  isHeld = false
+): TimelineKeyboardInput {
+  return { key: value, modifiers, isHeld, defaultPrevented: false }
 }
 
 beforeEach(() => {
@@ -32,6 +35,30 @@ afterEach(() => keyboard.dispose())
 const control = { ctrl: true, cmd: false, alt: false, shift: false }
 
 describe("Arrangement keyboard boundaries", () => {
+  test("computer MIDI mode keeps B from changing the draw preference or held override", () => {
+    projectActions.setMode("computerKeyboard", true)
+    const original = useProjectState.getState().workspace.drawMode
+    expect(keyboard.down(key("b"))).toBe(false)
+    keyboard.up(key("b"))
+    expect(useProjectState.getState().workspace.drawMode).toBe(original)
+    expect(useProjectState.getState().session.drawModeOverride).toBeNull()
+  })
+
+  test("Ctrl+4 toggles snap without changing grid or musical position", () => {
+    const before = useProjectState.getState()
+    expect(keyboard.down(key("4", control))).toBe(true)
+    expect(useProjectState.getState().workspace.snap).toBe(!before.workspace.snap)
+    expect(useProjectState.getState().workspace.grid).toEqual(before.workspace.grid)
+    expect(useProjectState.getState().session.position).toEqual(before.session.position)
+    keyboard.down(key("4", control))
+    expect(useProjectState.getState().workspace.snap).toBe(before.workspace.snap)
+  })
+
+  test("an already consumed native key cannot toggle transport again", () => {
+    expect(keyboard.down({ ...key("space"), defaultPrevented: true })).toBe(false)
+    expect(useProjectState.getState().session.playing).toBe(false)
+  })
+
   test("Space exclusively controls transport, ignores repeats, releases control focus and preserves text input", () => {
     focus = "control"
     expect(keyboard.down(key("space"))).toBe(true)
@@ -99,10 +126,11 @@ describe("Arrangement keyboard boundaries", () => {
     expect(keyboard.down(key("ctrl"))).toBe(false)
   })
 
-  test("focused menus retain commands except Space and arrows never seek below bar one", () => {
+  test("focused menus retain their keys and arrows never seek below bar one", () => {
     focus = "menu"
     expect(keyboard.down(key("a"))).toBe(false)
     expect(keyboard.down(key("left"))).toBe(false)
+    expect(keyboard.down(key("space"))).toBe(false)
     focus = "timeline"
     projectActions.rewindToStart()
     keyboard.down(key("left"))

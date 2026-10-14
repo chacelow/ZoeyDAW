@@ -71,8 +71,7 @@ test("Undo during a pressed locator gesture cancels the gesture without consumin
   try {
     owner.view.rulers.down(200, 8)
     owner.keyboard.down({
-      elementId: 0,
-      eventType: "keyDown",
+      defaultPrevented: false,
       key: "z",
       modifiers: { ctrl: true, cmd: false, alt: false, shift: false },
     })

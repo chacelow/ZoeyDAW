@@ -3,7 +3,7 @@ import { MIN_CLIP_LENGTH_BARS } from "../../../../model/grid"
 import { positionToBar, visibleTracks } from "../../../../model/types"
 import { MARKER_RULER_HEIGHT } from "../../core/layout"
 import { barAt, movedLoop, rulerBar, rulerHit } from "../../core/rulers/geometry"
-import type { EventPayload } from "@gpuix/react"
+import type { TimelineKeyboardInput } from "../keyboard/controller"
 import type { ProjectEditToken, SessionState } from "../../../../model/types"
 import type { SceneStore } from "../../core/scene"
 
@@ -14,7 +14,7 @@ export interface RulerController {
   up: () => void
   cancel: () => void
   doubleClick: (x: number, y: number, shift?: boolean) => boolean
-  keyDown: (event: EventPayload) => boolean
+  keyDown: (event: TimelineKeyboardInput) => boolean
   loopSelection: (fallbackBar?: number) => boolean
   dispose: () => void
 }
@@ -188,7 +188,7 @@ export function createRulerController(scene: SceneStore): RulerController {
       } else return false
       return true
     },
-    keyDown(event: EventPayload) {
+    keyDown(event: TimelineKeyboardInput) {
       const key = event.key?.toLowerCase()
       const current = scene.get()
       const selected = current.targetSelection

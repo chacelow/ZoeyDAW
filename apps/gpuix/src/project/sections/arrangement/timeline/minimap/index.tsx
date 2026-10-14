@@ -11,6 +11,7 @@ import type { PublicInstance } from "@gpuix/react"
 import type { MinimapGeometry } from "../../core/viewport/minimap"
 import type { MinimapViewport } from "../../core/viewport/zoom"
 import type { CursorLockPort } from "../../../../../ui/controls"
+import type { MinimapGesture } from "./gesture"
 
 export interface MiniMapProps {
   geometry: MinimapGeometry
@@ -20,6 +21,7 @@ export interface MiniMapProps {
   cursor: CursorLockPort
   onNavigate: () => void
   onViewport: (viewport: MinimapViewport) => void
+  registerGesture?: (gesture: MinimapGesture) => () => void
 }
 
 export function MiniMap({
@@ -30,6 +32,7 @@ export function MiniMap({
   cursor,
   onNavigate,
   onViewport,
+  registerGesture,
 }: MiniMapProps) {
   const theme = useTheme()
   const { renderer } = useGpuix()
@@ -66,6 +69,7 @@ export function MiniMap({
   useEffect(() => {
     gesture.cancel()
   }, [epoch, gesture])
+  useEffect(() => registerGesture?.(gesture), [gesture, registerGesture])
   const rows = tracks.filter(track => track.kind !== "return" && track.kind !== "main")
   const rowHeight = height / Math.max(1, rows.length)
   const viewportBars = Math.min(geometry.bars, geometry.viewportWidth / geometry.pxPerBar)
@@ -108,9 +112,17 @@ export function MiniMap({
         setPointer(hit === "left" || hit === "right" ? "ew-resize" : "grab")
       }}
       onMouseUp={() => gesture.up()}
+      onBlur={() => gesture.cancel()}
       onKeyDown={event => {
-        if (event.key === "escape") gesture.cancel()
-        if (event.key === "enter") gesture.fit()
+        if (event.key === "escape" && gesture.phase !== "idle") {
+          gesture.cancel()
+          event.preventDefault()
+          event.stopPropagation()
+        } else if (event.key === "enter") {
+          gesture.fit()
+          event.preventDefault()
+          event.stopPropagation()
+        }
       }}
     >
       {rows.map((track, index) => (
