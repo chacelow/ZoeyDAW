@@ -5,12 +5,12 @@
  * TrackHeader/{TrackIdentity,TrackMixer}` as native gpuix elements — layout
  * and styling are rebuilt from `useTheme()` tokens, not copied DOM/CSS.
  */
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { PanDrag } from "../PanDrag"
 import { TrackControlsRow } from "../TrackControlsRow"
 import { VolumeDrag } from "../VolumeDrag"
-import type { Track } from "../../../../shared/model/types"
+import type { Track } from "@/shared/model/types"
 
 export interface TrackHeaderProps {
   readonly track: Track

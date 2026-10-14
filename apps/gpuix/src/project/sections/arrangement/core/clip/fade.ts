@@ -3,9 +3,9 @@ import {
   DEFAULT_FADE_CURVE,
   FADE_CURVE_VERTICAL_SCALE,
   fadeControls,
-} from "../../../../model/fades"
+} from "@/project/model/fades"
 import { FADE_HANDLE_PX } from "../clip-geometry"
-import type { AudioClip } from "../../../../model/types"
+import type { AudioClip } from "@/project/model/types"
 import type { Point } from "../interactions/types"
 
 export interface FadeDrag {

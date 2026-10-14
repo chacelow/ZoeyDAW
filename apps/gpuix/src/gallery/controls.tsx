@@ -67,12 +67,10 @@ import {
   DragPreviewArea,
   IconSlot,
 } from "../ui/controls"
+import { Icon } from "@/ui/controls/Icon"
 import type { PublicInstance } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { ControlInfo, CursorLockPort } from "../ui/controls"
-
-const glyph =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="currentColor" d="M4 2v12l10-6z"/></svg>'
 
 const cursorLock: CursorLockPort = {
   capture: cursorPosition,
@@ -191,24 +189,18 @@ function Gallery() {
                     label="Play icon"
                     iconOnly
                     icon={
-                      <svg
-                        aria-hidden="true"
-                        source={glyph}
-                        style={{
-                          width: theme.control["--spacing-control-icon"],
-                          height: theme.control["--spacing-control-icon"],
-                        }}
+                      <Icon
+                        name="Play"
+                        size={theme.control["--spacing-control-icon"]}
+                        color={theme.colors.foreground}
                       />
                     }
                   />
                   <IconSlot>
-                    <svg
-                      aria-hidden="true"
-                      source={glyph}
-                      style={{
-                        width: theme.control["--spacing-control-icon"],
-                        height: theme.control["--spacing-control-icon"],
-                      }}
+                    <Icon
+                      name="Play"
+                      size={theme.control["--spacing-control-icon"]}
+                      color={theme.colors.foreground}
                     />
                   </IconSlot>
                 </div>
@@ -519,13 +511,10 @@ function Gallery() {
                   iconOnly
                   label="Transport play"
                   icon={
-                    <svg
-                      aria-hidden="true"
-                      source={glyph}
-                      style={{
-                        width: theme.transportControl["--spacing-control-icon"],
-                        height: theme.transportControl["--spacing-control-icon"],
-                      }}
+                    <Icon
+                      name="Play"
+                      size={theme.transportControl["--spacing-control-icon"]}
+                      color={theme.colors.foreground}
                     />
                   }
                 />

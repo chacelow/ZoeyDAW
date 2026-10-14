@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx, sv } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx, sv } from "@/shared/theme/style"
 import type { InputProps as NativeInputProps } from "@gpuix/react"
 
 export interface InputProps extends NativeInputProps {

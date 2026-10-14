@@ -6,7 +6,7 @@ import {
   pinnedTrackHeight,
 } from "./layout"
 import { clipVisualGeometry, fadeHandleX, FADE_HANDLE_PX, RESIZE_EDGE_PX } from "./clip-geometry"
-import type { Clip, Track } from "../../../model/types"
+import type { Clip, Track } from "@/project/model/types"
 import type { ArrangementScene } from "./scene"
 
 export type HitTarget =

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx, sv } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx, sv } from "@/shared/theme/style"
 import type { EventPayload, Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 

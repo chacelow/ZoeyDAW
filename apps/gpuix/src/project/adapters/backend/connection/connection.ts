@@ -10,7 +10,7 @@ import type {
   ProjectBackend,
   ProjectBackendFactory,
   ProjectRuntimeStatus,
-} from "../../../model/backend"
+} from "@/project/model/backend"
 
 export interface BackendSubmission {
   stage: Exclude<BackendStage, "open">

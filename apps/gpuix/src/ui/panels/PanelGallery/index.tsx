@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import { CollapseDivider } from "../CollapseDivider"
 import { Group } from "../Group"
 import { Panel } from "../Panel"

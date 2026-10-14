@@ -1,4 +1,4 @@
-import type { BackendResult, BackendTelemetry } from "../../../model/backend"
+import type { BackendResult, BackendTelemetry } from "@/project/model/backend"
 
 export function validResult(value: unknown): value is BackendResult {
   if (

@@ -3,10 +3,10 @@
  * actually record (`audio`/`midi`), matching
  * `apps/web/.../TrackMixer`'s `track.kind === "audio" || track.kind === "midi"` guard.
  */
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { ToggleButton } from "../ToggleButton"
-import type { Track } from "../../../../shared/model/types"
+import type { Track } from "@/shared/model/types"
 
 export interface TrackControlsRowProps {
   readonly track: Track
