@@ -1,7 +1,7 @@
-import { projectActions, useProjectState } from "../../../../adapters"
-import { deriveGridPlan } from "../../../../model/grid"
-import { positionToBar } from "../../../../model/types"
-import type { WindowKeyEvent } from "../../../../../platform/keyboard"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { deriveGridPlan } from "@/project/model/grid"
+import { positionToBar } from "@/project/model/types"
+import type { WindowKeyEvent } from "@/platform/keyboard"
 
 const NOTE_KEYS: Readonly<Record<string, number>> = {
   a: 0,

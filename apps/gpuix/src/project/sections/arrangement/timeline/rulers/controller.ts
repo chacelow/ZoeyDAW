@@ -1,10 +1,10 @@
-import { projectActions, useProjectState } from "../../../../adapters"
-import { MIN_CLIP_LENGTH_BARS } from "../../../../model/grid"
-import { positionToBar, visibleTracks } from "../../../../model/types"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { MIN_CLIP_LENGTH_BARS } from "@/project/model/grid"
+import { positionToBar, visibleTracks } from "@/project/model/types"
 import { MARKER_RULER_HEIGHT } from "../../core/layout"
 import { barAt, movedLoop, rulerBar, rulerHit } from "../../core/rulers/geometry"
 import type { TimelineKeyboardInput } from "../keyboard/controller"
-import type { ProjectEditToken, SessionState } from "../../../../model/types"
+import type { ProjectEditToken, SessionState } from "@/project/model/types"
 import type { SceneStore } from "../../core/scene"
 
 export interface RulerController {

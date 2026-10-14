@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { gridLines, patternRegions } from "../../core/rulers/grid-lines"
 import type { SceneStore } from "../../core/scene"
 

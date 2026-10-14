@@ -2,9 +2,9 @@ import { minimapDragBody, minimapPointerDown } from "../../core/viewport/minimap
 import { minimapDragLeftEdge, minimapDragRightEdge } from "../../core/viewport/zoom"
 import type { MinimapAnchor, MinimapGeometry } from "../../core/viewport/minimap"
 import type { MinimapViewport } from "../../core/viewport/zoom"
-import type { CursorLockPort, ScreenPoint } from "../../../../../ui/controls"
+import type { CursorLockPort, ScreenPoint } from "@/ui/controls"
 import type { Point } from "../../core/interactions/types"
-import type { SessionState } from "../../../../model/types"
+import type { SessionState } from "@/project/model/types"
 
 interface Press {
   phase: "pressed" | "dragging"

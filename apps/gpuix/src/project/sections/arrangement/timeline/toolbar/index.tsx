@@ -1,9 +1,10 @@
-import { Button, DragPadNumber, DragPadToggle, DropdownButton } from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../shared/theme/style"
-import { projectActions, useProjectState } from "../../../../adapters"
-import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "../../../../model/grid"
-import { effectiveDrawMode } from "../../../../model/interaction-mode"
+import { Button, DragPadNumber, DragPadToggle, DropdownButton } from "@/ui/controls"
+import { Icon } from "@/ui/controls/Icon"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "@/project/model/grid"
+import { effectiveDrawMode } from "@/project/model/interaction-mode"
 import type { KeyboardOwner } from "../keyboard/controller"
 import type { TimelineLabels } from "../labels"
 
@@ -96,19 +97,37 @@ export function Toolbar({
         labelOn="B"
         labelOff="B"
       />
-      <Button iconOnly variant="ghost" label={labels.zoomOut} onClick={() => zoom(-1)}>
-        −
-      </Button>
-      <Button iconOnly variant="ghost" label={labels.zoomIn} onClick={() => zoom(1)}>
-        +
-      </Button>
+      <Button
+        iconOnly
+        icon={<Icon name="Minus" />}
+        variant="ghost"
+        label={labels.zoomOut}
+        onClick={() => zoom(-1)}
+      />
+      <Button
+        iconOnly
+        icon={<Icon name="Plus" />}
+        variant="ghost"
+        label={labels.zoomIn}
+        onClick={() => zoom(1)}
+      />
       <text
         style={sx({ fontSize: theme.control["--text-control-track"], flexShrink: 0 })}
       >{`${pxPerBar.toFixed(0)} ${labels.pixelsPerBar}`}</text>
-      <Button variant="ghost" label={labels.save} onClick={projectActions.saveSnapshot}>
+      <Button
+        icon={<Icon name="Save" />}
+        variant="ghost"
+        label={labels.save}
+        onClick={projectActions.saveSnapshot}
+      >
         {labels.save}
       </Button>
-      <Button variant="ghost" label={labels.restore} onClick={projectActions.restoreSnapshot}>
+      <Button
+        icon={<Icon name="FolderOpen" />}
+        variant="ghost"
+        label={labels.restore}
+        onClick={projectActions.restoreSnapshot}
+      >
         {labels.restore}
       </Button>
       <DragPadToggle

@@ -1,5 +1,5 @@
-import type { GridDensity } from "../../../model/grid"
-import type { BackendFailureCode } from "../../../model/backend"
+import type { GridDensity } from "@/project/model/grid"
+import type { BackendFailureCode } from "@/project/model/backend"
 
 export interface TimelineLabels {
   readonly timeline: string

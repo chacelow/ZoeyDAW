@@ -1,6 +1,6 @@
-import { projectActions, useProjectState } from "../../../../adapters"
-import { growTimelineBars, timelineBars } from "../../../../model/selectors"
-import { positionToBar, visibleTracks } from "../../../../model/types"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { growTimelineBars, timelineBars } from "@/project/model/selectors"
+import { positionToBar, visibleTracks } from "@/project/model/types"
 import {
   clampTimelineViewport,
   followViewport,
@@ -11,7 +11,7 @@ import {
 import { revealTrackScrollY } from "../../core/layout"
 import type { EventPayload } from "@gpuix/react"
 import type { TimelineViewport as ClampedTimelineViewport } from "../../core/viewport/zoom"
-import type { Track } from "../../../../model/types"
+import type { Track } from "@/project/model/types"
 
 export interface TimelineSize {
   containerWidth: number

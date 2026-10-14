@@ -1,4 +1,4 @@
-import { visibleTracks } from "../../../../model/types"
+import { visibleTracks } from "@/project/model/types"
 import {
   arrangementBodyBottom,
   arrangementBodyTop,

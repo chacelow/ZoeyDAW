@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { scrollbarGeometry } from "./scrollbar-geometry"
 import type { Props, PublicInstance } from "@gpuix/react"
 

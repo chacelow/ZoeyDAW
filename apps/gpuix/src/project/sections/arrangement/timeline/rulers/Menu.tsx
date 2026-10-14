@@ -5,11 +5,11 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../shared/theme/style"
-import { projectActions, useProjectState } from "../../../../adapters"
-import { positionToBar } from "../../../../model/types"
+} from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { positionToBar } from "@/project/model/types"
 import type { ReactNode } from "react"
 import type { TimelineController } from "../controller"
 import type { TimelineLabels } from "../labels"

@@ -1,10 +1,13 @@
 import { useRef, useState, useSyncExternalStore } from "react"
 import { useGpuix } from "@gpuix/react"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../shared/theme/style"
-import { useProjectState } from "../../../../adapters"
-import { formatAudioMusicalValue } from "../../../../model/audio-editor/musical-value"
-import { timeTickLabel, timeTicks } from "../../../../model/timeline-ticks"
+import { Shape } from "@/shared/svg/Shape"
+import { polygonPath } from "@/shared/svg/paths"
+import type { ShapePath } from "@/shared/svg/Shape"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
+import { useProjectState } from "@/project/adapters"
+import { formatAudioMusicalValue } from "@/project/model/audio-editor/musical-value"
+import { timeTickLabel, timeTicks } from "@/project/model/timeline-ticks"
 import {
   BAR_RULER_HEIGHT,
   LOOP_RULER_HEIGHT,
@@ -22,6 +25,17 @@ import type { SceneStore } from "../../core/scene"
 import type { TimelineController } from "../controller"
 import type { TimelineLabels } from "../labels"
 import type { RulerMenuTarget } from "./Menu"
+
+const markerPaths: readonly ShapePath[] = [
+  {
+    d: polygonPath([
+      { x: 0, y: 1 },
+      { x: 7, y: 5 },
+      { x: 0, y: 5 },
+    ]),
+    fill: true,
+  },
+]
 
 export function Rulers({ owner, labels }: { owner: TimelineController; labels: TimelineLabels }) {
   const scene = owner.sceneStore
@@ -178,18 +192,16 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
                     : theme.colors.mutedForeground,
               })}
             >
-              <svg
-                aria-hidden={true}
-                source={
-                  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 7"><path d="M0 1L7 5L0 5Z" fill="currentColor"/></svg>'
-                }
+              <Shape
+                paths={markerPaths}
+                viewBox="0 0 7 7"
+                width={theme.project.groupRailWidth}
+                height={theme.project.groupRailWidth}
+                color={theme.colors.primary}
                 style={sx({
                   position: "absolute",
                   left: 0,
                   bottom: theme.project.trackBorder,
-                  width: theme.project.groupRailWidth,
-                  height: theme.project.groupRailWidth,
-                  color: theme.colors.primary,
                   pointerEvents: "none",
                 })}
               />
