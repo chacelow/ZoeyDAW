@@ -50,6 +50,7 @@ export function BrowserNavigation({
   return (
     <ScrollArea
       fill
+      role="listbox"
       aria-label={labels.title}
       {...info}
       style={{ padding: theme.control["--spacing-control-track-pad"] }}
@@ -61,6 +62,8 @@ export function BrowserNavigation({
               color: theme.colors.mutedForeground,
               fontSize: theme.control["--text-control-track"],
               marginTop: theme.control["--spacing-control-track-gap"],
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
             }}
           >
             {labels.groups[group.id]}
@@ -99,7 +102,11 @@ export function BrowserNavigation({
                   renderer?.scrollIntoView?.(node.id)
                 }
               }}
-            />
+            >
+              <text style={{ whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                {labels.sources[id]}
+              </text>
+            </ListRow>
           ))}
         </div>
       ))}

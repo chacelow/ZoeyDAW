@@ -13,6 +13,7 @@ export interface BrowserLabels {
   readonly ascending: string
   readonly descending: string
   readonly empty: string
+  readonly resetFilters: string
   readonly favorite: string
   readonly unfavorite: string
   readonly noSelection: string

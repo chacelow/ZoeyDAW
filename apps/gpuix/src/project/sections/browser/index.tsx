@@ -4,6 +4,7 @@ import {
   Button,
   DragPreviewArea,
   Input,
+  IconSlot,
   ListRow,
   ScrollArea,
   useInfoBinding,
@@ -28,6 +29,16 @@ const CONTENT_KINDS: readonly (BrowserKind | "all")[] = [
   "tuning",
   "template",
 ]
+const KIND_GLYPHS: Readonly<Record<BrowserKind, string>> = {
+  device: "◈",
+  preset: "▤",
+  sample: "≋",
+  midi: "♪",
+  clip: "▣",
+  groove: "♬",
+  tuning: "♯",
+  template: "▱",
+}
 export interface BrowserBodySlots {
   readonly navigation: ReactNode
   readonly results: ReactNode
@@ -44,7 +55,11 @@ export interface BrowserPanelProps {
 export function BrowserSplitBody({ navigation, results }: BrowserBodySlots) {
   const theme = useTheme()
   return (
-    <Group orientation="horizontal" style={{ height: "100%", width: "100%" }}>
+    <Group
+      testId="browser-split"
+      orientation="horizontal"
+      style={{ height: "100%", width: "100%" }}
+    >
       <Panel
         defaultSize={theme.project.browserNavigationWidth}
         minSize={theme.control["--spacing-control-track"]}
@@ -55,7 +70,9 @@ export function BrowserSplitBody({ navigation, results }: BrowserBodySlots) {
         {navigation}
       </Panel>
       <PanelDivider orientation="vertical" testId="browser-navigation-divider" />
-      <Panel minSize={theme.project.browserResultsWidth}>{results}</Panel>
+      <Panel testId="browser-results-panel" minSize={theme.project.browserResultsWidth}>
+        {results}
+      </Panel>
     </Group>
   )
 }
@@ -90,10 +107,11 @@ export function BrowserPanel({
       renderer?.scrollIntoView?.(node.id)
     }
   }
-  function keyboard(event: Parameters<NonNullable<Props["onKeyDown"]>>[0]) {
-    const index = browser.rows.findIndex(row => row.entry.id === selectedId)
+  function keyboard(event: Parameters<NonNullable<Props["onKeyDown"]>>[0], rowId?: string) {
+    const index = browser.rows.findIndex(row => row.entry.id === (rowId ?? selectedId))
     const row = browser.rows[index]
     let nextIndex = index
+    let nextId: string | undefined
     switch (event.key) {
       case "down":
         nextIndex = Math.min(index + 1, browser.rows.length - 1)
@@ -113,7 +131,7 @@ export function BrowserPanel({
         break
       case "left":
         if (row?.expanded) browser.toggleExpanded(row.entry.id)
-        else if (row?.parentId) select(row.parentId)
+        else if (row?.parentId) nextId = row.parentId
         break
       case "enter":
         if (row?.expandable) browser.toggleExpanded(row.entry.id)
@@ -124,13 +142,15 @@ export function BrowserPanel({
     event.preventDefault()
     event.stopPropagation()
     const next = browser.rows[nextIndex]
-    if (nextIndex !== index && next) select(next.entry.id)
+    if (nextId) select(nextId)
+    else if (next && (nextIndex !== index || rowId)) select(next.entry.id)
   }
   const gap = theme.control["--spacing-control-track-gap"]
   return (
     <div
       role="region"
       aria-label={labels.title}
+      testId="browser-panel"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -207,6 +227,8 @@ export function BrowserPanel({
         style={{
           color: theme.colors.mutedForeground,
           paddingLeft: theme.control["--spacing-control-track-pad"],
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
         }}
       >
         {labels.demonstration}
@@ -257,9 +279,10 @@ export function BrowserPanel({
                 label={browser.descending ? labels.descending : labels.ascending}
                 onClick={() => browser.setDescending(!browser.descending)}
               >
-                {browser.descending ? "↓" : "↑"} {labels.content}
+                {`${browser.descending ? "↓" : "↑"} ${labels.content}`}
               </Button>
               <ScrollArea
+                testId="browser-results"
                 fill
                 role="tree"
                 aria-label={labels.content}
@@ -273,59 +296,109 @@ export function BrowserPanel({
                 onMouseLeave={resourceInfo.onMouseLeave}
               >
                 {browser.rows.length === 0 ? (
-                  <text style={{ color: theme.colors.mutedForeground }}>{labels.empty}</text>
+                  <div style={{ display: "flex", flexDirection: "column", gap }}>
+                    <text style={{ color: theme.colors.mutedForeground }}>{labels.empty}</text>
+                    {browser.filtering ? (
+                      <Button
+                        testId="browser-reset-filters"
+                        label={labels.resetFilters}
+                        onClick={() => {
+                          browser.setQuery("")
+                          browser.setKind("all")
+                        }}
+                      >
+                        {labels.resetFilters}
+                      </Button>
+                    ) : null}
+                  </div>
                 ) : (
                   browser.rows.map(row => (
                     <DragPreviewArea
                       key={row.entry.id}
-                      data={row.entry}
                       disabledDropLabel={labels.previewDisabled}
                       renderPreview={entry => (
-                        <text>
-                          {entry.name} — {labels.previewDisabled}
-                        </text>
+                        <text>{`${entry.name} · ${labels.kinds[entry.kind]} · ${labels.previewDisabled}`}</text>
                       )}
-                    >
-                      <ListRow
-                        role="treeitem"
-                        label={row.entry.name}
-                        testId={`browser-entry-${row.entry.id}`}
-                        selected={selectedId === row.entry.id}
-                        ref={node => {
-                          if (node) nodes.current.set(row.entry.id, node)
-                          else nodes.current.delete(row.entry.id)
-                        }}
-                        aria-expanded={row.expandable ? row.expanded : undefined}
-                        style={{
-                          paddingLeft:
-                            theme.control["--spacing-control-track-pad"] +
-                            row.depth * theme.control["--spacing-control-icon-slot"],
-                        }}
-                        leading={
-                          row.expandable ? (
-                            <Button
-                              iconOnly
-                              label={`${row.expanded ? "−" : "+"} ${row.entry.name}`}
-                              onClick={() => browser.toggleExpanded(row.entry.id)}
-                            >
-                              {row.expanded ? "⌄" : "›"}
-                            </Button>
-                          ) : undefined
-                        }
-                        trailing={
-                          <Button
-                            iconOnly
-                            label={`${browser.favorites.has(row.entry.id) ? labels.unfavorite : labels.favorite} ${row.entry.name}`}
-                            active={browser.favorites.has(row.entry.id)}
-                            onClick={() => browser.toggleFavorite(row.entry.id)}
-                          >
-                            ☆
-                          </Button>
-                        }
-                        onClick={() => select(row.entry.id)}
-                        onKeyDown={keyboard}
-                      />
-                    </DragPreviewArea>
+                      onClick={() => select(row.entry.id)}
+                      onKeyDown={event => keyboard(event, row.entry.id)}
+                      items={[
+                        {
+                          key: row.entry.id,
+                          data: row.entry,
+                          label: row.entry.name,
+                          children: (
+                            <ListRow
+                              role="treeitem"
+                              tabIndex={-1}
+                              label={row.entry.name}
+                              testId={`browser-entry-${row.entry.id}`}
+                              selected={selectedId === row.entry.id}
+                              ref={node => {
+                                if (node) nodes.current.set(row.entry.id, node)
+                                else nodes.current.delete(row.entry.id)
+                              }}
+                              aria-level={row.depth + 1}
+                              aria-expanded={row.expandable ? row.expanded : undefined}
+                              style={{
+                                paddingLeft:
+                                  theme.control["--spacing-control-track-pad"] +
+                                  row.depth * theme.control["--spacing-control-icon-slot"],
+                              }}
+                              leading={
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap,
+                                  }}
+                                >
+                                  {row.expandable ? (
+                                    <Button
+                                      iconOnly
+                                      label={`${row.expanded ? "−" : "+"} ${row.entry.name}`}
+                                      onClick={() => {
+                                        select(row.entry.id)
+                                        browser.toggleExpanded(row.entry.id)
+                                      }}
+                                    >
+                                      {row.expanded ? "⌄" : "›"}
+                                    </Button>
+                                  ) : (
+                                    <div
+                                      aria-hidden="true"
+                                      style={{
+                                        width: theme.control["--spacing-control-track"],
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  )}
+                                  <IconSlot>
+                                    <text aria-hidden="true">{KIND_GLYPHS[row.entry.kind]}</text>
+                                  </IconSlot>
+                                </div>
+                              }
+                              trailing={
+                                <Button
+                                  iconOnly
+                                  label={`${browser.favorites.has(row.entry.id) ? labels.unfavorite : labels.favorite} ${row.entry.name}`}
+                                  active={browser.favorites.has(row.entry.id)}
+                                  onClick={() => browser.toggleFavorite(row.entry.id)}
+                                >
+                                  ☆
+                                </Button>
+                              }
+                              onClick={event => {
+                                select(row.entry.id)
+                                if (event.clickCount === 2 && row.expandable)
+                                  browser.toggleExpanded(row.entry.id)
+                              }}
+                              onKeyDown={event => keyboard(event, row.entry.id)}
+                            />
+                          ),
+                        },
+                      ]}
+                    />
                   ))
                 )}
               </ScrollArea>
