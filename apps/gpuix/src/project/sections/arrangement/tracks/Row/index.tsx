@@ -113,7 +113,6 @@ export function TrackRow({
           userSelect: "none",
           focusVisible: focusRing,
         }}
-        onKeyDown={selectFromKeyboard}
       >
         <div
           role="group"
