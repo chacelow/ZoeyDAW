@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { cubicPath, polygonPath, polylinePath, segmentsPath } from "./paths"
+import { cubicAreaPath, cubicPath, polygonPath, polylinePath, segmentsPath } from "./paths"
 
 const p = (x: number, y: number) => ({ x, y })
 
@@ -19,6 +19,29 @@ describe("paths", () => {
         { control1: p(9, 10), control2: p(11, 12), end: p(13, 14) },
       ])
     ).toBe("M1,2C3,4,5,6,7,8C9,10,11,12,13,14")
+  })
+
+  test("cubicAreaPath follows the curve then closes along the baseline, not the diagonal", () => {
+    expect(
+      cubicAreaPath(p(10, 40), [{ control1: p(12, 30), control2: p(18, 10), end: p(20, 5) }], 0)
+    ).toBe("M10,40C12,30,18,10,20,5L20,0L10,0Z")
+  })
+
+  test("cubicAreaPath drops to the baseline from the last segment's end, not the first", () => {
+    expect(
+      cubicAreaPath(
+        p(0, 10),
+        [
+          { control1: p(1, 9), control2: p(2, 8), end: p(3, 7) },
+          { control1: p(4, 6), control2: p(5, 5), end: p(6, 4) },
+        ],
+        0
+      )
+    ).toBe("M0,10C1,9,2,8,3,7C4,6,5,5,6,4L6,0L0,0Z")
+  })
+
+  test("cubicAreaPath with no segments degenerates to a vertical edge at the start", () => {
+    expect(cubicAreaPath(p(3, 7), [], 0)).toBe("M3,7L3,0L3,0Z")
   })
 
   test("polygonPath closes the shape", () => {
