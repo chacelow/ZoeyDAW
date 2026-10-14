@@ -47,8 +47,8 @@ impl AudioSource {
     }
 
     /// Source-frame envelopes. Pyramid bins cover the interior; partial edge
-    /// bins sample `pcm` at the device frame nearest the source frame, which is
-    /// exact when the source already plays at the device rate.
+    /// bins sample `pcm` at the device frame that starts at the source frame,
+    /// clamped to the last one, which is exact when the rates match.
     pub fn read_peaks(
         &self,
         start: u64,
@@ -57,6 +57,7 @@ impl AudioSource {
     ) -> Result<Vec<f32>, &'static str> {
         let source_rate = u128::from(self.source_info.sample_rate.max(1));
         let device_rate = u128::from(self.sample_rate);
+        let last = self.pcm.len().saturating_sub(1);
         self.peaks.read_pixels(
             start,
             end,
@@ -64,7 +65,9 @@ impl AudioSource {
             self.source_info.frames as usize,
             |channel, frame| {
                 let device_frame = (frame as u128 * device_rate / source_rate) as usize;
-                self.pcm.get(device_frame).map_or(0.0, |pcm| pcm[channel])
+                self.pcm
+                    .get(device_frame.min(last))
+                    .map_or(0.0, |pcm| pcm[channel])
             },
         )
     }
