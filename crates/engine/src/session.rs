@@ -1,10 +1,10 @@
 //! One control-thread owner for device, decoded media, protocol fence and graph updates.
 use crate::{
-    assets::AudioSource,
+    assets::{AudioSource, MAX_PEAK_PIXELS},
     mix::Mixer,
     protocol::{BackendFailureCode, BackendRequest, BackendResult, BackendTelemetry, SessionFence},
     realtime::{Plan, Snapshot, TimelineNode},
-    transport::{Transport, TransportClock},
+    transport::{bar_to_frame, source_offset_frame, Transport, TransportClock},
 };
 use firewheel::{
     cpal::{CpalConfig, CpalStream},
@@ -231,7 +231,42 @@ impl DeviceSession {
     }
 
     pub fn source_info(&self, source: &str) -> Option<crate::assets::SourceInfo> {
-        self.sources.get(source).map(|cached| cached.audio.source_info)
+        self.sources
+            .get(source)
+            .map(|cached| cached.audio.source_info)
+    }
+
+    /// Clip-local one-based bars to source frames on the project tempo at the
+    /// decoded source rate; `content_offset_bars` wraps exactly like playback.
+    /// Stereo channel-major `[min,max]` pixels. Unknown sources, empty or
+    /// non-finite ranges read as silence; invalid pixel counts as empty.
+    pub fn read_peaks_at_bars(
+        &self,
+        source: &str,
+        start_bar: f64,
+        end_bar: f64,
+        pixels: usize,
+        content_offset_bars: f64,
+    ) -> Vec<f32> {
+        if pixels == 0 || pixels > MAX_PEAK_PIXELS {
+            return Vec::new();
+        }
+        let peaks = (|| {
+            let audio = &self.sources.get(source)?.audio;
+            let tempo = self.transport.as_ref()?.clock;
+            let clock = TransportClock::new(audio.source_info.sample_rate, tempo.bars_per_second)?;
+            if !start_bar.is_finite() || !end_bar.is_finite() || !content_offset_bars.is_finite() {
+                return None;
+            }
+            let frames = audio.source_info.frames;
+            let start = bar_to_frame(clock, start_bar);
+            let span = bar_to_frame(clock, end_bar).checked_sub(start)?;
+            let offset = source_offset_frame(clock, content_offset_bars, frames)?;
+            audio
+                .read_looped_peaks(start % frames + offset, span, pixels)
+                .ok()
+        })();
+        peaks.unwrap_or_else(|| vec![0.0; pixels * 4])
     }
 }
 
