@@ -29,6 +29,9 @@
   --project-transport-center-margin: 6px;
   --project-default-track-height: 70px;
   --project-track-border: 2px;
+  --project-minimap-min-height: 32px;
+  --project-minimap-max-height: 90px;
+  --project-timeline-min-height: 160px;
 }
 
 .project-transport {

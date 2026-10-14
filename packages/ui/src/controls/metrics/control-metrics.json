@@ -27,6 +27,9 @@
     "transportColumnGap": 12,
     "transportCenterMargin": 6,
     "defaultTrackHeight": 70,
-    "trackBorder": 2
+    "trackBorder": 2,
+    "minimapMinHeight": 32,
+    "minimapMaxHeight": 90,
+    "timelineMinHeight": 160
   }
 }
