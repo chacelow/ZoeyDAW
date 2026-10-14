@@ -10,6 +10,8 @@ import {
 } from "../../core/viewport/zoom"
 import { revealTrackScrollY } from "../../core/layout"
 import type { EventPayload } from "@gpuix/react"
+import type { TimelineViewport as ClampedTimelineViewport } from "../../core/viewport/zoom"
+import type { Track } from "../../../../model/types"
 
 export interface TimelineSize {
   containerWidth: number
@@ -17,7 +19,22 @@ export interface TimelineSize {
   timelineLeft: number
 }
 
-export function readTimelineViewport(size: TimelineSize) {
+export interface TimelineViewportSnapshot extends ClampedTimelineViewport {
+  bars: number
+  tracks: readonly Track[]
+}
+
+export interface TimelineViewportController {
+  read: () => TimelineViewportSnapshot
+  suspendFollow: () => void
+  clamp: () => void
+  wheel: (event: EventPayload, consumed?: boolean) => boolean
+  zoom: (direction: -1 | 1) => void
+  reveal: (trackId: string) => void
+  follow: (transportBar: number) => void
+}
+
+export function readTimelineViewport(size: TimelineSize): TimelineViewportSnapshot {
   const { document: project, workspace, session } = useProjectState.getState()
   const bars = growTimelineBars(
     timelineBars(project),
@@ -44,7 +61,7 @@ export function readTimelineViewport(size: TimelineSize) {
   }
 }
 
-export function createTimelineViewport(readSize: () => TimelineSize) {
+export function createTimelineViewport(readSize: () => TimelineSize): TimelineViewportController {
   let manualPanUntil = 0
   function suspendFollow() {
     manualPanUntil = performance.now() + 2000

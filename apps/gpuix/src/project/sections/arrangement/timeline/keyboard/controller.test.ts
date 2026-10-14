@@ -3,11 +3,11 @@ import { projectActions, useProjectState } from "../../../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
 import { initialSession, useProjectState as projectStore } from "../../../../stores/useProjectState"
 import { createTimelineKeyboard } from "./controller"
-import type { KeyboardFocus, TimelineKeyboard } from "./controller"
+import type { KeyboardFocus, KeyboardOwner } from "./controller"
 import type { EventPayload } from "@gpuix/react"
 
 let focus: KeyboardFocus = "timeline"
-let keyboard: TimelineKeyboard
+let keyboard: KeyboardOwner
 
 function key(value: string, modifiers?: EventPayload["modifiers"], isHeld = false): EventPayload {
   return { elementId: 0, eventType: "keyDown", key: value, modifiers, isHeld }

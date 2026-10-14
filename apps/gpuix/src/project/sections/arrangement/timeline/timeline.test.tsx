@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../../shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "../../../adapters"
@@ -8,6 +8,13 @@ import { createSceneStore } from "../core/scene"
 import { Grid } from "./grid"
 import { MiniMap } from "./minimap"
 import { Rulers, TimeRuler } from "./rulers"
+import { createTimelineController } from "./controller"
+import { englishLabels } from "./demo-labels"
+
+const disposals: Array<() => void> = []
+afterEach(() => {
+  while (disposals.length) disposals.pop()?.()
+})
 
 beforeEach(() => {
   projectStore.setState({
@@ -36,10 +43,11 @@ describe("Native timeline layout and hit testing", () => {
   test("Minimap survives a jitter and continues hidden-cursor dragging through store renders", () => {
     projectActions.setViewport({ pxPerBar: 100, scrollX: 4000 })
     const root = createTestRoot({ width: 1280, height: 100 })
+    disposals.push(root.unmount)
     let hidden = false
     let restored = false
     const cursor = {
-      position: () => ({ x: 440, y: 20 }),
+      capture: () => ({ x: 440, y: 20 }),
       hide: () => {
         hidden = true
         return true
@@ -91,13 +99,13 @@ describe("Native timeline layout and hit testing", () => {
     root.renderer.nativeSimulateMouseUp(440, 80)
     expect(hidden).toBe(false)
     expect(restored).toBe(true)
-    root.unmount()
   })
 
   test("numbered Pattern regions stay whole bars when fine labels are visible", () => {
     const scene = makeScene()
     scene.setViewport({ ...scene.get().viewport, pxPerBar: 800, width: 1200, scrollX: 400 })
     const root = createTestRoot({ width: 1200, height: 300 })
+    disposals.push(root.unmount)
     root.render(
       <ThemeProvider>
         <Grid scene={scene} height={200} />
@@ -118,19 +126,31 @@ describe("Native timeline layout and hit testing", () => {
       height: 200,
     })
     expect(root.renderer.findByTestId("pattern-region-1.25")).toBeUndefined()
-    root.unmount()
   })
 
-  test("marker drag previews then commits without opening an editor and Escape restores seek", () => {
+  test("marker drag commits once and native Arrow input is consumed by only the ruler owner", () => {
     const scene = makeScene()
     const id = projectActions.addMarker(3)
     if (!id) throw new Error("Marker not created")
-    const state = useProjectState.getState()
-    scene.setMusic({ ...scene.get(), markers: state.document.markers })
-    const root = createTestRoot({ width: 800, height: 100 })
+    projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
+    const owner = createTimelineController({
+      sceneStore: scene,
+      initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
+      metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
+      keyboard: { focus: () => "timeline", blurControl: () => {} },
+      subscribeWindowActive: () => () => {},
+    })
+    disposals.push(owner.dispose)
+    const root = createTestRoot({
+      width: 800,
+      height: 100,
+      onKeyDown: owner.keyboard.down,
+      onKeyUp: owner.keyboard.up,
+    })
+    disposals.push(root.unmount)
     root.render(
       <ThemeProvider>
-        <Rulers scene={scene} label="Music ruler" />
+        <Rulers owner={owner} labels={englishLabels} />
       </ThemeProvider>
     )
     root.renderer.flush()
@@ -145,12 +165,20 @@ describe("Native timeline layout and hit testing", () => {
       4
     )
     expect(useProjectState.getState().session.editingClipId).toBeNull()
-    root.unmount()
+    const before = useProjectState.getState().session.position
+    const ruler = root.renderer.findByTestId("timeline-rulers")
+    if (!ruler) throw new Error("Ruler missing")
+    root.renderer.nativeSimulateKeystrokes(ruler.id, "right")
+    expect(useProjectState.getState().document.markers.find(marker => marker.id === id)?.bar).toBe(
+      4.5
+    )
+    expect(useProjectState.getState().session.position).toEqual(before)
   })
 
   test("real-time ruler rescales with BPM while sharing the exact music scroll axis", () => {
     const scene = makeScene()
     const root = createTestRoot({ width: 800, height: 100 })
+    disposals.push(root.unmount)
     root.render(
       <ThemeProvider>
         <TimeRuler scene={scene} label="Time ruler" />
@@ -161,6 +189,5 @@ describe("Native timeline layout and hit testing", () => {
     scene.setMusic({ ...scene.get(), transport: { bpm: 60, numerator: 4, denominator: 4 } })
     root.renderer.flush()
     expect(root.renderer.getAllText()).toContain("0:04")
-    root.unmount()
   })
 })

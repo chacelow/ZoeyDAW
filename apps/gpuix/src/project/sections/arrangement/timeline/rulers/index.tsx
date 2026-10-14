@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react"
+import { useRef, useState, useSyncExternalStore } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "../../../../../shared/theme/ThemeProvider"
 import { sx } from "../../../../../shared/theme/style"
+import { useProjectState } from "../../../../adapters"
 import { formatAudioMusicalValue } from "../../../../model/audio-editor/musical-value"
 import { timeTickLabel, timeTicks } from "../../../../model/timeline-ticks"
 import {
@@ -11,18 +12,27 @@ import {
   TIME_RULER_HEIGHT,
 } from "../../core/layout"
 import { gridLines } from "../../core/rulers/grid-lines"
-import { createRulerController } from "./controller"
+import { rulerBar, rulerHit } from "../../core/rulers/geometry"
+import { timelinePointer } from "../viewport/coordinates"
+import { RulerMenu } from "./Menu"
+import { MarkerEditor } from "./MarkerEditor"
 import { PatternRegions } from "../grid"
 import type { PublicInstance } from "@gpuix/react"
 import type { SceneStore } from "../../core/scene"
+import type { TimelineController } from "../controller"
+import type { TimelineLabels } from "../labels"
+import type { RulerMenuTarget } from "./Menu"
 
-export function Rulers({ scene, label }: { scene: SceneStore; label: string }) {
+export function Rulers({ owner, labels }: { owner: TimelineController; labels: TimelineLabels }) {
+  const scene = owner.sceneStore
   const current = useSyncExternalStore(scene.subscribe, scene.get)
   const theme = useTheme()
   const { renderer } = useGpuix()
   const element = useRef<PublicInstance | null>(null)
-  const controller = useMemo(() => createRulerController(scene), [scene])
-  useEffect(() => () => controller.dispose(), [controller])
+  const controller = owner.view.rulers
+  const [menuTarget, setMenuTarget] = useState<RulerMenuTarget>({ kind: "ruler", bar: 1 })
+  const [pointer, setPointer] = useState<"default" | "grab" | "grabbing" | "ew-resize">("default")
+  const [focused, setFocused] = useState(false)
   const { width, scrollX, pxPerBar } = current.viewport
   const lines = gridLines(current).filter(line => line.kind === "major")
   const loopLeft = (current.loop.startBar - 1) * pxPerBar - scrollX
@@ -30,107 +40,182 @@ export function Rulers({ scene, label }: { scene: SceneStore; label: string }) {
   const loopStart = Math.max(0, loopLeft)
   const loopWidth = Math.max(0, Math.min(width, loopRight) - loopStart)
   return (
-    <div
-      ref={element}
-      testId="timeline-rulers"
-      aria-label={label}
-      role="group"
-      tabIndex={0}
-      style={sx({
-        position: "relative",
-        width,
-        height: BAR_RULER_HEIGHT,
-        overflow: "hidden",
-        backgroundColor: theme.colors.editorShell,
-        color: theme.colors.mutedForeground,
-        fontSize: theme.control["--text-control-track"],
-        cursor: "default",
-      })}
-      onMouseDown={event => {
-        const bounds = element.current && renderer?.getElementBounds?.(element.current.id)
-        if (!bounds) return
-        const x = (event.x ?? bounds.x) - bounds.x
-        const y = (event.y ?? bounds.y) - bounds.y
-        if ((event.clickCount ?? 1) >= 2) controller.doubleClick(x, y, event.modifiers?.shift)
-        else controller.down(x, y, event.modifiers?.shift, event.button)
-      }}
-      onMouseMove={event => {
-        const bounds = element.current && renderer?.getElementBounds?.(element.current.id)
-        if (bounds) controller.move((event.x ?? bounds.x) - bounds.x, event.modifiers?.shift)
-      }}
-      onMouseUp={() => controller.up()}
-      onKeyDown={event => controller.keyDown(event)}
-    >
-      <PatternRegions scene={scene} height={BAR_RULER_HEIGHT} />
-      {lines.map(line => (
-        <div
-          key={line.bar}
-          testId={`ruler-position-${line.bar}`}
-          style={sx({
-            position: "absolute",
-            left: line.x + theme.control["--spacing-control-gap"],
-            top: MARKER_RULER_HEIGHT,
-            height: LOOP_RULER_HEIGHT,
-            display: "flex",
-            alignItems: "center",
-            pointerEvents: "none",
-          })}
-        >
-          {formatAudioMusicalValue(
-            line.bar - 1,
-            current.transport.numerator,
-            current.transport.denominator,
-            "position"
+    <RulerMenu owner={owner} labels={labels} target={menuTarget}>
+      <div
+        ref={element}
+        testId="timeline-rulers"
+        aria-label={labels.musicRuler}
+        role="group"
+        tabIndex={0}
+        style={sx({
+          position: "relative",
+          width,
+          height: BAR_RULER_HEIGHT,
+          overflow: "hidden",
+          backgroundColor: theme.colors.editorShell,
+          color: theme.colors.mutedForeground,
+          fontSize: theme.control["--text-control-track"],
+          cursor: pointer,
+          userSelect: "none",
+          borderBottomWidth: 1,
+          borderColor: focused ? theme.colors.ring : theme.colors.border,
+        })}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false)
+          owner.view.autoScroll.stop()
+          controller.cancel()
+        }}
+        onMouseDown={event => {
+          const bounds = element.current && renderer?.getElementBounds?.(element.current.id)
+          if (!bounds) return
+          const next = timelinePointer(event, bounds)
+          const projection = scene.get()
+          const hit = rulerHit(projection, next)
+          if (!hit) return
+          if (hit.kind === "marker") setMenuTarget({ kind: "marker", id: hit.marker.id })
+          else if (hit.kind === "loop") setMenuTarget({ kind: "loop" })
+          else
+            setMenuTarget({
+              kind: "ruler",
+              bar: rulerBar(
+                projection,
+                next.x,
+                useProjectState.getState().workspace.snap,
+                next.shiftKey
+              ),
+            })
+          owner.view.autoScroll.stop()
+          if (event.button === 2 || event.modifiers?.ctrl) {
+            controller.cancel()
+            if (hit.kind === "marker")
+              scene.setTargetSelection({ kind: "marker", id: hit.marker.id, phase: "selected" })
+            else if (hit.kind === "loop") scene.setTargetSelection({ kind: "loop" })
+            return
+          }
+          owner.view.suspendFollow()
+          if ((event.clickCount ?? 1) >= 2) controller.doubleClick(next.x, next.y, next.shiftKey)
+          else if (controller.down(next.x, next.y, next.shiftKey, next.button))
+            owner.view.autoScroll.start(next, "horizontal")
+        }}
+        onMouseMove={event => {
+          const bounds = element.current && renderer?.getElementBounds?.(element.current.id)
+          if (!bounds) return
+          const next = timelinePointer(event, bounds)
+          if (controller.active) {
+            controller.move(next.x, next.shiftKey)
+            owner.view.autoScroll.update(next)
+          }
+          const hit = rulerHit(scene.get(), next)
+          setPointer(
+            hit?.kind === "marker" || (hit?.kind === "loop" && hit.edge === "body")
+              ? controller.active
+                ? "grabbing"
+                : "grab"
+              : hit?.kind === "loop"
+                ? "ew-resize"
+                : "default"
           )
-            .replace(/\.1$/, "")
-            .replace(/\.1$/, "")}
-        </div>
-      ))}
-      {current.markers
-        .filter(marker => {
-          const x = (marker.bar - 1) * pxPerBar - scrollX
-          return x >= 0 && x < width
-        })
-        .map(marker => (
+        }}
+        onMouseUp={() => {
+          owner.view.autoScroll.stop()
+          controller.up()
+        }}
+      >
+        <PatternRegions scene={scene} height={BAR_RULER_HEIGHT} />
+        {lines.map(line => (
           <div
-            key={marker.id}
-            testId={`ruler-marker-${marker.id}`}
+            key={line.bar}
+            testId={`ruler-position-${line.bar}`}
             style={sx({
               position: "absolute",
-              top: 0,
-              left: (marker.bar - 1) * pxPerBar - scrollX,
-              height: MARKER_RULER_HEIGHT,
+              left: line.x + theme.control["--spacing-control-gap"],
+              top: MARKER_RULER_HEIGHT,
+              height: LOOP_RULER_HEIGHT,
               display: "flex",
               alignItems: "center",
               pointerEvents: "none",
-              color:
-                current.targetSelection.kind === "marker" &&
-                current.targetSelection.id === marker.id
-                  ? theme.colors.foreground
-                  : theme.colors.mutedForeground,
             })}
           >
-            {marker.label}
+            {formatAudioMusicalValue(
+              line.bar - 1,
+              current.transport.numerator,
+              current.transport.denominator,
+              "position"
+            )
+              .replace(/\.1$/, "")
+              .replace(/\.1$/, "")}
           </div>
         ))}
-      {current.loop.enabled && loopWidth > 0 && (
-        <div
-          testId="ruler-loop"
-          style={sx({
-            position: "absolute",
-            left: loopStart,
-            top: MARKER_RULER_HEIGHT,
-            width: loopWidth,
-            height: LOOP_RULER_HEIGHT,
-            borderLeftWidth: 1,
-            borderRightWidth: 1,
-            borderColor: theme.colors.primary,
-            backgroundColor: theme.colors.canvasScrollbarActive,
-            pointerEvents: "none",
-          })}
-        />
-      )}
-    </div>
+        {current.markers
+          .filter(marker => {
+            const x = (marker.bar - 1) * pxPerBar - scrollX
+            return x >= 0 && x < width
+          })
+          .map(marker => (
+            <div
+              key={marker.id}
+              testId={`ruler-marker-${marker.id}`}
+              style={sx({
+                position: "absolute",
+                top: 0,
+                left: (marker.bar - 1) * pxPerBar - scrollX,
+                height: MARKER_RULER_HEIGHT,
+                display: "flex",
+                alignItems: "center",
+                paddingLeft: theme.project.groupRailWidth,
+                pointerEvents: "none",
+                borderLeftWidth: 1,
+                borderColor:
+                  current.targetSelection.kind === "marker" &&
+                  current.targetSelection.id === marker.id
+                    ? theme.colors.primary
+                    : "transparent",
+                color:
+                  current.targetSelection.kind === "marker" &&
+                  current.targetSelection.id === marker.id
+                    ? theme.colors.foreground
+                    : theme.colors.mutedForeground,
+              })}
+            >
+              <svg
+                aria-hidden={true}
+                source={
+                  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 7"><path d="M0 1L7 5L0 5Z" fill="currentColor"/></svg>'
+                }
+                style={sx({
+                  position: "absolute",
+                  left: 0,
+                  bottom: theme.project.trackBorder,
+                  width: theme.project.groupRailWidth,
+                  height: theme.project.groupRailWidth,
+                  color: theme.colors.primary,
+                  pointerEvents: "none",
+                })}
+              />
+              {marker.label}
+            </div>
+          ))}
+        {current.loop.enabled && loopWidth > 0 && (
+          <div
+            testId="ruler-loop"
+            style={sx({
+              position: "absolute",
+              left: loopStart,
+              top: MARKER_RULER_HEIGHT,
+              width: loopWidth,
+              height: LOOP_RULER_HEIGHT,
+              borderLeftWidth: 1,
+              borderRightWidth: 1,
+              borderColor: theme.colors.primary,
+              backgroundColor: theme.colors.canvasScrollbarActive,
+              pointerEvents: "none",
+            })}
+          />
+        )}
+        <MarkerEditor owner={owner} labels={labels} />
+      </div>
+    </RulerMenu>
   )
 }
 

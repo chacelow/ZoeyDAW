@@ -10,14 +10,14 @@ import { createMinimapGesture } from "./gesture"
 import type { PublicInstance } from "@gpuix/react"
 import type { MinimapGeometry } from "../../core/viewport/minimap"
 import type { MinimapViewport } from "../../core/viewport/zoom"
-import type { CursorPort } from "./gesture"
+import type { CursorLockPort } from "../../../../../ui/controls"
 
 export interface MiniMapProps {
   geometry: MinimapGeometry
   width: number
   height: number
   label: string
-  cursor: CursorPort
+  cursor: CursorLockPort
   onNavigate: () => void
   onViewport: (viewport: MinimapViewport) => void
 }
@@ -41,6 +41,7 @@ export function MiniMap({
   }, [geometry, width, onNavigate, onViewport])
   const tracks = useProjectState(state => state.document.tracks)
   const markers = useProjectState(state => state.document.markers)
+  const epoch = useProjectState(state => state.session.editEpoch)
   const position = useProjectState(state =>
     positionToBar(state.session.position, state.document.transport.numerator)
   )
@@ -49,7 +50,11 @@ export function MiniMap({
       createMinimapGesture({
         read() {
           const bounds = element.current && renderer?.getElementBounds?.(element.current.id)
-          return { ...latest.current, left: bounds?.x ?? 0 }
+          return {
+            ...latest.current,
+            left: bounds?.x ?? 0,
+            epoch: useProjectState.getState().session.editEpoch,
+          }
         },
         publish: viewport => latest.current.onViewport(viewport),
         navigate: () => latest.current.onNavigate(),
@@ -58,6 +63,9 @@ export function MiniMap({
     [renderer, cursor]
   )
   useEffect(() => () => gesture.dispose(), [gesture])
+  useEffect(() => {
+    gesture.cancel()
+  }, [epoch, gesture])
   const rows = tracks.filter(track => track.kind !== "return" && track.kind !== "main")
   const rowHeight = height / Math.max(1, rows.length)
   const viewportBars = Math.min(geometry.bars, geometry.viewportWidth / geometry.pxPerBar)

@@ -11,16 +11,17 @@ function mount() {
     minPxPerBar: 6.25,
     maxPxPerBar: 131072,
   }
+  let epoch = "project:0"
   let hidden = false
   let restored: { x: number; y: number } | null = null
   const gesture = createMinimapGesture({
-    read: () => ({ geometry, width: 1280, left: 0 }),
+    read: () => ({ geometry, width: 1280, left: 0, epoch }),
     publish: next => {
       geometry = { ...geometry, ...next }
     },
     navigate: () => {},
     cursor: {
-      position: () => ({ x: 452, y: 21 }),
+      capture: () => ({ x: 452, y: 21 }),
       hide: () => {
         hidden = true
         return true
@@ -32,10 +33,31 @@ function mount() {
       },
     },
   })
-  return { gesture, state: () => geometry, hidden: () => hidden, restored: () => restored }
+  return {
+    gesture,
+    state: () => geometry,
+    hidden: () => hidden,
+    restored: () => restored,
+    replaceProject() {
+      epoch += ":next"
+      geometry = { ...geometry, pxPerBar: 200, scrollX: 1000 }
+    },
+  }
 }
 
 describe("Minimap navigation ownership", () => {
+  test("an old minimap gesture restores only its cursor after the project owner changes", () => {
+    const a = mount()
+    a.gesture.down({ x: 440, y: 21 })
+    a.gesture.move({ x: 440, y: 60 })
+    expect(a.hidden()).toBe(true)
+    a.replaceProject()
+    a.gesture.cancel()
+    expect(a.state().pxPerBar).toBe(200)
+    expect(a.state().scrollX).toBe(1000)
+    expect(a.hidden()).toBe(false)
+  })
+
   test("jitter remains pressed and subsequent downward travel zooms out without dismissing", () => {
     const a = mount()
     a.gesture.down({ x: 452, y: 21 })

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { projectActions, useProjectState } from "../../../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
 import { initialSession, useProjectState as projectStore } from "../../../../stores/useProjectState"
@@ -6,8 +6,28 @@ import { createSceneStore } from "../../core/scene"
 import { arrangementBodyBottom, pinnedTrackHeight } from "../../core/layout"
 import { visibleTracks } from "../../../../model/types"
 import { createTimelineViewport } from "./controller"
-import { createTimelineAutoScroll } from "./auto-scroll"
+import { createTimelineController } from "../controller"
 import { timelinePointer } from "./coordinates"
+import type { TimelineController } from "../controller"
+import type { SceneStore } from "../../core/scene"
+
+const owners: TimelineController[] = []
+afterEach(() => {
+  for (const owner of owners) owner.dispose()
+  owners.length = 0
+})
+
+function ownScene(scene: SceneStore) {
+  const owner = createTimelineController({
+    sceneStore: scene,
+    initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 304 },
+    metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
+    keyboard: { focus: () => "timeline", blurControl: () => {} },
+    subscribeWindowActive: () => () => {},
+  })
+  owners.push(owner)
+  return owner
+}
 
 beforeEach(() => {
   projectStore.setState({
@@ -86,7 +106,7 @@ describe("Authoritative timeline viewport", () => {
       height: 320,
       dpr: 1,
     })
-    const scroll = createTimelineAutoScroll({ scene, edge: 42, onScroll: () => {} })
+    const scroll = ownScene(scene).view.autoScroll
     const pointer = timelinePointer(
       { elementId: 0, eventType: "mouseMove", x: 799, y: 40 },
       { x: 0, y: 0 }
@@ -117,7 +137,7 @@ describe("Authoritative timeline viewport", () => {
       dpr: 1,
     })
     const bottom = arrangementBodyBottom(320) - pinnedTrackHeight(visibleTracks(project.tracks))
-    const scroll = createTimelineAutoScroll({ scene, edge: 42, onScroll: () => {} })
+    const scroll = ownScene(scene).view.autoScroll
     scroll.start(
       timelinePointer(
         { elementId: 0, eventType: "mouseMove", x: 400, y: bottom + 5 },

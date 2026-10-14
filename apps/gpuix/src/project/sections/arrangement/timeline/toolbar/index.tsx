@@ -4,7 +4,7 @@ import { sx } from "../../../../../shared/theme/style"
 import { projectActions, useProjectState } from "../../../../adapters"
 import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "../../../../model/grid"
 import { effectiveDrawMode } from "../../../../model/interaction-mode"
-import type { TimelineKeyboard } from "../keyboard/controller"
+import type { KeyboardOwner } from "../keyboard/controller"
 import type { TimelineLabels } from "../labels"
 
 export function Toolbar({
@@ -15,7 +15,7 @@ export function Toolbar({
 }: {
   pxPerBar: number
   zoom: (direction: -1 | 1) => void
-  keyboard: TimelineKeyboard
+  keyboard: KeyboardOwner
   labels: TimelineLabels
 }) {
   const theme = useTheme()

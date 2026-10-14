@@ -1,4 +1,3 @@
-import { projectActions, useProjectState } from "../../../../adapters"
 import { visibleTracks } from "../../../../model/types"
 import {
   arrangementBodyBottom,
@@ -7,7 +6,7 @@ import {
   pinnedTrackHeight,
 } from "../../core/layout"
 import { clampScrollX } from "../../core/viewport/zoom"
-import type { SceneStore } from "../../core/scene"
+import type { ArrangementViewport, SceneStore } from "../../core/scene"
 import type { NativeTimelinePointer } from "./coordinates"
 
 export interface TimelineAutoScroll {
@@ -20,10 +19,12 @@ export interface TimelineAutoScroll {
 export function createTimelineAutoScroll({
   scene,
   edge,
+  setScroll,
   onScroll,
 }: {
   scene: SceneStore
   edge: number
+  setScroll: (x: number, y: number) => ArrangementViewport
   onScroll: (pointer: NativeTimelinePointer) => void
 }): TimelineAutoScroll {
   let pointer: NativeTimelinePointer | null = null
@@ -42,7 +43,7 @@ export function createTimelineAutoScroll({
         : x > width - edge
           ? Math.min(1, (x - width + edge) / edge)
           : 0
-    const tracks = visibleTracks(useProjectState.getState().document.tracks)
+    const tracks = visibleTracks([...current.tracks])
     const bottom = arrangementBodyBottom(height) - pinnedTrackHeight(tracks)
     const top = arrangementBodyTop()
     const ySpeed =
@@ -61,8 +62,8 @@ export function createTimelineAutoScroll({
       Math.max(0, scrollY + ySpeed * elapsed * 0.6)
     )
     if (nextX === scrollX && nextY === scrollY) return
-    projectActions.setViewport({ scrollX: nextX, scrollY: nextY })
-    scene.setViewport({ ...current.viewport, scrollX: nextX, scrollY: nextY })
+    const accepted = setScroll(nextX, nextY)
+    if (accepted.scrollX === scrollX && accepted.scrollY === scrollY) return
     onScroll(pointer)
   }
 

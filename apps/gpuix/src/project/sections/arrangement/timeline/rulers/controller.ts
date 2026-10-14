@@ -4,20 +4,35 @@ import { positionToBar, visibleTracks } from "../../../../model/types"
 import { MARKER_RULER_HEIGHT } from "../../core/layout"
 import { barAt, movedLoop, rulerBar, rulerHit } from "../../core/rulers/geometry"
 import type { EventPayload } from "@gpuix/react"
-import type { ProjectEditToken } from "../../../../model/types"
+import type { ProjectEditToken, SessionState } from "../../../../model/types"
 import type { SceneStore } from "../../core/scene"
 
-export function createRulerController(scene: SceneStore) {
+export interface RulerController {
+  readonly active: boolean
+  down: (x: number, y: number, shift?: boolean, button?: number) => boolean
+  move: (x: number, shift?: boolean) => void
+  up: () => void
+  cancel: () => void
+  doubleClick: (x: number, y: number, shift?: boolean) => boolean
+  keyDown: (event: EventPayload) => boolean
+  loopSelection: (fallbackBar?: number) => boolean
+  dispose: () => void
+}
+
+export function createRulerController(scene: SceneStore): RulerController {
   let gesture: {
     move: (x: number, shift: boolean) => void
     finish: (cancelled: boolean) => void
   } | null = null
   let token: ProjectEditToken | null = null
+  let epoch: SessionState["editEpoch"] | null = null
 
   function finish(cancelled: boolean) {
     const previous = gesture
     gesture = null
-    previous?.finish(cancelled)
+    if (epoch === useProjectState.getState().session.editEpoch) previous?.finish(cancelled)
+    else finishPreview(true)
+    epoch = null
     scene.setProjectPreview(useProjectState.getState().session.preview)
   }
   function finishPreview(cancelled: boolean) {
@@ -29,7 +44,28 @@ export function createRulerController(scene: SceneStore) {
     }
   }
 
+  function loopSelection(fallbackBar?: number): boolean {
+    const current = scene.get()
+    const selected = current.timeSelection ?? useProjectState.getState().session.timeSelection
+    const valid = selected && selected.endBar > selected.startBar
+    if (!valid && fallbackBar === undefined) return false
+    const requested = valid ? selected.startBar : (fallbackBar ?? 1)
+    const startBar = Math.max(1, Math.min(current.bars + 1 - MIN_CLIP_LENGTH_BARS, requested))
+    const endBar = valid ? selected.endBar : startBar + Math.max(1, current.gridPlan.cellBars)
+    projectActions.setLoop({
+      enabled: true,
+      startBar,
+      endBar: Math.max(startBar + MIN_CLIP_LENGTH_BARS, Math.min(current.bars + 1, endBar)),
+    })
+    scene.setTargetSelection({ kind: "loop" })
+    return true
+  }
+
   return {
+    get active() {
+      return gesture !== null
+    },
+    loopSelection,
     down(x: number, y: number, shift = false, button = 0) {
       if (button !== 0) return false
       finish(true)
@@ -37,7 +73,9 @@ export function createRulerController(scene: SceneStore) {
       const hit = rulerHit(current, { x, y })
       if (!hit) return false
       const state = useProjectState.getState()
+      epoch = state.session.editEpoch
       if (hit.kind === "marker") {
+        token = projectActions.beginPreview()
         const original =
           state.document.markers.find(marker => marker.id === hit.marker.id) ?? hit.marker
         const source = state.document.markers
@@ -45,7 +83,7 @@ export function createRulerController(scene: SceneStore) {
         scene.setTargetSelection({ kind: "marker", id: original.id, phase: "selected" })
         gesture = {
           move(nextX, bypass) {
-            token ??= projectActions.beginPreview()
+            if (!token) return
             const view = scene.get()
             const bar = rulerBar(
               view,
@@ -62,6 +100,7 @@ export function createRulerController(scene: SceneStore) {
           finish: finishPreview,
         }
       } else if (hit.kind === "loop") {
+        token = projectActions.beginPreview()
         const original = state.document.transport.loop
         const origin = barAt(current, x)
         let changed = false
@@ -79,7 +118,7 @@ export function createRulerController(scene: SceneStore) {
             )
             const loop = movedLoop(original, hit.edge, bar - anchor, view.bars + 1)
             changed = loop.startBar !== original.startBar || loop.endBar !== original.endBar
-            token ??= projectActions.beginPreview()
+            if (!token) return
             projectActions.previewLoop(token, loop)
             scene.setProjectPreview(useProjectState.getState().session.preview)
           },
@@ -116,6 +155,11 @@ export function createRulerController(scene: SceneStore) {
       return true
     },
     move(x: number, shift = false) {
+      if (!gesture) return
+      if (epoch !== useProjectState.getState().session.editEpoch) {
+        finish(true)
+        return
+      }
       gesture?.move(x, shift)
     },
     up() {
@@ -151,21 +195,7 @@ export function createRulerController(scene: SceneStore) {
       const state = useProjectState.getState()
       if (event.modifiers?.ctrl || event.modifiers?.cmd) {
         if (key === "l") {
-          const selection = current.timeSelection ?? state.session.timeSelection
-          if (selection && selection.endBar > selection.startBar) {
-            const startBar = Math.max(
-              1,
-              Math.min(current.bars + 1 - MIN_CLIP_LENGTH_BARS, selection.startBar)
-            )
-            projectActions.setLoop({
-              enabled: true,
-              startBar,
-              endBar: Math.max(
-                startBar + MIN_CLIP_LENGTH_BARS,
-                Math.min(current.bars + 1, selection.endBar)
-              ),
-            })
-          } else projectActions.setLoop({ enabled: !current.loop.enabled })
+          if (!loopSelection()) projectActions.setLoop({ enabled: !current.loop.enabled })
           scene.setTargetSelection({ kind: "loop" })
           return true
         }

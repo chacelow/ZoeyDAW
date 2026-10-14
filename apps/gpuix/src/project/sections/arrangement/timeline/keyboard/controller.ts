@@ -24,7 +24,7 @@ const NOTE_KEYS: Readonly<Record<string, number>> = {
 
 export type KeyboardFocus = "text" | "menu" | "control" | "timeline" | "clip-editor"
 
-export interface TimelineKeyboard {
+export interface KeyboardOwner {
   markDrawGesture: () => void
   latchDraw: (enabled: boolean) => void
   down: (event: EventPayload) => boolean
@@ -33,15 +33,17 @@ export interface TimelineKeyboard {
   dispose: () => void
 }
 
+export interface TimelineKeyboardDeps {
+  focus: () => KeyboardFocus
+  blurControl: () => void
+  claim?: (event: EventPayload) => boolean
+}
+
 export function createTimelineKeyboard({
   focus,
   blurControl,
   claim = () => false,
-}: {
-  focus: () => KeyboardFocus
-  blurControl: () => void
-  claim?: (event: EventPayload) => boolean
-}): TimelineKeyboard {
+}: TimelineKeyboardDeps): KeyboardOwner {
   const notes = new Map<string, number>()
   let draw: { original: boolean; used: boolean } | null = null
 
