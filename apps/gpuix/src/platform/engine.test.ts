@@ -143,10 +143,10 @@ describe("native readPeaksAtBars through musicalPeakReader", () => {
     expectEnvelopes(read("hump", 1, 2, PIXELS, 0), [0, 1, 2, 3])
   })
 
-  test("the waveform depends only on clip-local bars plus content offset", () => {
-    const reference = read("hump", 1, 2, PIXELS, 0)
-    expect(read("hump", 101, 102, PIXELS, 0)).toEqual(reference)
+  test("shifting the visible range equals shifting the content offset", () => {
     expect(read("hump", 1.25, 1.75, 2, 0)).toEqual(read("hump", 1, 1.5, 2, 0.25))
+    expect(read("hump", 1.75, 2.25, 2, 0.5)).toEqual(read("hump", 1, 1.5, 2, 1.25))
+    expectEnvelopes(read("hump", 1, 2, PIXELS, 0.25), [1, 2, 3, 0])
   })
 
   test("ranges past the source end wrap like looped playback", () => {
