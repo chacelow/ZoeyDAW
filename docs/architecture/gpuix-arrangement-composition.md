@@ -47,8 +47,9 @@ export function ArrangementLane(props: {
   scene: ArrangementScene
   viewport: ArrangementViewport
   controller: LaneController // createLaneController() 的返回值，由组合根创建
-  readPeaks: PeakReader // (sourceId, startFrame, endFrame, pixels) => Float32Array，来自 platform/engine
+  readPeaks: PeakReader // (sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；bars→frame 与源采样率换算由 platform/engine 适配函数负责，lane 不假设采样率
   clipboard: NativeClipboard // 来自 platform/clipboard
+  labels: LaneLabels // 菜单/名称编辑/数值编辑的双语标签，由组合根注入，lane 不依赖 i18n 包
 }): ReactNode
 export function createLaneController(deps: LaneControllerDeps): LaneController
 
