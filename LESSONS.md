@@ -80,6 +80,14 @@
 - 错 3：第一个变异（让 `size === collapsed` 的早返回失效）测试仍然全绿。继续排查（对同一组输入逐行 diff 输出）发现输出**完全相同**——这个早返回分支对该输入是冗余的，不是测试漏了。教训：变异不红不等于测试弱，先确认变异是否真的改变了行为（比对输出），再决定是否补用例，别为一个等价变异硬加测试。
 - 对：求解器的语义要与被替换的库对齐再验收。`react-resizable-panels` 4.12.3 的折叠行为是“越过折叠区中点才折叠/弹出”，A4 的求解器实测一致：A 在 delta=-200 到达 min，-260 折叠（中点 -250）；从折叠态展开，delta=40 仍为 0，60 弹到 100。
 
+## gpuix 迁移：窗口键盘事件在元素之后触发，Space 不播放靠控件自己不吞键
+
+- 错：以为窗口根键盘事件 `onKeyDown` 在元素事件之前以 Capture 先触发，可以在窗口层拦住 Space 不让按钮响应。
+- 对：读主干 `packages/native/js/renderer-state.ts`（约 186–225 行）与 `renderer.rs`（3670–3740）：`windowKeyDown/Up` 是同一次按键里**所有元素 keyDown 之后**才触发；同一次按键的事件共享 `keystrokeId`；元素 handler 调 `stopPropagation()` 会让窗口 handler 收不到；窗口 handler 不能阻止元素。`Tab`/`Escape` 的默认行为在窗口 handler 之后执行，`preventDefault` 可阻止。
+- 做法：工具栏/Transport/表头的按钮与切换控件**自己不响应 Space、也不 stopPropagation**，Space 才会冒到窗口 handler 触发播放；输入框聚焦时对可打印键 stopPropagation，避免空格触发播放。用 `createTestRoot` 的 `nativeSimulateKeystrokes` 写端到端测试证明两种情形。
+- 因：我先前凭印象给多个切片下了错误的顺序描述，靠读源码才纠正。
+- 见：`docs/architecture/gpuix-ui-standards.md` 第 9 节。
+
 ## gpuix 迁移：在用户的 Live 里操作要先确认手势区，且优先用 AX 语义动作
 
 - 错：为采集标尺缩放读数，在 Live 标尺数字行起点做垂直拖动。该区域是播放头/定位区，拖动触发了播放，播放位置被改。
