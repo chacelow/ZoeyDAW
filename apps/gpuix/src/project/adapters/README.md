@@ -18,6 +18,8 @@ The model remains DOM-free. The project adapter reaches Rust through `platform/e
 
 `context.ts` installs `createNativeBackend` through `runtime/backend-registration` as the application's default. This registration performs no native call and opens no device. The first runtime lease constructs the native session; the last release disposes it. An isolated `createProjectRuntime()` still has no implicit factory and throws `ProjectBackendNotConfiguredError` if acquired before configuration. Pure-logic tests explicitly inject `createMockProjectBackend()`, which reports a finite silence floor and never synthesizes levels. `mock://` references remain test fixtures and are rejected by the native media loader.
 
+`workspace.metronome` is a persisted UI preference, changed through `projectActions.setMetronome()`. Missing fields in older snapshots default to `true`; invalid explicit values reject the snapshot. The Transport animation derives its phase from accepted playback position. This switch does not enable click audio: the engine currently has no metronome DSP.
+
 ## Commands, confirmation and recovery
 
 `apply(request)` returns a `BackendResult` synchronously or asynchronously. Requests carry protocol version 1, `sessionId`, monotone `sequence`, `baseRevision`, target `revision`, stage, optional edit ID and a complete effective `BackendState`. The connection serializes requests, coalesces queued previews for the same edit, and removes those queued previews on cancellation.

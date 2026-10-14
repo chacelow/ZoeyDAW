@@ -13,5 +13,6 @@ export function initialWorkspace(): WorkspaceState {
     drawMode: false,
     computerKeyboard: false,
     link: false,
+    metronome: true,
   }
 }

@@ -164,6 +164,7 @@ export interface WorkspaceState {
   drawMode: boolean
   computerKeyboard: boolean
   link: boolean
+  metronome: boolean
 }
 export interface TimeSelection {
   startBar: number

@@ -135,6 +135,9 @@ export const transportActions = {
   setLink(link: boolean) {
     workspace(reduceWorkspace(get().workspace, { link }))
   },
+  setMetronome(metronome: boolean) {
+    workspace(reduceWorkspace(get().workspace, { metronome }))
+  },
   setProject(patch: Partial<Pick<DocumentState, "name" | "scaleRoot" | "scaleMode" | "groove">>) {
     document(reduceDocument(get().document, { type: "project", patch: structuredClone(patch) }))
   },
