@@ -146,6 +146,9 @@ importers:
       culori:
         specifier: ^4.0.2
         version: 4.0.2
+      d3-path:
+        specifier: 3.1.0
+        version: 3.1.0
       d3-shape:
         specifier: 3.2.0
         version: 3.2.0
@@ -165,6 +168,9 @@ importers:
       '@types/culori':
         specifier: ^4.0.1
         version: 4.0.1
+      '@types/d3-path':
+        specifier: 3.1.1
+        version: 3.1.1
       '@types/d3-shape':
         specifier: 3.2.0
         version: 3.2.0
