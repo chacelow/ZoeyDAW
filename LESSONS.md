@@ -54,6 +54,14 @@
 - 因：每个 gpuix 窗口是一个常驻 GPU 进程（约 70–130MB RSS）。2026-10-14 并行 worker 同时开着多个 gallery，其中一个跑了 29 分钟无人交互，协调者清理时 `bun` 合计 346MB → 54MB。窗口占用户本机性能，且 `--hot` 会持续监视文件。
 - 见：`.orca-specs/common.md`“进程清理”、[gpuix 架构](docs/architecture/gpuix.md)“测试”。
 
+## gpuix 迁移：已验证的好做法（可直接复用）
+
+- **platform 层用自己声明的结构类型，不 import 渲染器包**。`platform/window` 声明最小的 `WindowRenderer`（可选方法）与 `PathPromptOptions`，由应用组合根传入真实 renderer。换渲染器只需满足同一形状。**用测试文件里的类型断言守住一致性**：`type Assert<NativeRenderer extends WindowRenderer ? true : false>`——测试文件不受 `gpuix-layers` 规则约束，上游改签名时 `tsc` 在此报错，而 platform 源码保持零渲染器依赖。见 `apps/gpuix/src/platform/window/renderer-conformance.test.ts`。
+- **napi 导出在 `cargo test` 里的 dead_code 告警，在 crate 根一处声明**：`#![cfg_attr(test, allow(dead_code))]` 放 `crates/native/src/lib.rs`，新增模块无需各自重复；非测试构建仍用 `clippy -D warnings` 把关（已实测两种构建都过）。
+- **合并并行分支的 `Cargo.lock`**：`git checkout --ours Cargo.lock` 后 `cargo update --workspace`，让 cargo 针对两边合并后的 `Cargo.toml` 重新求解；再跑一次确认 "Locking 0 packages"（已稳定）。不要手工解锁文件冲突。
+- **atomic_file 迁移要对照原实现**：`write_atomically` 的顺序（create_dir_all → 清理陈旧 tmp → create_new 临时文件 → write_all → sync_all → 长度校验 → rename/MoveFileExW(WRITE_THROUGH) → 目录 fsync）与"清理失败只记日志不中断保存"均已与 `src-tauri` 原版逐项核对一致。迁移耐久性代码时照这个清单核。
+- **一个 `.node` 的体积**：A2 加入 `dyn-symbols` 与全部模块后为 1.14MB（仅光标时 496KB）；光标往返仍精确、`cursorPosition` 0.92µs/次，说明该特性不影响已验证路径。
+
 ## gpuix 迁移：Shell 引号会吞掉长回复
 
 - 错：把含 `$(`、反引号的中文长文本直接放进 `--body "..."` 双引号。
