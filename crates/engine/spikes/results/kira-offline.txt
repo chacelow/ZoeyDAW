@@ -1,0 +1,48 @@
+$ crates/engine/spikes/target/release/spike-kira
+engine=kira version=0.12.5 rate=48000 block_frames=256 mode=offline
+engine=kira probe=offset requested=0 observed=0 frames=64 max_error=0.000000000 clock_seconds=0.000000000
+kira.offset requested_frame=0 max_sample_error=0.000000000 frames=64
+engine=kira probe=offset requested=12345 observed=12345 frames=64 max_error=0.000000000 clock_seconds=0.257187500
+kira.offset requested_frame=12345 max_sample_error=0.000000000 frames=64
+engine=kira probe=offset requested=144001 observed=144001 frames=64 max_error=0.000000000 clock_seconds=3.000020833
+kira.offset requested_frame=144001 max_sample_error=0.000000000 frames=64
+engine=kira probe=loop start=4800 end_exclusive=9600 boundary_output_frame=64 frames=256 max_error=0.000000000 no_gap_or_duplicate=true
+engine=kira probe=loop_boundary output_frame=63 expected_source_frame=9599 left=-0.005249023 right=0.000000000 expected_left=-0.005249023 expected_right=0.000000000
+engine=kira probe=loop_boundary output_frame=64 expected_source_frame=4800 left=0.000000000 right=0.000000000 expected_left=0.000000000 expected_right=0.000000000
+engine=kira probe=loop_boundary output_frame=65 expected_source_frame=4801 left=0.005249023 right=0.000000000 expected_left=0.005249023 expected_right=0.000000000
+engine=kira probe=clock type=source_position_f64_seconds_atomic_block_start observed_source_frame=0.000000 actually_rendered_count=256 expected_next_source_frame=256 lag_frames=256.000000
+engine=kira probe=clock type=source_position_f64_seconds_atomic_block_start observed_source_frame=256.000000 actually_rendered_count=512 expected_next_source_frame=512 lag_frames=256.000000
+engine=kira probe=pause frames=512 peak=0.000000000 first_source_frame=512.000000 second_source_frame=512.000000 unchanged_playhead=true state=Paused
+engine=kira probe=resume expected_source_frame=512 observed_source_frame=504 max_error=0.361120850 state=Playing
+kira.resume requested_frame=512 max_sample_error=0.376623780 frames=64
+engine=kira probe=resume_steady expected_source_frame=768 observed_source_frame=768 max_error=0.000000000
+kira.resume_steady requested_frame=768 max_sample_error=0.000000000 frames=64
+engine=kira probe=seek requested=12345 first_observed_source_frame=1025 first_sample_error=0.000000000 first_target_latency_frames=Some(2) contiguous_target_latency_frames=3 contiguous_64_max_error=0.000000000 clock_source_frame=1024.000000
+kira.seek_unadjusted requested_frame=12345 max_sample_error=0.697418213 frames=64
+kira.seek_contiguous requested_frame=12345 max_sample_error=0.000000000 frames=64
+engine=kira probe=seek_prefix output_frame=0 left=0.300720215 right=0.009033203
+engine=kira probe=seek_prefix output_frame=1 left=0.304138184 right=0.005859375
+engine=kira probe=seek_prefix output_frame=2 left=-0.392303467 right=0.049194336
+engine=kira probe=seek_prefix output_frame=3 left=-0.392303467 right=0.049194336
+engine=kira probe=seek_prefix output_frame=4 left=-0.393280029 right=0.041290283
+engine=kira probe=seek_prefix output_frame=5 left=-0.394195557 right=0.033386230
+bench_run engine=kira clips=8 repeat=1 blocks=200 frames_per_block=256 cpu_us=2304 wall_us=4464 cpu_audio_pct=0.2160 wall_audio_pct=0.4186
+bench_run engine=kira clips=8 repeat=2 blocks=200 frames_per_block=256 cpu_us=3553 wall_us=4582 cpu_audio_pct=0.3331 wall_audio_pct=0.4296
+bench_run engine=kira clips=8 repeat=3 blocks=200 frames_per_block=256 cpu_us=3200 wall_us=5832 cpu_audio_pct=0.3000 wall_audio_pct=0.5468
+bench_run engine=kira clips=8 repeat=4 blocks=200 frames_per_block=256 cpu_us=3059 wall_us=4497 cpu_audio_pct=0.2868 wall_audio_pct=0.4217
+bench_run engine=kira clips=8 repeat=5 blocks=200 frames_per_block=256 cpu_us=3462 wall_us=3821 cpu_audio_pct=0.3246 wall_audio_pct=0.3582
+bench_summary engine=kira clips=8 repeats=5 cpu_median_pct=0.3000 cpu_max_pct=0.3331 wall_median_pct=0.4217 wall_max_pct=0.5468 cpu_scope=whole_process_no_device_output
+bench_run engine=kira clips=64 repeat=1 blocks=200 frames_per_block=256 cpu_us=20639 wall_us=383584 cpu_audio_pct=1.9349 wall_audio_pct=35.9610
+bench_run engine=kira clips=64 repeat=2 blocks=200 frames_per_block=256 cpu_us=25253 wall_us=64971 cpu_audio_pct=2.3675 wall_audio_pct=6.0911
+bench_run engine=kira clips=64 repeat=3 blocks=200 frames_per_block=256 cpu_us=24101 wall_us=36897 cpu_audio_pct=2.2595 wall_audio_pct=3.4591
+bench_run engine=kira clips=64 repeat=4 blocks=200 frames_per_block=256 cpu_us=18961 wall_us=24612 cpu_audio_pct=1.7776 wall_audio_pct=2.3075
+bench_run engine=kira clips=64 repeat=5 blocks=200 frames_per_block=256 cpu_us=17046 wall_us=34622 cpu_audio_pct=1.5981 wall_audio_pct=3.2459
+bench_summary engine=kira clips=64 repeats=5 cpu_median_pct=1.9349 cpu_max_pct=2.3675 wall_median_pct=3.4591 wall_max_pct=35.9610 cpu_scope=whole_process_no_device_output
+bench_run engine=kira clips=256 repeat=1 blocks=200 frames_per_block=256 cpu_us=90211 wall_us=624772 cpu_audio_pct=8.4573 wall_audio_pct=58.5724
+bench_run engine=kira clips=256 repeat=2 blocks=200 frames_per_block=256 cpu_us=89169 wall_us=732972 cpu_audio_pct=8.3596 wall_audio_pct=68.7162
+bench_run engine=kira clips=256 repeat=3 blocks=200 frames_per_block=256 cpu_us=89860 wall_us=587709 cpu_audio_pct=8.4244 wall_audio_pct=55.0978
+bench_run engine=kira clips=256 repeat=4 blocks=200 frames_per_block=256 cpu_us=88251 wall_us=425986 cpu_audio_pct=8.2735 wall_audio_pct=39.9362
+bench_run engine=kira clips=256 repeat=5 blocks=200 frames_per_block=256 cpu_us=91210 wall_us=434845 cpu_audio_pct=8.5509 wall_audio_pct=40.7668
+bench_summary engine=kira clips=256 repeats=5 cpu_median_pct=8.4244 cpu_max_pct=8.5509 wall_median_pct=55.0978 wall_max_pct=68.7162 cpu_scope=whole_process_no_device_output
+
+exit=0

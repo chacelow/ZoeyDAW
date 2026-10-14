@@ -1,0 +1,9 @@
+[package]
+name = "spike-kira"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+spike-common = { path = "../common" }
+kira = "=0.12.5"

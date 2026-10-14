@@ -1,0 +1,13 @@
+[package]
+name = "spike-common"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+hound = "3"
+cpu-time = "=1.0.0"
+
+[[bin]]
+name = "gen-asset"
+path = "src/bin/gen_asset.rs"

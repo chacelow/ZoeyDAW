@@ -1,0 +1,32 @@
+$ crates/engine/spikes/target/release/spike-rodio
+engine=rodio version=0.23.0 mode=offline rate=48000
+connect_before_append_bootstrap requested_frame=0 max_sample_error=0.293640137 frames=64
+offset_append_before_connect requested_frame=0 max_sample_error=0.000000000 frames=64
+offset_append_before_connect requested_frame=12345 max_sample_error=0.000000000 frames=64
+offset_append_before_connect requested_frame=144001 max_sample_error=0.000000000 frames=64
+loop start=4800 end=9600 wraps=3 max_sample_error=0.000000000 seam_left=[-0.0052490234, 0.0] seam_right=[0.0, 0.0] expected_left=[-0.0052490234, 0.0] expected_right=[0.0, 0.0]
+pause before_clock_frame=960.000 settled_clock_frame=1200.000 first_silent_after_frames=Some(200) paused_peak=0.000000000
+resume peak=0.399994 clock_frame=1440.000
+seek target=12345 first_target_after_frames=Some(88) control_cadence_frames=240 clock_frame=12345.000
+seek_first_block requested_frame=12345 max_sample_error=0.000000000 frames=64
+bench_run engine=rodio clips=8 repeat=1 blocks=200 frames_per_block=256 cpu_us=9770 wall_us=10189 cpu_audio_pct=0.9159 wall_audio_pct=0.9553
+bench_run engine=rodio clips=8 repeat=2 blocks=200 frames_per_block=256 cpu_us=9564 wall_us=11561 cpu_audio_pct=0.8966 wall_audio_pct=1.0839
+bench_run engine=rodio clips=8 repeat=3 blocks=200 frames_per_block=256 cpu_us=10275 wall_us=13051 cpu_audio_pct=0.9633 wall_audio_pct=1.2236
+bench_run engine=rodio clips=8 repeat=4 blocks=200 frames_per_block=256 cpu_us=9232 wall_us=13918 cpu_audio_pct=0.8655 wall_audio_pct=1.3049
+bench_run engine=rodio clips=8 repeat=5 blocks=200 frames_per_block=256 cpu_us=9901 wall_us=17884 cpu_audio_pct=0.9282 wall_audio_pct=1.6767
+bench_summary engine=rodio clips=8 repeats=5 cpu_median_pct=0.9159 cpu_max_pct=0.9633 wall_median_pct=1.2236 wall_max_pct=1.6767 cpu_scope=whole_process_no_device_output
+bench_run engine=rodio clips=64 repeat=1 blocks=200 frames_per_block=256 cpu_us=65619 wall_us=146254 cpu_audio_pct=6.1518 wall_audio_pct=13.7114
+bench_run engine=rodio clips=64 repeat=2 blocks=200 frames_per_block=256 cpu_us=69163 wall_us=149018 cpu_audio_pct=6.4840 wall_audio_pct=13.9705
+bench_run engine=rodio clips=64 repeat=3 blocks=200 frames_per_block=256 cpu_us=68251 wall_us=102691 cpu_audio_pct=6.3985 wall_audio_pct=9.6273
+bench_run engine=rodio clips=64 repeat=4 blocks=200 frames_per_block=256 cpu_us=66504 wall_us=154630 cpu_audio_pct=6.2347 wall_audio_pct=14.4966
+bench_run engine=rodio clips=64 repeat=5 blocks=200 frames_per_block=256 cpu_us=70342 wall_us=105101 cpu_audio_pct=6.5946 wall_audio_pct=9.8533
+bench_summary engine=rodio clips=64 repeats=5 cpu_median_pct=6.3985 cpu_max_pct=6.5946 wall_median_pct=13.7114 wall_max_pct=14.4966 cpu_scope=whole_process_no_device_output
+bench_run engine=rodio clips=256 repeat=1 blocks=200 frames_per_block=256 cpu_us=270639 wall_us=679744 cpu_audio_pct=25.3724 wall_audio_pct=63.7261
+bench_run engine=rodio clips=256 repeat=2 blocks=200 frames_per_block=256 cpu_us=277523 wall_us=708603 cpu_audio_pct=26.0178 wall_audio_pct=66.4316
+bench_run engine=rodio clips=256 repeat=3 blocks=200 frames_per_block=256 cpu_us=291864 wall_us=745770 cpu_audio_pct=27.3622 wall_audio_pct=69.9160
+bench_run engine=rodio clips=256 repeat=4 blocks=200 frames_per_block=256 cpu_us=286733 wall_us=2281121 cpu_audio_pct=26.8812 wall_audio_pct=213.8552
+bench_run engine=rodio clips=256 repeat=5 blocks=200 frames_per_block=256 cpu_us=276074 wall_us=2778092 cpu_audio_pct=25.8819 wall_audio_pct=260.4462
+bench_summary engine=rodio clips=256 repeats=5 cpu_median_pct=26.0178 cpu_max_pct=27.3622 wall_median_pct=69.9160 wall_max_pct=260.4462 cpu_scope=whole_process_no_device_output
+audit callback Player::append periodic_access(5ms) locks to_clear/position/volume/speed/seek; mixer inserts pending sources into Vec, queue uses Mutex; not hard-realtime-safe
+
+exit=0

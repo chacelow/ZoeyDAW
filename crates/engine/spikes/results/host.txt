@@ -1,0 +1,27 @@
+Date: 2026-10-14
+$ sysctl -n hw.model machdep.cpu.brand_string hw.ncpu
+Mac16,10
+Apple M4
+10
+$ pmset -g batt
+Now drawing from 'AC Power'
+
+ps -A -o pid=,pcpu=,comm= snapshot before serial benchmark (only app names and CPU retained):
+Orca Helper (Renderer): 108.1%
+Ableton Live 12 Beta: 65.4%
+WindowServer: 47.1%
+Microsoft Edge Helper: 24.1%
+coreaudiod: 23.3%
+UURemoteServer: 15.9%
+mdworker_shared: 14.0%
+Orca: 11.9%
+These are existing user processes; none stopped. No owned native demo or cargo compilation ran during the measured offline renders. CPU timing is whole-process ProcessTime, not wall-clock scheduling time and not system-wide CPU. No CPAL output thread runs in offline mode. Each 8/64/256 workload uses 16 warm-up blocks followed by 5 consecutive runs of 200 blocks, 256 stereo frames per block, 48000Hz. All candidate benchmarks ran sequentially on this host under AC power; wall-time results include interference from other applications.
+
+Native surface smoke (separate from engine integration):
+$ cd apps/gpuix && bun --hot src/features/waveform-automation/demo.tsx
+[gpuix] created native window
+[gpuix] mount complete
+AX window: waveform-automation demo
+AX static texts: waveform-automation demo; Waveform — synthesized peaks, track color; Automation curve — AutomationPoint[], eased segments
+Screenshot: native-window.png
+This is the existing synthesized waveform demo, NOT Rust peak-pyramid integration. Only the owned demo process was stopped after observation.
