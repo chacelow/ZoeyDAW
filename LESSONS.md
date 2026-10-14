@@ -87,6 +87,13 @@
 - 判据可复用：① 缺口是否已在主干；② 近 30 天提交数与作者分布（单人维护是风险，靠固定 SHA 与可复现脚本抵消）；③ 干净构建与单行重建的实测耗时；④ 现有 demo 与测试在自建版本上的兼容结果。
 - 见：`docs/research/gpuix-main-build.md`、`docs/architecture/gpuix.md` 的「渲染器版本决策」。
 
+## gpuix 迁移：切片 worktree 派发为 `gpuix-migration` 的子 worktree
+
+- 错：`orca orchestration worker-start --worktree new-top-level` 派发切片，客户端侧栏里每个切片都是平级的顶层 workspace，和无关项目混在一起，看不出归属。
+- 对：用 `--worktree new-child`（父为当前协调者所在 worktree `gpuix-migration`），切片在客户端里嵌套在它下面，合并和清理时一目了然。已派出的顶层切片用 `orca worktree set --worktree path:<dir> --parent-worktree path:<父目录>` 补挂，只改 Orca 元数据，不动 git 分支与文件。
+- 注意：`new-child` 默认以协调者当前分支为基线；协调者 HEAD 之后又有合并时，新切片自动带上，不必再指定 `--base-branch`。
+- 2026-10-14：A3 起即为子 worktree，B1、C1 初始为顶层，已补挂。
+
 ## gpuix 迁移：切片合入后立即删 worktree，不复用上下文
 
 - 决策（2026-10-14，用户关注本机性能）：切片**合入并核对无残留后立即**删除其 worktree、分支与对应 OMP 终端；不为"可能复用上下文"保留。
