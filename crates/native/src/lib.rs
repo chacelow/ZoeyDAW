@@ -7,6 +7,7 @@
 
 use napi_derive::napi;
 
+mod app_state;
 mod atomic_file;
 mod cursor;
 mod external;
