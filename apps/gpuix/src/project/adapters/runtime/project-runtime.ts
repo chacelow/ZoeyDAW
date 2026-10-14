@@ -15,6 +15,7 @@ import type {
   BackendRequest,
   BackendState,
   BackendTelemetry,
+  PeakReader,
   ProjectBackendFactory,
   ProjectRuntimeStatus,
 } from "../../model/backend"
@@ -483,6 +484,9 @@ export function createProjectRuntime({
   function readProjectTelemetry(): BackendTelemetry | null {
     return connection?.readTelemetry() ?? null
   }
+  const readProjectPeaks: PeakReader = (sourceId, startBar, endBar, pixels, contentOffsetBars) =>
+    connection?.readPeaks(sourceId, startBar, endBar, pixels, contentOffsetBars) ??
+    new Float32Array(0)
   function readTransportBar(): number {
     return (
       connection?.readTelemetry()?.clock.bar ??
@@ -905,6 +909,7 @@ export function createProjectRuntime({
     configureProjectBackend,
     startProjectRuntime,
     readProjectTelemetry,
+    readProjectPeaks,
     readTransportBar,
     whenProjectBackendIdle,
     projectEpoch,

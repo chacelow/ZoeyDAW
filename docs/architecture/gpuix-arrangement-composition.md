@@ -55,7 +55,7 @@ export function LaneRow(props: {
   scene: ArrangementScene
   viewport: ArrangementViewport
   controller: LaneController // createLaneController() 的返回值，由组合根创建
-  readPeaks: PeakReader // (sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；startBar/endBar 是 one-based 的 Clip 局部可见范围（1+visibleOffsetBars），contentOffsetBars=clip.sourceOffsetBars，适配层用 (bar-1+contentOffsetBars) 换源 frame；返回布局为 **channel-major，其次 pixel-major，每项 [min,max]**（立体声共 pixels*4 个 f32，先左声道全部像素的 [min,max]，再右声道），声道数=length/(2*pixels)，不转置不复制；采样率换算由 platform/engine 适配函数负责，lane 不假设采样率
+  readPeaks: PeakReader // 类型来自 project/model/backend；组合根传 adapters 的 readProjectPeaks（与传输、电平同一个工程会话）。(sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；startBar/endBar 是 one-based 的 Clip 局部可见范围（1+visibleOffsetBars），contentOffsetBars=clip.sourceOffsetBars；小节→源帧换算、带符号偏移与跨末尾回绕都在 Rust；返回布局为 **channel-major，其次 pixel-major，每项 [min,max]**（立体声共 pixels*4 个 f32，先左声道全部像素的 [min,max]，再右声道），声道数=length/(2*pixels)，不转置不复制；后端未打开时返回空数组。lane 不假设采样率、不自己换算
   clipboard: NativeClipboard // 来自 platform/clipboard
   labels: LaneLabels // 菜单/名称编辑/数值编辑的双语标签，由组合根注入，lane 不依赖 i18n 包
 }): ReactNode

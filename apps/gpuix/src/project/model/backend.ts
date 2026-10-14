@@ -113,11 +113,27 @@ export interface BackendTelemetry {
 }
 
 /**
+Waveform envelopes for a clip-local musical range: one-based `startBar`/`endBar`, signed
+`contentOffsetBars` wrapping like clip playback. Bar-to-frame conversion and looping happen in the
+backend on the applied tempo. Layout is channel-major, then pixel-major `[min, max]`; stereo yields
+`pixels * 4` floats, never PCM. Unknown sources and empty ranges yield zeros; no open backend yields
+an empty array.
+*/
+export type PeakReader = (
+  sourceId: string,
+  startBar: number,
+  endBar: number,
+  pixels: number,
+  contentOffsetBars: number
+) => Float32Array
+
+/**
 Implementations atomically apply state, fence sessions/sequences, and never receive UI or PCM buffers.
 */
 export interface ProjectBackend {
   apply: (request: BackendRequest) => BackendResult | Promise<BackendResult>
   subscribe: (listener: (telemetry: BackendTelemetry) => void) => () => void
+  readPeaks: PeakReader
   dispose: () => void
 }
 export type ProjectBackendFactory = () => ProjectBackend
