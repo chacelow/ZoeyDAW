@@ -7,8 +7,8 @@ export const DEFAULT_GRID: GridSettings = { mode: "adaptive", density: "medium" 
 export const MAX_NOTE_DENOMINATOR = 16_384
 export const MIN_CLIP_LENGTH_BARS = 1 / (MAX_NOTE_DENOMINATOR * 32)
 const DENSITY_MIN_WIDTH = [128, 64, 32, 16, 8] as const
-const FIXED_BAR_STEPS = [8, 4, 2, 1] as const
-const FIXED_NOTE_DENOMINATORS = [2, 4, 8, 16, 32] as const
+const FIXED_BAR_STEPS = [16, 8, 4, 2, 1] as const
+const FIXED_NOTE_DENOMINATORS = [2, 4, 8, 16, 32, 64, 128, 256] as const
 
 export interface GridPlan {
   cellBars: number
