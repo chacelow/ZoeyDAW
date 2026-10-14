@@ -9,11 +9,6 @@
 //!
 //! 精度:真实鼠标坐标是小数(高分辨率输入),而 warp 只落整数点,因此恢复位置与
 //! 锚点最多相差 0.5pt。这是系统接口的下限,不是实现偏差。
-//!
-//! 测试构建:`#[napi]` 导出只在非测试构建里被注册,`cargo test` 目标里这些函数看起来
-//! 没被使用。下面的 `allow(dead_code)` 只对测试目标生效;非测试构建仍以
-//! `clippy -D warnings` 把关。
-#![cfg_attr(test, allow(dead_code))]
 
 use napi_derive::napi;
 

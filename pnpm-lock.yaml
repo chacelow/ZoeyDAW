@@ -132,6 +132,9 @@ importers:
       '@zoeydaw/native':
         specifier: workspace:*
         version: link:../../crates/native
+      '@zoeymind/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@zoeymind/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -292,16 +295,13 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.10.8
-        version: 3.10.8(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)
+        version: 3.10.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.13.3)
 
   packages/i18n:
     dependencies:
       i18next:
         specifier: ^24.2.3
         version: 24.2.3(typescript@5.9.3)
-      i18next-browser-languagedetector:
-        specifier: ^8.0.2
-        version: 8.2.1
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.8)
@@ -312,6 +312,9 @@ importers:
         specifier: ^15.5.1
         version: 15.7.4(i18next@24.2.3(typescript@5.9.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@5.9.3)
     devDependencies:
+      '@types/bun':
+        specifier: ^1.2.0
+        version: 1.4.3
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.18
@@ -5051,9 +5054,6 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  i18next-browser-languagedetector@8.2.1:
-    resolution: {integrity: sha512-bZg8+4bdmaOiApD7N7BPT9W8MLZG+nPTOFlLiJiT8uzKXFjhxw4v2ierCXOwB5sFDMtuA5G4kgYZ0AznZxQ/cw==}
-
   i18next@24.2.3:
     resolution: {integrity: sha512-lfbf80OzkocvX7nmZtu7nSTNbrTYR52sLWxPtlXX1zAhVw8WEnFk4puUkCR4B1dNQwbSpEHHHemcZu//7EcB7A==}
     peerDependencies:
@@ -7823,7 +7823,7 @@ snapshots:
       '@types/react': 19.2.18
       react: 19.2.8
 
-  '@napi-rs/cli@3.10.8(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)':
+  '@napi-rs/cli@3.10.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.13.3)':
     dependencies:
       '@inquirer/prompts': 8.7.3(@types/node@24.13.3)
       '@napi-rs/cross-toolchain': 1.0.3
@@ -7838,8 +7838,8 @@ snapshots:
       typanion: 3.14.0
       typescript: 6.0.3
     optionalDependencies:
-      '@emnapi/core': 1.11.2
-      '@emnapi/runtime': 1.11.2
+      '@emnapi/core': 1.9.2
+      '@emnapi/runtime': 1.9.2
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
       - '@napi-rs/cross-toolchain-arm64-target-armv7'
@@ -11475,10 +11475,6 @@ snapshots:
   human-signals@8.0.1: {}
 
   husky@9.1.7: {}
-
-  i18next-browser-languagedetector@8.2.1:
-    dependencies:
-      '@babel/runtime': 7.29.7
 
   i18next@24.2.3(typescript@5.9.3):
     dependencies:
