@@ -7,7 +7,7 @@
  * rather than a cross-app import, kept in lockstep deliberately so both
  * renderers treat a lane's curve field the same way.
  */
-import { line } from "d3-shape"
+import { polylinePath } from "@/shared/svg/paths"
 import type { AutomationPoint } from "@/shared/model/types"
 
 const CURVE_STRENGTH = 4
@@ -64,21 +64,10 @@ export interface AutomationCurveLayoutOptions {
   sampleStepPx?: number
 }
 
-const curveLine = line<[number, number]>().digits(2)
-
-/** d3-shape returns null only for an empty input; every caller here passes at least two samples. */
-function pathOf(samples: ReadonlyArray<[number, number]>): string {
-  const d = curveLine(samples)
-  if (d === null) {
-    throw new RangeError("An automation curve needs at least one sample")
-  }
-  return d
-}
-
 function flatPath(y: number, width: number): string {
-  return pathOf([
-    [0, y],
-    [width, y],
+  return polylinePath([
+    { x: 0, y },
+    { x: width, y },
   ])
 }
 
@@ -118,11 +107,11 @@ export function buildAutomationCurveGeometry(
   }
 
   const stepCount = Math.max(1, Math.ceil(width / sampleStepPx))
-  const samples: Array<[number, number]> = []
+  const samples: Array<{ x: number; y: number }> = []
   for (let step = 0; step <= stepCount; step++) {
     const x = Math.min(width, step * sampleStepPx)
     const value = automationValueAtBar(points, firstBar + (x / width) * barSpan)
-    samples.push([x, valueToY(value, height)])
+    samples.push({ x, y: valueToY(value, height) })
   }
-  return { d: pathOf(samples), anchors }
+  return { d: polylinePath(samples), anchors }
 }
