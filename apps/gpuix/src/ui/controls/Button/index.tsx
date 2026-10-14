@@ -99,7 +99,7 @@ export function Button({
       onClick={activate}
       onKeyDown={event => {
         onKeyDown?.(event)
-        if (event.key === "enter" || event.key === "space") activate(event)
+        if (event.key === "enter") activate(event)
       }}
       onMouseEnter={event => {
         info.onMouseEnter()
