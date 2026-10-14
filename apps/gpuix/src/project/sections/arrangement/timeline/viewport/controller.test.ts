@@ -1,0 +1,133 @@
+import { beforeEach, describe, expect, test } from "bun:test"
+import { projectActions, useProjectState } from "../../../../adapters"
+import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
+import { initialSession, useProjectState as projectStore } from "../../../../stores/useProjectState"
+import { createSceneStore } from "../../core/scene"
+import { arrangementBodyBottom, pinnedTrackHeight } from "../../core/layout"
+import { visibleTracks } from "../../../../model/types"
+import { createTimelineViewport } from "./controller"
+import { createTimelineAutoScroll } from "./auto-scroll"
+import { timelinePointer } from "./coordinates"
+
+beforeEach(() => {
+  projectStore.setState({
+    document: createMockDocument(),
+    workspace: createMockWorkspace(),
+    session: initialSession(),
+  })
+  projectActions.setViewport({ pxPerBar: 100, scrollX: 2000, scrollY: 30 })
+})
+
+const size = { containerWidth: 1104, bodyHeight: 320, timelineLeft: 304 }
+const control = { ctrl: true, cmd: false, alt: false, shift: false }
+
+describe("Authoritative timeline viewport", () => {
+  test("vertical wheel changes only tracks, horizontal or Shift wheel changes only musical scroll", () => {
+    const viewport = createTimelineViewport(() => size)
+    viewport.wheel({ elementId: 0, eventType: "scroll", deltaY: -20 })
+    expect(useProjectState.getState().workspace.scrollX).toBe(2000)
+    expect(useProjectState.getState().workspace.scrollY).toBe(50)
+    viewport.wheel({ elementId: 0, eventType: "scroll", deltaX: -20 })
+    expect(useProjectState.getState().workspace.scrollX).toBe(2020)
+    expect(useProjectState.getState().workspace.scrollY).toBe(50)
+    viewport.wheel({
+      elementId: 0,
+      eventType: "scroll",
+      deltaY: -30,
+      modifiers: { ...control, ctrl: false, shift: true },
+    })
+    expect(useProjectState.getState().workspace.scrollX).toBe(2050)
+    expect(useProjectState.getState().workspace.scrollY).toBe(50)
+  })
+
+  test("Ctrl wheel preserves the music point under the pointer and consumed numeric wheel cannot move canvas", () => {
+    const viewport = createTimelineViewport(() => size)
+    const anchor = (2000 + 240) / 100
+    viewport.wheel({
+      elementId: 0,
+      eventType: "scroll",
+      x: size.timelineLeft + 240,
+      deltaY: 100,
+      modifiers: control,
+    })
+    const after = useProjectState.getState().workspace
+    expect((after.scrollX + 240) / after.pxPerBar).toBeCloseTo(anchor)
+    expect(after.scrollY).toBe(30)
+    expect(viewport.wheel({ elementId: 0, eventType: "scroll", deltaY: 100 }, true)).toBe(false)
+    expect(useProjectState.getState().workspace).toBe(after)
+  })
+
+  test("layout changes clamp logical scroll and no negative viewport survives zero-size windows", () => {
+    const measured = { ...size }
+    const viewport = createTimelineViewport(() => measured)
+    projectActions.setViewport({ pxPerBar: 1e10, scrollX: 1e20, scrollY: 1e20 })
+    viewport.clamp()
+    const clamped = viewport.read()
+    expect(useProjectState.getState().workspace.pxPerBar).toBe(clamped.maxPxPerBar)
+    expect(clamped.scrollX).toBe(clamped.timelineWidth - clamped.timeViewportWidth)
+    expect(clamped.scrollY).toBeLessThan(1e20)
+    measured.containerWidth = 0
+    measured.bodyHeight = 0
+    viewport.clamp()
+    expect(viewport.read().timeViewportWidth).toBe(0)
+    expect(viewport.read().scrollX).toBeGreaterThanOrEqual(0)
+    expect(viewport.read().scrollY).toBeGreaterThanOrEqual(0)
+  })
+
+  test("frame ticks keep scrolling a stationary edge pointer, horizontal mode never scrolls tracks, and stop releases ownership", () => {
+    const scene = createSceneStore()
+    const project = useProjectState.getState().document
+    scene.setMusic({ ...scene.get(), tracks: project.tracks, transport: project.transport })
+    scene.setViewport({
+      pxPerBar: 100,
+      scrollX: 2000,
+      scrollY: 30,
+      width: 800,
+      height: 320,
+      dpr: 1,
+    })
+    const scroll = createTimelineAutoScroll({ scene, edge: 42, onScroll: () => {} })
+    const pointer = timelinePointer(
+      { elementId: 0, eventType: "mouseMove", x: 799, y: 40 },
+      { x: 0, y: 0 }
+    )
+    scroll.start(pointer, "horizontal")
+    scroll.tick(0)
+    scroll.tick(16)
+    const first = useProjectState.getState().workspace.scrollX
+    scroll.tick(32)
+    expect(useProjectState.getState().workspace.scrollX).toBeGreaterThan(first)
+    expect(useProjectState.getState().workspace.scrollY).toBe(30)
+    const stopped = useProjectState.getState().workspace
+    scroll.stop()
+    scroll.tick(1000)
+    expect(useProjectState.getState().workspace).toBe(stopped)
+  })
+
+  test("pinned Return/Main region never causes vertical autoscroll", () => {
+    const scene = createSceneStore()
+    const project = useProjectState.getState().document
+    scene.setMusic({ ...scene.get(), tracks: project.tracks, transport: project.transport })
+    scene.setViewport({
+      pxPerBar: 100,
+      scrollX: 2000,
+      scrollY: 30,
+      width: 800,
+      height: 320,
+      dpr: 1,
+    })
+    const bottom = arrangementBodyBottom(320) - pinnedTrackHeight(visibleTracks(project.tracks))
+    const scroll = createTimelineAutoScroll({ scene, edge: 42, onScroll: () => {} })
+    scroll.start(
+      timelinePointer(
+        { elementId: 0, eventType: "mouseMove", x: 400, y: bottom + 5 },
+        { x: 0, y: 0 }
+      ),
+      "both"
+    )
+    scroll.tick(0)
+    scroll.tick(16)
+    expect(useProjectState.getState().workspace.scrollY).toBe(30)
+    scroll.stop()
+  })
+})

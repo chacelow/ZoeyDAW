@@ -68,8 +68,8 @@ export function createTimelineViewport(readSize: () => TimelineSize) {
       const size = readSize()
       const view = readTimelineViewport(size)
       const modifiers = event.modifiers
-      const deltaX = event.deltaX ?? 0
-      const deltaY = event.deltaY ?? 0
+      const deltaX = -(event.deltaX ?? 0)
+      const deltaY = -(event.deltaY ?? 0)
       if (!deltaX && !deltaY) return false
       if (modifiers?.ctrl || modifiers?.cmd) {
         suspendFollow()
