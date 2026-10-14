@@ -152,6 +152,7 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
       if (command && key === "e" && ids.length) {
         const bar =
           state.session.timeSelection?.startBar ??
+          state.session.insertionPoint?.bar ??
           positionToBar(state.session.position, state.document.transport.numerator)
         if (
           state.document.tracks.some(track =>

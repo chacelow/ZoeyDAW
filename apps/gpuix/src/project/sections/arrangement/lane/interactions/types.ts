@@ -27,11 +27,17 @@ export interface LaneContext {
   getState: () => ProjectState
 }
 
+export interface NativeClipboard {
+  readText(): string | null
+  writeText(text: string): void
+}
+
+export type LaneCursor =
+  "default" | "grab" | "grabbing" | "not-allowed" | "ew-resize" | "move" | "crosshair" | "ns-resize"
+
 export interface LaneGesture {
-  readonly cursor:
-    "default" | "grabbing" | "not-allowed" | "ew-resize" | "move" | "crosshair" | "ns-resize"
+  readonly cursor: LaneCursor
   readonly autoScroll: false | "horizontal" | "both"
-  readonly commitOnInterrupt?: boolean
   move(pointer: LanePointer): void
   finish(cancelled: boolean): void
 }
@@ -52,7 +58,7 @@ export type LaneMenuTarget =
 
 export interface LaneInteraction {
   start(pointer: LanePointer): LaneGesture | null
-  hover(pointer: LanePointer): string | undefined
+  hover(pointer: LanePointer): LaneCursor | undefined
   doubleClick(pointer: LanePointer): boolean
   keyDown(event: LaneKey): boolean
   contextMenu(pointer: LanePointer): LaneMenuTarget | null

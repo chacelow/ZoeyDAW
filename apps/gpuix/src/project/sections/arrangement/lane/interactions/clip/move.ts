@@ -42,7 +42,6 @@ export function createMoveGesture(
       return valid ? "grabbing" : "not-allowed"
     },
     autoScroll: "both",
-    commitOnInterrupt: true,
     move(next) {
       const scene = context.scene.get()
       const hit = hitTest(scene, next.x, next.y, context.getState().workspace.automationMode)

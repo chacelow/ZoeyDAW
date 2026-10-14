@@ -1,0 +1,303 @@
+import { memo, useMemo } from "react"
+import type { Track } from "../../../model/types"
+import { clipLabel } from "../../../model/clip-label"
+import { useTheme } from "../../../../shared/theme/ThemeProvider"
+import { sx } from "../../../../shared/theme/style"
+import { colorMix } from "../../../../shared/theme/color-mix"
+import { FADE_HANDLE_PX, fadeHandleX } from "../core/clip-geometry"
+import type { GridLine } from "../core/rulers/grid-lines"
+import { clipLoopTicks, midiPreviewRects, patternPreviewRects } from "./render-projection"
+import type { ClipCard } from "./render-projection"
+import { resolveLaneColor } from "./appearance"
+
+export type PeakReader = (
+  sourceId: string,
+  startBar: number,
+  endBar: number,
+  pixels: number,
+  contentOffsetBars: number
+) => Float32Array
+
+export const ClipCardView = memo(function ClipCardView({
+  card,
+  track,
+  viewportWidth,
+  numerator,
+  grid,
+  automationMode,
+  readPeaks,
+  onActivate,
+}: {
+  card: ClipCard
+  track: Track
+  viewportWidth: number
+  numerator: number
+  grid: readonly GridLine[]
+  automationMode: boolean
+  readPeaks: PeakReader
+  onActivate: (id: string) => void
+}) {
+  const theme = useTheme()
+  const g = card.geometry
+  const clip = card.clip
+  const visibleLeft = Math.max(0, g.left)
+  const width = Math.max(0, Math.min(viewportWidth, g.left + g.width) - visibleLeft)
+  const color = resolveLaneColor(clip.color ?? track.color, theme)
+  const bodyColor = card.selected ? theme.colors.arrangementClipSelected : color
+  const ink = theme.colors.primaryForeground
+  const notes = useMemo(
+    () =>
+      clip.kind === "midi"
+        ? midiPreviewRects(clip, g, numerator, viewportWidth)
+        : clip.kind === "pattern"
+          ? patternPreviewRects(clip, g, viewportWidth)
+          : [],
+    [clip, g, numerator, viewportWidth]
+  )
+  const sourceId = clip.kind === "audio" ? clip.samplePath : null
+  const contentOffsetBars = clip.sourceOffsetBars ?? 0
+  const sourceStartBar = 1 + ((visibleLeft - g.left) / g.width) * clip.lengthBars
+  const sourceEndBar = 1 + ((visibleLeft + width - g.left) / g.width) * clip.lengthBars
+  const pixels = Math.ceil(width)
+  const hasBody = g.bodyHeight > 0
+  const peaks = useMemo(
+    () =>
+      sourceId && hasBody && pixels > 0
+        ? readPeaks(sourceId, sourceStartBar, sourceEndBar, pixels, contentOffsetBars)
+        : new Float32Array(0),
+    [sourceId, sourceStartBar, sourceEndBar, pixels, contentOffsetBars, hasBody, readPeaks]
+  )
+  const channels = pixels > 0 ? peaks.length / (pixels * 2) : 0
+  const loopTicks = useMemo(() => clipLoopTicks(clip, g, viewportWidth), [clip, g, viewportWidth])
+  const fadeSource = useMemo(() => {
+    const paths = g.fades
+      .filter(fade => fade.handlesVisible)
+      .map(fade => {
+        const start = `M${fade.start.x - visibleLeft},${fade.start.y - g.bodyTop}`
+        const curves = fade.segments
+          .map(
+            segment =>
+              `C${segment.control1.x - visibleLeft},${segment.control1.y - g.bodyTop} ${segment.control2.x - visibleLeft},${segment.control2.y - g.bodyTop} ${segment.end.x - visibleLeft},${segment.end.y - g.bodyTop}`
+          )
+          .join(" ")
+        return `<path d="${start} ${curves}" fill="none" stroke="black" stroke-width="${theme.project.trackBorder}" stroke-linecap="round" stroke-linejoin="round"/>`
+      })
+      .join("")
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${g.bodyHeight}">${paths}</svg>`
+  }, [g, visibleLeft, width, theme.project.trackBorder])
+  return (
+    <div
+      testId={`${card.ghost ? "clip-ghost" : "clip-source"}-${clip.id}`}
+      role="button"
+      aria-label={clipLabel(clip)}
+      aria-pressed={card.selected}
+      tabIndex={card.ghost ? -1 : 0}
+      onKeyDown={event => {
+        if (event.key === "enter") onActivate(clip.id)
+      }}
+      style={sx({
+        position: "absolute",
+        left: visibleLeft,
+        top: g.top,
+        width,
+        height: g.height,
+        overflow: "hidden",
+        userSelect: "none",
+        opacity: card.ghost ? 0.5 : 1,
+      })}
+    >
+      <div
+        style={sx({
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width,
+          height: g.titleHeight,
+          backgroundColor:
+            card.selected && g.bodyHeight === 0 ? theme.colors.arrangementClipSelected : color,
+          pointerEvents: "none",
+        })}
+      />
+      {g.bodyHeight > 0 && (
+        <>
+          <div
+            style={sx({
+              position: "absolute",
+              left: 0,
+              top: g.titleHeight,
+              width,
+              height: g.bodyHeight,
+              backgroundColor: colorMix(
+                bodyColor,
+                card.selected ? 90 : automationMode ? 25 : 55,
+                "transparent"
+              ),
+              pointerEvents: "none",
+            })}
+          />
+          {grid
+            .filter(line => line.x >= visibleLeft && line.x < visibleLeft + width)
+            .map(line => (
+              <div
+                key={line.bar}
+                style={sx({
+                  position: "absolute",
+                  left: line.x - visibleLeft,
+                  top: g.titleHeight,
+                  width: 1,
+                  height: g.bodyHeight,
+                  backgroundColor: theme.colors.border,
+                  opacity: card.hovered ? 0.3 : 0.4,
+                  pointerEvents: "none",
+                })}
+              />
+            ))}
+          {notes.map((note, index) => (
+            <div
+              key={`${note.left}:${note.top}:${index}`}
+              style={sx({
+                position: "absolute",
+                left: note.left - visibleLeft,
+                top: note.top - g.top,
+                width: note.width,
+                height: note.height,
+                backgroundColor: ink,
+                opacity: automationMode ? 0.4 : 1,
+                pointerEvents: "none",
+              })}
+            />
+          ))}
+          {Array.from({ length: pixels * channels }, (_, index) => {
+            const pixel = Math.floor(index / channels)
+            const channel = index % channels
+            const channelHeight = g.bodyHeight / channels
+            const minimum = Math.max(-1, Math.min(1, peaks[index * 2] ?? 0))
+            const maximum = Math.max(-1, Math.min(1, peaks[index * 2 + 1] ?? 0))
+            const height = Math.max(1, ((maximum - minimum) * channelHeight) / 2)
+            return (
+              <div
+                key={index}
+                style={sx({
+                  position: "absolute",
+                  left: pixel,
+                  top:
+                    g.titleHeight + channel * channelHeight + ((1 - maximum) * channelHeight) / 2,
+                  width: 1,
+                  height,
+                  backgroundColor: ink,
+                  opacity: automationMode ? 0.4 : 1,
+                  pointerEvents: "none",
+                })}
+              />
+            )
+          })}
+          {!automationMode && !card.ghost && g.fades.some(fade => fade.handlesVisible) && (
+            <>
+              <svg
+                source={fadeSource}
+                aria-hidden
+                style={sx({
+                  position: "absolute",
+                  left: 0,
+                  top: g.titleHeight,
+                  width,
+                  height: g.bodyHeight,
+                  color: ink,
+                  pointerEvents: "none",
+                })}
+              />
+              {g.fades
+                .filter(fade => fade.handlesVisible)
+                .flatMap(fade => [
+                  {
+                    key: `${fade.edge}-peak`,
+                    point: fade.edge === "in" ? fade.end : fade.start,
+                    interactive: true,
+                  },
+                  {
+                    key: `${fade.edge}-quiet`,
+                    point: fade.edge === "in" ? fade.start : fade.end,
+                    interactive: false,
+                  },
+                  ...(fade.active
+                    ? [{ key: `${fade.edge}-curve`, point: fade.curve, interactive: true }]
+                    : []),
+                ])
+                .map(anchor => (
+                  <div
+                    key={anchor.key}
+                    testId={`fade-${clip.id}-${anchor.key}`}
+                    style={sx({
+                      position: "absolute",
+                      left: fadeHandleX(g, anchor.point.x) - visibleLeft - FADE_HANDLE_PX / 2,
+                      top: Math.max(
+                        g.titleHeight,
+                        Math.min(
+                          g.height - FADE_HANDLE_PX,
+                          anchor.point.y - g.top - FADE_HANDLE_PX / 2
+                        )
+                      ),
+                      width: FADE_HANDLE_PX,
+                      height: FADE_HANDLE_PX,
+                      borderWidth: 1,
+                      borderColor: ink,
+                      backgroundColor: anchor.interactive
+                        ? theme.colors.arrangementClipPaper
+                        : color,
+                      pointerEvents: "none",
+                    })}
+                  />
+                ))}
+            </>
+          )}
+        </>
+      )}
+      {loopTicks.map(x => (
+        <div
+          key={x}
+          style={sx({
+            position: "absolute",
+            left: x - visibleLeft,
+            top: 0,
+            width: 1,
+            height: theme.control["--spacing-control-track-gap"],
+            backgroundColor: ink,
+            pointerEvents: "none",
+          })}
+        />
+      ))}
+      {card.hovered && !card.selected && (
+        <div
+          style={sx({
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width,
+            height: g.height,
+            backgroundColor: colorMix(theme.colors.foreground, 10, "transparent"),
+            pointerEvents: "none",
+          })}
+        />
+      )}
+      <text
+        style={sx({
+          position: "absolute",
+          left: g.left - visibleLeft + theme.control["--spacing-control-track-gap"],
+          top: 0,
+          height: g.titleHeight,
+          width: Math.max(0, g.width - theme.control["--spacing-control-track-gap"] * 2),
+          display: "flex",
+          alignItems: "center",
+          color: ink,
+          fontSize: theme.control["--text-control-track"],
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          pointerEvents: "none",
+          userSelect: "none",
+        })}
+      >
+        {clipLabel(clip)}
+      </text>
+    </div>
+  )
+})

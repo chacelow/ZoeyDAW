@@ -36,7 +36,6 @@ export function createFadeGesture(
   return {
     cursor: handle === "curve" ? "move" : "ew-resize",
     autoScroll: false,
-    commitOnInterrupt: true,
     move(next) {
       const result = moveFadeDrag(drag, next, context.scene.get().viewport.pxPerBar)
       drag = result.state

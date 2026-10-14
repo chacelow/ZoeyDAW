@@ -1,0 +1,106 @@
+import { useRef, useState, useSyncExternalStore } from "react"
+import { Input } from "../../../../../../../ui/controls"
+import { useTheme } from "../../../../../../../shared/theme/ThemeProvider"
+import { sx } from "../../../../../../../shared/theme/style"
+import { clipLabel } from "../../../../../../model/clip-label"
+import { clipRect } from "../../../../core/layout"
+import { TRACK_TITLE_HEIGHT } from "../../../../../../layout"
+import { visibleRows } from "../../../render-projection"
+import type { LaneTranslate } from "../../../messages"
+import type { LaneContext } from "../../types"
+
+export function ClipNameEditor({ context, t }: { context: LaneContext; t: LaneTranslate }) {
+  const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)
+  const theme = useTheme()
+  const selection = scene.targetSelection
+  if (selection.kind !== "clip" || selection.phase !== "renaming") return null
+  const row = visibleRows(scene).find(item =>
+    item.track.clips.some(clip => clip.id === selection.id)
+  )
+  const clip = row?.track.clips.find(item => item.id === selection.id)
+  if (!row || !clip || row.top < row.clipTop) return null
+  const rect = clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
+  const left = Math.max(0, Math.round(rect.left) + 1)
+  const width = Math.min(
+    theme.project.controlsWidth,
+    scene.viewport.width - left,
+    rect.left + rect.width - left - 2
+  )
+  if (width <= theme.control["--spacing-control-track-gap"]) return null
+  return (
+    <NameInput
+      key={clip.id}
+      context={context}
+      id={clip.id}
+      initial={clipLabel(clip)}
+      t={t}
+      left={left}
+      top={Math.round(rect.top + 1)}
+      width={width}
+      height={Math.min(TRACK_TITLE_HEIGHT, row.height - 2)}
+    />
+  )
+}
+
+function NameInput({
+  context,
+  id,
+  initial,
+  t,
+  left,
+  top,
+  width,
+  height,
+}: {
+  context: LaneContext
+  id: string
+  initial: string
+  t: LaneTranslate
+  left: number
+  top: number
+  width: number
+  height: number
+}) {
+  const theme = useTheme()
+  const [value, setValue] = useState(initial)
+  const done = useRef(false)
+  const epoch = useRef(context.getState().session.editEpoch)
+  function finish(commit: boolean) {
+    if (done.current) return
+    done.current = true
+    if (context.getState().session.editEpoch !== epoch.current) return
+    const selection = context.scene.get().targetSelection
+    if (selection.kind !== "clip" || selection.id !== id || selection.phase !== "renaming") return
+    const label = value.trim()
+    if (commit && label && label !== initial) context.actions.updateClip(id, { label })
+    context.scene.setTargetSelection({ ...selection, phase: "selected" })
+  }
+  return (
+    <Input
+      autoFocus
+      testId="clip-name-editor"
+      aria-label={t("arrangement.rename")}
+      value={value}
+      onValueChange={setValue}
+      style={sx({
+        position: "absolute",
+        left,
+        top,
+        width,
+        height,
+        borderRadius: 0,
+        borderColor: theme.colors.primary,
+        backgroundColor: theme.colors.arrangementClipSelected,
+        color: theme.colors.primaryForeground,
+        paddingLeft: theme.control["--spacing-control-gap"],
+        paddingRight: theme.control["--spacing-control-gap"],
+      })}
+      onKeyDown={event => {
+        if (event.key === "enter") finish(true)
+        else if (event.key === "escape") finish(false)
+      }}
+      onBlur={() => finish(true)}
+      onMouseDownOutside={() => finish(true)}
+    />
+  )
+}
