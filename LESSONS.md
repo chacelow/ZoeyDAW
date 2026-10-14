@@ -80,6 +80,13 @@
 - 错 3：第一个变异（让 `size === collapsed` 的早返回失效）测试仍然全绿。继续排查（对同一组输入逐行 diff 输出）发现输出**完全相同**——这个早返回分支对该输入是冗余的，不是测试漏了。教训：变异不红不等于测试弱，先确认变异是否真的改变了行为（比对输出），再决定是否补用例，别为一个等价变异硬加测试。
 - 对：求解器的语义要与被替换的库对齐再验收。`react-resizable-panels` 4.12.3 的折叠行为是“越过折叠区中点才折叠/弹出”，A4 的求解器实测一致：A 在 delta=-200 到达 min，-260 折叠（中点 -250）；从折叠态展开，delta=40 仍为 0，60 弹到 100。
 
+## gpuix 迁移：并行提交会争用 lint-staged 的共享 stash，失败后先查再重试
+
+- 现象：多个 worktree 同时 `git commit`，lint-staged 备份阶段报 `could not write index`，提示的分支还是别的 worktree（`On main`）。
+- 因：lint-staged 的自动备份用 `git stash`，而 stash 与 `.git/refs/stash` 在所有 worktree 之间共享；并发提交互相覆盖备份。与 A7 那次『hook 报失败但提交已落地』是同一类问题。
+- 做法：失败后先 `git log -1`、`git status`、`git stash list`、找 `.git` 下的 `*.lock`，确认没有半成品；再**原样重试**同一条提交，间隔 30 秒，最多 3 次；不用 `--no-verify`，不手动 `git stash drop` 别人的备份。
+- 协调者侧：合并和提交尽量错开；若仍频繁冲突，再给 worker 分时段（与桌面输入串行同理）。
+
 ## gpuix 迁移：多个 worker 并发操作桌面会互相抢占，输入验证要串行
 
 - 现象：并发的 worker 同时用 `computer` 做点击/拖动/按键，报 `InputBusy: another desktop operation owns input/focus control`，或 `BackgroundUnavailable`，截图验证中途失败。
