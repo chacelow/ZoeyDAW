@@ -106,6 +106,12 @@ export function ToggleGroupItem({
       paddingRight: theme.control["--spacing-control-track-pad"],
       cursor: "pointer",
       userSelect: "none",
+      keyboardFocusDim: false,
+      focusVisible: {
+        outlineWidth: 1,
+        outlineColor: theme.colors.ring,
+        outlineOffset: -1,
+      },
     },
     variants: {
       variant: {

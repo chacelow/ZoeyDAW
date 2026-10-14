@@ -9,12 +9,12 @@ import {
   useRef,
   useState,
 } from "react"
-import type { EventPayload, Props, PublicInstance } from "@gpuix/react"
+import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { FloatingContentProps } from "@gpuix/react/floating"
 import type { RefObject } from "react"
 import { useTheme } from "../../../shared/theme/ThemeProvider"
 import { sx } from "../../../shared/theme/style"
-import { readOuterBounds, useFloatingCenterOffset } from "../useMeasuredTextWidth"
+import { readOuterBounds } from "../useMeasuredTextWidth"
 
 export interface PopoverProps extends Props {
   open?: boolean
@@ -82,10 +82,12 @@ export function PopoverTrigger({
   children,
   onClick,
   onKeyDown,
+  style,
   ref,
   ...props
 }: PopoverTriggerProps) {
   const popover = usePopover()
+  const theme = useTheme()
   const childDisabled =
     asChild && isValidElement<{ disabled?: unknown }>(children) && children.props.disabled === true
   const unavailable = disabled || popover.disabled || childDisabled
@@ -105,6 +107,15 @@ export function PopoverTrigger({
     "aria-disabled": unavailable,
     "aria-haspopup": "dialog",
     "aria-expanded": popover.open,
+    style: sx(
+      {
+        keyboardFocusDim: false,
+        focusVisible: unavailable
+          ? undefined
+          : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+      },
+      style
+    ),
     onClick: (event: EventPayload) => {
       if (unavailable) return
       onClick?.(event)
@@ -112,11 +123,11 @@ export function PopoverTrigger({
       lastActivation.current = event
       popover.setOpen(!popover.open)
     },
-    onKeyDown: (event: EventPayload) => {
+    onKeyDown: (event: KeyEvent) => {
       if (unavailable) return
       onKeyDown?.(event)
       const key = event.key?.toLowerCase()
-      if (key === "enter" || key === "space" || key === " ") {
+      if (key === "enter") {
         if (lastActivation.current === event) return
         lastActivation.current = event
         popover.setOpen(!popover.open)
@@ -176,6 +187,7 @@ export function PopoverContent({
       fontSize: theme.control["--text-control-track"],
       whiteSpace: "normal",
       overflowY: "auto",
+      keyboardFocusDim: false,
     },
     style,
     {
@@ -186,13 +198,6 @@ export function PopoverContent({
       ),
     }
   )
-  const centerOffset = useFloatingCenterOffset({
-    open: popover.open,
-    surface,
-    side,
-    align,
-    style: surfaceStyle,
-  })
   if (!popover.open) return null
   return (
     <FloatingLayer
@@ -203,7 +208,7 @@ export function PopoverContent({
       aria-disabled={false}
       side={side}
       align={align}
-      alignOffset={alignOffset + centerOffset}
+      alignOffset={alignOffset}
       sideOffset={sideOffset}
       collisionPadding={collisionPadding}
       style={surfaceStyle}

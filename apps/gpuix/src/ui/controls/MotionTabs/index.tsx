@@ -73,13 +73,18 @@ export function MotionTabs({
       color: theme.colors.mutedForeground,
       cursor: "pointer",
       userSelect: "none",
+      keyboardFocusDim: false,
+      focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
     },
     variants: {
       selected: {
         true: { color: theme.colors.foreground, fontWeight: 600 },
         false: { hover: { backgroundColor: theme.colors.muted } },
       },
-      disabled: { true: { opacity: 0.5, cursor: "not-allowed" }, false: {} },
+      disabled: {
+        true: { opacity: 0.5, cursor: "not-allowed", focusVisible: undefined },
+        false: {},
+      },
     },
   })
   return (

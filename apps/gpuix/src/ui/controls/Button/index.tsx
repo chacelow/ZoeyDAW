@@ -1,11 +1,9 @@
-import { useCallback } from "react"
-import { setRefs } from "@gpuix/react/floating"
 import { useTheme } from "../../../shared/theme/ThemeProvider"
 import { sv, sx } from "../../../shared/theme/style"
 import { controlChrome } from "../chrome"
 import { IconSlot } from "../IconSlot"
 import { useInfoBinding } from "../ControlEnvironment"
-import type { Props, PublicInstance } from "@gpuix/react"
+import type { Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { ControlSize } from "../chrome"
 
@@ -43,15 +41,8 @@ export function Button({
   ...props
 }: ButtonProps) {
   const theme = useTheme()
-  const { ref: infoRef, ...info } = useInfoBinding({ type: "button" })
+  const info = useInfoBinding({ type: "button" })
   const name = label ?? props["aria-label"] ?? (typeof children === "string" ? children : undefined)
-  const bindRef = useCallback(
-    (node: PublicInstance | null) => {
-      infoRef(node)
-      setRefs(node, ref)
-    },
-    [infoRef, ref]
-  )
   const appearances = sv({
     variants: {
       variant: {
@@ -77,7 +68,7 @@ export function Button({
   return (
     <div
       {...props}
-      ref={bindRef}
+      ref={ref}
       role="button"
       tabIndex={0}
       aria-disabled={disabled}

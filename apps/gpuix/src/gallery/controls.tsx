@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { render, useGpuix } from "@gpuix/react"
+import { render } from "@gpuix/react"
 import { cursorHide, cursorPosition, cursorRestore } from "@zoeydaw/native"
 import { ThemeProvider, useTheme } from "../shared/theme/ThemeProvider"
 import { StateGallery } from "./states"
@@ -125,7 +125,6 @@ function GalleryCard({
 
 function Gallery() {
   const theme = useTheme()
-  const { renderer } = useGpuix()
   const [info, setInfo] = useState<ControlInfo | null>(null)
   const [bpm, setBpm] = useState(120)
   const [level, setLevel] = useState(50)
@@ -152,12 +151,6 @@ function Gallery() {
       <div
         role="application"
         aria-label="Native controls gallery"
-        onKeyDown={event => {
-          if (event.key === "tab") {
-            if (event.modifiers?.shift) renderer?.focusPrevious?.()
-            else renderer?.focusNext?.()
-          }
-        }}
         style={{
           display: "flex",
           flexDirection: "column",

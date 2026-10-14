@@ -38,6 +38,10 @@ export function Card({
       backgroundColor: theme.colors.card,
       color: theme.colors.cardForeground,
       fontSize: theme.control["--text-control-track"],
+      keyboardFocusDim: onClick ? false : undefined,
+      focusVisible: onClick
+        ? { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 }
+        : undefined,
     },
     style
   )

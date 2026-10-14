@@ -84,6 +84,12 @@ export function RadioGroupItem({
       color: theme.colors.foreground,
       cursor: "pointer",
       userSelect: "none",
+      keyboardFocusDim: false,
+      focusVisible: {
+        outlineWidth: 1,
+        outlineColor: theme.colors.ring,
+        outlineOffset: -1,
+      },
     },
     variants: { disabled: { true: { opacity: 0.5, cursor: "not-allowed" }, false: {} } },
   })

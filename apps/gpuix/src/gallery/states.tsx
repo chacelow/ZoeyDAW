@@ -1,5 +1,4 @@
 import { useRef, useState } from "react"
-import { useGpuix } from "@gpuix/react"
 import { useTheme } from "../shared/theme/ThemeProvider"
 import {
   Button,
@@ -27,7 +26,6 @@ const glyph =
 
 export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPort }) {
   const theme = useTheme()
-  const { renderer } = useGpuix()
   const zh = process.env.GALLERY_LOCALE === "zh"
   const disabled = process.env.GALLERY_DISABLED === "1"
   const text = (en: string, cn: string) => (zh ? cn : en)
@@ -65,10 +63,6 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
         aria-label="Control state specimens"
         onKeyDown={event => {
           setKeys(event.key ?? "")
-          if (event.key === "tab") {
-            if (event.modifiers?.shift) renderer?.focusPrevious?.()
-            else renderer?.focusNext?.()
-          }
         }}
         style={{
           display: "flex",

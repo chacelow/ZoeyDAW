@@ -9,12 +9,12 @@ import {
   useRef,
   useState,
 } from "react"
-import type { EventPayload, NativeRenderer, Props, PublicInstance } from "@gpuix/react"
+import type { EventPayload, KeyEvent, NativeRenderer, Props, PublicInstance } from "@gpuix/react"
 import type { FloatingContentProps } from "@gpuix/react/floating"
 import type { ReactNode, RefObject } from "react"
 import { useTheme } from "../../../shared/theme/ThemeProvider"
 import { sx } from "../../../shared/theme/style"
-import { readOuterBounds, useFloatingCenterOffset } from "../useMeasuredTextWidth"
+import { readOuterBounds } from "../useMeasuredTextWidth"
 
 export interface MenuProps extends Props {
   open?: boolean
@@ -223,11 +223,13 @@ function MenuTrigger({
   onClick,
   onMouseDown,
   onKeyDown,
+  style,
   ref,
   ...props
 }: MenuTriggerProps) {
   const menu = useMenu()
   const { renderer } = useGpuix()
+  const theme = useTheme()
   const childDisabled =
     asChild && isValidElement<{ disabled?: unknown }>(children) && children.props.disabled === true
   const unavailable = disabled || menu.disabled || childDisabled
@@ -249,6 +251,15 @@ function MenuTrigger({
     "aria-disabled": unavailable,
     "aria-haspopup": "menu",
     "aria-expanded": menu.open,
+    style: sx(
+      {
+        keyboardFocusDim: false,
+        focusVisible: unavailable
+          ? undefined
+          : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+      },
+      style
+    ),
     onMouseDown: (event: EventPayload) => {
       if (unavailable) return
       onMouseDown?.(event)
@@ -266,7 +277,7 @@ function MenuTrigger({
       lastActivation.current = event
       if (!menu.contextMenu) menu.setOpen(!menu.open)
     },
-    onKeyDown: (event: EventPayload) => {
+    onKeyDown: (event: KeyEvent) => {
       if (unavailable) return
       onKeyDown?.(event)
       const key = event.key?.toLowerCase()
@@ -377,6 +388,7 @@ function MenuContent({
       fontSize: theme.control["--text-control-track"],
       whiteSpace: "normal",
       overflowY: "auto",
+      keyboardFocusDim: false,
     },
     style,
     {
@@ -387,13 +399,6 @@ function MenuContent({
       ),
     }
   )
-  const centerOffset = useFloatingCenterOffset({
-    open: menu.open,
-    surface,
-    side: resolvedSide,
-    align,
-    style: surfaceStyle,
-  })
   if (!menu.open) return null
   const content = (
     <FloatingLayer
@@ -404,7 +409,7 @@ function MenuContent({
       aria-disabled={false}
       side={resolvedSide}
       align={align}
-      alignOffset={alignOffset + centerOffset}
+      alignOffset={alignOffset}
       sideOffset={sideOffset}
       collisionPadding={collisionPadding}
       style={surfaceStyle}
@@ -523,6 +528,10 @@ function MenuItem({
         color: unavailable ? theme.colors.mutedForeground : theme.colors.popoverForeground,
         cursor: unavailable ? "default" : "pointer",
         hover: unavailable ? undefined : { backgroundColor: theme.colors.accent },
+        keyboardFocusDim: false,
+        focusVisible: unavailable
+          ? undefined
+          : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
       },
       style
     ),
@@ -532,7 +541,7 @@ function MenuItem({
       onMouseEnter?.(event)
       if (instance.current) renderer?.focusElement?.(instance.current.id)
     },
-    onKeyDown: (event: EventPayload) => {
+    onKeyDown: (event: KeyEvent) => {
       if (event.elementId !== instance.current?.id) return
       onKeyDown?.(event)
       if (navigate(menu, renderer, event)) return

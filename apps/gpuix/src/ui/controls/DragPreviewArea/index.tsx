@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "../../../shared/theme/ThemeProvider"
 import { sx, sv } from "../../../shared/theme/style"
-import type { EventPayload, Props } from "@gpuix/react"
+import type { EventPayload, KeyEvent, Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 
 export interface DragPreviewItem<T> {
@@ -126,7 +126,7 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
     finish(false)
     onMouseUp?.(event)
   }
-  const keyDown = (event: EventPayload) => {
+  const keyDown = (event: KeyEvent) => {
     if (event.key === "escape") finish(true)
     else onKeyDown?.(event)
   }
@@ -142,12 +142,16 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
     if (!disabled) onClick?.(event)
   }
   const variants = sv({
-    base: { userSelect: "none" },
+    base: {
+      userSelect: "none",
+      keyboardFocusDim: false,
+      focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+    },
     variants: {
       state: {
         idle: { cursor: "grab" },
         dragging: { cursor: "grabbing", opacity: 0.4 },
-        disabled: { cursor: "not-allowed", opacity: 0.5 },
+        disabled: { cursor: "not-allowed", opacity: 0.5, focusVisible: undefined },
       },
     },
   })

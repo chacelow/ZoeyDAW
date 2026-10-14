@@ -175,7 +175,6 @@ export function NumericPad({
       )}
       {pad.mode === "editing" ? (
         <input
-          ref={info.ref}
           testId={testId ? `${testId}-value` : undefined}
           autoFocus
           aria-label={label}
@@ -183,7 +182,11 @@ export function NumericPad({
           value={pad.draft}
           onChange={event => pad.handleEditChange(event.value ?? "")}
           onSubmit={pad.commitEditing}
-          onBlur={pad.commitEditing}
+          onFocus={info.onFocus}
+          onBlur={() => {
+            info.onBlur()
+            pad.commitEditing()
+          }}
           onKeyDown={pad.handleEditKeyDown}
           style={{
             flexGrow: 1,
@@ -207,13 +210,17 @@ export function NumericPad({
   )
   if (pad.mode === "editing")
     return (
-      <div testId={testId} style={shell}>
+      <div
+        testId={testId}
+        style={shell}
+        onMouseEnter={info.onMouseEnter}
+        onMouseLeave={info.onMouseLeave}
+      >
         {contents}
       </div>
     )
   return (
     <div
-      ref={info.ref}
       testId={testId}
       role="spinbutton"
       aria-label={description ? `${label} — ${description}` : label}

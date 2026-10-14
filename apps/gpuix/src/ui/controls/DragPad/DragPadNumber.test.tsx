@@ -216,6 +216,42 @@ test("hidden icons remove their slot and editing keeps the same shell bounds", (
   root.unmount()
 })
 
+test("Space stays inside the numeric editor instead of reaching playback shortcuts", () => {
+  const windowKeys: string[] = []
+  let latest = 120
+  const root = createTestRoot({
+    width: 400,
+    height: 180,
+    onKeyDown: event => {
+      windowKeys.push(event.key ?? "")
+    },
+  })
+  root.render(
+    <ThemeProvider>
+      <DragPadNumber
+        testId="pad"
+        label="Numeric editor"
+        value={120}
+        onChange={value => {
+          latest = value
+        }}
+        min={20}
+        max={300}
+        step={1}
+      />
+    </ThemeProvider>
+  )
+  root.renderer.nativeSimulateKeystrokes(root.renderer.findByTestId("pad")!.id, "enter")
+  const editor = root.renderer.findByType("input")[0]!
+  expect(root.renderer.getFocusedElementId()).toBe(editor.id)
+  windowKeys.length = 0
+  root.renderer.simulateKeystrokes("space")
+  expect(windowKeys).toEqual([])
+  expect(latest).toBe(120)
+  expect(root.renderer.getFocusedElementId()).toBe(editor.id)
+  root.unmount()
+})
+
 test.todo(
   "real OS press-without-dwell: JS cursor capture can lag the native mouseDown by one injected move; needs permission-gated CGEventTap capture"
 )

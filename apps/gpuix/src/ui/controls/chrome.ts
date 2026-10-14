@@ -26,6 +26,12 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
       fontSize: metrics["--text-control-track"],
       cursor: "pointer",
       userSelect: "none",
+      keyboardFocusDim: false,
+      focusVisible: {
+        outlineWidth: 1,
+        outlineColor: theme.colors.ring,
+        outlineOffset: -1,
+      },
     },
     variants: {
       highlight: {
