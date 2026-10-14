@@ -241,10 +241,12 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 
 - `onLayout`：主干有（`.changeset/on-layout.md`），0.10.0 没有。绕行：`getElementBounds` 采样，收敛在唯一的测量 hook。
 - `getElementBounds` 含 padding 的修复：主干有（`bounds-include-padding`）。绕行：`readOuterBounds`，唯一入口。
-- `onFocus/onBlur` 在 `focusElement`/窗口失活时不触发：绕行为应用作用域单一采样器；窗口失活信号走 Rust `isApplicationActive`。
+- `onFocus/onBlur` 在 `focusElement` 时不触发：元素焦点绕行为应用作用域单一采样器。窗口激活已由 F1 补丁 `window-active-change.patch` 提供原生事件 `renderer.onWindowActiveChange`，经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧的 50ms 激活采样已删除，不得再用定时器轮询激活。
 - 关闭拦截、`hideWindow`、托盘：主干也没有；GPUI fork 里 `on_window_should_close` 已存在，只缺 gpuix 注册与 JS 暴露。当前 `WindowCloseGuard.supported=false`，不得用 `process.exit()` 冒充。
 - `measureText`：没有。绕行：挂载不可见样本节点读取实测宽度。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
+- 错：合入改动 `scripts/gpuix-main/config.json` 补丁序列的分支后，直接在主干跑 tsc 和 `bun test`。共享 vendor 仍是旧补丁的产物，主干一度显示 tsc 8 个错误、25 个测试失败，全部是假失败。
+- 对：先跑 `node scripts/gpuix-main/check.mjs`；它报 “Vendor must contain exactly the checked-in ordered patch series” 时，先通知各 worker 暂停渲染器相关构建与整套测试，再跑 `bash scripts/gpuix-main/build.sh`，check 通过后才把门禁结果当真，最后通知各 worker merge 主干。
 
 ## gpuix 迁移：依赖与版本核实
 

@@ -1,138 +1,172 @@
 import { describe, expect, test } from "bun:test"
 import { createApplicationActiveSubscription } from "./application-active"
+import type { ActivityListener, WindowActivityRenderer } from "./application-active"
 
-function createHarness(initial: boolean | null = true) {
-  let activity = initial
-  let reads = 0
-  let starts = 0
-  let stops = 0
-  let interval: number | undefined
-  let tick: (() => void) | undefined
-  const subscribe = createApplicationActiveSubscription({
-    readActive: () => {
-      reads += 1
-      return activity
-    },
-    startSampling: (sample, intervalMs) => {
-      starts += 1
-      interval = intervalMs
-      tick = sample
-      return () => {
-        stops += 1
-        tick = undefined
+function activityRenderer(initial = true) {
+  let active = initial
+  let callback: ActivityListener | null = null
+  const resources = { starts: 0, stops: 0 }
+  const renderer: WindowActivityRenderer = {
+    onWindowActiveChange(next) {
+      callback = next
+      if (next === null) resources.stops++
+      else {
+        resources.starts++
+        next(active)
       }
     },
-  })
+  }
   return {
-    subscribe,
-    advance: (next: boolean | null) => {
-      activity = next
-      tick?.()
+    subscribe: createApplicationActiveSubscription(renderer),
+    resources,
+    emit(next: boolean) {
+      active = next
+      callback?.(next)
     },
-    stats: () => ({ reads, starts, stops, interval, running: tick !== undefined }),
+    retainCallback() {
+      if (!callback) throw new Error("No activation observer")
+      return callback
+    },
   }
 }
 
-describe("application activation sampling", () => {
-  test("starts lazily and stops after the final lease, with idempotent cleanup", () => {
-    const harness = createHarness()
+async function drainEvents() {
+  await new Promise<void>(resolve => {
+    queueMicrotask(resolve)
+  })
+}
+
+describe("native window activation subscriptions", () => {
+  test("attaches lazily, captures baseline without notifying, and releases the last lease", async () => {
+    const host = activityRenderer()
     const changes: boolean[] = []
-    expect(harness.stats()).toMatchObject({ reads: 0, starts: 0, running: false })
-    const unsubscribe = harness.subscribe(active => {
+    expect(host.resources).toEqual({ starts: 0, stops: 0 })
+    const unsubscribe = host.subscribe(active => {
       changes.push(active)
     })
-    expect(harness.stats()).toMatchObject({ reads: 1, starts: 1, interval: 50, running: true })
+    expect(host.resources).toEqual({ starts: 1, stops: 0 })
+    await drainEvents()
     expect(changes).toEqual([])
-    unsubscribe()
-    unsubscribe()
-    harness.advance(false)
-    expect(harness.stats()).toMatchObject({ reads: 1, stops: 1, running: false })
+    host.emit(false)
     expect(changes).toEqual([])
-  })
-
-  test("notifies only activity transitions", () => {
-    const harness = createHarness()
-    const changes: boolean[] = []
-    const unsubscribe = harness.subscribe(active => {
-      changes.push(active)
-    })
-    harness.advance(true)
-    harness.advance(false)
-    harness.advance(false)
-    harness.advance(true)
-    harness.advance(true)
-    expect(changes).toEqual([false, true])
+    await drainEvents()
+    expect(changes).toEqual([false])
     unsubscribe()
-  })
-
-  test("unknown activity is active, including transitions out of inactivity", () => {
-    const harness = createHarness(null)
-    const changes: boolean[] = []
-    const unsubscribe = harness.subscribe(active => {
-      changes.push(active)
-    })
-    harness.advance(true)
-    harness.advance(null)
-    harness.advance(false)
-    harness.advance(null)
-    harness.advance(true)
-    expect(changes).toEqual([false, true])
     unsubscribe()
+    host.emit(true)
+    await drainEvents()
+    expect(changes).toEqual([false])
+    expect(host.resources).toEqual({ starts: 1, stops: 1 })
   })
 
-  test("all subscribers share one sampler and release independently", () => {
-    const harness = createHarness()
+  test("all listeners share one observer and queued events skip cancelled leases", async () => {
+    const host = activityRenderer()
     const first: boolean[] = []
     const second: boolean[] = []
-    const unsubscribeFirst = harness.subscribe(active => {
+    const cancelFirst = host.subscribe(active => {
       first.push(active)
     })
-    const unsubscribeSecond = harness.subscribe(active => {
+    const cancelSecond = host.subscribe(active => {
       second.push(active)
     })
-    expect(harness.stats()).toMatchObject({ starts: 1, reads: 1 })
-    harness.advance(false)
-    unsubscribeFirst()
-    harness.advance(true)
-    expect(first).toEqual([false])
+    expect(host.resources.starts).toBe(1)
+    host.emit(false)
+    cancelFirst()
+    await drainEvents()
+    expect(first).toEqual([])
+    expect(second).toEqual([false])
+    expect(host.resources.stops).toBe(0)
+    host.emit(true)
+    await drainEvents()
     expect(second).toEqual([false, true])
-    expect(harness.stats()).toMatchObject({ starts: 1, stops: 0, reads: 3 })
-    unsubscribeSecond()
-    expect(harness.stats()).toMatchObject({ stops: 1, running: false })
+    cancelSecond()
+    expect(host.resources.stops).toBe(1)
   })
 
-  test("duplicate callbacks have independent subscriptions", () => {
-    const harness = createHarness()
+  test("duplicate callbacks retain independent leases", async () => {
+    const host = activityRenderer()
     const changes: boolean[] = []
     const listener = (active: boolean) => {
       changes.push(active)
     }
-    const first = harness.subscribe(listener)
-    const second = harness.subscribe(listener)
-    harness.advance(false)
+    const first = host.subscribe(listener)
+    const second = host.subscribe(listener)
+    host.emit(false)
+    await drainEvents()
     first()
-    harness.advance(true)
+    host.emit(true)
+    await drainEvents()
     expect(changes).toEqual([false, false, true])
-    expect(harness.stats()).toMatchObject({ starts: 1, stops: 0 })
     second()
-    expect(harness.stats()).toMatchObject({ stops: 1 })
+    expect(host.resources).toEqual({ starts: 1, stops: 1 })
   })
 
-  test("restarting captures a fresh baseline without replaying unobserved changes", () => {
-    const harness = createHarness()
+  test("restarting captures fresh state and rejects old callbacks and queued transitions", async () => {
+    const host = activityRenderer()
     const changes: boolean[] = []
-    harness.subscribe(active => {
-      changes.push(active)
-    })()
-    harness.advance(false)
-    const unsubscribe = harness.subscribe(active => {
+    const first = host.subscribe(active => {
       changes.push(active)
     })
-    harness.advance(false)
+    const oldCallback = host.retainCallback()
+    host.emit(false)
+    first()
+    const second = host.subscribe(active => {
+      changes.push(active)
+    })
+    oldCallback(true)
+    await drainEvents()
     expect(changes).toEqual([])
-    harness.advance(true)
+    host.emit(true)
+    await drainEvents()
     expect(changes).toEqual([true])
-    expect(harness.stats()).toMatchObject({ starts: 2, stops: 1 })
+    second()
+    expect(host.resources).toEqual({ starts: 2, stops: 2 })
+  })
+
+  test("subscriptions added after a transition never receive its queued notification", async () => {
+    const host = activityRenderer()
+    const first: boolean[] = []
+    const second: boolean[] = []
+    const cancelFirst = host.subscribe(active => {
+      first.push(active)
+    })
+    host.emit(false)
+    const cancelSecond = host.subscribe(active => {
+      second.push(active)
+    })
+    await drainEvents()
+    expect(first).toEqual([false])
+    expect(second).toEqual([])
+    host.emit(true)
+    await drainEvents()
+    expect(second).toEqual([true])
+    cancelFirst()
+    cancelSecond()
+  })
+
+  test("fixed-seed activation sequences notify exactly the state transitions", async () => {
+    const host = activityRenderer()
+    const actual: boolean[] = []
+    const expected: boolean[] = []
+    const unsubscribe = host.subscribe(active => {
+      actual.push(active)
+    })
+    let previous = true
+    let seed = 0x146115
+    for (let index = 0; index < 500; index++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+      const active = ((seed >>> 16) & 1) === 1
+      if (active !== previous) expected.push(active)
+      previous = active
+      host.emit(active)
+    }
+    await drainEvents()
+    expect(actual).toEqual(expected)
     unsubscribe()
+  })
+
+  test("unsupported renderers fail on subscription rather than falling back to polling", () => {
+    const subscribe = createApplicationActiveSubscription({})
+    expect(() => subscribe(() => undefined)).toThrow(Error)
   })
 })

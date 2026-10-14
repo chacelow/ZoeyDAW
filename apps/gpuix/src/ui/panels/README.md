@@ -28,7 +28,7 @@
 
 `PanelEnvironmentProvider` 接收 `environment.subscribeWindowActive(listener): unsubscribe`。应用组合根负责把原生订阅注入，ui/panels 不 import platform。没有注入时只支持元素级焦点检查与 Esc 取消。
 
-gpuix 0.10.0 没有可用的窗口激活信号，div 的 onBlur 也未在实测焦点切换中发出。`useDividerDrag` 保留 `renderer.getFocusedElementId()` 检查作为元素级兜底。原生应用失活查询与共享订阅由 A2 提供；真实窗口失活到 Finder 的端到端回滚，需要应用组合根接线后验证，当前独立画廊未接入。
+窗口激活由原生事件提供(F1 `renderer.onWindowActiveChange`,平台层 `subscribeApplicationActive`,第一条原生值只建立 baseline),组合根把它注入 `subscribeWindowActive`。div 的 onBlur 未在实测焦点切换中发出,`useDividerDrag` 保留 `renderer.getFocusedElementId()` 检查作为元素级兜底。真实窗口失活到 Finder 的端到端回滚需要应用组合根接线后验证,当前独立画廊未接入。
 
 ## 运行
 

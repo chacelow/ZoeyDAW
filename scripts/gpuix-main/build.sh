@@ -7,7 +7,6 @@ readonly revision="$(node -p "require('$script_dir/config.json').revision")"
 readonly zed_revision="$(node -p "require('$script_dir/config.json').zedRevision")"
 readonly vendor_root="${GPUIX_VENDOR_ROOT:-/Volumes/PSSD/code/_vendor/zoeydaw-gpuix}"
 readonly vendor="$vendor_root/$revision"
-readonly patch="$script_dir/patches/close-guard.patch"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/Volumes/PSSD/code/_vendor/target}"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-6}"
 
@@ -45,14 +44,13 @@ git -C "$vendor" submodule update --init --depth 1
 [ -z "$(git -C "$vendor" ls-files --others --exclude-standard)" ] || {
   echo "Refusing untracked gpuix sources" >&2; exit 1;
 }
-# The only permitted source change is the versioned, reviewed close-guard patch.
-if git -C "$vendor" diff --quiet HEAD; then
-  git -C "$vendor" apply "$patch"
-else
-  git -C "$vendor" diff --binary HEAD | diff - "$patch" || {
-    echo "Refusing modified gpuix sources beyond the close-guard patch" >&2; exit 1;
-  }
-fi
+# Only extend a checkout that exactly matches a reviewed prefix of the series.
+pending_patches="$(node "$script_dir/check.mjs" --pending "$vendor")"
+readonly pending_patches
+while IFS= read -r patch; do
+  [ -z "$patch" ] || git -C "$vendor" apply "$script_dir/patches/$patch"
+done <<< "$pending_patches"
+node "$script_dir/check.mjs" --sources "$vendor"
 [ -z "$(git -C "$vendor/zed" status --porcelain)" ] || {
   echo "Refusing modified zed sources" >&2; exit 1;
 }
