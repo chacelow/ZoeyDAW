@@ -1,4 +1,3 @@
-import { useState } from "react"
 import { useTheme } from "../../../shared/theme/ThemeProvider"
 import { sx, sv } from "../../../shared/theme/style"
 import type { Props } from "@gpuix/react"
@@ -25,11 +24,11 @@ export function ListRow({
   ...props
 }: ListRowProps) {
   const theme = useTheme()
-  const [focused, setFocused] = useState(false)
   const metrics = theme.control
   const appearance = sv({
     base: {
       display: "flex",
+      flexDirection: "row",
       alignItems: "center",
       flexShrink: 0,
       minWidth: 0,
@@ -43,6 +42,7 @@ export function ListRow({
       cursor: "pointer",
       userSelect: "none",
       hover: { backgroundColor: theme.colors.secondary },
+      focusVisible: { borderColor: theme.colors.ring },
       borderWidth: 1,
       borderColor: "transparent",
     },
@@ -75,23 +75,15 @@ export function ListRow({
       aria-disabled={disabled}
       style={sx(
         appearance({ selected: selected ? "yes" : "no", disabled: disabled ? "yes" : "no" }),
-        focused ? { borderColor: theme.colors.ring } : undefined,
         style
       )}
-      onFocus={event => {
-        setFocused(true)
-        props.onFocus?.(event)
-      }}
-      onBlur={event => {
-        setFocused(false)
-        props.onBlur?.(event)
-      }}
       onClick={event => {
         if (!disabled) onClick?.(event)
       }}
       onKeyDown={event => {
+        if (disabled) return
         onKeyDown?.(event)
-        if (!disabled && event.key === "enter") onClick?.(event)
+        if (!event.defaultPrevented && event.key === "enter") onClick?.(event)
       }}
     >
       {leading ? <div style={{ flexShrink: 0 }}>{leading}</div> : null}
