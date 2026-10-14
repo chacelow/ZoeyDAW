@@ -9,9 +9,7 @@ import {
   METER_MIN_DB,
   METER_MAX_DB,
 } from "../../core/meters/meter-peak"
-import { meterDecayDriver } from "./decay-driver"
-import type { MeterDecayDriver } from "./decay-driver"
-import { useTrackTelemetry } from "./telemetry"
+import { useMeterEnvironment } from "./telemetry"
 
 interface MeterDisplay {
   left: number
@@ -30,16 +28,18 @@ export function TrackMeter({
   trackId,
   trackName,
   height,
-  driver = meterDecayDriver,
 }: {
   readonly trackId: string
   readonly trackName: string
   readonly height: number
-  readonly driver?: MeterDecayDriver
 }) {
   const { t } = useTrackLabels()
   const theme = useTheme()
-  const readTelemetry = useTrackTelemetry()
+  const { telemetry: readTelemetry, driver } = useMeterEnvironment()
+  const reader = useRef(readTelemetry)
+  useLayoutEffect(() => {
+    reader.current = readTelemetry
+  }, [readTelemetry])
   const epoch = useProjectState(state => state.session.backend.sessionId)
   const peaks = useRef({ left: createMeterPeak(), right: createMeterPeak() })
   const [display, setDisplay] = useState(SILENT_DISPLAY)
@@ -47,7 +47,7 @@ export function TrackMeter({
     peaks.current = { left: createMeterPeak(), right: createMeterPeak() }
     setDisplay(SILENT_DISPLAY)
     return driver.subscribe(now => {
-      const level = readTelemetry()?.levels[trackId]
+      const level = reader.current()?.levels[trackId]
       const left = meterDb(level?.[0] ?? METER_MIN_DB)
       const right = meterDb(level?.[1] ?? METER_MIN_DB)
       advanceMeterPeak(peaks.current.left, left, now)
@@ -64,7 +64,7 @@ export function TrackMeter({
       )
       return leftPeak > METER_MIN_DB || rightPeak > METER_MIN_DB
     })
-  }, [trackId, epoch, driver, readTelemetry])
+  }, [trackId, epoch, driver])
   const width = theme.control["--spacing-control-track"]
   const channelWidth = Math.floor((width - 1) / 2)
   const zeroY = Math.min(
@@ -85,7 +85,7 @@ export function TrackMeter({
         width,
         height,
         flexShrink: 0,
-        backgroundColor: theme.colors.card,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
       }}
     >
       {(["left", "right"] as const).map((channel, index) => {
@@ -109,7 +109,7 @@ export function TrackMeter({
               width: index === 0 ? channelWidth : width - channelWidth - 1,
               height,
               overflow: "hidden",
-              backgroundColor: theme.colors.meterGood,
+              backgroundColor: theme.colors.arrangementMeterGood,
             }}
           >
             <div
@@ -124,8 +124,8 @@ export function TrackMeter({
                   type: "linear-gradient",
                   angle: 180,
                   stops: [
-                    { position: 0, color: theme.colors.meterWarn },
-                    { position: 0.3, color: theme.colors.meterGood },
+                    { position: 0, color: theme.colors.arrangementMeterWarn },
+                    { position: 0.3, color: theme.colors.arrangementMeterGood },
                   ],
                 },
               }}
@@ -138,7 +138,7 @@ export function TrackMeter({
                 height: zeroY,
                 left: 0,
                 right: 0,
-                backgroundColor: theme.colors.meterDanger,
+                backgroundColor: theme.colors.arrangementMeterDanger,
               }}
             />
             <div
@@ -163,7 +163,7 @@ export function TrackMeter({
                   left: 0,
                   right: 0,
                   height: 1,
-                  backgroundColor: theme.colors.meterPeak,
+                  backgroundColor: theme.colors.arrangementMeterPeak,
                 }}
               />
             ) : null}
@@ -179,7 +179,7 @@ export function TrackMeter({
           right: 0,
           top: zeroY,
           height: 1,
-          backgroundColor: theme.colors.card,
+          backgroundColor: theme.colors.arrangementSurfaceAlt,
         }}
       />
     </div>
