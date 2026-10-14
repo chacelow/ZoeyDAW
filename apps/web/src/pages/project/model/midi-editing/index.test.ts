@@ -37,7 +37,7 @@ describe("MIDI editor transformations", () => {
       pitchDelta: 30,
       window,
     })
-    expect(moved.notes[0]).toMatchObject({ startBeat: 0, pitch: 84 })
+    expect(moved.notes[0]).toMatchObject({ startBeat: 0, pitch: 102 })
     expect(moved.notes[1]).toBe(notes[1])
     expect(moved.selection).toEqual([0])
     const resized = transformNotes({
@@ -70,7 +70,7 @@ describe("MIDI editor transformations", () => {
       window,
       id: "inserted",
     })
-    expect(inserted.notes[3]).toMatchObject({ startBeat: 5.75, pitch: 84 })
+    expect(inserted.notes[3]).toMatchObject({ startBeat: 5.75, pitch: 127 })
     expect(inserted.selection).toEqual([3])
     expect(setNoteVelocity(notes, [0, 2], 110).notes.map(note => note.velocity)).toEqual([
       110, 80, 110,
@@ -120,5 +120,43 @@ describe("MIDI editor transformations", () => {
       erased: first.erased,
     })
     expect(second.edit.notes.map(note => note.id)).toEqual(["outside"])
+  })
+
+  it("selects and edits the full pitch domain while retaining hidden source material", () => {
+    const extremes: MidiNote[] = [
+      { id: "low", pitch: 0, startBeat: 2, lengthBeats: 1, velocity: 1 },
+      { id: "high", pitch: 127, startBeat: 3, lengthBeats: 1, velocity: 127 },
+      { id: "hidden", pitch: 100, startBeat: 8, lengthBeats: 1, velocity: 100 },
+    ]
+    expect(selectVisibleNotes(extremes, window)).toEqual([0, 1])
+    const down = transformNotes({
+      notes: extremes,
+      selection: [0, 1],
+      kind: "move",
+      beatDelta: 0,
+      pitchDelta: -12,
+      window,
+    })
+    expect(down.notes.map(note => note.pitch)).toEqual([0, 115, 100])
+    expect(down.notes[2]).toBe(extremes[2])
+    const up = transformNotes({
+      notes: extremes,
+      selection: [0, 1],
+      kind: "move",
+      beatDelta: 0,
+      pitchDelta: 12,
+      window,
+    })
+    expect(up.notes.map(note => note.pitch)).toEqual([12, 127, 100])
+    const lowest = insertNote({
+      notes: extremes,
+      horizontalRatio: 0,
+      verticalRatio: 1,
+      window,
+      id: "lowest",
+    })
+    expect(lowest.notes[3]).toMatchObject({ pitch: 0, startBeat: 2 })
+    expect(setNoteVelocity(extremes, [0], 0).notes[0].velocity).toBe(1)
+    expect(setNoteVelocity(extremes, [1], 200).notes[1].velocity).toBe(127)
   })
 })

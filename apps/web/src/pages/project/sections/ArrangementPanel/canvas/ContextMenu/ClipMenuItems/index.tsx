@@ -108,7 +108,7 @@ export function ClipMenuItems({
     <>
       <ContextMenuLabel>{clip.label ?? clip.kind}</ContextMenuLabel>
       <ContextMenuItem onClick={() => projectActions.setEditingClip(clip.id)}>
-        {t("arrangement.openTemporaryEditor")}
+        {t("detail.openClip")}
       </ContextMenuItem>
       <ContextMenuItem onClick={rename}>{t("arrangement.rename")}</ContextMenuItem>
       <ContextMenuSeparator />

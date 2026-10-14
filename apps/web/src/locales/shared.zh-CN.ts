@@ -132,12 +132,6 @@ export default {
       follow: "跟随 playhead",
       loop: "循环",
     },
-    status: {
-      sampleRate: "48.0 kHz",
-      buffer: "缓冲 256",
-      cpu: "CPU 2%",
-      noProject: "no project",
-    },
   },
   about: {
     prototype: "prototype 骨架",

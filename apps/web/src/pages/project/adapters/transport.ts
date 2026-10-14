@@ -173,10 +173,12 @@ export const transportActions = {
     })
   },
   selectClips(ids: string[]) {
+    const selectedClipIds = [...new Set(ids)].filter(id =>
+      get().document.tracks.some(track => track.clips.some(clip => clip.id === id))
+    )
     session({
-      selectedClipIds: [...new Set(ids)].filter(id =>
-        get().document.tracks.some(track => track.clips.some(clip => clip.id === id))
-      ),
+      selectedClipIds,
+      editingClipId: selectedClipIds.length === 1 ? selectedClipIds[0] : null,
     })
   },
   setTimeSelection(selection: TimeSelection | null) {

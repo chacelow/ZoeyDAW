@@ -219,6 +219,12 @@ export const clipActions = {
     )
   },
   setEditingClip(id: string | null) {
-    session({ editingClipId: id })
+    const current = get().session
+    if (id && !get().document.tracks.some(track => track.clips.some(clip => clip.id === id))) return
+    session({
+      editingClipId: id,
+      ...(id && { selectedClipIds: [id] }),
+      clipEditorRequest: current.clipEditorRequest + 1,
+    })
   },
 }

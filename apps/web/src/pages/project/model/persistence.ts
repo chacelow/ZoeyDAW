@@ -1,6 +1,8 @@
 import { acceptsClip } from "./types"
 import { isGridSettings, isLegacyGridBars } from "./grid"
 import { MAX_AUTOMATION_CURVE, MIN_AUTOMATION_CURVE } from "./automation-curve"
+import { isAudioClipSettings } from "./audio-editor"
+import { isDevice } from "./devices"
 import type { Clip, DocumentState, Track, WorkspaceState } from "./types"
 
 const record = (v: unknown): v is Record<string, unknown> =>
@@ -53,6 +55,7 @@ export function isClip(v: unknown): v is Clip {
     return (
       text(v.samplePath) &&
       number(v.gainDb) &&
+      (v.audioSettings === undefined || isAudioClipSettings(v.audioSettings)) &&
       number(fadeIn) &&
       (v.fadeInBars === undefined || number(v.fadeInBars)) &&
       fadeIn >= 0 &&
@@ -135,6 +138,8 @@ function isTrack(v: unknown): v is Track {
       (record(v.sends) &&
         Object.values(v.sends).every(level => number(level) && level >= -60 && level <= 6))) &&
     positive(v.heightPx) &&
+    (v.devices === undefined ||
+      (Array.isArray(v.devices) && v.devices.every(isDevice) && uniqueIds(v.devices))) &&
     (v.childTrackIds === undefined || strings(v.childTrackIds)) &&
     (v.collapsed === undefined || bool(v.collapsed)) &&
     text(v.monitor) &&
@@ -314,6 +319,9 @@ export function serializeClip(clip: Clip): Clip {
         kind: "audio",
         samplePath: clip.samplePath,
         gainDb: clip.gainDb,
+        ...(clip.audioSettings === undefined
+          ? {}
+          : { audioSettings: structuredClone(clip.audioSettings) }),
         ...(clip.fadeInBars !== undefined && { fadeInBars: clip.fadeInBars }),
         ...(clip.fadeOutBars !== undefined && { fadeOutBars: clip.fadeOutBars }),
         ...(clip.fadeInOffsetBars !== undefined && { fadeInOffsetBars: clip.fadeInOffsetBars }),
@@ -431,6 +439,7 @@ export function parseProject(json: string): { document: DocumentState; workspace
           ...(track.cueVolumeDb === undefined ? {} : { cueVolumeDb: track.cueVolumeDb }),
           ...(track.returnPost === undefined ? {} : { returnPost: track.returnPost }),
           ...(track.sends === undefined ? {} : { sends: { ...track.sends } }),
+          ...(track.devices === undefined ? {} : { devices: structuredClone(track.devices) }),
           clips: track.clips.map(serializeClip),
           heightPx: track.heightPx,
           ...(track.childTrackIds === undefined ? {} : { childTrackIds: [...track.childTrackIds] }),

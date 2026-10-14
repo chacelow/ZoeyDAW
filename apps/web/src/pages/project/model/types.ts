@@ -1,5 +1,7 @@
 import type { ProjectRuntimeStatus } from "./backend"
 import type { GridSettings } from "./grid"
+import type { AudioClipSettings } from "./audio-editor"
+import type { Device } from "./devices"
 
 export const MIN_TIMELINE_BARS = 128
 export const PATTERN_STEPS_PER_BAR = 16
@@ -41,6 +43,7 @@ export interface AudioClip extends ClipBase {
   samplePath: string
   waveformPeaks?: number[]
   gainDb: number
+  audioSettings?: AudioClipSettings
   fadeInBars?: number
   fadeOutBars?: number
   /**
@@ -127,6 +130,7 @@ export interface Track {
   collapsed?: boolean
   monitor: "in" | "auto" | "off"
   automation: AutomationLane[]
+  devices?: Device[]
 }
 export interface Marker {
   id: string
@@ -187,6 +191,7 @@ export interface SessionState {
   selectedClipIds: string[]
   timeSelection: TimeSelection | null
   editingClipId: string | null
+  clipEditorRequest: number
   levels: Record<string, [number, number]>
   dirty: boolean
   canUndo: boolean

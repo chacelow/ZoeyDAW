@@ -17,7 +17,7 @@ beforeEach(() => {
   )
 })
 
-it("double-click selects a card and creates an empty-lane card without opening the temporary editor", () => {
+it("selects and creates cards without opening Clip View", () => {
   const scene = createSceneStore()
   const state = useProjectState.getState()
   scene.setMusic({
@@ -49,19 +49,19 @@ it("double-click selects a card and creates an empty-lane card without opening t
   })
   expect(interaction.hover(pointer("trager"))).toBe("grab")
   interaction.start(pointer("trager"))?.finish(false)
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   expect(interaction.doubleClick(pointer("trager"))).toBe(true)
   expect(useProjectState.getState().session.selectedClipIds).toEqual(["trager-1"])
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   expect(interaction.doubleClick(pointer("4-midi"))).toBe(true)
   const created = useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!
     .clips[0]
   expect(created).toMatchObject({ kind: "midi", startBar: 4 })
   expect(useProjectState.getState().session.selectedClipIds).toEqual([created.id])
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   expect(interaction.keyDown(new KeyboardEvent("keydown", { key: "r", ctrlKey: true }))).toBe(true)
   expect(scene.get().targetSelection).toEqual({ kind: "clip", id: created.id, phase: "renaming" })
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
 })
 
 it("retains the last compatible multi-clip preview across incompatible and absent destinations", () => {

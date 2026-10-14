@@ -154,12 +154,6 @@ export default {
       follow: "Follow playhead",
       loop: "Loop",
     },
-    status: {
-      sampleRate: "48.0 kHz",
-      buffer: "256",
-      cpu: "CPU 2%",
-      noProject: "no project",
-    },
   },
   about: {
     prototype: "prototype scaffold",

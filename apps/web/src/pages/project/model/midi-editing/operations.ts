@@ -17,9 +17,7 @@ export function validSelection(notes: MidiNote[], selection: number[]): number[]
 export function selectVisibleNotes(notes: MidiNote[], window: Window): number[] {
   return notes.flatMap((note, index) =>
     note.startBeat < window.sourceOffsetBeats + window.totalBeats &&
-    note.startBeat + note.lengthBeats > window.sourceOffsetBeats &&
-    note.pitch >= 37 &&
-    note.pitch <= 84
+    note.startBeat + note.lengthBeats > window.sourceOffsetBeats
       ? [index]
       : []
   )
@@ -87,7 +85,7 @@ export function insertNote({
       ...notes,
       {
         id,
-        pitch: Math.max(0, Math.min(127, 84 - Math.floor(verticalRatio * 48))),
+        pitch: Math.max(0, Math.min(127, 127 - Math.floor(verticalRatio * 128))),
         startBeat: midiInsertionBeat({ horizontalRatio, ...window }),
         lengthBeats: 1,
         velocity: 100,
@@ -133,7 +131,7 @@ export function transformNotes({
         pitchDelta,
         ...window,
       })
-      return { ...moved, pitch: Math.max(37, Math.min(84, moved.pitch)) }
+      return moved
     }),
     selection: valid,
   }
@@ -143,7 +141,11 @@ export function setNoteVelocity(notes: MidiNote[], selection: number[], velocity
   const valid = validSelection(notes, selection)
   const indices = new Set(valid)
   return {
-    notes: notes.map((note, index) => (indices.has(index) ? { ...note, velocity } : note)),
+    notes: notes.map((note, index) =>
+      indices.has(index)
+        ? { ...note, velocity: Math.max(1, Math.min(127, Math.round(velocity))) }
+        : note
+    ),
     selection: valid,
   }
 }

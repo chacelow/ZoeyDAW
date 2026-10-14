@@ -12,6 +12,10 @@ Browser 的 `renderBody` 插槽接收 navigation/results。双栏继承同一底
 
 Arrangement 的视觉调整限于 `.project-arrangement`，Transport 排列限于 `.project-transport`。除当次明确要求，不改侧栏、全局主题、标题栏与 Footer。
 
+底部 Clip 与 Device 视图由 Footer 独立开关，允许同时显示。`useProjectShell` 持有显隐组合、收起前组合及 Clip 高度，布局度量归 `pages/project/detail-view`。可调高的 Clip 与主区域共用 resizable Group；固定高度 Device 在该 Group 外由 `ProjectLayout` 组装，避免展开 Clip 时库优先挤掉相邻 Device。`DeviceDivider` 只在拖动越过半高阈值时切换显隐，支持反向拖回、Esc、失焦取消与方向键。关闭的内容卸载以取消未完成编辑；所有卡片仍使用 PanelShell。
+
+Footer 保留组件类型帮助和视图开关。采样率、缓冲及 CPU 图示位于 Transport Header；当前为标明的原型预览值，不是实时硬件性能测量。
+
 ## PanelShell 与分隔条
 
 每张 panel 卡片包 `PanelShell`。它统一背景、固定宽度边框、圆角和 pointer-capture 激活分发，active 只换边框颜色，不改变尺寸或增加外沿高亮。

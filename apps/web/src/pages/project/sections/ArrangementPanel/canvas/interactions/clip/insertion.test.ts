@@ -73,7 +73,7 @@ it("clicks a Clip body and blank track, retaining an exact row-local insertion",
     bar: 9 + 2 / 16_384,
   })
   expect(useProjectState.getState().session.timeSelection).toBeNull()
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   const blank = pointer(32, row("4-midi").top + row("4-midi").height / 2)
   interaction.start(blank)?.finish(false)
   expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])

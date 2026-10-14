@@ -59,8 +59,6 @@ export default {
   createMidiClip: "创建 MIDI 片段",
   createPatternClip: "创建 Pattern 片段",
   addMarker: "添加标记",
-  openTemporaryEditor: "打开临时编辑器",
-  temporaryEditor: "临时编辑器",
   duplicateClip: "复制片段",
   splitAtPlayhead: "在播放头处分割",
   deleteClip: "删除片段",

@@ -1,40 +1,60 @@
-/**
- * StatusStrip — 底部状态条。
- *
- * 左：折叠底栏 toggle
- * 中：`<InfoChannel />` 展示 hover info / warnings（填满空间）
- * 右：真实监控（采样率 / 缓冲 / CPU）
- *
- * 和 chrome 同色 `bg-card`，无 border 无圆角。
- */
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, AudioLines, Piano } from "lucide-react"
+import { Button } from "@zoeymind/ui"
 import { useTranslation } from "@zoeymind/i18n"
 import { InfoChannel } from "./InfoChannel"
+import type { DetailSection } from "@/pages/project/detail-view"
 
 export interface StatusStripProps {
-  readonly projectId: string
   readonly footerCollapsed: boolean
+  readonly clipVisible: boolean
+  readonly devicesVisible: boolean
   readonly onToggleFooter: () => void
+  readonly onToggleDetail: (section: DetailSection) => void
 }
 
-export function StatusStrip({ footerCollapsed, onToggleFooter }: StatusStripProps) {
+export function StatusStrip({
+  footerCollapsed,
+  clipVisible,
+  devicesVisible,
+  onToggleFooter,
+  onToggleDetail,
+}: StatusStripProps) {
   const { t } = useTranslation()
   return (
-    <div className="bg-card text-muted-foreground flex h-9 shrink-0 items-center gap-4 px-4 text-xs tabular-nums">
-      <button
-        type="button"
+    <div className="bg-card text-muted-foreground flex h-9 shrink-0 items-center gap-2 px-2 text-xs tabular-nums">
+      <Button
+        variant="ghost"
+        size="control-icon"
         onClick={onToggleFooter}
-        className="hover:bg-accent hover:text-accent-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-sm"
-        title={t("project.toggleFooter")}
         aria-label={t("project.toggleFooter")}
+        aria-expanded={!footerCollapsed}
       >
-        {footerCollapsed ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
-      </button>
+        {footerCollapsed ? <ChevronUp /> : <ChevronDown />}
+      </Button>
       <InfoChannel />
-      <div className="flex shrink-0 items-center gap-3">
-        <span>{t("project.status.sampleRate")}</span>
-        <span>{t("project.status.buffer")}</span>
-        <span>{t("project.status.cpu")}</span>
+      <div role="group" aria-label={t("detail.views")} className="flex shrink-0 items-center gap-1">
+        <Button
+          variant={clipVisible ? "secondary" : "ghost"}
+          size="control"
+          aria-pressed={clipVisible}
+          aria-controls="project-clip-view"
+          aria-label={t("detail.clipToggle")}
+          onClick={() => onToggleDetail("clip")}
+        >
+          <Piano />
+          {t("detail.clip")}
+        </Button>
+        <Button
+          variant={devicesVisible ? "secondary" : "ghost"}
+          size="control"
+          aria-pressed={devicesVisible}
+          aria-controls="project-device-view"
+          aria-label={t("detail.devicesToggle")}
+          onClick={() => onToggleDetail("devices")}
+        >
+          <AudioLines />
+          {t("detail.devices")}
+        </Button>
       </div>
     </div>
   )

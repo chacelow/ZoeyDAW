@@ -12,6 +12,13 @@ function Editor() {
   return clip ? <ClipDetail clip={clip} close={() => {}} /> : null
 }
 
+function AudioFixtureEditor() {
+  const clip = useProjectState(state =>
+    state.document.tracks.flatMap(track => track.clips).find(item => item.id === "audio-1")
+  )
+  return clip ? <ClipDetail clip={clip} close={() => {}} /> : null
+}
+
 function patternSteps() {
   const clip = useProjectState
     .getState()
@@ -24,6 +31,14 @@ function patternSteps() {
 }
 
 beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  )
   const document = createMockDocument()
   const track = document.tracks.find(item => item.id === "trager")
   if (!track) {
@@ -46,6 +61,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   Reflect.deleteProperty(HTMLElement.prototype, "setPointerCapture")
   Reflect.deleteProperty(HTMLElement.prototype, "hasPointerCapture")
   Reflect.deleteProperty(HTMLElement.prototype, "releasePointerCapture")
@@ -107,4 +123,50 @@ it("edits one source cycle rather than allocating repeat copies for a long Patte
   projectActions.updateClip("pattern-test", { lengthBars: 4 })
   const view = render(<Editor />)
   expect(view.container.querySelectorAll("[data-step-index]")).toHaveLength(16)
+})
+
+it("routes project undo and redo from detail controls without consuming text-field undo", () => {
+  const view = render(<Editor />)
+  const step = view.container.querySelector<HTMLElement>('[data-step-index="0"]')
+  if (!step) throw new Error("Missing Pattern step")
+  fireEvent.pointerDown(step, { button: 0, pointerId: 9 })
+  fireEvent.pointerUp(step, { pointerId: 9 })
+  expect(patternSteps()[0]).toBe(true)
+  const close = view.getByRole("button", { name: "arrangement.closeClipEditor" })
+  fireEvent.keyDown(close, { key: "z", metaKey: true })
+  expect(patternSteps()[0]).toBe(false)
+  fireEvent.keyDown(close, { key: "z", metaKey: true, shiftKey: true })
+  expect(patternSteps()[0]).toBe(true)
+  const input = view.container.querySelector<HTMLInputElement>("[data-clip-name]")
+  if (!input) throw new Error("Missing Clip name field")
+  expect(fireEvent.keyDown(input, { key: "z", metaKey: true })).toBe(true)
+  expect(patternSteps()[0]).toBe(true)
+})
+
+it("allows shared pre-edit typing to author a musical Audio loop position", () => {
+  const view = render(<AudioFixtureEditor />)
+  const button = view.getByRole("button", { name: "detailAudio.loopPosition" })
+  button.focus()
+  fireEvent.click(button, { detail: 0 })
+  fireEvent.keyDown(button, { key: "3", code: "Digit3" })
+  const input = view.getByRole("textbox", { name: "detailAudio.loopPosition" })
+  fireEvent.change(input, { target: { value: "3.1.1" } })
+  fireEvent.keyDown(input, { key: "Enter" })
+  const clip = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.id === "audio-1")
+  if (clip?.kind !== "audio") throw new Error("Missing Audio fixture")
+  expect(clip.audioSettings?.loopStartBars).toBe(2)
+  expect(clip.sourceOffsetBars ?? 0).toBe(0)
+  fireEvent.keyDown(view.getByRole("button", { name: "detailAudio.loopPosition" }), {
+    key: "z",
+    metaKey: true,
+  })
+  const restored = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.id === "audio-1")
+  if (restored?.kind !== "audio") throw new Error("Missing restored Audio fixture")
+  expect(restored.audioSettings).toBeUndefined()
 })

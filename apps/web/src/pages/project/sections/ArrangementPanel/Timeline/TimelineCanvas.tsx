@@ -1,11 +1,10 @@
-import { useMemo, useRef } from "react"
+import { useRef } from "react"
 import { Group, Panel } from "react-resizable-panels"
 import { useTranslation } from "@zoeymind/i18n"
 import { PanelDivider } from "@/components/panels"
-import { useProjectState, projectActions } from "@/pages/project/adapters"
+import { useProjectState } from "@/pages/project/adapters"
 import { deriveGridPlan } from "@/pages/project/model/grid"
 import { CONTROLS_WIDTH } from "@/pages/project/layout"
-import { ClipDetail } from "../Clip/Detail"
 import { CanvasContextMenu } from "../canvas/ContextMenu"
 import { MarkerEditor } from "../canvas/interactions/rulers/MarkerEditor"
 import { AutomationValueEditor } from "../canvas/interactions/automation/ValueEditor"
@@ -38,19 +37,6 @@ export function TimelineCanvas() {
   const grid = useProjectState(state => state.workspace.grid)
   const numerator = useProjectState(state => state.document.transport.numerator)
   const denominator = useProjectState(state => state.document.transport.denominator)
-  const editingClipId = useProjectState(state => state.session.editingClipId)
-  const tracks = useProjectState(state => state.document.tracks)
-  const editingClip = useMemo(() => {
-    if (!editingClipId) {
-      return
-    }
-    for (const track of tracks) {
-      const clip = track.clips.find(item => item.id === editingClipId)
-      if (clip) {
-        return clip
-      }
-    }
-  }, [editingClipId, tracks])
 
   useMidiKeyboard()
   useSceneSync()
@@ -147,11 +133,6 @@ export function TimelineCanvas() {
                 height={viewport.bodyHeight}
               />
             </div>
-            {editingClip ? (
-              <div className="relative h-[190px] shrink-0">
-                <ClipDetail clip={editingClip} close={() => projectActions.setEditingClip(null)} />
-              </div>
-            ) : null}
           </div>
         </Panel>
       </Group>

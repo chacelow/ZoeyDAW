@@ -60,8 +60,6 @@ export default {
   createMidiClip: "Create MIDI clip",
   createPatternClip: "Create pattern clip",
   addMarker: "Add locator",
-  openTemporaryEditor: "Open temporary editor",
-  temporaryEditor: "Temporary editor",
   duplicateClip: "Duplicate clip",
   splitAtPlayhead: "Split at playhead",
   deleteClip: "Delete clip",

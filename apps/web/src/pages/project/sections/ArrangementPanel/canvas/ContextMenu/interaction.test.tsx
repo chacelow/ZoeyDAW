@@ -75,7 +75,7 @@ it("activates Edit value from the real menu and keeps input focus after the popu
   ).toBeCloseTo(40 / 66)
 })
 
-it("creates and renames a Pattern through menus without activating the temporary editor", async () => {
+it("creates and renames a Pattern through menus without opening Clip View", async () => {
   const view = render(
     <StrictMode>
       <SceneSync />
@@ -98,7 +98,7 @@ it("creates and renames a Pattern through menus without activating the temporary
   const created = useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!
     .clips[0]
   expect(created).toMatchObject({ kind: "pattern", startBar: 5 })
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   fireEvent.contextMenu(canvas, { clientX: 96, clientY: 280 })
   fireEvent.click(await screen.findByRole("menuitem", { name: "arrangement.rename" }))
   const input = await screen.findByRole("textbox", { name: "arrangement.rename" })
@@ -108,5 +108,5 @@ it("creates and renames a Pattern through menus without activating the temporary
   expect(
     useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!.clips[0].label
   ).toBe("Pattern variation")
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
 })

@@ -39,6 +39,7 @@ import { projectActions, useProjectEditGesture, useProjectState } from "@/pages/
 import { growTimelineBars, timelineBars } from "@/pages/project/model/selectors"
 import { effectiveDrawMode } from "@/pages/project/model/interaction-mode"
 import { setDrawModeLatched } from "../ArrangementPanel/Timeline/drawModeKey"
+import { PerformanceStatus } from "./PerformanceStatus"
 
 export interface TransportBarProps {
   readonly onBack: () => void
@@ -408,6 +409,7 @@ export function TransportBar({ onBack, onToggleBrowser }: TransportBarProps) {
             )}
             icon={<Keyboard weight="fill" />}
           />
+          <PerformanceStatus />
           <Button
             variant="ghost"
             size="control-icon"

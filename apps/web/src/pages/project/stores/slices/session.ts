@@ -12,6 +12,7 @@ export function initialSession(): SessionState {
     selectedClipIds: [],
     timeSelection: null,
     editingClipId: null,
+    clipEditorRequest: 0,
     levels: {},
     dirty: false,
     canUndo: false,

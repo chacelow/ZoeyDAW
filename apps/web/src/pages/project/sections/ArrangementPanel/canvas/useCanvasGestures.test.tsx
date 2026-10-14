@@ -290,9 +290,9 @@ describe("canvas clip gestures", () => {
       fireEvent.pointerUp(host, title)
     })
     expect(useProjectState.getState().session.selectedClipIds).toEqual(["audio-1"])
-    expect(useProjectState.getState().session.editingClipId).toBeNull()
+    expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
     act(() => fireEvent.doubleClick(host, { clientX: title.clientX, clientY: title.clientY }))
-    expect(useProjectState.getState().session.editingClipId).toBeNull()
+    expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   })
 
   it("toggles clip selection with modifiers without starting a document gesture", () => {

@@ -2,6 +2,11 @@
 
 ## 0.1.0 - unreleased
 
+- Add independent bottom Clip and Device views with simultaneous display, remembered collapse restoration, a resizable Clip editor and binary fixed-height Device divider based on observed Live behavior.
+- Replace the temporary embedded editor with a full-range MIDI piano roll, pitch keyboard, source ruler, velocity lane and cancellable source-coordinate note editing. Preserve held-key releases and correct viewport fit after row-height commits.
+- Add Audio independent playback Start/End markers, musical-position inputs using the clip's actual meter, source/loop editing with independent loop bounds, waveform zoom/pan, gain/fades and authored warp/pitch/reverse metadata. Keep unknown sources empty and processing explicitly visual-only.
+- Add per-track ordered device metadata with insertion, bypass, folding, parameter gestures, keyboard/drag ordering and undo. Validate and roundtrip new detail metadata in snapshots.
+- Move prototype performance readouts to the Header and correct shared Progress indicator flex growth so its width reflects the actual percentage.
 - Own project runtime state per injected store and acquire backends explicitly. Keep imports/configuration/hydration idle, isolate editing identity from engine sessions, and retain independent recording across temporary-edit teardown.
 - Split Connection into public exports, coordinator, protocol validation and telemetry interpolation; share one dispatch path for opening and queued requests.
 - Scope control hover, warnings and mapping by provider. Isolate gallery demos from the application environment and remove shared UI dependencies on project-private stores; inject the project title at route composition.
