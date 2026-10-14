@@ -1,0 +1,9 @@
+[package]
+name = "zoeydaw-engine"
+version = "0.1.0"
+description = "zoeydaw audio engine: protocol state, transport clock, mixing, telemetry (no UI, no napi)"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]

@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = ["crates/native", "crates/engine"]
+# 旧 Tauri 壳独立 lockfile,迁移完成后随 web 一并删除。
+exclude = ["src-tauri"]
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.85"
