@@ -91,7 +91,7 @@
 
 - 错：`orca orchestration worker-start --worktree new-top-level` 派发切片，客户端侧栏里每个切片都是平级的顶层 workspace，和无关项目混在一起，看不出归属。
 - 对：用 `--worktree new-child`（父为当前协调者所在 worktree `gpuix-migration`），切片在客户端里嵌套在它下面，合并和清理时一目了然。已派出的顶层切片用 `orca worktree set --worktree path:<dir> --parent-worktree path:<父目录>` 补挂，只改 Orca 元数据，不动 git 分支与文件。
-- 注意：`new-child` 默认以协调者当前分支为基线；协调者 HEAD 之后又有合并时，新切片自动带上，不必再指定 `--base-branch`。
+- 注意：`new-child` 的父默认是主仓库 `zoeydaw`，不是协调者所在的 worktree（2026-10-14 实测）；必须在创建后用 `orca worktree set --parent-worktree` 补挂到 `gpuix-migration`。基线分支用 `--base-branch gpuix-migration` 显式指定，才会带上之前所有合并。
 - 2026-10-14：A3 起即为子 worktree，B1、C1 初始为顶层，已补挂。
 
 ## gpuix 迁移：切片合入后立即删 worktree，不复用上下文
