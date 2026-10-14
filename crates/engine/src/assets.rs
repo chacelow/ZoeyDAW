@@ -9,20 +9,36 @@ use symphonia::core::{
     io::MediaSourceStream,
 };
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SourceInfo {
+    pub sample_rate: u32,
+    pub frames: u64,
+    pub channels: u32,
+}
+
 #[derive(Debug)]
 pub struct AudioSource {
     pub pcm: Vec<[f32; 2]>,
     pub sample_rate: u32,
     pub peaks: PeakPyramid,
+    pub source_info: SourceInfo,
+    pub source_pcm: Vec<[f32; 2]>,
 }
 
 impl AudioSource {
     pub fn from_pcm(pcm: Vec<[f32; 2]>, sample_rate: u32) -> Self {
         let peaks = PeakPyramid::from_interleaved(pcm.as_flattened(), 2, 64, 32);
+        let source_info = SourceInfo {
+            sample_rate,
+            frames: pcm.len() as u64,
+            channels: 2,
+        };
         Self {
-            pcm,
+            pcm: pcm.clone(),
             sample_rate,
             peaks,
+            source_info,
+            source_pcm: pcm,
         }
     }
 
@@ -33,8 +49,8 @@ impl AudioSource {
         pixels: usize,
     ) -> Result<Vec<f32>, &'static str> {
         self.peaks
-            .read_pixels(start, end, pixels, self.pcm.len(), |channel, frame| {
-                self.pcm[frame][channel]
+            .read_pixels(start, end, pixels, self.source_pcm.len(), |channel, frame| {
+                self.source_pcm[frame][channel]
             })
     }
 
@@ -90,7 +106,20 @@ impl AudioSource {
         if rate == 0 || target_rate == 0 {
             return Err("empty media or invalid sample rate".into());
         }
-        if rate != target_rate {
+        let original_sample_rate = rate;
+        let original_channels = channels as u32;
+        let source_frames = (interleaved.len() / channels) as u64;
+        let source_pcm: Vec<[f32; 2]> = interleaved
+            .chunks_exact(channels)
+            .map(|frame| [frame[0], frame[channels - 1]])
+            .collect();
+        let peaks = PeakPyramid::from_interleaved(source_pcm.as_flattened(), 2, 64, 32);
+        let source_info = SourceInfo {
+            sample_rate: original_sample_rate,
+            frames: source_frames,
+            channels: original_channels,
+        };
+        let pcm = if rate != target_rate {
             let frames = interleaved.len() / channels;
             let input =
                 InterleavedSlice::new(&interleaved, channels, frames).map_err(|e| e.to_string())?;
@@ -102,15 +131,39 @@ impl AudioSource {
                 FixedSync::Both,
             )
             .map_err(|e| e.to_string())?;
-            interleaved = resampler
+            let resampled = resampler
                 .process_all(&input, frames, None)
                 .map_err(|e| e.to_string())?
                 .take_data();
-        }
-        let pcm = interleaved
-            .chunks_exact(channels)
-            .map(|frame| [frame[0], frame[channels - 1]])
-            .collect();
-        Ok(Self::from_pcm(pcm, target_rate))
+            resampled
+                .chunks_exact(channels)
+                .map(|frame| [frame[0], frame[channels - 1]])
+                .collect()
+        } else {
+            source_pcm.clone()
+        };
+        Ok(Self {
+            pcm,
+            sample_rate: target_rate,
+            peaks,
+            source_info,
+            source_pcm,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_pcm_preserves_source_info() {
+        let pcm = vec![[0.1, -0.1], [0.5, -0.5], [-0.8, 0.8]];
+        let source = AudioSource::from_pcm(pcm, 44100);
+        assert_eq!(source.source_info.sample_rate, 44100);
+        assert_eq!(source.source_info.frames, 3);
+        assert_eq!(source.source_info.channels, 2);
+        let peaks = source.read_peaks(0, 3, 3).unwrap();
+        assert_eq!(peaks.len(), 12);
     }
 }

@@ -21,6 +21,13 @@ use zoeydaw_engine::{
 };
 
 type TelemetryCallback = ThreadsafeFunction<String, (), String, Status, false, true, 1>;
+#[napi(object)]
+pub struct SourceInfo {
+    pub sample_rate: u32,
+    pub frames: f64,
+    pub channels: u32,
+}
+
 enum Command {
     Apply(BackendRequest, Sender<String>),
     Subscribe(TelemetryCallback),
@@ -31,6 +38,7 @@ enum Command {
         usize,
         Sender<std::result::Result<Vec<f32>, String>>,
     ),
+    SourceInfo(String, Sender<Option<SourceInfo>>),
     Dispose,
 }
 struct Handle {
@@ -77,6 +85,18 @@ fn run(receiver: mpsc::Receiver<Command>) {
                     .map_err(Clone::clone)
                     .and_then(|session| session.read_peaks(&source, start, end, pixels));
                 let _ = reply.send(result);
+            }
+            Ok(Command::SourceInfo(source, reply)) => {
+                let info = session
+                    .as_ref()
+                    .ok()
+                    .and_then(|session| session.source_info(&source))
+                    .map(|info| SourceInfo {
+                        sample_rate: info.sample_rate,
+                        frames: info.frames as f64,
+                        channels: info.channels,
+                    });
+                let _ = reply.send(info);
             }
             Ok(Command::Dispose) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
@@ -195,4 +215,13 @@ pub fn read_peaks(
         .map_err(|e| error(e.to_string()))?
         .map(Float32Array::new)
         .map_err(error)
+}
+
+#[napi]
+pub fn source_info(session: u32, source_id: String) -> Result<Option<SourceInfo>> {
+    let (reply, receiver) = mpsc::channel();
+    sender(session)?
+        .send(Command::SourceInfo(source_id, reply))
+        .map_err(|e| error(e.to_string()))?;
+    receiver.recv().map_err(|e| error(e.to_string()))
 }

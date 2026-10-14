@@ -229,6 +229,10 @@ impl DeviceSession {
             .read_peaks(start, end, pixels)
             .map_err(str::to_owned)
     }
+
+    pub fn source_info(&self, source: &str) -> Option<crate::assets::SourceInfo> {
+        self.sources.get(source).map(|cached| cached.audio.source_info)
+    }
 }
 
 fn local_path(uri: &str) -> Result<PathBuf, String> {
