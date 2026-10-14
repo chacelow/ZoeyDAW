@@ -21,6 +21,13 @@ describe("iconMarkup", () => {
     expect(iconMarkup("Play", 1.5)).not.toBe(iconMarkup("Play", 2))
   })
 
+  test("a Phosphor glyph comes from the package asset, tinted by currentColor", () => {
+    const markup = iconMarkup("Metronome")
+    expect(markup.startsWith("<svg")).toBe(true)
+    expect(markup).toContain("currentColor")
+    expect(iconMarkup("Metronome")).toBe(markup)
+  })
+
   test("an unknown name fails loudly instead of drawing an empty glyph", () => {
     expect(() => iconMarkup("NotARealIcon" as never)).toThrow(RangeError)
   })
