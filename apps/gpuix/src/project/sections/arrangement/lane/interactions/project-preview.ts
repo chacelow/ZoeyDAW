@@ -13,7 +13,10 @@ export function synchronizeProjectScene(context: LaneContext): void {
     loop: state.document.transport.loop,
   })
   context.scene.setProjectPreview(state.session.preview)
-  context.scene.setPlayback(state.session)
+  context.scene.setPlayback({
+    playing: state.session.playing,
+    insertionPoint: state.session.insertionPoint,
+  })
   if (state.session.preview?.kind !== "tracks") {
     context.scene.setClipDrag(null)
     context.scene.setClipResize(null)

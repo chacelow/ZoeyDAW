@@ -4,7 +4,8 @@ import { positionToBar } from "../../../../model/types"
 import { uniqueId } from "../../../../model/reducers"
 import { parseAutomationClipboard } from "../../core/automation/clipboard"
 import { sortedPoints } from "../../core/automation/points"
-import type { LaneContext, NativeClipboard } from "./types"
+import type { LaneContext } from "./types"
+import type { NativeClipboard } from "../../../../../platform/clipboard"
 
 export function createLaneClipboard(
   context: LaneContext,

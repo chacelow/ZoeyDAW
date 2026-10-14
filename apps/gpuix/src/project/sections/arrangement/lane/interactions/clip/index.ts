@@ -71,19 +71,13 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
         pointer.y,
         context.getState().workspace.automationMode
       )
-      scene.setHover(
-        hit && "clip" in hit
-          ? {
-              id: hit.clip.id,
-              region:
-                hit.kind === "clip-title"
-                  ? "title"
-                  : hit.kind === "clip-resize"
-                    ? hit.region
-                    : "body",
-            }
-          : null
-      )
+      if (hit && "clip" in hit) {
+        const region =
+          hit.kind === "clip-title" ? "title" : hit.kind === "clip-resize" ? hit.region : "body"
+        const current = scene.get().hoverClip
+        if (current?.id !== hit.clip.id || current.region !== region)
+          scene.setHover({ id: hit.clip.id, region })
+      } else if (scene.get().hoverClip) scene.setHover(null)
       return hit?.kind === "clip-resize" || (hit?.kind === "clip-fade" && hit.handle !== "curve")
         ? "ew-resize"
         : hit?.kind === "clip-fade"

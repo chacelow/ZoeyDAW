@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react"
+import { useRef, useState } from "react"
 import { Input } from "../../../../../../../ui/controls"
 import { useTheme } from "../../../../../../../shared/theme/ThemeProvider"
 import { sx } from "../../../../../../../shared/theme/style"
@@ -8,14 +8,26 @@ import { TRACK_TITLE_HEIGHT } from "../../../../../../layout"
 import { visibleRows } from "../../../render-projection"
 import type { LaneTranslate } from "../../../messages"
 import type { LaneContext } from "../../types"
+import type { ArrangementScene } from "../../../../core/scene"
 
-export function ClipNameEditor({ context, t }: { context: LaneContext; t: LaneTranslate }) {
-  const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)
+export function ClipNameEditor({
+  context,
+  scene,
+  trackId,
+  originY,
+  t,
+}: {
+  context: LaneContext
+  scene: ArrangementScene
+  trackId: string
+  originY: number
+  t: LaneTranslate
+}) {
   const theme = useTheme()
   const selection = scene.targetSelection
   if (selection.kind !== "clip" || selection.phase !== "renaming") return null
-  const row = visibleRows(scene).find(item =>
-    item.track.clips.some(clip => clip.id === selection.id)
+  const row = visibleRows(scene).find(
+    item => item.track.id === trackId && item.track.clips.some(clip => clip.id === selection.id)
   )
   const clip = row?.track.clips.find(item => item.id === selection.id)
   if (!row || !clip || row.top < row.clipTop) return null
@@ -35,7 +47,7 @@ export function ClipNameEditor({ context, t }: { context: LaneContext; t: LaneTr
       initial={clipLabel(clip)}
       t={t}
       left={left}
-      top={Math.round(rect.top + 1)}
+      top={Math.round(rect.top + 1) - originY}
       width={width}
       height={Math.min(TRACK_TITLE_HEIGHT, row.height - 2)}
     />

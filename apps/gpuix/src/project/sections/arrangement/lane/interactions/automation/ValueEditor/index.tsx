@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react"
+import { useRef, useState } from "react"
 import { Input } from "../../../../../../../ui/controls"
 import { useTheme } from "../../../../../../../shared/theme/ThemeProvider"
 import { sx } from "../../../../../../../shared/theme/style"
@@ -14,11 +14,23 @@ import {
 } from "../../../../core/automation/geometry"
 import type { LaneTranslate } from "../../../messages"
 import type { LaneContext } from "../../types"
+import type { ArrangementScene } from "../../../../core/scene"
 
-export function AutomationValueEditor({ context, t }: { context: LaneContext; t: LaneTranslate }) {
-  const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)
+export function AutomationValueEditor({
+  context,
+  scene,
+  trackId,
+  originY,
+  t,
+}: {
+  context: LaneContext
+  scene: ArrangementScene
+  trackId: string
+  originY: number
+  t: LaneTranslate
+}) {
   const selection = scene.targetSelection
-  if (selection.kind !== "automation-value") return null
+  if (selection.kind !== "automation-value" || selection.trackId !== trackId) return null
   const row = activeAutomationRows(scene).find(
     item => item.track.id === selection.trackId && item.laneId === selection.laneId
   )
@@ -36,7 +48,7 @@ export function AutomationValueEditor({ context, t }: { context: LaneContext; t:
       parameter={row.parameter}
       initial={point.value}
       x={automationX(scene, point.bar)}
-      y={automationY(row, point.value)}
+      y={automationY(row, point.value) - originY}
     />
   )
 }

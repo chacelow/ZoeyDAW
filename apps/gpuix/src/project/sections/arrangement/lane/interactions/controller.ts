@@ -1,3 +1,5 @@
+import type { NativeClipboard } from "../../../../../platform/clipboard"
+import type { ArrangementViewport } from "../../core/scene"
 import { snapBar } from "../../../../model/grid-geometry"
 import { visibleTracks } from "../../../../model/types"
 import { automationBar } from "../../core/automation/geometry"
@@ -20,7 +22,6 @@ import type {
   LaneKey,
   LaneMenuTarget,
   LanePointer,
-  NativeClipboard,
 } from "./types"
 
 export interface LaneInteractionState {
@@ -48,7 +49,7 @@ export interface LaneController {
 export interface LaneControllerDeps extends LaneContext {
   clipboard: NativeClipboard
   edgePixels: number
-  setScroll(x: number, y: number): void
+  setScroll(x: number, y: number): ArrangementViewport
   onCursorChange?: (cursor: LaneCursor) => void
   onDragActiveChange?: (active: boolean) => void
   markDrawModeGesture?: () => void
@@ -171,7 +172,7 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
     },
     pointerLeave() {
       if (!active) {
-        context.scene.setHover(null)
+        if (context.scene.get().hoverClip) context.scene.setHover(null)
         publish("default")
       }
     },

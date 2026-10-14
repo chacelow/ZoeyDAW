@@ -9,14 +9,8 @@ import type { GridLine } from "../core/rulers/grid-lines"
 import { clipLoopTicks, midiPreviewRects, patternPreviewRects } from "./render-projection"
 import type { ClipCard } from "./render-projection"
 import { resolveLaneColor } from "./appearance"
-
-export type PeakReader = (
-  sourceId: string,
-  startBar: number,
-  endBar: number,
-  pixels: number,
-  contentOffsetBars: number
-) => Float32Array
+import type { PeakReader } from "./PeakReader"
+import { WaveformPreview } from "./WaveformPreview"
 
 export const ClipCardView = memo(function ClipCardView({
   card,
@@ -54,20 +48,8 @@ export const ClipCardView = memo(function ClipCardView({
           : [],
     [clip, g, numerator, viewportWidth]
   )
-  const sourceId = clip.kind === "audio" ? clip.samplePath : null
-  const contentOffsetBars = clip.sourceOffsetBars ?? 0
   const sourceStartBar = 1 + ((visibleLeft - g.left) / g.width) * clip.lengthBars
   const sourceEndBar = 1 + ((visibleLeft + width - g.left) / g.width) * clip.lengthBars
-  const pixels = Math.ceil(width)
-  const hasBody = g.bodyHeight > 0
-  const peaks = useMemo(
-    () =>
-      sourceId && hasBody && pixels > 0
-        ? readPeaks(sourceId, sourceStartBar, sourceEndBar, pixels, contentOffsetBars)
-        : new Float32Array(0),
-    [sourceId, sourceStartBar, sourceEndBar, pixels, contentOffsetBars, hasBody, readPeaks]
-  )
-  const channels = pixels > 0 ? peaks.length / (pixels * 2) : 0
   const loopTicks = useMemo(() => clipLoopTicks(clip, g, viewportWidth), [clip, g, viewportWidth])
   const fadeSource = useMemo(() => {
     const paths = g.fades
@@ -167,30 +149,21 @@ export const ClipCardView = memo(function ClipCardView({
               })}
             />
           ))}
-          {Array.from({ length: pixels * channels }, (_, index) => {
-            const pixel = Math.floor(index / channels)
-            const channel = index % channels
-            const channelHeight = g.bodyHeight / channels
-            const minimum = Math.max(-1, Math.min(1, peaks[index * 2] ?? 0))
-            const maximum = Math.max(-1, Math.min(1, peaks[index * 2 + 1] ?? 0))
-            const height = Math.max(1, ((maximum - minimum) * channelHeight) / 2)
-            return (
-              <div
-                key={index}
-                style={sx({
-                  position: "absolute",
-                  left: pixel,
-                  top:
-                    g.titleHeight + channel * channelHeight + ((1 - maximum) * channelHeight) / 2,
-                  width: 1,
-                  height,
-                  backgroundColor: ink,
-                  opacity: automationMode ? 0.4 : 1,
-                  pointerEvents: "none",
-                })}
-              />
-            )
-          })}
+          {clip.kind === "audio" && (
+            <WaveformPreview
+              id={clip.id}
+              sourceId={clip.samplePath}
+              startBar={sourceStartBar}
+              endBar={sourceEndBar}
+              contentOffsetBars={clip.sourceOffsetBars ?? 0}
+              width={width}
+              height={g.bodyHeight}
+              top={g.titleHeight}
+              color={ink}
+              opacity={automationMode ? 0.4 : 1}
+              readPeaks={readPeaks}
+            />
+          )}
           {!automationMode && !card.ghost && g.fades.some(fade => fade.handlesVisible) && (
             <>
               <svg

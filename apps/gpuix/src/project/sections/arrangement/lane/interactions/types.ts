@@ -27,11 +27,6 @@ export interface LaneContext {
   getState: () => ProjectState
 }
 
-export interface NativeClipboard {
-  readText(): string | null
-  writeText(text: string): void
-}
-
 export type LaneCursor =
   "default" | "grab" | "grabbing" | "not-allowed" | "ew-resize" | "move" | "crosshair" | "ns-resize"
 

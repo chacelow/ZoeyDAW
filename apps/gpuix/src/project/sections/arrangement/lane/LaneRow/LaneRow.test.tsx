@@ -6,7 +6,7 @@ import { createMockDocument } from "../../../../adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import { LaneContents } from "./Contents"
 import { layoutTrackRows } from "../../core/layout"
-import { PlayheadLayer } from "../PlayheadLayer"
+import { LaneOverlay } from "../LaneOverlay"
 
 let root: TestRoot | undefined
 afterEach(() => {
@@ -131,7 +131,7 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
               }}
             />
           </div>
-          <PlayheadLayer scene={scene.get()} transportBar={4} />
+          <LaneOverlay scene={scene.get()} viewport={scene.get().viewport} transportBar={4} />
         </div>
       </ThemeProvider>
     )
