@@ -14,7 +14,8 @@
     "@zoeydaw/native": "workspace:*",
     "@zoeymind/ui": "workspace:*",
     "culori": "^4.0.2",
-    "react": "^19.2.0"
+    "react": "^19.2.0",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
