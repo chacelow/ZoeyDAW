@@ -32,6 +32,7 @@
   --project-minimap-min-height: 32px;
   --project-minimap-max-height: 90px;
   --project-timeline-min-height: 160px;
+  --project-timeline-auto-scroll-edge: 42px;
 }
 
 .project-transport {

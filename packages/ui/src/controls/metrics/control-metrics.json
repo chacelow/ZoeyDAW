@@ -30,6 +30,7 @@
     "trackBorder": 2,
     "minimapMinHeight": 32,
     "minimapMaxHeight": 90,
-    "timelineMinHeight": 160
+    "timelineMinHeight": 160,
+    "timelineAutoScrollEdge": 42
   }
 }
