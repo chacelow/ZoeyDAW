@@ -6,6 +6,7 @@ const sections = fileURLToPath(new URL("../../", import.meta.url))
 const tests = [
   `${sections}footer/EffectChain/edit-devices.test.tsx`,
   `${sections}transport/metronome.test.ts`,
+  `${sections}footer/EffectChain/DeviceDisplay/response.test.ts`,
 ]
 const mutations = [
   {
@@ -28,6 +29,13 @@ const mutations = [
     from: "Math.floor(ordinal) % 2",
     to: "Math.floor(ordinal) % 3",
     invariant: "property: adjacent accepted beats",
+  },
+  {
+    name: "device-quadratic-control-sign",
+    file: "footer/EffectChain/DeviceDisplay/response.ts",
+    from: "control.x - start.x",
+    to: "control.x + start.x",
+    invariant: "property: quadratic device responses",
   },
 ]
 const baseline = spawnSync(process.execPath, ["test", ...tests], { encoding: "utf8" })
