@@ -1,0 +1,176 @@
+# Arrangement 计算核心
+
+B1，2026-10-15。这里只接收坐标、工程模型和显式手势数据，返回几何、命中结果或编辑投影。不读取界面节点，不注册输入，不提交工程事务。
+
+## 所有权与坐标
+
+- 工程数据由既有 project Store/runtime 持有。`createSceneStore()` 只保存实例内的展示投影、选择与预览，不导出全局实例。
+- 手势 baseline 与累积值由调用方持有。`moveFadeDrag()`、`paintAutomation()` 返回下一状态，不改输入。
+- 时间从 bar 1 开始。横坐标统一为 `(bar - 1) * pxPerBar - scrollX`。
+- `project/model/grid`、`grid-geometry` 和 `timeline-ticks` 保持唯一模型实现。`rulers/grid-lines.ts` 只把场景已有的 `gridPlan` 投影成有 major/minor 分类的可见线。
+- 轨道度量及 resize 直接使用 `project/layout`，不复制控件高度常量。
+- `meters/meter-peak.ts` 保持原来的显式时间输入与原位更新 API。它不读取时钟、不启动采样。
+
+## 迁移文件
+
+来源根目录为 `apps/web/src/pages/project/sections/ArrangementPanel/`，目标均相对本目录。原文件保留只读。
+
+| 来源 | 目标 | 处理 |
+| --- | --- | --- |
+| `canvas/scene.ts` | `scene.ts` | 保留 store API，去掉模块级 singleton |
+| `canvas/layout.ts` | `layout.ts` | 保留轨道、Clip、滚动布局 |
+| `canvas/hit-test.ts` | `hit-test.ts` | 保留命中优先级、边缘容差与折叠规则 |
+| `canvas/clip-geometry.ts` | `clip-geometry.ts` | 保留像素取整和 fade 几何 |
+| `MiniMap/zoom.ts` | `viewport/zoom.ts` | 保留双边缩放；修正下拖方向 |
+| `canvas/interactions/clip/fade.ts` | `clip/fade.ts` | 抽出 baseline 与移动 reducer |
+| `canvas/interactions/clip/timeRange.ts` | `clip/timeRange.ts` | 抽出跨轨范围投影与零宽提交判断 |
+| `canvas/interactions/rulers/geometry.ts` | `rulers/geometry.ts` | 去掉输入壳类型，直接接收 Point |
+| `canvas/interactions/automation/geometry.ts` | `automation/geometry.ts` | 保留行、值、时间投影 |
+| `canvas/interactions/automation/hit.ts` | `automation/hit.ts` | 直接接收 scene 与 Point |
+| `canvas/interactions/automation/points.ts` | `automation/points.ts` | 抽出选择、移动、静止删除判断 |
+| `canvas/interactions/automation/segment.ts` | `automation/segment.ts` | 抽出端点移动、弯曲、插点判断 |
+| `canvas/interactions/automation/selection.ts` | `automation/selection.ts` | 抽出矩形选择 |
+| `canvas/interactions/automation/clipboard.ts` | `automation/clipboard.ts` | 保留未知输入解析与边界校验 |
+| `canvas/interactions/automation/drawing.ts` | `automation/drawing.ts` | 抽出显式绘制状态 reducer |
+| `canvas/interactions/automation/flat.ts` | `automation/flat.ts` | 抽出 held line 插点与提交条件 |
+| `canvas/interactions/automation/index.ts` | `automation/index.ts` | 抽出手势分派与 hover 光标判断 |
+| `canvas/interactions/automation/preview.ts` | `automation/points.ts` | 只抽 `sortedPoints()`，不改输入数组 |
+| `canvas/painters/meter-peak.ts` | `meters/meter-peak.ts` | 保留电平范围、hold 和衰减规则 |
+| `canvas/painters/playhead.ts` | `clip-alignment.ts` | 只抽对齐线位置 |
+| `canvas/painters/grid.ts`、`canvas/painters/rulers/loop.ts` | `rulers/grid-lines.ts` | 只抽可见分层网格线和编号间距 |
+| `canvas/interactions/controller.ts` | `interactions/layers.ts` | 只抽交互层分派和 3px 拖动阈值 |
+| `Timeline/Viewport/useTimelineViewport.ts` | `viewport/zoom.ts` | 只抽 clamp、anchor zoom、pan 与 follow |
+| `MiniMap/useMinimapGesture.ts` | `viewport/minimap.ts` | 只抽 hit、jump、anchor ratio 与 body drag |
+
+## B2 计算接口
+
+具体输入结构与导出类型同实现文件。以下签名列出从副作用文件抽出的计算入口。`Point` 为 `{ x: number; y: number }`。
+
+```ts
+// clip-alignment.ts
+alignmentBar(scene: ArrangementScene): number | null
+
+// interactions/layers.ts
+interactionLayer(scene: ArrangementScene, pointer: Point, automationMode: boolean): "ruler" | "clip" | "automation"
+dragStarted(origin: Point, current: Point): boolean
+
+// clip/fade.ts
+beginFadeDrag(clip: AudioClip, edge: "in" | "out", handle: "length" | "curve", origin: Point, pxPerBar: number, height: number): FadeDrag
+moveFadeDrag(state: FadeDrag, current: Point, pxPerBar: number): { state: FadeDrag; patch: Partial<AudioClip> | null }
+
+// clip/timeRange.ts
+timeRangeSelection(scene: ArrangementScene, startBar: number, trackId: string, previousTrackIds: readonly string[], pointer: Point, snap: boolean, automationMode: boolean): TimeSelection
+committedTimeRange(selection: TimeSelection): TimeSelection | null
+
+// automation/hit.ts
+hitAutomation(scene: ArrangementScene, pointer: Point): AutomationHit | null
+
+// automation/points.ts
+sortedPoints(points: readonly AutomationPoint[]): AutomationPoint[]
+selectedPointIds(existing: readonly string[], pointId: string, shift: boolean): string[]
+movePoints(input: MovePointsInput): AutomationPoint[]
+deletePointOnRelease(cancelled: boolean, moved: boolean, shift: boolean, ids: readonly string[]): boolean
+
+// automation/segment.ts
+moveSegment(source: readonly AutomationPoint[], fromId: string, toId: string, delta: number, bend: boolean): AutomationPoint[]
+insertSegmentPoint(from: AutomationPoint, to: AutomationPoint, bar: number, snap: boolean, cellBars: number, endBar: number, bypass?: boolean): Omit<AutomationPoint, "id">
+shouldInsertSegmentPoint(cancelled: boolean, changed: boolean, bend: boolean, near: boolean): boolean
+
+// automation/selection.ts
+marqueePointIds(row: AutomationRow, originBar: number, endBar: number, originY: number, endY: number): string[]
+
+// automation/flat.ts
+flatLinePoint(bar: number, value: number, snap: boolean, cellBars: number, endBar: number, bypass?: boolean): Omit<AutomationPoint, "id">
+shouldInsertFlatPoint(cancelled: boolean, moved: boolean): boolean
+
+// automation/drawing.ts
+paintAutomation(input: PaintInput): PaintResult
+
+// automation/index.ts
+automationAction(hit: AutomationHit | null, drawMode: boolean, button: number): AutomationAction | null
+automationCursor(hit: AutomationHit | null, drawMode: boolean): "crosshair" | "grab" | "ns-resize" | undefined
+
+// rulers/grid-lines.ts
+numberedRulerPlan(pxPerBar: number, numerator: number): { mode: "sixteenth" | "beat" | "bar"; stepBars: number }
+gridLines(scene: ArrangementScene, left?: number, right?: number): GridLine[]
+
+// viewport/zoom.ts
+zoomAtAnchor(input: ZoomAnchorInput & { nextPxPerBar: number }): MinimapViewport
+wheelZoom(input: ZoomAnchorInput & { deltaY: number }): MinimapViewport
+stepZoom(input: Omit<ZoomAnchorInput, "anchorX"> & { direction: -1 | 1 }): MinimapViewport
+clampTimelineViewport(input: TimelineViewportInput): TimelineViewport
+panViewport(input: PanViewportInput): { scrollX: number; scrollY: number }
+followViewport(input: FollowViewportInput): number
+clampScrollX(scrollX: number, bars: number, pxPerBar: number, viewportWidth: number): number
+
+// viewport/minimap.ts
+minimapHit(x: number, width: number, geometry: MinimapGeometry): MinimapHit
+minimapPointerDown(input: { x: number; width: number; geometry: MinimapGeometry }): MinimapAnchor | null
+minimapDragBody(input: { geometry: MinimapGeometry; width: number; initialScrollX: number; zoomAnchorRatio: number; deltaX: number; deltaY: number }): MinimapViewport
+```
+
+`paintAutomation()` 的 `idPrefix` 由 B2 在手势开始时分配，必须在工程内唯一。`DrawingState.nextId` 是本手势计数器，重绘同一 cell 保留 ID。取消手势直接丢弃返回值，工程提交与撤销仍由 B2 的 runtime 事务负责。
+
+缩放锚点在未撞到工程边界时保持像素位置。到达 scroll clamp 后，边界优先，无法同时保持越界的锚点。Minimap 下拖减小 `pxPerBar`，上拖增大；水平锚点采用按下位置在选区内的比例，不固定中心。
+
+Pattern Ghost 及任一侧 resize 的对齐线均返回当前预览 Clip 的左起点。该规则覆盖 web 右侧 resize 原先画到尾部的行为。
+
+## 未迁移与 B2 归属
+
+| web 文件 | 原因 | B2 消费方 |
+| --- | --- | --- |
+| `canvas/interactions/controller.ts`、`coordinates.ts`、`autoScroll.ts` | 输入注册、捕获、坐标采集、调度留在宿主层 | 交互切片 |
+| `clip/fade.ts`、`clip/timeRange.ts` 的手势壳，`clip/move.ts`、`clip/resize.ts` | 工程事务、preview、commit、cancel 留在 runtime 调用层 | Clip 交互切片 |
+| `automation/{points,segment,selection,drawing,flat,index,preview,commands}.ts` 的副作用壳 | 选择同步、剪贴板访问、工程预览、撤销不属于计算核心 | automation 交互切片 |
+| `Timeline/Viewport/useTimelineViewport.ts` | 测量、输入、订阅和 follow 调度 | 时间轴切片 |
+| `MiniMap/useMinimapGesture.ts` | 捕获、光标恢复、帧合并和提交 | Minimap 切片 |
+| 其余 painter、scheduler、scene sync、audio telemetry writer | 绘制或订阅，不属于 B1 | 渲染及播放展示切片 |
+| `canvas/audio/ring-buffer.ts` | gpuix 无消费者；accepted telemetry 已由 runtime 的 `readProjectTelemetry()`、`readTransportBar()` 持有，无需再造共享内存展示缓存 | 不迁；B2 直接消费既有 telemetry |
+
+8 个原纯测试文件原行为断言迁入，包含 fractional hit、clipboard 与 meter peak。fade 与 automation 手势测试改为计算层行为测试，保留 peak/quiet、边界反向、跨轨、拖动、碰撞、绘制、1/256 与 segment 断言。原输入捕获、工程 token、commit/cancel、undo 及播放副作用断言不伪造为纯测试，留给上述 B2 消费方。其余未迁实现的原测试同样不迁。
+
+B1 没有未实现的计算函数；不包含 B2 的渲染、输入、工程事务或音频 DSP。
+
+## 验证记录
+
+运行目录为 `apps/gpuix`，除非命令显式使用根目录路径。
+
+| 命令或检查 | 实测结果 |
+| --- | --- |
+| 根目录 `pnpm install --frozen-lockfile` | 成功，无依赖清单变化 |
+| 根目录 `pnpm native:build` | 成功，为全应用检查生成既有原生包 |
+| `pnpm exec tsc --noEmit` | 通过，0 diagnostics |
+| `bun test src/project/sections/arrangement/core` | 101 pass，0 fail，15 files，88320 assertions |
+| `bun test` | 397 pass，1 existing todo，0 fail，57 files |
+| `bun test --randomize --seed 75956` | 397 pass，1 existing todo，0 fail |
+| `bun test --randomize --seed 15890` | 397 pass，1 existing todo，0 fail |
+| 每个 core 测试文件独立 `bun test <file>` | 15 files 全通过 |
+| 根目录 `pnpm exec eslint apps/gpuix/src/project/sections` | 通过，0 errors，0 warnings，包含 gpuix-layers |
+| 禁止宿主标识符扫描 | 零命中 |
+| 独立 `bun -e` 场景 | 下拖后 64 → 38.81796222160854 px/bar；bar 23.5 锚点保持 x=160；x=43 吸附 bar 1.25，命中同一条可见网格线 |
+
+本切片不修改 Rust，无需 cargo 检查。按切片验收例外未启动窗口或服务。初次检查因未安装依赖与未生成原生包失败，完成上述准备后类型和完整测试均通过。
+
+### 变异检查
+
+`bun src/project/sections/arrangement/core/verification/mutations.mjs` 先检查原版，再逐个变异、运行整个 core suite，并在 finally 恢复原文件。脚本要求对应性质组明确失败，语法错误不计通过。不要与其他写入本目录的工作并行运行。
+
+| 变异                                       | 失败用例数 |
+| ------------------------------------------ | ---------: |
+| hit-left-tolerance：左边缘容差减 1         |          1 |
+| hit-right-sign：翻转右边缘距离符号         |          5 |
+| time-scroll-sign：反向 scrollX             |          2 |
+| time-origin：bar 起点从 1 改 0             |          2 |
+| snap-disabled：关闭 ruler 吸附             |          3 |
+| snap-double-cell：吸附 cell 翻倍           |          3 |
+| fade-curve-unclamped：去掉纵向 clamp       |          5 |
+| fade-position-unclamped：去掉横向 clamp    |          5 |
+| zoom-offset-sign：翻转锚点像素补偿         |          6 |
+| zoom-anchor-scale：锚点时间计算 scale 翻倍 |          7 |
+| minimap-direction：反转上下缩放方向        |          7 |
+
+前十项分别约束命中、时间往返、网格吸附、fade 序列、缩放锚点，每组至少两项。全部恢复后再运行完整检查。固定种子 LCG 性质测试覆盖 500 组命中、3000 组时间转换、1500 组吸附、500 组缩放和 600 × 10 次 fade 拖动。
+
+### 进程清理
+
+根目录执行 `ps -axo pid,etime,command | grep -E 'bun .*--hot|cargo run|gallery|demo'`，输出为 `(no output)`，退出码 1，表示没有匹配进程。本切片没有启动长驻进程。
