@@ -21,6 +21,13 @@ use zoeydaw_engine::{
 };
 
 type TelemetryCallback = ThreadsafeFunction<String, (), String, Status, false, true, 1>;
+#[napi(object)]
+pub struct SourceInfo {
+    pub sample_rate: u32,
+    pub frames: f64,
+    pub channels: u32,
+}
+
 enum Command {
     Apply(BackendRequest, Sender<String>),
     Subscribe(TelemetryCallback),
@@ -31,6 +38,15 @@ enum Command {
         usize,
         Sender<std::result::Result<Vec<f32>, String>>,
     ),
+    PeaksAtBars {
+        source: String,
+        start_bar: f64,
+        end_bar: f64,
+        pixels: usize,
+        content_offset_bars: f64,
+        reply: Sender<Vec<f32>>,
+    },
+    SourceInfo(String, Sender<Option<SourceInfo>>),
     Dispose,
 }
 struct Handle {
@@ -77,6 +93,40 @@ fn run(receiver: mpsc::Receiver<Command>) {
                     .map_err(Clone::clone)
                     .and_then(|session| session.read_peaks(&source, start, end, pixels));
                 let _ = reply.send(result);
+            }
+            Ok(Command::PeaksAtBars {
+                source,
+                start_bar,
+                end_bar,
+                pixels,
+                content_offset_bars,
+                reply,
+            }) => {
+                let peaks = session.as_ref().map_or_else(
+                    |_| Vec::new(),
+                    |session| {
+                        session.read_peaks_at_bars(
+                            &source,
+                            start_bar,
+                            end_bar,
+                            pixels,
+                            content_offset_bars,
+                        )
+                    },
+                );
+                let _ = reply.send(peaks);
+            }
+            Ok(Command::SourceInfo(source, reply)) => {
+                let info = session
+                    .as_ref()
+                    .ok()
+                    .and_then(|session| session.source_info(&source))
+                    .map(|info| SourceInfo {
+                        sample_rate: info.sample_rate,
+                        frames: info.frames as f64,
+                        channels: info.channels,
+                    });
+                let _ = reply.send(info);
             }
             Ok(Command::Dispose) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
@@ -195,4 +245,44 @@ pub fn read_peaks(
         .map_err(|e| error(e.to_string()))?
         .map(Float32Array::new)
         .map_err(error)
+}
+
+#[napi]
+pub fn source_info(session: u32, source_id: String) -> Result<Option<SourceInfo>> {
+    let (reply, receiver) = mpsc::channel();
+    sender(session)?
+        .send(Command::SourceInfo(source_id, reply))
+        .map_err(|e| error(e.to_string()))?;
+    receiver.recv().map_err(|e| error(e.to_string()))
+}
+
+/// One-based clip-local bars on the applied project tempo, sampled at the
+/// decoded source rate. Signed `contentOffsetBars` wraps like clip playback.
+/// Same layout as `readPeaks`. Unknown sources and empty or non-finite
+/// ranges yield `pixels*4` zeros; `pixels` of 0 or above 16384, or a session
+/// whose device failed to open, yield an empty array.
+#[napi]
+pub fn read_peaks_at_bars(
+    session: u32,
+    source_id: String,
+    start_bar: f64,
+    end_bar: f64,
+    pixels: u32,
+    content_offset_bars: f64,
+) -> Result<Float32Array> {
+    let (reply, receiver) = mpsc::channel();
+    sender(session)?
+        .send(Command::PeaksAtBars {
+            source: source_id,
+            start_bar,
+            end_bar,
+            pixels: pixels as usize,
+            content_offset_bars,
+            reply,
+        })
+        .map_err(|e| error(e.to_string()))?;
+    receiver
+        .recv()
+        .map(Float32Array::new)
+        .map_err(|e| error(e.to_string()))
 }

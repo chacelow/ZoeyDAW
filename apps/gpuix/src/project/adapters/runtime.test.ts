@@ -55,6 +55,7 @@ function deferredBackend() {
         listeners.delete(listener)
       }
     },
+    readPeaks: () => new Float32Array(0),
     dispose() {
       listeners.clear()
     },
@@ -129,6 +130,7 @@ it("does not create backend resources on import, factory construction, or hydrat
         }
       },
       subscribe: () => () => {},
+      readPeaks: () => new Float32Array(0),
       dispose() {
         disposed++
       },
@@ -351,6 +353,7 @@ it("disposes backend resources on the last page lease and reopens a fresh epoch"
         }
       },
       subscribe: () => () => {},
+      readPeaks: () => new Float32Array(0),
       dispose() {
         instance.disposed = true
       },
@@ -450,6 +453,7 @@ it("keeps each edit owner's backend id stable and its undo history separate", ()
     subscribe() {
       return () => {}
     },
+    readPeaks: () => new Float32Array(0),
     dispose() {},
   }))
   const first = projectActions.beginEdit("bpm")

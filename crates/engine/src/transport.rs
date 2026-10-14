@@ -59,6 +59,14 @@ pub fn frame_to_bar(clock: TransportClock, frame: u64) -> f64 {
     1.0 + (frame as f64 / f64::from(clock.sample_rate)) * clock.bars_per_second
 }
 
+/// Signed source offset in bars, wrapped into `0..frames` like looped clip
+/// playback. `None` for an empty source.
+pub fn source_offset_frame(clock: TransportClock, offset_bars: f64, frames: u64) -> Option<u64> {
+    let offset =
+        (offset_bars / clock.bars_per_second * f64::from(clock.sample_rate)).round() as i128;
+    (frames > 0).then(|| offset.rem_euclid(i128::from(frames)) as u64)
+}
+
 /// Allocation-free source ranges for a render block, including repeated loops.
 /// Positions before the loop start play through normally; positions at or past
 /// the loop end wrap before rendering. Without a loop, the frame domain ends
@@ -232,6 +240,20 @@ mod tests {
             assert_eq!(bar_to_frame(clock, 0.9), 0);
             assert_eq!(bar_to_frame(clock, 2.0), 2 * u64::from(sample_rate));
         }
+    }
+
+    #[test]
+    fn source_offset_wraps_signed_bars_into_the_source() {
+        let clock = TransportClock::new(44100, 0.5).unwrap();
+        assert_eq!(source_offset_frame(clock, 0.0, 1000), Some(0));
+        assert_eq!(source_offset_frame(clock, 0.5, 100_000), Some(44100));
+        assert_eq!(
+            source_offset_frame(clock, -0.5, 100_000),
+            Some(100_000 - 44100)
+        );
+        assert_eq!(source_offset_frame(clock, -0.5, 44100), Some(0));
+        assert_eq!(source_offset_frame(clock, -3.0, 1000), Some(400));
+        assert_eq!(source_offset_frame(clock, 1.0, 0), None);
     }
 
     #[test]
