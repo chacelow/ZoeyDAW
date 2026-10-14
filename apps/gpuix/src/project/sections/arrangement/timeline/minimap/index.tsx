@@ -22,6 +22,7 @@ export interface MiniMapProps {
   cursor: CursorLockPort
   onNavigate: () => void
   onViewport: (viewport: MinimapViewport) => void
+  onFit: () => void
   registerGesture?: (gesture: MinimapGesture) => () => void
 }
 
@@ -33,6 +34,7 @@ export function MiniMap({
   cursor,
   onNavigate,
   onViewport,
+  onFit,
   registerGesture,
 }: MiniMapProps) {
   const theme = useTheme()
@@ -94,8 +96,11 @@ export function MiniMap({
         cursor: pointer,
       })}
       onMouseDown={event => {
-        if ((event.clickCount ?? 1) >= 2) gesture.fit()
-        else gesture.down({ x: event.x ?? 0, y: event.y ?? 0 }, event.button)
+        if (event.button !== undefined && event.button !== 0) return
+        if ((event.clickCount ?? 1) >= 2) {
+          gesture.up()
+          onFit()
+        } else gesture.down({ x: event.x ?? 0, y: event.y ?? 0 }, event.button)
       }}
       onMouseMove={event => {
         gesture.move({ x: event.x ?? 0, y: event.y ?? 0 })
@@ -113,7 +118,8 @@ export function MiniMap({
           event.preventDefault()
           event.stopPropagation()
         } else if (event.key === "enter") {
-          gesture.fit()
+          gesture.up()
+          onFit()
           event.preventDefault()
           event.stopPropagation()
         }

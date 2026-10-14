@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
-import { arrangementBodyBottom, pinnedTrackHeight } from "../../core/layout"
+import {
+  arrangementBodyBottom,
+  BAR_RULER_HEIGHT,
+  layoutTrackRows,
+  pinnedTrackHeight,
+} from "../../core/layout"
 import { visibleTracks } from "@/project/model/types"
 import { createTimelineViewport } from "./controller"
 import { createTimelineController } from "../controller"
@@ -16,10 +21,11 @@ afterEach(() => {
   owners.length = 0
 })
 
-function ownScene(scene: SceneStore) {
+const size = { containerWidth: 1104, bodyHeight: 320, timelineLeft: 304 }
+function ownScene(scene: SceneStore, initialSize = size) {
   const owner = createTimelineController({
     sceneStore: scene,
-    initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 304 },
+    initialSize,
     metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
     keyboard: { focus: () => "timeline", blurControl: () => {} },
     subscribeWindowActive: () => () => {},
@@ -35,10 +41,69 @@ beforeEach(() => {
   projectActions.setViewport({ pxPerBar: 100, scrollX: 2000, scrollY: 30 })
 })
 
-const size = { containerWidth: 1104, bodyHeight: 320, timelineLeft: 304 }
 const control = { ctrl: true, cmd: false, alt: false, shift: false }
 
 describe("Authoritative timeline viewport", () => {
+  test("native frame ticks follow only after playback reaches the music viewport center", () => {
+    projectActions.setViewport({ scrollX: 0, scrollY: 0 })
+    projectActions.setFollow(true)
+    const owner = ownScene(createSceneStore(), {
+      containerWidth: 704,
+      bodyHeight: 300,
+      timelineLeft: 0,
+    })
+    projectActions.togglePlay()
+    projectActions.seekBar(2)
+    owner.tick(0)
+    expect(useProjectState.getState().workspace.scrollX).toBe(0)
+    projectActions.seekBar(3.5)
+    owner.tick(16)
+    expect(useProjectState.getState().workspace.scrollX).toBe(50)
+    projectActions.seekBar(3.75)
+    owner.tick(32)
+    expect(useProjectState.getState().workspace.scrollX).toBe(75)
+    projectActions.seekBar(1.25)
+    owner.tick(48)
+    expect(useProjectState.getState().workspace.scrollX).toBe(0)
+  })
+
+  test("Follow disabled or stopped playback cannot move the viewport", () => {
+    projectActions.setViewport({ scrollX: 0, scrollY: 0 })
+    projectActions.setFollow(true)
+    const owner = ownScene(createSceneStore(), {
+      containerWidth: 704,
+      bodyHeight: 300,
+      timelineLeft: 0,
+    })
+    projectActions.seekBar(5)
+    owner.tick(0)
+    expect(useProjectState.getState().workspace.scrollX).toBe(0)
+    projectActions.setFollow(false)
+    projectActions.togglePlay()
+    owner.tick(16)
+    expect(useProjectState.getState().workspace.scrollX).toBe(0)
+    projectActions.setFollow(true)
+    owner.tick(32)
+    expect(useProjectState.getState().workspace.scrollX).toBe(200)
+    projectActions.stop()
+    projectActions.seekBar(8)
+    owner.tick(48)
+    expect(useProjectState.getState().workspace.scrollX).toBe(200)
+  })
+
+  test("explicit editor focus reveals its offscreen track without resetting musical scroll", () => {
+    const owner = ownScene(createSceneStore(), {
+      containerWidth: 1104,
+      bodyHeight: 200,
+      timelineLeft: 0,
+    })
+    projectActions.setEditingClip("audio-1")
+    const row = layoutTrackRows(owner.sceneStore.get()).find(item => item.track.id === "3-audio")
+    if (!row) throw new Error("Audio track missing")
+    expect(row.top).toBe(BAR_RULER_HEIGHT)
+    expect(useProjectState.getState().workspace.scrollX).toBe(2000)
+  })
+
   test("vertical wheel changes only tracks, horizontal or Shift wheel changes only musical scroll", () => {
     const viewport = createTimelineViewport(() => size)
     viewport.wheel({ elementId: 0, eventType: "scroll", deltaY: -20 })
@@ -57,7 +122,7 @@ describe("Authoritative timeline viewport", () => {
     expect(useProjectState.getState().workspace.scrollY).toBe(50)
   })
 
-  test("Ctrl wheel preserves the music point under the pointer and consumed numeric wheel cannot move canvas", () => {
+  test("Ctrl wheel preserves the music point under the pointer", () => {
     const viewport = createTimelineViewport(() => size)
     const anchor = (2000 + 240) / 100
     viewport.wheel({
@@ -70,8 +135,6 @@ describe("Authoritative timeline viewport", () => {
     const after = useProjectState.getState().workspace
     expect((after.scrollX + 240) / after.pxPerBar).toBeCloseTo(anchor)
     expect(after.scrollY).toBe(30)
-    expect(viewport.wheel({ elementId: 0, eventType: "scroll", deltaY: 100 }, true)).toBe(false)
-    expect(useProjectState.getState().workspace).toBe(after)
   })
 
   test("layout changes clamp logical scroll and no negative viewport survives zero-size windows", () => {

@@ -10,7 +10,6 @@ export interface TimelineLabels {
   readonly musicRuler: string
   readonly timeRuler: string
   readonly horizontalScroll: string
-  readonly verticalScroll: string
   readonly resizeOverview: string
   readonly snap: string
   readonly grid: string

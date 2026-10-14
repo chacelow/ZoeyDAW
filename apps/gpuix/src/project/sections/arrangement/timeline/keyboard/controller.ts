@@ -87,7 +87,7 @@ export function createTimelineKeyboard({
         return true
       }
       if (target === "clip-editor") return false
-      if (claim(event)) return true
+      if (target === "timeline" && claim(event)) return true
       const state = useProjectState.getState()
       if (modified) {
         if (alt) return false

@@ -28,7 +28,7 @@ export interface TimelineViewportController {
   read: () => TimelineViewportSnapshot
   suspendFollow: () => void
   clamp: () => void
-  wheel: (event: EventPayload, consumed?: boolean) => boolean
+  wheel: (event: EventPayload) => boolean
   zoom: (direction: -1 | 1) => void
   reveal: (trackId: string) => void
   follow: (transportBar: number) => void
@@ -80,8 +80,7 @@ export function createTimelineViewport(readSize: () => TimelineSize): TimelineVi
         projectActions.setViewport({ pxPerBar, scrollX, scrollY })
       }
     },
-    wheel(event: EventPayload, consumed = false) {
-      if (consumed) return false
+    wheel(event: EventPayload) {
       const size = readSize()
       const view = readTimelineViewport(size)
       const modifiers = event.modifiers

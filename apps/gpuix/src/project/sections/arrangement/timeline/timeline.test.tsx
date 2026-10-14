@@ -10,6 +10,7 @@ import { Rulers, TimeRuler } from "./rulers"
 import { createTimelineController } from "./controller"
 import { englishLabels } from "./demo-labels"
 import { flushSync } from "@gpuix/react"
+import { Button } from "@/ui/controls"
 
 const disposals: Array<() => void> = []
 afterEach(() => {
@@ -37,9 +38,22 @@ function makeScene() {
   return scene
 }
 
+function timelineOwner(scene = createSceneStore()) {
+  const owner = createTimelineController({
+    sceneStore: scene,
+    initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
+    metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
+    keyboard: { focus: () => "timeline", blurControl: () => {} },
+    subscribeWindowActive: () => () => {},
+  })
+  disposals.push(owner.dispose)
+  return owner
+}
+
 describe("Native timeline layout and hit testing", () => {
   test("Minimap survives a jitter and continues hidden-cursor dragging through store renders", () => {
     projectActions.setViewport({ pxPerBar: 100, scrollX: 4000 })
+    const owner = timelineOwner()
     const root = createTestRoot({ width: 1280, height: 100 })
     disposals.push(root.unmount)
     let hidden = false
@@ -67,6 +81,7 @@ describe("Native timeline layout and hit testing", () => {
             cursor={cursor}
             onNavigate={() => {}}
             onViewport={projectActions.setViewport}
+            onFit={owner.fitToProject}
             geometry={{
               bars: 128,
               viewportWidth: 800,
@@ -97,9 +112,15 @@ describe("Native timeline layout and hit testing", () => {
     root.renderer.nativeSimulateMouseUp(440, 80)
     expect(hidden).toBe(false)
     expect(restored).toBe(true)
+    const overview = root.renderer.findByTestId("timeline-minimap")
+    if (!overview) throw new Error("Overview missing")
+    root.renderer.nativeSimulateKeystrokes(overview.id, "enter")
+    expect(useProjectState.getState().workspace.pxPerBar).toBe(6.25)
+    expect(useProjectState.getState().workspace.scrollX).toBe(0)
   })
 
   test("folded descendants keep their overview clips and vertical track scroll cannot move the minimap", () => {
+    const owner = timelineOwner()
     const root = createTestRoot({ width: 1280, height: 100 })
     disposals.push(root.unmount)
     root.render(
@@ -111,6 +132,7 @@ describe("Native timeline layout and hit testing", () => {
           cursor={{ capture: () => null, hide: () => {}, restore: () => {} }}
           onNavigate={() => {}}
           onViewport={projectActions.setViewport}
+          onFit={owner.fitToProject}
           geometry={{
             bars: 128,
             viewportWidth: 800,
@@ -170,14 +192,7 @@ describe("Native timeline layout and hit testing", () => {
     const id = projectActions.addMarker(3)
     if (!id) throw new Error("Marker not created")
     projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
-    const owner = createTimelineController({
-      sceneStore: scene,
-      initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
-      metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
-      keyboard: { focus: () => "timeline", blurControl: () => {} },
-      subscribeWindowActive: () => () => {},
-    })
-    disposals.push(owner.dispose)
+    const owner = timelineOwner(scene)
     const root = createTestRoot({
       width: 800,
       height: 100,
@@ -210,6 +225,50 @@ describe("Native timeline layout and hit testing", () => {
       4.5
     )
     expect(useProjectState.getState().session.position).toEqual(before)
+  })
+
+  test("Enter on a focused native control cannot also rename a selected locator", () => {
+    const id = projectActions.addMarker(3)
+    if (!id) throw new Error("Locator missing")
+    projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
+    const owner = createTimelineController({
+      sceneStore: createSceneStore(),
+      initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
+      metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
+      keyboard: { focus: () => "control", blurControl: () => {} },
+      subscribeWindowActive: () => () => {},
+    })
+    disposals.push(owner.dispose)
+    owner.view.rulers.down(200, 8)
+    owner.view.rulers.up()
+    const root = createTestRoot({ width: 300, height: 100, onKeyDown: owner.keyboard.down })
+    disposals.push(root.unmount)
+    function Harness() {
+      const snap = useProjectState(state => state.workspace.snap)
+      return (
+        <ThemeProvider>
+          <Button
+            testId="snap-control"
+            label="Snap"
+            active={snap}
+            onActiveChange={projectActions.setSnap}
+          >
+            Snap
+          </Button>
+        </ThemeProvider>
+      )
+    }
+    root.render(<Harness />)
+    const before = useProjectState.getState().workspace.snap
+    const button = root.renderer.findByTestId("snap-control")
+    if (!button) throw new Error("Snap control missing")
+    root.renderer.nativeSimulateKeystrokes(button.id, "enter")
+    expect(useProjectState.getState().workspace.snap).toBe(!before)
+    expect(owner.sceneStore.get().targetSelection).toEqual({
+      kind: "marker",
+      id,
+      phase: "selected",
+    })
   })
 
   test("real-time ruler rescales with BPM while retaining the music scroll origin", () => {

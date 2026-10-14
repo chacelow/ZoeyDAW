@@ -14,6 +14,7 @@ import type { MinimapGesture } from "./minimap/gesture"
 import type { RulerController } from "./rulers/controller"
 import type { TimelineAutoScroll } from "./viewport/auto-scroll"
 import type { TimelineSize } from "./viewport/controller"
+import type { SessionState } from "@/project/model/types"
 
 export interface TimelinePresentation {
   readonly size: TimelineSize
@@ -28,7 +29,7 @@ export interface TimelineView {
   measure: (size: TimelineSize) => void
   setOverviewHeight: (height: number) => void
   overviewGeometry: () => MinimapGeometry
-  wheel: (event: EventPayload, consumed?: boolean) => boolean
+  wheel: (event: EventPayload) => boolean
   stepZoom: (direction: -1 | 1) => void
   suspendFollow: () => void
   registerMinimap: (gesture: MinimapGesture) => () => void
@@ -117,6 +118,8 @@ export function createTimelineController({
   let epoch = useProjectState.getState().session.editEpoch
   let clipIds = useProjectState.getState().session.selectedClipIds
   let trackIds = useProjectState.getState().session.selectedTrackIds
+  let revealedClip: SessionState["editingClipId"] | undefined
+  let revealedHeight: number | undefined
 
   function synchronize() {
     if (disposed) return
@@ -130,6 +133,19 @@ export function createTimelineController({
     }
     viewport.clamp()
     const current = useProjectState.getState()
+    if (
+      revealedClip !== current.session.editingClipId ||
+      revealedHeight !== presentation.size.bodyHeight
+    ) {
+      revealedClip = current.session.editingClipId
+      revealedHeight = presentation.size.bodyHeight
+      if (revealedClip && revealedHeight > 0) {
+        const track = current.document.tracks.find(item =>
+          item.clips.some(clip => clip.id === revealedClip)
+        )
+        if (track) viewport.reveal(track.id)
+      }
+    }
     const projection = viewport.read()
     sceneStore.setMusic({
       bars: projection.bars,

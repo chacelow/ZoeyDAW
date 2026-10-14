@@ -90,6 +90,45 @@ describe("Arrangement keyboard boundaries", () => {
     expect(useProjectState.getState().workspace.drawMode).toBe(!original)
   })
 
+  test("a tapped B creates one preference undo entry", () => {
+    hydrateProject(
+      JSON.stringify({
+        version: 2,
+        document: createMockDocument(),
+        workspace: { ...createMockWorkspace(), drawMode: false, computerKeyboard: false },
+      })
+    )
+    keyboard.down(key("b"))
+    expect(useProjectState.getState().workspace.drawMode).toBe(false)
+    keyboard.up(key("b"))
+    expect(useProjectState.getState().workspace.drawMode).toBe(true)
+    projectActions.undo()
+    expect(useProjectState.getState().workspace.drawMode).toBe(false)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
+  })
+
+  test("used held B is excluded from an authored edit snapshot and adds no tool history", () => {
+    hydrateProject(
+      JSON.stringify({
+        version: 2,
+        document: createMockDocument(),
+        workspace: { ...createMockWorkspace(), drawMode: false, computerKeyboard: false },
+      })
+    )
+    keyboard.down(key("b"))
+    keyboard.markDrawGesture()
+    projectActions.beginEdit()
+    projectActions.setBpm(130)
+    projectActions.endEdit()
+    keyboard.up(key("b"))
+    expect(useProjectState.getState().workspace.drawMode).toBe(false)
+    expect(useProjectState.getState().session.drawModeOverride).toBeNull()
+    projectActions.undo()
+    expect(useProjectState.getState().document.transport.bpm).toBe(120)
+    expect(useProjectState.getState().workspace.drawMode).toBe(false)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
+  })
+
   test("MIDI input wins over arrangement commands and releases notes after mode-off or text focus", () => {
     projectActions.setMode("computerKeyboard", true)
     const automation = useProjectState.getState().workspace.automationMode

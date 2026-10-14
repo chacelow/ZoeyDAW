@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react"
-import { useGpuix } from "@gpuix/react"
+import { useCallback, useEffect, useSyncExternalStore } from "react"
 import { useWindowKeyboard } from "@/platform/keyboard"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -11,7 +10,7 @@ import { Grid } from "../grid"
 import { MiniMap } from "../minimap"
 import { Rulers, TimeRuler } from "../rulers"
 import { Toolbar } from "../toolbar"
-import type { EventPayload, PublicInstance } from "@gpuix/react"
+import type { EventPayload } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { CursorLockPort } from "@/ui/controls"
 import type { PanelDimensions } from "@/ui/panels"
@@ -35,8 +34,6 @@ export function ArrangementTimeline({
 }: ArrangementTimelineProps) {
   const theme = useTheme()
   const keyboard = useWindowKeyboard()
-  const { renderer } = useGpuix()
-  const body = useRef<PublicInstance | null>(null)
   const view = controller.view
   const current = useSyncExternalStore(controller.sceneStore.subscribe, controller.sceneStore.get)
   const presentation = useSyncExternalStore(view.subscribe, view.getSnapshot)
@@ -77,20 +74,6 @@ export function ArrangementTimeline({
       })
     },
     [view]
-  )
-
-  const onScroll = useCallback(
-    (event: EventPayload) => {
-      const bounds = body.current && renderer?.getElementBounds?.(body.current.id)
-      if (bounds)
-        view.measure({
-          containerWidth: bounds.width,
-          bodyHeight: bounds.height,
-          timelineLeft: bounds.x,
-        })
-      view.wheel(event)
-    },
-    [renderer, view]
   )
 
   return (
@@ -139,6 +122,7 @@ export function ArrangementTimeline({
             cursor={cursor}
             onNavigate={view.suspendFollow}
             onViewport={projectActions.setViewport}
+            onFit={controller.fitToProject}
             registerGesture={view.registerMinimap}
           />
           <ControlledScrollbar
@@ -158,7 +142,6 @@ export function ArrangementTimeline({
         <PanelDivider orientation="horizontal" aria-label={labels.resizeOverview} />
         <Panel minSize={theme.project.timelineMinHeight}>
           <div
-            ref={body}
             role="application"
             aria-label={labels.timeline}
             tabIndex={0}
@@ -173,7 +156,7 @@ export function ArrangementTimeline({
               backgroundColor: theme.colors.arrangementSurfaceAlt,
             })}
             onLayout={onLayout}
-            onScroll={onScroll}
+            onScroll={view.wheel}
           >
             <div
               style={sx({

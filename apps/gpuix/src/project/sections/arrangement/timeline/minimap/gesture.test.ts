@@ -102,7 +102,7 @@ describe("Minimap navigation ownership", () => {
     }
   })
 
-  test("outside click navigates, double-click fits, cancellation restores the press baseline", () => {
+  test("outside click navigates and cancellation restores the press baseline", () => {
     const a = mount()
     a.gesture.down({ x: 1000, y: 21 })
     expect(a.state().scrollX).toBe(9600)
@@ -114,9 +114,6 @@ describe("Minimap navigation ownership", () => {
     expect(a.state().scrollX).toBe(4000)
     expect(a.state().pxPerBar).toBe(100)
     expect(a.hidden()).toBe(false)
-    a.gesture.fit()
-    expect(a.state().pxPerBar).toBe(6.25)
-    expect(a.state().scrollX).toBe(0)
   })
 
   test("zoom preserves the pointer ratio across randomized interior anchors", () => {

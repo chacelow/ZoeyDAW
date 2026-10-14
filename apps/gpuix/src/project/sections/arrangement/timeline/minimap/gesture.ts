@@ -1,5 +1,6 @@
 import { minimapDragBody, minimapPointerDown } from "../../core/viewport/minimap"
 import { minimapDragLeftEdge, minimapDragRightEdge } from "../../core/viewport/zoom"
+import { dragStarted } from "../../core/interactions/layers"
 import type { MinimapAnchor, MinimapGeometry } from "../../core/viewport/minimap"
 import type { MinimapViewport } from "../../core/viewport/zoom"
 import type { CursorLockPort, ScreenPoint } from "@/ui/controls"
@@ -36,7 +37,6 @@ export interface MinimapGesture {
   up: () => void
   cancel: () => void
   dispose: () => void
-  fit: () => void
 }
 
 /** The store owns the viewport; this controller owns only a pointer-down baseline. */
@@ -92,7 +92,7 @@ export function createMinimapGesture({
       const deltaX = point.x - press.origin.x
       const deltaY = point.y - press.origin.y
       if (press.phase === "pressed") {
-        if (Math.hypot(deltaX, deltaY) < 3) return
+        if (!dragStarted(press.origin, point)) return
         press.phase = "dragging"
         if (press.cursor) {
           cursor.hide()
@@ -127,18 +127,5 @@ export function createMinimapGesture({
     up: () => finish(),
     cancel: () => finish(true),
     dispose: () => finish(true),
-    fit() {
-      finish()
-      const { geometry } = read()
-      if (geometry.viewportWidth <= 0) return
-      navigate()
-      publish({
-        pxPerBar: Math.max(
-          geometry.minPxPerBar,
-          Math.min(geometry.maxPxPerBar, geometry.viewportWidth / geometry.bars)
-        ),
-        scrollX: 0,
-      })
-    },
   }
 }
