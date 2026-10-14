@@ -1,3 +1,15 @@
+import { isApplicationActive } from "@zoeydaw/native"
+import { createApplicationActiveSubscription } from "./application-active"
+
+/** One lazy sampler per application; null preserves active gestures on unsupported hosts. */
+export const subscribeApplicationActive = createApplicationActiveSubscription({
+  readActive: isApplicationActive,
+  startSampling: (sample, intervalMs) => {
+    const timer = setInterval(sample, intervalMs)
+    return () => clearInterval(timer)
+  },
+})
+
 /**
  * 窗口平台端口。这里**自己声明**需要的最小能力(结构类型),不 import `@gpuix/native`:
  * platform 层不依赖渲染器包(`architecture/gpuix-layers` 规则会拦),换渲染器只需让新的
