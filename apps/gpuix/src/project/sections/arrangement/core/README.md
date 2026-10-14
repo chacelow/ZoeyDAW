@@ -91,8 +91,9 @@ automationAction(hit: AutomationHit | null, drawMode: boolean, button: number): 
 automationCursor(hit: AutomationHit | null, drawMode: boolean): "crosshair" | "grab" | "ns-resize" | undefined
 
 // rulers/grid-lines.ts
-numberedRulerPlan(pxPerBar: number, numerator: number): { mode: "sixteenth" | "beat" | "bar"; stepBars: number }
+numberedRulerPlan(pxPerBar: number, numerator: number, denominator?: number): { mode: "sixteenth" | "beat" | "bar"; stepBars: number }
 gridLines(scene: ArrangementScene, left?: number, right?: number): GridLine[]
+patternRegions(scene: ArrangementScene): PatternRegion[] // 编号 Pattern 的明暗区域，跟随编号小节而非细网格；timeline 与 lane 共用
 
 // viewport/zoom.ts
 zoomAtAnchor(input: ZoomAnchorInput & { nextPxPerBar: number }): MinimapViewport
