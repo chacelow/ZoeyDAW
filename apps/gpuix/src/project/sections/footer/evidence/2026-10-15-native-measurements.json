@@ -1,0 +1,197 @@
+{
+  "renderer": "fixed-main-native-test-renderer",
+  "measurements": [
+    {
+      "name": "browser",
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "bounds": {
+        "browser-panel": {
+          "x": 0,
+          "y": 0,
+          "width": 320,
+          "height": 640
+        },
+        "browser-split": {
+          "x": 0,
+          "y": 30,
+          "width": 320,
+          "height": 610
+        },
+        "browser-search": {
+          "x": 36,
+          "y": 2,
+          "width": 265,
+          "height": 11
+        },
+        "browser-navigation-panel": {
+          "x": 0,
+          "y": 30,
+          "width": 90,
+          "height": 610
+        },
+        "browser-navigation-divider": {
+          "x": 90,
+          "y": 30,
+          "width": 7,
+          "height": 610
+        },
+        "browser-results-panel": {
+          "x": 97,
+          "y": 30,
+          "width": 223,
+          "height": 610
+        },
+        "browser-results": {
+          "x": 97,
+          "y": 75,
+          "width": 223,
+          "height": 550
+        },
+        "browser-entry-tunings-12-TET": {
+          "x": 97,
+          "y": 75,
+          "width": 223,
+          "height": 17
+        },
+        "browser-entry-instruments-wavetable": {
+          "x": 97,
+          "y": 1027,
+          "width": 223,
+          "height": 17
+        }
+      },
+      "retainedBefore": 1124,
+      "retainedAfter": 1124,
+      "scroll": [0, -419],
+      "frames": {
+        "frames": 21,
+        "samples": 21,
+        "currentMs": 9.44487476348877,
+        "p90Ms": 12.675000190734863,
+        "p99Ms": 12.725500106811523,
+        "maxMs": 72.85287475585938
+      }
+    },
+    {
+      "name": "transport",
+      "viewport": {
+        "width": 620,
+        "height": 100
+      },
+      "bounds": {
+        "transport-scroll": {
+          "x": 0,
+          "y": 0,
+          "width": 620,
+          "height": 20
+        },
+        "transport-left": {
+          "x": 0,
+          "y": 0,
+          "width": 543,
+          "height": 20
+        },
+        "transport-center": {
+          "x": 555,
+          "y": 0,
+          "width": 272,
+          "height": 20
+        },
+        "transport-right": {
+          "x": 851,
+          "y": 0,
+          "width": 162,
+          "height": 20
+        },
+        "transport-play": {
+          "x": 702,
+          "y": 0,
+          "width": 20,
+          "height": 20
+        },
+        "transport-stop": {
+          "x": 726,
+          "y": 0,
+          "width": 20,
+          "height": 20
+        },
+        "transport-record": {
+          "x": 774,
+          "y": 0,
+          "width": 20,
+          "height": 20
+        }
+      },
+      "retainedBefore": 223,
+      "retainedAfter": 223,
+      "scroll": null,
+      "frames": {
+        "frames": 15,
+        "samples": 15,
+        "currentMs": 1.7300000190734863,
+        "p90Ms": 1.7300000190734863,
+        "p99Ms": 1.9137080907821655,
+        "maxMs": 22.733457565307617
+      }
+    },
+    {
+      "name": "footer",
+      "viewport": {
+        "width": 955,
+        "height": 300
+      },
+      "bounds": {
+        "footer-divider": {
+          "x": 0,
+          "y": 0,
+          "width": 955,
+          "height": 7
+        },
+        "footer-content": {
+          "x": 0,
+          "y": 7,
+          "width": 955,
+          "height": 184
+        },
+        "device-device-363d499a-bfd2-4490-8735-0d034aa83ece": {
+          "x": 2,
+          "y": 39,
+          "width": 256,
+          "height": 133
+        },
+        "device-device-06978987-9332-4270-a99e-81e89874656c": {
+          "x": 260,
+          "y": 39,
+          "width": 256,
+          "height": 133
+        },
+        "device-device-44b6c1f0-d199-49fc-8e36-01b24db21115": {
+          "x": 518,
+          "y": 39,
+          "width": 256,
+          "height": 133
+        },
+        "device-device-035e1fb7-dbb5-44d6-b07b-b7d0348ca42d": {
+          "x": 776,
+          "y": 39,
+          "width": 256,
+          "height": 133
+        }
+      },
+      "retainedBefore": 317,
+      "retainedAfter": 317,
+      "scroll": null,
+      "frames": {
+        "frames": 14,
+        "samples": 14,
+        "currentMs": 1.7925000190734863,
+        "p90Ms": 3.376458168029785,
+        "p99Ms": 5.453166961669922,
+        "maxMs": 17.648792266845703
+      }
+    }
+  ]
+}
