@@ -1,6 +1,6 @@
-import { useState } from "react"
 import { useTheme } from "../../../shared/theme/ThemeProvider"
 import { sx, sv } from "../../../shared/theme/style"
+import { stopTextShortcutPropagation } from "../keyboard"
 import type { InputProps as NativeInputProps } from "@gpuix/react"
 
 export interface InputProps extends NativeInputProps {
@@ -14,14 +14,12 @@ export function Input({
   invalid = false,
   onValueChange,
   onChange,
-  onFocus,
-  onBlur,
+  onKeyDown,
   readOnly,
   style,
   ...props
 }: InputProps) {
   const theme = useTheme()
-  const [focused, setFocused] = useState(false)
   const variants = sv({
     base: {
       height: theme.control["--spacing-control-track"],
@@ -34,11 +32,16 @@ export function Input({
       paddingLeft: 6,
       paddingRight: 6,
       minWidth: 0,
+      keyboardFocusDim: false,
+      focusVisible: {
+        outlineWidth: 1,
+        outlineColor: theme.colors.ring,
+        outlineOffset: -1,
+      },
     },
     variants: {
       state: {
         default: {},
-        focused: { borderColor: theme.colors.ring },
         invalid: { borderColor: theme.colors.destructive },
       },
       disabled: { true: { opacity: 0.5, cursor: "not-allowed" }, false: {} },
@@ -57,23 +60,19 @@ export function Input({
       }}
       style={sx(
         variants({
-          state: invalid ? "invalid" : focused ? "focused" : "default",
+          state: invalid ? "invalid" : "default",
           disabled: disabled ? "true" : "false",
         }),
         style
       )}
+      onKeyDown={event => {
+        onKeyDown?.(event)
+        if (!disabled && !readOnly) stopTextShortcutPropagation(event)
+      }}
       onChange={event => {
         if (disabled || readOnly) return
         if (event.value !== undefined) onValueChange?.(event.value)
         onChange?.(event)
-      }}
-      onFocus={event => {
-        setFocused(true)
-        onFocus?.(event)
-      }}
-      onBlur={event => {
-        setFocused(false)
-        onBlur?.(event)
       }}
     />
   )
