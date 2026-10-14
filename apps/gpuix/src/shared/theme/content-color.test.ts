@@ -4,10 +4,10 @@ import { CONTENT_PALETTE, contentFill, resolveContentColor } from "./content-col
 
 describe("resolveContentColor", () => {
   test("every palette token follows the active theme", () => {
+    const keys = ["chart1", "chart2", "chart3", "chart4", "chart5"] as const
     for (const [index, token] of CONTENT_PALETTE.entries()) {
-      const key = `chart${index + 1}` as const
-      expect(resolveContentColor(token, lightColors)).toBe(lightColors[key])
-      expect(resolveContentColor(token, darkColors)).toBe(darkColors[key])
+      expect(resolveContentColor(token, lightColors)).toBe(lightColors[keys[index]])
+      expect(resolveContentColor(token, darkColors)).toBe(darkColors[keys[index]])
     }
   })
 
