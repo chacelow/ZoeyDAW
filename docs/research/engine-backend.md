@@ -157,6 +157,6 @@ export function musicalPeakReader(session: number): PeakReader
 - **布局**：与 `readPeaks` 相同，channel-major，其次 pixel-major，每项 `[min, max]`，立体声 `pixels × 4` 个 f32。
 - **失败语义**：不抛错、不产生 NaN。未知素材、尚未 apply 工程、`endBar ≤ startBar`、任一参数非有限，返回 `pixels × 4` 个 0；`pixels` 为 0 或大于 16384、或会话设备打开失败，返回空数组。
 - **TS 侧**：`musicalPeakReader(session)` 返回满足组合契约 `PeakReader` 签名的闭包，原样转发到 `readPeaksAtBars`，不含任何换算公式，也不再接收 `bpm`/拍号（引擎已持有）。
-- **验证**：`apps/gpuix/src/platform/engine.test.ts` 对真实 napi 断言 44.1kHz 源在 120BPM 4/4 下恰好一小节、平移不变、跨末尾回绕、负偏移取模、静音边界。变异检查：去掉取模（起点不取模且忽略偏移）2 失败，忽略偏移 2 失败，换成设备采样率 4 失败，`rem_euclid` 换成 `%` 1 失败（Cargo 另 3 失败），去掉末尾回绕 2 失败（Cargo 另 1 失败）。
+- **验证**：`apps/gpuix/src/platform/engine.test.ts` 对真实 napi 断言 44.1kHz 源在 120BPM 4/4 下恰好一小节、可见范围平移等于内容偏移平移、跨末尾回绕、负偏移取模、静音边界。变异检查（6 个 TS 测试）：去掉取模（起点不取模且忽略偏移）2 失败，忽略偏移 2 失败，换成设备采样率 4 失败，`rem_euclid` 换成 `%` 1 失败（Cargo 另 3 失败），去掉末尾回绕 3 失败（Cargo 另 1 失败）。
 
 API 依据：[Firewheel node contract](https://github.com/billydm/firewheel/blob/main/_autodocs/api-reference/core-node.md)、[Firewheel 0.14.0](https://docs.rs/firewheel/0.14.0/firewheel/)、[Symphonia 0.6.1](https://docs.rs/symphonia/0.6.1/symphonia/)、[Rubato 5.0.1](https://docs.rs/rubato/5.0.1/rubato/)。具体签名以本机 Cargo.lock 对应源码和实际构建结果为准。
