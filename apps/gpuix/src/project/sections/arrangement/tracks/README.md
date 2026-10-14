@@ -76,3 +76,7 @@ TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane
 Visibility and reorder hit candidates share one projection. Return/Main remain bottom-anchored; when they exceed the available height, the pinned viewport is clipped below the reserved top gap and hidden pinned headers unmount. No offscreen lane content is retained solely to preserve an editor.
 
 Native test windows can be smaller than requested: a requested 1200px height was accepted as 1021px after the display change. Behavior tests now obtain the accepted size through `useWindowSize`, just like the real demo, so pinned controls are not falsely tested outside the native hit region.
+
+## Prototype cutover
+
+The ten files under `features/track-mixer` are removed. LSP reference checks found no external consumers of its exported controls or formatters. Its captured-drag lifetime, controlled toggle state, volume fill and bipolar pan behavior are now provided by the shared A3 controls consumed above, rather than retained as a second UI family. The old demo's independently writable `Track[]` is not carried forward: the new verification entry authors the real project store and acquires the native backend explicitly.
