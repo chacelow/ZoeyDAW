@@ -1,3 +1,5 @@
+import { useRef } from "react"
+import { useGpuix } from "@gpuix/react"
 import { useTrackLabels } from "../labels"
 import { Button } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -7,7 +9,7 @@ import { contentFill } from "@/shared/theme/content-color"
 import { TrackNameInput } from "./NameInput"
 import { AutomationSelector } from "./AutomationSelector"
 import { Icon } from "@/ui/controls/Icon"
-import type { KeyEvent, Props } from "@gpuix/react"
+import type { KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { Track } from "@/project/model/types"
 
 export function TrackIdentity({
@@ -33,6 +35,8 @@ export function TrackIdentity({
 }) {
   const { t } = useTrackLabels()
   const theme = useTheme()
+  const { renderer } = useGpuix()
+  const identity = useRef<PublicInstance | null>(null)
   const ink = theme.colors.arrangementClipInk
   const automation = useProjectState(state => state.workspace.automationMode)
   const gutter = (railCount + (track.kind === "group" ? 1 : 0)) * theme.project.groupRailWidth
@@ -57,6 +61,7 @@ export function TrackIdentity({
   }
   return (
     <div
+      ref={identity}
       role="group"
       aria-label={`${t("trackIdentity")} ${track.name}`}
       testId={`track-identity-${track.id}`}
@@ -77,7 +82,9 @@ export function TrackIdentity({
           : contentFill(track.color, theme.colors),
         focusVisible: focusRing,
       }}
-      onKeyDown={handleKeyDown}
+      onKeyDown={event => {
+        if (renderer?.getFocusedElementId?.() === identity.current?.id) handleKeyDown(event)
+      }}
     >
       <div
         testId={`track-title-${track.id}`}

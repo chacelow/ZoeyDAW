@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { COLLAPSED_TRACK_HEIGHT, MAX_TRACK_HEIGHT } from "@/project/layout"
@@ -11,7 +12,7 @@ import { TrackMenu } from "../TrackMenu"
 import { GroupOverview } from "../GroupOverview"
 import { useTrackResize } from "./useTrackResize"
 import type { ReactNode } from "react"
-import type { KeyEvent, Props } from "@gpuix/react"
+import type { KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { GroupRail } from "@/project/model/track-groups"
 import type { Track } from "@/project/model/types"
 import type { TrackRow as TrackRowGeometry } from "../../core/layout"
@@ -42,8 +43,9 @@ export function TrackRow({
 }) {
   const { track } = row
   const theme = useTheme()
+  const { renderer } = useGpuix()
+  const laneElement = useRef<PublicInstance | null>(null)
   const { t } = useTrackLabels()
-  const tracks = useProjectState(state => state.document.tracks)
   const selection = useProjectState(state => state.session.selectedTrackIds)
   const surface = useProjectState(state => state.session.trackSelectionSurface)
   const selected = selection.includes(track.id)
@@ -51,7 +53,7 @@ export function TrackRow({
   const resizeHandlers = useTrackResize(track)
   const choose = (target: "arrangement" | "header", range: boolean, additive: boolean) => {
     if (range && selection.length) {
-      const ids = visibleTracks(tracks).map(item => item.id)
+      const ids = visibleTracks(useProjectState.getState().document.tracks).map(item => item.id)
       const start = ids.indexOf(selection[0] ?? "")
       const end = ids.indexOf(track.id)
       if (start !== -1 && end !== -1) {
@@ -115,6 +117,7 @@ export function TrackRow({
         }}
       >
         <div
+          ref={laneElement}
           role="group"
           aria-label={`${t("trackLane")} ${track.name}`}
           tabIndex={0}
@@ -139,7 +142,10 @@ export function TrackRow({
                 Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
               )
           }}
-          onKeyDown={selectFromKeyboard}
+          onKeyDown={event => {
+            if (renderer?.getFocusedElementId?.() === laneElement.current?.id)
+              selectFromKeyboard(event)
+          }}
         >
           {showLane ? (
             track.kind === "group" && track.collapsed ? (

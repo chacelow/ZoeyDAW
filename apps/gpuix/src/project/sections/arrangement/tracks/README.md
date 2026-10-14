@@ -64,6 +64,10 @@ Selection/editing handlers consume Enter/F2, resize consumes its arrow keys, and
 
 Native rename opts into F1 `selectAllOnFocus`. Direct typing after F2 now replaces the existing name without synthesizing Cmd+A. The autofocus/input-Space/Tab subset passes 3 tests with 8 assertions.
 
+Container Enter actions check native focus ownership, not `event.elementId`: native ancestor callbacks report the handler node's ID. Fold controls and lane-slot children therefore keep their own selection behavior. A native slot test proves Cmd click and Enter preserve child-controller selection; the real lane implementation remains a cross-slice integration check. Rows read full topology only inside range-selection handling rather than subscribing to every track edit.
+
+`Row/interaction.test.tsx` is slightly over 600 lines because one native-root fixture covers the migrated Web matrix and the capture/selection/keyboard/slot transitions. Keeping the fixture local avoids exporting test-registration side effects or duplicating project hydration. Production modules remain below the threshold; no file approaches 1000 lines.
+
 All icons now use `ui/controls/Icon` (`Headphones`, `Circle`, `ChevronDown`, `ChevronRight`); there is no locally authored SVG markup or font-glyph icon. Keyboard focus uses the native `focusVisible` inset outline without changing track geometry.
 
 ## 公共接口

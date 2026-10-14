@@ -20,6 +20,8 @@ import type { ArrangementViewport } from "../../core/scene"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createControlledFrames } from "../verification/frame-source"
+import { Button } from "@/ui/controls"
+import type { TrackRowsProps } from "../TrackRows"
 
 const controlledFrames = createControlledFrames()
 
@@ -43,10 +45,12 @@ function Surface({
   view,
   focusedTrackId,
   appearance = "dark",
+  renderLane = row => <text testId={`lane-content-${row.track.id}`}>{row.track.name}</text>,
 }: {
   readonly view: ArrangementViewport
   readonly focusedTrackId: string | null
   readonly appearance?: Appearance
+  readonly renderLane?: TrackRowsProps["renderLane"]
 }) {
   const size = useWindowSize()
   const acceptedViewport = { ...view, ...size }
@@ -69,7 +73,7 @@ function Surface({
             if (!useProjectState.getState().session.selectedTrackIds.includes(id))
               projectActions.selectTracks([id], "header")
           }}
-          renderLane={row => <text testId={`lane-content-${row.track.id}`}>{row.track.name}</text>}
+          renderLane={renderLane}
         />
       </ThemeProvider>
     </AnimationFrameProvider>
@@ -424,6 +428,7 @@ test("Space reaches the window transport once without toggling a focused Solo co
   root.renderer.nativeSimulateKeyUp(solo.id, "space")
   expect(current("3-audio").solo).toBe(false)
   expect(spaces).toBe(1)
+  expect(root.renderer.findByTestId("track-menu-3-audio")).toBeUndefined()
 })
 
 test("Space on a focused level remains a transport key rather than starting numeric editing", () => {
@@ -550,6 +555,7 @@ test("Enter on Solo changes the control without replacing independent header sel
   expect(current("3-audio").solo).toBe(true)
   expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
   expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
+  expect(root.renderer.findByTestId("track-menu-3-audio")).toBeUndefined()
 })
 
 test("visible descendants retain their group frame when its parent header is offscreen", () => {
@@ -566,4 +572,46 @@ test("F2 autofocus selects the native track name for direct replacement", () => 
   root.renderer.nativeSimulateKeystrokes(element(root, "track-label-3-audio").id, "f2")
   root.renderer.simulateKeystrokes("N e w enter")
   expect(current("3-audio").name).toBe("New")
+})
+
+test("Enter on a fold control preserves unrelated header selection", () => {
+  projectActions.selectTracks(["4-midi"], "header")
+  const root = mount()
+  root.renderer.nativeSimulateKeystrokes(element(root, "track-fold-3-audio").id, "enter")
+  expect(current("3-audio").collapsed).toBe(true)
+  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
+  expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
+})
+
+test("interactive lane children keep their mouse and keyboard selection ownership", () => {
+  projectActions.selectTracks(["3-audio"], "arrangement")
+  const root = createTestRoot({ width: 1000, height: 500 })
+  roots.push(root)
+  root.render(
+    <Surface
+      view={{ ...viewport, height: 500 }}
+      focusedTrackId={null}
+      renderLane={row => (
+        <Button
+          testId={`slot-${row.track.id}`}
+          label="Clip body"
+          onMouseDown={() => projectActions.selectTracks([row.track.id], "arrangement")}
+          onClick={() => projectActions.updateTrack(row.track.id, { mute: !row.track.mute })}
+        >
+          Clip
+        </Button>
+      )}
+    />
+  )
+  root.renderer.flush()
+  const slot = bounds(root, "slot-3-audio")
+  root.renderer.nativeSimulateClick(slot.x + slot.width / 2, slot.y + slot.height / 2, 0, "cmd")
+  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["3-audio"])
+  expect(useProjectState.getState().session.trackSelectionSurface).toBe("arrangement")
+  expect(current("3-audio").mute).toBe(true)
+  flushSync(() => projectActions.selectTracks(["4-midi"], "header"))
+  root.renderer.nativeSimulateKeystrokes(element(root, "slot-3-audio").id, "enter")
+  expect(current("3-audio").mute).toBe(false)
+  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
+  expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
 })
