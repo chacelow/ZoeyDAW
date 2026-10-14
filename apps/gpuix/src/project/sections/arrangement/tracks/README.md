@@ -82,7 +82,7 @@ TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane
 
 `TrackRow` owns the whole track: lane on the left, then colored identity, routing and Mixer on the right, following the observed Live order. It owns the single outer top/bottom border. Group frames span the visible branch, rails are painted above row borders, expanded groups do not duplicate descendant previews, and folded groups render a shared-geometry descendant overview.
 
-Group frame calculation is limited to visible group IDs and the existing model-projected ancestors of visible rows. A parent header can unmount while its frame still wraps visible descendants. This avoids scanning every offscreen group without adding another hierarchy model or shared API.
+Group frame calculation indexes last descendant rows in one memoized pass over row ancestry, then reads the result for visible group IDs. A parent header can unmount while its frame still wraps visible descendants. There is no per-frame-group scan of all tracks and no second hierarchy model or shared API.
 
 Collapsed Audio fade masks belong to Clip titles in lane's `ClipFades`, using B1's real fade metadata and hidden folded handles. `TrackIdentity` has no independent static fade decoration. Older layout screenshots are historical geometry evidence, not current fade or theme acceptance.
 
