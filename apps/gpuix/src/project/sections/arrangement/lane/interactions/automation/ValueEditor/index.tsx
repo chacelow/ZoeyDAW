@@ -162,9 +162,13 @@ function ValueInput({
         paddingRight: theme.control["--spacing-control-gap"],
       })}
       onKeyDown={event => {
-        if (event.key === "enter") finish(true)
-        else if (event.key === "escape") finish(false)
+        event.stopPropagation()
+        if (event.key === "escape") {
+          event.preventDefault()
+          finish(false)
+        }
       }}
+      onSubmit={() => finish(true)}
       onBlur={() => finish(true)}
       onMouseDownOutside={() => finish(true)}
     />

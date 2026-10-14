@@ -75,7 +75,10 @@ export const ClipCardView = memo(function ClipCardView({
       aria-pressed={card.selected}
       tabIndex={card.ghost ? -1 : 0}
       onKeyDown={event => {
-        if (event.key === "enter") onActivate(clip.id)
+        if (event.key !== "enter") return
+        event.preventDefault()
+        event.stopPropagation()
+        onActivate(clip.id)
       }}
       style={sx({
         position: "absolute",
@@ -86,6 +89,9 @@ export const ClipCardView = memo(function ClipCardView({
         overflow: "hidden",
         userSelect: "none",
         opacity: card.ghost ? 0.5 : 1,
+        pointerEvents: "none",
+        keyboardFocusDim: false,
+        focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
       })}
     >
       <div

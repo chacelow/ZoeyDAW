@@ -1,0 +1,393 @@
+import { afterEach, expect, it } from "bun:test"
+import { useSyncExternalStore } from "react"
+import { createTestRoot } from "@gpuix/react/testing"
+import type { TestRoot } from "@gpuix/react/testing"
+import type { NativeClipboard } from "../../../../../platform/clipboard"
+import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
+import { hydrateProject, projectActions, useProjectState } from "../../../../adapters"
+import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
+import { createSceneStore } from "../../core/scene"
+import type { SceneStore } from "../../core/scene"
+import { clipRect, layoutTrackRows } from "../../core/layout"
+import { clipVisualGeometry } from "../../core/clip-geometry"
+import { LaneRow } from "../LaneRow"
+import { LaneOverlay } from "../LaneOverlay"
+import { visibleRows } from "../render-projection"
+import { labelsByLocale } from "../demo/labels"
+import { createLaneController } from "./controller"
+import type { LaneController } from "./controller"
+import { synchronizeProjectScene } from "./project-preview"
+
+let root: TestRoot | undefined
+let controller: LaneController | undefined
+let releaseStore: (() => void) | undefined
+afterEach(() => {
+  root?.unmount()
+  controller?.dispose()
+  releaseStore?.()
+  root = undefined
+  controller = undefined
+  releaseStore = undefined
+})
+
+function Surface({
+  scene,
+  controller,
+  clipboard,
+}: {
+  scene: SceneStore
+  controller: LaneController
+  clipboard: NativeClipboard
+}) {
+  const snapshot = useSyncExternalStore(scene.subscribe, scene.get)
+  return (
+    <ThemeProvider>
+      <div style={{ position: "relative", width: 1000, height: 500 }}>
+        {visibleRows(snapshot).map(row => (
+          <div
+            key={row.track.id}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: row.clipTop,
+              width: 1000,
+              height: row.clipBottom - row.clipTop,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                top: row.top - row.clipTop,
+                width: 1000,
+                height: row.height,
+              }}
+            >
+              <LaneRow
+                row={row}
+                scene={snapshot}
+                viewport={snapshot.viewport}
+                controller={controller}
+                readPeaks={() => new Float32Array(0)}
+                clipboard={clipboard}
+                labels={labelsByLocale.en}
+              />
+            </div>
+          </div>
+        ))}
+        <LaneOverlay
+          scene={snapshot}
+          viewport={snapshot.viewport}
+          transportBar={useProjectState.getState().session.position.bar}
+        />
+      </div>
+    </ThemeProvider>
+  )
+}
+
+function mount(options: { automation?: boolean; audio?: boolean } = {}) {
+  const document = createMockDocument()
+  const track = document.tracks.find(item => item.kind === "midi")
+  const main = document.tracks.find(item => item.kind === "main")
+  const audio = document.tracks.find(item => item.kind === "audio")
+  if (!track || !main || !audio) throw new Error("Missing project fixtures")
+  track.id = "source"
+  track.output = "main"
+  track.clips = [
+    {
+      kind: "pattern",
+      id: "pattern",
+      patternId: "p",
+      startBar: 2,
+      lengthBars: 4,
+      steps: [true, false, true, false],
+    },
+  ]
+  track.automation = [
+    {
+      id: "source-volume",
+      parameter: "volume",
+      points: [
+        { id: "a", bar: 2.5, value: 0.5 },
+        { id: "b", bar: 5, value: 0.8 },
+        { id: "outside", bar: 20, value: 0.1 },
+      ],
+    },
+  ]
+  const target = {
+    ...structuredClone(track),
+    id: "target",
+    name: "Target",
+    clips: [],
+    automation: [],
+  }
+  audio.id = "audio"
+  audio.output = "main"
+  audio.clips = [
+    {
+      kind: "audio",
+      id: "audio-clip",
+      startBar: 2,
+      lengthBars: 4,
+      samplePath: "fixture.wav",
+      sourceOffsetBars: 0,
+      gainDb: 0,
+      fadeInBars: 1,
+      fadeOutBars: 1,
+    },
+  ]
+  document.tracks = [track, target, ...(options.audio ? [audio] : []), main]
+  const workspace = createMockWorkspace()
+  workspace.pxPerBar = 64
+  workspace.scrollX = 0
+  workspace.scrollY = 0
+  workspace.grid = { mode: "fixed", bars: 0.25 }
+  workspace.automationMode = options.automation ?? false
+  hydrateProject(JSON.stringify({ version: 2, document, workspace }))
+  const scene = createSceneStore()
+  scene.setViewport({ width: 1000, height: 500, pxPerBar: 64, scrollX: 0, scrollY: 0, dpr: 1 })
+  const clipboardState = { value: "" }
+  const clipboard: NativeClipboard = {
+    readText: () => clipboardState.value,
+    writeText: value => {
+      clipboardState.value = value
+    },
+  }
+  const current = createLaneController({
+    scene,
+    actions: projectActions,
+    getState: useProjectState.getState,
+    clipboard,
+    edgePixels: 42,
+    setScroll(x, y) {
+      projectActions.setViewport({ scrollX: x, scrollY: y })
+      const next = {
+        ...scene.get().viewport,
+        scrollX: useProjectState.getState().workspace.scrollX,
+        scrollY: useProjectState.getState().workspace.scrollY,
+      }
+      scene.setViewport(next)
+      return next
+    },
+  })
+  controller = current
+  synchronizeProjectScene(current.context)
+  releaseStore = useProjectState.subscribe((state, previous) => {
+    synchronizeProjectScene(current.context)
+    if (state.session.selectedClipIds !== previous.session.selectedClipIds)
+      scene.setSelection(new Set(state.session.selectedClipIds))
+    if (state.session.selectedTrackIds !== previous.session.selectedTrackIds)
+      scene.setTrackSelection(new Set(state.session.selectedTrackIds))
+    if (state.session.timeSelection !== previous.session.timeSelection)
+      scene.setTimeSelection(state.session.timeSelection)
+  })
+  const windowKeys: string[] = []
+  const currentRoot = createTestRoot({
+    width: 1000,
+    height: 500,
+    onKeyDown: event => {
+      windowKeys.push(event.key ?? "")
+      if (event.key === "space") projectActions.togglePlay()
+    },
+  })
+  root = currentRoot
+  currentRoot.render(<Surface scene={scene} controller={current} clipboard={clipboard} />)
+  const sourceRow = layoutTrackRows(scene.get()).find(row => row.track.id === "source")
+  const targetRow = layoutTrackRows(scene.get()).find(row => row.track.id === "target")
+  const host = currentRoot.renderer.findByTestId("lane-row-source")
+  if (!sourceRow || !targetRow || !host) throw new Error("Missing lane geometry")
+  return {
+    root: currentRoot,
+    renderer: currentRoot.renderer,
+    scene,
+    controller: current,
+    sourceRow,
+    targetRow,
+    host: host.id,
+    clipboard,
+    clipboardState,
+    windowKeys,
+  }
+}
+
+it("keeps sub-threshold presses inert and rolls a native Ghost drag back on Escape", () => {
+  const { renderer, scene, sourceRow, host } = mount()
+  renderer.nativeSimulateMouseDown(100, sourceRow.top + 6)
+  renderer.nativeSimulateMouseMove(102, sourceRow.top + 6, 0)
+  expect(scene.get().clipDrag).toBeNull()
+  renderer.nativeSimulateMouseMove(228, sourceRow.top + 6, 0)
+  expect(scene.get().tracks[0]?.clips[0]?.startBar).toBe(4)
+  expect(useProjectState.getState().document.tracks[0]?.clips[0]?.startBar).toBe(2)
+  expect(renderer.findByTestId("clip-ghost-pattern")).toBeDefined()
+  renderer.nativeSimulateKeystrokes(host, "escape")
+  expect(renderer.findByTestId("clip-ghost-pattern")).toBeUndefined()
+  expect(useProjectState.getState().document.tracks[0]?.clips[0]?.startBar).toBe(2)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("moves all automation within the Clip interval across tracks in Automation mode", () => {
+  const { renderer, scene, sourceRow, targetRow } = mount({ automation: true })
+  renderer.nativeSimulateMouseDown(100, sourceRow.top + 6)
+  renderer.nativeSimulateMouseMove(228, targetRow.top + 6, 0)
+  expect(scene.get().tracks.find(track => track.id === "source")?.clips).toEqual([])
+  renderer.nativeSimulateMouseUp(228, targetRow.top + 6)
+  const state = useProjectState.getState()
+  expect(state.document.tracks[0]?.automation[0]?.points.map(point => point.bar)).toEqual([20])
+  expect(state.document.tracks[1]?.clips[0]?.startBar).toBe(4)
+  expect(
+    state.document.tracks[1]?.automation[0]?.points.map(point => [point.bar, point.value])
+  ).toEqual([
+    [4.5, 0.5],
+    [7, 0.8],
+  ])
+  projectActions.undo()
+  expect(
+    useProjectState.getState().document.tracks[0]?.automation[0]?.points.map(point => point.bar)
+  ).toEqual([2.5, 5, 20])
+  expect(useProjectState.getState().document.tracks[1]?.clips).toEqual([])
+})
+
+it("splits at the stationary insertion anchor during playback and does nothing without selection", () => {
+  const { renderer, host, windowKeys } = mount()
+  projectActions.selectClips(["pattern"])
+  projectActions.setPosition({ bar: 5, beat: 1, sixteenth: 1 })
+  projectActions.togglePlay()
+  projectActions.setInsertionPoint({ trackId: "source", bar: 3 })
+  renderer.nativeSimulateKeystrokes(host, "cmd-e")
+  expect(
+    useProjectState
+      .getState()
+      .document.tracks[0]?.clips.map(clip => [clip.startBar, clip.lengthBars])
+  ).toEqual([
+    [2, 1],
+    [3, 3],
+  ])
+  expect(windowKeys.includes("e")).toBe(false)
+  projectActions.undo()
+  projectActions.selectClips([])
+  renderer.nativeSimulateKeystrokes(host, "cmd-e")
+  expect(
+    useProjectState
+      .getState()
+      .document.tracks[0]?.clips.map(clip => [clip.startBar, clip.lengthBars])
+  ).toEqual([[2, 4]])
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("uses current native clipboard text and leaves Clips intact when writing the clipboard fails", () => {
+  const { renderer, host, sourceRow, controller, clipboardState, clipboard } = mount()
+  const clip = renderer.findByTestId("clip-source-pattern")
+  if (!clip) throw new Error("Missing Clip")
+  renderer.nativeSimulateKeystrokes(clip.id, "enter")
+  renderer.nativeSimulateKeystrokes(host, "cmd-c")
+  const copied = clipboardState.value
+  clipboardState.value = "unrelated external text"
+  renderer.nativeSimulateKeystrokes(host, "cmd-v")
+  expect(useProjectState.getState().document.tracks[0]?.clips.map(clip => clip.startBar)).toEqual([
+    2,
+  ])
+  clipboardState.value = copied
+  renderer.nativeSimulateClick(448, sourceRow.top + 30)
+  renderer.nativeSimulateKeystrokes(host, "cmd-v")
+  expect(useProjectState.getState().document.tracks[0]?.clips.map(clip => clip.startBar)).toEqual([
+    2, 8,
+  ])
+  clipboard.writeText = () => {
+    throw new Error("Clipboard unavailable")
+  }
+  expect(() => controller.clipboard("cut")).toThrow("Clipboard unavailable")
+  expect(useProjectState.getState().document.tracks[0]?.clips.map(clip => clip.startBar)).toEqual([
+    2, 8,
+  ])
+})
+
+it("commits and cancels inline names without leaking editor keys or requesting Clip View", () => {
+  const { renderer, host, sourceRow, windowKeys } = mount()
+  const request = useProjectState.getState().session.clipEditorRequest
+  renderer.nativeSimulateClick(100, sourceRow.top + 6)
+  renderer.nativeSimulateKeystrokes(host, "cmd-r")
+  const editor = renderer.findByTestId("clip-name-editor")
+  if (!editor) throw new Error("Rename editor not mounted")
+  expect(renderer.getFocusedElementId()).toBe(editor.id)
+  const keysBefore = [...windowKeys]
+  renderer.simulateKeystrokes("cmd-a n e w space enter")
+  expect(useProjectState.getState().document.tracks[0]?.clips[0]?.label).toBe("new")
+  expect(windowKeys).toEqual(keysBefore)
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(request)
+  renderer.nativeSimulateKeystrokes(host, "cmd-r")
+  renderer.simulateKeystrokes("cmd-a b a d escape")
+  expect(useProjectState.getState().document.tracks[0]?.clips[0]?.label).toBe("new")
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(request)
+})
+
+it("keeps saturated fade previews on release and moves both fade endpoints when trimming", () => {
+  const { renderer, scene } = mount({ audio: true })
+  const row = layoutTrackRows(scene.get()).find(row => row.track.id === "audio")
+  const clip = row?.track.clips[0]
+  if (!row || clip?.kind !== "audio") throw new Error("Missing audio Clip")
+  const geometry = clipVisualGeometry(clipRect(clip, row, 64, 0), clip, row.track, true)
+  const fade = geometry.fades[0]
+  if (!fade) throw new Error("Missing fade geometry")
+  renderer.nativeSimulateMouseMove(200, geometry.bodyTop + 20)
+  renderer.nativeSimulateMouseDown(fade.end.x, fade.end.y + 1)
+  renderer.nativeSimulateMouseMove(400, fade.end.y + 1, 0)
+  const preview = scene.get().tracks.find(track => track.id === "audio")?.clips[0]
+  expect(preview?.kind === "audio" && preview.fadeInBars).toBe(3)
+  renderer.nativeSimulateMouseUp(400, fade.end.y + 1)
+  const committed = useProjectState.getState().document.tracks.find(track => track.id === "audio")
+    ?.clips[0]
+  expect(committed?.kind === "audio" && committed.fadeInBars).toBe(3)
+  projectActions.undo()
+  renderer.nativeSimulateMouseMove(200, geometry.bodyTop + 20)
+  const peak = renderer.findByTestId("fade-audio-clip-in-peak")
+  const quiet = renderer.findByTestId("fade-audio-clip-in-quiet")
+  if (!peak || !quiet) throw new Error("Missing native fade handles")
+  const peakBefore = renderer.getElementBounds(peak.id)
+  const quietBefore = renderer.getElementBounds(quiet.id)
+  if (!peakBefore || !quietBefore) throw new Error("Unpainted fade handles")
+  renderer.nativeSimulateMouseMove(64, row.top + 6)
+  renderer.nativeSimulateMouseDown(64, row.top + 6)
+  renderer.nativeSimulateMouseMove(96, row.top + 6, 0)
+  renderer.nativeSimulateMouseUp(96, row.top + 6)
+  renderer.nativeSimulateMouseMove(200, geometry.bodyTop + 20)
+  const nextPeak = renderer.findByTestId("fade-audio-clip-in-peak")
+  const nextQuiet = renderer.findByTestId("fade-audio-clip-in-quiet")
+  if (!nextPeak || !nextQuiet) throw new Error("Missing restored fade handles")
+  const peakAfter = renderer.getElementBounds(nextPeak.id)
+  const quietAfter = renderer.getElementBounds(nextQuiet.id)
+  expect(peakAfter?.x).toBeCloseTo(peakBefore.x + 32)
+  expect(quietAfter?.x).toBeCloseTo(quietBefore.x + 32)
+})
+
+it("advances edge autoscroll from elapsed native frame time and rejects disposed input", () => {
+  const { controller, sourceRow, scene } = mount()
+  const pointer = {
+    x: 100,
+    y: sourceRow.top + 6,
+    button: 0,
+    shiftKey: false,
+    altKey: false,
+    metaKey: false,
+    ctrlKey: false,
+  }
+  controller.pointerDown(pointer)
+  controller.pointerMove({ ...pointer, x: 1000 }, true)
+  controller.step(0)
+  controller.step(20)
+  controller.step(40)
+  expect(scene.get().viewport.scrollX).toBe(30)
+  const moved = scene.get().tracks[0]?.clips[0]?.startBar
+  expect(moved).toBeGreaterThan(15)
+  controller.interrupt()
+  expect(useProjectState.getState().document.tracks[0]?.clips[0]?.startBar).toBe(2)
+  controller.dispose()
+  scene.setHover({ id: "new-owner", region: "body" })
+  controller.dispose()
+  controller.pointerLeave()
+  controller.pointerDown(pointer)
+  controller.pointerMove({ ...pointer, x: 400 }, true)
+  controller.step(80)
+  expect(scene.get().hoverClip?.id).toBe("new-owner")
+  expect(useProjectState.getState().document.tracks[0]?.clips[0]?.startBar).toBe(2)
+})

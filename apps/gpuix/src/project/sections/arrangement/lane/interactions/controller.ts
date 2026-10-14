@@ -163,6 +163,7 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
       publish(active.gesture.cursor)
     },
     pointerUp(pointer: LanePointer) {
+      if (disposed) return
       if (active && active.epoch !== context.getState().session.editEpoch) {
         finish(true)
         return
@@ -171,6 +172,7 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
       finish(false)
     },
     pointerLeave() {
+      if (disposed) return
       if (!active) {
         if (context.scene.get().hoverClip) context.scene.setHover(null)
         publish("default")
@@ -291,6 +293,7 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
       }
     },
     dispose() {
+      if (disposed) return
       disposed = true
       finish(true)
       clip.deactivate()

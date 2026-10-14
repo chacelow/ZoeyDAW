@@ -38,6 +38,7 @@ export function LaneContents({
         width: scene.viewport.width,
         height: row.height,
         overflow: "hidden",
+        pointerEvents: "none",
         backgroundColor: scene.selectedTrackIds.has(row.track.id)
           ? theme.colors.arrangementSurfaceSelected
           : theme.colors.editorShell,
@@ -91,6 +92,7 @@ export function LaneContents({
           top: -row.top,
           width: scene.viewport.width,
           height: scene.viewport.height,
+          pointerEvents: "none",
         })}
       >
         {visibleClipCards(scene, row, automationMode).map(card => (

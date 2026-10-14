@@ -32,12 +32,30 @@
 
 ## 验证状态
 
-当前已验证：B1 投影性质测试、原生 TestRoot 的裁剪与节点身份、Clip 预览/提交/撤销、停止与播放引导层、聚焦 Clip 的 Space 传播、channel-major 立体声几何。
+已验证 B1 投影性质、原生 TestRoot 的裁剪与节点身份、Clip 预览/提交/撤销、跨轨 Automation 区间移动、播放期间在静止插入点裁剪、剪贴板端口当前文本优先（测试注入内存实现）、名称输入提交/取消、fade 极端释放持久与裁剪两锚点同移、停止与播放引导层、Clip 节点 Space 传播、channel-major 立体声几何。
 
 真实窗口、200×50 满量滚动/缩放统计及全部输入状态截图尚未验收。原生帧回调与聚焦自动全选等待协调者的 F1；真实 musical PeakReader 等待源采样率适配能力，不添加 JS 计时器或假峰值后备路径。
+
+命令在 `apps/gpuix` 执行：
+
+| 命令 | 结果 |
+| --- | --- |
+| `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx` | 7 pass，0 fail，36 assertions |
+| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 17 pass，0 fail；3 个变异均命中预期行为；源目标 SHA-256 前后相同 |
+
+变异通过 Bun runtime preload 在内存替换模块，不写源文件；脚本验证预期用例确实失败，不能以语法错误代替变异被捕获。
+
+| 变异                                | 失败用例数 |
+| ----------------------------------- | ---------: |
+| 移除屏外 Clip 裁剪                  |          1 |
+| 忽略 MIDI 保留源偏移                |          1 |
+| 将 channel-major 峰值错读成交错声道 |          1 |
 
 ## 已验证做法与错题
 
 - 错：将“每像素每声道 min/max”理解为交错声道。对：核对 C1 实际 channel-major 布局，按声道连续区间索引。因：交错会把左右声道的像素位置打散；原生立体声 bounds 回归覆盖此差异。
 - 错：只按浮点 ClipRect 相交判断挂载。对：复用 B1 `clipVisualGeometry` 后再判断取整几何。因：小于半像素的交集可能取整为零可见宽度；固定种子性质测试捕获该边界。
 - 对：悬停仅在 Clip ID 或 title/body 区域变化时更新 scene；不为同一区域的每次 mouseMove 重建展示投影。
+- 错：让有填色或 absolute 的展示容器使用默认命中规则。对：纯展示层明确 `pointerEvents: "none"`，鼠标输入由唯一车道 host 捕获。因：固定主干的 `should_occlude` 默认阻断这些容器后面的鼠标事件；完整 LaneRow 回归与 native hitbox 探针先确认 host 未收到 down/move，修复后手势通过。
+- 错：照搬 Web 输入框的 Enter keydown 提交。对：原生 Input 使用 `onSubmit`，Escape 留在 keydown，并在文本编辑期间阻止窗口快捷键传播。因：GPUI 输入动作会消费 Enter，不保证额外发出元素 keydown；名称提交回归覆盖真实 keystroke 路径。
+- 对：语言服务器抽取类型后先确认实际生成的扩展名与导入；只含类型也可能生成 `.tsx`，不能假设不存在 `.ts` 就没有新文件。

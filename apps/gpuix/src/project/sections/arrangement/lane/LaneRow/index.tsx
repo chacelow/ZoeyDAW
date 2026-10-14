@@ -4,6 +4,7 @@ import type { EventPayload, PublicInstance } from "@gpuix/react"
 import type { NativeClipboard } from "../../../../../platform/clipboard"
 import { useProjectState } from "../../../../adapters"
 import { sx } from "../../../../../shared/theme/style"
+import { useTheme } from "../../../../../shared/theme/ThemeProvider"
 import type { ArrangementScene, ArrangementViewport } from "../../core/scene"
 import type { TrackRow } from "../../core/layout"
 import type { LaneController } from "../interactions/controller"
@@ -27,6 +28,7 @@ export interface LaneRowProps {
 
 export function LaneRow({ row, scene, viewport, controller, readPeaks, labels }: LaneRowProps) {
   const { renderer } = useGpuix()
+  const theme = useTheme()
   const host = useRef<PublicInstance | null>(null)
   const interaction = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
   const automationMode = useProjectState(state => state.workspace.automationMode)
@@ -94,7 +96,25 @@ export function LaneRow({ row, scene, viewport, controller, readPeaks, labels }:
             height: row.height,
             userSelect: "none",
             cursor: interaction.cursor,
+            keyboardFocusDim: false,
+            focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
           })}
+          onKeyDown={event => {
+            if (!event.key) return
+            if (
+              controller.keyDown({
+                key: event.key,
+                shiftKey: event.modifiers?.shift ?? false,
+                altKey: event.modifiers?.alt ?? false,
+                metaKey: event.modifiers?.cmd ?? false,
+                ctrlKey: event.modifiers?.ctrl ?? false,
+                repeat: event.isHeld ?? false,
+              })
+            ) {
+              event.preventDefault()
+              event.stopPropagation()
+            }
+          }}
           onMouseDown={event => {
             const next = pointer(event)
             if (!next || event.button !== 0 || event.modifiers?.ctrl) return
