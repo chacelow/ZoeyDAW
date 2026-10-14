@@ -245,6 +245,8 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 - 关闭拦截、`hideWindow`、托盘：主干也没有；GPUI fork 里 `on_window_should_close` 已存在，只缺 gpuix 注册与 JS 暴露。当前 `WindowCloseGuard.supported=false`，不得用 `process.exit()` 冒充。
 - `measureText`：没有。绕行：挂载不可见样本节点读取实测宽度。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
+- 错：合入改动 `scripts/gpuix-main/config.json` 补丁序列的分支后，直接在主干跑 tsc 和 `bun test`。共享 vendor 仍是旧补丁的产物，主干一度显示 tsc 8 个错误、25 个测试失败，全部是假失败。
+- 对：先跑 `node scripts/gpuix-main/check.mjs`；它报 “Vendor must contain exactly the checked-in ordered patch series” 时，先通知各 worker 暂停渲染器相关构建与整套测试，再跑 `bash scripts/gpuix-main/build.sh`，check 通过后才把门禁结果当真，最后通知各 worker merge 主干。
 
 ## gpuix 迁移：依赖与版本核实
 
