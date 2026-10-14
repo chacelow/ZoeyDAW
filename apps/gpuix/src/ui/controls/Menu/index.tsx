@@ -271,11 +271,12 @@ function MenuTrigger({
       onKeyDown?.(event)
       const key = event.key?.toLowerCase()
       if (
-        isActivation(event) ||
-        key === "down" ||
-        key === "arrowdown" ||
-        key === "up" ||
-        key === "arrowup" ||
+        (!menu.contextMenu &&
+          (isActivation(event) ||
+            key === "down" ||
+            key === "arrowdown" ||
+            key === "up" ||
+            key === "arrowup")) ||
         (key === "f10" && event.modifiers?.shift) ||
         key === "contextmenu"
       ) {
