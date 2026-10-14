@@ -9,6 +9,7 @@ use napi_derive::napi;
 
 mod app_state;
 mod atomic_file;
+mod clipboard;
 mod cursor;
 mod external;
 mod log;
