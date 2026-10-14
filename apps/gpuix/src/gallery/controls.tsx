@@ -2,6 +2,7 @@ import { useRef, useState } from "react"
 import { render } from "@gpuix/react"
 import { cursorHide, cursorPosition, cursorRestore } from "@zoeydaw/native"
 import { ThemeProvider, useTheme } from "../shared/theme/ThemeProvider"
+import { StateGallery } from "./states"
 import {
   Button,
   Card,
@@ -90,12 +91,34 @@ function GalleryCard({
   readonly title: string
   readonly children: ReactNode
 }) {
+  const theme = useTheme()
+  const inset = theme.control["--spacing-control-track-gap"]
   return (
-    <Card style={{ width: 320, flexShrink: 0 }}>
-      <CardHeader>
+    <Card
+      aria-label={title}
+      style={{
+        width: theme.project.controlsWidth,
+        flexShrink: 0,
+        paddingTop: inset,
+        paddingBottom: inset,
+        gap: inset,
+        borderRadius: 1,
+      }}
+    >
+      <CardHeader style={{ paddingLeft: inset, paddingRight: inset }}>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent style={{ gap: 10 }}>{children}</CardContent>
+      <CardContent
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: inset,
+          paddingLeft: inset,
+          paddingRight: inset,
+        }}
+      >
+        {children}
+      </CardContent>
     </Card>
   )
 }
@@ -116,7 +139,13 @@ function Gallery() {
   const [settings, setSettings] = useState(false)
   const [pane, setPane] = useState("general")
   const inputRef = useRef<PublicInstance | null>(null)
-  const row = { display: "flex", flexDirection: "row", alignItems: "center", gap: 10 }
+  const row = {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.control["--spacing-control-gap"],
+  }
+  const cardRow = { ...row, alignItems: "start", gap: theme.project.panelGap }
   return (
     <ControlEnvironmentProvider value={{ setInfo, cursorLock }}>
       <div
@@ -129,20 +158,29 @@ function Gallery() {
           height: "100%",
           backgroundColor: theme.colors.background,
           color: theme.colors.foreground,
-          padding: 16,
-          gap: 12,
+          padding: theme.project.panelGap,
+          gap: theme.control["--spacing-control-track-gap"],
         }}
       >
-        <text role="heading" aria-level={1} style={{ fontSize: 18 }}>
+        <text
+          role="heading"
+          aria-level={1}
+          style={{ fontSize: theme.transportControl["--text-control-track"] }}
+        >
           Native controls gallery
         </text>
-        <text style={{ fontSize: 11, color: theme.colors.mutedForeground }}>
+        <text
+          style={{
+            fontSize: theme.control["--text-control-track"],
+            color: theme.colors.mutedForeground,
+          }}
+        >
           Compact metrics · shared DragPad sensitivity · native anchored layers · Tab / arrows /
           Enter / Escape
         </text>
         <ScrollArea aria-label="All shared controls" style={{ flexGrow: 1, minHeight: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={row}>
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.project.panelGap }}>
+            <div style={cardRow}>
               <GalleryCard title="Buttons / numeric controls">
                 <div style={row}>
                   <Button label="Active button" active={active} onActiveChange={setActive}>
@@ -153,11 +191,25 @@ function Gallery() {
                     label="Play icon"
                     iconOnly
                     icon={
-                      <svg aria-hidden="true" source={glyph} style={{ width: 10, height: 10 }} />
+                      <svg
+                        aria-hidden="true"
+                        source={glyph}
+                        style={{
+                          width: theme.control["--spacing-control-icon"],
+                          height: theme.control["--spacing-control-icon"],
+                        }}
+                      />
                     }
                   />
                   <IconSlot>
-                    <svg aria-hidden="true" source={glyph} style={{ width: 10, height: 10 }} />
+                    <svg
+                      aria-hidden="true"
+                      source={glyph}
+                      style={{
+                        width: theme.control["--spacing-control-icon"],
+                        height: theme.control["--spacing-control-icon"],
+                      }}
+                    />
                   </IconSlot>
                 </div>
                 <div style={row}>
@@ -187,16 +239,6 @@ function Gallery() {
                       )
                     }}
                   />
-                  <DragPadNumber
-                    label="Transport BPM"
-                    value={bpm}
-                    onChange={setBpm}
-                    min={20}
-                    max={300}
-                    step={1}
-                    defaultValue={120}
-                    size="transport"
-                  />
                 </ControlGroup>
                 <div style={row}>
                   <DragPadBar
@@ -220,7 +262,7 @@ function Gallery() {
                   <PanControl label="Pan" value={pan} onChange={setPan} />
                   <DragPadToggle label="Mute" value={active} onChange={setActive} />
                 </div>
-                <text style={{ fontSize: 10 }}>
+                <text style={{ fontSize: theme.control["--text-control-track"] }}>
                   {`BPM ${bpm} · Level ${level} · Pan ${pan.toFixed(2)}`}
                 </text>
               </GalleryCard>
@@ -242,7 +284,7 @@ function Gallery() {
                     label="Continuous adjustment"
                     trigger="Adjust popup"
                     testId="gallery-popup"
-                    contentStyle={{ width: 220 }}
+                    contentStyle={{ width: theme.project.controlsWidth }}
                   >
                     <PopoverHeader>
                       <PopoverTitle>Continuous adjustment</PopoverTitle>
@@ -287,10 +329,10 @@ function Gallery() {
                   <ContextMenuTrigger
                     aria-label="Right click context area"
                     style={{
-                      padding: 12,
+                      padding: theme.control["--spacing-control-track-gap"],
                       borderWidth: 1,
                       borderColor: theme.colors.border,
-                      fontSize: 11,
+                      fontSize: theme.control["--text-control-track"],
                     }}
                   >
                     <text>Right-click / Ctrl-click / Shift-F10</text>
@@ -361,7 +403,7 @@ function Gallery() {
                   </ToggleGroupItem>
                 </ToggleGroup>
                 <MotionTabs
-                  tabWidth={100}
+                  tabWidth={theme.project.identityWidth}
                   options={[
                     { key: "clips", label: "Clips", content: <text>Clip tab content</text> },
                     { key: "devices", label: "Devices", content: <text>Device tab content</text> },
@@ -370,14 +412,17 @@ function Gallery() {
                 <Button onClick={() => setSettings(true)}>Open settings</Button>
               </GalleryCard>
             </div>
-            <div style={row}>
+            <div style={cardRow}>
               <GalleryCard title="Containers / feedback">
                 <CardDescription>Card header, title, description and content.</CardDescription>
                 <Separator />
                 <Progress aria-label="Level progress" value={level} />
                 <Loading
                   message="Loading native resources"
-                  style={{ position: "relative", height: 28 }}
+                  style={{
+                    position: "relative",
+                    height: theme.transportControl["--spacing-control-track"],
+                  }}
                 />
                 <Empty>
                   <EmptyHeader>
@@ -398,15 +443,24 @@ function Gallery() {
                 </div>
               </GalleryCard>
               <GalleryCard title="Retry / scroll / drag preview">
-                <div style={{ position: "relative", height: 110 }}>
+                <div style={{ position: "relative", height: theme.project.defaultTrackHeight }}>
                   <LoadErrorScreen
                     title="Example load error"
                     message="The resource cannot be opened."
                     onRetry={() => setStatus("Retry requested")}
                   />
                 </div>
-                <ScrollArea aria-label="Scrollable sample" style={{ height: 50 }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <ScrollArea
+                  aria-label="Scrollable sample"
+                  style={{ height: theme.control["--spacing-control-track"] * 4 }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: theme.control["--spacing-control-track-gap"],
+                    }}
+                  >
                     {Array.from({ length: 12 }, (_, index) => (
                       <text key={index}>{`Scrollable row ${index + 1}`}</text>
                     ))}
@@ -424,7 +478,9 @@ function Gallery() {
                 </DragPreviewArea>
               </GalleryCard>
               <GalleryCard title="Shared environment / geometry">
-                <text style={{ fontSize: 11 }}>Footer info publishes control kinds only.</text>
+                <text style={{ fontSize: theme.control["--text-control-track"] }}>
+                  Footer info publishes control kinds only.
+                </text>
                 <ControlGroup label="Position" separator="dot">
                   <Button>1</Button>
                   <Button>1</Button>
@@ -434,12 +490,47 @@ function Gallery() {
                   <Button>Left</Button>
                   <Button>Right</Button>
                 </ControlGroup>
-                <Separator orientation="vertical" style={{ height: 30 }} />
-                <text style={{ fontSize: 11 }}>
+                <Separator
+                  orientation="vertical"
+                  style={{ height: theme.transportControl["--spacing-control-track"] }}
+                />
+                <text style={{ fontSize: theme.control["--text-control-track"] }}>
                   All compact controls use the same shared metrics.
                 </text>
               </GalleryCard>
             </div>
+            <GalleryCard title="Transport controls">
+              <ControlGroup
+                label="Transport tempo controls"
+                style={{ gap: theme.transportControl["--spacing-control-gap"] }}
+              >
+                <DragPadNumber
+                  label="Transport BPM"
+                  value={bpm}
+                  onChange={setBpm}
+                  min={20}
+                  max={300}
+                  step={1}
+                  defaultValue={120}
+                  size="transport"
+                />
+                <Button
+                  size="transport"
+                  iconOnly
+                  label="Transport play"
+                  icon={
+                    <svg
+                      aria-hidden="true"
+                      source={glyph}
+                      style={{
+                        width: theme.transportControl["--spacing-control-icon"],
+                        height: theme.transportControl["--spacing-control-icon"],
+                      }}
+                    />
+                  }
+                />
+              </ControlGroup>
+            </GalleryCard>
             <SettingsShell
               open={settings}
               onOpenChange={setSettings}
@@ -451,12 +542,22 @@ function Gallery() {
                 { id: "general", label: "General", content: <text>General settings</text> },
                 { id: "audio", label: "Audio", content: <text>Audio settings</text> },
               ]}
-              style={{ width: 700, height: 240 }}
+              style={{
+                width: theme.project.controlsWidth * 2,
+                height: theme.project.defaultTrackHeight * 3,
+              }}
             />
           </div>
         </ScrollArea>
         <Separator />
-        <div style={{ display: "flex", flexDirection: "row", gap: 12, fontSize: 11 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: theme.control["--spacing-control-gap"],
+            fontSize: theme.control["--text-control-track"],
+          }}
+        >
           <text role="status" aria-label="Footer info">{`Info: ${info ?? "none"}`}</text>
           <text role="status" aria-label="Gallery verification">
             {status}
@@ -469,8 +570,8 @@ function Gallery() {
 }
 
 render(
-  <ThemeProvider>
-    <Gallery />
+  <ThemeProvider defaultAppearance={process.env.GALLERY_APPEARANCE === "light" ? "light" : "dark"}>
+    {process.env.GALLERY_VIEW === "states" ? <StateGallery cursorLock={cursorLock} /> : <Gallery />}
   </ThemeProvider>,
   { title: "zoeydaw native controls", width: 1050, height: 780 }
 )
