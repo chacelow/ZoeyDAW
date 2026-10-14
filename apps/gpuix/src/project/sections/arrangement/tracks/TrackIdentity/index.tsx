@@ -161,28 +161,6 @@ export function TrackIdentity({
           <AutomationSelector track={track} />
         </div>
       ) : null}
-      {track.collapsed && track.kind === "audio" ? (
-        <div
-          aria-hidden="true"
-          testId={`track-folded-fade-${track.id}`}
-          style={{
-            position: "absolute",
-            left: gutter,
-            right: 0,
-            top: 0,
-            bottom: 0,
-            pointerEvents: "none",
-            background: {
-              type: "linear-gradient",
-              angle: 90,
-              stops: [
-                { position: 0, color: "transparent" },
-                { position: 1, color: theme.colors.arrangementFadeMask },
-              ],
-            },
-          }}
-        />
-      ) : null}
     </div>
   )
 }

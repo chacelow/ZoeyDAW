@@ -81,6 +81,8 @@ TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane
 
 Group frame calculation is limited to visible group IDs and the existing model-projected ancestors of visible rows. A parent header can unmount while its frame still wraps visible descendants. This avoids scanning every offscreen group without adding another hierarchy model or shared API.
 
+Collapsed Audio fade masks belong to Clip titles in lane's `ClipFades`, using B1's real fade metadata and hidden folded handles. `TrackIdentity` has no independent static fade decoration. Older layout screenshots are historical geometry evidence, not current fade or theme acceptance.
+
 Visibility and reorder hit candidates share one projection. Return/Main remain bottom-anchored; when they exceed the available height, the pinned viewport is clipped below the reserved top gap and hidden pinned headers unmount. No offscreen lane content is retained solely to preserve an editor.
 
 Native test windows can be smaller than requested: a requested 1200px height was accepted as 1021px after the display change. Behavior tests now obtain the accepted size through `useWindowSize`, just like the real demo, so pinned controls are not falsely tested outside the native hit region.
