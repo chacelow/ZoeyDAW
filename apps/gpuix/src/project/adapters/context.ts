@@ -1,0 +1,47 @@
+import { useProjectState } from "../stores/useProjectState"
+import { createProjectRuntime } from "./runtime"
+
+export type { ProjectSeed, ProjectBackendOptions, ProjectRuntimeDependencies } from "./runtime"
+
+const runtime = createProjectRuntime({
+  store: useProjectState,
+})
+
+export const {
+  get,
+  sameWorkspacePreferences,
+  setPreciseTransportBar,
+  configureProjectBackend,
+  startProjectRuntime,
+  readProjectTelemetry,
+  readTransportBar,
+  whenProjectBackendIdle,
+  projectEpoch,
+  projectRevision,
+  markProjectSaved,
+  canSaveProject,
+  getCommittedDocument,
+  readRecordingBar,
+  session,
+  document,
+  workspace,
+  tracks,
+  updateTrack,
+  editClip,
+  beginEdit,
+  recordDocument,
+  endEdit,
+  isCurrentEdit,
+  cancelEdit,
+  undo,
+  redo,
+  getEffectiveDocument,
+  beginPreview,
+  previewTracks,
+  previewMarkers,
+  previewLoop,
+  commitPreview,
+  cancelPreview,
+  hydrateState,
+  resetProject,
+} = runtime
