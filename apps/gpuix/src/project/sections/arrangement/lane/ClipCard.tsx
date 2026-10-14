@@ -3,19 +3,13 @@ import type { Track } from "@/project/model/types"
 import { clipLabel } from "@/project/model/clip-label"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { colorMix } from "@/shared/theme/color-mix"
-import { FADE_HANDLE_PX, fadeHandleX } from "../core/clip-geometry"
 import type { GridLine } from "../core/rulers/grid-lines"
 import { clipLoopTicks, midiPreviewRects, patternPreviewRects } from "./render-projection"
 import type { ClipCard } from "./render-projection"
-import { resolveLaneColor } from "./appearance"
-import type { PeakReader } from "./PeakReader"
+import { resolveContentColor, contentFill } from "@/shared/theme/content-color"
+import type { PeakReader } from "@/platform/engine"
 import { WaveformPreview } from "./WaveformPreview"
-import { Shape } from "@/shared/svg/Shape"
-import type { ShapePath } from "@/shared/svg/Shape"
-import { cubicPath } from "@/shared/svg/paths"
-
-const NO_FADE_PATHS: readonly ShapePath[] = []
+import { ClipFades } from "./ClipFades"
 
 export const ClipCardView = memo(function ClipCardView({
   card,
@@ -41,9 +35,17 @@ export const ClipCardView = memo(function ClipCardView({
   const clip = card.clip
   const visibleLeft = Math.max(0, g.left)
   const width = Math.max(0, Math.min(viewportWidth, g.left + g.width) - visibleLeft)
-  const color = resolveLaneColor(clip.color ?? track.color, theme)
-  const bodyColor = card.selected ? theme.colors.arrangementClipSelected : color
-  const ink = theme.colors.primaryForeground
+  const token = clip.color ?? track.color
+  const paint = useMemo(
+    () => ({
+      title: resolveContentColor(token, theme.colors),
+      body: contentFill(token, theme.colors),
+    }),
+    [token, theme.colors]
+  )
+  const color = paint.title
+  const bodyColor = card.selected ? theme.colors.arrangementClipSelected : paint.body
+  const ink = theme.colors.arrangementClipInk
   const notes = useMemo(
     () =>
       clip.kind === "midi"
@@ -56,18 +58,6 @@ export const ClipCardView = memo(function ClipCardView({
   const sourceStartBar = 1 + ((visibleLeft - g.left) / g.width) * clip.lengthBars
   const sourceEndBar = 1 + ((visibleLeft + width - g.left) / g.width) * clip.lengthBars
   const loopTicks = useMemo(() => clipLoopTicks(clip, g, viewportWidth), [clip, g, viewportWidth])
-  const fadePaths = useMemo(
-    () =>
-      g.fades.length
-        ? g.fades
-            .filter(fade => fade.active && fade.handlesVisible)
-            .map(fade => ({
-              d: cubicPath(fade.start, fade.segments),
-              strokeWidth: theme.project.trackBorder,
-            }))
-        : NO_FADE_PATHS,
-    [g.fades, theme.project.trackBorder]
-  )
   return (
     <div
       testId={`${card.ghost ? "clip-ghost" : "clip-source"}-${clip.id}`}
@@ -116,11 +106,8 @@ export const ClipCardView = memo(function ClipCardView({
               top: g.titleHeight,
               width,
               height: g.bodyHeight,
-              backgroundColor: colorMix(
-                bodyColor,
-                card.selected ? 90 : automationMode ? 25 : 55,
-                "transparent"
-              ),
+              backgroundColor: bodyColor,
+              opacity: card.selected ? 0.9 : automationMode ? 0.25 : 0.55,
               pointerEvents: "none",
             })}
           />
@@ -135,7 +122,7 @@ export const ClipCardView = memo(function ClipCardView({
                   top: g.titleHeight,
                   width: 1,
                   height: g.bodyHeight,
-                  backgroundColor: theme.colors.border,
+                  backgroundColor: theme.colors.arrangementLine,
                   opacity: card.hovered ? 0.3 : 0.4,
                   pointerEvents: "none",
                 })}
@@ -171,68 +158,16 @@ export const ClipCardView = memo(function ClipCardView({
               readPeaks={readPeaks}
             />
           )}
-          {!automationMode && !card.ghost && g.fades.some(fade => fade.handlesVisible) && (
-            <>
-              {fadePaths.length > 0 && (
-                <Shape
-                  width={width}
-                  height={g.bodyHeight}
-                  viewBox={`${visibleLeft} ${g.bodyTop} ${width} ${g.bodyHeight}`}
-                  paths={fadePaths}
-                  color={ink}
-                  style={sx({
-                    position: "absolute",
-                    left: 0,
-                    top: g.titleHeight,
-                    pointerEvents: "none",
-                  })}
-                />
-              )}
-              {g.fades
-                .filter(fade => fade.handlesVisible)
-                .flatMap(fade => [
-                  {
-                    key: `${fade.edge}-peak`,
-                    point: fade.edge === "in" ? fade.end : fade.start,
-                    interactive: true,
-                  },
-                  {
-                    key: `${fade.edge}-quiet`,
-                    point: fade.edge === "in" ? fade.start : fade.end,
-                    interactive: false,
-                  },
-                  ...(fade.active
-                    ? [{ key: `${fade.edge}-curve`, point: fade.curve, interactive: true }]
-                    : []),
-                ])
-                .map(anchor => (
-                  <div
-                    key={anchor.key}
-                    testId={`fade-${clip.id}-${anchor.key}`}
-                    style={sx({
-                      position: "absolute",
-                      left: fadeHandleX(g, anchor.point.x) - visibleLeft - FADE_HANDLE_PX / 2,
-                      top: Math.max(
-                        g.titleHeight,
-                        Math.min(
-                          g.height - FADE_HANDLE_PX,
-                          anchor.point.y - g.top - FADE_HANDLE_PX / 2
-                        )
-                      ),
-                      width: FADE_HANDLE_PX,
-                      height: FADE_HANDLE_PX,
-                      borderWidth: 1,
-                      borderColor: ink,
-                      backgroundColor: anchor.interactive
-                        ? theme.colors.arrangementClipPaper
-                        : color,
-                      pointerEvents: "none",
-                    })}
-                  />
-                ))}
-            </>
-          )}
         </>
+      )}
+      {clip.kind === "audio" && !automationMode && !card.ghost && (
+        <ClipFades
+          id={clip.id}
+          geometry={g}
+          visibleLeft={visibleLeft}
+          width={width}
+          bodyFill={bodyColor}
+        />
       )}
       {loopTicks.map(x => (
         <div
@@ -256,7 +191,8 @@ export const ClipCardView = memo(function ClipCardView({
             top: 0,
             width,
             height: g.height,
-            backgroundColor: colorMix(theme.colors.foreground, 10, "transparent"),
+            backgroundColor: theme.colors.foreground,
+            opacity: 0.1,
             pointerEvents: "none",
           })}
         />

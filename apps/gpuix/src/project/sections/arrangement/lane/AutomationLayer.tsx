@@ -82,7 +82,7 @@ export function AutomationLayer({ scene, trackId }: { scene: ArrangementScene; t
               width={width}
               height={row.bottom - row.top}
               paths={[{ d, strokeWidth: theme.control["--spacing-control-track-pad"] }]}
-              color={theme.colors.destructive}
+              color={theme.colors.arrangementAutomation}
               style={sx({ position: "absolute", left: 0, top: 0, pointerEvents: "none" })}
             />
             {points
@@ -112,7 +112,7 @@ export function AutomationLayer({ scene, trackId }: { scene: ArrangementScene; t
                       width: radius * 2,
                       height: radius * 2,
                       borderRadius: radius,
-                      backgroundColor: theme.colors.destructive,
+                      backgroundColor: theme.colors.arrangementAutomation,
                       pointerEvents: "none",
                     })}
                   />

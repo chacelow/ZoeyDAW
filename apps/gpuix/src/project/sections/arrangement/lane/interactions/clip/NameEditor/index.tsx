@@ -103,7 +103,7 @@ function NameInput({
         borderRadius: 0,
         borderColor: theme.colors.primary,
         backgroundColor: theme.colors.arrangementClipSelected,
-        color: theme.colors.primaryForeground,
+        color: theme.colors.arrangementClipInk,
         paddingLeft: theme.control["--spacing-control-gap"],
         paddingRight: theme.control["--spacing-control-gap"],
       })}

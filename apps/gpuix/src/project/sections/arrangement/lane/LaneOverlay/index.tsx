@@ -96,7 +96,7 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
             top,
             width: 1,
             height: bottom - top,
-            backgroundColor: recording ? theme.colors.destructive : theme.colors.primary,
+            backgroundColor: recording ? theme.colors.arrangementAutomation : theme.colors.primary,
             pointerEvents: "none",
           })}
         />

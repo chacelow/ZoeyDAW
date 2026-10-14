@@ -1,16 +1,15 @@
 import { useMemo } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { colorMix } from "@/shared/theme/color-mix"
 import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { projectTrackGroups } from "@/project/model/track-groups"
 import { gridLines } from "../../core/rulers/grid-lines"
 import type { ArrangementScene } from "../../core/scene"
 import { visibleClipCards } from "../render-projection"
 import type { TrackRow } from "../../core/layout"
-import type { PeakReader } from "../PeakReader"
+import type { PeakReader } from "@/platform/engine"
 import { ClipCardView } from "../ClipCard"
-import { resolveLaneColor } from "../appearance"
+import { resolveContentColor } from "@/shared/theme/content-color"
 import { AutomationLayer } from "../AutomationLayer"
 
 export function LaneContents({
@@ -41,7 +40,7 @@ export function LaneContents({
         pointerEvents: "none",
         backgroundColor: scene.selectedTrackIds.has(row.track.id)
           ? theme.colors.arrangementSurfaceSelected
-          : theme.colors.editorShell,
+          : theme.colors.arrangementSurface,
       })}
     >
       {grid.map(line => (
@@ -54,7 +53,7 @@ export function LaneContents({
             top: 0,
             width: 1,
             height: row.height,
-            backgroundColor: theme.colors.border,
+            backgroundColor: theme.colors.arrangementLine,
             opacity: line.kind === "major" ? 1 : 0.5,
             pointerEvents: "none",
           })}
@@ -77,7 +76,7 @@ export function LaneContents({
                   top: 0,
                   width: Math.min(scene.viewport.width, right) - Math.max(0, left),
                   height: Math.min(TRACK_TITLE_HEIGHT, row.height),
-                  backgroundColor: resolveLaneColor(clip.color ?? track.color, theme),
+                  backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
                   opacity: 0.85,
                   pointerEvents: "none",
                 })}
@@ -121,7 +120,8 @@ export function LaneContents({
               top: 0,
               width: (selection.endBar - selection.startBar) * scene.viewport.pxPerBar,
               height: row.height,
-              backgroundColor: colorMix(theme.colors.primary, 20, "transparent"),
+              backgroundColor: theme.colors.primary,
+              opacity: 0.2,
               pointerEvents: "none",
             })}
           />

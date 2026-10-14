@@ -6,15 +6,7 @@ import type { Clip } from "@/project/model/types"
 import type { LaneContext, LaneMenuTarget } from "../interactions/types"
 import type { LaneController } from "../interactions/controller"
 import type { LaneTranslate } from "../messages"
-import { resolveLaneColor } from "../appearance"
-
-const COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-]
+import { resolveContentColor, CONTENT_PALETTE } from "@/shared/theme/content-color"
 
 export function ClipMenuItems({
   target,
@@ -142,13 +134,13 @@ export function ClipMenuItems({
           padding: theme.control["--spacing-control-gap"],
         })}
       >
-        {COLORS.map((color, index) => (
+        {CONTENT_PALETTE.map((color, index) => (
           <Button
             key={color}
             iconOnly
             aria-label={`${t("arrangement.clipColor")} ${index + 1}`}
             active={clip.color === color}
-            style={sx({ backgroundColor: resolveLaneColor(color, theme) })}
+            style={sx({ backgroundColor: resolveContentColor(color, theme.colors) })}
             onClick={() => {
               context.actions.beginEdit()
               for (const id of ids) context.actions.updateClip(id, { color })

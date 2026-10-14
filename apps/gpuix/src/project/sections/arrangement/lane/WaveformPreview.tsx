@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react"
 import { sx } from "@/shared/theme/style"
-import type { PeakReader } from "./PeakReader"
+import type { PeakReader } from "@/platform/engine"
 
 const EMPTY_PEAKS = new Float32Array(0)
 
