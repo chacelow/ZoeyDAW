@@ -57,3 +57,22 @@ Shared integration still pending at this intermediate commit: A3b's container-wi
 `useTrackReorder` holds only pointer baseline, source/target IDs and drop highlight. It consumes B1's drag threshold and the shared bounds reader; document order changes only on release through `projectActions.reorderTrack`. Escape and application deactivation clear the gesture without a history entry. Group moves preserve their branch and routing through the existing command.
 
 Native behavior checks: captured reorder, cancellation and Group branch moves passed 3 tests with 8 assertions. Cmd removal and Shift range selection passed a separate regression. `onFocusTrack` reports inline editor focus only; invoking it after ordinary additive selection had incorrectly reselected a just-removed track and was removed from that path.
+
+## 公共接口
+
+`index.ts` exports `TrackRows`, `TrackRowsProps`, `TrackLabels`, `TelemetryReader`, `TrackRowGeometry` and the paired `trackResources`. The combination contract is `docs/architecture/gpuix-arrangement-composition.md`; tracks do not import lane or timeline.
+
+```ts
+TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane, labels })
+```
+
+- `scene` / `viewport`: the existing B1 `ArrangementScene` / `ArrangementViewport`; no second writable viewport or project is created.
+- `renderLane(row)`: the composition root supplies lane-only content. Geometry is the existing `core/layout.TrackRow` (exported here as `TrackRowGeometry`); lane content must not draw track borders.
+- `focusedTrackId`: preserves one offscreen header while its lane content remains unmounted. `onFocusTrack(id)` reports inline-name editing focus; ordinary lane/header selection remains owned by `projectActions.selectTracks` and its explicit surface.
+- `telemetry`: accepted backend telemetry reader; `labels`: immutable translated strings supplied by the composition root.
+
+`TrackRow` owns the whole track: lane on the left, then colored identity, routing and Mixer on the right, following the observed Live order. It owns the single outer top/bottom border. Group frames span the visible branch, rails are painted above row borders, expanded groups do not duplicate descendant previews, and folded groups render a shared-geometry descendant overview.
+
+Visibility and reorder hit candidates share one projection. Return/Main remain bottom-anchored; when they exceed the available height, the pinned viewport is clipped below the reserved top gap and hidden pinned headers unmount. No offscreen lane content is retained solely to preserve an editor.
+
+Native test windows can be smaller than requested: a requested 1200px height was accepted as 1021px after the display change. Behavior tests now obtain the accepted size through `useWindowSize`, just like the real demo, so pinned controls are not falsely tested outside the native hit region.
