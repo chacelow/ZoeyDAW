@@ -2,27 +2,27 @@ import { useEffect, useMemo, useState } from "react"
 import { render, useGpuix, useWindowSize } from "@gpuix/react"
 import { cursorHide, cursorPosition, cursorRestore } from "@zoeydaw/native"
 import { fileURLToPath } from "node:url"
-import { ThemeProvider, useTheme } from "../../../../shared/theme/ThemeProvider"
-import { Button, ControlEnvironmentProvider } from "../../../../ui/controls"
-import { PanelEnvironmentProvider } from "../../../../ui/panels"
-import { subscribeApplicationActive } from "../../../../platform/window"
+import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
+import { Button, ControlEnvironmentProvider } from "@/ui/controls"
+import { PanelEnvironmentProvider } from "@/ui/panels"
+import { subscribeApplicationActive } from "@/platform/window"
 import {
   hydrateProject,
   projectActions,
   readProjectTelemetry,
   startProjectRuntime,
   useProjectState,
-} from "../../../adapters"
-import { createTrack } from "../../../model/reducers"
-import { timelineBars } from "../../../model/selectors"
-import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP } from "../../../layout"
+} from "@/project/adapters"
+import { createTrack } from "@/project/model/reducers"
+import { timelineBars } from "@/project/model/selectors"
+import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP } from "@/project/layout"
 import { clipRect } from "../core/layout"
 import { createSceneStore } from "../core/scene"
 import { TrackRows } from "./TrackRows"
 import { trackResources } from "./locales"
 import { trackFill } from "./track-color"
-import type { Appearance } from "../../../../shared/theme/ThemeProvider"
-import type { CursorLockPort } from "../../../../ui/controls"
+import type { Appearance } from "@/shared/theme/ThemeProvider"
+import type { CursorLockPort } from "@/ui/controls"
 
 const document = structuredClone(useProjectState.getState().document)
 const workspace = structuredClone(useProjectState.getState().workspace)

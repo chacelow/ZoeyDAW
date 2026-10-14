@@ -1,7 +1,7 @@
 import { useTrackLabels } from "../../labels"
-import { DropdownButton } from "../../../../../../ui/controls"
-import { projectActions, useProjectState } from "../../../../../adapters"
-import type { Track } from "../../../../../model/types"
+import { DropdownButton } from "@/ui/controls"
+import { projectActions, useProjectState } from "@/project/adapters"
+import type { Track } from "@/project/model/types"
 
 export function AutomationSelector({ track }: { readonly track: Track }) {
   const { t } = useTrackLabels()

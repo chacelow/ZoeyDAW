@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { projectActions, useProjectState } from "../../../../adapters"
-import { COLLAPSED_TRACK_HEIGHT, MAX_TRACK_HEIGHT } from "../../../../layout"
-import { visibleTracks } from "../../../../model/types"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { COLLAPSED_TRACK_HEIGHT, MAX_TRACK_HEIGHT } from "@/project/layout"
+import { visibleTracks } from "@/project/model/types"
 import { useTrackLabels } from "../labels"
 import { TrackIdentity } from "../TrackIdentity"
 import { TrackRouting } from "../TrackRouting"
@@ -11,9 +11,9 @@ import { TrackMenu } from "../TrackMenu"
 import { GroupOverview } from "../GroupOverview"
 import { useTrackResize } from "./useTrackResize"
 import type { ReactNode } from "react"
-import type { Props } from "@gpuix/react"
-import type { GroupRail } from "../../../../model/track-groups"
-import type { Track } from "../../../../model/types"
+import type { KeyEvent, Props } from "@gpuix/react"
+import type { GroupRail } from "@/project/model/track-groups"
+import type { Track } from "@/project/model/types"
 import type { TrackRow as TrackRowGeometry } from "../../core/layout"
 import type { ArrangementViewport } from "../../core/scene"
 
@@ -72,6 +72,21 @@ export function TrackRow({
     )
   }
   const pinned = track.kind === "return" || track.kind === "main"
+  const focusRing = {
+    outlineWidth: theme.project.trackBorder / 2,
+    outlineOffset: -theme.project.trackBorder / 2,
+    outlineColor: theme.colors.ring,
+  }
+  const selectFromKeyboard = (event: KeyEvent) => {
+    if (event.key !== "enter") return
+    event.preventDefault()
+    event.stopPropagation()
+    choose(
+      "arrangement",
+      Boolean(event.modifiers?.shift),
+      Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
+    )
+  }
   return (
     <TrackMenu
       track={track}
@@ -96,7 +111,9 @@ export function TrackRow({
           minWidth: 0,
           backgroundColor: theme.colors.card,
           userSelect: "none",
+          focusVisible: focusRing,
         }}
+        onKeyDown={selectFromKeyboard}
       >
         <div
           role="group"
@@ -113,6 +130,7 @@ export function TrackRow({
               selected && surface === "arrangement"
                 ? theme.colors.arrangementSurfaceSelected
                 : theme.colors.card,
+            focusVisible: focusRing,
           }}
           onMouseDown={event => {
             if (event.button === 0)
@@ -122,14 +140,7 @@ export function TrackRow({
                 Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
               )
           }}
-          onKeyDown={event => {
-            if (event.key === "enter")
-              choose(
-                "arrangement",
-                Boolean(event.modifiers?.shift),
-                Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
-              )
-          }}
+          onKeyDown={selectFromKeyboard}
         >
           {showLane ? (
             track.kind === "group" && track.collapsed ? (
@@ -176,6 +187,7 @@ export function TrackRow({
             ...(pinned ? { top: 0 } : { bottom: 0 }),
             height: theme.control["--spacing-control-track-gap"],
             cursor: "ns-resize",
+            focusVisible: focusRing,
           }}
           {...resizeHandlers}
         />

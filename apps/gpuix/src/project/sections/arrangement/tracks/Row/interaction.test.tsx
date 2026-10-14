@@ -14,7 +14,7 @@ import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP, TRACK_LAYOUT } from "../../.
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
 import { trackResources } from "../locales"
-import type { TestRoot } from "@gpuix/react/testing"
+import type { TestRoot, TestWindowOptions } from "@gpuix/react/testing"
 import type { ArrangementViewport } from "../../core/scene"
 
 const roots: TestRoot[] = []
@@ -33,8 +33,12 @@ function current(id: string) {
   return track
 }
 
-function mount(view = viewport, focusedTrackId: string | null = null) {
-  const root = createTestRoot({ width: view.width, height: view.height })
+function mount(
+  view = viewport,
+  focusedTrackId: string | null = null,
+  windowEvents: Pick<TestWindowOptions, "onKeyDown"> = {}
+) {
+  const root = createTestRoot({ width: view.width, height: view.height, ...windowEvents })
   roots.push(root)
   function Surface() {
     const size = useWindowSize()
@@ -89,6 +93,7 @@ beforeEach(() => {
   for (const track of document.tracks) {
     track.collapsed = false
     track.heightPx = 70
+    if (track.id === "3-audio") track.volumeDb = -12
   }
   hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
 })
@@ -383,4 +388,118 @@ test("oversubscribed pinned rows preserve the top gap and unmount offscreen head
   const pinned = bounds(root, "track-pinned-viewport")
   expect(pinned.y).toBeGreaterThan(surface.y)
   expect(pinned.y + pinned.height).toBeLessThanOrEqual(surface.y + surface.height)
+})
+
+test("Space reaches the window transport once without toggling a focused Solo control", () => {
+  let spaces = 0
+  const root = mount(viewport, null, {
+    onKeyDown(event) {
+      if (event.key !== "space" || event.isHeld) return
+      spaces += 1
+      projectActions.togglePlay()
+    },
+  })
+  const solo = element(root, "track-solo-3-audio")
+  root.renderer.nativeSimulateKeystrokes(solo.id, "space")
+  expect(current("3-audio").solo).toBe(false)
+  expect(useProjectState.getState().session.playing).toBe(true)
+  expect(spaces).toBe(1)
+  root.renderer.nativeSimulateKeyDown(solo.id, "space", true)
+  root.renderer.nativeSimulateKeyUp(solo.id, "space")
+  expect(current("3-audio").solo).toBe(false)
+  expect(spaces).toBe(1)
+})
+
+test("Space on a focused level remains a transport key rather than starting numeric editing", () => {
+  const root = mount(viewport, null, {
+    onKeyDown(event) {
+      if (event.key === "space" && !event.isHeld) projectActions.togglePlay()
+    },
+  })
+  const level = element(root, "track-volume-3-audio")
+  const volume = current("3-audio").volumeDb
+  root.renderer.nativeSimulateKeystrokes(level.id, "space")
+  expect(useProjectState.getState().session.playing).toBe(true)
+  expect(current("3-audio").volumeDb).toBe(volume)
+  expect(root.renderer.getFocusedElementId()).toBe(level.id)
+})
+
+test("native name input keeps printable Space away from the window transport", () => {
+  let spaces = 0
+  const root = mount(viewport, null, {
+    onKeyDown(event) {
+      if (event.key === "space") spaces += 1
+    },
+  })
+  root.renderer.nativeSimulateKeystrokes(element(root, "track-label-3-audio").id, "f2")
+  root.renderer.nativeSimulateKeystrokes(
+    element(root, "track-name-3-audio").id,
+    "cmd-a A space B enter"
+  )
+  expect(current("3-audio").name).toBe("A B")
+  expect(spaces).toBe(0)
+})
+
+test("Tab follows lane, identity, fold and title before enabled routing controls", () => {
+  projectActions.updateTrack("3-audio", { heightPx: 35 })
+  const root = mount()
+  root.renderer.nativeSimulateKeystrokes(element(root, "track-row-3-audio").id, "tab")
+  expect(root.renderer.getFocusedElementId()).toBe(element(root, "track-lane-3-audio").id)
+  for (const id of [
+    "track-identity-3-audio",
+    "track-fold-3-audio",
+    "track-label-3-audio",
+    "track-output-3-audio",
+  ]) {
+    root.renderer.simulateKeystrokes("tab")
+    expect(root.renderer.getFocusedElementId()).toBe(element(root, id).id)
+  }
+})
+
+test("hovered 16px level wheel commits one undoable value change", () => {
+  const root = mount()
+  const level = bounds(root, "track-volume-3-audio")
+  const x = level.x + level.width / 2
+  const y = level.y + level.height / 2
+  root.renderer.nativeSimulateMouseMove(x, y)
+  root.renderer.nativeSimulateScrollWheel(x, y, 0, -16)
+  expect(current("3-audio").volumeDb).toBeCloseTo(-11.9, 6)
+  expect(useProjectState.getState().session.canUndo).toBe(true)
+  flushSync(() => projectActions.undo())
+  expect(current("3-audio").volumeDb).toBe(-12)
+})
+
+test("captured mixer dragging commits once and Escape rolls its next preview back", () => {
+  const root = mount()
+  const level = bounds(root, "track-volume-3-audio")
+  const x = level.x + level.width / 2
+  const y = level.y + level.height / 2
+  root.renderer.nativeSimulateMouseDown(x, y)
+  root.renderer.nativeSimulateMouseMove(x, y - 40, 0)
+  expect(current("3-audio").volumeDb).toBe(-11)
+  root.renderer.nativeSimulateMouseUp(x, y - 40)
+  flushSync(() => projectActions.undo())
+  expect(current("3-audio").volumeDb).toBe(-12)
+  root.renderer.nativeSimulateMouseDown(x, y)
+  root.renderer.nativeSimulateMouseMove(x, y - 16, 0)
+  expect(current("3-audio").volumeDb).toBeCloseTo(-11.6, 6)
+  root.renderer.nativeSimulateKeystrokes(element(root, "track-volume-3-audio").id, "escape")
+  root.renderer.nativeSimulateMouseUp(x, y - 16)
+  expect(current("3-audio").volumeDb).toBe(-12)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+test("a Return self-send rejects wheel and captured drag without authoring feedback", () => {
+  const root = mount()
+  const send = bounds(root, "track-send-a-apply-a-apply")
+  const x = send.x + send.width / 2
+  const y = send.y + send.height / 2
+  const before = structuredClone(current("a-apply"))
+  root.renderer.nativeSimulateMouseMove(x, y)
+  root.renderer.nativeSimulateScrollWheel(x, y, 0, -16)
+  root.renderer.nativeSimulateMouseDown(x, y)
+  root.renderer.nativeSimulateMouseMove(x, y - 40, 0)
+  root.renderer.nativeSimulateMouseUp(x, y - 40)
+  expect(current("a-apply")).toEqual(before)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
 })

@@ -1,13 +1,13 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
-import { PanelEnvironmentContext } from "../../../../../ui/panels/PanelEnvironment"
-import { readOuterBounds } from "../../../../../ui/controls/useMeasuredTextWidth"
-import { projectActions, useProjectState } from "../../../../adapters"
+import { PanelEnvironmentContext } from "@/ui/panels/PanelEnvironment"
+import { readOuterBounds } from "@/ui/controls/useMeasuredTextWidth"
+import { projectActions, useProjectState } from "@/project/adapters"
 import { dragStarted } from "../../core/interactions/layers"
 import type { Props, PublicInstance } from "@gpuix/react"
 import type { RefObject } from "react"
 import type { TrackRow } from "../../core/layout"
-import type { Track } from "../../../../model/types"
+import type { Track } from "@/project/model/types"
 
 export function useTrackReorder(
   rows: readonly TrackRow[],
@@ -88,7 +88,10 @@ export function useTrackReorder(
           if (start?.moved && start.target) projectActions.reorderTrack(start.id, start.target)
         },
         onKeyDown(event) {
-          if (event.key === "escape") cancel()
+          if (event.key !== "escape" || !anchor.current) return
+          event.preventDefault()
+          event.stopPropagation()
+          cancel()
         },
       }
     },

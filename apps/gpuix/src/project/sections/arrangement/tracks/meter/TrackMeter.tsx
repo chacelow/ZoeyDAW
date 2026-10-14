@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import { useTrackLabels } from "../labels"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { useProjectState } from "../../../../adapters"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { useProjectState } from "@/project/adapters"
 import {
   advanceMeterPeak,
   createMeterPeak,

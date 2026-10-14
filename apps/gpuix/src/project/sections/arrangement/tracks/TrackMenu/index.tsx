@@ -7,11 +7,11 @@ import {
   ContextMenuItem,
   ContextMenuLabel,
   ContextMenuSeparator,
-} from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { projectActions, useProjectState } from "../../../../adapters"
+} from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { projectActions, useProjectState } from "@/project/adapters"
 import type { ReactElement } from "react"
-import type { Track } from "../../../../model/types"
+import type { Track } from "@/project/model/types"
 
 export function TrackMenu({
   track,
@@ -41,7 +41,9 @@ export function TrackMenu({
     <ContextMenu
       style={{ width: "100%", height: "100%", flexDirection: "column", alignItems: "stretch" }}
     >
-      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+      <ContextMenuTrigger asChild role="group">
+        {children}
+      </ContextMenuTrigger>
       <ContextMenuContent testId={`track-menu-${track.id}`}>
         <ContextMenuLabel>{track.name}</ContextMenuLabel>
         <ContextMenuItem testId={`track-rename-${track.id}`} onSelect={onRename}>

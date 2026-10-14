@@ -1,13 +1,14 @@
 import { useTrackLabels } from "../labels"
-import { Button } from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { projectActions, useProjectState } from "../../../../adapters"
-import { TRACK_TITLE_HEIGHT } from "../../../../layout"
+import { Button } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { trackFill } from "../track-color"
 import { TrackNameInput } from "./NameInput"
 import { AutomationSelector } from "./AutomationSelector"
-import type { Props } from "@gpuix/react"
-import type { Track } from "../../../../model/types"
+import { Icon } from "@/ui/controls/Icon"
+import type { KeyEvent, Props } from "@gpuix/react"
+import type { Track } from "@/project/model/types"
 
 export function TrackIdentity({
   track,
@@ -35,6 +36,25 @@ export function TrackIdentity({
   const ink = theme.appearance === "dark" ? theme.colors.card : theme.colors.foreground
   const automation = useProjectState(state => state.workspace.automationMode)
   const gutter = (railCount + (track.kind === "group" ? 1 : 0)) * theme.project.groupRailWidth
+  const focusRing = {
+    outlineWidth: theme.project.trackBorder / 2,
+    outlineOffset: -theme.project.trackBorder / 2,
+    outlineColor: theme.colors.ring,
+  }
+  const handleKeyDown = (event: KeyEvent) => {
+    if (event.key === "enter" || event.key === "f2") {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.key === "f2") onRename()
+      else
+        onChoose(
+          Boolean(event.modifiers?.shift),
+          Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
+        )
+      return
+    }
+    dragHandlers?.onKeyDown?.(event)
+  }
   return (
     <div
       role="group"
@@ -55,16 +75,9 @@ export function TrackIdentity({
         backgroundColor: selected
           ? theme.colors.arrangementClipSelected
           : trackFill(track.color, theme),
+        focusVisible: focusRing,
       }}
-      onKeyDown={event => {
-        if (event.key === "enter")
-          onChoose(
-            Boolean(event.modifiers?.shift),
-            Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
-          )
-        if (event.key === "f2") onRename()
-        dragHandlers?.onKeyDown?.(event)
-      }}
+      onKeyDown={handleKeyDown}
     >
       <div
         testId={`track-title-${track.id}`}
@@ -88,9 +101,11 @@ export function TrackIdentity({
           onClick={() => projectActions.updateTrack(track.id, { collapsed: !track.collapsed })}
           style={{ borderWidth: 0, borderRadius: 0 }}
         >
-          <text aria-hidden="true" style={{ color: ink }}>
-            {track.collapsed ? "▸" : "▾"}
-          </text>
+          <Icon
+            name={track.collapsed ? "ChevronRight" : "ChevronDown"}
+            size={theme.control["--spacing-control-icon"]}
+            color={ink}
+          />
         </Button>
         {renaming ? (
           <TrackNameInput track={track} onFinish={onRenameEnd} />
@@ -111,6 +126,7 @@ export function TrackIdentity({
               justifyContent: "flex-start",
               color: ink,
               cursor: dragging ? "grabbing" : track.kind === "main" ? "default" : "grab",
+              focusVisible: focusRing,
             }}
             onMouseDown={event => {
               if (event.button !== 0) return
@@ -123,14 +139,7 @@ export function TrackIdentity({
             }}
             onMouseMove={dragHandlers?.onMouseMove}
             onMouseUp={dragHandlers?.onMouseUp}
-            onKeyDown={event => {
-              if (event.key === "enter")
-                onChoose(
-                  Boolean(event.modifiers?.shift),
-                  Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
-                )
-              if (event.key === "f2") onRename()
-            }}
+            onKeyDown={handleKeyDown}
           >
             <text
               style={{

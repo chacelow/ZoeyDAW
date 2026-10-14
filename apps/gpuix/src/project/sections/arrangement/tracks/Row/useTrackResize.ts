@@ -1,9 +1,9 @@
 import { useCallback, useContext, useEffect, useRef } from "react"
-import { PanelEnvironmentContext } from "../../../../../ui/panels/PanelEnvironment"
-import { projectActions, useProjectEditGesture } from "../../../../adapters"
-import { resizeTrackHeight, TRACK_REVEAL_THRESHOLD, TRACK_RESIZE_STEP } from "../../../../layout"
+import { PanelEnvironmentContext } from "@/ui/panels/PanelEnvironment"
+import { projectActions, useProjectEditGesture } from "@/project/adapters"
+import { resizeTrackHeight, TRACK_REVEAL_THRESHOLD, TRACK_RESIZE_STEP } from "@/project/layout"
 import type { Props } from "@gpuix/react"
-import type { Track } from "../../../../model/types"
+import type { Track } from "@/project/model/types"
 
 type HeightPatch = Pick<Track, "collapsed" | "heightPx">
 
@@ -58,6 +58,9 @@ export function useTrackResize(
     onBlur: cancel,
     onKeyDown(event) {
       if (event.key === "escape") {
+        if (!anchor.current) return
+        event.preventDefault()
+        event.stopPropagation()
         cancel()
         return
       }
@@ -68,6 +71,8 @@ export function useTrackResize(
         event.key !== "arrowdown"
       )
         return
+      event.preventDefault()
+      event.stopPropagation()
       const up = event.key === "up" || event.key === "arrowup"
       projectActions.updateTrack(
         track.id,

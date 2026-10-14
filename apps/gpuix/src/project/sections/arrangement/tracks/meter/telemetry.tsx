@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect } from "react"
-import { readProjectTelemetry, useProjectState } from "../../../../adapters"
+import { readProjectTelemetry, useProjectState } from "@/project/adapters"
 import { meterDecayDriver } from "./decay-driver"
 import type { ReactNode } from "react"
-import type { BackendTelemetry } from "../../../../model/backend"
+import type { BackendTelemetry } from "@/project/model/backend"
 
 export type TelemetryReader = () => BackendTelemetry | null
 const TelemetryContext = createContext<TelemetryReader>(readProjectTelemetry)

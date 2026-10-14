@@ -1,8 +1,8 @@
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import { clipRect } from "../../core/layout"
 import { trackFill } from "../track-color"
 import { useTrackLabels } from "../labels"
-import type { Track } from "../../../../model/types"
+import type { Track } from "@/project/model/types"
 import type { ArrangementViewport } from "../../core/scene"
 
 export function GroupOverview({

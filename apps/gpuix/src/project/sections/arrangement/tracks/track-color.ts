@@ -1,5 +1,5 @@
-import { colorMix } from "../../../../shared/theme/color-mix"
-import type { Theme } from "../../../../shared/theme/ThemeProvider"
+import { colorMix } from "@/shared/theme/color-mix"
+import type { Theme } from "@/shared/theme/ThemeProvider"
 
 const PALETTE_KEYS: Record<string, keyof Theme["colors"]> = {
   "var(--chart-1)": "chart1",

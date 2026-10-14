@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { visibleTracks } from "../../../../model/types"
-import { projectTrackGroups } from "../../../../model/track-groups"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { visibleTracks } from "@/project/model/types"
+import { projectTrackGroups } from "@/project/model/track-groups"
 import {
   arrangementBodyTop,
   arrangementBodyBottom,

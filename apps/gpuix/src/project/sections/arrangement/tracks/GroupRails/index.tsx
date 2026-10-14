@@ -1,7 +1,7 @@
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import { trackFill } from "../track-color"
-import type { GroupRail } from "../../../../model/track-groups"
-import type { Track } from "../../../../model/types"
+import type { GroupRail } from "@/project/model/track-groups"
+import type { Track } from "@/project/model/types"
 
 export function GroupRails({
   rails,

@@ -48,7 +48,7 @@ Header geometry uses the shared 304px control column: identity 100px, routing 74
 
 Native screenshot inspection caught a context-menu host shrinking the composite row to content width. Explicit full-size column/stretch layout on the existing `ContextMenu` root fixed it; the width regression changed from 360px to the full 1000px viewport. Dark-track title ink was corrected to the theme's dark surface color so it remains readable on lightened authored track colors. Initial and repaired images are in `evidence/2026-10-15-initial-width-defect.png` and `evidence/2026-10-15-layout-fixed.png`.
 
-Shared integration still pending at this intermediate commit: A3b's container-width Select, compact numeric icon treatment and ContextMenu keyboard fix. The existing arrow-key regressions are kept failing rather than weakened or skipped.
+Shared integration still pending: A3b's container-width Select, compact numeric icon treatment, Space policy and main-build bounds reader. On the fixed main renderer, owned resize keys now call `preventDefault` and `stopPropagation`; all three resize keyboard regressions pass. The remaining shared geometry/Space regressions are retained, not weakened or skipped.
 
 ## Track gestures
 
@@ -57,6 +57,10 @@ Shared integration still pending at this intermediate commit: A3b's container-wi
 `useTrackReorder` holds only pointer baseline, source/target IDs and drop highlight. It consumes B1's drag threshold and the shared bounds reader; document order changes only on release through `projectActions.reorderTrack`. Escape and application deactivation clear the gesture without a history entry. Group moves preserve their branch and routing through the existing command.
 
 Native behavior checks: captured reorder, cancellation and Group branch moves passed 3 tests with 8 assertions. Cmd removal and Shift range selection passed a separate regression. `onFocusTrack` reports inline editor focus only; invoking it after ordinary additive selection had incorrectly reselected a just-removed track and was removed from that path.
+
+Selection/editing handlers consume Enter/F2, resize consumes its arrow keys, and active cancellation consumes Escape. Name input keeps its keys inside the native editor; Space on non-editable controls remains available to the trailing window transport owner. Native name-input isolation and Tab order passed 2 tests with 7 assertions. Native mixer wheel, captured commit/cancel and disabled self-send passed 3 tests with 10 assertions; wheel simulation uses 16 pixel units per shared step, not line units.
+
+All icons now use `ui/controls/Icon` (`Headphones`, `Circle`, `ChevronDown`, `ChevronRight`); there is no locally authored SVG markup or font-glyph icon. Keyboard focus uses the native `focusVisible` inset outline without changing track geometry.
 
 ## 公共接口
 

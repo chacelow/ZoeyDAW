@@ -1,10 +1,10 @@
 import { useTrackLabels } from "../labels"
-import { DropdownButton, DragPadToggle } from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { projectActions, useProjectState } from "../../../../adapters"
-import { trackControlRows } from "../../../../layout"
-import { routingDestinations } from "../../../../model/track-routing"
-import type { Track } from "../../../../model/types"
+import { DropdownButton, DragPadToggle } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { trackControlRows } from "@/project/layout"
+import { routingDestinations } from "@/project/model/track-routing"
+import type { Track } from "@/project/model/types"
 
 const HARDWARE_CHANNELS = [
   { id: "1-2", label: "1 / 2" },

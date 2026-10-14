@@ -1,13 +1,13 @@
 import { createTestRoot } from "@gpuix/react/testing"
-import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
+import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import {
   hydrateProject,
   projectActions,
   readProjectTelemetry,
   useProjectState,
-} from "../../../../adapters"
-import { createTrack } from "../../../../model/reducers"
-import { DEFAULT_TRACK_HEIGHT } from "../../../../layout"
+} from "@/project/adapters"
+import { createTrack } from "@/project/model/reducers"
+import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
 import { trackResources } from "../locales"

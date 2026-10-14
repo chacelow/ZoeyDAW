@@ -1,9 +1,9 @@
 import { useRef, useState } from "react"
 import { useTrackLabels } from "../../labels"
-import { Input } from "../../../../../../ui/controls"
-import { useTheme } from "../../../../../../shared/theme/ThemeProvider"
-import { projectActions } from "../../../../../adapters"
-import type { Track } from "../../../../../model/types"
+import { Input } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { projectActions } from "@/project/adapters"
+import type { Track } from "@/project/model/types"
 
 export function TrackNameInput({
   track,
@@ -33,7 +33,11 @@ export function TrackNameInput({
       onSubmit={() => finish(true)}
       onBlur={() => finish(true)}
       onKeyDown={event => {
-        if (event.key === "escape") finish(false)
+        event.stopPropagation()
+        if (event.key === "escape") {
+          event.preventDefault()
+          finish(false)
+        }
       }}
       style={{
         flexGrow: 1,

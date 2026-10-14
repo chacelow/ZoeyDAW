@@ -1,14 +1,12 @@
 import { useTrackLabels } from "../labels"
-import { DragPadBar, DragPadToggle, PanControl } from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { projectActions, useProjectEditGesture, useProjectState } from "../../../../adapters"
-import { trackControlRows, trackHeight } from "../../../../layout"
+import { DragPadBar, DragPadToggle, PanControl } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
+import { trackControlRows, trackHeight } from "@/project/layout"
 import { TrackMeter } from "../meter/TrackMeter"
+import { Icon } from "@/ui/controls/Icon"
 import type { ReactNode } from "react"
-import type { Track } from "../../../../model/types"
-
-const HEADPHONES =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2A10 10 0 0 0 2 12v7a3 3 0 0 0 3 3h3V12H4a8 8 0 0 1 16 0h-4v10h3a3 3 0 0 0 3-3v-7A10 10 0 0 0 12 2Z"/></svg>'
+import type { Track } from "@/project/model/types"
 
 function MixerLevel({
   label,
@@ -100,14 +98,10 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 value={track.cueVolumeDb ?? 0}
                 onChange={cueVolumeDb => projectActions.updateTrack(track.id, { cueVolumeDb })}
                 icon={
-                  <svg
-                    aria-hidden="true"
-                    source={HEADPHONES}
-                    style={{
-                      width: theme.control["--spacing-control-icon"],
-                      height: theme.control["--spacing-control-icon"],
-                      color: theme.colors.mutedForeground,
-                    }}
+                  <Icon
+                    name="Headphones"
+                    size={theme.control["--spacing-control-icon"]}
+                    color={theme.colors.mutedForeground}
                   />
                 }
               />
@@ -139,7 +133,15 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 value={track.armed}
                 onChange={armed => projectActions.updateTrack(track.id, { armed })}
                 testId={`track-arm-${track.id}`}
-                icon={<text aria-hidden="true">●</text>}
+                icon={
+                  <Icon
+                    name="Circle"
+                    size={theme.control["--spacing-control-icon"]}
+                    color={
+                      track.armed ? theme.colors.primaryForeground : theme.colors.mutedForeground
+                    }
+                  />
+                }
                 style={{
                   ...column,
                   width: "auto",
