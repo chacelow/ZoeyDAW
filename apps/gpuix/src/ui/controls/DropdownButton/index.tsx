@@ -126,6 +126,7 @@ export function DropdownButton<T extends string = string>({
         aria-disabled={disabled}
         {...info}
         disabled={disabled}
+        activateOnSpace={false}
         style={sx(
           controlChrome(
             theme,

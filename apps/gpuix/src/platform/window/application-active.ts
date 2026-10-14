@@ -1,44 +1,52 @@
-type ActivityListener = (active: boolean) => void
+export type ActivityListener = (active: boolean) => void
 
-interface ApplicationActivityDependencies {
-  readActive(): boolean | null
-  startSampling(sample: () => void, intervalMs: number): () => void
+export interface WindowActivityRenderer {
+  onWindowActiveChange?(callback: ActivityListener | null): void
 }
 
-/** Lifecycle owner for the gpuix 0.10.0 missing window activation signal. */
-export function createApplicationActiveSubscription({
-  readActive,
-  startSampling,
-}: ApplicationActivityDependencies) {
-  const subscriptions = new Set<{ listener: ActivityListener }>()
-  let stopSampling: (() => void) | undefined
-  let active = true
+interface ActivitySubscription {
+  readonly listener: ActivityListener
+}
 
-  const sample = () => {
-    const nextActive = readActive() ?? true
-    if (nextActive === active) {
-      return
-    }
-    active = nextActive
-    for (const subscription of subscriptions) {
-      subscription.listener(active)
-    }
-  }
+interface ActivitySession {
+  active: boolean | undefined
+  readonly subscriptions: Set<ActivitySubscription>
+}
 
-  // Capture a baseline, not an initial notification. Only transitions notify.
+/** One native observer per window; the first native value establishes the baseline. */
+export function createApplicationActiveSubscription(renderer: WindowActivityRenderer) {
+  const setCallback = renderer.onWindowActiveChange?.bind(renderer)
+  let session: ActivitySession | null = null
+
   return (listener: ActivityListener): (() => void) => {
+    if (!setCallback) throw new Error("Renderer does not support window activation events")
     const subscription = { listener }
-    subscriptions.add(subscription)
-    if (subscriptions.size === 1) {
-      active = readActive() ?? true
-      stopSampling = startSampling(sample, 50)
+    const current = session ?? { active: undefined, subscriptions: new Set<ActivitySubscription>() }
+    current.subscriptions.add(subscription)
+
+    if (session === null) {
+      session = current
+      setCallback(active => {
+        if (session !== current) return
+        const previous = current.active
+        current.active = active
+        if (previous === undefined || previous === active) return
+        const pending = [...current.subscriptions]
+        queueMicrotask(() => {
+          for (const pendingSubscription of pending) {
+            if (session !== current) return
+            if (current.subscriptions.has(pendingSubscription)) {
+              pendingSubscription.listener(active)
+            }
+          }
+        })
+      })
     }
+
     return () => {
-      if (!subscriptions.delete(subscription) || subscriptions.size !== 0) {
-        return
-      }
-      stopSampling?.()
-      stopSampling = undefined
+      if (!current.subscriptions.delete(subscription) || current.subscriptions.size !== 0) return
+      session = null
+      setCallback(null)
     }
   }
 }

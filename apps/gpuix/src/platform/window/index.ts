@@ -1,14 +1,5 @@
-import { isApplicationActive } from "@zoeydaw/native"
 import { createApplicationActiveSubscription } from "./application-active"
-
-/** One lazy sampler per application; null preserves active gestures on unsupported hosts. */
-export const subscribeApplicationActive = createApplicationActiveSubscription({
-  readActive: isApplicationActive,
-  startSampling: (sample, intervalMs) => {
-    const timer = setInterval(sample, intervalMs)
-    return () => clearInterval(timer)
-  },
-})
+import type { WindowActivityRenderer } from "./application-active"
 
 /**
  * 窗口平台端口。这里**自己声明**需要的最小能力(结构类型),不 import `@gpuix/native`:
@@ -23,7 +14,7 @@ export interface PathPromptOptions {
 }
 
 /** `@gpuix/native` 的 renderer 在结构上满足它;各方法在旧版本里可能缺失,所以都是可选。 */
-export interface WindowRenderer {
+export interface WindowRenderer extends WindowActivityRenderer {
   setWindowTitle?(title: string): void
   minimizeWindow?(): void
   zoomWindow?(): void
@@ -43,7 +34,9 @@ export function createWindowCloseGuard(): WindowCloseGuard {
 }
 
 export function createWindowPlatform(renderer: WindowRenderer) {
+  const subscribeApplicationActive = createApplicationActiveSubscription(renderer)
   return {
+    subscribeApplicationActive,
     setTitle: (title: string) => renderer.setWindowTitle?.(title),
     minimize: () => renderer.minimizeWindow?.(),
     zoom: () => renderer.zoomWindow?.(),
