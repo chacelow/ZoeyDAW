@@ -30,6 +30,7 @@ async function settle(root: TestRoot) {
   for (let i = 0; i < 4; i++) {
     await Bun.sleep(40)
     root.renderer.flush()
+    root.renderer.dispatchNativeEvents()
   }
 }
 
@@ -147,7 +148,7 @@ describe("native resizable panel interactions", () => {
     expect(bounds(root, "left").width).toBeCloseTo(300)
   })
 
-  test("sampling a smaller and larger container reflows constraints without stale pixels", async () => {
+  test("layout events reflow smaller and larger containers without stale pixels", async () => {
     let resize: ((width: number) => void) | undefined
     function Harness() {
       const [width, setWidth] = useState(800)
@@ -287,7 +288,7 @@ describe("native resizable panel interactions", () => {
     expect(unsubscribed).toBe(1)
   })
 
-  test("sampling cannot change the pointer anchor during an active drag", async () => {
+  test("layout events cannot change the pointer anchor during an active drag", async () => {
     let resize: ((width: number) => void) | undefined
     function Harness() {
       const [width, setWidth] = useState(800)

@@ -68,7 +68,7 @@
 
 ## 9. 键盘与焦点
 
-- Space 只控制播放：不得激活已聚焦或刚点过的按钮，也不触发该按钮的按下样式。
+- 工具栏、Transport、轨道表头的按钮与切换控件：Space 不激活、不进入按下样式，事件继续冒泡至窗口级播放快捷键；Enter 激活。弹层内选项、菜单项、RadioGroup 表单选项、可点击 Card 和 Label 保留 Space 选中或激活；文本输入中的 Space 仍输入空格。
 - 窗口级快捷键走窗口根键盘事件（`windowKeyDown`，在同一次按键的所有元素 `keyDown` 之后触发，共享 `keystrokeId`），不用 JS 定时器轮询。元素 handler 调 `stopPropagation()` 会让窗口 handler 收不到，所以工具栏按钮与切换控件不得吞 Space；输入框与可编辑控件聚焦时对可打印键 `stopPropagation`，快捷键不得吞掉文字输入。
 - 所有可点击元素可经 Tab 到达，焦点环可见；焦点顺序与视觉顺序一致。
 - 单键切换（如 M 切换轨道编辑模式）再按一次必须还原。

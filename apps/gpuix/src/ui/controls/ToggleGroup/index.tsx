@@ -2,7 +2,7 @@ import { createContext, useContext, useRef } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "../../../shared/theme/ThemeProvider"
 import { sx, sv } from "../../../shared/theme/style"
-import { isActivationKey, navigateSelection } from "../RadioGroup/keyboard"
+import { navigateSelection } from "../RadioGroup/keyboard"
 import type { Props } from "@gpuix/react"
 import type { SelectionEntry } from "../RadioGroup/keyboard"
 
@@ -36,6 +36,7 @@ export function ToggleGroup(props: ToggleGroupProps) {
     onValueChange: _onValueChange,
     ...native
   } = props
+  const theme = useTheme()
   const entries = useRef(new Map<string, SelectionEntry>()).current
   const selection: ToggleSelection = props
   return (
@@ -48,7 +49,7 @@ export function ToggleGroup(props: ToggleGroupProps) {
           {
             display: "flex",
             flexDirection: orientation === "horizontal" ? "row" : "column",
-            gap: 2,
+            gap: theme.control["--spacing-control-gap"],
           },
           style
         )}
@@ -95,14 +96,14 @@ export function ToggleGroupItem({
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: 4,
+      gap: theme.control["--spacing-control-gap"],
       height: theme.control["--spacing-control-track"],
       fontSize: theme.control["--text-control-track"],
       color: theme.colors.foreground,
       borderWidth: 1,
-      borderRadius: 3,
-      paddingLeft: 6,
-      paddingRight: 6,
+      borderRadius: theme.control["--spacing-control-gap"],
+      paddingLeft: theme.control["--spacing-control-track-pad"],
+      paddingRight: theme.control["--spacing-control-track-pad"],
       cursor: "pointer",
       userSelect: "none",
     },
@@ -116,10 +117,21 @@ export function ToggleGroupItem({
           backgroundColor: theme.colors.accent,
           color: theme.colors.accentForeground,
           borderColor: theme.colors.ring,
+          active: { backgroundColor: theme.colors.accent },
         },
-        false: { hover: { backgroundColor: theme.colors.muted } },
+        false: {
+          hover: { backgroundColor: theme.colors.muted },
+          active: { backgroundColor: theme.colors.accent },
+        },
       },
-      disabled: { true: { opacity: 0.5, cursor: "not-allowed" }, false: {} },
+      disabled: {
+        true: {
+          opacity: 0.5,
+          cursor: "not-allowed",
+          active: { backgroundColor: "transparent" },
+        },
+        false: {},
+      },
     },
   })
   return (
@@ -150,7 +162,7 @@ export function ToggleGroupItem({
       }}
       onKeyDown={event => {
         if (unavailable) return
-        if (isActivationKey(event)) toggle()
+        if (event.key === "enter") toggle()
         else
           navigateSelection({
             event,

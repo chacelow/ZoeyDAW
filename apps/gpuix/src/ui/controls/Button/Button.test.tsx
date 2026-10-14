@@ -6,7 +6,14 @@ import { Button } from "."
 import { readOuterBounds } from "../useMeasuredTextWidth"
 
 test("pointer and keyboard toggle once, disabled button ignores activation", () => {
-  const root = createTestRoot({ width: 320, height: 160 })
+  const rootKeys: string[] = []
+  const root = createTestRoot({
+    width: 320,
+    height: 160,
+    onKeyDown: event => {
+      rootKeys.push(event.key ?? "")
+    },
+  })
   let latest = false
   function Harness() {
     const [active, setActive] = useState(false)
@@ -44,6 +51,9 @@ test("pointer and keyboard toggle once, disabled button ignores activation", () 
   root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
   expect(latest).toBe(true)
   root.renderer.nativeSimulateKeystrokes(node.id, "space")
+  expect(latest).toBe(true)
+  expect(rootKeys).toContain("space")
+  root.renderer.nativeSimulateKeystrokes(node.id, "enter")
   expect(latest).toBe(false)
   root.renderer.nativeSimulateKeystrokes(root.renderer.findByTestId("disabled")!.id, "enter")
   expect(latest).toBe(false)
