@@ -88,6 +88,7 @@
 - 等价性：d3-shape 生成的 automation 路径与原手写路径在 2000 组随机曲线上逐坐标一致（最大差 0）。
 - review 教训：规范类问题（手写 SVG、深层相对导入、重复依赖）要用**扫描**发现，不是靠读 diff。以后每个切片合并前先跑 `pnpm exec eslint apps/gpuix/src`，并 `grep -rnE "<svg|<path" apps/gpuix/src` 看一眼。
 - 加依赖的坑：`pnpm add` 会重算 lockfile，把 `react: link:.gpuix-main/node_modules/react` 改回 19.2.8，导致 `Multiple React runtimes` 与 96 个测试失败。做法：只编辑 `package.json`，再 `pnpm install --no-frozen-lockfile`，然后 `git diff pnpm-lock.yaml` 确认只有新增行，并跑 `node scripts/gpuix-main/check.mjs --resolution`。`@types/d3-shape` 要 3.2.0 才有 `digits`。
+- lucide 没有的图标（如节拍器）：用 Phosphor 的包内资源 `@phosphor-icons/core/assets/regular/<name>.svg`（`with { type: "text" }` 导入，`shared/svg/assets.d.ts` 声明类型），登记在 `Icon` 的 `PHOSPHOR_ICONS`。我曾告诉 footer 切片「用 lucide 的 Metronome」，那是错的，核实后才纠正：发规范前先在代码里查名称是否存在。
 - 见：`docs/architecture/gpuix-ui-standards.md` 第 14 节、`tooling/eslint/gpuix-imports.js`。
 
 ## gpuix 迁移：并行提交会争用 lint-staged 的共享 stash，失败后先查再重试

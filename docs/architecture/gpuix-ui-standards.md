@@ -101,7 +101,7 @@
 - SVG 标记只在 `shared/svg/serialise.ts` 里写一次：所有 `<svg source>` 都经 `serialiseSvg(nodes, { viewBox, attributes })` 生成。gpuix 的 `<svg>` 只接收原始标记并按单色着色，所以颜色一律用 `currentColor`（图标）或 `style.color`，不在标记里写颜色字面量。
 - **跨目录导入用 `@/` 别名**（指向 `apps/gpuix/src`，在 `apps/gpuix/tsconfig.json` 的 `paths` 配置，`tsc`、`bun test`、`bun run`、`eslint` 都已验证可解析）。同目录与向上最多两层保持相对（`./x`、`../x`、`../../x`）；超过两层用 `@/`。`gpuix-layers` 把 `@/…` 与相对路径解析到同一层，别名绕不过分层规则。
 - 机制：`architecture/gpuix-imports` 拦截 ① 任何字符串或模板里的 `<svg`、`<path`、`<circle`、`<rect`、`<polyline`、`<polygon`、`<line`、`<ellipse`，② 超过两层的相对导入（可 `eslint --fix` 自动改成 `@/`）。测试文件不受限；唯一豁免是 `shared/svg/serialise.ts`，在 `eslint.config.js` 里按文件豁免，不放进规则里。
-- 新增图标：直接 `<Icon name="…" />`，不需要加任何文件。lucide 没有的图形，先问，不要手画。
+- 新增图标：直接 `<Icon name="…" />`。先查 lucide；lucide 没有的（例如节拍器 `Metronome`），用 [Phosphor](https://phosphoricons.com) 的包内资源：在 `ui/controls/Icon/index.tsx` 的 `PHOSPHOR_ICONS` 表里加一项，从 `@phosphor-icons/core/assets/regular/<name>.svg` 以 `with { type: "text" }` 导入，不改 `Icon` 之外的任何文件。Phosphor 也没有的图形，先问，不要手画。
 
 ## 13. 验收清单（每个界面切片交付时逐条回答）
 
