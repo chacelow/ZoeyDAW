@@ -496,3 +496,150 @@ node scripts/gpuix-main/check.mjs --resolution
 5. 运行 frozen install、`pnpm native:build`、`check.mjs --resolution`、gpuix 的 tsc、完整 bun test、ESLint，以及受影响的 Rust check/test。
 6. 逐个运行四个 feature demo、panel gallery、`bun --hot scripts/gpuix-main/probe.mjs` 和带 `--close` 的探针。验证布局事件、Space、红灯与 Cmd+W 的 veto/allow 转换，每个窗口验证后立即关闭。
 7. 更新本报告与第三方 notice；只提交 SHA、补丁、构建与解析配置，不提交源码或二进制。
+
+### D1 验收记录
+
+本轮是 renderer 集成，不是全量控件视觉验收。协调者已批准这一范围，补充要求是保存截图、核对面板 token，并比较 A4、A3 在 npm 与自建 renderer 下的布局。
+
+| 检查 | 实跑命令 | 结果 |
+| --- | --- | --- |
+| 独立 vendor 干净源码构建 | `bash scripts/gpuix-main/build.sh` | 通过，151.11s，复用现有 Cargo target；napi 部分 71.75s，二进制 23,665,216 bytes |
+| 幂等重建 | `bash -n scripts/gpuix-main/build.sh && bash scripts/gpuix-main/build.sh && node scripts/gpuix-main/check.mjs --resolution` | 通过，42.84s，补丁不重复 apply，manifest 与包 identity 检查通过 |
+| 干净消费者安装 | 把 `8b078fd` 的 `git archive` 解到独立临时目录，运行 `build.sh`、`pnpm install --frozen-lockfile`、`check.mjs --resolution` | 通过，999 个包；该目录起初没有 node_modules 或 `.gpuix-main`，验证后已删除 |
+| 本仓 native | `pnpm native:build` | 通过 |
+| gpuix 类型 | `pnpm --dir apps/gpuix exec tsc --noEmit` | 通过，0 error |
+| gpuix 全部测试 | `pnpm --dir apps/gpuix exec bun test` | 406 pass、1 todo、0 fail，59 files，93,740 expect |
+| lint | `pnpm exec eslint apps/gpuix/src scripts/gpuix-main/check.mjs scripts/gpuix-main/probe.mjs` | 0 error、0 warning |
+| 本仓 Rust | `cargo check && cargo test` | 通过，engine 21、native 8，doc-tests 0 |
+| vendor Rust | `CARGO_BUILD_JOBS=6 CARGO_TARGET_DIR=/Volumes/PSSD/code/_vendor/target cargo check --release --features test-support,gpui_platform/runtime_shaders` 与同 features 的 `cargo test --release` | 通过，266 pass、0 fail；上游 3 个 dead_code warning 未改 |
+| 保留的 Web | `pnpm --filter @zoeydaw/web typecheck && pnpm --filter @zoeydaw/web test` | 类型通过，462 pass、78 files |
+
+`packages/ui` 没有 test script，空的 `pnpm --filter @zoeymind/ui test` 不计为通过。额外运行 `cd packages/ui && pnpm exec tsc --noEmit`，报三处协调者确认的遗留 story API 错误：`data-table.stories.tsx:79` 的 `indeterminate`，`sheet.stories.tsx:26,36` 的 `asChild`。这些只读路径未改；Web/UI 的 React 与 ReactDOM 都保留 19.2.8，不是 vendor 的 19.2.4。
+
+唯一 todo 是既有 `project/model/grid.test.ts` 的 `Ctrl/Cmd+1/2 maps to adjustGrid through the Arrangement keyboard hook`，由 Arrangement 切片接线。本轮提供窗口订阅端口，不把快捷键业务称为已完成。
+
+面板生产代码删除 32ms 测量定时器、`useWindowSize` 与 `getElementBounds` 采样，只由 `onLayout` 更新尺寸。测试初次运行出现 7 个布局失败，原因是上游 `TestRenderer.flush()` 只 paint、不分发 paint 后事件；测试的 `settle()` 现在显式调用 `dispatchNativeEvents()`，原有拖动、折叠、resize 断言未放宽，10 个面板交互测试通过。元素焦点检查不属于尺寸采样，没有顺便删除。
+
+`WindowKeyboard` 在 `platform/keyboard` 拥有每个 render root 的订阅，`main.tsx` 注入 `onKeyDown`、`onKeyUp` 并提供 context。取消订阅、消费阻止第二个 section 命令、root 隔离各有行为测试。接入约定见该目录的 README，ui 不 import platform。
+
+### 真实窗口与探针
+
+所有入口均用带 name 的 `bun --hot` service 启动；表中截图与 AX 来自真实窗口，每轮取证后立即关闭。图片位于 [`scripts/gpuix-main/evidence`](../../scripts/gpuix-main/evidence/)。
+
+| 入口 | 观察到的内容或操作 | 截图 |
+| --- | --- | --- |
+| `src/features/track-mixer/demo.tsx` | Lead Synth、Drum Bus、FX Group，Volume/Pan sliders | `track-mixer.png` |
+| `src/features/clip-render/demo.tsx` | `7/13 clips mounted`，Drums/Bass/Keys/FX 与 clip 名称 | `clip-render.png` |
+| `src/features/waveform-automation/demo.tsx` | 合成竖线 peaks 与 SVG automation，非真实音频引擎 | `waveform-automation.png` |
+| `src/features/drag-pad/demo.tsx` | BPM 120、Pan 0.00、Percent 50、Disabled 42 | `drag-pad.png` |
+| `src/ui/panels/gallery.tsx` | 初始 Browser 275px、Clip 0px、Device 160px；Toggle Clip 后 Clip 160px，Device 仍 160px | `panel-geometry-default.png`、`panels-main.png` |
+| `src/main.tsx` | 注入键盘 provider 的应用根正常绘制 foundation 文本 | `main.png` |
+| `scripts/gpuix-main/probe.mjs` | Space 到达订阅，AX 变为 `Window key: space`；文字容器报告 border box | `capability.png` |
+| 同探针带 `--close` | Cmd+W veto、红灯 veto，Allow 后红灯关闭，exit 0 | `close-veto-final.png` |
+
+最终探针实际输出如下，`width` 是收缩文字容器的 border box，不是任意字符串 shaping API。
+
+```json
+{"kind":"textLayout","width":227,"height":29}
+{"kind":"windowKeyDown","key":"space"}
+{"kind":"windowKeyUp","key":"space"}
+{"kind":"closeRequest","allow":false}
+{"kind":"closeRequest","allow":false}
+{"kind":"closeRequest","allow":true}
+```
+
+### 渲染器切换的布局对照
+
+A4 比较旧采样版 npm 0.10.0 与 D1 `onLayout` 版自建主干，均打开 Clip，窗口外框 1120×788。A3 两边使用相同源码 `gpuix-migration@136f1dda8c06e153cc129daee08f1746cde70550` 的外置消费者，窗口外框 1050×808；本 worktree 不含 A3，未修改或访问其它 worktree。
+
+临时消费者通过 `git archive` 取源码，npm 对照只安装既有 `@gpuix/native@0.10.0`、`@gpuix/react@0.10.0`、React 19.2.8；主干对照只把三个链接改到固定 vendor。两个消费者的 React 都与自己的 renderer 一致，比较后移除临时目录。以下 x/y 相对 AX 窗口外框原点，包含标题栏。`Δ` 是自建减 npm 的 x/y/w/h。
+
+| 画廊与节点                   | npm x/y/w/h    | Δ x/y/w/h |
+| ---------------------------- | -------------- | --------- |
+| A4 Toggle Browser            | 7/35/108/35    | 0/0/0/0   |
+| A4 Toggle Clip               | 122/35/82/35   | 0/0/0/0   |
+| A4 Toggle Device             | 211/35/100/35  | 0/0/0/0   |
+| A4 browser                   | 7/77/275/342   | 0/0/0/0   |
+| A4 arrangement               | 289/77/824/342 | 0/0/0/0   |
+| A4 clip                      | 7/426/1106/160 | 0/0/0/0   |
+| A4 devices                   | 7/593/1106/160 | 0/0/0/0   |
+| A4 Resize browser            | 282/77/7/342   | 0/0/0/0   |
+| A4 Resize browser columns    | 93/114/7/303   | 0/0/0/0   |
+| A4 Resize clip               | 7/419/1106/7   | 0/0/0/0   |
+| A4 Toggle device by dragging | 7/586/1106/7   | 0/0/0/0   |
+| A3 Active button off         | 33/178/54/13   | 0/0/0/0   |
+| A3 No highlight              | 97/178/58/13   | 0/0/0/0   |
+| A3 Play icon                 | 165/178/13/13  | 0/0/0/0   |
+| A3 Outline                   | 33/191/36/13   | 0/0/0/0   |
+| A3 Secondary                 | 79/191/51/13   | 0/0/0/0   |
+| A3 Ghost                     | 140/191/31/13  | 0/0/0/0   |
+| A3 Delete                    | 181/191/33/13  | 0/0/0/0   |
+| A3 Link                      | 224/191/23/13  | 0/0/0/0   |
+| A3 Warp mode                 | 363/174/117/13 | 0/0/0/0   |
+| A3 Continuous adjustment     | 490/174/63/13  | 0/0/0/0   |
+| A3 Commands                  | 363/187/54/13  | 0/0/0/0   |
+| A3 BPM                       | 33/207/34/13   | 0/0/0/0   |
+| A3 Transport BPM             | 70/204/45/20   | 0/0/0/0   |
+| A3 Level                     | 33/224/34/13   | 0/0/0/0   |
+| A3 Bipolar                   | 77/224/45/13   | 0/0/0/0   |
+| A3 Pan                       | 132/224/39/13  | 0/0/0/0   |
+| A3 Gallery input             | 693/178/286/13 | 0/0/0/0   |
+
+28 个节点、112 个 bounds 标量全部相同。原始双边数据在 `evidence/renderer-comparison.json`；截图为 `panels-npm.png`、`panels-main.png`、`controls-npm.png`、`controls-main.png`，控件局部放大为 `controls-npm-zoom.png` 与 `controls-main-zoom.png`。截图的窗口阴影与红灯颜色受 OS 焦点影响，不据此宣称像素完全相同。该比较只覆盖已列节点与状态，不推导全部控件无回归。
+
+### 面板度量与视觉范围
+
+面板 AX 原始坐标在 `evidence/panel-bounds.json`，完整图与放大图为 `panel-geometry-default.png`、`panel-divider-default-zoom.png`。本轮没有调整样式；修复的是测量 owner 与测试事件泵。
+
+| 度量 | token 或既有约定 | 实测 | 结论 |
+| --- | --- | --- | --- |
+| Browser 到 Arrangement 间隙 | `PROJECT_METRICS.panelGap = 7` | 1009 − 727 − 275 = 7 | 一致 |
+| 竖向分隔条宽 | 同一 panelGap | 7 | 一致 |
+| Device 水平分隔条高 | 同一 panelGap | 7 | 一致 |
+| default 控件高 | `CONTROL_METRICS.default["--spacing-control-track"] = 13` | A3 已列 default 按钮与数值控件均 13 | 一致 |
+| transport 控件高 | transport track = 20 | Transport BPM 20 | 一致 |
+| 图标按钮正方形 | default track × track | Play icon 13×13 | 一致 |
+| Device 固定高 | A4 画廊既有 160px fixture，不是新增 token | 160，Clip 展开前后不变 | 一致 |
+| Panel 边框 | panelBorder = 2 | 未逐像素量出厚度 | 未验证，由 A4 ui-panels 验收 |
+
+只读观察 Live 的「无标题」窗口，AX 确认 Browser、Arrangement、Clip 细节与装置详情区域；没有点击、拖动、输入或修改 Live。参照图为 `live-reference-current.png` 与 `live-browser-default-zoom.png`。
+
+| 规则 | Live 观察 | 我们实现 | 一致性 |
+| --- | --- | --- | --- |
+| Browser 在左，Arrangement 在右，细节在下 | AX 与截图可见这些区域 | A4 画廊有对应 Panel 组合 | 区域关系一致，不声称像素复刻 |
+| 布局尺寸只有一个 owner | 无法从 Live UI 观察其内部测量机制 | renderer onLayout 事件持有尺寸 | Live 内部机制未验证 |
+| 紧凑控件 | 参照图有密集列表与轨道控件 | 默认 13px、transport 20px 实测符合本仓 token | 全量 Live 同区域密度未验证，由 A3 ui-controls 验收 |
+| Space 窗口快捷键 | 未在 Live 输入 | 窗口根订阅已收到 Space，不实现播放业务 | Live 行为未验证，播放接线由 B2 Arrangement/Transport 验收 |
+| 关闭拦截 | 未操作 Live 关闭 | 自建 PoC 的 veto/allow 已观察 | Live 行为未验证 |
+
+按 `gpuix-ui-standards.md` 第 13 节逐项声明如下。D1 不宣称通过全量视觉规范。
+
+| 检查 | 本轮证据或边界 |
+| --- | --- |
+| 每个控件每个状态放大图 | 提交已列默认、Clip 展开、Space、关闭 veto 图及局部 zoom；全量状态未验证，由 A3 ui-controls 与 A4 ui-panels 验收 |
+| 间距同一 token | panelGap 与控件高度实测见上表；其它间距未验证，由各 UI owner 验收 |
+| 文字、数值、图标居中 | 提交 zoom 与 bounds；未逐节点做居中误差量测，由 A3 ui-controls 验收 |
+| 同组等高、图标正方形 | 已列 default 13、transport 20、Play icon 13×13；未覆盖所有控件，由 A3 ui-controls 验收 |
+| 与 Live 同区域紧凑感 | 提交只读 Live 参照与本轮画廊图；全量同区域并排密度未验证，由 A3 ui-controls 与 B2 sections 验收 |
+| 深浅主题、中英文 | 未验证，由 A3 ui-controls、A4 ui-panels 与 B2 sections 验收 |
+| Tab、焦点环、Space | Space 根事件与有焦点时的 Cmd+W 已验证；完整 Tab 顺序、焦点环与输入框快捷键优先级未验证，由各 UI owner 与 B2 app-shell 验收 |
+| 拖动、滚轮、弹层保持打开 | 现有面板交互自动测试通过；全量原生手势与弹层状态未验证，由 A3 ui-controls 与 A4 ui-panels 验收 |
+| 裁剪、帧数与耗时 | Clip demo 实际显示 7/13 挂载；本轮没有重测 draw stats 或大型工程性能，由 B2 Arrangement 验收 |
+
+### 清理与未实现项
+
+每个自有窗口验证后已关闭，最长一次交互探针约 82 秒；没有长期存活的 D1 demo。干净安装快照与 npm 比较消费者已删除，固定 vendor 源码与构建缓存保留用于后续切片。
+
+最终进程核对命令及输出：
+
+```sh
+ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
+```
+
+```text
+14811 03:27       bun --hot src/gallery/controls.tsx
+```
+
+该 PID 是其它 worker 的同名 A3 gallery，本轮曾按 PID 区分窗口，未停止它。D1 启动的所有 service 均已退出，自有残留为 0。没有启动、重启或停止用户的 Tauri 应用。
+
+D1 指定的依赖切换、面板测量替换、键盘订阅端口均已实现。未实现的仍是原报告限定的跨平台 close/hideWindow/measureText，以及上面明确列出的其它 owner 的 UI 与快捷键业务；未把它们计入本轮完成能力。
