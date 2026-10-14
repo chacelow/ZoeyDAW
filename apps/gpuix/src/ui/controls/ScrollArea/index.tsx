@@ -2,6 +2,9 @@ import { useTheme } from "../../../shared/theme/ThemeProvider"
 import { sx } from "../../../shared/theme/style"
 import type { Props, StyleDesc } from "@gpuix/react"
 
+export { ControlledScrollbar } from "./ControlledScrollbar"
+export type { ControlledScrollbarProps } from "./ControlledScrollbar"
+
 export interface ScrollAreaProps extends Props {
   readonly orientation?: "vertical" | "horizontal" | "both"
   readonly fill?: boolean
