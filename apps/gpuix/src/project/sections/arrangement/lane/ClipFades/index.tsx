@@ -81,34 +81,48 @@ export function ClipFades({
   return (
     <>
       {visuals.masks.length > 0 && (
-        <Shape
-          width={width}
-          height={height}
-          viewBox={viewBox}
-          paths={visuals.masks}
-          color={theme.colors.arrangementFadeMask}
-          style={shapeStyle}
-        />
-      )}
-      {visuals.outside.map(region => {
-        const left = Math.max(visibleLeft, region.left)
-        const right = Math.min(visibleLeft + width, region.right)
-        return right > left ? (
-          <div
-            key={region.id}
-            aria-hidden
-            style={sx({
-              position: "absolute",
-              left: left - visibleLeft,
-              top: top - geometry.top,
-              width: right - left,
-              height,
-              backgroundColor: theme.colors.arrangementFadeMask,
-              pointerEvents: "none",
-            })}
+        <div
+          testId={`fade-mask-${id}`}
+          aria-hidden
+          style={sx({
+            position: "absolute",
+            left: 0,
+            top: top - geometry.top,
+            width,
+            height,
+            overflow: "hidden",
+            pointerEvents: "none",
+          })}
+        >
+          <Shape
+            width={width}
+            height={height}
+            viewBox={viewBox}
+            paths={visuals.masks}
+            color={theme.colors.arrangementFadeMask}
+            style={sx({ position: "absolute", left: 0, top: 0, pointerEvents: "none" })}
           />
-        ) : null
-      })}
+          {visuals.outside.map(region => {
+            const left = Math.max(visibleLeft, region.left)
+            const right = Math.min(visibleLeft + width, region.right)
+            return right > left ? (
+              <div
+                key={region.id}
+                aria-hidden
+                style={sx({
+                  position: "absolute",
+                  left: left - visibleLeft,
+                  top: 0,
+                  width: right - left,
+                  height,
+                  backgroundColor: theme.colors.arrangementFadeMask,
+                  pointerEvents: "none",
+                })}
+              />
+            ) : null
+          })}
+        </div>
+      )}
       {visuals.strokes.length > 0 && (
         <Shape
           width={width}

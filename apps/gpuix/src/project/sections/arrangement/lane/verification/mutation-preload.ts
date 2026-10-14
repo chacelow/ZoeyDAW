@@ -38,6 +38,17 @@ export const mutationCases: Record<string, MutationCase> = {
       ["const channel = Math.floor(index / pixels)", "const channel = index % channels"],
     ],
   },
+  "collapsed-mask": {
+    file: "ClipFades/index.tsx",
+    testFile: "interactions/controller.test.tsx",
+    testName: "moves the fade mask between title and body across collapse transitions",
+    replacements: [
+      [
+        "const top = geometry.bodyHeight ? geometry.bodyTop : geometry.top",
+        "const top = geometry.bodyTop",
+      ],
+    ],
+  },
 }
 
 const id = process.env.LANE_MUTATION
@@ -48,9 +59,8 @@ if (id) {
     name: "lane-mutation",
     setup(build) {
       build.onLoad(
-        { filter: /\/arrangement\/lane\/(?:render-projection\.ts|WaveformPreview\.tsx)$/ },
+        { filter: new RegExp(`/arrangement/lane/${selected.file.replaceAll(".", "\\.")}$`) },
         async args => {
-          if (!args.path.endsWith(`/arrangement/lane/${selected.file}`)) return
           let contents = await Bun.file(args.path).text()
           for (const [from, to] of selected.replacements) {
             const first = contents.indexOf(from)

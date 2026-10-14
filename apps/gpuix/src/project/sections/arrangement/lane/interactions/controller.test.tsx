@@ -391,3 +391,54 @@ it("advances edge autoscroll from elapsed native frame time and rejects disposed
   expect(scene.get().hoverClip?.id).toBe("new-owner")
   expect(useProjectState.getState().document.tracks[0]?.clips[0]?.startBar).toBe(2)
 })
+
+it("moves the fade mask between title and body across collapse transitions", () => {
+  const fixture = mount({ audio: true })
+  const paint = () =>
+    fixture.root.render(
+      <Surface
+        scene={fixture.scene}
+        controller={fixture.controller}
+        clipboard={fixture.clipboard}
+      />
+    )
+  projectActions.updateTrack("audio", { collapsed: true })
+  paint()
+  let card = fixture.renderer.findByTestId("clip-source-audio-clip")
+  let mask = fixture.renderer.findByTestId("fade-mask-audio-clip")
+  if (!card || !mask) throw new Error("Missing collapsed fade mask")
+  let cardBounds = fixture.renderer.getElementBounds(card.id)
+  let maskBounds = fixture.renderer.getElementBounds(mask.id)
+  if (!cardBounds || !maskBounds) throw new Error("Unpainted collapsed mask")
+  expect(maskBounds.y).toBe(cardBounds.y)
+  expect(maskBounds.height).toBe(cardBounds.height)
+  expect(fixture.renderer.findByTestId("fade-audio-clip-in-peak")).toBeUndefined()
+  projectActions.updateTrack("audio", { collapsed: false })
+  paint()
+  const row = layoutTrackRows(fixture.scene.get()).find(row => row.track.id === "audio")
+  const clip = row?.track.clips[0]
+  if (!row || !clip) throw new Error("Missing expanded audio")
+  const geometry = clipVisualGeometry(clipRect(clip, row, 64, 0), clip, row.track, true)
+  fixture.renderer.nativeSimulateMouseMove(200, geometry.bodyTop + 10)
+  card = fixture.renderer.findByTestId("clip-source-audio-clip")
+  mask = fixture.renderer.findByTestId("fade-mask-audio-clip")
+  if (!card || !mask) throw new Error("Missing expanded fade mask")
+  cardBounds = fixture.renderer.getElementBounds(card.id)
+  maskBounds = fixture.renderer.getElementBounds(mask.id)
+  if (!cardBounds || !maskBounds) throw new Error("Unpainted expanded mask")
+  expect(maskBounds.y).toBe(geometry.bodyTop)
+  expect(maskBounds.y).toBeGreaterThan(cardBounds.y)
+  expect(maskBounds.y + maskBounds.height).toBeCloseTo(cardBounds.y + cardBounds.height)
+  expect(fixture.renderer.findByTestId("fade-audio-clip-in-peak")).toBeDefined()
+  projectActions.updateTrack("audio", { collapsed: true })
+  paint()
+  card = fixture.renderer.findByTestId("clip-source-audio-clip")
+  mask = fixture.renderer.findByTestId("fade-mask-audio-clip")
+  if (!card || !mask) throw new Error("Collapsed mask did not return")
+  cardBounds = fixture.renderer.getElementBounds(card.id)
+  maskBounds = fixture.renderer.getElementBounds(mask.id)
+  if (!cardBounds || !maskBounds) throw new Error("Unpainted restored mask")
+  expect(maskBounds.y).toBe(cardBounds.y)
+  expect(maskBounds.height).toBe(cardBounds.height)
+  expect(fixture.renderer.findByTestId("fade-audio-clip-in-peak")).toBeUndefined()
+})

@@ -3,7 +3,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { projectTrackGroups } from "@/project/model/track-groups"
-import { gridLines } from "../../core/rulers/grid-lines"
+import { gridLines, patternRegions } from "../../core/rulers/grid-lines"
 import type { ArrangementScene } from "../../core/scene"
 import { visibleClipCards } from "../render-projection"
 import type { TrackRow } from "../../core/layout"
@@ -27,6 +27,7 @@ export function LaneContents({
 }) {
   const theme = useTheme()
   const grid = useMemo(() => gridLines(scene), [scene])
+  const regions = useMemo(() => patternRegions(scene), [scene])
   const groups = useMemo(() => projectTrackGroups(scene.tracks), [scene.tracks])
   const selection = scene.timeSelection
   return (
@@ -38,11 +39,41 @@ export function LaneContents({
         height: row.height,
         overflow: "hidden",
         pointerEvents: "none",
-        backgroundColor: scene.selectedTrackIds.has(row.track.id)
-          ? theme.colors.arrangementSurfaceSelected
-          : theme.colors.arrangementSurface,
+        backgroundColor: theme.colors.arrangementSurface,
       })}
     >
+      {regions
+        .filter(region => region.alternate && region.width > 0)
+        .map(region => (
+          <div
+            key={region.bar}
+            aria-hidden
+            style={sx({
+              position: "absolute",
+              left: region.left,
+              top: 0,
+              width: region.width,
+              height: row.height,
+              backgroundColor: theme.colors.arrangementSurfaceAlt,
+              pointerEvents: "none",
+            })}
+          />
+        ))}
+      {scene.selectedTrackIds.has(row.track.id) && (
+        <div
+          aria-hidden
+          style={sx({
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: scene.viewport.width,
+            height: row.height,
+            backgroundColor: theme.colors.arrangementSurfaceSelected,
+            opacity: 0.5,
+            pointerEvents: "none",
+          })}
+        />
+      )}
       {grid.map(line => (
         <div
           key={line.bar}

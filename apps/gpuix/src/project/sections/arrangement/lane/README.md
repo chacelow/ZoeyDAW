@@ -28,20 +28,20 @@
 
 返回值是 channel-major → pixel-major → `[min,max]` 的 Float32Array：先一个声道的全部像素，再下一个声道；声道数为 `length / (2 * pixels)`。渲染器直接索引，不转置或复制。空音频片段不生成假波形。
 
-原生元素只为相交 Clip 挂载；B1 像素取整之后再裁剪一次，避免亚像素交集最终落到屏外仍挂载。标题实心，下半部透明；网格位于下半部填色之上，淡化曲线只在展开音频片段的下方内容悬停时出现。
+原生元素只为相交 Clip 挂载；B1 像素取整之后再裁剪一次，避免亚像素交集最终落到屏外仍挂载。标题实心，下半部透明；网格位于下半部填色之上。fadeMask 常驻：折叠时在标题、展开时在 body；显式曲线与锚点只在展开音频片段的下半内容悬停时出现。锚点按 Live 仲裁采用 5px 空心方点与菱形，1px 描边，内部使用 Clip 体填充色。
 
 ## 验证状态
 
 已验证 B1 投影性质、原生 TestRoot 的裁剪与节点身份、Clip 预览/提交/撤销、跨轨 Automation 区间移动、播放期间在静止插入点裁剪、剪贴板端口当前文本优先（测试注入内存实现）、名称输入提交/取消、fade 极端释放持久与裁剪两锚点同移、停止与播放引导层、Clip 节点 Space 传播、channel-major 立体声几何。
 
-真实窗口、200×50 满量滚动/缩放统计及全部输入状态截图尚未验收。原生帧回调与聚焦自动全选等待协调者的 F1；真实 musical PeakReader 等待源采样率适配能力，不添加 JS 计时器或假峰值后备路径。
+真实窗口、200×50 满量滚动/缩放统计及全部输入状态截图尚未验收。真实峰值已统一为同一 runtime lease 的 `readProjectPeaks`；F1 帧回调与非指针聚焦全选正在同步接入，不添加 JS 计时器或假峰值后备路径。B 键手势后释放不锁定偏好的跨切片证明归 app-shell 集成测试，协调者确认待派发；lane 已在手势起点调用注入的 `markDrawModeGesture`，不添加 callback 计数假测。
 
 命令在 `apps/gpuix` 执行：
 
 | 命令 | 结果 |
 | --- | --- |
-| `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx` | 7 pass，0 fail，36 assertions |
-| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 17 pass，0 fail；3 个变异均命中预期行为；源目标 SHA-256 前后相同 |
+| `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx -t 'fade mask between'` | 1 pass，0 fail，10 assertions；折叠→展开→再折叠 |
+| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 18 pass，0 fail；4 个变异均命中预期行为；源目标 SHA-256 前后相同 |
 
 变异通过 Bun runtime preload 在内存替换模块，不写源文件；脚本验证预期用例确实失败，不能以语法错误代替变异被捕获。
 
@@ -50,6 +50,7 @@
 | 移除屏外 Clip 裁剪                  |          1 |
 | 忽略 MIDI 保留源偏移                |          1 |
 | 将 channel-major 峰值错读成交错声道 |          1 |
+| 移除 collapsed 标题遮罩分支         |          1 |
 
 ## 已验证做法与错题
 
