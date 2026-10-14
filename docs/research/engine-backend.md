@@ -113,9 +113,9 @@
 取证后关闭本切片所有窗口、音频会话与 benchmark service。交付前实跑的检查为：
 
 ```sh
-ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo" | grep -v "grep -E"
+ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo" | grep -v "grep -E" | grep -v "Orca.*orchestration ask"
 ```
 
-输出为空，零匹配。第二个过滤只移除检查命令自身。所有 `bun test`、Cargo 检查和有限 benchmark 均已结束，未停止其他 worktree 或用户的进程。
+输出为空，零实际窗口或音频进程匹配。过滤只移除检查命令自身，以及另一 worker 的 Orca CLI 问题正文含 `gallery` 造成的文本误命中，不排除真正的 `bun --hot` 或 `cargo run`。所有 `bun test`、Cargo 检查和有限 benchmark 均已结束，未停止其他 worktree 或用户的进程。
 
 API 依据：[Firewheel node contract](https://github.com/billydm/firewheel/blob/main/_autodocs/api-reference/core-node.md)、[Firewheel 0.14.0](https://docs.rs/firewheel/0.14.0/firewheel/)、[Symphonia 0.6.1](https://docs.rs/symphonia/0.6.1/symphonia/)、[Rubato 5.0.1](https://docs.rs/rubato/5.0.1/rubato/)。具体签名以本机 Cargo.lock 对应源码和实际构建结果为准。
