@@ -2,6 +2,7 @@ import core from "ultracite/eslint/core"
 import react from "ultracite/eslint/react"
 import {
   architecture,
+  gpuixLayers,
   publicIndex,
   uiTokens,
   correctnessProfile,
@@ -11,12 +12,14 @@ import {
 const localRules = {
   rules: {
     boundaries: architecture,
+    "gpuix-layers": gpuixLayers,
     "public-index": publicIndex,
     "ui-tokens": uiTokens,
   },
 }
 
 const source = ["apps/web/src/**/*.{ts,tsx,js,jsx}", "packages/ui/src/**/*.{ts,tsx,js,jsx}"]
+const gpuixSource = ["apps/gpuix/src/**/*.{ts,tsx,js,jsx}"]
 const reactPlugins = Object.assign({}, ...react.map(preset => preset.plugins ?? {}))
 
 export default [
@@ -135,6 +138,7 @@ export default [
   {
     files: [
       "apps/web/src/pages/project/adapters/{clipboard-memory,snapshots}.ts",
+      "apps/gpuix/src/project/adapters/{clipboard-memory,snapshots}.ts",
       "apps/web/src/pages/project/sections/ArrangementPanel/{useGestureCursor,Timeline/drawModeKey}.ts",
       "apps/web/src/shared/native/log-sink.ts",
       "packages/i18n/src/setup.ts",
@@ -142,6 +146,11 @@ export default [
       "packages/ui/src/motion/animated-toast-stack.tsx",
     ],
     rules: { "unicorn/no-top-level-assignment-in-function": "off" },
+  },
+  {
+    files: gpuixSource,
+    plugins: { architecture: localRules },
+    rules: { "architecture/gpuix-layers": "error" },
   },
   {
     files: source,
@@ -199,7 +208,10 @@ export default [
     rules: { "unicorn/no-document-cookie": "off", "sonarjs/pseudo-random": "off" },
   },
   {
-    files: ["apps/web/src/pages/project/adapters/backend/connection/connection.ts"],
+    files: [
+      "apps/web/src/pages/project/adapters/backend/connection/connection.ts",
+      "apps/gpuix/src/project/adapters/backend/connection/connection.ts",
+    ],
     rules: { "unicorn/prefer-then-catch": "off" },
   },
   {
