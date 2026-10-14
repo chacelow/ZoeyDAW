@@ -64,3 +64,12 @@ crates/
 - 不新增 npm 依赖；确需新增先 escalation。Rust 依赖限于本文与研究文档点名的 crate，新增同样先 escalation。
 - 在自己的分支提交，不 push、不碰 `main`、不碰其他 worktree。
 - 交付报告写清：实际运行的命令与结果、未实现项及原因、对共享契约的任何需求。
+
+## 渲染器版本决策
+
+2026-10-14 采纳 [gpuix 主干自建](../research/gpuix-main-build.md)方案 B：固定 `remorses/gpuix` `6a5c7c142ac32f9eb0caefe0121be995cfc18631`，经 `scripts/gpuix-main/build.sh` 构建，包名 `@zoeydaw/gpuix-native`。
+
+- 依据：npm 0.10.0 缺 `onLayout`，主干已有（比 0.10.0 多 70 个提交与 37 个未发布 changeset）；上游近 30 天 109 个提交，更新频繁，等发布无法定期；同类 `react-native-gpui`（14 星，仅 macOS arm64）、`gpui-react`（21 星，demo 级）成熟度不足。
+- 代价：干净构建约 400 秒、1.8 GiB 磁盘、最大 RSS 约 884 MiB；改 renderer 一行重建约 67 秒；上游主要由单人维护，必须固定 SHA 与 Cargo.lock，升级时同时核对 native、JS host、React 三者。
+- 落地条件：切换包解析时统一为一份 renderer，不保留两套；保留上游许可证与 THIRD_PARTY_NOTICES；升级验收沿用报告中的 31 个测试、四个真实窗口、`onLayout` 时序与关闭拦截转换。
+- 另：A3、A4 保留的文字宽度估算与测量采样，在切换后改用 `onLayout` 事件和后续的 `measureText`，同一时刻只保留一种 owner。
