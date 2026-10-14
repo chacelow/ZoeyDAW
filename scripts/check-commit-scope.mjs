@@ -9,14 +9,17 @@
  * 只看 commit message 的 subject (第一行), 因为标题最直接暴露作者是否把
  * 多件事捆一起. body 里的 bullet 是解释, 允许列多点; 单个功能可以有很多细节.
  *
- * 拦截信号 (subject line):
  *   1. ' + '   —— 用加号把两件事列出来 (最强信号)
  *   2. ' & '   —— 同义
  *   3. ' 和 '  —— 中文并列
  *   4. ' 与 '  —— 中文并列
- *   5. '、' 出现在 subject 里 (不在括号内的 scope)
- *   6. 多个 Conventional Commit 类型: 一行里出现 >= 2 个
+ *   5. 多个 Conventional Commit 类型: 一行里出现 >= 2 个
  *      feat/fix/chore/refactor/docs/perf/test/build/ci/style
+ *
+ * '、' 单独出现不拦截: 它常用于列举同一职责下的并列组成部分
+ * (例如 "建立共享主题、样式与类型基础" 是一个职责, 只是列了三个产物)。
+ * 只有上面 1-5 的信号已经判定这是多职责 commit 时, '、' 才作为补充证据
+ * 一并列出, 不单独触发拦截。
  *
  * 例:
  *   BAD:  feat(diff-view): 编辑器 diff 可视化 + 软删除 + fs 竞态修复
@@ -82,11 +85,6 @@ function main() {
     }
   }
 
-  // 中文顿号: 只有 scope 外的才算 (scope 内允许)
-  if (/、/.test(withoutScope)) {
-    violations.push("subject 出现 '、' (scope 外): 中文并列多件事")
-  }
-
   // 多个 CC 类型出现在 subject 里
   const typePattern = new RegExp(`\\b(${CC_TYPES.join("|")})\\b`, "gi")
   const typeHits = subject.match(typePattern) ?? []
@@ -95,6 +93,12 @@ function main() {
       `subject 出现 ${typeHits.length} 个 Conventional Commit 类型 (${typeHits.join(", ")}): ` +
         "一个 commit 应该只有一个类型"
     )
+  }
+
+  // 中文顿号: 只有和其他信号一起出现才算补充证据, 单独出现不拦截
+  // (列举同一职责的并列组成部分是合法写法, 例如 "主题、样式与类型基础")
+  if (violations.length > 0 && /、/.test(withoutScope)) {
+    violations.push("subject 出现 '、' (scope 外): 补充证据, 与其他信号一并出现")
   }
 
   if (violations.length === 0) {
