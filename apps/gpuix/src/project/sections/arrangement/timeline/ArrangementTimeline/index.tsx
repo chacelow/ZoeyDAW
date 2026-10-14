@@ -107,7 +107,7 @@ export function ArrangementTimeline({
         minHeight: 0,
         minWidth: 0,
         overflow: "hidden",
-        backgroundColor: theme.colors.editorShell,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
       })}
     >
       <Toolbar
@@ -122,7 +122,7 @@ export function ArrangementTimeline({
           flexGrow: 1,
           minHeight: 0,
           minWidth: 0,
-          backgroundColor: theme.colors.editorShell,
+          backgroundColor: theme.colors.arrangementSurfaceAlt,
         })}
       >
         <Panel
@@ -170,7 +170,7 @@ export function ArrangementTimeline({
               minWidth: 0,
               minHeight: 0,
               overflow: "hidden",
-              backgroundColor: theme.colors.editorShell,
+              backgroundColor: theme.colors.arrangementSurfaceAlt,
             })}
             onLayout={onLayout}
             onScroll={onScroll}
@@ -233,7 +233,7 @@ export function ArrangementTimeline({
                 position: "absolute",
                 right: theme.project.controlsWidth + theme.control["--spacing-control-gap"],
                 bottom: TIME_RULER_HEIGHT + theme.control["--spacing-control-gap"],
-                backgroundColor: theme.colors.editorShell,
+                backgroundColor: theme.colors.arrangementSurfaceAlt,
                 color: theme.colors.mutedForeground,
                 fontSize: theme.control["--text-control-track"],
                 pointerEvents: "none",
@@ -275,7 +275,7 @@ function TimelineStatus({ labels }: { labels: TimelineLabels }) {
         maxWidth: theme.project.controlsWidth,
         padding: theme.control["--spacing-control-gap"],
         fontSize: theme.control["--text-control-track"],
-        backgroundColor: theme.colors.editorShell,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
         color: error ? theme.colors.destructive : theme.colors.mutedForeground,
         pointerEvents: "none",
       })}

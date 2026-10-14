@@ -44,7 +44,7 @@ export function Toolbar({
         flexShrink: 0,
         overflowX: "scroll",
         overflowY: "hidden",
-        backgroundColor: theme.colors.editorShell,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
         color: theme.colors.mutedForeground,
         padding: theme.control["--spacing-control-track-pad"],
       })}

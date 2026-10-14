@@ -20,8 +20,8 @@ export function PatternRegions({ scene, height }: { scene: SceneStore; height: n
             width: region.width,
             height,
             backgroundColor: region.alternate
-              ? theme.colors.scrollbarTrack
-              : theme.colors.editorShell,
+              ? theme.colors.arrangementSurfaceAlt
+              : theme.colors.arrangementSurface,
             pointerEvents: "none",
           })}
         />
@@ -41,7 +41,7 @@ export function Grid({ scene, height }: { scene: SceneStore; height: number }) {
         width: current.viewport.width,
         height,
         overflow: "hidden",
-        backgroundColor: theme.colors.editorShell,
+        backgroundColor: theme.colors.arrangementSurface,
         pointerEvents: "none",
       })}
     >
@@ -56,8 +56,7 @@ export function Grid({ scene, height }: { scene: SceneStore; height: number }) {
             top: 0,
             width: line.kind === "major" ? theme.project.trackBorder : 1,
             height,
-            backgroundColor:
-              line.kind === "major" ? theme.colors.canvasScrollbarActive : theme.colors.border,
+            backgroundColor: theme.colors.arrangementLine,
             pointerEvents: "none",
           })}
         />

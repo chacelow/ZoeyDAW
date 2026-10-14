@@ -66,13 +66,13 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
           width,
           height: BAR_RULER_HEIGHT,
           overflow: "hidden",
-          backgroundColor: theme.colors.editorShell,
+          backgroundColor: theme.colors.arrangementSurfaceAlt,
           color: theme.colors.mutedForeground,
           fontSize: theme.control["--text-control-track"],
           cursor: pointer,
           userSelect: "none",
           borderBottomWidth: 1,
-          borderColor: focused ? theme.colors.ring : theme.colors.border,
+          borderColor: focused ? theme.colors.ring : theme.colors.arrangementLine,
         })}
         onFocus={() => setFocused(true)}
         onBlur={() => {
@@ -252,9 +252,12 @@ export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }
         height: TIME_RULER_HEIGHT,
         position: "relative",
         overflow: "hidden",
-        backgroundColor: theme.colors.editorShell,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
         color: theme.colors.mutedForeground,
         fontSize: theme.control["--text-control-track"],
+        borderTopWidth: 1,
+        borderColor: theme.colors.arrangementLine,
+        userSelect: "none",
       })}
     >
       {ticks.map(tick => (
@@ -267,8 +270,21 @@ export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }
             height: TIME_RULER_HEIGHT,
             display: "flex",
             alignItems: "center",
+            paddingLeft: theme.control["--spacing-control-track-pad"] * 2,
+            pointerEvents: "none",
           })}
         >
+          <div
+            style={sx({
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: 1,
+              height: theme.control["--spacing-control-track-gap"],
+              backgroundColor: theme.colors.arrangementLine,
+              pointerEvents: "none",
+            })}
+          />
           {timeTickLabel(tick.value)}
         </div>
       ))}

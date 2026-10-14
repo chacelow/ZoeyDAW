@@ -4,6 +4,7 @@ import { useProjectState } from "@/project/adapters"
 import { positionToBar } from "@/project/model/types"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
+import { resolveContentColor } from "@/shared/theme/content-color"
 import { clipRect } from "../../core/layout"
 import { minimapHit } from "../../core/viewport/minimap"
 import { createMinimapGesture } from "./gesture"
@@ -77,13 +78,6 @@ export function MiniMap({
     0,
     Math.min(geometry.bars - viewportBars, geometry.scrollX / geometry.pxPerBar)
   )
-  const contentColors: Readonly<Record<string, string>> = {
-    "var(--chart-1)": theme.colors.chart1,
-    "var(--chart-2)": theme.colors.chart2,
-    "var(--chart-3)": theme.colors.chart3,
-    "var(--chart-4)": theme.colors.chart4,
-    "var(--chart-5)": theme.colors.chart5,
-  }
   return (
     <div
       ref={element}
@@ -96,7 +90,7 @@ export function MiniMap({
         height,
         position: "relative",
         overflow: "hidden",
-        backgroundColor: theme.colors.editorShell,
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
         cursor: pointer,
       })}
       onMouseDown={event => {
@@ -128,6 +122,7 @@ export function MiniMap({
       {rows.map((track, index) => (
         <div
           key={track.id}
+          testId={`minimap-track-${track.id}`}
           style={sx({
             position: "absolute",
             left: 0,
@@ -135,7 +130,7 @@ export function MiniMap({
             width,
             height: rowHeight,
             borderBottomWidth: 1,
-            borderColor: theme.colors.border,
+            borderColor: theme.colors.arrangementLine,
             pointerEvents: "none",
           })}
         >
@@ -149,14 +144,14 @@ export function MiniMap({
             return (
               <div
                 key={clip.id}
+                testId={`minimap-clip-${clip.id}`}
                 style={sx({
                   position: "absolute",
                   left: rect.left,
                   top: 0,
                   width: rect.width,
                   height: Math.max(1, rowHeight - 1),
-                  backgroundColor:
-                    contentColors[clip.color ?? track.color] ?? clip.color ?? track.color,
+                  backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
                   pointerEvents: "none",
                 })}
               />
