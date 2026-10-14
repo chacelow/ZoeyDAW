@@ -75,6 +75,96 @@ describe("Controlled scrollbar", () => {
     a.unmount()
   })
 
+  test("navigation keys stay in the scrollbar while Space reaches the window playback owner", () => {
+    const keys: string[] = []
+    const root = createTestRoot({
+      width: 400,
+      height: 100,
+      onKeyDown: event => {
+        if (event.key) keys.push(event.key)
+      },
+    })
+    let current = 0
+    function Harness() {
+      const [value, setValue] = useState(0)
+      return (
+        <ThemeProvider>
+          <ControlledScrollbar
+            testId="scrollbar"
+            aria-label="Timeline scroll"
+            aria-controls="timeline"
+            orientation="horizontal"
+            value={value}
+            viewport={100}
+            extent={1000}
+            length={200}
+            onChange={next => {
+              current = next
+              setValue(next)
+            }}
+          />
+        </ThemeProvider>
+      )
+    }
+    try {
+      root.render(<Harness />)
+      const bar = root.renderer.findByTestId("scrollbar")
+      if (!bar) throw new Error("Scrollbar missing")
+      root.renderer.nativeSimulateKeystrokes(bar.id, "right")
+      expect(current).toBe(10)
+      expect(keys).toEqual([])
+      root.renderer.nativeSimulateKeystrokes(bar.id, "space")
+      expect(keys).toEqual(["space"])
+      expect(current).toBe(10)
+    } finally {
+      root.unmount()
+    }
+  })
+
+  test("hovered scrollbar consumes its wheel instead of also moving the canvas ancestor", () => {
+    const root = createTestRoot({ width: 400, height: 100 })
+    let canvasScroll = 0
+    let current = 0
+    function Harness() {
+      const [value, setValue] = useState(0)
+      return (
+        <ThemeProvider>
+          <div
+            style={{ width: 200, height: 100 }}
+            onScroll={event => {
+              canvasScroll -= event.deltaY ?? 0
+            }}
+          >
+            <ControlledScrollbar
+              aria-label="Timeline scroll"
+              aria-controls="timeline"
+              orientation="horizontal"
+              value={value}
+              viewport={100}
+              extent={1000}
+              length={200}
+              onChange={next => {
+                current = next
+                setValue(next)
+              }}
+            />
+          </div>
+        </ThemeProvider>
+      )
+    }
+    try {
+      root.render(<Harness />)
+      root.renderer.nativeSimulateScrollWheel(50, 5, 0, -40)
+      expect(current).toBe(40)
+      expect(canvasScroll).toBe(0)
+      root.renderer.nativeSimulateScrollWheel(50, 50, 0, -40)
+      expect(canvasScroll).toBe(40)
+      expect(current).toBe(40)
+    } finally {
+      root.unmount()
+    }
+  })
+
   test("geometry conserves thumb travel and reaches every logical endpoint across random extents", () => {
     let seed = 91237
     for (let i = 0; i < 2000; i++) {

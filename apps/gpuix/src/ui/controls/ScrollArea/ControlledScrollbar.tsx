@@ -54,6 +54,7 @@ export function ControlledScrollbar({
       aria-valuemin={0}
       aria-valuemax={geometry.maximum}
       aria-valuenow={geometry.value}
+      aria-valuetext={String(geometry.value)}
       style={sx(
         {
           position: "relative",
@@ -63,6 +64,7 @@ export function ControlledScrollbar({
           borderWidth: 1,
           borderColor: focused ? theme.colors.ring : theme.colors.scrollbarTrack,
           overflow: "hidden",
+          pointerEvents: "auto",
         },
         style
       )}
@@ -114,16 +116,21 @@ export function ControlledScrollbar({
       }
       onKeyDown={event => {
         const step = Math.max(1, viewport / 10)
+        let handled = true
         if (event.key === "home") publish(0)
         else if (event.key === "end") publish(geometry.maximum)
         else if (event.key === "pageup") publish(geometry.value - viewport)
         else if (event.key === "pagedown") publish(geometry.value + viewport)
         else if (event.key === (horizontal ? "left" : "up")) publish(geometry.value - step)
         else if (event.key === (horizontal ? "right" : "down")) publish(geometry.value + step)
-        else if (event.key === "escape") {
-          if (drag.current) publish(drag.current.value)
+        else if (event.key === "escape" && drag.current) {
+          publish(drag.current.value)
           drag.current = null
           setDragging(false)
+        } else handled = false
+        if (handled) {
+          event.preventDefault()
+          event.stopPropagation()
         }
       }}
     >
