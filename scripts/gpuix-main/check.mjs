@@ -26,6 +26,8 @@ const outputs = [
   "packages/native/dist/testing.js",
   "packages/react/dist/index.js",
   "packages/react/dist/index.d.ts",
+  "packages/react/dist/components/select.js",
+  "packages/react/dist/components/select.d.ts",
   "packages/react/dist/testing.js",
   "packages/react/jsx-runtime.js",
   "node_modules/react/package.json",
