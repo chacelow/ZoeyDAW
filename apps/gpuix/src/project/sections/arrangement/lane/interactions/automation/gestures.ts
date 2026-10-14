@@ -1,17 +1,24 @@
-import { uniqueId } from "../../../../../model/reducers"
-import type { AutomationPoint } from "../../../../../model/types"
-import { automationBar } from "../../../core/automation/geometry"
-import type { AutomationRow } from "../../../core/automation/geometry"
-import { deletePointOnRelease, movePoints, selectedPointIds } from "../../../core/automation/points"
+import { uniqueId } from "@/project/model/reducers"
+import type { AutomationPoint } from "@/project/model/types"
+import { automationBar } from "@/project/sections/arrangement/core/automation/geometry"
+import type { AutomationRow } from "@/project/sections/arrangement/core/automation/geometry"
+import {
+  deletePointOnRelease,
+  movePoints,
+  selectedPointIds,
+} from "@/project/sections/arrangement/core/automation/points"
 import {
   insertSegmentPoint,
   moveSegment,
   shouldInsertSegmentPoint,
-} from "../../../core/automation/segment"
-import { paintAutomation } from "../../../core/automation/drawing"
-import type { DrawingState } from "../../../core/automation/drawing"
-import { marqueePointIds } from "../../../core/automation/selection"
-import { flatLinePoint, shouldInsertFlatPoint } from "../../../core/automation/flat"
+} from "@/project/sections/arrangement/core/automation/segment"
+import { paintAutomation } from "@/project/sections/arrangement/core/automation/drawing"
+import type { DrawingState } from "@/project/sections/arrangement/core/automation/drawing"
+import { marqueePointIds } from "@/project/sections/arrangement/core/automation/selection"
+import {
+  flatLinePoint,
+  shouldInsertFlatPoint,
+} from "@/project/sections/arrangement/core/automation/flat"
 import { beginAutomationPreview } from "./preview"
 import type { LaneContext, LaneGesture, LanePointer } from "../types"
 

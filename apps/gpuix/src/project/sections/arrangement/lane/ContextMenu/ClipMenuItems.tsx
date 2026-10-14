@@ -1,13 +1,8 @@
-import {
-  Button,
-  ContextMenuItem,
-  ContextMenuLabel,
-  ContextMenuSeparator,
-} from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../shared/theme/style"
-import { acceptsClip, positionToBar } from "../../../../model/types"
-import type { Clip } from "../../../../model/types"
+import { Button, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
+import { acceptsClip, positionToBar } from "@/project/model/types"
+import type { Clip } from "@/project/model/types"
 import type { LaneContext, LaneMenuTarget } from "../interactions/types"
 import type { LaneController } from "../interactions/controller"
 import type { LaneTranslate } from "../messages"

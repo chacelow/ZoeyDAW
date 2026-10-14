@@ -1,6 +1,6 @@
-import { patternHasActivity, patternWindow } from "../../../model/pattern-window"
-import { PATTERN_STEPS_PER_BAR } from "../../../model/types"
-import type { Clip, MidiClip, PatternClip } from "../../../model/types"
+import { patternHasActivity, patternWindow } from "@/project/model/pattern-window"
+import { PATTERN_STEPS_PER_BAR } from "@/project/model/types"
+import type { Clip, MidiClip, PatternClip } from "@/project/model/types"
 import { clipVisualGeometry } from "../core/clip-geometry"
 import type { ClipVisualGeometry } from "../core/clip-geometry"
 import {

@@ -1,5 +1,5 @@
-import { uniqueId } from "../../../../../model/reducers"
-import { sortedPoints } from "../../../core/automation/points"
+import { uniqueId } from "@/project/model/reducers"
+import { sortedPoints } from "@/project/sections/arrangement/core/automation/points"
 import type { LaneContext, LaneKey } from "../types"
 
 export function automationKeyDown(context: LaneContext, event: LaneKey): boolean {

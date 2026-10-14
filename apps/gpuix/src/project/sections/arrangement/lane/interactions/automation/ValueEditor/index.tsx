@@ -1,20 +1,20 @@
 import { useRef, useState } from "react"
-import { Input } from "../../../../../../../ui/controls"
-import { useTheme } from "../../../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../../../shared/theme/style"
+import { Input } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import {
   automationSourceValue,
   clampAutomationValue,
   normalizedAutomationValue,
-} from "../../../../../../model/automation-curve"
+} from "@/project/model/automation-curve"
 import {
   activeAutomationRows,
   automationX,
   automationY,
-} from "../../../../core/automation/geometry"
-import type { LaneTranslate } from "../../../messages"
+} from "@/project/sections/arrangement/core/automation/geometry"
+import type { LaneTranslate } from "@/project/sections/arrangement/lane/messages"
 import type { LaneContext } from "../../types"
-import type { ArrangementScene } from "../../../../core/scene"
+import type { ArrangementScene } from "@/project/sections/arrangement/core/scene"
 
 export function AutomationValueEditor({
   context,

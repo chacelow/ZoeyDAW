@@ -1,4 +1,4 @@
-import type { GridDensity } from "../../../model/grid"
+import type { GridDensity } from "@/project/model/grid"
 
 export type LaneMessageKey =
   | "arrangement.timelineEditor"

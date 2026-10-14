@@ -1,14 +1,14 @@
 import { useRef, useState } from "react"
-import { Input } from "../../../../../../../ui/controls"
-import { useTheme } from "../../../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../../../shared/theme/style"
-import { clipLabel } from "../../../../../../model/clip-label"
-import { clipRect } from "../../../../core/layout"
-import { TRACK_TITLE_HEIGHT } from "../../../../../../layout"
-import { visibleRows } from "../../../render-projection"
-import type { LaneTranslate } from "../../../messages"
+import { Input } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
+import { clipLabel } from "@/project/model/clip-label"
+import { clipRect } from "@/project/sections/arrangement/core/layout"
+import { TRACK_TITLE_HEIGHT } from "@/project/layout"
+import { visibleRows } from "@/project/sections/arrangement/lane/render-projection"
+import type { LaneTranslate } from "@/project/sections/arrangement/lane/messages"
 import type { LaneContext } from "../../types"
-import type { ArrangementScene } from "../../../../core/scene"
+import type { ArrangementScene } from "@/project/sections/arrangement/core/scene"
 
 export function ClipNameEditor({
   context,

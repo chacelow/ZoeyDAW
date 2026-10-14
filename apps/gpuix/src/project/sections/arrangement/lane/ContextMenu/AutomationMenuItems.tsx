@@ -1,6 +1,6 @@
-import { ContextMenuItem, ContextMenuSeparator } from "../../../../../ui/controls"
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../shared/theme/style"
+import { ContextMenuItem, ContextMenuSeparator } from "@/ui/controls"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import type { LaneContext, LaneMenuTarget } from "../interactions/types"
 import type { LaneTranslate } from "../messages"
 

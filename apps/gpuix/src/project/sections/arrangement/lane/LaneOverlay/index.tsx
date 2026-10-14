@@ -1,9 +1,12 @@
-import { useTheme } from "../../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../../shared/theme/style"
+import { useMemo } from "react"
+import { Shape } from "@/shared/svg/Shape"
+import { polygonPath } from "@/shared/svg/paths"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { alignmentBar } from "../../core/clip-alignment"
 import { arrangementBodyBottom, arrangementBodyTop } from "../../core/layout"
 import type { ArrangementScene, ArrangementViewport } from "../../core/scene"
-import { useProjectState } from "../../../../adapters"
+import { useProjectState } from "@/project/adapters"
 import { visibleRows } from "../render-projection"
 
 export interface LaneOverlayProps {
@@ -14,6 +17,15 @@ export interface LaneOverlayProps {
 
 export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps) {
   const theme = useTheme()
+  const insertionPath = useMemo(
+    () =>
+      polygonPath([
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+        { x: 1, y: 1 },
+      ]),
+    []
+  )
   const recording = useProjectState(state => state.session.recording)
   const top = arrangementBodyTop()
   const bottom = arrangementBodyBottom(viewport.height)
@@ -59,18 +71,16 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
                 pointerEvents: "none",
               })}
             />
-            <svg
-              source={
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><path d="M0,0 L2,0 L1,1 Z"/></svg>'
-              }
-              aria-hidden
+            <Shape
+              width={theme.control["--spacing-control-track-gap"] * 2}
+              height={theme.project.groupRailWidth - 1}
+              viewBox="0 0 2 1"
+              paths={[{ d: insertionPath, fill: true }]}
+              color={theme.colors.primary}
               style={sx({
                 position: "absolute",
                 left: insertionX - theme.control["--spacing-control-track-gap"],
                 top: top - theme.project.groupRailWidth,
-                width: theme.control["--spacing-control-track-gap"] * 2,
-                height: theme.project.groupRailWidth - 1,
-                color: theme.colors.primary,
                 pointerEvents: "none",
               })}
             />

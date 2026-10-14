@@ -1,5 +1,5 @@
-import type { AutomationPoint } from "../../../../../model/types"
-import type { AutomationRow } from "../../../core/automation/geometry"
+import type { AutomationPoint } from "@/project/model/types"
+import type { AutomationRow } from "@/project/sections/arrangement/core/automation/geometry"
 import { beginTracksPreview } from "../project-preview"
 import type { LaneContext } from "../types"
 

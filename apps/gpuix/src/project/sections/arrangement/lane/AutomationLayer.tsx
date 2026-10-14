@@ -1,6 +1,9 @@
 import { useMemo } from "react"
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
+import { Shape } from "@/shared/svg/Shape"
+import { polylinePath } from "@/shared/svg/paths"
+import type { Point } from "@/shared/svg/paths"
 import {
   activeAutomationRows,
   AUTOMATION_POINT_RADIUS,
@@ -20,17 +23,19 @@ export function AutomationLayer({ scene, trackId }: { scene: ArrangementScene; t
     () => activeAutomationRows(scene).filter(row => row.track.id === trackId),
     [scene, trackId]
   )
+  if (width <= 0) return null
   return (
     <>
       {rows.map(row => {
         const points = row.lane?.points ?? []
         const startY = automationY(row, automationRowValue(row, automationBar(scene, 0))) - row.top
-        const path = [`M0,${startY}`]
-        if (!points.length) path.push(`L${width},${startY}`)
+        const samples: Point[] = [{ x: 0, y: startY }]
+        if (!points.length) samples.push({ x: width, y: startY })
         else if (points[0] && automationX(scene, points[0].bar) > 0)
-          path.push(
-            `L${Math.min(width, automationX(scene, points[0].bar))},${automationY(row, points[0].value) - row.top}`
-          )
+          samples.push({
+            x: Math.min(width, automationX(scene, points[0].bar)),
+            y: automationY(row, points[0].value) - row.top,
+          })
         for (let index = 1; index < points.length; index++) {
           const from = points[index - 1]
           const to = points[index]
@@ -42,17 +47,23 @@ export function AutomationLayer({ scene, trackId }: { scene: ArrangementScene; t
           const first = Math.max(0, x0)
           const last = Math.min(width, x1)
           for (let x = first; x < last; x += step)
-            path.push(
-              `L${x},${automationY(row, automationSegmentValue(from, to, automationBar(scene, x))) - row.top}`
-            )
-          path.push(
-            `L${last},${automationY(row, automationSegmentValue(from, to, automationBar(scene, last))) - row.top}`
-          )
+            samples.push({
+              x,
+              y:
+                automationY(row, automationSegmentValue(from, to, automationBar(scene, x))) -
+                row.top,
+            })
+          samples.push({
+            x: last,
+            y:
+              automationY(row, automationSegmentValue(from, to, automationBar(scene, last))) -
+              row.top,
+          })
         }
         const last = points.at(-1)
         if (last && automationX(scene, last.bar) < width)
-          path.push(`L${width},${automationY(row, last.value) - row.top}`)
-        const source = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${row.bottom - row.top}"><path d="${path.join(" ")}" fill="none" stroke="black" stroke-width="${theme.control["--spacing-control-track-pad"]}" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+          samples.push({ x: width, y: automationY(row, last.value) - row.top })
+        const d = polylinePath(samples)
         return (
           <div
             key={`${row.track.id}:${row.laneId}`}
@@ -67,18 +78,12 @@ export function AutomationLayer({ scene, trackId }: { scene: ArrangementScene; t
               pointerEvents: "none",
             })}
           >
-            <svg
-              source={source}
-              aria-hidden
-              style={sx({
-                position: "absolute",
-                left: 0,
-                top: 0,
-                width,
-                height: row.bottom - row.top,
-                color: theme.colors.destructive,
-                pointerEvents: "none",
-              })}
+            <Shape
+              width={width}
+              height={row.bottom - row.top}
+              paths={[{ d, strokeWidth: theme.control["--spacing-control-track-pad"] }]}
+              color={theme.colors.destructive}
+              style={sx({ position: "absolute", left: 0, top: 0, pointerEvents: "none" })}
             />
             {points
               .filter(

@@ -11,8 +11,8 @@ import {
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
   ContextMenuSeparator,
-} from "../../../../../ui/controls"
-import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "../../../../model/grid"
+} from "@/ui/controls"
+import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "@/project/model/grid"
 import type { LaneContext, LaneMenuTarget } from "../interactions/types"
 import type { LaneController } from "../interactions/controller"
 import type { LaneTranslate } from "../messages"

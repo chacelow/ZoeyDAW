@@ -1,7 +1,7 @@
-import { projectClipResize } from "../../../../../model/clip-edits"
-import { snapBar } from "../../../../../model/grid-geometry"
-import type { Clip } from "../../../../../model/types"
-import { automationBar } from "../../../core/automation/geometry"
+import { projectClipResize } from "@/project/model/clip-edits"
+import { snapBar } from "@/project/model/grid-geometry"
+import type { Clip } from "@/project/model/types"
+import { automationBar } from "@/project/sections/arrangement/core/automation/geometry"
 import { beginTracksPreview } from "../project-preview"
 import type { LaneContext, LaneGesture, LanePointer } from "../types"
 

@@ -1,7 +1,7 @@
-import type { AudioClip } from "../../../../../model/types"
-import { beginFadeDrag, moveFadeDrag } from "../../../core/clip/fade"
-import { clipVisualGeometry } from "../../../core/clip-geometry"
-import { clipRect, layoutTrackRows } from "../../../core/layout"
+import type { AudioClip } from "@/project/model/types"
+import { beginFadeDrag, moveFadeDrag } from "@/project/sections/arrangement/core/clip/fade"
+import { clipVisualGeometry } from "@/project/sections/arrangement/core/clip-geometry"
+import { clipRect, layoutTrackRows } from "@/project/sections/arrangement/core/layout"
 import { beginTracksPreview } from "../project-preview"
 import type { LaneContext, LaneGesture, LanePointer } from "../types"
 

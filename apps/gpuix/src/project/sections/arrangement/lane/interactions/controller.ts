@@ -1,7 +1,7 @@
-import type { NativeClipboard } from "../../../../../platform/clipboard"
+import type { NativeClipboard } from "@/platform/clipboard"
 import type { ArrangementViewport } from "../../core/scene"
-import { snapBar } from "../../../../model/grid-geometry"
-import { visibleTracks } from "../../../../model/types"
+import { snapBar } from "@/project/model/grid-geometry"
+import { visibleTracks } from "@/project/model/types"
 import { automationBar } from "../../core/automation/geometry"
 import { dragStarted, interactionLayer } from "../../core/interactions/layers"
 import {

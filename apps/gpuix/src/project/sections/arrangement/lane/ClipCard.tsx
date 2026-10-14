@@ -1,9 +1,9 @@
 import { memo, useMemo } from "react"
-import type { Track } from "../../../model/types"
-import { clipLabel } from "../../../model/clip-label"
-import { useTheme } from "../../../../shared/theme/ThemeProvider"
-import { sx } from "../../../../shared/theme/style"
-import { colorMix } from "../../../../shared/theme/color-mix"
+import type { Track } from "@/project/model/types"
+import { clipLabel } from "@/project/model/clip-label"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
+import { colorMix } from "@/shared/theme/color-mix"
 import { FADE_HANDLE_PX, fadeHandleX } from "../core/clip-geometry"
 import type { GridLine } from "../core/rulers/grid-lines"
 import { clipLoopTicks, midiPreviewRects, patternPreviewRects } from "./render-projection"
@@ -11,6 +11,11 @@ import type { ClipCard } from "./render-projection"
 import { resolveLaneColor } from "./appearance"
 import type { PeakReader } from "./PeakReader"
 import { WaveformPreview } from "./WaveformPreview"
+import { Shape } from "@/shared/svg/Shape"
+import type { ShapePath } from "@/shared/svg/Shape"
+import { cubicPath } from "@/shared/svg/paths"
+
+const NO_FADE_PATHS: readonly ShapePath[] = []
 
 export const ClipCardView = memo(function ClipCardView({
   card,
@@ -51,22 +56,18 @@ export const ClipCardView = memo(function ClipCardView({
   const sourceStartBar = 1 + ((visibleLeft - g.left) / g.width) * clip.lengthBars
   const sourceEndBar = 1 + ((visibleLeft + width - g.left) / g.width) * clip.lengthBars
   const loopTicks = useMemo(() => clipLoopTicks(clip, g, viewportWidth), [clip, g, viewportWidth])
-  const fadeSource = useMemo(() => {
-    const paths = g.fades
-      .filter(fade => fade.handlesVisible)
-      .map(fade => {
-        const start = `M${fade.start.x - visibleLeft},${fade.start.y - g.bodyTop}`
-        const curves = fade.segments
-          .map(
-            segment =>
-              `C${segment.control1.x - visibleLeft},${segment.control1.y - g.bodyTop} ${segment.control2.x - visibleLeft},${segment.control2.y - g.bodyTop} ${segment.end.x - visibleLeft},${segment.end.y - g.bodyTop}`
-          )
-          .join(" ")
-        return `<path d="${start} ${curves}" fill="none" stroke="black" stroke-width="${theme.project.trackBorder}" stroke-linecap="round" stroke-linejoin="round"/>`
-      })
-      .join("")
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${g.bodyHeight}">${paths}</svg>`
-  }, [g, visibleLeft, width, theme.project.trackBorder])
+  const fadePaths = useMemo(
+    () =>
+      g.fades.length
+        ? g.fades
+            .filter(fade => fade.active && fade.handlesVisible)
+            .map(fade => ({
+              d: cubicPath(fade.start, fade.segments),
+              strokeWidth: theme.project.trackBorder,
+            }))
+        : NO_FADE_PATHS,
+    [g.fades, theme.project.trackBorder]
+  )
   return (
     <div
       testId={`${card.ghost ? "clip-ghost" : "clip-source"}-${clip.id}`}
@@ -172,19 +173,21 @@ export const ClipCardView = memo(function ClipCardView({
           )}
           {!automationMode && !card.ghost && g.fades.some(fade => fade.handlesVisible) && (
             <>
-              <svg
-                source={fadeSource}
-                aria-hidden
-                style={sx({
-                  position: "absolute",
-                  left: 0,
-                  top: g.titleHeight,
-                  width,
-                  height: g.bodyHeight,
-                  color: ink,
-                  pointerEvents: "none",
-                })}
-              />
+              {fadePaths.length > 0 && (
+                <Shape
+                  width={width}
+                  height={g.bodyHeight}
+                  viewBox={`${visibleLeft} ${g.bodyTop} ${width} ${g.bodyHeight}`}
+                  paths={fadePaths}
+                  color={ink}
+                  style={sx({
+                    position: "absolute",
+                    left: 0,
+                    top: g.titleHeight,
+                    pointerEvents: "none",
+                  })}
+                />
+              )}
               {g.fades
                 .filter(fade => fade.handlesVisible)
                 .flatMap(fade => [

@@ -1,8 +1,11 @@
-import { effectiveDrawMode } from "../../../../../model/interaction-mode"
-import { snapBar } from "../../../../../model/grid-geometry"
-import { automationAction, automationCursor } from "../../../core/automation"
-import { automationBar, automationValue } from "../../../core/automation/geometry"
-import { hitAutomation } from "../../../core/automation/hit"
+import { effectiveDrawMode } from "@/project/model/interaction-mode"
+import { snapBar } from "@/project/model/grid-geometry"
+import { automationAction, automationCursor } from "@/project/sections/arrangement/core/automation"
+import {
+  automationBar,
+  automationValue,
+} from "@/project/sections/arrangement/core/automation/geometry"
+import { hitAutomation } from "@/project/sections/arrangement/core/automation/hit"
 import { synchronizeProjectScene } from "../project-preview"
 import {
   drawGesture,

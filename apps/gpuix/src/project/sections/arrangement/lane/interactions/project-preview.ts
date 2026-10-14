@@ -1,4 +1,4 @@
-import type { ProjectEditToken, Track } from "../../../../model/types"
+import type { ProjectEditToken, Track } from "@/project/model/types"
 import type { LaneContext } from "./types"
 
 export function synchronizeProjectScene(context: LaneContext): void {

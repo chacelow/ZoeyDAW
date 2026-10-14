@@ -1,6 +1,9 @@
-import { snapBar } from "../../../../../model/grid-geometry"
-import { automationBar } from "../../../core/automation/geometry"
-import { committedTimeRange, timeRangeSelection } from "../../../core/clip/timeRange"
+import { snapBar } from "@/project/model/grid-geometry"
+import { automationBar } from "@/project/sections/arrangement/core/automation/geometry"
+import {
+  committedTimeRange,
+  timeRangeSelection,
+} from "@/project/sections/arrangement/core/clip/timeRange"
 import type { LaneContext, LaneGesture, LanePointer } from "../types"
 
 export function createTimeRangeGesture(

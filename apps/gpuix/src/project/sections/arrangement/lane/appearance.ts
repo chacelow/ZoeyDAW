@@ -1,4 +1,4 @@
-import type { Theme } from "../../../../shared/theme/ThemeProvider"
+import type { Theme } from "@/shared/theme/ThemeProvider"
 
 export function resolveLaneColor(color: string, theme: Theme): string {
   switch (color) {

@@ -1,5 +1,5 @@
-import type { projectActions } from "../../../../adapters"
-import type { ProjectState } from "../../../../model/types"
+import type { projectActions } from "@/project/adapters"
+import type { ProjectState } from "@/project/model/types"
 import type { SceneStore } from "../../core/scene"
 
 export interface LanePointer {
