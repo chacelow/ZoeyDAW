@@ -4,8 +4,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from "@/ui/controls"
+import { DropdownMenuSeparator } from "@/ui/controls/Menu"
 import { Icon } from "@/ui/controls/Icon"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { deviceParameterKeys } from "@/project/model/devices"
