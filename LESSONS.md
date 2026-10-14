@@ -80,6 +80,14 @@
 - 错 3：第一个变异（让 `size === collapsed` 的早返回失效）测试仍然全绿。继续排查（对同一组输入逐行 diff 输出）发现输出**完全相同**——这个早返回分支对该输入是冗余的，不是测试漏了。教训：变异不红不等于测试弱，先确认变异是否真的改变了行为（比对输出），再决定是否补用例，别为一个等价变异硬加测试。
 - 对：求解器的语义要与被替换的库对齐再验收。`react-resizable-panels` 4.12.3 的折叠行为是“越过折叠区中点才折叠/弹出”，A4 的求解器实测一致：A 在 delta=-200 到达 min，-260 折叠（中点 -250）；从折叠态展开，delta=40 仍为 0，60 弹到 100。
 
+## gpuix 迁移：切片合入后立即删 worktree，不复用上下文
+
+- 决策（2026-10-14，用户关注本机性能）：切片**合入并核对无残留后立即**删除其 worktree、分支与对应 OMP 终端；不为"可能复用上下文"保留。
+- 因：每个存活的 OMP/agent 进程常驻内存（实测单个约 0.6–2.7% 内存），旧切片上下文已被合并提交和 LESSONS 取代；复用只省一次创建时间，却拖累整机。新切片用新 worktree + 自包含任务描述更干净、边界更清楚。
+- 例外：有未提交改动、或任务未完成的切片保留并说明原因（本次 A3/A6/A7）。
+- 做法：① `git rev-list --count gpuix-migration..<branch>` 为 0 且 `git merge-base --is-ancestor` 为真；② `git status --short` 干净；③ `orca worktree rm --worktree path:<dir>`，**不加 `--force`**，让 git 拒绝脏树；④ `git branch -d`（不用 `-D`），未合入会被拒。
+- 终端：agent 终端由用户在 Orca 界面关闭，Agent 不自行 kill 进程。
+
 ## gpuix 迁移：commit 报 `pre-commit failed` 不等于没提交，先查再判断
 
 - 现象：`git add A B && git commit` 后输出 `husky - pre-commit script failed (code 1)`，随后 `git log` 却显示提交存在，`git status` 干净，`git stash list` 多出一条 `lint-staged automatic backup`。
