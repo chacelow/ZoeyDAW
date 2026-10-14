@@ -1,0 +1,9 @@
+$ crates/engine/spikes/target/release/spike-kira --device
+engine=kira version=0.12.5 rate=48000 block_frames=256 mode=device
+engine=kira probe=device clock_type=source_position_f64_seconds_atomic_block_start wall_seconds=0.503964 source_seconds=0.501333333 source_frame=24064.000000 voices=1 gain=0.05
+engine=kira probe=device clock_type=source_position_f64_seconds_atomic_block_start wall_seconds=1.006983 source_seconds=1.002666667 source_frame=48128.000000 voices=1 gain=0.05
+engine=kira probe=device clock_type=source_position_f64_seconds_atomic_block_start wall_seconds=1.509912 source_seconds=1.504000000 source_frame=72192.000000 voices=1 gain=0.05
+engine=kira probe=device clock_type=source_position_f64_seconds_atomic_block_start wall_seconds=2.011342 source_seconds=2.005333333 source_frame=96256.000000 voices=1 gain=0.05
+engine=kira probe=device_rendered_count status=UNSUPPORTED reason=CpalBackend_does_not_expose_callback_frame_count_or_DAC_timestamp
+
+exit=0

@@ -1,0 +1,10 @@
+[package]
+name = "spike-firewheel"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+spike-common = { path = "../common" }
+firewheel = { version = "=0.14.0", features = ["sampler_node", "scheduled_events"] }
+audioadapter-buffers = "=5.2.0"

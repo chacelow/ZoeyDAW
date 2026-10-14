@@ -1,0 +1,8 @@
+$ crates/engine/spikes/target/release/spike-rodio --device
+device engine=rodio rate=48000 channels=6 buffer=Fixed(2048)
+device clock_source=Player::get_pos frame_at_asset_rate=96240.000 playing=true
+device paused_frame=96480.000
+device after_seek_resume_frame=16185.000
+Dropping DeviceSink, audio playing through this sink will stop, to prevent this message from appearing use tracing or call `.log_on_drop(false)` on this DeviceSink
+
+exit=0
