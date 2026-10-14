@@ -3,6 +3,7 @@
  * proves the foundation (theme, tokens, style helpers) boots for real.
  */
 import { render } from "@gpuix/react"
+import { createWindowKeyboard, WindowKeyboardProvider } from "./platform/keyboard"
 import { ThemeProvider, useTheme } from "./shared/theme/ThemeProvider"
 import { sx } from "./shared/theme/style"
 
@@ -34,9 +35,13 @@ function FoundationCheck() {
   )
 }
 
+const keyboard = createWindowKeyboard()
+
 render(
-  <ThemeProvider>
-    <FoundationCheck />
-  </ThemeProvider>,
-  { title: "gpuix foundation check", width: 480, height: 240 }
+  <WindowKeyboardProvider value={keyboard}>
+    <ThemeProvider>
+      <FoundationCheck />
+    </ThemeProvider>
+  </WindowKeyboardProvider>,
+  { title: "gpuix foundation check", width: 480, height: 240, ...keyboard.rootHandlers }
 )

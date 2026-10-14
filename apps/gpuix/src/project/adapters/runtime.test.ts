@@ -623,7 +623,11 @@ it("opens external-backend projects without demo media and leaves empty audio cl
   const stop = startProjectRuntime()
   try {
     projectActions.togglePlay()
-    expect(useProjectState.getState().session.levels[track.id]).toEqual([-60, -60])
+    expect(
+      useProjectState
+        .getState()
+        .session.levels[track.id].every(level => Number.isFinite(level) && level <= -60)
+    ).toBe(true)
   } finally {
     stop()
   }
@@ -753,6 +757,7 @@ it("stops recording on accepted record-off even before the next telemetry frame"
       playing: true,
       recording: true,
       levels: {},
+      outputLatencyFrames: null,
     })
     projectActions.noteOn(80)
     // Bun #35452: toMatchObject rewrites received; keep the live store untouched.

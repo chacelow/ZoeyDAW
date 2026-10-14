@@ -5,6 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@gpuix/native': link:.gpuix-main/packages/native
+  '@gpuix/react': link:.gpuix-main/packages/react
   '@typescript-eslint/eslint-plugin': 8.71.2
   '@typescript-eslint/parser': 8.71.2
   '@typescript-eslint/utils': 8.71.2
@@ -124,11 +126,11 @@ importers:
   apps/gpuix:
     dependencies:
       '@gpuix/native':
-        specifier: 0.10.0
-        version: 0.10.0
+        specifier: link:../../.gpuix-main/packages/native
+        version: link:../../.gpuix-main/packages/native
       '@gpuix/react':
-        specifier: 0.10.0
-        version: 0.10.0(react@19.2.8)
+        specifier: link:../../.gpuix-main/packages/react
+        version: link:../../.gpuix-main/packages/react
       '@zoeydaw/native':
         specifier: workspace:*
         version: link:../../crates/native
@@ -142,11 +144,11 @@ importers:
         specifier: ^4.0.2
         version: 4.0.2
       react:
-        specifier: ^19.2.0
-        version: 19.2.8
+        specifier: link:../../.gpuix-main/node_modules/react
+        version: link:../../.gpuix-main/node_modules/react
       zustand:
         specifier: ^5.0.9
-        version: 5.0.15(@types/react@19.2.18)(immer@11.1.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
+        version: 5.0.15(@types/react@19.2.18)(immer@11.1.17)(react@gpuix-main+node_modules+react)(use-sync-external-store@1.6.0(react@gpuix-main+node_modules+react))
     devDependencies:
       '@types/bun':
         specifier: ^1.2.0
@@ -1125,30 +1127,6 @@ packages:
 
   '@github/browserslist-config@1.0.0':
     resolution: {integrity: sha512-gIhjdJp/c2beaIWWIlsXdqXVRUz3r2BxBCpfz/F3JXHvSAQ1paMYjLH+maEATtENg+k5eLV7gA+9yPp762ieuw==}
-
-  '@gpuix/native-darwin-arm64@0.10.0':
-    resolution: {integrity: sha512-Uu1aiZsKBPuk9llFkoaFU95k1t+drG3txv97SgZZZ2x4LKqvy5c0bmklhCG1r7Ypm62qY/NKY0Sl553r/G34Tg==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@gpuix/native-linux-x64-gnu@0.10.0':
-    resolution: {integrity: sha512-HNLL+jp+FA5qvdHq52MDGnj6LmsbkVXojwalGgNYA+iJlffFGfzHkCRmoM21Z+TNKa5cvuRTPgnfP6FGr8KxIw==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@gpuix/native-win32-x64-msvc@0.10.0':
-    resolution: {integrity: sha512-4NQ81KBzcItiSJGupmvvSpuELCF139fqjQSSscHKbYCD+mcAyhOxADr3I2BNHXWhQr42jUgXhV2n/n0udN1KMQ==}
-    cpu: [x64]
-    os: [win32]
-
-  '@gpuix/native@0.10.0':
-    resolution: {integrity: sha512-hBvQ0vT1ybOoRDQu6JASgRfdcWFbHTRQ0Fr3oiTxdclvzdR8v9fBUQVYfVtgZnnL4pl1LS02eNrQx8//E6/Xjw==}
-
-  '@gpuix/react@0.10.0':
-    resolution: {integrity: sha512-RB//IrYBghiso0K0h8V+K9huwzONtEhwdpXoCs/rZjqN1F4RGxjhaeChtAwTt/JnjTSM1rcLi5cicM1xy8kr+g==}
-    peerDependencies:
-      react: ^18.0.0 || ^19.0.0
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -4767,10 +4745,6 @@ packages:
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
 
-  eventsource-parser@4.1.2:
-    resolution: {integrity: sha512-N9b0EvATDJfZj+Szg3m8WwqseQhei/mtTd6V0rCciGbI/yG24o3yBk0YVyfOZZsLVMZHWs++Zk3Aqd2y2EztnQ==}
-    engines: {node: '>=22.12'}
-
   execa@10.1.1:
     resolution: {integrity: sha512-yJAC9ulsE6fU0K6wzJBIH+wI+KAtMeu6Ck8rs23OVzvEhqXjGADdI6K+YNIDAjcQQ6AwXTD96cKExJo6xFJXyg==}
     engines: {node: '>=22'}
@@ -6096,12 +6070,6 @@ packages:
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
 
-  react-reconciler@0.31.0:
-    resolution: {integrity: sha512-7Ob7Z+URmesIsIVRjnLoDGwBEG/tVitidU0nMsqX/eeJaLY89RISO/10ERe0MqmzuKUUB1rmY+h1itMbUHg9BQ==}
-    engines: {node: '>=0.10.0'}
-    peerDependencies:
-      react: ^19.0.0
-
   react-redux@9.3.0:
     resolution: {integrity: sha512-KQopgqFo/p/fgmAs5qz6p5RWaNAzq40WAu7fJIXnQpYxFPbJYtsJPWvGeF2rOBaY/kEuV77AVsX8TsQzKm+A/g==}
     peerDependencies:
@@ -6341,9 +6309,6 @@ packages:
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
     engines: {node: '>=v12.22.7'}
-
-  scheduler@0.25.0:
-    resolution: {integrity: sha512-xFVuu11jh+xcO7JOAGJNOXld8/TcEHK/4CituBUeUb5hqxJLj9YuemAEuvm9gQ/+pgXYfbQuqAkiYu+u7YEsNA==}
 
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
@@ -7621,30 +7586,6 @@ snapshots:
   '@floating-ui/utils@0.2.12': {}
 
   '@github/browserslist-config@1.0.0': {}
-
-  '@gpuix/native-darwin-arm64@0.10.0':
-    optional: true
-
-  '@gpuix/native-linux-x64-gnu@0.10.0':
-    optional: true
-
-  '@gpuix/native-win32-x64-msvc@0.10.0':
-    optional: true
-
-  '@gpuix/native@0.10.0':
-    dependencies:
-      eventsource-parser: 4.1.2
-      zod: 4.6.7
-    optionalDependencies:
-      '@gpuix/native-darwin-arm64': 0.10.0
-      '@gpuix/native-linux-x64-gnu': 0.10.0
-      '@gpuix/native-win32-x64-msvc': 0.10.0
-
-  '@gpuix/react@0.10.0(react@19.2.8)':
-    dependencies:
-      '@gpuix/native': 0.10.0
-      react: 19.2.8
-      react-reconciler: 0.31.0(react@19.2.8)
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -11192,8 +11133,6 @@ snapshots:
 
   eventemitter3@5.0.4: {}
 
-  eventsource-parser@4.1.2: {}
-
   execa@10.1.1:
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
@@ -12476,11 +12415,6 @@ snapshots:
 
   react-is@17.0.2: {}
 
-  react-reconciler@0.31.0(react@19.2.8):
-    dependencies:
-      react: 19.2.8
-      scheduler: 0.25.0
-
   react-redux@9.3.0(@types/react@19.2.18)(react@19.2.8)(redux@5.0.1):
     dependencies:
       '@types/use-sync-external-store': 0.0.6
@@ -12755,8 +12689,6 @@ snapshots:
   saxes@6.0.0:
     dependencies:
       xmlchars: 2.2.0
-
-  scheduler@0.25.0: {}
 
   scheduler@0.27.0: {}
 
@@ -13358,6 +13290,11 @@ snapshots:
     dependencies:
       react: 19.2.8
 
+  use-sync-external-store@1.6.0(react@gpuix-main+node_modules+react):
+    dependencies:
+      react: link:.gpuix-main/node_modules/react
+    optional: true
+
   util-deprecate@1.0.2: {}
 
   uuid@11.1.1: {}
@@ -13611,3 +13548,10 @@ snapshots:
       immer: 11.1.17
       react: 19.2.8
       use-sync-external-store: 1.6.0(react@19.2.8)
+
+  zustand@5.0.15(@types/react@19.2.18)(immer@11.1.17)(react@gpuix-main+node_modules+react)(use-sync-external-store@1.6.0(react@gpuix-main+node_modules+react)):
+    optionalDependencies:
+      '@types/react': 19.2.18
+      immer: 11.1.17
+      react: link:.gpuix-main/node_modules/react
+      use-sync-external-store: 1.6.0(react@gpuix-main+node_modules+react)
