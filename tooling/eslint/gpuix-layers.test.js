@@ -1,0 +1,153 @@
+import { describe, it } from "vitest"
+import { RuleTester } from "eslint"
+import * as parser from "@typescript-eslint/parser"
+import { gpuixLayers } from "./index.js"
+
+RuleTester.describe = describe
+RuleTester.it = it
+
+const tester = new RuleTester({
+  languageOptions: { parser, parserOptions: { ecmaFeatures: { jsx: true } } },
+})
+const src = "/repo/apps/gpuix/src"
+
+function fixture(filename, code, errors) {
+  return { filename, code, ...(errors && { errors }) }
+}
+
+tester.run("architecture/gpuix-layers", gpuixLayers, {
+  valid: [
+    // 误报回归:工程领域字段 `document` 是属性访问或局部变量,不是 DOM 全局。
+    fixture(`${src}/project/model/clip.ts`, "const tracks = get().document.tracks; void tracks"),
+    fixture(
+      `${src}/project/model/clip.ts`,
+      "const document = { tracks: [] }; void document.tracks"
+    ),
+    fixture(
+      `${src}/project/model/clip.ts`,
+      "export function f(document: { tracks: number[] }) { return document.tracks }"
+    ),
+    // model 只依赖同层与类型。
+    fixture(
+      `${src}/project/model/grid.ts`,
+      'import type { Clip } from "./types"; void (0 as unknown as Clip)'
+    ),
+    // stores 可用 zustand 与 react;adapters 可用 stores 与 platform 接口。
+    fixture(
+      `${src}/project/stores/useProjectState.ts`,
+      'import { create } from "zustand"; void create'
+    ),
+    fixture(
+      `${src}/project/adapters/snapshots.ts`,
+      'import { useProjectState } from "../stores/useProjectState"; void useProjectState'
+    ),
+    fixture(
+      `${src}/project/adapters/snapshots.ts`,
+      'import { model } from "../model/grid"; void model'
+    ),
+    // sections 可依赖 ui、shared 与 project 内部各层(不在规则范围)。
+    fixture(
+      `${src}/project/sections/Arrangement/index.tsx`,
+      'import { Button } from "../../../ui/controls/Button"; void Button'
+    ),
+    // ui 可依赖 shared/theme 与 @gpuix。
+    fixture(
+      `${src}/ui/controls/Button/index.tsx`,
+      'import { useTheme } from "../../../shared/theme/ThemeProvider"; import { x } from "@gpuix/react"; void useTheme; void x'
+    ),
+    // platform 可用原生包。
+    fixture(
+      `${src}/platform/storage/index.ts`,
+      'import { settingsGet } from "@zoeydaw/native"; void settingsGet'
+    ),
+    // 测试文件不受限。
+    fixture(
+      `${src}/project/model/clip.test.ts`,
+      'import { x } from "react"; window.foo = 1; void x'
+    ),
+  ],
+  invalid: [
+    fixture(`${src}/project/model/clip.ts`, 'import { useState } from "react"; void useState', [
+      { messageId: "forbiddenPackage" },
+    ]),
+    fixture(`${src}/project/model/clip.ts`, 'import { create } from "zustand"; void create', [
+      { messageId: "forbiddenPackage" },
+    ]),
+    fixture(`${src}/project/model/clip.ts`, 'import { x } from "@gpuix/react"; void x', [
+      { messageId: "forbiddenPackage" },
+    ]),
+    fixture(
+      `${src}/project/model/clip.ts`,
+      'import { cursorHide } from "@zoeydaw/native"; void cursorHide',
+      [{ messageId: "forbiddenPackage" }]
+    ),
+    fixture(
+      `${src}/project/model/clip.ts`,
+      'import { s } from "../stores/useProjectState"; void s',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/project/model/clip.ts`,
+      'import { Button } from "../../ui/controls/Button"; void Button',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(`${src}/project/model/clip.ts`, "export const w = window.innerWidth", [
+      { messageId: "runtimeGlobal" },
+    ]),
+    fixture(`${src}/project/model/clip.ts`, "export const d = document.title", [
+      { messageId: "runtimeGlobal" },
+    ]),
+    fixture(`${src}/project/model/clip.ts`, 'export const v = localStorage.getItem("k")', [
+      { messageId: "runtimeGlobal" },
+    ]),
+    fixture(`${src}/project/stores/useProjectState.ts`, "export const w = window.innerWidth", [
+      { messageId: "runtimeGlobal" },
+    ]),
+    fixture(`${src}/project/adapters/snapshots.ts`, 'export const v = localStorage.getItem("k")', [
+      { messageId: "runtimeGlobal" },
+    ]),
+    fixture(
+      `${src}/project/adapters/snapshots.ts`,
+      'import { Button } from "../../ui/controls/Button"; void Button',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/project/adapters/snapshots.ts`,
+      'import { settingsGet } from "@zoeydaw/native"; void settingsGet',
+      [{ messageId: "forbiddenPackage" }]
+    ),
+    fixture(
+      `${src}/ui/controls/Button/index.tsx`,
+      'import { p } from "../../../project/model/types"; void p',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/ui/controls/Button/index.tsx`,
+      'import { cursorHide } from "@zoeydaw/native"; void cursorHide',
+      [{ messageId: "forbiddenPackage" }]
+    ),
+    fixture(
+      `${src}/ui/controls/Button/index.tsx`,
+      'import { create } from "zustand"; void create',
+      [{ messageId: "forbiddenPackage" }]
+    ),
+    fixture(
+      `${src}/platform/storage/index.ts`,
+      'import { Button } from "../../ui/controls/Button"; void Button',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/platform/storage/index.ts`,
+      'import { m } from "../../project/model/types"; void m',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/shared/theme/style.ts`,
+      'import { Button } from "../../ui/controls/Button"; void Button',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(`${src}/project/model/clip.ts`, 'const m = import("react"); void m', [
+      { messageId: "forbiddenPackage" },
+    ]),
+  ],
+})
