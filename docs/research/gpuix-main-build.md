@@ -813,7 +813,7 @@ Validation: native GPUI tests cover the initial value, activation, deactivation,
 
 #### F1 实测记录
 
-证据保存在 [platform/frame/evidence](../../apps/gpuix/src/platform/frame/evidence/)。日志使用 `.txt`，不再被根目录的 `*.log` 忽略。`runtime-summary-2026-10-15.json` 保存可重算的阶段数据和 CPU 计算。完整日志的头部读取有长度上限，可能在一条记录中间结束，独立 tail 文件保存最终停帧区间。
+证据保存在 [scripts/gpuix-main/evidence/f1](../../scripts/gpuix-main/evidence/f1/)（合入时从 `apps/gpuix/src/platform/frame/evidence` 移出应用源码树，与其它 gpuix-main 证据同处）。日志使用 `.txt`，不再被根目录的 `*.log` 忽略。`runtime-summary-2026-10-15.json` 保存可重算的阶段数据和 CPU 计算。完整日志的头部读取有长度上限，可能在一条记录中间结束，独立 tail 文件保存最终停帧区间。
 
 | 观察场景 | 实际结果 | 证据 |
 | --- | --- | --- |
