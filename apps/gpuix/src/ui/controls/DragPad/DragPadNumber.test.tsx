@@ -1,27 +1,9 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
-import { ThemeProvider } from "../../shared/theme/ThemeProvider"
+import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { DragPadNumber } from "./DragPadNumber"
-
-// Real native-cursor calls spawn `osascript` and hide/warp/show the host's
-// actual OS cursor (see native-cursor.ts). A permanent test suite must not
-// have that side effect on every `bun test` run (confirmed empirically:
-// without this mock, these tests really did spawn osascript and touch the
-// real cursor). `mock.module` patches the live binding `DragPadNumber`
-// already imported above resolves to
-// (https://bun.com/docs/test/mocks: "Overriding Already Imported Modules"),
-// so this stays a static import instead of a runtime-selected one.
-const captureCursorPosition = mock(() => ({ x: 111, y: 222 }))
-const hideCursor = mock(() => {})
-const restoreCursor = mock((_point: { x: number; y: number }) => {})
-mock.module("./native-cursor", () => ({ captureCursorPosition, hideCursor, restoreCursor }))
-
-beforeEach(() => {
-  captureCursorPosition.mockClear()
-  hideCursor.mockClear()
-  restoreCursor.mockClear()
-})
+import { readOuterBounds } from "../useMeasuredTextWidth"
 
 function mount(initial = 120, min = 0, max = 300, step = 1) {
   let latest = initial
@@ -50,7 +32,7 @@ function mount(initial = 120, min = 0, max = 300, step = 1) {
   root.renderer.flush()
   const element = root.renderer.findByTestId("pad")
   if (!element) throw new Error("DragPadNumber not mounted")
-  const bounds = root.renderer.getElementBounds(element.id)
+  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(element.id))
   if (!bounds) throw new Error("DragPadNumber not painted")
   return {
     ...root,
@@ -131,7 +113,7 @@ describe("DragPadNumber native interactions", () => {
     const a = mount()
     const pad = a.renderer.findByTestId("pad")
     if (!pad) throw new Error("Missing pad")
-    const original = a.renderer.getElementBounds(pad.id)
+    const original = readOuterBounds(a.renderer, a.renderer.getElement(pad.id))
     expect(a.renderer.findByType("svg")).toHaveLength(1)
     a.renderer.nativeSimulateClick(a.x, a.y)
     expect(a.renderer.findByType("svg")).toHaveLength(1)
@@ -139,45 +121,28 @@ describe("DragPadNumber native interactions", () => {
     expect(a.renderer.findByType("svg")).toHaveLength(1)
     const editing = a.renderer.findByTestId("pad")
     if (!editing) throw new Error("Missing editing shell")
-    expect(a.renderer.getElementBounds(editing.id)?.width).toBe(original?.width)
+    expect(readOuterBounds(a.renderer, a.renderer.getElement(editing.id))?.width).toBe(
+      original?.width
+    )
     a.unmount()
   })
 })
 
-describe("DragPadNumber native-cursor wiring", () => {
-  test("a plain click captures a cursor anchor but never hides or restores the cursor", () => {
-    const a = mount()
-    a.renderer.nativeSimulateClick(a.x, a.y)
-    expect(captureCursorPosition).toHaveBeenCalledTimes(1)
-    expect(hideCursor).not.toHaveBeenCalled()
-    expect(restoreCursor).not.toHaveBeenCalled()
-    a.unmount()
-  })
-
-  test("wheel adjustment never hides the cursor", () => {
-    const a = mount()
-    a.renderer.nativeSimulateScrollWheel(a.x, a.y, 0, 16)
-    expect(captureCursorPosition).not.toHaveBeenCalled()
-    expect(hideCursor).not.toHaveBeenCalled()
-    a.unmount()
-  })
-
-  test("a real drag hides the cursor once confirmed and restores it to the mouseDown-time anchor on release", () => {
-    const a = mount()
-    a.renderer.nativeSimulateMouseDown(a.x, a.y)
-    expect(captureCursorPosition).toHaveBeenCalledTimes(1)
-    expect(hideCursor).not.toHaveBeenCalled()
-    a.renderer.nativeSimulateMouseMove(a.x + 180, a.y - 40, 0)
-    expect(hideCursor).toHaveBeenCalledTimes(1)
-    expect(restoreCursor).not.toHaveBeenCalled()
-    a.renderer.nativeSimulateMouseUp(a.x + 180, a.y - 40)
-    expect(restoreCursor).toHaveBeenCalledTimes(1)
-    // The anchor passed to restore is whatever was captured at mouseDown,
-    // not a value derived from the drag's end position — this is the exact
-    // bug this design fixes (see native-cursor.ts's doc comment): capturing
-    // lazily inside the move handler anchors to a point already partway
-    // through the drag instead of the true press pixel.
-    expect(restoreCursor).toHaveBeenCalledWith({ x: 111, y: 222 })
-    a.unmount()
-  })
+test("keyboard adjusts a focused value and Escape rolls back an active drag", () => {
+  const a = mount()
+  const element = a.renderer.findByTestId("pad")!
+  a.renderer.nativeSimulateKeystrokes(element.id, "up")
+  expect(a.value()).toBe(121)
+  a.renderer.nativeSimulateMouseDown(a.x, a.y)
+  a.renderer.nativeSimulateMouseMove(a.x, a.y - 40, 0)
+  expect(a.value()).toBe(131)
+  a.renderer.simulateKeystrokes("escape")
+  expect(a.value()).toBe(121)
+  a.renderer.nativeSimulateMouseUp(a.x, a.y - 40)
+  expect(a.value()).toBe(121)
+  a.unmount()
 })
+
+test.todo(
+  "real OS press-without-dwell: JS cursor capture can lag the native mouseDown by one injected move; needs permission-gated CGEventTap capture"
+)

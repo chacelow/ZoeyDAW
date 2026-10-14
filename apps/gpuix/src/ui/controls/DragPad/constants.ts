@@ -18,13 +18,3 @@ export const WHEEL_PIXELS_PER_STEP = 16
 
 /** `deltaY` unit when `event.precise` is false (line-based mouse wheel). */
 export const WHEEL_LINE_PIXELS = 16
-
-/**
- * Approximate monospace glyph width as a fraction of font size.
- *
- * gpuix has no text-measurement API callable from JS (no `measureText`,
- * no ghost-DOM layout query), so the compact width reservation is an
- * estimate from character count instead of a browser-measured sample. See
- * `README.md` for the tradeoff.
- */
-export const CHAR_WIDTH_RATIO = 0.62
