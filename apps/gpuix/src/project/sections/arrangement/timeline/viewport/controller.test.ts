@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { projectActions, useProjectState } from "../../../../adapters"
-import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
-import { initialSession, useProjectState as projectStore } from "../../../../stores/useProjectState"
+import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
+import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import { arrangementBodyBottom, pinnedTrackHeight } from "../../core/layout"
-import { visibleTracks } from "../../../../model/types"
+import { visibleTracks } from "@/project/model/types"
 import { createTimelineViewport } from "./controller"
 import { createTimelineController } from "../controller"
 import { timelinePointer } from "./coordinates"
@@ -30,11 +29,9 @@ function ownScene(scene: SceneStore) {
 }
 
 beforeEach(() => {
-  projectStore.setState({
-    document: createMockDocument(),
-    workspace: createMockWorkspace(),
-    session: initialSession(),
-  })
+  hydrateProject(
+    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+  )
   projectActions.setViewport({ pxPerBar: 100, scrollX: 2000, scrollY: 30 })
 })
 

@@ -4,19 +4,16 @@ import {
   projectActions,
   serializeProject,
   useProjectState,
-} from "../../../../adapters"
-import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
-import { initialSession, useProjectState as projectStore } from "../../../../stores/useProjectState"
+} from "@/project/adapters"
+import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import { createRulerController } from "./controller"
 import { createTimelineController } from "../controller"
 
 beforeEach(() => {
-  projectStore.setState({
-    document: createMockDocument(),
-    workspace: createMockWorkspace(),
-    session: initialSession(),
-  })
+  hydrateProject(
+    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+  )
 })
 
 function mount() {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { adjustGrid, deriveGridPlan, gridZoomLimit, noteGridBars } from "../../../model/grid"
+import { adjustGrid, deriveGridPlan, gridZoomLimit, noteGridBars } from "@/project/model/grid"
 import { createSceneStore } from "../core/scene"
 import { gridLines, numberedRulerPlan, patternRegions } from "../core/rulers/grid-lines"
 

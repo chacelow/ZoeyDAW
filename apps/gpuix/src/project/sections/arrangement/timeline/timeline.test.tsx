@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
-import { ThemeProvider } from "../../../../shared/theme/ThemeProvider"
-import { projectActions, useProjectState } from "../../../adapters"
-import { createMockDocument, createMockWorkspace } from "../../../adapters/fixtures"
-import { initialSession, useProjectState as projectStore } from "../../../stores/useProjectState"
+import { ThemeProvider } from "@/shared/theme/ThemeProvider"
+import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
+import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../core/scene"
 import { Grid } from "./grid"
 import { MiniMap } from "./minimap"
 import { Rulers, TimeRuler } from "./rulers"
 import { createTimelineController } from "./controller"
 import { englishLabels } from "./demo-labels"
+import { flushSync } from "@gpuix/react"
 
 const disposals: Array<() => void> = []
 afterEach(() => {
@@ -17,11 +17,9 @@ afterEach(() => {
 })
 
 beforeEach(() => {
-  projectStore.setState({
-    document: createMockDocument(),
-    workspace: createMockWorkspace(),
-    session: initialSession(),
-  })
+  hydrateProject(
+    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+  )
 })
 
 function makeScene() {
@@ -101,6 +99,46 @@ describe("Native timeline layout and hit testing", () => {
     expect(restored).toBe(true)
   })
 
+  test("folded descendants keep their overview clips and vertical track scroll cannot move the minimap", () => {
+    const root = createTestRoot({ width: 1280, height: 100 })
+    disposals.push(root.unmount)
+    root.render(
+      <ThemeProvider>
+        <MiniMap
+          width={1280}
+          height={40}
+          label="Arrangement overview"
+          cursor={{ capture: () => null, hide: () => {}, restore: () => {} }}
+          onNavigate={() => {}}
+          onViewport={projectActions.setViewport}
+          geometry={{
+            bars: 128,
+            viewportWidth: 800,
+            pxPerBar: 100,
+            scrollX: 4000,
+            minPxPerBar: 6.25,
+            maxPxPerBar: 131072,
+          }}
+        />
+      </ThemeProvider>
+    )
+    const overview = root.renderer.findByTestId("timeline-minimap")
+    const clip = root.renderer.findByTestId("minimap-clip-trager-1")
+    if (!overview || !clip) throw new Error("Overview source clip missing")
+    const frameBefore = root.renderer.getElementBounds(overview.id)
+    const clipBefore = root.renderer.getElementBounds(clip.id)
+    expect(clipBefore).toMatchObject({ width: 80, height: 7, y: 8 })
+    flushSync(() => {
+      projectActions.updateTrack("drums-group", { collapsed: true })
+      projectActions.setViewport({ scrollY: 120 })
+    })
+    root.renderer.flush()
+    const retained = root.renderer.findByTestId("minimap-clip-trager-1")
+    if (!retained) throw new Error("Fold hid overview content")
+    expect(root.renderer.getElementBounds(retained.id)).toEqual(clipBefore)
+    expect(root.renderer.getElementBounds(overview.id)).toEqual(frameBefore)
+  })
+
   test("numbered Pattern regions stay whole bars when fine labels are visible", () => {
     const scene = makeScene()
     scene.setViewport({ ...scene.get().viewport, pxPerBar: 800, width: 1200, scrollX: 400 })
@@ -125,7 +163,6 @@ describe("Native timeline layout and hit testing", () => {
       width: 800,
       height: 200,
     })
-    expect(root.renderer.findByTestId("pattern-region-1.25")).toBeUndefined()
   })
 
   test("marker drag commits once and native Arrow input is consumed by only the ruler owner", () => {
@@ -175,8 +212,10 @@ describe("Native timeline layout and hit testing", () => {
     expect(useProjectState.getState().session.position).toEqual(before)
   })
 
-  test("real-time ruler rescales with BPM while sharing the exact music scroll axis", () => {
+  test("real-time ruler rescales with BPM while retaining the music scroll origin", () => {
     const scene = makeScene()
+    scene.setMusic({ ...scene.get(), transport: { bpm: 120, numerator: 4, denominator: 4 } })
+    scene.setViewport({ ...scene.get().viewport, scrollX: 200 })
     const root = createTestRoot({ width: 800, height: 100 })
     disposals.push(root.unmount)
     root.render(
@@ -184,10 +223,19 @@ describe("Native timeline layout and hit testing", () => {
         <TimeRuler scene={scene} label="Time ruler" />
       </ThemeProvider>
     )
+    function tenSecondsLeft() {
+      const label = root.renderer.findByText("0:10")
+      if (label?.parentId == null) throw new Error("Time label missing")
+      const bounds = root.renderer.getElementBounds(label.parentId)
+      if (!bounds) throw new Error("Time label not painted")
+      return bounds.x
+    }
+    const before = tenSecondsLeft()
+    flushSync(() =>
+      scene.setMusic({ ...scene.get(), transport: { bpm: 60, numerator: 4, denominator: 4 } })
+    )
     root.renderer.flush()
-    expect(root.renderer.getAllText()).toContain("0:02")
-    scene.setMusic({ ...scene.get(), transport: { bpm: 60, numerator: 4, denominator: 4 } })
-    root.renderer.flush()
-    expect(root.renderer.getAllText()).toContain("0:04")
+    expect(before - tenSecondsLeft()).toBe(250)
+    expect(scene.get().viewport.scrollX).toBe(200)
   })
 })

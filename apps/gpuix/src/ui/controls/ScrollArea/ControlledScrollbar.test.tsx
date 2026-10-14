@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
-import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
+import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { ControlledScrollbar } from "./ControlledScrollbar"
 import { scrollbarGeometry } from "./scrollbar-geometry"
 

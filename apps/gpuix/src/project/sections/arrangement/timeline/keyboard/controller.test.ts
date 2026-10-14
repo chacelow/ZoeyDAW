@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { projectActions, useProjectState } from "../../../../adapters"
-import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
-import { initialSession, useProjectState as projectStore } from "../../../../stores/useProjectState"
+import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
+import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createTimelineKeyboard } from "./controller"
 import type { KeyboardFocus, KeyboardOwner, TimelineKeyboardInput } from "./controller"
 
@@ -17,11 +16,9 @@ function key(
 }
 
 beforeEach(() => {
-  projectStore.setState({
-    document: createMockDocument(),
-    workspace: createMockWorkspace(),
-    session: initialSession(),
-  })
+  hydrateProject(
+    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+  )
   focus = "timeline"
   keyboard = createTimelineKeyboard({
     focus: () => focus,
