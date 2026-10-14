@@ -1,5 +1,5 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { trackFill } from "../track-color"
+import { contentFill } from "@/shared/theme/content-color"
 import type { GroupRail } from "@/project/model/track-groups"
 import type { Track } from "@/project/model/types"
 
@@ -39,7 +39,7 @@ export function GroupRails({
             width: theme.project.groupRailWidth,
             height: "100%",
             flexShrink: 0,
-            backgroundColor: trackFill(group.color, theme),
+            backgroundColor: contentFill(group.color, theme.colors),
             borderLeftWidth: 1,
             borderRightWidth: 1,
             borderTopWidth: group.id === track.id ? 1 : 0,

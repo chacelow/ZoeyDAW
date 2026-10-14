@@ -1,6 +1,6 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { clipRect } from "../../core/layout"
-import { trackFill } from "../track-color"
+import { contentFill } from "@/shared/theme/content-color"
 import { useTrackLabels } from "../labels"
 import type { Track } from "@/project/model/types"
 import type { ArrangementViewport } from "../../core/scene"
@@ -52,7 +52,7 @@ export function GroupOverview({
                 top: rect.top,
                 width: rect.width,
                 height: rect.height,
-                backgroundColor: trackFill(clip.color ?? descendant.color, theme),
+                backgroundColor: contentFill(clip.color ?? descendant.color, theme.colors),
                 borderBottomWidth: 1,
                 borderColor: theme.colors.arrangementLine,
               }}

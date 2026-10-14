@@ -23,6 +23,8 @@ The routing increment does not connect an engine or create a second project stat
 
 The shared `DerivedThemeColors` owns Arrangement colors. Headers use `arrangementSurfaceAlt`, lanes use `arrangementSurface`, borders use `arrangementLine`, authored content ink uses `arrangementClipInk`, and Mixer fill uses `arrangementVolume`. Meter signal/peak colors consume `arrangementMeterGood/Warn/Danger/Peak`; zero-dB and stereo cutouts use the same `arrangementSurfaceAlt` as the header. The unlit meter well keeps Web's `muted` background. Local base color fields and their redundant wiring assertions have been deleted.
 
+Authored track/group/clip colors remain token strings. Menus consume the shared `CONTENT_PALETTE`; drawing consumes `resolveContentColor` / `contentFill`. The local token table and 68/32 mixing helper have been deleted. A native menu/snapshot/theme-switch regression proves the stored token survives and the rendered identity follows the new theme; a literal-write mutation fails that regression.
+
 The coordinator-provided Live frames show routing input activity but no illuminated output meter bars; yellow/red, peak strips and output-meter separator widths cannot be sampled reliably from them. They are not evidence of a Live meter-color match.
 
 ## Native stereo meters
@@ -48,7 +50,7 @@ Header geometry uses the shared 304px control column: identity 100px, routing 74
 
 Native screenshot inspection caught a context-menu host shrinking the composite row to content width. Explicit full-size column/stretch layout on the existing `ContextMenu` root fixed it; the width regression changed from 360px to the full 1000px viewport. Dark-track title ink was corrected to the theme's dark surface color so it remains readable on lightened authored track colors. Initial and repaired images are in `evidence/2026-10-15-initial-width-defect.png` and `evidence/2026-10-15-layout-fixed.png`.
 
-Shared integration still pending: A3b's container-width Select, compact numeric icon treatment, Space policy and main-build bounds reader. On the fixed main renderer, owned resize keys now call `preventDefault` and `stopPropagation`; all three resize keyboard regressions pass. The remaining shared geometry/Space regressions are retained, not weakened or skipped.
+Shared integration still pending: A3b's container-width Select, compact numeric icon treatment, Space policy, main-build bounds reader and secondary-click activation on nested interactive titles. Shift+F10 menu access works. Owned resize keys call `preventDefault` and `stopPropagation`; all three resize keyboard regressions pass. Shared failure regressions remain enabled.
 
 ## Track gestures
 

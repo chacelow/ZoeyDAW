@@ -13,7 +13,7 @@ import { TrackLabelsProvider } from "../labels"
 import { TrackTelemetryProvider } from "../meter/telemetry"
 import { TrackRow } from "../Row"
 import { GroupRails } from "../GroupRails"
-import { trackFill } from "../track-color"
+import { contentFill } from "@/shared/theme/content-color"
 import { useTrackReorder } from "../Row/useTrackReorder"
 import type { PublicInstance } from "@gpuix/react"
 import type { ReactNode } from "react"
@@ -131,7 +131,7 @@ export function TrackRows({
                   right: 0,
                   height,
                   borderWidth: 1,
-                  borderColor: trackFill(row.track.color, theme),
+                  borderColor: contentFill(row.track.color, theme.colors),
                   pointerEvents: "none",
                 }}
               />

@@ -10,6 +10,7 @@ import {
 } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
+import { CONTENT_PALETTE, contentFill, resolveContentColor } from "@/shared/theme/content-color"
 import type { ReactElement } from "react"
 import type { Track } from "@/project/model/types"
 
@@ -27,16 +28,6 @@ export function TrackMenu({
   const selectedIds = useProjectState(state => state.session.selectedTrackIds)
   const targets = selectedIds.includes(track.id) ? selectedIds : [track.id]
   const editable = track.kind !== "main"
-  const palette = [
-    theme.colors.chart1,
-    theme.colors.chart2,
-    theme.colors.chart3,
-    theme.colors.chart4,
-    theme.colors.chart5,
-    theme.colors.primary,
-    theme.colors.destructive,
-    theme.colors.mutedForeground,
-  ]
   return (
     <ContextMenu
       style={{ width: "100%", height: "100%", flexDirection: "column", alignItems: "stretch" }}
@@ -79,17 +70,20 @@ export function TrackMenu({
             padding: theme.control["--spacing-control-gap"],
           }}
         >
-          {palette.map((color, index) => (
+          {CONTENT_PALETTE.map((color, index) => (
             <Button
               key={color}
               iconOnly
               label={`${t("trackColor")} ${index + 1}`}
               testId={`track-color-${index}-${track.id}`}
-              style={{ backgroundColor: color }}
+              style={{
+                backgroundColor: resolveContentColor(color, theme.colors),
+                hover: { backgroundColor: contentFill(color, theme.colors) },
+              }}
               onClick={() => {
-                const token = projectActions.beginEdit("track-color")
+                const edit = projectActions.beginEdit("track-color")
                 for (const id of targets) projectActions.updateTrack(id, { color })
-                projectActions.endEdit(token)
+                projectActions.endEdit(edit)
               }}
             />
           ))}

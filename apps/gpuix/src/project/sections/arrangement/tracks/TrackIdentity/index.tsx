@@ -3,7 +3,7 @@ import { Button } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { TRACK_TITLE_HEIGHT } from "@/project/layout"
-import { trackFill } from "../track-color"
+import { contentFill } from "@/shared/theme/content-color"
 import { TrackNameInput } from "./NameInput"
 import { AutomationSelector } from "./AutomationSelector"
 import { Icon } from "@/ui/controls/Icon"
@@ -74,7 +74,7 @@ export function TrackIdentity({
         userSelect: "none",
         backgroundColor: selected
           ? theme.colors.arrangementClipSelected
-          : trackFill(track.color, theme),
+          : contentFill(track.color, theme.colors),
         focusVisible: focusRing,
       }}
       onKeyDown={handleKeyDown}

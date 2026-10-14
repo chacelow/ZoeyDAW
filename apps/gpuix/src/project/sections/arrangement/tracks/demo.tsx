@@ -20,7 +20,7 @@ import { clipRect } from "../core/layout"
 import { createSceneStore } from "../core/scene"
 import { TrackRows } from "./TrackRows"
 import { trackResources } from "./locales"
-import { trackFill } from "./track-color"
+import { contentFill } from "@/shared/theme/content-color"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import type { CursorLockPort } from "@/ui/controls"
 
@@ -268,7 +268,7 @@ function TrackSurface({
                     top: gap,
                     width: rect.width,
                     height: Math.max(0, row.height - gap * 2),
-                    backgroundColor: trackFill(clip.color ?? row.track.color, theme),
+                    backgroundColor: contentFill(clip.color ?? row.track.color, theme.colors),
                     overflow: "hidden",
                     padding: gap,
                     pointerEvents: "none",

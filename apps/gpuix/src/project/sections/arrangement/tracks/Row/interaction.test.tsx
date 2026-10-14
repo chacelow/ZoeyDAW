@@ -8,6 +8,7 @@ import {
   projectActions,
   useProjectState,
   readProjectTelemetry,
+  serializeProject,
 } from "../../../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
 import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP, TRACK_LAYOUT } from "../../../../layout"
@@ -16,6 +17,7 @@ import { TrackRows } from "../TrackRows"
 import { trackResources } from "../locales"
 import type { TestRoot, TestWindowOptions } from "@gpuix/react/testing"
 import type { ArrangementViewport } from "../../core/scene"
+import type { Appearance } from "@/shared/theme/ThemeProvider"
 
 const roots: TestRoot[] = []
 const viewport: ArrangementViewport = {
@@ -33,6 +35,40 @@ function current(id: string) {
   return track
 }
 
+function Surface({
+  view,
+  focusedTrackId,
+  appearance = "dark",
+}: {
+  readonly view: ArrangementViewport
+  readonly focusedTrackId: string | null
+  readonly appearance?: Appearance
+}) {
+  const size = useWindowSize()
+  const acceptedViewport = { ...view, ...size }
+  const document = useProjectState(state => state.document)
+  const scene = {
+    ...createSceneStore().get(),
+    tracks: document.tracks,
+    viewport: acceptedViewport,
+  }
+  return (
+    <ThemeProvider key={appearance} defaultAppearance={appearance}>
+      <TrackRows
+        scene={scene}
+        viewport={acceptedViewport}
+        focusedTrackId={focusedTrackId}
+        telemetry={readProjectTelemetry}
+        labels={trackResources["en-US"].arrangement}
+        onFocusTrack={id => {
+          if (!useProjectState.getState().session.selectedTrackIds.includes(id))
+            projectActions.selectTracks([id], "header")
+        }}
+        renderLane={row => <text testId={`lane-content-${row.track.id}`}>{row.track.name}</text>}
+      />
+    </ThemeProvider>
+  )
+}
 function mount(
   view = viewport,
   focusedTrackId: string | null = null,
@@ -40,33 +76,7 @@ function mount(
 ) {
   const root = createTestRoot({ width: view.width, height: view.height, ...windowEvents })
   roots.push(root)
-  function Surface() {
-    const size = useWindowSize()
-    const acceptedViewport = { ...view, ...size }
-    const document = useProjectState(state => state.document)
-    const scene = {
-      ...createSceneStore().get(),
-      tracks: document.tracks,
-      viewport: acceptedViewport,
-    }
-    return (
-      <ThemeProvider>
-        <TrackRows
-          scene={scene}
-          viewport={acceptedViewport}
-          focusedTrackId={focusedTrackId}
-          telemetry={readProjectTelemetry}
-          labels={trackResources["en-US"].arrangement}
-          onFocusTrack={id => {
-            if (!useProjectState.getState().session.selectedTrackIds.includes(id))
-              projectActions.selectTracks([id], "header")
-          }}
-          renderLane={row => <text testId={`lane-content-${row.track.id}`}>{row.track.name}</text>}
-        />
-      </ThemeProvider>
-    )
-  }
-  root.render(<Surface />)
+  root.render(<Surface view={view} focusedTrackId={focusedTrackId} />)
   root.renderer.flush()
   return root
 }
@@ -502,4 +512,36 @@ test("a Return self-send rejects wheel and captured drag without authoring feedb
   root.renderer.nativeSimulateMouseUp(x, y - 40)
   expect(current("a-apply")).toEqual(before)
   expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+test("track color menu persists its token and follows a later theme switch", () => {
+  projectActions.updateTrack("3-audio", { color: "var(--chart-1)" })
+  const root = mount()
+  root.renderer.nativeSimulateKeystrokes(element(root, "track-row-3-audio").id, "shift-f10")
+  click(root, "track-color-2-3-audio")
+  expect(current("3-audio").color).toBe("var(--chart-3)")
+  const darkFill = element(root, "track-identity-3-audio").style.backgroundColor
+  const saved = serializeProject()
+  flushSync(() => hydrateProject(saved))
+  root.render(<Surface view={viewport} focusedTrackId={null} appearance="light" />)
+  root.renderer.flush()
+  expect(current("3-audio").color).toBe("var(--chart-3)")
+  expect(element(root, "track-identity-3-audio").style.backgroundColor).not.toBe(darkFill)
+})
+
+test("secondary click on an interactive title opens its track context menu", () => {
+  const root = mount()
+  const label = bounds(root, "track-label-3-audio")
+  root.renderer.nativeSimulateClick(label.x + label.width / 2, label.y + label.height / 2, 2)
+  click(root, "track-color-2-3-audio")
+  expect(current("3-audio").color).toBe("var(--chart-3)")
+})
+
+test("Enter on Solo changes the control without replacing independent header selection", () => {
+  projectActions.selectTracks(["4-midi"], "header")
+  const root = mount()
+  root.renderer.nativeSimulateKeystrokes(element(root, "track-solo-3-audio").id, "enter")
+  expect(current("3-audio").solo).toBe(true)
+  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
+  expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
 })
