@@ -2,7 +2,7 @@
 
 `index.ts` is the UI's project data interface. `useProjectState(selector)` reads the composed Zustand root; `projectActions` issues synchronous, optimistic domain commands. `document` contains authored project data, `workspace` contains view geometry and editor preferences, and `session` contains playback, selection, meters, backend status and undo availability.
 
-This gpuix core has no DOM or native I/O dependency. The UI descriptions below preserve the Web prototype's domain behavior; they do not claim those panels or an audio engine have been migrated. Application composition must install a real backend and a platform snapshot-storage port before acquiring playback or saving.
+The model remains DOM-free. The project adapter reaches Rust through `platform/engine.ts`; it does not decode media or move PCM through JavaScript. The application must install a snapshot-storage port separately before saving.
 
 ## Backend registration and lifecycle
 
@@ -16,7 +16,7 @@ This gpuix core has no DOM or native I/O dependency. The UI descriptions below p
 
 `session.editEpoch` is a subscribable editing identity independent of engine `sessionId`. Tokens, controls and Canvas use it while live or idle; hydration/open/release invalidate old ownership. Engine acknowledgements and telemetry retain their protocol/session fences. `runtime/` owns the coordinator; `backend/connection/` exposes the connection interface and keeps protocol validation and interpolation in separate pure files.
 
-There is no default backend. `startProjectRuntime()` throws `ProjectBackendNotConfiguredError` before acquiring a lease when no factory is configured; call `configureProjectBackend()` at the application composition root first. Removing the final registration disposes its active connection and leaves the project idle. Idle editing, undo and hydration remain available without an engine. `createMockProjectBackend()` is retained for explicitly configured tests only; it produces no audio and loads no sample files. Demo `mock://` references are fixtures, not real media.
+`context.ts` installs `createNativeBackend` through `runtime/backend-registration` as the application's default. This registration performs no native call and opens no device. The first runtime lease constructs the native session; the last release disposes it. An isolated `createProjectRuntime()` still has no implicit factory and throws `ProjectBackendNotConfiguredError` if acquired before configuration. Pure-logic tests explicitly inject `createMockProjectBackend()`, which reports a finite silence floor and never synthesizes levels. `mock://` references remain test fixtures and are rejected by the native media loader.
 
 ## Commands, confirmation and recovery
 
@@ -35,7 +35,7 @@ The implementation applies a request atomically before acknowledging it. An acce
 
 On failure the runtime drops queued dependent edits, restores the accepted document and history, preserves current viewport/preferences and independent recording edits, and sends a recovery state. `session.backend` exposes phase, pending count, accepted revision and error; the Arrangement toolbar displays pending/error feedback. Successful recovery permits saving again while retaining the error indication until a later commit succeeds. `whenProjectBackendIdle()` waits for the current session's queue to settle and returns false for an unrecovered failure or disposed session.
 
-The engine DTO excludes names, colors, view geometry, waveform caches and PCM buffers. It includes timing, routing, mixing, automation, source windows, MIDI/Pattern content and fade metadata. `BackendAudioClip.sourceId === null` denotes an empty, silent clip. Other source IDs refer to entries in `project.sources`, currently keyed by URI. Musical coordinates are one-based bars; MIDI beats use the document meter-beat convention. Fade metadata is not an implemented DSP algorithm.
+The engine DTO excludes names, colors, view geometry, waveform caches and PCM buffers. It includes timing, routing, mixing, automation metadata, source windows, MIDI/Pattern content and fade controls. `BackendAudioClip.sourceId === null` denotes an empty, silent clip. Other source IDs refer to entries in `project.sources`. Musical coordinates are one-based bars. Audio source offsets are signed, rounded to sample frames, and wrapped modulo decoded source length, including left extensions and exact cycle multiples. Empty PCM is silent. Rust applies clip gain and the same rational fade curve defined by the UI's anchor position and curve value.
 
 ## Editing and rendering
 
@@ -45,11 +45,27 @@ Continuous controls use `useProjectEditGesture(onChange)`, which owns a session-
 
 ## Telemetry and native integration
 
-`subscribe(listener)` publishes `BackendTelemetry` with its own monotone sample sequence and `appliedSequence` identifying the applied command. The connection validates clocks and finite stereo dBFS levels, buffers telemetry arriving before its acknowledgement, and rejects stale sessions, samples and seek/play control generations. `readProjectTelemetry()` and `readTransportBar()` expose this same accepted stream to playhead, meters, Follow and recording. Display interpolation is capped at 250ms and wraps at the accepted loop; it does not create a second engine clock.
+`subscribe(listener)` publishes `BackendTelemetry` with its own monotone sample sequence and `appliedSequence` identifying the audio callback's applied command. The connection validates clocks, finite stereo dBFS levels, and the required `outputLatencyFrames` field. It buffers telemetry arriving before its acknowledgement and rejects stale sessions, samples and seek/play control generations through `appliedSequence`. Missing latency fields are invalid; unavailable latency is explicitly `null`. Display interpolation is capped at 250ms and wraps at the accepted loop; it does not create a second engine clock.
 
-A provider can report a musical clock or a sample clock with frame and sample rate. Rust and third-party integrations implement this port behind their own transport, parsing IPC data at that boundary. The provider owns realtime processing, decoding, media resolution and cancellation/disposal of its resources. Emit silence as finite dBFS values. Never publish PCM or synchronously invoke WebView work from an audio callback. The Canvas `audio/project-telemetry.ts` writer adapts runtime frames to local display slots; these slots are not a verified native shared-memory protocol.
+The native provider reports a sample clock from the Rust `Transport`, not Firewheel's continuously advancing graph clock. A custom Firewheel PCM node reads its allocation-free loop segments, so a paused block consumes no source frames and a new seek starts at the requested sample. Prepared routing and PCM ownership cross threads through a triple buffer. Atomic snapshots carry instantaneous per-channel peaks and internal RMS to the control thread; only peaks are published as `levels`, with silence at -120 dBFS. Meter peak hold and decay remain UI drawing state. Rust throttles telemetry to about 30Hz before the napi `ThreadsafeFunction` call. Disposal drops the device and callback; the TS adapter ignores already-queued frames after disposal.
 
-Keyboard note input uses the same transport control and accepted clock. Armed tracks retain simulated monitoring. `readRecordingBar()` permits short authored MIDI notes only while play/record and the seek generation are accepted; input during an unconfirmed seek does not write a note at the optimistic UI position. Independent recorded notes survive a cancelled control edit, including a Clip drag that returns to its origin before continuing. This remains a Web prototype, not audible MIDI or audio recording. Native audio, plugin hosting, device configuration and file persistence are not implemented by this change.
+Keyboard note input, authored MIDI recording and accepted recording clocks retain their existing project-state behavior. MIDI/Pattern clips and held notes are stored and participate in transport telemetry but produce no audio. MIDI synthesis, plugin hosting and native recording are not implemented. Automation lanes are retained in the protocol but are not applied to DSP by this backend.
+
+### Native session API
+
+`@zoeydaw/native` exports the following engine functions. The adapter uses only the platform re-export.
+
+| Export | Result and lifetime |
+| --- | --- |
+| `openSession(): number` | Opaque handle. The Rust control thread owns the CPAL stream and session. |
+| `apply(handle, requestJson): string` | `BackendResult` JSON. Missing devices, decoding failures, invalid routing and sample-rate faults return `kind: "rejected"`. |
+| `subscribeTelemetry(handle, callback): void` | Callback receives telemetry JSON. The Rust queue is bounded to one pending sample; callback failures do not panic the engine. |
+| `dispose(handle): void` | Idempotent release; joins the control thread and closes its output stream. |
+| `readPeaks(handle, sourceId, startFrame, endFrame, pixels): Float32Array` | Exact visible-range envelopes, never PCM. Frame coordinates use the device-resampled source rate. |
+
+Peak output is channel-major, then pixel-major `[min, max]`: `[leftMin0, leftMax0, …, rightMin0, rightMax0, …]`. Mono sources are duplicated to stereo, so output length is `pixels * 4`. Ranges are half-open, integer and nonnegative; `pixels` is 1–16384. The source bounds crop the requested range; empty pixels contain `[0, 0]`. Local filesystem paths and `file:///` URIs are supported, with Symphonia decoding mono/stereo media and Rubato converting rates off the realtime thread. Unsupported multichannel media is rejected.
+
+`outputLatencyFrames` comes from Firewheel's CPAL `process_to_playback_delay`, rounded to device frames. macOS measured 284 frames at 48kHz on the verification host. Platforms or callbacks without a playback timestamp report `null`; no buffer-size guess substitutes for unavailable latency. A device fault or changed sample rate is terminal for that session and rejects subsequent applies; reopening requires a new session.
 
 ## Snapshots and source data
 
@@ -103,7 +119,7 @@ Clip clipboard payloads are versioned and parsed at the input boundary. Copy, cu
 
 Locators support snapped movement, Shift snap bypass, rename, delete and navigation. Double-click starts playback from a locator without stopping an already-running transport. Arrow keys move the selected locator rather than seeking. Loop body movement preserves length; either edge resizes independently, and Cmd/Ctrl+L creates a loop from the selected time range.
 
-Automation uses a normalized envelope with optional per-segment curvature. Its painter and simulated meters share `model/automation-curve.ts`, including held head/tail values and empty-lane defaults. Point and segment gestures preview before committing; B draws every crossed grid cell. Numeric editing accepts parameter-specific values and shifts selected points relatively. Enter commits, Escape cancels, and menu dismissal preserves input focus.
+Automation uses a normalized envelope with optional per-segment curvature. Its painter uses `model/automation-curve.ts`; native automation DSP is not implemented. Point and segment gestures preview before committing; B draws every crossed grid cell. Numeric editing accepts parameter-specific values and shifts selected points relatively. Enter commits, Escape cancels, and menu dismissal preserves input focus.
 
 The Arrangement lower-right label shows the effective grid, including when Automation is off. Adaptive Narrowest reaches `1/16384` notes at maximum zoom with an 8px cell in both 4/4 and 4/8. For meter `n/d`, a `1/N` note occupies `d / (n * N)` bars. All viewport and MiniMap zoom paths share the limit, while logical scroll can exceed 16 million pixels without allocating an equally large canvas. The ruler adds readable bar, beat and sixteenth labels independently of the finest grid. Clip duration floors and Float64 simulated playhead storage preserve fine positions at distant bars.
 
