@@ -38,4 +38,70 @@
 - Audio Start/End 最初按 Live 的 Source 裁剪字段实现，实测却是独立播放标记：拖动不改变编排 Clip 的 startBar/lengthBars/sourceOffsetBars。已改为 audioSettings 内的 startMarkerBars/endMarkerBars，与 Loop Position/Length 和源边界三者互不影响。
 - 音乐位置格式化对极小的十六分音符分量直接插值 Number，JS 对小于 1e-6 的数会转成科学计数法（如 `2e-8`），生成的字符串跳出 `\d+(?:\.\d+)?` 解析正则，往返直接变 NaN。改为用 `toFixed` 字符串裁剪尾随 0，不经过 Number→String 再转换。
 
+## gpuix 迁移：工作方式（所有并行 worker 必读）
+
+- 错：在共享 worktree 里用 `git stash` / `git checkout <旧提交>` 做"改动前后对照"。
+- 对：对照一律用 `git worktree add ../tmp-xxx <提交>` 的临时副本，用完 `git worktree remove`。
+- 因：stash 引用存放在所有 worktree 共用的 common git dir（实测：在主 worktree `git stash`，链接 worktree 里 `git stash list` 同样可见）。并行切片的 lint-staged 备份 stash、别人的 WIP 会和你的混在一起，`stash pop` 可能把别的分支的文件落进当前工作区，产生 `DU` 未合并条目。2026-10-14 协调者在合并 A5 时踩过：`.orca-specs/` 一度被收走，A2 的两个文件落进了协调者工作区，靠 stash 的第三个父提交（untracked 快照）恢复，未丢数据。
+- 同一天再犯一次：为了"验证上面这条"，协调者在共享仓库里 `git stash push` 做探针再 `git stash drop`，探针把**当时未提交的 LESSONS.md 一起收走并丢弃**。教训：验证 stash 共享性应在 `mktemp -d` 的一次性仓库里做（上面的实测就是这样），绝不在真实仓库里做；未提交的重要改动先 `git add` + 提交，哪怕是 WIP。
+- 恢复：被 drop 的 stash 提交仍是悬空对象。`git fsck --no-reflogs --unreachable` 列出悬空提交，按 stash 信息（`git log -1 --format='%H %s' <sha>`）找到，再 `git checkout <sha> -- <路径>`，不要 `stash pop`。
+- 见：`git rev-parse --git-common-dir`；已进入 stash 的未跟踪文件在它的第三个父提交里：`git checkout "stash@{0}^3" -- <路径>`。
+
+## gpuix 迁移：Shell 引号会吞掉长回复
+
+- 错：把含 `$(`、反引号的中文长文本直接放进 `--body "..."` 双引号。
+- 对：先写进文件，再 `--body "$(cat file)"`；heredoc 用带引号的 `<<'EOF'`。
+- 因：`$(` 与反引号会被 shell 当作命令替换执行（表现为 `command not found: 的`），worker 收到的是被截断的残缺指令。2026-10-14 发给 A2 的关闭拦截回复因此残缺，靠文件重发。
+
+## gpuix 迁移：不要把"阻塞等待"和"回执确认"并发
+
+- 错：同一批命令里先后台 `check --wait`，又同时 `check --ack`。
+- 对：用一条命令 `check --ack <旧 delivery> --wait ...`，先确认再等待。
+- 因：等待先于回执执行时，同一条消息会被整批重放，表现为重复处理同一个问题。
+
+## gpuix 迁移：验收用语义检查，不用字面 grep
+
+- 错：用 `grep "document\."` 判断"有没有 DOM 耦合"。
+- 对：用 ESLint 作用域分析判断"解析不到任何声明的全局引用"；规则在 `tooling/eslint/gpuix-layers.js`，由 `LAYERS` 声明表驱动，`state.document.tracks`、局部变量 `document` 不会误报（规则测试含此回归用例）。
+- 因：工程领域字段就叫 `document`，字面匹配会命中数百处合法代码，逼 worker 改公共契约来过门禁。
+- 见：`tooling/eslint/gpuix-layers.test.js`、[gpuix 架构](docs/architecture/gpuix.md)。
+
+## gpuix 迁移：Bun 测试运行器的已知缺陷
+
+- 错：`expect(live).toMatchObject({ notes: expect.arrayContaining([...]) })` 之后继续使用 `live`。
+- 对：对会被后续逻辑再读的活状态，先 `structuredClone` 再交给断言；在每处包裹旁注明原因，上游修复后整批移除。
+- 因：Bun 1.3.14 与最新 1.4.3 都会把 `received` 里的数组替换成 `ExpectArrayContaining`（上游 oven-sh/bun#3521、#35452，均 open），污染活的 Zustand state，下一条用例在 `clip.notes.map` 崩溃。Vitest 无此问题。
+- 另：`vi.setSystemTime` 在 bun 里叫 `setSystemTime`（从 `bun:test` 导入）；`jest.getTimerCount()` 可用。
+
+## gpuix 迁移：光标锁定（拖动数值）
+
+- 错 1：用 `CGAssociateMouseAndMouseCursorPosition` 做 FPS 式 pointer lock。GPUI 的 `mouseMove` 全部取自 `NSEvent.locationInWindow`（绝对位置，源码 `crates/gpui_macos/src/events.rs`），断开关联会冻结位置，`mouseMove` 停发。
+- 错 2：在越过点击阈值的 `mouseMove` 里才读取光标锚点。此时光标已走过一段，恢复位置落在拖动中途（实测读回 542 而非 568）。锚点必须在 `mouseDown`（位置静止）读取。
+- 错 3：`bun:ffi` 读 `CGEventGetLocation`。`CGPoint` 按值返回，`FFIType` 没有 struct，读到垃圾。
+- 错 4：`osascript` 子进程当原生桥，约 54ms/次。
+- 对：Rust（`crates/native/src/cursor.rs`）经 napi 暴露 `cursorPosition/cursorHide/cursorRestore`，进程内约 2µs/次；mouseDown 抓锚点 → 确认拖动后才隐藏 → 松手先 warp 回锚点再显示。`CGWarpMouseCursorPosition` 只落整数点，所以与小数锚点最多差 0.5pt，已四舍五入。
+- 测试：真实模块会改宿主光标，单元测试必须 mock（`mock.module`），否则每次 `bun test` 都在动开发者的鼠标；整套测试前后光标坐标须一致。
+
+## gpuix 迁移：gpuix 0.10.0 的原生缺口（临时代码清单，升级后整体删除）
+
+npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失、主干已有或仍缺的能力，所有绕行代码必须集中在单一函数/hook 里并注明对应上游项：
+
+- `onLayout`：主干有（`.changeset/on-layout.md`），0.10.0 没有。绕行：`getElementBounds` 采样，收敛在唯一的测量 hook。
+- `getElementBounds` 含 padding 的修复：主干有（`bounds-include-padding`）。绕行：`readOuterBounds`，唯一入口。
+- `onFocus/onBlur` 在 `focusElement`/窗口失活时不触发：绕行为应用作用域单一采样器；窗口失活信号走 Rust `isApplicationActive`。
+- 关闭拦截、`hideWindow`、托盘：主干也没有；GPUI fork 里 `on_window_should_close` 已存在，只缺 gpuix 注册与 JS 暴露。当前 `WindowCloseGuard.supported=false`，不得用 `process.exit()` 冒充。
+- `measureText`：没有。绕行：挂载不可见样本节点读取实测宽度。
+- 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
+
+## gpuix 迁移：依赖与版本核实
+
+- 对：引入任何 crate/npm 包前先用 registry 核实版本与活跃度，不凭记忆。本轮核实结果：`dirs 7.0.0`（不是 6）、`windows-sys 0.61.2`（不是 0.59）、`url 2.5.8`、`cpu-time 1.0.0`。
+- 对：安全边界（外链校验）用 WHATWG 兼容的 `url` crate，不手写 scheme/host 解析；Windows 打开外链不经 shell（`ShellExecuteW`），各平台以数组参数传 URL，拒绝以 `-` 开头的 href。
+- 对：并行 worker 共同修改的 `package.json` / `pnpm-lock.yaml` / `Cargo.lock` 一律在合并时由协调者重新生成，不手工解冲突。
+
+## gpuix 迁移：引擎选型结论（A5 实测）
+
+- 单核 CPU 中位数（8/64/256 clips）：Firewheel 0.020/0.224/1.07%，Kira 0.300/1.93/8.42%，Rodio 0.916/6.40/26.0%（测于用户有 Orca/Ableton 重负载时，墙钟已披露）。
+- 没有任何候选的内置 sampler 满足 DAW 的样本精确语义：Firewheel 非零起点吞一帧、暂停消耗一块；Kira seek 先吐 2 帧旧数据并重复目标；Rodio 回调取锁且按 5ms 量化。结论：Firewheel 图运行时 + 自有 PCM 走带节点。证据见 `docs/research/engine-playback-graph.md`。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
