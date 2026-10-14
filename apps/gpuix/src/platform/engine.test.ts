@@ -4,233 +4,169 @@ import { tmpdir } from "node:os"
 import nodePath from "node:path"
 import { pathToFileURL } from "node:url"
 import { apply, dispose, musicalPeakReader, openSession, sourceInfo } from "./engine"
-import type { BackendRequest } from "../project/model/backend"
+import type { BackendRequest } from "@/project/model/backend"
+import type { PeakReader } from "./engine"
 
-function makeChirpWav(rate: number, seconds: number): Buffer {
-  const frames = rate * seconds
-  const bytes = Buffer.alloc(44 + frames * 2)
+// 120 BPM in 4/4 is two seconds per bar: the 44.1 kHz source is exactly one bar.
+const SOURCE_RATE = 44_100
+const SOURCE_FRAMES = SOURCE_RATE * 2
+const QUARTER = SOURCE_FRAMES / 4
+const PIXELS = 4
+
+// Smooth, asymmetric and zero at both ends, so each quarter has a distinct
+// envelope and resampling to the device rate adds no ringing.
+const samples = Array.from({ length: SOURCE_FRAMES }, (_, frame) => {
+  const x = frame / SOURCE_FRAMES
+  return Math.round(0.9 * 6.75 * x * x * (1 - x) * 32_767)
+})
+
+function wav(): Buffer {
+  const bytes = Buffer.alloc(44 + SOURCE_FRAMES * 2)
   bytes.write("RIFF", 0)
   bytes.writeUInt32LE(bytes.length - 8, 4)
   bytes.write("WAVEfmt ", 8)
   bytes.writeUInt32LE(16, 16)
   bytes.writeUInt16LE(1, 20)
   bytes.writeUInt16LE(1, 22)
-  bytes.writeUInt32LE(rate, 24)
-  bytes.writeUInt32LE(rate * 2, 28)
+  bytes.writeUInt32LE(SOURCE_RATE, 24)
+  bytes.writeUInt32LE(SOURCE_RATE * 2, 28)
   bytes.writeUInt16LE(2, 32)
   bytes.writeUInt16LE(16, 34)
   bytes.write("data", 36)
-  bytes.writeUInt32LE(frames * 2, 40)
-  for (let frame = 0; frame < frames; frame++) {
-    const progress = frame / frames
-    const freq = 200 + 800 * progress
-    const amp = 0.1 + 0.8 * progress
-    const sample = amp * Math.sin((2 * Math.PI * freq * frame) / rate)
-    bytes.writeInt16LE(Math.round(sample * 32767), 44 + frame * 2)
-  }
+  bytes.writeUInt32LE(SOURCE_FRAMES * 2, 40)
+  samples.forEach((sample, frame) => bytes.writeInt16LE(sample, 44 + frame * 2))
   return bytes
 }
 
-describe("C2 peak-metadata and musicalPeakReader", () => {
+/** [min,max] of source quarter `q`, straight from the PCM written to disk. */
+function quarter(q: number): [number, number] {
+  const slice = samples.slice(q * QUARTER, (q + 1) * QUARTER).map(sample => sample / 32_768)
+  return [Math.min(...slice), Math.max(...slice)]
+}
+
+/** Expected stereo channel-major layout for a mono source read as four quarters. */
+function expected(quarters: number[]): number[] {
+  const channel = quarters.flatMap(quarter)
+  return [...channel, ...channel]
+}
+
+function expectEnvelopes(actual: Float32Array, quarters: number[]) {
+  const want = expected(quarters)
+  expect(actual.length).toBe(want.length)
+  actual.forEach((value, index) => {
+    expect(Math.abs(value - want[index])).toBeLessThan(0.01)
+  })
+}
+
+function request(sourceUri: string): BackendRequest {
+  return {
+    protocolVersion: 1,
+    sessionId: "c2-peaks-at-bars",
+    sequence: 0,
+    baseRevision: 0,
+    revision: 0,
+    stage: "open",
+    editId: null,
+    state: {
+      project: {
+        bpm: 120,
+        numerator: 4,
+        denominator: 4,
+        loop: { enabled: false, startBar: 1, endBar: 3 },
+        sources: [{ id: "hump", uri: sourceUri }],
+        tracks: [
+          {
+            id: "main",
+            kind: "main",
+            output: "external",
+            input: "none",
+            inputChannel: null,
+            outputChannel: null,
+            monitor: "off",
+            volumeDb: -30,
+            pan: 0,
+            mute: false,
+            solo: false,
+            armed: false,
+            sends: {},
+            returnPost: true,
+            cueOutput: null,
+            cueVolumeDb: 0,
+            clips: [],
+            automation: [],
+          },
+        ],
+      },
+      control: {
+        playing: false,
+        recording: false,
+        seekBar: 1,
+        seekGeneration: 0,
+        heldNotes: [],
+        midiVelocity: 0.8,
+      },
+    },
+  }
+}
+
+describe("native readPeaksAtBars through musicalPeakReader", () => {
   let session: number
   let directory: string
-  let wavPath: string
-  const sourceRate = 44100
-  const durationSeconds = 2
-  const totalWavFrames = sourceRate * durationSeconds
-  const project = { bpm: 120, numerator: 4, denominator: 4 }
+  let read: PeakReader
 
   beforeAll(() => {
-    directory = mkdtempSync(nodePath.join(tmpdir(), "zoeydaw-c2-test-"))
-    wavPath = nodePath.join(directory, "chirp-44k.wav")
-    writeFileSync(wavPath, makeChirpWav(sourceRate, durationSeconds))
-
+    directory = mkdtempSync(nodePath.join(tmpdir(), "zoeydaw-c2-"))
+    const path = nodePath.join(directory, "hump-44k.wav")
+    writeFileSync(path, wav())
     session = openSession()
-    const request: BackendRequest = {
-      protocolVersion: 1,
-      sessionId: "c2-integration-session",
-      sequence: 0,
-      baseRevision: 0,
-      revision: 0,
-      stage: "open",
-      editId: null,
-      state: {
-        project: {
-          bpm: 120,
-          numerator: 4,
-          denominator: 4,
-          loop: { enabled: false, startBar: 1, endBar: 3 },
-          sources: [{ id: "chirp", uri: pathToFileURL(wavPath).href }],
-          tracks: [
-            {
-              id: "main",
-              kind: "main",
-              output: "external",
-              input: "none",
-              inputChannel: null,
-              outputChannel: null,
-              monitor: "off",
-              volumeDb: -30,
-              pan: 0,
-              mute: false,
-              solo: false,
-              armed: false,
-              sends: {},
-              returnPost: true,
-              cueOutput: null,
-              cueVolumeDb: 0,
-              clips: [],
-              automation: [],
-            },
-          ],
-        },
-        control: {
-          playing: false,
-          recording: false,
-          seekBar: 1,
-          seekGeneration: 0,
-          heldNotes: [],
-          midiVelocity: 0.8,
-        },
-      },
-    }
-    const resultJson = apply(session, JSON.stringify(request))
-    const parsed = JSON.parse(resultJson)
-    expect(parsed.kind).toBe("accepted")
+    read = musicalPeakReader(session)
+    expect(read("hump", 1, 2, PIXELS, 0)).toEqual(new Float32Array(PIXELS * 4))
+    const result = JSON.parse(apply(session, JSON.stringify(request(pathToFileURL(path).href))))
+    expect(result.kind).toBe("accepted")
   })
 
   afterAll(() => {
-    try {
-      dispose(session)
-    } finally {
-      rmSync(directory, { recursive: true, force: true })
-    }
+    dispose(session)
+    rmSync(directory, { recursive: true, force: true })
   })
 
-  test("1. sourceInfo returns actual decoded source sample rate, frames, and channels", () => {
-    const unknown = sourceInfo(session, "nonexistent-source")
-    expect(unknown).toBeNull()
-
-    const info = sourceInfo(session, "chirp")
-    expect(info).not.toBeNull()
-    if (!info) throw new Error("Expected sourceInfo to return metadata")
-
-    expect(info.sampleRate).toBe(44100)
-    expect(info.sampleRate).not.toBe(48000)
-    expect(info.frames).toBe(totalWavFrames)
-    expect(info.channels).toBe(1)
+  test("sourceInfo reports the decoded 44.1 kHz source, not the 48 kHz device", () => {
+    expect(sourceInfo(session, "missing")).toBeNull()
+    expect(sourceInfo(session, "hump")).toEqual({
+      sampleRate: SOURCE_RATE,
+      frames: SOURCE_FRAMES,
+      channels: 1,
+    })
   })
 
-  test("2. musicalPeakReader returns identical waveform when Clip is shifted to bar 100", () => {
-    const reader = musicalPeakReader(session, project)
-    const pixels = 64
-    const peaksBar1 = reader("chirp", 1, 2, pixels, 0)
-    const peaksBar101 = reader("chirp", 101, 102, pixels, 0)
-
-    expect(peaksBar1.length).toBe(pixels * 4)
-    expect(peaksBar101.length).toBe(pixels * 4)
-
-    let hasNonZero = false
-    for (let i = 0; i < peaksBar1.length; i++) {
-      if (Math.abs(peaksBar1[i]) > 0.01) hasNonZero = true
-      expect(peaksBar1[i]).toBeCloseTo(peaksBar101[i], 4)
-    }
-    expect(hasNonZero).toBe(true)
+  test("one bar spans exactly the source frames at the source sample rate", () => {
+    expectEnvelopes(read("hump", 1, 2, PIXELS, 0), [0, 1, 2, 3])
   })
 
-  test("3. signed negative contentOffsetBars cyclically wraps with rem_euclid matching C1 semantics", () => {
-    const reader = musicalPeakReader(session, project)
-    const pixels = 64
-
-    const negHalf = reader("chirp", 1, 2, pixels, -0.5)
-    const posHalf = reader("chirp", 1, 2, pixels, 0.5)
-    expect(negHalf.length).toBe(pixels * 4)
-    for (let i = 0; i < negHalf.length; i++) {
-      expect(negHalf[i]).toBeCloseTo(posHalf[i], 4)
-    }
-
-    const negFull = reader("chirp", 1, 2, pixels, -1.0)
-    const zeroOffset = reader("chirp", 1, 2, pixels, 0)
-    for (let i = 0; i < negFull.length; i++) {
-      expect(negFull[i]).toBeCloseTo(zeroOffset[i], 4)
-    }
+  test("the waveform depends only on clip-local bars plus content offset", () => {
+    const reference = read("hump", 1, 2, PIXELS, 0)
+    expect(read("hump", 101, 102, PIXELS, 0)).toEqual(reference)
+    expect(read("hump", 1.25, 1.75, 2, 0)).toEqual(read("hump", 1, 1.5, 2, 0.25))
   })
 
-  test("4. mutation checks fail when contentOffset is ignored or sampleRate is forced to 48000", () => {
-    const realReader = musicalPeakReader(session, project)
-    const pixels = 64
-    const targetOffset = 0.35
-
-    const expected = realReader("chirp", 1, 2, pixels, targetOffset)
-
-    let mutationsFailed = 0
-
-    // Mutation 1: ignore contentOffset (always use 0)
-    const mutatedOffsetOutput = realReader("chirp", 1, 2, pixels, 0)
-    let offsetDiffers = false
-    for (let i = 0; i < expected.length; i++) {
-      if (Math.abs(expected[i] - mutatedOffsetOutput[i]) > 0.05) {
-        offsetDiffers = true
-        break
-      }
-    }
-    if (offsetDiffers) {
-      mutationsFailed++
-    }
-
-    // Mutation 2: assume 48000 sample rate instead of source rate 44100
-    const barsPerSec = (project.bpm * project.denominator) / (240 * project.numerator)
-    const mutated48kOutput = (() => {
-      const sampleRate = 48000
-      const rawStart = Math.round((targetOffset / barsPerSec) * sampleRate)
-      const rawEnd = Math.round(((1 + targetOffset) / barsPerSec) * sampleRate)
-      const span = rawEnd - rawStart
-      return musicalPeakReader(session, project)(
-        "chirp",
-        1,
-        1 + span / (barsPerSec * 44100),
-        pixels,
-        targetOffset
-      )
-    })()
-
-    let rateDiffers = false
-    for (let i = 0; i < expected.length; i++) {
-      if (Math.abs(expected[i] - mutated48kOutput[i]) > 0.05) {
-        rateDiffers = true
-        break
-      }
-    }
-    if (rateDiffers) {
-      mutationsFailed++
-    }
-
-    expect(mutationsFailed).toBe(2)
+  test("ranges past the source end wrap like looped playback", () => {
+    expectEnvelopes(read("hump", 1.5, 2.5, PIXELS, 0), [2, 3, 0, 1])
   })
 
-  test("5. handles unmapped sources, out-of-bounds ranges, and invalid arguments safely", () => {
-    const reader = musicalPeakReader(session, project)
+  test("signed negative content offsets wrap modulo the source length", () => {
+    expectEnvelopes(read("hump", 1, 2, PIXELS, -0.25), [3, 0, 1, 2])
+    expect(read("hump", 1, 2, PIXELS, -0.25)).toEqual(read("hump", 1, 2, PIXELS, 0.75))
+    expect(read("hump", 1, 2, PIXELS, -3)).toEqual(read("hump", 1, 2, PIXELS, 0))
+  })
 
-    const unmapped = reader("unmapped-source", 1, 2, 32, 0)
-    expect(unmapped.length).toBe(128)
-    for (let i = 0; i < unmapped.length; i++) {
-      expect(unmapped[i]).toBe(0)
-    }
-
-    const inverted = reader("chirp", 3, 2, 32, 0)
-    expect(inverted.length).toBe(128)
-    for (let i = 0; i < inverted.length; i++) {
-      expect(inverted[i]).toBe(0)
-    }
-
-    const zeroPixels = reader("chirp", 1, 2, 0, 0)
-    expect(zeroPixels.length).toBe(0)
-
-    const nanBars = reader("chirp", NaN, 2, 16, 0)
-    expect(nanBars.length).toBe(64)
-    for (let i = 0; i < nanBars.length; i++) {
-      expect(nanBars[i]).toBe(0)
-      expect(Number.isNaN(nanBars[i])).toBe(false)
-    }
+  test("unknown sources and empty or non-finite ranges read as silence", () => {
+    const silence = new Float32Array(PIXELS * 4)
+    expect(read("missing", 1, 2, PIXELS, 0)).toEqual(silence)
+    expect(read("hump", 2, 1, PIXELS, 0)).toEqual(silence)
+    expect(read("hump", 1, 1, PIXELS, 0)).toEqual(silence)
+    expect(read("hump", Number.NaN, 2, PIXELS, 0)).toEqual(silence)
+    expect(read("hump", 1, Number.POSITIVE_INFINITY, PIXELS, 0)).toEqual(silence)
+    expect(read("hump", 1, 2, PIXELS, Number.NaN)).toEqual(silence)
+    expect(read("hump", 1, 2, 0, 0)).toHaveLength(0)
   })
 })
