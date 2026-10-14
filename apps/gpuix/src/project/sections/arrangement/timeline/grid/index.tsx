@@ -4,6 +4,8 @@ import { sx } from "@/shared/theme/style"
 import { gridLines, patternRegions } from "../../core/rulers/grid-lines"
 import type { SceneStore } from "../../core/scene"
 
+const MINOR_GRID_OPACITY = 0.55
+
 export function PatternRegions({ scene, height }: { scene: SceneStore; height: number }) {
   const current = useSyncExternalStore(scene.subscribe, scene.get)
   const theme = useTheme()
@@ -54,9 +56,10 @@ export function Grid({ scene, height }: { scene: SceneStore; height: number }) {
             position: "absolute",
             left: line.x,
             top: 0,
-            width: line.kind === "major" ? theme.project.trackBorder : 1,
+            width: line.kind === "major" ? theme.project.arrangementGridMajorLineWidth : 1,
             height,
             backgroundColor: theme.colors.arrangementLine,
+            opacity: line.kind === "major" ? 1 : MINOR_GRID_OPACITY,
             pointerEvents: "none",
           })}
         />

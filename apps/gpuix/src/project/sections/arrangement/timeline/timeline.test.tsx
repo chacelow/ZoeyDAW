@@ -271,6 +271,55 @@ describe("Native timeline layout and hit testing", () => {
     })
   })
 
+  test("native locator rename selects all, commits Enter once and cancels Escape", () => {
+    const id = projectActions.addMarker(3)
+    if (!id) throw new Error("Locator missing")
+    projectActions.updateMarker(id, { label: "Original locator" })
+    projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
+    const owner = timelineOwner()
+    const root = createTestRoot({
+      width: 800,
+      height: 100,
+      onKeyDown: owner.keyboard.down,
+      onKeyUp: owner.keyboard.up,
+    })
+    disposals.push(root.unmount)
+    root.render(
+      <ThemeProvider>
+        <Rulers owner={owner} labels={englishLabels} />
+      </ThemeProvider>
+    )
+    root.renderer.nativeSimulateClick(200, 8)
+    const ruler = root.renderer.findByTestId("timeline-rulers")
+    if (!ruler) throw new Error("Ruler missing")
+    root.renderer.nativeSimulateKeystrokes(ruler.id, "f2")
+    const editor = root.renderer.findByTestId("marker-name-editor")
+    if (!editor) throw new Error("Locator editor missing")
+    root.renderer.nativeSimulateKeystrokes(editor.id, "q")
+    expect(root.renderer.findByTestId("marker-name-editor")?.customProps?.value).toBe("q")
+    expect(
+      useProjectState.getState().document.markers.find(marker => marker.id === id)?.label
+    ).toBe("Original locator")
+    root.renderer.nativeSimulateKeystrokes(editor.id, "enter")
+    expect(
+      useProjectState.getState().document.markers.find(marker => marker.id === id)?.label
+    ).toBe("q")
+    expect(root.renderer.findByTestId("marker-name-editor")).toBeUndefined()
+    expect(owner.sceneStore.get().targetSelection).toEqual({
+      kind: "marker",
+      id,
+      phase: "selected",
+    })
+    root.renderer.nativeSimulateKeystrokes(ruler.id, "f2")
+    const next = root.renderer.findByTestId("marker-name-editor")
+    if (!next) throw new Error("Locator editor did not reopen")
+    root.renderer.nativeSimulateKeystrokes(next.id, "z escape")
+    expect(
+      useProjectState.getState().document.markers.find(marker => marker.id === id)?.label
+    ).toBe("q")
+    expect(root.renderer.findByTestId("marker-name-editor")).toBeUndefined()
+  })
+
   test("real-time ruler rescales with BPM while retaining the music scroll origin", () => {
     const scene = makeScene()
     scene.setMusic({ ...scene.get(), transport: { bpm: 120, numerator: 4, denominator: 4 } })

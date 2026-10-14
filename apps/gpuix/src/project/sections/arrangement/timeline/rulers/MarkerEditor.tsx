@@ -64,26 +64,30 @@ function MarkerNameInput({
   return (
     <Input
       autoFocus
+      selectAllOnFocus
       testId="marker-name-editor"
       aria-label={label}
       value={value}
       onValueChange={setValue}
+      onSubmit={() => close(true)}
       onBlur={() => close(true)}
       onKeyDown={event => {
-        if (event.key === "enter") close(true)
-        else if (event.key === "escape") close(false)
+        if (event.key !== "escape") return
+        event.preventDefault()
+        event.stopPropagation()
+        close(false)
       }}
       style={sx({
         position: "absolute",
-        top: Math.max(0, MARKER_RULER_HEIGHT - theme.project.trackBorder),
+        top: Math.max(0, MARKER_RULER_HEIGHT - theme.project.arrangementMarkerInset),
         left: Math.max(
           0,
           Math.min(
-            owner.sceneStore.get().viewport.width - theme.project.identityWidth,
-            left + theme.project.groupRailWidth
+            owner.sceneStore.get().viewport.width - theme.project.arrangementMarkerEditorMinWidth,
+            left + theme.project.arrangementMarkerLabelInset
           )
         ),
-        width: theme.project.identityWidth,
+        minWidth: theme.project.arrangementMarkerEditorMinWidth,
       })}
     />
   )

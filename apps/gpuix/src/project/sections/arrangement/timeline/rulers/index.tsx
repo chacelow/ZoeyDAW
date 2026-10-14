@@ -28,9 +28,9 @@ import type { RulerMenuTarget } from "./Menu"
 const markerPaths: readonly ShapePath[] = [
   {
     d: polygonPath([
-      { x: 0, y: 1 },
-      { x: 7, y: 5 },
-      { x: 0, y: 5 },
+      { x: 0, y: 0 },
+      { x: 6, y: 4 },
+      { x: 0, y: 4 },
     ]),
     fill: true,
   },
@@ -169,7 +169,7 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
                 height: MARKER_RULER_HEIGHT,
                 display: "flex",
                 alignItems: "center",
-                paddingLeft: theme.project.groupRailWidth,
+                paddingLeft: theme.project.arrangementMarkerLabelInset - 1,
                 pointerEvents: "none",
                 borderLeftWidth: 1,
                 borderColor:
@@ -186,14 +186,14 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
             >
               <Shape
                 paths={markerPaths}
-                viewBox="0 0 7 7"
-                width={theme.project.groupRailWidth}
-                height={theme.project.groupRailWidth}
+                viewBox="0 0 6 4"
+                width={theme.project.arrangementMarkerWidth}
+                height={theme.project.arrangementMarkerHeight}
                 color={theme.colors.primary}
                 style={sx({
                   position: "absolute",
                   left: 0,
-                  bottom: theme.project.trackBorder,
+                  bottom: theme.project.arrangementMarkerInset,
                   pointerEvents: "none",
                 })}
               />
