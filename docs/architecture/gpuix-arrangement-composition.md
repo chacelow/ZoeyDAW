@@ -46,7 +46,7 @@ export function ArrangementLane(props: {
   scene: ArrangementScene
   viewport: ArrangementViewport
   controller: LaneController // createLaneController() 的返回值，由组合根创建
-  readPeaks: PeakReader // (sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；bars→frame 与源采样率换算由 platform/engine 适配函数负责，lane 不假设采样率
+  readPeaks: PeakReader // (sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；startBar/endBar 是 one-based 的 Clip 局部可见范围（1+visibleOffsetBars），contentOffsetBars=clip.sourceOffsetBars，适配层用 (bar-1+contentOffsetBars) 换源 frame；返回每像素每声道 min/max，声道数=length/(2*pixels)；采样率换算由 platform/engine 适配函数负责，lane 不假设采样率
   clipboard: NativeClipboard // 来自 platform/clipboard
   labels: LaneLabels // 菜单/名称编辑/数值编辑的双语标签，由组合根注入，lane 不依赖 i18n 包
 }): ReactNode
