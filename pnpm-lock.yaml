@@ -132,6 +132,9 @@ importers:
       '@zoeydaw/native':
         specifier: workspace:*
         version: link:../../crates/native
+      '@zoeymind/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@zoeymind/ui':
         specifier: workspace:*
         version: link:../../packages/ui

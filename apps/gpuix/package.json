@@ -12,6 +12,7 @@
     "@gpuix/native": "0.10.0",
     "@gpuix/react": "0.10.0",
     "@zoeydaw/native": "workspace:*",
+    "@zoeymind/logger": "workspace:*",
     "@zoeymind/ui": "workspace:*",
     "culori": "^4.0.2",
     "react": "^19.2.0"
