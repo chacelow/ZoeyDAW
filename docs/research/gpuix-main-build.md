@@ -637,9 +637,9 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 ```
 
 ```text
-14811 03:27       bun --hot src/gallery/controls.tsx
+33614 05:43       bun --hot src/gallery/controls.tsx
 ```
 
-该 PID 是其它 worker 的同名 A3 gallery，本轮曾按 PID 区分窗口，未停止它。D1 启动的所有 service 均已退出，自有残留为 0。没有启动、重启或停止用户的 Tauri 应用。
+该 PID 属于 `gpuix-a3b-gallery-polish/apps/gpuix`，已用 `lsof -a -p 33614 -d cwd -Fn` 确认，未停止它。D1 比较时也曾按 PID 区分同名窗口，启动的所有 service 均已退出，自有残留为 0。没有启动、重启或停止用户的 Tauri 应用。
 
 D1 指定的依赖切换、面板测量替换、键盘订阅端口均已实现。未实现的仍是原报告限定的跨平台 close/hideWindow/measureText，以及上面明确列出的其它 owner 的 UI 与快捷键业务；未把它们计入本轮完成能力。
