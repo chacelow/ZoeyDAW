@@ -49,3 +49,11 @@ Header geometry uses the shared 304px control column: identity 100px, routing 74
 Native screenshot inspection caught a context-menu host shrinking the composite row to content width. Explicit full-size column/stretch layout on the existing `ContextMenu` root fixed it; the width regression changed from 360px to the full 1000px viewport. Dark-track title ink was corrected to the theme's dark surface color so it remains readable on lightened authored track colors. Initial and repaired images are in `evidence/2026-10-15-initial-width-defect.png` and `evidence/2026-10-15-layout-fixed.png`.
 
 Shared integration still pending at this intermediate commit: A3b's container-width Select, compact numeric icon treatment and ContextMenu keyboard fix. The existing arrow-key regressions are kept failing rather than weakened or skipped.
+
+## Track gestures
+
+`useTrackResize` uses only `project/layout`'s height, step and reveal thresholds. Ordinary tracks resize from the bottom; Return/Main resize from the top with reversed vertical direction. The separator is a transparent hit region with a resize cursor, not a hover card. Continuous authored height changes use the existing session-fenced edit gesture; Escape, blur, application deactivation and unmount cancel its preview. Application activation is injected through the existing `PanelEnvironmentProvider` port.
+
+`useTrackReorder` holds only pointer baseline, source/target IDs and drop highlight. It consumes B1's drag threshold and the shared bounds reader; document order changes only on release through `projectActions.reorderTrack`. Escape and application deactivation clear the gesture without a history entry. Group moves preserve their branch and routing through the existing command.
+
+Native behavior checks: captured reorder, cancellation and Group branch moves passed 3 tests with 8 assertions. Cmd removal and Shift range selection passed a separate regression. `onFocusTrack` reports inline editor focus only; invoking it after ordinary additive selection had incorrectly reselected a just-removed track and was removed from that path.
