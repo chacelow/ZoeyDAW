@@ -12,18 +12,20 @@ index 7e8f534..ecbcdfa 100644
  }
  
 diff --git a/packages/native/src/custom_elements/input.rs b/packages/native/src/custom_elements/input.rs
-index 0f98401..6364454 100644
+index 0f98401..e03b0dc 100644
 --- a/packages/native/src/custom_elements/input.rs
 +++ b/packages/native/src/custom_elements/input.rs
-@@ -17,7 +17,7 @@ use gpui::{
+@@ -17,8 +17,8 @@ use gpui::{
      ClipboardItem, Context, CursorStyle, DispatchPhase, ElementInputHandler, Entity,
      EntityInputHandler, FocusHandle, GlobalElementId, KeyBinding, LayoutId, MouseButton,
      MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, ScrollWheelEvent,
 -    SharedString, Style, Task, TextRun, TextStyle, UTF16Selection, UnderlineStyle, Window,
-+    SharedString, Style, Subscription, Task, TextRun, TextStyle, UTF16Selection, UnderlineStyle, Window,
-     WrappedLine,
+-    WrappedLine,
++    SharedString, Style, Subscription, Task, TextRun, TextStyle, UTF16Selection, UnderlineStyle,
++    Window, WrappedLine,
  };
  use unicode_segmentation::UnicodeSegmentation;
+ use web_time::Instant;
 @@ -312,6 +312,7 @@ struct TextEditorElement {
      value: String,
      placeholder: String,
