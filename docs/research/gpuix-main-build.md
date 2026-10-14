@@ -508,7 +508,7 @@ node scripts/gpuix-main/check.mjs --resolution
 | 干净消费者安装 | 把 `8b078fd` 的 `git archive` 解到独立临时目录，运行 `build.sh`、`pnpm install --frozen-lockfile`、`check.mjs --resolution` | 通过，999 个包；该目录起初没有 node_modules 或 `.gpuix-main`，验证后已删除 |
 | 本仓 native | `pnpm native:build` | 通过 |
 | gpuix 类型 | `pnpm --dir apps/gpuix exec tsc --noEmit` | 通过，0 error |
-| gpuix 全部测试 | `pnpm --dir apps/gpuix exec bun test` | 406 pass、1 todo、0 fail，59 files，93,740 expect |
+| gpuix 全部测试 | `pnpm --dir apps/gpuix exec bun test` | 407 pass、1 todo、0 fail，60 files，93,745 expect |
 | lint | `pnpm exec eslint apps/gpuix/src scripts/gpuix-main/check.mjs scripts/gpuix-main/probe.mjs` | 0 error、0 warning |
 | 本仓 Rust | `cargo check && cargo test` | 通过，engine 21、native 8，doc-tests 0 |
 | vendor Rust | `CARGO_BUILD_JOBS=6 CARGO_TARGET_DIR=/Volumes/PSSD/code/_vendor/target cargo check --release --features test-support,gpui_platform/runtime_shaders` 与同 features 的 `cargo test --release` | 通过，266 pass、0 fail；上游 3 个 dead_code warning 未改 |
@@ -521,6 +521,8 @@ node scripts/gpuix-main/check.mjs --resolution
 面板生产代码删除 32ms 测量定时器、`useWindowSize` 与 `getElementBounds` 采样，只由 `onLayout` 更新尺寸。测试初次运行出现 7 个布局失败，原因是上游 `TestRenderer.flush()` 只 paint、不分发 paint 后事件；测试的 `settle()` 现在显式调用 `dispatchNativeEvents()`，原有拖动、折叠、resize 断言未放宽，10 个面板交互测试通过。元素焦点检查不属于尺寸采样，没有顺便删除。
 
 `WindowKeyboard` 在 `platform/keyboard` 拥有每个 render root 的订阅，`main.tsx` 注入 `onKeyDown`、`onKeyUp` 并提供 context。取消订阅、消费阻止第二个 section 命令、root 隔离各有行为测试。接入约定见该目录的 README，ui 不 import platform。
+
+补充 `keyboard-native.test.tsx` 的真实 `createTestRoot` 端到端测试，1 pass、5 expect：先原生点击 button-role host，证明状态可切换；焦点在该 host 时按 Space，状态不额外变化，窗口订阅收到 Space；焦点在 input 时，元素 handler 的 `stopPropagation()` 阻止 Space 到达窗口订阅。该测试验证 trailing 事件链，不代替未在本 worktree 的 A3 Button 激活策略测试。窗口订阅不能拦截先运行的元素 handler；业务订阅者仍须判断输入与菜单焦点。没有新增原生消费返回值 API 或修改上游事件系统。
 
 ### 真实窗口与探针
 
@@ -622,7 +624,7 @@ A4 比较旧采样版 npm 0.10.0 与 D1 `onLayout` 版自建主干，均打开 C
 | 同组等高、图标正方形 | 已列 default 13、transport 20、Play icon 13×13；未覆盖所有控件，由 A3 ui-controls 验收 |
 | 与 Live 同区域紧凑感 | 提交只读 Live 参照与本轮画廊图；全量同区域并排密度未验证，由 A3 ui-controls 与 B2 sections 验收 |
 | 深浅主题、中英文 | 未验证，由 A3 ui-controls、A4 ui-panels 与 B2 sections 验收 |
-| Tab、焦点环、Space | Space 根事件与有焦点时的 Cmd+W 已验证；完整 Tab 顺序、焦点环与输入框快捷键优先级未验证，由各 UI owner 与 B2 app-shell 验收 |
+| Tab、焦点环、Space | Space 根事件、有焦点时的 Cmd+W、native host 的 input Space 停止冒泡已验证；完整 Tab 顺序、焦点环与产品输入框快捷键优先级未验证，由各 UI owner 与 B2 app-shell 验收 |
 | 拖动、滚轮、弹层保持打开 | 现有面板交互自动测试通过；全量原生手势与弹层状态未验证，由 A3 ui-controls 与 A4 ui-panels 验收 |
 | 裁剪、帧数与耗时 | Clip demo 实际显示 7/13 挂载；本轮没有重测 draw stats 或大型工程性能，由 B2 Arrangement 验收 |
 
