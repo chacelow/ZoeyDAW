@@ -1,4 +1,4 @@
-import type { AutomationPoint } from "../../../../model/types"
+import type { AutomationPoint } from "@/project/model/types"
 
 export const AUTOMATION_MIME = "application/x-zoeymind-automation+json"
 

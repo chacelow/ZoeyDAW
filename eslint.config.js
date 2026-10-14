@@ -3,6 +3,7 @@ import react from "ultracite/eslint/react"
 import {
   architecture,
   gpuixLayers,
+  gpuixImports,
   publicIndex,
   uiTokens,
   correctnessProfile,
@@ -13,6 +14,7 @@ const localRules = {
   rules: {
     boundaries: architecture,
     "gpuix-layers": gpuixLayers,
+    "gpuix-imports": gpuixImports,
     "public-index": publicIndex,
     "ui-tokens": uiTokens,
   },
@@ -150,7 +152,13 @@ export default [
   {
     files: gpuixSource,
     plugins: { architecture: localRules },
-    rules: { "architecture/gpuix-layers": "error" },
+    rules: { "architecture/gpuix-layers": "error", "architecture/gpuix-imports": "error" },
+  },
+  {
+    // 唯一允许写 SVG 标记的文件;其余手写 SVG 一律由 architecture/gpuix-imports 拦截。
+    files: ["apps/gpuix/src/shared/svg/serialise.ts"],
+    plugins: { architecture: localRules },
+    rules: { "architecture/gpuix-imports": "off" },
   },
   {
     files: source,

@@ -1,7 +1,7 @@
-import { MIN_CLIP_LENGTH_BARS } from "../../../../model/grid"
-import { snapBar } from "../../../../model/grid-geometry"
+import { MIN_CLIP_LENGTH_BARS } from "@/project/model/grid"
+import { snapBar } from "@/project/model/grid-geometry"
 import { BAR_RULER_HEIGHT, MARKER_RULER_HEIGHT } from "../layout"
-import type { LoopRegion, Marker } from "../../../../model/types"
+import type { LoopRegion, Marker } from "@/project/model/types"
 import type { ArrangementScene } from "../scene"
 import type { Point } from "../interactions/types"
 

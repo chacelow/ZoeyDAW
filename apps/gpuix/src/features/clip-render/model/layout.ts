@@ -1,4 +1,4 @@
-import type { ClipBase } from "../../../shared/model/types"
+import type { ClipBase } from "@/shared/model/types"
 
 export const PX_PER_BAR = 24
 export const MIN_CLIP_LENGTH_BARS = 0.5

@@ -5,10 +5,10 @@
  * dense arrangement cheap (see docs/research/gpuix-rendering-alternatives.md).
  */
 import { memo } from "react"
-import { sx } from "../../../shared/theme/style"
+import { sx } from "@/shared/theme/style"
 import { isClipVisible, type VisibleRange } from "../model/layout"
 import { ClipBlock, type ClipGesture } from "./ClipBlock"
-import type { Theme } from "../../../shared/theme/ThemeProvider"
+import type { Theme } from "@/shared/theme/ThemeProvider"
 import type { DemoTrack } from "../model/demo-data"
 
 export interface TrackRowProps {

@@ -1,7 +1,7 @@
 import { hitTest } from "../hit-test"
 import { layoutTrackRows } from "../layout"
-import { snapBar } from "../../../../model/grid-geometry"
-import type { TimeSelection } from "../../../../model/types"
+import { snapBar } from "@/project/model/grid-geometry"
+import type { TimeSelection } from "@/project/model/types"
 import type { ArrangementScene } from "../scene"
 import type { Point } from "../interactions/types"
 
