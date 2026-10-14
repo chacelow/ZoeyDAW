@@ -18,11 +18,9 @@ import {
   ToggleGroupItem,
   MotionTabs,
 } from "../ui/controls"
+import { Icon } from "@/ui/controls/Icon"
 import type { PublicInstance } from "@gpuix/react"
 import type { CursorLockPort } from "../ui/controls"
-
-const glyph =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="currentColor" d="M4 2v12l10-6z"/></svg>'
 
 export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPort }) {
   const theme = useTheme()
@@ -46,13 +44,10 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
     gap: theme.control["--spacing-control-gap"],
   }
   const icon = (
-    <svg
-      aria-hidden="true"
-      source={glyph}
-      style={{
-        width: theme.control["--spacing-control-icon"],
-        height: theme.control["--spacing-control-icon"],
-      }}
+    <Icon
+      name="Play"
+      size={theme.control["--spacing-control-icon"]}
+      color={theme.colors.foreground}
     />
   )
   return (
@@ -242,13 +237,10 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
             iconOnly
             size="transport"
             icon={
-              <svg
-                aria-hidden="true"
-                source={glyph}
-                style={{
-                  width: theme.transportControl["--spacing-control-icon"],
-                  height: theme.transportControl["--spacing-control-icon"],
-                }}
+              <Icon
+                name="Play"
+                size={theme.transportControl["--spacing-control-icon"]}
+                color={theme.colors.foreground}
               />
             }
           />
