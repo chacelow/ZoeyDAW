@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
 import { PanelEnvironmentProvider } from "@/ui/panels"
-import { subscribeApplicationActive } from "@/platform/window"
+import { createWindowPlatform } from "@/platform/window"
+import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import {
   hydrateProject,
   projectActions,
@@ -88,7 +89,6 @@ const cursorLock: CursorLockPort = {
     cursorRestore(point)
   },
 }
-const panelEnvironment = { subscribeWindowActive: subscribeApplicationActive }
 
 function TrackSurface({
   appearance,
@@ -305,6 +305,15 @@ function TrackSurface({
 }
 
 function Demo() {
+  const { renderer } = useGpuix()
+  const ports = useMemo(() => {
+    if (!renderer) throw new Error("Track demo requires a native renderer")
+    const window = createWindowPlatform(renderer)
+    return {
+      frames: createAnimationFrameSource(renderer),
+      panels: { subscribeWindowActive: window.subscribeApplicationActive },
+    }
+  }, [renderer])
   const [appearance, setAppearance] = useState<Appearance>(
     process.env.TRACK_THEME === "light" ? "light" : "dark"
   )
@@ -313,18 +322,20 @@ function Demo() {
   )
   useEffect(() => startProjectRuntime(), [])
   return (
-    <ThemeProvider key={appearance} defaultAppearance={appearance}>
-      <ControlEnvironmentProvider value={{ cursorLock }}>
-        <PanelEnvironmentProvider environment={panelEnvironment}>
-          <TrackSurface
-            appearance={appearance}
-            onAppearance={setAppearance}
-            language={language}
-            onLanguage={setLanguage}
-          />
-        </PanelEnvironmentProvider>
-      </ControlEnvironmentProvider>
-    </ThemeProvider>
+    <AnimationFrameProvider source={ports.frames}>
+      <ThemeProvider key={appearance} defaultAppearance={appearance}>
+        <ControlEnvironmentProvider value={{ cursorLock }}>
+          <PanelEnvironmentProvider environment={ports.panels}>
+            <TrackSurface
+              appearance={appearance}
+              onAppearance={setAppearance}
+              language={language}
+              onLanguage={setLanguage}
+            />
+          </PanelEnvironmentProvider>
+        </ControlEnvironmentProvider>
+      </ThemeProvider>
+    </AnimationFrameProvider>
   )
 }
 

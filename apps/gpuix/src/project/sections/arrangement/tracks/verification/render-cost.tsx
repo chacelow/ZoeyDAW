@@ -11,6 +11,8 @@ import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
 import { trackResources } from "../locales"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { createControlledFrames } from "./frame-source"
 
 const baseline = structuredClone(useProjectState.getState().document)
 const workspace = structuredClone(useProjectState.getState().workspace)
@@ -18,6 +20,7 @@ const main = baseline.tracks.find(track => track.kind === "main")
 if (!main) throw new Error("Missing Main output")
 const results = []
 for (const sourceCount of [20, 2000]) {
+  const controlledFrames = createControlledFrames()
   const document = structuredClone(baseline)
   document.tracks = []
   for (let index = 0; index < sourceCount; index++) {
@@ -42,17 +45,21 @@ for (const sourceCount of [20, 2000]) {
   const root = createTestRoot({ width: viewport.width, height: viewport.height })
   try {
     root.render(
-      <ThemeProvider>
-        <TrackRows
-          scene={store.get()}
-          viewport={viewport}
-          focusedTrackId={null}
-          onFocusTrack={id => projectActions.selectTracks([id], "header")}
-          telemetry={readProjectTelemetry}
-          labels={trackResources["en-US"].arrangement}
-          renderLane={row => <text testId={`profile-lane-${row.track.id}`}>{row.track.name}</text>}
-        />
-      </ThemeProvider>
+      <AnimationFrameProvider source={controlledFrames.source}>
+        <ThemeProvider>
+          <TrackRows
+            scene={store.get()}
+            viewport={viewport}
+            focusedTrackId={null}
+            onFocusTrack={id => projectActions.selectTracks([id], "header")}
+            telemetry={readProjectTelemetry}
+            labels={trackResources["en-US"].arrangement}
+            renderLane={row => (
+              <text testId={`profile-lane-${row.track.id}`}>{row.track.name}</text>
+            )}
+          />
+        </ThemeProvider>
+      </AnimationFrameProvider>
     )
     root.renderer.flush()
     const mountedRows = root.renderer
@@ -64,7 +71,10 @@ for (const sourceCount of [20, 2000]) {
     const retained = root.renderer.getRetainedElementCount()
     root.renderer.resetDebugFrameOverlayStats()
     const before = root.renderer.getDebugFrameOverlayStats().frames ?? 0
-    for (let frame = 0; frame < 30; frame++) root.renderer.flush()
+    for (let frame = 0; frame < 30; frame++) {
+      controlledFrames.advance(performance.now())
+      root.renderer.flush()
+    }
     const stats = root.renderer.getDebugFrameOverlayStats()
     results.push({
       sourceCount,

@@ -9,6 +9,10 @@ import { TrackTelemetryProvider } from "./telemetry"
 import { TrackMeter } from "./TrackMeter"
 import type { BackendTelemetry } from "../../../../model/backend"
 import type { TestRoot } from "@gpuix/react/testing"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { createControlledFrames } from "../verification/frame-source"
+
+const controlledFrames = createControlledFrames()
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -46,13 +50,15 @@ test("accepted stereo telemetry drives overload, card cutouts and held peaks aft
   const root = createTestRoot({ width: 120, height: 160 })
   roots.push(root)
   root.render(
-    <ThemeProvider>
-      <TrackLabelsProvider labels={trackResources["en-US"].arrangement}>
-        <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
-          <TrackMeter trackId="audio" trackName="Audio" height={132} />
-        </TrackTelemetryProvider>
-      </TrackLabelsProvider>
-    </ThemeProvider>
+    <AnimationFrameProvider source={controlledFrames.source}>
+      <ThemeProvider>
+        <TrackLabelsProvider labels={trackResources["en-US"].arrangement}>
+          <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
+            <TrackMeter trackId="audio" trackName="Audio" height={132} />
+          </TrackTelemetryProvider>
+        </TrackLabelsProvider>
+      </ThemeProvider>
+    </AnimationFrameProvider>
   )
   root.renderer.flush()
   const meter = () => {
@@ -111,13 +117,15 @@ test("missing track telemetry remains silent instead of displaying another track
     () => 0
   )
   root.render(
-    <ThemeProvider>
-      <TrackLabelsProvider labels={trackResources["zh-CN"].arrangement}>
-        <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
-          <TrackMeter trackId="missing" trackName="音频" height={66} />
-        </TrackTelemetryProvider>
-      </TrackLabelsProvider>
-    </ThemeProvider>
+    <AnimationFrameProvider source={controlledFrames.source}>
+      <ThemeProvider>
+        <TrackLabelsProvider labels={trackResources["zh-CN"].arrangement}>
+          <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
+            <TrackMeter trackId="missing" trackName="音频" height={66} />
+          </TrackTelemetryProvider>
+        </TrackLabelsProvider>
+      </ThemeProvider>
+    </AnimationFrameProvider>
   )
   root.renderer.flush()
   const meter = root.renderer.findByTestId("track-meter-missing")
@@ -146,13 +154,15 @@ test("changing an inline telemetry reader preserves held peaks and reads its lat
   roots.push(root)
   const renderMeter = () =>
     root.render(
-      <ThemeProvider>
-        <TrackLabelsProvider labels={trackResources["en-US"].arrangement}>
-          <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
-            <TrackMeter trackId="audio" trackName="Audio" height={132} />
-          </TrackTelemetryProvider>
-        </TrackLabelsProvider>
-      </ThemeProvider>
+      <AnimationFrameProvider source={controlledFrames.source}>
+        <ThemeProvider>
+          <TrackLabelsProvider labels={trackResources["en-US"].arrangement}>
+            <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
+              <TrackMeter trackId="audio" trackName="Audio" height={132} />
+            </TrackTelemetryProvider>
+          </TrackLabelsProvider>
+        </ThemeProvider>
+      </AnimationFrameProvider>
     )
   renderMeter()
   flushSync(() => {

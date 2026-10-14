@@ -7,26 +7,8 @@ export interface MeterDecayDriver {
   wake: () => void
 }
 
-// Temporary UI-animation source until the renderer exposes its native frame callback.
-const timerFrames: FrameSource = {
-  subscribe(callback) {
-    let active = true
-    let timer: ReturnType<typeof setTimeout>
-    const frame = () => {
-      if (!active) return
-      callback()
-      if (active) timer = setTimeout(frame, 1000 / 30)
-    }
-    timer = setTimeout(frame, 1000 / 30)
-    return () => {
-      active = false
-      clearTimeout(timer)
-    }
-  },
-}
-
 export function createMeterDecayDriver(
-  frames: FrameSource = timerFrames,
+  frames: FrameSource,
   now: () => number = () => performance.now()
 ): MeterDecayDriver {
   const listeners = new Set<(time: number) => boolean>()
@@ -56,5 +38,3 @@ export function createMeterDecayDriver(
     },
   }
 }
-
-export const meterDecayDriver = createMeterDecayDriver()

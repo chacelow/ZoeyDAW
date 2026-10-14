@@ -18,6 +18,10 @@ import { trackResources } from "../locales"
 import type { TestRoot, TestWindowOptions } from "@gpuix/react/testing"
 import type { ArrangementViewport } from "../../core/scene"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { createControlledFrames } from "../verification/frame-source"
+
+const controlledFrames = createControlledFrames()
 
 const roots: TestRoot[] = []
 const viewport: ArrangementViewport = {
@@ -53,20 +57,22 @@ function Surface({
     viewport: acceptedViewport,
   }
   return (
-    <ThemeProvider key={appearance} defaultAppearance={appearance}>
-      <TrackRows
-        scene={scene}
-        viewport={acceptedViewport}
-        focusedTrackId={focusedTrackId}
-        telemetry={readProjectTelemetry}
-        labels={trackResources["en-US"].arrangement}
-        onFocusTrack={id => {
-          if (!useProjectState.getState().session.selectedTrackIds.includes(id))
-            projectActions.selectTracks([id], "header")
-        }}
-        renderLane={row => <text testId={`lane-content-${row.track.id}`}>{row.track.name}</text>}
-      />
-    </ThemeProvider>
+    <AnimationFrameProvider source={controlledFrames.source}>
+      <ThemeProvider key={appearance} defaultAppearance={appearance}>
+        <TrackRows
+          scene={scene}
+          viewport={acceptedViewport}
+          focusedTrackId={focusedTrackId}
+          telemetry={readProjectTelemetry}
+          labels={trackResources["en-US"].arrangement}
+          onFocusTrack={id => {
+            if (!useProjectState.getState().session.selectedTrackIds.includes(id))
+              projectActions.selectTracks([id], "header")
+          }}
+          renderLane={row => <text testId={`lane-content-${row.track.id}`}>{row.track.name}</text>}
+        />
+      </ThemeProvider>
+    </AnimationFrameProvider>
   )
 }
 function mount(
@@ -553,4 +559,11 @@ test("visible descendants retain their group frame when its parent header is off
   const lastChild = bounds(root, "track-row-sidechain")
   expect(frame.y + frame.height).toBe(lastChild.y + lastChild.height)
   expect(frame.y).toBeLessThan(bounds(root, "track-row-trager").y)
+})
+
+test("F2 autofocus selects the native track name for direct replacement", () => {
+  const root = mount()
+  root.renderer.nativeSimulateKeystrokes(element(root, "track-label-3-audio").id, "f2")
+  root.renderer.simulateKeystrokes("N e w enter")
+  expect(current("3-audio").name).toBe("New")
 })

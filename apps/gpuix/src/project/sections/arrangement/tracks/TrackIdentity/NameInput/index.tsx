@@ -26,6 +26,7 @@ export function TrackNameInput({
   return (
     <Input
       autoFocus
+      selectAllOnFocus
       testId={`track-name-${track.id}`}
       aria-label={t("trackName")}
       value={draft}

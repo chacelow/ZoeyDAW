@@ -31,7 +31,7 @@ The coordinator-provided Live frames show routing input activity but no illumina
 
 `meter/TrackMeter.tsx` reads only the injected `TelemetryReader` (`() => BackendTelemetry | null`). Missing tracks and disconnected telemetry remain at the existing B1 display floor. C1's −120 dBFS silence is clamped for display by the shared `meterDb` function; no simulated levels or second transport clock are introduced. Peak state is local, non-serialized and reset on backend session changes. Hold and fall behavior reuse `core/meters/meter-peak.ts`.
 
-`TrackTelemetryProvider` owns one accepted-level subscription and injects the same driver used by meter subscriptions and telemetry wakeups. `createMeterDecayDriver(FrameSource, now)` lazily shares one frame source across all mounted meters, coalesces repeated telemetry wakes, and stops on silence or last unmount. The currently approved default is a temporary 30fps timer chain pending F1. Importing the module starts no timer. Reader callbacks are kept in a committed ref, so an inline callback identity change does not reset held peaks; only track/backend/driver lifetime changes reset them.
+`TrackTelemetryProvider` owns one accepted-level subscription and one shared meter driver for the track surface. It drives decay through F1 `useAnimationFrame`; all timer code and the old default singleton are deleted. Frame subscription is active only while peaks remain above the floor and ends on silence or unmount. Reader callbacks stay in a committed ref, so callback identity changes do not reset held peaks. Track/backend/driver lifetime changes do reset them.
 
 `TrackLabels` is injected, with paired Chinese/English resources in `locales.ts`; no i18n dependency or second language state was added to project components.
 
@@ -62,6 +62,8 @@ Native behavior checks: captured reorder, cancellation and Group branch moves pa
 
 Selection/editing handlers consume Enter/F2, resize consumes its arrow keys, and active cancellation consumes Escape. Name input keeps its keys inside the native editor; Space on non-editable controls remains available to the trailing window transport owner. Native name-input isolation and Tab order passed 2 tests with 7 assertions. Native mixer wheel, captured commit/cancel and disabled self-send passed 3 tests with 10 assertions; wheel simulation uses 16 pixel units per shared step, not line units.
 
+Native rename opts into F1 `selectAllOnFocus`. Direct typing after F2 now replaces the existing name without synthesizing Cmd+A. The autofocus/input-Space/Tab subset passes 3 tests with 8 assertions.
+
 All icons now use `ui/controls/Icon` (`Headphones`, `Circle`, `ChevronDown`, `ChevronRight`); there is no locally authored SVG markup or font-glyph icon. Keyboard focus uses the native `focusVisible` inset outline without changing track geometry.
 
 ## 公共接口
@@ -76,6 +78,7 @@ TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane
 - `renderLane(row)`: the composition root supplies lane-only content. Geometry is the existing `core/layout.TrackRow` (exported here as `TrackRowGeometry`); lane content must not draw track borders.
 - `focusedTrackId`: preserves one offscreen header while its lane content remains unmounted. `onFocusTrack(id)` reports inline-name editing focus; ordinary lane/header selection remains owned by `projectActions.selectTracks` and its explicit surface.
 - `telemetry`: accepted backend telemetry reader; `labels`: immutable translated strings supplied by the composition root.
+- Mount `TrackRows` inside F1 `AnimationFrameProvider` using `createAnimationFrameSource(renderer)` at the composition root. The demo also injects native activation through `createWindowPlatform(renderer).subscribeApplicationActive`; no sampled activation singleton remains.
 
 `TrackRow` owns the whole track: lane on the left, then colored identity, routing and Mixer on the right, following the observed Live order. It owns the single outer top/bottom border. Group frames span the visible branch, rails are painted above row borders, expanded groups do not duplicate descendant previews, and folded groups render a shared-geometry descendant overview.
 
