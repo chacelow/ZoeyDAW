@@ -43,18 +43,27 @@ export function createTimelineController(deps: TimelineControllerDeps): Timeline
 export function ArrangementTimeline(props: {
   controller: TimelineController // 取代分散的 scene/viewport/keyboard/cursor 入参
   tracks: ReactNode // 由组合根传入 <TrackRows renderLane={row => <LaneRow .../>} />
+  overlay: ReactNode // 由组合根传入 <LaneOverlay .../>，timeline 把它叠在 tracks 上方单次挂载
   labels: TimelineLabels // 双语标签由组合根注入，timeline 不依赖 i18n 包
   cursor: CursorLockPort // 光标锁（Minimap 拖动），默认委托 @zoeydaw/native
 }): ReactNode
 
 // lane/index.ts
-export function ArrangementLane(props: {
+export function LaneRow(props: {
+  row: TrackRow // core/layout.TrackRow（tracks 传结构兼容的 TrackRowGeometry）
   scene: ArrangementScene
   viewport: ArrangementViewport
   controller: LaneController // createLaneController() 的返回值，由组合根创建
   readPeaks: PeakReader // (sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；startBar/endBar 是 one-based 的 Clip 局部可见范围（1+visibleOffsetBars），contentOffsetBars=clip.sourceOffsetBars，适配层用 (bar-1+contentOffsetBars) 换源 frame；返回每像素每声道 min/max，声道数=length/(2*pixels)；采样率换算由 platform/engine 适配函数负责，lane 不假设采样率
   clipboard: NativeClipboard // 来自 platform/clipboard
   labels: LaneLabels // 菜单/名称编辑/数值编辑的双语标签，由组合根注入，lane 不依赖 i18n 包
+}): ReactNode
+// 跨行的叠加层：全画布播放头、Pattern Ghost 起点对齐长线、停止时的行内插入线与标尺三角。
+// 它们必须跨越多行与空白区域，不能塞进单行，所以独立导出，由 ArrangementTimeline 在 tracks 上方单次挂载。
+export function LaneOverlay(props: {
+  scene: ArrangementScene
+  viewport: ArrangementViewport
+  transportBar: () => number // 当前播放位置（小节），来自 runtime 的 readTransportBar
 }): ReactNode
 export function createLaneController(deps: LaneControllerDeps): LaneController
 
