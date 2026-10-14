@@ -138,6 +138,7 @@ export default [
   {
     files: [
       "apps/web/src/pages/project/adapters/{clipboard-memory,snapshots}.ts",
+      "apps/gpuix/src/project/adapters/{clipboard-memory,snapshots}.ts",
       "apps/web/src/pages/project/sections/ArrangementPanel/{useGestureCursor,Timeline/drawModeKey}.ts",
       "apps/web/src/shared/native/log-sink.ts",
       "packages/i18n/src/setup.ts",
@@ -207,7 +208,10 @@ export default [
     rules: { "unicorn/no-document-cookie": "off", "sonarjs/pseudo-random": "off" },
   },
   {
-    files: ["apps/web/src/pages/project/adapters/backend/connection/connection.ts"],
+    files: [
+      "apps/web/src/pages/project/adapters/backend/connection/connection.ts",
+      "apps/gpuix/src/project/adapters/backend/connection/connection.ts",
+    ],
     rules: { "unicorn/prefer-then-catch": "off" },
   },
   {
