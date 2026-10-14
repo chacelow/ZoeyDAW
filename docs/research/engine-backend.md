@@ -24,8 +24,10 @@
 | `subscribeTelemetry` | `(session: number, callback: (json: string) => void): void`，约 30Hz，由 Rust 节流。 |
 | `dispose` | `(session: number): void`，幂等释放。 |
 | `readPeaks` | `(session: number, sourceId: string, startFrame: number, endFrame: number, pixels: number): Float32Array`。 |
+| `sourceInfo` | `(session: number, sourceId: string): { sampleRate, frames, channels } \| null`，见下文 C2 节。 |
+| `readPeaksAtBars` | `(session: number, sourceId: string, startBar: number, endBar: number, pixels: number, contentOffsetBars: number): Float32Array`，见下文 C2 节。 |
 
-峰值是 channel-major、pixel-major `[min, max]`，即 `[Lmin0, Lmax0, …, Rmin0, Rmax0, …]`。mono 复制为 stereo，长度为 `pixels * 4`。帧坐标属于设备采样率下的缓存素材；半开范围按素材边界裁剪，空像素返回零。像素数为 1–16384。
+峰值是 channel-major、pixel-major `[min, max]`，即 `[Lmin0, Lmax0, …, Rmin0, Rmax0, …]`。mono 复制为 stereo，长度为 `pixels * 4`。帧坐标属于素材解码后的源采样率（`sourceInfo.sampleRate`），不是设备采样率；半开范围按素材边界裁剪，空像素返回零。像素数为 1–16384。
 
 `BackendTelemetry` 只新增必填 `outputLatencyFrames: number | null`。TS 校验拒绝缺失字段和非有限电平，接受有限静音地板 -120 dBFS。`levels` 是每轨瞬时左右峰值；RMS 在 Rust 内部计算，不新增没有消费者的 `rmsLevels`。峰值保持和回落仍归 UI。
 
@@ -118,43 +120,43 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo" | grep 
 
 输出为空，零实际窗口或音频进程匹配。过滤只移除检查命令自身，以及另一 worker 的 Orca CLI 问题正文含 `gallery` 造成的文本误命中，不排除真正的 `bun --hot` 或 `cargo run`。所有 `bun test`、Cargo 检查和有限 benchmark 均已结束，未停止其他 worktree 或用户的进程。
 
-## C2 peak-metadata: sourceInfo 与 musicalPeakReader 契约
+## C2 peak-metadata: sourceInfo 与 readPeaksAtBars 契约
 
-2026-10-15。分支 `gpuix-c2-peak-metadata`。暴露源解码采样率与总帧数，并在 `platform/engine.ts` 提供满足 Arrangement 组合契约的 `musicalPeakReader`。
+2026-10-15。分支 `gpuix-c2-peak-metadata`。暴露源解码采样率与总帧数；小节到源帧的换算与循环取模全部在 Rust 内完成，`platform/engine.ts` 的 `musicalPeakReader` 只转发。
 
-### 1. sourceInfo 契约
+### 素材内存
+
+`AudioSource` 只保留一份 PCM：`pcm` 是重采样到设备采样率的播放缓冲。`peaks` 金字塔在解码时于源采样率上一次性构建，`source_info` 记录源采样率、帧数与声道。峰值读取的内部 bin 来自金字塔；不足一个 bin 的边缘帧按 `floor(frame × 设备率 / 源率)` 取 `pcm` 中对应样本，源率等于设备率时精确，否则是相邻样本的近似。`decode_keeps_one_device_rate_pcm_and_source_rate_info` 用穷举解构锁定字段集合，再加一份 PCM 字段即编译失败。
+
+### sourceInfo
 
 ```typescript
 export declare function sourceInfo(session: number, sourceId: string): SourceInfo | null
-
-export interface SourceInfo {
-  sampleRate: number
-  frames: number
-  channels: number
-}
 ```
 
-- 返回素材解码后的实际采样率（如 44100Hz）、总帧数与声道数。
-- 与设备采样率（如 48000Hz）严格区分：保持源文件解码后的原始参数，不返回重采样后的设备采样率。
-- 会话无效或素材未加载时返回 `null`，不抛出异常。
-- `crates/native` 公共导出仅新增此一个导出；`readPeaks` 签名与 channel-major 布局严格保持。
+- 返回素材解码后的实际采样率（如 44100Hz）、总帧数与声道数，与设备采样率（如 48000Hz）区分。
+- 素材未加载返回 `null`。
 
-### 2. musicalPeakReader 契约
+### readPeaksAtBars 与 musicalPeakReader
 
 ```typescript
-export type PeakReader = (
+export declare function readPeaksAtBars(
+  session: number,
   sourceId: string,
   startBar: number,
   endBar: number,
   pixels: number,
-  contentOffsetBars?: number
-) => Float32Array
+  contentOffsetBars: number
+): Float32Array
 
-export function musicalPeakReader(session: number, project: MusicalProjectContext): PeakReader
+export function musicalPeakReader(session: number): PeakReader
 ```
 
-- **小节换算**：复用 `crates/engine` 的 `TransportClock` 语义，以 `barsPerSecond = (bpm * denominator) / (240 * numerator)` 进行小节到秒的换算，并结合 `sourceInfo.sampleRate` 转换为源素材帧坐标。
-- **最小换算实现选型理由**：在 TS 侧直接以 2 行纯算术复用 `bar_to_frame` 语义，不额外增加 napi 导出（遵守 `crates/native` 仅批准 `sourceInfo` 单一新导出的契约门禁），同时消除高频波形渲染中的重复 FFI 调用开销。
-- **循环取模与平移一致性**：对 `(bar - 1 + contentOffsetBars)` 的帧位置采用 `rem_euclid(rawStartFrame, totalFrames)` 循环取模，与 C1 `mix/mod.rs` 的循环读取语义保持完全一致。Clip 在时间线上平移（如移至第 100 小节）时返回完全相同的波形；带符号负 `contentOffsetBars` 正确循环回绕。
-- **跨素材边界分段拼接**：当可见跨度 `frameSpan` 超出素材剩余长度或跨越多轮循环时，按像素比例分段调用 `readPeaks` 并按 channel-major 拼装，确保多小节循环波形连贯无缺。
-- **安全保证**：素材未加载、帧范围越界、无效像素数或参数包含 NaN 时返回零长度或全静音 `Float32Array`，绝不抛出错误，绝不返回 NaN。API 依据：[Firewheel node contract](https://github.com/billydm/firewheel/blob/main/_autodocs/api-reference/core-node.md)、[Firewheel 0.14.0](https://docs.rs/firewheel/0.14.0/firewheel/)、[Symphonia 0.6.1](https://docs.rs/symphonia/0.6.1/symphonia/)、[Rubato 5.0.1](https://docs.rs/rubato/5.0.1/rubato/)。具体签名以本机 Cargo.lock 对应源码和实际构建结果为准。
+- **坐标**：`startBar/endBar` 是 one-based 的 Clip 局部可见范围。Rust 取该会话最近一次被接受的工程的 `TransportClock.bars_per_second`，换成源采样率时钟后用 `bar_to_frame` 求起止源帧。Clip 在时间线上的位置不参与计算，移到第 100 小节读到的波形不变。
+- **偏移与循环**：`contentOffsetBars` 经 `transport::source_offset_frame` 换成带符号源帧并 `rem_euclid(frames)`；C1 混音 `Mixer::compile` 调用同一函数，两处语义只有一份实现。可见范围越过素材末尾时按循环播放回绕，`read_looped_peaks` 对跨越接缝的像素合并两段包络；不跨接缝时结果与 `readPeaks` 完全相同。
+- **布局**：与 `readPeaks` 相同，channel-major，其次 pixel-major，每项 `[min, max]`，立体声 `pixels × 4` 个 f32。
+- **失败语义**：不抛错、不产生 NaN。未知素材、尚未 apply 工程、`endBar ≤ startBar`、任一参数非有限，返回 `pixels × 4` 个 0；`pixels` 为 0 或大于 16384、或会话设备打开失败，返回空数组。
+- **TS 侧**：`musicalPeakReader(session)` 返回满足组合契约 `PeakReader` 签名的闭包，原样转发到 `readPeaksAtBars`，不含任何换算公式，也不再接收 `bpm`/拍号（引擎已持有）。
+- **验证**：`apps/gpuix/src/platform/engine.test.ts` 对真实 napi 断言 44.1kHz 源在 120BPM 4/4 下恰好一小节、平移不变、跨末尾回绕、负偏移取模、静音边界。变异检查：去掉取模（起点不取模且忽略偏移）2 失败，忽略偏移 2 失败，换成设备采样率 4 失败，`rem_euclid` 换成 `%` 1 失败（Cargo 另 3 失败），去掉末尾回绕 2 失败（Cargo 另 1 失败）。
+
+API 依据：[Firewheel node contract](https://github.com/billydm/firewheel/blob/main/_autodocs/api-reference/core-node.md)、[Firewheel 0.14.0](https://docs.rs/firewheel/0.14.0/firewheel/)、[Symphonia 0.6.1](https://docs.rs/symphonia/0.6.1/symphonia/)、[Rubato 5.0.1](https://docs.rs/rubato/5.0.1/rubato/)。具体签名以本机 Cargo.lock 对应源码和实际构建结果为准。
