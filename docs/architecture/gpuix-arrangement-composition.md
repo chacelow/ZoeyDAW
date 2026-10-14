@@ -20,7 +20,7 @@ app-shell ──▶ ArrangementPanel (composition root, 在 app-shell 或 arrang
 视口（`scrollX`、`scrollY`、`pxPerBar`、可见行范围）只有一个 owner：`timeline`。
 
 - `ArrangementViewport`（`pxPerBar`、`scrollX`、`scrollY`、`width`、`height`、`dpr`）与 `ArrangementScene` 类型**定义在 `core/scene`（B1，已合入）**，三个切片都从那里取，不各自重新定义。
-- `timeline` 拥有视口**状态与操作**：导出 `useArrangementViewport()`，返回 `{ viewport: ArrangementViewport, setScroll(x, y), zoomAt(anchorBar, anchorPx, factor), fitToProject() }`；缩放/平移的纯计算调用 `core/viewport`。
+- `timeline` 拥有视口**状态与操作**，经 `TimelineController` 暴露（见第 3 节）；缩放/平移的纯计算调用 `core/viewport`。`setScroll` 必须同步：返回前共享 `SceneStore` 的 viewport 投影已更新，并返回接受后的 `ArrangementViewport`，这样 lane 的边缘自动滚动在同一帧重算 Ghost 时读到的是新值，不读前一帧。
 - `lane` 与 `tracks` 只**读**视口（通过 props 传入同一个对象），不持有第二份。
 - 垂直滚动：`tracks` 的表头列与 `lane` 的车道共用同一个 `scrollY`，作为一个整体滚动；Minimap 固定，不随垂直滚动。
 
@@ -28,18 +28,24 @@ app-shell ──▶ ArrangementPanel (composition root, 在 app-shell 或 arrang
 
 ```ts
 // timeline/index.ts
-export interface TimelineSlots {
-  toolbar?: ReactNode
-  overview?: ReactNode // Minimap，timeline 自己提供默认实现
+export interface TimelineController {
+  // 由组合根创建并 dispose；内部持有同一个 SceneStore、窗口键盘 owner、视口命令、标尺与自动滚动状态
+  readonly sceneStore: SceneStore
+  readonly keyboard: KeyboardOwner
+  useViewport(): ArrangementViewport // 返回当前 viewport
+  setScroll(x: number, y: number): ArrangementViewport // 同步语义：返回前已更新共享 SceneStore 的 viewport 投影，返回「接受后」的 viewport
+  zoomAt(anchorBar: number, anchorPx: number, factor: number): ArrangementViewport
+  fitToProject(): ArrangementViewport
+  tick(nowMs: number): void // 由组合根的帧源（F1 合入后为原生帧回调）喂入，驱动边缘自动滚动与跟随播放
+  dispose(): void
 }
+export function createTimelineController(deps: TimelineControllerDeps): TimelineController
 export function ArrangementTimeline(props: {
-  scene: ArrangementScene // 来自 core/scene
-  viewport: ArrangementViewport
+  controller: TimelineController // 取代分散的 scene/viewport/keyboard/cursor 入参
   tracks: ReactNode // 由组合根传入 <TrackRows renderLane={row => <LaneRow .../>} />
   labels: TimelineLabels // 双语标签由组合根注入，timeline 不依赖 i18n 包
+  cursor: CursorLockPort // 光标锁（Minimap 拖动），默认委托 @zoeydaw/native
 }): ReactNode
-export function createTimelineKeyboard(deps: TimelineKeyboardDeps): KeyboardOwner
-export { useArrangementViewport } // 返回 { viewport, setScroll, zoomAt, fitToProject }
 
 // lane/index.ts
 export function ArrangementLane(props: {
