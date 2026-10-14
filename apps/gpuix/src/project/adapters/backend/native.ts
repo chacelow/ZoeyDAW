@@ -2,17 +2,7 @@ import * as engine from "@/platform/engine"
 import { validFrame, validResult } from "./connection/protocol"
 import type { BackendResult, BackendTelemetry, ProjectBackend } from "../../model/backend"
 
-export interface NativeProjectBackend extends ProjectBackend {
-  /** Channel-major, pixel-major [min,max]; stereo returns pixels * 4 floats, never PCM. */
-  readPeaks: (
-    sourceId: string,
-    startFrame: number,
-    endFrame: number,
-    pixels: number
-  ) => Float32Array
-}
-
-export function createNativeBackend(): NativeProjectBackend {
+export function createNativeBackend(): ProjectBackend {
   const handle = engine.openSession()
   const listeners = new Set<(telemetry: BackendTelemetry) => void>()
   let disposed = false
@@ -70,8 +60,11 @@ export function createNativeBackend(): NativeProjectBackend {
       listeners.clear()
       engine.dispose(handle)
     },
-    readPeaks(sourceId, startFrame, endFrame, pixels) {
-      return engine.readPeaks(handle, sourceId, startFrame, endFrame, pixels)
+    readPeaks(sourceId, startBar, endBar, pixels, contentOffsetBars) {
+      if (disposed) {
+        return new Float32Array(0)
+      }
+      return engine.readPeaksAtBars(handle, sourceId, startBar, endBar, pixels, contentOffsetBars)
     },
   }
 }

@@ -4,6 +4,7 @@ export {
   configureProjectBackend,
   startProjectRuntime,
   readProjectTelemetry,
+  readProjectPeaks,
   readTransportBar,
   whenProjectBackendIdle,
   getEffectiveDocument,

@@ -53,7 +53,7 @@ Keyboard note input, authored MIDI recording and accepted recording clocks retai
 
 ### Native session API
 
-`@zoeydaw/native` exports the following engine functions. The adapter uses only the platform re-export.
+`@zoeydaw/native` exports the following engine functions. The adapter uses only the platform re-export. Views read waveforms through `readProjectPeaks` (a `PeakReader` from `model/backend`): the runtime forwards to whichever backend its connection currently owns, so peaks come from the same session as transport and meters, and the engine handle never leaves the adapter. With no open backend it returns an empty array.
 
 | Export | Result and lifetime |
 | --- | --- |

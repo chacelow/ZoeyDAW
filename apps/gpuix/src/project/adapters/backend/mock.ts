@@ -163,6 +163,9 @@ export function createMockProjectBackend(): ProjectBackend {
         reconcileTimer()
       }
     },
+    readPeaks(_sourceId, _startBar, _endBar, pixels) {
+      return new Float32Array(isDisposed ? 0 : pixels * 4)
+    },
     dispose() {
       isDisposed = true
       listeners.clear()

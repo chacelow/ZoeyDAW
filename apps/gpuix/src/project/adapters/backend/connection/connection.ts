@@ -7,6 +7,7 @@ import type {
   BackendStage,
   BackendState,
   BackendTelemetry,
+  PeakReader,
   ProjectBackend,
   ProjectBackendFactory,
   ProjectRuntimeStatus,
@@ -32,6 +33,8 @@ export interface BackendConnection {
   submit: (input: BackendSubmission) => number
   start: () => () => void
   readTelemetry: () => BackendTelemetry | null
+  /** Empty when no backend is open; the engine session never leaves the connection. */
+  readPeaks: PeakReader
   whenIdle: () => Promise<boolean>
   dispose: () => void
 }
@@ -394,6 +397,9 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
       !leases || !frame || !acceptedState || frame.frame.appliedSequence < controlSequence
         ? null
         : interpolate(frame.frame, frame.receivedAt, acceptedState, performance.now()),
+    readPeaks: (sourceId, startBar, endBar, pixels, contentOffsetBars) =>
+      backend?.readPeaks(sourceId, startBar, endBar, pixels, contentOffsetBars) ??
+      new Float32Array(0),
     whenIdle() {
       if (isDisposed || !backend) {
         return Promise.resolve(false)

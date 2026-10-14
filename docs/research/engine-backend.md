@@ -122,7 +122,7 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo" | grep 
 
 ## C2 peak-metadata: sourceInfo 与 readPeaksAtBars 契约
 
-2026-10-15。分支 `gpuix-c2-peak-metadata`。暴露源解码采样率与总帧数；小节到源帧的换算与循环取模全部在 Rust 内完成，`platform/engine.ts` 的 `musicalPeakReader` 只转发。
+2026-10-15。分支 `gpuix-c2-peak-metadata`。暴露源解码采样率与总帧数；小节到源帧的换算与循环取模全部在 Rust 内完成。TS 侧没有独立的峰值读取器：`ProjectBackend.readPeaks` 就是 `PeakReader`，native backend 用自己的会话转发到 `readPeaksAtBars`，runtime 以 `readProjectPeaks` 暴露给视图。
 
 ### 素材内存
 
@@ -137,7 +137,7 @@ export declare function sourceInfo(session: number, sourceId: string): SourceInf
 - 返回素材解码后的实际采样率（如 44100Hz）、总帧数与声道数，与设备采样率（如 48000Hz）区分。
 - 素材未加载返回 `null`。
 
-### readPeaksAtBars 与 musicalPeakReader
+### readPeaksAtBars
 
 ```typescript
 export declare function readPeaksAtBars(
@@ -148,15 +148,13 @@ export declare function readPeaksAtBars(
   pixels: number,
   contentOffsetBars: number
 ): Float32Array
-
-export function musicalPeakReader(session: number): PeakReader
 ```
 
 - **坐标**：`startBar/endBar` 是 one-based 的 Clip 局部可见范围。Rust 取该会话最近一次被接受的工程的 `TransportClock.bars_per_second`，换成源采样率时钟后用 `bar_to_frame` 求起止源帧。Clip 在时间线上的位置不参与计算，移到第 100 小节读到的波形不变。
 - **偏移与循环**：`contentOffsetBars` 经 `transport::source_offset_frame` 换成带符号源帧并 `rem_euclid(frames)`；C1 混音 `Mixer::compile` 调用同一函数，两处语义只有一份实现。可见范围越过素材末尾时按循环播放回绕，`read_looped_peaks` 对跨越接缝的像素合并两段包络；不跨接缝时结果与 `readPeaks` 完全相同。
 - **布局**：与 `readPeaks` 相同，channel-major，其次 pixel-major，每项 `[min, max]`，立体声 `pixels × 4` 个 f32。
 - **失败语义**：不抛错、不产生 NaN。未知素材、尚未 apply 工程、`endBar ≤ startBar`、任一参数非有限，返回 `pixels × 4` 个 0；`pixels` 为 0 或大于 16384、或会话设备打开失败，返回空数组。
-- **TS 侧**：`musicalPeakReader(session)` 返回满足组合契约 `PeakReader` 签名的闭包，原样转发到 `readPeaksAtBars`，不含任何换算公式，也不再接收 `bpm`/拍号（引擎已持有）。
-- **验证**：`apps/gpuix/src/platform/engine.test.ts` 对真实 napi 断言 44.1kHz 源在 120BPM 4/4 下恰好一小节、可见范围平移等于内容偏移平移、跨末尾回绕、负偏移取模、静音边界。变异检查（6 个 TS 测试）：去掉取模（起点不取模且忽略偏移）2 失败，忽略偏移 2 失败，换成设备采样率 4 失败，`rem_euclid` 换成 `%` 1 失败（Cargo 另 3 失败），去掉末尾回绕 3 失败（Cargo 另 1 失败）。
+- **TS 侧**：`createNativeBackend().readPeaks` 原样转发到 `readPeaksAtBars`（会话由 backend 闭包持有，dispose 后返回空数组），不含任何换算公式，也不接收 `bpm`/拍号（引擎已持有）。帧坐标版 `readPeaks` 仍是 native 导出，但不经 platform 再导出，应用内没有调用方。
+- **验证**：`apps/gpuix/src/platform/engine.test.ts` 对真实 napi 断言 44.1kHz 源在 120BPM 4/4 下恰好一小节、可见范围平移等于内容偏移平移、跨末尾回绕、负偏移取模、静音边界。变异检查（6 个 TS 测试）：去掉取模（起点不取模且忽略偏移）2 失败，忽略偏移 2 失败，换成设备采样率 4 失败，`rem_euclid` 换成 `%` 1 失败（Cargo 另 3 失败），去掉末尾回绕 3 失败（Cargo 另 1 失败）。`connection.test.ts` 证明峰值只读当前打开的 backend：重开后切到新实例，dispose 后为空。
 
 API 依据：[Firewheel node contract](https://github.com/billydm/firewheel/blob/main/_autodocs/api-reference/core-node.md)、[Firewheel 0.14.0](https://docs.rs/firewheel/0.14.0/firewheel/)、[Symphonia 0.6.1](https://docs.rs/symphonia/0.6.1/symphonia/)、[Rubato 5.0.1](https://docs.rs/rubato/5.0.1/rubato/)。具体签名以本机 Cargo.lock 对应源码和实际构建结果为准。
