@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import { useGpuix } from "@gpuix/react"
 import { useTheme } from "../shared/theme/ThemeProvider"
 import {
   Button,
@@ -26,6 +27,7 @@ const glyph =
 
 export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPort }) {
   const theme = useTheme()
+  const { renderer } = useGpuix()
   const zh = process.env.GALLERY_LOCALE === "zh"
   const disabled = process.env.GALLERY_DISABLED === "1"
   const text = (en: string, cn: string) => (zh ? cn : en)
@@ -52,6 +54,7 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
       style={{
         width: theme.control["--spacing-control-icon"],
         height: theme.control["--spacing-control-icon"],
+        color: theme.colors.foreground,
       }}
     />
   )
@@ -60,7 +63,13 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
       <div
         role="application"
         aria-label="Control state specimens"
-        onKeyDown={event => setKeys(event.key ?? "")}
+        onKeyDown={event => {
+          setKeys(event.key ?? "")
+          if (event.key === "tab") {
+            if (event.modifiers?.shift) renderer?.focusPrevious?.()
+            else renderer?.focusNext?.()
+          }
+        }}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -174,7 +183,9 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
           </PopupButton>
         </div>
         <div style={row}>
-          <Label controlRef={inputRef}>{text("Input label", "输入标签")}</Label>
+          <Label controlRef={inputRef} disabled={disabled}>
+            {text("Input label", "输入标签")}
+          </Label>
           <Input
             ref={inputRef}
             aria-label="State input"
@@ -248,11 +259,61 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
                 style={{
                   width: theme.transportControl["--spacing-control-icon"],
                   height: theme.transportControl["--spacing-control-icon"],
+                  color: theme.colors.foreground,
                 }}
               />
             }
           />
         </div>
+        <div style={row}>
+          <div
+            role="group"
+            aria-label="Narrow selector parent"
+            style={{ width: theme.project.routingWidth }}
+          >
+            <DropdownButton
+              label="Filled narrow selector"
+              fill
+              disabled={disabled}
+              value={mode}
+              onChange={setMode}
+              items={[
+                { id: "beats", label: text("Beats", "节拍") },
+                { id: "tones", label: text("Long routing destination", "较长的路由目的地") },
+              ]}
+            />
+          </div>
+          <div
+            role="group"
+            aria-label="Wide selector parent"
+            style={{ width: theme.project.controlsWidth }}
+          >
+            <DropdownButton
+              label="Filled wide selector"
+              fill
+              disabled={disabled}
+              align="center"
+              value={mode}
+              onChange={setMode}
+              items={[
+                { id: "beats", label: text("Beats", "节拍") },
+                { id: "tones", label: text("Long routing destination", "较长的路由目的地") },
+              ]}
+            />
+          </div>
+        </div>
+        <DragPadNumber
+          label="State icon-free number"
+          testId="state-icon-free-number"
+          value={number}
+          onChange={setNumber}
+          min={20}
+          max={300}
+          step={1}
+          defaultValue={120}
+          hideIcon
+          disabled={disabled}
+        />
         <text role="status" aria-label="State keyboard log">
           {keys}
         </text>
