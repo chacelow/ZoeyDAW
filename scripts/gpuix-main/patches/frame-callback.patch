@@ -35,10 +35,10 @@ index 47a3fac..7e8f534 100644
        | "getElementsAt"
        | "scrollTo"
 diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
-index 0525e23..03686ab 100644
+index 0525e23..95d5c28 100644
 --- a/packages/native/src/renderer.rs
 +++ b/packages/native/src/renderer.rs
-@@ -72,6 +72,95 @@ fn query_window_should_close() -> bool {
+@@ -72,6 +72,97 @@ fn query_window_should_close() -> bool {
      handler.map(|handler| handler()).unwrap_or(true)
  }
  
@@ -70,13 +70,13 @@ index 0525e23..03686ab 100644
 +            if !state.active {
 +                return None;
 +            }
-+            state.callback.clone().map(|callback| {
-+                (callback, state.origin.elapsed().as_secs_f64() * 1000.0)
-+            })
++            state
++                .callback
++                .clone()
++                .map(|callback| (callback, state.origin.elapsed().as_secs_f64() * 1000.0))
 +        });
 +        if let Some((callback, timestamp_ms)) = frame {
 +            callback(timestamp_ms);
-+            window.refresh();
 +            schedule_animation_frame(window);
 +        }
 +    });
@@ -108,33 +108,35 @@ index 0525e23..03686ab 100644
 +                origin: std::time::Instant::now(),
 +            };
 +        });
-+        window.update(cx, |_, window, cx| {
-+            schedule_animation_frame(window);
-+            schedule_animation_frame(window);
-+            assert_eq!(window.simulate_next_frame(cx), 1);
-+            assert_eq!(calls.get(), 1);
-+            ANIMATION_FRAME.with(|stored| stored.borrow_mut().active = false);
-+            assert_eq!(window.simulate_next_frame(cx), 1);
-+            assert_eq!(calls.get(), 1);
-+            assert_eq!(window.simulate_next_frame(cx), 0);
-+            schedule_animation_frame(window);
-+            assert_eq!(window.simulate_next_frame(cx), 0);
-+            ANIMATION_FRAME.with(|stored| stored.borrow_mut().active = true);
-+            schedule_animation_frame(window);
-+            assert_eq!(window.simulate_next_frame(cx), 1);
-+            assert_eq!(calls.get(), 2);
-+            ANIMATION_FRAME.with(|stored| stored.borrow_mut().callback = None);
-+            assert_eq!(window.simulate_next_frame(cx), 1);
-+            assert_eq!(calls.get(), 2);
-+            assert_eq!(window.simulate_next_frame(cx), 0);
-+        }).unwrap();
++        window
++            .update(cx, |_, window, cx| {
++                schedule_animation_frame(window);
++                schedule_animation_frame(window);
++                assert_eq!(window.simulate_next_frame(cx), 1);
++                assert_eq!(calls.get(), 1);
++                ANIMATION_FRAME.with(|stored| stored.borrow_mut().active = false);
++                assert_eq!(window.simulate_next_frame(cx), 1);
++                assert_eq!(calls.get(), 1);
++                assert_eq!(window.simulate_next_frame(cx), 0);
++                schedule_animation_frame(window);
++                assert_eq!(window.simulate_next_frame(cx), 0);
++                ANIMATION_FRAME.with(|stored| stored.borrow_mut().active = true);
++                schedule_animation_frame(window);
++                assert_eq!(window.simulate_next_frame(cx), 1);
++                assert_eq!(calls.get(), 2);
++                ANIMATION_FRAME.with(|stored| stored.borrow_mut().callback = None);
++                assert_eq!(window.simulate_next_frame(cx), 1);
++                assert_eq!(calls.get(), 2);
++                assert_eq!(window.simulate_next_frame(cx), 0);
++            })
++            .unwrap();
 +    }
 +}
 +
  /// Parse a CSS font-weight value (string or number) into a GPUI FontWeight.
  /// Accepts named keywords ("bold", "semibold"), numeric strings ("700"),
  /// and raw numbers (700). Falls back to 400 (normal) for unrecognized values.
-@@ -140,6 +229,13 @@ thread_local! {
+@@ -140,6 +231,13 @@ thread_local! {
      static GPUI_WINDOW: RefCell<Option<gpui::WindowHandle<GpuixView>>> = const { RefCell::new(None) };
      #[cfg(target_os = "macos")]
      static WINDOW_CLOSE_HANDLER: RefCell<Option<Rc<dyn Fn() -> bool>>> = const { RefCell::new(None) };
@@ -148,7 +150,7 @@ index 0525e23..03686ab 100644
      #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
      static WEB_APP: RefCell<Option<gpui::ApplicationHandle>> = const { RefCell::new(None) };
      #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
-@@ -1696,6 +1792,45 @@ impl GpuixRenderer {
+@@ -1696,6 +1794,47 @@ impl GpuixRenderer {
          })
      }
  
@@ -161,8 +163,10 @@ index 0525e23..03686ab 100644
 +    pub fn set_animation_frame_callback(
 +        &self,
 +        env: Env,
-+        #[napi(ts_arg_type = "((timestampMs: number) => void) | null")]
-+        callback: Either<FunctionRef<f64, ()>, Null>,
++        #[napi(ts_arg_type = "((timestampMs: number) => void) | null")] callback: Either<
++            FunctionRef<f64, ()>,
++            Null,
++        >,
 +    ) -> Result<()> {
 +        let handler = match callback {
 +            Either::A(callback) => Some(Rc::new(move |timestamp_ms| {
