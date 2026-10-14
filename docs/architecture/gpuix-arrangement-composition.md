@@ -91,7 +91,7 @@ export function TrackRows(props: {
 
 | 键 | owner |
 | --- | --- |
-| Space（播放）、M、A、B、Ctrl/Cmd+1..5（网格）、Ctrl/Cmd+Z/Shift+Z、Ctrl/Cmd+S | `timeline`（`createTimelineKeyboard`，窗口根监听） |
+| Space（播放）、M、A、B、Ctrl/Cmd+1..5（网格）、Ctrl/Cmd+Z/Shift+Z、Ctrl/Cmd+S | `timeline`（`createTimelineController` 内部唯一的 keyboard，窗口根监听） |
 | Clip/Automation 选择、split（Ctrl/Cmd+E，有选中时）、duplicate、rename、delete、复制剪切粘贴、拖动中 Escape | `lane`（`LaneController.keyDown`） |
 | 轨道名称输入、Mixer 数值编辑 | `tracks`（控件自己） |
 
@@ -100,7 +100,7 @@ export function TrackRows(props: {
 
 ## 5. 组合根
 
-`ArrangementPanel`（`arrangement/index.tsx`）负责：创建 `createLaneController`、`createTimelineKeyboard`，取 viewport、scene、telemetry，注入 labels，把三个目录的组件按上面的 props 装配。**它由 `app-shell` 切片拥有**；在 `app-shell` 派发之前，各切片用各自 demo 里的最小组合根验证，不要抢先写它。
+`ArrangementPanel`（`arrangement/index.tsx`）负责：创建 `createLaneController` 与 `createTimelineController`（后者内部持有唯一的 timeline keyboard，组合根不再单独调用 `createTimelineKeyboard`），取 viewport、scene、telemetry、`readProjectPeaks`，注入 labels，把三个目录的组件按上面的 props 装配。lane 的 `markDrawModeGesture` 接 `timelineController.keyboard.markDrawGesture`：按住 B 期间发生过绘制，松开 B 时不锁定绘制偏好。编号 Pattern 区域的明暗只来自 B1 `core/rulers/grid-lines.ts` 的 `patternRegions(scene)`；行内若用不透明底色盖住外层网格，lane 消费同一投影，不复制计算。**它由 `app-shell` 切片拥有**；在 `app-shell` 派发之前，各切片用各自 demo 里的最小组合根验证，不要抢先写它。
 
 ## 6. 变更规则
 
