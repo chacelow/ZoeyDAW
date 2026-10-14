@@ -26,25 +26,34 @@ export function validResult(value: unknown): value is BackendResult {
           value.code === "disposed")
 }
 
-export function validFrame(value: BackendTelemetry, sessionId: string): boolean {
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function nonnegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+}
+
+export function validFrame(value: unknown, sessionId: string): value is BackendTelemetry {
   if (
-    !value ||
+    !record(value) ||
     value.sessionId !== sessionId ||
-    !Number.isSafeInteger(value.sequence) ||
-    value.sequence < 0 ||
-    !Number.isSafeInteger(value.appliedSequence) ||
-    value.appliedSequence < 0 ||
+    !nonnegativeInteger(value.sequence) ||
+    !nonnegativeInteger(value.appliedSequence) ||
     typeof value.playing !== "boolean" ||
-    typeof value.recording !== "boolean"
+    typeof value.recording !== "boolean" ||
+    !(value.outputLatencyFrames === null || nonnegativeInteger(value.outputLatencyFrames))
   ) {
     return false
   }
   const { clock } = value
   if (
-    !clock ||
+    !record(clock) ||
     (clock.kind !== "musical" && clock.kind !== "sample") ||
+    typeof clock.bar !== "number" ||
     !Number.isFinite(clock.bar) ||
     clock.bar < 1 ||
+    typeof clock.barsPerSecond !== "number" ||
     !Number.isFinite(clock.barsPerSecond) ||
     clock.barsPerSecond < 0
   ) {
@@ -52,17 +61,20 @@ export function validFrame(value: BackendTelemetry, sessionId: string): boolean 
   }
   if (
     clock.kind === "sample" &&
-    (!Number.isSafeInteger(clock.frame) ||
-      clock.frame < 0 ||
+    (!nonnegativeInteger(clock.frame) ||
+      typeof clock.sampleRate !== "number" ||
       !Number.isFinite(clock.sampleRate) ||
       clock.sampleRate <= 0)
   ) {
     return false
   }
-  return typeof value.levels !== "object" || value.levels === null
-    ? false
-    : Object.values(value.levels).every(
-        pair =>
-          Array.isArray(pair) && pair.length === 2 && pair.every(level => Number.isFinite(level))
-      )
+  return (
+    record(value.levels) &&
+    Object.values(value.levels).every(
+      pair =>
+        Array.isArray(pair) &&
+        pair.length === 2 &&
+        pair.every(level => typeof level === "number" && Number.isFinite(level))
+    )
+  )
 }

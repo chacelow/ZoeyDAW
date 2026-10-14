@@ -55,6 +55,7 @@ function frame(request: BackendRequest, bar = 1): BackendTelemetry {
     playing: request.state.control.playing,
     recording: false,
     levels: { main: [-12, -12] },
+    outputLatencyFrames: null,
   }
 }
 

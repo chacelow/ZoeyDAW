@@ -9,3 +9,8 @@ rust-version.workspace = true
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+firewheel = { version = "=0.14.0", default-features = false, features = ["std", "cpal"] }
+audioadapter-buffers = "=5.2.0"
+symphonia = { version = "=0.6.1", features = ["all"] }
+rubato = "=5.0.1"
+triple_buffer = "=9.0.0"
