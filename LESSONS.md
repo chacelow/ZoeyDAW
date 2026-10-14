@@ -80,6 +80,14 @@
 - 错 3：第一个变异（让 `size === collapsed` 的早返回失效）测试仍然全绿。继续排查（对同一组输入逐行 diff 输出）发现输出**完全相同**——这个早返回分支对该输入是冗余的，不是测试漏了。教训：变异不红不等于测试弱，先确认变异是否真的改变了行为（比对输出），再决定是否补用例，别为一个等价变异硬加测试。
 - 对：求解器的语义要与被替换的库对齐再验收。`react-resizable-panels` 4.12.3 的折叠行为是“越过折叠区中点才折叠/弹出”，A4 的求解器实测一致：A 在 delta=-200 到达 min，-260 折叠（中点 -250）；从折叠态展开，delta=40 仍为 0，60 弹到 100。
 
+## gpuix 迁移：commit 报 `pre-commit failed` 不等于没提交，先查再判断
+
+- 现象：`git add A B && git commit` 后输出 `husky - pre-commit script failed (code 1)`，随后 `git log` 却显示提交存在，`git status` 干净，`git stash list` 多出一条 `lint-staged automatic backup`。
+- 因：lint-staged 先把工作区改动备份进 stash，再运行格式化（prettier 会重排代码）。同一条命令里先后有两次提交，第二次因"没有暂存文件"让 lint-staged 报错、hook 返回非零，但**第一次提交已经成功**，且 prettier 重排后的内容已进入提交；备份 stash 因第二次提交异常而没被清理。
+- 对：看到 hook 失败**不要重试盲目重复提交**。依次确认：① `git log --oneline -3` 提交是否在；② `git show HEAD:<文件> | grep` 内容是否在 HEAD；③ `git diff --stat stash@{0} HEAD` 备份里有没有 HEAD 之外的东西；④ 若测试文件被 prettier 重排过，用**行为验证**而不是文本比对确认等价（重跑测试 + 重跑变异检查 + 对关键表达式做数值等价比对）；⑤ 确认无误再 `git stash drop` 自己的备份。
+- 注意：这条 stash 在所有 worktree 间共用（见"工作方式"一节），丢弃前必须确认它是自己的、内容已在 HEAD。2026-10-14 实测：备份里的 `LESSONS.md` 与 HEAD 逐字节相同，测试文件仅被 prettier 重排；`(s = ...)/2**32` 与 `(s = ...) / 2**32` 的两种 rng 写法在 160000 个值上完全一致；3 个用例与 4 个变异在重排后的版本上结果不变。
+- 另：同一个 commit 里不要连续跑两次 `git commit`。分开执行，每次检查退出码与 `git log`。
+
 ## gpuix 迁移：Shell 引号会吞掉长回复
 
 - 错：把含 `$(`、反引号的中文长文本直接放进 `--body "..."` 双引号。
