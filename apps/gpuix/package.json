@@ -11,17 +11,21 @@
   "dependencies": {
     "@gpuix/native": "link:../../.gpuix-main/packages/native",
     "@gpuix/react": "link:../../.gpuix-main/packages/react",
+    "@phosphor-icons/core": "2.1.1",
     "@zoeydaw/native": "workspace:*",
     "@zoeymind/logger": "workspace:*",
     "@zoeymind/ui": "workspace:*",
     "culori": "^4.0.2",
+    "d3-shape": "3.2.0",
+    "lucide": "0.555.0",
     "react": "link:../../.gpuix-main/node_modules/react",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
-    "@types/react": "^19.2.5",
     "@types/culori": "^4.0.1",
+    "@types/d3-shape": "3.2.0",
+    "@types/react": "^19.2.5",
     "typescript": "~5.9.3"
   }
 }

@@ -1,7 +1,7 @@
 import { useContext, useImperativeHandle, useLayoutEffect, useRef } from "react"
 import type { ReactNode, Ref } from "react"
 import type { StyleDesc } from "@gpuix/react"
-import { sx } from "../../../shared/theme/style"
+import { sx } from "@/shared/theme/style"
 import { SlotContext, usePanelGroup } from "../context"
 import { toPixels } from "../layout/sizes"
 import type { PanelConstraints, PanelSize } from "../layout/sizes"

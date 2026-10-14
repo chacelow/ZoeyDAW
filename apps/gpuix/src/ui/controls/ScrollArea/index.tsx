@@ -1,5 +1,5 @@
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import type { Props, StyleDesc } from "@gpuix/react"
 
 export interface ScrollAreaProps extends Props {

@@ -8,3 +8,4 @@
 - 纯计算（场景、命中、网格、缩放）：`src/project/sections/arrangement/core/README.md`。
 - 共享控件与面板：`src/ui/controls/README.md`、`src/ui/panels/README.md`。
 - 原生能力缺口先查 `crates/native`；Rust 能做的不在 TS 里绕。
+- 图标与 SVG、导入别名：图标用 `<Icon name="…"/>`（lucide），曲线路径用 d3-shape，不手写 SVG；跨目录导入用 `@/`，不写超过两层的 `../`。lint 强制，细则见 UI 规范第 14 节。

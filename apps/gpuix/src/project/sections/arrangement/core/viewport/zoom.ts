@@ -1,6 +1,6 @@
-import { CONTROLS_WIDTH } from "../../../../layout"
-import { gridZoomLimit } from "../../../../model/grid"
-import type { Track } from "../../../../model/types"
+import { CONTROLS_WIDTH } from "@/project/layout"
+import { gridZoomLimit } from "@/project/model/grid"
+import type { Track } from "@/project/model/types"
 import { maxTrackScrollY } from "../layout"
 
 export interface MinimapViewport {

@@ -1,6 +1,6 @@
 import { Children } from "react"
-import { useTheme } from "../../../shared/theme/ThemeProvider"
-import { sx } from "../../../shared/theme/style"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { IconSlot } from "../IconSlot"
 import type { Props } from "@gpuix/react"
 import type { ReactNode } from "react"

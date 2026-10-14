@@ -1,7 +1,7 @@
-import { clampAutomationCurve, clampAutomationValue } from "../../../../model/automation-curve"
+import { clampAutomationCurve, clampAutomationValue } from "@/project/model/automation-curve"
 import { automationSegmentValue } from "./geometry"
-import { snapBar } from "../../../../model/grid-geometry"
-import type { AutomationPoint } from "../../../../model/types"
+import { snapBar } from "@/project/model/grid-geometry"
+import type { AutomationPoint } from "@/project/model/types"
 
 export function moveSegment(
   source: readonly AutomationPoint[],
