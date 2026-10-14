@@ -109,6 +109,7 @@ export interface BackendTelemetry {
   Finite dBFS levels; providers encode silence at a finite floor.
   */
   levels: Readonly<Record<string, readonly [number, number]>>
+  outputLatencyFrames: number | null
 }
 
 /**

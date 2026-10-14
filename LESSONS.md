@@ -80,6 +80,66 @@
 - 错 3：第一个变异（让 `size === collapsed` 的早返回失效）测试仍然全绿。继续排查（对同一组输入逐行 diff 输出）发现输出**完全相同**——这个早返回分支对该输入是冗余的，不是测试漏了。教训：变异不红不等于测试弱，先确认变异是否真的改变了行为（比对输出），再决定是否补用例，别为一个等价变异硬加测试。
 - 对：求解器的语义要与被替换的库对齐再验收。`react-resizable-panels` 4.12.3 的折叠行为是“越过折叠区中点才折叠/弹出”，A4 的求解器实测一致：A 在 delta=-200 到达 min，-260 折叠（中点 -250）；从折叠态展开，delta=40 仍为 0，60 弹到 100。
 
+## gpuix 迁移：并行提交会争用 lint-staged 的共享 stash，失败后先查再重试
+
+- 现象：多个 worktree 同时 `git commit`，lint-staged 备份阶段报 `could not write index`，提示的分支还是别的 worktree（`On main`）。
+- 因：lint-staged 的自动备份用 `git stash`，而 stash 与 `.git/refs/stash` 在所有 worktree 之间共享；并发提交互相覆盖备份。与 A7 那次『hook 报失败但提交已落地』是同一类问题。
+- 做法：失败后先 `git log -1`、`git status`、`git stash list`、找 `.git` 下的 `*.lock`，确认没有半成品；再**原样重试**同一条提交，间隔 30 秒，最多 3 次；不用 `--no-verify`，不手动 `git stash drop` 别人的备份。
+- 协调者侧：合并和提交尽量错开；若仍频繁冲突，再给 worker 分时段（与桌面输入串行同理）。
+
+## gpuix 迁移：多个 worker 并发操作桌面会互相抢占，输入验证要串行
+
+- 现象：并发的 worker 同时用 `computer` 做点击/拖动/按键，报 `InputBusy: another desktop operation owns input/focus control`，或 `BackgroundUnavailable`，截图验证中途失败。
+- 对：由协调者给**一个 worker 在固定时间窗内独占桌面输入**（只读的 screenshot/zoom/ax 不受影响，可并行）；其他 worker 在窗内只做代码与测试；窗结束由该 worker 回复『桌面释放』，协调者再点名下一个。窗内未做完的项如实列『未验证』交付，不无限占用。
+- 因：桌面只有一个真实指针与一个键盘焦点；`computer.window()` 的后台输入路径也依赖焦点恢复，会与别的输入冲突。
+- 同时别碰用户的 Live：独占窗口只限自己启动的窗口。
+- 派发时就按窗口数控制并发：同时需要真实窗口输入验证的切片最多 2 个，其余先排队。
+
+## gpuix 迁移：AX `find({title})` 是子串匹配，改 Live 状态要用精确 ref
+
+- 错：`live.find({ role: "checkbox", title: "播放" })` 想点『播放』，却命中了『跟随播放』（子串匹配，且排在前面），把『跟随播放』关掉。
+- 对：改 Live 状态前，先从 `win.ax()` 里按**完整标签与 ref** 定位；用 `win.ref("eN")` 精确操作；操作后读回该控件的值确认，并核对相关开关（跟随播放、循环、录制、编辑菜单首项 Undo 标签）没有被连带改变。
+- 恢复：已用精确 ref 把『跟随播放』恢复为 1；播放位置回到 1.1.1（原为 4.3.1，AX 位置滑块不可写，无法还原）。
+- 因：Live 的 AX 标签有大量前缀相同的控件（播放/跟随播放、预备录制/预备录制自动化）。
+- 授权边界不变：只覆盖观察与视图类操作，不覆盖修改工程内容。
+
+## gpuix 迁移：窗口键盘事件在元素之后触发，Space 不播放靠控件自己不吞键
+
+- 错：以为窗口根键盘事件 `onKeyDown` 在元素事件之前以 Capture 先触发，可以在窗口层拦住 Space 不让按钮响应。
+- 对：读主干 `packages/native/js/renderer-state.ts`（约 186–225 行）与 `renderer.rs`（3670–3740）：`windowKeyDown/Up` 是同一次按键里**所有元素 keyDown 之后**才触发；同一次按键的事件共享 `keystrokeId`；元素 handler 调 `stopPropagation()` 会让窗口 handler 收不到；窗口 handler 不能阻止元素。`Tab`/`Escape` 的默认行为在窗口 handler 之后执行，`preventDefault` 可阻止。
+- 做法：工具栏/Transport/表头的按钮与切换控件**自己不响应 Space、也不 stopPropagation**，Space 才会冒到窗口 handler 触发播放；输入框聚焦时对可打印键 stopPropagation，避免空格触发播放。用 `createTestRoot` 的 `nativeSimulateKeystrokes` 写端到端测试证明两种情形。
+- 因：我先前凭印象给多个切片下了错误的顺序描述，靠读源码才纠正。
+- 见：`docs/architecture/gpuix-ui-standards.md` 第 9 节。
+
+## gpuix 迁移：在用户的 Live 里操作要先确认手势区，且优先用 AX 语义动作
+
+- 错：为采集标尺缩放读数，在 Live 标尺数字行起点做垂直拖动。该区域是播放头/定位区，拖动触发了播放，播放位置被改。
+- 对：先用只读 AX 与菜单（`win.menu.items`）取信息；必须动 Live 时，优先用 AX 的语义动作（`el.press()`，如『停止』），不用坐标拖动；每一步前记录基线，动完核对：播放状态、录制状态、编辑菜单首项（Undo 标签）是否变化。
+- 恢复：AX 的位置滑块不可写（`AXValue is not settable`），播放位置改了无法用 AX 还原；因此**在不需要时不要触发播放**。不用 Undo 当视图还原（会撤销真实编辑）。
+- 因：Live 是用户的真实工程，视图状态（缩放、位置）和内容状态（Clip、自动化）必须分开对待；拖动手势区由 Live 自己定义，不能凭窗口坐标猜。
+- 授权：用户已明确授权协调者直接操作 Live、不必逐次询问（2026-10-14）；该授权只覆盖观察与视图类操作，不覆盖修改工程内容。
+
+## gpuix 迁移：快捷键以 Live 菜单实测为准，不凭规格文字
+
+- 错：规格把 `Ctrl+E` 写成「最大缩放下细分网格到 1/256」，worker 照写就会实现一个 Live 里根本不存在的行为。
+- 对：用 `computer` 的 `win.menu.items(["编辑"])`、`["选项"]` 只读读取 Live 菜单与快捷键。实测：`Cmd+E` 是「裁剪」（Split，需选区）；`Cmd+1` 缩窄网格、`Cmd+2` 加宽网格、`Cmd+3` 三连音网格、`Cmd+4` 吸附到网格、`Cmd+5` 固定网格；`Cmd+B` 渲染到新轨道、`Cmd+J` 合并、`Cmd+U` 量化、`Cmd+L` 停用 Loop。
+- 因：产品决策里的文字是转述，菜单是 Live 自己的真相；菜单读取只读、不改工程，成本为零。
+- 做法：任何涉及快捷键或命令名的切片先读菜单，把对照写进报告；发现规格与菜单不一致，立刻更正规格并通知所有相关切片。
+
+## gpuix 迁移：写了规范还要保证 Agent 读得到
+
+- 错：把规范写进 `docs/`，只在派发消息里口头告知；没有入口文件指向它，新开的 Agent 与后续会话读不到，规范等于没写。
+- 对：入口文件分层指路。根 `AGENTS.md` 的路由表按「修改范围」指到文档；`apps/gpuix/AGENTS.md` 与各目录就近的 `AGENTS.md`（如 `src/ui`、`src/project/sections`）在 Agent 改到该目录时再指一次；worker 规格 `common.md` 的先读清单同步更新。入口只放指针与触发条件，细则留在被指向的文档，避免入口膨胀。
+- 校验：`node scripts/check-doc-routes.mjs` 检查必读文档都被入口文件链接；新增必读文档时同步加进它的 `required` 列表。该脚本做过变异检查：去掉入口链接会失败。
+- 见：`AGENTS.md`、`apps/gpuix/AGENTS.md`、`scripts/check-doc-routes.mjs`。
+
+## gpuix 迁移：界面必须逐个元素放大看，不能凭一张全屏图或 AX 树
+
+- 错：只用类型检查、测试和一张全屏截图就声称界面完成；间距、居中、尺寸、紧凑感没有逐项核对。
+- 对：画廊里每个控件每个状态各截一张并放大，用 AX bounds 或像素量出尺寸与间距，对照 `CONTROL_METRICS` 与间距 token、Ableton Live 同区域并排看密度；发现问题先改再重新截图；关键截图入 `evidence/`。
+- 因：DAW 是高密度工作站，1px 的间距差和一点松散就会让整体不像专业软件；AX 树只证明语义存在，不证明视觉正确。
+- 见：`docs/architecture/gpuix.md` 的「UI 视觉验收」。
+
 ## gpuix 迁移：渲染器版本用实测与上游活跃度定，不等发布
 
 - 决策（2026-10-14）：采纳固定主干自建，不继续停在 npm 0.10.0，也不等上游发布。

@@ -1,6 +1,6 @@
 # zoeydaw
 
-Web-UI DAW。React 做交互，Tauri 承载桌面壳；当前是单项目 Web 原型，adapter 提供模拟数据、时钟和本地快照，没有真实音频引擎或工程文件系统。产品范围见 [原型策略](docs/product-prototype.md)。包名与版本以各 `package.json` 为准。
+Web-UI DAW，正在重构为 gpuix 原生应用（`apps/gpuix` + `crates/*`），`apps/web` 与 `src-tauri` 在迁移完成后删除。React 做交互，Tauri 承载桌面壳；当前是单项目 Web 原型，adapter 提供模拟数据、时钟和本地快照，没有真实音频引擎或工程文件系统。产品范围见 [原型策略](docs/product-prototype.md)。包名与版本以各 `package.json` 为准。
 
 ## 开工与必读路由
 
@@ -8,6 +8,11 @@ Web-UI DAW。React 做交互，Tauri 承载桌面壳；当前是单项目 Web �
 
 | 修改范围 | 动手前必读 |
 | --- | --- |
+| `apps/gpuix`、`crates/*` 的任何改动（gpuix 原生重构，取代 web 与 Tauri） | [gpuix 架构与切片契约](docs/architecture/gpuix.md) |
+| 可见界面：控件、面板、间距、居中、尺寸、紧凑感、颜色、状态、拖动、弹层、键盘焦点 | [gpuix UI 规范](docs/architecture/gpuix-ui-standards.md)，交付按其第 13 节逐条给证据 |
+| Arrangement 的 `tracks`、`lane`、`timeline`、`core` 之间的接口与键盘 owner | [Arrangement 组合契约](docs/architecture/gpuix-arrangement-composition.md) |
+| 渲染器版本、构建、`@gpuix/*` 依赖、关闭拦截 | [主干自建报告](docs/research/gpuix-main-build.md) |
+| 引擎、音频播放、遥测、峰值、`ProjectBackend` | [播放图选型](docs/research/engine-playback-graph.md) 与 `apps/gpuix/src/project/adapters/README.md` |
 | 命令、工具链、HMR、原生重启或提交 | [setup](docs/agents/setup.md) |
 | 新模块、多文件修改、状态/目录/依赖调整 | [modules](docs/architecture/modules.md) |
 | 工程数据、编辑事务、保存或后端接口 | [stores](apps/web/src/pages/project/stores/README.md) 与 [adapters](apps/web/src/pages/project/adapters/README.md) |
