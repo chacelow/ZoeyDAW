@@ -80,6 +80,16 @@
 - 错 3：第一个变异（让 `size === collapsed` 的早返回失效）测试仍然全绿。继续排查（对同一组输入逐行 diff 输出）发现输出**完全相同**——这个早返回分支对该输入是冗余的，不是测试漏了。教训：变异不红不等于测试弱，先确认变异是否真的改变了行为（比对输出），再决定是否补用例，别为一个等价变异硬加测试。
 - 对：求解器的语义要与被替换的库对齐再验收。`react-resizable-panels` 4.12.3 的折叠行为是“越过折叠区中点才折叠/弹出”，A4 的求解器实测一致：A 在 delta=-200 到达 min，-260 折叠（中点 -250）；从折叠态展开，delta=40 仍为 0，60 弹到 100。
 
+## gpuix 迁移：图标和曲线不手写 SVG，跨目录导入用 `@/` 别名
+
+- 错：为了「不新增 npm 依赖」在 `DragPad/icon.tsx`、画廊、`AutomationCurveView` 里手写 `<svg>`/`<path d="…">` 字符串，并写了 121 处 `../../../` 深层相对导入；review 时没有逐文件扫描，让这些东西进了主干。
+- 对：图标用 `lucide`（web 同一套）经 `ui/controls/Icon`；曲线路径用 `d3-shape`，标记只经 `shared/svg/serialise.ts` 生成；跨目录用 `@/`。两条都由 `architecture/gpuix-imports` lint 强制（含 `--fix`），并有 81 个规则测试与 5 个变异检查。
+- 因：手写路径数据无法复核（拼错一个字符就是另一个图标），也无法和 web 的图标保持一致；「别名做不了」不成立：`paths` 在 `tsc`、`bun test`、`bun run`、`eslint` 里实测都能解析，且 `gpuix-layers` 补了别名解析，不会绕过分层。
+- 等价性：d3-shape 生成的 automation 路径与原手写路径在 2000 组随机曲线上逐坐标一致（最大差 0）。
+- review 教训：规范类问题（手写 SVG、深层相对导入、重复依赖）要用**扫描**发现，不是靠读 diff。以后每个切片合并前先跑 `pnpm exec eslint apps/gpuix/src`，并 `grep -rnE "<svg|<path" apps/gpuix/src` 看一眼。
+- 加依赖的坑：`pnpm add` 会重算 lockfile，把 `react: link:.gpuix-main/node_modules/react` 改回 19.2.8，导致 `Multiple React runtimes` 与 96 个测试失败。做法：只编辑 `package.json`，再 `pnpm install --no-frozen-lockfile`，然后 `git diff pnpm-lock.yaml` 确认只有新增行，并跑 `node scripts/gpuix-main/check.mjs --resolution`。`@types/d3-shape` 要 3.2.0 才有 `digits`。
+- 见：`docs/architecture/gpuix-ui-standards.md` 第 14 节、`tooling/eslint/gpuix-imports.js`。
+
 ## gpuix 迁移：并行提交会争用 lint-staged 的共享 stash，失败后先查再重试
 
 - 现象：多个 worktree 同时 `git commit`，lint-staged 备份阶段报 `could not write index`，提示的分支还是别的 worktree（`On main`）。
