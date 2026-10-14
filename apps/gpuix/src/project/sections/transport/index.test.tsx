@@ -119,3 +119,21 @@ test("narrow headers keep central buttons square and every control group non-ove
     projectActions.stop()
   }
 })
+
+test("held Space repeats do not toggle the transport more than once", () => {
+  const root = mount()
+  try {
+    const record = root.renderer.findByTestId("transport-record")
+    if (!record) throw new Error("Missing record")
+    root.renderer.nativeSimulateKeyDown(record.id, "space", false)
+    expect(useProjectState.getState().session.playing).toBe(true)
+    root.renderer.nativeSimulateKeyDown(record.id, "space", true)
+    root.renderer.nativeSimulateKeyDown(record.id, "space", true)
+    root.renderer.nativeSimulateKeyUp(record.id, "space")
+    expect(useProjectState.getState().session.playing).toBe(true)
+    expect(useProjectState.getState().session.recording).toBe(false)
+  } finally {
+    root.unmount()
+    projectActions.stop()
+  }
+})
