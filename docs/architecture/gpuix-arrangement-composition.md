@@ -36,6 +36,7 @@ export interface TimelineController {
   setScroll(x: number, y: number): ArrangementViewport // 同步语义：返回前已更新共享 SceneStore 的 viewport 投影，返回「接受后」的 viewport
   zoomAt(anchorBar: number, anchorPx: number, factor: number): ArrangementViewport
   fitToProject(): ArrangementViewport
+  readonly view: TimelineView // 命名的视图交互端口，仅供 ArrangementTimeline 消费（标尺、测量、滚轮、暂停跟随、minimap 高度）；组合根与 app-shell 不依赖其细项
   tick(nowMs: number): void // 由组合根的帧源（F1 合入后为原生帧回调）喂入，驱动边缘自动滚动与跟随播放
   dispose(): void
 }
