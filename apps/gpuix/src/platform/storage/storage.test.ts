@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { readBytes, resolveExternalHttpUrl, writeBytesAtomically } from "@zoeydaw/native"
-import { createSettings } from "../settings"
+import { createSettingStorage, createSettings } from "../settings"
 import { createSnapshotStorage } from "./index"
 
 const paths: string[] = []
@@ -35,6 +35,17 @@ describe("real napi storage", () => {
     settings.set({ language: "en-US", themePreset: "dark", closeBehavior: "tray" })
     expect(createSettings({ configDir: dir }).get()).toEqual({
       language: "en-US",
+      themePreset: "dark",
+      closeBehavior: "tray",
+    })
+    const localeStorage: { get(): string | null; set(locale: string): void } = createSettingStorage(
+      "language",
+      { configDir: dir }
+    )
+    localeStorage.set("zh-CN")
+    expect(localeStorage.get()).toBe("zh-CN")
+    expect(createSettings({ configDir: dir }).get()).toEqual({
+      language: "zh-CN",
       themePreset: "dark",
       closeBehavior: "tray",
     })

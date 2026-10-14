@@ -19,3 +19,18 @@ export function createSettings(options: { configDir?: string } = {}) {
     },
   }
 }
+
+export function createSettingStorage<K extends keyof UserSettings>(
+  key: K,
+  options: { configDir?: string } = {}
+) {
+  const settings = createSettings(options)
+  return {
+    get(): NonNullable<UserSettings[K]> | null {
+      return settings.get()[key] ?? null
+    },
+    set(value: NonNullable<UserSettings[K]>): void {
+      settings.set({ ...settings.get(), [key]: value })
+    },
+  }
+}
