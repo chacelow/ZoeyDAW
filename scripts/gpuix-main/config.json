@@ -1,4 +1,5 @@
 {
   "revision": "6a5c7c142ac32f9eb0caefe0121be995cfc18631",
-  "zedRevision": "c2e9f882030ca95cee55d206512a0a3ee6cd72b0"
+  "zedRevision": "c2e9f882030ca95cee55d206512a0a3ee6cd72b0",
+  "patches": ["close-guard.patch", "frame-callback.patch"]
 }

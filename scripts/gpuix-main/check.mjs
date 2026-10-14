@@ -1,15 +1,22 @@
 import { createHash } from "node:crypto"
 import { execFileSync } from "node:child_process"
-import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { createRequire } from "node:module"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(directory, "../..")
 const config = JSON.parse(readFileSync(path.join(directory, "config.json"), "utf8"))
-const patch = readFileSync(path.join(directory, "patches/close-guard.patch"), "utf8")
-const vendor = path.join(root, ".gpuix-main")
+const patches = config.patches.map(name => ({
+  name,
+  content: readFileSync(path.join(directory, "patches", name), "utf8"),
+}))
+const pendingArgument = process.argv.indexOf("--pending")
+const sourceArgument = Math.max(process.argv.indexOf("--sources"), pendingArgument)
+const vendor =
+  sourceArgument < 0 ? path.join(root, ".gpuix-main") : process.argv[sourceArgument + 1]
 const outputs = [
   "packages/native/index.js",
   "packages/native/index.d.ts",
@@ -27,6 +34,24 @@ const digest = value => createHash("sha256").update(value).digest("hex")
 const git = (directory, ...args) =>
   execFileSync("/usr/bin/git", ["-C", directory, ...args], { encoding: "utf8" }).trimEnd()
 
+function expectedSourceDiffs() {
+  const temporary = mkdtempSync(path.join(tmpdir(), "gpuix-patch-index-"))
+  const env = { ...process.env, GIT_INDEX_FILE: path.join(temporary, "index") }
+  const indexedGit = (...args) =>
+    execFileSync("/usr/bin/git", ["-C", vendor, ...args], { encoding: "utf8", env }).trimEnd()
+  try {
+    indexedGit("read-tree", config.revision)
+    const diffs = [""]
+    for (const patch of patches) {
+      indexedGit("apply", "--cached", path.join(directory, "patches", patch.name))
+      diffs.push(indexedGit("diff", "--binary", "--cached", "HEAD"))
+    }
+    return diffs
+  } finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+}
+
 try {
   if (!existsSync(vendor)) throw new Error("Missing .gpuix-main build link")
   if (git(vendor, "rev-parse", "HEAD") !== config.revision) {
@@ -35,16 +60,24 @@ try {
   if (git(path.join(vendor, "zed"), "rev-parse", "HEAD") !== config.zedRevision) {
     throw new Error(`Expected zed ${config.zedRevision}`)
   }
-  if (git(vendor, "diff", "--binary", "HEAD") !== patch.trimEnd()) {
-    throw new Error(
-      "Vendor must contain exactly the checked-in close-guard patch, with no other changes"
-    )
+  const expectedDiffs = expectedSourceDiffs()
+  const appliedCount = expectedDiffs.indexOf(git(vendor, "diff", "--binary", "HEAD"))
+  if (appliedCount === -1 || (pendingArgument === -1 && appliedCount !== patches.length)) {
+    throw new Error("Vendor must contain exactly the checked-in ordered patch series")
   }
   if (git(vendor, "ls-files", "--others", "--exclude-standard") !== "") {
     throw new Error("Refusing untracked vendor sources")
   }
   if (git(path.join(vendor, "zed"), "status", "--porcelain") !== "") {
     throw new Error("Refusing a modified zed submodule")
+  }
+  if (pendingArgument !== -1) {
+    for (const patch of patches.slice(appliedCount)) process.stdout.write(`${patch.name}\n`)
+    process.exit(0)
+  }
+  if (sourceArgument >= 0) {
+    process.stdout.write(`Applied renderer patches verified: ${config.patches.join(", ")}\n`)
+    process.exit(0)
   }
   const hashes = Object.fromEntries(
     outputs.map(output => {
@@ -57,7 +90,7 @@ try {
   const metadata = {
     revision: config.revision,
     zedRevision: config.zedRevision,
-    patch: digest(patch),
+    patches: Object.fromEntries(patches.map(patch => [patch.name, digest(patch.content)])),
     platform: process.platform,
     arch: process.arch,
     outputs: hashes,
@@ -105,7 +138,9 @@ try {
     }
     process.stdout.write(`${JSON.stringify(resolved, null, 2)}\n`)
   }
-  process.stdout.write(`gpuix ${config.revision}: patched native, host and React build verified\n`)
+  process.stdout.write(
+    `gpuix ${config.revision}: patched native, host and React build verified (${config.patches.join(", ")})\n`
+  )
 } catch (error) {
   process.stderr.write(
     `gpuix self-build prerequisite failed: ${error.message}\n` +
