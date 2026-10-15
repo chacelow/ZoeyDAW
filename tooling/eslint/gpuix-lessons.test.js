@@ -36,8 +36,23 @@ tester.run("architecture/gpuix-lessons", gpuixLessons, {
     { filename: `${src}/project/sections/footer/demo.tsx`, code: "setTimeout(() => {}, 0)" },
     // Outside the gpuix app the rule is inert.
     { filename: "/repo/apps/web/src/x.ts", code: "setInterval(() => {}, 32)" },
-    // A local function that merely shares the name is still a timer-shaped call; an unrelated property is not.
+    // An unrelated renderer getter is not an appearance override.
     { filename: `${src}/app/x.ts`, code: "const appearance = renderer.getWindowAppearance()" },
+    // Business surfaces may read design roles, 0/1 radii, and derive geometry from an inset token.
+    {
+      filename: `${src}/app/window/UnsavedCloseDialog.tsx`,
+      code: "const s = { borderRadius: theme.design.popover.radius, padding: theme.design.popover.inset, gap }",
+    },
+    { filename: `${src}/project/sections/lane/x.tsx`, code: "const s = { borderRadius: 0 }" },
+    {
+      filename: `${src}/project/sections/footer/EffectChain/DeviceCard/index.tsx`,
+      code: 'const s = { width: theme.control["--spacing-control-track"] + inset * 2 }',
+    },
+    // ui/** owns shape and is not a business surface.
+    {
+      filename: `${src}/ui/controls/Card/index.tsx`,
+      code: "const s = { borderRadius: 8, gap: gap * 2 }",
+    },
   ],
   invalid: [
     // The 32ms focus poll removed from useDividerDrag (fabe4fb) must not come back.
@@ -55,6 +70,25 @@ tester.run("architecture/gpuix-lessons", gpuixLessons, {
       filename: `${src}/app/settings/theme-mode.ts`,
       code: 'renderer.setWindowAppearance("dark")',
       errors: [{ messageId: "appearanceOverride" }],
+    },
+    // T1 cases that must not come back.
+    {
+      filename: `${src}/app/settings/ThemePresetGrid.tsx`,
+      code: 'const s = { borderRadius: theme.control["--spacing-control-track"] }',
+      errors: [{ messageId: "shapeLiteral" }],
+    },
+    {
+      filename: `${src}/project/sections/clip-edit/pattern/PatternSteps.tsx`,
+      code: "const s = { borderRadius: 2 }",
+      errors: [{ messageId: "shapeLiteral" }],
+    },
+    {
+      filename: `${src}/app/home/HomePage.tsx`,
+      code: "const s = { padding: gap * 4, gap: gap * 3 }",
+      errors: [
+        { messageId: "spacingMultiple", data: { key: "padding" } },
+        { messageId: "spacingMultiple", data: { key: "gap" } },
+      ],
     },
   ],
 })

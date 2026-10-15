@@ -138,7 +138,7 @@ export function PatternSteps({
               minWidth: 0,
               height: theme.project.midiRulerHeight,
               borderWidth: 1,
-              borderRadius: 2,
+              borderRadius: theme.design.shape.toggleRadius,
               borderColor: theme.colors.arrangementLine,
               backgroundColor: on
                 ? color
