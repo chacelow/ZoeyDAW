@@ -15,7 +15,7 @@ export function NotFoundPage() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: theme.control["--spacing-control-track-gap"] * 2,
+        gap: theme.design.spacing.stackGap,
         width: "100%",
         height: "100%",
         color: theme.colors.foreground,

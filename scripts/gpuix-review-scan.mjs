@@ -38,13 +38,6 @@ for (const file of code) {
   }
   if (/from "(\.\.\/){3,}/.test(text))
     add("deep-relative-import", file, "use the @/ alias (eslint --fix)")
-  if (/\b(setInterval|setTimeout)\s*\(/.test(text) && !/platform\/(frame|window)/.test(file)) {
-    add(
-      "js-timer",
-      file,
-      "JS timer: use platform/frame or a native event; justify in the report if intentional"
-    )
-  }
   if (
     /["'`]#[0-9a-fA-F]{3,8}["'`]|["'`](?:rgba?|oklch|hsla?)\(/.test(text) &&
     !/shared\/theme|\/tokens?\./.test(file)
@@ -56,7 +49,8 @@ for (const file of code) {
       /\b(?:gap|padding\w*|margin\w*|width|height|fontSize|borderRadius)\s*:\s*(\d{2,})\b/g
     ),
   ]
-  if (px.length)
+  // Token owner files are where literal pixel values belong, same exemption as colour literals.
+  if (px.length && !/shared\/theme|\/tokens?\./.test(file))
     add(
       "px-literal",
       file,
@@ -88,7 +82,7 @@ for (const file of source) {
     add("legacy-bounds-shim", file, "0.10 bounds shim: use renderer.getElementBounds / onLayout")
 }
 
-// Everything eslint already knows (layers, DOM globals, @/ alias, no hand-written SVG) comes from eslint, not from regexes here.
+// Everything eslint already knows (layers, DOM globals, @/ alias, no hand-written SVG, JS timers, appearance override) comes from eslint, not from regexes here.
 if (source.length > 0) {
   try {
     execFileSync(

@@ -30,24 +30,17 @@ export function useDividerDrag<Snapshot>({
     origin: number
     snapshot: Snapshot
     elementId: number
-    stop: () => void
   } | null>(null)
   const position = (event: EventPayload) => (orientation === "vertical" ? event.x : event.y)
   const cancel = useCallback(() => {
     const active = drag.current
     drag.current = null
-    if (active) {
-      active.stop()
-      onRestore.current(active.snapshot)
-    }
+    if (active) onRestore.current(active.snapshot)
   }, [])
   const complete = useCallback(() => {
     const active = drag.current
     drag.current = null
-    if (active) {
-      active.stop()
-      onFinish.current?.()
-    }
+    if (active) onFinish.current?.()
   }, [])
   useLayoutEffect(() => {
     if (disabled) complete()
@@ -80,12 +73,10 @@ export function useDividerDrag<Snapshot>({
     onMouseDown: (event: EventPayload) => {
       if (disabled || (event.button !== undefined && event.button !== 0)) return
       cancel()
-      const timer = setInterval(checkFocus, 32)
       drag.current = {
         origin: position(event) ?? 0,
         snapshot: start(),
         elementId: event.elementId,
-        stop: () => clearInterval(timer),
       }
     },
     onMouseMove: update,

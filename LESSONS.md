@@ -249,7 +249,7 @@
 
 - `onLayout`：主干有（`.changeset/on-layout.md`）。A3b 已把文本样本测量改为原生事件；旧 `getElementBounds` 定时采样已删除，缓存仍按字体与样本集持有。
 - `getElementBounds`：主干直接返回 border box。A3b 已删除旧 border/padding 修正、`readOuterBounds` 转发层及所有生产/测试调用，直接消费原生 API，几何断言未放宽。
-- `onFocus/onBlur`：A3b 已删除元素焦点采样器与 register/ref 兼容路径，由原生事件发布控件种类，原生 `focusVisible` 绘制焦点环。窗口激活由 F1 `window-active-change.patch` 经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧 50ms 激活采样已删除，不得重新轮询。
+- `onFocus/onBlur`：A3b 已删除元素焦点采样器与 register/ref 兼容路径，由原生事件发布控件种类，原生 `focusVisible` 绘制焦点环。窗口激活由 F1 `window-active-change.patch` 经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧 50ms 激活采样已删除，不得重新轮询。2026-10-15 又删掉分隔条拖动中残留的 32ms 焦点轮询（`fabe4fb`）。门禁：`architecture/gpuix-lessons` 拦截 `apps/gpuix/src` 产品代码里的 `setInterval`/`setTimeout`，例外只列在该规则的 `TIMER_ALLOWED` 中（toast 自动消失、mock 后端）。
 - 关闭拦截：D1 补丁 `setWindowShouldClose` 加 H1 补丁 `closeWindow()`，由 `platform/window/close-guard.ts` 的 `createWindowCloseGuard` 统一持有(macOS 下 `supported=true`)，用法见 `apps/gpuix/src/platform/window/README.md`。`hideWindow` 和托盘仍然没有。不得用 `process.exit()` 冒充关闭。
 - `measureText`：仍没有独立字符串测量 API。挂载不可见样本文本，由 `onLayout` 读取实测宽度，不保留定时测量作为第二 owner。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
@@ -273,7 +273,7 @@
 - 错：为了让原生标题栏跟随所选的明/暗模式，调用 GPUI 的 `set_window_appearance` / `NSApp.appearance`，同时继续用 `subscribeSystemAppearance` 实现「跟随系统」。
 - 对：「跟随系统」只在没有设置应用级外观覆盖时成立。确需让标题栏跟随模式，先换成直接读系统外观的来源(例如 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`),再加覆盖。
 - 因：`onWindowAppearanceChange` 回报的是窗口的 `effectiveAppearance`,它继承 `NSApp.appearance`;一旦覆盖,读到的就是自己设的值,系统切换不再触发变化。
-- 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。
+- 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。门禁：`architecture/gpuix-lessons` 拦截 `setWindowAppearance` 调用。
 
 ## gpuix 迁移：computer 截不到按住期间的 pressed 帧
 

@@ -60,6 +60,14 @@
 
 原生元素只为相交 Clip 挂载；B1 像素取整之后再裁剪一次，避免亚像素交集最终落到屏外仍挂载。标题实心，下半部透明；网格位于下半部填色之上。fadeMask 常驻：折叠时在标题、展开时在 body；显式曲线与锚点只在展开音频片段的下半内容悬停时出现。锚点按 Live 仲裁采用 5px 空心方点与菱形，1px 描边，内部使用 Clip 体填充色。
 
+## probe.wav 实源波形回归
+
+lane 在彩色 Clip 主体上使用 `theme.colors.arrangementClipInk`，与 Web 参考一致。clip-edit 在编辑器底色上使用 Clip 派生色，两种语境不互换。原先提出的 lane 颜色改动已撤回，`ClipCard` 与共享 `PeakColumns` 的产品绘制未改变，也未增加 lane 特判。
+
+`native-waveform.test.tsx` 使用同一个 `crates/engine/spikes/assets/probe.wav`、真实工程后端与 1280×800 Native PNG，在深浅主题分别检查左右声道包络与源峰值的独立原生 div 参考一致，并断言 lane 像素等于主题 Clip 墨色。SourceWaveform 同源对照单独检查编辑器派生色和自身 inset 语义。左声道是恒幅 ±0.4 正弦，当前缩放每像素 min/max 稳定，连续色带符合素材，不是声道几何错误。
+
+交换共享 PeakColumns 的声道偏移会使两条主题回归失败。将 lane 墨色误改为 Clip 派生色也会使两条回归失败。PNG 解码由测试专用 `shared/waveform/testing/native-png.ts` 与 SourceWaveform-runtime 共用，测试结束删除临时图片。独立 Standards 复审按撤回后的契约检查，无新增 findings。
+
 ## 产品规则与 Live 对照
 
 | 产品规则 | Live 观察 | 实现 | 差异或未验证 |
@@ -84,10 +92,10 @@
 | 命令 | 结果 |
 | --- | --- |
 | `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx -t 'fade mask between'` | 1 pass，0 fail，10 assertions；折叠→展开→再折叠 |
-| `bun test src/project/sections/arrangement/lane` | A 接入后 baseline 27 pass，0 fail |
-| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 27 pass，0 fail；12 个变异命中预期失败；源目标 SHA-256 前后相同 |
-| `bun test` | 1071 pass，1 todo，0 fail，1103833 assertions；1072 tests / 170 files |
-| lane、共享 PeakColumns 与 SourceWaveform-runtime 受影响测试 | 32 pass，0 fail，102975 assertions；7 files |
+| `bun test src/project/sections/arrangement/lane` | 实源回归后 baseline 29 pass，0 fail |
+| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 29 pass，0 fail；14 个变异命中预期失败；源目标 SHA-256 前后相同 |
+| `bun test` | A 阶段历史结果 1071 pass，1 todo，0 fail；当前交付另跑 `pnpm verify:gpuix` |
+| lane、共享 PeakColumns 与 SourceWaveform-runtime 受影响测试 | 34 pass，0 fail，103109 assertions；8 files |
 
 变异通过 Bun runtime preload 在内存替换模块，不写源文件；脚本验证预期用例确实失败，不能以语法错误代替变异被捕获。
 
@@ -105,6 +113,8 @@
 | 移除小数网格边界 overscan                |          1 |
 | 将局部网格右边界扩大到整视口             |          1 |
 | 将真实波形第 16 列渲染成静音             |          1 |
+| 交换 probe.wav 声道偏移                  |          2 |
+| 将 lane Clip 墨色误改为派生色            |          2 |
 
 F3 原生回归 `presents the latest playhead on resume and releases frame leases when stopped or unmounted` 在修复前读取到 x=96，期望最新 x=416；修复后不等待普通帧、不在测试外包 flushSync，立即读到 x=416。停止、重启、卸载同时验证播放线与订阅生命周期，单用例 1 pass、12 assertions。它验证 NativeTestRoot 的首恢复采样布局，不冒充本轮已经重做 OS 遮挡恢复窗口验收。
 
@@ -150,7 +160,26 @@ Native 归因均为 976×196、完整 200×50 文档、同一十步输入、DEV�
 
 经协调者授权，clip-edit 的 `SourceWaveform-runtime.test.tsx` 只迁移截图观察 helper。PNG 解码后读取首个立体声声道的实际列包络，原会话开关、tempo、meter 与 reopen 的 14 条断言保留。第 16 列静音变异在画面产生 1px 包络，使 `opened > 1` 失败，证明 helper 不读 quad 内部结构。修复后整套测试恢复通过。
 
-A 以 `86a9de4` 为审查固定点，由两个独立只读 reviewer 上下文分别审 Standards 与 Spec，两轴新增必修、仲裁与判断项均为 0。授权测试 helper 的后续 Standards 复审同样无 findings。不声称跨模型信号。原始六轮满量属于 A 之前，A 后的原视口满量与 OS 组合界面仍待单独验证。
+A 以 `86a9de4` 为审查固定点，由两个独立只读 reviewer 上下文分别审 Standards 与 Spec，两轴新增必修、仲裁与判断项均为 0。授权测试 helper 的后续 Standards 复审同样无 findings。不声称跨模型信号。原始六轮属于 A 之前，A 后的原视口离屏结果见下节，OS 组合界面仍待单独验证。
+
+## 2026-10-15 A 后原视口离屏结果
+
+固定单元为 `13b5267`。UTC 2026-10-15T13:58:41Z 至 2026-10-15T14:08:41Z 的 JSON 授权内，先运行 5 个 Native PNG fixture，5 pass、0 fail，再交替运行 DEV 与 production 各三轮。视口固定 976×758，工程保持 200 条轨道、每轨 50 个 Clip。全部轮与命令回执均保留，无失败，不取最好一轮。
+
+| 模式 | 轮次 | 首视图 CPU ms | CPU p50 ms | CPU p90 ms | CPU max ms | Native p90 ms | Native p99 ms | Native max ms | Native pre max ms |
+| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: |
+| development | 1 | 176.83 | 37.92 | 53.34 | 63.89 | 21.59 | 22.51 | 30.16 | 60.79 |
+| production | 1 | 61.81 | 25.19 | 35.93 | 42.87 | 16.38 | 19.97 | 21.92 | 29.58 |
+| development | 2 | 74.69 | 36.71 | 48.52 | 48.82 | 18.00 | 19.37 | 20.94 | 28.05 |
+| production | 2 | 57.93 | 25.67 | 35.81 | 41.00 | 17.93 | 20.79 | 23.71 | 27.19 |
+| development | 3 | 76.84 | 38.03 | 45.04 | 58.19 | 17.39 | 18.90 | 20.91 | 28.23 |
+| production | 3 | 74.02 | 25.07 | 33.73 | 38.85 | 17.32 | 17.59 | 20.88 | 32.94 |
+
+每轮 Native 为 29 frames、21 samples。`Native pre` 是首视图完成前累计 8 个 draw samples 的统计，包含初始化绘制，不等于单独的首次 OS presentation。初始 retained 节点从 A 前的 3615 减到 2736，滚动期间为 1632 至 3018。CPU 与 Native 指标仍超出 16ms 门槛，不能宣称滚动、缩放达标。
+
+前后 swap 使用 9668.25 至 9612.25MiB，compressor 占用 241544 至 286360 个 16KiB 页。A 前后两个时段的系统压力不同，这不是严格近邻 A/B。完整六轮、fixture、首视图统计与内存输出位于忽略文件 `evidence/verification/A-quiet-all-rounds.json.local`，SHA-256 为 `0948e0ab7d28df7c169e4e0b48fc02116e8bc4180f4f6464ac95671c358ff3d6`。
+
+协议边界：这些结果来自有限 headless `createTestRoot` 进程，固定的是 A 单元 `13b5267`，不是协调者后续指定的 `a9bc471` 主干，也不是命名 `bun --hot` 窗口验收。未将它们标为正式主干窗口通过。已同步后续主干，下一步按协调者决策拆分 production JS、commit 与 Native layout，暂不扩 Native text API。修复后另申请同协议满量和真实窗口时段。
 
 ## 2026-10-15 引用稳定增量
 

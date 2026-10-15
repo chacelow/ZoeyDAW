@@ -7,7 +7,7 @@ import {
   useAnimationFrame,
 } from "@/platform/frame"
 import { WindowKeyboardProvider } from "@/platform/keyboard"
-import { createWindowPlatform } from "@/platform/window"
+import { createWindowPlatform, LAUNCH_FOCUS } from "@/platform/window"
 import {
   getEffectiveDocument,
   projectActions,
@@ -47,7 +47,7 @@ function NativeFrames({ runtime, children }: { runtime: LaneDemoRuntime; childre
   useLayoutEffect(() => {
     if (!renderer) return
     const platform = createWindowPlatform(renderer)
-    platform.activate()
+    if (LAUNCH_FOCUS.focus) platform.activate()
     return platform.subscribeApplicationActive(active => {
       if (!active) runtime.interrupt()
     })
@@ -352,6 +352,7 @@ const root = render(
     title: `zoeydaw lane ${stress ? "200x50" : "verification"} ${appearance} ${locale}`,
     width: 1280,
     height: 800,
+    ...LAUNCH_FOCUS,
     ...runtime.keyboard.rootHandlers,
   }
 )

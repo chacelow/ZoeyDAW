@@ -82,7 +82,7 @@ function RouteErrorScreen({
   const theme = useTheme()
   const { t } = useAppTranslation()
   const detail = showDetails && error instanceof Error ? error.message : undefined
-  const gap = theme.control["--spacing-control-track-gap"]
+  const gap = theme.design.popover.gap
   return (
     <LoadErrorScreen
       testId="route-error"
@@ -102,8 +102,8 @@ function RouteErrorScreen({
             flexDirection: "column",
             gap,
             maxWidth: theme.project.controlsWidth,
-            padding: gap * 2,
-            borderRadius: gap,
+            padding: theme.design.popover.inset,
+            borderRadius: theme.design.popover.radius,
             backgroundColor: theme.colors.muted,
             color: theme.colors.mutedForeground,
           }}

@@ -4,6 +4,7 @@ import {
   architecture,
   gpuixLayers,
   gpuixImports,
+  gpuixLessons,
   publicIndex,
   uiTokens,
   correctnessProfile,
@@ -15,6 +16,7 @@ const localRules = {
     boundaries: architecture,
     "gpuix-layers": gpuixLayers,
     "gpuix-imports": gpuixImports,
+    "gpuix-lessons": gpuixLessons,
     "public-index": publicIndex,
     "ui-tokens": uiTokens,
   },
@@ -152,7 +154,11 @@ export default [
   {
     files: gpuixSource,
     plugins: { architecture: localRules },
-    rules: { "architecture/gpuix-layers": "error", "architecture/gpuix-imports": "error" },
+    rules: {
+      "architecture/gpuix-layers": "error",
+      "architecture/gpuix-imports": "error",
+      "architecture/gpuix-lessons": "error",
+    },
   },
   {
     // 唯一允许写 SVG 标记的文件;其余手写 SVG 一律由 architecture/gpuix-imports 拦截。
