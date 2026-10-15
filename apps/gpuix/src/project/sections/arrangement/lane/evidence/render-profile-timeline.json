@@ -1,0 +1,250 @@
+{
+  "timestamp": "2026-10-15T03:38:16.705Z",
+  "projectionOwner": "timeline/controller",
+  "cpuRenderAndFlush": {
+    "count": 10,
+    "medianMs": 184.46462500000007,
+    "p90Ms": 280.3061660000003,
+    "maxMs": 284.7658749999996
+  },
+  "cpuAdditionalFlush": {
+    "count": 10,
+    "medianMs": 69.57058300000017,
+    "p90Ms": 81.60129200000029,
+    "maxMs": 82.68795900000032
+  },
+  "native": {
+    "meaningfulFrames": true,
+    "stats": {
+      "frames": 29,
+      "samples": 21,
+      "currentMs": 77.20362091064453,
+      "p90Ms": 83.56336975097656,
+      "p99Ms": 92.16766357421875,
+      "maxMs": 93.96220397949219
+    }
+  },
+  "initial": {
+    "retained": 14716,
+    "mountedClips": 279,
+    "waveformRoots": 93,
+    "waveformColumnNodes": 2976,
+    "types": {
+      "div": 14065,
+      "svg": 93,
+      "text": 558
+    }
+  },
+  "steps": [
+    {
+      "step": "horizontal",
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 480,
+        "scrollY": 0,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 279,
+      "retained": 14716,
+      "waveformRoots": 93,
+      "waveformColumnNodes": 2976,
+      "rows": 10,
+      "clipRenders": 279,
+      "reactMs": 31.480349000018123,
+      "peakClips": 45,
+      "peakCalls": 45,
+      "duplicatePeakQueries": 0
+    },
+    {
+      "step": "vertical",
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 480,
+        "scrollY": 360,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 279,
+      "retained": 14716,
+      "waveformRoots": 93,
+      "waveformColumnNodes": 2976,
+      "rows": 10,
+      "clipRenders": 279,
+      "reactMs": 28.217333000014833,
+      "peakClips": 62,
+      "peakCalls": 62,
+      "duplicatePeakQueries": 0
+    },
+    {
+      "step": "horizontal",
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 816,
+        "scrollY": 360,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 216,
+      "retained": 12655,
+      "waveformRoots": 72,
+      "waveformColumnNodes": 2304,
+      "rows": 10,
+      "clipRenders": 216,
+      "reactMs": 21.39522399997304,
+      "peakClips": 12,
+      "peakCalls": 12,
+      "duplicatePeakQueries": 0
+    },
+    {
+      "step": "vertical",
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 816,
+        "scrollY": 780,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 216,
+      "retained": 12655,
+      "waveformRoots": 72,
+      "waveformColumnNodes": 2304,
+      "rows": 10,
+      "clipRenders": 216,
+      "reactMs": 28.345445000051768,
+      "peakClips": 48,
+      "peakCalls": 48,
+      "duplicatePeakQueries": 0
+    },
+    {
+      "step": "zoomIn",
+      "viewport": {
+        "pxPerBar": 10,
+        "scrollX": 1142,
+        "scrollY": 780,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 189,
+      "retained": 11429,
+      "waveformRoots": 63,
+      "waveformColumnNodes": 2520,
+      "rows": 10,
+      "clipRenders": 189,
+      "reactMs": 17.66832599995996,
+      "peakClips": 63,
+      "peakCalls": 63,
+      "duplicatePeakQueries": 0
+    },
+    {
+      "step": "horizontal",
+      "viewport": {
+        "pxPerBar": 10,
+        "scrollX": 1264,
+        "scrollY": 780,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 162,
+      "retained": 10430,
+      "waveformRoots": 54,
+      "waveformColumnNodes": 2160,
+      "rows": 10,
+      "clipRenders": 162,
+      "reactMs": 10.303892000034466,
+      "peakClips": 0,
+      "peakCalls": 0,
+      "duplicatePeakQueries": 0
+    },
+    {
+      "step": "vertical",
+      "viewport": {
+        "pxPerBar": 10,
+        "scrollX": 1264,
+        "scrollY": 340,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 180,
+      "retained": 11305,
+      "waveformRoots": 54,
+      "waveformColumnNodes": 2160,
+      "rows": 11,
+      "clipRenders": 180,
+      "reactMs": 17.057118000016544,
+      "peakClips": 36,
+      "peakCalls": 36,
+      "duplicatePeakQueries": 0
+    },
+    {
+      "step": "zoomOut",
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 816,
+        "scrollY": 340,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 240,
+      "retained": 13783,
+      "waveformRoots": 72,
+      "waveformColumnNodes": 2304,
+      "rows": 11,
+      "clipRenders": 240,
+      "reactMs": 18.042397999997775,
+      "peakClips": 72,
+      "peakCalls": 72,
+      "duplicatePeakQueries": 15
+    },
+    {
+      "step": "horizontal",
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 316,
+        "scrollY": 340,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 310,
+      "retained": 15963,
+      "waveformRoots": 93,
+      "waveformColumnNodes": 2952,
+      "rows": 11,
+      "clipRenders": 310,
+      "reactMs": 20.647468999986813,
+      "peakClips": 51,
+      "peakCalls": 51,
+      "duplicatePeakQueries": 38
+    },
+    {
+      "step": "vertical",
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 316,
+        "scrollY": 0,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "mountedClips": 279,
+      "retained": 14672,
+      "waveformRoots": 93,
+      "waveformColumnNodes": 2952,
+      "rows": 10,
+      "clipRenders": 279,
+      "reactMs": 20.836447999948177,
+      "peakClips": 62,
+      "peakCalls": 62,
+      "duplicatePeakQueries": 60
+    }
+  ]
+}

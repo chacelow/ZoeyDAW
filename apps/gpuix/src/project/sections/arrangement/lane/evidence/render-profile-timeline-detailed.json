@@ -1,0 +1,1198 @@
+{
+  "event": "lane-render-cost",
+  "timestamp": "2026-10-15T03:47:41.922Z",
+  "viewport": {
+    "width": 976,
+    "height": 758
+  },
+  "editableTracks": 200,
+  "clips": 10000,
+  "backend": "ready",
+  "nativePeakSamples": 128,
+  "timingScope": "headless CPU React render + native flush; not real-window GPU frame time",
+  "projectionOwner": "timeline/controller",
+  "reactProfilingEnabled": true,
+  "cpuRenderAndFlush": {
+    "count": 10,
+    "medianMs": 275.65033300000005,
+    "p90Ms": 390.7894580000002,
+    "maxMs": 818.355
+  },
+  "cpuAdditionalFlush": {
+    "count": 10,
+    "medianMs": 83.10016700000051,
+    "p90Ms": 135.90370900000016,
+    "maxMs": 224.9174170000001
+  },
+  "retained": {
+    "initial": 14716,
+    "min": 10430,
+    "max": 15963
+  },
+  "initial": {
+    "renderAndFlushMs": 587.7880829999999,
+    "additionalFlushMs": 258.254375,
+    "viewport": {
+      "pxPerBar": 8,
+      "scrollX": 0,
+      "scrollY": 0,
+      "width": 976,
+      "height": 758,
+      "dpr": 1
+    },
+    "retained": 14716,
+    "mountedClips": 279,
+    "mountedRows": 10,
+    "waveformRoots": 93,
+    "waveformColumnNodes": 2976,
+    "types": {
+      "div": 14065,
+      "svg": 93,
+      "text": 558
+    },
+    "profile": {
+      "rows": [
+        {
+          "trackId": "track-d118e0a2-a01f-487c-8388-4bf2e9143728",
+          "name": "Track 001",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 41.757226999995964
+        },
+        {
+          "trackId": "track-26cda240-d99f-455b-afbc-d2c2343f143f",
+          "name": "Track 002",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 6.516108999999915
+        },
+        {
+          "trackId": "track-6aefb681-dc01-4861-8f65-a8b274e59090",
+          "name": "Track 003",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 23.140455000000884
+        },
+        {
+          "trackId": "track-a2460355-dd51-4515-a457-1606b21c3410",
+          "name": "Track 004",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 59.48805799999991
+        },
+        {
+          "trackId": "track-486b4bbb-9659-4a3a-b374-f1320e2c505d",
+          "name": "Track 005",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 5.465982999999596
+        },
+        {
+          "trackId": "track-0aa4ffcd-ebf1-4ea9-8f7d-f9bb7b9951f2",
+          "name": "Track 006",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 14.307125999996856
+        },
+        {
+          "trackId": "track-41676700-f425-4720-8868-842b1f9f02aa",
+          "name": "Track 007",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 28.387359999999262
+        },
+        {
+          "trackId": "track-64bc7a1a-4c5a-4de1-a321-6aa4c0b961cf",
+          "name": "Track 008",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 2.1142030000002023
+        },
+        {
+          "trackId": "track-849c4470-c787-4904-872a-ccf6c0a4396e",
+          "name": "Track 009",
+          "renders": 1,
+          "clipRenders": 31,
+          "actualMs": 2.000193999998828
+        },
+        {
+          "trackId": "main",
+          "name": "Main",
+          "renders": 1,
+          "clipRenders": 0,
+          "actualMs": 0.7714590000001635
+        }
+      ],
+      "rowRenders": 10,
+      "clipRenders": 279,
+      "actualReactMs": 183.94817399999158,
+      "peakCalls": 93,
+      "retainedDuplicateQueries": 0,
+      "remountedDuplicateQueries": 0
+    }
+  },
+  "steps": [
+    {
+      "step": "horizontal",
+      "renderAndFlushMs": 818.355,
+      "additionalFlushMs": 224.9174170000001,
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 480,
+        "scrollY": 0,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 14716,
+      "mountedClips": 279,
+      "mountedRows": 10,
+      "waveformRoots": 93,
+      "waveformColumnNodes": 2976,
+      "types": {
+        "div": 14065,
+        "svg": 93,
+        "text": 558
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-d118e0a2-a01f-487c-8388-4bf2e9143728",
+            "name": "Track 001",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 46.46230199999036
+          },
+          {
+            "trackId": "track-26cda240-d99f-455b-afbc-d2c2343f143f",
+            "name": "Track 002",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 7.534795000005488
+          },
+          {
+            "trackId": "track-6aefb681-dc01-4861-8f65-a8b274e59090",
+            "name": "Track 003",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 10.252326000000267
+          },
+          {
+            "trackId": "track-a2460355-dd51-4515-a457-1606b21c3410",
+            "name": "Track 004",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 44.44163999998955
+          },
+          {
+            "trackId": "track-486b4bbb-9659-4a3a-b374-f1320e2c505d",
+            "name": "Track 005",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 6.3100690000051145
+          },
+          {
+            "trackId": "track-0aa4ffcd-ebf1-4ea9-8f7d-f9bb7b9951f2",
+            "name": "Track 006",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.2373830000033195
+          },
+          {
+            "trackId": "track-41676700-f425-4720-8868-842b1f9f02aa",
+            "name": "Track 007",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 7.996540999988156
+          },
+          {
+            "trackId": "track-64bc7a1a-4c5a-4de1-a321-6aa4c0b961cf",
+            "name": "Track 008",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 4.866344000005029
+          },
+          {
+            "trackId": "track-849c4470-c787-4904-872a-ccf6c0a4396e",
+            "name": "Track 009",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 6.948679999995875
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 11.416810999998688
+          }
+        ],
+        "rowRenders": 10,
+        "clipRenders": 279,
+        "actualReactMs": 148.46689099998184,
+        "peakCalls": 45,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 0
+      }
+    },
+    {
+      "step": "vertical",
+      "renderAndFlushMs": 275.65033300000005,
+      "additionalFlushMs": 105.29016700000011,
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 480,
+        "scrollY": 360,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 14716,
+      "mountedClips": 279,
+      "mountedRows": 10,
+      "waveformRoots": 93,
+      "waveformColumnNodes": 2976,
+      "types": {
+        "div": 14065,
+        "text": 558,
+        "svg": 93
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-0aa4ffcd-ebf1-4ea9-8f7d-f9bb7b9951f2",
+            "name": "Track 006",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.365443999992749
+          },
+          {
+            "trackId": "track-41676700-f425-4720-8868-842b1f9f02aa",
+            "name": "Track 007",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.9915540000069996
+          },
+          {
+            "trackId": "track-64bc7a1a-4c5a-4de1-a321-6aa4c0b961cf",
+            "name": "Track 008",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 5.149959999987914
+          },
+          {
+            "trackId": "track-849c4470-c787-4904-872a-ccf6c0a4396e",
+            "name": "Track 009",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 5.156328000008216
+          },
+          {
+            "trackId": "track-72c8b80c-cbe7-489f-b59e-a20c9a584889",
+            "name": "Track 010",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 17.06714899999224
+          },
+          {
+            "trackId": "track-10d9719e-6c9f-45c5-bf20-ade027d236aa",
+            "name": "Track 011",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 3.092574000001605
+          },
+          {
+            "trackId": "track-0cdcb1a8-2d1b-4180-b0ac-7fb589c4a7b1",
+            "name": "Track 012",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 5.266572999991695
+          },
+          {
+            "trackId": "track-f7745d33-5c1d-49d0-9ec0-1dcaf207e080",
+            "name": "Track 013",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 3.7670250000119267
+          },
+          {
+            "trackId": "track-fc0a5829-3df3-4f7e-9107-a0a7c9c9cfae",
+            "name": "Track 014",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 3.2756379999805176
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 1.4528260000161026
+          }
+        ],
+        "rowRenders": 10,
+        "clipRenders": 279,
+        "actualReactMs": 49.585070999989966,
+        "peakCalls": 62,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 0
+      }
+    },
+    {
+      "step": "horizontal",
+      "renderAndFlushMs": 278.67408300000034,
+      "additionalFlushMs": 72.69795900000008,
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 816,
+        "scrollY": 360,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 12655,
+      "mountedClips": 216,
+      "mountedRows": 10,
+      "waveformRoots": 72,
+      "waveformColumnNodes": 2304,
+      "types": {
+        "div": 12151,
+        "text": 432,
+        "svg": 72
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-0aa4ffcd-ebf1-4ea9-8f7d-f9bb7b9951f2",
+            "name": "Track 006",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 3.561866999998074
+          },
+          {
+            "trackId": "track-41676700-f425-4720-8868-842b1f9f02aa",
+            "name": "Track 007",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 10.322599000005539
+          },
+          {
+            "trackId": "track-64bc7a1a-4c5a-4de1-a321-6aa4c0b961cf",
+            "name": "Track 008",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 2.2366839999835975
+          },
+          {
+            "trackId": "track-849c4470-c787-4904-872a-ccf6c0a4396e",
+            "name": "Track 009",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 4.388162000018838
+          },
+          {
+            "trackId": "track-72c8b80c-cbe7-489f-b59e-a20c9a584889",
+            "name": "Track 010",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 2.3124519999933
+          },
+          {
+            "trackId": "track-10d9719e-6c9f-45c5-bf20-ade027d236aa",
+            "name": "Track 011",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.6678289999981644
+          },
+          {
+            "trackId": "track-0cdcb1a8-2d1b-4180-b0ac-7fb589c4a7b1",
+            "name": "Track 012",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 2.759118000016315
+          },
+          {
+            "trackId": "track-f7745d33-5c1d-49d0-9ec0-1dcaf207e080",
+            "name": "Track 013",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 6.341243999998369
+          },
+          {
+            "trackId": "track-fc0a5829-3df3-4f7e-9107-a0a7c9c9cfae",
+            "name": "Track 014",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 4.677312000008442
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 0.7717820000020765
+          }
+        ],
+        "rowRenders": 10,
+        "clipRenders": 216,
+        "actualReactMs": 39.039049000022715,
+        "peakCalls": 12,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 0
+      }
+    },
+    {
+      "step": "vertical",
+      "renderAndFlushMs": 127.12462499999947,
+      "additionalFlushMs": 78.4106670000001,
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 816,
+        "scrollY": 780,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 12655,
+      "mountedClips": 216,
+      "mountedRows": 10,
+      "waveformRoots": 72,
+      "waveformColumnNodes": 2304,
+      "types": {
+        "div": 12151,
+        "text": 432,
+        "svg": 72
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-0cdcb1a8-2d1b-4180-b0ac-7fb589c4a7b1",
+            "name": "Track 012",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.5126159999917945
+          },
+          {
+            "trackId": "track-f7745d33-5c1d-49d0-9ec0-1dcaf207e080",
+            "name": "Track 013",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.3734340000037264
+          },
+          {
+            "trackId": "track-fc0a5829-3df3-4f7e-9107-a0a7c9c9cfae",
+            "name": "Track 014",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.1550879999876997
+          },
+          {
+            "trackId": "track-a383b1eb-8df5-4467-9b4a-2282efbec50d",
+            "name": "Track 015",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.7177289999790446
+          },
+          {
+            "trackId": "track-48513a43-c188-4266-af71-677be28c5696",
+            "name": "Track 016",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 5.053499000022384
+          },
+          {
+            "trackId": "track-0a1597aa-46e7-4b29-a176-37da0acc216a",
+            "name": "Track 017",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.5257480000118449
+          },
+          {
+            "trackId": "track-c94cc635-a81c-475a-93e5-5259a99b6229",
+            "name": "Track 018",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.501291000016863
+          },
+          {
+            "trackId": "track-473fbe44-3c93-4a52-bf5c-1631c94d7e08",
+            "name": "Track 019",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 3.559186000002228
+          },
+          {
+            "trackId": "track-83d0375d-5e1d-48fe-9e1b-7c0413e2ace9",
+            "name": "Track 020",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.7010509999972783
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 0.5457120000037321
+          }
+        ],
+        "rowRenders": 10,
+        "clipRenders": 216,
+        "actualReactMs": 19.645354000016596,
+        "peakCalls": 48,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 0
+      }
+    },
+    {
+      "step": "zoomIn",
+      "renderAndFlushMs": 390.7894580000002,
+      "additionalFlushMs": 66.2669590000005,
+      "viewport": {
+        "pxPerBar": 10,
+        "scrollX": 1142,
+        "scrollY": 780,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 11429,
+      "mountedClips": 189,
+      "mountedRows": 10,
+      "waveformRoots": 63,
+      "waveformColumnNodes": 2520,
+      "types": {
+        "div": 10988,
+        "text": 378,
+        "svg": 63
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-0cdcb1a8-2d1b-4180-b0ac-7fb589c4a7b1",
+            "name": "Track 012",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 2.1121350000112216
+          },
+          {
+            "trackId": "track-f7745d33-5c1d-49d0-9ec0-1dcaf207e080",
+            "name": "Track 013",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 5.498900999985381
+          },
+          {
+            "trackId": "track-fc0a5829-3df3-4f7e-9107-a0a7c9c9cfae",
+            "name": "Track 014",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 2.119652000003043
+          },
+          {
+            "trackId": "track-a383b1eb-8df5-4467-9b4a-2282efbec50d",
+            "name": "Track 015",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 1.8189729999967312
+          },
+          {
+            "trackId": "track-48513a43-c188-4266-af71-677be28c5696",
+            "name": "Track 016",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 2.870342999989589
+          },
+          {
+            "trackId": "track-0a1597aa-46e7-4b29-a176-37da0acc216a",
+            "name": "Track 017",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 1.4203009999982896
+          },
+          {
+            "trackId": "track-c94cc635-a81c-475a-93e5-5259a99b6229",
+            "name": "Track 018",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 1.3601069999986066
+          },
+          {
+            "trackId": "track-473fbe44-3c93-4a52-bf5c-1631c94d7e08",
+            "name": "Track 019",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 8.9620909999976
+          },
+          {
+            "trackId": "track-83d0375d-5e1d-48fe-9e1b-7c0413e2ace9",
+            "name": "Track 020",
+            "renders": 1,
+            "clipRenders": 21,
+            "actualMs": 6.161101000004237
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 0.5877469999923051
+          }
+        ],
+        "rowRenders": 10,
+        "clipRenders": 189,
+        "actualReactMs": 32.911350999977,
+        "peakCalls": 63,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 0
+      }
+    },
+    {
+      "step": "horizontal",
+      "renderAndFlushMs": 304.94508399999995,
+      "additionalFlushMs": 56.64637500000026,
+      "viewport": {
+        "pxPerBar": 10,
+        "scrollX": 1264,
+        "scrollY": 780,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 10430,
+      "mountedClips": 162,
+      "mountedRows": 10,
+      "waveformRoots": 54,
+      "waveformColumnNodes": 2160,
+      "types": {
+        "div": 10052,
+        "text": 324,
+        "svg": 54
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-0cdcb1a8-2d1b-4180-b0ac-7fb589c4a7b1",
+            "name": "Track 012",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 16.840997999991487
+          },
+          {
+            "trackId": "track-f7745d33-5c1d-49d0-9ec0-1dcaf207e080",
+            "name": "Track 013",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 23.20810600000823
+          },
+          {
+            "trackId": "track-fc0a5829-3df3-4f7e-9107-a0a7c9c9cfae",
+            "name": "Track 014",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.3584029999765335
+          },
+          {
+            "trackId": "track-a383b1eb-8df5-4467-9b4a-2282efbec50d",
+            "name": "Track 015",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.2251269999951546
+          },
+          {
+            "trackId": "track-48513a43-c188-4266-af71-677be28c5696",
+            "name": "Track 016",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 24.022314999997434
+          },
+          {
+            "trackId": "track-0a1597aa-46e7-4b29-a176-37da0acc216a",
+            "name": "Track 017",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 6.9137099999952625
+          },
+          {
+            "trackId": "track-c94cc635-a81c-475a-93e5-5259a99b6229",
+            "name": "Track 018",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 7.019440999981271
+          },
+          {
+            "trackId": "track-473fbe44-3c93-4a52-bf5c-1631c94d7e08",
+            "name": "Track 019",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.268045999975584
+          },
+          {
+            "trackId": "track-83d0375d-5e1d-48fe-9e1b-7c0413e2ace9",
+            "name": "Track 020",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.3782740000024205
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 4.051868999990802
+          }
+        ],
+        "rowRenders": 10,
+        "clipRenders": 162,
+        "actualReactMs": 87.28628899991418,
+        "peakCalls": 0,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 0
+      }
+    },
+    {
+      "step": "vertical",
+      "renderAndFlushMs": 139.78829200000018,
+      "additionalFlushMs": 135.90370900000016,
+      "viewport": {
+        "pxPerBar": 10,
+        "scrollX": 1264,
+        "scrollY": 340,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 11305,
+      "mountedClips": 180,
+      "mountedRows": 11,
+      "waveformRoots": 54,
+      "waveformColumnNodes": 2160,
+      "types": {
+        "div": 10891,
+        "text": 360,
+        "svg": 54
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-486b4bbb-9659-4a3a-b374-f1320e2c505d",
+            "name": "Track 005",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.7659790000061548
+          },
+          {
+            "trackId": "track-0aa4ffcd-ebf1-4ea9-8f7d-f9bb7b9951f2",
+            "name": "Track 006",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.693044000017835
+          },
+          {
+            "trackId": "track-41676700-f425-4720-8868-842b1f9f02aa",
+            "name": "Track 007",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 3.1267499999876236
+          },
+          {
+            "trackId": "track-64bc7a1a-4c5a-4de1-a321-6aa4c0b961cf",
+            "name": "Track 008",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.5127840000131982
+          },
+          {
+            "trackId": "track-849c4470-c787-4904-872a-ccf6c0a4396e",
+            "name": "Track 009",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.563346000002639
+          },
+          {
+            "trackId": "track-72c8b80c-cbe7-489f-b59e-a20c9a584889",
+            "name": "Track 010",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 3.1702060000316123
+          },
+          {
+            "trackId": "track-10d9719e-6c9f-45c5-bf20-ade027d236aa",
+            "name": "Track 011",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.58904299999449
+          },
+          {
+            "trackId": "track-0cdcb1a8-2d1b-4180-b0ac-7fb589c4a7b1",
+            "name": "Track 012",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.933984999981476
+          },
+          {
+            "trackId": "track-f7745d33-5c1d-49d0-9ec0-1dcaf207e080",
+            "name": "Track 013",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.387060000008205
+          },
+          {
+            "trackId": "track-fc0a5829-3df3-4f7e-9107-a0a7c9c9cfae",
+            "name": "Track 014",
+            "renders": 1,
+            "clipRenders": 18,
+            "actualMs": 1.5082020000099874
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 0.4813759999951799
+          }
+        ],
+        "rowRenders": 11,
+        "clipRenders": 180,
+        "actualReactMs": 19.7317750000484,
+        "peakCalls": 36,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 0
+      }
+    },
+    {
+      "step": "zoomOut",
+      "renderAndFlushMs": 368.10491600000023,
+      "additionalFlushMs": 83.1548329999996,
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 816,
+        "scrollY": 340,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 13783,
+      "mountedClips": 240,
+      "mountedRows": 11,
+      "waveformRoots": 72,
+      "waveformColumnNodes": 2304,
+      "types": {
+        "div": 13231,
+        "text": 480,
+        "svg": 72
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-486b4bbb-9659-4a3a-b374-f1320e2c505d",
+            "name": "Track 005",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.7316249999876163
+          },
+          {
+            "trackId": "track-0aa4ffcd-ebf1-4ea9-8f7d-f9bb7b9951f2",
+            "name": "Track 006",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.7284739999804515
+          },
+          {
+            "trackId": "track-41676700-f425-4720-8868-842b1f9f02aa",
+            "name": "Track 007",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 8.717564000053244
+          },
+          {
+            "trackId": "track-64bc7a1a-4c5a-4de1-a321-6aa4c0b961cf",
+            "name": "Track 008",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 3.864570000020649
+          },
+          {
+            "trackId": "track-849c4470-c787-4904-872a-ccf6c0a4396e",
+            "name": "Track 009",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 3.6423519999971177
+          },
+          {
+            "trackId": "track-72c8b80c-cbe7-489f-b59e-a20c9a584889",
+            "name": "Track 010",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 7.608121999975992
+          },
+          {
+            "trackId": "track-10d9719e-6c9f-45c5-bf20-ade027d236aa",
+            "name": "Track 011",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 2.8660109999927954
+          },
+          {
+            "trackId": "track-0cdcb1a8-2d1b-4180-b0ac-7fb589c4a7b1",
+            "name": "Track 012",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 1.3903919999875143
+          },
+          {
+            "trackId": "track-f7745d33-5c1d-49d0-9ec0-1dcaf207e080",
+            "name": "Track 013",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 6.586944999995467
+          },
+          {
+            "trackId": "track-fc0a5829-3df3-4f7e-9107-a0a7c9c9cfae",
+            "name": "Track 014",
+            "renders": 1,
+            "clipRenders": 24,
+            "actualMs": 3.29222700000264
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 1.4471969999967769
+          }
+        ],
+        "rowRenders": 11,
+        "clipRenders": 240,
+        "actualReactMs": 42.875478999990264,
+        "peakCalls": 72,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 15
+      }
+    },
+    {
+      "step": "horizontal",
+      "renderAndFlushMs": 245.4262920000001,
+      "additionalFlushMs": 83.10016700000051,
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 316,
+        "scrollY": 340,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 15963,
+      "mountedClips": 310,
+      "mountedRows": 11,
+      "waveformRoots": 93,
+      "waveformColumnNodes": 2952,
+      "types": {
+        "div": 15250,
+        "text": 620,
+        "svg": 93
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-486b4bbb-9659-4a3a-b374-f1320e2c505d",
+            "name": "Track 005",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.0954259999998612
+          },
+          {
+            "trackId": "track-0aa4ffcd-ebf1-4ea9-8f7d-f9bb7b9951f2",
+            "name": "Track 006",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.7965190000013536
+          },
+          {
+            "trackId": "track-41676700-f425-4720-8868-842b1f9f02aa",
+            "name": "Track 007",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.998867000032078
+          },
+          {
+            "trackId": "track-64bc7a1a-4c5a-4de1-a321-6aa4c0b961cf",
+            "name": "Track 008",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.5866599999862956
+          },
+          {
+            "trackId": "track-849c4470-c787-4904-872a-ccf6c0a4396e",
+            "name": "Track 009",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.5184139999819308
+          },
+          {
+            "trackId": "track-72c8b80c-cbe7-489f-b59e-a20c9a584889",
+            "name": "Track 010",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.4596460000011575
+          },
+          {
+            "trackId": "track-10d9719e-6c9f-45c5-bf20-ade027d236aa",
+            "name": "Track 011",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.5540890000256695
+          },
+          {
+            "trackId": "track-0cdcb1a8-2d1b-4180-b0ac-7fb589c4a7b1",
+            "name": "Track 012",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.5857750000004671
+          },
+          {
+            "trackId": "track-f7745d33-5c1d-49d0-9ec0-1dcaf207e080",
+            "name": "Track 013",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 3.9007029999975202
+          },
+          {
+            "trackId": "track-fc0a5829-3df3-4f7e-9107-a0a7c9c9cfae",
+            "name": "Track 014",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.5666519999804223
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 0.6462589999973716
+          }
+        ],
+        "rowRenders": 11,
+        "clipRenders": 310,
+        "actualReactMs": 22.709010000004128,
+        "peakCalls": 51,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 38
+      }
+    },
+    {
+      "step": "vertical",
+      "renderAndFlushMs": 161.16354200000023,
+      "additionalFlushMs": 84.11341700000048,
+      "viewport": {
+        "pxPerBar": 8,
+        "scrollX": 316,
+        "scrollY": 0,
+        "width": 976,
+        "height": 758,
+        "dpr": 1
+      },
+      "retained": 14672,
+      "mountedClips": 279,
+      "mountedRows": 10,
+      "waveformRoots": 93,
+      "waveformColumnNodes": 2952,
+      "types": {
+        "div": 14021,
+        "svg": 93,
+        "text": 558
+      },
+      "profile": {
+        "rows": [
+          {
+            "trackId": "track-d118e0a2-a01f-487c-8388-4bf2e9143728",
+            "name": "Track 001",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 4.75258300000587
+          },
+          {
+            "trackId": "track-26cda240-d99f-455b-afbc-d2c2343f143f",
+            "name": "Track 002",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.0993119999920964
+          },
+          {
+            "trackId": "track-6aefb681-dc01-4861-8f65-a8b274e59090",
+            "name": "Track 003",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.0452459999969506
+          },
+          {
+            "trackId": "track-a2460355-dd51-4515-a457-1606b21c3410",
+            "name": "Track 004",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 4.141075000026831
+          },
+          {
+            "trackId": "track-486b4bbb-9659-4a3a-b374-f1320e2c505d",
+            "name": "Track 005",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 2.0050689999688984
+          },
+          {
+            "trackId": "track-0aa4ffcd-ebf1-4ea9-8f7d-f9bb7b9951f2",
+            "name": "Track 006",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.7420899999979156
+          },
+          {
+            "trackId": "track-41676700-f425-4720-8868-842b1f9f02aa",
+            "name": "Track 007",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.588909999990392
+          },
+          {
+            "trackId": "track-64bc7a1a-4c5a-4de1-a321-6aa4c0b961cf",
+            "name": "Track 008",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.3204569999843443
+          },
+          {
+            "trackId": "track-849c4470-c787-4904-872a-ccf6c0a4396e",
+            "name": "Track 009",
+            "renders": 1,
+            "clipRenders": 31,
+            "actualMs": 1.3533929999866814
+          },
+          {
+            "trackId": "main",
+            "name": "Main",
+            "renders": 1,
+            "clipRenders": 0,
+            "actualMs": 0.5233090000028824
+          }
+        ],
+        "rowRenders": 10,
+        "clipRenders": 279,
+        "actualReactMs": 21.571443999952862,
+        "peakCalls": 62,
+        "retainedDuplicateQueries": 0,
+        "remountedDuplicateQueries": 60
+      }
+    }
+  ],
+  "native": {
+    "meaningfulFrames": true,
+    "stats": {
+      "frames": 29,
+      "samples": 21,
+      "currentMs": 83.15816497802734,
+      "p90Ms": 220.7906951904297,
+      "p99Ms": 286.9373474121094,
+      "maxMs": 319.5871887207031
+    }
+  }
+}
