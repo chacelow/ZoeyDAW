@@ -485,7 +485,7 @@ node scripts/gpuix-main/check.mjs --resolution
 
 构建只允许固定 SHA、固定 zed SHA 与仓库中的 `patches/close-guard.patch`，拒绝额外 tracked diff、untracked 源码与 dirty zed。已应用的补丁可重复构建，不重复 apply。外置 `.build-lock` 确保同一 vendor 同时只有一个构建 owner；中断留下锁目录时，先确认原构建已结束，再移除空锁目录。`check.mjs` 校验补丁 diff、平台与产物 SHA-256 manifest，拒绝源码或产物发生变化的旧构建。
 
-关闭补丁来自 A6 附录，纳入版本管理后由干净 checkout 应用。它仍只适用于 macOS embedded loop，未实现 Windows/Linux 的跨线程关闭流程、handler 清除或异步确认。`WindowCloseGuard.supported` 没有被改成 true。上游完整 Apache-2.0 LICENSE 与 THIRD_PARTY_NOTICES 原文保存在根 `THIRD_PARTY_NOTICES`。
+关闭补丁来自 A6 附录，纳入版本管理后由干净 checkout 应用。它仍只适用于 macOS embedded loop，未实现 Windows/Linux 的跨线程关闭流程、handler 清除或异步确认。`WindowCloseGuard.supported` 没有被改成 true(后由 H1 接通，见「H1 窗口外观与程序化关闭」)。上游完整 Apache-2.0 LICENSE 与 THIRD_PARTY_NOTICES 原文保存在根 `THIRD_PARTY_NOTICES`。
 
 ### 升级到下一个主干 SHA
 
@@ -728,6 +728,7 @@ D1 指定的依赖切换、面板测量替换、键盘订阅端口均已实现�
 | `anchored-center.patch` | `native/src/custom_elements/anchored.rs` | 仅无 position 的 snap trigger-flex 路径让 flex 独占交叉轴居中 |
 | `select-trigger-space.patch` | `react/src/components/select.tsx` | `activateOnSpace` 默认 true，尊重 caller `defaultPrevented` |
 | `window-active-change.patch` | `native/src/renderer.rs`、`native/index.d.ts`、`native/js/host.ts` | GPUI 原生窗口激活观察，异步 bool 回调 |
+| `window-appearance-close.patch`(H1) | `native/src/renderer.rs`、`native/index.d.ts`、`native/js/host.ts` | 窗口明暗外观观察；`closeWindow()` 不经否决关闭，见「H1 窗口外观与程序化关闭」 |
 
 前置 `close-guard.patch` 保持 D1 的关闭契约。新增补丁不改变两个固定 SHA，没有新增依赖。
 
@@ -890,7 +891,7 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 | 接口 | 契约 |
 | --- | --- |
 | `onWindowAppearanceChange(callback \| null)` | 基于 GPUI `observe_window_appearance`。第一次回调异步回报当前值，之后回报变化。传 null 释放 observer。弱、非阻塞 TSFN，不让进程保活。`VibrantLight`/`VibrantDark` 归并为 `"light"`/`"dark"` |
-| `closeWindow()` | 调用 `Window::remove_window()`，**不**经过 `setWindowShouldClose`。在 `QuitMode::LastWindowClosed` 下最后一个窗口关闭即 `cx.quit()`，`tick()` 返回 false，JS 退出。不能在 `setWindowShouldClose` 回调里同步调用：AppKit 询问期间 GPUI 已被借用 |
+| `closeWindow()` | 调用 `Window::remove_window()`，**不**经过 `setWindowShouldClose`。在 `QuitMode::LastWindowClosed` 下最后一个窗口关闭即 `cx.quit()`，`tick()` 返回 false，JS 退出。禁止在 `setWindowShouldClose` 回调里同步调用：AppKit 询问期间 GPUI `App` 已被借用，再次 `borrow_mut` 会 panic，而且发生在 AppKit 的 FFI 回调里，可能直接 abort 进程。`platform/window` 守卫会在这种情况下抛错拦截 |
 | `NativeRenderer` | host 的 Pick 列表补上 `onWindowAppearanceChange`、`setWindowShouldClose`、`closeWindow`，`platform/window` 的结构端口在编译期与它核对 |
 
 macOS 直接更新 view；Windows、Linux、FreeBSD 走 UI command 队列，与激活接口相同，但这三个平台没有实跑。
@@ -908,7 +909,7 @@ TS 侧：`createWindowPlatform(renderer).subscribeSystemAppearance` 与 `subscri
 | 基线 | 系统为深色，订阅后原生回报 `dark`，平台层不通知 | `h1-demo-log-2026-10-15.txt` |
 | 深 → 浅 | 原生 `light`，约 90ms 后平台 `appearanceChange light`；AX 读到 `System appearance: light` | 同上、`appearance-light-2026-10-15.png` |
 | 浅 → 深 | 原生 `dark`，平台 `appearanceChange dark` | 同上、`appearance-dark-2026-10-15.png` |
-| dirty 时按关闭按钮 | AX `AXCloseButton` press 触发 `closeRequest allow=false`，窗口保留，AX 读到 `Close guard: dialog: unsaved changes` | 日志 |
+| dirty 时按关闭按钮 | AX `AXCloseButton` press 触发 `closeRequest allow=false`，窗口保留，AX 读到 `Close guard: dialog: unsaved changes`(截图早于重绘，仍显示 dirty，以 AX 为准) | 日志与 AX 抄录 |
 | 选择「不保存」 | `discardChosen` 后调用 `guard.close()`，窗口消失，bun 进程 exit 0 | 日志、窗口列表 |
 
 #### H1 命令
@@ -918,6 +919,8 @@ TS 侧：`createWindowPlatform(renderer).subscribeSystemAppearance` 与 `subscri
 | 根目录 | `GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/h1-gpuix bash scripts/gpuix-main/build.sh runtime` | native release 172.99s，RSS 798 MB；七个补丁经 `check.mjs --sources` 精确校验 |
 | vendor | `cargo test --release --manifest-path packages/native/Cargo.toml --lib --features test-support,gpui_platform/runtime_shaders` | 274 pass(F1 后 271 个，新增 3 个) |
 | vendor 变异 | 把 VibrantDark 映射为 light，并删除注册时的基线回调 | 2 个外观测试失败，恢复后通过 |
+| 本仓 Rust 变异 | `ThemeMode::Dark` 加 `alias = "Dark", "auto"`(宽松解析) | `rejects_unknown_theme_mode_on_read_and_write` 失败，恢复后通过 |
+| TS 变异 | 删除守卫的 `deciding` 拦截；`shouldClose` 恒为 true；不支持时 `close()` 变成空操作；外观端口误接 `onWindowActiveChange`；去掉基线判断；删除 `register(null)` | 依次 1、2、1、1、6、5 个失败，恢复后全部通过 |
 | 根目录 | `cargo check`、`cargo test` | 通过，native 11、engine 32 |
 | apps/gpuix | `pnpm exec tsc --noEmit`、`bun test` | tsc 0 错误；568 pass、2 todo、0 fail |
 

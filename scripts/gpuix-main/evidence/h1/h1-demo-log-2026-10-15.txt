@@ -7,3 +7,9 @@
 {"t":1792031503038,"kind":"closeRequest","allow":false}
 {"t":1792031510098,"kind":"discardChosen"}
 exit=0 (process exited after closeWindow; window absent from window list)
+
+# AX after pressing AXCloseButton (window e1 still present, dirty veto):
+#   statictext e3: "System appearance: dark"
+#   statictext e4: "Close guard: dialog: unsaved changes"
+# AX after pressing button "Don't save and close":
+#   computer.window(title="H1 appearance close demo") -> no window matches; service h1-demo exited 0
