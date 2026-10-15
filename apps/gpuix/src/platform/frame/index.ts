@@ -4,5 +4,5 @@ export type {
   AnimationFrameSource,
   FrameRenderer,
 } from "./animation-frame-source"
-export { AnimationFrameProvider, useAnimationFrame } from "./AnimationFrameProvider"
+export { AnimationFrameProvider, useAnimationFrame, useResumeFrame } from "./AnimationFrameProvider"
 export type { AnimationFrameProviderProps } from "./AnimationFrameProvider"

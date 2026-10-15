@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
 import { AnimationFrameProvider } from "@/platform/frame"
+import { useProjectState } from "@/project/stores/useProjectState"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackLabelsProvider } from "../labels"
 import { trackResources } from "../locales"
@@ -122,4 +123,27 @@ test("inline reader changes preserve held peaks and unmount cancels the real fra
   ).toBe("L -60.0 dB, R -60.0 dB")
   view.close()
   expect(view.frames.subscribers).toBe(0)
+})
+
+test("first resume commits newest stereo telemetry even when the decay driver was idle", () => {
+  const previousSession = useProjectState.getState().session
+  useProjectState.setState({ session: { ...previousSession, playing: true } })
+  let telemetry = frame({ audio: [-120, -120] })
+  const view = mountMeter(() => telemetry)
+  try {
+    expect(view.frames.subscribers).toBe(0)
+    expect(view.frames.resumeSubscribers).toBe(1)
+    expect(
+      view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
+    ).toBe("L -60.0 dB, R -60.0 dB")
+    // No ordinary frame or provider rerender occurs while the window is hidden.
+    telemetry = { ...frame({ audio: [-38, -41] }), sequence: 10529, playing: true }
+    view.frames.resume(5500)
+    expect(
+      view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
+    ).toBe("L -38.0 dB, R -41.0 dB")
+  } finally {
+    view.close()
+    useProjectState.setState({ session: previousSession })
+  }
 })
