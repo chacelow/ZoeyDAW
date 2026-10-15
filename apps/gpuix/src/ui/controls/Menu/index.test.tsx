@@ -92,6 +92,9 @@ describe("native command menus", () => {
     press(root, "command", "escape")
     expect(changes).toEqual([true, false])
     press(root, "trigger", "space")
+    expect(changes).toEqual([true, false])
+    expect(root.renderer.findByTestId("content")).toBeUndefined()
+    press(root, "trigger", "enter")
     expect(changes).toEqual([true, false, true])
     expect(root.renderer.findByTestId("content")).toBeDefined()
   })
@@ -462,13 +465,13 @@ describe("native command menus", () => {
     expect(latestHeight).toBe(53)
     expect(root.renderer.findByTestId("content")).toBeUndefined()
     expect(root.renderer.getFocusedElementId()).toBe(child.id)
-    for (const key of ["down", "left", "right", "enter", "space"]) {
+    for (const key of ["down", "left", "right", "enter", "space", "escape"]) {
       root.renderer.simulateKeystrokes(key)
       expect(root.renderer.findByTestId("content")).toBeUndefined()
       expect(root.renderer.getFocusedElementId()).toBe(child.id)
     }
     expect(latestHeight).toBe(70)
-    expect(childKeys).toEqual(["up", "down", "left", "right", "enter", "space"])
+    expect(childKeys).toEqual(["up", "down", "left", "right", "enter", "space", "escape"])
     root.renderer.nativeSimulateKeystrokes(element(root, "trigger").id, "shift-f10")
     expect(root.renderer.findByTestId("content")).toBeDefined()
     root.renderer.simulateKeystrokes("escape")

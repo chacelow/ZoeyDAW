@@ -283,7 +283,7 @@ function MenuTrigger({
       const key = event.key?.toLowerCase()
       if (
         (!menu.contextMenu &&
-          (isActivation(event) ||
+          (key === "enter" ||
             key === "down" ||
             key === "arrowdown" ||
             key === "up" ||
@@ -295,10 +295,10 @@ function MenuTrigger({
         lastActivation.current = event
         menu.initialEdge.current = key === "up" || key === "arrowup" ? "last" : "first"
         menu.setPointer(null)
-        menu.setOpen(isActivation(event) ? !menu.open : true)
-        if (menu.open && !isActivation(event))
+        menu.setOpen(key === "enter" ? !menu.open : true)
+        if (menu.open && key !== "enter")
           focusEntry(menu.entries, renderer, menu.initialEdge.current)
-      } else if (key === "escape" || key === "esc") {
+      } else if (menu.open && (key === "escape" || key === "esc")) {
         navigate(menu, renderer, event)
       }
     },
@@ -500,7 +500,12 @@ function MenuItem({
     onSelect?.(event)
     onClick?.(event)
     if (activate) activate(event)
-    else menu.closeAll()
+    else {
+      menu.closeAll()
+      let root = menu
+      while (root.parent) root = root.parent
+      if (root.trigger.current) renderer?.focusElement?.(root.trigger.current.id)
+    }
   }
   const slotProps = {
     ...props,
@@ -545,7 +550,11 @@ function MenuItem({
       if (event.elementId !== instance.current?.id) return
       onKeyDown?.(event)
       if (navigate(menu, renderer, event)) return
-      if (!unavailable && isActivation(event)) select(event)
+      if (!unavailable && isActivation(event)) {
+        event.preventDefault()
+        event.stopPropagation()
+        select(event)
+      }
     },
   } satisfies Props & {
     disabled: boolean
