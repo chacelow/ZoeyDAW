@@ -77,3 +77,35 @@ for (const mutation of mutations) {
   }
   process.stdout.write(`| ${mutation.name} | ${failures} |\n`)
 }
+
+const numberPath = `${ui}controls/DragPad/DragPadNumber.tsx`
+const numberSource = readFileSync(numberPath, "utf8")
+const aliasAnchor = "  readonly size?: ControlSize"
+if (!numberSource.includes(aliasAnchor)) throw new Error("Stale numeric size anchor")
+const app = fileURLToPath(new URL("../../../", import.meta.url))
+const typecheck = () =>
+  spawnSync(
+    process.execPath,
+    [fileURLToPath(import.meta.resolve("typescript/bin/tsc")), "--noEmit"],
+    { cwd: app, encoding: "utf8" }
+  )
+const baselineTypes = typecheck()
+if (baselineTypes.status !== 0)
+  throw new Error(`Type baseline failed:\n${baselineTypes.stdout}${baselineTypes.stderr}`)
+try {
+  writeFileSync(
+    numberPath,
+    numberSource.replace(aliasAnchor, () => `${aliasAnchor}\n  readonly variant?: ControlSize`)
+  )
+  const result = typecheck()
+  if (
+    result.status === 0 ||
+    !result.stdout.includes("number-font.test.tsx") ||
+    !result.stdout.includes("does not satisfy the constraint 'false'")
+  ) {
+    throw new Error(`Removed alias escaped type regression:\n${result.stdout}${result.stderr}`)
+  }
+  console.log("removed-size-alias: type regression caught")
+} finally {
+  writeFileSync(numberPath, numberSource)
+}

@@ -4,6 +4,12 @@ import { flushSync } from "@gpuix/react"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { DragPadNumber } from "./DragPadNumber"
+import type { DragPadNumberProps } from "./DragPadNumber"
+
+type AssertFalse<T extends false> = T
+export type NumericPadHasNoVariantAlias = AssertFalse<
+  "variant" extends keyof DragPadNumberProps ? true : false
+>
 
 test("numeric font token controls measured width, display and editing", async () => {
   const root = createTestRoot({ width: 640, height: 180 })

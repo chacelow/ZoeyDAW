@@ -16,7 +16,6 @@ export interface DragPadNumberProps extends Omit<UseDragPadOptions, "format"> {
   readonly label: string
   readonly description?: string
   readonly format?: (value: number) => string
-  readonly variant?: ControlSize
   readonly size?: ControlSize
   readonly icon?: ReactNode
   readonly hideIcon?: boolean
@@ -41,8 +40,7 @@ export function NumericPad({
   parse,
   disabled = false,
   editable = true,
-  variant = "default",
-  size = variant,
+  size = "default",
   icon,
   hideIcon = false,
   testId,
