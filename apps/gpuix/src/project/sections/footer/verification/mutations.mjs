@@ -7,6 +7,7 @@ const tests = [
   `${sections}footer/EffectChain/edit-devices.test.tsx`,
   `${sections}transport/metronome.test.ts`,
   `${sections}footer/EffectChain/DeviceDisplay/response.test.ts`,
+  `${sections}transport/layout.test.ts`,
 ]
 const mutations = [
   {
@@ -36,6 +37,20 @@ const mutations = [
     from: "control.x - start.x",
     to: "control.x + start.x",
     invariant: "property: quadratic device responses",
+  },
+  {
+    name: "header-left-minimum",
+    file: "transport/layout.ts",
+    from: "Math.max(measured.left,",
+    to: "Math.min(measured.left,",
+    invariant: "property: Header columns",
+  },
+  {
+    name: "header-fraction-bias",
+    file: "transport/layout.ts",
+    from: "remaining / 2",
+    to: "remaining / 3",
+    invariant: "property: Header columns",
   },
 ]
 const baseline = spawnSync(process.execPath, ["test", ...tests], { encoding: "utf8" })

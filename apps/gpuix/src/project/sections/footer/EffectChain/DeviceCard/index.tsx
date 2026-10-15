@@ -33,7 +33,7 @@ export interface DeviceCardProps {
   readonly registerHandle: (node: PublicInstance | null) => void
   readonly handleProps: Pick<
     Props,
-    "onMouseDown" | "onMouseMove" | "onMouseUp" | "onBlur" | "onKeyDown"
+    "onMouseDown" | "onMouseMove" | "onMouseUp" | "onBlur" | "onKeyDown" | "onFocus"
   >
 }
 
@@ -65,6 +65,7 @@ export function DeviceCard({
       aria-label={name}
       aria-current={selected ? "true" : undefined}
       testId={`device-${device.id}`}
+      onMouseDown={onSelect}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -129,6 +130,7 @@ export function DeviceCard({
           label={`${labels.select} ${name}`}
           active={selected}
           testId={`device-handle-${device.id}`}
+          aria-description={labels.keyboardHelp}
           onActiveChange={onSelect}
           style={{
             flexGrow: device.collapsed ? 0 : 1,

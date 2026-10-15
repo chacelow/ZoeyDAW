@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import type { PublicInstance } from "@gpuix/react"
 import { render, useGpuix } from "@gpuix/react"
 import { nativeCursorLock } from "@/platform/cursor"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
@@ -6,24 +7,35 @@ import { Button, ControlEnvironmentProvider } from "@/ui/controls"
 import { Group, Panel, PanelDivider, PanelEnvironmentProvider } from "@/ui/panels"
 import { createWindowPlatform } from "@/platform/window"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
+import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
+import { createVerificationKeyboard } from "./verification/keyboard"
+import type { VerificationKeyboardOwner } from "./verification/keyboard"
 import { projectActions, startProjectRuntime, useProjectState } from "../../adapters"
 import { createDevice, DEVICE_KINDS } from "../../model/devices"
 import { BrowserPanel } from "../browser"
 import { englishBrowserLabels, chineseBrowserLabels } from "../browser/demo-labels"
-import { TransportBar, handleTransportKeyDown } from "../transport"
+import { TransportBar } from "../transport"
 import { englishTransportLabels, chineseTransportLabels } from "../transport/demo-labels"
 import { StatusStrip } from "../status"
 import { englishStatusLabels, chineseStatusLabels } from "../status/demo-labels"
 import { FooterPanel } from "."
 import { englishFooterLabels, chineseFooterLabels } from "./demo-labels"
-import type { BrowserPanelHandle } from "../browser"
 import type { ControlInfo } from "@/ui/controls"
 import type { FooterView } from "."
 import type { PanelImperativeHandle } from "@/ui/panels"
 
 const chinese = process.env.B2_LANGUAGE === "zh"
 const appearance = process.env.B2_APPEARANCE === "light" ? "light" : "dark"
-const searchHandle: { current: BrowserPanelHandle | null } = { current: null }
+const searchCommand: { current: (() => boolean) | null } = { current: null }
+const windowKeyboard = createWindowKeyboard()
+windowKeyboard.subscribe("keyDown", event => {
+  if (
+    (event.modifiers?.cmd || event.modifiers?.ctrl) &&
+    event.key === "f" &&
+    searchCommand.current?.()
+  )
+    event.preventDefault()
+})
 
 function NativeDiagnostics() {
   const theme = useTheme()
@@ -91,9 +103,25 @@ function NativePanels() {
   const [collapsed, setCollapsed] = useState(false)
   const [info, setInfo] = useState<ControlInfo | null>(null)
   const browserHandle = useRef<PanelImperativeHandle | null>(null)
-  const browserRef = useRef<BrowserPanelHandle | null>(null)
+  const keyboardOwner = useRef<VerificationKeyboardOwner | null>(null)
+  const focusSurface = useRef<PublicInstance | null>(null)
   const clipHandle = useRef<PanelImperativeHandle | null>(null)
-  searchHandle.current = browserRef.current
+  useLayoutEffect(() => {
+    const owner = createVerificationKeyboard({
+      windowKeyboard,
+      metrics: theme.project,
+      size: { containerWidth: 1280, bodyHeight: 760, timelineLeft: 0 },
+      subscribeWindowActive: windowPlatform.subscribeApplicationActive,
+      blurControl: () => {
+        if (focusSurface.current) renderer?.focusElement?.(focusSurface.current.id)
+      },
+    })
+    keyboardOwner.current = owner
+    return () => {
+      keyboardOwner.current = null
+      owner.dispose()
+    }
+  }, [renderer, theme.project, windowPlatform])
   useEffect(() => {
     projectActions.setProject({ name: chinese ? "未命名项目" : "Untitled project" })
     if (process.env.B2_BPM) projectActions.setBpm(Number(process.env.B2_BPM))
@@ -129,6 +157,7 @@ function NativePanels() {
       onViewChange={changeView}
       onCollapsedChange={changeCollapsed}
       subscribeWindowActive={windowPlatform.subscribeApplicationActive}
+      reducedMotion={false}
       renderClipEditor={() => {
         throw new Error(
           "Standalone verification contains no selected Clip; the application supplies the real editor"
@@ -137,107 +166,123 @@ function NativePanels() {
     />
   )
   return (
-    <AnimationFrameProvider source={frameSource}>
-      <ControlEnvironmentProvider value={{ setInfo, cursorLock: nativeCursorLock }}>
-        <PanelEnvironmentProvider
-          environment={{ subscribeWindowActive: windowPlatform.subscribeApplicationActive }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              width: "100%",
-              height: "100%",
-              minHeight: 0,
-              backgroundColor: theme.colors.muted,
-              color: theme.colors.foreground,
-              fontSize: theme.control["--text-control-track"],
-            }}
+    <WindowKeyboardProvider value={windowKeyboard}>
+      <AnimationFrameProvider source={frameSource}>
+        <ControlEnvironmentProvider value={{ setInfo, cursorLock: nativeCursorLock }}>
+          <PanelEnvironmentProvider
+            environment={{ subscribeWindowActive: windowPlatform.subscribeApplicationActive }}
           >
-            <TransportBar
-              labels={chinese ? chineseTransportLabels : englishTransportLabels}
-              onBack={() => projectActions.stop()}
-              onToggleBrowser={() => {
-                const handle = browserHandle.current
-                if (handle?.isCollapsed()) handle.expand()
-                else handle?.collapse()
+            <div
+              ref={focusSurface}
+              tabIndex={-1}
+              role="group"
+              aria-label="Native verification workspace"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                width: "100%",
+                height: "100%",
+                minHeight: 0,
+                backgroundColor: theme.colors.muted,
+                color: theme.colors.foreground,
+                fontSize: theme.control["--text-control-track"],
               }}
-            />
-            <Group orientation="horizontal" style={{ flexGrow: 1, minHeight: 0 }}>
-              <Panel
-                panelRef={browserHandle}
-                defaultSize="25%"
-                minSize={
-                  theme.project.browserNavigationWidth +
-                  theme.project.browserResultsWidth +
-                  theme.project.panelGap
-                }
-                collapsible
-                collapsedSize={0}
-              >
-                <BrowserPanel
-                  browserRef={node => {
-                    browserRef.current = node
-                    searchHandle.current = node
-                  }}
-                  labels={chinese ? chineseBrowserLabels : englishBrowserLabels}
-                />
-              </Panel>
-              <PanelDivider orientation="vertical" />
-              <Panel>
-                {view === "clip" ? (
-                  <Group orientation="vertical" style={{ height: "100%", width: "100%" }}>
-                    <Panel defaultSize="60%" minSize="20%">
-                      <NativeDiagnostics />
-                    </Panel>
-                    <PanelDivider
-                      orientation="horizontal"
-                      aria-label="Resize Clip Edit"
-                      style={{
-                        backgroundColor: theme.colors.muted,
-                        borderTopWidth: 1,
-                        borderColor: theme.colors.border,
-                      }}
-                    />
-                    <Panel
-                      panelRef={clipHandle}
-                      defaultSize={collapsed ? 0 : "40%"}
-                      minSize="20%"
-                      collapsible
-                      collapsedSize={0}
-                      onResize={size => setCollapsed(size.inPixels === 0)}
-                    >
-                      {footer}
-                    </Panel>
-                  </Group>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      height: "100%",
-                      minHeight: 0,
+            >
+              <TransportBar
+                labels={chinese ? chineseTransportLabels : englishTransportLabels}
+                reducedMotion={false}
+                onBack={() => projectActions.stop()}
+                onDrawModeChange={enabled => {
+                  if (!keyboardOwner.current) throw new Error("Timeline keyboard is not mounted")
+                  keyboardOwner.current.timeline.keyboard.latchDraw(enabled)
+                }}
+                onToggleBrowser={() => {
+                  const handle = browserHandle.current
+                  if (handle?.isCollapsed()) handle.expand()
+                  else handle?.collapse()
+                }}
+              />
+              <Group orientation="horizontal" style={{ flexGrow: 1, minHeight: 0 }}>
+                <Panel
+                  panelRef={browserHandle}
+                  defaultSize="25%"
+                  minSize={
+                    theme.project.browserNavigationWidth +
+                    theme.project.browserResultsWidth +
+                    theme.project.panelGap
+                  }
+                  collapsible
+                  collapsedSize={0}
+                >
+                  <BrowserPanel
+                    browserRef={node => {
+                      searchCommand.current = node
+                        ? () => {
+                            if (browserHandle.current?.isCollapsed()) return false
+                            node.focusSearch()
+                            return true
+                          }
+                        : null
                     }}
-                  >
-                    <NativeDiagnostics />
-                    {footer}
-                  </div>
-                )}
-              </Panel>
-            </Group>
-            <StatusStrip
-              labels={chinese ? chineseStatusLabels : englishStatusLabels}
-              footerCollapsed={collapsed}
-              view={view}
-              onToggleFooter={() => changeCollapsed(!collapsed)}
-              onViewChange={changeView}
-              info={info}
-              warnings={[]}
-            />
-          </div>
-        </PanelEnvironmentProvider>
-      </ControlEnvironmentProvider>
-    </AnimationFrameProvider>
+                    labels={chinese ? chineseBrowserLabels : englishBrowserLabels}
+                  />
+                </Panel>
+                <PanelDivider orientation="vertical" />
+                <Panel>
+                  {view === "clip" ? (
+                    <Group orientation="vertical" style={{ height: "100%", width: "100%" }}>
+                      <Panel defaultSize="60%" minSize="20%">
+                        <NativeDiagnostics />
+                      </Panel>
+                      <PanelDivider
+                        orientation="horizontal"
+                        aria-label="Resize Clip Edit"
+                        style={{
+                          backgroundColor: theme.colors.muted,
+                          borderTopWidth: 1,
+                          borderColor: theme.colors.border,
+                        }}
+                      />
+                      <Panel
+                        panelRef={clipHandle}
+                        defaultSize={collapsed ? 0 : "40%"}
+                        minSize="20%"
+                        collapsible
+                        collapsedSize={0}
+                        onResize={size => setCollapsed(size.inPixels === 0)}
+                      >
+                        {footer}
+                      </Panel>
+                    </Group>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        height: "100%",
+                        minHeight: 0,
+                      }}
+                    >
+                      <NativeDiagnostics />
+                      {footer}
+                    </div>
+                  )}
+                </Panel>
+              </Group>
+              <StatusStrip
+                labels={chinese ? chineseStatusLabels : englishStatusLabels}
+                footerCollapsed={collapsed}
+                view={view}
+                onToggleFooter={() => changeCollapsed(!collapsed)}
+                onViewChange={changeView}
+                info={info}
+                warnings={[]}
+              />
+            </div>
+          </PanelEnvironmentProvider>
+        </ControlEnvironmentProvider>
+      </AnimationFrameProvider>
+    </WindowKeyboardProvider>
   )
 }
 
@@ -249,14 +294,7 @@ render(
     title: `zoeydaw B2 panels ${appearance} ${chinese ? "zh" : "en"}`,
     width: 1280,
     height: 760,
-    onKeyDown: event => {
-      if ((event.modifiers?.cmd || event.modifiers?.ctrl) && event.key === "f") {
-        event.preventDefault()
-        searchHandle.current?.focusSearch()
-        return
-      }
-      handleTransportKeyDown(event)
-    },
+    ...windowKeyboard.rootHandlers,
   }
 )
 process.stdout.write("B2 panels mounted\n")

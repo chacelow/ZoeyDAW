@@ -14,6 +14,8 @@ export const englishFooterLabels: FooterLabels = {
   emptyHelp: "Choose Add device to edit this chain",
   prototypeHelp: "Device metadata only — DSP is not connected",
   chain: "Device chain",
+  keyboardHelp: "Left/Right focus, Alt+Left/Right reorder, Delete remove, Enter fold",
+  reorderHint: "Release to reorder; Esc to cancel",
   select: "Select",
   actions: "Actions for",
   bypass: "Bypass",
@@ -62,6 +64,8 @@ export const chineseFooterLabels: FooterLabels = {
   moveRight: "右移",
   delete: "删除",
   toggle: "展开或收起底部面板",
+  keyboardHelp: "左右键移动焦点，Alt+左右键重排，Delete删除，Enter折叠",
+  reorderHint: "松开完成重排，Esc取消",
   kindNames: { utility: "实用工具", filter: "滤波器", delay: "延迟", reverb: "混响" },
   parameterNames: {
     gainDb: "增益",

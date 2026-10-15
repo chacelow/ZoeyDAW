@@ -16,7 +16,7 @@ const EMPTY_DEVICES: readonly Device[] = []
 export interface EffectChainProps {
   readonly track: Track | null
   readonly labels: FooterLabels
-  readonly subscribeWindowActive?: (listener: (active: boolean) => void) => () => void
+  readonly subscribeWindowActive: (listener: (active: boolean) => void) => () => void
 }
 
 function TrackDeviceChain({
@@ -53,7 +53,7 @@ function TrackDeviceChain({
   }, [])
   useEffect(
     () =>
-      subscribeWindowActive?.(active => {
+      subscribeWindowActive(active => {
         if (!active) cancel()
       }),
     [subscribeWindowActive, cancel]
@@ -227,6 +227,7 @@ function TrackDeviceChain({
                 onDelete={() => remove(device.id)}
                 onMove={direction => move(device.id, direction)}
                 handleProps={{
+                  onFocus: () => setSelectedId(device.id),
                   onMouseDown: event => {
                     if (event.button !== undefined && event.button !== 0) return
                     setSelectedId(device.id)
@@ -251,7 +252,7 @@ function TrackDeviceChain({
           fontSize: theme.control["--text-control-track"],
         }}
       >
-        {labels.prototypeHelp}
+        {preview ? `${labels.prototypeHelp} · ${labels.reorderHint}` : labels.prototypeHelp}
       </text>
     </div>
   )

@@ -2,6 +2,8 @@ import { writeFileSync } from "node:fs"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { createTestAnimationFrames } from "./test-frame"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { createDevice, DEVICE_KINDS } from "@/project/model/devices"
 import { BrowserPanel } from "../../browser"
@@ -10,7 +12,10 @@ import { TransportBar } from "../../transport"
 import { englishTransportLabels } from "../../transport/demo-labels"
 import { FooterPanel } from ".."
 import { englishFooterLabels } from "../demo-labels"
+import { createTestWindowActivity } from "./test-activity"
 import type { FooterView } from ".."
+
+const activity = createTestWindowActivity()
 
 projectActions.addTrack("audio")
 const track = useProjectState.getState().document.tracks.find(item => item.kind === "audio")
@@ -29,6 +34,7 @@ function FooterMeasurement() {
       onViewChange={setView}
       onCollapsedChange={setCollapsed}
       reducedMotion
+      subscribeWindowActive={activity.subscribe}
       renderClipEditor={() => {
         throw new Error("Measurement has no selected clip")
       }}
@@ -61,7 +67,11 @@ const cases = [
     content: (
       <TransportBar
         labels={englishTransportLabels}
+        reducedMotion
         onBack={projectActions.stop}
+        onDrawModeChange={() => {
+          throw new Error("Measurement does not dispatch draw commands")
+        }}
         onToggleBrowser={() => {
           throw new Error("Measurement is read-only")
         }}
@@ -94,8 +104,13 @@ const cases = [
 const report = []
 for (const entry of cases) {
   const root = createTestRoot({ width: entry.width, height: entry.height })
+  const frames = createTestAnimationFrames()
   try {
-    root.render(<ThemeProvider>{entry.content}</ThemeProvider>)
+    root.render(
+      <ThemeProvider>
+        <AnimationFrameProvider source={frames}>{entry.content}</AnimationFrameProvider>
+      </ThemeProvider>
+    )
     root.renderer.flush()
     root.renderer.dispatchNativeEvents()
     root.renderer.flush()

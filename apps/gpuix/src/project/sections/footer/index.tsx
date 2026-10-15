@@ -3,6 +3,7 @@ import { CollapseDivider } from "@/ui/panels"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useProjectState } from "../../adapters"
 import type { Clip, Track } from "../../model/types"
+import { Fragment } from "react"
 import type { ReactNode } from "react"
 import type { FooterLabels } from "./labels"
 import { EffectChain } from "./EffectChain"
@@ -20,9 +21,8 @@ export interface FooterPanelProps {
   readonly onViewChange: (view: FooterView) => void
   readonly onCollapsedChange: (collapsed: boolean) => void
   readonly renderClipEditor: (slot: ClipEditorSlot) => ReactNode
-  readonly clipHeight?: number
-  readonly reducedMotion?: boolean
-  readonly subscribeWindowActive?: (listener: (active: boolean) => void) => () => void
+  readonly reducedMotion: boolean
+  readonly subscribeWindowActive: (listener: (active: boolean) => void) => () => void
 }
 
 export function FooterPanel({
@@ -32,8 +32,7 @@ export function FooterPanel({
   onViewChange,
   onCollapsedChange,
   renderClipEditor,
-  clipHeight,
-  reducedMotion = false,
+  reducedMotion,
   subscribeWindowActive,
 }: FooterPanelProps) {
   const theme = useTheme()
@@ -50,7 +49,7 @@ export function FooterPanel({
   const owner = tracks.find(track => track.clips.some(clip => clip.id === clipId))
   const clip = owner?.clips.find(item => item.id === clipId)
   const track = tracks.find(item => item.id === selectedTrackIds.at(-1)) ?? owner ?? null
-  const height = view === "devices" ? theme.project.footerDeviceHeight : (clipHeight ?? "100%")
+  const height = view === "devices" ? theme.project.footerDeviceHeight : "100%"
   const emptyClip = (
     <div
       style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -111,9 +110,13 @@ export function FooterPanel({
               key: "clip",
               label: labels.clipTab,
               content:
-                view === "clip" && clip && owner
-                  ? renderClipEditor({ clip, track: owner, close: () => onCollapsedChange(true) })
-                  : emptyClip,
+                view === "clip" && clip && owner ? (
+                  <Fragment key={clip.id}>
+                    {renderClipEditor({ clip, track: owner, close: () => onCollapsedChange(true) })}
+                  </Fragment>
+                ) : (
+                  emptyClip
+                ),
             },
           ]}
         />

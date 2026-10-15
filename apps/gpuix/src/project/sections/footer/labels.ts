@@ -14,6 +14,8 @@ export interface FooterLabels {
   readonly emptyHelp: string
   readonly prototypeHelp: string
   readonly chain: string
+  readonly keyboardHelp: string
+  readonly reorderHint: string
   readonly select: string
   readonly actions: string
   readonly bypass: string
