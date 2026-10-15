@@ -1,5 +1,5 @@
 import { useContext } from "react"
-import type { EventPayload, StyleDesc } from "@gpuix/react"
+import type { KeyEvent, StyleDesc } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { SlotContext, usePanelGroup } from "../context"
@@ -20,7 +20,7 @@ export function Separator({
   hidden,
   style,
   testId,
-  "aria-label": label = "Resize panels",
+  "aria-label": label,
 }: SeparatorProps) {
   const group = usePanelGroup()
   const index = useContext(SlotContext)
@@ -34,7 +34,7 @@ export function Separator({
     finish: () => group.endDrag(),
     restore: snapshot => group.endDrag(snapshot),
   })
-  const onKeyDown = (event: EventPayload) => {
+  const onKeyDown = (event: KeyEvent) => {
     if (event.key === "escape") {
       drag.cancel()
       return
@@ -47,6 +47,8 @@ export function Separator({
           ? -1
           : 0
     if (direction === 0) return
+    event.preventDefault()
+    event.stopPropagation()
     const delta = keyboardDelta(
       group.sizes,
       group.constraints,
@@ -63,7 +65,7 @@ export function Separator({
     <div
       role="separator"
       aria-label={label}
-      aria-valuetext={`${Math.round(group.sizes[index] ?? 0)} pixels`}
+      aria-valuetext={String(Math.round(group.sizes[index] ?? 0))}
       testId={testId}
       tabIndex={disabled ? -1 : 0}
       onMouseDown={drag.onMouseDown}

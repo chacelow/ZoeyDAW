@@ -23,8 +23,9 @@
 - `shape.panelRadius` 默认7，独立于 `project.panelGap`。PanelShell 只消费形状与边框，不改变 Group/Panel 的求解、resize 或拖动 owner。
 - `shape.indicatorRadius` 保持等宽高选中徽标的圆形语义，默认值是 control-track 高度的一半；不借用 control gap 或整段控件高度作为圆角。
 - `controlBorderWidth=0` 时，数值与下拉宽度按真实 `borderWidth * 2` 推导；滚动条的内长和 thumb 横截面同样扣真实边框。Focus ring 与单选指示器描边是功能标记，独立于外壳边框。
+- `typography.numberFontFamily` 是数值字体的唯一入口（默认 Menlo）。DragPadNumber 的测量样本、显示文字和真实 input 共用该值；覆盖字体时缓存按字体键重新测量，编辑态保留同一外壳宽度。
 - `cards` 保存 `default`、`sm`、`controls`、`project` 的独立 radius/inset/gap。改变 inset 不会改变 radius。`insetOwner` 明确内边距由外壳还是 Header/Content 持有，避免嵌套双重 padding。
-- Menu 与 Popover 是不同 family，默认 surface radius 都为4，但 inset 分别为4与8；Menu item radius2、inline padding6 与 Popover 内容 gap6 各有明确字段，不混成按钮形状。
+- Menu 与 Popover 是不同 family，默认 surface radius 都为4，但 inset 分别为4与8；弹层列表行使用 ListRow 的共享行 chrome，不再拥有独立的项 padding、gap 或圆角。Popover 内容 gap6 仍由自身 token 持有。
 
 组合 Gallery 的默认、flat、加大间距是只读演示配置，不是用户主题编辑器。入口 `bun --hot apps/gpuix/src/gallery/controls.tsx` 需要已批准的独占桌面时段；小量整页取证为 `bun apps/gpuix/src/gallery/verification/evidence.tsx`，默认创建系统临时目录下私有的 `zoeydaw-a3-composition-*` 目录并输出真实路径，不批量提交图片。
 

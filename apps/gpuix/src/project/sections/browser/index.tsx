@@ -54,7 +54,11 @@ export interface BrowserPanelProps {
   readonly renderBody?: (slots: BrowserBodySlots) => ReactNode
 }
 
-export function BrowserSplitBody({ navigation, results }: BrowserBodySlots) {
+export function BrowserSplitBody({
+  navigation,
+  results,
+  dividerLabel,
+}: BrowserBodySlots & { readonly dividerLabel: string }) {
   const theme = useTheme()
   return (
     <Group
@@ -73,6 +77,7 @@ export function BrowserSplitBody({ navigation, results }: BrowserBodySlots) {
       </Panel>
       <PanelDivider
         orientation="vertical"
+        aria-label={dividerLabel}
         testId="browser-navigation-divider"
         style={{
           backgroundColor: theme.colors.muted,
@@ -90,7 +95,7 @@ export function BrowserSplitBody({ navigation, results }: BrowserBodySlots) {
 export function BrowserPanel({
   labels,
   browserRef,
-  renderBody = slots => <BrowserSplitBody {...slots} />,
+  renderBody = slots => <BrowserSplitBody {...slots} dividerLabel={labels.resizeNavigation} />,
 }: BrowserPanelProps) {
   const theme = useTheme()
   const { renderer } = useGpuix()
@@ -99,6 +104,12 @@ export function BrowserPanel({
   const tree = useRef<PublicInstance | null>(null)
   const nodes = useRef(new Map<string, PublicInstance>())
   const [hoveredResource, setHoveredResource] = useState<string | null>(null)
+  const [focusBySource, setFocusBySource] = useState<
+    Partial<Record<typeof browser.source, string>>
+  >({})
+  const focusedId =
+    browser.rows.find(row => row.entry.id === focusBySource[browser.source])?.entry.id ??
+    browser.rows[0]?.entry.id
   const resourceInfo = useInfoBinding({ type: "resources" })
   const searchInfo = useInfoBinding({ type: "search" })
   const filterInfo = useInfoBinding({ type: "filters" })
@@ -112,16 +123,20 @@ export function BrowserPanel({
     }),
     [renderer]
   )
-  function select(id: string) {
-    browser.setSelectedId(id)
+  function focus(id: string) {
+    setFocusBySource(previous => ({ ...previous, [browser.source]: id }))
     const node = nodes.current.get(id)
     if (node) {
       renderer?.focusElement?.(node.id)
       renderer?.scrollIntoView?.(node.id)
     }
   }
+  function select(id: string) {
+    browser.setSelectedId(id)
+    focus(id)
+  }
   function keyboard(event: Parameters<NonNullable<Props["onKeyDown"]>>[0], rowId?: string) {
-    const index = browser.rows.findIndex(row => row.entry.id === (rowId ?? selectedId))
+    const index = browser.rows.findIndex(row => row.entry.id === (rowId ?? focusedId))
     const row = browser.rows[index]
     let nextIndex = index
     let nextId: string | undefined
@@ -147,6 +162,7 @@ export function BrowserPanel({
         else if (row?.parentId) nextId = row.parentId
         break
       case "enter":
+        if (row) browser.setSelectedId(row.entry.id)
         if (row?.expandable) browser.toggleExpanded(row.entry.id)
         break
       default:
@@ -155,8 +171,8 @@ export function BrowserPanel({
     event.preventDefault()
     event.stopPropagation()
     const next = browser.rows[nextIndex]
-    if (nextId) select(nextId)
-    else if (next && (nextIndex !== index || rowId)) select(next.entry.id)
+    if (nextId) focus(nextId)
+    else if (next) focus(next.entry.id)
   }
   const gap = theme.control["--spacing-control-track-gap"]
   return (
@@ -319,7 +335,7 @@ export function BrowserPanel({
                 testId="browser-results"
                 fill
                 role="tree"
-                tabIndex={selectedId ? -1 : 0}
+                tabIndex={browser.rows.length === 0 ? 0 : -1}
                 aria-label={labels.results}
                 ref={node => {
                   tree.current = node
@@ -365,7 +381,7 @@ export function BrowserPanel({
                           children: (
                             <ListRow
                               role="treeitem"
-                              tabIndex={selectedId === row.entry.id ? 0 : -1}
+                              tabIndex={focusedId === row.entry.id ? 0 : -1}
                               label={row.entry.name}
                               testId={`browser-entry-${row.entry.id}`}
                               selected={selectedId === row.entry.id}
@@ -460,7 +476,13 @@ export function BrowserPanel({
                               }}
                               onMouseEnter={() => setHoveredResource(row.entry.id)}
                               onMouseLeave={() => setHoveredResource(null)}
-                              onFocus={resourceInfo.onFocus}
+                              onFocus={() => {
+                                setFocusBySource(previous => ({
+                                  ...previous,
+                                  [browser.source]: row.entry.id,
+                                }))
+                                resourceInfo.onFocus()
+                              }}
                               onBlur={resourceInfo.onBlur}
                               onKeyDown={event => keyboard(event, row.entry.id)}
                             />

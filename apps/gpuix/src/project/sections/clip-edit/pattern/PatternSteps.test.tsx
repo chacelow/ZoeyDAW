@@ -41,6 +41,19 @@ function beginStroke(h: Harness, index = 0) {
   return [x, y] satisfies [number, number]
 }
 
+it("keeps the translated step name stable while pressed state changes", () => {
+  const h = open()
+  const step = h.root.renderer.findByTestId("pattern-step-0")
+  if (!step) throw new Error("Missing first step")
+  const name = h.root.renderer.getElement(step.id)?.customProps?.["aria-label"]
+  expect(typeof name).toBe("string")
+  expect(name).not.toMatch(/\((on|off)\)/)
+  expect(steps()[0]).toBe(false)
+  h.key("pattern-steps", "enter")
+  expect(h.root.renderer.getElement(step.id)?.customProps?.["aria-label"]).toBe(name)
+  expect(steps()[0]).toBe(true)
+})
+
 it("paints every crossed step in one undoable stroke", () => {
   const h = open()
   beginStroke(h)

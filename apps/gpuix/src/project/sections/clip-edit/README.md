@@ -33,6 +33,8 @@ MIDI 音符编辑调用 `project/model/midi-editing`。grid 中方向键移动�
 
 唯一 selection owner 原子持有 `{indices,current}`。组内点击与 Shift 添加音符更新 current 而不重排成员，Cmd+A 扩展成员并保留 current，gridcell、slider 与力度数值使用同一锚点。Left/Right 导航改为单选；Up/Down 保留组成员与 Undo 事务。聚焦项滚出可见范围后同步到可见候选项，选择变化不产生工程 Undo。二维编辑面保留唯一根 Tab 入口及原箭头编辑语义（`gpuix-ui-standards.md:74`），pitch 行不进入 Tab。quad 像素对齐只有共享原生路径，UI 不做逻辑像素舍入。
 
+MIDI 工具栏与音频参数使用共享 `ScrollArea`：前者将纵向滚轮转换为横向滚动，后者提供有名称的纵向滚动区域与键盘入口。钢琴卷帘、波形与 Pattern 的领域坐标、缩放和滚动仍由各自视口 owner 管理。
+
 音频视图请求当前可见的保留源窗口部分及其实际像素宽度。音乐位置到采样帧、带符号的偏移和回绕由 Rust 处理。共享 `PeakColumns` 直接画 channel-major 的 min/max；UI 只在增益或反向预览需要时产生变换数组。Overview 使用同一 reader，宽度来自 renderer 布局。reader 身份稳定时，session、backend phase/pending/acceptedRevision 与 tempo/meter 仍构成查询 generation，后端就绪和音乐到帧的映射变化会使峰值缓存失效。
 
 Start/End、Loop Position/Length 和 Arrangement 位置互不替代。标记键盘步长是一音乐十六分音符，Shift 为其四分之一。键盘微调先取消仍在进行的 pointer 事务，读取还原后的权威 Clip，再单独提交 nudge。Start/End、Loop Position/Length、Warp/Mode、Source BPM、Transpose、Detune、Reverse 目前只编辑元数据，C1 播放尚未响应这些设置；这与 Web 范围一致并获协调者批准。琴键使用 held-note 端口，不代表已接通 MIDI synthesis。

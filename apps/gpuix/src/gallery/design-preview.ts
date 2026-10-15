@@ -23,7 +23,7 @@ export const GALLERY_DESIGNS: Readonly<Record<GalleryDesignMode, DesignTokens>> 
       controls: { ...defaults.cards.controls, radius: 0 },
       project: { ...defaults.cards.project, radius: 0 },
     },
-    menu: { ...defaults.menu, radius: 0, itemRadius: 0, borderWidth: 0 },
+    menu: { ...defaults.menu, radius: 0, borderWidth: 0 },
     popover: { ...defaults.popover, radius: 0, borderWidth: 0 },
   },
   spacious: {
@@ -70,11 +70,7 @@ export const GALLERY_DESIGNS: Readonly<Record<GalleryDesignMode, DesignTokens>> 
     menu: {
       ...defaults.menu,
       inset: defaults.menu.inset * 2,
-      itemPaddingInline: defaults.menu.itemPaddingInline * 2,
-      itemPaddingBlock: defaults.menu.itemPaddingBlock * 2,
-      itemGap: defaults.menu.itemGap * 2,
       labelInset: defaults.menu.labelInset * 2,
-      selectItemInset: defaults.menu.selectItemInset * 2,
     },
     popover: {
       ...defaults.popover,

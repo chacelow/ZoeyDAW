@@ -79,7 +79,7 @@ export function PianoKeys({
             key={pitch}
             role="button"
             tabIndex={0}
-            aria-label={`${label} ${pitchName(pitch)}${active ? " (on)" : ""}`}
+            aria-label={`${label} ${pitchName(pitch)}`}
             aria-pressed={active}
             testId={`midi-key-${pitch}`}
             style={sx({

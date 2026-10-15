@@ -11,6 +11,7 @@ export interface CardDesignTokens {
   readonly hover: "none" | "accent"
 }
 export interface DesignTokens {
+  readonly typography: { readonly numberFontFamily: string }
   readonly shape: {
     readonly controlRadius: number
     readonly controlBorderWidth: number
@@ -36,12 +37,7 @@ export interface DesignTokens {
     readonly radius: number
     readonly borderWidth: number
     readonly inset: number
-    readonly itemRadius: number
-    readonly itemPaddingInline: number
-    readonly itemPaddingBlock: number
-    readonly itemGap: number
     readonly labelInset: number
-    readonly selectItemInset: number
   }
   readonly popover: {
     readonly radius: number
@@ -64,6 +60,7 @@ export interface DesignTokens {
 }
 
 export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
+  typography: { numberFontFamily: "Menlo" },
   shape: {
     controlRadius: 3,
     controlBorderWidth: 1,
@@ -129,12 +126,7 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
     radius: 4,
     borderWidth: 1,
     inset: 4,
-    itemRadius: 2,
-    itemPaddingInline: 6,
-    itemPaddingBlock: 2,
-    itemGap: 6,
     labelInset: 6,
-    selectItemInset: 4,
   },
   popover: { radius: 4, borderWidth: 1, inset: 8, gap: 6, headerGap: 4 },
   settings: {

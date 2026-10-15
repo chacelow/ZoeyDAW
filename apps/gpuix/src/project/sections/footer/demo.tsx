@@ -235,7 +235,10 @@ function NativePanels() {
                     labels={chinese ? chineseBrowserLabels : englishBrowserLabels}
                   />
                 </Panel>
-                <PanelDivider orientation="vertical" />
+                <PanelDivider
+                  orientation="vertical"
+                  aria-label={chinese ? "调整浏览器宽度" : "Resize Browser"}
+                />
                 <Panel>
                   {view === "clip" ? (
                     <Group orientation="vertical" style={{ height: "100%", width: "100%" }}>
@@ -244,7 +247,7 @@ function NativePanels() {
                       </Panel>
                       <PanelDivider
                         orientation="horizontal"
-                        aria-label="Resize Clip Edit"
+                        aria-label={chinese ? "调整片段编辑器高度" : "Resize Clip Edit"}
                         style={{
                           backgroundColor: theme.colors.muted,
                           borderTopWidth: 1,

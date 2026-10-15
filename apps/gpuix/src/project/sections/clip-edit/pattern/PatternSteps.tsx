@@ -214,7 +214,7 @@ export function PatternSteps({
               testId={`pattern-step-${index}`}
               role="button"
               tabIndex={-1}
-              aria-label={`${label} ${index + 1} (${on ? "on" : "off"})`}
+              aria-label={`${label} ${index + 1}`}
               aria-pressed={on}
               style={sx({
                 position: "absolute",

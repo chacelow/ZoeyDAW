@@ -9,7 +9,7 @@ import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { createVerificationKeyboard } from "../footer/verification/keyboard"
 import { createTestWindowActivity } from "../footer/verification/test-activity"
 import { BrowserPanel } from "."
-import { englishBrowserLabels } from "./demo-labels"
+import { englishBrowserLabels, chineseBrowserLabels } from "./demo-labels"
 import type { BrowserPanelHandle } from "."
 
 beforeEach(() =>
@@ -17,6 +17,106 @@ beforeEach(() =>
     JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
   )
 )
+
+test("results rove focus independently of selection across filtering and source changes", () => {
+  const root = createTestRoot({ width: 600, height: 700 })
+  try {
+    root.render(
+      <ThemeProvider>
+        <BrowserPanel
+          labels={englishBrowserLabels}
+          renderBody={({ results }) => (
+            <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              {results}
+              <Button testId="after-results" label="After results" />
+            </div>
+          )}
+        />
+      </ThemeProvider>
+    )
+    const renderer = root.renderer
+    const node = (id: string) => {
+      const result = renderer.findByTestId(id)
+      if (!result) throw new Error(`Missing ${id}`)
+      return result
+    }
+    const enterTree = () => {
+      const sort = renderer
+        .findByType("div")
+        .find(item => item.customProps?.["aria-label"] === englishBrowserLabels.ascending)
+      if (!sort) throw new Error("Missing sort button before results")
+      renderer.nativeSimulateKeystrokes(sort.id, "tab")
+    }
+    const enterResults = (expected: string) => {
+      enterTree()
+      expect(renderer.getFocusedElementId()).toBe(node(expected).id)
+    }
+    const first = "browser-entry-tunings-12-TET"
+    enterResults(first)
+    expect(renderer.getElement(node(first).id)?.customProps?.["aria-selected"]).toBe(false)
+    renderer.nativeSimulateKeystrokes(node(first).id, "down")
+    const current = renderer.getFocusedElementId()
+    if (current === null || current === undefined) throw new Error("Missing roved focus")
+    expect(current).not.toBe(node(first).id)
+    expect(renderer.getElement(current)?.customProps?.["aria-selected"]).toBe(false)
+    renderer.nativeSimulateKeystrokes(current, "tab")
+    expect(renderer.getFocusedElementId()).toBe(node("after-results").id)
+    enterTree()
+    expect(renderer.getFocusedElementId()).toBe(current)
+    renderer.nativeSimulateKeystrokes(node("browser-search").id, "A n a l o g")
+    enterResults("browser-entry-instruments-analog")
+    expect(
+      renderer.getElement(node("browser-entry-instruments-analog").id)?.customProps?.[
+        "aria-selected"
+      ]
+    ).toBe(false)
+    renderer.nativeSimulateKeystrokes(node("browser-search").id, "cmd-a z z z z z z")
+    enterResults("browser-results")
+    renderer.nativeSimulateKeystrokes(node("browser-reset-filters").id, "enter")
+    enterResults("browser-entry-instruments-analog")
+  } finally {
+    root.unmount()
+  }
+})
+
+test("changing source gives its first result a Tab entry without selecting it", () => {
+  const root = mount()
+  try {
+    const source = root.renderer.findByTestId("browser-source-instruments")
+    if (!source) throw new Error("Missing instrument source")
+    root.renderer.nativeSimulateKeystrokes(source.id, "enter")
+    const analog = root.renderer.findByTestId("browser-entry-instruments-analog")
+    if (!analog) throw new Error("Missing Analog")
+    root.renderer.nativeSimulateKeystrokes(analog.id, "shift-tab")
+    root.renderer.simulateKeystrokes("tab")
+    expect(root.renderer.getFocusedElementId()).toBe(analog.id)
+    expect(root.renderer.getElement(analog.id)?.customProps?.["aria-selected"]).toBe(false)
+    root.renderer.nativeSimulateKeystrokes(analog.id, "enter")
+    expect(root.renderer.getElement(analog.id)?.customProps?.["aria-selected"]).toBe(true)
+  } finally {
+    root.unmount()
+  }
+})
+
+for (const labels of [englishBrowserLabels, chineseBrowserLabels]) {
+  test(`Browser divider uses the injected ${labels.title} label`, () => {
+    const root = createTestRoot({ width: 600, height: 640 })
+    try {
+      root.render(
+        <ThemeProvider>
+          <BrowserPanel labels={labels} />
+        </ThemeProvider>
+      )
+      const divider = root.renderer.findByTestId("browser-navigation-divider")
+      if (!divider) throw new Error("Missing Browser divider")
+      expect(root.renderer.getElement(divider.id)?.customProps?.["aria-label"]).toBe(
+        labels.resizeNavigation
+      )
+    } finally {
+      root.unmount()
+    }
+  })
+}
 
 function mount() {
   const keyboard = createWindowKeyboard()
@@ -226,7 +326,7 @@ test("Tab exits the result tree after arrow navigation without visiting drag or 
     const first = root.renderer.findByTestId("browser-entry-tunings-12-TET")
     const after = root.renderer.findByTestId("after-browser")
     if (!tree || !first || !after) throw new Error("Missing tree focus targets")
-    root.renderer.nativeSimulateKeystrokes(tree.id, "down")
+    root.renderer.nativeSimulateKeystrokes(tree.id, "home")
     expect(root.renderer.getFocusedElementId()).toBe(first.id)
     root.renderer.nativeSimulateKeystrokes(first.id, "tab")
     expect(root.renderer.getFocusedElementId()).toBe(after.id)

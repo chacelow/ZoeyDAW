@@ -18,7 +18,7 @@
 
 `layout/computeLayout.ts` 只接受像素快照、解析后的约束、分隔位置与累计 delta。它保持总像素数，相邻面板先分配，达到 min/max 后才向更远的面板分配。折叠与展开只选择两侧都能容纳的跳变，不能靠挤破邻居约束完成折叠。
 
-`layout/sizes.ts` 解析单位、初始化与重排。空间足够时遵守 min/max；空间不足时只放宽可变面板的 minimum，固定面板不缩小。固定区域自身已超过总尺寸的输入抛出 RangeError。所有 maximum 都达到后保留空余，不突破 maximum。
+`layout/sizes.ts` 解析单位、初始化与重排。空间足够时遵守 min/max；空间不足时只放宽可变面板的 minimum，固定面板不缩小。`ResolvedConstraints.fixed` 只在作者显式声明同单位的 minSize、maxSize 且解析后 max <= min 时成立，不以空间不足时夹取出的 `min === max` 判断固定。像素 minimum 与百分比 maximum 混用时保持弹性。固定区域自身已超过总尺寸的输入抛出 RangeError。所有 maximum 都达到后保留空余，不突破 maximum。
 
 `useElementSize` 是唯一的容器尺寸 owner，只接收固定主干渲染器的 `onLayout` border-box 事件；不再用定时器、窗口尺寸或 `getElementBounds` 采样。事件在 paint 后到达，隐藏未绘制的容器不报告。拖动使用按下时的约束与尺寸快照，尺寸事件不能改变活动拖动的锚点；松开后再重排。
 

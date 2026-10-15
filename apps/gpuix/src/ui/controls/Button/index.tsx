@@ -119,7 +119,7 @@ export function Button({
       tabIndex={tabIndex}
       aria-disabled={disabled}
       aria-pressed={onActiveChange ? active : undefined}
-      aria-label={onActiveChange && name ? `${name} (${active ? "on" : "off"})` : name}
+      aria-label={name}
       style={sx(baseStyle, disabled && { hover: disabledPaint, active: disabledPaint }, style)}
       onClick={activate}
       onKeyDown={event => {

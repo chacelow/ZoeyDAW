@@ -3,7 +3,7 @@ import { useMemo } from "react"
 import { useProjectEditGesture, projectActions } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { Button, DragPadNumber } from "@/ui/controls"
+import { Button, DragPadNumber, ScrollArea } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import { MidiRuler } from "./MidiRuler"
 import { NoteGrid } from "./NoteGrid"
@@ -73,8 +73,6 @@ export function MidiEditor({
     paddingRight: trackGap,
     paddingTop: gap,
     paddingBottom: gap,
-    overflowX: "scroll",
-    overflowY: "hidden",
     borderBottomWidth: 1,
     borderColor: theme.colors.arrangementLine,
   })
@@ -89,7 +87,14 @@ export function MidiEditor({
         minHeight: 0,
       })}
     >
-      <div testId="midi-toolbar" style={toolbar}>
+      <ScrollArea
+        testId="midi-toolbar"
+        aria-label={labels.pianoRoll}
+        orientation="horizontal"
+        wheelToHorizontal
+        height="auto"
+        style={toolbar}
+      >
         <Button
           label={labels.fold}
           active={view.fold}
@@ -161,7 +166,7 @@ export function MidiEditor({
         <text style={muted}>
           {`${labels.gridStep} · ${editor.visibleSelection.length} ${labels.selected}`}
         </text>
-      </div>
+      </ScrollArea>
       <div style={sx({ display: "flex", flexDirection: "row", flexShrink: 0 })}>
         <div
           style={sx({

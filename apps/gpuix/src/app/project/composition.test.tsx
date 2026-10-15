@@ -12,7 +12,8 @@ import {
   automationY,
 } from "@/project/sections/arrangement/core/automation/geometry"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
-import { Input, DragPadNumber, ControlEnvironmentProvider } from "@/ui/controls"
+import { Input, DragPadNumber, ControlEnvironmentProvider, MotionTabs } from "@/ui/controls"
+import { Group, Panel, Separator } from "@/ui/panels"
 import { initAppI18n } from "../i18n"
 import { createAppInteraction } from "../interaction"
 import { ArrangementPanel } from "./ArrangementPanel"
@@ -93,6 +94,21 @@ function mount({ autoFocusInput = false, readOnlyInput = false } = {}) {
           <WindowKeyboardProvider value={keyboard}>
             <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
               <TextEditor />
+              <MotionTabs
+                options={[
+                  { key: "devices", label: "Devices" },
+                  { key: "clip", label: "Clip" },
+                ]}
+              />
+              <Group orientation="horizontal" style={{ width: 800, height: 100 }}>
+                <Panel defaultSize="50" testId="keyboard-left">
+                  <text>Browser</text>
+                </Panel>
+                <Separator testId="keyboard-divider" aria-label="Resize browser" />
+                <Panel>
+                  <text>Content</text>
+                </Panel>
+              </Group>
               <DragPadNumber
                 testId="number-editor"
                 label="Octave"
@@ -274,4 +290,22 @@ test("focused readOnly Input keeps native selection and blocks Arrangement modes
   root.renderer.nativeSimulateKeystrokes(element(root, "timeline-viewport").id, "a")
   expect(interaction.isTextFocused()).toBe(false)
   expect(useProjectState.getState().workspace.automationMode).toBe(true)
+})
+
+test("tab navigation and panel resize consume arrows without seeking; Space still plays", async () => {
+  const { root } = mount()
+  await layout(root)
+  flushSync(() => projectActions.seekBar(8))
+  const before = { ...useProjectState.getState().session.position }
+  root.renderer.nativeSimulateKeystrokes(element(root, "motion-tab-devices").id, "right")
+  expect(root.renderer.getFocusedElementId()).toBe(element(root, "motion-tab-clip").id)
+  expect(useProjectState.getState().session.position).toEqual(before)
+  const panel = element(root, "keyboard-left")
+  const width = root.renderer.getElementBounds(panel.id)?.width
+  root.renderer.nativeSimulateKeystrokes(element(root, "keyboard-divider").id, "right")
+  expect(root.renderer.getElementBounds(panel.id)?.width).toBeGreaterThan(width ?? 0)
+  expect(useProjectState.getState().session.position).toEqual(before)
+  const playing = useProjectState.getState().session.playing
+  root.renderer.nativeSimulateKeystrokes(element(root, "keyboard-divider").id, "space")
+  expect(useProjectState.getState().session.playing).toBe(!playing)
 })

@@ -1,4 +1,4 @@
-import type { EventPayload, NativeRenderer, PublicInstance } from "@gpuix/react"
+import type { EventPayload, KeyEvent, NativeRenderer, PublicInstance } from "@gpuix/react"
 
 export interface SelectionEntry {
   value: string
@@ -14,7 +14,7 @@ export function navigateSelection({
   orientation,
   select,
 }: {
-  event: EventPayload
+  event: KeyEvent
   value: string
   entries: Map<string, SelectionEntry>
   renderer: NativeRenderer | null
@@ -42,6 +42,8 @@ export function navigateSelection({
         ? enabled.at(-1)
         : enabled[(index + (backward ? -1 : 1) + enabled.length) % enabled.length]
   if (!target) return
+  event.preventDefault()
+  event.stopPropagation()
   renderer?.focusElement?.(target.node.id)
   select?.(target.value)
 }

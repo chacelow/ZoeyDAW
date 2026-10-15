@@ -6,6 +6,20 @@ import { readFileSync, writeFileSync } from "node:fs"
 
 const mutations = [
   {
+    name: "R1c MIDI toolbar loses wheel translation",
+    file: "src/project/sections/clip-edit/midi/MidiEditor.tsx",
+    from: "wheelToHorizontal",
+    to: "wheelToHorizontal={false}",
+    tests: ["src/project/sections/clip-edit/scroll-regions.test.tsx"],
+  },
+  {
+    name: "R1c audio parameters lose shared region semantics",
+    file: "src/project/sections/clip-edit/audio/AudioParameters.tsx",
+    from: 'orientation="vertical"',
+    to: 'orientation="vertical" role="group"',
+    tests: ["src/project/sections/clip-edit/scroll-regions.test.tsx"],
+  },
+  {
     name: "quantize ignores the selection",
     file: "src/project/model/midi-editing/operations.ts",
     from: "if (!indices.has(index) || Math.abs(cells",
