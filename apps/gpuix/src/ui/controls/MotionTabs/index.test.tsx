@@ -41,6 +41,11 @@ test("tabs select accessible panes through arrows and Home/End with matching ind
   expect(changes).toEqual([])
   expect(root.renderer.findByTestId("pane-a")).toBeDefined()
   expect(spaces).toEqual([false])
+  root.renderer.simulateKeystrokes("enter")
+  expect(changes).toEqual(["c"])
+  expect(root.renderer.findByTestId("pane-c")).toBeDefined()
+  root.renderer.simulateKeystrokes("home")
+  changes.length = 0
   root.renderer.nativeSimulateKeystrokes(first.id, "right")
   expect(changes).toEqual(["c"])
   expect(root.renderer.getFocusedElementId()).toBe(last.id)

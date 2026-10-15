@@ -59,14 +59,7 @@ test("radio arrows wrap, skip disabled items, and Home/End update controlled sel
 })
 
 test("controlled radio does not keep an independent selection", () => {
-  const spaces: boolean[] = []
-  const root = createTestRoot({
-    width: 400,
-    height: 180,
-    onKeyDown: event => {
-      if (event.key === "space") spaces.push(event.defaultPrevented)
-    },
-  })
+  const root = createTestRoot({ width: 400, height: 180 })
   const requested: string[] = []
   root.render(
     <ThemeProvider>
@@ -92,9 +85,6 @@ test("controlled radio does not keep an independent selection", () => {
   root.renderer.nativeSimulateKeystrokes(first.id, "right")
   expect(requested).toEqual(["c"])
   root.renderer.simulateKeystrokes("space")
-  expect(requested).toEqual(["c"])
-  expect(spaces).toEqual([false])
-  root.renderer.simulateKeystrokes("enter")
   expect(requested).toEqual(["c", "c"])
   root.unmount()
 })

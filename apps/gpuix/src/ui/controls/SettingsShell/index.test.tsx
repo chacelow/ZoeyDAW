@@ -68,14 +68,7 @@ test("settings shell navigates actual selected panes and closes through Escape",
 })
 
 test("standalone settings navigation item activates only when enabled", () => {
-  const spaces: boolean[] = []
-  const root = createTestRoot({
-    width: 300,
-    height: 180,
-    onKeyDown: event => {
-      if (event.key === "space") spaces.push(event.defaultPrevented)
-    },
-  })
+  const root = createTestRoot({ width: 300, height: 180 })
   const selected: string[] = []
   root.render(
     <ThemeProvider>
@@ -93,9 +86,6 @@ test("standalone settings navigation item activates only when enabled", () => {
   const nav = root.renderer.findByTestId("nav")
   if (!nav) throw new Error("Missing navigation item")
   root.renderer.nativeSimulateKeystrokes(nav.id, "space")
-  expect(selected).toEqual([])
-  expect(spaces).toEqual([false])
-  root.renderer.simulateKeystrokes("enter")
   expect(selected).toEqual(["general"])
   root.render(
     <ThemeProvider>
