@@ -49,15 +49,18 @@ export const ClipCardView = memo(function ClipCardView({
   const notes = useMemo(
     () =>
       clip.kind === "midi"
-        ? midiPreviewRects(clip, g, numerator, viewportWidth)
+        ? midiPreviewRects(clip, g, numerator, viewportWidth, theme.project)
         : clip.kind === "pattern"
-          ? patternPreviewRects(clip, g, viewportWidth)
+          ? patternPreviewRects(clip, g, viewportWidth, theme.project)
           : [],
-    [clip, g, numerator, viewportWidth]
+    [clip, g, numerator, viewportWidth, theme.project]
   )
   const sourceStartBar = 1 + ((visibleLeft - g.left) / g.width) * clip.lengthBars
   const sourceEndBar = 1 + ((visibleLeft + width - g.left) / g.width) * clip.lengthBars
-  const loopTicks = useMemo(() => clipLoopTicks(clip, g, viewportWidth), [clip, g, viewportWidth])
+  const loopTicks = useMemo(
+    () => clipLoopTicks(clip, g, viewportWidth, theme.project),
+    [clip, g, viewportWidth, theme.project]
+  )
   return (
     <div
       testId={`${card.ghost ? "clip-ghost" : "clip-source"}-${clip.id}`}
@@ -177,7 +180,7 @@ export const ClipCardView = memo(function ClipCardView({
             left: x - visibleLeft,
             top: 0,
             width: 1,
-            height: theme.control["--spacing-control-track-gap"],
+            height: theme.project.arrangementLoopTickHeight,
             backgroundColor: ink,
             pointerEvents: "none",
           })}
@@ -197,25 +200,37 @@ export const ClipCardView = memo(function ClipCardView({
           })}
         />
       )}
-      <text
+      <div
         style={sx({
           position: "absolute",
-          left: g.left - visibleLeft + theme.control["--spacing-control-track-gap"],
+          left: g.left - visibleLeft + theme.project.arrangementClipLabelClipInset,
           top: 0,
           height: g.titleHeight,
-          width: Math.max(0, g.width - theme.control["--spacing-control-track-gap"] * 2),
-          display: "flex",
-          alignItems: "center",
-          color: ink,
-          fontSize: theme.control["--text-control-track"],
-          whiteSpace: "nowrap",
+          width: Math.max(0, g.width - theme.project.arrangementClipLabelClipInset * 2),
           overflow: "hidden",
           pointerEvents: "none",
-          userSelect: "none",
         })}
       >
-        {clipLabel(clip)}
-      </text>
+        <text
+          style={sx({
+            position: "absolute",
+            left:
+              theme.project.arrangementClipLabelInset - theme.project.arrangementClipLabelClipInset,
+            top: 0,
+            height: g.titleHeight,
+            width: g.width,
+            display: "flex",
+            alignItems: "center",
+            color: ink,
+            fontSize: theme.control["--text-control-track"],
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+            userSelect: "none",
+          })}
+        >
+          {clipLabel(clip)}
+        </text>
+      </div>
     </div>
   )
 })

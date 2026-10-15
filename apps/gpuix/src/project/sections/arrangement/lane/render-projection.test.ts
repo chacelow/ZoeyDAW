@@ -1,4 +1,5 @@
 import { expect, it } from "bun:test"
+import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
 import { createMockDocument } from "../../../adapters/fixtures"
 import type { Clip, MidiClip } from "../../../model/types"
 import { clipRect, layoutTrackRows } from "../core/layout"
@@ -113,8 +114,8 @@ it("clips retained MIDI repetitions and Pattern activity to the visible source w
       steps: [true, false, false, true, false, false, false, false],
     }
     for (const rect of [
-      ...midiPreviewRects(midi, geometry, 4, viewportWidth),
-      ...patternPreviewRects(pattern, geometry, viewportWidth),
+      ...midiPreviewRects(midi, geometry, 4, viewportWidth, PROJECT_METRICS),
+      ...patternPreviewRects(pattern, geometry, viewportWidth, PROJECT_METRICS),
     ]) {
       expect(rect.left).toBeGreaterThanOrEqual(0)
       expect(rect.left + rect.width).toBeLessThanOrEqual(viewportWidth + 1)
@@ -123,7 +124,7 @@ it("clips retained MIDI repetitions and Pattern activity to the visible source w
       expect(rect.top).toBeGreaterThanOrEqual(geometry.bodyTop)
       expect(rect.top + rect.height).toBeLessThanOrEqual(geometry.bodyTop + geometry.bodyHeight)
     }
-    for (const tick of clipLoopTicks(midi, geometry, viewportWidth)) {
+    for (const tick of clipLoopTicks(midi, geometry, viewportWidth, PROJECT_METRICS)) {
       expect(tick).toBeGreaterThanOrEqual(0)
       expect(tick).toBeLessThanOrEqual(viewportWidth)
       const bar = sourceOffsetBars + ((tick - geometry.left) / geometry.width) * lengthBars
@@ -185,9 +186,9 @@ it("retains MIDI source phase after trimming and across equivalent loop windows"
   for (const [sourceOffsetBars, expectedLeft] of phases) {
     const clip = { ...base, sourceOffsetBars }
     const geometry = clipVisualGeometry(clipRect(clip, row, 256, 0), clip, track, false)
-    expect(midiPreviewRects(clip, geometry, 4, 512).map(note => [note.left, note.width])).toEqual([
-      [expectedLeft, 32],
-    ])
+    expect(
+      midiPreviewRects(clip, geometry, 4, 512, PROJECT_METRICS).map(note => [note.left, note.width])
+    ).toEqual([[expectedLeft, 32]])
   }
   let seed = 0x781903
   const random = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32
@@ -215,12 +216,13 @@ it("retains MIDI source phase after trimming and across equivalent loop windows"
       track,
       false
     )
-    const original = midiPreviewRects(clip, geometry, 4, 600)
+    const original = midiPreviewRects(clip, geometry, 4, 600, PROJECT_METRICS)
     const cycled = midiPreviewRects(
       { ...clip, sourceOffsetBars: (clip.sourceOffsetBars ?? 0) + loopBars },
       geometry,
       4,
-      600
+      600,
+      PROJECT_METRICS
     )
     expect(cycled.length).toBe(original.length)
     for (let index = 0; index < original.length; index++) {

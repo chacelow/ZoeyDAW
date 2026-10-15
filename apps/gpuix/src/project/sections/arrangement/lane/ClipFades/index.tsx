@@ -30,7 +30,7 @@ export function ClipFades({
   const theme = useTheme()
   const top = geometry.bodyHeight ? geometry.bodyTop : geometry.top
   const height = geometry.bodyHeight || geometry.height
-  const size = FADE_HANDLE_PX - theme.project.trackBorder
+  const size = theme.project.arrangementFadeHandleSize
   const diamond = useMemo(() => {
     const half = size / 2
     const inset = 1 / 2

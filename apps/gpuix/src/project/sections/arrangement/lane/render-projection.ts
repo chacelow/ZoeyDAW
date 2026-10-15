@@ -1,3 +1,4 @@
+import type { Theme } from "@/shared/theme/ThemeProvider"
 import { patternHasActivity, patternWindow } from "@/project/model/pattern-window"
 import { PATTERN_STEPS_PER_BAR } from "@/project/model/types"
 import type { Clip, MidiClip, PatternClip } from "@/project/model/types"
@@ -11,7 +12,7 @@ import {
   layoutTrackRows,
   pinnedTrackHeight,
 } from "../core/layout"
-import type { TrackRow } from "../core/layout"
+import type { ClipRect, TrackRow } from "../core/layout"
 import type { ArrangementScene } from "../core/scene"
 
 export interface VisibleRow extends TrackRow {
@@ -26,6 +27,22 @@ export interface ClipCard {
   selected: boolean
   hovered: boolean
 }
+
+export type ClipCardProjector = (
+  rect: ClipRect,
+  ghost: boolean,
+  selected: boolean,
+  hovered: boolean,
+  fadesVisible: boolean
+) => ClipCard
+
+const freshCard: ClipCardProjector = (rect, ghost, selected, hovered, fadesVisible) => ({
+  clip: rect.clip,
+  geometry: clipVisualGeometry(rect, rect.clip, rect.track, fadesVisible),
+  ghost,
+  selected,
+  hovered,
+})
 
 export interface PreviewRect {
   left: number
@@ -51,6 +68,15 @@ export function visibleClipCards(
   row: TrackRow,
   automationMode: boolean
 ): ClipCard[] {
+  return projectVisibleClipCards(scene, row, automationMode, freshCard)
+}
+
+export function projectVisibleClipCards(
+  scene: ArrangementScene,
+  row: TrackRow,
+  automationMode: boolean,
+  project: ClipCardProjector
+): ClipCard[] {
   const { width, pxPerBar, scrollX } = scene.viewport
   if (width <= 0 || pxPerBar <= 0 || row.track.kind === "group") return []
   const source =
@@ -62,22 +88,19 @@ export function visibleClipCards(
       const rect = clipRect(clip, row, pxPerBar, scrollX)
       if (rect.left + rect.width <= 0 || rect.left >= width) continue
       const hovered = !scene.clipDrag && !automationMode && scene.hoverClip?.id === clip.id
-      const geometry = clipVisualGeometry(
+      const selected = ghost
+        ? !!scene.clipDrag?.ids.has(clip.id)
+        : !scene.clipDrag && scene.selectedClipIds.has(clip.id)
+      const card = project(
         rect,
-        clip,
-        row.track,
+        ghost,
+        selected,
+        hovered,
         !ghost && hovered && scene.hoverClip?.region === "body"
       )
+      const geometry = card.geometry
       if (geometry.left + geometry.width <= 0 || geometry.left >= width) continue
-      cards.push({
-        clip,
-        geometry,
-        ghost,
-        selected: ghost
-          ? !!scene.clipDrag?.ids.has(clip.id)
-          : !scene.clipDrag && scene.selectedClipIds.has(clip.id),
-        hovered,
-      })
+      cards.push(card)
     }
   }
   return cards
@@ -87,7 +110,8 @@ export function midiPreviewRects(
   clip: MidiClip,
   geometry: ClipVisualGeometry,
   numerator: number,
-  viewportWidth: number
+  viewportWidth: number,
+  metrics: Theme["project"]
 ): PreviewRect[] {
   const { left, width, bodyTop, bodyHeight } = geometry
   if (!clip.notes.length || bodyHeight <= 0 || width <= 0) return []
@@ -110,7 +134,11 @@ export function midiPreviewRects(
     const duration = Math.min(note.lengthBeats, cycle)
     const first = Math.floor((visibleStart - phase - duration) / cycle) + 1
     const last = Math.ceil((visibleEnd - phase) / cycle)
-    const top = bodyTop + 1 + ((maxPitch - note.pitch) / pitchSpan) * Math.max(0, bodyHeight - 4)
+    const top =
+      bodyTop +
+      metrics.arrangementPreviewNoteTopInset +
+      ((maxPitch - note.pitch) / pitchSpan) *
+        Math.max(0, bodyHeight - metrics.arrangementPreviewNoteInset)
     for (let repeat = first; repeat < last; repeat++) {
       const start = Math.max(sourceStart, phase + repeat * cycle)
       const end = Math.min(sourceStart + sourceLength, phase + repeat * cycle + duration)
@@ -122,7 +150,12 @@ export function midiPreviewRects(
         left + ((end - sourceStart) / sourceLength) * width
       )
       if (through > x)
-        rectangles.push({ left: x, top, width: through - x, height: Math.min(3, bodyHeight) })
+        rectangles.push({
+          left: x,
+          top,
+          width: through - x,
+          height: Math.min(metrics.arrangementPreviewNoteHeight, bodyHeight),
+        })
     }
   }
   return rectangles
@@ -131,21 +164,29 @@ export function midiPreviewRects(
 export function patternPreviewRects(
   clip: PatternClip,
   geometry: ClipVisualGeometry,
-  viewportWidth: number
+  viewportWidth: number,
+  metrics: Theme["project"]
 ): PreviewRect[] {
   const { left, width, bodyTop, bodyHeight } = geometry
   const steps = clip.steps
   if (!steps?.length || bodyHeight <= 0 || width <= 0) return []
   const source = patternWindow(clip)
   const cellWidth = width / (clip.lengthBars * PATTERN_STEPS_PER_BAR)
-  const top = Math.round(bodyTop + Math.max(0, (bodyHeight - 3) / 2))
+  const top = Math.round(
+    bodyTop + Math.max(0, (bodyHeight - metrics.arrangementPreviewNoteHeight) / 2)
+  )
   const result: PreviewRect[] = []
   if (cellWidth < 1) {
     for (let x = Math.ceil(Math.max(0, left)); x < Math.min(viewportWidth, left + width); x++) {
       const from = source.origin + (x - left) / cellWidth
       const end = source.origin + (Math.min(x + 1, left + width) - left) / cellWidth
       if (patternHasActivity(steps, from, end))
-        result.push({ left: x, top, width: 1, height: Math.min(3, bodyHeight) })
+        result.push({
+          left: x,
+          top,
+          width: 1,
+          height: Math.min(metrics.arrangementPreviewNoteHeight, bodyHeight),
+        })
     }
     return result
   }
@@ -166,8 +207,8 @@ export function patternPreviewRects(
       result.push({
         left: x,
         top,
-        width: Math.max(1, Math.min(cellWidth - 1, through - x)),
-        height: Math.min(3, bodyHeight),
+        width: Math.max(1, Math.min(cellWidth - metrics.arrangementPreviewStepGap, through - x)),
+        height: Math.min(metrics.arrangementPreviewNoteHeight, bodyHeight),
       })
   }
   return result
@@ -176,7 +217,8 @@ export function patternPreviewRects(
 export function clipLoopTicks(
   clip: Clip,
   geometry: ClipVisualGeometry,
-  viewportWidth: number
+  viewportWidth: number,
+  metrics: Theme["project"]
 ): number[] {
   const period =
     clip.kind === "midi"
@@ -187,14 +229,23 @@ export function clipLoopTicks(
           ? clip.audioSettings.loopLengthBars
           : null
   const { left, width } = geometry
-  if (!period || width <= 0 || (period / clip.lengthBars) * width < 2) return []
+  if (
+    !period ||
+    width <= 0 ||
+    (period / clip.lengthBars) * width < metrics.arrangementLoopTickMinSpacing
+  )
+    return []
   const sourceStart = clip.sourceOffsetBars ?? 0
   const from = sourceStart + (Math.max(0, -left) / width) * clip.lengthBars
   const through = sourceStart + (Math.min(width, viewportWidth - left) / width) * clip.lengthBars
   const ticks: number[] = []
   for (let cycle = Math.floor(from / period) + 1; cycle * period < through; cycle++) {
     const x = left + ((cycle * period - sourceStart) / clip.lengthBars) * width
-    if (x > left + 1 && x < left + width - 1) ticks.push(Math.round(x))
+    if (
+      x > left + metrics.arrangementLoopTickEdgeInset &&
+      x < left + width - metrics.arrangementLoopTickEdgeInset
+    )
+      ticks.push(Math.round(x))
   }
   return ticks
 }

@@ -1,6 +1,8 @@
 import { useState, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import type { EventPayload } from "@gpuix/react"
+import { useGpuix } from "@gpuix/react"
+import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -32,6 +34,7 @@ export function LaneContextMenu({
   resolveTarget: (event: EventPayload) => LaneMenuTarget | null
   t: LaneTranslate
 }) {
+  const { renderer } = useGpuix()
   const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)
   const [target, setTarget] = useState<LaneMenuTarget | null>(null)
   const [open, setOpen] = useState(false)
@@ -54,6 +57,22 @@ export function LaneContextMenu({
         onMouseDown={event => {
           if (event.button === 2 || event.isRightClick || event.modifiers?.ctrl)
             setTarget(resolveTarget(event))
+        }}
+        onKeyDown={event => {
+          const key = event.key?.toLowerCase()
+          if (key !== "contextmenu" && !(key === "f10" && event.modifiers?.shift)) return
+          const focused = renderer?.getFocusedElementId?.()
+          const bounds =
+            focused === undefined || focused === null ? null : renderer?.getElementBounds?.(focused)
+          setTarget(
+            bounds
+              ? resolveTarget({
+                  ...event,
+                  x: bounds.x + bounds.width / 2,
+                  y: bounds.y + Math.min(TRACK_TITLE_HEIGHT, bounds.height) / 2,
+                })
+              : null
+          )
         }}
       >
         {children}

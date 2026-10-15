@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useLayoutEffect, useMemo, useState } from "react"
 import { Shape } from "@/shared/svg/Shape"
 import { polygonPath } from "@/shared/svg/paths"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -7,16 +7,24 @@ import { alignmentBar } from "../../core/clip-alignment"
 import { arrangementBodyBottom, arrangementBodyTop } from "../../core/layout"
 import type { ArrangementScene, ArrangementViewport } from "../../core/scene"
 import { useProjectState } from "@/project/adapters"
+import { useAnimationFrame } from "@/platform/frame"
 import { visibleRows } from "../render-projection"
 
 export interface LaneOverlayProps {
   scene: ArrangementScene
   viewport: ArrangementViewport
-  transportBar: number
+  transportBar: () => number
 }
 
 export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps) {
   const theme = useTheme()
+  const [position, setPosition] = useState(transportBar)
+  useLayoutEffect(() => {
+    setPosition(transportBar())
+  }, [transportBar, scene.playback.playing])
+  useAnimationFrame(() => {
+    setPosition(transportBar())
+  }, scene.playback.playing)
   const insertionPath = useMemo(
     () =>
       polygonPath([
@@ -35,7 +43,7 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
   const row = anchor
     ? visibleRows(projected).find(item => item.track.id === anchor.trackId)
     : undefined
-  const playheadX = (transportBar - 1) * viewport.pxPerBar - viewport.scrollX
+  const playheadX = (position - 1) * viewport.pxPerBar - viewport.scrollX
   const insertionX = anchor ? (anchor.bar - 1) * viewport.pxPerBar - viewport.scrollX : -1
   const alignmentX =
     alignment === null ? -1 : (alignment - 1) * viewport.pxPerBar - viewport.scrollX
@@ -72,15 +80,15 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
               })}
             />
             <Shape
-              width={theme.control["--spacing-control-track-gap"] * 2}
-              height={theme.project.groupRailWidth - 1}
+              width={theme.project.arrangementInsertionTriangleWidth}
+              height={theme.project.arrangementInsertionTriangleHeight}
               viewBox="0 0 2 1"
               paths={[{ d: insertionPath, fill: true }]}
               color={theme.colors.primary}
               style={sx({
                 position: "absolute",
-                left: insertionX - theme.control["--spacing-control-track-gap"],
-                top: top - theme.project.groupRailWidth,
+                left: insertionX - theme.project.arrangementInsertionTriangleWidth / 2,
+                top: top - theme.project.arrangementInsertionTriangleTopOffset,
                 pointerEvents: "none",
               })}
             />

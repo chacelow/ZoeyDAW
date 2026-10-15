@@ -1,6 +1,7 @@
 import { memo, useMemo } from "react"
-import { sx } from "@/shared/theme/style"
+import { PeakColumns } from "@/shared/waveform/PeakColumns"
 import type { PeakReader } from "@/project/model/backend"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 
 const EMPTY_PEAKS = new Float32Array(0)
 
@@ -29,6 +30,7 @@ export const WaveformPreview = memo(function WaveformPreview({
   opacity: number
   readPeaks: PeakReader
 }) {
+  const theme = useTheme()
   const pixels = Math.ceil(width)
   const peaks = useMemo(
     () =>
@@ -37,44 +39,17 @@ export const WaveformPreview = memo(function WaveformPreview({
         : EMPTY_PEAKS,
     [sourceId, startBar, endBar, pixels, contentOffsetBars, height, readPeaks]
   )
-  const channels = pixels > 0 ? peaks.length / (pixels * 2) : 0
-  if (!channels) return null
   return (
-    <div
+    <PeakColumns
       testId={`waveform-${id}`}
-      aria-hidden
-      style={sx({
-        position: "absolute",
-        left: 0,
-        top,
-        width,
-        height,
-        overflow: "hidden",
-        pointerEvents: "none",
-      })}
-    >
-      {Array.from({ length: pixels * channels }, (_, index) => {
-        const pixel = index % pixels
-        const channel = Math.floor(index / pixels)
-        const channelHeight = height / channels
-        const minimum = Math.max(-1, Math.min(1, peaks[index * 2] ?? 0))
-        const maximum = Math.max(-1, Math.min(1, peaks[index * 2 + 1] ?? 0))
-        return (
-          <div
-            key={index}
-            style={sx({
-              position: "absolute",
-              left: pixel,
-              top: channel * channelHeight + ((1 - maximum) * channelHeight) / 2,
-              width: 1,
-              height: Math.max(1, ((maximum - minimum) * channelHeight) / 2),
-              backgroundColor: color,
-              opacity,
-              pointerEvents: "none",
-            })}
-          />
-        )
-      })}
-    </div>
+      peaks={peaks}
+      pixels={pixels}
+      width={width}
+      height={height}
+      top={top}
+      color={color}
+      opacity={opacity}
+      inset={theme.project.arrangementWaveformInset}
+    />
   )
 })

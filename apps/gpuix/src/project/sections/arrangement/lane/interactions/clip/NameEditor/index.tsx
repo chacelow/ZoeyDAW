@@ -90,6 +90,7 @@ function NameInput({
   return (
     <Input
       autoFocus
+      selectAllOnFocus
       testId="clip-name-editor"
       aria-label={t("arrangement.rename")}
       value={value}

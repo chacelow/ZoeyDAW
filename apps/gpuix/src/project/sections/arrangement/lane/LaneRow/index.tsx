@@ -1,7 +1,6 @@
 import { useCallback, useRef, useSyncExternalStore } from "react"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload, PublicInstance } from "@gpuix/react"
-import type { NativeClipboard } from "@/platform/clipboard"
 import { useProjectState } from "@/project/adapters"
 import { sx } from "@/shared/theme/style"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -22,7 +21,6 @@ export interface LaneRowProps {
   viewport: ArrangementViewport
   controller: LaneController
   readPeaks: PeakReader
-  clipboard: NativeClipboard
   labels: LaneLabels
 }
 
@@ -49,22 +47,6 @@ export function LaneRow({ row, scene, viewport, controller, readPeaks, labels }:
       }
     },
     [renderer, row.top]
-  )
-  const activate = useCallback(
-    (id: string) => {
-      const context = controller.context
-      if (interaction.dragActive || context.getState().session.preview) return
-      const clip = row.track.clips.find(item => item.id === id)
-      if (!clip) return
-      context.actions.selectTracks([row.track.id], "arrangement")
-      context.actions.selectClips([id])
-      context.actions.setTimeSelection(null)
-      context.actions.setInsertionPoint({ trackId: row.track.id, bar: clip.startBar })
-      context.scene.setSelection(new Set([id]))
-      context.scene.setTimeSelection(null)
-      context.scene.setTargetSelection({ kind: "clip", id, phase: "selected" })
-    },
-    [controller, interaction.dragActive, row.track]
   )
   return (
     <div
@@ -137,7 +119,7 @@ export function LaneRow({ row, scene, viewport, controller, readPeaks, labels }:
             scene={scene}
             automationMode={automationMode}
             readPeaks={readPeaks}
-            onActivate={activate}
+            onActivate={controller.activateClip}
           />
         </div>
       </LaneContextMenu>

@@ -79,7 +79,6 @@ export function createLaneClipboard(
         context.actions.beginEdit()
         context.actions.cutClips(ids, state.session.timeSelection ?? undefined)
         context.actions.endEdit()
-        context.scene.setSelection(new Set())
       }
       return true
     }
@@ -107,7 +106,6 @@ export function createLaneClipboard(
     const done = context.actions.pasteClips(target.trackId, target.bar, payload)
     context.actions.endEdit()
     if (done) {
-      context.scene.setSelection(new Set(context.getState().session.selectedClipIds))
       context.scene.setTargetSelection({ kind: "none" })
     }
     return done

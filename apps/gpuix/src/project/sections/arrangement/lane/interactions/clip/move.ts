@@ -96,7 +96,6 @@ export function createMoveGesture(
       context.scene.setClipDrag(null)
       if (cancelled || !plan) return
       context.actions.selectClips(plan.selectedIds)
-      context.scene.setSelection(new Set(context.getState().session.selectedClipIds))
       const selectedId = context.getState().session.selectedClipIds[0]
       const owner = context
         .getState()

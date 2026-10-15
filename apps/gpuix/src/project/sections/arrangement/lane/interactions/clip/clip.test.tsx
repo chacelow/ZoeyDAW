@@ -6,11 +6,12 @@ import { createMockDocument, createMockWorkspace } from "../../../../../adapters
 import { alignmentBar } from "../../../core/clip-alignment"
 import { createSceneStore } from "../../../core/scene"
 import { layoutTrackRows } from "../../../core/layout"
-import { synchronizeProjectScene } from "../project-preview"
+import { createTestTimeline } from "../../testing/project-scene.test-helper"
 import type { LaneContext, LaneGesture, LanePointer } from "../types"
 import { createClipInteractions } from "."
 
 let root: TestRoot | undefined
+let releaseTimeline: (() => void) | undefined
 beforeEach(() => {
   const document = createMockDocument()
   const track = document.tracks.find(item => item.kind === "midi")
@@ -28,24 +29,28 @@ beforeEach(() => {
   track.output = "main"
   document.tracks = [track, ...document.tracks.filter(item => item.kind === "main")]
   const workspace = createMockWorkspace()
+  workspace.pxPerBar = 64
+  workspace.scrollX = 0
+  workspace.scrollY = 0
   workspace.grid = { mode: "fixed", bars: 0.25 }
   workspace.automationMode = false
   hydrateProject(JSON.stringify({ version: 2, document, workspace }))
 })
 afterEach(() => {
   root?.unmount()
+  releaseTimeline?.()
   root = undefined
+  releaseTimeline = undefined
 })
 
 function mount() {
   const scene = createSceneStore()
-  scene.setViewport({ width: 1000, height: 350, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
   const context: LaneContext = {
     scene,
     actions: projectActions,
     getState: useProjectState.getState,
   }
-  synchronizeProjectScene(context)
+  releaseTimeline = createTestTimeline(scene, 1000, 350).dispose
   const interactions = createClipInteractions(context)
   let gesture: LaneGesture | null = null
   const pointer = (x = 0, y = 0): LanePointer => ({

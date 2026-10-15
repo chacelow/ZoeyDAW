@@ -40,7 +40,6 @@ export function ClipMenuItems({
         ?.clips.at(-1)
       if (created) {
         context.actions.selectClips([created.id])
-        context.scene.setSelection(new Set([created.id]))
       }
     }
     return (
@@ -109,7 +108,6 @@ export function ClipMenuItems({
           context.actions.beginEdit()
           context.actions.duplicateClips(ids)
           context.actions.endEdit()
-          context.scene.setSelection(new Set(context.getState().session.selectedClipIds))
         }}
       >
         {t("arrangement.duplicateClip")}
@@ -154,7 +152,6 @@ export function ClipMenuItems({
         style={sx({ color: theme.colors.destructive })}
         onClick={() => {
           context.actions.deleteClips(ids)
-          context.scene.setSelection(new Set())
         }}
       >
         {t("arrangement.deleteClip")}

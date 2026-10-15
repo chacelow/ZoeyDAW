@@ -14,7 +14,6 @@ import { hitTest } from "../../core/hit-test"
 import { createClipInteractions } from "./clip"
 import { createAutomationInteractions } from "./automation"
 import { createLaneClipboard } from "./clipboard"
-import { synchronizeProjectScene } from "./project-preview"
 import type {
   LaneContext,
   LaneCursor,
@@ -33,6 +32,7 @@ export interface LaneController {
   readonly context: LaneContext
   getSnapshot(): LaneInteractionState
   subscribe(listener: () => void): () => void
+  activateClip(clipId: string): boolean
   pointerDown(pointer: LanePointer): void
   pointerMove(pointer: LanePointer, pressed: boolean): void
   pointerUp(pointer: LanePointer): void
@@ -50,8 +50,6 @@ export interface LaneControllerDeps extends LaneContext {
   clipboard: NativeClipboard
   edgePixels: number
   setScroll(x: number, y: number): ArrangementViewport
-  onCursorChange?: (cursor: LaneCursor) => void
-  onDragActiveChange?: (active: boolean) => void
   markDrawModeGesture?: () => void
 }
 
@@ -74,10 +72,7 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
   let disposed = false
   function publish(cursor: LaneCursor, dragActive = interaction.dragActive) {
     if (interaction.cursor === cursor && interaction.dragActive === dragActive) return
-    const previous = interaction
     interaction = { cursor, dragActive }
-    if (previous.cursor !== cursor) deps.onCursorChange?.(cursor)
-    if (previous.dragActive !== dragActive) deps.onDragActiveChange?.(dragActive)
     for (const listener of listeners) listener()
   }
   function finish(cancelled: boolean) {
@@ -87,7 +82,6 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
     publish("default", false)
     if (!current) return
     if (current.epoch === context.getState().session.editEpoch) current.gesture.finish(cancelled)
-    else synchronizeProjectScene(context)
   }
   function layer(pointer: LanePointer) {
     const mode = interactionLayer(
@@ -106,9 +100,13 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
         listeners.delete(listener)
       }
     },
+    activateClip(clipId) {
+      if (disposed || active || context.getState().session.preview) return false
+      automation.deactivate()
+      return clip.activate(clipId)
+    },
     pointerDown(pointer: LanePointer) {
       if (disposed || pointer.button !== 0 || active) return
-      synchronizeProjectScene(context)
       const owner = layer(pointer)
       if (!owner) return
       const hit = hitTest(
@@ -233,7 +231,6 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
         const ids = context.getState().session.selectedClipIds
         if (!ids.length) return false
         context.actions.deleteClips(ids)
-        context.scene.setSelection(new Set())
         return true
       }
       return false

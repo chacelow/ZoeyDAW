@@ -3,7 +3,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { projectTrackGroups } from "@/project/model/track-groups"
-import { gridLines, patternRegions } from "../../core/rulers/grid-lines"
+import { patternRegions } from "../../core/rulers/grid-lines"
 import type { ArrangementScene } from "../../core/scene"
 import { visibleClipCards } from "../render-projection"
 import type { TrackRow } from "../../core/layout"
@@ -11,6 +11,7 @@ import type { PeakReader } from "@/project/model/backend"
 import { ClipCardView } from "../ClipCard"
 import { resolveContentColor } from "@/shared/theme/content-color"
 import { AutomationLayer } from "../AutomationLayer"
+import { createClipCardProjection, createGridProjection } from "../clip-card-projection"
 
 export function LaneContents({
   row,
@@ -26,9 +27,30 @@ export function LaneContents({
   onActivate: (id: string) => void
 }) {
   const theme = useTheme()
-  const grid = useMemo(() => gridLines(scene), [scene])
+  const projectGrid = useMemo(createGridProjection, [])
+  const projectCards = useMemo(createClipCardProjection, [])
+  const grid = projectGrid(scene)
+  const localRow = useMemo(
+    () => ({ track: row.track, top: 0, height: row.height }),
+    [row.track, row.height]
+  )
+  const cards = projectCards(scene, localRow, automationMode)
   const regions = useMemo(() => patternRegions(scene), [scene])
   const groups = useMemo(() => projectTrackGroups(scene.tracks), [scene.tracks])
+  const descendants = groups.leafDescendantsByGroupId.get(row.track.id)
+  const groupPitch = descendants?.length
+    ? Math.max(
+        0,
+        Math.min(TRACK_TITLE_HEIGHT, row.height) - theme.project.arrangementGroupPreviewInset * 2
+      ) / descendants.length
+    : 0
+  const groupBandHeight = Math.max(
+    theme.project.arrangementGroupPreviewBandMinHeight,
+    Math.min(
+      theme.project.arrangementGroupPreviewBandMaxHeight,
+      groupPitch - theme.project.arrangementGroupPreviewBandGap
+    )
+  )
   const selection = scene.timeSelection
   return (
     <div
@@ -92,40 +114,47 @@ export function LaneContents({
       ))}
       {row.track.kind === "group" &&
         row.track.collapsed &&
-        (groups.leafDescendantsByGroupId.get(row.track.id) ?? []).flatMap(track =>
-          track.clips.map(clip => {
-            const left = (clip.startBar - 1) * scene.viewport.pxPerBar - scene.viewport.scrollX
-            const right = left + clip.lengthBars * scene.viewport.pxPerBar
-            if (right <= 0 || left >= scene.viewport.width) return null
-            return (
-              <div
-                key={`${track.id}:${clip.id}`}
-                aria-hidden
-                style={sx({
-                  position: "absolute",
-                  left: Math.max(0, left),
-                  top: 0,
-                  width: Math.min(scene.viewport.width, right) - Math.max(0, left),
-                  height: Math.min(TRACK_TITLE_HEIGHT, row.height),
-                  backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
-                  opacity: 0.85,
-                  pointerEvents: "none",
-                })}
-              />
-            )
-          })
+        descendants?.flatMap((track, index) =>
+          visibleClipCards(scene, { track, top: row.top, height: row.height }, automationMode).map(
+            card => {
+              const clip = card.clip
+              const left = Math.max(0, card.geometry.left)
+              const right = Math.min(scene.viewport.width, card.geometry.left + card.geometry.width)
+              if (right <= left) return null
+              return (
+                <div
+                  key={`${track.id}:${card.ghost ? "ghost" : "source"}:${clip.id}`}
+                  testId={`group-clip-${track.id}-${card.ghost ? "ghost" : "source"}-${clip.id}`}
+                  aria-hidden
+                  style={sx({
+                    position: "absolute",
+                    left,
+                    top:
+                      theme.project.arrangementGroupPreviewInset +
+                      index * groupPitch +
+                      Math.max(0, (groupPitch - groupBandHeight) / 2),
+                    width: right - left,
+                    height: groupBandHeight,
+                    backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
+                    opacity: 0.85,
+                    pointerEvents: "none",
+                  })}
+                />
+              )
+            }
+          )
         )}
       <div
         style={sx({
           position: "absolute",
           left: 0,
-          top: -row.top,
+          top: 0,
           width: scene.viewport.width,
-          height: scene.viewport.height,
+          height: row.height,
           pointerEvents: "none",
         })}
       >
-        {visibleClipCards(scene, row, automationMode).map(card => (
+        {cards.map(card => (
           <ClipCardView
             key={`${card.ghost ? "ghost" : "source"}:${card.clip.id}`}
             card={card}
@@ -138,8 +167,21 @@ export function LaneContents({
             onActivate={onActivate}
           />
         ))}
-        {automationMode && <AutomationLayer scene={scene} trackId={row.track.id} />}
       </div>
+      {automationMode && (
+        <div
+          style={sx({
+            position: "absolute",
+            left: 0,
+            top: -row.top,
+            width: scene.viewport.width,
+            height: scene.viewport.height,
+            pointerEvents: "none",
+          })}
+        >
+          <AutomationLayer scene={scene} trackId={row.track.id} />
+        </div>
+      )}
       {selection &&
         selection.trackIds.includes(row.track.id) &&
         selection.endBar > selection.startBar && (

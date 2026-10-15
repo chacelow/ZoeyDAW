@@ -1,3 +1,5 @@
+import path from "node:path"
+
 interface MutationCase {
   file: string
   testFile: string
@@ -30,7 +32,7 @@ export const mutationCases: Record<string, MutationCase> = {
     ],
   },
   "stereo-packing": {
-    file: "WaveformPreview.tsx",
+    file: "../../../../shared/waveform/PeakColumns.tsx",
     testFile: "WaveformPreview.test.tsx",
     testName: "preserves channel-major stereo envelopes without interleaving their pixels",
     replacements: [
@@ -49,29 +51,34 @@ export const mutationCases: Record<string, MutationCase> = {
       ],
     ],
   },
+  "card-identity": {
+    file: "clip-card-projection.ts",
+    testFile: "LaneRow/LaneRow.test.tsx",
+    testName: "scrolls an already-visible unchanged Clip without rerendering its content",
+    replacements: [["return previous.card", "return { ...previous.card }"]],
+  },
 }
 
 const id = process.env.LANE_MUTATION
 if (id) {
   const selected = mutationCases[id]
   if (!selected) throw new Error(`Unknown lane mutation: ${id}`)
+  const target = path.resolve(import.meta.dir, "..", selected.file)
+  const filter = new RegExp(`^${target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)
   Bun.plugin({
     name: "lane-mutation",
     setup(build) {
-      build.onLoad(
-        { filter: new RegExp(`/arrangement/lane/${selected.file.replaceAll(".", "\\.")}$`) },
-        async args => {
-          let contents = await Bun.file(args.path).text()
-          for (const [from, to] of selected.replacements) {
-            const first = contents.indexOf(from)
-            if (first === -1 || contents.indexOf(from, first + from.length) >= 0)
-              throw new Error(`Mutation target drift: ${id}`)
-            contents = contents.replace(from, () => to)
-          }
-          process.stderr.write(`[lane-mutation] applied ${id}\n`)
-          return { contents, loader: args.path.endsWith(".tsx") ? "tsx" : "ts" }
+      build.onLoad({ filter }, async args => {
+        let contents = await Bun.file(args.path).text()
+        for (const [from, to] of selected.replacements) {
+          const first = contents.indexOf(from)
+          if (first === -1 || contents.indexOf(from, first + from.length) >= 0)
+            throw new Error(`Mutation target drift: ${id}`)
+          contents = contents.replace(from, () => to)
         }
-      )
+        process.stderr.write(`[lane-mutation] applied ${id}\n`)
+        return { contents, loader: args.path.endsWith(".tsx") ? "tsx" : "ts" }
+      })
     },
   })
 }

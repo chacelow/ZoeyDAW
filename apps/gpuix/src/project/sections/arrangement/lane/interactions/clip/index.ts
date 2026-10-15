@@ -8,16 +8,45 @@ import { createFadeGesture } from "./fade"
 import { createTimeRangeGesture } from "./timeRange"
 import type { LaneContext, LaneInteraction } from "../types"
 
-export function createClipInteractions(context: LaneContext): LaneInteraction {
+interface ClipInteraction extends LaneInteraction {
+  activate(clipId: string): boolean
+}
+
+export function createClipInteractions(context: LaneContext): ClipInteraction {
   const { scene, actions } = context
   let ownsTarget = false
+  function select(ids: string[], clipId: string) {
+    actions.selectClips(ids)
+    scene.setTargetSelection(
+      ids.includes(clipId) ? { kind: "clip", id: clipId, phase: "selected" } : { kind: "none" }
+    )
+    ownsTarget = true
+  }
+  function seekToStart(trackId: string, bar: number) {
+    actions.setTimeSelection(null)
+    actions.setInsertionPoint({ trackId, bar })
+  }
   return {
+    activate(clipId) {
+      const state = context.getState()
+      const owner = state.document.tracks.find(track =>
+        track.clips.some(clip => clip.id === clipId)
+      )
+      const clip = owner?.clips.find(item => item.id === clipId)
+      if (!owner || !clip) return false
+      actions.selectTracks([owner.id], "arrangement")
+      select(
+        state.session.selectedClipIds.includes(clipId) ? state.session.selectedClipIds : [clipId],
+        clipId
+      )
+      seekToStart(owner.id, clip.startBar)
+      return true
+    },
     start(pointer) {
       const state = context.getState()
       const hit = hitTest(scene.get(), pointer.x, pointer.y, state.workspace.automationMode)
       if (!hit) {
         actions.selectClips([])
-        scene.setSelection(new Set())
         scene.setTargetSelection({ kind: "none" })
         return null
       }
@@ -25,7 +54,6 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
       ownsTarget = true
       if (!("clip" in hit)) {
         actions.selectClips([])
-        scene.setSelection(new Set())
         scene.setTargetSelection({ kind: "none" })
         return createTimeRangeGesture(context, pointer, hit.track.id)
       }
@@ -38,17 +66,9 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
         : selected.includes(hit.clip.id)
           ? selected
           : [hit.clip.id]
-      actions.selectClips(next)
-      scene.setSelection(new Set(next))
-      scene.setTargetSelection(
-        next.includes(hit.clip.id)
-          ? { kind: "clip", id: hit.clip.id, phase: "selected" }
-          : { kind: "none" }
-      )
+      select(next, hit.clip.id)
       if (hit.kind === "clip-title" || hit.kind === "clip-resize") {
-        actions.setTimeSelection(null)
-        scene.setTimeSelection(null)
-        actions.setInsertionPoint({ trackId: hit.track.id, bar: hit.clip.startBar })
+        seekToStart(hit.track.id, hit.clip.startBar)
       }
       if (hit.kind === "clip-title" && !additive && next.includes(hit.clip.id)) {
         return createMoveGesture(context, pointer, hit.track, hit.clip.id, [
@@ -95,10 +115,7 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
       )
       if (!hit) return false
       if ("clip" in hit) {
-        actions.selectClips([hit.clip.id])
-        scene.setSelection(new Set([hit.clip.id]))
-        scene.setTargetSelection({ kind: "clip", id: hit.clip.id, phase: "selected" })
-        ownsTarget = true
+        select([hit.clip.id], hit.clip.id)
         return true
       }
       if (hit.track.kind !== "audio" && hit.track.kind !== "midi") return false
@@ -121,7 +138,6 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
         ?.clips.at(-1)
       if (clip) {
         actions.selectClips([clip.id])
-        scene.setSelection(new Set([clip.id]))
       }
       return true
     },
@@ -133,14 +149,12 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
       if (command && key === "a") {
         const all = state.document.tracks.flatMap(track => track.clips.map(clip => clip.id))
         actions.selectClips(all)
-        scene.setSelection(new Set(all))
         return true
       }
       if (command && key === "d" && ids.length) {
         actions.beginEdit()
         actions.duplicateClips(ids)
         actions.endEdit()
-        scene.setSelection(new Set(context.getState().session.selectedClipIds))
         return true
       }
       if (command && key === "e" && ids.length) {
@@ -182,7 +196,6 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
         const selected = context.getState().session.selectedClipIds
         const ids = selected.includes(hit.clip.id) ? selected : [hit.clip.id]
         actions.selectClips(ids)
-        scene.setSelection(new Set(ids))
         scene.setTargetSelection({ kind: "clip", id: hit.clip.id, phase: "selected" })
         ownsTarget = true
         return { kind: "clip", clipId: hit.clip.id, clipIds: ids }

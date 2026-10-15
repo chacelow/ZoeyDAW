@@ -6,7 +6,6 @@ import {
   automationValue,
 } from "@/project/sections/arrangement/core/automation/geometry"
 import { hitAutomation } from "@/project/sections/arrangement/core/automation/hit"
-import { synchronizeProjectScene } from "../project-preview"
 import {
   drawGesture,
   flatLineGesture,
@@ -20,7 +19,6 @@ import type { LaneContext, LaneInteraction } from "../types"
 export function createAutomationInteractions(context: LaneContext): LaneInteraction {
   return {
     start(pointer) {
-      synchronizeProjectScene(context)
       const scene = context.scene.get()
       const hit = hitAutomation(scene, pointer)
       const action = automationAction(hit, effectiveDrawMode(context.getState()), pointer.button)
@@ -54,7 +52,6 @@ export function createAutomationInteractions(context: LaneContext): LaneInteract
       )
     },
     doubleClick(pointer) {
-      synchronizeProjectScene(context)
       const scene = context.scene.get()
       const hit = hitAutomation(scene, pointer)
       if (hit?.kind === "point") return true
@@ -80,7 +77,6 @@ export function createAutomationInteractions(context: LaneContext): LaneInteract
     },
     keyDown: event => automationKeyDown(context, event),
     contextMenu(pointer) {
-      synchronizeProjectScene(context)
       const scene = context.scene.get()
       const hit = hitAutomation(scene, pointer)
       if (!hit) return null

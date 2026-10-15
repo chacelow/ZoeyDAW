@@ -141,6 +141,7 @@ function ValueInput({
   return (
     <Input
       autoFocus
+      selectAllOnFocus
       testId="automation-value-editor"
       aria-label={t("arrangement.editAutomationValue")}
       value={value}

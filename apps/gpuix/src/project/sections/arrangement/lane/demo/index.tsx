@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react"
+import { useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { render, useGpuix } from "@gpuix/react"
 import {
@@ -53,7 +46,9 @@ function NativeFrames({ runtime, children }: { runtime: LaneDemoRuntime; childre
   }, [renderer])
   useLayoutEffect(() => {
     if (!renderer) return
-    return createWindowPlatform(renderer).subscribeApplicationActive(active => {
+    const platform = createWindowPlatform(renderer)
+    platform.activate()
+    return platform.subscribeApplicationActive(active => {
       if (!active) runtime.interrupt()
     })
   }, [renderer, runtime])
@@ -69,12 +64,10 @@ function TransportOverlay({
 }) {
   const playing = useProjectState(state => state.session.playing)
   const interaction = useSyncExternalStore(runtime.lane.subscribe, runtime.lane.getSnapshot)
-  const [bar, setBar] = useState(readTransportBar)
   useAnimationFrame(timestampMs => {
     runtime.frame(timestampMs)
-    setBar(readTransportBar())
   }, playing || interaction.dragActive)
-  return <LaneOverlay scene={scene} viewport={scene.viewport} transportBar={bar} />
+  return <LaneOverlay scene={scene} viewport={scene.viewport} transportBar={readTransportBar} />
 }
 
 function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
@@ -286,7 +279,6 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
                 viewport={scene.viewport}
                 controller={runtime.lane}
                 readPeaks={readProjectPeaks}
-                clipboard={runtime.clipboard}
                 labels={labelsByLocale[locale]}
               />
             </div>
