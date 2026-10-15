@@ -2,7 +2,6 @@ import { afterEach, beforeEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync, useWindowSize } from "@gpuix/react"
 import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
-import { readOuterBounds } from "../../../../../ui/controls/useMeasuredTextWidth"
 import {
   hydrateProject,
   projectActions,
@@ -98,7 +97,7 @@ function element(root: TestRoot, id: string) {
 }
 
 function bounds(root: TestRoot, id: string) {
-  const found = readOuterBounds(root.renderer, element(root, id))
+  const found = root.renderer.getElementBounds(element(root, id).id)
   if (!found) throw new Error(`Unpainted ${id}`)
   return found
 }

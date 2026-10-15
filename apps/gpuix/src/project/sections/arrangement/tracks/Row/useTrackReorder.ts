@@ -1,7 +1,6 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { PanelEnvironmentContext } from "@/ui/panels/PanelEnvironment"
-import { readOuterBounds } from "@/ui/controls/useMeasuredTextWidth"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { dragStarted } from "../../core/interactions/layers"
 import type { Props, PublicInstance } from "@gpuix/react"
@@ -65,7 +64,7 @@ export function useTrackReorder(
           }
           if (!start.moved && !dragStarted(start, { x: event.x, y: event.y })) return
           start.moved = true
-          const bounds = readOuterBounds(renderer, container.current)
+          const bounds = container.current ? renderer?.getElementBounds(container.current.id) : null
           const target =
             bounds && event.x >= bounds.x && event.x <= bounds.x + bounds.width
               ? rows.find(
