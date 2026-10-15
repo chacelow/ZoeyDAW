@@ -1,4 +1,4 @@
-# A3b gallery-polish:控件画廊的间距、居中与紧凑感修正(含逐状态视觉证据)
+# A3b gallery-polish：组合画廊的统一布局与整体评审
 
 ## Target
 
@@ -18,9 +18,9 @@ A3 已合入并通过类型、测试与真实窗口交互,但协调者 review �
 1. 画廊里所有间距、内边距取 `useTheme()` 的 token 或 `CONTROL_METRICS`/`PROJECT_METRICS`;需要的值不存在就**先加 token 再引用**(token 属共享契约:新增 token 前 `orca orchestration ask` 给出名称、值与理由)。
 2. 同类位置同一值:同一行控件间水平 gap 取同一 token;相邻行的垂直 gap 取同一 token;卡片内边距取同一 token。transport 档控件单独成区,不与默认档混行。
 3. 并排对比 Ableton Live 同类区域(只读观察:`computer.window({app:"Live"})` 的 screenshot/zoom/ax;**不要点击或改 Live 工程、不抢焦点**),调整到同一密度量级,记录对比表(Live 观察→画廊实现→差异)。
-4. **逐状态逐控件截图并放大**(这是 `docs/architecture/gpuix-ui-standards.md` 第 13 节的要求,A3 没做到):每个控件的默认、悬停、按下、聚焦、禁用、激活、预编辑、编辑各一张,放大看居中(文字、数值、图标)、同组等高、纯图标控件为正方形、数值控件宽度在内容变化与进入编辑态时不抖动。用 `win.ax()` 的 bounds 量出实际值与 token 核对,表格写进报告。深色与浅色、中英文各复核一遍。
+4. 以组合 Gallery 同屏比较控件组、卡片、工具栏、展开/收起面板，协调者亲自评审跨区域对齐、垂直居中、卡片 gap、按钮 gap、padding 与共享 token。状态通过实际操作和有效原生回归验证；深浅/中英用少量整体 overview，局部截图仅定位具体缺陷。
 5. 发现问题先改再重新截图确认,报告写修了什么;控件本体(`ui/controls/**`)的缺陷也可以修,但每处修改要写明依据并保持既有测试断言不被删弱。
-6. 关键截图复制进 `apps/gpuix/src/ui/controls/evidence/`(命名含控件与状态),小体积,提交。
+6. 截图输出仓库外或 Git 忽略目录，不批量提交图片；提交可重跑 Gallery 入口、必要行为回归与整体评审结论。
 
 ## Constraints
 
@@ -31,4 +31,4 @@ A3 已合入并通过类型、测试与真实窗口交互,但协调者 review �
 ## Observable acceptance
 
 - `tsc --noEmit`、`bun test`、`pnpm exec eslint apps/gpuix/src` 通过(贴命令与计数)。
-- 报告含:间距对照表(量出的像素值 vs token)、每控件每状态的检查结论与截图路径、与 Live 的对比表、修了什么、未验证项。未验证的写「未验证」。
+- 报告含整体布局与共享入口检查、必要的间距/token 对照、Live 同区域比较、修复与未验证路径，不以逐按钮截图数量作为验收。
