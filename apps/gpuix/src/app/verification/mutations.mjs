@@ -5,6 +5,13 @@ import { spawnSync } from "node:child_process"
 
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..")
 const mutations = [
+  {
+    name: "R1c splitter restores hardcoded English units",
+    file: "../ui/panels/Separator/index.tsx",
+    from: "String(Math.round(group.sizes[index] ?? 0))",
+    to: `\`\${Math.round(group.sizes[index] ?? 0)} pixels\``,
+    tests: "src/ui/panels/Separator/accessibility.test.tsx",
+  },
   ...["controls/RadioGroup/keyboard.ts", "panels/Separator/index.tsx"].map(file => ({
     name: `R1c consumed arrows bubble from ${file}`,
     file: `../ui/${file}`,
