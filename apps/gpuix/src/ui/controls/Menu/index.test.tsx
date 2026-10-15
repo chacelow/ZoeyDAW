@@ -5,7 +5,7 @@ import type { TestRoot } from "@gpuix/react/testing"
 import type { ReactNode } from "react"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Button } from "../Button"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import {
   ContextMenu,
   ContextMenuContent,
@@ -49,7 +49,7 @@ function element(root: TestRoot, testId: string) {
 
 function bounds(root: TestRoot, testId: string) {
   const node = element(root, testId)
-  const box = readOuterBounds(root.renderer, root.renderer.getElement(node.id))
+  const box = root.renderer.getElementBounds(node.id)
   if (!box) throw new Error(`Unpainted ${testId}`)
   return box
 }

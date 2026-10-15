@@ -1,4 +1,3 @@
-import { readOuterBounds } from "../useMeasuredTextWidth"
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -50,8 +49,8 @@ test("settings shell navigates actual selected panes and closes through Escape",
   const before = root.renderer.findByTestId("before-settings")
   const after = root.renderer.findByTestId("after-settings")
   if (!before || !after) throw new Error("Missing layout markers")
-  const beforeBounds = readOuterBounds(root.renderer, root.renderer.getElement(before.id))
-  const afterBounds = readOuterBounds(root.renderer, root.renderer.getElement(after.id))
+  const beforeBounds = root.renderer.getElementBounds(before.id)
+  const afterBounds = root.renderer.getElementBounds(after.id)
   if (!beforeBounds || !afterBounds) throw new Error("Unpainted layout markers")
   expect(afterBounds.y - beforeBounds.y - beforeBounds.height).toBe(520)
   expect(root.renderer.findByTestId("pane-general")).toBeDefined()

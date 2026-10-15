@@ -3,7 +3,7 @@ import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync, Select, SelectContent, SelectItem, SelectTrigger } from "@gpuix/react"
 import type { SelectTriggerProps } from "@gpuix/react"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { DropdownButton } from "."
 
@@ -256,12 +256,14 @@ test("centered native Select anchors to the compact trigger rather than a stretc
     await Bun.sleep(10)
     flushSync(() => {})
     root.renderer.flush()
-    const trigger = readOuterBounds(root.renderer, root.renderer.findByTestId("center"))!
-    const content = readOuterBounds(root.renderer, root.renderer.findByTestId("center-content"))!
+    const trigger = root.renderer.getElementBounds(root.renderer.findByTestId("center")!.id)!
+    const content = root.renderer.getElementBounds(
+      root.renderer.findByTestId("center-content")!.id
+    )!
     if (Math.abs(content.x + content.width / 2 - trigger.x - trigger.width / 2) <= 0.5) break
   }
-  const trigger = readOuterBounds(root.renderer, root.renderer.findByTestId("center"))!
-  const content = readOuterBounds(root.renderer, root.renderer.findByTestId("center-content"))!
+  const trigger = root.renderer.getElementBounds(root.renderer.findByTestId("center")!.id)!
+  const content = root.renderer.getElementBounds(root.renderer.findByTestId("center-content")!.id)!
   // Native anchored positions snap to pixels; odd surface widths can differ by half a point.
   expect(
     Math.abs(content.x + content.width / 2 - trigger.x - trigger.width / 2)
@@ -295,9 +297,9 @@ test("filled select owns the parent width and preserves anchored alignment", asy
       </ThemeProvider>
     )
     root.renderer.flush()
-    const parent = readOuterBounds(root.renderer, root.renderer.findByTestId("parent"))!
-    const outer = readOuterBounds(root.renderer, root.renderer.findByTestId("fill-root"))!
-    const trigger = readOuterBounds(root.renderer, root.renderer.findByTestId("fill"))!
+    const parent = root.renderer.getElementBounds(root.renderer.findByTestId("parent")!.id)!
+    const outer = root.renderer.getElementBounds(root.renderer.findByTestId("fill-root")!.id)!
+    const trigger = root.renderer.getElementBounds(root.renderer.findByTestId("fill")!.id)!
     expect(outer.width).toBe(parent.width)
     expect(trigger.width).toBe(parent.width)
     root.renderer.nativeSimulateKeystrokes(root.renderer.findByTestId("fill")!.id, "enter")
@@ -305,14 +307,16 @@ test("filled select owns the parent width and preserves anchored alignment", asy
       await Bun.sleep(10)
       flushSync(() => {})
       root.renderer.flush()
-      const content = readOuterBounds(root.renderer, root.renderer.findByTestId("fill-content"))!
+      const content = root.renderer.getElementBounds(
+        root.renderer.findByTestId("fill-content")!.id
+      )!
       const delta =
         align === "center"
           ? content.x + content.width / 2 - trigger.x - trigger.width / 2
           : content.x - trigger.x
       if (Math.abs(delta) <= 0.5) break
     }
-    const content = readOuterBounds(root.renderer, root.renderer.findByTestId("fill-content"))!
+    const content = root.renderer.getElementBounds(root.renderer.findByTestId("fill-content")!.id)!
     expect(
       Math.abs(
         align === "center"

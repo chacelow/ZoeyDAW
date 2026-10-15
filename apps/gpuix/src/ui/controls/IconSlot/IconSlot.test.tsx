@@ -3,7 +3,6 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Button } from "../Button"
 import { IconSlot } from "."
-import { readOuterBounds } from "../useMeasuredTextWidth"
 
 test("icon slot stays within button bounds and leaves the icon hit transparent", () => {
   const root = createTestRoot({ width: 320, height: 160 })
@@ -29,14 +28,8 @@ test("icon slot stays within button bounds and leaves the icon hit transparent",
     </ThemeProvider>
   )
   root.renderer.flush()
-  const outer = readOuterBounds(
-    root.renderer,
-    root.renderer.getElement(root.renderer.findByTestId("button")!.id)
-  )!
-  const inner = readOuterBounds(
-    root.renderer,
-    root.renderer.getElement(root.renderer.findByTestId("icon")!.id)
-  )!
+  const outer = root.renderer.getElementBounds(root.renderer.findByTestId("button")!.id)!
+  const inner = root.renderer.getElementBounds(root.renderer.findByTestId("icon")!.id)!
   expect(inner.width).toBeLessThanOrEqual(outer.width)
   expect(inner.height).toBeLessThanOrEqual(outer.height)
   root.renderer.nativeSimulateClick(inner.x + inner.width / 2, inner.y + inner.height / 2)

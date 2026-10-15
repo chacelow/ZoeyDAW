@@ -3,7 +3,6 @@ import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider, useTheme } from "../../../shared/theme/ThemeProvider"
 import { DragPadNumber } from "./DragPadNumber"
-import { readOuterBounds } from "../useMeasuredTextWidth"
 
 function mount(initial = 120, min = 0, max = 300, step = 1) {
   let latest = initial
@@ -32,7 +31,7 @@ function mount(initial = 120, min = 0, max = 300, step = 1) {
   root.renderer.flush()
   const element = root.renderer.findByTestId("pad")
   if (!element) throw new Error("DragPadNumber not mounted")
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(element.id))
+  const bounds = root.renderer.getElementBounds(element.id)
   if (!bounds) throw new Error("DragPadNumber not painted")
   return {
     ...root,
@@ -116,7 +115,7 @@ describe("DragPadNumber native interactions", () => {
     root.renderer.flush()
     const scroll = root.renderer.findByTestId("scroll-parent")!
     const pad = root.renderer.findByTestId("wheel-pad")!
-    const bounds = readOuterBounds(root.renderer, pad)!
+    const bounds = root.renderer.getElementBounds(pad!.id)!
     const before = root.renderer.getScrollOffset(scroll.id)
     expect(before).not.toBeNull()
     root.renderer.nativeSimulateScrollWheel(
@@ -129,7 +128,7 @@ describe("DragPadNumber native interactions", () => {
     expect(latest).toBe(119)
     expect(root.renderer.getAllText()).toContain("119")
     expect(root.renderer.getScrollOffset(scroll.id)).toEqual(before)
-    const viewport = readOuterBounds(root.renderer, scroll)!
+    const viewport = root.renderer.getElementBounds(scroll!.id)!
     root.renderer.nativeSimulateScrollWheel(
       viewport.x + viewport.width - 10,
       viewport.y + viewport.height / 2,
@@ -174,7 +173,7 @@ describe("DragPadNumber native interactions", () => {
     const a = mount()
     const pad = a.renderer.findByTestId("pad")
     if (!pad) throw new Error("Missing pad")
-    const original = readOuterBounds(a.renderer, a.renderer.getElement(pad.id))
+    const original = a.renderer.getElementBounds(pad.id)
     expect(a.renderer.findByType("svg")).toHaveLength(1)
     a.renderer.nativeSimulateClick(a.x, a.y)
     expect(a.renderer.findByType("svg")).toHaveLength(1)
@@ -182,9 +181,7 @@ describe("DragPadNumber native interactions", () => {
     expect(a.renderer.findByType("svg")).toHaveLength(1)
     const editing = a.renderer.findByTestId("pad")
     if (!editing) throw new Error("Missing editing shell")
-    expect(readOuterBounds(a.renderer, a.renderer.getElement(editing.id))?.width).toBe(
-      original?.width
-    )
+    expect(a.renderer.getElementBounds(editing.id)?.width).toBe(original?.width)
     a.unmount()
   })
 })
@@ -242,14 +239,14 @@ test("hidden icons remove their slot and editing keeps the same shell bounds", (
   )
   root.renderer.flush()
   const shell = root.renderer.findByTestId("hidden")!
-  const original = readOuterBounds(root.renderer, shell)!
-  const text = readOuterBounds(root.renderer, root.renderer.findByTestId("widest"))!
+  const original = root.renderer.getElementBounds(shell!.id)!
+  const text = root.renderer.getElementBounds(root.renderer.findByTestId("widest")!.id)!
   expect(original.width).toBe(Math.ceil(text.width + padding * 2 + 2))
   expect(root.renderer.findByTestId("hidden-edit-indicator")).toBeUndefined()
   const assertIndicatorFits = () => {
     const element = root.renderer.findByTestId("hidden-edit-indicator")!
-    const indicator = readOuterBounds(root.renderer, element)!
-    const value = readOuterBounds(root.renderer, root.renderer.findByTestId("hidden-value"))!
+    const indicator = root.renderer.getElementBounds(element!.id)!
+    const value = root.renderer.getElementBounds(root.renderer.findByTestId("hidden-value")!.id)!
     expect(indicator.x).toBeGreaterThanOrEqual(original.x)
     expect(indicator.y).toBeGreaterThanOrEqual(original.y)
     expect(indicator.y + indicator.height).toBeLessThanOrEqual(original.y + original.height)
@@ -264,12 +261,12 @@ test("hidden icons remove their slot and editing keeps the same shell bounds", (
     original.y + original.height / 2
   )
   expect(root.renderer.findByTestId("hidden-edit-indicator")).toBeDefined()
-  expect(readOuterBounds(root.renderer, root.renderer.findByTestId("hidden"))).toEqual(original)
+  expect(root.renderer.getElementBounds(root.renderer.findByTestId("hidden")!.id)).toEqual(original)
   assertIndicatorFits()
   root.renderer.simulateKeystrokes("9")
   expect(root.renderer.findByType("input")).toHaveLength(1)
   expect(root.renderer.findByTestId("hidden-edit-indicator")).toBeDefined()
-  expect(readOuterBounds(root.renderer, root.renderer.findByTestId("hidden"))).toEqual(original)
+  expect(root.renderer.getElementBounds(root.renderer.findByTestId("hidden")!.id)).toEqual(original)
   assertIndicatorFits()
   root.unmount()
 })

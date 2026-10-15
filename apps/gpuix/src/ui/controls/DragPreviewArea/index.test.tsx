@@ -1,4 +1,3 @@
-import { readOuterBounds } from "../useMeasuredTextWidth"
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
@@ -35,7 +34,7 @@ function mount(disabled = false) {
   root.renderer.flush()
   const source = root.renderer.findByTestId("drag-source-source")
   if (!source) throw new Error("Missing drag source")
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(source.id))
+  const bounds = root.renderer.getElementBounds(source.id)
   if (!bounds) throw new Error("Unpainted drag source")
   return { ...root, source, x: bounds.x + 10, y: bounds.y + 10, starts, ends, clicks: () => clicks }
 }
@@ -50,7 +49,7 @@ test("pressed source crosses threshold, tracks native anchored preview, and rele
   expect(root.starts).toEqual(["kick.wav"])
   const preview = root.renderer.findByTestId("drag-preview")
   if (!preview) throw new Error("Missing active preview")
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(preview.id))
+  const bounds = root.renderer.getElementBounds(preview.id)
   expect(bounds?.x).toBeGreaterThan(root.x + 50)
   expect(bounds?.y).toBeGreaterThan(root.y + 30)
   root.renderer.nativeSimulateMouseMove(root.x + 360, root.y + 150, 0)
@@ -108,7 +107,7 @@ test("explicit items preview their own native data instead of querying descendan
   root.renderer.flush()
   const source = root.renderer.findByTestId("drag-source-b")
   if (!source) throw new Error("Missing second source")
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(source.id))
+  const bounds = root.renderer.getElementBounds(source.id)
   if (!bounds) throw new Error("Unpainted second source")
   root.renderer.nativeSimulateMouseDown(bounds.x + 10, bounds.y + 10)
   root.renderer.nativeSimulateMouseMove(bounds.x + 30, bounds.y + 15, 0)

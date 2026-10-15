@@ -4,7 +4,7 @@ import { useCallback, useLayoutEffect, useRef } from "react"
 import type { EventPayload, NativeRenderer, PublicInstance } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { useMenu } from "./context"
 import { focusEntry, navigate } from "./navigation"
 import type { MenuContentProps } from "./model"
@@ -15,7 +15,7 @@ function containsPoint(
   renderer: NativeRenderer | null
 ) {
   if (point.x === undefined || point.y === undefined) return false
-  const bounds = readOuterBounds(renderer, instance)
+  const bounds = renderer?.getElementBounds?.(instance.id)
   return (
     !!bounds &&
     point.x >= bounds.x &&

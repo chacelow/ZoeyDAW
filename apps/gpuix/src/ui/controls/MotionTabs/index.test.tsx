@@ -1,4 +1,3 @@
-import { readOuterBounds } from "../useMeasuredTextWidth"
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
@@ -53,8 +52,8 @@ test("tabs select accessible panes through arrows and Home/End with matching ind
   expect(root.renderer.findByTestId("pane-a")).toBeUndefined()
   const indicator = root.renderer.findByTestId("motion-tabs-indicator")
   if (!indicator) throw new Error("Missing indicator")
-  const activeBounds = readOuterBounds(root.renderer, root.renderer.getElement(last.id))
-  const indicatorBounds = readOuterBounds(root.renderer, root.renderer.getElement(indicator.id))
+  const activeBounds = root.renderer.getElementBounds(last.id)
+  const indicatorBounds = root.renderer.getElementBounds(indicator.id)
   expect(indicatorBounds?.x).toBe(activeBounds?.x)
   expect(indicatorBounds?.width).toBe(100)
   root.renderer.simulateKeystrokes("home")

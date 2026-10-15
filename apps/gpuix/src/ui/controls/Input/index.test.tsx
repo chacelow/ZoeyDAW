@@ -1,4 +1,3 @@
-import { readOuterBounds } from "../useMeasuredTextWidth"
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -50,12 +49,12 @@ test("native editor commits event.value and preserves compact geometry while foc
   root.renderer.flush()
   const input = root.renderer.findByTestId("input")
   if (!input) throw new Error("Missing input")
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(input.id))
+  const bounds = root.renderer.getElementBounds(input.id)
   const before = root.renderer.findByTestId("before-input")
   const after = root.renderer.findByTestId("after-input")
   if (!before || !after) throw new Error("Missing layout markers")
-  const beforeBounds = readOuterBounds(root.renderer, root.renderer.getElement(before.id))
-  const afterBounds = readOuterBounds(root.renderer, root.renderer.getElement(after.id))
+  const beforeBounds = root.renderer.getElementBounds(before.id)
+  const afterBounds = root.renderer.getElementBounds(after.id)
   if (!beforeBounds || !afterBounds) throw new Error("Unpainted layout markers")
   expect(afterBounds.y - beforeBounds.y - beforeBounds.height).toBe(height)
   root.renderer.nativeSimulateKeystrokes(input.id, "a b c")
@@ -71,7 +70,7 @@ test("native editor commits event.value and preserves compact geometry while foc
   expect(changedValues.at(-1)).toBe("ab ")
   expect(inputKeys.at(-1)).toBe("space")
   expect(windowKeys).toEqual([])
-  expect(readOuterBounds(root.renderer, root.renderer.getElement(input.id))).toEqual(bounds)
+  expect(root.renderer.getElementBounds(input.id)).toEqual(bounds)
   root.unmount()
 })
 

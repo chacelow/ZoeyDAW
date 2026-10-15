@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { Button } from "../Button"
 import { DragPadNumber } from "../DragPad"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "."
 
 const roots: TestRoot[] = []
@@ -25,7 +25,7 @@ function mount(children: ReactNode) {
 function click(root: TestRoot, testId: string, button = 0) {
   const node = root.renderer.findByTestId(testId)
   if (!node) throw new Error(`Missing ${testId}`)
-  const box = readOuterBounds(root.renderer, root.renderer.getElement(node.id))
+  const box = root.renderer.getElementBounds(node.id)
   if (!box) throw new Error(`Unpainted ${testId}`)
   root.renderer.nativeSimulateClick(box.x + box.width / 2, box.y + box.height / 2, button)
 }

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { icons } from "lucide"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { Icon, iconMarkup } from "./index"
 
 describe("iconMarkup", () => {
@@ -57,7 +57,7 @@ describe("Icon", () => {
     root.renderer.flush()
     expect(root.renderer.findByType("svg")).toHaveLength(1)
     const [node] = root.renderer.findByType("svg")
-    const bounds = readOuterBounds(root.renderer, root.renderer.getElement(node.id))
+    const bounds = root.renderer.getElementBounds(node.id)
     expect(bounds).not.toBeNull()
     expect(bounds?.width).toBe(bounds?.height)
     expect(bounds?.width).toBe(10)
