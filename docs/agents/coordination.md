@@ -68,7 +68,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 - 共享组件发现两份实现时,由协调者抽到 `shared/` 或拥有它的切片,另一份删除。
 - vendor 补丁序列的变更合入后,由协调者重建共享 vendor 并通知各 worker。
 
-**桌面时段**:真实窗口输入一次只给一个 worker,用 reply 给出 UTC 起止时间,同时通知其余 worker 暂停输入;到点就停,发「桌面释放」。
+**桌面时段**:真实窗口输入一次只给一个 worker,用 reply 给出 UTC 起止时间,同时通知其余 worker 暂停输入;到点就停,发「桌面释放」。worker 只操作自己启动的窗口,用 `computer.window(...)` 加 AX `el.press()`、`win.observe()`/`screenshot()` 与窗口级输入,**不调用 `computer.control.acquire`**(它要人类实时批准,本项目不用;app-shell 阶段 1、clip-lane、a3b 都是这样完成的)。worker 被工具或权限卡住时,协调者先查以前切片的做法给出可行路线,不转问用户。
 
 **巡检(2026-10-15 01:45、01:49 UTC 用户要求)**:launchd 每 10 分钟运行 `scripts/orchestration/coordinator-tick.sh`,检查所有派发未关闭的 worker(包括终端状态为 retained 的空闲 worker)。判断依据是该 worker 会话最后一条消息距现在的时间。同一个 worker 每 10 分钟最多唤醒一次:
 
@@ -88,7 +88,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 **交接协调者(2026-10-15 07:12 UTC 用户要求)**:
 
 1. 旧协调者停止派发和收消息,写交接目录:HANDOFF.md(用户当前要求、Run、活跃 Dispatch、未处理消息、未提交现场、保留的 worktree 及原因)、完整 TODO(completed/abandoned/open 分开,不把未完成标完成)。
-2. 在 `gpuix-migration` worktree 用 `omp --model cursor-claude/cc/claude-opus-5-5` 起新终端;新协调者在自己的终端执行 `orca orchestration run-use --id <run>`,导入 TODO,把 `coordinator-tick.sh` 的 `COORD` 改成自己的终端,写回执 `ACCEPTED.json`(实际终端、Run、TODO 计数、主干 HEAD)。规则文件改动后不需要交接,在协调者终端 `/restart` 即可重新注入 `AGENTS.md`,上下文、TODO 与 Run 绑定保留。
+2. 在 `gpuix-migration` worktree 用 `omp --model cursor-claude/cc/claude-opus-5-5` 起新终端;新协调者在自己的终端执行 `orca orchestration run-use --id <run>`,导入 TODO,把 `coordinator-tick.sh` 的 `COORD` 改成自己的终端,写回执 `ACCEPTED.json`(实际终端、Run、TODO 计数、主干 HEAD)。规则文件改动后不需要交接,在协调者终端 `/restart` 即可重新注入 `AGENTS.md`,上下文、TODO 与 Run 绑定保留。`/restart` 沿用进程启动时的 `--model`:当前协调者终端(term_abc5c16c)是以 `--model cursor-claude/cx/gpt-6.1-sol` 启动的,每次重启后都要再执行 `/model:cursor-claude/cc/claude-opus-5-5`。
 3. 旧协调者核对 `run-show` 与回执,把自己的 TODO 标为已移交(不是完成),告诉用户可以关闭。
 4. HANDOFF 只写现场和指针,不复述或改写本文规则;规则有冲突就先改本文,再交接。
 

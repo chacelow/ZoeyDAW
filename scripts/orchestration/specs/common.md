@@ -5,7 +5,7 @@
 - 基线：分支 `gpuix-migration`，提交 `d0db74c`。参考源码在 `apps/web/src/**`、`packages/**`、`src-tauri/**`（只读，迁移完成后统一删除，你不要删）。
 - 原生能力放 `crates/native`、引擎放 `crates/engine`，能用 Rust 直接做的不要在 TS 里绕路。
 - 需要 `pnpm native:build`（根目录）后才有 `@zoeydaw/native` 二进制。
-- 每个切片都要真实运行：`bun --hot <入口>` 打开原生窗口，用 `computer` 的 AX/截图验证；不能只靠类型检查。
+- 每个切片都要真实运行：`bun --hot <入口>` 打开原生窗口，用 `computer` 的 AX/截图验证；不能只靠类型检查。只操作自己启动的窗口：`computer.window(...)` 加 AX `el.press()`、`observe()`/`screenshot()` 与窗口级输入。**不调用 `computer.control.acquire`**，它需要用户实时批准，本项目不用。
 - 提交：自己的分支内多次小提交，每次一件事；标题避免 `+ & 和 与` 与多个 Conventional Commit 类型；`ultracite` 预提交门禁必须通过，不用 `--no-verify`。非交互提交带 `USER_CONFIRM_HASH=$(git write-tree)`——用户已授权本次重构任务内 `gpuix-migration` 及切片分支的全部本地提交（见 `docs/agents/setup.md`「提交授权」），不向用户或协调者索取“我确认”。
 - 不 push，不碰 `main`，不碰其他 worktree，不启动或停止用户已有服务。
 - 遇到需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、或与契约冲突的发现：停下来，用 `orca orchestration ask`（见 preamble）向协调者提问，不要自行决定。
