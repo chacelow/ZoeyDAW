@@ -1,4 +1,3 @@
-import { readOuterBounds } from "../useMeasuredTextWidth"
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -39,8 +38,8 @@ test("radio arrows wrap, skip disabled items, and Home/End update controlled sel
   const first = root.renderer.findByTestId("a")
   const last = root.renderer.findByTestId("c")
   if (!first || !last) throw new Error("Missing radios")
-  const firstBounds = readOuterBounds(root.renderer, root.renderer.getElement(first.id))
-  const lastBounds = readOuterBounds(root.renderer, root.renderer.getElement(last.id))
+  const firstBounds = root.renderer.getElementBounds(first.id)
+  const lastBounds = root.renderer.getElementBounds(last.id)
   expect(lastBounds?.y).toBeGreaterThan(firstBounds?.y ?? 0)
   root.renderer.nativeSimulateKeystrokes(first.id, "down")
   expect(latest).toBe("c")

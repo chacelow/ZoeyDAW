@@ -4,7 +4,6 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { DragPadNumber } from "../DragPad"
 import { PopupButton } from "."
-import { readOuterBounds } from "../useMeasuredTextWidth"
 
 test("embedded numeric drag and repeated wheel adjustment keep popup open until outside press", () => {
   const root = createTestRoot({ width: 480, height: 320 })
@@ -34,15 +33,9 @@ test("embedded numeric drag and repeated wheel adjustment keep popup open until 
   }
   root.render(<Harness />)
   root.renderer.flush()
-  const trigger = readOuterBounds(
-    root.renderer,
-    root.renderer.getElement(root.renderer.findByTestId("popup")!.id)
-  )!
+  const trigger = root.renderer.getElementBounds(root.renderer.findByTestId("popup")!.id)!
   root.renderer.nativeSimulateClick(trigger.x + 2, trigger.y + 2)
-  const bounds = readOuterBounds(
-    root.renderer,
-    root.renderer.getElement(root.renderer.findByTestId("inner")!.id)
-  )!
+  const bounds = root.renderer.getElementBounds(root.renderer.findByTestId("inner")!.id)!
   const x = bounds.x + bounds.width / 2
   const y = bounds.y + bounds.height / 2
   root.renderer.nativeSimulateMouseDown(x, y)

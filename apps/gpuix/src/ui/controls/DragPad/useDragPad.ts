@@ -14,6 +14,7 @@ export interface UseDragPadOptions {
   min: number
   max: number
   step: number
+  dragStep?: number
   defaultValue?: number
   disabled?: boolean
   editable?: boolean
@@ -40,6 +41,7 @@ export function useDragPad(options: UseDragPadOptions) {
     min,
     max,
     step,
+    dragStep = step,
     defaultValue,
     disabled = false,
     editable = true,
@@ -135,9 +137,11 @@ export function useDragPad(options: UseDragPadOptions) {
         setDragging(true)
         setMode("idle")
       }
-      commitNumber(valueAfterDrag({ startValue: anchor.startValue, deltaY, step, min, max }))
+      commitNumber(
+        valueAfterDrag({ startValue: anchor.startValue, deltaY, step: dragStep, min, max })
+      )
     },
-    [step, min, max, commitNumber]
+    [dragStep, min, max, commitNumber]
   )
 
   const handleMouseUp = useCallback(() => {
@@ -163,14 +167,14 @@ export function useDragPad(options: UseDragPadOptions) {
           currentValue: valueRef.current,
           deltaY: event.deltaY,
           precise: event.precise ?? false,
-          step,
+          step: dragStep,
           min,
           max,
         })
       )
       callbacks.current.onGestureEnd?.()
     },
-    [disabled, dragging, mode, step, min, max, commitNumber]
+    [disabled, dragging, mode, dragStep, min, max, commitNumber]
   )
 
   const startEditing = useCallback(

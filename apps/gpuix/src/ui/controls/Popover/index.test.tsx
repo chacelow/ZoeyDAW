@@ -8,7 +8,7 @@ import type { ReactNode } from "react"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Button } from "../Button"
 import { DragPadNumber } from "../DragPad/DragPadNumber"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "."
 
 const roots: TestRoot[] = []
@@ -34,7 +34,7 @@ function element(root: TestRoot, testId: string) {
 
 function bounds(root: TestRoot, testId: string) {
   const node = element(root, testId)
-  const box = readOuterBounds(root.renderer, root.renderer.getElement(node.id))
+  const box = root.renderer.getElementBounds(node.id)
   if (!box) throw new Error(`Unpainted ${testId}`)
   return box
 }

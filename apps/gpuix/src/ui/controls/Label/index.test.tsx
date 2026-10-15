@@ -1,4 +1,3 @@
-import { readOuterBounds } from "../useMeasuredTextWidth"
 import { expect, test } from "bun:test"
 import { useRef } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -27,11 +26,11 @@ test("label keyboard activation focuses its native editor without changing layou
   const label = root.renderer.findByTestId("label")
   const input = root.renderer.findByTestId("input")
   if (!label || !input) throw new Error("Missing form controls")
-  const before = readOuterBounds(root.renderer, root.renderer.getElement(label.id))
+  const before = root.renderer.getElementBounds(label.id)
   expect(before?.width).toBeGreaterThan(0)
   root.renderer.nativeSimulateKeystrokes(label.id, "enter")
   expect(root.renderer.getFocusedElementId()).toBe(input.id)
-  expect(readOuterBounds(root.renderer, root.renderer.getElement(label.id))).toEqual(before)
+  expect(root.renderer.getElementBounds(label.id)).toEqual(before)
   root.unmount()
 })
 
