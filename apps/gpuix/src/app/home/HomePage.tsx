@@ -28,7 +28,7 @@ export function HomePage({ storage }: HomePageProps) {
   const router = useRouter()
   const { t, locale } = useAppTranslation()
   const [recent, setRecent] = useState(() => loadRecentProjects(storage))
-  const gap = theme.control["--spacing-control-track-gap"]
+  const gap = theme.design.spacing.stackGap
   const open = (project: RecentProject) => {
     const next = bumpRecentProject(recent, { ...project, openedAt: Date.now() })
     saveRecentProjects(storage, next)
@@ -44,13 +44,13 @@ export function HomePage({ storage }: HomePageProps) {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: gap * 3,
+        gap: theme.design.spacing.cardGroupGap,
         width: "100%",
         maxWidth: theme.project.controlsWidth * 3,
         alignSelf: "center",
         height: "100%",
         minHeight: 0,
-        padding: gap * 4,
+        padding: theme.design.spacing.rootInset,
         color: theme.colors.foreground,
         fontSize: theme.control["--text-control-track"],
       }}

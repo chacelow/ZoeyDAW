@@ -19,7 +19,7 @@ export interface ThemePresetGridProps {
 export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGridProps) {
   const theme = useTheme()
   const { renderer } = useGpuix()
-  const gap = theme.control["--spacing-control-track-gap"]
+  const gap = theme.design.settings.itemGap
   const swatchHeight = theme.control["--spacing-control-track"] * 2
   const columnWidth = theme.project.identityWidth * 2
   return (
@@ -74,7 +74,7 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
                   flexDirection: "row",
                   height: swatchHeight,
                   borderWidth: 1,
-                  borderRadius: theme.control["--spacing-control-gap"],
+                  borderRadius: theme.design.shape.controlRadius,
                   borderColor: theme.colors.border,
                   overflow: "hidden",
                 }}
@@ -96,14 +96,14 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
                   style={{
                     pointerEvents: "none",
                     position: "absolute",
-                    top: gap * 2,
-                    right: gap * 2,
+                    top: theme.design.settings.headerInset,
+                    right: theme.design.settings.headerInset,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     width: theme.control["--spacing-control-track"],
                     height: theme.control["--spacing-control-track"],
-                    borderRadius: theme.control["--spacing-control-track"],
+                    borderRadius: theme.design.shape.indicatorRadius,
                     backgroundColor: theme.colors.primary,
                   }}
                 >

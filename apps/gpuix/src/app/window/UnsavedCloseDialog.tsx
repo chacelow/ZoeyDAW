@@ -13,7 +13,7 @@ export interface UnsavedCloseDialogProps {
 export function UnsavedCloseDialog({ open, onChoose }: UnsavedCloseDialogProps) {
   const theme = useTheme()
   const { t } = useAppTranslation()
-  const gap = theme.control["--spacing-control-track-gap"]
+  const gap = theme.design.popover.gap
   return (
     <ModalDialog
       open={open}
@@ -28,11 +28,11 @@ export function UnsavedCloseDialog({ open, onChoose }: UnsavedCloseDialogProps) 
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: gap * 3,
+          gap,
           width: theme.project.controlsWidth,
-          padding: gap * 4,
-          borderWidth: 1,
-          borderRadius: gap,
+          padding: theme.design.popover.inset,
+          borderWidth: theme.design.popover.borderWidth,
+          borderRadius: theme.design.popover.radius,
           borderColor: theme.colors.border,
           backgroundColor: theme.colors.background,
           color: theme.colors.foreground,

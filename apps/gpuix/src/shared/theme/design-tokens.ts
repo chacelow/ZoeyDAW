@@ -19,6 +19,7 @@ export interface DesignTokens {
     readonly cardBorderWidth: number
     readonly panelRadius: number
     readonly panelBorderWidth: number
+    readonly indicatorRadius: number
     readonly indicatorStrokeWidth: number
     readonly focusRingWidth: number
   }
@@ -73,6 +74,7 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
     panelBorderWidth: PROJECT_METRICS.panelBorder,
     focusRingWidth: 1,
     indicatorStrokeWidth: 1,
+    indicatorRadius: CONTROL_METRICS.default["--spacing-control-track"] / 2,
   },
   input: { paddingInline: 6 },
   cards: {

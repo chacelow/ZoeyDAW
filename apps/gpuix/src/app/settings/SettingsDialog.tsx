@@ -86,9 +86,13 @@ function SettingsPane({ section }: { readonly section: SettingsSection }) {
 
 function useSectionStyle() {
   const theme = useTheme()
-  const gap = theme.control["--spacing-control-track-gap"]
+  const gap = theme.design.settings.itemGap
   return {
-    section: { display: "flex", flexDirection: "column", gap: gap * 2 } as const,
+    section: {
+      display: "flex",
+      flexDirection: "column",
+      gap: theme.design.settings.headerGap,
+    } as const,
     field: { display: "flex", flexDirection: "column", gap } as const,
     muted: { color: theme.colors.mutedForeground, whiteSpace: "normal" } as const,
   }
@@ -121,7 +125,7 @@ function AppearanceSection() {
           // Web parity: a full-width segmented track (`bg-muted/60 p-1`), items share the width.
           style={{
             padding: theme.control["--spacing-control-track-pad"],
-            borderRadius: theme.control["--spacing-control-gap"],
+            borderRadius: theme.design.shape.controlRadius,
             backgroundColor: theme.colors.muted,
           }}
         >
