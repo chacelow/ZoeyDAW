@@ -119,7 +119,7 @@ export function projectVisibleClipCards<T extends ClipCard>(
 
 export function midiPreviewRects(
   clip: MidiClip,
-  geometry: ClipVisualGeometry,
+  geometry: Pick<ClipVisualGeometry, "left" | "width" | "bodyTop" | "bodyHeight">,
   numerator: number,
   viewportWidth: number,
   metrics: Theme["project"]
@@ -174,7 +174,7 @@ export function midiPreviewRects(
 
 export function patternPreviewRects(
   clip: PatternClip,
-  geometry: ClipVisualGeometry,
+  geometry: Pick<ClipVisualGeometry, "left" | "width" | "bodyTop" | "bodyHeight">,
   viewportWidth: number,
   metrics: Theme["project"]
 ): PreviewRect[] {
@@ -227,7 +227,7 @@ export function patternPreviewRects(
 
 export function clipLoopTicks(
   clip: Clip,
-  geometry: ClipVisualGeometry,
+  geometry: Pick<ClipVisualGeometry, "left" | "width">,
   viewportWidth: number,
   metrics: Theme["project"]
 ): number[] {

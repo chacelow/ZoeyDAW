@@ -91,6 +91,73 @@ it("culls offscreen native cards and retains visible node identity while scrolli
   expect(root.renderer.getElementBounds(second.id)?.x).toBe(96)
 })
 
+it("moves a fully visible Clip without reuploading or remounting its unchanged content", () => {
+  const score = createMockDocument()
+  const track = score.tracks.find(item => item.kind === "midi")
+  if (!track) throw new Error("Missing MIDI track")
+  track.clips = [
+    {
+      kind: "pattern",
+      id: "local-content",
+      patternId: "p",
+      startBar: 3,
+      lengthBars: 2,
+      label: "Local content",
+      steps: [true, false, true, false],
+    },
+  ]
+  const scene = createSceneStore()
+  scene.setMusic({
+    bars: 128,
+    grid: { mode: "fixed", bars: 0.25 },
+    transport: score.transport,
+    tracks: [track],
+    markers: [],
+    loop: score.transport.loop,
+  })
+  scene.setViewport({ width: 500, height: 300, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
+  const row = layoutTrackRows(scene.get())[0]
+  if (!row) throw new Error("Missing track row")
+  const readPeaks = () => new Float32Array(0)
+  const onActivate = () => {}
+  root = createTestRoot({ width: 500, height: 300 })
+  const render = () =>
+    root?.render(
+      <ThemeProvider>
+        <div style={{ position: "relative", width: 500, height: 300 }}>
+          <LaneContents
+            row={row}
+            scene={scene.get()}
+            automationMode={false}
+            readPeaks={readPeaks}
+            onActivate={onActivate}
+          />
+        </div>
+      </ThemeProvider>
+    )
+  render()
+  const clip = root.renderer.findByTestId("clip-source-local-content")
+  if (!clip) throw new Error("Missing Clip")
+  const renderer = root.renderer
+  const descendants = (id: number): number[] => {
+    const element = renderer.getElement(id)
+    if (!element) throw new Error(`Missing native content element ${id}`)
+    return [id, ...element.children.flatMap(descendants)]
+  }
+  const contentIds = descendants(clip.id).filter(id => id !== clip.id)
+  const batches = new Set(contentIds.filter(id => renderer.getElement(id)?.type === "quad-batch"))
+  const uploads = spyOn(renderer, "setQuads")
+  try {
+    scene.setViewport({ ...scene.get().viewport, scrollX: 64 })
+    render()
+    expect(renderer.getElementBounds(clip.id)?.x).toBe(64)
+    expect(uploads.mock.calls.filter(([id]) => batches.has(id))).toHaveLength(0)
+    expect(descendants(clip.id).filter(id => id !== clip.id)).toEqual(contentIds)
+  } finally {
+    uploads.mockRestore()
+  }
+})
+
 it("keeps a focused Clip Space-transparent and exposes only the playing transport guide", () => {
   const score = createMockDocument()
   const track = score.tracks.find(item => item.kind === "midi")

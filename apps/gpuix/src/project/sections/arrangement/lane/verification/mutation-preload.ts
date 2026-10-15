@@ -8,6 +8,22 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "global-content-position": {
+    file: "clip-card-projection.ts",
+    testFile: "LaneRow/LaneRow.test.tsx",
+    testName: "moves a fully visible Clip without reuploading or remounting its unchanged content",
+    replacements: [
+      ["viewportWidth: visibleWidth", "viewportWidth: scene.viewport.width"],
+      ["left: geometry.left - visibleLeft", "left: geometry.left"],
+      ["x: line.x - visibleLeft", "x: line.x"],
+    ],
+  },
+  "local-content-identity": {
+    file: "clip-card-projection.ts",
+    testFile: "LaneRow/LaneRow.test.tsx",
+    testName: "moves a fully visible Clip without reuploading or remounting its unchanged content",
+    replacements: [["oldContent.clip === rect.clip", "false && oldContent.clip === rect.clip"]],
+  },
   "probe-channel-offset": {
     file: "../../../../shared/waveform/PeakColumns.tsx",
     testFile: "native-waveform.test.tsx",
@@ -20,7 +36,7 @@ export const mutationCases: Record<string, MutationCase> = {
     ],
   },
   "probe-waveform-ink": {
-    file: "ClipCard.tsx",
+    file: "ClipContents.tsx",
     testFile: "native-waveform.test.tsx",
     testName: "native probe fixture retains stereo envelopes and lane clip ink in dark",
     replacements: [["color={ink}", "color={color}"]],
@@ -52,7 +68,7 @@ export const mutationCases: Record<string, MutationCase> = {
     testFile: "render-projection.test.ts",
     testName:
       "keeps Clip-local grids phase-aligned across fractional viewports and vertical-only motion",
-    replacements: [["geometry.left + geometry.width", "scene.viewport.width"]],
+    replacements: [["geometry.left - 1", "0"]],
   },
   "offscreen-mount": {
     file: "render-projection.ts",
