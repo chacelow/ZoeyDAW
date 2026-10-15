@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, it } from "bun:test"
 import { create } from "zustand"
 import { createStore } from "zustand/vanilla"
-import { parseProject } from "../model/persistence"
-import { initialSession } from "../stores/useProjectState"
-import { initialDocument } from "../stores/slices/document"
-import { initialWorkspace } from "../stores/slices/workspace"
-import { createProjectRuntime } from "./runtime"
-import { createMockProjectBackend } from "./backend/mock"
-import { createMockDocument, createMockWorkspace } from "./fixtures"
+import { parseProject } from "../../model/persistence"
+import { initialSession } from "../../stores/useProjectState"
+import { initialDocument } from "../../stores/slices/document"
+import { initialWorkspace } from "../../stores/slices/workspace"
+import { createProjectRuntime } from "."
+import { createMockProjectBackend } from "../backend/mock"
+import { createMockDocument, createMockWorkspace } from "../fixtures"
 import {
   configureProjectBackend,
   hydrateProject,
@@ -19,14 +19,14 @@ import {
   setProjectStorageId,
   setSnapshotStorage,
   createMemorySnapshotStorage,
-} from "."
+} from ".."
 import type {
   BackendRequest,
   BackendResult,
   BackendTelemetry,
   ProjectBackend,
-} from "../model/backend"
-import type { ProjectState } from "../model/types"
+} from "../../model/backend"
+import type { ProjectState } from "../../model/types"
 
 const backendPhaseOnImport = useProjectState.getState().session.backend.phase
 

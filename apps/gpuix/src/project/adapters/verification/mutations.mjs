@@ -35,7 +35,7 @@ const mutations = [
     from: "    editing.flushRecording()\n    owner.sessionCounter++",
     to: "    owner.sessionCounter++",
     occurrences: 2,
-    test: "runtime.test.ts",
+    test: "runtime/project-runtime.test.ts",
     failure: "retains recording across failed",
   },
   {
@@ -43,7 +43,7 @@ const mutations = [
     file: "runtime/runtime-editing.ts",
     from: "const journal = runtime.recordingJournal\n    runtime.recordingJournal = []",
     to: "const journal = runtime.recordingJournal",
-    test: "runtime.test.ts",
+    test: "runtime/project-runtime.test.ts",
     failure: "retains recording across failed",
   },
   {
