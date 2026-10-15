@@ -18,15 +18,26 @@ rm -f /tmp/verify-gpuix-native.$$.log
 echo "ok"
 
 step "tsc --noEmit"
-(cd apps/gpuix && pnpm exec tsc --noEmit) && echo "0 errors"
+# `a && b` is exempt from `set -e`, so each gate is a plain statement whose failure stops the script.
+(cd apps/gpuix && pnpm exec tsc --noEmit)
+echo "0 errors"
 
 step "eslint apps/gpuix/src (layers, imports, max-warnings 0)"
-pnpm exec eslint --max-warnings=0 apps/gpuix/src && echo "ok"
+pnpm exec eslint --max-warnings=0 apps/gpuix/src
+echo "ok"
 
 step "bun test"
-(cd apps/gpuix && bun test 2>&1) | grep -E "^ [0-9]+ (pass|fail|todo)|^Ran |\(fail\)" | tee /tmp/verify-gpuix-test.$$.txt
-if grep -qE "^ [1-9][0-9]* fail" /tmp/verify-gpuix-test.$$.txt; then rm -f /tmp/verify-gpuix-test.$$.txt; exit 1; fi
-rm -f /tmp/verify-gpuix-test.$$.txt
+tests="/tmp/verify-gpuix-test.$$.txt"
+status=0
+(cd apps/gpuix && bun test) >"$tests" 2>&1 || status=$?
+grep -E "^ [0-9]+ (pass|fail|todo)|^Ran |\(fail\)" "$tests" || true
+if [ "$status" -ne 0 ]; then
+  tail -40 "$tests"
+  rm -f "$tests"
+  echo "bun test exited $status"
+  exit 1
+fi
+rm -f "$tests"
 
 step "review scan ($base...HEAD; uncommitted changes are not scanned)"
 node scripts/gpuix-review-scan.mjs "$base" | tail -3
