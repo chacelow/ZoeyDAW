@@ -92,7 +92,7 @@ export type {
   PopoverHeaderProps,
   PopoverTitleProps,
 } from "./Popover"
-export type { CardProps } from "./Card"
+export type { CardProps, CardHeaderProps } from "./Card"
 export type { SeparatorProps } from "./Separator"
 export type { ProgressProps } from "./Progress"
 export type { LoadingProps } from "./Loading"

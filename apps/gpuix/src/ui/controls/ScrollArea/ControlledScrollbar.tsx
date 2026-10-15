@@ -37,7 +37,14 @@ export function ControlledScrollbar({
   const [dragging, setDragging] = useState(false)
   const horizontal = orientation === "horizontal"
   const thickness = theme.control["--spacing-control-icon-slot"]
-  const geometry = scrollbarGeometry(value, viewport, extent, Math.max(0, length - 2), thickness)
+  const borderWidth = theme.design.shape.controlBorderWidth
+  const geometry = scrollbarGeometry(
+    value,
+    viewport,
+    extent,
+    Math.max(0, length - borderWidth * 2),
+    thickness
+  )
   const unavailable = disabled || geometry.maximum === 0
   function publish(next: number) {
     if (!unavailable) onChange(Math.max(0, Math.min(geometry.maximum, next)))
@@ -61,7 +68,13 @@ export function ControlledScrollbar({
           width: horizontal ? length : thickness,
           height: horizontal ? thickness : length,
           backgroundColor: theme.colors.scrollbarTrack,
-          borderWidth: 1,
+          opacity: unavailable ? 0.5 : 1,
+          borderWidth,
+          focusVisible: {
+            outlineWidth: theme.design.shape.focusRingWidth,
+            outlineColor: theme.colors.ring,
+            outlineOffset: -theme.design.shape.focusRingWidth,
+          },
           borderColor: focused ? theme.colors.ring : theme.colors.scrollbarTrack,
           overflow: "hidden",
           pointerEvents: "auto",
@@ -140,8 +153,8 @@ export function ControlledScrollbar({
           position: "absolute",
           left: horizontal ? geometry.offset : 0,
           top: horizontal ? 0 : geometry.offset,
-          width: horizontal ? geometry.thumb : thickness - 2,
-          height: horizontal ? thickness - 2 : geometry.thumb,
+          width: horizontal ? geometry.thumb : Math.max(0, thickness - borderWidth * 2),
+          height: horizontal ? Math.max(0, thickness - borderWidth * 2) : geometry.thumb,
           backgroundColor: unavailable
             ? theme.colors.canvasScrollbar
             : dragging

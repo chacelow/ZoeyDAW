@@ -1,7 +1,12 @@
 import { expect, test } from "bun:test"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { ListRow } from "."
+
+const { join } = path
 
 test("list rows accept Enter but preserve Space and exclude disabled items", () => {
   const root = createTestRoot({ width: 300, height: 160 })
@@ -68,3 +73,36 @@ test("a consumed Enter does not also activate the resource row", () => {
     root.unmount()
   }
 })
+
+for (const appearance of ["dark", "light"] as const) {
+  test(`native GPU row hover is distinct without overriding selected/disabled (${appearance})`, () => {
+    const directory = mkdtempSync(join(tmpdir(), "list-row-hover-"))
+    const root = createTestRoot({ width: 180, height: 40 })
+    const frame = (hover: boolean) => {
+      root.renderer.nativeSimulateMouseMove(hover ? 80 : 175, hover ? 6 : 35)
+      const path = join(directory, "frame.png")
+      root.renderer.captureScreenshot(path)
+      return readFileSync(path)
+    }
+    try {
+      for (const state of ["default", "selected", "disabled"] as const) {
+        root.render(
+          <ThemeProvider appearance={appearance}>
+            <ListRow
+              label="Resource"
+              selected={state === "selected"}
+              disabled={state === "disabled"}
+              style={{ width: 160 }}
+            />
+          </ThemeProvider>
+        )
+        const idle = frame(false)
+        const hover = frame(true)
+        expect(hover.equals(idle)).toBe(state !== "default")
+      }
+    } finally {
+      root.unmount()
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+}

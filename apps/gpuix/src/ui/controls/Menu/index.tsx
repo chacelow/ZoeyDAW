@@ -123,16 +123,20 @@ function MenuItem({
       {
         display: "flex",
         alignItems: "center",
-        gap: 6,
+        gap: theme.design.menu.itemGap,
         minWidth: 0,
         minHeight: theme.control["--spacing-control-track"],
         flexShrink: 0,
         fontSize: theme.control["--text-control-track"],
-        paddingLeft: inset ? theme.control["--spacing-control-icon"] + 12 : 6,
-        paddingRight: 6,
-        paddingTop: 2,
-        paddingBottom: 2,
-        borderRadius: 2,
+        paddingLeft: inset
+          ? theme.control["--spacing-control-icon"] +
+            theme.design.menu.itemPaddingInline +
+            theme.design.menu.itemGap
+          : theme.design.menu.itemPaddingInline,
+        paddingRight: theme.design.menu.itemPaddingInline,
+        paddingTop: theme.design.menu.itemPaddingBlock,
+        paddingBottom: theme.design.menu.itemPaddingBlock,
+        borderRadius: theme.design.menu.itemRadius,
         whiteSpace: "normal",
         color: unavailable ? theme.colors.mutedForeground : theme.colors.popoverForeground,
         cursor: unavailable ? "default" : "pointer",
@@ -140,7 +144,11 @@ function MenuItem({
         keyboardFocusDim: false,
         focusVisible: unavailable
           ? undefined
-          : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+          : {
+              outlineWidth: theme.design.shape.focusRingWidth,
+              outlineColor: theme.colors.ring,
+              outlineOffset: -theme.design.shape.focusRingWidth,
+            },
       },
       style
     ),
@@ -318,7 +326,7 @@ export function ContextMenuLabel({ style, ...props }: Props) {
       {...props}
       style={sx(
         {
-          padding: 6,
+          padding: theme.design.menu.labelInset,
           color: theme.colors.mutedForeground,
           fontSize: theme.control["--text-control-track"],
           whiteSpace: "normal",

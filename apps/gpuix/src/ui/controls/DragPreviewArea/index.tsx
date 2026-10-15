@@ -147,7 +147,11 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
     base: {
       userSelect: "none",
       keyboardFocusDim: false,
-      focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+      focusVisible: {
+        outlineWidth: theme.design.shape.focusRingWidth,
+        outlineColor: theme.colors.ring,
+        outlineOffset: -theme.design.shape.focusRingWidth,
+      },
     },
     variants: {
       state: {
@@ -211,8 +215,8 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
             padding: 8,
             maxWidth: 320,
             opacity: 0.85,
-            borderRadius: 4,
-            borderWidth: 1,
+            borderRadius: theme.design.popover.radius,
+            borderWidth: theme.design.popover.borderWidth,
             borderColor: theme.colors.border,
             backgroundColor: theme.colors.popover,
             color: theme.colors.popoverForeground,

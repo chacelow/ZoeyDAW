@@ -58,6 +58,12 @@ export function ScrollArea({
           position: "relative",
           minWidth: 0,
           minHeight: 0,
+          keyboardFocusDim: false,
+          focusVisible: {
+            outlineWidth: theme.design.shape.focusRingWidth,
+            outlineColor: theme.colors.ring,
+            outlineOffset: -theme.design.shape.focusRingWidth,
+          },
           width: fill ? "100%" : undefined,
           height: boundedHeight,
           maxHeight,

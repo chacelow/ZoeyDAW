@@ -111,7 +111,11 @@ export function PopoverTrigger({
         keyboardFocusDim: false,
         focusVisible: unavailable
           ? undefined
-          : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+          : {
+              outlineWidth: theme.design.shape.focusRingWidth,
+              outlineColor: theme.colors.ring,
+              outlineOffset: -theme.design.shape.focusRingWidth,
+            },
       },
       style
     ),
@@ -175,12 +179,12 @@ export function PopoverContent({
     {
       display: "flex",
       flexDirection: "column",
-      gap: 6,
+      gap: theme.design.popover.gap,
       width: theme.control["--spacing-control-track"] * 12,
-      padding: 8,
-      borderWidth: 1,
+      padding: theme.design.popover.inset,
+      borderWidth: theme.design.popover.borderWidth,
       borderColor: theme.colors.border,
-      borderRadius: 4,
+      borderRadius: theme.design.popover.radius,
       color: theme.colors.popoverForeground,
       backgroundColor: theme.colors.popover,
       fontSize: theme.control["--text-control-track"],
@@ -241,10 +245,19 @@ export function PopoverContent({
 }
 
 export function PopoverHeader({ style, ...props }: PopoverHeaderProps) {
+  const theme = useTheme()
   return (
     <div
       {...props}
-      style={sx({ display: "flex", flexDirection: "column", gap: 4, whiteSpace: "normal" }, style)}
+      style={sx(
+        {
+          display: "flex",
+          flexDirection: "column",
+          gap: theme.design.popover.headerGap,
+          whiteSpace: "normal",
+        },
+        style
+      )}
     />
   )
 }

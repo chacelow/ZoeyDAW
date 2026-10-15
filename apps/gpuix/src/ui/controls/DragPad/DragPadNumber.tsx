@@ -91,7 +91,10 @@ export function NumericPad({
   ]
   const measurement = useMeasuredTextWidth(samples, { fontSize, fontFamily: "Menlo" })
   const width = Math.ceil(
-    measurement.width + (hideIcon ? 0 : iconSize + iconGap) + trackPad * 2 + 2
+    measurement.width +
+      (hideIcon ? 0 : iconSize + iconGap) +
+      trackPad * 2 +
+      theme.design.shape.controlBorderWidth * 2
   )
   const [layoutWidth, setLayoutWidth] = useState<number>()
   const handleLayout = useCallback<NonNullable<Props["onLayout"]>>(event => {

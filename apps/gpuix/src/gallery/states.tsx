@@ -1,306 +1,371 @@
 import { useRef, useState } from "react"
-import { useTheme } from "../shared/theme/ThemeProvider"
+import type { PublicInstance } from "@gpuix/react"
+import type { ReactNode } from "react"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import {
   Button,
   ControlEnvironmentProvider,
+  ControlGroup,
   DragPadNumber,
   DragPadBar,
   DragPadBipolar,
   DragPadToggle,
   PanControl,
-  DropdownButton,
-  PopupButton,
-  Input,
   Label,
-  RadioGroup,
-  RadioGroupItem,
-  ToggleGroup,
-  ToggleGroupItem,
-  MotionTabs,
-} from "../ui/controls"
+  Input,
+  ScrollArea,
+  SettingsShell,
+  Toaster,
+} from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
-import type { PublicInstance } from "@gpuix/react"
-import type { CursorLockPort } from "../ui/controls"
+import type { ControlInfo, CursorLockPort } from "@/ui/controls"
+import { GalleryCard } from "./GalleryCard"
+import { GalleryMenus } from "./GalleryMenus"
+import {
+  GalleryForms,
+  GalleryLists,
+  GalleryPanels,
+  GalleryFeedback,
+  GalleryProjectCards,
+} from "./GalleryExamples"
 
-export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPort }) {
+export function StateGallery({
+  cursorLock,
+  locale,
+  toolbar,
+}: {
+  readonly cursorLock?: CursorLockPort
+  readonly locale: "en" | "zh"
+  readonly toolbar: ReactNode
+}) {
   const theme = useTheme()
-  const zh = process.env.GALLERY_LOCALE === "zh"
-  const disabled = process.env.GALLERY_DISABLED === "1"
-  const text = (en: string, cn: string) => (zh ? cn : en)
+  const t = (en: string, zh: string) => (locale === "zh" ? zh : en)
   const [number, setNumber] = useState(120)
   const [level, setLevel] = useState(50)
   const [pan, setPan] = useState(0)
   const [active, setActive] = useState(false)
-  const [input, setInput] = useState(text("Native input", "原生输入"))
-  const [mode, setMode] = useState("beats")
-  const [radio, setRadio] = useState("a")
-  const [tool, setTool] = useState("")
-  const [keys, setKeys] = useState("")
+  const [input, setInput] = useState(t("Native input", "原生输入"))
+  const [info, setInfo] = useState<ControlInfo | null>(null)
+  const [status, setStatus] = useState(t("Ready · UI examples only", "就绪 · 仅 UI 示例"))
+  const [settings, setSettings] = useState(false)
+  const [pane, setPane] = useState("general")
   const inputRef = useRef<PublicInstance | null>(null)
   const row = {
     display: "flex",
     flexDirection: "row",
-    alignItems: "center",
-    gap: theme.control["--spacing-control-gap"],
+    alignItems: "start",
+    gap: theme.design.spacing.cardGroupGap,
   }
-  const icon = (
-    <Icon
-      name="Play"
-      size={theme.control["--spacing-control-icon"]}
-      color={theme.colors.foreground}
-    />
-  )
   return (
-    <ControlEnvironmentProvider value={{ cursorLock }}>
+    <ControlEnvironmentProvider value={{ cursorLock, setInfo }}>
       <div
+        testId="gallery-root"
         role="application"
-        aria-label="Control state specimens"
-        onKeyDown={event => {
-          setKeys(event.key ?? "")
-        }}
+        aria-label={t("Native composition gallery", "原生组合画廊")}
         style={{
           display: "flex",
           flexDirection: "column",
-          alignItems: "start",
           width: "100%",
           height: "100%",
-          padding: theme.project.panelGap,
-          gap: theme.control["--spacing-control-track-gap"],
-          color: theme.colors.foreground,
+          padding: theme.design.spacing.rootInset,
+          gap: theme.design.spacing.stackGap,
           backgroundColor: theme.colors.background,
+          color: theme.colors.foreground,
           fontSize: theme.control["--text-control-track"],
         }}
       >
-        <text>
-          {text(
-            "Real control states · Tab / Enter / Escape",
-            "真实控件状态 · Tab / Enter / Escape"
-          )}
+        <text
+          role="heading"
+          aria-level={1}
+          style={{ fontSize: theme.transportControl["--text-control-track"] }}
+        >
+          {t("Shared design · composition Gallery", "共享设计 · 组合画廊")}
         </text>
+        {toolbar}
         <div style={row}>
-          <Button
-            label="State button"
-            disabled={disabled}
-            active={active}
-            onActiveChange={setActive}
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: theme.design.spacing.stackGap }}
           >
-            {text("Activate", "激活")}
-          </Button>
-          <Button label="State icon" disabled={disabled} iconOnly icon={icon} />
-          <Button disabled={disabled} variant="outline">
-            {text("Outline", "轮廓")}
-          </Button>
-          <Button disabled={disabled} variant="secondary">
-            {text("Secondary", "次要")}
-          </Button>
-          <Button disabled={disabled} variant="ghost">
-            {text("Ghost", "透明")}
-          </Button>
-          <Button disabled={disabled} variant="destructive">
-            {text("Delete", "删除")}
-          </Button>
-          <Button disabled={disabled} variant="link">
-            {text("Link", "链接")}
-          </Button>
-        </div>
-        <div style={row}>
-          <DragPadNumber
-            label="State number"
-            value={number}
-            onChange={setNumber}
-            min={20}
-            max={300}
-            step={1}
-            defaultValue={120}
-            disabled={disabled}
-          />
-          <DragPadBar
-            label="State bar"
-            value={level}
-            onChange={setLevel}
-            min={0}
-            max={100}
-            step={1}
-            defaultValue={50}
-            disabled={disabled}
-          />
-          <DragPadBipolar
-            label="State bipolar"
-            value={pan}
-            onChange={setPan}
-            min={-1}
-            max={1}
-            step={0.01}
-            defaultValue={0}
-            disabled={disabled}
-          />
-          <PanControl label="State pan" value={pan} onChange={setPan} disabled={disabled} />
-          <DragPadToggle
-            label="State toggle"
-            value={active}
-            onChange={setActive}
-            disabled={disabled}
-          />
-        </div>
-        <div style={row}>
-          <DropdownButton
-            label="State dropdown"
-            value={mode}
-            onChange={setMode}
-            disabled={disabled}
-            items={[
-              { id: "beats", label: text("Beats", "节拍") },
-              { id: "tones", label: text("Tones\nPreserves pitch", "音调\n保留音高") },
-              { id: "off", label: text("Disabled", "禁用"), disabled: true },
-            ]}
-          />
-          <PopupButton
-            label="State popup"
-            trigger={text("Adjust popup", "调整弹层")}
-            disabled={disabled}
-          >
-            <DragPadNumber
-              label="State popup number"
-              value={number}
-              onChange={setNumber}
-              min={20}
-              max={300}
-              step={1}
-            />
-            <text>{text("Drag and wheel: remains open", "拖动与滚轮：保持打开")}</text>
-          </PopupButton>
-        </div>
-        <div style={row}>
-          <Label controlRef={inputRef} disabled={disabled}>
-            {text("Input label", "输入标签")}
-          </Label>
-          <Input
-            ref={inputRef}
-            aria-label="State input"
-            value={input}
-            onValueChange={setInput}
-            disabled={disabled}
-            style={{ width: theme.project.controlsWidth }}
-          />
-        </div>
-        <RadioGroup
-          aria-label="State radio group"
-          value={radio}
-          onValueChange={setRadio}
-          disabled={disabled}
-          orientation="horizontal"
-          style={{ gap: theme.control["--spacing-control-gap"] }}
-        >
-          <RadioGroupItem value="a">{text("First", "第一")}</RadioGroupItem>
-          <RadioGroupItem value="b">{text("Second", "第二")}</RadioGroupItem>
-        </RadioGroup>
-        <ToggleGroup
-          aria-label="State tool group"
-          type="single"
-          value={tool}
-          onValueChange={setTool}
-          disabled={disabled}
-        >
-          <ToggleGroupItem value="draw">{text("Draw", "绘制")}</ToggleGroupItem>
-          <ToggleGroupItem value="snap">{text("Snap", "吸附")}</ToggleGroupItem>
-        </ToggleGroup>
-        <MotionTabs
-          tabWidth={theme.project.identityWidth}
-          options={[
-            {
-              key: "clips",
-              label: text("Clips", "片段"),
-              content: <text>{text("Clip content", "片段内容")}</text>,
-            },
-            {
-              key: "devices",
-              label: text("Devices", "装置"),
-              content: <text>{text("Device content", "装置内容")}</text>,
-            },
-          ]}
-        />
-        <div
-          role="group"
-          aria-label="State transport region"
-          style={{ ...row, gap: theme.transportControl["--spacing-control-gap"] }}
-        >
-          <DragPadNumber
-            label="State transport number"
-            value={number}
-            onChange={setNumber}
-            min={20}
-            max={300}
-            step={1}
-            defaultValue={120}
-            disabled={disabled}
-            size="transport"
-          />
-          <Button
-            label="State transport icon"
-            disabled={disabled}
-            iconOnly
-            size="transport"
-            icon={
-              <Icon
-                name="Play"
-                size={theme.transportControl["--spacing-control-icon"]}
-                color={theme.colors.foreground}
+            <text>{`${t("Default toolbar", "默认工具栏")} · ${theme.control["--spacing-control-track"]}`}</text>
+            <ControlGroup
+              testId="gallery-default-toolbar"
+              label={t("Default toolbar", "默认工具栏")}
+              variant="toolbar"
+            >
+              <Button
+                testId="gallery-button"
+                label={t("Activate example", "激活示例")}
+                active={active}
+                onActiveChange={setActive}
+              >
+                {t("Activate", "激活")}
+              </Button>
+              <Button
+                testId="gallery-icon"
+                iconOnly
+                label={t("Default play", "默认播放按钮")}
+                active={active}
+                onActiveChange={setActive}
+                icon={<Icon name="Play" size={theme.control["--spacing-control-icon"]} />}
               />
-            }
-          />
-        </div>
-        <div style={row}>
-          <div
-            role="group"
-            aria-label="Narrow selector parent"
-            style={{ width: theme.project.routingWidth }}
-          >
-            <DropdownButton
-              label="Filled narrow selector"
-              fill
-              disabled={disabled}
-              value={mode}
-              onChange={setMode}
-              items={[
-                { id: "beats", label: text("Beats", "节拍") },
-                { id: "tones", label: text("Long routing destination", "较长的路由目的地") },
-              ]}
-            />
+              <Button
+                variant="outline"
+                onClick={() => setStatus(t("Outline action", "轮廓按钮操作"))}
+              >
+                {t("Outline", "轮廓")}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setStatus(t("Secondary action", "次要按钮操作"))}
+              >
+                {t("Secondary", "次要")}
+              </Button>
+              <Button variant="ghost" onClick={() => setStatus(t("Ghost action", "透明按钮操作"))}>
+                {t("Ghost", "透明")}
+              </Button>
+              <Button variant="destructive" active={active} onActiveChange={setActive}>
+                {t("Delete", "删除")}
+              </Button>
+              <Button variant="link" onClick={() => setStatus(t("Link action", "链接按钮操作"))}>
+                {t("Link", "链接")}
+              </Button>
+              <Button
+                highlight={false}
+                onClick={() => setStatus(t("No-highlight action", "无高亮按钮操作"))}
+              >
+                {t("No highlight", "无高亮")}
+              </Button>
+              <Button disabled>{t("Unavailable", "不可用")}</Button>
+            </ControlGroup>
           </div>
           <div
-            role="group"
-            aria-label="Wide selector parent"
-            style={{ width: theme.project.controlsWidth }}
+            style={{ display: "flex", flexDirection: "column", gap: theme.design.spacing.stackGap }}
           >
-            <DropdownButton
-              label="Filled wide selector"
-              fill
-              disabled={disabled}
-              align="center"
-              value={mode}
-              onChange={setMode}
-              items={[
-                { id: "beats", label: text("Beats", "节拍") },
-                { id: "tones", label: text("Long routing destination", "较长的路由目的地") },
-              ]}
-            />
+            <text>{`${t("Transport toolbar", "走带工具栏")} · ${theme.transportControl["--spacing-control-track"]}`}</text>
+            <ControlGroup
+              testId="gallery-transport-toolbar"
+              label={t("Transport toolbar", "走带工具栏")}
+              variant="toolbar"
+              size="transport"
+            >
+              <DragPadNumber
+                testId="gallery-transport-number"
+                label={t("Transport tempo", "走带速度")}
+                value={number}
+                onChange={setNumber}
+                min={20}
+                max={300}
+                step={1}
+                defaultValue={120}
+                size="transport"
+              />
+              <Button
+                testId="gallery-transport-icon"
+                iconOnly
+                size="transport"
+                label={t("Transport play example", "走带播放示例")}
+                active={active}
+                onActiveChange={setActive}
+                icon={<Icon name="Play" size={theme.transportControl["--spacing-control-icon"]} />}
+              />
+              <Button
+                iconOnly
+                size="transport"
+                label={t("Transport stop example", "走带停止示例")}
+                onClick={() => setActive(false)}
+                icon={
+                  <Icon name="Square" size={theme.transportControl["--spacing-control-icon"]} />
+                }
+              />
+            </ControlGroup>
           </div>
         </div>
-        <DragPadNumber
-          label="State icon-free number"
-          testId="state-icon-free-number"
-          value={number}
-          onChange={setNumber}
-          min={20}
-          max={300}
-          step={1}
-          defaultValue={120}
-          hideIcon
-          disabled={disabled}
+        <ScrollArea
+          testId="gallery-body-scroll"
+          aria-label={t("Gallery sections", "画廊分区")}
+          style={{ flexGrow: 1, minHeight: 0 }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: theme.design.spacing.cardGroupGap,
+            }}
+          >
+            <div style={row}>
+              <GalleryCard
+                title={t("Numeric and input", "数值与输入")}
+                toggleLabel={t("Toggle numeric section", "展开或收起数值区")}
+                testId="gallery-numeric-card"
+              >
+                <ControlGroup
+                  variant="toolbar"
+                  label={t("Compact numeric controls", "紧凑数值控件")}
+                >
+                  <DragPadNumber
+                    testId="gallery-number"
+                    label={t("Tempo", "速度")}
+                    value={number}
+                    onChange={setNumber}
+                    min={20}
+                    max={300}
+                    step={1}
+                    defaultValue={120}
+                  />
+                  <DragPadBar
+                    testId="gallery-bar"
+                    label={t("Level", "电平")}
+                    value={level}
+                    onChange={setLevel}
+                    min={0}
+                    max={100}
+                    step={1}
+                    defaultValue={50}
+                  />
+                  <DragPadBipolar
+                    testId="gallery-bipolar"
+                    label={t("Bipolar", "双极数值")}
+                    value={pan}
+                    onChange={setPan}
+                    min={-1}
+                    max={1}
+                    step={0.01}
+                    defaultValue={0}
+                  />
+                  <PanControl
+                    testId="gallery-pan"
+                    label={t("Pan", "声像")}
+                    value={pan}
+                    onChange={setPan}
+                  />
+                  <DragPadToggle
+                    label={t("Mute example", "静音示例")}
+                    value={active}
+                    onChange={setActive}
+                  />
+                </ControlGroup>
+                <ControlGroup variant="toolbar">
+                  <DragPadNumber
+                    testId="gallery-icon-free"
+                    label={t("Icon-free tempo", "无图标速度")}
+                    value={number}
+                    onChange={setNumber}
+                    min={20}
+                    max={300}
+                    step={1}
+                    defaultValue={120}
+                    hideIcon
+                  />
+                  <text>
+                    {t("Same parameter; stable edit shells.", "同一参数，编辑外壳宽度稳定。")}
+                  </text>
+                </ControlGroup>
+                <Label controlRef={inputRef}>{t("Input label", "输入标签")}</Label>
+                <div testId="gallery-input-shell">
+                  <Input
+                    ref={inputRef}
+                    testId="gallery-input"
+                    aria-label={t("Native input", "原生输入")}
+                    value={input}
+                    onValueChange={setInput}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <Input
+                  aria-label={t("Invalid input example", "无效输入示例")}
+                  invalid
+                  value={input}
+                  onValueChange={setInput}
+                  style={{ width: "100%" }}
+                />
+                <Input
+                  aria-label={t("Unavailable input", "不可用输入")}
+                  disabled
+                  value={t("Unavailable", "不可用")}
+                  style={{ width: "100%" }}
+                />
+              </GalleryCard>
+              <GalleryCard
+                title={t("Menus and popups", "菜单与弹层")}
+                toggleLabel={t("Toggle menus section", "展开或收起菜单区")}
+                testId="gallery-menu-card"
+              >
+                <GalleryMenus
+                  locale={locale}
+                  value={number}
+                  onChange={setNumber}
+                  onAction={setStatus}
+                />
+              </GalleryCard>
+              <GalleryCard
+                title={t("Forms and navigation", "表单与导航")}
+                toggleLabel={t("Toggle forms section", "展开或收起表单区")}
+                testId="gallery-forms-card"
+              >
+                <GalleryForms locale={locale} onSettings={() => setSettings(true)} />
+              </GalleryCard>
+            </div>
+            <div style={row}>
+              <GalleryCard
+                title={t("List rows and scroll area", "列表行与滚动区域")}
+                toggleLabel={t("Toggle lists section", "展开或收起列表区")}
+                testId="gallery-list-card"
+              >
+                <GalleryLists locale={locale} />
+              </GalleryCard>
+              <GalleryCard
+                title={t("Shared panel shells", "共享面板外壳")}
+                toggleLabel={t("Toggle panel section", "展开或收起面板区")}
+                testId="gallery-panel-card"
+              >
+                <GalleryPanels locale={locale} />
+              </GalleryCard>
+              <GalleryCard
+                title={t("Feedback · initially collapsed", "反馈 · 初始收起")}
+                toggleLabel={t("Toggle feedback section", "展开或收起反馈区")}
+                testId="gallery-feedback-card"
+                defaultExpanded={false}
+              >
+                <GalleryFeedback locale={locale} level={level} onAction={setStatus} />
+              </GalleryCard>
+            </div>
+            <GalleryProjectCards locale={locale} onAction={setStatus} />
+            <SettingsShell
+              open={settings}
+              onOpenChange={setSettings}
+              title={t("Settings composition", "设置组合")}
+              description={t("UI navigation example", "UI 导航示例")}
+              activeId={pane}
+              onActiveChange={setPane}
+              closeLabel={t("Close settings", "关闭设置")}
+              navigationLabel={t("Settings sections", "设置分类")}
+              items={[
+                {
+                  id: "general",
+                  label: t("General", "通用"),
+                  content: <text>{t("General settings", "通用设置")}</text>,
+                },
+                {
+                  id: "audio",
+                  label: t("Audio", "音频"),
+                  content: <text>{t("Audio settings", "音频设置")}</text>,
+                },
+              ]}
+              style={{
+                width: theme.project.controlsWidth * 2,
+                height: theme.project.defaultTrackHeight * 3,
+              }}
+            />
+          </div>
+        </ScrollArea>
+        <text
+          role="status"
+          aria-label={t("Gallery status", "画廊状态")}
+        >{`${t("Info", "提示")}: ${info ?? "—"} · ${status}`}</text>
+        <Toaster
+          dismissLabel={t("Dismiss notification", "关闭通知")}
+          loadingLabel={t("Loading", "加载中")}
         />
-        <text role="status" aria-label="State keyboard log">
-          {keys}
-        </text>
       </div>
     </ControlEnvironmentProvider>
   )

@@ -1,8 +1,108 @@
-# A3b 控件画廊修正与验收报告
+# A3b 组合 Gallery 与共享设计入口
 
-2026-10-15。证据根目录为 `scripts/gpuix-main/evidence/a3b-gallery-polish/`，本文所有截图和 AX 链接均指向该目录下的持久文件。
+2026-10-15。本轮按用户修订后的组合界面验收交付源码、可重跑入口和简短结论。新截图留在私有临时目录，不批量提交；下方 `historical/`、`current/` 及旧报告均保留 old-baseline 标签。
 
-## 结论与证据边界
+## 当前交付
+
+用户经协调者明确撤回逐按钮、逐状态、逐主题截图矩阵，改为真实组合 Gallery 整体评审。旧批量生成入口已删除，已生成的本地图片未删除、未 stage，也不作为完成依据。仓库从 `556d829` 同步至 `66f9ce9`，使用已准备好的十一补丁 renderer，没有自行重建共享 vendor、增加依赖或修改业务工程、platform、crates、resize/drag owner。
+
+### 共享入口与默认值
+
+`shared/theme/design-tokens.ts` 是本轮外观 owner；`Theme.design` 必填完整 readonly 对象，Provider 可受控传完整对象，默认值不变，没有 partial merge、持久化或用户主题编辑器。原 `control`、`transportControl`、`project` 几何 owner 保留。输入与 DragPad 的焦点/编辑逻辑未随外观迁移重写。
+
+| 语义 | 当前默认值 | 来源与边界 |
+| --- | --- | --- |
+| compact / transport | 高13/20，pad1.5/2，gap2/3 | 既有只读 metrics，经 Theme 提供 |
+| control shape / Input | radius3、border1；Input inline padding6 | 原 chrome/Input/ControlGroup 默认值，改由 design 提供 |
+| Card default / sm / controls | radius8/6/1，inset16/12/4，gap16/12/4 | 保留原 Card 与旧 Gallery 的有意差异，不由 inset 推导 radius |
+| project Card | radius6、inset12、gap4、accent hover | 匹配 HomePage 已知实例覆盖；shell 拥有一个 inset，Header/Content 不叠加 |
+| card group / root / stack | gap7、inset7、gap4 | 原 Gallery/metrics 默认值 |
+| PanelShell | radius7、border2 | radius 独立于 panelGap；只改两行共享外观，不进求解器 |
+| Menu / Popover | surface radius4；inset4/8；Menu item radius2、inline padding6 | 各 family 独立 token，不混成按钮外观 |
+
+数值、Dropdown 与 scrollbar 内长均按实际 `borderWidth * 2` 推导。flat 预览把外壳 radius/border 设0，保留独立的功能性 focus ring 与单选指示器描边。`CardHeader.disclosure` 在共享组件内统一 row/center 布局；`ControlGroup` 保留 joined gap0，toolbar 按两档共享 gap 排列。
+
+### 可重跑入口与证明
+
+```sh
+GPUIX_BACKGROUND=1 bun --hot apps/gpuix/src/gallery/controls.tsx
+bun apps/gpuix/src/gallery/verification/evidence.tsx
+```
+
+真实窗口启动仍须专属绝对 UTC 时段。第二条仅创建一个离屏 Native TestRenderer，输出少量组合 overview、同帧 tree/AX、实测 bounds、参数/折叠/滚轮操作、token 对照与失败列表。默认使用 `mkdtempSync(tmpdir)` 的私有目录，不使用可预测的公共临时目录。
+
+本轮最新小量取证 `errors=[]`。紧凑摘要见 [SUMMARY.json](SUMMARY.json)，保留实际 renderer realpath/SHA、构造函数 identity、仓库基线、源码指纹、有序十一补丁指纹、真实截图路径与几何比较。当前 renderer SHA-256 为 `f88985db8a8c3b49af2ae736052e5eb4f0db37bf25bd74fc9cb24e926b759a1d`；真实窗口评审使用的上一十一补丁二进制 SHA `a70751be7a50334a227d471cf7a9cd766af1b15dd742e5f973c34c362e914ff1` 另记，不混作同一版本，也不以配置 SHA 冒充实际二进制。
+
+### 协调者真实整体评审
+
+批准时段为 `2026-10-15T12:00:04Z` 至 `12:15:04Z`。worker 只启动命名 service，输入、截图与 AX 评审归协调者；worker 未做任何 desktop 截图、AX 或输入。
+
+- 协调者确认统一入口生效：Flat 的 Activate 宽40→38符合两条边框推导，spacing 模式列 gap7→14，切回 Default 恢复原布局。同类组件联动得到实际窗口 automation 证明。
+- 各 section toggle 实测13×13、距组顶6px，一致。
+- 评审必修为 Panel A/B 与 Project Card 在同一列却使用不同层级 inset。已采用协调者批准的分区方案：Project Card 移出紧凑 Panel 列，独立标为 project content hierarchy；没有把不同语义的4与12改成任意实例数字。实际 bounds 回归防止重新混回该列。
+- 遮挡时 OS 截图是黑屏，符合 F3 停帧行为。整体颜色/层次复核使用原生 GPU 整页图，真实窗口使用 automation/AX 几何；不把黑屏或 AX 存在称为物理像素通过。物理 held mouse、系统光标锚点仍未验证，既有批准限制保留。
+
+收到“评审结束”后于 `12:13:41.239Z` 立即关闭 service。旧启动 PID52582 与后台 PID59868 的 `ps -p 59868,52582 -o pid=,etime=,command=` stdout/stderr 均为空、exit1，两进程不存在；没有残留自有窗口或停止用户应用。
+
+### 实际检查与回归
+
+| 检查 | 实际结果 |
+| --- | --- |
+| 十一补丁 `check.mjs --resolution` | 通过，单一 renderer/React runtime |
+| `pnpm native:build` | 通过，仅重建本 worktree app native；未重建 vendor |
+| full `tsc --noEmit` | 通过 |
+| full `bun test` | 1120 pass，1 todo，0 fail，172 files；保留既有 todo |
+| 受影响原生回归 | 66 pass，0 fail，5 files |
+| full `eslint apps/gpuix/src` | 通过 |
+| `gpuix-review-scan.mjs 66f9ce9` | 实扫34 source、5 test；0 HARD、4 WARN，逐项分类见下 |
+| 组合 Native GPU smoke | `errors=[]`，零边框宽度、编辑/提交/取消、折叠、滚轮、卸载 retained0 |
+
+早先把巨量 GPU 采图与全套测试并行，曾导致三个既有5秒超时，1056 pass/3 fail。没有弱化测试或 timeout；撤回批量采图并串行执行后，上表 full suite 通过。曾有 WIP scanner 只比较提交返回0 files，这不作为扫描证据；交付扫描使用实际本地提交差异。
+
+| 真实缺陷 / 新契约 | 验证 |
+| --- | --- |
+| ListRow hover token 别名导致像素无变化 | 修前2 fail，恢复 secondary 变异2 fail；selected+disabled 保持 primary 减弱 |
+| ListRow 非继承 focus dim / ScrollArea ring | 删除 ListRow opt-out 变异2 fail，每主题14,896内容像素变化；删 ring 变异2 fail |
+| ControlledScrollbar disabled 无区别 | 修前4 fail，删 opacity 变异4 fail，值/位置/几何相同 |
+| Button/Toggle/Tabs/Settings disabled hover/pressed 优先级 | 四 owner 原分支合计24 fail，修后34 pass；完整相关集包含 selected+disabled |
+| 一个 controlRadius 对 Button/Input/Group 的实际 raster 联动 | 移除 Provider design 依赖变异3 fail；几何不移动 |
+| 零边框数值宽度 | 恢复固定 +2 变异1 fail，实际34而期望32 |
+| disclosure Space 误激活父 Card | 原生修前1 fail，修后1 pass；Space 到窗口，Card 自身 Space 仍激活，Enter 不双激活 |
+| project 单 inset | 直接内容与 Header/Content 实际边界一致，12/20两值不双 padding |
+
+### 自审与移交边界
+
+独立只读 Standards/Spec 审查确认完整 token owner、默认差异、border 推导与 PanelShell 范围，无新增 Standards 硬问题；发现的 Card 后代 Space P2 已修并复审关闭。原矩阵的 dragging/binding/edit finding 已由真实原生检查解决，随用户新方向删除旧矩阵入口，不留双 API。
+
+| 扫描发现 | 类别 | 处置 |
+| --- | --- | --- |
+| `gallery/controls.tsx` viewport1050×780 | 记录 | 协调者指定的真实窗口几何，不是控件魔法数，保留固定比较视口 |
+| `gallery/verification/evidence.tsx` viewport1050×780 | 记录 | 与真实 Gallery 使用同一取证视口，不将验证入口当产品控件 |
+| `shared/theme/design-tokens.ts` gap16 | 记录 | 此文件就是获批的语义默认值 owner；来源为原 Card default，不向消费者散布 |
+| `SettingsShell/index.tsx` 默认720×520 | 记录 | 未改动的既有对话框默认几何，属于布局而非本轮 radius/border/padding；不扩大私有布局范围 |
+
+HomePage 的 Card padding/gap/hover 是唯一已知待 app-shell owner 迁移的业务实例覆盖，本轮提供 `size="project"` 与 Card README，不越界修改 app。业务私有布局、反馈内部布局、内容色和工程几何没有冒称全部 token 化；数值只是 UI 参数，不代表接通音频引擎。
+
+### 错题
+
+- 逐按钮截图数量不是整体 Gallery 的视觉验收。用户纠正后停止生成并撤回该完成门槛。
+- Input 原生 bounds 是内部输入框，不能与别的控件外壳混比；保留 raw 与无样式 wrapper 两层。
+- 原生多键 batch 可能在首键新建 editor 前把后续键送给旧节点。用逐键 native dispatch，并核对目标 editor、焦点、draft 与真实 commit。
+- `keyboardFocusDim` 不继承。裸文本不能覆盖真实 ListRow 内容被压暗的问题。
+- Card 不能只看 Enter/Space 字符就激活；必须检查实际焦点 owner 与 defaultPrevented，让后代 Space 继续到窗口。
+
+### 已验证做法
+
+- 完整受控 DesignTokens 只换 context，不重挂载子树；token 改动保留已编辑参数，并同步多个同类组件的实际图像/几何。
+- radius 与 spacing 独立；Card 用一个 inset 与显式 owner 分配内边距，不把两个数凑成同一个效果。
+- 原生行为/raster 回归抓优先级，少量整页 GPU 图与协调者真实组合操作抓整体；两层证据不互相冒充。
+- 所有自启动窗口命名、限定绝对 UTC、收到结束即关闭，并用真实 ps 空输出来记录清理。
+
+## Old-baseline：此前 A3b 报告
+
+以下内容保留原批次事实；其中“当前”“最近”“未验证”均指该旧批次，不覆盖上方本轮组合 Gallery 与共享设计入口的证据。
+
+### 结论与证据边界
 
 代码增量已完成集成门禁，但**完整视觉验收尚未完成**。历史截图不能证明当前实现，尤其不能证明 shared Icon、G1 光标锚点、F1 原生布局与 F2 事件切换后的外观。当前 GUI 补证以 Runtime 返回的实际文件为准，不把类型检查、AX 存在或旧图数量当成视觉通过。
 
@@ -17,7 +117,7 @@
 
 历史 PNG 合计 1,268,363 bytes，约 1.27 MB。此数只描述已有文件体积，不是验收覆盖率。旧文件名里的 `final` 仅指当时那一批截图的末次捕获。历史 metadata 已补充这一限定。
 
-## 修正前后
+### 修正前后
 
 Before 来自任务原始观察、失败回归或被替换的实现。After 是当前代码契约；“测试通过”和“真实窗口视觉通过”分开记录。
 
@@ -54,7 +154,7 @@ Before 来自任务原始观察、失败回归或被替换的实现。After 是�
 
 G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现。旧做法在 JS 处理 mouseDown 时读取 OS 当前位置，可能得到已移动10pt的点。当前端口接收事件按下点并经原生坐标换算；既有 G1 读回记录显示两条40pt路径均回到按下点 `(412,293)`、误差0pt。该记录不等于本轮 current GUI 重新取证；人手速度、多屏与全屏实机仍未验证。
 
-## 像素与 token 对照
+### 像素与 token 对照
 
 下表历史值来自 [历史 measurements.json](historical/measurements.json) 与原任务的 AX 观察。当前列区分源码目标与当前窗口测量，绝不把 token 数字写成实测。AX按工具报告的原生坐标单位记值，与token数值对照；当前display scale未知，不宣称物理像素与pt换算，也不从放大图反推Retina倍率。
 
@@ -78,7 +178,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 
 数值预编辑/编辑的历史 metadata 保存的是进入编辑前的 shell bounds，不能把其 native textfield 子节点当同一个bounds，也不能只靠这份JSON断言编辑壳从未变宽。当前 native renderer 几何回归覆盖宽度稳定与 resize。历史 toggle 在默认/active记录w22，在focus/hover记录w18，对应文字内容不同，不能宣称所有控件宽度在所有状态固定。旧 Radio pressed记录h15、部分pressed记录y变化，也不构成当前尺寸或held外观通过。
 
-## 与 Live 的只读比较
+### 与 Live 的只读比较
 
 仅复用已有 [Live BPM局部](historical/live-bpm-reference.png)，本报告与Runtime均未focus、点击或修改Live。gallery侧可对照当前 [compact数值4×裁图](current/number-default-dark-en-2026-10-15-e18-4x.png) 与 [Transport数值4×裁图](current/transport-number-default-dark-en-2026-10-15-e47-4x.png)。这是旧只读参照与当前静态窗口的密度比较，不补造Live其他状态。
 
@@ -91,7 +191,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 | 窄BPM显示无独立图标 | 当前hideIcon默认shell22×13，有预编辑/编辑裁图 | 当前确有无图标变体；Live编辑指示未实测，不能宣称caret外观一致 |
 | Live编辑、hover、pressed、focus、disabled状态 | 已有crop只含静态局部 | 未验证；不能推断Live其他状态，更不宣称音频行为一致 |
 
-## 历史逐控件逐状态索引
+### 历史逐控件逐状态索引
 
 下表每个链接都是 `historical/` 中已有的真实文件。标“历史”只表示有对应旧截图，**不表示当前状态通过，也不表示本次报告任务已对所有图重新放大验收**。没有文件的格子保守记“未验证”，没有用未经API核对的N/A掩盖缺口。
 
@@ -121,7 +221,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 | transport-number | 历史 [transport-number-default-dark-en.png](historical/transport-number-default-dark-en.png) | 历史 [transport-number-hover-dark-en.png](historical/transport-number-hover-dark-en.png) | 未验证；旧文件 [transport-number-pressed-dark-en.png](historical/transport-number-pressed-dark-en.png) | 历史 [transport-number-focus-dark-en.png](historical/transport-number-focus-dark-en.png) | 历史 [transport-number-disabled-dark-en.png](historical/transport-number-disabled-dark-en.png) | 未验证 | 历史 [transport-number-pre-edit-dark-en.png](historical/transport-number-pre-edit-dark-en.png) | 历史 [transport-number-edit-dark-en.png](historical/transport-number-edit-dark-en.png) |
 | transport-icon | 历史 [transport-icon-default-dark-en.png](historical/transport-icon-default-dark-en.png) | 历史 [transport-icon-hover-dark-en.png](historical/transport-icon-hover-dark-en.png) | 未验证；旧文件 [transport-icon-pressed-dark-en.png](historical/transport-icon-pressed-dark-en.png) | 历史 [transport-icon-focus-dark-en.png](historical/transport-icon-focus-dark-en.png) | 历史 [transport-icon-disabled-dark-en.png](historical/transport-icon-disabled-dark-en.png) | 未验证 | 未验证 | 未验证 |
 
-## 深浅色与中英文历史矩阵
+### 深浅色与中英文历史矩阵
 
 以下默认与禁用图片覆盖dark/light × en/zh。hover、focus、active、预编辑与编辑仅有dark-en旧批次。tabs没有disabled图片，保留未验证；不能因为没有截图就判API不支持。
 
@@ -149,7 +249,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 | transport-number | [transport-number-default-dark-en.png](historical/transport-number-default-dark-en.png) / [transport-number-disabled-dark-en.png](historical/transport-number-disabled-dark-en.png) | [transport-number-default-dark-zh.png](historical/transport-number-default-dark-zh.png) / [transport-number-disabled-dark-zh.png](historical/transport-number-disabled-dark-zh.png) | [transport-number-default-light-en.png](historical/transport-number-default-light-en.png) / [transport-number-disabled-light-en.png](historical/transport-number-disabled-light-en.png) | [transport-number-default-light-zh.png](historical/transport-number-default-light-zh.png) / [transport-number-disabled-light-zh.png](historical/transport-number-disabled-light-zh.png) |
 | transport-icon | [transport-icon-default-dark-en.png](historical/transport-icon-default-dark-en.png) / [transport-icon-disabled-dark-en.png](historical/transport-icon-disabled-dark-en.png) | [transport-icon-default-dark-zh.png](historical/transport-icon-default-dark-zh.png) / [transport-icon-disabled-dark-zh.png](historical/transport-icon-disabled-dark-zh.png) | [transport-icon-default-light-en.png](historical/transport-icon-default-light-en.png) / [transport-icon-disabled-light-en.png](historical/transport-icon-disabled-light-en.png) | [transport-icon-default-light-zh.png](historical/transport-icon-default-light-zh.png) / [transport-icon-disabled-light-zh.png](historical/transport-icon-disabled-light-zh.png) |
 
-## 历史行为证据与当前自动化证明
+### 历史行为证据与当前自动化证明
 
 | 场景 | 实际已有观察 | 持久证据与限制 |
 | --- | --- | --- |
@@ -161,7 +261,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 | 窄/宽fill弹层打开 | 现有两张open图和parent/trigger bounds | [窄open](historical/dropdown-fill-narrow-open-dark-en.png)、[宽open](historical/dropdown-fill-wide-open-dark-en.png)；F1切换后的anchored alignment仍需当前GUI复核 |
 | 当前键盘、布局、命中 | Native TestRenderer测试和失败变异见下表 | 自动化不是物理键鼠或截图；当前真实Tab/Space、popup操作另列 |
 
-### 最近已观察的集成门禁
+#### 最近已观察的集成门禁
 
 这是主代理最后一次实际观察结果的记录，本报告任务没有执行build、测试、lint、formatter或commit。
 
@@ -174,7 +274,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 | 仓库根 | `cargo check` | 通过，最后已观察记录 | 本轮报告未重跑，不能冒称与最新截图同刻 |
 | 仓库根 | `cargo test` | 49 tests，4 suites通过，最后已观察记录 | 共享原生基线兼容；本切片未新增Rust源码 |
 
-### 回归变异记录
+#### 回归变异记录
 
 下表记录主代理实际观察到的失败，变异已还原。不是“计划变异”，也不靠删弱既有断言获得green；本报告未重跑这些命令。失败数字是各次变异运行结果，不能相加当新增测试数量。
 
@@ -194,7 +294,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 | DragPreviewArea忽略source role | 失败 | 实际source的AX角色正确 |
 | DragPreviewArea wrapper误为button/额外入口 | 失败 | wrapper group与source owner不重复 |
 
-### 两轴自审与仲裁
+#### 两轴自审与仲裁
 
 | 轴 | 发现 | 处置 |
 | --- | --- | --- |
@@ -202,7 +302,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 | Spec | 未发现明确新增实现缺陷；根MenuTrigger和SubTrigger的Space语义措辞有歧义 | 根trigger禁Space，弹层`menuitem`语义SubTrigger保留Space并消费；例外明确落在菜单项语义，不扩散到工具栏 |
 | 原生依赖 | 早期嵌套右键、native布局与focusVisible被列为blocked | 当前已消费F1/F2；旧报告中的阻塞不能沿用。视觉证据不足是另一个问题，不由依赖合入自动消除 |
 
-## 当前窗口补证
+### 当前窗口补证
 
 第二次授权为06:04–06:14 UTC；Runtime在06:13:37 UTC结束桌面会话，10个自有命名gallery服务均已停止。首次授权在开始前过期的记录保留为provenance，不把首次失败当作这次重试结果。未对Live进行focus、点击或修改。
 
@@ -212,7 +312,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 
 裁图用baseline AX bounds及窗口阴影帧校准定位，比例约0.865714。活动或编辑后原ref可能已经替换，裁图中的旧ref和target只是定位来源，不是同刻AX身份/宽度读回。截图放大便于观察，但不把4×后的边缘像素直接当逻辑px测量。
 
-### 当前主题与语言矩阵
+#### 当前主题与语言矩阵
 
 | 当前组合 | 默认真实截图与AX | 禁用真实截图与AX | 覆盖限制 |
 | --- | --- | --- | --- |
@@ -223,7 +323,7 @@ G1 光标锚点是共享原生增量的消费，不冒称本报告任务实现�
 
 默认dark-en中compact控件处于同一紧凑高度，纯图标壳为方形；light-zh全图可见中文标签与浅色层级。这里只确认实际有图及静态观察，没有替所有状态宣称文字居中、裁切、颜色区别均已验收。
 
-### 当前逐控件逐状态
+#### 当前逐控件逐状态
 
 表中“4×裁图”证明文件存在且来自真实窗口，不自动意味着该状态的全部视觉检查通过。“全图已有”不满足每控件每状态各一张放大的要求。所有pressed均未验证；缺图不使用N/A掩盖。
 
@@ -281,7 +381,7 @@ normal gallery的Card、ControlGroup、IconSlot、菜单与Popover、反馈、Se
 | SettingsShell / SettingsNavItem | 未验证 | 未验证 |
 | DragPreviewArea source / preview | 未验证 | 未验证 |
 
-### 当前真实键盘与动态操作
+#### 当前真实键盘与动态操作
 
 | 操作 | 实际观察 | 证据与结论 |
 | --- | --- | --- |
@@ -303,7 +403,7 @@ normal gallery的Card、ControlGroup、IconSlot、菜单与Popover、反馈、Se
 
 原生popup作为独立layer出现在AX中，但父窗口截图未包含该layer的可见内容。因此当前popup保持打开与120→116→122的结论只来自AX，不把父窗口图片写成popup本体的像素验收。
 
-### 进程与桌面清理
+#### 进程与桌面清理
 
 Runtime的10个命名服务、pid与逐项停止UTC记录在manifest中；06:13:37 UTC精确gallery标题查询为空，computer会话已关闭。主代理随后实际执行以下强制全局残留检查，本报告没有重跑：
 
@@ -313,7 +413,7 @@ ps -axo pid,etime,command | grep -E 'bun .*--hot|cargo run|gallery|demo'
 
 结果为“无匹配，输出为空，grep退出码1”，即该检查未发现残留进程。只清理本任务自己启动的服务，没有停止用户服务。
 
-## UI规范第13节逐项结论
+### UI规范第13节逐项结论
 
 | 检查 | 已有证据 | 当前结论 |
 | --- | --- | --- |
