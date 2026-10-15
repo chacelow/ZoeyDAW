@@ -14,6 +14,7 @@ export function MenuTrigger({
   children,
   onClick,
   onMouseDown,
+  onContextMenu,
   onKeyDown,
   style,
   ref,
@@ -55,13 +56,18 @@ export function MenuTrigger({
     onMouseDown: (event: EventPayload) => {
       if (unavailable) return
       onMouseDown?.(event)
-      if (menu.contextMenu && (event.button === 2 || event.isRightClick || event.modifiers?.ctrl)) {
-        menu.setPointer(
-          event.x !== undefined && event.y !== undefined ? { x: event.x, y: event.y } : null
-        )
-        menu.setOpen(true)
-      }
     },
+    onContextMenu: unavailable
+      ? undefined
+      : menu.contextMenu
+        ? (event: EventPayload) => {
+            onContextMenu?.(event)
+            menu.setPointer(
+              event.x !== undefined && event.y !== undefined ? { x: event.x, y: event.y } : null
+            )
+            menu.setOpen(true)
+          }
+        : onContextMenu,
     onClick: (event: EventPayload) => {
       if (unavailable) return
       onClick?.(event)
