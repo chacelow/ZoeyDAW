@@ -5,6 +5,7 @@ import { sx } from "@/shared/theme/style"
 import { SlotContext, usePanelGroup } from "../context"
 import { keyboardDelta } from "../layout/keyboardDelta"
 import { useDividerDrag } from "../useDividerDrag"
+import { dividerChrome } from "../divider-chrome"
 
 export interface SeparatorProps {
   disabled?: boolean
@@ -70,9 +71,7 @@ export function Separator({
       onMouseUp={drag.onMouseUp}
       onBlur={drag.onBlur}
       onKeyDown={onKeyDown}
-      style={sx({ backgroundColor: theme.colors.card }, style, {
-        flexShrink: 0,
-        userSelect: "none",
+      style={sx(dividerChrome(theme, disabled), style, {
         cursor: disabled ? "default" : vertical ? "col-resize" : "row-resize",
         ...(vertical
           ? { width: theme.project.panelGap, height: "100%" }
