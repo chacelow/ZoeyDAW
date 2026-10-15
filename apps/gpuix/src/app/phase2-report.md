@@ -1,6 +1,6 @@
 # B2 app-shell 阶段2装配
 
-2026-10-15。基线已 fast-forward 到 `7cf7215`。当前代码已装配真实 sections，完整交付仍受 F5 autoFocus 事件修复、ClipEditorSlot IDs 切换和剩余真实窗口输入取证限制，未发送完成结论。
+2026-10-15。基线先 fast-forward 到 `7cf7215`，再按协调者指定合入 `d57b07b`，合并提交为 `5488550`。当前代码已装配真实 sections，完整交付仍待 F5 autoFocus、ClipEditorSlot IDs 切换及最终集成许可。剩余真实 UI 由协调者在依赖合入后统一组合评审，本 worker 不再重复局部取证。
 
 已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
 
@@ -57,19 +57,18 @@
 
 真实入口使用 `bun --hot --preload ./src/app/verification/native-fixture.ts src/main.tsx`。fixture 使用真实 NativeBackend 和 probe.wav，不模拟音频或 Provider。
 
-| UI 规范第 13 节 | 本次证据与结论 |
+| UI 规范第 13 节的组合验收 | 本次证据与结论 |
 | --- | --- |
-| 每个控件每个状态 | 已观察装配默认态、设置主题和语言切换。没有完成所有 sections 控件状态矩阵，不以集成截图替代各切片状态验收 |
-| 间距 | Browser 外层 AX 315、内部导航 AX 90，来自共享 Panel 与 Browser token。原生组合测试证明 lane 宽等于时间视口，整行等于 lane 加 controlsWidth |
-| 居中 | 四组全窗截图可复查标题、Transport 和轨道头。未完成逐控件放大测量 |
-| 尺寸 | Search 的原始 AX bounds 为 258×13，窗口 1280×800。未自行换算屏幕 scale。真实离屏几何回归验证 lane、表头和 rails 不重叠 |
-| 紧凑感与 Live | 本 Dispatch 未重新读取 Live，按未验证处理。阶段1 `evidence/live-reference-full-2026-10-15.png` 仅为已有参考，不冒称本次观察 |
-| 深浅与中英文 | `project-dark-en`、`project-light-en`、`project-light-zh`、`project-dark-zh` 四张真实截图；设置仍是原分段主题与语言 RadioGroup |
-| 键盘 | 物理 Cmd+F 与 a/Cmd+A 未验证。窗口 helper 返回成功但 AX search 未聚焦，真实 focusedElement 曾指向 Orca Terminal input。停止进一步键盘输入，不把无模式变化当成功 |
-| 拖动、滚轮、弹层 | 设置弹层与主题/语言 AX 操作已验证。真实 Clip 打开、Back、拖动/滚轮未完成；最后元素输入返回 BackgroundUnavailable，按限制停止 |
-| 性能 | 尚未采集本次真实窗口帧数/耗时与节点数；不使用定时器数量代替 |
+| Gallery 与业务整体布局 | 已运行真实 main 的首页与完整工程组合视图，保留 Transport、Browser、Arrangement、Footer 的空间关系；协调者待依赖合入后最终整体评审 |
+| 跨区域对齐与居中 | 整页可复查连续标题栏/Header、轨道头和 lane；真实组合几何回归证明 lane/表头/rails 不重叠 |
+| 间距与内边距 | Browser 外层 AX 315、内部导航 AX 90；布局 gap、panel padding 和 Browser 列宽直接引用已有共享 token |
+| 统一设计入口 | 组合根未引入私有圆角、边框或间距值，未改 shared/theme；公共控件、Panel、MotionTabs 仍消费共享 token |
+| 尺寸与紧凑感 | Search 原始 AX 为 258×13，窗口 1280×800，不自行换算 scale。本 Dispatch 未重新读取 Live；阶段1截图仅为既有参考 |
+| 深浅与中英文 | `project-dark-en`、`project-light-en`、`project-light-zh`、`project-dark-zh` 整页截图，原分段主题与语言 RadioGroup 仍可切换 |
+| 状态与键盘 | 真实离屏行为覆盖 B、A、Cmd+A、Space、modal/折叠守卫；物理键盘目标焦点无法证明，按工具未验证保留限制 |
+| 拖动、滚轮、弹层与性能 | 真实设置弹层与主题/语言 AX 操作通过。Clip、Back、拖动、滚轮、实际帧耗时与节点数留给协调者统一组合评审，最后后台输入的精确失败已保留 |
 
-四组截图、首页截图和对应 AX 位于 `evidence/phase2/`。窗口表面保持标题栏/Header 连续、无新边框，红绿灯未修改，标题仍弱化。不能从未刷新的预览推导颜色缺陷；本次先获得实际已刷新的窗口后保存四组证据。
+已有截图仅保留在本地 `evidence/phase2/` 的 Git 忽略目录，不新增图片提交；AX、可重跑入口和简短结论保留在 Git。窗口表面保持标题栏/Header 连续、无新边框，红绿灯未修改，标题仍弱化。不能从未刷新的预览推导颜色缺陷；本次先获得实际已刷新的窗口后保存整页参考。
 
 第一次 acquire 超时后未启动窗口，先 blocking ask。第二次获得实时批准后运行首页到工程主路径。窗口在 08:35:25 已不可访问，control 为 inactive；service 仍运行，日志没有 panic，无法据此判断窗口关闭原因。立即停止本人 service 并上报。最后一次窗口精确绑定 pid 86471，依协调者要求仅后台 AX/窗口操作，不再 acquire 或 takeover。AXPress 不支持 Clip 元素，改元素 click 后 provider 报 `BackgroundUnavailable: cannot establish the user's key window for background focus restoration`，没有升级前台。两个 service 都在 deadline 前停止。
 
