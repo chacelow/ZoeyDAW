@@ -25,8 +25,12 @@ for path in sys.argv[1:]:
     if v: print(v); break
 ' "$@"; }
 
-orca worktree create --name "$name" --repo path:/Volumes/PSSD/code/zoeydaw --base-branch gpuix-migration \
-  --setup skip --parent-worktree "path:$root/gpuix-migration" --json | field worktree.path path >/dev/null
+created=$(orca worktree create --name "$name" --repo path:/Volumes/PSSD/code/zoeydaw --base-branch gpuix-migration \
+  --setup skip --parent-worktree "path:$root/gpuix-migration" --json)
+printf '%s' "$created" | field worktree.path path >/dev/null
+# worktree create opens an idle shell; the worker gets its own omp terminal below.
+startup=$(printf '%s' "$created" | field startupTerminal.handle || true)
+[ -n "$startup" ] && orca terminal close --terminal "$startup" --tab --json >/dev/null
 
 terminal=$(orca terminal create --worktree "path:$root/$name" --title "$name" \
   --command "omp --model $WORKER_MODEL --extension $HOME/.omp/agent/extensions/orca-agent-status.ts --config '$orca_omp'" \
