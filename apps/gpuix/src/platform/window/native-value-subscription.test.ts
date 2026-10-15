@@ -1,23 +1,20 @@
 import { describe, expect, test } from "bun:test"
-import { createApplicationActiveSubscription } from "./application-active"
-import type { ActivityListener, WindowActivityRenderer } from "./application-active"
+import { createNativeValueSubscription } from "./native-value-subscription"
 
 function activityRenderer(initial = true) {
   let active = initial
-  let callback: ActivityListener | null = null
+  let callback: ((active: boolean) => void) | null = null
   const resources = { starts: 0, stops: 0 }
-  const renderer: WindowActivityRenderer = {
-    onWindowActiveChange(next) {
-      callback = next
-      if (next === null) resources.stops++
-      else {
-        resources.starts++
-        next(active)
-      }
-    },
+  const register = (next: ((active: boolean) => void) | null) => {
+    callback = next
+    if (next === null) resources.stops++
+    else {
+      resources.starts++
+      next(active)
+    }
   }
   return {
-    subscribe: createApplicationActiveSubscription(renderer),
+    subscribe: createNativeValueSubscription(register, "window activation events"),
     resources,
     emit(next: boolean) {
       active = next
@@ -36,7 +33,7 @@ async function drainEvents() {
   })
 }
 
-describe("native window activation subscriptions", () => {
+describe("native value subscriptions", () => {
   test("attaches lazily, captures baseline without notifying, and releases the last lease", async () => {
     const host = activityRenderer()
     const changes: boolean[] = []
@@ -165,8 +162,19 @@ describe("native window activation subscriptions", () => {
     unsubscribe()
   })
 
+  test("failed registration never leaves a silent session behind", () => {
+    let attempts = 0
+    const subscribe = createNativeValueSubscription<boolean>(() => {
+      attempts++
+      throw new Error("native unavailable")
+    }, "test source")
+    expect(() => subscribe(() => undefined)).toThrow("native unavailable")
+    expect(() => subscribe(() => undefined)).toThrow("native unavailable")
+    expect(attempts).toBe(2)
+  })
+
   test("unsupported renderers fail on subscription rather than falling back to polling", () => {
-    const subscribe = createApplicationActiveSubscription({})
-    expect(() => subscribe(() => undefined)).toThrow(Error)
+    const subscribe = createNativeValueSubscription<boolean>(undefined, "window activation events")
+    expect(() => subscribe(() => undefined)).toThrow("window activation events")
   })
 })

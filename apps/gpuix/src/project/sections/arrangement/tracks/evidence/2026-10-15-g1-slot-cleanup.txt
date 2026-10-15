@@ -1,0 +1,11 @@
+Command:
+ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
+
+Observed stdout:
+88423 10:13       bun --hot src/project/sections/clip-edit/demo/index.tsx
+Observed exit code: 0
+
+This is another slice's clip-edit demo, not a tracks process; it was not stopped.
+Own service b2-tracks-g1-signal-proof: exited, 2026-10-15T02:44:18.440Z.
+computer.control.state(): { active: false }
+No tracks verification process remains in the observed output.
