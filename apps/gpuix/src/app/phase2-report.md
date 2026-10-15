@@ -1,8 +1,10 @@
 # B2 app-shell 阶段2装配
 
-2026-10-15。基线先 fast-forward 到 `7cf7215`，再按协调者指定合入 `d57b07b`，合并提交为 `5488550`。当前代码已装配真实 sections，完整交付仍待 F5 autoFocus、F3 resume 帧接口、ClipEditorSlot IDs 切换及最终集成许可。剩余真实 UI 由协调者在依赖合入后统一组合评审，本 worker 不再重复局部取证。
+2026-10-15。已按协调者指定合入 `d57b07b` 与 F5 `6d6dd39`，对应合并提交为 `5488550`、`2884a0a`。F5 autoFocus 依赖已解除，当前 app 全套与默认全量变异通过。剩余 F3 resume 帧接口、ClipEditorSlot IDs 和 DesignTokens Card 变体仍待合入；真实 UI 由协调者在这些依赖合入后统一组合评审，本 worker 不重复局部取证。
 
 已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
+
+独立 review 的只读输入修复为 `7381d81`，按活动需求订阅帧为 `f5e0a4f`。两个提交的 hook 均通过。
 
 ## 实现与 owner
 
@@ -24,32 +26,28 @@
 
 | 文件 | 发现与修复 | 验证 |
 | --- | --- | --- |
-| `ui/controls/ControlEnvironment/index.tsx`、`Input/index.tsx`、`DragPad/DragPadNumber.tsx`、controls README | 增加可选 textFocus lease。真实 onFocus 获取，blur/unmount/退出编辑态释放；保留 ControlInfo，不读取输入内容、不轮询 | Input 显式聚焦真实 native 回归已通过；autoFocus 两条等待 F5 |
+| `ui/controls/ControlEnvironment/index.tsx`、`Input/index.tsx`、`DragPad/DragPadNumber.tsx`、controls README | 增加可选 textFocus lease。真实 onFocus 获取，blur/unmount/退出编辑态释放；保留 ControlInfo，不读取输入内容、不轮询 | F5 合入后 Input 显式焦点、Input autoFocus、DragPad 编辑 autoFocus 和 readonly 全部通过 |
 | `arrangement/tracks/TrackRows/index.tsx` | timeline 已扣 controlsWidth，tracks 再扣导致槽和 rails 错位。现在 viewport.width 是时间宽度，整行宽度加回 controlsWidth | 真实 TrackRows、LaneRow 的边界相等，rails 在 lane 末端；回归通过 |
 | tracks demo、render-cost、Row interaction tests | 迁移已有 viewport 构造者，保持相同总窗口宽度 | 已纳入受影响套件 |
 | `arrangement/timeline/controller.ts` | 唯一投影 owner 补充 session.automationParameters 投影 | 切换 pan/volume 后真实 automation geometry 切换，回归通过 |
+| `arrangement/timeline/viewport/auto-scroll.ts`、controller 与 README | pointer 活动直接派生帧需求，start/update/stop 只在活动边界通知；controller 暴露稳定 demand 端口，root 不读 view 细项，tick 算法不变 | idle/播放/真实拖动/ruler start-stop 回归、四项变异、真实 native backend smoke 通过 |
 | Arrangement 组合契约 | 明确 viewport.width 不含 controlsWidth | 与代码保持一致 |
 
-未改 platform、vendor、shared/theme、Rust、依赖清单或旧 Web/Tauri。
+本切片未自行修改 platform、vendor、shared/theme、Rust、依赖清单或旧 Web/Tauri。F5 与共享 vendor 由协调者合入、重建，本 worker 仅同步使用。
 
 ## 实跑验证
 
 | 命令或场景 | 观察结果 |
 | --- | --- |
-| `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | 通过，最近一次 3.84 秒 |
-| `pnpm exec eslint apps/gpuix/src` | 通过，无输出，57.78 秒，见 `evidence/phase2/eslint.txt` |
-| `bun test src/app/project/composition.test.tsx --test-name-pattern "^(?!.*(autoFocus\|DragPad native)).*" --timeout 30000` | 5 pass，0 fail，2 filtered out。只用于 F5 前可达验证，不作为全套通过 |
-| app、ControlEnvironment、Input、DragPad、tracks、timeline 的组合检查 | 205 pass，2 fail。两条失败都是 ThemePresetGrid 独立挂载遗漏新增 AppInteractionProvider。已迁移该测试消费者 |
-| `bun test src/app/settings/ThemePresetGrid.test.tsx --timeout 30000` | 上述迁移后 2 pass，0 fail，18 assertions，809 毫秒 |
-| 真实 native runtime smoke | open/apply 被接受；48 kHz telemetry、输出延迟 284 帧；同会话读取 channel-major min/max 共 256 个 f32，范围 -0.399993896484375 到 0.399993896484375；释放后 phase 为 idle |
-| 完整 `bun test` 与默认变异脚本 | 仍待 F5 与 IDs 接口同步后执行，不称已通过 |
-| 精确路径变异 | B 绘制标记、第二窗口 keyboard owner、rails 再扣 controlsWidth、自动化漏投影、modal Cmd+F、折叠 Cmd+F 六项，均先跑对应真实行为基线，再观察变异后 1 条断言失败并恢复源码；见 `focused-mutations-before-f5.txt` |
-| Input focus 固定 timeline 变异 | 真实 Input 聚焦后 Cmd+1 错改 grid，断言按预期失败。原 focus 守卫已恢复，见 `input-focus-mutation.txt` |
-| 独立 review 的停止帧/只读输入回归 | 修复前 4 fail：idle 常驻 native frame demand，以及真实 readOnly Input 的 a/m 错改 Automation/Computer keyboard。修复后 4 pass、28 assertions，见 `review-failing-before.txt`、`review-passing-after.txt` |
-| 帧需求、组合、timeline、Input 受影响套件 | 78 pass、0 fail、2 filtered out，652 assertions；仅暂不执行已知 F5 autoFocus 两项，见 `review-affected-tests.txt` |
-| 独立 review 的变异 | idle 常驻 demand、播放不通知、autoScroll start 不通知、readOnly 丢 text lease 四项均先过对应基线，再被断言抓住，见 `review-mutations.txt` |
-| 真实 native 后端帧需求 smoke | idle demand=false；native playing=true 时 demand=true；native playing=false 时 demand=false；释放后 idle。没有打开窗口，见 `frame-demand-native-smoke.txt` |
-| `gpuix-review-scan` | 提交后实际扫描 28 source、5 tests，0 hard、3 warn，见 `review-scan.txt` |
+| `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | F5 合入后通过，3.21 秒，见 `typecheck-after-f5.txt` |
+| `pnpm exec eslint apps/gpuix/src` | F5 合入后通过，无输出，25.58 秒，见 `eslint-after-f5.txt` |
+| `bun test src/app --timeout 30000` | 49 pass、0 fail、1383 assertions，12.99 秒，无过滤，包含两条原先等待 F5 的 autoFocus 回归，见 `app-tests-after-f5.txt` |
+| `bun test --timeout 30000` | 1064 pass、1 既有 todo、0 fail，172 文件、1103219 assertions，37.32 秒，见 `all-bun-after-f5.txt` |
+| `bun apps/gpuix/src/app/verification/mutations.mjs` | 完整 app 基线先通过，24 项变异全部被真实行为断言抓住，源码逐项恢复，91.27 秒，见 `all-mutations-after-f5.txt` |
+| 真实 native peaks smoke | 同一工程会话 open/apply 接受，48 kHz telemetry、输出延迟 284 帧，channel-major min/max 共 256 个 f32，范围 ±0.399993896484375；释放后 idle |
+| 真实 native 帧需求 smoke | idle=false、native playing=true 时 demand=true、native playing=false 时 demand=false，最后释放到 idle；见 `frame-demand-native-smoke.txt` |
+| 独立 review 回归 | 停止帧与只读输入修复前 4 fail，修复后 4 pass、28 assertions；另有四项专门变异均抓住，见 `review-failing-before.txt`、`review-passing-after.txt`、`review-mutations.txt` |
+| `gpuix-review-scan` | F5 同步后扫描 29 source、7 tests，0 hard、3 warn，见 `review-scan.txt` |
 
 第一轮完整 UI 组合用默认 5 秒期限，部分测试在本机负载下超时。协调者批准最终命令使用 `--timeout 30000`，没有更改行为断言，也不把期限加长称为性能修复。单独 Cmd+F 行为检查实测通过，3.78 秒。
 
@@ -93,7 +91,7 @@
 | viewport.width 被重复扣 controlsWidth | 汇报仲裁后必修 | 协调者批准最小 tracks 修复，真实几何回归通过 |
 | automation 参数漏投影 | 汇报仲裁后必修 | 协调者批准 timeline 唯一 owner 修复，pan/volume 回归通过 |
 | textFocus 缺少公共端口 | 汇报仲裁后必修 | 协调者批准 A3 最小 lease 端口，Input 显式聚焦通过 |
-| native autoFocus 不发 focus | 汇报仲裁 | F5 修 vendor；拒绝 app ref/query/轮询补丁，两条真实回归保留不跳过 |
+| native autoFocus 不发 focus | 汇报仲裁后解除 | F5 修 vendor；未加 app ref/query/轮询补丁，真实 Input/DragPad autoFocus 回归及完整 app/变异全部通过 |
 | ThemePresetGrid 独立挂载缺少 app modal owner | 必修 | 更新测试 Provider，单跑 2 pass |
 | renderer 键盘路由/后台焦点恢复不可证明目标 | 汇报仲裁 | 停止并保留精确错误，真实键盘和 Clip/Back UI 不宣称通过 |
 | ClipEditorSlot 大对象 props 性能风险 | 汇报仲裁 | editors 负责 clean cutover 为 IDs，app 使用同一 slot，不保留兼容层 |
@@ -105,6 +103,8 @@
 | readOnly Input 被当非文本 | 必修 | 真实原生 a/m 确实误改模式。现在仅 disabled 排除文本 lease；只读选择/复制仍归原生，回归通过 |
 | Input 旧测试只断言回调次数与向窗口传播 | 必修 | 删除旧 incidental forwarding 断言，不重新固定传播数组；新 disabled 用实际受控文本值验证不可编辑，readonly 由真实组合模式/选择回归验证 |
 | F3 resume 帧同步 | 等待接口 | 协调者要求 F3 合入后接 `useResumeFrame` 并在回调中显式 `flushSync(composition.tick)`。当前无该公共端口，不造适配层 |
+| 既有 `project/model/grid.test.ts:66` 的 `it.todo` | 记录 | 唯一 todo 为 Ctrl/Cmd+1/2 hook 映射的旧占位，非本轮新增，未越过 model owner 删除；full Bun 0 fail，app 无 todo/过滤 |
+| Home 最近工程 Card 的实例外观 | 等待接口 | DesignTokens 合入后消费真实共享同语义变体，删除 padding/gap/hover 实例覆盖，仅保留 width 等布局约束；当前不先改、不造第二套样式 |
 
 ## 错题
 
@@ -113,6 +113,7 @@
 - 错：未提交时 review scan 的 0 hard 看似通过。脚本只检查 base...HEAD，必须提交后确认实际扫描文件数。
 - 错：组合根用视图是否存在作为 frame demand，停止也持续请求帧。需求必须从 playing 与真实手势 owner 派生，活动边界通过稳定订阅通知，不另存可写需求镜像。
 - 错：把 readOnly 等同于非文本焦点。真实 readonly Input 的 a/m 冒到窗口，改变了 Automation 与电脑键盘模式。只有 disabled 排除文本 lease，readonly 仍拥有文本选择与快捷键隔离。
+- 错：长串工具操作间没及时读取第二轮静默通知。已在本会话验证 runner 增加命令前后消息检查，未处理通知先拒绝启动新验证；异步任务读取最终完成输出后才记录验收。
 
 ## 已验证做法
 
