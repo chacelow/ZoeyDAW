@@ -32,8 +32,8 @@ const mutations = [
   {
     name: "drop-recording-before-teardown",
     file: "runtime/project-runtime.ts",
-    from: "isRuntimeDisposed = true\n    flushRecording()",
-    to: "isRuntimeDisposed = true",
+    from: "    flushRecording()\n    sessionCounter++",
+    to: "    sessionCounter++",
     occurrences: 2,
     test: "runtime.test.ts",
     failure: "retains recording across failed",
@@ -45,6 +45,30 @@ const mutations = [
     to: "const journal = recordingJournal",
     test: "runtime.test.ts",
     failure: "retains recording across failed",
+  },
+  {
+    name: "release-before-quiescing",
+    file: "runtime/project-runtime.ts",
+    from: "function closeBackend(): void {\n    isRuntimeDisposed = true",
+    to: "function closeBackend(): void {",
+    test: "runtime/recording-lifecycle.test.ts",
+    failure: "retains recording during",
+  },
+  {
+    name: "registration-before-quiescing",
+    file: "runtime/project-runtime.ts",
+    from: "): () => void {\n    isRuntimeDisposed = true",
+    to: "): () => void {",
+    test: "runtime/recording-lifecycle.test.ts",
+    failure: "retains recording during",
+  },
+  {
+    name: "unregister-before-quiescing",
+    file: "runtime/project-runtime.ts",
+    from: "      isRuntimeDisposed = true\n      if (activeEdit)",
+    to: "      if (activeEdit)",
+    test: "runtime/recording-lifecycle.test.ts",
+    failure: "retains recording during",
   },
 ]
 const tests = [...new Set(mutations.map(mutation => `${adapters}${mutation.test}`))]

@@ -309,13 +309,13 @@ export function createProjectRuntime({
       throw new ProjectBackendNotConfiguredError()
     }
     const isReopening = connection !== null
+    isRuntimeDisposed = true
     if (activeEdit) {
       cancelEdit(activeEdit.token)
     }
     if (activePreview) {
       cancelPreview(activePreview)
     }
-    isRuntimeDisposed = true
     flushRecording()
     sessionCounter++
     stopConnection?.()
@@ -383,6 +383,7 @@ export function createProjectRuntime({
     next: ProjectBackendFactory,
     options: ProjectBackendOptions = {}
   ): () => void {
+    isRuntimeDisposed = true
     if (activeEdit) {
       cancelEdit(activeEdit.token)
     }
@@ -409,6 +410,7 @@ export function createProjectRuntime({
       if (!active) {
         return
       }
+      isRuntimeDisposed = true
       if (activeEdit) {
         cancelEdit(activeEdit.token)
       }
@@ -427,20 +429,19 @@ export function createProjectRuntime({
     }
   }
   function closeBackend(): void {
+    isRuntimeDisposed = true
     if (activeEdit) {
       cancelEdit(activeEdit.token)
     }
     if (activePreview) {
       cancelPreview(activePreview)
     }
-    isRuntimeDisposed = true
     flushRecording()
     sessionCounter++
     stopConnection?.()
     stopConnection = null
     connection?.dispose()
     connection = null
-    isRuntimeDisposed = true
     isBackendRecovered = false
     acceptedControl = { ...acceptedControl, playing: false, recording: false, heldNotes: [] }
     checkpoints.clear()
