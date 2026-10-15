@@ -1,5 +1,5 @@
-import { useGpuix, useWindowSize } from "@gpuix/react"
-import { FloatingLayer, floatingRootStyle, renderSlot, setRefs } from "@gpuix/react/floating"
+import { useGpuix } from "@gpuix/react"
+import { renderSlot, setRefs } from "@gpuix/react/floating"
 import {
   createContext,
   isValidElement,
@@ -7,436 +7,45 @@ import {
   useContext,
   useLayoutEffect,
   useRef,
-  useState,
 } from "react"
-import type { EventPayload, KeyEvent, NativeRenderer, Props, PublicInstance } from "@gpuix/react"
-import type { FloatingContentProps } from "@gpuix/react/floating"
-import type { ReactNode, RefObject } from "react"
+import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
+import type { ReactNode } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+import { MenuSub, useMenu } from "./context"
+import { MenuContent } from "./content"
+import { focusEntry, isActivation, navigate } from "./navigation"
+import { MenuTrigger } from "./trigger"
+import type {
+  MenuCheckboxItemProps,
+  MenuContentProps,
+  MenuItemProps,
+  MenuProps,
+  MenuRadioGroupProps,
+  MenuRadioItemProps,
+  MenuState,
+  MenuSubTriggerProps,
+  MenuTriggerProps,
+} from "./model"
 
-export interface MenuProps extends Props {
-  open?: boolean
-  defaultOpen?: boolean
-  disabled?: boolean
-  onOpenChange?: (open: boolean) => void
-}
+export { ContextMenu, DropdownMenu, MenuSub } from "./context"
+export type {
+  MenuCheckboxItemProps,
+  MenuContentProps,
+  MenuItemProps,
+  MenuProps,
+  MenuRadioGroupProps,
+  MenuRadioItemProps,
+  MenuSubTriggerProps,
+  MenuTriggerProps,
+} from "./model"
 
-export interface MenuTriggerProps extends Props {
-  asChild?: boolean
-  disabled?: boolean
-}
-
-export type MenuContentProps = FloatingContentProps
-
-export interface MenuItemProps extends Props {
-  disabled?: boolean
-  inset?: boolean
-  onSelect?: (event: EventPayload) => void
-}
-
-export interface MenuCheckboxItemProps extends MenuItemProps {
-  checked: boolean
-  onCheckedChange?: (checked: boolean) => void
-}
-
-export interface MenuRadioGroupProps extends Props {
-  value: string
-  onValueChange?: (value: string) => void
-}
-
-export interface MenuRadioItemProps extends MenuItemProps {
-  value: string
-}
-
-export interface MenuSubTriggerProps extends MenuItemProps {
-  asChild?: boolean
-}
-
-type Point = { x: number; y: number }
-type MenuEntry = { instance: PublicInstance; disabled: boolean }
-type EntryEdge = "first" | "last"
-
-interface MenuState {
-  open: boolean
-  disabled: boolean
-  contextMenu: boolean
-  parent: MenuState | null
-  pointer: Point | null
-  setPointer: (point: Point | null) => void
-  setOpen: (open: boolean) => void
-  closeAll: () => void
-  trigger: RefObject<PublicInstance | null>
-  entries: Map<number, MenuEntry>
-  surfaces: Map<number, PublicInstance>
-  initialEdge: RefObject<EntryEdge>
-  activeChild: RefObject<MenuState | null>
-}
-
-const MenuContext = createContext<MenuState | null>(null)
 const RadioContext = createContext<Pick<MenuRadioGroupProps, "value" | "onValueChange"> | null>(
   null
 )
 
-function useMenu(): MenuState {
-  const menu = useContext(MenuContext)
-  if (!menu) throw new Error("Menu components require a menu root")
-  return menu
-}
-
-function MenuRoot({
-  open: controlledOpen,
-  defaultOpen = false,
-  disabled = false,
-  onOpenChange,
-  children,
-  style,
-  contextMenu,
-  submenu = false,
-  ...props
-}: MenuProps & { contextMenu: boolean; submenu?: boolean }) {
-  const ancestor = useContext(MenuContext)
-  const parent = submenu ? ancestor : null
-  if (submenu && !parent) throw new Error("MenuSub requires a parent menu")
-  const [internalOpen, setInternalOpen] = useState(defaultOpen)
-  const [pointer, setPointer] = useState<Point | null>(null)
-  const trigger = useRef<PublicInstance | null>(null)
-  const entries = useRef(new Map<number, MenuEntry>()).current
-  const ownSurfaces = useRef(new Map<number, PublicInstance>()).current
-  const initialEdge = useRef<EntryEdge>("first")
-  const activeChild = useRef<MenuState | null>(null)
-  const open = !disabled && (controlledOpen ?? internalOpen) && (!parent || parent.open)
-  const setOpen = useCallback(
-    (next: boolean) => {
-      if (disabled && next) return
-      if (controlledOpen === undefined) setInternalOpen(next)
-      if (next !== open) onOpenChange?.(next)
-    },
-    [controlledOpen, disabled, onOpenChange, open]
-  )
-  const state: MenuState = {
-    open,
-    disabled,
-    contextMenu,
-    parent,
-    pointer,
-    setPointer,
-    setOpen,
-    trigger,
-    entries,
-    surfaces: parent?.surfaces ?? ownSurfaces,
-    initialEdge,
-    activeChild,
-    closeAll: parent?.closeAll ?? (() => setOpen(false)),
-  }
-  return (
-    <MenuContext.Provider value={state}>
-      <div {...props} style={sx(floatingRootStyle(), submenu && { width: "100%" }, style)}>
-        <div style={sx(floatingRootStyle(), submenu && { width: "100%" })}>{children}</div>
-      </div>
-    </MenuContext.Provider>
-  )
-}
-
-export function ContextMenu(props: MenuProps) {
-  return <MenuRoot {...props} contextMenu />
-}
-
-export function DropdownMenu(props: MenuProps) {
-  return <MenuRoot {...props} contextMenu={false} />
-}
-
-export function MenuSub(props: MenuProps) {
-  const menu = useMenu()
-  return <MenuRoot {...props} contextMenu={menu.contextMenu} submenu />
-}
-
-function focusEntry(
-  entries: Map<number, MenuEntry>,
-  renderer: NativeRenderer | null,
-  edge: EntryEdge
-) {
-  const enabled = [...entries.values()].filter(entry => !entry.disabled)
-  const entry = edge === "first" ? enabled[0] : enabled.at(-1)
-  if (entry) {
-    renderer?.focusElement?.(entry.instance.id)
-    entry.instance.scrollIntoView?.()
-    return true
-  }
-  return false
-}
-
-function navigate(menu: MenuState, renderer: NativeRenderer | null, event: EventPayload): boolean {
-  const key = event.key?.toLowerCase()
-  const activeChild = menu.activeChild.current
-  if (
-    activeChild?.open &&
-    (key === "escape" || key === "esc" || key === "left" || key === "arrowleft")
-  )
-    return navigate(activeChild, renderer, event)
-  if (
-    key === "escape" ||
-    key === "esc" ||
-    (menu.parent && (key === "left" || key === "arrowleft"))
-  ) {
-    menu.setOpen(false)
-    if (menu.trigger.current) renderer?.focusElement?.(menu.trigger.current.id)
-    return true
-  }
-  if (key === "tab") {
-    menu.closeAll()
-    return true
-  }
-  if (key === "home" || key === "end") {
-    focusEntry(menu.entries, renderer, key === "home" ? "first" : "last")
-    return true
-  }
-  const direction =
-    key === "down" || key === "arrowdown" ? 1 : key === "up" || key === "arrowup" ? -1 : 0
-  if (!direction) return false
-  const enabled = [...menu.entries.values()].filter(entry => !entry.disabled)
-  const index = enabled.findIndex(entry => entry.instance.id === event.elementId)
-  const next =
-    index === -1
-      ? direction > 0
-        ? 0
-        : enabled.length - 1
-      : (index + direction + enabled.length) % enabled.length
-  const entry = enabled[next]
-  if (entry) {
-    renderer?.focusElement?.(entry.instance.id)
-    entry.instance.scrollIntoView?.()
-  }
-  return true
-}
-
-function isActivation(event: EventPayload) {
-  const key = event.key?.toLowerCase()
-  return key === "enter" || key === "space" || key === " "
-}
-
-function MenuTrigger({
-  asChild = false,
-  disabled = false,
-  children,
-  onClick,
-  onMouseDown,
-  onKeyDown,
-  style,
-  ref,
-  ...props
-}: MenuTriggerProps) {
-  const menu = useMenu()
-  const { renderer } = useGpuix()
-  const theme = useTheme()
-  const childDisabled =
-    asChild && isValidElement<{ disabled?: unknown }>(children) && children.props.disabled === true
-  const unavailable = disabled || menu.disabled || childDisabled
-  const lastActivation = useRef<EventPayload | null>(null)
-  const bindRef = useCallback(
-    (instance: PublicInstance | null) => {
-      if (menu.trigger.current) menu.surfaces.delete(menu.trigger.current.id)
-      menu.trigger.current = instance
-      if (instance) menu.surfaces.set(instance.id, instance)
-      setRefs(instance, ref)
-    },
-    [menu.surfaces, menu.trigger, ref]
-  )
-  const slotProps = {
-    ...props,
-    role: props.role ?? "button",
-    tabIndex: 0,
-    disabled: unavailable,
-    "aria-disabled": unavailable,
-    "aria-haspopup": "menu",
-    "aria-expanded": menu.open,
-    style: sx(
-      {
-        keyboardFocusDim: false,
-        focusVisible: unavailable
-          ? undefined
-          : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
-      },
-      style
-    ),
-    onMouseDown: (event: EventPayload) => {
-      if (unavailable) return
-      onMouseDown?.(event)
-      if (menu.contextMenu && (event.button === 2 || event.isRightClick || event.modifiers?.ctrl)) {
-        menu.setPointer(
-          event.x !== undefined && event.y !== undefined ? { x: event.x, y: event.y } : null
-        )
-        menu.setOpen(true)
-      }
-    },
-    onClick: (event: EventPayload) => {
-      if (unavailable) return
-      onClick?.(event)
-      if (lastActivation.current === event) return
-      lastActivation.current = event
-      if (!menu.contextMenu) menu.setOpen(!menu.open)
-    },
-    onKeyDown: (event: KeyEvent) => {
-      if (unavailable) return
-      onKeyDown?.(event)
-      const key = event.key?.toLowerCase()
-      if (
-        (!menu.contextMenu &&
-          (key === "enter" ||
-            key === "down" ||
-            key === "arrowdown" ||
-            key === "up" ||
-            key === "arrowup")) ||
-        (key === "f10" && event.modifiers?.shift) ||
-        key === "contextmenu"
-      ) {
-        if (lastActivation.current === event) return
-        lastActivation.current = event
-        menu.initialEdge.current = key === "up" || key === "arrowup" ? "last" : "first"
-        menu.setPointer(null)
-        menu.setOpen(key === "enter" ? !menu.open : true)
-        if (menu.open && key !== "enter")
-          focusEntry(menu.entries, renderer, menu.initialEdge.current)
-      } else if (menu.open && (key === "escape" || key === "esc")) {
-        navigate(menu, renderer, event)
-      }
-    },
-  } satisfies Props & {
-    disabled: boolean
-    "aria-disabled": boolean
-    "aria-haspopup": string
-    "aria-expanded": boolean
-  }
-  return renderSlot({ asChild, children, props: slotProps, ref: bindRef })
-}
-
 export const ContextMenuTrigger = MenuTrigger
 export const DropdownMenuTrigger = MenuTrigger
-
-function containsPoint(
-  instance: PublicInstance,
-  point: EventPayload,
-  renderer: NativeRenderer | null
-) {
-  if (point.x === undefined || point.y === undefined) return false
-  const bounds = readOuterBounds(renderer, instance)
-  return (
-    !!bounds &&
-    point.x >= bounds.x &&
-    point.x <= bounds.x + bounds.width &&
-    point.y >= bounds.y &&
-    point.y <= bounds.y + bounds.height
-  )
-}
-
-function MenuContent({
-  children,
-  style,
-  side,
-  align = "start",
-  alignOffset = 0,
-  sideOffset = 4,
-  collisionPadding = 8,
-  onMouseDownOutside,
-  onKeyDown,
-  ref,
-  ...props
-}: MenuContentProps) {
-  const menu = useMenu()
-  const theme = useTheme()
-  const { renderer } = useGpuix()
-  const viewport = useWindowSize()
-  const surface = useRef<PublicInstance | null>(null)
-  const bindRef = useCallback(
-    (instance: PublicInstance | null) => {
-      if (surface.current) menu.surfaces.delete(surface.current.id)
-      surface.current = instance
-      if (instance) menu.surfaces.set(instance.id, instance)
-      setRefs(instance, ref)
-    },
-    [menu.surfaces, ref]
-  )
-  useLayoutEffect(() => {
-    const parent = menu.parent
-    if (!parent || !menu.open) return
-    parent.activeChild.current = menu
-    return () => {
-      if (parent.activeChild.current?.trigger === menu.trigger) parent.activeChild.current = null
-    }
-  }, [menu])
-  useLayoutEffect(() => {
-    if (menu.open && !menu.activeChild.current?.open) {
-      if (!focusEntry(menu.entries, renderer, menu.initialEdge.current) && surface.current)
-        renderer?.focusElement?.(surface.current.id)
-    }
-  }, [menu.open, menu.entries, menu.initialEdge, menu.activeChild, renderer])
-  const maxWidth = Math.max(0, viewport.width - collisionPadding * 2)
-  const maxHeight = Math.max(0, viewport.height - collisionPadding * 2)
-  const resolvedSide = side ?? (menu.parent ? "right" : "bottom")
-  const surfaceStyle = sx(
-    {
-      display: "flex",
-      flexDirection: "column",
-      width: theme.control["--spacing-control-track"] * 10,
-      padding: 4,
-      borderWidth: 1,
-      borderRadius: 4,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.popover,
-      color: theme.colors.popoverForeground,
-      fontSize: theme.control["--text-control-track"],
-      whiteSpace: "normal",
-      overflowY: "auto",
-      keyboardFocusDim: false,
-    },
-    style,
-    {
-      maxWidth: Math.min(maxWidth, typeof style?.maxWidth === "number" ? style.maxWidth : maxWidth),
-      maxHeight: Math.min(
-        maxHeight,
-        typeof style?.maxHeight === "number" ? style.maxHeight : maxHeight
-      ),
-    }
-  )
-  if (!menu.open) return null
-  const content = (
-    <FloatingLayer
-      {...props}
-      ref={bindRef}
-      role="menu"
-      tabIndex={0}
-      aria-disabled={false}
-      side={resolvedSide}
-      align={align}
-      alignOffset={alignOffset}
-      sideOffset={sideOffset}
-      collisionPadding={collisionPadding}
-      style={surfaceStyle}
-      onMouseDownOutside={event => {
-        if ([...menu.surfaces.values()].some(instance => containsPoint(instance, event, renderer)))
-          return
-        onMouseDownOutside?.(event)
-        menu.closeAll()
-      }}
-      onKeyDown={event => {
-        if (renderer?.getFocusedElementId?.() !== surface.current?.id) return
-        onKeyDown?.(event)
-        navigate(menu, renderer, event)
-      }}
-    >
-      {children}
-    </FloatingLayer>
-  )
-  if (menu.contextMenu && !menu.parent && menu.pointer) {
-    return (
-      <anchored position={menu.pointer} deferred fit="snap" snapMargin={collisionPadding}>
-        <div style={{ width: 0, height: 0 }}>{content}</div>
-      </anchored>
-    )
-  }
-  return content
-}
 
 export const ContextMenuContent = MenuContent
 export const DropdownMenuContent = MenuContent
