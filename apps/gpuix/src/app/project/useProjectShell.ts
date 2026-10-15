@@ -27,10 +27,15 @@ export function useProjectShell(): ProjectShellApi {
   const editingClipId = useProjectState(current => current.session.editingClipId)
 
   // Only an explicit request opens or closes Clip Edit; selecting a Clip does not, so the
-  // editing id is read at request time rather than tracked.
+  // editing id is read at request time rather than tracked. The request counter seen at
+  // mount belongs to whatever ran before this view (e.g. the previous project), so it is
+  // the baseline, not a request.
   const editing = useRef(editingClipId)
   editing.current = editingClipId
+  const handledRequest = useRef(editorRequest)
   useLayoutEffect(() => {
+    if (editorRequest === handledRequest.current) return
+    handledRequest.current = editorRequest
     if (editorRequest === 0) return
     dispatch({ type: "clip-editor-request", editing: editing.current !== null })
   }, [editorRequest])
