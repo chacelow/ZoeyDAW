@@ -25,7 +25,12 @@ function state(seekBar = 1, seekGeneration = 0, playing = false): BackendState {
     },
   }
 }
-function deferred() {
+interface DeferredResult {
+  promise: Promise<BackendResult>
+  resolve: (result: BackendResult) => void
+  reject: (reason: Error) => void
+}
+function deferred(): DeferredResult {
   let resolve: (result: BackendResult) => void = () => {
     throw new Error("Uninitialized result")
   }
@@ -124,6 +129,38 @@ function harness(backend: ControlledBackend) {
 afterEach(() => jest.useRealTimers())
 
 describe("backend connection", () => {
+  it("keeps the latest requested seek fence while dispatching older queued controls", async () => {
+    const pending = new Map<number, DeferredResult>()
+    const backend = controlled(request => {
+      if (request.stage === "open") {
+        return accepted(request)
+      }
+      const result = deferred()
+      pending.set(request.sequence, result)
+      return result.promise
+    })
+    const h = harness(backend)
+    h.connection.open("queued-seeks", state())
+    h.connection.start()
+    h.connection.submit({ stage: "commit", revision: 1, editId: null, state: state() })
+    h.connection.submit({ stage: "transport", revision: 1, editId: null, state: state(2, 1) })
+    h.connection.submit({ stage: "transport", revision: 1, editId: null, state: state(3, 2) })
+    pending.get(1)?.resolve(accepted(backend.requests[1]))
+    await Promise.resolve()
+    const oldSeek = backend.requests[2]
+    backend.send(frame(oldSeek, 2))
+    pending.get(2)?.resolve(accepted(oldSeek))
+    await Promise.resolve()
+    expect(h.frames).toEqual([])
+    expect(h.connection.readTelemetry()).toBeNull()
+    const latestSeek = backend.requests[3]
+    backend.send(frame(latestSeek, 3))
+    pending.get(3)?.resolve(accepted(latestSeek))
+    await Promise.resolve()
+    expect(h.frames.map(value => value.clock.bar)).toEqual([3])
+    h.connection.dispose()
+  })
+
   it("acknowledges synchronous mock-style applications before returning and disposes leases", async () => {
     const backend = controlled(accepted)
     const h = harness(backend)
