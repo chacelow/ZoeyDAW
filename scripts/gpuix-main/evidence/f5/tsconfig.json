@@ -1,0 +1,10 @@
+{
+  "extends": "../../../../apps/gpuix/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../../../../apps/gpuix/src/*"]
+    }
+  },
+  "include": ["*.tsx", "../../../../apps/gpuix/src/shared/svg/assets.d.ts"]
+}

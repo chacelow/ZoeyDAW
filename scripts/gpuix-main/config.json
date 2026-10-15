@@ -11,6 +11,7 @@
     "window-appearance-close.patch",
     "context-menu.patch",
     "quad-batch.patch",
+    "autofocus-focus-event.patch",
     "resume-frame.patch"
   ]
 }
