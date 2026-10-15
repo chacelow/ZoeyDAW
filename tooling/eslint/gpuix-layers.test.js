@@ -65,6 +65,11 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
       `${src}/platform/storage/index.ts`,
       'import { settingsGet } from "@zoeydaw/native"; void settingsGet'
     ),
+    // sections 经 platform 的 TS 端口使用原生能力,经 adapters 使用工程能力。
+    fixture(
+      `${src}/project/sections/arrangement/tracks/meter.tsx`,
+      'import { useAnimationFrame } from "@/platform/frame"; import { tracks } from "@/project/adapters"; void useAnimationFrame; void tracks'
+    ),
     // 测试文件不受限。
     fixture(
       `${src}/project/model/clip.test.ts`,
@@ -161,6 +166,19 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
       'import { Button } from "../../ui/controls/Button"; void Button',
       [{ messageId: "forbiddenLayer" }]
     ),
+    fixture(
+      `${src}/project/sections/arrangement/tracks/demo.tsx`,
+      'import { cursorHide } from "@zoeydaw/native"; void cursorHide',
+      [{ messageId: "forbiddenPackage" }]
+    ),
+    fixture(
+      `${src}/project/sections/footer/index.tsx`,
+      'import { App } from "@/app/App"; void App',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(`${src}/project/sections/footer/index.tsx`, "const w = window.innerWidth; void w", [
+      { messageId: "runtimeGlobal" },
+    ]),
     fixture(`${src}/project/model/clip.ts`, 'const m = import("react"); void m', [
       { messageId: "forbiddenPackage" },
     ]),
