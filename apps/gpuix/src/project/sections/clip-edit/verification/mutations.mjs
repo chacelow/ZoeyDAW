@@ -36,8 +36,8 @@ const mutations = [
   {
     name: "MIDI consumed keys leak to region",
     file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
-    from: "event.preventDefault()\n      event.stopPropagation()",
-    to: "event.preventDefault()",
+    from: "if (handled) {\n      event.preventDefault()\n      event.stopPropagation()",
+    to: "if (handled) {\n      event.preventDefault()",
     tests: ["src/project/sections/clip-edit/midi/MidiEditor.test.tsx"],
   },
   {
@@ -46,6 +46,174 @@ const mutations = [
     from: "event.stopPropagation()",
     to: "finish(true); projectActions.undo()",
     tests: ["src/project/sections/clip-edit/ClipEditor.test.tsx"],
+  },
+  {
+    name: "stable peaks ignore backend generation",
+    file: "src/project/sections/clip-edit/audio/SourceWaveform.tsx",
+    from: "    generation,\n",
+    to: "",
+    tests: ["src/project/sections/clip-edit/audio/SourceWaveform-runtime.test.tsx"],
+  },
+  {
+    name: "viewport ignores folded pitch shrink",
+    file: "src/project/sections/clip-edit/midi/useMidiViewport.ts",
+    from: "const next = clampScroll(previous.x, previous.y, roll)",
+    to: "const next = { scrollX: previous.x, scrollY: previous.y }",
+    tests: ["src/project/sections/clip-edit/midi/viewport-behavior.test.tsx"],
+  },
+  {
+    name: "piano pointer selection keeps key focus",
+    file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
+    from: 'if (source === "pointer" && host.current)',
+    to: 'if (source === "keyboard" && host.current)',
+    tests: ["src/project/sections/clip-edit/midi/keyboard-reachability.test.tsx"],
+  },
+  {
+    name: "velocity keyboard adjustment is ignored",
+    file: "src/project/sections/clip-edit/midi/VelocityLane.tsx",
+    from: 'onVelocityChange(index, event.key === "up" ? 1 : -1)',
+    to: "onVelocityChange(index, 0)",
+    tests: ["src/project/sections/clip-edit/midi/keyboard-reachability.test.tsx"],
+  },
+  {
+    name: "destructive commands interrupt active move",
+    file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
+    from: "if (gesture.current && mutatesNotes && !modifiers?.alt)",
+    to: "if (false && gesture.current && mutatesNotes && !modifiers?.alt)",
+    tests: ["src/project/sections/clip-edit/midi/gesture-shortcuts.test.tsx"],
+  },
+  {
+    name: "marker nudge commits current drag",
+    file: "src/project/sections/clip-edit/audio/SourceMarker.tsx",
+    from: "event.stopPropagation()\n        cancel()\n        const baseline",
+    to: "event.stopPropagation()\n        const baseline",
+    tests: ["src/project/sections/clip-edit/audio/marker-shortcuts.test.tsx"],
+  },
+  {
+    name: "insertion uses window relative grid",
+    file: "src/project/model/midi-notes.ts",
+    from: "const target = sourceOffsetBeats + horizontalRatio * totalBeats",
+    to: "const target = horizontalRatio * totalBeats",
+    tests: ["src/project/sections/clip-edit/midi/grid-phase.test.ts"],
+  },
+  {
+    name: "paint grid follows trimmed window",
+    file: "src/project/model/midi-editing/operations.ts",
+    from: "Math.floor(window.sourceOffsetBeats * 4) / 4",
+    to: "window.sourceOffsetBeats",
+    tests: ["src/project/sections/clip-edit/midi/grid-phase.test.ts"],
+  },
+  {
+    name: "erase grid follows trimmed window",
+    file: "src/project/model/midi-editing/operations.ts",
+    from: "const high = Math.max(firstCell, lastCell)\n  const origin = Math.floor(window.sourceOffsetBeats * 4) / 4",
+    to: "const high = Math.max(firstCell, lastCell)\n  const origin = window.sourceOffsetBeats",
+    tests: ["src/project/sections/clip-edit/midi/grid-phase.test.ts"],
+  },
+  {
+    name: "quantize target follows trimmed window",
+    file: "src/project/model/midi-editing/operations.ts",
+    from: "const target = cell * gridBeats",
+    to: "const target = window.sourceOffsetBeats + cell * gridBeats",
+    tests: ["src/project/sections/clip-edit/midi/grid-phase.test.ts"],
+  },
+  {
+    name: "cell hit uses relative source origin",
+    file: "src/project/sections/clip-edit/midi/layout.ts",
+    from: "Math.floor(beat / NOTE_GRID_BEATS)",
+    to: "Math.floor((beat - roll.window.sourceOffsetBeats) / NOTE_GRID_BEATS)",
+    tests: ["src/project/sections/clip-edit/midi/grid-phase.test.ts"],
+  },
+  {
+    name: "display grid follows trimmed window",
+    file: "src/project/sections/clip-edit/midi/layout.ts",
+    from: "Math.ceil(firstBeat / step) * step",
+    to: "sourceOffsetBeats + Math.ceil((firstBeat - sourceOffsetBeats) / step) * step",
+    tests: ["src/project/sections/clip-edit/midi/grid-phase.test.ts"],
+  },
+  {
+    name: "paint discards crossing half cell",
+    file: "src/project/model/midi-editing/operations.ts",
+    from: "beat + 0.25 <= window.sourceOffsetBeats",
+    to: "beat < window.sourceOffsetBeats",
+    tests: ["src/project/sections/clip-edit/midi/grid-phase.test.ts"],
+  },
+  {
+    name: "tiny window insertion overshoots right edge",
+    file: "src/project/model/midi-notes.ts",
+    from: "Math.floor(sourceOffsetBeats / NOTE_GRID_BEATS)",
+    to: "Math.ceil(sourceOffsetBeats / NOTE_GRID_BEATS)",
+    tests: ["src/project/sections/clip-edit/midi/grid-phase.test.ts"],
+  },
+  {
+    name: "erase deletes hidden left notes",
+    file: "src/project/model/midi-editing/operations.ts",
+    from: "note.startBeat + note.lengthBeats <= window.sourceOffsetBeats",
+    to: "false",
+    tests: ["src/project/model/midi-editing/visible-cells.test.ts"],
+  },
+  {
+    name: "erase deletes hidden right notes",
+    file: "src/project/model/midi-editing/operations.ts",
+    from: "note.startBeat >= window.sourceOffsetBeats + window.totalBeats",
+    to: "false",
+    tests: ["src/project/model/midi-editing/visible-cells.test.ts"],
+  },
+  {
+    name: "paint tests occupancy only at grid start",
+    file: "src/project/model/midi-editing/operations.ts",
+    from: "note.startBeat < visibleEnd",
+    to: "note.startBeat <= beat",
+    tests: ["src/project/model/midi-editing/visible-cells.test.ts"],
+  },
+  {
+    name: "paint allows hidden left notes to block",
+    file: "src/project/model/midi-editing/operations.ts",
+    from: "note.startBeat + note.lengthBeats > visibleStart",
+    to: "note.startBeat + note.lengthBeats > beat",
+    tests: ["src/project/model/midi-editing/visible-cells.test.ts"],
+  },
+  {
+    name: "held Button loses latched release state",
+    file: "src/project/sections/clip-edit/midi/MidiEditor.tsx",
+    from: "active={view.fold}",
+    to: "active={false}",
+    tests: ["src/project/sections/clip-edit/pressed-families.test.tsx"],
+  },
+  {
+    name: "held DragPad fill is overridden",
+    file: "src/project/sections/clip-edit/midi/MidiEditor.tsx",
+    from: 'testId="midi-velocity-value"',
+    to: 'testId="midi-velocity-value" style={{ backgroundColor: theme.colors.muted }}',
+    tests: ["src/project/sections/clip-edit/pressed-families.test.tsx"],
+  },
+  {
+    name: "held piano key has idle fill",
+    file: "src/project/sections/clip-edit/midi/PianoKeys.tsx",
+    from: "backgroundColor: active ? theme.colors.primary : black ? ebony : ivory",
+    to: "backgroundColor: black ? ebony : ivory",
+    tests: ["src/project/sections/clip-edit/pressed-families.test.tsx"],
+  },
+  {
+    name: "held Pattern step has idle fill",
+    file: "src/project/sections/clip-edit/pattern/PatternSteps.tsx",
+    from: "backgroundColor: on",
+    to: "backgroundColor: false",
+    tests: ["src/project/sections/clip-edit/pressed-families.test.tsx"],
+  },
+  {
+    name: "held marker placement stays frozen",
+    file: "src/project/sections/clip-edit/audio/SourceMarker.tsx",
+    from: "left: right ? left - hit : left",
+    to: "left: right ? left - hit : 0",
+    tests: ["src/project/sections/clip-edit/pressed-families.test.tsx"],
+  },
+  {
+    name: "held menu release discards selection",
+    file: "src/project/sections/clip-edit/audio/AudioParameters.tsx",
+    from: "onChange={warpMode => change({ warpMode })}",
+    to: "onChange={() => {}}",
+    tests: ["src/project/sections/clip-edit/pressed-families.test.tsx"],
   },
 ]
 
@@ -60,13 +228,16 @@ const run = tests => {
     return { failed: 0 }
   } catch (error) {
     const out = `${error.stdout ?? ""}${error.stderr ?? ""}`
-    return { failed: Number(/(\d+) fail/.exec(out)?.[1] ?? Number.NaN) }
+    return { failed: Number(/(\d+) fail/.exec(out)?.[1] ?? Number.NaN), output: out }
   }
 }
 
 const baseline = run([...new Set(selected.flatMap(mutation => mutation.tests))])
 console.log(`baseline: ${baseline.failed} failing`)
-if (baseline.failed !== 0) process.exit(1)
+if (baseline.failed !== 0) {
+  console.log(baseline.output)
+  process.exit(1)
+}
 let survived = 0
 for (const mutation of selected) {
   const original = readFileSync(mutation.file, "utf8")
