@@ -188,7 +188,8 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 | A3b第一增量消费 | 已修/已接 | 七处Select fill，普通level/send/pan hideIcon，Cue保留Headphones；原生output实际内宽断言通过 |
 | 最终纠正及consumer双轴复核 | 已返回，无新增必修/仲裁 | TrackFinalReview4多次固定增量复核覆盖当前三个后续提交；视觉与运行结果由本报告单列 |
 | G1 demo真实读回增量 | 代码复核无必修 | TrackFinalReview4已审ad3a63d的观测顺序/边界；长行格式由hook修正，实际GUI证明另列 |
-| 观测增量触发no-tests | 已仲裁：采证后删除临时诊断 | 协调者要求保留原始证据/报告，删除demo readback/stdout包装；不改扫描、不加转发/mock echo测试，旧入口不是现存功能；清理提交后复核扫描 |
+| 观测增量触发no-tests | 已仲裁并清零 | 038ed87删除临时readback/stdout包装，仅保留证据/报告，旧入口不是现存功能；提交后扫描0source/0tests、0HARD/0WARN，未改扫描或添加转发测试 |
+| 清理代码与文档一致性 | 独立复核无发现 | TrackFinalReview4确认仅保留原Frame stats显示、直接注入nativeCursorLock；README/报告均已说明历史入口删除 |
 | driver活动条件的冗余`listeners.size > 0` | 记录 | 不影响行为；不为风格再改生产路径 |
 | 受控帧源同步、生产源microtask | 记录 | 排队/session失效由platform测试负责，tracks不另造调度器 |
 | Ctrl与lane Shift/identity Cmd对称分支未逐项测试 | 记录 | 当前已覆盖native正反守卫、Cmd移除与Shift范围；不增重复路径用例 |
@@ -262,7 +263,7 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 - 独立CLI调用新platform adapter：`pressAnchorWithoutWindow:null`、`cursorReadable:true`，没有移动/隐藏光标。
 - demo诊断增量在当前主干执行`pnpm --filter @zoeydaw/gpuix-prototype typecheck`和切片eslint均退出0。曾误在根目录调用裸tsc，仅打印CLI帮助，未将它计为类型通过。
 - 合入4036109相关主干后，`pnpm exec tsc --noEmit && bun test src/ui/controls/DragPad/DragPadNumber.test.tsx src/ui/controls/DragPad/variants.test.tsx src/project/sections/arrangement/tracks`：tsc0，65pass/1已仲裁嵌套右键失败，66tests/6files。
-- 提交ad3a63d后扫描实际覆盖1source/0tests，1HARD `no-tests`、1WARN窗口尺寸；未提交时的0source空扫描没有计为通过。随后按协调者要求删除临时source诊断，不新增扫描例外或日志类测试；清理提交后的扫描结果另记。
+- ad3a63d的临时诊断曾触发1source/0tests、1HARD `no-tests`、1WARN。按协调者裁决，038ed87提交删除后重新扫描：0source/0tests、0HARD/0WARN；这是净代码已恢复主干、仅剩证据/报告差异的结果，不是给未提交诊断套用空扫描，也没有门禁例外。
 - 删除临时诊断后，apps/gpuix内再次执行`pnpm exec tsc --noEmit && bun src/project/sections/arrangement/tracks/verification/render-cost.tsx`退出0；原生裁剪仍为6行/6车道槽，两组保留节点一致，卸载归零断言通过。此结果不代替未完成的真实peak视觉。
 
 ### 时段约束未通过
