@@ -60,7 +60,7 @@ export function SourceMarker({
       }),
     [environment, cancel]
   )
-  const flag = theme.control["--spacing-control-gap"] * 3
+  const flag = theme.project.arrangementMarkerWidth
   const hit = theme.control["--spacing-control-icon"]
   const x = ((position - view.start) / view.span) * width
   if ((x < 0 || x > width) && !active.current) return null

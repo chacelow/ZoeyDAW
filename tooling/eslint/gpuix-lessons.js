@@ -98,10 +98,10 @@ export const gpuixLessons = {
         "'{{name}}' simulates time in JS. Use platform/frame for animation, native events for focus/activation (LESSONS.md). A real wall-clock delay must be added to TIMER_ALLOWED in tooling/eslint/gpuix-lessons.js with a reason.",
       appearanceOverride:
         "'{{name}}' overrides the application appearance and breaks follow-system (LESSONS.md「跟随系统读的是窗口外观」). Theme the content instead.",
+      spacingMultiple:
+        "'{{key}}: token × N' invents a spacing step. Use the theme.design role for this spacing (spacing/settings/popover/cards). The replacement must keep the rendered size unless the change is intended and pixel-verified; do not borrow a token from another role just to silence this.",
       shapeLiteral:
         "Business surfaces take borderRadius from theme.design (shape/cards/menu/popover) or 0, not a literal or a control metric. Add a design token if none fits.",
-      spacingMultiple:
-        "'{{key}}: token × N' invents a spacing step. Use the theme.design role for this spacing (spacing/settings/popover/cards).",
     },
     schema: [],
   },
