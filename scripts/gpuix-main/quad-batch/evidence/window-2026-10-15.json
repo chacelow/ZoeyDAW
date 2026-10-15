@@ -1,0 +1,32 @@
+{
+  "phase": "Initial visual/theme verification before imperative API cutover; final runtime metrics are in window-imperative-2026-10-15.json",
+  "workload": {
+    "tracks": 50,
+    "clipsPerTrack": 50,
+    "rectangles": 14065,
+    "kind": "synthetic equal-geometry primitive stress, not lane or real peaks"
+  },
+  "service": "f4-quad-window",
+  "pid": 46338,
+  "lifetime": "4m11s; killed immediately after evidence",
+  "viewport": { "x": 720, "y": 720, "zoom": 1.25 },
+  "native": {
+    "frames": 126,
+    "samples": 118,
+    "currentMs": 0.39716699719429016,
+    "p90Ms": 0.5027499794960022,
+    "p99Ms": 0.8945000171661377,
+    "maxMs": 2.5678329467773438
+  },
+  "inputs": {
+    "initialScrollY": 360,
+    "initialZoom": 1.25,
+    "wheelSteps": 12,
+    "additionalZoomPairs": 4
+  },
+  "axFinal": "group Quad batch x=720 y=720 zoom=1.25; 6 AX nodes total including native window chrome; no per-batch or per-rectangle AX nodes",
+  "axChinese": "group 批量矩形 x=0 y=360 zoom=1.25",
+  "themesLanguages": ["light/en", "light/zh", "dark/zh", "dark/en"],
+  "captureNote": "Initial fully occluded Metal window had stale black capture; authorized takeover activation exposed actual rendered surface before visual acceptance. No application code workaround was added.",
+  "scope": "Native CPU draw statistics, not GPU completion time. No product controls, labels, clip cards, or real audio in this probe."
+}

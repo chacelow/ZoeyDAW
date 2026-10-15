@@ -1,0 +1,281 @@
+{
+  "reactMode": "development",
+  "mode": "div",
+  "workload": {
+    "tracks": 50,
+    "clipsPerTrack": 50,
+    "rowHeight": 36,
+    "clipWidth": 192,
+    "rectangles": 14065,
+    "grid": 1565,
+    "midiNotes": 2500,
+    "peakColumns": 10000
+  },
+  "viewport": {
+    "width": 976,
+    "height": 758
+  },
+  "initial": {
+    "renderAndFlushMs": 140.90587499999998,
+    "nativeDuringRenderMs": 48.71424999999999,
+    "reactAndMutationMs": 92.19162499999999,
+    "additionalFlushMs": 32.631624999999985,
+    "retained": 14066
+  },
+  "timingScope": "Synthetic equal-geometry CPU React render + headless native flush; not lane readProjectPeaks or GPU completion time",
+  "cpuRenderAndFlush": {
+    "count": 30,
+    "medianMs": 76.48895900000025,
+    "p90Ms": 83.20808399999987,
+    "maxMs": 119.48520800000006
+  },
+  "cpuAdditionalFlush": {
+    "count": 30,
+    "medianMs": 30.479209000000083,
+    "p90Ms": 31.931790999999976,
+    "maxMs": 33.4575420000001
+  },
+  "nativeDuringRender": {
+    "count": 30,
+    "medianMs": 31.556125000000065,
+    "p90Ms": 33.175874999999905,
+    "maxMs": 35.612041999999974
+  },
+  "reactAndMutation": {
+    "count": 30,
+    "medianMs": 45.10991700000022,
+    "p90Ms": 51.412915999999996,
+    "maxMs": 83.87316600000008
+  },
+  "native": {
+    "frames": 71,
+    "samples": 61,
+    "currentMs": 29.098331451416016,
+    "p90Ms": 31.8659610748291,
+    "p99Ms": 33.932498931884766,
+    "maxMs": 34.83695983886719
+  },
+  "samples": [
+    {
+      "renderAndFlushMs": 81.13274999999999,
+      "nativeDuringRenderMs": 31.31858299999999,
+      "reactAndMutationMs": 49.814167,
+      "additionalFlushMs": 33.4575420000001,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 119.48520800000006,
+      "nativeDuringRenderMs": 35.612041999999974,
+      "reactAndMutationMs": 83.87316600000008,
+      "additionalFlushMs": 30.557000000000016,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 70.93712500000004,
+      "nativeDuringRenderMs": 33.975832999999966,
+      "reactAndMutationMs": 36.96129200000007,
+      "additionalFlushMs": 32.4904590000001,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 89.32312500000012,
+      "nativeDuringRenderMs": 32.842166999999904,
+      "reactAndMutationMs": 56.480958000000214,
+      "additionalFlushMs": 29.41508399999998,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 72.45624999999995,
+      "nativeDuringRenderMs": 30.11175000000003,
+      "reactAndMutationMs": 42.344499999999925,
+      "additionalFlushMs": 31.352541999999858,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 77.63154200000008,
+      "nativeDuringRenderMs": 30.643332999999984,
+      "reactAndMutationMs": 46.9882090000001,
+      "additionalFlushMs": 31.27258299999994,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 68.35091699999998,
+      "nativeDuringRenderMs": 32.86462499999993,
+      "reactAndMutationMs": 35.48629200000005,
+      "additionalFlushMs": 29.984958000000006,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 80.72725000000014,
+      "nativeDuringRenderMs": 29.84120800000005,
+      "reactAndMutationMs": 50.88604200000009,
+      "additionalFlushMs": 31.55529200000001,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 66.81600000000003,
+      "nativeDuringRenderMs": 30.40258300000005,
+      "reactAndMutationMs": 36.41341699999998,
+      "additionalFlushMs": 30.355583999999908,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 80.72520900000018,
+      "nativeDuringRenderMs": 29.834750000000213,
+      "reactAndMutationMs": 50.890458999999964,
+      "additionalFlushMs": 30.481874999999945,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 70.48612500000013,
+      "nativeDuringRenderMs": 32.20441699999992,
+      "reactAndMutationMs": 38.28170800000021,
+      "additionalFlushMs": 29.476916000000074,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 88.2768329999999,
+      "nativeDuringRenderMs": 32.93570799999998,
+      "reactAndMutationMs": 55.34112499999992,
+      "additionalFlushMs": 32.54791699999987,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 70.54616599999986,
+      "nativeDuringRenderMs": 35.069749999999885,
+      "reactAndMutationMs": 35.47641599999997,
+      "additionalFlushMs": 31.697000000000116,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 82.44912499999987,
+      "nativeDuringRenderMs": 31.03620899999987,
+      "reactAndMutationMs": 51.412915999999996,
+      "additionalFlushMs": 30.381624999999985,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 64.74116700000013,
+      "nativeDuringRenderMs": 31.623791999999867,
+      "reactAndMutationMs": 33.117375000000266,
+      "additionalFlushMs": 29.550416999999925,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 76.48895900000025,
+      "nativeDuringRenderMs": 31.379042000000027,
+      "reactAndMutationMs": 45.10991700000022,
+      "additionalFlushMs": 30.479209000000083,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 62.506832999999915,
+      "nativeDuringRenderMs": 30.326958000000104,
+      "reactAndMutationMs": 32.17987499999981,
+      "additionalFlushMs": 31.931790999999976,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 81.12725,
+      "nativeDuringRenderMs": 32.86704200000031,
+      "reactAndMutationMs": 48.26020799999969,
+      "additionalFlushMs": 30.105291999999736,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 64.99466600000005,
+      "nativeDuringRenderMs": 32.76408300000003,
+      "reactAndMutationMs": 32.230583000000024,
+      "additionalFlushMs": 29.464457999999922,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 80.71166600000015,
+      "nativeDuringRenderMs": 30.181708999999955,
+      "reactAndMutationMs": 50.529957000000195,
+      "additionalFlushMs": 31.44499999999971,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 62.768125000000055,
+      "nativeDuringRenderMs": 30.344583000000057,
+      "reactAndMutationMs": 32.423542,
+      "additionalFlushMs": 31.440416999999798,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 75.55062499999985,
+      "nativeDuringRenderMs": 31.58962500000007,
+      "reactAndMutationMs": 43.960999999999785,
+      "additionalFlushMs": 30.447999999999865,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 65.38500000000022,
+      "nativeDuringRenderMs": 31.556125000000065,
+      "reactAndMutationMs": 33.82887500000015,
+      "additionalFlushMs": 31.515124999999898,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 83.20808399999987,
+      "nativeDuringRenderMs": 33.175874999999905,
+      "reactAndMutationMs": 50.032208999999966,
+      "additionalFlushMs": 31.707042,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 71.00937499999964,
+      "nativeDuringRenderMs": 31.76404199999979,
+      "reactAndMutationMs": 39.245332999999846,
+      "additionalFlushMs": 30.251666999999998,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 76.73270899999989,
+      "nativeDuringRenderMs": 31.307124999999814,
+      "reactAndMutationMs": 45.42558400000007,
+      "additionalFlushMs": 29.45966700000008,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 67.80666700000029,
+      "nativeDuringRenderMs": 30.239082999999937,
+      "reactAndMutationMs": 37.56758400000035,
+      "additionalFlushMs": 30.152042000000165,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 80.26887499999975,
+      "nativeDuringRenderMs": 32.70141700000022,
+      "reactAndMutationMs": 47.56745799999953,
+      "additionalFlushMs": 30.03874999999971,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 69.43770799999993,
+      "nativeDuringRenderMs": 31.214833,
+      "reactAndMutationMs": 38.22287499999993,
+      "additionalFlushMs": 30.265041999999994,
+      "retained": 14066
+    },
+    {
+      "renderAndFlushMs": 77.8910420000002,
+      "nativeDuringRenderMs": 29.79641700000002,
+      "reactAndMutationMs": 48.09462500000018,
+      "additionalFlushMs": 29.939792000000125,
+      "retained": 14066
+    }
+  ],
+  "rendererPatches": [
+    "close-guard.patch",
+    "frame-callback.patch",
+    "input-select-all-on-focus.patch",
+    "anchored-center.patch",
+    "select-trigger-space.patch",
+    "window-active-change.patch",
+    "window-appearance-close.patch",
+    "context-menu.patch",
+    "quad-batch.patch"
+  ]
+}
