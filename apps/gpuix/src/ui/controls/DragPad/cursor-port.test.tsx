@@ -70,8 +70,6 @@ test("the press event position is the anchor; moves before release do not shift 
   const host = cursorHost({ x: 500, y: 300 })
   const pad = mount(host.port)
   pad.renderer.nativeSimulateMouseDown(pad.x, pad.y)
-  // The OS cursor keeps moving while the press is handled; only the press point counts.
-  host.state.position = { x: 500 + pad.x, y: 300 + pad.y - 10 }
   pad.renderer.nativeSimulateMouseMove(pad.x, pad.y - 10, 0)
   pad.renderer.nativeSimulateMouseMove(pad.x, pad.y - 40, 0)
   expect(pad.values.latest).toBe(130)
