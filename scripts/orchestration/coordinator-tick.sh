@@ -7,7 +7,7 @@
 set -u
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
 DIR=/Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration/scripts/orchestration
-COORD="term_0fd151fe-e7bc-4de5-bb1a-476fa321d21d"
+COORD="term_bc4c1300-5ad5-4ed7-8061-dd26e6dcbc71"
 LOG="$HOME/Library/Logs/zoeydaw-coordinator-tick.log"
 STAMP="$HOME/Library/Caches/zoeydaw-tick"
 mkdir -p "$STAMP"
