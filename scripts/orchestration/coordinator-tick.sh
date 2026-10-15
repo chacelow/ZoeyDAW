@@ -32,7 +32,7 @@ printf "%s\n" "$report" | grep -E "^(IDLE|STALE|ERROR) " | while read -r flag id
   fi
   case "$flag" in
     IDLE) text="[协调者巡检] 你的回合已结束,但派发仍未关闭,协调者收不到你的状态。现在二选一并立即执行:① 还有能独立推进的 TODO → 直接继续做;② 在等协调者/其它切片/桌面时段 → 用 orca orchestration ask 发出具体问题或申请(ask 会阻塞到协调者 reply,不要只在终端里写)。已完成 → 发 merge_ready 或 worker_done。不要停在没有发出消息的状态。" ;;
-    *) text="[协调者巡检] 你的会话已 ${flag} (超过 10 分钟没有新消息,或最后一条是错误)。遇到模型流超时直接重试并从上一个 TODO 继续;在等协调者就用 orca orchestration ask 重发问题。" ;;
+    *) text="[协调者巡检] 你的会话已 ${flag} (超过 10 分钟没有新消息,或最后一条是错误)。消息收件箱只需查一次:没有待回复的问题就别再查,回到 TODO 列表里第一个未完成项并动手改代码/跑命令;模型流断开就重试上一步。真在等协调者时才用 orca orchestration ask 重发问题。" ;;
   esac
   orca terminal send --terminal "$handle" --enter --text "$text" >> "$LOG" 2>&1
   touch "$last"
