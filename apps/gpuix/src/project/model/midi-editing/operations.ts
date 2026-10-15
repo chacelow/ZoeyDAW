@@ -222,3 +222,51 @@ export function eraseCells({
     erased: next,
   }
 }
+
+const GRID_EPSILON = 1e-9
+
+/**
+Live's Cmd+U: snap selected note starts to the editor grid, keeping lengths. A start that the
+source-window move rules cannot place on any nearby grid line is left where it is.
+*/
+export function quantizeNotes({
+  notes,
+  selection,
+  gridBeats,
+  window,
+}: {
+  notes: MidiNote[]
+  selection: number[]
+  gridBeats: number
+  window: Window
+}): Edit {
+  const valid = validSelection(notes, selection)
+  if (!(gridBeats > 0) || !Number.isFinite(gridBeats)) {
+    return { notes, selection: valid }
+  }
+  const indices = new Set(valid)
+  return {
+    notes: notes.map((note, index) => {
+      const cells = note.startBeat / gridBeats
+      if (!indices.has(index) || Math.abs(cells - Math.round(cells)) < GRID_EPSILON) {
+        return note
+      }
+      for (const cell of new Set([Math.round(cells), Math.ceil(cells), Math.floor(cells)])) {
+        const target = cell * gridBeats
+        const moved = moveMidiNote({
+          note,
+          originalStartBeat: note.startBeat,
+          originalPitch: note.pitch,
+          beatDelta: target - note.startBeat,
+          pitchDelta: 0,
+          ...window,
+        })
+        if (moved.startBeat === target) {
+          return moved
+        }
+      }
+      return note
+    }),
+    selection: valid,
+  }
+}
