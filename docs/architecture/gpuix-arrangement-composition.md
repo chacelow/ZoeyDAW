@@ -29,7 +29,9 @@ app-shell ──▶ ArrangementPanel (composition root, 在 app-shell 或 arrang
 ```ts
 // timeline/index.ts
 export interface TimelineController {
-  // 由组合根创建并 dispose；内部持有同一个 SceneStore、窗口键盘 owner、视口命令、标尺与自动滚动状态
+  // 由组合根创建并 dispose；内部持有同一个 SceneStore、窗口键盘 owner、视口命令、标尺与自动滚动状态。
+  // 「工程 → 场景」投影（music/viewport/playback/projectPreview/timeSelection/选择）只由它订阅 store 后写入，唯一 owner；
+  // lane 只写自己的瞬态手势字段（clipDrag/clipResize/hover/targetSelection、进行中的时间选区预览），不再整份同步。
   readonly sceneStore: SceneStore
   readonly keyboard: KeyboardOwner
   useViewport(): ArrangementViewport // 返回当前 viewport
@@ -46,7 +48,7 @@ export function ArrangementTimeline(props: {
   tracks: ReactNode // 由组合根传入 <TrackRows renderLane={row => <LaneRow .../>} />
   overlay: ReactNode // 由组合根传入 <LaneOverlay .../>，timeline 把它叠在 tracks 上方单次挂载
   labels: TimelineLabels // 双语标签由组合根注入，timeline 不依赖 i18n 包
-  cursor: CursorLockPort // 光标锁（Minimap 拖动），默认委托 @zoeydaw/native
+  cursor: CursorLockPort // 光标锁（Minimap 拖动），组合根传 @/platform/cursor 的 nativeCursorLock
 }): ReactNode
 
 // lane/index.ts
@@ -56,7 +58,6 @@ export function LaneRow(props: {
   viewport: ArrangementViewport
   controller: LaneController // createLaneController() 的返回值，由组合根创建
   readPeaks: PeakReader // 类型来自 project/model/backend；组合根传 adapters 的 readProjectPeaks（与传输、电平同一个工程会话）。(sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；startBar/endBar 是 one-based 的 Clip 局部可见范围（1+visibleOffsetBars），contentOffsetBars=clip.sourceOffsetBars；小节→源帧换算、带符号偏移与跨末尾回绕都在 Rust；返回布局为 **channel-major，其次 pixel-major，每项 [min,max]**（立体声共 pixels*4 个 f32，先左声道全部像素的 [min,max]，再右声道），声道数=length/(2*pixels)，不转置不复制；后端未打开时返回空数组。lane 不假设采样率、不自己换算
-  clipboard: NativeClipboard // 来自 platform/clipboard
   labels: LaneLabels // 菜单/名称编辑/数值编辑的双语标签，由组合根注入，lane 不依赖 i18n 包
 }): ReactNode
 // 跨行的叠加层：全画布播放头、Pattern Ghost 起点对齐长线、停止时的行内插入线与标尺三角。
