@@ -322,4 +322,11 @@
 - 因：同一个原因还解释了后台窗口截图全黑。这两类失败都不是代码缺陷，重复申请时段或重试只会浪费时间。
 - 见：`docs/agents/setup.md`「后台启动」、F3 报告（`scripts/gpuix-main/patches/resume-frame.patch`）。
 
+## gpuix 迁移：面板是否固定看作者声明，不看空间不够时夹出来的 min===max
+
+- 错：`fitLayout` 用 `c.min === c.max` 判断固定面板。弹性面板没写 maxSize，默认 `"100%"`，视口小于 minSize 时 `Math.max(min, max)` 把它夹成 min===max，被当成固定面板，直接抛 `Fixed panels exceed the available size`。打开 Clip 编辑器后 timeline 面板只剩 57px，整个工程页进了错误边界。
+- 对：`ResolvedConstraints.fixed` 只在作者声明了同单位的 minSize 和 maxSize、并且 maxSize <= minSize 时成立。像素 min 配百分比 max 永远是弹性面板，空间不够时按比例放宽最小值；只有真正声明的固定面板合计超出才保留 RangeError。
+- 因：派生值丢失了“为什么相等”的信息。两个值碰巧相等，不能当作声明意图。
+- 见：`apps/gpuix/src/ui/panels/layout/sizes.ts`、R1c `2ff9471`/`7e335a2`、`src/ui/verification/mutations-r1c.mjs`。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
