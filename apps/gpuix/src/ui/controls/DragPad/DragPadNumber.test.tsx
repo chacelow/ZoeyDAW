@@ -251,7 +251,3 @@ test("Space stays inside the numeric editor instead of reaching playback shortcu
   expect(root.renderer.getFocusedElementId()).toBe(editor.id)
   root.unmount()
 })
-
-test.todo(
-  "real OS press-without-dwell: JS cursor capture can lag the native mouseDown by one injected move; needs permission-gated CGEventTap capture"
-)

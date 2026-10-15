@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { render } from "@gpuix/react"
-import { nativeCursorLock } from "@/platform/cursor"
+import { currentCursorPosition, nativeCursorLock } from "@/platform/cursor"
 import { ThemeProvider, useTheme } from "../shared/theme/ThemeProvider"
 import { StateGallery } from "./states"
 import {
@@ -213,7 +213,7 @@ function Gallery() {
                     step={1}
                     defaultValue={120}
                     onGestureEnd={() => {
-                      const point = nativeCursorLock.capture()
+                      const point = currentCursorPosition()
                       setStatus(
                         point
                           ? `cursorPosition (${point.x}, ${point.y})`

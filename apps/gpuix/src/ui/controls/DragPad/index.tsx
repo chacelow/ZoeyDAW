@@ -1,4 +1,4 @@
-export type { CursorLockPort, ScreenPoint } from "./cursor-port"
+export type { CursorLockPort, ScreenPoint, WindowPoint } from "./cursor-port"
 export { DragPadNumber } from "./DragPadNumber"
 export type { DragPadNumberProps } from "./DragPadNumber"
 export { formatNumericValue } from "./numberModel"
