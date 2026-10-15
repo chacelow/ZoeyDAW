@@ -119,8 +119,9 @@ functions.grep({
 | `bun src/project/sections/footer/verification/states.tsx /tmp/zoeydaw-t1-footer` | 16 states / errors=[] / exit0 |
 | `bun src/project/sections/arrangement/tracks/verification/appearance-smoke.tsx` | 四套组合capture，retained trees全部释放，exit0 |
 | 临时AutomationValueEditor token-delta smoke | 深浅均输入x205→212（stackGap+7），width98/height11不变，exit0；临时源已清理 |
-| `pnpm verify:gpuix`（修正前、修正后各一次） | 最终1153 pass / 1既有todo / 0fail，179文件；tsc0 errors、eslint0warnings、真实后端smoke通过；末行verify:gpuix passed |
+| `pnpm verify:gpuix`（初次、审查修正后、同步最新主干后共三次） | 最新1154 pass / 1既有todo / 0fail，179文件；tsc0 errors、eslint0warnings、真实后端smoke通过；末行verify:gpuix passed |
 | `node scripts/gpuix-review-scan.mjs` | 12 source / 2 test，0 HARD / 2 WARN，逐条处置见自审表 |
+| `node scripts/gpuix-ui-map.mjs` 与新增verify地图门禁 | 9 entries / 3 routes / 224 testIds，ui map current；按协调者最新指令同步gpuix-migration与生成地图 |
 | 两次实现提交的ultracite pre-commit | 均通过，未使用no-verify |
 
 唯一todo是既有 `project/model/grid.test.ts:66`，非本轮新增，未越model所有权删除。没有Rust源码改动，未运行额外cargo check/test。
@@ -166,3 +167,5 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 ## 合入状态
 
 本报告随merge_ready交付；协调者合入后，本worker只读复核提交祖先与合入回执，再发worker_done。真实桌面视觉仍由协调者统一收尾，不把它描述为本worker已验证。
+
+已同步主干新增的gpuix-lessons lint、divider焦点清理与UI地图门禁，最终验证1154pass/1既有todo/0fail；没有自行修改这些主干产品实现。
