@@ -2,7 +2,7 @@
 
 ## 前置
 
-在 lane 与 clip-editors 两个切片合入主干之后派发（协调者确认）。基于当时的 `gpuix-migration` 新建 worktree。
+clip-editors 已全部合入；lane 的主要工作已合入（主干 b12fa3b），它仍在 `apps/gpuix/src/project/sections/arrangement/lane/**` 收尾，并已确认不再需要读 `apps/web` 参考。你不要修改 lane 目录下的文件；如果你的 import 迁移扫到 lane 目录里的 `@zoeymind/*`，照常迁移，lane 同步主干时会以主干为准。基于当前 `gpuix-migration` 新建 worktree。
 
 ## Target
 
