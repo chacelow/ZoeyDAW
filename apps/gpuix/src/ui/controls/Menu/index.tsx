@@ -14,7 +14,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { MenuSub, useMenu } from "./context"
 import { MenuContent } from "./content"
-import { focusEntry, isActivation, navigate } from "./navigation"
+import { finishSelection, focusEntry, isActivation, navigate } from "./navigation"
 import { MenuTrigger } from "./trigger"
 import type {
   MenuCheckboxItemProps,
@@ -109,12 +109,7 @@ function MenuItem({
     onSelect?.(event)
     onClick?.(event)
     if (activate) activate(event)
-    else {
-      menu.closeAll()
-      let root = menu
-      while (root.parent) root = root.parent
-      if (root.trigger.current) renderer?.focusElement?.(root.trigger.current.id)
-    }
+    else finishSelection(menu, renderer)
   }
   const slotProps = {
     ...props,

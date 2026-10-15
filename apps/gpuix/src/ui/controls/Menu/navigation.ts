@@ -16,6 +16,13 @@ export function focusEntry(
   return false
 }
 
+export function finishSelection(menu: MenuState, renderer: NativeRenderer | null) {
+  menu.closeAll()
+  let root = menu
+  while (root.parent) root = root.parent
+  if (root.trigger.current) renderer?.focusElement?.(root.trigger.current.id)
+}
+
 export function navigate(
   menu: MenuState,
   renderer: NativeRenderer | null,
