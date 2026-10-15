@@ -101,6 +101,72 @@ test("data set before mounting paints on attach and survives native host remount
   }
 })
 
+test("invalid native stroke updates leave the prior tree unchanged", () => {
+  const root = createTestRoot({ width: 100, height: 100 })
+  roots.push(root)
+  root.renderer.applyBatch(
+    JSON.stringify([
+      ["createElement", 700, "quad-batch"],
+      ["setStyle", 700, { width: 100, height: 100, color: "red" }],
+      ["setRoot", 700],
+    ])
+  )
+  root.renderer.setQuads(700, new Float32Array([10, 10, 30, 30]))
+  const directory = mkdtempSync(path.join(tmpdir(), "gpuix-quad-stroke-"))
+  try {
+    root.renderer.captureScreenshot(path.join(directory, "default.png"))
+    root.renderer.applyBatch(
+      JSON.stringify([
+        ["setCustomProp", 700, "strokeWidth", 1],
+        ["setCustomProp", 700, "strokeColor", "blue"],
+      ])
+    )
+    root.renderer.captureScreenshot(path.join(directory, "before.png"))
+    for (const [key, value] of [
+      ["strokeWidth", -1],
+      ["strokeWidth", -1e-100],
+      ["strokeWidth", "1"],
+      ["strokeWidth", 1e100],
+      ["strokeColor", 42],
+      ["strokeColor", "not-a-color"],
+    ]) {
+      expect(() =>
+        root.renderer.applyBatch(
+          JSON.stringify([
+            ["setStyle", 700, { width: 100, height: 100, color: "green" }],
+            ["setCustomProp", 700, key, value],
+          ])
+        )
+      ).toThrow()
+      root.renderer.captureScreenshot(path.join(directory, "after.png"))
+      expect(readFileSync(path.join(directory, "after.png"))).toEqual(
+        readFileSync(path.join(directory, "before.png"))
+      )
+    }
+    for (const strokeWidth of [null, NaN, Infinity]) {
+      // The JSON protocol reserves null for removing a prop; nonfinite JS numbers encode as null.
+      root.renderer.applyBatch(JSON.stringify([["setCustomProp", 700, "strokeWidth", strokeWidth]]))
+      root.renderer.captureScreenshot(path.join(directory, "removed.png"))
+      expect(readFileSync(path.join(directory, "removed.png"))).toEqual(
+        readFileSync(path.join(directory, "default.png"))
+      )
+    }
+    root.renderer.applyBatch(
+      JSON.stringify([
+        ["setCustomProp", 700, "strokeWidth", 1],
+        ["setCustomProp", 700, "strokeColor", null],
+      ])
+    )
+    root.renderer.captureScreenshot(path.join(directory, "transparent.png"))
+    expect(readFileSync(path.join(directory, "transparent.png"))).toEqual(
+      readFileSync(path.join(directory, "default.png"))
+    )
+    root.renderer.applyBatch(JSON.stringify([["destroyElement", 700]]))
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
 test("quad paint passes input through despite cursor and pointerEvents auto", () => {
   const root = createTestRoot({ width: 100, height: 100 })
   roots.push(root)
