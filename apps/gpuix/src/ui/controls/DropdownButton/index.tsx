@@ -13,6 +13,7 @@ import { controlChrome } from "../chrome"
 import { useInfoBinding } from "../ControlEnvironment"
 import { useMeasuredTextWidth } from "../useMeasuredTextWidth"
 import { IconSlot } from "../IconSlot"
+import { listRowChrome } from "../ListRow"
 import type { Props, StyleDesc } from "@gpuix/react"
 import type { FloatingAlign, FloatingSide } from "@gpuix/react/floating"
 import type { ReactNode } from "react"
@@ -182,9 +183,10 @@ export function DropdownButton<T extends string = string>({
               <SelectLabel
                 key={item.id}
                 style={{
-                  fontSize: metrics["--text-control-track"],
+                  fontSize: theme.control["--text-control-track"],
                   color: theme.colors.mutedForeground,
-                  padding: theme.design.menu.selectItemInset,
+                  paddingLeft: theme.control["--spacing-control-track-pad"],
+                  paddingRight: theme.control["--spacing-control-track-pad"],
                 }}
               >
                 <text>{item.label}</text>
@@ -193,6 +195,7 @@ export function DropdownButton<T extends string = string>({
           ) : (
             <SelectItem
               key={item.id}
+              testId={testId ? `${testId}-option-${item.id}` : undefined}
               value={item.id}
               disabled={item.disabled}
               role="option"
@@ -201,14 +204,9 @@ export function DropdownButton<T extends string = string>({
               aria-disabled={item.disabled ?? false}
               aria-selected={item.id === value}
               style={state => ({
-                display: "flex",
-                flexDirection: "row",
+                ...listRowChrome(theme),
                 justifyContent: "space-between",
-                padding: theme.design.menu.selectItemInset,
-                gap: metrics["--spacing-control-gap"],
-                minHeight: metrics["--spacing-control-track"],
                 whiteSpace: "normal",
-                fontSize: metrics["--text-control-track"],
                 backgroundColor: state.selected
                   ? theme.colors.primary
                   : state.highlighted

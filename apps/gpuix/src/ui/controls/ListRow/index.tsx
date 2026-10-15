@@ -1,8 +1,27 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
 import { colorMix } from "@/shared/theme/color-mix"
-import type { Props } from "@gpuix/react"
+import type { Props, StyleDesc } from "@gpuix/react"
 import type { ReactNode } from "react"
+import type { Theme } from "@/shared/theme/ThemeProvider"
+
+export function listRowChrome(theme: Theme) {
+  return {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+    minWidth: 0,
+    minHeight: theme.control["--spacing-control-track"],
+    gap: theme.control["--spacing-control-track-gap"],
+    paddingLeft: theme.control["--spacing-control-track-pad"],
+    paddingRight: theme.control["--spacing-control-track-pad"],
+    fontSize: theme.control["--text-control-track"],
+    borderWidth: theme.design.shape.controlBorderWidth,
+    borderRadius: theme.design.shape.listRowRadius,
+    borderColor: "transparent",
+  } satisfies StyleDesc
+}
 
 export interface ListRowProps extends Props {
   readonly label: string
@@ -25,19 +44,9 @@ export function ListRow({
   ...props
 }: ListRowProps) {
   const theme = useTheme()
-  const metrics = theme.control
   const appearance = sv({
     base: {
-      display: "flex",
-      flexDirection: "row",
-      alignItems: "center",
-      flexShrink: 0,
-      minWidth: 0,
-      minHeight: metrics["--spacing-control-track"],
-      gap: metrics["--spacing-control-track-gap"],
-      paddingLeft: metrics["--spacing-control-track-pad"],
-      paddingRight: metrics["--spacing-control-track-pad"],
-      fontSize: metrics["--text-control-track"],
+      ...listRowChrome(theme),
       color: theme.colors.foreground,
       backgroundColor: theme.colors.muted,
       cursor: "pointer",
@@ -50,9 +59,6 @@ export function ListRow({
         outlineColor: theme.colors.ring,
         outlineOffset: -theme.design.shape.focusRingWidth,
       },
-      borderWidth: theme.design.shape.controlBorderWidth,
-      borderRadius: theme.design.shape.listRowRadius,
-      borderColor: "transparent",
     },
     variants: {
       selected: {

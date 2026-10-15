@@ -16,6 +16,7 @@ import { MenuSub, useMenu } from "./context"
 import { MenuContent } from "./content"
 import { finishSelection, focusEntry, isActivation, navigate } from "./navigation"
 import { MenuTrigger } from "./trigger"
+import { listRowChrome } from "../ListRow"
 import type {
   MenuCheckboxItemProps,
   MenuContentProps,
@@ -121,22 +122,12 @@ function MenuItem({
     "aria-checked": checked,
     style: sx(
       {
-        display: "flex",
-        alignItems: "center",
-        gap: theme.design.menu.itemGap,
-        minWidth: 0,
-        minHeight: theme.control["--spacing-control-track"],
-        flexShrink: 0,
-        fontSize: theme.control["--text-control-track"],
+        ...listRowChrome(theme),
         paddingLeft: inset
           ? theme.control["--spacing-control-icon"] +
-            theme.design.menu.itemPaddingInline +
-            theme.design.menu.itemGap
-          : theme.design.menu.itemPaddingInline,
-        paddingRight: theme.design.menu.itemPaddingInline,
-        paddingTop: theme.design.menu.itemPaddingBlock,
-        paddingBottom: theme.design.menu.itemPaddingBlock,
-        borderRadius: theme.design.menu.itemRadius,
+            theme.control["--spacing-control-track-pad"] +
+            theme.control["--spacing-control-track-gap"]
+          : theme.control["--spacing-control-track-pad"],
         whiteSpace: "normal",
         color: unavailable ? theme.colors.mutedForeground : theme.colors.popoverForeground,
         cursor: unavailable ? "default" : "pointer",
