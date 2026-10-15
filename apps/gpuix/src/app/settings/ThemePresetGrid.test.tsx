@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_THEME_PRESET, THEME_PRESETS } from "@/shared/theme/presets"
 import { ModalDialog } from "../dialog/ModalDialog"
+import { AppInteractionProvider } from "../interaction"
 import { ThemePresetGrid } from "./ThemePresetGrid"
 import type { TestRoot } from "@gpuix/react/testing"
 import type { ThemePresetId } from "@/shared/theme/presets"
@@ -11,15 +12,17 @@ import type { ThemePresetId } from "@/shared/theme/presets"
 function Grid() {
   const [value, setValue] = useState<ThemePresetId>(DEFAULT_THEME_PRESET)
   return (
-    <ThemeProvider>
-      <div style={{ width: "100%", height: "100%" }}>
-        <ModalDialog open onOpenChange={() => {}} label="Presets">
-          <div style={{ width: 420 }}>
-            <ThemePresetGrid value={value} onValueChange={setValue} label="Presets" />
-          </div>
-        </ModalDialog>
-      </div>
-    </ThemeProvider>
+    <AppInteractionProvider>
+      <ThemeProvider>
+        <div style={{ width: "100%", height: "100%" }}>
+          <ModalDialog open onOpenChange={() => {}} label="Presets">
+            <div style={{ width: 420 }}>
+              <ThemePresetGrid value={value} onValueChange={setValue} label="Presets" />
+            </div>
+          </ModalDialog>
+        </div>
+      </ThemeProvider>
+    </AppInteractionProvider>
   )
 }
 

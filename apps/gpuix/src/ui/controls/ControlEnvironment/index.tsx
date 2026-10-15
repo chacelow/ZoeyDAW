@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef } from "react"
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef } from "react"
 import type { ReactNode } from "react"
 import type { CursorLockPort } from "../DragPad/cursor-port"
 
@@ -19,6 +19,7 @@ export interface ControlEnvironment {
   readonly setInfo?: (info: ControlInfo | null) => void
   readonly mappingActive?: boolean
   readonly cursorLock?: CursorLockPort
+  readonly textFocus?: { enter(): () => void }
 }
 const EnvironmentContext = createContext<ControlEnvironment>({})
 
@@ -34,6 +35,24 @@ export function ControlEnvironmentProvider({
 
 export function useControlEnvironment(): ControlEnvironment {
   return useContext(EnvironmentContext)
+}
+
+/** Native editor focus owns a lease; blur and unmount release it idempotently. */
+export function useTextFocusBinding(active = true) {
+  const { textFocus } = useControlEnvironment()
+  const release = useRef<(() => void) | null>(null)
+  const onBlur = useCallback(() => {
+    release.current?.()
+    release.current = null
+  }, [])
+  const onFocus = useCallback(() => {
+    if (active && !release.current) release.current = textFocus?.enter() ?? null
+  }, [active, textFocus])
+  useLayoutEffect(() => {
+    if (!active) onBlur()
+  }, [active, onBlur])
+  useLayoutEffect(() => onBlur, [onBlur, textFocus])
+  return { onFocus, onBlur }
 }
 
 export interface UseInfoBindingOptions {

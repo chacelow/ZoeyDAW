@@ -6,7 +6,11 @@ import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { i18next } from "@zoeymind/i18n/core"
 import * as engine from "@/platform/engine"
-import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
+import {
+  createWindowKeyboard,
+  WindowKeyboardProvider,
+  type WindowKeyboard,
+} from "@/platform/keyboard"
 import { createSettingStorage, DEFAULT_THEME_MODE } from "@/platform/settings"
 import {
   configureProjectBackend,
@@ -22,7 +26,8 @@ import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixt
 import { dismissToast, toastLoading } from "@/ui/controls/Toaster"
 import { AppShell } from "./AppShell"
 import { changeLocale, initAppI18n } from "./i18n"
-import { emptyProjectSlots } from "./project/empty-slots"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { AppNativeEnvironmentProvider } from "./native-environment"
 import { createRouter } from "./router/router"
 import { createPreferenceStore } from "./settings/preference-store"
 import { isThemeMode } from "./settings/theme-mode"
@@ -91,6 +96,7 @@ function countSessions() {
 interface Harness {
   readonly root: TestRoot
   readonly router: Router
+  readonly keyboard: WindowKeyboard
   readonly saved: { mode: ThemeMode | null; preset: ThemePresetId | null }
   readonly rerender: () => void
 }
@@ -124,25 +130,30 @@ function mount(overrides: Partial<AppShellProps> = {}, wrap = (node: ReactNode) 
     ),
   }
   const keyboard = createWindowKeyboard()
+  const frames = { subscribe: () => () => {}, subscribeResume: () => () => {} }
+  const native = { subscribeWindowActive: () => () => {} }
   const root = createTestRoot({ width: 1280, height: 800, ...keyboard.rootHandlers })
   roots.push(root)
   const node = () =>
     wrap(
-      <WindowKeyboardProvider value={keyboard}>
-        <AppShell
-          router={router}
-          appearance={appearance}
-          systemAppearance={null}
-          storage={createMemorySnapshotStorage()}
-          closeRenderer={null}
-          renderProjectSlots={emptyProjectSlots}
-          showErrorDetails
-          {...overrides}
-        />
-      </WindowKeyboardProvider>
+      <AnimationFrameProvider source={frames}>
+        <AppNativeEnvironmentProvider value={native}>
+          <WindowKeyboardProvider value={keyboard}>
+            <AppShell
+              router={router}
+              appearance={appearance}
+              systemAppearance={null}
+              storage={createMemorySnapshotStorage()}
+              closeRenderer={null}
+              showErrorDetails
+              {...overrides}
+            />
+          </WindowKeyboardProvider>
+        </AppNativeEnvironmentProvider>
+      </AnimationFrameProvider>
     )
   root.render(node())
-  return { root, router, saved, rerender: () => root.render(node()) }
+  return { root, router, saved, keyboard, rerender: () => root.render(node()) }
 }
 
 /** Applies an external store change (router, project actions) and paints it. */
@@ -170,6 +181,14 @@ function element(root: TestRoot, testId: string) {
   const found = root.renderer.findByTestId(testId)
   if (!found) throw new Error(`Missing ${testId}`)
   return found
+}
+
+function button(root: TestRoot, label: string) {
+  const node = root.renderer
+    .findByType("div")
+    .find(item => item.customProps?.["aria-label"] === label && item.customProps?.role === "button")
+  if (!node) throw new Error(`Missing button ${label}`)
+  return node
 }
 
 function click(root: TestRoot, testId: string) {
@@ -222,7 +241,7 @@ describe("project runtime lease", () => {
     expect(sessions).toEqual({ opened: 4, disposed: 4 })
   })
 
-  test("real native backend opens only for the project and is disposed on leaving (requires audio device)", async () => {
+  test("Transport onBack releases the real native session; reopening creates a fresh lease", async () => {
     const handles: number[] = []
     const originalOpen = engine.openSession
     const originalDispose = engine.dispose
@@ -258,7 +277,8 @@ describe("project runtime lease", () => {
       const handle = handles.at(-1)
       const request = requests.at(-1)
       if (handle === undefined || !request) throw new Error("No real native session was opened")
-      act(root, () => router.navigate("/"))
+      root.renderer.nativeSimulateKeystrokes(button(root, "返回").id, "enter")
+      expect(router.getRoute().kind).toBe("home")
       // Call napi directly, bypassing createNativeBackend's JS disposed short circuit.
       const result: unknown = JSON.parse(engine.apply(handle, JSON.stringify(request)))
       expect(result).toMatchObject({ kind: "rejected", code: "disposed" })
@@ -498,6 +518,51 @@ describe("keyboard", () => {
     expect(playing()).toBe(!before)
     projectActions.stop()
   })
+
+  test("global Cmd+F focuses Browser only when unconsumed, nonmodal and expanded", async () => {
+    countSessions()
+    const { root, keyboard } = mount({ router: createRouter("/project/search") })
+    await layout(root)
+    const timeline = element(root, "timeline-viewport")
+    const search = element(root, "browser-search")
+    root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
+    expect(root.renderer.getFocusedElementId()).toBe(search.id)
+    root.renderer.simulateKeystrokes("D r i f t")
+    root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
+    root.renderer.simulateKeystrokes("a")
+    expect(root.renderer.getElement(search.id)?.customProps?.value).toBe("a")
+    root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "enter")
+    const dialogFocus = root.renderer.getFocusedElementId()
+    root.renderer.simulateKeystrokes("cmd-f")
+    expect(root.renderer.getFocusedElementId()).toBe(dialogFocus)
+    keyboard.rootHandlers.onKeyDown({
+      key: "f",
+      modifiers: { cmd: true, ctrl: false, alt: false, shift: false },
+      defaultPrevented: false,
+      preventDefault() {},
+      stopPropagation() {},
+    })
+    expect(root.renderer.getFocusedElementId()).toBe(dialogFocus)
+    root.renderer.simulateKeystrokes("escape")
+    expect(root.renderer.findByTestId("settings-dialog")).toBeUndefined()
+    root.renderer.nativeSimulateKeystrokes(button(root, "切换浏览器").id, "enter")
+    await layout(root)
+    root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
+    expect(root.renderer.getFocusedElementId()).not.toBe(search.id)
+    root.renderer.nativeSimulateKeystrokes(button(root, "切换浏览器").id, "enter")
+    await layout(root)
+    root.renderer.focusElement(timeline.id)
+    keyboard.rootHandlers.onKeyDown({
+      key: "f",
+      modifiers: { cmd: true, ctrl: false, alt: false, shift: false },
+      defaultPrevented: true,
+      preventDefault() {
+        throw new Error("Already consumed")
+      },
+      stopPropagation() {},
+    })
+    expect(root.renderer.getFocusedElementId()).toBe(timeline.id)
+  })
 })
 
 describe("project layout state", () => {
@@ -521,6 +586,7 @@ describe("project layout state", () => {
     act(root, () => projectActions.setEditingClip(clipId()))
     await layout(root)
     expect(root.renderer.findByTestId("clip-panel")).toBeDefined()
+    expect(root.renderer.findByTestId("clip-editor")).toBeDefined()
     expect(browserWidth()).toBe(resized)
     act(root, () => projectActions.setEditingClip(null))
     await layout(root)

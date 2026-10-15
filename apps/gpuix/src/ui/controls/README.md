@@ -22,6 +22,8 @@ A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live �
 
 - 数值由消费者持有。所有数值变体共享 `useDragPad`、每步 4px 比例和主题度量，Bar/Bipolar 只改变填充外观。没有复制 track-mixer 的早期拖动逻辑。
 - `CursorLockPort` 经 `ControlEnvironment.cursorLock` 注入。UI 不依赖 `@zoeydaw/native`。无端口时不隐藏光标；画廊组合入口接入真实 Rust 光标函数。
+- `ControlEnvironment.textFocus` 是组合根可选注入的文本焦点 lease 端口，`enter(): () => void` 返回幂等释放函数。Input 与 DragPadNumber 实际编辑 input 在原生 `onFocus` 取得 lease，在 `onBlur`、编辑态退出或卸载时释放。普通数值 spinbutton 不报告文本焦点。lease 不传输入内容，不替代既有 ControlInfo；不查询 host 树、不轮询焦点。renderer 必须为 autoFocus 发出真实 focus 事件。
+- 可聚焦 `readOnly` Input 仍报告文本焦点并隔离可打印快捷键，只有 `disabled` 排除。只读不等于非文本，选择/复制仍由原生编辑器拥有。
 - Button 的 `active/onActiveChange` 为受控状态。`highlight` 默认开启，关闭后不加 hover 高亮。`iconOnly` 使用正方形尺寸，图标经共享 `Icon` 与主题 token 着色。active destructive 保持 web Record 的 danger wash、hover 与 focus 层级，不被 primary 覆盖。调用方可配置原生 `role/tabIndex`。
 - `DropdownButton` 复用固定主干 Select。`fill` 同时铺满外层和 trigger，默认仍按内容测宽。工具栏 trigger 不激活 Space，弹层选项 Space 选择并消费，不同时触发播放。标签保留换行，紧凑 trigger 把换行折成空格，指示器固定右侧。
 - `ControlledScrollbar` 是加性的横/纵向受控变体：`value`、`viewport`、`extent` 使用同一逻辑单位，`length` 是绘制长度，`onChange` 写回消费者的唯一 owner。Arrangement 用它实现 **minimap 下 marks 与 timeline 共用的一条横向滚动条**，不另建音乐滚动状态或巨大 native scroll 内容。

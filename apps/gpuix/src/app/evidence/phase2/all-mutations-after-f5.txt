@@ -1,0 +1,29 @@
+bg_14 [bash] — completed — bun apps/gpuix/src/app/verification/mutations.mjs
+dirty close bypasses confirmation: 3 failing test(s)
+failed save arms closing: 1 failing test(s)
+project id path loses encoding: 1 failing test(s)
+view unmount loses its lease cleanup: 3 failing test(s)
+language selection is no longer persisted: 1 failing test(s)
+old Clip View request is treated as a new request: 1 failing test(s)
+retired native close predicate still vetoes: 1 failing test(s)
+preset click stops selecting: 1 failing test(s)
+modal stops guarding global Browser search: 1 failing test(s)
+preset repair escapes the startup failure boundary: 1 failing test(s)
+arrow focus stops revealing the preset: 1 failing test(s)
+Tab focus stops revealing the preset: 1 failing test(s)
+native dispose becomes a no-op behind the JS facade: 1 failing test(s)
+lane draw gesture stops marking held B: 1 failing test(s)
+native text focus is misclassified as timeline: 3 failing test(s)
+editors stop reporting text focus leases: 3 failing test(s)
+a second window owner processes timeline keys: 1 failing test(s)
+collapsed Browser search guard is removed: 1 failing test(s)
+track rails deduct controls from time width again: 1 failing test(s)
+timeline loses automation parameter projection: 1 failing test(s)
+stopped composition keeps native frame demand active: 1 failing test(s)
+playback demand changes stop notifying the root: 1 failing test(s)
+ruler start no longer notifies native frame demand: 1 failing test(s)
+readOnly Input loses its text focus lease: 1 failing test(s)
+24 mutations caught; originals restored
+
+
+Wall time: 91.27 seconds
