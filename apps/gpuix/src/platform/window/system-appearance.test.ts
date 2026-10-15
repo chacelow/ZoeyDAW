@@ -44,10 +44,19 @@ describe("system appearance port", () => {
     expect(activity).toEqual(["start", "stop"])
   })
 
-  test("renderers without appearance events fail on subscription", () => {
+  test("the current appearance is readable before any change for the first theme", () => {
+    let current: SystemAppearance = "dark"
+    const platform = createWindowPlatform({ getWindowAppearance: () => current })
+    expect(platform.getSystemAppearance()).toBe("dark")
+    current = "light"
+    expect(platform.getSystemAppearance()).toBe("light")
+  })
+
+  test("renderers without appearance support fail loudly instead of guessing", () => {
     const platform = createWindowPlatform({})
     expect(() => platform.subscribeSystemAppearance(() => undefined)).toThrow(
       "window appearance events"
     )
+    expect(() => platform.getSystemAppearance()).toThrow("window appearance queries")
   })
 })

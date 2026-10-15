@@ -21,6 +21,7 @@ export type SystemAppearance = "light" | "dark"
 export interface WindowRenderer extends CloseGuardRenderer {
   onWindowActiveChange?: NativeObserverRegistration<boolean>
   onWindowAppearanceChange?: NativeObserverRegistration<SystemAppearance>
+  getWindowAppearance?(): SystemAppearance
   setWindowTitle?(title: string): void
   minimizeWindow?(): void
   zoomWindow?(): void
@@ -42,11 +43,18 @@ export function createWindowPlatform(renderer: WindowRenderer) {
     /**
      * 窗口的有效外观。它跟随系统,前提是没有人调用 GPUI 的 `set_window_appearance`
      * 覆盖应用外观(见 LESSONS),否则「跟随系统」会读到被覆盖的值。
+     * 订阅只通知变化;首帧用 `getSystemAppearance()` 取当前值。
      */
     subscribeSystemAppearance: createNativeValueSubscription(
       renderer.onWindowAppearanceChange?.bind(renderer),
       "window appearance events"
     ),
+    getSystemAppearance(): SystemAppearance {
+      if (!renderer.getWindowAppearance) {
+        throw new Error("Renderer does not support window appearance queries")
+      }
+      return renderer.getWindowAppearance()
+    },
     setTitle: (title: string) => renderer.setWindowTitle?.(title),
     minimize: () => renderer.minimizeWindow?.(),
     zoom: () => renderer.zoomWindow?.(),
