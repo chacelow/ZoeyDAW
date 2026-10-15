@@ -10,6 +10,7 @@
     "window-active-change.patch",
     "window-appearance-close.patch",
     "context-menu.patch",
-    "quad-batch.patch"
+    "quad-batch.patch",
+    "autofocus-focus-event.patch"
   ]
 }
