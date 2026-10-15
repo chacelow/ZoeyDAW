@@ -6,7 +6,7 @@
 
 已迁移消费者：tracks 电平 driver（`playing || active`，先 wake 再 advance）、PerformanceStatus（ordinary/resume 共用刷新逻辑与 predicate，暂停 popup 也同步显示最新 latency/time）。测试 frame adapters 的必选 resume 接口一次性迁完，普通 emit/step/count 含义不变。app composition 的永久订阅与 lane playhead 消费者由协调者交各自 owner，不将这些未迁路径冒充本切片完成。
 
-产品代码提交为 `ee47dbe`，已包含合并基线 `d57b07b`，祖先包含 F4b `496a17d`。最终文档/工具提交的精确 HEAD 由 merge_ready/worker_done 消息提供。
+F3 产品代码提交为 `ee47dbe`。最终已同步 F5 基线 `6d6dd39`，合并提交为 `c8b8425`，其祖先包含 F4b `496a17d` 与规则更新 `d57b07b`。最终文档提交的精确 HEAD 由 merge_ready/worker_done 消息提供。
 
 ## 实际运行证据
 
@@ -20,14 +20,15 @@
 
 ## F4b 最终补丁与产物
 
-独立根：`GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/f3-gpuix`，没有改共享 vendor。十补丁的末尾顺序为 `context-menu.patch → quad-batch.patch → resume-frame.patch`，固定 gpuix/zed SHA 不变。
+独立根：`GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/f3-gpuix`，没有改共享 vendor。十一补丁的末尾顺序为 `context-menu.patch → quad-batch.patch → autofocus-focus-event.patch → resume-frame.patch`，固定 gpuix/zed SHA 不变。
 
-| 补丁                       | SHA-256                                                            |
-| -------------------------- | ------------------------------------------------------------------ |
+| 补丁 | SHA-256 |
+| --- | --- |
 | quad-batch.patch（含 F4b） | `50521d343f35f86ffd1fd3502e4d4be5024d25695ea11df9952d3735903cb003` |
-| resume-frame.patch         | `d9340e770ed1b4887142aab2c59b0572db3a76f89a966db73f0d0482cacf995b` |
+| autofocus-focus-event.patch（F5） | `61466c01374135b441724545ad708aa7c8e8a9147584710f176e4595e5c99f53` |
+| resume-frame.patch | `d9340e770ed1b4887142aab2c59b0572db3a76f89a966db73f0d0482cacf995b` |
 
-最终 vendor 全套为 293 pass；quad 模块单独 6 pass，输出明确包含 `fractional_position_matches_native_div`、`fractional_size_matches_native_div`、`stereo_lane_half_pixel_matches_native_div`、`fractional_host_origin_matches_native_div` 四类 oracle。旧 289 结果只属于旧 quad，未将其称作 F4b 验证。`setQuads` 恢复内新几何首绘与删除失效调用的反向变异均已验证。
+最终含 F5 的 vendor 全套为 307 pass；F4b 接合时 quad 模块单独 6 pass，输出明确包含 `fractional_position_matches_native_div`、`fractional_size_matches_native_div`、`stereo_lane_half_pixel_matches_native_div`、`fractional_host_origin_matches_native_div` 四类 oracle。旧 289 只属于旧 quad，293 是 F4b 接合而尚未加 F5 的结果；未将它们冒称最终十一补丁结果。`setQuads` 恢复内新几何首绘与删除失效调用的反向变异均已验证。
 
 ## 门禁
 
@@ -35,9 +36,9 @@
 | --- | --- |
 | 根：`pnpm native:build` | 已通过并加载真实本地二进制 |
 | 根：`cargo check && cargo test` | 通过，51 tests / 4 suites |
-| 根：`GPUIX_VENDOR_ROOT=… bash scripts/gpuix-main/build.sh` | 最终十补丁干净构建通过 |
+| 根：`GPUIX_VENDOR_ROOT=… bash scripts/gpuix-main/build.sh` | 最终十一补丁干净构建通过 |
 | 根：`node scripts/gpuix-main/check.mjs --resolution` | 原生、host、React/reconciler/Zustand 单实例检查通过 |
-| vendor：release `cargo check` 与 `cargo test --lib`，features `test-support,gpui_platform/runtime_shaders` | 通过，293 tests |
+| vendor：release `cargo check` 与 `cargo test --lib`，features `test-support,gpui_platform/runtime_shaders` | 通过，307 tests（含 F4b 与 F5） |
 | vendor：同 features，`cargo test --lib quad_batch::tests` | 6 pass，含四类 F4b fractional oracle |
 | apps/gpuix：`tsc --noEmit` | 通过 |
 | apps/gpuix：`tsc --noEmit -p verification/tsconfig.json` | 通过 |
