@@ -30,29 +30,42 @@ export function useUnsavedCloseGuard(renderer: CloseGuardRenderer | null) {
 
   useLayoutEffect(() => {
     if (!renderer) return
-    guard.current = createWindowCloseGuard(renderer, {
+    // The renderer keeps its predicate after unmount (the port has no unregister); a retired
+    // guard therefore allows closing and never touches this component's state again.
+    let isRetired = false
+    const created = createWindowCloseGuard(renderer, {
       shouldClose() {
+        if (isRetired) return true
         const result = requestClose(state.current, useProjectState.getState().session.dirty)
         state.current = result.next
         // AppKit is waiting on this answer; open the dialog right after it returns, committed
         // synchronously because the request arrives outside any React event.
-        if (!result.allow) queueMicrotask(() => flushSync(() => setAsking(true)))
+        if (!result.allow) {
+          queueMicrotask(() => {
+            if (!isRetired) flushSync(() => setAsking(true))
+          })
+        }
         return result.allow
       },
     })
+    guard.current = created
     return () => {
-      guard.current = null
+      isRetired = true
+      if (guard.current === created) guard.current = null
     }
   }, [renderer])
 
   const choose = useCallback(async (choice: UnsavedCloseChoice) => {
     setAsking(false)
+    const current = guard.current
     const saved = choice === "save" && (await saveProject())
+    // Unmounted or replaced while saving: the decision belongs to a guard that no longer exists.
+    if (current !== guard.current) return
     if (choice === "save" && !saved) toast.error(labels.current("windowClose.saveFailed"))
     state.current = chooseClose(state.current, choice, saved)
     if (state.current.phase !== "armed") return
     try {
-      guard.current?.close()
+      current?.close()
     } catch {
       // No programmatic close before H1: the armed state allows the next native request.
       toast(labels.current("windowClose.pressAgain"))
