@@ -22,7 +22,7 @@
 
 工程到共享 SceneStore 的投影只有 timeline controller 一个产品 owner。lane 的 preview、选择与播放命令只改工程 store；lane 仅写自身的拖动、缩放、悬停、targetSelection 与手势进行中的 timeSelection。独立 demo 无 timeline 时，由 demo/runtime 的一个订阅投影并在 dispose 时退订。
 
-卡片展示几何使用行内坐标，轨道行自身承担垂直滚动位移。每个 LaneContents 只缓存当前可见 Clip，source 与 Ghost 分开按 clipId 索引。未变的 card、geometry 与 Clip 局部 grid 保持引用。网格调用 B1 的范围接口，左侧取 1px overscan 后由 hook 按可见边界过滤，保留小数滚动下取整进入 Clip 的首线。行网格与交替 Pattern 区域共用横向投影缓存，只在横向位置、比例、宽度、网格单元或工程范围改变时失效。默认 React memo 不设深比较器，Automation 的跨行坐标保持不变。
+卡片展示几何使用行内坐标，轨道行自身承担垂直滚动位移。`ClipCardView` 只拥有位置、透明度、AX 与键盘宿主，`ClipContentsView` 默认 memo 只消费局部内容。原有 display projector 在 source/Ghost 分离的可见 Clip 缓存内派生局部几何、网格与裁剪范围，横向纯位置变化复用内容引用；缩放、裁剪、编辑、选择、悬停和折叠仍使内容失效。loop tick 使用局部序号 key，不随全局 x 变动。网格继续调用 B1 范围接口，左侧 1px overscan 经 hook 可见边界过滤，行网格与交替区域共用横向投影缓存。没有第二个工程 owner、新缓存层或 React 深比较器。production 分段口径、所有重复轮与节点变化说明见 [滚动剖析](PROFILING.md)。
 
 窗口键盘 owner 在 timeline。lane 只消费选择、Ctrl/Cmd+E 裁剪、创建副本、重命名、删除、复制/剪切/粘贴与拖动 Escape；Space 不激活 Clip，并继续传播给窗口播放 owner。Clip 标题设插入点到左起点；内容点击设到点击位置；普通激活不打开 Clip View。
 
@@ -92,10 +92,10 @@ lane 在彩色 Clip 主体上使用 `theme.colors.arrangementClipInk`，与 Web 
 | 命令 | 结果 |
 | --- | --- |
 | `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx -t 'fade mask between'` | 1 pass，0 fail，10 assertions；折叠→展开→再折叠 |
-| `bun test src/project/sections/arrangement/lane` | 实源回归后 baseline 29 pass，0 fail |
-| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 29 pass，0 fail；14 个变异命中预期失败；源目标 SHA-256 前后相同 |
+| `bun test src/project/sections/arrangement/lane` | 局部内容回归后 baseline 30 pass，0 fail |
+| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 30 pass，0 fail；16 个变异命中预期失败；源目标 SHA-256 前后相同 |
 | `bun test` | A 阶段历史结果 1071 pass，1 todo，0 fail；当前交付另跑 `pnpm verify:gpuix` |
-| lane、共享 PeakColumns 与 SourceWaveform-runtime 受影响测试 | 34 pass，0 fail，103109 assertions；8 files |
+| lane、共享 PeakColumns 与 SourceWaveform-runtime 受影响测试 | 35 pass，0 fail，103112 assertions；8 files |
 
 变异通过 Bun runtime preload 在内存替换模块，不写源文件；脚本验证预期用例确实失败，不能以语法错误代替变异被捕获。
 
@@ -111,10 +111,12 @@ lane 在彩色 Clip 主体上使用 `theme.colors.arrangementClipInk`，与 Web 
 | 恢复回调不再同步提交位置                 |          1 |
 | 停止后仍保持恢复订阅                     |          1 |
 | 移除小数网格边界 overscan                |          1 |
-| 将局部网格右边界扩大到整视口             |          1 |
+| 将局部网格左边界扩大到整视口             |          1 |
 | 将真实波形第 16 列渲染成静音             |          1 |
 | 交换 probe.wav 声道偏移                  |          2 |
 | 将 lane Clip 墨色误改为派生色            |          2 |
+| 强制未变局部内容产生新对象               |          1 |
+| 将全局x、viewport与grid放回局部内容输入  |          1 |
 
 F3 原生回归 `presents the latest playhead on resume and releases frame leases when stopped or unmounted` 在修复前读取到 x=96，期望最新 x=416；修复后不等待普通帧、不在测试外包 flushSync，立即读到 x=416。停止、重启、卸载同时验证播放线与订阅生命周期，单用例 1 pass、12 assertions。它验证 NativeTestRoot 的首恢复采样布局，不冒充本轮已经重做 OS 遮挡恢复窗口验收。
 

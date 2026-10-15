@@ -17,8 +17,8 @@ Bun.plugin({
   name: "lane-native-cost-attribution",
   setup(build) {
     const contentsPath = path.resolve(import.meta.dir, "../LaneRow/Contents.tsx")
-    const cardPath = path.resolve(import.meta.dir, "../ClipCard.tsx")
-    build.onLoad({ filter: /\/(?:LaneRow\/Contents|ClipCard)\.tsx$/ }, async args => {
+    const cardPath = path.resolve(import.meta.dir, "../ClipContents.tsx")
+    build.onLoad({ filter: /\/(?:LaneRow\/Contents|ClipContents)\.tsx$/ }, async args => {
       if (args.path !== contentsPath && args.path !== cardPath) return undefined
       let contents = await Bun.file(args.path).text()
       if (args.path === contentsPath) {
