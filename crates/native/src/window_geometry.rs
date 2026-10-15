@@ -41,42 +41,41 @@ mod platform {
     use objc2_app_kit::NSApplication;
 
     extern "C" {
-        /// AppKit 全局 `NSApp`:gpuix 创建 GPUI 应用前为 nil。
-        static NSApp: *const NSApplication;
+        /// AppKit 全局 `NSApp`:gpuix 创建 GPUI 应用前为 nil,创建时由 AppKit 在运行时写入,
+        /// 因此必须声明为可变静态量(只读 extern static 被外部修改属于未定义行为)。
+        static mut NSApp: *const NSApplication;
     }
 
-    /// 当前 key 窗口(没有时取 main 窗口)。非主线程、应用未创建或没有窗口返回 None。
-    pub fn active_window() -> Option<WindowGeometry> {
+    /// 当前 key 窗口(没有时取 main 窗口)的几何与主屏高度。非主线程、应用未创建或没有窗口返回 None。
+    pub fn active_window() -> Option<(WindowGeometry, f64)> {
         // NSApplication 只能在主线程访问;bun --hot 在主线程调用 napi(见 app_state.rs 的实测),
         // Worker 线程拿不到 marker,直接返回 None,调用方不锁光标。
         MainThreadMarker::new()?;
         // 不用 sharedApplication:应用未创建时它会造出普通 NSApplication,之后 GPUI 初始化
         // panic(见 app_state.rs)。读全局指针,nil 即 None。
-        // SAFETY: 主线程上读取 AppKit 导出的全局对象指针;非 nil 时由 AppKit 持有,本调用内有效。
-        let app = unsafe { NSApp.as_ref() }?;
+        // SAFETY: AppKit 只在主线程写 NSApp,本函数已确认在主线程,读取不与写入并发;
+        // 非 nil 时对象由 AppKit 持有,本调用内有效。
+        let app = unsafe { core::ptr::addr_of!(NSApp).read().as_ref() }?;
         let window = app.keyWindow().or_else(|| app.mainWindow())?;
         let frame = window.frame();
         let content_height = window.contentView()?.frame().size.height;
-        Some(WindowGeometry { frame_x: frame.origin.x, frame_y: frame.origin.y, content_height })
-    }
-
-    pub fn primary_height() -> f64 {
-        CGDisplay::main().bounds().size.height
+        let geometry =
+            WindowGeometry { frame_x: frame.origin.x, frame_y: frame.origin.y, content_height };
+        Some((geometry, CGDisplay::main().bounds().size.height))
     }
 }
 
 #[cfg(not(target_os = "macos"))]
 mod platform {
     use super::WindowGeometry;
-    pub fn active_window() -> Option<WindowGeometry> { None }
-    pub fn primary_height() -> f64 { 0.0 }
+    pub fn active_window() -> Option<(WindowGeometry, f64)> { None }
 }
 
 /// 把当前 key 窗口里的事件坐标换算成 CG 全局屏幕坐标。没有可用窗口或非 macOS 返回 null。
 #[napi]
 pub fn window_point_to_screen(point: WindowPoint) -> Option<ScreenPoint> {
-    let window = platform::active_window()?;
-    Some(window_to_cg(window, platform::primary_height(), point))
+    let (window, primary_height) = platform::active_window()?;
+    Some(window_to_cg(window, primary_height, point))
 }
 
 #[cfg(test)]
