@@ -1,0 +1,9 @@
+{"t":1792031403761,"kind":"nativeRegister","attach":true}
+{"t":1792031403763,"kind":"nativeAppearance","value":"dark"}
+{"t":1792031424172,"kind":"nativeAppearance","value":"light"}
+{"t":1792031424263,"kind":"appearanceChange","value":"light"}
+{"t":1792031469724,"kind":"nativeAppearance","value":"dark"}
+{"t":1792031469764,"kind":"appearanceChange","value":"dark"}
+{"t":1792031503038,"kind":"closeRequest","allow":false}
+{"t":1792031510098,"kind":"discardChosen"}
+exit=0 (process exited after closeWindow; window absent from window list)
