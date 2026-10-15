@@ -14,6 +14,7 @@ export interface WindowCloseGuardOptions {
 }
 
 export interface WindowCloseGuard {
+  /** Whether the close button and ⌘W consult `shouldClose`; only macOS today. */
   readonly supported: boolean
   /** Close the window after the user decided; does not consult `shouldClose`. */
   close(): void
@@ -25,17 +26,8 @@ export function createWindowCloseGuard(
 ): WindowCloseGuard {
   const register = renderer.setWindowShouldClose?.bind(renderer)
   const closeWindow = renderer.closeWindow?.bind(renderer)
-  if (!(register && closeWindow)) {
-    return {
-      supported: false,
-      close() {
-        throw new Error("Renderer does not support guarded window close")
-      },
-    }
-  }
-
   let deciding = false
-  register(() => {
+  register?.(() => {
     deciding = true
     try {
       return shouldClose()
@@ -44,8 +36,9 @@ export function createWindowCloseGuard(
     }
   })
   return {
-    supported: true,
+    supported: register !== undefined,
     close() {
+      if (!closeWindow) throw new Error("Renderer does not support closeWindow")
       // AppKit holds GPUI while asking; closing from inside would re-enter it.
       if (deciding) throw new Error("close() must run after shouldClose returns")
       closeWindow()

@@ -67,9 +67,24 @@ describe("window close guard", () => {
     expect(host.state.open).toBe(false)
   })
 
-  test("renderers without close support report it instead of silently ignoring close()", () => {
+  test("platforms without a close veto still close after the user decides", () => {
+    let open = true
+    const guard = createWindowCloseGuard(
+      {
+        closeWindow() {
+          open = false
+        },
+      },
+      { shouldClose: () => false }
+    )
+    expect(guard.supported).toBe(false)
+    guard.close()
+    expect(open).toBe(false)
+  })
+
+  test("renderers without closeWindow report it instead of silently ignoring close()", () => {
     const guard = createWindowCloseGuard({}, { shouldClose: () => false })
     expect(guard.supported).toBe(false)
-    expect(() => guard.close()).toThrow(Error)
+    expect(() => guard.close()).toThrow("closeWindow")
   })
 })
