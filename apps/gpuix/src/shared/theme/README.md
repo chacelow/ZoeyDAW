@@ -6,7 +6,7 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `ThemeProvider.tsx` | `ThemeProvider` 与 `useTheme()`。无内部 state：`appearance`、`preset` 由组合根受控传入，切换只换 context value，不重挂载子树。都不传时等于旧行为（`defaultAppearance`，缺省 dark，Default 预设）。 |
+| `ThemeProvider.tsx` | `ThemeProvider` 与 `useTheme()`。无内部 state：`appearance`、`preset` 由组合根受控传入，切换只换 context value，不重挂载子树。都不传时用 `defaultAppearance`（缺省 dark）与 Default 预设；与旧版只读初值不同，`defaultAppearance` 变化也会跟随（现有调用方都只在挂载时传，行为不变）。 |
 | `presets.ts` | `THEME_PRESETS`（Web 菜单顺序，Default 在首位）、`ThemePresetId`、`DEFAULT_THEME_PRESET`、`getThemePreset(id)`、`isThemePresetId(value)`。每个预设的 light/dark 在模块加载时各派生一次。 |
 | `presets.data.ts` | 生成文件，不手改。 |
 | `generate-presets.mjs` | 生成器：`node apps/gpuix/src/shared/theme/generate-presets.mjs`；`--check` 校验生成结果未过期。 |
@@ -24,11 +24,11 @@
 
 ## 持久化
 
-`platform/settings/theme-preset.ts` 的 `createThemePresetSetting(isThemePresetId)`：读取时校验，未知、已删除或旧格式的 id 返回 `null`（调用方回退 Default），读取不写文件；下一次 `set` 覆盖旧值。`platform` 不能 import `shared/theme`，预设校验由组合根注入。
+`platform/settings/theme-preset.ts` 的 `createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET)`：`get()` 校验，未知、已删除或旧格式的 id 返回 `null`（调用方回退 Default），读取不写文件。其他设置的写入会把旧值原样带过去，所以组合根启动时调用一次 `repair()`：存的是无效 id 时写入 `default` 并返回 `true`。`platform` 不能 import `shared/theme`，预设校验与 Default id 由组合根注入。
 
 ## 字段对照
 
-预设提供的字段（`ThemeColors`），每个预设 light/dark 各一份：
+预设提供的字段（`ThemeColors`），每个预设 light/dark 各一份。这是迁移前 gpuix 已有的 23 个字段，未增减；`secondaryForeground` 目前没有产品消费者，保留以与 `secondary` 成对（`Button` 的 secondary 变体使用 `secondary`），不单独删除：
 
 | Web CSS 变量              | `ThemeColors` 字段    |
 | ------------------------- | --------------------- |
