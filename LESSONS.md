@@ -271,4 +271,10 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 - 因：`onWindowAppearanceChange` 回报的是窗口的 `effectiveAppearance`,它继承 `NSApp.appearance`;一旦覆盖,读到的就是自己设的值,系统切换不再触发变化。
 - 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。
 
+## gpuix 迁移：computer 截不到按住期间的 pressed 帧
+
+- 错：把激活态截图或松开后的截图当成 pressed 证据；或在一个 `computer.run` 里按住再截图，就以为截到的是按住那一刻。
+- 对：pressed 用测试直接断言：按下后的样式值与尺寸正确，松开后恢复，并做变异。真实窗口的 pressed 帧在报告里标为工具限制下的未验证。拿到截图后，用控件状态读回（例如切换控件在 onClick 才变化）核对截图时刻，不凭截图里的样子判断。
+- 因：2026-10-15 clip-editors 实测，display 截图报 `InvalidCoordinateFrame`，并行调用报 `Computer worker busy`，同一个 run 里的拖动会阻塞截图，图实际是松开之后才截的。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
