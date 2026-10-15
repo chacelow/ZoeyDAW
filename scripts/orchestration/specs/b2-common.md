@@ -37,7 +37,7 @@
 
 - 状态转换、边界、键盘可达性各有行为测试(`createTestRoot`)。不测转发/源码文本/incidental 默认值。纯逻辑部分用性质测试,**并做变异检查**(至少 2 个变异→失败数,写进报告)。迁移 web 对应目录里仍有意义的测试。
 - `tsc --noEmit`、`bun test`、`pnpm exec eslint apps/gpuix/src/project/sections/<panel>` 全部通过(贴命令与计数)。
-- **真实窗口**:`bun --hot` 打开 demo,用 `computer` 的 AX 与截图验证主路径;不能只靠类型检查。至少一次真实交互(点击、键盘、拖动、悬停弹层),附 AX/截图证据。
+- **真实运行**：按 `common.md` 的验证顺序，用离屏 `createTestRoot` 加真实后端做原生像素与交互验证（点击、键盘、拖动、悬停弹层至少一项），附截图或 AX 证据；后台窗口只做不依赖帧的检查，真实可见窗口的验收由协调者负责。
 - **进程清理(强制)**:一切 `bun --hot` demo、窗口、service 验证完立刻结束(`write proc://<name>/kill`),`worker_done` 前贴 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"` 的零残留输出。超过 5 分钟无交互的 demo 视为泄漏。
 - 报告列出:迁入清单(源→目标)、与 web 的行为差异及原因、变异表、未实现项(禁止把未实现描述成完成)、错题/已验证做法(LESSONS 格式)。
 

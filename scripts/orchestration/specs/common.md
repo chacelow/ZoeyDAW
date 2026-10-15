@@ -5,7 +5,7 @@
 - 基线：分支 `gpuix-migration`，提交 `d0db74c`。参考源码在 `apps/web/src/**`、`packages/**`、`src-tauri/**`（只读，迁移完成后统一删除，你不要删）。
 - 原生能力放 `crates/native`、引擎放 `crates/engine`，能用 Rust 直接做的不要在 TS 里绕路。
 - 需要 `pnpm native:build`（根目录）后才有 `@zoeydaw/native` 二进制。
-- 每个切片都要真实运行：`bun --hot <入口>` 打开原生窗口，用 `computer` 的 AX/截图验证；不能只靠类型检查。只操作自己启动的窗口：`computer.window(...)` 加 AX `el.press()`、`observe()`/`screenshot()` 与窗口级输入。**不调用 `computer.control.acquire`**，它需要用户实时批准，本项目不用。
+- 每个切片都要真实运行，不能只靠类型检查。验证顺序：① 离屏 `createTestRoot` 配合真实后端（`app/verification/native-fixture.ts`）和 `captureScreenshot` 做原生像素与行为验证，这是常规证据；② 需要真实窗口时，用 `GPUIX_BACKGROUND=1 bun --hot <入口>` 启动自己的命名 service，只做不依赖帧推进的检查（启动、AX 只读量值、资源释放）。后台窗口通常被前台遮挡，不出帧，截图会全黑（见 `docs/agents/setup.md`「后台启动」）。**不要为帧相关的验收申请桌面时段**，真实可见窗口的视觉和性能由协调者在收尾时在前台串行验收。只操作自己启动的窗口，**不调用 `computer.control.acquire`**。
 - 提交：自己的分支内多次小提交，每次一件事；标题避免 `+ & 和 与` 与多个 Conventional Commit 类型；`ultracite` 预提交门禁必须通过，不用 `--no-verify`。非交互提交带 `USER_CONFIRM_HASH=$(git write-tree)`——用户已授权本次重构任务内 `gpuix-migration` 及切片分支的全部本地提交（见 `docs/agents/setup.md`「提交授权」），不向用户或协调者索取“我确认”。
 - 不 push，不碰 `main`，不碰其他 worktree，不启动或停止用户已有服务。
 - 决策：自己路径内、可撤回、不改方向的事自己决定并在报告里写理由，规则没写到的也一样。需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、跨切片、与契约冲突，或属于根 `AGENTS.md`「决策默认归 Agent」清单的事：用 `orca orchestration ask` 问协调者，带上候选与建议。worker 不直接问用户。
