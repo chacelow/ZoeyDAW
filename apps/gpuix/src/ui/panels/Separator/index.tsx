@@ -47,6 +47,8 @@ export function Separator({
           ? -1
           : 0
     if (direction === 0) return
+    event.preventDefault()
+    event.stopPropagation()
     const delta = keyboardDelta(
       group.sizes,
       group.constraints,

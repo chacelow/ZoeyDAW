@@ -5,6 +5,14 @@ import { spawnSync } from "node:child_process"
 
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..")
 const mutations = [
+  ...["controls/RadioGroup/keyboard.ts", "panels/Separator/index.tsx"].map(file => ({
+    name: `R1c consumed arrows bubble from ${file}`,
+    file: `../ui/${file}`,
+    from: `event.preventDefault()\n${file.startsWith("panels") ? "    " : "  "}event.stopPropagation()`,
+    to: "void event",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "tab navigation",
+  })),
   {
     name: "dirty close bypasses confirmation",
     file: "window/unsaved-close.ts",
