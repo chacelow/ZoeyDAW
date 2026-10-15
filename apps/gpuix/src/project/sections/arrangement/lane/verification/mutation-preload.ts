@@ -8,6 +8,35 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "source-waveform-pixels": {
+    file: "../../../../shared/waveform/PeakColumns.tsx",
+    testFile: "../../clip-edit/audio/SourceWaveform-runtime.test.tsx",
+    testName: "stable peak reader follows native session opening, tempo, meter, and reopening",
+    replacements: [
+      [
+        "Math.min(1, peaks[index * 2] ?? 0)",
+        "(pixel === 16 ? 0 : Math.min(1, peaks[index * 2] ?? 0))",
+      ],
+      [
+        "Math.min(1, peaks[index * 2 + 1] ?? 0)",
+        "(pixel === 16 ? 0 : Math.min(1, peaks[index * 2 + 1] ?? 0))",
+      ],
+    ],
+  },
+  "grid-phase": {
+    file: "clip-card-projection.ts",
+    testFile: "render-projection.test.ts",
+    testName:
+      "keeps Clip-local grids phase-aligned across fractional viewports and vertical-only motion",
+    replacements: [["geometry.left - 1", "geometry.left"]],
+  },
+  "grid-bounds": {
+    file: "clip-card-projection.ts",
+    testFile: "render-projection.test.ts",
+    testName:
+      "keeps Clip-local grids phase-aligned across fractional viewports and vertical-only motion",
+    replacements: [["geometry.left + geometry.width", "scene.viewport.width"]],
+  },
   "offscreen-mount": {
     file: "render-projection.ts",
     testFile: "render-projection.test.ts",
