@@ -21,3 +21,4 @@ Worktree `gpuix-b2-app-shell`。迁移 `apps/web/src/{App.tsx,main.tsx,routes/**
 - 组合根挂唯一的 `AnimationFrameProvider`(`source = createAnimationFrameSource(renderer)`,同一个 renderer),覆盖所有 sections;不得在组合根或任何切片再起定时链。`ControlEnvironmentProvider` 的 `cursorLock` 注入 `@/platform/cursor` 的 `nativeCursorLock`;窗口激活经 `createWindowPlatform(renderer).subscribeApplicationActive` 注入 `PanelEnvironmentProvider`。依赖方向见 `docs/architecture/gpuix.md`(lint 强制)。
 - 组合根注入的 keyboard `focus()` 必须在真实 Input/Textarea 聚焦时返回 'text'(含 Cmd+A 全选后继续输入),使时间线快捷键(A、M、数字、Space 以外的键)不被触发。timeline 的 probe 实测过:Octave 编辑态下 A 键切换了 Automation。加一条组合根行为测试:聚焦 Input 后按 a 与 Cmd+A,Automation 与其它模式均不变;变异:focus() 固定返回 'timeline' 应失败。
 - 全局快捷键守卫(Cmd+F 等)统一在组合根:对话框打开时(唯一来源是 app 层 ModalDialog 的状态)、事件已被消费时、目标面板折叠时都不触发;sections 只导出命令(如 footer 的 focusBrowserSearch)。reduced motion 由 H1 的 platform 端口读取后注入 Footer/Transport。
+- 启动时调用 H2 提供的 themePreset 一次性修复方法(读到无效预设 id 写回 Default),之后再读取设置。
