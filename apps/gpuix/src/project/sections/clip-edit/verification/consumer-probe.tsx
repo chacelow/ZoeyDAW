@@ -20,6 +20,17 @@ import { seedClipEditProject } from "../demo/project"
 import { demoLabels } from "../demo/labels"
 import type { ClipEditorEnvironment } from "../environment"
 
+interface CapturedBounds {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+}
+interface CapturedImage {
+  readonly file: string
+  readonly sha256: string
+}
+
 const [label, workload = "normal", only] = process.argv.slice(2)
 if (!label || !/^[a-z0-9-]+$/.test(label) || (workload !== "normal" && workload !== "dense"))
   throw new Error("Usage: bun consumer-probe.tsx LABEL [normal|dense] [audio|midi|pattern]")
@@ -134,7 +145,7 @@ function census(node: unknown) {
   if (node !== null) visit(node)
   return { types, ids }
 }
-function bounds(id: string) {
+function bounds(id: string): CapturedBounds {
   const element = root.renderer.findByTestId(id)
   const box = element && root.renderer.getElementBounds(element.id)
   if (!box) throw new Error(`Missing ${id}`)
@@ -145,7 +156,7 @@ function settle() {
   root.renderer.dispatchNativeEvents()
   root.renderer.flush()
 }
-function screenshot(name: string) {
+function screenshot(name: string): CapturedImage {
   const filename = path.join(output, `${name}.png`)
   root.renderer.captureScreenshot(filename)
   return {
@@ -207,6 +218,10 @@ try {
     const firstNote = root.renderer.findByTestId(
       `midi-note-${workload === "dense" ? "dense-0" : "c-0"}`
     )
+    const lastPattern =
+      kind === "pattern"
+        ? root.renderer.findByTestId(`pattern-step-${workload === "dense" ? 1023 : 15}`)
+        : undefined
     const measuredBounds =
       kind === "midi"
         ? {
@@ -219,7 +234,7 @@ try {
           ? {
               strip: bounds("pattern-steps"),
               first: bounds("pattern-step-0"),
-              last: bounds(`pattern-step-${workload === "dense" ? 1023 : 15}`),
+              last: lastPattern ? root.renderer.getElementBounds(lastPattern.id) : null,
             }
           : null
     const initialImage = screenshot(`${kind}-initial`)
@@ -300,6 +315,36 @@ try {
       }
     }
     const finalImage = screenshot(`${kind}-final`)
+    let patternEnd: {
+      index: number
+      bounds: CapturedBounds
+      changed: number[]
+      retained: number
+      image: CapturedImage
+    } | null = null
+    if (kind === "pattern") {
+      const owner = root.renderer.findByTestId("pattern-steps")
+      if (!owner) throw new Error("Missing Pattern keyboard owner")
+      root.renderer.nativeSimulateKeystrokes(owner.id, "end")
+      root.renderer.flush()
+      const index = workload === "dense" ? 1023 : 15
+      const box = bounds(`pattern-step-${index}`)
+      const beforeSteps = readPatternSteps()
+      root.renderer.nativeSimulateClick(box.x + box.width / 2, box.y + box.height / 2)
+      const changed = readPatternSteps().flatMap((value, step) =>
+        value !== beforeSteps[step] ? [step] : []
+      )
+      if (changed.length !== 1 || changed[0] !== index)
+        throw new Error("Scrolled Pattern endpoint edited the wrong source step")
+      patternEnd = {
+        index,
+        bounds: box,
+        changed,
+        retained: root.renderer.getRetainedElementCount(),
+        image: screenshot("pattern-end"),
+      }
+      projectActions.undo()
+    }
     const edits = []
     if (kind === "midi") {
       const stem = root.renderer.findByTestId(
@@ -336,6 +381,7 @@ try {
       viewportImages,
       finalTree: census(root.renderer.toJSON()),
       finalImage,
+      patternEnd,
       actionAndFlushMs: summarize(timings.map(item => item.actionAndFlushMs)),
       additionalFlushMs: summarize(timings.map(item => item.additionalFlushMs)),
       byAction: Object.fromEntries(
@@ -353,10 +399,32 @@ try {
       timings,
     })
   }
+  let playbackAfterEdits = null
+  if (process.env.CLIP_EDIT_PLAYBACK_AFTER_EDITS === "1") {
+    const before = { ...useProjectState.getState().session.backend }
+    projectActions.togglePlay()
+    const accepted = await whenProjectBackendIdle()
+    const play = {
+      backend: { ...useProjectState.getState().session.backend },
+      playing: useProjectState.getState().session.playing,
+    }
+    if (play.playing) projectActions.togglePlay()
+    await whenProjectBackendIdle()
+    playbackAfterEdits = {
+      before,
+      accepted,
+      play,
+      stop: {
+        backend: { ...useProjectState.getState().session.backend },
+        playing: useProjectState.getState().session.playing,
+      },
+    }
+  }
   const result = {
     timestamp: new Date().toISOString(),
     label,
     workload,
+    playbackAfterEdits,
     reactMode: process.env.NODE_ENV ?? "development",
     inputProtocol: replayDoubleWheel
       ? "Legacy two-handler viewport replay; pixel parity only, not default performance gating"
