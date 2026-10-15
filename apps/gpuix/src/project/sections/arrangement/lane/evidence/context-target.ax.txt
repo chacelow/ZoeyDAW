@@ -1,0 +1,14 @@
+AX excerpts from the actual lane window during the 2026-10-15 06:57–07:02 UTC smoke, copied from the captured observe output.
+
+After selecting Pattern then right-clicking Audio:
+- window "zoeydaw lane verification dark en" [ref=e741] app=bun
+- group [ref=e745]: "12/12 projected cards · Track 001 Clip 01 start=1.0000 length=4.0000 · editorReq…"
+- menu [ref=e814]
+  - menuitem "Open Clip View" [ref=e815] (focused)
+  - menuitem "Rename" [ref=e816]
+  - menuitem "Delete Clip" [ref=e827]
+
+After the Rename menu command:
+- textfield "Rename" [ref=e832]: "Track 001 Clip 01" (focused)
+
+The menu header is visible in context-right-audio.png. The focused Audio field is visible in context-audio-rename.png. Physical Ctrl-left was not delivered due the recorded computer permission limitation; no observation for it is claimed.

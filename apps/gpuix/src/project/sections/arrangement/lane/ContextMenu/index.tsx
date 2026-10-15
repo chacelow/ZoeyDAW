@@ -54,10 +54,7 @@ export function LaneContextMenu({
     <ContextMenu open={open && target !== null} onOpenChange={setOpen}>
       <ContextMenuTrigger
         asChild
-        onMouseDown={event => {
-          if (event.button === 2 || event.isRightClick || event.modifiers?.ctrl)
-            setTarget(resolveTarget(event))
-        }}
+        onContextMenu={event => setTarget(resolveTarget(event))}
         onKeyDown={event => {
           const key = event.key?.toLowerCase()
           if (key !== "contextmenu" && !(key === "f10" && event.modifiers?.shift)) return

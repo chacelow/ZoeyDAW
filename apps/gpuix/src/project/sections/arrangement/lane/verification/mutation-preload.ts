@@ -57,6 +57,17 @@ export const mutationCases: Record<string, MutationCase> = {
     testName: "scrolls an already-visible unchanged Clip without rerendering its content",
     replacements: [["return previous.card", "return { ...previous.card }"]],
   },
+  "context-target": {
+    file: "ContextMenu/index.tsx",
+    testFile: "interactions/controller.test.tsx",
+    testName: "applies the native right click menu to its Clip rather than the previous selection",
+    replacements: [
+      [
+        "onContextMenu={event => setTarget(resolveTarget(event))}",
+        "onMouseDown={event => { if (event.button === 2 || event.isRightClick || event.modifiers?.ctrl) setTarget(resolveTarget(event)) }}",
+      ],
+    ],
+  },
 }
 
 const id = process.env.LANE_MUTATION
