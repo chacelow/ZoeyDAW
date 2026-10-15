@@ -75,14 +75,14 @@ export function valueAfterDrag({
 export interface ValueAfterWheelInput {
   currentValue: number
   deltaY: number
-  /** `event.precise`: true for trackpad (pixel-accurate), false for a notched wheel. */
+  /** GPUI `event.precise`: true for pixel deltas, false for line deltas. */
   precise: boolean
   step: number
   min: number
   max: number
 }
 
-/** Wheel mapping: scrolling down (`deltaY` > 0) decreases the value. */
+/** GPUI wheel mapping: positive `deltaY` scrolls toward earlier content and increases the value. */
 export function valueAfterWheel({
   currentValue,
   deltaY,
@@ -93,5 +93,5 @@ export function valueAfterWheel({
 }: ValueAfterWheelInput): number {
   const pixels = precise ? deltaY : deltaY * WHEEL_LINE_PIXELS
   const stepsTravelled = pixels / WHEEL_PIXELS_PER_STEP
-  return quantize(currentValue - stepsTravelled * step, step, min, max)
+  return quantize(currentValue + stepsTravelled * step, step, min, max)
 }

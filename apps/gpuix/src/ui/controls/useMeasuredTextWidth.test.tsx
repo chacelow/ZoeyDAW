@@ -4,7 +4,7 @@ import { readOuterBounds, useMeasuredTextWidth } from "./useMeasuredTextWidth"
 
 const samples = ["20", "300", "120.25"]
 
-test("sample layout is measured once, cached by font and strings, and never follows live digits", async () => {
+test("sample layout is measured once, cached by font and strings, and never follows live digits", () => {
   const root = createTestRoot({ width: 480, height: 240 })
   const observations: number[] = []
   let finalWidth = 0
@@ -39,7 +39,7 @@ test("sample layout is measured once, cached by font and strings, and never foll
   }
   root.render(<Harness value="20" />)
   root.renderer.flush()
-  await Bun.sleep(35)
+  root.renderer.dispatchNativeEvents()
   root.renderer.flush()
   expect(ready).toBe(true)
   for (const sample of samples) {

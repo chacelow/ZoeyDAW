@@ -51,7 +51,7 @@ function press(root: TestRoot, testId: string, key: string) {
 const triggerStyle = { width: 120, height: 24 }
 
 describe("native popovers", () => {
-  test("Button asChild emits one open change for each Enter/Space activation", () => {
+  test("Button asChild emits one change per Enter and ignores Space", () => {
     const changes: boolean[] = []
     const root = mount(
       <Popover
@@ -69,6 +69,9 @@ describe("native popovers", () => {
     expect(changes).toEqual([true])
     expect(root.renderer.findByTestId("content")).toBeDefined()
     press(root, "trigger", "space")
+    expect(changes).toEqual([true])
+    expect(root.renderer.findByTestId("content")).toBeDefined()
+    press(root, "trigger", "enter")
     expect(changes).toEqual([true, false])
     expect(root.renderer.findByTestId("content")).toBeUndefined()
     click(root, "trigger")
@@ -122,7 +125,7 @@ describe("native popovers", () => {
     expect(changes).toEqual([true, false])
   })
 
-  test("Enter/Space toggle and Escape dismisses with focus restored to the trigger", () => {
+  test("Enter toggles, Space is reserved, and Escape restores trigger focus", () => {
     const root = mount(
       <Popover>
         <PopoverTrigger testId="trigger" style={triggerStyle}>
@@ -137,8 +140,12 @@ describe("native popovers", () => {
     expect(root.renderer.findByTestId("content")).toBeUndefined()
     expect(root.renderer.getFocusedElementId()).toBe(element(root, "trigger").id)
     press(root, "trigger", "space")
+    expect(root.renderer.findByTestId("content")).toBeUndefined()
+    press(root, "trigger", "enter")
     expect(root.renderer.findByTestId("content")).toBeDefined()
     press(root, "trigger", "space")
+    expect(root.renderer.findByTestId("content")).toBeDefined()
+    press(root, "trigger", "enter")
     expect(root.renderer.findByTestId("content")).toBeUndefined()
   })
 

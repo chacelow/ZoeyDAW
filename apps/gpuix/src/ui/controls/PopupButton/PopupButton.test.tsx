@@ -52,10 +52,49 @@ test("embedded numeric drag and repeated wheel adjustment keep popup open until 
   expect(root.renderer.findByTestId("popup-content")).toBeDefined()
   root.renderer.nativeSimulateScrollWheel(x, y, 0, 16)
   const afterFirst = latest
+  expect(afterFirst).toBe(131)
   root.renderer.nativeSimulateScrollWheel(x, y, 0, 16)
-  expect(latest).toBeLessThan(afterFirst)
+  expect(latest).toBeGreaterThan(afterFirst)
+  expect(latest).toBe(132)
   expect(root.renderer.findByTestId("popup-content")).toBeDefined()
   root.renderer.nativeSimulateClick(440, 280)
   expect(root.renderer.findByTestId("popup-content")).toBeUndefined()
   root.unmount()
+})
+
+test("toolbar Space leaves popup state unchanged and reaches the window", () => {
+  const keys: string[] = []
+  const prevented: boolean[] = []
+  const root = createTestRoot({
+    width: 480,
+    height: 320,
+    onKeyDown: event => {
+      keys.push(event.key ?? "")
+      prevented.push(event.defaultPrevented)
+    },
+  })
+  try {
+    root.render(
+      <ThemeProvider>
+        <PopupButton testId="popup" label="Values" trigger="Values">
+          <text>Popup values</text>
+        </PopupButton>
+      </ThemeProvider>
+    )
+    const trigger = root.renderer.findByTestId("popup")!
+    root.renderer.nativeSimulateKeystrokes(trigger.id, "space")
+    expect(root.renderer.findByTestId("popup-content")).toBeUndefined()
+    expect(keys).toEqual(["space"])
+    expect(prevented).toEqual([false])
+    root.renderer.nativeSimulateKeystrokes(trigger.id, "enter")
+    expect(root.renderer.findByTestId("popup-content")).toBeDefined()
+    keys.length = 0
+    prevented.length = 0
+    root.renderer.nativeSimulateKeystrokes(trigger.id, "space")
+    expect(root.renderer.findByTestId("popup-content")).toBeDefined()
+    expect(keys).toEqual(["space"])
+    expect(prevented).toEqual([false])
+  } finally {
+    root.unmount()
+  }
 })

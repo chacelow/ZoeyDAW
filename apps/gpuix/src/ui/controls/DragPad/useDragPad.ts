@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { EventPayload } from "@gpuix/react"
+import type { EventPayload, KeyEvent } from "@gpuix/react"
 import { CLICK_MOVE_THRESHOLD_PX } from "./constants"
 import { useControlEnvironment } from "../ControlEnvironment"
+import { stopTextShortcutPropagation } from "../keyboard"
 import type { CursorLockPort, ScreenPoint } from "./cursor-port"
 import { quantize, valueAfterDrag, valueAfterWheel } from "./numberModel"
 
@@ -238,14 +239,15 @@ export function useDragPad(options: UseDragPadOptions) {
   )
 
   const handleEditKeyDown = useCallback(
-    (event: EventPayload) => {
+    (event: KeyEvent) => {
+      if (!disabled) stopTextShortcutPropagation(event)
       if (event.key !== "escape" || !editingRef.current) return
       editingRef.current = false
       commitNumber(originalValueRef.current)
       callbacks.current.onGestureCancel?.()
       setMode("idle")
     },
-    [commitNumber]
+    [commitNumber, disabled]
   )
 
   return {
