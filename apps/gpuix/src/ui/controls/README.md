@@ -72,7 +72,7 @@ Rust 源码未改。Cargo 检查证明基线兼容，不代替真实光标交互
 | 代码 | 发布版缺口与实测 | 删除或替换条件 |
 | --- | --- | --- |
 | `readOuterBounds`，与测量 hook 同文件 | 0.10 的 origin 随 padding 与轴对齐偏移，size 只扣 border。100×80、border 1、padding 8，start 原点 9、center 原点 1、end 原点 −7。全部调用经单一函数修正 | 上游 `.changeset/bounds-include-padding.md` 已记录 real box 修复。升级到含该修复的版本后整体删除 shim，从唯一边界切回原生 API |
-| `ControlEnvironment` focus sampler | 测试 renderer 的 focus 操作改变 `getFocusedElementId`，没有触发声明的 onFocus/onBlur。每个应用作用域只有一个 32ms sampler，首个订阅者启动，最后一个取消停止，只通知变化；测试断言两个控件共用同一个 timer | 发布版稳定发送元素 focus/blur 事件后删除。它不读取应用激活状态，不依赖 A2 的 50ms activation sampler |
+| `ControlEnvironment` focus sampler | 测试 renderer 的 focus 操作改变 `getFocusedElementId`，没有触发声明的 onFocus/onBlur。每个应用作用域只有一个 32ms sampler，首个订阅者启动，最后一个取消停止，只通知变化；测试断言两个控件共用同一个 timer | 发布版稳定发送元素 focus/blur 事件后删除。它不读取窗口激活状态；窗口激活走原生 `onWindowActiveChange` 事件 |
 | `useMeasuredTextWidth` | 没有公开 `measureText`。不可见真实文本节点在布局后读取宽度，按字体与样本串缓存。没有新增字体库或改 native 公共契约 | 上游 `measureText` 或可靠 onLayout 是 issue/PR 候选，本轮没有提交远程 issue |
 | `useFloatingCenterOffset` | 0.10 center 把浮层末端放到 trigger 中点。共享测量补偿半个 cross-axis 尺寸，并在 minWidth/minHeight 更新后重新采样 | 上游 center 定位修复后删除补偿。12 个 side/align 和 intrinsic-size 回归保持严格几何边界，Select 允许原生像素对齐产生的 0.5pt 差值 |
 

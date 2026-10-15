@@ -3,9 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import nodePath from "node:path"
 import { pathToFileURL } from "node:url"
-import { apply, dispose, musicalPeakReader, openSession, sourceInfo } from "./engine"
-import type { BackendRequest } from "@/project/model/backend"
-import type { PeakReader } from "./engine"
+import { apply, dispose, openSession, readPeaksAtBars, sourceInfo } from "./engine"
+import type { BackendRequest, PeakReader } from "@/project/model/backend"
 
 // 120 BPM in 4/4 is two seconds per bar: the 44.1 kHz source is exactly one bar.
 const SOURCE_RATE = 44_100
@@ -109,7 +108,7 @@ function request(sourceUri: string): BackendRequest {
   }
 }
 
-describe("native readPeaksAtBars through musicalPeakReader", () => {
+describe("native readPeaksAtBars", () => {
   let session: number
   let directory: string
   let read: PeakReader
@@ -119,7 +118,8 @@ describe("native readPeaksAtBars through musicalPeakReader", () => {
     const path = nodePath.join(directory, "hump-44k.wav")
     writeFileSync(path, wav())
     session = openSession()
-    read = musicalPeakReader(session)
+    read = (sourceId, startBar, endBar, pixels, contentOffsetBars) =>
+      readPeaksAtBars(session, sourceId, startBar, endBar, pixels, contentOffsetBars)
     expect(read("hump", 1, 2, PIXELS, 0)).toEqual(new Float32Array(PIXELS * 4))
     const result = JSON.parse(apply(session, JSON.stringify(request(pathToFileURL(path).href))))
     expect(result.kind).toBe("accepted")

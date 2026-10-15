@@ -84,6 +84,8 @@ function controlled(
         listeners.delete(listener)
       }
     },
+    readPeaks: (sourceId, _startBar, _endBar, pixels) =>
+      new Float32Array(pixels * 4).fill(Number(sourceId.length)),
     send(value) {
       for (const listener of listeners) {
         listener(value)
@@ -327,6 +329,28 @@ describe("backend connection", () => {
     expect(frames.map(value => value.clock.bar)).toEqual([4])
     stop()
     connection.dispose()
+  })
+
+  it("reads peaks from the currently open backend only", () => {
+    let calls = 0
+    const first = controlled(accepted)
+    const second = controlled(accepted)
+    second.readPeaks = (_sourceId, _startBar, _endBar, pixels) =>
+      new Float32Array(pixels * 4).fill(7)
+    const connection = createBackendConnection({
+      factory: () => (++calls === 1 ? first : second),
+      onAccepted: () => {},
+      onRejected: () => {},
+      onStatus: () => {},
+      onTelemetry: () => {},
+    })
+    expect(connection.readPeaks("kick", 1, 2, 2, 0)).toEqual(new Float32Array(0))
+    connection.open("old", state())
+    expect(connection.readPeaks("kick", 1, 2, 2, 0)).toEqual(new Float32Array(8).fill(4))
+    connection.open("new", state())
+    expect(connection.readPeaks("kick", 1, 2, 2, 0)).toEqual(new Float32Array(8).fill(7))
+    connection.dispose()
+    expect(connection.readPeaks("kick", 1, 2, 2, 0)).toEqual(new Float32Array(0))
   })
 
   it("buffers apply-before-ack telemetry and extrapolates no more than 250 ms", async () => {

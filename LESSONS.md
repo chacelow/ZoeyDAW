@@ -85,6 +85,8 @@
 - 现象：C2 发完 `worker_done` 后，协调者的退回意见发到它的 dispatch，报错「Dispatch is completed; its worker will never read that mailbox」。`--retry-of` 只能接已失败的 task，不能用于返工。
 - 对：在**同一个 worktree** 上用新的 `worker-start --spec ... --worktree path:<dir>` 派一个返工任务，规格写明已有提交、review 结论与必修项；旧 dispatch 用 `worker-release` 释放终端。
 - 预防：common 规格要求先自审（扫描 + 独立审查子代理）再 `worker_done`；越界改动必须先 ask。C2 这次越界改了 `crates/engine`、在 TS 里重写了 bar→frame 公式、并让每个素材多存一份 PCM——这三点自审都应该发现。
+- 回答 worker 的 `question` 用 `orca orchestration reply --id <msg_id>`，不要另发 `send --type status`。`question` 是阻塞调用，worker 只等这条消息的回复；23:40 批准 lane 桌面时段的 status 消息没有被读到，15 分钟时段白白过去。限时授权（桌面时段）以回复送达时刻起算，过期就重发。
+- 主干把测试从 `timeline/` 移到 `core/rulers/` 后，timeline 分支 merge 主干时，Git 的目录重命名推断把整个 `timeline/` 判成已移到 `core/rulers/`，产生 25 个文件的 location 冲突。切片 worktree 共用同一个仓库配置，已设置 `git config merge.directoryRenames false`。协调者在主干之间移动文件后，通知受影响切片：冲突要按 HEAD 和 MERGE_HEAD 逐个核对，不 abort，也不丢代码。
 
 ## gpuix 迁移：对照 Live 量尺寸要量完整组件，并注明单位与显示器
 
@@ -241,10 +243,12 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 
 - `onLayout`：主干有（`.changeset/on-layout.md`），0.10.0 没有。绕行：`getElementBounds` 采样，收敛在唯一的测量 hook。
 - `getElementBounds` 含 padding 的修复：主干有（`bounds-include-padding`）。绕行：`readOuterBounds`，唯一入口。
-- `onFocus/onBlur` 在 `focusElement`/窗口失活时不触发：绕行为应用作用域单一采样器；窗口失活信号走 Rust `isApplicationActive`。
+- `onFocus/onBlur` 在 `focusElement` 时不触发：元素焦点绕行为应用作用域单一采样器。窗口激活已由 F1 补丁 `window-active-change.patch` 提供原生事件 `renderer.onWindowActiveChange`，经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧的 50ms 激活采样已删除，不得再用定时器轮询激活。
 - 关闭拦截、`hideWindow`、托盘：主干也没有；GPUI fork 里 `on_window_should_close` 已存在，只缺 gpuix 注册与 JS 暴露。当前 `WindowCloseGuard.supported=false`，不得用 `process.exit()` 冒充。
 - `measureText`：没有。绕行：挂载不可见样本节点读取实测宽度。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
+- 错：合入改动 `scripts/gpuix-main/config.json` 补丁序列的分支后，直接在主干跑 tsc 和 `bun test`。共享 vendor 仍是旧补丁的产物，主干一度显示 tsc 8 个错误、25 个测试失败，全部是假失败。
+- 对：先跑 `node scripts/gpuix-main/check.mjs`；它报 “Vendor must contain exactly the checked-in ordered patch series” 时，先通知各 worker 暂停渲染器相关构建与整套测试，再跑 `bash scripts/gpuix-main/build.sh`，check 通过后才把门禁结果当真，最后通知各 worker merge 主干。
 
 ## gpuix 迁移：依赖与版本核实
 

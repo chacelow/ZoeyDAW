@@ -17,6 +17,7 @@ export const {
   configureProjectBackend,
   startProjectRuntime,
   readProjectTelemetry,
+  readProjectPeaks,
   readTransportBar,
   whenProjectBackendIdle,
   projectEpoch,

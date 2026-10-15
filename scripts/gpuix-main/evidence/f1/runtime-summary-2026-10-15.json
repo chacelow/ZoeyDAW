@@ -1,0 +1,543 @@
+{
+  "display": {
+    "command": "system_profiler SPDisplaysDataType -json",
+    "displayIdHex": "27",
+    "computerDisplayIdDecimal": "39",
+    "main": true,
+    "resolution": "1920 x 1080 @ 60.00Hz",
+    "refreshHz": 60.0
+  },
+  "foreground": {
+    "durationMs": 75724.49062499999,
+    "timestampHz": 60.00116984424807,
+    "monotonic": true,
+    "callbackDelta": 4506,
+    "drawDelta": 4506,
+    "lastDrawStats": {
+      "frames": 8667,
+      "samples": 1000,
+      "currentMs": 0.3939580023288727,
+      "p90Ms": 0.4703750014305115,
+      "p99Ms": 0.6087089776992798,
+      "maxMs": 0.7985829710960388
+    }
+  },
+  "inactive": {
+    "firstMs": 496.2406670000055,
+    "lastMs": 27516.80054200001,
+    "framesAtBothEnds": 8698,
+    "callbacksAtBothEnds": 0
+  },
+  "deferredGpuiQuery": {
+    "observedFrames": 6,
+    "safe": true
+  },
+  "cpuInitialForeground": {
+    "wallSeconds": 60.032,
+    "cpuSeconds": 10.63,
+    "averageOneCorePercent": 17.707,
+    "psPercentMin": 13.7,
+    "psPercentMax": 22.6
+  },
+  "cpuOptimizedNotForegroundPinned": {
+    "wallSeconds": 60.04,
+    "cpuSeconds": 6.97,
+    "averageOneCorePercent": 11.609,
+    "psPercentMin": 9.1,
+    "psPercentMax": 14.7
+  },
+  "cpuComparisonLimit": "Second interval did not keep the window foreground; CPU rows are not an equal-condition performance comparison.",
+  "hiddenWindowLimit": "Occlusion/minimize were observed before removing redundant refresh. Final build hidden-window behavior not re-run during fixed desktop slot.",
+  "firstProbeMinimizedAx": {
+    "AXMinimized": true
+  },
+  "firstProbeHiddenTail": [
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 721,
+      "elapsed": 25858.586458000005,
+      "hz": 27.906581400949516,
+      "monotonic": true,
+      "stats": {
+        "frames": 15438,
+        "samples": 1000,
+        "currentMs": 0.43662500381469727,
+        "p90Ms": 0.49312499165534973,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 27217.719083000004,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 28218.13079200001,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 29219.025000000023,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 30219.11716700002,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 31219.392625000008,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 32219.499417000014,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 33219.64383300001,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 34219.71354200001,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 35220.06562500002,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 36220.519542000024,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 37220.97958300001,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 38221.070917000005,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 39221.22916700001,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 40221.997417000006,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "minimized",
+      "active": true,
+      "callbacks": 742,
+      "elapsed": 41222.504667,
+      "hz": 27.253874878738504,
+      "monotonic": true,
+      "stats": {
+        "frames": 15480,
+        "samples": 1000,
+        "currentMs": 0.2190829962491989,
+        "p90Ms": 0.5010420083999634,
+        "p99Ms": 0.69679194688797,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 540.8269589999982,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15481,
+        "samples": 1000,
+        "currentMs": 0.782791018486023,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 1541.2798339999863,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 2541.310958999995,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 3541.909249999997,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 4542.018791999988,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 5542.424624999985,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 6542.710833999998,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 7542.899042000005,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 8543.332750000001,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 9543.34604199999,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 10543.427334000007,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 11543.655333999981,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    },
+    {
+      "phase": "inactive",
+      "active": false,
+      "callbacks": 0,
+      "elapsed": 12544.18075,
+      "hz": 0,
+      "monotonic": true,
+      "stats": {
+        "frames": 15482,
+        "samples": 1000,
+        "currentMs": 0.18379199504852295,
+        "p90Ms": 0.5016250014305115,
+        "p99Ms": 0.7129999995231628,
+        "maxMs": 0.9962499737739563
+      }
+    }
+  ],
+  "windowBounds": {
+    "coveredFrame": {
+      "x": 750,
+      "y": 465,
+      "width": 420,
+      "height": 178
+    },
+    "occlusionCover": {
+      "x": 360,
+      "y": 140,
+      "width": 1200,
+      "height": 828
+    }
+  },
+  "captureLimit": "Full raw head capture stops at reader limit and may end mid-record; separate tail txt preserves the paused interval.",
+  "nativeTestsFinal": 271,
+  "publicModeProbeCases": 14,
+  "publicModeFinalEqualsBaseline": true,
+  "publicModeWideningMutation": {
+    "passed": 1,
+    "failed": 2,
+    "filtered": 268
+  }
+}
