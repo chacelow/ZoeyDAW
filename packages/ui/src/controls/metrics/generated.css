@@ -72,6 +72,7 @@
   --project-audio-ruler-height: 39px;
   --project-traffic-light-frame-height: 14px;
   --project-status-height: 22.68px;
+  --project-dropdown-min-width: 100.8px;
 }
 
 .project-transport {

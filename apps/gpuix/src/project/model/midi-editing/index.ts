@@ -10,4 +10,5 @@ export {
   setNoteVelocity,
   drawCells,
   eraseCells,
+  quantizeNotes,
 } from "./operations"

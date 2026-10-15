@@ -14,12 +14,17 @@ export function midiInsertionBeat({
   sourceOffsetBeats: number
   totalBeats: number
 }): number {
-  const lastGridCell = Math.max(0, Math.ceil(totalBeats / NOTE_GRID_BEATS) - 1)
-  const gridCell = Math.max(
-    0,
-    Math.min(lastGridCell, Math.round((horizontalRatio * totalBeats) / NOTE_GRID_BEATS))
+  const firstGridCell = Math.max(0, Math.floor(sourceOffsetBeats / NOTE_GRID_BEATS))
+  const lastGridCell = Math.max(
+    firstGridCell,
+    Math.ceil((sourceOffsetBeats + totalBeats) / NOTE_GRID_BEATS) - 1
   )
-  return sourceOffsetBeats + gridCell * NOTE_GRID_BEATS
+  const target = sourceOffsetBeats + horizontalRatio * totalBeats
+  const gridCell = Math.max(
+    firstGridCell,
+    Math.min(lastGridCell, Math.round(target / NOTE_GRID_BEATS))
+  )
+  return gridCell * NOTE_GRID_BEATS
 }
 
 /**

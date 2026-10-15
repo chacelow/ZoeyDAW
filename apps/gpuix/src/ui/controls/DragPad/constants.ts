@@ -6,14 +6,14 @@
  * sensitivity (e.g. `(max - min) * factor`) for controls with a small
  * range: that reintroduces the "some controls drag faster than others"
  * inconsistency this control is built to avoid. A consumer who wants a
- * coarser or finer control changes `step`, not the shared pixel scale.
+ * coarser or finer pointer motion changes `dragStep`, not the shared pixel scale.
  */
 export const DRAG_PIXELS_PER_STEP = 4
 
 /** Pointer travel (px) below which a press is a click, not a drag. */
 export const CLICK_MOVE_THRESHOLD_PX = 3
 
-/** Pixel-equivalent wheel delta that advances the value by one `step`. */
+/** Pixel-equivalent wheel delta that advances the value by one `dragStep`. */
 export const WHEEL_PIXELS_PER_STEP = 16
 
 /** `deltaY` unit when `event.precise` is false (line-based mouse wheel). */

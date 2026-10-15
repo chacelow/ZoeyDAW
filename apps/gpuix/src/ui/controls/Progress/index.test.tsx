@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Progress } from "./index"
 
@@ -27,9 +27,7 @@ test("progress clamps values and invalid maxima into a finite track width", () =
     root.renderer.flush()
     const indicator = root.renderer.findByTestId("progress-indicator")
     if (!indicator) throw new Error("Progress indicator missing")
-    expect(
-      readOuterBounds(root.renderer, root.renderer.getElement(indicator.id))?.width
-    ).toBeCloseTo(item.width, 0)
+    expect(root.renderer.getElementBounds(indicator.id)?.width).toBeCloseTo(item.width, 0)
   }
   root.unmount()
 })

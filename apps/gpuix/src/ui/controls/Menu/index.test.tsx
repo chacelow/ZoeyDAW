@@ -5,7 +5,7 @@ import type { TestRoot } from "@gpuix/react/testing"
 import type { ReactNode } from "react"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Button } from "../Button"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import {
   ContextMenu,
   ContextMenuContent,
@@ -49,7 +49,7 @@ function element(root: TestRoot, testId: string) {
 
 function bounds(root: TestRoot, testId: string) {
   const node = element(root, testId)
-  const box = readOuterBounds(root.renderer, root.renderer.getElement(node.id))
+  const box = root.renderer.getElementBounds(node.id)
   if (!box) throw new Error(`Unpainted ${testId}`)
   return box
 }
@@ -92,6 +92,9 @@ describe("native command menus", () => {
     press(root, "command", "escape")
     expect(changes).toEqual([true, false])
     press(root, "trigger", "space")
+    expect(changes).toEqual([true, false])
+    expect(root.renderer.findByTestId("content")).toBeUndefined()
+    press(root, "trigger", "enter")
     expect(changes).toEqual([true, false, true])
     expect(root.renderer.findByTestId("content")).toBeDefined()
   })
@@ -422,7 +425,8 @@ describe("native command menus", () => {
     expect(box.y).toBeLessThanOrEqual(94)
     root.renderer.nativeSimulateMouseDown(610, 370)
     root.renderer.nativeSimulateMouseUp(610, 370)
-    root.renderer.nativeSimulateClick(100, 60, 0, "ctrl")
+    // macOS converts Ctrl+left to Right in GPUI's NSEvent path; F2 real-window proof: scripts/gpuix-main/evidence/f2.
+    root.renderer.nativeSimulateClick(100, 60, 2, "ctrl")
     expect(root.renderer.findByTestId("content")).toBeDefined()
   })
 
@@ -462,13 +466,13 @@ describe("native command menus", () => {
     expect(latestHeight).toBe(53)
     expect(root.renderer.findByTestId("content")).toBeUndefined()
     expect(root.renderer.getFocusedElementId()).toBe(child.id)
-    for (const key of ["down", "left", "right", "enter", "space"]) {
+    for (const key of ["down", "left", "right", "enter", "space", "escape"]) {
       root.renderer.simulateKeystrokes(key)
       expect(root.renderer.findByTestId("content")).toBeUndefined()
       expect(root.renderer.getFocusedElementId()).toBe(child.id)
     }
     expect(latestHeight).toBe(70)
-    expect(childKeys).toEqual(["up", "down", "left", "right", "enter", "space"])
+    expect(childKeys).toEqual(["up", "down", "left", "right", "enter", "space", "escape"])
     root.renderer.nativeSimulateKeystrokes(element(root, "trigger").id, "shift-f10")
     expect(root.renderer.findByTestId("content")).toBeDefined()
     root.renderer.simulateKeystrokes("escape")

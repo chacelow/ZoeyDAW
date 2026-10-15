@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import type { NativeRenderer, StyleDesc } from "@gpuix/react"
+import type { StyleDesc } from "@gpuix/react"
 
 const widths = new Map<string, number>()
 
@@ -11,13 +11,6 @@ function estimateTextWidth(samples: readonly string[], fontSize: number) {
     widest = Math.max(widest, characters)
   }
   return Math.ceil(widest * fontSize * 0.62)
-}
-
-export function readOuterBounds(
-  renderer: NativeRenderer | null | undefined,
-  instance: { readonly id: number } | null | undefined
-) {
-  return instance ? (renderer?.getElementBounds?.(instance.id) ?? null) : null
 }
 
 export function useMeasuredTextWidth(

@@ -1,4 +1,3 @@
-import { readOuterBounds } from "../useMeasuredTextWidth"
 import type { EventPayload, NativeRenderer, PublicInstance } from "@gpuix/react"
 
 export interface SelectionEntry {
@@ -28,8 +27,8 @@ export function navigateSelection({
   if (!backward && !forward && key !== "home" && key !== "end") return
   const enabled = [...entries.values()].filter(entry => !entry.disabled)
   enabled.sort((a, b) => {
-    const first = readOuterBounds(renderer, a.node)
-    const second = readOuterBounds(renderer, b.node)
+    const first = renderer?.getElementBounds?.(a.node.id)
+    const second = renderer?.getElementBounds?.(b.node.id)
     if (!first || !second) return 0
     return orientation === "vertical"
       ? first.y - second.y || first.x - second.x

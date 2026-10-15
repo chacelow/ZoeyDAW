@@ -2,7 +2,7 @@ import { useRef, useState } from "react"
 import { motion, useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
-import { isActivationKey, navigateSelection } from "../RadioGroup/keyboard"
+import { navigateSelection } from "../RadioGroup/keyboard"
 import type { Props, StyleDesc } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { SelectionEntry } from "../RadioGroup/keyboard"
@@ -152,7 +152,7 @@ export function MotionTabs({
             }}
             onKeyDown={event => {
               if (option.disabled) return
-              if (isActivationKey(event)) select(option.key)
+              if (event.key === "enter") select(option.key)
               else
                 navigateSelection({
                   event,

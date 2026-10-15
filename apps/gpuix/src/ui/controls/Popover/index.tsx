@@ -14,7 +14,6 @@ import type { FloatingContentProps } from "@gpuix/react/floating"
 import type { RefObject } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { readOuterBounds } from "../useMeasuredTextWidth"
 
 export interface PopoverProps extends Props {
   open?: boolean
@@ -214,7 +213,7 @@ export function PopoverContent({
       style={surfaceStyle}
       onMouseDownOutside={event => {
         const trigger = popover.trigger.current
-        const bounds = trigger ? readOuterBounds(renderer, trigger) : null
+        const bounds = trigger ? renderer?.getElementBounds?.(trigger.id) : null
         if (
           bounds &&
           event.x !== undefined &&
