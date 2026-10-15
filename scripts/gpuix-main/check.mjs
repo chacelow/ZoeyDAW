@@ -23,6 +23,8 @@ const outputs = [
   `packages/native/gpuix-native.${process.platform}-${process.arch}.node`,
   "packages/native/dist/host.js",
   "packages/native/dist/host.d.ts",
+  "packages/native/dist/mutations.js",
+  "packages/native/dist/mutations.d.ts",
   "packages/native/dist/testing.js",
   "packages/react/dist/index.js",
   "packages/react/dist/index.d.ts",
