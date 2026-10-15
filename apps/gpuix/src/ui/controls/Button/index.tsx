@@ -28,6 +28,8 @@ export function Button({
   iconOnly = false,
   variant = "default",
   size = "default",
+  role = "button",
+  tabIndex = 0,
   onActiveChange,
   icon,
   children,
@@ -78,8 +80,8 @@ export function Button({
     <div
       {...props}
       ref={ref}
-      role="button"
-      tabIndex={0}
+      role={role}
+      tabIndex={tabIndex}
       aria-disabled={disabled}
       aria-pressed={onActiveChange ? active : undefined}
       aria-label={onActiveChange && name ? `${name} (${active ? "on" : "off"})` : name}

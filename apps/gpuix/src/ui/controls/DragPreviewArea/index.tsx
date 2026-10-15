@@ -50,6 +50,8 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
     onDragStart,
     onDragEnd,
     style,
+    role = "button",
+    tabIndex = 0,
     onMouseDown,
     onMouseMove,
     onMouseUp,
@@ -159,17 +161,13 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
     ? props.items
     : [{ key: "source", data: props.data, children: props.children }]
   return (
-    <div
-      {...native}
-      role={native.role ?? "group"}
-      style={sx({ display: "flex", flexDirection: "column" }, style)}
-    >
+    <div {...native} role="group" style={sx({ display: "flex", flexDirection: "column" }, style)}>
       {items ? children : null}
       {sources.map(source => (
         <div
           key={source.key}
-          role="button"
-          tabIndex={0}
+          role={role}
+          tabIndex={tabIndex}
           aria-label={source.label}
           aria-disabled={disabled || !!source.disabled}
           testId={`drag-source-${source.key}`}
