@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sv, sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
@@ -90,7 +90,10 @@ export function NumericPad({
   const width = Math.ceil(
     measurement.width + (hideIcon ? 0 : iconSize + iconGap) + trackPad * 2 + 2
   )
-  const innerWidth = width - 2
+  const [layoutWidth, setLayoutWidth] = useState<number>()
+  const handleLayout = useCallback<NonNullable<Props["onLayout"]>>(event => {
+    if (event.width !== undefined) setLayoutWidth(event.width)
+  }, [])
   const shell = sx(
     controlChrome(
       theme,
@@ -108,6 +111,9 @@ export function NumericPad({
     },
     style
   )
+  const borderLeft = shell.borderLeftWidth ?? shell.borderWidth ?? 0
+  const borderRight = shell.borderRightWidth ?? shell.borderWidth ?? 0
+  const innerWidth = Math.max(0, (layoutWidth ?? width) - borderLeft - borderRight)
   const normalized = max === min ? 0 : Math.max(0, Math.min(1, (value - min) / (max - min)))
   const bipolar =
     max === min ? 0 : Math.max(-1, Math.min(1, value / Math.max(Math.abs(min), Math.abs(max))))
@@ -126,7 +132,8 @@ export function NumericPad({
         bar: { left: 0, width: normalized * innerWidth },
         bipolar: {
           left: bipolar >= 0 ? innerWidth / 2 : ((1 + bipolar) * innerWidth) / 2,
-          width: (Math.abs(bipolar) * innerWidth) / 2,
+          right: bipolar >= 0 ? ((1 - bipolar) * innerWidth) / 2 : innerWidth / 2,
+          width: bipolar === 0 ? 0 : undefined,
         },
       },
     },
@@ -143,9 +150,10 @@ export function NumericPad({
       {displayVariant === "bipolar" ? (
         <div
           aria-hidden="true"
+          testId={testId ? `${testId}-center` : undefined}
           style={{
             position: "absolute",
-            left: innerWidth / 2,
+            left: (innerWidth - 1) / 2,
             top: 2,
             bottom: 2,
             width: 1,
@@ -213,6 +221,7 @@ export function NumericPad({
       <div
         testId={testId}
         style={shell}
+        onLayout={handleLayout}
         onMouseEnter={info.onMouseEnter}
         onMouseLeave={info.onMouseLeave}
       >
@@ -228,6 +237,7 @@ export function NumericPad({
       aria-disabled={disabled}
       tabIndex={0}
       style={shell}
+      onLayout={handleLayout}
       onMouseDown={pad.handleMouseDown}
       onMouseMove={pad.handleMouseMove}
       onMouseUp={pad.handleMouseUp}

@@ -50,6 +50,79 @@ for (const Component of [DragPadBar, DragPadBipolar]) {
   })
 }
 
+for (const Component of [DragPadBar, DragPadBipolar]) {
+  for (const parentWidth of [50, 33]) {
+    for (const value of Component === DragPadBipolar ? [1, 0] : [1]) {
+      test(`${Component.name} value ${value} uses actual ${parentWidth}px shell width before and during editing`, () => {
+        const root = createTestRoot({ width: 300, height: 160 })
+        const render = (width: number) => {
+          root.render(
+            <ThemeProvider>
+              <div style={{ width }}>
+                <Component
+                  testId="stretched"
+                  label="Stretched value"
+                  value={value}
+                  onChange={() => {}}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  hideIcon
+                  style={{ width: "100%" }}
+                />
+              </div>
+            </ThemeProvider>
+          )
+        }
+        const settleLayout = () => {
+          for (let pass = 0; pass < 3; pass++) {
+            root.renderer.flush()
+            root.renderer.dispatchNativeEvents()
+          }
+          root.renderer.flush()
+        }
+        const assertGeometry = (width: number) => {
+          settleLayout()
+          const shell = root.renderer.findByTestId("stretched")!
+          const bounds = readOuterBounds(root.renderer, shell)!
+          const fillNode = root.renderer.findByTestId("stretched-fill")!
+          const fill = readOuterBounds(root.renderer, fillNode)!
+          expect(bounds.width).toBe(width)
+          if (value === 1) {
+            expect(
+              Math.abs(fill.x + fill.width - (bounds.x + bounds.width - 1))
+            ).toBeLessThanOrEqual(0.5)
+            if (Component === DragPadBar) {
+              expect(Math.abs(fill.x - (bounds.x + 1))).toBeLessThanOrEqual(0.5)
+            }
+          } else {
+            expect(fill.width).toBe(0)
+          }
+          if (Component === DragPadBipolar) {
+            const center = root.renderer.findByTestId("stretched-center")!
+            const line = readOuterBounds(root.renderer, center)!
+            expect(
+              Math.abs(line.x + line.width / 2 - (bounds.x + bounds.width / 2))
+            ).toBeLessThanOrEqual(0.5)
+          }
+          return bounds
+        }
+        render(parentWidth)
+        const bounds = assertGeometry(parentWidth)
+        root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+        assertGeometry(parentWidth)
+        root.renderer.simulateKeystrokes("enter")
+        expect(root.renderer.findByType("input")).toHaveLength(1)
+        assertGeometry(parentWidth)
+        const resizedWidth = parentWidth === 50 ? 33 : 50
+        render(resizedWidth)
+        assertGeometry(resizedWidth)
+        root.unmount()
+      })
+    }
+  }
+}
+
 test("toggle activates by click and keyboard without entering numeric edit", () => {
   const root = createTestRoot({ width: 320, height: 120 })
   let latest = false
