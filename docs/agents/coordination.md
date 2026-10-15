@@ -52,9 +52,9 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 ## 文件
 
-| 文件                              | 作用                                     |
-| --------------------------------- | ---------------------------------------- |
-| 本文                              | 决策权、加载路径、流程                   |
-| `LESSONS.md` 的「gpuix 迁移」各节 | 已经踩过的坑及对应做法                   |
-| `scripts/orchestration/specs/`    | `common.md`、`b2-common.md` 与各切片规格 |
-| `scripts/orchestration/*.sh`      | 派发、健康检查、定时巡检                 |
+| 文件 | 作用 |
+| --- | --- |
+| 本文 | 决策权、加载路径、流程 |
+| `LESSONS.md` 的「gpuix 迁移」各节 | 已经踩过的坑及对应做法 |
+| `scripts/orchestration/specs/` | `common.md`、`b2-common.md` 与各切片规格 |
+| `scripts/orchestration/*.sh` | 派发、健康检查、定时巡检；`listen.sh [ack] [timeout]` 是协调者唯一的消息监听入口，启动前先清掉残留的等待进程（Orca 每个 run 只允许一个等待者，残留会让之后的监听报 `waiter_exists`） |
