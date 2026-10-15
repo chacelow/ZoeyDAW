@@ -1,4 +1,4 @@
-import type { DocumentState, ProjectState } from "../../model/types"
+import type { DocumentState, ProjectPreview, ProjectState } from "../../model/types"
 
 export function getEffectiveDocument(state: {
   document: DocumentState
@@ -19,4 +19,12 @@ export function getEffectiveDocument(state: {
       return { ...state.document, transport: { ...state.document.transport, loop: preview.loop } }
     }
   }
+}
+
+export function previewChangesDocument(document: DocumentState, preview: ProjectPreview): boolean {
+  return preview.kind === "tracks"
+    ? JSON.stringify(preview.tracks) !== JSON.stringify(document.tracks)
+    : preview.kind === "markers"
+      ? JSON.stringify(preview.markers) !== JSON.stringify(document.markers)
+      : JSON.stringify(preview.loop) !== JSON.stringify(document.transport.loop)
 }
