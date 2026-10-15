@@ -66,7 +66,11 @@ export function ProjectLayout({
           {browser}
         </PanelShell>
       </Panel>
-      <PanelDivider orientation="vertical" aria-label={labels.resizeBrowser} />
+      <PanelDivider
+        orientation="vertical"
+        aria-label={labels.resizeBrowser}
+        testId="browser-divider"
+      />
       <Panel minSize={PROJECT_LAYOUT.arrangementMinWidth} testId="arrangement-panel">
         <PanelShell
           id="arrangement"
@@ -104,19 +108,26 @@ export function ProjectLayout({
           padding: gap,
         }}
       >
-        {clipView ? (
-          <Group orientation="vertical" style={{ flexGrow: 1, minHeight: 0 }} testId="project-main">
-            <Panel minSize={theme.project.timelineMinHeight} testId="workspace-panel">
-              {workspace}
-            </Panel>
+        {/*
+          One tree for both footer views, so switching Affect Chain / Clip Edit never remounts
+          the Browser/Arrangement subtree: Clip Edit is a resizable Panel inside the Group,
+          Affect Chain sits after it at the footer's own fixed height.
+        */}
+        <Group orientation="vertical" style={{ flexGrow: 1, minHeight: 0 }} testId="project-main">
+          <Panel minSize={theme.project.timelineMinHeight} testId="workspace-panel">
+            {workspace}
+          </Panel>
+          {clipView ? (
             <PanelDivider
               orientation="horizontal"
               aria-label={labels.resizeClipEdit}
               hidden={shell.footerCollapsed}
             />
+          ) : null}
+          {clipView ? (
             <Panel
               panelRef={shell.clipHandleRef}
-              defaultSize={shell.footerCollapsed ? 0 : PROJECT_LAYOUT.clipDefaultSize}
+              defaultSize={PROJECT_LAYOUT.clipDefaultSize}
               minSize={PROJECT_LAYOUT.clipMinSize}
               maxSize={PROJECT_LAYOUT.clipMaxSize}
               collapsible
@@ -126,14 +137,12 @@ export function ProjectLayout({
             >
               {footerShell}
             </Panel>
-          </Group>
-        ) : (
-          <>
-            <div style={{ display: "flex", flexGrow: 1, minHeight: 0 }}>{workspace}</div>
-            <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
-              {footerShell}
-            </div>
-          </>
+          ) : null}
+        </Group>
+        {clipView ? null : (
+          <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+            {footerShell}
+          </div>
         )}
         {status}
       </div>
