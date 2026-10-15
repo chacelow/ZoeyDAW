@@ -1,0 +1,90 @@
+[
+  {
+    "actual": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-before/stereo-inset-clamp-quad.png",
+    "reference": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-before/stereo-inset-clamp-div.png",
+    "width": 100,
+    "height": 100,
+    "differentPixels": 1,
+    "firstDifferences": [
+      {
+        "x": 1,
+        "y": 19,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      }
+    ],
+    "actualRgbaSha256": "96b159b2f26869b87098c6d4ca757f456fdca323603bf67b01e2914967c0112a",
+    "referenceRgbaSha256": "4868c659b24e33e8f7543845fca941a660de2e262f3bc503f644714a2709db93"
+  },
+  {
+    "actual": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-before/fractional-position-size-quad.png",
+    "reference": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-before/fractional-position-size-div.png",
+    "width": 100,
+    "height": 100,
+    "differentPixels": 22,
+    "firstDifferences": [
+      {
+        "x": 13,
+        "y": 15,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 16,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 17,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 18,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 19,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 20,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 21,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 22,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 23,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      },
+      {
+        "x": 13,
+        "y": 24,
+        "actual": [154, 154, 154, 255],
+        "reference": [10, 10, 10, 255]
+      }
+    ],
+    "actualRgbaSha256": "c3bfcd93438c3f914c2bb92429dd0b55b64890ed4c5ec5c9f8754507280655f3",
+    "referenceRgbaSha256": "5c1f17575c127a50592f12c5106ff984a591f52134ce30c336c9f4e16bf8a2aa"
+  }
+]

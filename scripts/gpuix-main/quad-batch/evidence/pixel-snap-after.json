@@ -1,0 +1,34 @@
+{
+  "fixtures": [
+    {
+      "actual": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-after/stereo-inset-clamp-quad.png",
+      "reference": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-after/stereo-inset-clamp-div.png",
+      "width": 100,
+      "height": 100,
+      "differentPixels": 0,
+      "firstDifferences": [],
+      "actualRgbaSha256": "4868c659b24e33e8f7543845fca941a660de2e262f3bc503f644714a2709db93",
+      "referenceRgbaSha256": "4868c659b24e33e8f7543845fca941a660de2e262f3bc503f644714a2709db93"
+    },
+    {
+      "actual": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-after/fractional-position-size-quad.png",
+      "reference": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-after/fractional-position-size-div.png",
+      "width": 100,
+      "height": 100,
+      "differentPixels": 0,
+      "firstDifferences": [],
+      "actualRgbaSha256": "5c1f17575c127a50592f12c5106ff984a591f52134ce30c336c9f4e16bf8a2aa",
+      "referenceRgbaSha256": "5c1f17575c127a50592f12c5106ff984a591f52134ce30c336c9f4e16bf8a2aa"
+    }
+  ],
+  "originalLaneReference": {
+    "actual": "scripts/gpuix-main/quad-batch/evidence/pixel-snap-after/stereo-inset-clamp-quad.png",
+    "reference": "/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-clip-lane/apps/gpuix/src/project/sections/arrangement/lane/evidence/peak-failed-reference.png",
+    "width": 100,
+    "height": 100,
+    "differentPixels": 0,
+    "firstDifferences": [],
+    "actualRgbaSha256": "4868c659b24e33e8f7543845fca941a660de2e262f3bc503f644714a2709db93",
+    "referenceRgbaSha256": "4868c659b24e33e8f7543845fca941a660de2e262f3bc503f644714a2709db93"
+  }
+}
