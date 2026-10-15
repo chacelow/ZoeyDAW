@@ -12,6 +12,7 @@
     "cargoCheck": "passed",
     "cargoTest": { "pass": 307, "fail": 0 },
     "quadModule": { "pass": 6, "fail": 0 },
+    "focusModule": { "pass": 14, "fail": 0 },
     "executedFractionalOracles": [
       "fractional_position_matches_native_div",
       "fractional_size_matches_native_div",

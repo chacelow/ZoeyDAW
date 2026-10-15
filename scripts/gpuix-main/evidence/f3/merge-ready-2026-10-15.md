@@ -40,6 +40,7 @@ F3 产品代码提交为 `ee47dbe`。最终已同步 F5 基线 `6d6dd39`，合�
 | 根：`node scripts/gpuix-main/check.mjs --resolution` | 原生、host、React/reconciler/Zustand 单实例检查通过 |
 | vendor：release `cargo check` 与 `cargo test --lib`，features `test-support,gpui_platform/runtime_shaders` | 通过，307 tests（含 F4b 与 F5） |
 | vendor：同 features，`cargo test --lib quad_batch::tests` | 6 pass，含四类 F4b fractional oracle |
+| vendor：同 features，`cargo test --lib focus_tests` | 14 pass，F5 焦点组显式复跑 |
 | apps/gpuix：`tsc --noEmit` | 通过 |
 | apps/gpuix：`tsc --noEmit -p verification/tsconfig.json` | 通过 |
 | frame / tracks meter / footer / transport / deadline 相关 Bun 回归 | 69 pass，54,940 assertions |
