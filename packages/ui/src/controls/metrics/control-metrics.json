@@ -66,6 +66,7 @@
     "midiKeyWidth": 54,
     "midiRulerHeight": 34,
     "midiVelocityHeight": 40,
+    "midiVelocityHandleWidth": 4,
     "midiRowMaxHeight": 18,
     "midiRowMinHeight": 6,
     "audioRulerHeight": 39,
