@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { memo, useMemo } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { Shape } from "@/shared/svg/Shape"
@@ -14,7 +14,7 @@ interface FadeAnchor {
   point: Point
 }
 
-export function ClipFades({
+export const ClipFades = memo(function ClipFades({
   id,
   geometry,
   visibleLeft,
@@ -185,4 +185,4 @@ export function ClipFades({
       ))}
     </>
   )
-}
+})

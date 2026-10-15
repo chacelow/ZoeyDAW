@@ -12,6 +12,60 @@ import {
   visibleClipCards,
   visibleRows,
 } from "./render-projection"
+import { gridLines } from "../core/rulers/grid-lines"
+import { createClipCardProjection } from "./clip-card-projection"
+
+it("keeps Clip-local grids phase-aligned across fractional viewports and vertical-only motion", () => {
+  const score = createMockDocument()
+  const track = score.tracks.find(item => item.kind === "midi")
+  if (!track) throw new Error("Missing MIDI track")
+  track.clips = [
+    {
+      kind: "pattern",
+      id: "grid-phase",
+      patternId: "p",
+      startBar: 3.5,
+      lengthBars: 2,
+      steps: [true],
+    },
+  ]
+  const scene = createSceneStore()
+  scene.setMusic({
+    bars: 128,
+    grid: { mode: "fixed", bars: 0.25 },
+    transport: score.transport,
+    tracks: [track],
+    markers: [],
+    loop: score.transport.loop,
+  })
+  const project = createClipCardProjection()
+  let seed = 0x93ab2
+  const random = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32
+  for (let sample = 0; sample < 200; sample++) {
+    scene.setViewport({
+      width: 500 + random(),
+      height: 300,
+      scrollX: sample === 0 ? 0.2 : random() * 8,
+      scrollY: 0,
+      pxPerBar: sample === 0 ? 8 : 8 + random() * 128,
+      dpr: 1,
+    })
+    const row = layoutTrackRows(scene.get())[0]
+    if (!row) throw new Error("Missing projected track")
+    const localRow = { ...row, top: 0 }
+    const card = project(scene.get(), localRow, false)[0]
+    if (!card) throw new Error("Missing visible grid Clip")
+    const left = Math.max(0, card.geometry.left)
+    const right = Math.min(scene.get().viewport.width, card.geometry.left + card.geometry.width)
+    const inside = (line: { x: number }) => line.x >= left && line.x < right
+    expect(card.grid.every(line => line.x >= Math.max(0, left - 1) && line.x < right + 1)).toBe(
+      true
+    )
+    expect(card.grid.filter(inside)).toEqual(gridLines(scene.get()).filter(inside))
+    scene.setViewport({ ...scene.get().viewport, scrollY: 0.5 })
+    expect(project(scene.get(), localRow, false)[0]?.grid).toBe(card.grid)
+  }
+})
 
 it("culls every non-intersecting row and clip through randomized viewport transforms", () => {
   let seed = 0x3285a

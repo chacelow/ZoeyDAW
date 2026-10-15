@@ -1,20 +1,41 @@
 import { clipVisualGeometry } from "../core/clip-geometry"
 import type { ClipRect, TrackRow } from "../core/layout"
 import type { ArrangementScene } from "../core/scene"
-import { projectVisibleClipCards } from "./render-projection"
+import { projectLocalFadeGeometry, projectVisibleClipCards } from "./render-projection"
 import type { ClipCard } from "./render-projection"
-import { gridLines } from "../core/rulers/grid-lines"
+import { gridLines, patternRegions } from "../core/rulers/grid-lines"
+import type { GridLine, PatternRegion } from "../core/rulers/grid-lines"
+
+export interface RenderClipCard extends ClipCard {
+  grid: readonly GridLine[]
+}
 
 interface CachedCard {
-  card: ClipCard
+  card: RenderClipCard
   rect: ClipRect
   collapsed: boolean
   fadesVisible: boolean
+  gridRevision: number
+}
+
+function sameGridViewport(previous: ArrangementScene | undefined, next: ArrangementScene): boolean {
+  return (
+    !!previous &&
+    previous.bars === next.bars &&
+    previous.gridPlan.cellBars === next.gridPlan.cellBars &&
+    previous.viewport.width === next.viewport.width &&
+    previous.viewport.scrollX === next.viewport.scrollX &&
+    previous.viewport.pxPerBar === next.viewport.pxPerBar
+  )
 }
 
 export function createClipCardProjection() {
   const caches: [Map<string, CachedCard>, Map<string, CachedCard>] = [new Map(), new Map()]
+  let previousGrid: ArrangementScene | undefined
+  let gridRevision = 0
   return (scene: ArrangementScene, row: TrackRow, automationMode: boolean) => {
+    if (!sameGridViewport(previousGrid, scene)) gridRevision++
+    previousGrid = scene
     const cards = projectVisibleClipCards(
       scene,
       row,
@@ -24,32 +45,49 @@ export function createClipCardProjection() {
         const key = rect.clip.id
         const previous = retained.get(key)
         const collapsed = !!rect.track.collapsed
-        const sameGeometry =
+        const sameLocalGeometry =
           previous &&
           previous.card.clip === rect.clip &&
           previous.collapsed === collapsed &&
           previous.fadesVisible === fadesVisible &&
-          previous.rect.left === rect.left &&
           previous.rect.top === rect.top &&
           previous.rect.width === rect.width &&
           previous.rect.height === rect.height
+        const sameGeometry = sameLocalGeometry && previous.rect.left === rect.left
+        const sameGrid =
+          previous &&
+          previous.gridRevision === gridRevision &&
+          previous.rect.left === rect.left &&
+          previous.rect.width === rect.width
         if (
           sameGeometry &&
+          sameGrid &&
           previous.card.ghost === ghost &&
           previous.card.selected === selected &&
           previous.card.hovered === hovered
         )
           return previous.card
-        const card = {
+        const geometry = sameGeometry
+          ? previous.card.geometry
+          : clipVisualGeometry(rect, rect.clip, rect.track, fadesVisible)
+        const card: RenderClipCard = {
           clip: rect.clip,
-          geometry: sameGeometry
-            ? previous.card.geometry
-            : clipVisualGeometry(rect, rect.clip, rect.track, fadesVisible),
+          fadeGeometry: sameLocalGeometry
+            ? previous.card.fadeGeometry
+            : projectLocalFadeGeometry(rect, ghost, fadesVisible),
+          geometry,
+          grid: sameGrid
+            ? previous.card.grid
+            : gridLines(
+                scene,
+                Math.max(0, geometry.left - 1),
+                Math.min(scene.viewport.width, geometry.left + geometry.width)
+              ),
           ghost,
           selected,
           hovered,
         }
-        retained.set(key, { card, rect, collapsed, fadesVisible })
+        retained.set(key, { card, rect, collapsed, fadesVisible, gridRevision })
         return card
       }
     )
@@ -62,20 +100,11 @@ export function createClipCardProjection() {
 
 export function createGridProjection() {
   let previous: ArrangementScene | undefined
-  let lines: ReturnType<typeof gridLines> = []
+  let projection: { lines: GridLine[]; regions: PatternRegion[] } | undefined
   return (scene: ArrangementScene) => {
-    const current = scene.viewport
-    if (
-      previous &&
-      previous.bars === scene.bars &&
-      previous.gridPlan.cellBars === scene.gridPlan.cellBars &&
-      previous.viewport.width === current.width &&
-      previous.viewport.scrollX === current.scrollX &&
-      previous.viewport.pxPerBar === current.pxPerBar
-    )
-      return lines
+    if (projection && sameGridViewport(previous, scene)) return projection
     previous = scene
-    lines = gridLines(scene)
-    return lines
+    projection = { lines: gridLines(scene), regions: patternRegions(scene) }
+    return projection
   }
 }

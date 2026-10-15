@@ -27,7 +27,9 @@ import type { LaneController } from "../interactions/controller"
 import { takeProfileCounters } from "./profile-counters"
 
 const viewportWidth = 976
-const viewportHeight = 758
+const viewportHeight = Number(process.env.LANE_PROFILE_VIEWPORT_HEIGHT ?? 758)
+if (!Number.isFinite(viewportHeight) || viewportHeight <= 0)
+  throw new Error("LANE_PROFILE_VIEWPORT_HEIGHT must be positive")
 const media = createVerificationMedia()
 let timeline: TimelineController | undefined
 let lane: LaneController | undefined
@@ -55,12 +57,13 @@ const onProfileRender: ProfilerOnRenderCallback = (id, _phase, actualDuration) =
 
 function countTree(node: unknown) {
   const types: Record<string, number> = {}
+  const clipSubtrees: Record<string, Record<string, number>> = {}
   let mountedClips = 0
   let mountedRows = 0
   let waveformRoots = 0
   let waveformColumnNodes = 0
   const clipIds = new Set<string>()
-  function visit(current: unknown) {
+  function visit(current: unknown, clipTypes?: Record<string, number>) {
     if (
       !current ||
       typeof current !== "object" ||
@@ -75,35 +78,52 @@ function countTree(node: unknown) {
       if (current.testId.startsWith("clip-source-")) {
         mountedClips++
         clipIds.add(current.testId.slice("clip-source-".length))
+        if (profileEnabled) {
+          clipTypes = {}
+          clipSubtrees[current.testId.slice("clip-source-".length)] = clipTypes
+        }
       }
       if (current.testId.startsWith("lane-row-") && !current.testId.startsWith("lane-row-content-"))
         mountedRows++
       waveform = current.testId.startsWith("waveform-")
       if (waveform) waveformRoots++
     }
+    if (clipTypes) clipTypes[current.type] = (clipTypes[current.type] ?? 0) + 1
     if ("children" in current) {
       if (!Array.isArray(current.children)) throw new Error("Invalid native tree children")
       if (waveform) waveformColumnNodes += current.children.length
-      for (const child of current.children) visit(child)
+      for (const child of current.children) visit(child, clipTypes)
     }
   }
   if (node !== null) visit(node)
-  return { mountedClips, mountedRows, waveformRoots, waveformColumnNodes, types, clipIds }
+  return {
+    mountedClips,
+    mountedRows,
+    waveformRoots,
+    waveformColumnNodes,
+    types,
+    clipIds,
+    clipSubtrees,
+  }
 }
 
 function summarizeReactProfile(
   counters: ReturnType<typeof takeProfileCounters>,
   previousClipIds: ReadonlySet<string>,
-  trackNames: ReadonlyMap<string, string>
+  trackNames: ReadonlyMap<string, string>,
+  clipTracks: ReadonlyMap<string, string>
 ) {
+  const clipCounts = new Map<string, number>()
+  for (const [clipId, count] of Object.entries(counters.clipCards)) {
+    const trackId = clipTracks.get(clipId)
+    if (!trackId) throw new Error(`Missing diagnostic Clip track: ${clipId}`)
+    clipCounts.set(trackId, (clipCounts.get(trackId) ?? 0) + count)
+  }
   const rows = Object.entries(counters.laneRows).map(([trackId, renders]) => ({
     trackId,
     name: trackNames.get(trackId),
     renders,
-    clipRenders: Object.values(counters.clipCards[trackId] ?? {}).reduce(
-      (sum, count) => sum + count,
-      0
-    ),
+    clipRenders: clipCounts.get(trackId) ?? 0,
     actualMs: renderDurations.get(`row:${trackId}`)?.actualMs ?? 0,
   }))
   let peakCalls = 0
@@ -158,6 +178,45 @@ try {
 
   let projectMetrics: Theme["project"] | undefined
   root = createTestRoot({ width: viewportWidth, height: viewportHeight })
+  const uploadStats = { calls: 0, values: 0, ms: 0 }
+  const upload = root.renderer.setQuads
+  Object.defineProperty(root.renderer, "setQuads", {
+    value: (elementId: number, values: Float32Array) => {
+      const before = performance.now()
+      try {
+        return upload(elementId, values)
+      } finally {
+        uploadStats.calls++
+        uploadStats.values += values.length
+        uploadStats.ms += performance.now() - before
+      }
+    },
+  })
+  const nativeWork = { batches: 0, batchMs: 0, flushes: 0, flushMs: 0 }
+  const applyBatch = root.renderer.applyBatch
+  Object.defineProperty(root.renderer, "applyBatch", {
+    value: (operations: string) => {
+      const before = performance.now()
+      try {
+        return applyBatch(operations)
+      } finally {
+        nativeWork.batches++
+        nativeWork.batchMs += performance.now() - before
+      }
+    },
+  })
+  const flush = root.renderer.flush.bind(root.renderer)
+  Object.defineProperty(root.renderer, "flush", {
+    value: () => {
+      const before = performance.now()
+      try {
+        return flush()
+      } finally {
+        nativeWork.flushes++
+        nativeWork.flushMs += performance.now() - before
+      }
+    },
+  })
   root.render(
     <ThemeProvider>
       <CaptureMetrics
@@ -190,9 +249,18 @@ try {
     markDrawModeGesture: timeline.keyboard.markDrawGesture,
   })
   const trackNames = new Map(state.document.tracks.map(track => [track.id, track.name]))
+  const clipTracks = new Map<string, string>()
+  for (const track of editable) for (const clip of track.clips) clipTracks.set(clip.id, track.id)
   let previousClipIds = new Set<string>()
   const render = () => {
     if (!lane || !root) throw new Error("Probe is not mounted")
+    uploadStats.calls = 0
+    uploadStats.values = 0
+    uploadStats.ms = 0
+    nativeWork.batches = 0
+    nativeWork.batchMs = 0
+    nativeWork.flushes = 0
+    nativeWork.flushMs = 0
     const scene = sceneStore.get()
     const controller = lane
     const before = performance.now()
@@ -254,12 +322,19 @@ try {
     root.renderer.flush()
     const additionalFlushMs = performance.now() - flushStart
     const { clipIds, ...tree } = countTree(root.renderer.toJSON())
-    const profile = summarizeReactProfile(takeProfileCounters(), previousClipIds, trackNames)
+    const profile = summarizeReactProfile(
+      takeProfileCounters(),
+      previousClipIds,
+      trackNames,
+      clipTracks
+    )
     previousClipIds = clipIds
     renderDurations.clear()
     return {
       renderAndFlushMs,
       additionalFlushMs,
+      uploads: { ...uploadStats },
+      nativeWork: { ...nativeWork },
       viewport: scene.viewport,
       retained: root.renderer.getRetainedElementCount(),
       ...tree,
@@ -267,6 +342,11 @@ try {
     }
   }
   const first = render()
+  if (first.mountedClips === 0)
+    throw new Error("Diagnostic viewport must include editable Clips, not only pinned tracks")
+  const firstNative = root.renderer.getDebugFrameOverlayStats()
+  const capturePath = process.env.LANE_PROFILE_CAPTURE
+  if (capturePath) root.renderer.captureScreenshot(capturePath)
   root.renderer.resetDebugFrameOverlayStats()
   const steps = [
     { kind: "horizontal", deltaX: -480, deltaY: 0 },
@@ -318,7 +398,7 @@ try {
         },
         initial: first,
         steps: results,
-        native: { meaningfulFrames: (native.frames ?? 0) > 0, stats: native },
+        native: { meaningfulFrames: (native.frames ?? 0) > 0, first: firstNative, stats: native },
       },
       null,
       2
