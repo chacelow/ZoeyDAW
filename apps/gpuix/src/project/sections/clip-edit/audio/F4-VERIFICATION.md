@@ -2,6 +2,10 @@
 
 2026-10-15。唯一共享PeakColumns已切QuadBatch，公开props未改，没有第二条波形路径。正常与完整10000notes/1024steps工程的initial、zoom、scroll、final共8个GPU全图与旧div decoded RGBA全部0diff。初始节点3438→216。metadata实际44100Hz、88200frames、stereo；可见范围/像素数、tempo/meter/session重开均由真实后端与原生像素回归覆盖。
 
+## S1 模块边界
+
+`AudioWaveform.tsx` 只组合工具栏、标尺、主波形与 overview。`useAudioWaveformView.ts` 唯一拥有 view、drag、selection、尺寸与原生 refs，子组件只读取 view 并调用 owner 的事件处理。主入口计算一份 ticks，两个标尺与主波形共享它。`AudioWaveformRulers.tsx` 的 children 插槽保留标尺、Loop、主波形、时间标尺的原生节点顺序。`SourceWaveform.tsx` 与共享 `PeakColumns` 路径不变。
+
 ## 分段与测量修正
 
 `verification/audio-profile-preload.ts` 只在内存观察原有renderRootSync、commitRoot、flushPassiveEffects及host prepare/reset，不修改vendor或关闭React instrumentation。`audio-render-cost.tsx` 按原30步wheel协议记录p50/p90，applyBatch与getBounds分别计时。commit包含passive，hostCommit包含applyBatch，嵌套段不能相加。
