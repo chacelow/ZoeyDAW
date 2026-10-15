@@ -37,7 +37,7 @@
 
 omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker 起在 gpuix-migration 的子 worktree,读到的是 gpuix-migration 分支的规则;协调者如果起在仓库根(`main`),读到的就是旧规则。所以:
 
-- 协调者会话的工作目录必须是 `gpuix-migration` worktree,启动命令 `omp --model cursor-claude/cx/gpt-6.1-sol`。起在别处时,开工先读本文与该分支的 `AGENTS.md`、`LESSONS.md`。
+- 协调者会话的工作目录必须是 `gpuix-migration` worktree,启动命令 `omp --model cursor-claude/cc/claude-opus-5-5`。起在别处时,开工先读本文与该分支的 `AGENTS.md`、`LESSONS.md`。
 - `AGENTS.md` 只在会话启动时注入,压缩后不会重读。入口文件改了,正在运行的会话要么手动读改后的文件,要么重启(见下面「交接」)。
 - 所有长期规则写进 gpuix-migration 分支的文件,不只留在会话里。用户在会话里给的规则,当轮就写进对应文件。
 - 协调用的脚本与切片规格放在 `scripts/orchestration/`,纳入版本管理(见下)。
@@ -46,7 +46,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **派发**:`scripts/orchestration/start-worker.sh <worktree> <标题> <规格文件...>`。它把新 worktree 的 Orca 父级固定为 gpuix-migration,保证所有切片挂在同一棵树下。规格 = `common.md` +(B2 切片再加 `b2-common.md`)+ 本切片规格。
 
-**模型固定为 `cursor-claude/cx/gpt-6.1-sol`(2026-10-15 03:19 UTC 用户要求)**:派发时手动指定,不依赖全局 omp 默认模型(其他会话可能改它)。Orca 拒绝 `worker-start --agent omp --model`,所以脚本先建 worktree,再开一个运行 `omp --model …` 的终端,最后用 `worker-start --terminal` 交付规格。不要直接调用 `worker-start --agent omp`;临时起的 Orca 工作区 agent、新的协调者同样用 `omp --model cursor-claude/cx/gpt-6.1-sol` 启动。实现派工一律走 Orca worker,不用 omp `task` 子代理代替;`task` 只用于 worker 交付前的只读自审。
+**模型按角色固定(2026-10-15 03:19 UTC 用户要求固定模型;同日 08:20 前后用户明确协调者用 Opus 5.5)**:协调者用 `cursor-claude/cc/claude-opus-5-5`;worker、临时起的 Orca 工作区 agent 用 `cursor-claude/cx/gpt-6.1-sol`。启动时手动指定,不依赖全局 omp 默认模型(其他会话可能改它)。Orca 拒绝 `worker-start --agent omp --model`,所以脚本先建 worktree,再开一个运行 `omp --model …` 的终端,最后用 `worker-start --terminal` 交付规格。不要直接调用 `worker-start --agent omp`。实现派工一律走 Orca worker,不用 omp `task` 子代理代替;`task` 只用于 worker 交付前的只读自审。
 
 **回答问题**:worker 的 `question` 一律用 `orca orchestration reply --id`;`send` 用于通知。
 
@@ -86,7 +86,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 **交接协调者(2026-10-15 07:12 UTC 用户要求)**:
 
 1. 旧协调者停止派发和收消息,写交接目录:HANDOFF.md(用户当前要求、Run、活跃 Dispatch、未处理消息、未提交现场、保留的 worktree 及原因)、完整 TODO(completed/abandoned/open 分开,不把未完成标完成)。
-2. 在 `gpuix-migration` worktree 用 `omp --model cursor-claude/cx/gpt-6.1-sol` 起新终端;新协调者在自己的终端执行 `orca orchestration run-use --id <run>`,导入 TODO,把 `coordinator-tick.sh` 的 `COORD` 改成自己的终端,写回执 `ACCEPTED.json`(实际终端、Run、TODO 计数、主干 HEAD)。
+2. 在 `gpuix-migration` worktree 用 `omp --model cursor-claude/cc/claude-opus-5-5` 起新终端;新协调者在自己的终端执行 `orca orchestration run-use --id <run>`,导入 TODO,把 `coordinator-tick.sh` 的 `COORD` 改成自己的终端,写回执 `ACCEPTED.json`(实际终端、Run、TODO 计数、主干 HEAD)。规则文件改动后不需要交接,在协调者终端 `/restart` 即可重新注入 `AGENTS.md`,上下文、TODO 与 Run 绑定保留。
 3. 旧协调者核对 `run-show` 与回执,把自己的 TODO 标为已移交(不是完成),告诉用户可以关闭。
 4. HANDOFF 只写现场和指针,不复述或改写本文规则;规则有冲突就先改本文,再交接。
 
