@@ -72,3 +72,5 @@ bun --hot src/main.tsx
 变异脚本可接名字子串，例如 `bun apps/gpuix/src/app/verification/mutations.mjs "lane draw"`。过滤执行先验证该项的真实行为基线；不传过滤参数时仍先跑完整 app 基线。
 
 `verification/resume-smoke.tsx` 配合 `native-fixture.ts` preload 可重跑实际 AppShell、真实 NativeBackend 与离屏 GPUI 的恢复提交。要求 `B2_EVIDENCE_DIR` 指向已创建的临时目录，配置/存储也限定在该目录；建议同时隔离 HOME。它手动投递 frame host 的 resume 事件，不替代真实桌面 occlusion 评审。
+
+`verification/r1c-surfaces.tsx` 配合同一 native fixture preload，向命令行参数指定的仓库外目录采集中英文、深浅主题、MIDI/Audio 的八个工程组合。采集前确认工程与编辑器存在，root 在 finally 中卸载。R1c 回归、变异、自审及前台验收边界见 [R1c 验证报告](verification/R1C-REPORT.md)。
