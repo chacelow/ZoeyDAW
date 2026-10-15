@@ -2,14 +2,13 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { createSettingStorage } from "@/platform/settings"
+import { createSettingStorage, DEFAULT_THEME_MODE } from "@/platform/settings"
 import { createThemePresetSetting } from "@/platform/settings/theme-preset"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "@/shared/theme/presets"
 import { createPreferenceStore } from "./preference-store"
-import { DEFAULT_THEME_MODE, isThemeMode, resolveAppearance } from "./theme-mode"
-import { createThemeModeSetting } from "./theme-mode-setting"
+import { isThemeMode, resolveAppearance } from "./theme-mode"
 import type { PreferenceSetting } from "./preference-store"
-import type { ThemeMode } from "./theme-mode"
+import type { ThemeMode } from "@/platform/settings"
 
 const directories: string[] = []
 afterEach(() => {
@@ -126,13 +125,13 @@ describe("real native settings port", () => {
     expect(createSettingStorage("themePreset", { configDir: dir }).get()).toBe(DEFAULT_THEME_PRESET)
   })
 
-  test("before H1 the Rust settings reject themeMode and the store degrades to memory", () => {
+  test("themeMode persists through Rust without overwriting the language", () => {
     const dir = configDir()
     createSettingStorage("language", { configDir: dir }).set("zh-CN")
-    const store = modeStore(createThemeModeSetting({ configDir: dir }))
+    const store = modeStore(createSettingStorage("themeMode", { configDir: dir }))
     store.set("light")
-    expect(store.get()).toBe("light")
-    expect(store.isPersisted()).toBe(false)
+    expect(store.isPersisted()).toBe(true)
+    expect(modeStore(createSettingStorage("themeMode", { configDir: dir })).get()).toBe("light")
     expect(createSettingStorage("language", { configDir: dir }).get()).toBe("zh-CN")
   })
 })

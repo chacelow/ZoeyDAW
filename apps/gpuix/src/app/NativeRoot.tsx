@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 import { useGpuix } from "@gpuix/react"
 import { nativeCursorLock } from "@/platform/cursor"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
@@ -6,7 +6,6 @@ import { createWindowPlatform } from "@/platform/window"
 import { ControlEnvironmentProvider } from "@/ui/controls"
 import { PanelEnvironmentProvider } from "@/ui/panels"
 import { AppShell } from "./AppShell"
-import { supportsCloseGuard } from "./window/close-guard-port"
 import type { AppShellProps } from "./AppShell"
 
 export type NativeRootProps = Omit<AppShellProps, "closeRenderer" | "systemAppearance">
@@ -25,18 +24,18 @@ export function NativeRoot(props: NativeRootProps) {
       frames: createAnimationFrameSource(renderer),
       panels: { subscribeWindowActive: window.subscribeApplicationActive },
       controls: { cursorLock: nativeCursorLock },
+      window,
     }
   }, [renderer])
+  const systemAppearance = useSyncExternalStore(
+    native.window.subscribeSystemAppearance,
+    native.window.getSystemAppearance
+  )
   return (
     <AnimationFrameProvider source={native.frames}>
       <ControlEnvironmentProvider value={native.controls}>
         <PanelEnvironmentProvider environment={native.panels}>
-          {/* System appearance stays null until H1's subscribeSystemAppearance lands. */}
-          <AppShell
-            {...props}
-            closeRenderer={supportsCloseGuard(renderer) ? renderer : null}
-            systemAppearance={null}
-          />
+          <AppShell {...props} closeRenderer={renderer} systemAppearance={systemAppearance} />
         </PanelEnvironmentProvider>
       </ControlEnvironmentProvider>
     </AnimationFrameProvider>

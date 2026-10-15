@@ -9,7 +9,7 @@ import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
 import { configureLogger } from "@zoeymind/logger"
 import { createLogPlatform, createNativeLogSink } from "./platform/log"
 import { createWindowKeyboard, WindowKeyboardProvider } from "./platform/keyboard"
-import { createSettingStorage } from "./platform/settings"
+import { createSettingStorage, DEFAULT_THEME_MODE } from "./platform/settings"
 import { createThemePresetSetting } from "./platform/settings/theme-preset"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "./shared/theme/presets"
 import { createSnapshotStorage } from "./platform/storage"
@@ -18,8 +18,7 @@ import { initAppI18n } from "./app/i18n"
 import { NativeRoot } from "./app/NativeRoot"
 import { createRouter } from "./app/router/router"
 import { createPreferenceStore } from "./app/settings/preference-store"
-import { DEFAULT_THEME_MODE, isThemeMode } from "./app/settings/theme-mode"
-import { createThemeModeSetting } from "./app/settings/theme-mode-setting"
+import { isThemeMode } from "./app/settings/theme-mode"
 import { emptyProjectSlots } from "./app/project/empty-slots"
 
 createLogPlatform().initialize()
@@ -27,7 +26,11 @@ configureLogger({ sinks: [createNativeLogSink()] })
 initAppI18n({ storage: createSettingStorage("language") })
 const presetSetting = createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET)
 const appearance = {
-  themeMode: createPreferenceStore(createThemeModeSetting(), isThemeMode, DEFAULT_THEME_MODE),
+  themeMode: createPreferenceStore(
+    createSettingStorage("themeMode"),
+    isThemeMode,
+    DEFAULT_THEME_MODE
+  ),
   themePreset: createPreferenceStore(presetSetting, isThemePresetId, DEFAULT_THEME_PRESET),
 }
 const storage = createSnapshotStorage()

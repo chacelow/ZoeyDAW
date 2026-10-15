@@ -3,8 +3,8 @@
  *
  * - clean project: the native close proceeds.
  * - dirty project: veto, then ask (save / discard / cancel).
- * - after save or discard the user's decision is final: close programmatically when the
- *   renderer can, otherwise allow exactly the next native close request ("press again").
+ * - after a successful save or discard the decision is armed: the caller closes through the
+ *   native closeWindow port, outside the synchronous should-close callback.
  */
 export type UnsavedClosePhase = "idle" | "asking" | "armed"
 

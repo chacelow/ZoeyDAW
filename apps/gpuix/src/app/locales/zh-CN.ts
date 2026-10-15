@@ -62,7 +62,7 @@ export default {
     save: "保存",
     discard: "不保存",
     saveFailed: "保存失败，窗口仍保持打开。",
-    pressAgain: "已处理。再按一次关闭即可关闭窗口。",
+    closeFailed: "窗口关闭失败，请重试关闭。",
   },
   titlebar: {
     settings: "设置",

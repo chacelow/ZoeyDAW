@@ -1,3 +1,5 @@
+import { logger } from "@zoeymind/logger"
+
 export interface PreferenceSetting<T extends string> {
   get(): string | null
   set(value: T): void
@@ -29,7 +31,12 @@ export function createPreferenceStore<T extends string>(
     setting.repair?.()
     const stored = setting.get()
     if (stored !== null && isValue(stored)) value = stored
-  } catch {
+  } catch (error) {
+    logger.warn(
+      "[app/preferences] Could not initialize preference; using fallback",
+      fallback,
+      error
+    )
     persisted = false
   }
   const listeners = new Set<() => void>()
@@ -42,7 +49,8 @@ export function createPreferenceStore<T extends string>(
       try {
         setting.set(next)
         persisted = true
-      } catch {
+      } catch (error) {
+        logger.warn("[app/preferences] Could not persist preference", next, error)
         persisted = false
       }
       for (const listener of listeners) listener()

@@ -20,7 +20,7 @@ import type { SnapshotStorage } from "@/platform/storage"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import type { ProjectLayoutSlots } from "./project/ProjectLayout"
 import type { Router } from "./router/router"
-import type { CloseGuardRenderer } from "./window/close-guard-port"
+import type { WindowRenderer } from "@/platform/window"
 import type { ProjectShellApi } from "./project/useProjectShell"
 
 export interface AppShellProps {
@@ -30,7 +30,7 @@ export interface AppShellProps {
   /** Durable app data (recent projects); the native data directory in production. */
   readonly storage: SnapshotStorage
   /** Window close interception; `null` leaves closing unguarded. */
-  readonly closeRenderer: CloseGuardRenderer | null
+  readonly closeRenderer: WindowRenderer | null
   readonly renderProjectSlots: (shell: ProjectShellApi) => ProjectLayoutSlots
   /** Show raw route-error messages (web shows them only in DEV). */
   readonly showErrorDetails: boolean

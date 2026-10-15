@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 import type { ThemePresetId } from "@/shared/theme/presets"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import type { PreferenceStore } from "./settings/preference-store"
-import type { ThemeMode } from "./settings/theme-mode"
+import type { ThemeMode } from "@/platform/settings"
 
 export interface AppPreferences {
   readonly themeMode: ThemeMode
@@ -13,7 +13,7 @@ export interface AppPreferences {
   readonly themeModePersisted: boolean
   readonly themePreset: ThemePresetId
   readonly setThemePreset: (preset: ThemePresetId) => void
-  /** Native system appearance; `null` until the H1 appearance subscription is wired. */
+  /** Native system appearance; renderer-free hosts can report `null`. */
   readonly systemAppearance: Appearance | null
 }
 

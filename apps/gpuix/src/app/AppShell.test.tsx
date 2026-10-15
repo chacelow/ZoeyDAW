@@ -7,7 +7,7 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { i18next } from "@zoeymind/i18n/core"
 import * as engine from "@/platform/engine"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
-import { createSettingStorage } from "@/platform/settings"
+import { createSettingStorage, DEFAULT_THEME_MODE } from "@/platform/settings"
 import {
   configureProjectBackend,
   createMemorySnapshotStorage,
@@ -23,15 +23,15 @@ import { initAppI18n } from "./i18n"
 import { emptyProjectSlots } from "./project/empty-slots"
 import { createRouter } from "./router/router"
 import { createPreferenceStore } from "./settings/preference-store"
-import { DEFAULT_THEME_MODE, isThemeMode } from "./settings/theme-mode"
+import { isThemeMode } from "./settings/theme-mode"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "@/shared/theme/presets"
 import type { TestRoot } from "@gpuix/react/testing"
 import type { ReactNode } from "react"
 import type { AppShellProps } from "./AppShell"
 import type { Router } from "./router/router"
-import type { ThemeMode } from "./settings/theme-mode"
+import type { ThemeMode } from "@/platform/settings"
 import type { ThemePresetId } from "@/shared/theme/presets"
-import type { CloseGuardRenderer } from "./window/close-guard-port"
+import type { WindowRenderer } from "@/platform/window"
 import type { BackendRequest } from "@/project/model/backend"
 
 const languageStorage = {
@@ -321,6 +321,28 @@ describe("settings dialog", () => {
     expect(root.renderer.findByTestId("home-page")).toBeDefined()
   })
 
+  test("system appearance updates the same project without reopening its backend", () => {
+    const sessions = countSessions()
+    const props: { router: Router; systemAppearance: AppShellProps["systemAppearance"] } = {
+      router: createRouter("/project/system-appearance"),
+      systemAppearance: "dark",
+    }
+    const { root, rerender } = mount(props)
+    const background = () =>
+      root.renderer.getElement(element(root, "app-frame").id)?.style.backgroundColor
+    const dark = background()
+    props.systemAppearance = "light"
+    rerender()
+    expect(background()).not.toBe(dark)
+    expect(sessions).toEqual({ opened: 1, disposed: 0 })
+    click(root, "titlebar-settings")
+    click(root, "theme-mode-dark")
+    props.systemAppearance = "dark"
+    rerender()
+    expect(background()).toBe(dark)
+    expect(sessions).toEqual({ opened: 1, disposed: 0 })
+  })
+
   test("choosing a preset by click or arrow keys recolors the app and persists", () => {
     const { root, saved } = mount()
     const background = () =>
@@ -369,9 +391,12 @@ describe("unsaved close guard", () => {
   function nativeClose() {
     let callback: (() => boolean) | null = null
     let closed = 0
-    const renderer: CloseGuardRenderer = {
+    const renderer: WindowRenderer = {
       setWindowShouldClose: next => {
         callback = next
+      },
+      closeWindow: () => {
+        closed++
       },
     }
     return {
@@ -382,11 +407,6 @@ describe("unsaved close guard", () => {
       },
       get closed() {
         return closed
-      },
-      withProgrammaticClose: () => {
-        renderer.closeWindow = () => {
-          closed++
-        }
       },
     }
   }
@@ -407,7 +427,7 @@ describe("unsaved close guard", () => {
     expect(native.request()).toBe(false)
   })
 
-  test("discard without programmatic close allows exactly the next close request", async () => {
+  test("discard closes the window directly after the choice", async () => {
     countSessions()
     const native = nativeClose()
     const { root } = mount({ closeRenderer: native.renderer, router: createRouter("/project/q") })
@@ -416,20 +436,19 @@ describe("unsaved close guard", () => {
     await settle(root)
     click(root, "unsaved-discard")
     await settle(root)
-    expect(native.request()).toBe(true)
-    expect(native.request()).toBe(false)
+    expect(native.closed).toBe(1)
   })
 
   test("save closes programmatically once the snapshot is accepted", async () => {
     countSessions()
     const native = nativeClose()
-    native.withProgrammaticClose()
     const { root } = mount({ closeRenderer: native.renderer, router: createRouter("/project/r") })
     projectActions.setBpm(137)
     expect(native.request()).toBe(false)
     await settle(root)
     click(root, "unsaved-save")
-    for (let tick = 0; tick < 10 && native.closed === 0; tick++) await Promise.resolve()
+    await whenProjectBackendIdle()
+    await settle(root)
     expect(useProjectState.getState().session.dirty).toBe(false)
     expect(native.closed).toBe(1)
   })

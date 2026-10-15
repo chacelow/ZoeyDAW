@@ -3,9 +3,9 @@ import { flushSync } from "@gpuix/react"
 import { toast } from "@/ui/controls"
 import { projectActions, useProjectState, whenProjectBackendIdle } from "@/project/adapters"
 import { useAppTranslation } from "../i18n"
-import { createWindowCloseGuard } from "./close-guard-port"
+import { createWindowCloseGuard } from "@/platform/window"
 import { chooseClose, IDLE_CLOSE, requestClose } from "./unsaved-close"
-import type { CloseGuardRenderer, WindowCloseGuard } from "./close-guard-port"
+import type { WindowRenderer, WindowCloseGuard } from "@/platform/window"
 import type { UnsavedCloseChoice, UnsavedCloseState } from "./unsaved-close"
 
 /** Saves through the project's snapshot path and reports whether the project became clean. */
@@ -20,7 +20,7 @@ async function saveProject(): Promise<boolean> {
  * Vetoes closing a dirty project window and asks first. `renderer === null` (test roots and
  * renderers without the close-guard patch) leaves closing unguarded.
  */
-export function useUnsavedCloseGuard(renderer: CloseGuardRenderer | null) {
+export function useUnsavedCloseGuard(renderer: WindowRenderer | null) {
   const { t } = useAppTranslation()
   const [asking, setAsking] = useState(false)
   const state = useRef<UnsavedCloseState>(IDLE_CLOSE)
@@ -67,8 +67,7 @@ export function useUnsavedCloseGuard(renderer: CloseGuardRenderer | null) {
     try {
       current?.close()
     } catch {
-      // No programmatic close before H1: the armed state allows the next native request.
-      toast(labels.current("windowClose.pressAgain"))
+      toast.error(labels.current("windowClose.closeFailed"))
     }
   }, [])
 

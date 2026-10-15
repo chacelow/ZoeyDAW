@@ -20,7 +20,7 @@ import { isThemeMode, THEME_MODES } from "./theme-mode"
 import type { IconName } from "@/ui/controls/Icon"
 import type { SettingsNavItem } from "@/ui/controls"
 import type { SupportedLocale } from "../i18n"
-import type { ThemeMode } from "./theme-mode"
+import type { ThemeMode } from "@/platform/settings"
 
 export type SettingsSection = "appearance" | "language" | "logs" | "about"
 

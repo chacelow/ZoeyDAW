@@ -65,7 +65,7 @@ export default {
     save: "Save",
     discard: "Don't save",
     saveFailed: "Saving failed. The window remains open.",
-    pressAgain: "Done. Press close again to close the window.",
+    closeFailed: "The window could not close. Try closing it again.",
   },
   titlebar: {
     settings: "Settings",
