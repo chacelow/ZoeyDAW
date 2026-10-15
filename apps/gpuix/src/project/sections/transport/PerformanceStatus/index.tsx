@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useAnimationFrame } from "@/platform/frame"
 import type { BackendTelemetry } from "@/project/model/backend"
 import { PopupButton } from "@/ui/controls"
@@ -13,12 +13,22 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
   const playing = useProjectState(state => state.session.playing)
   const hasTelemetry = useProjectState(state => state.session.levels.main !== undefined)
   const [telemetry, setTelemetry] = useState<BackendTelemetry | null>(readProjectTelemetry)
+  const [popupOpen, setPopupOpen] = useState(false)
+  useEffect(() => {
+    setTelemetry(readProjectTelemetry())
+  }, [hasTelemetry, playing])
   useAnimationFrame(
     () => {
       const next = readProjectTelemetry()
-      setTelemetry(previous => (previous === next ? previous : next))
+      setTelemetry(previous => {
+        if (previous === next) return previous
+        if (popupOpen) return next
+        const previousRate = previous?.clock.kind === "sample" ? previous.clock.sampleRate : null
+        const nextRate = next?.clock.kind === "sample" ? next.clock.sampleRate : null
+        return previousRate === nextRate ? previous : next
+      })
     },
-    playing || hasTelemetry || telemetry !== null
+    playing || (popupOpen && hasTelemetry)
   )
   const clock = telemetry?.clock
   const sampleRate = clock?.kind === "sample" ? clock.sampleRate : null
@@ -30,6 +40,8 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
   return (
     <PopupButton
       testId="transport-engine"
+      open={popupOpen}
+      onOpenChange={setPopupOpen}
       label={labels.engine}
       side="bottom"
       align="end"

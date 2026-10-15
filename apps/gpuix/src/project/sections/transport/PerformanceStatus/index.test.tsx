@@ -68,9 +68,13 @@ test("native-frame readout receives the first paused telemetry and later latency
       release = startProjectRuntime()
     })
     flushSync(() => frames.emit(16))
+    expect(frames.subscriberCount).toBe(0)
     const trigger = root.renderer.findByTestId("transport-engine")
     if (!trigger) throw new Error("Missing telemetry trigger")
     root.renderer.nativeSimulateKeystrokes(trigger.id, "enter")
+    flushSync(() => frames.emit(20))
+    root.renderer.flush()
+    expect(frames.subscriberCount).toBe(1)
     expect(root.renderer.getPaintedText().join(" ")).toContain("5.00 ms")
     expect(useProjectState.getState().session.playing).toBe(false)
     flushSync(() => changeLatency(480))
@@ -78,6 +82,8 @@ test("native-frame readout receives the first paused telemetry and later latency
     root.renderer.flush()
     expect(root.renderer.getPaintedText().join(" ")).toContain("10.00 ms")
     expect(root.renderer.getPaintedText().join(" ")).not.toContain("5.00 ms")
+    root.renderer.nativeSimulateKeystrokes(trigger.id, "enter")
+    expect(frames.subscriberCount).toBe(0)
   } finally {
     root.unmount()
     if (release) {

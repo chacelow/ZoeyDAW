@@ -181,3 +181,79 @@ test("wide Header centres its transport group between balanced outer columns", (
     root.unmount()
   }
 })
+
+test("vertical wheel in a Header gap accesses horizontal overflow", () => {
+  const root = mount(620)
+  try {
+    const left = root.renderer.findByTestId("transport-left")
+    const scroll = root.renderer.findByTestId("transport-scroll")
+    const bounds = left ? root.renderer.getElementBounds(left.id) : null
+    if (!bounds || !scroll) throw new Error("Missing Header geometry")
+    root.renderer.nativeSimulateScrollWheel(
+      bounds.x + bounds.width + PROJECT_METRICS.transportColumnGap / 2,
+      bounds.y + bounds.height / 2,
+      0,
+      -80
+    )
+    expect(root.renderer.getScrollOffset(scroll.id)?.[0]).toBeLessThan(0)
+  } finally {
+    root.unmount()
+  }
+})
+
+test("BPM wheel clamps at the project maximum without scrolling the Header and is undoable", () => {
+  projectActions.setBpm(998.99)
+  const root = mount(620)
+  try {
+    const bpm = root.renderer.findByTestId("transport-bpm")
+    const scroll = root.renderer.findByTestId("transport-scroll")
+    const bounds = bpm ? root.renderer.getElementBounds(bpm.id) : null
+    if (!bounds || !scroll) throw new Error("Missing BPM geometry")
+    root.renderer.nativeSimulateMouseMove(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    root.renderer.nativeSimulateScrollWheel(
+      bounds.x + bounds.width / 2,
+      bounds.y + bounds.height / 2,
+      0,
+      32
+    )
+    expect(useProjectState.getState().document.transport.bpm).toBe(999)
+    expect(root.renderer.getScrollOffset(scroll.id)?.[0]).toBe(0)
+    projectActions.undo()
+    expect(useProjectState.getState().document.transport.bpm).toBe(998.99)
+  } finally {
+    root.unmount()
+  }
+})
+
+test("BPM drag uses its coarse drag step and creates one undo", () => {
+  const root = mount()
+  try {
+    const bpm = root.renderer.findByTestId("transport-bpm")
+    const bounds = bpm ? root.renderer.getElementBounds(bpm.id) : null
+    if (!bounds) throw new Error("Missing BPM geometry")
+    const x = bounds.x + bounds.width / 2
+    const y = bounds.y + bounds.height / 2
+    root.renderer.nativeSimulateMouseDown(x, y)
+    root.renderer.nativeSimulateMouseMove(x, y - 20, 0)
+    root.renderer.nativeSimulateMouseUp(x, y - 20)
+    expect(useProjectState.getState().document.transport.bpm).toBe(125)
+    projectActions.undo()
+    expect(useProjectState.getState().document.transport.bpm).toBe(120)
+  } finally {
+    root.unmount()
+  }
+})
+
+test("BPM keyboard fine adjustment preserves decimals independently of coarse motion and can undo", () => {
+  const root = mount()
+  try {
+    const bpm = root.renderer.findByTestId("transport-bpm")
+    if (!bpm) throw new Error("Missing BPM")
+    root.renderer.nativeSimulateKeystrokes(bpm.id, "up")
+    expect(useProjectState.getState().document.transport.bpm).toBeCloseTo(120.01, 8)
+    projectActions.undo()
+    expect(useProjectState.getState().document.transport.bpm).toBe(120)
+  } finally {
+    root.unmount()
+  }
+})

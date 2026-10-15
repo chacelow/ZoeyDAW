@@ -5,7 +5,7 @@ import { nativeCursorLock } from "@/platform/cursor"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
 import { Group, Panel, PanelDivider, PanelEnvironmentProvider } from "@/ui/panels"
-import { createWindowPlatform } from "@/platform/window"
+import { createWindowPlatform, getReducedMotion, subscribeReducedMotion } from "@/platform/window"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { createVerificationKeyboard } from "./verification/keyboard"
@@ -102,6 +102,8 @@ function NativePanels() {
   const [view, setView] = useState<FooterView>("devices")
   const [collapsed, setCollapsed] = useState(false)
   const [info, setInfo] = useState<ControlInfo | null>(null)
+  const [reducedMotion, setReducedMotion] = useState(getReducedMotion)
+  useEffect(() => subscribeReducedMotion(setReducedMotion), [])
   const browserHandle = useRef<PanelImperativeHandle | null>(null)
   const keyboardOwner = useRef<VerificationKeyboardOwner | null>(null)
   const focusSurface = useRef<PublicInstance | null>(null)
@@ -125,6 +127,7 @@ function NativePanels() {
   useEffect(() => {
     projectActions.setProject({ name: chinese ? "未命名项目" : "Untitled project" })
     if (process.env.B2_BPM) projectActions.setBpm(Number(process.env.B2_BPM))
+    if (process.env.B2_RECORDING === "1") projectActions.toggleRecording()
     projectActions.addTrack("audio")
     const track = useProjectState.getState().document.tracks.find(item => item.kind === "audio")
     if (track) {
@@ -157,7 +160,7 @@ function NativePanels() {
       onViewChange={changeView}
       onCollapsedChange={changeCollapsed}
       subscribeWindowActive={windowPlatform.subscribeApplicationActive}
-      reducedMotion={false}
+      reducedMotion={reducedMotion}
       renderClipEditor={() => {
         throw new Error(
           "Standalone verification contains no selected Clip; the application supplies the real editor"
@@ -190,7 +193,7 @@ function NativePanels() {
             >
               <TransportBar
                 labels={chinese ? chineseTransportLabels : englishTransportLabels}
-                reducedMotion={false}
+                reducedMotion={reducedMotion}
                 onBack={() => projectActions.stop()}
                 onDrawModeChange={enabled => {
                   if (!keyboardOwner.current) throw new Error("Timeline keyboard is not mounted")

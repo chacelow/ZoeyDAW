@@ -1,5 +1,6 @@
 import { beforeEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
+import { Button } from "@/ui/controls"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
@@ -9,6 +10,7 @@ import { createVerificationKeyboard } from "../footer/verification/keyboard"
 import { createTestWindowActivity } from "../footer/verification/test-activity"
 import { BrowserPanel } from "."
 import { englishBrowserLabels } from "./demo-labels"
+import type { BrowserPanelHandle } from "."
 
 beforeEach(() =>
   hydrateProject(
@@ -177,6 +179,57 @@ test("favorite action changes its collection without selecting the resource row"
     root.renderer.nativeSimulateMouseExit(-1, -1)
     expect(root.renderer.getElement(favorite.id)?.style.opacity).toBe(1)
     expect(root.renderer.getElement(row.id)?.style.backgroundColor).toBe(background)
+  } finally {
+    root.unmount()
+  }
+})
+
+test("focusSearch selects the previous query before keyboard replacement", () => {
+  const root = createTestRoot({ width: 600, height: 640 })
+  const command: { current: BrowserPanelHandle | null } = { current: null }
+  try {
+    root.render(
+      <ThemeProvider>
+        <BrowserPanel
+          labels={englishBrowserLabels}
+          browserRef={handle => {
+            command.current = handle
+          }}
+        />
+      </ThemeProvider>
+    )
+    const search = root.renderer.findByTestId("browser-search")
+    const tree = root.renderer.findByTestId("browser-results")
+    if (!search || !tree || !command.current) throw new Error("Missing search command")
+    root.renderer.nativeSimulateKeystrokes(search.id, "A n a l o g")
+    root.renderer.focusElement(tree.id)
+    command.current.focusSearch()
+    root.renderer.nativeSimulateKeystrokes(search.id, "D r i f t")
+    expect(root.renderer.getElement(search.id)?.customProps?.value).toBe("Drift")
+  } finally {
+    root.unmount()
+  }
+})
+
+test("Tab exits the result tree after arrow navigation without visiting drag or favorite controls", () => {
+  const root = createTestRoot({ width: 600, height: 700 })
+  try {
+    root.render(
+      <ThemeProvider>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <BrowserPanel labels={englishBrowserLabels} />
+          <Button testId="after-browser" label="After Browser" />
+        </div>
+      </ThemeProvider>
+    )
+    const tree = root.renderer.findByTestId("browser-results")
+    const first = root.renderer.findByTestId("browser-entry-tunings-12-TET")
+    const after = root.renderer.findByTestId("after-browser")
+    if (!tree || !first || !after) throw new Error("Missing tree focus targets")
+    root.renderer.nativeSimulateKeystrokes(tree.id, "down")
+    expect(root.renderer.getFocusedElementId()).toBe(first.id)
+    root.renderer.nativeSimulateKeystrokes(first.id, "tab")
+    expect(root.renderer.getFocusedElementId()).toBe(after.id)
   } finally {
     root.unmount()
   }

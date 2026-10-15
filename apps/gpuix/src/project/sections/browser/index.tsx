@@ -207,6 +207,7 @@ export function BrowserPanel({
           aria-label={labels.search}
           placeholder={labels.searchPlaceholder}
           testId="browser-search"
+          selectAllOnFocus
           onValueChange={browser.setQuery}
           style={{ minWidth: 0, flexGrow: 1 }}
           onKeyDown={event => {
@@ -318,6 +319,7 @@ export function BrowserPanel({
                 testId="browser-results"
                 fill
                 role="tree"
+                tabIndex={selectedId ? -1 : 0}
                 aria-label={labels.results}
                 ref={node => {
                   tree.current = node
@@ -348,12 +350,13 @@ export function BrowserPanel({
                   browser.rows.map(row => (
                     <DragPreviewArea
                       key={row.entry.id}
+                      role="presentation"
+                      tabIndex={-1}
                       disabledDropLabel={labels.previewDisabled}
                       renderPreview={entry => (
                         <text>{`${entry.name} · ${labels.kinds[entry.kind]} · ${labels.previewDisabled}`}</text>
                       )}
                       onClick={() => select(row.entry.id)}
-                      onKeyDown={event => keyboard(event, row.entry.id)}
                       items={[
                         {
                           key: row.entry.id,
@@ -362,7 +365,7 @@ export function BrowserPanel({
                           children: (
                             <ListRow
                               role="treeitem"
-                              tabIndex={-1}
+                              tabIndex={selectedId === row.entry.id ? 0 : -1}
                               label={row.entry.name}
                               testId={`browser-entry-${row.entry.id}`}
                               selected={selectedId === row.entry.id}
@@ -389,6 +392,7 @@ export function BrowserPanel({
                                   {row.expandable ? (
                                     <Button
                                       iconOnly
+                                      tabIndex={-1}
                                       label={`${row.expanded ? labels.collapse : labels.expand} ${row.entry.name}`}
                                       onClick={() => {
                                         select(row.entry.id)
@@ -424,6 +428,7 @@ export function BrowserPanel({
                               trailing={
                                 <Button
                                   iconOnly
+                                  tabIndex={-1}
                                   testId={`browser-favorite-${row.entry.id}`}
                                   style={{
                                     opacity:

@@ -94,6 +94,7 @@ export function TransportBar({
   return (
     <ScrollArea
       orientation="horizontal"
+      wheelToHorizontal
       fill
       aria-label={labels.controls}
       testId="transport-scroll"
@@ -158,11 +159,13 @@ export function TransportBar({
             </Button>
             <TransportNumber
               hideIcon
+              testId="transport-bpm"
               value={meter.bpm}
               onChange={projectActions.setBpm}
               min={20}
               max={999}
               step={0.01}
+              dragStep={1}
               defaultValue={120}
               label={labels.bpm}
               format={value => value.toFixed(2)}

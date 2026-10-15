@@ -55,7 +55,7 @@ export function StatusStrip({
         flexDirection: "row",
         alignItems: "center",
         flexShrink: 0,
-        height: theme.transportControl["--spacing-control-track"],
+        height: theme.project.statusHeight,
         gap: theme.control["--spacing-control-track-gap"],
         paddingLeft: theme.control["--spacing-control-track-pad"],
         paddingRight: theme.control["--spacing-control-track-pad"],

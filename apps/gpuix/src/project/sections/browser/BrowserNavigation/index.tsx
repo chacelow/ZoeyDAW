@@ -74,6 +74,7 @@ export function BrowserNavigation({
     <ScrollArea
       fill
       role="listbox"
+      tabIndex={-1}
       aria-label={labels.title}
       {...info}
       style={{ padding: theme.control["--spacing-control-track-pad"] }}
@@ -94,6 +95,8 @@ export function BrowserNavigation({
           {group.sources.map(id => (
             <ListRow
               key={id}
+              role="option"
+              tabIndex={source === id ? 0 : -1}
               label={labels.sources[id]}
               testId={`browser-source-${id}`}
               selected={source === id}

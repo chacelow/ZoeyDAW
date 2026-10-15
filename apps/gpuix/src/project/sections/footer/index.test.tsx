@@ -3,6 +3,7 @@ import { useState } from "react"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
+import { Group, Panel, PanelDivider, PanelEnvironmentProvider } from "@/ui/panels"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
@@ -173,6 +174,89 @@ test("device arrow focus also selects its active card", () => {
     expect(root.renderer.getElement(card.id)?.style.borderColor).not.toBe(
       root.renderer.getElement(previousCard.id)?.style.borderColor
     )
+  } finally {
+    root.unmount()
+  }
+})
+
+test("Add device menu appends exactly the chosen device kind", () => {
+  const root = createTestRoot({ width: 900, height: 400 })
+  try {
+    const track = useProjectState.getState().document.tracks.find(item => item.kind === "audio")
+    if (!track) throw new Error("Missing track")
+    projectActions.updateTrack(track.id, { devices: [createDevice("utility")] })
+    projectActions.selectTracks([track.id], "header")
+    root.render(<FooterHarness />)
+    const add = root.renderer.findByTestId("device-add")
+    if (!add) throw new Error("Missing Add command")
+    root.renderer.nativeSimulateKeystrokes(add.id, "enter")
+    const reverb = root.renderer.findByTestId("device-add-reverb")
+    if (!reverb) throw new Error("Missing Reverb choice")
+    root.renderer.nativeSimulateKeystrokes(reverb.id, "enter")
+    expect(
+      useProjectState
+        .getState()
+        .document.tracks.find(item => item.id === track.id)
+        ?.devices?.map(device => device.kind)
+    ).toEqual(["utility", "reverb"])
+  } finally {
+    root.unmount()
+  }
+})
+
+test("native Clip host divider drag changes the Footer height continuously", () => {
+  const root = createTestRoot({ width: 900, height: 600 })
+  try {
+    root.render(
+      <ThemeProvider>
+        <PanelEnvironmentProvider environment={{ subscribeWindowActive: activity.subscribe }}>
+          <Group orientation="vertical" style={{ width: "100%", height: "100%" }}>
+            <Panel defaultSize="60%" minSize="20%">
+              <div />
+            </Panel>
+            <PanelDivider orientation="horizontal" testId="clip-host-divider" />
+            <Panel defaultSize="40%" minSize="20%">
+              <FooterPanel
+                labels={englishFooterLabels}
+                view="clip"
+                collapsed={false}
+                reducedMotion
+                subscribeWindowActive={activity.subscribe}
+                onViewChange={() => {
+                  throw new Error("Unexpected tab")
+                }}
+                onCollapsedChange={() => {
+                  throw new Error("Unexpected collapse")
+                }}
+                renderClipEditor={() => {
+                  throw new Error("No selected Clip")
+                }}
+              />
+            </Panel>
+          </Group>
+        </PanelEnvironmentProvider>
+      </ThemeProvider>
+    )
+    root.renderer.dispatchNativeEvents()
+    root.renderer.flush()
+    const divider = root.renderer.findByTestId("clip-host-divider")
+    const footer = root.renderer.findByTestId("footer-content")
+    const initialDivider = divider ? root.renderer.getElementBounds(divider.id) : null
+    const initialFooter = footer ? root.renderer.getElementBounds(footer.id) : null
+    if (!divider || !footer || !initialDivider || !initialFooter)
+      throw new Error("Missing Clip host geometry")
+    const x = initialDivider.x + initialDivider.width / 2
+    const y = initialDivider.y + initialDivider.height / 2
+    root.renderer.nativeSimulateMouseDown(x, y)
+    root.renderer.nativeSimulateMouseMove(x, y - 40, 0)
+    root.renderer.nativeSimulateMouseUp(x, y - 40)
+    root.renderer.dispatchNativeEvents()
+    root.renderer.flush()
+    expect(root.renderer.getElementBounds(footer.id)?.height).toBeCloseTo(
+      initialFooter.height + 40,
+      0
+    )
+    expect(root.renderer.getElementBounds(divider.id)?.y).toBeCloseTo(initialDivider.y - 40, 0)
   } finally {
     root.unmount()
   }

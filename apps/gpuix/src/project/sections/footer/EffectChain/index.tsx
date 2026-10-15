@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
-import { DropdownButton, ScrollArea } from "@/ui/controls"
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  ScrollArea,
+} from "@/ui/controls"
+import { Icon } from "@/ui/controls/Icon"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useProjectEditGesture } from "@/project/adapters"
 import { createDevice, DEVICE_KINDS } from "@/project/model/devices"
@@ -165,18 +173,24 @@ function TrackDeviceChain({
           }}
         >{`${track.name} › ${labels.title}`}</text>
         <div style={{ flexGrow: 1 }} />
-        <DropdownButton<DeviceKind | "add">
-          value="add"
-          label={labels.add}
-          renderValue={() => labels.add}
-          side="top"
-          align="end"
-          matchTriggerWidth={false}
-          items={DEVICE_KINDS.map(kind => ({ id: kind, label: labels.kindNames[kind] }))}
-          onChange={kind => {
-            if (kind !== "add") add(kind)
-          }}
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              label={labels.add}
+              testId="device-add"
+              icon={<Icon name="Plus" color={theme.colors.foreground} />}
+            >
+              {labels.add}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="end" aria-label={labels.add}>
+            {DEVICE_KINDS.map(kind => (
+              <DropdownMenuItem key={kind} testId={`device-add-${kind}`} onSelect={() => add(kind)}>
+                {labels.kindNames[kind]}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <ScrollArea orientation="horizontal" fill style={{ flexGrow: 1, height: 0 }}>
         {devices.length === 0 ? (

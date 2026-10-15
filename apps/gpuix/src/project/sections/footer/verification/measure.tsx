@@ -122,6 +122,7 @@ for (const entry of cases) {
       })
     )
     const retainedBefore = root.renderer.getRetainedElementCount()
+    if (process.argv[2]) root.renderer.captureScreenshot(`${process.argv[2]}.${entry.name}.png`)
     const results = root.renderer.findByTestId("browser-results")
     if (results) {
       root.renderer.scrollTo(results.id, 0, -10000)

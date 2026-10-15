@@ -2,18 +2,13 @@ import { MotionTabs } from "@/ui/controls"
 import { CollapseDivider } from "@/ui/panels"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useProjectState } from "../../adapters"
-import type { Clip, Track } from "../../model/types"
+import type { ClipEditorSlot } from "@/project/sections/clip-edit"
 import { Fragment } from "react"
 import type { ReactNode } from "react"
 import type { FooterLabels } from "./labels"
 import { EffectChain } from "./EffectChain"
 
 export type FooterView = "devices" | "clip"
-export interface ClipEditorSlot {
-  readonly clip: Clip
-  readonly track: Track
-  readonly close: () => void
-}
 export interface FooterPanelProps {
   readonly labels: FooterLabels
   readonly view: FooterView
