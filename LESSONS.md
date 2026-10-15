@@ -288,4 +288,11 @@
 - 因：Apple Git 2.50.1（Apple Git-155）执行 `apply -N` 时，会删掉这个补丁没涉及的所有 index 条目，剩下的文件看起来全部被删除。2026-10-15 F4 在新 checkout 上构建时发现：`git diff --binary HEAD` 超过 1MB，`check.mjs` 报 ENOBUFS。之前没暴露，是因为只在已有的 vendor 上增量打过补丁。
 - 见：`scripts/gpuix-main/build.sh`。
 
+## gpuix 迁移：批量绘制等价性必须覆盖小数几何
+
+- 错：整数合成矩形的 PNG 相同，就认定 `quad-batch` 与原生 div 像素等价。
+- 对：复用 GPUI `Window::pixel_snap_bounds` 处理本地位置和尺寸，再交给 `paint_quad` 处理绝对边缘；用原生 div 作独立 oracle，覆盖小数位置、尺寸、host origin 和 scale 1/1.25/1.5/2。
+- 因：layout 的 authored metric 舍入与 paint-time edge 舍入是两步。lane 的 `y=5.5,height=4.5,top=10` 曾多画一个像素，整数压力探针未捕获。
+- 见：`scripts/gpuix-main/quad-batch/PIXEL-SNAP-REPORT.md`、`pixel-parity.tsx` 与 `quad-batch.patch` 中的四类回归。F4b 独立复核与共享 vendor 重建后的新 GPU 图均与原 div、lane 参考图解码后零差异。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
