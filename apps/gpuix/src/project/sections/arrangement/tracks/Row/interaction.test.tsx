@@ -303,7 +303,6 @@ test("folding Group unmounts children and shows only the folded descendant overv
   const root = mount()
   const children = current("drums-group").childTrackIds ?? []
   expect(children.length).toBeGreaterThan(0)
-  expect(root.renderer.findByTestId("track-group-overview-drums-group")).toBeUndefined()
   for (const child of children)
     expect(root.renderer.findByTestId(`track-row-${child}`)).toBeDefined()
   expect(bounds(root, "track-group-frame-drums-group").height).toBeGreaterThan(
@@ -312,10 +311,9 @@ test("folding Group unmounts children and shows only the folded descendant overv
   click(root, "track-fold-drums-group")
   for (const child of children)
     expect(root.renderer.findByTestId(`track-row-${child}`)).toBeUndefined()
-  expect(root.renderer.findByTestId("track-group-overview-drums-group")).toBeDefined()
+  expect(root.renderer.findByTestId("lane-content-drums-group")).toBeDefined()
   expect(bounds(root, "track-group-frame-drums-group").height).toBe(COLLAPSED_TRACK_HEIGHT)
   click(root, "track-fold-drums-group")
-  expect(root.renderer.findByTestId("track-group-overview-drums-group")).toBeUndefined()
   for (const child of children)
     expect(root.renderer.findByTestId(`track-row-${child}`)).toBeDefined()
 })

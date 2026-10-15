@@ -111,9 +111,7 @@ export function TrackRows({
             >
               <TrackRow
                 row={row}
-                viewport={viewport}
                 rails={groups.railsByTrackId.get(row.track.id) ?? []}
-                descendants={groups.leafDescendantsByGroupId.get(row.track.id) ?? []}
                 lane={visible ? renderLane(row) : null}
                 showLane={visible}
                 onFocusTrack={onFocusTrack}

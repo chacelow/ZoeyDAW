@@ -9,20 +9,15 @@ import { TrackIdentity } from "../TrackIdentity"
 import { TrackRouting } from "../TrackRouting"
 import { TrackMixer } from "../TrackMixer"
 import { TrackMenu } from "../TrackMenu"
-import { GroupOverview } from "../GroupOverview"
 import { useTrackResize } from "./useTrackResize"
 import type { ReactNode } from "react"
 import type { KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { GroupRail } from "@/project/model/track-groups"
-import type { Track } from "@/project/model/types"
 import type { TrackRow as TrackRowGeometry } from "../../core/layout"
-import type { ArrangementViewport } from "../../core/scene"
 
 export function TrackRow({
   row,
-  viewport,
   rails,
-  descendants,
   lane,
   showLane,
   onFocusTrack,
@@ -31,9 +26,7 @@ export function TrackRow({
   dropTarget,
 }: {
   readonly row: TrackRowGeometry
-  readonly viewport: ArrangementViewport
   readonly rails: readonly GroupRail[]
-  readonly descendants: readonly Track[]
   readonly lane: ReactNode
   readonly showLane: boolean
   readonly onFocusTrack: (id: string) => void
@@ -147,18 +140,7 @@ export function TrackRow({
               selectFromKeyboard(event)
           }}
         >
-          {showLane ? (
-            track.kind === "group" && track.collapsed ? (
-              <GroupOverview
-                track={track}
-                descendants={descendants}
-                viewport={viewport}
-                height={row.height - theme.project.trackBorder}
-              />
-            ) : (
-              lane
-            )
-          ) : null}
+          {showLane ? lane : null}
         </div>
         <TrackIdentity
           track={track}
