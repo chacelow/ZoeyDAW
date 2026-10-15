@@ -150,7 +150,26 @@ Native 归因均为 976×196、完整 200×50 文档、同一十步输入、DEV�
 
 经协调者授权，clip-edit 的 `SourceWaveform-runtime.test.tsx` 只迁移截图观察 helper。PNG 解码后读取首个立体声声道的实际列包络，原会话开关、tempo、meter 与 reopen 的 14 条断言保留。第 16 列静音变异在画面产生 1px 包络，使 `opened > 1` 失败，证明 helper 不读 quad 内部结构。修复后整套测试恢复通过。
 
-A 以 `86a9de4` 为审查固定点，由两个独立只读 reviewer 上下文分别审 Standards 与 Spec，两轴新增必修、仲裁与判断项均为 0。授权测试 helper 的后续 Standards 复审同样无 findings。不声称跨模型信号。原始六轮满量属于 A 之前，A 后的原视口满量与 OS 组合界面仍待单独验证。
+A 以 `86a9de4` 为审查固定点，由两个独立只读 reviewer 上下文分别审 Standards 与 Spec，两轴新增必修、仲裁与判断项均为 0。授权测试 helper 的后续 Standards 复审同样无 findings。不声称跨模型信号。原始六轮属于 A 之前，A 后的原视口离屏结果见下节，OS 组合界面仍待单独验证。
+
+## 2026-10-15 A 后原视口离屏结果
+
+固定单元为 `13b5267`。UTC 2026-10-15T13:58:41Z 至 2026-10-15T14:08:41Z 的 JSON 授权内，先运行 5 个 Native PNG fixture，5 pass、0 fail，再交替运行 DEV 与 production 各三轮。视口固定 976×758，工程保持 200 条轨道、每轨 50 个 Clip。全部轮与命令回执均保留，无失败，不取最好一轮。
+
+| 模式 | 轮次 | 首视图 CPU ms | CPU p50 ms | CPU p90 ms | CPU max ms | Native p90 ms | Native p99 ms | Native max ms | Native pre max ms |
+| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: |
+| development | 1 | 176.83 | 37.92 | 53.34 | 63.89 | 21.59 | 22.51 | 30.16 | 60.79 |
+| production | 1 | 61.81 | 25.19 | 35.93 | 42.87 | 16.38 | 19.97 | 21.92 | 29.58 |
+| development | 2 | 74.69 | 36.71 | 48.52 | 48.82 | 18.00 | 19.37 | 20.94 | 28.05 |
+| production | 2 | 57.93 | 25.67 | 35.81 | 41.00 | 17.93 | 20.79 | 23.71 | 27.19 |
+| development | 3 | 76.84 | 38.03 | 45.04 | 58.19 | 17.39 | 18.90 | 20.91 | 28.23 |
+| production | 3 | 74.02 | 25.07 | 33.73 | 38.85 | 17.32 | 17.59 | 20.88 | 32.94 |
+
+每轮 Native 为 29 frames、21 samples。`Native pre` 是首视图完成前累计 8 个 draw samples 的统计，包含初始化绘制，不等于单独的首次 OS presentation。初始 retained 节点从 A 前的 3615 减到 2736，滚动期间为 1632 至 3018。CPU 与 Native 指标仍超出 16ms 门槛，不能宣称滚动、缩放达标。
+
+前后 swap 使用 9668.25 至 9612.25MiB，compressor 占用 241544 至 286360 个 16KiB 页。A 前后两个时段的系统压力不同，这不是严格近邻 A/B。完整六轮、fixture、首视图统计与内存输出位于忽略文件 `evidence/verification/A-quiet-all-rounds.json.local`，SHA-256 为 `0948e0ab7d28df7c169e4e0b48fc02116e8bc4180f4f6464ac95671c358ff3d6`。
+
+协议边界：这些结果来自有限 headless `createTestRoot` 进程，固定的是 A 单元 `13b5267`，不是协调者后续指定的 `a9bc471` 主干，也不是命名 `bun --hot` 窗口验收。未将它们标为正式主干窗口通过。已同步后续主干，下一步按协调者决策拆分 production JS、commit 与 Native layout，暂不扩 Native text API。修复后另申请同协议满量和真实窗口时段。
 
 ## 2026-10-15 引用稳定增量
 
