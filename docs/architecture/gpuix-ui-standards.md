@@ -96,7 +96,7 @@
 
 ## 14. 图标、SVG 与导入（写死，由 lint 强制）
 
-- **不手写 SVG**。图标一律来自 [`lucide`](https://lucide.dev) 包（web 一直用 `lucide-react`，同一套图标），通过 `ui/controls/Icon` 的 `<Icon name="Play" />` 绘制；名称是 `IconName` 类型，拼错在编译期报错，运行期未知名称抛 `RangeError`，不会静默画空白。
+- **不手写 SVG**。图标来自第三方图标库：首选 [`lucide`](https://lucide.dev)（web 一直用 `lucide-react`，同一套图标），lucide 没有的用 Phosphor（见本节最后一条），都通过 `ui/controls/Icon` 的 `<Icon name="Play" />` 绘制；名称是 `IconName` 类型，拼错在编译期报错，运行期未知名称抛 `RangeError`，不会静默画空白。
 - 数据驱动的几何（automation 曲线、波形包络、clip 淡入淡出、标记三角、网格线）用 `@/shared/svg/paths` 生成路径数据（d3-shape / d3-path：`polylinePath` 折线、`cubicPath` 三次贝塞尔链、`polygonPath` 闭合多边形、`segmentsPath` 互不相连的线段），再交给 `@/shared/svg/Shape` 绘制成单色原生 `<svg>`。**不拼接 `M … L …`/`C …` 字符串，不写 `<svg`/`<path` 字面量**；需要的形状函数不存在时，加到 `paths.ts`（带测试与变异检查），不要在切片里自己写。颜色只来自 `style.color`（`currentColor`），不在标记里写颜色。
 - SVG 标记只在 `shared/svg/serialise.ts` 里写一次：所有 `<svg source>` 都经 `serialiseSvg(nodes, { viewBox, attributes })` 生成。gpuix 的 `<svg>` 只接收原始标记并按单色着色，所以颜色一律用 `currentColor`（图标）或 `style.color`，不在标记里写颜色字面量。
 - **跨目录导入用 `@/` 别名**（指向 `apps/gpuix/src`，在 `apps/gpuix/tsconfig.json` 的 `paths` 配置，`tsc`、`bun test`、`bun run`、`eslint` 都已验证可解析）。同目录与向上最多两层保持相对（`./x`、`../x`、`../../x`）；超过两层用 `@/`。`gpuix-layers` 把 `@/…` 与相对路径解析到同一层，别名绕不过分层规则。

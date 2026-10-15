@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Worker health snapshot. Primary signal: age of the last message in each worker's
 # omp session (~/.omp/agent/sessions/<worktree>/*.jsonl). STALE when > STALE_MIN minutes.
+# ASKING when the newest message this worker sent is a `question` with nothing else in its
+# thread: it is blocked on the coordinator's reply, so waking it would only make it ask again.
 # Also reports the last message role/stop reason, last commit age, dirty files,
 # behind-main count, and leaked demo processes.
 set -u
@@ -25,6 +27,14 @@ done | python3 -c '
 import sys,os,json,glob,subprocess,time,datetime
 stale=int(os.environ.get("STALE_MIN","10"))
 now=time.time()
+inbox=json.loads(subprocess.run(["orca","orchestration","inbox","--limit","1000","--json"],capture_output=True,text=True).stdout or "{}")
+msgs=[m for m in ((inbox.get("result") or {}).get("messages") or []) if m.get("run_id")=="run_2ea0f3afbca8"]
+threads={}
+for m in msgs: threads.setdefault(m["thread_id"],[]).append(m["id"])
+newest={}
+for m in sorted(msgs,key=lambda m:m["created_at"]):
+    if m["from_handle"].startswith("dispatch:"): newest[m["from_handle"].removeprefix("dispatch:")]=m
+pending={did:[m["id"]] for did,m in newest.items() if m.get("type")=="question" and threads[m["thread_id"]]==[m["id"]]}
 for line in sys.stdin:
     did,path,handle=line.split()
     wt=os.path.basename(path)
@@ -57,12 +67,14 @@ for line in sys.stdin:
     # It cannot report on its own from that state, so the tick must wake it after IDLE_MIN.
     idle_min=int(os.environ.get("IDLE_MIN","3"))
     tui_idle=subprocess.run(["orca","terminal","wait","--terminal",handle,"--for","tui-idle","--timeout-ms","1000"],capture_output=True).returncode==0
-    if age is None: flag="NO-SESSION"
+    asks=pending.get(did,[])
+    if asks: flag="ASKING"
+    elif age is None: flag="NO-SESSION"
     elif errored: flag="ERROR"
     elif tui_idle and age>idle_min*60: flag="IDLE"
     elif age>stale*60: flag="STALE"
     else: flag="ok"
-    detail=role+((" "+str(note)[:40]) if note else "")
+    detail=role+((" "+str(note)[:40]) if note else "")+((" asks="+",".join(asks)) if asks else "")
     shown=mins if mins is not None else -1
     print(f"{flag:10} {did:18} {wt:34} last-msg={shown:>3}m ({detail})  commit={cm}m dirty={dirty} behind={behind}  {handle}")
 '

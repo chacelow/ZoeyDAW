@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# launchd tick (every 5 min).
+# launchd tick (every 10 min, ~/Library/LaunchAgents/com.zoeydaw.coordinator-tick.plist).
 # 1. Runs health-check.sh. A worker gets a prompt typed into its terminal (at most once per
 #    10 min per worker) when it is:
 #    - IDLE: its turn ended (TUI idle) but the dispatch is still open. The worker cannot report
 #      from that state, so the prompt makes it report to the coordinator through Orca.
 #    - STALE: no session message for 10 min; ERROR: last message is an assistant error.
-# 2. Types a patrol prompt into the coordinator terminal when it is idle.
+#    ASKING workers are not nudged: they wait on the coordinator's reply.
+# 2. Types a patrol prompt into the coordinator terminal when it is idle, naming unanswered questions.
 set -u
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
 DIR=/Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration/scripts/orchestration
-COORD="term_bc4c1300-5ad5-4ed7-8061-dd26e6dcbc71"
+COORD="term_abc5c16c-c9a2-4e3e-8e4e-6c98a70ec114"
 LOG="$HOME/Library/Logs/zoeydaw-coordinator-tick.log"
 STAMP="$HOME/Library/Caches/zoeydaw-tick"
 mkdir -p "$STAMP"
@@ -37,7 +38,8 @@ done
 
 if orca terminal wait --terminal "$COORD" --for tui-idle --timeout-ms 1000 >/dev/null 2>&1; then
   summary=$(printf "%s\n" "$report" | grep -cE "^(IDLE|STALE|ERROR) ")
-  orca terminal send --terminal "$COORD" --enter --text "[定时巡检] 有 ${summary} 个 worker 为 IDLE/STALE/ERROR(已自动唤醒)。运行 scripts/orchestration/health-check.sh 复核;清理已合入的 worktree、已结束的终端与超时 demo 进程;处理积压的 orchestration 消息后继续监听。" >> "$LOG" 2>&1
+  asks=$(printf "%s\n" "$report" | grep -oE "asks=[^ )]+" | sed 's/asks=//' | tr ',\n' '  ' | xargs)
+  orca terminal send --terminal "$COORD" --enter --text "[定时巡检] 待你 reply 的 question: ${asks:-无}。有 ${summary} 个 worker 为 IDLE/STALE/ERROR(已自动唤醒)。运行 scripts/orchestration/health-check.sh 复核;清理已合入的 worktree、已结束的终端与超时 demo 进程;处理积压的 orchestration 消息后继续监听。" >> "$LOG" 2>&1
   echo "$(ts) coordinator pinged" >> "$LOG"
 else
   echo "$(ts) coordinator busy, ping skipped" >> "$LOG"
