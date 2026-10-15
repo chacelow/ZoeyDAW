@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload, KeyEvent, PublicInstance } from "@gpuix/react"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
@@ -37,10 +37,16 @@ interface Gesture {
   readonly start: { x: number; y: number }
   readonly notes: MidiNote[]
   readonly selection: number[]
+  readonly currentNoteIndex: number | null
   readonly pitch: number
   lastCell: number
   lastPitch: number
   erased: Set<number>
+}
+
+interface NoteSelection {
+  readonly indices: number[]
+  readonly current: number | null
 }
 
 export interface Marquee {
@@ -76,14 +82,28 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
   const transaction = useProjectEditGesture((notes: MidiNote[]) =>
     projectActions.updateClip(clip.id, { notes })
   )
-  const [selected, setSelected] = useState<number[]>([])
+  const [selection, setSelection] = useState<NoteSelection>({ indices: [], current: null })
+  const selected = selection.indices
+  const setSelected = useCallback((indices: number[], preferred: number | null) => {
+    setSelection({
+      indices,
+      current: preferred !== null && indices.includes(preferred) ? preferred : (indices[0] ?? null),
+    })
+  }, [])
   const [marquee, setMarquee] = useState<Marquee | null>(null)
   const gesture = useRef<Gesture | null>(null)
   const host = useRef<PublicInstance | null>(null)
   const velocityHost = useRef<PublicInstance | null>(null)
   const latest = useRef(roll)
   latest.current = roll
-  const visibleSelection = validSelection(clip.notes, selected)
+  const visibleSelection = useMemo(
+    () => validSelection(clip.notes, selected),
+    [clip.notes, selected]
+  )
+  const currentNoteIndex =
+    selection.current !== null && visibleSelection.includes(selection.current)
+      ? selection.current
+      : (visibleSelection[0] ?? null)
 
   const finish = useCallback(
     (cancel: boolean) => {
@@ -92,11 +112,11 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       gesture.current = null
       setMarquee(null)
       if (active.kind === "marquee") {
-        if (cancel) setSelected(active.selection)
+        if (cancel) setSelected(active.selection, active.currentNoteIndex)
       } else if (cancel) transaction.onGestureCancel()
       else transaction.onGestureEnd()
     },
-    [transaction]
+    [transaction, setSelected]
   )
   useEffect(
     () =>
@@ -157,7 +177,10 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         top: Math.min(active.start.y, y),
         bottom: Math.max(active.start.y, y),
       }
-      setSelected([...new Set([...active.selection, ...marqueeHits(active.notes, view, box)])])
+      setSelected(
+        [...new Set([...active.selection, ...marqueeHits(active.notes, view, box)])],
+        currentNoteIndex
+      )
       setMarquee(box)
       return
     }
@@ -210,6 +233,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       start: { x, y },
       notes: storedNotes(clip.id),
       selection,
+      currentNoteIndex,
       pitch: pitchAt(y, view),
       lastPitch: pitchAt(y, view),
       lastCell: cellAt(x, view),
@@ -233,7 +257,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     if ((event.clickCount ?? 1) >= 2 && !drawMode) {
       if (hit.kind === "note") {
         projectActions.updateClip(clip.id, { notes: deleteNotes(clip.notes, [hit.index]).notes })
-        setSelected([])
+        setSelected([], null)
         return
       }
       const pitch = pitchAt(y, view)
@@ -245,13 +269,13 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         id: uniqueId("note"),
       })
       projectActions.updateClip(clip.id, { notes: edit.notes })
-      setSelected(edit.selection)
+      setSelected(edit.selection, edit.selection[0] ?? null)
       return
     }
     if (drawMode) {
       environment.drawMode.markGesture()
       transaction.onGestureStart()
-      setSelected([])
+      setSelected([], null)
       const active = begin(hit.kind === "note" ? "erase" : "draw", event, origin, [])
       if (hit.kind === "note") {
         active.erased = new Set([hit.index])
@@ -264,7 +288,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     }
     if (hit.kind === "note") {
       const selection = selectHit(selected, hit.index, extend)
-      setSelected(selection)
+      setSelected(selection, selection.includes(hit.index) ? hit.index : currentNoteIndex)
       if (selection.includes(hit.index) && !extend) {
         transaction.onGestureStart()
         begin(hit.edge ? "resize" : "move", event, origin, selection)
@@ -272,7 +296,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       return
     }
     const selection = extend ? visibleSelection : []
-    setSelected(selection)
+    setSelected(selection, currentNoteIndex)
     begin("marquee", event, origin, selection)
   }
 
@@ -287,7 +311,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     if (index === null) return
     if (host.current) renderer?.focusElement?.(host.current.id)
     const selection = visibleSelection.includes(index) ? visibleSelection : [index]
-    setSelected(selection)
+    setSelected(selection, index)
     transaction.onGestureStart()
     begin("velocity", event, { x: bounds.x, y: bounds.y }, selection)
     move(event)
@@ -302,13 +326,13 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         else (shift ? projectActions.redo : projectActions.undo)()
         return true
       case "a":
-        setSelected(selectVisibleNotes(notes, view.window))
+        setSelected(selectVisibleNotes(notes, view.window), currentNoteIndex)
         return true
       case "d": {
         if (!visibleSelection.length) return false
         const edit = duplicateNotes(notes, visibleSelection, () => uniqueId("note"))
         projectActions.updateClip(clip.id, { notes: edit.notes })
-        setSelected(edit.selection)
+        setSelected(edit.selection, edit.selection[0] ?? null)
         return true
       }
       case "u":
@@ -330,7 +354,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         clipboardMemory.write(text)
         if (key === "x") {
           projectActions.updateClip(clip.id, { notes: deleteNotes(notes, visibleSelection).notes })
-          setSelected([])
+          setSelected([], null)
         }
         return true
       }
@@ -341,7 +365,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         if (!copied) return false
         const edit = pasteNotes(notes, copied, () => uniqueId("note"))
         projectActions.updateClip(clip.id, { notes: edit.notes })
-        setSelected(edit.selection)
+        setSelected(edit.selection, edit.selection[0] ?? null)
         return true
       }
       default:
@@ -364,7 +388,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     let handled = false
     if (key === "escape") {
       if (gesture.current) finish(true)
-      else setSelected([])
+      else setSelected([], null)
       handled = true
     } else if (commandKey && !modifiers?.alt) {
       handled = command(key, Boolean(modifiers?.shift))
@@ -373,7 +397,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         projectActions.updateClip(clip.id, {
           notes: deleteNotes(clip.notes, visibleSelection).notes,
         })
-        setSelected([])
+        setSelected([], null)
         handled = true
       } else if (Object.hasOwn(MOVE_KEYS, key)) {
         const [beatDelta, pitchStep] = MOVE_KEYS[key] ?? [0, 0]
@@ -402,6 +426,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     drawMode,
     marquee,
     visibleSelection,
+    currentNoteIndex,
     finish,
     blur: () => {
       // Native preview repaint can report a transient null focus; application loss has its own port.
@@ -421,15 +446,28 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       const indices = selectVisibleNotes(clip.notes, latest.current.window).filter(
         index => clip.notes[index]?.pitch === pitch
       )
-      setSelected(extend ? [...new Set([...visibleSelection, ...indices])] : indices)
+      setSelected(
+        extend ? [...new Set([...visibleSelection, ...indices])] : indices,
+        indices[0] ?? currentNoteIndex
+      )
       if (source === "pointer" && host.current) renderer?.focusElement?.(host.current.id)
+    },
+    activateNote: (index: number, preserveSelection: boolean) => {
+      if (index < 0 || index >= clip.notes.length) return
+      setSelection(previous => {
+        const indices =
+          preserveSelection && previous.indices.includes(index) ? previous.indices : [index]
+        return indices === previous.indices && previous.current === index
+          ? previous
+          : { indices, current: index }
+      })
     },
     changeVelocity: (index: number, delta: number) => {
       const note = clip.notes[index]
       if (!note) return
       const selection = visibleSelection.includes(index) ? visibleSelection : [index]
       finish(true)
-      setSelected(selection)
+      setSelected(selection, index)
       projectActions.updateClip(clip.id, {
         notes: setNoteVelocity(storedNotes(clip.id), selection, note.velocity + delta).notes,
       })

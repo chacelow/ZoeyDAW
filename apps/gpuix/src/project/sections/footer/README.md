@@ -2,7 +2,7 @@
 
 `FooterPanel` 接收 `FooterLabels`、受控 `view` 和 `collapsed`。组合根持有标签与折叠状态，StatusStrip 消费同一份状态。
 
-Affect Chain 与 Clip Edit 互斥，放在同一个底部面板。Affect Chain 高度取 `theme.project.footerDeviceHeight`，分隔条只折叠或展开，不自由改变高度。Clip Edit 的内容由 `renderClipEditor({ clip, track, close })` 注入，编辑器实现属于 B2-clip-editors。普通 Clip 选择不会切换标签或构造隐藏编辑器。关闭面板会卸载内容并取消未完成编辑。
+Affect Chain 与 Clip Edit 互斥，放在同一个底部面板。Affect Chain 高度取 `theme.project.footerDeviceHeight`，分隔条只折叠或展开，不自由改变高度。Clip Edit 由 `renderClipEditor({ clipId, trackId, close })` 注入；只传身份，编辑器通过 adapter 读取唯一工程 owner，不把包含 notes 的 Clip/Track 大对象穿过 React props。普通 Clip 选择不会切换标签或构造隐藏编辑器。关闭面板会卸载内容并取消未完成编辑。
 
 Clip Edit 填满宿主 Panel。可调高度由组合根的垂直 Group、Panel 与 PanelDivider 持有，Footer 不给 Clip Edit 添加固定高度的二值分隔条。`demo.tsx` 按这一接口组合宿主，切换到 Clip Edit 后可连续调整高度。
 

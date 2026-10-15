@@ -295,4 +295,10 @@
 - 因：layout 的 authored metric 舍入与 paint-time edge 舍入是两步。lane 的 `y=5.5,height=4.5,top=10` 曾多画一个像素，整数压力探针未捕获。
 - 见：`scripts/gpuix-main/quad-batch/PIXEL-SNAP-REPORT.md`、`pixel-parity.tsx` 与 `quad-batch.patch` 中的四类回归。F4b 独立复核与共享 vendor 重建后的新 GPU 图均与原 div、lane 参考图解码后零差异。
 
+## gpuix 迁移：修改补丁序列中间的补丁，共享 vendor 要从该补丁起逆序回退
+
+- 错：合入改了 `quad-batch.patch` 的分支后直接跑 `build.sh`，以为它会增量重放；或者只逆向回退被改的那一个补丁。
+- 对：`check.mjs` 报 “Vendor must contain exactly the checked-in ordered patch series” 时，用合入前主干版本的补丁，从序列尾部逆序 `git apply --reverse --check` 后回退，直到被改补丁为止（2026-10-15 F4c：resume-frame → autofocus-focus-event → quad-batch）；再用 `git rm --cached` 清掉补丁新建文件残留的 intent-to-add 条目，然后跑 `build.sh` 从该位置重放。
+- 因：后面的补丁建立在被改补丁的上下文之上，只回退中间那一个会冲突；`build.sh` 只能在已有前缀正确时追加尾部补丁。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
