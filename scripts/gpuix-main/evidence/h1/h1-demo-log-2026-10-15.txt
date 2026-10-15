@@ -13,3 +13,8 @@ exit=0 (process exited after closeWindow; window absent from window list)
 #   statictext e4: "Close guard: dialog: unsaved changes"
 # AX after pressing button "Don't save and close":
 #   computer.window(title="H1 appearance close demo") -> no window matches; service h1-demo exited 0
+
+# getWindowAppearance smoke (after A/B arbitration, 03:00 UTC, system AppleInterfaceStyle=Dark):
+{"kind":"getSystemAppearance","value":"dark"}
+{"kind":"guard","supported":true}
+# guard.close() from a microtask -> process exit=0; GPUI logged once "ERROR gpui::window] window not found" after removal (queued update on the removed window, harmless).

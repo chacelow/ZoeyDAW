@@ -266,6 +266,7 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 - 错：为了让原生标题栏跟随所选的明/暗模式，调用 GPUI 的 `set_window_appearance` / `NSApp.appearance`，同时继续用 `subscribeSystemAppearance` 实现「跟随系统」。
 - 对：「跟随系统」只在没有设置应用级外观覆盖时成立。确需让标题栏跟随模式，先换成直接读系统外观的来源(例如 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`),再加覆盖。
 - 因：`onWindowAppearanceChange` 回报的是窗口的 `effectiveAppearance`,它继承 `NSApp.appearance`;一旦覆盖,读到的就是自己设的值,系统切换不再触发变化。
+- 已知限制(推断，未实测)：GPUI 只认 Aqua、DarkAqua 和 Vibrant 两种外观名，其它一律当作 Light。所以开启「增强对比度」后，深色外观可能报成 `"light"`。要修就得在 renderer 里另读 `NSAppearance`，不要在 TS 里猜。
 - 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。
 
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

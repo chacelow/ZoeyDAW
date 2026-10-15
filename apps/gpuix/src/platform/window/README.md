@@ -11,7 +11,7 @@
 - 已取消的订阅、以及重新订阅后旧 session 排队的回调都不会再触达监听者。
 - renderer 缺少对应方法时，订阅直接抛错，不退回轮询。
 
-`subscribeSystemAppearance` 回报 `"light" | "dark"`，GPUI 的 Vibrant 变体在 Rust 侧已归并。它读的是窗口的有效外观，前提是没有人通过 GPUI `set_window_appearance` 覆盖应用外观，原因见 LESSONS。主题模式 `"system"` 用它，`"light"`、`"dark"` 不需要订阅。模式持久化在 `platform/settings` 的 `themeMode`，与配色预设 `themePreset` 互相独立。
+`subscribeSystemAppearance` 回报 `"light" | "dark"`，GPUI 的 Vibrant 变体在 Rust 侧已归并。订阅只通知变化，首帧主题要用同步的 `getSystemAppearance()` 取当前值。两者读的都是窗口的有效外观，前提是没有人通过 GPUI `set_window_appearance` 覆盖应用外观，原因见 LESSONS。已知限制(推断，未实测)：开启「增强对比度」后的深色外观名不在 GPUI 的识别表里，会被当作 `"light"`。主题模式 `"system"` 用这两个接口，`"light"`、`"dark"` 不需要订阅。模式持久化在 `platform/settings` 的 `themeMode`，与配色预设 `themePreset` 互相独立。
 
 ## 关闭守卫
 
@@ -27,8 +27,8 @@ const guard = createWindowCloseGuard(renderer, {
 
 - `shouldClose` 在 macOS 上由 AppKit 同步调用，触发来源是关闭按钮和 ⌘W。它必须同步返回，返回 `false` 表示否决。
 - `guard.close()` 调用 renderer 的 `closeWindow()`，**不**经过 `shouldClose`，因为用户已经在对话框里做过选择。它关闭窗口之后，最后一个窗口关闭即退出(`QuitMode::LastWindowClosed`，`tick()` 返回 false)。
-- 在 `shouldClose` 内部同步调用 `close()` 会重入 GPUI，守卫会直接抛错。对话框必须在 `shouldClose` 返回之后再做选择。
-- renderer 不支持时 `supported === false`，此时调用 `close()` 抛错，不会静默不关。
+- 在 `shouldClose` 内部同步调用 `close()` 会重入 GPUI，在 AppKit 回调里 panic，可能直接 abort 进程。守卫会抛错拦住这种调用。对话框必须在 `shouldClose` 返回之后再做选择。
+- `supported` 只表示关闭按钮和 ⌘W 能否被否决。目前只有 macOS 为 true，Windows、Linux 的 renderer 没有 `setWindowShouldClose`。`close()` 只依赖 `closeWindow()`，三个平台都可用。renderer 连 `closeWindow` 都没有时，`close()` 会抛错，不会静默不关。
 - `actionAfterGuard` / `closeButtonAction` 仍负责根据 `closeBehavior` 决定是问、隐藏到托盘还是直接退出。
 
 从仓库根运行 `bun --hot scripts/gpuix-main/probe.mjs` 可以看激活事件。外观和关闭的真实窗口验证记录在 `docs/research/gpuix-main-build.md` 的 H1 一节。

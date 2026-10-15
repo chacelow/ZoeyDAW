@@ -891,14 +891,17 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 | 接口 | 契约 |
 | --- | --- |
 | `onWindowAppearanceChange(callback \| null)` | 基于 GPUI `observe_window_appearance`。第一次回调异步回报当前值，之后回报变化。传 null 释放 observer。弱、非阻塞 TSFN，不让进程保活。`VibrantLight`/`VibrantDark` 归并为 `"light"`/`"dark"` |
+| `getWindowAppearance()` | 同步返回当前 `"light" \| "dark"`。macOS 走 `update_window`，Win/Linux 走 UI command 加 2 秒超时应答。供首帧主题使用，因为订阅首值只当基线 |
 | `closeWindow()` | 调用 `Window::remove_window()`，**不**经过 `setWindowShouldClose`。在 `QuitMode::LastWindowClosed` 下最后一个窗口关闭即 `cx.quit()`，`tick()` 返回 false，JS 退出。禁止在 `setWindowShouldClose` 回调里同步调用：AppKit 询问期间 GPUI `App` 已被借用，再次 `borrow_mut` 会 panic，而且发生在 AppKit 的 FFI 回调里，可能直接 abort 进程。`platform/window` 守卫会在这种情况下抛错拦截 |
-| `NativeRenderer` | host 的 Pick 列表补上 `onWindowAppearanceChange`、`setWindowShouldClose`、`closeWindow`，`platform/window` 的结构端口在编译期与它核对 |
+| `NativeRenderer` | host 的 Pick 列表补上 `onWindowAppearanceChange`、`getWindowAppearance`、`setWindowShouldClose`、`closeWindow`，`platform/window` 的结构端口在编译期与它核对 |
 
 macOS 直接更新 view；Windows、Linux、FreeBSD 走 UI command 队列，与激活接口相同，但这三个平台没有实跑。
 
 **约束**：回报的是窗口的 `effectiveAppearance`，它继承 `NSApp.appearance`。如果以后为了让原生标题栏跟随所选模式而调用 GPUI `set_window_appearance`，「跟随系统」读到的就会是被覆盖的值，系统切换也不再触发变化。为此记入 LESSONS。另一条备选方案是在 `crates/native` 里监听 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`：它能读到真实的系统值，但要新增 objc2-foundation/block2，只覆盖 macOS，也无法在 GPUI 测试里模拟。协调者批准走补丁方案。
 
-TS 侧：`createWindowPlatform(renderer).subscribeSystemAppearance` 与 `subscribeApplicationActive` 共用 `createNativeValueSubscription`，旧的 `application-active.ts` 已删除。`createWindowCloseGuard(renderer, { shouldClose })` 返回 `{ supported, close() }`，在 `shouldClose` 执行期间调用 `close()` 会抛错。设置中的 `themeMode`(`light | dark | system`，缺省按 system)与 `themePreset` 互相独立。详见 `apps/gpuix/src/platform/window/README.md`。
+TS 侧：`createWindowPlatform(renderer).subscribeSystemAppearance` 与 `subscribeApplicationActive` 共用 `createNativeValueSubscription`，旧的 `application-active.ts` 已删除；`getSystemAppearance()` 给出首帧值。`createWindowCloseGuard(renderer, { shouldClose })` 返回 `{ supported, close() }`：`supported` 只表示能否否决(仅 macOS)，`close()` 只依赖三平台都有的 `closeWindow`，在 `shouldClose` 执行期间调用会抛错。设置中的 `themeMode`(`light | dark | system`，缺省按 system)与 `themePreset` 互相独立。详见 `apps/gpuix/src/platform/window/README.md`。
+
+**已知限制(推断，未实测)**：GPUI `gpui_macos/src/window_appearance.rs` 只识别 Aqua、DarkAqua 和两个 Vibrant 名称，其它名称一律回落为 `Light`。开启「增强对比度」后，系统报告的深色外观名(如 `NSAppearanceNameAccessibilityHighContrastDarkAqua`)会被当作 `"light"`。修复要么改 zed 子模块(本补丁不改)，要么在 renderer 里另读 `NSAppearance`。协调者决定只记录，不在本机切换辅助功能设置实测。
 
 #### H1 实测记录
 
