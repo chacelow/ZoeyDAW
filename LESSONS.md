@@ -88,7 +88,7 @@
 - 回答 worker 的 `question` 用 `orca orchestration reply --id <msg_id>`，不要另发 `send --type status`。`question` 是阻塞调用，worker 只等这条消息的回复；23:40 批准 lane 桌面时段的 status 消息没有被读到，15 分钟时段白白过去。限时授权（桌面时段）以回复送达时刻起算，过期就重发。
 - 主干把测试从 `timeline/` 移到 `core/rulers/` 后，timeline 分支 merge 主干时，Git 的目录重命名推断把整个 `timeline/` 判成已移到 `core/rulers/`，产生 25 个文件的 location 冲突。切片 worktree 共用同一个仓库配置，已设置 `git config merge.directoryRenames false`。协调者在主干之间移动文件后，通知受影响切片：冲突要按 HEAD 和 MERGE_HEAD 逐个核对，不 abort，也不丢代码。
 - 错：`worker-start --worktree new-child` 把新 worktree 的 Orca 父级设成协调者终端所在的 worktree，也就是仓库根 `/Volumes/PSSD/code/zoeydaw`，不是 `gpuix-migration`。结果 Orca 侧边栏里出现两棵树：早期切片挂在 gpuix-migration 下，后期切片挂在 zoeydaw 下。分支其实都基于 `gpuix-migration`，只是显示挂错了地方。
-- 对：一律用 `scripts/orchestration/start-worker.sh` 派发。它在 worker-start 之后立即执行 `orca worktree set --parent-worktree path:…/gpuix-migration`，所有切片都挂在 gpuix-migration 这一个父 workspace 下。
+- 对：一律用 `scripts/orchestration/start-worker.sh` 派发。它在创建 worktree 时显式传 `--parent-worktree path:…/gpuix-migration`，不依赖 CLI 所在目录，所有切片都挂在 gpuix-migration 这一个父 workspace 下。
 
 ## gpuix 迁移：对照 Live 量尺寸要量完整组件，并注明单位与显示器
 
@@ -181,20 +181,17 @@
 - 判据可复用：① 缺口是否已在主干；② 近 30 天提交数与作者分布（单人维护是风险，靠固定 SHA 与可复现脚本抵消）；③ 干净构建与单行重建的实测耗时；④ 现有 demo 与测试在自建版本上的兼容结果。
 - 见：`docs/research/gpuix-main-build.md`、`docs/architecture/gpuix.md` 的「渲染器版本决策」。
 
-## gpuix 迁移：切片 worktree 派发为 `gpuix-migration` 的子 worktree
+## gpuix 迁移：切片 worktree 是 `gpuix-migration` 的子 worktree
 
-- 错：`orca orchestration worker-start --worktree new-top-level` 派发切片，客户端侧栏里每个切片都是平级的顶层 workspace，和无关项目混在一起，看不出归属。
-- 对：用 `--worktree new-child`（父为当前协调者所在 worktree `gpuix-migration`），切片在客户端里嵌套在它下面，合并和清理时一目了然。已派出的顶层切片用 `orca worktree set --worktree path:<dir> --parent-worktree path:<父目录>` 补挂，只改 Orca 元数据，不动 git 分支与文件。
-- 注意：`new-child` 的父默认是主仓库 `zoeydaw`，不是协调者所在的 worktree（2026-10-14 实测）；必须在创建后用 `orca worktree set --parent-worktree` 补挂到 `gpuix-migration`。基线分支用 `--base-branch gpuix-migration` 显式指定，才会带上之前所有合并。
-- 2026-10-14：A3 起即为子 worktree，B1、C1 初始为顶层，已补挂。
+- 2026-10-14 16:02、2026-10-15 02:22 用户要求：所有切片在 Orca 里挂在 gpuix-migration 一个父级下。派发方式见上面「review 退回要重新派发」一节末两条与 `start-worker.sh`。
 
 ## gpuix 迁移：切片合入后立即删 worktree，不复用上下文
 
-- 决策（2026-10-14，用户关注本机性能）：切片**合入并核对无残留后立即**删除其 worktree、分支与对应 OMP 终端；不为"可能复用上下文"保留。
-- 因：每个存活的 OMP/agent 进程常驻内存（实测单个约 0.6–2.7% 内存），旧切片上下文已被合并提交和 LESSONS 取代；复用只省一次创建时间，却拖累整机。新切片用新 worktree + 自包含任务描述更干净、边界更清楚。
-- 例外：有未提交改动、或任务未完成的切片保留并说明原因（本次 A3/A6/A7）。
-- 做法：① `git rev-list --count gpuix-migration..<branch>` 为 0 且 `git merge-base --is-ancestor` 为真；② `git status --short` 干净；③ `orca worktree rm --worktree path:<dir>`，**不加 `--force`**，让 git 拒绝脏树；④ `git branch -d`（不用 `-D`），未合入会被拒。
-- 终端：agent 终端由用户在 Orca 界面关闭，Agent 不自行 kill 进程。
+- 决策（2026-10-14 15:26 UTC，用户关注本机性能）：切片**合入并核对无残留后立即**删除其 worktree、分支与对应 OMP 终端；不为"可能复用上下文"或"留着最终复验"保留，复验另开新 worktree。
+- 因：每个存活的 OMP/agent 进程常驻内存（实测单个约 0.6–2.7% 内存），还会带着 LSP、rust-analyzer 等子进程；旧切片上下文已被合并提交和 LESSONS 取代。
+- 例外：有未提交改动或任务未完成的保留，并用 `orca worktree set --comment "保留:<原因>;删除条件:<条件>"` 写明。2026-10-15 审计时 tracks、timeline 两个已合入 worktree 以"最终复验"为由保留且无说明，被用户指出不知道是有意保留还是漏删。
+- 做法：① `git rev-list --count gpuix-migration..<branch>` 为 0 且 `git merge-base --is-ancestor` 为真；② `git status --short` 干净；③ `lsof +D <dir>` 确认没有 agent 进程还在用；④ `orca worktree rm --worktree path:<dir>`，**不加 `--force`**，它会顺带删除已合入的分支。
+- 终端：`worker-release` 对派发脚本建的终端返回 `user_takeover`，这只是创建方式的标记。错：2026-10-15 据此把 4 个已完成终端留给用户手动关，用户指出不要把可自行处理的清理留给他。对：确认 TUI 空闲、派发 completed 后，协调者用 `orca terminal close --terminal <handle> --tab` 关闭，再 `lsof +D` 确认进程已退出、删除 worktree。
 
 ## gpuix 迁移：commit 报 `pre-commit failed` 不等于没提交，先查再判断
 
@@ -242,14 +239,15 @@
 
 ## gpuix 迁移：gpuix 0.10.0 的原生缺口（临时代码清单，升级后整体删除）
 
-npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失、主干已有或仍缺的能力，所有绕行代码必须集中在单一函数/hook 里并注明对应上游项：
+以下记录 0.10.0 与固定主干的能力差异及切换状态。已删除的路径不得重新引入；剩余原生能力不以 TS 轮询或占位行为冒充。
 
-- `onLayout`：主干有（`.changeset/on-layout.md`），0.10.0 没有。绕行：`getElementBounds` 采样，收敛在唯一的测量 hook。
-- `getElementBounds` 含 padding 的修复：主干有（`bounds-include-padding`）。绕行：`readOuterBounds`，唯一入口。
-- `onFocus/onBlur` 在 `focusElement` 时不触发：元素焦点绕行为应用作用域单一采样器。窗口激活已由 F1 补丁 `window-active-change.patch` 提供原生事件 `renderer.onWindowActiveChange`，经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧的 50ms 激活采样已删除，不得再用定时器轮询激活。
+- `onLayout`：主干有（`.changeset/on-layout.md`）。A3b 已把文本样本测量改为原生事件；旧 `getElementBounds` 定时采样已删除，缓存仍按字体与样本集持有。
+- `getElementBounds`：主干直接返回 border box。A3b 已删除旧 border/padding 修正、`readOuterBounds` 转发层及所有生产/测试调用，直接消费原生 API，几何断言未放宽。
+- `onFocus/onBlur`：A3b 已删除元素焦点采样器与 register/ref 兼容路径，由原生事件发布控件种类，原生 `focusVisible` 绘制焦点环。窗口激活由 F1 `window-active-change.patch` 经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧 50ms 激活采样已删除，不得重新轮询。
 - 关闭拦截：D1 补丁 `setWindowShouldClose` 加 H1 补丁 `closeWindow()`，由 `platform/window/close-guard.ts` 的 `createWindowCloseGuard` 统一持有(macOS 下 `supported=true`)，用法见 `apps/gpuix/src/platform/window/README.md`。`hideWindow` 和托盘仍然没有。不得用 `process.exit()` 冒充关闭。
-- `measureText`：没有。绕行：挂载不可见样本节点读取实测宽度。
+- `measureText`：仍没有独立字符串测量 API。挂载不可见样本文本，由 `onLayout` 读取实测宽度，不保留定时测量作为第二 owner。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
+- 浮层 center：F1 `anchored-center.patch` 用零尺寸点锚消除重复减半。A3b 已删除 `useFloatingCenterOffset`、调用和采样；不再添加 TS offset 抵消原生定位。
 - 错：合入改动 `scripts/gpuix-main/config.json` 补丁序列的分支后，直接在主干跑 tsc 和 `bun test`。共享 vendor 仍是旧补丁的产物，主干一度显示 tsc 8 个错误、25 个测试失败，全部是假失败。
 - 对：先跑 `node scripts/gpuix-main/check.mjs`；它报 “Vendor must contain exactly the checked-in ordered patch series” 时，先通知各 worker 暂停渲染器相关构建与整套测试，再跑 `bash scripts/gpuix-main/build.sh`，check 通过后才把门禁结果当真，最后通知各 worker merge 主干。
 
@@ -270,5 +268,18 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 - 对：「跟随系统」只在没有设置应用级外观覆盖时成立。确需让标题栏跟随模式，先换成直接读系统外观的来源(例如 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`),再加覆盖。
 - 因：`onWindowAppearanceChange` 回报的是窗口的 `effectiveAppearance`,它继承 `NSApp.appearance`;一旦覆盖,读到的就是自己设的值,系统切换不再触发变化。
 - 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。
+
+## gpuix 迁移：computer 截不到按住期间的 pressed 帧
+
+- 错：把激活态截图或松开后的截图当成 pressed 证据；或在一个 `computer.run` 里按住再截图，就以为截到的是按住那一刻。
+- 对：pressed 用测试直接断言：按下后的样式值与尺寸正确，松开后恢复，并做变异。真实窗口的 pressed 帧在报告里标为工具限制下的未验证。拿到截图后，用控件状态读回（例如切换控件在 onClick 才变化）核对截图时刻，不凭截图里的样子判断。
+- 因：2026-10-15 clip-editors 实测，display 截图报 `InvalidCoordinateFrame`，并行调用报 `Computer worker busy`，同一个 run 里的拖动会阻塞截图，图实际是松开之后才截的。
+
+## gpuix 迁移：Apple Git 的 `git apply --intent-to-add` 会丢 index 条目
+
+- 错：在 vendor 构建脚本里用 `git apply --intent-to-add`，想顺带把补丁新建的文件登记进 index。
+- 对：先用普通 `git apply` 打完全部补丁，再用 `git ls-files --others --exclude-standard` 找出新建的文件，交给 `git add --intent-to-add --pathspec-from-file=-` 登记。
+- 因：Apple Git 2.50.1（Apple Git-155）执行 `apply -N` 时，会删掉这个补丁没涉及的所有 index 条目，剩下的文件看起来全部被删除。2026-10-15 F4 在新 checkout 上构建时发现：`git diff --binary HEAD` 超过 1MB，`check.mjs` 报 ENOBUFS。之前没暴露，是因为只在已有的 vendor 上增量打过补丁。
+- 见：`scripts/gpuix-main/build.sh`。
 
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

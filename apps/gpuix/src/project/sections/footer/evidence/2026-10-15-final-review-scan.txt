@@ -1,0 +1,11 @@
+Command: node scripts/gpuix-review-scan.mjs
+Source commit: c08efec
+Base: gpuix-migration (includes 8ceeb41 verification boundary correction)
+
+WARN  px-literal             apps/gpuix/src/project/sections/footer/demo.tsx  2 raw pixel value(s) like width: 1280: use CONTROL_METRICS/PROJECT_METRICS/theme tokens
+WARN  px-literal             apps/gpuix/src/project/sections/footer/verification/measure.tsx  6 raw pixel value(s) like width: 320: use CONTROL_METRICS/PROJECT_METRICS/theme tokens
+WARN  px-literal             apps/gpuix/src/project/sections/footer/verification/states.tsx  8 raw pixel value(s) like width: 1800: use CONTROL_METRICS/PROJECT_METRICS/theme tokens
+
+39 source files, 13 test files scanned vs gpuix-migration: 0 hard, 3 warn
+
+Disposition: fixed native window/test viewport dimensions and deterministic input fixture dimensions only; no product control spacing or sizing constants. Window capture resolutions were coordinator-approved. Retained as verification inputs rather than inventing theme tokens for test scenes.

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Separator } from "./index"
 
@@ -20,11 +20,11 @@ test("horizontal and vertical separators occupy only one pixel on the dividing a
   const horizontal = root.renderer.findByTestId("horizontal")
   const vertical = root.renderer.findByTestId("vertical")
   if (!horizontal || !vertical) throw new Error("Separators missing")
-  expect(readOuterBounds(root.renderer, root.renderer.getElement(horizontal.id))).toMatchObject({
+  expect(root.renderer.getElementBounds(horizontal.id)).toMatchObject({
     width: 200,
     height: 1,
   })
-  expect(readOuterBounds(root.renderer, root.renderer.getElement(vertical.id))).toMatchObject({
+  expect(root.renderer.getElementBounds(vertical.id)).toMatchObject({
     width: 1,
     height: 80,
   })

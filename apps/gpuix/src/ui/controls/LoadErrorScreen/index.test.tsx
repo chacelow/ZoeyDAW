@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { LoadErrorScreen } from "./index"
 
@@ -23,7 +23,7 @@ test("load errors expose the original failure and execute retry via native input
   expect(root.renderer.findByText("File is missing")).toBeDefined()
   const retry = root.renderer.findByTestId("error-retry")
   if (!retry) throw new Error("Retry button missing")
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(retry.id))
+  const bounds = root.renderer.getElementBounds(retry.id)
   if (!bounds) throw new Error("Retry button not laid out")
   root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
   root.renderer.nativeSimulateKeystrokes(retry.id, "enter")

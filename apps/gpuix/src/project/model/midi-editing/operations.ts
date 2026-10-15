@@ -168,14 +168,19 @@ export function drawCells({
   createId: () => string
 }): Edit {
   const added: MidiNote[] = []
+  const origin = Math.floor(window.sourceOffsetBeats * 4) / 4
   for (let cell = Math.min(firstCell, lastCell); cell <= Math.max(firstCell, lastCell); cell++) {
-    const beat = window.sourceOffsetBeats + cell / 4
+    const beat = origin + cell / 4
+    const visibleStart = Math.max(beat, window.sourceOffsetBeats)
+    const visibleEnd = Math.min(beat + 0.25, window.sourceOffsetBeats + window.totalBeats)
     if (
-      beat < window.sourceOffsetBeats ||
+      beat + 0.25 <= window.sourceOffsetBeats ||
       beat >= window.sourceOffsetBeats + window.totalBeats ||
       notes.some(note => {
         return (
-          note.pitch === pitch && note.startBeat <= beat && note.startBeat + note.lengthBeats > beat
+          note.pitch === pitch &&
+          note.startBeat < visibleEnd &&
+          note.startBeat + note.lengthBeats > visibleStart
         )
       })
     ) {
@@ -206,10 +211,15 @@ export function eraseCells({
   const next = new Set(erased)
   const low = Math.min(firstCell, lastCell)
   const high = Math.max(firstCell, lastCell)
+  const origin = Math.floor(window.sourceOffsetBeats * 4) / 4
   notes.forEach((note, index) => {
-    const startCell = Math.floor((note.startBeat - window.sourceOffsetBeats) * 4)
-    const endCell =
-      Math.ceil((note.startBeat + note.lengthBeats - window.sourceOffsetBeats) * 4) - 1
+    if (
+      note.startBeat + note.lengthBeats <= window.sourceOffsetBeats ||
+      note.startBeat >= window.sourceOffsetBeats + window.totalBeats
+    )
+      return
+    const startCell = Math.floor((note.startBeat - origin) * 4)
+    const endCell = Math.ceil((note.startBeat + note.lengthBeats - origin) * 4) - 1
     if (note.pitch === pitch && startCell <= high && endCell >= low) {
       next.add(index)
     }
@@ -220,5 +230,53 @@ export function eraseCells({
       selection: validSelection(notes, selection),
     },
     erased: next,
+  }
+}
+
+const GRID_EPSILON = 1e-9
+
+/**
+Live's Cmd+U: snap selected note starts to the editor grid, keeping lengths. A start that the
+source-window move rules cannot place on any nearby grid line is left where it is.
+*/
+export function quantizeNotes({
+  notes,
+  selection,
+  gridBeats,
+  window,
+}: {
+  notes: MidiNote[]
+  selection: number[]
+  gridBeats: number
+  window: Window
+}): Edit {
+  const valid = validSelection(notes, selection)
+  if (!(gridBeats > 0) || !Number.isFinite(gridBeats)) {
+    return { notes, selection: valid }
+  }
+  const indices = new Set(valid)
+  return {
+    notes: notes.map((note, index) => {
+      const cells = note.startBeat / gridBeats
+      if (!indices.has(index) || Math.abs(cells - Math.round(cells)) < GRID_EPSILON) {
+        return note
+      }
+      for (const cell of new Set([Math.round(cells), Math.ceil(cells), Math.floor(cells)])) {
+        const target = cell * gridBeats
+        const moved = moveMidiNote({
+          note,
+          originalStartBeat: note.startBeat,
+          originalPitch: note.pitch,
+          beatDelta: target - note.startBeat,
+          pitchDelta: 0,
+          ...window,
+        })
+        if (moved.startBeat === target) {
+          return moved
+        }
+      }
+      return note
+    }),
+    selection: valid,
   }
 }

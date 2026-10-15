@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "./index"
 
@@ -20,8 +20,8 @@ test("empty state centers a bounded header and exposes its heading", () => {
   const empty = root.renderer.findByTestId("empty")
   const header = root.renderer.findByTestId("header")
   if (!empty || !header) throw new Error("Empty state missing")
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(header.id))
-  const emptyBounds = readOuterBounds(root.renderer, root.renderer.getElement(empty.id))
+  const bounds = root.renderer.getElementBounds(header.id)
+  const emptyBounds = root.renderer.getElementBounds(empty.id)
   if (!bounds || !emptyBounds) throw new Error("Empty state not laid out")
   expect(bounds.width).toBeLessThan(emptyBounds.width)
   expect(bounds.x + bounds.width / 2).toBeCloseTo(emptyBounds.x + emptyBounds.width / 2, 0)

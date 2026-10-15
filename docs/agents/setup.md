@@ -2,17 +2,20 @@
 
 ## 当前工程
 
-React Web 前端由 Tauri 2 承载，Rust 提供桌面原生能力。工作区使用 pnpm。版本、包名和脚本以对应 `package.json`、`Cargo.toml` 为准；共享包目前仍有 `@zoeymind/*` 名称，本任务不顺带改名。
+gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crates/native`（napi，产物 `@zoeydaw/native`），引擎在 `crates/engine`。工作区使用 pnpm。`apps/web`、`packages/**`、`src-tauri` 是迁移参考，只读。版本、包名和脚本以对应 `package.json`、`Cargo.toml` 为准。
 
-## 应用由用户持有
+## 运行与热更新（gpuix）
 
-用户手动运行 `pnpm tauri:dev` 并保持观察。Agent 不启动、不重启应用，也不停止用户已有服务。
+- 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，切片 demo 与画廊各有入口）。改 TS/TSX 保存即热更新。
+- Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。不提示用户重启 `tauri:dev`。
+- Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；交付前确认零残留（见 `scripts/orchestration/specs/common.md`）。
+- 不停止用户自己启动的应用或服务；用户的 `tauri:dev` 只属于旧 Web 参考，Agent 不启动也不重启它。
 
-- 修改 Web TS、TSX 或 CSS 后通过 Vite HMR 生效，继续验证。
-- 修改 Rust、`src-tauri/tauri.conf.json`、capabilities、Cargo 依赖或原生 plugin 注册后，明确告诉用户“需要重启 tauri:dev”。由用户操作。
-- 若已有应用不可访问，先检查现有服务和连接，不用另开一个应用绕过问题。
+## 验证命令（gpuix）
 
-## 验证命令
+在 `apps/gpuix` 运行 `tsc --noEmit`、`bun test`、`pnpm exec eslint apps/gpuix/src`（根目录）；涉及 Rust 时 `cargo check`、`cargo test`；交付前 `node scripts/gpuix-review-scan.mjs`。
+
+## 旧 Web 参考的验证命令
 
 开发套件统一使用 Ultracite v8，Node 要求以根 `package.json` 为准，当前至少 22.18。常规入口在工作区根目录运行：
 
@@ -41,29 +44,20 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 不要未经审查重跑 `ultracite init` 覆盖项目配置。升级时检查预设、peer 绑定和本地架构规则，重新执行 doctor、check、类型、测试与页面验证；不使用自动启动其他 agent 的修复参数替代本轮受控编辑。
 
-`pnpm tauri:dev` 和 `pnpm tauri:build` 只给用户参考，Agent 不主动执行。当前按纯本地开发验收：保留 workflow 文件，但不上传 GitHub、不触发远程流程、不把配置存在称为 CI 已运行。
+`pnpm tauri:dev` 和 `pnpm tauri:build` 只给用户参考，Agent 不执行。按纯本地开发验收：保留 workflow 文件，但不上传 GitHub、不触发远程流程、不把配置存在称为 CI 已运行。
 
-UI 改动必须在已有应用或 Web 页面上验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制，不把模拟电平称为真实音频。
+UI 改动必须在真实 gpuix 窗口验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制。
 
 ## 修改前确认
 
-以下改动先问用户：
-
-- `src-tauri/tauri.conf.json`。
-- `packages/ui/src/` 公共 API。
-- 新增 npm 依赖。
-- `.github/workflows/`。
+以下改动先问用户：新增 npm/Rust 依赖、`.github/workflows/`、push/PR/发布、改系统设置、改 Live 工程内容。gpuix 重构期间的其它技术决定（含共享 UI 公共 API）由协调者决定，见 [协调方式](coordination.md)。
 
 secrets、token 和 API key 不进入仓库。保留其他 Session、Agent 的未提交和暂存工作。
 
-## 每一次 commit 单独确认
+## 提交授权
 
-每次 commit 都要求用户在本次提交上下文明确说出 **“我确认”**。之前的授权不延续；“提交吧”“commit 一下”“push 吧”不能替代。
+**`gpuix-migration` 及其切片分支**：用户 2026-10-14 12:40 UTC 原话“去掉我确定这个 gate，然后你来编排，然后你来 review，你来做决策……最后交付给我就行了”。这些分支的本地提交（含协调者的合并提交）已授权，不再逐次索取“我确认”。非交互提交照常带 `USER_CONFIRM_HASH=$(git write-tree)` 通过 hook；`ultracite`/lint-staged 门禁仍必须通过，不用 `--no-verify`。
 
-`.husky/pre-commit` 执行确认门禁及已有格式/检查流程。非交互提交在获得该次确认后使用：
+**`main` 与其它分支**：每次 commit 都要求用户在本次提交上下文明确说出 **“我确认”**。之前的授权不延续；“提交吧”“commit 一下”“push 吧”不能替代。
 
-```sh
-USER_CONFIRM_HASH=$(git write-tree) git commit -m "..."
-```
-
-确认 hash 绑定本次 staged tree；通过 hash 校验的非交互提交尝试记录在 `.git/commit-audit.log`，该文件不记录被拒绝的违规尝试。未经授权不 commit，不自动扩展为 push、发布或部署。
+两种情况都不自动扩展为 push、发布或部署。确认 hash 绑定本次 staged tree；通过 hash 校验的非交互提交记录在 `.git/commit-audit.log`。

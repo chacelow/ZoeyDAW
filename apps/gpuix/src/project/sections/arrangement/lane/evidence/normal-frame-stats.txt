@@ -1,0 +1,19 @@
+lane-normal-verification [service] — ready — up 5m10s — pid 29615
+ready=true persist=false detached=false
+[gpuix] created native window
+[gpuix] mount complete
+{"event":"lane-ready","stress":false,"locale":"en","appearance":"dark","totalClips":12,"nativePeakSamples":128,"nativePe
+akMagnitude":0.45880126953125,"backend":"ready"}
+{"event":"lane-frame-stats","stress":false,"locale":"en","appearance":"dark","editableTracks":4,"totalClips":12,"project
+edMountedCards":12,"viewport":{"pxPerBar":64,"scrollX":0,"scrollY":0,"width":976,"height":758,"dpr":1},"native":{"frames
+":9,"samples":9,"currentMs":28.704416275024414,"p90Ms":28.35150146484375,"p99Ms":28.35150146484375,"maxMs":28.7044162750
+24414}}
+2026-10-15 10:11:17.837 bun[29615:52487394] error messaging the mach port for IMKCFRunLoopWakeUpReliable
+{"event":"lane-frame-stats","stress":false,"locale":"en","appearance":"dark","editableTracks":4,"totalClips":12,"project
+edMountedCards":12,"viewport":{"pxPerBar":64,"scrollX":0,"scrollY":0,"width":976,"height":758,"dpr":1},"native":{"frames
+":167,"samples":167,"currentMs":55.14875030517578,"p90Ms":30.577123641967773,"p99Ms":55.14875030517578,"maxMs":63.410289
+7644043}}
+{"event":"lane-frame-stats","stress":false,"locale":"en","appearance":"dark","editableTracks":4,"totalClips":12,"project
+edMountedCards":8,"viewport":{"pxPerBar":64,"scrollX":322.45982932266656,"scrollY":0,"width":976,"height":758,"dpr":1},"
+native":{"frames":256,"samples":256,"currentMs":22.332082748413086,"p90Ms":31.553831100463867,"p99Ms":45.70237731933594,
+"maxMs":63.4102897644043}}

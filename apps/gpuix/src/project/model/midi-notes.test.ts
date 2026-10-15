@@ -19,7 +19,7 @@ describe("MIDI source-window geometry", () => {
       7.75
     )
     expect(midiInsertionBeat({ horizontalRatio: 0, sourceOffsetBeats: 0.4, totalBeats: 0.3 })).toBe(
-      0.4
+      0.5
     )
   })
 

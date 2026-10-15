@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-10-15T06:40:25.632Z",
+  "bounds": {
+    "x": 320,
+    "y": 160,
+    "width": 1280,
+    "height": 788
+  },
+  "screenshot": {
+    "path": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/omp-computer-15a6dfed82b6ae19.png",
+    "width": 1280,
+    "height": 788,
+    "coordinateWidth": 1280,
+    "coordinateHeight": 788
+  },
+  "inputs": [],
+  "service": "b2-final-readonly-0638",
+  "terminatedAfterCapture": true,
+  "startup": {
+    "B2_RECORDING": "1"
+  }
+}

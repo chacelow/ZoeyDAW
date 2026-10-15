@@ -1,0 +1,300 @@
+import { afterEach, expect, it, spyOn } from "bun:test"
+import { createTestRoot } from "@gpuix/react/testing"
+import type { TestRoot } from "@gpuix/react/testing"
+import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
+import { createMockDocument } from "../../../../adapters/fixtures"
+import { createSceneStore } from "../../core/scene"
+import { LaneContents } from "./Contents"
+import { layoutTrackRows } from "../../core/layout"
+import { LaneOverlay } from "../LaneOverlay"
+import { flushSync } from "@gpuix/react"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { createManualFrames } from "../testing/frames.test-helper"
+import * as clipLabels from "@/project/model/clip-label"
+
+let root: TestRoot | undefined
+afterEach(() => {
+  root?.unmount()
+  root = undefined
+})
+
+it("culls offscreen native cards and retains visible node identity while scrolling", () => {
+  const score = createMockDocument()
+  const track = score.tracks.find(item => item.kind === "midi")
+  if (!track) throw new Error("Missing MIDI track")
+  track.clips = [
+    {
+      kind: "pattern",
+      id: "first",
+      patternId: "p",
+      startBar: 1,
+      lengthBars: 2,
+      label: "First",
+      steps: [true, false],
+    },
+    {
+      kind: "pattern",
+      id: "second",
+      patternId: "p",
+      startBar: 5,
+      lengthBars: 2,
+      label: "Second",
+      steps: [false, true],
+    },
+    {
+      kind: "pattern",
+      id: "distant",
+      patternId: "p",
+      startBar: 1000,
+      lengthBars: 2,
+      steps: [true],
+    },
+  ]
+  const scene = createSceneStore()
+  scene.setMusic({
+    bars: 1024,
+    grid: { mode: "fixed", bars: 0.25 },
+    transport: score.transport,
+    tracks: [track],
+    markers: [],
+    loop: score.transport.loop,
+  })
+  scene.setViewport({ width: 500, height: 300, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
+  const row = layoutTrackRows(scene.get())[0]
+  if (!row) throw new Error("Missing track row")
+  root = createTestRoot({ width: 500, height: 300 })
+  const render = () =>
+    root?.render(
+      <ThemeProvider>
+        <div style={{ position: "relative", width: 500, height: 300 }}>
+          <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
+            <LaneContents
+              row={row}
+              scene={scene.get()}
+              automationMode={false}
+              readPeaks={() => new Float32Array(0)}
+              onActivate={() => {}}
+            />
+          </div>
+        </div>
+      </ThemeProvider>
+    )
+  render()
+  const second = root.renderer.findByTestId("clip-source-second")
+  if (!second) throw new Error("Missing visible card")
+  expect(root.renderer.findByTestId("clip-source-distant")).toBeUndefined()
+  expect(root.renderer.getElementBounds(second.id)?.x).toBe(256)
+  scene.setViewport({ ...scene.get().viewport, scrollX: 160 })
+  render()
+  expect(root.renderer.findByTestId("clip-source-first")).toBeUndefined()
+  expect(root.renderer.findByTestId("clip-source-second")?.id).toBe(second.id)
+  expect(root.renderer.getElementBounds(second.id)?.x).toBe(96)
+})
+
+it("keeps a focused Clip Space-transparent and exposes only the playing transport guide", () => {
+  const score = createMockDocument()
+  const track = score.tracks.find(item => item.kind === "midi")
+  if (!track) throw new Error("Missing MIDI track")
+  track.clips = [
+    { kind: "pattern", id: "pattern", patternId: "p", startBar: 2, lengthBars: 2, steps: [true] },
+  ]
+  const scene = createSceneStore()
+  scene.setMusic({
+    bars: 128,
+    grid: { mode: "fixed", bars: 0.25 },
+    transport: score.transport,
+    tracks: [track],
+    markers: [],
+    loop: score.transport.loop,
+  })
+  scene.setViewport({ width: 500, height: 300, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
+  const row = layoutTrackRows(scene.get())[0]
+  if (!row) throw new Error("Missing track row")
+  scene.setPlayback({ playing: false, insertionPoint: { trackId: track.id, bar: 3 } })
+  const received: string[] = []
+  let activations = 0
+  const frames = createManualFrames()
+  let position = 4
+  const readPosition = () => position
+  root = createTestRoot({
+    width: 500,
+    height: 300,
+    onKeyDown: event => {
+      received.push(event.key ?? "")
+    },
+  })
+  const render = () =>
+    root?.render(
+      <AnimationFrameProvider source={frames}>
+        <ThemeProvider>
+          <div style={{ position: "relative", width: 500, height: 300 }}>
+            <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
+              <LaneContents
+                row={row}
+                scene={scene.get()}
+                automationMode={false}
+                readPeaks={() => new Float32Array(0)}
+                onActivate={() => {
+                  activations++
+                }}
+              />
+            </div>
+            <LaneOverlay
+              scene={scene.get()}
+              viewport={scene.get().viewport}
+              transportBar={readPosition}
+            />
+          </div>
+        </ThemeProvider>
+      </AnimationFrameProvider>
+    )
+  render()
+  const clip = root.renderer.findByTestId("clip-source-pattern")
+  if (!clip) throw new Error("Missing Clip focus target")
+  root.renderer.nativeSimulateKeystrokes(clip.id, "space")
+  expect(received).toEqual(["space"])
+  expect(activations).toBe(0)
+  expect(root.renderer.findByTestId("transport-playhead")).toBeUndefined()
+  const insertion = root.renderer.findByTestId("insertion-point")
+  if (!insertion) throw new Error("Missing stopped insertion")
+  expect(root.renderer.getElementBounds(insertion.id)?.x).toBe(128)
+  scene.setPlayback({ ...scene.get().playback, playing: true })
+  render()
+  expect(root.renderer.findByTestId("insertion-point")).toBeUndefined()
+  const playhead = root.renderer.findByTestId("transport-playhead")
+  if (!playhead) throw new Error("Missing playing transport")
+  expect(root.renderer.getElementBounds(playhead.id)?.x).toBe(192)
+  position = 5
+  flushSync(() => frames.step(16))
+  root.renderer.flush()
+  expect(root.renderer.getElementBounds(playhead.id)?.x).toBe(256)
+})
+
+it("preserves tiny Clip pixel width when projecting a collapsed group summary", () => {
+  const score = createMockDocument()
+  const track = score.tracks.find(item => item.kind === "midi")
+  const group = score.tracks.find(item => item.kind === "group")
+  if (!track || !group) throw new Error("Missing group fixture")
+  const lengthBars = 0.001
+  track.clips = [
+    {
+      kind: "pattern",
+      id: "tiny",
+      patternId: "p",
+      startBar: 2,
+      lengthBars,
+      label: "Tiny",
+      steps: [true],
+    },
+  ]
+  const scene = createSceneStore()
+  const music: Parameters<typeof scene.setMusic>[0] = {
+    bars: 1024,
+    grid: { mode: "fixed", bars: 0.25 },
+    transport: score.transport,
+    tracks: [{ ...group, collapsed: true, childTrackIds: [track.id] }, track],
+    markers: [],
+    loop: score.transport.loop,
+  }
+  scene.setMusic(music)
+  scene.setViewport({ width: 500, height: 300, scrollX: 0, scrollY: 0, pxPerBar: 8, dpr: 1 })
+  root = createTestRoot({ width: 500, height: 300 })
+  const render = (trackId: string) => {
+    const row = layoutTrackRows(scene.get()).find(item => item.track.id === trackId)
+    if (!row) throw new Error("Missing projected row")
+    root?.render(
+      <ThemeProvider>
+        <div style={{ position: "relative", width: 500, height: 300 }}>
+          <LaneContents
+            row={row}
+            scene={scene.get()}
+            automationMode={false}
+            readPeaks={() => new Float32Array(0)}
+            onActivate={() => {}}
+          />
+        </div>
+      </ThemeProvider>
+    )
+  }
+  render(group.id)
+  const summary = root.renderer.findByTestId(`group-clip-${track.id}-source-tiny`)
+  if (!summary) throw new Error("Missing collapsed summary")
+  const summaryBounds = root.renderer.getElementBounds(summary.id)
+  scene.setMusic({
+    ...music,
+    tracks: [{ ...group, collapsed: false, childTrackIds: [track.id] }, track],
+  })
+  render(track.id)
+  const expanded = root.renderer.findByTestId("clip-source-tiny")
+  if (!expanded) throw new Error("Missing expanded tiny Clip")
+  const expandedBounds = root.renderer.getElementBounds(expanded.id)
+  expect(summaryBounds?.x).toBe(expandedBounds?.x)
+  expect(summaryBounds?.width).toBe(expandedBounds?.width)
+  expect(summaryBounds?.width).toBeGreaterThan(lengthBars * scene.get().viewport.pxPerBar)
+})
+
+it("scrolls an already-visible unchanged Clip without rerendering its content", () => {
+  const score = createMockDocument()
+  const track = score.tracks.find(item => item.kind === "midi")
+  if (!track) throw new Error("Missing MIDI track")
+  track.clips = [
+    {
+      kind: "pattern",
+      id: "stable",
+      patternId: "p",
+      startBar: 2,
+      lengthBars: 4,
+      label: "Stable Clip",
+      steps: [true, false],
+    },
+  ]
+  const scene = createSceneStore()
+  scene.setMusic({
+    bars: 128,
+    grid: { mode: "fixed", bars: 0.25 },
+    transport: score.transport,
+    tracks: [track],
+    markers: [],
+    loop: score.transport.loop,
+  })
+  scene.setViewport({ width: 500, height: 300, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
+  const label = spyOn(clipLabels, "clipLabel")
+  const readPeaks = () => new Float32Array(0)
+  const onActivate = () => {}
+  root = createTestRoot({ width: 500, height: 300 })
+  const paint = () => {
+    const row = layoutTrackRows(scene.get())[0]
+    if (!row) throw new Error("Missing visible row")
+    root?.render(
+      <ThemeProvider>
+        <div style={{ position: "relative", width: 500, height: 300 }}>
+          <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
+            <LaneContents
+              row={row}
+              scene={scene.get()}
+              automationMode={false}
+              readPeaks={readPeaks}
+              onActivate={onActivate}
+            />
+          </div>
+        </div>
+      </ThemeProvider>
+    )
+  }
+  try {
+    paint()
+    const clip = root.renderer.findByTestId("clip-source-stable")
+    const before = clip && root.renderer.getElementBounds(clip.id)
+    if (!clip || !before) throw new Error("Missing visible Clip")
+    if (!label.mock.calls.some(([item]) => item.id === "stable"))
+      throw new Error("Label instrumentation did not observe the initial Clip render")
+    label.mockClear()
+    scene.setViewport({ ...scene.get().viewport, scrollY: 16 })
+    paint()
+    expect(root.renderer.findByTestId("clip-source-stable")?.id).toBe(clip.id)
+    expect(root.renderer.getElementBounds(clip.id)?.y).toBe(before.y - 16)
+    expect(label.mock.calls.filter(([item]) => item.id === "stable")).toHaveLength(0)
+  } finally {
+    label.mockRestore()
+  }
+})

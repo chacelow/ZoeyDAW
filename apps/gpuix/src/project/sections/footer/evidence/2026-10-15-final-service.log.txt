@@ -1,0 +1,7 @@
+b2-ui-dark-en [service] — ready — up 1m36s — pid 60504
+ready=true persist=false detached=false
+[gpuix] created native window
+[gpuix] mount complete
+B2 panels mounted
+B2_FRAME_STATS {"frames":434,"samples":434,"currentMs":8.54312515258789,"p90Ms":10.182665824890137,"p99Ms":12.7921257019
+04297,"maxMs":49.919456481933594}

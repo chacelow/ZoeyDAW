@@ -1,5 +1,6 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sv, sx } from "@/shared/theme/style"
+import { colorMix } from "@/shared/theme/color-mix"
 import { controlChrome } from "../chrome"
 import { IconSlot } from "../IconSlot"
 import { useInfoBinding } from "../ControlEnvironment"
@@ -27,6 +28,8 @@ export function Button({
   iconOnly = false,
   variant = "default",
   size = "default",
+  role = "button",
+  tabIndex = 0,
   onActiveChange,
   icon,
   children,
@@ -43,6 +46,14 @@ export function Button({
   const theme = useTheme()
   const info = useInfoBinding({ type: "button" })
   const name = label ?? props["aria-label"] ?? (typeof children === "string" ? children : undefined)
+  const activeDestructive = active && variant === "destructive"
+  const destructiveBackground = activeDestructive
+    ? colorMix(theme.colors.destructive, theme.appearance === "dark" ? 20 : 10, "transparent")
+    : undefined
+  const destructiveHighlight =
+    activeDestructive && highlight && !disabled
+      ? colorMix(theme.colors.destructive, theme.appearance === "dark" ? 30 : 20, "transparent")
+      : destructiveBackground
   const appearances = sv({
     variants: {
       variant: {
@@ -69,8 +80,8 @@ export function Button({
     <div
       {...props}
       ref={ref}
-      role="button"
-      tabIndex={0}
+      role={role}
+      tabIndex={tabIndex}
       aria-disabled={disabled}
       aria-pressed={onActiveChange ? active : undefined}
       aria-label={onActiveChange && name ? `${name} (${active ? "on" : "off"})` : name}
@@ -85,12 +96,28 @@ export function Button({
           iconOnly: iconOnly ? "on" : "off",
         }),
         !active && appearances({ variant }),
+        activeDestructive && {
+          backgroundColor: destructiveBackground,
+          color: theme.colors.destructive,
+          hover: { backgroundColor: destructiveHighlight, color: theme.colors.destructive },
+          active: { backgroundColor: destructiveHighlight, color: theme.colors.destructive },
+          focusVisible: {
+            borderColor: colorMix(theme.colors.destructive, 40, "transparent"),
+            outlineWidth: 1,
+            outlineColor: colorMix(
+              theme.colors.destructive,
+              theme.appearance === "dark" ? 40 : 20,
+              "transparent"
+            ),
+            outlineOffset: -1,
+          },
+        },
         style
       )}
       onClick={activate}
       onKeyDown={event => {
         onKeyDown?.(event)
-        if (event.key === "enter") activate(event)
+        if (!event.defaultPrevented && event.key === "enter") activate(event)
       }}
       onMouseEnter={event => {
         info.onMouseEnter()

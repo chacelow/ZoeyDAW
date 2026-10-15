@@ -239,7 +239,9 @@ export default [
     },
   },
   {
-    files: ["scripts/gpuix-main/context-menu/**/*.test.tsx"],
+    // Renderer probes and regressions under scripts/gpuix-main/<slice>/ run against the app's
+    // dependency tree (react, @gpuix/*), resolved through a node_modules link to apps/gpuix.
+    files: ["scripts/gpuix-main/*/**/*.{ts,tsx}"],
     rules: {
       "import-x/no-extraneous-dependencies": [
         "error",
@@ -247,6 +249,24 @@ export default [
           devDependencies: true,
           packageDir: [import.meta.dirname, `${import.meta.dirname}/apps/gpuix`],
         },
+      ],
+      "n/no-extraneous-import": [
+        "error",
+        { allowModules: ["react", "@gpuix/react", "@gpuix/native"] },
+      ],
+    },
+  },
+  {
+    // These two shared controls take role from the caller (a composite widget such as the Browser
+    // tree gives its rows one Tab entry). Elements without a role are still checked.
+    files: [
+      "apps/gpuix/src/ui/controls/Button/index.tsx",
+      "apps/gpuix/src/ui/controls/DragPreviewArea/index.tsx",
+    ],
+    rules: {
+      "jsx-a11y/no-static-element-interactions": [
+        "error",
+        { handlers: ["onClick"], allowExpressionValues: true },
       ],
     },
   },

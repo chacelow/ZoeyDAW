@@ -1,0 +1,47 @@
+{
+  "nativeCommand": "CARGO_PROFILE_RELEASE_LTO=off cargo test --release --manifest-path packages/native/Cargo.toml --features test-support,gpui_platform/runtime_shaders --lib quad_batch",
+  "nativeMutations": [
+    { "change": "local x + 1", "result": "0 pass / 1 fail", "failure": "origin x 24 expected 23" },
+    {
+      "change": "remove batch content mask",
+      "result": "0 pass / 1 fail",
+      "failure": "2 painted quads expected 1 after shrinking the element"
+    },
+    {
+      "change": "replace style fill with green",
+      "result": "0 pass / 1 fail",
+      "failure": "hue 0.33333334 expected 0"
+    },
+    {
+      "change": "override batch opacity with 1",
+      "result": "0 pass / 1 fail",
+      "failure": "nested opacity and alpha assertion"
+    }
+  ],
+  "cursorRegression": {
+    "before": "0 pass / 1 fail: pure visual batch registered a native hitbox",
+    "fix": "clear cursor after style application without copying StyleDesc",
+    "after": "273 native tests pass"
+  },
+  "consumerCommand": "bun test src/shared/quads (apps/gpuix)",
+  "consumerMutations": [
+    {
+      "change": "force React render from setQuads",
+      "result": "2 pass / 1 fail",
+      "failure": "render count 2 expected 1"
+    },
+    {
+      "change": "remove pending upload on ref attach",
+      "result": "2 pass / 1 fail",
+      "failure": "premount actual GPU PNG differs from direct native setter PNG"
+    },
+    {
+      "change": "remove unchanged-reference deduplication",
+      "result": "2 pass / 1 fail",
+      "failure": "2 uploads expected 1 for identical reference"
+    }
+  ],
+  "restoredNativeResult": "Final merged nine-patch suite: 283 pass / 0 fail, default release LTO. Targeted mutations were exercised on the earlier seven-patch suite; F4 assertions remain unchanged.",
+  "restoredConsumerResult": "3 pass / 0 fail",
+  "allMutationsRestored": true
+}

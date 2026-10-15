@@ -70,7 +70,7 @@
 
 - 工具栏、Transport、轨道表头的按钮与切换控件：Space 不激活、不进入按下样式，事件继续冒泡至窗口级播放快捷键；Enter 激活。弹层内选项、菜单项、RadioGroup 表单选项、可点击 Card 和 Label 保留 Space 选中或激活；文本输入中的 Space 仍输入空格。
 - 窗口级快捷键走窗口根键盘事件（`windowKeyDown`，在同一次按键的所有元素 `keyDown` 之后触发，共享 `keystrokeId`），不用 JS 定时器轮询。元素 handler 调 `stopPropagation()` 会让窗口 handler 收不到，所以工具栏按钮与切换控件不得吞 Space；输入框与可编辑控件聚焦时对可打印键 `stopPropagation`，快捷键不得吞掉文字输入。
-- 所有可点击元素都能用键盘到达，焦点环可见；焦点顺序与视觉顺序一致。普通控件用 Tab 到达。树、列表、网格这类复合控件整体只占一个 Tab 入口，内部的行用方向键移动，行内的次要按钮（如收藏）设 `tabIndex=-1`，不再逐个占用 Tab 顺序。
+- 所有可点击元素都能用键盘到达，焦点环可见；焦点顺序与视觉顺序一致。普通控件用 Tab 到达。树、列表、网格这类复合控件整体只占一个 Tab 入口，用 roving tabindex：当前选中行设 `tabIndex=0`，其余行、容器本身以及行内的次要按钮（如收藏、展开）设 `tabIndex=-1`；行与行之间用方向键移动。不要把容器设为唯一的 0 而行全部为 -1：GPUI 遇到焦点在 -1 元素上时，下一次 Tab 会从窗口开头重新开始（2026-10-15 footer 用原生 Tab 实测）。
 - 单键切换（如 M 切换轨道编辑模式）再按一次必须还原。
 - 快捷键与命令名以 Ableton Live 菜单的实测为准（只读读取菜单），不凭文字描述：`Cmd/Ctrl+1` 缩窄网格、`+2` 加宽网格、`+3` 三连音网格、`+4` 吸附到网格、`+5` 固定网格、`+E` 裁剪（Split）。
 
@@ -96,7 +96,7 @@
 
 ## 14. 图标、SVG 与导入（写死，由 lint 强制）
 
-- **不手写 SVG**。图标一律来自 [`lucide`](https://lucide.dev) 包（web 一直用 `lucide-react`，同一套图标），通过 `ui/controls/Icon` 的 `<Icon name="Play" />` 绘制；名称是 `IconName` 类型，拼错在编译期报错，运行期未知名称抛 `RangeError`，不会静默画空白。
+- **不手写 SVG**。图标来自第三方图标库：首选 [`lucide`](https://lucide.dev)（web 一直用 `lucide-react`，同一套图标），lucide 没有的用 Phosphor（见本节最后一条），都通过 `ui/controls/Icon` 的 `<Icon name="Play" />` 绘制；名称是 `IconName` 类型，拼错在编译期报错，运行期未知名称抛 `RangeError`，不会静默画空白。
 - 数据驱动的几何（automation 曲线、波形包络、clip 淡入淡出、标记三角、网格线）用 `@/shared/svg/paths` 生成路径数据（d3-shape / d3-path：`polylinePath` 折线、`cubicPath` 三次贝塞尔链、`polygonPath` 闭合多边形、`segmentsPath` 互不相连的线段），再交给 `@/shared/svg/Shape` 绘制成单色原生 `<svg>`。**不拼接 `M … L …`/`C …` 字符串，不写 `<svg`/`<path` 字面量**；需要的形状函数不存在时，加到 `paths.ts`（带测试与变异检查），不要在切片里自己写。颜色只来自 `style.color`（`currentColor`），不在标记里写颜色。
 - SVG 标记只在 `shared/svg/serialise.ts` 里写一次：所有 `<svg source>` 都经 `serialiseSvg(nodes, { viewBox, attributes })` 生成。gpuix 的 `<svg>` 只接收原始标记并按单色着色，所以颜色一律用 `currentColor`（图标）或 `style.color`，不在标记里写颜色字面量。
 - **跨目录导入用 `@/` 别名**（指向 `apps/gpuix/src`，在 `apps/gpuix/tsconfig.json` 的 `paths` 配置，`tsc`、`bun test`、`bun run`、`eslint` 都已验证可解析）。同目录与向上最多两层保持相对（`./x`、`../x`、`../../x`）；超过两层用 `@/`。`gpuix-layers` 把 `@/…` 与相对路径解析到同一层，别名绕不过分层规则。

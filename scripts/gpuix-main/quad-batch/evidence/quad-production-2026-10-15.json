@@ -1,0 +1,281 @@
+{
+  "reactMode": "production",
+  "mode": "quad",
+  "workload": {
+    "tracks": 50,
+    "clipsPerTrack": 50,
+    "rowHeight": 36,
+    "clipWidth": 192,
+    "rectangles": 14065,
+    "grid": 1565,
+    "midiNotes": 2500,
+    "peakColumns": 10000
+  },
+  "viewport": {
+    "width": 976,
+    "height": 758
+  },
+  "initial": {
+    "renderAndFlushMs": 3.7235839999999882,
+    "nativeDuringRenderMs": 0.3697080000000028,
+    "reactAndMutationMs": 3.3538759999999854,
+    "additionalFlushMs": 0.32995800000000486,
+    "retained": 4
+  },
+  "timingScope": "Synthetic equal-geometry CPU React render + headless native flush; not lane readProjectPeaks or GPU completion time",
+  "cpuRenderAndFlush": {
+    "count": 30,
+    "medianMs": 0.49408299999998917,
+    "p90Ms": 0.6696249999999964,
+    "maxMs": 1.5121660000000077
+  },
+  "cpuAdditionalFlush": {
+    "count": 30,
+    "medianMs": 0.2627499999999827,
+    "p90Ms": 0.2827500000000214,
+    "maxMs": 0.31108299999999645
+  },
+  "nativeDuringRender": {
+    "count": 30,
+    "medianMs": 0.26824999999999477,
+    "p90Ms": 0.3109589999999969,
+    "maxMs": 0.370207999999991
+  },
+  "reactAndMutation": {
+    "count": 30,
+    "medianMs": 0.21587600000000862,
+    "p90Ms": 0.36129099999999426,
+    "maxMs": 1.1419580000000167
+  },
+  "native": {
+    "frames": 68,
+    "samples": 61,
+    "currentMs": 0.25975000858306885,
+    "p90Ms": 0.29041698575019836,
+    "p99Ms": 0.33379098773002625,
+    "maxMs": 0.3520829975605011
+  },
+  "samples": [
+    {
+      "renderAndFlushMs": 1.5121660000000077,
+      "nativeDuringRenderMs": 0.370207999999991,
+      "reactAndMutationMs": 1.1419580000000167,
+      "additionalFlushMs": 0.31108299999999645,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.8025420000000167,
+      "nativeDuringRenderMs": 0.3203749999999843,
+      "reactAndMutationMs": 0.48216700000003243,
+      "additionalFlushMs": 0.29675000000000296,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.6696249999999964,
+      "nativeDuringRenderMs": 0.3083340000000021,
+      "reactAndMutationMs": 0.36129099999999426,
+      "additionalFlushMs": 0.2827500000000214,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.6034999999999968,
+      "nativeDuringRenderMs": 0.2920000000000016,
+      "reactAndMutationMs": 0.3114999999999952,
+      "additionalFlushMs": 0.2726669999999842,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.7744580000000099,
+      "nativeDuringRenderMs": 0.2849170000000072,
+      "reactAndMutationMs": 0.48954100000000267,
+      "additionalFlushMs": 0.26608300000000895,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.49550000000002115,
+      "nativeDuringRenderMs": 0.26683300000001964,
+      "reactAndMutationMs": 0.2286670000000015,
+      "additionalFlushMs": 0.25866700000000264,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.4972500000000082,
+      "nativeDuringRenderMs": 0.2652920000000165,
+      "reactAndMutationMs": 0.23195799999999167,
+      "additionalFlushMs": 0.25695799999999736,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.5307090000000017,
+      "nativeDuringRenderMs": 0.2692920000000072,
+      "reactAndMutationMs": 0.26141699999999446,
+      "additionalFlushMs": 0.25533300000000736,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.5756250000000023,
+      "nativeDuringRenderMs": 0.27512500000000273,
+      "reactAndMutationMs": 0.30049999999999955,
+      "additionalFlushMs": 0.26770799999999895,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.5562089999999955,
+      "nativeDuringRenderMs": 0.28641700000000014,
+      "reactAndMutationMs": 0.26979199999999537,
+      "additionalFlushMs": 0.26499999999998636,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.5504999999999995,
+      "nativeDuringRenderMs": 0.3109589999999969,
+      "reactAndMutationMs": 0.23954100000000267,
+      "additionalFlushMs": 0.2715419999999824,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.5052499999999895,
+      "nativeDuringRenderMs": 0.2822500000000048,
+      "reactAndMutationMs": 0.22299999999998477,
+      "additionalFlushMs": 0.2682079999999871,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.42712500000001796,
+      "nativeDuringRenderMs": 0.2524579999999901,
+      "reactAndMutationMs": 0.17466700000002788,
+      "additionalFlushMs": 0.24570900000000506,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.4007080000000087,
+      "nativeDuringRenderMs": 0.24987500000000296,
+      "reactAndMutationMs": 0.15083300000000577,
+      "additionalFlushMs": 0.24491699999998673,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.43608300000002487,
+      "nativeDuringRenderMs": 0.2599580000000117,
+      "reactAndMutationMs": 0.1761250000000132,
+      "additionalFlushMs": 0.2462500000000034,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.4294170000000008,
+      "nativeDuringRenderMs": 0.2571670000000097,
+      "reactAndMutationMs": 0.17224999999999113,
+      "additionalFlushMs": 0.2580420000000174,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.3962500000000091,
+      "nativeDuringRenderMs": 0.24479199999998968,
+      "reactAndMutationMs": 0.1514580000000194,
+      "additionalFlushMs": 0.2455410000000029,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.40125000000000455,
+      "nativeDuringRenderMs": 0.24645799999998985,
+      "reactAndMutationMs": 0.1547920000000147,
+      "additionalFlushMs": 0.25108299999999417,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.3936659999999961,
+      "nativeDuringRenderMs": 0.25124999999999886,
+      "reactAndMutationMs": 0.1424159999999972,
+      "additionalFlushMs": 0.2585000000000264,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.4017079999999851,
+      "nativeDuringRenderMs": 0.24620899999999324,
+      "reactAndMutationMs": 0.15549899999999184,
+      "additionalFlushMs": 0.24933300000000713,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.48733400000000415,
+      "nativeDuringRenderMs": 0.33741699999998787,
+      "reactAndMutationMs": 0.1499170000000163,
+      "additionalFlushMs": 0.28658300000000736,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.5105420000000152,
+      "nativeDuringRenderMs": 0.29466600000000653,
+      "reactAndMutationMs": 0.21587600000000862,
+      "additionalFlushMs": 0.2736250000000098,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.44941699999998264,
+      "nativeDuringRenderMs": 0.26824999999999477,
+      "reactAndMutationMs": 0.18116699999998787,
+      "additionalFlushMs": 0.2727089999999919,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.4485829999999851,
+      "nativeDuringRenderMs": 0.26454100000000835,
+      "reactAndMutationMs": 0.18404199999997672,
+      "additionalFlushMs": 0.26029199999999264,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.49408299999998917,
+      "nativeDuringRenderMs": 0.26787500000000364,
+      "reactAndMutationMs": 0.22620799999998553,
+      "additionalFlushMs": 0.2627499999999827,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.5167079999999942,
+      "nativeDuringRenderMs": 0.28558400000000006,
+      "reactAndMutationMs": 0.2311239999999941,
+      "additionalFlushMs": 0.2591250000000116,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.46387499999997317,
+      "nativeDuringRenderMs": 0.26379099999999767,
+      "reactAndMutationMs": 0.2000839999999755,
+      "additionalFlushMs": 0.26737500000001546,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.46041700000000674,
+      "nativeDuringRenderMs": 0.2777499999999975,
+      "reactAndMutationMs": 0.18266700000000924,
+      "additionalFlushMs": 0.26354200000000105,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.46137500000000387,
+      "nativeDuringRenderMs": 0.2653750000000059,
+      "reactAndMutationMs": 0.19599999999999795,
+      "additionalFlushMs": 0.2540829999999801,
+      "retained": 4
+    },
+    {
+      "renderAndFlushMs": 0.40962500000000546,
+      "nativeDuringRenderMs": 0.2532500000000084,
+      "reactAndMutationMs": 0.15637499999999704,
+      "additionalFlushMs": 0.26141699999999446,
+      "retained": 4
+    }
+  ],
+  "rendererPatches": [
+    "close-guard.patch",
+    "frame-callback.patch",
+    "input-select-all-on-focus.patch",
+    "anchored-center.patch",
+    "select-trigger-space.patch",
+    "window-active-change.patch",
+    "window-appearance-close.patch",
+    "context-menu.patch",
+    "quad-batch.patch"
+  ]
+}

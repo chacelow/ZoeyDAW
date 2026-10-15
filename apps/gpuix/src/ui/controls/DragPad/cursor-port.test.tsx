@@ -4,7 +4,7 @@ import { handleGpuixEvent } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { ControlEnvironmentProvider } from "../ControlEnvironment"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { DragPadNumber } from "./DragPadNumber"
 import type { CursorLockPort, ScreenPoint } from "./cursor-port"
 
@@ -55,7 +55,7 @@ function mount(initialPort: CursorLockPort) {
   root.render(<Harness port={initialPort} />)
   root.renderer.flush()
   const element = root.renderer.findByTestId("pad")!
-  const bounds = readOuterBounds(root.renderer, element)!
+  const bounds = root.renderer.getElementBounds(element!.id)!
   return {
     ...root,
     values,

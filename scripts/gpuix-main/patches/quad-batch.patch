@@ -1,0 +1,600 @@
+diff --git a/packages/native/index.d.ts b/packages/native/index.d.ts
+index ce328a4..2644142 100644
+--- a/packages/native/index.d.ts
++++ b/packages/native/index.d.ts
+@@ -59,6 +59,8 @@ export declare class GpuixRenderer {
+    * Acquires the tree mutex ONCE for the entire batch.
+    */
+   applyBatch(json: string): Array<number>
++  /** Replace local x/y/width/height rectangles with one copy from JavaScript. */
++  setQuads(elementId: number, quads: Float32Array): void
+   /** Pump the native event loop. Returns false after the last window closes. */
+   tick(): boolean
+   isInitialized(): boolean
+@@ -260,6 +262,7 @@ export declare class TestGpuixRenderer {
+    * Returns accumulated destroyed IDs from all destroyElement ops.
+    */
+   applyBatch(json: string): Array<number>
++  setQuads(elementId: number, quads: Float32Array): void
+   /**
+    * Notify the view entity and run GPUI until parked.
+    * This triggers GpuixView::render() → build_element() → GPUI layout.
+diff --git a/packages/native/js/host.ts b/packages/native/js/host.ts
+index 8d63095..799b33e 100644
+--- a/packages/native/js/host.ts
++++ b/packages/native/js/host.ts
+@@ -248,6 +248,7 @@ export type ElementType =
+   | "img"
+   | "svg"
+   | "canvas"
++  | "quad-batch"
+   | "input"
+   | "textarea"
+   | "anchored"
+@@ -586,6 +587,12 @@ export interface SvgProps extends HostProps {
+   source?: string
+ }
+ 
++/** Visual-only host; upload geometry through its imperative setQuads handle. */
++export interface QuadBatchProps {
++  style?: StyleDesc
++  testId?: string
++}
++
+ /**
+  * Props for the <code> custom element — a syntax-highlighted code block.
+  *
+@@ -697,6 +704,7 @@ export type NativeRenderer = MutationHost &
+       | "scrollIntoView"
+       | "setImage"
+       | "setImagePixels"
++      | "setQuads"
+       | "getScrollOffset"
+       | "getListScrollTop"
+       | "getSelectedText"
+diff --git a/packages/native/js/testing.ts b/packages/native/js/testing.ts
+index b39de9b..f0ebbc7 100644
+--- a/packages/native/js/testing.ts
++++ b/packages/native/js/testing.ts
+@@ -34,6 +34,7 @@ export type { MacCpuThrottle } from "./cpu-throttle.js"
+ 
+ interface NativeTestRendererApi extends NativeRenderer {
+   promptForPaths(options?: PathPromptOptions): Promise<string[] | null>
++  setQuads(elementId: number, quads: Float32Array): void
+   flush(): void
+   drainEvents(): EventPayload[]
+   simulateKeystrokes(keystrokes: string): void
+@@ -175,6 +176,7 @@ export class TestRenderer implements NativeRenderer {
+   /** Native TestGpuixRenderer — all state lives here in Rust's RetainedTree. */
+   private native: NativeTestRendererApi
+   readonly applyBatch: NativeRenderer["applyBatch"]
++  readonly setQuads: NonNullable<NativeRenderer["setQuads"]>
+   readonly focusNext: () => void
+   readonly focusPrevious: () => void
+   readonly promptForPaths: NonNullable<NativeRenderer["promptForPaths"]>
+@@ -192,6 +194,7 @@ export class TestRenderer implements NativeRenderer {
+     }
+     this.native = new NativeTestRenderer(options.width, options.height)
+     this.applyBatch = this.native.applyBatch.bind(this.native)
++    this.setQuads = this.native.setQuads.bind(this.native)
+     this.focusNext = this.native.focusNext.bind(this.native)
+     this.focusPrevious = this.native.focusPrevious.bind(this.native)
+     this.promptForPaths = this.native.promptForPaths.bind(this.native)
+diff --git a/packages/native/src/lib.rs b/packages/native/src/lib.rs
+index c5f4fa1..1f14017 100644
+--- a/packages/native/src/lib.rs
++++ b/packages/native/src/lib.rs
+@@ -21,6 +21,7 @@ mod diff;
+ mod element_tree;
+ mod markdown;
+ mod motion;
++mod quad_batch;
+ mod renderer;
+ // The data model is public so `examples/bench_serde.rs` measures the real
+ // types instead of a copy that silently drifts from them.
+diff --git a/packages/native/src/quad_batch.rs b/packages/native/src/quad_batch.rs
+new file mode 100644
+index 0000000..3a40a71
+--- /dev/null
++++ b/packages/native/src/quad_batch.rs
+@@ -0,0 +1,242 @@
++use crate::{retained_tree::RetainedElement, style::StyleDesc};
++use gpui::prelude::*;
++
++pub(crate) fn validate(values: &[f32]) -> Result<(), String> {
++    if values.len() % 4 != 0 {
++        return Err("quads length must be a multiple of four".into());
++    }
++    if values
++        .chunks_exact(4)
++        .any(|q| q.iter().any(|v| !v.is_finite()) || q[2] < 0.0 || q[3] < 0.0)
++    {
++        return Err("quads must contain finite coordinates and nonnegative dimensions".into());
++    }
++    Ok(())
++}
++
++pub(crate) fn render(element: &RetainedElement, style: Option<&StyleDesc>) -> gpui::Div {
++    let values = element.quads();
++    let color: gpui::Hsla = style
++        .and_then(|s| s.color.as_deref())
++        .and_then(crate::color::parse_color_rgba)
++        .map(Into::into)
++        .unwrap_or_else(gpui::white);
++    let canvas = gpui::canvas(
++        |_, _, _| (),
++        move |bounds, _, window, _| {
++            window.with_content_mask(Some(gpui::ContentMask { bounds }), |window| {
++                window.paint_layer(bounds, |window| {
++                    for q in values.as_deref().unwrap_or(&[]).chunks_exact(4) {
++                        if q[2] == 0.0 || q[3] == 0.0 {
++                            continue;
++                        }
++                        let rect = gpui::Bounds::new(
++                            bounds.origin + gpui::point(gpui::px(q[0]), gpui::px(q[1])),
++                            gpui::size(gpui::px(q[2]), gpui::px(q[3])),
++                        );
++                        window.paint_quad(gpui::fill(rect, color));
++                    }
++                });
++            });
++        },
++    )
++    .absolute()
++    .top_0()
++    .left_0()
++    .size_full();
++    let mut el = gpui::div().relative();
++    if let Some(style) = style {
++        el = crate::renderer::apply_styles(el, style);
++    }
++    el.style().mouse_cursor = None;
++    el.child(canvas)
++}
++
++#[cfg(test)]
++mod tests {
++    use crate::{
++        renderer::{apply_batch_to_tree, GpuixView},
++        retained_tree::RetainedTree,
++        text::SharedSelection,
++    };
++    use std::sync::{Arc, Mutex};
++
++    struct HitboxProbe {
++        element: gpui::Div,
++        inserted: std::rc::Rc<std::cell::Cell<bool>>,
++    }
++
++    impl gpui::IntoElement for HitboxProbe {
++        type Element = Self;
++        fn into_element(self) -> Self {
++            self
++        }
++    }
++
++    impl gpui::Element for HitboxProbe {
++        type RequestLayoutState = <gpui::Div as gpui::Element>::RequestLayoutState;
++        type PrepaintState = Option<gpui::Hitbox>;
++        fn id(&self) -> Option<gpui::ElementId> {
++            None
++        }
++        fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
++            None
++        }
++        fn request_layout(
++            &mut self,
++            id: Option<&gpui::GlobalElementId>,
++            inspector: Option<&gpui::InspectorElementId>,
++            window: &mut gpui::Window,
++            cx: &mut gpui::App,
++        ) -> (gpui::LayoutId, Self::RequestLayoutState) {
++            self.element.request_layout(id, inspector, window, cx)
++        }
++        fn prepaint(
++            &mut self,
++            id: Option<&gpui::GlobalElementId>,
++            inspector: Option<&gpui::InspectorElementId>,
++            bounds: gpui::Bounds<gpui::Pixels>,
++            state: &mut Self::RequestLayoutState,
++            window: &mut gpui::Window,
++            cx: &mut gpui::App,
++        ) -> Self::PrepaintState {
++            let hitbox = self
++                .element
++                .prepaint(id, inspector, bounds, state, window, cx);
++            self.inserted.set(hitbox.is_some());
++            hitbox
++        }
++        fn paint(
++            &mut self,
++            id: Option<&gpui::GlobalElementId>,
++            inspector: Option<&gpui::InspectorElementId>,
++            bounds: gpui::Bounds<gpui::Pixels>,
++            state: &mut Self::RequestLayoutState,
++            hitbox: &mut Self::PrepaintState,
++            window: &mut gpui::Window,
++            cx: &mut gpui::App,
++        ) {
++            self.element
++                .paint(id, inspector, bounds, state, hitbox, window, cx);
++        }
++    }
++
++    struct CursorFixture {
++        tree: RetainedTree,
++        inserted: std::rc::Rc<std::cell::Cell<bool>>,
++    }
++
++    impl gpui::Render for CursorFixture {
++        fn render(
++            &mut self,
++            _: &mut gpui::Window,
++            _: &mut gpui::Context<Self>,
++        ) -> impl gpui::IntoElement {
++            let element = &self.tree.elements[&1];
++            HitboxProbe {
++                element: super::render(element, element.style.as_deref()),
++                inserted: self.inserted.clone(),
++            }
++        }
++    }
++
++    #[gpui::test]
++    fn cursor_and_pointer_styles_cannot_insert_a_native_hitbox(cx: &mut gpui::TestAppContext) {
++        let mut tree = RetainedTree::new();
++        apply_batch_to_tree(&mut tree, br#"[["createElement",1,"quad-batch"],["setStyle",1,{"width":100,"height":100,"color":"red","cursor":"pointer","pointerEvents":"auto"}],["setRoot",1]]"#).unwrap();
++        tree.set_quads(1, &[0.0, 0.0, 100.0, 100.0]).unwrap();
++        let inserted = std::rc::Rc::new(std::cell::Cell::new(true));
++        let observed = inserted.clone();
++        cx.add_window(|_, _| CursorFixture { tree, inserted });
++        cx.run_until_parked();
++        assert!(
++            !observed.get(),
++            "pure visual batch registered a native hitbox"
++        );
++    }
++
++    #[gpui::test]
++    fn local_positions_masks_color_opacity_and_retained_buffer(cx: &mut gpui::TestAppContext) {
++        let mut tree = RetainedTree::new();
++        apply_batch_to_tree(&mut tree, br##"[["createElement",1,"div"],["setStyle",1,{"width":80,"height":60,"overflow":"hidden","opacity":0.5}],["createElement",2,"quad-batch"],["setStyle",2,{"position":"absolute","left":20,"top":10,"width":100,"height":100,"color":"#ff000080","opacity":0.5}],["appendChild",1,2],["setRoot",1]]"##).unwrap();
++        tree.set_quads(
++            2,
++            &[
++                3.0, 4.0, 10.0, 12.0, 55.0, 5.0, 20.0, 10.0, 90.0, 90.0, 10.0, 10.0,
++            ],
++        )
++        .unwrap();
++        let buffer = tree.elements[&2].quads().unwrap();
++        let tree = Arc::new(Mutex::new(tree));
++        let window = cx.open_window(gpui::size(gpui::px(200.0), gpui::px(200.0)), |_, _| {
++            GpuixView::new(
++                tree.clone(),
++                None,
++                "quad test".into(),
++                SharedSelection::default(),
++            )
++        });
++        cx.run_until_parked();
++        window
++            .update(cx, |_, window, _| {
++                let quads = window.painted_quads();
++                assert_eq!(quads.len(), 2);
++                let scale = window.scale_factor();
++                let first = &quads[0];
++                assert_eq!(first.bounds.origin.x.as_f32() / scale, 23.0);
++                assert_eq!(first.bounds.origin.y.as_f32() / scale, 14.0);
++                assert_eq!(first.bounds.size.width.as_f32() / scale, 10.0);
++                assert_eq!(first.bounds.size.height.as_f32() / scale, 12.0);
++                assert_eq!(first.content_mask.bounds.right().as_f32() / scale, 80.0);
++                assert_eq!(first.content_mask.bounds.bottom().as_f32() / scale, 60.0);
++                let color = first.background.as_solid().unwrap();
++                assert_eq!(color.h, 0.0);
++                assert_eq!(color.s, 1.0);
++                assert!((color.a - (128.0 / 255.0 * 0.25)).abs() < 0.001);
++            })
++            .unwrap();
++        {
++            let mut retained = tree.lock().unwrap();
++            apply_batch_to_tree(&mut retained, br##"[["setStyle",2,{"position":"absolute","left":20,"top":10,"width":40,"height":30,"color":"#ff000080","opacity":0.5}]]"##).unwrap();
++        }
++        window
++            .update(cx, |_, window, cx| {
++                cx.notify();
++                window.refresh();
++            })
++            .unwrap();
++        cx.run_until_parked();
++        window
++            .update(cx, |_, window, _| {
++                let quads = window.painted_quads();
++                assert_eq!(quads.len(), 1);
++                let scale = window.scale_factor();
++                assert_eq!(quads[0].content_mask.bounds.right().as_f32() / scale, 60.0);
++                assert_eq!(quads[0].content_mask.bounds.bottom().as_f32() / scale, 40.0);
++            })
++            .unwrap();
++        {
++            let mut retained = tree.lock().unwrap();
++            apply_batch_to_tree(&mut retained, br##"[["setStyle",2,{"position":"absolute","left":20,"top":10,"width":100,"height":100,"color":"#ff000080","opacity":0.5}]]"##).unwrap();
++        }
++        let mut tree = tree.lock().unwrap();
++        tree.take_dirty();
++        apply_batch_to_tree(&mut tree, br##"[["setStyle",2,{"position":"absolute","left":20,"top":10,"width":100,"height":100,"color":"#ff000080","opacity":0.5}]]"##).unwrap();
++        assert!(Arc::ptr_eq(&buffer, &tree.elements[&2].quads().unwrap()));
++        assert!(!tree.take_dirty());
++        assert!(!tree.elements[&2].needs_focus());
++        tree.set_quads(2, &[0.0, 0.0, 2.0, 2.0]).unwrap();
++        assert!(!Arc::ptr_eq(&buffer, &tree.elements[&2].quads().unwrap()));
++        assert!(tree.take_dirty());
++        for invalid in [
++            &[0.0][..],
++            &[0.0, 0.0, -1.0, 1.0],
++            &[f32::NAN, 0.0, 1.0, 1.0],
++        ] {
++            assert!(tree.set_quads(2, invalid).is_err());
++        }
++        assert!(tree.set_quads(1, &[]).is_err());
++        tree.destroy_element(1);
++        assert!(tree.elements.is_empty());
++    }
++}
+diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
+index bf4f049..7709693 100644
+--- a/packages/native/src/renderer.rs
++++ b/packages/native/src/renderer.rs
+@@ -1596,6 +1596,22 @@ impl GpuixRenderer {
+         Ok(destroyed)
+     }
+ 
++    /// Replace local x/y/width/height rectangles with one copy from JavaScript.
++    #[napi]
++    pub fn set_quads(
++        &self,
++        element_id: f64,
++        quads: napi::bindgen_prelude::Float32Array,
++    ) -> Result<()> {
++        let id = to_element_id(element_id)?;
++        self.tree
++            .lock()
++            .unwrap()
++            .set_quads(id, &quads)
++            .map_err(Error::from_reason)?;
++        self.request_invalidate()
++    }
++
+     // ── Frame loop ───────────────────────────────────────────────────
+ 
+     /// Pump the native event loop. Returns false after the last window closes.
+@@ -5446,6 +5462,10 @@ pub(crate) fn build_element(
+             ctx.custom_registry.destroy(id);
+             build_host_container(element, style, ctx, window, cx)
+         }
++        "quad-batch" => {
++            ctx.custom_registry.destroy(id);
++            crate::quad_batch::render(element, style).into_any_element()
++        }
+         "virtual-list" => {
+             ctx.custom_registry.destroy(id);
+             build_virtual_list(element, ctx, window, cx)
+diff --git a/packages/native/src/retained_tree.rs b/packages/native/src/retained_tree.rs
+index ee95967..b312d6b 100644
+--- a/packages/native/src/retained_tree.rs
++++ b/packages/native/src/retained_tree.rs
+@@ -62,11 +62,16 @@ pub struct RetainedElement {
+ struct ElementExtras {
+     events: HashSet<String>,
+     custom_props: HashMap<String, serde_json::Value>,
++    quads: Option<Arc<[f32]>>,
+ }
+ 
+ static EMPTY_EXTRAS: LazyLock<ElementExtras> = LazyLock::new(ElementExtras::default);
+ 
+ impl RetainedElement {
++    pub(crate) fn quads(&self) -> Option<Arc<[f32]>> {
++        self.extras.as_deref().and_then(|extras| extras.quads.clone())
++    }
++
+     /// The element's `tabIndex`, when it has a usable one.
+     pub fn tab_index(&self) -> Option<isize> {
+         self.custom_props()
+@@ -78,6 +83,9 @@ impl RetainedElement {
+     /// Whether the element must own a gpui focus handle: it takes text, is in the
+     /// tab order, or listens for a key or focus event.
+     pub fn needs_focus(&self) -> bool {
++        if self.element_type == "quad-batch" {
++            return false;
++        }
+         matches!(self.element_type.as_str(), "input" | "textarea")
+             || self.tab_index().is_some()
+             || self.events().contains("keyDown")
+@@ -118,7 +126,9 @@ impl RetainedElement {
+         if self
+             .extras
+             .as_ref()
+-            .is_some_and(|extras| extras.events.is_empty() && extras.custom_props.is_empty())
++            .is_some_and(|extras| {
++                extras.events.is_empty() && extras.custom_props.is_empty() && extras.quads.is_none()
++            })
+         {
+             self.extras = None;
+         }
+@@ -468,6 +478,20 @@ impl RetainedTree {
+         }
+     }
+ 
++    pub(crate) fn set_quads(&mut self, id: u64, values: &[f32]) -> Result<(), String> {
++        crate::quad_batch::validate(values)?;
++        let element = self
++            .elements
++            .get_mut(&id)
++            .ok_or_else(|| format!("Unknown element id {id}"))?;
++        if element.element_type != "quad-batch" {
++            return Err("setQuads requires a <quad-batch> element".into());
++        }
++        element.extras_mut().quads = Some(Arc::from(values));
++        self.mark_render_changed(id);
++        Ok(())
++    }
++
+     pub fn set_text(&mut self, id: u64, content: String) {
+         let mut changed = false;
+         if let Some(element) = self.elements.get_mut(&id) {
+@@ -646,6 +670,9 @@ impl RetainedTree {
+         let Some(element) = self.elements.get(&id) else {
+             return;
+         };
++        if element.element_type == "quad-batch" {
++            return;
++        }
+         let style = element.style.as_deref();
+         let own_box = (walk.painted_box)(id);
+         let (x, y) = (walk.x, walk.y);
+diff --git a/packages/native/src/test_renderer.rs b/packages/native/src/test_renderer.rs
+index fe53084..2434a25 100644
+--- a/packages/native/src/test_renderer.rs
++++ b/packages/native/src/test_renderer.rs
+@@ -305,6 +305,20 @@ impl TestGpuixRenderer {
+         apply_batch_to_tree(&mut tree, json.as_bytes()).map_err(Error::from_reason)
+     }
+ 
++    #[napi]
++    pub fn set_quads(
++        &self,
++        element_id: f64,
++        quads: napi::bindgen_prelude::Float32Array,
++    ) -> Result<()> {
++        let id = crate::renderer::to_element_id(element_id)?;
++        self.tree
++            .lock()
++            .unwrap()
++            .set_quads(id, &quads)
++            .map_err(Error::from_reason)
++    }
++
+     // ── Test-specific methods ────────────────────────────────────────
+ 
+     /// Notify the view entity and run GPUI until parked.
+diff --git a/packages/react/jsx-dev-runtime.d.ts b/packages/react/jsx-dev-runtime.d.ts
+index e987c1f..d8f1e55 100644
+--- a/packages/react/jsx-dev-runtime.d.ts
++++ b/packages/react/jsx-dev-runtime.d.ts
+@@ -12,6 +12,7 @@ import type {
+   InputProps,
+   MarkdownProps,
+   Props,
++  QuadBatchProps,
+   SvgProps,
+   TextareaProps,
+   VirtualListProps,
+@@ -34,6 +35,7 @@ export namespace JSX {
+     img: ImgProps
+     svg: SvgProps
+     canvas: Props
++    "quad-batch": QuadBatchProps
+     input: InputProps
+     textarea: TextareaProps
+     anchored: AnchoredProps
+diff --git a/packages/react/jsx-runtime.d.ts b/packages/react/jsx-runtime.d.ts
+index 1c005b1..7c3256d 100644
+--- a/packages/react/jsx-runtime.d.ts
++++ b/packages/react/jsx-runtime.d.ts
+@@ -13,6 +13,7 @@ import type {
+   InputProps,
+   MarkdownProps,
+   Props,
++  QuadBatchProps,
+   SvgProps,
+   TextareaProps,
+   VirtualListProps,
+@@ -35,6 +36,7 @@ export namespace JSX {
+     img: ImgProps
+     svg: SvgProps
+     canvas: Props
++    "quad-batch": QuadBatchProps
+     input: InputProps
+     textarea: TextareaProps
+     anchored: AnchoredProps
+diff --git a/packages/react/src/components/index.ts b/packages/react/src/components/index.ts
+index b6aae3c..d1fc5fb 100644
+--- a/packages/react/src/components/index.ts
++++ b/packages/react/src/components/index.ts
+@@ -35,6 +35,7 @@ export const gpuixComponents = {
+   img: "img",
+   svg: "svg",
+   canvas: "canvas",
++  "quad-batch": "quad-batch",
+   input: "input",
+   textarea: "textarea",
+   anchored: "anchored",
+diff --git a/packages/react/src/index.ts b/packages/react/src/index.ts
+index 0cbb65e..af64725 100644
+--- a/packages/react/src/index.ts
++++ b/packages/react/src/index.ts
+@@ -148,6 +148,8 @@ export type {
+   PathPromptOptions,
+   Props,
+   PublicInstance,
++  QuadBatchInstance,
++  QuadBatchProps,
+   StyleDesc,
+   SvgProps,
+   SelectionHost,
+diff --git a/packages/react/src/reconciler/host-config.ts b/packages/react/src/reconciler/host-config.ts
+index 5b493ae..ac8fdb7 100644
+--- a/packages/react/src/reconciler/host-config.ts
++++ b/packages/react/src/reconciler/host-config.ts
+@@ -59,6 +59,16 @@ function attachHostMethods(instance: Instance): void {
+   instance.scrollIntoView = () => {
+     container.nativeRenderer.scrollIntoView?.(instance.id)
+   }
++  if (instance.type === "quad-batch") {
++    Object.assign(instance, {
++      setQuads(quads: Float32Array) {
++        const upload = container.nativeRenderer.setQuads
++        if (!upload) throw new Error("Renderer does not support quad batches")
++        upload.call(container.nativeRenderer, instance.id, quads)
++      },
++    })
++    return
++  }
+   if (instance.type !== "img") return
+   const img = instance as ImgInstance
+   img.setImage = (bytes) => {
+diff --git a/packages/react/src/types/host.ts b/packages/react/src/types/host.ts
+index 57d5c62..549bc7c 100644
+--- a/packages/react/src/types/host.ts
++++ b/packages/react/src/types/host.ts
+@@ -10,6 +10,7 @@ import type {
+   TextareaProps as NativeTextareaProps,
+   ImgProps as NativeImgProps,
+   SvgProps as NativeSvgProps,
++  QuadBatchProps as NativeQuadBatchProps,
+   CodeProps as NativeCodeProps,
+   DiffProps as NativeDiffProps,
+   MarkdownProps as NativeMarkdownProps,
+@@ -52,6 +53,11 @@ export interface SvgProps extends NativeSvgProps {
+   ref?: Ref<PublicInstance>
+ }
+ 
++export interface QuadBatchProps extends NativeQuadBatchProps {
++  key?: Key | null
++  ref?: Ref<QuadBatchInstance>
++}
++
+ export interface CodeProps extends NativeCodeProps {
+   key?: Key | null
+   children?: ReactNode
+@@ -107,6 +113,11 @@ export interface Instance {
+   scrollIntoView?(): void
+ }
+ 
++export interface QuadBatchInstance extends Instance {
++  type: "quad-batch"
++  setQuads(quads: Float32Array): void
++}
++
+ export interface ImgInstance extends Instance {
+   type: "img"
+   setImage(bytes: Buffer | Uint8Array): void

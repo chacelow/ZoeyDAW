@@ -1,6 +1,8 @@
 # gpuix 共享控件交付记录
 
-2026-10-15，A3 切片，基于 `@gpuix/react` 和 `@gpuix/native` 0.10.0。实现位于 `ui/controls`，原生能力组合入口位于 [`src/gallery/controls.tsx`](../../gallery/controls.tsx)。画廊移到 `ui/` 外是协调者批准的分层修正，不保留旧入口 shim。
+当前实现消费固定 gpuix 主干 `6a5c7c142ac32f9eb0caefe0121be995cfc18631` 及仓库受控补丁。实现位于 `ui/controls`，原生能力由 [`src/gallery/controls.tsx`](../../gallery/controls.tsx) 等组合入口经 platform 端口注入。下方 A3 的命令、字体数值和窗口记录属于 0.10.0 迁移时的历史证据，不代表最新主干逐状态复核。
+
+A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live 对比、门禁和未验证项见[最终证据报告](../../../../../scripts/gpuix-main/evidence/a3b-gallery-polish/REPORT.md)。当前已观察到部分状态与四组主题语言基线，但未完成完整逐控件逐状态视觉矩阵，不以代码门禁替代该验收。
 
 ## 范围与接口
 
@@ -13,19 +15,20 @@
 | Popover | `Popover`、`PopoverTrigger`、`PopoverContent`、`PopoverHeader`、`PopoverTitle` |
 | 容器和反馈 | `Card`、`CardHeader`、`CardTitle`、`CardDescription`、`CardContent`、`Empty`、`EmptyHeader`、`EmptyTitle`、`EmptyDescription`、`Separator`、`Progress`、`Loading`、`LoadErrorScreen`、`ScrollArea`、`ControlledScrollbar`、`Toaster`、`toast`、`toastLoading` |
 | 表单和导航 | `Label`、`Input`、`RadioGroup`、`RadioGroupItem`、`ToggleGroup`、`ToggleGroupItem`、`SettingsShell`、`SettingsNavItem`、`MotionTabs` |
+| 列表 | `ListRow`（Browser、下拉与菜单的共享行容器；Enter 激活，Space 留给 Transport） |
 | 环境和拖拽 | `ControlEnvironment`、`ControlEnvironmentProvider`、`ControlGroup`、`ControlInfo`、`useInfoBinding`、`DragPreviewArea` |
 
 组件和专用 Props 位于 family 入口，根入口显式列出被消费的控件与类型。主题、预设和共享度量继续由 `shared/theme` 持有，本切片不新增主题 API、依赖或 Rust 源码。
 
 - 数值由消费者持有。所有数值变体共享 `useDragPad`、每步 4px 比例和主题度量，Bar/Bipolar 只改变填充外观。没有复制 track-mixer 的早期拖动逻辑。
 - `CursorLockPort` 经 `ControlEnvironment.cursorLock` 注入。UI 不依赖 `@zoeydaw/native`。无端口时不隐藏光标；画廊组合入口接入真实 Rust 光标函数。
-- Button 的 `active/onActiveChange` 为受控状态。`highlight` 默认开启，关闭后不加 hover 高亮。`iconOnly` 使用正方形尺寸，图标继承按钮颜色。
-- `DropdownButton` 复用发布版 Select。弹层保留标签换行，紧凑 trigger 把换行折成空格，指示器固定右侧。命令菜单与任意内容 Popover 不借 Select 模拟。
+- Button 的 `active/onActiveChange` 为受控状态。`highlight` 默认开启，关闭后不加 hover 高亮。`iconOnly` 使用正方形尺寸，图标经共享 `Icon` 与主题 token 着色。active destructive 保持 web Record 的 danger wash、hover 与 focus 层级，不被 primary 覆盖。调用方可配置原生 `role/tabIndex`。
+- `DropdownButton` 复用固定主干 Select。`fill` 同时铺满外层和 trigger，默认仍按内容测宽。工具栏 trigger 不激活 Space，弹层选项 Space 选择并消费，不同时触发播放。标签保留换行，紧凑 trigger 把换行折成空格，指示器固定右侧。
 - `ControlledScrollbar` 是加性的横/纵向受控变体：`value`、`viewport`、`extent` 使用同一逻辑单位，`length` 是绘制长度，`onChange` 写回消费者的唯一 owner。Arrangement 用它实现 **minimap 下 marks 与 timeline 共用的一条横向滚动条**，不另建音乐滚动状态或巨大 native scroll 内容。
 - 滚动条导航键只由控件消费，Space 留给窗口播放 owner；悬停滚轮通过原生 `pointerEvents: auto` 命中阻止祖先一起滚动，不伪造已消费事件标志。厚度和最小 thumb 来自共享控件度量，当前逻辑值经 `aria-valuetext` 暴露。
-- Menu/Popover 复用发布版 `FloatingLayer` 和 `renderSlot`。没有引入或复制社区库源码。原生子菜单、禁用项、Esc、键盘导航、焦点归还、四向定位和 outside mouseDown 均有行为测试。
+- Menu/Popover 复用固定主干 `FloatingLayer` 与 `renderSlot`。ContextMenu 用 F2 原生 `onContextMenu` 事件捕获最近作用域，能跨交互后代，不复制 MouseDown 分发或判断 Ctrl。Menu 按 state/context、trigger、navigation、content、item composition 拆分；根 trigger 的 Space 留给播放，弹层 MenuItem 与 SubTrigger 的 Space 仍选择并消费。
 - `toastLoading(message, id?)` 保留原消费者接口。同 id 的 loading 可以被 success/error 替换；通知 store 只有一份，替换、淘汰和关闭清理旧 timer。
-- `SettingsShell` 是非模态导航和内容容器，不宣称实现模态 focus trap。`MotionTabs` 使用静态指示器位置和原生 opacity 过渡，当前发布版 MotionStyle 不提供 transform。
+- `SettingsShell` 是非模态导航和内容容器，不宣称实现模态 focus trap。RadioGroup 与对话框内 SettingsNavItem 保留标准 Space 选择；工具栏 `MotionTabs` 只用 Enter 激活，Space 不切换。Tabs 使用静态指示器和原生 opacity 过渡。
 - `DragPreviewArea` 删除 DOM selector/HTMLElement 接口，改为显式 `data` 或 `items` 和 `renderPreview(data)`。预览支持阈值、释放、Esc 和取消；实际资源放置保持禁用。
 
 ## 实跑命令
@@ -68,14 +71,16 @@ Rust 源码未改。Cargo 检查证明基线兼容，不代替真实光标交互
 
 另实测数值编辑：点击 BPM 预编辑，按 `9` 后出现原生 textfield；点击其他控件后提交，数值按 min 钳制为 20。Bar 的 wheel 50 → 49，Bipolar/Pan 的 wheel 从中心到 −0.02/L2，Progress 同步为 49%。这些是 UI 参数，不是音频引擎。
 
-## 依赖上游缺陷的临时代码
+## 已完成的 0.10 临时路径切换
 
-| 代码 | 发布版缺口与实测 | 删除或替换条件 |
+| 原路径 | 当前唯一 owner | 状态 |
 | --- | --- | --- |
-| `readOuterBounds`，与测量 hook 同文件 | 0.10 的 origin 随 padding 与轴对齐偏移，size 只扣 border。100×80、border 1、padding 8，start 原点 9、center 原点 1、end 原点 −7。全部调用经单一函数修正 | 上游 `.changeset/bounds-include-padding.md` 已记录 real box 修复。升级到含该修复的版本后整体删除 shim，从唯一边界切回原生 API |
-| `ControlEnvironment` focus sampler | 测试 renderer 的 focus 操作改变 `getFocusedElementId`，没有触发声明的 onFocus/onBlur。每个应用作用域只有一个 32ms sampler，首个订阅者启动，最后一个取消停止，只通知变化；测试断言两个控件共用同一个 timer | 发布版稳定发送元素 focus/blur 事件后删除。它不读取窗口激活状态；窗口激活走原生 `onWindowActiveChange` 事件 |
-| `useMeasuredTextWidth` | 没有公开 `measureText`。不可见真实文本节点在布局后读取宽度，按字体与样本串缓存。没有新增字体库或改 native 公共契约 | 上游 `measureText` 或可靠 onLayout 是 issue/PR 候选，本轮没有提交远程 issue |
-| `useFloatingCenterOffset` | 0.10 center 把浮层末端放到 trigger 中点。共享测量补偿半个 cross-axis 尺寸，并在 minWidth/minHeight 更新后重新采样 | 上游 center 定位修复后删除补偿。12 个 side/align 和 intrinsic-size 回归保持严格几何边界，Select 允许原生像素对齐产生的 0.5pt 差值 |
+| `readOuterBounds` border/padding 修正及后续转发层 | 生产和测试直接调用 renderer 的原生 `getElementBounds` | API、调用和导入均已删除，原有几何断言未放宽 |
+| `ControlEnvironment` 32ms focus sampler | 原生 `onFocus/onBlur` 发布控件种类，原生 `focusVisible` 绘制内沿焦点环 | sampler、register/ref 兼容路径与 timer 断言已删除，保留真实焦点/隐私行为回归 |
+| 隐藏文本定时测量 | 已挂载样本的原生 `onLayout`，按字体与样本集缓存 | 无采样 timer。尚未取得首帧测量时保留估算，值与编辑 draft 不改变宽度 |
+| `useFloatingCenterOffset` | F1 原生零尺寸点锚与 center 定位 | 补偿函数、调用和采样均已删除，side/align 与 intrinsic size 几何回归通过 |
+
+`Input` 与数值编辑框只隔离可打印快捷键，不阻止原生文字编辑。原生已消费的删除、移动、撤销与提交不补发给工程窗口，完整契约见 [Input 键盘契约](Input/README.md)。`hideIcon`、`dragStep`、实际内宽与滚轮命中契约见 [DragPad](DragPad/README.md)。
 
 字体 probe 使用真实 gpuix text layout，结果如下。probe 已删除，永久测试验证样本宽度上界、值位数变化不改宽度、缓存和最多一次宽度修正。
 

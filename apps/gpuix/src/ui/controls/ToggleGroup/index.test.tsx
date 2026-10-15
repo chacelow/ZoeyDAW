@@ -1,4 +1,3 @@
-import { readOuterBounds } from "../useMeasuredTextWidth"
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -38,12 +37,12 @@ test("single toggle keyboard activation clears selection and arrows only move fo
   const first = root.renderer.findByTestId("a")
   const last = root.renderer.findByTestId("c")
   if (!first || !last) throw new Error("Missing toggles")
-  const before = readOuterBounds(root.renderer, root.renderer.getElement(first.id))
+  const before = root.renderer.getElementBounds(first.id)
   root.renderer.nativeSimulateKeystrokes(first.id, "space")
   expect(latest).toBe("a")
   root.renderer.nativeSimulateKeystrokes(first.id, "enter")
   expect(latest).toBe("")
-  expect(readOuterBounds(root.renderer, root.renderer.getElement(first.id))).toEqual(before)
+  expect(root.renderer.getElementBounds(first.id)).toEqual(before)
   root.renderer.simulateKeystrokes("right")
   expect(root.renderer.getFocusedElementId()).toBe(last.id)
   expect(latest).toBe("")
