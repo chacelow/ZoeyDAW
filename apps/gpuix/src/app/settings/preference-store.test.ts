@@ -73,6 +73,27 @@ describe("preference store", () => {
     expect(store.isPersisted()).toBe(false)
   })
 
+  test("an invalid preset whose repair cannot write still initializes to Default in memory", () => {
+    const store = createPreferenceStore(
+      {
+        get: () => "retired-preset",
+        set() {
+          throw new Error("settings directory is read-only")
+        },
+        repair() {
+          throw new Error("settings directory is read-only")
+        },
+      },
+      isThemePresetId,
+      DEFAULT_THEME_PRESET
+    )
+    expect(store.get()).toBe(DEFAULT_THEME_PRESET)
+    expect(store.isPersisted()).toBe(false)
+    store.set("modern-minimal")
+    expect(store.get()).toBe("modern-minimal")
+    expect(store.isPersisted()).toBe(false)
+  })
+
   test("system resolves to the native reading, or dark while none exists", () => {
     expect(resolveAppearance("system", null)).toBe("dark")
     expect(resolveAppearance("system", "light")).toBe("light")
@@ -96,7 +117,6 @@ describe("real native settings port", () => {
       const setting = createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET, {
         configDir: dir,
       })
-      setting.repair()
       return createPreferenceStore(setting, isThemePresetId, DEFAULT_THEME_PRESET)
     }
     open().set("catppuccin")

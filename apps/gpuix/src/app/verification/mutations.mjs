@@ -68,6 +68,34 @@ const mutations = [
     to: "playbackKeysEnabled={!close.asking}",
     tests: "src/app/AppShell.test.tsx",
   },
+  {
+    name: "preset repair escapes the startup failure boundary",
+    file: "settings/preference-store.ts",
+    from: "try {\n    setting.repair?.()",
+    to: "setting.repair?.()\n  try {",
+    tests: "src/app/settings/preference-store.test.ts",
+  },
+  {
+    name: "arrow focus stops revealing the preset",
+    file: "settings/ThemePresetGrid.tsx",
+    from: "renderer?.scrollIntoView?.(focused)",
+    to: "void focused",
+    tests: "src/app/settings/ThemePresetGrid.test.tsx",
+  },
+  {
+    name: "Tab focus stops revealing the preset",
+    file: "dialog/ModalDialog.tsx",
+    from: "renderer?.scrollIntoView?.(focused)",
+    to: "void focused",
+    tests: "src/app/settings/ThemePresetGrid.test.tsx",
+  },
+  {
+    name: "native dispose becomes a no-op behind the JS facade",
+    file: "AppShell.test.tsx",
+    from: "const originalDispose = engine.dispose",
+    to: "const originalDispose = engine.dispose\n    const skippedDispose = spyOn(engine, 'dispose').mockImplementation(() => {})\n    cleanups.push(() => skippedDispose.mockRestore())",
+    tests: "src/app/AppShell.test.tsx",
+  },
 ]
 
 function run(tests) {

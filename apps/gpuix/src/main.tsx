@@ -26,7 +26,6 @@ createLogPlatform().initialize()
 configureLogger({ sinks: [createNativeLogSink()] })
 initAppI18n({ storage: createSettingStorage("language") })
 const presetSetting = createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET)
-presetSetting.repair()
 const appearance = {
   themeMode: createPreferenceStore(createThemeModeSetting(), isThemeMode, DEFAULT_THEME_MODE),
   themePreset: createPreferenceStore(presetSetting, isThemePresetId, DEFAULT_THEME_PRESET),

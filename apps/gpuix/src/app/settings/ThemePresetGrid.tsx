@@ -1,3 +1,4 @@
+import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { THEME_PRESETS, isThemePresetId } from "@/shared/theme/presets"
 import { ScrollArea, ToggleGroup, ToggleGroupItem } from "@/ui/controls"
@@ -17,24 +18,26 @@ export interface ThemePresetGridProps {
  */
 export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGridProps) {
   const theme = useTheme()
+  const { renderer } = useGpuix()
   const gap = theme.control["--spacing-control-track-gap"]
   const swatchHeight = theme.control["--spacing-control-track"] * 2
   const columnWidth = theme.project.identityWidth * 2
   return (
-    <ScrollArea
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={next => {
+        if (isThemePresetId(next)) onValueChange(next)
+      }}
+      orientation="vertical"
       aria-label={label}
-      height={theme.project.defaultTrackHeight * 4}
-      style={{ flexShrink: 0 }}
     >
-      <ToggleGroup
-        type="single"
-        value={value}
-        onValueChange={next => {
-          if (isThemePresetId(next)) onValueChange(next)
-        }}
-        orientation="vertical"
+      {/* Each option is a direct scroll child: native scrollIntoView addresses child indices. */}
+      <ScrollArea
+        testId="theme-preset-scroll"
         aria-label={label}
-        style={{ flexDirection: "row", flexWrap: "wrap", gap }}
+        height={theme.project.defaultTrackHeight * 4}
+        style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap, flexShrink: 0 }}
       >
         {THEME_PRESETS.map(preset => {
           const selected = preset.id === value
@@ -45,9 +48,14 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
               testId={`theme-preset-${preset.id}`}
               aria-label={preset.label}
               onKeyDown={event => {
-                if (event.key !== "space" && event.key !== " ") return
-                event.preventDefault()
-                if (!event.isHeld) onValueChange(preset.id)
+                if (event.key === "space" || event.key === " ") {
+                  event.preventDefault()
+                  if (!event.isHeld) onValueChange(preset.id)
+                }
+                if (!["up", "down", "home", "end"].includes(event.key ?? "")) return
+                // ToggleGroupItem moved focus before invoking this callback.
+                const focused = renderer?.getFocusedElementId?.()
+                if (focused !== null && focused !== undefined) renderer?.scrollIntoView?.(focused)
               }}
               style={{
                 position: "relative",
@@ -121,7 +129,7 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
             </ToggleGroupItem>
           )
         })}
-      </ToggleGroup>
-    </ScrollArea>
+      </ScrollArea>
+    </ToggleGroup>
   )
 }

@@ -1,10 +1,11 @@
-import { afterEach, beforeAll, describe, expect, test } from "bun:test"
+import { afterEach, beforeAll, describe, expect, spyOn, test } from "bun:test"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { i18next } from "@zoeymind/i18n/core"
+import * as engine from "@/platform/engine"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { createSettingStorage } from "@/platform/settings"
 import {
@@ -31,10 +32,19 @@ import type { Router } from "./router/router"
 import type { ThemeMode } from "./settings/theme-mode"
 import type { ThemePresetId } from "@/shared/theme/presets"
 import type { CloseGuardRenderer } from "./window/close-guard-port"
-import type { BackendRequest, ProjectBackend } from "@/project/model/backend"
+import type { BackendRequest } from "@/project/model/backend"
 
+const languageStorage = {
+  value: "zh-CN",
+  get() {
+    return this.value
+  },
+  set(locale: string) {
+    this.value = locale
+  },
+}
 beforeAll(async () => {
-  initAppI18n({ initialLanguage: "zh-CN" })
+  initAppI18n({ initialLanguage: "zh-CN", storage: languageStorage })
   await i18next.changeLanguage("zh-CN")
 })
 
@@ -42,6 +52,8 @@ const roots: TestRoot[] = []
 const cleanups: (() => void)[] = []
 afterEach(async () => {
   for (const root of roots.splice(0)) root.unmount()
+  // Retire the temporary settings port before a later keyboard test can persist a language.
+  initAppI18n({ storage: languageStorage })
   for (const cleanup of cleanups.splice(0)) cleanup()
   await i18next.changeLanguage("zh-CN")
 })
@@ -205,37 +217,47 @@ describe("project runtime lease", () => {
   })
 
   test("real native backend opens only for the project and is disposed on leaving (requires audio device)", async () => {
-    const opened: { backend: ProjectBackend; request: BackendRequest | null }[] = []
+    const handles: number[] = []
+    const originalOpen = engine.openSession
+    const originalDispose = engine.dispose
+    const opening = spyOn(engine, "openSession").mockImplementation(() => {
+      const handle = originalOpen()
+      handles.push(handle)
+      return handle
+    })
+    cleanups.push(() => {
+      opening.mockRestore()
+      // Also clean up a session if an assertion or a disposal mutation fails.
+      for (const handle of handles) originalDispose(handle)
+    })
+    const requests: BackendRequest[] = []
     cleanups.push(
       configureProjectBackend(() => {
         const backend = createNativeBackend()
-        const entry: { backend: ProjectBackend; request: BackendRequest | null } = {
-          backend,
-          request: null,
-        }
-        opened.push(entry)
         return {
           ...backend,
           apply(request) {
-            entry.request = request
+            requests.push(request)
             return backend.apply(request)
           },
         }
       })
     )
     const { root, router } = mount()
-    expect(opened).toEqual([])
-    act(root, () => router.navigate("/project/native-device"))
-    expect(await whenProjectBackendIdle()).toBe(true)
-    expect(useProjectState.getState().session.backend.error).toBeNull()
-    expect(opened.length).toBe(1)
-    const entry = opened[0]
-    if (!entry?.request) throw new Error("The native backend did not receive the project open")
-    act(root, () => router.navigate("/"))
-    expect(await entry.backend.apply(entry.request)).toMatchObject({
-      kind: "rejected",
-      code: "disposed",
-    })
+    expect(handles).toEqual([])
+    for (const projectId of ["native-device-first", "native-device-second"]) {
+      act(root, () => router.navigate(`/project/${projectId}`))
+      expect(await whenProjectBackendIdle()).toBe(true)
+      expect(useProjectState.getState().session.backend.error).toBeNull()
+      const handle = handles.at(-1)
+      const request = requests.at(-1)
+      if (handle === undefined || !request) throw new Error("No real native session was opened")
+      act(root, () => router.navigate("/"))
+      // Call napi directly, bypassing createNativeBackend's JS disposed short circuit.
+      const result: unknown = JSON.parse(engine.apply(handle, JSON.stringify(request)))
+      expect(result).toMatchObject({ kind: "rejected", code: "disposed" })
+    }
+    expect(handles.length).toBe(2)
     expect(useProjectState.getState().session.playing).toBe(false)
   })
 })

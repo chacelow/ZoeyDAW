@@ -1,6 +1,8 @@
 export interface PreferenceSetting<T extends string> {
   get(): string | null
   set(value: T): void
+  /** Optional storage migration, executed once before reading, within the failure boundary. */
+  repair?(): boolean
 }
 
 export interface PreferenceStore<T extends string> {
@@ -24,6 +26,7 @@ export function createPreferenceStore<T extends string>(
   let persisted = true
   let value = fallback
   try {
+    setting.repair?.()
     const stored = setting.get()
     if (stored !== null && isValue(stored)) value = stored
   } catch {
