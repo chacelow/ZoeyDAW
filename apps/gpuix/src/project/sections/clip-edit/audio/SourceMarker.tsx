@@ -7,7 +7,7 @@ import { colorMix } from "@/shared/theme/color-mix"
 import { Shape } from "@/shared/svg/Shape"
 import { polygonPath } from "@/shared/svg/paths"
 import { useClipEditorEnvironment } from "../environment"
-import { markerKeyStep, markerPatch } from "./markers"
+import { markerKeyStep, markerPatch, markerPosition } from "./markers"
 import type { AudioClip } from "@/project/model/types"
 import type { MarkerKind } from "./markers"
 import type { SourceView } from "./source-view"
@@ -39,9 +39,11 @@ export function SourceMarker({
   const theme = useTheme()
   const environment = useClipEditorEnvironment()
   const transport = useProjectState(state => state.document.transport)
-  const active = useRef<{ clip: AudioClip; x: number; value: number; barsPerPixel: number } | null>(
-    null
-  )
+  const active = useRef<
+    | { kind: "pointer"; clip: AudioClip; x: number; value: number; barsPerPixel: number }
+    | { kind: "key"; clip: AudioClip }
+    | null
+  >(null)
   const gesture = useProjectEditGesture((value: number) => {
     const patch = markerPatch(active.current?.clip ?? clip, kind, value, transport.bpm)
     if (patch) projectActions.updateClip(clip.id, patch)
@@ -66,7 +68,9 @@ export function SourceMarker({
   const left = Math.max(0, Math.min(width, x))
   const value = (event: EventPayload) => {
     const drag = active.current
-    return drag ? drag.value + ((event.x ?? drag.x) - drag.x) * drag.barsPerPixel : position
+    return drag?.kind === "pointer"
+      ? drag.value + ((event.x ?? drag.x) - drag.x) * drag.barsPerPixel
+      : position
   }
   return (
     <div
@@ -90,6 +94,7 @@ export function SourceMarker({
       onMouseDown={event => {
         if ((event.button ?? 0) !== 0 || width <= 0) return
         active.current = {
+          kind: "pointer",
           clip,
           x: event.x ?? 0,
           value: position,
@@ -98,10 +103,10 @@ export function SourceMarker({
         gesture.onGestureStart()
       }}
       onMouseMove={event => {
-        if (active.current) gesture.onChange(value(event))
+        if (active.current?.kind === "pointer") gesture.onChange(value(event))
       }}
       onMouseUp={event => {
-        if (!active.current) return
+        if (active.current?.kind !== "pointer") return
         gesture.onChange(value(event))
         active.current = null
         gesture.onGestureEnd()
@@ -117,13 +122,23 @@ export function SourceMarker({
         if (event.key !== "left" && event.key !== "right") return
         event.preventDefault()
         event.stopPropagation()
+        cancel()
+        const baseline = useProjectState
+          .getState()
+          .document.tracks.flatMap(track => track.clips)
+          .find(candidate => candidate.id === clip.id)
+        if (baseline?.kind !== "audio") return
+        active.current = { kind: "key", clip: baseline }
         const step = markerKeyStep(
           transport.numerator,
           transport.denominator,
           Boolean(event.modifiers?.shift)
         )
         gesture.onGestureStart()
-        gesture.onChange(position + (event.key === "right" ? step : -step))
+        gesture.onChange(
+          markerPosition(baseline, kind, transport.bpm) + (event.key === "right" ? step : -step)
+        )
+        active.current = null
         gesture.onGestureEnd()
       }}
     >
