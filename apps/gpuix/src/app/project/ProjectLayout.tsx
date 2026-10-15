@@ -1,7 +1,8 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { Group, Panel, PanelDivider, PanelShell } from "@/ui/panels"
-import { PENDING_BROWSER_COLUMNS, PROJECT_LAYOUT } from "./layout-constraints"
-import type { ReactNode } from "react"
+import { PROJECT_LAYOUT } from "./layout-constraints"
+import type { ReactNode, Ref } from "react"
+import type { PublicInstance } from "@gpuix/react"
 import type { ProjectShellApi } from "./useProjectShell"
 
 /**
@@ -22,6 +23,7 @@ export interface ProjectLayoutSlots {
 export interface ProjectLayoutProps extends ProjectLayoutSlots {
   readonly projectId: string
   readonly shell: ProjectShellApi
+  readonly focusRef: Ref<PublicInstance>
   readonly labels: { readonly resizeClipEdit: string; readonly resizeBrowser: string }
 }
 
@@ -33,6 +35,7 @@ export interface ProjectLayoutProps extends ProjectLayoutSlots {
 export function ProjectLayout({
   projectId,
   shell,
+  focusRef,
   labels,
   transport,
   browser,
@@ -54,9 +57,7 @@ export function ProjectLayout({
       <Panel
         panelRef={shell.browserHandleRef}
         defaultSize={PROJECT_LAYOUT.browserDefaultSize}
-        minSize={
-          PENDING_BROWSER_COLUMNS.navigationWidth + PENDING_BROWSER_COLUMNS.resultsWidth + gap
-        }
+        minSize={theme.project.browserNavigationWidth + theme.project.browserResultsWidth + gap}
         maxSize={PROJECT_LAYOUT.browserMaxSize}
         collapsible
         collapsedSize={0}
@@ -84,6 +85,8 @@ export function ProjectLayout({
   )
   return (
     <div
+      ref={focusRef}
+      tabIndex={-1}
       testId="project-layout"
       role="group"
       aria-label={projectId}

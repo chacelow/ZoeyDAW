@@ -6,6 +6,7 @@ import { createWindowPlatform } from "@/platform/window"
 import { ControlEnvironmentProvider } from "@/ui/controls"
 import { PanelEnvironmentProvider } from "@/ui/panels"
 import { AppShell } from "./AppShell"
+import { AppNativeEnvironmentProvider } from "./native-environment"
 import type { AppShellProps } from "./AppShell"
 
 export type NativeRootProps = Omit<AppShellProps, "closeRenderer" | "systemAppearance">
@@ -35,7 +36,9 @@ export function NativeRoot(props: NativeRootProps) {
     <AnimationFrameProvider source={native.frames}>
       <ControlEnvironmentProvider value={native.controls}>
         <PanelEnvironmentProvider environment={native.panels}>
-          <AppShell {...props} closeRenderer={renderer} systemAppearance={systemAppearance} />
+          <AppNativeEnvironmentProvider value={native.panels}>
+            <AppShell {...props} closeRenderer={renderer} systemAppearance={systemAppearance} />
+          </AppNativeEnvironmentProvider>
         </PanelEnvironmentProvider>
       </ControlEnvironmentProvider>
     </AnimationFrameProvider>

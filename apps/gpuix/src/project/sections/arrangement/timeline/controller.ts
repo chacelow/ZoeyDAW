@@ -169,6 +169,7 @@ export function createTimelineController({
     })
     sceneStore.setProjectPreview(current.session.preview)
     sceneStore.setTimeSelection(current.session.timeSelection)
+    sceneStore.setAutomationParameters(current.session.automationParameters)
     if (clipIds !== current.session.selectedClipIds) {
       clipIds = current.session.selectedClipIds
       sceneStore.setSelection(new Set(clipIds))

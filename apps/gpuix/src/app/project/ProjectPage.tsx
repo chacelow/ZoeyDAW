@@ -2,39 +2,51 @@ import { useLayoutEffect } from "react"
 import { setProjectStorageId, startProjectRuntime } from "@/project/adapters"
 import { useAppTranslation } from "../i18n"
 import { ProjectLayout } from "./ProjectLayout"
-import { usePlaybackKey } from "./usePlaybackKey"
+import { useProjectComposition } from "./useProjectComposition"
+import { ProjectSections } from "./ProjectSections"
 import { useProjectShell } from "./useProjectShell"
 import type { ProjectLayoutSlots } from "./ProjectLayout"
 import type { ProjectShellApi } from "./useProjectShell"
 
 export interface ProjectPageProps {
   readonly projectId: string
-  /** Section nodes for the current shell state; phase 2's composition root supplies them. */
-  readonly renderSlots: (shell: ProjectShellApi) => ProjectLayoutSlots
-  readonly playbackKeysEnabled: boolean
+  readonly renderSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
 }
 
 /**
  * Route entry: isolates the project's editing session and snapshot key, then holds a runtime
  * lease (opening the native backend) for exactly as long as the view is mounted.
  */
-export function ProjectPage({ projectId, renderSlots, playbackKeysEnabled }: ProjectPageProps) {
+export function ProjectPage({ projectId, renderSlots }: ProjectPageProps) {
   const shell = useProjectShell()
   const { t } = useAppTranslation()
-  usePlaybackKey(playbackKeysEnabled)
   useLayoutEffect(() => {
     setProjectStorageId(projectId)
     return startProjectRuntime()
   }, [projectId])
+  const { composition, browserRef, focusRef } = useProjectComposition(shell)
+  const labels = {
+    resizeBrowser: t("project.resizeBrowser"),
+    resizeClipEdit: t("project.resizeClipEdit"),
+  }
+  if (!renderSlots)
+    return composition ? (
+      <ProjectSections
+        composition={composition}
+        browserRef={browserRef}
+        focusRef={focusRef}
+        projectId={projectId}
+        shell={shell}
+        labels={labels}
+      />
+    ) : null
   return (
     <ProjectLayout
       {...renderSlots(shell)}
       projectId={projectId}
       shell={shell}
-      labels={{
-        resizeBrowser: t("project.resizeBrowser"),
-        resizeClipEdit: t("project.resizeClipEdit"),
-      }}
+      focusRef={focusRef}
+      labels={labels}
     />
   )
 }

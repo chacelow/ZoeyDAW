@@ -83,7 +83,7 @@ export function TrackRows({
   const reorder = useTrackReorder(visibility.rows, container)
   const normal = rows.filter(row => !isPinnedTrack(row.track))
   const pinned = rows.filter(row => isPinnedTrack(row.track))
-  const laneWidth = Math.max(0, viewport.width - theme.project.controlsWidth)
+  const laneWidth = viewport.width
   const drawRows = (
     input: readonly TrackRowGeometry[],
     offset: number,
@@ -177,7 +177,7 @@ export function TrackRows({
           testId="track-rows"
           style={{
             position: "relative",
-            width: viewport.width,
+            width: viewport.width + theme.project.controlsWidth,
             height: viewport.height,
             backgroundColor: theme.colors.arrangementSurfaceAlt,
             overflow: "hidden",

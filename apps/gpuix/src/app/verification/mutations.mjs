@@ -62,11 +62,12 @@ const mutations = [
     tests: "src/app/AppShell.test.tsx",
   },
   {
-    name: "Space in settings leaks into transport",
-    file: "AppShell.tsx",
-    from: "playbackKeysEnabled={!settingsOpen && !close.asking}",
-    to: "playbackKeysEnabled={!close.asking}",
+    name: "modal stops guarding global Browser search",
+    file: "project/composition.ts",
+    from: "deps.interaction.isModalOpen()",
+    to: "false",
     tests: "src/app/AppShell.test.tsx",
+    pattern: "global Cmd",
   },
   {
     name: "preset repair escapes the startup failure boundary",
@@ -96,10 +97,68 @@ const mutations = [
     to: "const originalDispose = engine.dispose\n    const skippedDispose = spyOn(engine, 'dispose').mockImplementation(() => {})\n    cleanups.push(() => skippedDispose.mockRestore())",
     tests: "src/app/AppShell.test.tsx",
   },
+  {
+    name: "lane draw gesture stops marking held B",
+    file: "project/composition.ts",
+    from: "markDrawModeGesture: timeline.keyboard.markDrawGesture",
+    to: "markDrawModeGesture: () => {}",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "held B",
+  },
+  {
+    name: "native text focus is misclassified as timeline",
+    file: "project/composition.ts",
+    from: 'if (deps.interaction.isTextFocused()) return "text"',
+    to: 'if (false) return "text"',
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "native text focus",
+  },
+  {
+    name: "editors stop reporting text focus leases",
+    file: "../ui/controls/ControlEnvironment/index.tsx",
+    from: "if (active && !release.current)",
+    to: "if (false)",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "native text focus",
+  },
+  {
+    name: "a second window owner processes timeline keys",
+    file: "project/composition.ts",
+    from: "windowKey = event.keystrokeId",
+    to: "windowKey = event.keystrokeId; timeline.keyboard.down(event)",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "one native key sequence",
+  },
+  {
+    name: "collapsed Browser search guard is removed",
+    file: "project/composition.ts",
+    from: "deps.browserCollapsed()",
+    to: "false",
+    tests: "src/app/AppShell.test.tsx",
+    pattern: "global Cmd",
+  },
+  {
+    name: "track rails deduct controls from time width again",
+    file: "../project/sections/arrangement/tracks/TrackRows/index.tsx",
+    from: "const laneWidth = viewport.width",
+    to: "const laneWidth = Math.max(0, viewport.width - theme.project.controlsWidth)",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "real TrackRows",
+  },
+  {
+    name: "timeline loses automation parameter projection",
+    file: "../project/sections/arrangement/timeline/controller.ts",
+    from: "sceneStore.setAutomationParameters(current.session.automationParameters)",
+    to: "void current.session.automationParameters",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "timeline projection",
+  },
 ]
 
-function run(tests) {
-  const result = spawnSync(process.execPath, ["test", tests], { cwd: app, encoding: "utf8" })
+function run(tests, pattern) {
+  const args = ["test", tests, "--timeout", "30000"]
+  if (pattern) args.push("--test-name-pattern", pattern)
+  const result = spawnSync(process.execPath, args, { cwd: app, encoding: "utf8" })
   if (result.error) throw result.error
   return { status: result.status, output: `${result.stdout}${result.stderr}` }
 }
@@ -116,7 +175,7 @@ for (const mutation of mutations) {
       file,
       original.replace(mutation.from, () => mutation.to)
     )
-    result = run(mutation.tests)
+    result = run(mutation.tests, mutation.pattern)
   } finally {
     writeFileSync(file, original)
   }
