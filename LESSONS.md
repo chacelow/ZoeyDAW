@@ -301,4 +301,11 @@
 - 对：`check.mjs` 报 “Vendor must contain exactly the checked-in ordered patch series” 时，用合入前主干版本的补丁，从序列尾部逆序 `git apply --reverse --check` 后回退，直到被改补丁为止（2026-10-15 F4c：resume-frame → autofocus-focus-event → quad-batch）；再用 `git rm --cached` 清掉补丁新建文件残留的 intent-to-add 条目，然后跑 `build.sh` 从该位置重放。
 - 因：后面的补丁建立在被改补丁的上下文之上，只回退中间那一个会冲突；`build.sh` 只能在已有前缀正确时追加尾部补丁。
 
+## gpuix 迁移：视觉评审把「看起来不对」报成缺陷前，先核对素材与参考实现
+
+- 错：协调者看到 lane 音频 Clip 左声道是一条近黑色满幅横带，就当作 `PeakColumns` 声道几何错误和颜色错误派修；worker 据此把波形改成 Clip 派生色，并加断言锁定。
+- 对：先算测试素材的预期包络。`probe.wav` 左声道是 ±0.4 的恒幅正弦，在 Arrangement 缩放下每像素 min/max 都是 ±0.4，本来就是满幅连续带。颜色先查 web 参考：`canvas/painters/clip.ts` 用 `--arrangement-clip-ink` 画波形，即彩色 Clip 上的深色墨。两项都符合预期，只是看起来不像真实音乐。
+- 因：评审只凭视觉印象，没有核对数据与参考，就把有意的设计当成缺陷，还产生了一个反向锁定的错误断言。
+- 见：`apps/web/src/pages/project/sections/ArrangementPanel/canvas/painters/clip.ts:199`、`crates/engine/spikes/assets/probe.wav`。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
