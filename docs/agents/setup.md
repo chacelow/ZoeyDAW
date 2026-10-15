@@ -15,7 +15,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 ## 验证命令（gpuix）
 
-在 `apps/gpuix` 运行 `tsc --noEmit`、`bun test`、`pnpm exec eslint apps/gpuix/src`（根目录）；涉及 Rust 时 `cargo check`、`cargo test`；交付前 `node scripts/gpuix-review-scan.mjs`。
+在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`），按顺序执行：渲染器身份校验（十一补丁，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、`bun test`、review scan（`baseRef...HEAD`，默认 `gpuix-migration`；未提交的改动不在扫描范围内），最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
 
 ## 旧 Web 参考的验证命令
 

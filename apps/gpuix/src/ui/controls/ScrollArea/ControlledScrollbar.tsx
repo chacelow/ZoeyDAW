@@ -118,9 +118,10 @@ export function ControlledScrollbar({
           : (event.y ?? bounds.y) - bounds.y
         publish(anchor.value + ((pointer - anchor.origin) / geometry.travel) * geometry.maximum)
       }}
-      onMouseUp={() => {
+      onMouseUp={event => {
         drag.current = null
         setDragging(false)
+        props.onMouseUp?.(event)
       }}
       onScroll={event =>
         publish(
