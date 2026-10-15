@@ -64,6 +64,11 @@ export default {
     saveFailed: "保存失败，窗口仍保持打开。",
     closeFailed: "窗口关闭失败，请重试关闭。",
   },
+  notifications: {
+    title: "通知",
+    dismiss: "关闭通知",
+    loading: "加载中",
+  },
   titlebar: {
     settings: "设置",
   },

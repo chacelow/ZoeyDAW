@@ -61,6 +61,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         onOpenChange={onOpenChange}
         title={t("settings.title")}
         closeLabel={t("settings.close")}
+        navigationLabel={t("settings.navigation")}
         items={items}
         activeId={section}
         onActiveChange={id => setSection(id as SettingsSection)}

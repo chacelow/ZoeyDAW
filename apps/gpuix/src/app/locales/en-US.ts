@@ -67,6 +67,11 @@ export default {
     saveFailed: "Saving failed. The window remains open.",
     closeFailed: "The window could not close. Try closing it again.",
   },
+  notifications: {
+    title: "Notifications",
+    dismiss: "Dismiss",
+    loading: "Loading",
+  },
   titlebar: {
     settings: "Settings",
   },

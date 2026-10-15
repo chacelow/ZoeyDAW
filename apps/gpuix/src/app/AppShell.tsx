@@ -128,7 +128,12 @@ function AppFrame({
         </RouteErrorBoundary>
       </div>
       <UnsavedCloseDialog open={close.asking} onChoose={choice => void close.choose(choice)} />
-      <Toaster position="bottom-left" />
+      <Toaster
+        position="bottom-left"
+        aria-label={t("notifications.title")}
+        dismissLabel={t("notifications.dismiss")}
+        loadingLabel={t("notifications.loading")}
+      />
       {children}
     </div>
   )

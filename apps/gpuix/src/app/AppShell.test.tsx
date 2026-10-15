@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, spyOn, test } from "bun:test"
+import { afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -13,13 +13,15 @@ import {
   createMemorySnapshotStorage,
   projectActions,
   useProjectState,
+  setSnapshotStorage,
   whenProjectBackendIdle,
 } from "@/project/adapters"
 import { createMockProjectBackend } from "@/project/adapters/backend/mock"
 import { createNativeBackend } from "@/project/adapters/backend/native"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
+import { dismissToast, toastLoading } from "@/ui/controls/Toaster"
 import { AppShell } from "./AppShell"
-import { initAppI18n } from "./i18n"
+import { changeLocale, initAppI18n } from "./i18n"
 import { emptyProjectSlots } from "./project/empty-slots"
 import { createRouter } from "./router/router"
 import { createPreferenceStore } from "./settings/preference-store"
@@ -47,6 +49,9 @@ beforeAll(async () => {
   initAppI18n({ initialLanguage: "zh-CN", storage: languageStorage })
   await i18next.changeLanguage("zh-CN")
 })
+beforeEach(() => {
+  setSnapshotStorage(createMemorySnapshotStorage())
+})
 
 const roots: TestRoot[] = []
 const cleanups: (() => void)[] = []
@@ -55,6 +60,7 @@ afterEach(async () => {
   // Retire the temporary settings port before a later keyboard test can persist a language.
   initAppI18n({ storage: languageStorage })
   for (const cleanup of cleanups.splice(0)) cleanup()
+  setSnapshotStorage(null)
   await i18next.changeLanguage("zh-CN")
 })
 
@@ -377,6 +383,25 @@ describe("settings dialog", () => {
     await settle(root)
     expect(text(root)).toContain("设置")
     expect(createSettingStorage("language", { configDir }).get()).toBe("zh-CN")
+  })
+
+  test("settings navigation and toast controls expose the selected locale in AX", async () => {
+    const { root } = mount()
+    click(root, "titlebar-settings")
+    act(root, () => toastLoading("工程载入", "locale-probe"))
+    const labels = () =>
+      Object.values(root.renderer.getA11yTree().nodes ?? {}).map(node => node.aria?.label)
+    expect(labels()).toContain("设置分类")
+    expect(labels()).toContain("通知")
+    expect(labels()).toContain("关闭通知 工程载入")
+    expect(labels()).toContain("加载中")
+    await changeLocale("en-US")
+    await settle(root)
+    expect(labels()).toContain("Settings sections")
+    expect(labels()).toContain("Notifications")
+    expect(labels()).toContain("Dismiss 工程载入")
+    expect(labels()).toContain("Loading")
+    act(root, () => dismissToast())
   })
 
   test("follow-system stays disabled while no native appearance exists", () => {
