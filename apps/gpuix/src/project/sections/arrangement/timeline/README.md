@@ -36,6 +36,8 @@
 
 工程与 `scrollX/scrollY/pxPerBar` 的权威状态仍在 adapters/stores。controller 只同步只读 Scene 投影；手势保存的是按下基线与编辑 token，不是第二份可写工程。hydration、后端/路由 epoch 变化会取消旧手势。定位点与循环在按下时取得 preview 所有权，提交为一次历史，取消不消费前一条历史。
 
+Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有效按下保持到释放或取消，即使指针离开选框、overview 或手势中发生 store 提交也不回落到 hover；epoch/失活取消同步恢复视觉与光标。
+
 组合根提供：
 
 1. 同一真实 renderer 的 `createWindowPlatform(renderer).subscribeApplicationActive`，不用旧 A2 采样 singleton。
@@ -56,6 +58,8 @@ B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨�
 - `gridLines.major`：只在整数小节区域边界上；其余线只来自 `gridPlan.cellBars`，不把拍/十六分音符标签变成粗线。
 - `rulerTicks`：独立的可读标签层，按真实 `16 / denominator` 换算每拍十六分音符数量。
 - `rulerLabel/adjacentMarker`：由批准的 B1 纯函数提供展示位置与邻近定位点，不在组件内排序或拼位置规则。
+
+网格与音乐标尺的 Pattern 背景统一使用 `useQuadBatch` 命令式上传；网格按主题的粗/细线材质分批，不逐线挂载节点。可见几何仍来自 B1，不将 Float32Array 放入 React props/state。`grid/parity.test.tsx` 用固定的旧 div 绘制 oracle 对照深浅主题、标尺/车道高度、分数滚动与极端缩放的原生 PNG。标尺文字保留原生文本布局，时间刻度的短线与文字仍共用原位置节点；没有为少量文字标签另建绘制系统。
 
 标签间距的 38/56 默认来自 web，可读性配置集中在 `RULER_LABEL_SPACING`。多档 Live 阈值及极端缩小时的明暗合并未对照 Live，不把估计写成实测结论。
 
@@ -90,3 +94,7 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，本切�
 在仓库根先运行 `pnpm native:build`。在 `apps/gpuix` 运行 `pnpm exec tsc --noEmit`、`bun test src/project/sections/arrangement/timeline`；根目录运行对应目录 eslint 与 `node scripts/gpuix-review-scan.mjs`。
 
 外部 store/Scene 更新的原生组件测试必须用真实 `flushSync` 提交 React，再 `renderer.flush()` 绘制；单独 native flush 不能证明 UI 已跟随状态变化。永久测试保留音乐位置/时间缩放、事务/历史、epoch、MIDI/B 模式与真实按键传播，性质测试配实际变异检查。
+
+A3b 消费回归复用 `ui/controls/Menu/{interaction,pointer}.test.tsx`、`DragPad/{DragPadNumber,variants}.test.tsx`、`platform/keyboard/keyboard-native.test.tsx`；最终文本焦点 lease 由 `app/project/composition.test.tsx` 的真实 DragPad→timeline 组合回归覆盖。`bun src/project/sections/arrangement/timeline/verification/mutations.ts` 运行内存变异，不写共享源码；每个变异必须实际加载且使行为断言失败。
+
+`bun src/project/sections/arrangement/timeline/verification/layout-smoke.tsx` 输出真实原生 toolbar、文字和图标的 bounds。1.5px padding 在 scale=1 的 GPUI pre-layout metric snapping 中按中点向零舍入为 1px，不是 AX 丢精度；不以业务实例补偿改变共享密度 token。

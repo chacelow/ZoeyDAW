@@ -28,6 +28,7 @@ export interface MinimapGestureOptions {
   publish: (viewport: MinimapViewport) => void
   navigate: () => void
   cursor: CursorLockPort
+  onPhaseChange?: (phase: MinimapGesture["phase"]) => void
 }
 
 export interface MinimapGesture {
@@ -45,6 +46,7 @@ export function createMinimapGesture({
   publish,
   navigate,
   cursor,
+  onPhaseChange,
 }: MinimapGestureOptions): MinimapGesture {
   let press: Press | null = null
 
@@ -52,6 +54,7 @@ export function createMinimapGesture({
     const previous = press
     press = null
     if (!previous) return
+    onPhaseChange?.("idle")
     if (cancelled && previous.epoch === read().epoch) {
       publish({ pxPerBar: previous.geometry.pxPerBar, scrollX: previous.geometry.scrollX })
     }
@@ -78,6 +81,7 @@ export function createMinimapGesture({
         hidden: false,
         epoch,
       }
+      onPhaseChange?.("pressed")
       navigate()
       if (anchor.initialScrollX !== geometry.scrollX) {
         publish({ pxPerBar: geometry.pxPerBar, scrollX: anchor.initialScrollX })
@@ -94,6 +98,7 @@ export function createMinimapGesture({
       if (press.phase === "pressed") {
         if (!dragStarted(press.origin, point)) return
         press.phase = "dragging"
+        onPhaseChange?.("dragging")
         if (press.cursor) {
           cursor.hide()
           press.hidden = true

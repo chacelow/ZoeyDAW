@@ -41,6 +41,8 @@ export function MiniMap({
   const { renderer } = useGpuix()
   const element = useRef<PublicInstance | null>(null)
   const [pointer, setPointer] = useState<"grab" | "ew-resize">("grab")
+  const [hovered, setHovered] = useState(false)
+  const [phase, setPhase] = useState<MinimapGesture["phase"]>("idle")
   const latest = useRef({ geometry, width, onNavigate, onViewport })
   useLayoutEffect(() => {
     latest.current = { geometry, width, onNavigate, onViewport }
@@ -65,11 +67,12 @@ export function MiniMap({
         publish: viewport => latest.current.onViewport(viewport),
         navigate: () => latest.current.onNavigate(),
         cursor,
+        onPhaseChange: setPhase,
       }),
     [renderer, cursor]
   )
   useEffect(() => () => gesture.dispose(), [gesture])
-  useEffect(() => {
+  useLayoutEffect(() => {
     gesture.cancel()
   }, [epoch, gesture])
   useEffect(() => registerGesture?.(gesture), [gesture, registerGesture])
@@ -95,6 +98,8 @@ export function MiniMap({
         backgroundColor: theme.colors.arrangementSurfaceAlt,
         cursor: pointer,
       })}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onMouseDown={event => {
         if (event.button !== undefined && event.button !== 0) return
         if ((event.clickCount ?? 1) >= 2) {
@@ -200,9 +205,14 @@ export function MiniMap({
           left: (start / geometry.bars) * width,
           width: (viewportBars / geometry.bars) * width,
           height,
-          borderWidth: 1,
+          borderWidth: theme.design.shape.controlBorderWidth,
           borderColor: theme.colors.mutedForeground,
-          backgroundColor: theme.colors.canvasScrollbar,
+          backgroundColor:
+            phase !== "idle"
+              ? theme.colors.canvasScrollbarActive
+              : hovered
+                ? theme.colors.canvasScrollbarHover
+                : theme.colors.canvasScrollbar,
           pointerEvents: "none",
         })}
       />
