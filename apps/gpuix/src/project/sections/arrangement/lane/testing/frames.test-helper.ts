@@ -1,6 +1,8 @@
 import type { AnimationFrameCallback, AnimationFrameSource } from "@/platform/frame"
 
 export interface ManualFrames extends AnimationFrameSource {
+  readonly subscriberCount: number
+  readonly resumeSubscriberCount: number
   step(timestampMs: number): void
   stepResume(timestampMs: number): void
 }
@@ -9,6 +11,12 @@ export function createManualFrames(): ManualFrames {
   const subscribers = new Set<AnimationFrameCallback>()
   const resumeSubscribers = new Set<AnimationFrameCallback>()
   return {
+    get subscriberCount() {
+      return subscribers.size
+    },
+    get resumeSubscriberCount() {
+      return resumeSubscribers.size
+    },
     subscribe(callback) {
       subscribers.add(callback)
       return () => {

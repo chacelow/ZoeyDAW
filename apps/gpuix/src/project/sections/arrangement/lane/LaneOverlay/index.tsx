@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useState } from "react"
+import { flushSync } from "@gpuix/react"
 import { Shape } from "@/shared/svg/Shape"
 import { polygonPath } from "@/shared/svg/paths"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -7,7 +8,7 @@ import { alignmentBar } from "../../core/clip-alignment"
 import { arrangementBodyBottom, arrangementBodyTop } from "../../core/layout"
 import type { ArrangementScene, ArrangementViewport } from "../../core/scene"
 import { useProjectState } from "@/project/adapters"
-import { useAnimationFrame } from "@/platform/frame"
+import { useAnimationFrame, useResumeFrame } from "@/platform/frame"
 import { visibleRows } from "../render-projection"
 
 export interface LaneOverlayProps {
@@ -24,6 +25,9 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
   }, [transportBar, scene.playback.playing])
   useAnimationFrame(() => {
     setPosition(transportBar())
+  }, scene.playback.playing)
+  useResumeFrame(() => {
+    flushSync(() => setPosition(transportBar()))
   }, scene.playback.playing)
   const insertionPath = useMemo(
     () =>
