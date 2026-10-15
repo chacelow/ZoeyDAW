@@ -25,6 +25,14 @@ import { createSceneStore } from "../../core/scene"
 import { createLaneController } from "../interactions/controller"
 import type { LaneController } from "../interactions/controller"
 import { takeProfileCounters } from "./profile-counters"
+import {
+  beginFramePhases,
+  markReactStart,
+  recordNativeFlush,
+  recordObserver,
+  takeFramePhases,
+} from "./frame-phases"
+import { MutationProfile } from "./mutation-profile"
 
 const viewportWidth = 976
 const viewportHeight = Number(process.env.LANE_PROFILE_VIEWPORT_HEIGHT ?? 758)
@@ -37,6 +45,8 @@ let releaseBackend: (() => void) | undefined
 let root: TestRoot | undefined
 let retainedAfterUnmount: number
 const profileEnabled = process.env.LANE_REACT_PROFILE === "1"
+const phaseEnabled = process.env.LANE_PHASE_PROFILE === "1"
+const reactProfilerEnabled = profileEnabled && process.env.NODE_ENV !== "production"
 const renderDurations = new Map<string, { commits: number; actualMs: number; maxMs: number }>()
 
 function CaptureMetrics({ onMetrics }: { onMetrics: (metrics: Theme["project"]) => void }) {
@@ -138,6 +148,18 @@ function summarizeReactProfile(
     rows,
     rowRenders: rows.reduce((sum, row) => sum + row.renders, 0),
     clipRenders: rows.reduce((sum, row) => sum + row.clipRenders, 0),
+    clipMounts: Object.values(counters.clipMounts).reduce((sum, count) => sum + count, 0),
+    clipUnmounts: Object.values(counters.clipUnmounts).reduce((sum, count) => sum + count, 0),
+    retainedClipRenders: Object.entries(counters.clipCards).reduce(
+      (sum, [id, count]) => sum + (previousClipIds.has(id) ? count : 0),
+      0
+    ),
+    changedInputs: counters.changedInputs,
+    clipContentRenders: Object.values(counters.clipContents).reduce((sum, count) => sum + count, 0),
+    retainedClipContentRenders: Object.entries(counters.clipContents).reduce(
+      (sum, [id, count]) => sum + (previousClipIds.has(id) ? count : 0),
+      0
+    ),
     actualReactMs: rows.reduce((sum, row) => sum + row.actualMs, 0),
     peakCalls,
     retainedDuplicateQueries,
@@ -193,16 +215,20 @@ try {
     },
   })
   const nativeWork = { batches: 0, batchMs: 0, flushes: 0, flushMs: 0 }
+  const mutations = new MutationProfile()
   const applyBatch = root.renderer.applyBatch
   Object.defineProperty(root.renderer, "applyBatch", {
     value: (operations: string) => {
       const before = performance.now()
-      try {
-        return applyBatch(operations)
-      } finally {
-        nativeWork.batches++
-        nativeWork.batchMs += performance.now() - before
+      const destroyed = applyBatch(operations)
+      nativeWork.batches++
+      nativeWork.batchMs += performance.now() - before
+      if (phaseEnabled) {
+        const observerStart = performance.now()
+        mutations.observe(operations, destroyed)
+        recordObserver(performance.now() - observerStart)
       }
+      return destroyed
     },
   })
   const flush = root.renderer.flush.bind(root.renderer)
@@ -213,7 +239,9 @@ try {
         return flush()
       } finally {
         nativeWork.flushes++
-        nativeWork.flushMs += performance.now() - before
+        const elapsed = performance.now() - before
+        nativeWork.flushMs += elapsed
+        if (phaseEnabled) recordNativeFlush(before, elapsed)
       }
     },
   })
@@ -252,7 +280,8 @@ try {
   const clipTracks = new Map<string, string>()
   for (const track of editable) for (const clip of track.clips) clipTracks.set(clip.id, track.id)
   let previousClipIds = new Set<string>()
-  const render = () => {
+  let previousRows = new Set<string>()
+  const render = (inputProjectionMs = 0) => {
     if (!lane || !root) throw new Error("Probe is not mounted")
     uploadStats.calls = 0
     uploadStats.values = 0
@@ -264,7 +293,12 @@ try {
     const scene = sceneStore.get()
     const controller = lane
     const before = performance.now()
-    root.render(
+    const rowStart = performance.now()
+    const rows = visibleRows(scene)
+    const rowProjectionMs = performance.now() - rowStart
+    if (phaseEnabled) beginFramePhases(inputProjectionMs + rowProjectionMs)
+    mutations.beginFrame()
+    const node = (
       <ThemeProvider>
         <div
           style={sx({
@@ -274,7 +308,7 @@ try {
             overflow: "hidden",
           })}
         >
-          {visibleRows(scene).map(row => {
+          {rows.map(row => {
             const element = (
               <div
                 key={row.track.id}
@@ -306,7 +340,7 @@ try {
                 </div>
               </div>
             )
-            return profileEnabled ? (
+            return reactProfilerEnabled ? (
               <Profiler key={row.track.id} id={`row:${row.track.id}`} onRender={onProfileRender}>
                 {element}
               </Profiler>
@@ -317,10 +351,13 @@ try {
         </div>
       </ThemeProvider>
     )
+    if (phaseEnabled) markReactStart()
+    root.render(node)
     const renderAndFlushMs = performance.now() - before
     const flushStart = performance.now()
     root.renderer.flush()
     const additionalFlushMs = performance.now() - flushStart
+    const phases = phaseEnabled ? takeFramePhases() : null
     const { clipIds, ...tree } = countTree(root.renderer.toJSON())
     const profile = summarizeReactProfile(
       takeProfileCounters(),
@@ -328,6 +365,15 @@ try {
       trackNames,
       clipTracks
     )
+    const visibleRowIds = new Set(rows.map(row => row.track.id))
+    const visibility = {
+      enteredRows: [...visibleRowIds].filter(id => !previousRows.has(id)),
+      exitedRows: [...previousRows].filter(id => !visibleRowIds.has(id)),
+      enteredClips: [...clipIds].filter(id => !previousClipIds.has(id)).length,
+      exitedClips: [...previousClipIds].filter(id => !clipIds.has(id)).length,
+      retainedClips: [...clipIds].filter(id => previousClipIds.has(id)).length,
+    }
+    previousRows = visibleRowIds
     previousClipIds = clipIds
     renderDurations.clear()
     return {
@@ -335,6 +381,9 @@ try {
       additionalFlushMs,
       uploads: { ...uploadStats },
       nativeWork: { ...nativeWork },
+      phases,
+      mutations: phaseEnabled ? mutations.snapshot() : null,
+      visibility,
       viewport: scene.viewport,
       retained: root.renderer.getRetainedElementCount(),
       ...tree,
@@ -360,8 +409,9 @@ try {
     { kind: "horizontal", deltaX: 500, deltaY: 0 },
     { kind: "vertical", deltaX: 0, deltaY: 350 },
   ] as const
-  const results = []
+  const results: (ReturnType<typeof render> & { step: (typeof steps)[number]["kind"] })[] = []
   for (const step of steps) {
+    const inputStart = performance.now()
     if (step.kind === "zoomIn" || step.kind === "zoomOut")
       timeline.view.stepZoom(step.kind === "zoomIn" ? 1 : -1)
     else
@@ -372,7 +422,7 @@ try {
         deltaY: step.deltaY,
         precise: true,
       })
-    results.push({ step: step.kind, ...render() })
+    results.push({ step: step.kind, ...render(performance.now() - inputStart) })
   }
   const native = root.renderer.getDebugFrameOverlayStats()
   const retained = results.map(result => result.retained)
@@ -389,6 +439,30 @@ try {
         timingScope: "headless CPU React render + native flush; not real-window GPU frame time",
         projectionOwner: "timeline/controller",
         reactProfilingEnabled: profileEnabled,
+        phaseProfilingEnabled: phaseEnabled,
+        reactProfilerCallbacksExpected: reactProfilerEnabled,
+        phaseSummary: phaseEnabled
+          ? Object.fromEntries(
+              [
+                "projectionMs",
+                "renderEnvelopeExclusiveProjectionMs",
+                "commitInclusiveMs",
+                "commitExcludingObserverMs",
+                "hostQueueFlushInclusiveMs",
+                "postCommitSyncRemainderMs",
+                "vnodeConstructionMs",
+                "nativeFlushMs",
+                "additionalNativeFlushMs",
+                "observerMs",
+              ].map(key => {
+                const samples = results.flatMap(result => {
+                  const value: unknown = result.phases && Reflect.get(result.phases, key)
+                  return typeof value === "number" ? [value] : []
+                })
+                return [key, samples.length ? summarize(samples) : null]
+              })
+            )
+          : null,
         cpuRenderAndFlush: summarize(results.map(result => result.renderAndFlushMs)),
         cpuAdditionalFlush: summarize(results.map(result => result.additionalFlushMs)),
         retained: {
