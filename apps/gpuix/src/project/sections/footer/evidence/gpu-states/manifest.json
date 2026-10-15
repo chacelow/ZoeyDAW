@@ -1,0 +1,445 @@
+{
+  "renderer": "createTestRoot-native-gpu",
+  "states": [
+    {
+      "name": "transport-bpm-default",
+      "screenshot": "transport-bpm-default.png",
+      "viewport": {
+        "width": 1800,
+        "height": 120
+      },
+      "bounds": {
+        "transport-bpm": {
+          "x": 89,
+          "y": 0,
+          "width": 50,
+          "height": 20
+        },
+        "transport-record": {
+          "x": 984,
+          "y": 0,
+          "width": 20,
+          "height": 20
+        }
+      },
+      "values": {
+        "bpm": 120,
+        "interaction": "idle"
+      }
+    },
+    {
+      "name": "transport-bpm-hover",
+      "screenshot": "transport-bpm-hover.png",
+      "viewport": {
+        "width": 1800,
+        "height": 120
+      },
+      "bounds": {
+        "transport-bpm": {
+          "x": 89,
+          "y": 0,
+          "width": 50,
+          "height": 20
+        }
+      },
+      "values": {
+        "bpm": 120,
+        "pointer": {
+          "x": 114.5,
+          "y": 10
+        },
+        "interaction": "hover"
+      }
+    },
+    {
+      "name": "transport-bpm-pressed",
+      "screenshot": "transport-bpm-pressed.png",
+      "viewport": {
+        "width": 1800,
+        "height": 120
+      },
+      "bounds": {
+        "transport-bpm": {
+          "x": 89,
+          "y": 0,
+          "width": 50,
+          "height": 20
+        }
+      },
+      "values": {
+        "bpm": 120,
+        "pointer": {
+          "x": 114.5,
+          "y": 10
+        },
+        "interaction": "mouse-down"
+      }
+    },
+    {
+      "name": "transport-bpm-pre-edit",
+      "screenshot": "transport-bpm-pre-edit.png",
+      "viewport": {
+        "width": 1800,
+        "height": 120
+      },
+      "bounds": {
+        "transport-bpm": {
+          "x": 89,
+          "y": 0,
+          "width": 50,
+          "height": 20
+        },
+        "transport-bpm-edit-indicator": {
+          "x": 90,
+          "y": 3,
+          "width": 1,
+          "height": 14
+        }
+      },
+      "values": {
+        "bpm": 120,
+        "interaction": "pre-edit"
+      }
+    },
+    {
+      "name": "transport-bpm-focused",
+      "screenshot": "transport-bpm-focused.png",
+      "viewport": {
+        "width": 1800,
+        "height": 120
+      },
+      "bounds": {
+        "transport-bpm": {
+          "x": 89,
+          "y": 0,
+          "width": 50,
+          "height": 20
+        }
+      },
+      "values": {
+        "bpm": 120,
+        "focusedElementId": 21
+      }
+    },
+    {
+      "name": "transport-bpm-edit",
+      "screenshot": "transport-bpm-edit.png",
+      "viewport": {
+        "width": 1800,
+        "height": 120
+      },
+      "bounds": {
+        "transport-bpm": {
+          "x": 89,
+          "y": 0,
+          "width": 50,
+          "height": 20
+        },
+        "transport-bpm-value": {
+          "x": 92,
+          "y": 0,
+          "width": 44,
+          "height": 19
+        }
+      },
+      "values": {
+        "bpm": 120,
+        "draft": "120.00",
+        "interaction": "editing"
+      }
+    },
+    {
+      "name": "transport-record-active",
+      "screenshot": "transport-record-active.png",
+      "viewport": {
+        "width": 1800,
+        "height": 120
+      },
+      "bounds": {
+        "transport-record": {
+          "x": 984,
+          "y": 0,
+          "width": 20,
+          "height": 20
+        }
+      },
+      "values": {
+        "recording": true,
+        "pointer": {
+          "x": 994,
+          "y": 10
+        }
+      }
+    },
+    {
+      "name": "browser-selected",
+      "screenshot": "browser-selected.png",
+      "viewport": {
+        "width": 600,
+        "height": 640
+      },
+      "bounds": {
+        "browser-panel": {
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "height": 640
+        },
+        "browser-results": {
+          "x": 97,
+          "y": 58,
+          "width": 503,
+          "height": 582
+        },
+        "browser-entry-tunings-12-TET": {
+          "x": 97,
+          "y": 58,
+          "width": 503,
+          "height": 17
+        }
+      },
+      "values": {
+        "selected": "tunings-12-TET",
+        "initialBackground": "oklch(26.9% 0 0deg)",
+        "selectedBackground": "oklch(92.2% 0 0deg)",
+        "pointer": {
+          "x": 348.5,
+          "y": 66.5
+        }
+      }
+    },
+    {
+      "name": "browser-favorite",
+      "screenshot": "browser-favorite.png",
+      "viewport": {
+        "width": 600,
+        "height": 640
+      },
+      "bounds": {
+        "browser-entry-tunings-12-TET": {
+          "x": 97,
+          "y": 58,
+          "width": 503,
+          "height": 17
+        },
+        "browser-favorite-tunings-12-TET": {
+          "x": 585,
+          "y": 60,
+          "width": 13,
+          "height": 13
+        }
+      },
+      "values": {
+        "selected": "tunings-12-TET",
+        "favorite": "tunings-12-TET",
+        "initialFavoriteOpacity": 0,
+        "pointer": {
+          "x": 591.5,
+          "y": 66.5
+        }
+      }
+    },
+    {
+      "name": "browser-expanded",
+      "screenshot": "browser-expanded.png",
+      "viewport": {
+        "width": 600,
+        "height": 640
+      },
+      "bounds": {
+        "browser-results": {
+          "x": 97,
+          "y": 58,
+          "width": 503,
+          "height": 582
+        },
+        "browser-entry-instruments-analog": {
+          "x": 97,
+          "y": 109,
+          "width": 503,
+          "height": 17
+        },
+        "browser-entry-instruments-analog-1": {
+          "x": 97,
+          "y": 126,
+          "width": 503,
+          "height": 17
+        }
+      },
+      "values": {
+        "selected": "instruments-analog",
+        "expanded": "instruments-analog",
+        "visibleChild": "browser-entry-instruments-analog-1"
+      }
+    },
+    {
+      "name": "footer-device-expanded",
+      "screenshot": "footer-device-expanded.png",
+      "viewport": {
+        "width": 955,
+        "height": 300
+      },
+      "bounds": {
+        "footer-content": {
+          "x": 0,
+          "y": 7,
+          "width": 955,
+          "height": 184
+        },
+        "device-device-0888da2b-eb56-4b83-936d-8f865bbb939d": {
+          "x": 2,
+          "y": 39,
+          "width": 256,
+          "height": 133
+        },
+        "device-handle-device-0888da2b-eb56-4b83-936d-8f865bbb939d": {
+          "x": 35,
+          "y": 42,
+          "width": 205,
+          "height": 13
+        }
+      },
+      "values": {
+        "trackId": "track-9dc18aa5-ccbb-45e5-92eb-484693df8ed6",
+        "deviceId": "device-0888da2b-eb56-4b83-936d-8f865bbb939d",
+        "enabled": true,
+        "collapsed": false
+      }
+    },
+    {
+      "name": "footer-device-bypassed",
+      "screenshot": "footer-device-bypassed.png",
+      "viewport": {
+        "width": 955,
+        "height": 300
+      },
+      "bounds": {
+        "device-device-0888da2b-eb56-4b83-936d-8f865bbb939d": {
+          "x": 2,
+          "y": 39,
+          "width": 256,
+          "height": 133
+        }
+      },
+      "values": {
+        "deviceId": "device-0888da2b-eb56-4b83-936d-8f865bbb939d",
+        "enabled": false,
+        "collapsed": false,
+        "pointer": {
+          "x": 11.5,
+          "y": 48.5
+        }
+      }
+    },
+    {
+      "name": "footer-device-folded-bypassed",
+      "screenshot": "footer-device-folded-bypassed.png",
+      "viewport": {
+        "width": 955,
+        "height": 300
+      },
+      "bounds": {
+        "device-device-0888da2b-eb56-4b83-936d-8f865bbb939d": {
+          "x": 2,
+          "y": 39,
+          "width": 17,
+          "height": 133
+        },
+        "device-handle-device-0888da2b-eb56-4b83-936d-8f865bbb939d": {
+          "x": 4,
+          "y": 72,
+          "width": 13,
+          "height": 13
+        }
+      },
+      "values": {
+        "deviceId": "device-0888da2b-eb56-4b83-936d-8f865bbb939d",
+        "enabled": false,
+        "collapsed": true
+      }
+    },
+    {
+      "name": "footer-clip-empty",
+      "screenshot": "footer-clip-empty.png",
+      "viewport": {
+        "width": 955,
+        "height": 300
+      },
+      "bounds": {
+        "footer-content": {
+          "x": 0,
+          "y": 0,
+          "width": 955,
+          "height": 300
+        },
+        "motion-tab-clip": {
+          "x": 100,
+          "y": 0,
+          "width": 100,
+          "height": 13
+        }
+      },
+      "values": {
+        "view": "clip",
+        "selectedClipIds": [],
+        "emptyMessage": "No clip selected"
+      }
+    },
+    {
+      "name": "status-help",
+      "screenshot": "status-help.png",
+      "viewport": {
+        "width": 955,
+        "height": 64
+      },
+      "bounds": {
+        "status-info": {
+          "x": 18,
+          "y": 4,
+          "width": 828,
+          "height": 15
+        },
+        "status-devices": {
+          "x": 895,
+          "y": 5,
+          "width": 59,
+          "height": 13
+        }
+      },
+      "values": {
+        "info": "number",
+        "title": "Number",
+        "description": "Drag or wheel to adjust; double-click to reset"
+      }
+    },
+    {
+      "name": "status-warning",
+      "screenshot": "status-warning.png",
+      "viewport": {
+        "width": 955,
+        "height": 64
+      },
+      "bounds": {
+        "status-info": {
+          "x": 18,
+          "y": 4,
+          "width": 828,
+          "height": 15
+        },
+        "status-devices": {
+          "x": 895,
+          "y": 5,
+          "width": 59,
+          "height": 13
+        }
+      },
+      "values": {
+        "warning": {
+          "message": "Verification warning",
+          "severity": "warning"
+        }
+      }
+    }
+  ],
+  "errors": []
+}

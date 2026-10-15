@@ -48,7 +48,7 @@
           "x": 97,
           "y": 75,
           "width": 223,
-          "height": 550
+          "height": 565
         },
         "browser-entry-tunings-12-TET": {
           "x": 97,
@@ -63,16 +63,16 @@
           "height": 17
         }
       },
-      "retainedBefore": 1124,
-      "retainedAfter": 1124,
-      "scroll": [0, -419],
+      "retainedBefore": 1026,
+      "retainedAfter": 1026,
+      "scroll": [0, -404],
       "frames": {
-        "frames": 21,
-        "samples": 21,
-        "currentMs": 9.44487476348877,
-        "p90Ms": 12.675000190734863,
-        "p99Ms": 12.725500106811523,
-        "maxMs": 72.85287475585938
+        "frames": 24,
+        "samples": 24,
+        "currentMs": 6.637042045593262,
+        "p90Ms": 7.530459403991699,
+        "p99Ms": 9.115915298461914,
+        "maxMs": 32.04945755004883
       }
     },
     {
@@ -91,50 +91,50 @@
         "transport-left": {
           "x": 0,
           "y": 0,
-          "width": 543,
+          "width": 502,
           "height": 20
         },
         "transport-center": {
-          "x": 555,
+          "x": 538,
           "y": 0,
-          "width": 272,
+          "width": 257,
           "height": 20
         },
         "transport-right": {
-          "x": 851,
+          "x": 807,
           "y": 0,
-          "width": 162,
+          "width": 144,
           "height": 20
         },
         "transport-play": {
-          "x": 702,
+          "x": 679,
           "y": 0,
           "width": 20,
           "height": 20
         },
         "transport-stop": {
-          "x": 726,
+          "x": 703,
           "y": 0,
           "width": 20,
           "height": 20
         },
         "transport-record": {
-          "x": 774,
+          "x": 751,
           "y": 0,
           "width": 20,
           "height": 20
         }
       },
-      "retainedBefore": 223,
-      "retainedAfter": 223,
+      "retainedBefore": 114,
+      "retainedAfter": 114,
       "scroll": null,
       "frames": {
-        "frames": 15,
-        "samples": 15,
-        "currentMs": 1.7300000190734863,
-        "p90Ms": 1.7300000190734863,
-        "p99Ms": 1.9137080907821655,
-        "maxMs": 22.733457565307617
+        "frames": 18,
+        "samples": 18,
+        "currentMs": 0.5442919731140137,
+        "p90Ms": 1.0242500305175781,
+        "p99Ms": 1.1059579849243164,
+        "maxMs": 10.266249656677246
       }
     },
     {
@@ -156,41 +156,41 @@
           "width": 955,
           "height": 184
         },
-        "device-device-363d499a-bfd2-4490-8735-0d034aa83ece": {
+        "device-device-f024df00-953c-489c-8257-4065c0c612f3": {
           "x": 2,
           "y": 39,
           "width": 256,
           "height": 133
         },
-        "device-device-06978987-9332-4270-a99e-81e89874656c": {
+        "device-device-18caf315-165f-484f-93ae-1eb68e8e849a": {
           "x": 260,
           "y": 39,
           "width": 256,
           "height": 133
         },
-        "device-device-44b6c1f0-d199-49fc-8e36-01b24db21115": {
+        "device-device-83f0c737-2f08-43f4-b348-610e39cd51fc": {
           "x": 518,
           "y": 39,
           "width": 256,
           "height": 133
         },
-        "device-device-035e1fb7-dbb5-44d6-b07b-b7d0348ca42d": {
+        "device-device-9732e237-f267-4efd-bf6e-2e5cae37dd54": {
           "x": 776,
           "y": 39,
           "width": 256,
           "height": 133
         }
       },
-      "retainedBefore": 317,
-      "retainedAfter": 317,
+      "retainedBefore": 195,
+      "retainedAfter": 195,
       "scroll": null,
       "frames": {
-        "frames": 14,
-        "samples": 14,
-        "currentMs": 1.7925000190734863,
-        "p90Ms": 3.376458168029785,
-        "p99Ms": 5.453166961669922,
-        "maxMs": 17.648792266845703
+        "frames": 17,
+        "samples": 17,
+        "currentMs": 1.1154580116271973,
+        "p90Ms": 1.3488750457763672,
+        "p99Ms": 1.8519580364227295,
+        "maxMs": 7.542958736419678
       }
     }
   ]
