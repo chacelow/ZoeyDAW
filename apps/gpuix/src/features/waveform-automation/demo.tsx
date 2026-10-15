@@ -8,11 +8,7 @@ import { render } from "@gpuix/react"
 import { sx } from "../../shared/theme/style"
 import { ThemeProvider, useTheme } from "../../shared/theme/ThemeProvider"
 import { AutomationCurveView } from "./AutomationCurveView"
-import { WaveformView } from "./WaveformView"
-import { synthesizeWaveformPeaks } from "./model/waveform"
 import type { AutomationPoint } from "../../shared/model/types"
-
-const demoPeaks = synthesizeWaveformPeaks({ sampleCount: 120, seed: 7, frequency: 4 })
 
 const demoAutomationPoints: AutomationPoint[] = [
   { id: "p0", bar: 1, value: 0.2, curve: 0 },
@@ -39,17 +35,6 @@ function WaveformAutomationDemo() {
       <text style={{ color: theme.colors.foreground, fontSize: 16, fontWeight: 600 }}>
         waveform-automation demo
       </text>
-      <div style={sx({ display: "flex", flexDirection: "column", gap: 8 })}>
-        <text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>
-          Waveform — synthesized peaks, track color
-        </text>
-        <WaveformView
-          peaks={demoPeaks}
-          color={theme.colors.chart1}
-          width={480}
-          height={theme.project.defaultTrackHeight}
-        />
-      </div>
       <div style={sx({ display: "flex", flexDirection: "column", gap: 8 })}>
         <text style={{ color: theme.colors.mutedForeground, fontSize: 12 }}>
           Automation curve — AutomationPoint[], eased segments
