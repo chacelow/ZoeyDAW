@@ -550,7 +550,11 @@ function Gallery() {
 
 render(
   <ThemeProvider defaultAppearance={process.env.GALLERY_APPEARANCE === "light" ? "light" : "dark"}>
-    {process.env.GALLERY_VIEW === "states" ? <StateGallery cursorLock={cursorLock} /> : <Gallery />}
+    {process.env.GALLERY_VIEW === "states" ? (
+      <StateGallery cursorLock={nativeCursorLock} />
+    ) : (
+      <Gallery />
+    )}
   </ThemeProvider>,
   { title: "zoeydaw native controls", width: 1050, height: 780 }
 )
