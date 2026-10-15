@@ -1,0 +1,57 @@
+{
+  "display": {
+    "width": 1920,
+    "height": 1080,
+    "reportedScale": 0
+  },
+  "capture": {
+    "sourceWidth": 1920,
+    "sourceHeight": 918,
+    "width": 1280,
+    "height": 612
+  },
+  "unit": "Raw AX bounds; no unverified point/pixel conversion",
+  "audio": {
+    "identity": {
+      "x": 1623,
+      "y": 254,
+      "width": 95,
+      "height": 83
+    },
+    "routingMixer": {
+      "x": 1718,
+      "y": 254,
+      "width": 193,
+      "height": 85
+    },
+    "completeHeaderWidth": 288,
+    "routingControl": {
+      "width": 69,
+      "height": [14, 15]
+    },
+    "activation": {
+      "width": 46,
+      "height": 15
+    },
+    "solo": {
+      "width": 22,
+      "height": 15
+    },
+    "arm": {
+      "width": 22,
+      "height": 15
+    },
+    "volume": {
+      "width": 46,
+      "height": 14
+    },
+    "pan": {
+      "width": 46,
+      "height": 14
+    },
+    "send": {
+      "width": 31,
+      "height": 14
+    }
+  }
+}

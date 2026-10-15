@@ -111,10 +111,14 @@ export const toast = Object.assign(notify, {
 
 export interface ToasterProps extends Props {
   readonly position?: ToastPosition
+  readonly dismissLabel?: string
+  readonly loadingLabel?: string
 }
 
 export function Toaster({
   position = "bottom-right",
+  dismissLabel = "Dismiss",
+  loadingLabel = "Loading",
   style,
   testId = "toaster",
   ...props
@@ -183,8 +187,8 @@ export function Toaster({
             </div>
           ) : null}
           {notice.status === "loading" ? (
-            <div role="status" aria-label="Loading">
-              Loading…
+            <div role="status" aria-label={loadingLabel}>
+              {loadingLabel}…
             </div>
           ) : null}
           <div style={{ display: "flex", gap, justifyContent: "flex-end" }}>
@@ -203,11 +207,12 @@ export function Toaster({
             <Button
               testId={`${testId}-${notice.id}-dismiss`}
               variant="ghost"
-              label="Dismiss"
-              aria-label={`Dismiss ${notice.title ?? notice.description ?? notice.message ?? "notification"}`}
+              label={[dismissLabel, notice.title ?? notice.description ?? notice.message]
+                .filter(Boolean)
+                .join(" ")}
               onClick={() => dismissToast(notice.id)}
             >
-              Dismiss
+              {dismissLabel}
             </Button>
           </div>
         </div>

@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
-import { readOuterBounds } from "@/ui/controls/useMeasuredTextWidth"
 import { polygonPath } from "./paths"
 import { Shape, shapeMarkup } from "./Shape"
 
@@ -52,7 +51,7 @@ describe("Shape", () => {
     )
     root.renderer.flush()
     const [node] = root.renderer.findByType("svg")
-    const bounds = readOuterBounds(root.renderer, root.renderer.getElement(node.id))
+    const bounds = root.renderer.getElementBounds(node.id)
     expect(bounds?.width).toBe(14)
     expect(bounds?.height).toBe(7)
     root.unmount()

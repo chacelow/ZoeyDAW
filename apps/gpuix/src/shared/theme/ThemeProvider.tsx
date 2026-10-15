@@ -2,17 +2,23 @@
  * Theme context: the single source every slice reads colors and control
  * metrics from. No feature directory should import `colors.ts` or
  * `@zoeymind/ui/metrics` directly; go through `useTheme()`.
+ *
+ * The provider holds no state: the composition root owns appearance and
+ * preset (settings, system appearance) and passes them in. Changing either
+ * only swaps the context value, so the subtree keeps its component state.
  */
-import { createContext, useContext, useMemo, useState } from "react"
+import { createContext, useContext, useMemo } from "react"
 import { CONTROL_METRICS, PROJECT_METRICS } from "@zoeymind/ui/metrics"
-import { darkColors, lightColors } from "./colors"
+import { DEFAULT_THEME_PRESET, getThemePreset } from "./presets"
 import type { ReactNode } from "react"
-import type { DerivedThemeColors } from "./colors"
+import type { ColorScheme, DerivedThemeColors } from "./colors"
+import type { ThemePresetId } from "./presets"
 
-export type Appearance = "light" | "dark"
+export type Appearance = ColorScheme
 
 export interface Theme {
   appearance: Appearance
+  preset: ThemePresetId
   colors: DerivedThemeColors
   control: typeof CONTROL_METRICS.default
   transportControl: typeof CONTROL_METRICS.transport
@@ -21,24 +27,34 @@ export interface Theme {
 
 const ThemeContext = createContext<Theme | null>(null)
 
-function buildTheme(appearance: Appearance): Theme {
-  return {
-    appearance,
-    colors: appearance === "dark" ? darkColors : lightColors,
-    control: CONTROL_METRICS.default,
-    transportControl: CONTROL_METRICS.transport,
-    project: PROJECT_METRICS,
-  }
-}
-
 export interface ThemeProviderProps {
   children: ReactNode
+  /** Controlled appearance; falls back to `defaultAppearance` when omitted. */
+  appearance?: Appearance
+  /** Controlled color preset; Default when omitted. */
+  preset?: ThemePresetId
+  /** Appearance for demos and tests that do not control it. */
   defaultAppearance?: Appearance
 }
 
-export function ThemeProvider({ children, defaultAppearance = "dark" }: ThemeProviderProps) {
-  const [appearance] = useState<Appearance>(defaultAppearance)
-  const theme = useMemo(() => buildTheme(appearance), [appearance])
+export function ThemeProvider({
+  children,
+  appearance,
+  preset = DEFAULT_THEME_PRESET,
+  defaultAppearance = "dark",
+}: ThemeProviderProps) {
+  const scheme = appearance ?? defaultAppearance
+  const theme = useMemo<Theme>(
+    () => ({
+      appearance: scheme,
+      preset,
+      colors: getThemePreset(preset).colors[scheme],
+      control: CONTROL_METRICS.default,
+      transportControl: CONTROL_METRICS.transport,
+      project: PROJECT_METRICS,
+    }),
+    [scheme, preset]
+  )
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
 }
 

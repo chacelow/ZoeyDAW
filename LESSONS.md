@@ -52,7 +52,7 @@
 - 错：`bun --hot <demo>` 启动原生窗口做截图/AX 验证后不关，继续做别的事。
 - 对：用带 `name` 的 bash service 启动（`proc://<name>`），拿到证据立刻 `write proc://<name>/kill`；交付前 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"` 确认零残留。
 - 因：每个 gpuix 窗口是一个常驻 GPU 进程（约 70–130MB RSS）。2026-10-14 并行 worker 同时开着多个 gallery，其中一个跑了 29 分钟无人交互，协调者清理时 `bun` 合计 346MB → 54MB。窗口占用户本机性能，且 `--hot` 会持续监视文件。
-- 见：`.orca-specs/common.md`“进程清理”、[gpuix 架构](docs/architecture/gpuix.md)“测试”。
+- 见：`scripts/orchestration/specs/common.md`“进程清理”、[gpuix 架构](docs/architecture/gpuix.md)“测试”。
 
 ## gpuix 迁移：已验证的好做法（可直接复用）
 
@@ -87,6 +87,8 @@
 - 预防：common 规格要求先自审（扫描 + 独立审查子代理）再 `worker_done`；越界改动必须先 ask。C2 这次越界改了 `crates/engine`、在 TS 里重写了 bar→frame 公式、并让每个素材多存一份 PCM——这三点自审都应该发现。
 - 回答 worker 的 `question` 用 `orca orchestration reply --id <msg_id>`，不要另发 `send --type status`。`question` 是阻塞调用，worker 只等这条消息的回复；23:40 批准 lane 桌面时段的 status 消息没有被读到，15 分钟时段白白过去。限时授权（桌面时段）以回复送达时刻起算，过期就重发。
 - 主干把测试从 `timeline/` 移到 `core/rulers/` 后，timeline 分支 merge 主干时，Git 的目录重命名推断把整个 `timeline/` 判成已移到 `core/rulers/`，产生 25 个文件的 location 冲突。切片 worktree 共用同一个仓库配置，已设置 `git config merge.directoryRenames false`。协调者在主干之间移动文件后，通知受影响切片：冲突要按 HEAD 和 MERGE_HEAD 逐个核对，不 abort，也不丢代码。
+- 错：`worker-start --worktree new-child` 把新 worktree 的 Orca 父级设成协调者终端所在的 worktree，也就是仓库根 `/Volumes/PSSD/code/zoeydaw`，不是 `gpuix-migration`。结果 Orca 侧边栏里出现两棵树：早期切片挂在 gpuix-migration 下，后期切片挂在 zoeydaw 下。分支其实都基于 `gpuix-migration`，只是显示挂错了地方。
+- 对：一律用 `scripts/orchestration/start-worker.sh` 派发。它在 worker-start 之后立即执行 `orca worktree set --parent-worktree path:…/gpuix-migration`，所有切片都挂在 gpuix-migration 这一个父 workspace 下。
 
 ## gpuix 迁移：对照 Live 量尺寸要量完整组件，并注明单位与显示器
 
@@ -231,10 +233,11 @@
 ## gpuix 迁移：光标锁定（拖动数值）
 
 - 错 1：用 `CGAssociateMouseAndMouseCursorPosition` 做 FPS 式 pointer lock。GPUI 的 `mouseMove` 全部取自 `NSEvent.locationInWindow`（绝对位置，源码 `crates/gpui_macos/src/events.rs`），断开关联会冻结位置，`mouseMove` 停发。
-- 错 2：在越过点击阈值的 `mouseMove` 里才读取光标锚点。此时光标已走过一段，恢复位置落在拖动中途（实测读回 542 而非 568）。锚点必须在 `mouseDown`（位置静止）读取。
+- 错 2：在越过点击阈值的 `mouseMove` 里才读取光标锚点。此时光标已走过一段，恢复位置落在拖动中途（实测读回 542 而非 568）。
+- 错 2b：在 JS 处理 `mouseDown` 时读 OS 当前光标位置当锚点。事件经 ThreadsafeFunction 异步投递，JS 处理前 OS 可能已处理后续 move；合成“按下即移动”实测偏一个 move 步长（`(805,364)` 读成 `(805,354)`）。锚点必须取按下事件自身的 `x/y`（GPUI 由 `locationInWindow` 在事件时刻算出），再经 `windowPointToScreen` 换算成屏幕点。
 - 错 3：`bun:ffi` 读 `CGEventGetLocation`。`CGPoint` 按值返回，`FFIType` 没有 struct，读到垃圾。
 - 错 4：`osascript` 子进程当原生桥，约 54ms/次。
-- 对：Rust（`crates/native/src/cursor.rs`）经 napi 暴露 `cursorPosition/cursorHide/cursorRestore`，进程内约 2µs/次；mouseDown 抓锚点 → 确认拖动后才隐藏 → 松手先 warp 回锚点再显示。`CGWarpMouseCursorPosition` 只落整数点，所以与小数锚点最多差 0.5pt，已四舍五入。
+- 对：Rust 经 napi 暴露 `windowPointToScreen`（`crates/native/src/window_geometry.rs`）与 `cursorHide/cursorRestore`；按下事件坐标换算出锚点 → 确认拖动后才隐藏 → 松手先 warp 回锚点再显示。换算全程用点，不乘 Retina 缩放；以内容区高度翻转（与 GPUI 一致），以主屏高度从 AppKit 翻到 CG 坐标。读 `NSApp` 全局指针而非 `sharedApplication`，避免在 gpuix 启动前造出普通 NSApplication。`cursorPosition` 只用于读回验证。`CGWarpMouseCursorPosition` 只落整数点，所以与小数锚点最多差 0.5pt，已四舍五入。
 - 测试：真实模块会改宿主光标，单元测试必须 mock（`mock.module`），否则每次 `bun test` 都在动开发者的鼠标；整套测试前后光标坐标须一致。
 
 ## gpuix 迁移：gpuix 0.10.0 的原生缺口（临时代码清单，升级后整体删除）
@@ -244,7 +247,7 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 - `onLayout`：主干有（`.changeset/on-layout.md`），0.10.0 没有。绕行：`getElementBounds` 采样，收敛在唯一的测量 hook。
 - `getElementBounds` 含 padding 的修复：主干有（`bounds-include-padding`）。绕行：`readOuterBounds`，唯一入口。
 - `onFocus/onBlur` 在 `focusElement` 时不触发：元素焦点绕行为应用作用域单一采样器。窗口激活已由 F1 补丁 `window-active-change.patch` 提供原生事件 `renderer.onWindowActiveChange`，经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧的 50ms 激活采样已删除，不得再用定时器轮询激活。
-- 关闭拦截、`hideWindow`、托盘：主干也没有；GPUI fork 里 `on_window_should_close` 已存在，只缺 gpuix 注册与 JS 暴露。当前 `WindowCloseGuard.supported=false`，不得用 `process.exit()` 冒充。
+- 关闭拦截：D1 补丁 `setWindowShouldClose` 加 H1 补丁 `closeWindow()`，由 `platform/window/close-guard.ts` 的 `createWindowCloseGuard` 统一持有(macOS 下 `supported=true`)，用法见 `apps/gpuix/src/platform/window/README.md`。`hideWindow` 和托盘仍然没有。不得用 `process.exit()` 冒充关闭。
 - `measureText`：没有。绕行：挂载不可见样本节点读取实测宽度。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
 - 错：合入改动 `scripts/gpuix-main/config.json` 补丁序列的分支后，直接在主干跑 tsc 和 `bun test`。共享 vendor 仍是旧补丁的产物，主干一度显示 tsc 8 个错误、25 个测试失败，全部是假失败。
@@ -260,5 +263,12 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 
 - 单核 CPU 中位数（8/64/256 clips）：Firewheel 0.020/0.224/1.07%，Kira 0.300/1.93/8.42%，Rodio 0.916/6.40/26.0%（测于用户有 Orca/Ableton 重负载时，墙钟已披露）。
 - 没有任何候选的内置 sampler 满足 DAW 的样本精确语义：Firewheel 非零起点吞一帧、暂停消耗一块；Kira seek 先吐 2 帧旧数据并重复目标；Rodio 回调取锁且按 5ms 量化。结论：Firewheel 图运行时 + 自有 PCM 走带节点。证据见 `docs/research/engine-playback-graph.md`。
+
+## gpuix 迁移：跟随系统读的是窗口外观，不能再覆盖应用外观
+
+- 错：为了让原生标题栏跟随所选的明/暗模式，调用 GPUI 的 `set_window_appearance` / `NSApp.appearance`，同时继续用 `subscribeSystemAppearance` 实现「跟随系统」。
+- 对：「跟随系统」只在没有设置应用级外观覆盖时成立。确需让标题栏跟随模式，先换成直接读系统外观的来源(例如 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`),再加覆盖。
+- 因：`onWindowAppearanceChange` 回报的是窗口的 `effectiveAppearance`,它继承 `NSApp.appearance`;一旦覆盖,读到的就是自己设的值,系统切换不再触发变化。
+- 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。
 
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

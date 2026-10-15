@@ -14,7 +14,9 @@ mod cursor;
 mod engine;
 mod external;
 mod log;
+mod reduced_motion;
 mod settings;
+mod window_geometry;
 
 /// 管线连通性探针:证明 Rust → napi → Bun 的加载路径可用。
 #[napi]
