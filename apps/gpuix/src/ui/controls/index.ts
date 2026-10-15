@@ -33,7 +33,7 @@ export { Separator } from "./Separator"
 export { Progress } from "./Progress"
 export { Loading } from "./Loading"
 export { LoadErrorScreen } from "./LoadErrorScreen"
-export { ScrollArea } from "./ScrollArea"
+export { ScrollArea, ControlledScrollbar } from "./ScrollArea"
 export { Toaster, toast, toastLoading } from "./Toaster"
 export { Label } from "./Label"
 export { Input } from "./Input"
@@ -96,7 +96,7 @@ export type { SeparatorProps } from "./Separator"
 export type { ProgressProps } from "./Progress"
 export type { LoadingProps } from "./Loading"
 export type { LoadErrorScreenProps } from "./LoadErrorScreen"
-export type { ScrollAreaProps } from "./ScrollArea"
+export type { ScrollAreaProps, ControlledScrollbarProps } from "./ScrollArea"
 export type {
   ToasterProps,
   ToastOptions,
