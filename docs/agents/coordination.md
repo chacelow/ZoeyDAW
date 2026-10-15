@@ -36,6 +36,8 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **派发**:`scripts/orchestration/start-worker.sh <worktree> <标题> <规格文件...>`。它把新 worktree 的 Orca 父级固定为 gpuix-migration,保证所有切片挂在同一棵树下。规格 = `common.md` +(B2 切片再加 `b2-common.md`)+ 本切片规格。
 
+**worker 模型固定为 `cursor-claude/cx/gpt-6.1-sol`(2026-10-15 用户要求)**:派发时手动指定,不依赖全局 omp 默认模型(其他会话可能改它)。Orca 拒绝 `worker-start --agent omp --model`,所以脚本先建 worktree,再开一个运行 `omp --model …` 的终端,最后用 `worker-start --terminal` 交付规格。不要直接调用 `worker-start --agent omp`;临时起的 Orca 工作区 agent 同样用 `omp --model cursor-claude/cx/gpt-6.1-sol` 启动。
+
 **回答问题**:worker 的 `question` 一律用 `orca orchestration reply --id`;`send` 用于通知。
 
 **合并前复核**:不信报告,自己在临时 worktree 里与主干合并后跑 tsc、bun test、eslint、`gpuix-review-scan`,做关键变异,比对失败名单与主干基线。改动了补丁序列的,先重建共享 vendor 再看结果。合入后释放 worker 终端、删除已合入的 worktree、确认没有残留进程。
