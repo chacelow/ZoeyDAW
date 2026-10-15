@@ -238,5 +238,17 @@ export default [
       ],
     },
   },
+  {
+    files: ["scripts/gpuix-main/context-menu/**/*.test.tsx"],
+    rules: {
+      "import-x/no-extraneous-dependencies": [
+        "error",
+        {
+          devDependencies: true,
+          packageDir: [import.meta.dirname, `${import.meta.dirname}/apps/gpuix`],
+        },
+      ],
+    },
+  },
   vendoredProfile([...core, ...react]),
 ]
