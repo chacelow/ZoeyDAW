@@ -57,6 +57,47 @@ describe("Controlled scrollbar", () => {
     }
   })
 
+  test("releasing a drag ends it before handing mouse-up to the caller", () => {
+    const root = createTestRoot({ width: 400, height: 400 })
+    const released: number[] = []
+    let current = 0
+    function Harness() {
+      const [value, setValue] = useState(0)
+      return (
+        <ThemeProvider>
+          <ControlledScrollbar
+            testId="scrollbar"
+            aria-label="Pattern scroll"
+            aria-controls="pattern"
+            orientation="horizontal"
+            value={value}
+            viewport={100}
+            extent={1000}
+            length={200}
+            onChange={next => {
+              current = next
+              setValue(next)
+            }}
+            onMouseUp={() => {
+              released.push(current)
+            }}
+          />
+        </ThemeProvider>
+      )
+    }
+    root.render(<Harness />)
+    root.renderer.flush()
+    root.renderer.nativeSimulateMouseDown(5, 5)
+    root.renderer.nativeSimulateMouseMove(500, 5, 0)
+    root.renderer.nativeSimulateMouseUp(500, 5)
+    root.renderer.flush()
+    expect(released).toEqual([900])
+    root.renderer.nativeSimulateMouseMove(5, 5, 0)
+    root.renderer.flush()
+    expect(current).toBe(900)
+    root.unmount()
+  })
+
   test("keyboard Home/End and page navigation preserve logical boundaries", () => {
     const a = mount("horizontal")
     a.renderer.nativeSimulateClick(5, 5)
