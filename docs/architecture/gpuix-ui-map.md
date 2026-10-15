@@ -19,7 +19,7 @@
 | `src/app/verification/design-surfaces.tsx` | 是 | `T1_APPEARANCE`、`T1_SURFACE` |
 | `src/gallery/controls.tsx` | 是 | `GALLERY_APPEARANCE`、`GALLERY_LOCALE` |
 | `src/main.tsx` | 是 | `NODE_ENV`、`ZOEYDAW_ROUTE` |
-| `src/project/sections/arrangement/lane/demo/index.tsx` | 否 | `LANE_LOCALE`、`LANE_STRESS`、`LANE_THEME` |
+| `src/project/sections/arrangement/lane/demo/index.tsx` | 是 | `LANE_LOCALE`、`LANE_STRESS`、`LANE_THEME` |
 | `src/project/sections/arrangement/tracks/demo.tsx` | 是 | `TRACK_LANGUAGE`、`TRACK_THEME` |
 | `src/project/sections/clip-edit/demo/index.tsx` | 是 | `CLIP_EDIT_LOCALE`、`CLIP_EDIT_STRESS`、`CLIP_EDIT_THEME` |
 | `src/project/sections/footer/demo.tsx` | 是 | `B2_APPEARANCE`、`B2_BPM`、`B2_LANGUAGE`、`B2_RECORDING` |
