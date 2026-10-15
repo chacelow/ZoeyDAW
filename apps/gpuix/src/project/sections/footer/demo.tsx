@@ -5,7 +5,12 @@ import { nativeCursorLock } from "@/platform/cursor"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
 import { Group, Panel, PanelDivider, PanelEnvironmentProvider } from "@/ui/panels"
-import { createWindowPlatform, getReducedMotion, subscribeReducedMotion } from "@/platform/window"
+import {
+  createWindowPlatform,
+  getReducedMotion,
+  LAUNCH_FOCUS,
+  subscribeReducedMotion,
+} from "@/platform/window"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { createVerificationKeyboard } from "./verification/keyboard"
@@ -298,6 +303,7 @@ render(
     width: 1280,
     height: 760,
     ...windowKeyboard.rootHandlers,
+    ...LAUNCH_FOCUS,
   }
 )
 process.stdout.write("B2 panels mounted\n")

@@ -13,6 +13,7 @@ import { createSettingStorage, DEFAULT_THEME_MODE } from "./platform/settings"
 import { createThemePresetSetting } from "./platform/settings/theme-preset"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "./shared/theme/presets"
 import { createSnapshotStorage } from "./platform/storage"
+import { LAUNCH_FOCUS } from "./platform/window"
 import { setSnapshotStorage } from "./project/adapters"
 import { initAppI18n } from "./app/i18n"
 import { NativeRoot } from "./app/NativeRoot"
@@ -55,5 +56,6 @@ render(
     trafficLightX: PROJECT_METRICS.trafficLightMargin,
     trafficLightY: (PROJECT_METRICS.titlebarHeight - PROJECT_METRICS.trafficLightFrameHeight) / 2,
     ...keyboard.rootHandlers,
+    ...LAUNCH_FOCUS,
   }
 )

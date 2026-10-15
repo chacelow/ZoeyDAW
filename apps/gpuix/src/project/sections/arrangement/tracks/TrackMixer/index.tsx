@@ -119,7 +119,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
               labelOn={label}
               labelOff={label}
               testId={`track-enabled-${track.id}`}
-              style={{ ...column, flexGrow: 2, paddingLeft: 0, paddingRight: 0 }}
+              style={{ ...column, flexGrow: 2 }}
             />
             <DragPadToggle
               label={`${t("solo")} ${track.name}`}
@@ -128,7 +128,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
               labelOn="S"
               labelOff="S"
               testId={`track-solo-${track.id}`}
-              style={{ ...column, paddingLeft: 0, paddingRight: 0 }}
+              style={column}
             />
             {track.kind === "audio" || track.kind === "midi" ? (
               <DragPadToggle
@@ -149,8 +149,6 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 style={{
                   ...column,
                   width: "auto",
-                  paddingLeft: 0,
-                  paddingRight: 0,
                   ...(track.armed ? { backgroundColor: theme.colors.destructive } : {}),
                 }}
               />
@@ -166,7 +164,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 testId={`track-post-${track.id}`}
                 labelOn="Post"
                 labelOff="Pre"
-                style={{ ...column, paddingLeft: 0, paddingRight: 0 }}
+                style={column}
               />
             ) : null}
           </div>

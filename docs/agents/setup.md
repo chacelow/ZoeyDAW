@@ -10,11 +10,12 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 - 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，切片 demo 与画廊各有入口）。改 TS/TSX 保存即热更新。
 - Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。不提示用户重启 `tauri:dev`。
 - Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；交付前确认零残留（见 `scripts/orchestration/specs/common.md`）。
+- 后台启动：任何入口（`src/main.tsx`、Gallery、各切片 demo）加 `GPUIX_BACKGROUND=1`，窗口打开时不抢键盘焦点，用户的前台应用保持不变，统一由 `platform/window` 的 `LAUNCH_FOCUS` 控制。离屏截图、AX 只读量值和例行回归都用这种方式。后台窗口不能替代真实桌面验收：截图可能全黑，`el.press()` 等输入可能报 `BackgroundUnavailable`，遇到就把对应项标为未验证，不要切到前台操作。
 - 不停止用户自己启动的应用或服务；用户的 `tauri:dev` 只属于旧 Web 参考，Agent 不启动也不重启它。
 
 ## 验证命令（gpuix）
 
-在 `apps/gpuix` 运行 `tsc --noEmit`、`bun test`、`pnpm exec eslint apps/gpuix/src`（根目录）；涉及 Rust 时 `cargo check`、`cargo test`；交付前 `node scripts/gpuix-review-scan.mjs`。
+在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`），按顺序执行：渲染器身份校验（十一补丁，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、`bun test`、review scan（`baseRef...HEAD`，默认 `gpuix-migration`；未提交的改动不在扫描范围内），最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
 
 ## 旧 Web 参考的验证命令
 

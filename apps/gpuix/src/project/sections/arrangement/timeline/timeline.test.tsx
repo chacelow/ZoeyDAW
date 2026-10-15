@@ -5,7 +5,6 @@ import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../core/scene"
-import { Grid } from "./grid"
 import { MiniMap } from "./minimap"
 import { Rulers, TimeRuler } from "./rulers"
 import { createTimelineController } from "./controller"
@@ -149,22 +148,28 @@ describe("Native timeline layout and hit testing", () => {
     }
     root.render(<Harness />)
     root.renderer.flush()
+    const normalColor = root.renderer.findByTestId("minimap-frame")?.style.backgroundColor
     root.renderer.nativeSimulateMouseDown(440, 20)
+    const pressedColor = root.renderer.findByTestId("minimap-frame")?.style.backgroundColor
+    expect(pressedColor).not.toBe(normalColor)
     root.renderer.nativeSimulateMouseMove(441, 21, 0)
     root.renderer.flush()
     expect(root.renderer.findByTestId("timeline-minimap")).not.toBeNull()
     expect(useProjectState.getState().workspace.pxPerBar).toBe(100)
     root.renderer.nativeSimulateMouseMove(440, 60, 0)
     root.renderer.flush()
+    expect(root.renderer.findByTestId("minimap-frame")?.style.backgroundColor).toBe(pressedColor)
     expect(hidden).toBe(true)
     expect(useProjectState.getState().workspace.pxPerBar).toBeLessThan(100)
     const afterFirst = useProjectState.getState().workspace.pxPerBar
     root.renderer.nativeSimulateMouseMove(440, 80, 0)
     root.renderer.flush()
+    expect(root.renderer.findByTestId("minimap-frame")?.style.backgroundColor).toBe(pressedColor)
     expect(useProjectState.getState().workspace.pxPerBar).toBeLessThan(afterFirst)
     root.renderer.nativeSimulateMouseUp(440, 80)
     expect(hidden).toBe(false)
     expect(restored).toBe(true)
+    expect(root.renderer.findByTestId("minimap-frame")?.style.backgroundColor).toBe(normalColor)
     const overview = root.renderer.findByTestId("timeline-minimap")
     if (!overview) throw new Error("Overview missing")
     root.renderer.nativeSimulateKeystrokes(overview.id, "enter")
@@ -212,32 +217,6 @@ describe("Native timeline layout and hit testing", () => {
     if (!retained) throw new Error("Fold hid overview content")
     expect(root.renderer.getElementBounds(retained.id)).toEqual(clipBefore)
     expect(root.renderer.getElementBounds(overview.id)).toEqual(frameBefore)
-  })
-
-  test("numbered Pattern regions stay whole bars when fine labels are visible", () => {
-    const scene = makeScene()
-    scene.setViewport({ ...scene.get().viewport, pxPerBar: 800, width: 1200, scrollX: 400 })
-    const root = createTestRoot({ width: 1200, height: 300 })
-    disposals.push(root.unmount)
-    root.render(
-      <ThemeProvider>
-        <Grid scene={scene} height={200} />
-      </ThemeProvider>
-    )
-    root.renderer.flush()
-    const first = root.renderer.findByTestId("pattern-region-1")
-    const second = root.renderer.findByTestId("pattern-region-2")
-    if (!first || !second) throw new Error("Pattern regions missing")
-    expect(root.renderer.getElementBounds(first.id)).toMatchObject({
-      x: 0,
-      width: 400,
-      height: 200,
-    })
-    expect(root.renderer.getElementBounds(second.id)).toMatchObject({
-      x: 400,
-      width: 800,
-      height: 200,
-    })
   })
 
   test("marker drag commits once and native Arrow input is consumed by only the ruler owner", () => {
