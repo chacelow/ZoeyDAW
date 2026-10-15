@@ -1,0 +1,345 @@
+bun test v1.3.14 (0d9b296a)
+
+ 3 pass
+ 0 fail
+ 14 expect() calls
+Ran 3 tests across 1 file. [1.97s]
+bun test v1.3.14 (0d9b296a)
+
+src/app/AppShell.test.tsx:
+273 |     countSessions()
+274 |     const router = createRouter("/project/broken")
+275 |     const { root } = mount({
+276 |       router,
+277 |       renderProjectSlots: () => {
+278 |         throw new Error("route-render-failure")
+                        ^
+error: route-render-failure
+      at renderProjectSlots (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.test.tsx:278:19)
+      at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:31:11)
+      at react_stack_bottom_frame (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:17596:20)
+      at renderWithHooks (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:5335:22)
+      at updateFunctionComponent (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:7720:19)
+      at runWithFiberInDEV (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:2508:13)
+      at performUnitOfWork (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15273:22)
+      at workLoopSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15099:41)
+      at renderRootSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15080:11)
+      at performWorkOnRoot (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:14245:35)
+ {
+  componentStack: "\n    at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:21:31)\n    at RouteErrorBoundary (unknown:1:28)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at AppFrame (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:83:17)\n    at ThemeProvider (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/shared/theme/ThemeProvider.tsx:43:12)\n    at AppPreferencesProvider (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/preferences.tsx:42:3)\n    at AppShell (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:49:43)",
+  errorBoundary: RouteErrorBoundary {
+    props: {
+      routeKey: "/project/broken",
+      onHome: [Function: onHome],
+      showDetails: true,
+      children: <ProjectPage key="broken" projectId="broken" renderSlots=[Function: renderProjectSlots] playbackKeysEnabled=true />,
+    },
+    context: {},
+    refs: {},
+    updater: {
+      enqueueSetState: [Function: enqueueSetState],
+      enqueueReplaceState: [Function: enqueueReplaceState],
+      enqueueForceUpdate: [Function: enqueueForceUpdate],
+    },
+    state: {
+      error: 273 |     countSessions()
+274 |     const router = createRouter("/project/broken")
+275 |     const { root } = mount({
+276 |       router,
+277 |       renderProjectSlots: () => {
+278 |         throw new Error("route-render-failure")
+                        ^
+error: route-render-failure
+      at renderProjectSlots (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.test.tsx:278:19)
+      at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:31:11)
+      at react_stack_bottom_frame (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:17596:20)
+      at renderWithHooks (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:5335:22)
+      at updateFunctionComponent (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:7720:19)
+      at runWithFiberInDEV (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:2508:13)
+      at performUnitOfWork (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15273:22)
+      at workLoopSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15099:41)
+      at renderRootSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15080:11)
+      at performWorkOnRoot (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:14245:35)
+,
+      failedRoute: null,
+      attempt: 0,
+    },
+    _reactInternals: FiberNode {
+      tag: 1,
+      key: null,
+      elementType: [class RouteErrorBoundary],
+      type: [class RouteErrorBoundary],
+      stateNode: [Circular],
+      return: [Object ...],
+      child: [Object ...],
+      sibling: null,
+      index: 0,
+      ref: null,
+      refCleanup: null,
+      pendingProps: [Object ...],
+      memoizedProps: [Object ...],
+      updateQueue: [Object ...],
+      memoizedState: [Object ...],
+      dependencies: null,
+      mode: 3,
+      flags: 193,
+      subtreeFlags: 9963521,
+      deletions: null,
+      lanes: 0,
+      childLanes: 0,
+      alternate: null,
+      actualDuration: 0.22670999999991182,
+      actualStartTime: 833.017458,
+      selfBaseDuration: 0.01391599999999471,
+      treeBaseDuration: 0.16058299999986048,
+      _debugInfo: null,
+      _debugOwner: [Object ...],
+      _debugStack: 328 |         type,
+329 |         config,
+330 |         maybeKey,
+331 |         isStaticChildren,
+332 |         trackActualOwner
+333 |           ? Error("react-stack-top-frame")
+                  ^
+error: react-stack-top-frame
+      at <anonymous> (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react@19.2.4/node_modules/react/cjs/react-jsx-dev-runtime.development.js:333:13)
+      at AppFrame (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:111:9)
+      at react_stack_bottom_frame (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:17596:20)
+      at renderWithHooks (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:5335:22)
+      at updateFunctionComponent (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:7720:19)
+      at runWithFiberInDEV (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:2508:13)
+      at performUnitOfWork (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15273:22)
+      at workLoopSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15099:41)
+      at renderRootSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15080:11)
+      at performWorkOnRoot (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:14245:35)
+,
+      _debugTask: null,
+      _debugNeedsRemount: false,
+      _debugHookTypes: null,
+    },
+    _reactInternalInstance: {},
+    componentDidCatch: [Function: componentDidCatch],
+    render: [Function: render],
+    isReactComponent: {},
+    setState: [Function],
+    forceUpdate: [Function],
+    isMounted: [Getter],
+    replaceState: [Getter],
+  },
+}
+[37m ZOEY v1.0.0 - Intelligent Mind Mapping[0m
+[32mReady to enhance your thinking! 🚀[0m
+
+[31m[ERROR][0m [35m[ZOEY][0m [31m[RouteErrorBoundary] Unhandled route error[0m 273 |     countSessions()
+274 |     const router = createRouter("/project/broken")
+275 |     const { root } = mount({
+276 |       router,
+277 |       renderProjectSlots: () => {
+278 |         throw new Error("route-render-failure")
+                        ^
+error: route-render-failure
+      at renderProjectSlots (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.test.tsx:278:19)
+      at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:31:11)
+      at react_stack_bottom_frame (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:17596:20)
+      at renderWithHooks (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:5335:22)
+      at updateFunctionComponent (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:7720:19)
+      at runWithFiberInDEV (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:2508:13)
+      at performUnitOfWork (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15273:22)
+      at workLoopSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15099:41)
+      at renderRootSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15080:11)
+      at performWorkOnRoot (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:14245:35)
+ 
+    at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:21:31)
+    at RouteErrorBoundary (unknown:1:28)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at AppFrame (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:83:17)
+    at ThemeProvider (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/shared/theme/ThemeProvider.tsx:43:12)
+    at AppPreferencesProvider (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/preferences.tsx:42:3)
+    at AppShell (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:49:43)
+295 |     countSessions()
+296 |     const { root } = mount({
+297 |       router: createRouter("/project/broken"),
+298 |       showErrorDetails: false,
+299 |       renderProjectSlots: () => {
+300 |         throw new Error("route-render-failure")
+                        ^
+error: route-render-failure
+      at renderProjectSlots (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.test.tsx:300:19)
+      at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:31:11)
+      at react_stack_bottom_frame (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:17596:20)
+      at renderWithHooks (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:5335:22)
+      at updateFunctionComponent (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:7720:19)
+      at runWithFiberInDEV (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:2508:13)
+      at performUnitOfWork (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15273:22)
+      at workLoopSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15099:41)
+      at renderRootSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15080:11)
+      at performWorkOnRoot (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:14245:35)
+ {
+  componentStack: "\n    at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:21:31)\n    at RouteErrorBoundary (unknown:1:28)\n    at div (<anonymous>)\n    at div (<anonymous>)\n    at AppFrame (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:83:17)\n    at ThemeProvider (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/shared/theme/ThemeProvider.tsx:43:12)\n    at AppPreferencesProvider (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/preferences.tsx:42:3)\n    at AppShell (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:49:43)",
+  errorBoundary: RouteErrorBoundary {
+    props: {
+      routeKey: "/project/broken",
+      onHome: [Function: onHome],
+      showDetails: false,
+      children: <ProjectPage key="broken" projectId="broken" renderSlots=[Function: renderProjectSlots] playbackKeysEnabled=true />,
+    },
+    context: {},
+    refs: {},
+    updater: {
+      enqueueSetState: [Function: enqueueSetState],
+      enqueueReplaceState: [Function: enqueueReplaceState],
+      enqueueForceUpdate: [Function: enqueueForceUpdate],
+    },
+    state: {
+      error: 295 |     countSessions()
+296 |     const { root } = mount({
+297 |       router: createRouter("/project/broken"),
+298 |       showErrorDetails: false,
+299 |       renderProjectSlots: () => {
+300 |         throw new Error("route-render-failure")
+                        ^
+error: route-render-failure
+      at renderProjectSlots (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.test.tsx:300:19)
+      at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:31:11)
+      at react_stack_bottom_frame (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:17596:20)
+      at renderWithHooks (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:5335:22)
+      at updateFunctionComponent (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:7720:19)
+      at runWithFiberInDEV (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:2508:13)
+      at performUnitOfWork (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15273:22)
+      at workLoopSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15099:41)
+      at renderRootSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15080:11)
+      at performWorkOnRoot (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:14245:35)
+,
+      failedRoute: null,
+      attempt: 0,
+    },
+    _reactInternals: FiberNode {
+      tag: 1,
+      key: null,
+      elementType: [class RouteErrorBoundary],
+      type: [class RouteErrorBoundary],
+      stateNode: [Circular],
+      return: [Object ...],
+      child: [Object ...],
+      sibling: null,
+      index: 0,
+      ref: null,
+      refCleanup: null,
+      pendingProps: [Object ...],
+      memoizedProps: [Object ...],
+      updateQueue: [Object ...],
+      memoizedState: [Object ...],
+      dependencies: null,
+      mode: 3,
+      flags: 193,
+      subtreeFlags: 9963521,
+      deletions: null,
+      lanes: 0,
+      childLanes: 0,
+      alternate: null,
+      actualDuration: 0.20241900000007718,
+      actualStartTime: 895.343375,
+      selfBaseDuration: 0.009584000000018023,
+      treeBaseDuration: 0.1399620000000823,
+      _debugInfo: null,
+      _debugOwner: [Object ...],
+      _debugStack: 328 |         type,
+329 |         config,
+330 |         maybeKey,
+331 |         isStaticChildren,
+332 |         trackActualOwner
+333 |           ? Error("react-stack-top-frame")
+                  ^
+error: react-stack-top-frame
+      at <anonymous> (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react@19.2.4/node_modules/react/cjs/react-jsx-dev-runtime.development.js:333:13)
+      at AppFrame (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:111:9)
+      at react_stack_bottom_frame (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:17596:20)
+      at renderWithHooks (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:5335:22)
+      at updateFunctionComponent (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:7720:19)
+      at runWithFiberInDEV (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:2508:13)
+      at performUnitOfWork (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15273:22)
+      at workLoopSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15099:41)
+      at renderRootSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15080:11)
+      at performWorkOnRoot (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:14245:35)
+,
+      _debugTask: null,
+      _debugNeedsRemount: false,
+      _debugHookTypes: null,
+    },
+    _reactInternalInstance: {},
+    componentDidCatch: [Function: componentDidCatch],
+    render: [Function: render],
+    isReactComponent: {},
+    setState: [Function],
+    forceUpdate: [Function],
+    isMounted: [Getter],
+    replaceState: [Getter],
+  },
+}
+[31m[ERROR][0m [35m[ZOEY][0m [31m[RouteErrorBoundary] Unhandled route error[0m 295 |     countSessions()
+296 |     const { root } = mount({
+297 |       router: createRouter("/project/broken"),
+298 |       showErrorDetails: false,
+299 |       renderProjectSlots: () => {
+300 |         throw new Error("route-render-failure")
+                        ^
+error: route-render-failure
+      at renderProjectSlots (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.test.tsx:300:19)
+      at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:31:11)
+      at react_stack_bottom_frame (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:17596:20)
+      at renderWithHooks (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:5335:22)
+      at updateFunctionComponent (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:7720:19)
+      at runWithFiberInDEV (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:2508:13)
+      at performUnitOfWork (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15273:22)
+      at workLoopSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15099:41)
+      at renderRootSync (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:15080:11)
+      at performWorkOnRoot (/Volumes/PSSD/code/_vendor/f5-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react-reconciler@0.33.0+b1ab299f0a400331/node_modules/react-reconciler/cjs/react-reconciler.development.js:14245:35)
+ 
+    at ProjectPage (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/project/ProjectPage.tsx:21:31)
+    at RouteErrorBoundary (unknown:1:28)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at AppFrame (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:83:17)
+    at ThemeProvider (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/shared/theme/ThemeProvider.tsx:43:12)
+    at AppPreferencesProvider (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/preferences.tsx:42:3)
+    at AppShell (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/AppShell.tsx:49:43)
+
+src/app/settings/preference-store.test.ts:
+[33m[WARN][0m [35m[ZOEY][0m [33m[app/preferences] Could not initialize preference; using fallback[0m system warn: unknown field `themeMode`
+      at get (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.test.ts:63:19)
+      at createPreferenceStore (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.ts:32:28)
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.test.ts:61:19)
+
+[33m[WARN][0m [35m[ZOEY][0m [33m[app/preferences] Could not persist preference[0m light warn: unknown field `themeMode`
+      at set (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.test.ts:66:19)
+      at set (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.ts:50:17)
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.test.ts:70:42)
+
+[33m[WARN][0m [35m[ZOEY][0m [33m[app/preferences] Could not initialize preference; using fallback[0m default warn: settings directory is read-only
+      at repair (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.test.ts:83:21)
+      at createPreferenceStore (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.ts:31:13)
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.test.ts:76:19)
+
+[33m[WARN][0m [35m[ZOEY][0m [33m[app/preferences] Could not persist preference[0m modern-minimal warn: settings directory is read-only
+      at set (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.test.ts:80:21)
+      at set (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.ts:50:17)
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/apps/gpuix/src/app/settings/preference-store.test.ts:91:11)
+
+2026-10-15 18:03:42.164 defaults[66603:55576213] 
+The domain/default pair of (com.apple.universalaccess, reduceMotion) does not exist
+Context leak detected, CoreAnalytics returned false
+Context leak detected, CoreAnalytics returned false
+Context leak detected, CoreAnalytics returned false
+Context leak detected, CoreAnalytics returned false
+
+src/project/adapters/backend/native.test.ts:
+native device {"sampleRate":48000,"outputLatencyFrames":284,"playingFrames":96256,"mainDbFS":[-50.01557677334402,-50.01557677334402],"stoppedDbFS":[-120,-120],"telemetryCount":60}
+Context leak detected, CoreAnalytics returned false
+Context leak detected, CoreAnalytics returned false
+
+ 1051 pass
+ 1 todo
+ 0 fail
+ 1103140 expect() calls
+Ran 1052 tests across 169 files. [30.89s]

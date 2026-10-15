@@ -1,0 +1,5 @@
+Command: ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
+Output: (empty)
+Exit status: 1 (grep found no matches)
+No matching demo/gallery/hot-window/cargo-run process remains.
+This worker started no desktop window or long-lived service; all finite build/test commands have exited.
