@@ -989,13 +989,19 @@ This is a local draft only. No issue or PR was published. Follow the upstream co
 
 2026-10-15。`quad-batch.patch` 排在 `context-menu.patch` 后，包含主干 H1 与 F2 契约。独立 vendor 为 `/Volumes/PSSD/code/_vendor/f4-gpuix`，不修改共享 vendor 或 zed。补丁包含 retained buffer、paint、napi 与 TestRenderer setter、React ref 方法、intrinsic 与 TS 类型。通用 mutation queue 保持上游原样。
 
-`<QuadBatch>` 只接收 style、testId 与 ref，**不接收 quads prop**。`shared/quads/useQuadBatch.ts` 提供稳定的 `QuadBatchController { ref, setQuads }`。数据只经事件或 layout effect 内的 `batch.setQuads(Float32Array)` 上传，不进入 React props 或 state。数据更新不触发 React render。挂载前设置的数据由 controller 缓存，在 native ref attach 后上传；卸载后不再访问旧 host，重新挂载时重放最新数据。controller 按引用去重，缓冲视为不可变，替换引用才发布修改。
+`<QuadBatch>` 接收 style、testId、ref 与每 batch 的标量 `strokeWidth?: number`、`strokeColor?: string`，**不接收 quads prop**。`shared/quads/useQuadBatch.ts` 提供稳定的 `QuadBatchController { ref, setQuads }`。数据只经事件或 layout effect 内的 `batch.setQuads(Float32Array)` 上传，不进入 React props 或 state。数据更新不触发 React render。挂载前设置的数据由 controller 缓存，在 native ref attach 后上传；卸载后不再访问旧 host，重新挂载时重放最新数据。controller 按引用去重，缓冲视为不可变，替换引用才发布修改。
 
-每四个 float 为本地 `x, y, width, height`。颜色取 `style.color`，透明度取节点与祖先 opacity，每种颜色一个 host。原生边界拒绝非四倍长度、非有限值与负尺寸，零尺寸不绘制。绘制受元素自身边界与祖先 content mask 裁剪。
+每四个 float 为本地 `x, y, width, height`。填充色取 `style.color`，透明度取节点与祖先 opacity，每种 paint material 一个 host。原生边界拒绝非四倍长度、非有限值与负尺寸，零尺寸不绘制。绘制受元素自身边界与祖先 content mask 裁剪。几何 ABI 不变；未来如批准逐记录颜色，可追加并列索引 buffer，本轮未实现。
 
 F4b 修复 fractional geometry：本地 `x/y/width/height` 先经 GPUI `Window::pixel_snap_bounds`，沿用 authored absolute lengths 的 device-pixel half-toward-zero 规则；再加 host origin，由既有 `Window::paint_quad` 取整绝对边缘。没有 TS 补偿、zed 修改、逐矩形 layout node 或额外缓冲拷贝。原生测试以独立 div 的实绘 bounds 为 oracle，覆盖小数位置、小数尺寸、lane stereo case 与小数 host origin，scale 为 1、1.25、1.5、2。
 
 lane 的 `pixels=2,height=40,inset=1,top=10` 等价 GPU fixture 在修复前复现 `(1,19)` 的唯一像素差，修复后 decoded RGBA 与原 lane reference 逐像素相同。验证使用隔离 `/Volumes/PSSD/code/_vendor/f4b-gpuix` 与 `/Volumes/PSSD/code/_vendor/target-f4b`。命令、mutation、像素和性能证据见 [F4b 报告](../../scripts/gpuix-main/quad-batch/PIXEL-SNAP-REPORT.md)。
+
+F4c 描边宽度使用逻辑像素，默认 0；颜色使用原生已有 color parser，默认 transparent。native batch 在任何树修改之前验证描边 metadata，拒绝非有限或负宽度、不支持的颜色与错误类型；null 或缺失 width 明确表示默认 0，null 或缺失 color 明确表示 transparent。JSON.stringify 会将 JS NaN/Infinity 编码成 null，因此这类输入按协议移除 prop，而不是原生非有限 number；该行为有真实 native 截图回归。按协调者仲裁不在 TS 建立第二套清洗或校验。
+
+`strokeWidth=0` 保持 F4b 单 fill 路径；`strokeWidth>0` 对同一 bounds 先画背景，再画 border-only quad，完全沿用 GPUI div 的绘制顺序与原生 border snapping，不拆成五个 independently snapped fill rectangles。每 note 仍只有一条四 float geometry record，不增加 retained node；描边路径原生 paint 调用数由 N 增至 2N。单 filled-and-bordered quad 在 alpha 组合上与 div 差 169 个 decoded RGBA 像素，协调者据此批准统一双 paint，未放宽像素阈值、未改 zed。
+
+F4c 的四种 scale（1、1.25、1.5、2）由原生 div scene oracle 比较实绘 bounds 与 border widths；decoded RGBA 像素验收在默认 scale，非默认 scale 不宣称截图验证。真实消费者初始 viewport 导出的 10,000-note 几何（40,000 floats、112 materials）在同一 viewport 与 div oracle 为 0diff。验证使用独立 `/Volumes/PSSD/code/_vendor/f4c-gpuix` 与 `/Volumes/PSSD/code/_vendor/target-f4c`，十一补丁保留 F5 与 F3 顺序；详见 [F4c 报告](../../scripts/gpuix-main/quad-batch/BORDERED-REPORT.md)。
 
 采用命令式数据上传是性能决策。React 19.2 development 的 performance track 会遍历 typed-array props；即使不走 JSON，声明式 quads prop 仍使开发版超过一帧。最终接口删除该 prop 与二进制提交队列，不改 React instrumentation。DEV 与 production 的完整测量见[交付报告](../../scripts/gpuix-main/quad-batch/REPORT.md)。
 
