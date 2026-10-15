@@ -47,6 +47,7 @@ it("Button holds compact geometry with a distinct native active refinement, then
   expect(h.root.renderer.findByTestId("midi-key-71")).toBeDefined()
   h.root.renderer.nativeSimulateMouseUp(before.x + before.width / 2, before.y + before.height / 2)
   expect(h.root.renderer.findByTestId("midi-key-71")).toBeUndefined()
+  expect(labelNode(h, "Fold").style.backgroundColor).not.toEqual(button.style.backgroundColor)
   expect(bounds(h, button.id)).toMatchObject({ width: before.width, height: before.height })
 })
 
