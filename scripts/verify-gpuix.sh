@@ -31,6 +31,9 @@ rm -f /tmp/verify-gpuix-test.$$.txt
 step "review scan ($base...HEAD; uncommitted changes are not scanned)"
 node scripts/gpuix-review-scan.mjs "$base" | tail -3
 
+step "UI map current (docs/architecture/gpuix-ui-map.md)"
+node scripts/gpuix-ui-map.mjs --check
+
 step "offscreen app smoke (real backend, Home -> project -> resume first present)"
 evidence="$(mktemp -d)"
 trap 'rm -rf "$evidence"' EXIT

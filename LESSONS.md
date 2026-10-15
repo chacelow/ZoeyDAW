@@ -249,7 +249,7 @@
 
 - `onLayout`：主干有（`.changeset/on-layout.md`）。A3b 已把文本样本测量改为原生事件；旧 `getElementBounds` 定时采样已删除，缓存仍按字体与样本集持有。
 - `getElementBounds`：主干直接返回 border box。A3b 已删除旧 border/padding 修正、`readOuterBounds` 转发层及所有生产/测试调用，直接消费原生 API，几何断言未放宽。
-- `onFocus/onBlur`：A3b 已删除元素焦点采样器与 register/ref 兼容路径，由原生事件发布控件种类，原生 `focusVisible` 绘制焦点环。窗口激活由 F1 `window-active-change.patch` 经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧 50ms 激活采样已删除，不得重新轮询。
+- `onFocus/onBlur`：A3b 已删除元素焦点采样器与 register/ref 兼容路径，由原生事件发布控件种类，原生 `focusVisible` 绘制焦点环。窗口激活由 F1 `window-active-change.patch` 经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧 50ms 激活采样已删除，不得重新轮询。2026-10-15 又删掉分隔条拖动中残留的 32ms 焦点轮询（`fabe4fb`）。门禁：`architecture/gpuix-lessons` 拦截 `apps/gpuix/src` 产品代码里的 `setInterval`/`setTimeout`，例外只列在该规则的 `TIMER_ALLOWED` 中（toast 自动消失、mock 后端）。
 - 关闭拦截：D1 补丁 `setWindowShouldClose` 加 H1 补丁 `closeWindow()`，由 `platform/window/close-guard.ts` 的 `createWindowCloseGuard` 统一持有(macOS 下 `supported=true`)，用法见 `apps/gpuix/src/platform/window/README.md`。`hideWindow` 和托盘仍然没有。不得用 `process.exit()` 冒充关闭。
 - `measureText`：仍没有独立字符串测量 API。挂载不可见样本文本，由 `onLayout` 读取实测宽度，不保留定时测量作为第二 owner。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
@@ -273,7 +273,7 @@
 - 错：为了让原生标题栏跟随所选的明/暗模式，调用 GPUI 的 `set_window_appearance` / `NSApp.appearance`，同时继续用 `subscribeSystemAppearance` 实现「跟随系统」。
 - 对：「跟随系统」只在没有设置应用级外观覆盖时成立。确需让标题栏跟随模式，先换成直接读系统外观的来源(例如 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`),再加覆盖。
 - 因：`onWindowAppearanceChange` 回报的是窗口的 `effectiveAppearance`,它继承 `NSApp.appearance`;一旦覆盖,读到的就是自己设的值,系统切换不再触发变化。
-- 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。
+- 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。门禁：`architecture/gpuix-lessons` 拦截 `setWindowAppearance` 调用。
 
 ## gpuix 迁移：computer 截不到按住期间的 pressed 帧
 
@@ -300,5 +300,12 @@
 - 错：合入改了 `quad-batch.patch` 的分支后直接跑 `build.sh`，以为它会增量重放；或者只逆向回退被改的那一个补丁。
 - 对：`check.mjs` 报 “Vendor must contain exactly the checked-in ordered patch series” 时，用合入前主干版本的补丁，从序列尾部逆序 `git apply --reverse --check` 后回退，直到被改补丁为止（2026-10-15 F4c：resume-frame → autofocus-focus-event → quad-batch）；再用 `git rm --cached` 清掉补丁新建文件残留的 intent-to-add 条目，然后跑 `build.sh` 从该位置重放。
 - 因：后面的补丁建立在被改补丁的上下文之上，只回退中间那一个会冲突；`build.sh` 只能在已有前缀正确时追加尾部补丁。
+
+## gpuix 迁移：视觉评审把「看起来不对」报成缺陷前，先核对素材与参考实现
+
+- 错：协调者看到 lane 音频 Clip 左声道是一条近黑色满幅横带，就当作 `PeakColumns` 声道几何错误和颜色错误派修；worker 据此把波形改成 Clip 派生色，并加断言锁定。
+- 对：先算测试素材的预期包络。`probe.wav` 左声道是 ±0.4 的恒幅正弦，在 Arrangement 缩放下每像素 min/max 都是 ±0.4，本来就是满幅连续带。颜色先查 web 参考：`canvas/painters/clip.ts` 用 `--arrangement-clip-ink` 画波形，即彩色 Clip 上的深色墨。两项都符合预期，只是看起来不像真实音乐。
+- 因：评审只凭视觉印象，没有核对数据与参考，就把有意的设计当成缺陷，还产生了一个反向锁定的错误断言。
+- 见：`apps/web/src/pages/project/sections/ArrangementPanel/canvas/painters/clip.ts:199`、`crates/engine/spikes/assets/probe.wav`。
 
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
