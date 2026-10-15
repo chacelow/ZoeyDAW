@@ -11,7 +11,6 @@ export function createTimeRangeGesture(
   pointer: LanePointer,
   trackId: string
 ): LaneGesture {
-  const previous = context.getState().session.timeSelection
   const scene = context.scene.get()
   const startBar = snapBar(
     automationBar(scene, pointer.x),
@@ -34,16 +33,17 @@ export function createTimeRangeGesture(
         context.getState().workspace.snap && !next.shiftKey,
         context.getState().workspace.automationMode
       )
-      context.scene.setTimeSelection(selection)
+      context.scene.setTimeSelectionPreview(selection)
     },
     finish(cancelled) {
       if (cancelled) {
-        context.scene.setTimeSelection(previous)
+        context.scene.setTimeSelectionPreview(null)
         return
       }
       const committed = committedTimeRange(selection)
       context.actions.setTimeSelection(committed)
       context.actions.setInsertionPoint({ trackId, bar: selection.startBar })
+      context.scene.setTimeSelectionPreview(null)
     },
   }
 }

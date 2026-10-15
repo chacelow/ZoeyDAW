@@ -51,6 +51,7 @@ function fixtureScene(partial?: Partial<ArrangementScene>): ArrangementScene {
     selectedTrackIds: new Set(),
     hoverClip: null,
     timeSelection: null,
+    timeSelectionPreview: null,
     ...partial,
     ...(partial?.viewport && { viewport: { ...viewport, ...partial.viewport } }),
   }

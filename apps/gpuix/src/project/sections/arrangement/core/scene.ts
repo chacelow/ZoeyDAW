@@ -56,6 +56,7 @@ export interface ArrangementScene extends SceneMusic {
   selectedTrackIds: ReadonlySet<string>
   hoverClip: { id: string; region: "title" | "body" } | null
   timeSelection: TimeSelection | null
+  timeSelectionPreview: TimeSelection | null
   targetSelection: CanvasTargetSelection
   automationParameters: Readonly<Record<string, AutomationLane["parameter"]>>
 }
@@ -75,9 +76,11 @@ export interface SceneStore {
   setAutomationParameters: (parameters: ArrangementScene["automationParameters"]) => void
   setHover: (hover: ArrangementScene["hoverClip"]) => void
   setTimeSelection: (selection: TimeSelection | null) => void
+  setTimeSelectionPreview: (selection: TimeSelection | null) => void
 }
 
 export function createSceneStore(): SceneStore {
+  let committedTimeSelection: TimeSelection | null = null
   let source: SceneMusic = {
     bars: 128,
     grid: DEFAULT_GRID,
@@ -101,6 +104,7 @@ export function createSceneStore(): SceneStore {
     selectedTrackIds: new Set(),
     hoverClip: null,
     timeSelection: null,
+    timeSelectionPreview: null,
     targetSelection: { kind: "none" },
     automationParameters: {},
   }
@@ -228,23 +232,32 @@ export function createSceneStore(): SceneStore {
       bump({ ...scene, hoverClip: hover })
     },
     setTimeSelection(selection) {
-      const current = scene.timeSelection
-      if (current === selection) {
-        return
-      }
-      if (
-        current &&
-        selection &&
-        current.startBar === selection.startBar &&
-        current.endBar === selection.endBar &&
-        current.trackIds.length === selection.trackIds.length &&
-        current.trackIds.every((id, index) => id === selection.trackIds[index])
-      ) {
-        return
-      }
-      bump({ ...scene, timeSelection: selection })
+      committedTimeSelection = selection
+      const visible = scene.timeSelectionPreview ?? committedTimeSelection
+      if (timeSelectionEquals(scene.timeSelection, visible)) return
+      bump({ ...scene, timeSelection: visible })
+    },
+    setTimeSelectionPreview(selection) {
+      if (timeSelectionEquals(scene.timeSelectionPreview, selection)) return
+      bump({
+        ...scene,
+        timeSelectionPreview: selection,
+        timeSelection: selection ?? committedTimeSelection,
+      })
     },
   }
+}
+
+function timeSelectionEquals(a: TimeSelection | null, b: TimeSelection | null): boolean {
+  return (
+    a === b ||
+    (a !== null &&
+      b !== null &&
+      a.startBar === b.startBar &&
+      a.endBar === b.endBar &&
+      a.trackIds.length === b.trackIds.length &&
+      a.trackIds.every((id, index) => id === b.trackIds[index]))
+  )
 }
 
 function viewportEquals(a: ArrangementViewport, b: ArrangementViewport): boolean {
