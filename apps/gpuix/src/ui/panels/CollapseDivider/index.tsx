@@ -3,6 +3,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { computeLayout } from "../layout/computeLayout"
 import { useDividerDrag } from "../useDividerDrag"
+import { dividerChrome } from "../divider-chrome"
 
 export interface CollapseDividerProps {
   expanded: boolean
@@ -54,12 +55,10 @@ export function CollapseDivider({
       onMouseUp={drag.onMouseUp}
       onBlur={drag.onBlur}
       onKeyDown={onKeyDown}
-      style={sx({ backgroundColor: theme.colors.card }, style, {
+      style={sx(dividerChrome(theme), style, {
         height: theme.project.panelGap,
         width: "100%",
-        flexShrink: 0,
         cursor: "row-resize",
-        userSelect: "none",
       })}
     />
   )

@@ -106,7 +106,6 @@ export function TrackIdentity({
           testId={`track-fold-${track.id}`}
           aria-expanded={!track.collapsed}
           onClick={() => projectActions.updateTrack(track.id, { collapsed: !track.collapsed })}
-          style={{ borderWidth: 0, borderRadius: 0 }}
         >
           <Icon
             name={track.collapsed ? "ChevronRight" : "ChevronDown"}
@@ -126,10 +125,6 @@ export function TrackIdentity({
               flexBasis: 0,
               minWidth: 0,
               height: theme.control["--spacing-control-track"],
-              borderWidth: 0,
-              borderRadius: 0,
-              paddingLeft: 0,
-              paddingRight: 0,
               justifyContent: "flex-start",
               color: ink,
               cursor: dragging ? "grabbing" : track.kind === "main" ? "default" : "grab",
