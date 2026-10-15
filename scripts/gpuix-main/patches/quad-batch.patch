@@ -98,10 +98,10 @@ index c5f4fa1..1f14017 100644
  // types instead of a copy that silently drifts from them.
 diff --git a/packages/native/src/quad_batch.rs b/packages/native/src/quad_batch.rs
 new file mode 100644
-index 0000000..bd1da1b
+index 0000000..d2875d9
 --- /dev/null
 +++ b/packages/native/src/quad_batch.rs
-@@ -0,0 +1,406 @@
+@@ -0,0 +1,407 @@
 +#[cfg(test)]
 +#[path = "quad_batch_paint_tests.rs"]
 +mod paint_tests;
@@ -128,8 +128,9 @@ index 0000000..bd1da1b
 +    }
 +    let width = value
 +        .as_f64()
-+        .map(|width| width as f32)
 +        .filter(|width| width.is_finite() && *width >= 0.0)
++        .map(|width| width as f32)
++        .filter(|width| width.is_finite())
 +        .ok_or_else(|| "quad-batch strokeWidth must be finite and nonnegative".to_string())?;
 +    Ok(width)
 +}
@@ -510,10 +511,10 @@ index 0000000..bd1da1b
 +}
 diff --git a/packages/native/src/quad_batch_paint_tests.rs b/packages/native/src/quad_batch_paint_tests.rs
 new file mode 100644
-index 0000000..2659ea9
+index 0000000..e00f586
 --- /dev/null
 +++ b/packages/native/src/quad_batch_paint_tests.rs
-@@ -0,0 +1,110 @@
+@@ -0,0 +1,111 @@
 +use crate::{
 +    renderer::{apply_batch_to_tree, GpuixView},
 +    retained_tree::RetainedTree,
@@ -525,6 +526,7 @@ index 0000000..2659ea9
 +fn malformed_paint_is_atomic() {
 +    for (key, value) in [
 +        ("strokeWidth", serde_json::json!(-1)),
++        ("strokeWidth", serde_json::json!(-1e-100)),
 +        ("strokeWidth", serde_json::json!("1")),
 +        ("strokeWidth", serde_json::json!(1e100)),
 +        ("strokeColor", serde_json::json!(42)),

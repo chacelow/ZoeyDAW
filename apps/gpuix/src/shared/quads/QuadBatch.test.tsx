@@ -124,6 +124,7 @@ test("invalid native stroke updates leave the prior tree unchanged", () => {
     root.renderer.captureScreenshot(path.join(directory, "before.png"))
     for (const [key, value] of [
       ["strokeWidth", -1],
+      ["strokeWidth", -1e-100],
       ["strokeWidth", "1"],
       ["strokeWidth", 1e100],
       ["strokeColor", 42],
