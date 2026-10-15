@@ -11,7 +11,14 @@ const options = [
 ]
 
 test("tabs select accessible panes through arrows and Home/End with matching indicator geometry", () => {
-  const root = createTestRoot({ width: 500, height: 240 })
+  const spaces: boolean[] = []
+  const root = createTestRoot({
+    width: 500,
+    height: 240,
+    onKeyDown: event => {
+      if (event.key === "space") spaces.push(event.defaultPrevented)
+    },
+  })
   const changes: string[] = []
   root.render(
     <ThemeProvider>
@@ -30,6 +37,10 @@ test("tabs select accessible panes through arrows and Home/End with matching ind
   const last = root.renderer.findByTestId("motion-tab-c")
   if (!first || !last) throw new Error("Missing tabs")
   expect(root.renderer.findByTestId("pane-a")).toBeDefined()
+  root.renderer.nativeSimulateKeystrokes(last.id, "space")
+  expect(changes).toEqual([])
+  expect(root.renderer.findByTestId("pane-a")).toBeDefined()
+  expect(spaces).toEqual([false])
   root.renderer.nativeSimulateKeystrokes(first.id, "right")
   expect(changes).toEqual(["c"])
   expect(root.renderer.getFocusedElementId()).toBe(last.id)

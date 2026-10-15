@@ -48,5 +48,5 @@ export function navigateSelection({
 }
 
 export function isActivationKey(event: EventPayload) {
-  return event.key === "enter" || event.key === "space" || event.key === " "
+  return event.key === "enter"
 }
