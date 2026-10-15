@@ -100,3 +100,43 @@ test("Space on a Footer tab controls playback without switching the editor", () 
     projectActions.stop()
   }
 })
+
+test("Clip Edit follows its host height and does not expose the fixed-device divider", () => {
+  const root = createTestRoot({ width: 800, height: 500 })
+  function frame(height: number) {
+    root.render(
+      <ThemeProvider>
+        <div style={{ width: "100%", height }}>
+          <FooterPanel
+            labels={englishFooterLabels}
+            view="clip"
+            collapsed={false}
+            onViewChange={() => {
+              throw new Error("Unexpected tab change")
+            }}
+            onCollapsedChange={() => {
+              throw new Error("Unexpected collapse")
+            }}
+            renderClipEditor={() => {
+              throw new Error("No selected clip")
+            }}
+            reducedMotion
+          />
+        </div>
+      </ThemeProvider>
+    )
+  }
+  try {
+    frame(220)
+    expect(root.renderer.findByTestId("footer-divider")).toBeUndefined()
+    const first = root.renderer.findByTestId("footer-content")
+    if (!first) throw new Error("Missing Clip Edit container")
+    expect(root.renderer.getElementBounds(first.id)?.height).toBe(220)
+    frame(310)
+    const resized = root.renderer.findByTestId("footer-content")
+    if (!resized) throw new Error("Missing resized Clip Edit container")
+    expect(root.renderer.getElementBounds(resized.id)?.height).toBe(310)
+  } finally {
+    root.unmount()
+  }
+})

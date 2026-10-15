@@ -50,10 +50,7 @@ export function FooterPanel({
   const owner = tracks.find(track => track.clips.some(clip => clip.id === clipId))
   const clip = owner?.clips.find(item => item.id === clipId)
   const track = tracks.find(item => item.id === selectedTrackIds.at(-1)) ?? owner ?? null
-  const height =
-    view === "devices"
-      ? theme.project.footerDeviceHeight
-      : (clipHeight ?? theme.project.footerDeviceHeight)
+  const height = view === "devices" ? theme.project.footerDeviceHeight : (clipHeight ?? "100%")
   const emptyClip = (
     <div
       style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -69,16 +66,23 @@ export function FooterPanel({
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
+        width: "100%",
+        minWidth: 0,
+        minHeight: 0,
+        height: view === "clip" ? (collapsed ? 0 : height) : undefined,
         backgroundColor: theme.colors.muted,
       }}
     >
-      <CollapseDivider
-        expanded={!collapsed}
-        expandedSize={height}
-        onExpandedChange={expanded => onCollapsedChange(!expanded)}
-        aria-label={labels.toggle}
-        testId="footer-divider"
-      />
+      {view === "devices" ? (
+        <CollapseDivider
+          expanded={!collapsed}
+          expandedSize={theme.project.footerDeviceHeight}
+          onExpandedChange={expanded => onCollapsedChange(!expanded)}
+          aria-label={labels.toggle}
+          testId="footer-divider"
+          style={{ backgroundColor: theme.colors.muted }}
+        />
+      ) : null}
       {!collapsed ? (
         <MotionTabs
           testId="footer-content"

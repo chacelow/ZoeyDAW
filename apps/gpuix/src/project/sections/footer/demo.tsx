@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { render } from "@gpuix/react"
+import { render, useGpuix } from "@gpuix/react"
 import { cursorHide, cursorPosition, cursorRestore } from "@zoeydaw/native"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
@@ -33,6 +33,58 @@ const chinese = process.env.B2_LANGUAGE === "zh"
 const appearance = process.env.B2_APPEARANCE === "light" ? "light" : "dark"
 const searchHandle: { current: BrowserPanelHandle | null } = { current: null }
 
+function NativeDiagnostics() {
+  const theme = useTheme()
+  const { renderer } = useGpuix()
+  const session = useProjectState(state => state.session)
+  const name = useProjectState(state => state.document.name)
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: theme.control["--spacing-control-track-gap"],
+        padding: theme.control["--spacing-control-track-gap"],
+        minHeight: 0,
+        flexGrow: 1,
+      }}
+    >
+      <text>{name}</text>
+      <text
+        role="status"
+        aria-label="Native backend state"
+      >{`Backend ${session.backend.phase} · ${session.playing ? "playing" : "stopped"} · ${session.position.bar}.${session.position.beat}.${Math.floor(session.position.sixteenth)}`}</text>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: theme.control["--spacing-control-track-gap"],
+        }}
+      >
+        <Button label="Undo" onClick={projectActions.undo} disabled={!session.canUndo}>
+          Undo
+        </Button>
+        <Button label="Redo" onClick={projectActions.redo} disabled={!session.canRedo}>
+          Redo
+        </Button>
+        <Button
+          label="Capture frame statistics"
+          onClick={() =>
+            process.stdout.write(
+              `B2_FRAME_STATS ${JSON.stringify(renderer?.getDebugFrameOverlayStats?.())}\n`
+            )
+          }
+        >
+          Frame stats
+        </Button>
+      </div>
+      <text style={{ color: theme.colors.mutedForeground }}>
+        Native backend; no device DSP or metronome audio
+      </text>
+    </div>
+  )
+}
+
 function NativePanels() {
   const theme = useTheme()
   const [view, setView] = useState<FooterView>("devices")
@@ -40,10 +92,11 @@ function NativePanels() {
   const [info, setInfo] = useState<ControlInfo | null>(null)
   const browserHandle = useRef<PanelImperativeHandle | null>(null)
   const browserRef = useRef<BrowserPanelHandle | null>(null)
+  const clipHandle = useRef<PanelImperativeHandle | null>(null)
   searchHandle.current = browserRef.current
-  const session = useProjectState(state => state.session)
-  const document_ = useProjectState(state => state.document)
   useEffect(() => {
+    projectActions.setProject({ name: chinese ? "未命名项目" : "Untitled project" })
+    if (process.env.B2_BPM) projectActions.setBpm(Number(process.env.B2_BPM))
     projectActions.addTrack("audio")
     const track = useProjectState.getState().document.tracks.find(item => item.kind === "audio")
     if (track) {
@@ -56,10 +109,33 @@ function NativePanels() {
     return startProjectRuntime()
   }, [])
   function changeView(next: FooterView) {
+    if (next === "clip" && view === "clip") clipHandle.current?.expand()
     setView(next)
     setCollapsed(false)
   }
+  function changeCollapsed(next: boolean) {
+    if (view === "clip") {
+      if (next) clipHandle.current?.collapse()
+      else clipHandle.current?.expand()
+    }
+    setCollapsed(next)
+  }
   const footerLabels = chinese ? chineseFooterLabels : englishFooterLabels
+  const footer = (
+    <FooterPanel
+      labels={footerLabels}
+      view={view}
+      collapsed={collapsed}
+      onViewChange={changeView}
+      onCollapsedChange={changeCollapsed}
+      subscribeWindowActive={subscribeApplicationActive}
+      renderClipEditor={() => {
+        throw new Error(
+          "Standalone verification contains no selected Clip; the application supplies the real editor"
+        )
+      }}
+    />
+  )
   return (
     <ControlEnvironmentProvider value={{ setInfo, cursorLock }}>
       <PanelEnvironmentProvider environment={{ subscribeWindowActive: subscribeApplicationActive }}>
@@ -106,54 +182,46 @@ function NativePanels() {
             </Panel>
             <PanelDivider orientation="vertical" />
             <Panel>
-              <div
-                style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}
-              >
+              {view === "clip" ? (
+                <Group orientation="vertical" style={{ height: "100%", width: "100%" }}>
+                  <Panel defaultSize="60%" minSize="20%">
+                    <NativeDiagnostics />
+                  </Panel>
+                  <PanelDivider
+                    orientation="horizontal"
+                    aria-label="Resize Clip Edit"
+                    style={{
+                      backgroundColor: theme.colors.muted,
+                      borderTopWidth: 1,
+                      borderColor: theme.colors.border,
+                    }}
+                  />
+                  <Panel
+                    panelRef={clipHandle}
+                    defaultSize={collapsed ? 0 : "40%"}
+                    minSize="20%"
+                    collapsible
+                    collapsedSize={0}
+                    onResize={size => setCollapsed(size.inPixels === 0)}
+                  >
+                    {footer}
+                  </Panel>
+                </Group>
+              ) : (
                 <div
-                  style={{
-                    flexGrow: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: theme.control["--spacing-control-track-gap"],
-                    padding: theme.control["--spacing-control-track-gap"],
-                  }}
+                  style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}
                 >
-                  <text>{document_.name}</text>
-                  <text
-                    role="status"
-                    aria-label="Native backend state"
-                  >{`Backend ${session.backend.phase} · ${session.playing ? "playing" : "stopped"} · ${session.position.bar}.${session.position.beat}.${Math.floor(session.position.sixteenth)}`}</text>
-                  <Button label="Undo" onClick={projectActions.undo} disabled={!session.canUndo}>
-                    Undo
-                  </Button>
-                  <Button label="Redo" onClick={projectActions.redo} disabled={!session.canRedo}>
-                    Redo
-                  </Button>
-                  <Button label="Native warning" onClick={() => setInfo(null)}>
-                    Native backend, no device DSP or metronome audio
-                  </Button>
+                  <NativeDiagnostics />
+                  {footer}
                 </div>
-                <FooterPanel
-                  labels={footerLabels}
-                  view={view}
-                  collapsed={collapsed}
-                  onViewChange={changeView}
-                  onCollapsedChange={setCollapsed}
-                  subscribeWindowActive={subscribeApplicationActive}
-                  renderClipEditor={({ close }) => (
-                    <Button label={footerLabels.toggle} onClick={close}>
-                      {footerLabels.toggle}
-                    </Button>
-                  )}
-                />
-              </div>
+              )}
             </Panel>
           </Group>
           <StatusStrip
             labels={chinese ? chineseStatusLabels : englishStatusLabels}
             footerCollapsed={collapsed}
             view={view}
-            onToggleFooter={() => setCollapsed(value => !value)}
+            onToggleFooter={() => changeCollapsed(!collapsed)}
             onViewChange={changeView}
             info={info}
             warnings={[]}
