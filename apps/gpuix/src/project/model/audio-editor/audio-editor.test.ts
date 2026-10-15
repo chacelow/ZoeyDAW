@@ -90,7 +90,7 @@ describe("audio clip settings", () => {
 
 describe("independent playback and loop markers", () => {
   it("moves Start from 1.1.1 to 1.2.1 in 4/8 without resizing or slipping Arrangement content", () => {
-    const sourceClip = { ...clip, sourceOffsetBars: 0, waveformPeaks: [0.2, 0.8, 0.3] }
+    const sourceClip = { ...clip, sourceOffsetBars: 0 }
     const settings = getAudioClipSettings(sourceClip, 120)
     const start = parseAudioMusicalValue("1.2.1", 4, 8, "position", 0, 100)
     expect(start).toBe(0.25)
@@ -101,7 +101,6 @@ describe("independent playback and loop markers", () => {
     expect(next.startBar).toBe(8)
     expect(next.lengthBars).toBe(8)
     expect(next.sourceOffsetBars).toBe(0)
-    expect(next.waveformPeaks).toBe(sourceClip.waveformPeaks)
     expect(fadeControls(next, "in")).toEqual(fadeControls(sourceClip, "in"))
     expect(fadeControls(next, "out")).toEqual(fadeControls(sourceClip, "out"))
     expect(next.audioSettings).toMatchObject({ loopStartBars: 0, loopLengthBars: 8 })

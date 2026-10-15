@@ -136,7 +136,6 @@ const tracks: Track[] = [
         gainDb: 0,
         fadeInBars: 0.25,
         fadeOutBars: 0.5,
-        waveformPeaks: mockWaveformPeaks("mock://kick.wav"),
       },
     ],
   },

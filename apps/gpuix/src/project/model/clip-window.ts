@@ -24,7 +24,6 @@ export function clipWindow(clip: Clip, startBar: number, endBar: number): Clip |
   const fades = fadeWindow(clip, offset, length)
   return {
     ...clip,
-    waveformPeaks: undefined,
     startBar: start,
     lengthBars: length,
     sourceOffsetBars: common.sourceOffsetBars,

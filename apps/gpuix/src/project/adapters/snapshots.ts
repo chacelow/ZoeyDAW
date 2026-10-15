@@ -10,9 +10,9 @@ import {
   markProjectSaved,
   canSaveProject,
   getCommittedDocument,
+  getCommittedWorkspace,
   sameWorkspacePreferences,
 } from "./context"
-import { withWaveformPreview } from "./visuals"
 
 export interface SnapshotStorage {
   get(key: string): string | null
@@ -49,28 +49,17 @@ export function setProjectStorageId(projectId: string): void {
   storageId = projectId
 }
 export function serializeProject(): string {
-  const state = get()
-  return stringifyProject(getCommittedDocument(), state.workspace)
+  return stringifyProject(getCommittedDocument(), getCommittedWorkspace())
 }
 export function hydrateProject(json: string): void {
-  const parsed = parseProject(json)
-  hydrateState({
-    ...parsed,
-    document: {
-      ...parsed.document,
-      tracks: parsed.document.tracks.map(track => ({
-        ...track,
-        clips: track.clips.map(clip => (clip.kind === "audio" ? withWaveformPreview(clip) : clip)),
-      })),
-    },
-  })
+  hydrateState(parseProject(json))
 }
 export const snapshotActions = {
   saveSnapshot(): void {
     const epoch = projectEpoch()
     const revision = projectRevision()
     const document = getCommittedDocument()
-    const { workspace } = get()
+    const workspace = getCommittedWorkspace()
     const key = storageKey()
     const storage = snapshotStorage
     let isFinished = false

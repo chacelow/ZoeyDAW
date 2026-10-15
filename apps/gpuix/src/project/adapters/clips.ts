@@ -8,7 +8,6 @@ import {
   fadeWindow,
 } from "../model/fades"
 import { editClip, get, session, tracks, updateTrack } from "./context"
-import { withWaveformPreview } from "./visuals"
 import type { AudioClip, Clip } from "../model/types"
 
 export const clipActions = {
@@ -24,7 +23,7 @@ export const clipActions = {
     }
     const clip = createClip(kind, startBar, lengthBars)
     updateTrack(trackId, {
-      clips: [...target.clips, clip.kind === "audio" ? withWaveformPreview(clip) : clip],
+      clips: [...target.clips, clip],
     })
   },
   updateClip(id: string, patch: Partial<Clip>) {
@@ -39,8 +38,7 @@ export const clipActions = {
           "fadeOutOffsetBars" in patch ||
           "fadeInCurve" in patch ||
           "fadeOutCurve" in patch ||
-          "samplePath" in patch ||
-          "waveformPeaks" in patch) &&
+          "samplePath" in patch) &&
           clip.kind !== "audio")
       ) {
         return clip
@@ -146,10 +144,7 @@ export const clipActions = {
     }
   },
   resizeClip(id: string, edge: "left" | "right", bar: number) {
-    editClip(id, clip => {
-      const next = projectClipResize(clip, edge, bar)
-      return next !== clip && next.kind === "audio" ? withWaveformPreview(next) : next
-    })
+    editClip(id, clip => projectClipResize(clip, edge, bar))
   },
   deleteClips(ids: string[]) {
     const source = get().document.tracks
@@ -202,12 +197,12 @@ export const clipActions = {
             const leftFades = fadeWindow(clip, 0, leftLength)
             const rightFades = fadeWindow(clip, leftLength, right.lengthBars)
             return [
-              withWaveformPreview({ ...clip, lengthBars: leftLength, ...leftFades }),
-              withWaveformPreview({
+              { ...clip, lengthBars: leftLength, ...leftFades },
+              {
                 ...right,
                 sourceOffsetBars: rightOffset,
                 ...rightFades,
-              }),
+              },
             ]
           }
           return [

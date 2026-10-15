@@ -81,3 +81,18 @@ it("keeps the previous saved revision and dirty edits when a write fails", () =>
   expect(projectActions.restoreSnapshot()).toBe(true)
   expect(useProjectState.getState().document.transport.bpm).toBe(155)
 })
+
+it("serializes and saves committed workspace preferences during a cancelled edit", () => {
+  const before = useProjectState.getState().workspace.follow
+  const token = projectActions.beginEdit("workspace-save")
+  projectActions.setFollow(!before)
+  const viewport = { pxPerBar: 80, scrollX: 240, scrollY: 70 }
+  projectActions.setViewport(viewport)
+  expect(JSON.parse(serializeProject()).workspace.follow).toBe(before)
+  projectActions.saveSnapshot()
+  projectActions.cancelEdit(token)
+  expect(useProjectState.getState().workspace.follow).toBe(before)
+  expect(projectActions.restoreSnapshot()).toBe(true)
+  expect(useProjectState.getState().workspace.follow).toBe(before)
+  expect(useProjectState.getState().workspace).toMatchObject(viewport)
+})

@@ -139,8 +139,8 @@ describe("snapshot graph and identity boundaries", () => {
   })
 })
 
-describe("derived waveform previews", () => {
-  it("bounds a long source window without changing its stored musical duration", () => {
+describe("source windows and waveform fixtures", () => {
+  it("preserves a long source window's authored musical range", () => {
     const document = createMockDocument()
     const clip = document.tracks.find(track => track.id === "3-audio")!.clips[0]
     clip.lengthBars = 10_000
@@ -150,8 +150,7 @@ describe("derived waveform previews", () => {
       .getState()
       .document.tracks.find(track => track.id === "3-audio")!.clips[0]
     expect(restored.lengthBars).toBe(10_000)
-    expect(restored.kind === "audio" && restored.waveformPeaks?.length).toBe(2048)
-    expect(restored.kind === "audio" && restored.waveformPeaks?.every(Number.isFinite)).toBe(true)
+    expect(restored.sourceOffsetBars).toBe(0.5)
     expect(serializeProject()).not.toContain("waveformPeaks")
   })
 
