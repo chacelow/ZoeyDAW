@@ -79,8 +79,11 @@ export function MenuTrigger({
       if (unavailable) return
       const target = renderer?.getFocusedElementId?.()
       onKeyDown?.(event)
-      if (event.defaultPrevented || target !== menu.trigger.current?.id) return
+      if (event.defaultPrevented) return
       const key = event.key?.toLowerCase()
+      const contextShortcut =
+        menu.contextMenu && ((key === "f10" && event.modifiers?.shift) || key === "contextmenu")
+      if (!contextShortcut && target !== menu.trigger.current?.id) return
       if (
         (!menu.contextMenu &&
           (key === "enter" ||

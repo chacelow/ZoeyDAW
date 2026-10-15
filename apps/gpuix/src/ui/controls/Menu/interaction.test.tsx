@@ -162,3 +162,21 @@ for (const asChild of [false, true]) {
     expect(root.renderer.findByTestId("content")).toBeUndefined()
   })
 }
+
+test("dedicated context shortcuts still open from a focused descendant", () => {
+  const root = mount(
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div testId="trigger" style={{ width: 300, height: 100 }}>
+          <Button testId="child">Clip control</Button>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent testId="content">
+        <ContextMenuItem testId="item">Command</ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  )
+  root.renderer.nativeSimulateKeystrokes(element(root, "child").id, "shift-f10")
+  expect(root.renderer.findByTestId("content")).toBeDefined()
+  expect(root.renderer.getFocusedElementId()).toBe(element(root, "item").id)
+})
