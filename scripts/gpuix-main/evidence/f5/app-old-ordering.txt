@@ -1,0 +1,65 @@
+bun test v1.3.14 (0d9b296a)
+
+../../scripts/gpuix-main/evidence/f5/drag-pad-focus.test.tsx:
+45 |       root.renderer.dispatchNativeEvents()
+46 |       const input = root.renderer.findByTestId("pad-value")
+47 |       if (!input) throw new Error("Missing editing input")
+48 |       expect(input.type).toBe("input")
+49 |       expect(root.renderer.getFocusedElementId()).toBe(input.id)
+50 |       expect(info.filter(value => value === "number")).toEqual(["number"])
+                                                            ^
+error: expect(received).toEqual(expected)
+
+- [
+-   "number",
+- ]
++ []
+
+- Expected  - 3
++ Received  + 1
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/scripts/gpuix-main/evidence/f5/drag-pad-focus.test.tsx:50:56)
+(fail) DragPadNumber enter edit delivers the input onFocus once [133.86ms]
+45 |       root.renderer.dispatchNativeEvents()
+46 |       const input = root.renderer.findByTestId("pad-value")
+47 |       if (!input) throw new Error("Missing editing input")
+48 |       expect(input.type).toBe("input")
+49 |       expect(root.renderer.getFocusedElementId()).toBe(input.id)
+50 |       expect(info.filter(value => value === "number")).toEqual(["number"])
+                                                            ^
+error: expect(received).toEqual(expected)
+
+- [
+-   "number",
+- ]
++ []
+
+- Expected  - 3
++ Received  + 1
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/scripts/gpuix-main/evidence/f5/drag-pad-focus.test.tsx:50:56)
+(fail) DragPadNumber 7 edit delivers the input onFocus once [17.08ms]
+71 |         />
+72 |         <input testId="next" onFocus={() => events.push("next:focus")} />
+73 |       </div>
+74 |     )
+75 |     root.renderer.dispatchNativeEvents()
+76 |     expect(events).toEqual(["first:focus"])
+                        ^
+error: expect(received).toEqual(expected)
+
+- [
+-   "first:focus",
+- ]
++ []
+
+- Expected  - 3
++ Received  + 1
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f5-autofocus-event/scripts/gpuix-main/evidence/f5/drag-pad-focus.test.tsx:76:20)
+(fail) native autofocus reports focus once and JS Tab reports blur once [12.01ms]
+
+ 0 pass
+ 3 fail
+ 7 expect() calls
+Ran 3 tests across 1 file. [1.74s]
