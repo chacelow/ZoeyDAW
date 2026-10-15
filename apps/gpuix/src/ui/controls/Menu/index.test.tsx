@@ -426,6 +426,55 @@ describe("native command menus", () => {
     expect(root.renderer.findByTestId("content")).toBeDefined()
   })
 
+  test("context wrappers preserve composite child editing keys and focus", () => {
+    let latestHeight = 70
+    const childKeys: string[] = []
+    function CompositeRow() {
+      const [height, setHeight] = useState(70)
+      return (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div testId="trigger" style={{ width: 300, height: 160 }}>
+              <div
+                testId="resizer"
+                role="separator"
+                tabIndex={0}
+                style={{ width: 100, height }}
+                onKeyDown={event => {
+                  childKeys.push(event.key ?? "")
+                  if (event.key === "up" || event.key === "down") {
+                    latestHeight = height + (event.key === "up" ? -17 : 17)
+                    setHeight(latestHeight)
+                  }
+                }}
+              />
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent testId="content">
+            <ContextMenuItem>Command</ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      )
+    }
+    const root = mount(<CompositeRow />)
+    const child = element(root, "resizer")
+    root.renderer.nativeSimulateKeystrokes(child.id, "up")
+    expect(latestHeight).toBe(53)
+    expect(root.renderer.findByTestId("content")).toBeUndefined()
+    expect(root.renderer.getFocusedElementId()).toBe(child.id)
+    for (const key of ["down", "left", "right", "enter", "space"]) {
+      root.renderer.simulateKeystrokes(key)
+      expect(root.renderer.findByTestId("content")).toBeUndefined()
+      expect(root.renderer.getFocusedElementId()).toBe(child.id)
+    }
+    expect(latestHeight).toBe(70)
+    expect(childKeys).toEqual(["up", "down", "left", "right", "enter", "space"])
+    root.renderer.nativeSimulateKeystrokes(element(root, "trigger").id, "shift-f10")
+    expect(root.renderer.findByTestId("content")).toBeDefined()
+    root.renderer.simulateKeystrokes("escape")
+    expect(root.renderer.findByTestId("content")).toBeUndefined()
+  })
+
   test("context radio groups select real values rather than dropdown indices", () => {
     const changes: string[] = []
     function Harness() {
@@ -460,6 +509,8 @@ describe("native command menus", () => {
     expect(changes).toEqual(["second"])
     expect(root.renderer.findByTestId("content")).toBeUndefined()
     press(root, "trigger", "enter")
+    expect(root.renderer.findByTestId("content")).toBeUndefined()
+    press(root, "trigger", "shift-f10")
     click(root, "second")
     expect(changes).toEqual(["second"])
   })
