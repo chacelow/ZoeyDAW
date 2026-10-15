@@ -1,3 +1,5 @@
+import { MIN_GRID_CELL_PX } from "@/project/model/grid"
+
 import type { ArrangementScene } from "../scene"
 
 /** Readability defaults inherited from web; only the 4/8 subdivision hierarchy is Live-observed. */
@@ -54,6 +56,11 @@ export interface GridLine {
   kind: "minor" | "major"
 }
 
+/** Only unreadable whole bars aggregate; label cadence and grid preferences never choose this step. */
+function patternStepBars(pxPerBar: number): number {
+  return Math.max(1, 2 ** Math.ceil(Math.log2(MIN_GRID_CELL_PX / pxPerBar)))
+}
+
 export function gridLines(
   scene: ArrangementScene,
   left = 0,
@@ -61,7 +68,8 @@ export function gridLines(
 ): GridLine[] {
   const { pxPerBar, scrollX } = scene.viewport
   if (!(pxPerBar > 0) || right < left) return []
-  const patternVisible = pxPerBar >= 1
+  const majorBars = patternStepBars(pxPerBar)
+  const majorPx = majorBars * pxPerBar
   const { cellBars } = scene.gridPlan
   const cellPx = cellBars * pxPerBar
   const lines: GridLine[] = []
@@ -70,16 +78,18 @@ export function gridLines(
     const last = Math.min(Math.floor(scene.bars / cellBars), Math.floor((scrollX + right) / cellPx))
     for (let cell = first; cell <= last; cell++) {
       const offset = cell * cellBars
-      if (patternVisible && Math.abs(offset - Math.round(offset)) < 1e-8) continue
+      if (Math.abs(offset / majorBars - Math.round(offset / majorBars)) < 1e-8) continue
       lines.push({ bar: 1 + offset, x: Math.round(cell * cellPx - scrollX) + 0.5, kind: "minor" })
     }
   }
-  if (patternVisible) {
-    const first = Math.max(0, Math.ceil((scrollX + left) / pxPerBar))
-    const last = Math.min(Math.floor(scene.bars), Math.floor((scrollX + right) / pxPerBar))
-    for (let bar = first; bar <= last; bar++) {
-      lines.push({ bar: 1 + bar, x: Math.round(bar * pxPerBar - scrollX) + 0.5, kind: "major" })
-    }
+  const first = Math.max(0, Math.ceil((scrollX + left) / majorPx))
+  const last = Math.min(Math.floor(scene.bars / majorBars), Math.floor((scrollX + right) / majorPx))
+  for (let bar = first; bar <= last; bar++) {
+    lines.push({
+      bar: 1 + bar * majorBars,
+      x: Math.round(bar * majorPx - scrollX) + 0.5,
+      kind: "major",
+    })
   }
   return lines
 }
@@ -94,13 +104,13 @@ export interface PatternRegion {
 /** Pattern regions follow numbered bars, never the finer grid cells. */
 export function patternRegions(scene: ArrangementScene): PatternRegion[] {
   const { pxPerBar, scrollX, width } = scene.viewport
-  if (!(pxPerBar >= 1) || !(width > 0)) return []
-  const step = 1
+  if (!(pxPerBar > 0) || !(width > 0)) return []
+  const step = patternStepBars(pxPerBar)
   const regionWidth = step * pxPerBar
   const first = Math.max(0, Math.floor(scrollX / regionWidth))
   const last = Math.min(
     Math.ceil(scene.bars / step) - 1,
-    Math.floor((scrollX + width) / regionWidth)
+    Math.ceil((scrollX + width) / regionWidth) - 1
   )
   const regions: PatternRegion[] = []
   for (let index = first; index <= last; index++) {

@@ -93,9 +93,10 @@ automationCursor(hit: AutomationHit | null, drawMode: boolean): "crosshair" | "g
 // rulers/grid-lines.ts
 numberedRulerPlan(pxPerBar: number, numerator: number, denominator?: number): { mode: "sixteenth" | "beat" | "bar"; stepBars: number }
 rulerTicks(scene: ArrangementScene): RulerTick[] // 可读的拍/十六分音符标签，仅供标尺，不产生画布主线
-gridLines(scene: ArrangementScene, left?: number, right?: number): GridLine[] // major 仅整数小节边界；minor 仅 gridPlan.cellBars
-patternRegions(scene: ArrangementScene): PatternRegion[] // 每个整数小节独立交替，和标签 stepBars 无关；小于 1px 的区段不绘制
-RULER_LABEL_SPACING // 集中的可读性阈值；多级 Live 阈值仍未验证
+gridLines(scene: ArrangementScene, left?: number, right?: number): GridLine[] // major 仅整数小节边界；不可读时按 2 幂小节合并，minor 仅 gridPlan.cellBars
+patternRegions(scene: ArrangementScene): PatternRegion[] // 正常缩放每小节独立；小于 model/grid.MIN_GRID_CELL_PX 时按 2 幂合并，相邻交替，和标签 stepBars 无关
+RULER_LABEL_SPACING // 集中的标签可读性阈值；多级 Live 阈值仍未验证
+MIN_GRID_CELL_PX // model/grid 的既有最小单元像素，Pattern/major 复用而非另造阈值；极小视图合并尚未对照 Live
 
 // rulers/geometry.ts
 rulerLabel(bar: number, numerator: number, denominator: number): string
