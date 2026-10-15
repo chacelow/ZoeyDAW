@@ -885,24 +885,44 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 
 ### F4 native quad batches
 
-2026-10-15。`quad-batch.patch` 排在 `window-active-change.patch` 后；独立 vendor 为 `/Volumes/PSSD/code/_vendor/f4-gpuix`，不修改共享 vendor 或 zed。补丁包含 native retained buffer、paint、napi 与 TestRenderer 方法、host 二进制提交队列、React intrinsic 与 TS 类型。
+2026-10-15。`quad-batch.patch` 排在 `window-active-change.patch` 后。独立 vendor 为 `/Volumes/PSSD/code/_vendor/f4-gpuix`，不修改共享 vendor 或 zed。补丁包含 retained buffer、paint、napi 与 TestRenderer setter、React ref 方法、intrinsic 与 TS 类型。通用 mutation queue 保持上游原样。
 
-使用 `shared/quads/QuadBatch.tsx`：`quads: Float32Array` 每四个值为本地 `x, y, width, height`，颜色取 `style.color`，透明度取 `style.opacity` 及祖先 opacity。每种颜色一个节点；数组视为不可变，引用不变不上传，替换引用只更新原生缓冲。原生边界拒绝非四倍长度、非有限值与负尺寸，零尺寸不绘制。
+`<QuadBatch>` 只接收 style、testId 与 ref，**不接收 quads prop**。`shared/quads/useQuadBatch.ts` 提供稳定的 `QuadBatchController { ref, setQuads }`。数据只经事件或 layout effect 内的 `batch.setQuads(Float32Array)` 上传，不进入 React props 或 state。数据更新不触发 React render。挂载前设置的数据由 controller 缓存，在 native ref attach 后上传；卸载后不再访问旧 host，重新挂载时重放最新数据。controller 按引用去重，缓冲视为不可变，替换引用才发布修改。
 
-选择独立 `<quad-batch>` 而不是占用 `<canvas>`：这是只画纯色矩形的声明式叶子，不是通用 Canvas 绘图上下文。保留上游未实现 canvas 的 API 空间。叶子没有 children、输入或 AX props，不注册 hitbox、focus handle 或 AX 节点；即使 style 指定 `pointerEvents: "auto"` 也不捕获输入。绘制同时受元素自身边界与祖先 content mask 裁剪。
+每四个 float 为本地 `x, y, width, height`。颜色取 `style.color`，透明度取节点与祖先 opacity，每种颜色一个 host。原生边界拒绝非四倍长度、非有限值与负尺寸，零尺寸不绘制。绘制受元素自身边界与祖先 content mask 裁剪。
 
-`setQuads(elementId, Float32Array)` 不经过 JSON。host mutation queue 保留 typed-array 引用，在常规 `applyBatch` 建立元素后调用 napi setter；同一提交内合并同 id 上传，销毁的 id 不再上传。napi 借用 JS typed-array slice，验证后一次拷贝到节点拥有的 `Arc<[f32]>`，之后 paint 只 clone Arc，不复制数据。没有持有可被 JS 修改或 detach 的跨帧 ArrayBuffer；没有新依赖。沿用上游 `Arc<std::sync::Mutex<RetainedTree>>` 是协调者批准的既有锁契约例外；持锁期间只访问树、验证与拷贝，不布局、绘制或回调 JS。
+采用命令式数据上传是性能决策。React 19.2 development 的 performance track 会遍历 typed-array props；即使不走 JSON，声明式 quads prop 仍使开发版超过一帧。最终接口删除该 prop 与二进制提交队列，不改 React instrumentation。DEV 与 production 的完整测量见[交付报告](../../scripts/gpuix-main/quad-batch/REPORT.md)。
 
-当前实现覆盖 napi desktop 与 native TestRenderer。wasm renderer 没有 `setQuads`，host 明确抛 unsupported，不静默画空白；Windows/Linux 的 shared-tree 更新路径未经真实平台验证。两个调用间的跨线程提交原子性不作保证，macOS embedded loop 在 JS 同步提交结束后绘制。
+选择独立 `<quad-batch>`，保留 `<canvas>` 给通用绘图上下文。批量叶子没有 children、输入或 AX props，不注册 hitbox、focus handle 或 AX 节点。绘制路径忽略 cursor 与 pointerEvents，即使指定 pointer cursor 也不注册 hitbox。
 
-验收工具在 `scripts/gpuix-main/quad-batch/`：同一 50×50 合成几何、14,065 个纯画面矩形，div 与 quad 两种路径，不改 lane 产品代码。该 A/B 是协调者批准的等量节点探针，**不是** lane 的真实 `readProjectPeaks` 满量工程，也不能代替 lane 接入后的整链路性能验收。命令、实测及第 13 节证据见该目录的交付报告。
+napi `setQuads(elementId, Float32Array)` 借用 JS typed-array slice，验证后一次拷贝到节点拥有的 `Arc<[f32]>`。paint 只 clone Arc，不复制数据。SDK 的 `QuadBatchInstance.setQuads` 绑定所属 renderer，每次显式调用上传一次；共享 controller 负责引用去重。没有跨帧借用可被 JS 修改或 detach 的 ArrayBuffer，没有新依赖。沿用上游 `Arc<std::sync::Mutex<RetainedTree>>` 是协调者批准的既有锁契约例外。锁内只访问树、验证与拷贝，不布局、绘制或回调 JS。
 
-#### Upstream PR draft — not published
+当前覆盖 napi desktop 与 native TestRenderer。wasm renderer 没有 setter，SDK 明确抛 unsupported。Windows、Linux 未实跑，独立 UI 线程上的多 setter 调用不承诺原子绘制。macOS embedded loop 在 JS 同步提交结束后绘制。
 
-Title: `feat(native): add declarative single-color rectangle batches`
+验收工具在 `scripts/gpuix-main/quad-batch/`。两路使用同一 50×50 合成几何、14,065 个矩形，不改 lane 产品代码。该探针不是 lane 真实 `readProjectPeaks` 满量工程，不能代替 lane 接入后的整链路验收。
 
-Add a visual-only `quad-batch` host leaf with a `Float32Array` of local x/y/width/height tuples. Keep the unimplemented general-purpose canvas type separate. Style supplies fill color and opacity, and native painting uses content-masked GPUI quads without per-rectangle React or layout nodes. The element never enters pointer hit testing, keyboard focus, or accessibility.
+#### Lane 与 clip-editors 接入
 
-Upload changed buffers through `setQuads` rather than JSON custom props. The host queue waits until element creation has committed and drops uploads for destroyed elements. Copy each changed JS buffer once into retained native storage; re-rendering with the same reference does not upload. TestRenderer uses the same retained model and paint path.
+在数据 owner 内生成缓冲，用事件或 layout effect 上传。不要把 Float32Array 传给 `QuadBatch` 或另一个 React 组件，再指望下游隐藏它。
 
-Scope: napi desktop; wasm support remains unsupported explicitly. Proposed verification includes GPUI scene assertions for local coordinates, clipping, color and nested opacity; immutable-reference upload regression; native pointer pass-through; mutation checks and equal-geometry A/B measurements. No issue or PR has been sent; upstream contribution policy noted in the F1 section still applies.
+```tsx
+const batch = useQuadBatch()
+useLayoutEffect(() => {
+  batch.setQuads(buildLocalRectangles(viewport))
+}, [batch, viewport])
+return <QuadBatch ref={batch.ref} style={batchStyle} />
+```
+
+`buildLocalRectangles` 表示消费者已有的几何计算，不是共享模块导出。Style 继续由消费者取主题 token；本切片不迁移 lane 或 clip-editors。
+
+#### Upstream PR draft, not published
+
+Title: `feat(native): add visual rectangle batches with imperative buffer uploads`
+
+Add a visual-only `quad-batch` host leaf. Style supplies fill color and opacity. Native painting uses content-masked GPUI quads without per-rectangle React or layout nodes. Ignore cursor styles, and never register pointer hitboxes, keyboard focus, or accessibility nodes. Keep the unimplemented general-purpose canvas type separate.
+
+Expose `setQuads(elementId, Float32Array)` and a typed native ref method. Do not accept a geometry prop: React development performance instrumentation recursively records typed-array props. Upload buffers directly after native host attachment, outside JSON mutations and React props or state. Copy each explicit upload once into retained native storage. A consumer controller can cache pre-mount data, replay it on attachment, and skip unchanged references without rendering.
+
+Validation covers GPUI local coordinates, clipping, nested opacity, color, and cursor-induced hitbox prevention. Consumer native tests cover render-free updates, pending data through GPU screenshot comparison, remount, and pointer pass-through. Each targeted invariant has a failing mutation. Equal-geometry DEV and production measurements and initial screenshot hashes are included in the local report.
+
+Scope is napi desktop. wasm remains explicitly unsupported. No issue or PR has been sent; the upstream contribution policy noted in the F1 section still applies.

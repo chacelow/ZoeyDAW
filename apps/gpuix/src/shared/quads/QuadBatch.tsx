@@ -1,8 +1,7 @@
 import type { QuadBatchProps } from "@gpuix/react"
 
-/** Local x/y/width/height rectangles. Memoize the Float32Array: unchanged references
- * are not uploaded; replace the array to publish edits. One node per color batch.
- * This visual leaf has no pointer, keyboard, or accessibility participation.
+/** Visual-only host. Pass useQuadBatch().ref, then upload local x/y/width/height
+ * rectangles through setQuads outside React props. One node per color batch.
  */
 export function QuadBatch(props: QuadBatchProps) {
   return <quad-batch {...props} />
