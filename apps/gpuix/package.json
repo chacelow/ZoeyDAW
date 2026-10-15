@@ -13,6 +13,7 @@
     "@gpuix/react": "link:../../.gpuix-main/packages/react",
     "@phosphor-icons/core": "2.1.1",
     "@zoeydaw/native": "workspace:*",
+    "@zoeymind/i18n": "workspace:*",
     "@zoeymind/logger": "workspace:*",
     "@zoeymind/ui": "workspace:*",
     "culori": "^4.0.2",
