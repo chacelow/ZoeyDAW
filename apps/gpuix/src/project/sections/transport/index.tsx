@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react"
+import { useMemo, useRef, useState } from "react"
 import { Button, ControlGroup, DragPadToggle, DropdownButton, ScrollArea } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { Icon } from "@/ui/controls/Icon"
@@ -10,6 +10,8 @@ import { TransportNumber } from "./TransportNumber"
 import { PerformanceStatus } from "./PerformanceStatus"
 import { metronomePhase, tappedTempo } from "./metronome"
 import { MetronomeIndicator } from "./MetronomeIndicator"
+import { transportColumns } from "./layout"
+import type { TransportMeasurements } from "./layout"
 
 const SCALE_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] as const
 const SCALE_MODES = [
@@ -29,14 +31,16 @@ export interface TransportBarProps {
   readonly labels: TransportLabels
   readonly onBack: () => void
   readonly onToggleBrowser: () => void
-  readonly reducedMotion?: boolean
+  readonly onDrawModeChange: (enabled: boolean) => void
+  readonly reducedMotion: boolean
 }
 
 export function TransportBar({
   labels,
   onBack,
   onToggleBrowser,
-  reducedMotion = false,
+  onDrawModeChange,
+  reducedMotion,
 }: TransportBarProps) {
   const theme = useTheme()
   const document_ = useProjectState(state => state.document)
@@ -59,6 +63,27 @@ export function TransportBar({
   )
   const gap = theme.transportControl["--spacing-control-track-gap"]
   const iconSize = theme.transportControl["--spacing-control-icon"]
+  const [measurements, setMeasurements] = useState<TransportMeasurements>({
+    viewport: 0,
+    left: 0,
+    center: 0,
+    right: 0,
+  })
+  const columns = useMemo(
+    () => transportColumns(measurements, theme.project.transportColumnGap),
+    [measurements, theme.project.transportColumnGap]
+  )
+  const measured =
+    measurements.viewport > 0 &&
+    measurements.left > 0 &&
+    measurements.center > 0 &&
+    measurements.right > 0
+  function measure(part: keyof TransportMeasurements, width: number | undefined) {
+    if (width !== undefined)
+      setMeasurements(current =>
+        current[part] === width ? current : { ...current, [part]: width }
+      )
+  }
   const groupStyle = {
     display: "flex",
     flexDirection: "row",
@@ -72,6 +97,7 @@ export function TransportBar({
       fill
       aria-label={labels.controls}
       testId="transport-scroll"
+      onLayout={event => measure("viewport", event.width)}
       style={{
         height: theme.transportControl["--spacing-control-track"],
         flexShrink: 0,
@@ -85,125 +111,150 @@ export function TransportBar({
           alignItems: "center",
           gap: theme.project.transportColumnGap,
           minWidth: "100%",
+          width: measured ? columns.content : undefined,
           height: "100%",
         }}
       >
-        <div testId="transport-left" style={groupStyle}>
-          <Button size="transport" iconOnly label={labels.toggleBrowser} onClick={onToggleBrowser}>
-            <Icon name="LayoutGrid" size={iconSize} color={theme.colors.foreground} />
-          </Button>
-          <DragPadToggle
-            size="transport"
-            value={workspace.link}
-            onChange={projectActions.setLink}
-            label={labels.link}
-            labelOn={labels.link}
-            labelOff={labels.link}
-          />
-          <Button
-            size="transport"
-            label={labels.tap}
-            onClick={() => {
-              const result = tappedTempo(taps.current, performance.now())
-              taps.current = result.taps
-              if (result.bpm !== null) projectActions.setBpm(result.bpm)
-            }}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            width: measured ? columns.left : undefined,
+            flexGrow: measured ? 0 : 1,
+            flexShrink: 0,
+          }}
+        >
+          <div
+            testId="transport-left"
+            style={groupStyle}
+            onLayout={event => measure("left", event.width)}
           >
-            {labels.tap}
-          </Button>
-          <TransportNumber
-            value={meter.bpm}
-            onChange={projectActions.setBpm}
-            min={20}
-            max={999}
-            step={0.01}
-            defaultValue={120}
-            label={labels.bpm}
-            format={value => value.toFixed(2)}
-            widthSamples={["999.99"]}
-          />
-          <ControlGroup label={labels.meter} separator="slash">
-            <TransportNumber
-              value={meter.numerator}
-              onChange={projectActions.setNumerator}
-              min={1}
-              max={32}
-              step={1}
-              defaultValue={4}
-              label={labels.numerator}
-            />
-            <TransportNumber
-              value={meter.denominator}
-              onChange={projectActions.setDenominator}
-              min={1}
-              max={32}
-              step={1}
-              defaultValue={4}
-              label={labels.denominator}
-            />
-          </ControlGroup>
-          <Button
-            size="transport"
-            iconOnly
-            label={`${labels.metronome} — ${labels.metronomeSilent}`}
-            active={workspace.metronome}
-            onActiveChange={projectActions.setMetronome}
-          >
-            <MetronomeIndicator
-              phase={phase}
-              enabled={workspace.metronome}
-              reducedMotion={reducedMotion}
-            />
-          </Button>
-          <ControlGroup label={labels.scale} separator="line">
-            <DropdownButton
+            <Button
               size="transport"
-              value={document_.scaleRoot}
-              label={labels.scaleRoot}
-              matchTriggerWidth={false}
-              items={SCALE_ROOTS.map(id => ({ id, label: id }))}
-              onChange={value => projectActions.setProject({ scaleRoot: value })}
+              iconOnly
+              label={labels.toggleBrowser}
+              onClick={onToggleBrowser}
+            >
+              <Icon name="LayoutGrid" size={iconSize} color={theme.colors.foreground} />
+            </Button>
+            <DragPadToggle
+              size="transport"
+              value={workspace.link}
+              onChange={projectActions.setLink}
+              label={labels.link}
+              labelOn={labels.link}
+              labelOff={labels.link}
+            />
+            <Button
+              size="transport"
+              label={labels.tap}
+              onClick={() => {
+                const result = tappedTempo(taps.current, performance.now())
+                taps.current = result.taps
+                if (result.bpm !== null) projectActions.setBpm(result.bpm)
+              }}
+            >
+              {labels.tap}
+            </Button>
+            <TransportNumber
+              hideIcon
+              value={meter.bpm}
+              onChange={projectActions.setBpm}
+              min={20}
+              max={999}
+              step={0.01}
+              defaultValue={120}
+              label={labels.bpm}
+              format={value => value.toFixed(2)}
+              widthSamples={["999.99"]}
+            />
+            <ControlGroup label={labels.meter} separator="slash">
+              <TransportNumber
+                value={meter.numerator}
+                onChange={projectActions.setNumerator}
+                min={1}
+                max={16}
+                step={1}
+                defaultValue={4}
+                label={labels.numerator}
+              />
+              <TransportNumber
+                value={meter.denominator}
+                onChange={projectActions.setDenominator}
+                min={1}
+                max={32}
+                step={1}
+                defaultValue={4}
+                label={labels.denominator}
+              />
+            </ControlGroup>
+            <Button
+              size="transport"
+              iconOnly
+              label={`${labels.metronome} — ${labels.metronomeSilent}`}
+              active={workspace.metronome}
+              onActiveChange={projectActions.setMetronome}
+            >
+              <MetronomeIndicator
+                phase={phase}
+                enabled={workspace.metronome}
+                reducedMotion={reducedMotion}
+              />
+            </Button>
+            <ControlGroup label={labels.scale} separator="line">
+              <DropdownButton
+                size="transport"
+                value={document_.scaleRoot}
+                label={labels.scaleRoot}
+                matchTriggerWidth={false}
+                items={SCALE_ROOTS.map(id => ({ id, label: id }))}
+                onChange={value => projectActions.setProject({ scaleRoot: value })}
+              />
+              <DropdownButton
+                testId="transport-scale-mode"
+                size="transport"
+                value={document_.scaleMode}
+                label={labels.scaleMode}
+                matchTriggerWidth={false}
+                items={SCALE_MODES.map(id => ({ id, label: labels.scaleModes[id] }))}
+                onChange={value => projectActions.setProject({ scaleMode: value })}
+              />
+            </ControlGroup>
+            <TransportNumber
+              value={document_.groove}
+              onChange={value => projectActions.setProject({ groove: value })}
+              min={0}
+              max={100}
+              step={1}
+              defaultValue={0}
+              label={labels.groove}
+              icon={
+                <Icon name="AudioWaveform" size={iconSize} color={theme.colors.mutedForeground} />
+              }
+              format={value => `${Math.round(value)}%`}
             />
             <DropdownButton
-              testId="transport-scale-mode"
+              testId="transport-bar-length"
               size="transport"
-              value={document_.scaleMode}
-              label={labels.scaleMode}
+              value={meter.barLength}
+              label={labels.barLength}
               matchTriggerWidth={false}
-              items={SCALE_MODES.map(id => ({ id, label: labels.scaleModes[id] }))}
-              onChange={value => projectActions.setProject({ scaleMode: value })}
+              items={[
+                { type: "heading", id: "short", label: labels.shortLengths },
+                ...BAR_LENGTHS.slice(0, 3).map(id => ({ id, label: labels.barLengths[id] })),
+                { type: "separator", id: "separator" },
+                { type: "heading", id: "long", label: labels.longLengths },
+                ...BAR_LENGTHS.slice(3).map(id => ({ id, label: labels.barLengths[id] })),
+              ]}
+              onChange={projectActions.setBarLength}
             />
-          </ControlGroup>
-          <TransportNumber
-            value={document_.groove}
-            onChange={value => projectActions.setProject({ groove: value })}
-            min={0}
-            max={100}
-            step={1}
-            defaultValue={0}
-            label={labels.groove}
-            icon={
-              <Icon name="AudioWaveform" size={iconSize} color={theme.colors.mutedForeground} />
-            }
-            format={value => `${Math.round(value)}%`}
-          />
-          <DropdownButton
-            testId="transport-bar-length"
-            size="transport"
-            value={meter.barLength}
-            label={labels.barLength}
-            matchTriggerWidth={false}
-            items={[
-              { type: "heading", id: "short", label: labels.shortLengths },
-              ...BAR_LENGTHS.slice(0, 3).map(id => ({ id, label: labels.barLengths[id] })),
-              { type: "separator", id: "separator" },
-              { type: "heading", id: "long", label: labels.longLengths },
-              ...BAR_LENGTHS.slice(3).map(id => ({ id, label: labels.barLengths[id] })),
-            ]}
-            onChange={projectActions.setBarLength}
-          />
+          </div>
         </div>
-        <div testId="transport-center" style={groupStyle}>
+        <div
+          testId="transport-center"
+          style={groupStyle}
+          onLayout={event => measure("center", event.width)}
+        >
           <DragPadToggle
             size="transport"
             value={workspace.follow}
@@ -317,45 +368,56 @@ export function TransportBar({
             }
           />
         </div>
-        <div style={{ flexGrow: 1 }} />
-        <div testId="transport-right" style={groupStyle}>
-          <DragPadToggle
-            size="transport"
-            value={drawMode}
-            onChange={enabled => {
-              projectActions.setDrawModeOverride(null)
-              projectActions.setMode("drawMode", enabled)
-            }}
-            label={labels.drawMode}
-            icon={
-              <Icon
-                name="Pencil"
-                size={iconSize}
-                color={drawMode ? theme.colors.primaryForeground : theme.colors.foreground}
-              />
-            }
-          />
-          <DragPadToggle
-            size="transport"
-            value={workspace.computerKeyboard}
-            onChange={enabled => projectActions.setMode("computerKeyboard", enabled)}
-            label={labels.computerKeyboard}
-            icon={
-              <Icon
-                name="Keyboard"
-                size={iconSize}
-                color={
-                  workspace.computerKeyboard
-                    ? theme.colors.primaryForeground
-                    : theme.colors.foreground
-                }
-              />
-            }
-          />
-          <PerformanceStatus labels={labels} />
-          <Button size="transport" iconOnly label={labels.back} onClick={onBack}>
-            <Icon name="ChevronLeft" size={iconSize} color={theme.colors.foreground} />
-          </Button>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            width: measured ? columns.right : undefined,
+            flexGrow: measured ? 0 : 1,
+            flexShrink: 0,
+          }}
+        >
+          <div
+            testId="transport-right"
+            style={groupStyle}
+            onLayout={event => measure("right", event.width)}
+          >
+            <DragPadToggle
+              size="transport"
+              value={drawMode}
+              onChange={onDrawModeChange}
+              label={labels.drawMode}
+              icon={
+                <Icon
+                  name="Pencil"
+                  size={iconSize}
+                  color={drawMode ? theme.colors.primaryForeground : theme.colors.foreground}
+                />
+              }
+            />
+            <DragPadToggle
+              size="transport"
+              value={workspace.computerKeyboard}
+              onChange={enabled => projectActions.setMode("computerKeyboard", enabled)}
+              label={labels.computerKeyboard}
+              icon={
+                <Icon
+                  name="Keyboard"
+                  size={iconSize}
+                  color={
+                    workspace.computerKeyboard
+                      ? theme.colors.primaryForeground
+                      : theme.colors.foreground
+                  }
+                />
+              }
+            />
+            <PerformanceStatus labels={labels} />
+            <Button size="transport" iconOnly label={labels.back} onClick={onBack}>
+              <Icon name="ChevronLeft" size={iconSize} color={theme.colors.foreground} />
+            </Button>
+          </div>
         </div>
       </div>
     </ScrollArea>
@@ -363,4 +425,3 @@ export function TransportBar({
 }
 
 export type { TransportLabels } from "./labels"
-export { handleTransportKeyDown } from "./keyboard"

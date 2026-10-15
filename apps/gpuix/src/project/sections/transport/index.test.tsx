@@ -3,8 +3,14 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
-import { TransportBar, handleTransportKeyDown } from "."
+import { TransportBar } from "."
 import { englishTransportLabels } from "./demo-labels"
+import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
+import { createVerificationKeyboard } from "../footer/verification/keyboard"
+import { createTestWindowActivity } from "../footer/verification/test-activity"
+import { createTestAnimationFrames } from "../footer/verification/test-frame"
 
 beforeEach(() =>
   hydrateProject(
@@ -12,24 +18,50 @@ beforeEach(() =>
   )
 )
 function mount(width = 1800) {
-  const root = createTestRoot({
-    width,
-    height: 400,
-    onKeyDown: event => {
-      handleTransportKeyDown(event)
+  const keyboard = createWindowKeyboard()
+  const root = createTestRoot({ width, height: 400, ...keyboard.rootHandlers })
+  const activity = createTestWindowActivity()
+  const frames = createTestAnimationFrames()
+  const owner = createVerificationKeyboard({
+    windowKeyboard: keyboard,
+    metrics: PROJECT_METRICS,
+    size: { containerWidth: width, bodyHeight: 400, timelineLeft: 0 },
+    subscribeWindowActive: activity.subscribe,
+    blurControl: () => {
+      const sink = root.renderer.findByTestId("keyboard-focus-surface")
+      if (sink) root.renderer.focusElement(sink.id)
     },
   })
   root.render(
     <ThemeProvider>
-      <TransportBar
-        labels={englishTransportLabels}
-        onBack={projectActions.stop}
-        onToggleBrowser={() => {
-          throw new Error("Unexpected browser input")
-        }}
-      />
+      <WindowKeyboardProvider value={keyboard}>
+        <AnimationFrameProvider source={frames}>
+          <div
+            testId="keyboard-focus-surface"
+            tabIndex={-1}
+            style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}
+          >
+            <TransportBar
+              labels={englishTransportLabels}
+              reducedMotion={false}
+              onDrawModeChange={owner.timeline.keyboard.latchDraw}
+              onBack={projectActions.stop}
+              onToggleBrowser={() => {
+                throw new Error("Unexpected browser input")
+              }}
+            />
+          </div>
+        </AnimationFrameProvider>
+      </WindowKeyboardProvider>
     </ThemeProvider>
   )
+  root.renderer.dispatchNativeEvents()
+  root.renderer.flush()
+  const unmount = root.unmount
+  root.unmount = () => {
+    unmount()
+    owner.dispose()
+  }
   return root
 }
 
@@ -135,5 +167,17 @@ test("held Space repeats do not toggle the transport more than once", () => {
   } finally {
     root.unmount()
     projectActions.stop()
+  }
+})
+
+test("wide Header centres its transport group between balanced outer columns", () => {
+  const root = mount(1800)
+  try {
+    const center = root.renderer.findByTestId("transport-center")
+    const bounds = center ? root.renderer.getElementBounds(center.id) : null
+    if (!bounds) throw new Error("Missing center group")
+    expect(Math.abs(bounds.x + bounds.width / 2 - 900)).toBeLessThanOrEqual(0.5)
+  } finally {
+    root.unmount()
   }
 })

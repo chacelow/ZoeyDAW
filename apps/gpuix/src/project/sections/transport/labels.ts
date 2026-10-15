@@ -34,6 +34,7 @@ export interface TransportLabels {
   readonly unavailable: string
   readonly latency: string
   readonly cpu: string
+  readonly buffer: string
   readonly scaleModes: Readonly<
     Record<
       | "major"

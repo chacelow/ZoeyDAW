@@ -36,6 +36,7 @@ export const englishTransportLabels: TransportLabels = {
   unavailable: "Unavailable",
   latency: "Output latency",
   cpu: "CPU",
+  buffer: "Buffer",
   time: "Sample time",
   scaleModes: {
     major: "Major",
@@ -93,6 +94,7 @@ export const chineseTransportLabels: TransportLabels = {
   unavailable: "不可用",
   latency: "输出延迟",
   cpu: "CPU",
+  buffer: "缓冲",
   time: "采样时间",
   scaleModes: {
     major: "大调",
