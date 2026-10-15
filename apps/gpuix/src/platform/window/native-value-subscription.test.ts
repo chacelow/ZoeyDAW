@@ -162,6 +162,17 @@ describe("native value subscriptions", () => {
     unsubscribe()
   })
 
+  test("failed registration never leaves a silent session behind", () => {
+    let attempts = 0
+    const subscribe = createNativeValueSubscription<boolean>(() => {
+      attempts++
+      throw new Error("native unavailable")
+    }, "test source")
+    expect(() => subscribe(() => undefined)).toThrow("native unavailable")
+    expect(() => subscribe(() => undefined)).toThrow("native unavailable")
+    expect(attempts).toBe(2)
+  })
+
   test("unsupported renderers fail on subscription rather than falling back to polling", () => {
     const subscribe = createNativeValueSubscription<boolean>(undefined, "window activation events")
     expect(() => subscribe(() => undefined)).toThrow("window activation events")

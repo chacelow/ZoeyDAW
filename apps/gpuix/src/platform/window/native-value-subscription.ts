@@ -1,4 +1,4 @@
-/** Renderer registration shape shared by `onWindowActiveChange` and `onWindowAppearanceChange`. */
+/** Callback registration shared by native window and process-level values. */
 export type NativeObserverRegistration<T> = (callback: ((value: T) => void) | null) => void
 
 interface Lease<T> {
@@ -11,7 +11,7 @@ interface Session<T> {
 }
 
 /**
- * One lazy native observer per renderer. The first native value only establishes the
+ * One lazy native observer per source. The first native value only establishes the
  * baseline; listeners hear later changes, delivered in a microtask so they never run
  * inside the native callback. The last unsubscribe releases the observer.
  */
@@ -29,19 +29,24 @@ export function createNativeValueSubscription<T>(
 
     if (session === null) {
       session = current
-      register(value => {
-        if (session !== current) return
-        const previous = current.value
-        current.value = value
-        if (previous === undefined || previous === value) return
-        const pending = [...current.leases]
-        queueMicrotask(() => {
-          for (const pendingLease of pending) {
-            if (session !== current) return
-            if (current.leases.has(pendingLease)) pendingLease.listener(value)
-          }
+      try {
+        register(value => {
+          if (session !== current) return
+          const previous = current.value
+          current.value = value
+          if (previous === undefined || previous === value) return
+          const pending = [...current.leases]
+          queueMicrotask(() => {
+            for (const pendingLease of pending) {
+              if (session !== current) return
+              if (current.leases.has(pendingLease)) pendingLease.listener(value)
+            }
+          })
         })
-      })
+      } catch (error) {
+        session = null
+        throw error
+      }
     }
 
     return () => {
