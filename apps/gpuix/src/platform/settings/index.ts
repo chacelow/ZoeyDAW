@@ -1,9 +1,13 @@
 import { settingsGet, settingsSet, userDirectories } from "@zoeydaw/native"
 
 export type CloseBehavior = "ask" | "tray" | "quit"
+/** 明暗模式;与配色预设 `themePreset` 是两个设置。未保存时按 `DEFAULT_THEME_MODE` 处理。 */
+export type ThemeMode = "light" | "dark" | "system"
+export const DEFAULT_THEME_MODE: ThemeMode = "system"
 
 export interface UserSettings {
   themePreset?: string
+  themeMode?: ThemeMode
   language?: string
   closeBehavior?: CloseBehavior
 }
