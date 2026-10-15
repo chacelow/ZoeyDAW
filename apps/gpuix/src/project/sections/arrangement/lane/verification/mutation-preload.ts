@@ -68,6 +68,37 @@ export const mutationCases: Record<string, MutationCase> = {
       ],
     ],
   },
+  "resume-position": {
+    file: "LaneOverlay/index.tsx",
+    testFile: "LaneRow/LaneRow.test.tsx",
+    testName:
+      "presents the latest playhead on resume and releases frame leases when stopped or unmounted",
+    replacements: [
+      [
+        "  useResumeFrame(() => {\n    flushSync(() => setPosition(transportBar()))\n  }, scene.playback.playing)\n",
+        "",
+      ],
+    ],
+  },
+  "resume-flush": {
+    file: "LaneOverlay/index.tsx",
+    testFile: "LaneRow/LaneRow.test.tsx",
+    testName:
+      "presents the latest playhead on resume and releases frame leases when stopped or unmounted",
+    replacements: [["flushSync(() => setPosition(transportBar()))", "setPosition(transportBar())"]],
+  },
+  "resume-active": {
+    file: "LaneOverlay/index.tsx",
+    testFile: "LaneRow/LaneRow.test.tsx",
+    testName:
+      "presents the latest playhead on resume and releases frame leases when stopped or unmounted",
+    replacements: [
+      [
+        "  useResumeFrame(() => {\n    flushSync(() => setPosition(transportBar()))\n  }, scene.playback.playing)",
+        "  useResumeFrame(() => {\n    flushSync(() => setPosition(transportBar()))\n  }, true)",
+      ],
+    ],
+  },
 }
 
 const id = process.env.LANE_MUTATION
