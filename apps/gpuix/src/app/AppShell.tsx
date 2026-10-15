@@ -14,6 +14,7 @@ import { SettingsDialog } from "./settings/SettingsDialog"
 import { TitleBar } from "./shell/TitleBar"
 import { UnsavedCloseDialog } from "./window/UnsavedCloseDialog"
 import { useUnsavedCloseGuard } from "./window/useUnsavedCloseGuard"
+import type { ReactNode } from "react"
 import type { SnapshotStorage } from "@/platform/storage"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import type { ProjectLayoutSlots } from "./project/ProjectLayout"
@@ -60,8 +61,9 @@ export function AppShell({
           renderProjectSlots={renderProjectSlots}
           showErrorDetails={showErrorDetails}
           onOpenSettings={openSettings}
-        />
-        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+        >
+          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+        </AppFrame>
       </AppPreferencesProvider>
     </RouterProvider>
   )
@@ -73,8 +75,11 @@ function AppFrame({
   renderProjectSlots,
   showErrorDetails,
   onOpenSettings,
+  children,
 }: Pick<AppShellProps, "storage" | "closeRenderer" | "renderProjectSlots" | "showErrorDetails"> & {
   readonly onOpenSettings: () => void
+  /** App-level overlays; they must stay inside this frame, the window root's only host child. */
+  readonly children: ReactNode
 }) {
   const theme = useTheme()
   const route = useRoute()
@@ -124,6 +129,7 @@ function AppFrame({
       </div>
       <UnsavedCloseDialog open={close.asking} onChoose={choice => void close.choose(choice)} />
       <Toaster position="bottom-left" />
+      {children}
     </div>
   )
 }

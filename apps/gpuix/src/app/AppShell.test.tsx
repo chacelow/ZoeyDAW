@@ -1,8 +1,12 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { i18next } from "@zoeymind/i18n/core"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
+import { createSettingStorage } from "@/platform/settings"
 import {
   configureProjectBackend,
   createMemorySnapshotStorage,
@@ -200,30 +204,44 @@ describe("route error fallback", () => {
 })
 
 describe("settings dialog", () => {
-  test("theme mode and language switch live and persist through their ports", async () => {
+  test("theme mode switches live, persists, and the app survives closing the dialog", () => {
     const { root, saved } = mount()
+    const background = () =>
+      root.renderer.getElement(element(root, "app-frame").id)?.style.backgroundColor
+    const dark = background()
     click(root, "titlebar-settings")
     expect(root.renderer.findByTestId("settings-dialog")).toBeDefined()
-    // The open dialog's layer is the inspectable tree; its surface follows the theme.
-    const background = () =>
-      root.renderer.findByType("div").find(node => node.style.backgroundColor)?.style
-        .backgroundColor
-    const dark = background()
     click(root, "theme-mode-light")
     expect(saved.mode).toBe("light")
+    root.renderer.nativeSimulateKeystrokes(element(root, "theme-mode-light").id, "escape")
+    root.renderer.flush()
+    expect(root.renderer.findByTestId("settings-dialog")).toBeUndefined()
     expect(background()).not.toBe(dark)
+    click(root, "titlebar-settings")
     click(root, "theme-mode-dark")
     expect(saved.mode).toBe("dark")
+    root.renderer.nativeSimulateKeystrokes(element(root, "theme-mode-dark").id, "escape")
+    root.renderer.flush()
     expect(background()).toBe(dark)
+    expect(root.renderer.findByTestId("home-page")).toBeDefined()
+  })
 
+  test("language switches live and persists through the native settings file", async () => {
+    const configDir = mkdtempSync(path.join(tmpdir(), "zoeydaw-app-language-"))
+    cleanups.push(() => rmSync(configDir, { recursive: true, force: true }))
+    const storage = createSettingStorage("language", { configDir })
+    initAppI18n({ storage })
+    const { root } = mount()
+    click(root, "titlebar-settings")
     click(root, "settings-nav-language")
     click(root, "language-en-US")
     await settle(root)
-    expect(i18next.language).toBe("en-US")
     expect(text(root)).toContain("Settings")
+    expect(storage.get()).toBe("en-US")
     click(root, "language-zh-CN")
     await settle(root)
     expect(text(root)).toContain("设置")
+    expect(createSettingStorage("language", { configDir }).get()).toBe("zh-CN")
   })
 
   test("follow-system stays disabled while no native appearance exists", () => {
