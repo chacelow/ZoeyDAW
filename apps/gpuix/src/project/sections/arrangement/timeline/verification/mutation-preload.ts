@@ -51,6 +51,13 @@ export const mutationCases: Record<string, MutationCase> = {
     from: "          autoFocus\n",
     to: "",
   },
+  "text-focus-lease": {
+    file: "ui/controls/DragPad/DragPadNumber.tsx",
+    testFile: "src/app/project/composition.test.tsx",
+    testName: "DragPad native text focus protects",
+    from: 'useTextFocusBinding(pad.mode === "editing")',
+    to: "useTextFocusBinding(false)",
+  },
   "minimap-pressed": {
     file: "project/sections/arrangement/timeline/minimap/index.tsx",
     testFile: "src/project/sections/arrangement/timeline/minimap/visual-state.test.tsx",

@@ -95,4 +95,6 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，本切�
 
 外部 store/Scene 更新的原生组件测试必须用真实 `flushSync` 提交 React，再 `renderer.flush()` 绘制；单独 native flush 不能证明 UI 已跟随状态变化。永久测试保留音乐位置/时间缩放、事务/历史、epoch、MIDI/B 模式与真实按键传播，性质测试配实际变异检查。
 
-A3b 消费回归复用 `ui/controls/Menu/{interaction,pointer}.test.tsx`、`DragPad/{DragPadNumber,variants}.test.tsx` 与 `platform/keyboard/keyboard-native.test.tsx`。`bun src/project/sections/arrangement/timeline/verification/mutations.ts` 运行内存变异，不写共享源码；每个变异必须实际加载且使行为断言失败。
+A3b 消费回归复用 `ui/controls/Menu/{interaction,pointer}.test.tsx`、`DragPad/{DragPadNumber,variants}.test.tsx`、`platform/keyboard/keyboard-native.test.tsx`；最终文本焦点 lease 由 `app/project/composition.test.tsx` 的真实 DragPad→timeline 组合回归覆盖。`bun src/project/sections/arrangement/timeline/verification/mutations.ts` 运行内存变异，不写共享源码；每个变异必须实际加载且使行为断言失败。
+
+`bun src/project/sections/arrangement/timeline/verification/layout-smoke.tsx` 输出真实原生 toolbar、文字和图标的 bounds。1.5px padding 在 scale=1 的 GPUI pre-layout metric snapping 中按中点向零舍入为 1px，不是 AX 丢精度；不以业务实例补偿改变共享密度 token。
