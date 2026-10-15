@@ -20,14 +20,14 @@ export function PianoKeys({
 }: {
   readonly roll: RollGeometry
   readonly label: string
-  readonly selectPitch: (pitch: number, extend: boolean) => void
+  readonly selectPitch: (pitch: number, extend: boolean, source: "pointer" | "keyboard") => void
 }) {
   const theme = useTheme()
   const environment = useClipEditorEnvironment()
   const sounding = useProjectState(state => state.session.activeMidiNotes)
-  const held = useRef<number | null>(null)
+  const held = useRef<{ pitch: number; source: "pointer" | "keyboard" } | null>(null)
   const release = useCallback(() => {
-    if (held.current !== null) projectActions.noteOff(held.current)
+    if (held.current !== null) projectActions.noteOff(held.current.pitch)
     held.current = null
   }, [])
   useEffect(
@@ -40,10 +40,10 @@ export function PianoKeys({
   useEffect(() => release, [release])
   const { first, end } = visibleRows(roll)
   const keyWidth = theme.project.midiKeyWidth
-  const press = (pitch: number, extend: boolean) => {
+  const press = (pitch: number, extend: boolean, source: "pointer" | "keyboard") => {
     release()
-    held.current = pitch
-    selectPitch(pitch, extend)
+    held.current = { pitch, source }
+    selectPitch(pitch, extend, source)
     projectActions.noteOn(pitch)
   }
   const labelled = roll.pitches.length < 24
@@ -107,19 +107,22 @@ export function PianoKeys({
               if ((event.button ?? 0) !== 0) return
               press(
                 pitch,
-                Boolean(event.modifiers?.shift || event.modifiers?.cmd || event.modifiers?.ctrl)
+                Boolean(event.modifiers?.shift || event.modifiers?.cmd || event.modifiers?.ctrl),
+                "pointer"
               )
             }}
             onMouseMove={event => {
               if (event.pressedButton !== 0) release()
             }}
             onMouseUp={release}
-            onBlur={release}
+            onBlur={() => {
+              if (held.current?.source === "keyboard") release()
+            }}
             onKeyDown={event => {
               if (event.key !== "enter" || event.isHeld) return
               event.preventDefault()
               event.stopPropagation()
-              press(pitch, Boolean(event.modifiers?.shift))
+              press(pitch, Boolean(event.modifiers?.shift), "keyboard")
             }}
             onKeyUp={event => {
               if (event.key === "enter") release()

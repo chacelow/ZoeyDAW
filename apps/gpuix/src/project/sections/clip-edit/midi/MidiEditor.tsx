@@ -248,6 +248,7 @@ export function MidiEditor({
           selection={editor.visibleSelection}
           label={labels.velocityLane}
           color={color}
+          onVelocityChange={editor.changeVelocity}
           onMouseDown={editor.pressVelocity}
           onMouseMove={editor.move}
           onMouseUp={editor.release}

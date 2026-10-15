@@ -56,6 +56,7 @@ const MOVE_KEYS: Readonly<Record<string, readonly [beats: number, pitches: numbe
   up: [0, 1],
   down: [0, -1],
 }
+const DRAG_BLOCKED_COMMANDS: Readonly<Record<string, true>> = { d: true, u: true, x: true, v: true }
 
 function storedNotes(id: string): MidiNote[] {
   for (const track of useProjectState.getState().document.tracks)
@@ -352,6 +353,14 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     const key = event.key ?? ""
     const modifiers = event.modifiers
     const commandKey = Boolean(modifiers?.cmd || modifiers?.ctrl)
+    const mutatesNotes = commandKey
+      ? Object.hasOwn(DRAG_BLOCKED_COMMANDS, key)
+      : key === "delete" || key === "backspace" || Object.hasOwn(MOVE_KEYS, key)
+    if (gesture.current && mutatesNotes && !modifiers?.alt) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
     let handled = false
     if (key === "escape") {
       if (gesture.current) finish(true)
@@ -408,11 +417,22 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       finish(true)
       environment.drawMode.latch(enabled)
     },
-    selectPitch: (pitch: number, extend: boolean) => {
+    selectPitch: (pitch: number, extend: boolean, source: "pointer" | "keyboard") => {
       const indices = selectVisibleNotes(clip.notes, latest.current.window).filter(
         index => clip.notes[index]?.pitch === pitch
       )
       setSelected(extend ? [...new Set([...visibleSelection, ...indices])] : indices)
+      if (source === "pointer" && host.current) renderer?.focusElement?.(host.current.id)
+    },
+    changeVelocity: (index: number, delta: number) => {
+      const note = clip.notes[index]
+      if (!note) return
+      const selection = visibleSelection.includes(index) ? visibleSelection : [index]
+      finish(true)
+      setSelected(selection)
+      projectActions.updateClip(clip.id, {
+        notes: setNoteVelocity(storedNotes(clip.id), selection, note.velocity + delta).notes,
+      })
     },
     /** Applies one velocity to the selection as a single undo entry (numeric control path). */
     velocityGesture: transaction,
