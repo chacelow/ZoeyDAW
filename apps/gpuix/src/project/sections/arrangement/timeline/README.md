@@ -58,6 +58,8 @@ B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨�
 - `rulerTicks`：独立的可读标签层，按真实 `16 / denominator` 换算每拍十六分音符数量。
 - `rulerLabel/adjacentMarker`：由批准的 B1 纯函数提供展示位置与邻近定位点，不在组件内排序或拼位置规则。
 
+网格与音乐标尺的 Pattern 背景统一使用 `useQuadBatch` 命令式上传；网格按主题的粗/细线材质分批，不逐线挂载节点。可见几何仍来自 B1，不将 Float32Array 放入 React props/state。`grid/parity.test.tsx` 用固定的旧 div 绘制 oracle 对照深浅主题、标尺/车道高度、分数滚动与极端缩放的原生 PNG。标尺文字保留原生文本布局，时间刻度的短线与文字仍共用原位置节点；没有为少量文字标签另建绘制系统。
+
 标签间距的 38/56 默认来自 web，可读性配置集中在 `RULER_LABEL_SPACING`。多档 Live 阈值及极端缩小时的明暗合并未对照 Live，不把估计写成实测结论。
 
 ## 键盘 owner
