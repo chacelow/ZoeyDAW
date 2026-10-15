@@ -57,6 +57,9 @@
   --project-arrangement-group-preview-band-max-height: 2px;
   --project-arrangement-group-preview-band-gap: 1px;
   --project-arrangement-fade-handle-size: 5px;
+  --project-titlebar-height: 28px;
+  --project-traffic-light-margin: 8px;
+  --project-traffic-light-inset: 68px;
 }
 
 .project-transport {
