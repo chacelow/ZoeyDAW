@@ -94,13 +94,12 @@ index c5f4fa1..1f14017 100644
  // types instead of a copy that silently drifts from them.
 diff --git a/packages/native/src/quad_batch.rs b/packages/native/src/quad_batch.rs
 new file mode 100644
-index 0000000..fbe7f37
+index 0000000..8320127
 --- /dev/null
 +++ b/packages/native/src/quad_batch.rs
-@@ -0,0 +1,244 @@
+@@ -0,0 +1,243 @@
 +use crate::{retained_tree::RetainedElement, style::StyleDesc};
 +use gpui::prelude::*;
-+use std::sync::Arc;
 +
 +pub(crate) fn validate(values: &[f32]) -> Result<(), String> {
 +    if values.len() % 4 != 0 {
@@ -116,7 +115,7 @@ index 0000000..fbe7f37
 +}
 +
 +pub(crate) fn render(element: &RetainedElement, style: Option<&StyleDesc>) -> gpui::Div {
-+    let values = element.quads().unwrap_or_else(|| Arc::from([]));
++    let values = element.quads();
 +    let color: gpui::Hsla = style
 +        .and_then(|s| s.color.as_deref())
 +        .and_then(crate::color::parse_color_rgba)
@@ -127,7 +126,7 @@ index 0000000..fbe7f37
 +        move |bounds, _, window, _| {
 +            window.with_content_mask(Some(gpui::ContentMask { bounds }), |window| {
 +                window.paint_layer(bounds, |window| {
-+                    for q in values.chunks_exact(4) {
++                    for q in values.as_deref().unwrap_or(&[]).chunks_exact(4) {
 +                        if q[2] == 0.0 || q[3] == 0.0 {
 +                            continue;
 +                        }
@@ -161,7 +160,7 @@ index 0000000..fbe7f37
 +        retained_tree::RetainedTree,
 +        text::SharedSelection,
 +    };
-+    use std::sync::Mutex;
++    use std::sync::{Arc, Mutex};
 +
 +    struct HitboxProbe {
 +        element: gpui::Div,
