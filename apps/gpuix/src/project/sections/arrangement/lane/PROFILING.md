@@ -69,7 +69,7 @@ Native回归 `moves a fully visible Clip without reuploading or remounting its u
 
 production诊断：`NODE_ENV=production LANE_PROFILE_VIEWPORT_HEIGHT=196 bun --preload ./src/project/sections/arrangement/lane/verification/phase-preload.ts src/project/sections/arrangement/lane/verification/render-cost.tsx`。像素诊断使用 `local-content-pixel-preload.ts` 的 `LANE_CONTENT_CAPTURE_DIR`、`LANE_CONTENT_APPEARANCE` 和可选修复前 `LANE_CONTENT_REFERENCE`，然后运行 `compare-local-content-pixels.ts before-directory after-directory`。诊断环境开关不属于产品窗口入口。
 
-本次ignored原始证据位于 `evidence/verification/production-phases-before.json.local`、`production-phases-after.json.local`、`local-content-pixels.json.local`。它们保留每帧时间、输入引用变化、component生命周期、完整host mutation分类和命令回执。正式交付仍须新同协议主干窗口复测以及 `pnpm verify:gpuix`。
+本次ignored原始证据位于 `evidence/verification/production-phases-before.json.local`、`production-phases-after.json.local`、`local-content-pixels.json.local`。它们是本worker实际运行的 `createTestRoot` 离屏诊断，保留每帧时间、输入引用变化、component生命周期、完整host mutation分类和命令回执。它们不是真实满量窗口结果，不作为16ms窗口门槛通过证明。
 
 ## 独立审查处置
 
@@ -78,4 +78,14 @@ production诊断：`NODE_ENV=production LANE_PROFILE_VIEWPORT_HEIGHT=196 bun --p
 | 两个空捕获目录会被像素比较工具误判成功 | 必修 | 增加非空PNG捕获守卫。两个空目录实际退出1并报缺少capturedPNG；原真实深色13帧仍全部字节相同。没有用语法错误或空循环代替失败证明。 |
 | geometry、source/Ghost、memo边界与分段计时口径 | 无新增finding | 独立Spec只读审查通过；Standards除上述工具缺陷外无其他必修或仲裁。Taffy仍null，Native flush不伪称layout。 |
 
-独立审查未执行检查。测试、变异与NativePNG证明由本worker实际运行，完整窗口预算仍待后续验收。
+独立审查未执行检查。测试、变异与NativePNG证明由本worker实际运行。完整窗口16ms预算按协调者收尾决定由其前台串行验收，不把来源不同的证据拼成已通过。
+
+## 真实窗口尝试、输出路径与停帧来源
+
+本worker按绝对UTC授权，用命名 `bun --hot` service、`GPUIX_BACKGROUND=1`、完整200×50与原十步协议尝试复测，但完成轮数为0。第一次在创建窗口前遇到preload注入锚点不唯一，已修为包含 `createAnimationFrameSource(renderer)` 的唯一边界。续次日志确认实际创建窗口、挂载完成、10000 Clip与backend ready，但没有完成标记，runner随后报告输出文件ENOENT。两次service均在finally关闭，规定ps过滤无残留；没有将零轮当作性能结论。
+
+来源必须区分：协调者在2026-10-15 19:16 UTC，于本worktree用相同production、背景模式和preload独立诊断，报告 `window-profile-mounted` 与 `window-profile-await-frame` 均出现、文件已写出，随后停在 `await-initial-native-frame`，viewport为0×0，Native只停留启动时6帧。本worker没有另行复跑确认这些数字。该结果与F3已验证的遮挡/最小化停帧一致：被Edge完全遮挡的背景窗口不交付animation-frame；未遮挡的非活动窗口才继续节流绘制。它不是内容性能失败。
+
+输出路径作为独立工具问题修正：preload现在以实际cwd解析为绝对路径、创建父目录、在创建窗口前写 `preload-ready` 回执，记录canonical output、cwd、pid和deadline，并把同一路径回传给effect。无窗口的路径验证已观察到实际文件与绝对路径一致；脚本摘要首次引号错误记录保留，随后直接检查已成功写出的回执，未重开窗口。证据在 `evidence/verification/window-output-path-proof.txt.local`。缺少、过期UTC授权仍在创建窗口前失败。
+
+按协调者的明确决定，不再申请后台时段，也不绕过遮挡停帧、不主动激活窗口、不使用JS定时器伪造帧。满量真实窗口16ms需要未被遮挡的可见窗口，已移交协调者收尾阶段的前台串行真实桌面验收。这里提交的是可复查runner、真实production离屏分段、根因修复和像素等价证据；真实窗口预算状态仍为待前台验收。
