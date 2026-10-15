@@ -231,10 +231,11 @@
 ## gpuix 迁移：光标锁定（拖动数值）
 
 - 错 1：用 `CGAssociateMouseAndMouseCursorPosition` 做 FPS 式 pointer lock。GPUI 的 `mouseMove` 全部取自 `NSEvent.locationInWindow`（绝对位置，源码 `crates/gpui_macos/src/events.rs`），断开关联会冻结位置，`mouseMove` 停发。
-- 错 2：在越过点击阈值的 `mouseMove` 里才读取光标锚点。此时光标已走过一段，恢复位置落在拖动中途（实测读回 542 而非 568）。锚点必须在 `mouseDown`（位置静止）读取。
+- 错 2：在越过点击阈值的 `mouseMove` 里才读取光标锚点。此时光标已走过一段，恢复位置落在拖动中途（实测读回 542 而非 568）。
+- 错 2b：在 JS 处理 `mouseDown` 时读 OS 当前光标位置当锚点。事件经 ThreadsafeFunction 异步投递，JS 处理前 OS 可能已处理后续 move；合成“按下即移动”实测偏一个 move 步长（`(805,364)` 读成 `(805,354)`）。锚点必须取按下事件自身的 `x/y`（GPUI 由 `locationInWindow` 在事件时刻算出），再经 `windowPointToScreen` 换算成屏幕点。
 - 错 3：`bun:ffi` 读 `CGEventGetLocation`。`CGPoint` 按值返回，`FFIType` 没有 struct，读到垃圾。
 - 错 4：`osascript` 子进程当原生桥，约 54ms/次。
-- 对：Rust（`crates/native/src/cursor.rs`）经 napi 暴露 `cursorPosition/cursorHide/cursorRestore`，进程内约 2µs/次；mouseDown 抓锚点 → 确认拖动后才隐藏 → 松手先 warp 回锚点再显示。`CGWarpMouseCursorPosition` 只落整数点，所以与小数锚点最多差 0.5pt，已四舍五入。
+- 对：Rust 经 napi 暴露 `windowPointToScreen`（`crates/native/src/window_geometry.rs`）与 `cursorHide/cursorRestore`；按下事件坐标换算出锚点 → 确认拖动后才隐藏 → 松手先 warp 回锚点再显示。换算全程用点，不乘 Retina 缩放；以内容区高度翻转（与 GPUI 一致），以主屏高度从 AppKit 翻到 CG 坐标。读 `NSApp` 全局指针而非 `sharedApplication`，避免在 gpuix 启动前造出普通 NSApplication。`cursorPosition` 只用于读回验证。`CGWarpMouseCursorPosition` 只落整数点，所以与小数锚点最多差 0.5pt，已四舍五入。
 - 测试：真实模块会改宿主光标，单元测试必须 mock（`mock.module`），否则每次 `bun test` 都在动开发者的鼠标；整套测试前后光标坐标须一致。
 
 ## gpuix 迁移：gpuix 0.10.0 的原生缺口（临时代码清单，升级后整体删除）

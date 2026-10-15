@@ -60,6 +60,12 @@
   --project-titlebar-height: 28px;
   --project-traffic-light-margin: 8px;
   --project-traffic-light-inset: 68px;
+  --project-midi-key-width: 54px;
+  --project-midi-ruler-height: 34px;
+  --project-midi-velocity-height: 40px;
+  --project-midi-row-max-height: 18px;
+  --project-midi-row-min-height: 6px;
+  --project-audio-ruler-height: 39px;
 }
 
 .project-transport {

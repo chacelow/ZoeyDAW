@@ -58,6 +58,12 @@
     "arrangementFadeHandleSize": 5,
     "titlebarHeight": 28,
     "trafficLightMargin": 8,
-    "trafficLightInset": 68
+    "trafficLightInset": 68,
+    "midiKeyWidth": 54,
+    "midiRulerHeight": 34,
+    "midiVelocityHeight": 40,
+    "midiRowMaxHeight": 18,
+    "midiRowMinHeight": 6,
+    "audioRulerHeight": 39
   }
 }
