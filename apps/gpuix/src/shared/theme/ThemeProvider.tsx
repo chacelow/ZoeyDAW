@@ -33,11 +33,19 @@ function buildTheme(appearance: Appearance): Theme {
 
 export interface ThemeProviderProps {
   children: ReactNode
+  /** Initial appearance when uncontrolled; fixed after mount. */
   defaultAppearance?: Appearance
+  /** Controlled appearance; changing it re-derives the theme without remounting children. */
+  appearance?: Appearance
 }
 
-export function ThemeProvider({ children, defaultAppearance = "dark" }: ThemeProviderProps) {
-  const [appearance] = useState<Appearance>(defaultAppearance)
+export function ThemeProvider({
+  children,
+  defaultAppearance = "dark",
+  appearance: controlled,
+}: ThemeProviderProps) {
+  const [initial] = useState<Appearance>(defaultAppearance)
+  const appearance = controlled ?? initial
   const theme = useMemo(() => buildTheme(appearance), [appearance])
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
 }
