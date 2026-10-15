@@ -44,7 +44,7 @@ export function VelocityLane({
   const [focused, setFocused] = useState(false)
   const activeHost = useRef<PublicInstance | null>(null)
   const height = theme.project.midiVelocityHeight
-  const handle = theme.design.shape.indicatorRadius * 2
+  const handle = theme.project.midiVelocityHandleWidth
   const selected = useMemo(() => new Set(selection), [selection])
   const stems = useMemo(() => {
     const visible = []

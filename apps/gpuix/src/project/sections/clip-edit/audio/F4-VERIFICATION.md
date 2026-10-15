@@ -45,4 +45,6 @@ Space在真实窗口未验证：后台窗口引擎拒绝，离屏同场景通过
 
 ## 语义度量
 
-SourceMarker旗标读取arrangementMarkerWidth，保持6的既有尺寸，不再由spacing×3生成。Velocity handle读取indicatorRadius的双倍直径，保持4的既有尺寸；这是半径到直径的几何推导，不是视觉间距缩放。Pattern圆角与描边已经分别读取toggleRadius和controlBorderWidth。
+SourceMarker旗标读取arrangementMarkerWidth，保持6的既有尺寸，不再由spacing×3生成。Velocity handle最初误用indicatorRadius×2，实际从4变成13px，已纠正为主干777ec9f新增的midiVelocityHandleWidth=4；indicatorRadius不是力度柄token。Pattern圆角与描边已经分别读取toggleRadius和controlBorderWidth。
+
+真实GPU回归 `midi/VelocityLane.test.tsx` 将实际VelocityLane与4×4 native div旧绘制比较，在中心x20、左右部分裁剪x-1/81和完全离屏x-5/85五种状态全部PNG逐字节相等。将handle改回indicatorRadius×2的13px变异实际失败（Expected true / Received false）；恢复midiVelocityHandleWidth后通过。此回归防止未来借用无关token导致力度柄可见尺寸及裁剪改变。
