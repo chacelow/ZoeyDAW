@@ -41,7 +41,6 @@ export interface ClipBase {
 export interface AudioClip extends ClipBase {
   kind: "audio"
   samplePath: string
-  waveformPeaks?: number[]
   gainDb: number
   audioSettings?: AudioClipSettings
   fadeInBars?: number

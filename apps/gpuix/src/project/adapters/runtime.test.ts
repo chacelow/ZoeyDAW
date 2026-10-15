@@ -827,3 +827,64 @@ it("starts independently injected runtime projects without fabricated demo media
   expect(runtime.get().document.tracks.flatMap(track => track.clips)).toEqual([])
   expect(runtime.get().session.backend.phase).toBe("idle")
 })
+
+it.each([
+  { owner: "edit", lifecycle: "release" },
+  { owner: "preview", lifecycle: "release" },
+  { owner: "edit", lifecycle: "replace" },
+  { owner: "preview", lifecycle: "replace" },
+  { owner: "preview", lifecycle: "switch" },
+])(
+  "retains recording across failed $owner recovery at $lifecycle without crossing projects",
+  async ({ owner, lifecycle }) => {
+    const remote = deferredBackend()
+    const store = createStore<ProjectState>(() => ({
+      document: initialDocument(),
+      workspace: initialWorkspace(),
+      session: initialSession(),
+    }))
+    const runtime = createProjectRuntime({ store, backendFactory: () => remote.backend })
+    const release = runtime.startProjectRuntime()
+    if (owner === "edit") {
+      runtime.beginEdit("failed-recording")
+      runtime.document({ ...runtime.get().document, name: "Uncommitted" })
+    } else {
+      const token = runtime.beginPreview()
+      runtime.previewMarkers(token, [{ id: "preview", label: "Temporary", bar: 2 }])
+    }
+    runtime.recordDocument(document => ({
+      ...document,
+      markers: [...document.markers, { id: "recorded", label: "Recorded", bar: 4 }],
+    }))
+    remote.settle("rejected")
+    await Promise.resolve()
+    expect(remote.requests.at(-1)?.stage).toBe("recover")
+    remote.settle("rejected")
+    await Promise.resolve()
+    expect(await runtime.whenProjectBackendIdle()).toBe(false)
+    expect(runtime.get().document.markers).toEqual([])
+    if (lifecycle === "switch") {
+      runtime.resetProject("another-project")
+      expect(runtime.get().document.markers).toEqual([])
+      release()
+      expect(runtime.get().document.markers).toEqual([])
+      return
+    }
+    if (lifecycle === "release") {
+      release()
+      expect(runtime.get().document.markers.map(marker => marker.id)).toEqual(["recorded"])
+    }
+    const replace = runtime.configureProjectBackend(() => createMockProjectBackend())
+    const reopened = lifecycle === "release" ? runtime.startProjectRuntime() : release
+    expect(runtime.get().document.markers.map(marker => marker.id)).toEqual(["recorded"])
+    expect(runtime.get().document.name).not.toBe("Uncommitted")
+    runtime.undo()
+    expect(runtime.get().document.markers).toEqual([])
+    runtime.redo()
+    expect(runtime.get().document.markers.map(marker => marker.id)).toEqual(["recorded"])
+    runtime.resetProject("another-project")
+    expect(runtime.get().document.markers).toEqual([])
+    reopened()
+    replace()
+  }
+)

@@ -248,10 +248,6 @@ describe("versioned persistence", () => {
     expect(state.session.position.bar).toBe(1)
     expect(state.session.canUndo).toBe(false)
     expect(state.session.automationParameters).toEqual({})
-    const restoredAudio = state.document.tracks
-      .find(track => track.id === "3-audio")
-      ?.clips.find(clip => clip.id === "audio-1")
-    expect(restoredAudio?.kind === "audio" && restoredAudio.waveformPeaks?.length).toBe(64)
   })
 
   it("rejects invalid snapshots without mutating project or undo history", () => {

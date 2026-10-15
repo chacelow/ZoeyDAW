@@ -83,10 +83,7 @@ export function isClip(v: unknown): v is Clip {
       inOffset + fadeIn <= v.lengthBars &&
       outOffset + fadeOut <= v.lengthBars &&
       inOffset + fadeIn + outOffset + fadeOut <=
-        v.lengthBars + Number.EPSILON * Math.max(1, v.lengthBars) &&
-      (v.waveformPeaks === undefined ||
-        (Array.isArray(v.waveformPeaks) &&
-          v.waveformPeaks.every(peak => number(peak) && peak >= 0 && peak <= 1)))
+        v.lengthBars + Number.EPSILON * Math.max(1, v.lengthBars)
     )
   }
   return v.kind === "pattern"

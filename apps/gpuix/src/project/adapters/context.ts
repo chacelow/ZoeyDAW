@@ -25,6 +25,7 @@ export const {
   markProjectSaved,
   canSaveProject,
   getCommittedDocument,
+  getCommittedWorkspace,
   readRecordingBar,
   session,
   document,

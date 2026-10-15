@@ -5,7 +5,6 @@ import { initialDocument } from "../../stores/slices/document"
 import { initialWorkspace } from "../../stores/slices/workspace"
 import { projectBackendDocument } from "../backend/projection"
 import { createBackendConnection } from "../backend/connection"
-import { withWaveformPreview } from "../visuals"
 import { routeTrack } from "./track-routing"
 import { sameWorkspacePreferences } from "./workspace-preferences"
 import { getEffectiveDocument as projectEffectiveDocument } from "./effective-document"
@@ -310,12 +309,14 @@ export function createProjectRuntime({
       throw new ProjectBackendNotConfiguredError()
     }
     const isReopening = connection !== null
+    isRuntimeDisposed = true
     if (activeEdit) {
       cancelEdit(activeEdit.token)
     }
     if (activePreview) {
       cancelPreview(activePreview)
     }
+    flushRecording()
     sessionCounter++
     stopConnection?.()
     isRuntimeDisposed = false
@@ -382,6 +383,7 @@ export function createProjectRuntime({
     next: ProjectBackendFactory,
     options: ProjectBackendOptions = {}
   ): () => void {
+    isRuntimeDisposed = true
     if (activeEdit) {
       cancelEdit(activeEdit.token)
     }
@@ -408,6 +410,7 @@ export function createProjectRuntime({
       if (!active) {
         return
       }
+      isRuntimeDisposed = true
       if (activeEdit) {
         cancelEdit(activeEdit.token)
       }
@@ -426,18 +429,19 @@ export function createProjectRuntime({
     }
   }
   function closeBackend(): void {
+    isRuntimeDisposed = true
     if (activeEdit) {
       cancelEdit(activeEdit.token)
     }
     if (activePreview) {
       cancelPreview(activePreview)
     }
+    flushRecording()
     sessionCounter++
     stopConnection?.()
     stopConnection = null
     connection?.dispose()
     connection = null
-    isRuntimeDisposed = true
     isBackendRecovered = false
     acceptedControl = { ...acceptedControl, playing: false, recording: false, heldNotes: [] }
     checkpoints.clear()
@@ -530,6 +534,17 @@ export function createProjectRuntime({
   }
   function getCommittedDocument(): DocumentState {
     return editStart?.document ?? get().document
+  }
+  function getCommittedWorkspace(): WorkspaceState {
+    const current = get().workspace
+    return editStart
+      ? {
+          ...editStart.workspace,
+          pxPerBar: current.pxPerBar,
+          scrollX: current.scrollX,
+          scrollY: current.scrollY,
+        }
+      : current
   }
   function readRecordingBar(): number | null {
     const state = get()
@@ -792,25 +807,7 @@ export function createProjectRuntime({
     if (!isActive(token)) {
       return null
     }
-    const source = get().document.tracks
-    const projected = next.map(track => {
-      const original = source.find(item => item.id === track.id)
-      return {
-        ...track,
-        clips: track.clips.map(clip => {
-          if (clip.kind !== "audio") {
-            return clip
-          }
-          const prior = original?.clips.find(item => item.id === clip.id)
-          return prior?.kind === "audio" &&
-            prior.samplePath === clip.samplePath &&
-            prior.sourceOffsetBars === clip.sourceOffsetBars &&
-            prior.lengthBars === clip.lengthBars
-            ? clip
-            : withWaveformPreview(clip)
-        }),
-      }
-    })
+    const projected = [...next]
     setPreview(token, { kind: "tracks", token, tracks: projected })
     return projected
   }
@@ -917,6 +914,7 @@ export function createProjectRuntime({
     markProjectSaved,
     canSaveProject,
     getCommittedDocument,
+    getCommittedWorkspace,
     readRecordingBar,
     session,
     document,

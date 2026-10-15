@@ -221,7 +221,7 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
       request.state.control.seekGeneration !== acceptedState?.control.seekGeneration ||
       request.state.control.playing !== acceptedState?.control.playing
     ) {
-      controlSequence = request.sequence
+      controlSequence = Math.max(controlSequence, request.sequence)
     }
     status()
     try {

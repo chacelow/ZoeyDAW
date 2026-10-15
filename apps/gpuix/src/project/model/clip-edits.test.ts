@@ -227,7 +227,6 @@ describe("pure clip edit projections", () => {
     const moved = { ...original, startBar: 10, fadeInBars: 9, fadeOutBars: 9 }
     const extended = projectClipResize(moved, "left", 8)
     expect(extended).toMatchObject({ startBar: 8, lengthBars: 18, sourceOffsetBars: -2 })
-    expect(extended).toHaveProperty("waveformPeaks", moved.waveformPeaks)
     expect(projectClipResize(extended, "right", 9)).toMatchObject({
       lengthBars: 1,
       fadeInBars: 1,
