@@ -88,4 +88,6 @@ production诊断：`NODE_ENV=production LANE_PROFILE_VIEWPORT_HEIGHT=196 bun --p
 
 输出路径作为独立工具问题修正：preload现在以实际cwd解析为绝对路径、创建父目录、在创建窗口前写 `preload-ready` 回执，记录canonical output、cwd、pid和deadline，并把同一路径回传给effect。无窗口的路径验证已观察到实际文件与绝对路径一致；脚本摘要首次引号错误记录保留，随后直接检查已成功写出的回执，未重开窗口。证据在 `evidence/verification/window-output-path-proof.txt.local`。缺少、过期UTC授权仍在创建窗口前失败。
 
+`window-profile-preload.test.ts` 在无Native窗口的子进程中验证相对输出路径、创建父目录和入口前回执；物理cwd通过realpath统一，避免macOS的 `/var` 与 `/private/var` 别名误判。缺少或过期授权时断言子进程失败、入口未执行、输出文件未写出。两条测试2pass、12assertions，替代仅静态检查路径的弱证明，也让runner源变更有可失败的行为回归。
+
 按协调者的明确决定，不再申请后台时段，也不绕过遮挡停帧、不主动激活窗口、不使用JS定时器伪造帧。满量真实窗口16ms需要未被遮挡的可见窗口，已移交协调者收尾阶段的前台串行真实桌面验收。这里提交的是可复查runner、真实production离屏分段、根因修复和像素等价证据；真实窗口预算状态仍为待前台验收。
