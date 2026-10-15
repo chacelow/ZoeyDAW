@@ -22,4 +22,4 @@
 
 ## 最终关闭
 
-产品 HEAD `ee47dbe` 的最终扫描为 8 source、5 test，0 HARD、0 WARN。独立 reviewer 对 `d57b07b..ee47dbe` 及最终证据增量复核后，Standards 通过、Spec 通过，剩余真实缺陷 0；原两项证据缺口关闭。最新完整 Bun 为 1067 pass、1 todo、0 fail；F4b 四类 oracle 已在最终 vendor 293 tests 中实际通过，quad 模块单独 6 pass。没有把主代理门禁冒称为 reviewer 独立复跑。
+最终交付提交扫描为 8 source、6 test，0 HARD、0 WARN。产品 HEAD 为 `ee47dbe`；独立 reviewer 对 `d57b07b..ee47dbe` 及最终证据增量复核后，Standards 通过、Spec 通过，剩余真实缺陷 0，原两项证据缺口关闭。最新完整 Bun 为 1067 pass、1 todo、0 fail；F4b 四类 oracle 已在最终 vendor 293 tests 中实际通过，quad 模块单独 6 pass。没有把主代理门禁冒称为 reviewer 独立复跑。

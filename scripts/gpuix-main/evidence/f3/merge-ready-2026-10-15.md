@@ -99,4 +99,4 @@
 ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 ```
 
-最终已提交产品扫描为 8 source、5 test、0 HARD、0 WARN。独立只读 reviewer 最终确认 Standards 与 Spec 均通过，必修、汇报仲裁、记录类剩余缺陷均为 0。
+最终已提交扫描为 8 source、6 test、0 HARD、0 WARN。独立只读 reviewer 最终确认 Standards 与 Spec 均通过，必修、汇报仲裁、记录类剩余缺陷均为 0。

@@ -23,6 +23,6 @@
   "typescript": { "application": "passed", "verification": "passed" },
   "relatedBun": { "pass": 69, "fail": 0, "assertions": 54940, "files": 14 },
   "fullBun": { "pass": 1067, "todo": 1, "fail": 0, "assertions": 1103212, "files": 170 },
-  "reviewScan": { "sourceFiles": 8, "testFiles": 5, "hard": 0, "warn": 0 },
+  "reviewScan": { "sourceFiles": 8, "testFiles": 6, "hard": 0, "warn": 0 },
   "independentReview": { "standards": "passed", "spec": "passed", "remainingFindings": 0 }
 }
