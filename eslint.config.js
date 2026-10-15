@@ -250,5 +250,19 @@ export default [
       ],
     },
   },
+  {
+    // These two shared controls take role from the caller (a composite widget such as the Browser
+    // tree gives its rows one Tab entry). Elements without a role are still checked.
+    files: [
+      "apps/gpuix/src/ui/controls/Button/index.tsx",
+      "apps/gpuix/src/ui/controls/DragPreviewArea/index.tsx",
+    ],
+    rules: {
+      "jsx-a11y/no-static-element-interactions": [
+        "error",
+        { handlers: ["onClick"], allowExpressionValues: true },
+      ],
+    },
+  },
   vendoredProfile([...core, ...react]),
 ]
