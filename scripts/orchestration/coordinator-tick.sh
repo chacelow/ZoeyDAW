@@ -16,8 +16,11 @@ STAMP="$HOME/Library/Caches/zoeydaw-tick"
 mkdir -p "$STAMP"
 ts() { date -u +%FT%TZ; }
 
+git_probe=$(cd /Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration && git rev-parse --git-dir 2>&1)
+git_access=$(head -c 40 /Volumes/PSSD/code/zoeydaw/.git/worktrees/gpuix-migration/HEAD 2>&1; printf ' commondir='; cat /Volumes/PSSD/code/zoeydaw/.git/worktrees/gpuix-migration/commondir 2>&1; printf ' common='; head -c 40 /Volumes/PSSD/code/zoeydaw/.git/HEAD 2>&1)
 report=$("$DIR/health-check.sh" 2>&1)
 echo "$(ts) ---" >> "$LOG"
+echo "$(ts) launchd uid=$(id -u) home=$HOME path=$PATH git=${git_probe//$'\n'/ } gitdir=${git_access//$'\n'/ }" >> "$LOG"
 printf "%s\n" "$report" >> "$LOG"
 
 printf "%s\n" "$report" | grep -E "^(IDLE|STALE|ERROR) " | while read -r flag id wt _rest; do
