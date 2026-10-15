@@ -1,0 +1,56 @@
+B2 app-shell phase 1, 2026-10-15
+
+pnpm native:build
+  PASS after merging H1. No Rust sources authored by this slice.
+
+pnpm exec tsc --noEmit -p apps/gpuix
+pnpm exec tsc --noEmit -p packages/i18n
+pnpm --filter @zoeydaw/web typecheck
+  PASS, zero TypeScript errors.
+
+(cd apps/gpuix && bun test src/app)
+  36 pass / 0 fail, 5 files.
+(cd apps/gpuix && bun test src/app --randomize --seed 7)
+(cd apps/gpuix && bun test src/app --randomize --seed 99)
+  Both: 36 pass / 0 fail.
+(cd apps/gpuix && bun test src/platform/external)
+  1 pass / 0 fail.
+(cd packages/i18n && bun test --randomize --seed 7)
+(cd packages/i18n && bun test --randomize --seed 99)
+  Both: 3 pass / 0 fail.
+
+(cd apps/gpuix && bun test)
+  862 pass / 1 todo / 1 fail.
+  Ran 864 tests across 127 files, 16.58s.
+  Sole failure: secondary click on an interactive title opens its track context menu.
+  Baseline failure reproduced on gpuix-migration separately.
+  Owners: F2 native context-menu port and A3b integration.
+  Coordinator explicitly approved phase-1 merge_ready with this baseline exception.
+  Do not describe the full suite as green.
+
+pnpm exec eslint apps/gpuix/src/app apps/gpuix/src/main.tsx apps/gpuix/src/platform/external
+  PASS, 0 errors and 0 warnings.
+
+cargo check --workspace && cargo test --workspace
+  PASS, 49 tests across 4 suites, 0 failures.
+
+bun apps/gpuix/src/app/verification/mutations.mjs
+  13 mutations caught; originals restored.
+  Failed counts: 3, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1.
+
+node scripts/gpuix-review-scan.mjs
+  30 source files, 7 test files scanned versus gpuix-migration.
+  0 HARD / 1 WARN.
+  WARN: main.tsx window width 1280 and height 800, from src-tauri/tauri.conf.json.
+  Coordinator approved composition-root metrics access and these initial window dimensions.
+
+node scripts/gpuix-main/check.mjs --resolution
+  PASS. One native renderer and one vendor React for app/renderer/reconciler/Zustand.
+  Ordered patches include window-appearance-close.patch.
+
+ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo" | grep -v grep
+  No output, exit status 1 (no matching processes).
+  Every service started by this slice was stopped immediately after evidence collection.
+  Last service: b2-shell-scroll, pid 76003, stopped 04:05:04 UTC, exit 143 from explicit kill.
+
+No push. No user Live inputs. No user-owned application stopped.

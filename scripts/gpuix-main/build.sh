@@ -47,8 +47,10 @@ git -C "$vendor" submodule update --init --depth 1
 # Only extend a checkout that exactly matches a reviewed prefix of the series.
 pending_patches="$(node "$script_dir/check.mjs" --pending "$vendor")"
 readonly pending_patches
+# --intent-to-add records files a patch creates, so the next build's untracked-source guard
+# does not mistake them for stray edits (context-menu.patch adds context_menu.rs).
 while IFS= read -r patch; do
-  [ -z "$patch" ] || git -C "$vendor" apply "$script_dir/patches/$patch"
+  [ -z "$patch" ] || git -C "$vendor" apply --intent-to-add "$script_dir/patches/$patch"
 done <<< "$pending_patches"
 node "$script_dir/check.mjs" --sources "$vendor"
 [ -z "$(git -C "$vendor/zed" status --porcelain)" ] || {
@@ -72,4 +74,7 @@ if [ -e "$root/.gpuix-main" ] && [ ! -L "$root/.gpuix-main" ]; then
   echo "Refusing to replace a non-symlink .gpuix-main" >&2; exit 1
 fi
 ln -sfn "$vendor" "$root/.gpuix-main"
+# The renderer regression tests under scripts/gpuix-main resolve react and @gpuix/* through the
+# app's dependency tree; node_modules is gitignored, so recreate the link on every build.
+ln -sfn ../../../apps/gpuix/node_modules "$script_dir/context-menu/node_modules"
 node "$script_dir/check.mjs" --record

@@ -1,0 +1,6 @@
+gpuix self-build prerequisite failed: Renderer outputs or patch changed since the recorded build
+Run bash scripts/gpuix-main/build.sh before pnpm install --frozen-lockfile.
+Do not install the npm renderer as a fallback; see docs/research/gpuix-main-build.md.
+
+
+Command exited with code 1

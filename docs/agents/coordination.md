@@ -36,6 +36,8 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **派发**:`scripts/orchestration/start-worker.sh <worktree> <标题> <规格文件...>`。它把新 worktree 的 Orca 父级固定为 gpuix-migration,保证所有切片挂在同一棵树下。规格 = `common.md` +(B2 切片再加 `b2-common.md`)+ 本切片规格。
 
+**worker 模型固定为 `cursor-claude/cx/gpt-6.1-sol`(2026-10-15 用户要求)**:派发时手动指定,不依赖全局 omp 默认模型(其他会话可能改它)。Orca 拒绝 `worker-start --agent omp --model`,所以脚本先建 worktree,再开一个运行 `omp --model …` 的终端,最后用 `worker-start --terminal` 交付规格。不要直接调用 `worker-start --agent omp`;临时起的 Orca 工作区 agent 同样用 `omp --model cursor-claude/cx/gpt-6.1-sol` 启动。
+
 **回答问题**:worker 的 `question` 一律用 `orca orchestration reply --id`;`send` 用于通知。
 
 **合并前复核**:不信报告,自己在临时 worktree 里与主干合并后跑 tsc、bun test、eslint、`gpuix-review-scan`,做关键变异,比对失败名单与主干基线。改动了补丁序列的,先重建共享 vendor 再看结果。合入后释放 worker 终端、删除已合入的 worktree、确认没有残留进程。
@@ -48,7 +50,13 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **桌面时段**:真实窗口输入一次只给一个 worker,用 reply 给出 UTC 起止时间,同时通知其余 worker 暂停输入;到点就停,发「桌面释放」。
 
-**巡检**:launchd 每 10 分钟运行 `scripts/orchestration/coordinator-tick.sh`。会话最后一条消息超过 10 分钟(STALE)或以报错结束(ERROR)的 worker 会被自动唤醒;协调者空闲时收到一次巡检提示。
+**巡检**:launchd 每 5 分钟运行 `scripts/orchestration/coordinator-tick.sh`,检查所有派发未关闭的 worker(包括终端状态为 retained 的空闲 worker)。三种情况会被自动唤醒,同一个 worker 每 10 分钟最多唤醒一次:
+
+- IDLE:回合已结束(TUI 空闲)超过 3 分钟,但派发没关。worker 在这个状态下无法主动上报,唤醒提示会要求它继续做,或者用 `ask` 发出等待原因。
+- STALE:会话 10 分钟没有新消息。
+- ERROR:最后一条消息是模型报错,比如流超时。
+
+协调者空闲时也会收到一次巡检提示。worker 端的规则是不允许静默停下,写在 `specs/common.md`。
 
 ## 文件
 

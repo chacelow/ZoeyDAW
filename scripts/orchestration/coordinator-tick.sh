@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# launchd tick (every 10 min).
-# 1. Runs health-check.sh; any worker whose session's last message is older than 10 min (STALE)
-#    or ended on an assistant error (ERROR) gets a resume prompt typed into its terminal,
-#    at most once per 20 min per worker.
+# launchd tick (every 5 min).
+# 1. Runs health-check.sh. A worker gets a prompt typed into its terminal (at most once per
+#    10 min per worker) when it is:
+#    - IDLE: its turn ended (TUI idle) but the dispatch is still open. The worker cannot report
+#      from that state, so the prompt makes it report to the coordinator through Orca.
+#    - STALE: no session message for 10 min; ERROR: last message is an assistant error.
 # 2. Types a patrol prompt into the coordinator terminal when it is idle.
 set -u
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
 DIR=/Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration/scripts/orchestration
-COORD="term_0fd151fe-e7bc-4de5-bb1a-476fa321d21d"
+COORD="term_bc4c1300-5ad5-4ed7-8061-dd26e6dcbc71"
 LOG="$HOME/Library/Logs/zoeydaw-coordinator-tick.log"
 STAMP="$HOME/Library/Caches/zoeydaw-tick"
 mkdir -p "$STAMP"
@@ -17,21 +19,25 @@ report=$("$DIR/health-check.sh" 2>&1)
 echo "$(ts) ---" >> "$LOG"
 printf "%s\n" "$report" >> "$LOG"
 
-printf "%s\n" "$report" | grep -E "^(STALE|ERROR) " | while read -r flag id wt _rest; do
+printf "%s\n" "$report" | grep -E "^(IDLE|STALE|ERROR) " | while read -r flag id wt _rest; do
   handle=$(printf "%s\n" "$_rest" | grep -oE "term_[0-9a-f-]+" | tail -1)
   [ -n "$handle" ] || continue
   last="$STAMP/$id"
-  if [ -f "$last" ] && [ $(( $(date +%s) - $(stat -f %m "$last") )) -lt 1200 ]; then
-    echo "$(ts) $id $flag nudge suppressed (<20m)" >> "$LOG"; continue
+  if [ -f "$last" ] && [ $(( $(date +%s) - $(stat -f %m "$last") )) -lt 600 ]; then
+    echo "$(ts) $id $flag nudge suppressed (<10m)" >> "$LOG"; continue
   fi
-  orca terminal send --terminal "$handle" --enter --text "[协调者巡检] 你的会话已 ${flag} (超过 10 分钟没有新消息,或最后一条是错误)。如果在等协调者答复,用 orchestration ask 重发问题;否则从上一个 TODO 继续,遇到模型流超时直接重试。" >> "$LOG" 2>&1
+  case "$flag" in
+    IDLE) text="[协调者巡检] 你的回合已结束,但派发仍未关闭,协调者收不到你的状态。现在二选一并立即执行:① 还有能独立推进的 TODO → 直接继续做;② 在等协调者/其它切片/桌面时段 → 用 orca orchestration ask 发出具体问题或申请(ask 会阻塞到协调者 reply,不要只在终端里写)。已完成 → 发 merge_ready 或 worker_done。不要停在没有发出消息的状态。" ;;
+    *) text="[协调者巡检] 你的会话已 ${flag} (超过 10 分钟没有新消息,或最后一条是错误)。遇到模型流超时直接重试并从上一个 TODO 继续;在等协调者就用 orca orchestration ask 重发问题。" ;;
+  esac
+  orca terminal send --terminal "$handle" --enter --text "$text" >> "$LOG" 2>&1
   touch "$last"
   echo "$(ts) $id $flag nudged $handle" >> "$LOG"
 done
 
 if orca terminal wait --terminal "$COORD" --for tui-idle --timeout-ms 1000 >/dev/null 2>&1; then
-  summary=$(printf "%s\n" "$report" | grep -cE "^(STALE|ERROR) ")
-  orca terminal send --terminal "$COORD" --enter --text "[定时巡检] 有 ${summary} 个 worker 为 STALE/ERROR(已自动唤醒)。运行 scripts/orchestration/health-check.sh 复核;清理已合入的 worktree、已结束的终端与超时 demo 进程;处理积压的 orchestration 消息后继续监听。" >> "$LOG" 2>&1
+  summary=$(printf "%s\n" "$report" | grep -cE "^(IDLE|STALE|ERROR) ")
+  orca terminal send --terminal "$COORD" --enter --text "[定时巡检] 有 ${summary} 个 worker 为 IDLE/STALE/ERROR(已自动唤醒)。运行 scripts/orchestration/health-check.sh 复核;清理已合入的 worktree、已结束的终端与超时 demo 进程;处理积压的 orchestration 消息后继续监听。" >> "$LOG" 2>&1
   echo "$(ts) coordinator pinged" >> "$LOG"
 else
   echo "$(ts) coordinator busy, ping skipped" >> "$LOG"
