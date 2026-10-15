@@ -80,6 +80,9 @@ for (const file of source) {
     add("skipped-test", file, "skipped/only test: delete or fix")
   if (/expect\([^)]*\)\.toBeTruthy\(\)\s*$/m.test(text) && /\.test\.(ts|tsx)$/.test(file))
     add("weak-assertion", file, "toBeTruthy-only assertion: assert the behaviour")
+  // 0.10 compatibility shims double-compensate on the pinned main renderer; only ui/controls may still hold them until A3b deletes them.
+  if (!file.includes("/ui/controls/") && /\b(readOuterBounds|useFloatingCenterOffset)\b/.test(text))
+    add("legacy-bounds-shim", file, "0.10 bounds shim: use renderer.getElementBounds / onLayout")
 }
 
 // Everything eslint already knows (layers, DOM globals, @/ alias, no hand-written SVG) comes from eslint, not from regexes here.
@@ -122,6 +125,7 @@ const hard = new Set([
   "skipped-test",
   "no-tests",
   "any",
+  "legacy-bounds-shim",
 ])
 for (const f of findings)
   console.log(`${hard.has(f.kind) ? "HARD" : "WARN"}  ${f.kind.padEnd(22)} ${f.file}  ${f.detail}`)
