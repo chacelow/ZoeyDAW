@@ -315,4 +315,11 @@
 - 因：Float32Array 不是 Array，不走 `JSON.stringify` 的快路径，而是落到逐键枚举的默认分支；几千个峰值一帧就是几毫秒到十几毫秒。
 - 见：`apps/gpuix/src/shared/waveform/PeakColumns.tsx`、2026-10-15 clip-editors Audio 剖析。
 
+## gpuix 迁移：后台窗口被遮挡时不出帧，不能拿来做帧相关的测量
+
+- 错：用 `GPUIX_BACKGROUND=1` 打开的真实窗口做满量性能复测，以为只是「不抢焦点」；lane 两次申请时段都 0 轮，profiler 一直停在 `await-initial-native-frame`，viewport 0×0。
+- 对：后台窗口开在前台应用后面，属于被遮挡状态。F3 实测过，macOS 会停发被遮挡或最小化窗口的 animation frame，未遮挡的非活动窗口约 22Hz。所以后台窗口只适合不依赖帧推进的检查（AX 只读、启动、资源清理）。性能、首帧、截图类验收要么用离屏 `createTestRoot`（标明来源），要么在真实桌面让窗口可见后串行进行。
+- 因：同一个原因还解释了后台窗口截图全黑。这两类失败都不是代码缺陷，重复申请时段或重试只会浪费时间。
+- 见：`docs/agents/setup.md`「后台启动」、F3 报告（`scripts/gpuix-main/patches/resume-frame.patch`）。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
