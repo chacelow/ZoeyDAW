@@ -4,6 +4,8 @@
 
 已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
 
+最终共享工程 Card 调用切换为 `7c70de7`。HomePage 只保留布局 width，所有行为与完整验收通过，未新增图片提交。
+
 独立 review 的只读输入修复为 `7381d81`，按活动需求订阅帧为 `f5e0a4f`。两个提交的 hook 均通过。
 
 ## 实现与 owner
@@ -51,7 +53,7 @@
 | root resume 真实离屏 smoke | 实际 AppShell、NativeBackend 与离屏 GPUI。native bar=20.066934020833333，恢复前 scroll=0，pre-present retained 与 workspace 均为 905.0813746453334，实际 frames=11，卸载后 idle；只手动投递 resume host 事件，不宣称真实桌面恢复证据 |
 | 最终 Home/Card/native 生命周期 smoke | 真实最近工程 Card 实测 width304、左右 inset12、gap4；原生 Enter 重开同一 project ID，返回首页后旧 backend 为 idle，再打开真实 native playback 后恢复首 present；最后卸载 idle，见 `final-native-smoke.txt` |
 | `node scripts/gpuix-main/check.mjs --resolution` | F4c 同步后十一补丁与 app 的 native/React 解析验证通过，见 `renderer-resolution.txt` |
-| `gpuix-review-scan` | 当前集成分支扫描 30 source、7 tests，0 hard、4 warn，见 `review-scan.txt` |
+| `gpuix-review-scan` | 最终提交后扫描 31 source、7 tests，0 hard、4 warn，见 `review-scan.txt` |
 
 第一轮完整 UI 组合用默认 5 秒期限，部分测试在本机负载下超时。协调者批准最终命令使用 `--timeout 30000`，没有更改行为断言，也不把期限加长称为性能修复。单独 Cmd+F 行为检查实测通过，3.78 秒。
 
