@@ -94,10 +94,10 @@ index c5f4fa1..1f14017 100644
  // types instead of a copy that silently drifts from them.
 diff --git a/packages/native/src/quad_batch.rs b/packages/native/src/quad_batch.rs
 new file mode 100644
-index 0000000..8320127
+index 0000000..3a40a71
 --- /dev/null
 +++ b/packages/native/src/quad_batch.rs
-@@ -0,0 +1,243 @@
+@@ -0,0 +1,242 @@
 +use crate::{retained_tree::RetainedElement, style::StyleDesc};
 +use gpui::prelude::*;
 +
@@ -154,7 +154,6 @@ index 0000000..8320127
 +
 +#[cfg(test)]
 +mod tests {
-+    use super::*;
 +    use crate::{
 +        renderer::{apply_batch_to_tree, GpuixView},
 +        retained_tree::RetainedTree,
