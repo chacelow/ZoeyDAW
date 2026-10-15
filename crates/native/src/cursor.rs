@@ -5,7 +5,8 @@
 //! 只做"隐藏 + 记录锚点 + 松手 warp 回锚点再显示",真实光标不可见地继续移动,
 //! gpuix 照常通过 pointer capture 收到 move/up。
 //!
-//! 锚点必须在 mouseDown 抓取(此刻位置静止),不能延后到越过拖动阈值的 mouseMove。
+//! 锚点取 mouseDown 事件自身携带的窗口坐标,经 `windowPointToScreen` 换算;不在 JS 处理
+//! mouseDown 时读当前位置——那时 OS 可能已处理过后续 move。`cursorPosition` 只用于读回验证。
 //!
 //! 精度:真实鼠标坐标是小数(高分辨率输入),而 warp 只落整数点,因此恢复位置与
 //! 锚点最多相差 0.5pt。这是系统接口的下限,不是实现偏差。
@@ -62,7 +63,7 @@ pub fn cursor_position() -> Option<ScreenPoint> {
     platform::position()
 }
 
-/// 隐藏 OS 光标。确认进入拖动后调用;锚点应已在 mouseDown 由 `cursorPosition` 取得。
+/// 隐藏 OS 光标。确认进入拖动后调用;锚点应已在 mouseDown 由 `windowPointToScreen` 取得。
 #[napi]
 pub fn cursor_hide() -> bool {
     platform::hide()
