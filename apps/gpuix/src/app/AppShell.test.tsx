@@ -14,6 +14,7 @@ import {
   useProjectState,
 } from "@/project/adapters"
 import { createMockProjectBackend } from "@/project/adapters/backend/mock"
+import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { AppShell } from "./AppShell"
 import { initAppI18n } from "./i18n"
 import { emptyProjectSlots } from "./project/empty-slots"
@@ -43,17 +44,22 @@ afterEach(async () => {
 function countSessions() {
   const sessions = { opened: 0, disposed: 0 }
   cleanups.push(
-    configureProjectBackend(() => {
-      sessions.opened++
-      const backend = createMockProjectBackend()
-      return {
-        ...backend,
-        dispose: () => {
-          sessions.disposed++
-          backend.dispose()
-        },
+    configureProjectBackend(
+      () => {
+        sessions.opened++
+        const backend = createMockProjectBackend()
+        return {
+          ...backend,
+          dispose: () => {
+            sessions.disposed++
+            backend.dispose()
+          },
+        }
+      },
+      {
+        createProject: () => ({ document: createMockDocument(), workspace: createMockWorkspace() }),
       }
-    })
+    )
   )
   return sessions
 }
@@ -102,6 +108,15 @@ function mount(overrides: Partial<AppShellProps> = {}, wrap = (node: ReactNode) 
 function act(root: TestRoot, change: () => void) {
   flushSync(change)
   root.renderer.flush()
+}
+
+/** Panel geometry follows onLayout, which arrives after paint (same settle as ui/panels tests). */
+async function layout(root: TestRoot) {
+  for (let pass = 0; pass < 4; pass++) {
+    await Bun.sleep(40)
+    root.renderer.flush()
+    root.renderer.dispatchNativeEvents()
+  }
 }
 
 /** Lets queued microtasks (dialog open after the native veto, async choices) commit. */
@@ -334,5 +349,63 @@ describe("keyboard", () => {
     root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "enter")
     expect(root.renderer.findByTestId("settings-dialog")).toBeDefined()
     projectActions.stop()
+  })
+})
+
+describe("project layout state", () => {
+  function clipId() {
+    const clip = useProjectState.getState().document.tracks.flatMap(track => track.clips)[0]
+    if (!clip) throw new Error("fixture project has no clip")
+    return clip.id
+  }
+
+  test("a resized Browser keeps its width when the footer switches to Clip Edit and back", async () => {
+    countSessions()
+    const { root } = mount({ router: createRouter("/project/layout") })
+    const browserWidth = () =>
+      root.renderer.getElementBounds(element(root, "browser-panel").id)?.width ?? 0
+    await layout(root)
+    const initial = browserWidth()
+    root.renderer.nativeSimulateKeystrokes(element(root, "browser-divider").id, "shift-right")
+    await layout(root)
+    const resized = browserWidth()
+    expect(resized).toBeGreaterThan(initial)
+    act(root, () => projectActions.setEditingClip(clipId()))
+    await layout(root)
+    expect(root.renderer.findByTestId("clip-panel")).toBeDefined()
+    expect(browserWidth()).toBe(resized)
+    act(root, () => projectActions.setEditingClip(null))
+    await layout(root)
+    expect(browserWidth()).toBe(resized)
+  })
+
+  test("a Clip View request from the previous project does not open Clip Edit in the next", () => {
+    countSessions()
+    const { root, router } = mount({ router: createRouter("/project/first") })
+    act(root, () => projectActions.setEditingClip(clipId()))
+    expect(root.renderer.findByTestId("clip-panel")).toBeDefined()
+    act(root, () => router.navigate("/project/second"))
+    expect(root.renderer.findByTestId("project-layout")).toBeDefined()
+    expect(root.renderer.findByTestId("clip-panel")).toBeUndefined()
+  })
+})
+
+describe("close guard lifecycle", () => {
+  test("after the shell unmounts the native predicate allows closing a dirty project", () => {
+    countSessions()
+    const native: { request?: () => boolean } = {}
+    const { root } = mount({
+      router: createRouter("/project/gone"),
+      closeRenderer: {
+        setWindowShouldClose: next => {
+          native.request = next
+        },
+      },
+    })
+    projectActions.setBpm(141)
+    root.unmount()
+    roots.splice(0)
+    expect(useProjectState.getState().session.dirty).toBe(true)
+    expect(native.request?.()).toBe(true)
   })
 })
