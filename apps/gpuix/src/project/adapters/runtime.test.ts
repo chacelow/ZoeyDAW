@@ -850,11 +850,11 @@ it.each([
       runtime.document({ ...runtime.get().document, name: "Uncommitted" })
     } else {
       const token = runtime.beginPreview()
-      runtime.previewMarkers(token, [{ id: "preview", name: "Temporary", bar: 2 }])
+      runtime.previewMarkers(token, [{ id: "preview", label: "Temporary", bar: 2 }])
     }
     runtime.recordDocument(document => ({
       ...document,
-      markers: [...document.markers, { id: "recorded", name: "Recorded", bar: 4 }],
+      markers: [...document.markers, { id: "recorded", label: "Recorded", bar: 4 }],
     }))
     remote.settle("rejected")
     await Promise.resolve()
