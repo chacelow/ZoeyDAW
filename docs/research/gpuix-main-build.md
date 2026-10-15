@@ -714,3 +714,171 @@ D1 指定的依赖切换、面板测量替换、键盘订阅端口均已实现�
 真实 Button/Input 测试用 `createTestRoot` 的 `nativeSimulateKeystrokes`，不是复制控件策略的假组件；当前 0 pass、2 fail 是被批准保留的红灯回归。A3b 迁移完成后应直接运行这两条测试与完整套件，不恢复手写 host、不 skip、不放宽断言。旧 Popover 的 Enter/Space 激活断言也须按新的「Space 只播放」产品契约更新，不能继续把 Space 激活当正确行为。
 
 静态 28 节点 bounds 的零差异仍只证明当时列出的默认/展开状态，未覆盖弹层与键盘策略；本次完整测试补上了这个限制。协调者收到本清单后合入 D1，再让 A3b 在同一自建 renderer 上完成迁移。
+
+### F1 renderer 补丁集成
+
+2026-10-15。基线包含 D1，另同步 `gpuix-migration` 的 `675f112` 导入规范。F1 在独立 vendor checkout 构建，没有修改原 D1 checkout 或 zed 子模块。
+
+`config.json.patches` 是补丁顺序的唯一来源。`build.sh` 只接受干净源码或已审查补丁序列的完整前缀，再按序 `git apply` 剩余补丁。`check.mjs` 用临时 Git index 从固定 SHA 重建预期 diff，与工作树逐字比较。构建记录包含每个补丁及 native、host、React 产物的 SHA-256，包含这次修改的 `dist/components/select.js` 和声明文件。
+
+| 补丁 | 修改的 vendor 文件 | 契约 |
+| --- | --- | --- |
+| `frame-callback.patch` | `native/src/renderer.rs`、`native/index.d.ts`、`native/js/host.ts` | 显示帧驱动、显式 active、单调时间 |
+| `input-select-all-on-focus.patch` | `native/src/custom_elements/input.rs`、`native/js/host.ts` | 非鼠标聚焦时可选全选，默认关闭 |
+| `anchored-center.patch` | `native/src/custom_elements/anchored.rs` | 仅无 position 的 snap trigger-flex 路径让 flex 独占交叉轴居中 |
+| `select-trigger-space.patch` | `react/src/components/select.tsx` | `activateOnSpace` 默认 true，尊重 caller `defaultPrevented` |
+| `window-active-change.patch` | `native/src/renderer.rs`、`native/index.d.ts`、`native/js/host.ts` | GPUI 原生窗口激活观察，异步 bool 回调 |
+
+前置 `close-guard.patch` 保持 D1 的关闭契约。新增补丁不改变两个固定 SHA，没有新增依赖。
+
+#### 帧与窗口事件的唯一 owner
+
+原生帧接口为 `setAnimationFrameCallback(callback | null)` 和 `setAnimationFrameActive(active)`。`timestampMs` 来自单调时钟。callback 同步返回，不得重入修改 GPUI。inactive 不再请求下一帧，已排队的一帧可排空，但不调用 JavaScript。原生回调不强制 redraw，React commit 自己使视图失效，避免一次显示帧绘制两次。
+
+`platform/frame` 的 `createAnimationFrameSource(renderer)` 在首次订阅时注册并激活原生回调，最后一个订阅释放时关闭并清空回调。回调通过 microtask 投递，取消的订阅和旧 session 的排队回调都不能再更新消费者。一个 renderer 共用一个 source。
+
+`AnimationFrameProvider` 接收这个 source，`useAnimationFrame(callback, active)` 只有两个参数。callback 更新不重启原生订阅。active=false、source 更换和卸载都会取消。源码不 import renderer 包，类型一致性测试同时检查 napi `GpuixRenderer` 和 React 的 `NativeRenderer`。
+
+帧接口仍限 macOS embedded loop。Windows、Linux 的同步帧回调没有实现，也没有定时器 fallback。窗口激活接口另用非阻塞 TSFN，已实现 macOS 更新路径和 Windows、Linux、FreeBSD 的 UI command 路径，后三者没有实跑。
+
+`renderer.onWindowActiveChange(callback | null)` 首次异步回报当前窗口状态，再回报激活变化。null 释放 GPUI observer。`createWindowPlatform(renderer).subscribeApplicationActive(listener)` 共用一个惰性 observer，第一条原生值只建立 baseline，不通知消费者。它报告当前窗口激活，不是进程内所有窗口的合并状态。旧全局 sampler、`startSampling` 和 50ms interval 已删除。`@zoeydaw/native.isApplicationActive` 查询保持不变，供没有窗口的场景使用。
+
+本基线没有 `MeterDecayDriver` 或 `clip-lane` 的自动滚动 owner，F1 未改 `project/**`。协调者将其切换分配给 tracks 与 lane 的 owner，接入时不能同时保留定时链和帧订阅。
+
+#### 输入与弹层边界
+
+`selectAllOnFocus` 的类型 owner 是 `native/js/host.ts`，生成到 `native/dist/host.d.ts`。React 的 `InputProps`、`TextareaProps` 继承它，共享 `Input` 再继承 React 类型并使用已有 `...props` 透传。没有重复声明或第二个输入实现。napi 的 `index.d.ts` 不包含 input props，不在其中另造类型。
+
+autoFocus 可以早于编辑器 state 构造，因此构造时也检查现有 focus。普通聚焦订阅调用既有 `select_all`。鼠标 focus 的标记在 focus 前设置，由延迟 focus 通知消费，保留普通点击插入符和拖选。readOnly 允许选择，但仍拒绝文本修改。重复聚焦重新全选。
+
+弹层最初尝试用零尺寸中间节点定位中心点。半尺寸漂移消失，但奇偶尺寸组合仍有两次舍入形成的 1 logical px 误差。最终只在 `position` 为空且 `fit="snap"` 的 trigger-flex 路径改用 cross-axis start，flex 独占交叉轴居中，不增加节点。显式 position、显式 anchor、fill、start、end 与 `fit="switch"` 保持原 GPUI 语义。协调者批准这一保守范围，`switch` 模式的 double-half 未修复，不把它描述成全模式居中修复。默认 snap 回归继续使用 0.51 logical px 容差。
+
+SDK SelectTrigger 的 Space 默认行为不变。共享 `DropdownButton` 传 `activateOnSpace={false}`，Space 不激活也不阻止冒泡。Enter 仍打开，菜单项的 Space 仍选中。caller 的 `preventDefault()` 在 SDK 内建键盘行为之前生效。
+
+#### 上游 PR 草稿
+
+以下是五份独立 PR 说明草稿，按本轮任务要求保留，未提交远程。F1 的 consumer hook 和平台订阅不要求进入上游。上游当前规则禁止外部贡献者开 PR，要求先开 issue，公开 API 变更还须同步 README。因此真正贡献前需要维护者决定流程并补 README；本轮不擅自扩围，也没有发 issue 或 PR。
+
+##### Frame callback
+
+Title: `feat(native): expose demand-driven animation frame callbacks on macOS`
+
+Add `setAnimationFrameCallback(callback | null)` and `setAnimationFrameActive(active)` to the embedded-loop renderer. GPUI `on_next_frame` drives the callback with a monotonic millisecond timestamp. An inactive callback does not schedule another frame, and a pending frame drains without calling JavaScript. Registration is idempotent while a frame is pending.
+
+Callbacks must return synchronously and must not mutate GPUI reentrantly. Consumers can defer React updates. The renderer does not force a redraw for a callback, so a React commit remains the only redraw owner.
+
+Validation: native GPUI scheduling and cancellation regression, consumer hook lifecycle tests with an injected frame source, cancellation mutations, and a real macOS counter window. This API is macOS embedded-loop only. Windows and Linux need a different delivery model because their UI thread is separate from JavaScript.
+
+##### Input focus selection
+
+Title: `feat(input): add selectAllOnFocus without changing pointer caret placement`
+
+Add the optional boolean `selectAllOnFocus` to native input and textarea props. The default remains false. Keyboard focus, programmatic focus, and autoFocus reuse the existing select-all action. Pointer focus preserves ordinary caret placement and drag selection.
+
+Keep focus subscriptions on the editor state and handle autoFocus that occurs before state construction. A pointer-origin flag prevents a deferred focus notification from selecting over the caret placed by the mouse handler. readOnly inputs remain selectable and reject edits.
+
+Validation: real native editor tests cover automatic focus replacement, Tab, programmatic refocus, pointer placement, omitted and false props, and readOnly transitions. Consumer `Input` inherits the prop without a second implementation. No synthetic Cmd+A or OS keyboard workaround is used.
+
+Known limitation: the current native accessibility node does not expose AXSelectedText or AXSelectedTextRange. Runtime verification uses enlarged selection screenshots, AX values, and real replacement or caret-insertion behavior. This change does not modify the GPUI accessibility backend.
+
+##### Anchored center alignment
+
+Title: `fix(native): center snap-mode trigger layers on the cross axis only once`
+
+For trigger-relative layers with no explicit `position` and `fit="snap"`, the wrapper already centers the layer with flex. A center GPUI anchor subtracts the half extent again. Use the cross-axis start anchor only for that snap-mode wrapper path. Explicit positions, explicit anchors, fill, start and end alignment, and switch fitting retain their original GPUI anchors.
+
+A zero-size center wrapper removes the large drift but adds a second rounding point for odd sizes. The proposed snap-only fix adds no wrapper. The existing double-half drift in `fit="switch"` is deliberately not fixed in this bounded change, so its flip and clamp decisions remain compatible.
+
+Validation: native GPUI regressions cover snap-mode sides and alignments, seeded odd and even sizes, padding, deferred rendering, explicit-position snap margins, and original switch flip decisions. The property fixture assembles the same GPUI layout path and calls the real anchor helpers. A separate raw TestRenderer comparison exercises the complete native custom element and matches the original binary pixel-for-pixel for the public position and switch cases. Widening the cross-start condition fails both compatibility regressions.
+
+##### Select trigger keyboard policy
+
+Title: `feat(react): let SelectTrigger opt out of Space activation`
+
+Add `activateOnSpace?: boolean`, default true, to `SelectTriggerProps`. Consume it inside SelectTrigger instead of forwarding it to the native host. Enter still opens the popup. Space opens it only when enabled, so toolbar consumers can leave Space to their window shortcut owner. SelectItem behavior does not change.
+
+After calling the caller's `onKeyDown`, check `defaultPrevented` before running built-in keyboard actions.
+
+Validation: native React tests cover the unchanged default, Space opt-out and window propagation, Enter, caller cancellation, and menu Space selection. Removing either guard fails the corresponding regression.
+
+##### Window activation events
+
+Title: `feat(native): expose window activation events without polling`
+
+Add `onWindowActiveChange(callback | null)` backed by GPUI `observe_window_activation`. The first asynchronous callback reports the current state. Later callbacks report activation changes. Passing null drops the observer. A weak, nonblocking TSFN delivers a boolean directly to JavaScript and does not keep the process alive.
+
+The macOS renderer updates its view directly. Windows, Linux, and FreeBSD register the same observer through their existing UI command queue. No JavaScript timer or GPUI submodule change is required.
+
+Validation: native GPUI tests cover the initial value, activation, deactivation, and unsubscription. Consumer tests cover shared leases, duplicate listeners, queued event cancellation, session replacement, and seeded transition sequences. Removing native observer cleanup or consumer cancellation fails these tests. Only the macOS runtime has been exercised.
+
+#### F1 实测记录
+
+证据保存在 [scripts/gpuix-main/evidence/f1](../../scripts/gpuix-main/evidence/f1/)（合入时从 `apps/gpuix/src/platform/frame/evidence` 移出应用源码树，与其它 gpuix-main 证据同处）。日志使用 `.txt`，不再被根目录的 `*.log` 忽略。`runtime-summary-2026-10-15.json` 保存可重算的阶段数据和 CPU 计算。完整日志的头部读取有长度上限，可能在一条记录中间结束，独立 tail 文件保存最终停帧区间。
+
+| 观察场景 | 实际结果 | 证据 |
+| --- | --- | --- |
+| 当前主显示器 | `1920 x 1080 @ 60.00Hz`，`system_profiler SPDisplaysDataType -json` | `display-refresh-2026-10-15.json` |
+| 显式激活后的 counter | 75.724s 阶段，单调 timestamp，60.00117Hz；4506 callback 对应 4506 draw | `f1-frame-final-2026-10-15.txt`、`runtime-summary-2026-10-15.json` |
+| 末次 draw 统计 | 最后 1000 个样本，p90 0.470ms、p99 0.609ms、max 0.799ms | 同上 |
+| active=false | 阶段 0.496s 与 27.517s 的 `frames` 均为 8698，callback 均为 0 | `frame-optimized-inactive-tail-2026-10-15.txt`、`runtime-summary-2026-10-15.json` |
+| 初版完整遮挡 | counter 被自有 1200×828 cover 覆盖后 callback=0，`frames` 固定 13294 | `frame-probe-2026-10-15.txt`、`occlusion-cover-2026-10-15.png` |
+| 初版最小化 | AXMinimized=true，callback 累计数 742、`frames` 15480 不再增长；阶段平均 Hz 包含最小化前采样，不作为最小化帧率 | `frame-first-hidden-tail-2026-10-15.txt`、summary 中的 AX 记录 |
+| 初版前台 CPU | 60.032s 使用 CPU 10.63s，平均 17.707% 单核；ps 样本 13.7% 至 22.6% | `frame-cpu-2026-10-15.json` |
+| 去掉冗余 redraw 后的 active CPU | 60.040s 使用 CPU 6.97s，平均 11.609% 单核；ps 样本 9.1% 至 14.7%；该区间未固定前台 | `frame-optimized-cpu-2026-10-15.json` |
+| deferred hook 边界 | hook callback 内直接调用 GPUI stats 成功，首次读到 frames=6，没有重入 panic | `f1-frame-final-2026-10-15.txt` |
+| 原生激活订阅 | baseline=true 不通知平台消费者；最小化与恢复通知 false、true；注销后再次最小化与恢复没有回调 | `f1-activity-final-2026-10-15.txt`、`window-activation-2026-10-15.png` |
+
+两组 CPU 的前台条件不同，不能据此作等条件性能提升结论。draw 统计是 CPU 绘制耗时，不是 GPU 完成时间，小型 counter 也不代表大型 DAW。遮挡与最小化的停帧证据来自删除冗余 `window.refresh()` 前的初版；最终构建没有在固定桌面时段内复测隐藏窗口，这一项明确列为未验证，不推断平台保证。
+
+原始 TestRenderer snap 探针覆盖 360 组合、2160 条断言，最终为 0 失败，容差保持 0.51。公开 position 与 switch 的 14 个组合另从未改 D1 二进制采集 baseline，最终二进制逐像素一致。`anchored-public-baseline-2026-10-15.json` 与 `anchored-public-final-2026-10-15.json` 内容相同。被拒绝的 broad cross-start 版本改变了其中 11 个组合，见 `anchored-public-rejected-2026-10-15.json`。测试脚本已清理，永久 GPUI 回归保留在补丁中。
+
+#### 输入与第 13 节验收
+
+| 检查 | 结论与证据 |
+| --- | --- |
+| 控件状态放大图 | `input-autofocus-light-zh-zoom-2026-10-15.png` 显示聚焦全选；首轮默认、Tab 替换、鼠标插入及第二轮重聚焦、textarea 各有截图。没有声称覆盖未改动的全部 hover、pressed、disabled 状态 |
+| 间距 token | 没有修改共享 Input 的布局或 token；探针容器不是产品布局，不把其临时 gap 当成产品度量验收 |
+| 文字与数值居中 | 沿用既有 Input 排版，截图核对选择文本未溢出；本轮没有修改数值控件或图标居中 |
+| 尺寸 | 深色英文输入框 AX 为 240×13；实际 `CONTROL_METRICS.default` height=13、fontSize=9；共享控件高度与 token 一致。没有新增图标控件 |
+| 紧凑感与 Live | 参照既有 13 高 Input，没有新卡片布局；没有操作用户的 Live 作并排对照，此项未验证 |
+| 主题与语言 | 深色英文 `input-autofocus-2026-10-15.png`；浅色中文 `input-autofocus-light-zh-2026-10-15.png`。没有声称完成四种交叉组合 |
+| 键盘与焦点 | autoFocus 将 Rename me 替换 X；Tab 将 Tab replace 替换 Y；shift-Tab 重聚焦后将鼠标插入符整串替换 Z。Input Space 基线问题仍归 A3b |
+| 鼠标与只读 | 普通点击后 Mouse caret 变 Mouse caretZ，没有全选替换；只读字段输入 R 后 AX 仍是只读文本；textarea 两行内容整串替换 T，见 `input-textarea-light-zh-2026-10-15.png` |
+| 动态拖动、滚轮与弹层 | 本轮没有修改产品拖动、滚轮或弹层保持打开行为；SDK 的额外 OS popup 窗口没有在时段内打开，未验证。原生几何与 SDK 键盘行为由真实 TestRenderer 验证 |
+| 性能与可见范围裁剪 | 表中有真实 callback、native frames、CPU 与 draw 统计；未改时间线可见范围裁剪，不声称做了该项产品验收 |
+
+AX 节点不公开选区文本属性。协调者批准使用放大全选截图、AX 前后值以及实际替换或插入的组合证据，没有用 Cmd+A 或假键盘选区绕路。
+
+#### F1 命令与例外
+
+| 位置 | 实跑命令 | 结果 |
+| --- | --- | --- |
+| 根目录 | `GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/f1-gpuix bash scripts/gpuix-main/build.sh` | 最终成功，native 增量 23.01s，总 27.49s；六补丁精确验证，无干净重建 |
+| 临时干净 index | 六个补丁逐个 `git apply --cached --check` 后按序 apply | 通过；zed 无修改 |
+| 根目录 | `node scripts/gpuix-main/check.mjs --resolution` | native、host、React 统一解析到该外置构建 |
+| apps/gpuix | `bun test src/platform/frame src/platform/window src/ui/controls/Input` | 44 pass，0 fail |
+| apps/gpuix | Select SDK 四项行为测试的 `--test-name-pattern` 子集 | 4 pass，0 fail；没有替代完整套件 |
+| vendor | `cargo check --release --manifest-path packages/native/Cargo.toml --features test-support,gpui_platform/runtime_shaders` | 通过，保留上游既有 warnings |
+| vendor | 同 feature 的 `cargo test --release --manifest-path packages/native/Cargo.toml --lib` | 最终 271 pass |
+| 根目录 | `cargo check`、`cargo test` | 通过，35 tests，4 suites；本轮未改自有 Rust 源码 |
+| 根目录 | `pnpm exec eslint apps/gpuix/src/platform` 及 `pnpm exec eslint apps/gpuix/src` | 通过，本切片 HARD 扫描无匹配 |
+| apps/gpuix | `pnpm exec tsc --noEmit` | 非零，仅下列 4 个主干基线错误，F1 新增文件零错误 |
+| apps/gpuix | `bun test` | 508 pass、2 todo、10 fail，520 tests，93 files；下列 A3b 例外已获协调者批准 |
+
+tsc 的四处主干基线错误为 `DragPreviewArea/index.tsx:131`、`Menu/index.tsx:271`、`Menu/index.tsx:536`、`Popover/index.tsx:117`，均是 EventPayload 缺少 KeyEvent 的 defaultPrevented、preventDefault、stopPropagation。协调者在主干 `1143ef7` 独立复现并批准豁免，由 A3b 负责，不伪称 tsc 全绿。
+
+剩余 10 个测试失败归 A3b 的 0.10 bounds 与 center 补偿和 Input Space 边界。包括 Input Space 1、ControlGroup 1、Popover 4、Menu 2、DropdownButton center 与 fill 2。center 从旧 1.5px 变成 63.5px 是旧 `useFloatingCenterOffset` 在二次补偿已修好的 native 默认 snap 居中。协调者明确禁止 F1 越界删除这些兼容代码，接受已知失败后由 A3b 在合入 F1 后收尾。断言没有删除、skip 或放宽。
+
+变异结果保持可复查。删除 hook unsubscribe 产生 5 失败；inactive 仍激活帧源产生 4 失败；删除激活订阅取消产生 4 失败。SDK Space guard 删除产生 2 失败，defaultPrevented guard 删除产生 1 失败。原生 frame、observer cleanup、旧 center anchor 的组合变异产生 266 pass、3 fail。放宽 snap-only 条件产生 1 pass、2 public-mode fail，268 filtered。恢复后最终 271 个原生测试通过，未保留任何变异。
+
+双轴 pstack-reviewer 的 Spec 轴发现并促成了 position 与 switch 兼容修复，最终复审已关闭全部本切片发现。Standards 轴没有本切片代码 HARD 违规。无用 factory re-export 已删除，新增 Rust 块已单独格式化。共享 `LESSONS.md` 与 A4 panels README 的旧采样器描述已交给协调者，不越界修改。审查处理记录见 `self-review-2026-10-15.json`。
+
+首轮 NAPI 生成曾把 Rust `Option<FunctionRef>` 变成可选参数 `callback?`，精确 source 校验拒绝了该产物。实现改为 `Either<FunctionRef, Null>`，保持 API 要求的必填 nullable 参数后增量修正；没有重复干净构建。后续 center 舍入和 public-mode 范围修正均按协调者仲裁完成。
+
+六个自有命名 service 均在每组取证后关闭，临时探针和补丁片段已删除。交付前实际执行：
+
+```sh
+ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
+```
+
+输出为空，grep 返回 1 表示无匹配，不是残留进程失败。原始 stdout 与自有 service 清单见 `process-cleanup-2026-10-15.json`。没有启动或停止用户已有应用，没有 push 或远程贡献。

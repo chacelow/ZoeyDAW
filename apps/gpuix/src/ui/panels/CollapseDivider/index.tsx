@@ -1,5 +1,6 @@
-import type { EventPayload } from "@gpuix/react"
+import type { EventPayload, StyleDesc } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
+import { sx } from "@/shared/theme/style"
 import { computeLayout } from "../layout/computeLayout"
 import { useDividerDrag } from "../useDividerDrag"
 
@@ -7,6 +8,7 @@ export interface CollapseDividerProps {
   expanded: boolean
   expandedSize: number
   onExpandedChange: (expanded: boolean) => void
+  style?: StyleDesc
   testId?: string
   "aria-label"?: string
 }
@@ -16,6 +18,7 @@ export function CollapseDivider({
   expanded,
   expandedSize,
   onExpandedChange,
+  style,
   testId,
   "aria-label": label = "Toggle fixed panel",
 }: CollapseDividerProps) {
@@ -51,14 +54,13 @@ export function CollapseDivider({
       onMouseUp={drag.onMouseUp}
       onBlur={drag.onBlur}
       onKeyDown={onKeyDown}
-      style={{
+      style={sx({ backgroundColor: theme.colors.card }, style, {
         height: theme.project.panelGap,
         width: "100%",
         flexShrink: 0,
-        backgroundColor: theme.colors.card,
         cursor: "row-resize",
         userSelect: "none",
-      }}
+      })}
     />
   )
 }

@@ -55,7 +55,7 @@ export function LaneRow(props: {
   scene: ArrangementScene
   viewport: ArrangementViewport
   controller: LaneController // createLaneController() 的返回值，由组合根创建
-  readPeaks: PeakReader // (sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；startBar/endBar 是 one-based 的 Clip 局部可见范围（1+visibleOffsetBars），contentOffsetBars=clip.sourceOffsetBars，适配层用 (bar-1+contentOffsetBars) 换源 frame；返回布局为 **channel-major，其次 pixel-major，每项 [min,max]**（立体声共 pixels*4 个 f32，先左声道全部像素的 [min,max]，再右声道），声道数=length/(2*pixels)，不转置不复制；采样率换算由 platform/engine 适配函数负责，lane 不假设采样率
+  readPeaks: PeakReader // 类型来自 project/model/backend；组合根传 adapters 的 readProjectPeaks（与传输、电平同一个工程会话）。(sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；startBar/endBar 是 one-based 的 Clip 局部可见范围（1+visibleOffsetBars），contentOffsetBars=clip.sourceOffsetBars；小节→源帧换算、带符号偏移与跨末尾回绕都在 Rust；返回布局为 **channel-major，其次 pixel-major，每项 [min,max]**（立体声共 pixels*4 个 f32，先左声道全部像素的 [min,max]，再右声道），声道数=length/(2*pixels)，不转置不复制；后端未打开时返回空数组。lane 不假设采样率、不自己换算
   clipboard: NativeClipboard // 来自 platform/clipboard
   labels: LaneLabels // 菜单/名称编辑/数值编辑的双语标签，由组合根注入，lane 不依赖 i18n 包
 }): ReactNode
@@ -91,7 +91,7 @@ export function TrackRows(props: {
 
 | 键 | owner |
 | --- | --- |
-| Space（播放）、M、A、B、Ctrl/Cmd+1..5（网格）、Ctrl/Cmd+Z/Shift+Z、Ctrl/Cmd+S | `timeline`（`createTimelineKeyboard`，窗口根监听） |
+| Space（播放）、M、A、B、Ctrl/Cmd+1..5（网格）、Ctrl/Cmd+Z/Shift+Z、Ctrl/Cmd+S | `timeline`（`createTimelineController` 内部唯一的 keyboard，窗口根监听） |
 | Clip/Automation 选择、split（Ctrl/Cmd+E，有选中时）、duplicate、rename、delete、复制剪切粘贴、拖动中 Escape | `lane`（`LaneController.keyDown`） |
 | 轨道名称输入、Mixer 数值编辑 | `tracks`（控件自己） |
 
@@ -100,7 +100,7 @@ export function TrackRows(props: {
 
 ## 5. 组合根
 
-`ArrangementPanel`（`arrangement/index.tsx`）负责：创建 `createLaneController`、`createTimelineKeyboard`，取 viewport、scene、telemetry，注入 labels，把三个目录的组件按上面的 props 装配。**它由 `app-shell` 切片拥有**；在 `app-shell` 派发之前，各切片用各自 demo 里的最小组合根验证，不要抢先写它。
+`ArrangementPanel`（`arrangement/index.tsx`）负责：创建 `createLaneController` 与 `createTimelineController`（后者内部持有唯一的 timeline keyboard，组合根不再单独调用 `createTimelineKeyboard`），取 viewport、scene、telemetry、`readProjectPeaks`，注入 labels，把三个目录的组件按上面的 props 装配。lane 的 `markDrawModeGesture` 接 `timelineController.keyboard.markDrawGesture`：按住 B 期间发生过绘制，松开 B 时不锁定绘制偏好。编号 Pattern 区域的明暗只来自 B1 `core/rulers/grid-lines.ts` 的 `patternRegions(scene)`；行内若用不透明底色盖住外层网格，lane 消费同一投影，不复制计算。**它由 `app-shell` 切片拥有**；在 `app-shell` 派发之前，各切片用各自 demo 里的最小组合根验证，不要抢先写它。
 
 ## 6. 变更规则
 

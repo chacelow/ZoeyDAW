@@ -1,0 +1,8 @@
+{
+  "command": "system_profiler SPDisplaysDataType -json",
+  "displayIdHex": "27",
+  "computerDisplayIdDecimal": "39",
+  "main": true,
+  "resolution": "1920 x 1080 @ 60.00Hz",
+  "refreshHz": 60.0
+}

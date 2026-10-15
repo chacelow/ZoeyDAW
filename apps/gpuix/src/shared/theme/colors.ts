@@ -105,9 +105,35 @@ export interface DerivedThemeColors extends ThemeColors {
   scrollbarTrack: string
   /** `color-mix(in oklab, card 78%, foreground)`. */
   arrangementSurfaceSelected: string
+  /** `color-mix(in oklab, card 86%, foreground)`; timeline lane background. */
+  arrangementSurface: string
+  /** `color-mix(in oklab, card 84%, foreground)`; also the ruler, toolbar and track-header background. */
+  arrangementSurfaceAlt: string
+  /** `light-dark(border, muted)`; grid lines, separators and meter cutouts. */
+  arrangementLine: string
+  /** `destructive`; automation curves and recording. */
+  arrangementAutomation: string
+  /** `chart-2`; volume and pan lanes. */
+  arrangementVolume: string
+  /** `chart-2`. */
+  arrangementMeterGood: string
+  /** `light-dark(chart-4, chart-3)`. */
+  arrangementMeterWarn: string
+  /** `destructive`. */
+  arrangementMeterDanger: string
+  /** `muted-foreground`; meter peak-hold bar. */
+  arrangementMeterPeak: string
+  /** `light-dark(foreground, card)`; text, waveform and fade stroke drawn on clips. */
+  arrangementClipInk: string
+  /** `color-mix(in oklab, clip-ink 50%, transparent)`. */
+  arrangementFadeMask: string
 }
 
-function derive(base: ThemeColors): DerivedThemeColors {
+type ColorScheme = "light" | "dark"
+
+function derive(base: ThemeColors, scheme: ColorScheme): DerivedThemeColors {
+  const lightDark = (light: string, dark: string) => (scheme === "light" ? light : dark)
+  const arrangementClipInk = lightDark(base.foreground, base.card)
   return {
     ...base,
     editorShell: colorMix(base.muted, 30, base.background),
@@ -116,8 +142,19 @@ function derive(base: ThemeColors): DerivedThemeColors {
     canvasScrollbarActive: colorMix(base.foreground, 26, "transparent"),
     scrollbarTrack: colorMix(base.foreground, 4, base.background),
     arrangementSurfaceSelected: colorMix(base.card, 78, base.foreground),
+    arrangementSurface: colorMix(base.card, 86, base.foreground),
+    arrangementSurfaceAlt: colorMix(base.card, 84, base.foreground),
+    arrangementLine: lightDark(base.border, base.muted),
+    arrangementAutomation: base.destructive,
+    arrangementVolume: base.chart2,
+    arrangementMeterGood: base.chart2,
+    arrangementMeterWarn: lightDark(base.chart4, base.chart3),
+    arrangementMeterDanger: base.destructive,
+    arrangementMeterPeak: base.mutedForeground,
+    arrangementClipInk,
+    arrangementFadeMask: colorMix(arrangementClipInk, 50, "transparent"),
   }
 }
 
-export const lightColors: DerivedThemeColors = derive(lightBase)
-export const darkColors: DerivedThemeColors = derive(darkBase)
+export const lightColors: DerivedThemeColors = derive(lightBase, "light")
+export const darkColors: DerivedThemeColors = derive(darkBase, "dark")

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { render } from "@gpuix/react"
-import { cursorHide, cursorPosition, cursorRestore } from "@zoeydaw/native"
+import { nativeCursorLock } from "@/platform/cursor"
 import { ThemeProvider, useTheme } from "../shared/theme/ThemeProvider"
 import { StateGallery } from "./states"
 import {
@@ -70,17 +70,7 @@ import {
 import { Icon } from "@/ui/controls/Icon"
 import type { PublicInstance } from "@gpuix/react"
 import type { ReactNode } from "react"
-import type { ControlInfo, CursorLockPort } from "../ui/controls"
-
-const cursorLock: CursorLockPort = {
-  capture: cursorPosition,
-  hide: () => {
-    cursorHide()
-  },
-  restore: point => {
-    cursorRestore(point)
-  },
-}
+import type { ControlInfo } from "../ui/controls"
 
 function GalleryCard({
   title,
@@ -145,7 +135,7 @@ function Gallery() {
   }
   const cardRow = { ...row, alignItems: "start", gap: theme.project.panelGap }
   return (
-    <ControlEnvironmentProvider value={{ setInfo, cursorLock }}>
+    <ControlEnvironmentProvider value={{ setInfo, cursorLock: nativeCursorLock }}>
       <div
         role="application"
         aria-label="Native controls gallery"
@@ -223,7 +213,7 @@ function Gallery() {
                     step={1}
                     defaultValue={120}
                     onGestureEnd={() => {
-                      const point = cursorPosition()
+                      const point = nativeCursorLock.capture()
                       setStatus(
                         point
                           ? `cursorPosition (${point.x}, ${point.y})`
@@ -560,7 +550,11 @@ function Gallery() {
 
 render(
   <ThemeProvider defaultAppearance={process.env.GALLERY_APPEARANCE === "light" ? "light" : "dark"}>
-    {process.env.GALLERY_VIEW === "states" ? <StateGallery cursorLock={cursorLock} /> : <Gallery />}
+    {process.env.GALLERY_VIEW === "states" ? (
+      <StateGallery cursorLock={nativeCursorLock} />
+    ) : (
+      <Gallery />
+    )}
   </ThemeProvider>,
   { title: "zoeydaw native controls", width: 1050, height: 780 }
 )

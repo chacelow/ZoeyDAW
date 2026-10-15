@@ -4,8 +4,12 @@ import { tmpdir } from "node:os"
 import nodePath from "node:path"
 import { pathToFileURL } from "node:url"
 import { createNativeBackend } from "./native"
-import type { BackendRequest, BackendTelemetry, BackendTrack } from "../../model/backend"
-import type { NativeProjectBackend } from "./native"
+import type {
+  BackendRequest,
+  BackendTelemetry,
+  BackendTrack,
+  ProjectBackend,
+} from "../../model/backend"
 import * as engine from "../../../platform/engine"
 
 test("importing the default project context never opens a native session", async () => {
@@ -46,7 +50,7 @@ function wav(rate: number, seconds: number): Buffer {
 }
 
 function receive(
-  backend: NativeProjectBackend,
+  backend: ProjectBackend,
   frames: BackendTelemetry[],
   predicate: (frame: BackendTelemetry) => boolean
 ): Promise<BackendTelemetry> {
@@ -165,7 +169,8 @@ test("real decoder, device clock, seeks, finite meters and visible peaks", async
     const stopped = await receive(backend, frames, frame => frame.appliedSequence === 0)
     expect(stopped.clock.kind).toBe("sample")
     expect(stopped.levels.main).toEqual([-120, -120])
-    const peaks = backend.readPeaks("sine", 0, 4800, 64)
+    // 120 BPM 4/4: bars 1–1.05 are the first 0.1 s of the 3 s sine.
+    const peaks = backend.readPeaks("sine", 1, 1.05, 64, 0)
     expect(peaks).toBeInstanceOf(Float32Array)
     expect(peaks.length).toBe(256)
     for (let index = 0; index < peaks.length; index += 2) {
@@ -246,6 +251,7 @@ test("real decoder, device clock, seeks, finite meters and visible peaks", async
       kind: "rejected",
       code: "disposed",
     })
+    expect(backend.readPeaks("sine", 1, 1.05, 64, 0)).toHaveLength(0)
   } finally {
     unsubscribe()
     backend.dispose()
