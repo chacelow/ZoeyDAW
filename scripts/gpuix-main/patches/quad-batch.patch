@@ -1,5 +1,5 @@
 diff --git a/packages/native/index.d.ts b/packages/native/index.d.ts
-index ce328a4..2644142 100644
+index 2f865d1..44ff6a6 100644
 --- a/packages/native/index.d.ts
 +++ b/packages/native/index.d.ts
 @@ -59,6 +59,8 @@ export declare class GpuixRenderer {
@@ -11,7 +11,7 @@ index ce328a4..2644142 100644
    /** Pump the native event loop. Returns false after the last window closes. */
    tick(): boolean
    isInitialized(): boolean
-@@ -260,6 +262,7 @@ export declare class TestGpuixRenderer {
+@@ -237,6 +239,7 @@ export declare class TestGpuixRenderer {
     * Returns accumulated destroyed IDs from all destroyElement ops.
     */
    applyBatch(json: string): Array<number>
@@ -20,7 +20,7 @@ index ce328a4..2644142 100644
     * Notify the view entity and run GPUI until parked.
     * This triggers GpuixView::render() → build_element() → GPUI layout.
 diff --git a/packages/native/js/host.ts b/packages/native/js/host.ts
-index 8d63095..799b33e 100644
+index 47a3fac..ffcc6d4 100644
 --- a/packages/native/js/host.ts
 +++ b/packages/native/js/host.ts
 @@ -248,6 +248,7 @@ export type ElementType =
@@ -31,7 +31,7 @@ index 8d63095..799b33e 100644
    | "input"
    | "textarea"
    | "anchored"
-@@ -586,6 +587,12 @@ export interface SvgProps extends HostProps {
+@@ -584,6 +585,16 @@ export interface SvgProps extends HostProps {
    source?: string
  }
  
@@ -39,12 +39,16 @@ index 8d63095..799b33e 100644
 +export interface QuadBatchProps {
 +  style?: StyleDesc
 +  testId?: string
++  /** Logical pixels; finite and nonnegative. Defaults to zero. */
++  strokeWidth?: number
++  /** Renderer-supported color; defaults to transparent. */
++  strokeColor?: string
 +}
 +
  /**
   * Props for the <code> custom element — a syntax-highlighted code block.
   *
-@@ -697,6 +704,7 @@ export type NativeRenderer = MutationHost &
+@@ -692,6 +703,7 @@ export type NativeRenderer = MutationHost &
        | "scrollIntoView"
        | "setImage"
        | "setImagePixels"
@@ -94,10 +98,14 @@ index c5f4fa1..1f14017 100644
  // types instead of a copy that silently drifts from them.
 diff --git a/packages/native/src/quad_batch.rs b/packages/native/src/quad_batch.rs
 new file mode 100644
-index 0000000..3a40a71
+index 0000000..d2875d9
 --- /dev/null
 +++ b/packages/native/src/quad_batch.rs
-@@ -0,0 +1,318 @@
+@@ -0,0 +1,407 @@
++#[cfg(test)]
++#[path = "quad_batch_paint_tests.rs"]
++mod paint_tests;
++
 +use crate::{retained_tree::RetainedElement, style::StyleDesc};
 +use gpui::prelude::*;
 +
@@ -114,6 +122,38 @@ index 0000000..3a40a71
 +    Ok(())
 +}
 +
++fn stroke_width(value: &serde_json::Value) -> Result<f32, String> {
++    if value.is_null() {
++        return Ok(0.0);
++    }
++    let width = value
++        .as_f64()
++        .filter(|width| width.is_finite() && *width >= 0.0)
++        .map(|width| width as f32)
++        .filter(|width| width.is_finite())
++        .ok_or_else(|| "quad-batch strokeWidth must be finite and nonnegative".to_string())?;
++    Ok(width)
++}
++
++fn stroke_color(value: &serde_json::Value) -> Result<gpui::Hsla, String> {
++    if value.is_null() {
++        return Ok(gpui::transparent_black());
++    }
++    value
++        .as_str()
++        .and_then(crate::color::parse_color_rgba)
++        .map(Into::into)
++        .ok_or_else(|| "quad-batch strokeColor must be a supported color string".to_string())
++}
++
++pub(crate) fn validate_paint_prop(key: &str, value: &serde_json::Value) -> Result<(), String> {
++    match key {
++        "strokeWidth" => stroke_width(value).map(|_| ()),
++        "strokeColor" => stroke_color(value).map(|_| ()),
++        _ => Ok(()),
++    }
++}
++
 +pub(crate) fn render(element: &RetainedElement, style: Option<&StyleDesc>) -> gpui::Div {
 +    let values = element.quads();
 +    let color: gpui::Hsla = style
@@ -121,6 +161,16 @@ index 0000000..3a40a71
 +        .and_then(crate::color::parse_color_rgba)
 +        .map(Into::into)
 +        .unwrap_or_else(gpui::white);
++    let prop = |key| {
++        element
++            .custom_props()
++            .get(key)
++            .unwrap_or(&serde_json::Value::Null)
++    };
++    let stroke_width = stroke_width(prop("strokeWidth")).expect("validated quad-batch strokeWidth");
++    let stroke_color = stroke_color(prop("strokeColor")).expect("validated quad-batch strokeColor");
++    let mut stroke_background = stroke_color;
++    stroke_background.a = 0.0;
 +    let canvas = gpui::canvas(
 +        |_, _, _| (),
 +        move |bounds, _, window, _| {
@@ -137,6 +187,18 @@ index 0000000..3a40a71
 +                        ));
 +                        rect.origin = bounds.origin + rect.origin;
 +                        window.paint_quad(gpui::fill(rect, color));
++                        if stroke_width > 0.0 {
++                            // Div composites the background into the render target before the
++                            // border. A single filled/bordered quad changes 8-bit alpha rounding.
++                            window.paint_quad(gpui::quad(
++                                rect,
++                                gpui::Corners::default(),
++                                stroke_background,
++                                gpui::Edges::all(gpui::px(stroke_width)),
++                                stroke_color,
++                                gpui::BorderStyle::default(),
++                            ));
++                        }
 +                    }
 +                });
 +            });
@@ -192,27 +254,58 @@ index 0000000..3a40a71
 +        let batch_tree = make_tree(true);
 +        let div_tree = make_tree(false);
 +        let batch = cx.open_window(gpui::size(gpui::px(200.0), gpui::px(200.0)), |_, _| {
-+            GpuixView::new(batch_tree, None, "batch geometry".into(), SharedSelection::default())
++            GpuixView::new(
++                batch_tree,
++                None,
++                "batch geometry".into(),
++                SharedSelection::default(),
++            )
 +        });
 +        let div = cx.open_window(gpui::size(gpui::px(200.0), gpui::px(200.0)), |_, _| {
-+            GpuixView::new(div_tree, None, "div geometry".into(), SharedSelection::default())
++            GpuixView::new(
++                div_tree,
++                None,
++                "div geometry".into(),
++                SharedSelection::default(),
++            )
 +        });
 +        for scale in [1.0, 1.25, 1.5, 2.0] {
 +            for window in [batch, div] {
-+                window.update(cx, |_, window, cx| {
-+                    window.set_scale_factor(scale);
-+                    cx.notify();
-+                }).unwrap();
++                window
++                    .update(cx, |_, window, cx| {
++                        window.set_scale_factor(scale);
++                        cx.notify();
++                    })
++                    .unwrap();
 +            }
 +            cx.run_until_parked();
-+            let actual = batch.update(cx, |_, window, _| {
-+                window.painted_quads().iter().map(|quad| quad.bounds).collect::<Vec<_>>()
-+            }).unwrap();
-+            let expected = div.update(cx, |_, window, _| {
-+                window.painted_quads().iter().map(|quad| quad.bounds).collect::<Vec<_>>()
-+            }).unwrap();
-+            assert_eq!(expected.len(), 1, "reference div did not paint at scale {scale}");
-+            assert_eq!(actual, expected, "native div mismatch at scale {scale}, origin {origin:?}, rect {rect:?}");
++            let actual = batch
++                .update(cx, |_, window, _| {
++                    window
++                        .painted_quads()
++                        .iter()
++                        .map(|quad| quad.bounds)
++                        .collect::<Vec<_>>()
++                })
++                .unwrap();
++            let expected = div
++                .update(cx, |_, window, _| {
++                    window
++                        .painted_quads()
++                        .iter()
++                        .map(|quad| quad.bounds)
++                        .collect::<Vec<_>>()
++                })
++                .unwrap();
++            assert_eq!(
++                expected.len(),
++                1,
++                "reference div did not paint at scale {scale}"
++            );
++            assert_eq!(
++                actual, expected,
++                "native div mismatch at scale {scale}, origin {origin:?}, rect {rect:?}"
++            );
 +        }
 +    }
 +
@@ -416,11 +509,128 @@ index 0000000..3a40a71
 +        assert!(tree.elements.is_empty());
 +    }
 +}
+diff --git a/packages/native/src/quad_batch_paint_tests.rs b/packages/native/src/quad_batch_paint_tests.rs
+new file mode 100644
+index 0000000..e00f586
+--- /dev/null
++++ b/packages/native/src/quad_batch_paint_tests.rs
+@@ -0,0 +1,111 @@
++use crate::{
++    renderer::{apply_batch_to_tree, GpuixView},
++    retained_tree::RetainedTree,
++    text::SharedSelection,
++};
++use std::sync::{Arc, Mutex};
++
++#[test]
++fn malformed_paint_is_atomic() {
++    for (key, value) in [
++        ("strokeWidth", serde_json::json!(-1)),
++        ("strokeWidth", serde_json::json!(-1e-100)),
++        ("strokeWidth", serde_json::json!("1")),
++        ("strokeWidth", serde_json::json!(1e100)),
++        ("strokeColor", serde_json::json!(42)),
++        ("strokeColor", serde_json::json!("not-a-color")),
++    ] {
++        let mut tree = RetainedTree::new();
++        let ops = serde_json::json!([
++            ["createElement", 1, "quad-batch"],
++            ["setCustomProp", 1, key, value],
++            ["setRoot", 1]
++        ]);
++        assert!(
++            apply_batch_to_tree(&mut tree, &serde_json::to_vec(&ops).unwrap()).is_err(),
++            "accepted {key}"
++        );
++        assert!(
++            tree.elements.is_empty(),
++            "invalid metadata partly applied the batch"
++        );
++    }
++}
++
++#[gpui::test]
++fn bordered_quad_matches_div_metrics_at_all_scales(cx: &mut gpui::TestAppContext) {
++    for origin in [[20.0, 10.0], [20.5, 10.75]] {
++        for rect in [[3.5, 4.75, 30.5, 22.75], [-0.5, -1.75, 12.5, 8.25]] {
++            for width in [0.0, 1.0, 1.25] {
++                let make = |batch| {
++                    let mut tree = RetainedTree::new();
++                    let ops = serde_json::json!([
++                        ["createElement", 1, "div"],
++                        ["setStyle", 1, {"width":200,"height":200}],
++                        ["createElement", 2, if batch {"quad-batch"} else {"div"}],
++                        ["setStyle", 2, {"position":"absolute","left":origin[0],"top":origin[1],"width":100,"height":100,"overflow":"hidden","color":"rgba(164,181,198,0.63)"}],
++                        ["appendChild", 1, 2],
++                        ["setRoot", 1]
++                    ]);
++                    apply_batch_to_tree(&mut tree, &serde_json::to_vec(&ops).unwrap()).unwrap();
++                    let ops = if batch {
++                        tree.set_quads(2, &rect).unwrap();
++                        serde_json::json!([
++                            ["setCustomProp", 2, "strokeWidth", width],
++                            ["setCustomProp", 2, "strokeColor", "rgba(50,69,103,0.47)"]
++                        ])
++                    } else {
++                        serde_json::json!([
++                            ["createElement",3,"div"],
++                            ["setStyle",3,{"position":"absolute","left":rect[0],"top":rect[1],"width":rect[2],"height":rect[3],"backgroundColor":"rgba(164,181,198,0.63)","borderWidth":width,"borderColor":"rgba(50,69,103,0.47)"}],
++                            ["appendChild",2,3]
++                        ])
++                    };
++                    apply_batch_to_tree(&mut tree, &serde_json::to_vec(&ops).unwrap()).unwrap();
++                    Arc::new(Mutex::new(tree))
++                };
++                let batch_tree = make(true);
++                let div_tree = make(false);
++                let batch = cx.open_window(gpui::size(gpui::px(200.0), gpui::px(200.0)), |_, _| {
++                    GpuixView::new(batch_tree, None, "batch".into(), SharedSelection::default())
++                });
++                let div = cx.open_window(gpui::size(gpui::px(200.0), gpui::px(200.0)), |_, _| {
++                    GpuixView::new(div_tree, None, "div".into(), SharedSelection::default())
++                });
++                for scale in [1.0, 1.25, 1.5, 2.0] {
++                    for handle in [batch, div] {
++                        handle
++                            .update(cx, |_, window, cx| {
++                                window.set_scale_factor(scale);
++                                cx.notify();
++                            })
++                            .unwrap();
++                    }
++                    cx.run_until_parked();
++                    let actual = batch
++                        .update(cx, |_, window, _| window.painted_quads())
++                        .unwrap();
++                    let expected = div
++                        .update(cx, |_, window, _| window.painted_quads())
++                        .unwrap();
++                    assert_eq!(actual.len(), expected.len(), "div-equivalent paint count");
++                    for (actual, expected) in actual.iter().zip(&expected) {
++                        assert_eq!(actual.bounds, expected.bounds, "bounds at scale {scale}");
++                        assert_eq!(actual.background.as_solid(), expected.background.as_solid());
++                        assert_eq!(
++                            actual.border_widths, expected.border_widths,
++                            "stroke metric at scale {scale}"
++                        );
++                        assert_eq!(
++                            actual.border_color.a, expected.border_color.a,
++                            "stroke alpha at scale {scale}"
++                        );
++                        if actual.border_color.a > 0.0 {
++                            assert_eq!(actual.border_color, expected.border_color);
++                        }
++                    }
++                }
++            }
++        }
++    }
++}
 diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
-index bf4f049..7709693 100644
+index cc780fc..9d097d2 100644
 --- a/packages/native/src/renderer.rs
 +++ b/packages/native/src/renderer.rs
-@@ -1596,6 +1596,22 @@ impl GpuixRenderer {
+@@ -1430,6 +1430,22 @@ impl GpuixRenderer {
          Ok(destroyed)
      }
  
@@ -443,7 +653,7 @@ index bf4f049..7709693 100644
      // ── Frame loop ───────────────────────────────────────────────────
  
      /// Pump the native event loop. Returns false after the last window closes.
-@@ -5446,6 +5462,10 @@ pub(crate) fn build_element(
+@@ -5157,6 +5173,10 @@ pub(crate) fn build_element(
              ctx.custom_registry.destroy(id);
              build_host_container(element, style, ctx, window, cx)
          }
@@ -454,6 +664,36 @@ index bf4f049..7709693 100644
          "virtual-list" => {
              ctx.custom_registry.destroy(id);
              build_virtual_list(element, ctx, window, cx)
+@@ -6970,6 +6990,29 @@ fn resolve_styles(
+ pub fn apply_batch_to_tree(tree: &mut RetainedTree, bytes: &[u8]) -> BatchResult<Vec<f64>> {
+     // Phase 1: decode. No mutation.
+     let parsed = parse_batch_ops(bytes)?;
++    if parsed.iter().any(|op| matches!(op, BatchOp::SetCustomProp { key, .. }
++        if key == "strokeWidth" || key == "strokeColor")) {
++        let mut created_types = std::collections::HashMap::new();
++        for op in &parsed {
++            match op {
++                BatchOp::CreateElement { id, element_type } => {
++                    created_types.insert(*id, element_type.as_str() == "quad-batch");
++                }
++                BatchOp::DestroyElement { id } => {
++                    created_types.insert(*id, false);
++                }
++                BatchOp::SetCustomProp { id, key, value } => {
++                    let is_quad = created_types.get(id).copied().unwrap_or_else(|| {
++                        tree.elements.get(id).is_some_and(|element| element.element_type == "quad-batch")
++                    });
++                    if is_quad {
++                        crate::quad_batch::validate_paint_prop(key, value)?;
++                    }
++                }
++                _ => {}
++            }
++        }
++    }
+ 
+     // Phase 2: resolve styles. Touches the style table only; a failure here
+     // sweeps back out whatever this call interned.
 diff --git a/packages/native/src/retained_tree.rs b/packages/native/src/retained_tree.rs
 index ee95967..b312d6b 100644
 --- a/packages/native/src/retained_tree.rs
