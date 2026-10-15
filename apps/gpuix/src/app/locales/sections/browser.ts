@@ -22,6 +22,7 @@ export const englishBrowserLabels: BrowserLabels = {
   favorite: "Favorite",
   unfavorite: "Unfavorite",
   previewDisabled: "Resource placement is disabled",
+  resizeNavigation: "Resize browser navigation",
   groups: { collections: "Collections", library: "Library", places: "Places" },
   sources: {
     all: "All",
@@ -78,6 +79,7 @@ export const chineseBrowserLabels: BrowserLabels = {
   favorite: "收藏",
   unfavorite: "取消收藏",
   previewDisabled: "资源放置已禁用",
+  resizeNavigation: "调整浏览器导航宽度",
   groups: { collections: "收藏夹", library: "音色库", places: "位置" },
   sources: {
     all: "全部",

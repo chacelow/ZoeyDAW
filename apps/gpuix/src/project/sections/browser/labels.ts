@@ -12,6 +12,7 @@ export interface BrowserLabels {
   readonly content: string
   readonly name: string
   readonly results: string
+  readonly resizeNavigation: string
   readonly expand: string
   readonly collapse: string
   readonly ascending: string
