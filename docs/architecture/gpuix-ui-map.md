@@ -92,7 +92,7 @@
 
 ### `project/sections/clip-edit`
 
-`audio-…`、`audio-editor`、`audio-loop`、`audio-loop-range`、`audio-marker-…`、`audio-overview`、`audio-overview-frame`、`audio-parameters`、`audio-peaks`、`audio-reverse`、`audio-selection`、`audio-surface`、`audio-warp`、`audio-warp-mode`、`audio-waveform`、`clip-editor`、`clip-name`、`midi-editor`、`midi-grid`、`midi-key-…`、`midi-keys`、`midi-loop-bars`、`midi-marquee`、`midi-note-…`、`midi-note-row-…`、`midi-ruler`、`midi-toolbar`、`midi-velocity`、`midi-velocity-…`、`midi-velocity-value`、`pattern-editor`、`pattern-step-…`、`pattern-steps`
+`audio-…`、`audio-editor`、`audio-loop`、`audio-loop-range`、`audio-marker-…`、`audio-overview`、`audio-overview-frame`、`audio-parameters`、`audio-peaks`、`audio-reverse`、`audio-selection`、`audio-surface`、`audio-warp`、`audio-warp-mode`、`audio-waveform`、`clip-editor`、`clip-name`、`midi-editor`、`midi-grid`、`midi-key-…`、`midi-keys`、`midi-loop-bars`、`midi-marquee`、`midi-note-…`、`midi-note-row-…`、`midi-ruler`、`midi-toolbar`、`midi-velocity`、`midi-velocity-…`、`midi-velocity-value`、`pattern-editor`、`pattern-horizontal-scroll`、`pattern-step-…`、`pattern-steps`
 
 ### `project/sections/footer`
 
