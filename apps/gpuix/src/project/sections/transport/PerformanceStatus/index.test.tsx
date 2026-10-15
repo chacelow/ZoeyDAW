@@ -20,16 +20,26 @@ test("native-frame readout receives the first paused telemetry and later latency
   hydrateProject(
     JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
   )
-  let publishLatency: ((frames: number) => void) | null = null
+  let publishTelemetry: ((latencyFrames: number, sampleFrame: number) => void) | null = null
   const restore = configureProjectBackend(() => {
     const backend = createMockProjectBackend()
     return {
       ...backend,
       subscribe(listener) {
         let last: BackendTelemetry | null = null
-        publishLatency = frames => {
-          if (!last) throw new Error("No accepted telemetry fixture")
-          last = { ...last, sequence: last.sequence + 1, outputLatencyFrames: frames }
+        publishTelemetry = (latencyFrames, sampleFrame) => {
+          if (!last || last.clock.kind !== "sample")
+            throw new Error("No accepted sample telemetry fixture")
+          last = {
+            ...last,
+            sequence: last.sequence + 1,
+            outputLatencyFrames: latencyFrames,
+            clock: {
+              ...last.clock,
+              frame: sampleFrame,
+              bar: 1 + (sampleFrame / last.clock.sampleRate) * last.clock.barsPerSecond,
+            },
+          }
           listener(last)
         }
         return backend.subscribe(frame => {
@@ -52,9 +62,9 @@ test("native-frame readout receives the first paused telemetry and later latency
   const frames = createTestAnimationFrames()
   const root = createTestRoot({ width: 600, height: 300 })
   let release: (() => void) | null = null
-  function changeLatency(value: number) {
-    if (!publishLatency) throw new Error("Missing producer")
-    publishLatency(value)
+  function changeTelemetry(latencyFrames: number, sampleFrame: number) {
+    if (!publishTelemetry) throw new Error("Missing producer")
+    publishTelemetry(latencyFrames, sampleFrame)
   }
   try {
     root.render(
@@ -77,11 +87,17 @@ test("native-frame readout receives the first paused telemetry and later latency
     expect(frames.subscriberCount).toBe(1)
     expect(root.renderer.getPaintedText().join(" ")).toContain("5.00 ms")
     expect(useProjectState.getState().session.playing).toBe(false)
-    flushSync(() => changeLatency(480))
+    flushSync(() => changeTelemetry(480, 4800))
     flushSync(() => frames.emit(32))
     root.renderer.flush()
     expect(root.renderer.getPaintedText().join(" ")).toContain("10.00 ms")
     expect(root.renderer.getPaintedText().join(" ")).not.toContain("5.00 ms")
+    flushSync(() => changeTelemetry(720, 96000))
+    expect(root.renderer.getAllText().join(" ")).toContain("10.00 ms")
+    frames.emitResume(48)
+    expect(root.renderer.getAllText().join(" ")).toContain("15.00 ms")
+    expect(root.renderer.getAllText().join(" ")).toContain("0:00:02.000")
+    expect(root.renderer.getAllText().join(" ")).not.toContain("10.00 ms")
     root.renderer.nativeSimulateKeystrokes(trigger.id, "enter")
     expect(frames.subscriberCount).toBe(0)
   } finally {

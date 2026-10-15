@@ -4,12 +4,17 @@ import type { AnimationFrameCallback, FrameRenderer } from "./animation-frame-so
 
 function frameRenderer() {
   let callback: AnimationFrameCallback | null = null
+  let resumeCallback: AnimationFrameCallback | null = null
   let active = false
   const calls: string[] = []
   const renderer: FrameRenderer = {
     setAnimationFrameCallback(next) {
       calls.push(next === null ? "callback:null" : "callback:set")
       callback = next
+    },
+    setResumeFrameCallback(next) {
+      calls.push(next === null ? "resume:null" : "resume:set")
+      resumeCallback = next
     },
     setAnimationFrameActive(next) {
       calls.push(`active:${next}`)
@@ -25,12 +30,22 @@ function frameRenderer() {
     get callback() {
       return callback
     },
+    get resumeCallback() {
+      return resumeCallback
+    },
     registeredCallback() {
       if (callback === null) throw new Error("No registered native frame callback")
       return callback
     },
+    registeredResumeCallback() {
+      if (resumeCallback === null) throw new Error("No registered native resume callback")
+      return resumeCallback
+    },
     frame(timestampMs: number) {
       callback?.(timestampMs)
+    },
+    resume(timestampMs: number) {
+      resumeCallback?.(timestampMs)
     },
   }
 }
@@ -44,6 +59,16 @@ async function drainFrame() {
 describe("createAnimationFrameSource", () => {
   test("unsupported renderers fail before subscribing", () => {
     expect(() => createAnimationFrameSource({})).toThrow(Error)
+  })
+  test("renderer without resume support fails before registering ordinary frames", () => {
+    const host = frameRenderer()
+    expect(() =>
+      createAnimationFrameSource({
+        setAnimationFrameCallback: host.renderer.setAnimationFrameCallback,
+        setAnimationFrameActive: host.renderer.setAnimationFrameActive,
+      })
+    ).toThrow("Renderer does not support animation frame callbacks")
+    expect(host.calls).toEqual([])
   })
   test("construction is side-effect-free and only the first subscriber activates native frames", () => {
     const host = frameRenderer()
@@ -222,5 +247,160 @@ describe("createAnimationFrameSource", () => {
     await drainFrame()
     expect(frames).toEqual(["first"])
     unsubscribeFirst()
+  })
+})
+
+describe("resume frame source", () => {
+  test("resume demand is independent of ordinary frame sessions", async () => {
+    const host = frameRenderer()
+    const source = createAnimationFrameSource(host.renderer)
+    const delivered: string[] = []
+    const stopResume = source.subscribeResume(timestamp => {
+      delivered.push(`resume:${timestamp}`)
+    })
+    expect(host.calls).toEqual(["resume:set"])
+    expect(host.active).toBe(false)
+    expect(host.callback).toBeNull()
+    const stopFrame = source.subscribe(timestamp => {
+      delivered.push(`ordinary:${timestamp}`)
+    })
+    host.frame(1)
+    host.resume(2)
+    expect(delivered).toEqual(["resume:2"])
+    await drainFrame()
+    expect(delivered).toEqual(["resume:2", "ordinary:1"])
+    stopFrame()
+    expect(host.resumeCallback).not.toBeNull()
+    host.resume(3)
+    expect(delivered).toEqual(["resume:2", "ordinary:1", "resume:3"])
+    stopResume()
+    expect(host.calls).toEqual([
+      "resume:set",
+      "callback:set",
+      "active:true",
+      "active:false",
+      "callback:null",
+      "resume:null",
+    ])
+  })
+
+  test("removing the final resume listener leaves an ordinary frame session running", async () => {
+    const host = frameRenderer()
+    const source = createAnimationFrameSource(host.renderer)
+    const delivered: string[] = []
+    const stopFrame = source.subscribe(timestamp => {
+      delivered.push(`ordinary:${timestamp}`)
+    })
+    const ordinaryCallback = host.registeredCallback()
+    const stopResume = source.subscribeResume(timestamp => {
+      delivered.push(`resume:${timestamp}`)
+    })
+    stopResume()
+    expect(host.resumeCallback).toBeNull()
+    expect(host.callback).toBe(ordinaryCallback)
+    expect(host.active).toBe(true)
+    host.frame(4)
+    await drainFrame()
+    expect(delivered).toEqual(["ordinary:4"])
+    stopFrame()
+    expect(host.calls).toEqual([
+      "callback:set",
+      "active:true",
+      "resume:set",
+      "resume:null",
+      "active:false",
+      "callback:null",
+    ])
+  })
+
+  test("shared native resume callback dispatches synchronously and cancels each subscription", () => {
+    const host = frameRenderer()
+    const source = createAnimationFrameSource(host.renderer)
+    const delivered: number[] = []
+    const callback = (timestamp: number) => {
+      delivered.push(timestamp)
+    }
+    const stopFirst = source.subscribeResume(callback)
+    const nativeCallback = host.registeredResumeCallback()
+    const stopSecond = source.subscribeResume(callback)
+    expect(host.calls).toEqual(["resume:set"])
+    expect(host.resumeCallback).toBe(nativeCallback)
+    host.resume(4)
+    expect(delivered).toEqual([4, 4])
+    stopFirst()
+    stopFirst()
+    host.resume(5)
+    expect(delivered).toEqual([4, 4, 5])
+    stopSecond()
+    stopSecond()
+    expect(host.calls).toEqual(["resume:set", "resume:null"])
+    nativeCallback(6)
+    expect(delivered).toEqual([4, 4, 5])
+  })
+
+  test("cancellation during resume dispatch and old native callback cannot reach later listeners", () => {
+    const host = frameRenderer()
+    const source = createAnimationFrameSource(host.renderer)
+    const delivered: string[] = []
+    let stopSecond: () => void = () => undefined
+    const stopFirst = source.subscribeResume(() => {
+      delivered.push("first")
+      stopSecond()
+    })
+    const oldNativeCallback = host.registeredResumeCallback()
+    stopSecond = source.subscribeResume(() => {
+      delivered.push("second")
+    })
+    host.resume(1)
+    expect(delivered).toEqual(["first"])
+    stopFirst()
+    const stopNext = source.subscribeResume(() => {
+      delivered.push("next")
+    })
+    expect(host.registeredResumeCallback()).not.toBe(oldNativeCallback)
+    oldNativeCallback(2)
+    expect(delivered).toEqual(["first"])
+    host.resume(3)
+    expect(delivered).toEqual(["first", "next"])
+    stopNext()
+    expect(host.active).toBe(false)
+  })
+
+  test("listener added during resume starts with the next transition", () => {
+    const host = frameRenderer()
+    const source = createAnimationFrameSource(host.renderer)
+    const delivered: string[] = []
+    let stopNew: () => void = () => undefined
+    const stopFirst = source.subscribeResume(() => {
+      delivered.push("first")
+      stopNew = source.subscribeResume(() => {
+        delivered.push("new")
+      })
+    })
+    host.resume(1)
+    expect(delivered).toEqual(["first"])
+    stopFirst()
+    host.resume(2)
+    expect(delivered).toEqual(["first", "new"])
+    stopNew()
+    expect(host.resumeCallback).toBeNull()
+  })
+
+  test("last listener can cancel itself inside the native resume callback", () => {
+    const host = frameRenderer()
+    const source = createAnimationFrameSource(host.renderer)
+    const delivered: number[] = []
+    let stop: () => void = () => undefined
+    stop = source.subscribeResume(timestamp => {
+      delivered.push(timestamp)
+      stop()
+    })
+    const nativeCallback = host.registeredResumeCallback()
+    host.resume(9)
+    expect(delivered).toEqual([9])
+    expect(host.resumeCallback).toBeNull()
+    expect(host.calls).toEqual(["resume:set", "resume:null"])
+    nativeCallback(10)
+    expect(delivered).toEqual([9])
   })
 })

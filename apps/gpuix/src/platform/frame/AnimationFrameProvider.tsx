@@ -36,3 +36,27 @@ export function useAnimationFrame(callback: AnimationFrameCallback, active: bool
     }
   }, [source, active])
 }
+
+export function useResumeFrame(callback: AnimationFrameCallback, active: boolean): void {
+  const source = useContext(AnimationFrameContext)
+  if (source === null) {
+    throw new Error("useResumeFrame must be used within an AnimationFrameProvider")
+  }
+
+  const committedCallback = useRef(callback)
+  useLayoutEffect(() => {
+    committedCallback.current = callback
+  }, [callback])
+
+  useLayoutEffect(() => {
+    if (!active) return
+    let subscribed = true
+    const unsubscribe = source.subscribeResume(timestampMs => {
+      if (subscribed) committedCallback.current(timestampMs)
+    })
+    return () => {
+      subscribed = false
+      unsubscribe()
+    }
+  }, [source, active])
+}

@@ -133,3 +133,26 @@ Canvas 2D 是当前渲染实现，不保证任意工程规模的帧率。性能�
 本轮通过 [REA](https://github.com/morluto/rea) 检查本机 Ableton Live 应用包及 Info.plist，并读取已安装主题中的 Clip、Waveform 和混合因子角色。实际 AX 说明确认 `A` 是自动化切换、`M` 是电脑 MIDI 键盘、`Cmd+M` 是 Live 的 MIDI 映射。Group 连接样式有运行窗口截图；淡变与折叠 Group 的补充图来自 [Arrangement View 手册](https://www.ableton.com/en/manual/arrangement-view/#audio-clip-fades-and-crossfades) 和 [Group Tracks 手册](https://www.ableton.com/en/manual/mixing/#group-tracks)。
 
 当前没有 Hopper、Ghidra 或 IDA，未反编译 Live 原生实现。前台控制确认未取得，不能把未成功切换的原生折叠、缩放和拖动状态说成实测。当前实现依据已观察的 UI、资源角色和官方说明独立构建，不宣称像素完全一致或完整 Live 行为等价。
+
+## gpuix 原生窗口的播放可见性
+
+2026-10-15。此节适用于 `apps/gpuix` 原生渲染，不改变上文 Web 原型的历史范围。窗口激活与窗口可见是两个独立状态；`isVisible` 不能替代 `NSWindowOcclusionState.Visible`。
+
+| 播放中窗口状态 | 实测 callback Hz | 单核进程 CPU | 策略 |
+| --- | --: | --: | --- |
+| 前台可见 | 60.003 | 15.526% | 显示帧驱动 |
+| 失活但仍可见 | 21.792 | 8.989% | 保留 GPUI 的失活节流，电平、播放头、时钟继续更新 |
+| 完全遮挡 | 0 | 4.136% | 允许停止显示帧，遥测继续接收 |
+| 最小化 | 0 | 3.450% | 允许停止显示帧，遥测继续接收 |
+
+前台与失活可见各取状态稳定后的至少 12 秒，其余为至少 5 秒稳定采样；最小化另有 8.764 秒停帧补证。CPU 来自进程 user+system 增量，含 Bun、真实静音 Main 引擎、hot reload 与采样，不是 GPU 利用率，也不代表大型工程成本。不同桌面时段的单次对比不能隔离补丁开销。GPUI 的失活最小帧间隔为 33333µs，量化和派发时机会使实测频率低于名义 30Hz；不为追求后台 60Hz 取消这一节流。
+
+表中桌面数据对应 F3 key-order 恢复状态机版本、F4 接合之前；F4 接合后的 retained geometry 首绘以 headless GPUI 回归验证，未重新宣称测过接合后的桌面 CPU。无恢复订阅者时跳过周期可见性采样，注册时仍显式建立最新 baseline。
+
+恢复规则：从遮挡、最小化或失活恢复后的首次 presentation 必须包含同步恢复回调执行时 JS 已收到的最新遥测；音频线程尚未交付的样本不计入这个相等性边界。不能把恢复后 250ms 的截图、第一条普通 frame 回调或最终收敛当成首次 presentation 的证明。普通帧回调继续异步投递，避免重入 GPUI；不使用 JS 定时器补帧。停止播放且没有剩余动画时不再请求帧。
+
+同步恢复通道独立于普通帧：`subscribeResume` / `useResumeFrame` 的消费者以 `flushSync` 提交 retained tree；安全的批次写入包括 `applyBatch` 和 F4 `setQuads`，不在该同步回调中借用或读取 GPUI。原生代码在回调结束后通过当前 `window/cx` 应用失效；仅同步改树还不够，GPUI 在 dirty 为 false 时可直接 presentation 旧 scene 而不进入 `Window::draw`。不强制 draw 的 GPUI 回归及其失效分支变异覆盖这一门控。
+
+AppKit 的 key-window prepaint 可以早于 occlusion Visible 位更新；`Occluded → BecomingVisible → Visible` 允许 key 先到时立即恢复，且不会在随后的可见通知重复派发。纯遮挡恢复不依赖 key 信号。轨道电平的恢复需求为 `playing || active`：停止播放后仍在 hold/decay 的动画也要同步追上，动画耗尽后释放两种帧订阅。
+
+基线五次最小化恢复均实际呈现旧序号；最终最小化恢复 5/5、保持失活的纯遮挡恢复 5/5，首 presentation 的 scene sequence 均等于回调时最新已交付 sequence。原始记录与修复前后 CPU 对比见 [F3 测量报告](../../scripts/gpuix-main/evidence/f3/measurement-2026-10-15.md)。完全遮挡可以完整复现 tracks 的冻结症状，但原 tracks 记录缺少同步窗口状态，因此是「可复现、未证实」，不是对原场景的追认。

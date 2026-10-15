@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
 import { AnimationFrameProvider } from "@/platform/frame"
+import { useProjectState } from "@/project/stores/useProjectState"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackLabelsProvider } from "../labels"
 import { trackResources } from "../locales"
@@ -122,4 +123,53 @@ test("inline reader changes preserve held peaks and unmount cancels the real fra
   ).toBe("L -60.0 dB, R -60.0 dB")
   view.close()
   expect(view.frames.subscribers).toBe(0)
+})
+
+test("first resume commits newest stereo telemetry even when the decay driver was idle", () => {
+  const previousSession = useProjectState.getState().session
+  useProjectState.setState({ session: { ...previousSession, playing: true } })
+  let telemetry = frame({ audio: [-120, -120] })
+  const view = mountMeter(() => telemetry)
+  try {
+    expect(view.frames.subscribers).toBe(0)
+    expect(view.frames.resumeSubscribers).toBe(1)
+    expect(
+      view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
+    ).toBe("L -60.0 dB, R -60.0 dB")
+    // No ordinary frame or provider rerender occurs while the window is hidden.
+    telemetry = { ...frame({ audio: [-38, -41] }), sequence: 10529, playing: true }
+    view.frames.resume(5500)
+    expect(
+      view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
+    ).toBe("L -38.0 dB, R -41.0 dB")
+  } finally {
+    view.close()
+    useProjectState.setState({ session: previousSession })
+  }
+})
+
+test("stopped held peaks catch up on resume and release all frame demand after decay", () => {
+  const previousSession = useProjectState.getState().session
+  useProjectState.setState({ session: { ...previousSession, playing: true } })
+  let telemetry = frame({ audio: [3, 0] })
+  const view = mountMeter(() => telemetry)
+  try {
+    view.advance(0)
+    expect(view.root.renderer.findByTestId("track-meter-peak-left-audio")).toBeDefined()
+    useProjectState.setState({ session: { ...useProjectState.getState().session, playing: false } })
+    telemetry = frame({ audio: [-120, -120] })
+    view.render()
+    // Playback stopped, but the held peak still needs elapsed-time decay after occlusion.
+    view.frames.resume(5000)
+    expect(view.root.renderer.findByTestId("track-meter-peak-left-audio")).toBeUndefined()
+    expect(view.root.renderer.findByTestId("track-meter-peak-right-audio")).toBeUndefined()
+    expect(
+      view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
+    ).toBe("L -60.0 dB, R -60.0 dB")
+    expect(view.frames.subscribers).toBe(0)
+    expect(view.frames.resumeSubscribers).toBe(0)
+  } finally {
+    view.close()
+    useProjectState.setState({ session: previousSession })
+  }
 })

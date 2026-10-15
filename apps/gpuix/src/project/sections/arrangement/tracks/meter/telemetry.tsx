@@ -1,6 +1,7 @@
+import { flushSync } from "@gpuix/react"
 import { createContext, useContext, useLayoutEffect, useMemo, useState } from "react"
 import { useProjectState } from "@/project/adapters"
-import { useAnimationFrame } from "@/platform/frame"
+import { useAnimationFrame, useResumeFrame } from "@/platform/frame"
 import { createMeterDecayDriver } from "./decay-driver"
 import type { ReactNode } from "react"
 import type { BackendTelemetry } from "@/project/model/backend"
@@ -23,9 +24,16 @@ export function TrackTelemetryProvider({
 }) {
   const levels = useProjectState(state => state.session.levels)
   const epoch = useProjectState(state => state.session.backend.sessionId)
+  const playing = useProjectState(state => state.session.playing)
   const [active, setActive] = useState(false)
   const driver = useMemo(() => createMeterDecayDriver(setActive), [])
   useAnimationFrame(timestampMs => driver.advance(timestampMs), active)
+  useResumeFrame(timestampMs => {
+    flushSync(() => {
+      driver.wake()
+      driver.advance(timestampMs)
+    })
+  }, playing || active)
   const environment = useMemo(() => ({ telemetry, driver }), [telemetry, driver])
   useLayoutEffect(() => driver.wake(), [levels, epoch, telemetry, driver])
   return <TelemetryContext.Provider value={environment}>{children}</TelemetryContext.Provider>

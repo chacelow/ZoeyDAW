@@ -1,7 +1,7 @@
 import type { GpuixRenderer } from "@gpuix/native"
 import type { NativeRenderer } from "@gpuix/native/host"
 import type { createAnimationFrameSource, FrameRenderer } from "./animation-frame-source"
-import type { useAnimationFrame } from "./AnimationFrameProvider"
+import type { useAnimationFrame, useResumeFrame } from "./AnimationFrameProvider"
 
 type Assert<T extends true> = T
 
@@ -11,4 +11,7 @@ export type ReactRendererSatisfiesFrameFactory = Assert<
 >
 export type AnimationFrameHookHasTwoArguments = Assert<
   Parameters<typeof useAnimationFrame>["length"] extends 2 ? true : false
+>
+export type ResumeFrameHookHasTwoArguments = Assert<
+  Parameters<typeof useResumeFrame>["length"] extends 2 ? true : false
 >
