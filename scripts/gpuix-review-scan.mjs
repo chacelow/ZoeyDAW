@@ -76,7 +76,9 @@ for (const file of code) {
 }
 for (const file of source) {
   const text = stripComments(readFileSync(file, "utf8"))
-  if (/\b(it|test)\.skip\(|\b(describe|it|test)\.only\(|xit\(|xtest\(/.test(text))
+  if (
+    /\b(it|test)\.skip\(|\b(describe|it|test)\.only\(|(?<![\w$.])x(it|test|describe)\(/.test(text)
+  )
     add("skipped-test", file, "skipped/only test: delete or fix")
   if (/expect\([^)]*\)\.toBeTruthy\(\)\s*$/m.test(text) && /\.test\.(ts|tsx)$/.test(file))
     add("weak-assertion", file, "toBeTruthy-only assertion: assert the behaviour")

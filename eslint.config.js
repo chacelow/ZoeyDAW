@@ -143,7 +143,7 @@ export default [
       "apps/gpuix/src/project/adapters/{clipboard-memory,snapshots}.ts",
       "apps/web/src/pages/project/sections/ArrangementPanel/{useGestureCursor,Timeline/drawModeKey}.ts",
       "apps/web/src/shared/native/log-sink.ts",
-      "packages/i18n/src/setup.ts",
+      "packages/i18n/src/core.ts",
       "packages/ui/src/{Loading,toaster,paste-zone}.tsx",
       "packages/ui/src/motion/animated-toast-stack.tsx",
     ],
@@ -235,6 +235,38 @@ export default [
           devDependencies: true,
           packageDir: [import.meta.dirname, `${import.meta.dirname}/packages/shared`],
         },
+      ],
+    },
+  },
+  {
+    // Renderer probes and regressions under scripts/gpuix-main/<slice>/ run against the app's
+    // dependency tree (react, @gpuix/*), resolved through a node_modules link to apps/gpuix.
+    files: ["scripts/gpuix-main/*/**/*.{ts,tsx}"],
+    rules: {
+      "import-x/no-extraneous-dependencies": [
+        "error",
+        {
+          devDependencies: true,
+          packageDir: [import.meta.dirname, `${import.meta.dirname}/apps/gpuix`],
+        },
+      ],
+      "n/no-extraneous-import": [
+        "error",
+        { allowModules: ["react", "@gpuix/react", "@gpuix/native"] },
+      ],
+    },
+  },
+  {
+    // These two shared controls take role from the caller (a composite widget such as the Browser
+    // tree gives its rows one Tab entry). Elements without a role are still checked.
+    files: [
+      "apps/gpuix/src/ui/controls/Button/index.tsx",
+      "apps/gpuix/src/ui/controls/DragPreviewArea/index.tsx",
+    ],
+    rules: {
+      "jsx-a11y/no-static-element-interactions": [
+        "error",
+        { handlers: ["onClick"], allowExpressionValues: true },
       ],
     },
   },

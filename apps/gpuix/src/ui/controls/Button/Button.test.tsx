@@ -3,7 +3,6 @@ import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Button } from "."
-import { readOuterBounds } from "../useMeasuredTextWidth"
 
 test("pointer and keyboard toggle once, disabled button ignores activation", () => {
   const rootKeys: string[] = []
@@ -47,7 +46,7 @@ test("pointer and keyboard toggle once, disabled button ignores activation", () 
   root.render(<Harness />)
   root.renderer.flush()
   const node = root.renderer.findByTestId("toggle")!
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(node.id))!
+  const bounds = root.renderer.getElementBounds(node.id)!
   root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
   expect(latest).toBe(true)
   root.renderer.nativeSimulateKeystrokes(node.id, "space")
@@ -75,14 +74,8 @@ test("icon buttons are square in both shared metric profiles", () => {
     </ThemeProvider>
   )
   root.renderer.flush()
-  const small = readOuterBounds(
-    root.renderer,
-    root.renderer.getElement(root.renderer.findByTestId("small")!.id)
-  )!
-  const large = readOuterBounds(
-    root.renderer,
-    root.renderer.getElement(root.renderer.findByTestId("large")!.id)
-  )!
+  const small = root.renderer.getElementBounds(root.renderer.findByTestId("small")!.id)!
+  const large = root.renderer.getElementBounds(root.renderer.findByTestId("large")!.id)!
   expect(small.width).toBe(small.height)
   expect(large.width).toBe(large.height)
   expect(large.height).toBeGreaterThan(small.height)

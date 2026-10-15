@@ -24,15 +24,15 @@ export const THEME_PRESETS: readonly ThemePreset[] = PRESET_DATA.map(preset => (
   colors: { light: derive(preset.light, "light"), dark: derive(preset.dark, "dark") },
 }))
 
-const PRESETS_BY_ID = Object.fromEntries(
-  THEME_PRESETS.map(preset => [preset.id, preset])
-) as Record<ThemePresetId, ThemePreset>
+const PRESETS_BY_ID = new Map<string, ThemePreset>(THEME_PRESETS.map(preset => [preset.id, preset]))
 
 /** Boundary check for ids read from settings or other untyped input. */
 export function isThemePresetId(value: string): value is ThemePresetId {
-  return Object.hasOwn(PRESETS_BY_ID, value)
+  return PRESETS_BY_ID.has(value)
 }
 
 export function getThemePreset(id: ThemePresetId): ThemePreset {
-  return PRESETS_BY_ID[id]
+  const preset = PRESETS_BY_ID.get(id)
+  if (!preset) throw new RangeError(`Unknown theme preset "${id}"`)
+  return preset
 }

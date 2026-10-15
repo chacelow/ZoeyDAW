@@ -485,7 +485,7 @@ node scripts/gpuix-main/check.mjs --resolution
 
 构建只允许固定 SHA、固定 zed SHA 与仓库中的 `patches/close-guard.patch`，拒绝额外 tracked diff、untracked 源码与 dirty zed。已应用的补丁可重复构建，不重复 apply。外置 `.build-lock` 确保同一 vendor 同时只有一个构建 owner；中断留下锁目录时，先确认原构建已结束，再移除空锁目录。`check.mjs` 校验补丁 diff、平台与产物 SHA-256 manifest，拒绝源码或产物发生变化的旧构建。
 
-关闭补丁来自 A6 附录，纳入版本管理后由干净 checkout 应用。它仍只适用于 macOS embedded loop，未实现 Windows/Linux 的跨线程关闭流程、handler 清除或异步确认。`WindowCloseGuard.supported` 没有被改成 true。上游完整 Apache-2.0 LICENSE 与 THIRD_PARTY_NOTICES 原文保存在根 `THIRD_PARTY_NOTICES`。
+关闭补丁来自 A6 附录，纳入版本管理后由干净 checkout 应用。它仍只适用于 macOS embedded loop，未实现 Windows/Linux 的跨线程关闭流程、handler 清除或异步确认。`WindowCloseGuard.supported` 没有被改成 true(后由 H1 接通，见「H1 窗口外观与程序化关闭」)。上游完整 Apache-2.0 LICENSE 与 THIRD_PARTY_NOTICES 原文保存在根 `THIRD_PARTY_NOTICES`。
 
 ### 升级到下一个主干 SHA
 
@@ -728,6 +728,8 @@ D1 指定的依赖切换、面板测量替换、键盘订阅端口均已实现�
 | `anchored-center.patch` | `native/src/custom_elements/anchored.rs` | 仅无 position 的 snap trigger-flex 路径让 flex 独占交叉轴居中 |
 | `select-trigger-space.patch` | `react/src/components/select.tsx` | `activateOnSpace` 默认 true，尊重 caller `defaultPrevented` |
 | `window-active-change.patch` | `native/src/renderer.rs`、`native/index.d.ts`、`native/js/host.ts` | GPUI 原生窗口激活观察，异步 bool 回调 |
+| `window-appearance-close.patch`(H1) | `native/src/renderer.rs`、`native/index.d.ts`、`native/js/host.ts` | 窗口明暗外观观察；`closeWindow()` 不经否决关闭，见「H1 窗口外观与程序化关闭」 |
+| `context-menu.patch`(F2) | `native/src/context_menu.rs`、`native/src/{lib,renderer}.rs`、`native/js/{host,mutations}.ts` | 最近宿主的原生右键通知，越过交互后代并尊重后续遮挡，见「F2 原生 contextMenu」 |
 
 前置 `close-guard.patch` 保持 D1 的关闭契约。新增补丁不改变两个固定 SHA，没有新增依赖。
 
@@ -883,9 +885,109 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 
 输出为空，grep 返回 1 表示无匹配，不是残留进程失败。原始 stdout 与自有 service 清单见 `process-cleanup-2026-10-15.json`。没有启动或停止用户已有应用，没有 push 或远程贡献。
 
+### H1 窗口外观与程序化关闭
+
+2026-10-15。补丁 `window-appearance-close.patch` 接在 `window-active-change.patch` 之后，修改 `native/src/renderer.rs`、`native/index.d.ts`(NAPI 生成)、`native/js/host.ts`。不改 zed 子模块，不改两个固定 SHA，不新增依赖。构建在独立 vendor 根 `/Volumes/PSSD/code/_vendor/h1-gpuix` 上完成，共享 checkout 未改动。合入主干时由协调者统一重建共享 vendor。
+
+| 接口 | 契约 |
+| --- | --- |
+| `onWindowAppearanceChange(callback \| null)` | 基于 GPUI `observe_window_appearance`。第一次回调异步回报当前值，之后回报变化。传 null 释放 observer。弱、非阻塞 TSFN，不让进程保活。`VibrantLight`/`VibrantDark` 归并为 `"light"`/`"dark"` |
+| `getWindowAppearance()` | 同步返回当前 `"light" \| "dark"`。macOS 走 `update_window`，Win/Linux 走 UI command 加 2 秒超时应答。供首帧主题使用，因为订阅首值只当基线 |
+| `closeWindow()` | 调用 `Window::remove_window()`，**不**经过 `setWindowShouldClose`。在 `QuitMode::LastWindowClosed` 下最后一个窗口关闭即 `cx.quit()`，`tick()` 返回 false，JS 退出。禁止在 `setWindowShouldClose` 回调里同步调用：AppKit 询问期间 GPUI `App` 已被借用，再次 `borrow_mut` 会 panic，而且发生在 AppKit 的 FFI 回调里，可能直接 abort 进程。`platform/window` 守卫会在这种情况下抛错拦截 |
+| `NativeRenderer` | host 的 Pick 列表补上 `onWindowAppearanceChange`、`getWindowAppearance`、`setWindowShouldClose`、`closeWindow`，`platform/window` 的结构端口在编译期与它核对 |
+
+macOS 直接更新 view；Windows、Linux、FreeBSD 走 UI command 队列，与激活接口相同，但这三个平台没有实跑。
+
+**约束**：回报的是窗口的 `effectiveAppearance`，它继承 `NSApp.appearance`。如果以后为了让原生标题栏跟随所选模式而调用 GPUI `set_window_appearance`，「跟随系统」读到的就会是被覆盖的值，系统切换也不再触发变化。为此记入 LESSONS。另一条备选方案是在 `crates/native` 里监听 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`：它能读到真实的系统值，但要新增 objc2-foundation/block2，只覆盖 macOS，也无法在 GPUI 测试里模拟。协调者批准走补丁方案。
+
+TS 侧：`createWindowPlatform(renderer).subscribeSystemAppearance` 与 `subscribeApplicationActive` 共用 `createNativeValueSubscription`，旧的 `application-active.ts` 已删除；`getSystemAppearance()` 给出首帧值。`createWindowCloseGuard(renderer, { shouldClose })` 返回 `{ supported, close() }`：`supported` 只表示能否否决(仅 macOS)，`close()` 只依赖三平台都有的 `closeWindow`，在 `shouldClose` 执行期间调用会抛错。设置中的 `themeMode`(`light | dark | system`，缺省按 system)与 `themePreset` 互相独立。详见 `apps/gpuix/src/platform/window/README.md`。
+
+**已知限制(推断，未实测)**：GPUI `gpui_macos/src/window_appearance.rs` 只识别 Aqua、DarkAqua 和两个 Vibrant 名称，其它名称一律回落为 `Light`。开启「增强对比度」后，系统报告的深色外观名(如 `NSAppearanceNameAccessibilityHighContrastDarkAqua`)会被当作 `"light"`。修复要么改 zed 子模块(本补丁不改)，要么在 renderer 里另读 `NSAppearance`。协调者决定只记录，不在本机切换辅助功能设置实测。
+
+**减少动态效果(协调者追加)**：GPUI 只有 `App::reduce_motion` 字段(默认 false，不从系统读取)，vendor 也没有相应接口，所以放在 `crates/native/src/reduced_motion.rs`，不改补丁。napi 提供 `reducedMotion()` 与 `onReducedMotionChange(callback | null)`：观察者对象用 `define_class!` 定义，挂在 `NSWorkspace.notificationCenter` 上，监听 `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification`。注册时先经弱、非阻塞 TSFN 异步回报当前值，传 null 时移除 observer，进程内只有一个 owner。依赖变化：`objc2-foundation 0.3.2` 由传递依赖改为直接依赖，`objc2-app-kit` 增加 `NSWorkspace`、`NSAccessibility` 两个 feature；`Cargo.lock` 只在 zoeydaw-native 的依赖列表里多一行。非 macOS 平台两个接口都返回错误。
+
+#### H1 实测记录
+
+证据在 [scripts/gpuix-main/evidence/h1](../../scripts/gpuix-main/evidence/h1/)。由协调者代为在系统设置里切换外观，demo 窗口为 420×140。
+
+| 场景 | 结果 | 证据 |
+| --- | --- | --- |
+| 基线 | 系统为深色，订阅后原生回报 `dark`，平台层不通知 | `h1-demo-log-2026-10-15.txt` |
+| 深 → 浅 | 原生 `light`，约 90ms 后平台 `appearanceChange light`；AX 读到 `System appearance: light` | 同上、`appearance-light-2026-10-15.png` |
+| 浅 → 深 | 原生 `dark`，平台 `appearanceChange dark` | 同上、`appearance-dark-2026-10-15.png` |
+| dirty 时按关闭按钮 | AX `AXCloseButton` press 触发 `closeRequest allow=false`，窗口保留，AX 读到 `Close guard: dialog: unsaved changes`(截图早于重绘，仍显示 dirty，以 AX 为准) | 日志与 AX 抄录 |
+| 选择「不保存」 | `discardChosen` 后调用 `guard.close()`，窗口消失，bun 进程 exit 0 | 日志、窗口列表 |
+
+#### H1 命令
+
+| 位置 | 实跑命令 | 结果 |
+| --- | --- | --- |
+| 根目录 | `GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/h1-gpuix bash scripts/gpuix-main/build.sh runtime` | native release 172.99s，RSS 798 MB；七个补丁经 `check.mjs --sources` 精确校验 |
+| vendor | `cargo test --release --manifest-path packages/native/Cargo.toml --lib --features test-support,gpui_platform/runtime_shaders` | 274 pass(F1 后 271 个，新增 3 个) |
+| vendor 变异 | 把 VibrantDark 映射为 light，并删除注册时的基线回调 | 2 个外观测试失败，恢复后通过 |
+| 本仓 Rust 变异 | `ThemeMode::Dark` 加 `alias = "Dark", "auto"`(宽松解析) | `rejects_unknown_theme_mode_on_read_and_write` 失败，恢复后通过 |
+| TS 变异 | 删除守卫的 `deciding` 拦截；`shouldClose` 恒为 true；不支持时 `close()` 变成空操作；外观端口误接 `onWindowActiveChange`；去掉基线判断；删除 `register(null)` | 依次 1、2、1、1、6、5 个失败，恢复后全部通过 |
+| 根目录 | `cargo check`、`cargo test` | 通过，native 17(含 reduced motion 合成通知测试)、engine 32 |
+| reduced motion 变异 | 注册时不回报基线；TS getter 恒为 true；替换时跳过 `removeObserver` | 前两项分别使 Rust 测试、TS napi 测试失败。第三项测试仍通过：旧 observer 的 `Retained` 已被释放，macOS 10.11 起 NotificationCenter 对已释放的 observer 是弱引用，不会再回调，所以 `removeObserver` 在测试里观察不到差别。代码仍然显式移除，不依赖弱引用行为 |
+| 真实进程 | gpuix 窗口内调用 `getReducedMotion()` 与 `onReducedMotionChange` | 两者都是 false，与 `defaults read com.apple.universalaccess reduceMotion` 一致(该键不存在，即关闭)；注销后进程 exit 0。系统设置的真实切换未实测(协调者决定不改辅助功能设置)，变化路径只由合成通知测试覆盖 |
+| apps/gpuix(merge 主干 4b447b6 后) | `pnpm exec tsc --noEmit`、`bun test` | tsc 0 错误；bun 只有 1 个失败 `secondary click on an interactive title opens its track context menu`，干净主干同样复现，属于主干已知问题 |
+
+GPUI 的 `TestWindow::simulate_appearance_change` 与 `TestAppContext::test_window` 都是 crate 私有，补丁内的测试无法模拟变化，只能覆盖基线、归并和 observer 的释放；「变化会触发 observer」由 GPUI 自带的 `test_appearance_change_runs_after_app_update` 与上面的真实窗口证明。
+
+### F2 原生 contextMenu
+
+2026-10-15。`context-menu.patch` 接在 H1 的 `window-appearance-close.patch` 后面。独立 vendor 根为 `/Volumes/PSSD/code/_vendor/f2-gpuix`，Cargo target 为 `/Volumes/PSSD/code/_vendor/target-f2`。固定 gpuix、zed SHA 不变，没有新增依赖或修改 zed。
+
+#### 消费方契约
+
+`native/js/host.ts` 是 `HostProps.onContextMenu` 的类型 owner，`@gpuix/react` 的 `Props` 继承它。`mutations.ts` 把 prop 注册成 `contextMenu`。能力作用于 `<div>`、`<text>` 宿主。
+
+| 项目 | 契约 |
+| --- | --- |
+| 触发 | 右键按下，不等待松开。普通左键、中键、键盘不触发 |
+| 命中 | 元素 bounds 包含该点，且该点未被祖先 content mask 裁掉。交互后代的 `BlockMouse`、`BlockMouseExceptScroll` 不阻断通知 |
+| owner | 包含该点的最近声明作用域接收一次。重叠的独立作用域按 GPUI 绘制顺序选择最前面的一个 |
+| 遮挡 | 后续兄弟或 deferred anchored 浮层的 `BlockMouse`、`BlockMouseExceptScroll` 会阻断被盖住的作用域 |
+| 顺序 | 在 capture 阶段选定 owner，`App::defer` 在既有 descendant `mouseDown`、`mouseDownOutside` 后发送通知。不调用 `stop_propagation` 或 `prevent_default` |
+| macOS | GPUI `gpui_macos/src/window.rs:2583-2635` 已把 ctrl-left down/up 归一化成 Right，并清掉 control。renderer 和消费方都不再检查 ctrl |
+| payload | `elementId` 为作用域 id，`eventType="contextMenu"`，`x/y` 为鼠标事件同源的窗口坐标，`button=2`、`clickCount`、`isRightClick=true`、`modifiers`。不填 `key`、`keyChar`、`keystrokeId` |
+| 不改变 | 后代右键 `onMouseDown`、普通 `onClick`、hover 边沿、滚轮 owner、指针捕获及布局 |
+
+A3b 的 `ContextMenuTrigger` 应从 `onMouseDown` 的 button/ctrl 分支切换到 `onContextMenu`，以 `event.x/y` 定位现有弹层。保留后代自己的 mouse-down handler。F2 不改 `ui/controls`。
+
+#### GPUI 命中与生命周期
+
+GPUI `window.rs:5454-5472` 的 capture 按监听注册顺序运行，bubble 反序运行。Div 在子元素 paint 前注册自身监听。`window.rs:1089-1110` 逆序遍历 hitbox，对 bounds 与 content mask 取交集；`BlockMouse` 截断命中列表，`BlockMouseExceptScroll` 截断 hover 集合。
+
+F2 的透明 `Scope` 复用 child 的 `LayoutId`，不增加布局节点。它先 prepaint 子树，再在元素自身 bounds 上插入 Normal probe。probe 位于普通交互后代前面，但仍在后续兄弟和 deferred 层后面。原祖先 hitbox 的 `is_hovered=false` 不再阻断通知；probe 的 hover 查询只复用 GPUI 的遮挡结果。Normal probe 不改变其它 hitbox 的 hover 或 scroll 资格。
+
+每个 `GpuixView` 只有一个可复用的作用域 registry。只在 paint 按前序登记，避免虚拟列表 speculative prepaint 回滚留下幽灵项。每帧最前面的 canvas 清空 registry，root capture 反向选择最后一个 eligible。隐藏宿主不登记，隐藏祖先也不会 paint 子树。probe 使用单独的 GPUI identity，避免重绘时替换祖先已捕获的 hitbox。
+
+没有使用 automation 的 `RetainedTree.elements_at`，也没有在 UI 层伪造或转发事件。`check.mjs` 额外校验 `native/dist/mutations.js` 和 `.d.ts` 的 SHA-256，覆盖新增的运行时事件名映射。
+
+#### 验证与集成边界
+
+真实 Button、DragPadNumber 的 TS 失败用例在补丁前为 1 pass、3 fail，补丁后扩展为 8 pass。原生七项回归覆盖两种阻断后代、最近作用域、左键、bounds 外、deferred 遮挡与 content mask；逐项变异都使对应测试失败。含 H1 的 vendor 完整套件为 281 pass。
+
+真实 macOS 窗口验证了 Button 右键、数值控件右键、inner owner、ctrl-click、anchored 遮挡、primary 点击、Tab 和 Space，以及深浅主题。数值始终为 120；ctrl-click payload 的 button 为 2，ctrl 为 false。窗口取证后立即关闭，临时探针已删除。截图、AX、完整命令、变异与自审记录见 [F2 交付报告](../../scripts/gpuix-main/evidence/f2/merge-ready.md)。
+
+最终 `apps/gpuix` 类型检查通过，完整 `bun test` 为 825 pass、1 todo、1 fail。唯一失败仍是 `secondary click on an interactive title opens its track context menu`，原因是消费方 `ContextMenu` 尚未改用 `onContextMenu`，不是全套全绿。协调者批准先合入原生端口、重建 vendor，再通知 A3b 接入；协调者在 A3b 合入时重跑该用例，作为 F2 的最终集成验收。
+
+#### 上游 PR 草稿
+
+Title: `feat(native): notify the nearest context-menu scope through interactive descendants`
+
+Add `HostProps.onContextMenu` for div and text hosts. Notify the deepest eligible scope on a right-button press, using the same window coordinates and modifiers as other mouse events. macOS control-click keeps the existing GPUI normalization. The notification carries no keyboard fields.
+
+A layout-transparent wrapper inserts a Normal hitbox after ordinary descendants. This lets the scope receive context-menu notification through descendants that block mouse input, while later siblings, content masks, and deferred layers still occlude it. Resolve one owner during capture and defer notification until existing mouse-down handlers have run. Do not stop propagation, change descendant pointer interactivity, or patch GPUI.
+
+Validation: GPUI tests cover both blocking descendant behaviors, nearest scope, repeated presses, primary clicks, outside bounds, deferred overlays, and clipping. Mutation runs detect each regression. Native React tests use real Button and numeric controls and also cover hover, scroll, hidden scopes, listener removal, and pointer capture across repaint. A real macOS window verifies control-click and occlusion. Windows, Linux, and browser runtimes have not been exercised.
+
+This is a local draft only. No issue or PR was published. Follow the upstream contribution policy noted in F1 before sending it, including the required public README update.
+
 ### F4 native quad batches
 
-2026-10-15。`quad-batch.patch` 排在 `window-active-change.patch` 后。独立 vendor 为 `/Volumes/PSSD/code/_vendor/f4-gpuix`，不修改共享 vendor 或 zed。补丁包含 retained buffer、paint、napi 与 TestRenderer setter、React ref 方法、intrinsic 与 TS 类型。通用 mutation queue 保持上游原样。
+2026-10-15。`quad-batch.patch` 排在 `context-menu.patch` 后，包含主干 H1 与 F2 契约。独立 vendor 为 `/Volumes/PSSD/code/_vendor/f4-gpuix`，不修改共享 vendor 或 zed。补丁包含 retained buffer、paint、napi 与 TestRenderer setter、React ref 方法、intrinsic 与 TS 类型。通用 mutation queue 保持上游原样。
 
 `<QuadBatch>` 只接收 style、testId 与 ref，**不接收 quads prop**。`shared/quads/useQuadBatch.ts` 提供稳定的 `QuadBatchController { ref, setQuads }`。数据只经事件或 layout effect 内的 `batch.setQuads(Float32Array)` 上传，不进入 React props 或 state。数据更新不触发 React render。挂载前设置的数据由 controller 缓存，在 native ref attach 后上传；卸载后不再访问旧 host，重新挂载时重放最新数据。controller 按引用去重，缓冲视为不可变，替换引用才发布修改。
 

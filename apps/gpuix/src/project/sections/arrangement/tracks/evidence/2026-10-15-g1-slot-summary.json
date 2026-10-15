@@ -1,0 +1,37 @@
+{
+  "authorizedStart": "2026-10-15T02:33:00.000Z",
+  "authorizedEnd": "2026-10-15T02:43:00.000Z",
+  "serviceStarted": "2026-10-15T02:33:07.662Z",
+  "serviceExited": "2026-10-15T02:44:18.440Z",
+  "lateKillMs": 78440,
+  "cursorRestore": {
+    "event": "cursor-restored",
+    "anchor": {
+      "x": 1418,
+      "y": 353
+    },
+    "actual": {
+      "x": 1418,
+      "y": 353
+    }
+  },
+  "shots": [
+    {
+      "name": "drag",
+      "before": 25,
+      "after": 54
+    },
+    {
+      "name": "playing",
+      "before": 62,
+      "after": 180
+    },
+    {
+      "name": "overload-stale",
+      "before": 834,
+      "after": 835
+    }
+  ],
+  "peakDecayVisual": "not completed",
+  "foregroundControl": "interactive acquisition timed out; released after closing window"
+}

@@ -8,6 +8,8 @@
     "anchored-center.patch",
     "select-trigger-space.patch",
     "window-active-change.patch",
+    "window-appearance-close.patch",
+    "context-menu.patch",
     "quad-batch.patch"
   ]
 }

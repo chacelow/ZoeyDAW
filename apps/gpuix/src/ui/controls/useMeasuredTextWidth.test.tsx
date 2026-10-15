@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
-import { readOuterBounds, useMeasuredTextWidth } from "./useMeasuredTextWidth"
+import { useMeasuredTextWidth } from "./useMeasuredTextWidth"
 
 const samples = ["20", "300", "120.25"]
 
@@ -43,10 +43,7 @@ test("sample layout is measured once, cached by font and strings, and never foll
   root.renderer.flush()
   expect(ready).toBe(true)
   for (const sample of samples) {
-    const actual = readOuterBounds(
-      root.renderer,
-      root.renderer.getElement(root.renderer.findByTestId(sample)!.id)
-    )!
+    const actual = root.renderer.getElementBounds(root.renderer.findByTestId(sample)!.id)!
     expect(finalWidth).toBeGreaterThanOrEqual(actual.width)
   }
   const stableWidth = finalWidth

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { ScrollArea } from "./index"
 
@@ -18,14 +18,14 @@ test("bounded native scrolling moves overflowing content without expanding the v
   root.renderer.flush()
   const scroll = root.renderer.findByTestId("scroll")
   if (!scroll) throw new Error("Scroll area missing")
-  expect(readOuterBounds(root.renderer, root.renderer.getElement(scroll.id))).toMatchObject({
+  expect(root.renderer.getElementBounds(scroll.id)).toMatchObject({
     width: 200,
     height: 100,
   })
   root.renderer.nativeSimulateScrollWheel(50, 50, 0, -80)
   root.renderer.flush()
   expect(root.renderer.getScrollOffset(scroll.id)?.[1]).toBeLessThan(0)
-  expect(readOuterBounds(root.renderer, root.renderer.getElement(scroll.id))?.height).toBe(100)
+  expect(root.renderer.getElementBounds(scroll.id)?.height).toBe(100)
   root.unmount()
 })
 
@@ -43,7 +43,7 @@ test("both-axis scrolling and fill remain bounded by explicit native dimensions"
   root.renderer.flush()
   const scroll = root.renderer.findByTestId("scroll")
   if (!scroll) throw new Error("Scroll area missing")
-  expect(readOuterBounds(root.renderer, root.renderer.getElement(scroll.id))).toMatchObject({
+  expect(root.renderer.getElementBounds(scroll.id)).toMatchObject({
     width: 200,
     height: 100,
   })

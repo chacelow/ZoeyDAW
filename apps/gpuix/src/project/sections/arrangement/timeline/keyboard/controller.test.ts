@@ -32,6 +32,17 @@ afterEach(() => keyboard.dispose())
 const control = { ctrl: true, cmd: false, alt: false, shift: false }
 
 describe("Arrangement keyboard boundaries", () => {
+  test("text focus leaves a, Cmd+A and digits to the native editor", () => {
+    focus = "text"
+    const before = useProjectState.getState()
+    for (const event of [key("a"), key("a", { ...control, ctrl: false, cmd: true }), key("5")]) {
+      expect(keyboard.down(event)).toBe(false)
+    }
+    expect(useProjectState.getState().workspace).toEqual(before.workspace)
+    expect(useProjectState.getState().session.drawModeOverride).toBeNull()
+    expect(useProjectState.getState().session.position).toEqual(before.session.position)
+  })
+
   test("computer MIDI mode keeps B from changing the draw preference or held override", () => {
     projectActions.setMode("computerKeyboard", true)
     const original = useProjectState.getState().workspace.drawMode

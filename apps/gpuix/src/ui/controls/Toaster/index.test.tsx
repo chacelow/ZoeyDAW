@@ -1,7 +1,7 @@
 import { afterEach, expect, jest, test } from "bun:test"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
-import { readOuterBounds } from "../useMeasuredTextWidth"
+
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { dismissToast, toast, Toaster, toastLoading } from "./index"
 
@@ -44,7 +44,7 @@ test("toast actions and dismiss buttons perform native interactions", () => {
   root.renderer.flush()
   const dismiss = root.renderer.findByTestId(`toaster-${nextId}-dismiss`)
   if (!dismiss) throw new Error("Toast dismiss button missing")
-  const bounds = readOuterBounds(root.renderer, root.renderer.getElement(dismiss.id))
+  const bounds = root.renderer.getElementBounds(dismiss.id)
   if (!bounds) throw new Error("Toast dismiss button not laid out")
   root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
   expect(root.renderer.findByTestId(`toaster-${nextId}`)).toBeUndefined()

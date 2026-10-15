@@ -1,0 +1,30 @@
+bun test v1.3.14 (0d9b296a)
+2026-10-15 12:04:15.180 defaults[77944:53375749] 
+The domain/default pair of (com.apple.universalaccess, reduceMotion) does not exist
+Context leak detected, CoreAnalytics returned false
+Context leak detected, CoreAnalytics returned false
+
+src/project/adapters/backend/native.test.ts:
+native device {"sampleRate":48000,"outputLatencyFrames":284,"playingFrames":97280,"mainDbFS":[-50.01557613267566,-50.01557613267566],"stoppedDbFS":[-120,-120],"telemetryCount":60}
+Context leak detected, CoreAnalytics returned false
+
+src/project/sections/arrangement/tracks/Row/interaction.test.tsx:
+90 |   return root
+91 | }
+92 | 
+93 | function element(root: TestRoot, id: string) {
+94 |   const found = root.renderer.findByTestId(id)
+95 |   if (!found) throw new Error(`Missing ${id}`)
+                                                  ^
+error: Missing track-color-2-3-audio
+      at element (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f2-context-menu/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:95:46)
+      at bounds (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f2-context-menu/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:100:48)
+      at click (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f2-context-menu/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:106:16)
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-f2-context-menu/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:548:3)
+(fail) secondary click on an interactive title opens its track context menu [62.62ms]
+
+ 825 pass
+ 1 todo
+ 1 fail
+ 787133 expect() calls
+Ran 827 tests across 121 files. [14.87s]

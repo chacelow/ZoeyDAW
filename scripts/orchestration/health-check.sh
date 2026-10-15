@@ -11,8 +11,10 @@ orca orchestration worker-list --run run_2ea0f3afbca8 --json 2>/dev/null | pytho
 import sys,json
 d=json.loads(sys.stdin.buffer.read().decode("utf-8","replace")); r=d.get("result",d)
 items=r if isinstance(r,list) else (r.get("workers") or r.get("items") or [])
+# Every worker whose dispatch is still open: an idle worker keeps terminalState "retained",
+# not "active", and an idle worker is exactly the case this check exists for.
 for x in items:
-    if x.get("terminalState") in ("active","reclaimable"): print(x["dispatchId"])
+    if x.get("dispatchStatus") == "dispatched" and x.get("terminalState") != "released": print(x["dispatchId"])
 ' | while read -r id; do
   orca orchestration worker-show --dispatch "$id" --json 2>/dev/null | python3 -c '
 import sys,json
@@ -51,7 +53,15 @@ for line in sys.stdin:
     behind=git("rev-list","--count","HEAD..gpuix-migration") or "?"
     mins=None if age is None else int(age//60)
     errored = role=="assistant" and bool((d.get("message") or {}).get("errorMessage")) if age is not None else False
-    flag="NO-SESSION" if age is None else ("ERROR" if errored else ("STALE" if age>stale*60 else "ok"))
+    # IDLE: the agent ended its turn (TUI idle) without closing the dispatch with worker_done.
+    # It cannot report on its own from that state, so the tick must wake it after IDLE_MIN.
+    idle_min=int(os.environ.get("IDLE_MIN","3"))
+    tui_idle=subprocess.run(["orca","terminal","wait","--terminal",handle,"--for","tui-idle","--timeout-ms","1000"],capture_output=True).returncode==0
+    if age is None: flag="NO-SESSION"
+    elif errored: flag="ERROR"
+    elif tui_idle and age>idle_min*60: flag="IDLE"
+    elif age>stale*60: flag="STALE"
+    else: flag="ok"
     detail=role+((" "+str(note)[:40]) if note else "")
     shown=mins if mins is not None else -1
     print(f"{flag:10} {did:18} {wt:34} last-msg={shown:>3}m ({detail})  commit={cm}m dirty={dirty} behind={behind}  {handle}")

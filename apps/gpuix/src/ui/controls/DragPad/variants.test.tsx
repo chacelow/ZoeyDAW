@@ -3,7 +3,6 @@ import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { DragPadBar, DragPadBipolar, DragPadToggle } from "."
-import { readOuterBounds } from "../useMeasuredTextWidth"
 
 for (const Component of [DragPadBar, DragPadBipolar]) {
   test(`${Component.name} shares relative sensitivity and clamps keyboard adjustment`, () => {
@@ -33,17 +32,14 @@ for (const Component of [DragPadBar, DragPadBipolar]) {
     root.render(<Harness />)
     root.renderer.flush()
     const node = root.renderer.findByTestId("variant")!
-    const b = readOuterBounds(root.renderer, root.renderer.getElement(node.id))!
+    const b = root.renderer.getElementBounds(node.id)!
     root.renderer.nativeSimulateMouseDown(b.x + b.width / 2, b.y + b.height / 2)
     root.renderer.nativeSimulateMouseMove(b.x + b.width / 2, b.y + b.height / 2 - 40, 0)
     root.renderer.nativeSimulateMouseUp(b.x + b.width / 2, b.y + b.height / 2 - 40)
     expect(latest).toBeCloseTo(0.1)
     for (let n = 0; n < 100; n++) root.renderer.nativeSimulateKeystrokes(node.id, "up")
     expect(latest).toBe(1)
-    const fill = readOuterBounds(
-      root.renderer,
-      root.renderer.getElement(root.renderer.findByTestId("variant-fill")!.id)
-    )!
+    const fill = root.renderer.getElementBounds(root.renderer.findByTestId("variant-fill")!.id)!
     expect(fill.width).toBeLessThanOrEqual(b.width)
     expect(fill.width).toBeGreaterThan(0)
     root.unmount()
@@ -84,9 +80,9 @@ for (const Component of [DragPadBar, DragPadBipolar]) {
         const assertGeometry = (width: number) => {
           settleLayout()
           const shell = root.renderer.findByTestId("stretched")!
-          const bounds = readOuterBounds(root.renderer, shell)!
+          const bounds = root.renderer.getElementBounds(shell!.id)!
           const fillNode = root.renderer.findByTestId("stretched-fill")!
-          const fill = readOuterBounds(root.renderer, fillNode)!
+          const fill = root.renderer.getElementBounds(fillNode!.id)!
           expect(bounds.width).toBe(width)
           if (value === 1) {
             expect(
@@ -100,7 +96,7 @@ for (const Component of [DragPadBar, DragPadBipolar]) {
           }
           if (Component === DragPadBipolar) {
             const center = root.renderer.findByTestId("stretched-center")!
-            const line = readOuterBounds(root.renderer, center)!
+            const line = root.renderer.getElementBounds(center!.id)!
             expect(
               Math.abs(line.x + line.width / 2 - (bounds.x + bounds.width / 2))
             ).toBeLessThanOrEqual(0.5)
@@ -145,7 +141,7 @@ test("toggle activates by click and keyboard without entering numeric edit", () 
   root.render(<Harness />)
   root.renderer.flush()
   const node = root.renderer.findByTestId("toggle")!
-  const b = readOuterBounds(root.renderer, root.renderer.getElement(node.id))!
+  const b = root.renderer.getElementBounds(node.id)!
   root.renderer.nativeSimulateClick(b.x + b.width / 2, b.y + b.height / 2)
   expect(latest).toBe(true)
   root.renderer.nativeSimulateKeystrokes(node.id, "enter")
