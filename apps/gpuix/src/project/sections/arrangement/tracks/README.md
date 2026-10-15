@@ -1,6 +1,6 @@
 # Arrangement tracks
 
-Stage 1 integration is not final acceptance. [VERIFICATION.md](VERIFICATION.md) records the migration inventory, Live comparison, visual checklist, independent reviews and actual gates: slice lint/scan and Rust pass; shared TypeScript and full-suite failures remain enabled. A3b fill/hideIcon, geometry, Space, nested context-menu and missing per-state visuals block acceptance. After the shared increment, verification continues in this slice; no `worker_done` is claimed.
+Stage 1 integration is not final acceptance. [VERIFICATION.md](VERIFICATION.md) records the migration inventory, Live comparison, visual checklist, independent reviews and actual gates. TypeScript, slice lint/scan and Rust pass. One shared nested-context-menu regression remains enabled; actual numeric fill/bipolar geometry, wheel ancestor isolation and complete per-state visuals still block acceptance. Verification continues after A3b's second increment; no `worker_done` is claimed.
 
 ## Routing legality
 
@@ -117,4 +117,4 @@ bun test src/project/sections/arrangement/tracks
 
 The demo is a composition root, not another project implementation. It authors the project store, acquires the real native backend and uses the repository's real probe WAV. Its lane slot is a read-only Clip projection for verifying track geometry, not an implementation of the separate clip-lane slice. Main is attenuated for validation; the overload button edits real Clip gain through the public command. Theme and language controls only affect the verification surface. Use a named service and kill it immediately after capturing AX/screenshots.
 
-`render-cost.tsx` runs the native test renderer, measures actual draw statistics and retained/mounted nodes for 20 versus 2000 source tracks, and asserts all nodes are released after unmount. The pre-main run held both cases at 6 rows, 6 lane contents and 683 retained elements for 30 frames; final renderer timings will be recorded after the shared main-build integration.
+`render-cost.tsx` runs the native test renderer, measures actual draw statistics and retained/mounted nodes for 20 versus 2000 source tracks, and asserts all nodes are released after unmount. The current first-increment run confirms clipping keeps node counts independent of source count. Exact frame timings and raw evidence are in [VERIFICATION.md](VERIFICATION.md); this single run is not a speedup or stable-frame-rate claim.

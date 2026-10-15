@@ -42,7 +42,7 @@
 
 ## 已运行的验证
 
-阶段1门禁基线为本分支 `8d34ed1`，已合入主干至 `7223d52`。以下区分早期验证与当前门禁，不把历史通过扩大为当前全套通过。
+当前阶段1源码为 `b1cdfc7`，已合入A3b第一增量 `593d771`。首轮 `8d34ed1` 的失败输出保留作定位记录，不再代表当前门禁；下面列出实际执行结果及修复归属。
 
 | 命令/场景 | 已观察结果 |
 | --- | --- |
@@ -53,32 +53,41 @@
 | `pnpm exec tsc --noEmit`（初始 0.10 阶段） | 0 diagnostics；不是当前主干最终结论 |
 | `bun test src/project/model/track-routing.test.ts src/project/model/project.test.ts`（索引重构后） | 17 pass，0 fail，185917 assertions |
 | `bun test src/project/sections/arrangement/tracks/meter`（真实provider/hook/driver路径） | 6 pass，0 fail，40 assertions；无测试driver/now旁路 |
-| 原生 height 键盘定向回归 | 3 个 resize 用例通过；Send 几何遇共享 bounds shim，保留失败 |
+| 原生 height 键盘定向回归 | 3个resize通过；8项几何断言在删除本切片旧shim后8pass/87assert，未放宽 |
 | 原生 name Space 隔离与 Tab 顺序 | 2 pass，7 assertions |
 | 原生 Mixer wheel/drag/cancel/disabled self-send | 3 pass，10 assertions；模拟滚轮单位为 Pixels，16px 为共享一步 |
 | 原生后代 Enter/独立选择/Tab | 3 pass，18 assertions；修复 Solo Enter 意外改变 row selection |
 | 菜单选色/快照/切主题 | 1 pass，3 assertions；颜色 token 不变，身份实际渲染色改变 |
-| 原生屏外父表头/可见子轨围栏、屏外裁剪、固定轨道超限 | 3 例通过；另有既存共享 Group bounds 断言 25 vs23 未放宽 |
+| 原生屏外父表头/可见子轨围栏、屏外裁剪、固定轨道超限 | 3例通过；Group的25 vs23误差是旧测试shim重复补偿，已修正 |
 | `node_modules/.bin/eslint --fix`（拥有范围及授权增量） | 零输出；深层导入自动改为 `@/`，自绘 SVG/字形已改共享 Icon |
-| `node scripts/gpuix-review-scan.mjs`（当前基线） | 23 source、4 tests，0 HARD、2 WARN；仅demo与render-cost窗口尺寸字面量 |
-| `pnpm exec tsc --noEmit`（apps/gpuix） | 退出2；4个共享UI `EventPayload`→`KeyEvent`错误，详见下表 |
-| `bun test`（apps/gpuix） | 575 pass、2 todo、25 fail，741854 assertions；602 tests/103 files/174.38s，保留完整原始输出 |
+| `node scripts/gpuix-review-scan.mjs`（当前基线） | 23 source、5 tests，0 HARD、2 WARN；仅demo与render-cost窗口尺寸字面量 |
+| `pnpm exec tsc --noEmit`（A3b第一增量后） | 退出0，无诊断；自有类型与共享KeyEvent问题均已清除 |
+| `bun test`（当前阶段1源码） | 609 pass、2 todo、1 fail，753836 assertions；612 tests/104 files/42.38s，唯一失败为已仲裁的嵌套标题副键点击 |
 | `pnpm exec eslint apps/gpuix/src/project/sections/arrangement/tracks` | 退出0，无输出 |
 | `cargo check --workspace && cargo test --workspace` | 退出0；engine32、native8，共40 pass；仅既有非根package profile警告 |
 
-### 阶段1门禁阻塞
+### 当前原生裁剪与帧统计
+
+实跑 `bun src/project/sections/arrangement/tracks/verification/render-cost.tsx`，退出0。脚本卸载后逐项断言retained为0，并断言两组保留节点相同。原始数据：`evidence/2026-10-15-first-increment-render-cost.json`。单次采样，不推断大工程更快或稳定帧率。
+
+| 源轨道数 | 挂载行 | 车道槽 | 保留节点 | 原生帧 | p90 ms | p99 ms | max ms |
+| -------: | -----: | -----: | -------: | -----: | -----: | -----: | -----: |
+|       20 |      6 |      6 |      660 |     30 | 11.738 | 13.362 | 13.695 |
+|     2000 |      6 |      6 |      660 |     30 |  7.603 |  9.181 |  9.658 |
+
+### 阶段1剩余阻塞与首轮问题处置
 
 | 观察 | 分类与后续 |
 | --- | --- |
-| `DragPreviewArea/index.tsx:131`、`Menu/index.tsx:271/536`、`Popover/index.tsx:117` 的4个TS2345 | 共享UI原生事件类型接缝；已向协调者汇报，不在tracks越界修复 |
-| platform/controls共10个失败：Input Space、ControlGroup边界、Popover切换/锚点/clamp、Menu context/clamp、Select居中/fill | 阻塞：A3b；失败保留不跳过，不用tracks包装绕过 |
-| tracks共8个几何失败：复合行宽1、折叠首行5、Send三列1、Group高度1 | 阻塞：A3b/readOuterBounds；例如folded Group实测25而断言23，Send误差1.667而限值1，未放宽 |
-| tracks的focused-level Space、嵌套右键失败 | 阻塞：A3b；保持消费者回归 |
-| 5个用例报告5000ms超时（含上述Space）：F2、Group拖动、focused-level Space、name Space、Tab | 未定位；不擅自提高timeout，不把全套失败都归因A3b；已汇报协调者 |
-| Solo Enter的菜单存在断言在全套失败，早期定向用例通过 | 当前全套失败如实保留；可能存在浮层/超时后的隔离影响仅为推测，尚未定位 |
+| 首轮4个共享UI `EventPayload`→`KeyEvent`错误 | A3b第一增量已修，本分支合入后tsc退出0 |
+| 首轮platform/controls的10个失败 | A3b第一增量已修，本分支全套不再报告这些失败 |
+| tracks首轮8个几何失败：复合行宽1、折叠首行5、Send三列1、Group高度1 | 本切片必修，先前误归A3b。协调者实测定位为0.10 `readOuterBounds`重复补偿；测试helper已切原生bounds，8pass/87assert，不改断言 |
+| 嵌套标题副键点击打不开track菜单 | 阻塞：A3b第二增量；保持消费者回归，不造本地事件包装 |
+| 首轮5个5000ms超时：F2、Group拖动、focused-level Space、name Space、Tab | 后续完整运行不再报告超时；未提高timeout、跳过或放宽断言，未推断根因 |
+| focused-level Space及Solo Enter祖先菜单断言 | A3b第一增量后当前消费者路径已通过；不扩大为全部共享键盘策略已验证 |
 | 全套2个todo | 既存于`project/model/grid.test.ts:66`和`ui/controls/DragPad/DragPadNumber.test.tsx:146`；本切片没有新增/跳过测试 |
 
-原始输出：`evidence/2026-10-15-stage1-bun-test.txt`、`evidence/2026-10-15-stage1-cargo.txt`。阶段1未通过全量类型/测试门禁，不能称“全绿”。
+最终阶段1输出为 `evidence/2026-10-15-first-increment-full-test.txt`。首轮输出保存在 `stage1-bun-test.txt`，native-bounds中间门禁为 `native-bounds-full-test.txt`，Rust输出为 `stage1-cargo.txt`。当前仍有共享嵌套右键失败，且缺逐状态视觉，不能称最终验收通过。
 
 ### 变异检查
 
@@ -88,6 +97,7 @@
 | 索引判定把输出环路改为允许 | 1 | 已恢复，同上 |
 | 菜单把 token 写入改成解析后 literal | 1 | 已恢复，选色/快照/切主题回归通过 |
 | 禁用生产 `useAnimationFrame` 订阅 | 2 | 已恢复，meter套件6pass40assertions |
+| 产品reorder恢复0.10 `readOuterBounds` | 1 | 已恢复原生bounds；强化后的两侧落点均非原始顺序，2pass/2assert |
 
 固定种子路由性质生成 200 棵、每棵 17 条轨道的分组树：候选与 authored route 接受集合一致，输入未被修改。候选索引不再在每个目标路径里反复 `tracks.find`。独立纯函数场景：2002 条轨、2001 个合法目标，200 次投影 41.38ms；没有测旧版，不报提速倍数。
 
@@ -105,9 +115,11 @@
 
 真实 C1 证据：`evidence/2026-10-15-real-meter-playing.ax.txt` 显示 Audio L−23.0/R−27.0、Group L−26.0/R−28.5、Return L−38.0/R−45.0 dBFS；`real-meter-overload.ax.txt` 显示真实 Clip gain24 后 Audio L+1.0/R−1.8，Main 保持低输出。没有合成电平。
 
-早期显示布局变化曾导致黑图和 `InvalidCoordinateFrame`，不是锁屏。F1 同步后的 `b2-tracks-f1-states` 已取得清晰当前图：dark/en、dark/zh、light/zh、light/en 各一张完整图和zoom，另有Solo激活、Group折叠AX/图。`final-*-default` 指默认布局，后三种主题语言图保留了先前激活的Audio Solo，AX明确为on，不能当作所有按钮默认态。每张有同名`.ax.txt`，服务3m22s即kill。菜单、编辑、系统拖动/滚轮与最终bounds按协调者要求等A3b增量后再申请，不沿用已结束的输入时段。
+早期显示布局变化曾导致黑图和 `InvalidCoordinateFrame`，不是锁屏。`b2-tracks-f1-states` 在A3b第一增量前取得四主题语言、Solo激活和Group折叠的清晰图/zoom/AX，3m22s即kill。文件名`final-*-default`仅表示当时的默认布局，不代表当前consumer验收；后三种主题语言保留了Audio Solo on。新fill/hideIcon及菜单/编辑/系统拖动/滚轮/最终bounds必须重新取证，不沿用已结束的输入时段。
 
 当前生产帧smoke证据：`production-frame-smoke.ax.txt`、`production-frame-smoke-black.png`。capture/input/AX均granted，`screenLocked=false`、`displayAsleep=false`；raise自己窗口后仍黑。只能证明窗口和走带命令响应，不能证明本次真实信号、颜色或停后peak视觉。旧C1遥测证据不替代本次结果。
+
+demo有真实音频源：`track-demo-audio` 是Audio Clip，samplePath指向 `crates/engine/spikes/assets/probe.wav`，循环1→2，Audio −12dB、Main −36dB。本次floor不是“无源mock”的证据；未捕获到非静音信号的原因尚未定位。
 
 阶段1已实跑 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"`：stdout为空，退出1，没有匹配进程。原始记录见 `evidence/2026-10-15-stage1-process-cleanup.txt`；这是本次检查时的状态，不承诺后续其他worker启动情况。
 
@@ -140,13 +152,13 @@
 | --- | --- |
 | 每控件每状态放大图 | 四主题语言、Solo、Group已有图；菜单/编辑/hover/pressed/focus逐控件证据：阻塞：A3b，未验证 |
 | 同类间距统一token | 源统一gap4、control13、区域padding4；最终逐控件AX bounds：阻塞：A3b，未验证 |
-| 数值/文字/图标居中 | 历史zoom已有；路由/Send fill与hideIcon裁切：阻塞：A3b，未验证 |
+| 数值/文字/图标居中 | 历史zoom已有；新Select fill/hideIcon已消费，实际居中/裁切仍待新图，NumericPad内宽属A3b第二增量；未验证 |
 | 同组等高、图标方形 | fold/palette按13×13，record遵循Mixer扩展；最终bounds：阻塞：A3b，未验证 |
 | Live同区域紧凑感 | `2026-10-15-native-live-side-by-side.png`；raw AX292 vs304，约宽4%；不把截图缩放像素误当原始单位 |
-| 深/浅与中/英 | `final-dark-en-default`、`final-dark-zh-default`、`final-light-zh-default`、`final-light-en-default`各有真实图/zoom/AX；后三者Solo保持on，非全默认状态 |
-| Tab/焦点环/Space | 早期native定向与正反Enter守卫通过；当前全套含Space与超时失败，最终系统验收：阻塞：A3b，未验证 |
+| 深/浅与中/英 | A3b前四组合各有真实图/zoom/AX；后三者Solo保持on；新consumer四组合待重新取证，未验证 |
+| Tab/焦点环/Space | 当前原生消费者回归通过且无超时；系统焦点环/Space逐状态取证未完成，不扩大为共享全路径通过 |
 | drag/wheel/popup | 早期事务/取消/self-send通过；菜单/编辑/系统拖动/滚轮及最终bounds：阻塞：A3b，未验证 |
-| 可见裁剪性能 | pre-main20/2000均6行、6lane、683节点、30native帧；main最终统计未运行 |
+| 可见裁剪性能 | 当前主干已实跑，见“当前原生裁剪与帧统计”及原始JSON；卸载后节点归零断言通过 |
 
 ## 自审结果与分类
 
@@ -157,6 +169,7 @@
 | TrackDualAxisReview2 | `git diff 95d49fe...66f4783` | 17个自有提交，含轨道源迁移、原型删除、经批准的共享路由迁移与主题收敛 |
 | TrackDeltaReview3 | `git diff 66f4783...33d2849 -- apps/gpuix/src/project/sections/arrangement/tracks` | fb178d7、2bcdeee、10740d4、33d2849 |
 | TrackFinalReview4 | `git diff 33d2849...8d34ed1 -- apps/gpuix/src/project/sections/arrangement/tracks` | 2c947eb、ad1a01a、8d34ed1 |
+| TrackFinalReview4 后续复核 | `git diff 21f3a26...b1cdfc7 -- apps/gpuix/src/project/sections/arrangement/tracks`及固定工作区增量 | bb4c17e、5ab43d2、b1cdfc7；native bounds、强化边界回归、七处fill、hideIcon/Cue图标与GPUI滚轮迁移均已覆盖 |
 
 | 发现 | 类别 | 处置/证据 |
 | --- | --- | --- |
@@ -170,18 +183,22 @@
 | Identity静态fade装饰 | 汇报仲裁→已定 | 原Web/B1链路证据，删除22行；lane按真实Clip metadata负责 |
 | raw window尺寸2处 | 记录/已批准 | demo外框1120/verification1000，不是控件尺寸；scan WARN保留说明 |
 | UI峰值JS timer | 汇报仲裁→已替换 | F1 `useAnimationFrame`与真实renderer source已接；timer代码和旧singleton完全删除，离屏测试用受控帧源 |
-| readOuterBounds、Space、fill/hideIcon、bipolar实际宽度、嵌套右键 | 汇报仲裁 | A3b已接单；不覆写内部、不放宽、不skip，报告保留失败 |
-| 最终纠正双轴复核 | 已返回，无新增必修 | TrackFinalReview4覆盖三个最终提交；不把源码审查当视觉或全套门禁通过 |
+| 测试/产品使用0.10 bounds shim | 必修→已修 | bb4c17e与后续类型修正直接使用原生getElementBounds；8项几何转绿；合成边框容器行间±1px回归2pass，改回shim变异1fail |
+| A3b第一增量消费 | 已修/已接 | 七处Select fill，普通level/send/pan hideIcon，Cue保留Headphones；原生output实际内宽断言通过 |
+| 最终纠正及consumer双轴复核 | 已返回，无新增必修/仲裁 | TrackFinalReview4多次固定增量复核覆盖当前三个后续提交；视觉与运行结果由本报告单列 |
 | driver活动条件的冗余`listeners.size > 0` | 记录 | 不影响行为；不为风格再改生产路径 |
 | 受控帧源同步、生产源microtask | 记录 | 排队/session失效由platform测试负责，tracks不另造调度器 |
 | Ctrl与lane Shift/identity Cmd对称分支未逐项测试 | 记录 | 当前已覆盖native正反守卫、Cmd移除与Shift范围；不增重复路径用例 |
+| 边界−1顺序不变，不能区分空target | 记录→已强化 | 拖动源改为第三条轨，边界两侧都产生非原始顺序；2pass，shim变异1fail |
+| hook合成边框场景被误称生产几何修复 | 描述仲裁→已更正 | 当前TrackRows无border/padding，产品几何不变；README区分hook合约与8项测试helper修正 |
+| Cue/全部fill分支缺consumer接线断言 | 记录 | 不加wiring/svg存在性测试；实际图标和状态留到真实窗口逐项取证，未验证 |
 
 ## 未实现/未验证事项
 
-- **阻塞：A3b，未验证**：Send/路由fill、hideIcon裁切、readOuterBounds几何、Space、嵌套右键及菜单/编辑/系统拖动/滚轮/最终bounds。失败测试全部启用，不宣称“已无裁切/已键盘全通”。
+- **阻塞：A3b第二增量，未验证**：NumericPad实际内宽fill/bipolar中线、wheel祖先隔离、嵌套右键及尚未完成的菜单/编辑/系统拖动/滚轮/最终bounds。Select fill/hideIcon已消费；8项几何已由本切片删除旧shim修复。
 - F1 已接原生帧和激活，NameInput已opt-in `selectAllOnFocus`。真实四主题语言窗口能启动；默认生产帧路径meter6例40断言，F2自动全选/输入Space/Tab三例8断言通过。真实播放停后peak视觉尚未补齐，不把旧timer阶段AX扩大到新路径。
 - 四主题语言与Solo/Group已有清晰图，逐控件完整状态仍缺证据；当前生产帧窗口再次黑图且电平floor，真实信号与停后peak视觉未验证，未定位根因。
-- 当前类型4错、全套25失败/2todo已保留；切片lint、scan和Rust通过。5个超时及Solo菜单断言未定位，已汇报，不归入已完成。
+- A3b第一增量后类型检查已通过，旧共享10失败与8项自有几何失败已清。完整逐状态视觉、真实信号/停后peak仍未验证；保留嵌套右键失败，不称全部完成。
 
 ## 错题与已验证做法（LESSONS格式）
 
@@ -214,3 +231,9 @@
 - 错：把Clip fade口述误放到右侧TrackIdentity，静态装饰无法表达Clip元数据。
 - 对：查Web painter→B1 clip geometry→lane ClipFades，删除多余层并由协调者统一归属。
 - 证：WebIdentity无fade；B1 collapsed bodyHeight0用title高度画mask，handles隐藏。
+
+### 渲染器升级后删除旧bounds补偿
+
+- 错：继续用0.10的`readOuterBounds`读已包含border/padding的主干bounds，并把8个几何失败误归共享控件。
+- 对：产品和测试都读唯一原生`getElementBounds`；用主干`legacy-bounds-shim`扫描阻止复发。
+- 证：8项几何8pass/87assert；合成边框容器行间±1px回归2pass，恢复旧shim的变异1fail。当前无边框生产容器的几何并未改变。
