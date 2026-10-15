@@ -55,7 +55,7 @@ Header geometry uses the shared 304px control column: identity 100px, routing 74
 
 Native screenshot inspection caught a context-menu host shrinking the composite row to content width. Explicit full-size column/stretch layout on the existing `ContextMenu` root fixed it; the width regression changed from 360px to the full 1000px viewport. Dark-track title ink was corrected to the theme's dark surface color so it remains readable on lightened authored track colors. Initial and repaired images are in `evidence/2026-10-15-initial-width-defect.png` and `evidence/2026-10-15-layout-fixed.png`.
 
-Shared integration still pending: A3b's container-width Select, compact numeric icon treatment, Space policy and secondary-click/ancestor-key activation on nested interactive titles. Shift+F10 menu access works. Owned resize keys call `preventDefault` and `stopPropagation`; all three resize keyboard regressions pass. Shared failure regressions remain enabled.
+The first A3b increment is consumed: routing and automation selectors use shared `fill`; plain level/send/pan controls use shared `hideIcon`, while Main cue retains its Headphones icon. NumericPad actual inner-width fill/bipolar geometry, wheel ancestor isolation and secondary-click/ancestor-key menu activation still need A3b's second increment. Shift+F10 menu access works. Owned resize keys consume their events; shared failure regressions remain enabled. Final screenshots and system interaction checks are still pending.
 
 ## Track gestures
 

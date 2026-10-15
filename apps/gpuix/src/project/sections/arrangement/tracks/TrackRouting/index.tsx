@@ -60,6 +60,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
       {track.collapsed ? (
         isMain ? (
           <DropdownButton
+            fill
             label={`${t("output")} ${track.name}`}
             testId={`track-output-${track.id}`}
             value={track.outputChannel ?? "1-2"}
@@ -72,6 +73,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
           {showInput ? (
             <>
               <DropdownButton
+                fill
                 label={`${t("input")} ${track.name}`}
                 testId={`track-input-${track.id}`}
                 value={track.input}
@@ -84,6 +86,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
                 ]}
               />
               <DropdownButton
+                fill
                 label={`${t("inputChannel")} ${track.name}`}
                 testId={`track-input-channel-${track.id}`}
                 value={
@@ -136,6 +139,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
           ) : null}
           {isMain ? (
             <DropdownButton
+              fill
               label={`${t("cueOutput")} ${track.name}`}
               testId={`track-cue-output-${track.id}`}
               value={track.cueOutput ?? "1-2"}
@@ -144,6 +148,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
             />
           ) : null}
           <DropdownButton
+            fill
             label={`${t("output")} ${track.name}`}
             testId={`track-output-${track.id}`}
             value={isMain ? (track.outputChannel ?? "1-2") : track.output}
@@ -157,6 +162,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
           />
           {showOutputChannel ? (
             <DropdownButton
+              fill
               label={`${t("outputChannel")} ${track.name}`}
               testId={`track-output-channel-${track.id}`}
               value={

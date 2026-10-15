@@ -131,6 +131,8 @@ test("composite rows fill the viewport and give the lane remaining width", () =>
   expect(lane.width + identity.width + routing.width + mixer.width).toBe(row.width)
   expect(identity.x).toBe(lane.x + lane.width)
   expect(mixer.x + mixer.width).toBe(row.x + row.width)
+  const routingInnerWidth = routing.width - TRACK_LAYOUT.spacing * 2
+  expect(bounds(root, "track-output-3-audio").width).toBe(routingInnerWidth)
 })
 
 for (const id of ["a-apply", "main"]) {
@@ -482,7 +484,7 @@ test("hovered 16px level wheel commits one undoable value change", () => {
   const x = level.x + level.width / 2
   const y = level.y + level.height / 2
   root.renderer.nativeSimulateMouseMove(x, y)
-  root.renderer.nativeSimulateScrollWheel(x, y, 0, -16)
+  root.renderer.nativeSimulateScrollWheel(x, y, 0, 16)
   expect(current("3-audio").volumeDb).toBeCloseTo(-11.9, 6)
   expect(useProjectState.getState().session.canUndo).toBe(true)
   flushSync(() => projectActions.undo())

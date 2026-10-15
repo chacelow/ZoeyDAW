@@ -27,6 +27,7 @@ function MixerLevel({
   const theme = useTheme()
   return (
     <DragPadBar
+      hideIcon={!icon}
       label={label}
       value={value}
       color={theme.colors.arrangementVolume}
@@ -184,6 +185,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 </div>
               ) : null}
               <PanControl
+                hideIcon
                 label={`${t("pan")} ${track.name}`}
                 testId={`track-pan-${track.id}`}
                 value={track.pan}

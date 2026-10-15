@@ -11,6 +11,7 @@ export function AutomationSelector({ track }: { readonly track: Track }) {
   )
   return (
     <DropdownButton<"volume" | "pan">
+      fill
       testId={`track-automation-${track.id}`}
       label={`${t("automationParameter")} ${track.name}`}
       value={parameter}
