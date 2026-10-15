@@ -1,40 +1,46 @@
-export interface FrameSource {
-  subscribe: (callback: () => void) => () => void
+export interface MeterListener {
+  readonly active: () => boolean
+  readonly advance: (timestampMs: number) => boolean
 }
 
 export interface MeterDecayDriver {
-  subscribe: (listener: (time: number) => boolean) => () => void
+  subscribe: (listener: MeterListener) => () => void
   wake: () => void
+  advance: (timestampMs: number) => void
 }
 
 export function createMeterDecayDriver(
-  frames: FrameSource,
-  now: () => number = () => performance.now()
+  onActiveChange: (active: boolean) => void
 ): MeterDecayDriver {
-  const listeners = new Set<(time: number) => boolean>()
-  let stopFrames: (() => void) | null = null
-  const stop = () => {
-    stopFrames?.()
-    stopFrames = null
-  }
-  const tick = () => {
-    let active = false
-    const time = now()
-    for (const listener of listeners) active = listener(time) || active
-    if (!active || !listeners.size) stop()
-    return active
+  const listeners = new Set<MeterListener>()
+  let running = false
+  const setActive = (active: boolean) => {
+    if (running === active) return
+    running = active
+    onActiveChange(active)
   }
   return {
-    subscribe(listener: (time: number) => boolean) {
+    subscribe(listener) {
       listeners.add(listener)
       return () => {
         listeners.delete(listener)
-        if (!listeners.size) stop()
+        if (!listeners.size) setActive(false)
       }
     },
     wake() {
-      if (stopFrames) return
-      if (listeners.size && tick() && !stopFrames) stopFrames = frames.subscribe(tick)
+      for (const listener of listeners) {
+        if (listener.active()) {
+          setActive(true)
+          return
+        }
+      }
+      setActive(false)
+    },
+    advance(timestampMs) {
+      if (!running) return
+      let active = false
+      for (const listener of listeners) active = listener.advance(timestampMs) || active
+      setActive(active && listeners.size > 0)
     },
   }
 }

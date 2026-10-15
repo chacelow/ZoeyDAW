@@ -1,115 +1,93 @@
 import { expect, test } from "bun:test"
 import { advanceMeterPeak, createMeterPeak, METER_MIN_DB } from "../../core/meters/meter-peak"
 import { createMeterDecayDriver } from "./decay-driver"
-import type { FrameSource } from "./decay-driver"
 
-test("one frame source serves visible meters and stops after silence or last unmount", () => {
-  let time = 0
-  const frameCallbacks = new Set<() => void>()
-  let starts = 0
-  let stops = 0
-  const frames: FrameSource = {
-    subscribe(callback) {
-      starts += 1
-      frameCallbacks.add(callback)
-      return () => {
-        stops += 1
-        frameCallbacks.delete(callback)
-      }
-    },
-  }
-  const driver = createMeterDecayDriver(frames, () => time)
+test("one activity request serves meters and ends on silence or last unmount", () => {
+  const activity: boolean[] = []
+  const driver = createMeterDecayDriver(active => {
+    activity.push(active)
+  })
   const peak = createMeterPeak()
   let level = 0
   driver.wake()
-  expect(starts).toBe(0)
-  const unmount = driver.subscribe(now => {
-    advanceMeterPeak(peak, level, now)
-    return peak.db > METER_MIN_DB
+  expect(activity).toEqual([])
+  const detach = driver.subscribe({
+    active: () => level > METER_MIN_DB || peak.db > METER_MIN_DB,
+    advance(timestampMs) {
+      advanceMeterPeak(peak, level, timestampMs)
+      return peak.db > METER_MIN_DB
+    },
   })
-  const unmountSilent = driver.subscribe(() => false)
+  const detachSilent = driver.subscribe({ active: () => false, advance: () => false })
   driver.wake()
   driver.wake()
-  expect(starts).toBe(1)
+  expect(activity).toEqual([true])
+  driver.advance(0)
   expect(peak.db).toBe(0)
   level = METER_MIN_DB
-  time = 600
-  for (const callback of frameCallbacks) callback()
+  driver.advance(600)
   expect(peak.db).toBe(0)
-  time = 1000
-  for (const callback of frameCallbacks) callback()
+  driver.advance(1000)
   expect(peak.db).toBeCloseTo(-9.6)
-  time = 4000
-  for (const callback of frameCallbacks) callback()
+  driver.advance(4000)
   expect(peak.db).toBe(METER_MIN_DB)
-  expect(stops).toBe(1)
-  expect(frameCallbacks.size).toBe(0)
+  expect(activity).toEqual([true, false])
   level = 3
   driver.wake()
-  expect(starts).toBe(2)
-  unmountSilent()
-  expect(stops).toBe(1)
-  unmount()
-  expect(stops).toBe(2)
+  expect(activity).toEqual([true, false, true])
+  detachSilent()
+  detach()
+  expect(activity).toEqual([true, false, true, false])
   driver.wake()
-  expect(starts).toBe(2)
+  expect(activity).toEqual([true, false, true, false])
 })
 
-test("injected frame callbacks advance peak decay without an independent transport clock", () => {
-  let time = 0
-  const frames = new Set<() => void>()
-  const driver = createMeterDecayDriver(
-    {
-      subscribe(callback) {
-        frames.add(callback)
-        return () => {
-          frames.delete(callback)
-        }
-      },
-    },
-    () => time
-  )
+test("inactive driver ignores unrelated frames and wakeups do not advance the peak clock", () => {
+  const activity: boolean[] = []
+  const driver = createMeterDecayDriver(active => {
+    activity.push(active)
+  })
   const peak = createMeterPeak()
-  let level = 6
-  const detach = driver.subscribe(now => {
-    advanceMeterPeak(peak, level, now)
-    return peak.db > METER_MIN_DB
+  let level = METER_MIN_DB
+  const detach = driver.subscribe({
+    active: () => level > METER_MIN_DB || peak.db > METER_MIN_DB,
+    advance(timestampMs) {
+      advanceMeterPeak(peak, level, timestampMs)
+      return peak.db > METER_MIN_DB
+    },
   })
+  driver.advance(100)
+  expect(peak.updatedAt).toBe(0)
+  level = 6
   driver.wake()
-  level = METER_MIN_DB
-  time = 1600
-  for (const callback of frames) callback()
-  expect(peak.db).toBe(-18)
-  time = 4000
-  for (const callback of frames) callback()
   expect(peak.db).toBe(METER_MIN_DB)
-  expect(frames.size).toBe(0)
+  driver.advance(1000)
+  expect(peak.db).toBe(6)
+  expect(peak.holdUntil).toBe(1600)
+  level = METER_MIN_DB
+  driver.advance(2600)
+  expect(peak.db).toBe(-18)
   detach()
+  expect(activity).toEqual([true, false])
 })
 
-test("repeated telemetry wakes coalesce into the active frame source", () => {
-  const frames = new Set<() => void>()
-  const driver = createMeterDecayDriver(
-    {
-      subscribe(callback) {
-        frames.add(callback)
-        return () => {
-          frames.delete(callback)
-        }
-      },
-    },
-    () => 0
-  )
-  let advances = 0
-  const detach = driver.subscribe(() => {
-    advances += 1
-    return true
+test("repeated telemetry wakes coalesce without duplicating native frame activation", () => {
+  let activations = 0
+  const driver = createMeterDecayDriver(active => {
+    if (active) activations += 1
   })
-  driver.wake()
-  for (let subscriber = 0; subscriber < 10; subscriber++) driver.wake()
-  expect(advances).toBe(1)
-  for (const callback of frames) callback()
-  expect(advances).toBe(2)
+  let frames = 0
+  const detach = driver.subscribe({
+    active: () => true,
+    advance: () => {
+      frames += 1
+      return true
+    },
+  })
+  for (let wake = 0; wake < 10; wake++) driver.wake()
+  expect(activations).toBe(1)
+  expect(frames).toBe(0)
+  driver.advance(50)
+  expect(frames).toBe(1)
   detach()
-  expect(frames.size).toBe(0)
 })

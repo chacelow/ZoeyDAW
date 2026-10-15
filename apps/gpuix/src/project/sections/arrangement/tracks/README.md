@@ -33,12 +33,14 @@ The coordinator-provided Live frames show routing input activity but no illumina
 
 `TrackTelemetryProvider` owns one accepted-level subscription and one shared meter driver for the track surface. It drives decay through F1 `useAnimationFrame`; all timer code and the old default singleton are deleted. Frame subscription is active only while peaks remain above the floor and ends on silence or unmount. Reader callbacks stay in a committed ref, so callback identity changes do not reset held peaks. Track/backend/driver lifetime changes do reset them.
 
+The driver consumes F1 callback timestamps directly. Wakeups only request a frame for a live signal/held peak; they do not advance a separate clock. The optional test driver and `now` injection have been deleted. Meter tests exercise this same provider/hook/driver path through the canonical `AnimationFrameSource`; disabling the production subscription produces two failures.
+
 `TrackLabels` is injected, with paired Chinese/English resources in `locales.ts`; no i18n dependency or second language state was added to project components.
 
-### Exercised proof before shared-renderer integration
+### Exercised proof
 
-- `bun test src/project/sections/arrangement/tracks/meter`: 6 pass, 0 fail, 37 assertions, including failing-before/passing-after inline-reader peak preservation.
-- Real C1 window: AX playback changed Stopped → Playing; Audio reported L −23.0 / R −27.0 dBFS, Group L −26.0 / R −28.5, Return L −38.0 / R −45.0. A real authored Clip gain change to 24 dB produced Audio L +1.0 / R −1.8 dBFS while Main remained at low output level.
+- `bun test src/project/sections/arrangement/tracks/meter`: 6 pass, 0 fail, 40 assertions, covering production frame activation, native timestamp hold/fall, silence/unmount unsubscribe and inline-reader preservation.
+- Initial C1 window, before F1 frame integration: AX playback changed Stopped → Playing; Audio reported L −23.0 / R −27.0 dBFS, Group L −26.0 / R −28.5, Return L −38.0 / R −45.0. A real authored Clip gain change to 24 dB produced Audio L +1.0 / R −1.8 dBFS while Main remained at low output level.
 - Evidence: `evidence/2026-10-15-real-meter-playing.ax.txt` and `evidence/2026-10-15-real-meter-overload.ax.txt`.
 - The display layout changed during this run; screenshots were black and a display capture reported `InvalidCoordinateFrame`. AX proves the command/telemetry path, not the missing meter pixels. The service was killed after 1m55s; visual meter-state verification remains pending.
 

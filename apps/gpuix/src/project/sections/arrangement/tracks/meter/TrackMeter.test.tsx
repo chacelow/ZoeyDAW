@@ -1,18 +1,15 @@
 import { afterEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
-import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackLabelsProvider } from "../labels"
 import { trackResources } from "../locales"
-import { createMeterDecayDriver } from "./decay-driver"
+import { createControlledFrames } from "../verification/frame-source"
 import { TrackTelemetryProvider } from "./telemetry"
 import { TrackMeter } from "./TrackMeter"
-import type { BackendTelemetry } from "../../../../model/backend"
+import type { BackendTelemetry } from "@/project/model/backend"
 import type { TestRoot } from "@gpuix/react/testing"
-import { AnimationFrameProvider } from "@/platform/frame"
-import { createControlledFrames } from "../verification/frame-source"
-
-const controlledFrames = createControlledFrames()
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -32,154 +29,97 @@ function frame(levels: BackendTelemetry["levels"]): BackendTelemetry {
   }
 }
 
-test("accepted stereo telemetry drives overload, card cutouts and held peaks after stop", () => {
-  let time = 0
-  let telemetry: BackendTelemetry | null = null
-  const callbacks = new Set<() => void>()
-  const driver = createMeterDecayDriver(
-    {
-      subscribe(callback) {
-        callbacks.add(callback)
-        return () => {
-          callbacks.delete(callback)
-        }
-      },
-    },
-    () => time
-  )
+function mountMeter(
+  readTelemetry: () => BackendTelemetry | null,
+  id = "audio",
+  language: "en-US" | "zh-CN" = "en-US"
+) {
+  const frames = createControlledFrames()
   const root = createTestRoot({ width: 120, height: 160 })
   roots.push(root)
-  root.render(
-    <AnimationFrameProvider source={controlledFrames.source}>
-      <ThemeProvider>
-        <TrackLabelsProvider labels={trackResources["en-US"].arrangement}>
-          <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
-            <TrackMeter trackId="audio" trackName="Audio" height={132} />
-          </TrackTelemetryProvider>
-        </TrackLabelsProvider>
-      </ThemeProvider>
-    </AnimationFrameProvider>
-  )
-  root.renderer.flush()
-  const meter = () => {
-    const found = root.renderer.findByTestId("track-meter-audio")
-    if (!found) throw new Error("Missing meter")
-    return found
-  }
-  expect(meter().customProps?.["aria-valuetext"]).toBe("L -60.0 dB, R -60.0 dB")
-  expect(callbacks.size).toBe(0)
-  telemetry = frame({ audio: [-12, 3] })
-  flushSync(() => driver.wake())
-  root.renderer.flush()
-  expect(meter().customProps?.["aria-valuetext"]).toBe("L -12.0 dB, R 3.0 dB")
-  const zero = root.renderer.findByTestId("track-meter-zero-audio")
-  expect(zero?.style.backgroundColor).toBe(meter().style.backgroundColor)
-  expect(zero?.style.top).toBe(12)
-  expect(root.renderer.findByTestId("track-meter-floor-right-audio")?.style.height).toBe(6)
-  expect(root.renderer.findByTestId("track-meter-peak-right-audio")?.style.top).toBe(6)
-  telemetry = frame({ audio: [-120, -120] })
-  time = 600
-  flushSync(() => {
-    for (const callback of callbacks) callback()
-  })
-  root.renderer.flush()
-  expect(meter().customProps?.["aria-valuetext"]).toBe("L -60.0 dB, R -60.0 dB")
-  expect(root.renderer.findByTestId("track-meter-peak-right-audio")?.style.top).toBe(6)
-  time = 1600
-  flushSync(() => {
-    for (const callback of callbacks) callback()
-  })
-  root.renderer.flush()
-  expect(root.renderer.findByTestId("track-meter-peak-right-audio")?.style.top).toBe(54)
-  time = 4000
-  flushSync(() => {
-    for (const callback of callbacks) callback()
-  })
-  root.renderer.flush()
-  expect(root.renderer.findByTestId("track-meter-peak-right-audio")).toBeUndefined()
-  expect(callbacks.size).toBe(0)
-})
-
-test("missing track telemetry remains silent instead of displaying another track's levels", () => {
-  const root = createTestRoot({ width: 120, height: 160 })
-  roots.push(root)
-  const telemetry = frame({ unrelated: [6, 6] })
-  const callbacks = new Set<() => void>()
-  const driver = createMeterDecayDriver(
-    {
-      subscribe(callback) {
-        callbacks.add(callback)
-        return () => {
-          callbacks.delete(callback)
-        }
-      },
-    },
-    () => 0
-  )
-  root.render(
-    <AnimationFrameProvider source={controlledFrames.source}>
-      <ThemeProvider>
-        <TrackLabelsProvider labels={trackResources["zh-CN"].arrangement}>
-          <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
-            <TrackMeter trackId="missing" trackName="音频" height={66} />
-          </TrackTelemetryProvider>
-        </TrackLabelsProvider>
-      </ThemeProvider>
-    </AnimationFrameProvider>
-  )
-  root.renderer.flush()
-  const meter = root.renderer.findByTestId("track-meter-missing")
-  expect(meter?.customProps?.["aria-valuetext"]).toBe("L -60.0 dB, R -60.0 dB")
-  expect(meter?.customProps?.["aria-label"]).toBe("电平表 音频")
-  expect(root.renderer.findByTestId("track-meter-peak-left-missing")).toBeUndefined()
-  expect(callbacks.size).toBe(0)
-})
-
-test("changing an inline telemetry reader preserves held peaks and reads its latest frame", () => {
-  let time = 0
-  let telemetry = frame({ audio: [3, 0] })
-  const callbacks = new Set<() => void>()
-  const driver = createMeterDecayDriver(
-    {
-      subscribe(callback) {
-        callbacks.add(callback)
-        return () => {
-          callbacks.delete(callback)
-        }
-      },
-    },
-    () => time
-  )
-  const root = createTestRoot({ width: 120, height: 160 })
-  roots.push(root)
-  const renderMeter = () =>
+  const render = () =>
     root.render(
-      <AnimationFrameProvider source={controlledFrames.source}>
+      <AnimationFrameProvider source={frames.source}>
         <ThemeProvider>
-          <TrackLabelsProvider labels={trackResources["en-US"].arrangement}>
-            <TrackTelemetryProvider telemetry={() => telemetry} driver={driver}>
-              <TrackMeter trackId="audio" trackName="Audio" height={132} />
+          <TrackLabelsProvider labels={trackResources[language].arrangement}>
+            <TrackTelemetryProvider telemetry={() => readTelemetry()}>
+              <TrackMeter
+                trackId={id}
+                trackName={language === "zh-CN" ? "音频" : "Audio"}
+                height={132}
+              />
             </TrackTelemetryProvider>
           </TrackLabelsProvider>
         </ThemeProvider>
       </AnimationFrameProvider>
     )
-  renderMeter()
-  flushSync(() => {
-    driver.wake()
-    for (const callback of callbacks) callback()
-  })
-  root.renderer.flush()
-  expect(root.renderer.findByTestId("track-meter-peak-left-audio")?.style.top).toBe(6)
+  render()
+  const advance = (timestampMs: number) => {
+    flushSync(() => frames.advance(timestampMs))
+    root.renderer.flush()
+  }
+  const close = () => {
+    const index = roots.indexOf(root)
+    if (index === -1) return
+    roots.splice(index, 1)
+    root.unmount()
+  }
+  return { root, frames, render, advance, close }
+}
+
+test("production frame bridge renders stereo overload, holds peaks and stops after silence", () => {
+  let telemetry: BackendTelemetry | null = null
+  const view = mountMeter(() => telemetry)
+  const meter = () => {
+    const found = view.root.renderer.findByTestId("track-meter-audio")
+    if (!found) throw new Error("Missing meter")
+    return found
+  }
+  expect(meter().customProps?.["aria-valuetext"]).toBe("L -60.0 dB, R -60.0 dB")
+  expect(view.frames.subscribers).toBe(0)
+  telemetry = frame({ audio: [-12, 3] })
+  view.render()
+  expect(view.frames.subscribers).toBe(1)
+  view.advance(0)
+  expect(meter().customProps?.["aria-valuetext"]).toBe("L -12.0 dB, R 3.0 dB")
+  const zero = view.root.renderer.findByTestId("track-meter-zero-audio")
+  expect(zero?.style.backgroundColor).toBe(meter().style.backgroundColor)
+  expect(zero?.style.top).toBe(12)
+  expect(view.root.renderer.findByTestId("track-meter-floor-right-audio")?.style.height).toBe(6)
   telemetry = frame({ audio: [-120, -120] })
-  time = 100
-  renderMeter()
-  flushSync(() => {
-    for (const callback of callbacks) callback()
-  })
-  root.renderer.flush()
-  expect(root.renderer.findByTestId("track-meter-peak-left-audio")?.style.top).toBe(6)
-  expect(root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]).toBe(
-    "L -60.0 dB, R -60.0 dB"
-  )
+  view.render()
+  view.advance(600)
+  expect(meter().customProps?.["aria-valuetext"]).toBe("L -60.0 dB, R -60.0 dB")
+  expect(view.root.renderer.findByTestId("track-meter-peak-right-audio")?.style.top).toBe(6)
+  view.advance(1600)
+  expect(view.root.renderer.findByTestId("track-meter-peak-right-audio")?.style.top).toBe(54)
+  view.advance(4000)
+  expect(view.root.renderer.findByTestId("track-meter-peak-right-audio")).toBeUndefined()
+  expect(view.frames.subscribers).toBe(0)
+})
+
+test("missing track telemetry stays at floor without starting native frame subscriptions", () => {
+  const view = mountMeter(() => frame({ unrelated: [6, 6] }), "missing", "zh-CN")
+  const meter = view.root.renderer.findByTestId("track-meter-missing")
+  expect(meter?.customProps?.["aria-valuetext"]).toBe("L -60.0 dB, R -60.0 dB")
+  expect(meter?.customProps?.["aria-label"]).toBe("电平表 音频")
+  expect(view.root.renderer.findByTestId("track-meter-peak-left-missing")).toBeUndefined()
+  expect(view.frames.subscribers).toBe(0)
+})
+
+test("inline reader changes preserve held peaks and unmount cancels the real frame bridge", () => {
+  let telemetry = frame({ audio: [3, 0] })
+  const view = mountMeter(() => telemetry)
+  expect(view.frames.subscribers).toBe(1)
+  view.advance(0)
+  expect(view.root.renderer.findByTestId("track-meter-peak-left-audio")?.style.top).toBe(6)
+  telemetry = frame({ audio: [-120, -120] })
+  view.render()
+  view.advance(100)
+  expect(view.root.renderer.findByTestId("track-meter-peak-left-audio")?.style.top).toBe(6)
+  expect(
+    view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
+  ).toBe("L -60.0 dB, R -60.0 dB")
+  view.close()
+  expect(view.frames.subscribers).toBe(0)
 })

@@ -46,23 +46,34 @@ export function TrackMeter({
   useLayoutEffect(() => {
     peaks.current = { left: createMeterPeak(), right: createMeterPeak() }
     setDisplay(SILENT_DISPLAY)
-    return driver.subscribe(now => {
-      const level = reader.current()?.levels[trackId]
-      const left = meterDb(level?.[0] ?? METER_MIN_DB)
-      const right = meterDb(level?.[1] ?? METER_MIN_DB)
-      advanceMeterPeak(peaks.current.left, left, now)
-      advanceMeterPeak(peaks.current.right, right, now)
-      const leftPeak = peaks.current.left.db
-      const rightPeak = peaks.current.right.db
-      setDisplay(previous =>
-        previous.left === left &&
-        previous.right === right &&
-        previous.leftPeak === leftPeak &&
-        previous.rightPeak === rightPeak
-          ? previous
-          : { left, right, leftPeak, rightPeak }
-      )
-      return leftPeak > METER_MIN_DB || rightPeak > METER_MIN_DB
+    return driver.subscribe({
+      active() {
+        const level = reader.current()?.levels[trackId]
+        return (
+          meterDb(level?.[0] ?? METER_MIN_DB) > METER_MIN_DB ||
+          meterDb(level?.[1] ?? METER_MIN_DB) > METER_MIN_DB ||
+          peaks.current.left.db > METER_MIN_DB ||
+          peaks.current.right.db > METER_MIN_DB
+        )
+      },
+      advance(now) {
+        const level = reader.current()?.levels[trackId]
+        const left = meterDb(level?.[0] ?? METER_MIN_DB)
+        const right = meterDb(level?.[1] ?? METER_MIN_DB)
+        advanceMeterPeak(peaks.current.left, left, now)
+        advanceMeterPeak(peaks.current.right, right, now)
+        const leftPeak = peaks.current.left.db
+        const rightPeak = peaks.current.right.db
+        setDisplay(previous =>
+          previous.left === left &&
+          previous.right === right &&
+          previous.leftPeak === leftPeak &&
+          previous.rightPeak === rightPeak
+            ? previous
+            : { left, right, leftPeak, rightPeak }
+        )
+        return leftPeak > METER_MIN_DB || rightPeak > METER_MIN_DB
+      },
     })
   }, [trackId, epoch, driver])
   const width = theme.control["--spacing-control-track"]
