@@ -65,6 +65,7 @@
     "midiRowMaxHeight": 18,
     "midiRowMinHeight": 6,
     "audioRulerHeight": 39,
-    "trafficLightFrameHeight": 14
+    "trafficLightFrameHeight": 14,
+    "statusHeight": 22.68
   }
 }
