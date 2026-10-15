@@ -28,6 +28,10 @@
   --project-transport-column-gap: 12px;
   --project-transport-center-margin: 6px;
   --project-default-track-height: 70px;
+  --project-footer-device-height: 184px;
+  --project-device-card-width: 256px;
+  --project-browser-navigation-width: 90px;
+  --project-browser-results-width: 140px;
   --project-track-border: 2px;
   --project-minimap-min-height: 32px;
   --project-minimap-max-height: 90px;

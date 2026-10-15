@@ -1,3 +1,4 @@
+import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import type { Props, StyleDesc } from "@gpuix/react"
@@ -7,6 +8,7 @@ export type { ControlledScrollbarProps } from "./ControlledScrollbar"
 
 export interface ScrollAreaProps extends Props {
   readonly orientation?: "vertical" | "horizontal" | "both"
+  readonly wheelToHorizontal?: boolean
   readonly fill?: boolean
   readonly size?: { readonly width: number; readonly height: number }
   readonly height?: StyleDesc["height"]
@@ -15,14 +17,17 @@ export interface ScrollAreaProps extends Props {
 
 export function ScrollArea({
   orientation = "vertical",
+  wheelToHorizontal = false,
   fill = false,
   size,
   height,
   maxHeight,
   style,
+  onScroll,
   ...props
 }: ScrollAreaProps) {
   const theme = useTheme()
+  const { renderer } = useGpuix()
   const boundedHeight =
     size?.height ??
     height ??
@@ -34,6 +39,20 @@ export function ScrollArea({
       role={props.role ?? "region"}
       tabIndex={props.tabIndex ?? 0}
       aria-disabled={false}
+      onScroll={event => {
+        onScroll?.(event)
+        if (
+          !wheelToHorizontal ||
+          orientation !== "horizontal" ||
+          event.deltaX ||
+          !event.deltaY ||
+          event.modifiers?.ctrl ||
+          event.modifiers?.cmd
+        )
+          return
+        const offset = renderer?.getScrollOffset?.(event.elementId)
+        if (offset) renderer?.scrollTo?.(event.elementId, (offset[0] ?? 0) + event.deltaY, 0)
+      }}
       style={sx(
         {
           position: "relative",

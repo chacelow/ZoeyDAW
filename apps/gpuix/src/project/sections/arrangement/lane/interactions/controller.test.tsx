@@ -2,6 +2,7 @@ import { afterEach, expect, it } from "bun:test"
 import { useMemo, useSyncExternalStore } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
+import { flushSync, handleGpuixEvent } from "@gpuix/react"
 import type { NativeClipboard } from "../../../../../platform/clipboard"
 import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "../../../../adapters"
@@ -452,3 +453,42 @@ it("opens the focused Clip context menu from the keyboard without a previous rig
   renderer.simulateKeystrokes("escape")
   expect(renderer.findByText(labelsByLocale.en["detail.openClip"])).toBeUndefined()
 })
+
+for (const gesture of [
+  { name: "native right click", modifiers: "" },
+  { name: "normalized Ctrl-left context click", modifiers: "ctrl" },
+]) {
+  it(`applies the ${gesture.name} menu to its Clip rather than the previous selection`, () => {
+    const { renderer, scene } = mount({ audio: true })
+    const audioRow = layoutTrackRows(scene.get()).find(row => row.track.id === "audio")
+    if (!audioRow) throw new Error("Missing audio target")
+    projectActions.selectClips(["pattern"])
+    const host = renderer.findByTestId("lane-row-audio")
+    if (!host) throw new Error("Missing context event host")
+    const elementId = host.id
+    flushSync(() =>
+      handleGpuixEvent(
+        {
+          eventType: "contextMenu",
+          elementId,
+          x: 100,
+          y: audioRow.top + 6,
+          button: 2,
+          isRightClick: true,
+          modifiers: { ctrl: gesture.modifiers === "ctrl", shift: false, alt: false, cmd: false },
+        },
+        renderer
+      )
+    )
+    renderer.flush()
+    const remove = renderer.findByText(labelsByLocale.en["arrangement.deleteClip"])
+    const bounds = remove && renderer.getElementBounds(remove.id)
+    if (!bounds) throw new Error("Missing target Clip menu action")
+    renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    const tracks = useProjectState.getState().document.tracks
+    expect(tracks.find(track => track.id === "source")?.clips.map(clip => clip.id)).toEqual([
+      "pattern",
+    ])
+    expect(tracks.find(track => track.id === "audio")?.clips).toEqual([])
+  })
+}

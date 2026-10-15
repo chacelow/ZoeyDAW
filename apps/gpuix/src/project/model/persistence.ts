@@ -298,7 +298,8 @@ function isWorkspace(v: unknown): v is WorkspaceState {
     bool(v.automationMode) &&
     bool(v.drawMode) &&
     bool(v.computerKeyboard) &&
-    bool(v.link)
+    bool(v.link) &&
+    bool(v.metronome)
   )
 }
 
@@ -391,6 +392,9 @@ export function parseProject(json: string): { document: DocumentState; workspace
     }
     workspacePayload = { ...rawWorkspace, grid: { mode: "fixed", bars: rawWorkspace.gridBars } }
   }
+  if (record(workspacePayload) && !("metronome" in workspacePayload)) {
+    workspacePayload = { ...workspacePayload, metronome: true }
+  }
   if (!isWorkspace(workspacePayload)) {
     throw new Error("Invalid or unsupported project snapshot")
   }
@@ -478,6 +482,7 @@ export function parseProject(json: string): { document: DocumentState; workspace
       drawMode: view.drawMode,
       computerKeyboard: view.computerKeyboard,
       link: view.link,
+      metronome: view.metronome,
     },
   }
 }

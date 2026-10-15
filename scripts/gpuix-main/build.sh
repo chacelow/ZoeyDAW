@@ -80,5 +80,8 @@ fi
 ln -sfn "$vendor" "$root/.gpuix-main"
 # The renderer regression tests under scripts/gpuix-main resolve react and @gpuix/* through the
 # app's dependency tree; node_modules is gitignored, so recreate the link on every build.
-ln -sfn ../../../apps/gpuix/node_modules "$script_dir/context-menu/node_modules"
+for config in "$script_dir"/*/tsconfig.json; do
+  [ -f "$config" ] || continue
+  ln -sfn "$root/apps/gpuix/node_modules" "$(dirname "$config")/node_modules"
+done
 node "$script_dir/check.mjs" --record

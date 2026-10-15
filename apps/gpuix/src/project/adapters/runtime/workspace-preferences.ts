@@ -8,6 +8,7 @@ export function sameWorkspacePreferences(a: WorkspaceState, b: WorkspaceState): 
     a.automationMode === b.automationMode &&
     a.drawMode === b.drawMode &&
     a.computerKeyboard === b.computerKeyboard &&
-    a.link === b.link
+    a.link === b.link &&
+    a.metronome === b.metronome
   )
 }

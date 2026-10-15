@@ -26,6 +26,10 @@
 
 窗口键盘 owner 在 timeline。lane 只消费选择、Ctrl/Cmd+E 裁剪、创建副本、重命名、删除、复制/剪切/粘贴与拖动 Escape；Space 不激活 Clip，并继续传播给窗口播放 owner。Clip 标题设插入点到左起点；内容点击设到点击位置；普通激活不打开 Clip View。
 
+右键目标只由 F2 归一化后的 `onContextMenu` payload 设置，不再从 `onMouseDown` 的 button/ctrl 猜测右键。Shift+F10 保留独立的原生焦点 bounds 定位。回归只发送 context 事件，再通过真实菜单动作验证删除的是目标 Clip，而不是之前的选择；Ctrl+左键按平台归一化后的右键 payload 注入。
+
+`evidence/context-*` 保存实际窗口证据：先选中 Pattern，再右键 Audio，菜单标题与 Rename 字段均为该 Audio Clip。物理 Ctrl+左键的后台修饰输入被 computer 拒绝，foreground 控制申请超时且没有确认批准，未发送前台点击；该物理路径未验证，归一化事件行为以回归与 F2 平台证据为准。
+
 ## 迁入清单
 
 源路径相对于 `apps/web/src/pages/project/sections/ArrangementPanel/`，目标相对于本目录。
@@ -69,19 +73,20 @@
 | 命令 | 结果 |
 | --- | --- |
 | `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx -t 'fade mask between'` | 1 pass，0 fail，10 assertions；折叠→展开→再折叠 |
-| `bun test src/project/sections/arrangement/lane` | 23 pass，0 fail，102343 assertions |
-| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 23 pass，0 fail；5 个变异各命中 1 个预期失败；源目标 SHA-256 前后相同 |
-| `bun test` | 880 pass，1 fail，882 tests / 131 files；唯一失败为主干已知 tracks 标题嵌套右键菜单，不属于 lane |
+| `bun test src/project/sections/arrangement/lane` | 25 pass，0 fail，102347 assertions |
+| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 25 pass，0 fail；6 个变异命中预期失败；源目标 SHA-256 前后相同 |
+| `bun test` | 995 pass，1 todo，0 fail，1048318 assertions；996 tests / 156 files |
 
 变异通过 Bun runtime preload 在内存替换模块，不写源文件；脚本验证预期用例确实失败，不能以语法错误代替变异被捕获。
 
-| 变异                                | 失败用例数 |
-| ----------------------------------- | ---------: |
-| 移除屏外 Clip 裁剪                  |          1 |
-| 忽略 MIDI 保留源偏移                |          1 |
-| 将 channel-major 峰值错读成交错声道 |          1 |
-| 移除 collapsed 标题遮罩分支         |          1 |
-| 不再复用未变 ClipCard 引用          |          1 |
+| 变异                                     | 失败用例数 |
+| ---------------------------------------- | ---------: |
+| 移除屏外 Clip 裁剪                       |          1 |
+| 忽略 MIDI 保留源偏移                     |          1 |
+| 将 channel-major 峰值错读成交错声道      |          1 |
+| 移除 collapsed 标题遮罩分支              |          1 |
+| 不再复用未变 ClipCard 引用               |          1 |
+| 将原生 context 目标退回 mouseDown 旧路径 |          2 |
 
 ## 2026-10-15 引用稳定增量
 

@@ -1,0 +1,65 @@
+{
+  "reviewer": "pstack-reviewer / F4IndependentReview",
+  "fixedPoint": "28eb9bf",
+  "implementationCommits": ["7f7c472", "2ed2d59", "e194113", "d386dd6", "f451715"],
+  "mainlineIntegrations": {
+    "mainline": ["9f21648", "d5325b9"],
+    "mergeCommits": ["31ad0c6", "962853d"]
+  },
+  "diffCommand": "git diff 28eb9bf..e194113 -- apps/gpuix/src/shared/quads scripts/gpuix-main/patches/quad-batch.patch scripts/gpuix-main/config.json scripts/gpuix-main/build.sh docs/research/gpuix-main-build.md",
+  "finalDiffCommand": "git diff d5325b9..HEAD -- apps/gpuix/src/shared/quads scripts/gpuix-main docs/research/gpuix-main-build.md",
+  "commitListCommand": "git log d5325b9..HEAD --oneline",
+  "additionalReadSet": "scripts/gpuix-main/quad-batch/{Surface.tsx,workload.ts,render-cost.tsx,window.tsx,run.sh,tsconfig.json,evidence/*}",
+  "initialStandardsFindings": 0,
+  "initialSpecFindings": 1,
+  "finding": {
+    "category": "必修",
+    "severity": "P2",
+    "summary": "style.cursor caused GPUI Div to register a hitbox",
+    "fix": "clear el.style().mouse_cursor after style application, without cloning StyleDesc",
+    "regression": "cursor_and_pointer_styles_cannot_insert_a_native_hitbox observes actual GPUI Div prepaint Option<Hitbox>",
+    "before": "0 pass / 1 fail: pure visual batch registered a native hitbox",
+    "after": "273 pass / 0 fail, full native lib suite"
+  },
+  "cursorFollowup": {
+    "standardsFindings": 0,
+    "specFindings": 0,
+    "result": "Mandatory finding closed"
+  },
+  "imperativeApiFollowup": {
+    "standardsFindings": 0,
+    "specFindings": 0,
+    "result": "No new findings; coordinator's latest imperative geometry contract met",
+    "checked": [
+      "host/latest/uploaded ownership and detach/remount",
+      "resetAfterCommit creates host before ref attachment",
+      "geometry excluded from JSX props and mutation queue",
+      "render-free update regression with flushSync",
+      "premount GPU screenshot comparison against direct native setter",
+      "cursor and pointerEvents isolation",
+      "DEV and production p90 below16ms"
+    ],
+    "scopeNote": "At review time final imperative window metrics were reported by parent; the durable window-imperative-2026-10-15.json was saved separately"
+  },
+  "emptyBufferFollowup": {
+    "standardsFindings": 0,
+    "specFindings": 0,
+    "result": "Option<Arc> captured by paint; absent data borrows static empty slice, no new allocation or copy; previous conclusions remain valid"
+  },
+  "mergedToolingFollowup": {
+    "standardsFindings": 0,
+    "specFindings": 0,
+    "checked": [
+      "main eight patches preserved, quad-batch ninth",
+      "safe apply then separate add-N from central Git fix",
+      "shared dependency-link loop and no duplicate runner setup",
+      "runProbe-local timing state",
+      "finally cleanup and outside leak assertion",
+      "F4 imperative contract retained after H1/F2 documentation merge"
+    ],
+    "result": "No new findings; prior closed items remain closed"
+  },
+  "scan": { "sourceFiles": 2, "testFiles": 1, "hard": 0, "warn": 0 },
+  "openFindings": 0,
+  "reviewMode": "Read-only; reviewer did not run builds/tests/lint/formatters"
+}

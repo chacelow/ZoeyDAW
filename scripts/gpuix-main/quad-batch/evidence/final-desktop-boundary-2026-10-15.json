@@ -1,0 +1,10 @@
+{
+  "approvedWindow": { "start": "2026-10-15T07:06:03Z", "deadline": "2026-10-15T07:07:33Z" },
+  "guard": "Date.now() >= Date.parse(deadline) checked before service launch",
+  "result": "Expired before launch; fail-closed",
+  "servicesStarted": 0,
+  "inputsSent": 0,
+  "foregroundTakeoverRequested": false,
+  "coordinatorDisposition": "Use existing real-window evidence and deliver; do not request another desktop slot",
+  "evidenceScope": "Existing imperative window: 67 frames and CPU draw p90 0.418ms before H1/F2 integration. Final nine-patch validation is separately documented: 283 native tests, application 996 pass / 1 todo / 0 fail, identical GPU PNG, DEV and production A/B. No final nine-patch desktop rerun is claimed."
+}
