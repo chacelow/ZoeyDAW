@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { PeakColumns } from "@/shared/waveform/PeakColumns"
+import { useProjectState } from "@/project/adapters"
 import type { PeakReader } from "@/project/model/backend"
 import type { SourceView } from "./source-view"
 
@@ -37,12 +38,32 @@ export function SourceWaveform({
   readonly readPeaks: PeakReader
   readonly testId?: string
 }) {
+  const sessionId = useProjectState(state => state.session.backend.sessionId)
+  const phase = useProjectState(state => state.session.backend.phase)
+  const pending = useProjectState(state => state.session.backend.pending)
+  const acceptedRevision = useProjectState(state => state.session.backend.acceptedRevision)
+  const bpm = useProjectState(state => state.document.transport.bpm)
+  const numerator = useProjectState(state => state.document.transport.numerator)
+  const denominator = useProjectState(state => state.document.transport.denominator)
+  // PeakReader intentionally hides the backend handle; its musical frame mapping still changes.
+  const generation = useMemo(
+    () => ({
+      sessionId,
+      phase,
+      pending,
+      acceptedRevision,
+      bpm,
+      numerator,
+      denominator,
+    }),
+    [sessionId, phase, pending, acceptedRevision, bpm, numerator, denominator]
+  )
   const from = Math.max(view.start, window.start)
   const to = Math.min(view.start + view.span, window.end)
   const left = Math.round(((from - view.start) / view.span) * width)
   const pixels = Math.max(0, Math.round(((to - view.start) / view.span) * width) - left)
   const peaks = useMemo(() => {
-    if (!sourceId || pixels <= 0 || to <= from) return EMPTY
+    if (generation.phase === "idle" || !sourceId || pixels <= 0 || to <= from) return EMPTY
     const length = window.end - window.start
     const [local0, local1] = reverse
       ? [length - (to - window.start), length - (from - window.start)]
@@ -59,7 +80,7 @@ export function SourceWaveform({
         out[target * 2 + 1] = (raw[source * 2 + 1] ?? 0) * gain
       }
     return out
-  }, [sourceId, from, to, pixels, gain, reverse, readPeaks, window.start, window.end])
+  }, [sourceId, from, to, pixels, gain, reverse, readPeaks, window.start, window.end, generation])
   if (!peaks.length) return null
   return (
     <div
