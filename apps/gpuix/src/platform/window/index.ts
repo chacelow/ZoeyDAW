@@ -33,6 +33,7 @@ export { actionAfterGuard, closeButtonAction, DEFAULT_CLOSE_BEHAVIOR } from "./c
 export type { CloseBehavior, CloseButtonAction } from "./close-behavior"
 export { createWindowCloseGuard } from "./close-guard"
 export type { WindowCloseGuard, WindowCloseGuardOptions } from "./close-guard"
+export { getReducedMotion, subscribeReducedMotion } from "./reduced-motion"
 
 export function createWindowPlatform(renderer: WindowRenderer) {
   return {
