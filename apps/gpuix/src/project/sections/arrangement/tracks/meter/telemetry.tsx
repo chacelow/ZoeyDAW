@@ -33,7 +33,7 @@ export function TrackTelemetryProvider({
       driver.wake()
       driver.advance(timestampMs)
     })
-  }, playing)
+  }, playing || active)
   const environment = useMemo(() => ({ telemetry, driver }), [telemetry, driver])
   useLayoutEffect(() => driver.wake(), [levels, epoch, telemetry, driver])
   return <TelemetryContext.Provider value={environment}>{children}</TelemetryContext.Provider>

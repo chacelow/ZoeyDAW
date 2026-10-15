@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { useAnimationFrame } from "@/platform/frame"
+import { flushSync } from "@gpuix/react"
+import { useAnimationFrame, useResumeFrame } from "@/platform/frame"
 import type { BackendTelemetry } from "@/project/model/backend"
 import { PopupButton } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -17,19 +18,19 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
   useEffect(() => {
     setTelemetry(readProjectTelemetry())
   }, [hasTelemetry, playing])
-  useAnimationFrame(
-    () => {
-      const next = readProjectTelemetry()
-      setTelemetry(previous => {
-        if (previous === next) return previous
-        if (popupOpen) return next
-        const previousRate = previous?.clock.kind === "sample" ? previous.clock.sampleRate : null
-        const nextRate = next?.clock.kind === "sample" ? next.clock.sampleRate : null
-        return previousRate === nextRate ? previous : next
-      })
-    },
-    playing || (popupOpen && hasTelemetry)
-  )
+  const needsFrames = playing || (popupOpen && hasTelemetry)
+  const refreshTelemetry = () => {
+    const next = readProjectTelemetry()
+    setTelemetry(previous => {
+      if (previous === next) return previous
+      if (popupOpen) return next
+      const previousRate = previous?.clock.kind === "sample" ? previous.clock.sampleRate : null
+      const nextRate = next?.clock.kind === "sample" ? next.clock.sampleRate : null
+      return previousRate === nextRate ? previous : next
+    })
+  }
+  useAnimationFrame(refreshTelemetry, needsFrames)
+  useResumeFrame(() => flushSync(refreshTelemetry), needsFrames)
   const clock = telemetry?.clock
   const sampleRate = clock?.kind === "sample" ? clock.sampleRate : null
   const rate = sampleRate === null ? labels.unavailable : `${sampleRate / 1000} kHz`

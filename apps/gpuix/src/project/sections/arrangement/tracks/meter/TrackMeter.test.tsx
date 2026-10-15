@@ -147,3 +147,29 @@ test("first resume commits newest stereo telemetry even when the decay driver wa
     useProjectState.setState({ session: previousSession })
   }
 })
+
+test("stopped held peaks catch up on resume and release all frame demand after decay", () => {
+  const previousSession = useProjectState.getState().session
+  useProjectState.setState({ session: { ...previousSession, playing: true } })
+  let telemetry = frame({ audio: [3, 0] })
+  const view = mountMeter(() => telemetry)
+  try {
+    view.advance(0)
+    expect(view.root.renderer.findByTestId("track-meter-peak-left-audio")).toBeDefined()
+    useProjectState.setState({ session: { ...useProjectState.getState().session, playing: false } })
+    telemetry = frame({ audio: [-120, -120] })
+    view.render()
+    // Playback stopped, but the held peak still needs elapsed-time decay after occlusion.
+    view.frames.resume(5000)
+    expect(view.root.renderer.findByTestId("track-meter-peak-left-audio")).toBeUndefined()
+    expect(view.root.renderer.findByTestId("track-meter-peak-right-audio")).toBeUndefined()
+    expect(
+      view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
+    ).toBe("L -60.0 dB, R -60.0 dB")
+    expect(view.frames.subscribers).toBe(0)
+    expect(view.frames.resumeSubscribers).toBe(0)
+  } finally {
+    view.close()
+    useProjectState.setState({ session: previousSession })
+  }
+})

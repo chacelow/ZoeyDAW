@@ -10,6 +10,7 @@ export interface AnimationFrameSource {
   subscribe(callback: AnimationFrameCallback): () => void
   // Resume runs inside native prepaint; callers must commit first-present state synchronously.
   // React consumers use flushSync around updates made by their resume listener.
+  // Retained applyBatch/setQuads writes are safe; GPUI reads and window mutations throw.
   subscribeResume(callback: AnimationFrameCallback): () => void
 }
 

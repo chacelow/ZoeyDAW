@@ -37,17 +37,17 @@ index d07bff3..857f6f9 100644
  # Same crate GPUI uses. A .node cannot ship an exe manifest, so Windows DPI
  # awareness is set at runtime in renderer.rs instead of via windows-manifest.
 diff --git a/packages/native/index.d.ts b/packages/native/index.d.ts
-index e38f101..2a81872 100644
+index fdb3589..323fc84 100644
 --- a/packages/native/index.d.ts
 +++ b/packages/native/index.d.ts
-@@ -104,6 +104,13 @@ export declare class GpuixRenderer {
+@@ -106,6 +106,13 @@ export declare class GpuixRenderer {
     * queued frame drains without calling JavaScript or requesting another frame.
     */
    setAnimationFrameActive(active: boolean): void
 +  /**
-+   * Runs synchronously before the first restored frame is painted. Only
-+   * applyBatch may update the retained tree inside this callback; GPUI reads
-+   * and window updates cannot reenter the frame's borrowed App context.
++   * Runs synchronously before the first restored frame is painted. Retained
++   * batch setters (applyBatch and setQuads) may update data in this callback;
++   * GPUI reads and window updates cannot reenter the borrowed App context.
 +   * Registration samples a baseline rather than emitting an initial resume.
 +   */
 +  setResumeFrameCallback(callback: ((timestampMs: number) => void) | null): void
@@ -55,10 +55,10 @@ index e38f101..2a81872 100644
     * Subscribe to native window activation. The first asynchronous callback
     * reports current state; later callbacks report activation changes.
 diff --git a/packages/native/js/host.ts b/packages/native/js/host.ts
-index 6ce4cc1..c95fae0 100644
+index 64a0499..dab27d5 100644
 --- a/packages/native/js/host.ts
 +++ b/packages/native/js/host.ts
-@@ -696,6 +696,7 @@ export type NativeRenderer = MutationHost &
+@@ -703,6 +703,7 @@ export type NativeRenderer = MutationHost &
        | "setWindowSelectionChange"
        | "setAnimationFrameCallback"
        | "setAnimationFrameActive"
@@ -67,7 +67,7 @@ index 6ce4cc1..c95fae0 100644
        | "onWindowAppearanceChange"
        | "getWindowAppearance"
 diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
-index e4c7d5e..d490e9a 100644
+index c559adc..6c93f48 100644
 --- a/packages/native/src/renderer.rs
 +++ b/packages/native/src/renderer.rs
 @@ -25,6 +25,8 @@ use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
@@ -79,7 +79,7 @@ index e4c7d5e..d490e9a 100644
  use std::cell::RefCell;
  use std::collections::{HashMap, HashSet};
  use std::rc::Rc;
-@@ -112,6 +114,164 @@ fn schedule_animation_frame(window: &gpui::Window) {
+@@ -112,6 +114,169 @@ fn schedule_animation_frame(window: &gpui::Window) {
      });
  }
  
@@ -178,7 +178,7 @@ index e4c7d5e..d490e9a 100644
 +fn reject_during_resume() -> Result<()> {
 +    if RESUME_FRAME.with(|stored| stored.borrow().dispatching) {
 +        Err(Error::from_reason(
-+            "Native GPUI reads and updates are unavailable during a resume frame callback; only applyBatch and setResumeFrameCallback are allowed",
++            "Native GPUI reads and updates are unavailable during a resume frame callback; retained batch setters (applyBatch, setQuads) and state-only callback registration are allowed",
 +        ))
 +    } else {
 +        Ok(())
@@ -187,7 +187,12 @@ index e4c7d5e..d490e9a 100644
 +
 +#[cfg(target_os = "macos")]
 +fn sample_resume_frame() {
-+    RESUME_FRAME.with(|stored| stored.borrow_mut().sample());
++    RESUME_FRAME.with(|stored| {
++        let mut state = stored.borrow_mut();
++        if state.callback.is_some() {
++            state.sample();
++        }
++    });
 +}
 +
 +#[cfg(target_os = "macos")]
@@ -244,7 +249,7 @@ index e4c7d5e..d490e9a 100644
  #[cfg(all(test, target_os = "macos"))]
  mod animation_frame_tests {
      use super::*;
-@@ -161,6 +321,141 @@ mod animation_frame_tests {
+@@ -161,6 +326,235 @@ mod animation_frame_tests {
              })
              .unwrap();
      }
@@ -330,6 +335,100 @@ index e4c7d5e..d490e9a 100644
 +    }
 +
 +    #[gpui::test]
++    fn resumed_commit_is_visible_through_dirty_gated_gpui_redraws(cx: &mut gpui::TestAppContext) {
++        let mut renderer = GpuixRenderer::new(None);
++        {
++            let tree = Arc::get_mut(&mut renderer.tree)
++                .expect("new renderer owns its unshared tree")
++                .get_mut()
++                .expect("new renderer tree cannot be poisoned");
++            apply_batch_to_tree(tree, br#"[["createElement",1,"div"],["createElement",2,"text"],["appendChild",1,2],["setText",2,"stale"],["setRoot",1]]"#).unwrap();
++            tree.take_dirty();
++        }
++        let renderer = Rc::new(renderer);
++        let window = cx.add_window(|_, _| GpuixView::new(
++            renderer.tree.clone(), None, "dirty-gated resume".into(), SharedSelection::default(),
++        ));
++        cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx)).unwrap();
++        RESUME_FRAME.with(|stored| {
++            let renderer = renderer.clone();
++            let mut state = stored.borrow_mut();
++            *state = ResumeFrameState::default();
++            state.observe(false, false);
++            state.callback = Some(Rc::new(move |_| {
++                renderer.apply_batch(r#"[["setText",2,"fresh"]]"#.to_string()).unwrap();
++                RESUME_FRAME.with(|stored| stored.borrow_mut().callback = None);
++            }));
++            state.observe(true, false);
++        });
++        let scenes = cx.update_window(window.into(), |_, window, cx| {
++            schedule_resume_frame(window);
++            assert_eq!(window.simulate_next_frame(cx), 1);
++            let mut scenes = Vec::new();
++            for _ in 0..2 {
++                // KeyUp preserves modality and uses GPUI's real dirty-gated draw path.
++                // Do not force a draw here: doing so masks a missing invalidation.
++                window.dispatch_event(gpui::PlatformInput::KeyUp(gpui::KeyUpEvent {
++                    keystroke: gpui::Keystroke::parse("f24").unwrap(),
++                }), cx);
++                scenes.push(crate::text::painted_text());
++            }
++            scenes
++        }).unwrap();
++        assert!(scenes[1].iter().any(|text| text == "fresh"), "second GPUI redraw still has old scene: {scenes:?}");
++        assert!(scenes[0].iter().any(|text| text == "fresh"));
++        assert!(scenes.iter().flatten().all(|text| text != "stale"));
++        RESUME_FRAME.with(|stored| *stored.borrow_mut() = ResumeFrameState::default());
++    }
++
++    #[gpui::test]
++    fn resume_quad_upload_is_retained_only_and_paints_new_geometry(cx: &mut gpui::TestAppContext) {
++        let mut renderer = GpuixRenderer::new(None);
++        {
++            let tree = Arc::get_mut(&mut renderer.tree)
++                .expect("new renderer owns its unshared tree")
++                .get_mut()
++                .expect("new renderer tree cannot be poisoned");
++            apply_batch_to_tree(tree, br#"[["createElement",1,"quad-batch"],["setStyle",1,{"width":100,"height":100}],["setRoot",1]]"#).unwrap();
++            tree.set_quads(1, &[0.0, 0.0, 8.0, 12.0]).unwrap();
++            tree.take_dirty();
++        }
++        let renderer = Rc::new(renderer);
++        let window = cx.add_window(|_, _| GpuixView::new(
++            renderer.tree.clone(), None, "quad resume".into(), SharedSelection::default(),
++        ));
++        cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx)).unwrap();
++        RESUME_FRAME.with(|stored| {
++            let renderer = renderer.clone();
++            let mut state = stored.borrow_mut();
++            *state = ResumeFrameState::default();
++            state.observe(false, false);
++            state.callback = Some(Rc::new(move |_| {
++                renderer.set_quads(1.0, napi::bindgen_prelude::Float32Array::new(
++                    vec![4.0, 6.0, 32.0, 20.0],
++                )).unwrap();
++                RESUME_FRAME.with(|stored| stored.borrow_mut().callback = None);
++            }));
++            state.observe(true, false);
++        });
++        cx.update_window(window.into(), |_, window, cx| {
++            schedule_resume_frame(window);
++            assert_eq!(window.simulate_next_frame(cx), 1);
++            window.dispatch_event(gpui::PlatformInput::KeyUp(gpui::KeyUpEvent {
++                keystroke: gpui::Keystroke::parse("f24").unwrap(),
++            }), cx);
++            let quads = window.painted_quads();
++            assert_eq!(quads.len(), 1);
++            let scale = window.scale_factor();
++            assert_eq!(quads[0].bounds.origin.x.as_f32() / scale, 4.0);
++            assert_eq!(quads[0].bounds.origin.y.as_f32() / scale, 6.0);
++            assert_eq!(quads[0].bounds.size.width.as_f32() / scale, 32.0);
++            assert_eq!(quads[0].bounds.size.height.as_f32() / scale, 20.0);
++        }).unwrap();
++        RESUME_FRAME.with(|stored| *stored.borrow_mut() = ResumeFrameState::default());
++    }
++
++    #[gpui::test]
 +    fn resumed_window_tracks_visibility_and_key_transitions_without_initial_event(
 +        _cx: &mut gpui::TestAppContext,
 +    ) {
@@ -386,7 +485,7 @@ index e4c7d5e..d490e9a 100644
  }
  
  #[cfg(test)]
-@@ -376,6 +671,8 @@ thread_local! {
+@@ -376,6 +770,8 @@ thread_local! {
          pending: false,
          origin: std::time::Instant::now(),
      });
@@ -395,7 +494,7 @@ index e4c7d5e..d490e9a 100644
      #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
      static WEB_APP: RefCell<Option<gpui::ApplicationHandle>> = const { RefCell::new(None) };
      #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
-@@ -540,6 +837,7 @@ fn recv_ui_response<T>(receiver: std::sync::mpsc::Receiver<T>, operation: &str)
+@@ -540,6 +936,7 @@ fn recv_ui_response<T>(receiver: std::sync::mpsc::Receiver<T>, operation: &str)
  fn update_window<R>(
      update: impl FnOnce(&mut GpuixView, &mut gpui::Window, &mut gpui::Context<GpuixView>) -> R,
  ) -> Result<R> {
@@ -403,7 +502,7 @@ index e4c7d5e..d490e9a 100644
      let window = GPUI_WINDOW
          .with(|window| *window.borrow())
          .ok_or_else(|| Error::from_reason("GPUI window is not initialized"))?;
-@@ -562,6 +860,7 @@ fn update_window<R>(
+@@ -562,6 +959,7 @@ fn update_window<R>(
  fn update_window_without_view<R>(
      update: impl FnOnce(&mut gpui::Window, &mut gpui::App) -> R,
  ) -> Result<R> {
@@ -411,7 +510,7 @@ index e4c7d5e..d490e9a 100644
      let window = GPUI_WINDOW
          .with(|window| *window.borrow())
          .ok_or_else(|| Error::from_reason("GPUI window is not initialized"))?;
-@@ -581,6 +880,10 @@ fn update_window_without_view<R>(
+@@ -581,6 +979,10 @@ fn update_window_without_view<R>(
  
  #[cfg(target_os = "macos")]
  fn invalidate_window() -> Result<()> {
@@ -422,7 +521,7 @@ index e4c7d5e..d490e9a 100644
      update_window(|_view, window, cx| {
          cx.notify();
          window.refresh();
-@@ -1214,6 +1517,11 @@ impl GpuixRenderer {
+@@ -1214,6 +1616,11 @@ impl GpuixRenderer {
      }
  
      fn begin_path_prompt(&self, options: gpui::PathPromptOptions, deferred: PathPromptDeferred) {
@@ -434,7 +533,7 @@ index e4c7d5e..d490e9a 100644
          #[cfg(target_os = "macos")]
          {
              let prompt = GPUI_APP.with(|app| {
-@@ -1291,6 +1599,8 @@ impl GpuixRenderer {
+@@ -1291,6 +1698,8 @@ impl GpuixRenderer {
      }
  
      fn automation_bounds(&self) -> Result<HashMap<u64, crate::automation::ElementBounds>> {
@@ -443,7 +542,7 @@ index e4c7d5e..d490e9a 100644
          #[cfg(target_os = "macos")]
          return Ok(crate::automation::all_bounds());
  
-@@ -1311,6 +1621,8 @@ impl GpuixRenderer {
+@@ -1311,6 +1720,8 @@ impl GpuixRenderer {
      }
  
      fn elements_at(&self, x: f64, y: f64) -> Result<Vec<u64>> {
@@ -452,7 +551,7 @@ index e4c7d5e..d490e9a 100644
          #[cfg(target_os = "macos")]
          {
              let tree = self.tree.lock().unwrap();
-@@ -1337,6 +1649,8 @@ impl GpuixRenderer {
+@@ -1337,6 +1748,8 @@ impl GpuixRenderer {
      }
  
      fn element_bounds(&self, id: u64) -> Result<Option<crate::automation::ElementBounds>> {
@@ -461,7 +560,7 @@ index e4c7d5e..d490e9a 100644
          #[cfg(target_os = "macos")]
          return Ok(crate::automation::get_bounds(id));
  
-@@ -1402,6 +1716,8 @@ impl GpuixRenderer {
+@@ -1402,6 +1815,8 @@ impl GpuixRenderer {
      /// Initialize GPUI using the native event-loop architecture for this OS.
      #[napi]
      pub fn init(&self, options: Option<WindowOptions>) -> Result<()> {
@@ -470,7 +569,7 @@ index e4c7d5e..d490e9a 100644
          #[cfg(not(any(
              target_os = "macos",
              target_os = "windows",
-@@ -1514,6 +1830,32 @@ impl GpuixRenderer {
+@@ -1514,6 +1929,32 @@ impl GpuixRenderer {
                  return Err(error);
              }
          };
@@ -503,7 +602,7 @@ index e4c7d5e..d490e9a 100644
  
          MAC_PLATFORM.with(|stored| {
              *stored.borrow_mut() = Some(platform);
-@@ -1705,6 +2047,8 @@ impl GpuixRenderer {
+@@ -1721,6 +2162,8 @@ impl GpuixRenderer {
      /// Pump the native event loop. Returns false after the last window closes.
      #[napi]
      pub fn tick(&self) -> Result<bool> {
@@ -512,7 +611,7 @@ index e4c7d5e..d490e9a 100644
          let initialized = *self.initialized.lock().unwrap();
          if !initialized {
              return Err(Error::from_reason(
-@@ -1714,12 +2058,19 @@ impl GpuixRenderer {
+@@ -1730,12 +2173,19 @@ impl GpuixRenderer {
  
          #[cfg(target_os = "macos")]
          {
@@ -532,7 +631,7 @@ index e4c7d5e..d490e9a 100644
              return Ok(running);
          }
  
-@@ -1980,6 +2331,9 @@ impl GpuixRenderer {
+@@ -1996,6 +2446,9 @@ impl GpuixRenderer {
              Either::B(_) => None,
          };
          ANIMATION_FRAME.with(|stored| stored.borrow_mut().callback = handler);
@@ -542,7 +641,7 @@ index e4c7d5e..d490e9a 100644
          update_window_without_view(|window, _cx| schedule_animation_frame(window))
      }
  
-@@ -1989,12 +2343,61 @@ impl GpuixRenderer {
+@@ -2005,12 +2458,61 @@ impl GpuixRenderer {
      #[napi]
      pub fn set_animation_frame_active(&self, active: bool) -> Result<()> {
          ANIMATION_FRAME.with(|stored| stored.borrow_mut().active = active);
@@ -553,9 +652,9 @@ index e4c7d5e..d490e9a 100644
          Ok(())
      }
  
-+    /// Runs synchronously before the first restored frame is painted. Only
-+    /// applyBatch may update the retained tree inside this callback; GPUI reads
-+    /// and window updates cannot reenter the frame's borrowed App context.
++    /// Runs synchronously before the first restored frame is painted. Retained
++    /// batch setters (applyBatch and setQuads) may update data in this callback;
++    /// GPUI reads and window updates cannot reenter the borrowed App context.
 +    /// Registration samples a baseline rather than emitting an initial resume.
 +    #[cfg(target_os = "macos")]
 +    #[napi]
@@ -605,7 +704,7 @@ index e4c7d5e..d490e9a 100644
      /// Subscribe to native window activation. The first asynchronous callback
      /// reports current state; later callbacks report activation changes.
      /// Passing null drops the GPUI observer. Already queued callbacks may drain.
-@@ -2451,13 +2854,17 @@ impl GpuixRenderer {
+@@ -2467,13 +2969,17 @@ impl GpuixRenderer {
  
      /// The current text selection joined in document order, or null.
      #[napi]
@@ -625,7 +724,7 @@ index e4c7d5e..d490e9a 100644
          self.selection.lock().clear();
          self.request_invalidate()
      }
-@@ -2469,6 +2876,8 @@ impl GpuixRenderer {
+@@ -2485,6 +2991,8 @@ impl GpuixRenderer {
      /// x and y are negative pixel values (scroll down = more negative y).
      #[napi]
      pub fn scroll_to(&self, element_id: f64, x: f64, y: f64) -> Result<()> {
@@ -634,7 +733,7 @@ index e4c7d5e..d490e9a 100644
          let id = to_element_id(element_id)?;
          #[cfg(target_os = "macos")]
          if !VIRTUAL_LIST_STATES.with(|cell| {
-@@ -2519,6 +2928,8 @@ impl GpuixRenderer {
+@@ -2535,6 +3043,8 @@ impl GpuixRenderer {
          index: f64,
          offset_in_item: Option<f64>,
      ) -> Result<()> {
@@ -643,7 +742,7 @@ index e4c7d5e..d490e9a 100644
          let id = to_element_id(element_id)?;
          let index = index as usize;
          let offset = offset_in_item.unwrap_or(0.0) as f32;
-@@ -2563,6 +2974,8 @@ impl GpuixRenderer {
+@@ -2579,6 +3089,8 @@ impl GpuixRenderer {
      /// estimates, because it is the anchor gpui itself scrolls by.
      #[napi]
      pub fn get_list_scroll_top(&self, element_id: f64) -> Result<Option<Vec<f64>>> {
@@ -652,7 +751,7 @@ index e4c7d5e..d490e9a 100644
          let id = to_element_id(element_id)?;
          #[cfg(target_os = "macos")]
          return Ok(VIRTUAL_LIST_STATES.with(|cell| {
-@@ -2598,6 +3011,8 @@ impl GpuixRenderer {
+@@ -2614,6 +3126,8 @@ impl GpuixRenderer {
      /// Returns [x, y] or null if the element has no scroll handle.
      #[napi]
      pub fn get_scroll_offset(&self, element_id: f64) -> Result<Option<Vec<f64>>> {
@@ -661,7 +760,7 @@ index e4c7d5e..d490e9a 100644
          let id = to_element_id(element_id)?;
          #[cfg(target_os = "macos")]
          return Ok(VIRTUAL_LIST_STATES
-@@ -2784,6 +3199,8 @@ impl GpuixRenderer {
+@@ -2800,6 +3314,8 @@ impl GpuixRenderer {
  
      #[napi]
      pub fn get_automation_tree(&self) -> Result<String> {
@@ -670,7 +769,7 @@ index e4c7d5e..d490e9a 100644
          self.request_invalidate()?;
          let bounds = self.automation_bounds()?;
          let tree = self.tree.lock().unwrap();
-@@ -2812,18 +3229,22 @@ impl GpuixRenderer {
+@@ -2828,18 +3344,22 @@ impl GpuixRenderer {
      }
  
      #[napi]
@@ -697,7 +796,7 @@ index e4c7d5e..d490e9a 100644
      }
  
      /// Every highlight wash painted in the last frame, in paint order.
-@@ -2831,11 +3252,13 @@ impl GpuixRenderer {
+@@ -2847,11 +3367,13 @@ impl GpuixRenderer {
      /// A quad is invisible to `getPaintedText()`, so this is the only way to
      /// assert on `highlight` without a screenshot.
      #[napi]
