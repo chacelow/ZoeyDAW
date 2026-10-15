@@ -163,9 +163,18 @@ function run(tests, pattern) {
   return { status: result.status, output: `${result.stdout}${result.stderr}` }
 }
 
-const baseline = run("src/app")
-if (baseline.status !== 0) throw new Error(`Baseline failed:\n${baseline.output}`)
-for (const mutation of mutations) {
+const filter = process.argv[2]
+const selected = filter ? mutations.filter(mutation => mutation.name.includes(filter)) : mutations
+if (selected.length === 0) throw new Error(`No mutation matches ${filter}`)
+if (!filter) {
+  const baseline = run("src/app")
+  if (baseline.status !== 0) throw new Error(`Baseline failed:\n${baseline.output}`)
+}
+for (const mutation of selected) {
+  if (filter) {
+    const baseline = run(mutation.tests, mutation.pattern)
+    if (baseline.status !== 0) throw new Error(`Baseline failed:\n${baseline.output}`)
+  }
   const file = path.join(app, "src/app", mutation.file)
   const original = readFileSync(file, "utf8")
   if (!original.includes(mutation.from)) throw new Error(`Stale mutation: ${mutation.name}`)
@@ -187,4 +196,4 @@ for (const mutation of mutations) {
   }
   console.log(`${mutation.name}: ${failed} failing test(s)`)
 }
-console.log(`${mutations.length} mutations caught; originals restored`)
+console.log(`${selected.length} mutations caught; originals restored`)

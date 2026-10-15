@@ -1,0 +1,8 @@
+WARN  px-literal             apps/gpuix/src/main.tsx  2 raw pixel value(s) like width: 1280: use CONTROL_METRICS/PROJECT_METRICS/theme tokens
+WARN  px-literal             apps/gpuix/src/project/sections/arrangement/tracks/demo.tsx  2 raw pixel value(s) like width: 1120: use CONTROL_METRICS/PROJECT_METRICS/theme tokens
+WARN  px-literal             apps/gpuix/src/project/sections/arrangement/tracks/verification/render-cost.tsx  2 raw pixel value(s) like width: 1000: use CONTROL_METRICS/PROJECT_METRICS/theme tokens
+
+28 source files, 5 test files scanned vs gpuix-migration: 0 hard, 3 warn
+
+
+Wall time: 9.27 seconds

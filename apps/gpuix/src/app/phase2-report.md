@@ -2,6 +2,8 @@
 
 2026-10-15。基线已 fast-forward 到 `7cf7215`。当前代码已装配真实 sections，完整交付仍受 F5 autoFocus 事件修复、ClipEditorSlot IDs 切换和剩余真实窗口输入取证限制，未发送完成结论。
 
+已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
+
 ## 实现与 owner
 
 | 内容 | 唯一 owner 与清理 |
@@ -40,8 +42,10 @@
 | app、ControlEnvironment、Input、DragPad、tracks、timeline 的组合检查 | 205 pass，2 fail。两条失败都是 ThemePresetGrid 独立挂载遗漏新增 AppInteractionProvider。已迁移该测试消费者 |
 | `bun test src/app/settings/ThemePresetGrid.test.tsx --timeout 30000` | 上述迁移后 2 pass，0 fail，18 assertions，809 毫秒 |
 | 真实 native runtime smoke | open/apply 被接受；48 kHz telemetry、输出延迟 284 帧；同会话读取 channel-major min/max 共 256 个 f32，范围 -0.399993896484375 到 0.399993896484375；释放后 phase 为 idle |
-| 完整 `bun test` 与变异脚本 | 仍待 F5 与 IDs 接口同步后执行，不称已通过 |
-| `gpuix-review-scan` | 未提交 diff 时扫描器只比较 base...HEAD，扫描 0 文件，不作为交付扫描证据。提交后需重跑 |
+| 完整 `bun test` 与默认变异脚本 | 仍待 F5 与 IDs 接口同步后执行，不称已通过 |
+| 精确路径变异 | B 绘制标记、第二窗口 keyboard owner、rails 再扣 controlsWidth、自动化漏投影、modal Cmd+F、折叠 Cmd+F 六项，均先跑对应真实行为基线，再观察变异后 1 条断言失败并恢复源码；见 `focused-mutations-before-f5.txt` |
+| Input focus 固定 timeline 变异 | 真实 Input 聚焦后 Cmd+1 错改 grid，断言按预期失败。原 focus 守卫已恢复，见 `input-focus-mutation.txt` |
+| `gpuix-review-scan` | 提交后实际扫描 28 source、5 tests，0 hard、3 warn，见 `review-scan.txt` |
 
 第一轮完整 UI 组合用默认 5 秒期限，部分测试在本机负载下超时。协调者批准最终命令使用 `--timeout 30000`，没有更改行为断言，也不把期限加长称为性能修复。单独 Cmd+F 行为检查实测通过，3.78 秒。
 
@@ -90,6 +94,9 @@
 | ThemePresetGrid 独立挂载缺少 app modal owner | 必修 | 更新测试 Provider，单跑 2 pass |
 | renderer 键盘路由/后台焦点恢复不可证明目标 | 汇报仲裁 | 停止并保留精确错误，真实键盘和 Clip/Back UI 不宣称通过 |
 | ClipEditorSlot 大对象 props 性能风险 | 汇报仲裁 | editors 负责 clean cutover 为 IDs，app 使用同一 slot，不保留兼容层 |
+| scan main.tsx 的 1280×800 | 记录 | 既有窗口初始尺寸来自旧 tauri.conf.json，入口 render 前无 theme；未新增该值 |
+| scan tracks/demo.tsx 的 1120×780 | 记录 | 既有验证窗口尺寸，非产品控件度量；本次只改 time-width 投影 |
+| scan tracks/verification/render-cost.tsx 的 1000×500 | 记录 | 固定验证场景的时间视口尺寸，已将实际窗口改为 width 加 controlsWidth |
 | 独立模型审查 | 协调者处置 | 按本 Dispatch 仲裁，不用无法固定模型的 task reviewer。独立审查由协调者安排显式模型 worker 或本人执行 |
 
 ## 错题

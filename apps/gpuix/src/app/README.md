@@ -62,3 +62,5 @@ bun --hot src/main.tsx
 ```
 
 `bun apps/gpuix/src/app/verification/mutations.mjs` 跑 app 基线与行为变异，并在每次变异后恢复源码。真实后端 lease 测试需要可用音频设备，没有设备会失败，不跳过。`verification/native-fixture.ts` 是真实 main 的隔离验证 preload，要求 `B2_EVIDENCE_DIR` 指向临时目录，配合临时 HOME 避免改用户配置。第一阶段历史报告见 `report.md`，阶段2验收与限制见 `phase2-report.md`。
+
+变异脚本可接名字子串，例如 `bun apps/gpuix/src/app/verification/mutations.mjs "lane draw"`。过滤执行先验证该项的真实行为基线；不传过滤参数时仍先跑完整 app 基线。
