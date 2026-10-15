@@ -1,7 +1,7 @@
 import type { PeakReader } from "@/project/model/backend"
 
 const rowRenders = new Map<string, number>()
-const clipRenders = new Map<string, Map<string, number>>()
+const clipRenders = new Map<string, number>()
 const peakReads = new Map<string, { calls: number; duplicateQueries: number; pixels: number }>()
 const previousPeakQueries = new Map<string, string>()
 
@@ -9,13 +9,8 @@ export function recordRowRender(trackId: string): void {
   rowRenders.set(trackId, (rowRenders.get(trackId) ?? 0) + 1)
 }
 
-export function recordClipRender(trackId: string, clipId: string): void {
-  let clips = clipRenders.get(trackId)
-  if (!clips) {
-    clips = new Map()
-    clipRenders.set(trackId, clips)
-  }
-  clips.set(clipId, (clips.get(clipId) ?? 0) + 1)
+export function recordClipRender(clipId: string): void {
+  clipRenders.set(clipId, (clipRenders.get(clipId) ?? 0) + 1)
 }
 
 export function profilePeakRead(
@@ -40,9 +35,7 @@ export function profilePeakRead(
 export function takeProfileCounters() {
   const snapshot = {
     laneRows: Object.fromEntries(rowRenders),
-    clipCards: Object.fromEntries(
-      [...clipRenders].map(([trackId, clips]) => [trackId, Object.fromEntries(clips)])
-    ),
+    clipCards: Object.fromEntries(clipRenders),
     peakReads: Object.fromEntries(peakReads),
   }
   rowRenders.clear()

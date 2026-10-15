@@ -1,9 +1,8 @@
-import { useMemo } from "react"
+import { useLayoutEffect, useMemo } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { projectTrackGroups } from "@/project/model/track-groups"
-import { patternRegions } from "../../core/rulers/grid-lines"
 import type { ArrangementScene } from "../../core/scene"
 import { visibleClipCards } from "../render-projection"
 import type { TrackRow } from "../../core/layout"
@@ -12,6 +11,9 @@ import { ClipCardView } from "../ClipCard"
 import { resolveContentColor } from "@/shared/theme/content-color"
 import { AutomationLayer } from "../AutomationLayer"
 import { createClipCardProjection, createGridProjection } from "../clip-card-projection"
+import { useGridQuads } from "../GridQuads"
+import { QuadBatch } from "@/shared/quads/QuadBatch"
+import { useQuadBatch } from "@/shared/quads/useQuadBatch"
 
 export function LaneContents({
   row,
@@ -29,13 +31,32 @@ export function LaneContents({
   const theme = useTheme()
   const projectGrid = useMemo(createGridProjection, [])
   const projectCards = useMemo(createClipCardProjection, [])
-  const grid = projectGrid(scene)
+  const { lines: grid, regions } = projectGrid(scene)
   const localRow = useMemo(
     () => ({ track: row.track, top: 0, height: row.height }),
     [row.track, row.height]
   )
   const cards = projectCards(scene, localRow, automationMode)
-  const regions = useMemo(() => patternRegions(scene), [scene])
+  const backgroundBatch = useQuadBatch()
+  const backgroundQuads = useMemo(() => {
+    let count = 0
+    for (const region of regions) if (region.alternate && region.width > 0) count++
+    const values = new Float32Array(count * 4)
+    let offset = 0
+    for (const region of regions) {
+      if (!region.alternate || region.width <= 0) continue
+      values[offset] = region.left
+      values[offset + 1] = 0
+      values[offset + 2] = region.width
+      values[offset + 3] = row.height
+      offset += 4
+    }
+    return values
+  }, [regions, row.height])
+  useLayoutEffect(() => {
+    backgroundBatch.setQuads(backgroundQuads)
+  }, [backgroundBatch, backgroundQuads])
+  const gridBatch = useGridQuads(grid, 0, scene.viewport.width, row.height, false)
   const groups = useMemo(() => projectTrackGroups(scene.tracks), [scene.tracks])
   const descendants = groups.leafDescendantsByGroupId.get(row.track.id)
   const groupPitch = descendants?.length
@@ -64,23 +85,21 @@ export function LaneContents({
         backgroundColor: theme.colors.arrangementSurface,
       })}
     >
-      {regions
-        .filter(region => region.alternate && region.width > 0)
-        .map(region => (
-          <div
-            key={region.bar}
-            aria-hidden
-            style={sx({
-              position: "absolute",
-              left: region.left,
-              top: 0,
-              width: region.width,
-              height: row.height,
-              backgroundColor: theme.colors.arrangementSurfaceAlt,
-              pointerEvents: "none",
-            })}
-          />
-        ))}
+      {backgroundQuads.length > 0 && (
+        <QuadBatch
+          ref={backgroundBatch.ref}
+          aria-hidden
+          style={sx({
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: scene.viewport.width,
+            height: row.height,
+            color: theme.colors.arrangementSurfaceAlt,
+            pointerEvents: "none",
+          })}
+        />
+      )}
       {scene.selectedTrackIds.has(row.track.id) && (
         <div
           aria-hidden
@@ -96,22 +115,38 @@ export function LaneContents({
           })}
         />
       )}
-      {grid.map(line => (
-        <div
-          key={line.bar}
+      {gridBatch.hasMajor && (
+        <QuadBatch
+          ref={gridBatch.majorRef}
           aria-hidden
           style={sx({
             position: "absolute",
-            left: line.x,
+            left: 0,
             top: 0,
-            width: 1,
+            width: scene.viewport.width,
             height: row.height,
-            backgroundColor: theme.colors.arrangementLine,
-            opacity: line.kind === "major" ? 1 : 0.5,
+            color: theme.colors.arrangementLine,
+            opacity: 1,
             pointerEvents: "none",
           })}
         />
-      ))}
+      )}
+      {gridBatch.hasMinor && (
+        <QuadBatch
+          ref={gridBatch.minorRef}
+          aria-hidden
+          style={sx({
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: scene.viewport.width,
+            height: row.height,
+            color: theme.colors.arrangementLine,
+            opacity: 0.5,
+            pointerEvents: "none",
+          })}
+        />
+      )}
       {row.track.kind === "group" &&
         row.track.collapsed &&
         descendants?.flatMap((track, index) =>
@@ -158,10 +193,9 @@ export function LaneContents({
           <ClipCardView
             key={`${card.ghost ? "ghost" : "source"}:${card.clip.id}`}
             card={card}
-            track={row.track}
+            trackColor={row.track.color}
             viewportWidth={scene.viewport.width}
             numerator={scene.transport.numerator}
-            grid={grid}
             automationMode={automationMode}
             readPeaks={readPeaks}
             onActivate={onActivate}

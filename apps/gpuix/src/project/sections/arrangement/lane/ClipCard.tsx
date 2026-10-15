@@ -1,31 +1,30 @@
-import { memo, useMemo } from "react"
-import type { Track } from "@/project/model/types"
+import { memo, useLayoutEffect, useMemo } from "react"
 import { clipLabel } from "@/project/model/clip-label"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import type { GridLine } from "../core/rulers/grid-lines"
 import { clipLoopTicks, midiPreviewRects, patternPreviewRects } from "./render-projection"
-import type { ClipCard } from "./render-projection"
+import type { RenderClipCard } from "./clip-card-projection"
 import { resolveContentColor, contentFill } from "@/shared/theme/content-color"
 import type { PeakReader } from "@/project/model/backend"
 import { WaveformPreview } from "./WaveformPreview"
 import { ClipFades } from "./ClipFades"
+import { QuadBatch } from "@/shared/quads/QuadBatch"
+import { useQuadBatch } from "@/shared/quads/useQuadBatch"
+import { useGridQuads } from "./GridQuads"
 
 export const ClipCardView = memo(function ClipCardView({
   card,
-  track,
+  trackColor,
   viewportWidth,
   numerator,
-  grid,
   automationMode,
   readPeaks,
   onActivate,
 }: {
-  card: ClipCard
-  track: Track
+  card: RenderClipCard
+  trackColor: string
   viewportWidth: number
   numerator: number
-  grid: readonly GridLine[]
   automationMode: boolean
   readPeaks: PeakReader
   onActivate: (id: string) => void
@@ -35,7 +34,8 @@ export const ClipCardView = memo(function ClipCardView({
   const clip = card.clip
   const visibleLeft = Math.max(0, g.left)
   const width = Math.max(0, Math.min(viewportWidth, g.left + g.width) - visibleLeft)
-  const token = clip.color ?? track.color
+  const gridBatch = useGridQuads(card.grid, visibleLeft, width, g.bodyHeight, true)
+  const token = clip.color ?? trackColor
   const paint = useMemo(
     () => ({
       title: resolveContentColor(token, theme.colors),
@@ -55,6 +55,22 @@ export const ClipCardView = memo(function ClipCardView({
           : [],
     [clip, g, numerator, viewportWidth, theme.project]
   )
+  const noteBatch = useQuadBatch()
+  const noteQuads = useMemo(() => {
+    const values = new Float32Array(notes.length * 4)
+    let offset = 0
+    for (const note of notes) {
+      values[offset] = note.left - visibleLeft
+      values[offset + 1] = note.top - g.top
+      values[offset + 2] = note.width
+      values[offset + 3] = note.height
+      offset += 4
+    }
+    return values
+  }, [notes, visibleLeft, g.top])
+  useLayoutEffect(() => {
+    noteBatch.setQuads(noteQuads)
+  }, [noteBatch, noteQuads])
   const sourceStartBar = 1 + ((visibleLeft - g.left) / g.width) * clip.lengthBars
   const sourceEndBar = 1 + ((visibleLeft + width - g.left) / g.width) * clip.lengthBars
   const loopTicks = useMemo(
@@ -114,38 +130,38 @@ export const ClipCardView = memo(function ClipCardView({
               pointerEvents: "none",
             })}
           />
-          {grid
-            .filter(line => line.x >= visibleLeft && line.x < visibleLeft + width)
-            .map(line => (
-              <div
-                key={line.bar}
-                style={sx({
-                  position: "absolute",
-                  left: line.x - visibleLeft,
-                  top: g.titleHeight,
-                  width: 1,
-                  height: g.bodyHeight,
-                  backgroundColor: theme.colors.arrangementLine,
-                  opacity: card.hovered ? 0.3 : 0.4,
-                  pointerEvents: "none",
-                })}
-              />
-            ))}
-          {notes.map((note, index) => (
-            <div
-              key={`${note.left}:${note.top}:${index}`}
+          {gridBatch.hasMajor && (
+            <QuadBatch
+              ref={gridBatch.majorRef}
+              aria-hidden
               style={sx({
                 position: "absolute",
-                left: note.left - visibleLeft,
-                top: note.top - g.top,
-                width: note.width,
-                height: note.height,
-                backgroundColor: ink,
+                left: 0,
+                top: g.titleHeight,
+                width,
+                height: g.bodyHeight,
+                color: theme.colors.arrangementLine,
+                opacity: card.hovered ? 0.3 : 0.4,
+                pointerEvents: "none",
+              })}
+            />
+          )}
+          {noteQuads.length > 0 && (
+            <QuadBatch
+              ref={noteBatch.ref}
+              aria-hidden
+              style={sx({
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width,
+                height: g.height,
+                color: ink,
                 opacity: automationMode ? 0.4 : 1,
                 pointerEvents: "none",
               })}
             />
-          ))}
+          )}
           {clip.kind === "audio" && (
             <WaveformPreview
               id={clip.id}
@@ -163,11 +179,11 @@ export const ClipCardView = memo(function ClipCardView({
           )}
         </>
       )}
-      {clip.kind === "audio" && !automationMode && !card.ghost && (
+      {card.fadeGeometry && !automationMode && (
         <ClipFades
           id={clip.id}
-          geometry={g}
-          visibleLeft={visibleLeft}
+          geometry={card.fadeGeometry}
+          visibleLeft={visibleLeft - g.left}
           width={width}
           bodyFill={bodyColor}
         />
@@ -200,7 +216,7 @@ export const ClipCardView = memo(function ClipCardView({
           })}
         />
       )}
-      <div
+      <text
         style={sx({
           position: "absolute",
           left: g.left - visibleLeft + theme.project.arrangementClipLabelClipInset,
@@ -208,29 +224,19 @@ export const ClipCardView = memo(function ClipCardView({
           height: g.titleHeight,
           width: Math.max(0, g.width - theme.project.arrangementClipLabelClipInset * 2),
           overflow: "hidden",
+          paddingLeft:
+            theme.project.arrangementClipLabelInset - theme.project.arrangementClipLabelClipInset,
+          display: "flex",
+          alignItems: "center",
+          color: ink,
+          fontSize: theme.control["--text-control-track"],
+          whiteSpace: "nowrap",
+          userSelect: "none",
           pointerEvents: "none",
         })}
       >
-        <text
-          style={sx({
-            position: "absolute",
-            left:
-              theme.project.arrangementClipLabelInset - theme.project.arrangementClipLabelClipInset,
-            top: 0,
-            height: g.titleHeight,
-            width: g.width,
-            display: "flex",
-            alignItems: "center",
-            color: ink,
-            fontSize: theme.control["--text-control-track"],
-            whiteSpace: "nowrap",
-            pointerEvents: "none",
-            userSelect: "none",
-          })}
-        >
-          {clipLabel(clip)}
-        </text>
-      </div>
+        {clipLabel(clip)}
+      </text>
     </div>
   )
 })
