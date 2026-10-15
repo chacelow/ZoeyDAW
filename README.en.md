@@ -1,46 +1,44 @@
 # zoeydaw
 
-Web-UI DAW. Rust audio core, plugin host, and mixer; React + Tauri 2 shell.
+A native DAW. `apps/gpuix` combines React logic with gpuix native rendering; `crates/native` provides Rust napi platform capabilities, and `crates/engine` owns audio playback. gpuix is the only product entry point. The legacy Web, Tauri, and shared-package workspaces have been removed.
 
-Status: **Web interaction prototype**. The app includes a home page, a single-project panel layout, an Ableton-style Browser, and an interactive arrangement timeline. A mock adapter supplies tracks, waveform previews, MIDI clips, patterns, playback position, and level meters. Local snapshots use browser localStorage, not audio project files. File access, plug-in scanning, and the audio engine are not connected.
+The app includes Home, project panels, Browser, Arrangement, and Audio/MIDI/Pattern editors. Project adapters connect to the real native backend; settings, logging, and snapshots use native storage. See [product scope](docs/product-prototype.md) for implemented and outstanding capabilities; plug-in hosting and Ableton `.als` import are not claimed as complete.
 
 ## Develop
 
+Initialize a new checkout from the repository root:
+
 ```bash
-pnpm install
-pnpm --filter @zoeydaw/web dev     # web only
-pnpm tauri:dev                     # with native shell
+bash scripts/gpuix-main/build.sh
+pnpm install --frozen-lockfile
+pnpm native:build
+pnpm verify:gpuix
 ```
 
-Needs Node ≥22, pnpm 10, Rust ≥1.77, Tauri 2 platform prerequisites.
+Open the development window:
+
+```bash
+pnpm --filter @zoeydaw/gpuix-prototype dev
+```
+
+See [setup](docs/agents/setup.md) for the pinned renderer build, toolchain, hot reload, and native restart rules. Node requirements and the pnpm version are defined in the root `package.json`. The current self-built renderer is verified on macOS arm64.
 
 ## Layout
 
+```text
+apps/gpuix/src/app/          Application shell, routing, composition root
+apps/gpuix/src/project/      Domain model, stores, adapters, business panels
+apps/gpuix/src/ui/           Shared native controls and panels
+apps/gpuix/src/shared/theme/ Theme, presets, shared measurements
+apps/gpuix/src/platform/     Native ports, i18n, logging
+crates/native/              Rust napi bridge and platform capabilities
+crates/engine/              Audio engine
 ```
-apps/web/           React frontend (Vite + Tailwind v4)
-packages/ui         Shared UI library (shadcn-style + Storybook)
-packages/i18n       zh-CN / en-US translations
-packages/logger     Browser / Node colour logger
-packages/shared     Cross-package zod schemas / types
-src-tauri/          Tauri 2 Rust shell (atomic file write + logging + updater + tray)
-```
 
-## Arrangement and state
+Cross-directory imports use `@/` for `apps/gpuix/src`. ESLint enforces the dependency direction documented in the [gpuix architecture](docs/architecture/gpuix.md).
 
-- `apps/web/src/pages/project/sections/ArrangementPanel` composes Toolbar, Viewport, TrackHeaderViewport, and painter lifecycle modules through Timeline. `canvas/interactions` separates clip, ruler, and automation input. `Clip/Detail` separates Audio, MIDI, and Pattern editors.
-- `apps/web/src/pages/project/model` owns domain types, operations, and versioned snapshot validation.
-- `apps/web/src/pages/project/stores` composes document, workspace, and session slices into one project store.
-- `apps/web/src/pages/project/adapters` exposes state selectors and commands to the UI. Mock data, playback simulation, and snapshot storage stay behind this boundary so Rust integration does not scatter native calls across pages.
-- `packages/ui/src/controls` owns shared numeric editing, drag adjustment, dropdowns, toggles, icon slots, and sizing tokens. The UI package also exports volume faders, level meters, and pan controls.
+## Project and arrangement
 
-Snapshots retain musical data, routing and workspace preferences. Adaptive grids save mode and density, not a zoom-derived cell. Playback, recording, insertion/playhead positions, selections, live meters, held notes and undo history remain transient. See the [store architecture](apps/web/src/pages/project/stores/README.md) and [adapter architecture](apps/web/src/pages/project/adapters/README.md).
-
-`A` toggles Automation. Tapping `B` latches Draw Mode; holding it during a gesture temporarily switches mode. Drawing edits automation and MIDI notes, not Arrangement cards. `M` toggles the computer MIDI keyboard. Ctrl/Cmd+1 and +2 adjust adaptive grid density; zoom keeps cells legible down to `1/16384`. Ctrl/Cmd+E splits selected Clips. Space starts or stops playback from the insertion point; the full-height line appears only while playing. Home rewinds. Text fields and Clip editors retain their editing keys.
-
-Timeline bodies and blank lanes use the default arrow. Clip titles are opaque and show a grab cursor; translucent lower bodies preserve the grid. Clicking a body or lane places an insertion cursor and dragging selects time, without highlighting the right-side operations. Header focus colors only the name/identity area, with no selection border or changes to routing/mixer controls. Card operations do not open an editor; rename stays in the title and temporary editors remain explicit prototype actions. Folded ordinary tracks omit bodies and fades. Folding a Group collapses itself and descendants while retaining its summary and first-row controls.
-
-## Next
-
-Audio engine, CLAP + VST3 host, project persistence, and Ableton `.als` import land in follow-up iterations, scoped from UI interactions.
+[Stores](apps/gpuix/src/project/stores/README.md) own document, workspace, and transient session state. [Adapters](apps/gpuix/src/project/adapters/README.md) define editing, playback, and persistence boundaries. The [Arrangement composition contract](docs/architecture/gpuix-arrangement-composition.md) defines timeline, tracks, lane, and core ownership. Shared layout and appearance follow the [panel contract](docs/architecture/project-panels.md).
 
 License: Apache-2.0.

@@ -11,7 +11,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const eslintBin = path.join(repoRoot, "node_modules", ".bin", "eslint")
 const eslintConfig = path.join(repoRoot, "eslint.config.js")
 const run = (cmd, args) => execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 }).trim()
-const changed = run("git", ["diff", "--name-only", "--diff-filter=AM", `${base}...HEAD`])
+const changed = run("git", ["diff", "--name-only", "--diff-filter=AMR", `${base}...HEAD`])
   .split("\n")
   .filter(Boolean)
 const source = changed.filter(f => /^apps\/gpuix\/src\/.*\.(ts|tsx)$/.test(f))

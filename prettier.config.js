@@ -1,9 +1,12 @@
 import config from "ultracite/prettier"
 
-export default {
+const nativeConfig = {
   ...config,
   arrowParens: "avoid",
   printWidth: 100,
   semi: false,
-  plugins: ["prettier-plugin-tailwindcss"],
 }
+
+delete nativeConfig.tailwindFunctions
+
+export default nativeConfig

@@ -55,7 +55,7 @@ UI 色使用语义 token，不散落原生色阶或内联调色板。主题定�
 
 激活状态通过原生 role 与相应 aria 属性表达，共享 hover 规则不覆盖激活态。列表激活色优先于菜单 focus 色。
 
-Footer Info 只接收 `ControlEnvironment` 定义的组件类型，由 `platform/i18n` 提供固定说明，不发布资源名、输入值或即时参数。控件环境由应用作用域提供；组件画廊使用独立作用域。
+Footer Info 只接收 `ControlEnvironment` 定义的组件类型，应用组合根从 `app/locales/sections/status` 注入 `StatusStrip` 的固定说明，不发布资源名、输入值或即时参数。控件环境由应用作用域提供；组件画廊使用独立作用域。
 
 拖拽 Ghost 复用 `DragPreviewArea` 与已有原生交互，保留阈值、释放、Esc 与取消，不恢复 DOM portal 或 Motion 依赖。资源放置仍按原型范围禁用。
 

@@ -87,27 +87,9 @@ importers:
       lint-staged:
         specifier: ^16.2.7
         version: 16.4.0
-      postcss-less:
-        specifier: ^6.0.0
-        version: 6.0.0(postcss@8.5.26)
-      postcss-scss:
-        specifier: ^4.0.9
-        version: 4.0.9(postcss@8.5.26)
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
-      prettier-plugin-tailwindcss:
-        specifier: ^0.8.1
-        version: 0.8.1(prettier@3.9.6)
-      stylelint:
-        specifier: ^17.16.0
-        version: 17.16.0(typescript@5.9.3)
-      stylelint-config-idiomatic-order:
-        specifier: ^10.0.0
-        version: 10.0.0(stylelint@17.16.0(typescript@5.9.3))
-      stylelint-config-standard:
-        specifier: ^40.0.0
-        version: 40.0.0(stylelint@17.16.0(typescript@5.9.3))
       ultracite:
         specifier: 8.0.1
         version: 8.0.1(eslint@10.12.0(jiti@2.7.0))(prettier@3.9.6)(stylelint@17.16.0(typescript@5.9.3))(typescript@5.9.3)
@@ -174,7 +156,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.10.8
-        version: 3.10.8(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)
+        version: 3.10.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.13.3)
 
 packages:
 
@@ -3425,32 +3407,15 @@ packages:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
 
-  postcss-less@6.0.0:
-    resolution: {integrity: sha512-FPX16mQLyEjLzEuuJtxA8X3ejDLNGGEG503d2YGZR5Ask1SpDN8KmZUMpzCvyalWRywAn1n1VOA5dcqfCLo5rg==}
-    engines: {node: '>=12'}
-    peerDependencies:
-      postcss: ^8.3.5
-
   postcss-safe-parser@7.1.0:
     resolution: {integrity: sha512-1WzZxRLaAFwEh6Do+zyGpjWV3nGJNxxhuh7Ubu/q1ICImMgZJnLwhoaEpRbG4pJppp2Y1ncL9ffA2f+LhrefQg==}
     engines: {node: '>=18.0'}
     peerDependencies:
       postcss: ^8.4.31
 
-  postcss-scss@4.0.9:
-    resolution: {integrity: sha512-AjKOeiwAitL/MXxQW2DliT28EKukvvbEWx3LBmJIRN8KfBGZbRTxNYW0kSqi1COiTZ57nZ9NW06S6ux//N1c9A==}
-    engines: {node: '>=12.0'}
-    peerDependencies:
-      postcss: ^8.4.29
-
   postcss-selector-parser@7.1.6:
     resolution: {integrity: sha512-7qASPzhKF2l2KLboRZux8CCTRMdGiV08vWmyKzPz22qZ7ZjQBOeY7rNzNoCLSUiftJ7HUq0GERHmxw/t0dCdMw==}
     engines: {node: '>=4'}
-
-  postcss-sorting@8.0.2:
-    resolution: {integrity: sha512-M9dkSrmU00t/jK7rF6BZSZauA5MAaBW4i5EnJXspMwt4iqTh/L9j6fgMnbElEOfyRyfLfVbIHj/R52zHzAPe1Q==}
-    peerDependencies:
-      postcss: ^8.4.20
 
   postcss-value-parser@4.2.0:
     resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
@@ -3466,61 +3431,6 @@ packages:
   prettier-linter-helpers@1.0.1:
     resolution: {integrity: sha512-SxToR7P8Y2lWmv/kTzVLC1t/GDI2WGjMwNhLLE9qtH8Q13C+aEmuRlzDst4Up4s0Wc8sF2M+J57iB3cMLqftfg==}
     engines: {node: '>=6.0.0'}
-
-  prettier-plugin-tailwindcss@0.8.1:
-    resolution: {integrity: sha512-iaFMYqDsE4ffdDkn5qup0j5f2aCEBFZrdrZnvu9QKTlWx/iGPeQ4HHu7b7fCPMxeo9nwQBiOAh2nSypdFYWJkw==}
-    engines: {node: '>=20.19'}
-    peerDependencies:
-      '@ianvs/prettier-plugin-sort-imports': '*'
-      '@prettier/plugin-hermes': '*'
-      '@prettier/plugin-oxc': '*'
-      '@prettier/plugin-pug': '*'
-      '@shopify/prettier-plugin-liquid': '*'
-      '@trivago/prettier-plugin-sort-imports': '*'
-      '@zackad/prettier-plugin-twig': '*'
-      prettier: ^3.0
-      prettier-plugin-astro: '*'
-      prettier-plugin-css-order: '*'
-      prettier-plugin-jsdoc: '*'
-      prettier-plugin-marko: '*'
-      prettier-plugin-multiline-arrays: '*'
-      prettier-plugin-organize-attributes: '*'
-      prettier-plugin-organize-imports: '*'
-      prettier-plugin-sort-imports: '*'
-      prettier-plugin-svelte: '*'
-    peerDependenciesMeta:
-      '@ianvs/prettier-plugin-sort-imports':
-        optional: true
-      '@prettier/plugin-hermes':
-        optional: true
-      '@prettier/plugin-oxc':
-        optional: true
-      '@prettier/plugin-pug':
-        optional: true
-      '@shopify/prettier-plugin-liquid':
-        optional: true
-      '@trivago/prettier-plugin-sort-imports':
-        optional: true
-      '@zackad/prettier-plugin-twig':
-        optional: true
-      prettier-plugin-astro:
-        optional: true
-      prettier-plugin-css-order:
-        optional: true
-      prettier-plugin-jsdoc:
-        optional: true
-      prettier-plugin-marko:
-        optional: true
-      prettier-plugin-multiline-arrays:
-        optional: true
-      prettier-plugin-organize-attributes:
-        optional: true
-      prettier-plugin-organize-imports:
-        optional: true
-      prettier-plugin-sort-imports:
-        optional: true
-      prettier-plugin-svelte:
-        optional: true
 
   prettier@3.9.6:
     resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
@@ -3802,29 +3712,6 @@ packages:
   strip-json-comments@3.1.1:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
-
-  stylelint-config-idiomatic-order@10.0.0:
-    resolution: {integrity: sha512-gJjT1nwhgnHS52+mRn+5Iw6keZIPRN4W+vbzct9Elb+tWOo61jC/CzXzAJHvvOYQZqUYItfs2aQ8fU5hnCvuGg==}
-    engines: {node: '>=12'}
-    peerDependencies:
-      stylelint: '>=11'
-
-  stylelint-config-recommended@18.0.0:
-    resolution: {integrity: sha512-mxgT2XY6YZ3HWWe3Di8umG6aBmWmHTblTgu/f10rqFXnyWxjKWwNdjSWkgkwCtxIKnqjSJzvFmPT5yabVIRxZg==}
-    engines: {node: '>=20.19.0'}
-    peerDependencies:
-      stylelint: ^17.0.0
-
-  stylelint-config-standard@40.0.0:
-    resolution: {integrity: sha512-EznGJxOUhtWck2r6dJpbgAdPATIzvpLdK9+i5qPd4Lx70es66TkBPljSg4wN3Qnc6c4h2n+WbUrUynQ3fanjHw==}
-    engines: {node: '>=20.19.0'}
-    peerDependencies:
-      stylelint: ^17.0.0
-
-  stylelint-order@6.0.4:
-    resolution: {integrity: sha512-0UuKo4+s1hgQ/uAxlYU4h0o0HS4NiQDud0NAUNI0aa8FJdmYHA5ZZTFHiV5FpmE3071e9pZx5j0QpVJW5zOCUA==}
-    peerDependencies:
-      stylelint: ^14.0.0 || ^15.0.0 || ^16.0.1
 
   stylelint@17.16.0:
     resolution: {integrity: sha512-ejlWnbJ13x1GU32+zZXa6sYQJsKKkwSdv2B4rAdO3OWdEmvhSJKcXi5pOphQYSzyaj1kXpuGJr7pcMBNfDIuPw==}
@@ -4403,6 +4290,7 @@ snapshots:
     dependencies:
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
+    optional: true
 
   '@csstools/css-color-parser@4.2.0(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
     dependencies:
@@ -4415,25 +4303,31 @@ snapshots:
   '@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0)':
     dependencies:
       '@csstools/css-tokenizer': 4.0.0
+    optional: true
 
   '@csstools/css-syntax-patches-for-csstree@1.1.15(css-tree@3.2.1)':
     optionalDependencies:
       css-tree: 3.2.1
+    optional: true
 
-  '@csstools/css-tokenizer@4.0.0': {}
+  '@csstools/css-tokenizer@4.0.0':
+    optional: true
 
   '@csstools/media-query-list-parser@5.0.2(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
     dependencies:
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
+    optional: true
 
   '@csstools/selector-resolve-nested@4.0.2(postcss-selector-parser@7.1.6)':
     dependencies:
       postcss-selector-parser: 7.1.6
+    optional: true
 
   '@csstools/selector-specificity@6.0.1(postcss-selector-parser@7.1.6)':
     dependencies:
       postcss-selector-parser: 7.1.6
+    optional: true
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -4798,7 +4692,7 @@ snapshots:
 
   '@mdn/browser-compat-data@6.1.5': {}
 
-  '@napi-rs/cli@3.10.8(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)':
+  '@napi-rs/cli@3.10.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.13.3)':
     dependencies:
       '@inquirer/prompts': 8.7.3(@types/node@24.13.3)
       '@napi-rs/cross-toolchain': 1.0.3
@@ -4813,8 +4707,8 @@ snapshots:
       typanion: 3.14.0
       typescript: 6.0.3
     optionalDependencies:
-      '@emnapi/core': 1.11.2
-      '@emnapi/runtime': 1.11.2
+      '@emnapi/core': 1.9.2
+      '@emnapi/runtime': 1.9.2
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
       - '@napi-rs/cross-toolchain-arm64-target-armv7'
@@ -5641,18 +5535,21 @@ snapshots:
       fast-uri: 3.1.8
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
+    optional: true
 
   ansi-escapes@7.3.0:
     dependencies:
       environment: 1.1.0
 
-  ansi-regex@5.0.1: {}
+  ansi-regex@5.0.1:
+    optional: true
 
   ansi-regex@6.3.0: {}
 
   ansi-styles@4.3.0:
     dependencies:
       color-convert: 2.0.1
+    optional: true
 
   ansi-styles@6.2.3: {}
 
@@ -5737,7 +5634,8 @@ snapshots:
 
   ast-types-flow@0.0.8: {}
 
-  astral-regex@2.0.0: {}
+  astral-regex@2.0.0:
+    optional: true
 
   async-function@1.0.0: {}
 
@@ -5868,10 +5766,13 @@ snapshots:
   color-convert@2.0.1:
     dependencies:
       color-name: 1.1.4
+    optional: true
 
-  color-name@1.1.4: {}
+  color-name@1.1.4:
+    optional: true
 
-  colord@2.10.0: {}
+  colord@2.10.0:
+    optional: true
 
   colorette@2.0.20: {}
 
@@ -5901,6 +5802,7 @@ snapshots:
       parse-json: 5.2.0
     optionalDependencies:
       typescript: 5.9.3
+    optional: true
 
   cross-spawn@7.0.6:
     dependencies:
@@ -5908,14 +5810,17 @@ snapshots:
       shebang-command: 2.0.0
       which: 2.0.2
 
-  css-functions-list@3.3.3: {}
+  css-functions-list@3.3.3:
+    optional: true
 
   css-tree@3.2.1:
     dependencies:
       mdn-data: 2.27.1
       source-map-js: 1.2.1
+    optional: true
 
-  cssesc@3.0.0: {}
+  cssesc@3.0.0:
+    optional: true
 
   csstype@3.2.3: {}
 
@@ -6020,7 +5925,8 @@ snapshots:
 
   emoji-regex@10.6.0: {}
 
-  emoji-regex@8.0.0: {}
+  emoji-regex@8.0.0:
+    optional: true
 
   emoji-regex@9.2.2: {}
 
@@ -6037,13 +5943,15 @@ snapshots:
 
   entities@8.1.0: {}
 
-  env-paths@2.2.1: {}
+  env-paths@2.2.1:
+    optional: true
 
   environment@1.1.0: {}
 
   error-ex@1.3.4:
     dependencies:
       is-arrayish: 0.2.1
+    optional: true
 
   es-abstract-get@1.0.0:
     dependencies:
@@ -6651,13 +6559,15 @@ snapshots:
     dependencies:
       fast-string-truncated-width: 3.0.3
 
-  fast-uri@3.1.8: {}
+  fast-uri@3.1.8:
+    optional: true
 
   fast-wrap-ansi@0.2.2:
     dependencies:
       fast-string-width: 3.0.2
 
-  fastest-levenshtein@1.0.16: {}
+  fastest-levenshtein@1.0.16:
+    optional: true
 
   fastq@1.20.3:
     dependencies:
@@ -6775,12 +6685,14 @@ snapshots:
   global-modules@2.0.0:
     dependencies:
       global-prefix: 3.0.0
+    optional: true
 
   global-prefix@3.0.0:
     dependencies:
       ini: 1.3.8
       kind-of: 6.0.3
       which: 1.3.1
+    optional: true
 
   globals@14.0.0: {}
 
@@ -6802,8 +6714,10 @@ snapshots:
       micromatch: 4.0.8
       slash: 5.1.0
       unicorn-magic: 0.4.1
+    optional: true
 
-  globjoin@0.1.4: {}
+  globjoin@0.1.4:
+    optional: true
 
   globrex@0.1.2: {}
 
@@ -6813,7 +6727,8 @@ snapshots:
 
   has-bigints@1.1.0: {}
 
-  has-flag@5.0.1: {}
+  has-flag@5.0.1:
+    optional: true
 
   has-property-descriptors@1.0.2:
     dependencies:
@@ -6856,7 +6771,8 @@ snapshots:
 
   html-entities@2.6.0: {}
 
-  html-tags@5.1.0: {}
+  html-tags@5.1.0:
+    optional: true
 
   htmlparser2@10.1.0:
     dependencies:
@@ -6895,13 +6811,15 @@ snapshots:
       parent-module: 1.0.1
       resolve-from: 4.0.0
 
-  import-meta-resolve@4.2.0: {}
+  import-meta-resolve@4.2.0:
+    optional: true
 
   imurmurhash@0.1.4: {}
 
   indent-string@5.0.0: {}
 
-  ini@1.3.8: {}
+  ini@1.3.8:
+    optional: true
 
   internal-slot@1.1.0:
     dependencies:
@@ -6915,7 +6833,8 @@ snapshots:
       call-bound: 1.0.4
       get-intrinsic: 1.3.0
 
-  is-arrayish@0.2.1: {}
+  is-arrayish@0.2.1:
+    optional: true
 
   is-async-function@2.1.1:
     dependencies:
@@ -6969,7 +6888,8 @@ snapshots:
     dependencies:
       call-bound: 1.0.4
 
-  is-fullwidth-code-point@3.0.0: {}
+  is-fullwidth-code-point@3.0.0:
+    optional: true
 
   is-fullwidth-code-point@5.1.0:
     dependencies:
@@ -6998,7 +6918,8 @@ snapshots:
 
   is-number@7.0.0: {}
 
-  is-path-inside@4.0.0: {}
+  is-path-inside@4.0.0:
+    optional: true
 
   is-plain-obj@4.1.0: {}
 
@@ -7107,11 +7028,13 @@ snapshots:
 
   jsesc@3.1.0: {}
 
-  json-parse-even-better-errors@2.3.1: {}
+  json-parse-even-better-errors@2.3.1:
+    optional: true
 
   json-schema-traverse@0.4.1: {}
 
-  json-schema-traverse@1.0.0: {}
+  json-schema-traverse@1.0.0:
+    optional: true
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
@@ -7138,7 +7061,8 @@ snapshots:
     dependencies:
       '@keyv/serialize': 1.1.1
 
-  kind-of@6.0.3: {}
+  kind-of@6.0.3:
+    optional: true
 
   language-subtag-registry@0.3.23: {}
 
@@ -7200,7 +7124,8 @@ snapshots:
       lightningcss-win32-arm64-msvc: 1.33.0
       lightningcss-win32-x64-msvc: 1.33.0
 
-  lines-and-columns@1.2.4: {}
+  lines-and-columns@1.2.4:
+    optional: true
 
   lint-staged@16.4.0:
     dependencies:
@@ -7234,7 +7159,8 @@ snapshots:
 
   lodash.snakecase@4.1.1: {}
 
-  lodash.truncate@4.4.2: {}
+  lodash.truncate@4.4.2:
+    optional: true
 
   lodash.upperfirst@4.3.1: {}
 
@@ -7280,13 +7206,16 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  mathml-tag-names@4.0.0: {}
+  mathml-tag-names@4.0.0:
+    optional: true
 
-  mdn-data@2.27.1: {}
+  mdn-data@2.27.1:
+    optional: true
 
   mdn-data@2.35.0: {}
 
-  meow@14.1.0: {}
+  meow@14.1.0:
+    optional: true
 
   merge2@1.4.1: {}
 
@@ -7335,7 +7264,8 @@ snapshots:
 
   node-releases@2.0.58: {}
 
-  normalize-path@3.0.0: {}
+  normalize-path@3.0.0:
+    optional: true
 
   npm-run-path@6.0.0:
     dependencies:
@@ -7471,6 +7401,7 @@ snapshots:
       error-ex: 1.3.4
       json-parse-even-better-errors: 2.3.1
       lines-and-columns: 1.2.4
+    optional: true
 
   parse-ms@4.0.0: {}
 
@@ -7507,28 +7438,19 @@ snapshots:
 
   possible-typed-array-names@1.1.0: {}
 
-  postcss-less@6.0.0(postcss@8.5.26):
-    dependencies:
-      postcss: 8.5.26
-
   postcss-safe-parser@7.1.0(postcss@8.5.26):
     dependencies:
       postcss: 8.5.26
-
-  postcss-scss@4.0.9(postcss@8.5.26):
-    dependencies:
-      postcss: 8.5.26
+    optional: true
 
   postcss-selector-parser@7.1.6:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
+    optional: true
 
-  postcss-sorting@8.0.2(postcss@8.5.26):
-    dependencies:
-      postcss: 8.5.26
-
-  postcss-value-parser@4.2.0: {}
+  postcss-value-parser@4.2.0:
+    optional: true
 
   postcss@8.5.26:
     dependencies:
@@ -7541,10 +7463,6 @@ snapshots:
   prettier-linter-helpers@1.0.1:
     dependencies:
       fast-diff: 1.3.0
-
-  prettier-plugin-tailwindcss@0.8.1(prettier@3.9.6):
-    dependencies:
-      prettier: 3.9.6
 
   prettier@3.9.6: {}
 
@@ -7603,7 +7521,8 @@ snapshots:
     dependencies:
       jsesc: 3.1.0
 
-  require-from-string@2.0.2: {}
+  require-from-string@2.0.2:
+    optional: true
 
   reserved-identifiers@1.2.0: {}
 
@@ -7765,13 +7684,15 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  slash@5.1.0: {}
+  slash@5.1.0:
+    optional: true
 
   slice-ansi@4.0.0:
     dependencies:
       ansi-styles: 4.3.0
       astral-regex: 2.0.0
       is-fullwidth-code-point: 3.0.0
+    optional: true
 
   slice-ansi@7.1.2:
     dependencies:
@@ -7817,6 +7738,7 @@ snapshots:
       emoji-regex: 8.0.0
       is-fullwidth-code-point: 3.0.0
       strip-ansi: 6.0.1
+    optional: true
 
   string-width@7.2.0:
     dependencies:
@@ -7883,6 +7805,7 @@ snapshots:
   strip-ansi@6.0.1:
     dependencies:
       ansi-regex: 5.0.1
+    optional: true
 
   strip-ansi@7.2.0:
     dependencies:
@@ -7895,26 +7818,6 @@ snapshots:
   strip-indent@4.1.1: {}
 
   strip-json-comments@3.1.1: {}
-
-  stylelint-config-idiomatic-order@10.0.0(stylelint@17.16.0(typescript@5.9.3)):
-    dependencies:
-      stylelint: 17.16.0(typescript@5.9.3)
-      stylelint-order: 6.0.4(stylelint@17.16.0(typescript@5.9.3))
-
-  stylelint-config-recommended@18.0.0(stylelint@17.16.0(typescript@5.9.3)):
-    dependencies:
-      stylelint: 17.16.0(typescript@5.9.3)
-
-  stylelint-config-standard@40.0.0(stylelint@17.16.0(typescript@5.9.3)):
-    dependencies:
-      stylelint: 17.16.0(typescript@5.9.3)
-      stylelint-config-recommended: 18.0.0(stylelint@17.16.0(typescript@5.9.3))
-
-  stylelint-order@6.0.4(stylelint@17.16.0(typescript@5.9.3)):
-    dependencies:
-      postcss: 8.5.26
-      postcss-sorting: 8.0.2(postcss@8.5.26)
-      stylelint: 17.16.0(typescript@5.9.3)
 
   stylelint@17.16.0(typescript@5.9.3):
     dependencies:
@@ -7956,19 +7859,23 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+    optional: true
 
-  supports-color@10.2.2: {}
+  supports-color@10.2.2:
+    optional: true
 
   supports-hyperlinks@4.6.0:
     dependencies:
       has-flag: 5.0.1
       supports-color: 10.2.2
+    optional: true
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
   svg-element-attributes@1.3.1: {}
 
-  svg-tags@1.0.0: {}
+  svg-tags@1.0.0:
+    optional: true
 
   symbol-tree@3.2.4:
     optional: true
@@ -7984,6 +7891,7 @@ snapshots:
       slice-ansi: 4.0.0
       string-width: 4.2.3
       strip-ansi: 6.0.1
+    optional: true
 
   tapable@2.3.3: {}
 
@@ -8152,7 +8060,8 @@ snapshots:
 
   unicorn-magic@0.3.0: {}
 
-  unicorn-magic@0.4.1: {}
+  unicorn-magic@0.4.1:
+    optional: true
 
   universal-user-agent@7.0.3: {}
 
@@ -8204,7 +8113,8 @@ snapshots:
       react: link:.gpuix-main/node_modules/react
     optional: true
 
-  util-deprecate@1.0.2: {}
+  util-deprecate@1.0.2:
+    optional: true
 
   vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.1):
     dependencies:
@@ -8326,6 +8236,7 @@ snapshots:
   which@1.3.1:
     dependencies:
       isexe: 2.0.0
+    optional: true
 
   which@2.0.2:
     dependencies:
@@ -8352,6 +8263,7 @@ snapshots:
   write-file-atomic@7.0.1:
     dependencies:
       signal-exit: 4.1.0
+    optional: true
 
   xml-name-validator@5.0.0:
     optional: true
