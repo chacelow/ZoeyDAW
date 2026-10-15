@@ -1,5 +1,6 @@
 import { createSettings } from "@/platform/settings"
-import type { ThemeModeSetting } from "./theme-mode"
+import type { PreferenceSetting } from "./preference-store"
+import type { ThemeMode } from "./theme-mode"
 
 /**
  * TEMPORARY until H1 adds `themeMode` to `UserSettings` and the Rust `Settings` struct: read
@@ -7,7 +8,9 @@ import type { ThemeModeSetting } from "./theme-mode"
  * field on write and the theme-mode store falls back to memory. After H1, replace with
  * `createSettingStorage("themeMode")` and delete this file.
  */
-export function createThemeModeSetting(options: { configDir?: string } = {}): ThemeModeSetting {
+export function createThemeModeSetting(
+  options: { configDir?: string } = {}
+): PreferenceSetting<ThemeMode> {
   const settings = createSettings(options)
   return {
     get: () => {

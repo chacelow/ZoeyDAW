@@ -3,26 +3,34 @@
  * No project session opens here; the project route acquires and releases its own lease.
  */
 import { render } from "@gpuix/react"
+// Composition-root exception (coordinator-approved): window options are computed before
+// render(), so there is no useTheme() yet; only this file reads the metrics directly.
 import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
 import { configureLogger } from "@zoeymind/logger"
 import { createLogPlatform, createNativeLogSink } from "./platform/log"
 import { createWindowKeyboard, WindowKeyboardProvider } from "./platform/keyboard"
 import { createSettingStorage } from "./platform/settings"
+import { createThemePresetSetting } from "./platform/settings/theme-preset"
+import { DEFAULT_THEME_PRESET, isThemePresetId } from "./shared/theme/presets"
 import { createSnapshotStorage } from "./platform/storage"
 import { setSnapshotStorage } from "./project/adapters"
 import { initAppI18n } from "./app/i18n"
 import { NativeRoot } from "./app/NativeRoot"
 import { createRouter } from "./app/router/router"
-import { createThemeModeStore } from "./app/settings/theme-mode"
+import { createPreferenceStore } from "./app/settings/preference-store"
+import { DEFAULT_THEME_MODE, isThemeMode } from "./app/settings/theme-mode"
 import { createThemeModeSetting } from "./app/settings/theme-mode-setting"
 import { emptyProjectSlots } from "./app/project/empty-slots"
-
-/** AppKit's standard window button frame height (Live AX: AXCloseButton 12×14). */
-const TRAFFIC_LIGHT_FRAME_HEIGHT = 14
 
 createLogPlatform().initialize()
 configureLogger({ sinks: [createNativeLogSink()] })
 initAppI18n({ storage: createSettingStorage("language") })
+const presetSetting = createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET)
+presetSetting.repair()
+const appearance = {
+  themeMode: createPreferenceStore(createThemeModeSetting(), isThemeMode, DEFAULT_THEME_MODE),
+  themePreset: createPreferenceStore(presetSetting, isThemePresetId, DEFAULT_THEME_PRESET),
+}
 const storage = createSnapshotStorage()
 setSnapshotStorage(storage)
 
@@ -32,7 +40,7 @@ render(
   <WindowKeyboardProvider value={keyboard}>
     <NativeRoot
       router={createRouter(process.env.ZOEYDAW_ROUTE ?? "/")}
-      themeModes={createThemeModeStore(createThemeModeSetting())}
+      appearance={appearance}
       storage={storage}
       renderProjectSlots={emptyProjectSlots}
       showErrorDetails={process.env.NODE_ENV !== "production"}
@@ -45,7 +53,7 @@ render(
     height: 800,
     titlebarTransparent: true,
     trafficLightX: PROJECT_METRICS.trafficLightMargin,
-    trafficLightY: (PROJECT_METRICS.titlebarHeight - TRAFFIC_LIGHT_FRAME_HEIGHT) / 2,
+    trafficLightY: (PROJECT_METRICS.titlebarHeight - PROJECT_METRICS.trafficLightFrameHeight) / 2,
     ...keyboard.rootHandlers,
   }
 )

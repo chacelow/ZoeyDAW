@@ -5,6 +5,7 @@ import { useProjectState } from "@/project/adapters"
 import { HomePage } from "./home/HomePage"
 import { useAppTranslation } from "./i18n"
 import { AppPreferencesProvider } from "./preferences"
+import type { AppearanceStores } from "./preferences"
 import { ProjectPage } from "./project/ProjectPage"
 import { NotFoundPage } from "./router/NotFoundPage"
 import { routePath } from "./router/route"
@@ -19,13 +20,12 @@ import type { SnapshotStorage } from "@/platform/storage"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import type { ProjectLayoutSlots } from "./project/ProjectLayout"
 import type { Router } from "./router/router"
-import type { ThemeModeStore } from "./settings/theme-mode"
 import type { CloseGuardRenderer } from "./window/close-guard-port"
 import type { ProjectShellApi } from "./project/useProjectShell"
 
 export interface AppShellProps {
   readonly router: Router
-  readonly themeModes: ThemeModeStore
+  readonly appearance: AppearanceStores
   readonly systemAppearance: Appearance | null
   /** Durable app data (recent projects); the native data directory in production. */
   readonly storage: SnapshotStorage
@@ -39,7 +39,7 @@ export interface AppShellProps {
 /** Everything below the render root: preferences, routes, titlebar, dialogs. */
 export function AppShell({
   router,
-  themeModes,
+  appearance,
   systemAppearance,
   storage,
   closeRenderer,
@@ -50,17 +50,14 @@ export function AppShell({
   const openSettings = useCallback(() => setSettingsOpen(true), [])
   return (
     <RouterProvider value={router}>
-      <AppPreferencesProvider
-        themeModes={themeModes}
-        systemAppearance={systemAppearance}
-        openSettings={openSettings}
-      >
+      <AppPreferencesProvider stores={appearance} systemAppearance={systemAppearance}>
         <AppFrame
           storage={storage}
           closeRenderer={closeRenderer}
           renderProjectSlots={renderProjectSlots}
           showErrorDetails={showErrorDetails}
           onOpenSettings={openSettings}
+          settingsOpen={settingsOpen}
         >
           <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
         </AppFrame>
@@ -75,9 +72,11 @@ function AppFrame({
   renderProjectSlots,
   showErrorDetails,
   onOpenSettings,
+  settingsOpen,
   children,
 }: Pick<AppShellProps, "storage" | "closeRenderer" | "renderProjectSlots" | "showErrorDetails"> & {
   readonly onOpenSettings: () => void
+  readonly settingsOpen: boolean
   /** App-level overlays; they must stay inside this frame, the window root's only host child. */
   readonly children: ReactNode
 }) {
@@ -121,6 +120,7 @@ function AppFrame({
               key={route.projectId}
               projectId={route.projectId}
               renderSlots={renderProjectSlots}
+              playbackKeysEnabled={!settingsOpen && !close.asking}
             />
           ) : (
             <NotFoundPage />

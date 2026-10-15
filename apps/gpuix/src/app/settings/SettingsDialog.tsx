@@ -15,6 +15,7 @@ import { openExternalUrl } from "@/platform/external"
 import { ModalDialog } from "../dialog/ModalDialog"
 import { changeLocale, SUPPORTED_LOCALES, useAppTranslation } from "../i18n"
 import { useAppPreferences } from "../preferences"
+import { ThemePresetGrid } from "./ThemePresetGrid"
 import { isThemeMode, THEME_MODES } from "./theme-mode"
 import type { IconName } from "@/ui/controls/Icon"
 import type { SettingsNavItem } from "@/ui/controls"
@@ -95,7 +96,14 @@ function useSectionStyle() {
 function AppearanceSection() {
   const theme = useTheme()
   const { t } = useAppTranslation()
-  const { themeMode, setThemeMode, themePersisted, systemAppearance } = useAppPreferences()
+  const {
+    themeMode,
+    setThemeMode,
+    themeModePersisted,
+    themePreset,
+    setThemePreset,
+    systemAppearance,
+  } = useAppPreferences()
   const styles = useSectionStyle()
   const iconSize = theme.control["--spacing-control-icon"]
   return (
@@ -109,6 +117,12 @@ function AppearanceSection() {
             if (isThemeMode(value)) setThemeMode(value)
           }}
           aria-label={t("settings.themeMode")}
+          // Web parity: a full-width segmented track (`bg-muted/60 p-1`), items share the width.
+          style={{
+            padding: theme.control["--spacing-control-track-pad"],
+            borderRadius: theme.control["--spacing-control-gap"],
+            backgroundColor: theme.colors.muted,
+          }}
         >
           {THEME_MODES.map(mode => (
             <ToggleGroupItem
@@ -118,6 +132,11 @@ function AppearanceSection() {
               aria-label={t(`ui.theme.${mode}`)}
               disabled={mode === "system" && systemAppearance === null}
               style={{ flexGrow: 1 }}
+              onKeyDown={event => {
+                if (event.key !== "space" && event.key !== " ") return
+                event.preventDefault()
+                if (!event.isHeld) setThemeMode(mode)
+              }}
             >
               <Icon name={MODE_ICONS[mode]} size={iconSize} />
               <text>{t(`ui.theme.${mode}`)}</text>
@@ -127,9 +146,18 @@ function AppearanceSection() {
         {systemAppearance === null ? (
           <text style={styles.muted}>{t("settings.systemUnavailable")}</text>
         ) : null}
-        {themePersisted ? null : (
+        {themeModePersisted ? null : (
           <text style={styles.muted}>{t("settings.themeNotPersisted")}</text>
         )}
+      </div>
+      <Separator />
+      <div style={styles.field}>
+        <Label>{t("settings.themePreset")}</Label>
+        <ThemePresetGrid
+          value={themePreset}
+          onValueChange={setThemePreset}
+          label={t("settings.themePreset")}
+        />
       </div>
     </div>
   )

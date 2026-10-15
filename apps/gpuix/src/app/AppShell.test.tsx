@@ -12,20 +12,26 @@ import {
   createMemorySnapshotStorage,
   projectActions,
   useProjectState,
+  whenProjectBackendIdle,
 } from "@/project/adapters"
 import { createMockProjectBackend } from "@/project/adapters/backend/mock"
+import { createNativeBackend } from "@/project/adapters/backend/native"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { AppShell } from "./AppShell"
 import { initAppI18n } from "./i18n"
 import { emptyProjectSlots } from "./project/empty-slots"
 import { createRouter } from "./router/router"
-import { createThemeModeStore } from "./settings/theme-mode"
+import { createPreferenceStore } from "./settings/preference-store"
+import { DEFAULT_THEME_MODE, isThemeMode } from "./settings/theme-mode"
+import { DEFAULT_THEME_PRESET, isThemePresetId } from "@/shared/theme/presets"
 import type { TestRoot } from "@gpuix/react/testing"
 import type { ReactNode } from "react"
 import type { AppShellProps } from "./AppShell"
 import type { Router } from "./router/router"
 import type { ThemeMode } from "./settings/theme-mode"
+import type { ThemePresetId } from "@/shared/theme/presets"
 import type { CloseGuardRenderer } from "./window/close-guard-port"
+import type { BackendRequest, ProjectBackend } from "@/project/model/backend"
 
 beforeAll(async () => {
   initAppI18n({ initialLanguage: "zh-CN" })
@@ -67,21 +73,38 @@ function countSessions() {
 interface Harness {
   readonly root: TestRoot
   readonly router: Router
-  readonly saved: { mode: ThemeMode | null }
+  readonly saved: { mode: ThemeMode | null; preset: ThemePresetId | null }
   readonly rerender: () => void
 }
 
 function mount(overrides: Partial<AppShellProps> = {}, wrap = (node: ReactNode) => node): Harness {
   const router = overrides.router ?? createRouter()
-  const saved: { mode: ThemeMode | null } = { mode: null }
-  const themeModes =
-    overrides.themeModes ??
-    createThemeModeStore({
-      get: () => saved.mode,
-      set: mode => {
-        saved.mode = mode
+  const saved: { mode: ThemeMode | null; preset: ThemePresetId | null } = {
+    mode: null,
+    preset: null,
+  }
+  const appearance = overrides.appearance ?? {
+    themeMode: createPreferenceStore<ThemeMode>(
+      {
+        get: () => saved.mode,
+        set: mode => {
+          saved.mode = mode
+        },
       },
-    })
+      isThemeMode,
+      DEFAULT_THEME_MODE
+    ),
+    themePreset: createPreferenceStore<ThemePresetId>(
+      {
+        get: () => saved.preset,
+        set: preset => {
+          saved.preset = preset
+        },
+      },
+      isThemePresetId,
+      DEFAULT_THEME_PRESET
+    ),
+  }
   const keyboard = createWindowKeyboard()
   const root = createTestRoot({ width: 1280, height: 800, ...keyboard.rootHandlers })
   roots.push(root)
@@ -90,7 +113,7 @@ function mount(overrides: Partial<AppShellProps> = {}, wrap = (node: ReactNode) 
       <WindowKeyboardProvider value={keyboard}>
         <AppShell
           router={router}
-          themeModes={themeModes}
+          appearance={appearance}
           systemAppearance={null}
           storage={createMemorySnapshotStorage()}
           closeRenderer={null}
@@ -180,6 +203,41 @@ describe("project runtime lease", () => {
     roots.splice(0)
     expect(sessions).toEqual({ opened: 4, disposed: 4 })
   })
+
+  test("real native backend opens only for the project and is disposed on leaving (requires audio device)", async () => {
+    const opened: { backend: ProjectBackend; request: BackendRequest | null }[] = []
+    cleanups.push(
+      configureProjectBackend(() => {
+        const backend = createNativeBackend()
+        const entry: { backend: ProjectBackend; request: BackendRequest | null } = {
+          backend,
+          request: null,
+        }
+        opened.push(entry)
+        return {
+          ...backend,
+          apply(request) {
+            entry.request = request
+            return backend.apply(request)
+          },
+        }
+      })
+    )
+    const { root, router } = mount()
+    expect(opened).toEqual([])
+    act(root, () => router.navigate("/project/native-device"))
+    expect(await whenProjectBackendIdle()).toBe(true)
+    expect(useProjectState.getState().session.backend.error).toBeNull()
+    expect(opened.length).toBe(1)
+    const entry = opened[0]
+    if (!entry?.request) throw new Error("The native backend did not receive the project open")
+    act(root, () => router.navigate("/"))
+    expect(await entry.backend.apply(entry.request)).toMatchObject({
+      kind: "rejected",
+      code: "disposed",
+    })
+    expect(useProjectState.getState().session.playing).toBe(false)
+  })
 })
 
 describe("route error fallback", () => {
@@ -239,6 +297,24 @@ describe("settings dialog", () => {
     root.renderer.flush()
     expect(background()).toBe(dark)
     expect(root.renderer.findByTestId("home-page")).toBeDefined()
+  })
+
+  test("choosing a preset by click or arrow keys recolors the app and persists", () => {
+    const { root, saved } = mount()
+    const background = () =>
+      root.renderer.getElement(element(root, "app-frame").id)?.style.backgroundColor
+    const before = background()
+    click(root, "titlebar-settings")
+    click(root, "theme-preset-modern-minimal")
+    expect(saved.preset).toBe("modern-minimal")
+    root.renderer.nativeSimulateKeystrokes(element(root, "theme-preset-modern-minimal").id, "down")
+    root.renderer.nativeSimulateKeystrokes(root.renderer.getFocusedElementId() ?? 0, "enter")
+    root.renderer.flush()
+    expect(saved.preset).not.toBe("modern-minimal")
+    expect(saved.preset).not.toBeNull()
+    root.renderer.nativeSimulateKeystrokes(root.renderer.getFocusedElementId() ?? 0, "escape")
+    root.renderer.flush()
+    expect(background()).not.toBe(before)
   })
 
   test("language switches live and persists through the native settings file", async () => {
@@ -340,7 +416,7 @@ describe("unsaved close guard", () => {
 describe("keyboard", () => {
   test("Space on the project route toggles playback and leaves the settings button untouched", () => {
     countSessions()
-    const { root } = mount({ router: createRouter("/project/k") })
+    const { root, saved } = mount({ router: createRouter("/project/k") })
     const playing = () => useProjectState.getState().session.playing
     const before = playing()
     root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "space")
@@ -348,6 +424,12 @@ describe("keyboard", () => {
     expect(root.renderer.findByTestId("settings-dialog")).toBeUndefined()
     root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "enter")
     expect(root.renderer.findByTestId("settings-dialog")).toBeDefined()
+    root.renderer.nativeSimulateKeystrokes(element(root, "theme-mode-light").id, "space")
+    expect(saved.mode).toBe("light")
+    expect(playing()).toBe(!before)
+    click(root, "settings-nav-language")
+    root.renderer.nativeSimulateKeystrokes(element(root, "language-en-US").id, "space")
+    expect(playing()).toBe(!before)
     projectActions.stop()
   })
 })

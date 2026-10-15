@@ -11,18 +11,17 @@ import { projectActions } from "@/project/adapters"
  * Window key events arrive after every element handler; buttons do not consume Space and
  * text inputs stop printable keys, so only unclaimed Space reaches here.
  */
-export function usePlaybackKey(): void {
+export function usePlaybackKey(enabled: boolean): void {
   const keyboard = useWindowKeyboard()
-  useEffect(
-    () =>
-      keyboard.subscribe("keyDown", event => {
-        const modifiers = event.modifiers
-        const key = event.key?.toLowerCase()
-        if ((key !== "space" && key !== " ") || event.defaultPrevented) return
-        if (modifiers?.cmd || modifiers?.ctrl || modifiers?.alt || modifiers?.shift) return
-        event.preventDefault()
-        if (!event.isHeld) projectActions.togglePlay()
-      }),
-    [keyboard]
-  )
+  useEffect(() => {
+    if (!enabled) return
+    return keyboard.subscribe("keyDown", event => {
+      const modifiers = event.modifiers
+      const key = event.key?.toLowerCase()
+      if ((key !== "space" && key !== " ") || event.defaultPrevented) return
+      if (modifiers?.cmd || modifiers?.ctrl || modifiers?.alt || modifiers?.shift) return
+      event.preventDefault()
+      if (!event.isHeld) projectActions.togglePlay()
+    })
+  }, [keyboard, enabled])
 }

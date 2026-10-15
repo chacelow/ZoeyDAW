@@ -40,6 +40,7 @@ export default {
       logs: "Logs",
       about: "About",
     },
+    themePreset: "Theme preset",
     themeMode: "Theme",
     systemUnavailable:
       "Following the system needs the native appearance capability; unavailable for now.",

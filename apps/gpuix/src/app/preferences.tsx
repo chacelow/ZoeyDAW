@@ -2,16 +2,19 @@ import { createContext, useContext, useMemo, useSyncExternalStore } from "react"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { resolveAppearance } from "./settings/theme-mode"
 import type { ReactNode } from "react"
+import type { ThemePresetId } from "@/shared/theme/presets"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
-import type { ThemeMode, ThemeModeStore } from "./settings/theme-mode"
+import type { PreferenceStore } from "./settings/preference-store"
+import type { ThemeMode } from "./settings/theme-mode"
 
 export interface AppPreferences {
   readonly themeMode: ThemeMode
   readonly setThemeMode: (mode: ThemeMode) => void
-  readonly themePersisted: boolean
+  readonly themeModePersisted: boolean
+  readonly themePreset: ThemePresetId
+  readonly setThemePreset: (preset: ThemePresetId) => void
   /** Native system appearance; `null` until the H1 appearance subscription is wired. */
   readonly systemAppearance: Appearance | null
-  readonly openSettings: () => void
 }
 
 const PreferencesContext = createContext<AppPreferences | null>(null)
@@ -22,35 +25,44 @@ export function useAppPreferences(): AppPreferences {
   return preferences
 }
 
+export interface AppearanceStores {
+  readonly themeMode: PreferenceStore<ThemeMode>
+  readonly themePreset: PreferenceStore<ThemePresetId>
+}
+
 export interface AppPreferencesProviderProps {
-  readonly themeModes: ThemeModeStore
+  readonly stores: AppearanceStores
   readonly systemAppearance: Appearance | null
-  readonly openSettings: () => void
   readonly children: ReactNode
 }
 
-/** Resolves the theme mode into the controlled appearance of the single ThemeProvider. */
+/** Feeds the persisted mode and preset into the single, controlled ThemeProvider. */
 export function AppPreferencesProvider({
-  themeModes,
+  stores,
   systemAppearance,
-  openSettings,
   children,
 }: AppPreferencesProviderProps) {
-  const themeMode = useSyncExternalStore(themeModes.subscribe, themeModes.getMode)
-  const themePersisted = useSyncExternalStore(themeModes.subscribe, themeModes.isPersisted)
+  const { themeMode: modes, themePreset: presets } = stores
+  const themeMode = useSyncExternalStore(modes.subscribe, modes.get)
+  const themeModePersisted = useSyncExternalStore(modes.subscribe, modes.isPersisted)
+  const themePreset = useSyncExternalStore(presets.subscribe, presets.get)
   const value = useMemo<AppPreferences>(
     () => ({
       themeMode,
-      setThemeMode: themeModes.setMode,
-      themePersisted,
+      setThemeMode: modes.set,
+      themeModePersisted,
+      themePreset,
+      setThemePreset: presets.set,
       systemAppearance,
-      openSettings,
     }),
-    [themeMode, themeModes, themePersisted, systemAppearance, openSettings]
+    [themeMode, modes, themeModePersisted, themePreset, presets, systemAppearance]
   )
   return (
     <PreferencesContext.Provider value={value}>
-      <ThemeProvider appearance={resolveAppearance(themeMode, systemAppearance)}>
+      <ThemeProvider
+        appearance={resolveAppearance(themeMode, systemAppearance)}
+        preset={themePreset}
+      >
         {children}
       </ThemeProvider>
     </PreferencesContext.Provider>

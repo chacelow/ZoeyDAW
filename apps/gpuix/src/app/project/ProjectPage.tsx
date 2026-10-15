@@ -11,16 +11,17 @@ export interface ProjectPageProps {
   readonly projectId: string
   /** Section nodes for the current shell state; phase 2's composition root supplies them. */
   readonly renderSlots: (shell: ProjectShellApi) => ProjectLayoutSlots
+  readonly playbackKeysEnabled: boolean
 }
 
 /**
  * Route entry: isolates the project's editing session and snapshot key, then holds a runtime
  * lease (opening the native backend) for exactly as long as the view is mounted.
  */
-export function ProjectPage({ projectId, renderSlots }: ProjectPageProps) {
+export function ProjectPage({ projectId, renderSlots, playbackKeysEnabled }: ProjectPageProps) {
   const shell = useProjectShell()
   const { t } = useAppTranslation()
-  usePlaybackKey()
+  usePlaybackKey(playbackKeysEnabled)
   useLayoutEffect(() => {
     setProjectStorageId(projectId)
     return startProjectRuntime()

@@ -40,6 +40,7 @@ export default {
       logs: "日志",
       about: "关于",
     },
+    themePreset: "主题预设",
     themeMode: "主题",
     systemUnavailable: "跟随系统需要原生外观能力,暂不可用。",
     themeNotPersisted: "主题设置未能保存,重启后恢复默认。",
