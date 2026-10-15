@@ -903,6 +903,8 @@ TS 侧：`createWindowPlatform(renderer).subscribeSystemAppearance` 与 `subscri
 
 **已知限制(推断，未实测)**：GPUI `gpui_macos/src/window_appearance.rs` 只识别 Aqua、DarkAqua 和两个 Vibrant 名称，其它名称一律回落为 `Light`。开启「增强对比度」后，系统报告的深色外观名(如 `NSAppearanceNameAccessibilityHighContrastDarkAqua`)会被当作 `"light"`。修复要么改 zed 子模块(本补丁不改)，要么在 renderer 里另读 `NSAppearance`。协调者决定只记录，不在本机切换辅助功能设置实测。
 
+**减少动态效果(协调者追加)**：GPUI 只有 `App::reduce_motion` 字段(默认 false，不从系统读取)，vendor 也没有相应接口，所以放在 `crates/native/src/reduced_motion.rs`，不改补丁。napi 提供 `reducedMotion()` 与 `onReducedMotionChange(callback | null)`：观察者对象用 `define_class!` 定义，挂在 `NSWorkspace.notificationCenter` 上，监听 `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification`。注册时先经弱、非阻塞 TSFN 异步回报当前值，传 null 时移除 observer，进程内只有一个 owner。依赖变化：`objc2-foundation 0.3.2` 由传递依赖改为直接依赖，`objc2-app-kit` 增加 `NSWorkspace`、`NSAccessibility` 两个 feature；`Cargo.lock` 只在 zoeydaw-native 的依赖列表里多一行。非 macOS 平台两个接口都返回错误。
+
 #### H1 实测记录
 
 证据在 [scripts/gpuix-main/evidence/h1](../../scripts/gpuix-main/evidence/h1/)。由协调者代为在系统设置里切换外观，demo 窗口为 420×140。
@@ -924,7 +926,9 @@ TS 侧：`createWindowPlatform(renderer).subscribeSystemAppearance` 与 `subscri
 | vendor 变异 | 把 VibrantDark 映射为 light，并删除注册时的基线回调 | 2 个外观测试失败，恢复后通过 |
 | 本仓 Rust 变异 | `ThemeMode::Dark` 加 `alias = "Dark", "auto"`(宽松解析) | `rejects_unknown_theme_mode_on_read_and_write` 失败，恢复后通过 |
 | TS 变异 | 删除守卫的 `deciding` 拦截；`shouldClose` 恒为 true；不支持时 `close()` 变成空操作；外观端口误接 `onWindowActiveChange`；去掉基线判断；删除 `register(null)` | 依次 1、2、1、1、6、5 个失败，恢复后全部通过 |
-| 根目录 | `cargo check`、`cargo test` | 通过，native 11、engine 32 |
-| apps/gpuix | `pnpm exec tsc --noEmit`、`bun test` | tsc 0 错误；568 pass、2 todo、0 fail |
+| 根目录 | `cargo check`、`cargo test` | 通过，native 17(含 reduced motion 合成通知测试)、engine 32 |
+| reduced motion 变异 | 注册时不回报基线；TS getter 恒为 true；替换时跳过 `removeObserver` | 前两项分别使 Rust 测试、TS napi 测试失败。第三项测试仍通过：旧 observer 的 `Retained` 已被释放，macOS 10.11 起 NotificationCenter 对已释放的 observer 是弱引用，不会再回调，所以 `removeObserver` 在测试里观察不到差别。代码仍然显式移除，不依赖弱引用行为 |
+| 真实进程 | gpuix 窗口内调用 `getReducedMotion()` 与 `onReducedMotionChange` | 两者都是 false，与 `defaults read com.apple.universalaccess reduceMotion` 一致(该键不存在，即关闭)；注销后进程 exit 0。系统设置的真实切换未实测(协调者决定不改辅助功能设置)，变化路径只由合成通知测试覆盖 |
+| apps/gpuix(merge 主干 4b447b6 后) | `pnpm exec tsc --noEmit`、`bun test` | tsc 0 错误；bun 只有 1 个失败 `secondary click on an interactive title opens its track context menu`，干净主干同样复现，属于主干已知问题 |
 
 GPUI 的 `TestWindow::simulate_appearance_change` 与 `TestAppContext::test_window` 都是 crate 私有，补丁内的测试无法模拟变化，只能覆盖基线、归并和 observer 的释放；「变化会触发 observer」由 GPUI 自带的 `test_appearance_change_runs_after_app_update` 与上面的真实窗口证明。

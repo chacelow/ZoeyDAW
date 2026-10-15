@@ -13,6 +13,8 @@
 
 `subscribeSystemAppearance` 回报 `"light" | "dark"`，GPUI 的 Vibrant 变体在 Rust 侧已归并。订阅只通知变化，首帧主题要用同步的 `getSystemAppearance()` 取当前值。两者读的都是窗口的有效外观，前提是没有人通过 GPUI `set_window_appearance` 覆盖应用外观，原因见 LESSONS。已知限制(推断，未实测)：开启「增强对比度」后的深色外观名不在 GPUI 的识别表里，会被当作 `"light"`。主题模式 `"system"` 用这两个接口，`"light"`、`"dark"` 不需要订阅。模式持久化在 `platform/settings` 的 `themeMode`，与配色预设 `themePreset` 互相独立。
 
+`getReducedMotion()` / `subscribeReducedMotion(listener)` 读取系统「减少动态效果」，由 `@zoeydaw/native` 提供：Rust 读 `NSWorkspace.accessibilityDisplayShouldReduceMotion`，并监听 `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification`。它们不依赖 renderer，整个进程只有一个 observer。约定同上：首帧用 getter 取值，订阅只通知变化。GPUI 自带的 `App::reduce_motion` 不从系统读取，不要拿它当来源。只有 macOS 实现，其它平台两个接口都会抛错。
+
 ## 关闭守卫
 
 ```ts
