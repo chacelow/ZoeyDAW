@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { adjustGrid, deriveGridPlan, gridZoomLimit, noteGridBars } from "../../../model/grid"
-import { createSceneStore } from "../core/scene"
-import { gridLines, numberedRulerPlan, patternRegions } from "../core/rulers/grid-lines"
+import { adjustGrid, deriveGridPlan, gridZoomLimit, noteGridBars } from "@/project/model/grid"
+import { createSceneStore } from "../scene"
+import { gridLines, numberedRulerPlan, patternRegions, rulerTicks } from "./grid-lines"
 
 const METERS = [
   { numerator: 4, denominator: 4 },
@@ -12,6 +12,61 @@ const METERS = [
 ]
 
 describe("Music-position grid invariants", () => {
+  test("zoomed-out numbering cannot group Pattern shading into four-bar blocks", () => {
+    const scene = createSceneStore()
+    scene.setViewport({ pxPerBar: 24, scrollX: 0, scrollY: 0, width: 200, height: 200, dpr: 1 })
+    const regions = patternRegions(scene.get())
+    expect(
+      regions
+        .slice(0, 3)
+        .map(region => ({ bar: region.bar, width: region.width, alternate: region.alternate }))
+    ).toEqual([
+      { bar: 1, width: 24, alternate: false },
+      { bar: 2, width: 24, alternate: true },
+      { bar: 3, width: 24, alternate: false },
+    ])
+  })
+
+  test("fine ruler labels cannot leave full-height subdivision lines after Ctrl+2 widens the grid", () => {
+    const scene = createSceneStore()
+    scene.setViewport({ pxPerBar: 800, scrollX: 0, scrollY: 0, width: 1600, height: 200, dpr: 1 })
+    scene.setMusic({ ...scene.get(), grid: { mode: "fixed", bars: 16 } })
+    expect(gridLines(scene.get()).map(line => line.bar)).toEqual([1, 2, 3])
+  })
+
+  test("unreadable bars aggregate to power-of-two regions with model-backed minimum spacing", () => {
+    const minimum = deriveGridPlan({ mode: "fixed", bars: 1 }, 1, 4, 4).minimumCellPx
+    const scene = createSceneStore()
+    let seed = 16231
+    for (let iteration = 0; iteration < 1200; iteration++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+      const pxPerBar =
+        iteration < 3 ? [1, 2, 1 / 16384][iteration] : 2 ** ((seed / 2 ** 32) * 31 - 14)
+      const bars = Math.max(2000, Math.ceil(2000 / pxPerBar))
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+      const scrollX = (seed / 2 ** 32) * Math.max(0, bars * pxPerBar - 1000)
+      scene.setMusic({ ...scene.get(), bars })
+      scene.setViewport({ pxPerBar, scrollX, scrollY: 0, width: 1000, height: 200, dpr: 1 })
+      const majors = gridLines(scene.get()).filter(line => line.kind === "major")
+      expect(majors.length).toBeLessThanOrEqual(Math.ceil(1000 / minimum) + 1)
+      for (let i = 1; i < majors.length; i++) {
+        expect(majors[i].x - majors[i - 1].x).toBeGreaterThanOrEqual(minimum)
+        expect(Number.isInteger(majors[i].bar)).toBe(true)
+      }
+      const regions = patternRegions(scene.get())
+      expect(regions.length).toBeLessThanOrEqual(Math.ceil(1000 / minimum) + 1)
+      expect(regions.reduce((sum, region) => sum + region.width, 0)).toBeCloseTo(1000)
+      for (let i = 1; i < regions.length; i++) {
+        const barsPerRegion = regions[i].bar - regions[i - 1].bar
+        expect(Number.isInteger(Math.log2(barsPerRegion))).toBe(true)
+        expect(regions[i].alternate).toBe(!regions[i - 1].alternate)
+        expect(Number.isInteger(regions[i].bar)).toBe(true)
+        if (i < regions.length - 1) expect(regions[i].width).toBeGreaterThanOrEqual(minimum)
+        if (pxPerBar >= minimum) expect(barsPerRegion).toBe(1)
+      }
+    }
+  })
+
   test("Live-observed 4/8 numbering contains the half-beat sixteenth hierarchy", () => {
     const plan = numberedRulerPlan(320, 4, 8)
     expect(plan.mode).toBe("sixteenth")
@@ -42,9 +97,15 @@ describe("Music-position grid invariants", () => {
       const lines = gridLines(current)
       const majors = lines.filter(line => line.kind === "major")
       for (let index = 1; index < majors.length; index++) {
-        expect(majors[index].bar - majors[index - 1].bar).toBeCloseTo(plan.stepBars)
+        expect(Number.isInteger(majors[index].bar)).toBe(true)
+        expect(majors[index].bar - majors[index - 1].bar).toBe(1)
+        expect(Math.abs(majors[index].x - majors[index - 1].x - pxPerBar)).toBeLessThanOrEqual(1)
+      }
+      const ticks = rulerTicks(current)
+      for (let index = 1; index < ticks.length; index++) {
+        expect(ticks[index].bar - ticks[index - 1].bar).toBeCloseTo(plan.stepBars)
         expect(
-          Math.abs(majors[index].x - majors[index - 1].x - plan.stepBars * pxPerBar)
+          Math.abs(ticks[index].x - ticks[index - 1].x - plan.stepBars * pxPerBar)
         ).toBeLessThanOrEqual(1)
       }
       const cell = current.gridPlan.cellBars
@@ -61,6 +122,7 @@ describe("Music-position grid invariants", () => {
       expect(regions.reduce((sum, region) => sum + region.width, 0)).toBeCloseTo(800)
       for (let index = 1; index < regions.length; index++) {
         expect(regions[index].alternate).toBe(!regions[index - 1].alternate)
+        expect(regions[index].bar - regions[index - 1].bar).toBe(1)
         expect(regions[index].left).toBeCloseTo(regions[index - 1].left + regions[index - 1].width)
       }
       scene.setMusic({ ...current, grid: { mode: "adaptive", density: "narrowest" } })

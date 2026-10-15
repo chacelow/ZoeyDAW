@@ -5,8 +5,9 @@ export type GridSettings =
 
 export const DEFAULT_GRID: GridSettings = { mode: "adaptive", density: "medium" }
 export const MAX_NOTE_DENOMINATOR = 16_384
+export const MIN_GRID_CELL_PX = 8
 export const MIN_CLIP_LENGTH_BARS = 1 / (MAX_NOTE_DENOMINATOR * 32)
-const DENSITY_MIN_WIDTH = [128, 64, 32, 16, 8] as const
+const DENSITY_MIN_WIDTH = [128, 64, 32, 16, MIN_GRID_CELL_PX] as const
 const FIXED_BAR_STEPS = [16, 8, 4, 2, 1] as const
 const FIXED_NOTE_DENOMINATORS = [2, 4, 8, 16, 32, 64, 128, 256] as const
 
@@ -92,7 +93,9 @@ export function deriveGridPlan(
 ): GridPlan {
   const beatBars = 1 / numerator
   const minimumCellPx =
-    settings.mode === "adaptive" ? DENSITY_MIN_WIDTH[GRID_DENSITIES.indexOf(settings.density)] : 8
+    settings.mode === "adaptive"
+      ? DENSITY_MIN_WIDTH[GRID_DENSITIES.indexOf(settings.density)]
+      : MIN_GRID_CELL_PX
   let cellBars: number
   if (settings.mode === "fixed") {
     cellBars = settings.bars
@@ -163,5 +166,5 @@ export function gridForMeterChange(
 Keep a 1/16384 note at least 8 logical pixels wide at maximum zoom.
 */
 export function gridZoomLimit(numerator: number, denominator: number): number {
-  return (8 * MAX_NOTE_DENOMINATOR * numerator) / denominator
+  return (MIN_GRID_CELL_PX * MAX_NOTE_DENOMINATOR * numerator) / denominator
 }
