@@ -171,12 +171,16 @@ export function drawCells({
   const origin = Math.floor(window.sourceOffsetBeats * 4) / 4
   for (let cell = Math.min(firstCell, lastCell); cell <= Math.max(firstCell, lastCell); cell++) {
     const beat = origin + cell / 4
+    const visibleStart = Math.max(beat, window.sourceOffsetBeats)
+    const visibleEnd = Math.min(beat + 0.25, window.sourceOffsetBeats + window.totalBeats)
     if (
       beat + 0.25 <= window.sourceOffsetBeats ||
       beat >= window.sourceOffsetBeats + window.totalBeats ||
       notes.some(note => {
         return (
-          note.pitch === pitch && note.startBeat <= beat && note.startBeat + note.lengthBeats > beat
+          note.pitch === pitch &&
+          note.startBeat < visibleEnd &&
+          note.startBeat + note.lengthBeats > visibleStart
         )
       })
     ) {
@@ -209,6 +213,11 @@ export function eraseCells({
   const high = Math.max(firstCell, lastCell)
   const origin = Math.floor(window.sourceOffsetBeats * 4) / 4
   notes.forEach((note, index) => {
+    if (
+      note.startBeat + note.lengthBeats <= window.sourceOffsetBeats ||
+      note.startBeat >= window.sourceOffsetBeats + window.totalBeats
+    )
+      return
     const startCell = Math.floor((note.startBeat - origin) * 4)
     const endCell = Math.ceil((note.startBeat + note.lengthBeats - origin) * 4) - 1
     if (note.pitch === pitch && startCell <= high && endCell >= low) {
