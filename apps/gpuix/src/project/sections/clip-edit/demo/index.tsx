@@ -9,7 +9,7 @@ import { createNativeClipboard } from "@/platform/clipboard"
 import { nativeCursorLock } from "@/platform/cursor"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
-import { createWindowPlatform } from "@/platform/window"
+import { createWindowPlatform, LAUNCH_FOCUS } from "@/platform/window"
 import {
   projectActions,
   readProjectPeaks,
@@ -215,6 +215,7 @@ const root = render(
     width: 1100,
     height: 420,
     ...keyboard.rootHandlers,
+    ...LAUNCH_FOCUS,
   }
 )
 const lifecycle = { disposed: false }
