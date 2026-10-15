@@ -993,6 +993,10 @@ This is a local draft only. No issue or PR was published. Follow the upstream co
 
 每四个 float 为本地 `x, y, width, height`。颜色取 `style.color`，透明度取节点与祖先 opacity，每种颜色一个 host。原生边界拒绝非四倍长度、非有限值与负尺寸，零尺寸不绘制。绘制受元素自身边界与祖先 content mask 裁剪。
 
+F4b 修复 fractional geometry：本地 `x/y/width/height` 先经 GPUI `Window::pixel_snap_bounds`，沿用 authored absolute lengths 的 device-pixel half-toward-zero 规则；再加 host origin，由既有 `Window::paint_quad` 取整绝对边缘。没有 TS 补偿、zed 修改、逐矩形 layout node 或额外缓冲拷贝。原生测试以独立 div 的实绘 bounds 为 oracle，覆盖小数位置、小数尺寸、lane stereo case 与小数 host origin，scale 为 1、1.25、1.5、2。
+
+lane 的 `pixels=2,height=40,inset=1,top=10` 等价 GPU fixture 在修复前复现 `(1,19)` 的唯一像素差，修复后 decoded RGBA 与原 lane reference 逐像素相同。验证使用隔离 `/Volumes/PSSD/code/_vendor/f4b-gpuix` 与 `/Volumes/PSSD/code/_vendor/target-f4b`。命令、mutation、像素和性能证据见 [F4b 报告](../../scripts/gpuix-main/quad-batch/PIXEL-SNAP-REPORT.md)。
+
 采用命令式数据上传是性能决策。React 19.2 development 的 performance track 会遍历 typed-array props；即使不走 JSON，声明式 quads prop 仍使开发版超过一帧。最终接口删除该 prop 与二进制提交队列，不改 React instrumentation。DEV 与 production 的完整测量见[交付报告](../../scripts/gpuix-main/quad-batch/REPORT.md)。
 
 选择独立 `<quad-batch>`，保留 `<canvas>` 给通用绘图上下文。批量叶子没有 children、输入或 AX props，不注册 hitbox、focus handle 或 AX 节点。绘制路径忽略 cursor 与 pointerEvents，即使指定 pointer cursor 也不注册 hitbox。
