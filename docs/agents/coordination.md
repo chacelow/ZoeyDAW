@@ -24,6 +24,8 @@
 
 **协调者的职责边界**:
 
+- **用户只和协调者对话**(2026-10-15 用户原话:"我主要和你对话,其他都是你来调")。协调者用 Opus 5.5,它调起的所有 Agent 用 gpt-6.1-sol。汇报里不出现"新协调者/临时 agent"之类需要用户分辨的角色。
+- **主动排查与审查,不把收尾留给用户**:每轮主动核对所有 Workspace、终端、进程与派发状态,发现漏清理、停滞、规则冲突当场处理。只有「仍然先问用户」里的事项,或确实无法由 Agent 完成的操作(例如需要用户账号授权),才交给用户,并说明为什么 Agent 做不了。
 - **只统筹,不包办实现**。业务实现与返工交给对应切片的 worker;协调者写的只有合并、冲突解决、共享契约/规范/脚本和复核用的临时探针。
 - **能并行的先派出去**。不要让一条调查或验证链拖住其它切片;先派,再在等待期间复核。
 - **卡点由协调者主动解阻**:worker 遇到能力缺口或方案分歧时,协调者自己(或让 worker)用 Context7、GitHub、已登录的 Ego Browser(X 上的作者与项目)找最新方案,社交帖子只作线索,结论以源码、文档和实测为准。
@@ -54,7 +56,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **释放(2026-10-14 15:26、2026-10-15 01:44 用户要求)**:切片合入并核对后当场做完三件事,不为"可能复用上下文"保留:
 
-1. `orca orchestration worker-release` 释放 worker 终端;用户接管(`user_takeover`)的终端请用户在 Orca 里关,Agent 不 kill。
+1. `orca orchestration worker-release` 释放 worker 终端。返回 `user_takeover` 是因为 `start-worker.sh` 先建终端再交给 Orca,不代表用户接管;确认终端 TUI 空闲、派发已 completed 后,协调者直接 `orca terminal close --terminal <handle> --tab`,不留给用户。只有用户亲自开的终端才不碰。
 2. `orca worktree rm --worktree path:<dir>`(不加 `--force`)删除已合入的 worktree 与分支,步骤见 LESSONS「切片合入后立即删 worktree」;复核用的 `/tmp` worktree 用完就 `git worktree remove`。
 3. `ps` 确认该切片启动的 demo、gallery、service 已结束。
 
