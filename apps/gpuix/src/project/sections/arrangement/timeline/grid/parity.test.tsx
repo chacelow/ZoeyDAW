@@ -11,8 +11,8 @@ import { Grid as DivGrid } from "./div-reference.test-helper"
 import { Grid } from "."
 
 for (const appearance of ["dark", "light"] as const) {
-  for (const height of [34, 200]) {
-    test(`batched grid preserves ${appearance} div pixels at height ${height}, fractional scroll and extreme zoom`, () => {
+  for (const initialHeight of [34, 200]) {
+    test(`batched grid preserves ${appearance} div pixels from height ${initialHeight} through scrolling, resizing and extreme zoom`, () => {
       hydrateProject(
         JSON.stringify({
           version: 2,
@@ -31,38 +31,73 @@ for (const appearance of ["dark", "light"] as const) {
         loop: document.transport.loop,
       })
       const directory = mkdtempSync(path.join(tmpdir(), "timeline-grid-parity-"))
-      const results: Array<{ zoom: number; scroll: number; divNodes: number; batchNodes: number }> =
-        []
+      const frames: Array<{
+        pxPerBar: number
+        scrollX: number
+        height: number
+        reference: Buffer<ArrayBuffer>
+        divNodes: number
+      }> = []
       try {
         for (const pxPerBar of [6.25, 100, 800, 131072]) {
           for (const scrollX of [0, 400.375]) {
+            const height = scrollX === 0 ? initialHeight : initialHeight === 34 ? 200 : 34
             scene.setViewport({ width: 1200, height, pxPerBar, scrollX, scrollY: 0, dpr: 1 })
-            const root = createTestRoot({ width: 1200, height })
+            const reference = createTestRoot({ width: 1200, height: 200 })
             try {
-              root.render(
+              reference.render(
                 <ThemeProvider appearance={appearance}>
                   <DivGrid scene={scene} height={height} />
                 </ThemeProvider>
               )
-              root.renderer.captureScreenshot(path.join(directory, "div.png"))
-              const divNodes = root.renderer.getRetainedElementCount()
-              root.render(
-                <ThemeProvider appearance={appearance}>
-                  <Grid scene={scene} height={height} />
-                </ThemeProvider>
-              )
-              root.renderer.captureScreenshot(path.join(directory, "batch.png"))
-              const batchNodes = root.renderer.getRetainedElementCount()
-              expect(readFileSync(path.join(directory, "batch.png"))).toEqual(
-                readFileSync(path.join(directory, "div.png"))
-              )
-              results.push({ zoom: pxPerBar, scroll: scrollX, divNodes, batchNodes })
+              reference.renderer.captureScreenshot(path.join(directory, "div.png"))
+              frames.push({
+                pxPerBar,
+                scrollX,
+                height,
+                reference: readFileSync(path.join(directory, "div.png")),
+                divNodes: reference.renderer.getRetainedElementCount(),
+              })
             } finally {
-              root.unmount()
+              reference.unmount()
             }
           }
         }
-        console.log(JSON.stringify(results))
+        const root = createTestRoot({ width: 1200, height: 200 })
+        const results: Array<{
+          zoom: number
+          scroll: number
+          divNodes: number
+          batchNodes: number
+        }> = []
+        try {
+          for (const frame of frames) {
+            scene.setViewport({
+              width: 1200,
+              height: frame.height,
+              pxPerBar: frame.pxPerBar,
+              scrollX: frame.scrollX,
+              scrollY: 0,
+              dpr: 1,
+            })
+            root.render(
+              <ThemeProvider appearance={appearance}>
+                <Grid scene={scene} height={frame.height} />
+              </ThemeProvider>
+            )
+            root.renderer.captureScreenshot(path.join(directory, "batch.png"))
+            expect(readFileSync(path.join(directory, "batch.png"))).toEqual(frame.reference)
+            results.push({
+              zoom: frame.pxPerBar,
+              scroll: frame.scrollX,
+              divNodes: frame.divNodes,
+              batchNodes: root.renderer.getRetainedElementCount(),
+            })
+          }
+          console.log(JSON.stringify(results))
+        } finally {
+          root.unmount()
+        }
       } finally {
         rmSync(directory, { recursive: true, force: true })
       }

@@ -20,7 +20,12 @@ for (const [id, selected] of Object.entries(mutationCases)) {
   )
   const output = result.stderr.toString() + result.stdout.toString()
   const failures = output.match(/\n\s+(\d+) fail\b/)?.[1]
-  if (!output.includes(`[timeline-mutation] applied ${id}`) || !failures || result.exitCode === 0)
+  if (
+    !output.includes(`[timeline-mutation] applied ${id}`) ||
+    !output.includes("error: expect(") ||
+    !failures ||
+    result.exitCode === 0
+  )
     throw new Error(`Mutation did not produce a test failure: ${id}\n${output}`)
   console.log(`${id}: ${failures} failed test(s)`)
 }

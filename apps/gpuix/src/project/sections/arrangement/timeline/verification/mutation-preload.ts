@@ -65,6 +65,34 @@ export const mutationCases: Record<string, MutationCase> = {
     from: "? theme.colors.canvasScrollbarActive",
     to: "? theme.colors.canvasScrollbarHover",
   },
+  "minimap-epoch-color": {
+    file: "project/sections/arrangement/timeline/minimap/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/minimap/visual-state.test.tsx",
+    testName: "overview pressed color",
+    from: "}, [epoch, gesture])",
+    to: "}, [gesture])",
+  },
+  "minimap-epoch-presentation": {
+    file: "project/sections/arrangement/timeline/minimap/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/minimap/visual-state.test.tsx",
+    testName: "overview pressed color",
+    from: "  useLayoutEffect(() => {\n    gesture.cancel()",
+    to: "  useEffect(() => {\n    gesture.cancel()",
+  },
+  "grid-upload-scroll": {
+    file: "project/sections/arrangement/timeline/grid/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/grid/parity.test.tsx",
+    testName: "batched grid preserves",
+    from: "}, [major, minor, values])",
+    to: "}, [])",
+  },
+  "region-upload-scroll": {
+    file: "project/sections/arrangement/timeline/grid/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/grid/parity.test.tsx",
+    testName: "batched grid preserves",
+    from: "}, [base, alternate, values])",
+    to: "}, [])",
+  },
 }
 
 const id = process.env.TIMELINE_MUTATION
