@@ -8,7 +8,7 @@
 - 每个切片都要真实运行：`bun --hot <入口>` 打开原生窗口，用 `computer` 的 AX/截图验证；不能只靠类型检查。只操作自己启动的窗口：`computer.window(...)` 加 AX `el.press()`、`observe()`/`screenshot()` 与窗口级输入。**不调用 `computer.control.acquire`**，它需要用户实时批准，本项目不用。
 - 提交：自己的分支内多次小提交，每次一件事；标题避免 `+ & 和 与` 与多个 Conventional Commit 类型；`ultracite` 预提交门禁必须通过，不用 `--no-verify`。非交互提交带 `USER_CONFIRM_HASH=$(git write-tree)`——用户已授权本次重构任务内 `gpuix-migration` 及切片分支的全部本地提交（见 `docs/agents/setup.md`「提交授权」），不向用户或协调者索取“我确认”。
 - 不 push，不碰 `main`，不碰其他 worktree，不启动或停止用户已有服务。
-- 遇到需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、或与契约冲突的发现：停下来，用 `orca orchestration ask`（见 preamble）向协调者提问，不要自行决定。
+- 决策：自己路径内、可撤回、不改方向的事自己决定并在报告里写理由，规则没写到的也一样。需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、跨切片、与契约冲突，或属于根 `AGENTS.md`「决策默认归 Agent」清单的事：用 `orca orchestration ask` 问协调者，带上候选与建议。worker 不直接问用户。
 - **不允许静默停下**:你一旦结束回合,协调者就收不到你的任何状态,只有发出的 Orca 消息才算上报。每次结束回合前必须已经发出其中一种:还有工作就继续做,不结束回合;等待协调者、其它切片或桌面时段,发 `orca orchestration ask`(它会阻塞到协调者 reply,把你直接唤醒);阶段完成,发 `merge_ready`;全部完成,发 `worker_done`。只在终端里写"等待中"不算上报。巡检会自动唤醒停在空闲状态、却没有关闭派发的 worker。
 - 交付 `worker_done` 前：`tsc --noEmit`、`bun test`、（涉及 Rust）`cargo check` 与 `cargo test` 全部在你的 worktree 实跑通过；报告里写清命令、结果、未实现项及原因。不得把未实现的部分描述成完成。报告单列「错题」与「已验证做法」两节（LESSONS 格式）；不要直接改 `LESSONS.md`，由协调者整理。
 - 涉及 Live 已有行为的切片，实现前先观察 Ableton Live，报告附「产品规则 → Live 观察 → 实现 → 差异/未验证」对照表。

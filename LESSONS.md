@@ -193,6 +193,12 @@
 - 做法：① `git rev-list --count gpuix-migration..<branch>` 为 0 且 `git merge-base --is-ancestor` 为真；② `git status --short` 干净；③ `lsof +D <dir>` 确认没有 agent 进程还在用；④ `orca worktree rm --worktree path:<dir>`，**不加 `--force`**，它会顺带删除已合入的分支。
 - 终端：`worker-release` 对派发脚本建的终端返回 `user_takeover`，这只是创建方式的标记。错：2026-10-15 据此把 4 个已完成终端留给用户手动关，用户指出不要把可自行处理的清理留给他。对：确认 TUI 空闲、派发 completed 后，协调者用 `orca terminal close --terminal <handle> --tab` 关闭，再 `lsof +D` 确认进程已退出、删除 worktree。
 
+## gpuix 迁移：协调者把能自己决定的事转问用户
+
+- 错：2026-10-15 协调者两次用 `ask` 问用户：07:27 问是否授权本分支合并提交（已授权），08:27 问能否批准 worker 的 `computer.control.acquire`（本项目根本不用这个接口）。前一次另外 4 个已完成终端也留给用户手动关。
+- 对：先按 `AGENTS.md`「Ask first」判断是否真属于要问用户的事；不属于就自己决定。worker 卡在工具或权限上，先查以前切片怎么做成的（session 记录、LESSONS、规格），把可行路线直接回给 worker。
+- 因：用户的定位是“协调者做决策性 approve 和 review，不做转发”；规则只写在 coordination.md 时，协调者遇到新情况仍会退回问用户，所以边界写进了会注入系统提示的 `AGENTS.md`。
+
 ## gpuix 迁移：commit 报 `pre-commit failed` 不等于没提交，先查再判断
 
 - 现象：`git add A B && git commit` 后输出 `husky - pre-commit script failed (code 1)`，随后 `git log` 却显示提交存在，`git status` 干净，`git stash list` 多出一条 `lint-staged automatic backup`。

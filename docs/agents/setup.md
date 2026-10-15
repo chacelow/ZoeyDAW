@@ -50,7 +50,7 @@ UI 改动必须在真实 gpuix 窗口验证主路径，观察新截图或实际�
 
 ## 修改前确认
 
-以下改动先问用户：新增 npm/Rust 依赖、`.github/workflows/`、push/PR/发布、改系统设置、改 Live 工程内容。gpuix 重构期间的其它技术决定（含共享 UI 公共 API）由协调者决定，见 [协调方式](coordination.md)。
+问用户的范围只有根 `AGENTS.md`「决策默认归 Agent」那张封闭清单；清单外的技术决定（含共享 UI 公共 API）由协调者决定，见 [协调方式](coordination.md)。
 
 secrets、token 和 API key 不进入仓库。保留其他 Session、Agent 的未提交和暂存工作。
 
