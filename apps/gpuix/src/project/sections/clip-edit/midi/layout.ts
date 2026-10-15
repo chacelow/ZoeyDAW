@@ -139,11 +139,13 @@ export function marqueeHits(
   })
 }
 
-/** Grid cell index (sixteenths from the window start) under a content x. */
+/** Cell index relative to the first absolute-grid cell intersecting the source window. */
 export function cellAt(x: number, roll: Pick<RollGeometry, "width" | "window">): number {
-  return Math.floor(
-    (Math.max(0, Math.min(roll.width, x)) / Math.max(1, roll.width)) *
-      (roll.window.totalBeats / NOTE_GRID_BEATS)
+  const beat =
+    roll.window.sourceOffsetBeats +
+    (Math.max(0, Math.min(roll.width, x)) / Math.max(1, roll.width)) * roll.window.totalBeats
+  return (
+    Math.floor(beat / NOTE_GRID_BEATS) - Math.floor(roll.window.sourceOffsetBeats / NOTE_GRID_BEATS)
   )
 }
 

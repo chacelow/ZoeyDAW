@@ -168,10 +168,11 @@ export function drawCells({
   createId: () => string
 }): Edit {
   const added: MidiNote[] = []
+  const origin = Math.floor(window.sourceOffsetBeats * 4) / 4
   for (let cell = Math.min(firstCell, lastCell); cell <= Math.max(firstCell, lastCell); cell++) {
-    const beat = window.sourceOffsetBeats + cell / 4
+    const beat = origin + cell / 4
     if (
-      beat < window.sourceOffsetBeats ||
+      beat + 0.25 <= window.sourceOffsetBeats ||
       beat >= window.sourceOffsetBeats + window.totalBeats ||
       notes.some(note => {
         return (
@@ -206,10 +207,10 @@ export function eraseCells({
   const next = new Set(erased)
   const low = Math.min(firstCell, lastCell)
   const high = Math.max(firstCell, lastCell)
+  const origin = Math.floor(window.sourceOffsetBeats * 4) / 4
   notes.forEach((note, index) => {
-    const startCell = Math.floor((note.startBeat - window.sourceOffsetBeats) * 4)
-    const endCell =
-      Math.ceil((note.startBeat + note.lengthBeats - window.sourceOffsetBeats) * 4) - 1
+    const startCell = Math.floor((note.startBeat - origin) * 4)
+    const endCell = Math.ceil((note.startBeat + note.lengthBeats - origin) * 4) - 1
     if (note.pitch === pitch && startCell <= high && endCell >= low) {
       next.add(index)
     }
