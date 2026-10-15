@@ -21,7 +21,8 @@ function mount() {
     },
     navigate: () => {},
     cursor: {
-      capture: () => ({ x: 452, y: 21 }),
+      // Window origin at screen (1000, 500): the anchor must be the press point, not a later move.
+      capture: point => ({ x: 1000 + point.x, y: 500 + point.y }),
       hide: () => {
         hidden = true
         return true
@@ -72,7 +73,7 @@ describe("Minimap navigation ownership", () => {
     a.gesture.up()
     expect(a.gesture.phase).toBe("idle")
     expect(a.hidden()).toBe(false)
-    expect(a.restored()).toEqual({ x: 452, y: 21 })
+    expect(a.restored()).toEqual({ x: 1452, y: 521 })
   })
 
   test("horizontal panning has fixed gain and no event-count or velocity dependency", () => {

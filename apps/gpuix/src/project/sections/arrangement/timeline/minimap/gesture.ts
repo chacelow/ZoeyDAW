@@ -74,7 +74,7 @@ export function createMinimapGesture({
         geometry,
         width,
         origin: point,
-        cursor: cursor.capture(),
+        cursor: cursor.capture(point),
         hidden: false,
         epoch,
       }
