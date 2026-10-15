@@ -1,0 +1,37 @@
+{
+  "command": "RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin CARGO_BUILD_JOBS=6 CARGO_TARGET_DIR=/Volumes/PSSD/code/_vendor/target-f4b cargo test --release --manifest-path packages/native/Cargo.toml --features test-support,gpui_platform/runtime_shaders --lib quad_batch",
+  "cwd": "/Volumes/PSSD/code/_vendor/f4b-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631",
+  "mutation": "After fixed full native suite passed 287/287, replace Window::pixel_snap_bounds(local) and translated snapped origin with the original raw-f32 Bounds::new(host.origin + local position, raw size).",
+  "result": { "exitCode": 101, "passed": 2, "failed": 4 },
+  "failures": [
+    {
+      "test": "fractional_position_matches_native_div",
+      "scale": 1.25,
+      "actualDeviceSize": [13, 15],
+      "nativeDivDeviceSize": [12, 15]
+    },
+    {
+      "test": "fractional_size_matches_native_div",
+      "scale": 1.25,
+      "actualDeviceSize": [3, 3],
+      "nativeDivDeviceSize": [2, 2]
+    },
+    {
+      "test": "stereo_lane_half_pixel_matches_native_div",
+      "scale": 1,
+      "actualDeviceSize": [1, 5],
+      "nativeDivDeviceSize": [1, 4]
+    },
+    {
+      "test": "fractional_host_origin_matches_native_div",
+      "scale": 1,
+      "actualDeviceSize": [11, 12],
+      "nativeDivDeviceSize": [10, 13]
+    }
+  ],
+  "testScaleFactors": [1, 1.25, 1.5, 2],
+  "productionMutationRestored": true,
+  "restoredFullNativeSuite": { "passed": 287, "failed": 0, "exitCode": 0, "runtimeSeconds": 0.5 },
+  "restoredLog": "/Volumes/PSSD/code/_vendor/f4b-gpuix/native-restored.log",
+  "rawLog": "/Volumes/PSSD/code/_vendor/f4b-gpuix/native-raw-mutation.log"
+}

@@ -170,7 +170,7 @@
 ## gpuix 迁移：界面必须逐个元素放大看，不能凭一张全屏图或 AX 树
 
 - 错：只用类型检查、测试和一张全屏截图就声称界面完成；间距、居中、尺寸、紧凑感没有逐项核对。
-- 对：画廊里每个控件每个状态各截一张并放大，用 AX bounds 或像素量出尺寸与间距，对照 `CONTROL_METRICS` 与间距 token、Ableton Live 同区域并排看密度；发现问题先改再重新截图；关键截图入 `evidence/`。
+- 对：在真实组合 Gallery 与业务界面中整体核对跨区域对齐、展开/收起按钮居中、卡片与按钮 gap、padding 和共享 token；局部放大只定位缺陷，生成截图默认 Git 忽略，协调者亲自评审（2026-10-15 用户纠正）。
 - 因：DAW 是高密度工作站，1px 的间距差和一点松散就会让整体不像专业软件；AX 树只证明语义存在，不证明视觉正确。
 - 见：`docs/architecture/gpuix.md` 的「UI 视觉验收」。
 
@@ -192,6 +192,12 @@
 - 例外：有未提交改动或任务未完成的保留，并用 `orca worktree set --comment "保留:<原因>;删除条件:<条件>"` 写明。2026-10-15 审计时 tracks、timeline 两个已合入 worktree 以"最终复验"为由保留且无说明，被用户指出不知道是有意保留还是漏删。
 - 做法：① `git rev-list --count gpuix-migration..<branch>` 为 0 且 `git merge-base --is-ancestor` 为真；② `git status --short` 干净；③ `lsof +D <dir>` 确认没有 agent 进程还在用；④ `orca worktree rm --worktree path:<dir>`，**不加 `--force`**，它会顺带删除已合入的分支。
 - 终端：`worker-release` 对派发脚本建的终端返回 `user_takeover`，这只是创建方式的标记。错：2026-10-15 据此把 4 个已完成终端留给用户手动关，用户指出不要把可自行处理的清理留给他。对：确认 TUI 空闲、派发 completed 后，协调者用 `orca terminal close --terminal <handle> --tab` 关闭，再 `lsof +D` 确认进程已退出、删除 worktree。
+
+## gpuix 迁移：协调者把能自己决定的事转问用户
+
+- 错：2026-10-15 协调者两次用 `ask` 问用户：07:27 问是否授权本分支合并提交（已授权），08:27 问能否批准 worker 的 `computer.control.acquire`（本项目根本不用这个接口）。前一次另外 4 个已完成终端也留给用户手动关。
+- 对：先按 `AGENTS.md`「Ask first」判断是否真属于要问用户的事；不属于就自己决定。worker 卡在工具或权限上，先查以前切片怎么做成的（session 记录、LESSONS、规格），把可行路线直接回给 worker。
+- 因：用户的定位是“协调者做决策性 approve 和 review，不做转发”；规则只写在 coordination.md 时，协调者遇到新情况仍会退回问用户，所以边界写进了会注入系统提示的 `AGENTS.md`。
 
 ## gpuix 迁移：commit 报 `pre-commit failed` 不等于没提交，先查再判断
 
@@ -281,5 +287,12 @@
 - 对：先用普通 `git apply` 打完全部补丁，再用 `git ls-files --others --exclude-standard` 找出新建的文件，交给 `git add --intent-to-add --pathspec-from-file=-` 登记。
 - 因：Apple Git 2.50.1（Apple Git-155）执行 `apply -N` 时，会删掉这个补丁没涉及的所有 index 条目，剩下的文件看起来全部被删除。2026-10-15 F4 在新 checkout 上构建时发现：`git diff --binary HEAD` 超过 1MB，`check.mjs` 报 ENOBUFS。之前没暴露，是因为只在已有的 vendor 上增量打过补丁。
 - 见：`scripts/gpuix-main/build.sh`。
+
+## gpuix 迁移：批量绘制等价性必须覆盖小数几何
+
+- 错：整数合成矩形的 PNG 相同，就认定 `quad-batch` 与原生 div 像素等价。
+- 对：复用 GPUI `Window::pixel_snap_bounds` 处理本地位置和尺寸，再交给 `paint_quad` 处理绝对边缘；用原生 div 作独立 oracle，覆盖小数位置、尺寸、host origin 和 scale 1/1.25/1.5/2。
+- 因：layout 的 authored metric 舍入与 paint-time edge 舍入是两步。lane 的 `y=5.5,height=4.5,top=10` 曾多画一个像素，整数压力探针未捕获。
+- 见：`scripts/gpuix-main/quad-batch/PIXEL-SNAP-REPORT.md`、`pixel-parity.tsx` 与 `quad-batch.patch` 中的四类回归。F4b 独立复核与共享 vendor 重建后的新 GPU 图均与原 div、lane 参考图解码后零差异。
 
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

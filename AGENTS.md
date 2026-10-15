@@ -24,7 +24,12 @@ DAW，正在从 Web + Tauri 重构为 gpuix 原生应用：`apps/gpuix`（React 
 
 - **Never**：提交 secrets/token/API key；停止用户自己启动的应用或服务（包括 `tauri:dev`）。
 - **Always**：复用共享 UI 包及其 token；跨文件重命名用 LSP；保留其他 Session/Agent 的未提交与暂存工作。
-- **Ask first**：新增 npm/Rust 依赖、`.github/workflows/`、push/PR/发布、改系统设置、改 Live 工程内容。其它技术决定（含共享 UI 公共 API）由协调者决定，范围见 [协调方式](docs/agents/coordination.md)。
+- **决策默认归 Agent**（2026-10-15 用户原话：“你不是作为转发的，你是作为决策性 approve 和 review 的，只有重大事件再向我汇报”）。问用户只限下面这张封闭清单，清单外的一切（包括没想到的新情况、规则没写到的灰色地带）都由协调者自己判断、执行，在汇报里写明理由：
+  - 不可撤回或影响外部：push/PR/发布、删除用户自己的文件或数据、改系统设置、改 Live 工程内容。
+  - 改变方向：偏离产品规则或交互语义、推翻已定架构。
+  - 新增 npm/Rust 依赖、`.github/workflows/`。
+  - Agent 物理上做不到、必须用户本人操作的事（如账号登录）；汇报里说明为什么做不到。
+- 拿不准时按三问自己判：能不能撤回？会不会动到用户的数据或外部？是不是改方向？三个都是否就直接做。规则之间冲突或没覆盖到，选更保守、可撤回的做法，事后把判断补进规则，不停下来等用户。worker 卡在工具或权限上，先查以前切片的做法给出路线。细则见 [协调方式](docs/agents/coordination.md)。
 - gpuix 的验证窗口由 Agent 自己用 `bun --hot` 启动，验证完立即关闭；Rust 改动重跑 `pnpm native:build` 后重启自己的窗口，不再提示用户重启 `tauri:dev`。
 - 提交授权：`gpuix-migration` 及其切片分支的本地提交已由用户授权（2026-10-14 12:40 UTC，撤销逐次“我确认”）；`main` 与其它分支仍须用户在本次提交上下文说 **“我确认”**。细节见 setup。
 

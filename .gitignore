@@ -48,3 +48,14 @@ crates/native/browser.js
 
 # Local self-built renderer; build.sh owns this symlink, never its external contents.
 /.gpuix-main
+
+# Generated native validation captures; keep runnable probes and reports in Git.
+**/evidence/**/*.png
+**/evidence/**/*.jpg
+**/evidence/**/*.jpeg
+**/evidence/**/*.webp
+**/evidence/**/*.gif
+**/verification/**/*.png
+**/verification/**/*.jpg
+**/verification/**/*.jpeg
+**/verification/**/*.webp
