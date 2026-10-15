@@ -170,6 +170,58 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
   expect(root.renderer.getElementBounds(playhead.id)?.x).toBe(256)
 })
 
+it("presents the latest playhead on resume and releases frame leases when stopped or unmounted", () => {
+  const scene = createSceneStore()
+  scene.setViewport({ width: 500, height: 300, scrollX: 32, scrollY: 0, pxPerBar: 64, dpr: 1 })
+  scene.setPlayback({ playing: true, insertionPoint: null })
+  const frames = createManualFrames()
+  let position = 3
+  const readPosition = () => position
+  root = createTestRoot({ width: 500, height: 300 })
+  const render = () =>
+    root?.render(
+      <AnimationFrameProvider source={frames}>
+        <ThemeProvider>
+          <div style={{ position: "relative", width: 500, height: 300 }}>
+            <LaneOverlay
+              scene={scene.get()}
+              viewport={scene.get().viewport}
+              transportBar={readPosition}
+            />
+          </div>
+        </ThemeProvider>
+      </AnimationFrameProvider>
+    )
+  render()
+  const playhead = root.renderer.findByTestId("transport-playhead")
+  if (!playhead) throw new Error("Missing playing transport")
+  expect(root.renderer.getElementBounds(playhead.id)?.x).toBe(96)
+  position = 8
+  frames.stepResume(500)
+  expect(root.renderer.getElementBounds(playhead.id)?.x).toBe(416)
+  expect(frames.subscriberCount).toBe(1)
+  expect(frames.resumeSubscriberCount).toBe(1)
+  scene.setPlayback({ playing: false, insertionPoint: null })
+  render()
+  expect(root.renderer.findByTestId("transport-playhead")).toBeUndefined()
+  expect(frames.subscriberCount).toBe(0)
+  expect(frames.resumeSubscriberCount).toBe(0)
+  position = 2
+  frames.stepResume(600)
+  scene.setPlayback({ playing: true, insertionPoint: null })
+  render()
+  const restarted = root.renderer.findByTestId("transport-playhead")
+  if (!restarted) throw new Error("Missing restarted transport")
+  expect(root.renderer.getElementBounds(restarted.id)?.x).toBe(32)
+  expect(frames.resumeSubscriberCount).toBe(1)
+  const renderer = root.renderer
+  root.unmount()
+  root = undefined
+  expect(renderer.getRetainedElementCount()).toBe(0)
+  expect(frames.subscriberCount).toBe(0)
+  expect(frames.resumeSubscriberCount).toBe(0)
+})
+
 it("preserves tiny Clip pixel width when projecting a collapsed group summary", () => {
   const score = createMockDocument()
   const track = score.tracks.find(item => item.kind === "midi")
