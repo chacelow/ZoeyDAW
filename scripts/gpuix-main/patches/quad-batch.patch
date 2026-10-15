@@ -169,10 +169,10 @@ index c5f4fa1..1f14017 100644
  // types instead of a copy that silently drifts from them.
 diff --git a/packages/native/src/quad_batch.rs b/packages/native/src/quad_batch.rs
 new file mode 100644
-index 0000000..38589a3
+index 0000000..fbe7f37
 --- /dev/null
 +++ b/packages/native/src/quad_batch.rs
-@@ -0,0 +1,149 @@
+@@ -0,0 +1,244 @@
 +use crate::{retained_tree::RetainedElement, style::StyleDesc};
 +use gpui::prelude::*;
 +use std::sync::Arc;
@@ -190,7 +190,7 @@ index 0000000..38589a3
 +    Ok(())
 +}
 +
-+pub(crate) fn render(element: &RetainedElement, style: Option<&StyleDesc>) -> gpui::AnyElement {
++pub(crate) fn render(element: &RetainedElement, style: Option<&StyleDesc>) -> gpui::Div {
 +    let values = element.quads().unwrap_or_else(|| Arc::from([]));
 +    let color: gpui::Hsla = style
 +        .and_then(|s| s.color.as_deref())
@@ -224,7 +224,8 @@ index 0000000..38589a3
 +    if let Some(style) = style {
 +        el = crate::renderer::apply_styles(el, style);
 +    }
-+    el.child(canvas).into_any_element()
++    el.style().mouse_cursor = None;
++    el.child(canvas)
 +}
 +
 +#[cfg(test)]
@@ -236,6 +237,100 @@ index 0000000..38589a3
 +        text::SharedSelection,
 +    };
 +    use std::sync::Mutex;
++
++    struct HitboxProbe {
++        element: gpui::Div,
++        inserted: std::rc::Rc<std::cell::Cell<bool>>,
++    }
++
++    impl gpui::IntoElement for HitboxProbe {
++        type Element = Self;
++        fn into_element(self) -> Self {
++            self
++        }
++    }
++
++    impl gpui::Element for HitboxProbe {
++        type RequestLayoutState = <gpui::Div as gpui::Element>::RequestLayoutState;
++        type PrepaintState = Option<gpui::Hitbox>;
++        fn id(&self) -> Option<gpui::ElementId> {
++            None
++        }
++        fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
++            None
++        }
++        fn request_layout(
++            &mut self,
++            id: Option<&gpui::GlobalElementId>,
++            inspector: Option<&gpui::InspectorElementId>,
++            window: &mut gpui::Window,
++            cx: &mut gpui::App,
++        ) -> (gpui::LayoutId, Self::RequestLayoutState) {
++            self.element.request_layout(id, inspector, window, cx)
++        }
++        fn prepaint(
++            &mut self,
++            id: Option<&gpui::GlobalElementId>,
++            inspector: Option<&gpui::InspectorElementId>,
++            bounds: gpui::Bounds<gpui::Pixels>,
++            state: &mut Self::RequestLayoutState,
++            window: &mut gpui::Window,
++            cx: &mut gpui::App,
++        ) -> Self::PrepaintState {
++            let hitbox = self
++                .element
++                .prepaint(id, inspector, bounds, state, window, cx);
++            self.inserted.set(hitbox.is_some());
++            hitbox
++        }
++        fn paint(
++            &mut self,
++            id: Option<&gpui::GlobalElementId>,
++            inspector: Option<&gpui::InspectorElementId>,
++            bounds: gpui::Bounds<gpui::Pixels>,
++            state: &mut Self::RequestLayoutState,
++            hitbox: &mut Self::PrepaintState,
++            window: &mut gpui::Window,
++            cx: &mut gpui::App,
++        ) {
++            self.element
++                .paint(id, inspector, bounds, state, hitbox, window, cx);
++        }
++    }
++
++    struct CursorFixture {
++        tree: RetainedTree,
++        inserted: std::rc::Rc<std::cell::Cell<bool>>,
++    }
++
++    impl gpui::Render for CursorFixture {
++        fn render(
++            &mut self,
++            _: &mut gpui::Window,
++            _: &mut gpui::Context<Self>,
++        ) -> impl gpui::IntoElement {
++            let element = &self.tree.elements[&1];
++            HitboxProbe {
++                element: super::render(element, element.style.as_deref()),
++                inserted: self.inserted.clone(),
++            }
++        }
++    }
++
++    #[gpui::test]
++    fn cursor_and_pointer_styles_cannot_insert_a_native_hitbox(cx: &mut gpui::TestAppContext) {
++        let mut tree = RetainedTree::new();
++        apply_batch_to_tree(&mut tree, br#"[["createElement",1,"quad-batch"],["setStyle",1,{"width":100,"height":100,"color":"red","cursor":"pointer","pointerEvents":"auto"}],["setRoot",1]]"#).unwrap();
++        tree.set_quads(1, &[0.0, 0.0, 100.0, 100.0]).unwrap();
++        let inserted = std::rc::Rc::new(std::cell::Cell::new(true));
++        let observed = inserted.clone();
++        cx.add_window(|_, _| CursorFixture { tree, inserted });
++        cx.run_until_parked();
++        assert!(
++            !observed.get(),
++            "pure visual batch registered a native hitbox"
++        );
++    }
 +
 +    #[gpui::test]
 +    fn local_positions_masks_color_opacity_and_retained_buffer(cx: &mut gpui::TestAppContext) {
@@ -323,7 +418,7 @@ index 0000000..38589a3
 +    }
 +}
 diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
-index bf4f049..d7026bc 100644
+index bf4f049..7709693 100644
 --- a/packages/native/src/renderer.rs
 +++ b/packages/native/src/renderer.rs
 @@ -1596,6 +1596,22 @@ impl GpuixRenderer {
@@ -355,7 +450,7 @@ index bf4f049..d7026bc 100644
          }
 +        "quad-batch" => {
 +            ctx.custom_registry.destroy(id);
-+            crate::quad_batch::render(element, style)
++            crate::quad_batch::render(element, style).into_any_element()
 +        }
          "virtual-list" => {
              ctx.custom_registry.destroy(id);

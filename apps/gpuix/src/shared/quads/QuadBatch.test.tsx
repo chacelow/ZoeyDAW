@@ -62,6 +62,7 @@ test("quad paint passes input to the underlying native target even with pointerE
           height: 100,
           color: "red",
           pointerEvents: "auto",
+          cursor: "pointer",
         }}
       />
     </div>
