@@ -182,11 +182,13 @@ test("DropdownButton leaves Space to playback and retains Enter and menu Space",
     root.renderer.nativeSimulateKeystrokes(trigger.id, "enter")
     const content = root.renderer.findByTestId("toolbar-select-content")!
     expect(content).toBeDefined()
+    received.length = 0
     root.renderer.nativeSimulateKeystrokes(content.id, "down")
     root.renderer.nativeSimulateKeystrokes(content.id, "space")
     expect(changes).toEqual(["b"])
     expect(root.renderer.findByTestId("toolbar-select-content")).toBeUndefined()
     expect(root.renderer.getFocusedElementId()).toBe(trigger.id)
+    expect(received.filter(event => event.key === "space")).toEqual([])
   } finally {
     root.unmount()
   }

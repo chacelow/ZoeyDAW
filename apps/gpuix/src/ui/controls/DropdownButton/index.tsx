@@ -162,6 +162,9 @@ export function DropdownButton<T extends string = string>({
         align={align}
         sideOffset={sideOffset}
         style={contentStyle}
+        onKeyDown={event => {
+          if (event.key === "enter" || event.key === "space") event.stopPropagation()
+        }}
       >
         {items.map(item =>
           "type" in item ? (
