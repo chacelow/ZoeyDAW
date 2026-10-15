@@ -1,4 +1,5 @@
 import { projectActions, useProjectState } from "@/project/adapters"
+import { clipLabel } from "@/project/model/clip-label"
 import { resolveContentColor } from "@/shared/theme/content-color"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -10,15 +11,14 @@ import { AudioParameters } from "./audio/AudioParameters"
 import { AudioWaveform } from "./audio/AudioWaveform"
 import { MidiEditor } from "./midi/MidiEditor"
 import { PatternSteps } from "./pattern/PatternSteps"
-import type { Clip, Track } from "@/project/model/types"
 import type { PeakReader } from "@/project/model/backend"
 import type { ClipEditorEnvironment } from "./environment"
 import type { ClipEditorLabels } from "./labels"
 
-/** Footer slot payload; identical in shape to the Footer's `ClipEditorSlot`. */
+/** Footer imports this sole ID-only editor slot contract. */
 export interface ClipEditorSlot {
-  readonly clip: Clip
-  readonly track: Track
+  readonly clipId: string
+  readonly trackId: string
   readonly close: () => void
 }
 
@@ -34,8 +34,8 @@ at once. Editing happens only here. Unhandled keys bubble to the window owner (S
 Cmd/Ctrl+Z from any non-text control in the editor is project undo/redo.
 */
 export function ClipEditor({
-  clip,
-  track,
+  clipId,
+  trackId,
   close,
   labels,
   readPeaks,
@@ -43,6 +43,9 @@ export function ClipEditor({
 }: ClipEditorProps) {
   const theme = useTheme()
   const transport = useProjectState(state => state.document.transport)
+  const track = useProjectState(state => state.document.tracks.find(item => item.id === trackId))
+  const clip = track?.clips.find(item => item.id === clipId)
+  if (!clip || !track) return null
   const color = resolveContentColor(clip.color ?? track.color, theme.colors)
   const gap = theme.control["--spacing-control-gap"]
   const trackGap = theme.control["--spacing-control-track-gap"]
@@ -98,7 +101,12 @@ export function ClipEditor({
               backgroundColor: color,
             })}
           />
-          <ClipNameInput key={clip.id} clip={clip} label={labels.rename} />
+          <ClipNameInput
+            key={clip.id}
+            clipId={clip.id}
+            value={clip.label ?? clipLabel(clip)}
+            label={labels.rename}
+          />
           <text
             style={{
               color: theme.colors.mutedForeground,
@@ -128,8 +136,8 @@ export function ClipEditor({
         ) : clip.kind === "midi" ? (
           <MidiEditor
             key={clip.id}
-            clip={clip}
-            track={track}
+            readClip={() => clip}
+            color={color}
             numerator={transport.numerator}
             labels={labels.midi}
           />

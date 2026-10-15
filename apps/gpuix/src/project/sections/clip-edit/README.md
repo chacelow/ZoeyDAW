@@ -6,8 +6,8 @@
 
 | 导出 | 契约 |
 | --- | --- |
-| `ClipEditor(props)` | `clip`、`track`、`close` 来自 Footer 的 render slot，另注入 `labels`、`readPeaks` 与 `environment` |
-| `ClipEditorSlot` | `{ clip: Clip; track: Track; close(): void }`，Footer 合入时由协调者统一同形类型 |
+| `ClipEditor(props)` | `clipId`、`trackId`、`close` 来自 Footer 的 render slot，另注入 `labels`、`readPeaks` 与 `environment`；编辑器通过 adapter selector 读取唯一工程 owner |
+| `ClipEditorSlot` | `{ clipId: string; trackId: string; close(): void }`，Footer 消费此唯一类型，不通过 React props 转发包含大量 notes 的 Clip/Track 对象 |
 | `ClipEditorLabels` | 所有界面文字。英文与中文示例只在 `demo/labels.ts`，应用组合根提供实际翻译 |
 | `ClipEditorEnvironment` | `clipboard`、`subscribeWindowActive`、`drawMode`、`onRegionKey`，均由组合根提供 |
 
@@ -25,9 +25,13 @@
 
 工程只在 adapters/stores。连续编辑使用 `useProjectEditGesture`，一笔拖动产生一条撤销记录，Escape、失活、卸载或切换 Clip 取消。选择、框选矩形、折叠、缩放和滚动只在编辑器内部，不进快照。
 
-MIDI 音符编辑调用 `project/model/midi-editing`。按键包括方向键移动、Shift 上下跨八度、Delete、Cmd+A/C/X/V/D/U/Z。Cmd+U 是协调者批准的新增量化，只改选中音符起点，网格由调用方传给 `quantizeNotes`，长度保留。拖动进行中消费并忽略 Delete、Cut、Paste、方向键、D、U，直到 release；Escape 与 Cmd+Z 仍取消手势。这是协调者选择的事务边界。指针选琴键后编辑焦点回到 grid，键盘 Enter 试听仍留琴键，可见力度杆可 Tab 到达并以上下键调整。
+MIDI 音符编辑调用 `project/model/midi-editing`。grid 中方向键移动、Shift 上下跨八度、Delete、Cmd+A/C/X/V/D/U/Z。Cmd+U 只量化选中起点；长度与未选音符保留。拖动中消费并忽略 Delete、Cut、Paste、方向键、D、U，直到 release；Escape 与 Cmd+Z 仍取消手势。指针选琴键后焦点回到 grid，Enter 试听仍留琴键。力度 lane 是单 Tab 入口的复合控件：Left/Right 按源音符顺序移动当前项并单选，Up/Down 沿用选中组的力度步长及 Undo 事务；Space 仍冒到窗口播放。
 
 钢琴卷帘绘制与命中共用可见音符几何。屏外音符不挂载，琴键、网格线与力度杆也按可见范围裁剪。滚轮调整视口，Shift 滚轮横向滚动。Cmd 或 Ctrl 滚轮改变时间缩放。显示、插入、刷写、擦除和量化使用源绝对 beat 0 的网格。首尾半格只按可见交集判断占用与擦除，不删除窗口外的保留音符。窗口 resize 和 Fold 音高集合变化重新夹取 scroll，普通音符编辑不自动重新 fit。
+
+视口 wheel 只有 MIDI body 一个 owner，琴键和 grid 不重复消费事件；一次 Cmd/Ctrl wheel 与工具栏一样只缩放一级。被动网格、无文字音符和力度杆经 `useQuadBatch` 命令式上传，几何与 typed array 不进入 React props；有文字的音符保留原生文字盒的边框、裁切与绘制层级。屏外音符不给几何或语义节点。可见 pitch 行的 AX 标签保留音符时间范围、力度与选择标记，当前选中音符保留 gridcell；力度只保留一个活动 slider，原生值经 `aria-valuetext` 暴露。
+
+唯一 selection owner 原子持有 `{indices,current}`。组内点击与 Shift 添加音符更新 current 而不重排成员，Cmd+A 扩展成员并保留 current，gridcell、slider 与力度数值使用同一锚点。Left/Right 导航改为单选；Up/Down 保留组成员与 Undo 事务。聚焦项滚出可见范围后同步到可见候选项，选择变化不产生工程 Undo。二维编辑面保留唯一根 Tab 入口及原箭头编辑语义（`gpuix-ui-standards.md:74`），pitch 行不进入 Tab。quad 像素对齐只有共享原生路径，UI 不做逻辑像素舍入。
 
 音频视图请求当前可见的保留源窗口部分及其实际像素宽度。音乐位置到采样帧、带符号的偏移和回绕由 Rust 处理。共享 `PeakColumns` 直接画 channel-major 的 min/max；UI 只在增益或反向预览需要时产生变换数组。Overview 使用同一 reader，宽度来自 renderer 布局。reader 身份稳定时，session、backend phase/pending/acceptedRevision 与 tempo/meter 仍构成查询 generation，后端就绪和音乐到帧的映射变化会使峰值缓存失效。
 
@@ -41,6 +45,7 @@ Pattern 只编辑一个源周期。裁剪后的首步保留其源相位。鼠标
 - `midi/layout.ts`、`viewport.ts`：可见几何、命中、框选、拟合和缩放位置。
 - `midi/useMidiEditor.ts`：手势、选择、剪贴板与编辑命令；工程操作复用 model。
 - `midi/NoteGrid.tsx`、`PianoKeys.tsx`、`MidiRuler.tsx`、`VelocityLane.tsx`：渲染与输入 host。
+- `midi/note-paint.ts`、`paint-layers.ts`：纯可见矩形、重叠层与不可变上传快照；`QuadPaint.tsx`：host 注册及命令式上传生命周期，不持有工程或选择状态。
 - `audio/source-view.ts`、`markers.ts`：源视口与标记计算。
 - `audio/AudioParameters.tsx`：复用 DragPad、Toggle 与 Dropdown 的参数面板。
 - `audio/AudioWaveform.tsx`、`SourceWaveform.tsx`、`SourceMarker.tsx`：源视图组合、真实峰值查询、标记事务。
@@ -55,8 +60,10 @@ pnpm exec tsc --noEmit
 bun test src/project/sections/clip-edit src/project/model/midi-editing
 bun src/project/sections/clip-edit/verification/mutations.mjs
 bun --hot src/project/sections/clip-edit/demo/index.tsx
+bun src/project/sections/clip-edit/verification/consumer-probe.tsx current dense
+NODE_ENV=production bun src/project/sections/clip-edit/verification/consumer-probe.tsx current-production dense
 ```
 
-Demo 使用真实 runtime 与临时生成的立体声 WAV。`CLIP_EDIT_THEME=light`、`CLIP_EDIT_LOCALE=zh` 切换示例外观和语言，结束时删除临时媒体。验证窗口须由带名称的 service 启动，取证后立即结束。
+Demo 使用真实 runtime 与临时生成的立体声 WAV。`CLIP_EDIT_THEME=light`、`CLIP_EDIT_LOCALE=zh` 切换外观和语言，`CLIP_EDIT_STRESS=1` 使用与 headless probe 相同的完整 10000 notes / 1024 steps 工程；结束时删除临时媒体。窗口先申请桌面时段，以命名 service 启动，验证后立即结束。生成 PNG 在 ignored evidence 中，不批量提交；JSON 记录解码元数据、真实 peak 请求、节点、单帧/编辑计时及输入序列。
 
 迁移清单、差异、Live 对照、截图、测量、完整命令与自审结论见 [验证报告](VERIFICATION.md)。

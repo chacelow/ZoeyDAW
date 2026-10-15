@@ -1,18 +1,24 @@
 import { useRef } from "react"
 import { projectActions, useProjectEditGesture } from "@/project/adapters"
-import { clipLabel } from "@/project/model/clip-label"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { Input } from "@/ui/controls"
-import type { Clip } from "@/project/model/types"
 
 /**
 Clip name, edited live as one transaction: the first keystroke opens it, Enter, blur or an outside
 press commits, Escape restores. The text field owns its keys, so nothing reaches window shortcuts.
 */
-export function ClipNameInput({ clip, label }: { readonly clip: Clip; readonly label: string }) {
+export function ClipNameInput({
+  clipId,
+  value,
+  label,
+}: {
+  readonly clipId: string
+  readonly value: string
+  readonly label: string
+}) {
   const theme = useTheme()
   const gesture = useProjectEditGesture((value: string) =>
-    projectActions.updateClip(clip.id, { label: value })
+    projectActions.updateClip(clipId, { label: value })
   )
   const editing = useRef(false)
   const finish = (cancel: boolean) => {
@@ -25,7 +31,7 @@ export function ClipNameInput({ clip, label }: { readonly clip: Clip; readonly l
     <Input
       testId="clip-name"
       aria-label={label}
-      value={clip.label ?? clipLabel(clip)}
+      value={value}
       onValueChange={value => {
         if (!editing.current) {
           editing.current = true

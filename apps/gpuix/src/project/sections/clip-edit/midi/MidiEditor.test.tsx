@@ -240,7 +240,7 @@ it("drags a selected velocity stem as one transaction", () => {
   const h = open()
   h.key("midi-grid", "cmd-a")
   const lane = h.bounds("midi-velocity")
-  const stem = h.bounds("midi-velocity-visible")
+  const stem = noteBox(h, "visible")
   const at = (velocity: number) => lane.y + lane.height * (1 - velocity / 127)
   press(h, stem.x, at(80))
   h.root.renderer.nativeSimulateMouseMove(stem.x, at(110), 0)
@@ -263,7 +263,7 @@ it("folds to used pitches and zooms without touching the project", () => {
   expect(useProjectState.getState().document).toBe(before)
 })
 
-it("only mounts notes inside the viewport", () => {
+it("keeps accessible note rows and batched painting inside the viewport", () => {
   projectActions.updateClip(MIDI_ID, {
     notes: Array.from({ length: 128 }, (_, pitch) => ({
       id: `p${pitch}`,
@@ -274,13 +274,17 @@ it("only mounts notes inside the viewport", () => {
     })),
   })
   const h = open()
-  const mounted = Array.from({ length: 128 }, (_, pitch) =>
-    h.root.renderer.findByTestId(`midi-note-p${pitch}`)
-  ).filter(Boolean)
-  expect(mounted.length).toBeGreaterThan(0)
+  const divs = h.root.renderer.findByType("div")
+  const mounted = divs.filter(element => element.testId?.startsWith("midi-note-row-"))
+  const visiblePitches = divs
+    .filter(element => element.testId?.startsWith("midi-key-"))
+    .map(element => element.testId?.replace("midi-key-", "midi-note-row-"))
+    .sort((a, b) => Number(a?.split("-").at(-1)) - Number(b?.split("-").at(-1)))
+  expect(mounted.length).toBeLessThan(128)
+  expect(mounted.map(element => element.testId)).toEqual(visiblePitches)
   const grid = h.bounds("midi-grid")
-  expect(h.root.renderer.findByTestId("midi-note-p0")).toBeUndefined()
-  expect(h.root.renderer.findByTestId("midi-note-p127")).toBeUndefined()
+  expect(h.root.renderer.findByTestId("midi-note-row-0")).toBeUndefined()
+  expect(h.root.renderer.findByTestId("midi-note-row-127")).toBeUndefined()
   for (const element of mounted) {
     if (!element) throw new Error("Missing mounted note")
     const box = h.root.renderer.getElementBounds(element.id)

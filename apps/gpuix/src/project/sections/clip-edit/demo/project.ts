@@ -6,7 +6,7 @@ import { CONTENT_PALETTE } from "@/shared/theme/content-color"
 import type { Track } from "@/project/model/types"
 
 /** One MIDI, one Audio (real generated WAV) and one Pattern clip; returns their ids. */
-export function seedClipEditProject(mediaUri: string) {
+export function seedClipEditProject(mediaUri: string, workload: "normal" | "dense") {
   const current = useProjectState.getState()
   const document = structuredClone(current.document)
   const main = document.tracks.find(track => track.kind === "main")
@@ -56,6 +56,19 @@ export function seedClipEditProject(mediaUri: string) {
   if (pattern.kind !== "pattern") throw new Error("Expected a Pattern clip")
   pattern.label = "Hats"
   pattern.steps = Array.from({ length: 16 }, (_, index) => index % 4 === 2)
+  if (workload === "dense") {
+    midi.lengthBars = 16
+    midi.loopBars = 16
+    midi.notes = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `dense-${index}`,
+      pitch: 36 + (index % 50),
+      startBeat: Math.floor(index / 50) * 0.32,
+      lengthBeats: 0.24,
+      velocity: 1 + (index % 127),
+    }))
+    pattern.lengthBars = 64
+    pattern.steps = Array.from({ length: 1024 }, (_, index) => index % 4 === 2)
+  }
   midiTrack.clips = [midi, pattern]
   tracks.push(midiTrack)
   const audioTrack = createTrack("audio", tracks, undefined, DEFAULT_TRACK_HEIGHT)
