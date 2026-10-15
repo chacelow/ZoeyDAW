@@ -1,0 +1,13 @@
+resume first present
+resume first present loses synchronous React commit: 1 failing test(s)
+1 mutations caught; originals restored
+
+
+resume subscribes
+resume subscribes while composition is idle: 1 failing test(s)
+1 mutations caught; originals restored
+
+
+resume tick is disconnected
+resume tick is disconnected from the root: 1 failing test(s)
+1 mutations caught; originals restored

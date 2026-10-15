@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { createRef, useState } from "react"
 import type { ReactNode } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -83,6 +86,36 @@ describe("native resizable panel interactions", () => {
     root.renderer.simulateKeystrokes("escape")
     root.renderer.nativeSimulateMouseUp(point.x + 80, point.y)
     expect(bounds(root, "left").width).toBeCloseTo(before)
+  })
+
+  test("divider paints distinct idle, hover and pressed states and stays pressed while dragging", async () => {
+    const directory = mkdtempSync(path.join(tmpdir(), "divider-states-"))
+    const image = path.join(directory, "frame.png")
+    try {
+      const root = await mount(pair())
+      const point = divider(root, "divider")
+      const capture = () => {
+        root.renderer.flush()
+        root.renderer.captureScreenshot(image)
+        return readFileSync(image)
+      }
+      root.renderer.clockPause()
+      root.renderer.nativeSimulateMouseMove(point.x + 300, point.y)
+      const idle = capture()
+      root.renderer.nativeSimulateMouseMove(point.x, point.y)
+      const hover = capture()
+      root.renderer.nativeSimulateMouseDown(point.x, point.y)
+      const pressed = capture()
+      expect(hover.equals(idle)).toBe(false)
+      expect(pressed.equals(hover)).toBe(false)
+      expect(pressed.equals(idle)).toBe(false)
+      root.renderer.nativeSimulateMouseUp(point.x, point.y)
+      expect(capture().equals(hover)).toBe(true)
+      root.renderer.nativeSimulateMouseMove(point.x + 300, point.y)
+      expect(capture().equals(idle)).toBe(true)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
   })
 
   test("focus loss cancels and directional keys adjust the focused divider", async () => {

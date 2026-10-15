@@ -62,11 +62,12 @@ const mutations = [
     tests: "src/app/AppShell.test.tsx",
   },
   {
-    name: "Space in settings leaks into transport",
-    file: "AppShell.tsx",
-    from: "playbackKeysEnabled={!settingsOpen && !close.asking}",
-    to: "playbackKeysEnabled={!close.asking}",
+    name: "modal stops guarding global Browser search",
+    file: "project/composition.ts",
+    from: "deps.interaction.isModalOpen()",
+    to: "false",
     tests: "src/app/AppShell.test.tsx",
+    pattern: "global Cmd",
   },
   {
     name: "preset repair escapes the startup failure boundary",
@@ -96,17 +97,140 @@ const mutations = [
     to: "const originalDispose = engine.dispose\n    const skippedDispose = spyOn(engine, 'dispose').mockImplementation(() => {})\n    cleanups.push(() => skippedDispose.mockRestore())",
     tests: "src/app/AppShell.test.tsx",
   },
+  {
+    name: "lane draw gesture stops marking held B",
+    file: "project/composition.ts",
+    from: "markDrawModeGesture: timeline.keyboard.markDrawGesture",
+    to: "markDrawModeGesture: () => {}",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "held B",
+  },
+  {
+    name: "native text focus is misclassified as timeline",
+    file: "project/composition.ts",
+    from: 'if (deps.interaction.isTextFocused()) return "text"',
+    to: 'if (false) return "text"',
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "native text focus",
+  },
+  {
+    name: "editors stop reporting text focus leases",
+    file: "../ui/controls/ControlEnvironment/index.tsx",
+    from: "if (active && !release.current)",
+    to: "if (false)",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "native text focus",
+  },
+  {
+    name: "a second window owner processes timeline keys",
+    file: "project/composition.ts",
+    from: "windowKey = event.keystrokeId",
+    to: "windowKey = event.keystrokeId; timeline.keyboard.down(event)",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "one native key sequence",
+  },
+  {
+    name: "collapsed Browser search guard is removed",
+    file: "project/composition.ts",
+    from: "deps.browserCollapsed()",
+    to: "false",
+    tests: "src/app/AppShell.test.tsx",
+    pattern: "global Cmd",
+  },
+  {
+    name: "track rails deduct controls from time width again",
+    file: "../project/sections/arrangement/tracks/TrackRows/index.tsx",
+    from: "const laneWidth = viewport.width",
+    to: "const laneWidth = Math.max(0, viewport.width - theme.project.controlsWidth)",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "real TrackRows",
+  },
+  {
+    name: "timeline loses automation parameter projection",
+    file: "../project/sections/arrangement/timeline/controller.ts",
+    from: "sceneStore.setAutomationParameters(current.session.automationParameters)",
+    to: "void current.session.automationParameters",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "timeline projection",
+  },
+  {
+    name: "stopped composition keeps native frame demand active",
+    file: "project/composition.ts",
+    from: "!disposed &&",
+    to: "true ||",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "stopped idle",
+  },
+  {
+    name: "playback demand changes stop notifying the root",
+    file: "project/composition.ts",
+    from: "if (next.session.playing !== previous.session.playing) listener()",
+    to: "void previous",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "stopped idle",
+  },
+  {
+    name: "ruler start no longer notifies native frame demand",
+    file: "../project/sections/arrangement/timeline/viewport/auto-scroll.ts",
+    from: "if (!wasActive) notifyDemand()",
+    to: "void wasActive",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "ruler autoscroll",
+  },
+  {
+    name: "readOnly Input loses its text focus lease",
+    file: "../ui/controls/Input/index.tsx",
+    from: "useTextFocusBinding(!disabled)",
+    to: "useTextFocusBinding(!disabled && !readOnly)",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "focused readOnly Input",
+  },
+  {
+    name: "resume first present loses synchronous React commit",
+    file: "project/useProjectComposition.ts",
+    from: "flushSync(() => composition?.tick(timestamp))",
+    to: "composition?.tick(timestamp)",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "resume commits",
+  },
+  {
+    name: "resume subscribes while composition is idle",
+    file: "project/useProjectComposition.ts",
+    from: "useResumeFrame(timestamp => {\n    flushSync(() => composition?.tick(timestamp))\n  }, frameDemand)",
+    to: "useResumeFrame(timestamp => {\n    flushSync(() => composition?.tick(timestamp))\n  }, true)",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "stopped idle",
+  },
+  {
+    name: "resume tick is disconnected from the root",
+    file: "project/useProjectComposition.ts",
+    from: "useResumeFrame(timestamp => {\n    flushSync(() => composition?.tick(timestamp))\n  }, frameDemand)",
+    to: "void frameDemand",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "resume commits",
+  },
 ]
 
-function run(tests) {
-  const result = spawnSync(process.execPath, ["test", tests], { cwd: app, encoding: "utf8" })
+function run(tests, pattern) {
+  const args = ["test", tests, "--timeout", "30000"]
+  if (pattern) args.push("--test-name-pattern", pattern)
+  const result = spawnSync(process.execPath, args, { cwd: app, encoding: "utf8" })
   if (result.error) throw result.error
   return { status: result.status, output: `${result.stdout}${result.stderr}` }
 }
 
-const baseline = run("src/app")
-if (baseline.status !== 0) throw new Error(`Baseline failed:\n${baseline.output}`)
-for (const mutation of mutations) {
+const filter = process.argv[2]
+const selected = filter ? mutations.filter(mutation => mutation.name.includes(filter)) : mutations
+if (selected.length === 0) throw new Error(`No mutation matches ${filter}`)
+if (!filter) {
+  const baseline = run("src/app")
+  if (baseline.status !== 0) throw new Error(`Baseline failed:\n${baseline.output}`)
+}
+for (const mutation of selected) {
+  if (filter) {
+    const baseline = run(mutation.tests, mutation.pattern)
+    if (baseline.status !== 0) throw new Error(`Baseline failed:\n${baseline.output}`)
+  }
   const file = path.join(app, "src/app", mutation.file)
   const original = readFileSync(file, "utf8")
   if (!original.includes(mutation.from)) throw new Error(`Stale mutation: ${mutation.name}`)
@@ -116,7 +240,7 @@ for (const mutation of mutations) {
       file,
       original.replace(mutation.from, () => mutation.to)
     )
-    result = run(mutation.tests)
+    result = run(mutation.tests, mutation.pattern)
   } finally {
     writeFileSync(file, original)
   }
@@ -128,4 +252,4 @@ for (const mutation of mutations) {
   }
   console.log(`${mutation.name}: ${failed} failing test(s)`)
 }
-console.log(`${mutations.length} mutations caught; originals restored`)
+console.log(`${selected.length} mutations caught; originals restored`)

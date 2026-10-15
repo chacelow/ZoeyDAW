@@ -14,6 +14,8 @@ export interface TimelineAutoScroll {
   start: (pointer: NativeTimelinePointer, axis: "horizontal" | "both") => void
   update: (pointer: NativeTimelinePointer) => void
   stop: () => void
+  getFrameDemand: () => boolean
+  subscribeFrameDemand: (listener: () => void) => () => void
 }
 
 export function createTimelineAutoScroll({
@@ -30,6 +32,11 @@ export function createTimelineAutoScroll({
   let pointer: NativeTimelinePointer | null = null
   let axis: "horizontal" | "both" = "both"
   let last: number | null = null
+  const listeners = new Set<() => void>()
+
+  function notifyDemand() {
+    for (const listener of listeners) listener()
+  }
 
   function tick(now: number) {
     if (!pointer) return
@@ -69,17 +76,30 @@ export function createTimelineAutoScroll({
 
   return {
     tick,
+    getFrameDemand: () => pointer !== null,
+    subscribeFrameDemand(listener) {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
     start(next, mode) {
+      const wasActive = pointer !== null
       pointer = next
       axis = mode
       last = null
+      if (!wasActive) notifyDemand()
     },
     update(next) {
+      const wasActive = pointer !== null
       pointer = next
+      if (!wasActive) notifyDemand()
     },
     stop() {
+      const wasActive = pointer !== null
       pointer = null
       last = null
+      if (wasActive) notifyDemand()
     },
   }
 }

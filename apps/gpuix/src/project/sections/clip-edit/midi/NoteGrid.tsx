@@ -118,6 +118,8 @@ export function NoteGrid({
           id={layer.key}
           color={layer.color}
           opacity={layer.opacity}
+          strokeWidth={layer.strokeWidth}
+          strokeColor={layer.strokeColor}
           bind={bind}
           width={roll.viewWidth}
           height={roll.viewHeight}
@@ -147,6 +149,8 @@ export function NoteGrid({
             id={layer.key}
             color={layer.color}
             opacity={layer.opacity}
+            strokeWidth={layer.strokeWidth}
+            strokeColor={layer.strokeColor}
             bind={bind}
             width={roll.viewWidth}
             height={roll.viewHeight}

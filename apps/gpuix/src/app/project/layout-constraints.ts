@@ -12,11 +12,3 @@ export const PROJECT_LAYOUT = {
   clipMinSize: "20%",
   clipMaxSize: "70%",
 } as const
-
-/**
- * TEMPORARY until the footer slice merges `project.browserNavigationWidth` (90) and
- * `project.browserResultsWidth` (140) into CONTROL_METRICS
- * (gpuix-b2-footer-browser-transport, packages/ui/src/controls/metrics/control-metrics.json).
- * Then read them from `theme.project` and delete this constant.
- */
-export const PENDING_BROWSER_COLUMNS = { navigationWidth: 90, resultsWidth: 140 } as const

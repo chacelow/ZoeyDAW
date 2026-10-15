@@ -23,6 +23,9 @@ import type { ClipEditorEnvironment } from "../environment"
 const [label, workload = "normal", only] = process.argv.slice(2)
 if (!label || !/^[a-z0-9-]+$/.test(label) || (workload !== "normal" && workload !== "dense"))
   throw new Error("Usage: bun consumer-probe.tsx LABEL [normal|dense] [audio|midi|pattern]")
+const replayDoubleWheel = process.env.CLIP_EDIT_REPLAY_DOUBLE_WHEEL === "1"
+if (replayDoubleWheel && process.env.CLIP_EDIT_REFERENCE)
+  throw new Error("Replay mode is only for the new single-owner consumer")
 const output = path.join(import.meta.dir, "../evidence", `f4-${label}-${workload}`)
 mkdirSync(output, { recursive: true })
 const size = { width: 1100, height: 420 }
@@ -264,13 +267,15 @@ try {
           const zoom = step === 0 || step === 5
           const delta = step < 5 ? -120 : 120
           const vertical = kind === "midi" && (step === 2 || step === 7)
-          root.renderer.dispatchScrollWheel(
-            box.x + box.width / 2,
-            box.y + box.height / 2,
-            zoom || vertical ? 0 : delta,
-            zoom ? -delta : vertical ? delta : 0,
-            zoom ? "cmd" : undefined
-          )
+          for (let repeat = 0; repeat < (replayDoubleWheel && kind === "midi" ? 2 : 1); repeat++) {
+            root.renderer.dispatchScrollWheel(
+              box.x + box.width / 2,
+              box.y + box.height / 2,
+              zoom || vertical ? 0 : delta,
+              zoom ? -delta : vertical ? delta : 0,
+              zoom ? "cmd" : undefined
+            )
+          }
         }
         root.renderer.flush()
         const actionAndFlushMs = performance.now() - before
@@ -353,6 +358,11 @@ try {
     label,
     workload,
     reactMode: process.env.NODE_ENV ?? "development",
+    inputProtocol: replayDoubleWheel
+      ? "Legacy two-handler viewport replay; pixel parity only, not default performance gating"
+      : process.env.CLIP_EDIT_REFERENCE
+        ? "Historical consumer with duplicate native wheel handlers"
+        : "Single native wheel owner",
     size,
     backend: useProjectState.getState().session.backend,
     decoded,

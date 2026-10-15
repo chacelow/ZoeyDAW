@@ -1,0 +1,11 @@
+{
+  "nativeApp": "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/packages/native/dist/host.js",
+  "nativeRenderer": "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/packages/native/dist/host.js",
+  "reactApp": "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react@19.2.4/node_modules/react/index.js",
+  "reactRenderer": "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react@19.2.4/node_modules/react/index.js",
+  "reactReconciler": "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react@19.2.4/node_modules/react/index.js",
+  "reactZustand": "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/node_modules/.bun/react@19.2.4/node_modules/react/index.js",
+  "reactUi": "/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-app-shell/node_modules/.pnpm/react@19.2.8/node_modules/react/index.js",
+  "reactWeb": "/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-app-shell/node_modules/.pnpm/react@19.2.8/node_modules/react/index.js"
+}
+gpuix 6a5c7c142ac32f9eb0caefe0121be995cfc18631: patched native, host and React build verified (close-guard.patch, frame-callback.patch, input-select-all-on-focus.patch, anchored-center.patch, select-trigger-space.patch, window-active-change.patch, window-appearance-close.patch, context-menu.patch, quad-batch.patch, autofocus-focus-event.patch, resume-frame.patch)

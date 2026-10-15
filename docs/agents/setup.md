@@ -6,6 +6,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 ## 运行与热更新（gpuix）
 
+- 新 worktree 初始化（`start-worker.sh` 以 `--setup skip` 创建，没有依赖）：在 worktree 根目录依次运行 `bash scripts/gpuix-main/build.sh`、`pnpm install --frozen-lockfile`、`pnpm native:build`、`node scripts/gpuix-main/check.mjs --resolution`。共享 vendor 已构建好时，`build.sh` 只校验并生成本 checkout 的 `.gpuix-main` 链接，不会重建。不要改 vendor 路径，不要删构建锁；报补丁序列不一致时交给协调者（见 LESSONS「修改补丁序列中间的补丁」）。
 - 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，切片 demo 与画廊各有入口）。改 TS/TSX 保存即热更新。
 - Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。不提示用户重启 `tauri:dev`。
 - Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；交付前确认零残留（见 `scripts/orchestration/specs/common.md`）。

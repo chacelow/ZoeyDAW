@@ -1,0 +1,72 @@
+254 |   await layout(root)
+255 |   const input = element(root, "text-editor")
+256 |   root.renderer.nativeSimulateKeystrokes(input.id, "cmd-a a m b")
+257 |   expect(root.renderer.getFocusedElementId()).toBe(input.id)
+258 |   expect(root.renderer.getElement(input.id)?.customProps?.value).toBe("seed")
+259 |   expect(useProjectState.getState().workspace).toMatchObject({ automationMode: false, computerKeyboard: false, drawMode: false })
+                                                     ^
+error: expect(received).toMatchObject(expected)
+
+  {
+-   "automationMode": false,
+-   "computerKeyboard": false,
++   "automationMode": true,
++   "computerKeyboard": true,
+    "drawMode": false,
++   "follow": true,
++   "grid": {
++     "bars": 0.25,
++     "mode": "fixed",
++   },
+(fail) focused readOnly Input keeps native selection and blocks Arrangement modes and select-all [511.81ms]
+
+67 |   return { x, y, button: 0, shiftKey: false, altKey: false, metaKey: false, ctrlKey: false }
+68 | }
+69 | 
+70 | test("stopped idle has no native frame demand; playback starts it and stop releases it", () => {
+71 |   const { root, native } = mount()
+72 |   expect(native.active).toBe(false)
+                             ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-app-shell/apps/gpuix/src/app/project/frame-demand.test.tsx:72:25)
+(fail) stopped idle has no native frame demand; playback starts it and stop releases it [12.41ms]
+92 |   if (!row || !clip) throw new Error("Missing lane drag fixture")
+93 |   const rect = clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
+94 |   const start = pointer(rect.left + rect.width / 2, row.top + TRACK_TITLE_HEIGHT + 10)
+95 |   const end = pointer(start.x + 48, start.y)
+96 |   flushSync(() => composition.lane.pointerDown(start))
+97 |   expect(native.active).toBe(false)
+                             ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-app-shell/apps/gpuix/src/app/project/frame-demand.test.tsx:97:25)
+(fail) real lane drag acquires frame demand after its threshold and releases it on commit [9.82ms]
+106 | })
+107 | 
+108 | test("ruler autoscroll demand begins on start and ends on stop without pointer polling", () => {
+109 |   const { native, owner } = mount()
+110 |   const scroll = owner().timeline.view.autoScroll
+111 |   expect(native.active).toBe(false)
+                              ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-app-shell/apps/gpuix/src/app/project/frame-demand.test.tsx:111:25)
+(fail) ruler autoscroll demand begins on start and ends on stop without pointer polling [12.22ms]
+
+ 0 pass
+ 4 fail
+Ran 4 tests across 2 files. [882.00ms]
+[raw output: artifact://202]
+
+
+Command exited with code 1
