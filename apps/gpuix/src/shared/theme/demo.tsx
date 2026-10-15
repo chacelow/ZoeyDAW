@@ -275,4 +275,10 @@ function Demo() {
   )
 }
 
-render(<Demo />, { title: "zoeydaw · theme presets", width: 960, height: 420 })
+// Same contract as platform/window/launch.ts; shared cannot import platform.
+render(<Demo />, {
+  title: "zoeydaw · theme presets",
+  width: 960,
+  height: 420,
+  focus: process.env.GPUIX_BACKGROUND !== "1",
+})

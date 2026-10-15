@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
 import { PanelEnvironmentProvider } from "@/ui/panels"
-import { createWindowPlatform } from "@/platform/window"
+import { createWindowPlatform, LAUNCH_FOCUS } from "@/platform/window"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import {
   hydrateProject,
@@ -333,7 +333,7 @@ render(<Demo />, {
   title: "zoeydaw B2 native tracks",
   width: 1120,
   height: 780,
-  focus: false,
+  ...LAUNCH_FOCUS,
   onKeyDown: event => {
     if (event.key === "space" && !event.isHeld) projectActions.togglePlay()
   },

@@ -34,6 +34,7 @@ export type { CloseBehavior, CloseButtonAction } from "./close-behavior"
 export { createWindowCloseGuard } from "./close-guard"
 export type { WindowCloseGuard, WindowCloseGuardOptions } from "./close-guard"
 export { getReducedMotion, subscribeReducedMotion } from "./reduced-motion"
+export { LAUNCH_FOCUS } from "./launch"
 
 export function createWindowPlatform(renderer: WindowRenderer) {
   return {

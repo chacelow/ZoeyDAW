@@ -10,6 +10,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 - 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，切片 demo 与画廊各有入口）。改 TS/TSX 保存即热更新。
 - Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。不提示用户重启 `tauri:dev`。
 - Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；交付前确认零残留（见 `scripts/orchestration/specs/common.md`）。
+- 后台启动：任何入口（`src/main.tsx`、Gallery、各切片 demo）加 `GPUIX_BACKGROUND=1`，窗口打开时不抢键盘焦点，用户的前台应用保持不变，统一由 `platform/window` 的 `LAUNCH_FOCUS` 控制。离屏截图、AX 只读量值和例行回归都用这种方式。后台窗口不能替代真实桌面验收：截图可能全黑，`el.press()` 等输入可能报 `BackgroundUnavailable`，遇到就把对应项标为未验证，不要切到前台操作。
 - 不停止用户自己启动的应用或服务；用户的 `tauri:dev` 只属于旧 Web 参考，Agent 不启动也不重启它。
 
 ## 验证命令（gpuix）
