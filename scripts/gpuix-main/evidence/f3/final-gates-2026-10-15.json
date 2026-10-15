@@ -1,0 +1,30 @@
+{
+  "productHead": "ee47dbe",
+  "integratedBaseline": "6d6dd39",
+  "patches": {
+    "quad-batch.patch": "50521d343f35f86ffd1fd3502e4d4be5024d25695ea11df9952d3735903cb003",
+    "autofocus-focus-event.patch": "61466c01374135b441724545ad708aa7c8e8a9147584710f176e4595e5c99f53",
+    "resume-frame.patch": "d9340e770ed1b4887142aab2c59b0572db3a76f89a966db73f0d0482cacf995b"
+  },
+  "nativeVendor": {
+    "build": "passed: isolated f3 vendor, exact ordered eleven-patch series including final F5",
+    "sourceAndResolution": "passed",
+    "cargoCheck": "passed",
+    "cargoTest": { "pass": 307, "fail": 0 },
+    "quadModule": { "pass": 6, "fail": 0 },
+    "focusModule": { "pass": 14, "fail": 0 },
+    "executedFractionalOracles": [
+      "fractional_position_matches_native_div",
+      "fractional_size_matches_native_div",
+      "stereo_lane_half_pixel_matches_native_div",
+      "fractional_host_origin_matches_native_div"
+    ],
+    "zedStatusPorcelain": ""
+  },
+  "workspaceRust": { "check": "passed", "pass": 51, "suites": 4 },
+  "typescript": { "application": "passed", "verification": "passed" },
+  "relatedBun": { "pass": 69, "fail": 0, "assertions": 54940, "files": 14 },
+  "fullBun": { "pass": 1067, "todo": 1, "fail": 0, "assertions": 1103212, "files": 170 },
+  "reviewScan": { "sourceFiles": 8, "testFiles": 6, "hard": 0, "warn": 0 },
+  "independentReview": { "standards": "passed", "spec": "passed", "remainingFindings": 0 }
+}

@@ -1,0 +1,19 @@
+diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
+index cc780fc..d5d7e5c 100644
+--- a/packages/native/src/renderer.rs
++++ b/packages/native/src/renderer.rs
+@@ -4940,6 +5229,14 @@ impl gpui::Render for GpuixView {
+         // Clone Arc so we don't borrow self.tree — frees self for focus_handles access.
+         let tree_arc = self.tree.clone();
+         let tree = tree_arc.lock().unwrap();
++        if std::env::var_os("F3_PRESENT_LOG").is_some() {
++            let mut parts: Vec<_> = tree.elements.values().filter_map(|element| {
++                element.content.as_ref().map(|text| (element.id, text.as_str()))
++            }).collect();
++            parts.sort_by_key(|(id, _)| *id);
++            let scene = parts.iter().map(|(_, text)| *text).collect::<Vec<_>>().join(" ");
++            unsafe { std::env::set_var("F3_SCENE_TEXT", scene); }
++        }
+         let callback = self.event_callback.clone();
+ 
+         // Sync focus handles before building elements.

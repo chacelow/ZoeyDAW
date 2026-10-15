@@ -1,0 +1,15 @@
+{
+  "warmupMs": 1000,
+  "seconds": 8.763644084,
+  "window": {
+    "isKeyWindow": false,
+    "isMainWindow": false,
+    "occlusionVisible": false,
+    "isMiniaturized": true,
+    "isVisible": false,
+    "appIsActive": true
+  },
+  "frames": [64, 64],
+  "callbacks": [57, 57],
+  "sequence": [68, 308]
+}

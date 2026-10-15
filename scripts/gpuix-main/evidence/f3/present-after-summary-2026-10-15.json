@@ -1,0 +1,42 @@
+[
+  {
+    "phase": "restored-1",
+    "monotonicNs": "7289557250",
+    "unixMs": 1792043438748,
+    "sceneSequence": 193,
+    "latestDeliveredSequence": 193,
+    "fresh": true
+  },
+  {
+    "phase": "restored-2",
+    "monotonicNs": "14345523625",
+    "unixMs": 1792043445796,
+    "sceneSequence": 385,
+    "latestDeliveredSequence": 385,
+    "fresh": true
+  },
+  {
+    "phase": "restored-3",
+    "monotonicNs": "21381110291",
+    "unixMs": 1792043452826,
+    "sceneSequence": 578,
+    "latestDeliveredSequence": 578,
+    "fresh": true
+  },
+  {
+    "phase": "restored-4",
+    "monotonicNs": "28393273250",
+    "unixMs": 1792043459834,
+    "sceneSequence": 770,
+    "latestDeliveredSequence": 770,
+    "fresh": true
+  },
+  {
+    "phase": "restored-5",
+    "monotonicNs": "35406154791",
+    "unixMs": 1792043466845,
+    "sceneSequence": 962,
+    "latestDeliveredSequence": 962,
+    "fresh": true
+  }
+]

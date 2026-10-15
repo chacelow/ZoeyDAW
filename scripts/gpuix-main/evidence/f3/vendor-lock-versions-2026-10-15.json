@@ -1,0 +1,7 @@
+{
+  "before": 819,
+  "after": 819,
+  "added": [],
+  "removed": [],
+  "approved": ["cocoa@0.26.0", "objc@0.2.7", "raw-window-handle@0.6.2"]
+}

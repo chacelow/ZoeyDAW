@@ -1,0 +1,110 @@
+[
+  {
+    "phase": "foreground",
+    "seconds": 12.0160915,
+    "warmupMs": 1000,
+    "window": {
+      "isKeyWindow": true,
+      "isMainWindow": true,
+      "occlusionVisible": true,
+      "isMiniaturized": false,
+      "isVisible": true,
+      "appIsActive": true
+    },
+    "frames": [75, 796],
+    "callbacks": [68, 789],
+    "sequence": [33, 360],
+    "hz": 60.00287198212497,
+    "cpuPercent": 15.52614675079663
+  },
+  {
+    "phase": "inactive-visible",
+    "seconds": 12.022824250000001,
+    "warmupMs": 1000,
+    "window": {
+      "isKeyWindow": false,
+      "isMainWindow": false,
+      "occlusionVisible": true,
+      "isMiniaturized": false,
+      "isVisible": true,
+      "appIsActive": false
+    },
+    "frames": [1804, 2066],
+    "callbacks": [1795, 2057],
+    "sequence": [841, 1167],
+    "hz": 21.791884714608546,
+    "cpuPercent": 8.989360382607272
+  },
+  {
+    "phase": "occluded",
+    "seconds": 8.26475833299999,
+    "warmupMs": 0,
+    "window": {
+      "isKeyWindow": false,
+      "isMainWindow": false,
+      "occlusionVisible": false,
+      "isMiniaturized": false,
+      "isVisible": true,
+      "appIsActive": false
+    },
+    "frames": [3459, 3459],
+    "callbacks": [3448, 3448],
+    "sequence": [1826, 2052],
+    "hz": 0,
+    "cpuPercent": 4.135837809499812
+  },
+  {
+    "phase": "minimized",
+    "seconds": 7.759681540999998,
+    "warmupMs": 0,
+    "window": {
+      "isKeyWindow": false,
+      "isMainWindow": false,
+      "occlusionVisible": false,
+      "isMiniaturized": true,
+      "isVisible": false,
+      "appIsActive": false
+    },
+    "frames": [3459, 3459],
+    "callbacks": [3448, 3448],
+    "sequence": [2056, 2283],
+    "hz": 0,
+    "cpuPercent": 3.4495487809091783
+  },
+  {
+    "phase": "restored",
+    "seconds": 8.263487792,
+    "warmupMs": 0,
+    "window": {
+      "isKeyWindow": true,
+      "isMainWindow": true,
+      "occlusionVisible": true,
+      "isMiniaturized": false,
+      "isVisible": true,
+      "appIsActive": true
+    },
+    "frames": [3461, 3958],
+    "callbacks": [3450, 3946],
+    "sequence": [2288, 2528],
+    "hz": 60.02308135315268,
+    "cpuPercent": 13.951215624909587
+  },
+  {
+    "phase": "stopped",
+    "seconds": 8.264353875000001,
+    "warmupMs": 0,
+    "window": {
+      "isKeyWindow": true,
+      "isMainWindow": true,
+      "occlusionVisible": true,
+      "isMiniaturized": false,
+      "isVisible": true,
+      "appIsActive": true
+    },
+    "frames": [3960, 3960],
+    "callbacks": [3947, 3947],
+    "sequence": [2536, 2758],
+    "hz": 0,
+    "cpuPercent": 3.926671157943366
+  }
+]
