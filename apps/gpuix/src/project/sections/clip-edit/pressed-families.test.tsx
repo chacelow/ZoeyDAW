@@ -33,7 +33,7 @@ function bounds(h: Harness, id: number) {
 
 it("Button holds compact geometry with a distinct native active refinement, then activates on release", () => {
   const h = (view = mount())
-  const button = labelNode(h, "Fold (off)")
+  const button = labelNode(h, "Fold")
   const before = bounds(h, button.id)
   const active = button.style.active
   if (!active || typeof active !== "object" || !("backgroundColor" in active))
@@ -44,9 +44,9 @@ it("Button holds compact geometry with a distinct native active refinement, then
     width: before.width,
     height: CONTROL_METRICS.default["--spacing-control-track"],
   })
-  expect(labelNode(h, "Fold (off)").id).toBe(button.id)
+  expect(h.root.renderer.findByTestId("midi-key-71")).toBeDefined()
   h.root.renderer.nativeSimulateMouseUp(before.x + before.width / 2, before.y + before.height / 2)
-  expect(labelNode(h, "Fold (on)").id).toBe(button.id)
+  expect(h.root.renderer.findByTestId("midi-key-71")).toBeUndefined()
   expect(bounds(h, button.id)).toMatchObject({ width: before.width, height: before.height })
 })
 
