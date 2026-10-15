@@ -242,14 +242,15 @@
 
 ## gpuix 迁移：gpuix 0.10.0 的原生缺口（临时代码清单，升级后整体删除）
 
-npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失、主干已有或仍缺的能力，所有绕行代码必须集中在单一函数/hook 里并注明对应上游项：
+以下记录 0.10.0 与固定主干的能力差异及切换状态。已删除的路径不得重新引入；剩余原生能力不以 TS 轮询或占位行为冒充。
 
-- `onLayout`：主干有（`.changeset/on-layout.md`），0.10.0 没有。绕行：`getElementBounds` 采样，收敛在唯一的测量 hook。
-- `getElementBounds` 含 padding 的修复：主干有（`bounds-include-padding`）。绕行：`readOuterBounds`，唯一入口。
-- `onFocus/onBlur` 在 `focusElement` 时不触发：元素焦点绕行为应用作用域单一采样器。窗口激活已由 F1 补丁 `window-active-change.patch` 提供原生事件 `renderer.onWindowActiveChange`，经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧的 50ms 激活采样已删除，不得再用定时器轮询激活。
+- `onLayout`：主干有（`.changeset/on-layout.md`）。A3b 已把文本样本测量改为原生事件；旧 `getElementBounds` 定时采样已删除，缓存仍按字体与样本集持有。
+- `getElementBounds`：主干直接返回 border box。A3b 已删除旧 border/padding 修正、`readOuterBounds` 转发层及所有生产/测试调用，直接消费原生 API，几何断言未放宽。
+- `onFocus/onBlur`：A3b 已删除元素焦点采样器与 register/ref 兼容路径，由原生事件发布控件种类，原生 `focusVisible` 绘制焦点环。窗口激活由 F1 `window-active-change.patch` 经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧 50ms 激活采样已删除，不得重新轮询。
 - 关闭拦截：D1 补丁 `setWindowShouldClose` 加 H1 补丁 `closeWindow()`，由 `platform/window/close-guard.ts` 的 `createWindowCloseGuard` 统一持有(macOS 下 `supported=true`)，用法见 `apps/gpuix/src/platform/window/README.md`。`hideWindow` 和托盘仍然没有。不得用 `process.exit()` 冒充关闭。
-- `measureText`：没有。绕行：挂载不可见样本节点读取实测宽度。
+- `measureText`：仍没有独立字符串测量 API。挂载不可见样本文本，由 `onLayout` 读取实测宽度，不保留定时测量作为第二 owner。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
+- 浮层 center：F1 `anchored-center.patch` 用零尺寸点锚消除重复减半。A3b 已删除 `useFloatingCenterOffset`、调用和采样；不再添加 TS offset 抵消原生定位。
 - 错：合入改动 `scripts/gpuix-main/config.json` 补丁序列的分支后，直接在主干跑 tsc 和 `bun test`。共享 vendor 仍是旧补丁的产物，主干一度显示 tsc 8 个错误、25 个测试失败，全部是假失败。
 - 对：先跑 `node scripts/gpuix-main/check.mjs`；它报 “Vendor must contain exactly the checked-in ordered patch series” 时，先通知各 worker 暂停渲染器相关构建与整套测试，再跑 `bash scripts/gpuix-main/build.sh`，check 通过后才把门禁结果当真，最后通知各 worker merge 主干。
 
