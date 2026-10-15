@@ -31,7 +31,7 @@ strip = "symbols"
 core-graphics = "0.25"
 objc2 = "0.6.5"
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSRunningApplication", "NSPasteboard", "NSApplication", "NSResponder", "NSWindow", "NSView", "NSWorkspace", "NSAccessibility"] }
-objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSNotification", "NSString", "NSObject"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSNotification", "NSString"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61.2", features = ["Win32_Storage_FileSystem", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading"] }

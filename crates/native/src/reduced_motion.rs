@@ -60,6 +60,7 @@ mod platform {
     define_class!(
         // SAFETY: NSObject has no subclassing requirements and this class does not implement Drop.
         #[unsafe(super(NSObject))]
+        #[name = "ZoeydawReducedMotionObserver"]
         #[ivars = Ivars]
         struct ReducedMotionObserver;
 
@@ -73,14 +74,7 @@ mod platform {
         unsafe impl NSObjectProtocol for ReducedMotionObserver {}
     );
 
-    /// The registered observer; removing it from the workspace center happens on replace.
-    struct Registration(Retained<ReducedMotionObserver>);
-
-    // SAFETY: the observer only holds a Send + Sync listener and is never messaged from Rust
-    // except to unregister it; NSNotificationCenter add/remove are thread-safe.
-    unsafe impl Send for Registration {}
-
-    static REGISTRATION: Mutex<Option<Registration>> = Mutex::new(None);
+    static REGISTRATION: Mutex<Option<Retained<ReducedMotionObserver>>> = Mutex::new(None);
 
     fn read() -> bool {
         NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion()
@@ -95,14 +89,14 @@ mod platform {
         let mut registration = REGISTRATION
             .lock()
             .map_err(|_| napi::Error::from_reason("reduced motion observer lock poisoned"))?;
-        if let Some(Registration(observer)) = registration.take() {
+        if let Some(observer) = registration.take() {
             // SAFETY: `observer` was added to this center by this module.
             unsafe { center.removeObserver(&observer) };
         }
         let Some(listener) = listener else {
             return Ok(());
         };
-        listener(read());
+        // SAFETY: NSObject init accepts this allocated subclass with initialized ivars.
         let observer: Retained<ReducedMotionObserver> = unsafe {
             msg_send![
                 super(ReducedMotionObserver::alloc().set_ivars(Ivars { listener })),
@@ -119,7 +113,8 @@ mod platform {
                 None,
             );
         }
-        *registration = Some(Registration(observer));
+        (observer.ivars().listener)(read());
+        *registration = Some(observer);
         Ok(())
     }
 
