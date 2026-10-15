@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sv, sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
-import { useInfoBinding } from "../ControlEnvironment"
+import { useInfoBinding, useTextFocusBinding } from "../ControlEnvironment"
 import { DragPadIcon } from "./icon"
 import { formatNumericValue } from "./numberModel"
 import { useDragPad } from "./useDragPad"
@@ -78,6 +78,7 @@ export function NumericPad({
     onGestureCancel,
   })
   const info = useInfoBinding({ type: displayVariant, description, dragging: pad.dragging })
+  const textFocus = useTextFocusBinding(pad.mode === "editing")
   const fontSize = metrics["--text-control-track"]
   const iconSize = metrics["--spacing-control-icon"]
   const iconGap = metrics["--spacing-control-gap"]
@@ -90,7 +91,10 @@ export function NumericPad({
   ]
   const measurement = useMeasuredTextWidth(samples, { fontSize, fontFamily: "Menlo" })
   const width = Math.ceil(
-    measurement.width + (hideIcon ? 0 : iconSize + iconGap) + trackPad * 2 + 2
+    measurement.width +
+      (hideIcon ? 0 : iconSize + iconGap) +
+      trackPad * 2 +
+      theme.design.shape.controlBorderWidth * 2
   )
   const [layoutWidth, setLayoutWidth] = useState<number>()
   const handleLayout = useCallback<NonNullable<Props["onLayout"]>>(event => {
@@ -193,8 +197,12 @@ export function NumericPad({
           value={pad.draft}
           onChange={event => pad.handleEditChange(event.value ?? "")}
           onSubmit={pad.commitEditing}
-          onFocus={info.onFocus}
+          onFocus={() => {
+            textFocus.onFocus()
+            info.onFocus()
+          }}
           onBlur={() => {
+            textFocus.onBlur()
             info.onBlur()
             pad.commitEditing()
           }}

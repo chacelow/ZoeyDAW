@@ -1,6 +1,48 @@
+import { writeFileSync } from "node:fs"
 import path from "node:path"
 
 process.env.LANE_REACT_PROFILE = "1"
+
+const measureLogPath = process.env.LANE_MEASURE_LOG
+if (measureLogPath) {
+  const measurements = new Map<
+    string,
+    { calls: number; ms: number; maxMs: number; properties: number }
+  >()
+  const measure = performance.measure.bind(performance)
+  performance.measure = (...args: Parameters<typeof performance.measure>) => {
+    const before = performance.now()
+    try {
+      return measure(...args)
+    } finally {
+      const elapsed = performance.now() - before
+      let properties = 0
+      const options: unknown = args[1]
+      if (options && typeof options === "object" && "detail" in options) {
+        const detail = options.detail
+        if (detail && typeof detail === "object" && "devtools" in detail) {
+          const devtools = detail.devtools
+          if (
+            devtools &&
+            typeof devtools === "object" &&
+            "properties" in devtools &&
+            Array.isArray(devtools.properties)
+          )
+            properties = devtools.properties.length
+        }
+      }
+      const entry = measurements.get(args[0]) ?? { calls: 0, ms: 0, maxMs: 0, properties: 0 }
+      entry.calls++
+      entry.ms += elapsed
+      entry.maxMs = Math.max(entry.maxMs, elapsed)
+      entry.properties += properties
+      measurements.set(args[0], entry)
+    }
+  }
+  process.once("exit", () =>
+    writeFileSync(measureLogPath, `${JSON.stringify(Object.fromEntries(measurements), null, 2)}\n`)
+  )
+}
 
 const probes = [
   {
@@ -13,7 +55,7 @@ const probes = [
     file: "ClipCard.tsx",
     imports: 'import { recordClipRender } from "./verification/profile-counters"\n',
     from: "  const theme = useTheme()",
-    to: "  recordClipRender(track.id, card.clip.id)\n  const theme = useTheme()",
+    to: "  recordClipRender(card.clip.id)\n  const theme = useTheme()",
   },
   {
     file: "WaveformPreview.tsx",

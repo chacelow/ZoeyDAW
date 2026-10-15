@@ -1,0 +1,6 @@
+Command: bun test src/app --timeout 30000
+ 49 pass
+ 0 fail
+ 1383 expect() calls
+Ran 49 tests across 8 files. [12.99s]
+Wall time: 13.05 seconds

@@ -10,7 +10,12 @@ import {
   serializeProject,
 } from "../../../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
-import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP, TRACK_LAYOUT } from "../../../../layout"
+import {
+  COLLAPSED_TRACK_HEIGHT,
+  CONTROLS_WIDTH,
+  TRACK_RESIZE_STEP,
+  TRACK_LAYOUT,
+} from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
 import { trackResources } from "../locales"
@@ -52,7 +57,11 @@ function Surface({
   readonly renderLane?: TrackRowsProps["renderLane"]
 }) {
   const size = useWindowSize()
-  const acceptedViewport = { ...view, ...size }
+  const acceptedViewport = {
+    ...view,
+    width: Math.max(0, size.width - CONTROLS_WIDTH),
+    height: size.height,
+  }
   const document = useProjectState(state => state.document)
   const scene = {
     ...createSceneStore().get(),

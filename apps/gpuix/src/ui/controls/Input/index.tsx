@@ -1,6 +1,7 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
 import { stopTextShortcutPropagation } from "../keyboard"
+import { useTextFocusBinding } from "../ControlEnvironment"
 import type { InputProps as NativeInputProps } from "@gpuix/react"
 
 export interface InputProps extends NativeInputProps {
@@ -15,28 +16,31 @@ export function Input({
   onValueChange,
   onChange,
   onKeyDown,
+  onFocus,
+  onBlur,
   readOnly,
   style,
   ...props
 }: InputProps) {
   const theme = useTheme()
+  const textFocus = useTextFocusBinding(!disabled)
   const variants = sv({
     base: {
       height: theme.control["--spacing-control-track"],
       fontSize: theme.control["--text-control-track"],
       color: theme.colors.foreground,
       backgroundColor: theme.colors.background,
-      borderWidth: 1,
+      borderWidth: theme.design.shape.controlBorderWidth,
       borderColor: theme.colors.input,
-      borderRadius: 3,
-      paddingLeft: 6,
-      paddingRight: 6,
+      borderRadius: theme.design.shape.controlRadius,
+      paddingLeft: theme.design.input.paddingInline,
+      paddingRight: theme.design.input.paddingInline,
       minWidth: 0,
       keyboardFocusDim: false,
       focusVisible: {
-        outlineWidth: 1,
+        outlineWidth: theme.design.shape.focusRingWidth,
         outlineColor: theme.colors.ring,
-        outlineOffset: -1,
+        outlineOffset: -theme.design.shape.focusRingWidth,
       },
     },
     variants: {
@@ -65,9 +69,17 @@ export function Input({
         }),
         style
       )}
+      onFocus={event => {
+        textFocus.onFocus()
+        onFocus?.(event)
+      }}
+      onBlur={event => {
+        textFocus.onBlur()
+        onBlur?.(event)
+      }}
       onKeyDown={event => {
         onKeyDown?.(event)
-        if (!disabled && !readOnly) stopTextShortcutPropagation(event)
+        if (!disabled) stopTextShortcutPropagation(event)
       }}
       onChange={event => {
         if (disabled || readOnly) return

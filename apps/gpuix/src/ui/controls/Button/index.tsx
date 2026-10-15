@@ -76,6 +76,41 @@ export function Button({
     onActiveChange?.(!active)
     onClick?.(event)
   }
+  const baseStyle = sx(
+    controlChrome(
+      theme,
+      size
+    )({
+      active: active ? "on" : "off",
+      highlight: highlight ? "on" : "off",
+      disabled: disabled ? "on" : "off",
+      iconOnly: iconOnly ? "on" : "off",
+    }),
+    !active && appearances({ variant }),
+    activeDestructive && {
+      backgroundColor: destructiveBackground,
+      color: theme.colors.destructive,
+      hover: { backgroundColor: destructiveHighlight, color: theme.colors.destructive },
+      active: { backgroundColor: destructiveHighlight, color: theme.colors.destructive },
+      focusVisible: {
+        borderColor: colorMix(theme.colors.destructive, 40, "transparent"),
+        outlineWidth: theme.design.shape.focusRingWidth,
+        outlineColor: colorMix(
+          theme.colors.destructive,
+          theme.appearance === "dark" ? 40 : 20,
+          "transparent"
+        ),
+        outlineOffset: -theme.design.shape.focusRingWidth,
+      },
+    }
+  )
+  const disabledPaint = disabled
+    ? {
+        backgroundColor: baseStyle.backgroundColor,
+        color: baseStyle.color,
+        borderColor: baseStyle.borderColor,
+      }
+    : undefined
   return (
     <div
       {...props}
@@ -85,35 +120,7 @@ export function Button({
       aria-disabled={disabled}
       aria-pressed={onActiveChange ? active : undefined}
       aria-label={onActiveChange && name ? `${name} (${active ? "on" : "off"})` : name}
-      style={sx(
-        controlChrome(
-          theme,
-          size
-        )({
-          active: active ? "on" : "off",
-          highlight: highlight ? "on" : "off",
-          disabled: disabled ? "on" : "off",
-          iconOnly: iconOnly ? "on" : "off",
-        }),
-        !active && appearances({ variant }),
-        activeDestructive && {
-          backgroundColor: destructiveBackground,
-          color: theme.colors.destructive,
-          hover: { backgroundColor: destructiveHighlight, color: theme.colors.destructive },
-          active: { backgroundColor: destructiveHighlight, color: theme.colors.destructive },
-          focusVisible: {
-            borderColor: colorMix(theme.colors.destructive, 40, "transparent"),
-            outlineWidth: 1,
-            outlineColor: colorMix(
-              theme.colors.destructive,
-              theme.appearance === "dark" ? 40 : 20,
-              "transparent"
-            ),
-            outlineOffset: -1,
-          },
-        },
-        style
-      )}
+      style={sx(baseStyle, disabled && { hover: disabledPaint, active: disabledPaint }, style)}
       onClick={activate}
       onKeyDown={event => {
         onKeyDown?.(event)

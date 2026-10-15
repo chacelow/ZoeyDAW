@@ -84,19 +84,19 @@ export function DropdownButton<T extends string = string>({
     metrics["--spacing-control-icon"] +
     metrics["--spacing-control-gap"] * 2 +
     (icon ? metrics["--spacing-control-icon-slot"] : 0) +
-    2
+    theme.design.shape.controlBorderWidth * 2
   const display = renderValue ? renderValue(selected) : (selected?.label ?? value)
   const contentStyle: StyleDesc = {
     minWidth: matchTriggerWidth ? width : theme.project.dropdownMinWidth,
     maxWidth: 320,
     maxHeight: 300,
     overflowY: "scroll",
-    padding: metrics["--spacing-control-track-gap"],
+    padding: theme.design.menu.inset,
     display: "flex",
     flexDirection: "column",
-    borderWidth: 1,
+    borderWidth: theme.design.menu.borderWidth,
     borderColor: theme.colors.border,
-    borderRadius: 4,
+    borderRadius: theme.design.menu.radius,
     backgroundColor: theme.colors.popover,
   }
   return (
@@ -184,7 +184,7 @@ export function DropdownButton<T extends string = string>({
                 style={{
                   fontSize: metrics["--text-control-track"],
                   color: theme.colors.mutedForeground,
-                  padding: metrics["--spacing-control-track-gap"],
+                  padding: theme.design.menu.selectItemInset,
                 }}
               >
                 <text>{item.label}</text>
@@ -204,7 +204,7 @@ export function DropdownButton<T extends string = string>({
                 display: "flex",
                 flexDirection: "row",
                 justifyContent: "space-between",
-                padding: metrics["--spacing-control-track-gap"],
+                padding: theme.design.menu.selectItemInset,
                 gap: metrics["--spacing-control-gap"],
                 minHeight: metrics["--spacing-control-track"],
                 whiteSpace: "normal",

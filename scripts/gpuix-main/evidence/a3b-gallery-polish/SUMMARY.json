@@ -1,0 +1,1101 @@
+{
+  "acceptance": "Combined Gallery review; no per-control screenshot matrix",
+  "provenance": {
+    "capturedUtc": "2026-10-15T13:35:01.574Z",
+    "repositoryHead": "66f9ce988f79af9ffae882a9342d18c3f24a944b",
+    "repositoryDiffSha256": "54ef3a1fbb27337d95d6b02f06fc38693a05c01c2dfce13a069927daac96cbb3",
+    "sourceFiles": {
+      "apps/gpuix/src/gallery/states.tsx": "c2f4b1e03bfd17509e50f3f74fc10d8e3f4a987b38dbfd85a10d24e679c0da4c",
+      "apps/gpuix/src/gallery/controls.tsx": "fb31e52b0f7576a70656080ce16f3e8c6ee4f39ea7babb9e38f720ff8fdf7816",
+      "apps/gpuix/src/gallery/GalleryDemo.tsx": "91e9585b9373e5fb8e5f5207dc9ba679b4bdd43736316cf29e93eefea6e4a4a6",
+      "apps/gpuix/src/gallery/GalleryCard.tsx": "3c0e0ea69d6141f6dc34ec78bf3a8743d15fd9b6c3bca11a56c7d0f9b80c3320",
+      "apps/gpuix/src/gallery/GalleryMenus.tsx": "2dc76ce8971caa3f96617ab5bdbe32b7f199f911cce0bde6ec210f144a2dd4b7",
+      "apps/gpuix/src/gallery/GalleryExamples.tsx": "f077c040a4c78b9bbee610cbe0c9b601e0f48e7ea36387fc0a5f069c70c38eb6",
+      "apps/gpuix/src/gallery/design-preview.ts": "a2fc5f40fa2b401df64485d6073711d2a2448bc5eb62776002ffa187a850d62f",
+      "apps/gpuix/src/gallery/verification/evidence.tsx": "c80faea4a0249942e75330ffdae5530d84c236a22eb9ea896081362e332cf1fa",
+      "apps/gpuix/src/gallery/evidence-binding.ts": "1e4fcf73b464cef6d791fdd992d238f3fd1c47431a213a258eb5842fa0410731",
+      "apps/gpuix/src/gallery/evidence-provenance.ts": "f09ec44caedffbc61b63cc771b08f5edac6f56b0ee33cb7a55776f6743ea1dd9",
+      "apps/gpuix/src/shared/theme/ThemeProvider.tsx": "1af505856d88007d54eeb25bb4fbab73bcac0cb49441294e9800520a25abd6db",
+      "apps/gpuix/src/shared/theme/design-tokens.ts": "74c8529e206b417b64aa88e34e0d616cdb3b8c03660f60ec192576bd5aa622ed",
+      "apps/gpuix/src/ui/controls/chrome.ts": "7c55076afd6c3d23d3713b9cc8d22c4a6130b3d47d62e5f6f5073400754a8649",
+      "apps/gpuix/src/ui/controls/Card/index.tsx": "0209877b1a0636151d87c9f0fb94c90e0df55c9505c63c7ccbe87ff1d3470a83",
+      "apps/gpuix/src/ui/controls/ControlGroup/index.tsx": "c61cea177f9145585584aff157c241719332f1679bcfb17d8df9df6a1276a105",
+      "apps/gpuix/src/ui/controls/Input/index.tsx": "a7db7198fa02263ea19d9f0c0650bbc53d180d0bc97b9b61b4d12f063fda43cc",
+      "apps/gpuix/src/ui/controls/DragPad/DragPadNumber.tsx": "373d91fc00a8c9736c98db7e914b2514c9f12dddc928e0b2c4dca4f938da49e2",
+      "apps/gpuix/src/ui/controls/DropdownButton/index.tsx": "1565ae9d4e7494ef1993daa5de6e4bf84e59347d6d9b71e924457a03cf3d0422",
+      "apps/gpuix/src/ui/controls/ListRow/index.tsx": "b1edfe4d831d5114ebfd15ff25c45f091f3479faf516eb61bd2c9efe5e961838",
+      "apps/gpuix/src/ui/controls/ScrollArea/index.tsx": "5659fa4a536e9301eb09a9ecc0796836d7999cce8a3204b5051117d0c927abf3",
+      "apps/gpuix/src/ui/controls/ScrollArea/ControlledScrollbar.tsx": "b226ead598a5d1f8ffc36d920162da7d8de6d54e0c5f13bd2b80a59e62257f9f",
+      "apps/gpuix/src/ui/controls/Button/index.tsx": "526d307f971be3d04a9741ddcdef707c7bb92e76f547515eabb3bc2970b96518",
+      "apps/gpuix/src/ui/controls/ToggleGroup/index.tsx": "39877f0e8464c99ddb3f5ce3606ad9ed76f54e0c9ffe2a95a1f5478da0de3624",
+      "apps/gpuix/src/ui/controls/MotionTabs/index.tsx": "479b1e143dee9f1f6e0822d8d0e8dde28f3e8bd1597b20f03d9c832e798f5d8a",
+      "apps/gpuix/src/ui/controls/SettingsShell/index.tsx": "069a086a71c5e476f038ab91ceb8c7117760f3c27596715b022f11dfba61416a",
+      "apps/gpuix/src/ui/controls/Menu/index.tsx": "7ab45afce419e6e88c59827582d148a2d16a7a4c0d27456922aaaac87409ccd3",
+      "apps/gpuix/src/ui/controls/Menu/content.tsx": "cacd359ca5e8171f6b2d03f050b608cf7dd58693a0d2e814c31335bffba77d31",
+      "apps/gpuix/src/ui/controls/Menu/trigger.tsx": "ec77645392e0db2d8ed0dfc4812d66044d7bc5d6578358e058e1508ba498b094",
+      "apps/gpuix/src/ui/controls/Popover/index.tsx": "276c43d76839e5adea088815b6d0283fcc1da5077c738e79ac6acdb75eb6c197",
+      "apps/gpuix/src/ui/panels/PanelShell/index.tsx": "c473dd78de19493a7f19527535ef9fc53c4225e02b65ccc70af6c47ffd10da8e"
+    },
+    "rendererSourceRevision": "6a5c7c142ac32f9eb0caefe0121be995cfc18631",
+    "zedRevision": "c2e9f882030ca95cee55d206512a0a3ee6cd72b0",
+    "rendererNative": {
+      "path": "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/packages/native/gpuix-native.darwin-arm64.node",
+      "sha256": "f88985db8a8c3b49af2ae736052e5eb4f0db37bf25bd74fc9cb24e926b759a1d",
+      "proof": "TestRenderer imports @gpuix/native.TestGpuixRenderer; its constructor is identical to the constructor directly loaded from this realpath",
+      "constructorIdentityMatched": true
+    },
+    "nativeLoaderResolved": "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/packages/native/index.js",
+    "runtime": {
+      "packages/react/dist/index.js": "7944f238836b81d381fb8fe564d1f56fee5bf0777c28beb9a4624e14f7e9b3a3",
+      "packages/react/dist/testing.js": "f574bbe5d4d75d15c539a87be8f3567f617fb2c275c46b7a4d41b244a880ee3c",
+      "packages/native/dist/host.js": "3cc5ae6979ae76ad90d59bc2eb54e293cee28c817c0379f72851aa5787d3fa6c",
+      "packages/native/dist/testing.js": "cfed38011ee7c4b80911e1b64c64eb71e8c001211949393e7ccac3a3e9f33764"
+    },
+    "patches": [
+      {
+        "name": "close-guard.patch",
+        "sha256": "4ea0d7d85148b369e7ba39716f53876c9730d66c5af4bdcb86746cf80fb9966d"
+      },
+      {
+        "name": "frame-callback.patch",
+        "sha256": "b4c7556c855b5069e04b0bd6409ab25ac0d6796f26f596e36071519655814d03"
+      },
+      {
+        "name": "input-select-all-on-focus.patch",
+        "sha256": "f3e94f831cd6e99dfee1870549d0a2c4c86ad5f630cb357f00170143a465862c"
+      },
+      {
+        "name": "anchored-center.patch",
+        "sha256": "97f8929769c5ec29e7458877e7b7ada5ccd11df1d6bcc41f43f11c728cc5f5c4"
+      },
+      {
+        "name": "select-trigger-space.patch",
+        "sha256": "d8396aa81ea76a69022616a985b5a91132e70c836fb9b5bcf0eb584abfb8f5fc"
+      },
+      {
+        "name": "window-active-change.patch",
+        "sha256": "09b4267e192cad6a96a2bf807e1fa2ecb97226e63265086d407bef446d9fe707"
+      },
+      {
+        "name": "window-appearance-close.patch",
+        "sha256": "ae02a3fdc988911b195744966ab84dea56a8e3f320e67fc8cd17bea9a4a988b6"
+      },
+      {
+        "name": "context-menu.patch",
+        "sha256": "0ccd768609d0627b4dc82a07e16e0aabb9c337ea4565511c6f8fd7b15f428f8d"
+      },
+      {
+        "name": "quad-batch.patch",
+        "sha256": "89895d324c09479ac14e0fd34a3ccadd5f040396130707817be74c83e3d1acd9"
+      },
+      {
+        "name": "autofocus-focus-event.patch",
+        "sha256": "61466c01374135b441724545ad708aa7c8e8a9147584710f176e4595e5c99f53"
+      },
+      {
+        "name": "resume-frame.patch",
+        "sha256": "d9340e770ed1b4887142aab2c59b0572db3a76f89a966db73f0d0482cacf995b"
+      }
+    ],
+    "layer": "native offscreen GPU composition; no host window or OS input; cursorLock capability not injected",
+    "limits": [
+      "Overview and geometry/state checks do not replace coordinator review in the real composition Gallery",
+      "Physical held mouse and system cursor anchoring are not proved by headless rendering"
+    ]
+  },
+  "captures": [
+    {
+      "key": "default--dark--en",
+      "screenshot": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/default--dark--en.png",
+      "sha256": "f7b1e3d6d3760bb60f98680e9e57bda3b1f52644abaaee8dbef827b2d0126918",
+      "metadata": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/default--dark--en.json",
+      "visualReview": "Coordinator must inspect the real combined Gallery; file count and assertions are not visual approval"
+    },
+    {
+      "key": "flat--dark--en",
+      "screenshot": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/flat--dark--en.png",
+      "sha256": "1e2605429ca55c0decc7437f7752d3df92d1a05de1b66e600e16f55311a22f37",
+      "metadata": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/flat--dark--en.json",
+      "visualReview": "Coordinator must inspect the real combined Gallery; file count and assertions are not visual approval"
+    },
+    {
+      "key": "spacious--dark--en",
+      "screenshot": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/spacious--dark--en.png",
+      "sha256": "62094e01d57f579716f63e68b1f14d249bb73dca54b003c8efd2667c06538e78",
+      "metadata": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/spacious--dark--en.json",
+      "visualReview": "Coordinator must inspect the real combined Gallery; file count and assertions are not visual approval"
+    },
+    {
+      "key": "default--dark--zh",
+      "screenshot": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/default--dark--zh.png",
+      "sha256": "3de4ed4d5e03379165d399a9156389d1096b36b5c7735eb92b7a292e264aad93",
+      "metadata": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/default--dark--zh.json",
+      "visualReview": "Coordinator must inspect the real combined Gallery; file count and assertions are not visual approval"
+    },
+    {
+      "key": "default--light--en",
+      "screenshot": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/default--light--en.png",
+      "sha256": "71cae22f83021bde77b882d163931cbb4b3a8daeee3cb4492b2feb68967e82ad",
+      "metadata": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/default--light--en.json",
+      "visualReview": "Coordinator must inspect the real combined Gallery; file count and assertions are not visual approval"
+    },
+    {
+      "key": "default--light--zh",
+      "screenshot": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/default--light--zh.png",
+      "sha256": "dc63b582dc0d17b2f2bb7727fbc9fcdfd234376fa21483eb328bfb17023072da",
+      "metadata": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/zoeydaw-a3-composition-JPogno/default--light--zh.json",
+      "visualReview": "Coordinator must inspect the real combined Gallery; file count and assertions are not visual approval"
+    }
+  ],
+  "measurements": [
+    {
+      "key": "default--dark--en",
+      "invariant": "Card group gap",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "Root inset",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "Card width",
+      "actual": 304,
+      "expected": 304,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-button height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-button actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-icon height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-number height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-transport-number height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-transport-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-transport-icon height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-transport-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-icon square",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "gallery-transport-icon square",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "Input inline padding",
+      "actual": 6,
+      "expected": 6,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--en",
+      "invariant": "Disclosure vertical center",
+      "actual": 102.5,
+      "expected": 102.5,
+      "tolerance": 1,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "Card group gap",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "Root inset",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "Card width",
+      "actual": 304,
+      "expected": 304,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-button height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-button actual border token",
+      "actual": 0,
+      "expected": 0,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-icon height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-icon actual border token",
+      "actual": 0,
+      "expected": 0,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-number height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-number actual border token",
+      "actual": 0,
+      "expected": 0,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-transport-number height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-transport-number actual border token",
+      "actual": 0,
+      "expected": 0,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-transport-icon height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-transport-icon actual border token",
+      "actual": 0,
+      "expected": 0,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-icon square",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "gallery-transport-icon square",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "Input inline padding",
+      "actual": 6,
+      "expected": 6,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "flat--dark--en",
+      "invariant": "Disclosure vertical center",
+      "actual": 101.5,
+      "expected": 101.5,
+      "tolerance": 1,
+      "pass": true
+    },
+    {
+      "key": "design-linkage",
+      "invariant": "Numeric width removes actual two borders",
+      "actual": 2,
+      "expected": 2,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "Card group gap",
+      "actual": 14,
+      "expected": 14,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "Root inset",
+      "actual": 14,
+      "expected": 14,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "Card width",
+      "actual": 304,
+      "expected": 304,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-button height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-button actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-icon height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-number height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-transport-number height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-transport-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-transport-icon height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-transport-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-icon square",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "gallery-transport-icon square",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "Input inline padding",
+      "actual": 12,
+      "expected": 12,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "spacious--dark--en",
+      "invariant": "Disclosure vertical center",
+      "actual": 129.5,
+      "expected": 129.5,
+      "tolerance": 1,
+      "pass": true
+    },
+    {
+      "key": "numeric-edit",
+      "invariant": "Editing shell width stays stable",
+      "actual": 34,
+      "expected": 34,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "numeric-edit",
+      "invariant": "Enter commits real value",
+      "actual": 240,
+      "expected": 240,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "numeric-edit",
+      "invariant": "Transport shares actual parameter",
+      "actual": 240,
+      "expected": 240,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "numeric-edit",
+      "invariant": "Escape restores pre-edit value",
+      "actual": 240,
+      "expected": 240,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "disclosure",
+      "invariant": "Collapsed Card has only header and shared insets",
+      "actual": 25,
+      "expected": 25,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "disclosure",
+      "invariant": "Reopen preserves owner parameter",
+      "actual": 240,
+      "expected": 240,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "Card group gap",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "Root inset",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "Card width",
+      "actual": 304,
+      "expected": 304,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-button height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-button actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-icon height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-number height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-transport-number height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-transport-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-transport-icon height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-transport-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-icon square",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "gallery-transport-icon square",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "Input inline padding",
+      "actual": 6,
+      "expected": 6,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--dark--zh",
+      "invariant": "Disclosure vertical center",
+      "actual": 102.5,
+      "expected": 102.5,
+      "tolerance": 1,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "Card group gap",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "Root inset",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "Card width",
+      "actual": 304,
+      "expected": 304,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-button height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-button actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-icon height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-number height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-transport-number height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-transport-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-transport-icon height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-transport-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-icon square",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "gallery-transport-icon square",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "Input inline padding",
+      "actual": 6,
+      "expected": 6,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--en",
+      "invariant": "Disclosure vertical center",
+      "actual": 102.5,
+      "expected": 102.5,
+      "tolerance": 1,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "Card group gap",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "Root inset",
+      "actual": 7,
+      "expected": 7,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "Card width",
+      "actual": 304,
+      "expected": 304,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-button height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-button actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-icon height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-number height",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-transport-number height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-transport-number actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-transport-icon height",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-transport-icon actual border token",
+      "actual": 1,
+      "expected": 1,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-icon square",
+      "actual": 13,
+      "expected": 13,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "gallery-transport-icon square",
+      "actual": 20,
+      "expected": 20,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "Input inline padding",
+      "actual": 6,
+      "expected": 6,
+      "tolerance": 0.02,
+      "pass": true
+    },
+    {
+      "key": "default--light--zh",
+      "invariant": "Disclosure vertical center",
+      "actual": 102.5,
+      "expected": 102.5,
+      "tolerance": 1,
+      "pass": true
+    },
+    {
+      "key": "lifecycle",
+      "invariant": "Retained nodes after unmount",
+      "actual": 0,
+      "expected": 0,
+      "tolerance": 0.02,
+      "pass": true
+    }
+  ],
+  "operations": [
+    {
+      "key": "dark-en",
+      "numericEdit": "240 committed and shared; Escape cancelled next edit",
+      "disclosure": "closed body unmounted and reopened",
+      "scrollOffset": [0, -32]
+    }
+  ],
+  "errors": [],
+  "desktop": {
+    "leaseStartUtc": "2026-10-15T12:00:04Z",
+    "leaseDeadlineUtc": "2026-10-15T12:15:04Z",
+    "inputOwner": "coordinator",
+    "workerInput": false,
+    "service": "a3-composition-review-bg",
+    "pid": 59868,
+    "closedUtc": "2026-10-15T12:13:41.239Z",
+    "checkedPids": [59868, 52582],
+    "psStdout": "",
+    "psStderr": "",
+    "psExitCode": 1,
+    "limit": "OS screenshots black while occluded; coordinator used real-window automation geometry and native GPU overviews",
+    "rendererSha256": "f88985db8a8c3b49af2ae736052e5eb4f0db37bf25bd74fc9cb24e926b759a1d"
+  },
+  "gates": {
+    "fullTypecheck": "passed",
+    "fullBun": {
+      "pass": 1120,
+      "todo": 1,
+      "fail": 0,
+      "files": 172
+    },
+    "affectedBun": {
+      "pass": 66,
+      "fail": 0,
+      "files": 5
+    },
+    "fullEslint": "passed",
+    "resolution": "eleven ordered patches verified",
+    "scanner": {
+      "command": "node scripts/gpuix-review-scan.mjs 66f9ce9",
+      "sourceFiles": 34,
+      "testFiles": 5,
+      "hard": 0,
+      "warn": 4,
+      "warnings": [
+        {
+          "file": "apps/gpuix/src/gallery/controls.tsx",
+          "kind": "px-literal",
+          "disposition": "Coordinator-approved fixed native review viewport 1050x780"
+        },
+        {
+          "file": "apps/gpuix/src/gallery/verification/evidence.tsx",
+          "kind": "px-literal",
+          "disposition": "Matching native verification viewport, not product-control geometry"
+        },
+        {
+          "file": "apps/gpuix/src/shared/theme/design-tokens.ts",
+          "kind": "px-literal",
+          "disposition": "Canonical approved semantic-token defaults; preserves original Card gap16"
+        },
+        {
+          "file": "apps/gpuix/src/ui/controls/SettingsShell/index.tsx",
+          "kind": "px-literal",
+          "disposition": "Unchanged legacy dialog layout720x520; outside appearance-only migration"
+        }
+      ]
+    }
+  }
+}

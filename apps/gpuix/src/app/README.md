@@ -1,6 +1,6 @@
 # 应用外壳
 
-`src/main.tsx` 是原生应用入口。首页、单工程页、404、路由错误兜底、设置对话框都在 `app/`。本阶段不挂 Arrangement、Transport、Browser、Footer、Status 的内容。
+`src/main.tsx` 是原生应用入口。首页、单工程页、404、路由错误兜底、设置对话框都在 `app/`。工程页装配真实 Arrangement、Transport、Browser、Footer 与 Status，不保留空槽默认入口。
 
 ## 状态与生命周期
 
@@ -13,6 +13,8 @@
 | 面板激活、Browser handle、Footer view 与折叠 | `project/useProjectShell` | 随工程视图卸载 |
 | 帧源、窗口激活、光标能力 | `NativeRoot` 绑定当前 renderer | Provider 与订阅各自退订，不新增动画定时链 |
 | 未保存关闭判定 | `window/useUnsavedCloseGuard` | 旧 predicate 在卸载后放行，不再修改 React 状态 |
+| Arrangement scene、timeline 与 lane controller | `project/createProjectComposition` | 工程视图卸载时 dispose，取消手势并退订窗口与工程 |
+| 文本焦点 lease、ModalDialog 打开状态 | `AppInteractionProvider` | Input 与实际数值编辑框的原生 focus/blur/unmount，ModalDialog 的 open/unmount |
 
 `project/adapters/context.ts` 已注册真实 native backend 工厂。入口不再注册第二个，也不在模块初始化时打开会话。入口只安装 `createSnapshotStorage()`，供快照和最近工程列表使用。
 
@@ -27,11 +29,11 @@
 - `ModalDialog` 是应用内唯一的模态包裹。设置和未保存关闭提示都使用它。所有弹层必须留在 `AppFrame` 这个唯一根 host 节点内；gpuix 的窗口 container 不支持并列根 host 节点。
 - 原 Web 日志页仍是说明文字。本阶段初始化真实日志 sink，但不增加原 Web 没有的日志管理交互。
 
-## 空槽接口
+## 工程组合
 
-`ProjectPage.renderSlots(shell)` 返回 `ProjectLayoutSlots`。每个槽的值是 `ReactNode`。传 `null` 不显示占位文字或虚构面板。
+`ProjectSections` 用 `ProjectLayoutSlots` 装配 sections。`ProjectLayout` 只管理面板几何与激活外观，不持有第二份工程或视口。Browser 最小宽度直接取 `theme.project.browserNavigationWidth` 与 `browserResultsWidth`。
 
-| 槽 | 第二阶段内容 | 所需 shell 接口 |
+| 槽 | 内容 | 所需 shell 接口 |
 | --- | --- | --- |
 | `transport` | `TransportBar` | `toggleBrowser`，组合根路由返回命令 |
 | `browser` | `BrowserPanel` | `browserHandleRef` 由外层 Panel 持有 |
@@ -41,17 +43,19 @@
 
 Footer 按新切片契约二选一显示 Affect Chain 或 Clip Edit，不迁 Web 可同时打开两者的 `detail-view`。Clip Edit 用垂直 Group 连续调整高度。Affect Chain 在 Group 外按 Footer 自身固定高度显示。切换时 Browser 与 Arrangement 的树位置不变。
 
-`usePlaybackKey` 只服务第一阶段空 Arrangement。第二阶段挂 `createTimelineController` 时删除它，由 timeline 唯一处理 Space，避免双 owner。模态对话框打开期间不订阅这条播放快捷键。
+Clip slot 的唯一类型由 `clip-edit` 定义，只含 `clipId`、`trackId`、`close`。app 显式消费这三项，编辑器自行订阅权威 store；不传完整 clip/track 或 notes 数组，不留旧对象 props 兼容。
 
-## 尚待组合根收敛的部分
+`createProjectComposition` 只创建一个 `createTimelineController`，后者持有唯一 timeline keyboard。lane 的 `markDrawModeGesture` 接该 keyboard 的 `markDrawGesture`。`ArrangementTimeline` 注册窗口键盘，lane 在元素阶段消费的事件不会再次到达窗口 owner。旧 `usePlaybackKey` 已删除。
 
-| 文件 | 原因 | 删除条件 |
-| --- | --- | --- |
-| `project/layout-constraints.ts` 的 `PENDING_BROWSER_COLUMNS` | Footer 的 Browser 两列 token 尚未合入 | Footer token 合入后读取 `theme.project` |
+`ArrangementPanel` 将同一个 scene 与 viewport 传给 TrackRows 和 LaneRow，`TrackRows.renderLane` 放置每行车道，`LaneOverlay` 单次挂载。峰值、telemetry、走带位置分别来自 adapters 的 `readProjectPeaks`、`readProjectTelemetry`、`readTransportBar`，均使用 ProjectPage 的同一个 backend session。
 
-H1 的两个临时文件 `settings/theme-mode-setting.ts` 和 `window/close-guard-port.ts` 已删除。模式和关闭都直接消费平台端口。
+文本焦点由 `ControlEnvironment.textFocus` 的 lease 读取，模态状态只由 app `ModalDialog` 报告。全局 Cmd/Ctrl+F 在组合根检查已消费事件、modal 与 Browser 的实际折叠状态，再调用 `BrowserPanelHandle.focusSearch()`。Clip editor 通过共享 `keystrokeId` 标记自己的键盘区域，不把未消费的 A/M 等发送给 Arrangement 命令。Space 后焦点回到工程 host，不保留按钮的按下行为。
 
-窗口返回首页入口在第二阶段由 TransportBar 提供。本阶段不增加额外标题栏按钮。
+`NativeRoot` 为整个应用提供同一个 renderer 的唯一 `AnimationFrameProvider`、`nativeCursorLock` 与原生窗口激活端口。Footer 和 Transport 的 reduced motion 直接读取 platform/window，不增加定时链。Transport 的 Back 回到首页并释放 ProjectPage lease。
+
+帧需求由 `playing`、lane 的真实 `dragActive` 与 timeline 的 autoScroll 活动共同派生，经稳定的 external-store 订阅通知组合根。停止且无手势时取消 native frame 订阅，播放或手势开始时恢复；不缓存第二份可写需求状态，不轮询 pointer。只读 Input 仍是文本焦点，不能把 A/M 或 Cmd+A 送给 Arrangement。
+
+普通帧继续使用 `useAnimationFrame`。同一个 source 的 `useResumeFrame` 使用同一需求谓词，在原生 prepaint 中显式 `flushSync` 执行同一个 `composition.tick`，使首次恢复 present 使用最新视口。无需求时两类订阅都释放，不另建 source 或 timer。
 
 ## 验证入口
 
@@ -59,8 +63,12 @@ H1 的两个临时文件 `settings/theme-mode-setting.ts` 和 `window/close-guar
 pnpm native:build
 pnpm exec tsc --noEmit -p apps/gpuix
 cd apps/gpuix
-bun test src/app
+bun test src/app --timeout 30000
 bun --hot src/main.tsx
 ```
 
-`bun apps/gpuix/src/app/verification/mutations.mjs` 会先跑 app 基线，再执行 13 个行为变异，最后恢复每个文件。真实后端 lease 测试需要可用音频设备，没有设备会失败，不跳过。视觉与迁移报告见 `report.md`。
+`bun apps/gpuix/src/app/verification/mutations.mjs` 跑 app 基线与行为变异，并在每次变异后恢复源码。真实后端 lease 测试需要可用音频设备，没有设备会失败，不跳过。`verification/native-fixture.ts` 是真实 main 的隔离验证 preload，要求 `B2_EVIDENCE_DIR` 指向临时目录，配合临时 HOME 避免改用户配置。第一阶段历史报告见 `report.md`，阶段2验收与限制见 `phase2-report.md`。
+
+变异脚本可接名字子串，例如 `bun apps/gpuix/src/app/verification/mutations.mjs "lane draw"`。过滤执行先验证该项的真实行为基线；不传过滤参数时仍先跑完整 app 基线。
+
+`verification/resume-smoke.tsx` 配合 `native-fixture.ts` preload 可重跑实际 AppShell、真实 NativeBackend 与离屏 GPUI 的恢复提交。要求 `B2_EVIDENCE_DIR` 指向已创建的临时目录，配置/存储也限定在该目录；建议同时隔离 HOME。它手动投递 frame host 的 resume 事件，不替代真实桌面 occlusion 评审。

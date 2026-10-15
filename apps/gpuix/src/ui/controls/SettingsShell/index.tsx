@@ -35,26 +35,38 @@ export function SettingsNavItem({
     base: {
       display: "flex",
       alignItems: "center",
-      gap: 6,
+      gap: theme.design.settings.itemGap,
       height: theme.control["--spacing-control-track"],
       fontSize: theme.control["--text-control-track"],
       color: theme.colors.foreground,
-      paddingLeft: 8,
-      paddingRight: 8,
-      borderRadius: 3,
+      paddingLeft: theme.design.settings.paddingInline,
+      paddingRight: theme.design.settings.paddingInline,
+      borderRadius: theme.design.shape.controlRadius,
       cursor: "pointer",
       userSelect: "none",
       keyboardFocusDim: false,
       focusVisible: item.disabled
         ? undefined
-        : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+        : {
+            outlineWidth: theme.design.shape.focusRingWidth,
+            outlineColor: theme.colors.ring,
+            outlineOffset: -theme.design.shape.focusRingWidth,
+          },
     },
     variants: {
       selected: {
         true: { backgroundColor: theme.colors.primary, color: theme.colors.primaryForeground },
         false: { hover: { backgroundColor: theme.colors.muted } },
       },
-      disabled: { true: { opacity: 0.5, cursor: "not-allowed" }, false: {} },
+      disabled: {
+        true: {
+          opacity: 0.5,
+          cursor: "not-allowed",
+          hover: { backgroundColor: selected ? theme.colors.primary : "transparent" },
+          active: { backgroundColor: selected ? theme.colors.primary : "transparent" },
+        },
+        false: {},
+      },
     },
   })
   return (
@@ -144,9 +156,9 @@ export function SettingsShell({
           height: 520,
           backgroundColor: theme.colors.background,
           color: theme.colors.foreground,
-          borderWidth: 1,
+          borderWidth: theme.design.popover.borderWidth,
           borderColor: theme.colors.border,
-          borderRadius: 4,
+          borderRadius: theme.design.popover.radius,
           overflow: "hidden",
           keyboardFocusDim: false,
         },
@@ -162,13 +174,20 @@ export function SettingsShell({
           display: "flex",
           flexDirection: "row",
           alignItems: "center",
-          gap: 8,
-          padding: 12,
-          borderBottomWidth: 1,
+          gap: theme.design.settings.headerGap,
+          padding: theme.design.settings.headerInset,
+          borderBottomWidth: theme.design.popover.borderWidth,
           borderColor: theme.colors.border,
         }}
       >
-        <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+        <div
+          style={{
+            flexGrow: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: theme.design.settings.headerTextGap,
+          }}
+        >
           <div
             role="heading"
             aria-level={1}
@@ -203,11 +222,11 @@ export function SettingsShell({
             flexDirection: "column",
             width: navigationWidth,
             flexShrink: 0,
-            gap: 2,
-            padding: 8,
+            gap: theme.design.settings.navigationGap,
+            padding: theme.design.settings.navigationInset,
             overflowY: "auto",
             backgroundColor: theme.colors.editorShell,
-            borderRightWidth: 1,
+            borderRightWidth: theme.design.popover.borderWidth,
             borderColor: theme.colors.border,
           }}
         >
@@ -240,7 +259,15 @@ export function SettingsShell({
         <div
           role="tabpanel"
           aria-label={selected?.label}
-          style={sx({ flexGrow: 1, minWidth: 0, overflowY: "auto", padding: 16 }, contentStyle)}
+          style={sx(
+            {
+              flexGrow: 1,
+              minWidth: 0,
+              overflowY: "auto",
+              padding: theme.design.settings.contentInset,
+            },
+            contentStyle
+          )}
         >
           {renderPane ? renderPane(activeId) : (selected?.content ?? children)}
         </div>

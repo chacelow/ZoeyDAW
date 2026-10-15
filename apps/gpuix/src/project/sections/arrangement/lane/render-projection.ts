@@ -22,22 +22,33 @@ export interface VisibleRow extends TrackRow {
 
 export interface ClipCard {
   clip: Clip
+  fadeGeometry: ClipVisualGeometry | null
   geometry: ClipVisualGeometry
   ghost: boolean
   selected: boolean
   hovered: boolean
 }
 
-export type ClipCardProjector = (
+export type ClipCardProjector<T extends ClipCard> = (
   rect: ClipRect,
   ghost: boolean,
   selected: boolean,
   hovered: boolean,
   fadesVisible: boolean
-) => ClipCard
+) => T
 
-const freshCard: ClipCardProjector = (rect, ghost, selected, hovered, fadesVisible) => ({
+export function projectLocalFadeGeometry(
+  rect: ClipRect,
+  ghost: boolean,
+  fadesVisible: boolean
+): ClipVisualGeometry | null {
+  if (rect.clip.kind !== "audio" || ghost) return null
+  return clipVisualGeometry({ ...rect, left: 0 }, rect.clip, rect.track, fadesVisible)
+}
+
+const freshCard: ClipCardProjector<ClipCard> = (rect, ghost, selected, hovered, fadesVisible) => ({
   clip: rect.clip,
+  fadeGeometry: projectLocalFadeGeometry(rect, ghost, fadesVisible),
   geometry: clipVisualGeometry(rect, rect.clip, rect.track, fadesVisible),
   ghost,
   selected,
@@ -71,17 +82,17 @@ export function visibleClipCards(
   return projectVisibleClipCards(scene, row, automationMode, freshCard)
 }
 
-export function projectVisibleClipCards(
+export function projectVisibleClipCards<T extends ClipCard>(
   scene: ArrangementScene,
   row: TrackRow,
   automationMode: boolean,
-  project: ClipCardProjector
-): ClipCard[] {
+  project: ClipCardProjector<T>
+): T[] {
   const { width, pxPerBar, scrollX } = scene.viewport
   if (width <= 0 || pxPerBar <= 0 || row.track.kind === "group") return []
   const source =
     scene.clipDrag?.source.find(track => track.id === row.track.id)?.clips ?? row.track.clips
-  const cards: ClipCard[] = []
+  const cards: T[] = []
   for (const ghost of scene.clipDrag ? [false, true] : [false]) {
     for (const clip of ghost ? row.track.clips : source) {
       if (ghost && !scene.clipDrag?.ids.has(clip.id)) continue

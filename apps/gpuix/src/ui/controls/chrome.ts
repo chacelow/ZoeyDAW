@@ -18,8 +18,8 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
       gap: metrics["--spacing-control-gap"],
       paddingLeft: metrics["--spacing-control-track-pad"],
       paddingRight: metrics["--spacing-control-track-pad"],
-      borderRadius: 3,
-      borderWidth: 1,
+      borderRadius: theme.design.shape.controlRadius,
+      borderWidth: theme.design.shape.controlBorderWidth,
       borderColor: theme.colors.border,
       backgroundColor: theme.colors.muted,
       color: theme.colors.foreground,
@@ -28,9 +28,9 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
       userSelect: "none",
       keyboardFocusDim: false,
       focusVisible: {
-        outlineWidth: 1,
+        outlineWidth: theme.design.shape.focusRingWidth,
         outlineColor: theme.colors.ring,
-        outlineOffset: -1,
+        outlineOffset: -theme.design.shape.focusRingWidth,
       },
     },
     variants: {

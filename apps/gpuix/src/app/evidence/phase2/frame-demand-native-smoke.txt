@@ -1,0 +1,2 @@
+{"idleFrameDemand":false,"playing":{"frameDemand":true,"enginePlaying":true},"stopped":{"frameDemand":false,"enginePlaying":false}}
+released idle

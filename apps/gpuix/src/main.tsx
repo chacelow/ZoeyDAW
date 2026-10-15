@@ -19,7 +19,6 @@ import { NativeRoot } from "./app/NativeRoot"
 import { createRouter } from "./app/router/router"
 import { createPreferenceStore } from "./app/settings/preference-store"
 import { isThemeMode } from "./app/settings/theme-mode"
-import { emptyProjectSlots } from "./app/project/empty-slots"
 
 createLogPlatform().initialize()
 configureLogger({ sinks: [createNativeLogSink()] })
@@ -44,7 +43,6 @@ render(
       router={createRouter(process.env.ZOEYDAW_ROUTE ?? "/")}
       appearance={appearance}
       storage={storage}
-      renderProjectSlots={emptyProjectSlots}
       showErrorDetails={process.env.NODE_ENV !== "production"}
     />
   </WindowKeyboardProvider>,
