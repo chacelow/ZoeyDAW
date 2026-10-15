@@ -143,7 +143,7 @@ export default [
       "apps/gpuix/src/project/adapters/{clipboard-memory,snapshots}.ts",
       "apps/web/src/pages/project/sections/ArrangementPanel/{useGestureCursor,Timeline/drawModeKey}.ts",
       "apps/web/src/shared/native/log-sink.ts",
-      "packages/i18n/src/setup.ts",
+      "packages/i18n/src/core.ts",
       "packages/ui/src/{Loading,toaster,paste-zone}.tsx",
       "packages/ui/src/motion/animated-toast-stack.tsx",
     ],
