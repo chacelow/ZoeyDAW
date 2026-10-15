@@ -87,7 +87,7 @@ export function DropdownButton<T extends string = string>({
     2
   const display = renderValue ? renderValue(selected) : (selected?.label ?? value)
   const contentStyle: StyleDesc = {
-    minWidth: matchTriggerWidth ? width : 120,
+    minWidth: matchTriggerWidth ? width : theme.project.dropdownMinWidth,
     maxWidth: 320,
     maxHeight: 300,
     overflowY: "scroll",
