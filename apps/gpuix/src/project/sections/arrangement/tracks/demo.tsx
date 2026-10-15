@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { render, useGpuix, useWindowSize } from "@gpuix/react"
-import { currentCursorPosition, nativeCursorLock } from "@/platform/cursor"
+import { nativeCursorLock } from "@/platform/cursor"
 import { fileURLToPath } from "node:url"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
@@ -222,9 +222,6 @@ function TrackSurface({
           label={gallery.frameStats}
           onClick={() => {
             const frame = renderer?.getDebugFrameOverlayStats?.()
-            process.stdout.write(
-              `${JSON.stringify({ event: "frame-stats", frame, telemetry: readProjectTelemetry() })}\n`
-            )
             setStats(
               frame
                 ? `${frame.frames ?? 0} ${gallery.frames}; p90 ${frame.p90Ms ?? 0} ms`
@@ -302,15 +299,6 @@ function Demo() {
     if (!renderer) throw new Error("Track demo requires a native renderer")
     const window = createWindowPlatform(renderer)
     return {
-      cursorLock: {
-        ...nativeCursorLock,
-        restore: (point: Parameters<typeof nativeCursorLock.restore>[0]) => {
-          nativeCursorLock.restore(point)
-          process.stdout.write(
-            `${JSON.stringify({ event: "cursor-restored", anchor: point, actual: currentCursorPosition() })}\n`
-          )
-        },
-      },
       frames: createAnimationFrameSource(renderer),
       panels: { subscribeWindowActive: window.subscribeApplicationActive },
     }
@@ -325,7 +313,7 @@ function Demo() {
   return (
     <AnimationFrameProvider source={ports.frames}>
       <ThemeProvider key={appearance} defaultAppearance={appearance}>
-        <ControlEnvironmentProvider value={{ cursorLock: ports.cursorLock }}>
+        <ControlEnvironmentProvider value={{ cursorLock: nativeCursorLock }}>
           <PanelEnvironmentProvider environment={ports.panels}>
             <TrackSurface
               appearance={appearance}
