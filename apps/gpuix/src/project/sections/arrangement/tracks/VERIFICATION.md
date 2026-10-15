@@ -202,7 +202,7 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 - F2嵌套副键已通过现存消费者行为回归；内存恢复旧mouseDown/button判断后失败1项，没有修改共享文件。
 - F3已通过授权的 `meter/telemetry.tsx` 消费 `useResumeFrame` 并 `flushSync`；首帧最新值及停止后恢复释放frame demand回归通过，禁用恢复advance变异失败1项。
 - 停止后peak回归覆盖600ms保持、1600/2000ms逐渐下降、4000ms到地板且释放帧订阅；将订阅错误限定为playing变异失败1项。
-- 需要新Live操作的条目均为「未验证（Live未运行）」；按协调者指示不启动、不操作Live。当前系统输入证据与限制见文末，不把离屏测试扩大为系统输入验证。
+- Live已补只读AX/截图；需要输入才能验证的手势、峰值动态及多Send行为仍未验证，未对Live发送输入。系统输入证据与限制见文末，不把离屏测试扩大为系统输入验证。
 
 ## 错题与已验证做法（LESSONS格式）
 
