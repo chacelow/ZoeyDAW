@@ -278,6 +278,30 @@ const mutations = [
     to: "strokeWidth={0}",
     tests: ["src/project/sections/clip-edit/midi/QuadPaint.test.tsx"],
   },
+  {
+    name: "Pattern hit testing restores viewport equal division",
+    file: "src/project/sections/clip-edit/pattern/geometry.ts",
+    from: "Math.floor((x + geometry.offset) / geometry.stride)",
+    to: "Math.floor(x / ((geometry.viewport + geometry.gap) / geometry.count))",
+    tests: [
+      "src/project/sections/clip-edit/pattern/PatternSteps.test.tsx",
+      "src/project/sections/clip-edit/pattern/geometry.test.ts",
+    ],
+  },
+  {
+    name: "Pattern mounts every offscreen source step",
+    file: "src/project/sections/clip-edit/pattern/PatternSteps.tsx",
+    from: "length: geometry.end - geometry.first",
+    to: "length",
+    tests: ["src/project/sections/clip-edit/pattern/PatternSteps.test.tsx"],
+  },
+  {
+    name: "Pattern scrollbar release loses editing focus",
+    file: "src/project/sections/clip-edit/pattern/PatternSteps.tsx",
+    from: "onMouseUp={focusOwner}",
+    to: "onMouseUp={undefined}",
+    tests: ["src/project/sections/clip-edit/pattern/PatternSteps.test.tsx"],
+  },
 ]
 
 const extra = process.argv.slice(2)

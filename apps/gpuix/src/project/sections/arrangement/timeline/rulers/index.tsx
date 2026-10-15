@@ -262,7 +262,7 @@ export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }
             height: TIME_RULER_HEIGHT,
             display: "flex",
             alignItems: "center",
-            paddingLeft: theme.control["--spacing-control-track-pad"] * 2,
+            paddingLeft: theme.design.spacing.stackGap,
             pointerEvents: "none",
           })}
         >

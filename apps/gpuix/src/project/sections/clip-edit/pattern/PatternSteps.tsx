@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload, PublicInstance } from "@gpuix/react"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
 import { patternWindow } from "@/project/model/pattern-window"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
+import { ControlledScrollbar } from "@/ui/controls"
 import { useClipEditorEnvironment } from "../environment"
+import { patternGeometry, patternScrollToStep, patternStepAt, patternStepRect } from "./geometry"
 import type { PatternClip } from "@/project/model/types"
 
-/**
-One source cycle of steps, starting at the clip's first visible step. A press toggles the step and
-paints that value across every step the pointer crosses; the whole stroke is one undo entry.
-Escape or window deactivation cancels the stroke.
-*/
+/** One source cycle, one editing focus owner, and the same rectangles for paint and picking. */
 export function PatternSteps({
   clip,
   label,
@@ -29,14 +27,30 @@ export function PatternSteps({
     projectActions.updateClip(clip.id, { steps })
   )
   const host = useRef<PublicInstance | null>(null)
-  const painting = useRef<{ value: boolean; last: number; left: number; cell: number } | null>(null)
+  const painting = useRef<{ value: boolean; last: number } | null>(null)
+  const [width, setWidth] = useState(0)
+  const [offset, setOffset] = useState(0)
+  const [currentStep, setCurrentStep] = useState(0)
+  const [focused, setFocused] = useState(false)
   const [hovered, setHovered] = useState<number | null>(null)
   const source = patternWindow(clip)
-  const first = source.first
-  const period = source.period
-  const length = Math.min(period, Math.max(1, source.end - source.first))
-  const isOn = (index: number) => clip.steps?.[(first + index) % period] === true
-
+  const length = Math.min(source.period, Math.max(1, source.end - source.first))
+  const gap = theme.control["--spacing-control-gap"]
+  const border = theme.design.shape.controlBorderWidth
+  const minimum = theme.control["--spacing-control-track"]
+  const height = theme.project.midiRulerHeight
+  const geometry = useMemo(
+    () => patternGeometry({ count: length, viewport: width, gap, border, minimum, offset }),
+    [length, width, gap, border, minimum, offset]
+  )
+  const current = Math.min(length - 1, currentStep)
+  const sourceIndex = (index: number) =>
+    (((source.first + index) % source.period) + source.period) % source.period
+  const isOn = (index: number) => clip.steps?.[sourceIndex(index)] === true
+  const scrollTo = (value: number) => setOffset(Math.max(0, Math.min(geometry.maximum, value)))
+  const focusOwner = () => {
+    if (host.current) renderer?.focusElement?.(host.current.id)
+  }
   const finish = useCallback(
     (cancel: boolean) => {
       if (!painting.current) return
@@ -61,12 +75,12 @@ export function PatternSteps({
       .find(item => item.id === clip.id)
     if (current?.kind !== "pattern") return
     const steps = Array.from(
-      { length: Math.max(period, current.steps?.length ?? 0) },
+      { length: Math.max(source.period, current.steps?.length ?? 0) },
       (_, index) => current.steps?.[index] === true
     )
     let changed = false
     for (let step = Math.min(from, to); step <= Math.max(from, to); step++) {
-      const index = (first + step) % steps.length
+      const index = sourceIndex(step)
       if (steps[index] === value) continue
       steps[index] = value
       changed = true
@@ -74,93 +88,173 @@ export function PatternSteps({
     if (changed) transaction.onChange(steps)
   }
 
-  const stepAt = (event: EventPayload, active: { left: number; cell: number }) =>
-    Math.max(
-      0,
-      Math.min(length - 1, Math.floor(((event.x ?? active.left) - active.left) / active.cell))
-    )
+  function stepAt(event: EventPayload): number | null {
+    const bounds = host.current && renderer?.getElementBounds?.(host.current.id)
+    return bounds && bounds.width > 0
+      ? patternStepAt(geometry, (event.x ?? bounds.x) - bounds.x)
+      : null
+  }
 
-  const gap = theme.control["--spacing-control-gap"]
   return (
     <div
-      ref={host}
-      testId="pattern-steps"
-      role="group"
-      aria-label={label}
-      style={sx({ display: "flex", flexDirection: "row", gap, width: "100%" })}
-      onMouseDown={event => {
-        if ((event.button ?? 0) !== 0 || painting.current || !host.current) return
-        const bounds = renderer?.getElementBounds?.(host.current.id)
-        if (!bounds || bounds.width <= 0) return
-        const geometry = { left: bounds.x, cell: (bounds.width + gap) / length }
-        const index = stepAt(event, geometry)
-        const value = !isOn(index)
-        painting.current = { value, last: index, ...geometry }
-        transaction.onGestureStart()
-        paint(index, index, value)
-      }}
-      onMouseMove={event => {
-        const active = painting.current
-        const bounds = host.current && renderer?.getElementBounds?.(host.current.id)
-        if (!active) {
-          if (bounds)
-            setHovered(stepAt(event, { left: bounds.x, cell: (bounds.width + gap) / length }))
-          return
-        }
-        const index = stepAt(event, active)
-        if (index === active.last) return
-        paint(active.last, index, active.value)
-        active.last = index
-      }}
-      onMouseUp={() => finish(false)}
-      onMouseLeave={() => setHovered(null)}
-      onBlur={() => finish(true)}
-      onKeyDown={event => {
-        if (event.key !== "escape" || !painting.current) return
-        event.preventDefault()
-        event.stopPropagation()
-        finish(true)
-      }}
-    >
-      {Array.from({ length }, (_, index) => {
-        const on = isOn(index)
-        return (
-          <div
-            key={index}
-            testId={`pattern-step-${index}`}
-            role="button"
-            tabIndex={0}
-            aria-label={`${label} ${index + 1} (${on ? "on" : "off"})`}
-            aria-pressed={on}
-            style={sx({
-              flexGrow: 1,
-              flexBasis: 0,
-              minWidth: 0,
-              height: theme.project.midiRulerHeight,
-              borderWidth: 1,
-              borderRadius: 2,
-              borderColor: theme.colors.arrangementLine,
-              backgroundColor: on
-                ? color
-                : hovered === index
-                  ? theme.colors.arrangementSurfaceSelected
-                  : theme.colors.arrangementSurface,
-              pointerEvents: "none",
-              keyboardFocusDim: false,
-              focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
-            })}
-            onKeyDown={event => {
-              // Enter toggles a focused step; Space stays the transport key.
-              if (event.key !== "enter" || event.isHeld) return
-              event.preventDefault()
-              event.stopPropagation()
-              transaction.onGestureStart()
-              paint(index, index, !on)
-              transaction.onGestureEnd()
-            }}
-          />
-        )
+      style={sx({
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        minWidth: 0,
+        flexShrink: 0,
       })}
+    >
+      <div
+        ref={host}
+        testId="pattern-steps"
+        role="group"
+        tabIndex={0}
+        aria-label={`${label} ${current + 1}/${length}`}
+        style={sx({
+          position: "relative",
+          width: "100%",
+          minWidth: 0,
+          height,
+          flexShrink: 0,
+          overflow: "hidden",
+          keyboardFocusDim: false,
+          focusVisible: {
+            outlineWidth: theme.design.shape.focusRingWidth,
+            outlineColor: theme.colors.ring,
+            outlineOffset: -1,
+          },
+        })}
+        onLayout={event => {
+          if (event.width !== undefined) setWidth(event.width)
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false)
+          const focus = renderer?.getFocusedElementId?.()
+          if (focus !== null && focus !== undefined && focus !== host.current?.id) finish(true)
+        }}
+        onMouseDown={event => {
+          if ((event.button ?? 0) !== 0 || painting.current) return
+          const index = stepAt(event)
+          if (index === null) return
+          focusOwner()
+          setCurrentStep(index)
+          const value = !isOn(index)
+          painting.current = { value, last: index }
+          transaction.onGestureStart()
+          paint(index, index, value)
+        }}
+        onMouseMove={event => {
+          const index = stepAt(event)
+          if (index === null) return
+          const active = painting.current
+          if (!active) {
+            setHovered(index)
+            return
+          }
+          if (active.last === index) return
+          paint(active.last, index, active.value)
+          active.last = index
+          setCurrentStep(index)
+        }}
+        onMouseUp={() => finish(false)}
+        onMouseLeave={() => setHovered(null)}
+        onScroll={event => {
+          if (event.modifiers?.cmd || event.modifiers?.ctrl) return
+          const delta = event.deltaX || event.deltaY || 0
+          if (!delta || !geometry.maximum) return
+          scrollTo(geometry.offset - delta)
+        }}
+        onKeyDown={event => {
+          if (event.key === "escape" && painting.current) {
+            event.preventDefault()
+            event.stopPropagation()
+            finish(true)
+            return
+          }
+          if (
+            (event.modifiers?.cmd || event.modifiers?.ctrl) &&
+            event.key === "z" &&
+            painting.current
+          ) {
+            event.preventDefault()
+            event.stopPropagation()
+            finish(true)
+            return
+          }
+          if (event.modifiers?.cmd || event.modifiers?.ctrl || event.modifiers?.alt) return
+          let next: number | null = null
+          if (event.key === "left") next = Math.max(0, current - 1)
+          else if (event.key === "right") next = Math.min(length - 1, current + 1)
+          else if (event.key === "home") next = 0
+          else if (event.key === "end") next = length - 1
+          if (next !== null) {
+            event.preventDefault()
+            event.stopPropagation()
+            setCurrentStep(next)
+            scrollTo(patternScrollToStep(geometry, next))
+          } else if (event.key === "enter" && !event.isHeld) {
+            event.preventDefault()
+            event.stopPropagation()
+            if (painting.current) return
+            transaction.onGestureStart()
+            paint(current, current, !isOn(current))
+            transaction.onGestureEnd()
+          }
+        }}
+      >
+        {Array.from({ length: geometry.end - geometry.first }, (_, offset) => {
+          const index = geometry.first + offset
+          const rect = patternStepRect(geometry, index)
+          const on = isOn(index)
+          return (
+            <div
+              key={index}
+              testId={`pattern-step-${index}`}
+              role="button"
+              tabIndex={-1}
+              aria-label={`${label} ${index + 1} (${on ? "on" : "off"})`}
+              aria-pressed={on}
+              style={sx({
+                position: "absolute",
+                left: rect.x,
+                top: 0,
+                width: rect.width,
+                height,
+                borderWidth: border,
+                borderRadius: theme.design.shape.toggleRadius,
+                borderColor:
+                  focused && index === current
+                    ? theme.colors.foreground
+                    : theme.colors.arrangementLine,
+                backgroundColor: on
+                  ? color
+                  : hovered === index
+                    ? theme.colors.arrangementSurfaceSelected
+                    : theme.colors.arrangementSurface,
+                pointerEvents: "none",
+              })}
+            />
+          )
+        })}
+      </div>
+      {geometry.maximum > 0 ? (
+        <ControlledScrollbar
+          testId="pattern-horizontal-scroll"
+          aria-label={label}
+          aria-controls="pattern-steps"
+          orientation="horizontal"
+          tabIndex={-1}
+          value={geometry.offset}
+          viewport={geometry.viewport}
+          extent={geometry.extent}
+          length={geometry.viewport}
+          onChange={scrollTo}
+          onMouseUp={focusOwner}
+          style={{ flexShrink: 0 }}
+        />
+      ) : null}
     </div>
   )
 }

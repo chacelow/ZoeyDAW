@@ -1,6 +1,8 @@
 // Generates docs/architecture/gpuix-ui-map.md from apps/gpuix/src so the map cannot drift from code.
 // Usage: node scripts/gpuix-ui-map.mjs          (rewrite the map)
 //        node scripts/gpuix-ui-map.mjs --check  (exit 1 when the committed map is stale)
+//        node scripts/gpuix-ui-map.mjs --stage  (rewrite and git add; run by lint-staged on gpuix source)
+import { execFileSync } from "node:child_process"
 import { readdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 
@@ -123,6 +125,10 @@ if (process.argv.includes("--check")) {
   )
 } else {
   writeFileSync(output, content)
+  // --stage (pre-commit via lint-staged): fold the regenerated map into the commit being made,
+  // so a testId change can never land with a stale map.
+  if (process.argv.includes("--stage"))
+    execFileSync("/usr/bin/git", ["add", path.relative(root, output)], { cwd: root })
   process.stdout.write(
     `wrote ${path.relative(root, output)}: ${entries.length} entries, ${testIdCount} testIds\n`
   )

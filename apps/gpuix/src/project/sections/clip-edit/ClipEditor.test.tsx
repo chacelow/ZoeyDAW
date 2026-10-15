@@ -65,13 +65,16 @@ it("routes Cmd+Z and Cmd+Shift+Z from a close control to project history", () =>
   expect(steps()[0]).toBe(true)
 })
 
-it("routes project undo and redo from a focused step control", () => {
+it("routes project undo and redo from the Pattern editing owner", () => {
   const h = open()
-  h.key("pattern-step-3", "enter")
+  h.key("pattern-steps", "right")
+  h.key("pattern-steps", "right")
+  h.key("pattern-steps", "right")
+  h.key("pattern-steps", "enter")
   expect(steps()[3]).toBe(true)
-  h.key("pattern-step-3", "cmd-z")
+  h.key("pattern-steps", "cmd-z")
   expect(steps()[3]).toBe(false)
-  h.key("pattern-step-3", "cmd-shift-z")
+  h.key("pattern-steps", "cmd-shift-z")
   expect(steps()[3]).toBe(true)
 })
 

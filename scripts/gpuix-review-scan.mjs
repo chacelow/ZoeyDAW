@@ -49,7 +49,8 @@ for (const file of code) {
       /\b(?:gap|padding\w*|margin\w*|width|height|fontSize|borderRadius)\s*:\s*(\d{2,})\b/g
     ),
   ]
-  if (px.length)
+  // Token owner files are where literal pixel values belong, same exemption as colour literals.
+  if (px.length && !/shared\/theme|\/tokens?\./.test(file))
     add(
       "px-literal",
       file,

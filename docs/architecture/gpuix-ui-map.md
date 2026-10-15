@@ -16,6 +16,7 @@
 
 | 入口 | 后台启动 | 环境开关 |
 | --- | --- | --- |
+| `src/app/verification/design-surfaces.tsx` | 是 | `T1_APPEARANCE`、`T1_SURFACE` |
 | `src/gallery/controls.tsx` | 是 | `GALLERY_APPEARANCE`、`GALLERY_LOCALE` |
 | `src/main.tsx` | 是 | `NODE_ENV`、`ZOEYDAW_ROUTE` |
 | `src/project/sections/arrangement/lane/demo/index.tsx` | 是 | `LANE_LOCALE`、`LANE_STRESS`、`LANE_THEME` |
@@ -91,7 +92,7 @@
 
 ### `project/sections/clip-edit`
 
-`audio-…`、`audio-editor`、`audio-loop`、`audio-loop-range`、`audio-marker-…`、`audio-overview`、`audio-overview-frame`、`audio-parameters`、`audio-peaks`、`audio-reverse`、`audio-selection`、`audio-surface`、`audio-warp`、`audio-warp-mode`、`audio-waveform`、`clip-editor`、`clip-name`、`midi-editor`、`midi-grid`、`midi-key-…`、`midi-keys`、`midi-loop-bars`、`midi-marquee`、`midi-note-…`、`midi-note-row-…`、`midi-ruler`、`midi-toolbar`、`midi-velocity`、`midi-velocity-…`、`midi-velocity-value`、`pattern-editor`、`pattern-step-…`、`pattern-steps`
+`audio-…`、`audio-editor`、`audio-loop`、`audio-loop-range`、`audio-marker-…`、`audio-overview`、`audio-overview-frame`、`audio-parameters`、`audio-peaks`、`audio-reverse`、`audio-selection`、`audio-surface`、`audio-warp`、`audio-warp-mode`、`audio-waveform`、`clip-editor`、`clip-name`、`midi-editor`、`midi-grid`、`midi-key-…`、`midi-keys`、`midi-loop-bars`、`midi-marquee`、`midi-note-…`、`midi-note-row-…`、`midi-ruler`、`midi-toolbar`、`midi-velocity`、`midi-velocity-…`、`midi-velocity-value`、`pattern-editor`、`pattern-horizontal-scroll`、`pattern-step-…`、`pattern-steps`
 
 ### `project/sections/footer`
 

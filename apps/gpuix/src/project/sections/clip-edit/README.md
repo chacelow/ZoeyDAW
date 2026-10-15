@@ -37,7 +37,7 @@ MIDI 音符编辑调用 `project/model/midi-editing`。grid 中方向键移动�
 
 Start/End、Loop Position/Length 和 Arrangement 位置互不替代。标记键盘步长是一音乐十六分音符，Shift 为其四分之一。键盘微调先取消仍在进行的 pointer 事务，读取还原后的权威 Clip，再单独提交 nudge。Start/End、Loop Position/Length、Warp/Mode、Source BPM、Transpose、Detune、Reverse 目前只编辑元数据，C1 播放尚未响应这些设置；这与 Web 范围一致并获协调者批准。琴键使用 held-note 端口，不代表已接通 MIDI synthesis。
 
-Pattern 只编辑一个源周期。裁剪后的首步保留其源相位。鼠标刷过的步统一写入同一事务，Enter 切换单步，Space 留给播放。
+Pattern 只编辑一个源周期，保留裁剪首步与负偏移相位。`pattern/geometry.ts` 统一绘制、命中、裁剪和键盘reveal。步骤保持control-track最小宽度，长周期通过共享ControlledScrollbar横向滚动，屏外步不挂载。根是唯一Tab入口，Left/Right、Home/End移动当前步并揭示它，Enter切换当前步，Space留给播放。brush跨滚动仍为单一Undo，Escape、失活与拖动中Undo取消当前笔刷。
 
 ## 文件职责
 
@@ -49,7 +49,7 @@ Pattern 只编辑一个源周期。裁剪后的首步保留其源相位。鼠标
 - `audio/source-view.ts`、`markers.ts`：源视口与标记计算。
 - `audio/AudioParameters.tsx`：复用 DragPad、Toggle 与 Dropdown 的参数面板。
 - `audio/AudioWaveform.tsx`、`SourceWaveform.tsx`、`SourceMarker.tsx`：源视图组合、真实峰值查询、标记事务。
-- `pattern/PatternSteps.tsx`：源周期刷步。
+- `pattern/PatternSteps.tsx`、`geometry.ts`：源周期刷步、可见viewport与统一命中几何。复测见 `pattern/VERIFICATION.md`。
 
 ## 验证入口
 
