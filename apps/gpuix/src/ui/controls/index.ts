@@ -50,6 +50,7 @@ export type { IconSlotProps } from "./IconSlot"
 export type {
   CursorLockPort,
   ScreenPoint,
+  WindowPoint,
   DragPadNumberProps,
   DragPadBarProps,
   DragPadBipolarProps,

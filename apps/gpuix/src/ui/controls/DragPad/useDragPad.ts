@@ -104,12 +104,14 @@ export function useDragPad(options: UseDragPadOptions) {
         setMode("idle")
         return
       }
+      const pressPoint =
+        event.x === undefined || event.y === undefined ? null : { x: event.x, y: event.y }
       anchorRef.current = {
         startX: event.x ?? 0,
         startY: event.y ?? 0,
         startValue: valueRef.current,
         dragging: false,
-        cursorAnchor: cursorLock?.capture() ?? null,
+        cursorAnchor: pressPoint && cursorLock ? cursorLock.capture(pressPoint) : null,
         cursorLock,
       }
     },

@@ -142,7 +142,3 @@ test("keyboard adjusts a focused value and Escape rolls back an active drag", ()
   expect(a.value()).toBe(121)
   a.unmount()
 })
-
-test.todo(
-  "real OS press-without-dwell: JS cursor capture can lag the native mouseDown by one injected move; needs permission-gated CGEventTap capture"
-)
