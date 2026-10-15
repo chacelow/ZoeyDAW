@@ -1,6 +1,6 @@
 # B2 app-shell 阶段2装配
 
-2026-10-15。已同步 F5 `6d6dd39`、F3 `b4a55a8`、F4c `66f9ce9` 与 editors IDs `5444e5d`，对应合并提交为 `2884a0a`、`5f57999`、`99ac7cf`、`c2e70b6`。root resume 和 ID-only Clip slot 已按正式接口接入；剩余 DesignTokens Card 变体待合入。真实 UI 由协调者统一组合评审，本 worker 不重复局部取证。
+2026-10-15。已同步 F5 `6d6dd39`、F3 `b4a55a8`、F4c `66f9ce9`、editors IDs `5444e5d` 和 lane resume `7f48dcc`。root resume 已提交 `e1b29b7`，ID-only Clip slot 已提交 `a6a2650`，均通过 hook；lane 同步合并为 `f182c8d`。剩余 DesignTokens Card 变体待合入，真实 UI 由协调者统一组合评审。
 
 已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
 
@@ -42,7 +42,7 @@
 | `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | F3 合入后通过，2.96 秒，见 `typecheck-after-f3.txt` |
 | `pnpm exec eslint apps/gpuix/src` | F3 合入后通过，无输出，22.81 秒，见 `eslint-after-f3.txt` |
 | `bun test src/app --timeout 30000` | IDs 切换后 50 pass、0 fail、1390 assertions，14.93 秒，无过滤，包含 Clip 请求/切换和 native lease 路径，见 `app-tests-after-ids.txt` |
-| `bun test --timeout 30000` | F3/F5 集成后 1082 pass、1 既有 todo、0 fail，173 文件、1103314 assertions，33.46 秒，见 `all-bun-after-f3.txt` |
+| `bun test --timeout 30000` | IDs/lane resume 同步后 1092 pass、1 既有 todo、0 fail，174 文件、1103376 assertions，37.22 秒，见 `all-bun-after-ids.txt` |
 | `bun apps/gpuix/src/app/verification/mutations.mjs` | 完整 app 基线先通过，27 项变异全部被真实行为断言抓住，源码逐项恢复，74.82 秒，见 `all-mutations-after-f3.txt` |
 | 真实 native peaks smoke | 同一工程会话 open/apply 接受，48 kHz telemetry、输出延迟 284 帧，channel-major min/max 共 256 个 f32，范围 ±0.399993896484375；释放后 idle |
 | 真实 native 帧需求 smoke | idle=false、native playing=true 时 demand=true、native playing=false 时 demand=false，最后释放到 idle；见 `frame-demand-native-smoke.txt` |
@@ -50,7 +50,7 @@
 | root resume 首 present 回归 | 未接入时 2 fail，接入后 4 pass、26 assertions；实际 timeline follow 的 retained 与首个 painted 文本均立即为 200，idle 不留 resume 订阅。移除 flushSync、idle 强制订阅、断开 resume 三项变异全部抓住 |
 | root resume 真实离屏 smoke | 实际 AppShell、NativeBackend 与离屏 GPUI。native bar=20.066934020833333，恢复前 scroll=0，pre-present retained 与 workspace 均为 905.0813746453334，实际 frames=11，卸载后 idle；只手动投递 resume host 事件，不宣称真实桌面恢复证据 |
 | `node scripts/gpuix-main/check.mjs --resolution` | F4c 同步后十一补丁与 app 的 native/React 解析验证通过，见 `renderer-resolution.txt` |
-| `gpuix-review-scan` | F5 同步后扫描 29 source、7 tests，0 hard、3 warn，见 `review-scan.txt` |
+| `gpuix-review-scan` | 当前集成分支扫描 30 source、7 tests，0 hard、4 warn，见 `review-scan.txt` |
 
 第一轮完整 UI 组合用默认 5 秒期限，部分测试在本机负载下超时。协调者批准最终命令使用 `--timeout 30000`，没有更改行为断言，也不把期限加长称为性能修复。单独 Cmd+F 行为检查实测通过，3.78 秒。
 
@@ -101,6 +101,7 @@
 | scan main.tsx 的 1280×800 | 记录 | 既有窗口初始尺寸来自旧 tauri.conf.json，入口 render 前无 theme；未新增该值 |
 | scan tracks/demo.tsx 的 1120×780 | 记录 | 既有验证窗口尺寸，非产品控件度量；本次只改 time-width 投影 |
 | scan tracks/verification/render-cost.tsx 的 1000×500 | 记录 | 固定验证场景的时间视口尺寸，已将实际窗口改为 width 加 controlsWidth |
+| scan verification/resume-smoke.tsx 的 1280×800 | 记录 | 固定离屏验收窗口，匹配真实入口初始尺寸，不是产品控件尺寸；未创建第二套 UI token |
 | 独立模型审查 | 协调者处置 | 按本 Dispatch 仲裁，不用无法固定模型的 task reviewer。独立审查由协调者安排显式模型 worker 或本人执行 |
 | 停止工程常驻 frame 订阅 | 必修 | 已改 playing/lane.dragActive/timeline autoScroll 的派生 external-store，start/stop 通知而不轮询。真实根 hook/控制器回归、四条变异与 native 后端 smoke 已证明 |
 | readOnly Input 被当非文本 | 必修 | 真实原生 a/m 确实误改模式。现在仅 disabled 排除文本 lease；只读选择/复制仍归原生，回归通过 |
