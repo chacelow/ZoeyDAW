@@ -1,3 +1,4 @@
+import { MINOR_GRID_OPACITY } from "../../core/rulers/grid-quads"
 import { useLayoutEffect, useMemo } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -142,7 +143,7 @@ export function LaneContents({
             width: scene.viewport.width,
             height: row.height,
             color: theme.colors.arrangementLine,
-            opacity: 0.5,
+            opacity: MINOR_GRID_OPACITY,
             pointerEvents: "none",
           })}
         />

@@ -5,7 +5,12 @@ import type { TestRoot } from "@gpuix/react/testing"
 import { flushSync, handleGpuixEvent } from "@gpuix/react"
 import type { NativeClipboard } from "../../../../../platform/clipboard"
 import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
-import { hydrateProject, projectActions, useProjectState } from "../../../../adapters"
+import {
+  hydrateProject,
+  projectActions,
+  serializeProject,
+  useProjectState,
+} from "../../../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import type { SceneStore } from "../../core/scene"
@@ -189,6 +194,41 @@ function mount(options: { automation?: boolean; audio?: boolean } = {}) {
     windowKeys,
   }
 }
+
+it("keeps a live time-range preview across snap updates and restores committed selection on cancel", () => {
+  const { renderer, scene, sourceRow, host } = mount()
+  const previous = { startBar: 8, endBar: 9, trackIds: ["source"] }
+  projectActions.setTimeSelection(previous)
+  renderer.nativeSimulateMouseDown(400, sourceRow.top + 40)
+  renderer.nativeSimulateMouseMove(528, sourceRow.top + 40, 0)
+  const preview = { startBar: 7.25, endBar: 9.25, trackIds: ["source"] }
+  expect(scene.get().timeSelection).toEqual(preview)
+  expect(useProjectState.getState().session.timeSelection).toEqual(previous)
+  projectActions.setSnap(false)
+  expect(scene.get().timeSelection).toEqual(preview)
+  renderer.nativeSimulateKeystrokes(host, "escape")
+  expect(scene.get().timeSelection).toEqual(previous)
+  renderer.nativeSimulateMouseDown(400, sourceRow.top + 40)
+  renderer.nativeSimulateMouseMove(528, sourceRow.top + 40, 0)
+  renderer.nativeSimulateMouseUp(528, sourceRow.top + 40)
+  expect(scene.get().timeSelection).toEqual(useProjectState.getState().session.timeSelection)
+  expect(scene.get().timeSelection).toEqual(preview)
+})
+
+it("clears invalidated time-range preview without overwriting the hydrated project selection", () => {
+  const { renderer, scene, sourceRow } = mount()
+  renderer.nativeSimulateMouseDown(400, sourceRow.top + 40)
+  renderer.nativeSimulateMouseMove(528, sourceRow.top + 40, 0)
+  expect(scene.get().timeSelection).toEqual({ startBar: 7.25, endBar: 9.25, trackIds: ["source"] })
+  hydrateProject(serializeProject())
+  const selection = { startBar: 12, endBar: 14, trackIds: ["target"] }
+  projectActions.setTimeSelection(selection)
+  renderer.nativeSimulateMouseUp(528, sourceRow.top + 40)
+  expect(scene.get().timeSelection).toEqual(selection)
+  expect(scene.get().timeSelectionPreview).toBeNull()
+  expect(useProjectState.getState().session.timeSelection).toEqual(selection)
+  expect(useProjectState.getState().session.insertionPoint).toBeNull()
+})
 
 it("keeps sub-threshold presses inert and rolls a native Ghost drag back on Escape", () => {
   const { renderer, scene, sourceRow, host } = mount()

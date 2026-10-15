@@ -1,11 +1,4 @@
-import { visibleTracks } from "@/project/model/types"
-import {
-  arrangementBodyBottom,
-  arrangementBodyTop,
-  maxTrackScrollY,
-  pinnedTrackHeight,
-} from "../../core/layout"
-import { clampScrollX } from "../../core/viewport/zoom"
+import { edgeScroll } from "../../core/viewport/edge-scroll"
 import type { ArrangementViewport, SceneStore } from "../../core/scene"
 import type { NativeTimelinePointer } from "./coordinates"
 
@@ -41,33 +34,17 @@ export function createTimelineAutoScroll({
   function tick(now: number) {
     if (!pointer) return
     const current = scene.get()
-    const { width, height, pxPerBar, scrollX, scrollY } = current.viewport
-    const x = pointer.x
-    const y = pointer.y
-    const xSpeed =
-      x < edge
-        ? -Math.min(1, (edge - x) / edge)
-        : x > width - edge
-          ? Math.min(1, (x - width + edge) / edge)
-          : 0
-    const tracks = visibleTracks([...current.tracks])
-    const bottom = arrangementBodyBottom(height) - pinnedTrackHeight(tracks)
-    const top = arrangementBodyTop()
-    const ySpeed =
-      axis === "horizontal" || bottom <= top || y >= bottom
-        ? 0
-        : y < top + edge
-          ? -Math.min(1, (top + edge - y) / edge)
-          : y > bottom - edge
-            ? Math.min(1, (y - bottom + edge) / edge)
-            : 0
-    const elapsed = last === null ? 0 : Math.min(48, Math.max(0, now - last))
+    const { scrollX, scrollY } = current.viewport
+    const { scrollX: nextX, scrollY: nextY } = edgeScroll({
+      viewport: current.viewport,
+      bars: current.bars,
+      tracks: current.tracks,
+      pointer,
+      axis,
+      edge,
+      elapsed: last === null ? 0 : now - last,
+    })
     last = now
-    const nextX = clampScrollX(scrollX + xSpeed * elapsed * 0.75, current.bars, pxPerBar, width)
-    const nextY = Math.min(
-      maxTrackScrollY(tracks, height),
-      Math.max(0, scrollY + ySpeed * elapsed * 0.6)
-    )
     if (nextX === scrollX && nextY === scrollY) return
     const accepted = setScroll(nextX, nextY)
     if (accepted.scrollX === scrollX && accepted.scrollY === scrollY) return

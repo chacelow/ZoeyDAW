@@ -3,7 +3,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { gridLines, patternRegions } from "../../core/rulers/grid-lines"
 import type { SceneStore } from "../../core/scene"
-import { MINOR_GRID_OPACITY } from "./index"
+import { MINOR_GRID_OPACITY } from "../../core/rulers/grid-quads"
 
 export function PatternRegions({ scene, height }: { scene: SceneStore; height: number }) {
   const current = useSyncExternalStore(scene.subscribe, scene.get)

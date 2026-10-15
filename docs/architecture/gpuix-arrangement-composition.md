@@ -32,7 +32,8 @@ app-shell ──▶ ArrangementPanel (composition root, 在 app-shell 或 arrang
 export interface TimelineController {
   // 由组合根创建并 dispose；内部持有同一个 SceneStore、窗口键盘 owner、视口命令、标尺与自动滚动状态。
   // 「工程 → 场景」投影（music/viewport/playback/projectPreview/timeSelection/选择）只由它订阅 store 后写入，唯一 owner；
-  // lane 只写自己的瞬态手势字段（clipDrag/clipResize/hover/targetSelection、进行中的时间选区预览），不再整份同步。
+  // lane 只写自己的瞬态手势字段（clipDrag/clipResize/hover/targetSelection、setTimeSelectionPreview），不再整份同步。
+  // scene.timeSelection 为显示投影：lane 预览优先，否则为 timeline 写入的 committed 选区；结束/取消清除预览。
   readonly sceneStore: SceneStore
   readonly keyboard: KeyboardOwner
   useViewport(): ArrangementViewport // 返回当前 viewport
@@ -95,7 +96,7 @@ export function TrackRows(props: {
 
 | 键 | owner |
 | --- | --- |
-| Space（播放）、M、A、B、Ctrl/Cmd+1..5（网格）、Ctrl/Cmd+Z/Shift+Z、Ctrl/Cmd+S | `timeline`（`createTimelineController` 内部唯一的 keyboard，窗口根监听） |
+| Space（播放）、M、A、B、Ctrl/Cmd+1、+2、+4（网格）、Ctrl/Cmd+Z/Shift+Z、Ctrl/Cmd+S | `timeline`（`createTimelineController` 内部唯一的 keyboard，窗口根监听）；+3（三连音）与 +5（固定网格）未实现 |
 | Clip/Automation 选择、split（Ctrl/Cmd+E，有选中时）、duplicate、rename、delete、复制剪切粘贴、拖动中 Escape | `lane`（`LaneController.keyDown`） |
 | 轨道名称输入、Mixer 数值编辑 | `tracks`（控件自己） |
 

@@ -82,6 +82,8 @@ All icons now use `ui/controls/Icon` (`Headphones`, `Circle`, `ChevronDown`, `Ch
 
 `index.ts` exports `TrackRows`, `TrackRowsProps`, `TrackLabels`, `TelemetryReader`, `TrackRowGeometry` and the paired `trackResources`. The combination contract is `docs/architecture/gpuix-arrangement-composition.md`; tracks do not import lane or timeline.
 
+`TrackRow` 对所有可见行（包括折叠 Group）始终挂载 `renderLane` 提供的内容。Group 摘要仅由 lane 绘制；tracks 不再拥有独立摘要实现或重复扣除 `controlsWidth`。屏外保焦点的表头仍不挂载 lane。
+
 ```ts
 TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane, labels })
 ```

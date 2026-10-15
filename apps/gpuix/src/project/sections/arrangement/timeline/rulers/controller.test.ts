@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "bun:test"
+import { afterEach, beforeEach, expect, test } from "bun:test"
 import {
   hydrateProject,
   projectActions,
@@ -7,8 +7,12 @@ import {
 } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
-import { createRulerController } from "./controller"
 import { createTimelineController } from "../controller"
+
+const disposals: Array<() => void> = []
+afterEach(() => {
+  for (const dispose of disposals.splice(0)) dispose()
+})
 
 beforeEach(() => {
   hydrateProject(
@@ -17,17 +21,16 @@ beforeEach(() => {
 })
 
 function mount() {
-  const scene = createSceneStore()
-  const project = useProjectState.getState().document
-  scene.setMusic({
-    ...scene.get(),
-    tracks: project.tracks,
-    markers: project.markers,
-    loop: project.transport.loop,
-    transport: project.transport,
+  projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
+  const owner = createTimelineController({
+    sceneStore: createSceneStore(),
+    initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
+    metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
+    keyboard: { focus: () => "timeline", blurControl: () => {} },
+    subscribeWindowActive: () => () => {},
   })
-  scene.setViewport({ width: 800, height: 320, pxPerBar: 100, scrollX: 0, scrollY: 0, dpr: 1 })
-  return { scene, controller: createRulerController(scene) }
+  disposals.push(owner.dispose)
+  return { scene: owner.sceneStore, controller: owner.view.rulers }
 }
 
 test("a marker press cannot acquire a fresh edit after project hydration rotates ownership", () => {
