@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react"
-import { useGpuix } from "@gpuix/react"
+import { flushSync, useGpuix } from "@gpuix/react"
 import { createNativeClipboard } from "@/platform/clipboard"
-import { useAnimationFrame } from "@/platform/frame"
+import { useAnimationFrame, useResumeFrame } from "@/platform/frame"
 import { useWindowKeyboard } from "@/platform/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useAppInteraction } from "../interaction"
@@ -57,5 +57,8 @@ export function useProjectComposition(shell: ProjectShellApi) {
     () => composition?.getFrameDemand() ?? false
   )
   useAnimationFrame(timestamp => composition?.tick(timestamp), frameDemand)
+  useResumeFrame(timestamp => {
+    flushSync(() => composition?.tick(timestamp))
+  }, frameDemand)
   return { composition, browserRef, focusRef }
 }

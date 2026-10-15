@@ -185,6 +185,30 @@ const mutations = [
     tests: "src/app/project/composition.test.tsx",
     pattern: "focused readOnly Input",
   },
+  {
+    name: "resume first present loses synchronous React commit",
+    file: "project/useProjectComposition.ts",
+    from: "flushSync(() => composition?.tick(timestamp))",
+    to: "composition?.tick(timestamp)",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "resume commits",
+  },
+  {
+    name: "resume subscribes while composition is idle",
+    file: "project/useProjectComposition.ts",
+    from: "useResumeFrame(timestamp => {\n    flushSync(() => composition?.tick(timestamp))\n  }, frameDemand)",
+    to: "useResumeFrame(timestamp => {\n    flushSync(() => composition?.tick(timestamp))\n  }, true)",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "stopped idle",
+  },
+  {
+    name: "resume tick is disconnected from the root",
+    file: "project/useProjectComposition.ts",
+    from: "useResumeFrame(timestamp => {\n    flushSync(() => composition?.tick(timestamp))\n  }, frameDemand)",
+    to: "void frameDemand",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "resume commits",
+  },
 ]
 
 function run(tests, pattern) {

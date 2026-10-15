@@ -130,7 +130,7 @@ function mount(overrides: Partial<AppShellProps> = {}, wrap = (node: ReactNode) 
     ),
   }
   const keyboard = createWindowKeyboard()
-  const frames = { subscribe: () => () => {} }
+  const frames = { subscribe: () => () => {}, subscribeResume: () => () => {} }
   const native = { subscribeWindowActive: () => () => {} }
   const root = createTestRoot({ width: 1280, height: 800, ...keyboard.rootHandlers })
   roots.push(root)

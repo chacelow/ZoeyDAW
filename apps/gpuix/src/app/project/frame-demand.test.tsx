@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test"
-import { useLayoutEffect } from "react"
+import { useLayoutEffect, useSyncExternalStore } from "react"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
@@ -40,9 +40,14 @@ beforeEach(() => {
 })
 
 function mount() {
-  const native: { active: boolean; callback: AnimationFrameCallback | null } = {
+  const native: {
+    active: boolean
+    callback: AnimationFrameCallback | null
+    resumeCallback: AnimationFrameCallback | null
+  } = {
     active: false,
     callback: null,
+    resumeCallback: null,
   }
   const frames = createAnimationFrameSource({
     setAnimationFrameActive(active) {
@@ -50,6 +55,9 @@ function mount() {
     },
     setAnimationFrameCallback(callback) {
       native.callback = callback
+    },
+    setResumeFrameCallback(callback) {
+      native.resumeCallback = callback
     },
   })
   const keyboard = createWindowKeyboard()
@@ -62,7 +70,7 @@ function mount() {
     useLayoutEffect(() => {
       owner = composition
     }, [composition])
-    return <div />
+    return composition ? <FollowProjection composition={composition} /> : <div />
   }
   root.render(
     <AnimationFrameProvider source={frames}>
@@ -87,6 +95,14 @@ function mount() {
   }
 }
 
+function FollowProjection({ composition }: { readonly composition: ProjectComposition }) {
+  const scene = useSyncExternalStore(
+    composition.timeline.sceneStore.subscribe,
+    composition.timeline.sceneStore.get
+  )
+  return <text testId="resume-follow-scroll">{scene.viewport.scrollX}</text>
+}
+
 function pointer(x: number, y: number): LanePointer {
   return { x, y, button: 0, shiftKey: false, altKey: false, metaKey: false, ctrlKey: false }
 }
@@ -95,13 +111,16 @@ test("stopped idle has no native frame demand; playback starts it and stop relea
   const { root, native } = mount()
   expect(native.active).toBe(false)
   expect(native.callback).toBeNull()
+  expect(native.resumeCallback).toBeNull()
   flushSync(projectActions.togglePlay)
   expect(useProjectState.getState().session.playing).toBe(true)
   expect(native.active).toBe(true)
   expect(native.callback).not.toBeNull()
+  expect(native.resumeCallback).not.toBeNull()
   flushSync(projectActions.stop)
   expect(native.active).toBe(false)
   expect(native.callback).toBeNull()
+  expect(native.resumeCallback).toBeNull()
   root.unmount()
   expect(native.active).toBe(false)
 })
@@ -140,4 +159,22 @@ test("ruler autoscroll demand begins on start and ends on stop without pointer p
   flushSync(scroll.stop)
   expect(native.active).toBe(false)
   expect(native.callback).toBeNull()
+})
+
+test("resume commits the latest real timeline follow position before the first present", () => {
+  const { root, native, owner } = mount()
+  flushSync(() => {
+    owner().timeline.view.measure({ containerWidth: 704, bodyHeight: 300, timelineLeft: 0 })
+    projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
+    projectActions.setFollow(true)
+    projectActions.togglePlay()
+    projectActions.seekBar(5)
+  })
+  expect(root.renderer.getAllText()).toEqual(["0"])
+  native.resumeCallback?.(16)
+  expect(root.renderer.getAllText()).toEqual(["200"])
+  root.renderer.flush()
+  expect(root.renderer.getPaintedText()).toEqual(["200"])
+  flushSync(projectActions.stop)
+  expect(native.resumeCallback).toBeNull()
 })

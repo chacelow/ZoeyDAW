@@ -1,6 +1,6 @@
 # B2 app-shell 阶段2装配
 
-2026-10-15。已按协调者指定合入 `d57b07b` 与 F5 `6d6dd39`，对应合并提交为 `5488550`、`2884a0a`。F5 autoFocus 依赖已解除，当前 app 全套与默认全量变异通过。剩余 F3 resume 帧接口、ClipEditorSlot IDs 和 DesignTokens Card 变体仍待合入；真实 UI 由协调者在这些依赖合入后统一组合评审，本 worker 不重复局部取证。
+2026-10-15。已同步 F5 `6d6dd39`、F3 `b4a55a8` 和 F4c `66f9ce9`，对应合并提交为 `2884a0a`、`5f57999`、`99ac7cf`。root resume 已按正式接口接入，F3/F5 全套与默认全量变异通过。剩余 ClipEditorSlot IDs 和 DesignTokens Card 变体仍待合入；真实 UI 由协调者统一组合评审，本 worker 不重复局部取证。
 
 已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
 
@@ -39,14 +39,17 @@
 
 | 命令或场景 | 观察结果 |
 | --- | --- |
-| `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | F5 合入后通过，3.21 秒，见 `typecheck-after-f5.txt` |
-| `pnpm exec eslint apps/gpuix/src` | F5 合入后通过，无输出，25.58 秒，见 `eslint-after-f5.txt` |
+| `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | F3 合入后通过，2.96 秒，见 `typecheck-after-f3.txt` |
+| `pnpm exec eslint apps/gpuix/src` | F3 合入后通过，无输出，22.81 秒，见 `eslint-after-f3.txt` |
 | `bun test src/app --timeout 30000` | 49 pass、0 fail、1383 assertions，12.99 秒，无过滤，包含两条原先等待 F5 的 autoFocus 回归，见 `app-tests-after-f5.txt` |
-| `bun test --timeout 30000` | 1064 pass、1 既有 todo、0 fail，172 文件、1103219 assertions，37.32 秒，见 `all-bun-after-f5.txt` |
-| `bun apps/gpuix/src/app/verification/mutations.mjs` | 完整 app 基线先通过，24 项变异全部被真实行为断言抓住，源码逐项恢复，91.27 秒，见 `all-mutations-after-f5.txt` |
+| `bun test --timeout 30000` | F3/F5 集成后 1082 pass、1 既有 todo、0 fail，173 文件、1103314 assertions，33.46 秒，见 `all-bun-after-f3.txt` |
+| `bun apps/gpuix/src/app/verification/mutations.mjs` | 完整 app 基线先通过，27 项变异全部被真实行为断言抓住，源码逐项恢复，74.82 秒，见 `all-mutations-after-f3.txt` |
 | 真实 native peaks smoke | 同一工程会话 open/apply 接受，48 kHz telemetry、输出延迟 284 帧，channel-major min/max 共 256 个 f32，范围 ±0.399993896484375；释放后 idle |
 | 真实 native 帧需求 smoke | idle=false、native playing=true 时 demand=true、native playing=false 时 demand=false，最后释放到 idle；见 `frame-demand-native-smoke.txt` |
 | 独立 review 回归 | 停止帧与只读输入修复前 4 fail，修复后 4 pass、28 assertions；另有四项专门变异均抓住，见 `review-failing-before.txt`、`review-passing-after.txt`、`review-mutations.txt` |
+| root resume 首 present 回归 | 未接入时 2 fail，接入后 4 pass、26 assertions；实际 timeline follow 的 retained 与首个 painted 文本均立即为 200，idle 不留 resume 订阅。移除 flushSync、idle 强制订阅、断开 resume 三项变异全部抓住 |
+| root resume 真实离屏 smoke | 实际 AppShell、NativeBackend 与离屏 GPUI。native bar=20.066934020833333，恢复前 scroll=0，pre-present retained 与 workspace 均为 905.0813746453334，实际 frames=11，卸载后 idle；只手动投递 resume host 事件，不宣称真实桌面恢复证据 |
+| `node scripts/gpuix-main/check.mjs --resolution` | F4c 同步后十一补丁与 app 的 native/React 解析验证通过，见 `renderer-resolution.txt` |
 | `gpuix-review-scan` | F5 同步后扫描 29 source、7 tests，0 hard、3 warn，见 `review-scan.txt` |
 
 第一轮完整 UI 组合用默认 5 秒期限，部分测试在本机负载下超时。协调者批准最终命令使用 `--timeout 30000`，没有更改行为断言，也不把期限加长称为性能修复。单独 Cmd+F 行为检查实测通过，3.78 秒。
@@ -102,7 +105,7 @@
 | 停止工程常驻 frame 订阅 | 必修 | 已改 playing/lane.dragActive/timeline autoScroll 的派生 external-store，start/stop 通知而不轮询。真实根 hook/控制器回归、四条变异与 native 后端 smoke 已证明 |
 | readOnly Input 被当非文本 | 必修 | 真实原生 a/m 确实误改模式。现在仅 disabled 排除文本 lease；只读选择/复制仍归原生，回归通过 |
 | Input 旧测试只断言回调次数与向窗口传播 | 必修 | 删除旧 incidental forwarding 断言，不重新固定传播数组；新 disabled 用实际受控文本值验证不可编辑，readonly 由真实组合模式/选择回归验证 |
-| F3 resume 帧同步 | 等待接口 | 协调者要求 F3 合入后接 `useResumeFrame` 并在回调中显式 `flushSync(composition.tick)`。当前无该公共端口，不造适配层 |
+| F3 resume 帧同步 | 必修已完成 | `useResumeFrame` 与普通帧使用同一 demand，在回调中显式 flushSync 同一 composition.tick；首 present 实际 UI、idle 释放、三项变异与真实后端离屏 smoke 已证明 |
 | 既有 `project/model/grid.test.ts:66` 的 `it.todo` | 记录 | 唯一 todo 为 Ctrl/Cmd+1/2 hook 映射的旧占位，非本轮新增，未越过 model owner 删除；full Bun 0 fail，app 无 todo/过滤 |
 | Home 最近工程 Card 的实例外观 | 等待接口 | DesignTokens 合入后消费真实共享同语义变体，删除 padding/gap/hover 实例覆盖，仅保留 width 等布局约束；当前不先改、不造第二套样式 |
 

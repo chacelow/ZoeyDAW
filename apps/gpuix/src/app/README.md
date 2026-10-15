@@ -53,6 +53,8 @@ Footer 按新切片契约二选一显示 Affect Chain 或 Clip Edit，不迁 Web
 
 帧需求由 `playing`、lane 的真实 `dragActive` 与 timeline 的 autoScroll 活动共同派生，经稳定的 external-store 订阅通知组合根。停止且无手势时取消 native frame 订阅，播放或手势开始时恢复；不缓存第二份可写需求状态，不轮询 pointer。只读 Input 仍是文本焦点，不能把 A/M 或 Cmd+A 送给 Arrangement。
 
+普通帧继续使用 `useAnimationFrame`。同一个 source 的 `useResumeFrame` 使用同一需求谓词，在原生 prepaint 中显式 `flushSync` 执行同一个 `composition.tick`，使首次恢复 present 使用最新视口。无需求时两类订阅都释放，不另建 source 或 timer。
+
 ## 验证入口
 
 ```sh
@@ -66,3 +68,5 @@ bun --hot src/main.tsx
 `bun apps/gpuix/src/app/verification/mutations.mjs` 跑 app 基线与行为变异，并在每次变异后恢复源码。真实后端 lease 测试需要可用音频设备，没有设备会失败，不跳过。`verification/native-fixture.ts` 是真实 main 的隔离验证 preload，要求 `B2_EVIDENCE_DIR` 指向临时目录，配合临时 HOME 避免改用户配置。第一阶段历史报告见 `report.md`，阶段2验收与限制见 `phase2-report.md`。
 
 变异脚本可接名字子串，例如 `bun apps/gpuix/src/app/verification/mutations.mjs "lane draw"`。过滤执行先验证该项的真实行为基线；不传过滤参数时仍先跑完整 app 基线。
+
+`verification/resume-smoke.tsx` 配合 `native-fixture.ts` preload 可重跑实际 AppShell、真实 NativeBackend 与离屏 GPUI 的恢复提交。要求 `B2_EVIDENCE_DIR` 指向已创建的临时目录，配置/存储也限定在该目录；建议同时隔离 HOME。它手动投递 frame host 的 resume 事件，不替代真实桌面 occlusion 评审。

@@ -87,7 +87,7 @@ function mount({ autoFocusInput = false, readOnlyInput = false } = {}) {
     )
   }
   root.render(
-    <AnimationFrameProvider source={{ subscribe: () => () => {} }}>
+    <AnimationFrameProvider source={{ subscribe: () => () => {}, subscribeResume: () => () => {} }}>
       <ThemeProvider>
         <ControlEnvironmentProvider value={{ textFocus: interaction.textFocus }}>
           <WindowKeyboardProvider value={keyboard}>

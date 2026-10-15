@@ -1,0 +1,40 @@
+107 |   expect(native.resumeCallback).toBeNull()
+108 |   flushSync(projectActions.togglePlay)
+109 |   expect(useProjectState.getState().session.playing).toBe(true)
+110 |   expect(native.active).toBe(true)
+111 |   expect(native.callback).not.toBeNull()
+112 |   expect(native.resumeCallback).not.toBeNull()
+                                          ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-app-shell/apps/gpuix/src/app/project/frame-demand.test.tsx:112:37)
+(fail) stopped idle has no native frame demand; playback starts it and stop releases it [107.74ms]
+163 |     projectActions.togglePlay()
+164 |     projectActions.seekBar(5)
+165 |   })
+166 |   expect(root.renderer.getAllText()).toEqual(["0"])
+167 |   native.resumeCallback?.(16)
+168 |   expect(root.renderer.getAllText()).toEqual(["200"])
+                                           ^
+error: expect(received).toEqual(expected)
+
+  [
+-   "200",
++   "0",
+  ]
+
+- Expected  - 1
++ Received  + 1
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-app-shell/apps/gpuix/src/app/project/frame-demand.test.tsx:168:38)
+(fail) resume commits the latest real timeline follow position before the first present [9.45ms]
+
+ 2 pass
+ 2 fail
+Ran 4 tests across 1 file. [727.00ms]
+[raw output: artifact://317]
+
+
+Command exited with code 1

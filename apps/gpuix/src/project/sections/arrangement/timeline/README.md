@@ -40,7 +40,7 @@
 
 1. 同一真实 renderer 的 `createWindowPlatform(renderer).subscribeApplicationActive`，不用旧 A2 采样 singleton。
 2. 一份 `WindowKeyboardProvider`，根 `render` 使用同一 bus 的 `rootHandlers`。时间线只在已处理键上 `preventDefault()`；原生元素先处理，窗口回调在后。
-3. 一份 `AnimationFrameProvider`，通过 `useAnimationFrame(controller.tick, active)` 喂帧，不保留 JS timer 链。
+3. 一份 `AnimationFrameProvider`。普通帧通过 `useAnimationFrame` 喂 `tick`，恢复 prepaint 通过同一 demand 的 `useResumeFrame` 显式 `flushSync` 同一个 tick；不保留 JS timer 链或第二帧源。
 4. 从 `@/platform/cursor` 注入同一 `nativeCursorLock` 到 `ControlEnvironmentProvider` 与时间线；Panel 环境复用同一窗口失活订阅。sections 不直接 import napi 包。
 5. 配置好的真实 project runtime lease、原生快照存储及最后的释放。
 
