@@ -30,6 +30,8 @@ export const QuadPaint = memo(function QuadPaint({
   id,
   color,
   opacity,
+  strokeWidth,
+  strokeColor,
   width,
   height,
   bind,
@@ -37,6 +39,8 @@ export const QuadPaint = memo(function QuadPaint({
   id: string
   color: string
   opacity: number
+  strokeWidth?: number
+  strokeColor?: string
   width: number
   height: number
   bind: PaintBinding
@@ -50,6 +54,8 @@ export const QuadPaint = memo(function QuadPaint({
     <QuadBatch
       ref={batch.ref}
       testId={id}
+      strokeWidth={strokeWidth}
+      strokeColor={strokeColor}
       style={{ position: "absolute", left: 0, top: 0, width, height, color, opacity }}
     />
   )

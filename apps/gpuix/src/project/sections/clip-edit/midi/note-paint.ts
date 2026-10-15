@@ -6,8 +6,9 @@ import { isBlackKey } from "./geometry"
 import { rollGridLines, visibleRows } from "./layout"
 import type { NoteRect, RollGeometry } from "./layout"
 import { paintLayers } from "./paint-layers"
+import type { PaintGroup } from "./paint-layers"
 
-type Groups = Map<string, { color: string; opacity: number; rectangles: number[] }>
+type Groups = Map<string, PaintGroup>
 interface LabelRect extends NoteRect {
   readonly fill: string
   readonly border: string
@@ -143,44 +144,13 @@ export function notePaint({
     const y = rect.top - roll.scrollY + 1
     const width = Math.max(1, rect.width)
     const height = Math.max(1, rect.height - 1)
-    const fillKey = `midi-note-fill-${plane}-${isSelected ? "selected" : "plain"}-${note.velocity}`
-    const borderKey = `midi-note-border-${plane}-${isSelected ? "selected" : "plain"}`
-    if (width > 2 && height > 2) {
-      let interior = paint.groups.get(fillKey)
-      if (!interior) {
-        interior = { color: fill, opacity: 1, rectangles: [] }
-        paint.groups.set(fillKey, interior)
-      }
-      interior.rectangles.push(x + 1, y + 1, width - 2, height - 2)
+    const key = `midi-note-${plane}-${isSelected ? "selected" : "plain"}-${fill}`
+    let group = paint.groups.get(key)
+    if (!group) {
+      group = { color: fill, opacity: 1, strokeWidth: 1, strokeColor: border, rectangles: [] }
+      paint.groups.set(key, group)
     }
-    let stroke = paint.groups.get(borderKey)
-    if (!stroke) {
-      stroke = { color: border, opacity: 1, rectangles: [] }
-      paint.groups.set(borderKey, stroke)
-    }
-    // Disjoint pieces preserve alpha and ancestor opacity, including one-pixel notes.
-    if (width <= 2 || height <= 2) {
-      stroke.rectangles.push(x, y, width, height)
-    } else {
-      stroke.rectangles.push(
-        x,
-        y,
-        width,
-        1,
-        x,
-        y + height - 1,
-        width,
-        1,
-        x,
-        y + 1,
-        1,
-        height - 2,
-        x + width - 1,
-        y + 1,
-        1,
-        height - 2
-      )
-    }
+    group.rectangles.push(x, y, width, height)
   }
   return {
     background: paintLayers(background),

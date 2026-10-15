@@ -6,7 +6,15 @@ import path from "node:path"
 import { useMemo } from "react"
 import { QuadPaint, usePaintLayers } from "./QuadPaint"
 
-function Surface({ x, visible }: { x: number; visible: boolean }) {
+function Surface({
+  x,
+  visible,
+  strokeWidth,
+}: {
+  x: number
+  visible: boolean
+  strokeWidth: number
+}) {
   const layers = useMemo(
     () =>
       visible
@@ -15,11 +23,13 @@ function Surface({ x, visible }: { x: number; visible: boolean }) {
               key: "viewport-fill",
               color: "#fafafa",
               opacity: 0.6,
+              strokeWidth,
+              strokeColor: "#ab3456b3",
               rectangles: () => new Float32Array([x, 7.5, 10.5, 12.5]),
             },
           ]
         : [],
-    [x, visible]
+    [x, visible, strokeWidth]
   )
   const bind = usePaintLayers(layers)
   return (
@@ -38,6 +48,8 @@ function Surface({ x, visible }: { x: number; visible: boolean }) {
           id={layer.key}
           color={layer.color}
           opacity={layer.opacity}
+          strokeWidth={layer.strokeWidth}
+          strokeColor={layer.strokeColor}
           bind={bind}
           width={80}
           height={60}
@@ -47,7 +59,15 @@ function Surface({ x, visible }: { x: number; visible: boolean }) {
   )
 }
 
-function Reference({ x, visible }: { x: number; visible: boolean }) {
+function Reference({
+  x,
+  visible,
+  strokeWidth,
+}: {
+  x: number
+  visible: boolean
+  strokeWidth: number
+}) {
   return (
     <div
       style={{
@@ -68,6 +88,8 @@ function Reference({ x, visible }: { x: number; visible: boolean }) {
             height: 12.5,
             backgroundColor: "#fafafa",
             opacity: 0.6,
+            borderWidth: strokeWidth,
+            borderColor: "#ab3456b3",
           }}
         />
       ) : null}
@@ -80,10 +102,11 @@ test("viewport uploads reach memoized hosts and survive remove/remount with nati
   const actual = createTestRoot({ width: 80, height: 60 })
   try {
     const states = [
-      { x: 3.5, visible: true },
-      { x: 16.5, visible: true },
-      { x: 16.5, visible: false },
-      { x: -0.5, visible: true },
+      { x: 3.5, visible: true, strokeWidth: 1 },
+      { x: 16.5, visible: true, strokeWidth: 1 },
+      { x: 16.5, visible: false, strokeWidth: 1 },
+      { x: -0.5, visible: true, strokeWidth: 1 },
+      { x: 16.5, visible: true, strokeWidth: 0 },
     ]
     try {
       for (const [index, state] of states.entries()) {
