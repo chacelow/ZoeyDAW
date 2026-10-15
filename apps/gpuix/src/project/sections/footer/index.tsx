@@ -107,7 +107,11 @@ export function FooterPanel({
               content:
                 view === "clip" && clip && owner ? (
                   <Fragment key={clip.id}>
-                    {renderClipEditor({ clip, track: owner, close: () => onCollapsedChange(true) })}
+                    {renderClipEditor({
+                      clipId: clip.id,
+                      trackId: owner.id,
+                      close: () => onCollapsedChange(true),
+                    })}
                   </Fragment>
                 ) : (
                   emptyClip

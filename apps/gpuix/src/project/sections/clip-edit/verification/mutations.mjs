@@ -71,8 +71,8 @@ const mutations = [
   {
     name: "velocity keyboard adjustment is ignored",
     file: "src/project/sections/clip-edit/midi/VelocityLane.tsx",
-    from: 'onVelocityChange(index, event.key === "up" ? 1 : -1)',
-    to: "onVelocityChange(index, 0)",
+    from: 'onVelocityChange(active.index, event.key === "up" ? 1 : -1)',
+    to: "onVelocityChange(active.index, 0)",
     tests: ["src/project/sections/clip-edit/midi/keyboard-reachability.test.tsx"],
   },
   {
@@ -214,6 +214,62 @@ const mutations = [
     from: "onChange={warpMode => change({ warpMode })}",
     to: "onChange={() => {}}",
     tests: ["src/project/sections/clip-edit/pressed-families.test.tsx"],
+  },
+  {
+    name: "wheel pan consumes the delta twice",
+    file: "src/project/sections/clip-edit/midi/MidiEditor.tsx",
+    from: "else view.scrollTo(view.roll.scrollX - dx, view.roll.scrollY - dy)",
+    to: "else view.scrollTo(view.roll.scrollX - 2 * dx, view.roll.scrollY - 2 * dy)",
+    tests: ["src/project/sections/clip-edit/midi/viewport-behavior.test.tsx"],
+  },
+  {
+    name: "wheel zoom applies two source steps",
+    file: "src/project/sections/clip-edit/midi/useMidiViewport.ts",
+    from: "horizontalZoom * HORIZONTAL_ZOOM.factor ** direction",
+    to: "horizontalZoom * HORIZONTAL_ZOOM.factor ** (direction * 2)",
+    tests: ["src/project/sections/clip-edit/midi/viewport-behavior.test.tsx"],
+  },
+  {
+    name: "active velocity ignores the selection owner",
+    file: "src/project/sections/clip-edit/midi/VelocityLane.tsx",
+    from: "stems.find(stem => stem.index === currentNoteIndex)",
+    to: "stems[0]",
+    tests: ["src/project/sections/clip-edit/midi/keyboard-reachability.test.tsx"],
+  },
+  {
+    name: "velocity restores a Tab stop per stem",
+    file: "src/project/sections/clip-edit/midi/VelocityLane.tsx",
+    from: "{active ? (",
+    to: '{stems.filter(stem => stem.index !== active?.index).map(stem => <div key={"legacy-" + stem.index} role="slider" tabIndex={0} aria-label={label} aria-valuetext={String(stem.note.velocity)} style={{ position: "absolute", left: stem.x, bottom: 0, width: 1, height: stem.stem, pointerEvents: "none" }} />)}\n      {active ? (',
+    tests: ["src/project/sections/clip-edit/midi/keyboard-reachability.test.tsx"],
+  },
+  {
+    name: "memoized paint hosts never receive new viewport geometry",
+    file: "src/project/sections/clip-edit/midi/QuadPaint.tsx",
+    from: "[controllers, layers]",
+    to: "[controllers]",
+    tests: ["src/project/sections/clip-edit/midi/QuadPaint.test.tsx"],
+  },
+  {
+    name: "new paint hosts are never registered",
+    file: "src/project/sections/clip-edit/midi/QuadPaint.tsx",
+    from: "bind(id, batch)",
+    to: "bind(id, null)",
+    tests: ["src/project/sections/clip-edit/midi/QuadPaint.test.tsx"],
+  },
+  {
+    name: "group hit discards the current note anchor",
+    file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
+    from: "setSelected(selection, selection.includes(hit.index) ? hit.index : currentNoteIndex)",
+    to: "setSelected(selection, currentNoteIndex)",
+    tests: ["src/project/sections/clip-edit/midi/keyboard-reachability.test.tsx"],
+  },
+  {
+    name: "Cmd+A replaces the current note anchor",
+    file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
+    from: "setSelected(selectVisibleNotes(notes, view.window), currentNoteIndex)",
+    to: "setSelected(selectVisibleNotes(notes, view.window), null)",
+    tests: ["src/project/sections/clip-edit/midi/keyboard-reachability.test.tsx"],
   },
 ]
 

@@ -1,8 +1,8 @@
 import type { EventPayload } from "@gpuix/react"
+import { useMemo } from "react"
 import { useProjectEditGesture, projectActions } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { resolveContentColor } from "@/shared/theme/content-color"
 import { Button, DragPadNumber } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import { MidiRuler } from "./MidiRuler"
@@ -11,7 +11,7 @@ import { PianoKeys } from "./PianoKeys"
 import { VelocityLane } from "./VelocityLane"
 import { useMidiEditor } from "./useMidiEditor"
 import { useMidiViewport } from "./useMidiViewport"
-import type { MidiClip, Track } from "@/project/model/types"
+import type { MidiClip } from "@/project/model/types"
 import type { MidiEditorLabels } from "../labels"
 
 /** Loop length shares the audio editor's sixteenth step and lower bound. */
@@ -22,31 +22,35 @@ Piano roll for one MIDI clip. Fold, zoom and scroll stay local; notes change onl
 editor's project transactions. Wheel scrolls (Shift for time), Cmd/Ctrl+wheel zooms time.
 */
 export function MidiEditor({
-  clip,
-  track,
+  readClip,
+  color,
   numerator,
   labels,
 }: {
-  readonly clip: MidiClip
-  readonly track: Track
+  readonly readClip: () => MidiClip
+  readonly color: string
   readonly numerator: number
   readonly labels: MidiEditorLabels
 }) {
   const theme = useTheme()
-  const window = {
-    sourceOffsetBeats: (clip.sourceOffsetBars ?? 0) * numerator,
-    totalBeats: clip.lengthBars * numerator,
-  }
+  const clip = readClip()
+  const window = useMemo(
+    () => ({
+      sourceOffsetBeats: (clip.sourceOffsetBars ?? 0) * numerator,
+      totalBeats: clip.lengthBars * numerator,
+    }),
+    [clip.sourceOffsetBars, clip.lengthBars, numerator]
+  )
   const view = useMidiViewport(clip, window)
+  const readNotes = useMemo(() => () => clip.notes, [clip.notes])
   const editor = useMidiEditor(clip, view.roll, theme.project.midiVelocityHeight)
   const loopGesture = useProjectEditGesture((loopBars: number) =>
     projectActions.updateClip(clip.id, { loopBars })
   )
-  const color = resolveContentColor(clip.color ?? track.color, theme.colors)
   const gap = theme.control["--spacing-control-gap"]
   const trackGap = theme.control["--spacing-control-track-gap"]
   const fontSize = theme.control["--text-control-track"]
-  const selectedNote = clip.notes[editor.visibleSelection[0] ?? -1]
+  const selectedNote = clip.notes[editor.currentNoteIndex ?? -1]
   const wheel = (event: EventPayload) => {
     const dx = event.deltaX ?? 0
     const dy = event.deltaY ?? 0
@@ -184,8 +188,9 @@ export function MidiEditor({
         <NoteGrid
           hostRef={editor.host}
           roll={view.roll}
-          notes={clip.notes}
+          readNotes={readNotes}
           selection={editor.visibleSelection}
+          currentNoteIndex={editor.currentNoteIndex}
           marquee={editor.marquee}
           numerator={numerator}
           drawMode={editor.drawMode}
@@ -198,7 +203,6 @@ export function MidiEditor({
           onMouseDown={editor.pressGrid}
           onMouseMove={editor.move}
           onMouseUp={editor.release}
-          onScroll={wheel}
           onKeyDown={editor.keyDown}
           onBlur={editor.blur}
         />
@@ -244,11 +248,13 @@ export function MidiEditor({
         <VelocityLane
           hostRef={editor.velocityHost}
           roll={view.roll}
-          notes={clip.notes}
+          readNotes={readNotes}
           selection={editor.visibleSelection}
+          currentNoteIndex={editor.currentNoteIndex}
           label={labels.velocityLane}
           color={color}
           onVelocityChange={editor.changeVelocity}
+          onActivateNote={editor.activateNote}
           onMouseDown={editor.pressVelocity}
           onMouseMove={editor.move}
           onMouseUp={editor.release}

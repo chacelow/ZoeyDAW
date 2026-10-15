@@ -118,8 +118,8 @@ export function mount(id = MIDI_ID, size = TEST_SIZE): Harness {
       <ThemeProvider>
         <div style={{ display: "flex", width: size.width, height: size.height }}>
           <ClipEditor
-            clip={clip}
-            track={track}
+            clipId={clip.id}
+            trackId={track.id}
             close={() => {}}
             labels={demoLabels.en}
             readPeaks={(_source, _start, _end, pixels) => new Float32Array(pixels * 4).fill(0.5)}

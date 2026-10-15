@@ -30,16 +30,19 @@ export function useMidiViewport(clip: MidiClip, window: SourceWindow) {
   const pitches = useMemo(() => rollPitches(clip.notes, fold), [clip.notes, fold])
   // Like Live, zoom 1 fits the whole source window to the editor width.
   const width = size.width * horizontalZoom
-  const roll: RollGeometry = {
-    pitches,
-    rowHeight,
-    width,
-    scrollX: scroll.x,
-    scrollY: scroll.y,
-    viewWidth: size.width,
-    viewHeight: size.height,
-    window,
-  }
+  const roll = useMemo<RollGeometry>(
+    () => ({
+      pitches,
+      rowHeight,
+      width,
+      scrollX: scroll.x,
+      scrollY: scroll.y,
+      viewWidth: size.width,
+      viewHeight: size.height,
+      window,
+    }),
+    [pitches, rowHeight, width, scroll.x, scroll.y, size.width, size.height, window]
+  )
   const fitKey = `${clip.id}|${fold}|${window.sourceOffsetBeats}|${window.totalBeats}`
   const fitted = useRef<string | null>(null)
   useLayoutEffect(() => {

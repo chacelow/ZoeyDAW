@@ -28,7 +28,10 @@ import type { ClipEditorEnvironment } from "../environment"
 const locale = process.env.CLIP_EDIT_LOCALE === "zh" ? "zh" : "en"
 const appearance = process.env.CLIP_EDIT_THEME === "light" ? "light" : "dark"
 const media = createVerificationMedia()
-const seeded = seedClipEditProject(media.uri)
+const seeded = seedClipEditProject(
+  media.uri,
+  process.env.CLIP_EDIT_STRESS === "1" ? "dense" : "normal"
+)
 const release = startProjectRuntime()
 const keyboard = createWindowKeyboard()
 const clipboard = createNativeClipboard()
@@ -173,8 +176,8 @@ function Demo() {
       <div style={sx({ flexGrow: 1, minHeight: 0, display: "flex" })}>
         {clip && track ? (
           <ClipEditor
-            clip={clip}
-            track={track}
+            clipId={clip.id}
+            trackId={track.id}
             close={() => setClipId(seeded.midi)}
             labels={demoLabels[locale]}
             readPeaks={readProjectPeaks}

@@ -55,7 +55,7 @@ function visibleHeight(pixel: number): number {
 test("stable peak reader follows native session opening, tempo, meter, and reopening", async () => {
   media = createVerificationMedia()
   restoreBackend = configureProjectBackend(createNativeBackend)
-  const { audio } = seedClipEditProject(media.uri)
+  const { audio } = seedClipEditProject(media.uri, "normal")
   const clip = useProjectState
     .getState()
     .document.tracks.flatMap(track => track.clips)

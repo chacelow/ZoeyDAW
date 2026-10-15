@@ -5,9 +5,13 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
 import { Group, Panel, PanelDivider, PanelEnvironmentProvider } from "@/ui/panels"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
-import { hydrateProject, projectActions, useProjectState } from "../../adapters"
+import { hydrateProject, projectActions, readProjectPeaks, useProjectState } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
 import { createWindowKeyboard } from "@/platform/keyboard"
+import { createNativeClipboard } from "@/platform/clipboard"
+import { ClipEditor } from "@/project/sections/clip-edit"
+import { demoLabels } from "@/project/sections/clip-edit/demo/labels"
+import type { ClipEditorEnvironment } from "@/project/sections/clip-edit"
 import { createVerificationKeyboard } from "./verification/keyboard"
 import { FooterPanel } from "."
 import { englishFooterLabels } from "./demo-labels"
@@ -257,6 +261,83 @@ test("native Clip host divider drag changes the Footer height continuously", () 
       0
     )
     expect(root.renderer.getElementBounds(divider.id)?.y).toBeCloseTo(initialDivider.y - 40, 0)
+  } finally {
+    root.unmount()
+  }
+})
+
+test("the ID slot keeps one real MIDI editor live through a velocity edit and Undo", () => {
+  const document = createMockDocument()
+  const track = document.tracks.find(item => item.kind === "midi")
+  if (!track) throw new Error("Missing MIDI fixture")
+  track.clips.push({
+    id: "footer-midi",
+    kind: "midi",
+    startBar: 1,
+    lengthBars: 1,
+    notes: [{ id: "footer-note", pitch: 64, startBeat: 0, lengthBeats: 1, velocity: 80 }],
+  })
+  hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
+  projectActions.selectClips(["footer-midi"])
+  const environment: ClipEditorEnvironment = {
+    clipboard: createNativeClipboard(),
+    subscribeWindowActive: activity.subscribe,
+    drawMode: {
+      markGesture: () => {
+        throw new Error("Unexpected draw gesture")
+      },
+      latch: enabled => projectActions.setMode("drawMode", enabled),
+    },
+    onRegionKey: () => {
+      throw new Error("Editing key escaped its owner")
+    },
+  }
+  const root = createTestRoot({ width: 900, height: 420 })
+  const unexpected = () => {
+    throw new Error("Unexpected Footer view transition")
+  }
+  try {
+    root.render(
+      <ThemeProvider>
+        <FooterPanel
+          labels={englishFooterLabels}
+          view="clip"
+          collapsed={false}
+          reducedMotion
+          subscribeWindowActive={activity.subscribe}
+          onViewChange={unexpected}
+          onCollapsedChange={unexpected}
+          renderClipEditor={slot => (
+            <ClipEditor
+              {...slot}
+              labels={demoLabels.en}
+              readPeaks={readProjectPeaks}
+              environment={environment}
+            />
+          )}
+        />
+      </ThemeProvider>
+    )
+    root.renderer.dispatchNativeEvents()
+    root.renderer.flush()
+    const stem = root.renderer.findByTestId("midi-velocity-footer-note")
+    if (!stem) throw new Error("The ID slot did not mount the selected MIDI editor")
+    root.renderer.nativeSimulateKeystrokes(stem.id, "up")
+    const velocity = () => {
+      const clip = useProjectState
+        .getState()
+        .document.tracks.find(item => item.id === track.id)
+        ?.clips.find(item => item.id === "footer-midi")
+      if (clip?.kind !== "midi") throw new Error("MIDI fixture was lost")
+      return clip.notes[0]?.velocity
+    }
+    expect(velocity()).toBe(81)
+    expect(
+      root.renderer.findByType("div").filter(node => node.testId === "clip-editor")
+    ).toHaveLength(1)
+    root.renderer.nativeSimulateKeystrokes(stem.id, "cmd-z")
+    expect(velocity()).toBe(80)
+    expect(root.renderer.findByTestId("midi-editor")).toBeDefined()
   } finally {
     root.unmount()
   }

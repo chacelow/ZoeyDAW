@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it } from "bun:test"
-import { projectActions } from "@/project/adapters"
-import { MIDI_ID, mount, seed } from "../harness.test"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { MIDI_ID, mount, notes, seed } from "../harness.test"
 import type { Harness } from "../harness.test"
 
 let view: Harness | undefined
@@ -72,10 +72,46 @@ it("clamps a folded scroll after removing all but one source pitch", () => {
     notes: [{ id: "pitch-111", pitch: 111, startBeat: 3, lengthBeats: 1, velocity: 80 }],
   })
   const grid = h.bounds("midi-grid")
-  const note = h.bounds("midi-note-pitch-111")
+  const note = h.bounds("midi-note-row-111")
   const key = h.bounds("midi-key-111")
   expect(note.y + note.height).toBeGreaterThan(grid.y)
   expect(note.y).toBeLessThan(grid.y + grid.height)
   expect(key.y + key.height).toBeGreaterThan(grid.y)
   expect(key.y).toBeLessThan(grid.y + grid.height)
+})
+
+it("consumes each grid wheel once for time zoom and horizontal pan", () => {
+  const h = (view = mount())
+  const before = useProjectState.getState().document
+  const grid = h.bounds("midi-grid")
+  const controls = h.root.renderer.findByType("div")
+  const plus = controls.find(node => node.customProps?.["aria-label"] === "Zoom in time")
+  const minus = controls.find(node => node.customProps?.["aria-label"] === "Zoom out time")
+  if (!plus || !minus) throw new Error("Missing native time zoom controls")
+  h.root.renderer.nativeSimulateKeystrokes(plus.id, "enter")
+  const buttonZoomed = h.bounds("midi-note-visible")
+  expect(buttonZoomed.width).toBe(grid.width / 2)
+  h.root.renderer.nativeSimulateKeystrokes(minus.id, "enter")
+  gridWheel(h, 0, 120, "cmd")
+  const zoomed = h.bounds("midi-note-visible")
+  expect(zoomed).toEqual(buttonZoomed)
+  expect(zoomed.width).toBe(grid.width / 2)
+  expect(zoomed.x).toBe(grid.x)
+  gridWheel(h, -60, 0)
+  expect(h.bounds("midi-note-visible").x).toBe(zoomed.x - 60)
+  expect(useProjectState.getState().document).toBe(before)
+})
+
+it("zoom and pan preserve selection and the previous editing Undo entry", () => {
+  const h = (view = mount())
+  h.key("midi-grid", "cmd-a")
+  h.key("midi-grid", "up")
+  expect(notes().map(note => note.pitch)).toEqual([73, 65])
+  gridWheel(h, 0, 120, "cmd")
+  gridWheel(h, -60, 0)
+  expect(h.root.renderer.getAutomationTree()).toContain("2 selected")
+  expect(notes().map(note => note.pitch)).toEqual([73, 65])
+  h.key("midi-grid", "cmd-z")
+  expect(notes().map(note => note.pitch)).toEqual([72, 64])
+  expect(h.root.renderer.getAutomationTree()).toContain("2 selected")
 })

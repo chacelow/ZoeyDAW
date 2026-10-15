@@ -1,24 +1,24 @@
 import type { EventPayload, KeyEvent, PublicInstance } from "@gpuix/react"
+import { useMemo } from "react"
 import type { Ref } from "react"
-import { MIN_GRID_CELL_PX } from "@/project/model/grid"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { colorMix } from "@/shared/theme/color-mix"
-import { isBlackKey, pitchName } from "./geometry"
-import { rollGridLines, visibleNoteRects, visibleRows } from "./layout"
+import { pitchName } from "./geometry"
+import { visibleNoteRects } from "./layout"
+import { QuadPaint, usePaintLayers } from "./QuadPaint"
+import { notePaint } from "./note-paint"
 import type { MidiNote } from "@/project/model/types"
 import type { RollGeometry } from "./layout"
 import type { Marquee } from "./useMidiEditor"
 
-/**
-The focusable note surface. It owns pointer capture for every grid gesture (one host with
-mouseDown + mouseMove), and mounts only rows, lines and notes that intersect the viewport.
-*/
+/** One grid owns pointer capture, hit testing and edit shortcuts; quads are visual-only. */
 export function NoteGrid({
   hostRef,
   roll,
-  notes,
+  readNotes,
   selection,
+  currentNoteIndex,
   marquee,
   numerator,
   drawMode,
@@ -28,14 +28,14 @@ export function NoteGrid({
   onMouseDown,
   onMouseMove,
   onMouseUp,
-  onScroll,
   onKeyDown,
   onBlur,
 }: {
   readonly hostRef: Ref<PublicInstance | null>
   readonly roll: RollGeometry
-  readonly notes: readonly MidiNote[]
+  readonly readNotes: () => readonly MidiNote[]
   readonly selection: readonly number[]
+  readonly currentNoteIndex: number | null
   readonly marquee: Marquee | null
   readonly numerator: number
   readonly drawMode: boolean
@@ -45,18 +45,48 @@ export function NoteGrid({
   readonly onMouseDown: (event: EventPayload) => void
   readonly onMouseMove: (event: EventPayload) => void
   readonly onMouseUp: (event: EventPayload) => void
-  readonly onScroll: (event: EventPayload) => void
   readonly onKeyDown: (event: KeyEvent) => void
   readonly onBlur: () => void
 }) {
   const theme = useTheme()
-  const { first, end } = visibleRows(roll)
-  const rows = roll.pitches.slice(first, end)
-  const lines = rollGridLines(roll, numerator, MIN_GRID_CELL_PX)
-  const rects = visibleNoteRects(notes, roll)
-  const selected = new Set(selection)
-  const lineColor = theme.colors.arrangementLine
+  const notes = readNotes()
+  const rects = useMemo(() => visibleNoteRects(notes, roll), [notes, roll])
+  const selected = useMemo(() => new Set(selection), [selection])
   const fontSize = theme.control["--text-control-track"]
+  const activeRect = rects.find(rect => rect.index === currentNoteIndex)
+  const activeNote = activeRect ? notes[activeRect.index] : undefined
+  const rows = useMemo(() => {
+    const descriptions = new Map<number, { top: number; notes: string[]; selected: boolean }>()
+    for (const rect of rects) {
+      const note = notes[rect.index]
+      if (!note) continue
+      let row = descriptions.get(note.pitch)
+      if (!row) {
+        row = { top: rect.top, notes: [], selected: false }
+        descriptions.set(note.pitch, row)
+      }
+      row.notes.push(
+        `${note.startBeat}–${note.startBeat + note.lengthBeats} · ${note.velocity}/127${selected.has(rect.index) ? " *" : ""}`
+      )
+      row.selected ||= selected.has(rect.index)
+    }
+    return Array.from(descriptions, ([pitch, row]) => ({
+      pitch,
+      top: row.top,
+      selected: row.selected,
+      description: row.notes.join("; "),
+    }))
+  }, [rects, notes, selected])
+  const paint = useMemo(
+    () =>
+      notePaint({ notes, rects, roll, selected, numerator, color, colors: theme.colors, fontSize }),
+    [notes, rects, roll, selected, numerator, color, theme.colors, fontSize]
+  )
+  const layers = useMemo(
+    () => [...paint.background, ...paint.planes.flatMap(plane => plane.layers)],
+    [paint]
+  )
+  const bind = usePaintLayers(layers)
   return (
     <div
       ref={hostRef}
@@ -79,79 +109,98 @@ export function NoteGrid({
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
-      onScroll={onScroll}
       onKeyDown={onKeyDown}
       onBlur={onBlur}
     >
-      {rows.map((pitch, offset) => (
+      {paint.background.map(layer => (
+        <QuadPaint
+          key={layer.key}
+          id={layer.key}
+          color={layer.color}
+          opacity={layer.opacity}
+          bind={bind}
+          width={roll.viewWidth}
+          height={roll.viewHeight}
+        />
+      ))}
+      {rows.map(row => (
         <div
-          key={pitch}
-          style={sx({
+          key={`row-${row.pitch}`}
+          testId={`midi-note-row-${row.pitch}`}
+          role="row"
+          aria-label={`${pitchName(row.pitch)} · ${row.description}`}
+          aria-selected={row.selected}
+          style={{
             position: "absolute",
             left: 0,
-            right: 0,
-            top: (first + offset) * roll.rowHeight - roll.scrollY,
+            top: row.top - roll.scrollY,
+            width: roll.viewWidth,
             height: roll.rowHeight,
-            borderBottomWidth: 1,
-            borderColor: lineColor,
-            backgroundColor: isBlackKey(pitch) ? theme.colors.arrangementSurfaceAlt : undefined,
             pointerEvents: "none",
-          })}
+          }}
         />
       ))}
-      {lines.map(line => (
-        <div
-          key={line.x}
-          style={sx({
-            position: "absolute",
-            left: line.x - roll.scrollX,
-            top: 0,
-            bottom: 0,
-            width: 1,
-            backgroundColor: line.level === 2 ? theme.colors.mutedForeground : lineColor,
-            opacity: line.level === 2 ? 0.45 : line.level === 1 ? 1 : 0.55,
-            pointerEvents: "none",
-          })}
-        />
-      ))}
-      {rects.map(rect => {
-        const note = notes[rect.index]
-        if (!note) return null
-        const isSelected = selected.has(rect.index)
-        return (
-          <div
-            key={note.id ?? rect.index}
-            testId={`midi-note-${note.id ?? rect.index}`}
-            role="gridcell"
-            aria-label={`${pitchName(note.pitch)} · ${note.velocity}`}
-            aria-selected={isSelected}
-            style={sx({
-              position: "absolute",
-              left: rect.left - roll.scrollX,
-              top: rect.top - roll.scrollY + 1,
-              width: Math.max(1, rect.width),
-              height: Math.max(1, rect.height - 1),
-              overflow: "hidden",
-              borderWidth: 1,
-              borderColor: isSelected
-                ? theme.colors.foreground
-                : colorMix(color, 60, theme.colors.background),
-              // Velocity reads as fill strength, as in Live's piano roll.
-              backgroundColor: isSelected
-                ? colorMix(color, 55 + (note.velocity / 127) * 45, theme.colors.foreground)
-                : colorMix(color, 35 + (note.velocity / 127) * 65, theme.colors.arrangementSurface),
-              color:
-                theme.appearance === "dark" ? theme.colors.background : theme.colors.foreground,
-              fontSize,
-              pointerEvents: "none",
-            })}
-          >
-            {rect.width > fontSize * 3 && rect.height > fontSize ? (
+      {paint.planes.flatMap(plane => [
+        ...plane.layers.map(layer => (
+          <QuadPaint
+            key={layer.key}
+            id={layer.key}
+            color={layer.color}
+            opacity={layer.opacity}
+            bind={bind}
+            width={roll.viewWidth}
+            height={roll.viewHeight}
+          />
+        )),
+        ...plane.labels.map(rect => {
+          const note = notes[rect.index]
+          if (!note) return null
+          return (
+            <div
+              key={note.id ?? rect.index}
+              testId={`midi-note-${note.id ?? rect.index}`}
+              role="gridcell"
+              aria-label={`${pitchName(note.pitch)} · ${note.startBeat}–${note.startBeat + note.lengthBeats} · ${note.velocity}/127`}
+              aria-selected={selected.has(rect.index)}
+              style={sx({
+                position: "absolute",
+                left: rect.left - roll.scrollX,
+                top: rect.top - roll.scrollY + 1,
+                width: Math.max(1, rect.width),
+                height: Math.max(1, rect.height - 1),
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: rect.border,
+                backgroundColor: rect.fill,
+                color:
+                  theme.appearance === "dark" ? theme.colors.background : theme.colors.foreground,
+                fontSize,
+                pointerEvents: "none",
+              })}
+            >
               <text style={{ pointerEvents: "none" }}>{pitchName(note.pitch)}</text>
-            ) : null}
-          </div>
-        )
-      })}
+            </div>
+          )
+        }),
+      ])}
+      {activeRect &&
+      activeNote &&
+      !(activeRect.width > fontSize * 3 && activeRect.height > fontSize) ? (
+        <div
+          testId={`midi-note-${activeNote.id ?? activeRect.index}`}
+          role="gridcell"
+          aria-selected
+          aria-label={`${pitchName(activeNote.pitch)} · ${activeNote.startBeat}–${activeNote.startBeat + activeNote.lengthBeats} · ${activeNote.velocity}/127`}
+          style={{
+            position: "absolute",
+            left: activeRect.left - roll.scrollX,
+            top: activeRect.top - roll.scrollY + 1,
+            width: Math.max(1, activeRect.width),
+            height: Math.max(1, activeRect.height - 1),
+            pointerEvents: "none",
+          }}
+        />
+      ) : null}
       {marquee ? (
         <div
           testId="midi-marquee"
