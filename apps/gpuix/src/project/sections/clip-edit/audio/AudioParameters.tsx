@@ -10,7 +10,7 @@ import {
 } from "@/project/model/audio-editor"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { DragPadNumber, DragPadToggle, DropdownButton } from "@/ui/controls"
+import { DragPadNumber, DragPadToggle, DropdownButton, ScrollArea } from "@/ui/controls"
 import type { AudioClipSettings, AudioMusicalValueKind } from "@/project/model/audio-editor"
 import type { AudioClip } from "@/project/model/types"
 import type { ReactNode } from "react"
@@ -259,9 +259,10 @@ export function AudioParameters({
     fontSize: theme.control["--text-control-track"],
   }
   return (
-    <div
+    <ScrollArea
       testId="audio-parameters"
-      role="group"
+      orientation="vertical"
+      height="100%"
       aria-label={labels.title}
       style={sx({
         display: "flex",
@@ -269,7 +270,6 @@ export function AudioParameters({
         flexShrink: 0,
         borderRightWidth: 1,
         borderColor: theme.colors.arrangementLine,
-        overflowY: "scroll",
       })}
     >
       <div style={column}>
@@ -334,6 +334,6 @@ export function AudioParameters({
           onChange={reverse => change({ reverse })}
         />
       </div>
-    </div>
+    </ScrollArea>
   )
 }
