@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { render, useGpuix, useWindowSize } from "@gpuix/react"
-import { cursorHide, cursorPosition, cursorRestore } from "@zoeydaw/native"
+import { nativeCursorLock } from "@/platform/cursor"
 import { fileURLToPath } from "node:url"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
@@ -23,7 +23,6 @@ import { TrackRows } from "./TrackRows"
 import { trackResources } from "./locales"
 import { contentFill } from "@/shared/theme/content-color"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
-import type { CursorLockPort } from "@/ui/controls"
 
 const document = structuredClone(useProjectState.getState().document)
 const workspace = structuredClone(useProjectState.getState().workspace)
@@ -79,16 +78,6 @@ for (let index = 0; index < 5; index++) {
 workspace.pxPerBar = 48
 document.transport.loop = { enabled: true, startBar: 1, endBar: 2 }
 hydrateProject(JSON.stringify({ version: 2, document, workspace }))
-
-const cursorLock: CursorLockPort = {
-  capture: cursorPosition,
-  hide: () => {
-    cursorHide()
-  },
-  restore: point => {
-    cursorRestore(point)
-  },
-}
 
 function TrackSurface({
   appearance,
@@ -324,7 +313,7 @@ function Demo() {
   return (
     <AnimationFrameProvider source={ports.frames}>
       <ThemeProvider key={appearance} defaultAppearance={appearance}>
-        <ControlEnvironmentProvider value={{ cursorLock }}>
+        <ControlEnvironmentProvider value={{ cursorLock: nativeCursorLock }}>
           <PanelEnvironmentProvider environment={ports.panels}>
             <TrackSurface
               appearance={appearance}
