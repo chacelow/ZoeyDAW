@@ -1,5 +1,7 @@
 # Arrangement tracks
 
+Stage 1 integration is not final acceptance. [VERIFICATION.md](VERIFICATION.md) records the migration inventory, Live comparison, visual checklist, independent reviews and actual gates: slice lint/scan and Rust pass; shared TypeScript and full-suite failures remain enabled. A3b fill/hideIcon, geometry, Space, nested context-menu and missing per-state visuals block acceptance. After the shared increment, verification continues in this slice; no `worker_done` is claimed.
+
 ## Routing legality
 
 `project/model/track-routing.ts` owns `canRouteTrack(sourceId, destinationId, tracks)` and `routingDestinations(track, tracks)`. Both the routing menu and `adapters/runtime/track-routing.ts` use the same decision. Internal targets must be Group or Main, cannot be the source or its descendant, and cannot close an output cycle. `none` and `external` remain legal terminal destinations. Checking candidates does not alter the document.
@@ -43,6 +45,7 @@ The driver consumes F1 callback timestamps directly. Wakeups only request a fram
 - Initial C1 window, before F1 frame integration: AX playback changed Stopped → Playing; Audio reported L −23.0 / R −27.0 dBFS, Group L −26.0 / R −28.5, Return L −38.0 / R −45.0. A real authored Clip gain change to 24 dB produced Audio L +1.0 / R −1.8 dBFS while Main remained at low output level.
 - Evidence: `evidence/2026-10-15-real-meter-playing.ax.txt` and `evidence/2026-10-15-real-meter-overload.ax.txt`.
 - The display layout changed during this run; screenshots were black and a display capture reported `InvalidCoordinateFrame`. AX proves the command/telemetry path, not the missing meter pixels. The service was killed after 1m55s; visual meter-state verification remains pending.
+- Current production-frame smoke at `8d34ed1`: AX changed Stopped → Playing → Stopped, but all meters stayed at the floor and window capture was black despite granted permissions and an unlocked/awake display. The service was killed after 1m25s. This attempt does not prove live signal or peak-decay pixels; see `evidence/2026-10-15-production-frame-smoke.ax.txt` and the matching black screenshot.
 
 ## Track header controls
 
