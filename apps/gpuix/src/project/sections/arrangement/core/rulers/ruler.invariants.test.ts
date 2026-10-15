@@ -58,9 +58,8 @@ test("locator navigation finds the closest strict neighbor without mutating sour
     expect(next?.bar ?? null).toBe(
       after.length ? Math.min(...after.map(marker => marker.bar)) : null
     )
-    if (previous)
-      expect(previous.id).toBe(before.filter(marker => marker.bar === previous.bar).at(-1)?.id)
-    if (next) expect(next.id).toBe(after.find(marker => marker.bar === next.bar)?.id)
+    if (previous) expect(before.filter(marker => marker.bar === previous.bar).at(-1)).toBe(previous)
+    if (next) expect(after.find(marker => marker.bar === next.bar)).toBe(next)
     expect(markers).toEqual(source)
   }
   expect(adjacentMarker([], 1, -1)).toBeNull()
