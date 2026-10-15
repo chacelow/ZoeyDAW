@@ -39,6 +39,33 @@
   --project-arrangement-marker-label-inset: 7px;
   --project-arrangement-marker-editor-min-width: 60.48px;
   --project-arrangement-grid-major-line-width: 1px;
+  --project-arrangement-preview-note-height: 3px;
+  --project-arrangement-preview-note-inset: 4px;
+  --project-arrangement-preview-note-top-inset: 1px;
+  --project-arrangement-preview-step-gap: 1px;
+  --project-arrangement-waveform-inset: 1px;
+  --project-arrangement-loop-tick-height: 5px;
+  --project-arrangement-loop-tick-min-spacing: 2px;
+  --project-arrangement-loop-tick-edge-inset: 1px;
+  --project-arrangement-clip-label-inset: 4px;
+  --project-arrangement-clip-label-clip-inset: 2px;
+  --project-arrangement-insertion-triangle-width: 8px;
+  --project-arrangement-insertion-triangle-height: 6px;
+  --project-arrangement-insertion-triangle-top-offset: 7px;
+  --project-arrangement-group-preview-inset: 3px;
+  --project-arrangement-group-preview-band-min-height: 0.5px;
+  --project-arrangement-group-preview-band-max-height: 2px;
+  --project-arrangement-group-preview-band-gap: 1px;
+  --project-arrangement-fade-handle-size: 5px;
+  --project-titlebar-height: 28px;
+  --project-traffic-light-margin: 8px;
+  --project-traffic-light-inset: 68px;
+  --project-midi-key-width: 54px;
+  --project-midi-ruler-height: 34px;
+  --project-midi-velocity-height: 40px;
+  --project-midi-row-max-height: 18px;
+  --project-midi-row-min-height: 6px;
+  --project-audio-ruler-height: 39px;
 }
 
 .project-transport {

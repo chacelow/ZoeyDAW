@@ -11,7 +11,7 @@
 | Context menu | `ContextMenu`、`ContextMenuTrigger`、`ContextMenuContent`、`ContextMenuItem`、`ContextMenuLabel`、`ContextMenuSeparator`、`ContextMenuRadioGroup`、`ContextMenuRadioItem`、`ContextMenuSub`、`ContextMenuSubTrigger`、`ContextMenuSubContent` |
 | Dropdown menu | `DropdownMenu`、`DropdownMenuTrigger`、`DropdownMenuContent`、`DropdownMenuItem`、`DropdownMenuCheckboxItem`、`DropdownMenuPortal`、`DropdownMenuSub`、`DropdownMenuSubTrigger`、`DropdownMenuSubContent` |
 | Popover | `Popover`、`PopoverTrigger`、`PopoverContent`、`PopoverHeader`、`PopoverTitle` |
-| 容器和反馈 | `Card`、`CardHeader`、`CardTitle`、`CardDescription`、`CardContent`、`Empty`、`EmptyHeader`、`EmptyTitle`、`EmptyDescription`、`Separator`、`Progress`、`Loading`、`LoadErrorScreen`、`ScrollArea`、`Toaster`、`toast`、`toastLoading` |
+| 容器和反馈 | `Card`、`CardHeader`、`CardTitle`、`CardDescription`、`CardContent`、`Empty`、`EmptyHeader`、`EmptyTitle`、`EmptyDescription`、`Separator`、`Progress`、`Loading`、`LoadErrorScreen`、`ScrollArea`、`ControlledScrollbar`、`Toaster`、`toast`、`toastLoading` |
 | 表单和导航 | `Label`、`Input`、`RadioGroup`、`RadioGroupItem`、`ToggleGroup`、`ToggleGroupItem`、`SettingsShell`、`SettingsNavItem`、`MotionTabs` |
 | 环境和拖拽 | `ControlEnvironment`、`ControlEnvironmentProvider`、`ControlGroup`、`ControlInfo`、`useInfoBinding`、`DragPreviewArea` |
 
@@ -21,6 +21,8 @@
 - `CursorLockPort` 经 `ControlEnvironment.cursorLock` 注入。UI 不依赖 `@zoeydaw/native`。无端口时不隐藏光标；画廊组合入口接入真实 Rust 光标函数。
 - Button 的 `active/onActiveChange` 为受控状态。`highlight` 默认开启，关闭后不加 hover 高亮。`iconOnly` 使用正方形尺寸，图标继承按钮颜色。
 - `DropdownButton` 复用发布版 Select。弹层保留标签换行，紧凑 trigger 把换行折成空格，指示器固定右侧。命令菜单与任意内容 Popover 不借 Select 模拟。
+- `ControlledScrollbar` 是加性的横/纵向受控变体：`value`、`viewport`、`extent` 使用同一逻辑单位，`length` 是绘制长度，`onChange` 写回消费者的唯一 owner。Arrangement 用它实现 **minimap 下 marks 与 timeline 共用的一条横向滚动条**，不另建音乐滚动状态或巨大 native scroll 内容。
+- 滚动条导航键只由控件消费，Space 留给窗口播放 owner；悬停滚轮通过原生 `pointerEvents: auto` 命中阻止祖先一起滚动，不伪造已消费事件标志。厚度和最小 thumb 来自共享控件度量，当前逻辑值经 `aria-valuetext` 暴露。
 - Menu/Popover 复用发布版 `FloatingLayer` 和 `renderSlot`。没有引入或复制社区库源码。原生子菜单、禁用项、Esc、键盘导航、焦点归还、四向定位和 outside mouseDown 均有行为测试。
 - `toastLoading(message, id?)` 保留原消费者接口。同 id 的 loading 可以被 success/error 替换；通知 store 只有一份，替换、淘汰和关闭清理旧 timer。
 - `SettingsShell` 是非模态导航和内容容器，不宣称实现模态 focus trap。`MotionTabs` 使用静态指示器位置和原生 opacity 过渡，当前发布版 MotionStyle 不提供 transform。
@@ -85,8 +87,8 @@ Rust 源码未改。Cargo 检查证明基线兼容，不代替真实光标交互
 
 首次取得截图时测量已经完成，没有捕获估算首帧，因此不能声称修正肉眼不可见。真实布局 probe 证明存在 0px 或 1px 修正。需要完全消除可见修正时，组合入口可预热相同字体和样本缓存后再显示布局；本轮未加入这项产品策略。
 
-## 明确保留的限制
+## 已修复：按下即移动的光标锚点（G1，2026-10-15）
 
-唯一 todo 是极快“按下即移动”的原生屏幕锚点时序。无停留路径在 JS 收到 mouseDown 前，OS 已经处理一个 10pt move，实测锚点从 `(805,364)` 偏到 `(805,354)`。同点停留路径正确。工具结束会另行恢复用户原光标，因此报告只使用组件恢复后、工具恢复前的 `onGestureEnd` 读回值。
+原限制：JS 处理 `mouseDown` 时读 OS 当前光标，合成“按下即移动”实测锚点从 `(805,364)` 偏到 `(805,354)`。现在锚点取按下事件自身的窗口坐标，经原生 `windowPointToScreen` 换算，不加补偿、轮询或 CGEventTap。`CursorLockPort.capture` 改为接收按下点；事件缺坐标时不锁光标。
 
-协调者批准本轮记录此限制，不加补偿或轮询猜测。可靠的 CGEventTap 捕获需要辅助功能/输入监控权限，留给用户决定。真实硬件速度尚未测，不能把合成输入结果当作人手精度数据。详情与回归步骤见 [DragPad 契约](DragPad/README.md)。
+真实画廊复测：按下屏幕点 `(412,293)`（AX 窗口原点 `(383,152)` + 窗口内 `(29,141)`）。无停留每步 10pt 上移 40pt 与同点停留 4 次后上移，两条路径的 `onGestureEnd` 读回都是 `(412,293)`，误差 0pt，BPM 均为 130。证据：[截图](DragPad/evidence/press-anchor-restored-2026-10-15.png)、[AX](DragPad/evidence/press-anchor-restored-2026-10-15.ax.txt)。仍未验证：人手真实硬件速度、多显示器与全屏实机（换算单测覆盖副屏负坐标）。细节见 [DragPad 契约](DragPad/README.md)。
