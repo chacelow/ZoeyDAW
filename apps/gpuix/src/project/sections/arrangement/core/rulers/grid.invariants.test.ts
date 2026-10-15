@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { adjustGrid, deriveGridPlan, gridZoomLimit, noteGridBars } from "@/project/model/grid"
-import { createSceneStore } from "../core/scene"
-import { gridLines, numberedRulerPlan, patternRegions, rulerTicks } from "../core/rulers/grid-lines"
+import { createSceneStore } from "../scene"
+import { gridLines, numberedRulerPlan, patternRegions, rulerTicks } from "./grid-lines"
 
 const METERS = [
   { numerator: 4, denominator: 4 },
