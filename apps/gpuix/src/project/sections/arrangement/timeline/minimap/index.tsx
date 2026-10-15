@@ -100,7 +100,9 @@ export function MiniMap({
         if ((event.clickCount ?? 1) >= 2) {
           gesture.up()
           onFit()
-        } else gesture.down({ x: event.x ?? 0, y: event.y ?? 0 }, event.button)
+        } else if (event.x !== undefined && event.y !== undefined) {
+          gesture.down({ x: event.x, y: event.y }, event.button)
+        }
       }}
       onMouseMove={event => {
         gesture.move({ x: event.x ?? 0, y: event.y ?? 0 })

@@ -1,0 +1,62 @@
+{
+  "e201": {
+    "bounds": {
+      "x": 786,
+      "y": 355,
+      "width": 171,
+      "height": 13
+    },
+    "enabled": "true",
+    "pressed": "<no value>"
+  },
+  "e203": {
+    "bounds": {
+      "x": 959,
+      "y": 355,
+      "width": 170,
+      "height": 13
+    },
+    "enabled": "true",
+    "pressed": "<no value>"
+  },
+  "e205": {
+    "bounds": {
+      "x": 1131,
+      "y": 355,
+      "width": 171,
+      "height": 13
+    },
+    "enabled": "true",
+    "pressed": "<no value>"
+  },
+  "e211": {
+    "bounds": {
+      "x": 785,
+      "y": 422,
+      "width": 200,
+      "height": 55
+    },
+    "enabled": "true",
+    "pressed": "<no value>"
+  },
+  "e213": {
+    "bounds": {
+      "x": 989,
+      "y": 422,
+      "width": 200,
+      "height": 55
+    },
+    "enabled": "true",
+    "pressed": "<no value>"
+  },
+  "e215": {
+    "bounds": {
+      "x": 785,
+      "y": 481,
+      "width": 200,
+      "height": 55
+    },
+    "enabled": "true",
+    "pressed": "<no value>"
+  }
+}

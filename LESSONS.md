@@ -247,7 +247,7 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 - `onLayout`：主干有（`.changeset/on-layout.md`），0.10.0 没有。绕行：`getElementBounds` 采样，收敛在唯一的测量 hook。
 - `getElementBounds` 含 padding 的修复：主干有（`bounds-include-padding`）。绕行：`readOuterBounds`，唯一入口。
 - `onFocus/onBlur` 在 `focusElement` 时不触发：元素焦点绕行为应用作用域单一采样器。窗口激活已由 F1 补丁 `window-active-change.patch` 提供原生事件 `renderer.onWindowActiveChange`，经 `createWindowPlatform(renderer).subscribeApplicationActive` 共享订阅；旧的 50ms 激活采样已删除，不得再用定时器轮询激活。
-- 关闭拦截、`hideWindow`、托盘：主干也没有；GPUI fork 里 `on_window_should_close` 已存在，只缺 gpuix 注册与 JS 暴露。当前 `WindowCloseGuard.supported=false`，不得用 `process.exit()` 冒充。
+- 关闭拦截：D1 补丁 `setWindowShouldClose` 加 H1 补丁 `closeWindow()`，由 `platform/window/close-guard.ts` 的 `createWindowCloseGuard` 统一持有(macOS 下 `supported=true`)，用法见 `apps/gpuix/src/platform/window/README.md`。`hideWindow` 和托盘仍然没有。不得用 `process.exit()` 冒充关闭。
 - `measureText`：没有。绕行：挂载不可见样本节点读取实测宽度。
 - 自建主干默认构建需要 Xcode 的 Metal 工具链（`xcrun metal`）；本机只有 CLT 时用 `runtime_shaders` 特性。
 - 错：合入改动 `scripts/gpuix-main/config.json` 补丁序列的分支后，直接在主干跑 tsc 和 `bun test`。共享 vendor 仍是旧补丁的产物，主干一度显示 tsc 8 个错误、25 个测试失败，全部是假失败。
@@ -263,5 +263,12 @@ npm 最新就是 0.10.0，主干已领先 88 个提交。以下是 0.10.0 缺失
 
 - 单核 CPU 中位数（8/64/256 clips）：Firewheel 0.020/0.224/1.07%，Kira 0.300/1.93/8.42%，Rodio 0.916/6.40/26.0%（测于用户有 Orca/Ableton 重负载时，墙钟已披露）。
 - 没有任何候选的内置 sampler 满足 DAW 的样本精确语义：Firewheel 非零起点吞一帧、暂停消耗一块；Kira seek 先吐 2 帧旧数据并重复目标；Rodio 回调取锁且按 5ms 量化。结论：Firewheel 图运行时 + 自有 PCM 走带节点。证据见 `docs/research/engine-playback-graph.md`。
+
+## gpuix 迁移：跟随系统读的是窗口外观，不能再覆盖应用外观
+
+- 错：为了让原生标题栏跟随所选的明/暗模式，调用 GPUI 的 `set_window_appearance` / `NSApp.appearance`，同时继续用 `subscribeSystemAppearance` 实现「跟随系统」。
+- 对：「跟随系统」只在没有设置应用级外观覆盖时成立。确需让标题栏跟随模式，先换成直接读系统外观的来源(例如 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`),再加覆盖。
+- 因：`onWindowAppearanceChange` 回报的是窗口的 `effectiveAppearance`,它继承 `NSApp.appearance`;一旦覆盖,读到的就是自己设的值,系统切换不再触发变化。
+- 见：`scripts/gpuix-main/patches/window-appearance-close.patch`、`apps/gpuix/src/platform/window/index.ts`。
 
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

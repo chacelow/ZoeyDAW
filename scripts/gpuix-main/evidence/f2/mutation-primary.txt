@@ -1,0 +1,49 @@
+warning: only one of `license` or `license-file` is necessary
+`license` should be used if the package license can be expressed with a standard SPDX expression.
+`license-file` should be used if the package uses a non-standard license.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields for more information.
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling gpuix-native v0.10.0 (/Volumes/PSSD/code/_vendor/f2-gpuix/6a5c7c142ac32f9eb0caefe0121be995cfc18631/packages/native)
+warning: impl trait in impl method signature does not match trait method signature
+   --> src/renderer.rs:123:84
+    |
+123 |         fn render(&mut self, _: &mut gpui::Window, _: &mut gpui::Context<Self>) -> gpui::Div {
+    |                                                                                    ^^^^^^^^^
+    |
+    = note: add `#[allow(refining_impl_trait)]` if it is intended for this to be part of the public API of this crate
+    = note: we are soliciting feedback, see issue #121718 <https://github.com/rust-lang/rust/issues/121718> for more information
+    = note: `#[warn(refining_impl_trait_internal)]` (part of `#[warn(refining_impl_trait)]`) on by default
+help: replace the return type so that it matches the trait
+    |
+123 -         fn render(&mut self, _: &mut gpui::Window, _: &mut gpui::Context<Self>) -> gpui::Div {
+123 +         fn render(&mut self, _: &mut gpui::Window, _: &mut gpui::Context<Self>) -> impl gpui::IntoElement {
+    |
+
+warning: `gpuix-native` (lib test) generated 1 warning
+    Finished `release` profile [optimized] target(s) in 1m 32s
+warning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (/Volumes/PSSD/code/_vendor/target-f2/release/deps/gpuix_native-c491cf9af71515a4)
+
+running 1 test
+test context_menu::tests::primary_click_retains_mouse_down_and_click_without_context_menu ... FAILED
+
+failures:
+
+---- context_menu::tests::primary_click_retains_mouse_down_and_click_without_context_menu stdout ----
+
+thread 'context_menu::tests::primary_click_retains_mouse_down_and_click_without_context_menu' (53297430) panicked at src/context_menu.rs:319:9:
+assertion `left == right` failed
+  left: [10]
+ right: []
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    context_menu::tests::primary_click_retains_mouse_down_and_click_without_context_menu
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 277 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

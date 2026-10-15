@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
+import { createRendererState } from "@gpuix/native/host"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
@@ -11,6 +12,7 @@ import { createTimelineController } from "./controller"
 import { englishLabels } from "./demo-labels"
 import { flushSync } from "@gpuix/react"
 import { Button } from "@/ui/controls"
+import type { CursorLockPort } from "@/ui/controls"
 
 const disposals: Array<() => void> = []
 afterEach(() => {
@@ -51,6 +53,57 @@ function timelineOwner(scene = createSceneStore()) {
 }
 
 describe("Native timeline layout and hit testing", () => {
+  for (const coordinates of [{}, { x: 450 }, { y: 20 }]) {
+    test(`Minimap ignores an incomplete press ${JSON.stringify(coordinates)}`, () => {
+      projectActions.setViewport({ pxPerBar: 100, scrollX: 4000 })
+      const owner = timelineOwner()
+      const root = createTestRoot({ width: 1280, height: 100 })
+      disposals.push(root.unmount)
+      let captures = 0
+      let hidden = false
+      const cursor: CursorLockPort = {
+        capture: point => {
+          captures++
+          return point
+        },
+        hide: () => {
+          hidden = true
+        },
+        restore: () => {
+          hidden = false
+        },
+      }
+      root.render(
+        <ThemeProvider>
+          <MiniMap
+            width={1280}
+            height={40}
+            label="Arrangement overview"
+            geometry={owner.view.overviewGeometry()}
+            cursor={cursor}
+            onNavigate={owner.view.suspendFollow}
+            onViewport={projectActions.setViewport}
+            onFit={owner.fitToProject}
+          />
+        </ThemeProvider>
+      )
+      root.renderer.flush()
+      const overview = root.renderer.findByTestId("timeline-minimap")
+      if (!overview) throw new Error("Overview missing")
+      expect(
+        createRendererState(root.renderer).dispatch({
+          elementId: overview.id,
+          eventType: "mouseDown",
+          ...coordinates,
+        })
+      ).toBe(true)
+      root.renderer.nativeSimulateMouseMove(450, 30, 0)
+      expect(captures).toBe(0)
+      expect(hidden).toBe(false)
+      expect(useProjectState.getState().workspace).toMatchObject({ pxPerBar: 100, scrollX: 4000 })
+    })
+  }
+
   test("Minimap survives a jitter and continues hidden-cursor dragging through store renders", () => {
     projectActions.setViewport({ pxPerBar: 100, scrollX: 4000 })
     const owner = timelineOwner()

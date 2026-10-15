@@ -14,6 +14,7 @@ mod cursor;
 mod engine;
 mod external;
 mod log;
+mod reduced_motion;
 mod settings;
 mod window_geometry;
 mod window_diagnostics;

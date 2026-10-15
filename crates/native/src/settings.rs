@@ -45,9 +45,20 @@ struct Settings {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     theme_preset: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    theme_mode: Option<ThemeMode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     language: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     close_behavior: Option<CloseBehavior>,
+}
+
+/// 明暗模式,与配色预设 `themePreset` 相互独立;缺省由 TS 端按 `system` 处理。
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum ThemeMode {
+    Light,
+    Dark,
+    System,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -156,6 +167,76 @@ mod tests {
             Some("{}".into())
         );
         assert!(!directory.join("escape.json").exists());
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    fn temporary_directory(name: &str) -> PathBuf {
+        let directory =
+            std::env::temp_dir().join(format!("zoeydaw-settings-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+        directory
+    }
+
+    #[test]
+    fn reads_settings_written_before_theme_mode_existed() {
+        let directory = temporary_directory("legacy");
+        fs::write(
+            settings_path(&directory),
+            r#"{"themePreset":"amber","language":"zh-CN","closeBehavior":"ask"}"#,
+        )
+        .unwrap();
+        let settings = get_settings(&directory).unwrap();
+        assert_eq!(settings.theme_mode, None);
+        assert_eq!(settings.theme_preset.as_deref(), Some("amber"));
+        assert!(!settings_get(directory.to_string_lossy().into_owned())
+            .unwrap()
+            .contains("themeMode"));
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn round_trips_every_theme_mode_independently_of_preset() {
+        let directory = temporary_directory("round-trip");
+        let config_dir = directory.to_string_lossy().into_owned();
+        for (json, mode) in [
+            ("light", ThemeMode::Light),
+            ("dark", ThemeMode::Dark),
+            ("system", ThemeMode::System),
+        ] {
+            settings_set(
+                config_dir.clone(),
+                format!(r#"{{"themePreset":"dark","themeMode":"{json}"}}"#),
+            )
+            .unwrap();
+            let settings = get_settings(&directory).unwrap();
+            assert_eq!(settings.theme_mode, Some(mode));
+            assert_eq!(settings.theme_preset.as_deref(), Some("dark"));
+            assert!(settings_get(config_dir.clone())
+                .unwrap()
+                .contains(&format!(r#""themeMode":"{json}""#)));
+        }
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn rejects_unknown_theme_mode_on_read_and_write() {
+        let directory = temporary_directory("unknown-mode");
+        let config_dir = directory.to_string_lossy().into_owned();
+        settings_set(config_dir.clone(), r#"{"themeMode":"light"}"#.into()).unwrap();
+
+        let write_error = settings_set(config_dir.clone(), r#"{"themeMode":"sepia"}"#.into())
+            .unwrap_err()
+            .reason;
+        assert!(write_error.contains("sepia"), "{write_error}");
+        assert_eq!(
+            get_settings(&directory).unwrap().theme_mode,
+            Some(ThemeMode::Light)
+        );
+
+        fs::write(settings_path(&directory), r#"{"themeMode":"Dark"}"#).unwrap();
+        let read_error = settings_get(config_dir).unwrap_err().reason;
+        assert!(read_error.contains("Dark"), "{read_error}");
         fs::remove_dir_all(directory).unwrap();
     }
 }

@@ -1,7 +1,7 @@
 /**
  * Web CSS variable (without `--`) behind each preset-provided `ThemeColors`
- * field. The preset generator (`apps/gpuix/scripts/theme-presets.mjs`) copies
- * exactly these tokens; every other Web preset token is dropped (see README).
+ * field. The preset generator (`generate-presets.mjs`, next to this file)
+ * copies exactly these tokens; every other Web preset token is dropped (see README).
  *
  * Kept import-free so Node can load it from the generator with type stripping.
  */

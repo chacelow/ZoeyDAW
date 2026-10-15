@@ -66,6 +66,8 @@
   --project-midi-row-max-height: 18px;
   --project-midi-row-min-height: 6px;
   --project-audio-ruler-height: 39px;
+  --project-traffic-light-frame-height: 14px;
+  --project-status-height: 22.68px;
 }
 
 .project-transport {

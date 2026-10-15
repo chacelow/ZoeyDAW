@@ -64,7 +64,7 @@ test("controlled preset and appearance recolor the same child without remounting
   root.unmount()
 })
 
-test("uncontrolled provider keeps the old contract: defaultAppearance with the Default preset", () => {
+test("without controlled props, defaultAppearance picks the scheme and Default the colors", () => {
   const root = createTestRoot({ width: 300, height: 100 })
   const { light, dark } = getThemePreset("default").colors
   root.render(

@@ -7,6 +7,8 @@
     "input-select-all-on-focus.patch",
     "anchored-center.patch",
     "select-trigger-space.patch",
-    "window-active-change.patch"
+    "window-active-change.patch",
+    "window-appearance-close.patch",
+    "context-menu.patch"
   ]
 }

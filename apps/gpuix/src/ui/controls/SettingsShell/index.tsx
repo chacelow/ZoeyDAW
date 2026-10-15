@@ -105,6 +105,7 @@ export interface SettingsShellProps extends Omit<Props, "children"> {
   contentStyle?: StyleDesc
   navigationWidth?: number
   closeLabel?: string
+  navigationLabel?: string
 }
 export function SettingsShell({
   open,
@@ -119,6 +120,7 @@ export function SettingsShell({
   contentStyle,
   navigationWidth = 168,
   closeLabel = "Close settings",
+  navigationLabel = "Settings sections",
   style,
   onKeyDown,
   ...props
@@ -195,7 +197,7 @@ export function SettingsShell({
       <div style={{ display: "flex", flexDirection: "row", flexGrow: 1, minHeight: 0 }}>
         <div
           role="tablist"
-          aria-label="Settings sections"
+          aria-label={navigationLabel}
           style={{
             display: "flex",
             flexDirection: "column",
