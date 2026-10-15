@@ -187,6 +187,8 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 | 测试/产品使用0.10 bounds shim | 必修→已修 | bb4c17e与后续类型修正直接使用原生getElementBounds；8项几何转绿；合成边框容器行间±1px回归2pass，改回shim变异1fail |
 | A3b第一增量消费 | 已修/已接 | 七处Select fill，普通level/send/pan hideIcon，Cue保留Headphones；原生output实际内宽断言通过 |
 | 最终纠正及consumer双轴复核 | 已返回，无新增必修/仲裁 | TrackFinalReview4多次固定增量复核覆盖当前三个后续提交；视觉与运行结果由本报告单列 |
+| G1 demo真实读回增量 | 代码复核无必修 | TrackFinalReview4已审ad3a63d的观测顺序/边界；长行格式由hook修正，实际GUI证明另列 |
+| 观测增量触发no-tests | 汇报仲裁，HARD未清 | 相对当前主干1source/0tests，扫描1HARD/1WARN；不加转发/mock echo测试，已申请删除临时诊断或共享验证入口例外，由协调者决定 |
 | driver活动条件的冗余`listeners.size > 0` | 记录 | 不影响行为；不为风格再改生产路径 |
 | 受控帧源同步、生产源microtask | 记录 | 排队/session失效由platform测试负责，tracks不另造调度器 |
 | Ctrl与lane Shift/identity Cmd对称分支未逐项测试 | 记录 | 当前已覆盖native正反守卫、Cmd移除与Shift范围；不增重复路径用例 |
@@ -196,7 +198,7 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 
 ## 未实现/未验证事项
 
-- **阻塞：A3b第二增量，未验证**：NumericPad实际内宽fill/bipolar中线、wheel祖先隔离、嵌套右键及尚未完成的菜单/编辑/系统拖动/滚轮/最终bounds。Select fill/hideIcon已消费；8项几何已由本切片删除旧shim修复。
+- 4036109的数值fill/bipolar/滚轮隔离消费者回归已通过；剩余**F2嵌套右键、F3后台帧及停后peak/完整逐状态视觉未完成**。观测增量的no-tests HARD仍在仲裁，不称当前增量全绿。
 - F1 已接原生帧和激活，NameInput已opt-in `selectAllOnFocus`。真实四主题语言窗口能启动；默认生产帧路径meter6例40断言，F2自动全选/输入Space/Tab三例8断言通过。真实播放停后peak视觉尚未补齐，不把旧timer阶段AX扩大到新路径。
 - 旧四主题语言与Solo/Group图不覆盖H2及最新consumer；G1时段已有真实WAV信号清晰图和还原锚点0pt读回。停后peak、完整逐控件状态及后台帧问题仍未验证完。
 - 类型与既有门禁结果按各自基线记录；嵌套右键仍保留失败。后台key/main、遮挡和callback计数未采，不能宣称已定位失活或遮挡根因。
@@ -247,7 +249,7 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 | --- | --- | --- |
 | 真实WAV播放 | 清晰窗口图；Audio AX L−22.0/R−48.7dB，Group L−25.0/R−41.6，Return L−37.0/R−40.5；Main音量仍−36dB | `evidence/2026-10-15-g1-slot-playing.png`与同名`.ax.txt` |
 | G1快拖，无额外停留 | Audio −12.0→−11.0；上拖40px，anchor和原生restore后读回均(1418,353)，误差0pt | `evidence/2026-10-15-g1-slot-events.json`的`cursor-restored`、`evidence/2026-10-15-g1-slot-drag.ax.txt`；对应截图为black，不用它宣称完整拖动视觉 |
-| Clip gain24 | accepted levels某轨道L+2.0308dB，但UI仍旧L−22；没有记录该原始ID到名称映射，不额外映射或宣称红区视觉通过 | `evidence/2026-10-15-g1-slot-events.json`、`evidence/2026-10-15-g1-slot-overload-stale.png`与同名AX |
+| Clip gain24 | frames834/sequence10529的accepted `levels.main`为L−38.0157/R−40.9905dB，同批AX Main仍为L−60/R−60；某随机轨道L+2.0308dB未额外映射，不宣称红区视觉通过 | `evidence/2026-10-15-g1-slot-events.json`、`evidence/2026-10-15-g1-slot-overload-stale.png`与同名AX |
 | 停后peak | 未完成，不宣称通过 | 后续另排前台时段 |
 
 关键图前后renderer统计与后台数据已交协调者，完整六列表见[`后台帧记录`](evidence/2026-10-15-background-frames.md)。原生key/main、occlusion与frame callback次数都未采，Window图清晰不等于桌面可见。当前数据不能区分“失活但可见”与“被遮挡”，不能用renderer帧数代替callback计数。
@@ -259,6 +261,8 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 - `cargo check --workspace && cargo test --workspace`：退出0，45pass。
 - 独立CLI调用新platform adapter：`pressAnchorWithoutWindow:null`、`cursorReadable:true`，没有移动/隐藏光标。
 - demo诊断增量在当前主干执行`pnpm --filter @zoeydaw/gpuix-prototype typecheck`和切片eslint均退出0。曾误在根目录调用裸tsc，仅打印CLI帮助，未将它计为类型通过。
+- 合入4036109相关主干后，`pnpm exec tsc --noEmit && bun test src/ui/controls/DragPad/DragPadNumber.test.tsx src/ui/controls/DragPad/variants.test.tsx src/project/sections/arrangement/tracks`：tsc0，65pass/1已仲裁嵌套右键失败，66tests/6files。
+- 提交ad3a63d后扫描实际覆盖1source/0tests，1HARD `no-tests`、1WARN窗口尺寸；此前未提交时的0source空扫描没有计为这个增量的通过证明。
 
 ### 时段约束未通过
 

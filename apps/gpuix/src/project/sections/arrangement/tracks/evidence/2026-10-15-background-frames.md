@@ -14,7 +14,7 @@
 | 02:39:45，电平画面仍旧 | 未采样 | 未采样 | 前834/834，后835/835 | 未记录 | 前后均true |
 | 02:41:31.816，前台窗口检查 | 原生key/main未采样；OS前台窗口不是tracks | 未采样 | 未同期采样；上次835/835 | 未记录 | 未同期采样；上次true |
 
-02:39:08前后 telemetry sequence 为9538→9680，02:39:45为10529→10678。真实音频clock与levels继续更新，但两个截图区间之间renderer只增加少量帧；accepted telemetry的某轨道L已为+2.0308dB，UI Audio仍是旧L−22.0dB。此次没有记录轨道ID到名称映射，因此不把该原始ID额外映射为Audio。
+02:39:08前后telemetry sequence为9538→9680，02:39:45为10529→10678，真实音频clock与levels继续更新。明确的Main样本：frames834、sequence10529时`levels.main`为L−38.0157/R−40.9905dB，同批保存的AX却是Main L−60/R−60dB。这个对照不依赖随机轨道ID到名称的推断。另有某原始轨道L+2.0308dB，但未记录ID映射，不额外把它映射为Audio或宣称红区视觉通过。
 
 “失活但可见”和“被遮挡”两种情况都未建立独立样本。前台恢复与帧恢复相关只是一项观察，不是根因结论。后续需在同一时间基准下采集原生window/app状态、occlusion、frame callback计数和renderer统计，再由协调者决定原生切片。
 
