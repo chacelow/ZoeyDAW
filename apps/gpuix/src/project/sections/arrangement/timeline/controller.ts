@@ -45,6 +45,8 @@ export interface TimelineController {
   zoomAt: (anchorBar: number, anchorPx: number, factor: number) => ArrangementViewport
   fitToProject: () => ArrangementViewport
   tick: (nowMs: number) => void
+  getFrameDemand: () => boolean
+  subscribeFrameDemand: (listener: () => void) => () => void
   dispose: () => void
 }
 
@@ -234,6 +236,8 @@ export function createTimelineController({
     sceneStore,
     keyboard,
     view,
+    getFrameDemand: autoScroll.getFrameDemand,
+    subscribeFrameDemand: autoScroll.subscribeFrameDemand,
     useViewport() {
       return useSyncExternalStore(sceneStore.subscribe, getViewport)
     },

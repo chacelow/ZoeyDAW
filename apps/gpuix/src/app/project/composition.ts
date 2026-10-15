@@ -16,6 +16,8 @@ export interface ProjectComposition {
   readonly lane: LaneController
   onClipRegionKey(id: number | undefined): void
   tick(timestampMs: number): void
+  getFrameDemand(): boolean
+  subscribeFrameDemand(listener: () => void): () => void
   dispose(): void
 }
 
@@ -97,6 +99,26 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
     tick(timestampMs) {
       timeline.tick(timestampMs)
       lane.step(timestampMs)
+    },
+    getFrameDemand() {
+      return (
+        !disposed &&
+        (useProjectState.getState().session.playing ||
+          lane.getSnapshot().dragActive ||
+          timeline.getFrameDemand())
+      )
+    },
+    subscribeFrameDemand(listener) {
+      const unsubscribeProject = useProjectState.subscribe((next, previous) => {
+        if (next.session.playing !== previous.session.playing) listener()
+      })
+      const unsubscribeLane = lane.subscribe(listener)
+      const unsubscribeScroll = timeline.subscribeFrameDemand(listener)
+      return () => {
+        unsubscribeProject()
+        unsubscribeLane()
+        unsubscribeScroll()
+      }
     },
     dispose() {
       if (disposed) return

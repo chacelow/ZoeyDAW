@@ -15,6 +15,7 @@
 | `controller.zoomAt(anchorBar, anchorPx, factor)` | 显式音乐位置/像素锚点缩放；边界夹取优先 |
 | `controller.fitToProject()` | 使用统一的派生工程范围适配，包括最小编辑范围与当前播放/时间选区；Minimap 不再另算一套 fit |
 | `controller.tick(nowMs)` | 由原生帧源驱动边缘滚动与 Follow；本模块不创建定时器或第二走带时钟 |
+| `controller.getFrameDemand()` / `subscribeFrameDemand(listener)` | 标尺 autoScroll 的稳定活动读取与通知，直接由 start/update/stop 的活动边界驱动。组合根合并播放与 lane 手势需求后再订阅帧，不读取 TimelineView 细项 |
 | `controller.keyboard` | 唯一键盘 owner；`markDrawGesture()` 由实际绘制/拖动消费者调用；组合根不能再创建独立键盘 |
 | `TimelineLabels` | 严格的可见文本契约；示例双语数据在 `demo-labels.ts`，不依赖 i18n 包 |
 
@@ -23,7 +24,7 @@
 ### TimelineView
 
 - `rulers`：定位点/循环的按下、移动、提交、取消、键盘与选区循环事务。
-- `autoScroll`：`start/update/stop/tick` 的单一状态机；滚动经同步 `setScroll` 后才重算预览。
+- `autoScroll`：`start/update/stop/tick` 的单一状态机；滚动经同步 `setScroll` 后才重算预览。活动由内部 pointer 推导，通知只在空闲/活动边界发出，不建立第二份活动状态。
 - `getSnapshot/subscribe`：只持有测量尺寸和 overview 高度，不复制工程数据。
 - `measure`：由原生 `onLayout` 提供尺寸；不另做采样或滚轮测量。
 - `setOverviewHeight`：共享 32–90px 约束；Panel/Divider 复用 A4。

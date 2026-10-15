@@ -51,6 +51,8 @@ Footer 按新切片契约二选一显示 Affect Chain 或 Clip Edit，不迁 Web
 
 `NativeRoot` 为整个应用提供同一个 renderer 的唯一 `AnimationFrameProvider`、`nativeCursorLock` 与原生窗口激活端口。Footer 和 Transport 的 reduced motion 直接读取 platform/window，不增加定时链。Transport 的 Back 回到首页并释放 ProjectPage lease。
 
+帧需求由 `playing`、lane 的真实 `dragActive` 与 timeline 的 autoScroll 活动共同派生，经稳定的 external-store 订阅通知组合根。停止且无手势时取消 native frame 订阅，播放或手势开始时恢复；不缓存第二份可写需求状态，不轮询 pointer。只读 Input 仍是文本焦点，不能把 A/M 或 Cmd+A 送给 Arrangement。
+
 ## 验证入口
 
 ```sh

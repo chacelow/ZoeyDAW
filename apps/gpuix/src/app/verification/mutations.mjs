@@ -153,6 +153,38 @@ const mutations = [
     tests: "src/app/project/composition.test.tsx",
     pattern: "timeline projection",
   },
+  {
+    name: "stopped composition keeps native frame demand active",
+    file: "project/composition.ts",
+    from: "!disposed &&",
+    to: "true ||",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "stopped idle",
+  },
+  {
+    name: "playback demand changes stop notifying the root",
+    file: "project/composition.ts",
+    from: "if (next.session.playing !== previous.session.playing) listener()",
+    to: "void previous",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "stopped idle",
+  },
+  {
+    name: "ruler start no longer notifies native frame demand",
+    file: "../project/sections/arrangement/timeline/viewport/auto-scroll.ts",
+    from: "if (!wasActive) notifyDemand()",
+    to: "void wasActive",
+    tests: "src/app/project/frame-demand.test.tsx",
+    pattern: "ruler autoscroll",
+  },
+  {
+    name: "readOnly Input loses its text focus lease",
+    file: "../ui/controls/Input/index.tsx",
+    from: "useTextFocusBinding(!disabled)",
+    to: "useTextFocusBinding(!disabled && !readOnly)",
+    tests: "src/app/project/composition.test.tsx",
+    pattern: "focused readOnly Input",
+  },
 ]
 
 function run(tests, pattern) {

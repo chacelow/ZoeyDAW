@@ -1,0 +1,23 @@
+stopped composition
+stopped composition keeps native frame demand active: 1 failing test(s)
+1 mutations caught; originals restored
+
+
+Wall time: 1.40 seconds
+
+playback demand
+playback demand changes stop notifying the root: 1 failing test(s)
+1 mutations caught; originals restored
+
+
+ruler start
+ruler start no longer notifies native frame demand: 1 failing test(s)
+1 mutations caught; originals restored
+
+
+readOnly Input loses
+readOnly Input loses its text focus lease: 1 failing test(s)
+1 mutations caught; originals restored
+
+
+Wall time: 1.42 seconds

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react"
+import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useGpuix } from "@gpuix/react"
 import { createNativeClipboard } from "@/platform/clipboard"
 import { useAnimationFrame } from "@/platform/frame"
@@ -48,6 +48,14 @@ export function useProjectComposition(shell: ProjectShellApi) {
     minimapMaxHeight,
     timelineAutoScrollEdge,
   ])
-  useAnimationFrame(timestamp => composition?.tick(timestamp), composition !== null)
+  const subscribeFrameDemand = useCallback(
+    (listener: () => void) => composition?.subscribeFrameDemand(listener) ?? (() => {}),
+    [composition]
+  )
+  const frameDemand = useSyncExternalStore(
+    subscribeFrameDemand,
+    () => composition?.getFrameDemand() ?? false
+  )
+  useAnimationFrame(timestamp => composition?.tick(timestamp), frameDemand)
   return { composition, browserRef, focusRef }
 }

@@ -1,6 +1,6 @@
 # B2 app-shell 阶段2装配
 
-2026-10-15。基线先 fast-forward 到 `7cf7215`，再按协调者指定合入 `d57b07b`，合并提交为 `5488550`。当前代码已装配真实 sections，完整交付仍待 F5 autoFocus、ClipEditorSlot IDs 切换及最终集成许可。剩余真实 UI 由协调者在依赖合入后统一组合评审，本 worker 不再重复局部取证。
+2026-10-15。基线先 fast-forward 到 `7cf7215`，再按协调者指定合入 `d57b07b`，合并提交为 `5488550`。当前代码已装配真实 sections，完整交付仍待 F5 autoFocus、F3 resume 帧接口、ClipEditorSlot IDs 切换及最终集成许可。剩余真实 UI 由协调者在依赖合入后统一组合评审，本 worker 不再重复局部取证。
 
 已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
 
@@ -36,7 +36,7 @@
 
 | 命令或场景 | 观察结果 |
 | --- | --- |
-| `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | 通过，最近一次 3.86 秒 |
+| `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | 通过，最近一次 3.84 秒 |
 | `pnpm exec eslint apps/gpuix/src` | 通过，无输出，57.78 秒，见 `evidence/phase2/eslint.txt` |
 | `bun test src/app/project/composition.test.tsx --test-name-pattern "^(?!.*(autoFocus\|DragPad native)).*" --timeout 30000` | 5 pass，0 fail，2 filtered out。只用于 F5 前可达验证，不作为全套通过 |
 | app、ControlEnvironment、Input、DragPad、tracks、timeline 的组合检查 | 205 pass，2 fail。两条失败都是 ThemePresetGrid 独立挂载遗漏新增 AppInteractionProvider。已迁移该测试消费者 |
@@ -45,6 +45,10 @@
 | 完整 `bun test` 与默认变异脚本 | 仍待 F5 与 IDs 接口同步后执行，不称已通过 |
 | 精确路径变异 | B 绘制标记、第二窗口 keyboard owner、rails 再扣 controlsWidth、自动化漏投影、modal Cmd+F、折叠 Cmd+F 六项，均先跑对应真实行为基线，再观察变异后 1 条断言失败并恢复源码；见 `focused-mutations-before-f5.txt` |
 | Input focus 固定 timeline 变异 | 真实 Input 聚焦后 Cmd+1 错改 grid，断言按预期失败。原 focus 守卫已恢复，见 `input-focus-mutation.txt` |
+| 独立 review 的停止帧/只读输入回归 | 修复前 4 fail：idle 常驻 native frame demand，以及真实 readOnly Input 的 a/m 错改 Automation/Computer keyboard。修复后 4 pass、28 assertions，见 `review-failing-before.txt`、`review-passing-after.txt` |
+| 帧需求、组合、timeline、Input 受影响套件 | 78 pass、0 fail、2 filtered out，652 assertions；仅暂不执行已知 F5 autoFocus 两项，见 `review-affected-tests.txt` |
+| 独立 review 的变异 | idle 常驻 demand、播放不通知、autoScroll start 不通知、readOnly 丢 text lease 四项均先过对应基线，再被断言抓住，见 `review-mutations.txt` |
+| 真实 native 后端帧需求 smoke | idle demand=false；native playing=true 时 demand=true；native playing=false 时 demand=false；释放后 idle。没有打开窗口，见 `frame-demand-native-smoke.txt` |
 | `gpuix-review-scan` | 提交后实际扫描 28 source、5 tests，0 hard、3 warn，见 `review-scan.txt` |
 
 第一轮完整 UI 组合用默认 5 秒期限，部分测试在本机负载下超时。协调者批准最终命令使用 `--timeout 30000`，没有更改行为断言，也不把期限加长称为性能修复。单独 Cmd+F 行为检查实测通过，3.78 秒。
@@ -97,12 +101,18 @@
 | scan tracks/demo.tsx 的 1120×780 | 记录 | 既有验证窗口尺寸，非产品控件度量；本次只改 time-width 投影 |
 | scan tracks/verification/render-cost.tsx 的 1000×500 | 记录 | 固定验证场景的时间视口尺寸，已将实际窗口改为 width 加 controlsWidth |
 | 独立模型审查 | 协调者处置 | 按本 Dispatch 仲裁，不用无法固定模型的 task reviewer。独立审查由协调者安排显式模型 worker 或本人执行 |
+| 停止工程常驻 frame 订阅 | 必修 | 已改 playing/lane.dragActive/timeline autoScroll 的派生 external-store，start/stop 通知而不轮询。真实根 hook/控制器回归、四条变异与 native 后端 smoke 已证明 |
+| readOnly Input 被当非文本 | 必修 | 真实原生 a/m 确实误改模式。现在仅 disabled 排除文本 lease；只读选择/复制仍归原生，回归通过 |
+| Input 旧测试只断言回调次数与向窗口传播 | 必修 | 删除旧 incidental forwarding 断言，不重新固定传播数组；新 disabled 用实际受控文本值验证不可编辑，readonly 由真实组合模式/选择回归验证 |
+| F3 resume 帧同步 | 等待接口 | 协调者要求 F3 合入后接 `useResumeFrame` 并在回调中显式 `flushSync(composition.tick)`。当前无该公共端口，不造适配层 |
 
 ## 错题
 
 - 错：只按 native autoFocus 已改变焦点就假设 onFocus 事件已到达。真实 probe 显示 focused id 与 input 相等，但 focus 事件列表为空。根因交由 F5 修 renderer 的监听注册顺序，不在 app 查询 host 树补偿。
 - 错：把窗口 helper 返回成功当作键盘已送到目标。AXFocused=false、空 Search 和 Orca Terminal input 证明不能这样判定。后续先验证真实字段焦点；BackgroundUnavailable 时停止，不继续敲键。
 - 错：未提交时 review scan 的 0 hard 看似通过。脚本只检查 base...HEAD，必须提交后确认实际扫描文件数。
+- 错：组合根用视图是否存在作为 frame demand，停止也持续请求帧。需求必须从 playing 与真实手势 owner 派生，活动边界通过稳定订阅通知，不另存可写需求镜像。
+- 错：把 readOnly 等同于非文本焦点。真实 readonly Input 的 a/m 冒到窗口，改变了 Automation 与电脑键盘模式。只有 disabled 排除文本 lease，readonly 仍拥有文本选择与快捷键隔离。
 
 ## 已验证做法
 

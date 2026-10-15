@@ -41,6 +41,8 @@ export interface TimelineController {
   fitToProject(): ArrangementViewport
   readonly view: TimelineView // 命名的视图交互端口，仅供 ArrangementTimeline 消费（标尺、测量、滚轮、暂停跟随、minimap 高度）；组合根与 app-shell 不依赖其细项
   tick(nowMs: number): void // 由组合根的帧源（F1 合入后为原生帧回调）喂入，驱动边缘自动滚动与跟随播放
+  getFrameDemand(): boolean // 标尺 autoScroll 的实际活动；组合根再合并 playing 与 lane.dragActive
+  subscribeFrameDemand(listener: () => void): () => void // 空闲/活动边界通知，不轮询、不把 view 细项泄漏给组合根
   dispose(): void
 }
 export function createTimelineController(deps: TimelineControllerDeps): TimelineController
