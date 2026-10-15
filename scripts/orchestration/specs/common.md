@@ -9,6 +9,7 @@
 - 提交：自己的分支内多次小提交，每次一件事；标题避免 `+ & 和 与` 与多个 Conventional Commit 类型；`ultracite` 预提交门禁必须通过，不用 `--no-verify`。非交互提交需带 `USER_CONFIRM_HASH=$(git write-tree)`——用户已授权本次重构任务内的全部切片提交，无需再询问。
 - 不 push，不碰 `main`，不碰其他 worktree，不启动或停止用户已有服务。
 - 遇到需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、或与契约冲突的发现：停下来，用 `orca orchestration ask`（见 preamble）向协调者提问，不要自行决定。
+- **不允许静默停下**:你一旦结束回合,协调者就收不到你的任何状态,只有发出的 Orca 消息才算上报。每次结束回合前必须已经发出其中一种:还有工作就继续做,不结束回合;等待协调者、其它切片或桌面时段,发 `orca orchestration ask`(它会阻塞到协调者 reply,把你直接唤醒);阶段完成,发 `merge_ready`;全部完成,发 `worker_done`。只在终端里写"等待中"不算上报。巡检会自动唤醒停在空闲状态、却没有关闭派发的 worker。
 - 交付 `worker_done` 前：`tsc --noEmit`、`bun test`、（涉及 Rust）`cargo check` 与 `cargo test` 全部在你的 worktree 实跑通过；报告里写清命令、结果、未实现项及原因。不得把未实现的部分描述成完成。
 - **进程清理(强制,用户明确要求)**:你启动的一切东西——`bun --hot` demo/gallery、测试用窗口、`cargo run` 的 spike、任何后台 service——**验证完立刻关闭,不要留到下一步**。窗口和进程会占用户本机的内存与 GPU。具体做法:启动时一律用带 `name` 的 bash service(`proc://<name>` 可见、可 `kill`),不要裸启动;每次截图/AX 验证拿到结果后马上 `write proc://<name>/kill`;`worker_done` 之前自己跑一遍 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"` 确认**零残留**,报告里附这条命令的输出。长时间存活的 demo(超过 5 分钟没有交互)视为泄漏。
 

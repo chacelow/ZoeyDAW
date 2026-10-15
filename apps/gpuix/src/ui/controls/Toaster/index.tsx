@@ -207,8 +207,7 @@ export function Toaster({
             <Button
               testId={`${testId}-${notice.id}-dismiss`}
               variant="ghost"
-              label={dismissLabel}
-              aria-label={[dismissLabel, notice.title ?? notice.description ?? notice.message]
+              label={[dismissLabel, notice.title ?? notice.description ?? notice.message]
                 .filter(Boolean)
                 .join(" ")}
               onClick={() => dismissToast(notice.id)}

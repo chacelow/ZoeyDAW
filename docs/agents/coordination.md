@@ -50,7 +50,13 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **桌面时段**:真实窗口输入一次只给一个 worker,用 reply 给出 UTC 起止时间,同时通知其余 worker 暂停输入;到点就停,发「桌面释放」。
 
-**巡检**:launchd 每 10 分钟运行 `scripts/orchestration/coordinator-tick.sh`。会话最后一条消息超过 10 分钟(STALE)或以报错结束(ERROR)的 worker 会被自动唤醒;协调者空闲时收到一次巡检提示。
+**巡检**:launchd 每 5 分钟运行 `scripts/orchestration/coordinator-tick.sh`,检查所有派发未关闭的 worker(包括终端状态为 retained 的空闲 worker)。三种情况会被自动唤醒,同一个 worker 每 10 分钟最多唤醒一次:
+
+- IDLE:回合已结束(TUI 空闲)超过 3 分钟,但派发没关。worker 在这个状态下无法主动上报,唤醒提示会要求它继续做,或者用 `ask` 发出等待原因。
+- STALE:会话 10 分钟没有新消息。
+- ERROR:最后一条消息是模型报错,比如流超时。
+
+协调者空闲时也会收到一次巡检提示。worker 端的规则是不允许静默停下,写在 `specs/common.md`。
 
 ## 文件
 
