@@ -1,8 +1,8 @@
 diff --git a/packages/native/index.d.ts b/packages/native/index.d.ts
-index ce328a4..843215c 100644
+index ce328a4..e38f101 100644
 --- a/packages/native/index.d.ts
 +++ b/packages/native/index.d.ts
-@@ -110,6 +110,20 @@ export declare class GpuixRenderer {
+@@ -110,6 +110,26 @@ export declare class GpuixRenderer {
     * Passing null drops the GPUI observer. Already queued callbacks may drain.
     */
    onWindowActiveChange(callback: ((active: boolean) => void) | null): void
@@ -14,31 +14,38 @@ index ce328a4..843215c 100644
 +   */
 +  onWindowAppearanceChange(callback: ((appearance: "light" | "dark") => void) | null): void
 +  /**
++   * The window's current light/dark appearance, synchronously. Use it for the
++   * initial theme; onWindowAppearanceChange only reports changes to listeners.
++   */
++  getWindowAppearance(): "light" | "dark"
++  /**
 +   * Close the window without consulting setWindowShouldClose, then quit like
-+   * the last window closing. Call it after the user has already decided;
-+   * calling it synchronously inside the setWindowShouldClose handler re-enters
-+   * GPUI and fails.
++   * the last window closing. Call it after the user has already decided.
++   * Never call it synchronously inside the setWindowShouldClose handler:
++   * GPUI is already borrowed there, so the reentrant borrow panics inside an
++   * AppKit callback and can abort the process.
 +   */
 +  closeWindow(): void
    /**
     * Bring the window forward and give it focus. This is how a window opened
     * with `show: false` or `focus: false` is revealed later.
 diff --git a/packages/native/js/host.ts b/packages/native/js/host.ts
-index 8d63095..9acb083 100644
+index 8d63095..838f5f7 100644
 --- a/packages/native/js/host.ts
 +++ b/packages/native/js/host.ts
-@@ -690,6 +690,9 @@ export type NativeRenderer = MutationHost &
+@@ -690,6 +690,10 @@ export type NativeRenderer = MutationHost &
        | "setAnimationFrameCallback"
        | "setAnimationFrameActive"
        | "onWindowActiveChange"
 +      | "onWindowAppearanceChange"
++      | "getWindowAppearance"
 +      | "setWindowShouldClose"
 +      | "closeWindow"
        | "getElementBounds"
        | "getElementsAt"
        | "scrollTo"
 diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
-index bf4f049..0183f83 100644
+index bf4f049..74202b6 100644
 --- a/packages/native/src/renderer.rs
 +++ b/packages/native/src/renderer.rs
 @@ -213,6 +213,94 @@ mod window_activation_tests {
@@ -104,8 +111,8 @@ index bf4f049..0183f83 100644
 +        assert_eq!(*changes.lock(), vec!["light", "light"]);
 +    }
 +
-+    /// `closeWindow` removes the window directly; a close handler that vetoes the
-+    /// system close button must not be consulted again.
++    /// `closeWindow` relies on GPUI `remove_window` not consulting a close handler
++    /// that vetoes the system close button.
 +    #[gpui::test]
 +    fn removing_the_window_bypasses_a_vetoing_close_handler(cx: &mut gpui::TestAppContext) {
 +        let window = appearance_view(cx);
@@ -144,7 +151,17 @@ index bf4f049..0183f83 100644
      ZoomWindow,
      ToggleFullscreen,
      SetWindowTitle(String),
-@@ -638,6 +727,7 @@ enum UiCommand {
+@@ -616,6 +705,9 @@ enum UiCommand {
+     GetWindowSize {
+         response: SyncSender<WindowSize>,
+     },
++    GetWindowAppearance {
++        response: SyncSender<&'static str>,
++    },
+     GetElementBounds {
+         id: u64,
+         response: SyncSender<Option<crate::automation::ElementBounds>>,
+@@ -638,6 +730,7 @@ enum UiCommand {
          event_id: u64,
      },
      SetWindowActiveChangeCallback(Option<WindowActivityCallback>),
@@ -152,7 +169,7 @@ index bf4f049..0183f83 100644
      ControlClock {
          control: ClockControl,
          response: SyncSender<f64>,
-@@ -685,6 +775,7 @@ async fn run_ui_commands(
+@@ -685,6 +778,7 @@ async fn run_ui_commands(
              UiCommand::MinimizeWindow => {
                  window.update(cx, |_view, window, _cx| window.minimize_window())
              }
@@ -160,7 +177,19 @@ index bf4f049..0183f83 100644
              UiCommand::ZoomWindow => window.update(cx, |_view, window, _cx| window.zoom_window()),
              UiCommand::ToggleFullscreen => {
                  window.update(cx, |_view, window, _cx| window.toggle_fullscreen())
-@@ -915,6 +1006,11 @@ async fn run_ui_commands(
+@@ -851,6 +945,11 @@ async fn run_ui_commands(
+                         .ok();
+                 })
+             }
++            UiCommand::GetWindowAppearance { response } => {
++                window.update(cx, move |_view, window, _cx| {
++                    response.send(appearance_name(window.appearance())).ok();
++                })
++            }
+             UiCommand::GetAutomationBounds { response } => {
+                 window.update(cx, move |_view, window, cx| {
+                     cx.notify();
+@@ -915,6 +1014,11 @@ async fn run_ui_commands(
                      view.set_window_active_change_callback(callback, window, cx);
                  })
              }
@@ -172,7 +201,7 @@ index bf4f049..0183f83 100644
              UiCommand::ControlClock { control, response } => {
                  window.update(cx, move |view, _window, cx| {
                      let now_ms = match control {
-@@ -1933,6 +2029,70 @@ impl GpuixRenderer {
+@@ -1933,6 +2037,97 @@ impl GpuixRenderer {
          Err(Error::from_reason("Unsupported operating system"))
      }
  
@@ -217,10 +246,37 @@ index bf4f049..0183f83 100644
 +        Err(Error::from_reason("Unsupported operating system"))
 +    }
 +
++    /// The window's current light/dark appearance, synchronously. Use it for the
++    /// initial theme; onWindowAppearanceChange only reports changes to listeners.
++    #[napi(ts_return_type = "\"light\" | \"dark\"")]
++    pub fn get_window_appearance(&self) -> Result<String> {
++        #[cfg(target_os = "macos")]
++        return update_window(|_view, window, _cx| appearance_name(window.appearance()).to_owned());
++
++        #[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
++        {
++            let (response, receiver) = sync_channel(1);
++            self.send_ui_command(UiCommand::GetWindowAppearance { response })?;
++            return recv_ui_response(receiver, "the window appearance query")
++                .map(str::to_owned);
++        }
++
++        #[cfg(not(any(
++            target_os = "macos",
++            target_os = "windows",
++            target_os = "linux",
++            target_os = "freebsd"
++        )))]
++        Err(Error::from_reason(
++            "The production GPUIX renderer does not support this operating system",
++        ))
++    }
++
 +    /// Close the window without consulting setWindowShouldClose, then quit like
-+    /// the last window closing. Call it after the user has already decided;
-+    /// calling it synchronously inside the setWindowShouldClose handler re-enters
-+    /// GPUI and fails.
++    /// the last window closing. Call it after the user has already decided.
++    /// Never call it synchronously inside the setWindowShouldClose handler:
++    /// GPUI is already borrowed there, so the reentrant borrow panics inside an
++    /// AppKit callback and can abort the process.
 +    #[napi]
 +    pub fn close_window(&self) -> Result<()> {
 +        #[cfg(target_os = "macos")]
@@ -243,7 +299,7 @@ index bf4f049..0183f83 100644
      /// Bring the window forward and give it focus. This is how a window opened
      /// with `show: false` or `focus: false` is revealed later.
      #[napi]
-@@ -3753,6 +3913,15 @@ impl Drop for GpuixRenderer {
+@@ -3753,6 +3948,15 @@ impl Drop for GpuixRenderer {
  // ── GPUI View ────────────────────────────────────────────────────────
  
  type WindowActivityCallback = Arc<dyn Fn(bool) + Send + Sync>;
@@ -259,7 +315,7 @@ index bf4f049..0183f83 100644
  
  pub(crate) struct GpuixView {
      pub(crate) tree: Arc<Mutex<RetainedTree>>,
-@@ -3764,6 +3933,7 @@ pub(crate) struct GpuixView {
+@@ -3764,6 +3968,7 @@ pub(crate) struct GpuixView {
      pub(crate) window_selection_change: bool,
      pub(crate) window_selection_event_id: u64,
      window_activation_subscription: Option<gpui::Subscription>,
@@ -267,7 +323,7 @@ index bf4f049..0183f83 100644
      /// Last identity delivered through `selectionChange`. Only written once an
      /// event is really queued, so adding the listener later still reports.
      reported_selection: Option<u64>,
-@@ -4085,6 +4255,7 @@ impl GpuixView {
+@@ -4085,6 +4290,7 @@ impl GpuixView {
              window_selection_change: false,
              window_selection_event_id: 0,
              window_activation_subscription: None,
@@ -275,7 +331,7 @@ index bf4f049..0183f83 100644
              reported_selection: None,
              focus_handles: HashMap::new(),
              pending_focus_element: None,
-@@ -4119,6 +4290,22 @@ impl GpuixView {
+@@ -4119,6 +4325,22 @@ impl GpuixView {
          }
      }
  
