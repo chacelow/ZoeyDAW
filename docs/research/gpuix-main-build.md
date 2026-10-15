@@ -1052,3 +1052,11 @@ GPUI `Context::on_focus/on_blur` 创建订阅后，通过 `defer` 激活监听�
 pending intent 的基线字段与 deferred focus 均持有稳定 `FocusHandle` 身份，等待跨越旧 owner 退休也不按可回收 id 误判取消；已退出 focusable 集合的请求目标不参与仲裁。所有 renderer-owned focus 合并成一个候选，在订阅激活 defer 之后用一次 `Context::defer_in` 应用；随后由 GPUI focus-path 转换交付 focus/blur。Window 的 GpuixView owner 释放时一并释放 intent、handles 与订阅。没有手工补发事件、JS 轮询、逐帧 refocus 或新公共 API。
 
 完整失败前、通过后、旧时序变异、DragPadNumber 消费方、隔离重建与自审证据见 [F5 验证报告](../../scripts/gpuix-main/evidence/f5/REPORT.md)。本切片按专项验收使用 offscreen real renderer，不打开桌面窗口；不声称完成视觉或 Live 对照验收。
+
+### F6 native ARIA toggle states
+
+| 补丁 | 顺序 | 契约 |
+| --- | --- | --- |
+| `aria-toggled.patch` | `resume-frame.patch` 之后 | `aria-pressed`、`aria-checked` 的 boolean / `"mixed"` 映射到 AccessKit `Toggled`；两者同时给时 checked 优先，删除属性后清空 |
+
+F6 使用独立 vendor 根 `/Volumes/PSSD/code/_vendor/f6-gpuix`，不修改共享 vendor 或业务控件。沿用 `bool_prop`，不接受字符串 `"true"` / `"false"`。macOS 实测 button 加 pressed 暴露为 `AXCheckBox` / `AXToggle`（role description 为 `toggle button`），`AXValue` 随 false → true 更新；删除状态后恢复普通 button。原生 AccessKit 的 Mixed 在本机 AX 读取中显示为 `true`，不据此改变业务 role。验证入口与原始 AX 见 [F6 报告](../../scripts/gpuix-main/evidence/f6/REPORT.md)。
