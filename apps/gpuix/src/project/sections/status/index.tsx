@@ -146,7 +146,10 @@ export function StatusStrip({
           label={labels.clip}
           active={!footerCollapsed && view === "clip"}
           testId="status-clip"
-          onActiveChange={() => onViewChange("clip")}
+          onActiveChange={active => {
+            if (active) onViewChange("clip")
+            else onToggleFooter()
+          }}
         >
           {labels.clip}
         </Button>
@@ -154,7 +157,10 @@ export function StatusStrip({
           label={labels.devices}
           active={!footerCollapsed && view === "devices"}
           testId="status-devices"
-          onActiveChange={() => onViewChange("devices")}
+          onActiveChange={active => {
+            if (active) onViewChange("devices")
+            else onToggleFooter()
+          }}
         >
           {labels.devices}
         </Button>
