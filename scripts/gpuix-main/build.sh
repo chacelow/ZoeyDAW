@@ -47,11 +47,15 @@ git -C "$vendor" submodule update --init --depth 1
 # Only extend a checkout that exactly matches a reviewed prefix of the series.
 pending_patches="$(node "$script_dir/check.mjs" --pending "$vendor")"
 readonly pending_patches
-# --intent-to-add records files a patch creates, so the next build's untracked-source guard
-# does not mistake them for stray edits (context-menu.patch adds context_menu.rs).
+# Files a patch creates are recorded with `git add --intent-to-add`, so the next build's
+# untracked-source guard does not mistake them for stray edits (context-menu.patch adds
+# context_menu.rs). Not `git apply --intent-to-add`: Apple Git 2.50.1 drops every index entry the
+# patch does not touch, which then reads as deleting the rest of the tree.
 while IFS= read -r patch; do
-  [ -z "$patch" ] || git -C "$vendor" apply --intent-to-add "$script_dir/patches/$patch"
+  [ -z "$patch" ] || git -C "$vendor" apply "$script_dir/patches/$patch"
 done <<< "$pending_patches"
+created="$(git -C "$vendor" ls-files --others --exclude-standard)"
+[ -z "$created" ] || printf '%s\n' "$created" | git -C "$vendor" add --intent-to-add --pathspec-from-file=-
 node "$script_dir/check.mjs" --sources "$vendor"
 [ -z "$(git -C "$vendor/zed" status --porcelain)" ] || {
   echo "Refusing modified zed sources" >&2; exit 1;
