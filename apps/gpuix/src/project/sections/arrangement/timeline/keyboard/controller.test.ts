@@ -90,6 +90,26 @@ describe("Arrangement keyboard boundaries", () => {
     expect(useProjectState.getState().workspace.drawMode).toBe(!original)
   })
 
+  for (const used of [false, true]) {
+    test(`clip-editor B ${used ? "drawing is temporary" : "tap latches"}`, () => {
+      focus = "clip-editor"
+      const original = useProjectState.getState().workspace.drawMode
+      expect(keyboard.down(key("b"))).toBe(true)
+      expect(useProjectState.getState().session.drawModeOverride).toBe(!original)
+      expect(useProjectState.getState().workspace.drawMode).toBe(original)
+      keyboard.down(key("b", undefined, true))
+      if (used) keyboard.markDrawGesture()
+      expect(keyboard.up(key("b"))).toBe(true)
+      expect(useProjectState.getState().session.drawModeOverride).toBeNull()
+      expect(useProjectState.getState().workspace.drawMode).toBe(used ? original : !original)
+      expect(useProjectState.getState().session.canUndo).toBe(!used)
+      if (!used) {
+        projectActions.undo()
+        expect(useProjectState.getState().workspace.drawMode).toBe(original)
+      }
+    })
+  }
+
   test("a tapped B creates one preference undo entry", () => {
     hydrateProject(
       JSON.stringify({

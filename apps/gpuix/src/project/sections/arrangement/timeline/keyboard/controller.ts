@@ -86,6 +86,15 @@ export function createTimelineKeyboard({
         if (!event.isHeld) projectActions.togglePlay()
         return true
       }
+      if (key === "b" && !modified && !alt) {
+        const state = useProjectState.getState()
+        if (state.workspace.computerKeyboard) return false
+        if (!draw && !event.isHeld) {
+          draw = { original: state.workspace.drawMode, used: false }
+          projectActions.setDrawModeOverride(!draw.original)
+        }
+        return true
+      }
       if (target === "clip-editor") return false
       if (target === "timeline" && claim(event)) return true
       const state = useProjectState.getState()
@@ -140,14 +149,6 @@ export function createTimelineKeyboard({
           }
           return true
         }
-      }
-      if (key === "b") {
-        if (state.workspace.computerKeyboard) return false
-        if (!draw && !event.isHeld) {
-          draw = { original: state.workspace.drawMode, used: false }
-          projectActions.setDrawModeOverride(!draw.original)
-        }
-        return true
       }
       if (key === "a") {
         if (!event.isHeld) projectActions.setMode("automationMode", !state.workspace.automationMode)
