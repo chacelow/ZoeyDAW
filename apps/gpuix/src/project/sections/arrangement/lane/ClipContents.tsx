@@ -160,9 +160,9 @@ export const ClipContentsView = memo(function ClipContentsView({
           bodyFill={bodyColor}
         />
       )}
-      {loopTicks.map(x => (
+      {loopTicks.map((x, ordinal) => (
         <div
-          key={x}
+          key={ordinal}
           style={sx({
             position: "absolute",
             left: x - visibleLeft,
