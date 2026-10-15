@@ -29,9 +29,9 @@ export function Label({
       alignItems: "center",
       keyboardFocusDim: false,
       focusVisible: {
-        outlineWidth: 1,
+        outlineWidth: theme.design.shape.focusRingWidth,
         outlineColor: theme.colors.ring,
-        outlineOffset: -1,
+        outlineOffset: -theme.design.shape.focusRingWidth,
       },
     },
     variants: { disabled: { true: { opacity: 0.5 }, false: {} } },

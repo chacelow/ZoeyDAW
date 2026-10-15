@@ -49,7 +49,11 @@ export function MenuTrigger({
         keyboardFocusDim: false,
         focusVisible: unavailable
           ? undefined
-          : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+          : {
+              outlineWidth: theme.design.shape.focusRingWidth,
+              outlineColor: theme.colors.ring,
+              outlineOffset: -theme.design.shape.focusRingWidth,
+            },
       },
       style
     ),
