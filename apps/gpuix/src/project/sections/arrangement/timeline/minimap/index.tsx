@@ -72,7 +72,7 @@ export function MiniMap({
     [renderer, cursor]
   )
   useEffect(() => () => gesture.dispose(), [gesture])
-  useEffect(() => {
+  useLayoutEffect(() => {
     gesture.cancel()
   }, [epoch, gesture])
   useEffect(() => registerGesture?.(gesture), [gesture, registerGesture])

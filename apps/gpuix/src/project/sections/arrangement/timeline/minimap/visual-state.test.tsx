@@ -1,10 +1,14 @@
 import { afterEach, expect, test } from "bun:test"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { MiniMap } from "."
-import type { MinimapGesture } from "./gesture"
+import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
+import type { CursorLockPort } from "@/ui/controls"
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -12,15 +16,25 @@ afterEach(() => {
 })
 
 test("overview pressed color survives leaving its bounds and cancellation restores hover", () => {
+  projectActions.setViewport({ pxPerBar: 100, scrollX: 4000 })
   const root = createTestRoot({ width: 800, height: 120 })
   roots.push(root)
-  let registered: MinimapGesture | undefined
   let normal = ""
   let hover = ""
   let pressed = ""
   let hidden = false
+  const cursor: CursorLockPort = {
+    capture: point => point,
+    hide: () => {
+      hidden = true
+    },
+    restore: () => {
+      hidden = false
+    },
+  }
   function Fixture() {
     const theme = useTheme()
+    const workspace = useProjectState(state => state.workspace)
     normal = theme.colors.canvasScrollbar
     hover = theme.colors.canvasScrollbarHover
     pressed = theme.colors.canvasScrollbarActive
@@ -32,29 +46,15 @@ test("overview pressed color survives leaving its bounds and cancellation restor
         geometry={{
           bars: 128,
           viewportWidth: 800,
-          pxPerBar: 100,
-          scrollX: 4000,
+          pxPerBar: workspace.pxPerBar,
+          scrollX: workspace.scrollX,
           minPxPerBar: 6.25,
           maxPxPerBar: 131072,
         }}
-        cursor={{
-          capture: point => point,
-          hide: () => {
-            hidden = true
-          },
-          restore: () => {
-            hidden = false
-          },
-        }}
+        cursor={cursor}
         onNavigate={() => {}}
-        onViewport={() => {}}
+        onViewport={projectActions.setViewport}
         onFit={() => {}}
-        registerGesture={gesture => {
-          registered = gesture
-          return () => {
-            registered = undefined
-          }
-        }}
       />
     )
   }
@@ -77,7 +77,25 @@ test("overview pressed color survives leaving its bounds and cancellation restor
   expect(color()).toBe(normal)
   root.renderer.nativeSimulateMouseMove(275, 16, 0)
   root.renderer.nativeSimulateMouseDown(275, 16)
-  expect(registered).toBeDefined()
-  flushSync(() => registered?.cancel())
+  root.renderer.nativeSimulateMouseMove(275, 24, 0)
+  expect(hidden).toBe(true)
+  const { document, workspace } = useProjectState.getState()
+  flushSync(() => hydrateProject(JSON.stringify({ version: 2, document, workspace })))
+  expect(hidden).toBe(false)
   expect(color()).toBe(hover)
+  const directory = mkdtempSync(path.join(tmpdir(), "timeline-epoch-present-"))
+  try {
+    root.renderer.captureScreenshot(path.join(directory, "first.png"))
+    root.render(
+      <ThemeProvider>
+        <Fixture />
+      </ThemeProvider>
+    )
+    root.renderer.captureScreenshot(path.join(directory, "settled.png"))
+    expect(readFileSync(path.join(directory, "first.png"))).toEqual(
+      readFileSync(path.join(directory, "settled.png"))
+    )
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
 })

@@ -148,22 +148,28 @@ describe("Native timeline layout and hit testing", () => {
     }
     root.render(<Harness />)
     root.renderer.flush()
+    const normalColor = root.renderer.findByTestId("minimap-frame")?.style.backgroundColor
     root.renderer.nativeSimulateMouseDown(440, 20)
+    const pressedColor = root.renderer.findByTestId("minimap-frame")?.style.backgroundColor
+    expect(pressedColor).not.toBe(normalColor)
     root.renderer.nativeSimulateMouseMove(441, 21, 0)
     root.renderer.flush()
     expect(root.renderer.findByTestId("timeline-minimap")).not.toBeNull()
     expect(useProjectState.getState().workspace.pxPerBar).toBe(100)
     root.renderer.nativeSimulateMouseMove(440, 60, 0)
     root.renderer.flush()
+    expect(root.renderer.findByTestId("minimap-frame")?.style.backgroundColor).toBe(pressedColor)
     expect(hidden).toBe(true)
     expect(useProjectState.getState().workspace.pxPerBar).toBeLessThan(100)
     const afterFirst = useProjectState.getState().workspace.pxPerBar
     root.renderer.nativeSimulateMouseMove(440, 80, 0)
     root.renderer.flush()
+    expect(root.renderer.findByTestId("minimap-frame")?.style.backgroundColor).toBe(pressedColor)
     expect(useProjectState.getState().workspace.pxPerBar).toBeLessThan(afterFirst)
     root.renderer.nativeSimulateMouseUp(440, 80)
     expect(hidden).toBe(false)
     expect(restored).toBe(true)
+    expect(root.renderer.findByTestId("minimap-frame")?.style.backgroundColor).toBe(normalColor)
     const overview = root.renderer.findByTestId("timeline-minimap")
     if (!overview) throw new Error("Overview missing")
     root.renderer.nativeSimulateKeystrokes(overview.id, "enter")
