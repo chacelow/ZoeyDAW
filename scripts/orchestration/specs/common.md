@@ -10,7 +10,7 @@
 - 不 push，不碰 `main`，不碰其他 worktree，不启动或停止用户已有服务。
 - 决策：自己路径内、可撤回、不改方向的事自己决定并在报告里写理由，规则没写到的也一样。需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、跨切片、与契约冲突，或属于根 `AGENTS.md`「决策默认归 Agent」清单的事：用 `orca orchestration ask` 问协调者，带上候选与建议。worker 不直接问用户。
 - **不允许静默停下**:你一旦结束回合,协调者就收不到你的任何状态,只有发出的 Orca 消息才算上报。每次结束回合前必须已经发出其中一种:还有工作就继续做,不结束回合;等待协调者、其它切片或桌面时段,发 `orca orchestration ask`(它会阻塞到协调者 reply,把你直接唤醒);阶段完成,发 `merge_ready`;全部完成,发 `worker_done`。只在终端里写"等待中"不算上报。巡检会自动唤醒停在空闲状态、却没有关闭派发的 worker。
-- 交付 `worker_done` 前：`tsc --noEmit`、`bun test`、（涉及 Rust）`cargo check` 与 `cargo test` 全部在你的 worktree 实跑通过；报告里写清命令、结果、未实现项及原因。不得把未实现的部分描述成完成。报告单列「错题」与「已验证做法」两节（LESSONS 格式）；不要直接改 `LESSONS.md`，由协调者整理。
+- 交付 `worker_done` 前：在你的 worktree 根目录运行 `pnpm verify:gpuix` 并确认通过（见 `docs/agents/setup.md`「验证命令」）；涉及 Rust 时另跑 `cargo check` 与 `cargo test`。报告里写清命令、结果、未实现项及原因。不得把未实现的部分描述成完成。报告单列「错题」与「已验证做法」两节（LESSONS 格式）；不要直接改 `LESSONS.md`，由协调者整理。
 - 涉及 Live 已有行为的切片，实现前先观察 Ableton Live，报告附「产品规则 → Live 观察 → 实现 → 差异/未验证」对照表。
 - UI 以真实 Gallery 和业务组合视图作整体评审，按 `gpuix-ui-standards.md` 第 13 节执行；生成截图默认放仓库外或 Git 忽略目录，不批量提交逐按钮/逐状态 PNG。圆角、边框、gap、padding 通过共享组件与 token 统一调整。
 - 卡在能力缺口或方案选择时，先用 Context7、GitHub 查最新方案（必要时请协调者用 Ego Browser 搜 X），把候选与实测证据随 `ask` 一起发。
