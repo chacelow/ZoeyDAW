@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test"
 import { converter, parse } from "culori"
 import { DEFAULT_THEME_PRESET, THEME_PRESETS, getThemePreset, isThemePresetId } from "./presets"
 import { PRESET_DATA } from "./presets.data"
-import { WEB_COLOR_TOKENS } from "./web-tokens"
 import type { DerivedThemeColors } from "./colors"
 
 const toRgb = converter("rgb")
@@ -11,10 +10,29 @@ const SCHEMES = ["light", "dark"] as const
 
 /** Compile-time exhaustive: adding or removing a role without updating this table fails `tsc`. */
 const DERIVED_ROLES: Record<keyof DerivedThemeColors, true> = {
-  ...(Object.fromEntries(Object.keys(WEB_COLOR_TOKENS).map(key => [key, true])) as Record<
-    keyof typeof WEB_COLOR_TOKENS,
-    true
-  >),
+  background: true,
+  foreground: true,
+  card: true,
+  cardForeground: true,
+  popover: true,
+  popoverForeground: true,
+  primary: true,
+  primaryForeground: true,
+  secondary: true,
+  secondaryForeground: true,
+  muted: true,
+  mutedForeground: true,
+  accent: true,
+  accentForeground: true,
+  destructive: true,
+  border: true,
+  input: true,
+  ring: true,
+  chart1: true,
+  chart2: true,
+  chart3: true,
+  chart4: true,
+  chart5: true,
   arrangementClipSelected: true,
   arrangementClipPaper: true,
   editorShell: true,
@@ -55,8 +73,8 @@ test("the Web preset list is migrated whole: Default plus 42 tweakcn presets, un
   expect(new Set(THEME_PRESETS.map(preset => preset.id)).size).toBe(THEME_PRESETS.length)
 })
 
-test("every preset provides exactly the consumed Web tokens in both schemes", () => {
-  const expected = new Set(Object.keys(WEB_COLOR_TOKENS))
+test("every preset provides the complete color model in both schemes", () => {
+  const expected = new Set(Object.keys(PRESET_DATA[0].light))
   for (const preset of PRESET_DATA) {
     for (const scheme of SCHEMES) {
       expect({ id: preset.id, scheme, keys: new Set(Object.keys(preset[scheme])) }).toEqual({

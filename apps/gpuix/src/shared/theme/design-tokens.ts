@@ -1,4 +1,4 @@
-import { CONTROL_METRICS, PROJECT_METRICS } from "@zoeymind/ui/metrics"
+import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
 
 export type CardSize = "default" | "sm" | "controls" | "project"
 export interface CardDesignTokens {

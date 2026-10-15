@@ -6,7 +6,7 @@ import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { WaveformPreview } from "./WaveformPreview"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
-import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
+import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 
 let root: TestRoot | undefined
 let directory: string | undefined

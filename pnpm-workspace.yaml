@@ -1,6 +1,5 @@
 packages:
   - apps/*
-  - packages/*
   - crates/native
 overrides:
   "@gpuix/native": link:.gpuix-main/packages/native
@@ -14,5 +13,3 @@ packageExtensions:
     dependencies:
       "@typescript-eslint/eslint-plugin": 8.71.2
       "@typescript-eslint/parser": 8.71.2
-patchedDependencies:
-  metal-fx@1.0.4: patches/metal-fx@1.0.4.patch

@@ -1,9 +1,0 @@
-# Project state ownership
-
-The composed root is `useProjectState.ts`, initialized from the empty document/workspace/session slices. The mock project seed is supplied on route entry, not by importing the adapter. `../adapters/index.ts` is the selector/command/backend interface; `context.ts` binds one `createProjectRuntime` instance to the current project's store. Each runtime owns its history, edits, confirmation checkpoints, registration stack and backend resources. Pure domain calculations live in `../model/`; display geometry lives in `../layout/`. See `../adapters/README.md` for lifecycle and persistence.
-
-Application-wide control hover, warnings and mapping belong to `@/shared/control-interactions`. Each `ControlInteractionsProvider` owns one state instance; the component gallery uses an isolated provider/bridge. Project components consume this public environment rather than owning app-wide state in private project stores. They read project data through `useProjectState` and write through `projectActions`.
-
-Canvas Scene is a rendering projection. Gesture previews are owned by the adapter and consumed through `getEffectiveDocument()`, then committed or cancelled with a session-scoped token. Controls, Canvas gestures, undo and redo share the backend state path. Playback head, Follow, meters and prototype MIDI recording consume the same accepted telemetry. Store subscribers must not introduce a second editable project or independent transport clock.
-
-`session.editEpoch` identifies editing ownership even while no backend is acquired. Hydration, backend opening and last runtime release rotate it; controls and Canvas fence stale callbacks against that identity. Backend `sessionId` identifies engine protocol traffic only. Neither identity enters persisted snapshots. Constructing or importing the runtime creates no backend session.

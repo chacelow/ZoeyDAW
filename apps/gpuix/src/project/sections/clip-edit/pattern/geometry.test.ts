@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { CONTROL_METRICS } from "@zoeymind/ui/metrics"
+import { CONTROL_METRICS } from "@/shared/theme/metrics/config"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { patternGeometry, patternScrollToStep, patternStepAt, patternStepRect } from "./geometry"
 

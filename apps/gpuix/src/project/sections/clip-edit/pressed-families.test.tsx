@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it } from "bun:test"
 import { projectActions } from "@/project/adapters"
-import { CONTROL_METRICS } from "@zoeymind/ui/metrics"
+import { CONTROL_METRICS } from "@/shared/theme/metrics/config"
 import { AUDIO_ID, PATTERN_ID, clipById, mount, notes, seed } from "./harness.test"
 import type { Harness } from "./harness.test"
 

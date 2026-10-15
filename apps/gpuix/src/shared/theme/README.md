@@ -8,13 +8,12 @@
 | --- | --- |
 | `ThemeProvider.tsx` | `ThemeProvider` 与 `useTheme()`。无内部 state：`appearance`、`preset`、完整 `design` 由组合根受控传入，切换只换 context value，不重挂载子树。省略 `design` 使用 `DEFAULT_DESIGN_TOKENS`，不合并 partial、不写设置。 |
 | `presets.ts` | `THEME_PRESETS`（Web 菜单顺序，Default 在首位）、`ThemePresetId`、`DEFAULT_THEME_PRESET`、`getThemePreset(id)`、`isThemePresetId(value)`。每个预设的 light/dark 在模块加载时各派生一次。 |
-| `presets.data.ts` | 生成文件，不手改。 |
-| `generate-presets.mjs` | 生成器：`node apps/gpuix/src/shared/theme/generate-presets.mjs`；`--check` 校验生成结果未过期。 |
-| `web-tokens.ts` | `ThemeColors` 字段 → Web CSS 变量的唯一对照表，生成器与类型都从它来。 |
+| `presets.data.ts` | gpuix 主题预设数据源；迁移后直接维护，颜色字面量保持原精度。 |
+| `metrics/control-metrics.json` | 控件与工程几何的单一数据源，由 `metrics/config.ts` 直接导入；无 CSS 生成路径。 |
 | `colors.ts` | `ThemeColors`、`DerivedThemeColors` 与唯一的 `derive(base, scheme)`。 |
 | `color-mix.ts` | 把 `color-mix(in oklab, …)` 解析成 hex8。 |
 | `content-color.ts` | 轨道、Clip 的 `var(--chart-N)` 内容色按当前主题解析。 |
-| `design-tokens.ts` | 原生 `DesignTokens`、Card 语义变体与默认值。shape 独立于 spacing，旧 Web 包只作为既有几何默认值来源，不向旧包添加新逻辑。 |
+| `design-tokens.ts` | 原生 `DesignTokens`、Card 语义变体与默认值；几何默认值从本地 metrics 派生。 |
 
 ## 原生设计入口
 
@@ -33,8 +32,7 @@
 
 ## 预设来源
 
-- Default：`apps/web/src/index.css` 的 `:root` 与 `.dark`（Web 选 Default 时清空覆盖值，露出的就是这两块）。
-- 其余 42 个：`packages/ui/src/theme/theme-presets.ts`（tweakcn）。Web 列表共 43 项（含 Default），不是 44。
+- 2026-10 迁移时完整保留 Default 与 42 个 tweakcn 预设；原 Web/CSS 输入已删除，当前权威来源是 `presets.data.ts`。
 - 颜色原样复制：hex 与 `oklch()` 字面量保持源精度，不经 HSL 转换。gpuix 的 csscolorparser 直接接受两者。
 - id：Web 的 Default 是空字符串 `""`，gpuix 用 `"default"`。持久化的旧值 `""` 读成 `null`，回退 Default。
 

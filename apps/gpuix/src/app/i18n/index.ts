@@ -1,11 +1,11 @@
 import { useMemo, useSyncExternalStore } from "react"
-import { i18next, initI18nCore, persistLocale, resolveLocale } from "@zoeymind/i18n/core"
-import type { InitI18nOptions, SupportedLocale } from "@zoeymind/i18n/core"
+import { i18next, initI18nCore, persistLocale, resolveLocale } from "@/platform/i18n/core"
+import type { InitI18nOptions, SupportedLocale } from "@/platform/i18n/core"
 import enUS from "../locales/en-US"
 import zhCN from "../locales/zh-CN"
 
-export { SUPPORTED_LOCALES } from "@zoeymind/i18n/core"
-export type { SupportedLocale } from "@zoeymind/i18n/core"
+export { SUPPORTED_LOCALES } from "@/platform/i18n/core"
+export type { SupportedLocale } from "@/platform/i18n/core"
 
 /**
  * gpuix binding for the shared i18next singleton. react-i18next resolves a second React

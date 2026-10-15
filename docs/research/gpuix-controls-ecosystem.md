@@ -2,6 +2,8 @@
 
 调研日期：2026-10-14。目标是 [remorses/gpuix](https://github.com/remorses/gpuix)，不是 `gpui-shell`。本文只做依赖与行为选型，不实施迁移。
 
+历史范围：下文的“当前”均指调研当日。本仓库的 `apps/web`、`packages/**`、`src-tauri` 已删除，原应用 manifest 与消费者路径仅是历史证据，不是当前开发入口。实际组件与主题 owner 见 [项目面板与共享外观](../architecture/project-panels.md)。
+
 ## 结论
 
 `@gpuix/react` 已有原生 Select、Combobox、Tooltip，以及输入、浮层、虚拟列表和 SVG host。不能把这次迁移理解为换一组 React import：当前 Base UI、cmdk、Resizable Panels、图标 React 包和浏览器控件依赖的 DOM、事件和 CSS 并不存在于同名的 GPUIX host 中。[G1] [G2] [G3]
@@ -139,7 +141,6 @@ React Native 示例只证明某库支持受控值接口或无 DOM 的状态层�
 
 因此当前推荐路径是固定 owner、repo、SHA 后评估源码；安装路径须另外核对确切 npm 名称、版本、tarball 内容与源码对应关系。本次没有运行任何安装命令。
 
-
 ## 五项优先建议
 
 1. **官方 gpuix 控件先行。** 已发布 Select/Combobox/Tooltip 直接进入后续验证候选；main 的 Button/Dialog/DismissableLayer 作为单独版本路线评估。第一个验收用 Settings Dialog 内打开 Select，再检查 Esc、Tab、焦点归还和浮层遮挡，不先造 popup 框架。[G1] [G2] [G4]
@@ -210,7 +211,6 @@ X 补充没有改变核心排序：先验证官方当前控件和 W/D 的相关�
 | `cfg://providers/streamIdleTimeoutSeconds` | `15` 秒 | `global config`，默认 `-1` | 两次模型流事件之间静默的 watchdog 阈值；不是 HMR 或网络性能测量 |
 
 值与要求中的 `60/15` 相符，不是本次读取发现的 stale 值。仅记录配置事实，不据此断言任何先前中断的根因。
-
 
 ## 一手来源
 

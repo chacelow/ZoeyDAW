@@ -2,6 +2,8 @@
 
 2026-10-14，A6 spike。消费者基线为 `d0db74c`，交付前按协调者要求合入 `gpuix-migration` 的共享错题本更新。第三方源码、构建缓存、消费者副本和 PoC 留在 `/Volumes/PSSD/code/_vendor`，不进入本仓库。
 
+历史范围：各节保留对应切片当时的命令与结果，不把历史通过数当成当前验证。本仓库的 `apps/web`、`packages/**`、`src-tauri` 已删除，涉及这些目录的旧命令不再执行；vendor gpuix 的 `packages/native`、`packages/react` 仍是外部源码路径，不属于此次删除范围。当前本地入口见 [setup](../agents/setup.md)。
+
 ## 结论：选择 B，固定主干自建
 
 推荐 **B：固定 `6a5c7c142ac32f9eb0caefe0121be995cfc18631` 自建，纳入本仓库的 native 构建管线**，计划包名为 `@zoeydaw/gpuix-native`。本轮没有发布包、修改应用依赖、推送第三方 fork 或发 PR。

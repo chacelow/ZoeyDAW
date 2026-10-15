@@ -48,7 +48,7 @@ tester.run("architecture/gpuix-imports", gpuixImports, {
       code: 'import { x } from "../../../shared/theme/style"; const m = "<svg></svg>"; void [x, m]',
     },
     // 仓库其他应用不受影响。
-    { filename: "/repo/apps/web/src/a.tsx", code: 'const m = "<svg></svg>"; void m' },
+    { filename: "/repo/tooling/fixture.tsx", code: 'const m = "<svg></svg>"; void m' },
   ],
   invalid: [
     {

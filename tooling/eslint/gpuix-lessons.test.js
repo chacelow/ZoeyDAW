@@ -35,7 +35,7 @@ tester.run("architecture/gpuix-lessons", gpuixLessons, {
     },
     { filename: `${src}/project/sections/footer/demo.tsx`, code: "setTimeout(() => {}, 0)" },
     // Outside the gpuix app the rule is inert.
-    { filename: "/repo/apps/web/src/x.ts", code: "setInterval(() => {}, 32)" },
+    { filename: "/repo/tooling/fixture.ts", code: "setInterval(() => {}, 32)" },
     // An unrelated renderer getter is not an appearance override.
     { filename: `${src}/app/x.ts`, code: "const appearance = renderer.getWindowAppearance()" },
     // Business surfaces may read design roles, 0/1 radii, and derive geometry from an inset token.

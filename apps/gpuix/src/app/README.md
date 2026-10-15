@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 当前路由与返回栈 | `router/createRouter` | 随窗口销毁 |
 | 当前主题模式、配色预设 | `settings/createPreferenceStore` | 订阅者卸载时退订，值经 platform settings 落盘 |
-| 当前语言 | `@zoeymind/i18n/core` 的 i18next 单例 | `useAppTranslation` 卸载时退订 |
+| 当前语言 | `@/platform/i18n/core` 的 i18next 单例 | `useAppTranslation` 卸载时退订 |
 | 工程文档、编辑事务、走带 | `project/adapters` 与 `project/stores` | `ProjectPage` 显示时取得 `startProjectRuntime` lease，卸载时释放 |
 | 面板激活、Browser handle、Footer view 与折叠 | `project/useProjectShell` | 随工程视图卸载 |
 | 帧源、窗口激活、光标能力 | `NativeRoot` 绑定当前 renderer | Provider 与订阅各自退订，不新增动画定时链 |
@@ -22,7 +22,7 @@
 
 - 外观页保留明、暗、跟随系统的分段控件，以及 Web 顺序的 43 项预设网格。
 - 预设经 `createThemePresetSetting` 存储，启动时先 `repair()`，再读取。切换只改变受控 ThemeProvider 的 context，不重挂载工程。
-- 语言经 `createSettingStorage("language")` 持久化。`app/i18n` 只消费 React-free `@zoeymind/i18n/core`，不加载 react-i18next 的第二份 React。
+- 语言经 `createSettingStorage("language")` 持久化。`app/i18n` 只消费 React-free `@/platform/i18n/core`，不加载 react-i18next 的第二份 React。
 - 模式经 `createSettingStorage("themeMode")` 持久化。`NativeRoot` 同步读取系统外观并订阅变化，跟随系统会更新同一工程，不重开后端。
 - 失效预设修复的读写失败落入 preference store 的失败边界。记录日志，保留内存选择，不阻断启动。
 - dirty 关闭先由原生 should-close 否决。保存成功或不保存后调用原生 `closeWindow()`，不再要求再按一次关闭。

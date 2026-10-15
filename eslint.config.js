@@ -1,42 +1,26 @@
 import core from "ultracite/eslint/core"
 import react from "ultracite/eslint/react"
 import {
-  architecture,
   gpuixLayers,
   gpuixImports,
   gpuixLessons,
-  publicIndex,
-  uiTokens,
   correctnessProfile,
-  vendoredProfile,
 } from "./tooling/eslint/index.js"
 
 const localRules = {
   rules: {
-    boundaries: architecture,
     "gpuix-layers": gpuixLayers,
     "gpuix-imports": gpuixImports,
     "gpuix-lessons": gpuixLessons,
-    "public-index": publicIndex,
-    "ui-tokens": uiTokens,
   },
 }
 
-const source = ["apps/web/src/**/*.{ts,tsx,js,jsx}", "packages/ui/src/**/*.{ts,tsx,js,jsx}"]
 const gpuixSource = ["apps/gpuix/src/**/*.{ts,tsx,js,jsx}"]
-const reactPlugins = Object.assign({}, ...react.map(preset => preset.plugins ?? {}))
 
 export default [
   ...correctnessProfile([...core, ...react]),
   {
-    ignores: [
-      ".agents/**",
-      ".claude/**",
-      ".github/**",
-      "src-tauri/**",
-      "packages/ui/src/theme/theme-presets.ts",
-      "packages/ui/src/controls/metrics/generated.css",
-    ],
+    ignores: [".agents/**", ".claude/**", ".github/**"],
   },
   {
     files: ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"],
@@ -49,17 +33,10 @@ export default [
       "import-x/no-cycle": ["error", { ignoreExternal: true }],
     },
     settings: {
-      "import-x/internal-regex": "^@zoeymind/",
+      "import-x/internal-regex": "^@zoeydaw/",
       "import-x/resolver": {
         typescript: {
-          project: [
-            "apps/web/tsconfig.app.json",
-            "packages/ui/tsconfig.json",
-            "packages/shared/tsconfig.json",
-            "packages/logger/tsconfig.json",
-            "packages/i18n/tsconfig.json",
-          ],
-          noWarnOnMultipleProjects: true,
+          project: ["apps/gpuix/tsconfig.json"],
         },
       },
     },
@@ -110,21 +87,6 @@ export default [
     },
   },
   {
-    files: [
-      "apps/web/src/**/*.{js,jsx,ts,tsx}",
-      "packages/ui/src/**/*.{js,jsx,ts,tsx}",
-      "packages/i18n/src/**/*.{js,jsx,ts,tsx}",
-    ],
-    plugins: { "react-hooks": reactPlugins["react-hooks"] },
-    rules: {
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "error",
-      "react-hooks/set-state-in-render": "error",
-      "github/no-blur": "off",
-      "n/no-callback-literal": "off",
-    },
-  },
-  {
     files: ["**/*.{test,spec,stories}.{js,jsx,ts,tsx,mjs}", "**/__tests__/**"],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
@@ -141,13 +103,8 @@ export default [
   },
   {
     files: [
-      "apps/web/src/pages/project/adapters/{clipboard-memory,snapshots}.ts",
       "apps/gpuix/src/project/adapters/{clipboard-memory,snapshots}.ts",
-      "apps/web/src/pages/project/sections/ArrangementPanel/{useGestureCursor,Timeline/drawModeKey}.ts",
-      "apps/web/src/shared/native/log-sink.ts",
-      "packages/i18n/src/core.ts",
-      "packages/ui/src/{Loading,toaster,paste-zone}.tsx",
-      "packages/ui/src/motion/animated-toast-stack.tsx",
+      "apps/gpuix/src/platform/i18n/core.ts",
     ],
     rules: { "unicorn/no-top-level-assignment-in-function": "off" },
   },
@@ -167,82 +124,8 @@ export default [
     rules: { "architecture/gpuix-imports": "off" },
   },
   {
-    files: source,
-    plugins: { architecture: localRules },
-    rules: {
-      "architecture/boundaries": "error",
-      "architecture/public-index": "error",
-    },
-  },
-  {
-    files: [
-      "apps/web/src/**/*.{tsx,jsx}",
-      "packages/ui/src/controls/**/*.{tsx,jsx}",
-      "packages/ui/src/button.{tsx,jsx}",
-    ],
-    ignores: ["**/*.{test,spec,stories}.{tsx,jsx}", "**/__tests__/**"],
-    rules: { "architecture/ui-tokens": "error" },
-  },
-  {
-    files: ["apps/web/src/**/*.{ts,tsx,js,jsx}"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              regex: "^\\.\\./\\.\\./",
-              message: "Use @/ for imports two or more directories above this file.",
-            },
-          ],
-        },
-      ],
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "ImportExpression[source.value=/^[.][.]\\x2F[.][.]\\x2F/]",
-          message: "Use @/ for dynamic imports two or more directories above this file.",
-        },
-      ],
-    },
-  },
-  {
-    files: ["packages/ui/src/controls/DragPad/DragPadBase.tsx"],
-    rules: {
-      "github/a11y-role-supports-aria-props": "off",
-      "jsx-a11y/role-supports-aria-props": "off",
-    },
-  },
-  {
-    files: ["packages/ui/src/data-table/types.ts"],
-    rules: { "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^TData$" }] },
-  },
-  {
-    files: ["packages/ui/src/sidebar.tsx"],
-    rules: { "unicorn/no-document-cookie": "off", "sonarjs/pseudo-random": "off" },
-  },
-  {
-    files: [
-      "apps/web/src/pages/project/adapters/backend/connection/connection.ts",
-      "apps/gpuix/src/project/adapters/backend/connection/connection.ts",
-    ],
+    files: ["apps/gpuix/src/project/adapters/backend/connection/connection.ts"],
     rules: { "unicorn/prefer-then-catch": "off" },
-  },
-  {
-    files: ["apps/web/src/pages/project/sections/ArrangementPanel/MiniMap/useMinimapGesture.ts"],
-    rules: { "compat/compat": "off" },
-  },
-  {
-    files: ["packages/shared/src/__tests__/**"],
-    rules: {
-      "import-x/no-extraneous-dependencies": [
-        "error",
-        {
-          devDependencies: true,
-          packageDir: [import.meta.dirname, `${import.meta.dirname}/packages/shared`],
-        },
-      ],
-    },
   },
   {
     // Renderer probes and regressions under scripts/gpuix-main/<slice>/ run against the app's
@@ -276,5 +159,4 @@ export default [
       ],
     },
   },
-  vendoredProfile([...core, ...react]),
 ]

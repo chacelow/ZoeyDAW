@@ -1,14 +1,14 @@
 /**
  * Theme context: the single source every slice reads colors and control
  * metrics from. No feature directory should import `colors.ts` or
- * `@zoeymind/ui/metrics` directly; go through `useTheme()`.
+ * `shared/theme/metrics` directly; go through `useTheme()`.
  *
  * The provider holds no state: the composition root owns appearance and
  * preset (settings, system appearance) and passes them in. Changing either
  * only swaps the context value, so the subtree keeps its component state.
  */
 import { createContext, useContext, useMemo } from "react"
-import { CONTROL_METRICS, PROJECT_METRICS } from "@zoeymind/ui/metrics"
+import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { DEFAULT_THEME_PRESET, getThemePreset } from "./presets"
 import type { ReactNode } from "react"
 import type { ColorScheme, DerivedThemeColors } from "./colors"

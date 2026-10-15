@@ -52,7 +52,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **共享资源只有一个 owner**:
 
-- 共享度量(`control-metrics.json`)由协调者统一加入主干,每个值都要有来源(web 文件行号或 Live 实测),不接受估算。
+- 共享度量(`apps/gpuix/src/shared/theme/metrics/control-metrics.json`)由协调者统一加入主干,每个值都要有来源(迁移时的历史文件记录或 Live 实测),不接受估算。
 - 共享组件发现两份实现时,由协调者抽到 `shared/` 或拥有它的切片,另一份删除。
 - vendor 补丁序列的变更合入后,由协调者重建共享 vendor 并通知各 worker。
 

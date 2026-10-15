@@ -1,4 +1,4 @@
-import { logger } from "@zoeymind/logger"
+import { logger } from "@/platform/log/logger"
 
 export interface PreferenceSetting<T extends string> {
   get(): string | null

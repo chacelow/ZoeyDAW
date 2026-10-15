@@ -51,6 +51,7 @@ const LAYERS = [
       "app",
       "shared/theme",
     ],
+    allowLayers: ["shared/theme/metrics"],
     forbidGlobals: true,
   },
   {
@@ -131,6 +132,7 @@ const LAYER_ROOTS = [
   ["project", "/apps/gpuix/src/project"],
   ["ui", "/apps/gpuix/src/ui"],
   ["platform", "/apps/gpuix/src/platform"],
+  ["shared/theme/metrics", "/apps/gpuix/src/shared/theme/metrics"],
   ["shared/theme", "/apps/gpuix/src/shared"],
   ["app", "/apps/gpuix/src/app"],
 ]
@@ -168,7 +170,7 @@ const SRC_ALIAS = "@/"
 function resolveTarget(file, specifier) {
   if (specifier.startsWith(SRC_ALIAS)) {
     const srcRoot = file.slice(0, file.indexOf("/apps/gpuix/src/") + "/apps/gpuix/src".length)
-    return normalized(`${srcRoot}/${specifier.slice(SRC_ALIAS.length)}`)
+    return normalized(path.resolve(srcRoot, specifier.slice(SRC_ALIAS.length)))
   }
   return specifier.startsWith(".")
     ? normalized(path.resolve(path.dirname(file), specifier))
@@ -248,6 +250,7 @@ export const gpuixLayers = {
       if (
         targetLayer &&
         targetLayer !== layer.name &&
+        !layer.allowLayers?.includes(targetLayer) &&
         layerForbidden(layer.forbidLayers, targetLayer)
       ) {
         context.report({

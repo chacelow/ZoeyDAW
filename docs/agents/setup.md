@@ -2,51 +2,30 @@
 
 ## 当前工程
 
-gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crates/native`（napi，产物 `@zoeydaw/native`），引擎在 `crates/engine`。工作区使用 pnpm。`apps/web`、`packages/**`、`src-tauri` 是迁移参考，只读。版本、包名和脚本以对应 `package.json`、`Cargo.toml` 为准。
+gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crates/native`（napi，产物 `@zoeydaw/native`），引擎在 `crates/engine`。工作区使用 pnpm，只保留 gpuix 应用与 Rust crates。主题度量在 `apps/gpuix/src/shared/theme/metrics`，语言与日志分别在 `apps/gpuix/src/platform/i18n`、`apps/gpuix/src/platform/log`。版本、包名和脚本以对应 `package.json`、`Cargo.toml` 为准。
 
 ## 运行与热更新（gpuix）
 
 - 新 worktree 初始化（`start-worker.sh` 以 `--setup skip` 创建，没有依赖）：在 worktree 根目录依次运行 `bash scripts/gpuix-main/build.sh`、`pnpm install --frozen-lockfile`、`pnpm native:build`、`node scripts/gpuix-main/check.mjs --resolution`。共享 vendor 已构建好时，`build.sh` 只校验并生成本 checkout 的 `.gpuix-main` 链接，不会重建。不要改 vendor 路径，不要删构建锁；报补丁序列不一致时交给协调者（见 LESSONS「修改补丁序列中间的补丁」）。
 - 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，切片 demo 与画廊各有入口）。改 TS/TSX 保存即热更新。
-- Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。不提示用户重启 `tauri:dev`。
+- Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。
 - Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；交付前确认零残留（见 `scripts/orchestration/specs/common.md`）。
 - 后台启动：任何入口（`src/main.tsx`、Gallery、各切片 demo）加 `GPUIX_BACKGROUND=1`，窗口打开时不抢键盘焦点，用户的前台应用保持不变，统一由 `platform/window` 的 `LAUNCH_FOCUS` 控制。AX 只读量值、离屏截图（`createTestRoot`）和例行回归都用这种方式。后台窗口不能替代真实桌面验收：它通常被前台应用遮挡，macOS 会停发遮挡窗口的 animation frame（F3 实测），所以窗口截图可能全黑，等待原生帧的测量（性能、首帧）会一直卡住；`el.press()` 等输入还可能报 `BackgroundUnavailable`。遇到这些情况，把对应项标为未验证，不要切到前台，也不要用 headless 数据冒充窗口数据；需要真实帧的验收，交由协调者在真实桌面上串行完成。
-- 不停止用户自己启动的应用或服务；用户的 `tauri:dev` 只属于旧 Web 参考，Agent 不启动也不重启它。
+- 不停止用户自己启动的应用或服务。
 
 ## 验证命令（gpuix）
 
 在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`），按顺序执行：渲染器身份校验（十一补丁，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、`bun test`、review scan（`baseRef...HEAD`，默认 `gpuix-migration`；未提交的改动不在扫描范围内），最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
 
-## 旧 Web 参考的验证命令
+## 根工具与度量
 
-开发套件统一使用 Ultracite v8，Node 要求以根 `package.json` 为准，当前至少 22.18。常规入口在工作区根目录运行：
+根 `package.json` 定义 `doctor`、`check`、`fix`、`test` 等入口；gpuix 的完整验收使用上面的 `verify:gpuix`。Node 版本要求与各命令实际覆盖范围以 manifest 和脚本为准，不再运行旧 Web、共享包或 Tauri 的命令。
 
-```sh
-pnpm doctor
-pnpm check
-pnpm fix
-pnpm test
-pnpm --filter @zoeydaw/web typecheck
-pnpm --filter @zoeymind/shared typecheck
-pnpm --filter @zoeymind/logger typecheck
-pnpm build
-```
+共享度量的配置源是 `apps/gpuix/src/shared/theme/metrics/control-metrics.json`，同目录 `config.ts` 直接导入 JSON 并导出类型化度量。消费者通过 `shared/theme` 使用同一份配置，不复制数字；原 Web 度量 CSS 生成与漂移检查命令已删除，gpuix 不需要生成 CSS。
 
-`check` 执行 Ultracite 与共享度量漂移检查；`fix` 先生成度量 CSS 再执行套件修复；`test` 运行 Web 行为、根工具模块规则及 shared/logger 测试。Web 的 lint/format 是这些根入口的别名，不维护另一套格式配置。类型检查和构建单独执行，不包含在 `check` 中。
+正确性、类型、无障碍与项目架构/token 是硬门禁。自动检查只覆盖规则声明的静态范围，不代表完整依赖图或所有动态样式已验证。不要未经审查重跑 `ultracite init` 覆盖项目配置；升级时核对预设、peer 绑定与本地规则，再执行对应工具、类型、测试和界面验证。
 
-需要单独修改共享度量时使用包命令，不从 Web 跨目录执行脚本：
-
-```sh
-pnpm --filter @zoeymind/ui metrics:generate
-pnpm metrics:check
-cargo check --manifest-path src-tauri/Cargo.toml
-```
-
-正确性、类型、无障碍与项目架构/token 作为硬门禁；预设中的 suggestion/layout 规则默认关闭，不输出建议或自动要求全仓改写，文件名约束等显式规则以根配置为准，格式由套件 formatter 统一。架构检查覆盖配置列出的层级、公共入口和可静态识别的 JSX token，不是完整依赖图或所有动态样式的证明。现有单实例服务和测试 harness 的合理模式在根配置集中声明。类型化 React props 不重复添加 PropTypes，当前 Router 版本也不按 v8 规则强行迁移。
-
-不要未经审查重跑 `ultracite init` 覆盖项目配置。升级时检查预设、peer 绑定和本地架构规则，重新执行 doctor、check、类型、测试与页面验证；不使用自动启动其他 agent 的修复参数替代本轮受控编辑。
-
-`pnpm tauri:dev` 和 `pnpm tauri:build` 只给用户参考，Agent 不执行。按纯本地开发验收：保留 workflow 文件，但不上传 GitHub、不触发远程流程、不把配置存在称为 CI 已运行。
+按纯本地开发验收，不上传 GitHub、不触发远程流程，不把 workflow 文件存在称为 CI 已运行。
 
 UI 改动必须在真实 gpuix 窗口验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制。
 

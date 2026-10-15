@@ -1,19 +1,38 @@
 /**
- * Theme color model, ported from `apps/web/src/index.css`.
- *
- * `ThemeColors` is the set of tokens a preset provides (see `presets.data.ts`,
- * generated from the Web sources). `derive()` adds every role the Web theme
- * computes from them with `color-mix()` / `light-dark()`, resolved once
- * through `colorMix()` because gpuix has no CSS engine to evaluate them.
+ * Theme color model. Presets are maintained directly in `presets.data.ts`.
+ * `derive()` resolves semantic roles once because gpuix has no CSS engine.
  *
  * Shared by every gpuix module in this app: do not hand-roll a second color
  * table or a second derivation in a feature slice.
  */
 import { colorMix } from "./color-mix"
-import type { WEB_COLOR_TOKENS } from "./web-tokens"
 
-/** One preset's colors for one scheme; field ↔ Web token map in `web-tokens.ts`. */
-export type ThemeColors = { readonly [Field in keyof typeof WEB_COLOR_TOKENS]: string }
+/** One preset's colors for one scheme. */
+export interface ThemeColors {
+  readonly background: string
+  readonly foreground: string
+  readonly card: string
+  readonly cardForeground: string
+  readonly popover: string
+  readonly popoverForeground: string
+  readonly primary: string
+  readonly primaryForeground: string
+  readonly secondary: string
+  readonly secondaryForeground: string
+  readonly muted: string
+  readonly mutedForeground: string
+  readonly accent: string
+  readonly accentForeground: string
+  readonly destructive: string
+  readonly border: string
+  readonly input: string
+  readonly ring: string
+  readonly chart1: string
+  readonly chart2: string
+  readonly chart3: string
+  readonly chart4: string
+  readonly chart5: string
+}
 
 export type ColorScheme = "light" | "dark"
 

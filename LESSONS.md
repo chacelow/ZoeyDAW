@@ -7,28 +7,28 @@
 - 错：用外沿 ring、box-shadow 或 outline 做 active。
 - 对：保持外壳尺寸，只换现有边框颜色。具体宽度由共享度量配置决定，不在错题本固定另一份数字。
 - 因：Resizable Panel/Group 内置 overflow 会裁掉外沿，产生部分边框残影。
-- 见：`apps/web/src/components/panels/PanelShell/index.tsx`、[Panel 契约](docs/architecture/project-panels.md)。
+- 见：`apps/web/src/components/panels/PanelShell/index.tsx`（已删除）、[Panel 契约](docs/architecture/project-panels.md)。
 
 ## defaultSize 的单位
 
 - 错：把 `defaultSize={18}` 当作百分比。
 - 对：数值表达像素，百分比使用字符串。
 - 因：react-resizable-panels v4 的尺寸 API 与早期写法不同。
-- 见：`apps/web/src/pages/project/ProjectLayout.tsx`。
+- 见：`apps/web/src/pages/project/ProjectLayout.tsx`（已删除）。
 
 ## 只改 CSS 不等于修改 Canvas 几何
 
 - 错：覆写控件 CSS 高度后，认定轨道 resize、标题与命中范围也已同步。
 - 对：从同一度量配置派生 CSS 和 JS 布局，检查两端的实际结果。
 - 因：轨道几何过去来自 JS 常量，独立 CSS 覆写不能更新它；2026-10-14 页面探针确认共享控件与 scoped 轨道变体会分别响应。
-- 见：`packages/ui/src/controls/metrics/`、`apps/web/src/pages/project/layout/`。
+- 见：`packages/ui/src/controls/metrics/`（已删除）、`apps/web/src/pages/project/layout/`（已删除）。
 
 ## 导入接口不应启动工程后端
 
 - 错：在模块末尾 openBackend，导致首页导入 facade 就创建会话。
 - 对：构造/配置只建立数据与 owner，运行视图显式取得 lease，最后释放时清理资源。
 - 因：隐藏副作用把页面是否显示与后端生命周期分离，妨碍实例隔离和原生接入。
-- 见：`apps/web/src/pages/project/adapters/runtime/`。
+- 见：`apps/web/src/pages/project/adapters/runtime/`（已删除）。
 
 ## 2026-10-14 底部视图的布局与输入回归
 
@@ -306,7 +306,7 @@
 - 错：协调者看到 lane 音频 Clip 左声道是一条近黑色满幅横带，就当作 `PeakColumns` 声道几何错误和颜色错误派修；worker 据此把波形改成 Clip 派生色，并加断言锁定。
 - 对：先算测试素材的预期包络。`probe.wav` 左声道是 ±0.4 的恒幅正弦，在 Arrangement 缩放下每像素 min/max 都是 ±0.4，本来就是满幅连续带。颜色先查 web 参考：`canvas/painters/clip.ts` 用 `--arrangement-clip-ink` 画波形，即彩色 Clip 上的深色墨。两项都符合预期，只是看起来不像真实音乐。
 - 因：评审只凭视觉印象，没有核对数据与参考，就把有意的设计当成缺陷，还产生了一个反向锁定的错误断言。
-- 见：`apps/web/src/pages/project/sections/ArrangementPanel/canvas/painters/clip.ts:199`、`crates/engine/spikes/assets/probe.wav`。
+- 见：`apps/web/src/pages/project/sections/ArrangementPanel/canvas/painters/clip.ts:199`（已删除）、`crates/engine/spikes/assets/probe.wav`。
 
 ## gpuix 迁移：React 19 DEV 的 Performance Track 会遍历大 TypedArray props
 

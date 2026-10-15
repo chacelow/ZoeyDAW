@@ -30,7 +30,7 @@ crates/
 
 ## 硬规则
 
-1. **没有 DOM、没有 CSS、没有 Tailwind class**。样式是 `sx()` / `sv()` 产出的 style 对象；颜色与度量只经 `useTheme()`，不 import `colors.ts` 或 `@zoeymind/ui/metrics`。
+1. **没有 DOM、没有 CSS、没有 Tailwind class**。样式是 `sx()` / `sv()` 产出的 style 对象；颜色与度量只经 `useTheme()`，不 import `colors.ts` 或 `shared/theme/metrics`（纯 `project/layout` 与窗口入口的既有直接度量读取除外）。
 2. **不堆样式文件**。共享外观进入控件的 `sv` variant；局部布局留在 TSX 的命名对象。
 3. **时间线、轨道、Clip 用原生 `<div>` + 可见范围裁剪**，不引入 Canvas2D。waveform 用裁剪后的竖线 div；automation 曲线用 `<svg source>`（单色 tint）。
 4. **Rust 能做的就在 Rust 做，不绕路**：光标、文件原子写、设置落盘、日志、外链、窗口辅助、引擎全部是 `crates/native` / `crates/engine`。TS 只做适配。不用 `osascript`、`bun:ffi` struct 返回、子进程当原生桥。

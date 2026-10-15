@@ -11,7 +11,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const eslintBin = path.join(repoRoot, "node_modules", ".bin", "eslint")
 const eslintConfig = path.join(repoRoot, "eslint.config.js")
 const run = (cmd, args) => execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 }).trim()
-const changed = run("git", ["diff", "--name-only", "--diff-filter=AM", `${base}...HEAD`])
+const changed = run("git", ["diff", "--name-only", "--diff-filter=AMR", `${base}...HEAD`])
   .split("\n")
   .filter(Boolean)
 const source = changed.filter(f => /^apps\/gpuix\/src\/.*\.(ts|tsx)$/.test(f))
@@ -77,8 +77,8 @@ for (const file of source) {
     add("skipped-test", file, "skipped/only test: delete or fix")
   if (/expect\([^)]*\)\.toBeTruthy\(\)\s*$/m.test(text) && /\.test\.(ts|tsx)$/.test(file))
     add("weak-assertion", file, "toBeTruthy-only assertion: assert the behaviour")
-  // 0.10 compatibility shims double-compensate on the pinned main renderer; only ui/controls may still hold them until A3b deletes them.
-  if (!file.includes("/ui/controls/") && /\b(readOuterBounds|useFloatingCenterOffset)\b/.test(text))
+  // Bounds already include border/padding on the pinned renderer; compatibility shims are obsolete.
+  if (/\b(readOuterBounds|useFloatingCenterOffset)\b/.test(text))
     add("legacy-bounds-shim", file, "0.10 bounds shim: use renderer.getElementBounds / onLayout")
 }
 

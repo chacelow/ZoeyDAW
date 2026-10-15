@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
-import { i18next } from "@zoeymind/i18n/core"
+import { i18next } from "@/platform/i18n/core"
 import * as engine from "@/platform/engine"
 import {
   createWindowKeyboard,

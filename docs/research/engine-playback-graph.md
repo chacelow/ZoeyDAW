@@ -127,4 +127,4 @@ cargo clippy -p zoeydaw-engine --all-targets -- -D warnings
 - 安装现有 lockfile 后 `pnpm native:build` 通过；生成物不提交、不修改 native 源码。
 - `pnpm --filter @zoeydaw/gpuix-prototype exec tsc --noEmit`、`bun test apps/gpuix` 通过（31 tests）。根目录 `bun test` 扫进只读旧 Web/packages 的 Vitest 测试，`vi.mocked` 等不兼容；经协调者确认只以 GPUix 范围验收，不越界修旧用例。
 - `bun --hot apps/gpuix/src/features/waveform-automation/demo.tsx`（实际在 apps/gpuix 目录运行对应相对入口）创建原生窗口；AX 与[截图](../../crates/engine/spikes/results/native-window.png)确认既有 waveform/automation 表面。它仍是 synthesized peaks，**不是 Rust peak pyramid 已接 UI 的证据**。Rust 数据源已由 inspect 与纯函数测试直接核对。
-- 本次 Rust/Cargo 改动应用到旧 Tauri 壳时，**需要重启 tauri:dev**，由用户操作；本 worker 未启动、重启或停止用户已有服务。
+- 历史操作说明：当时 Rust/Cargo 改动应用到旧 Tauri 壳时需要由用户重启 tauri:dev；该壳现已删除，此说明不再是运行入口。本 worker 未启动、重启或停止用户已有服务。

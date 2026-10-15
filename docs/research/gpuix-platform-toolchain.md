@@ -2,6 +2,8 @@
 
 调研日期：2026-10-14。目标是 `remorses/gpuix`，不是 gpui-shell。本轮只调研，不安装依赖、不启动应用、不改产品源码、不提交。
 
+历史范围：本文保留迁移前的替代方案与权限分析，不是当前工具链说明。旧 Web/Tauri 实现及共享 packages 已删除；日志与语言的当前 owner 是 `apps/gpuix/src/platform/log`、`apps/gpuix/src/platform/i18n`，运行与构建入口见 [setup](../agents/setup.md)。
+
 ## 代码与发布基线
 
 - Orca Workspace 为 `GPUix Migration Research`，目录是 `/Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration`，分支为 `gpuix-migration`。
