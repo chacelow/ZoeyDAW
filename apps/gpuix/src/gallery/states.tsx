@@ -55,7 +55,9 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
       <div
         role="application"
         aria-label="Control state specimens"
-        onKeyDown={event => setKeys(event.key ?? "")}
+        onKeyDown={event => {
+          setKeys(event.key ?? "")
+        }}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -169,7 +171,9 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
           </PopupButton>
         </div>
         <div style={row}>
-          <Label controlRef={inputRef}>{text("Input label", "输入标签")}</Label>
+          <Label controlRef={inputRef} disabled={disabled}>
+            {text("Input label", "输入标签")}
+          </Label>
           <Input
             ref={inputRef}
             aria-label="State input"
@@ -245,6 +249,55 @@ export function StateGallery({ cursorLock }: { readonly cursorLock: CursorLockPo
             }
           />
         </div>
+        <div style={row}>
+          <div
+            role="group"
+            aria-label="Narrow selector parent"
+            style={{ width: theme.project.routingWidth }}
+          >
+            <DropdownButton
+              label="Filled narrow selector"
+              fill
+              disabled={disabled}
+              value={mode}
+              onChange={setMode}
+              items={[
+                { id: "beats", label: text("Beats", "节拍") },
+                { id: "tones", label: text("Long routing destination", "较长的路由目的地") },
+              ]}
+            />
+          </div>
+          <div
+            role="group"
+            aria-label="Wide selector parent"
+            style={{ width: theme.project.controlsWidth }}
+          >
+            <DropdownButton
+              label="Filled wide selector"
+              fill
+              disabled={disabled}
+              align="center"
+              value={mode}
+              onChange={setMode}
+              items={[
+                { id: "beats", label: text("Beats", "节拍") },
+                { id: "tones", label: text("Long routing destination", "较长的路由目的地") },
+              ]}
+            />
+          </div>
+        </div>
+        <DragPadNumber
+          label="State icon-free number"
+          testId="state-icon-free-number"
+          value={number}
+          onChange={setNumber}
+          min={20}
+          max={300}
+          step={1}
+          defaultValue={120}
+          hideIcon
+          disabled={disabled}
+        />
         <text role="status" aria-label="State keyboard log">
           {keys}
         </text>

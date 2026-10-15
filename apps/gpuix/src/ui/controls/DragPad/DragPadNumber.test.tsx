@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
-import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
+import { ThemeProvider, useTheme } from "../../../shared/theme/ThemeProvider"
 import { DragPadNumber } from "./DragPadNumber"
 import { readOuterBounds } from "../useMeasuredTextWidth"
 
@@ -78,6 +78,9 @@ describe("DragPadNumber native interactions", () => {
     expect(a.value()).toBe(120)
     a.renderer.nativeSimulateScrollWheel(a.x, a.y, 0, 16)
     expect(a.value()).not.toBe(120)
+    expect(a.value()).toBe(121)
+    a.renderer.nativeSimulateScrollWheel(a.x, a.y, 0, -32)
+    expect(a.value()).toBe(119)
     a.unmount()
   })
 
@@ -141,6 +144,112 @@ test("keyboard adjusts a focused value and Escape rolls back an active drag", ()
   a.renderer.nativeSimulateMouseUp(a.x, a.y - 40)
   expect(a.value()).toBe(121)
   a.unmount()
+})
+
+test("hidden icons remove their slot and editing keeps the same shell bounds", () => {
+  const root = createTestRoot({ width: 400, height: 180 })
+  let padding = 0
+  let foreground = ""
+  function Fixture() {
+    const theme = useTheme()
+    const [value, setValue] = useState(120)
+    padding = theme.control["--spacing-control-track-pad"]
+    foreground = theme.colors.foreground
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "start" }}>
+        <DragPadNumber
+          testId="hidden"
+          label="Hidden icon number"
+          value={value}
+          onChange={setValue}
+          min={20}
+          max={300}
+          step={1}
+          defaultValue={120}
+          hideIcon
+        />
+        <text
+          testId="widest"
+          style={{ fontSize: theme.control["--text-control-track"], fontFamily: "Menlo" }}
+        >
+          300
+        </text>
+      </div>
+    )
+  }
+  root.render(
+    <ThemeProvider>
+      <Fixture />
+    </ThemeProvider>
+  )
+  root.renderer.flush()
+  const shell = root.renderer.findByTestId("hidden")!
+  const original = readOuterBounds(root.renderer, shell)!
+  const text = readOuterBounds(root.renderer, root.renderer.findByTestId("widest"))!
+  expect(original.width).toBe(Math.ceil(text.width + padding * 2 + 2))
+  expect(root.renderer.findByTestId("hidden-edit-indicator")).toBeUndefined()
+  const assertIndicatorFits = () => {
+    const element = root.renderer.findByTestId("hidden-edit-indicator")!
+    const indicator = readOuterBounds(root.renderer, element)!
+    const value = readOuterBounds(root.renderer, root.renderer.findByTestId("hidden-value"))!
+    expect(indicator.x).toBeGreaterThanOrEqual(original.x)
+    expect(indicator.y).toBeGreaterThanOrEqual(original.y)
+    expect(indicator.y + indicator.height).toBeLessThanOrEqual(original.y + original.height)
+    expect(indicator.x + indicator.width).toBeLessThanOrEqual(value.x)
+    expect(element.style.backgroundColor).toBe(foreground)
+    expect(element.style.backgroundColor).not.toBe(
+      root.renderer.findByTestId("hidden")!.style.backgroundColor
+    )
+  }
+  root.renderer.nativeSimulateClick(
+    original.x + original.width / 2,
+    original.y + original.height / 2
+  )
+  expect(root.renderer.findByTestId("hidden-edit-indicator")).toBeDefined()
+  expect(readOuterBounds(root.renderer, root.renderer.findByTestId("hidden"))).toEqual(original)
+  assertIndicatorFits()
+  root.renderer.simulateKeystrokes("9")
+  expect(root.renderer.findByType("input")).toHaveLength(1)
+  expect(root.renderer.findByTestId("hidden-edit-indicator")).toBeDefined()
+  expect(readOuterBounds(root.renderer, root.renderer.findByTestId("hidden"))).toEqual(original)
+  assertIndicatorFits()
+  root.unmount()
+})
+
+test("Space stays inside the numeric editor instead of reaching playback shortcuts", () => {
+  const windowKeys: string[] = []
+  let latest = 120
+  const root = createTestRoot({
+    width: 400,
+    height: 180,
+    onKeyDown: event => {
+      windowKeys.push(event.key ?? "")
+    },
+  })
+  root.render(
+    <ThemeProvider>
+      <DragPadNumber
+        testId="pad"
+        label="Numeric editor"
+        value={120}
+        onChange={value => {
+          latest = value
+        }}
+        min={20}
+        max={300}
+        step={1}
+      />
+    </ThemeProvider>
+  )
+  root.renderer.nativeSimulateKeystrokes(root.renderer.findByTestId("pad")!.id, "enter")
+  const editor = root.renderer.findByType("input")[0]!
+  expect(root.renderer.getFocusedElementId()).toBe(editor.id)
+  windowKeys.length = 0
+  root.renderer.simulateKeystrokes("space")
+  expect(windowKeys).toEqual([])
+  expect(latest).toBe(120)
+  expect(root.renderer.getFocusedElementId()).toBe(editor.id)
+  root.unmount()
 })
 
 test.todo(

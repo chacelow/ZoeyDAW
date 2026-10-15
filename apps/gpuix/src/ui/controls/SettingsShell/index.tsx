@@ -44,6 +44,10 @@ export function SettingsNavItem({
       borderRadius: 3,
       cursor: "pointer",
       userSelect: "none",
+      keyboardFocusDim: false,
+      focusVisible: item.disabled
+        ? undefined
+        : { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
     },
     variants: {
       selected: {
@@ -142,6 +146,7 @@ export function SettingsShell({
           borderColor: theme.colors.border,
           borderRadius: 4,
           overflow: "hidden",
+          keyboardFocusDim: false,
         },
         style
       )}

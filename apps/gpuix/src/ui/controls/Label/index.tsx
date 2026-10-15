@@ -22,9 +22,17 @@ export function Label({
   const { renderer } = useGpuix()
   const variants = sv({
     base: {
+      display: "flex",
+      height: theme.control["--spacing-control-track"],
       color: theme.colors.foreground,
       fontSize: theme.control["--text-control-track"],
       alignItems: "center",
+      keyboardFocusDim: false,
+      focusVisible: {
+        outlineWidth: 1,
+        outlineColor: theme.colors.ring,
+        outlineOffset: -1,
+      },
     },
     variants: { disabled: { true: { opacity: 0.5 }, false: {} } },
   })

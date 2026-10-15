@@ -19,6 +19,7 @@ export interface DragPadNumberProps extends Omit<UseDragPadOptions, "format"> {
   readonly variant?: ControlSize
   readonly size?: ControlSize
   readonly icon?: ReactNode
+  readonly hideIcon?: boolean
   readonly testId?: string
   readonly widthSamples?: readonly string[]
   readonly color?: string
@@ -42,6 +43,7 @@ export function NumericPad({
   variant = "default",
   size = variant,
   icon,
+  hideIcon = false,
   testId,
   widthSamples = [],
   color,
@@ -85,7 +87,9 @@ export function NumericPad({
     ...widthSamples,
   ]
   const measurement = useMeasuredTextWidth(samples, { fontSize, fontFamily: "Menlo" })
-  const width = Math.ceil(measurement.width + iconSize + iconGap + trackPad * 2 + 2)
+  const width = Math.ceil(
+    measurement.width + (hideIcon ? 0 : iconSize + iconGap) + trackPad * 2 + 2
+  )
   const innerWidth = width - 2
   const shell = sx(
     controlChrome(
@@ -150,17 +154,39 @@ export function NumericPad({
           }}
         />
       ) : null}
-      {iconNode}
+      {hideIcon ? (
+        pad.mode !== "idle" ? (
+          <div
+            aria-hidden="true"
+            testId={testId ? `${testId}-edit-indicator` : undefined}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: trackPad,
+              bottom: trackPad,
+              width: 1,
+              backgroundColor: theme.colors.foreground,
+              pointerEvents: "none",
+            }}
+          />
+        ) : null
+      ) : (
+        iconNode
+      )}
       {pad.mode === "editing" ? (
         <input
-          ref={info.ref}
+          testId={testId ? `${testId}-value` : undefined}
           autoFocus
           aria-label={label}
           aria-disabled={disabled}
           value={pad.draft}
           onChange={event => pad.handleEditChange(event.value ?? "")}
           onSubmit={pad.commitEditing}
-          onBlur={pad.commitEditing}
+          onFocus={info.onFocus}
+          onBlur={() => {
+            info.onBlur()
+            pad.commitEditing()
+          }}
           onKeyDown={pad.handleEditKeyDown}
           style={{
             flexGrow: 1,
@@ -173,7 +199,10 @@ export function NumericPad({
           }}
         />
       ) : (
-        <text style={{ fontSize, fontFamily: "Menlo", color: theme.colors.foreground }}>
+        <text
+          testId={testId ? `${testId}-value` : undefined}
+          style={{ fontSize, fontFamily: "Menlo", color: theme.colors.foreground }}
+        >
           {pad.display}
         </text>
       )}
@@ -181,13 +210,17 @@ export function NumericPad({
   )
   if (pad.mode === "editing")
     return (
-      <div testId={testId} style={shell}>
+      <div
+        testId={testId}
+        style={shell}
+        onMouseEnter={info.onMouseEnter}
+        onMouseLeave={info.onMouseLeave}
+      >
         {contents}
       </div>
     )
   return (
     <div
-      ref={info.ref}
       testId={testId}
       role="spinbutton"
       aria-label={description ? `${label} — ${description}` : label}
