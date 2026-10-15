@@ -12,6 +12,7 @@
     "context-menu.patch",
     "quad-batch.patch",
     "autofocus-focus-event.patch",
-    "resume-frame.patch"
+    "resume-frame.patch",
+    "aria-toggled.patch"
   ]
 }
