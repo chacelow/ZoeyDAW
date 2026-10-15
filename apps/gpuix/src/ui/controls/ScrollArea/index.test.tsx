@@ -1,9 +1,16 @@
 import { expect, test } from "bun:test"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { inflateSync } from "node:zlib"
 import { createTestRoot } from "@gpuix/react/testing"
 import { useState } from "react"
 import { DragPadNumber } from "../DragPad"
+import { ListRow } from "../ListRow"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { ScrollArea } from "./index"
+
+const { join } = path
 
 test("bounded native scrolling moves overflowing content without expanding the viewport", () => {
   const root = createTestRoot({ width: 400, height: 300 })
@@ -161,3 +168,99 @@ test("numeric child consumes its wheel without moving the horizontal ancestor", 
     root.unmount()
   }
 })
+
+function nativePixels(path: string) {
+  const png = readFileSync(path)
+  const width = png.readUInt32BE(16)
+  const height = png.readUInt32BE(20)
+  if (png[24] !== 8 || png[25] !== 6 || png[28] !== 0)
+    throw new Error("Expected noninterlaced native RGBA8 PNG")
+  const chunks: Buffer[] = []
+  for (let offset = 8; offset < png.length;) {
+    const size = png.readUInt32BE(offset)
+    if (png.toString("ascii", offset + 4, offset + 8) === "IDAT")
+      chunks.push(png.subarray(offset + 8, offset + 8 + size))
+    offset += size + 12
+  }
+  const scanlines = inflateSync(Buffer.concat(chunks))
+  const stride = width * 4
+  const pixels = Buffer.alloc(stride * height)
+  for (let y = 0; y < height; y++) {
+    const filter = scanlines[y * (stride + 1)]
+    for (let x = 0; x < stride; x++) {
+      const left = x >= 4 ? pixels[y * stride + x - 4] : 0
+      const above = y > 0 ? pixels[(y - 1) * stride + x] : 0
+      const corner = y > 0 && x >= 4 ? pixels[(y - 1) * stride + x - 4] : 0
+      const estimate = left + above - corner
+      const paeth =
+        Math.abs(estimate - left) <= Math.abs(estimate - above) &&
+        Math.abs(estimate - left) <= Math.abs(estimate - corner)
+          ? left
+          : Math.abs(estimate - above) <= Math.abs(estimate - corner)
+            ? above
+            : corner
+      if (filter > 4) throw new Error(`Unexpected PNG filter ${filter}`)
+      const predictor =
+        filter === 0
+          ? 0
+          : filter === 1
+            ? left
+            : filter === 2
+              ? above
+              : filter === 3
+                ? Math.floor((left + above) / 2)
+                : paeth
+      pixels[y * stride + x] = (scanlines[y * (stride + 1) + x + 1] + predictor) & 255
+    }
+  }
+  return { width, height, pixels }
+}
+
+for (const appearance of ["dark", "light"] as const) {
+  test(`native keyboard focus paints an inset ring without dimming scroll contents (${appearance})`, () => {
+    const directory = mkdtempSync(join(tmpdir(), "scroll-area-focus-"))
+    const path = join(directory, "frame.png")
+    const root = createTestRoot({ width: 220, height: 100 })
+    try {
+      root.render(
+        <ThemeProvider appearance={appearance}>
+          <ScrollArea testId="scroll-focus" size={{ width: 200, height: 80 }}>
+            <div style={{ height: 300 }}>
+              {Array.from({ length: 12 }, (_, index) => (
+                <ListRow key={index} label={`Readable resource ${index}`} tabIndex={-1} />
+              ))}
+            </div>
+          </ScrollArea>
+        </ThemeProvider>
+      )
+      root.renderer.nativeSimulateMouseMove(215, 95)
+      root.renderer.captureScreenshot(path)
+      const idle = nativePixels(path)
+      root.renderer.simulateKeystrokes("tab")
+      const focusTarget = root.renderer.findByTestId("scroll-focus")
+      if (!focusTarget) throw new Error("Missing scroll focus target")
+      expect(root.renderer.getFocusedElementId()).toBe(focusTarget.id)
+      root.renderer.captureScreenshot(path)
+      const focus = nativePixels(path)
+      let edgeChanges = 0
+      let contentChanges = 0
+      for (let y = 0; y < 80; y++)
+        for (let x = 0; x < 200; x++) {
+          const offset = (y * idle.width + x) * 4
+          if (
+            !idle.pixels
+              .subarray(offset, offset + 4)
+              .equals(focus.pixels.subarray(offset, offset + 4))
+          ) {
+            if (x < 2 || y < 2 || x >= 198 || y >= 78) edgeChanges++
+            else contentChanges++
+          }
+        }
+      expect(contentChanges).toBe(0)
+      expect(edgeChanges).toBeGreaterThan(0)
+    } finally {
+      root.unmount()
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+}

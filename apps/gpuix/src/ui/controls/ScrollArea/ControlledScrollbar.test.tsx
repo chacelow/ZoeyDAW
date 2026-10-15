@@ -1,9 +1,15 @@
 import { describe, expect, test } from "bun:test"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
+import type { ElementBounds } from "@gpuix/native/host"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { ControlledScrollbar } from "./ControlledScrollbar"
 import { scrollbarGeometry } from "./scrollbar-geometry"
+
+const { join } = path
 
 function mount(orientation: "horizontal" | "vertical", extent = 1000) {
   const root = createTestRoot({ width: 400, height: 400 })
@@ -185,3 +191,56 @@ describe("Controlled scrollbar", () => {
     }
   })
 })
+
+for (const appearance of ["dark", "light"] as const)
+  for (const orientation of ["horizontal", "vertical"] as const) {
+    test(`native GPU disabled scrollbar is distinct at identical geometry (${appearance}/${orientation})`, () => {
+      const directory = mkdtempSync(join(tmpdir(), "scrollbar-disabled-"))
+      const path = join(directory, "frame.png")
+      const root = createTestRoot({ width: 220, height: 220 })
+      let value = 0
+      try {
+        let enabledFrame: Buffer | undefined
+        let enabledBounds: ElementBounds | null = null
+        for (const disabled of [false, true]) {
+          root.render(
+            <ThemeProvider appearance={appearance}>
+              <ControlledScrollbar
+                testId="visual-scrollbar"
+                aria-label="Timeline scroll"
+                aria-controls="timeline"
+                orientation={orientation}
+                value={0}
+                viewport={100}
+                extent={1000}
+                length={200}
+                disabled={disabled}
+                onChange={next => {
+                  value = next
+                }}
+              />
+            </ThemeProvider>
+          )
+          root.renderer.nativeSimulateMouseMove(215, 215)
+          const node = root.renderer.findByTestId("visual-scrollbar")
+          if (!node) throw new Error("Missing scrollbar")
+          const bounds = root.renderer.getElementBounds(node.id)
+          root.renderer.captureScreenshot(path)
+          const frame = readFileSync(path)
+          if (!disabled) {
+            enabledFrame = frame
+            enabledBounds = bounds
+          } else {
+            if (!enabledFrame) throw new Error("Missing enabled baseline")
+            expect(bounds).toEqual(enabledBounds)
+            expect(frame.equals(enabledFrame)).toBe(false)
+            root.renderer.nativeSimulateScrollWheel(5, 5, 0, -40)
+            expect(value).toBe(0)
+          }
+        }
+      } finally {
+        root.unmount()
+        rmSync(directory, { recursive: true, force: true })
+      }
+    })
+  }

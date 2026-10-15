@@ -86,9 +86,9 @@ export function RadioGroupItem({
       userSelect: "none",
       keyboardFocusDim: false,
       focusVisible: {
-        outlineWidth: 1,
+        outlineWidth: theme.design.shape.focusRingWidth,
         outlineColor: theme.colors.ring,
-        outlineOffset: -1,
+        outlineOffset: -theme.design.shape.focusRingWidth,
       },
     },
     variants: { disabled: { true: { opacity: 0.5, cursor: "not-allowed" }, false: {} } },
@@ -131,7 +131,7 @@ export function RadioGroupItem({
         style={{
           width: theme.control["--spacing-control-icon"],
           height: theme.control["--spacing-control-icon"],
-          borderWidth: 1,
+          borderWidth: theme.design.shape.indicatorStrokeWidth,
           borderRadius: theme.control["--spacing-control-icon"],
           borderColor: selected ? theme.colors.primary : theme.colors.border,
           alignItems: "center",

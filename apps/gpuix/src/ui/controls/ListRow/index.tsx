@@ -1,5 +1,6 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
+import { colorMix } from "@/shared/theme/color-mix"
 import type { Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 
@@ -41,9 +42,16 @@ export function ListRow({
       backgroundColor: theme.colors.muted,
       cursor: "pointer",
       userSelect: "none",
-      hover: { backgroundColor: theme.colors.secondary },
-      focusVisible: { borderColor: theme.colors.ring },
-      borderWidth: 1,
+      keyboardFocusDim: false,
+      hover: { backgroundColor: colorMix(theme.colors.muted, 90, theme.colors.foreground) },
+      focusVisible: {
+        borderColor: theme.colors.ring,
+        outlineWidth: theme.design.shape.focusRingWidth,
+        outlineColor: theme.colors.ring,
+        outlineOffset: -theme.design.shape.focusRingWidth,
+      },
+      borderWidth: theme.design.shape.controlBorderWidth,
+      borderRadius: theme.design.shape.listRowRadius,
       borderColor: "transparent",
     },
     variants: {
@@ -59,7 +67,7 @@ export function ListRow({
         yes: {
           opacity: 0.5,
           cursor: "not-allowed",
-          hover: { backgroundColor: theme.colors.muted },
+          hover: { backgroundColor: selected ? theme.colors.primary : theme.colors.muted },
         },
         no: {},
       },

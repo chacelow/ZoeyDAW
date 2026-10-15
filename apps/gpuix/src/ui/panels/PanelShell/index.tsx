@@ -37,8 +37,8 @@ export function PanelShell<Id extends string>({
         minHeight: 0,
         overflow: "hidden",
         backgroundColor: theme.colors.muted,
-        borderWidth: theme.project.panelBorder,
-        borderRadius: theme.project.panelGap,
+        borderWidth: theme.design.shape.panelBorderWidth,
+        borderRadius: theme.design.shape.panelRadius,
         borderColor: id === active ? theme.colors.ring : theme.colors.border,
       })}
     >

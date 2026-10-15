@@ -68,13 +68,17 @@ export function MotionTabs({
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: 4,
+      gap: theme.design.tabs.itemGap,
       fontSize: theme.control["--text-control-track"],
       color: theme.colors.mutedForeground,
       cursor: "pointer",
       userSelect: "none",
       keyboardFocusDim: false,
-      focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+      focusVisible: {
+        outlineWidth: theme.design.shape.focusRingWidth,
+        outlineColor: theme.colors.ring,
+        outlineOffset: -theme.design.shape.focusRingWidth,
+      },
     },
     variants: {
       selected: {
@@ -82,7 +86,13 @@ export function MotionTabs({
         false: { hover: { backgroundColor: theme.colors.muted } },
       },
       disabled: {
-        true: { opacity: 0.5, cursor: "not-allowed", focusVisible: undefined },
+        true: {
+          opacity: 0.5,
+          cursor: "not-allowed",
+          focusVisible: undefined,
+          hover: { backgroundColor: "transparent" },
+          active: { backgroundColor: "transparent" },
+        },
         false: {},
       },
     },
@@ -90,7 +100,15 @@ export function MotionTabs({
   return (
     <div
       {...props}
-      style={sx({ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }, style)}
+      style={sx(
+        {
+          display: "flex",
+          flexDirection: "column",
+          gap: theme.design.tabs.contentGap,
+          minWidth: 0,
+        },
+        style
+      )}
     >
       <div
         role="tablist"
@@ -101,7 +119,7 @@ export function MotionTabs({
             position: "relative",
             overflowX: "auto",
             backgroundColor: theme.colors.muted,
-            borderRadius: 3,
+            borderRadius: theme.design.shape.controlRadius,
           },
           containerStyle
         )}
@@ -119,7 +137,7 @@ export function MotionTabs({
               top: 0,
               height: theme.control["--spacing-control-track"],
               backgroundColor: theme.colors.background,
-              borderRadius: 3,
+              borderRadius: theme.design.shape.controlRadius,
               pointerEvents: "none",
             }}
           >
