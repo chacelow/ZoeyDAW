@@ -66,6 +66,7 @@
     "midiRowMinHeight": 6,
     "audioRulerHeight": 39,
     "trafficLightFrameHeight": 14,
-    "statusHeight": 22.68
+    "statusHeight": 22.68,
+    "dropdownMinWidth": 100.8
   }
 }
