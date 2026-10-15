@@ -1,0 +1,57 @@
+[
+  {
+    "ns": "15684374000",
+    "unixMs": 1792038966974,
+    "context": {
+      "phase": "restored-1",
+      "sequence": 421,
+      "unixMs": 1792038966965
+    },
+    "scene": "F3 frame probe : callbacks  86 ; telemetry  272 ;  playing",
+    "sceneSequence": 272
+  },
+  {
+    "ns": "22694197000",
+    "unixMs": 1792038973983,
+    "context": {
+      "phase": "restored-2",
+      "sequence": 612,
+      "unixMs": 1792038973973
+    },
+    "scene": "F3 frame probe : callbacks  146 ; telemetry  463 ;  playing",
+    "sceneSequence": 463
+  },
+  {
+    "ns": "29703749792",
+    "unixMs": 1792038980993,
+    "context": {
+      "phase": "restored-3",
+      "sequence": 802,
+      "unixMs": 1792038980984
+    },
+    "scene": "F3 frame probe : callbacks  206 ; telemetry  654 ;  playing",
+    "sceneSequence": 654
+  },
+  {
+    "ns": "36715373125",
+    "unixMs": 1792038988005,
+    "context": {
+      "phase": "restored-4",
+      "sequence": 986,
+      "unixMs": 1792038987992
+    },
+    "scene": "F3 frame probe : callbacks  265 ; telemetry  844 ;  playing",
+    "sceneSequence": 844
+  },
+  {
+    "ns": "43716667625",
+    "unixMs": 1792038995006,
+    "context": {
+      "phase": "restored-5",
+      "sequence": 1162,
+      "unixMs": 1792038995000
+    },
+    "scene": "F3 frame probe : callbacks  324 ; telemetry  1025 ;  playing",
+    "sceneSequence": 1025
+  }
+]
