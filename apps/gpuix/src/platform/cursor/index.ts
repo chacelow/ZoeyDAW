@@ -1,9 +1,5 @@
+import type { ScreenPoint } from "@zoeydaw/native"
 import { cursorHide, cursorPosition, cursorRestore, windowPointToScreen } from "@zoeydaw/native"
-
-interface Point {
-  readonly x: number
-  readonly y: number
-}
 
 /**
  * Native cursor lock for drag controls; structurally the `CursorLockPort` that
@@ -16,10 +12,10 @@ export const nativeCursorLock = {
   hide: (): void => {
     cursorHide()
   },
-  restore: (point: Point): void => {
+  restore: (point: ScreenPoint): void => {
     cursorRestore(point)
   },
 }
 
 /** Live OS cursor position; for read-back verification only, never a drag anchor. */
-export const currentCursorPosition: () => Point | null = cursorPosition
+export const currentCursorPosition: () => ScreenPoint | null = cursorPosition
