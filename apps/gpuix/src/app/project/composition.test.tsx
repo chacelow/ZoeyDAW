@@ -49,7 +49,7 @@ beforeEach(() => {
   hydrateProject(JSON.stringify({ version: 2, document, workspace }))
 })
 
-function mount(autoFocusInput = false) {
+function mount({ autoFocusInput = false, readOnlyInput = false } = {}) {
   const keyboard = createWindowKeyboard()
   const interaction = createAppInteraction()
   let clipboard = ""
@@ -82,6 +82,7 @@ function mount(autoFocusInput = false) {
         value={value}
         onValueChange={setValue}
         autoFocus={autoFocusInput}
+        readOnly={readOnlyInput}
       />
     )
   }
@@ -179,7 +180,7 @@ test("one native key sequence has one owner: lane duplicate once, timeline A onc
 
 for (const kind of ["Input", "Input autoFocus", "DragPad"] as const) {
   test(`${kind} native text focus protects a, Cmd+A and grid shortcuts until blur/unmount`, async () => {
-    const { root, interaction, composition } = mount(kind === "Input autoFocus")
+    const { root, interaction, composition } = mount({ autoFocusInput: kind === "Input autoFocus" })
     await layout(root)
     if (kind === "Input") root.renderer.focusElement(element(root, "text-editor").id)
     else if (kind === "DragPad")
@@ -246,4 +247,31 @@ test("timeline projection updates lane automation geometry when the track parame
       row => row.track.id === "source"
     )
   ).toMatchObject({ parameter: "volume", laneId: "volume" })
+})
+
+test("focused readOnly Input keeps native selection and blocks Arrangement modes and select-all", async () => {
+  const { root, composition, interaction } = mount({ readOnlyInput: true })
+  await layout(root)
+  const input = element(root, "text-editor")
+  root.renderer.nativeSimulateKeystrokes(input.id, "cmd-a a m b")
+  expect(root.renderer.getFocusedElementId()).toBe(input.id)
+  expect(root.renderer.getElement(input.id)?.customProps?.value).toBe("seed")
+  expect(useProjectState.getState().workspace).toMatchObject({
+    automationMode: false,
+    computerKeyboard: false,
+    drawMode: false,
+  })
+  expect(useProjectState.getState().session.selectedClipIds).toEqual([])
+  expect(
+    composition.timeline.keyboard.down({
+      key: "a",
+      defaultPrevented: false,
+      modifiers: { cmd: true, ctrl: false, alt: false, shift: false },
+    })
+  ).toBe(false)
+  expect(useProjectState.getState().session.selectedClipIds).toEqual([])
+  expect(interaction.isTextFocused()).toBe(true)
+  root.renderer.nativeSimulateKeystrokes(element(root, "timeline-viewport").id, "a")
+  expect(interaction.isTextFocused()).toBe(false)
+  expect(useProjectState.getState().workspace.automationMode).toBe(true)
 })

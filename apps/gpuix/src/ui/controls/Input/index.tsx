@@ -23,7 +23,7 @@ export function Input({
   ...props
 }: InputProps) {
   const theme = useTheme()
-  const textFocus = useTextFocusBinding(!disabled && !readOnly)
+  const textFocus = useTextFocusBinding(!disabled)
   const variants = sv({
     base: {
       height: theme.control["--spacing-control-track"],
@@ -79,7 +79,7 @@ export function Input({
       }}
       onKeyDown={event => {
         onKeyDown?.(event)
-        if (!disabled && !readOnly) stopTextShortcutPropagation(event)
+        if (!disabled) stopTextShortcutPropagation(event)
       }}
       onChange={event => {
         if (disabled || readOnly) return
