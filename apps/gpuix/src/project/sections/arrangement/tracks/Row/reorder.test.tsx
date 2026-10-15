@@ -25,7 +25,9 @@ function projectedRows() {
 function ReorderSurface() {
   const container = useRef<PublicInstance | null>(null)
   const reorder = useTrackReorder(projectedRows(), container)
-  const source = useProjectState.getState().document.tracks.find(track => track.id === "3-audio")
+  const source = useProjectState
+    .getState()
+    .document.tracks.find(track => track.id === "boundary-target")
   if (!source) throw new Error("Missing drag source")
   return (
     <div
@@ -42,7 +44,7 @@ function ReorderSurface() {
 
 beforeEach(() => {
   const document = createMockDocument()
-  const extra = createTrack("audio", document.tracks)
+  const extra = createTrack("audio", document.tracks, undefined, 70)
   extra.id = "boundary-target"
   document.tracks.splice(document.tracks.length - 1, 0, extra)
   for (const track of document.tracks) {
@@ -56,8 +58,8 @@ afterEach(() => {
 })
 
 test.each([
-  { offset: -1, order: ["3-audio", "4-midi", "boundary-target"] },
-  { offset: 1, order: ["4-midi", "3-audio", "boundary-target"] },
+  { offset: -1, order: ["boundary-target", "3-audio", "4-midi"] },
+  { offset: 1, order: ["3-audio", "boundary-target", "4-midi"] },
 ])("drag insertion follows the adjacent row boundary at $offset px", ({ offset, order }) => {
   const root = createTestRoot({ width: 400, height: 300 })
   roots.push(root)
@@ -71,7 +73,7 @@ test.each([
   if (!container || !source) throw new Error("Missing reorder surface")
   const containerBounds = root.renderer.getElementBounds(container.id)
   const sourceBounds = root.renderer.getElementBounds(source.id)
-  const nextRow = projectedRows().find(row => row.track.id === "boundary-target")
+  const nextRow = projectedRows().find(row => row.track.id === "4-midi")
   if (!containerBounds || !sourceBounds || !nextRow) throw new Error("Missing row geometry")
   const x = sourceBounds.x + sourceBounds.width / 2
   const startY = sourceBounds.y + sourceBounds.height / 2
@@ -79,7 +81,7 @@ test.each([
   root.renderer.nativeSimulateMouseDown(x, startY)
   root.renderer.nativeSimulateMouseMove(x, endY, 0)
   root.renderer.nativeSimulateMouseUp(x, endY)
-  expect(
+  expect<readonly string[]>(
     useProjectState
       .getState()
       .document.tracks.filter(track => projectedIds.has(track.id))

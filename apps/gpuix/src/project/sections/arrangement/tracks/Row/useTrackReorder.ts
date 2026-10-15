@@ -64,7 +64,9 @@ export function useTrackReorder(
           }
           if (!start.moved && !dragStarted(start, { x: event.x, y: event.y })) return
           start.moved = true
-          const bounds = container.current ? renderer?.getElementBounds(container.current.id) : null
+          const bounds = container.current
+            ? renderer?.getElementBounds?.(container.current.id)
+            : null
           const target =
             bounds && event.x >= bounds.x && event.x <= bounds.x + bounds.width
               ? rows.find(
