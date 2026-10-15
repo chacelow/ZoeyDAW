@@ -3,7 +3,10 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
-import { handleTransportKeyDown } from "../transport"
+import { createWindowKeyboard } from "@/platform/keyboard"
+import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
+import { createVerificationKeyboard } from "../footer/verification/keyboard"
+import { createTestWindowActivity } from "../footer/verification/test-activity"
 import { BrowserPanel } from "."
 import { englishBrowserLabels } from "./demo-labels"
 
@@ -14,11 +17,17 @@ beforeEach(() =>
 )
 
 function mount() {
-  const root = createTestRoot({
-    width: 600,
-    height: 640,
-    onKeyDown: event => {
-      handleTransportKeyDown(event)
+  const keyboard = createWindowKeyboard()
+  const root = createTestRoot({ width: 600, height: 640, ...keyboard.rootHandlers })
+  const activity = createTestWindowActivity()
+  const owner = createVerificationKeyboard({
+    windowKeyboard: keyboard,
+    metrics: PROJECT_METRICS,
+    size: { containerWidth: 600, bodyHeight: 640, timelineLeft: 0 },
+    subscribeWindowActive: activity.subscribe,
+    blurControl: () => {
+      const tree = root.renderer.findByTestId("browser-results")
+      if (tree) root.renderer.focusElement(tree.id)
     },
   })
   root.render(
@@ -28,6 +37,11 @@ function mount() {
   )
   root.renderer.dispatchNativeEvents()
   root.renderer.flush()
+  const unmount = root.unmount
+  root.unmount = () => {
+    unmount()
+    owner.dispose()
+  }
   return root
 }
 
@@ -145,6 +159,24 @@ test("narrow Browser results and right-side actions stay inside the resizable pa
     if (!resultsBounds || !rowBounds) throw new Error("Missing narrow Browser bounds")
     expect(resultsBounds.x + resultsBounds.width).toBeLessThanOrEqual(240)
     expect(rowBounds.x + rowBounds.width).toBeLessThanOrEqual(240)
+  } finally {
+    root.unmount()
+  }
+})
+
+test("favorite action changes its collection without selecting the resource row", () => {
+  const root = mount()
+  try {
+    const row = root.renderer.findByTestId("browser-entry-tunings-12-TET")
+    const favorite = root.renderer.findByTestId("browser-favorite-tunings-12-TET")
+    const bounds = favorite ? root.renderer.getElementBounds(favorite.id) : null
+    if (!row || !favorite || !bounds) throw new Error("Missing favorite action")
+    const background = root.renderer.getElement(row.id)?.style.backgroundColor
+    root.renderer.nativeSimulateMouseMove(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    root.renderer.nativeSimulateMouseExit(-1, -1)
+    expect(root.renderer.getElement(favorite.id)?.style.opacity).toBe(1)
+    expect(root.renderer.getElement(row.id)?.style.backgroundColor).toBe(background)
   } finally {
     root.unmount()
   }

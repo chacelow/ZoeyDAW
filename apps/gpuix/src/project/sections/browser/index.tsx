@@ -1,4 +1,4 @@
-import { useCallback, useImperativeHandle, useRef } from "react"
+import { useImperativeHandle, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import {
   Button,
@@ -98,16 +98,10 @@ export function BrowserPanel({
   const search = useRef<PublicInstance | null>(null)
   const tree = useRef<PublicInstance | null>(null)
   const nodes = useRef(new Map<string, PublicInstance>())
+  const [hoveredResource, setHoveredResource] = useState<string | null>(null)
   const resourceInfo = useInfoBinding({ type: "resources" })
-  const { ref: searchInfoRef, ...searchInfo } = useInfoBinding({ type: "search" })
+  const searchInfo = useInfoBinding({ type: "search" })
   const filterInfo = useInfoBinding({ type: "filters" })
-  const bindSearch = useCallback(
-    (node: PublicInstance | null) => {
-      search.current = node
-      searchInfoRef(node)
-    },
-    [searchInfoRef]
-  )
   const selectedId = browser.selected?.entry.id
   useImperativeHandle(
     browserRef,
@@ -208,7 +202,7 @@ export function BrowserPanel({
         </Button>
         <Input
           {...searchInfo}
-          ref={bindSearch}
+          ref={search}
           value={browser.query}
           aria-label={labels.search}
           placeholder={labels.searchPlaceholder}
@@ -314,7 +308,7 @@ export function BrowserPanel({
                 onClick={() => browser.setDescending(!browser.descending)}
                 style={{ justifyContent: "space-between" }}
               >
-                <text>{labels.content}</text>
+                <text>{labels.name}</text>
                 <Icon
                   name={browser.descending ? "ChevronDown" : "ChevronUp"}
                   color={theme.colors.foreground}
@@ -324,10 +318,9 @@ export function BrowserPanel({
                 testId="browser-results"
                 fill
                 role="tree"
-                aria-label={labels.content}
+                aria-label={labels.results}
                 ref={node => {
                   tree.current = node
-                  resourceInfo.ref(node)
                 }}
                 onKeyDown={keyboard}
                 style={{ flexGrow: 1, height: 0 }}
@@ -337,6 +330,7 @@ export function BrowserPanel({
                 {browser.rows.length === 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap }}>
                     <text style={{ color: theme.colors.mutedForeground }}>{labels.empty}</text>
+                    <text style={{ color: theme.colors.mutedForeground }}>{labels.emptyHint}</text>
                     {browser.filtering ? (
                       <Button
                         testId="browser-reset-filters"
@@ -395,7 +389,7 @@ export function BrowserPanel({
                                   {row.expandable ? (
                                     <Button
                                       iconOnly
-                                      label={`${row.expanded ? "−" : "+"} ${row.entry.name}`}
+                                      label={`${row.expanded ? labels.collapse : labels.expand} ${row.entry.name}`}
                                       onClick={() => {
                                         select(row.entry.id)
                                         browser.toggleExpanded(row.entry.id)
@@ -430,6 +424,15 @@ export function BrowserPanel({
                               trailing={
                                 <Button
                                   iconOnly
+                                  testId={`browser-favorite-${row.entry.id}`}
+                                  style={{
+                                    opacity:
+                                      browser.favorites.has(row.entry.id) ||
+                                      selectedId === row.entry.id ||
+                                      hoveredResource === row.entry.id
+                                        ? 1
+                                        : 0,
+                                  }}
                                   label={`${browser.favorites.has(row.entry.id) ? labels.unfavorite : labels.favorite} ${row.entry.name}`}
                                   active={browser.favorites.has(row.entry.id)}
                                   onActiveChange={() => browser.toggleFavorite(row.entry.id)}
@@ -450,6 +453,8 @@ export function BrowserPanel({
                                 if (event.clickCount === 2 && row.expandable)
                                   browser.toggleExpanded(row.entry.id)
                               }}
+                              onMouseEnter={() => setHoveredResource(row.entry.id)}
+                              onMouseLeave={() => setHoveredResource(null)}
                               onFocus={resourceInfo.onFocus}
                               onBlur={resourceInfo.onBlur}
                               onKeyDown={event => keyboard(event, row.entry.id)}
@@ -461,11 +466,6 @@ export function BrowserPanel({
                   ))
                 )}
               </ScrollArea>
-              <text role="status" style={{ color: theme.colors.mutedForeground }}>
-                {browser.selected
-                  ? `${browser.selected.entry.name} · ${labels.kinds[browser.selected.entry.kind]}`
-                  : labels.noSelection}
-              </text>
             </div>
           ),
         })}
