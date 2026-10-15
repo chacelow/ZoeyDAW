@@ -8,6 +8,23 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "probe-channel-offset": {
+    file: "../../../../shared/waveform/PeakColumns.tsx",
+    testFile: "native-waveform.test.tsx",
+    testName: "native probe fixture retains stereo envelopes and lane clip ink in dark",
+    replacements: [
+      [
+        "const channel = Math.floor(index / pixels)",
+        "const channel = channels - 1 - Math.floor(index / pixels)",
+      ],
+    ],
+  },
+  "probe-waveform-ink": {
+    file: "ClipCard.tsx",
+    testFile: "native-waveform.test.tsx",
+    testName: "native probe fixture retains stereo envelopes and lane clip ink in dark",
+    replacements: [["color={ink}", "color={color}"]],
+  },
   "source-waveform-pixels": {
     file: "../../../../shared/waveform/PeakColumns.tsx",
     testFile: "../../clip-edit/audio/SourceWaveform-runtime.test.tsx",

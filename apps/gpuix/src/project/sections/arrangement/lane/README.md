@@ -60,6 +60,14 @@
 
 原生元素只为相交 Clip 挂载；B1 像素取整之后再裁剪一次，避免亚像素交集最终落到屏外仍挂载。标题实心，下半部透明；网格位于下半部填色之上。fadeMask 常驻：折叠时在标题、展开时在 body；显式曲线与锚点只在展开音频片段的下半内容悬停时出现。锚点按 Live 仲裁采用 5px 空心方点与菱形，1px 描边，内部使用 Clip 体填充色。
 
+## probe.wav 实源波形回归
+
+lane 在彩色 Clip 主体上使用 `theme.colors.arrangementClipInk`，与 Web 参考一致。clip-edit 在编辑器底色上使用 Clip 派生色，两种语境不互换。原先提出的 lane 颜色改动已撤回，`ClipCard` 与共享 `PeakColumns` 的产品绘制未改变，也未增加 lane 特判。
+
+`native-waveform.test.tsx` 使用同一个 `crates/engine/spikes/assets/probe.wav`、真实工程后端与 1280×800 Native PNG，在深浅主题分别检查左右声道包络与源峰值的独立原生 div 参考一致，并断言 lane 像素等于主题 Clip 墨色。SourceWaveform 同源对照单独检查编辑器派生色和自身 inset 语义。左声道是恒幅 ±0.4 正弦，当前缩放每像素 min/max 稳定，连续色带符合素材，不是声道几何错误。
+
+交换共享 PeakColumns 的声道偏移会使两条主题回归失败。将 lane 墨色误改为 Clip 派生色也会使两条回归失败。PNG 解码由测试专用 `shared/waveform/testing/native-png.ts` 与 SourceWaveform-runtime 共用，测试结束删除临时图片。独立 Standards 复审按撤回后的契约检查，无新增 findings。
+
 ## 产品规则与 Live 对照
 
 | 产品规则 | Live 观察 | 实现 | 差异或未验证 |
@@ -84,10 +92,10 @@
 | 命令 | 结果 |
 | --- | --- |
 | `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx -t 'fade mask between'` | 1 pass，0 fail，10 assertions；折叠→展开→再折叠 |
-| `bun test src/project/sections/arrangement/lane` | A 接入后 baseline 27 pass，0 fail |
-| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 27 pass，0 fail；12 个变异命中预期失败；源目标 SHA-256 前后相同 |
-| `bun test` | 1071 pass，1 todo，0 fail，1103833 assertions；1072 tests / 170 files |
-| lane、共享 PeakColumns 与 SourceWaveform-runtime 受影响测试 | 32 pass，0 fail，102975 assertions；7 files |
+| `bun test src/project/sections/arrangement/lane` | 实源回归后 baseline 29 pass，0 fail |
+| `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 29 pass，0 fail；14 个变异命中预期失败；源目标 SHA-256 前后相同 |
+| `bun test` | A 阶段历史结果 1071 pass，1 todo，0 fail；当前交付另跑 `pnpm verify:gpuix` |
+| lane、共享 PeakColumns 与 SourceWaveform-runtime 受影响测试 | 34 pass，0 fail，103109 assertions；8 files |
 
 变异通过 Bun runtime preload 在内存替换模块，不写源文件；脚本验证预期用例确实失败，不能以语法错误代替变异被捕获。
 
@@ -105,6 +113,8 @@
 | 移除小数网格边界 overscan                |          1 |
 | 将局部网格右边界扩大到整视口             |          1 |
 | 将真实波形第 16 列渲染成静音             |          1 |
+| 交换 probe.wav 声道偏移                  |          2 |
+| 将 lane Clip 墨色误改为派生色            |          2 |
 
 F3 原生回归 `presents the latest playhead on resume and releases frame leases when stopped or unmounted` 在修复前读取到 x=96，期望最新 x=416；修复后不等待普通帧、不在测试外包 flushSync，立即读到 x=416。停止、重启、卸载同时验证播放线与订阅生命周期，单用例 1 pass、12 assertions。它验证 NativeTestRoot 的首恢复采样布局，不冒充本轮已经重做 OS 遮挡恢复窗口验收。
 
