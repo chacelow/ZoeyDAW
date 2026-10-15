@@ -308,4 +308,11 @@
 - 因：评审只凭视觉印象，没有核对数据与参考，就把有意的设计当成缺陷，还产生了一个反向锁定的错误断言。
 - 见：`apps/web/src/pages/project/sections/ArrangementPanel/canvas/painters/clip.ts:199`、`crates/engine/spikes/assets/probe.wav`。
 
+## gpuix 迁移：React 19 DEV 的 Performance Track 会遍历大 TypedArray props
+
+- 错：DEV 剖析显示 `PeakColumns` 45 次渲染耗时 125ms，就准备改共享组件的公开 props，或另造一条命令式上传路径。
+- 对：先分清是谁的成本。React 19 DEV 的 `logComponentRender`（react-reconciler.development.js）在 props 引用变化时，会经 `addObjectDiffToProperties` 和 `addObjectToProperties` 对 `Float32Array` 的每个下标做 for-in，写进 Performance Track。这段代码不进 production。验收以 production p90 为门槛；DEV 报告单列这一项，并给出扣除后的数字。
+- 因：Float32Array 不是 Array，不走 `JSON.stringify` 的快路径，而是落到逐键枚举的默认分支；几千个峰值一帧就是几毫秒到十几毫秒。
+- 见：`apps/gpuix/src/shared/waveform/PeakColumns.tsx`、2026-10-15 clip-editors Audio 剖析。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

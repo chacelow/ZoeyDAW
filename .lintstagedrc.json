@@ -1,3 +1,4 @@
 {
-  "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,css,scss,less,md,mdx,yaml,yml}": "ultracite fix"
+  "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,css,scss,less,md,mdx,yaml,yml}": "ultracite fix",
+  "apps/gpuix/src/**/*.{ts,tsx}": "node scripts/gpuix-ui-map.mjs --stage"
 }
