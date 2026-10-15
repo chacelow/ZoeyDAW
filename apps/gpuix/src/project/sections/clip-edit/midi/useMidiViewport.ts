@@ -43,12 +43,20 @@ export function useMidiViewport(clip: MidiClip, window: SourceWindow) {
   const fitKey = `${clip.id}|${fold}|${window.sourceOffsetBeats}|${window.totalBeats}`
   const fitted = useRef<string | null>(null)
   useLayoutEffect(() => {
-    if (fitted.current === fitKey || size.height <= 0) return
-    const fit = fitRows(clip.notes, pitches, window, size.height, limits)
-    fitted.current = fitKey
-    setRowHeight(fit.rowHeight)
-    setScroll({ x: 0, y: fit.scrollY })
-  }, [fitKey, size.height, clip.notes, pitches, window, limits])
+    if (fitted.current !== fitKey && size.height > 0) {
+      const fit = fitRows(clip.notes, pitches, window, size.height, limits)
+      fitted.current = fitKey
+      setRowHeight(fit.rowHeight)
+      setScroll({ x: 0, y: fit.scrollY })
+      return
+    }
+    setScroll(previous => {
+      const next = clampScroll(previous.x, previous.y, roll)
+      return previous.x === next.scrollX && previous.y === next.scrollY
+        ? previous
+        : { x: next.scrollX, y: next.scrollY }
+    })
+  }, [fitKey, size.width, size.height, width, rowHeight, clip.notes, pitches, window, limits])
 
   const scrollTo = useCallback(
     (x: number, y: number) => {
@@ -119,9 +127,12 @@ export function useMidiViewport(clip: MidiClip, window: SourceWindow) {
     zoomTime,
     zoomPitch,
     scrollTo,
-    measure: (next: { width: number; height: number }) =>
-      setSize(previous =>
-        previous.width === next.width && previous.height === next.height ? previous : next
-      ),
+    measure: (next: { width: number; height: number }) => {
+      if (size.width === next.width && size.height === next.height) return
+      if (size.width !== next.width && size.width > 0) {
+        setScroll(previous => ({ ...previous, x: (previous.x * next.width) / size.width }))
+      }
+      setSize(next)
+    },
   }
 }
