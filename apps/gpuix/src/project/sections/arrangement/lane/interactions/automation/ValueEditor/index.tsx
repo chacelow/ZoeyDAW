@@ -152,7 +152,7 @@ function ValueInput({
           0,
           Math.min(
             context.scene.get().viewport.width - theme.project.identityWidth,
-            x + theme.control["--spacing-control-track-gap"] * 2
+            x + theme.design.spacing.stackGap
           )
         ),
         top: Math.max(0, y - theme.control["--spacing-control-icon"]),

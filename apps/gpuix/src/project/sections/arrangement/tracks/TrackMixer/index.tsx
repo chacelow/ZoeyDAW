@@ -58,7 +58,8 @@ export function TrackMixer({ track }: { readonly track: Track }) {
   const isMain = track.kind === "main"
   const rows = trackControlRows(track)
   const gap = theme.control["--spacing-control-track-gap"]
-  const height = trackHeight(track) - theme.project.trackBorder - gap * 2
+  const inset = theme.design.cards.controls.inset
+  const height = trackHeight(track) - theme.project.trackBorder - inset * 2
   const label =
     track.kind === "return"
       ? String.fromCharCode(65 + returns.findIndex(item => item.id === track.id))
@@ -75,7 +76,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
         flexShrink: 0,
         minWidth: 0,
         height: "100%",
-        padding: gap,
+        padding: inset,
         gap,
         width:
           theme.project.controlsWidth - theme.project.identityWidth - theme.project.routingWidth,

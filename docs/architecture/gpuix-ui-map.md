@@ -16,6 +16,7 @@
 
 | 入口 | 后台启动 | 环境开关 |
 | --- | --- | --- |
+| `src/app/verification/design-surfaces.tsx` | 是 | `T1_APPEARANCE`、`T1_SURFACE` |
 | `src/gallery/controls.tsx` | 是 | `GALLERY_APPEARANCE`、`GALLERY_LOCALE` |
 | `src/main.tsx` | 是 | `NODE_ENV`、`ZOEYDAW_ROUTE` |
 | `src/project/sections/arrangement/lane/demo/index.tsx` | 否 | `LANE_LOCALE`、`LANE_STRESS`、`LANE_THEME` |

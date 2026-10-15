@@ -22,6 +22,7 @@
 
 - `shape.controlRadius` 统一 Button、数值壳、Input、ControlGroup、MotionTabs 与设置导航的同类圆角。Toggle 与 ListRow 有各自的形状语义，默认值分别为2与0，不再借 gap 作为 radius。
 - `shape.panelRadius` 默认7，独立于 `project.panelGap`。PanelShell 只消费形状与边框，不改变 Group/Panel 的求解、resize 或拖动 owner。
+- `shape.indicatorRadius` 保持等宽高选中徽标的圆形语义，默认值是 control-track 高度的一半；不借用 control gap 或整段控件高度作为圆角。
 - `controlBorderWidth=0` 时，数值与下拉宽度按真实 `borderWidth * 2` 推导；滚动条的内长和 thumb 横截面同样扣真实边框。Focus ring 与单选指示器描边是功能标记，独立于外壳边框。
 - `cards` 保存 `default`、`sm`、`controls`、`project` 的独立 radius/inset/gap。改变 inset 不会改变 radius。`insetOwner` 明确内边距由外壳还是 Header/Content 持有，避免嵌套双重 padding。
 - Menu 与 Popover 是不同 family，默认 surface radius 都为4，但 inset 分别为4与8；Menu item radius2、inline padding6 与 Popover 内容 gap6 各有明确字段，不混成按钮形状。

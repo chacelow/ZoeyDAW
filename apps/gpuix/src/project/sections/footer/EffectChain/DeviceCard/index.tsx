@@ -57,6 +57,7 @@ export function DeviceCard({
 }: DeviceCardProps) {
   const theme = useTheme()
   const gap = theme.control["--spacing-control-gap"]
+  const inset = theme.design.cards.controls.inset
   const name = labels.kindNames[device.kind]
   return (
     <div
@@ -72,7 +73,7 @@ export function DeviceCard({
         flexShrink: 0,
         height: "100%",
         width: device.collapsed
-          ? theme.control["--spacing-control-track"] + gap * 2
+          ? theme.control["--spacing-control-track"] + inset * 2
           : theme.project.deviceCardWidth,
         borderWidth: 1,
         borderColor: dropTarget
@@ -91,7 +92,7 @@ export function DeviceCard({
           flexDirection: device.collapsed ? "column" : "row",
           alignItems: "center",
           gap,
-          padding: gap,
+          padding: inset,
           flexShrink: 0,
         }}
       >

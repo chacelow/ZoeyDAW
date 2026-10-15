@@ -19,7 +19,7 @@ export interface ThemePresetGridProps {
 export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGridProps) {
   const theme = useTheme()
   const { renderer } = useGpuix()
-  const gap = theme.control["--spacing-control-track-gap"]
+  const gap = theme.design.settings.itemGap
   const swatchHeight = theme.control["--spacing-control-track"] * 2
   const columnWidth = theme.project.identityWidth * 2
   return (
@@ -70,11 +70,12 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
               <div
                 style={{
                   pointerEvents: "none",
+                  position: "relative",
                   display: "flex",
                   flexDirection: "row",
                   height: swatchHeight,
                   borderWidth: 1,
-                  borderRadius: theme.control["--spacing-control-gap"],
+                  borderRadius: theme.design.shape.controlRadius,
                   borderColor: theme.colors.border,
                   overflow: "hidden",
                 }}
@@ -90,30 +91,30 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
                     style={{ flexGrow: 1, backgroundColor: color, pointerEvents: "none" }}
                   />
                 ))}
+                {selected ? (
+                  <div
+                    style={{
+                      pointerEvents: "none",
+                      position: "absolute",
+                      top: gap,
+                      right: gap,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: theme.control["--spacing-control-track"],
+                      height: theme.control["--spacing-control-track"],
+                      borderRadius: theme.design.shape.indicatorRadius,
+                      backgroundColor: theme.colors.primary,
+                    }}
+                  >
+                    <Icon
+                      name="Check"
+                      size={theme.control["--spacing-control-icon"]}
+                      color={theme.colors.primaryForeground}
+                    />
+                  </div>
+                ) : null}
               </div>
-              {selected ? (
-                <div
-                  style={{
-                    pointerEvents: "none",
-                    position: "absolute",
-                    top: gap * 2,
-                    right: gap * 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: theme.control["--spacing-control-track"],
-                    height: theme.control["--spacing-control-track"],
-                    borderRadius: theme.control["--spacing-control-track"],
-                    backgroundColor: theme.colors.primary,
-                  }}
-                >
-                  <Icon
-                    name="Check"
-                    size={theme.control["--spacing-control-icon"]}
-                    color={theme.colors.primaryForeground}
-                  />
-                </div>
-              ) : null}
               <text
                 style={{
                   pointerEvents: "none",
