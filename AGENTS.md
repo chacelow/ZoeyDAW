@@ -13,6 +13,7 @@ Web-UI DAW，正在重构为 gpuix 原生应用（`apps/gpuix` + `crates/*`）�
 | Arrangement 的 `tracks`、`lane`、`timeline`、`core` 之间的接口与键盘 owner | [Arrangement 组合契约](docs/architecture/gpuix-arrangement-composition.md) |
 | 渲染器版本、构建、`@gpuix/*` 依赖、关闭拦截 | [主干自建报告](docs/research/gpuix-main-build.md) |
 | 引擎、音频播放、遥测、峰值、`ProjectBackend` | [播放图选型](docs/research/engine-playback-graph.md) 与 `apps/gpuix/src/project/adapters/README.md` |
+| 协调者会话、派发切片、review 与合入、决策权 | [gpuix 重构的协调方式](docs/agents/coordination.md) |
 | 命令、工具链、HMR、原生重启或提交 | [setup](docs/agents/setup.md) |
 | 新模块、多文件修改、状态/目录/依赖调整 | [modules](docs/architecture/modules.md) |
 | 工程数据、编辑事务、保存或后端接口 | [stores](apps/web/src/pages/project/stores/README.md) 与 [adapters](apps/web/src/pages/project/adapters/README.md) |
@@ -23,7 +24,7 @@ Web-UI DAW，正在重构为 gpuix 原生应用（`apps/gpuix` + `crates/*`）�
 
 - **Never**：提交 secrets/token/API key；Agent 启动、重启 `tauri:dev` 或停止用户已有应用。
 - **Always**：复用共享 UI 包及其 token；跨文件重命名用 LSP；保留其他 Session/Agent 的未提交与暂存工作。
-- **Ask first**：修改 `src-tauri/tauri.conf.json`、共享 UI 公共 API、新增 npm 依赖或 `.github/workflows/`。
+- **Ask first**：修改 `src-tauri/tauri.conf.json`、新增 npm 依赖或 `.github/workflows/`。gpuix 重构期间，共享 UI 公共 API 与其它技术决策由协调者决定，范围见 [协调方式](docs/agents/coordination.md)。
 - 修改 Rust、原生配置、capabilities、Cargo 依赖或 plugin 注册后，明确告诉用户“需要重启 tauri:dev”，由用户操作。
 - 每次 commit 都须用户在本次提交上下文明确说 **“我确认”**，历史授权不延续；门禁细节见 setup。
 

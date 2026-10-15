@@ -84,6 +84,64 @@ describe("DragPadNumber native interactions", () => {
     a.unmount()
   })
 
+  test("wheel over a pad changes its consumer without scrolling its ancestor", () => {
+    const root = createTestRoot({ width: 320, height: 180 })
+    let latest = 120
+    function Harness() {
+      const [value, setValue] = useState(120)
+      return (
+        <ThemeProvider>
+          <div testId="scroll-parent" style={{ width: 200, height: 100, overflow: "scroll" }}>
+            <div style={{ height: 400, flexShrink: 0, alignItems: "start" }}>
+              <DragPadNumber
+                label="Wheel owner"
+                testId="wheel-pad"
+                value={value}
+                min={0}
+                max={300}
+                step={1}
+                onChange={next => {
+                  latest = next
+                  setValue(next)
+                }}
+              />
+            </div>
+          </div>
+        </ThemeProvider>
+      )
+    }
+    root.render(<Harness />)
+    root.renderer.flush()
+    root.renderer.dispatchNativeEvents()
+    root.renderer.flush()
+    const scroll = root.renderer.findByTestId("scroll-parent")!
+    const pad = root.renderer.findByTestId("wheel-pad")!
+    const bounds = readOuterBounds(root.renderer, pad)!
+    const before = root.renderer.getScrollOffset(scroll.id)
+    expect(before).not.toBeNull()
+    root.renderer.nativeSimulateScrollWheel(
+      bounds.x + bounds.width / 2,
+      bounds.y + bounds.height / 2,
+      0,
+      -16
+    )
+    root.renderer.flush()
+    expect(latest).toBe(119)
+    expect(root.renderer.getAllText()).toContain("119")
+    expect(root.renderer.getScrollOffset(scroll.id)).toEqual(before)
+    const viewport = readOuterBounds(root.renderer, scroll)!
+    root.renderer.nativeSimulateScrollWheel(
+      viewport.x + viewport.width - 10,
+      viewport.y + viewport.height / 2,
+      0,
+      -40
+    )
+    root.renderer.flush()
+    expect(latest).toBe(119)
+    expect(root.renderer.getScrollOffset(scroll.id)![1]).toBeLessThan(before![1])
+    root.unmount()
+  })
+
   test("click preserves value; typing updates it live; Enter finishes editing", () => {
     const a = mount()
     a.renderer.nativeSimulateClick(a.x, a.y)
@@ -251,7 +309,3 @@ test("Space stays inside the numeric editor instead of reaching playback shortcu
   expect(root.renderer.getFocusedElementId()).toBe(editor.id)
   root.unmount()
 })
-
-test.todo(
-  "real OS press-without-dwell: JS cursor capture can lag the native mouseDown by one injected move; needs permission-gated CGEventTap capture"
-)

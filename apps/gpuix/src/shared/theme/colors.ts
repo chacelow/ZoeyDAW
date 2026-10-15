@@ -1,100 +1,31 @@
 /**
- * Theme color tokens, ported from `apps/web/src/index.css`.
+ * Theme color model, ported from `apps/web/src/index.css`.
  *
- * Values are copied verbatim from the Web theme's `oklch()` literals; gpuix
- * accepts oklch strings natively, so the base tokens pass through unchanged.
- * Tokens derived from `color-mix()` are resolved once at module load through
- * `colorMix()`, since gpuix has no CSS engine to evaluate them at paint time.
+ * `ThemeColors` is the set of tokens a preset provides (see `presets.data.ts`,
+ * generated from the Web sources). `derive()` adds every role the Web theme
+ * computes from them with `color-mix()` / `light-dark()`, resolved once
+ * through `colorMix()` because gpuix has no CSS engine to evaluate them.
  *
  * Shared by every gpuix module in this app: do not hand-roll a second color
- * table in a feature slice.
+ * table or a second derivation in a feature slice.
  */
 import { colorMix } from "./color-mix"
+import type { WEB_COLOR_TOKENS } from "./web-tokens"
 
-export interface ThemeColors {
-  background: string
-  foreground: string
-  card: string
-  cardForeground: string
-  popover: string
-  popoverForeground: string
-  primary: string
-  primaryForeground: string
-  secondary: string
-  secondaryForeground: string
-  muted: string
-  mutedForeground: string
-  accent: string
-  accentForeground: string
-  destructive: string
-  border: string
-  input: string
-  ring: string
-  chart1: string
-  chart2: string
-  chart3: string
-  chart4: string
-  chart5: string
-  arrangementClipSelected: string
-  arrangementClipPaper: string
-}
+/** One preset's colors for one scheme; field ↔ Web token map in `web-tokens.ts`. */
+export type ThemeColors = { readonly [Field in keyof typeof WEB_COLOR_TOKENS]: string }
 
-const lightBase: ThemeColors = {
-  background: "oklch(100% 0 0deg)",
-  foreground: "oklch(14.5% 0 0deg)",
-  card: "oklch(100% 0 0deg)",
-  cardForeground: "oklch(14.5% 0 0deg)",
-  popover: "oklch(100% 0 0deg)",
-  popoverForeground: "oklch(14.5% 0 0deg)",
-  primary: "oklch(20.5% 0 0deg)",
-  primaryForeground: "oklch(98.5% 0 0deg)",
-  secondary: "oklch(97% 0 0deg)",
-  secondaryForeground: "oklch(20.5% 0 0deg)",
-  muted: "oklch(97% 0 0deg)",
-  mutedForeground: "oklch(55.6% 0 0deg)",
-  accent: "oklch(97% 0 0deg)",
-  accentForeground: "oklch(20.5% 0 0deg)",
-  destructive: "oklch(57.7% 0.245 27.325deg)",
-  border: "oklch(92.2% 0 0deg)",
-  input: "oklch(92.2% 0 0deg)",
-  ring: "oklch(70.8% 0 0deg)",
-  chart1: "oklch(64.6% 0.222 41.116deg)",
-  chart2: "oklch(60% 0.118 184.704deg)",
-  chart3: "oklch(39.8% 0.07 227.392deg)",
-  chart4: "oklch(82.8% 0.189 84.429deg)",
-  chart5: "oklch(76.9% 0.188 70.08deg)",
-  arrangementClipSelected: "oklch(87% 0.05 220deg)",
-  arrangementClipPaper: "oklch(97% 0.005 90deg)",
-}
+export type ColorScheme = "light" | "dark"
 
-const darkBase: ThemeColors = {
-  ...lightBase,
-  background: "oklch(14.5% 0 0deg)",
-  foreground: "oklch(98.5% 0 0deg)",
-  card: "oklch(20.5% 0 0deg)",
-  cardForeground: "oklch(98.5% 0 0deg)",
-  popover: "oklch(20.5% 0 0deg)",
-  popoverForeground: "oklch(98.5% 0 0deg)",
-  primary: "oklch(92.2% 0 0deg)",
-  primaryForeground: "oklch(20.5% 0 0deg)",
-  secondary: "oklch(26.9% 0 0deg)",
-  secondaryForeground: "oklch(98.5% 0 0deg)",
-  muted: "oklch(26.9% 0 0deg)",
-  mutedForeground: "oklch(70.8% 0 0deg)",
-  accent: "oklch(26.9% 0 0deg)",
-  accentForeground: "oklch(98.5% 0 0deg)",
-  destructive: "oklch(70.4% 0.191 22.216deg)",
-  border: "oklch(100% 0 0deg / 10%)",
-  input: "oklch(100% 0 0deg / 15%)",
-  ring: "oklch(55.6% 0 0deg)",
-  chart1: "oklch(48.8% 0.243 264.376deg)",
-  chart2: "oklch(69.6% 0.17 162.48deg)",
-  chart3: "oklch(76.9% 0.188 70.08deg)",
-  chart4: "oklch(62.7% 0.265 303.9deg)",
-  chart5: "oklch(64.5% 0.246 16.439deg)",
-}
+/** Web `:root` constants that no preset and no scheme overrides. */
+const ARRANGEMENT_CLIP_SELECTED = "oklch(87% 0.05 220deg)"
+const ARRANGEMENT_CLIP_PAPER = "oklch(97% 0.005 90deg)"
 
 export interface DerivedThemeColors extends ThemeColors {
+  /** Web `--arrangement-clip-selected`; same in every preset and scheme. */
+  arrangementClipSelected: string
+  /** Web `--arrangement-clip-paper`; same in every preset and scheme. */
+  arrangementClipPaper: string
   /** `color-mix(in oklab, muted 30%, background)`. */
   editorShell: string
   /** `color-mix(in oklab, foreground 10%, transparent)`. */
@@ -129,13 +60,13 @@ export interface DerivedThemeColors extends ThemeColors {
   arrangementFadeMask: string
 }
 
-type ColorScheme = "light" | "dark"
-
-function derive(base: ThemeColors, scheme: ColorScheme): DerivedThemeColors {
+export function derive(base: ThemeColors, scheme: ColorScheme): DerivedThemeColors {
   const lightDark = (light: string, dark: string) => (scheme === "light" ? light : dark)
   const arrangementClipInk = lightDark(base.foreground, base.card)
   return {
     ...base,
+    arrangementClipSelected: ARRANGEMENT_CLIP_SELECTED,
+    arrangementClipPaper: ARRANGEMENT_CLIP_PAPER,
     editorShell: colorMix(base.muted, 30, base.background),
     canvasScrollbar: colorMix(base.foreground, 10, "transparent"),
     canvasScrollbarHover: colorMix(base.foreground, 18, "transparent"),
@@ -155,6 +86,3 @@ function derive(base: ThemeColors, scheme: ColorScheme): DerivedThemeColors {
     arrangementFadeMask: colorMix(arrangementClipInk, 50, "transparent"),
   }
 }
-
-export const lightColors: DerivedThemeColors = derive(lightBase, "light")
-export const darkColors: DerivedThemeColors = derive(darkBase, "dark")

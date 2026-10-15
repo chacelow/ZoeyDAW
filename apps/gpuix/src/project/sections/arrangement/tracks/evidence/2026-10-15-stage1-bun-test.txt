@@ -1,0 +1,376 @@
+bun test v1.3.14 (0d9b296a)
+
+src/platform/keyboard/keyboard-native.test.tsx:
+60 |     root.render(<KeyboardHosts />)
+61 |     const input = root.renderer.findByTestId("keyboard-input")
+62 |     if (!input) throw new Error("Missing keyboard input")
+63 |     root.renderer.nativeSimulateKeystrokes(input.id, "space")
+64 |     expect(root.renderer.getFocusedElementId()).toBe(input.id)
+65 |     expect(received).toEqual([])
+                          ^
+error: expect(received).toEqual(expected)
+
+- []
++ [
++   "space",
++ ]
+
+- Expected  - 1
++ Received  + 3
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/platform/keyboard/keyboard-native.test.tsx:65:22)
+(fail) Space in real Input does not reach WindowKeyboard [45.83ms]
+
+src/ui/controls/ControlGroup/ControlGroup.test.tsx:
+37 |   )!
+38 |   const right = readOuterBounds(
+39 |     root.renderer,
+40 |     root.renderer.getElement(root.renderer.findByTestId("right")!.id)
+41 |   )!
+42 |   expect(left.x + left.width).toBeLessThanOrEqual(right.x)
+                                   ^
+error: expect(received).toBeLessThanOrEqual(expected)
+
+Expected: <= 22
+Received: 23
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/ControlGroup/ControlGroup.test.tsx:42:31)
+(fail) group separators do not overlap adjacent button hit targets [333.04ms]
+
+src/ui/controls/Popover/index.test.tsx:
+72 |     expect(changes).toEqual([true, false])
+73 |     expect(root.renderer.findByTestId("content")).toBeUndefined()
+74 |     click(root, "trigger")
+75 |     const trigger = bounds(root, "trigger")
+76 |     root.renderer.nativeSimulateClick(trigger.x + 0.25, trigger.y + trigger.height / 2)
+77 |     expect(changes).toEqual([true, false, true, false])
+                         ^
+error: expect(received).toEqual(expected)
+
+@@ -4,3 +4,3 @@
+    true,
+-   false,
+  ]
+
+- Expected  - 1
++ Received  + 0
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/Popover/index.test.tsx:77:21)
+(fail) native popovers > Button asChild emits one open change for each Enter/Space activation [100.30ms]
+335 |             </PopoverContent>
+336 |           </Popover>
+337 |         )
+338 |         const trigger = bounds(root, "trigger")
+339 |         const content = bounds(root, "content")
+340 |         if (side === "left") expect(content.x + content.width).toBeCloseTo(trigger.x - 10, 0)
+                                                                     ^
+error: expect(received).toBeCloseTo(expected, precision)
+
+Expected: 240
+Received: 233
+
+Expected precision: 0
+Expected difference: < 0.5
+Received difference: 7
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/Popover/index.test.tsx:340:64)
+(fail) native popovers > all sides and alignments use native anchor geometry and sideOffset [329.75ms]
+382 |       const content = bounds(root, "content")
+383 |       if (Math.abs(content.y + content.height / 2 - trigger.y - trigger.height / 2) < 0.5) break
+384 |     }
+385 |     const trigger = bounds(root, "trigger")
+386 |     const content = bounds(root, "content")
+387 |     expect(content.x + content.width).toBeCloseTo(trigger.x - 10, 0)
+                                            ^
+error: expect(received).toBeCloseTo(expected, precision)
+
+Expected: 240
+Received: 233
+
+Expected precision: 0
+Expected difference: < 0.5
+Received difference: 7
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/Popover/index.test.tsx:387:39)
+(fail) native popovers > intrinsic-height center alignment uses the measured native surface [1468.84ms]
+406 |         </Popover>,
+407 |         320,
+408 |         240
+409 |       )
+410 |       const box = bounds(root, "content")
+411 |       expect(box.width).toBeLessThanOrEqual(maximum ?? 304)
+                              ^
+error: expect(received).toBeLessThanOrEqual(expected)
+
+Expected: <= 304
+Received: 306
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/Popover/index.test.tsx:411:25)
+(fail) native popovers > oversized multiline surfaces clamp to the window and preserve explicit smaller maxima [437.55ms]
+Context leak detected, CoreAnalytics returned false
+
+src/ui/controls/Menu/index.test.tsx:
+414 |     )
+415 |     click(root, "trigger")
+416 |     expect(root.renderer.findByTestId("content")).toBeUndefined()
+417 |     root.renderer.nativeSimulateClick(180, 90, 2)
+418 |     const box = bounds(root, "content")
+419 |     expect(box.x).toBeGreaterThanOrEqual(180)
+                        ^
+error: expect(received).toBeGreaterThanOrEqual(expected)
+
+Expected: >= 180
+Received: 175
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/Menu/index.test.tsx:419:19)
+(fail) native command menus > context triggers ignore primary clicks and anchor right/Ctrl-click at the pointer [724.07ms]
+480 |       </DropdownMenu>,
+481 |       320,
+482 |       240
+483 |     )
+484 |     const box = bounds(root, "content")
+485 |     expect(box.width).toBeLessThanOrEqual(304)
+                            ^
+error: expect(received).toBeLessThanOrEqual(expected)
+
+Expected: <= 304
+Received: 306
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/Menu/index.test.tsx:485:23)
+(fail) native command menus > floating surfaces fit small viewports even with oversized requested dimensions [65.55ms]
+
+src/ui/controls/DropdownButton/DropdownButton.test.tsx:
+261 |   const trigger = readOuterBounds(root.renderer, root.renderer.findByTestId("center"))!
+262 |   const content = readOuterBounds(root.renderer, root.renderer.findByTestId("center-content"))!
+263 |   // Native anchored positions snap to pixels; odd surface widths can differ by half a point.
+264 |   expect(
+265 |     Math.abs(content.x + content.width / 2 - trigger.x - trigger.width / 2)
+266 |   ).toBeLessThanOrEqual(0.5)
+          ^
+error: expect(received).toBeLessThanOrEqual(expected)
+
+Expected: <= 0.5
+Received: 63.5
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/DropdownButton/DropdownButton.test.tsx:266:5)
+(fail) centered native Select anchors to the compact trigger rather than a stretched parent [940.74ms]
+295 |     root.renderer.flush()
+296 |     const parent = readOuterBounds(root.renderer, root.renderer.findByTestId("parent"))!
+297 |     const outer = readOuterBounds(root.renderer, root.renderer.findByTestId("fill-root"))!
+298 |     const trigger = readOuterBounds(root.renderer, root.renderer.findByTestId("fill"))!
+299 |     expect(outer.width).toBe(parent.width)
+300 |     expect(trigger.width).toBe(parent.width)
+                                ^
+error: expect(received).toBe(expected)
+
+Expected: 74
+Received: 76
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/ui/controls/DropdownButton/DropdownButton.test.tsx:300:27)
+(fail) filled select owns the parent width and preserves anchored alignment [232.80ms]
+
+src/project/adapters/backend/native.test.ts:
+native device {"sampleRate":48000,"outputLatencyFrames":284,"playingFrames":96000,"mainDbFS":[-50.01525260119736,-50.01525260119736],"stoppedDbFS":[-120,-120],"telemetryCount":59}
+
+src/project/sections/arrangement/tracks/Row/interaction.test.tsx:
+129 |   const routing = bounds(root, "track-routing-3-audio")
+130 |   const mixer = bounds(root, "track-mixer-3-audio")
+131 |   expect(row.width).toBe(viewport.width)
+132 |   expect(lane.width + identity.width + routing.width + mixer.width).toBe(row.width)
+133 |   expect(identity.x).toBe(lane.x + lane.width)
+134 |   expect(mixer.x + mixer.width).toBe(row.x + row.width)
+                                      ^
+error: expect(received).toBe(expected)
+
+Expected: 1000
+Received: 996
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:134:33)
+(fail) composite rows fill the viewport and give the lane remaining width [2049.91ms]
+204 |       )
+205 |       if (kind === "group")
+206 |         expect(root.renderer.findByTestId(`track-arm-space-${id}`)).toBeDefined()
+207 |       if (kind === "return") expect(root.renderer.findByTestId(`track-post-${id}`)).toBeDefined()
+208 |     }
+209 |     expect(bounds(root, `track-row-${id}`).height).toBe(COLLAPSED_TRACK_HEIGHT)
+                                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 23
+Received: 25
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:209:52)
+(fail) folded 3-audio retains only supported first-row controls [2010.51ms]
+204 |       )
+205 |       if (kind === "group")
+206 |         expect(root.renderer.findByTestId(`track-arm-space-${id}`)).toBeDefined()
+207 |       if (kind === "return") expect(root.renderer.findByTestId(`track-post-${id}`)).toBeDefined()
+208 |     }
+209 |     expect(bounds(root, `track-row-${id}`).height).toBe(COLLAPSED_TRACK_HEIGHT)
+                                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 23
+Received: 25
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:209:52)
+(fail) folded trager retains only supported first-row controls [2865.84ms]
+204 |       )
+205 |       if (kind === "group")
+206 |         expect(root.renderer.findByTestId(`track-arm-space-${id}`)).toBeDefined()
+207 |       if (kind === "return") expect(root.renderer.findByTestId(`track-post-${id}`)).toBeDefined()
+208 |     }
+209 |     expect(bounds(root, `track-row-${id}`).height).toBe(COLLAPSED_TRACK_HEIGHT)
+                                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 23
+Received: 25
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:209:52)
+(fail) folded drums-group retains only supported first-row controls [3631.49ms]
+204 |       )
+205 |       if (kind === "group")
+206 |         expect(root.renderer.findByTestId(`track-arm-space-${id}`)).toBeDefined()
+207 |       if (kind === "return") expect(root.renderer.findByTestId(`track-post-${id}`)).toBeDefined()
+208 |     }
+209 |     expect(bounds(root, `track-row-${id}`).height).toBe(COLLAPSED_TRACK_HEIGHT)
+                                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 23
+Received: 25
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:209:52)
+(fail) folded a-apply retains only supported first-row controls [2708.69ms]
+204 |       )
+205 |       if (kind === "group")
+206 |         expect(root.renderer.findByTestId(`track-arm-space-${id}`)).toBeDefined()
+207 |       if (kind === "return") expect(root.renderer.findByTestId(`track-post-${id}`)).toBeDefined()
+208 |     }
+209 |     expect(bounds(root, `track-row-${id}`).height).toBe(COLLAPSED_TRACK_HEIGHT)
+                                                         ^
+error: expect(received).toBe(expected)
+
+Expected: 23
+Received: 25
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:209:52)
+(fail) folded main retains only supported first-row controls [1990.66ms]
+253 |   const second = bounds(root, "track-send-return-0-3-audio")
+254 |   const third = bounds(root, "track-send-return-1-3-audio")
+255 |   const containerWidth = bounds(root, "track-sends-3-audio").width
+256 |   const idealWidth = (containerWidth - TRACK_LAYOUT.spacing * 2) / 3
+257 |   for (const column of [first, second, third])
+258 |     expect(Math.abs(column.width - idealWidth)).toBeLessThanOrEqual(1)
+                                                      ^
+error: expect(received).toBeLessThanOrEqual(expected)
+
+Expected: <= 1
+Received: 1.6666666666666643
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:258:49)
+(fail) send rows fill horizontally in equal thirds before adding a second row [1990.75ms]
+301 |   )
+302 |   click(root, "track-fold-drums-group")
+303 |   for (const child of children)
+304 |     expect(root.renderer.findByTestId(`track-row-${child}`)).toBeUndefined()
+305 |   expect(root.renderer.findByTestId("track-group-overview-drums-group")).toBeDefined()
+306 |   expect(bounds(root, "track-group-frame-drums-group").height).toBe(COLLAPSED_TRACK_HEIGHT)
+                                                                     ^
+error: expect(received).toBe(expected)
+
+Expected: 23
+Received: 25
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:306:64)
+(fail) folding Group unmounts children and shows only the folded descendant overview [1440.40ms]
+(fail) F2 name editing commits Enter, preserves spaces and cancels Escape [6196.69ms]
+  ^ this test timed out after 5000ms.
+Context leak detected, CoreAnalytics returned false
+(fail) dragging a Group moves its descendants as one branch without changing routing [7976.55ms]
+  ^ this test timed out after 5000ms.
+440 |   const level = element(root, "track-volume-3-audio")
+441 |   const volume = current("3-audio").volumeDb
+442 |   root.renderer.nativeSimulateKeystrokes(level.id, "space")
+443 |   expect(useProjectState.getState().session.playing).toBe(true)
+444 |   expect(current("3-audio").volumeDb).toBe(volume)
+445 |   expect(root.renderer.getFocusedElementId()).toBe(level.id)
+                                                    ^
+error: expect(received).toBe(expected)
+
+Expected: 455
+Received: 910
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:445:47)
+(fail) Space on a focused level remains a transport key rather than starting numeric editing [6125.36ms]
+  ^ this test timed out after 5000ms.
+(fail) native name input keeps printable Space away from the window transport [7147.58ms]
+  ^ this test timed out after 5000ms.
+(fail) Tab follows lane, identity, fold and title before enabled routing controls [7351.76ms]
+  ^ this test timed out after 5000ms.
+91 |   return root
+92 | }
+93 | 
+94 | function element(root: TestRoot, id: string) {
+95 |   const found = root.renderer.findByTestId(id)
+96 |   if (!found) throw new Error(`Missing ${id}`)
+                                                  ^
+error: Missing track-color-2-3-audio
+      at element (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:96:46)
+      at bounds (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:101:48)
+      at click (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:107:16)
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:547:3)
+(fail) secondary click on an interactive title opens its track context menu [1283.15ms]
+553 |   const root = mount()
+554 |   root.renderer.nativeSimulateKeystrokes(element(root, "track-solo-3-audio").id, "enter")
+555 |   expect(current("3-audio").solo).toBe(true)
+556 |   expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
+557 |   expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
+558 |   expect(root.renderer.findByTestId("track-menu-3-audio")).toBeUndefined()
+                                                                 ^
+error: expect(received).toBeUndefined()
+
+Received: {
+  id: 935,
+  type: "div",
+  style: {
+    display: "flex",
+    flexDirection: "column",
+    width: 130,
+    maxWidth: 984,
+    maxHeight: 1005,
+    padding: 4,
+    backgroundColor: "oklch(20.5% 0 0deg)",
+    color: "oklch(98.5% 0 0deg)",
+    borderWidth: 1,
+    borderColor: "oklch(100% 0 0deg / 10%)",
+    borderRadius: 4,
+    fontSize: 9,
+    whiteSpace: "normal",
+    overflowY: "auto",
+  },
+  text: null,
+  events: Set(2) {
+    "keyDown",
+    "mouseDownOutside",
+  },
+  children: [
+    908, 910, 912, 914, 916, 917, 919, 925, 926, 928, 930, 932, 934
+  ],
+  parentId: 936,
+  testId: "track-menu-3-audio",
+  customProps: {
+    role: "menu",
+    tabIndex: 0,
+  },
+}
+
+      at <anonymous> (/Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-tracks/apps/gpuix/src/project/sections/arrangement/tracks/Row/interaction.test.tsx:558:60)
+(fail) Enter on Solo changes the control without replacing independent header selection [1506.76ms]
+
+ 575 pass
+ 2 todo
+ 25 fail
+ 741854 expect() calls
+Ran 602 tests across 103 files. [174.38s]

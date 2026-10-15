@@ -1,0 +1,8 @@
+Command:
+ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
+
+Observed stdout: empty
+Observed exit code: 1 (no matching process)
+The current production-frame smoke service was killed after 1m25s.
+No bun --hot, cargo run, gallery or demo process matched at this checkpoint.
+Repeated after the b1cdfc7 first-increment full suite and finite native render-cost run: stdout remained empty, exit code 1. The profiling script exited and asserted zero retained nodes after both unmounts.
