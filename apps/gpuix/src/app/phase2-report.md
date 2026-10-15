@@ -1,6 +1,6 @@
 # B2 app-shell 阶段2装配
 
-2026-10-15。已同步 F5 `6d6dd39`、F3 `b4a55a8`、F4c `66f9ce9`、editors IDs `5444e5d` 和 lane resume `7f48dcc`。root resume 已提交 `e1b29b7`，ID-only Clip slot 已提交 `a6a2650`，均通过 hook；lane 同步合并为 `f182c8d`。剩余 DesignTokens Card 变体待合入，真实 UI 由协调者统一组合评审。
+2026-10-15。全部本派发代码与接口 cutover 已完成，当前基线为 DesignTokens `c39162d`，已包含 F5、F3、F4c、editors IDs、lane resume 与 PeakColumns QuadBatch。root resume `e1b29b7`、ID-only Clip slot `a6a2650` 和所有合并均通过 hook；真实组合 UI 由协调者统一最终评审，以下明确保留工具未验证路径。
 
 已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
 
@@ -39,16 +39,17 @@
 
 | 命令或场景 | 观察结果 |
 | --- | --- |
-| `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | F3 合入后通过，2.96 秒，见 `typecheck-after-f3.txt` |
-| `pnpm exec eslint apps/gpuix/src` | F3 合入后通过，无输出，22.81 秒，见 `eslint-after-f3.txt` |
+| `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | 最终基线通过，2.84 秒，见 `final-typecheck.txt` |
+| `pnpm exec eslint apps/gpuix/src` | 最终基线通过，无输出，41.12 秒，见 `final-eslint.txt` |
 | `bun test src/app --timeout 30000` | IDs 切换后 50 pass、0 fail、1390 assertions，14.93 秒，无过滤，包含 Clip 请求/切换和 native lease 路径，见 `app-tests-after-ids.txt` |
-| `bun test --timeout 30000` | IDs/lane resume 同步后 1092 pass、1 既有 todo、0 fail，174 文件、1103376 assertions，37.22 秒，见 `all-bun-after-ids.txt` |
-| `bun apps/gpuix/src/app/verification/mutations.mjs` | 完整 app 基线先通过，27 项变异全部被真实行为断言抓住，源码逐项恢复，74.82 秒，见 `all-mutations-after-f3.txt` |
+| `bun test --timeout 30000` | 最终 1146 pass、1 既有 todo、0 fail，176 文件、1104179 assertions，42.50 秒，无过滤，见 `final-bun.txt` |
+| `bun apps/gpuix/src/app/verification/mutations.mjs` | 完整 app 基线先通过，最终 27 项变异全部被真实行为断言抓住，源码逐项恢复，68.77 秒，见 `final-mutations.txt` |
 | 真实 native peaks smoke | 同一工程会话 open/apply 接受，48 kHz telemetry、输出延迟 284 帧，channel-major min/max 共 256 个 f32，范围 ±0.399993896484375；释放后 idle |
 | 真实 native 帧需求 smoke | idle=false、native playing=true 时 demand=true、native playing=false 时 demand=false，最后释放到 idle；见 `frame-demand-native-smoke.txt` |
 | 独立 review 回归 | 停止帧与只读输入修复前 4 fail，修复后 4 pass、28 assertions；另有四项专门变异均抓住，见 `review-failing-before.txt`、`review-passing-after.txt`、`review-mutations.txt` |
 | root resume 首 present 回归 | 未接入时 2 fail，接入后 4 pass、26 assertions；实际 timeline follow 的 retained 与首个 painted 文本均立即为 200，idle 不留 resume 订阅。移除 flushSync、idle 强制订阅、断开 resume 三项变异全部抓住 |
 | root resume 真实离屏 smoke | 实际 AppShell、NativeBackend 与离屏 GPUI。native bar=20.066934020833333，恢复前 scroll=0，pre-present retained 与 workspace 均为 905.0813746453334，实际 frames=11，卸载后 idle；只手动投递 resume host 事件，不宣称真实桌面恢复证据 |
+| 最终 Home/Card/native 生命周期 smoke | 真实最近工程 Card 实测 width304、左右 inset12、gap4；原生 Enter 重开同一 project ID，返回首页后旧 backend 为 idle，再打开真实 native playback 后恢复首 present；最后卸载 idle，见 `final-native-smoke.txt` |
 | `node scripts/gpuix-main/check.mjs --resolution` | F4c 同步后十一补丁与 app 的 native/React 解析验证通过，见 `renderer-resolution.txt` |
 | `gpuix-review-scan` | 当前集成分支扫描 30 source、7 tests，0 hard、4 warn，见 `review-scan.txt` |
 
@@ -79,6 +80,15 @@
 
 进程清理命令 `ps -p 65119,86471 -o pid,etime,command` 仅返回表头，两个本人进程均不存在。日志见 `b2-main-native.txt`、`b2-native-final.txt` 和 `process-cleanup.txt`。
 
+## Home 项目 Card cutover
+
+| Before | After |
+| --- | --- |
+| `HomePage.tsx` 的最近工程 Card 使用 `size="sm"` | 选择共享同语义 `size="project"` |
+| 实例覆盖左右 `gap*3` padding、`gap` 与 accent hover | 全部移除，由 `theme.design.cards.project` 拥有；实例 style 仅保留 `width: theme.project.controlsWidth` |
+
+点击、原生键盘激活、内容与时间格式未修改。实际 native headless Card 边界及打开工程行为已验证；物理 hover/整体观感仍由协调者在组合视图评审。
+
 ## 产品规则与 Live 对照
 
 | 产品规则 | Live 观察 | 实现 | 差异或未验证 |
@@ -108,7 +118,7 @@
 | Input 旧测试只断言回调次数与向窗口传播 | 必修 | 删除旧 incidental forwarding 断言，不重新固定传播数组；新 disabled 用实际受控文本值验证不可编辑，readonly 由真实组合模式/选择回归验证 |
 | F3 resume 帧同步 | 必修已完成 | `useResumeFrame` 与普通帧使用同一 demand，在回调中显式 flushSync 同一 composition.tick；首 present 实际 UI、idle 释放、三项变异与真实后端离屏 smoke 已证明 |
 | 既有 `project/model/grid.test.ts:66` 的 `it.todo` | 记录 | 唯一 todo 为 Ctrl/Cmd+1/2 hook 映射的旧占位，非本轮新增，未越过 model owner 删除；full Bun 0 fail，app 无 todo/过滤 |
-| Home 最近工程 Card 的实例外观 | 等待接口 | DesignTokens 合入后消费真实共享同语义变体，删除 padding/gap/hover 实例覆盖，仅保留 width 等布局约束；当前不先改、不造第二套样式 |
+| Home 最近工程 Card 的实例外观 | 必修已完成 | 已同步正式 c39162d，使用 size=project，实例只保留 width；实际 Card304/inset12/gap4 与原生打开同一工程 ID 的 smoke 通过，无第二套外观 |
 
 ## 错题
 

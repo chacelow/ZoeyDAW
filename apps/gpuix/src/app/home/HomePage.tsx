@@ -90,16 +90,12 @@ export function HomePage({ storage }: HomePageProps) {
               {recent.map(project => (
                 <Card
                   key={project.id}
-                  size="sm"
+                  size="project"
                   testId={`recent-${project.id}`}
                   aria-label={project.name}
                   onClick={() => open(project)}
                   style={{
                     width: theme.project.controlsWidth,
-                    paddingLeft: gap * 3,
-                    paddingRight: gap * 3,
-                    gap,
-                    hover: { backgroundColor: theme.colors.accent },
                   }}
                 >
                   <text style={{ fontWeight: 500 }}>{project.name}</text>

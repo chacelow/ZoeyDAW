@@ -53,6 +53,7 @@ const frames = createAnimationFrameSource({
   },
 })
 const keyboard = createWindowKeyboard()
+const router = createRouter("/")
 const root = createTestRoot({ width: 1280, height: 800, ...keyboard.rootHandlers })
 function retainedScroll() {
   const node = root.renderer.findByTestId("timeline-horizontal-scroll")
@@ -75,7 +76,7 @@ try {
       <AppNativeEnvironmentProvider value={{ subscribeWindowActive: () => () => {} }}>
         <WindowKeyboardProvider value={keyboard}>
           <AppShell
-            router={createRouter("/project/root-resume-smoke")}
+            router={router}
             appearance={appearance}
             systemAppearance="dark"
             storage={storage}
@@ -86,6 +87,33 @@ try {
       </AppNativeEnvironmentProvider>
     </AnimationFrameProvider>
   )
+  const create = root.renderer.findByTestId("home-create")
+  if (!create) throw new Error("No real Home create command")
+  root.renderer.nativeSimulateKeystrokes(create.id, "enter")
+  const createdRoute = router.getRoute()
+  if (createdRoute.kind !== "project") throw new Error("Home did not open a project")
+  if (!(await whenProjectBackendIdle())) throw new Error("First native project lease was rejected")
+  flushSync(() => router.navigate("/"))
+  if (useProjectState.getState().session.backend.phase !== "idle")
+    throw new Error("Leaving project did not release its native lease")
+  await layoutPass()
+  const card = root.renderer.findByTestId(`recent-${createdRoute.projectId}`)
+  if (!card) throw new Error("No real recent-project Card")
+  const bounds = root.renderer.getElementBounds(card.id)
+  console.log(
+    JSON.stringify({
+      recentCard: {
+        width: bounds?.width,
+        paddingLeft: card.style.paddingLeft,
+        paddingRight: card.style.paddingRight,
+        gap: card.style.gap,
+      },
+    })
+  )
+  root.renderer.nativeSimulateKeystrokes(card.id, "enter")
+  const reopened = router.getRoute()
+  if (reopened.kind !== "project" || reopened.projectId !== createdRoute.projectId)
+    throw new Error("Project Card keyboard activation changed the route identity")
   if (!(await whenProjectBackendIdle()))
     throw new Error("Native fixture backend did not accept the project")
   await layoutPass()

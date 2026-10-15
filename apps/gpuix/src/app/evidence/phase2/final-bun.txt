@@ -1,0 +1,7 @@
+Command: bun test --timeout 30000
+ 1146 pass
+ 1 todo
+ 0 fail
+ 1104179 expect() calls
+Ran 1147 tests across 176 files. [42.50s]
+Wall time: 42.60 seconds
