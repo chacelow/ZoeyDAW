@@ -108,6 +108,7 @@ export function NumericPad({
       borderColor: pad.mode === "preEdit" ? theme.colors.ring : theme.colors.border,
       cursor: disabled ? "not-allowed" : pad.mode === "idle" ? "ns-resize" : "text",
       overflow: "hidden",
+      pointerEvents: "auto",
     },
     style
   )
