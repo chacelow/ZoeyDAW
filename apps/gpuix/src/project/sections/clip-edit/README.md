@@ -25,13 +25,13 @@
 
 工程只在 adapters/stores。连续编辑使用 `useProjectEditGesture`，一笔拖动产生一条撤销记录，Escape、失活、卸载或切换 Clip 取消。选择、框选矩形、折叠、缩放和滚动只在编辑器内部，不进快照。
 
-MIDI 音符编辑调用 `project/model/midi-editing`。按键包括方向键移动、Shift 上下跨八度、Delete、Cmd+A/C/X/V/D/U/Z。Cmd+U 是协调者批准的新增量化，只改选中音符起点，网格由调用方传给 `quantizeNotes`，长度保留。
+MIDI 音符编辑调用 `project/model/midi-editing`。按键包括方向键移动、Shift 上下跨八度、Delete、Cmd+A/C/X/V/D/U/Z。Cmd+U 是协调者批准的新增量化，只改选中音符起点，网格由调用方传给 `quantizeNotes`，长度保留。拖动进行中消费并忽略 Delete、Cut、Paste、方向键、D、U，直到 release；Escape 与 Cmd+Z 仍取消手势。这是协调者选择的事务边界。指针选琴键后编辑焦点回到 grid，键盘 Enter 试听仍留琴键，可见力度杆可 Tab 到达并以上下键调整。
 
-钢琴卷帘绘制与命中共用可见音符几何。屏外音符不挂载，琴键、网格线与力度杆也按可见范围裁剪。滚轮调整视口，Shift 滚轮横向滚动。Cmd 或 Ctrl 滚轮改变时间缩放。
+钢琴卷帘绘制与命中共用可见音符几何。屏外音符不挂载，琴键、网格线与力度杆也按可见范围裁剪。滚轮调整视口，Shift 滚轮横向滚动。Cmd 或 Ctrl 滚轮改变时间缩放。显示、插入、刷写、擦除和量化使用源绝对 beat 0 的网格。首尾半格只按可见交集判断占用与擦除，不删除窗口外的保留音符。窗口 resize 和 Fold 音高集合变化重新夹取 scroll，普通音符编辑不自动重新 fit。
 
-音频视图请求当前可见的保留源窗口部分及其实际像素宽度。音乐位置到采样帧、带符号的偏移和回绕由 Rust 处理。共享 `PeakColumns` 直接画 channel-major 的 min/max；UI 只在增益或反向预览需要时产生变换数组。Overview 使用同一 reader，宽度来自 renderer 布局。
+音频视图请求当前可见的保留源窗口部分及其实际像素宽度。音乐位置到采样帧、带符号的偏移和回绕由 Rust 处理。共享 `PeakColumns` 直接画 channel-major 的 min/max；UI 只在增益或反向预览需要时产生变换数组。Overview 使用同一 reader，宽度来自 renderer 布局。reader 身份稳定时，session、backend phase/pending/acceptedRevision 与 tempo/meter 仍构成查询 generation，后端就绪和音乐到帧的映射变化会使峰值缓存失效。
 
-Start/End、Loop Position/Length 和 Arrangement 位置互不替代。标记键盘步长是一音乐十六分音符，Shift 为其四分之一。Warp、Transpose、Detune、Reverse 的设置保存为元数据；当前后端没有这些 DSP，不把显示的反向波形称为已接通反向播放。
+Start/End、Loop Position/Length 和 Arrangement 位置互不替代。标记键盘步长是一音乐十六分音符，Shift 为其四分之一。键盘微调先取消仍在进行的 pointer 事务，读取还原后的权威 Clip，再单独提交 nudge。Start/End、Loop Position/Length、Warp/Mode、Source BPM、Transpose、Detune、Reverse 目前只编辑元数据，C1 播放尚未响应这些设置；这与 Web 范围一致并获协调者批准。琴键使用 held-note 端口，不代表已接通 MIDI synthesis。
 
 Pattern 只编辑一个源周期。裁剪后的首步保留其源相位。鼠标刷过的步统一写入同一事务，Enter 切换单步，Space 留给播放。
 
