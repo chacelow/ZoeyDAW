@@ -55,6 +55,9 @@
     "arrangementGroupPreviewBandMinHeight": 0.5,
     "arrangementGroupPreviewBandMaxHeight": 2,
     "arrangementGroupPreviewBandGap": 1,
-    "arrangementFadeHandleSize": 5
+    "arrangementFadeHandleSize": 5,
+    "titlebarHeight": 28,
+    "trafficLightMargin": 8,
+    "trafficLightInset": 68
   }
 }
