@@ -1,6 +1,6 @@
 # B2 app-shell 阶段2装配
 
-2026-10-15。已同步 F5 `6d6dd39`、F3 `b4a55a8` 和 F4c `66f9ce9`，对应合并提交为 `2884a0a`、`5f57999`、`99ac7cf`。root resume 已按正式接口接入，F3/F5 全套与默认全量变异通过。剩余 ClipEditorSlot IDs 和 DesignTokens Card 变体仍待合入；真实 UI 由协调者统一组合评审，本 worker 不重复局部取证。
+2026-10-15。已同步 F5 `6d6dd39`、F3 `b4a55a8`、F4c `66f9ce9` 与 editors IDs `5444e5d`，对应合并提交为 `2884a0a`、`5f57999`、`99ac7cf`、`c2e70b6`。root resume 和 ID-only Clip slot 已按正式接口接入；剩余 DesignTokens Card 变体待合入。真实 UI 由协调者统一组合评审，本 worker 不重复局部取证。
 
 已提交 `888acd1 feat(app): 装配原生工程视图`，pre-commit 的 ultracite/lint-staged 通过，未绕过 hook。
 
@@ -15,7 +15,7 @@
 | Lane 手势 | 同一个 scene 的真实 LaneController。`markDrawModeGesture` 接 timeline keyboard 的 `markDrawGesture`，同步滚动使用 `timeline.setScroll` |
 | TrackRows 与 LaneOverlay | `ArrangementPanel.tsx` 经 `renderLane` 放置真实 LaneRow，overlay 只挂一次 |
 | 峰值、电平与走带 | adapters 的 `readProjectPeaks`、`readProjectTelemetry`、`readTransportBar`，使用同一工程会话 |
-| Footer Clip slot | 直接消费 clip-edit 定义及 Footer payload，不声明平行 slot 类型。当前 app 直接展开 slot，收到 IDs 接口后仍不重传 clip/track 大对象 |
+| Footer Clip slot | 直接消费 clip-edit 唯一 slot，显式解构并传入 clipId、trackId、close，不重传 clip/track 大对象，不声明平行类型或保留兼容层 |
 | 文本焦点与模态 | AppInteractionProvider 的动态 lease。原生 Input/DragPad 编辑焦点和 app ModalDialog 生命周期写入，窗口快捷键读取 |
 | 全局 Cmd/Ctrl+F | 组合根检查事件消费、ModalDialog 打开状态和 Browser handle 的实际折叠状态，再调用现有 `focusSearch()` |
 | 帧、激活、光标与 reduced motion | NativeRoot 的同一个 renderer 和唯一帧 Provider。原生窗口激活、nativeCursorLock 通过现有 Provider 注入；Footer/Transport 读取 platform reduced-motion |
@@ -41,7 +41,7 @@
 | --- | --- |
 | `pnpm --filter @zoeydaw/gpuix-prototype typecheck` | F3 合入后通过，2.96 秒，见 `typecheck-after-f3.txt` |
 | `pnpm exec eslint apps/gpuix/src` | F3 合入后通过，无输出，22.81 秒，见 `eslint-after-f3.txt` |
-| `bun test src/app --timeout 30000` | 49 pass、0 fail、1383 assertions，12.99 秒，无过滤，包含两条原先等待 F5 的 autoFocus 回归，见 `app-tests-after-f5.txt` |
+| `bun test src/app --timeout 30000` | IDs 切换后 50 pass、0 fail、1390 assertions，14.93 秒，无过滤，包含 Clip 请求/切换和 native lease 路径，见 `app-tests-after-ids.txt` |
 | `bun test --timeout 30000` | F3/F5 集成后 1082 pass、1 既有 todo、0 fail，173 文件、1103314 assertions，33.46 秒，见 `all-bun-after-f3.txt` |
 | `bun apps/gpuix/src/app/verification/mutations.mjs` | 完整 app 基线先通过，27 项变异全部被真实行为断言抓住，源码逐项恢复，74.82 秒，见 `all-mutations-after-f3.txt` |
 | 真实 native peaks smoke | 同一工程会话 open/apply 接受，48 kHz telemetry、输出延迟 284 帧，channel-major min/max 共 256 个 f32，范围 ±0.399993896484375；释放后 idle |
@@ -97,7 +97,7 @@
 | native autoFocus 不发 focus | 汇报仲裁后解除 | F5 修 vendor；未加 app ref/query/轮询补丁，真实 Input/DragPad autoFocus 回归及完整 app/变异全部通过 |
 | ThemePresetGrid 独立挂载缺少 app modal owner | 必修 | 更新测试 Provider，单跑 2 pass |
 | renderer 键盘路由/后台焦点恢复不可证明目标 | 汇报仲裁 | 停止并保留精确错误，真实键盘和 Clip/Back UI 不宣称通过 |
-| ClipEditorSlot 大对象 props 性能风险 | 汇报仲裁 | editors 负责 clean cutover 为 IDs，app 使用同一 slot，不保留兼容层 |
+| ClipEditorSlot 大对象 props 性能风险 | 汇报仲裁后完成 | editors 的 ID-only 接口已同步，app 显式只传 clipId/trackId/close，类型检查及真实 app 50 项回归通过，无旧对象兼容路径 |
 | scan main.tsx 的 1280×800 | 记录 | 既有窗口初始尺寸来自旧 tauri.conf.json，入口 render 前无 theme；未新增该值 |
 | scan tracks/demo.tsx 的 1120×780 | 记录 | 既有验证窗口尺寸，非产品控件度量；本次只改 time-width 投影 |
 | scan tracks/verification/render-cost.tsx 的 1000×500 | 记录 | 固定验证场景的时间视口尺寸，已将实际窗口改为 width 加 controlsWidth |

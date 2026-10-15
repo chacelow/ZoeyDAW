@@ -77,9 +77,11 @@ export function ProjectSections({
           onCollapsedChange={shell.setFooterCollapsed}
           reducedMotion={reducedMotion}
           subscribeWindowActive={subscribeWindowActive}
-          renderClipEditor={slot => (
+          renderClipEditor={({ clipId, trackId, close }) => (
             <ClipEditor
-              {...slot}
+              clipId={clipId}
+              trackId={trackId}
+              close={close}
               labels={clipEditorLabels[zh ? "zh" : "en"]}
               readPeaks={readProjectPeaks}
               environment={{

@@ -43,6 +43,8 @@
 
 Footer 按新切片契约二选一显示 Affect Chain 或 Clip Edit，不迁 Web 可同时打开两者的 `detail-view`。Clip Edit 用垂直 Group 连续调整高度。Affect Chain 在 Group 外按 Footer 自身固定高度显示。切换时 Browser 与 Arrangement 的树位置不变。
 
+Clip slot 的唯一类型由 `clip-edit` 定义，只含 `clipId`、`trackId`、`close`。app 显式消费这三项，编辑器自行订阅权威 store；不传完整 clip/track 或 notes 数组，不留旧对象 props 兼容。
+
 `createProjectComposition` 只创建一个 `createTimelineController`，后者持有唯一 timeline keyboard。lane 的 `markDrawModeGesture` 接该 keyboard 的 `markDrawGesture`。`ArrangementTimeline` 注册窗口键盘，lane 在元素阶段消费的事件不会再次到达窗口 owner。旧 `usePlaybackKey` 已删除。
 
 `ArrangementPanel` 将同一个 scene 与 viewport 传给 TrackRows 和 LaneRow，`TrackRows.renderLane` 放置每行车道，`LaneOverlay` 单次挂载。峰值、telemetry、走带位置分别来自 adapters 的 `readProjectPeaks`、`readProjectTelemetry`、`readTransportBar`，均使用 ProjectPage 的同一个 backend session。
