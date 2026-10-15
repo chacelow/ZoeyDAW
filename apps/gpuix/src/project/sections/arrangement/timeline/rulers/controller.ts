@@ -33,7 +33,6 @@ export function createRulerController(scene: SceneStore): RulerController {
     if (epoch === useProjectState.getState().session.editEpoch) previous?.finish(cancelled)
     else finishPreview(true)
     epoch = null
-    scene.setProjectPreview(useProjectState.getState().session.preview)
   }
   function finishPreview(cancelled: boolean) {
     const previous = token
@@ -95,7 +94,6 @@ export function createRulerController(scene: SceneStore): RulerController {
               token,
               source.map(marker => (marker.id === original.id ? { ...marker, bar } : marker))
             )
-            scene.setProjectPreview(useProjectState.getState().session.preview)
           },
           finish: finishPreview,
         }
@@ -120,7 +118,6 @@ export function createRulerController(scene: SceneStore): RulerController {
             changed = loop.startBar !== original.startBar || loop.endBar !== original.endBar
             if (!token) return
             projectActions.previewLoop(token, loop)
-            scene.setProjectPreview(useProjectState.getState().session.preview)
           },
           finish(cancelled) {
             finishPreview(cancelled || !changed)
@@ -133,7 +130,6 @@ export function createRulerController(scene: SceneStore): RulerController {
                   .map(track => track.id),
               }
               projectActions.setTimeSelection(selection)
-              scene.setTimeSelection(selection)
             }
           },
         }
