@@ -882,3 +882,27 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 ```
 
 输出为空，grep 返回 1 表示无匹配，不是残留进程失败。原始 stdout 与自有 service 清单见 `process-cleanup-2026-10-15.json`。没有启动或停止用户已有应用，没有 push 或远程贡献。
+
+### F4 native quad batches
+
+2026-10-15。`quad-batch.patch` 排在 `window-active-change.patch` 后；独立 vendor 为 `/Volumes/PSSD/code/_vendor/f4-gpuix`，不修改共享 vendor 或 zed。补丁包含 native retained buffer、paint、napi 与 TestRenderer 方法、host 二进制提交队列、React intrinsic 与 TS 类型。
+
+使用 `shared/quads/QuadBatch.tsx`：`quads: Float32Array` 每四个值为本地 `x, y, width, height`，颜色取 `style.color`，透明度取 `style.opacity` 及祖先 opacity。每种颜色一个节点；数组视为不可变，引用不变不上传，替换引用只更新原生缓冲。原生边界拒绝非四倍长度、非有限值与负尺寸，零尺寸不绘制。
+
+选择独立 `<quad-batch>` 而不是占用 `<canvas>`：这是只画纯色矩形的声明式叶子，不是通用 Canvas 绘图上下文。保留上游未实现 canvas 的 API 空间。叶子没有 children、输入或 AX props，不注册 hitbox、focus handle 或 AX 节点；即使 style 指定 `pointerEvents: "auto"` 也不捕获输入。绘制同时受元素自身边界与祖先 content mask 裁剪。
+
+`setQuads(elementId, Float32Array)` 不经过 JSON。host mutation queue 保留 typed-array 引用，在常规 `applyBatch` 建立元素后调用 napi setter；同一提交内合并同 id 上传，销毁的 id 不再上传。napi 借用 JS typed-array slice，验证后一次拷贝到节点拥有的 `Arc<[f32]>`，之后 paint 只 clone Arc，不复制数据。没有持有可被 JS 修改或 detach 的跨帧 ArrayBuffer；没有新依赖。沿用上游 `Arc<std::sync::Mutex<RetainedTree>>` 是协调者批准的既有锁契约例外；持锁期间只访问树、验证与拷贝，不布局、绘制或回调 JS。
+
+当前实现覆盖 napi desktop 与 native TestRenderer。wasm renderer 没有 `setQuads`，host 明确抛 unsupported，不静默画空白；Windows/Linux 的 shared-tree 更新路径未经真实平台验证。两个调用间的跨线程提交原子性不作保证，macOS embedded loop 在 JS 同步提交结束后绘制。
+
+验收工具在 `scripts/gpuix-main/quad-batch/`：同一 50×50 合成几何、14,065 个纯画面矩形，div 与 quad 两种路径，不改 lane 产品代码。该 A/B 是协调者批准的等量节点探针，**不是** lane 的真实 `readProjectPeaks` 满量工程，也不能代替 lane 接入后的整链路性能验收。命令、实测及第 13 节证据见该目录的交付报告。
+
+#### Upstream PR draft — not published
+
+Title: `feat(native): add declarative single-color rectangle batches`
+
+Add a visual-only `quad-batch` host leaf with a `Float32Array` of local x/y/width/height tuples. Keep the unimplemented general-purpose canvas type separate. Style supplies fill color and opacity, and native painting uses content-masked GPUI quads without per-rectangle React or layout nodes. The element never enters pointer hit testing, keyboard focus, or accessibility.
+
+Upload changed buffers through `setQuads` rather than JSON custom props. The host queue waits until element creation has committed and drops uploads for destroyed elements. Copy each changed JS buffer once into retained native storage; re-rendering with the same reference does not upload. TestRenderer uses the same retained model and paint path.
+
+Scope: napi desktop; wasm support remains unsupported explicitly. Proposed verification includes GPUI scene assertions for local coordinates, clipping, color and nested opacity; immutable-reference upload regression; native pointer pass-through; mutation checks and equal-geometry A/B measurements. No issue or PR has been sent; upstream contribution policy noted in the F1 section still applies.

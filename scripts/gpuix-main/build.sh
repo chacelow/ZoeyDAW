@@ -48,7 +48,7 @@ git -C "$vendor" submodule update --init --depth 1
 pending_patches="$(node "$script_dir/check.mjs" --pending "$vendor")"
 readonly pending_patches
 while IFS= read -r patch; do
-  [ -z "$patch" ] || git -C "$vendor" apply "$script_dir/patches/$patch"
+  [ -z "$patch" ] || git -C "$vendor" apply --intent-to-add "$script_dir/patches/$patch"
 done <<< "$pending_patches"
 node "$script_dir/check.mjs" --sources "$vendor"
 [ -z "$(git -C "$vendor/zed" status --porcelain)" ] || {
