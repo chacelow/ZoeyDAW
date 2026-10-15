@@ -12,6 +12,7 @@ export interface ResolvedConstraints {
   max: number
   collapsed: number
   collapsible: boolean
+  fixed: boolean
 }
 
 export function toPixels(size: PanelSize, total: number): number {
@@ -38,7 +39,13 @@ export function resolveConstraints(
     ) {
       throw new RangeError("Panel requires collapsedSize <= minSize <= maxSize")
     }
-    return { min, max: Math.max(min, max), collapsed, collapsible: panel.collapsible ?? false }
+    return {
+      min,
+      max: Math.max(min, max),
+      collapsed,
+      collapsible: panel.collapsible ?? false,
+      fixed: panel.maxSize !== undefined && max <= min,
+    }
   })
 }
 
@@ -79,7 +86,7 @@ export function fitLayout(
   const locked = constraints.map((c, index) =>
     c.collapsible && (sizes[index] ?? 0) < (c.min + c.collapsed) / 2
       ? c.collapsed
-      : c.min === c.max
+      : c.fixed
         ? c.min
         : null
   )
@@ -115,11 +122,11 @@ export function reflowLayout(
   pixelPanels: readonly boolean[] = []
 ): number[] {
   const hardFixed = inputConstraints.reduce(
-    (sum, c, i) => sum + (c.min === c.max ? snapSize(sizes[i], c) : 0),
+    (sum, c, i) => sum + (c.fixed ? snapSize(sizes[i], c) : 0),
     0
   )
   let held = inputConstraints.map((c, i) =>
-    pixelPanels[i] === true && c.min !== c.max ? snapSize(sizes[i], c) : 0
+    pixelPanels[i] === true && !c.fixed ? snapSize(sizes[i], c) : 0
   )
   const heldTotal = held.reduce((sum, size) => sum + size, 0)
   const pixelBudget = Math.max(0, total - hardFixed)
@@ -127,20 +134,20 @@ export function reflowLayout(
     held = fitLayout(
       held,
       inputConstraints.map((c, i) =>
-        pixelPanels[i] === true && c.min !== c.max
+        pixelPanels[i] === true && !c.fixed
           ? c
-          : { min: 0, max: 0, collapsed: 0, collapsible: false }
+          : { min: 0, max: 0, collapsed: 0, collapsible: false, fixed: true }
       ),
       pixelBudget
     )
   }
   const constraints = inputConstraints.map((c, i) =>
-    pixelPanels[i] === true && c.min !== c.max ? { ...c, min: held[i], max: held[i] } : c
+    pixelPanels[i] === true && !c.fixed ? { ...c, min: held[i], max: held[i], fixed: true } : c
   )
   const fixed = constraints.reduce(
     (sum, c, i) =>
       sum +
-      (c.min === c.max
+      (c.fixed
         ? snapSize(sizes[i], c)
         : c.collapsible && sizes[i] === c.collapsed
           ? c.collapsed
@@ -149,13 +156,13 @@ export function reflowLayout(
   )
   const flexible = sizes.reduce((sum, size, i) => {
     const c = constraints[i]
-    return sum + (c.min === c.max || (c.collapsible && size === c.collapsed) ? 0 : size)
+    return sum + (c.fixed || (c.collapsible && size === c.collapsed) ? 0 : size)
   }, 0)
   const ratio = flexible > 0 ? Math.max(0, total - fixed) / flexible : 1
   return fitLayout(
     sizes.map((size, i) => {
       const c = constraints[i]
-      return c.min === c.max || (c.collapsible && size === c.collapsed)
+      return c.fixed || (c.collapsible && size === c.collapsed)
         ? size
         : Math.max(c.min, size * ratio)
     }),

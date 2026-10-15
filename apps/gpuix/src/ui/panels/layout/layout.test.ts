@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { computeLayout } from "./computeLayout"
 import { fitLayout, initialLayout, reflowLayout, resolveConstraints, toPixels } from "./sizes"
 
-const plain = { min: 0, max: 1000, collapsed: 0, collapsible: false }
-const browser = { min: 190, max: 500, collapsed: 0, collapsible: true }
+const plain = { min: 0, max: 1000, collapsed: 0, collapsible: false, fixed: false }
+const browser = { min: 190, max: 500, collapsed: 0, collapsible: true, fixed: false }
 
 describe("panel dimensions and reflow", () => {
   test("numeric sizes are pixels and bare or suffixed strings are percentages", () => {
@@ -57,7 +57,11 @@ describe("panel dimensions and reflow", () => {
   })
 
   test("undersized viewports relax flexible minima but never compress fixed panels", () => {
-    const constraints = [plain, { ...plain, min: 150, max: 150 }, { ...plain, min: 200 }]
+    const constraints = [
+      plain,
+      { ...plain, min: 150, max: 150, fixed: true },
+      { ...plain, min: 200 },
+    ]
     const small = reflowLayout([350, 150, 300], constraints, 250)
     small.forEach((size, index) => expect(size).toBeCloseTo([0, 150, 100][index]))
     expect(() => reflowLayout([350, 150, 300], constraints, 100)).toThrow(RangeError)

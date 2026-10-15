@@ -41,11 +41,19 @@ const mutations = [
     to: 'minWidth: 0,\n            fontSize,\n            fontFamily: "Menlo",',
     invariant: font,
   },
+  {
+    name: "undersized-flexible-panel-becomes-fixed",
+    file: "panels/layout/sizes.ts",
+    from: "      : c.fixed",
+    to: "      : c.min === c.max",
+    invariant: "flexible pixel minima above the viewport",
+  },
 ]
 const args = [
   "test",
   `${ui}controls/DropdownButton/density.test.tsx`,
   `${ui}controls/DragPad/number-font.test.tsx`,
+  `${ui}panels/layout/sizes.test.ts`,
 ]
 const baseline = spawnSync(process.execPath, args, { encoding: "utf8" })
 if (baseline.status !== 0) throw new Error(`Baseline failed:\n${baseline.stdout}${baseline.stderr}`)

@@ -28,8 +28,14 @@ export function CollapseDivider({
     orientation: "horizontal",
     start: () => expanded,
     move: (anchor, delta) => {
-      const free = { min: 0, max: expandedSize, collapsed: 0, collapsible: false }
-      const fixed = { min: expandedSize, max: expandedSize, collapsed: 0, collapsible: true }
+      const free = { min: 0, max: expandedSize, collapsed: 0, collapsible: false, fixed: false }
+      const fixed = {
+        min: expandedSize,
+        max: expandedSize,
+        collapsed: 0,
+        collapsible: true,
+        fixed: true,
+      }
       const sizes = computeLayout(anchor ? [0, expandedSize] : [expandedSize, 0], [free, fixed], {
         separator: 0,
         delta,
