@@ -79,6 +79,20 @@ const LAYERS = [
     forbidGlobals: true,
   },
   {
+    name: "project/sections",
+    match: /\/apps\/gpuix\/src\/project\/sections\//u,
+    // 面板经 adapters 使用工程能力,经 platform 的 TS 端口(帧、窗口激活、剪贴板、键盘、光标)使用原生能力;
+    // 不直接调原生二进制,不依赖组合根或旧 Web UI 包。
+    forbidPackages: [
+      /^react-dom(?:\/|$)/u,
+      /^zustand(?:\/|$)/u,
+      /^@zoeydaw\/native(?:\/|$)/u,
+      /^@zoeymind\/ui(?:\/|$)/u,
+    ],
+    forbidLayers: ["app"],
+    forbidGlobals: true,
+  },
+  {
     name: "ui",
     match: /\/apps\/gpuix\/src\/ui\//u,
     // 共享 UI 不认识工程,也不直接调原生二进制。
