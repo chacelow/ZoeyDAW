@@ -89,7 +89,10 @@ export function NumericPad({
     ...(defaultValue === undefined ? [] : [toText(defaultValue)]),
     ...widthSamples,
   ]
-  const measurement = useMeasuredTextWidth(samples, { fontSize, fontFamily: "Menlo" })
+  const measurement = useMeasuredTextWidth(samples, {
+    fontSize,
+    fontFamily: theme.design.typography.numberFontFamily,
+  })
   const width = Math.ceil(
     measurement.width +
       (hideIcon ? 0 : iconSize + iconGap) +
@@ -211,7 +214,7 @@ export function NumericPad({
             flexGrow: 1,
             minWidth: 0,
             fontSize,
-            fontFamily: "Menlo",
+            fontFamily: theme.design.typography.numberFontFamily,
             color: theme.colors.foreground,
             textAlign: "center",
             cursor: "text",
@@ -220,7 +223,11 @@ export function NumericPad({
       ) : (
         <text
           testId={testId ? `${testId}-value` : undefined}
-          style={{ fontSize, fontFamily: "Menlo", color: theme.colors.foreground }}
+          style={{
+            fontSize,
+            fontFamily: theme.design.typography.numberFontFamily,
+            color: theme.colors.foreground,
+          }}
         >
           {pad.display}
         </text>
