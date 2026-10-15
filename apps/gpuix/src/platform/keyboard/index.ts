@@ -5,6 +5,8 @@ export interface WindowKeyEvent {
   readonly key?: string
   readonly keyChar?: string
   readonly isHeld?: boolean
+  /** Native id shared by every element and window handler of one keystroke; correlates bubbling with the window phase. */
+  readonly keystrokeId?: number
   readonly modifiers?: {
     readonly shift: boolean
     readonly ctrl: boolean
