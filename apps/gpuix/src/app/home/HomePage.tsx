@@ -47,6 +47,7 @@ export function HomePage({ storage }: HomePageProps) {
         gap: gap * 3,
         width: "100%",
         maxWidth: theme.project.controlsWidth * 3,
+        alignSelf: "center",
         height: "100%",
         minHeight: 0,
         padding: gap * 4,

@@ -40,6 +40,7 @@ render(
   </WindowKeyboardProvider>,
   {
     title: "zoeydaw",
+    // Initial window size from src-tauri/tauri.conf.json (app.windows[0]).
     width: 1280,
     height: 800,
     titlebarTransparent: true,
