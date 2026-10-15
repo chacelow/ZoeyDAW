@@ -88,11 +88,7 @@ export function ListRow({
     >
       {leading ? <div style={{ flexShrink: 0 }}>{leading}</div> : null}
       <div style={{ flexGrow: 1, minWidth: 0 }}>{children ?? <text>{label}</text>}</div>
-      {trailing ? (
-        <div style={{ flexShrink: 0, marginLeft: metrics["--spacing-control-track-gap"] }}>
-          {trailing}
-        </div>
-      ) : null}
+      {trailing ? <div style={{ flexShrink: 0 }}>{trailing}</div> : null}
     </div>
   )
 }
