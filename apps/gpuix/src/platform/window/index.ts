@@ -1,5 +1,6 @@
 import type { CloseGuardRenderer } from "./close-guard"
 import { createNativeValueSubscription } from "./native-value-subscription"
+import type { NativeObserverRegistration } from "./native-value-subscription"
 
 /**
  * 窗口平台端口。这里**自己声明**需要的最小能力(结构类型),不 import `@gpuix/native`:
@@ -18,8 +19,8 @@ export type SystemAppearance = "light" | "dark"
 
 /** `@gpuix/native` 的 renderer 在结构上满足它;各方法在旧版本里可能缺失,所以都是可选。 */
 export interface WindowRenderer extends CloseGuardRenderer {
-  onWindowActiveChange?(callback: ((active: boolean) => void) | null): void
-  onWindowAppearanceChange?(callback: ((appearance: SystemAppearance) => void) | null): void
+  onWindowActiveChange?: NativeObserverRegistration<boolean>
+  onWindowAppearanceChange?: NativeObserverRegistration<SystemAppearance>
   setWindowTitle?(title: string): void
   minimizeWindow?(): void
   zoomWindow?(): void
