@@ -76,6 +76,7 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
     publish("default", false)
     if (!current) return
     if (current.epoch === context.getState().session.editEpoch) current.gesture.finish(cancelled)
+    context.scene.setTimeSelectionPreview(null)
   }
   function layer(pointer: LanePointer) {
     const mode = interactionLayer(

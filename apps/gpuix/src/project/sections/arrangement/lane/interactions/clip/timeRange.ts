@@ -36,14 +36,10 @@ export function createTimeRangeGesture(
       context.scene.setTimeSelectionPreview(selection)
     },
     finish(cancelled) {
-      if (cancelled) {
-        context.scene.setTimeSelectionPreview(null)
-        return
-      }
+      if (cancelled) return
       const committed = committedTimeRange(selection)
       context.actions.setTimeSelection(committed)
       context.actions.setInsertionPoint({ trackId, bar: selection.startBar })
-      context.scene.setTimeSelectionPreview(null)
     },
   }
 }

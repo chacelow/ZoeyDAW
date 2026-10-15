@@ -16,6 +16,13 @@ export const mutationCases: Record<string, MutationCase> = {
     from: "const visible = scene.timeSelectionPreview ?? committedTimeSelection",
     to: "const visible = committedTimeSelection",
   },
+  "range-preview-epoch-cleanup": {
+    file: "project/sections/arrangement/lane/interactions/controller.ts",
+    testFile: "src/project/sections/arrangement/lane/interactions/controller.test.tsx",
+    testName: "clears invalidated time-range preview",
+    from: "    context.scene.setTimeSelectionPreview(null)\n",
+    to: "",
+  },
   "collapsed-group-slot": {
     file: "project/sections/arrangement/tracks/Row/index.tsx",
     testFile: "src/project/sections/arrangement/tracks/Row/group-lane.test.tsx",
