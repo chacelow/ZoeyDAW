@@ -130,8 +130,6 @@ export function TrackRouting({ track }: { readonly track: Track }) {
                     flexGrow: 1,
                     flexBasis: 0,
                     minWidth: 0,
-                    paddingLeft: 0,
-                    paddingRight: 0,
                   }}
                 />
               ))}

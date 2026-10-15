@@ -173,3 +173,34 @@ test("stopped held peaks catch up on resume and release all frame demand after d
     useProjectState.setState({ session: previousSession })
   }
 })
+
+test("stopping playback preserves peak hold then gradually decays to floor", () => {
+  const previousSession = useProjectState.getState().session
+  useProjectState.setState({ session: { ...previousSession, playing: true } })
+  let telemetry = { ...frame({ audio: [3, 0] }), playing: true }
+  const view = mountMeter(() => telemetry)
+  const peakTop = () => view.root.renderer.findByTestId("track-meter-peak-left-audio")?.style.top
+  try {
+    view.advance(0)
+    expect(peakTop()).toBe(6)
+    telemetry = frame({ audio: [-120, -120] })
+    flushSync(() => {
+      useProjectState.setState({
+        session: { ...useProjectState.getState().session, playing: false },
+      })
+    })
+    view.advance(600)
+    expect(peakTop()).toBe(6)
+    expect(view.frames.subscribers).toBe(1)
+    view.advance(1600)
+    expect(peakTop()).toBe(54)
+    view.advance(2000)
+    expect(peakTop()).toBe(73)
+    view.advance(4000)
+    expect(peakTop()).toBeUndefined()
+    expect(view.frames.subscribers).toBe(0)
+  } finally {
+    view.close()
+    useProjectState.setState({ session: previousSession })
+  }
+})

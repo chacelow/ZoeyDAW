@@ -4,9 +4,9 @@
 
 本报告区分已运行的证据、共享依赖阻塞与未验证项，不把源码存在当作实际行为通过。轨道切片使用真实 C1 后端；本切片不实现 MIDI 乐器、插件 DSP、Clip 编辑器或工程文件系统。`demo.tsx` 的车道内容是只读组合槽，用于轨道几何验收，不冒充 clip-lane 切片。
 
-当前自有实现覆盖复合轨道、身份/路由/Mixer/菜单、分组框/围栏/折叠总览、步进高度、内部重排与真实遥测电平。F1 原生帧、激活和全选已接入，定时链与旧激活 singleton 已删除。A3b 的共享控件缺口仍独立列出；协调者要求保留失败回归，不允许切片自行绕过或放宽断言。
+当前实现覆盖复合轨道、身份/路由/Mixer/菜单、分组框/围栏/折叠总览、步进高度、内部重排与真实遥测电平。补验收基线为 `21dace3`；F2嵌套副键与F3恢复首帧已由共享能力及授权的 `meter/telemetry.tsx` 接通，不增加本地事件包装。
 
-阶段1为协调者明确批准的分段集成交付，不是最终验收或 `worker_done`。本阶段保存可合入实现、原始失败输出与现有证据；A3b第一增量合入后再补齐视觉与受影响回归，发送第二次 `merge_ready`。
+下文「阶段1」命令和截图是历史证据，不代表当前门禁。当前补验收结果见文末；A3b已合入，不再列为阻塞。
 
 ## 迁入清单
 
@@ -82,12 +82,12 @@
 | 首轮4个共享UI `EventPayload`→`KeyEvent`错误 | A3b第一增量已修，本分支合入后tsc退出0 |
 | 首轮platform/controls的10个失败 | A3b第一增量已修，本分支全套不再报告这些失败 |
 | tracks首轮8个几何失败：复合行宽1、折叠首行5、Send三列1、Group高度1 | 本切片必修，先前误归A3b。协调者实测定位为0.10 `readOuterBounds`重复补偿；测试helper已切原生bounds，8pass/87assert，不改断言 |
-| 嵌套标题副键点击打不开track菜单 | 阻塞：A3b第二增量；保持消费者回归，不造本地事件包装 |
+| 嵌套标题副键点击打不开track菜单 | 历史失败已由F2共享原生事件修复；补验收原生回归通过，旧mouseDown变异失败1项 |
 | 首轮5个5000ms超时：F2、Group拖动、focused-level Space、name Space、Tab | 后续完整运行不再报告超时；未提高timeout、跳过或放宽断言，未推断根因 |
 | focused-level Space及Solo Enter祖先菜单断言 | A3b第一增量后当前消费者路径已通过；不扩大为全部共享键盘策略已验证 |
 | 全套2个todo | 既存于`project/model/grid.test.ts:66`和`ui/controls/DragPad/DragPadNumber.test.tsx:146`；本切片没有新增/跳过测试 |
 
-最终阶段1输出为 `evidence/2026-10-15-first-increment-full-test.txt`。首轮输出保存在 `stage1-bun-test.txt`，native-bounds中间门禁为 `native-bounds-full-test.txt`，Rust输出为 `stage1-cargo.txt`。当前仍有共享嵌套右键失败，且缺逐状态视觉，不能称最终验收通过。
+阶段1历史输出为 `evidence/2026-10-15-first-increment-full-test.txt`；首轮输出保留在 `stage1-bun-test.txt`，中间门禁在 `native-bounds-full-test.txt`，Rust输出在 `stage1-cargo.txt`。当前结果以文末补验收为准。
 
 ### 变异检查
 
@@ -126,39 +126,39 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 
 ## 与 Live 对比表
 
-只读观察 `Live`，未由本 worker 发送点击/拖动/按键、未激活 Live。当前窗口1920×918，capture从1920×918缩至1280×612。表内为原始 AX 单位，不自行换算点/像素。协调者完整标题列99 + 路由/Mixer193 =292；worker outline row95未含4个外围单位，原始记录见 `live-geometry.json`。本项目100+74+130=304，约宽4%，不扩大共享宽度。
+历史观察窗口1920×918，完整标题列99 + 路由/Mixer193 =292 AX单位（`live-geometry.json`）。本轮在协调者批准的UTC时段只读观察已运行Live，未点击/输入/激活：当前窗口1463×1049，截图缩至1250×896，路径 `/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/omp-computer-15a75264ba1dfdad.png`。当前AX与bounds在 `/tmp/zoeydaw-tracks-followup/live-current.ax.txt`、`live-bounds.json`；原始AX单位不换算为截图像素。窗口/显示器变化，旧292宽与新值不作直接百分比结论。
 
 | 产品规则 | Live 事实/证据 | 本实现与结论 |
 | --- | --- | --- |
 | 复合行的区域顺序与密度 | `live-current-zoom.png`：车道左，颜色标题、路由、Mixer右；完整宽292 AX | 同顺序，304共享单位；原始布局截图已观察；当前角色颜色仍需新图 |
 | 轨道/操作条高亮独立 | 本 worker 未在 Live 输入验证 | 自有 selection surface 原生回归通过；Live 一致性未验证 |
 | resize步进、折叠阈值、光标 | Live 未执行拖动 | 复用共享布局步长，native回归；Live交互未验证 |
-| 展开 Audio 内容 | Live AX 输入/通道/监听/输出/激活/Solo/arm/volume/pan/send | 已迁移容量规则；源表/原生行为回归；逐状态视觉未完整验证 |
-| MIDI音量/Pan | Live 空 MIDI AX 无这两项 | 按协调者产品决定保留；明确差异，非已接通乐器声明 |
-| Group展开/折叠内容 | Live Group AX输出、开关、Solo、音量/Pan/send，无arm | 预留不可交互arm槽，真实后代总览；折叠Live未输入验证 |
-| Return/Main内容 | Live当前zoom：Return A/S/Post；Main独立两输出/两级别/Pan，无arm/Solo | 实现同类规则；全部折叠状态Live未验证 |
-| 表头独立padding与数值列 | Live routing69×14/15，enable46×15，Solo/arm22×15，volume/pan46×14，send31×14 | token高度13、gap4、routing区域74；共享fill/hideIcon仍待A3b，不宣称无裁切 |
-| Send横向三列再换行 | Live只观察一条Send宽31 | native三列容量/守恒断言存在，Shared bounds迁移未过；Live多Send换行未验证 |
+| 展开 Audio 内容 | 本轮AX e1540–e1554：输入/通道/监听/输出/激活/Solo/arm/volume/pan/send | 原生窗口e62–e101与相同可见内容一致；系统逐状态视觉未完整验证 |
+| MIDI音量/Pan | 本轮AX e1555–e1566仍无音量/Pan（No Output） | 按协调者产品决定保留；明确差异，非已接通乐器声明 |
+| Group展开/折叠内容 | 历史Group输出/开关/Solo/音量/Pan/send无arm；本轮sidechain折叠，未操作 | 预留不可交互arm槽；折叠手势/完整展开对照未验证（禁止Live输入） |
+| Return/Main内容 | 本轮AX e1567–e1581：Return开关/Solo/Post；Main两输出/音量/Cue/Pan，无arm/Solo；截图两行当前折叠 | 同类控件规则一致；全部折叠/展开状态未验证（未操作Live） |
+| 表头独立padding与数值列 | 本轮Live routing72×15、enable48×15、Solo/arm23×15、volume/pan48×15（live-bounds.json） | 我们高度13、routing66、enable47、Solo26、arm24；同量级但非完全相同，不宣称像素一致 |
+| Send横向三列再换行 | 本轮Live只观察一条Send32×15 | 我们真实AX三列32/33/32×13、gap4，第四个换行；原生容量/守恒通过；Live多Send未验证 |
 | 电平0dB/声道切口、渐变与峰值 | 提供的Live帧未出现可采样输出条，仅输入指示器 | 使用共享角色和B1峰值；真实AX信号已证明；Live色值/线宽/hold视觉未验证 |
 | 组框连通、围栏在上、分隔不截断 | Live当前zoom可见组色条；未观察所有折叠/嵌套状态 | 复合行唯一边框、active ancestry框、rails最后画；原生边界回归；Live全部状态未验证 |
 | 作者颜色与填充 | Live标题及填充同一作者色 | canonical token + shared contentFill，切主题原生回归通过 |
 | 折叠Audio标题fade | Web/B1证据定位为Clip标题；协调者已确认lane绘制 | 删除Identity额外装饰；Clip fade归lane，非本切片虚构遮罩 |
-| Space仅播放、Tab与焦点 | Live未按键取证 | owned input/Tab/Enter通过；共享Space策略尚待A3b，不称一致 |
-| wheel、隐藏/恢复光标、弹层调整 | Live未输入验证 | 真实backend按钮路径已操作；native组件事务测试通过；本轮完整系统拖动/hover证据待取 |
+| Space仅播放、Tab与焦点 | Live未按键取证 | 当前原生消费者input/Tab/Enter/Space回归通过；Live交互一致性未验证（禁止输入） |
+| wheel、隐藏/恢复光标、弹层调整 | Live未输入验证 | native事务/取消回归通过；系统drag/wheel/focus未验证（黑图且不接管前台）；嵌套标题右键菜单已实际打开 |
 | 分割条/侧栏/Header溢出 | 不属于本轨道切片 | 依赖panels/timeline/app-shell；未擅自实现另一套 |
 
 ## UI规范第13节证据矩阵
 
 | 检查 | 当前证据和限制 |
 | --- | --- |
-| 每控件每状态放大图 | 四主题语言、Solo、Group已有图；菜单/编辑/hover/pressed/focus逐控件证据：阻塞：A3b，未验证 |
-| 同类间距统一token | 源统一gap4、control13、区域padding4；最终逐控件AX bounds：阻塞：A3b，未验证 |
-| 数值/文字/图标居中 | 历史zoom已有；新Select fill/hideIcon已消费，实际居中/裁切仍待新图，NumericPad内宽属A3b第二增量；未验证 |
-| 同组等高、图标方形 | fold/palette按13×13，record遵循Mixer扩展；最终bounds：阻塞：A3b，未验证 |
+| 每控件每状态放大图 | 按新版第13节采用少量组合overview，不批量逐按钮截图；当前补验收见文末 |
+| 同类间距统一token | 源统一共享control/project度量；当前组合bounds与限制见文末 |
+| 数值/文字/图标居中 | Select fill/hideIcon与NumericPad共享实现已入主干；当前组合截图见文末 |
+| 同组等高、图标方形 | fold/palette取共享尺寸，record随Mixer扩展；当前组合bounds见文末 |
 | Live同区域紧凑感 | `2026-10-15-native-live-side-by-side.png`；raw AX292 vs304，约宽4%；不把截图缩放像素误当原始单位 |
-| 深/浅与中/英 | A3b前四组合各有真实图/zoom/AX；后三者Solo保持on；新consumer四组合待重新取证，未验证 |
+| 深/浅与中/英 | 当前四种组合离屏完整截图已生成；真实窗口Light切换AX验证通过；系统窗口截图全黑，不把离屏图扩大为系统呈现已通过 |
 | Tab/焦点环/Space | 当前原生消费者回归通过且无超时；系统焦点环/Space逐状态取证未完成，不扩大为共享全路径通过 |
-| drag/wheel/popup | 早期事务/取消/self-send通过；菜单/编辑/系统拖动/滚轮及最终bounds：阻塞：A3b，未验证 |
+| drag/wheel/popup | 共享能力已合入；原生消费者回归通过，系统输入取证及限制见文末 |
 | 可见裁剪性能 | 当前主干已实跑，见“当前原生裁剪与帧统计”及原始JSON；卸载后节点归零断言通过 |
 
 ## 自审结果与分类
@@ -199,10 +199,10 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 
 ## 未实现/未验证事项
 
-- 4036109的数值fill/bipolar/滚轮隔离消费者回归已通过；剩余**F2嵌套右键、F3后台帧及停后peak/完整逐状态视觉未完成**。临时demo诊断已按协调者裁决删除，不作为现存功能或继续取证入口。
-- F1 已接原生帧和激活，NameInput已opt-in `selectAllOnFocus`。真实四主题语言窗口能启动；默认生产帧路径meter6例40断言，F2自动全选/输入Space/Tab三例8断言通过。真实播放停后peak视觉尚未补齐，不把旧timer阶段AX扩大到新路径。
-- 旧四主题语言与Solo/Group图不覆盖H2及最新consumer；G1时段已有真实WAV信号清晰图和还原锚点0pt读回。停后peak、完整逐控件状态及后台帧问题仍未验证完。
-- 类型与既有门禁结果按各自基线记录；嵌套右键仍保留失败。后台key/main、遮挡和callback计数未采，不能宣称已定位失活或遮挡根因。
+- F2嵌套副键已通过现存消费者行为回归；内存恢复旧mouseDown/button判断后失败1项，没有修改共享文件。
+- F3已通过授权的 `meter/telemetry.tsx` 消费 `useResumeFrame` 并 `flushSync`；首帧最新值及停止后恢复释放frame demand回归通过，禁用恢复advance变异失败1项。
+- 停止后peak回归覆盖600ms保持、1600/2000ms逐渐下降、4000ms到地板且释放帧订阅；将订阅错误限定为playing变异失败1项。
+- 需要新Live操作的条目均为「未验证（Live未运行）」；按协调者指示不启动、不操作Live。当前系统输入证据与限制见文末，不把离屏测试扩大为系统输入验证。
 
 ## 错题与已验证做法（LESSONS格式）
 
@@ -273,3 +273,68 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 协调者已要求：以后需要前台时提前ask，不在时段内申请交互式control.acquire。停后peak留到下次；本批只交部分证据，不发送第二次最终merge_ready或worker_done。
 
 后续`computer.control.state()`为`active:false`。进程检查只剩其他切片的`88423 10:13 bun --hot src/project/sections/clip-edit/demo/index.tsx`，未停止它，不声称全机零匹配。自己的tracks service已退出；原始清理输出见`evidence/2026-10-15-g1-slot-cleanup.txt`。
+
+## 2026-10-15 F2/F3/A3b补验收
+
+基线 `21dace3`，没有重写已合入实现。删除 Identity Button、Mixer/Monitor Toggle、NameInput 的局部 padding/border/radius 覆盖，让共享 chrome/Input 与 `theme.design` 拥有外观；保留列宽、轨道色和布局。新停止回归走生产 provider/hook/driver 和已有确定性 frame source，不增加时钟或第二份工程数据。
+
+### 当前门禁
+
+| 命令（除注明外在apps/gpuix） | 实际结果 |
+| --- | --- |
+| 根目录初始化：build.sh → frozen install → native:build → check.mjs --resolution | 全部成功，十一补丁 verified，未新增依赖 |
+| `pnpm exec tsc --noEmit && bun test`（最终） | 退出0；1147 pass、1既有todo、0 fail，1104186 assertions，176 files，40.05s |
+| `bun test src/project/sections/arrangement/tracks` | 49 pass、0 fail、264 assertions；后续一次short trager超时5000ms，定向重跑1pass/7assert且最终全套通过，未放宽timeout |
+| `bun test src/project/sections/arrangement/tracks/meter` | 9 pass、0 fail、57 assertions |
+| 根目录 `cargo check --workspace && cargo test --workspace` | 退出0；51 pass/4 suites；既有非根profile警告 |
+| `bun src/project/sections/arrangement/tracks/verification/appearance-smoke.tsx` | 四种主题语言组合截图；每次卸载retained tree为0 |
+
+### 可重跑变异
+
+在apps/gpuix运行 `TRACKS_MUTATION=<id> bun test --preload ./src/project/sections/arrangement/tracks/verification/mutation-preload.ts <test> -t '<name>'`。preload只修改内存中的onLoad源码，检查替换唯一性，不写共享文件；`git status --short apps/gpuix/src/ui/controls/Menu/trigger.tsx`为空。
+
+| id | test与name | 实测失败数 |
+| --- | --- | --: |
+| context-mousedown | tracks/Row/interaction.test.tsx；secondary click | 1：嵌套标题菜单未打开，选色目标不存在 |
+| stop-freezes-peak | tracks/meter/TrackMeter.test.tsx；stopping playback preserves | 1：停止后帧订阅0而非1，无法继续衰减 |
+| resume-stale | tracks/meter/TrackMeter.test.tsx；first resume commits | 1：首个恢复帧仍floor而非最新−38/−41dB |
+
+表中test路径前缀均为 `src/project/sections/arrangement/`。正常实现的对应回归全部通过；没有保留失败标记。
+
+### UI第13节当前证据
+
+协调者批准桌面时段14:55:30–15:05:30 UTC；所有输入只在自启窗口，无acquire/takeover。AX与生成图在 `/tmp/zoeydaw-tracks-followup/`。真实窗口截图 `/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/omp-computer-15a75185751dfdab.png` 全黑，不能作为视觉通过证据。协调者已明确接受以下边界，系统视觉与输入缺口归收尾串行整体验收。
+
+| 第13节检查 | 本轮证据／限制 |
+| --- | --- |
+| Gallery与业务整体布局 | `dark-en-US.png`、`dark-zh-CN.png`、`light-en-US.png`、`light-zh-CN.png`为完整TrackRows组合离屏图，不是逐按钮截图；lane为只读文字槽，不冒充clip-lane接通 |
+| 跨区域对齐与居中 | native-bounds.json真实AX：fold13×13；title68×13；routing66×13；volume48×13、pan53×13。离屏overview检查文字/数值居中；系统呈现全黑，仍未验证 |
+| 间距与内边距 | 真实AX monitor横向gap4，路由纵向gap4，Send列gap4；共享control/project度量，不加实例补偿 |
+| 统一设计入口 | 删除四处组件族局部零padding/border/radius；改用共享Button/Toggle/Input已有chrome，圆角/边框来自theme.design；无共享文件改动 |
+| 尺寸与紧凑感 | native-bounds.json：同组高13，fold13×13，Send三列32/33/32；Live本轮高15、send32，紧凑同量级，非像素一致 |
+| 深浅主题与中英文 | 四种组合离屏图已重新生成；真实Light AX press后变为Dark标签，主题切换实际发生；系统主题视觉未验证（全黑） |
+| 状态与键盘 | 实际Solo AX press off→on；现存原生Tab/Space/Enter/编辑/disabled/取消回归通过；系统focus/hover/pressed未验证（不接管前台） |
+| 拖动/滚轮/弹层/性能 | 嵌套标题AX右键实际打开Rename/颜色菜单，menu.ax.txt；系统drag/wheel未验证（黑图、不接管前台），原生事务回归通过；本轮未重复性能采样，历史数据不扩大为当前性能结论 |
+
+低音量播放尝试前AX确认Main−36dB，但 `computer.run` 10秒超时，未得到播放/停止返回证据，立刻kill服务；不宣称真实播放或停后peak截图通过。停止peak由确定性生产hook回归证明：600ms保持、1600/2000ms逐渐下降、4000ms到地板并释放订阅。Live本轮只读截图/AX补齐可观察内容，手势、播放峰值及多Send行为仍未验证，未操作用户工程。
+
+### 补验收自审结果
+
+| 发现 | 类别 | 处置/证据 |
+| --- | --- | --- |
+| F2/F3已由主干修复，旧报告仍称阻塞 | 必修 | 删除过时阻塞与保留失败描述；复用共享事件/useResumeFrame，3个内存变异各失败1项 |
+| 停止后平滑下降缺显式状态转换回归 | 必修 | 新增停止行为回归，包含hold/中间位置/floor/释放；playing限定变异失败 |
+| 业务控件局部外观覆盖 | 必修 | Identity/Mixer/Monitor/NameInput恢复共享chrome/Input；消费者回归与当前组合图 |
+| 窗口黑图及播放run超时 | 汇报仲裁→已接受证据边界 | 协调者批准离屏四组合+原生回归交付；系统drag/wheel/focus/播放停止/peak窗口图继续未验证 |
+| 独立TracksFollowupReview两轴 | 记录 | 对照gpuix代码质量底线及Spec，已审新增回归、preload、appearance入口及Identity/Mixer delta，0必修/0仲裁；不把静态审查称运行验证 |
+
+### 错题
+
+- 错：将黑色系统截图当成界面视觉通过，或把一次10秒超时当成播放/停止成功。
+- 对：AX证明语义/量值，离屏图证明可重复组合绘制；系统呈现与输入限制单独汇报仲裁，超时即停止自有service，不升级前台。
+- 证：真实Light/Solo/菜单AX与黑图并存；协调者接受明确未验证边界。
+
+### 已验证做法
+
+- 用Bun onLoad做共享源码内存变异：不写共享文件，目标漂移直接失败，消费者行为测试验证真实缺陷。
+- 停止回归不要只看最终floor：先检查hold，再检查两个下降中间态，最后检查frame demand释放；冻结与瞬时归零都能被捕获。

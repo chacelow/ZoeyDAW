@@ -43,9 +43,6 @@ export function TrackNameInput({
       style={{
         flexGrow: 1,
         backgroundColor: "transparent",
-        paddingLeft: 0,
-        paddingRight: 0,
-        borderWidth: 0,
         fontSize: theme.control["--text-control-track"],
         color: theme.colors.arrangementClipInk,
       }}
