@@ -271,6 +271,13 @@ const mutations = [
     to: "setSelected(selectVisibleNotes(notes, view.window), null)",
     tests: ["src/project/sections/clip-edit/midi/keyboard-reachability.test.tsx"],
   },
+  {
+    name: "native note stroke metadata is omitted",
+    file: "src/project/sections/clip-edit/midi/QuadPaint.tsx",
+    from: "strokeWidth={strokeWidth}",
+    to: "strokeWidth={0}",
+    tests: ["src/project/sections/clip-edit/midi/QuadPaint.test.tsx"],
+  },
 ]
 
 const extra = process.argv.slice(2)
