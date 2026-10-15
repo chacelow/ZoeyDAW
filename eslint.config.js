@@ -239,7 +239,9 @@ export default [
     },
   },
   {
-    files: ["scripts/gpuix-main/context-menu/**/*.test.tsx"],
+    // Renderer probes and regressions under scripts/gpuix-main/<slice>/ run against the app's
+    // dependency tree (react, @gpuix/*), resolved through a node_modules link to apps/gpuix.
+    files: ["scripts/gpuix-main/*/**/*.{ts,tsx}"],
     rules: {
       "import-x/no-extraneous-dependencies": [
         "error",
@@ -247,6 +249,10 @@ export default [
           devDependencies: true,
           packageDir: [import.meta.dirname, `${import.meta.dirname}/apps/gpuix`],
         },
+      ],
+      "n/no-extraneous-import": [
+        "error",
+        { allowModules: ["react", "@gpuix/react", "@gpuix/native"] },
       ],
     },
   },

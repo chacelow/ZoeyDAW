@@ -65,7 +65,8 @@ for (const file of code) {
   if (/\bas any\b|: any\b|<any>/.test(text)) add("any", file, "avoid any: type the boundary")
   if (
     /\bmock\w*\(|createMock|simulat/i.test(text) &&
-    !/backend\/mock|test-setup|fixtures/.test(file)
+    // verification/ entry points drive the real app with nativeSimulate; they are not product code.
+    !/backend\/mock|test-setup|fixtures|\/verification\//.test(file)
   ) {
     add(
       "mock-in-product-code",
