@@ -1,6 +1,6 @@
 # zoeydaw
 
-DAW，正在从 Web + Tauri 重构为 gpuix 原生应用：`apps/gpuix`（React 逻辑 + gpuix 原生元素）与 `crates/native`、`crates/engine`（Rust napi 与真实引擎）。`apps/web`、`packages/**`、`src-tauri` 只作迁移参考，迁移完成后删除，新工作不往里加。产品范围与长期清单见 [产品范围](docs/product-prototype.md)。包名与版本以各 `package.json` 为准。
+DAW，使用 gpuix 原生应用：`apps/gpuix`（React 逻辑 + gpuix 原生元素）与 `crates/native`、`crates/engine`（Rust napi 与真实引擎）。旧 Web/Tauri 应用及共享 packages 已删除；主题度量、i18n 与日志由 gpuix 应用内模块持有。产品范围与长期清单见 [产品范围](docs/product-prototype.md)。包名与版本以各 `package.json` 为准。
 
 ## 开工与必读路由
 
@@ -8,7 +8,7 @@ DAW，正在从 Web + Tauri 重构为 gpuix 原生应用：`apps/gpuix`（React 
 
 | 修改范围 | 动手前必读 |
 | --- | --- |
-| `apps/gpuix`、`crates/*` 的任何改动（gpuix 原生重构，取代 web 与 Tauri） | [gpuix 架构与切片契约](docs/architecture/gpuix.md) |
+| `apps/gpuix`、`crates/*` 的任何改动 | [gpuix 架构与切片契约](docs/architecture/gpuix.md) |
 | 可见界面：控件、面板、间距、居中、尺寸、紧凑感、颜色、状态、拖动、弹层、键盘焦点 | [gpuix UI 规范](docs/architecture/gpuix-ui-standards.md)，交付按其第 13 节逐条给证据 |
 | 自动化或验收要找入口、路由、环境开关、`testId` | [gpuix UI 地图](docs/architecture/gpuix-ui-map.md)（脚本生成，不要手改） |
 | Arrangement 的 `tracks`、`lane`、`timeline`、`core` 之间的接口与键盘 owner | [Arrangement 组合契约](docs/architecture/gpuix-arrangement-composition.md) |
@@ -19,19 +19,18 @@ DAW，正在从 Web + Tauri 重构为 gpuix 原生应用：`apps/gpuix`（React 
 | 新模块、多文件修改、状态/目录/依赖调整 | [modules](docs/architecture/modules.md) |
 | 工程数据、编辑事务、保存或后端接口 | `apps/gpuix/src/project/stores/README.md` 与 `apps/gpuix/src/project/adapters/README.md` |
 | 产品范围、长期功能清单、Rust/插件/文件格式方向 | [产品范围](docs/product-prototype.md) |
-| 只读参考旧 Web/Tauri 实现时 | [project-panels](docs/architecture/project-panels.md)、`apps/web/src/**`（不修改） |
 
 ## 不可破的边界
 
-- **Never**：提交 secrets/token/API key；停止用户自己启动的应用或服务（包括 `tauri:dev`）。
-- **Always**：复用共享 UI 包及其 token；跨文件重命名用 LSP；保留其他 Session/Agent 的未提交与暂存工作。
+- **Never**：提交 secrets/token/API key；停止用户自己启动的应用或服务。
+- **Always**：复用 `apps/gpuix/src/ui` 的公共组件与 `shared/theme` 的 token；跨文件重命名用 LSP；保留其他 Session/Agent 的未提交与暂存工作。
 - **决策默认归 Agent**（2026-10-15 用户原话：“你不是作为转发的，你是作为决策性 approve 和 review 的，只有重大事件再向我汇报”）。问用户只限下面这张封闭清单，清单外的一切（包括没想到的新情况、规则没写到的灰色地带）都由协调者自己判断、执行，在汇报里写明理由：
   - 不可撤回或影响外部：push/PR/发布、删除用户自己的文件或数据、改系统设置、改 Live 工程内容。
   - 改变方向：偏离产品规则或交互语义、推翻已定架构。
   - 新增 npm/Rust 依赖、`.github/workflows/`。
   - Agent 物理上做不到、必须用户本人操作的事（如账号登录）；汇报里说明为什么做不到。
 - 拿不准时按三问自己判：能不能撤回？会不会动到用户的数据或外部？是不是改方向？三个都是否就直接做。规则之间冲突或没覆盖到，选更保守、可撤回的做法，事后把判断补进规则，不停下来等用户。worker 卡在工具或权限上，先查以前切片的做法给出路线。细则见 [协调方式](docs/agents/coordination.md)。
-- gpuix 的验证窗口由 Agent 自己用 `bun --hot` 启动，验证完立即关闭；Rust 改动重跑 `pnpm native:build` 后重启自己的窗口，不再提示用户重启 `tauri:dev`。
+- gpuix 的验证窗口由 Agent 自己用 `bun --hot` 启动，验证完立即关闭；Rust 改动重跑 `pnpm native:build` 后重启自己的窗口，不要求用户重启其服务。
 - 提交授权：`gpuix-migration` 及其切片分支的本地提交已由用户授权（2026-10-14 12:40 UTC，撤销逐次“我确认”）；`main` 与其它分支仍须用户在本次提交上下文说 **“我确认”**。细节见 setup。
 
 ## 设计与完成门槛

@@ -2,9 +2,9 @@
 
 ## 当前范围
 
-zoeydaw 是 DAW，正在从 Web + Tauri 重构为 gpuix 原生应用（2026-10-14 起）。React 写交互逻辑，gpuix 原生元素渲染，Rust（`crates/native`、`crates/engine`）提供原生能力与真实音频引擎。架构与验收见 [gpuix 架构](architecture/gpuix.md)。
+zoeydaw 是 gpuix 原生 DAW。React 写交互逻辑，gpuix 原生元素渲染，Rust（`crates/native`、`crates/engine`）提供原生能力与真实音频引擎。架构与验收见 [gpuix 架构](architecture/gpuix.md)。
 
-本轮迁移的目标是把现有 Web 版**一模一样**地重构到 gpuix（行为、状态、键盘、样式、产品规则等价），接真实后端而不是 mock（用户 2026-10-14 13:21 UTC：Mock 到后面还要改一遍，不如直接用真实的），完成后删除 `apps/web`、`packages/**`、`src-tauri`。
+旧 Web/Tauri 应用及共享 packages 已删除。保留迁移时确定的行为、状态、键盘、样式与产品规则，使用真实后端而不是 mock（用户 2026-10-14 13:21 UTC：Mock 到后面还要改一遍，不如直接用真实的）。删除旧实现不扩大功能范围，也不表示长期清单已全部实现。
 
 一个窗口同时持有一个项目视图；不恢复旧思维导图的多 Tab、Portal 或故障隔离架构。
 

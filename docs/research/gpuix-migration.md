@@ -2,6 +2,8 @@
 
 调研日期：2026-10-14。用户选择 `gpuix`，本轮只做替代方案调研。允许考虑最新主干、预发布和社区源码，不以成熟度作为否决条件。
 
+历史范围：本文保留迁移前的选型判断，不是当前功能状态。旧 Web/Tauri 实现及共享 packages 已删除；当前原生职责与实际能力以 [gpuix 架构](../architecture/gpuix.md)、[工程 adapter](../../apps/gpuix/src/project/adapters/README.md) 为准。
+
 ## 结论
 
 普通控件、图标、样式和部分动画有可复用方案，不需要把整个组件库从零手写。

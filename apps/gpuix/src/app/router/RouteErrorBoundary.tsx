@@ -1,5 +1,5 @@
 import { Component, Fragment } from "react"
-import { logger } from "@zoeymind/logger"
+import { logger } from "@/platform/log/logger"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { LoadErrorScreen } from "@/ui/controls"
 import { useAppTranslation } from "../i18n"

@@ -2,6 +2,8 @@
 
 调研日期：2026-10-14。目标固定为 `remorses/gpuix`，不改为 gpui-shell。本文只研究渲染与交互底层，控件清单和打包方案由其他报告负责。
 
+历史范围：本文保留调研当日的取样与判断；本仓库的 `apps/web`、`packages/**`、`src-tauri` 已删除，下文这些路径仅用于定位历史证据，不是当前开发入口。外部 gpuix 仓库中的 `packages/*` 不属于此次删除范围。
+
 ## 用户纠偏：Canvas 不是需求，是 Web 卡顿的权宜解法
 
 用户明确说明：当前产品用 Canvas 2D 画时间线，原因是 Web 版本太卡，不是产品必须保留 Canvas API。这改变了本报告的默认方向。下文的绘图缺口分析仍然成立，但不再把“让 gpuix 支持等价 Canvas2D”当作首选目标。
@@ -45,7 +47,7 @@ gpuix 官方自带的时间线示例正好处理同类场景：拖动 Clip、边
 | `.../canvas/TrackMeter.tsx:34-118` 与 `.../canvas/painters/meter.ts:51-123` | telemetry revision 驱动，峰值保持/衰减有时钟，三段 stop 的渐变，独立 painter | 当前 telemetry 是原型数据；迁移绘图不等于接通音频引擎；峰值衰减期间即使 revision 不变仍需刷新 |
 | `.../canvas/scene.ts:13-78` | `ArrangementScene` 具有 viewport、revision、只读工程投影与交互预览 | SceneStore 继续是唯一绘制输入 owner；不得让 Rust painter、React 和撤销各持有可写工程副本 |
 
-上表省略号均以 `apps/web/src/pages/project/sections/ArrangementPanel` 为前缀。源文件可从[只读产品目录](file:///Volumes/PSSD/code/zoeydaw/)核对。
+上表省略号均以 `apps/web/src/pages/project/sections/ArrangementPanel` 为前缀。取样目录为 `file:///Volumes/PSSD/code/zoeydaw/`；其中旧产品源文件已删除，保留路径用于辨识当时的读取位置，不再提供活动链接。
 
 ## gpuix 版本与源码边界
 
@@ -103,7 +105,7 @@ gpuix 官方自带的时间线示例正好处理同类场景：拖动 Clip、边
 ```ts
 // native-only Canvas2D backend。浏览器不能 import 此 Node-API 包。
 const canvas = createCanvas(width, height)
-const ctx = canvas.getContext('2d')
+const ctx = canvas.getContext("2d")
 paintScene(ctx, scene, tokens)
 const image = ctx.getImageData(0, 0, width, height)
 const bytes = Buffer.from(image.data.buffer, image.data.byteOffset, image.data.byteLength)

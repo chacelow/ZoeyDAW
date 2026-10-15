@@ -37,6 +37,15 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
       `${src}/project/model/grid.ts`,
       'import type { Clip } from "./types"; void (0 as unknown as Clip)'
     ),
+    // Pure layout reads shared metrics without gaining access to theme hooks or colours.
+    fixture(
+      `${src}/project/layout/track.ts`,
+      'import { CONTROL_METRICS } from "@/shared/theme/metrics"; void CONTROL_METRICS'
+    ),
+    fixture(
+      `${src}/project/layout/track.ts`,
+      'import { PROJECT_METRICS } from "../../shared/theme/metrics/config"; void PROJECT_METRICS'
+    ),
     // stores 可用 zustand 与 react;adapters 可用 stores 与 platform 接口。
     fixture(
       `${src}/project/stores/useProjectState.ts`,
@@ -86,6 +95,36 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
     fixture(`${src}/project/model/grid.ts`, 'import { sx } from "@/ui/controls"; void sx', [
       { messageId: "forbiddenLayer" },
     ]),
+    fixture(
+      `${src}/project/layout/track.ts`,
+      'import { useTheme } from "@/shared/theme"; void useTheme',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/project/layout/track.ts`,
+      'export { colors } from "../../shared/theme/colors"',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/project/layout/track.ts`,
+      'const theme = import("@/shared/theme/metrics/../ThemeProvider"); void theme',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/project/layout/track.ts`,
+      'import { theme } from "@/shared/theme/metrics-extra"; void theme',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/project/model/track.ts`,
+      'import { CONTROL_METRICS } from "@/shared/theme/metrics"; void CONTROL_METRICS',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(
+      `${src}/project/stores/track.ts`,
+      'import { PROJECT_METRICS } from "@/shared/theme/metrics"; void PROJECT_METRICS',
+      [{ messageId: "forbiddenLayer" }]
+    ),
 
     fixture(`${src}/project/model/clip.ts`, 'import { useState } from "react"; void useState', [
       { messageId: "forbiddenPackage" },

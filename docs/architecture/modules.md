@@ -43,9 +43,9 @@ someModule/
 | 职责 | 负责 | 不负责 |
 | --- | --- | --- |
 | UI | 呈现、展示格式、事件转发、局部界面状态 | 工程规则、撤销历史、后端队列、绕过公开接口操作业务 Store |
-| 局部 hook/UI controller | 生命周期、DOM 输入与捕获、交互资源清理 | 把全部业务原样搬进一个大 hook |
+| 局部 hook/UI controller | 生命周期、原生输入与捕获、交互资源清理 | 把全部业务原样搬进一个大 hook |
 | 业务 Store/runtime | 权威状态、状态转换、事务、命令协调、资源生命周期 | JSX、具体 DOM 节点、CSS 操作和组件实例 |
-| 纯函数/model | 显式输入输出、计算、投影、约束、reducer | React、Zustand、DOM、Tauri、隐式可变全局状态 |
+| 纯函数/model | 显式输入输出、计算、投影、约束、reducer | React、Zustand、平台调用、隐式可变全局状态 |
 | 外部 adapter | IPC、文件和第三方能力适配，外部输入校验与错误转换 | 具体 UI、第二份权威工程状态 |
 
 UI 与 hook 通过公开 selector 和命令访问业务状态；业务 runtime 通过接口使用外部 adapter。通用层不反向依赖具体页面。应用组合层可以将功能数据适配为通用组件的 props；通用组件本身不读取功能私有 Store。
@@ -60,7 +60,7 @@ UI 与 hook 通过公开 selector 和命令访问业务状态；业务 runtime �
 | 单功能筛选、导航与编辑交互 | 功能目录；确需共享时由共同上层、功能 Provider 或 Store 拥有 |
 | 工程、撤销、播放与后端同步 | 现有 project Store/runtime，通过 adapter 公开接口访问 |
 | 跨页面设置和通用控件环境 | 应用共享层，不由某个页面私有 Store 充当全局来源 |
-| 不认识业务的 UI 交互 | 共享 UI 包，通过 props/context 接收应用能力 |
+| 不认识业务的 UI 交互 | `apps/gpuix/src/ui`，通过 props/context 接收应用能力 |
 | 无副作用的计算与规则 | 所属功能 model；相同语义的跨功能消费者确实出现后再提升 |
 
 函数复用计算，controller 复用有生命周期的行为，hook 适配 React。调用同一个 hook 多次不等于共享状态。可派生结果直接计算，不维护第二份需要同步的 Store。
@@ -79,6 +79,6 @@ UI 与 hook 通过公开 selector 和命令访问业务状态；业务 runtime �
 
 可机械检查的跨层导入、公共入口和 token 使用通过已有 lint、类型或行为测试落实。交付时区分自动检查和仍需人工判断的部分；文档中的硬规则不等于 CI 已覆盖全部设计判断。
 
-- 工程数据和运行时：[stores](../../apps/web/src/pages/project/stores/README.md)、[adapters](../../apps/web/src/pages/project/adapters/README.md)。
+- 工程数据和运行时：[stores](../../apps/gpuix/src/project/stores/README.md)、[adapters](../../apps/gpuix/src/project/adapters/README.md)。
 - 外观、共享控件与 Panel：[项目面板与共享外观](project-panels.md)。
 - 操作与运行：[开发环境与操作边界](../agents/setup.md)。

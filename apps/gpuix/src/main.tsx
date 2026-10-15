@@ -5,8 +5,8 @@
 import { render } from "@gpuix/react"
 // Composition-root exception (coordinator-approved): window options are computed before
 // render(), so there is no useTheme() yet; only this file reads the metrics directly.
-import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
-import { configureLogger } from "@zoeymind/logger"
+import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
+import { configureLogger } from "@/platform/log/logger"
 import { createLogPlatform, createNativeLogSink } from "./platform/log"
 import { createWindowKeyboard, WindowKeyboardProvider } from "./platform/keyboard"
 import { createSettingStorage, DEFAULT_THEME_MODE } from "./platform/settings"

@@ -113,8 +113,6 @@ try {
     const renderer = createRequire(path.join(vendor, "packages/react/package.json"))
     const reconciler = createRequire(renderer.resolve("react-reconciler"))
     const zustand = createRequire(app.resolve("zustand"))
-    const ui = createRequire(path.join(root, "packages/ui/package.json"))
-    const web = createRequire(path.join(root, "apps/web/package.json"))
     const resolved = {
       nativeApp: realpathSync(app.resolve("@gpuix/native/host")),
       nativeRenderer: realpathSync(renderer.resolve("@gpuix/native/host")),
@@ -122,8 +120,6 @@ try {
       reactRenderer: realpathSync(renderer.resolve("react")),
       reactReconciler: realpathSync(reconciler.resolve("react")),
       reactZustand: realpathSync(zustand.resolve("react")),
-      reactUi: realpathSync(ui.resolve("react")),
-      reactWeb: realpathSync(web.resolve("react")),
     }
     if (resolved.nativeApp !== resolved.nativeRenderer) throw new Error("Multiple native renderers")
     if (
@@ -132,13 +128,6 @@ try {
       )
     ) {
       throw new Error("Multiple React runtimes")
-    }
-    const webReact = web("react/package.json").version
-    const webReactDom = web("react-dom/package.json").version
-    const uiReact = ui("react/package.json").version
-    const uiReactDom = ui("react-dom/package.json").version
-    if (webReact !== webReactDom || uiReact !== uiReactDom) {
-      throw new Error("Web/UI React and ReactDOM versions must match")
     }
     process.stdout.write(`${JSON.stringify(resolved, null, 2)}\n`)
   }

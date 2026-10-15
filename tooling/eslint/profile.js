@@ -5,7 +5,6 @@ const stableHookRules = new Set([
   "react-hooks/exhaustive-deps",
   "react-hooks/set-state-in-render",
 ])
-const vendored = ["packages/ui/src/components/reui/**", "packages/ui/src/shadcn-io/**"]
 export function correctnessProfile(presets) {
   const plugins = Object.assign({}, ...presets.map(preset => preset.plugins ?? {}))
   const recommendations = new Set([
@@ -37,14 +36,4 @@ export function correctnessProfile(presets) {
       ),
     }),
   }))
-}
-
-export function vendoredProfile(presets) {
-  return {
-    files: vendored,
-    linterOptions: { reportUnusedDisableDirectives: "off" },
-    rules: Object.fromEntries(
-      presets.flatMap(preset => Object.keys(preset.rules ?? {})).map(name => [name, "off"])
-    ),
-  }
 }

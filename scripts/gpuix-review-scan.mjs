@@ -77,8 +77,8 @@ for (const file of source) {
     add("skipped-test", file, "skipped/only test: delete or fix")
   if (/expect\([^)]*\)\.toBeTruthy\(\)\s*$/m.test(text) && /\.test\.(ts|tsx)$/.test(file))
     add("weak-assertion", file, "toBeTruthy-only assertion: assert the behaviour")
-  // 0.10 compatibility shims double-compensate on the pinned main renderer; only ui/controls may still hold them until A3b deletes them.
-  if (!file.includes("/ui/controls/") && /\b(readOuterBounds|useFloatingCenterOffset)\b/.test(text))
+  // Bounds already include border/padding on the pinned renderer; compatibility shims are obsolete.
+  if (/\b(readOuterBounds|useFloatingCenterOffset)\b/.test(text))
     add("legacy-bounds-shim", file, "0.10 bounds shim: use renderer.getElementBounds / onLayout")
 }
 

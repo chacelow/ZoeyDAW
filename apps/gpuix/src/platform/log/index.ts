@@ -8,7 +8,7 @@ import {
   userDirectories,
   writeLog,
 } from "@zoeydaw/native"
-import type { LogEntry, LogSink } from "@zoeymind/logger"
+import type { LogEntry, LogSink } from "@/platform/log/types"
 
 export type LogLevel = "off" | "error" | "warn" | "info" | "debug" | "trace"
 

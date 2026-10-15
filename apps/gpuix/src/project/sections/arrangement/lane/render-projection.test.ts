@@ -1,5 +1,5 @@
 import { expect, it } from "bun:test"
-import { PROJECT_METRICS } from "@zoeymind/ui/metrics"
+import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { createMockDocument } from "../../../adapters/fixtures"
 import type { Clip, MidiClip } from "../../../model/types"
 import { clipRect, layoutTrackRows } from "../core/layout"

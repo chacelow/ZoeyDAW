@@ -9,7 +9,7 @@ cd "$root"
 
 step() { printf '\n== %s\n' "$1"; }
 
-step "renderer identity (eleven-patch vendor, single native/React resolution)"
+step "renderer identity (configured patch series, single native/React resolution)"
 node scripts/gpuix-main/check.mjs --resolution | tail -1
 
 step "@zoeydaw/native build"
@@ -22,6 +22,12 @@ step "tsc --noEmit"
 
 step "eslint apps/gpuix/src (layers, imports, max-warnings 0)"
 pnpm exec eslint --max-warnings=0 apps/gpuix/src && echo "ok"
+
+step "gpuix architecture rule regressions"
+pnpm test:architecture
+
+step "required documentation routes"
+node scripts/check-doc-routes.mjs
 
 step "bun test"
 (cd apps/gpuix && bun test 2>&1) | grep -E "^ [0-9]+ (pass|fail|todo)|^Ran |\(fail\)" | tee /tmp/verify-gpuix-test.$$.txt

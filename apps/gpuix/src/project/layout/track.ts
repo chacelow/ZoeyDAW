@@ -1,4 +1,4 @@
-import { CONTROL_METRICS, PROJECT_METRICS } from "@zoeymind/ui/metrics"
+import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import type { Track } from "../model/types"
 
 export const TRACK_LAYOUT = {
