@@ -50,8 +50,8 @@ const mutations = [
   {
     name: "stable peaks ignore backend generation",
     file: "src/project/sections/clip-edit/audio/SourceWaveform.tsx",
-    from: "    generation,\n",
-    to: "",
+    from: "window.end, generation]",
+    to: "window.end]",
     tests: ["src/project/sections/clip-edit/audio/SourceWaveform-runtime.test.tsx"],
   },
   {
