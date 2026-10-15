@@ -49,6 +49,9 @@ function Choice({
       aria-label={label}
       aria-pressed={selected}
       onMouseDown={onSelect}
+      onKeyDown={event => {
+        if (event.key === "enter") onSelect()
+      }}
       style={{
         height: control["--spacing-control-track"] + control["--spacing-control-track-pad"] * 4,
         paddingLeft: control["--spacing-control-track-gap"] * 2,
