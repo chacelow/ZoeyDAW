@@ -1067,6 +1067,35 @@
       "files": 5
     },
     "fullEslint": "passed",
-    "resolution": "eleven ordered patches verified"
+    "resolution": "eleven ordered patches verified",
+    "scanner": {
+      "command": "node scripts/gpuix-review-scan.mjs 66f9ce9",
+      "sourceFiles": 34,
+      "testFiles": 5,
+      "hard": 0,
+      "warn": 4,
+      "warnings": [
+        {
+          "file": "apps/gpuix/src/gallery/controls.tsx",
+          "kind": "px-literal",
+          "disposition": "Coordinator-approved fixed native review viewport 1050x780"
+        },
+        {
+          "file": "apps/gpuix/src/gallery/verification/evidence.tsx",
+          "kind": "px-literal",
+          "disposition": "Matching native verification viewport, not product-control geometry"
+        },
+        {
+          "file": "apps/gpuix/src/shared/theme/design-tokens.ts",
+          "kind": "px-literal",
+          "disposition": "Canonical approved semantic-token defaults; preserves original Card gap16"
+        },
+        {
+          "file": "apps/gpuix/src/ui/controls/SettingsShell/index.tsx",
+          "kind": "px-literal",
+          "disposition": "Unchanged legacy dialog layout720x520; outside appearance-only migration"
+        }
+      ]
+    }
   }
 }

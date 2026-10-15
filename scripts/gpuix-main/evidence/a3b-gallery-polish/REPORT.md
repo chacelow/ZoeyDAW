@@ -54,6 +54,7 @@ bun apps/gpuix/src/gallery/verification/evidence.tsx
 | full `bun test` | 1120 pass，1 todo，0 fail，172 files；保留既有 todo |
 | 受影响原生回归 | 66 pass，0 fail，5 files |
 | full `eslint apps/gpuix/src` | 通过 |
+| `gpuix-review-scan.mjs 66f9ce9` | 实扫34 source、5 test；0 HARD、4 WARN，逐项分类见下 |
 | 组合 Native GPU smoke | `errors=[]`，零边框宽度、编辑/提交/取消、折叠、滚轮、卸载 retained0 |
 
 早先把巨量 GPU 采图与全套测试并行，曾导致三个既有5秒超时，1056 pass/3 fail。没有弱化测试或 timeout；撤回批量采图并串行执行后，上表 full suite 通过。曾有 WIP scanner 只比较提交返回0 files，这不作为扫描证据；交付扫描使用实际本地提交差异。
@@ -72,6 +73,13 @@ bun apps/gpuix/src/gallery/verification/evidence.tsx
 ### 自审与移交边界
 
 独立只读 Standards/Spec 审查确认完整 token owner、默认差异、border 推导与 PanelShell 范围，无新增 Standards 硬问题；发现的 Card 后代 Space P2 已修并复审关闭。原矩阵的 dragging/binding/edit finding 已由真实原生检查解决，随用户新方向删除旧矩阵入口，不留双 API。
+
+| 扫描发现 | 类别 | 处置 |
+| --- | --- | --- |
+| `gallery/controls.tsx` viewport1050×780 | 记录 | 协调者指定的真实窗口几何，不是控件魔法数，保留固定比较视口 |
+| `gallery/verification/evidence.tsx` viewport1050×780 | 记录 | 与真实 Gallery 使用同一取证视口，不将验证入口当产品控件 |
+| `shared/theme/design-tokens.ts` gap16 | 记录 | 此文件就是获批的语义默认值 owner；来源为原 Card default，不向消费者散布 |
+| `SettingsShell/index.tsx` 默认720×520 | 记录 | 未改动的既有对话框默认几何，属于布局而非本轮 radius/border/padding；不扩大私有布局范围 |
 
 HomePage 的 Card padding/gap/hover 是唯一已知待 app-shell owner 迁移的业务实例覆盖，本轮提供 `size="project"` 与 Card README，不越界修改 app。业务私有布局、反馈内部布局、内容色和工程几何没有冒称全部 token 化；数值只是 UI 参数，不代表接通音频引擎。
 
