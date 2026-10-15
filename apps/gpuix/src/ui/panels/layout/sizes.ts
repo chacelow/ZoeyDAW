@@ -34,7 +34,7 @@ export function resolveConstraints(
     const max = toPixels(panel.maxSize ?? "100", total)
     const collapsed = toPixels(panel.collapsedSize ?? 0, total)
     if (
-      (typeof panel.maxSize === "number" && max < min) ||
+      (typeof panel.minSize === "number" && typeof panel.maxSize === "number" && max < min) ||
       (panel.collapsible && collapsed > min)
     ) {
       throw new RangeError("Panel requires collapsedSize <= minSize <= maxSize")
@@ -44,7 +44,11 @@ export function resolveConstraints(
       max: Math.max(min, max),
       collapsed,
       collapsible: panel.collapsible ?? false,
-      fixed: panel.maxSize !== undefined && max <= min,
+      fixed:
+        panel.minSize !== undefined &&
+        panel.maxSize !== undefined &&
+        typeof panel.minSize === typeof panel.maxSize &&
+        max <= min,
     }
   })
 }

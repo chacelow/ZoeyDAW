@@ -48,6 +48,13 @@ const mutations = [
     to: "      : c.min === c.max",
     invariant: "flexible pixel minima above the viewport",
   },
+  {
+    name: "mixed-unit-bounds-become-fixed",
+    file: "panels/layout/sizes.ts",
+    from: "typeof panel.minSize === typeof panel.maxSize &&",
+    to: "true &&",
+    invariant: "mixed-unit panel bounds remain flexible",
+  },
 ]
 const args = [
   "test",

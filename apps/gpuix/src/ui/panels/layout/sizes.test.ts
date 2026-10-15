@@ -19,3 +19,12 @@ test("declared fixed panels retain their reservation and still reject an undersi
     )
   ).toThrow("Fixed panels exceed the available size")
 })
+
+test("mixed-unit panel bounds remain flexible when a shrinking viewport crosses their minimum", () => {
+  const constraints = resolveConstraints([{ minSize: 160, maxSize: "100%" }, {}], 60)
+  expect(fitLayout([160, 0], constraints, 60)).toEqual([60, 0])
+  expect(initialLayout([undefined, undefined], constraints, 60)).toEqual([60, 0])
+  expect(reflowLayout([160, 0], constraints, 60)).toEqual([60, 0])
+  const reverseUnits = resolveConstraints([{ minSize: "100%", maxSize: 160 }, {}], 200)
+  expect(fitLayout([200, 0], reverseUnits, 100)).toEqual([100, 0])
+})
