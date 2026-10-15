@@ -7,6 +7,9 @@ import { sx } from "@/shared/theme/style"
 import { gridLines, patternRegions } from "../../core/rulers/grid-lines"
 import type { SceneStore } from "../../core/scene"
 
+/** Minor grid lines stay visibly weaker than bar lines (web `painters/grid.ts`). */
+export const MINOR_GRID_OPACITY = 0.55
+
 export function PatternRegions({ scene, height }: { scene: SceneStore; height: number }) {
   const current = useSyncExternalStore(scene.subscribe, scene.get)
   const theme = useTheme()
@@ -107,7 +110,7 @@ export function Grid({ scene, height }: { scene: SceneStore; height: number }) {
     >
       <PatternRegions scene={scene} height={height} />
       <QuadBatch ref={major.ref} style={style} />
-      <QuadBatch ref={minor.ref} style={sx(style, { opacity: 0.55 })} />
+      <QuadBatch ref={minor.ref} style={sx(style, { opacity: MINOR_GRID_OPACITY })} />
     </div>
   )
 }
