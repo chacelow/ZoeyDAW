@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useState } from "react"
 import {
   Select,
   SelectContent,
@@ -11,9 +11,9 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
 import { useInfoBinding } from "../ControlEnvironment"
-import { useFloatingCenterOffset, useMeasuredTextWidth } from "../useMeasuredTextWidth"
+import { useMeasuredTextWidth } from "../useMeasuredTextWidth"
 import { IconSlot } from "../IconSlot"
-import type { Props, PublicInstance, StyleDesc } from "@gpuix/react"
+import type { Props, StyleDesc } from "@gpuix/react"
 import type { FloatingAlign, FloatingSide } from "@gpuix/react/floating"
 import type { ReactNode } from "react"
 import type { ControlSize } from "../chrome"
@@ -86,7 +86,6 @@ export function DropdownButton<T extends string = string>({
     (icon ? metrics["--spacing-control-icon-slot"] : 0) +
     2
   const display = renderValue ? renderValue(selected) : (selected?.label ?? value)
-  const surface = useRef<PublicInstance | null>(null)
   const contentStyle: StyleDesc = {
     minWidth: matchTriggerWidth ? width : 120,
     maxWidth: 320,
@@ -100,7 +99,6 @@ export function DropdownButton<T extends string = string>({
     borderRadius: 4,
     backgroundColor: theme.colors.popover,
   }
-  const centerOffset = useFloatingCenterOffset({ open, surface, side, align, style: contentStyle })
   return (
     <Select
       testId={testId ? `${testId}-root` : undefined}
@@ -155,7 +153,6 @@ export function DropdownButton<T extends string = string>({
         </text>
       </SelectTrigger>
       <SelectContent
-        ref={surface}
         testId={testId ? `${testId}-content` : undefined}
         role="listbox"
         tabIndex={0}
@@ -163,7 +160,6 @@ export function DropdownButton<T extends string = string>({
         aria-label={label}
         side={side}
         align={align}
-        alignOffset={centerOffset}
         sideOffset={sideOffset}
         style={contentStyle}
       >

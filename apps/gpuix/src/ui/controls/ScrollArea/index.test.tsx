@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { readOuterBounds } from "../useMeasuredTextWidth"
-import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
+import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { ScrollArea } from "./index"
 
 test("bounded native scrolling moves overflowing content without expanding the viewport", () => {

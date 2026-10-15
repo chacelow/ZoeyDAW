@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { DRAG_PIXELS_PER_STEP } from "./constants"
+import { DRAG_PIXELS_PER_STEP, WHEEL_PIXELS_PER_STEP } from "./constants"
 import { clamp, formatNumericValue, quantize, valueAfterDrag, valueAfterWheel } from "./numberModel"
 
 describe("clamp", () => {
@@ -111,10 +111,10 @@ describe("valueAfterDrag", () => {
 })
 
 describe("valueAfterWheel", () => {
-  test("scrolling down decreases the value", () => {
+  test("scrolling toward later content (negative GPUI deltaY) decreases the value", () => {
     const next = valueAfterWheel({
       currentValue: 10,
-      deltaY: 16,
+      deltaY: -16,
       precise: true,
       step: 1,
       min: 0,
@@ -123,10 +123,10 @@ describe("valueAfterWheel", () => {
     expect(next).toBe(9)
   })
 
-  test("scrolling up increases the value", () => {
+  test("scrolling toward earlier content (positive GPUI deltaY) increases the value", () => {
     const next = valueAfterWheel({
       currentValue: 10,
-      deltaY: -16,
+      deltaY: 16,
       precise: true,
       step: 1,
       min: 0,
@@ -153,5 +153,49 @@ describe("valueAfterWheel", () => {
       max: 100,
     })
     expect(lineResult).toBe(preciseResult)
+  })
+
+  test("both raw wheel directions preserve range, quantization, and monotonicity", () => {
+    for (const precise of [true, false]) {
+      for (const step of [0.01, 0.25, 1, 5]) {
+        const min = -20 * step
+        const max = 20 * step
+        for (let index = -20; index <= 20; index++) {
+          const currentValue = index * step
+          for (const deltaY of [-1600, -80, -16, -1, 0, 1, 16, 80, 1600]) {
+            const next = valueAfterWheel({ currentValue, deltaY, precise, step, min, max })
+            expect(next).toBeGreaterThanOrEqual(min)
+            expect(next).toBeLessThanOrEqual(max)
+            expect(next / step).toBeCloseTo(Math.round(next / step), 8)
+            if (deltaY > 0) expect(next).toBeGreaterThanOrEqual(currentValue - 1e-12)
+            if (deltaY < 0) expect(next).toBeLessThanOrEqual(currentValue + 1e-12)
+            if (deltaY === 0) expect(next).toBeCloseTo(currentValue, 12)
+          }
+        }
+      }
+    }
+  })
+
+  test("wheel sensitivity stays step-based across ranges in both directions", () => {
+    for (const direction of [-1, 1]) {
+      const small = valueAfterWheel({
+        currentValue: 0,
+        deltaY: direction * WHEEL_PIXELS_PER_STEP,
+        precise: true,
+        step: 0.01,
+        min: -1,
+        max: 1,
+      })
+      const large = valueAfterWheel({
+        currentValue: 0,
+        deltaY: direction * WHEEL_PIXELS_PER_STEP,
+        precise: true,
+        step: 1,
+        min: -1000,
+        max: 1000,
+      })
+      expect(small).toBeCloseTo(direction * 0.01)
+      expect(large).toBe(direction)
+    }
   })
 })

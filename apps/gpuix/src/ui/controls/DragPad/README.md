@@ -9,27 +9,25 @@
 - `onGestureStart`/`onGestureEnd`/`onGestureCancel` 供消费者绑定编辑事务；共享库不认识工程或 Undo Store。
 - `useMeasuredTextWidth` 经唯一 `readOuterBounds` 边界测量真实隐藏样本文本，包括 min/max/default/widthSamples，按字体与样本集缓存。首次布局使用估算，测量后修正一次，live value/draft 不参与宽度。自定义格式中间值更宽时须提供 `widthSamples`。
 - 紧凑/Transport 度量来自 `useTheme()`，预编辑和编辑保留同样字号、宽度与图标。
+- `hideIcon` 默认关闭；开启后，宽度只含实测文本、两侧 track padding 和边框，不预留图标位。该变体的预编辑/编辑指示为叠加在内边距内的 1px 插入符形，不占布局、不遮数值；22px 紧凑壳无法再容纳 10px 图标。普通变体保持原图标。与 Live 对照：Live 窄数值控件无独立图标；未实测 Live 编辑态指示。
 
 ## 光标能力注入
 
-UI 层只声明 `CursorLockPort { capture, hide, restore }`，通过 `ControlEnvironmentProvider value.cursorLock` 注入。UI 不 import 原生包；未注入时不隐藏/还原光标，数值拖动仍工作。应用组合根负责接入 `@zoeydaw/native`，示例见 `src/gallery/controls.tsx`。
+UI 层只声明 `CursorLockPort { capture(pressPoint), hide, restore }`，通过 `ControlEnvironmentProvider value.cursorLock` 注入。UI 不 import 原生包；未注入时不隐藏/还原光标，数值拖动仍工作。应用组合根负责接入 `@zoeydaw/native`，示例见 `src/gallery/controls.tsx`。
 
-按下时通过端口捕获屏幕坐标；超过点击阈值后隐藏；释放/取消先还原再显示。手势保存取得锚点时的端口，Provider 更新不能把恢复责任转移给另一个实例。不使用 `CGAssociateMouseAndMouseCursorPosition`：gpuix 0.10 move 来自绝对窗口位置，断开关联会冻结事件。真实光标依旧不可见地移动，因此不是无限屏幕边界拖动。
+按下时把 mouseDown 事件自身的 `x/y`（窗口内容区左上原点，pt）交给 `capture`，端口换算成屏幕锚点；事件缺坐标时不锁光标。超过点击阈值后隐藏；释放/取消先还原再显示。手势保存取得锚点时的端口，Provider 更新不能把恢复责任转移给另一个实例。不使用 `CGAssociateMouseAndMouseCursorPosition`：gpuix move 来自绝对窗口位置，断开关联会冻结事件。真实光标依旧不可见地移动，因此不是无限屏幕边界拖动。
 
-## 已知限制：极快按下即移动
+## 锚点为什么取事件坐标
 
-JS 收到 `mouseDown` 时，OS 可能已经处理首个 `mouseMove`。极快的合成“按下即移动”（远快于人手）会让 `capture()` 读到晚于真实按下点的位置；本轮每步 10pt 的输入实测偏移一个 move 步长：按下 `(805,364)`，捕获/还原 `(805,354)`。本轮没有添加补偿或猜测逻辑。人手速度下仍需真实硬件复测，尚未测。
-
-可靠的后续方向是原生 `CGEventTap` 在事件发生时保存带时间戳的按下屏幕坐标，但这需要辅助功能/输入监控权限，属于待用户决策的产品取舍，本切片不引入。永久测试以 `test.todo` 明确保留无停留情形，不能把它算作通过。
+gpuix 事件经 ThreadsafeFunction 异步投递，JS 处理 `mouseDown` 时 OS 可能已处理后续 move。原实现在此刻读 OS 当前光标，合成“按下即移动”实测按下 `(805,364)`、还原 `(805,354)`。GPUI 在事件时刻由 `NSEvent.locationInWindow` 算出 `x/y`，所以按下事件坐标不受处理延迟影响。原生 `windowPointToScreen`（`crates/native/src/window_geometry.rs`）取 key 窗口（无则 main 窗口）的 frame 与内容区高度，按 `screenX = frame.x + x`、`screenY = 主屏高 − (frame.y + 内容区高 − y)` 换算成 CG 全局坐标；全程用点，不乘 Retina 缩放。没有可用窗口时返回 null，不锁光标。`cursorPosition` 只经 `platform/cursor` 的 `currentCursorPosition` 供画廊读回验证，不再是锚点来源。
 
 实际窗口回归步骤：
 
 1. 双击 BPM 还原 120。
-2. 真实按下 BPM 中心，拖动路径先重复按下点 4 次（同点停留），再上移 10/20/30/40px。
-3. 确认 AX 为 130，并在 gallery 的 `onGestureEnd` 中读取真实 `cursorPosition()`；读回应与按下点一致。本轮注入端口先后验证了 `(1299,279)` 与 `(805,364)`，最终截图记录后者。
-4. 另跑不含同点停留的路径，记录上述已知偏移；不得更改预期锚点来掩盖它。
+2. 按下 BPM 中心，无停留路径每步 10pt 上移到 40pt；另跑先在按下点重复 4 次再上移的停留路径。
+3. 两条路径都确认 AX 为 130，并在 gallery 的 `onGestureEnd` 中读取真实 `currentCursorPosition()`；读回须与按下点一致。2026-10-15 实测按下 `(412,293)`，两条路径读回均为 `(412,293)`，误差 0pt：[截图](evidence/press-anchor-restored-2026-10-15.png)、[AX](evidence/press-anchor-restored-2026-10-15.ax.txt)。
 
-`computer.drag` 完成后会恢复用户原光标，因此工具返回后的 OS 坐标不是组件的还原证据；画廊在组件恢复后、工具恢复前采样，并显示真实读回值。
+`computer.drag` 完成后会恢复用户原光标，因此工具返回后的 OS 坐标不是组件的还原证据；画廊在组件恢复后、工具恢复前采样，并显示真实读回值。未验证：人手真实硬件速度、多显示器与全屏实机。
 
 ## 运行
 
@@ -41,4 +39,4 @@ bun test src/ui/controls
 bunx tsc --noEmit
 ```
 
-旧 `features/drag-pad` 已迁走。画廊按协调者授权移到 `ui/` 之外，由组合入口持有原生能力。`evidence/` 内三张图仅是迁移前 DragPad 实验的历史截图；本轮画廊交互证据见上级报告。
+旧 `features/drag-pad` 已迁走。画廊按协调者授权移到 `ui/` 之外，由组合入口持有原生能力。`evidence/` 内 `press-anchor-restored-2026-10-15.*` 是 G1 锚点复测证据，其余三张图是迁移前 DragPad 实验的历史截图。
