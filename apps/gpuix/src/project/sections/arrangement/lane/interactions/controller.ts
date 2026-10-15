@@ -1,15 +1,9 @@
 import type { NativeClipboard } from "@/platform/clipboard"
 import type { ArrangementViewport } from "../../core/scene"
 import { snapBar } from "@/project/model/grid-geometry"
-import { visibleTracks } from "@/project/model/types"
 import { automationBar } from "../../core/automation/geometry"
 import { dragStarted, interactionLayer } from "../../core/interactions/layers"
-import {
-  arrangementBodyBottom,
-  arrangementBodyTop,
-  maxTrackScrollY,
-  pinnedTrackHeight,
-} from "../../core/layout"
+import { edgeScroll } from "../../core/viewport/edge-scroll"
 import { hitTest } from "../../core/hit-test"
 import { createClipInteractions } from "./clip"
 import { createAutomationInteractions } from "./automation"
@@ -248,41 +242,18 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
         finish(true)
         return
       }
-      const elapsed = lastFrame === null ? 0 : Math.max(0, Math.min(48, timestampMs - lastFrame))
-      lastFrame = timestampMs
       const scene = context.scene.get()
       const pointer = current.pointer
-      const edge = deps.edgePixels
-      const xSpeed =
-        pointer.x < edge
-          ? -Math.min(1, (edge - pointer.x) / edge)
-          : pointer.x > scene.viewport.width - edge
-            ? Math.min(1, (pointer.x - scene.viewport.width + edge) / edge)
-            : 0
-      const state = context.getState()
-      const tracks = visibleTracks(
-        state.session.preview?.kind === "tracks"
-          ? state.session.preview.tracks
-          : state.document.tracks
-      )
-      const top = arrangementBodyTop()
-      const bottom = arrangementBodyBottom(scene.viewport.height) - pinnedTrackHeight(tracks)
-      const ySpeed =
-        current.gesture.autoScroll === "horizontal" || bottom <= top || pointer.y >= bottom
-          ? 0
-          : pointer.y < top + edge
-            ? -Math.min(1, (top + edge - pointer.y) / edge)
-            : pointer.y > bottom - edge
-              ? Math.min(1, (pointer.y - bottom + edge) / edge)
-              : 0
-      const scrollX = Math.min(
-        Math.max(0, scene.bars * scene.viewport.pxPerBar - scene.viewport.width),
-        Math.max(0, scene.viewport.scrollX + xSpeed * elapsed * 0.75)
-      )
-      const scrollY = Math.min(
-        maxTrackScrollY(tracks, scene.viewport.height),
-        Math.max(0, scene.viewport.scrollY + ySpeed * elapsed * 0.6)
-      )
+      const { scrollX, scrollY } = edgeScroll({
+        viewport: scene.viewport,
+        bars: scene.bars,
+        tracks: scene.tracks,
+        pointer,
+        axis: current.gesture.autoScroll,
+        edge: deps.edgePixels,
+        elapsed: lastFrame === null ? 0 : timestampMs - lastFrame,
+      })
+      lastFrame = timestampMs
       if (scrollX !== scene.viewport.scrollX || scrollY !== scene.viewport.scrollY) {
         deps.setScroll(scrollX, scrollY)
         current.gesture.move(pointer)

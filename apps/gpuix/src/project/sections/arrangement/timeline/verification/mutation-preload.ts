@@ -9,6 +9,41 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "range-preview-overwrite": {
+    file: "project/sections/arrangement/core/scene.ts",
+    testFile: "src/project/sections/arrangement/lane/interactions/controller.test.tsx",
+    testName: "keeps a live time-range preview",
+    from: "const visible = scene.timeSelectionPreview ?? committedTimeSelection",
+    to: "const visible = committedTimeSelection",
+  },
+  "collapsed-group-slot": {
+    file: "project/sections/arrangement/tracks/Row/index.tsx",
+    testFile: "src/project/sections/arrangement/tracks/Row/group-lane.test.tsx",
+    testName: "collapsed group retains lane summary",
+    from: "{showLane ? lane : null}",
+    to: '{showLane && !(track.kind === "group" && track.collapsed) ? lane : null}',
+  },
+  "collapsed-group-width": {
+    file: "project/sections/arrangement/lane/LaneRow/Contents.tsx",
+    testFile: "src/project/sections/arrangement/tracks/Row/group-lane.test.tsx",
+    testName: "collapsed group retains lane summary",
+    from: "Math.min(scene.viewport.width, card.geometry.left + card.geometry.width)",
+    to: "Math.min(scene.viewport.width - theme.project.controlsWidth, card.geometry.left + card.geometry.width)",
+  },
+  "grid-local-origin": {
+    file: "project/sections/arrangement/core/rulers/grid-quads.ts",
+    testFile: "src/project/sections/arrangement/core/rulers/grid-quads.test.ts",
+    testName: "grid quad packing clips",
+    from: "output[offset] = line.x - left",
+    to: "output[offset] = line.x",
+  },
+  "edge-pinned-boundary": {
+    file: "project/sections/arrangement/core/viewport/edge-scroll.ts",
+    testFile: "src/project/sections/arrangement/core/viewport/edge-scroll.test.ts",
+    testName: "edge scrolling respects pinned rows",
+    from: " || y >= bottom",
+    to: "",
+  },
   "menu-space": {
     file: "ui/controls/Menu/trigger.tsx",
     testFile: "src/ui/controls/Menu/interaction.test.tsx",

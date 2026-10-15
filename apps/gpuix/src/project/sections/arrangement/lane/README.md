@@ -26,6 +26,8 @@
 
 窗口键盘 owner 在 timeline。lane 只消费选择、Ctrl/Cmd+E 裁剪、创建副本、重命名、删除、复制/剪切/粘贴与拖动 Escape；Space 不激活 Clip，并继续传播给窗口播放 owner。Clip 标题设插入点到左起点；内容点击设到点击位置；普通激活不打开 Clip View。
 
+时间选区拖动通过 `SceneStore.setTimeSelectionPreview` 呈现，未提交前不写 session；timeline 全量同步、Snap 切换不会覆盖它。释放后先提交选区再清除预览，取消只清除预览。边缘滚动纯计算复用 `core/viewport/edge-scroll`，网格 quad 打包与普通细线材质复用 `core/rulers/grid-quads`。
+
 右键目标只由 F2 归一化后的 `onContextMenu` payload 设置，不再从 `onMouseDown` 的 button/ctrl 猜测右键。Shift+F10 保留独立的原生焦点 bounds 定位。回归只发送 context 事件，再通过真实菜单动作验证删除的是目标 Clip，而不是之前的选择；Ctrl+左键按平台归一化后的右键 payload 注入。
 
 `evidence/context-*` 保存实际窗口证据：先选中 Pattern，再右键 Audio，菜单标题与 Rename 字段均为该 Audio Clip。物理 Ctrl+左键的后台修饰输入被 computer 拒绝，foreground 控制申请超时且没有确认批准，未发送前台点击；该物理路径未验证，归一化事件行为以回归与 F2 平台证据为准。

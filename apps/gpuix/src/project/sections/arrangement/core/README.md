@@ -10,6 +10,9 @@ B1，2026-10-15。这里只接收坐标、工程模型和显式手势数据，�
 - `project/model/grid`、`grid-geometry` 和 `timeline-ticks` 保持唯一模型实现。`rulers/grid-lines.ts` 只把场景已有的 `gridPlan` 投影成有 major/minor 分类的可见线。
 - 轨道度量及 resize 直接使用 `project/layout`，不复制控件高度常量。
 - `meters/meter-peak.ts` 保持原来的显式时间输入与原位更新 API。它不读取时钟、不启动采样。
+- `SceneStore.setTimeSelection` 只接 timeline 的 committed 投影；lane 使用 `setTimeSelectionPreview`，显示 `timeSelection` 优先取预览，结束或取消传 `null` 恢复当前 committed 值。
+- `rulers/grid-quads.ts` 的 `packGridQuads(lines, left, width, height, majorWidth, uniform?)` 统一半开可见范围过滤与局部 quad 打包；`MINOR_GRID_OPACITY` 是 timeline/lane 普通细网格的同一材质值。Clip 的 uniform 分批仍保留原始粗细几何。
+- `viewport/edge-scroll.ts` 的 `edgeScroll({ viewport, bars, tracks, pointer, axis, edge, elapsed })` 返回夹取后的 `scrollX/scrollY`；固定轨道不触发垂直滚动，单帧 elapsed 上限 48ms。调用方仍拥有手势与帧生命周期。
 
 ## 迁移文件
 

@@ -61,6 +61,8 @@ B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨�
 
 网格与音乐标尺的 Pattern 背景统一使用 `useQuadBatch` 命令式上传；网格按主题的粗/细线材质分批，不逐线挂载节点。可见几何仍来自 B1，不将 Float32Array 放入 React props/state。`grid/parity.test.tsx` 用固定的旧 div 绘制 oracle 对照深浅主题、标尺/车道高度、分数滚动与极端缩放的原生 PNG。标尺文字保留原生文本布局，时间刻度的短线与文字仍共用原位置节点；没有为少量文字标签另建绘制系统。
 
+GridLine 的半开可见范围过滤与 quad 打包由 `core/rulers/grid-quads.packGridQuads` 唯一实现；普通细线透明度与 lane 共用 `MINOR_GRID_OPACITY`。边缘滚动调用 `core/viewport/edge-scroll`，timeline 只持有活动指针、axis 与 last-frame 生命周期。Ruler 不再镜像写 `projectPreview/timeSelection`，这些工程投影仅由 TimelineController 订阅更新。
+
 标签间距的 38/56 默认来自 web，可读性配置集中在 `RULER_LABEL_SPACING`。多档 Live 阈值及极端缩小时的明暗合并未对照 Live，不把估计写成实测结论。
 
 ## 键盘 owner
