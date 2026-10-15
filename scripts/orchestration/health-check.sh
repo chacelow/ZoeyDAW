@@ -8,7 +8,8 @@
 set -u
 STALE_MIN="${STALE_MIN:-10}"
 cd /Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration || exit 1
-echo "== health $(date -u +%FT%TZ) main=$(git rev-parse --short HEAD) stale>${STALE_MIN}m"
+main=$(git rev-parse --short HEAD 2>&1) || main="ERROR:${main//$'\n'/ }"
+echo "== health $(date -u +%FT%TZ) main=${main} stale>${STALE_MIN}m"
 orca orchestration worker-list --run run_2ea0f3afbca8 --json 2>/dev/null | python3 -c '
 import sys,json
 d=json.loads(sys.stdin.buffer.read().decode("utf-8","replace")); r=d.get("result",d)
@@ -56,11 +57,17 @@ for line in sys.stdin:
             note=(m.get("errorMessage") or m.get("stopReason") or "")
             break
     def git(*a):
-        try: return subprocess.run(["git","-C",path,*a],capture_output=True,text=True).stdout.strip()
-        except Exception: return ""
-    last=git("log","-1","--format=%ct"); cm=int((now-int(last))/60) if last.isdigit() else -1
-    dirty=len([x for x in git("status","--short").splitlines() if x])
-    behind=git("rev-list","--count","HEAD..gpuix-migration") or "?"
+        result=subprocess.run(["git","-C",path,*a],capture_output=True,text=True)
+        if result.returncode:
+            raise RuntimeError((result.stderr or result.stdout).strip().splitlines()[-1])
+        return result.stdout.strip()
+    try:
+        last=git("log","-1","--format=%ct"); cm=int((now-int(last))/60)
+        dirty=len([x for x in git("status","--short").splitlines() if x])
+        behind=git("rev-list","--count","HEAD..gpuix-migration")
+        git_note=""
+    except RuntimeError as error:
+        cm="?"; dirty="?"; behind="?"; git_note=" git="+str(error)[:80]
     mins=None if age is None else int(age//60)
     errored = role=="assistant" and bool((d.get("message") or {}).get("errorMessage")) if age is not None else False
     # IDLE: the agent ended its turn (TUI idle) without closing the dispatch with worker_done.
@@ -74,7 +81,7 @@ for line in sys.stdin:
     elif tui_idle and age>idle_min*60: flag="IDLE"
     elif age>stale*60: flag="STALE"
     else: flag="ok"
-    detail=role+((" "+str(note)[:40]) if note else "")+((" asks="+",".join(asks)) if asks else "")
+    detail=role+((" "+str(note)[:40]) if note else "")+((" asks="+",".join(asks)) if asks else "")+git_note
     shown=mins if mins is not None else -1
     print(f"{flag:10} {did:18} {wt:34} last-msg={shown:>3}m ({detail})  commit={cm}m dirty={dirty} behind={behind}  {handle}")
 '

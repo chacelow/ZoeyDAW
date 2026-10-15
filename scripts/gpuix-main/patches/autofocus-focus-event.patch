@@ -1,0 +1,603 @@
+diff --git a/packages/native/src/focus_tests.rs b/packages/native/src/focus_tests.rs
+new file mode 100644
+index 0000000..fcb2abd
+--- /dev/null
++++ b/packages/native/src/focus_tests.rs
+@@ -0,0 +1,411 @@
++use super::*;
++
++type Events = Arc<parking_lot::Mutex<Vec<(u64, String)>>>;
++
++fn add_input(tree: &mut RetainedTree, id: u64, auto_focus: bool) {
++    tree.create_element(id, "input".into());
++    tree.set_custom_prop(id, "autoFocus".into(), serde_json::json!(auto_focus));
++    tree.set_event_listener(id, "focus".into(), true);
++    tree.set_event_listener(id, "blur".into(), true);
++    tree.append_child(1, id);
++}
++
++fn fixture(cx: &mut gpui::TestAppContext, input: bool) -> (gpui::WindowHandle<GpuixView>, Events) {
++    cx.update(crate::custom_elements::input::init);
++    let mut tree = RetainedTree::new();
++    tree.create_element(1, "div".into());
++    tree.set_root(1);
++    let events: Events = Arc::default();
++    let recorded = events.clone();
++    let callback: EventCallback = Arc::new(move |event| {
++        recorded
++            .lock()
++            .push((event.element_id as u64, event.event_type));
++    });
++    let window = cx.add_window(move |window, _| {
++        window.activate_window();
++        GpuixView::new(
++            Arc::new(Mutex::new(tree)),
++            Some(callback),
++            "focus regression".into(),
++            SharedSelection::default(),
++        )
++    });
++    cx.run_until_parked();
++    if input {
++        window
++            .update(cx, |view, _, cx| {
++                let mut tree = view.tree.lock().unwrap();
++                add_input(&mut tree, 2, true);
++                add_input(&mut tree, 3, false);
++                cx.notify();
++            })
++            .unwrap();
++        cx.run_until_parked();
++    }
++    (window, events)
++}
++
++fn assert_events(events: &Events, expected: &[(u64, &str)]) {
++    // Different handles have independent subscriptions; only each handle's
++    // event order is contractual, not blur-vs-focus order across handles.
++    let actual = events.lock();
++    let mut ids: std::collections::BTreeSet<_> = actual.iter().map(|(id, _)| *id).collect();
++    ids.extend(expected.iter().map(|(id, _)| *id));
++    for id in ids {
++        let actual: Vec<_> = actual
++            .iter()
++            .filter(|(target, _)| *target == id)
++            .map(|(_, event)| event.as_str())
++            .collect();
++        let expected: Vec<_> = expected
++            .iter()
++            .filter(|(target, _)| *target == id)
++            .map(|(_, event)| *event)
++            .collect();
++        assert_eq!(actual, expected, "element {id}");
++    }
++}
++
++fn tab_away(window: gpui::WindowHandle<GpuixView>, cx: &mut gpui::TestAppContext) {
++    cx.simulate_keystrokes(window.into(), "tab");
++    // The JS host owns Tab's default and invokes this native navigation API.
++    window
++        .update(cx, |_, window, cx| window.focus_next(cx))
++        .unwrap();
++    cx.run_until_parked();
++}
++
++#[gpui::test]
++fn autofocus_emits_focus_and_tab_emits_blur(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, true);
++    assert_events(&events, &[(2, "focus")]);
++    tab_away(window, cx);
++    assert_events(&events, &[(2, "focus"), (2, "blur"), (3, "focus")]);
++}
++
++#[gpui::test]
++fn autofocus_in_a_later_batch_emits_focus(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, false);
++    window
++        .update(cx, |view, _, cx| {
++            add_input(&mut view.tree.lock().unwrap(), 2, true);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "focus")]);
++}
++
++#[gpui::test]
++fn deferred_focus_element_emits_focus_when_created(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, false);
++    window
++        .update(cx, |view, window, cx| view.request_focus(2, window, cx))
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[]);
++    window
++        .update(cx, |view, _, cx| {
++            add_input(&mut view.tree.lock().unwrap(), 2, false);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "focus")]);
++}
++
++#[gpui::test]
++fn existing_focus_element_emits_once_and_autofocus_never_refocuses(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, true);
++    events.lock().clear();
++    window
++        .update(cx, |view, window, cx| view.request_focus(3, window, cx))
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "blur"), (3, "focus")]);
++    for _ in 0..3 {
++        window
++            .update(cx, |view, window, cx| {
++                view.request_focus(3, window, cx);
++                window.refresh();
++            })
++            .unwrap();
++        cx.run_until_parked();
++    }
++    assert_events(&events, &[(2, "blur"), (3, "focus")]);
++    window
++        .update(cx, |view, window, cx| {
++            assert!(view.focus_handles[&3].is_focused(window));
++            view.request_focus(2, window, cx);
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(
++        &events,
++        &[(2, "blur"), (3, "focus"), (3, "blur"), (2, "focus")],
++    );
++}
++
++#[gpui::test]
++fn explicit_request_outranks_autofocus(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, false);
++    window
++        .update(cx, |view, window, cx| {
++            view.request_focus(3, window, cx);
++            let mut tree = view.tree.lock().unwrap();
++            add_input(&mut tree, 2, true);
++            add_input(&mut tree, 3, false);
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(3, "focus")]);
++}
++
++#[gpui::test]
++fn later_user_focus_cancels_deferred_request(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, true);
++    events.lock().clear();
++    window
++        .update(cx, |view, window, cx| view.request_focus(4, window, cx))
++        .unwrap();
++    cx.run_until_parked();
++    tab_away(window, cx);
++    window
++        .update(cx, |view, _, cx| {
++            add_input(&mut view.tree.lock().unwrap(), 4, false);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "blur"), (3, "focus")]);
++}
++
++#[gpui::test]
++fn autofocus_survives_retiring_the_previous_focus_handle(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, false);
++    window
++        .update(cx, |view, _, cx| {
++            let mut tree = view.tree.lock().unwrap();
++            tree.create_element(2, "div".into());
++            tree.set_custom_prop(2, "tabIndex".into(), serde_json::json!(0));
++            tree.set_event_listener(2, "focus".into(), true);
++            tree.set_event_listener(2, "blur".into(), true);
++            tree.append_child(1, 2);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    window
++        .update(cx, |view, window, cx| view.request_focus(2, window, cx))
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "focus")]);
++    events.lock().clear();
++    window
++        .update(cx, |view, _, cx| {
++            let mut tree = view.tree.lock().unwrap();
++            tree.set_custom_prop(2, "tabIndex".into(), serde_json::Value::Null);
++            tree.set_event_listener(2, "focus".into(), false);
++            tree.set_event_listener(2, "blur".into(), false);
++            add_input(&mut tree, 3, true);
++            tree.append_child(2, 3);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(3, "focus")]);
++    window
++        .update(cx, |view, window, _| {
++            assert!(!view.focus_handles.contains_key(&2));
++            assert!(view.focus_handles[&3].is_focused(window));
++        })
++        .unwrap();
++}
++
++#[gpui::test]
++fn existing_explicit_request_outranks_same_batch_autofocus(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, true);
++    events.lock().clear();
++    window
++        .update(cx, |view, window, cx| {
++            view.request_focus(3, window, cx);
++            add_input(&mut view.tree.lock().unwrap(), 4, true);
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "blur"), (3, "focus")]);
++    window
++        .update(cx, |view, window, _| {
++            assert!(view.focus_handles[&3].is_focused(window));
++        })
++        .unwrap();
++}
++
++#[gpui::test]
++fn tab_after_existing_explicit_request_wins(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, true);
++    events.lock().clear();
++    window
++        .update(cx, |view, window, cx| {
++            view.request_focus(3, window, cx);
++            window.focus_next(cx);
++            add_input(&mut view.tree.lock().unwrap(), 4, true);
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[]);
++    window
++        .update(cx, |view, window, _| {
++            assert!(view.focus_handles[&2].is_focused(window));
++        })
++        .unwrap();
++}
++
++#[gpui::test]
++fn pending_request_survives_renderer_autofocus_in_an_earlier_batch(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, false);
++    window
++        .update(cx, |view, window, cx| {
++            view.request_focus(3, window, cx);
++            add_input(&mut view.tree.lock().unwrap(), 2, true);
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "focus")]);
++    window
++        .update(cx, |view, _, cx| {
++            add_input(&mut view.tree.lock().unwrap(), 3, false);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "focus"), (2, "blur"), (3, "focus")]);
++}
++
++#[gpui::test]
++fn existing_input_with_new_focus_listeners_emits_once(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, false);
++    window
++        .update(cx, |view, _, cx| {
++            let mut tree = view.tree.lock().unwrap();
++            add_input(&mut tree, 2, true);
++            add_input(&mut tree, 3, false);
++            tree.set_event_listener(3, "focus".into(), false);
++            tree.set_event_listener(3, "blur".into(), false);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "focus")]);
++    events.lock().clear();
++    window
++        .update(cx, |view, window, cx| {
++            {
++                let mut tree = view.tree.lock().unwrap();
++                tree.set_event_listener(3, "focus".into(), true);
++                tree.set_event_listener(3, "blur".into(), true);
++            }
++            view.request_focus(3, window, cx);
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "blur"), (3, "focus")]);
++    tab_away(window, cx);
++    assert_events(
++        &events,
++        &[(2, "blur"), (3, "focus"), (3, "blur"), (2, "focus")],
++    );
++}
++
++#[gpui::test]
++fn pending_request_survives_retiring_owner_before_target_creation(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, false);
++    window
++        .update(cx, |view, _, cx| {
++            let mut tree = view.tree.lock().unwrap();
++            tree.create_element(2, "div".into());
++            tree.set_custom_prop(2, "tabIndex".into(), serde_json::json!(0));
++            tree.set_event_listener(2, "focus".into(), true);
++            tree.set_event_listener(2, "blur".into(), true);
++            tree.append_child(1, 2);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    window
++        .update(cx, |view, window, cx| view.request_focus(2, window, cx))
++        .unwrap();
++    cx.run_until_parked();
++    events.lock().clear();
++    window
++        .update(cx, |view, window, cx| view.request_focus(4, window, cx))
++        .unwrap();
++    cx.run_until_parked();
++    window
++        .update(cx, |view, _, cx| {
++            view.tree.lock().unwrap().destroy_element(2);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    window
++        .update(cx, |view, _, cx| {
++            add_input(&mut view.tree.lock().unwrap(), 4, false);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(4, "focus")]);
++}
++
++#[gpui::test]
++fn new_source_blur_listener_observes_existing_target_request(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, false);
++    window
++        .update(cx, |view, _, cx| {
++            let mut tree = view.tree.lock().unwrap();
++            add_input(&mut tree, 2, true);
++            add_input(&mut tree, 3, false);
++            tree.set_event_listener(2, "blur".into(), false);
++            cx.notify();
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "focus")]);
++    events.lock().clear();
++    window
++        .update(cx, |view, window, cx| {
++            view.tree
++                .lock()
++                .unwrap()
++                .set_event_listener(2, "blur".into(), true);
++            view.request_focus(3, window, cx);
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert_events(&events, &[(2, "blur"), (3, "focus")]);
++}
++
++#[gpui::test]
++fn closing_window_releases_pending_focus_owner(cx: &mut gpui::TestAppContext) {
++    let (window, events) = fixture(cx, true);
++    events.lock().clear();
++    let view = window
++        .update(cx, |view, window, cx| {
++            view.request_focus(4, window, cx);
++            let view = cx.weak_entity();
++            window.remove_window();
++            view
++        })
++        .unwrap();
++    cx.run_until_parked();
++    assert!(
++        view.upgrade().is_none(),
++        "pending focus must not keep a closed window's owner alive"
++    );
++    assert!(!events
++        .lock()
++        .iter()
++        .any(|(id, event)| *id == 4 && event == "focus"));
++}
+diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
+index c559adc..5dc7d95 100644
+--- a/packages/native/src/renderer.rs
++++ b/packages/native/src/renderer.rs
+@@ -45,6 +45,10 @@ use crate::style::StyleDesc;
+ use crate::text::{selectable_text, selection_frame_reset, SharedSelection};
+ use crate::theme::Theme;
+ 
++#[cfg(test)]
++#[path = "focus_tests.rs"]
++mod focus_tests;
++
+ /// The Window menu items act on the focused window, and the root element is the
+ /// only place in GPUIX that has one. `crate::app_menu` owns everything else.
+ #[cfg(target_os = "macos")]
+@@ -3994,7 +3998,7 @@ pub(crate) struct GpuixView {
+     pub(crate) focus_handles: HashMap<u64, gpui::FocusHandle>,
+     pending_focus_element: Option<PendingFocus>,
+     /// Active focus/blur subscriptions keyed by element and event type.
+-    pub(crate) focus_subscriptions: HashMap<(u64, String), gpui::Subscription>,
++    pub(crate) focus_subscriptions: HashMap<(u64, &'static str), gpui::Subscription>,
+     /// Registry for custom element types (input, editor, diff, etc.).
+     /// Stores factories (one per type) and live instances (one per element ID).
+     pub(crate) custom_registry: CustomElementRegistry,
+@@ -5137,12 +5141,34 @@ impl VirtualListEntry {
+ impl GpuixView {
+     pub(crate) fn request_focus(&mut self, id: u64, window: &mut gpui::Window, cx: &mut gpui::Context<Self>) {
+         self.reveal_virtual_list_ancestor(id);
+-        if let Some(handle) = self.focus_handles.get(&id) {
+-            self.pending_focus_element = None;
+-            handle.focus(window, cx);
+-        } else {
+-            self.pending_focus_element = Some(PendingFocus::new(id, window, cx));
++        if let Some(handle) = self
++            .focus_handles
++            .get(&id)
++            .filter(|handle| !handle.is_focused(window))
++        {
++            let listeners_ready = {
++                let tree = self.tree.lock().unwrap();
++                tree.elements.get(&id).is_some_and(|element| {
++                    ["focus", "blur"].into_iter().all(|event| {
++                        !element.events().contains(event)
++                            || self.focus_subscriptions.contains_key(&(id, event))
++                    })
++                }) && self
++                    .focused_element_id(window)
++                    .and_then(|source| tree.elements.get(&source))
++                    .is_none_or(|source| {
++                        !source.events().contains("blur")
++                            || self.focus_subscriptions.contains_key(&(source.id, "blur"))
++                    })
++            };
++            // New listeners must activate before the focus-path transition.
++            if listeners_ready {
++                handle.focus(window, cx);
++            }
+         }
++        // Settled handles still focus synchronously. Retain every request
++        // until sync so new autoFocus handles in the same update cannot win.
++        self.pending_focus_element = Some(PendingFocus::new(id, window, cx));
+         cx.notify();
+     }
+ 
+@@ -5347,11 +5373,14 @@ impl GpuixView {
+     ) {
+         // Checked before this frame's autoFocus runs: an explicit request
+         // outranks autoFocus, but not a Tab or click that came after it.
+-        if self.pending_focus_element.is_some_and(|pending| {
+-            window.focused(cx).map(|handle| handle.id()) != pending.focused_at_request
+-        }) {
++        let user_moved_focus = self.pending_focus_element.as_ref().is_some_and(|pending| {
++            window.focused(cx).map(|handle| handle.id())
++                != pending.focused_at_request.as_ref().map(|handle| handle.id())
++        });
++        if user_moved_focus {
+             self.pending_focus_element = None;
+         }
++        let mut focus_to_apply = None;
+         // Only the focusable elements are visited. This runs every frame, and
+         // the rest of the tree is orders of magnitude larger.
+         //
+@@ -5371,8 +5400,8 @@ impl GpuixView {
+                 };
+                 // Focus once, at creation. Re-focusing every frame would
+                 // steal focus back from whatever the user clicked next.
+-                if element.auto_focus {
+-                    handle.focus(window, cx);
++                if element.auto_focus && !user_moved_focus {
++                    focus_to_apply = Some(handle.clone());
+                 }
+                 self.focus_handles.insert(id, handle);
+             } else if let (Some(handle), Some(index)) =
+@@ -5390,16 +5419,18 @@ impl GpuixView {
+         // microtask, Windows and Linux render on their own thread).
+         if let Some(handle) = self
+             .pending_focus_element
++            .as_ref()
++            .filter(|pending| tree.focusable_ids.contains(&pending.id))
+             .and_then(|pending| self.focus_handles.get(&pending.id).cloned())
+         {
+-            handle.focus(window, cx);
++            focus_to_apply = Some(handle);
+             self.pending_focus_element = None;
+         }
+ 
+         self.focus_subscriptions.retain(|(id, event), _| {
+             tree.elements
+                 .get(id)
+-                .is_some_and(|element| element.events().contains(event))
++                .is_some_and(|element| element.events().contains(*event))
+         });
+         for &id in &tree.focusable_ids {
+             let (Some(element), Some(handle)) =
+@@ -5407,7 +5438,7 @@ impl GpuixView {
+             else {
+                 continue;
+             };
+-            let focus_key = (id, "focus".to_string());
++            let focus_key = (id, "focus");
+             if element.events().contains("focus")
+                 && !self.focus_subscriptions.contains_key(&focus_key)
+             {
+@@ -5417,7 +5448,7 @@ impl GpuixView {
+                 });
+                 self.focus_subscriptions.insert(focus_key, subscription);
+             }
+-            let blur_key = (id, "blur".to_string());
++            let blur_key = (id, "blur");
+             if element.events().contains("blur")
+                 && !self.focus_subscriptions.contains_key(&blur_key)
+             {
+@@ -5429,26 +5460,47 @@ impl GpuixView {
+             }
+         }
+ 
++        if let Some(handle) = focus_to_apply {
++            // Keep the old handle alive if this draw retires its element's
++            // focusability, as when a numeric pad replaces itself with input.
++            let focused_at_sync = window.focused(cx);
++            // on_focus/on_blur activate through defer. Applying focus during
++            // this draw consumes its focus-path transition before activation.
++            // Queue after every subscription so GPUI delivers the next draw's
++            // transition through the same listeners as Tab and click focus.
++            cx.defer_in(window, move |view, window, cx| {
++                if window.focused(cx).map(|handle| handle.id())
++                    == focused_at_sync.as_ref().map(|handle| handle.id())
++                {
++                    handle.focus(window, cx);
++                    // A request for a still-missing handle must survive our
++                    // own autoFocus; only a later user focus cancels it.
++                    if let Some(pending) = view.pending_focus_element.as_mut() {
++                        pending.focused_at_request = window.focused(cx);
++                    }
++                }
++            });
++        }
++
+         // Clean up handles for elements that no longer exist.
+         self.focus_handles
+             .retain(|id, _| tree.focusable_ids.contains(id));
+     }
+ }
+ 
+-/// A `focusElement` request for an element whose focus handle does not exist
+-/// yet. It is dropped when focus moves any other way first (Tab, a click, a
+-/// newer request), so a late element never steals focus from the user.
+-#[derive(Clone, Copy)]
++/// A `focusElement` request awaiting handle creation or the next sync's
++/// autoFocus arbitration. It is dropped when focus moves any other way first
++/// (Tab, a click, a newer request), so it never overrides later user focus.
+ struct PendingFocus {
+     id: u64,
+-    focused_at_request: Option<gpui::FocusId>,
++    focused_at_request: Option<gpui::FocusHandle>,
+ }
+ 
+ impl PendingFocus {
+     fn new(id: u64, window: &gpui::Window, cx: &gpui::App) -> Self {
+         Self {
+             id,
+-            focused_at_request: window.focused(cx).map(|handle| handle.id()),
++            focused_at_request: window.focused(cx),
+         }
+     }
+ }

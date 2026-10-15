@@ -1032,3 +1032,15 @@ Expose `setQuads(elementId, Float32Array)` and a typed native ref method. Do not
 Validation covers GPUI local coordinates, clipping, nested opacity, color, and cursor-induced hitbox prevention. Consumer native tests cover render-free updates, pending data through GPU screenshot comparison, remount, and pointer pass-through. Each targeted invariant has a failing mutation. Equal-geometry DEV and production measurements and initial screenshot hashes are included in the local report.
 
 Scope is napi desktop. wasm remains explicitly unsupported. No issue or PR has been sent; the upstream contribution policy noted in the F1 section still applies.
+
+### F5 renderer-applied focus events
+
+2026-10-15。`autofocus-focus-event.patch` 接在九个已合入补丁的 `quad-batch.patch` 后；按协调者要求，quad 补丁同步 `496a17d` 已评审的 F4b 像素吸附版本，不二次修改。隔离源码根为 `/Volumes/PSSD/code/_vendor/f5-gpuix`，Cargo target 为该目录下的 `target`。不重建共享 vendor，不修改 F3 或 zed。
+
+GPUI `Context::on_focus/on_blur` 创建订阅后，通过 `defer` 激活监听。`Window::draw` 在当前帧完成时比较前后 focus path 并通知当时已激活的监听；不会为后来激活的监听重放事件。因此在 `GpuixView::sync_focus_handles` 内先 focus 再订阅，会得到已聚焦的 input，却丢失 JS focus 通知；仅在同一 render 内提前订阅也不够。
+
+修复沿用同一个 GPUI 订阅路径：只在 handle 创建时选择 autoFocus；已有目标仅在 target focus/blur 与 source blur 的已声明订阅均就绪时同步聚焦，否则等待 sync 激活后完成转换。所有显式请求保留至下一次 sync，统一优先于同批 autoFocus。请求之后的 Tab/click 取消旧请求，该次 sync 的 autoFocus 也不能覆盖用户焦点；renderer 自己执行 autoFocus 时只更新等待中的 pending 基线，不把它误判为用户导航。
+
+pending intent 的基线字段与 deferred focus 均持有稳定 `FocusHandle` 身份，等待跨越旧 owner 退休也不按可回收 id 误判取消；已退出 focusable 集合的请求目标不参与仲裁。所有 renderer-owned focus 合并成一个候选，在订阅激活 defer 之后用一次 `Context::defer_in` 应用；随后由 GPUI focus-path 转换交付 focus/blur。Window 的 GpuixView owner 释放时一并释放 intent、handles 与订阅。没有手工补发事件、JS 轮询、逐帧 refocus 或新公共 API。
+
+完整失败前、通过后、旧时序变异、DragPadNumber 消费方、隔离重建与自审证据见 [F5 验证报告](../../scripts/gpuix-main/evidence/f5/REPORT.md)。本切片按专项验收使用 offscreen real renderer，不打开桌面窗口；不声称完成视觉或 Live 对照验收。

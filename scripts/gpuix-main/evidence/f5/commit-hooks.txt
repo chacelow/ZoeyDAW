@@ -1,0 +1,24 @@
+chore(gpuix): sync reviewed renderer patch base
+status=0
+[gpuix-f5-autofocus-event a0feb8f] chore(gpuix): sync reviewed renderer patch base
+ 2 files changed, 91 insertions(+), 4 deletions(-)
+→ lint-staged could not find any staged files matching configured tasks.
+
+fix(gpuix): preserve focus transition lifetimes
+status=0
+[gpuix-f5-autofocus-event 064a8e2] fix(gpuix): preserve focus transition lifetimes
+ 2 files changed, 248 insertions(+), 17 deletions(-)
+[STARTED] Backing up original state...
+[COMPLETED] Backed up original state in git stash (d7b6e44)
+[STARTED] Running tasks for staged files...
+[STARTED] .lintstagedrc.json — 2 files
+[STARTED] *.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,css,scss,less,md,mdx,yaml,yml} — 1 file
+[STARTED] ultracite fix
+[COMPLETED] ultracite fix
+[COMPLETED] *.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,css,scss,less,md,mdx,yaml,yml} — 1 file
+[COMPLETED] .lintstagedrc.json — 2 files
+[COMPLETED] Running tasks for staged files...
+[STARTED] Applying modifications from tasks...
+[COMPLETED] Applying modifications from tasks...
+[STARTED] Cleaning up temporary files...
+[COMPLETED] Cleaning up temporary files...
