@@ -1,0 +1,395 @@
+{
+  "path": "/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/omp-computer-15a6d875abd636e7.png",
+  "width": 1050,
+  "height": 808,
+  "coordinateWidth": 1050,
+  "coordinateHeight": 808,
+  "ax": "- window \"zoeydaw native controls\" [ref=e1] app=bun\n  - group [ref=e2]\n    - group \"Control state specimens\" [ref=e3]\n      - statictext [ref=e4]: \"Real control states · Tab / Enter / Escape\"\n      - button \"State button (off)\" [ref=e5]\n        - statictext [ref=e6]: \"Activate\"\n      - button \"State icon\" [ref=e7]\n      - button \"Outline\" [ref=e8]\n        - statictext [ref=e9]: \"Outline\"\n      - button \"Secondary\" [ref=e10]\n        - statictext [ref=e11]: \"Secondary\"\n      - button \"Ghost\" [ref=e12]\n        - statictext [ref=e13]: \"Ghost\"\n      - button \"Delete\" [ref=e14]\n        - statictext [ref=e15]: \"Delete\"\n      - button \"Link\" [ref=e16]\n        - statictext [ref=e17]: \"Link\"\n      - incrementor \"State number\" [ref=e18]: \"120\"\n        - statictext [ref=e19]: \"120\"\n      - incrementor \"State bar\" [ref=e20]: \"50\"\n        - statictext [ref=e21]: \"50\"\n      - incrementor \"State bipolar\" [ref=e22]: \"0.00\"\n        - statictext [ref=e23]: \"0.00\"\n      - incrementor \"State pan\" [ref=e24]: \"C\"\n        - statictext [ref=e25]: \"C\"\n      - button \"State toggle (off)\" [ref=e26]\n        - statictext [ref=e27]: \"OFF\"\n      - button \"State dropdown\" [ref=e28]\n        - statictext [ref=e29]: \"Beats\"\n        - statictext [ref=e30]: \"⌄\"\n      - button \"State popup\" [ref=e31]\n        - statictext [ref=e32]: \"Adjust popup\"\n      - button \"Input label\" [ref=e33]\n      - textfield \"State input\" [ref=e34]: \"Native input\"\n      - radiogroup \"State radio group\" [ref=e35]\n        - radio \"First\" [ref=e36]\n        - radio \"Second\" [ref=e37]\n      - group \"State tool group\" [ref=e38]\n        - button \"Draw\" [ref=e39]\n        - button \"Snap\" [ref=e40]\n      - tabgroup [ref=e41]\n        - radio \"Clips\" [ref=e42]: \"true\"\n        - radio \"Devices\" [ref=e43]: \"false\"\n      - group \"Clips\" [ref=e44]\n        - statictext [ref=e45]: \"Clip content\"\n      - group \"State transport region\" [ref=e46]\n        - incrementor \"State transport number\" [ref=e47]: \"120\"\n          - statictext [ref=e48]: \"120\"\n        - button \"State transport icon\" [ref=e49]\n      - group \"Narrow selector parent\" [ref=e50]\n        - button \"Filled narrow selector\" [ref=e51]\n          - statictext [ref=e52]: \"Beats\"\n          - statictext [ref=e53]: \"⌄\"\n      - group \"Wide selector parent\" [ref=e54]\n        - button \"Filled wide selector\" [ref=e55]\n          - statictext [ref=e56]: \"Beats\"\n          - statictext [ref=e57]: \"Long routing destination\"\n          - statictext [ref=e58]: \"Beats\"\n          - statictext [ref=e59]: \"⌄\"\n      - incrementor \"State icon-free number\" [ref=e60]: \"120\"\n        - statictext [ref=e61]: \"120\"\n      - group \"State keyboard log\" [ref=e62]\n  - button [ref=e63]\n  - button [ref=e64]\n    - group [ref=e65]\n  - button [ref=e66]\n  - statictext [ref=e67]: \"zoeydaw native controls\"",
+  "nodeCount": 67,
+  "truncated": false,
+  "window": {
+    "id": "76517",
+    "pid": 47400,
+    "bounds": {
+      "x": 435,
+      "y": 150,
+      "width": 1050,
+      "height": 808
+    }
+  },
+  "bounds": [
+    {
+      "ref": "e3",
+      "role": "group",
+      "title": "Control state specimens",
+      "bounds": {
+        "x": 435,
+        "y": 178,
+        "width": 1050,
+        "height": 780
+      }
+    },
+    {
+      "ref": "e5",
+      "role": "button",
+      "title": "State button (off)",
+      "bounds": {
+        "x": 442,
+        "y": 204,
+        "width": 40,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e7",
+      "role": "button",
+      "title": "State icon",
+      "bounds": {
+        "x": 484,
+        "y": 204,
+        "width": 13,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e8",
+      "role": "button",
+      "title": "Outline",
+      "bounds": {
+        "x": 499,
+        "y": 204,
+        "width": 36,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e10",
+      "role": "button",
+      "title": "Secondary",
+      "bounds": {
+        "x": 537,
+        "y": 204,
+        "width": 51,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e12",
+      "role": "button",
+      "title": "Ghost",
+      "bounds": {
+        "x": 590,
+        "y": 204,
+        "width": 31,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e14",
+      "role": "button",
+      "title": "Delete",
+      "bounds": {
+        "x": 623,
+        "y": 204,
+        "width": 33,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e16",
+      "role": "button",
+      "title": "Link",
+      "bounds": {
+        "x": 658,
+        "y": 204,
+        "width": 23,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e18",
+      "role": "incrementor",
+      "title": "State number",
+      "bounds": {
+        "x": 442,
+        "y": 221,
+        "width": 34,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e20",
+      "role": "incrementor",
+      "title": "State bar",
+      "bounds": {
+        "x": 478,
+        "y": 221,
+        "width": 34,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e22",
+      "role": "incrementor",
+      "title": "State bipolar",
+      "bounds": {
+        "x": 514,
+        "y": 221,
+        "width": 45,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e24",
+      "role": "incrementor",
+      "title": "State pan",
+      "bounds": {
+        "x": 561,
+        "y": 221,
+        "width": 39,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e26",
+      "role": "button",
+      "title": "State toggle (off)",
+      "bounds": {
+        "x": 602,
+        "y": 221,
+        "width": 22,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e28",
+      "role": "button",
+      "title": "State dropdown",
+      "bounds": {
+        "x": 442,
+        "y": 238,
+        "width": 117,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e31",
+      "role": "button",
+      "title": "State popup",
+      "bounds": {
+        "x": 561,
+        "y": 238,
+        "width": 63,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e33",
+      "role": "button",
+      "title": "Input label",
+      "bounds": {
+        "x": 442,
+        "y": 255,
+        "width": 47,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e34",
+      "role": "textfield",
+      "title": "State input",
+      "bounds": {
+        "x": 491,
+        "y": 255,
+        "width": 304,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e35",
+      "role": "radiogroup",
+      "title": "State radio group",
+      "bounds": {
+        "x": 442,
+        "y": 272,
+        "width": 80,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e36",
+      "role": "radio",
+      "title": "First",
+      "bounds": {
+        "x": 442,
+        "y": 272,
+        "width": 32,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e37",
+      "role": "radio",
+      "title": "Second",
+      "bounds": {
+        "x": 476,
+        "y": 272,
+        "width": 46,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e38",
+      "role": "group",
+      "title": "State tool group",
+      "bounds": {
+        "x": 442,
+        "y": 289,
+        "width": 56,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e39",
+      "role": "button",
+      "title": "Draw",
+      "bounds": {
+        "x": 442,
+        "y": 289,
+        "width": 27,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e40",
+      "role": "button",
+      "title": "Snap",
+      "bounds": {
+        "x": 471,
+        "y": 289,
+        "width": 27,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e41",
+      "role": "tabgroup",
+      "bounds": {
+        "x": 442,
+        "y": 306,
+        "width": 200,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e42",
+      "role": "radio",
+      "title": "Clips",
+      "bounds": {
+        "x": 442,
+        "y": 306,
+        "width": 100,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e43",
+      "role": "radio",
+      "title": "Devices",
+      "bounds": {
+        "x": 542,
+        "y": 306,
+        "width": 100,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e46",
+      "role": "group",
+      "title": "State transport region",
+      "bounds": {
+        "x": 442,
+        "y": 346,
+        "width": 68,
+        "height": 20
+      }
+    },
+    {
+      "ref": "e47",
+      "role": "incrementor",
+      "title": "State transport number",
+      "bounds": {
+        "x": 442,
+        "y": 346,
+        "width": 45,
+        "height": 20
+      }
+    },
+    {
+      "ref": "e49",
+      "role": "button",
+      "title": "State transport icon",
+      "bounds": {
+        "x": 490,
+        "y": 346,
+        "width": 20,
+        "height": 20
+      }
+    },
+    {
+      "ref": "e50",
+      "role": "group",
+      "title": "Narrow selector parent",
+      "bounds": {
+        "x": 442,
+        "y": 370,
+        "width": 74,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e51",
+      "role": "button",
+      "title": "Filled narrow selector",
+      "bounds": {
+        "x": 442,
+        "y": 370,
+        "width": 74,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e54",
+      "role": "group",
+      "title": "Wide selector parent",
+      "bounds": {
+        "x": 518,
+        "y": 370,
+        "width": 304,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e55",
+      "role": "button",
+      "title": "Filled wide selector",
+      "bounds": {
+        "x": 518,
+        "y": 370,
+        "width": 304,
+        "height": 13
+      }
+    },
+    {
+      "ref": "e60",
+      "role": "incrementor",
+      "title": "State icon-free number",
+      "bounds": {
+        "x": 442,
+        "y": 387,
+        "width": 22,
+        "height": 13
+      }
+    }
+  ]
+}

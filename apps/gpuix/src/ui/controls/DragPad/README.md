@@ -15,7 +15,7 @@
 
 ## 光标能力注入
 
-UI 层只声明 `CursorLockPort { capture(pressPoint), hide, restore }`，通过 `ControlEnvironmentProvider value.cursorLock` 注入。UI 不 import 原生包；未注入时不隐藏/还原光标，数值拖动仍工作。应用组合根负责接入 `@zoeydaw/native`，示例见 `src/gallery/controls.tsx`。
+UI 层只声明 `CursorLockPort { capture(pressPoint), hide, restore }`，通过 `ControlEnvironmentProvider value.cursorLock` 注入。UI 不 import 原生包或 platform；未注入时不隐藏或还原光标，数值拖动仍工作。画廊等组合根注入 `@/platform/cursor` 的 `nativeCursorLock`，读回验证使用同一端口模块的 `currentCursorPosition`。
 
 按下时把 mouseDown 事件自身的 `x/y`（窗口内容区左上原点，pt）交给 `capture`，端口换算成屏幕锚点；事件缺坐标时不锁光标。超过点击阈值后隐藏；释放/取消先还原再显示。手势保存取得锚点时的端口，Provider 更新不能把恢复责任转移给另一个实例。不使用 `CGAssociateMouseAndMouseCursorPosition`：gpuix move 来自绝对窗口位置，断开关联会冻结事件。真实光标依旧不可见地移动，因此不是无限屏幕边界拖动。
 
