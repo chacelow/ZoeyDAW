@@ -1,6 +1,7 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
 import { stopTextShortcutPropagation } from "../keyboard"
+import { useTextFocusBinding } from "../ControlEnvironment"
 import type { InputProps as NativeInputProps } from "@gpuix/react"
 
 export interface InputProps extends NativeInputProps {
@@ -15,11 +16,14 @@ export function Input({
   onValueChange,
   onChange,
   onKeyDown,
+  onFocus,
+  onBlur,
   readOnly,
   style,
   ...props
 }: InputProps) {
   const theme = useTheme()
+  const textFocus = useTextFocusBinding(!disabled)
   const variants = sv({
     base: {
       height: theme.control["--spacing-control-track"],
@@ -65,9 +69,17 @@ export function Input({
         }),
         style
       )}
+      onFocus={event => {
+        textFocus.onFocus()
+        onFocus?.(event)
+      }}
+      onBlur={event => {
+        textFocus.onBlur()
+        onBlur?.(event)
+      }}
       onKeyDown={event => {
         onKeyDown?.(event)
-        if (!disabled && !readOnly) stopTextShortcutPropagation(event)
+        if (!disabled) stopTextShortcutPropagation(event)
       }}
       onChange={event => {
         if (disabled || readOnly) return

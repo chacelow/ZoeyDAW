@@ -20,6 +20,7 @@ app-shell ──▶ ArrangementPanel (composition root, 在 app-shell 或 arrang
 视口（`scrollX`、`scrollY`、`pxPerBar`、可见行范围）只有一个 owner：`timeline`。
 
 - `ArrangementViewport`（`pxPerBar`、`scrollX`、`scrollY`、`width`、`height`、`dpr`）与 `ArrangementScene` 类型**定义在 `core/scene`（B1，已合入）**，三个切片都从那里取，不各自重新定义。
+- `ArrangementViewport.width` 是可编辑时间宽度（`timeViewportWidth`），不含右侧 `controlsWidth`；`tracks` 的整行与外框宽度是二者之和，车道槽宽度直接使用 `viewport.width`。
 - `timeline` 拥有视口**状态与操作**，经 `TimelineController` 暴露（见第 3 节）；缩放/平移的纯计算调用 `core/viewport`。`setScroll` 必须同步：返回前共享 `SceneStore` 的 viewport 投影已更新，并返回接受后的 `ArrangementViewport`，这样 lane 的边缘自动滚动在同一帧重算 Ghost 时读到的是新值，不读前一帧。
 - `lane` 与 `tracks` 只**读**视口（通过 props 传入同一个对象），不持有第二份。
 - 垂直滚动：`tracks` 的表头列与 `lane` 的车道共用同一个 `scrollY`，作为一个整体滚动；Minimap 固定，不随垂直滚动。
@@ -40,6 +41,8 @@ export interface TimelineController {
   fitToProject(): ArrangementViewport
   readonly view: TimelineView // 命名的视图交互端口，仅供 ArrangementTimeline 消费（标尺、测量、滚轮、暂停跟随、minimap 高度）；组合根与 app-shell 不依赖其细项
   tick(nowMs: number): void // 由组合根的帧源（F1 合入后为原生帧回调）喂入，驱动边缘自动滚动与跟随播放
+  getFrameDemand(): boolean // 标尺 autoScroll 的实际活动；组合根再合并 playing 与 lane.dragActive
+  subscribeFrameDemand(listener: () => void): () => void // 空闲/活动边界通知，不轮询、不把 view 细项泄漏给组合根
   dispose(): void
 }
 export function createTimelineController(deps: TimelineControllerDeps): TimelineController

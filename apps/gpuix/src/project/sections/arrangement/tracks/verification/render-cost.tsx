@@ -7,7 +7,7 @@ import {
   useProjectState,
 } from "@/project/adapters"
 import { createTrack } from "@/project/model/reducers"
-import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
+import { CONTROLS_WIDTH, DEFAULT_TRACK_HEIGHT } from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
 import { trackResources } from "../locales"
@@ -42,7 +42,7 @@ for (const sourceCount of [20, 2000]) {
     transport: document.transport,
   })
   store.setViewport(viewport)
-  const root = createTestRoot({ width: viewport.width, height: viewport.height })
+  const root = createTestRoot({ width: viewport.width + CONTROLS_WIDTH, height: viewport.height })
   try {
     root.render(
       <AnimationFrameProvider source={controlledFrames.source}>

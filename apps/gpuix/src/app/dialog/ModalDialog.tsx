@@ -1,7 +1,8 @@
-import { useRef } from "react"
+import { useLayoutEffect, useRef } from "react"
 import { Dialog, DialogBackdrop, DialogPopup, DialogPortal, useGpuix } from "@gpuix/react"
 import { colorMix } from "@/shared/theme/color-mix"
 import { useTheme } from "@/shared/theme/ThemeProvider"
+import { useAppInteraction } from "../interaction"
 import type { ReactNode } from "react"
 import type { PublicInstance } from "@gpuix/react"
 
@@ -31,6 +32,8 @@ export function ModalDialog({
   const theme = useTheme()
   const { renderer } = useGpuix()
   const popup = useRef<PublicInstance | null>(null)
+  const interaction = useAppInteraction()
+  useLayoutEffect(() => (open ? interaction.enterModal() : undefined), [open, interaction])
   return (
     <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal={persistent}>
       <DialogPortal>

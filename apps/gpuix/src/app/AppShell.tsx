@@ -15,6 +15,7 @@ import { SettingsDialog } from "./settings/SettingsDialog"
 import { TitleBar } from "./shell/TitleBar"
 import { UnsavedCloseDialog } from "./window/UnsavedCloseDialog"
 import { useUnsavedCloseGuard } from "./window/useUnsavedCloseGuard"
+import { AppInteractionProvider } from "./interaction"
 import type { ReactNode } from "react"
 import type { SnapshotStorage } from "@/platform/storage"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
@@ -31,7 +32,7 @@ export interface AppShellProps {
   readonly storage: SnapshotStorage
   /** Window close interception; `null` leaves closing unguarded. */
   readonly closeRenderer: WindowRenderer | null
-  readonly renderProjectSlots: (shell: ProjectShellApi) => ProjectLayoutSlots
+  readonly renderProjectSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
   /** Show raw route-error messages (web shows them only in DEV). */
   readonly showErrorDetails: boolean
 }
@@ -49,20 +50,21 @@ export function AppShell({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const openSettings = useCallback(() => setSettingsOpen(true), [])
   return (
-    <RouterProvider value={router}>
-      <AppPreferencesProvider stores={appearance} systemAppearance={systemAppearance}>
-        <AppFrame
-          storage={storage}
-          closeRenderer={closeRenderer}
-          renderProjectSlots={renderProjectSlots}
-          showErrorDetails={showErrorDetails}
-          onOpenSettings={openSettings}
-          settingsOpen={settingsOpen}
-        >
-          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-        </AppFrame>
-      </AppPreferencesProvider>
-    </RouterProvider>
+    <AppInteractionProvider>
+      <RouterProvider value={router}>
+        <AppPreferencesProvider stores={appearance} systemAppearance={systemAppearance}>
+          <AppFrame
+            storage={storage}
+            closeRenderer={closeRenderer}
+            renderProjectSlots={renderProjectSlots}
+            showErrorDetails={showErrorDetails}
+            onOpenSettings={openSettings}
+          >
+            <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+          </AppFrame>
+        </AppPreferencesProvider>
+      </RouterProvider>
+    </AppInteractionProvider>
   )
 }
 
@@ -72,11 +74,9 @@ function AppFrame({
   renderProjectSlots,
   showErrorDetails,
   onOpenSettings,
-  settingsOpen,
   children,
 }: Pick<AppShellProps, "storage" | "closeRenderer" | "renderProjectSlots" | "showErrorDetails"> & {
   readonly onOpenSettings: () => void
-  readonly settingsOpen: boolean
   /** App-level overlays; they must stay inside this frame, the window root's only host child. */
   readonly children: ReactNode
 }) {
@@ -120,7 +120,6 @@ function AppFrame({
               key={route.projectId}
               projectId={route.projectId}
               renderSlots={renderProjectSlots}
-              playbackKeysEnabled={!settingsOpen && !close.asking}
             />
           ) : (
             <NotFoundPage />

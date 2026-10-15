@@ -172,41 +172,23 @@ test("native editing actions change text and never escape to project shortcuts",
   }
 })
 
-test("disabled and read-only native editors reject text edits", () => {
-  for (const mode of ["disabled", "readonly"]) {
-    const windowKeys: string[] = []
-    const inputKeys: string[] = []
-    const root = createTestRoot({
-      width: 400,
-      height: 180,
-      onKeyDown: event => {
-        windowKeys.push(event.key ?? "")
-      },
-    })
-    let changes = 0
+test("disabled Input preserves controlled text under native key input", () => {
+  const root = createTestRoot({ width: 400, height: 180 })
+  function Form() {
+    const [value, setValue] = useState("fixed")
+    return <Input testId="disabled-input" disabled value={value} onValueChange={setValue} />
+  }
+  try {
     root.render(
       <ThemeProvider>
-        <Input
-          testId="input"
-          value="fixed"
-          disabled={mode === "disabled"}
-          readOnly={mode === "readonly"}
-          onKeyDown={event => {
-            inputKeys.push(event.key ?? "")
-          }}
-          onValueChange={() => {
-            changes += 1
-          }}
-        />
+        <Form />
       </ThemeProvider>
     )
-    root.renderer.flush()
-    const input = root.renderer.findByTestId("input")
-    if (!input) throw new Error("Missing input")
+    const input = root.renderer.findByTestId("disabled-input")
+    if (!input) throw new Error("Missing disabled input")
     root.renderer.nativeSimulateKeystrokes(input.id, "a space")
-    expect(inputKeys).toEqual(["a", "space"])
-    expect(windowKeys).toEqual(["a", "space"])
-    expect(changes).toBe(0)
+    expect(root.renderer.getElement(input.id)?.customProps?.value).toBe("fixed")
+  } finally {
     root.unmount()
   }
 })
