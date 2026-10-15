@@ -71,7 +71,9 @@ export function MenuTrigger({
     },
     onKeyDown: (event: KeyEvent) => {
       if (unavailable) return
+      const target = renderer?.getFocusedElementId?.()
       onKeyDown?.(event)
+      if (event.defaultPrevented || target !== menu.trigger.current?.id) return
       const key = event.key?.toLowerCase()
       if (
         (!menu.contextMenu &&

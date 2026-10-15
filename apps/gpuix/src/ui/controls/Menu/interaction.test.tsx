@@ -114,3 +114,51 @@ describe("native menu interaction ownership", () => {
     })
   }
 })
+
+test("Enter on a nested control does not activate its dropdown ancestor", () => {
+  let childActions = 0
+  const root = mount(
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <div testId="trigger" style={{ width: 300, height: 100 }}>
+          <Button
+            testId="child"
+            onClick={() => {
+              childActions += 1
+            }}
+          >
+            Solo
+          </Button>
+        </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent testId="content">
+        <DropdownMenuItem>Command</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+  root.renderer.nativeSimulateKeystrokes(element(root, "child").id, "enter")
+  expect(childActions).toBe(1)
+  expect(root.renderer.findByTestId("content")).toBeUndefined()
+  expect(root.renderer.getFocusedElementId()).toBe(element(root, "child").id)
+})
+
+for (const asChild of [false, true]) {
+  test(`prevented Enter never activates a ${asChild ? "Button slot" : "plain"} menu trigger`, () => {
+    const root = mount(
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          testId="trigger"
+          asChild={asChild}
+          onKeyDown={event => event.preventDefault()}
+        >
+          {asChild ? <Button>Commands</Button> : "Commands"}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent testId="content">
+          <DropdownMenuItem>Command</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+    root.renderer.nativeSimulateKeystrokes(element(root, "trigger").id, "enter")
+    expect(root.renderer.findByTestId("content")).toBeUndefined()
+  })
+}
