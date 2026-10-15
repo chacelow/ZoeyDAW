@@ -58,7 +58,10 @@ test("End/Home and Tab/Shift-Tab keep the focused preset inside the scroll viewp
     const viewport = bounds(root, "theme-preset-scroll")
     expect(bounds(root, lastId).y).toBeGreaterThan(viewport.y + viewport.height)
     const selected = node(root, firstId)
-    const badge = selected.children
+    const swatch = selected.children
+      .map(id => root.renderer.getElement(id))
+      .find(child => child?.style.position === "relative")
+    const badge = swatch?.children
       .map(id => root.renderer.getElement(id))
       .find(child => child?.style.position === "absolute")
     if (!badge) throw new Error("Selected preset badge missing")

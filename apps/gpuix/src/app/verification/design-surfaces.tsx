@@ -7,13 +7,13 @@ import { createMemorySnapshotStorage } from "@/project/adapters"
 import { LAUNCH_FOCUS } from "@/platform/window"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { createTimelineController } from "@/project/sections/arrangement/timeline/controller"
-import { englishLabels } from "@/project/sections/arrangement/timeline/demo-labels"
+import { chineseLabels, englishLabels } from "../locales/sections/timeline"
 import { Rulers, TimeRuler } from "@/project/sections/arrangement/timeline/rulers"
-import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "@/shared/theme/presets"
 import { HomePage } from "../home/HomePage"
 import { saveRecentProjects } from "../home/recent-projects"
-import { initAppI18n } from "../i18n"
+import { initAppI18n, useAppTranslation } from "../i18n"
 import { AppInteractionProvider } from "../interaction"
 import { AppPreferencesProvider } from "../preferences"
 import { createRouter, RouterProvider } from "../router/router"
@@ -24,7 +24,6 @@ import { createPreferenceStore } from "../settings/preference-store"
 import { isThemeMode } from "../settings/theme-mode"
 import { UnsavedCloseDialog } from "../window/UnsavedCloseDialog"
 import type { ReactNode } from "react"
-import type { Appearance } from "@/shared/theme/ThemeProvider"
 import type { ThemeMode } from "@/platform/settings"
 
 const surfaces = ["home", "settings", "unsaved", "error", "not-found", "rulers"] as const
@@ -59,6 +58,8 @@ function FailedRoute(): never {
   throw new Error("The project could not be opened. Retry or return to Home.")
 }
 function Surface({ name }: { name: (typeof surfaces)[number] }) {
+  const { locale } = useAppTranslation()
+  const labels = locale.startsWith("zh") ? chineseLabels : englishLabels
   switch (name) {
     case "home":
       return <HomePage storage={storage} />
@@ -77,8 +78,8 @@ function Surface({ name }: { name: (typeof surfaces)[number] }) {
     case "rulers":
       return (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <Rulers owner={owner} labels={englishLabels} />
-          <TimeRuler scene={scene} label="Time ruler" />
+          <Rulers owner={owner} labels={labels} />
+          <TimeRuler scene={scene} label={labels.timeRuler} />
         </div>
       )
   }
@@ -91,16 +92,14 @@ function Background({ children }: { children: ReactNode }) {
     </div>
   )
 }
-function Providers({ appearance, children }: { appearance: Appearance; children: ReactNode }) {
+function Providers({ children }: { children: ReactNode }) {
   return (
-    <AppPreferencesProvider stores={stores} systemAppearance={appearance}>
-      <ThemeProvider appearance={appearance}>
-        <RouterProvider value={router}>
-          <AppInteractionProvider>
-            <Background>{children}</Background>
-          </AppInteractionProvider>
-        </RouterProvider>
-      </ThemeProvider>
+    <AppPreferencesProvider stores={stores} systemAppearance="dark">
+      <RouterProvider value={router}>
+        <AppInteractionProvider>
+          <Background>{children}</Background>
+        </AppInteractionProvider>
+      </RouterProvider>
     </AppPreferencesProvider>
   )
 }
@@ -110,8 +109,9 @@ const requested = process.env.T1_SURFACE
 if (requested) {
   const name = surfaces.find(item => item === requested)
   if (!name) throw new Error(`Unknown surface ${requested}`)
+  stores.themeMode.set(process.env.T1_APPEARANCE === "light" ? "light" : "dark")
   render(
-    <Providers appearance={process.env.T1_APPEARANCE === "light" ? "light" : "dark"}>
+    <Providers>
       <Surface name={name} />
     </Providers>,
     {
@@ -129,9 +129,10 @@ if (requested) {
   const captureLocale = async (locale: string) => {
     await i18next.changeLanguage(locale)
     for (const appearance of ["dark", "light"] as const) {
+      stores.themeMode.set(appearance)
       for (const name of surfaces) {
         root.render(
-          <Providers key={`${locale}-${appearance}-${name}`} appearance={appearance}>
+          <Providers key={`${locale}-${appearance}-${name}`}>
             <Surface name={name} />
           </Providers>
         )
