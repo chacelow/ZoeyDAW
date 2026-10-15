@@ -63,6 +63,7 @@
     "midiRulerHeight": 34,
     "midiVelocityHeight": 40,
     "midiRowMaxHeight": 18,
-    "midiRowMinHeight": 6
+    "midiRowMinHeight": 6,
+    "audioRulerHeight": 39
   }
 }

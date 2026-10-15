@@ -76,7 +76,7 @@ crates/
 1. **跑扫描**：在切片 worktree 根目录执行 `node scripts/gpuix-review-scan.mjs`（对比基线 `gpuix-migration`）。它调用 eslint（分层、DOM 全局、`@/` 别名、手写 SVG）并补查文件过大、裸像素与颜色字面量、JS 定时器、`any`、产品代码里的 mock、被跳过的测试、只改源码没有测试。`HARD` 必须清零，`WARN` 逐条在报告里给结论。
 2. **派独立审查**：用 `task` 起一个 `pstack-reviewer`（或 `reviewer`）子代理，按两条轴审你自己的 diff，两个提示都附完整 diff 命令与提交列表：
    - **Standards 轴**：对照 `docs/architecture/gpuix.md`、`gpuix-ui-standards.md`、`gpuix-arrangement-composition.md`、`LESSONS.md`，并带上下面的「代码质量底线」。
-   - **Spec 轴**：对照你的切片规格（`.orca-specs/<slice>.md`）与 `b2-common.md`，找缺失、越界、实现看似对但实则错的地方。审查是只读的，子代理不改文件，你自己改。
+   - **Spec 轴**：对照你的切片规格（`scripts/orchestration/specs/<slice>.md`）与 `b2-common.md`，找缺失、越界、实现看似对但实则错的地方。审查是只读的，子代理不改文件，你自己改。
 3. **分类处置**：把审查与扫描的每条发现归入三类，写进报告的「自审结果」表（发现、类别、处置、证据）。
    | 类别 | 判据 | 谁处置 |
    | --- | --- | --- |

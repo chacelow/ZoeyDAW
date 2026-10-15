@@ -5,6 +5,8 @@ import { sx } from "@/shared/theme/style"
  * Draws backend peak envelopes as one 1px column per pixel and channel.
  * `peaks` is channel-major, then pixel-major `[min, max]` (the `PeakReader` layout);
  * channel count is `peaks.length / (pixels * 2)`. Values are clamped to [-1, 1].
+ * `inset` keeps that many pixels clear above and below full scale in every channel
+ * (web clip waveform: amplitude = channelHeight / 2 - 1).
  */
 export const PeakColumns = memo(function PeakColumns({
   peaks,
@@ -14,6 +16,7 @@ export const PeakColumns = memo(function PeakColumns({
   top = 0,
   color,
   opacity = 1,
+  inset = 0,
   testId,
 }: {
   peaks: Float32Array
@@ -23,11 +26,13 @@ export const PeakColumns = memo(function PeakColumns({
   top?: number
   color: string
   opacity?: number
+  inset?: number
   testId?: string
 }) {
   const channels = pixels > 0 ? Math.floor(peaks.length / (pixels * 2)) : 0
   if (!channels || height <= 0) return null
   const channelHeight = height / channels
+  const amplitude = Math.max(0, channelHeight / 2 - inset)
   return (
     <div
       testId={testId}
@@ -53,9 +58,9 @@ export const PeakColumns = memo(function PeakColumns({
             style={sx({
               position: "absolute",
               left: pixel,
-              top: channel * channelHeight + ((1 - maximum) * channelHeight) / 2,
+              top: channel * channelHeight + channelHeight / 2 - maximum * amplitude,
               width: 1,
-              height: Math.max(1, ((maximum - minimum) * channelHeight) / 2),
+              height: Math.max(1, (maximum - minimum) * amplitude),
               backgroundColor: color,
               opacity,
               pointerEvents: "none",

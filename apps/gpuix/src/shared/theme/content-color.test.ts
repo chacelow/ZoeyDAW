@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { darkColors, lightColors } from "./colors"
+import { getThemePreset } from "./presets"
 import { CONTENT_PALETTE, contentFill, resolveContentColor } from "./content-color"
+
+const { light: lightColors, dark: darkColors } = getThemePreset("default").colors
 
 describe("resolveContentColor", () => {
   test("every palette token follows the active theme", () => {

@@ -8,7 +8,7 @@ afterEach(() => {
   for (const root of roots.splice(0)) root.unmount()
 })
 
-function columns(peaks: Float32Array, pixels: number, height: number) {
+function columns(peaks: Float32Array, pixels: number, height: number, inset?: number) {
   const root = createTestRoot({ width: 100, height: 100 })
   roots.push(root)
   root.render(
@@ -20,6 +20,7 @@ function columns(peaks: Float32Array, pixels: number, height: number) {
         width={pixels}
         height={height}
         color="#fff"
+        inset={inset}
       />
     </div>
   )
@@ -42,6 +43,15 @@ test("stereo peaks are channel-major: left channel fills the top half, right the
   expect(result[1]).toEqual({ x: 1, y: 5, height: 5 })
   expect(result[2]).toEqual({ x: 0, y: 30, height: 5 })
   expect(result[3]).toEqual({ x: 1, y: 20, height: 20 })
+})
+
+test("inset keeps full scale clear of every channel edge", () => {
+  // Stereo, 40px: each channel is 20px; inset 1 → amplitude 9, full scale spans y 1..19 and 21..39.
+  const result = columns(new Float32Array([-1, 1, -1, 1]), 1, 40, 1)
+  expect(result).toEqual([
+    { x: 0, y: 1, height: 18 },
+    { x: 0, y: 21, height: 18 },
+  ])
 })
 
 test("silence still draws a 1px line; mismatched or empty input draws nothing", () => {
