@@ -1,0 +1,24 @@
+{
+  "baseline": "7cf7215",
+  "diffCommand": "git diff 7cf7215 -- scripts/gpuix-main/patches/quad-batch.patch docs/research/gpuix-main-build.md",
+  "newFilesRead": [
+    "scripts/gpuix-main/quad-batch/pixel-parity.tsx",
+    "scripts/gpuix-main/quad-batch/compare-pixels.py",
+    "scripts/gpuix-main/quad-batch/evidence/pixel-snap-before.json",
+    "scripts/gpuix-main/quad-batch/evidence/pixel-snap-after.json"
+  ],
+  "authoredCommitsAtReview": [],
+  "standards": {
+    "reviewer": "pstack-reviewer/F4bStandardsReview",
+    "openFindings": 0,
+    "closedFinding": "P3 link to PIXEL-SNAP-REPORT.md was added while that report was in progress; file now exists, reviewer acknowledged closure.",
+    "result": "No native allocation, API shape, ownership, mutation queue or input/AX contract findings. Report completion and final run results were not re-reviewed."
+  },
+  "spec": {
+    "reviewer": "pstack-reviewer/F4bSpecReview",
+    "actionableFindings": 0,
+    "result": "GPUI authored-length snapping followed by host translation and paint_quad edge snapping matches explicit absolute native div geometry. Real independent div oracle and exact lane RGBA parity verified by reading evidence.",
+    "limits": "Four scales are covered by native painted-bounds tests, not four decoded GPU screenshot scales. No percentage/flex/grid-derived-position claim."
+  },
+  "reviewersRanChecks": false
+}
