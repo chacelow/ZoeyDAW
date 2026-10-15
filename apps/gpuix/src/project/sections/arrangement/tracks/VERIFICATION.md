@@ -327,6 +327,8 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 | 业务控件局部外观覆盖 | 必修 | Identity/Mixer/Monitor/NameInput恢复共享chrome/Input；消费者回归与当前组合图 |
 | 窗口黑图及播放run超时 | 汇报仲裁→已接受证据边界 | 协调者批准离屏四组合+原生回归交付；系统drag/wheel/focus/播放停止/peak窗口图继续未验证 |
 | 独立TracksFollowupReview两轴 | 记录 | 对照gpuix代码质量底线及Spec，已审新增回归、preload、appearance入口及Identity/Mixer delta，0必修/0仲裁；不把静态审查称运行验证 |
+| scan px-literal两处 | 记录 | appearance-smoke的760×720为验证画布尺寸，不是控件字面量；0HARD/1WARN |
+| 公开可写固定临时目录 | 必修→已修 | mkdtempSync创建唯一临时目录，eslint通过，不关闭规则 |
 
 ### 错题
 
@@ -338,3 +340,12 @@ demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crat
 
 - 用Bun onLoad做共享源码内存变异：不写共享文件，目标漂移直接失败，消费者行为测试验证真实缺陷。
 - 停止回归不要只看最终floor：先检查hold，再检查两个下降中间态，最后检查frame demand释放；冻结与瞬时归零都能被捕获。
+
+### 最终扫描与清理
+
+- 已提交实现 `7e4d58e`；独立审查完整命令 `git diff 21dace3...7e4d58e -- apps/gpuix/src/project/sections/arrangement/tracks`，实现提交列表仅 `7e4d58e`。后续提交仅更新本报告。
+- `pnpm exec eslint apps/gpuix/src/project/sections/arrangement/tracks`：退出0，无输出；`ultracite fix`预提交门禁通过，没有跳过hook。
+- `node scripts/gpuix-review-scan.mjs`：6 source、1 test，0 HARD、1 WARN。WARN为appearance-smoke验证画布760×720的两处像素尺寸，不是业务控件尺寸，记录保留。
+- 独立审查末次补充确认Monitor/NameInput收敛无必修/仲裁。首次固定临时目录触发eslint公开可写目录规则，已改为`mkdtempSync(path.join(tmpdir(), ...))`，lint通过；不是关闭规则。
+- 三个命名service：tracks-followup-ui取证后43.2s关闭；tracks-followup-interaction取菜单AX后关闭；tracks-followup-playback在10秒computer.run超时后立即关闭（总存活42.5s）。每个启动入口均设置240s自动终止兜底，不留watcher。
+- 已实跑 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"`：stdout为空，退出1；本次检查无匹配残留进程，未停止其他服务。
