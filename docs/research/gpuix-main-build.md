@@ -485,7 +485,7 @@ node scripts/gpuix-main/check.mjs --resolution
 
 构建只允许固定 SHA、固定 zed SHA 与仓库中的 `patches/close-guard.patch`，拒绝额外 tracked diff、untracked 源码与 dirty zed。已应用的补丁可重复构建，不重复 apply。外置 `.build-lock` 确保同一 vendor 同时只有一个构建 owner；中断留下锁目录时，先确认原构建已结束，再移除空锁目录。`check.mjs` 校验补丁 diff、平台与产物 SHA-256 manifest，拒绝源码或产物发生变化的旧构建。
 
-关闭补丁来自 A6 附录，纳入版本管理后由干净 checkout 应用。它仍只适用于 macOS embedded loop，未实现 Windows/Linux 的跨线程关闭流程、handler 清除或异步确认。`WindowCloseGuard.supported` 没有被改成 true。上游完整 Apache-2.0 LICENSE 与 THIRD_PARTY_NOTICES 原文保存在根 `THIRD_PARTY_NOTICES`。
+关闭补丁来自 A6 附录，纳入版本管理后由干净 checkout 应用。它仍只适用于 macOS embedded loop，未实现 Windows/Linux 的跨线程关闭流程、handler 清除或异步确认。`WindowCloseGuard.supported` 没有被改成 true(后由 H1 接通，见「H1 窗口外观与程序化关闭」)。上游完整 Apache-2.0 LICENSE 与 THIRD_PARTY_NOTICES 原文保存在根 `THIRD_PARTY_NOTICES`。
 
 ### 升级到下一个主干 SHA
 
@@ -728,6 +728,7 @@ D1 指定的依赖切换、面板测量替换、键盘订阅端口均已实现�
 | `anchored-center.patch` | `native/src/custom_elements/anchored.rs` | 仅无 position 的 snap trigger-flex 路径让 flex 独占交叉轴居中 |
 | `select-trigger-space.patch` | `react/src/components/select.tsx` | `activateOnSpace` 默认 true，尊重 caller `defaultPrevented` |
 | `window-active-change.patch` | `native/src/renderer.rs`、`native/index.d.ts`、`native/js/host.ts` | GPUI 原生窗口激活观察，异步 bool 回调 |
+| `window-appearance-close.patch`(H1) | `native/src/renderer.rs`、`native/index.d.ts`、`native/js/host.ts` | 窗口明暗外观观察；`closeWindow()` 不经否决关闭，见「H1 窗口外观与程序化关闭」 |
 
 前置 `close-guard.patch` 保持 D1 的关闭契约。新增补丁不改变两个固定 SHA，没有新增依赖。
 
@@ -882,3 +883,52 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 ```
 
 输出为空，grep 返回 1 表示无匹配，不是残留进程失败。原始 stdout 与自有 service 清单见 `process-cleanup-2026-10-15.json`。没有启动或停止用户已有应用，没有 push 或远程贡献。
+
+### H1 窗口外观与程序化关闭
+
+2026-10-15。补丁 `window-appearance-close.patch` 接在 `window-active-change.patch` 之后，修改 `native/src/renderer.rs`、`native/index.d.ts`(NAPI 生成)、`native/js/host.ts`。不改 zed 子模块，不改两个固定 SHA，不新增依赖。构建在独立 vendor 根 `/Volumes/PSSD/code/_vendor/h1-gpuix` 上完成，共享 checkout 未改动。合入主干时由协调者统一重建共享 vendor。
+
+| 接口 | 契约 |
+| --- | --- |
+| `onWindowAppearanceChange(callback \| null)` | 基于 GPUI `observe_window_appearance`。第一次回调异步回报当前值，之后回报变化。传 null 释放 observer。弱、非阻塞 TSFN，不让进程保活。`VibrantLight`/`VibrantDark` 归并为 `"light"`/`"dark"` |
+| `getWindowAppearance()` | 同步返回当前 `"light" \| "dark"`。macOS 走 `update_window`，Win/Linux 走 UI command 加 2 秒超时应答。供首帧主题使用，因为订阅首值只当基线 |
+| `closeWindow()` | 调用 `Window::remove_window()`，**不**经过 `setWindowShouldClose`。在 `QuitMode::LastWindowClosed` 下最后一个窗口关闭即 `cx.quit()`，`tick()` 返回 false，JS 退出。禁止在 `setWindowShouldClose` 回调里同步调用：AppKit 询问期间 GPUI `App` 已被借用，再次 `borrow_mut` 会 panic，而且发生在 AppKit 的 FFI 回调里，可能直接 abort 进程。`platform/window` 守卫会在这种情况下抛错拦截 |
+| `NativeRenderer` | host 的 Pick 列表补上 `onWindowAppearanceChange`、`getWindowAppearance`、`setWindowShouldClose`、`closeWindow`，`platform/window` 的结构端口在编译期与它核对 |
+
+macOS 直接更新 view；Windows、Linux、FreeBSD 走 UI command 队列，与激活接口相同，但这三个平台没有实跑。
+
+**约束**：回报的是窗口的 `effectiveAppearance`，它继承 `NSApp.appearance`。如果以后为了让原生标题栏跟随所选模式而调用 GPUI `set_window_appearance`，「跟随系统」读到的就会是被覆盖的值，系统切换也不再触发变化。为此记入 LESSONS。另一条备选方案是在 `crates/native` 里监听 `NSDistributedNotificationCenter` 的 `AppleInterfaceThemeChangedNotification`：它能读到真实的系统值，但要新增 objc2-foundation/block2，只覆盖 macOS，也无法在 GPUI 测试里模拟。协调者批准走补丁方案。
+
+TS 侧：`createWindowPlatform(renderer).subscribeSystemAppearance` 与 `subscribeApplicationActive` 共用 `createNativeValueSubscription`，旧的 `application-active.ts` 已删除；`getSystemAppearance()` 给出首帧值。`createWindowCloseGuard(renderer, { shouldClose })` 返回 `{ supported, close() }`：`supported` 只表示能否否决(仅 macOS)，`close()` 只依赖三平台都有的 `closeWindow`，在 `shouldClose` 执行期间调用会抛错。设置中的 `themeMode`(`light | dark | system`，缺省按 system)与 `themePreset` 互相独立。详见 `apps/gpuix/src/platform/window/README.md`。
+
+**已知限制(推断，未实测)**：GPUI `gpui_macos/src/window_appearance.rs` 只识别 Aqua、DarkAqua 和两个 Vibrant 名称，其它名称一律回落为 `Light`。开启「增强对比度」后，系统报告的深色外观名(如 `NSAppearanceNameAccessibilityHighContrastDarkAqua`)会被当作 `"light"`。修复要么改 zed 子模块(本补丁不改)，要么在 renderer 里另读 `NSAppearance`。协调者决定只记录，不在本机切换辅助功能设置实测。
+
+**减少动态效果(协调者追加)**：GPUI 只有 `App::reduce_motion` 字段(默认 false，不从系统读取)，vendor 也没有相应接口，所以放在 `crates/native/src/reduced_motion.rs`，不改补丁。napi 提供 `reducedMotion()` 与 `onReducedMotionChange(callback | null)`：观察者对象用 `define_class!` 定义，挂在 `NSWorkspace.notificationCenter` 上，监听 `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification`。注册时先经弱、非阻塞 TSFN 异步回报当前值，传 null 时移除 observer，进程内只有一个 owner。依赖变化：`objc2-foundation 0.3.2` 由传递依赖改为直接依赖，`objc2-app-kit` 增加 `NSWorkspace`、`NSAccessibility` 两个 feature；`Cargo.lock` 只在 zoeydaw-native 的依赖列表里多一行。非 macOS 平台两个接口都返回错误。
+
+#### H1 实测记录
+
+证据在 [scripts/gpuix-main/evidence/h1](../../scripts/gpuix-main/evidence/h1/)。由协调者代为在系统设置里切换外观，demo 窗口为 420×140。
+
+| 场景 | 结果 | 证据 |
+| --- | --- | --- |
+| 基线 | 系统为深色，订阅后原生回报 `dark`，平台层不通知 | `h1-demo-log-2026-10-15.txt` |
+| 深 → 浅 | 原生 `light`，约 90ms 后平台 `appearanceChange light`；AX 读到 `System appearance: light` | 同上、`appearance-light-2026-10-15.png` |
+| 浅 → 深 | 原生 `dark`，平台 `appearanceChange dark` | 同上、`appearance-dark-2026-10-15.png` |
+| dirty 时按关闭按钮 | AX `AXCloseButton` press 触发 `closeRequest allow=false`，窗口保留，AX 读到 `Close guard: dialog: unsaved changes`(截图早于重绘，仍显示 dirty，以 AX 为准) | 日志与 AX 抄录 |
+| 选择「不保存」 | `discardChosen` 后调用 `guard.close()`，窗口消失，bun 进程 exit 0 | 日志、窗口列表 |
+
+#### H1 命令
+
+| 位置 | 实跑命令 | 结果 |
+| --- | --- | --- |
+| 根目录 | `GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/h1-gpuix bash scripts/gpuix-main/build.sh runtime` | native release 172.99s，RSS 798 MB；七个补丁经 `check.mjs --sources` 精确校验 |
+| vendor | `cargo test --release --manifest-path packages/native/Cargo.toml --lib --features test-support,gpui_platform/runtime_shaders` | 274 pass(F1 后 271 个，新增 3 个) |
+| vendor 变异 | 把 VibrantDark 映射为 light，并删除注册时的基线回调 | 2 个外观测试失败，恢复后通过 |
+| 本仓 Rust 变异 | `ThemeMode::Dark` 加 `alias = "Dark", "auto"`(宽松解析) | `rejects_unknown_theme_mode_on_read_and_write` 失败，恢复后通过 |
+| TS 变异 | 删除守卫的 `deciding` 拦截；`shouldClose` 恒为 true；不支持时 `close()` 变成空操作；外观端口误接 `onWindowActiveChange`；去掉基线判断；删除 `register(null)` | 依次 1、2、1、1、6、5 个失败，恢复后全部通过 |
+| 根目录 | `cargo check`、`cargo test` | 通过，native 17(含 reduced motion 合成通知测试)、engine 32 |
+| reduced motion 变异 | 注册时不回报基线；TS getter 恒为 true；替换时跳过 `removeObserver` | 前两项分别使 Rust 测试、TS napi 测试失败。第三项测试仍通过：旧 observer 的 `Retained` 已被释放，macOS 10.11 起 NotificationCenter 对已释放的 observer 是弱引用，不会再回调，所以 `removeObserver` 在测试里观察不到差别。代码仍然显式移除，不依赖弱引用行为 |
+| 真实进程 | gpuix 窗口内调用 `getReducedMotion()` 与 `onReducedMotionChange` | 两者都是 false，与 `defaults read com.apple.universalaccess reduceMotion` 一致(该键不存在，即关闭)；注销后进程 exit 0。系统设置的真实切换未实测(协调者决定不改辅助功能设置)，变化路径只由合成通知测试覆盖 |
+| apps/gpuix(merge 主干 4b447b6 后) | `pnpm exec tsc --noEmit`、`bun test` | tsc 0 错误；bun 只有 1 个失败 `secondary click on an interactive title opens its track context menu`，干净主干同样复现，属于主干已知问题 |
+
+GPUI 的 `TestWindow::simulate_appearance_change` 与 `TestAppContext::test_window` 都是 crate 私有，补丁内的测试无法模拟变化，只能覆盖基线、归并和 observer 的释放；「变化会触发 observer」由 GPUI 自带的 `test_appearance_change_runs_after_app_update` 与上面的真实窗口证明。

@@ -103,7 +103,7 @@
 
 ## 原生窗口与进程生命周期
 
-所有 `bun --hot` 均用命名 service 启动，每批证据后立刻 kill，没有保留窗口继续写代码。
+所有 `bun --hot` 均用命名service启动。早期各批证据后立即kill；G1时段因交互式前台授权等待超时，关闭晚于终点78.440秒，已如实报告并关闭/撤权，不能称全部按时清理。
 
 | service | 已观察/处理 |
 | --- | --- |
@@ -112,14 +112,15 @@
 | `b2-tracks-layout-fixed` | 修复后真实截图/zoom：车道左、表头右；18.3s kill |
 | `b2-tracks-real-meter` | 真实 AX 按钮 Stopped→Playing；真实 telemetry 与 overload；1m55s kill，音频随进程停止 |
 | `b2-tracks-production-meter-proof` | 当前默认生产provider/hook/driver：AX Stopped→Playing→Stopped；电平仍floor、截图黑，未锁屏；1m25s kill，未宣称信号/衰减通过 |
+| `b2-tracks-g1-signal-proof` | 真实信号清晰图、40px拖动与G1原生读回；02:33:07.662启动，02:44:18.440退出；kill晚78.440秒，时限验收失败，peak视觉未完成 |
 
 真实 C1 证据：`evidence/2026-10-15-real-meter-playing.ax.txt` 显示 Audio L−23.0/R−27.0、Group L−26.0/R−28.5、Return L−38.0/R−45.0 dBFS；`real-meter-overload.ax.txt` 显示真实 Clip gain24 后 Audio L+1.0/R−1.8，Main 保持低输出。没有合成电平。
 
 早期显示布局变化曾导致黑图和 `InvalidCoordinateFrame`，不是锁屏。`b2-tracks-f1-states` 在A3b第一增量前取得四主题语言、Solo激活和Group折叠的清晰图/zoom/AX，3m22s即kill。文件名`final-*-default`仅表示当时的默认布局，不代表当前consumer验收；后三种主题语言保留了Audio Solo on。新fill/hideIcon及菜单/编辑/系统拖动/滚轮/最终bounds必须重新取证，不沿用已结束的输入时段。
 
-当前生产帧smoke证据：`production-frame-smoke.ax.txt`、`production-frame-smoke-black.png`。capture/input/AX均granted，`screenLocked=false`、`displayAsleep=false`；raise自己窗口后仍黑。只能证明窗口和走带命令响应，不能证明本次真实信号、颜色或停后peak视觉。旧C1遥测证据不替代本次结果。
+此前生产帧smoke证据：`production-frame-smoke.ax.txt`、`production-frame-smoke-black.png`，当时只能证明命令响应。后续G1时段已得到真实信号清晰图，但仍未完成停后peak，见文末增量补验。
 
-demo有真实音频源：`track-demo-audio` 是Audio Clip，samplePath指向 `crates/engine/spikes/assets/probe.wav`，循环1→2，Audio −12dB、Main −36dB。本次floor不是“无源mock”的证据；未捕获到非静音信号的原因尚未定位。
+demo有真实音频源：`track-demo-audio`为Audio Clip，samplePath指向`crates/engine/spikes/assets/probe.wav`，循环1→2，初始Audio −12dB、Main −36dB。后续日志证明后台仍有真实levels，不能把初始黑图/floor归为没有音频源。
 
 阶段1已实跑 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"`：stdout为空，退出1，没有匹配进程。原始记录见 `evidence/2026-10-15-stage1-process-cleanup.txt`；这是本次检查时的状态，不承诺后续其他worker启动情况。
 
@@ -186,6 +187,9 @@ demo有真实音频源：`track-demo-audio` 是Audio Clip，samplePath指向 `cr
 | 测试/产品使用0.10 bounds shim | 必修→已修 | bb4c17e与后续类型修正直接使用原生getElementBounds；8项几何转绿；合成边框容器行间±1px回归2pass，改回shim变异1fail |
 | A3b第一增量消费 | 已修/已接 | 七处Select fill，普通level/send/pan hideIcon，Cue保留Headphones；原生output实际内宽断言通过 |
 | 最终纠正及consumer双轴复核 | 已返回，无新增必修/仲裁 | TrackFinalReview4多次固定增量复核覆盖当前三个后续提交；视觉与运行结果由本报告单列 |
+| G1 demo真实读回增量 | 代码复核无必修 | TrackFinalReview4已审ad3a63d的观测顺序/边界；长行格式由hook修正，实际GUI证明另列 |
+| 观测增量触发no-tests | 已仲裁并清零 | 038ed87删除临时readback/stdout包装，仅保留证据/报告，旧入口不是现存功能；提交后扫描0source/0tests、0HARD/0WARN，未改扫描或添加转发测试 |
+| 清理代码与文档一致性 | 独立复核无发现 | TrackFinalReview4确认仅保留原Frame stats显示、直接注入nativeCursorLock；README/报告均已说明历史入口删除 |
 | driver活动条件的冗余`listeners.size > 0` | 记录 | 不影响行为；不为风格再改生产路径 |
 | 受控帧源同步、生产源microtask | 记录 | 排队/session失效由platform测试负责，tracks不另造调度器 |
 | Ctrl与lane Shift/identity Cmd对称分支未逐项测试 | 记录 | 当前已覆盖native正反守卫、Cmd移除与Shift范围；不增重复路径用例 |
@@ -195,10 +199,10 @@ demo有真实音频源：`track-demo-audio` 是Audio Clip，samplePath指向 `cr
 
 ## 未实现/未验证事项
 
-- **阻塞：A3b第二增量，未验证**：NumericPad实际内宽fill/bipolar中线、wheel祖先隔离、嵌套右键及尚未完成的菜单/编辑/系统拖动/滚轮/最终bounds。Select fill/hideIcon已消费；8项几何已由本切片删除旧shim修复。
+- 4036109的数值fill/bipolar/滚轮隔离消费者回归已通过；剩余**F2嵌套右键、F3后台帧及停后peak/完整逐状态视觉未完成**。临时demo诊断已按协调者裁决删除，不作为现存功能或继续取证入口。
 - F1 已接原生帧和激活，NameInput已opt-in `selectAllOnFocus`。真实四主题语言窗口能启动；默认生产帧路径meter6例40断言，F2自动全选/输入Space/Tab三例8断言通过。真实播放停后peak视觉尚未补齐，不把旧timer阶段AX扩大到新路径。
-- 四主题语言与Solo/Group已有清晰图，逐控件完整状态仍缺证据；当前生产帧窗口再次黑图且电平floor，真实信号与停后peak视觉未验证，未定位根因。
-- A3b第一增量后类型检查已通过，旧共享10失败与8项自有几何失败已清。完整逐状态视觉、真实信号/停后peak仍未验证；保留嵌套右键失败，不称全部完成。
+- 旧四主题语言与Solo/Group图不覆盖H2及最新consumer；G1时段已有真实WAV信号清晰图和还原锚点0pt读回。停后peak、完整逐控件状态及后台帧问题仍未验证完。
+- 类型与既有门禁结果按各自基线记录；嵌套右键仍保留失败。后台key/main、遮挡和callback计数未采，不能宣称已定位失活或遮挡根因。
 
 ## 错题与已验证做法（LESSONS格式）
 
@@ -237,3 +241,35 @@ demo有真实音频源：`track-demo-audio` 是Audio Clip，samplePath指向 `cr
 - 错：继续用0.10的`readOuterBounds`读已包含border/padding的主干bounds，并把8个几何失败误归共享控件。
 - 对：产品和测试都读唯一原生`getElementBounds`；用主干`legacy-bounds-shim`扫描阻止复发。
 - 证：8项几何8pass/87assert；合成边框容器行间±1px回归2pass，恢复旧shim的变异1fail。当前无边框生产容器的几何并未改变。
+
+## 增量补验：G1 与真实信号
+
+窗口基于`7d25915`与当时的临时demo读回诊断。采证时Frame stats打印真实accepted telemetry/renderer统计，组合根在原生restore后、工具恢复用户原指针前读回坐标；这些readback/stdout诊断现已按协调者裁决删除，旧入口不是现存功能。只保留原始证据与报告。后续已同步H2等主干，以下图片不冒称H2最终视觉。
+
+| 场景 | 实际结果 | 证据 |
+| --- | --- | --- |
+| 真实WAV播放 | 清晰窗口图；Audio AX L−22.0/R−48.7dB，Group L−25.0/R−41.6，Return L−37.0/R−40.5；Main音量仍−36dB | `evidence/2026-10-15-g1-slot-playing.png`与同名`.ax.txt` |
+| G1快拖，无额外停留 | Audio −12.0→−11.0；上拖40px，anchor和原生restore后读回均(1418,353)，误差0pt | `evidence/2026-10-15-g1-slot-events.json`的`cursor-restored`、`evidence/2026-10-15-g1-slot-drag.ax.txt`；对应截图为black，不用它宣称完整拖动视觉 |
+| Clip gain24 | frames834/sequence10529的accepted `levels.main`为L−38.0157/R−40.9905dB，同批AX Main仍为L−60/R−60；某随机轨道L+2.0308dB未额外映射，不宣称红区视觉通过 | `evidence/2026-10-15-g1-slot-events.json`、`evidence/2026-10-15-g1-slot-overload-stale.png`与同名AX |
+| 停后peak | 未完成，不宣称通过 | 后续另排前台时段 |
+
+关键图前后renderer统计与后台数据已交协调者，完整六列表见[`后台帧记录`](evidence/2026-10-15-background-frames.md)。原生key/main、occlusion与frame callback次数都未采，Window图清晰不等于桌面可见。当前数据不能区分“失活但可见”与“被遮挡”，不能用renderer帧数代替callback计数。
+
+### G1 增量已运行检查
+
+- `pnpm native:build`成功，release构建完成。
+- `pnpm exec tsc --noEmit && bun test src/platform/cursor/cursor.test.ts src/ui/controls/DragPad/cursor-port.test.tsx src/project/sections/arrangement/tracks`在apps/gpuix运行：tsc0，49pass/1已仲裁嵌套右键失败，50tests/6files。
+- `cargo check --workspace && cargo test --workspace`：退出0，45pass。
+- 独立CLI调用新platform adapter：`pressAnchorWithoutWindow:null`、`cursorReadable:true`，没有移动/隐藏光标。
+- demo诊断增量在当前主干执行`pnpm --filter @zoeydaw/gpuix-prototype typecheck`和切片eslint均退出0。曾误在根目录调用裸tsc，仅打印CLI帮助，未将它计为类型通过。
+- 合入4036109相关主干后，`pnpm exec tsc --noEmit && bun test src/ui/controls/DragPad/DragPadNumber.test.tsx src/ui/controls/DragPad/variants.test.tsx src/project/sections/arrangement/tracks`：tsc0，65pass/1已仲裁嵌套右键失败，66tests/6files。
+- ad3a63d的临时诊断曾触发1source/0tests、1HARD `no-tests`、1WARN。按协调者裁决，038ed87提交删除后重新扫描：0source/0tests、0HARD/0WARN；这是净代码已恢复主干、仅剩证据/报告差异的结果，不是给未提交诊断套用空扫描，也没有门禁例外。
+- 删除临时诊断后，apps/gpuix内再次执行`pnpm exec tsc --noEmit && bun src/project/sections/arrangement/tracks/verification/render-cost.tsx`退出0；原生裁剪仍为6行/6车道槽，两组保留节点一致，卸载归零断言通过。此结果不代替未完成的真实peak视觉。
+
+### 时段约束未通过
+
+授权02:33–02:43 UTC，服务02:33:07.662启动、02:44:18.440退出，晚78.440秒。末尾调用`computer.control.acquire`在宿主等待人工确认120秒后超时；随后立即kill、release并发“桌面释放”。原始时间在`evidence/2026-10-15-g1-slot-summary.json`，没有改写为按时完成。
+
+协调者已要求：以后需要前台时提前ask，不在时段内申请交互式control.acquire。停后peak留到下次；本批只交部分证据，不发送第二次最终merge_ready或worker_done。
+
+后续`computer.control.state()`为`active:false`。进程检查只剩其他切片的`88423 10:13 bun --hot src/project/sections/clip-edit/demo/index.tsx`，未停止它，不声称全机零匹配。自己的tracks service已退出；原始清理输出见`evidence/2026-10-15-g1-slot-cleanup.txt`。
