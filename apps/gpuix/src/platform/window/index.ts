@@ -1,5 +1,5 @@
-import { createApplicationActiveSubscription } from "./application-active"
-import type { WindowActivityRenderer } from "./application-active"
+import type { CloseGuardRenderer } from "./close-guard"
+import { createNativeValueSubscription } from "./native-value-subscription"
 
 /**
  * 窗口平台端口。这里**自己声明**需要的最小能力(结构类型),不 import `@gpuix/native`:
@@ -13,8 +13,13 @@ export interface PathPromptOptions {
   readonly prompt?: string
 }
 
+/** GPUI 的四种外观在 Rust 侧归并为二态(Vibrant* 并入 light/dark)。 */
+export type SystemAppearance = "light" | "dark"
+
 /** `@gpuix/native` 的 renderer 在结构上满足它;各方法在旧版本里可能缺失,所以都是可选。 */
-export interface WindowRenderer extends WindowActivityRenderer {
+export interface WindowRenderer extends CloseGuardRenderer {
+  onWindowActiveChange?(callback: ((active: boolean) => void) | null): void
+  onWindowAppearanceChange?(callback: ((appearance: SystemAppearance) => void) | null): void
   setWindowTitle?(title: string): void
   minimizeWindow?(): void
   zoomWindow?(): void
@@ -24,19 +29,23 @@ export interface WindowRenderer extends WindowActivityRenderer {
 }
 export { actionAfterGuard, closeButtonAction, DEFAULT_CLOSE_BEHAVIOR } from "./close-behavior"
 export type { CloseBehavior, CloseButtonAction } from "./close-behavior"
-
-export interface WindowCloseGuard {
-  readonly supported: boolean
-}
-
-export function createWindowCloseGuard(): WindowCloseGuard {
-  return { supported: false }
-}
+export { createWindowCloseGuard } from "./close-guard"
+export type { WindowCloseGuard, WindowCloseGuardOptions } from "./close-guard"
 
 export function createWindowPlatform(renderer: WindowRenderer) {
-  const subscribeApplicationActive = createApplicationActiveSubscription(renderer)
   return {
-    subscribeApplicationActive,
+    subscribeApplicationActive: createNativeValueSubscription(
+      renderer.onWindowActiveChange?.bind(renderer),
+      "window activation events"
+    ),
+    /**
+     * 窗口的有效外观。它跟随系统,前提是没有人调用 GPUI 的 `set_window_appearance`
+     * 覆盖应用外观(见 LESSONS),否则「跟随系统」会读到被覆盖的值。
+     */
+    subscribeSystemAppearance: createNativeValueSubscription(
+      renderer.onWindowAppearanceChange?.bind(renderer),
+      "window appearance events"
+    ),
     setTitle: (title: string) => renderer.setWindowTitle?.(title),
     minimize: () => renderer.minimizeWindow?.(),
     zoom: () => renderer.zoomWindow?.(),
