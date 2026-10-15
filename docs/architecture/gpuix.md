@@ -24,7 +24,9 @@ crates/
 └─ engine/               纯 Rust 引擎核心：协议状态、走带时钟、混音、遥测；不依赖 napi
 ```
 
-依赖只能向下：`app → project/sections → ui → shared`；`project/adapters → platform`；`project/model` 不依赖任何上层。`ui` 不得 import `project`；`crates/engine` 不得依赖 napi。`features/*` 是迁移期的过渡目录，对应面板迁入 `project/sections` 后删除。
+依赖只能向下：`app → project/sections → ui → shared`；`project/sections → project/adapters`；`project/sections → platform` 与 `project/adapters → platform` 只经 platform 的 TS 端口（帧 `platform/frame`、窗口激活 `platform/window`、剪贴板、键盘、光标 `platform/cursor` 等），不直接 import `@zoeydaw/native`；`project/model` 不依赖任何上层。`ui` 不得 import `project` 或 `platform`，原生能力由组合根经 Provider 注入（如 `ControlEnvironmentProvider` 的 `cursorLock`）。`crates/engine` 不得依赖 napi。以上由 `tooling/eslint/gpuix-layers.js` 强制。`features/*` 是迁移期的过渡目录，对应面板迁入 `project/sections` 后删除。
+
+原生帧：动画与电平衰减只用 `platform/frame` 的 `useAnimationFrame`，不写 `setInterval`/`setTimeout` 定时链。它要求祖先有 `AnimationFrameProvider`。整个应用只在组合根挂一个 Provider，`source` 是同一个 renderer 上的 `createAnimationFrameSource(renderer)`；各切片的 demo 自己挂一个，代替组合根。
 
 ## 硬规则
 

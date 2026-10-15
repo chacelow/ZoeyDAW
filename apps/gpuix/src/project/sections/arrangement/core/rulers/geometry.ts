@@ -1,5 +1,6 @@
 import { MIN_CLIP_LENGTH_BARS } from "@/project/model/grid"
 import { snapBar } from "@/project/model/grid-geometry"
+import { formatAudioMusicalValue } from "@/project/model/audio-editor/musical-value"
 import { BAR_RULER_HEIGHT, MARKER_RULER_HEIGHT } from "../layout"
 import type { LoopRegion, Marker } from "@/project/model/types"
 import type { ArrangementScene } from "../scene"
@@ -66,4 +67,31 @@ export function movedLoop(
     ...loop,
     endBar: Math.max(loop.startBar + MIN_CLIP_LENGTH_BARS, Math.min(end, loop.endBar + delta)),
   }
+}
+
+export function rulerLabel(bar: number, numerator: number, denominator: number): string {
+  return formatAudioMusicalValue(bar - 1, numerator, denominator, "position")
+    .replace(/\.1$/, "")
+    .replace(/\.1$/, "")
+}
+
+const LOCATOR_POSITION_EPSILON = 1e-6
+
+/** Previous ties choose the last source locator, matching web's reversed stable order. */
+export function adjacentMarker(
+  markers: readonly Marker[],
+  position: number,
+  direction: -1 | 1
+): Marker | null {
+  let nearest: Marker | null = null
+  for (const marker of markers) {
+    if (direction < 0) {
+      if (marker.bar >= position - LOCATOR_POSITION_EPSILON) continue
+      if (!nearest || marker.bar >= nearest.bar) nearest = marker
+    } else {
+      if (marker.bar <= position + LOCATOR_POSITION_EPSILON) continue
+      if (!nearest || marker.bar < nearest.bar) nearest = marker
+    }
+  }
+  return nearest
 }
