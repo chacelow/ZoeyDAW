@@ -84,3 +84,15 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 ```
 
 输出为空，grep exit 1（无匹配）；未停止用户进程。
+
+## 自审结果
+
+实现提交 `713eb0c8`，完整审查命令 `git diff 9fa42e0..713eb0c8 -- scripts/gpuix-main docs/research/gpuix-main-build.md`。提交后再次运行 `pnpm verify:gpuix` 通过。扫描针对提交范围，原生 patch 不被扫描器当作 Rust 源文件，另由 vendor Rust 编译、测试及独立审查覆盖。
+
+| 发现 | 类别 | 处置 | 证据 |
+| --- | --- | --- | --- |
+| review scan | 记录 | 0 HARD、0 WARN，无待处置条目 | `node scripts/gpuix-review-scan.mjs`：0 source / 1 test scanned |
+| probe 显式导入 Node globals 违反 n/prefer-global | 必修 | 使用 Bun globals，探针 tsconfig 显式声明 bun types | ultracite check、应用 tsc、原生回归及提交 hook 全通过 |
+| `git diff --check` 将 patch 中空白上下文行标为 trailing whitespace | 记录 | 保留标准 unified diff 的上下文前缀，不改坏可应用补丁 | build.sh 源身份验证及构建通过 |
+| Mixed 的 macOS AX 文本为 true | 记录 | 报告平台限制，不修改业务 role | offscreen 为 Mixed；`ax-mixed.txt` 为 true |
+| 独立审查由协调者完成 | 记录 | 协调者逐行审查 aria-toggled.patch，确认 checked 优先、mixed、删除清空及 Rust 覆盖无问题；按协调者指令结束卡住的 pstack-reviewer，采用其审查结论 | 本次直接指令明确批准替代；无必修或待仲裁项 |
