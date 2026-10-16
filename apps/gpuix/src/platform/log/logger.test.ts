@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { createLogger } from "./logger"
+import type { LogEntry } from "./types"
 
 beforeEach(() => {
   spyOn(console, "log").mockImplementation(() => {})
@@ -12,6 +13,78 @@ afterEach(() => {
 const jsonEntry = (args: unknown[]) => JSON.parse(String(args[0]))
 
 describe("native logger behavior", () => {
+  for (const json of [true, false]) {
+    test(`UPA-08 sanitizes console and sinks before ${json ? "JSON" : "formatted"} output`, () => {
+      const output = spyOn(console, "error").mockImplementation(() => {})
+      const entries: LogEntry[] = []
+      const context = { requestId: "req-safe", nested: { ToKeN: "context-secret" } }
+      const cause = Object.assign(new Error("inner"), { Password: "cause-secret" })
+      const error = Object.assign(new Error("outer", { cause }), {
+        code: "E_SAFE",
+        credentials: { PASSWORD: "error-secret" },
+      })
+      const argument = { rows: [{ token: "argument-secret", value: 42 }], error }
+      const log = createLogger({
+        json,
+        showLogo: false,
+        redactKeys: ["password", "TOKEN"],
+        contextProvider: () => context,
+        sinks: [
+          entry => {
+            entries.push(entry)
+          },
+        ],
+      })
+      log.error("operation failed", error, argument)
+      const normalizedError = {
+        name: "Error",
+        message: "outer",
+        stack: error.stack,
+        cause: {
+          name: "Error",
+          message: "inner",
+          stack: cause.stack,
+          Password: "[REDACTED]",
+        },
+        code: "E_SAFE",
+        credentials: { PASSWORD: "[REDACTED]" },
+      }
+      const sanitizedContext = { requestId: "req-safe", nested: { ToKeN: "[REDACTED]" } }
+      const sanitizedArgument = {
+        rows: [{ token: "[REDACTED]", value: 42 }],
+        error: normalizedError,
+      }
+      expect(entries[0]?.args).toEqual([
+        "operation failed",
+        normalizedError,
+        sanitizedArgument,
+        sanitizedContext,
+      ])
+      if (json) {
+        expect(jsonEntry(output.mock.calls[0])).toMatchObject({
+          msg: "operation failed",
+          ...sanitizedContext,
+          data: [normalizedError, sanitizedArgument],
+        })
+      } else {
+        expect(output).toHaveBeenCalledWith(
+          expect.stringContaining("operation failed"),
+          normalizedError,
+          sanitizedArgument,
+          sanitizedContext
+        )
+      }
+      for (const secret of ["context-secret", "cause-secret", "error-secret", "argument-secret"]) {
+        expect(JSON.stringify(entries)).not.toContain(secret)
+        expect(JSON.stringify(output.mock.calls)).not.toContain(secret)
+      }
+      expect(context.nested.ToKeN).toBe("context-secret")
+      expect(error.credentials.PASSWORD).toBe("error-secret")
+      expect(cause.Password).toBe("cause-secret")
+      expect(argument.rows[0]?.token).toBe("argument-secret")
+    })
+  }
+
   test("silent and minimum-level filtering suppress both console output and sinks", () => {
     const entries: unknown[] = []
     const log = createLogger({

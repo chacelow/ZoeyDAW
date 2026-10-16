@@ -10,15 +10,15 @@ export interface LoggerConfig {
   minLevel?: LogLevel
   json?: boolean
   /**
-  生产 JSON 模式下需脱敏的字段名（大小写不敏感，递归匹配）。命中值替换为 '[REDACTED]'。
+  所有 console 与 sink 输出需脱敏的字段名（大小写不敏感，递归匹配）。命中值替换为 '[REDACTED]'。
   */
   redactKeys?: string[]
   /**
-  返回每条日志要注入的环境字段（如 requestId/userId）。JSON 模式下合并进日志，权威值覆盖用户传入。
+  返回每条日志的环境字段（如 requestId/userId）。JSON 合并字段；格式化输出及 sink args 末尾附加脱敏后的上下文。
   */
   contextProvider?: () => Record<string, unknown> | undefined
   /**
-   * 侧输出通道. 每条通过 minLevel 的日志会在 console 输出后异步 forward 给每个 sink, sink 异常被吞掉, 保证不影响主流程. 典型用途: Tauri 桌面端 forward 到 Rust file target.
+   * 侧输出通道。通过级别过滤的日志在 console 后同步交给每个 sink；参数已展开 Error 并脱敏，sink 异常不影响主流程。
    */
   sinks?: LogSink[]
 }
@@ -52,7 +52,7 @@ export interface Logger {
 }
 
 /**
- * 一条 log 交给 sink 的结构体. 主消息在 args[0], 其余是附加参数 (Error / 对象 / 原始值).
+ * 一条 log 交给 sink 的结构体。args 保留主消息与附加参数的顺序，Error 递归展开为对象；若有环境上下文则附在末尾。所有对象均经过非原地脱敏。
  */
 export interface LogEntry {
   level: LogLevel

@@ -1,4 +1,4 @@
-// 生产 JSON 日志的值规范化：Error 展开 + 敏感字段脱敏。 独立成模块，前后端共用（无 node/browser 专属 API）。
+// 日志输出边界的值规范化：Error 展开 + 敏感字段脱敏。
 
 const REDACTED = "[REDACTED]"
 
@@ -45,13 +45,16 @@ export function redact(
   seen.add(value)
 
   if (Array.isArray(value)) {
-    return value.map(item => redact(item, redactKeys, seen))
+    const out = value.map(item => redact(item, redactKeys, seen))
+    seen.delete(value)
+    return out
   }
 
-  const source = value as Record<string, unknown>
+  const source = value instanceof Error ? normalizeError(value) : (value as Record<string, unknown>)
   const out: Record<string, unknown> = {}
   for (const key of Object.keys(source)) {
     out[key] = redactKeys.has(key.toLowerCase()) ? REDACTED : redact(source[key], redactKeys, seen)
   }
+  seen.delete(value)
   return out
 }
