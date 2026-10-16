@@ -7,13 +7,13 @@
 | 项目 | 行为与边界 |
 | --- | --- |
 | UPA-01 | recent、启动路径和历史返回在取得 runtime lease 前调用 `openProjectSnapshot(projectId)`，使用现有 parser 校验并 hydrate；新建路由携带一次性的 `openMode: "new"`，不读快照。缺失快照为空工程且无错误。 |
-| 损坏/读取失败 | 使用现有 `snapshotError` 显示，保持引擎可用。保存入口检查 failed-open key fence，不能用默认数据覆盖原始字节。`canSaveSnapshot()` 是 arrangement Save 按钮使用的只读 selector。 |
+| 损坏/读取失败 | 使用现有 `snapshotError` 显示，保持引擎可用。`SessionState.snapshotSaveBlocked` 唯一持有保存保护；保存命令读取同一字段，不能用默认数据覆盖原始字节。纯 `canSaveSnapshot(state)` selector 供 `useProjectState(canSaveSnapshot)` 订阅。 |
 | 修复后的 Restore | 显式 Restore 成功才清 fence 与错误；失败仍保护原 key。成功后编辑、保存正常。 |
 | UPA-02 | 唯一 router owner 在 navigate、replace、back 提交前调用 leave guard，复用窗口关闭的 save/discard/cancel 状态机与对话框。Cancel、保存失败不改变路由或 undo。保存成功后才离开；并发请求不替换正在处理的决定。 |
 | UPA-03 | 语言读取失败使用显式 initialLanguage 或 DEFAULT_LOCALE 并记录诊断；写入失败记诊断，保留已选内存语言，`changeLocale` 不因持久化失败 reject。 |
 | UPA-08 | console/native sink 分流前统一展开 Error 并递归脱敏，覆盖大小写、数组、Error 自定义字段及 context。cause 递归共用 `redact` 的 WeakSet，循环输出 `[Circular]`；不修改输入对象。 |
 
-所有权扩展均经协调者批准：`project/adapters/index.ts` 新入口导出；`snapshots.ts` failed-open fence、identity 切换清 fence、Restore 成功清 fence。未改快照校验规则。Save 按钮 disabled 接线归 R2-arrangement，不在本切片修改。
+所有权扩展均经协调者批准：`project/adapters/index.ts` 新入口导出，`snapshots.ts` 打开/恢复/保存边界，以及 `project/model/types.ts`、`project/stores/slices/session.ts` 的 `snapshotSaveBlocked` 必填字段。模块 `failedOpenKey` 已删除，hydrate/reset通过initialSession恢复保存。未改快照校验规则。Save按钮disabled接线归R2-arrangement，不在本切片修改。
 
 ## 红绿与变异
 
@@ -27,6 +27,7 @@
 | console/sink 脱敏 | JSON/formatted 两个 sink 泄露原始字段 | 两种输出一致脱敏，保留诊断字段；raw sink 变异使 4 个测试失败 |
 | Restore 恢复保存 | Restore 成功后保存仍保留 BPM120，目标163未落盘 | 保存163且 dirty 清除；遗漏成功清 fence 变异失败 |
 | 循环 Error.cause | JSON/formatted 均 Maximum call stack size exceeded | console/sink 输出完整诊断与 `[Circular]`，输入不变；恢复递归 normalizer 变异使2个测试失败 |
+| 订阅保存可用性 | 模块fence使历史ready state的selector读到false，而不是true | 同一组件false→Restore true→切换true，损坏字节不变，历史selector独立；恢复模块fence变异失败 |
 
 命令均在 `apps/gpuix` 运行，除特别注明：
 
@@ -37,9 +38,11 @@ bun test src/platform/i18n src/platform/log
 bun src/app/verification/mutations-r2.mjs
 bun src/platform/i18n/verification/mutations-r2.mjs
 bun src/platform/log/verification/mutations-r2.mjs
+bun test src/app/snapshot-availability.test.tsx
+bun src/app/verification/mutations-save-availability.mjs
 ```
 
-第一组在首次修复后33 pass；审查边界修复后第二组20 pass、0 fail、85 assertions；platform 初次聚合15 pass。最终变异为 app7、i18n2、log2，全部抓住并恢复原文件。
+第一组在首次修复后33pass；审查边界修复后第二组20pass、0fail、85assertions；platform初次聚合15pass。订阅组件单项12assertions通过，连同project-lifecycle为10pass、39assertions。最终R2变异为app7、selector1、i18n2、log2，全部抓住并恢复原文件。
 
 ## 实际运行证据
 
@@ -118,13 +121,14 @@ git diff ea11b3f1..HEAD -- apps/gpuix/src/app apps/gpuix/src/platform/i18n \
 | verification/r2-lifecycle.tsx的1280×800 root，WARN px-literal | 记录 | 固定测试视口输入，不是产品样式或token副本，保留 | 扫描0 HARD、1 WARN |
 | Standards轴 | 记录 | 没有独立规范发现 | reviewer初审及定向复核；两项发现复核均关闭，无新增Standards/Spec发现 |
 | 既有Cmd+F原生组合测试默认5秒超时 | 汇报仲裁 | 协调者拒绝放宽超时，要求移除layout固定sleep；改为native flush/event dispatch与React微任务推进 | AppShell19pass；既有modal/globalCmd变异1caught；reviewer复核断言/超时未弱化，625行无增长 |
+| 保存保护在模块变量中，selector不纯 | 汇报仲裁 | 协调者授权迁入SessionState并删除模块fence；最小订阅组件及历史state回归 | 单次挂载false→true→true，损坏字节不变；模块fence变异1caught；独立review确认唯一owner与生命周期 |
 | 既有grid.test.ts:66 todo | 记录 | 非本切片新增，不修改project/model所有权 | 首次完整门禁1226pass、1todo、0fail |
 
 ## 完整门禁与环境
 
 首轮在worktree根执行 `pnpm verify:gpuix` 全部通过：renderer身份、native构建、tsc0错误、eslint0warning、architecture80pass、文档路由9项、bun1226pass/1既有todo/0fail、scan0HARD/1WARN、UI map current、真实后端resume smoke released idle。审查边界修复后的 app-local `pnpm exec tsc --noEmit` 也通过。
 
-最终 `pnpm verify:gpuix` 已在同步后的worktree根完整通过，保持默认测试超时：tsc0错误、eslint0warning、architecture80pass、bun1255pass/1既有todo/0fail，200个测试文件；review scan为15个源码文件与4个测试文件、0HARD/1WARN；UI map current为224个testIds；真实native resume smoke输出21帧并released idle。最后一行为 `verify:gpuix passed`。
+纯selector返工前的 `pnpm verify:gpuix` 已在同步后的worktree根完整通过，保持默认测试超时：tsc0错误、eslint0warning、architecture80pass、bun1255pass/1既有todo/0fail，200个测试文件；review scan为15个源码文件与4个测试文件、0HARD/1WARN；UI map current为224个testIds；真实native resume smoke输出21帧并released idle。
 
 最终复跑曾被共享renderer manifest格式变更阻断。按协调者指令合入主干相容tooling后，`build.sh` 输出“Linked verified gpuix build without rebuilding or acquiring the build lock”，未修改或重录共享vendor。随后整套测试的唯一失败为既有Cmd+F组合测试5010ms超时，其余1254pass；按协调者裁定删除固定sleep，改同步布局/事件/微任务推进。AppShell19个测试在默认超时下通过，原有modal/globalCmd行为变异被抓住。
 
@@ -138,15 +142,17 @@ git diff ea11b3f1..HEAD -- apps/gpuix/src/app apps/gpuix/src/platform/i18n \
 - 错：Error先递归展开，再交给脱敏的循环检测。对：normalizer只展开当前Error字段，全部递归由同一个WeakSet控制。因：两套递归使循环保护晚于栈溢出。
 - 错：在worktree根调用未本地锁定的tsc。对：使用app-local工具链或verify:gpuix。因：根目录可解析到宿主全局TypeScript版本。
 - 错：用固定40ms sleep等待原生布局，受并发负载影响且不能证明状态已就绪。对：显式flush原生布局、同步分派事件，再推进React微任务。因：事件完成不等于经过一个任意时间间隔。
+- 错：让store selector闭包读取模块fence，历史state的选择值随当前工程变化。对：保存保护由session唯一持有，selector只读传入state。因：外部store订阅与snapshot一致性要求选择函数纯净。
 
 ## 已验证做法
 
 - 用真实native backend验证保存/离开/重开，断言落盘字节、文档、dirty和undo；不靠内部调用次数。
 - 故障恢复回归必须经过失败打开、修复存储、成功Restore、再次编辑保存，能抓住永久禁用的状态残留。
-- 变异脚本恢复原始缺陷并要求行为断言失败，finally恢复源码；本轮11个变异均被抓住。
+- 变异脚本恢复原始缺陷并要求行为断言失败，finally恢复源码；本轮12个R2变异均被抓住。
 - 新建意图只存在当前历史入口，离开后消费，避免历史返回把已保存工程当成新建。
 - 背景窗口只验证启动与释放；视觉取证用真实原生离屏组合，前台性能/像素审查留给协调者。
 - AppShell既有键盘和面板几何断言全部保留，用原有modal/globalCmd变异确认同步settle没有让测试空转；没有放宽超时。
+- 单次挂载订阅组件同时验证损坏打开、成功Restore、工程切换，历史state的selector结果保持独立，避免模块状态伪装成store selector。
 
 ## 本地提交
 

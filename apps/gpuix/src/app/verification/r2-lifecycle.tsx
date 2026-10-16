@@ -116,7 +116,10 @@ try {
   storage.set(corruptKey, corrupt)
   flushSync(() => router.navigate("/project/corrupt-smoke", { replace: true }))
   await settle()
-  if (canSaveSnapshot() || !useProjectState.getState().session.snapshotError)
+  if (
+    canSaveSnapshot(useProjectState.getState()) ||
+    !useProjectState.getState().session.snapshotError
+  )
     throw new Error("Corrupt open was not fenced")
   projectActions.saveSnapshot()
   await settle()

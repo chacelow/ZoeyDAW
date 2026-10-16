@@ -22,8 +22,8 @@ const mutations = [
   {
     name: "UPA-01 failed open overwrites saved bytes",
     file: "project/adapters/snapshots.ts",
-    from: "if (!canSaveSnapshot()) return",
-    to: "void canSaveSnapshot()",
+    from: "if (!canSaveSnapshot(get())) return",
+    to: "void canSaveSnapshot(get())",
     pattern: "corrupt saved project",
   },
   {
@@ -36,8 +36,8 @@ const mutations = [
   {
     name: "UPA-01 successful Restore leaves save fenced",
     file: "project/adapters/snapshots.ts",
-    from: "hydrateProject(saved)\n      failedOpenKey = null",
-    to: "hydrateProject(saved)",
+    from: "hydrateProject(saved)\n      session({ snapshotError: null, snapshotSaveBlocked: false })",
+    to: "hydrateProject(saved)\n      session({ snapshotError: null, snapshotSaveBlocked: true })",
     pattern: "successful Restore",
   },
   {

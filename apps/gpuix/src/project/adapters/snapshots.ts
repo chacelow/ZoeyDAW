@@ -1,5 +1,6 @@
 import { parseProject, stringifyProject } from "../model/persistence"
 import { useProjectState } from "../stores/useProjectState"
+import type { ProjectState } from "../model/types"
 import {
   get,
   hydrateState,
@@ -36,7 +37,6 @@ export function setSnapshotStorage(storage: SnapshotStorage | null): void {
 }
 
 let storageId: string | null = null
-let failedOpenKey: string | null = null
 const storageKey = () => `zoeydaw:project:snapshot:v1:${encodeURIComponent(storageId ?? "default")}`
 
 /**
@@ -48,7 +48,6 @@ export function setProjectStorageId(projectId: string): void {
   }
   resetProject(projectId)
   storageId = projectId
-  failedOpenKey = null
 }
 export function serializeProject(): string {
   return stringifyProject(getCommittedDocument(), getCommittedWorkspace())
@@ -57,9 +56,9 @@ export function hydrateProject(json: string): void {
   hydrateState(parseProject(json))
 }
 
-/** Failed opens protect the saved bytes until a successful reopen or identity change. */
-export function canSaveSnapshot(): boolean {
-  return failedOpenKey !== storageKey()
+/** Save availability belongs to the selected session snapshot, not module state. */
+export function canSaveSnapshot(state: Pick<ProjectState, "session">): boolean {
+  return !state.session.snapshotSaveBlocked
 }
 
 /** Route opening treats absent snapshots as a new empty project, unlike explicit Restore. */
@@ -67,13 +66,12 @@ export function openProjectSnapshot(projectId: string): boolean {
   if (storageId === projectId) resetProject(projectId)
   else setProjectStorageId(projectId)
   const key = storageKey()
-  failedOpenKey = key
   let saved: string | null
   try {
     if (!snapshotStorage) throw new Error("Snapshot storage is not configured")
     saved = snapshotStorage.get(key)
   } catch {
-    session({ snapshotError: "Could not read snapshot storage." })
+    session({ snapshotError: "Could not read snapshot storage.", snapshotSaveBlocked: true })
     return false
   }
   if (saved !== null) {
@@ -82,17 +80,17 @@ export function openProjectSnapshot(projectId: string): boolean {
     } catch {
       session({
         snapshotError: "The local snapshot is invalid or unsupported. Current project was kept.",
+        snapshotSaveBlocked: true,
       })
       return false
     }
   }
-  failedOpenKey = null
-  session({ snapshotError: null })
+  session({ snapshotError: null, snapshotSaveBlocked: false })
   return true
 }
 export const snapshotActions = {
   saveSnapshot(): void {
-    if (!canSaveSnapshot()) return
+    if (!canSaveSnapshot(get())) return
     const epoch = projectEpoch()
     const revision = projectRevision()
     const document = getCommittedDocument()
@@ -159,8 +157,7 @@ export const snapshotActions = {
     }
     try {
       hydrateProject(saved)
-      failedOpenKey = null
-      session({ snapshotError: null })
+      session({ snapshotError: null, snapshotSaveBlocked: false })
       return true
     } catch {
       session({
