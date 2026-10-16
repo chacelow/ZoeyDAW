@@ -511,6 +511,13 @@ add(
   "true &&"
 )
 add(
+  "lane",
+  "lane/clip-card-projection.ts",
+  "grid-readability-cache-invalidation",
+  "previous.geometry.arrangement.gridMinSubdivisionWidth",
+  "next.geometry.arrangement.gridMinSubdivisionWidth"
+)
+add(
   "input",
   "lane/interactions/automation/ValueEditor/index.tsx",
   "automation-editor-offset",

@@ -155,6 +155,40 @@ it("renders ghost, selection, draw and minor-grid overrides at the native lane c
   }
 })
 
+it("refreshes native minor-grid uploads when runtime readability geometry changes", () => {
+  const f = fixture()
+  const uploads = spyOn(f.renderer, "setQuads")
+  try {
+    f.paint()
+    const minor = f
+      .children(f.element(`lane-row-content-${f.track.id}`).id)
+      .find(layer => layer.type === "quad-batch" && layer.style.opacity === 0.71)
+    if (!minor) throw new Error("Missing retained minor grid")
+    const initial = uploads.mock.calls.filter(([id]) => id === minor.id).at(-1)?.[1]
+    if (!initial) throw new Error("Missing initial native grid upload")
+    expect(Array.from(initial.subarray(0, 3))).toEqual([16.5, 0, 2])
+    f.scene.setGeometry({
+      ...layout,
+      arrangement: { ...layout.arrangement, gridMinSubdivisionWidth: 32 },
+    })
+    f.paint()
+    expect(
+      f
+        .children(f.element(`lane-row-content-${f.track.id}`).id)
+        .filter(layer => layer.type === "quad-batch" && layer.style.opacity === 0.71)
+    ).toEqual([])
+    f.scene.setGeometry(layout)
+    f.paint()
+    const restored = f
+      .children(f.element(`lane-row-content-${f.track.id}`).id)
+      .find(layer => layer.type === "quad-batch" && layer.style.opacity === 0.71)
+    if (!restored) throw new Error("Minor grid did not return")
+    expect(uploads.mock.calls.filter(([id]) => id === restored.id).at(-1)?.[1]).toEqual(initial)
+  } finally {
+    uploads.mockRestore()
+  }
+})
+
 it("renders collapsed group summaries with their own opacity override", () => {
   const f = fixture()
   f.scene.setMusic({

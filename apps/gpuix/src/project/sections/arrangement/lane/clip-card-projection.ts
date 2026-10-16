@@ -36,6 +36,8 @@ function sameGridViewport(previous: ArrangementScene | undefined, next: Arrangem
     !!previous &&
     previous.bars === next.bars &&
     previous.gridPlan.cellBars === next.gridPlan.cellBars &&
+    previous.geometry.arrangement.gridMinSubdivisionWidth ===
+      next.geometry.arrangement.gridMinSubdivisionWidth &&
     previous.viewport.width === next.viewport.width &&
     previous.viewport.scrollX === next.viewport.scrollX &&
     previous.viewport.pxPerBar === next.viewport.pxPerBar
