@@ -30,6 +30,10 @@ export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPagePro
   const labels = {
     resizeBrowser: t("project.resizeBrowser"),
     resizeClipEdit: t("project.resizeClipEdit"),
+    browserPanel: "Browser",
+    arrangementPanel: "Arrangement",
+    footerPanel: "Footer",
+    activeDescription: "Active panel",
   }
   if (!renderSlots)
     return composition ? (

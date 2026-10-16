@@ -155,9 +155,16 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
     },
     variants: {
       state: {
-        idle: { cursor: "grab" },
-        dragging: { cursor: "grabbing", opacity: 0.4 },
-        disabled: { cursor: "not-allowed", opacity: 0.5, focusVisible: undefined },
+        idle: { cursor: theme.design.cursors.grab },
+        dragging: {
+          cursor: theme.design.cursors.grabbing,
+          opacity: theme.design.states.dragSourceOpacity,
+        },
+        disabled: {
+          cursor: theme.design.cursors.disabled,
+          opacity: theme.design.states.disabledOpacity,
+          focusVisible: undefined,
+        },
       },
     },
   })
@@ -200,7 +207,7 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
       {preview ? (
         <anchored
           position={{ x: preview.x, y: preview.y }}
-          offset={{ x: 12, y: 12 }}
+          offset={theme.design.dragPreview.pointerOffset}
           anchor="topLeft"
           fit="snap"
           priority={1000}
@@ -211,10 +218,10 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
             display: "flex",
             flexDirection: "row",
             alignItems: "center",
-            gap: 8,
-            padding: 8,
-            maxWidth: 320,
-            opacity: 0.85,
+            gap: theme.design.dragPreview.gap,
+            padding: theme.design.popover.inset,
+            maxWidth: theme.design.dragPreview.maxWidth,
+            opacity: theme.design.dragPreview.opacity,
             borderRadius: theme.design.popover.radius,
             borderWidth: theme.design.popover.borderWidth,
             borderColor: theme.colors.border,

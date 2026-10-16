@@ -62,6 +62,7 @@ export function VelocityLane({
           roll.width -
         roll.scrollX
       if (x < -handle || x > roll.viewWidth + handle) continue
+      // MIDI velocity is seven-bit protocol data; the scale is independent of editor density.
       visible.push({ index, note, x, stem: (note.velocity / 127) * height })
     }
     return visible
@@ -93,7 +94,7 @@ export function VelocityLane({
       group.rectangles.push(
         x,
         height - stem,
-        1,
+        theme.design.editor.velocityLineWidth,
         stem,
         x - handle / 2,
         height - stem - handle / 2,
@@ -102,7 +103,17 @@ export function VelocityLane({
       )
     }
     return paintLayers(groups)
-  }, [stems, selected, focused, active?.index, color, theme.colors.foreground, height, handle])
+  }, [
+    stems,
+    selected,
+    focused,
+    active?.index,
+    color,
+    theme.colors.foreground,
+    theme.design.editor.velocityLineWidth,
+    height,
+    handle,
+  ])
   const bind = usePaintLayers(layers)
   return (
     <div
@@ -117,7 +128,7 @@ export function VelocityLane({
         minWidth: 0,
         height,
         overflow: "hidden",
-        cursor: "ns-resize",
+        cursor: theme.design.cursors.verticalResize,
         backgroundColor: theme.colors.arrangementSurfaceAlt,
       })}
       onMouseDown={onMouseDown}
@@ -136,6 +147,7 @@ export function VelocityLane({
         />
       ))}
       {active ? (
+        // Audible MIDI note-on velocities span 1–127; zero belongs to the note-off protocol.
         <div
           key="active-stem"
           ref={activeHost}
@@ -152,10 +164,14 @@ export function VelocityLane({
             left: active.x,
             bottom: 0,
             height: active.stem,
-            width: 1,
+            width: theme.design.editor.velocityLineWidth,
             pointerEvents: "none",
             keyboardFocusDim: false,
-            focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+            focusVisible: {
+              outlineWidth: theme.design.shape.focusRingWidth,
+              outlineColor: theme.colors.ring,
+              outlineOffset: -theme.design.shape.focusRingWidth,
+            },
           })}
           onFocus={() => {
             setFocused(true)

@@ -104,7 +104,7 @@ export function ToggleGroupItem({
       borderRadius: theme.design.shape.toggleRadius,
       paddingLeft: theme.control["--spacing-control-track-pad"],
       paddingRight: theme.control["--spacing-control-track-pad"],
-      cursor: "pointer",
+      cursor: theme.design.cursors.action,
       userSelect: "none",
       keyboardFocusDim: false,
       focusVisible: {
@@ -132,8 +132,8 @@ export function ToggleGroupItem({
       },
       disabled: {
         true: {
-          opacity: 0.5,
-          cursor: "not-allowed",
+          opacity: theme.design.states.disabledOpacity,
+          cursor: theme.design.cursors.disabled,
           hover: { backgroundColor: selected ? theme.colors.accent : "transparent" },
           active: { backgroundColor: selected ? theme.colors.accent : "transparent" },
         },

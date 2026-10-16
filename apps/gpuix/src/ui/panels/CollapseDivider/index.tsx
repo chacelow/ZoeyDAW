@@ -11,7 +11,8 @@ export interface CollapseDividerProps {
   onExpandedChange: (expanded: boolean) => void
   style?: StyleDesc
   testId?: string
-  "aria-label"?: string
+  "aria-label": string
+  formatAccessiblePixels: (pixels: number) => string
 }
 
 /** A binary divider for a fixed-height region outside the adjustable Group. */
@@ -21,7 +22,8 @@ export function CollapseDivider({
   onExpandedChange,
   style,
   testId,
-  "aria-label": label = "Toggle fixed panel",
+  "aria-label": label,
+  formatAccessiblePixels,
 }: CollapseDividerProps) {
   const theme = useTheme()
   const drag = useDividerDrag({
@@ -57,7 +59,7 @@ export function CollapseDivider({
     <div
       role="separator"
       aria-label={label}
-      aria-valuetext={`${expanded ? expandedSize : 0} pixels`}
+      aria-valuetext={formatAccessiblePixels(expanded ? expandedSize : 0)}
       testId={testId}
       tabIndex={0}
       onMouseDown={drag.onMouseDown}
@@ -68,7 +70,7 @@ export function CollapseDivider({
       style={sx(dividerChrome(theme), style, {
         height: theme.project.panelGap,
         width: "100%",
-        cursor: "row-resize",
+        cursor: theme.design.cursors.rowResize,
       })}
     />
   )

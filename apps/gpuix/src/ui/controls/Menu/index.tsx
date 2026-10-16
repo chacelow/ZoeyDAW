@@ -130,7 +130,7 @@ function MenuItem({
           : theme.control["--spacing-control-track-pad"],
         whiteSpace: "normal",
         color: unavailable ? theme.colors.mutedForeground : theme.colors.popoverForeground,
-        cursor: unavailable ? "default" : "pointer",
+        cursor: unavailable ? theme.design.cursors.default : theme.design.cursors.action,
         hover: unavailable ? undefined : { backgroundColor: theme.colors.accent },
         keyboardFocusDim: false,
         focusVisible: unavailable
@@ -339,10 +339,10 @@ export function ContextMenuSeparator({ style, ...props }: Props) {
       role="separator"
       style={sx(
         {
-          height: 1,
+          height: theme.design.shape.separatorWidth,
           flexShrink: 0,
-          marginTop: 4,
-          marginBottom: 4,
+          marginTop: theme.design.menu.contextSeparatorInset,
+          marginBottom: theme.design.menu.contextSeparatorInset,
           backgroundColor: theme.colors.border,
         },
         style

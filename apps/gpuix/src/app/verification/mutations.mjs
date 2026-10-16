@@ -156,7 +156,7 @@ const mutations = [
     name: "track rails deduct controls from time width again",
     file: "../project/sections/arrangement/tracks/TrackRows/index.tsx",
     from: "const laneWidth = viewport.width",
-    to: "const laneWidth = Math.max(0, viewport.width - theme.project.controlsWidth)",
+    to: "const laneWidth = Math.max(0, viewport.width - theme.layout.track.controlsWidth)",
     tests: "src/app/project/composition.test.tsx",
     pattern: "real TrackRows",
   },

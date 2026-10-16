@@ -1,6 +1,5 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
-import { colorMix } from "@/shared/theme/color-mix"
 import type { Props, StyleDesc } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { Theme } from "@/shared/theme/ThemeProvider"
@@ -49,10 +48,10 @@ export function ListRow({
       ...listRowChrome(theme),
       color: theme.colors.foreground,
       backgroundColor: theme.colors.muted,
-      cursor: "pointer",
+      cursor: theme.design.cursors.action,
       userSelect: "none",
       keyboardFocusDim: false,
-      hover: { backgroundColor: colorMix(theme.colors.muted, 90, theme.colors.foreground) },
+      hover: { backgroundColor: theme.colors.listRowHover },
       focusVisible: {
         borderColor: theme.colors.ring,
         outlineWidth: theme.design.shape.focusRingWidth,
@@ -71,8 +70,8 @@ export function ListRow({
       },
       disabled: {
         yes: {
-          opacity: 0.5,
-          cursor: "not-allowed",
+          opacity: theme.design.states.disabledOpacity,
+          cursor: theme.design.cursors.disabled,
           hover: { backgroundColor: selected ? theme.colors.primary : theme.colors.muted },
         },
         no: {},

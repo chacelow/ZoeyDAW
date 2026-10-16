@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import type { PublicInstance } from "@gpuix/react"
 import type { ReactNode } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -16,8 +16,11 @@ import {
   ScrollArea,
   SettingsShell,
   Toaster,
+  configureToastPolicy,
+  dismissToast,
 } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
+import { DEFAULT_TOAST_POLICY } from "@/ui/controls/Toaster"
 import type { ControlInfo, CursorLockPort } from "@/ui/controls"
 import { GalleryCard } from "./GalleryCard"
 import { GalleryMenus } from "./GalleryMenus"
@@ -38,6 +41,10 @@ export function StateGallery({
   readonly locale: "en" | "zh"
   readonly toolbar: ReactNode
 }) {
+  useLayoutEffect(() => {
+    configureToastPolicy(DEFAULT_TOAST_POLICY)
+    return () => dismissToast()
+  }, [])
   const theme = useTheme()
   const t = (en: string, zh: string) => (locale === "zh" ? zh : en)
   const [number, setNumber] = useState(120)
@@ -237,11 +244,25 @@ export function StateGallery({
                     label={t("Pan", "声像")}
                     value={pan}
                     onChange={setPan}
+                    format={value =>
+                      value === 0
+                        ? "C"
+                        : `${value < 0 ? "L" : "R"}${Math.round(Math.abs(value) * 100)}`
+                    }
+                    parse={raw => {
+                      const text = raw.trim().toUpperCase()
+                      if (text === "C") return 0
+                      if (text.startsWith("L")) return -Number(text.slice(1)) / 100
+                      return text.startsWith("R") ? Number(text.slice(1)) / 100 : Number(text)
+                    }}
+                    widthSamples={["L100", "R100"]}
                   />
                   <DragPadToggle
                     label={t("Mute example", "静音示例")}
                     value={active}
                     onChange={setActive}
+                    labelOn="ON"
+                    labelOff="OFF"
                   />
                 </ControlGroup>
                 <ControlGroup variant="toolbar">
@@ -331,6 +352,7 @@ export function StateGallery({
             </div>
             <GalleryProjectCards locale={locale} onAction={setStatus} />
             <SettingsShell
+              testId="gallery-settings-preview"
               open={settings}
               onOpenChange={setSettings}
               title={t("Settings composition", "设置组合")}
@@ -352,8 +374,9 @@ export function StateGallery({
                 },
               ]}
               style={{
-                width: theme.project.controlsWidth * 2,
-                height: theme.project.defaultTrackHeight * 3,
+                width: theme.layout.gallery.settingsPreviewWidth,
+                // Fixed Gallery fixture height; it is unrelated to track density.
+                height: 210,
               }}
             />
           </div>
@@ -363,6 +386,8 @@ export function StateGallery({
           aria-label={t("Gallery status", "画廊状态")}
         >{`${t("Info", "提示")}: ${info ?? "—"} · ${status}`}</text>
         <Toaster
+          policy={DEFAULT_TOAST_POLICY}
+          aria-label={t("Notifications", "通知")}
           dismissLabel={t("Dismiss notification", "关闭通知")}
           loadingLabel={t("Loading", "加载中")}
         />

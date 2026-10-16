@@ -46,7 +46,7 @@ export function HomePage({ storage }: HomePageProps) {
         flexDirection: "column",
         gap: theme.design.spacing.cardGroupGap,
         width: "100%",
-        maxWidth: theme.project.controlsWidth * 3,
+        maxWidth: theme.layout.home.maxWidth,
         alignSelf: "center",
         height: "100%",
         minHeight: 0,
@@ -60,7 +60,10 @@ export function HomePage({ storage }: HomePageProps) {
           <div
             role="heading"
             aria-level={1}
-            style={{ fontSize: theme.transportControl["--text-control-track"], fontWeight: 600 }}
+            style={{
+              fontSize: theme.transportControl["--text-control-track"],
+              fontWeight: theme.design.typography.weights.semibold,
+            }}
           >
             {t("home.title")}
           </div>
@@ -95,10 +98,12 @@ export function HomePage({ storage }: HomePageProps) {
                   aria-label={project.name}
                   onClick={() => open(project)}
                   style={{
-                    width: theme.project.controlsWidth,
+                    width: theme.layout.home.recentCardWidth,
                   }}
                 >
-                  <text style={{ fontWeight: 500 }}>{project.name}</text>
+                  <text style={{ fontWeight: theme.design.typography.weights.medium }}>
+                    {project.name}
+                  </text>
                   <text style={{ color: theme.colors.mutedForeground }}>
                     {formatTime.format(project.openedAt)}
                   </text>

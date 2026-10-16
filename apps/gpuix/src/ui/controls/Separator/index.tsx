@@ -22,7 +22,9 @@ export function Separator({
       aria-orientation={orientation}
       style={sx(
         { flexShrink: 0, backgroundColor: theme.colors.border },
-        vertical ? { width: 1, alignSelf: "stretch" } : { height: 1, width: "100%" },
+        vertical
+          ? { width: theme.design.shape.separatorWidth, alignSelf: "stretch" }
+          : { height: theme.design.shape.separatorWidth, width: "100%" },
         style
       )}
     />

@@ -192,6 +192,7 @@ export function rollGridLines(
   )
   const lines: RollLine[] = []
   for (let beat = Math.ceil(firstBeat / step) * step; beat <= lastBeat; beat += step) {
+    // This tolerance only absorbs floating-point grid arithmetic, not a display threshold.
     const bar = Math.abs(beat / numerator - Math.round(beat / numerator)) < 1e-9
     const whole = Math.abs(beat - Math.round(beat)) < 1e-9
     lines.push({

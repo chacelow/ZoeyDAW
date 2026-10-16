@@ -1,6 +1,5 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { Group, Panel, PanelDivider, PanelShell } from "@/ui/panels"
-import { PROJECT_LAYOUT } from "./layout-constraints"
 import type { ReactNode, Ref } from "react"
 import type { PublicInstance } from "@gpuix/react"
 import type { ProjectShellApi } from "./useProjectShell"
@@ -24,7 +23,14 @@ export interface ProjectLayoutProps extends ProjectLayoutSlots {
   readonly projectId: string
   readonly shell: ProjectShellApi
   readonly focusRef: Ref<PublicInstance>
-  readonly labels: { readonly resizeClipEdit: string; readonly resizeBrowser: string }
+  readonly labels: {
+    readonly resizeClipEdit: string
+    readonly resizeBrowser: string
+    readonly browserPanel: string
+    readonly arrangementPanel: string
+    readonly footerPanel: string
+    readonly activeDescription: string
+  }
 }
 
 /**
@@ -44,11 +50,18 @@ export function ProjectLayout({
   status,
 }: ProjectLayoutProps) {
   const theme = useTheme()
+  const panels = theme.layout.project.panels
   const gap = theme.project.panelGap
   const clipView = shell.footerView === "clip"
   const footerShell =
     footer === null ? null : (
-      <PanelShell id="footer" active={shell.activeSection} onActivate={shell.setActiveSection}>
+      <PanelShell
+        id="footer"
+        active={shell.activeSection}
+        onActivate={shell.setActiveSection}
+        aria-label={labels.footerPanel}
+        activeDescription={labels.activeDescription}
+      >
         {footer}
       </PanelShell>
     )
@@ -56,14 +69,20 @@ export function ProjectLayout({
     <Group orientation="horizontal" testId="project-workspace">
       <Panel
         panelRef={shell.browserHandleRef}
-        defaultSize={PROJECT_LAYOUT.browserDefaultSize}
+        defaultSize={panels.browserDefaultSize}
         minSize={theme.project.browserNavigationWidth + theme.project.browserResultsWidth + gap}
-        maxSize={PROJECT_LAYOUT.browserMaxSize}
+        maxSize={panels.browserMaxSize}
         collapsible
         collapsedSize={0}
         testId="browser-panel"
       >
-        <PanelShell id="browser" active={shell.activeSection} onActivate={shell.setActiveSection}>
+        <PanelShell
+          id="browser"
+          active={shell.activeSection}
+          onActivate={shell.setActiveSection}
+          aria-label={labels.browserPanel}
+          activeDescription={labels.activeDescription}
+        >
           {browser}
         </PanelShell>
       </Panel>
@@ -72,11 +91,13 @@ export function ProjectLayout({
         aria-label={labels.resizeBrowser}
         testId="browser-divider"
       />
-      <Panel minSize={PROJECT_LAYOUT.arrangementMinWidth} testId="arrangement-panel">
+      <Panel minSize={panels.arrangementMinWidth} testId="arrangement-panel">
         <PanelShell
           id="arrangement"
           active={shell.activeSection}
           onActivate={shell.setActiveSection}
+          aria-label={labels.arrangementPanel}
+          activeDescription={labels.activeDescription}
         >
           {arrangement}
         </PanelShell>
@@ -91,6 +112,7 @@ export function ProjectLayout({
       role="group"
       aria-label={projectId}
       style={{
+        // Full extents, zero minimums, and flex factors are containment invariants, not panel defaults.
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -130,9 +152,9 @@ export function ProjectLayout({
           {clipView ? (
             <Panel
               panelRef={shell.clipHandleRef}
-              defaultSize={PROJECT_LAYOUT.clipDefaultSize}
-              minSize={PROJECT_LAYOUT.clipMinSize}
-              maxSize={PROJECT_LAYOUT.clipMaxSize}
+              defaultSize={panels.clipDefaultSize}
+              minSize={panels.clipMinSize}
+              maxSize={panels.clipMaxSize}
               collapsible
               collapsedSize={0}
               onResize={size => shell.setFooterCollapsed(size.inPixels === 0)}

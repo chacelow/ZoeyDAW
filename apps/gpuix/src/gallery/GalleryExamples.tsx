@@ -85,7 +85,9 @@ export function GalleryForms({
           { key: "off", label: t("Unavailable", "不可用"), disabled: true },
         ]}
       />
-      <Button onClick={onSettings}>{t("Open settings", "打开设置")}</Button>
+      <Button testId="gallery-open-settings" onClick={onSettings}>
+        {t("Open settings", "打开设置")}
+      </Button>
     </>
   )
 }
@@ -154,7 +156,14 @@ export function GalleryPanels({ locale }: { readonly locale: "en" | "zh" }) {
         ["panel-b", t("Panel B", "面板 B")],
       ].map(([id, title]) => (
         <div key={id} style={{ height: theme.project.defaultTrackHeight }}>
-          <PanelShell id={id} active={active} onActivate={setActive} testId={`gallery-${id}`}>
+          <PanelShell
+            id={id}
+            active={active}
+            onActivate={setActive}
+            testId={`gallery-${id}`}
+            aria-label={title}
+            activeDescription={t("Active panel", "当前活动面板")}
+          >
             <CardHeader>
               <CardTitle>{title}</CardTitle>
             </CardHeader>
@@ -203,7 +212,7 @@ export function GalleryProjectCards({
         display: "flex",
         flexDirection: "column",
         gap: theme.design.spacing.stackGap,
-        width: theme.project.controlsWidth,
+        width: theme.layout.gallery.cardWidth,
       }}
     >
       <CardTitle>
@@ -240,7 +249,11 @@ export function GalleryFeedback({
   const t = (en: string, zh: string) => (locale === "zh" ? zh : en)
   return (
     <>
-      <Progress value={level} aria-label={t("Progress", "进度")} />
+      <Progress
+        value={level}
+        aria-label={t("Progress", "进度")}
+        aria-valuetext={`${Math.round(Math.max(0, Math.min(100, level)))}%`}
+      />
       <ControlGroup variant="toolbar">
         <Button onClick={() => toast.success(t("Operation completed", "操作完成"))}>
           {t("Success", "成功")}
@@ -255,7 +268,7 @@ export function GalleryFeedback({
         </Button>
       </ControlGroup>
       <Loading
-        message={t("Loading native resources", "正在加载原生资源")}
+        label={t("Loading native resources", "正在加载原生资源")}
         style={{ position: "relative", height: theme.transportControl["--spacing-control-track"] }}
       />
       <Empty>

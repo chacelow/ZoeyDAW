@@ -73,6 +73,7 @@ export function FooterPanel({
           expandedSize={theme.project.footerDeviceHeight}
           onExpandedChange={expanded => onCollapsedChange(!expanded)}
           aria-label={labels.toggle}
+          formatAccessiblePixels={pixels => `${pixels} pixels`}
           testId="footer-divider"
           style={{ backgroundColor: theme.colors.muted }}
         />
@@ -86,8 +87,11 @@ export function FooterPanel({
           }}
           reducedMotion={reducedMotion}
           tabWidth={theme.project.identityWidth}
-          style={{ height, gap: 0, overflow: "hidden" }}
-          containerStyle={{ backgroundColor: theme.colors.muted, borderRadius: 0 }}
+          style={{ height, gap: theme.design.tabs.footerJoinedGroupGap, overflow: "hidden" }}
+          containerStyle={{
+            backgroundColor: theme.colors.muted,
+            borderRadius: theme.design.tabs.footerRadius,
+          }}
           contentStyle={{ flexGrow: 1, minHeight: 0 }}
           options={[
             {

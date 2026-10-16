@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef } from "react"
 import { Dialog, DialogBackdrop, DialogPopup, DialogPortal, useGpuix } from "@gpuix/react"
-import { colorMix } from "@/shared/theme/color-mix"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useAppInteraction } from "../interaction"
 import type { ReactNode } from "react"
@@ -17,9 +16,8 @@ export interface ModalDialogProps {
 }
 
 /**
- * The application's only modal surface: a full-window layer, a light dim and a centered
- * popup. The dim mirrors the web dialog overlay `bg-black/10` (apps/web index.css turns its
- * blur off), mixed from the theme foreground so it darkens both appearances slightly.
+ * The application's only modal surface: a full-window backdrop and a centered popup.
+ * The backdrop uses the theme's semantic dialog recipe, independently of scrollbar styling.
  */
 export function ModalDialog({
   open,
@@ -39,7 +37,7 @@ export function ModalDialog({
       <DialogPortal>
         <DialogBackdrop
           testId={testId ? `${testId}-backdrop` : undefined}
-          style={{ backgroundColor: colorMix(theme.colors.foreground, 10, "transparent") }}
+          style={{ backgroundColor: theme.colors.dialogBackdrop }}
         />
         <DialogPopup
           ref={popup}

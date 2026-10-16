@@ -34,7 +34,7 @@ export function Label({
         outlineOffset: -theme.design.shape.focusRingWidth,
       },
     },
-    variants: { disabled: { true: { opacity: 0.5 }, false: {} } },
+    variants: { disabled: { true: { opacity: theme.design.states.disabledOpacity }, false: {} } },
   })
   const activate = () => {
     if (!disabled && controlRef?.current) renderer?.focusElement?.(controlRef.current.id)

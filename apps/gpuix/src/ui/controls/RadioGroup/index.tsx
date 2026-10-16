@@ -82,7 +82,7 @@ export function RadioGroupItem({
       height: theme.control["--spacing-control-track"],
       fontSize: theme.control["--text-control-track"],
       color: theme.colors.foreground,
-      cursor: "pointer",
+      cursor: theme.design.cursors.action,
       userSelect: "none",
       keyboardFocusDim: false,
       focusVisible: {
@@ -91,7 +91,15 @@ export function RadioGroupItem({
         outlineOffset: -theme.design.shape.focusRingWidth,
       },
     },
-    variants: { disabled: { true: { opacity: 0.5, cursor: "not-allowed" }, false: {} } },
+    variants: {
+      disabled: {
+        true: {
+          opacity: theme.design.states.disabledOpacity,
+          cursor: theme.design.cursors.disabled,
+        },
+        false: {},
+      },
+    },
   })
   return (
     <div

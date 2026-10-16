@@ -57,7 +57,12 @@ export function AudioWaveformLayer({
       (edge === "in" ? clip.fadeInCurvePosition : clip.fadeOutCurvePosition) ?? 0.5,
       (edge === "in" ? clip.fadeInCurve : clip.fadeOutCurve) ?? DEFAULT_FADE_CURVE
     )
-    return [{ d: cubicPath({ x: x0, y: y0 }, segments), strokeWidth: 1 }]
+    return [
+      {
+        d: cubicPath({ x: x0, y: y0 }, segments),
+        strokeWidth: theme.design.editor.fadeStrokeWidth,
+      },
+    ]
   })
   const markerProps = { clip, view, width }
   return (
@@ -80,7 +85,7 @@ export function AudioWaveformLayer({
             left: toX(value),
             top: 0,
             bottom: 0,
-            width: 1,
+            width: theme.design.editor.gridMinorStrokeWidth,
             backgroundColor: line,
             pointerEvents: "none",
           })}
@@ -92,9 +97,9 @@ export function AudioWaveformLayer({
           left: 0,
           right: 0,
           top: height / 2,
-          height: 1,
+          height: theme.design.editor.dividerStrokeWidth,
           backgroundColor: theme.colors.mutedForeground,
-          opacity: 0.4,
+          opacity: theme.design.editor.waveformAxisOpacity,
           pointerEvents: "none",
         })}
       />
@@ -147,7 +152,7 @@ export function AudioWaveformLayer({
             left: toX(selection),
             top: 0,
             bottom: 0,
-            width: 1,
+            width: theme.design.editor.selectionLineWidth,
             backgroundColor: theme.colors.primary,
             pointerEvents: "none",
           })}

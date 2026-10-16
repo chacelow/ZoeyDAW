@@ -33,7 +33,7 @@ export function MotionTabs({
   value,
   onChange,
   showContent = true,
-  tabWidth = 120,
+  tabWidth: providedTabWidth,
   containerStyle,
   tabStyle,
   contentStyle,
@@ -42,6 +42,7 @@ export function MotionTabs({
   ...props
 }: MotionTabsProps) {
   const theme = useTheme()
+  const tabWidth = providedTabWidth ?? theme.design.tabs.width
   const { renderer } = useGpuix()
   const entries = useRef(new Map<string, SelectionEntry>()).current
   const [selection, setSelection] = useState({
@@ -71,7 +72,7 @@ export function MotionTabs({
       gap: theme.design.tabs.itemGap,
       fontSize: theme.control["--text-control-track"],
       color: theme.colors.mutedForeground,
-      cursor: "pointer",
+      cursor: theme.design.cursors.action,
       userSelect: "none",
       keyboardFocusDim: false,
       focusVisible: {
@@ -82,13 +83,16 @@ export function MotionTabs({
     },
     variants: {
       selected: {
-        true: { color: theme.colors.foreground, fontWeight: 600 },
+        true: {
+          color: theme.colors.foreground,
+          fontWeight: theme.design.typography.weights.semibold,
+        },
         false: { hover: { backgroundColor: theme.colors.muted } },
       },
       disabled: {
         true: {
-          opacity: 0.5,
-          cursor: "not-allowed",
+          opacity: theme.design.states.disabledOpacity,
+          cursor: theme.design.cursors.disabled,
           focusVisible: undefined,
           hover: { backgroundColor: "transparent" },
           active: { backgroundColor: "transparent" },
@@ -125,11 +129,15 @@ export function MotionTabs({
         )}
       >
         {selectedIndex !== -1 ? (
+          // Fade endpoints and reduced-motion zero duration preserve the accessibility contract.
           <motion.div
             key={selected?.key}
             initial={{ opacity: reducedMotion ? 1 : 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: reducedMotion ? 0 : 0.16, ease: "easeOut" }}
+            transition={{
+              duration: reducedMotion ? 0 : theme.design.motion.tabs.duration,
+              ease: theme.design.motion.tabs.easing,
+            }}
             style={{
               position: "absolute",
               left: selectedIndex * tabWidth,

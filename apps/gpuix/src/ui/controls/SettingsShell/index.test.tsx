@@ -24,6 +24,8 @@ test("settings shell navigates actual selected panes and closes through Escape",
           <SettingsShell
             testId="settings"
             title="Preferences"
+            closeLabel="Close preferences"
+            navigationLabel="Preference categories"
             open={open}
             onOpenChange={next => {
               opened = next

@@ -12,6 +12,7 @@ test("load errors expose the original failure and execute retry via native input
       <LoadErrorScreen
         testId="error"
         title="Project unavailable"
+        retryLabel="Try opening again"
         error={new Error("File is missing")}
         onRetry={() => {
           retries += 1

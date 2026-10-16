@@ -7,7 +7,7 @@ import { Icon, iconMarkup } from "./index"
 
 describe("iconMarkup", () => {
   test("serialises every path of the lucide node and keeps currentColor", () => {
-    const markup = iconMarkup("ChevronsUpDown")
+    const markup = iconMarkup("ChevronsUpDown", 2)
     for (const [, attributes] of icons.ChevronsUpDown) {
       expect(markup).toContain(`d="${attributes.d}"`)
     }
@@ -22,10 +22,10 @@ describe("iconMarkup", () => {
   })
 
   test("a Phosphor glyph comes from the package asset, tinted by currentColor", () => {
-    const markup = iconMarkup("Metronome")
+    const markup = iconMarkup("Metronome", 2)
     expect(markup.startsWith("<svg")).toBe(true)
     expect(markup).toContain("currentColor")
-    expect(iconMarkup("Metronome")).toBe(markup)
+    expect(iconMarkup("Metronome", 2)).toBe(markup)
   })
 
   test("filled lucide icons paint the interior while outlines stay hollow", () => {
@@ -40,7 +40,7 @@ describe("iconMarkup", () => {
   })
 
   test("an unknown name fails loudly instead of drawing an empty glyph", () => {
-    expect(() => iconMarkup("NotARealIcon" as never)).toThrow(RangeError)
+    expect(() => Reflect.apply(iconMarkup, undefined, ["NotARealIcon", 2])).toThrow(RangeError)
   })
 })
 

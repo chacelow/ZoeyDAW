@@ -82,7 +82,7 @@ export function AudioWaveform({
           paddingRight: theme.control["--spacing-control-track-gap"],
           paddingTop: gap,
           paddingBottom: gap,
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.design.editor.dividerStrokeWidth,
           borderColor: line,
         })}
       >

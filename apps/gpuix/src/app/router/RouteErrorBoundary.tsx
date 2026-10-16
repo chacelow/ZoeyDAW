@@ -96,19 +96,22 @@ function RouteErrorScreen({
       {detail ? (
         <div
           role="group"
+          testId="route-error-details"
           aria-label={t("routeError.details")}
           style={{
             display: "flex",
             flexDirection: "column",
             gap,
-            maxWidth: theme.project.controlsWidth,
+            maxWidth: theme.design.feedback.maxWidth,
             padding: theme.design.popover.inset,
             borderRadius: theme.design.popover.radius,
             backgroundColor: theme.colors.muted,
             color: theme.colors.mutedForeground,
           }}
         >
-          <text style={{ fontWeight: 500 }}>{t("routeError.details")}</text>
+          <text style={{ fontWeight: theme.design.typography.weights.medium }}>
+            {t("routeError.details")}
+          </text>
           <text style={{ whiteSpace: "normal" }}>{detail}</text>
         </div>
       ) : null}

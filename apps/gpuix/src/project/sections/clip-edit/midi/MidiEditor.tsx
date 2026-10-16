@@ -81,7 +81,7 @@ export function MidiEditor({
     paddingRight: trackGap,
     paddingTop: gap,
     paddingBottom: gap,
-    borderBottomWidth: 1,
+    borderBottomWidth: theme.design.editor.dividerStrokeWidth,
     borderColor: theme.colors.arrangementLine,
   })
   return (
@@ -180,8 +180,8 @@ export function MidiEditor({
           style={sx({
             width: theme.project.midiKeyWidth,
             flexShrink: 0,
-            borderRightWidth: 1,
-            borderBottomWidth: 1,
+            borderRightWidth: theme.design.editor.dividerStrokeWidth,
+            borderBottomWidth: theme.design.editor.dividerStrokeWidth,
             borderColor: theme.colors.arrangementLine,
             backgroundColor: theme.colors.arrangementSurfaceAlt,
           })}
@@ -226,7 +226,7 @@ export function MidiEditor({
           display: "flex",
           flexDirection: "row",
           flexShrink: 0,
-          borderTopWidth: 1,
+          borderTopWidth: theme.design.editor.dividerStrokeWidth,
           borderColor: theme.colors.arrangementLine,
         })}
       >
@@ -239,7 +239,7 @@ export function MidiEditor({
             alignItems: "center",
             justifyContent: "center",
             gap,
-            borderRightWidth: 1,
+            borderRightWidth: theme.design.editor.dividerStrokeWidth,
             borderColor: theme.colors.arrangementLine,
           })}
         >

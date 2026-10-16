@@ -174,7 +174,7 @@ export function CardTitle({ style, ...props }: Props) {
       style={sx(
         {
           fontSize: theme.control["--text-control-track"],
-          fontWeight: 600,
+          fontWeight: theme.design.typography.weights.semibold,
           color: theme.colors.cardForeground,
         },
         style

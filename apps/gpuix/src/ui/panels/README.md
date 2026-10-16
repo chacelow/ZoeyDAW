@@ -8,9 +8,9 @@
 - `Panel` 的 `defaultSize`、`minSize`、`maxSize`、`collapsedSize` 中，数值是像素，字符串是百分比。`"25"` 与 `"25%"` 等价，`0` 是零像素。
 - `panelRef` 提供 `isCollapsed()`、`expand()`、`collapse()`、`resize(px)` 与 `getSize()`。`onResize` 与 `getSize()` 都返回 `{ inPixels, asPercentage }`，百分比的分母扣除了分隔条。
 - 数值 defaultSize 的面板在容器重排时保留当前像素尺寸；百分比面板按剩余空间重新分配。已折叠的面板不会因窗口放大自动展开。
-- `PanelShell` 用 `useTheme().project` 的边框与 gap 度量。active 只改变边框颜色，不添加外沿或改变尺寸。原生 mouseDown 向调用方分发激活，子控件的 mouseDown 不会屏蔽它。
+- `PanelShell` 用 `useTheme().project` 的边框与 gap 度量。active 只改变边框颜色，不添加外沿或改变尺寸。调用方必须注入 `aria-label` 与 `activeDescription`；机器 `id` 只用于激活和 testId，不作为用户名称。原生 mouseDown 向调用方分发激活，子控件的 mouseDown 不会屏蔽它。
 - `PanelDivider` 的命中区取 `project.panelGap`，当前为 7px。方向键每次移动 10px，Shift 为 50px。在折叠边界，方向键一次跨越折叠区间。
-- `CollapseDivider` 管理 Group 外固定高度区域的显隐。`expandedSize` 的一半是切换阈值，拖回阈值以内恢复按下时的状态。上下方向键分别展开与折叠。
+- `CollapseDivider` 管理 Group 外固定高度区域的显隐。`expandedSize` 的一半是切换阈值，拖回阈值以内恢复按下时的状态。上下方向键分别展开与折叠。调用方必须提供 `aria-label` 与 `formatAccessiblePixels`，朗读当前展开尺寸或折叠后的零值，共享组件不拼接英文单位。
 - `CollapseDivider` 的 Home/Up 展开、End/Down 折叠与活动拖动的 Escape 取消只由控件消费（`preventDefault`、`stopPropagation`），不能同时触发窗口 rewind 或关闭 Clip Edit；idle Escape 与 Space 继续冒泡给窗口。`useDividerDrag.cancel` 从唯一 anchor 判断并返回是否实际取消，不新增一份 dragging 状态。原生组合回归见 `ui/verification/r2-controls.test.tsx`。
 
 固定高度 Device 应放在可调 Group 外。画廊用 160px Device 验证 Clip 展开与连续调整不会压缩它。折叠 Browser 时，内部 Group 保留最近的非零布局，固定宽度列表只由外部 Panel 裁剪。

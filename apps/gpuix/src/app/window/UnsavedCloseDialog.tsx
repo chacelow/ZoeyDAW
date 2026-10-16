@@ -25,11 +25,12 @@ export function UnsavedCloseDialog({ open, onChoose }: UnsavedCloseDialogProps) 
       testId="unsaved-close"
     >
       <div
+        testId="unsaved-close-content"
         style={{
           display: "flex",
           flexDirection: "column",
           gap,
-          width: theme.project.controlsWidth,
+          width: theme.design.dialog.confirmationWidth,
           padding: theme.design.popover.inset,
           borderWidth: theme.design.popover.borderWidth,
           borderRadius: theme.design.popover.radius,
@@ -39,7 +40,11 @@ export function UnsavedCloseDialog({ open, onChoose }: UnsavedCloseDialogProps) 
           fontSize: theme.control["--text-control-track"],
         }}
       >
-        <div role="heading" aria-level={2} style={{ fontWeight: 600 }}>
+        <div
+          role="heading"
+          aria-level={2}
+          style={{ fontWeight: theme.design.typography.weights.semibold }}
+        >
           {t("windowClose.title")}
         </div>
         <text style={{ color: theme.colors.mutedForeground, whiteSpace: "normal" }}>
