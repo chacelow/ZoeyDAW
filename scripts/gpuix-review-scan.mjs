@@ -6,20 +6,36 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parse } from "@typescript-eslint/parser"
 
+const absoluteOnly = process.argv[2] === "--absolute-paths"
 const base = process.argv[2] ?? "gpuix-migration"
 // Run the repo's own eslint binary by absolute path: no PATH lookup, and the scan lints against the same config the pre-commit hook uses.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const eslintBin = path.join(repoRoot, "node_modules", ".bin", "eslint")
 const eslintConfig = path.join(repoRoot, "eslint.config.js")
 const run = (cmd, args) => execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 }).trim()
-const changed = run("git", ["diff", "--name-only", "--diff-filter=AMR", `${base}...HEAD`])
-  .split("\n")
-  .filter(Boolean)
+const changed = absoluteOnly
+  ? []
+  : run("git", ["diff", "--name-only", "-z", "--diff-filter=AMR", `${base}...HEAD`])
+      .split("\0")
+      .filter(Boolean)
 const source = changed.filter(f => /^apps\/gpuix\/src\/.*\.(ts|tsx)$/.test(f))
 const code = source.filter(f => !/\.test\.(ts|tsx)$/.test(f))
 const findings = []
 const add = (kind, file, detail) => {
   findings.push({ kind, file, detail })
+}
+
+const absoluteFiles = (absoluteOnly ? run("git", ["ls-files", "-z"]).split("\0") : changed)
+  .filter(file => /\.(?:mjs|js|ts|tsx|sh|rs|json)$/u.test(file))
+  .filter(file => !file.split("/").includes("evidence"))
+const absolutePath =
+  /(?:(?<![\w.\/:\-])|(?<=:-))\/(?:Volumes|Users|tmp|private|var\/folders)(?=\/|[\s"'`),;]|$)/u
+for (const file of absoluteFiles) {
+  for (const [index, line] of readFileSync(file, "utf8").split("\n").entries()) {
+    const withoutFileUrls = line.replace(/file:\/\/[^\s"'`<>]+/gu, "")
+    if (absolutePath.test(withoutFileUrls))
+      add("absolute-path", file, `line ${index + 1}: machine-specific absolute path`)
+  }
 }
 
 const stripComments = text =>
@@ -156,6 +172,7 @@ const order = [
 ]
 findings.sort((a, b) => (order.indexOf(a.kind) + 1 || 99) - (order.indexOf(b.kind) + 1 || 99))
 const hard = new Set([
+  "absolute-path",
   "hand-written-svg",
   "deep-relative-import",
   "eslint",
@@ -169,6 +186,6 @@ for (const f of findings)
   console.log(`${hard.has(f.kind) ? "HARD" : "WARN"}  ${f.kind.padEnd(22)} ${f.file}  ${f.detail}`)
 const hardCount = findings.filter(f => hard.has(f.kind)).length
 console.log(
-  `\n${code.length} source files, ${tests.length} test files scanned vs ${base}: ${hardCount} hard, ${findings.length - hardCount} warn`
+  `\n${absoluteOnly ? `${absoluteFiles.length} tracked source files scanned` : `${code.length} source files, ${tests.length} test files scanned vs ${base}`}: ${hardCount} hard, ${findings.length - hardCount} warn`
 )
 process.exit(hardCount ? 1 : 0)
