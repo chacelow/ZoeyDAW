@@ -23,6 +23,7 @@ A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live �
 - 数值由消费者持有。所有数值变体共享 `useDragPad`、每步 4px 比例和主题度量，Bar/Bipolar 只改变填充外观。没有复制 track-mixer 的早期拖动逻辑。
 - `CursorLockPort` 经 `ControlEnvironment.cursorLock` 注入。UI 不依赖 `@zoeydaw/native`。无端口时不隐藏光标；画廊组合入口接入真实 Rust 光标函数。
 - `ControlEnvironment.textFocus` 是组合根可选注入的文本焦点 lease 端口，`enter(): () => void` 返回幂等释放函数。Input 与 DragPadNumber 实际编辑 input 在原生 `onFocus` 取得 lease，在 `onBlur`、编辑态退出或卸载时释放。普通数值 spinbutton 不报告文本焦点。lease 不传输入内容，不替代既有 ControlInfo；不查询 host 树、不轮询焦点。renderer 必须为 autoFocus 发出真实 focus 事件。
+- `ControlEnvironment.subscribeWindowActive` 复用组合根的原生 activation 源。数值手势失活时走与 Escape 相同的取消路径：恢复按下值和光标、取消事务、清除 anchor；后续 move/up 不再提交。订阅只随源变更，不随数值预览重建；卸载释放订阅。
 - 可聚焦 `readOnly` Input 仍报告文本焦点并隔离可打印快捷键，只有 `disabled` 排除。只读不等于非文本，选择/复制仍由原生编辑器拥有。
 - Button 的 `active/onActiveChange` 为受控状态。`highlight` 默认开启，关闭后不加 hover 高亮。`iconOnly` 使用正方形尺寸，图标经共享 `Icon` 与主题 token 着色。active destructive 保持 web Record 的 danger wash、hover 与 focus 层级，不被 primary 覆盖。调用方可配置原生 `role/tabIndex`。
 - `DropdownButton` 复用固定主干 Select。`size` 只控制 trigger；弹层选项与 Menu、Browser 的 ListRow 共用 `listRowChrome` 的紧凑行高度、字号、gap、padding、边框与圆角，不随 Transport 放大。`fill` 同时铺满外层和 trigger，默认仍按内容测宽。工具栏 trigger 不激活 Space，弹层选项 Space 选择并消费，不同时触发播放。标签保留换行，紧凑 trigger 把换行折成空格，指示器固定右侧。
@@ -31,6 +32,8 @@ A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live �
 - `ControlledScrollbar` 是加性的横/纵向受控变体：`value`、`viewport`、`extent` 使用同一逻辑单位，`length` 是绘制长度，`onChange` 写回消费者的唯一 owner。Arrangement 用它实现 **minimap 下 marks 与 timeline 共用的一条横向滚动条**，不另建音乐滚动状态或巨大 native scroll 内容。
 - 滚动条导航键只由控件消费，Space 留给窗口播放 owner；悬停滚轮通过原生 `pointerEvents: auto` 命中阻止祖先一起滚动，不伪造已消费事件标志。厚度和最小 thumb 来自共享控件度量，当前逻辑值经 `aria-valuetext` 暴露。
 - Menu/Popover 复用固定主干 `FloatingLayer` 与 `renderSlot`。ContextMenu 用 F2 原生 `onContextMenu` 事件捕获最近作用域，能跨交互后代，不复制 MouseDown 分发或判断 Ctrl。Menu 按 state/context、trigger、navigation、content、item composition 拆分；根 trigger 的 Space 留给播放，弹层 MenuItem 与 SubTrigger 的 Space 仍选择并消费。
+- Menu 的 Home/End、方向导航、Escape 与子菜单 Left/Right 消费默认行为和传播；根 trigger 的 Enter/Up/Down 同样消费，Space 仍交给播放。Tab 关闭菜单后保留原生焦点前进。`MenuTrigger` 保留调用方 `tabIndex`，默认仍为 0，允许编辑面把其从属 context trigger 排除在 Tab 顺序外。
+- DragPad 确实取消 drag/pre-edit、处理 Up/Down、进入编辑或接收预编辑输入时消费键盘事件；idle Escape 放行给弹层或窗口，普通 spinbutton 的 Space 继续冒泡。原生窗口键盘组合回归与变异入口：`bun test src/ui/verification/r2-controls.test.tsx`、`bun src/ui/verification/mutations-r2.mjs`（在 `apps/gpuix` 运行）；真实工程 smoke：`B2_EVIDENCE_DIR="$EVIDENCE_DIR" bun src/app/verification/r2-ui-smoke.tsx`，证据目录由调用方提供。
 - `toastLoading(message, id?)` 保留原消费者接口。同 id 的 loading 可以被 success/error 替换；通知 store 只有一份，替换、淘汰和关闭清理旧 timer。
 - `SettingsShell` 是非模态导航和内容容器，不宣称实现模态 focus trap。RadioGroup 与对话框内 SettingsNavItem 保留标准 Space 选择；工具栏 `MotionTabs` 只用 Enter 激活，Space 不切换。Tabs 使用静态指示器和原生 opacity 过渡。
 - `DragPreviewArea` 删除 DOM selector/HTMLElement 接口，改为显式 `data` 或 `items` 和 `renderPreview(data)`。预览支持阈值、释放、Esc 和取消；实际资源放置保持禁用。

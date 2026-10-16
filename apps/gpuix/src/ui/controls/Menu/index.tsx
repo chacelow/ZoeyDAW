@@ -298,8 +298,11 @@ function SubTrigger({
       }}
       onKeyDown={event => {
         onKeyDown?.(event)
-        if (event.key?.toLowerCase() === "right" || event.key?.toLowerCase() === "arrowright")
+        if (event.key?.toLowerCase() === "right" || event.key?.toLowerCase() === "arrowright") {
+          event.preventDefault()
+          event.stopPropagation()
           open()
+        }
       }}
     >
       {content}
