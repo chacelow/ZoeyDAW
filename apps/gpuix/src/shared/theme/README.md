@@ -31,6 +31,7 @@
 - Menu 与 Popover 是不同 family，默认 surface radius 都为4，但 inset 分别为4与8；弹层列表行使用 ListRow 的共享行 chrome，不再拥有独立的项 padding、gap 或圆角。Popover 内容 gap6 仍由自身 token 持有。
 - `design.colorRecipes` 控制混色、透明洗色与语义关联；默认配方复用预设缓存，覆盖配方按 scheme 重新派生。`contentFill(color, colors, paperTint)` 显式接收 `design.colorRecipes.contentPaperTint`，没有内部固定 tint。
 - `layout.track` 一次解析控件行高、间距、边框、折叠高、标题高、resize 步长/阈值与上限。行与 Clip 投影携带同一 `trackGeometry`，命中与绘制不各读默认值。
+- `layout.clipEditor.colorSwatchSize/nameWidth` 与 `layout.scrollArea.defaultHeight` 分别拥有 Clip 色块、名称输入宽度和滚动区域缺省高度。省略 layout 时在 `createLayoutTokens()` 中按原关系解析（默认8/200/260）；完整 layout 显式值优先。ScrollArea 的 `size`、`height`、`style.height` 和 `fill` 仍优先于缺省高度。
 
 组合 Gallery 的默认、flat、加大间距是只读演示配置，不是用户主题编辑器。后台启动使用 `GPUIX_BACKGROUND=1 bun --hot apps/gpuix/src/gallery/controls.tsx`，只验证不依赖帧推进的启动与 AX；真实可见组合在前台验收。离屏整页取证入口见 [setup](../../../../../docs/agents/setup.md)。
 

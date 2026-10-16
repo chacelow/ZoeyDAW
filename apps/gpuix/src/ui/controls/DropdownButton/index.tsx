@@ -71,6 +71,7 @@ export function DropdownButton<T extends string = string>({
   const theme = useTheme()
   const [open, setOpen] = useState(false)
   const metrics = size === "transport" ? theme.transportControl : theme.control
+  const gap = metrics["--spacing-control-gap"]
   const info = useInfoBinding({ type: "dropdown", description })
   const choices = items.filter((item): item is DropdownButtonValueItem<T> => !("type" in item))
   const selected = choices.find(item => item.id === value)
@@ -84,7 +85,7 @@ export function DropdownButton<T extends string = string>({
     measured.width +
     metrics["--spacing-control-track-pad"] * 2 +
     metrics["--spacing-control-icon"] +
-    metrics["--spacing-control-gap"] * 2 +
+    (gap + (icon ? gap : 0)) +
     (icon ? metrics["--spacing-control-icon-slot"] : 0) +
     theme.design.shape.controlBorderWidth * 2
   const display = renderValue ? renderValue(selected) : (selected?.label ?? value)
@@ -138,7 +139,10 @@ export function DropdownButton<T extends string = string>({
       >
         {measured.sampleNodes}
         {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
-        <div style={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}>
+        <div
+          testId={testId ? `${testId}-value` : undefined}
+          style={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}
+        >
           {typeof display === "string" ? (
             <text style={{ whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
               {display.replace(/\r?\n/g, " ")}

@@ -32,7 +32,7 @@ export function ScrollArea({
     size?.height ??
     height ??
     style?.height ??
-    (fill ? "100%" : theme.control["--spacing-control-track"] * 20)
+    (fill ? "100%" : theme.layout.scrollArea.defaultHeight)
   return (
     <div
       {...props}

@@ -50,6 +50,18 @@ export function layoutExpectations(
       expression: "gallery/states.tsx theme.project.controlsWidth * 2",
       value: project.controlsWidth * 2,
     },
+    "clipEditor.colorSwatchSize": {
+      expression: "project/sections/clip-edit/ClipEditor.tsx trackGap * 2",
+      value: control.trackGap * 2,
+    },
+    "clipEditor.nameWidth": {
+      expression: "project/sections/clip-edit/NameInput.tsx theme.project.identityWidth * 2",
+      value: project.identityWidth * 2,
+    },
+    "scrollArea.defaultHeight": {
+      expression: "ui/controls/ScrollArea/index.tsx theme.control['--spacing-control-track'] * 20",
+      value: control.track * 20,
+    },
     "track.controlHeight": {
       expression: "project/layout/track.ts CONTROL_METRICS.default['--spacing-control-track']",
       value: control.track,

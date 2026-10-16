@@ -49,7 +49,7 @@ export function ClipNameInput({
         finish(true)
       }}
       style={{
-        width: theme.project.identityWidth * 2,
+        width: theme.layout.clipEditor.nameWidth,
         flexShrink: 1,
         fontWeight: theme.design.typography.weights.semibold,
         backgroundColor: "transparent",

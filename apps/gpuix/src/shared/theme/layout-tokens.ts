@@ -29,6 +29,8 @@ export interface LayoutTokens {
   }
   readonly home: { readonly maxWidth: number; readonly recentCardWidth: number }
   readonly gallery: { readonly cardWidth: number; readonly settingsPreviewWidth: number }
+  readonly clipEditor: { readonly colorSwatchSize: number; readonly nameWidth: number }
+  readonly scrollArea: { readonly defaultHeight: number }
   readonly track: TrackGeometry
   readonly arrangement: {
     readonly markerRulerHeight: number
@@ -87,6 +89,8 @@ export function createLayoutTokens(control: ControlMetrics, project: ProjectMetr
     },
     home: { maxWidth: 912, recentCardWidth: 304 },
     gallery: { cardWidth: 304, settingsPreviewWidth: 608 },
+    clipEditor: { colorSwatchSize: spacing * 2, nameWidth: project.identityWidth * 2 },
+    scrollArea: { defaultHeight: controlHeight * 20 },
     track: {
       controlHeight,
       spacing,
