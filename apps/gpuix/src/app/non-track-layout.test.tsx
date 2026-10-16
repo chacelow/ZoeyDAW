@@ -15,6 +15,7 @@ import { LoadErrorScreen } from "@/ui/controls/LoadErrorScreen"
 import { HomePage } from "./home/HomePage"
 import { saveRecentProjects } from "./home/recent-projects"
 import { initAppI18n } from "./i18n"
+import { createDisplayFormats } from "./i18n/display-formats"
 import { AppInteractionProvider } from "./interaction"
 import { createRouter, RouterProvider } from "./router/router"
 import { UnsavedCloseDialog } from "./window/UnsavedCloseDialog"
@@ -148,7 +149,7 @@ test("Gallery settings preview width follows its own layout after native activat
           gallery: { ...DEFAULT_LAYOUT_TOKENS.gallery, settingsPreviewWidth: 487 },
         }}
       >
-        <StateGallery locale="en" toolbar={null} />
+        <StateGallery locale="en" formats={createDisplayFormats("en-US")} toolbar={null} />
       </ThemeProvider>
     )
     paint(root)

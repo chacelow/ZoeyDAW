@@ -15,6 +15,7 @@ import {
 import type { LaneTranslate } from "@/project/sections/arrangement/lane/messages"
 import type { LaneContext } from "../../types"
 import type { ArrangementScene } from "@/project/sections/arrangement/core/scene"
+import type { DisplayFormats } from "@/project/model/display-formats"
 
 export function AutomationValueEditor({
   context,
@@ -22,12 +23,14 @@ export function AutomationValueEditor({
   trackId,
   originY,
   t,
+  formats,
 }: {
   context: LaneContext
   scene: ArrangementScene
   trackId: string
   originY: number
   t: LaneTranslate
+  formats: DisplayFormats
 }) {
   const selection = scene.targetSelection
   if (selection.kind !== "automation-value" || selection.trackId !== trackId) return null
@@ -41,6 +44,7 @@ export function AutomationValueEditor({
       key={`${selection.trackId}:${selection.laneId}:${point.id}`}
       context={context}
       t={t}
+      formats={formats}
       trackId={selection.trackId}
       laneId={selection.laneId}
       pointId={point.id}
@@ -56,6 +60,7 @@ export function AutomationValueEditor({
 function ValueInput({
   context,
   t,
+  formats,
   trackId,
   laneId,
   pointId,
@@ -67,6 +72,7 @@ function ValueInput({
 }: {
   context: LaneContext
   t: LaneTranslate
+  formats: DisplayFormats
   trackId: string
   laneId: string
   pointId: string
@@ -80,12 +86,8 @@ function ValueInput({
   const [value, setValue] = useState(() => {
     const source = automationSourceValue(parameter, initial)
     return parameter === "volume"
-      ? source <= -60
-        ? "−∞ dB"
-        : `${source.toFixed(1)} dB`
-      : Math.abs(source) < 0.005
-        ? "C"
-        : `${source < 0 ? "L" : "R"} ${Math.round(Math.abs(source) * 100)}`
+      ? formats.db(source, { unit: true })
+      : formats.pan(source, "automation")
   })
   const done = useRef(false)
   const epoch = useRef(context.getState().session.editEpoch)
@@ -103,18 +105,7 @@ function ValueInput({
       return
     if (commit) {
       const trimmed = value.trim()
-      const parsed =
-        parameter === "pan"
-          ? /^c$/i.test(trimmed)
-            ? 0
-            : /^([lr])\s*(\d+(?:\.\d+)?)\s*%?$/i.test(trimmed)
-              ? ((trimmed[0]?.toLowerCase() === "l" ? -1 : 1) *
-                  Number(trimmed.match(/\d+(?:\.\d+)?/)?.[0])) /
-                100
-              : Number(trimmed)
-          : /^[-−]∞(?:\s*dB)?$/i.test(trimmed)
-            ? -60
-            : Number(trimmed.replace(/\s*dB\s*$/i, ""))
+      const parsed = parameter === "pan" ? formats.parsePan(trimmed) : formats.parseDb(trimmed)
       if (trimmed && Number.isFinite(parsed)) {
         const normalized = normalizedAutomationValue(parameter, parsed)
         const lane = context
@@ -157,7 +148,7 @@ function ValueInput({
         ),
         top: Math.max(0, y - theme.control["--spacing-control-icon"]),
         width: theme.project.identityWidth,
-        borderRadius: 0,
+        borderRadius: theme.design.editor.inlineRadius,
         borderColor: theme.colors.primary,
         paddingLeft: theme.control["--spacing-control-gap"],
         paddingRight: theme.control["--spacing-control-gap"],

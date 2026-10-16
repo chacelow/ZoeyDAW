@@ -44,10 +44,10 @@ export function GroupRails({
               theme.colors,
               theme.design.colorRecipes.contentPaperTint
             ),
-            borderLeftWidth: 1,
-            borderRightWidth: 1,
-            borderTopWidth: group.id === track.id ? 1 : 0,
-            borderBottomWidth: closes ? 1 : 0,
+            borderLeftWidth: theme.design.editor.dividerStrokeWidth,
+            borderRightWidth: theme.design.editor.dividerStrokeWidth,
+            borderTopWidth: group.id === track.id ? theme.design.editor.dividerStrokeWidth : 0,
+            borderBottomWidth: closes ? theme.design.editor.dividerStrokeWidth : 0,
             borderColor: theme.colors.arrangementLine,
           }}
         />

@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 import { nativeCursorLock } from "@/platform/cursor"
 import {
   projectActions,
@@ -9,14 +9,11 @@ import {
 } from "@/project/adapters"
 import { ArrangementTimeline } from "@/project/sections/arrangement/timeline"
 import { LaneRow, LaneOverlay, useLaneSurface } from "@/project/sections/arrangement/lane"
-import {
-  TrackRows,
-  TrackResizeOverlay,
-  trackResources,
-} from "@/project/sections/arrangement/tracks"
+import { TrackRows, TrackResizeOverlay } from "@/project/sections/arrangement/tracks"
 import { useAppTranslation } from "../i18n"
 import { englishLabels, chineseLabels } from "../locales/sections/timeline"
 import { labelsByLocale } from "../locales/sections/lane"
+import { createTrackLabels } from "../locales/sections/tracks"
 import type { ProjectComposition } from "./composition"
 
 export function ArrangementPanel({ composition }: { readonly composition: ProjectComposition }) {
@@ -24,7 +21,9 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
   const scene = useSyncExternalStore(timeline.sceneStore.subscribe, timeline.sceneStore.get)
   const viewport = timeline.useViewport()
   const { locale } = useAppTranslation()
-  const editSurface = useLaneSurface(lane, labelsByLocale[locale === "zh-CN" ? "zh" : "en"])
+  const trackLabels = useMemo(() => createTrackLabels(locale), [locale])
+  const laneLabels = labelsByLocale[locale === "zh-CN" ? "zh" : "en"]
+  const editSurface = useLaneSurface(lane, laneLabels)
   const selectedTrackIds = useProjectState(state => state.session.selectedTrackIds)
   const selectionSurface = useProjectState(state => state.session.trackSelectionSurface)
   return (
@@ -40,19 +39,21 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
           focusedTrackId={selectionSurface === "header" ? (selectedTrackIds.at(-1) ?? null) : null}
           onFocusTrack={id => projectActions.selectTracks([id], "header")}
           telemetry={readProjectTelemetry}
-          labels={trackResources[locale].arrangement}
+          labels={trackLabels}
           renderLane={row => (
-            <LaneRow row={row} scene={scene} viewport={viewport} readPeaks={readProjectPeaks} />
+            <LaneRow
+              row={row}
+              scene={scene}
+              viewport={viewport}
+              readPeaks={readProjectPeaks}
+              creationNames={laneLabels.creationNames}
+            />
           )}
         />
       }
       overlay={<LaneOverlay scene={scene} viewport={viewport} transportBar={readTransportBar} />}
       interactionOverlay={
-        <TrackResizeOverlay
-          scene={scene}
-          viewport={viewport}
-          labels={trackResources[locale].arrangement}
-        />
+        <TrackResizeOverlay scene={scene} viewport={viewport} labels={trackLabels} />
       }
     />
   )

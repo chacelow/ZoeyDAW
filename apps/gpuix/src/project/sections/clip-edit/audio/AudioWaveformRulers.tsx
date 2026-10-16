@@ -1,5 +1,3 @@
-import { formatAudioMusicalValue } from "@/project/model/audio-editor"
-import { timeTickLabel } from "@/project/model/timeline-ticks"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { SourceMarker } from "./SourceMarker"
@@ -61,7 +59,7 @@ export function AudioWaveformRulers({
       <text>{text}</text>
     </div>
   )
-  const markerProps = { clip, view, width }
+  const markerProps = { clip, view, width, formats: labels.formats }
   return (
     <>
       <div
@@ -79,7 +77,10 @@ export function AudioWaveformRulers({
         })}
       >
         {ticks.map(value =>
-          rulerLabel(toX(value), formatAudioMusicalValue(value, numerator, denominator, "position"))
+          rulerLabel(
+            toX(value),
+            labels.formats.musicalPosition(value, numerator, denominator, "position")
+          )
         )}
       </div>
       <div
@@ -140,7 +141,9 @@ export function AudioWaveformRulers({
           pointerEvents: "none",
         })}
       >
-        {ticks.map(value => rulerLabel(toX(value), timeTickLabel(value * secondsPerBar)))}
+        {ticks.map(value =>
+          rulerLabel(toX(value), labels.formats.duration(value * secondsPerBar, "ruler"))
+        )}
       </div>
     </>
   )

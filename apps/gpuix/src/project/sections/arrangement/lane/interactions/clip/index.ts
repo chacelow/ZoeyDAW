@@ -80,9 +80,9 @@ export function createClipInteractions(context: LaneContext): LaneInteraction {
           scene.setHover({ id: hit.clip.id, region })
       } else if (scene.get().hoverClip) scene.setHover(null)
       return hit?.kind === "clip-resize" || (hit?.kind === "clip-fade" && hit.handle !== "curve")
-        ? "ew-resize"
+        ? "horizontalResize"
         : hit?.kind === "clip-fade"
-          ? "move"
+          ? "fadeCurve"
           : hit?.kind === "clip-title"
             ? "grab"
             : "default"

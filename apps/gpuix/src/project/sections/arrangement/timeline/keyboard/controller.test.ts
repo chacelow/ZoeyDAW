@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
@@ -28,6 +29,23 @@ beforeEach(() => {
   })
 })
 afterEach(() => keyboard.dispose())
+
+test("computer keyboard velocity follows the injected step and ignores repeated presses", () => {
+  keyboard.dispose()
+  keyboard = createTimelineKeyboard({
+    focus: () => "timeline",
+    blurControl: () => {},
+    readPolicy: () => ({ ...ARRANGEMENT_DEFAULTS.keyboard, velocityStep: 3 }),
+  })
+  projectActions.setMode("computerKeyboard", true)
+  projectActions.setMidiVelocity(100)
+  keyboard.down(key("v"))
+  expect(useProjectState.getState().session.midiVelocity).toBe(103)
+  keyboard.down(key("v", undefined, true))
+  expect(useProjectState.getState().session.midiVelocity).toBe(103)
+  keyboard.down(key("c"))
+  expect(useProjectState.getState().session.midiVelocity).toBe(100)
+})
 
 const control = { ctrl: true, cmd: false, alt: false, shift: false }
 

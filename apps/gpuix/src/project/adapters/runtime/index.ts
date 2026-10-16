@@ -3,4 +3,5 @@ export type {
   ProjectSeed,
   ProjectBackendOptions,
   ProjectRuntimeDependencies,
+  ProjectCreationConfiguration,
 } from "./project-runtime"

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it } from "bun:test"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { AUDIO_ID, MIDI_ID, PATTERN_ID, clipById, mount, seed } from "./harness.test"
-import { demoLabels } from "./demo/labels"
+import { clipEditorLabels as demoLabels } from "@/app/locales/sections/clip-edit"
 import type { Harness } from "./harness.test"
 
 let view: Harness | undefined

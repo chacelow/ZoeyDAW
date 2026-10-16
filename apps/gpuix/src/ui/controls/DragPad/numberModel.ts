@@ -4,7 +4,6 @@
  *
  * No React, no gpuix host types. Testable with plain `bun:test`.
  */
-import { DRAG_PIXELS_PER_STEP, WHEEL_LINE_PIXELS, WHEEL_PIXELS_PER_STEP } from "./constants"
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -53,12 +52,13 @@ export interface ValueAfterDragInput {
   step: number
   min: number
   max: number
+  dragPixelsPerStep: number
 }
 
 /**
  * Relative-drag mapping: output depends only on `deltaY`, the distance
  * travelled since the press, never on the pointer's absolute position. One
- * `DRAG_PIXELS_PER_STEP` of upward travel (negative deltaY) adds one `step`;
+ * `dragPixelsPerStep` of upward travel (negative deltaY) adds one `step`;
  * downward subtracts. Linear — no velocity term, no easing curve.
  */
 export function valueAfterDrag({
@@ -67,8 +67,9 @@ export function valueAfterDrag({
   step,
   min,
   max,
+  dragPixelsPerStep,
 }: ValueAfterDragInput): number {
-  const stepsTravelled = -deltaY / DRAG_PIXELS_PER_STEP
+  const stepsTravelled = -deltaY / dragPixelsPerStep
   return quantize(startValue + stepsTravelled * step, step, min, max)
 }
 
@@ -80,6 +81,8 @@ export interface ValueAfterWheelInput {
   step: number
   min: number
   max: number
+  wheelPixelsPerStep: number
+  wheelLinePixels: number
 }
 
 /** GPUI wheel mapping: positive `deltaY` scrolls toward earlier content and increases the value. */
@@ -90,8 +93,10 @@ export function valueAfterWheel({
   step,
   min,
   max,
+  wheelPixelsPerStep,
+  wheelLinePixels,
 }: ValueAfterWheelInput): number {
-  const pixels = precise ? deltaY : deltaY * WHEEL_LINE_PIXELS
-  const stepsTravelled = pixels / WHEEL_PIXELS_PER_STEP
+  const pixels = precise ? deltaY : deltaY * wheelLinePixels
+  const stepsTravelled = pixels / wheelPixelsPerStep
   return quantize(currentValue + stepsTravelled * step, step, min, max)
 }

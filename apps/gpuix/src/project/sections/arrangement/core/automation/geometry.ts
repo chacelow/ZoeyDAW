@@ -14,8 +14,6 @@ import {
 import type { ArrangementScene } from "../scene"
 import type { AutomationLane, Track } from "@/project/model/types"
 
-export const AUTOMATION_POINT_RADIUS = 4
-
 export interface AutomationRow {
   track: Track
   lane: AutomationLane | undefined
@@ -28,17 +26,22 @@ export interface AutomationRow {
 }
 
 export function activeAutomationRows(scene: ArrangementScene): AutomationRow[] {
-  const bodyBottom = arrangementBodyBottom(scene.viewport.height)
+  const geometry = scene.geometry.arrangement
+  const bodyBottom = arrangementBodyBottom(scene.viewport.height, geometry)
   const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks, scene.geometry.track)
   return layoutTrackRows(scene).flatMap(row => {
-    if (row.track.collapsed || row.height <= scene.geometry.track.titleHeight + 4) return []
+    if (
+      row.track.collapsed ||
+      row.height <= scene.geometry.track.titleHeight + geometry.clip.bodyThresholdInset
+    )
+      return []
     const titleInset =
       row.track.kind === "audio" || row.track.kind === "midi"
-        ? scene.geometry.track.titleHeight + 1
+        ? scene.geometry.track.titleHeight + geometry.clip.verticalInset
         : 0
     const top = Math.max(
       row.top + titleInset,
-      isPinnedTrack(row.track) ? pinnedTop : arrangementBodyTop()
+      isPinnedTrack(row.track) ? pinnedTop : arrangementBodyTop(geometry)
     )
     const bottom = Math.min(row.top + row.height, isPinnedTrack(row.track) ? bodyBottom : pinnedTop)
     if (bottom <= top) return []
@@ -53,8 +56,9 @@ export function activeAutomationRows(scene: ArrangementScene): AutomationRow[] {
         parameter,
         top,
         bottom,
-        valueTop: row.top + titleInset + AUTOMATION_POINT_RADIUS,
-        valueHeight: Math.max(1, row.height - titleInset - AUTOMATION_POINT_RADIUS * 2),
+        valueTop: row.top + titleInset + geometry.automationPointRadius,
+        // One pixel keeps normalization well-defined when both endpoint radii consume the row.
+        valueHeight: Math.max(1, row.height - titleInset - geometry.automationPointRadius * 2),
       },
     ]
   })

@@ -1,5 +1,5 @@
 import { reduceDocument, uniqueId } from "../model/reducers"
-import { document, get } from "./context"
+import { document, get, projectCreationValues } from "./context"
 import type { DocumentState } from "../model/types"
 
 export const markerActions = {
@@ -11,7 +11,10 @@ export const markerActions = {
     document(
       reduceDocument(get().document, {
         type: "markers",
-        markers: [...get().document.markers, { id, bar, label: "Marker" }],
+        markers: [
+          ...get().document.markers,
+          { id, bar, label: projectCreationValues().names.marker },
+        ],
       })
     )
     return id

@@ -84,6 +84,7 @@ export interface DesignTokens {
     readonly contentGap: number
     readonly footerJoinedGroupGap: number
   }
+  readonly trackCreationColors: DesignDetails["trackCreationColors"]
   readonly overlay: DesignDetails["overlay"]
   readonly dragPreview: DesignDetails["dragPreview"]
   readonly empty: DesignDetails["empty"]

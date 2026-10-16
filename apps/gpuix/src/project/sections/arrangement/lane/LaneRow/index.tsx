@@ -4,15 +4,17 @@ import type { ArrangementScene, ArrangementViewport } from "../../core/scene"
 import type { TrackRow } from "../../core/layout"
 import type { PeakReader } from "@/project/model/backend"
 import { LaneContents } from "./Contents"
+import type { CreationNames } from "@/project/defaults/template"
 
 export interface LaneRowProps {
   row: TrackRow
   scene: ArrangementScene
   viewport: ArrangementViewport
   readPeaks: PeakReader
+  creationNames: Pick<CreationNames, "clip">
 }
 
-export function LaneRow({ row, scene, viewport, readPeaks }: LaneRowProps) {
+export function LaneRow({ row, scene, viewport, readPeaks, creationNames }: LaneRowProps) {
   const automationMode = useProjectState(state => state.workspace.automationMode)
   return (
     <div
@@ -27,7 +29,13 @@ export function LaneRow({ row, scene, viewport, readPeaks }: LaneRowProps) {
         pointerEvents: "none",
       })}
     >
-      <LaneContents row={row} scene={scene} automationMode={automationMode} readPeaks={readPeaks} />
+      <LaneContents
+        row={row}
+        scene={scene}
+        automationMode={automationMode}
+        readPeaks={readPeaks}
+        creationNames={creationNames}
+      />
     </div>
   )
 }

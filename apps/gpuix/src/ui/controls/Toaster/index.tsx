@@ -26,12 +26,6 @@ export interface ToastPolicy {
   readonly visibleLimit: number
 }
 
-export const DEFAULT_TOAST_POLICY: ToastPolicy = {
-  defaultDuration: 4200,
-  queueLimit: 8,
-  visibleLimit: 4,
-}
-
 interface Notice extends ToastOptions {
   readonly id: string
   readonly status: ToastVariant | "loading"

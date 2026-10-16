@@ -1,5 +1,7 @@
-import { initialDocument } from "../../stores/slices/document"
-import { initialWorkspace } from "../../stores/slices/workspace"
+import { getPreferences } from "@/platform/settings"
+import type { PreferenceValues } from "@/platform/settings"
+import { createProjectTemplate } from "../../defaults/template"
+import type { CreationNames, TrackCreationAppearance } from "../../defaults/template"
 import { createCheckpoint, historyFlags } from "./history"
 import type { Checkpoint } from "./history"
 import type { BackendConnection } from "../backend/connection"
@@ -19,16 +21,17 @@ export interface ProjectSeed {
 export interface ProjectBackendOptions {
   createProject?: (projectId: string) => ProjectSeed
 }
+export interface ProjectCreationConfiguration {
+  names(): CreationNames
+  appearance(): TrackCreationAppearance
+  preferences(): PreferenceValues
+}
 export interface ProjectRuntimeDependencies {
   store: Pick<typeof useProjectState, "getState" | "setState">
   backendFactory?: ProjectBackendFactory
   createProject?: (projectId: string) => ProjectSeed
+  creation?: ProjectCreationConfiguration
 }
-
-export const createEmptyProject = (): ProjectSeed => ({
-  document: initialDocument(),
-  workspace: initialWorkspace(),
-})
 
 export class ProjectBackendNotConfiguredError extends Error {
   constructor() {
@@ -63,10 +66,10 @@ export class RuntimeOwner {
   isBackendRecovered = false
   checkpoints = new Map<number, Checkpoint>()
   factory: ProjectBackendFactory | undefined
-  createProject: (projectId: string) => ProjectSeed
+  createProject: ((projectId: string) => ProjectSeed) | undefined
   backendFactories: {
     factory: ProjectBackendFactory
-    createProject: (projectId: string) => ProjectSeed
+    createProject: ((projectId: string) => ProjectSeed) | undefined
   }[] = []
   connection: BackendConnection | null = null
   runtimeUsers = 0
@@ -74,18 +77,21 @@ export class RuntimeOwner {
   isRuntimeDisposed = true
   readonly store: ProjectRuntimeDependencies["store"]
   readonly backendFactory: ProjectBackendFactory | undefined
-  readonly projectFactory: (projectId: string) => ProjectSeed
+  readonly projectFactory: ((projectId: string) => ProjectSeed) | undefined
+  creation: ProjectCreationConfiguration | undefined
 
   constructor({
     store,
     backendFactory,
-    createProject: projectFactory = createEmptyProject,
+    createProject: projectFactory,
+    creation,
   }: ProjectRuntimeDependencies) {
     this.store = store
     this.backendFactory = backendFactory
     this.projectFactory = projectFactory
     this.factory = backendFactory
     this.createProject = projectFactory
+    this.creation = creation
   }
 
   get = (): ProjectState => this.store.getState()
@@ -96,12 +102,42 @@ export class RuntimeOwner {
 
   pushHistory(entry: ProjectSeed): void {
     this.past.push(entry)
-    if (this.past.length > 100) this.past.shift()
+    const capacity = this.preferences().historyCapacity
+    if (this.past.length > capacity) this.past.splice(0, this.past.length - capacity)
     this.future.length = 0
   }
 
   flags(state: ProjectState, dirty: boolean): ProjectState["session"] {
     return historyFlags(state, dirty, this.past, this.future)
+  }
+
+  configureProjectCreation = (creation: ProjectCreationConfiguration): (() => void) => {
+    const previous = this.creation
+    this.creation = creation
+    return () => {
+      if (this.creation === creation) this.creation = previous
+    }
+  }
+
+  requireCreation = (): ProjectCreationConfiguration => {
+    if (!this.creation) {
+      throw new Error(
+        "Project creation is not configured. Call configureProjectCreation before initializing a project route or creating tracks."
+      )
+    }
+    return this.creation
+  }
+
+  preferences = (): PreferenceValues => this.creation?.preferences() ?? getPreferences()
+
+  creationValues = () => {
+    const creation = this.requireCreation()
+    return { names: creation.names(), appearance: creation.appearance() }
+  }
+
+  newProject(projectId: string): ProjectSeed {
+    if (this.createProject) return this.createProject(projectId)
+    return createProjectTemplate({ ...this.creationValues(), preferences: this.preferences() })
   }
 
   projectEpoch = (): string => this.get().session.editEpoch

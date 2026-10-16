@@ -37,6 +37,7 @@ export function setSnapshotStorage(storage: SnapshotStorage | null): void {
 }
 
 let storageId: string | null = null
+// The v1 storage namespace identifies existing local snapshots; changing it requires migration.
 const storageKey = () => `zoeydaw:project:snapshot:v1:${encodeURIComponent(storageId ?? "default")}`
 
 /**
@@ -71,7 +72,7 @@ export function openProjectSnapshot(projectId: string): boolean {
     if (!snapshotStorage) throw new Error("Snapshot storage is not configured")
     saved = snapshotStorage.get(key)
   } catch {
-    session({ snapshotError: "Could not read snapshot storage.", snapshotSaveBlocked: true })
+    session({ snapshotError: "read", snapshotSaveBlocked: true })
     return false
   }
   if (saved !== null) {
@@ -79,7 +80,7 @@ export function openProjectSnapshot(projectId: string): boolean {
       hydrateProject(saved)
     } catch {
       session({
-        snapshotError: "The local snapshot is invalid or unsupported. Current project was kept.",
+        snapshotError: "invalid",
         snapshotSaveBlocked: true,
       })
       return false
@@ -133,7 +134,7 @@ export const snapshotActions = {
         markProjectSaved(document, workspace)
       } catch {
         session({
-          snapshotError: "Could not save the local snapshot. Check storage availability.",
+          snapshotError: "write",
         })
       }
     }
@@ -148,11 +149,11 @@ export const snapshotActions = {
       }
       saved = snapshotStorage.get(storageKey())
     } catch {
-      session({ snapshotError: "Could not read snapshot storage." })
+      session({ snapshotError: "read" })
       return false
     }
     if (saved === null) {
-      session({ snapshotError: "No local snapshot exists for this project." })
+      session({ snapshotError: "missing" })
       return false
     }
     try {
@@ -161,7 +162,7 @@ export const snapshotActions = {
       return true
     } catch {
       session({
-        snapshotError: "The local snapshot is invalid or unsupported. Current project was kept.",
+        snapshotError: "invalid",
       })
       return false
     }

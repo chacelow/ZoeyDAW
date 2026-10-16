@@ -120,7 +120,7 @@ export function TrackRows({
                   left: 0,
                   right: 0,
                   height,
-                  borderWidth: 1,
+                  borderWidth: theme.design.shape.controlBorderWidth,
                   borderColor: contentFill(
                     row.track.color,
                     theme.colors,

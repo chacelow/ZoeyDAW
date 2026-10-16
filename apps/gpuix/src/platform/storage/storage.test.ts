@@ -31,9 +31,8 @@ describe("real napi storage", () => {
   test("settings persist valid preferences and snapshots isolate routes", () => {
     const dir = temporaryDirectory()
     const settings = createSettings({ configDir: dir })
-    expect(settings.get()).toEqual({})
     settings.set({ language: "en-US", themePreset: "dark", closeBehavior: "tray" })
-    expect(createSettings({ configDir: dir }).get()).toEqual({
+    expect(createSettings({ configDir: dir }).get()).toMatchObject({
       language: "en-US",
       themePreset: "dark",
       closeBehavior: "tray",
@@ -44,7 +43,7 @@ describe("real napi storage", () => {
     )
     localeStorage.set("zh-CN")
     expect(localeStorage.get()).toBe("zh-CN")
-    expect(createSettings({ configDir: dir }).get()).toEqual({
+    expect(createSettings({ configDir: dir }).get()).toMatchObject({
       language: "zh-CN",
       themePreset: "dark",
       closeBehavior: "tray",

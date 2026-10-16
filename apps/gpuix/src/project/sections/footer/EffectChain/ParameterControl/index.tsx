@@ -30,12 +30,7 @@ export function ParameterControl({
     )
   })
   if (value === undefined) return null
-  const language = labels.locale
   const percentage = config.unit === "pan" || config.unit === "ratioPercent"
-  const number = new Intl.NumberFormat(language, {
-    useGrouping: false,
-    maximumFractionDigits: percentage ? 0 : config.step < 1 ? 1 : 0,
-  })
   return (
     <div
       style={{
@@ -60,14 +55,8 @@ export function ParameterControl({
         max={config.max}
         step={config.step}
         defaultValue={config.defaultValue}
-        format={next => number.format(percentage ? next * 100 : next)}
-        parse={raw => {
-          const decimal =
-            new Intl.NumberFormat(language).formatToParts(1.1).find(part => part.type === "decimal")
-              ?.value ?? "."
-          const parsed = Number(raw.trim().replace(decimal, "."))
-          return percentage ? parsed / 100 : parsed
-        }}
+        format={next => labels.formats.parameter(next, { percentage, step: config.step })}
+        parse={raw => labels.formats.parseParameter(raw, { percentage, step: config.step })}
         {...gesture}
       />
     </div>

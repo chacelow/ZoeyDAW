@@ -3,13 +3,17 @@ import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { hydrateProject, useProjectState } from "@/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  TEST_CREATION_NAMES,
+} from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import { LaneContents } from "../../lane/LaneRow/Contents"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackRows } from "../TrackRows"
 import { TrackResizeOverlay } from "../TrackResizeOverlay"
-import { trackResources } from "../locales"
+import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "../verification/frame-source"
 
 for (const width of [800, 200]) {
@@ -55,9 +59,10 @@ for (const width of [800, 200]) {
                 focusedTrackId={null}
                 onFocusTrack={() => {}}
                 telemetry={() => null}
-                labels={trackResources["en-US"].arrangement}
+                labels={trackLabelsByLocale["en-US"]}
                 renderLane={row => (
                   <LaneContents
+                    creationNames={TEST_CREATION_NAMES}
                     row={row}
                     scene={scene.get()}
                     automationMode={false}
@@ -68,7 +73,7 @@ for (const width of [800, 200]) {
               <TrackResizeOverlay
                 scene={scene.get()}
                 viewport={scene.get().viewport}
-                labels={trackResources["en-US"].arrangement}
+                labels={trackLabelsByLocale["en-US"]}
               />
             </div>
           </ThemeProvider>

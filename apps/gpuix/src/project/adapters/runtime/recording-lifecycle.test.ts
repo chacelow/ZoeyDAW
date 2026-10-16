@@ -1,8 +1,11 @@
 import { expect, it } from "bun:test"
 import { createStore } from "zustand/vanilla"
-import { initialDocument } from "@/project/stores/slices/document"
-import { initialWorkspace } from "@/project/stores/slices/workspace"
-import { initialSession } from "@/project/stores/slices/session"
+import {
+  createTestDocument,
+  createTestWorkspace,
+  createTestSession,
+  TEST_PROJECT_CREATION,
+} from "../fixtures"
 import { createMockProjectBackend } from "../backend/mock"
 import { createProjectRuntime } from "."
 import type { BackendRequest, ProjectBackend } from "@/project/model/backend"
@@ -41,11 +44,15 @@ it.each([
       dispose() {},
     }
     const store = createStore<ProjectState>(() => ({
-      document: initialDocument(),
-      workspace: initialWorkspace(),
-      session: initialSession(),
+      document: createTestDocument(),
+      workspace: createTestWorkspace(),
+      session: createTestSession(),
     }))
-    const runtime = createProjectRuntime({ store, backendFactory: createMockProjectBackend })
+    const runtime = createProjectRuntime({
+      store,
+      backendFactory: createMockProjectBackend,
+      creation: TEST_PROJECT_CREATION,
+    })
     const unregister = runtime.configureProjectBackend(() => backend)
     const release = runtime.startProjectRuntime()
     if (owner === "edit") {
@@ -102,11 +109,15 @@ it("retains submitted recording after commit and recovery reject across reopen",
     dispose() {},
   }
   const store = createStore<ProjectState>(() => ({
-    document: initialDocument(),
-    workspace: initialWorkspace(),
-    session: initialSession(),
+    document: createTestDocument(),
+    workspace: createTestWorkspace(),
+    session: createTestSession(),
   }))
-  const runtime = createProjectRuntime({ store, backendFactory: () => backend })
+  const runtime = createProjectRuntime({
+    store,
+    backendFactory: () => backend,
+    creation: TEST_PROJECT_CREATION,
+  })
   const release = runtime.startProjectRuntime()
   runtime.recordDocument(document => ({
     ...document,

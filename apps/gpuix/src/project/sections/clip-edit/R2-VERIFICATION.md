@@ -65,7 +65,7 @@ bun --cwd apps/gpuix src/project/sections/transport/verification/mutations.mjs
 - 真实后端整应用 smoke 完成 Home→工程→resume first present，实际 `nativePlaying:true`、`frames:21`，结束 `released idle`。
 - `verification/r2-smoke.tsx` 经 app native fixture preload 配置真实引擎，实际执行 Undo 后继续编辑、Cut/Paste、预览拖动→无 flush 的 wheel/release→回滚。最终 `phase:ready`、`pending:0`、`acceptedRevision:6`、`error:null`；音符音乐字段为 `[[0.25,72],[3.25,65]]`。使用注入的内存剪贴板，不读写宿主剪贴板。
 - 原生截图为 `/tmp/zoeydaw-r2-sections/r2-midi.png`，已读图核对 MIDI 工具栏、琴键、网格、音符与力度区域的组合关系。可重跑命令在 Clip Edit README。
-- 自己用命名 service `r2-sections-demo` 启动 `GPUIX_BACKGROUND=1 bun --hot src/project/sections/clip-edit/demo/index.tsx`。只读 AX 观察到 `zoeydaw clip editor dark en` 窗口，8.6 秒后 kill。后台 AX 只暴露窗口 chrome，不能证明内容首帧或焦点交互。
+- 自己用命名 service `r2-sections-demo` 启动 `GPUIX_BACKGROUND=1 bun --hot src/app/verification/clip-edit/demo/index.tsx`。只读 AX 观察到 `zoeydaw clip editor dark en` 窗口，8.6 秒后 kill。后台 AX 只暴露窗口 chrome，不能证明内容首帧或焦点交互。
 - 本切片没有 Rust 源码变更，未另跑 cargo check/test；native:build 是实际执行的全量门禁步骤。
 - 所有本地提交通过 ultracite/lint-staged；未使用 --no-verify。提交的代码、测试与变异脚本扫描 `/Volumes|/Users|/tmp|/private|/var/folders` 无命中。证据输出目录由 `B2_EVIDENCE_DIR` 注入。
 

@@ -6,7 +6,6 @@ import { PopupButton } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { readProjectTelemetry, useProjectState } from "@/project/adapters"
 import type { TransportLabels } from "../labels"
-import { formatSampleTime } from "../metronome"
 
 export function PerformanceStatus({ labels }: { readonly labels: TransportLabels }) {
   const theme = useTheme()
@@ -36,10 +35,10 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
   useResumeFrame(() => flushSync(refreshTelemetry), needsFrames)
   const clock = telemetry?.clock
   const sampleRate = clock?.kind === "sample" ? clock.sampleRate : null
-  const rate = sampleRate === null ? labels.unavailable : `${sampleRate / 1000} kHz`
+  const rate = sampleRate === null ? labels.unavailable : labels.formats.sampleRate(sampleRate)
   const latency =
     sampleRate !== null && telemetry?.outputLatencyFrames != null
-      ? `${((telemetry.outputLatencyFrames / sampleRate) * 1000).toFixed(2)} ms`
+      ? labels.formats.latency((telemetry.outputLatencyFrames / sampleRate) * 1000)
       : labels.unavailable
   return (
     <PopupButton
@@ -63,7 +62,7 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
         <text>{`${labels.latency}: ${latency}`}</text>
         <text>{`${labels.buffer}: ${labels.unavailable}`}</text>
         <text>{`${labels.cpu}: ${labels.unavailable}`}</text>
-        <text>{`${labels.time}: ${clock?.kind === "sample" ? formatSampleTime(clock.frame, clock.sampleRate) : labels.unavailable}`}</text>
+        <text>{`${labels.time}: ${clock?.kind === "sample" ? labels.formats.duration(clock.frame / clock.sampleRate, "transport") : labels.unavailable}`}</text>
       </div>
     </PopupButton>
   )

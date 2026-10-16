@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState } from "react"
+import { usePreference } from "@/platform/settings"
+import { PROJECT_TEMPLATE } from "@/project/defaults/template"
 import { Button, ControlGroup, DragPadToggle, DropdownButton, ScrollArea } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { Icon } from "@/ui/controls/Icon"
@@ -41,6 +43,7 @@ export function TransportBar({
   reducedMotion,
 }: TransportBarProps) {
   const theme = useTheme()
+  const policy = usePreference("transport")
   const document_ = useProjectState(state => state.document)
   const workspace = useProjectState(state => state.workspace)
   const session = useProjectState(state => state.session)
@@ -127,7 +130,7 @@ export function TransportBar({
               size="transport"
               label={labels.tap}
               onClick={() => {
-                const result = tappedTempo(taps.current, performance.now())
+                const result = tappedTempo(taps.current, performance.now(), policy)
                 taps.current = result.taps
                 if (result.bpm !== null) projectActions.setBpm(result.bpm)
               }}
@@ -143,10 +146,10 @@ export function TransportBar({
               max={999}
               step={0.01}
               dragStep={1}
-              defaultValue={120}
+              defaultValue={PROJECT_TEMPLATE.transport.bpm}
               label={labels.bpm}
-              format={value => value.toFixed(2)}
-              widthSamples={["999.99"]}
+              format={value => labels.formats.number(value, "bpm")}
+              widthSamples={labels.formats.widthSamples.bpm}
             />
             <ControlGroup label={labels.meter} separator="slash">
               <TransportNumber
@@ -155,8 +158,9 @@ export function TransportBar({
                 min={1}
                 max={16}
                 step={1}
-                defaultValue={4}
+                defaultValue={PROJECT_TEMPLATE.transport.numerator}
                 label={labels.numerator}
+                format={value => labels.formats.number(value, "integer")}
               />
               <TransportNumber
                 value={meter.denominator}
@@ -164,8 +168,9 @@ export function TransportBar({
                 min={1}
                 max={32}
                 step={1}
-                defaultValue={4}
+                defaultValue={PROJECT_TEMPLATE.transport.denominator}
                 label={labels.denominator}
+                format={value => labels.formats.number(value, "integer")}
               />
             </ControlGroup>
             <Button
@@ -206,12 +211,12 @@ export function TransportBar({
               min={0}
               max={100}
               step={1}
-              defaultValue={0}
+              defaultValue={PROJECT_TEMPLATE.musical.groove}
               label={labels.groove}
               icon={
                 <Icon name="AudioWaveform" size={iconSize} color={theme.colors.mutedForeground} />
               }
-              format={value => `${Math.round(value)}%`}
+              format={value => labels.formats.percent(value / 100)}
             />
             <DropdownButton
               testId="transport-bar-length"
@@ -251,8 +256,9 @@ export function TransportBar({
               min={1}
               max={barMax}
               step={1}
-              defaultValue={1}
+              defaultValue={PROJECT_TEMPLATE.position.bar}
               label={labels.bar}
+              format={value => labels.formats.number(value, "integer")}
             />
             <TransportNumber
               value={session.position.beat}
@@ -260,8 +266,9 @@ export function TransportBar({
               min={1}
               max={meter.numerator}
               step={1}
-              defaultValue={1}
+              defaultValue={PROJECT_TEMPLATE.position.beat}
               label={labels.beat}
+              format={value => labels.formats.number(value, "integer")}
             />
             <TransportNumber
               value={session.position.sixteenth}
@@ -269,9 +276,9 @@ export function TransportBar({
               min={1}
               max={4}
               step={1}
-              defaultValue={1}
+              defaultValue={PROJECT_TEMPLATE.position.sixteenth}
               label={labels.sixteenth}
-              format={value => String(Math.floor(value))}
+              format={value => labels.formats.number(Math.floor(value), "integer")}
             />
           </ControlGroup>
           <Button
@@ -297,7 +304,7 @@ export function TransportBar({
             onClick={() => {
               const now = performance.now()
               projectActions.stop()
-              if (lastStop.current !== null && now - lastStop.current < 450)
+              if (lastStop.current !== null && now - lastStop.current < policy.stopRepeatMs)
                 projectActions.rewindToStart()
               lastStop.current = now
             }}

@@ -20,7 +20,9 @@ import {
   dismissToast,
 } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
-import { DEFAULT_TOAST_POLICY } from "@/ui/controls/Toaster"
+import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
+import type { DisplayFormats } from "@/project/model/display-formats"
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
 import type { ControlInfo, CursorLockPort } from "@/ui/controls"
 import { GalleryCard } from "./GalleryCard"
 import { GalleryMenus } from "./GalleryMenus"
@@ -35,14 +37,16 @@ import {
 export function StateGallery({
   cursorLock,
   locale,
+  formats,
   toolbar,
 }: {
   readonly cursorLock?: CursorLockPort
   readonly locale: "en" | "zh"
+  readonly formats: DisplayFormats
   readonly toolbar: ReactNode
 }) {
   useLayoutEffect(() => {
-    configureToastPolicy(DEFAULT_TOAST_POLICY)
+    configureToastPolicy(PREFERENCE_DEFAULTS.notifications)
     return () => dismissToast()
   }, [])
   const theme = useTheme()
@@ -64,7 +68,9 @@ export function StateGallery({
     gap: theme.design.spacing.cardGroupGap,
   }
   return (
-    <ControlEnvironmentProvider value={{ cursorLock, setInfo }}>
+    <ControlEnvironmentProvider
+      value={{ cursorLock, setInfo, inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}
+    >
       <div
         testId="gallery-root"
         role="application"
@@ -244,18 +250,9 @@ export function StateGallery({
                     label={t("Pan", "声像")}
                     value={pan}
                     onChange={setPan}
-                    format={value =>
-                      value === 0
-                        ? "C"
-                        : `${value < 0 ? "L" : "R"}${Math.round(Math.abs(value) * 100)}`
-                    }
-                    parse={raw => {
-                      const text = raw.trim().toUpperCase()
-                      if (text === "C") return 0
-                      if (text.startsWith("L")) return -Number(text.slice(1)) / 100
-                      return text.startsWith("R") ? Number(text.slice(1)) / 100 : Number(text)
-                    }}
-                    widthSamples={["L100", "R100"]}
+                    format={value => formats.pan(value, "control")}
+                    parse={formats.parsePan}
+                    widthSamples={formats.widthSamples.pan}
                   />
                   <DragPadToggle
                     label={t("Mute example", "静音示例")}
@@ -386,7 +383,7 @@ export function StateGallery({
           aria-label={t("Gallery status", "画廊状态")}
         >{`${t("Info", "提示")}: ${info ?? "—"} · ${status}`}</text>
         <Toaster
-          policy={DEFAULT_TOAST_POLICY}
+          policy={PREFERENCE_DEFAULTS.notifications}
           aria-label={t("Notifications", "通知")}
           dismissLabel={t("Dismiss notification", "关闭通知")}
           loadingLabel={t("Loading", "加载中")}

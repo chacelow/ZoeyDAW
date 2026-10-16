@@ -6,13 +6,7 @@ import type { ShapePath } from "@/shared/svg/Shape"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { useProjectState } from "@/project/adapters"
-import { timeTickLabel, timeTicks } from "@/project/model/timeline-ticks"
-import {
-  BAR_RULER_HEIGHT,
-  LOOP_RULER_HEIGHT,
-  MARKER_RULER_HEIGHT,
-  TIME_RULER_HEIGHT,
-} from "../../core/layout"
+import { timeTicks } from "@/project/model/timeline-ticks"
 import { rulerTicks } from "../../core/rulers/grid-lines"
 import { rulerBar, rulerHit, rulerLabel } from "../../core/rulers/geometry"
 import { timelinePointer } from "../viewport/coordinates"
@@ -24,7 +18,9 @@ import type { SceneStore } from "../../core/scene"
 import type { TimelineController } from "../controller"
 import type { TimelineLabels } from "../labels"
 import type { RulerMenuTarget } from "./Menu"
+import type { DisplayFormats } from "@/project/model/display-formats"
 
+// Normalized SVG coordinate domain; screen marker dimensions come from the theme below.
 const markerPaths: readonly ShapePath[] = [
   {
     d: polygonPath([
@@ -44,9 +40,12 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
   const element = useRef<PublicInstance | null>(null)
   const controller = owner.view.rulers
   const [menuTarget, setMenuTarget] = useState<RulerMenuTarget>({ kind: "ruler", bar: 1 })
-  const [pointer, setPointer] = useState<"default" | "grab" | "grabbing" | "ew-resize">("default")
+  const [pointer, setPointer] = useState<"default" | "grab" | "grabbing" | "horizontalResize">(
+    "default"
+  )
   const [focused, setFocused] = useState(false)
   const { width, scrollX, pxPerBar } = current.viewport
+  const { barRulerHeight, markerRulerHeight, loopRulerHeight } = theme.layout.arrangement
   const lines = rulerTicks(current)
   const loopLeft = (current.loop.startBar - 1) * pxPerBar - scrollX
   const loopRight = (current.loop.endBar - 1) * pxPerBar - scrollX
@@ -63,14 +62,14 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
         style={sx({
           position: "relative",
           width,
-          height: BAR_RULER_HEIGHT,
+          height: barRulerHeight,
           overflow: "hidden",
           backgroundColor: theme.colors.arrangementSurfaceAlt,
           color: theme.colors.mutedForeground,
           fontSize: theme.control["--text-control-track"],
-          cursor: pointer,
+          cursor: theme.design.cursors[pointer],
           userSelect: "none",
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.design.editor.dividerStrokeWidth,
           borderColor: focused ? theme.colors.ring : theme.colors.arrangementLine,
         })}
         onFocus={() => setFocused(true)}
@@ -126,7 +125,7 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
                 ? "grabbing"
                 : "grab"
               : hit?.kind === "loop"
-                ? "ew-resize"
+                ? "horizontalResize"
                 : "default"
           )
         }}
@@ -135,7 +134,7 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
           controller.up()
         }}
       >
-        <PatternRegions scene={scene} height={BAR_RULER_HEIGHT} />
+        <PatternRegions scene={scene} height={barRulerHeight} />
         {lines.map(line => (
           <div
             key={line.bar}
@@ -143,8 +142,8 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
             style={sx({
               position: "absolute",
               left: line.x + theme.control["--spacing-control-gap"],
-              top: MARKER_RULER_HEIGHT,
-              height: LOOP_RULER_HEIGHT,
+              top: markerRulerHeight,
+              height: loopRulerHeight,
               display: "flex",
               alignItems: "center",
               pointerEvents: "none",
@@ -166,12 +165,13 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
                 position: "absolute",
                 top: 0,
                 left: (marker.bar - 1) * pxPerBar - scrollX,
-                height: MARKER_RULER_HEIGHT,
+                height: markerRulerHeight,
                 display: "flex",
                 alignItems: "center",
-                paddingLeft: theme.project.arrangementMarkerLabelInset - 1,
+                paddingLeft:
+                  theme.project.arrangementMarkerLabelInset - theme.design.editor.markerLineWidth,
                 pointerEvents: "none",
-                borderLeftWidth: 1,
+                borderLeftWidth: theme.design.editor.markerLineWidth,
                 borderColor:
                   current.targetSelection.kind === "marker" &&
                   current.targetSelection.id === marker.id
@@ -206,11 +206,11 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
             style={sx({
               position: "absolute",
               left: loopStart,
-              top: MARKER_RULER_HEIGHT,
+              top: markerRulerHeight,
               width: loopWidth,
-              height: LOOP_RULER_HEIGHT,
-              borderLeftWidth: 1,
-              borderRightWidth: 1,
+              height: loopRulerHeight,
+              borderLeftWidth: theme.design.editor.loopStrokeWidth,
+              borderRightWidth: theme.design.editor.loopStrokeWidth,
               borderColor: theme.colors.primary,
               backgroundColor: theme.colors.canvasScrollbarActive,
               pointerEvents: "none",
@@ -223,7 +223,15 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
   )
 }
 
-export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }) {
+export function TimeRuler({
+  scene,
+  label,
+  formats,
+}: {
+  scene: SceneStore
+  label: string
+  formats: Pick<DisplayFormats, "duration">
+}) {
   const current = useSyncExternalStore(scene.subscribe, scene.get)
   const theme = useTheme()
   const { width, pxPerBar, scrollX } = current.viewport
@@ -241,13 +249,13 @@ export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }
       testId="timeline-time-ruler"
       style={sx({
         width,
-        height: TIME_RULER_HEIGHT,
+        height: theme.layout.arrangement.timeRulerHeight,
         position: "relative",
         overflow: "hidden",
         backgroundColor: theme.colors.arrangementSurfaceAlt,
         color: theme.colors.mutedForeground,
         fontSize: theme.control["--text-control-track"],
-        borderTopWidth: 1,
+        borderTopWidth: theme.design.editor.dividerStrokeWidth,
         borderColor: theme.colors.arrangementLine,
         userSelect: "none",
       })}
@@ -255,11 +263,12 @@ export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }
       {ticks.map(tick => (
         <div
           key={tick.value}
+          testId={`time-ruler-label-${tick.value}`}
           style={sx({
             position: "absolute",
             top: 0,
             left: tick.left - scrollX,
-            height: TIME_RULER_HEIGHT,
+            height: theme.layout.arrangement.timeRulerHeight,
             display: "flex",
             alignItems: "center",
             paddingLeft: theme.design.spacing.stackGap,
@@ -267,17 +276,18 @@ export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }
           })}
         >
           <div
+            testId={`time-ruler-tick-${tick.value}`}
             style={sx({
               position: "absolute",
               left: 0,
               top: 0,
-              width: 1,
+              width: theme.design.editor.markerLineWidth,
               height: theme.control["--spacing-control-track-gap"],
               backgroundColor: theme.colors.arrangementLine,
               pointerEvents: "none",
             })}
           />
-          {timeTickLabel(tick.value)}
+          {formats.duration(tick.value, "ruler")}
         </div>
       ))}
     </div>

@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../ControlEnvironment"
+import { TEST_INPUT_POLICY } from "./input-policy.test-fixture"
 import { describe, expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -11,19 +13,21 @@ function mount(initial = 120, min = 0, max = 300, step = 1) {
     const [value, setValue] = useState(initial)
     return (
       <ThemeProvider>
-        <DragPadNumber
-          label="Value"
-          testId="pad"
-          value={value}
-          min={min}
-          max={max}
-          step={step}
-          defaultValue={120}
-          onChange={next => {
-            latest = next
-            setValue(next)
-          }}
-        />
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <DragPadNumber
+            label="Value"
+            testId="pad"
+            value={value}
+            min={min}
+            max={max}
+            step={step}
+            defaultValue={120}
+            onChange={next => {
+              latest = next
+              setValue(next)
+            }}
+          />
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
   }
@@ -90,22 +94,24 @@ describe("DragPadNumber native interactions", () => {
       const [value, setValue] = useState(120)
       return (
         <ThemeProvider>
-          <div testId="scroll-parent" style={{ width: 200, height: 100, overflow: "scroll" }}>
-            <div style={{ height: 400, flexShrink: 0, alignItems: "start" }}>
-              <DragPadNumber
-                label="Wheel owner"
-                testId="wheel-pad"
-                value={value}
-                min={0}
-                max={300}
-                step={1}
-                onChange={next => {
-                  latest = next
-                  setValue(next)
-                }}
-              />
+          <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+            <div testId="scroll-parent" style={{ width: 200, height: 100, overflow: "scroll" }}>
+              <div style={{ height: 400, flexShrink: 0, alignItems: "start" }}>
+                <DragPadNumber
+                  label="Wheel owner"
+                  testId="wheel-pad"
+                  value={value}
+                  min={0}
+                  max={300}
+                  step={1}
+                  onChange={next => {
+                    latest = next
+                    setValue(next)
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          </ControlEnvironmentProvider>
         </ThemeProvider>
       )
     }
@@ -234,7 +240,9 @@ test("hidden icons remove their slot and editing keeps the same shell bounds", (
   }
   root.render(
     <ThemeProvider>
-      <Fixture />
+      <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+        <Fixture />
+      </ControlEnvironmentProvider>
     </ThemeProvider>
   )
   root.renderer.flush()
@@ -283,17 +291,19 @@ test("Space stays inside the numeric editor instead of reaching playback shortcu
   })
   root.render(
     <ThemeProvider>
-      <DragPadNumber
-        testId="pad"
-        label="Numeric editor"
-        value={120}
-        onChange={value => {
-          latest = value
-        }}
-        min={20}
-        max={300}
-        step={1}
-      />
+      <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+        <DragPadNumber
+          testId="pad"
+          label="Numeric editor"
+          value={120}
+          onChange={value => {
+            latest = value
+          }}
+          min={20}
+          max={300}
+          step={1}
+        />
+      </ControlEnvironmentProvider>
     </ThemeProvider>
   )
   root.renderer.nativeSimulateKeystrokes(root.renderer.findByTestId("pad")!.id, "enter")

@@ -1,3 +1,5 @@
+import { PREFERENCE_DEFAULTS } from "../defaults/preferences"
+import { PROJECT_TEMPLATE } from "../defaults/template"
 import { acceptsClip } from "./types"
 import { isGridSettings, isLegacyGridBars } from "./grid"
 import { MAX_AUTOMATION_CURVE, MIN_AUTOMATION_CURVE } from "./automation-curve"
@@ -50,10 +52,10 @@ export function isClip(v: unknown): v is Clip {
     return false
   }
   if (v.kind === "audio") {
-    const fadeIn = v.fadeInBars ?? 0
-    const fadeOut = v.fadeOutBars ?? 0
-    const inOffset = v.fadeInOffsetBars ?? 0
-    const outOffset = v.fadeOutOffsetBars ?? 0
+    const fadeIn = v.fadeInBars ?? PROJECT_TEMPLATE.clip.fade.durationBars
+    const fadeOut = v.fadeOutBars ?? PROJECT_TEMPLATE.clip.fade.durationBars
+    const inOffset = v.fadeInOffsetBars ?? PROJECT_TEMPLATE.clip.fade.offsetBars
+    const outOffset = v.fadeOutOffsetBars ?? PROJECT_TEMPLATE.clip.fade.offsetBars
     return (
       text(v.samplePath) &&
       number(v.gainDb) &&
@@ -392,7 +394,7 @@ export function parseProject(json: string): { document: DocumentState; workspace
     workspacePayload = { ...rawWorkspace, grid: { mode: "fixed", bars: rawWorkspace.gridBars } }
   }
   if (record(workspacePayload) && !("metronome" in workspacePayload)) {
-    workspacePayload = { ...workspacePayload, metronome: true }
+    workspacePayload = { ...workspacePayload, metronome: PREFERENCE_DEFAULTS.workspace.metronome }
   }
   if (!isWorkspace(workspacePayload)) {
     throw new Error("Invalid or unsupported project snapshot")

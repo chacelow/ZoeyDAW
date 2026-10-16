@@ -7,6 +7,7 @@ use napi::{
 use napi_derive::napi;
 use std::{
     collections::BTreeMap,
+    path::Path,
     sync::{
         atomic::{AtomicBool, AtomicU32, Ordering},
         mpsc::{self, Sender},
@@ -16,14 +17,16 @@ use std::{
     time::{Duration, Instant},
 };
 use zoeydaw_engine::{
+    defaults::TELEMETRY_INTERVAL_MICROS,
     protocol::{BackendFailureCode, BackendRequest},
-    session::{rejected, DeviceSession},
+    session::{rejected, DeviceSession, DeviceSessionConfig},
 };
 
 mod cleanup;
 mod telemetry;
 #[cfg(feature = "verification")]
 mod verification;
+// Protocol backpressure allows one pending telemetry callback, not an unbounded event queue.
 type TelemetryCallback = ThreadsafeFunction<String, (), String, Status, false, true, 1>;
 #[napi(object)]
 pub struct SourceInfo {
@@ -74,8 +77,8 @@ fn sender(id: u32) -> Result<Sender<Command>> {
         .map(|h| h.sender.clone())
         .ok_or_else(|| error("engine session disposed"))
 }
-fn run(receiver: mpsc::Receiver<Command>) {
-    let mut session = DeviceSession::open();
+fn run(receiver: mpsc::Receiver<Command>, config: DeviceSessionConfig) {
+    let mut session = DeviceSession::open(config);
     let mut callback: Option<TelemetryCallback> = None;
     let pending = Arc::new(AtomicBool::new(false));
     let mut deadline = Instant::now();
@@ -138,7 +141,7 @@ fn run(receiver: mpsc::Receiver<Command>) {
             Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
         if Instant::now() >= deadline {
-            deadline = Instant::now() + Duration::from_micros(33333);
+            deadline = Instant::now() + Duration::from_micros(TELEMETRY_INTERVAL_MICROS);
             if let (Ok(session), Some(sink)) = (session.as_mut(), callback.as_ref()) {
                 if let Some(pending) = telemetry::PendingTelemetry::acquire(&pending) {
                     if let Some(frame) = session.telemetry() {
@@ -164,8 +167,24 @@ fn run(receiver: mpsc::Receiver<Command>) {
     drop(session);
 }
 
+fn device_session_config(config_dir: Option<String>) -> Result<DeviceSessionConfig> {
+    let config_dir = match config_dir {
+        Some(directory) => directory,
+        None => crate::settings::user_directories()?.config_dir,
+    };
+    let device = crate::settings::get_settings(Path::new(&config_dir))
+        .map_err(|e| error(e.to_string()))?
+        .preferences
+        .audio_device;
+    Ok(DeviceSessionConfig {
+        sample_rate: device.sample_rate,
+        block_frames: device.block_frames,
+    })
+}
+
 #[napi]
-pub fn open_session(env: Env) -> Result<u32> {
+pub fn open_session(env: Env, config_dir: Option<String>) -> Result<u32> {
+    let config = device_session_config(config_dir)?;
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     if id == 0 {
         return Err(error("engine handle ids exhausted"));
@@ -181,7 +200,7 @@ pub fn open_session(env: Env) -> Result<u32> {
     let (sender, receiver) = mpsc::channel();
     let thread = thread::Builder::new()
         .name(format!("zoeydaw-engine-{id}"))
-        .spawn(move || run(receiver))
+        .spawn(move || run(receiver, config))
         .map_err(|e| error(e.to_string()))?;
     active.insert(id);
     handles.insert(
@@ -316,4 +335,44 @@ pub fn read_peaks_at_bars(
         .recv()
         .map(Float32Array::new)
         .map_err(|e| error(e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn device_configuration_follows_persisted_preferences_in_isolated_directories() {
+        let directory = std::env::temp_dir()
+            .join(format!("zoeydaw-engine-config-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&directory);
+        let config_dir = directory.to_string_lossy().into_owned();
+        let defaults = crate::settings::settings_defaults().preferences.audio_device;
+        assert_eq!(
+            device_session_config(Some(config_dir.clone())).unwrap(),
+            DeviceSessionConfig {
+                sample_rate: defaults.sample_rate,
+                block_frames: defaults.block_frames,
+            }
+        );
+        assert!(!directory.exists());
+        let mut settings = crate::settings::settings_defaults();
+        settings.preferences.audio_device.sample_rate = 44_100;
+        settings.preferences.audio_device.block_frames = 128;
+        crate::settings::settings_set(
+            config_dir.clone(),
+            serde_json::to_string(&settings).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            device_session_config(Some(config_dir.clone())).unwrap(),
+            DeviceSessionConfig {
+                sample_rate: 44_100,
+                block_frames: 128,
+            }
+        );
+        std::fs::write(directory.join("settings.json"), r#"{"schemaVersion":2}"#).unwrap();
+        assert!(device_session_config(Some(config_dir)).is_err());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 }

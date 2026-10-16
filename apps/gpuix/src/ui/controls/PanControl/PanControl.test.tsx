@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../ControlEnvironment"
+import { TEST_INPUT_POLICY } from "../DragPad/input-policy.test-fixture"
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -11,22 +13,24 @@ test("pan uses center reset and keyboard increments across both channels", () =>
     const [value, setValue] = useState(0)
     return (
       <ThemeProvider>
-        <PanControl
-          testId="pan"
-          label="声像"
-          format={current =>
-            current === 0
-              ? "中央"
-              : `${current < 0 ? "左" : "右"}${Math.round(Math.abs(current) * 100)}`
-          }
-          parse={raw => Number(raw) / 100}
-          widthSamples={["左100", "右100"]}
-          value={value}
-          onChange={next => {
-            latest = next
-            setValue(next)
-          }}
-        />
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <PanControl
+            testId="pan"
+            label="声像"
+            format={current =>
+              current === 0
+                ? "中央"
+                : `${current < 0 ? "左" : "右"}${Math.round(Math.abs(current) * 100)}`
+            }
+            parse={raw => Number(raw) / 100}
+            widthSamples={["左100", "右100"]}
+            value={value}
+            onChange={next => {
+              latest = next
+              setValue(next)
+            }}
+          />
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
   }

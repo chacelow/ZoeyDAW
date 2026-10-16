@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import { Button, ControlGroup } from "@/ui/controls"
 import type { CursorLockPort } from "@/ui/controls"
+import { createDisplayFormats } from "@/app/i18n/display-formats"
 import { GALLERY_DESIGNS } from "./design-preview"
 import type { GalleryDesignMode } from "./design-preview"
 import { StateGallery } from "./states"
@@ -21,6 +22,7 @@ export function GalleryDemo({
   const [appearance, setAppearance] = useState(initialAppearance)
   const [locale, setLocale] = useState(initialLocale)
   const [design, setDesign] = useState(initialDesign)
+  const formats = useMemo(() => createDisplayFormats(locale === "zh" ? "zh-CN" : "en-US"), [locale])
   const t = (en: string, zh: string) => (locale === "zh" ? zh : en)
   const labels: Record<GalleryDesignMode, string> = {
     default: t("Default design", "默认设计"),
@@ -33,6 +35,7 @@ export function GalleryDemo({
       <StateGallery
         cursorLock={cursorLock}
         locale={locale}
+        formats={formats}
         toolbar={
           <ControlGroup
             variant="toolbar"

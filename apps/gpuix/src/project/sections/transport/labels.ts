@@ -1,6 +1,8 @@
 import type { ProjectRuntimeStatus } from "@/project/model/backend"
+import type { DisplayFormats } from "@/project/model/display-formats"
 
 export interface TransportLabels {
+  readonly formats: DisplayFormats
   readonly controls: string
   readonly toggleBrowser: string
   readonly back: string
