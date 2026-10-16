@@ -7,7 +7,7 @@
 # behind-main count, and leaked demo processes.
 set -u
 STALE_MIN="${STALE_MIN:-10}"
-cd /Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration || exit 1
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)" || exit 1
 main=$(git rev-parse --short HEAD 2>&1) || main="ERROR:${main//$'\n'/ }"
 echo "== health $(date -u +%FT%TZ) main=${main} stale>${STALE_MIN}m"
 orca orchestration worker-list --run run_2ea0f3afbca8 --json 2>/dev/null | python3 -c '

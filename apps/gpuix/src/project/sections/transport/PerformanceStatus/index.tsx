@@ -56,7 +56,7 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
           gap: theme.control["--spacing-control-track-gap"],
         }}
       >
-        <text>{`${labels.engine}: ${phase}`}</text>
+        <text>{`${labels.engine}: ${labels.enginePhases[phase]}`}</text>
         <text>{`${labels.latency}: ${latency}`}</text>
         <text>{`${labels.buffer}: ${labels.unavailable}`}</text>
         <text>{`${labels.cpu}: ${labels.unavailable}`}</text>

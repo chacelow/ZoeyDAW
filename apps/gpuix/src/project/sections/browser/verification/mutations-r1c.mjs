@@ -7,6 +7,13 @@ const app = fileURLToPath(new URL("../../../../../", import.meta.url))
 const browserTests = "src/project/sections/browser/index.test.tsx"
 const mutations = [
   {
+    name: "SEC04 Escape restores the unfocusable results container",
+    file: "src/project/sections/browser/index.tsx",
+    from: "const node = focusedId === undefined ? tree.current : nodes.current.get(focusedId)",
+    to: "const node = tree.current",
+    tests: browserTests,
+  },
+  {
     name: "item4 container owns the unselected Tab entry",
     file: "src/project/sections/browser/index.tsx",
     from: "tabIndex={browser.rows.length === 0 ? 0 : -1}",
