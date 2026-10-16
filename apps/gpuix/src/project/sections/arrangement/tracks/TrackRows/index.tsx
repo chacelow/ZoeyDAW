@@ -1,14 +1,8 @@
 import { useMemo, useRef } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { visibleTracks } from "@/project/model/types"
 import { projectTrackGroups } from "@/project/model/track-groups"
-import {
-  arrangementBodyTop,
-  arrangementBodyBottom,
-  isPinnedTrack,
-  layoutTrackRowsForViewport,
-  pinnedTrackHeight,
-} from "../../core/layout"
+import { isPinnedTrack } from "../../core/layout"
+import { useTrackRowLayout } from "./useTrackRowLayout"
 import { TrackLabelsProvider } from "../labels"
 import { TrackTelemetryProvider } from "../meter/telemetry"
 import { TrackRow } from "../Row"
@@ -43,24 +37,11 @@ export function TrackRows({
 }: TrackRowsProps) {
   const theme = useTheme()
   const container = useRef<PublicInstance | null>(null)
-  const tracks = useMemo(() => visibleTracks([...scene.tracks]), [scene.tracks])
   const groups = useMemo(() => projectTrackGroups(scene.tracks), [scene.tracks])
-  const rows = useMemo(
-    () => layoutTrackRowsForViewport(tracks, viewport.scrollY, viewport.height),
-    [tracks, viewport.scrollY, viewport.height]
+  const { rows, bodyTop, bodyBottom, pinnedTop, pinnedViewportTop, visibility } = useTrackRowLayout(
+    scene,
+    viewport
   )
-  const bodyTop = arrangementBodyTop()
-  const bodyBottom = arrangementBodyBottom(viewport.height)
-  const pinnedTop = bodyBottom - pinnedTrackHeight(tracks)
-  const pinnedViewportTop = Math.max(bodyTop, pinnedTop)
-  const visibility = useMemo(() => {
-    const visibleRows = rows.filter(
-      row =>
-        row.top + row.height > (isPinnedTrack(row.track) ? pinnedViewportTop : bodyTop) &&
-        row.top < (isPinnedTrack(row.track) ? bodyBottom : pinnedTop)
-    )
-    return { rows: visibleRows, ids: new Set(visibleRows.map(row => row.track.id)) }
-  }, [rows, bodyTop, bodyBottom, pinnedTop, pinnedViewportTop])
   const visibleGroupIds = useMemo(() => {
     const ids = new Set<string>()
     for (const row of visibility.rows) {

@@ -9,6 +9,20 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "duplicate-lane-wheel": {
+    file: "project/sections/arrangement/timeline/ArrangementTimeline/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "native lane and header wheels",
+    from: '      testId="timeline-viewport"',
+    to: '      testId="timeline-viewport"\n      onScroll={view.wheel}',
+  },
+  "resize-overlay-behind-input": {
+    file: "project/sections/arrangement/timeline/ArrangementTimeline/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "lane-side track separator",
+    from: "            {wrap ? wrap(inputSurface) : inputSurface}\n            {interactionOverlay}",
+    to: "            {interactionOverlay}\n            {wrap ? wrap(inputSurface) : inputSurface}",
+  },
   "clip-editor-save": {
     file: "project/sections/arrangement/timeline/keyboard/controller.ts",
     testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",

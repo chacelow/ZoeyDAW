@@ -9,7 +9,11 @@ import {
 } from "@/project/adapters"
 import { ArrangementTimeline } from "@/project/sections/arrangement/timeline"
 import { LaneRow, LaneOverlay, useLaneSurface } from "@/project/sections/arrangement/lane"
-import { TrackRows, trackResources } from "@/project/sections/arrangement/tracks"
+import {
+  TrackRows,
+  TrackResizeOverlay,
+  trackResources,
+} from "@/project/sections/arrangement/tracks"
 import { useAppTranslation } from "../i18n"
 import { englishLabels, chineseLabels } from "../locales/sections/timeline"
 import { labelsByLocale } from "../locales/sections/lane"
@@ -43,6 +47,13 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
         />
       }
       overlay={<LaneOverlay scene={scene} viewport={viewport} transportBar={readTransportBar} />}
+      interactionOverlay={
+        <TrackResizeOverlay
+          scene={scene}
+          viewport={viewport}
+          labels={trackResources[locale].arrangement}
+        />
+      }
     />
   )
 }

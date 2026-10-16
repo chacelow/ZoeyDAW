@@ -9,7 +9,7 @@
 | 接口 | 契约 |
 | --- | --- |
 | `createTimelineController(deps)` | 组合根创建并负责 `dispose()`；内部只有一个 `SceneStore` 投影、一个键盘 owner、标尺事务与自动滚动状态 |
-| `ArrangementTimeline({ controller, tracks, overlay, labels, cursor, editSurface? })` | `tracks` 是完整复合行；`overlay` 是跨行叠加层；`editSurface` 由 lane hook 经组合根注入，timeline 不依赖 lane |
+| `ArrangementTimeline({ controller, tracks, overlay, labels, cursor, editSurface?, interactionOverlay? })` | `tracks` 是完整复合行；`overlay` 是跨行叠加层；lane 注入 `editSurface`，tracks 注入位于其上方的唯一 resize strips；timeline 不依赖两个切片 |
 | `controller.useViewport()` | React hook，订阅同一个 `ArrangementViewport`；类型来自 B1 `core/scene` |
 | `controller.setScroll(x, y)` | 同步更新权威 workspace 并夹取；返回前 `sceneStore.get().viewport` 已是接受后的同一投影；手工导航暂时暂停 Follow |
 | `controller.zoomAt(anchorBar, anchorPx, factor)` | 显式音乐位置/像素锚点缩放；边界夹取优先 |
@@ -51,7 +51,7 @@ Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有�
 
 B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨道行位置沿用同一原点。时间线只裁剪整行 slot，负向内部偏移抵消外层标尺裁剪偏移，不拆开轨道头与车道。Minimap 在独立上方 Panel，纵向滚动不移动它。
 
-音乐 `scrollX` 只有 **Minimap 下的一条 `ControlledScrollbar`**。它与标尺、车道共享逻辑范围，不构造整工程宽度的 native scroll 内容。工具栏自己的横向溢出仅用于访问控件，不是第二条音乐视口。
+音乐 `scrollX` 只有 **Minimap 下的一条 `ControlledScrollbar`**。它与标尺、车道共享逻辑范围，不构造整工程宽度的 native scroll 内容。工具栏自己的横向溢出仅用于访问控件，不是第二条音乐视口。全宽 `timeline-layout` 是唯一滚轮入口，透明 `timeline-viewport` 只处理 lane 指针、键盘与失焦。`interactionOverlay` 在它之上挂载 tracks 的分隔条矩形，不覆盖车道其他区域。原生组合回归覆盖一次 wheel 的平移量、车道与表头缩放比例，以及车道侧分隔条拖动。
 
 ## 网格的独立层
 

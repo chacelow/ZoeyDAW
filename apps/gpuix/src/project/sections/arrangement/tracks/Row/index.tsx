@@ -1,14 +1,12 @@
 import { useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
-import { COLLAPSED_TRACK_HEIGHT, MAX_TRACK_HEIGHT } from "@/project/layout"
 import { visibleTracks } from "@/project/model/types"
 import { useTrackLabels } from "../labels"
 import { TrackIdentity } from "../TrackIdentity"
 import { TrackRouting } from "../TrackRouting"
 import { TrackMixer } from "../TrackMixer"
 import { TrackMenu } from "../TrackMenu"
-import { useTrackResize } from "./useTrackResize"
 import type { ReactNode } from "react"
 import type { Props } from "@gpuix/react"
 import type { GroupRail } from "@/project/model/track-groups"
@@ -40,7 +38,6 @@ export function TrackRow({
   const surface = useProjectState(state => state.session.trackSelectionSurface)
   const selected = selection.includes(track.id)
   const [renaming, setRenaming] = useState(false)
-  const resizeHandlers = useTrackResize(track)
   const choose = (target: "arrangement" | "header", range: boolean, additive: boolean) => {
     if (range && selection.length) {
       const ids = visibleTracks(useProjectState.getState().document.tracks).map(item => item.id)
@@ -63,7 +60,6 @@ export function TrackRow({
       target
     )
   }
-  const pinned = track.kind === "return" || track.kind === "main"
   const focusRing = {
     outlineWidth: theme.project.trackBorder / 2,
     outlineOffset: -theme.project.trackBorder / 2,
@@ -131,26 +127,6 @@ export function TrackRow({
         />
         <TrackRouting track={track} />
         <TrackMixer track={track} />
-        <div
-          role="separator"
-          tabIndex={0}
-          aria-label={`${t("trackHeight")} ${track.name}`}
-          aria-orientation="horizontal"
-          aria-valuemin={COLLAPSED_TRACK_HEIGHT}
-          aria-valuemax={MAX_TRACK_HEIGHT}
-          aria-valuenow={row.height}
-          testId={`track-resize-${track.id}`}
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            ...(pinned ? { top: 0 } : { bottom: 0 }),
-            height: theme.control["--spacing-control-track-gap"],
-            cursor: "ns-resize",
-            focusVisible: focusRing,
-          }}
-          {...resizeHandlers}
-        />
         {dropTarget ? (
           <div
             aria-hidden="true"

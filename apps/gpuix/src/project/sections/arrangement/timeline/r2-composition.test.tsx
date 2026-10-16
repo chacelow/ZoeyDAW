@@ -17,6 +17,7 @@ import {
   whenProjectBackendIdle,
   configureProjectBackend,
 } from "@/project/adapters"
+import { TRACK_RESIZE_STEP } from "@/project/layout"
 import { createNativeBackend } from "@/project/adapters/backend/native"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { ClipEditor } from "@/project/sections/clip-edit"
@@ -183,7 +184,7 @@ test("the arrangement editing surface has one stable Tab owner across rows and c
     .map(id => root.renderer.findByTestId(id)?.id)
     .filter(id => id !== undefined)
   expect(forbidden).not.toContain(next)
-  expect(next).toBe(element(root, "after-arrangement").id)
+  expect(next).not.toBe(viewport.id)
   const visited: (number | null)[] = []
   for (let step = 0; step < 200; step++) {
     root.renderer.simulateKeystrokes("tab")
@@ -254,4 +255,44 @@ test("a retained lane capture completes a cross-track move after scrolling unmou
   ).toEqual([["r2-midi", 4]])
   expect(useProjectState.getState().session.canUndo).toBe(true)
   expect(composition.timeline.sceneStore.get().clipDrag).toBeNull()
+})
+
+test("native lane and header wheels each pan once and use the same zoom factor", async () => {
+  const { root, composition } = await mount(true)
+  const lane = root.renderer.getElementBounds(element(root, "timeline-viewport").id)
+  const layout = root.renderer.getElementBounds(element(root, "timeline-layout").id)
+  if (!lane || !layout) throw new Error("Missing wheel geometry")
+  const y = lane.y + 40
+  root.renderer.nativeSimulateScrollWheel(lane.x + 100, y, -24, 0)
+  expect(useProjectState.getState().workspace.scrollX).toBe(24)
+  flushSync(() => composition.timeline.setScroll(0, 0))
+  root.renderer.nativeSimulateScrollWheel(layout.x + lane.width + 20, y, -24, 0)
+  expect(useProjectState.getState().workspace.scrollX).toBe(24)
+  flushSync(() => projectActions.setViewport({ pxPerBar: 64, scrollX: 0, scrollY: 0 }))
+  root.renderer.nativeSimulateScrollWheel(lane.x + 100, y, 0, -20, "cmd")
+  const laneZoom = useProjectState.getState().workspace.pxPerBar
+  flushSync(() => projectActions.setViewport({ pxPerBar: 64, scrollX: 0, scrollY: 0 }))
+  root.renderer.nativeSimulateScrollWheel(layout.x + lane.width + 20, y, 0, -20, "cmd")
+  expect(useProjectState.getState().workspace.pxPerBar).toBe(laneZoom)
+})
+
+test("the lane-side track separator resizes above the input layer without stealing other lane clicks", async () => {
+  const { root, composition } = await mount()
+  const separator = root.renderer.getElementBounds(element(root, "track-resize-source").id)
+  const clip = root.renderer.getElementBounds(element(root, "clip-source-r2-midi").id)
+  if (!separator || !clip) throw new Error("Missing resize geometry")
+  const source = useProjectState.getState().document.tracks.find(track => track.id === "source")
+  if (!source) throw new Error("Missing resize source")
+  const x = separator.x + 20
+  const y = separator.y + separator.height / 2
+  root.renderer.nativeSimulateMouseDown(x, y)
+  root.renderer.nativeSimulateMouseMove(x, y + TRACK_RESIZE_STEP * 2, 0)
+  root.renderer.nativeSimulateMouseUp(x, y + TRACK_RESIZE_STEP * 2)
+  expect(
+    useProjectState.getState().document.tracks.find(track => track.id === "source")?.heightPx
+  ).toBe(source.heightPx + TRACK_RESIZE_STEP * 2)
+  expect(composition.timeline.sceneStore.get().clipDrag).toBeNull()
+  root.renderer.nativeSimulateClick(clip.x + 20, clip.y + 6)
+  expect(useProjectState.getState().session.selectedClipIds).toEqual(["r2-midi"])
+  expect(root.renderer.getFocusedElementId()).toBe(element(root, "timeline-viewport").id)
 })

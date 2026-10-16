@@ -18,6 +18,7 @@ import {
 } from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
+import { TrackResizeOverlay } from "../TrackResizeOverlay"
 import { trackResources } from "../locales"
 import type { TestRoot, TestWindowOptions } from "@gpuix/react/testing"
 import type { ArrangementViewport } from "../../core/scene"
@@ -71,18 +72,25 @@ function Surface({
   return (
     <AnimationFrameProvider source={controlledFrames.source}>
       <ThemeProvider key={appearance} defaultAppearance={appearance}>
-        <TrackRows
-          scene={scene}
-          viewport={acceptedViewport}
-          focusedTrackId={focusedTrackId}
-          telemetry={readProjectTelemetry}
-          labels={trackResources["en-US"].arrangement}
-          onFocusTrack={id => {
-            if (!useProjectState.getState().session.selectedTrackIds.includes(id))
-              projectActions.selectTracks([id], "header")
-          }}
-          renderLane={renderLane}
-        />
+        <div style={{ position: "relative", width: "100%", height: "100%" }}>
+          <TrackRows
+            scene={scene}
+            viewport={acceptedViewport}
+            focusedTrackId={focusedTrackId}
+            telemetry={readProjectTelemetry}
+            labels={trackResources["en-US"].arrangement}
+            onFocusTrack={id => {
+              if (!useProjectState.getState().session.selectedTrackIds.includes(id))
+                projectActions.selectTracks([id], "header")
+            }}
+            renderLane={renderLane}
+          />
+          <TrackResizeOverlay
+            scene={scene}
+            viewport={acceptedViewport}
+            labels={trackResources["en-US"].arrangement}
+          />
+        </div>
       </ThemeProvider>
     </AnimationFrameProvider>
   )
@@ -143,6 +151,58 @@ test("composite rows fill the viewport and give the lane remaining width", () =>
   const routingInnerWidth = routing.width - TRACK_LAYOUT.spacing * 2
   expect(bounds(root, "track-output-3-audio").width).toBe(routingInnerWidth)
 })
+
+test("resize separators span the lane and header exactly once per visible boundary", () => {
+  const root = mount()
+  const handles = root.renderer
+    .findByType("div")
+    .filter(node => node.testId?.startsWith("track-resize-"))
+  const ids = handles.map(node => node.testId)
+  expect(new Set(ids).size).toBe(ids.length)
+  const visibleLanes = root.renderer
+    .findByType("text")
+    .filter(node => node.testId?.startsWith("lane-content-"))
+  expect(handles.length).toBe(visibleLanes.length)
+  for (const handle of handles) {
+    const id = handle.testId?.slice("track-resize-".length)
+    const row = bounds(root, `track-row-${id}`)
+    const separator = root.renderer.getElementBounds(handle.id)
+    expect(separator).toMatchObject({ x: row.x, width: row.width })
+  }
+})
+
+test("visible rows with boundaries hidden behind pinned tracks expose no resize hitbox", () => {
+  const root = mount({ ...viewport, height: 250 })
+  expect(root.renderer.findByTestId("track-row-drums-group")).toBeDefined()
+  expect(root.renderer.findByTestId("track-resize-drums-group")).toBeUndefined()
+  expect(root.renderer.findByTestId("track-resize-main")).toBeDefined()
+})
+
+test("an offscreen focused header does not retain a resize owner", () => {
+  const root = mount({ ...viewport, height: 360, scrollY: 700 }, "3-audio")
+  expect(root.renderer.findByTestId("track-row-3-audio")).toBeDefined()
+  expect(root.renderer.findByTestId("track-resize-3-audio")).toBeUndefined()
+})
+
+test("pinned rows clipped above the body do not move their separator to a visible boundary", () => {
+  const root = mount({ ...viewport, height: 116 })
+  expect(root.renderer.findByTestId("track-row-main")).toBeDefined()
+  expect(root.renderer.findByTestId("track-resize-main")).toBeUndefined()
+})
+
+for (const { height, trackId, clipId } of [
+  { height: 260, trackId: "drums-group", clipId: "track-scrollable-viewport" },
+  { height: 120, trackId: "main", clipId: "track-pinned-viewport" },
+]) {
+  test(`partially visible ${trackId} separator stays inside its actual clip rectangle`, () => {
+    const root = mount({ ...viewport, height })
+    const separator = bounds(root, `track-resize-${trackId}`)
+    const clip = bounds(root, clipId)
+    expect(separator.height).toBeGreaterThan(0)
+    expect(separator.y).toBeGreaterThanOrEqual(clip.y)
+    expect(separator.y + separator.height).toBeLessThanOrEqual(clip.y + clip.height)
+  })
+}
 
 for (const id of ["a-apply", "main"]) {
   test(`bottom-anchored ${id} shrinks downward and expands upward`, () => {

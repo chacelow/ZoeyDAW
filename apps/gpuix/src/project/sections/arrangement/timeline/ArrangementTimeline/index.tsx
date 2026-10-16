@@ -32,6 +32,7 @@ export interface ArrangementTimelineProps {
   labels: TimelineLabels
   cursor: CursorLockPort
   editSurface?: TimelineEditSurface
+  interactionOverlay?: ReactNode
 }
 
 export function ArrangementTimeline({
@@ -41,6 +42,7 @@ export function ArrangementTimeline({
   labels,
   cursor,
   editSurface,
+  interactionOverlay,
 }: ArrangementTimelineProps) {
   const theme = useTheme()
   const keyboard = useWindowKeyboard()
@@ -60,7 +62,6 @@ export function ArrangementTimeline({
       aria-label={labels.timeline}
       tabIndex={0}
       testId="timeline-viewport"
-      onScroll={view.wheel}
       style={sx(
         {
           position: "absolute",
@@ -240,6 +241,7 @@ export function ArrangementTimeline({
               {overlay}
             </div>
             {wrap ? wrap(inputSurface) : inputSurface}
+            {interactionOverlay}
             <text
               role="status"
               aria-label={labels.grid}

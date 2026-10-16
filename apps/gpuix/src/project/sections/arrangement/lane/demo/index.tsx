@@ -330,7 +330,6 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
             testId="lane-surface"
             role="application"
             tabIndex={0}
-            onScroll={runtime.wheel}
             style={sx({
               position: "absolute",
               left: 0,

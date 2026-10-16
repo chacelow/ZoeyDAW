@@ -8,6 +8,7 @@ import { createSceneStore } from "../../core/scene"
 import { LaneContents } from "../../lane/LaneRow/Contents"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackRows } from "../TrackRows"
+import { TrackResizeOverlay } from "../TrackResizeOverlay"
 import { trackResources } from "../locales"
 import { createControlledFrames } from "../verification/frame-source"
 
@@ -44,22 +45,29 @@ for (const width of [800, 200]) {
       root.render(
         <AnimationFrameProvider source={createControlledFrames().source}>
           <ThemeProvider>
-            <TrackRows
-              scene={scene.get()}
-              viewport={scene.get().viewport}
-              focusedTrackId={null}
-              onFocusTrack={() => {}}
-              telemetry={() => null}
-              labels={trackResources["en-US"].arrangement}
-              renderLane={row => (
-                <LaneContents
-                  row={row}
-                  scene={scene.get()}
-                  automationMode={false}
-                  readPeaks={() => new Float32Array(0)}
-                />
-              )}
-            />
+            <div style={{ position: "relative", width: "100%", height: "100%" }}>
+              <TrackRows
+                scene={scene.get()}
+                viewport={scene.get().viewport}
+                focusedTrackId={null}
+                onFocusTrack={() => {}}
+                telemetry={() => null}
+                labels={trackResources["en-US"].arrangement}
+                renderLane={row => (
+                  <LaneContents
+                    row={row}
+                    scene={scene.get()}
+                    automationMode={false}
+                    readPeaks={() => new Float32Array(0)}
+                  />
+                )}
+              />
+              <TrackResizeOverlay
+                scene={scene.get()}
+                viewport={scene.get().viewport}
+                labels={trackResources["en-US"].arrangement}
+              />
+            </div>
           </ThemeProvider>
         </AnimationFrameProvider>
       )
