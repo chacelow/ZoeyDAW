@@ -202,6 +202,7 @@ export function useDragPad(options: UseDragPadOptions) {
     (event: KeyEvent) => {
       if (disabled) return
       if (event.key === "escape") {
+        if (!anchorRef.current && mode !== "preEdit") return
         event.preventDefault()
         event.stopPropagation()
         cancelDrag()

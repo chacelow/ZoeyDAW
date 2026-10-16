@@ -21,6 +21,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../controls/Menu"
+import { Popover, PopoverContent, PopoverTrigger } from "../controls/Popover"
 import { CollapseDivider } from "../panels/CollapseDivider"
 
 const cleanups: (() => void)[] = []
@@ -125,7 +126,7 @@ for (const key of ["enter", "up", "down", "right"]) {
   })
 }
 
-for (const key of ["home", "end", "up", "down", "escape"]) {
+for (const key of ["home", "end", "up", "down"]) {
   test(`UPA-06 collapse divider consumes ${key} and leaves Space for playback`, () => {
     let expanded = false
     function Divider() {
@@ -154,6 +155,41 @@ for (const key of ["home", "end", "up", "down", "escape"]) {
     expect(useProjectState.getState().session.playing).toBe(true)
   })
 }
+
+test("UPA-06 idle divider Escape reaches the window but an active drag Escape only rolls back", () => {
+  let expanded = false
+  function Divider() {
+    const [value, setValue] = useState(false)
+    return (
+      <CollapseDivider
+        testId="divider"
+        expanded={value}
+        expandedSize={160}
+        onExpandedChange={next => {
+          expanded = next
+          setValue(next)
+        }}
+      />
+    )
+  }
+  const root = mount(<Divider />)
+  const divider = element(root, "divider")
+  const bounds = root.renderer.getElementBounds(divider.id)
+  if (!bounds) throw new Error("Missing divider bounds")
+  const x = bounds.x + bounds.width / 2
+  const y = bounds.y + bounds.height / 2
+  root.renderer.nativeSimulateMouseDown(x, y)
+  root.renderer.nativeSimulateMouseMove(x, y - 120, 0)
+  expect(expanded).toBe(true)
+  root.renderer.nativeSimulateKeystrokes(divider.id, "escape")
+  expect(expanded).toBe(false)
+  expect(root.received).toEqual([])
+  expect(useProjectState.getState().session.editingClipId).toBe(root.clipId)
+  root.renderer.nativeSimulateMouseUp(x, y - 120)
+  root.renderer.nativeSimulateKeystrokes(divider.id, "escape")
+  expect(root.received).toEqual(["escape"])
+  expect(useProjectState.getState().session.editingClipId).toBeNull()
+})
 
 function padHost() {
   const listeners = new Set<(active: boolean) => void>()
@@ -253,6 +289,39 @@ test("UPA-07 DragPad Escape cancels only its gesture, not the open Clip Edit", (
   root.renderer.nativeSimulateKeystrokes(element(root, "pad").id, "space")
   expect(root.received).toEqual(["space"])
   expect(useProjectState.getState().session.playing).toBe(true)
+})
+
+test("UPA-07 idle DragPad Escape reaches the real window owner", () => {
+  const root = padHost()
+  root.renderer.nativeSimulateKeystrokes(element(root, "pad").id, "escape")
+  expect(root.values.current).toBe(120)
+  expect(root.values.gesture).toBe("idle")
+  expect(root.received).toEqual(["escape"])
+  expect(useProjectState.getState().session.editingClipId).toBeNull()
+})
+
+test("UPA-07 idle DragPad Escape closes its popup and restores the trigger focus", () => {
+  const root = mount(
+    <Popover>
+      <PopoverTrigger testId="popup-trigger">Adjust</PopoverTrigger>
+      <PopoverContent testId="popup">
+        <DragPadNumber
+          testId="popup-pad"
+          label="Popup value"
+          value={120}
+          onChange={() => {}}
+          min={20}
+          max={300}
+          step={1}
+        />
+      </PopoverContent>
+    </Popover>
+  )
+  root.renderer.nativeSimulateKeystrokes(element(root, "popup-trigger").id, "enter")
+  expect(root.renderer.findByTestId("popup")).toBeDefined()
+  root.renderer.nativeSimulateKeystrokes(element(root, "popup-pad").id, "escape")
+  expect(root.renderer.findByTestId("popup")).toBeUndefined()
+  expect(root.renderer.getFocusedElementId()).toBe(element(root, "popup-trigger").id)
 })
 
 test("ARR-05 ContextMenuTrigger preserves an editing surface's explicit Tab exclusion", () => {

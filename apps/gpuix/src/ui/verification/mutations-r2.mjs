@@ -30,9 +30,23 @@ const mutations = [
   {
     name: "UPA-07-escape-cancellation-bubbles",
     file: "controls/DragPad/useDragPad.ts",
-    from: 'if (event.key === "escape") {\n        event.preventDefault()\n        event.stopPropagation()',
-    to: 'if (event.key === "escape") {',
+    from: '        if (!anchorRef.current && mode !== "preEdit") return\n        event.preventDefault()\n        event.stopPropagation()',
+    to: '        if (!anchorRef.current && mode !== "preEdit") return',
     invariant: "UPA-07 DragPad Escape",
+  },
+  {
+    name: "UPA-07-idle-escape-swallowed",
+    file: "controls/DragPad/useDragPad.ts",
+    from: 'if (!anchorRef.current && mode !== "preEdit") return',
+    to: "",
+    invariant: "UPA-07 idle DragPad Escape",
+  },
+  {
+    name: "UPA-06-idle-escape-swallowed",
+    file: "panels/CollapseDivider/index.tsx",
+    from: "if (!drag.cancel()) return",
+    to: "drag.cancel()",
+    invariant: "UPA-06 idle divider Escape",
   },
   {
     name: "ARR-05-menu-trigger-overwrites-tabindex",

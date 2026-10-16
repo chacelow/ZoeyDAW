@@ -33,7 +33,7 @@ A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live �
 - 滚动条导航键只由控件消费，Space 留给窗口播放 owner；悬停滚轮通过原生 `pointerEvents: auto` 命中阻止祖先一起滚动，不伪造已消费事件标志。厚度和最小 thumb 来自共享控件度量，当前逻辑值经 `aria-valuetext` 暴露。
 - Menu/Popover 复用固定主干 `FloatingLayer` 与 `renderSlot`。ContextMenu 用 F2 原生 `onContextMenu` 事件捕获最近作用域，能跨交互后代，不复制 MouseDown 分发或判断 Ctrl。Menu 按 state/context、trigger、navigation、content、item composition 拆分；根 trigger 的 Space 留给播放，弹层 MenuItem 与 SubTrigger 的 Space 仍选择并消费。
 - Menu 的 Home/End、方向导航、Escape 与子菜单 Left/Right 消费默认行为和传播；根 trigger 的 Enter/Up/Down 同样消费，Space 仍交给播放。Tab 关闭菜单后保留原生焦点前进。`MenuTrigger` 保留调用方 `tabIndex`，默认仍为 0，允许编辑面把其从属 context trigger 排除在 Tab 顺序外。
-- DragPad 已处理的 Escape、Up/Down、进入编辑与预编辑输入消费键盘事件，普通 spinbutton 的 Space 继续冒泡。原生窗口键盘组合回归与变异入口：`bun test src/ui/verification/r2-controls.test.tsx`、`bun src/ui/verification/mutations-r2.mjs`（在 `apps/gpuix` 运行）；真实工程 smoke：`B2_EVIDENCE_DIR="$EVIDENCE_DIR" bun src/app/verification/r2-ui-smoke.tsx`，证据目录由调用方提供。
+- DragPad 确实取消 drag/pre-edit、处理 Up/Down、进入编辑或接收预编辑输入时消费键盘事件；idle Escape 放行给弹层或窗口，普通 spinbutton 的 Space 继续冒泡。原生窗口键盘组合回归与变异入口：`bun test src/ui/verification/r2-controls.test.tsx`、`bun src/ui/verification/mutations-r2.mjs`（在 `apps/gpuix` 运行）；真实工程 smoke：`B2_EVIDENCE_DIR="$EVIDENCE_DIR" bun src/app/verification/r2-ui-smoke.tsx`，证据目录由调用方提供。
 - `toastLoading(message, id?)` 保留原消费者接口。同 id 的 loading 可以被 success/error 替换；通知 store 只有一份，替换、淘汰和关闭清理旧 timer。
 - `SettingsShell` 是非模态导航和内容容器，不宣称实现模态 focus trap。RadioGroup 与对话框内 SettingsNavItem 保留标准 Space 选择；工具栏 `MotionTabs` 只用 Enter 激活，Space 不切换。Tabs 使用静态指示器和原生 opacity 过渡。
 - `DragPreviewArea` 删除 DOM selector/HTMLElement 接口，改为显式 `data` 或 `items` 和 `renderPreview(data)`。预览支持阈值、释放、Esc 和取消；实际资源放置保持禁用。
