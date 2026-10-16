@@ -1,0 +1,75 @@
+{
+  "workspace": {
+    "pxPerBar": 24,
+    "snap": true,
+    "follow": true,
+    "automationMode": false,
+    "drawMode": false,
+    "computerKeyboard": false,
+    "link": false,
+    "metronome": true,
+    "gridMode": "adaptive",
+    "fixedGridBars": 1,
+    "gridDensity": "medium"
+  },
+  "midi": {
+    "keyboardOctave": 4,
+    "minimumOctave": 0,
+    "maximumOctave": 8,
+    "velocity": 100,
+    "insertLengthBeats": 1,
+    "drawLengthBeats": 0.25,
+    "recordedNoteLengthBeats": 0.25,
+    "recordedClipBars": 1,
+    "noteGridBeats": 0.25,
+    "quantizeBeats": 0.25,
+    "loopStepBars": 0.0625,
+    "octaveLabelOffset": -2,
+    "initialPitch": 60,
+    "fold": false,
+    "zoom": 1
+  },
+  "midiViewport": {
+    "horizontalMin": 0.25,
+    "horizontalMax": 16,
+    "horizontalFactor": 2,
+    "pitchMin": 0.3333333333333333,
+    "pitchMax": 2.5,
+    "pitchFactor": 1.5
+  },
+  "audio": {
+    "warp": true,
+    "warpMode": "beats",
+    "transpose": 0,
+    "detune": 0,
+    "reverse": false,
+    "loop": true
+  },
+  "transport": {
+    "stopRepeatMs": 450,
+    "tapWindowMs": 2500,
+    "tapSamples": 5
+  },
+  "historyCapacity": 100,
+  "recentProjectCapacity": 20,
+  "window": { "width": 1280, "height": 800 },
+  "numericInput": {
+    "dragPixelsPerStep": 4,
+    "wheelPixelsPerStep": 16,
+    "wheelLinePixels": 16
+  },
+  "pointer": { "dragThresholdPixels": 3 },
+  "notifications": {
+    "defaultDuration": 4200,
+    "queueLimit": 8,
+    "visibleLimit": 4
+  },
+  "browser": {
+    "favorites": ["instruments-wavetable", "audioEffects-hybrid-reverb", "drums-drum-rack"],
+    "kind": "all",
+    "descending": false,
+    "libraryRoots": [],
+    "packRoots": []
+  },
+  "audioDevice": { "sampleRate": 48000, "blockFrames": 256 }
+}

@@ -1,6 +1,7 @@
 //! One control-thread owner for device, decoded media, protocol fence and graph updates.
 use crate::{
-    assets::{AudioSource, MAX_PEAK_PIXELS},
+    assets::AudioSource,
+    defaults::MAX_PEAK_PIXELS,
     mix::Mixer,
     protocol::{BackendFailureCode, BackendRequest, BackendResult, BackendTelemetry, SessionFence},
     realtime::{Plan, Snapshot, TimelineNode},
@@ -27,6 +28,19 @@ struct CachedSource {
 }
 type SourceCache = BTreeMap<String, CachedSource>;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DeviceSessionConfig {
+    pub sample_rate: u32,
+    pub block_frames: u32,
+}
+
+fn output_config(device: DeviceSessionConfig) -> CpalConfig {
+    let mut config = CpalConfig::default();
+    config.output.desired_sample_rate = Some(device.sample_rate);
+    config.output.desired_block_frames = Some(device.block_frames);
+    config
+}
+
 pub struct DeviceSession {
     context: FirewheelContext,
     stream: CpalStream,
@@ -49,7 +63,7 @@ pub fn rejected(request: &BackendRequest, code: BackendFailureCode) -> BackendRe
 }
 
 impl DeviceSession {
-    pub fn open() -> Result<Self, String> {
+    pub fn open(device: DeviceSessionConfig) -> Result<Self, String> {
         let (sender, receiver) = TripleBuffer::new(&None::<Plan>).split();
         let fault = Arc::new(AtomicBool::new(false));
         let mut context = FirewheelContext::new(FirewheelConfig {
@@ -71,10 +85,8 @@ impl DeviceSession {
         context
             .connect(id, context.graph_out_node_id(), &[(0, 0), (1, 1)], false)
             .map_err(|e| e.to_string())?;
-        let mut config = CpalConfig::default();
-        config.output.desired_sample_rate = Some(48000);
-        config.output.desired_block_frames = Some(256);
-        let stream = CpalStream::new(&mut context, config).map_err(|e| e.to_string())?;
+        let stream = CpalStream::new(&mut context, output_config(device))
+            .map_err(|e| e.to_string())?;
         context.update().map_err(|e| e.to_string())?;
         Ok(Self {
             context,
@@ -300,4 +312,19 @@ fn local_path(uri: &str) -> Result<PathBuf, String> {
     String::from_utf8(decoded)
         .map(PathBuf::from)
         .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn actual_output_configuration_uses_the_requested_sample_rate_and_block_size() {
+        let config = output_config(DeviceSessionConfig {
+            sample_rate: 96_000,
+            block_frames: 512,
+        });
+        assert_eq!(config.output.desired_sample_rate, Some(96_000));
+        assert_eq!(config.output.desired_block_frames, Some(512));
+    }
 }

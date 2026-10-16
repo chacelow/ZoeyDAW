@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { settingsDefaults } from "@zoeydaw/native"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "@/shared/theme/presets"
 import { createSettingStorage } from "./index"
 import { createThemePresetSetting } from "./theme-preset"
@@ -30,6 +31,7 @@ test("a listed preset round-trips through the real settings file beside other se
   preset.set("catppuccin")
   expect(presetSetting(configDir).get()).toBe("catppuccin")
   expect(stored(configDir)).toEqual({
+    ...settingsDefaults(),
     themePreset: "catppuccin",
     language: "zh-CN",
     closeBehavior: "ask",
@@ -49,7 +51,11 @@ test("an unlisted stored id reads as null without writing; repair replaces it wi
     createSettingStorage("language", { configDir }).set("zh-CN")
     expect(stored(configDir).themePreset).toBe(legacy)
     expect({ legacy, repaired: preset.repair() }).toEqual({ legacy, repaired: true })
-    expect(stored(configDir)).toEqual({ themePreset: DEFAULT_THEME_PRESET, language: "zh-CN" })
+    expect(stored(configDir)).toEqual({
+      ...settingsDefaults(),
+      themePreset: DEFAULT_THEME_PRESET,
+      language: "zh-CN",
+    })
     expect(preset.get()).toBe(DEFAULT_THEME_PRESET)
   }
 })
