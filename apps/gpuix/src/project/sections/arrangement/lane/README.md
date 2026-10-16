@@ -97,7 +97,7 @@ lane 在彩色 Clip 主体上使用 `theme.colors.arrangementClipInk`，与 Web 
 | `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx -t 'fade mask between'` | 1 pass，0 fail，10 assertions；折叠→展开→再折叠 |
 | `bun test src/project/sections/arrangement/lane` | 局部内容回归后 baseline 30 pass，0 fail |
 | `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 30 pass，0 fail；16 个变异命中预期失败；源目标 SHA-256 前后相同 |
-| `bun test` | A 阶段历史结果 1071 pass，1 todo，0 fail；当前交付另跑 `pnpm verify:gpuix` |
+| `bun test` | A 阶段历史结果 1071 pass，1 todo，0 fail；当前交付按 setup 的轻量检查，完整 `verify:gpuix` 仅由 Actions 执行 |
 | lane、共享 PeakColumns 与 SourceWaveform-runtime 受影响测试 | 35 pass，0 fail，103112 assertions；8 files |
 
 变异通过 Bun runtime preload 在内存替换模块，不写源文件；脚本验证预期用例确实失败，不能以语法错误代替变异被捕获。
@@ -140,7 +140,7 @@ F3 原生回归 `presents the latest playhead on resume and releases frame lease
 
 本轮仅暂停了其他 Agent 的重任务，整机仍有内存压力。前后 `sysctl vm.swapusage hw.memsize && vm_stat` 显示 16GiB 内存，swap 使用 10505.50 至 10778.25MiB；compressor 占用 445828 至 442428 个 16KiB 页。完整六轮各步数据与前后原始输出保存在本次运行的 `evidence/verification/quiet-all-rounds.json.local`，SHA-256 为 `17aa33700ecc905a3449b282bef9ad834d30ceb6c4c959a5633aa353f2ba9ccd`，由已有 `*.local` 规则忽略，不提交完整 trace。
 
-复跑每轮使用 `NODE_ENV=development bun src/project/sections/arrangement/lane/verification/render-cost.tsx` 或 `NODE_ENV=production bun src/project/sections/arrangement/lane/verification/render-cost.tsx`。新增满量性能批次仍须协调者安排静默窗口；本批均为有限离屏进程，结束已释放资源，无桌面输入。
+复跑每轮使用 `NODE_ENV=development bun src/app/verification/lane/render-cost.tsx` 或 `NODE_ENV=production bun src/app/verification/lane/render-cost.tsx`。新增满量性能批次仍须协调者安排静默窗口；本批均为有限离屏进程，结束已释放资源，无桌面输入。
 
 小规模诊断使用 `LANE_PROFILE_VIEWPORT_HEIGHT=196`，仍保留 200×50 工程，只缩小可见视口。80px 仅显示固定 Main 的尝试不含 Clip，已判无效，入口现有非空 Clip 守卫。`react-profile-preload.ts` 可配 `LANE_MEASURE_LOG` 透明记录 React DEV 的原始 `performance.measure`，不关闭 DEV tracing。原反事实 `LANE_PROFILE_NARROW_GRID` 已在 A 切换后删除，局部网格成为产品投影。`LANE_PROFILE_CAPTURE` 保存当前 Native PNG。
 
@@ -193,7 +193,7 @@ A 以 `86a9de4` 为审查固定点，由两个独立只读 reviewer 上下文分
 探针使用真实 `createTimelineController`、同一工程 runtime 与 `readProjectPeaks`，不以离屏成本代替真实窗口帧验收。命令：
 
 ```sh
-bun --preload ./src/project/sections/arrangement/lane/verification/react-profile-preload.ts src/project/sections/arrangement/lane/verification/render-cost.tsx
+bun --preload ./src/project/sections/arrangement/lane/verification/react-profile-preload.ts src/app/verification/lane/render-cost.tsx
 ```
 
 近邻 A/B 在同一十步滚动/缩放输入下运行，关闭复用使用内存变异，不改磁盘源文件。完整数据：`evidence/render-profile-identity-disabled.json`、`evidence/render-profile-identity-stable.json`。
