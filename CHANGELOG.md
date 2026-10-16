@@ -2,6 +2,10 @@
 
 ## 0.1.0 - unreleased
 
+### PC orchestration (2026-10-17)
+
+- Resume the coordinator and existing worker sessions on Windows. Add a portable Orca listener with explicit delivery acknowledgement and a five-minute patrol entry point for Windows Task Scheduler; keep machine paths and Run bindings outside the repository.
+
 ### gpuix native rewrite (2026-10-14 – 2026-10-15)
 
 - Replace the Web + Tauri application with the gpuix native app (`apps/gpuix`, React logic on gpuix native elements) and Rust crates `crates/native` (napi) and `crates/engine` (real audio engine). Delete `apps/web`, `src-tauri` and `packages/**`; theme metrics, i18n and logging now live inside `apps/gpuix`.
