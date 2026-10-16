@@ -30,7 +30,7 @@
 | `design.colorRecipes.editor.markerHover` | `project/sections/clip-edit/audio/SourceMarker.tsx colorMix(primary, 30, 'transparent')` | 30 | 30 | 一致 |
 | `design.colorRecipes.editor.marquee` | `project/sections/clip-edit/midi/NoteGrid.tsx colorMix(primary, 20, 'transparent')` | 20 | 20 | 一致 |
 | `design.colorRecipes.editor.pianoIvoryDark` | `project/sections/clip-edit/midi/PianoKeys.tsx colorMix(foreground, 75, background)` | 75 | 75 | 一致 |
-| `design.colorRecipes.editor.pianoEbony` | `project/sections/clip-edit/midi/PianoKeys.tsx colorMix(background/foreground, 80, foreground/background)` | 80 | 80 | 一致 |
+| `design.colorRecipes.editor.pianoEbony` | `project/sections/clip-edit/midi/PianoKeys.tsx dark ? colorMix(background, 80, foreground) : colorMix(foreground, 80, background)` | 80 | 80 | 一致 |
 | `design.colorRecipes.editor.velocityNoteBorder` | `project/sections/clip-edit/midi/note-paint.ts colorMix(color, 60, colors.background)` | 60 | 60 | 一致 |
 | `design.colorRecipes.editor.velocitySelected.base` | `project/sections/clip-edit/midi/note-paint.ts 55 + (note.velocity / 127) * 45` | 55 | 55 | 一致 |
 | `design.colorRecipes.editor.velocitySelected.range` | `project/sections/clip-edit/midi/note-paint.ts 55 + (note.velocity / 127) * 45` | 45 | 45 | 一致 |
@@ -113,7 +113,7 @@
 | `design.popover.width` | `ui/controls/Popover/index.tsx theme.control['--spacing-control-track'] * 12` | 156 | 156 | 一致 |
 | `design.settings.shellWidth` | `ui/controls/SettingsShell/index.tsx width: 720` | 720 | 720 | 一致 |
 | `design.settings.shellHeight` | `ui/controls/SettingsShell/index.tsx height: 520` | 520 | 520 | 一致 |
-| `design.settings.navigationWidth` | `ui/controls/SettingsShell/index.tsx width: 168` | 168 | 168 | 一致 |
+| `design.settings.navigationWidth` | `ui/controls/SettingsShell/index.tsx navigationWidth = 168` | 168 | 168 | 一致 |
 | `design.settings.presetGrid.columnWidth` | `app/settings/ThemePresetGrid.tsx theme.project.identityWidth * 2` | 200 | 200 | 一致 |
 | `design.settings.presetGrid.swatchHeight` | `app/settings/ThemePresetGrid.tsx theme.control['--spacing-control-track'] * 2` | 26 | 26 | 一致 |
 | `design.settings.presetGrid.scrollHeight` | `app/settings/ThemePresetGrid.tsx theme.project.defaultTrackHeight * 4` | 280 | 280 | 一致 |

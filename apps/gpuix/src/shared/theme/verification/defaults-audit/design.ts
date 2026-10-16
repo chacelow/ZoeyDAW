@@ -48,7 +48,7 @@ export function designExpectations(
       value: 520,
     },
     "settings.navigationWidth": {
-      expression: "ui/controls/SettingsShell/index.tsx width: 168",
+      expression: "ui/controls/SettingsShell/index.tsx navigationWidth = 168",
       value: 168,
     },
     "settings.presetGrid.columnWidth": {
