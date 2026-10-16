@@ -18,6 +18,8 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 ## 验证命令（gpuix）
 
+当前 `verify:gpuix` 门禁只支持 macOS。Windows/Linux 的离屏 `scaleFactor` 未实现；test-window 回归在非 macOS 显式报 unsupported 并非零退出，不跳过或报告假通过。
+
 在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`）。先对全仓 Git 跟踪源码检查机器绝对路径，再依次执行渲染器身份校验（完整补丁与产物 manifest，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、架构规则回归、工具 CLI 回归、文档路由、`bun test`、review scan、UI 地图校验，最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。review scan 对比 `baseRef...HEAD`，默认 `gpuix-migration`，不扫描未提交的改动。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
 
 工具 CLI 回归覆盖产物身份、link-only 初始化、Git 缓存路径、隔离 mutation 入口、部分提交的 UI 地图、禁用测试扫描与提交标题。独立变异入口为 `node scripts/gpuix-main/mutations-build-contract.mjs`、`node scripts/verification/mutations-ui-map.mjs`、`node scripts/verification/mutations-tooling-gates.mjs`、`node scripts/verification/mutations-absolute-path.mjs`、`node scripts/verification/mutations-mutation-isolation.mjs`，只修改临时副本。
@@ -29,6 +31,8 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 Header 只测 viewport，左右列由原生 flex 和 intrinsic minima 分配，不缓存子组 L/C/R 后再反馈列宽。首挂载回归覆盖 Helvetica、缺失字体和 1800/1070/900/620 四档宽度，保持原 mount 时序。`node scripts/gpuix-main/ci-geometry/mutations-header.mjs` 在隔离源码副本恢复旧反馈缓存，必须触发首次居中回归失败。
 
 CI 的 Bun 测试失败时输出完整日志，保留早期 Expected/Received；随后失败诊断步骤分别用 `PROBE_PASSES=1` 和 `PROBE_PASSES=4` 运行 `bun scripts/gpuix-main/ci-geometry/probe.tsx`。入口输出启用字体 family 列表、Header/Send 逐次布局 bounds 与 resize 状态。`PROBE_NUMBER`、`PROBE_SANS` 只替换请求的字体 family，不安装或隐藏系统字体。
+
+离屏测试窗口不受宿主显示器可见区域限制：`VisualTestAppContext` 显式传入 `offscreen_scale_factor`，macOS 只对这类窗口使用 `GPUIOffscreenWindow` 跳过 AppKit 的 frame 约束。`createTestRoot({ width, height, scaleFactor })` 的 macOS backing scale 默认为 `1`，可显式请求 `2`，不读取真实屏幕 scale；viewport 保持请求的逻辑尺寸，PNG 尺寸为逻辑尺寸乘以 scale。普通应用窗口保留原有屏幕约束与 scale fallback。`bun test scripts/gpuix-main/test-window/test-window.test.tsx` 请求 `4000×3000`，覆盖默认/1x/2x 的 viewport、根 bounds、PNG 尺寸及非法 scale，已纳入 `verify:gpuix`。对应序列为 `zed-offscreen-window-bounds.patch`、`zed-test-window-scale-factor.patch`，native 选项由 `test-window-scale-factor.patch` 持有；修改时使用独立 vendor 根与 Cargo target。
 
 `bun scripts/gpuix-main/ci-geometry/gallery.tsx <外部证据目录>` 捕获深浅主题与中英文的完整 Gallery；业务组合沿用 `app/verification/r1c-surfaces.tsx`，配合 `native-fixture.ts` 接真实后端。生成 PNG 留在外部证据目录，不提交图片。
 
