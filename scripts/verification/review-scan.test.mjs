@@ -4,6 +4,7 @@ import { withScanFixture } from "./tooling-gates-fixture.mjs"
 import { execFileSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
+import { gitExecutable } from "../gpuix-main/paths.mjs"
 
 const normal = 'describe("active suite", () => { test("active test", () => {}) })'
 const disabled = [
@@ -76,7 +77,7 @@ test("review scan exempts only the central native SVG host", () => {
       writeFileSync(path.join(root, file), `${body}\n`)
       return file
     })
-    execFileSync("/usr/bin/git", ["add", ...files], { cwd: root })
+    execFileSync(gitExecutable(), ["add", ...files], { cwd: root })
     const result = scan(normal)
     assert.equal(result.status, 1, result.stdout + result.stderr)
     assert.doesNotMatch(

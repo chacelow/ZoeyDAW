@@ -5,17 +5,18 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parse } from "@typescript-eslint/parser"
+import { gitExecutable } from "./gpuix-main/paths.mjs"
 
 const absoluteOnly = process.argv[2] === "--absolute-paths"
 const base = process.argv[2] ?? "gpuix-migration"
-// Run the repo's own eslint binary by absolute path: no PATH lookup, and the scan lints against the same config the pre-commit hook uses.
+// Execute the repo's ESLint JS entry with this Node runtime; Windows cannot exec the extensionless .bin shim.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-const eslintBin = path.join(repoRoot, "node_modules", ".bin", "eslint")
+const eslintBin = path.join(repoRoot, "node_modules", "eslint", "bin", "eslint.js")
 const eslintConfig = path.join(repoRoot, "eslint.config.js")
 const run = (cmd, args) => execFileSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 }).trim()
 const changed = absoluteOnly
   ? []
-  : run("git", ["diff", "--name-only", "-z", "--diff-filter=AMR", `${base}...HEAD`])
+  : run(gitExecutable(), ["diff", "--name-only", "-z", "--diff-filter=AMR", `${base}...HEAD`])
       .split("\0")
       .filter(Boolean)
 const source = changed.filter(f => /^apps\/gpuix\/src\/.*\.(ts|tsx)$/.test(f))
@@ -25,7 +26,9 @@ const add = (kind, file, detail) => {
   findings.push({ kind, file, detail })
 }
 
-const absoluteFiles = (absoluteOnly ? run("git", ["ls-files", "-z"]).split("\0") : changed)
+const absoluteFiles = (
+  absoluteOnly ? run(gitExecutable(), ["ls-files", "-z"]).split("\0") : changed
+)
   .filter(file => /\.(?:mjs|js|ts|tsx|sh|rs|json)$/u.test(file))
   .filter(file => !file.split("/").includes("evidence"))
 const absolutePath =
@@ -144,8 +147,8 @@ for (const file of source) {
 if (source.length > 0) {
   try {
     execFileSync(
-      eslintBin,
-      ["--config", eslintConfig, "--no-warn-ignored", "--max-warnings", "0", ...source],
+      process.execPath,
+      [eslintBin, "--config", eslintConfig, "--no-warn-ignored", "--max-warnings", "0", ...source],
       { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1 << 26 }
     )
   } catch (error) {
