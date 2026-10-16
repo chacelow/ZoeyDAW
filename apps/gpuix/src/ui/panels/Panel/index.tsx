@@ -78,6 +78,9 @@ export function Panel({
   }))
   const horizontal = group.orientation === "horizontal"
   const initialPixels = typeof defaultSize === "number" ? defaultSize : undefined
+  const weighted =
+    group.proportional && pixels !== undefined && initialPixels === undefined && !collapsed
+  const extent = weighted ? 0 : (pixels ?? initialPixels)
   return (
     <div
       role="group"
@@ -89,15 +92,14 @@ export function Panel({
         minWidth: 0,
         minHeight: 0,
         flexShrink: 0,
-        flexGrow:
-          pixels === undefined && initialPixels === undefined
+        flexGrow: weighted
+          ? pixels
+          : pixels === undefined && initialPixels === undefined
             ? typeof defaultSize === "string"
               ? Number.parseFloat(defaultSize)
               : 1
             : 0,
-        ...(horizontal
-          ? { width: pixels ?? initialPixels, height: "100%" }
-          : { height: pixels ?? initialPixels, width: "100%" }),
+        ...(horizontal ? { width: extent, height: "100%" } : { height: extent, width: "100%" }),
       })}
     >
       {children}

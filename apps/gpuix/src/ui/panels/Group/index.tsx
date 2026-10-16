@@ -40,6 +40,7 @@ export function Group({ orientation, children, style, id, testId }: GroupProps) 
   const dragging = useRef(false)
   const total =
     dragging.current && stored ? stored.total : available > 0 ? available : (stored?.total ?? 0)
+  const proportional = !dragging.current && total === available
   const constraints = useMemo(
     () =>
       total > 0
@@ -82,6 +83,7 @@ export function Group({ orientation, children, style, id, testId }: GroupProps) 
     sizes,
     constraints,
     total,
+    proportional,
     resizePanel: (index, pixels) => {
       const current = live.current
       if (current.sizes.length === 0) return

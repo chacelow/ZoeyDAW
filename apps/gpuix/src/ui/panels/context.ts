@@ -9,6 +9,7 @@ export interface LayoutSnapshot {
 
 export interface GroupState extends LayoutSnapshot {
   orientation: "horizontal" | "vertical"
+  proportional: boolean
   resizePanel: (index: number, pixels: number) => void
   beginDrag: () => LayoutSnapshot
   preview: (snapshot: LayoutSnapshot, separator: number, delta: number) => void
