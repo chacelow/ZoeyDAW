@@ -18,7 +18,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 ## 验证命令（gpuix）
 
-`verify:gpuix` 保留 macOS 完整门禁。Windows x64 使用独立的 `node scripts/verify-windows.mjs`，覆盖原生构建、Rust、TypeScript、Bun、离屏 scale、生产 UI 帧与真实后端截图。Windows job 首轮为 `continue-on-error`，是否转为必过由协调者根据 Actions 结果决定。Linux 不在本次移植范围，离屏 scale 回归仍显式报 unsupported。实际支持状态见 [Windows 移植报告](../research/windows-port.md)。
+`verify:gpuix` 保留 macOS 完整门禁。Windows x64 使用独立的 `node scripts/verify-windows.mjs`，覆盖原生构建、Rust、TypeScript、Bun、离屏 scale、生产 UI 帧与真实后端截图。Windows job 首轮为 `continue-on-error`，看到 Actions 稳定通过后转为必过。Linux 不在本次移植范围，离屏 scale 回归仍显式报 unsupported。实际支持状态见 [Windows 移植报告](../research/windows-port.md)。
 
 完整门禁只在 GitHub Actions 运行，不在本机重复跑 `pnpm verify:gpuix`。本地交付执行 `tsc --noEmit`、改动范围的 Bun 测试与 eslint、本切片变异入口、必要的单窗口 smoke；Rust 只检查和测试改动 crate。`verify:gpuix [baseRef]` 依次检查绝对路径、渲染器身份与单一解析、native 构建、类型、lint、架构与工具回归、文档路由、Bun、离屏 scale、review scan、UI 地图和真实后端应用 smoke。任一步失败即非零退出，全部通过打印 `verify:gpuix passed`。review scan 默认对比 `gpuix-migration...HEAD`，不覆盖未提交改动。
 

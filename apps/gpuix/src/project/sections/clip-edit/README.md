@@ -2,9 +2,7 @@
 
 应用组合根通过 `labels.midi.formats`、`labels.audio.formats` 注入 locale 显示策略（精度、单位、时长、音名及测宽样本），通过 `labels.creationNames` 注入未命名片段的本地化名称。编辑器消费当前 `midi`、`midiViewport`、`audio` 偏好：插入/绘制长度和力度、移动网格、量化网格、空片段音高、八度命名、fold/zoom 初态、缩放限制和 reset 都跟随各自来源。局部视图操作不写入工程历史；纯几何默认只读取纯 `PREFERENCE_DEFAULTS`，实时策略由编辑器显式传入。
 
-独立 demo 与真实后端验证入口位于 `app/verification/clip-edit`；创建媒体/seed 或启动 runtime 前，经 `initializeVerificationProject` 配置 creation 资源并打开隔离工程，随各入口既有生命周期释放。Profiler/preload 工具不创建第二个工程 owner。
-
-`preferences.test.tsx` 用独立临时设置 owner 覆盖插入/绘制、量化、fold/音名、独立 MIDI loop 步幅、音频 reset 和注入 formatter/测宽的实际消费者；每例恢复工程状态与 owner 并删除临时目录。C4 变异入口：在 `apps/gpuix` 执行 `bun src/project/sections/clip-edit/verification/mutations.mjs C4`，逐项打断来源并恢复原文件。
+`preferences.test.tsx` 用独立临时设置 owner 覆盖插入/绘制、量化、fold/音名、独立 MIDI loop 步幅、音频 reset 和注入 formatter/测宽的实际消费者；每例恢复工程状态与 owner 并删除临时目录。
 
 底部 Footer 的单 Clip 编辑器。公共入口为 `index.ts`。组件按 `clip.kind` 挂载 Audio、MIDI 或 Pattern 中的一种，不改变 Footer 的显示状态，也不创建弹层编辑器。
 
@@ -23,7 +21,7 @@
 
 MIDI 剪贴板使用版本 1 的 `application/x-zoeymind-midi-notes+json` 负载。Copy 和 Cut 生成的合法选区均可完整 Paste，不设 2048 音符或 250000 字符上限。Paste 保留 pitch、lengthBeats、velocity，将每个 startBeat 增加 0.25，并生成新的音符 ID。Cut 和 Paste 各产生一条 Undo；剪切后的选区可直接粘贴恢复。解析仍校验版本、非空音符数组及每个音符的字段，任一无效音符使整份负载被拒绝，不改变工程或历史。
 
-`midi/large-selection.test.tsx` 通过原生键盘覆盖 2049 音符、1024 音符且负载超过 250000 字符的 Copy/Cut/Paste 往返，以及无效负载的原子拒绝。恢复旧上限的突变检查为 `bun src/project/sections/clip-edit/verification/mutations.mjs SEC-01`，在 `apps/gpuix` 执行。
+`midi/large-selection.test.tsx` 通过原生键盘覆盖 2049 音符、1024 音符且负载超过 250000 字符的 Copy/Cut/Paste 往返，以及无效负载的原子拒绝。
 
 `environment.subscribeWindowActive` 必须来自组合根同一个原生窗口订阅，不在编辑器内创建第二个 observer。失活取消当前编辑事务和试听音符。
 
@@ -64,25 +62,3 @@ Pattern 只编辑一个源周期，保留裁剪首步与负偏移相位。`patte
 - `audio/AudioParameters.tsx`：复用 DragPad、Toggle 与 Dropdown 的参数面板。
 - `audio/AudioWaveform.tsx`、`SourceWaveform.tsx`、`SourceMarker.tsx`：源视图组合、真实峰值查询、标记事务。
 - `pattern/PatternSteps.tsx`、`geometry.ts`：源周期刷步、可见viewport与统一命中几何。
-
-## 验证入口
-
-根目录先执行 `pnpm native:build`。在 `apps/gpuix` 执行：
-
-```sh
-pnpm exec tsc --noEmit
-bun test src/project/sections/clip-edit src/project/model/midi-editing
-bun src/project/sections/clip-edit/verification/mutations.mjs
-bun --hot src/app/verification/clip-edit/demo/index.tsx
-bun src/app/verification/clip-edit/consumer-probe.tsx current dense
-NODE_ENV=production bun src/app/verification/clip-edit/consumer-probe.tsx current-production dense
-```
-
-R2 的真实后端离屏回归不改宿主剪贴板，输出在仓库外。先创建目录，再用 app 的 native fixture preload 配置真实引擎，section 不反向依赖 app：
-
-```sh
-mkdir -p /tmp/zoeydaw-r2-sections
-B2_EVIDENCE_DIR=/tmp/zoeydaw-r2-sections bun --preload ./src/app/verification/native-fixture.ts src/app/verification/clip-edit/r2-smoke.tsx
-```
-
-Demo 使用真实 runtime 与临时生成的立体声 WAV。`CLIP_EDIT_THEME=light`、`CLIP_EDIT_LOCALE=zh` 切换外观和语言，`CLIP_EDIT_STRESS=1` 使用与 headless probe 相同的完整 10000 notes / 1024 steps 工程；结束时删除临时媒体。以命名 service 启动，验证后立即结束。

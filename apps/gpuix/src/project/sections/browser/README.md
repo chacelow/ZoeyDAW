@@ -8,12 +8,8 @@
 
 搜索框 Escape 清空查询，等待结果提交后聚焦当前来源的有效 roving 行。有结果时不聚焦 tabIndex=-1 的树容器；只有清空查询后仍无结果才聚焦树。随后 Tab 继续前往 Browser 后面的控件，不回到窗口开头，也不选择资源。
 
-SEC-04 原生键盘回归位于 `index.test.tsx` 的 `search Escape restores the committed roving row and Tab proceeds to the next sibling`，覆盖有匹配和无匹配查询的 Escape 恢复。运行 `bun test src/project/sections/browser/index.test.tsx --timeout 30000`；恢复错误树焦点的变异运行 `bun src/project/sections/browser/verification/mutations-r1c.mjs SEC04`，均从 `apps/gpuix` 执行。
-
 `renderBody` 提供 navigation 和 results 插槽。默认 `BrowserSplitBody` 复用共享 Group、Panel 与 PanelDivider，导航宽度连续变化，分隔条可访问名称经 `BrowserLabels.resizeNavigation` 注入。外层 Browser 折叠时应保留组件挂载，让共享 Group 保存列表宽度和局部选择。
 
 `catalog.ts` 只定义目录结构；应用的 `app/locales/browser-catalog.ts` 提供演示目录的显示元数据，经 `BrowserLabels.entries` 注入。37 个设备、75 个设备预设和 20 个独立资源的 132 个 ID 显式保留，不从翻译后的名称推导。名称和标签随应用语言切换，品牌及 `.wav`/`.mid` 文件基名不翻译；紫色集合为独立布尔元数据，收藏使用稳定 ID。界面明确标注演示数据，不读取本地文件、不生成假路径、不加载插件，也不接受资源放置。资源 Ghost 复用 `DragPreviewArea`。
 
 行为回归见 `catalog.test.ts`（完整旧 ID 集、跨语言集合和文件基名）、`useBrowser.test.tsx`（真实 hook 的语言切换、搜索、选择与显示源注入）和 `app/i18n/display-formats.test.ts`（格式/解析/测量及创建名源跟随）。其中中文目录名称、标签和声像文字替换原来的英文显示，文本宽度因此随语言变化，不固定为英文像素宽度。
-
-列表复用 `ui/controls/ListRow`。实际窗口验证与 Live 对照见相邻 Footer 的交付报告和 `evidence/`。

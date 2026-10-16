@@ -18,38 +18,6 @@ API 来源：[NSPasteboard](https://docs.rs/objc2-app-kit/0.3.2/objc2_app_kit/st
 
 Windows 源码使用临时隐藏 HWND；作用域析构保证 CloseClipboard/DestroyWindow、GlobalUnlock 与尚未转移的 GlobalFree。先拒绝 U+0000、编码/分配/填充 UTF-16，再打开与清空剪贴板；成功 SetClipboardData 后 HGLOBAL 交给 OS，失败仍由本模块释放。空字符串合法，读到的块只借用、不释放，GlobalSize 限定终止符搜索，缺失 NUL 或无效 UTF-16 返回 null。无重试、缓存、私有格式。macOS 的任意 NSString 行为不变，下面含 U+0000 的 macOS 实测不适用于 Windows。Windows 跨进程/Worker、忙碌与 owner 生命周期仍待 Windows 运行验收。
 
-## 线程及初始化顺序实测
-
-2026-10-15，macOS arm64、Bun 1.3.14、gpuix 0.10.0、真实 release napi 二进制。临时入口先调用剪贴板，再加载现有 `src/main.tsx` 创建窗口，最后再次调用剪贴板。四条路径均写入并逐字节读回以下 59 字节文本，另外验证空字符串往返。
-
-```text
-E1 原生剪贴板\n中文往返 🎹🎵\r\n组合 e\u0301\u0000末尾
-```
-
-| 路径                   | `isMainThread` | `threadId` | 结果                               |
-| ---------------------- | -------------- | ---------- | ---------------------------------- |
-| 窗口创建前，主线程     | true           | 0          | `byteExact=true`，`emptyText=true` |
-| 窗口创建前，Bun Worker | false          | 1          | `byteExact=true`，`emptyText=true` |
-| 窗口创建后，主线程     | true           | 0          | `byteExact=true`，`emptyText=true` |
-| 窗口创建后，Bun Worker | false          | 2          | `byteExact=true`，`emptyText=true` |
-
-UTF-8 十六进制结果：
-
-```text
-453120e58e9fe7949fe589aae8b4b4e69dbf0ae4b8ade69687e5be80e8bf9420f09f8eb9f09f8eb50d0ae7bb84e590882065cc8100e69cabe5b0be
-```
-
-这四次调用没有 panic，GPUI 随后成功创建窗口，未复现 A7 的 `Ivar platform not found`。这是本机上述版本的实测，不是对所有 macOS 版本或同时竞争写入的保证。实现不调用 `NSApplication.sharedApplication`。
-
-窗口 AX 证据：
-
-```text
-window "gpuix foundation check", pid=27004, bounds=480×268
-  statictext "gpuix foundation: tokens + style helpers booted"
-```
-
-本切片未改任何可见控件或布局，UI 规范第 13 节的视觉改动验收不适用。
-
 ## 剪贴板恢复
 
 验证前 `computer.clipboard.read()` 返回空字符串，真实 native `clipboardReadText()` 返回 `null`。临时独立 Swift/AppKit 进程在内存中备份全部 pasteboard item 及其每个 type 的原始 Data，避免把无文本状态误恢复为空文本 representation。验证结束恢复全部数据，逐 item、type、Data 比较。备份和恢复输出：
@@ -62,45 +30,3 @@ originalNoTextStateRestored: true
 ```
 
 临时 Worker 已 terminate，窗口在截图后立即关闭，备份进程恢复后退出，临时 TS 与 Swift 文件已删除。永久单元测试不会写宿主剪贴板。
-
-## 验证结果
-
-| 命令 | 结果 |
-| --- | --- |
-| `pnpm native:build`，仓库根 | 通过，release napi 二进制生成成功 |
-| `cargo check --workspace` | 通过 |
-| `cargo test --workspace` | 29 通过，0 失败，engine 21、native 8 |
-| `cargo clippy -p zoeydaw-native --all-targets -- -D warnings` | 通过 |
-| `pnpm exec tsc --noEmit`，`apps/gpuix` | 通过 |
-| `bun test`，`apps/gpuix` | 472 通过，2 个已有 todo，0 失败，86 文件，94059 个断言 |
-| `bun test src/platform/clipboard/clipboard.test.ts`，`apps/gpuix` | 3 通过，0 失败，8 个断言 |
-| `pnpm exec eslint apps/gpuix/src/platform`，仓库根 | 通过，无输出 |
-| `bun --hot src/platform/clipboard/smoke.tmp.ts`，临时入口 | 四条真实 native 路径通过，窗口截图及 AX 已观察 |
-| `pnpm exec ultracite check apps/gpuix/src/platform/clipboard/index.ts apps/gpuix/src/platform/clipboard/clipboard.test.ts` | 通过 |
-
-上述为 2026-10-15 macOS 验证记录，不是 W1 Windows 的验证结果。W1 新增 UTF-16 编解码边界测试，以及 Windows NUL 拒绝不改变原剪贴板、分配锁定/失败转移保留所有权测试，尚未执行。Linux 分支仍明确拒绝写入。Cargo 输出既有非根 package profile 警告。Bun 全套历史输出 `Context leak detected, CoreAnalytics returned false`，测试退出码为 0。
-
-## 进程清理证据
-
-`e1-clipboard-smoke`、`e1-clipboard-smoke-run`、`e1-clipboard-backup` 均已关闭，E1 自启进程零残留。规定命令 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"` 的检查输出：
-
-```text
-33614 03:48       bun --hot src/gallery/controls.tsx
-```
-
-这是其他切片的 gallery，不是 E1 启动的进程。已告知协调者，未越权停止。此输出不表示全局零进程，只证明 E1 的三个命名进程均不在其中。
-
-## LESSONS 格式条目
-
-### 空剪贴板不能用写入空文本恢复
-
-- 错：把 `computer.clipboard.read()` 的空字符串当成已有空文本 representation，或在 native 读到 `null` 后写入 `""` 并声称原状态已恢复。
-- 对：真实写入测试前备份全部 pasteboard item/type/Data，结束后恢复并比较。原本 0 个 item 的剪贴板恢复后仍为 0 个 item。
-- 因：文本抽象隐藏了无文本与空文本的区别，单独恢复字符串会改变剪贴板类型信息。
-- 见：本切片实测 `items=0` 的备份与恢复输出。
-
-### NSPasteboard 可以在本机 Bun Worker 与 gpuix 初始化前使用
-
-- 对：直接使用 `NSPasteboard.generalPasteboard`，不要为剪贴板创建 `NSApplication.sharedApplication`。调用内使用 autorelease pool。
-- 验证：macOS arm64、Bun 1.3.14、gpuix 0.10.0，窗口前后各一次主线程及 Worker 调用，59 字节 UTF-8 与空字符串往返均通过，随后原生窗口正常创建。
-- 范围：macOS 上述版本实测；Windows 已有独立 Win32 源码但未实机验证，Linux 未实现。不承诺并发读写事务，不把本机版本实测推广到所有系统。

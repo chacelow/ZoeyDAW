@@ -105,21 +105,3 @@ Collapsed Audio fade masks belong to Clip titles in lane's `ClipFades`, using B1
 Visibility and reorder hit candidates share one projection. Return/Main remain bottom-anchored; when they exceed the available height, the pinned viewport is clipped below the reserved top gap and hidden pinned headers unmount. No offscreen lane content is retained solely to preserve an editor.
 
 Native test windows can be smaller than requested: a requested 1200px height was accepted as 1021px after the display change. Behavior tests now obtain the accepted size through `useWindowSize`, just like the real demo, so pinned controls are not falsely tested outside the native hit region.
-
-## Prototype cutover
-
-The ten files under `features/track-mixer` are removed. LSP reference checks found no external consumers of its exported controls or formatters. Its captured-drag lifetime, controlled toggle state, volume fill and bipolar pan behavior are now provided by the shared A3 controls consumed above, rather than retained as a second UI family. The old demo's independently writable `Track[]` is not carried forward: the new verification entry authors the real project store and acquires the native backend explicitly.
-
-## Verification entries
-
-From `apps/gpuix` after the repository's native build:
-
-```sh
-bun --hot src/app/verification/tracks/demo.tsx
-bun src/app/verification/tracks/render-cost.tsx
-bun test src/project/sections/arrangement/tracks
-```
-
-The demo is a composition root, not another project implementation. It authors the project store, acquires the real native backend and uses the repository's real probe WAV. Its lane slot is a read-only Clip projection for verifying track geometry, not an implementation of the separate clip-lane slice. Main is attenuated for validation; the overload button edits real Clip gain through the public command. Theme and language controls only affect the verification surface. Use a named service and kill it immediately after capturing AX/screenshots.
-
-`render-cost.tsx` runs the native test renderer, measures actual draw statistics and retained/mounted nodes for 20 versus 2000 source tracks, and asserts all nodes are released after unmount. Clipping keeps node counts independent of source count.

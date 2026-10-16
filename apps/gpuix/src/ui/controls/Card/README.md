@@ -27,8 +27,6 @@ HomePage 当前实例的左右 padding12、gap4、accent hover 属于 `project`�
 </Card>
 ```
 
-app-shell owner 负责该业务调用迁移。本切片不改工程打开逻辑、近期工程数据或业务目录。
-
 ## 折叠 Header
 
 `CardHeader.disclosure` 是完整的受控对象 `{ expanded, onExpandedChange, label }`。组件内部统一 title 与同档图标 Button 的 row/center 布局，调用方不加 margin 或独立居中样式。Card 以外的状态 owner 决定是否卸载 `CardContent`；Header 不拥有第二份 expanded state。

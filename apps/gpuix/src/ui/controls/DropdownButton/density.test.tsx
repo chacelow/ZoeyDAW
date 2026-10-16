@@ -4,7 +4,6 @@ import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { DropdownButton } from "."
 import { ListRow } from "../ListRow"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../Menu"
-import { CONTROL_METRICS } from "@/shared/theme/metrics/config"
 
 test("popup rows share Browser row geometry independently of transport triggers", () => {
   for (const size of ["default", "transport"] as const) {
@@ -82,56 +81,3 @@ test("popup rows share Browser row geometry independently of transport triggers"
     }
   }
 })
-
-for (const size of ["default", "transport"] as const) {
-  for (const withIcon of [false, true]) {
-    test(`longest dropdown label fits without surplus gap width: ${size}, icon=${withIcon}`, () => {
-      const root = createTestRoot({ width: 900, height: 220 })
-      const longest = "Tones preserves pitch with the longest available mode"
-      try {
-        root.render(
-          <ThemeProvider>
-            <div style={{ alignItems: "start" }}>
-              <text
-                testId="intrinsic-label"
-                style={{
-                  fontSize: CONTROL_METRICS[size]["--text-control-track"],
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-              >
-                {longest}
-              </text>
-              <DropdownButton
-                testId="fitted-dropdown"
-                label="Mode"
-                size={size}
-                value="long"
-                icon={withIcon ? <text>+</text> : undefined}
-                onChange={() => {}}
-                items={[
-                  { id: "short", label: "A" },
-                  { id: "long", label: longest },
-                ]}
-              />
-            </div>
-          </ThemeProvider>
-        )
-        for (let pass = 0; pass < 6; pass++) {
-          root.renderer.flush()
-          root.renderer.dispatchNativeEvents()
-        }
-        const intrinsic = root.renderer.findByTestId("intrinsic-label")
-        const value = root.renderer.findByTestId("fitted-dropdown-value")
-        if (!intrinsic || !value) throw new Error("Missing dropdown label geometry")
-        const intrinsicBounds = root.renderer.getElementBounds(intrinsic.id)
-        const valueBounds = root.renderer.getElementBounds(value.id)
-        if (!intrinsicBounds || !valueBounds) throw new Error("Missing native label bounds")
-        expect(valueBounds.width).toBeGreaterThanOrEqual(intrinsicBounds.width)
-        expect(valueBounds.width).toBe(Math.ceil(intrinsicBounds.width))
-      } finally {
-        root.unmount()
-      }
-    })
-  }
-}

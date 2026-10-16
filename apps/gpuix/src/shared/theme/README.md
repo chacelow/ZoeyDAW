@@ -96,17 +96,6 @@
 
 上述历史配方的比例与语义别名现均在 `design.colorRecipes`，默认结果不变。新增 destructive 状态、listRowHover、dialogBackdrop、编辑器洗色与钢琴键配方已具备来源，业务接线由对应切片完成。
 
-## gpuix 不消费、迁移时丢弃的预设 token
-
-| Web token | 丢弃原因 |
-| --- | --- |
-| `destructive-foreground` | gpuix 没有消费者；Web 的 `index.css` 也未定义它 |
-| `sidebar`、`sidebar-foreground`、`sidebar-primary`、`sidebar-primary-foreground`、`sidebar-accent`、`sidebar-accent-foreground`、`sidebar-border`、`sidebar-ring` | gpuix 没有 shadcn sidebar；侧栏表面用 `card`/`muted` |
-| `radius` | 预设不控制形状；原生圆角来自 `Theme.design`，几何高度/图标尺寸仍由共享 metrics 提供 |
-| `font-sans`、`font-serif`、`font-mono` | `Theme` 没有字体字段，文字用系统字体；预设字体（Inter、Lora 等）不随应用打包 |
-| `letter-spacing`、`spacing` | 不随配色预设变化；原生语义间距由 `Theme.design` 与既有几何 metrics 分工提供 |
-| `shadow-color`、`shadow-opacity`、`shadow-blur`、`shadow-spread`、`shadow-offset-x`、`shadow-offset-y` | 工作站层级用颜色与细线表达，不用阴影（UI 规范第 1 节） |
-
 ## 不变量（`presets.test.ts`）
 
 43 个预设 × 2 个模式：每个派生角色都存在，是 gpuix 能解析的 hex/oklch，RGB 通道有限。每个预设的明暗方向都与 Default 一致：light 的 `background` 比 dark 亮，`foreground` 比 dark 暗；Arrangement 表面向 foreground 递进（light 中 `surfaceSelected < surfaceAlt < surface`，dark 中相反）；`arrangementClipInk` 在两种模式下都比 `arrangementClipPaper` 暗。逐一核对过，没有例外。

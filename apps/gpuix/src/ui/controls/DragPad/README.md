@@ -30,7 +30,7 @@ gpuix 事件经 ThreadsafeFunction 异步投递，JS 处理 `mouseDown` 时 OS �
 
 1. 双击 BPM 还原 120。
 2. 按下 BPM 中心，无停留路径每步 10pt 上移到 40pt；另跑先在按下点重复 4 次再上移的停留路径。
-3. 两条路径都确认 AX 为 130，并在 gallery 的 `onGestureEnd` 中读取真实 `currentCursorPosition()`；读回须与按下点一致。2026-10-15 实测按下 `(412,293)`，两条路径读回均为 `(412,293)`，误差 0pt：[截图](evidence/press-anchor-restored-2026-10-15.png)、[AX](evidence/press-anchor-restored-2026-10-15.ax.txt)。
+3. 两条路径都确认 AX 为 130，并在 gallery 的 `onGestureEnd` 中读取真实 `currentCursorPosition()`；读回须与按下点一致。
 
 `computer.drag` 完成后会恢复用户原光标，因此工具返回后的 OS 坐标不是组件的还原证据；画廊在组件恢复后、工具恢复前采样，并显示真实读回值。未验证：人手真实硬件速度、多显示器与全屏实机。
 
@@ -43,5 +43,3 @@ bun --hot src/gallery/controls.tsx
 bun test src/ui/controls
 bunx tsc --noEmit
 ```
-
-旧 `features/drag-pad` 已迁走。画廊按协调者授权移到 `ui/` 之外，由组合入口持有原生能力。`evidence/` 内 `press-anchor-restored-2026-10-15.*` 是 G1 锚点复测证据，其余三张图是迁移前 DragPad 实验的历史截图。

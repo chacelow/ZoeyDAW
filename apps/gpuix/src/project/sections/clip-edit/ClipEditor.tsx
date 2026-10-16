@@ -94,7 +94,6 @@ export function ClipEditor({
           })}
         >
           <div
-            testId="clip-color-swatch"
             style={sx({
               width: theme.layout.clipEditor.colorSwatchSize,
               height: theme.layout.clipEditor.colorSwatchSize,

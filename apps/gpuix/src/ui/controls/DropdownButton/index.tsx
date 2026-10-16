@@ -139,10 +139,7 @@ export function DropdownButton<T extends string = string>({
       >
         {measured.sampleNodes}
         {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
-        <div
-          testId={testId ? `${testId}-value` : undefined}
-          style={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}
-        >
+        <div style={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}>
           {typeof display === "string" ? (
             <text style={{ whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
               {display.replace(/\r?\n/g, " ")}

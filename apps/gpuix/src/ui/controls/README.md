@@ -59,30 +59,3 @@
 | `Toaster`         | `aria-label`、`dismissLabel`、`loadingLabel`、`policy`                     |
 
 组合根在发布通知前调用 `configureToastPolicy({ defaultDuration, queueLimit, visibleLimit })`。唯一通知 store 持有配置引用、notice 与 timer；`Toaster` 只读 presentation，卸载 owner 调用 `dismissToast()` 释放通知资源。持续通知的 duration=0 是状态语义，不属于动画时长或主题。
-
-## 已完成的 0.10 临时路径切换
-
-| 原路径 | 当前唯一 owner | 状态 |
-| --- | --- | --- |
-| `readOuterBounds` border/padding 修正及后续转发层 | 生产和测试直接调用 renderer 的原生 `getElementBounds` | API、调用和导入均已删除，原有几何断言未放宽 |
-| `ControlEnvironment` 32ms focus sampler | 原生 `onFocus/onBlur` 发布控件种类，原生 `focusVisible` 绘制内沿焦点环 | sampler、register/ref 兼容路径与 timer 断言已删除，保留真实焦点/隐私行为回归 |
-| 隐藏文本定时测量 | 已挂载样本的原生 `onLayout`，按字体与样本集缓存 | 无采样 timer。尚未取得首帧测量时保留估算，值与编辑 draft 不改变宽度 |
-| `useFloatingCenterOffset` | F1 原生零尺寸点锚与 center 定位 | 补偿函数、调用和采样均已删除，side/align 与 intrinsic size 几何回归通过 |
-
-`Input` 与数值编辑框只隔离可打印快捷键，不阻止原生文字编辑。原生已消费的删除、移动、撤销与提交不补发给工程窗口，完整契约见 [Input 键盘契约](Input/README.md)。`hideIcon`、`dragStep`、实际内宽与滚轮命中契约见 [DragPad](DragPad/README.md)。
-
-字体 probe 使用真实 gpuix text layout，结果如下。probe 已删除，永久测试验证样本宽度上界、值位数变化不改宽度、缓存和最多一次宽度修正。
-
-| 样本                    | 首帧估算 | 实测宽度 | 修正 |
-| ----------------------- | -------- | -------- | ---- |
-| compact BPM，Menlo 9    | 17px     | 17px     | 0px  |
-| Transport BPM，Menlo 12 | 23px     | 22px     | −1px |
-| compact Pan，Menlo 9    | 23px     | 22px     | −1px |
-
-首次取得截图时测量已经完成，没有捕获估算首帧，因此不能声称修正肉眼不可见。真实布局 probe 证明存在 0px 或 1px 修正。需要完全消除可见修正时，组合入口可预热相同字体和样本缓存后再显示布局；本轮未加入这项产品策略。
-
-## 已修复：按下即移动的光标锚点（G1，2026-10-15）
-
-原限制：JS 处理 `mouseDown` 时读 OS 当前光标，合成“按下即移动”实测锚点从 `(805,364)` 偏到 `(805,354)`。现在锚点取按下事件自身的窗口坐标，经原生 `windowPointToScreen` 换算，不加补偿、轮询或 CGEventTap。`CursorLockPort.capture` 改为接收按下点；事件缺坐标时不锁光标。
-
-真实画廊复测：按下屏幕点 `(412,293)`（AX 窗口原点 `(383,152)` + 窗口内 `(29,141)`）。无停留每步 10pt 上移 40pt 与同点停留 4 次后上移，两条路径的 `onGestureEnd` 读回都是 `(412,293)`，误差 0pt，BPM 均为 130。仍未验证：人手真实硬件速度、多显示器与全屏实机（换算单测覆盖副屏负坐标）。细节见 [DragPad 契约](DragPad/README.md)。

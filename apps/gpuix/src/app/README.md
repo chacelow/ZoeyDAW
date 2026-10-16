@@ -45,7 +45,7 @@
 | `footer` | `FooterPanel` | `footerView`、`footerCollapsed`、`selectFooterView`、`setFooterCollapsed` |
 | `status` | `StatusStrip` | 同一份 Footer 状态，ControlEnvironment 的 info |
 
-Footer 按新切片契约二选一显示 Affect Chain 或 Clip Edit，不迁 Web 可同时打开两者的 `detail-view`。Clip Edit 用垂直 Group 连续调整高度。Affect Chain 在 Group 外按 Footer 自身固定高度显示。切换时 Browser 与 Arrangement 的树位置不变。
+Footer 二选一显示 Affect Chain 或 Clip Edit。Clip Edit 用垂直 Group 连续调整高度。Affect Chain 在 Group 外按 Footer 自身固定高度显示。切换时 Browser 与 Arrangement 的树位置不变。
 
 Clip slot 的唯一类型由 `clip-edit` 定义，只含 `clipId`、`trackId`、`close`。app 显式消费这三项，编辑器自行订阅权威 store；不传完整 clip/track 或 notes 数组，不留旧对象 props 兼容。
 
@@ -66,27 +66,3 @@ Clip slot 的唯一类型由 `clip-edit` 定义，只含 `clipId`、`trackId`、
 首页最大内容宽来自 `theme.layout.home.maxWidth`，预设网格的列宽、色块高、滚动高度来自 `theme.design.settings.presetGrid`。字重和模态遮罩分别读取 `theme.design.typography.weights` 与 `theme.colors.dialogBackdrop`，不借轨道尺寸或在调用处重算混色。
 
 `AppFrame` 在 layout effect 配置 `ToastPolicy`，卸载时清空通知与 timer。`Toaster` 只消费调用方传入的 presentation policy、关闭/加载文字及区域名称；UI 不反向读取工程或设置模块。调整 queueLimit 会淘汰最早通知并清理 timer，已保留通知不重新计时；默认时长只影响之后新建或替换的通知。
-
-`verification/configuration-surfaces.mjs capture <外部目录>` 捕获 Gallery 与真实后端业务组合；`compare <迁移前目录> <迁移后目录>` 比较同名 PNG 字节。
-
-## 验证入口
-
-```sh
-pnpm native:build
-pnpm exec tsc --noEmit -p apps/gpuix
-cd apps/gpuix
-bun test src/app --timeout 30000
-bun --hot src/main.tsx
-```
-
-`bun apps/gpuix/src/app/verification/mutations.mjs` 跑 app 基线与行为变异，并在每次变异后恢复源码。真实后端 lease 测试需要可用音频设备，没有设备会失败，不跳过。`verification/native-fixture.ts` 是真实 main 的隔离验证 preload，要求 `B2_EVIDENCE_DIR` 指向临时目录，配合临时 HOME 避免改用户配置。
-
-变异脚本可接名字子串，例如 `bun apps/gpuix/src/app/verification/mutations.mjs "lane draw"`。过滤执行先验证该项的真实行为基线；不传过滤参数时仍先跑完整 app 基线。
-
-`verification/resume-smoke.tsx` 配合 `native-fixture.ts` preload 可重跑实际 AppShell、真实 NativeBackend 与离屏 GPUI 的恢复提交。要求 `B2_EVIDENCE_DIR` 指向已创建的临时目录，配置/存储也限定在该目录；建议同时隔离 HOME。它手动投递 frame host 的 resume 事件，不替代真实桌面 occlusion 评审。
-
-`verification/r1c-surfaces.tsx` 配合同一 native fixture preload，向命令行参数指定的仓库外目录采集中英文、深浅主题、MIDI/Audio 的八个工程组合。采集前确认工程与编辑器存在，root 在 finally 中卸载。
-
-`verification/r2-lifecycle.tsx` 配合同一 native fixture preload，验证 dirty 离开保存 → recent hydrate → 损坏快照拒绝覆盖 → 修复后 Restore 恢复保存的实际 AppShell 路径，并采集少量完整组合截图/AX（中英文、深浅主题）。`verification/mutations-r2.mjs` 覆盖 UPA-01/02；locale 与 log 各自的 `verification/mutations-r2.mjs` 覆盖 UPA-03/08。R2 回归测试在 `project-lifecycle.test.tsx`，使用真实 native backend。
-
-`snapshot-availability.test.tsx` 用单次挂载的 `useProjectState(canSaveSnapshot)` 组件验证损坏打开为false、Restore成功及切换工程为true，并验证历史state选择结果不受当前工程影响；`verification/mutations-save-availability.mjs` 恢复模块fence时该回归失败。

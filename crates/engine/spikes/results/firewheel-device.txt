@@ -1,5 +1,0 @@
-$ crates/engine/spikes/target/release/spike-firewheel --device
-firewheel device status=STARTED backend=cpal sample_rate=48000 max_block_frames=256 voices=1 total_gain=0.05 peak_bound=0.025
-firewheel device status=FINISHED wall_seconds=2.005817 clock_type=rendered_sample_counter graph_frames=96256 source_frames=96256 source_rate=48000 device_rate=48000 playback_state=Playing output_stream_ok=true
-
-exit=0
