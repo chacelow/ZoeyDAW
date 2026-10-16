@@ -15,6 +15,10 @@
 
 `environment.clipboard` 是 `platform/clipboard` 的 `NativeClipboard`。复制、剪切和粘贴同时更新 adapter 的 `clipboardMemory`，外部文本不能恢复过期的 MIDI 负载。
 
+MIDI 剪贴板使用版本 1 的 `application/x-zoeymind-midi-notes+json` 负载。Copy 和 Cut 生成的合法选区均可完整 Paste，不设 2048 音符或 250000 字符上限。Paste 保留 pitch、lengthBeats、velocity，将每个 startBeat 增加 0.25，并生成新的音符 ID。Cut 和 Paste 各产生一条 Undo；剪切后的选区可直接粘贴恢复。解析仍校验版本、非空音符数组及每个音符的字段，任一无效音符使整份负载被拒绝，不改变工程或历史。
+
+`midi/large-selection.test.tsx` 通过原生键盘覆盖 2049 音符、1024 音符且负载超过 250000 字符的 Copy/Cut/Paste 往返，以及无效负载的原子拒绝。恢复旧上限的突变检查为 `bun src/project/sections/clip-edit/verification/mutations.mjs SEC-01`，在 `apps/gpuix` 执行。
+
 `environment.subscribeWindowActive` 必须来自组合根同一个原生窗口订阅，不在编辑器内创建第二个 observer。失活取消当前编辑事务和试听音符。
 
 `environment.drawMode.markGesture` 接 timeline keyboard 的 `markDrawGesture`，`latch` 接 `latchDraw`。B 键只由 timeline 处理。编辑器不持有第二份 B-key 状态。
@@ -27,11 +31,11 @@
 
 MIDI 音符编辑调用 `project/model/midi-editing`。grid 中方向键移动、Shift 上下跨八度、Delete、Cmd+A/C/X/V/D/U/Z。Cmd+U 只量化选中起点；长度与未选音符保留。拖动中消费并忽略 Delete、Cut、Paste、方向键、D、U，直到 release；Escape 与 Cmd+Z 仍取消手势。指针选琴键后焦点回到 grid，Enter 试听仍留琴键。力度 lane 是单 Tab 入口的复合控件：Left/Right 按源音符顺序移动当前项并单选，Up/Down 沿用选中组的力度步长及 Undo 事务；Space 仍冒到窗口播放。
 
-钢琴卷帘绘制与命中共用可见音符几何。屏外音符不挂载，琴键、网格线与力度杆也按可见范围裁剪。滚轮调整视口，Shift 滚轮横向滚动。Cmd 或 Ctrl 滚轮改变时间缩放。显示、插入、刷写、擦除和量化使用源绝对 beat 0 的网格。首尾半格只按可见交集判断占用与擦除，不删除窗口外的保留音符。窗口 resize 和 Fold 音高集合变化重新夹取 scroll，普通音符编辑不自动重新 fit。
+钢琴卷帘绘制与命中共用可见音符几何。屏外音符不挂载，琴键、网格线与力度杆也按可见范围裁剪。滚轮调整视口，Shift 滚轮横向滚动。Cmd 或 Ctrl 滚轮改变时间缩放。显示、插入、刷写、擦除和量化使用源绝对 beat 0 的网格。首尾半格只按可见交集判断占用与擦除，不删除窗口外的保留音符。窗口 resize 和 Fold 音高集合变化重新夹取 scroll，普通音符编辑不自动重新 fit。移动和拉长音符使用 content-space 位移，包含拖动中的 Shift 滚轮横移，释放仍只产生一条 Undo。时间比例、源窗口起点或 pitch 行高改变时取消当前手势并回滚，避免缩放后用新分母解释旧起点。`midi/scroll-gesture.test.tsx` 与 `mutations.mjs SEC-03` 覆盖横移和缩放取消。
 
 视口 wheel 只有 MIDI body 一个 owner，琴键和 grid 不重复消费事件；一次 Cmd/Ctrl wheel 与工具栏一样只缩放一级。被动网格、无文字音符和力度杆经 `useQuadBatch` 命令式上传，几何与 typed array 不进入 React props；有文字的音符保留原生文字盒的边框、裁切与绘制层级。屏外音符不给几何或语义节点。可见 pitch 行的 AX 标签保留音符时间范围、力度与选择标记，当前选中音符保留 gridcell；力度只保留一个活动 slider，原生值经 `aria-valuetext` 暴露。
 
-唯一 selection owner 原子持有 `{indices,current}`。组内点击与 Shift 添加音符更新 current 而不重排成员，Cmd+A 扩展成员并保留 current，gridcell、slider 与力度数值使用同一锚点。Left/Right 导航改为单选；Up/Down 保留组成员与 Undo 事务。聚焦项滚出可见范围后同步到可见候选项，选择变化不产生工程 Undo。二维编辑面保留唯一根 Tab 入口及原箭头编辑语义（`gpuix-ui-standards.md:74`），pitch 行不进入 Tab。quad 像素对齐只有共享原生路径，UI 不做逻辑像素舍入。
+唯一 selection owner 原子持有稳定音符 `{ids,current}`，渲染和 model API 的下标从当前 notes 派生；Undo/Redo 插入或删除前序成员不会转移选择，消失的 ID 不会选中替代成员。旧数据缺 ID 的归一化由工程解析边界负责，UI 不写 ID。组内点击与 Shift 添加音符更新 current 而不重排成员，Cmd+A 扩展成员并保留 current，gridcell、slider 与力度数值使用同一锚点。Left/Right 导航改为单选；Up/Down 保留组成员与 Undo 事务。聚焦项滚出可见范围后同步到可见候选项，选择变化不产生工程 Undo。二维编辑面保留唯一根 Tab 入口及原箭头编辑语义（`gpuix-ui-standards.md:74`），pitch 行不进入 Tab。quad 像素对齐只有共享原生路径，UI 不做逻辑像素舍入。`midi/history-selection.test.tsx` 与 `mutations.mjs SEC-02` 覆盖历史恢复后的继续编辑。
 
 MIDI 工具栏与音频参数使用共享 `ScrollArea`：前者将纵向滚轮转换为横向滚动，后者提供有名称的纵向滚动区域与键盘入口。钢琴卷帘、波形与 Pattern 的领域坐标、缩放和滚动仍由各自视口 owner 管理。
 
