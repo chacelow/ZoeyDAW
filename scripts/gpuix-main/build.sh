@@ -5,15 +5,18 @@ readonly script_dir="$(cd "$(dirname "$0")" && pwd)"
 readonly root="$(cd "$script_dir/../.." && pwd)"
 readonly revision="$(node -p "require('$script_dir/config.json').revision")"
 readonly zed_revision="$(node -p "require('$script_dir/config.json').zedRevision")"
-readonly vendor_root="${GPUIX_VENDOR_ROOT:-/Volumes/PSSD/code/_vendor/zoeydaw-gpuix}"
+vendor_base="$(node "$script_dir/paths.mjs")"
+readonly vendor_base
+readonly vendor_root="${GPUIX_VENDOR_ROOT:-$vendor_base/zoeydaw-gpuix}"
 readonly vendor="$vendor_root/$revision"
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/Volumes/PSSD/code/_vendor/target}"
+cargo_target="$(node "$script_dir/paths.mjs" --canonical "${CARGO_TARGET_DIR:-$vendor_base/target}")"
+export CARGO_TARGET_DIR="$cargo_target"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-6}"
 
-# Local builds keep the large target on the external disk; hosted CI runners have no such volume.
+# Local builds keep Cargo outputs beside the primary repository; hosted CI can use its own cache.
 case "$CARGO_TARGET_DIR" in
-  /Volumes/PSSD/*) ;;
-  *) [ "${CI:-}" = "true" ] || { echo "CARGO_TARGET_DIR must stay on /Volumes/PSSD" >&2; exit 1; } ;;
+  "$vendor_base"/*) ;;
+  *) [ "${CI:-}" = "true" ] || { echo "CARGO_TARGET_DIR must stay under the derived vendor base: $vendor_base" >&2; exit 1; } ;;
 esac
 case "$CARGO_BUILD_JOBS" in
   [1-6]) ;;
