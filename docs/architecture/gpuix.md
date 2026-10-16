@@ -45,48 +45,19 @@ crates/
 - 纯逻辑沿用原测试断言，只换框架导入；不为通过而改断言。
 - 组件行为用 `createTestRoot`（`@gpuix/react/testing`），断言布局边界、命中、状态转换；不测源码文本或转发。
 - 原生模块：对真实二进制测试。需要先 `pnpm native:build`。
-- 每个切片至少一次真实窗口运行（`bun --hot <demo>`）并截图/AX 验证；只报告实际运行过的验证。
-- **验证完立刻关闭**自己启动的 demo/窗口/service(用带 `name` 的 service 启动、拿到证据即 `kill`);`worker_done` 前用 `ps` 确认零残留。残留的窗口会占用户本机内存与 GPU。
+- UI 改动至少一次真实窗口运行（`bun --hot <入口>`）并截图/AX 验证；只报告实际运行过的验证。
+- **验证完立刻关闭**自己启动的 demo/窗口/service（用带 `name` 的 service 启动、拿到证据即 `kill`），收尾前用 `ps` 确认零残留。残留的窗口会占用户本机内存与 GPU。
 
-## 切片边界与所有权
-
-每个 worker 只改自己拥有的路径。需要改别人路径或共享契约（`shared/theme`、`crates/native` 的公共导出、本文）时，停下并通过 escalation 报告，不自行修改。
-
-| 切片 | 拥有路径 | 交付 |
-| --- | --- | --- |
-| A1 core-port | `project/{model,stores,adapters,layout}/**`、`project/types.ts` | 90 个文件与 29 个测试迁入并通过；`snapshots.ts` 改为存储端口 |
-| A2 native-platform | `crates/native/src/**`（`cursor.rs` 已完成，不动）、`apps/gpuix/src/platform/**`、`packages/i18n` 的去 DOM 化 | atomic_file、设置、日志、外链、i18n 存储端口；关闭拦截可行性结论 |
-| A3 ui-controls | `ui/controls/**` | 约 40 个被消费的控件符号 |
-| A4 ui-panels | `ui/panels/**` | PanelShell、PanelDivider、原生 resizable Group/Panel |
-| A5 engine-spike | `crates/engine/**`、`docs/research/engine-playback-graph.md` | firewheel / kira / rodio 实测对比与结论 |
-
-## 完成定义（每个切片）
+## 完成定义
 
 - `tsc --noEmit` 与改动范围内的 `bun test`、`cargo check`（涉及 Rust）通过；`ultracite` 预提交门禁通过，不用 `--no-verify`。
-- 本切片无 `react-dom`、`@tauri-apps/*`、`document`/`window`/`localStorage` 引用。
-- 不新增 npm 依赖；确需新增先 escalation。Rust 依赖限于本文与研究文档点名的 crate，新增同样先 escalation。
-- 在自己的分支提交，不 push、不碰 `main`、不碰其他 worktree。
-- 涉及界面的切片，按「UI 视觉验收」逐项完成并附证据；缺证据的视觉声明不算完成。
-- 交付前按「交付前自审与协调者仲裁」跑扫描、派独立审查并分类处置；报告含「自审结果」表。
-- 交付报告写清：实际运行的命令与结果、未实现项及原因、对共享契约的任何需求。
+- 无 `react-dom`、`@tauri-apps/*`、`document`/`window`/`localStorage` 引用。
+- 不新增 npm 依赖；Rust 依赖限于本文与研究文档点名的 crate，新增先问用户（见 `AGENTS.md` 封闭清单）。
+- 涉及界面的改动，按「UI 视觉验收」逐项完成；缺证据的视觉声明不算完成。
+- 跑 `node scripts/gpuix-review-scan.mjs`：`HARD` 清零，`WARN` 逐条判断。改动涉及工程模型、引擎、渲染器补丁、共享 UI 契约或组合契约时，提交前按下面的「代码质量底线」自查一遍 diff。
+- 汇报写清实际运行的命令与结果、未实现项及原因。
 
-## 交付前自审与协调者仲裁（每个切片必做）
-
-规范类问题（手写 SVG、深层相对导入、重复实现、越界）靠**扫描和独立审查**发现，不靠读 diff。交付前按下面三步走，缺一步不发 `worker_done`。
-
-1. **跑扫描**：在切片 worktree 根目录执行 `node scripts/gpuix-review-scan.mjs`（对比基线 `gpuix-migration`）。它调用 eslint（分层、DOM 全局、`@/` 别名、手写 SVG）并补查文件过大、裸像素与颜色字面量、JS 定时器、`any`、产品代码里的 mock、被跳过的测试。`HARD` 必须清零，`WARN` 逐条在报告里给结论。
-2. **独立审查（只在核心或跨模块改动时）**：改动涉及工程模型、引擎、`crates/native` 补丁、共享 UI 契约或组合契约时，用 `task` 起一个只读 `pstack-reviewer` 子代理，按两条轴审你的 diff，并读完它的结论再交付；纯文案、配置、样式、局部 UI 改动不派。两个提示都附完整 diff 命令与提交列表：
-   - **Standards 轴**：对照 `docs/architecture/gpuix.md`、`gpuix-ui-standards.md`、`gpuix-arrangement-composition.md`、`LESSONS.md`，并带上下面的「代码质量底线」。
-   - **Spec 轴**：对照你的切片规格（`scripts/orchestration/specs/<slice>.md`）与 `b2-common.md`，找缺失、越界、实现看似对但实则错的地方。审查是只读的，子代理不改文件，你自己改。
-3. **分类处置**：把审查与扫描的每条发现归入三类，写进报告的「自审结果」表（发现、类别、处置、证据）。
-   | 类别 | 判据 | 谁处置 |
-   | --- | --- | --- |
-   | **必修** | 违反成文规范或硬规则；在你拥有的路径内；修法唯一 | 你立即修，重跑扫描与测试，不用问 |
-   | **汇报仲裁** | 涉及别的切片或共享契约（`ui/controls`、`shared/theme`、组合契约、`crates/native`、`project/model`）；有多种合理方案；会改变产品行为；你不确定是否算缺陷 | 你**先不动**，用 `orca orchestration ask` 或报告汇报给协调者，写明证据、可选方案与你的建议 |
-   | **记录** | 风格偏好、无后果的小问题 | 写进报告，不修 |
-   | 协调者收到「汇报仲裁」后统一决定：由谁修、改哪份契约，并**通知所有受影响的分支**（一个共享控件的缺陷会同时影响几个切片，不能让每个切片各自绕过）。同一问题在两个切片里出现，只修一次，修在拥有它的那个切片。 |
-
-### 代码质量底线（Standards 轴必查）
+### 代码质量底线
 
 这些来自严格可维护性审查，目标是 Clean Code Base：删除复杂度，而不是搬运复杂度。
 
@@ -113,11 +84,9 @@ crates/
 
 UI 外观与交互由真实窗口观察验收，不用逐控件逐状态的单元测试代替。变异检查只在重写核心算法或修复曾经回归的缺陷时做一次，结果写进报告，不为每个改动新增变异入口脚本。现有测试中属于上述“不写”的，修改附近代码时顺手删除。
 
-协调者合并前会独立复跑扫描并抽查这份清单；报告里的自审表缺失或与扫描结果不符，退回。
+## UI 视觉验收（涉及界面的改动必做）
 
-## UI 视觉验收（涉及界面的切片必做）
-
-类型检查与 AX 树不能证明界面对。改了可见界面的切片，必须在真实 Gallery 与业务组合视图里检查整体，并把结论写进报告。
+类型检查与 AX 树不能证明界面对。改了可见界面，必须在真实 Gallery 与业务组合视图里检查整体。
 
 详细检查项见 [gpuix UI 规范](gpuix-ui-standards.md)（紧凑感、尺寸与间距、对齐居中、排版、颜色层级、状态、指针与拖动、弹层、键盘焦点、可访问性、动效、性能、验收清单）。
 
@@ -131,9 +100,8 @@ UI 外观与交互由真实窗口观察验收，不用逐控件逐状态的单�
    - **颜色与层级**：背景、面板、边框、弱化文字取自主题 token；hover/active/disabled 彼此可区分；网格线与分隔线不是最亮元素也不会看不见。
 3. **对照参照物**：有 Ableton Live 对应界面的，先只读观察 Live，再并排对比，报告附『与 Live 对比表』（观察→实现→一致/差异/未验证）。没有对应界面的，对照本项目已合并的同类控件。
 4. **统一入口**：圆角、边框、gap、padding 由共享 token 或组件变体拥有，业务实例不另写一套；用代表性组合的 AX bounds 核对疑点，改变一个入口应影响所有同类调用。
-5. **发现问题要修，不要只记录**：看出来的间距不齐、没居中、过松，先改再重新截图确认，报告里写修了什么。不能修的（超出所有权、需要共享契约变更）才 ask。
-6. **证据可复查**：提交可重跑的 Gallery/业务验证入口与简短结论。截图默认保存在仓库外或 Git 忽略目录，不批量提交生成图片。
-7. 协调者自己打开真实窗口评审整体；报告写明问题、共享修复入口、实际结果与仍未验证路径。
+5. **发现问题要修，不要只记录**：看出来的间距不齐、没居中、过松，先改再重新截图确认。
+6. **证据可复查**：提交可重跑的 Gallery/业务验证入口。截图默认保存在仓库外或 Git 忽略目录，不批量提交生成图片。
 
 ## 渲染器版本决策
 

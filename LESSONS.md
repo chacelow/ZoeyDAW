@@ -38,21 +38,21 @@
 - Audio Start/End 最初按 Live 的 Source 裁剪字段实现，实测却是独立播放标记：拖动不改变编排 Clip 的 startBar/lengthBars/sourceOffsetBars。已改为 audioSettings 内的 startMarkerBars/endMarkerBars，与 Loop Position/Length 和源边界三者互不影响。
 - 音乐位置格式化对极小的十六分音符分量直接插值 Number，JS 对小于 1e-6 的数会转成科学计数法（如 `2e-8`），生成的字符串跳出 `\d+(?:\.\d+)?` 解析正则，往返直接变 NaN。改为用 `toFixed` 字符串裁剪尾随 0，不经过 Number→String 再转换。
 
-## gpuix 迁移：工作方式（所有并行 worker 必读）
+## gpuix 迁移：worktree 之间的 stash 是共享的
 
 - 错：在共享 worktree 里用 `git stash` / `git checkout <旧提交>` 做"改动前后对照"。
 - 对：对照一律用 `git worktree add ../tmp-xxx <提交>` 的临时副本，用完 `git worktree remove`。
-- 因：stash 引用存放在所有 worktree 共用的 common git dir（实测：在主 worktree `git stash`，链接 worktree 里 `git stash list` 同样可见）。并行切片的 lint-staged 备份 stash、别人的 WIP 会和你的混在一起，`stash pop` 可能把别的分支的文件落进当前工作区，产生 `DU` 未合并条目。2026-10-14 协调者在合并 A5 时踩过：`.orca-specs/` 一度被收走，A2 的两个文件落进了协调者工作区，靠 stash 的第三个父提交（untracked 快照）恢复，未丢数据。
-- 同一天再犯一次：为了"验证上面这条"，协调者在共享仓库里 `git stash push` 做探针再 `git stash drop`，探针把**当时未提交的 LESSONS.md 一起收走并丢弃**。教训：验证 stash 共享性应在 `mktemp -d` 的一次性仓库里做（上面的实测就是这样），绝不在真实仓库里做；未提交的重要改动先 `git add` + 提交，哪怕是 WIP。
+- 因：stash 引用存放在所有 worktree 共用的 common git dir（实测：在主 worktree `git stash`，链接 worktree 里 `git stash list` 同样可见）。别的 worktree 的 lint-staged 备份 stash、WIP 会和你的混在一起，`stash pop` 可能把别的分支的文件落进当前工作区，产生 `DU` 未合并条目。2026-10-14 合并 A5 时踩过：`.orca-specs/` 一度被收走，A2 的两个文件落进了当前工作区，靠 stash 的第三个父提交（untracked 快照）恢复，未丢数据。
+- 同一天再犯一次：为了"验证上面这条"，在共享仓库里 `git stash push` 做探针再 `git stash drop`，探针把**当时未提交的 LESSONS.md 一起收走并丢弃**。教训：验证 stash 共享性应在 `mktemp -d` 的一次性仓库里做（上面的实测就是这样），绝不在真实仓库里做；未提交的重要改动先 `git add` + 提交，哪怕是 WIP。
 - 恢复：被 drop 的 stash 提交仍是悬空对象。`git fsck --no-reflogs --unreachable` 列出悬空提交，按 stash 信息（`git log -1 --format='%H %s' <sha>`）找到，再 `git checkout <sha> -- <路径>`，不要 `stash pop`。
 - 见：`git rev-parse --git-common-dir`；已进入 stash 的未跟踪文件在它的第三个父提交里：`git checkout "stash@{0}^3" -- <路径>`。
 
 ## gpuix 迁移：验证用的 demo 必须验证完就关
 
 - 错：`bun --hot <demo>` 启动原生窗口做截图/AX 验证后不关，继续做别的事。
-- 对：用带 `name` 的 bash service 启动（`proc://<name>`），拿到证据立刻 `write proc://<name>/kill`；交付前 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"` 确认零残留。
-- 因：每个 gpuix 窗口是一个常驻 GPU 进程（约 70–130MB RSS）。2026-10-14 并行 worker 同时开着多个 gallery，其中一个跑了 29 分钟无人交互，协调者清理时 `bun` 合计 346MB → 54MB。窗口占用户本机性能，且 `--hot` 会持续监视文件。
-- 见：`scripts/orchestration/specs/common.md`“进程清理”、[gpuix 架构](docs/architecture/gpuix.md)“测试”。
+- 对：用带 `name` 的 bash service 启动（`proc://<name>`），拿到证据立刻 `write proc://<name>/kill`；收尾前 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"` 确认零残留。
+- 因：每个 gpuix 窗口是一个常驻 GPU 进程（约 70–130MB RSS）。2026-10-14 同时开着多个 gallery，其中一个跑了 29 分钟无人交互，清理时 `bun` 合计 346MB → 54MB。窗口占用户本机性能，且 `--hot` 会持续监视文件。
+- 见：[gpuix 架构](docs/architecture/gpuix.md)“测试”。
 
 ## gpuix 迁移：已验证的好做法（可直接复用）
 
@@ -80,29 +80,11 @@
 - 错 3：第一个变异（让 `size === collapsed` 的早返回失效）测试仍然全绿。继续排查（对同一组输入逐行 diff 输出）发现输出**完全相同**——这个早返回分支对该输入是冗余的，不是测试漏了。教训：变异不红不等于测试弱，先确认变异是否真的改变了行为（比对输出），再决定是否补用例，别为一个等价变异硬加测试。
 - 对：求解器的语义要与被替换的库对齐再验收。`react-resizable-panels` 4.12.3 的折叠行为是“越过折叠区中点才折叠/弹出”，A4 的求解器实测一致：A 在 delta=-200 到达 min，-260 折叠（中点 -250）；从折叠态展开，delta=40 仍为 0，60 弹到 100。
 
-## gpuix 迁移：review 退回要重新派发，worker 交付后就不再收信
-
-- 现象：C2 发完 `worker_done` 后，协调者的退回意见发到它的 dispatch，报错「Dispatch is completed; its worker will never read that mailbox」。`--retry-of` 只能接已失败的 task，不能用于返工。
-- 对：返工派回原 lane 的同一个 agent。已合入后的新需求用 `scripts/orchestration/lane.sh assign`；review 退回的未合入工作用 `lane.sh rework <lane> <标题> <规格>`，在原分支上继续，不切分支。规格写明已有提交、review 结论与必修项。不另开新 worktree，也不释放原终端。
-- 复用 lane 的副作用（2026-10-16 C5 实测）：同一终端上新的 `worker-start --terminal` 之后，worker 可能先收到上一个已结算派发的完整 brief 重放（例如 C1 的 brief 在 C5 开工时又出现一次）。worker 要以当前派发的 task/dispatch ID 和分支为准，旧 brief 忽略、不重用已结算的 lifecycle ID；协调者收到这类确认问题，直接回复"是重放，按当前派发继续"。
-- 预防：common 规格要求先自审（扫描 + 独立审查子代理）再 `worker_done`；越界改动必须先 ask。C2 这次越界改了 `crates/engine`、在 TS 里重写了 bar→frame 公式、并让每个素材多存一份 PCM——这三点自审都应该发现。
-- 回答 worker 的 `question` 用 `orca orchestration reply --id <msg_id>`，不要另发 `send --type status`。`question` 是阻塞调用，worker 只等这条消息的回复；23:40 批准 lane 桌面时段的 status 消息没有被读到，15 分钟时段白白过去。限时授权（桌面时段）以回复送达时刻起算，过期就重发。
-- 主干把测试从 `timeline/` 移到 `core/rulers/` 后，timeline 分支 merge 主干时，Git 的目录重命名推断把整个 `timeline/` 判成已移到 `core/rulers/`，产生 25 个文件的 location 冲突。切片 worktree 共用同一个仓库配置，已设置 `git config merge.directoryRenames false`。协调者在主干之间移动文件后，通知受影响切片：冲突要按 HEAD 和 MERGE_HEAD 逐个核对，不 abort，也不丢代码。
-- 错：`worker-start --worktree new-child` 把新 worktree 的 Orca 父级设成协调者终端所在的 worktree，也就是仓库根 `/Volumes/PSSD/code/zoeydaw`，不是 `gpuix-migration`。结果 Orca 侧边栏里出现两棵树：早期切片挂在 gpuix-migration 下，后期切片挂在 zoeydaw 下。分支其实都基于 `gpuix-migration`，只是显示挂错了地方。
-- 对：新建 lane 时一律经 `scripts/orchestration/lane.sh new`（内部调 `start-worker.sh`）。它在创建 worktree 时显式传 `--parent-worktree path:…/gpuix-migration`，不依赖 CLI 所在目录，所有 lane 都挂在 gpuix-migration 这一个父 workspace 下。
-
 ## gpuix 迁移：对照 Live 量尺寸要量完整组件，并注明单位与显示器
 
 - 错：量 Live 轨道表头时只量了「路由/Mixer」组（193），漏掉左边的颜色标题列，据此说我们的 304 偏宽很多。tracks 切片复核指出并更正：完整表头是标题列 99 + 路由/Mixer 193 = 292，我们只宽约 4%。
 - 对：用 AX 树找到组件的**全部**组成部分再求外包框；报告里写原始 AX 单位、当时的显示器分辨率与窗口尺寸，比较比例而不是绝对值；`computer.displays()` 的 scale 可能为 0（未知），不要自行换算点和像素。
 - 因：显示器和窗口尺寸在会话中变过（2560 → 1920），绝对数值不可比；组件拆成多个 AX 节点时只量一个节点会系统性偏小。
-
-## gpuix 迁移：review 要有独立视角和统一仲裁，不靠协调者读 diff
-
-- 错：协调者一个人读 diff 与测试结果就合并，手写 SVG 与 121 处深层导入、重复的 Space 处理这类问题都漏过；各切片发现共享控件缺陷后各自绕过，同一个问题在多个分支里出现不同实现。
-- 对：交付前三步：扫描脚本（确定性检查）→ 独立只读审查子代理（Standards 与 Spec 两条轴）→ 分类（必修 / 汇报仲裁 / 记录）。必修自己改；涉及别的切片或共享契约的先汇报，协调者统一决定谁修并通知所有受影响分支；同一问题只修一次，修在拥有它的切片。协调者合并前独立复跑扫描。
-- 因：规范类缺陷靠扫描发现；独立子代理没有写代码时的盲区；共享缺陷必须由一个人统筹，否则各分支分叉。
-- 见：`docs/architecture/gpuix.md`「交付前自审与协调者仲裁」、`scripts/gpuix-review-scan.mjs`。
 
 ## gpuix 迁移：图标和曲线不手写 SVG，跨目录导入用 `@/` 别名
 
@@ -114,21 +96,6 @@
 - 加依赖的坑：`pnpm add` 会重算 lockfile，把 `react: link:.gpuix-main/node_modules/react` 改回 19.2.8，导致 `Multiple React runtimes` 与 96 个测试失败。做法：只编辑 `package.json`，再 `pnpm install --no-frozen-lockfile`，然后 `git diff pnpm-lock.yaml` 确认只有新增行，并跑 `node scripts/gpuix-main/check.mjs --resolution`。`@types/d3-shape` 要 3.2.0 才有 `digits`。
 - lucide 没有的图标（如节拍器）：用 Phosphor 的包内资源 `@phosphor-icons/core/assets/regular/<name>.svg`（`with { type: "text" }` 导入，`shared/svg/assets.d.ts` 声明类型），登记在 `Icon` 的 `PHOSPHOR_ICONS`。我曾告诉 footer 切片「用 lucide 的 Metronome」，那是错的，核实后才纠正：发规范前先在代码里查名称是否存在。
 - 见：`docs/architecture/gpuix-ui-standards.md` 第 14 节、`tooling/eslint/gpuix-imports.js`。
-
-## gpuix 迁移：并行提交会争用 lint-staged 的共享 stash，失败后先查再重试
-
-- 现象：多个 worktree 同时 `git commit`，lint-staged 备份阶段报 `could not write index`，提示的分支还是别的 worktree（`On main`）。
-- 因：lint-staged 的自动备份用 `git stash`，而 stash 与 `.git/refs/stash` 在所有 worktree 之间共享；并发提交互相覆盖备份。与 A7 那次『hook 报失败但提交已落地』是同一类问题。
-- 做法：失败后先 `git log -1`、`git status`、`git stash list`、找 `.git` 下的 `*.lock`，确认没有半成品；再**原样重试**同一条提交，间隔 30 秒，最多 3 次；不用 `--no-verify`，不手动 `git stash drop` 别人的备份。
-- 协调者侧：合并和提交尽量错开；若仍频繁冲突，再给 worker 分时段（与桌面输入串行同理）。
-
-## gpuix 迁移：多个 worker 并发操作桌面会互相抢占，输入验证要串行
-
-- 现象：并发的 worker 同时用 `computer` 做点击/拖动/按键，报 `InputBusy: another desktop operation owns input/focus control`，或 `BackgroundUnavailable`，截图验证中途失败。
-- 对：由协调者给**一个 worker 在固定时间窗内独占桌面输入**（只读的 screenshot/zoom/ax 不受影响，可并行）；其他 worker 在窗内只做代码与测试；窗结束由该 worker 回复『桌面释放』，协调者再点名下一个。窗内未做完的项如实列『未验证』交付，不无限占用。
-- 因：桌面只有一个真实指针与一个键盘焦点；`computer.window()` 的后台输入路径也依赖焦点恢复，会与别的输入冲突。
-- 同时别碰用户的 Live：独占窗口只限自己启动的窗口。
-- 派发时就按窗口数控制并发：同时需要真实窗口输入验证的切片最多 2 个，其余先排队。
 
 ## gpuix 迁移：AX `find({title})` 是子串匹配，改 Live 状态要用精确 ref
 
@@ -164,14 +131,14 @@
 ## gpuix 迁移：写了规范还要保证 Agent 读得到
 
 - 错：把规范写进 `docs/`，只在派发消息里口头告知；没有入口文件指向它，新开的 Agent 与后续会话读不到，规范等于没写。
-- 对：入口文件分层指路。根 `AGENTS.md` 的路由表按「修改范围」指到文档；`apps/gpuix/AGENTS.md` 与各目录就近的 `AGENTS.md`（如 `src/ui`、`src/project/sections`）在 Agent 改到该目录时再指一次；worker 规格 `common.md` 的先读清单同步更新。入口只放指针与触发条件，细则留在被指向的文档，避免入口膨胀。
+- 对：入口文件分层指路。根 `AGENTS.md` 的路由表按「修改范围」指到文档；`apps/gpuix/AGENTS.md` 与各目录就近的 `AGENTS.md`（如 `src/ui`、`src/project/sections`）在 Agent 改到该目录时再指一次。入口只放指针与触发条件，细则留在被指向的文档，避免入口膨胀。
 - 校验：`node scripts/check-doc-routes.mjs` 检查必读文档都被入口文件链接；新增必读文档时同步加进它的 `required` 列表。该脚本做过变异检查：去掉入口链接会失败。
 - 见：`AGENTS.md`、`apps/gpuix/AGENTS.md`、`scripts/check-doc-routes.mjs`。
 
 ## gpuix 迁移：界面必须逐个元素放大看，不能凭一张全屏图或 AX 树
 
 - 错：只用类型检查、测试和一张全屏截图就声称界面完成；间距、居中、尺寸、紧凑感没有逐项核对。
-- 对：在真实组合 Gallery 与业务界面中整体核对跨区域对齐、展开/收起按钮居中、卡片与按钮 gap、padding 和共享 token；局部放大只定位缺陷，生成截图默认 Git 忽略，协调者亲自评审（2026-10-15 用户纠正）。
+- 对：在真实组合 Gallery 与业务界面中整体核对跨区域对齐、展开/收起按钮居中、卡片与按钮 gap、padding 和共享 token；局部放大只定位缺陷，生成截图默认 Git 忽略（2026-10-15 用户纠正）。
 - 因：DAW 是高密度工作站，1px 的间距差和一点松散就会让整体不像专业软件；AX 树只证明语义存在，不证明视觉正确。
 - 见：`docs/architecture/gpuix.md` 的「UI 视觉验收」。
 
@@ -182,22 +149,6 @@
 - 判据可复用：① 缺口是否已在主干；② 近 30 天提交数与作者分布（单人维护是风险，靠固定 SHA 与可复现脚本抵消）；③ 干净构建与单行重建的实测耗时；④ 现有 demo 与测试在自建版本上的兼容结果。
 - 见：`docs/research/gpuix-main-build.md`、`docs/architecture/gpuix.md` 的「渲染器版本决策」。
 
-## gpuix 迁移：切片 worktree 是 `gpuix-migration` 的子 worktree
-
-- 2026-10-14 16:02、2026-10-15 02:22 用户要求：所有切片在 Orca 里挂在 gpuix-migration 一个父级下。派发方式见上面「review 退回要重新派发」一节末两条与 `start-worker.sh`。
-
-## gpuix 迁移：worker 用可复用的 lane，不是一次性 worktree
-
-- 决策（2026-10-16，用户）：固定几个 lane（worktree + agent 终端）长期保留，新任务派给空闲 lane 的同一个 agent；并行不够时才新建。取代 2026-10-14 “合入即删、不复用上下文”。
-- 因：每个新 agent 开工都要搜索、阅读大量文件，耗时又耗 token，往往只改几个文件就被销毁；复用的 agent 保留着之前读过的契约和文件地图。本机内存压力用控制 lane 数量来解决，而不是每次销毁。
-- 做法：`scripts/orchestration/lane.sh`（`list` / `assign` / `new`），细节见 `docs/agents/coordination.md`「派发」「合入后」。`assign` 只在“派发已结束、工作区干净、分支已合入”时才切新分支，不会丢未合入的工作。
-- 终端：`worker-release` 对派发脚本建的终端返回 `user_takeover`，这只是创建方式的标记。真要释放 lane 时，协调者确认 TUI 空闲、派发 completed 后自己 `orca terminal close --terminal <handle> --tab`，不留给用户（2026-10-15 用户纠正）。
-
-## gpuix 迁移：协调者把能自己决定的事转问用户
-
-- 错：2026-10-15 协调者两次用 `ask` 问用户：07:27 问是否授权本分支合并提交（已授权），08:27 问能否批准 worker 的 `computer.control.acquire`（本项目根本不用这个接口）。前一次另外 4 个已完成终端也留给用户手动关。
-- 对：先按 `AGENTS.md`「Ask first」判断是否真属于要问用户的事；不属于就自己决定。worker 卡在工具或权限上，先查以前切片怎么做成的（session 记录、LESSONS、规格），把可行路线直接回给 worker。
-- 因：用户的定位是“协调者做决策性 approve 和 review，不做转发”；规则只写在 coordination.md 时，协调者遇到新情况仍会退回问用户，所以边界写进了会注入系统提示的 `AGENTS.md`。
 
 ## gpuix 迁移：commit 报 `pre-commit failed` 不等于没提交，先查再判断
 
@@ -206,18 +157,6 @@
 - 对：看到 hook 失败**不要重试盲目重复提交**。依次确认：① `git log --oneline -3` 提交是否在；② `git show HEAD:<文件> | grep` 内容是否在 HEAD；③ `git diff --stat stash@{0} HEAD` 备份里有没有 HEAD 之外的东西；④ 若测试文件被 prettier 重排过，用**行为验证**而不是文本比对确认等价（重跑测试 + 重跑变异检查 + 对关键表达式做数值等价比对）；⑤ 确认无误再 `git stash drop` 自己的备份。
 - 注意：这条 stash 在所有 worktree 间共用（见"工作方式"一节），丢弃前必须确认它是自己的、内容已在 HEAD。2026-10-14 实测：备份里的 `LESSONS.md` 与 HEAD 逐字节相同，测试文件仅被 prettier 重排；`(s = ...)/2**32` 与 `(s = ...) / 2**32` 的两种 rng 写法在 160000 个值上完全一致；3 个用例与 4 个变异在重排后的版本上结果不变。
 - 另：同一个 commit 里不要连续跑两次 `git commit`。分开执行，每次检查退出码与 `git log`。
-
-## gpuix 迁移：Shell 引号会吞掉长回复
-
-- 错：把含 `$(`、反引号的中文长文本直接放进 `--body "..."` 双引号。
-- 对：先写进文件，再 `--body "$(cat file)"`；heredoc 用带引号的 `<<'EOF'`。
-- 因：`$(` 与反引号会被 shell 当作命令替换执行（表现为 `command not found: 的`），worker 收到的是被截断的残缺指令。2026-10-14 发给 A2 的关闭拦截回复因此残缺，靠文件重发。
-
-## gpuix 迁移：不要把"阻塞等待"和"回执确认"并发
-
-- 错：同一批命令里先后台 `check --wait`，又同时 `check --ack`。
-- 对：用一条命令 `check --ack <旧 delivery> --wait ...`，先确认再等待。
-- 因：等待先于回执执行时，同一条消息会被整批重放，表现为重复处理同一个问题。
 
 ## gpuix 迁移：验收用语义检查，不用字面 grep
 
@@ -328,11 +267,5 @@
 - 对：`ResolvedConstraints.fixed` 只在作者声明了同单位的 minSize 和 maxSize、并且 maxSize <= minSize 时成立。像素 min 配百分比 max 永远是弹性面板，空间不够时按比例放宽最小值；只有真正声明的固定面板合计超出才保留 RangeError。
 - 因：派生值丢失了“为什么相等”的信息。两个值碰巧相等，不能当作声明意图。
 - 见：`apps/gpuix/src/ui/panels/layout/sizes.ts`、R1c `2ff9471`/`7e335a2`、`src/ui/verification/mutations-r1c.mjs`。
-
-## 协调：不要问用户清单外的事（2026-10-16 用户纠正）
-
-- 错：协调者为前台桌面时段、CI 方案、删除已合入 worktree 等反复用 ask 打断用户。这些都不在 AGENTS.md 的封闭清单里，`docs/agents/coordination.md` 还明确把“桌面时段分配”“删除已合入 worktree”列为协调者自己决定的事。
-- 对：只有封闭清单里的事才问用户（push/发布、删用户自己的数据、改系统设置、操作 Live 工程、偏离产品方向、新依赖或 workflow、Agent 物理上做不到的事）。前台验收需要独占桌面时，协调者自己选时机，用后台窗口加 takeover 输入直接做，做完立刻关窗；用户在用电脑导致失败时，在汇报里写明“未验证”，不停下来问。
-- 因：清单外的问题全都能用“能否撤回、是否动用户数据或外部、是否改方向”三问自己判定，问用户只会拖慢进度。
 
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

@@ -6,14 +6,14 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 ## 运行与热更新（gpuix）
 
-- 新 worktree 初始化（`start-worker.sh` 以 `--setup skip` 创建，没有依赖）：在 worktree 根目录依次运行 `bash scripts/gpuix-main/build.sh`、`pnpm install --frozen-lockfile`、`pnpm native:build`、`node scripts/gpuix-main/check.mjs --resolution`。
-- `build.sh` 在取构建锁前校验 vendor 的 revision、完整补丁序列、native 与 React 的全部 dist 文件、根入口及 JSX runtime 产物哈希、构建模式。校验通过时只生成本 checkout 的 `.gpuix-main` 与测试依赖链接，不执行安装、编译或取锁，已有构建锁也不阻止链接。产物失效或构建模式不符时才由持锁 owner 重建并记录 manifest。不要删构建锁；报补丁序列不一致时交给协调者（见 LESSONS「修改补丁序列中间的补丁」）。
+- 新 worktree 初始化（没有依赖）：在 worktree 根目录依次运行 `bash scripts/gpuix-main/build.sh`、`pnpm install --frozen-lockfile`、`pnpm native:build`、`node scripts/gpuix-main/check.mjs --resolution`。
+- `build.sh` 在取构建锁前校验 vendor 的 revision、完整补丁序列、native 与 React 的全部 dist 文件、根入口及 JSX runtime 产物哈希、构建模式。校验通过时只生成本 checkout 的 `.gpuix-main` 与测试依赖链接，不执行安装、编译或取锁，已有构建锁也不阻止链接。产物失效或构建模式不符时才由持锁 owner 重建并记录 manifest。不要删构建锁；补丁序列不一致的处理见 LESSONS「修改补丁序列中间的补丁」。
 - 缓存基目录由 `git rev-parse --path-format=absolute --git-common-dir` 推导，为 `resolve(dirname(commonDir), "../_vendor")`，与主仓库位于同一磁盘。所有 linked worktree 使用同一个基目录。`GPUIX_VENDOR_ROOT` 默认是基目录下的 `zoeydaw-gpuix`，`CARGO_TARGET_DIR` 默认是基目录下的 `target`，两者都可用环境变量覆盖。除 `CI=true` 外，规范化后的 Cargo target 必须位于基目录内，符号链接不能绕过限制。
 - 原生 redraw mutation 必须显式传入隔离的 `GPUIX_VENDOR_ROOT`；native mutation 还要求 `CARGO_TARGET_DIR`，mode mutation 默认使用隔离 vendor 下的 `target`。两种入口都拒绝共享 vendor、共享 target 和仓库内路径，`CI=true` 只豁免 target 的磁盘位置约束，不豁免隔离要求。
 - 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，切片 demo 与画廊各有入口）。改 TS/TSX 保存即热更新。
 - Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。
-- Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；交付前确认零残留（见 `scripts/orchestration/specs/common.md`）。
-- 后台启动：任何入口（`src/main.tsx`、Gallery、各切片 demo）加 `GPUIX_BACKGROUND=1`，窗口打开时不抢键盘焦点，用户的前台应用保持不变，统一由 `platform/window` 的 `LAUNCH_FOCUS` 控制。AX 只读量值、离屏截图（`createTestRoot`）和例行回归都用这种方式。后台窗口不能替代真实桌面验收：它通常被前台应用遮挡，macOS 会停发遮挡窗口的 animation frame（F3 实测），所以窗口截图可能全黑，等待原生帧的测量（性能、首帧）会一直卡住；`el.press()` 等输入还可能报 `BackgroundUnavailable`。遇到这些情况，把对应项标为未验证，不要切到前台，也不要用 headless 数据冒充窗口数据；需要真实帧的验收，交由协调者在真实桌面上串行完成。
+- Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；收尾前确认零残留。
+- 后台启动：任何入口（`src/main.tsx`、Gallery、各 demo）加 `GPUIX_BACKGROUND=1`，窗口打开时不抢键盘焦点，用户的前台应用保持不变，统一由 `platform/window` 的 `LAUNCH_FOCUS` 控制。AX 只读量值、离屏截图（`createTestRoot`）和例行回归都用这种方式。后台窗口不能替代真实桌面验收：它通常被前台应用遮挡，macOS 会停发遮挡窗口的 animation frame（F3 实测），所以窗口截图可能全黑，等待原生帧的测量（性能、首帧）会一直卡住；`el.press()` 等输入还可能报 `BackgroundUnavailable`。遇到这些情况，把对应项标为未验证，不要用 headless 数据冒充窗口数据；需要真实帧的验收在真实桌面上串行完成。
 - 不停止用户自己启动的应用或服务。
 
 ## 验证命令（gpuix）
@@ -80,13 +80,13 @@ bun scripts/release/package.mjs "$(node -p 'require("./apps/gpuix/package.json")
 
 ## 修改前确认
 
-问用户的范围只有根 `AGENTS.md`「决策默认归 Agent」那张封闭清单；清单外的技术决定（含共享 UI 公共 API）由协调者决定，见 [协调方式](coordination.md)。
+问用户的范围只有根 `AGENTS.md`「决策默认归 Agent」那张封闭清单；清单外的技术决定（含共享 UI 公共 API）由 Agent 自己决定。
 
 secrets、token 和 API key 不进入仓库。保留其他 Session、Agent 的未提交和暂存工作。
 
 ## 提交授权
 
-**`gpuix-migration` 及其切片分支**：用户 2026-10-14 12:40 UTC 原话“去掉我确定这个 gate，然后你来编排，然后你来 review，你来做决策……最后交付给我就行了”。这些分支的本地提交（含协调者的合并提交）已授权，不再逐次索取“我确认”。非交互提交照常带 `USER_CONFIRM_HASH=$(git write-tree)` 通过 hook；`ultracite`/lint-staged 门禁仍必须通过，不用 `--no-verify`。
+**`gpuix-migration`**：用户 2026-10-14 12:40 UTC 授权本地提交，不再逐次索取“我确认”。非交互提交照常带 `USER_CONFIRM_HASH=$(git write-tree)` 通过 hook；`ultracite`/lint-staged 门禁仍必须通过，不用 `--no-verify`。
 
 **`main` 与其它分支**：每次 commit 都要求用户在本次提交上下文明确说出 **“我确认”**。之前的授权不延续；“提交吧”“commit 一下”“push 吧”不能替代。
 

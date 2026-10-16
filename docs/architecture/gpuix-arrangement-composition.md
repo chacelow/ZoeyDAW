@@ -132,5 +132,5 @@ export function TrackResizeOverlay(props: {
 
 ## 6. 变更规则
 
-- 本文是契约：任何切片需要改接口，先 ask，由协调者统一修改本文并通知所有相关切片。
+- 本文是契约：改接口时先改本文，再同步改 `core`、`tracks`、`lane`、`timeline` 与组合根。
 - 新增导出符号写进各目录 README 的「公共接口」小节，并保持与本文一致。
