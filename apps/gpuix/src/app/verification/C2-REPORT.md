@@ -2,7 +2,7 @@
 
 ## 交付状态与范围
 
-C2 样式、布局和共享文案接口已实现。相关轻量检查、原生回归、变异、组合截图与独立审查通过；本报告用于 `merge_ready`，不把 C4/C3 尚待合入的最终来源接线描述为完成。
+C2 样式、布局和共享文案接口已实现，原 `merge_ready` 头 `a2104da0` 已由协调者合入主干 `b4047cac`。随后同步 C4 与 C3 最终来源，删除全部批准的暂态接线；本报告区分原样式迁移的零像素差证据与最终来源合入后的验证。
 
 实际基线为 `a4a9d11c`。实现提交 `886841c7`，主干/K1 合并 `82b517bf`，C1 合并 `d3fa50f2`（输入 `1c84bd9a`），原生验收修复 `f7d4fbf9`，scanner 窄修 `06b9ffaa`。checkpoint 由协调者明确授权；每次直接提交均使用 `USER_CONFIRM_HASH`，ultracite 与 UI map hook 通过，未使用 `--no-verify`。没有 push。
 
@@ -27,7 +27,7 @@ C2 样式、布局和共享文案接口已实现。相关轻量检查、原生�
 | 6.6 | 200×60 为 SVG 坐标域，保留 C 并共享 `DEVICE_DISPLAY_VIEWBOX`，不作为屏幕尺寸 |
 | 7.6 | centerMarker inset/width 读取 design；其它 Arrangement 几何归 C3 |
 | 8.1 | tabs duration/easing 读取 design，原生中间帧回归；reduced-motion 零时长保持语义常量 |
-| 8.2、8.3 | ToastPolicy 经组合根注入；最终偏好来源归 C4，暂态路径见后表 |
+| 8.2、8.3 | ToastPolicy 经组合根注入；最终读取 C4 `usePreference("notifications")`，删除 UI 默认 policy |
 | 8.4、8.5 | 语义 cursor 统一；原生事件状态转换与变异覆盖，OS 实际指针形状留前台验收 |
 
 1.2 窗口默认归 C4；1.4、4.2 与 shared/theme 内部来源归 C1；Arrangement-only 位置与 8.6 归 C3。Transport 未发现对应裸样式组，未制造无必要改动。未删除历史盘点中的旧位置记录。
@@ -110,6 +110,8 @@ AX与参考图在证据目录 `live-reference.*`、`live-before-delivery.ax.txt`
 
 独立 `pstack-reviewer` 对 `git diff 886841c7^ 886841c7`、`git diff d3fa50f2` 和实际合入代码按 Standards/Spec 两轴只读审查，未执行验证或修改。原Spec唯一必修 success 消费者覆盖已补齐，并经同一 reviewer 复核关闭；后续三份 gate 改动也复核为无非预期绕过或越界。
 
+最终独立 `pstack-reviewer` 对 `git diff gpuix-migration -- <13个最终接口相关路径>` 并对照 `a2104da0` 复核当前源码；格式、labels、C/L/R 兼容、meter 策略与完整受控配置均无新增 Standards/Spec finding。现存 CI geometry probe 缺 overlay 的仲裁项经协调者批准最小修复，reviewer 复核关闭，未弱化失败保护。
+
 | 发现 | 类别 | 处置 | 证据 |
 | --- | --- | --- | --- |
 | success恢复chart2缺少消费者保护 | 必修 | 完整受控colors输入；红→绿/蓝chart2真实paint；两个旧接线变异 | 14相关测试、12Toast变异通过；review复核关闭 |
@@ -120,18 +122,49 @@ AX与参考图在证据目录 `live-reference.*`、`live-before-delivery.ax.txt`
 | WARN Gallery height210 | 记录/C | 固定Gallery验证夹具，协调者明确批准保留 | 代码旁理由、默认图0差 |
 | WARN DeviceDisplay width200/height60 | 记录/C | 固定SVG坐标域，与path/viewBox同源，不是屏幕尺寸 | DEVICE_DISPLAY_VIEWBOX与精确2/3转换说明 |
 | WARN PanelGallery三处固定数值 | 记录/C | 面板几何验证夹具，非产品默认；补代码旁理由 | 原有Panel验证与相关范围通过 |
-| 暂态来源最终收口 | 汇报仲裁 | 依赖C4/C3合入后清理，未宣称完成 | 下表明确owner与删除目标 |
+| 暂态来源最终收口 | 已批准集成 | 同步 C4/C3；全部临时 policy、panel 文案、像素与 pan formatter 已删除 | 下表列实际最终消费者 |
+| 最终合并丢失 meter formatter 消费 | 必修 | `aria-valuetext` 读取注入 `formats.meter` | 注入两位小数原生读数先失败、修后通过；71相关用例通过 |
+| CI geometry probe 缺少 resize overlay | 汇报仲裁后必修 | 协调者批准同一相对定位根补 `TrackResizeOverlay`，保留所有 resize 验收 | `PROBE_PASSES=1` 修前抛 Missing resize fixture，修后退出0；`initiallyHidden=true`、新send高度13/纵向差17、恢复后`finalSendHidden=true`；reviewer复核关闭 |
 
-## 最终集成依赖
+## 最终集成与来源收口
 
-| 暂态路径 | 最终owner与动作 |
+合入 C4 `277ca73c` 与最终 `e13fd1da`，修复提交为 `78558c0f`、`2082c786`；再同步含 C3 `d3a13041` 的主干 `b19fd835`。保留主干面板 divider 不改色、AppShell 禁止文本拖选与采样率修复，不回退其它切片行为。
+
+| 原暂态路径 | 最终消费者与状态 |
 | --- | --- |
-| `DEFAULT_TOAST_POLICY`、AppShell/Gallery读取 | C4接notifications偏好，删除UI常量；Gallery改纯默认/最终来源 |
-| ProjectPage临时panel英文 | C4 locale来源替换，机器id不变 |
-| Footer `${pixels} pixels` | C4 accessiblePixels formatter替换 |
-| TrackMixer `formatPan/parsePan/PAN_WIDTH_SAMPLES` | C3合C4后换formats.pan并删除局部定义 |
+| `DEFAULT_TOAST_POLICY`、AppShell/Gallery读取 | UI 常量已删除；AppShell 读取 notifications 偏好，policy 更新不触发卸载 dismiss 清理；Gallery 读取最终默认来源 |
+| ProjectPage临时panel英文 | `panel.browser/arrangement/footer/activeDescription` locale；机器 id 未变 |
+| Footer `${pixels} pixels` | `labels.formats.accessiblePixels` |
+| TrackMixer `formatPan/parsePan/PAN_WIDTH_SAMPLES` | 三项局部定义已删除；完整 TrackLabels 注入 `formats.pan(value, "control")`、`parsePan` 与 `widthSamples.pan`，保留 C/L/R 控件惯例 |
+| TrackMixer 音量与 TrackMeter 无障碍读数 | 分别消费 `formats.db/parseDb/widthSamples.db` 与 `formats.meter`，不绕过注入的数值策略 |
 
-这些是协调者批准的破循环接线。本轮先交 `merge_ready`；合入复核后再完成最终来源收口并发唯一 `worker_done`。
+C4 合入后真实后端相关 106 文件为 753 pass、0 fail、168791 断言；原生配置矩阵 152 pass。浏览器 locale 更新先提交 React 状态再 flush 原生布局；全宽 `ＷＡＲＭ ＷＡＶＥＳ` 回归发现中央搜索归一化缺少 NFKC，经协调者批准补入 `normalize("NFKC")`，未在浏览器消费者特判。
+
+最终 C3/C4 接口组合后 `tsc --noEmit` 通过；5 个受影响 formatter、track row/meter 与受控 theme 文件共 71 pass、0 fail、439 断言。原生 meter 策略用例曾实际失败：注入两位小数仍得到写死的一位小数读数；消费者改读 `formats.meter` 后通过，未改断言或默认策略。
+
+最终真实后端 smoke 重新捕获 4 Gallery 与 8 业务组合，目录为证据根下 `final-integrated`。这是合入 C4 文案/格式来源后的 smoke，不把其与旧语言策略基线宣称为零差；原 C2 同 renderer 12 图严格零差结论仍见上节。最终 NFKC 变异通过：移除中央兼容归一化时真实 native 浏览器消费者回归失败，临时源码副本自动清理。入口必须由 `bun` 执行；误用 `node` 会令 runner 的 `process.execPath test` 尝试加载不存在的 `test` 模块，已改用正确命令，没有修改或跳过变异。
+
+最终 `node scripts/gpuix-review-scan.mjs` 为 132 source、60 test、0 HARD、15 WARN。合并尚未提交时 scanner 提示多个 merge-base，采用 `c72383ac`；下面逐项基于实际源码处置，没有静默豁免。
+
+| WARN 文件 | 结论与处置 |
+| --- | --- |
+| `app/locales/browser-catalog.ts` | 663 行的集中本地化目录数据，C4 合入；记录，不为压行数拆第二份来源 |
+| `app/verification/clip-edit/audio-render-cost.tsx` | 固定 1100×420 离屏负载夹具，记录/C，非产品尺寸 |
+| `app/verification/clip-edit/consumer-probe.tsx` | 固定 1100×420 消费者验收视口，记录/C |
+| `app/verification/clip-edit/demo/index.tsx` | 固定 1100×420 自有 demo 窗口，记录/C |
+| `app/verification/footer/demo.tsx` | 固定 1280×760 组合验收窗口，记录/C |
+| `app/verification/footer/measure.tsx` | 320 等值为不同面板测量夹具的 viewport，记录/C |
+| `app/verification/footer/states.tsx` | 1800×120 等值为状态捕获 viewport，记录/C |
+| `app/verification/lane/demo.tsx` | 固定 1280×800 自有 lane 窗口，记录/C |
+| `app/verification/timeline/layout-smoke.tsx` | 固定 1280×40 离屏 timeline 夹具，记录/C |
+| `app/verification/tracks/appearance-smoke.tsx` | 固定 760×720 轨道验收视口，记录/C |
+| `app/verification/tracks/demo.tsx` | 固定 1120×780 自有轨道窗口，记录/C |
+| `app/verification/tracks/render-cost.tsx` | 固定 1000×500 轨道负载视口，记录/C |
+| `gallery/states.tsx` | 已有旁注说明 height210 为固定 Gallery 夹具，与轨道密度无关，原协调者批准的 C |
+| `project/adapters/fixtures.ts` | C4 集中的 `TEST_TRACK_APPEARANCE` fixture 颜色，不是生产主题来源，记录/C |
+| `project/defaults/template.ts` | `paddingBars: 16` 为 C4 统一的工程时间轴默认策略，非像素，regex 误报，记录 |
+
+最终进程审计执行 `ps -axo pid,etime,command` 后匹配 `bun .*--hot|cargo run|gallery|demo`，匹配列表与本工作区匹配列表均为空；没有遗留验证窗口或后台进程。保留长期 lane 的 worktree、终端与分支，不做派发外清理。
 
 ## 错题
 
@@ -141,6 +174,8 @@ AX与参考图在证据目录 `live-reference.*`、`live-before-delivery.ax.txt`
 - raw字符串替换grab会污染grabbing。复用已装TypeScript编译器AST按完整节点span替换，语法错误永不算杀死变异。[Compiler API](https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API)。
 - Orca check会重播最旧未ack批次，必须ack整个已处理delivery，否则新通知被挡住；不以重复轮询代替实际工作。
 - 根目录pnpm exec可误选全局TypeScript6；按项目声明作用域运行5.9.3，未通过静默弃用选项掩盖工具链选择错误。
+- C3/C4 合并时类型通过仍可能丢失数值策略消费者；注入两位小数的实际 meter 回归抓住了一位小数字面量，修消费者而不重新钉死默认文案。
+- 诊断入口必须组合被取证的真实 overlay；只挂 TrackRows 却找 resize 节点，会在原 CI 故障后叠加误报，不能删失败保护来消音。
 
 ## 已验证做法
 

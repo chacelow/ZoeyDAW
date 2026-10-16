@@ -21,8 +21,15 @@ export function seedClipEditProject(mediaUri: string, workload: "normal" | "dens
     ...TEST_CREATION,
     names: getCreationNames("en-US"),
     appearance: {
-      ...TEST_CREATION.appearance,
       heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight,
+      mainHeightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight,
+      colors: {
+        audio: CONTENT_PALETTE[0],
+        midi: CONTENT_PALETTE[1],
+        group: CONTENT_PALETTE[0],
+        return: CONTENT_PALETTE[0],
+        main: CONTENT_PALETTE[0],
+      },
     },
   }
   const midiTrack = createTrack("midi", tracks, undefined, creation)

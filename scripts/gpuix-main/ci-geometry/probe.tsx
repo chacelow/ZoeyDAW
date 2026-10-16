@@ -20,7 +20,8 @@ import { createTestAnimationFrames } from "@/project/sections/footer/verificatio
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
-import { trackResources } from "@/project/sections/arrangement/tracks/locales"
+import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
+import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "@/project/sections/arrangement/tracks/verification/frame-source"
 import type { TestRoot } from "@gpuix/react/testing"
 import { fontInventory } from "./font-inventory"
@@ -32,9 +33,13 @@ if (!Number.isSafeInteger(passes) || passes < 1)
 const sans = process.env.PROBE_SANS
 const design = {
   ...DEFAULT_DESIGN_TOKENS,
-  typography: { numberFontFamily: process.env.PROBE_NUMBER ?? "Menlo" },
+  typography: {
+    ...DEFAULT_DESIGN_TOKENS.typography,
+    numberFontFamily: process.env.PROBE_NUMBER ?? DEFAULT_DESIGN_TOKENS.typography.numberFontFamily,
+  },
 }
 const rootStyle = {
+  position: "relative" as const,
   width: "100%" as const,
   height: "100%" as const,
   display: "flex" as const,
@@ -42,6 +47,7 @@ const rootStyle = {
   ...(sans ? { fontFamily: sans } : {}),
 }
 const frames = createControlledFrames()
+// This viewport is a fixed verification fixture, not a product window default.
 const view = { width: 1000, height: 1600, pxPerBar: 32, scrollX: 0, scrollY: 0, dpr: 1 }
 
 function Tracks() {
@@ -66,9 +72,14 @@ function Tracks() {
             viewport={acceptedViewport}
             focusedTrackId={null}
             telemetry={readProjectTelemetry}
-            labels={trackResources["en-US"].arrangement}
+            labels={createTrackLabels("en-US")}
             onFocusTrack={id => projectActions.selectTracks([id], "header")}
             renderLane={row => <text>{row.track.name}</text>}
+          />
+          <TrackResizeOverlay
+            scene={scene}
+            viewport={acceptedViewport}
+            labels={createTrackLabels("en-US")}
           />
         </div>
       </ThemeProvider>

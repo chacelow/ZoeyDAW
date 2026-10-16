@@ -23,6 +23,7 @@ export type AutomationHit =
   | { row: AutomationRow; kind: "lane"; value: number; onLine: boolean }
 
 export function hitAutomation(scene: ArrangementScene, pointer: Point): AutomationHit | null {
+  const hit = scene.geometry.arrangement.hit
   const row = activeAutomationRows(scene).find(
     item => pointer.y >= item.top && pointer.y < item.bottom
   )
@@ -30,8 +31,8 @@ export function hitAutomation(scene: ArrangementScene, pointer: Point): Automati
   const points = row.lane?.points ?? []
   for (const point of points) {
     if (
-      Math.abs(pointer.x - automationX(scene, point.bar)) <= 6 &&
-      Math.abs(pointer.y - automationY(row, point.value)) <= 7
+      Math.abs(pointer.x - automationX(scene, point.bar)) <= hit.automationPointX &&
+      Math.abs(pointer.y - automationY(row, point.value)) <= hit.automationPointY
     ) {
       return { row, kind: "point", point }
     }
@@ -43,10 +44,15 @@ export function hitAutomation(scene: ArrangementScene, pointer: Point): Automati
     for (let index = 1; index < points.length; index++) {
       const from = points[index - 1]
       const to = points[index]
-      if (bar > from.bar && bar < to.bar && distance <= Math.min(14, row.valueHeight / 8)) {
-        return { row, kind: "segment", from, to, value, near: distance > 4 }
+      if (
+        bar > from.bar &&
+        bar < to.bar &&
+        distance <=
+          Math.min(hit.automationSegmentMax, row.valueHeight * hit.automationSegmentHeightFraction)
+      ) {
+        return { row, kind: "segment", from, to, value, near: distance > hit.automationNear }
       }
     }
   }
-  return { row, kind: "lane", value, onLine: distance <= 4 }
+  return { row, kind: "lane", value, onLine: distance <= hit.automationNear }
 }

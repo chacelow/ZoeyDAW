@@ -12,6 +12,7 @@ import {
   readProjectTelemetry,
 } from "@/project/adapters"
 import { createTrack } from "@/project/model/reducers"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import {
   createTestDocument,
   createTestWorkspace,
@@ -19,13 +20,12 @@ import {
   TEST_PROJECT_CREATION,
   TEST_TRACK_APPEARANCE,
 } from "@/project/adapters/fixtures"
-import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
 import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
+import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "@/project/sections/arrangement/tracks/verification/frame-source"
-import { trackResources } from "@/project/sections/arrangement/tracks/locales"
 
 const directory =
   process.env.TRACKS_EVIDENCE_DIR ?? mkdtempSync(path.join(tmpdir(), "zoeydaw-tracks-"))
@@ -73,13 +73,13 @@ for (const appearance of ["dark", "light"] as const) {
                   focusedTrackId={null}
                   onFocusTrack={id => projectActions.selectTracks([id], "header")}
                   telemetry={readProjectTelemetry}
-                  labels={trackResources[language].arrangement}
+                  labels={createTrackLabels(language)}
                   renderLane={row => <text>{row.track.name}</text>}
                 />
                 <TrackResizeOverlay
                   scene={scene.get()}
                   viewport={viewport}
-                  labels={trackResources[language].arrangement}
+                  labels={createTrackLabels(language)}
                 />
               </div>
             </ControlEnvironmentProvider>

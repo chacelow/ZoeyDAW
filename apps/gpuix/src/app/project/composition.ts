@@ -1,3 +1,5 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { createTimelineController } from "@/project/sections/arrangement/timeline"
 import { createLaneController } from "@/project/sections/arrangement/lane"
@@ -23,6 +25,7 @@ export interface ProjectComposition {
 }
 
 export interface ProjectCompositionDependencies {
+  readonly readPolicy?: () => ArrangementPolicy
   readonly interaction: AppInteraction
   readonly keyboard: WindowKeyboard
   readonly clipboard: NativeClipboard
@@ -36,6 +39,7 @@ export interface ProjectCompositionDependencies {
 
 /** Controllers share one scene; the timeline owns its projection and keyboard. */
 export function createProjectComposition(deps: ProjectCompositionDependencies): ProjectComposition {
+  const readPolicy = deps.readPolicy ?? (() => ARRANGEMENT_DEFAULTS)
   const sceneStore = createSceneStore(deps.geometry)
   let clipKey: number | undefined
   let windowKey: number | undefined
@@ -45,6 +49,7 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
   })
   const timeline = createTimelineController({
     sceneStore,
+    readPolicy,
     initialSize: { containerWidth: 0, bodyHeight: 0, timelineLeft: 0 },
     metrics: deps.metrics,
     subscribeWindowActive: deps.subscribeWindowActive,
@@ -70,10 +75,13 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
   })
   lane = createLaneController({
     scene: sceneStore,
+    readPolicy,
     actions: projectActions,
     getState: useProjectState.getState,
     clipboard: deps.clipboard,
-    edgePixels: deps.metrics.timelineAutoScrollEdge,
+    get edgePixels() {
+      return deps.metrics.timelineAutoScrollEdge
+    },
     setScroll: timeline.setScroll,
     markDrawModeGesture: timeline.keyboard.markDrawGesture,
   })

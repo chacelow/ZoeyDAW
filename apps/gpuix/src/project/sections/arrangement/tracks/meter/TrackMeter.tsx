@@ -1,14 +1,8 @@
-import { useLayoutEffect, useRef, useState } from "react"
+import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useTrackLabels } from "../labels"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useProjectState } from "@/project/adapters"
-import {
-  advanceMeterPeak,
-  createMeterPeak,
-  meterDb,
-  METER_MIN_DB,
-  METER_MAX_DB,
-} from "../../core/meters/meter-peak"
+import { advanceMeterPeak, createMeterPeak, meterDb } from "../../core/meters/meter-peak"
 import { useMeterEnvironment } from "./telemetry"
 
 interface MeterDisplay {
@@ -16,12 +10,6 @@ interface MeterDisplay {
   right: number
   leftPeak: number
   rightPeak: number
-}
-const SILENT_DISPLAY: MeterDisplay = {
-  left: METER_MIN_DB,
-  right: METER_MIN_DB,
-  leftPeak: METER_MIN_DB,
-  rightPeak: METER_MIN_DB,
 }
 
 export function TrackMeter({
@@ -33,35 +21,45 @@ export function TrackMeter({
   readonly trackName: string
   readonly height: number
 }) {
-  const { t } = useTrackLabels()
+  const { t, formats } = useTrackLabels()
   const theme = useTheme()
-  const { telemetry: readTelemetry, driver } = useMeterEnvironment()
+  const { telemetry: readTelemetry, driver, policy } = useMeterEnvironment()
+  const { minDb, maxDb } = policy
   const reader = useRef(readTelemetry)
   useLayoutEffect(() => {
     reader.current = readTelemetry
   }, [readTelemetry])
   const epoch = useProjectState(state => state.session.backend.sessionId)
-  const peaks = useRef({ left: createMeterPeak(), right: createMeterPeak() })
-  const [display, setDisplay] = useState(SILENT_DISPLAY)
+  const peaks = useRef({ left: createMeterPeak(policy), right: createMeterPeak(policy) })
+  const silentDisplay = useMemo<MeterDisplay>(
+    () => ({
+      left: minDb,
+      right: minDb,
+      leftPeak: minDb,
+      rightPeak: minDb,
+    }),
+    [minDb]
+  )
+  const [display, setDisplay] = useState(silentDisplay)
   useLayoutEffect(() => {
-    peaks.current = { left: createMeterPeak(), right: createMeterPeak() }
-    setDisplay(SILENT_DISPLAY)
+    peaks.current = { left: createMeterPeak(policy), right: createMeterPeak(policy) }
+    setDisplay(silentDisplay)
     return driver.subscribe({
       active() {
         const level = reader.current()?.levels[trackId]
         return (
-          meterDb(level?.[0] ?? METER_MIN_DB) > METER_MIN_DB ||
-          meterDb(level?.[1] ?? METER_MIN_DB) > METER_MIN_DB ||
-          peaks.current.left.db > METER_MIN_DB ||
-          peaks.current.right.db > METER_MIN_DB
+          meterDb(level?.[0] ?? minDb, policy) > minDb ||
+          meterDb(level?.[1] ?? minDb, policy) > minDb ||
+          peaks.current.left.db > minDb ||
+          peaks.current.right.db > minDb
         )
       },
       advance(now) {
         const level = reader.current()?.levels[trackId]
-        const left = meterDb(level?.[0] ?? METER_MIN_DB)
-        const right = meterDb(level?.[1] ?? METER_MIN_DB)
-        advanceMeterPeak(peaks.current.left, left, now)
-        advanceMeterPeak(peaks.current.right, right, now)
+        const left = meterDb(level?.[0] ?? minDb, policy)
+        const right = meterDb(level?.[1] ?? minDb, policy)
+        advanceMeterPeak(peaks.current.left, left, now, policy)
+        advanceMeterPeak(peaks.current.right, right, now, policy)
         const leftPeak = peaks.current.left.db
         const rightPeak = peaks.current.right.db
         setDisplay(previous =>
@@ -72,24 +70,23 @@ export function TrackMeter({
             ? previous
             : { left, right, leftPeak, rightPeak }
         )
-        return leftPeak > METER_MIN_DB || rightPeak > METER_MIN_DB
+        return leftPeak > minDb || rightPeak > minDb
       },
     })
-  }, [trackId, epoch, driver])
+  }, [trackId, epoch, driver, policy, minDb, silentDisplay])
   const width = theme.control["--spacing-control-track"]
-  const channelWidth = Math.floor((width - 1) / 2)
-  const zeroY = Math.min(
-    height - 1,
-    Math.round((height * METER_MAX_DB) / (METER_MAX_DB - METER_MIN_DB))
-  )
+  const { channelGap, peakWidth, zeroWidth, warningStop } = theme.design.editor.meter
+  // Stereo has two channels; level ratios remain normalized independently of visual metrics.
+  const channelWidth = Math.floor((width - channelGap) / 2)
+  const zeroY = Math.min(height - zeroWidth, Math.round((height * maxDb) / (maxDb - minDb)))
   return (
     <div
       role="meter"
       aria-label={`${t("levelMeter")} ${trackName}`}
-      aria-valuemin={METER_MIN_DB}
-      aria-valuemax={METER_MAX_DB}
+      aria-valuemin={minDb}
+      aria-valuemax={maxDb}
       aria-valuenow={Math.max(display.left, display.right)}
-      aria-valuetext={`L ${display.left.toFixed(1)} dB, R ${display.right.toFixed(1)} dB`}
+      aria-valuetext={formats.meter(display.left, display.right)}
       testId={`track-meter-${trackId}`}
       style={{
         position: "relative",
@@ -102,12 +99,10 @@ export function TrackMeter({
       {(["left", "right"] as const).map((channel, index) => {
         const level = display[channel]
         const peak = channel === "left" ? display.leftPeak : display.rightPeak
-        const top = Math.round(
-          height * (1 - (level - METER_MIN_DB) / (METER_MAX_DB - METER_MIN_DB))
-        )
+        const top = Math.round(height * (1 - (level - minDb) / (maxDb - minDb)))
         const peakY = Math.min(
-          height - 1,
-          Math.round(height * (1 - (peak - METER_MIN_DB) / (METER_MAX_DB - METER_MIN_DB)))
+          height - peakWidth,
+          Math.round(height * (1 - (peak - minDb) / (maxDb - minDb)))
         )
         return (
           <div
@@ -115,9 +110,9 @@ export function TrackMeter({
             testId={`track-meter-${channel}-${trackId}`}
             style={{
               position: "absolute",
-              left: index === 0 ? 0 : channelWidth + 1,
+              left: index === 0 ? 0 : channelWidth + channelGap,
               top: 0,
-              width: index === 0 ? channelWidth : width - channelWidth - 1,
+              width: index === 0 ? channelWidth : width - channelWidth - channelGap,
               height,
               overflow: "hidden",
               backgroundColor: theme.colors.arrangementMeterGood,
@@ -125,6 +120,7 @@ export function TrackMeter({
           >
             <div
               aria-hidden="true"
+              testId={`track-meter-gradient-${channel}-${trackId}`}
               style={{
                 position: "absolute",
                 top: zeroY,
@@ -133,10 +129,11 @@ export function TrackMeter({
                 right: 0,
                 background: {
                   type: "linear-gradient",
+                  // A half turn directs the normalized gradient downward; this is geometry, not style.
                   angle: 180,
                   stops: [
                     { position: 0, color: theme.colors.arrangementMeterWarn },
-                    { position: 0.3, color: theme.colors.arrangementMeterGood },
+                    { position: warningStop, color: theme.colors.arrangementMeterGood },
                   ],
                 },
               }}
@@ -164,7 +161,7 @@ export function TrackMeter({
                 backgroundColor: theme.colors.muted,
               }}
             />
-            {peak > METER_MIN_DB ? (
+            {peak > minDb ? (
               <div
                 aria-hidden="true"
                 testId={`track-meter-peak-${channel}-${trackId}`}
@@ -173,7 +170,7 @@ export function TrackMeter({
                   top: peakY,
                   left: 0,
                   right: 0,
-                  height: 1,
+                  height: peakWidth,
                   backgroundColor: theme.colors.arrangementMeterPeak,
                 }}
               />
@@ -189,7 +186,7 @@ export function TrackMeter({
           left: 0,
           right: 0,
           top: zeroY,
-          height: 1,
+          height: zeroWidth,
           backgroundColor: theme.colors.arrangementSurfaceAlt,
         }}
       />

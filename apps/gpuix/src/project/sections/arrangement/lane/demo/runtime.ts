@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import type { EventPayload } from "@gpuix/react"
 import { createNativeClipboard } from "@/platform/clipboard"
@@ -55,18 +56,21 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
     patch: Partial<Pick<ArrangementViewport, "pxPerBar" | "scrollX" | "scrollY">> = {}
   ) {
     const state = useProjectState.getState()
-    return clampTimelineViewport({
-      geometry: scene.get().geometry.track,
-      bars: scene.get().bars,
-      containerWidth: width,
-      bodyHeight: height,
-      numerator: state.document.transport.numerator,
-      denominator: state.document.transport.denominator,
-      tracks: visibleTracks(getEffectiveDocument().tracks),
-      storedPxPerBar: patch.pxPerBar ?? state.workspace.pxPerBar,
-      storedScrollX: patch.scrollX ?? state.workspace.scrollX,
-      storedScrollY: patch.scrollY ?? state.workspace.scrollY,
-    })
+    return clampTimelineViewport(
+      {
+        geometry: scene.get().geometry,
+        bars: scene.get().bars,
+        containerWidth: width,
+        bodyHeight: height,
+        numerator: state.document.transport.numerator,
+        denominator: state.document.transport.denominator,
+        tracks: visibleTracks(getEffectiveDocument().tracks),
+        storedPxPerBar: patch.pxPerBar ?? state.workspace.pxPerBar,
+        storedScrollX: patch.scrollX ?? state.workspace.scrollX,
+        storedScrollY: patch.scrollY ?? state.workspace.scrollY,
+      },
+      ARRANGEMENT_DEFAULTS.zoom
+    )
   }
   function applyViewport(
     patch: Partial<Pick<ArrangementViewport, "pxPerBar" | "scrollX" | "scrollY">> = {}
@@ -229,20 +233,23 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
       if (event.modifiers?.cmd || event.modifiers?.ctrl) {
         const solved = layout()
         applyViewport(
-          wheelZoom({
-            ...current.viewport,
-            bars: current.bars,
-            viewportWidth: current.viewport.width,
-            minPxPerBar: solved.minPxPerBar,
-            maxPxPerBar: solved.maxPxPerBar,
-            anchorX: (event.x ?? originX) - originX,
-            deltaY: -(event.deltaY ?? 0) * scale,
-          })
+          wheelZoom(
+            {
+              ...current.viewport,
+              bars: current.bars,
+              viewportWidth: current.viewport.width,
+              minPxPerBar: solved.minPxPerBar,
+              maxPxPerBar: solved.maxPxPerBar,
+              anchorX: (event.x ?? originX) - originX,
+              deltaY: -(event.deltaY ?? 0) * scale,
+            },
+            ARRANGEMENT_DEFAULTS.zoom
+          )
         )
       } else {
         applyViewport(
           panViewport({
-            geometry: current.geometry.track,
+            geometry: current.geometry,
             ...current.viewport,
             bars: current.bars,
             tracks: visibleTracks(getEffectiveDocument().tracks),
@@ -257,14 +264,17 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
       const current = scene.get()
       const solved = layout()
       applyViewport(
-        stepZoom({
-          ...current.viewport,
-          bars: current.bars,
-          viewportWidth: current.viewport.width,
-          minPxPerBar: solved.minPxPerBar,
-          maxPxPerBar: solved.maxPxPerBar,
-          direction,
-        })
+        stepZoom(
+          {
+            ...current.viewport,
+            bars: current.bars,
+            viewportWidth: current.viewport.width,
+            minPxPerBar: solved.minPxPerBar,
+            maxPxPerBar: solved.maxPxPerBar,
+            direction,
+          },
+          ARRANGEMENT_DEFAULTS.zoom
+        )
       )
     },
     frame(timestampMs) {
@@ -272,16 +282,19 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
       lane.step(timestampMs)
       const current = scene.get()
       const state = useProjectState.getState()
-      const next = followViewport({
-        ...current.viewport,
-        bars: current.bars,
-        viewportWidth: current.viewport.width,
-        transportBar: readTransportBar(),
-        playing: state.session.playing,
-        follow: state.workspace.follow,
-        now: timestampMs,
-        manualPanUntil,
-      })
+      const next = followViewport(
+        {
+          ...current.viewport,
+          bars: current.bars,
+          viewportWidth: current.viewport.width,
+          transportBar: readTransportBar(),
+          playing: state.session.playing,
+          follow: state.workspace.follow,
+          now: timestampMs,
+          manualPanUntil,
+        },
+        ARRANGEMENT_DEFAULTS.follow
+      )
       if (next !== current.viewport.scrollX) applyViewport({ scrollX: next })
     },
     interrupt() {

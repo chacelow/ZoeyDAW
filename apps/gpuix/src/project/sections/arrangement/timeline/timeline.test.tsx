@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -136,6 +137,7 @@ describe("Native timeline layout and hit testing", () => {
             onViewport={projectActions.setViewport}
             onFit={owner.fitToProject}
             geometry={{
+              policy: ARRANGEMENT_DEFAULTS,
               bars: 128,
               viewportWidth: 800,
               pxPerBar: workspace.pxPerBar,
@@ -193,6 +195,7 @@ describe("Native timeline layout and hit testing", () => {
           onViewport={projectActions.setViewport}
           onFit={owner.fitToProject}
           geometry={{
+            policy: ARRANGEMENT_DEFAULTS,
             bars: 128,
             viewportWidth: 800,
             pxPerBar: 100,
@@ -361,7 +364,7 @@ describe("Native timeline layout and hit testing", () => {
     disposals.push(root.unmount)
     root.render(
       <ThemeProvider>
-        <TimeRuler scene={scene} label="Time ruler" />
+        <TimeRuler formats={englishLabels.formats} scene={scene} label="Time ruler" />
       </ThemeProvider>
     )
     function tenSecondsLeft() {

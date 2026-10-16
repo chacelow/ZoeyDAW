@@ -1,7 +1,7 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { MIN_CLIP_LENGTH_BARS } from "@/project/model/grid"
 import { positionToBar, visibleTracks } from "@/project/model/types"
-import { MARKER_RULER_HEIGHT } from "../../core/layout"
 import { barAt, movedLoop, rulerBar, rulerHit } from "../../core/rulers/geometry"
 import type { TimelineKeyboardInput } from "../keyboard/controller"
 import type { ProjectEditToken, SessionState } from "@/project/model/types"
@@ -19,7 +19,10 @@ export interface RulerController {
   dispose: () => void
 }
 
-export function createRulerController(scene: SceneStore): RulerController {
+export function createRulerController(
+  scene: SceneStore,
+  readPolicy: () => ArrangementPolicy["keyboard"]
+): RulerController {
   let gesture: {
     move: (x: number, shift: boolean) => void
     finish: (cancelled: boolean) => void
@@ -176,7 +179,7 @@ export function createRulerController(scene: SceneStore): RulerController {
       } else if (hit.kind === "loop") {
         projectActions.setLoop({ enabled: !current.loop.enabled })
         scene.setTargetSelection({ kind: "loop" })
-      } else if (y < MARKER_RULER_HEIGHT) {
+      } else if (y < current.geometry.arrangement.markerRulerHeight) {
         const id = projectActions.addMarker(
           rulerBar(current, x, useProjectState.getState().workspace.snap, shift)
         )
@@ -209,7 +212,7 @@ export function createRulerController(scene: SceneStore): RulerController {
       } else if ((key === "f2" || key === "enter") && selected.kind === "marker") {
         scene.setTargetSelection({ ...selected, phase: "renaming" })
       } else if (key === "left" || key === "right") {
-        const step = state.workspace.snap ? current.gridPlan.cellBars : 1 / 16
+        const step = state.workspace.snap ? current.gridPlan.cellBars : readPolicy().markerNudgeBars
         const delta = key === "right" ? step : -step
         if (selected.kind === "loop") {
           projectActions.setLoop(

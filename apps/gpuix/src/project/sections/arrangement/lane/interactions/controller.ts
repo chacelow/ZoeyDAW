@@ -1,3 +1,5 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import type { NativeClipboard } from "@/platform/clipboard"
 import type { ArrangementViewport } from "../../core/scene"
 import { snapBar } from "@/project/model/grid-geometry"
@@ -39,7 +41,8 @@ export interface LaneController {
   dispose(): void
 }
 
-export interface LaneControllerDeps extends LaneContext {
+export interface LaneControllerDeps extends Omit<LaneContext, "readPolicy"> {
+  readPolicy?: () => ArrangementPolicy
   clipboard: NativeClipboard
   edgePixels: number
   setScroll(x: number, y: number): ArrangementViewport
@@ -47,7 +50,12 @@ export interface LaneControllerDeps extends LaneContext {
 }
 
 export function createLaneController(deps: LaneControllerDeps): LaneController {
-  const context: LaneContext = { scene: deps.scene, actions: deps.actions, getState: deps.getState }
+  const context: LaneContext = {
+    scene: deps.scene,
+    actions: deps.actions,
+    getState: deps.getState,
+    readPolicy: deps.readPolicy ?? (() => ARRANGEMENT_DEFAULTS),
+  }
   const clip = createClipInteractions(context)
   const automation = createAutomationInteractions(context)
   let active: {
@@ -143,7 +151,8 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
         return
       }
       active.pointer = pointer
-      if (!active.started && !dragStarted(active.origin, pointer)) return
+      if (!active.started && !dragStarted(active.origin, pointer, context.readPolicy().pointer))
+        return
       if (!active.started) {
         active.started = true
         publish(interaction.cursor, !!active.gesture.autoScroll)
@@ -245,10 +254,11 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
         viewport: scene.viewport,
         bars: scene.bars,
         tracks: scene.tracks,
-        geometry: scene.geometry.track,
+        geometry: scene.geometry,
         pointer,
         axis: current.gesture.autoScroll,
         edge: deps.edgePixels,
+        policy: context.readPolicy().autoScroll,
         elapsed: lastFrame === null ? 0 : timestampMs - lastFrame,
       })
       lastFrame = timestampMs

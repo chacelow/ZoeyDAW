@@ -57,6 +57,7 @@ export const ClipContentsView = memo(function ClipContentsView({
   )
   const noteBatch = useQuadBatch()
   const noteQuads = useMemo(() => {
+    // Native quad uploads encode each rectangle as x/y/width/height.
     const values = new Float32Array(notes.length * 4)
     let offset = 0
     for (const note of notes) {
@@ -101,7 +102,11 @@ export const ClipContentsView = memo(function ClipContentsView({
               width,
               height: g.bodyHeight,
               backgroundColor: bodyColor,
-              opacity: card.selected ? 0.9 : automationMode ? 0.25 : 0.55,
+              opacity: card.selected
+                ? theme.design.editor.clipBodySelectedOpacity
+                : automationMode
+                  ? theme.design.editor.clipBodyAutomationOpacity
+                  : theme.design.editor.clipBodyOpacity,
               pointerEvents: "none",
             })}
           />
@@ -116,7 +121,9 @@ export const ClipContentsView = memo(function ClipContentsView({
                 width,
                 height: g.bodyHeight,
                 color: theme.colors.arrangementLine,
-                opacity: card.hovered ? 0.3 : 0.4,
+                opacity: card.hovered
+                  ? theme.design.editor.clipGridHoveredOpacity
+                  : theme.design.editor.clipGridOpacity,
                 pointerEvents: "none",
               })}
             />
@@ -132,7 +139,7 @@ export const ClipContentsView = memo(function ClipContentsView({
                 width,
                 height: g.height,
                 color: ink,
-                opacity: automationMode ? 0.4 : 1,
+                opacity: automationMode ? theme.design.editor.clipAutomationPreviewOpacity : 1,
                 pointerEvents: "none",
               })}
             />
@@ -148,7 +155,7 @@ export const ClipContentsView = memo(function ClipContentsView({
               height={g.bodyHeight}
               top={g.titleHeight}
               color={ink}
-              opacity={automationMode ? 0.4 : 1}
+              opacity={automationMode ? theme.design.editor.clipAutomationPreviewOpacity : 1}
               readPeaks={readPeaks}
             />
           )}
@@ -170,7 +177,7 @@ export const ClipContentsView = memo(function ClipContentsView({
             position: "absolute",
             left: x - visibleLeft,
             top: 0,
-            width: 1,
+            width: theme.design.editor.loopLineWidth,
             height: theme.project.arrangementLoopTickHeight,
             backgroundColor: ink,
             pointerEvents: "none",
@@ -186,7 +193,7 @@ export const ClipContentsView = memo(function ClipContentsView({
             width,
             height: g.height,
             backgroundColor: theme.colors.foreground,
-            opacity: 0.1,
+            opacity: theme.design.editor.clipLoopShadeOpacity,
             pointerEvents: "none",
           })}
         />

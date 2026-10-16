@@ -72,11 +72,11 @@ it("culls offscreen native cards and retains visible node identity while scrolli
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
             <LaneContents
+              creationNames={TEST_CREATION_NAMES}
               row={row}
               scene={scene.get()}
               automationMode={false}
               readPeaks={() => new Float32Array(0)}
-              creationNames={TEST_CREATION_NAMES}
             />
           </div>
         </div>
@@ -128,11 +128,11 @@ it("moves a fully visible Clip without reuploading or remounting its unchanged c
       <ThemeProvider>
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <LaneContents
+            creationNames={TEST_CREATION_NAMES}
             row={row}
             scene={scene.get()}
             automationMode={false}
             readPeaks={readPeaks}
-            creationNames={TEST_CREATION_NAMES}
           />
         </div>
       </ThemeProvider>
@@ -199,11 +199,11 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
           <div style={{ position: "relative", width: 500, height: 300 }}>
             <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
               <LaneContents
+                creationNames={TEST_CREATION_NAMES}
                 row={row}
                 scene={scene.get()}
                 automationMode={false}
                 readPeaks={() => new Float32Array(0)}
-                creationNames={TEST_CREATION_NAMES}
               />
             </div>
             <LaneOverlay
@@ -325,11 +325,11 @@ it("preserves tiny Clip pixel width when projecting a collapsed group summary", 
       <ThemeProvider>
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <LaneContents
+            creationNames={TEST_CREATION_NAMES}
             row={row}
             scene={scene.get()}
             automationMode={false}
             readPeaks={() => new Float32Array(0)}
-            creationNames={TEST_CREATION_NAMES}
           />
         </div>
       </ThemeProvider>
@@ -388,11 +388,11 @@ it("scrolls an already-visible unchanged Clip without rerendering its content", 
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
             <LaneContents
+              creationNames={TEST_CREATION_NAMES}
               row={row}
               scene={scene.get()}
               automationMode={false}
               readPeaks={readPeaks}
-              creationNames={TEST_CREATION_NAMES}
             />
           </div>
         </div>
@@ -455,11 +455,11 @@ it("refreshes a cached mounted Clip title when density changes without changing 
       <ThemeProvider control={control} layout={layout}>
         <div style={{ position: "relative", width: 500, height: 200 }}>
           <LaneContents
+            creationNames={TEST_CREATION_NAMES}
             row={row}
             scene={scene.get()}
             automationMode={false}
             readPeaks={readPeaks}
-            creationNames={TEST_CREATION_NAMES}
           />
         </div>
       </ThemeProvider>

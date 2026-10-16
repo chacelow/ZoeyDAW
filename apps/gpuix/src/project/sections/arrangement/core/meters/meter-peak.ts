@@ -1,7 +1,4 @@
-export const METER_MIN_DB = -60
-export const METER_MAX_DB = 6
-const HOLD_MS = 600
-const FALL_DB_PER_SECOND = 24
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 
 export interface MeterPeak {
   db: number
@@ -9,24 +6,30 @@ export interface MeterPeak {
   updatedAt: number
 }
 
-export function createMeterPeak(): MeterPeak {
-  return { db: METER_MIN_DB, holdUntil: 0, updatedAt: 0 }
+export function createMeterPeak(policy: ArrangementPolicy["meter"]): MeterPeak {
+  return { db: policy.minDb, holdUntil: 0, updatedAt: 0 }
 }
 
-export function meterDb(levelDb: number): number {
+export function meterDb(levelDb: number, policy: ArrangementPolicy["meter"]): number {
   return Number.isNaN(levelDb)
-    ? METER_MIN_DB
-    : Math.max(METER_MIN_DB, Math.min(METER_MAX_DB, levelDb))
+    ? policy.minDb
+    : Math.max(policy.minDb, Math.min(policy.maxDb, levelDb))
 }
 
-export function advanceMeterPeak(peak: MeterPeak, levelDb: number, now: number): void {
-  const level = meterDb(levelDb)
-  if (level >= peak.db && level > METER_MIN_DB) {
+export function advanceMeterPeak(
+  peak: MeterPeak,
+  levelDb: number,
+  now: number,
+  policy: ArrangementPolicy["meter"]
+): void {
+  const level = meterDb(levelDb, policy)
+  if (level >= peak.db && level > policy.minDb) {
     peak.db = level
-    peak.holdUntil = now + HOLD_MS
+    peak.holdUntil = now + policy.holdMs
   } else {
     const elapsed = Math.max(0, now - Math.max(peak.updatedAt, peak.holdUntil))
-    peak.db = Math.max(level, peak.db - (elapsed * FALL_DB_PER_SECOND) / 1000)
+    // Milliseconds-to-seconds conversion is a time-unit constant, not a meter preference.
+    peak.db = Math.max(level, peak.db - (elapsed * policy.fallDbPerSecond) / 1000)
   }
   peak.updatedAt = now
 }
