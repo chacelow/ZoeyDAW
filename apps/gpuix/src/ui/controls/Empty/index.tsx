@@ -41,7 +41,7 @@ export function EmptyHeader({ style, ...props }: Props) {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          maxWidth: theme.project.controlsWidth,
+          maxWidth: theme.layout.track.controlsWidth,
           gap: theme.control["--spacing-control-track-gap"] * 2,
         },
         style

@@ -36,7 +36,7 @@ export function ClipNameEditor({
   const rect = clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
   const left = Math.max(0, Math.round(rect.left) + 1)
   const width = Math.min(
-    theme.project.controlsWidth,
+    theme.layout.track.controlsWidth,
     scene.viewport.width - left,
     rect.left + rect.width - left - 2
   )

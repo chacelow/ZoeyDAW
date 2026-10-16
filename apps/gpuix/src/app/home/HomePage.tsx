@@ -46,7 +46,7 @@ export function HomePage({ storage }: HomePageProps) {
         flexDirection: "column",
         gap: theme.design.spacing.cardGroupGap,
         width: "100%",
-        maxWidth: theme.project.controlsWidth * 3,
+        maxWidth: theme.layout.home.maxWidth,
         alignSelf: "center",
         height: "100%",
         minHeight: 0,
@@ -95,7 +95,7 @@ export function HomePage({ storage }: HomePageProps) {
                   aria-label={project.name}
                   onClick={() => open(project)}
                   style={{
-                    width: theme.project.controlsWidth,
+                    width: theme.layout.track.controlsWidth,
                   }}
                 >
                   <text style={{ fontWeight: 500 }}>{project.name}</text>

@@ -29,7 +29,7 @@ export function UnsavedCloseDialog({ open, onChoose }: UnsavedCloseDialogProps) 
           display: "flex",
           flexDirection: "column",
           gap,
-          width: theme.project.controlsWidth,
+          width: theme.layout.track.controlsWidth,
           padding: theme.design.popover.inset,
           borderWidth: theme.design.popover.borderWidth,
           borderRadius: theme.design.popover.radius,

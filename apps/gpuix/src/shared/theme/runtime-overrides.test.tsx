@@ -7,13 +7,17 @@ import { trackResources } from "@/project/sections/arrangement/tracks/locales"
 import { createMockDocument } from "@/project/adapters/fixtures"
 import { CONTROL_METRICS, PROJECT_METRICS } from "./metrics/config"
 import { DEFAULT_DESIGN_TOKENS } from "./design-tokens"
-import { createLayoutTokens } from "./layout-tokens"
+import { DEFAULT_LAYOUT_TOKENS, createLayoutTokens } from "./layout-tokens"
 import { ThemeProvider } from "./ThemeProvider"
 import type { ThemeProviderProps } from "./ThemeProvider"
 import type { TestRoot } from "@gpuix/react/testing"
 import { colorMix } from "./color-mix"
 import { getThemePreset } from "./presets"
 import { resolveContentColor } from "./content-color"
+import { HomePage } from "@/app/home/HomePage"
+import { createRouter, RouterProvider } from "@/app/router/router"
+import { createMemorySnapshotStorage } from "@/project/adapters"
+import { initAppI18n } from "@/app/i18n"
 
 function bounds(root: TestRoot, id: string) {
   const node = root.renderer.findByTestId(id)
@@ -91,6 +95,32 @@ test("runtime group overrides resize real controls and track identity without st
     expect(bounds(root, "default-control").height).toBe(13)
     expect(bounds(root, "transport-control").height).toBe(20)
     expect(bounds(root, `track-title-${track.id}`).height).toBe(21)
+  } finally {
+    root.unmount()
+  }
+})
+
+test("Home uses its layout maximum width independently of the track control column", () => {
+  initAppI18n()
+  // Fixed native viewport makes the Home maximum visible without a live window.
+  const root = createTestRoot({ width: 1200, height: 300 })
+  const storage = createMemorySnapshotStorage()
+  const router = createRouter()
+  const show = (maxWidth: number) =>
+    root.render(
+      <ThemeProvider
+        layout={{ ...DEFAULT_LAYOUT_TOKENS, home: { ...DEFAULT_LAYOUT_TOKENS.home, maxWidth } }}
+      >
+        <RouterProvider value={router}>
+          <HomePage storage={storage} />
+        </RouterProvider>
+      </ThemeProvider>
+    )
+  try {
+    show(912)
+    expect(bounds(root, "home-page").width).toBe(912)
+    show(600)
+    expect(bounds(root, "home-page").width).toBe(600)
   } finally {
     root.unmount()
   }

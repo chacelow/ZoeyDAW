@@ -101,7 +101,7 @@ function RouteErrorScreen({
             display: "flex",
             flexDirection: "column",
             gap,
-            maxWidth: theme.project.controlsWidth,
+            maxWidth: theme.layout.track.controlsWidth,
             padding: theme.design.popover.inset,
             borderRadius: theme.design.popover.radius,
             backgroundColor: theme.colors.muted,

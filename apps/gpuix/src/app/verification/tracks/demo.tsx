@@ -125,7 +125,7 @@ function TrackSurface({
   const toolbarHeight = theme.control["--spacing-control-track"] + gap * 2
   const viewport = useMemo(
     () => ({
-      width: Math.max(0, size.width - theme.project.controlsWidth),
+      width: Math.max(0, size.width - theme.layout.track.controlsWidth),
       height: Math.max(0, size.height - toolbarHeight * 2),
       pxPerBar: workspace.pxPerBar,
       scrollX: workspace.scrollX,
@@ -136,7 +136,7 @@ function TrackSurface({
       size.width,
       size.height,
       toolbarHeight,
-      theme.project.controlsWidth,
+      theme.layout.track.controlsWidth,
       workspace.pxPerBar,
       workspace.scrollX,
       workspace.scrollY,
@@ -253,7 +253,7 @@ function TrackSurface({
       <div
         style={{
           position: "relative",
-          width: viewport.width + theme.project.controlsWidth,
+          width: viewport.width + theme.layout.track.controlsWidth,
           height: viewport.height,
         }}
       >
