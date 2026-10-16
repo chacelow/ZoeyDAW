@@ -513,7 +513,11 @@ it("advances edge autoscroll from elapsed native frame time and rejects disposed
 it("moves the fade mask between title and body across collapse transitions", () => {
   const fixture = mount({ audio: true })
   const paint = () =>
-    fixture.root.render(<Surface scene={fixture.scene} controller={fixture.controller} />)
+    fixture.root.render(
+      <ThemeProvider>
+        <Surface scene={fixture.scene} controller={fixture.controller} />
+      </ThemeProvider>
+    )
   projectActions.updateTrack("audio", { collapsed: true })
   paint()
   let card = fixture.renderer.findByTestId("clip-source-audio-clip")
@@ -595,6 +599,8 @@ it("double click on the retained surface creates a Clip that can be renamed inli
     .getState()
     .document.tracks[0]?.clips.find(clip => clip.startBar === 8)
   if (!created) throw new Error("Double click did not create Clip")
+  const wide = { ...created, lengthBars: 2 }
+  projectActions.updateClip(created.id, { lengthBars: wide.lengthBars })
   projectActions.updateTrack(sourceRow.track.id, { collapsed: true })
   scene.setGeometry({
     ...scene.get().geometry,
@@ -614,7 +620,7 @@ it("double click on the retained surface creates a Clip that can be renamed inli
   expect(editor.style.borderRadius).toBe(7)
   const row = layoutTrackRows(scene.get()).find(item => item.track.id === sourceRow.track.id)
   if (!row) throw new Error("Missing inline editor row")
-  const rect = clipRect(created, row, scene.get().viewport.pxPerBar, scene.get().viewport.scrollX)
+  const rect = clipRect(wide, row, scene.get().viewport.pxPerBar, scene.get().viewport.scrollX)
   expect(editor.style.left).toBe(rect.left + 5)
   expect(editor.style.top).toBe(rect.top + 3)
   expect(editor.style.width).toBe(
@@ -793,6 +799,10 @@ it.each([DEFAULT_DESIGN_TOKENS, overriddenDesign])(
     const visual = clipVisualGeometry(clipRect(clip, row, 64, 0), clip, row.track, true)
     const curve = visual.fades[0]?.curve
     if (!curve) throw new Error("Missing fade curve")
+    renderer.nativeSimulateMouseMove(
+      visual.left + visual.width / 2,
+      visual.bodyTop + visual.bodyHeight / 2
+    )
     renderer.nativeSimulateMouseMove(curve.x, curve.y)
     expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.fadeCurve)
     renderer.nativeSimulateMouseDown(curve.x, curve.y)

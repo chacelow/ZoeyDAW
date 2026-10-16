@@ -12,7 +12,7 @@ import { TrackRows } from "./TrackRows"
 import { TrackRow } from "./Row"
 import { TrackResizeOverlay } from "./TrackResizeOverlay"
 import { TrackLabelsProvider } from "./labels"
-import { trackResources } from "./locales"
+import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "./verification/frame-source"
 import { TrackTelemetryProvider } from "./meter/telemetry"
 import type { DesignTokens } from "@/shared/theme/design-tokens"
@@ -20,8 +20,14 @@ import type { DesignTokens } from "@/shared/theme/design-tokens"
 test("native track consumers honor design overrides and shared arrangement geometry", () => {
   const document = createMockDocument()
   const group = document.tracks.find(track => track.kind === "group")
-  if (!group) throw new Error("Missing group fixture")
+  const main = document.tracks.find(track => track.kind === "main")
+  if (!group || !main) throw new Error("Missing group/Main fixture")
   group.collapsed = true
+  document.tracks = [
+    group,
+    ...document.tracks.filter(track => group.childTrackIds?.includes(track.id)),
+    main,
+  ]
   hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
   const layout = {
     ...DEFAULT_LAYOUT_TOKENS,
@@ -59,30 +65,37 @@ test("native track consumers honor design overrides and shared arrangement geome
     loop: document.transport.loop,
   })
   scene.setViewport({ width: 800, height: 500, pxPerBar: 100, scrollX: 0, scrollY: 0, dpr: 1 })
-  const main = document.tracks.find(track => track.kind === "main")
-  if (!group || !main) throw new Error("Missing group/main fixture")
   const root = createTestRoot({ width: 1104, height: 500 })
-  const labels = trackResources["en-US"].arrangement
+  const labels = createTrackLabels("en-US")
   try {
     root.render(
       <AnimationFrameProvider source={createControlledFrames().source}>
         <ThemeProvider design={design} layout={layout}>
-          <TrackRows
-            scene={scene.get()}
-            viewport={scene.get().viewport}
-            focusedTrackId={null}
-            onFocusTrack={() => {}}
-            telemetry={() => null}
-            renderLane={() => null}
-            labels={labels}
-          />
-          <TrackResizeOverlay scene={scene.get()} viewport={scene.get().viewport} labels={labels} />
+          <div style={{ position: "relative", width: 1104, height: 500 }}>
+            <TrackRows
+              scene={scene.get()}
+              viewport={scene.get().viewport}
+              focusedTrackId={null}
+              onFocusTrack={() => {}}
+              telemetry={() => null}
+              renderLane={() => null}
+              labels={labels}
+            />
+            <TrackResizeOverlay
+              scene={scene.get()}
+              viewport={scene.get().viewport}
+              labels={labels}
+            />
+          </div>
         </ThemeProvider>
       </AnimationFrameProvider>
     )
     const node = (id: string) => {
       const found = root.renderer.findByTestId(id)
-      if (!found) throw new Error(`Missing ${id}`)
+      if (!found)
+        throw new Error(
+          `Missing ${id}; rows=${JSON.stringify(layoutTrackRows(scene.get()).map(row => ({ id: row.track.id, kind: row.track.kind, top: row.top, height: row.height })))}`
+        )
       return found
     }
     const bounds = (id: string) => {

@@ -136,21 +136,21 @@ for (const changedSource of ["majorWidth", "minorWidth", "minorOpacity"] as cons
       gridMinorOpacity: changedSource === "minorOpacity" ? 0.2 : PROJECT_METRICS.gridMinorOpacity,
     }
     const directory = mkdtempSync(path.join(tmpdir(), "timeline-grid-config-"))
-    const reference = createTestRoot({ width: 640, height: 100 })
     const root = createTestRoot({ width: 640, height: 100 })
+    // Use one native render target, then retain Grid across the default-to-override transition.
     try {
+      root.render(
+        <ThemeProvider design={design} project={project}>
+          <DivGrid scene={scene} height={100} />
+        </ThemeProvider>
+      )
+      root.renderer.captureScreenshot(path.join(directory, "reference.png"))
       root.render(
         <ThemeProvider>
           <Grid scene={scene} height={100} />
         </ThemeProvider>
       )
       root.renderer.captureScreenshot(path.join(directory, "default.png"))
-      reference.render(
-        <ThemeProvider design={design} project={project}>
-          <DivGrid scene={scene} height={100} />
-        </ThemeProvider>
-      )
-      reference.renderer.captureScreenshot(path.join(directory, "reference.png"))
       root.render(
         <ThemeProvider design={design} project={project}>
           <Grid scene={scene} height={100} />
@@ -162,7 +162,6 @@ for (const changedSource of ["majorWidth", "minorWidth", "minorOpacity"] as cons
       expect(actual).not.toEqual(readFileSync(path.join(directory, "default.png")))
     } finally {
       root.unmount()
-      reference.unmount()
       rmSync(directory, { recursive: true, force: true })
     }
   })

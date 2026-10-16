@@ -127,6 +127,7 @@ function LaneEditors({ controller, labels }: { controller: LaneController; label
       trackId={selection.trackId}
       originY={0}
       t={t}
+      formats={labels.formats}
     />
   ) : null
 }

@@ -6,7 +6,7 @@ import type { ShapePath } from "@/shared/svg/Shape"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { useProjectState } from "@/project/adapters"
-import { timeTickLabel, timeTicks } from "@/project/model/timeline-ticks"
+import { timeTicks } from "@/project/model/timeline-ticks"
 import { rulerTicks } from "../../core/rulers/grid-lines"
 import { rulerBar, rulerHit, rulerLabel } from "../../core/rulers/geometry"
 import { timelinePointer } from "../viewport/coordinates"
@@ -18,6 +18,7 @@ import type { SceneStore } from "../../core/scene"
 import type { TimelineController } from "../controller"
 import type { TimelineLabels } from "../labels"
 import type { RulerMenuTarget } from "./Menu"
+import type { DisplayFormats } from "@/project/model/display-formats"
 
 // Normalized SVG coordinate domain; screen marker dimensions come from the theme below.
 const markerPaths: readonly ShapePath[] = [
@@ -222,7 +223,15 @@ export function Rulers({ owner, labels }: { owner: TimelineController; labels: T
   )
 }
 
-export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }) {
+export function TimeRuler({
+  scene,
+  label,
+  formats,
+}: {
+  scene: SceneStore
+  label: string
+  formats: Pick<DisplayFormats, "duration">
+}) {
   const current = useSyncExternalStore(scene.subscribe, scene.get)
   const theme = useTheme()
   const { width, pxPerBar, scrollX } = current.viewport
@@ -278,7 +287,7 @@ export function TimeRuler({ scene, label }: { scene: SceneStore; label: string }
               pointerEvents: "none",
             })}
           />
-          {timeTickLabel(tick.value)}
+          {formats.duration(tick.value, "ruler")}
         </div>
       ))}
     </div>

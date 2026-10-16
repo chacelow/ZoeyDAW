@@ -6,6 +6,7 @@ import { projectActions, useProjectState } from "@/project/adapters"
 import { trackControlRows } from "@/project/layout"
 import { routingDestinations } from "@/project/model/track-routing"
 import type { Track } from "@/project/model/types"
+import type { TrackTextLabels } from "../labels"
 
 const HARDWARE_CHANNELS = [
   { id: "1-2", label: "1 / 2" },
@@ -19,6 +20,11 @@ const MIDI_CHANNELS = Array.from({ length: 16 }, (_, index) => ({
   label: String(index + 1),
 }))
 const EMPTY_CHANNEL = [{ id: "", label: "" }]
+const MONITOR_LABELS = {
+  in: "monitorIn",
+  auto: "monitorAuto",
+  off: "monitorOff",
+} satisfies Record<Track["monitor"], keyof TrackTextLabels>
 
 export function TrackRouting({ track }: { readonly track: Track }) {
   const { t } = useTrackLabels()
@@ -118,22 +124,25 @@ export function TrackRouting({ track }: { readonly track: Track }) {
                 minWidth: 0,
               }}
             >
-              {(["in", "auto", "off"] satisfies Track["monitor"][]).map(mode => (
-                <DragPadToggle
-                  key={mode}
-                  label={`${t("monitor")} ${mode} ${track.name}`}
-                  testId={`track-monitor-${mode}-${track.id}`}
-                  value={track.monitor === mode}
-                  onChange={() => projectActions.updateTrack(track.id, { monitor: mode })}
-                  labelOn={mode === "auto" ? "Auto" : mode === "in" ? "In" : "Off"}
-                  labelOff={mode === "auto" ? "Auto" : mode === "in" ? "In" : "Off"}
-                  style={{
-                    flexGrow: 1,
-                    flexBasis: 0,
-                    minWidth: 0,
-                  }}
-                />
-              ))}
+              {(["in", "auto", "off"] satisfies Track["monitor"][]).map(mode => {
+                const modeLabel = t(MONITOR_LABELS[mode])
+                return (
+                  <DragPadToggle
+                    key={mode}
+                    label={`${t("monitor")} ${modeLabel} ${track.name}`}
+                    testId={`track-monitor-${mode}-${track.id}`}
+                    value={track.monitor === mode}
+                    onChange={() => projectActions.updateTrack(track.id, { monitor: mode })}
+                    labelOn={modeLabel}
+                    labelOff={modeLabel}
+                    style={{
+                      flexGrow: 1,
+                      flexBasis: 0,
+                      minWidth: 0,
+                    }}
+                  />
+                )
+              })}
             </div>
           ) : null}
           {isMain ? (

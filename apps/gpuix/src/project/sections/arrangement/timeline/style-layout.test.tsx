@@ -3,7 +3,7 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
-import { hydrateProject, useProjectState } from "@/project/adapters"
+import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
@@ -17,6 +17,8 @@ import { MiniMap } from "./minimap"
 import type { ReactNode } from "react"
 import type { DesignTokens } from "@/shared/theme/design-tokens"
 import type { CursorLockPort } from "@/ui/controls"
+import { createDisplayFormats } from "@/app/i18n/display-formats"
+import { displayConfigByLocale } from "@/app/locales/display"
 
 const layout = {
   ...DEFAULT_LAYOUT_TOKENS,
@@ -115,7 +117,9 @@ test("native rulers and minimap consume injected strokes, geometry and semantic 
     root.renderer.flush()
     expect(node("marker-name-editor").style.top).toBe(20)
 
-    render(<TimeRuler scene={scene} label={englishLabels.timeRuler} />)
+    render(
+      <TimeRuler formats={englishLabels.formats} scene={scene} label={englishLabels.timeRuler} />
+    )
     expect(bounds("timeline-time-ruler").height).toBe(27)
     expect(node("timeline-time-ruler").style.borderTopWidth).toBe(2)
     expect(node("time-ruler-label-0").style.height).toBe(27)
@@ -184,6 +188,42 @@ test("native timeline composition aligns editable body and footer with injected 
     expect(input.style.focusVisible).toMatchObject({ outlineWidth: 3, outlineOffset: -3 })
     expect(node("timeline-grid").style.height).toBe(input.style.height)
     expect(node("timeline-time-ruler").style.height).toBe(27)
+  } finally {
+    root.unmount()
+    owner.dispose()
+  }
+})
+
+test("native time ruler and zoom density consume their injected display precision", () => {
+  const { owner, scene, root, render, node } = setup()
+  const config = structuredClone(displayConfigByLocale["en-US"])
+  config.duration.rulerDigits = 1
+  config.duration.rulerOmitZeroFraction = false
+  config.precision.integer = 1
+  const labels = { ...englishLabels, formats: createDisplayFormats("en-US", config) }
+  try {
+    render(<TimeRuler scene={scene} label={labels.timeRuler} formats={labels.formats} />)
+    const text = node("time-ruler-label-0")
+      .children.map(id => root.renderer.getElement(id)?.text ?? "")
+      .join("")
+    expect(text).toBe("0:00.0")
+    projectActions.setViewport({ pxPerBar: 33.5 })
+    render(
+      <AnimationFrameProvider
+        source={{ subscribe: () => () => {}, subscribeResume: () => () => {} }}
+      >
+        <WindowKeyboardProvider value={createWindowKeyboard()}>
+          <ArrangementTimeline
+            controller={owner}
+            tracks={null}
+            overlay={null}
+            labels={labels}
+            cursor={cursor}
+          />
+        </WindowKeyboardProvider>
+      </AnimationFrameProvider>
+    )
+    expect(root.renderer.findByText(`33.5 ${labels.pixelsPerBar}`)).toBeDefined()
   } finally {
     root.unmount()
     owner.dispose()

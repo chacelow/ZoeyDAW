@@ -39,7 +39,7 @@ The driver consumes F1 callback timestamps directly. Wakeups only request a fram
 
 Meter 的声道间距、peak 线高、zero 线高和警告渐变位置读取 `design.editor.meter`。显示范围、hold 和 decay 仍来自注入的行为策略；样式覆盖不修改遥测或电平计算。`meter/TrackMeter.test.tsx` 增加原生消费回归，覆盖这些 design 输入。
 
-`TrackLabels` is injected, with paired Chinese/English resources in `locales.ts`; no i18n dependency or second language state was added to project components.
+`TrackLabels` 注入文案与 `DisplayFormats` 纯端口。唯一文本数据在 `app/locales/sections/tracks.ts`，组合根通过 `createTrackLabels(locale)` 构造并缓存标签。project 组件不导入 app、不持有第二份语言状态。Mixer 的 dB/Pan 显示和解析、Meter 声道朗读、monitor mode 文案都消费这份输入。
 
 ### Exercised proof
 
@@ -82,7 +82,7 @@ All icons now use `ui/controls/Icon` (`Headphones`, `Circle`, `ChevronDown`, `Ch
 
 ## 公共接口
 
-`index.ts` exports `TrackRows`, `TrackRowsProps`, `TrackResizeOverlay`, `TrackResizeOverlayProps`, `TrackLabels`, `TelemetryReader`, `TrackRowGeometry` and the paired `trackResources`. The combination contract is `docs/architecture/gpuix-arrangement-composition.md`; tracks do not import lane or timeline.
+`index.ts` exports `TrackRows`, `TrackRowsProps`, `TrackResizeOverlay`, `TrackResizeOverlayProps`, `TrackLabels`, `TelemetryReader` and `TrackRowGeometry`. Locale data is not re-exported from project. The combination contract is `docs/architecture/gpuix-arrangement-composition.md`; tracks do not import lane or timeline.
 
 `TrackRow` 对所有可见行（包括折叠 Group）始终挂载 `renderLane` 提供的内容。Group 摘要仅由 lane 绘制；tracks 不再拥有独立摘要实现或重复扣除 `controlsWidth`。屏外保焦点的表头仍不挂载 lane。
 

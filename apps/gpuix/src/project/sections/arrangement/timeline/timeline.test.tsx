@@ -364,7 +364,7 @@ describe("Native timeline layout and hit testing", () => {
     disposals.push(root.unmount)
     root.render(
       <ThemeProvider>
-        <TimeRuler scene={scene} label="Time ruler" />
+        <TimeRuler formats={englishLabels.formats} scene={scene} label="Time ruler" />
       </ThemeProvider>
     )
     function tenSecondsLeft() {

@@ -46,7 +46,11 @@ afterEach(() => {
       errors.push(error)
     }
   }
-  if (errors.length) throw new AggregateError(errors, "Live policy fixture cleanup failed")
+  if (errors.length)
+    throw new AggregateError(
+      errors,
+      `Live policy fixture cleanup failed:\n${errors.map(error => (error instanceof Error ? error.stack : String(error))).join("\n")}`
+    )
 })
 
 interface LivePolicyFixture {
@@ -69,20 +73,6 @@ function mount(): LivePolicyFixture {
   cleanups.push(configurePreferences(preferences))
 
   const savedState = useProjectState.getState()
-  const savedSnapshot = JSON.stringify({
-    version: 2,
-    document: savedState.document,
-    workspace: savedState.workspace,
-  })
-  cleanups.push(() => {
-    // Hydration clears this fixture's private runtime history before restoring the shared store.
-    try {
-      hydrateProject(savedSnapshot)
-    } finally {
-      projectStore.setState(savedState, true)
-    }
-  })
-  cleanups.push(configureProjectBackend(createNativeBackend))
   const document = createMockDocument()
   const source = document.tracks.find(track => track.kind === "midi")
   const main = document.tracks.find(track => track.kind === "main")
@@ -103,7 +93,17 @@ function mount(): LivePolicyFixture {
     drawMode: false,
     automationMode: false,
   } satisfies WorkspaceState
-  hydrateProject(JSON.stringify({ version: 2, document, workspace }))
+  const fixtureSnapshot = JSON.stringify({ version: 2, document, workspace })
+  cleanups.push(() => {
+    // Unopened bootstrap state is not a persistable project; reset history with this valid fixture.
+    try {
+      hydrateProject(fixtureSnapshot)
+    } finally {
+      projectStore.setState(savedState, true)
+    }
+  })
+  cleanups.push(configureProjectBackend(createNativeBackend))
+  hydrateProject(fixtureSnapshot)
   cleanups.push(startProjectRuntime())
 
   const keyboard = createWindowKeyboard()

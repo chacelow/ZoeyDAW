@@ -29,7 +29,7 @@ import { clipRect } from "@/project/sections/arrangement/core/layout"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
 import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
-import { trackResources } from "@/project/sections/arrangement/tracks/locales"
+import { createTrackLabels, trackResources } from "@/app/locales/sections/tracks"
 import { contentFill } from "@/shared/theme/content-color"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 
@@ -114,7 +114,7 @@ function TrackSurface({
   const phase = useProjectState(state => state.session.backend.phase)
   const insertionPoint = useProjectState(state => state.session.insertionPoint)
   const selectedTrackIds = useProjectState(state => state.session.selectedTrackIds)
-  const labels = trackResources[language].arrangement
+  const labels = useMemo(() => createTrackLabels(language), [language])
   const gallery = trackResources[language].gallery
   const overloaded = document.tracks.some(track =>
     track.clips.some(

@@ -1,3 +1,6 @@
+import { createDisplayFormats } from "@/app/i18n/display-formats"
+import type { TrackLabels } from "@/project/sections/arrangement/tracks/labels"
+
 export const trackResources = {
   "zh-CN": {
     gallery: {
@@ -43,6 +46,9 @@ export const trackResources = {
       noOutput: "无输出",
       externalOutput: "外部输出",
       monitor: "监听",
+      monitorIn: "输入",
+      monitorAuto: "自动",
+      monitorOff: "关闭",
       mixer: "轨道混音",
       trackEnabled: "启用轨道",
       recordArm: "录音准备",
@@ -53,6 +59,8 @@ export const trackResources = {
       trackLane: "轨道车道",
       solo: "独奏",
       post: "后级发送",
+      postShort: "Post",
+      preShort: "Pre",
     },
   },
   "en-US": {
@@ -99,6 +107,9 @@ export const trackResources = {
       noOutput: "No output",
       externalOutput: "External output",
       monitor: "Monitor",
+      monitorIn: "In",
+      monitorAuto: "Auto",
+      monitorOff: "Off",
       mixer: "Track mixer",
       trackEnabled: "Enable track",
       recordArm: "Record arm",
@@ -109,6 +120,12 @@ export const trackResources = {
       trackLane: "Track lane",
       solo: "Solo",
       post: "Post send",
+      postShort: "Post",
+      preShort: "Pre",
     },
   },
+}
+
+export function createTrackLabels(locale: keyof typeof trackResources): TrackLabels {
+  return { ...trackResources[locale].arrangement, formats: createDisplayFormats(locale) }
 }

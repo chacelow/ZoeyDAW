@@ -14,7 +14,7 @@ import { createMockDocument, createMockWorkspace } from "../../../../adapters/fi
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
 import { TrackResizeOverlay } from "../TrackResizeOverlay"
-import { trackResources } from "../locales"
+import { createTrackLabels } from "@/app/locales/sections/tracks"
 import type { TestRoot, TestWindowOptions } from "@gpuix/react/testing"
 import type { ArrangementViewport } from "../../core/scene"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
@@ -73,7 +73,7 @@ function Surface({
             viewport={acceptedViewport}
             focusedTrackId={focusedTrackId}
             telemetry={readProjectTelemetry}
-            labels={trackResources["en-US"].arrangement}
+            labels={createTrackLabels("en-US")}
             onFocusTrack={id => {
               if (!useProjectState.getState().session.selectedTrackIds.includes(id))
                 projectActions.selectTracks([id], "header")
@@ -83,7 +83,7 @@ function Surface({
           <TrackResizeOverlay
             scene={scene}
             viewport={acceptedViewport}
-            labels={trackResources["en-US"].arrangement}
+            labels={createTrackLabels("en-US")}
           />
         </div>
       </ThemeProvider>

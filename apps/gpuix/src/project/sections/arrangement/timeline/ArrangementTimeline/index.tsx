@@ -230,7 +230,11 @@ export function ArrangementTimeline({
               </div>
             </div>
             <div style={sx({ position: "absolute", left: 0, bottom: 0 })}>
-              <TimeRuler scene={controller.sceneStore} label={labels.timeRuler} />
+              <TimeRuler
+                scene={controller.sceneStore}
+                label={labels.timeRuler}
+                formats={labels.formats}
+              />
             </div>
             <div
               style={sx({

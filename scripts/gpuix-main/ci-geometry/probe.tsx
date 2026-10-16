@@ -20,7 +20,7 @@ import { createTestAnimationFrames } from "@/project/sections/footer/verificatio
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
-import { trackResources } from "@/project/sections/arrangement/tracks/locales"
+import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "@/project/sections/arrangement/tracks/verification/frame-source"
 import type { TestRoot } from "@gpuix/react/testing"
 import { fontInventory } from "./font-inventory"
@@ -70,7 +70,7 @@ function Tracks() {
             viewport={acceptedViewport}
             focusedTrackId={null}
             telemetry={readProjectTelemetry}
-            labels={trackResources["en-US"].arrangement}
+            labels={createTrackLabels("en-US")}
             onFocusTrack={id => projectActions.selectTracks([id], "header")}
             renderLane={row => <text>{row.track.name}</text>}
           />
