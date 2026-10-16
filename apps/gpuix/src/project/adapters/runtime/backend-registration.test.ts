@@ -1,19 +1,22 @@
 import { expect, it } from "bun:test"
 import { createStore } from "zustand/vanilla"
-import { initialDocument } from "../../stores/slices/document"
-import { initialWorkspace } from "../../stores/slices/workspace"
-import { initialSession } from "../../stores/slices/session"
+import {
+  createTestDocument,
+  createTestWorkspace,
+  createTestSession,
+  TEST_PROJECT_CREATION,
+} from "../fixtures"
 import { createMockProjectBackend } from "../backend/mock"
 import { createProjectRuntime, ProjectBackendNotConfiguredError } from "."
 import type { ProjectState } from "../../model/types"
 
 function isolatedRuntime() {
   const store = createStore<ProjectState>(() => ({
-    document: initialDocument(),
-    workspace: initialWorkspace(),
-    session: initialSession(),
+    document: createTestDocument(),
+    workspace: createTestWorkspace(),
+    session: createTestSession(),
   }))
-  const runtime = createProjectRuntime({ store })
+  const runtime = createProjectRuntime({ store, creation: TEST_PROJECT_CREATION })
   runtime.resetProject("backend-registration")
   return runtime
 }

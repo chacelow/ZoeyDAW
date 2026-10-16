@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../ControlEnvironment"
+import { TEST_INPUT_POLICY } from "./input-policy.test-fixture"
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -12,20 +14,22 @@ for (const Component of [DragPadBar, DragPadBipolar]) {
       const [value, setValue] = useState(0)
       return (
         <ThemeProvider>
-          <div style={{ padding: 80 }}>
-            <Component
-              testId="variant"
-              label="Variant"
-              value={value}
-              onChange={next => {
-                latest = next
-                setValue(next)
-              }}
-              min={-1}
-              max={1}
-              step={0.01}
-            />
-          </div>
+          <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+            <div style={{ padding: 80 }}>
+              <Component
+                testId="variant"
+                label="Variant"
+                value={value}
+                onChange={next => {
+                  latest = next
+                  setValue(next)
+                }}
+                min={-1}
+                max={1}
+                step={0.01}
+              />
+            </div>
+          </ControlEnvironmentProvider>
         </ThemeProvider>
       )
     }
@@ -54,19 +58,21 @@ for (const Component of [DragPadBar, DragPadBipolar]) {
         const render = (width: number) => {
           root.render(
             <ThemeProvider>
-              <div style={{ width }}>
-                <Component
-                  testId="stretched"
-                  label="Stretched value"
-                  value={value}
-                  onChange={() => {}}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  hideIcon
-                  style={{ width: "100%" }}
-                />
-              </div>
+              <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+                <div style={{ width }}>
+                  <Component
+                    testId="stretched"
+                    label="Stretched value"
+                    value={value}
+                    onChange={() => {}}
+                    min={-1}
+                    max={1}
+                    step={0.01}
+                    hideIcon
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              </ControlEnvironmentProvider>
             </ThemeProvider>
           )
         }
@@ -126,26 +132,61 @@ test("toggle activates by click and keyboard without entering numeric edit", () 
     const [value, setValue] = useState(false)
     return (
       <ThemeProvider>
-        <DragPadToggle
-          testId="toggle"
-          label="Mute"
-          value={value}
-          onChange={next => {
-            latest = next
-            setValue(next)
-          }}
-        />
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <DragPadToggle
+            testId="toggle"
+            label="Mute"
+            labelOn="已静音"
+            labelOff="播放中"
+            value={value}
+            onChange={next => {
+              latest = next
+              setValue(next)
+            }}
+          />
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
   }
   root.render(<Harness />)
   root.renderer.flush()
+  expect(root.renderer.findByText("播放中")).toBeDefined()
   const node = root.renderer.findByTestId("toggle")!
   const b = root.renderer.getElementBounds(node.id)!
   root.renderer.nativeSimulateClick(b.x + b.width / 2, b.y + b.height / 2)
   expect(latest).toBe(true)
+  root.renderer.flush()
+  expect(root.renderer.findByText("已静音")).toBeDefined()
+  expect(root.renderer.findByText("播放中")).toBeUndefined()
   root.renderer.nativeSimulateKeystrokes(node.id, "enter")
   expect(latest).toBe(false)
+  root.renderer.flush()
+  expect(root.renderer.findByText("播放中")).toBeDefined()
   expect(root.renderer.findByType("input")).toHaveLength(0)
+  root.unmount()
+})
+
+test("toggle uses explicit children or icon without state labels", () => {
+  const root = createTestRoot({ width: 320, height: 120 })
+  for (const value of [false, true]) {
+    root.render(
+      <ThemeProvider>
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <div>
+            <DragPadToggle label="循环" value={value} onChange={() => {}}>
+              循环内容
+            </DragPadToggle>
+            <DragPadToggle label="录音" value={value} onChange={() => {}} icon={<text>●</text>} />
+          </div>
+        </ControlEnvironmentProvider>
+      </ThemeProvider>
+    )
+    root.renderer.flush()
+    expect(root.renderer.findByText("循环内容")).toBeDefined()
+    expect(root.renderer.findByText("●")).toBeDefined()
+    const nodes = Object.values(root.renderer.getA11yTree().nodes ?? {})
+    expect(nodes.some(node => node.aria?.label === "循环")).toBe(true)
+    expect(nodes.some(node => node.aria?.label === "录音")).toBe(true)
+  }
   root.unmount()
 })

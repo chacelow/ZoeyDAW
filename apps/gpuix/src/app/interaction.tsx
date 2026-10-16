@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, useState } from "react"
 import { ControlEnvironmentProvider } from "@/ui/controls"
 import { useControlEnvironment } from "@/ui/controls/ControlEnvironment"
+import { usePreference } from "@/platform/settings"
+import { createControlInputPolicy } from "./control-input"
 import type { ReactNode } from "react"
 import type { ControlInfo } from "@/ui/controls"
 
@@ -34,11 +36,17 @@ const InfoContext = createContext<ControlInfo | null>(null)
 
 export function AppInteractionProvider({ children }: { readonly children: ReactNode }) {
   const inherited = useControlEnvironment()
+  const numericInput = usePreference("numericInput")
+  const pointer = usePreference("pointer")
+  const inputPolicy = useMemo(
+    () => createControlInputPolicy(numericInput, pointer),
+    [numericInput, pointer]
+  )
   const interaction = useMemo(createAppInteraction, [])
   const [info, setInfo] = useState<ControlInfo | null>(null)
   const controls = useMemo(
-    () => ({ ...inherited, textFocus: interaction.textFocus, setInfo }),
-    [inherited, interaction]
+    () => ({ ...inherited, textFocus: interaction.textFocus, setInfo, inputPolicy }),
+    [inherited, interaction, inputPolicy]
   )
   return (
     <InteractionContext.Provider value={interaction}>

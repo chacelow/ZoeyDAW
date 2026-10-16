@@ -6,7 +6,8 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import type { MidiNote } from "@/project/model/types"
 import type { RollGeometry } from "./layout"
-import { pitchName } from "./geometry"
+import { usePreference } from "@/platform/settings"
+import type { DisplayFormats } from "@/project/model/display-formats"
 import { QuadPaint, usePaintLayers } from "./QuadPaint"
 import { paintLayers } from "./paint-layers"
 
@@ -18,6 +19,7 @@ export function VelocityLane({
   selection,
   currentNoteIndex,
   label,
+  formats,
   color,
   onMouseDown,
   onMouseMove,
@@ -31,6 +33,7 @@ export function VelocityLane({
   readonly selection: readonly number[]
   readonly currentNoteIndex: number | null
   readonly label: string
+  readonly formats: DisplayFormats
   readonly color: string
   readonly onMouseDown: (event: EventPayload) => void
   readonly onMouseMove: (event: EventPayload) => void
@@ -39,6 +42,7 @@ export function VelocityLane({
   readonly onActivateNote: (index: number, preserveSelection: boolean) => void
 }) {
   const theme = useTheme()
+  const midi = usePreference("midi")
   const { renderer } = useGpuix()
   const notes = readNotes()
   const [focused, setFocused] = useState(false)
@@ -62,6 +66,7 @@ export function VelocityLane({
           roll.width -
         roll.scrollX
       if (x < -handle || x > roll.viewWidth + handle) continue
+      // MIDI velocity is seven-bit protocol data; the scale is independent of editor density.
       visible.push({ index, note, x, stem: (note.velocity / 127) * height })
     }
     return visible
@@ -93,7 +98,7 @@ export function VelocityLane({
       group.rectangles.push(
         x,
         height - stem,
-        1,
+        theme.design.editor.velocityLineWidth,
         stem,
         x - handle / 2,
         height - stem - handle / 2,
@@ -102,7 +107,17 @@ export function VelocityLane({
       )
     }
     return paintLayers(groups)
-  }, [stems, selected, focused, active?.index, color, theme.colors.foreground, height, handle])
+  }, [
+    stems,
+    selected,
+    focused,
+    active?.index,
+    color,
+    theme.colors.foreground,
+    theme.design.editor.velocityLineWidth,
+    height,
+    handle,
+  ])
   const bind = usePaintLayers(layers)
   return (
     <div
@@ -117,7 +132,7 @@ export function VelocityLane({
         minWidth: 0,
         height,
         overflow: "hidden",
-        cursor: "ns-resize",
+        cursor: theme.design.cursors.verticalResize,
         backgroundColor: theme.colors.arrangementSurfaceAlt,
       })}
       onMouseDown={onMouseDown}
@@ -136,26 +151,31 @@ export function VelocityLane({
         />
       ))}
       {active ? (
+        // Audible MIDI note-on velocities span 1–127; zero belongs to the note-off protocol.
         <div
           key="active-stem"
           ref={activeHost}
           testId={`midi-velocity-${active.note.id ?? active.index}`}
           role="slider"
           tabIndex={0}
-          aria-label={`${label} ${pitchName(active.note.pitch)} · ${active.note.startBeat}–${active.note.startBeat + active.note.lengthBeats} · ${active.note.velocity}/127`}
+          aria-label={`${label} ${formats.pitchName(active.note.pitch, midi.octaveLabelOffset)} · ${formats.number(active.note.startBeat, "midi")}–${formats.number(active.note.startBeat + active.note.lengthBeats, "midi")} · ${formats.number(active.note.velocity, "integer")}/127`}
           aria-valuemin={1}
           aria-valuemax={127}
           aria-valuenow={active.note.velocity}
-          aria-valuetext={String(active.note.velocity)}
+          aria-valuetext={formats.number(active.note.velocity, "integer")}
           style={sx({
             position: "absolute",
             left: active.x,
             bottom: 0,
             height: active.stem,
-            width: 1,
+            width: theme.design.editor.velocityLineWidth,
             pointerEvents: "none",
             keyboardFocusDim: false,
-            focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+            focusVisible: {
+              outlineWidth: theme.design.shape.focusRingWidth,
+              outlineColor: theme.colors.ring,
+              outlineOffset: -theme.design.shape.focusRingWidth,
+            },
           })}
           onFocus={() => {
             setFocused(true)

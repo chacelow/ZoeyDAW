@@ -21,7 +21,7 @@
 1. 业务与共享组件里出现颜色、尺寸、时长、透明度、字号字面量，视为违反本契约。允许的例外只有下面的“真正常量”。
 2. 共享组件不内置英文默认文案；文字一律由调用方经 `labels`/`children`/aria props 注入。
 3. 同一个值在多处出现，只能有一个来源；派生关系（例如“控件高度的一半”）写在来源里，不在使用处乘倍数。
-4. 主题 provider 能在运行时覆盖 `design`、`layout`、`control`、`transportControl`、`project` 全部分组；每个 prop 接受完整对象，不做 partial 合并。省略时使用集中默认值；省略 `layout` 时由当前 `control`、`project` 经 `createLayoutTokens()` 解析几何。Provider 不持有第二份可写配置，调用方以新对象替换受控值，不原地修改。
+4. 主题 provider 能在运行时覆盖 `colors`、`design`、`layout`、`control`、`transportControl`、`project` 全部分组；每个 prop 接受完整对象，不做 partial 合并。`colors` 使用包含全部派生语义角色的 `Theme["colors"]`，传入后直接采用；省略时仍按 preset/scheme 与配方缓存或派生。其余分组省略时使用集中默认值；省略 `layout` 时由当前 `control`、`project` 经 `createLayoutTokens()` 解析几何。Provider 不持有第二份可写配置，调用方以新对象替换受控值，不原地修改。
 5. 工程模板（新工程的初值）与持久化的工程值分开：模板改了不影响已保存的工程。
 
 ## 真正常量（留在代码）

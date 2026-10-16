@@ -31,8 +31,8 @@ export function MenuContent({
   side,
   align = "start",
   alignOffset = 0,
-  sideOffset = 4,
-  collisionPadding = 8,
+  sideOffset: providedSideOffset,
+  collisionPadding: providedCollisionPadding,
   onMouseDownOutside,
   onKeyDown,
   ref,
@@ -40,6 +40,8 @@ export function MenuContent({
 }: MenuContentProps) {
   const menu = useMenu()
   const theme = useTheme()
+  const sideOffset = providedSideOffset ?? theme.design.overlay.sideOffset
+  const collisionPadding = providedCollisionPadding ?? theme.design.overlay.collisionPadding
   const { renderer } = useGpuix()
   const viewport = useWindowSize()
   const surface = useRef<PublicInstance | null>(null)
@@ -73,7 +75,7 @@ export function MenuContent({
     {
       display: "flex",
       flexDirection: "column",
-      width: theme.control["--spacing-control-track"] * 10,
+      width: theme.design.menu.width,
       padding: theme.design.menu.inset,
       borderWidth: theme.design.menu.borderWidth,
       borderRadius: theme.design.menu.radius,

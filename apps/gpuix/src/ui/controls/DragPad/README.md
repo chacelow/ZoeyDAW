@@ -1,9 +1,12 @@
 # Native DragPad family
 
-`DragPadNumber`、`DragPadBar`、`DragPadBipolar` 共享 `NumericPad` 外壳、`useDragPad` 状态机和 `DRAG_PIXELS_PER_STEP = 4`。`PanControl` 是 bipolar 的 −1..1、0.01 步进格式化适配。`DragPadToggle` 复用 Button 的激活与键盘行为，不启动拖动。
+`DragPadNumber`、`DragPadBar`、`DragPadBipolar` 共享 `NumericPad` 外壳、`useDragPad` 状态机和注入的 `ControlInputPolicy`。`PanControl` 固定 bipolar 的 −1..1 范围、0.01 步进和归零值，显示与输入格式由调用方持有。`DragPadToggle` 复用 Button 的激活与键盘行为，不启动拖动。
 
 - 数值由消费者持有。拖动锚点、预编辑、输入草稿只属于短生命周期 UI 状态。
-- 上拖 40px 改变 10 个 `dragStep`，与 range、横向距离和 move 分段无关。`dragStep` 默认等于 `step`；拖动每步 4px，滚轮每步等效 16px，不改变共享比例。
+- `PanControl` 必须注入 `label`、`format`、`parse` 和 `widthSamples`；显示、输入与测宽使用同一份业务格式配置，共享控件不定义方向文字或解析别名。
+- `DragPadToggle` 的纯文字状态必须成对注入 `labelOn`/`labelOff`；提供显式 `icon` 或 `children` 时不需要状态文字，不内置默认文案。
+- 拖动与滚轮灵敏度由 `ControlEnvironmentProvider value.inputPolicy` 注入：`dragPixelsPerStep`、`wheelPixelsPerStep`、`wheelLinePixels`、`dragThresholdPixels`。应用组合读取 `numericInput` 与 `pointer` 偏好；Gallery/独立验证组合使用纯 `PREFERENCE_DEFAULTS`。UI 没有默认策略，实际指针/滚轮输入要求已注入；纯展示及键盘编辑不要求策略。嵌套环境只继承这一能力，其余字段继续由最近 Provider 替换。
+- 默认偏好下，上拖 40px 改变 10 个 `dragStep`，与 range、横向距离和 move 分段无关。`dragStep` 默认等于 `step`。按下时快照策略，偏好更新不改变当前手势的阈值或比例；下一次按下与滚轮读取新策略。
 - 点击进入 `preEdit`，数字字符进入 live editing；Enter 直接开始/提交编辑；Escape 撤销，失焦提交。
 - 方向键按 step 调整；双击还原 defaultValue。拖动 Escape/失焦取消；卸载释放光标和手势资源。
 - `step` 决定键入量化、格式化与方向键精度，`dragStep` 只决定拖动和滚轮。运动沿用零起点的量化网格，例如 `.25` 起始、`dragStep=1` 上拖 4px 得到 `1`，Escape 仍恢复 `.25`。

@@ -1,4 +1,3 @@
-import { MINOR_GRID_OPACITY } from "../../core/rulers/grid-quads"
 import { useLayoutEffect, useMemo } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -14,31 +13,41 @@ import { createClipCardProjection, createGridProjection } from "../clip-card-pro
 import { useGridQuads } from "../GridQuads"
 import { QuadBatch } from "@/shared/quads/QuadBatch"
 import { useQuadBatch } from "@/shared/quads/useQuadBatch"
+import type { CreationNames } from "@/project/defaults/template"
 
 export function LaneContents({
   row,
   scene,
   automationMode,
   readPeaks,
+  creationNames,
 }: {
   row: TrackRow
   scene: ArrangementScene
   automationMode: boolean
   readPeaks: PeakReader
+  creationNames: Pick<CreationNames, "clip">
 }) {
   const theme = useTheme()
   const projectGrid = useMemo(createGridProjection, [])
   const projectCards = useMemo(createClipCardProjection, [])
   const { lines: grid, regions } = projectGrid(scene)
   const localRow = useMemo(
-    () => ({ track: row.track, top: 0, height: row.height, trackGeometry: row.trackGeometry }),
-    [row.track, row.height, row.trackGeometry]
+    () => ({
+      track: row.track,
+      top: 0,
+      height: row.height,
+      trackGeometry: row.trackGeometry,
+      arrangementGeometry: row.arrangementGeometry,
+    }),
+    [row.track, row.height, row.trackGeometry, row.arrangementGeometry]
   )
   const cards = projectCards(scene, localRow, automationMode)
   const backgroundBatch = useQuadBatch()
   const backgroundQuads = useMemo(() => {
     let count = 0
     for (const region of regions) if (region.alternate && region.width > 0) count++
+    // Native quad uploads encode each rectangle as x/y/width/height.
     const values = new Float32Array(count * 4)
     let offset = 0
     for (const region of regions) {
@@ -109,7 +118,7 @@ export function LaneContents({
             width: scene.viewport.width,
             height: row.height,
             backgroundColor: theme.colors.arrangementSurfaceSelected,
-            opacity: 0.5,
+            opacity: theme.design.editor.rangeOpacity,
             pointerEvents: "none",
           })}
         />
@@ -141,7 +150,7 @@ export function LaneContents({
             width: scene.viewport.width,
             height: row.height,
             color: theme.colors.arrangementLine,
-            opacity: MINOR_GRID_OPACITY,
+            opacity: theme.project.gridMinorOpacity,
             pointerEvents: "none",
           })}
         />
@@ -169,7 +178,7 @@ export function LaneContents({
                   width: right - left,
                   height: groupBandHeight,
                   backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
-                  opacity: 0.85,
+                  opacity: theme.design.editor.groupClipPreviewOpacity,
                   pointerEvents: "none",
                 })}
               />
@@ -195,6 +204,7 @@ export function LaneContents({
             numerator={scene.transport.numerator}
             automationMode={automationMode}
             readPeaks={readPeaks}
+            creationNames={creationNames}
           />
         ))}
       </div>
@@ -224,7 +234,7 @@ export function LaneContents({
               width: (selection.endBar - selection.startBar) * scene.viewport.pxPerBar,
               height: row.height,
               backgroundColor: theme.colors.primary,
-              opacity: 0.2,
+              opacity: theme.design.editor.drawPreviewOpacity,
               pointerEvents: "none",
             })}
           />

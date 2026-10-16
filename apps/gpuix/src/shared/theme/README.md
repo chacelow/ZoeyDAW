@@ -6,7 +6,7 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `ThemeProvider.tsx` | `ThemeProvider` 与 `useTheme()`。无内部 state：`appearance`、`preset`、完整 `design/layout/control/transportControl/project` 由组合根受控传入，切换不重挂载子树。省略分组采用集中默认值；省略 layout 时从当前 control/project 派生，不合并 partial、不写设置。 |
+| `ThemeProvider.tsx` | `ThemeProvider` 与 `useTheme()`。无内部 state：`appearance`、`preset`、完整 `colors/design/layout/control/transportControl/project` 由组合根受控传入，切换不重挂载子树。省略分组采用集中默认值；省略 layout 时从当前 control/project 派生，不合并 partial、不写设置。 |
 | `presets.ts` | `THEME_PRESETS`、`ThemePresetId`、`DEFAULT_THEME_PRESET`、`getThemePreset(id)`、`isThemePresetId(value)`；`baseColors` 是语义 palette，`colors` 是默认配方的 light/dark 缓存。 |
 | `presets.data.ts` | gpuix 主题预设数据源；迁移后直接维护，颜色字面量保持原精度。 |
 | `metrics/control-metrics.json` | 控件与工程几何的单一数据源，由 `metrics/config.ts` 直接导入；无 CSS 生成路径。 |
@@ -20,7 +20,7 @@
 
 ## 原生设计入口
 
-`Theme.design` 始终是完整的 `DesignTokens`。`Theme.control`、`transportControl`、`project` 继续拥有原有高度、字体、图标与工程度量；`Theme.layout` 拥有面板与纯几何。五组都支持运行时受控替换。纯轨道布局显式接收 `theme.layout.track`，不读取 JSON；应用把 layout 注入 `ArrangementScene.geometry`，更新只读几何不改写持久轨高。
+`Theme.design` 始终是完整的 `DesignTokens`。`Theme.control`、`transportControl`、`project` 继续拥有原有高度、字体、图标与工程度量；`Theme.layout` 拥有面板与纯几何。这些组支持运行时受控替换。`colors` 可提供包含全部语义角色的 `Theme["colors"]`，用于运行时颜色覆盖和原生测试输入；传入时整体采用并跳过派生，省略时保留 preset/scheme 与配方的原缓存路径。纯轨道布局显式接收 `theme.layout.track`，不读取 JSON；应用把 layout 注入 `ArrangementScene.geometry`，更新只读几何不改写持久轨高。
 
 - `shape.controlRadius` 统一 Button、数值壳、Input、ControlGroup、MotionTabs 与设置导航的同类圆角。Toggle 与 ListRow 有各自的形状语义，默认值分别为2与0，不再借 gap 作为 radius。
 - `shape.panelRadius` 默认7，独立于 `project.panelGap`。PanelShell 只消费形状与边框，不改变 Group/Panel 的求解、resize 或拖动 owner。

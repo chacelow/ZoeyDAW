@@ -1,16 +1,15 @@
 import { create } from "zustand"
-import { initialDocument } from "./slices/document"
-import { initialWorkspace } from "./slices/workspace"
-import { initialSession } from "./slices/session"
+import { PREFERENCE_DEFAULTS } from "../defaults/preferences"
+import {
+  createSessionTemplate,
+  createUnopenedDocument,
+  createWorkspaceTemplate,
+} from "../defaults/template"
 import type { ProjectState } from "../model/types"
 
-export { initialSession } from "./slices/session"
-
-/**
-The single project root; adapters alone issue commands and own simulation.
-*/
+/** The unopened root owns no authored names or tracks; adapters initialize each route. */
 export const useProjectState = create<ProjectState>(() => ({
-  document: initialDocument(),
-  workspace: initialWorkspace(),
-  session: initialSession(),
+  document: createUnopenedDocument(),
+  workspace: createWorkspaceTemplate(PREFERENCE_DEFAULTS),
+  session: createSessionTemplate(PREFERENCE_DEFAULTS),
 }))

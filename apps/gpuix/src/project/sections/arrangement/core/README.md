@@ -4,31 +4,33 @@ B1，2026-10-15。这里只接收坐标、工程模型和显式手势数据，�
 
 ## 所有权与坐标
 
-- 工程数据由既有 project Store/runtime 持有。`createSceneStore(geometry)` 显式接收解析后的 `ArrangementGeometry`，只保存实例内的展示投影、选择与预览，不导出全局实例。
+- 工程数据由既有 project Store/runtime 持有。`createSceneStore(geometry)` 保存实例内的展示投影、选择与预览，不导出全局实例。`setGeometry()` 更新同一实例，不改工程数据。
 - 手势 baseline 与累积值由调用方持有。`moveFadeDrag()`、`paintAutomation()` 返回下一状态，不改输入。
 - 时间从 bar 1 开始。横坐标统一为 `(bar - 1) * pxPerBar - scrollX`。
 - `project/model/grid`、`grid-geometry` 和 `timeline-ticks` 保持唯一模型实现。`rulers/grid-lines.ts` 只把场景已有的 `gridPlan` 投影成有 major/minor 分类的可见线。
-- 轨道度量及 resize 使用 `project/layout` 的显式 `TrackGeometry` 输入端口；数值来自 `scene.geometry.track`，不读取 JSON，也不复制默认控件高度。
+- 轨道、标尺、Clip 和命中几何来自同一个 `scene.geometry`。`TrackRow` 与 `ClipRect` 保留 `trackGeometry`、`arrangementGeometry` 引用。纯计算不读取主题数据文件。
 - `meters/meter-peak.ts` 保持原来的显式时间输入与原位更新 API。它不读取时钟、不启动采样。
 - `SceneStore.setTimeSelection` 只接 timeline 的 committed 投影；lane 使用 `setTimeSelectionPreview`，显示 `timeSelection` 优先取预览，结束或取消传 `null` 恢复当前 committed 值。
-- `rulers/grid-quads.ts` 的 `packGridQuads(lines, left, width, height, majorWidth, uniform?)` 统一半开可见范围过滤与局部 quad 打包；`MINOR_GRID_OPACITY` 是 timeline/lane 普通细网格的同一材质值。Clip 的 uniform 分批仍保留原始粗细几何。
-- `viewport/edge-scroll.ts` 的 `edgeScroll({ viewport, bars, tracks, geometry, pointer, axis, edge, elapsed })` 返回夹取后的 `scrollX/scrollY`；`geometry` 为必填 `TrackGeometry`，与行投影、viewport clamp 使用同一份输入。固定轨道不触发垂直滚动，单帧 elapsed 上限 48ms；手势与帧生命周期仍归调用方。
+- `packGridQuads(lines, left, width, height, majorWidth, minorWidth, uniform?)` 统一半开可见范围过滤与局部 quad 打包。普通细网格透明度取 `theme.project.gridMinorOpacity`。Clip 的 uniform 分批仍保留原始粗细几何。
+- `edgeScroll({ viewport, bars, tracks, pointer, axis, edge, elapsed, geometry, policy })` 返回夹取后的 `scrollX/scrollY`。固定轨道不触发垂直滚动。`geometry` 提供轨道与标尺边界，`policy` 提供单帧上限与独立轴速度。调用方拥有手势与帧生命周期。
+- `project/defaults/arrangement.ts` 持有编辑策略默认值，共享 pointer 初值来自纯 `project/defaults/preferences` 入口。`resolveArrangementPolicy(source, overrides, pointer)` 在配置边界逐字段解析稀疏偏好，保留合法的零值。controllers 通过 `readPolicy()` 读取最新完整策略，纯计算只接收对应分组。Minimap 保存按下时的策略快照。偏好改变取消正在进行的手势，不重建 SceneStore 或 controllers。
+- `createMeterPeak(policy)`、`meterDb(levelDb, policy)`、`advanceMeterPeak(peak, levelDb, nowMs, policy)` 共用 `ArrangementPolicy["meter"]`；没有第二份 meter 范围、hold 或 fall 常量。时间单位换算仍是数学常量。
+- App composition 的生命周期由 keyboard/interaction/native renderer 等服务身份决定，不由 `project` 度量值决定。稳定的只读 metrics 视图读取最新受控来源；minimap 上下限、lane 与 ruler autoscroll 的 edge 不冻结初值。度量更新取消活动手势，不替换 SceneStore、controllers 或选择。真实 hook/native backend 回归在 `app/project/live-policy.test.tsx`。
 
 ## 公共接口：配置几何
 
 ```ts
 type ArrangementGeometry = Pick<LayoutTokens, "track" | "arrangement">
 createSceneStore(geometry: ArrangementGeometry): SceneStore
-// 同一 SceneStore 的运行时更新方法，不新建工程或覆盖 music。
 SceneStore.setGeometry(geometry: ArrangementGeometry): void
-layoutTrackRowsForViewport(tracks: readonly Track[], scrollY: number, height: number, geometry: TrackGeometry): TrackRow[]
+layoutTrackRowsForViewport(tracks: readonly Track[], scrollY: number, height: number, geometry: ArrangementGeometry): TrackRow[]
 ```
 
-- `ArrangementScene.geometry` 保存组合根注入的只读引用。应用从 `Theme.layout` 创建 SceneStore；来源替换时调用 `setGeometry()`，timeline 重算唯一 viewport 投影，轨道保存的 `heightPx` 不变。
-- `scene.geometry.track.controlsWidth` 是轨道控制列总宽的唯一来源，`project` 不再另存同义总宽。identity/routing 子列仍由 project 提供，Mixer 用总宽减两个子列宽派生剩余宽度，原生回归断言三列之和与总宽相等。
-- `TrackRow.trackGeometry`、`ClipRect.trackGeometry` 携带同一结构输入；Clip 的局部几何缓存以该引用为键，更新标题高时也失效 body/fade/content 投影，不只在轨高变化时失效。
-- `TimelineViewportInput`、`PanViewportInput`、`edgeScroll` 均要求显式 `geometry`。以 scene 为输入的函数从 `scene.geometry` 获取它；以 tracks/viewport 为输入的 helper 不为读配置创建包装 Scene，也不依赖 React context。
-- `arrangement` 中标尺、Clip 与 hit 的来源已随 Scene 注入；这些新增条目的业务读取由 C3 接线，不代表 C1 已改完相应手势策略。完整字段与来源规则见 [统一配置契约](../../../../../../../docs/architecture/configuration.md)。
+- `ArrangementScene.geometry` 保存组合根注入的只读引用。应用从 `Theme.layout` 创建 SceneStore，来源替换时调用 `setGeometry()`。timeline 重算唯一 viewport 投影，轨道保存的 `heightPx` 不变。
+- `scene.geometry.track.controlsWidth` 是轨道控制列总宽的唯一来源。identity/routing 子列仍由 project 提供，Mixer 用总宽减两个子列宽派生剩余宽度。
+- `TrackRow`、`ClipRect` 同时携带 `trackGeometry` 与 `arrangementGeometry`。Clip 局部缓存比较两个引用，标题高、Clip 和 fade 配置变化都会使投影失效。
+- `TimelineViewportInput`、`PanViewportInput`、`edgeScroll` 要求显式完整 `ArrangementGeometry`。独立 tracks/viewport helper 不为读取配置创建包装 Scene，也不依赖 React context。
+- `arrangement` 中标尺、Clip 与 hit 的读取使用注入来源。完整字段与来源规则见 [统一配置契约](../../../../../../../docs/architecture/configuration.md)。
 
 ## 迁移文件
 
@@ -71,10 +73,10 @@ alignmentBar(scene: ArrangementScene): number | null
 
 // interactions/layers.ts
 interactionLayer(scene: ArrangementScene, pointer: Point, automationMode: boolean): "ruler" | "clip" | "automation"
-dragStarted(origin: Point, current: Point): boolean
+dragStarted(origin: Point, current: Point, policy: ArrangementPolicy["pointer"]): boolean
 
 // clip/fade.ts
-beginFadeDrag(clip: AudioClip, edge: "in" | "out", handle: "length" | "curve", origin: Point, pxPerBar: number, height: number): FadeDrag
+beginFadeDrag(clip: AudioClip, edge: "in" | "out", handle: "length" | "curve", origin: Point, pxPerBar: number, height: number, fadeHitSize: number): FadeDrag
 moveFadeDrag(state: FadeDrag, current: Point, pxPerBar: number): { state: FadeDrag; patch: Partial<AudioClip> | null }
 
 // clip/timeRange.ts
@@ -107,14 +109,14 @@ paintAutomation(input: PaintInput): PaintResult
 
 // automation/index.ts
 automationAction(hit: AutomationHit | null, drawMode: boolean, button: number): AutomationAction | null
-automationCursor(hit: AutomationHit | null, drawMode: boolean): "crosshair" | "grab" | "ns-resize" | undefined
+automationCursor(hit: AutomationHit | null, drawMode: boolean): "automationDraw" | "grab" | "verticalResize" | undefined
 
 // rulers/grid-lines.ts
-numberedRulerPlan(pxPerBar: number, numerator: number, denominator?: number): { mode: "sixteenth" | "beat" | "bar"; stepBars: number }
+numberedRulerPlan(pxPerBar: number, numerator: number, denominator: number, spacing: ArrangementGeometry["arrangement"]["rulerLabelSpacing"]): { mode: "sixteenth" | "beat" | "bar"; stepBars: number }
 rulerTicks(scene: ArrangementScene): RulerTick[] // 可读的拍/十六分音符标签，仅供标尺，不产生画布主线
 gridLines(scene: ArrangementScene, left?: number, right?: number): GridLine[] // major 仅整数小节边界；不可读时按 2 幂小节合并，minor 仅 gridPlan.cellBars
 patternRegions(scene: ArrangementScene): PatternRegion[] // 正常缩放每小节独立；小于 model/grid.MIN_GRID_CELL_PX 时按 2 幂合并，相邻交替，和标签 stepBars 无关
-RULER_LABEL_SPACING // 集中的标签可读性阈值；多级 Live 阈值仍未验证
+scene.geometry.arrangement.rulerLabelSpacing // 标签可读性阈值；多级 Live 阈值仍未验证
 MIN_GRID_CELL_PX // model/grid 的既有最小单元像素，Pattern/major 复用而非另造阈值；极小视图合并尚未对照 Live
 
 // rulers/geometry.ts
@@ -123,11 +125,11 @@ adjacentMarker(markers: readonly Marker[], position: number, direction: -1 | 1):
 
 // viewport/zoom.ts
 zoomAtAnchor(input: ZoomAnchorInput & { nextPxPerBar: number }): MinimapViewport
-wheelZoom(input: ZoomAnchorInput & { deltaY: number }): MinimapViewport
-stepZoom(input: Omit<ZoomAnchorInput, "anchorX"> & { direction: -1 | 1 }): MinimapViewport
-clampTimelineViewport(input: TimelineViewportInput): TimelineViewport
+wheelZoom(input: ZoomAnchorInput & { deltaY: number }, policy: ArrangementPolicy["zoom"]): MinimapViewport
+stepZoom(input: Omit<ZoomAnchorInput, "anchorX"> & { direction: -1 | 1 }, policy: ArrangementPolicy["zoom"]): MinimapViewport
+clampTimelineViewport(input: TimelineViewportInput, policy: ArrangementPolicy["zoom"]): TimelineViewport
 panViewport(input: PanViewportInput): { scrollX: number; scrollY: number }
-followViewport(input: FollowViewportInput): number
+followViewport(input: FollowViewportInput, policy: ArrangementPolicy["follow"]): number
 clampScrollX(scrollX: number, bars: number, pxPerBar: number, viewportWidth: number): number
 
 // viewport/minimap.ts
@@ -137,6 +139,8 @@ minimapDragBody(input: { geometry: MinimapGeometry; width: number; initialScroll
 ```
 
 `paintAutomation()` 的 `idPrefix` 由 B2 在手势开始时分配，必须在工程内唯一。`DrawingState.nextId` 是本手势计数器，重绘同一 cell 保留 ID。取消手势直接丢弃返回值，工程提交与撤销仍由 B2 的 runtime 事务负责。freehand 的 `DrawingState.swept` 保存已扫过的合并时间区间：原始点在覆盖区间内删除；回扫替换先前不重合的采样点，未绘制的 viewport 间隙与区间外点保留。新手势以 `{ painted: [], swept: [], last, nextId: 0 }` 初始化；状态及原始点不就地修改。
+
+`PaintInput.policy` 是 `ArrangementPolicy["automation"]`，控制自由画线采样分辨率。网格 cell、音乐端点和归一化计算保持领域语义。来源覆盖回归包含 `behavior-policy.test.ts`、`geometry-policy.test.ts`、`configuration.test.ts` 与 native consumer 测试。`verification/policy-mutations.mjs` 与 `verification/style-mutations.mjs` 将使用处恢复为旧字面量。二者共用 `mutation-runner.mjs`，要求真实断言失败，并校验磁盘源码哈希；语法与导入失败不算有效变异。
 
 缩放锚点在未撞到工程边界时保持像素位置。到达 scroll clamp 后，边界优先，无法同时保持越界的锚点。Minimap 下拖减小 `pxPerBar`，上拖增大；水平锚点采用按下位置在选区内的比例，不固定中心。
 

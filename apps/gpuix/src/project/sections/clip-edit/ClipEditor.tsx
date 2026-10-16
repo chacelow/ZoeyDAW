@@ -104,7 +104,7 @@ export function ClipEditor({
           <ClipNameInput
             key={clip.id}
             clipId={clip.id}
-            value={clip.label ?? clipLabel(clip)}
+            value={clip.label ?? clipLabel(clip, labels.creationNames)}
             label={labels.rename}
           />
           <text

@@ -70,7 +70,7 @@ export function computeLayout(
     for (const [shrinkMin, shrinkMax] of shrink.suffix[0]) {
       const low = Math.max(growMin, shrinkMin)
       const high = Math.min(growMax, shrinkMax)
-      if (low > high) continue
+      if (low > high + 0.000001) continue
       const candidate = Math.max(low, Math.min(high, Math.abs(delta)))
       const candidateDistance = Math.abs(candidate - Math.abs(delta))
       if (

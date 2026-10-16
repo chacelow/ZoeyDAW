@@ -87,7 +87,7 @@ export function segmentGesture(
   const source = row.lane?.points ?? []
   let changed = false
   return {
-    cursor: pointer.altKey ? "ns-resize" : "grabbing",
+    cursor: pointer.altKey ? "verticalResize" : "grabbing",
     autoScroll: false,
     move(current) {
       changed = true
@@ -132,6 +132,7 @@ export function drawGesture(
       state,
       current,
       scene: context.scene.get(),
+      policy: context.readPolicy().automation,
       row,
       grid,
       freehand,
@@ -142,7 +143,7 @@ export function drawGesture(
   }
   paint(pointer)
   return {
-    cursor: "crosshair",
+    cursor: "automationDraw",
     autoScroll: "horizontal",
     move: paint,
     finish: preview.finish,

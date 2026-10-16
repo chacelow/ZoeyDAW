@@ -1,4 +1,6 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
+import { usePreference } from "@/platform/settings"
+import type { MidiEditorLabels } from "../labels"
 import { sx } from "@/shared/theme/style"
 import { MIN_GRID_CELL_PX } from "@/project/model/grid"
 import { rollGridLines } from "./layout"
@@ -17,16 +19,19 @@ export function MidiRuler({
   readonly roll: RollGeometry
   readonly numerator: number
   readonly loopBeats: number
-  readonly labels: { readonly sourceWindow: string; readonly loopBoundary: string }
+  readonly labels: MidiEditorLabels
 }) {
   const theme = useTheme()
+  const midi = usePreference("midi")
   const height = theme.project.midiRulerHeight
   const strip = theme.control["--spacing-control-track"]
   const fontSize = theme.control["--text-control-track"]
   const labelGap = theme.control["--spacing-control-gap"]
   const { sourceOffsetBeats, totalBeats } = roll.window
   // Label every line that has room for "bar.beat"; otherwise only bars.
-  const labelled = rollGridLines(roll, numerator, fontSize * 4).filter(line => line.level > 0)
+  const labelled = rollGridLines(roll, numerator, fontSize * 4, midi.noteGridBeats).filter(
+    line => line.level > 0
+  )
   const beatPx = roll.width / totalBeats
   const loopStep = loopBeats * Math.max(1, Math.ceil((MIN_GRID_CELL_PX * 3) / (loopBeats * beatPx)))
   const loops: number[] = []
@@ -42,14 +47,14 @@ export function MidiRuler({
     <div
       testId="midi-ruler"
       role="group"
-      aria-label={`${labels.sourceWindow} ${sourceOffsetBeats.toFixed(2)}–${(sourceOffsetBeats + totalBeats).toFixed(2)}`}
+      aria-label={`${labels.sourceWindow} ${labels.formats.number(sourceOffsetBeats, "ruler")}–${labels.formats.number(sourceOffsetBeats + totalBeats, "ruler")}`}
       style={sx({
         position: "relative",
         height,
         flexGrow: 1,
         minWidth: 0,
         overflow: "hidden",
-        borderBottomWidth: 1,
+        borderBottomWidth: theme.design.editor.dividerStrokeWidth,
         borderColor: theme.colors.arrangementLine,
         backgroundColor: theme.colors.arrangementSurfaceAlt,
       })}
@@ -62,7 +67,7 @@ export function MidiRuler({
           width: roll.width,
           height: strip,
           backgroundColor: theme.colors.primary,
-          opacity: 0.35,
+          opacity: theme.design.editor.midiLoopOpacity,
         })}
       />
       {loops.map(x => (
@@ -74,7 +79,7 @@ export function MidiRuler({
             position: "absolute",
             left: x,
             top: 0,
-            width: 1,
+            width: theme.design.editor.loopLineWidth,
             height: strip,
             backgroundColor: theme.colors.primary,
           })}
@@ -93,13 +98,17 @@ export function MidiRuler({
               top: strip,
               bottom: 0,
               paddingLeft: labelGap,
-              borderLeftWidth: 1,
+              borderLeftWidth: theme.design.editor.dividerStrokeWidth,
               borderColor: theme.colors.arrangementLine,
               color: theme.colors.mutedForeground,
               fontSize,
             })}
           >
-            <text>{line.level === 2 ? `${bar}` : `${bar}.${inBar}`}</text>
+            <text>
+              {line.level === 2
+                ? labels.formats.number(bar, "integer")
+                : `${labels.formats.number(bar, "integer")}.${labels.formats.number(inBar, "integer")}`}
+            </text>
           </div>
         )
       })}

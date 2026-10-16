@@ -8,6 +8,7 @@ import { visibleRows } from "@/project/sections/arrangement/lane/render-projecti
 import type { LaneTranslate } from "@/project/sections/arrangement/lane/messages"
 import type { LaneContext } from "../../types"
 import type { ArrangementScene } from "@/project/sections/arrangement/core/scene"
+import type { CreationNames } from "@/project/defaults/template"
 
 export function ClipNameEditor({
   context,
@@ -15,12 +16,14 @@ export function ClipNameEditor({
   trackId,
   originY,
   t,
+  creationNames,
 }: {
   context: LaneContext
   scene: ArrangementScene
   trackId: string
   originY: number
   t: LaneTranslate
+  creationNames: Pick<CreationNames, "clip">
 }) {
   const theme = useTheme()
   const selection = scene.targetSelection
@@ -31,11 +34,14 @@ export function ClipNameEditor({
   const clip = row?.track.clips.find(item => item.id === selection.id)
   if (!row || !clip || row.top < row.clipTop) return null
   const rect = clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
-  const left = Math.max(0, Math.round(rect.left) + 1)
+  const left = Math.max(
+    0,
+    Math.round(rect.left) + scene.geometry.arrangement.clip.nameEditorLeftInset
+  )
   const width = Math.min(
     theme.layout.track.controlsWidth,
     scene.viewport.width - left,
-    rect.left + rect.width - left - 2
+    rect.left + rect.width - left - scene.geometry.arrangement.clip.nameEditorRightInset
   )
   if (width <= theme.control["--spacing-control-track-gap"]) return null
   return (
@@ -43,12 +49,15 @@ export function ClipNameEditor({
       key={clip.id}
       context={context}
       id={clip.id}
-      initial={clipLabel(clip)}
+      initial={clipLabel(clip, creationNames)}
       t={t}
       left={left}
-      top={Math.round(rect.top + 1) - originY}
+      top={Math.round(rect.top + scene.geometry.arrangement.clip.verticalInset) - originY}
       width={width}
-      height={Math.min(scene.geometry.track.titleHeight, row.height - 2)}
+      height={Math.min(
+        scene.geometry.track.titleHeight,
+        row.height - scene.geometry.arrangement.clip.verticalInset * 2
+      )}
     />
   )
 }
@@ -100,7 +109,7 @@ function NameInput({
         top,
         width,
         height,
-        borderRadius: 0,
+        borderRadius: theme.design.editor.inlineRadius,
         borderColor: theme.colors.primary,
         backgroundColor: theme.colors.arrangementClipSelected,
         color: theme.colors.arrangementClipInk,

@@ -64,10 +64,6 @@ export function designExpectations(
       value: project.defaultTrackHeight * 4,
     },
     "tabs.width": { expression: "ui/controls/MotionTabs/index.tsx tabWidth = 120", value: 120 },
-    "tabs.footerRadius": {
-      expression: "project/sections/footer/index.tsx borderRadius: 0",
-      value: 0,
-    },
     "tabs.footerJoinedGroupGap": {
       expression: "project/sections/footer/index.tsx gap: 0",
       value: 0,

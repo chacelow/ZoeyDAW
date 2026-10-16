@@ -46,7 +46,7 @@ Provider 的 `design/layout/control/transportControl/project` 均接受完整对
 | 3.5 | `design.editor.{dividerStrokeWidth,loopStrokeWidth,selectionStrokeWidth}`；MIDI note 复用 `design.shape.controlBorderWidth` | 各 1；没有新增 note border 副本 |
 | 3.6 | `design.editor.{playheadLineWidth,insertionLineWidth,selectionLineWidth,markerLineWidth,loopLineWidth,velocityLineWidth}` | 各 1 |
 | 3.7 | 既有 `design.shape.controlBorderWidth`；`design.editor.{gridMinorStrokeWidth,noteInset}` | 1 / 1 / 1 |
-| 3.8 | `design.editor.inlineRadius`、`design.tabs.{footerRadius,footerJoinedGroupGap}` | 各 0，设计性方角/无缝，不是算法原点 |
+| 3.8 | `design.editor.inlineRadius`、`design.tabs.footerJoinedGroupGap` | 各 0；C2 原生判别证明 Footer 圆角是同色背景上的死配置，协调者批准删除该来源与 local override，不新增圆角裁剪语义 |
 | 4.1 | C4 的轨道创建色映射 | 按最新仲裁由 C4 放入 Theme 并注入 RuntimeOwner；C1 不重复添加，已保存内容色不回写 |
 | 4.2 | preset `baseColors.{arrangementClipSelected,arrangementClipPaper}` | 原 OKLCH 值；各预设可独立声明 |
 | 4.3 | `design.colorRecipes.destructive.{active,highlight,focusBorder,focusOutline}` → `colors.destructive*` | active light10/dark20；highlight light20/dark30；border40；outline light20/dark40 |

@@ -1,8 +1,26 @@
+import { creationNamesByLocale } from "./creation-names"
+
 /**
  * 应用外壳文案。键名沿用 apps/web/src/locales/shared.zh-CN.ts,只保留外壳用到的键;
  * 各 section 的文案由组合根以 labels 注入,不放在这里。
  */
 export default {
+  creationNames: creationNamesByLocale["zh-CN"],
+  snapshotErrors: {
+    read: "无法读取快照存储。",
+    invalid: "本地快照无效或不受支持，当前工程已保留。",
+    write: "无法保存本地快照，请检查存储是否可用。",
+    missing: "此工程尚无本地快照。",
+  },
+  panel: {
+    footer: "底部面板",
+    browser: "浏览器",
+    arrangement: "编排",
+    activeDescription: "活动面板",
+    toggleFixed: "切换{{panel}}",
+  },
+  control: { on: "开启", off: "关闭" },
+  track: { monitorModes: { off: "关闭", auto: "自动", in: "输入" } },
   app: {
     name: "zoeydaw",
     tagline: "Web UI DAW",
@@ -11,6 +29,8 @@ export default {
     loading: "加载中…",
     back: "返回",
     cancel: "取消",
+    retry: "重试",
+    loadFailed: "加载失败",
   },
   home: {
     title: "项目",

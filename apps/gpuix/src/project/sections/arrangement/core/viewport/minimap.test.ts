@@ -1,9 +1,11 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { describe, expect, it } from "bun:test"
 import { gridZoomLimit } from "../../../../model/grid"
 import { minimapDragBody, minimapHit, minimapPointerDown } from "./minimap"
 import type { MinimapGeometry } from "./minimap"
 
 const geometry: MinimapGeometry = {
+  policy: ARRANGEMENT_DEFAULTS,
   bars: 128,
   viewportWidth: 640,
   pxPerBar: 32,
@@ -11,6 +13,22 @@ const geometry: MinimapGeometry = {
   minPxPerBar: 5,
   maxPxPerBar: gridZoomLimit(4, 4),
 }
+
+it("minimap resize hit slop follows the injected policy at both edges", () => {
+  const configured = {
+    ...geometry,
+    policy: {
+      ...ARRANGEMENT_DEFAULTS,
+      zoom: { ...ARRANGEMENT_DEFAULTS.zoom, minimapEdgeHitPixels: 2 },
+    },
+  }
+  expect(minimapHit(196, 1280, configured)).toBe("jump")
+  expect(minimapHit(198, 1280, configured)).toBe("left")
+  expect(minimapHit(204, 1280, configured)).toBe("body")
+  expect(minimapHit(396, 1280, configured)).toBe("body")
+  expect(minimapHit(402, 1280, configured)).toBe("right")
+  expect(minimapHit(404, 1280, configured)).toBe("jump")
+})
 const width = 1280
 
 const bodyDrag = {

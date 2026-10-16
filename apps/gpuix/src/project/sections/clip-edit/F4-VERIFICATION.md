@@ -44,10 +44,10 @@ MIDI body是唯一wheel owner。NoteGrid根焦点保留0，符合 `gpuix-ui-stan
 从 `apps/gpuix` 执行：
 
 ```sh
-bun src/project/sections/clip-edit/verification/consumer-probe.tsx current dense midi
-NODE_ENV=production bun src/project/sections/clip-edit/verification/consumer-probe.tsx current-production dense midi
-CLIP_EDIT_REFERENCE=556d829 bun --preload ./src/project/sections/clip-edit/verification/reference-preload.ts src/project/sections/clip-edit/verification/consumer-probe.tsx reference dense midi
-CLIP_EDIT_REPLAY_DOUBLE_WHEEL=1 bun src/project/sections/clip-edit/verification/consumer-probe.tsx replay dense midi
+bun src/app/verification/clip-edit/consumer-probe.tsx current dense midi
+NODE_ENV=production bun src/app/verification/clip-edit/consumer-probe.tsx current-production dense midi
+CLIP_EDIT_REFERENCE=556d829 bun --preload ./src/app/verification/clip-edit/reference-preload.ts src/app/verification/clip-edit/consumer-probe.tsx reference dense midi
+CLIP_EDIT_REPLAY_DOUBLE_WHEEL=1 bun src/app/verification/clip-edit/consumer-probe.tsx replay dense midi
 ```
 
 `reference-preload.ts` 校验历史对象式入口，只在验证运行中装配旧API，产品没有旧props shim或双API。不同像素检查复用 `scripts/gpuix-main/quad-batch/compare-pixels.py`。

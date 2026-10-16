@@ -1,3 +1,4 @@
+import { TEST_INPUT_POLICY } from "../controls/DragPad/input-policy.test-fixture"
 import { afterEach, expect, test } from "bun:test"
 import { useState } from "react"
 import type { ReactNode } from "react"
@@ -134,6 +135,8 @@ for (const key of ["home", "end", "up", "down"]) {
       return (
         <CollapseDivider
           testId="divider"
+          aria-label="Toggle fixed panel"
+          formatAccessiblePixels={pixels => `${pixels} pixels`}
           expanded={value}
           expandedSize={160}
           onExpandedChange={next => {
@@ -163,6 +166,8 @@ test("UPA-06 idle divider Escape reaches the window but an active drag Escape on
     return (
       <CollapseDivider
         testId="divider"
+        aria-label="Toggle fixed panel"
+        formatAccessiblePixels={pixels => `${pixels} pixels`}
         expanded={value}
         expandedSize={160}
         onExpandedChange={next => {
@@ -196,6 +201,7 @@ function padHost() {
   const cursor = { visible: true, x: 0, y: 0 }
   const values = { current: 120, gesture: "idle" }
   const environment = {
+    inputPolicy: TEST_INPUT_POLICY,
     subscribeWindowActive(listener: (active: boolean) => void) {
       listeners.add(listener)
       return () => {

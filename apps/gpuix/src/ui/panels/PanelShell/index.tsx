@@ -7,6 +7,8 @@ export interface PanelShellProps<Id extends string> {
   id: Id
   active: Id
   onActivate: (id: Id) => void
+  "aria-label": string
+  activeDescription: string
   children: ReactNode
   style?: StyleDesc
   testId?: string
@@ -16,6 +18,8 @@ export function PanelShell<Id extends string>({
   id,
   active,
   onActivate,
+  "aria-label": label,
+  activeDescription,
   children,
   style,
   testId,
@@ -24,8 +28,8 @@ export function PanelShell<Id extends string>({
   return (
     <div
       role="group"
-      aria-label={id}
-      aria-description={id === active ? "Active panel" : undefined}
+      aria-label={label}
+      aria-description={id === active ? activeDescription : undefined}
       testId={testId ?? id}
       onMouseDown={() => onActivate(id)}
       style={sx(style, {

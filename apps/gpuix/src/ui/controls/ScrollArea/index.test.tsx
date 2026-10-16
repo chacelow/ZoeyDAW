@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../ControlEnvironment"
+import { TEST_INPUT_POLICY } from "../DragPad/input-policy.test-fixture"
 import { expect, test } from "bun:test"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -126,27 +128,29 @@ test("numeric child consumes its wheel without moving the horizontal ancestor", 
     const [value, setValue] = useState(50)
     return (
       <ThemeProvider>
-        <ScrollArea
-          testId="numeric-scroll"
-          orientation="horizontal"
-          wheelToHorizontal
-          size={{ width: 200, height: 100 }}
-        >
-          <div style={{ width: 600, height: 100, flexShrink: 0 }}>
-            <DragPadNumber
-              testId="wheel-pad"
-              label="Value"
-              value={value}
-              min={0}
-              max={100}
-              step={1}
-              onChange={next => {
-                latest = next
-                setValue(next)
-              }}
-            />
-          </div>
-        </ScrollArea>
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <ScrollArea
+            testId="numeric-scroll"
+            orientation="horizontal"
+            wheelToHorizontal
+            size={{ width: 200, height: 100 }}
+          >
+            <div style={{ width: 600, height: 100, flexShrink: 0 }}>
+              <DragPadNumber
+                testId="wheel-pad"
+                label="Value"
+                value={value}
+                min={0}
+                max={100}
+                step={1}
+                onChange={next => {
+                  latest = next
+                  setValue(next)
+                }}
+              />
+            </div>
+          </ScrollArea>
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
   }

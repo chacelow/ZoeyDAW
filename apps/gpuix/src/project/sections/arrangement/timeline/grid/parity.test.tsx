@@ -5,6 +5,8 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
+import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { hydrateProject, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
@@ -104,4 +106,63 @@ for (const appearance of ["dark", "light"] as const) {
       }
     })
   }
+}
+
+for (const changedSource of ["majorWidth", "minorWidth", "minorOpacity"] as const) {
+  test(`native arrangement grid consumes overridden ${changedSource} against an independent div oracle`, () => {
+    const document = createMockDocument()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
+    scene.setMusic({
+      bars: 128,
+      grid: { mode: "fixed", bars: 0.25 },
+      transport: document.transport,
+      markers: document.markers,
+      tracks: document.tracks,
+      loop: document.transport.loop,
+    })
+    scene.setViewport({ width: 640, height: 100, pxPerBar: 100, scrollX: 0, scrollY: 0, dpr: 1 })
+    const design = {
+      ...DEFAULT_DESIGN_TOKENS,
+      editor: {
+        ...DEFAULT_DESIGN_TOKENS.editor,
+        gridMinorStrokeWidth:
+          changedSource === "minorWidth" ? 4 : DEFAULT_DESIGN_TOKENS.editor.gridMinorStrokeWidth,
+      },
+    }
+    const project = {
+      ...PROJECT_METRICS,
+      arrangementGridMajorLineWidth:
+        changedSource === "majorWidth" ? 3 : PROJECT_METRICS.arrangementGridMajorLineWidth,
+      gridMinorOpacity: changedSource === "minorOpacity" ? 0.2 : PROJECT_METRICS.gridMinorOpacity,
+    }
+    const directory = mkdtempSync(path.join(tmpdir(), "timeline-grid-config-"))
+    const root = createTestRoot({ width: 640, height: 100 })
+    // Use one native render target, then retain Grid across the default-to-override transition.
+    try {
+      root.render(
+        <ThemeProvider design={design} project={project}>
+          <DivGrid scene={scene} height={100} />
+        </ThemeProvider>
+      )
+      root.renderer.captureScreenshot(path.join(directory, "reference.png"))
+      root.render(
+        <ThemeProvider>
+          <Grid scene={scene} height={100} />
+        </ThemeProvider>
+      )
+      root.renderer.captureScreenshot(path.join(directory, "default.png"))
+      root.render(
+        <ThemeProvider design={design} project={project}>
+          <Grid scene={scene} height={100} />
+        </ThemeProvider>
+      )
+      root.renderer.captureScreenshot(path.join(directory, "override.png"))
+      const actual = readFileSync(path.join(directory, "override.png"))
+      expect(actual).toEqual(readFileSync(path.join(directory, "reference.png")))
+      expect(actual).not.toEqual(readFileSync(path.join(directory, "default.png")))
+    } finally {
+      root.unmount()
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
 }

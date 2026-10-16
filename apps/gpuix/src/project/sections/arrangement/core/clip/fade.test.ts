@@ -25,7 +25,15 @@ function fixture() {
 test("fade peaks move while quiet offsets and discarded source remain fixed", () => {
   const { clip } = fixture()
   const before = fadeControls(clip, "in")
-  const initial = beginFadeDrag(clip, "in", "length", { x: 300, y: 200 }, 32, 64)
+  const initial = beginFadeDrag(
+    clip,
+    "in",
+    "length",
+    { x: 300, y: 200 },
+    32,
+    64,
+    DEFAULT_LAYOUT_TOKENS.arrangement.hit.clipFadeHandle
+  )
   const result = moveFadeDrag(initial, { x: 332, y: 200 }, 32)
   expect(fadeControls({ ...clip, ...result.patch }, "in")).toEqual({
     start: before.start,
@@ -34,7 +42,15 @@ test("fade peaks move while quiet offsets and discarded source remain fixed", ()
   expect(fadeControls(clip, "in")).toEqual(before)
   const out = fadeControls(clip, "out")
   const outResult = moveFadeDrag(
-    beginFadeDrag(clip, "out", "length", { x: 300, y: 200 }, 32, 64),
+    beginFadeDrag(
+      clip,
+      "out",
+      "length",
+      { x: 300, y: 200 },
+      32,
+      64,
+      DEFAULT_LAYOUT_TOKENS.arrangement.hit.clipFadeHandle
+    ),
     { x: 268, y: 200 },
     32
   )
@@ -43,7 +59,15 @@ test("fade peaks move while quiet offsets and discarded source remain fixed", ()
     end: out.end,
   })
   const curve = moveFadeDrag(
-    beginFadeDrag(clip, "in", "curve", { x: 300, y: 200 }, 32, 64),
+    beginFadeDrag(
+      clip,
+      "in",
+      "curve",
+      { x: 300, y: 200 },
+      32,
+      64,
+      DEFAULT_LAYOUT_TOKENS.arrangement.hit.clipFadeHandle
+    ),
     { x: 300, y: 192 },
     32
   )
@@ -65,7 +89,13 @@ test("resizing either clip edge carries both fade anchors together", () => {
       fadeOutOffsetBars: 1,
       fadeOutBars: 2,
     })
-    const row = { trackGeometry: DEFAULT_LAYOUT_TOKENS.track, track, top: 34, height: 121 }
+    const row = {
+      trackGeometry: DEFAULT_LAYOUT_TOKENS.track,
+      arrangementGeometry: DEFAULT_LAYOUT_TOKENS.arrangement,
+      track,
+      top: 34,
+      height: 121,
+    }
     const before = clipVisualGeometry(clipRect(clip, row, 32, 0), clip, track, true)
     const after = clipVisualGeometry(clipRect(next, row, 32, 0), next, track, true)
     const affected = edge === "left" ? 0 : 1
@@ -80,11 +110,25 @@ for (const edge of ["in", "out"] as const) {
       const { clip: source, track: owner } = fixture()
       const clip = { ...source, fadeInCurve: 0, fadeOutCurve: 0, fadeInBars: 3, fadeOutBars: 3 }
       const track = { ...owner, collapsed: false, heightPx: height }
-      const row = { trackGeometry: DEFAULT_LAYOUT_TOKENS.track, track, top: 34, height }
+      const row = {
+        trackGeometry: DEFAULT_LAYOUT_TOKENS.track,
+        arrangementGeometry: DEFAULT_LAYOUT_TOKENS.arrangement,
+        track,
+        top: 34,
+        height,
+      }
       const visual = clipVisualGeometry(clipRect(clip, row, 32, 0), clip, track, true)
       const fade = visual.fades.find(item => item.edge === edge)!
       const pointer = fade.curve
-      let state = beginFadeDrag(clip, edge, "curve", pointer, 32, visual.bodyHeight)
+      let state = beginFadeDrag(
+        clip,
+        edge,
+        "curve",
+        pointer,
+        32,
+        visual.bodyHeight,
+        DEFAULT_LAYOUT_TOKENS.arrangement.hit.clipFadeHandle
+      )
       const projected = (x: number, y: number) => {
         const result = moveFadeDrag(state, { x, y }, 32)
         state = result.state

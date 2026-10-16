@@ -9,6 +9,7 @@ export interface TrackGeometry {
   readonly collapsedHeight: number
   readonly titleHeight: number
   readonly defaultHeight: number
+  readonly mainHeight: number
   readonly maxHeight: number
   readonly resizeStep: number
   readonly revealThreshold: number
@@ -93,6 +94,7 @@ export function createLayoutTokens(control: ControlMetrics, project: ProjectMetr
       titleHeight,
       collapsedHeight: titleHeight + project.trackBorder,
       defaultHeight: project.defaultTrackHeight,
+      mainHeight: 108,
       maxHeight: project.maxTrackHeight,
       resizeStep,
       revealThreshold: resizeStep / 2,

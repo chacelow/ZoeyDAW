@@ -34,7 +34,8 @@ export { Progress } from "./Progress"
 export { Loading } from "./Loading"
 export { LoadErrorScreen } from "./LoadErrorScreen"
 export { ScrollArea, ControlledScrollbar } from "./ScrollArea"
-export { Toaster, toast, toastLoading } from "./Toaster"
+export { configureToastPolicy, dismissToast, Toaster, toast, toastLoading } from "./Toaster"
+export type { ToastPolicy } from "./Toaster"
 export { Label } from "./Label"
 export { Input } from "./Input"
 export { RadioGroup, RadioGroupItem } from "./RadioGroup"
@@ -111,7 +112,12 @@ export type { RadioGroupProps, RadioGroupItemProps } from "./RadioGroup"
 export type { ToggleGroupProps, ToggleGroupItemProps } from "./ToggleGroup"
 export type { SettingsShellProps, SettingsNavItemProps } from "./SettingsShell"
 export type { MotionTabsProps, TabOption } from "./MotionTabs"
-export type { ControlEnvironment, ControlInfo, UseInfoBindingOptions } from "./ControlEnvironment"
+export type {
+  ControlEnvironment,
+  ControlInputPolicy,
+  ControlInfo,
+  UseInfoBindingOptions,
+} from "./ControlEnvironment"
 export type { ControlGroupProps } from "./ControlGroup"
 export type { DragPreviewAreaProps, DragPreviewItem } from "./DragPreviewArea"
 export { ListRow } from "./ListRow"

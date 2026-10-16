@@ -69,10 +69,12 @@ describe("Music-position grid invariants", () => {
   })
 
   test("Live-observed 4/8 numbering contains the half-beat sixteenth hierarchy", () => {
-    const plan = numberedRulerPlan(320, 4, 8)
+    const plan = numberedRulerPlan(320, 4, 8, DEFAULT_LAYOUT_TOKENS.arrangement.rulerLabelSpacing)
     expect(plan.mode).toBe("sixteenth")
     expect(plan.stepBars).toBe(1 / 8)
-    expect(numberedRulerPlan(320, 4, 4)).toEqual({ mode: "beat", stepBars: 1 / 4 })
+    expect(
+      numberedRulerPlan(320, 4, 4, DEFAULT_LAYOUT_TOKENS.arrangement.rulerLabelSpacing)
+    ).toEqual({ mode: "beat", stepBars: 1 / 4 })
   })
 
   test("ruler cadence, snapping and Pattern shading remain coherent across randomized zooms and five meters", () => {
@@ -91,7 +93,12 @@ describe("Music-position grid invariants", () => {
         grid: { mode: "fixed", bars: noteGridBars(4, meter.numerator, meter.denominator) },
       })
       const current = scene.get()
-      const plan = numberedRulerPlan(pxPerBar, meter.numerator, meter.denominator)
+      const plan = numberedRulerPlan(
+        pxPerBar,
+        meter.numerator,
+        meter.denominator,
+        DEFAULT_LAYOUT_TOKENS.arrangement.rulerLabelSpacing
+      )
       if (plan.mode === "sixteenth")
         expect(plan.stepBars).toBe(noteGridBars(16, meter.numerator, meter.denominator))
       if (plan.mode === "beat") expect(plan.stepBars).toBe(1 / meter.numerator)

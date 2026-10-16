@@ -19,15 +19,27 @@ test("progress clamps values and invalid maxima into a finite track width", () =
     { value: Number.NaN, max: 100, width: 60 },
   ]
   for (const item of cases) {
+    const valueText = item.width === 60 ? "处理中" : `已完成 ${item.width / 2}`
     root.render(
       <ThemeProvider>
-        <Progress testId="progress" value={item.value} max={item.max} style={{ width: 200 }} />
+        <Progress
+          testId="progress"
+          value={item.value}
+          max={item.max}
+          aria-valuetext={valueText}
+          style={{ width: 200 }}
+        />
       </ThemeProvider>
     )
     root.renderer.flush()
     const indicator = root.renderer.findByTestId("progress-indicator")
     if (!indicator) throw new Error("Progress indicator missing")
     expect(root.renderer.getElementBounds(indicator.id)?.width).toBeCloseTo(item.width, 0)
+    expect(
+      Object.values(root.renderer.getA11yTree().nodes ?? {}).some(
+        node => node.aria?.role === "ProgressIndicator" && node.aria.value === valueText
+      )
+    ).toBe(true)
   }
   root.unmount()
 })

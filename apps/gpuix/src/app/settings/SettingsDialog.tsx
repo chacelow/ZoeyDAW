@@ -205,11 +205,12 @@ function LogsSection() {
 }
 
 function AboutSection() {
+  const theme = useTheme()
   const { t } = useAppTranslation()
   const styles = useSectionStyle()
   return (
     <div style={styles.section}>
-      <text style={{ fontWeight: 600 }}>{t("app.name")}</text>
+      <text style={{ fontWeight: theme.design.typography.weights.semibold }}>{t("app.name")}</text>
       <text style={styles.muted}>{`${t("app.tagline")} · ${t("about.prototype")}`}</text>
       <text style={styles.muted}>{t("about.sourceHint")}</text>
       <Separator />

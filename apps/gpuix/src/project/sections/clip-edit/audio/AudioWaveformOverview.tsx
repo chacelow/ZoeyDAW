@@ -1,4 +1,3 @@
-import { colorMix } from "@/shared/theme/color-mix"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { SourceWaveform } from "./SourceWaveform"
@@ -44,17 +43,21 @@ export function AudioWaveformOverview({
       tabIndex={0}
       aria-label={labels.overview}
       aria-valuenow={view.start}
-      aria-valuetext={view.start.toFixed(3)}
+      aria-valuetext={labels.formats.number(view.start, "viewport")}
       style={sx({
         position: "relative",
         flexShrink: 0,
         height: strip,
         overflow: "hidden",
-        cursor: "ew-resize",
-        borderTopWidth: 1,
+        cursor: theme.design.cursors.horizontalResize,
+        borderTopWidth: theme.design.editor.dividerStrokeWidth,
         borderColor: theme.colors.arrangementLine,
         keyboardFocusDim: false,
-        focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+        focusVisible: {
+          outlineWidth: theme.design.shape.focusRingWidth,
+          outlineColor: theme.colors.ring,
+          outlineOffset: -theme.design.shape.focusRingWidth,
+        },
       })}
       {...handlers}
     >
@@ -79,9 +82,9 @@ export function AudioWaveformOverview({
           bottom: 0,
           left: ((view.start - extent.start) / extent.span) * width,
           width: (view.span / extent.span) * width,
-          borderWidth: 1,
+          borderWidth: theme.design.editor.selectionStrokeWidth,
           borderColor: theme.colors.primary,
-          backgroundColor: colorMix(theme.colors.primary, 12, "transparent"),
+          backgroundColor: theme.colors.editorOverviewViewport,
           pointerEvents: "none",
         })}
       />

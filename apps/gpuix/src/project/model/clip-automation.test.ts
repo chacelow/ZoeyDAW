@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test"
 import { hydrateProject, projectActions, useProjectState } from "../adapters"
-import { createMockDocument, createMockWorkspace } from "../adapters/fixtures"
+import { createMockDocument, createMockWorkspace, TEST_CREATION } from "../adapters/fixtures"
 import { moveClipAutomation } from "./clip-automation"
 import { createTrack } from "./reducers"
 import type { Track } from "./types"
@@ -72,7 +72,7 @@ describe("automation accompanying Clip moves", () => {
 
   it("matches destination parameters, creates missing lanes, and copies fresh point IDs without removing sources", () => {
     const source = createMockDocument().tracks
-    const target = createTrack("audio", source, undefined, source[0].heightPx)
+    const target = createTrack("audio", source, undefined, TEST_CREATION)
     target.id = "other-audio"
     target.automation = [
       {
@@ -110,7 +110,7 @@ describe("automation accompanying Clip moves", () => {
 
   it("moves matching lanes across tracks while leaving unrelated destination automation untouched", () => {
     const source = createMockDocument().tracks
-    const target = createTrack("audio", source, undefined, source[0].heightPx)
+    const target = createTrack("audio", source, undefined, TEST_CREATION)
     target.id = "other-audio"
     target.automation = [
       { id: "other-pan", parameter: "pan", points: [{ id: "pan-resident", bar: 24, value: 0.8 }] },

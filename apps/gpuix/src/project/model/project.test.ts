@@ -345,7 +345,7 @@ describe("versioned persistence", () => {
     setProjectStorageId("snapshot-test-b")
     expect(useProjectState.getState().document.transport.bpm).toBe(120)
     expect(projectActions.restoreSnapshot()).toBe(false)
-    expect(useProjectState.getState().session.snapshotError).toMatch(/No local snapshot/)
+    expect(useProjectState.getState().session.snapshotError).toBe("missing")
     expect(useProjectState.getState().document.transport.bpm).toBe(120)
   })
 })

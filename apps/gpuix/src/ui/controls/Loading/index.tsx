@@ -3,28 +3,31 @@ import { sx } from "@/shared/theme/style"
 import { Progress } from "../Progress"
 import type { Props } from "@gpuix/react"
 
-export interface LoadingProps extends Props {
-  readonly tip?: string
-  readonly message?: string
+export type LoadingProps = Props & {
+  readonly label: string
   readonly show?: boolean
-  readonly progress?: number
-  readonly logoSrc?: string
-}
+} & (
+    | { readonly progress: number; readonly progressValueText: string }
+    | { readonly progress?: never; readonly progressValueText?: never }
+  ) &
+  (
+    | { readonly logoSrc: string; readonly logoAlt: string }
+    | { readonly logoSrc?: never; readonly logoAlt?: never }
+  )
 
 export function Loading({
-  tip,
-  message,
+  label,
   show = true,
   progress,
+  progressValueText,
   logoSrc,
+  logoAlt,
   children,
   style,
   ...props
 }: LoadingProps) {
   const theme = useTheme()
   if (!show) return null
-  const label = tip ?? message ?? "Loading"
-  const gap = theme.control["--spacing-control-track-gap"]
   const showProgress = typeof progress === "number"
   return (
     <div
@@ -44,7 +47,7 @@ export function Loading({
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: gap * 3,
+          gap: theme.design.loading.gap,
           backgroundColor: theme.colors.background,
           color: theme.colors.mutedForeground,
           fontSize: theme.control["--text-control-track"],
@@ -55,18 +58,18 @@ export function Loading({
       {logoSrc ? (
         <img
           src={logoSrc}
-          alt="ZoeyMind"
+          alt={logoAlt}
           objectFit="contain"
           style={{
-            width: theme.control["--spacing-control-icon"] * 6,
-            height: theme.control["--spacing-control-track"] * 3,
+            width: theme.design.loading.brandWidth,
+            height: theme.design.loading.brandHeight,
           }}
         />
       ) : null}
       <div>{label}</div>
       {showProgress ? (
-        <div style={{ width: theme.layout.track.controlsWidth }}>
-          <Progress value={progress ?? 0} aria-label={label} />
+        <div style={{ width: theme.design.loading.progressWidth }}>
+          <Progress value={progress ?? 0} aria-label={label} aria-valuetext={progressValueText} />
         </div>
       ) : null}
       {children}

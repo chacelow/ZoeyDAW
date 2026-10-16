@@ -1,3 +1,4 @@
+import { usePreference } from "@/platform/settings"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { PanelEnvironmentContext } from "@/ui/panels/PanelEnvironment"
@@ -13,6 +14,7 @@ export function useTrackReorder(
   container: RefObject<PublicInstance | null>
 ) {
   const { renderer } = useGpuix()
+  const pointer = usePreference("pointer")
   const { subscribeWindowActive } = useContext(PanelEnvironmentContext)
   const epoch = useProjectState(state => state.session.editEpoch)
   const anchor = useRef<{
@@ -32,7 +34,7 @@ export function useTrackReorder(
   useEffect(() => {
     cancel()
     return cancel
-  }, [epoch, cancel])
+  }, [epoch, cancel, pointer])
   useEffect(
     () =>
       subscribeWindowActive?.(active => {
@@ -62,7 +64,7 @@ export function useTrackReorder(
             cancel()
             return
           }
-          if (!start.moved && !dragStarted(start, { x: event.x, y: event.y })) return
+          if (!start.moved && !dragStarted(start, { x: event.x, y: event.y }, pointer)) return
           start.moved = true
           const bounds = container.current
             ? renderer?.getElementBounds?.(container.current.id)

@@ -1,9 +1,11 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { describe, expect, test } from "bun:test"
 import { createMinimapGesture } from "./gesture"
 import type { MinimapGeometry } from "../../core/viewport/minimap"
 
 function mount() {
   let geometry: MinimapGeometry = {
+    policy: ARRANGEMENT_DEFAULTS,
     bars: 128,
     viewportWidth: 800,
     pxPerBar: 100,

@@ -5,6 +5,7 @@ import type { Props } from "@gpuix/react"
 export interface ProgressProps extends Props {
   readonly value?: number | null
   readonly max?: number
+  readonly "aria-valuetext": string
 }
 
 export function Progress({ value = null, max = 100, style, testId, ...props }: ProgressProps) {
@@ -21,10 +22,7 @@ export function Progress({ value = null, max = 100, style, testId, ...props }: P
       aria-valuemin={0}
       aria-valuemax={upperBound}
       aria-valuenow={determinate ? clamped : undefined}
-      aria-valuetext={
-        props["aria-valuetext"] ??
-        (determinate ? `${Math.round((clamped / upperBound) * 100)}%` : "Loading")
-      }
+      aria-valuetext={props["aria-valuetext"]}
       style={sx(
         {
           display: "flex",
@@ -42,10 +40,11 @@ export function Progress({ value = null, max = 100, style, testId, ...props }: P
         testId={testId ? `${testId}-indicator` : undefined}
         style={{
           height: "100%",
-          width: `${determinate ? (clamped / upperBound) * 100 : 30}%`,
+          // Percent conversion is normalization, not a visual preference.
+          width: `${determinate ? (clamped / upperBound) * 100 : theme.design.progress.widthFraction * 100}%`,
           flexShrink: 0,
           backgroundColor: theme.colors.primary,
-          opacity: determinate ? 1 : 0.5,
+          opacity: determinate ? 1 : theme.design.progress.indeterminateOpacity,
         }}
       />
     </div>

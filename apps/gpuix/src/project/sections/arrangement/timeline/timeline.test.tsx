@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -9,7 +10,7 @@ import { createSceneStore } from "../core/scene"
 import { MiniMap } from "./minimap"
 import { Rulers, TimeRuler } from "./rulers"
 import { createTimelineController } from "./controller"
-import { englishLabels } from "./demo-labels"
+import { englishLabels } from "@/app/locales/sections/timeline"
 import { flushSync } from "@gpuix/react"
 import { Button } from "@/ui/controls"
 import type { CursorLockPort } from "@/ui/controls"
@@ -51,6 +52,18 @@ function timelineOwner(scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)) {
   disposals.push(owner.dispose)
   return owner
 }
+
+test("footer height changes clamp the viewport without revealing the editing track again", () => {
+  const owner = timelineOwner()
+  projectActions.setEditingClip("audio-1")
+  owner.setScroll(0, 0)
+  owner.view.measure({ containerWidth: 1104, bodyHeight: 160, timelineLeft: 0 })
+  expect(owner.sceneStore.get().viewport.scrollY).toBe(0)
+  expect(useProjectState.getState().workspace.scrollY).toBe(0)
+  projectActions.setEditingClip("trager-1")
+  projectActions.setEditingClip("audio-1")
+  expect(owner.sceneStore.get().viewport.scrollY).toBeGreaterThan(0)
+})
 
 describe("Native timeline layout and hit testing", () => {
   for (const coordinates of [{}, { x: 450 }, { y: 20 }]) {
@@ -136,6 +149,7 @@ describe("Native timeline layout and hit testing", () => {
             onViewport={projectActions.setViewport}
             onFit={owner.fitToProject}
             geometry={{
+              policy: ARRANGEMENT_DEFAULTS,
               bars: 128,
               viewportWidth: 800,
               pxPerBar: workspace.pxPerBar,
@@ -193,6 +207,7 @@ describe("Native timeline layout and hit testing", () => {
           onViewport={projectActions.setViewport}
           onFit={owner.fitToProject}
           geometry={{
+            policy: ARRANGEMENT_DEFAULTS,
             bars: 128,
             viewportWidth: 800,
             pxPerBar: 100,
@@ -361,7 +376,7 @@ describe("Native timeline layout and hit testing", () => {
     disposals.push(root.unmount)
     root.render(
       <ThemeProvider>
-        <TimeRuler scene={scene} label="Time ruler" />
+        <TimeRuler formats={englishLabels.formats} scene={scene} label="Time ruler" />
       </ThemeProvider>
     )
     function tenSecondsLeft() {
