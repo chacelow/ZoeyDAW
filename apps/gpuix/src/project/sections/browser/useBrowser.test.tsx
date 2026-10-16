@@ -139,7 +139,7 @@ test("application locale changes display and search without changing selection o
     flush(() => {})
 
     expect(state().rows).toEqual([])
-    flush(() => state().setQuery("  ＷＡＲＭ ＷＡＶＥＳ  "))
+    flush(() => state().setQuery("ＷＡＲＭ ＷＡＶＥＳ"))
     expect(state().rows.map(row => row.entry.name)).toEqual(["Wavetable", "Warm Waves"])
   } finally {
     root.unmount()

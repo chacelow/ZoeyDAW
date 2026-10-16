@@ -35,10 +35,14 @@ agent_terminal() {
     | jq -r '.result.terminals[]? | select((.title // "") | test("OMP|omp|π")) | .handle' | head -1
 }
 
-# Last dispatch of this terminal and its status.
+# Current dispatch of this terminal: an open (dispatched) one if any, otherwise the most recent one.
+# worker-list is not ordered by time, so a plain `last` can report a settled earlier dispatch while a
+# newer one is still running on the same terminal.
 last_dispatch() {
   orca orchestration worker-list --run "$run" --json \
-    | jq -r --arg t "$1" '[.result.workers[] | select(.agentTerminalHandle==$t)] | last | "\(.dispatchId // "") \(.dispatchStatus // "")"'
+    | jq -r --arg t "$1" '[.result.workers[] | select(.agentTerminalHandle==$t)]
+      | (map(select(.dispatchStatus=="dispatched")) | first) // last
+      | "\(.dispatchId // "") \(.dispatchStatus // "")"'
 }
 
 slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//' | cut -c1-40; }

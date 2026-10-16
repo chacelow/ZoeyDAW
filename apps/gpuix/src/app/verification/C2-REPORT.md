@@ -125,6 +125,7 @@ AX与参考图在证据目录 `live-reference.*`、`live-before-delivery.ax.txt`
 | 暂态来源最终收口 | 已批准集成 | 同步 C4/C3；全部临时 policy、panel 文案、像素与 pan formatter 已删除 | 下表列实际最终消费者 |
 | 最终合并丢失 meter formatter 消费 | 必修 | `aria-valuetext` 读取注入 `formats.meter` | 注入两位小数原生读数先失败、修后通过；71相关用例通过 |
 | CI geometry probe 缺少 resize overlay | 汇报仲裁后必修 | 协调者批准同一相对定位根补 `TrackResizeOverlay`，保留所有 resize 验收 | `PROBE_PASSES=1` 修前抛 Missing resize fixture，修后退出0；`initiallyHidden=true`、新send高度13/纵向差17、恢复后`finalSendHidden=true`；reviewer复核关闭 |
+| 最终合入丢失 monitor enum 标签消费 | 必修 | 同步协调者指定 `5d16ff9f`；实际消费者 `TrackRouting` 读取 `monitorModes/monitorShortNames`，不改状态或 enum | 协调者合入复核报告 `formatting.test.tsx:86` 得到 `Monitor off 3 Audio` 而非注入 `MODE-OFF`；只读 reviewer 复核四行修复，Standards/Spec均0 finding |
 
 ## 最终集成与来源收口
 
@@ -142,9 +143,13 @@ C4 合入后真实后端相关 106 文件为 753 pass、0 fail、168791 断言�
 
 最终 C3/C4 接口组合后 `tsc --noEmit` 通过；5 个受影响 formatter、track row/meter 与受控 theme 文件共 71 pass、0 fail、439 断言。原生 meter 策略用例曾实际失败：注入两位小数仍得到写死的一位小数读数；消费者改读 `formats.meter` 后通过，未改断言或默认策略。
 
+协调者对 `3e039f58` 的合入复核发现唯一 monitor 来源回归后，同步 `gpuix-migration` 的 `5d16ff9f`，修复实际 `TrackRouting` 消费者；`formatting.test.tsx` 单独运行 1 pass、7断言，tracks 全目录加 browser locale 回归为 65 pass、0 fail、8文件、337断言。随后项目作用域 `tsc --noEmit` 与 NFKC 来源变异通过；最终 scanner 仅剩本次差异 5 source、2 test，0 HARD、0 WARN。
+
+monitor 修复后再次真实后端捕获 4 Gallery 与 8 业务组合，保存在 `monitor-integrated`；读取中文业务 AX 得到 `监听 输入/自动/关闭 MIDI fixture` 与 audio 对应按钮，确认描述来自本地化 enum 来源。可见 In/Auto/Off 短名仍由集中来源保持 Live 惯例，未改变 monitor enum、状态或动作。
+
 最终真实后端 smoke 重新捕获 4 Gallery 与 8 业务组合，目录为证据根下 `final-integrated`。这是合入 C4 文案/格式来源后的 smoke，不把其与旧语言策略基线宣称为零差；原 C2 同 renderer 12 图严格零差结论仍见上节。最终 NFKC 变异通过：移除中央兼容归一化时真实 native 浏览器消费者回归失败，临时源码副本自动清理。入口必须由 `bun` 执行；误用 `node` 会令 runner 的 `process.execPath test` 尝试加载不存在的 `test` 模块，已改用正确命令，没有修改或跳过变异。
 
-最终 `node scripts/gpuix-review-scan.mjs` 为 132 source、60 test、0 HARD、15 WARN。合并尚未提交时 scanner 提示多个 merge-base，采用 `c72383ac`；下面逐项基于实际源码处置，没有静默豁免。
+`3e039f58` 提交前的 `node scripts/gpuix-review-scan.mjs` 为 132 source、60 test、0 HARD、15 WARN。那次合并尚未提交时 scanner 提示多个 merge-base，采用 `c72383ac`；下面保留其逐项处置记录。同步 `5d16ff9f` 后的最终差异扫描为 0 HARD、0 WARN，见上节。
 
 | WARN 文件 | 结论与处置 |
 | --- | --- |
@@ -176,6 +181,7 @@ C4 合入后真实后端相关 106 文件为 753 pass、0 fail、168791 断言�
 - 根目录pnpm exec可误选全局TypeScript6；按项目声明作用域运行5.9.3，未通过静默弃用选项掩盖工具链选择错误。
 - C3/C4 合并时类型通过仍可能丢失数值策略消费者；注入两位小数的实际 meter 回归抓住了一位小数字面量，修消费者而不重新钉死默认文案。
 - 诊断入口必须组合被取证的真实 overlay；只挂 TrackRows 却找 resize 节点，会在原 CI 故障后叠加误报，不能删失败保护来消音。
+- 完整 labels 类型不保证每个 enum 消费者都已接通。最后聚焦用例漏掉 `tracks/formatting.test.tsx`，协调者合入复核抓住 monitor 的 aria 与可见短名仍读字面量；按实际调用链修 `TrackRouting`，不只盯着 `TrackMixer` 文件名。
 
 ## 已验证做法
 
