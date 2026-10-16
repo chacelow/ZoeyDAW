@@ -136,7 +136,7 @@ diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
  
 @@ -1916,17 +1938,12 @@
      #[cfg(target_os = "windows")]
-     #[napi]
+     #[napi(skip_typescript)]
      pub fn init(&self, env: Env, options: Option<WindowOptions>) -> Result<()> {
 +        let registry = windows_cleanup::for_env(env)?;
          self.init_threaded(options)?;
