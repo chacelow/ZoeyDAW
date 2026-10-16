@@ -1,4 +1,4 @@
-import type { EventPayload, StyleDesc } from "@gpuix/react"
+import type { KeyEvent, StyleDesc } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { computeLayout } from "../layout/computeLayout"
@@ -44,10 +44,14 @@ export function CollapseDivider({
     },
     restore: onExpandedChange,
   })
-  const onKeyDown = (event: EventPayload) => {
-    if (event.key === "escape") drag.cancel()
-    else if (event.key === "up" || event.key === "home") onExpandedChange(true)
+  const onKeyDown = (event: KeyEvent) => {
+    if (event.key === "escape") {
+      if (!drag.cancel()) return
+    } else if (event.key === "up" || event.key === "home") onExpandedChange(true)
     else if (event.key === "down" || event.key === "end") onExpandedChange(false)
+    else return
+    event.preventDefault()
+    event.stopPropagation()
   }
   return (
     <div

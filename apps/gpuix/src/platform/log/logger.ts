@@ -1,7 +1,7 @@
 import { defaultColors } from "./colors"
 import { formatMessage } from "./formatter"
 import { showLogo } from "./logo"
-import { normalizeError, redact } from "./serialize"
+import { redact } from "./serialize"
 import { isProduction } from "./env"
 import type { LogLevel, LoggerConfig, Logger, LogEntry } from "./types"
 
@@ -64,8 +64,25 @@ export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger 
       displayLogo()
     }
 
-    const mainMessage = arguments_.length > 0 ? String(arguments_[0]) : ""
-    const extraArguments = arguments_.slice(1)
+    const redactKeys = new Set(config.redactKeys?.map(key => key.toLowerCase()))
+    const sanitizedArguments = arguments_.map(argument => redact(argument, redactKeys))
+    const context = config.contextProvider?.()
+    const sanitizedContext = context ? redact(context, redactKeys) : undefined
+    const sinkArguments = sanitizedContext
+      ? [...sanitizedArguments, sanitizedContext]
+      : sanitizedArguments
+    const firstArgument = sanitizedArguments[0]
+    const mainMessage =
+      arguments_[0] instanceof Error &&
+      firstArgument &&
+      typeof firstArgument === "object" &&
+      "name" in firstArgument &&
+      "message" in firstArgument
+        ? `${firstArgument.name}: ${firstArgument.message}`
+        : sanitizedArguments.length > 0
+          ? String(firstArgument)
+          : ""
+    const extraArguments = sanitizedArguments.slice(1)
 
     if (config.json) {
       const entry: Record<string, unknown> = {
@@ -77,32 +94,22 @@ export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger 
         entry.prefix = config.prefix
       }
       // 环境上下文（requestId/userId 等）先注入，作为权威字段
-      const context = config.contextProvider?.()
-      if (context) {
-        Object.assign(entry, context)
+      if (sanitizedContext) {
+        Object.assign(entry, sanitizedContext)
       }
-      // 附加参数：Error 展开为普通对象（否则 stack/message 丢失），其余原样
       if (
         extraArguments.length === 1 &&
         typeof extraArguments[0] === "object" &&
         extraArguments[0] !== null
       ) {
-        const first = extraArguments[0]
-        Object.assign(entry, first instanceof Error ? normalizeError(first) : first)
+        Object.assign(entry, extraArguments[0])
       } else if (extraArguments.length > 0) {
-        entry.data = extraArguments.map(argument =>
-          argument instanceof Error ? normalizeError(argument) : argument
-        )
+        entry.data = extraArguments
       }
-      const { redactKeys } = config
-      const payload =
-        redactKeys && redactKeys.length > 0
-          ? redact(entry, new Set(redactKeys.map(k => k.toLowerCase())))
-          : entry
       const consoleMethod =
         level === "error" ? console.error : level === "warn" ? console.warn : console.log
-      consoleMethod(JSON.stringify(payload))
-      emitToSinks(level, arguments_)
+      consoleMethod(JSON.stringify(entry))
+      emitToSinks(level, sinkArguments)
       return
     }
 
@@ -111,9 +118,13 @@ export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger 
 
     const consoleMethod =
       level === "error" ? console.error : level === "warn" ? console.warn : console.log
-    consoleMethod(...formattedParts, ...extraArguments)
+    consoleMethod(
+      ...formattedParts,
+      ...extraArguments,
+      ...(sanitizedContext ? [sanitizedContext] : [])
+    )
 
-    emitToSinks(level, arguments_)
+    emitToSinks(level, sinkArguments)
   }
 
   function emitToSinks(level: LogLevel, arguments_: unknown[]): void {

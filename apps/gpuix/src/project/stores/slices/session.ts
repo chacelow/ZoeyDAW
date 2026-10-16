@@ -18,6 +18,7 @@ export function initialSession(): SessionState {
     canUndo: false,
     canRedo: false,
     snapshotError: null,
+    snapshotSaveBlocked: false,
     preview: null,
     backend: { phase: "idle", sessionId: "", pending: 0, acceptedRevision: 0, error: null },
     activeMidiNotes: [],

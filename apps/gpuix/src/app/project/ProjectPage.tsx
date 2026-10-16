@@ -1,5 +1,5 @@
 import { useLayoutEffect } from "react"
-import { setProjectStorageId, startProjectRuntime } from "@/project/adapters"
+import { openProjectSnapshot, setProjectStorageId, startProjectRuntime } from "@/project/adapters"
 import { useAppTranslation } from "../i18n"
 import { ProjectLayout } from "./ProjectLayout"
 import { useProjectComposition } from "./useProjectComposition"
@@ -10,6 +10,7 @@ import type { ProjectShellApi } from "./useProjectShell"
 
 export interface ProjectPageProps {
   readonly projectId: string
+  readonly openMode?: "new"
   readonly renderSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
 }
 
@@ -17,13 +18,14 @@ export interface ProjectPageProps {
  * Route entry: isolates the project's editing session and snapshot key, then holds a runtime
  * lease (opening the native backend) for exactly as long as the view is mounted.
  */
-export function ProjectPage({ projectId, renderSlots }: ProjectPageProps) {
+export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPageProps) {
   const shell = useProjectShell()
   const { t } = useAppTranslation()
   useLayoutEffect(() => {
-    setProjectStorageId(projectId)
+    if (openMode === "new") setProjectStorageId(projectId)
+    else openProjectSnapshot(projectId)
     return startProjectRuntime()
-  }, [projectId])
+  }, [projectId, openMode])
   const { composition, browserRef, focusRef } = useProjectComposition(shell)
   const labels = {
     resizeBrowser: t("project.resizeBrowser"),

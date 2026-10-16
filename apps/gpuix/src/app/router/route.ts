@@ -4,7 +4,7 @@
  */
 export type Route =
   | { readonly kind: "home" }
-  | { readonly kind: "project"; readonly projectId: string }
+  | { readonly kind: "project"; readonly projectId: string; readonly openMode?: "new" }
   | { readonly kind: "not-found"; readonly path: string }
 
 export const HOME_ROUTE: Route = { kind: "home" }

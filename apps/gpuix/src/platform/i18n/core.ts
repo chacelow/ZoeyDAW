@@ -4,6 +4,7 @@ import i18next from "i18next"
 import zhCN from "./locales/zh-CN"
 import enUS from "./locales/en-US"
 import type { Module } from "i18next"
+import { logger } from "@/platform/log/logger"
 
 export const SUPPORTED_LOCALES = ["zh-CN", "en-US"] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
@@ -42,6 +43,7 @@ export function resolveLocale(locale: string | null | undefined): SupportedLocal
  * On the first call, options + core resources + optional appResources are bound.
  * Subsequent calls keep the existing instance and merge any new `appResources`
  * via `addResourceBundle` (deep + overwrite) so HMR-rerendered providers stay consistent.
+ * Storage read failures use the explicit initial language or the default locale.
  * `plugins` only apply on the first call.
  */
 export function initI18nCore(
@@ -58,10 +60,20 @@ export function initI18nCore(
   }
 
   for (const plugin of plugins) i18next.use(plugin)
-  i18next.init({
-    lng: resolveLocale(
+  let language: string | null | undefined
+  try {
+    language =
       storage?.get() ?? options?.initialLanguage ?? Intl.DateTimeFormat().resolvedOptions().locale
-    ),
+  } catch (error) {
+    language = options?.initialLanguage ?? DEFAULT_LOCALE
+    logger.warn(
+      "[i18n] Could not read locale; using fallback",
+      { operation: "read", locale: resolveLocale(language) },
+      error
+    )
+  }
+  i18next.init({
+    lng: resolveLocale(language),
     resources: {
       "zh-CN": { translation: { ...zhCN, ...appResources?.["zh-CN"] } },
       "en-US": { translation: { ...enUS, ...appResources?.["en-US"] } },
@@ -77,8 +89,17 @@ export function initI18nCore(
   return i18next
 }
 
+/** Best-effort persistence: storage failures never roll back the selected in-memory language. */
 export function persistLocale(locale: SupportedLocale): void {
-  storage?.set(locale)
+  try {
+    storage?.set(locale)
+  } catch (error) {
+    logger.warn(
+      "[i18n] Could not persist locale; keeping selected language",
+      { operation: "write", locale },
+      error
+    )
+  }
 }
 
 function registerAppResources(res: AppLocaleResources) {

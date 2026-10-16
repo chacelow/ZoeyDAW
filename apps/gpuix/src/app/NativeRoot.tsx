@@ -24,7 +24,10 @@ export function NativeRoot(props: NativeRootProps) {
     return {
       frames: createAnimationFrameSource(renderer),
       panels: { subscribeWindowActive: window.subscribeApplicationActive },
-      controls: { cursorLock: nativeCursorLock },
+      controls: {
+        cursorLock: nativeCursorLock,
+        subscribeWindowActive: window.subscribeApplicationActive,
+      },
       window,
     }
   }, [renderer])

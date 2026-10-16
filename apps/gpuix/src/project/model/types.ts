@@ -197,6 +197,7 @@ export interface SessionState {
   canUndo: boolean
   canRedo: boolean
   snapshotError: string | null
+  snapshotSaveBlocked: boolean
   preview: ProjectPreview | null
   backend: ProjectRuntimeStatus
   activeMidiNotes: number[]

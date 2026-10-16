@@ -7,7 +7,7 @@ set -uo pipefail
 sha="$1"; shift
 root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 base=$(git -C "$root" rev-parse HEAD)
-tree=$(mktemp -d "${TMPDIR:-/tmp}/zoeydaw-review.XXXXXX")
+tree=$(mktemp -d -t zoeydaw-review)
 trap 'git -C "$root" worktree remove --force "$tree" >/dev/null 2>&1' EXIT
 
 echo "== merge $sha onto $(git -C "$root" rev-parse --short HEAD)"
@@ -29,7 +29,7 @@ status=${PIPESTATUS[0]}
 echo "verify exit=$status"
 for entry in "$@"; do
   echo "== mutations $entry"
-  (cd apps/gpuix && bun $entry 2>&1 | grep -iE "caught|survived|SURVIV|KILLED|baseline|\| *0 *\||: 0 failing|error" | tail -40)
+  (cd apps/gpuix && bun $entry 2>&1 | grep -iE "caught|survived|SURVIV|KILLED|baseline|^\| [A-Za-z0-9]|: 0 failing|escaped|error" | tail -40)
 done
 [ -z "$(git status --short apps/gpuix/src)" ] || { echo "mutation left source changes"; status=3; }
 exit "$status"
