@@ -17,6 +17,7 @@ export function packGridQuads(
     if (uniform || line.kind === "major") majorCount++
     else minorCount++
   }
+  // Native quad protocol is four floats per rectangle: x, y, width, height.
   const major = new Float32Array(majorCount * 4)
   const minor = new Float32Array(minorCount * 4)
   let majorOffset = 0

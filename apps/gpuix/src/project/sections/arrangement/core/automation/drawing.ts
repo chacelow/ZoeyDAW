@@ -127,6 +127,7 @@ export function paintAutomation({
           cells.every(cell => !(point.bar >= cell.bar && point.bar < cell.bar + grid))
         ),
         ...cells.flatMap(({ key: _key, ...cell }) => {
+          // Sub-cell epsilon keeps adjacent step endpoints distinct; these are numerical safety bounds.
           const end = Math.min(scene.bars + 1, cell.bar + grid - Math.min(grid / 1000, 0.0001))
           return end - cell.bar >= 0.000001
             ? [cell, { id: `${cell.id}-end`, bar: end, value: cell.value }]
