@@ -7,18 +7,28 @@ export function createNativeBackend(): ProjectBackend {
   const listeners = new Set<(telemetry: BackendTelemetry) => void>()
   let disposed = false
   let sessionId = ""
-  engine.subscribeTelemetry(handle, json => {
-    if (disposed) {
-      return
+  try {
+    engine.subscribeTelemetry(handle, json => {
+      if (disposed) {
+        return
+      }
+      const value: unknown = JSON.parse(json)
+      if (!validFrame(value, sessionId)) {
+        return
+      }
+      for (const listener of listeners) {
+        listener(value)
+      }
+    })
+  } catch (error) {
+    disposed = true
+    try {
+      engine.dispose(handle)
+    } catch {
+      throw error
     }
-    const value: unknown = JSON.parse(json)
-    if (!validFrame(value, sessionId)) {
-      return
-    }
-    for (const listener of listeners) {
-      listener(value)
-    }
-  })
+    throw error
+  }
   return {
     apply(request): BackendResult {
       if (disposed) {
