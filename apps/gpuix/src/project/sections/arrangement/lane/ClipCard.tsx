@@ -1,6 +1,5 @@
 import { memo } from "react"
 import { clipLabel } from "@/project/model/clip-label"
-import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import type { RenderClipCard } from "./clip-card-projection"
 import type { PeakReader } from "@/project/model/backend"
@@ -21,7 +20,6 @@ export const ClipCardView = memo(function ClipCardView({
   automationMode: boolean
   readPeaks: PeakReader
 }) {
-  const theme = useTheme()
   const g = card.geometry
   const clip = card.clip
   const visibleLeft = Math.max(0, g.left)
@@ -41,8 +39,6 @@ export const ClipCardView = memo(function ClipCardView({
         userSelect: "none",
         opacity: card.ghost ? 0.5 : 1,
         pointerEvents: "none",
-        keyboardFocusDim: false,
-        focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
       })}
     >
       <ClipContentsView
