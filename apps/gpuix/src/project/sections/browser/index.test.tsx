@@ -79,6 +79,43 @@ test("results rove focus independently of selection across filtering and source 
   }
 })
 
+test("search Escape restores the committed roving row and Tab proceeds to the next sibling", () => {
+  const root = createTestRoot({ width: 600, height: 700 })
+  try {
+    root.render(
+      <ThemeProvider>
+        <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+          <Button testId="before-browser" label="Before Browser" />
+          <div style={{ flexGrow: 1, minHeight: 0 }}>
+            <BrowserPanel labels={englishBrowserLabels} />
+          </div>
+          <Button testId="after-browser" label="After Browser" />
+        </div>
+      </ThemeProvider>
+    )
+    const renderer = root.renderer
+    const node = (id: string) => {
+      const result = renderer.findByTestId(id)
+      if (!result) throw new Error(`Missing ${id}`)
+      return result
+    }
+    for (const query of ["A n a l o g", "z z z z z z"]) {
+      renderer.nativeSimulateKeystrokes(node("browser-search").id, query)
+      renderer.nativeSimulateKeystrokes(node("browser-search").id, "escape")
+      expect(renderer.getElement(node("browser-search").id)?.customProps?.value).toBe("")
+      const restored = node("browser-entry-tunings-12-TET")
+      expect(renderer.getElement(restored.id)?.customProps?.tabIndex).toBe(0)
+      expect(renderer.getElement(node("browser-results").id)?.customProps?.tabIndex).toBe(-1)
+      expect(renderer.getFocusedElementId()).toBe(restored.id)
+      renderer.simulateKeystrokes("tab")
+      expect(renderer.getFocusedElementId()).toBe(node("after-browser").id)
+      expect(renderer.getFocusedElementId()).not.toBe(node("before-browser").id)
+    }
+  } finally {
+    root.unmount()
+  }
+})
+
 test("changing source gives its first result a Tab entry without selecting it", () => {
   const root = mount()
   try {
