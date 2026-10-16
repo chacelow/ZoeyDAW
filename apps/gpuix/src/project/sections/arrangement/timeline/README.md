@@ -102,8 +102,6 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，仍未�
 
 在仓库根先运行 `pnpm native:build`。在 `apps/gpuix` 运行 `pnpm exec tsc --noEmit`、`bun test src/project/sections/arrangement/timeline`；根目录运行对应目录 eslint 与 `node scripts/gpuix-review-scan.mjs`。
 
-本轮跨目录修复、红绿变异、自审及组合截图边界见 [R2 验证报告](../R2-VERIFICATION.md)。
-
 外部 store/Scene 更新的原生组件测试必须用真实 `flushSync` 提交 React，再 `renderer.flush()` 绘制；单独 native flush 不能证明 UI 已跟随状态变化。永久测试保留音乐位置/时间缩放、事务/历史、epoch、MIDI/B 模式与真实按键传播，性质测试配实际变异检查。
 
 `grid/parity.test.tsx` 分别覆盖粗线宽、细线宽与细线透明度，用 div oracle 对照原生 PNG。

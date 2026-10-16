@@ -10,4 +10,4 @@ Tab 聚焦使用 `theme.colors.ring` 的 1px 内嵌 outline（offset −1），�
 
 原生行为测试覆盖 opt-in/default/vertical、有 deltaX、Ctrl/Meta 和数值子控件隔离。验证命令：在 apps/gpuix 执行 `bun test src/ui/controls/ScrollArea/index.test.tsx`。
 
-变异检查由 Footer 的统一验证工具运行，结果记录在 Footer/VERIFICATION.md，不在控件中保留测试用分支。
+变异检查由 Footer 的统一验证工具运行，不在控件中保留测试用分支。

@@ -79,13 +79,13 @@ bun test src/app --timeout 30000
 bun --hot src/main.tsx
 ```
 
-`bun apps/gpuix/src/app/verification/mutations.mjs` 跑 app 基线与行为变异，并在每次变异后恢复源码。真实后端 lease 测试需要可用音频设备，没有设备会失败，不跳过。`verification/native-fixture.ts` 是真实 main 的隔离验证 preload，要求 `B2_EVIDENCE_DIR` 指向临时目录，配合临时 HOME 避免改用户配置。第一阶段历史报告见 `report.md`，阶段2验收与限制见 `phase2-report.md`。
+`bun apps/gpuix/src/app/verification/mutations.mjs` 跑 app 基线与行为变异，并在每次变异后恢复源码。真实后端 lease 测试需要可用音频设备，没有设备会失败，不跳过。`verification/native-fixture.ts` 是真实 main 的隔离验证 preload，要求 `B2_EVIDENCE_DIR` 指向临时目录，配合临时 HOME 避免改用户配置。
 
 变异脚本可接名字子串，例如 `bun apps/gpuix/src/app/verification/mutations.mjs "lane draw"`。过滤执行先验证该项的真实行为基线；不传过滤参数时仍先跑完整 app 基线。
 
 `verification/resume-smoke.tsx` 配合 `native-fixture.ts` preload 可重跑实际 AppShell、真实 NativeBackend 与离屏 GPUI 的恢复提交。要求 `B2_EVIDENCE_DIR` 指向已创建的临时目录，配置/存储也限定在该目录；建议同时隔离 HOME。它手动投递 frame host 的 resume 事件，不替代真实桌面 occlusion 评审。
 
-`verification/r1c-surfaces.tsx` 配合同一 native fixture preload，向命令行参数指定的仓库外目录采集中英文、深浅主题、MIDI/Audio 的八个工程组合。采集前确认工程与编辑器存在，root 在 finally 中卸载。R1c 回归、变异、自审及前台验收边界见 [R1c 验证报告](verification/R1C-REPORT.md)。
+`verification/r1c-surfaces.tsx` 配合同一 native fixture preload，向命令行参数指定的仓库外目录采集中英文、深浅主题、MIDI/Audio 的八个工程组合。采集前确认工程与编辑器存在，root 在 finally 中卸载。
 
 `verification/r2-lifecycle.tsx` 配合同一 native fixture preload，验证 dirty 离开保存 → recent hydrate → 损坏快照拒绝覆盖 → 修复后 Restore 恢复保存的实际 AppShell 路径，并采集少量完整组合截图/AX（中英文、深浅主题）。`verification/mutations-r2.mjs` 覆盖 UPA-01/02；locale 与 log 各自的 `verification/mutations-r2.mjs` 覆盖 UPA-03/08。R2 回归测试在 `project-lifecycle.test.tsx`，使用真实 native backend。
 

@@ -23,7 +23,7 @@
 
 工程到共享 SceneStore 的投影只有 timeline controller 一个产品 owner。lane 的 preview、选择与播放命令只改工程 store；lane 仅写自身的拖动、缩放、悬停、targetSelection 与手势进行中的 timeSelection。独立 demo 无 timeline 时，由 demo/runtime 的一个订阅投影并在 dispose 时退订。
 
-卡片展示几何使用行内坐标，轨道行承担垂直滚动位移。`ClipCardView` 只拥有位置、透明度与 AX 描述，不持有键盘入口；`ClipContentsView` 默认 memo 只消费局部内容。原有 source/Ghost 可见 Clip 缓存派生局部几何、网格与裁剪范围，横向纯位置变化复用内容引用；缩放、裁剪、编辑、选择、悬停和折叠仍使内容失效。loop tick 使用局部序号 key，不随全局 x 变动。网格继续调用 B1 范围接口，没有第二个工程 owner、新缓存层或 React 深比较器。production 分段口径见 [滚动剖析](PROFILING.md)。
+卡片展示几何使用行内坐标，轨道行承担垂直滚动位移。`ClipCardView` 只拥有位置、透明度与 AX 描述，不持有键盘入口；`ClipContentsView` 默认 memo 只消费局部内容。原有 source/Ghost 可见 Clip 缓存派生局部几何、网格与裁剪范围，横向纯位置变化复用内容引用；缩放、裁剪、编辑、选择、悬停和折叠仍使内容失效。loop tick 使用局部序号 key，不随全局 x 变动。网格继续调用 B1 范围接口，没有第二个工程 owner、新缓存层或 React 深比较器。
 
 ### 配置来源（C3）
 
@@ -240,8 +240,8 @@ F4 初期审查以 `496a17d` 为固定点，命令为 `git diff 496a17d -- apps/
 - 错：照搬 Web 输入框的 Enter keydown 提交。对：原生 Input 使用 `onSubmit`，Escape 留在 keydown，并在文本编辑期间阻止窗口快捷键传播。因：GPUI 输入动作会消费 Enter；真实名称输入提交与原生回归覆盖此路径。
 - 错：用全局行 y 坐标与每次新建的 card/geometry 作为 memo 入参。对：行内几何按 clipId 缓存、只保留可见项，行容器负责垂直位移。因：不变的内容曾在每次垂直滚动时重渲染；native 标签渲染回归和 `card-identity` 变异锁定此行为。
 - 错：看到 SVG 减少节点就认为性能改善。对：同时记录 React/原生耗时、节点数与完整内容。因：两次网格 SVG 实验降低节点数，却使总 render/flush p90 回退，实验代码已撤回，仅保留测量数据。
-- 错：把浮点 quad 原样绘制当作 div 像素等价。对：由 F4b 在原生层复用 GPUI 设备像素吸附，不在 TS 复刻舍入。因：分数高度曾多画一个像素；原生 PNG oracle 捕获并验证修复。可复核的已修复历史证据见仓库 `scripts/gpuix-main/quad-batch/PIXEL-SNAP-REPORT.md`。
-- 错：把约 488 条整视口网格逐 Clip 传过两层 React props。对：先用保持 DEV tracing 的小规模 A/B 定位，再由投影 owner 缓存局部网格或合成行级批绘制。因：React DEV changed-props 会递归格式化变化数组，单车道产生约 58 万条属性记录；Native 上传亚毫秒不代表 JS 没有遍历成本。产品结构修复仍待协调者审定。
+- 错：把浮点 quad 原样绘制当作 div 像素等价。对：由 F4b 在原生层复用 GPUI 设备像素吸附，不在 TS 复刻舍入。因：分数高度曾多画一个像素；原生 PNG oracle 捕获并验证修复。
+- 错：把约 488 条整视口网格逐 Clip 传过两层 React props。对：先用保持 DEV tracing 的小规模 A/B 定位，再由投影 owner 缓存局部网格或合成行级批绘制。因：React DEV changed-props 会递归格式化变化数组，单车道产生约 58 万条属性记录；Native 上传亚毫秒不代表 JS 没有遍历成本。
 - 错：只订阅普通帧，认为恢复时自然会赶上播放头。对：恢复边界经 `useResumeFrame` 同步读当前时钟并 `flushSync` 提交。因：首 present 在下一普通帧之前，旧位置会闪现；缺恢复、缺同步、停止后不退订三种变异均被原生回归捕获。
 
 ## 已验证做法

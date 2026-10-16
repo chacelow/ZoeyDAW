@@ -1,8 +1,6 @@
-# gpuix 共享控件交付记录
+# gpuix 共享控件
 
-当前实现消费固定 gpuix 主干 `6a5c7c142ac32f9eb0caefe0121be995cfc18631` 及仓库受控补丁。实现位于 `ui/controls`，原生能力由 [`src/gallery/controls.tsx`](../../gallery/controls.tsx) 等组合入口经 platform 端口注入。下方 A3 的命令、字体数值和窗口记录属于 0.10.0 迁移时的历史证据，不代表最新主干逐状态复核。
-
-A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live 对比、门禁和未验证项见[最终证据报告](../../../../../scripts/gpuix-main/evidence/a3b-gallery-polish/REPORT.md)。当前已观察到部分状态与四组主题语言基线，但未完成完整逐控件逐状态视觉矩阵，不以代码门禁替代该验收。
+当前实现消费固定 gpuix 主干 `6a5c7c142ac32f9eb0caefe0121be995cfc18631` 及仓库受控补丁。实现位于 `ui/controls`，原生能力由 [`src/gallery/controls.tsx`](../../gallery/controls.tsx) 等组合入口经 platform 端口注入。
 
 ## 范围与接口
 
@@ -62,46 +60,6 @@ A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live �
 
 组合根在发布通知前调用 `configureToastPolicy({ defaultDuration, queueLimit, visibleLimit })`。唯一通知 store 持有配置引用、notice 与 timer；`Toaster` 只读 presentation，卸载 owner 调用 `dismissToast()` 释放通知资源。持续通知的 duration=0 是状态语义，不属于动画时长或主题。
 
-## 实跑命令
-
-在本 worktree 执行，未把代理自报作为结果。
-
-| 位置 | 命令 | 观察结果 |
-| --- | --- | --- |
-| 根目录 | `pnpm install --frozen-lockfile` | 成功，未修改依赖清单或 lockfile |
-| 根目录 | `pnpm native:build` | 成功，加载真实 `@zoeydaw/native` 二进制 |
-| 根目录 | `cargo check` | 通过，基线 workspace profile warning |
-| 根目录 | `cargo test` | 通过，3 个 suite 均为 0 tests；native test target 有 7 个基线 unused warnings |
-| `apps/gpuix` | `bunx tsc --noEmit` | 通过 |
-| `apps/gpuix` | `bun test src/ui/controls` | 92 pass，1 todo，0 fail |
-| `apps/gpuix` | `bun test` | 97 pass，1 todo，0 fail |
-| 根目录 | `pnpm exec ultracite fix apps/gpuix/src/ui/controls apps/gpuix/src/gallery` | 通过，无关闭 a11y 规则 |
-| 根目录 | `pnpm exec eslint apps/gpuix/src/ui` | 通过，UI 源码无原生包导入 |
-| `apps/gpuix` | `bun --hot src/gallery/controls.tsx` | 原生窗口 `zoeydaw native controls`，AX 与截图验证 |
-
-Rust 源码未改。Cargo 检查证明基线兼容，不代替真实光标交互证据。只停止了本轮自己启动的画廊进程，没有启动或停止用户应用，没有 push。
-
-## 实际窗口行为
-
-桌面 helper 的 background 输入存在焦点恢复限制。拖动先收到 `BackgroundUnavailable`，后收到 `InputFailed`。本轮最终改用同一 `computer` API 的 desktop 输入，并按实际 2560×1080 到 1280×540 截图比例换算 AX 全局坐标；没有使用 Bash、AppleScript 或 CGEventPost 代替 UI 验证。
-
-最终画廊将 `Footer info` 和 `Gallery verification` 分成两个 AX 状态节点。最终光标截图中，输入只在原生编辑器中出现，Footer info 仅为 `Info: number`。其余快照来自同轮较早状态，含旧画廊诊断栏的输入副本；`ControlEnvironment` 始终只发布组件类型，最终入口已删除该副本。
-
-| 场景 | 实际观察 | 证据 |
-| --- | --- | --- |
-| 画廊和 DragPad | 双击还原 120；真实上拖 40px 后 130。最终按下屏幕点 `(805,364)`，画廊 `onGestureEnd` 内真实 `cursorPosition()` 读回 `(805,364)`；输入为 `Scoped native input`，Footer Info 仍仅显示类型 | [截图](evidence/cursor-restored.png)、[AX](evidence/cursor-restored.ax.txt) |
-| Button、表单、Tabs | 点击激活按钮后 AX 为 `Active button (on)`；输入为 `Verified native input`；中文 Radio、Snap 切换；Devices Tab 为 true，并显示 Device 内容 | [截图](evidence/forms.png)、[AX](evidence/forms.ax.txt) |
-| Select 和子菜单 | Beats 选择为 Tones；Commands → Export → Audio 打开原生子菜单，选择后菜单关闭，状态为 `Audio selected` | [截图](evidence/menus.png)、[AX](evidence/menus.ax.txt) |
-| Context menu | 真实右键打开；选择 Rename 关闭菜单。截图含 radio group 和 More 子菜单入口 | [截图](evidence/context-menu.png)、[AX](evidence/context-menu.ax.txt) |
-| 任意内容 popup | 内嵌 BPM 130 → 140 的真实拖动后仍打开，再连续 wheel 调整为 138，AX 仍包含 `Continuous adjustment` 和 `Popup BPM` | [截图](evidence/popup-adjustment.png)、[AX](evidence/popup-adjustment.ax.txt) |
-| Popover | 内部 action 执行后保持打开；两行文字分别渲染，状态为 `Inside popover` | [截图](evidence/popover.png)、[AX](evidence/popover.ax.txt) |
-| Settings | 打开设置，General → Audio，AX 中 Audio 为 true，内容切到 Audio settings，随后关闭 | [截图](evidence/settings.png)、[AX](evidence/settings.ax.txt) |
-| 反馈 | Retry 执行后状态为 `Retry requested`；loading toast 被同 id error 替换为 `Load failed` | [截图](evidence/feedback.png)、[AX](evidence/feedback.ax.txt) |
-| ScrollArea | 真实 wheel 后第一行 AX y 从 520 到 440，viewport 高度保持 50，截图显示第 5、6、7 行 | [截图](evidence/scroll.png) |
-| Drag preview | 真实横向拖动 source 后释放，状态为 `Preview released`。永久测试另覆盖拖动中的预览与取消 | [截图](evidence/drag-preview.png)、[AX](evidence/drag-preview.ax.txt) |
-
-另实测数值编辑：点击 BPM 预编辑，按 `9` 后出现原生 textfield；点击其他控件后提交，数值按 min 钳制为 20。Bar 的 wheel 50 → 49，Bipolar/Pan 的 wheel 从中心到 −0.02/L2，Progress 同步为 49%。这些是 UI 参数，不是音频引擎。
-
 ## 已完成的 0.10 临时路径切换
 
 | 原路径 | 当前唯一 owner | 状态 |
@@ -127,4 +85,4 @@ Rust 源码未改。Cargo 检查证明基线兼容，不代替真实光标交互
 
 原限制：JS 处理 `mouseDown` 时读 OS 当前光标，合成“按下即移动”实测锚点从 `(805,364)` 偏到 `(805,354)`。现在锚点取按下事件自身的窗口坐标，经原生 `windowPointToScreen` 换算，不加补偿、轮询或 CGEventTap。`CursorLockPort.capture` 改为接收按下点；事件缺坐标时不锁光标。
 
-真实画廊复测：按下屏幕点 `(412,293)`（AX 窗口原点 `(383,152)` + 窗口内 `(29,141)`）。无停留每步 10pt 上移 40pt 与同点停留 4 次后上移，两条路径的 `onGestureEnd` 读回都是 `(412,293)`，误差 0pt，BPM 均为 130。证据：[截图](DragPad/evidence/press-anchor-restored-2026-10-15.png)、[AX](DragPad/evidence/press-anchor-restored-2026-10-15.ax.txt)。仍未验证：人手真实硬件速度、多显示器与全屏实机（换算单测覆盖副屏负坐标）。细节见 [DragPad 契约](DragPad/README.md)。
+真实画廊复测：按下屏幕点 `(412,293)`（AX 窗口原点 `(383,152)` + 窗口内 `(29,141)`）。无停留每步 10pt 上移 40pt 与同点停留 4 次后上移，两条路径的 `onGestureEnd` 读回都是 `(412,293)`，误差 0pt，BPM 均为 130。仍未验证：人手真实硬件速度、多显示器与全屏实机（换算单测覆盖副屏负坐标）。细节见 [DragPad 契约](DragPad/README.md)。

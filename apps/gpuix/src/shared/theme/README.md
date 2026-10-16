@@ -32,9 +32,9 @@
 - `design.colorRecipes` 控制混色、透明洗色与语义关联；默认配方复用预设缓存，覆盖配方按 scheme 重新派生。`contentFill(color, colors, paperTint)` 显式接收 `design.colorRecipes.contentPaperTint`，没有内部固定 tint。
 - `layout.track` 一次解析控件行高、间距、边框、折叠高、标题高、resize 步长/阈值与上限。行与 Clip 投影携带同一 `trackGeometry`，命中与绘制不各读默认值。
 
-组合 Gallery 的默认、flat、加大间距是只读演示配置，不是用户主题编辑器。后台启动使用 `GPUIX_BACKGROUND=1 bun --hot apps/gpuix/src/gallery/controls.tsx`，只验证不依赖帧推进的启动与 AX；真实可见组合由协调者在前台收尾验收。离屏整页取证入口见 [setup](../../../../../docs/agents/setup.md)。
+组合 Gallery 的默认、flat、加大间距是只读演示配置，不是用户主题编辑器。后台启动使用 `GPUIX_BACKGROUND=1 bun --hot apps/gpuix/src/gallery/controls.tsx`，只验证不依赖帧推进的启动与 AX；真实可见组合在前台验收。离屏整页取证入口见 [setup](../../../../../docs/agents/setup.md)。
 
-来源已建立不代表业务全部迁移。C1 只迁本模块内部配方、Provider 与轨道几何注入，业务样式及新条目的消费者由 C2/C3 接线，并负责每个新增来源的实际消费者回归与字面量变异。完整组 ID 映射及证据见 `verification/C1-REPORT.md`。
+来源已建立不代表业务全部迁移。C1 只迁本模块内部配方、Provider 与轨道几何注入，业务样式及新条目的消费者由 C2/C3 接线。
 
 ## 预设来源
 

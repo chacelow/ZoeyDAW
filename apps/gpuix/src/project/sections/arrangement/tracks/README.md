@@ -1,7 +1,5 @@
 # Arrangement tracks
 
-Stage 1 integration is not final acceptance. [VERIFICATION.md](VERIFICATION.md) records the migration inventory, Live comparison, visual checklist, independent reviews and actual gates. TypeScript, slice lint/scan and Rust pass. One shared nested-context-menu regression remains enabled; actual numeric fill/bipolar geometry, wheel ancestor isolation and complete per-state visuals still block acceptance. Verification continues after A3b's second increment; no `worker_done` is claimed.
-
 ## Routing legality
 
 `project/model/track-routing.ts` owns `canRouteTrack(sourceId, destinationId, tracks)` and `routingDestinations(track, tracks)`. Both the routing menu and `adapters/runtime/track-routing.ts` use the same decision. Internal targets must be Group or Main, cannot be the source or its descendant, and cannot close an output cycle. `none` and `external` remain legal terminal destinations. Checking candidates does not alter the document.
@@ -43,15 +41,7 @@ Meter 的声道间距、peak 线高、zero 线高和警告渐变位置读取 `de
 
 `TrackLabels` 注入文案与 `DisplayFormats` 纯端口。唯一文本数据在 `app/locales/sections/tracks.ts`，组合根通过 `createTrackLabels(locale)` 构造标签并在自身生命周期内复用。project 组件不导入 app、不持有第二份语言状态。Mixer 的 dB/Pan 显示和解析、Meter 声道朗读、monitor mode 文案都消费这份输入。
 
-Mixer 使用 `formats.pan(value, "control")`；自动化 ValueEditor 使用 `"automation"` 变体，并通过 `formats.db(value, { unit: true })` 保留单位。中心 `C` 是跨语言协议表示，文案来源由共享 formatter 统一拥有，不在业务组件另加 locale 特例。C3 的完整来源/变异/像素证据见 [C3-REPORT.md](../C3-REPORT.md)。
-
-### Exercised proof
-
-- `bun test src/project/sections/arrangement/tracks/meter`: 6 pass, 0 fail, 40 assertions, covering production frame activation, native timestamp hold/fall, silence/unmount unsubscribe and inline-reader preservation.
-- Initial C1 window, before F1 frame integration: AX playback changed Stopped → Playing; Audio reported L −23.0 / R −27.0 dBFS, Group L −26.0 / R −28.5, Return L −38.0 / R −45.0. A real authored Clip gain change to 24 dB produced Audio L +1.0 / R −1.8 dBFS while Main remained at low output level.
-- The display layout changed during this run; screenshots were black and a display capture reported `InvalidCoordinateFrame`. AX proves the command/telemetry path, not the missing meter pixels. The service was killed after 1m55s; visual meter-state verification remains pending.
-- Production-frame smoke at `8d34ed1`: AX changed Stopped → Playing → Stopped, but all meters stayed at the floor and window capture was black despite granted permissions and an unlocked/awake display. This attempt does not prove live signal or peak-decay pixels.
-- The later G1 slot produced a clear real-WAV meter image and native cursor restore readback at exactly the press anchor. The background-frame state is not classified: key/main, occlusion and callback counts were not recorded. Peak-decay visuals remain incomplete. Exact results and the late-shutdown incident are in [VERIFICATION.md](VERIFICATION.md).
+Mixer 使用 `formats.pan(value, "control")`；自动化 ValueEditor 使用 `"automation"` 变体，并通过 `formats.db(value, { unit: true })` 保留单位。中心 `C` 是跨语言协议表示，文案来源由共享 formatter 统一拥有，不在业务组件另加 locale 特例。
 
 ## Track header controls
 
@@ -132,6 +122,4 @@ bun test src/project/sections/arrangement/tracks
 
 The demo is a composition root, not another project implementation. It authors the project store, acquires the real native backend and uses the repository's real probe WAV. Its lane slot is a read-only Clip projection for verifying track geometry, not an implementation of the separate clip-lane slice. Main is attenuated for validation; the overload button edits real Clip gain through the public command. Theme and language controls only affect the verification surface. Use a named service and kill it immediately after capturing AX/screenshots.
 
-The temporary stdout telemetry and cursor-readback wrapper used for the G1 slot have been removed after evidence collection. They are not current demo features. The existing Frame stats button only displays native frame statistics, and the composition root injects `nativeCursorLock` directly. Historical readbacks remain in `evidence/`. Reserve foreground access through the coordinator before a desktop slot; do not request interactive `computer.control.acquire` inside a bounded slot.
-
-`render-cost.tsx` runs the native test renderer, measures actual draw statistics and retained/mounted nodes for 20 versus 2000 source tracks, and asserts all nodes are released after unmount. The current first-increment run confirms clipping keeps node counts independent of source count. Exact frame timings and raw evidence are in [VERIFICATION.md](VERIFICATION.md); this single run is not a speedup or stable-frame-rate claim.
+`render-cost.tsx` runs the native test renderer, measures actual draw statistics and retained/mounted nodes for 20 versus 2000 source tracks, and asserts all nodes are released after unmount. Clipping keeps node counts independent of source count.

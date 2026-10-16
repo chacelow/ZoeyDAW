@@ -63,7 +63,7 @@ Pattern 只编辑一个源周期，保留裁剪首步与负偏移相位。`patte
 - `audio/source-view.ts`、`markers.ts`：源视口与标记计算。
 - `audio/AudioParameters.tsx`：复用 DragPad、Toggle 与 Dropdown 的参数面板。
 - `audio/AudioWaveform.tsx`、`SourceWaveform.tsx`、`SourceMarker.tsx`：源视图组合、真实峰值查询、标记事务。
-- `pattern/PatternSteps.tsx`、`geometry.ts`：源周期刷步、可见viewport与统一命中几何。复测见 `pattern/VERIFICATION.md`。
+- `pattern/PatternSteps.tsx`、`geometry.ts`：源周期刷步、可见viewport与统一命中几何。
 
 ## 验证入口
 
@@ -85,8 +85,4 @@ mkdir -p /tmp/zoeydaw-r2-sections
 B2_EVIDENCE_DIR=/tmp/zoeydaw-r2-sections bun --preload ./src/app/verification/native-fixture.ts src/app/verification/clip-edit/r2-smoke.tsx
 ```
 
-Demo 使用真实 runtime 与临时生成的立体声 WAV。`CLIP_EDIT_THEME=light`、`CLIP_EDIT_LOCALE=zh` 切换外观和语言，`CLIP_EDIT_STRESS=1` 使用与 headless probe 相同的完整 10000 notes / 1024 steps 工程；结束时删除临时媒体。窗口先申请桌面时段，以命名 service 启动，验证后立即结束。生成 PNG 在 ignored evidence 中，不批量提交；JSON 记录解码元数据、真实 peak 请求、节点、单帧/编辑计时及输入序列。
-
-迁移清单、差异、Live 对照、截图、测量、完整命令与自审结论见 [验证报告](VERIFICATION.md)。
-
-SEC-01～SEC-05 的红绿回归、恢复变异、真实后端证据、所有权批准和独立自审见 [R2 验证报告](R2-VERIFICATION.md)。
+Demo 使用真实 runtime 与临时生成的立体声 WAV。`CLIP_EDIT_THEME=light`、`CLIP_EDIT_LOCALE=zh` 切换外观和语言，`CLIP_EDIT_STRESS=1` 使用与 headless probe 相同的完整 10000 notes / 1024 steps 工程；结束时删除临时媒体。以命名 service 启动，验证后立即结束。
