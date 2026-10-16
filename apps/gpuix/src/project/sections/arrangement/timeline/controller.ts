@@ -124,7 +124,6 @@ export function createTimelineController({
   let clipIds = useProjectState.getState().session.selectedClipIds
   let trackIds = useProjectState.getState().session.selectedTrackIds
   let revealedClip: SessionState["editingClipId"] | undefined
-  let revealedHeight: number | undefined
 
   function synchronize() {
     if (disposed) return
@@ -139,12 +138,11 @@ export function createTimelineController({
     viewport.clamp()
     const current = useProjectState.getState()
     if (
-      revealedClip !== current.session.editingClipId ||
-      revealedHeight !== presentation.size.bodyHeight
+      revealedClip !== current.session.editingClipId &&
+      (!current.session.editingClipId || presentation.size.bodyHeight > 0)
     ) {
       revealedClip = current.session.editingClipId
-      revealedHeight = presentation.size.bodyHeight
-      if (revealedClip && revealedHeight > 0) {
+      if (revealedClip) {
         const track = current.document.tracks.find(item =>
           item.clips.some(clip => clip.id === revealedClip)
         )

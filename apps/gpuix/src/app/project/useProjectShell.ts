@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useReducer, useRef } from "react"
 import { useProjectState } from "@/project/adapters"
 import { INITIAL_PROJECT_SHELL, reduceProjectShell } from "./project-shell"
 import type { PanelImperativeHandle } from "@/ui/panels"
-import type { FooterView, ProjectShellState, SectionId } from "./project-shell"
+import type { FooterView, ProjectShellAction, ProjectShellState, SectionId } from "./project-shell"
 
 export interface ProjectShellApi extends ProjectShellState {
   readonly browserHandleRef: React.RefObject<PanelImperativeHandle | null>
@@ -12,17 +12,29 @@ export interface ProjectShellApi extends ProjectShellState {
   readonly toggleFooter: () => void
   readonly setFooterCollapsed: (collapsed: boolean) => void
   readonly selectFooterView: (view: FooterView) => void
+  readonly reportClipCollapsed: (collapsed: boolean) => void
 }
 
 /**
- * Owns the project view's panel chrome. Clip Edit lives in a resizable Panel, so its
- * collapse is driven through the panel handle and reported back by `onResize`; Affect Chain
- * collapse is the footer's own two-state divider and only needs the state.
+ * Clip panel commands drive its imperative handle once; resize reports only publish accepted
+ * geometry. Feeding reports back into another imperative layout effect creates a collapse loop.
  */
 export function useProjectShell(): ProjectShellApi {
   const [state, dispatch] = useReducer(reduceProjectShell, INITIAL_PROJECT_SHELL)
   const browserHandleRef = useRef<PanelImperativeHandle | null>(null)
   const clipHandleRef = useRef<PanelImperativeHandle | null>(null)
+  const command = useCallback(
+    (action: ProjectShellAction) => {
+      const next = reduceProjectShell(state, action)
+      const handle = clipHandleRef.current
+      if (state.footerView === "clip" && next.footerView === "clip" && handle) {
+        if (next.footerCollapsed) handle.collapse()
+        else handle.expand()
+      }
+      dispatch(action)
+    },
+    [state]
+  )
   const editorRequest = useProjectState(current => current.session.clipEditorRequest)
   const editingClipId = useProjectState(current => current.session.editingClipId)
 
@@ -37,16 +49,8 @@ export function useProjectShell(): ProjectShellApi {
     if (editorRequest === handledRequest.current) return
     handledRequest.current = editorRequest
     if (editorRequest === 0) return
-    dispatch({ type: "clip-editor-request", editing: editing.current !== null })
-  }, [editorRequest])
-
-  const clipPanel = state.footerView === "clip"
-  useLayoutEffect(() => {
-    const handle = clipHandleRef.current
-    if (!clipPanel || !handle) return
-    if (state.footerCollapsed && !handle.isCollapsed()) handle.collapse()
-    else if (!state.footerCollapsed && handle.isCollapsed()) handle.expand()
-  }, [clipPanel, state.footerCollapsed])
+    command({ type: "clip-editor-request", editing: editing.current !== null })
+  }, [editorRequest, command])
 
   return {
     ...state,
@@ -58,11 +62,15 @@ export function useProjectShell(): ProjectShellApi {
       if (handle?.isCollapsed()) handle.expand()
       else handle?.collapse()
     }, []),
-    toggleFooter: useCallback(() => dispatch({ type: "toggle-footer" }), []),
+    toggleFooter: useCallback(() => command({ type: "toggle-footer" }), [command]),
     setFooterCollapsed: useCallback(
+      collapsed => command({ type: "set-footer-collapsed", collapsed }),
+      [command]
+    ),
+    selectFooterView: useCallback(view => command({ type: "select-footer-view", view }), [command]),
+    reportClipCollapsed: useCallback(
       collapsed => dispatch({ type: "set-footer-collapsed", collapsed }),
       []
     ),
-    selectFooterView: useCallback(view => dispatch({ type: "select-footer-view", view }), []),
   }
 }
