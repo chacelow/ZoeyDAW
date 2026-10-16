@@ -142,6 +142,14 @@ mutations.push(
     to: "return",
     test: sceneTest,
     failure: "runtime geometry changes move",
+  },
+  {
+    name: "clip-density-cache-key",
+    file: "src/project/sections/arrangement/lane/clip-card-projection.ts",
+    from: "previous.rect.trackGeometry === rect.trackGeometry &&",
+    to: "",
+    test: "src/project/sections/arrangement/lane/LaneRow/LaneRow.test.tsx",
+    failure: "refreshes a cached mounted Clip title",
   }
 )
 try {
