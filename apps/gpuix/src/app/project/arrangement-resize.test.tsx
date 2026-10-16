@@ -68,7 +68,6 @@ function mount() {
   hydrateProject(snapshot)
   cleanups.push(startProjectRuntime())
   const keyboard = createWindowKeyboard()
-  // Fixed full-project viewport is a regression fixture, not a product window default.
   const root = createTestRoot({ width: 1280, height: 800, ...keyboard.rootHandlers })
   cleanups.push(() => root.unmount())
   let latest: { composition: ProjectComposition; shell: ProjectShellApi } | null = null

@@ -47,7 +47,7 @@ MIDI 工具栏与音频参数使用共享 `ScrollArea`：前者将纵向滚轮�
 
 音频视图请求当前可见的保留源窗口部分及其实际像素宽度。音乐位置到采样帧、带符号的偏移和回绕由 Rust 处理。共享 `PeakColumns` 直接画 channel-major 的 min/max；UI 只在增益或反向预览需要时产生变换数组。Overview 使用同一 reader，宽度来自 renderer 布局。reader 身份稳定时，session、backend phase/pending/acceptedRevision 与 tempo/meter 仍构成查询 generation，后端就绪和音乐到帧的映射变化会使峰值缓存失效。
 
-Start/End、Loop Position/Length 和 Arrangement 位置互不替代。标记键盘步长是一音乐十六分音符，Shift 为其四分之一。键盘微调先取消仍在进行的 pointer 事务，读取还原后的权威 Clip，再单独提交 nudge。Start/End、Loop Position/Length、Warp/Mode、Source BPM、Transpose、Detune、Reverse 目前只编辑元数据，引擎播放尚未响应这些设置；这与 Web 范围一致并获协调者批准。琴键使用 held-note 端口，不代表已接通 MIDI synthesis。
+Start/End、Loop Position/Length 和 Arrangement 位置互不替代。标记键盘步长是一音乐十六分音符，Shift 为其四分之一。键盘微调先取消仍在进行的 pointer 事务，读取还原后的权威 Clip，再单独提交 nudge。Start/End、Loop Position/Length、Warp/Mode、Source BPM、Transpose、Detune、Reverse 目前只编辑元数据，引擎播放尚未响应这些设置。琴键使用 held-note 端口，不代表已接通 MIDI synthesis。
 
 Pattern 只编辑一个源周期，保留裁剪首步与负偏移相位。`pattern/geometry.ts` 统一绘制、命中、裁剪和键盘reveal。步骤保持control-track最小宽度，长周期通过共享ControlledScrollbar横向滚动，屏外步不挂载。根是唯一Tab入口，Left/Right、Home/End移动当前步并揭示它，Enter切换当前步，Space留给播放。brush跨滚动仍为单一Undo，Escape、失活与拖动中Undo取消当前笔刷。
 

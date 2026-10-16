@@ -131,9 +131,7 @@ export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger 
       try {
         sink(entry)
       } catch {
-        /*
-        sink 异常吞掉, 保证 logger 主流程不受影响
-        */
+        continue
       }
     }
   }
