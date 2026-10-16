@@ -1,3 +1,5 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { deriveGridPlan } from "@/project/model/grid"
 import { positionToBar } from "@/project/model/types"
@@ -22,6 +24,7 @@ export interface KeyboardOwner {
 }
 
 export interface TimelineKeyboardDeps {
+  readPolicy?: () => ArrangementPolicy["keyboard"]
   focus: () => KeyboardFocus
   blurControl: () => void
   claim?: (event: TimelineKeyboardInput) => boolean
@@ -30,6 +33,7 @@ export interface TimelineKeyboardDeps {
 
 export function createTimelineKeyboard({
   focus,
+  readPolicy = () => ARRANGEMENT_DEFAULTS.keyboard,
   blurControl,
   claim = () => false,
   browserSearch,
@@ -134,18 +138,23 @@ export function createTimelineKeyboard({
     ),
     "computerKeyboard.velocityDown": local(
       once(() =>
-        projectActions.setMidiVelocity(useProjectState.getState().session.midiVelocity - 10)
+        projectActions.setMidiVelocity(
+          useProjectState.getState().session.midiVelocity - readPolicy().velocityStep
+        )
       )
     ),
     "computerKeyboard.velocityUp": local(
       once(() =>
-        projectActions.setMidiVelocity(useProjectState.getState().session.midiVelocity + 10)
+        projectActions.setMidiVelocity(
+          useProjectState.getState().session.midiVelocity + readPolicy().velocityStep
+        )
       )
     ),
     "computerKeyboard.note": local(event => {
       const key = normalizeKey(event.key)
       const semitone = COMPUTER_NOTE_KEYS[key]
       if (semitone === undefined) return "pass"
+      // The keyboard octave mapping and MIDI's twelve-semitone, 7-bit pitch domain are constants.
       const pitch = (useProjectState.getState().session.midiOctave + 1) * 12 + semitone
       if (!event.isHeld && !notes.has(key) && pitch <= 127) {
         notes.set(key, pitch)

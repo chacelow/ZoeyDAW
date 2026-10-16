@@ -112,7 +112,12 @@ export type { RadioGroupProps, RadioGroupItemProps } from "./RadioGroup"
 export type { ToggleGroupProps, ToggleGroupItemProps } from "./ToggleGroup"
 export type { SettingsShellProps, SettingsNavItemProps } from "./SettingsShell"
 export type { MotionTabsProps, TabOption } from "./MotionTabs"
-export type { ControlEnvironment, ControlInfo, UseInfoBindingOptions } from "./ControlEnvironment"
+export type {
+  ControlEnvironment,
+  ControlInputPolicy,
+  ControlInfo,
+  UseInfoBindingOptions,
+} from "./ControlEnvironment"
 export type { ControlGroupProps } from "./ControlGroup"
 export type { DragPreviewAreaProps, DragPreviewItem } from "./DragPreviewArea"
 export { ListRow } from "./ListRow"

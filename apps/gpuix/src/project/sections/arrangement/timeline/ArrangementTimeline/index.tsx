@@ -5,7 +5,6 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { ControlledScrollbar } from "@/ui/controls"
 import { Group, Panel, PanelDivider } from "@/ui/panels"
-import { BAR_RULER_HEIGHT, TIME_RULER_HEIGHT } from "../../core/layout"
 import { Grid } from "../grid"
 import { MiniMap } from "../minimap"
 import { Rulers, TimeRuler } from "../rulers"
@@ -53,7 +52,8 @@ export function ArrangementTimeline({
   const scrollbarHeight = theme.control["--spacing-control-icon-slot"]
   const width = presentation.size.containerWidth
   const geometry = view.overviewGeometry()
-  const trackBodyHeight = Math.max(0, viewport.height - BAR_RULER_HEIGHT - TIME_RULER_HEIGHT)
+  const { barRulerHeight, timeRulerHeight } = theme.layout.arrangement
+  const trackBodyHeight = Math.max(0, viewport.height - barRulerHeight - timeRulerHeight)
   const { wrap, ...surfaceHandlers } = editSurface ?? { wrap: undefined }
   const inputSurface = (
     <div
@@ -66,11 +66,15 @@ export function ArrangementTimeline({
         {
           position: "absolute",
           left: 0,
-          top: BAR_RULER_HEIGHT,
+          top: barRulerHeight,
           width: viewport.width,
           height: trackBodyHeight,
           keyboardFocusDim: false,
-          focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+          focusVisible: {
+            outlineWidth: theme.design.shape.focusRingWidth,
+            outlineColor: theme.colors.ring,
+            outlineOffset: -theme.design.shape.focusRingWidth,
+          },
         },
         editSurface?.style
       )}
@@ -193,7 +197,7 @@ export function ArrangementTimeline({
               style={sx({
                 position: "absolute",
                 left: 0,
-                top: BAR_RULER_HEIGHT,
+                top: barRulerHeight,
                 pointerEvents: "none",
               })}
             >
@@ -206,7 +210,7 @@ export function ArrangementTimeline({
               style={sx({
                 position: "absolute",
                 left: 0,
-                top: BAR_RULER_HEIGHT,
+                top: barRulerHeight,
                 width: "100%",
                 height: trackBodyHeight,
                 overflow: "hidden",
@@ -217,7 +221,7 @@ export function ArrangementTimeline({
                 style={sx({
                   position: "absolute",
                   left: 0,
-                  top: -BAR_RULER_HEIGHT,
+                  top: -barRulerHeight,
                   width: "100%",
                   height: viewport.height,
                 })}
@@ -226,7 +230,11 @@ export function ArrangementTimeline({
               </div>
             </div>
             <div style={sx({ position: "absolute", left: 0, bottom: 0 })}>
-              <TimeRuler scene={controller.sceneStore} label={labels.timeRuler} />
+              <TimeRuler
+                scene={controller.sceneStore}
+                label={labels.timeRuler}
+                formats={labels.formats}
+              />
             </div>
             <div
               style={sx({
@@ -248,7 +256,7 @@ export function ArrangementTimeline({
               style={sx({
                 position: "absolute",
                 right: theme.layout.track.controlsWidth + theme.control["--spacing-control-gap"],
-                bottom: TIME_RULER_HEIGHT + theme.control["--spacing-control-gap"],
+                bottom: timeRulerHeight + theme.control["--spacing-control-gap"],
                 backgroundColor: theme.colors.arrangementSurfaceAlt,
                 color: theme.colors.mutedForeground,
                 fontSize: theme.control["--text-control-track"],
@@ -269,7 +277,11 @@ function TimelineStatus({ labels }: { labels: TimelineLabels }) {
   const theme = useTheme()
   const snapshot = useProjectState(state => state.session.snapshotError)
   const backend = useProjectState(state => state.session.backend)
-  const error = snapshot ?? (backend.error ? labels.backendErrors[backend.error] : null)
+  const error = snapshot
+    ? labels.snapshotErrors[snapshot]
+    : backend.error
+      ? labels.backendErrors[backend.error]
+      : null
   const message =
     error ??
     (backend.phase === "opening"

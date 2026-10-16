@@ -1,4 +1,4 @@
-import { initialSession } from "../../stores/slices/session"
+import { createSessionTemplate } from "../../defaults/template"
 import { positionToBar } from "../../model/types"
 import { getEffectiveDocument as projectEffectiveDocument } from "./effective-document"
 import { sameWorkspacePreferences } from "./workspace-preferences"
@@ -15,6 +15,7 @@ export type {
   ProjectSeed,
   ProjectBackendOptions,
   ProjectRuntimeDependencies,
+  ProjectCreationConfiguration,
 } from "./runtime-state"
 
 export function createProjectRuntime(dependencies: ProjectRuntimeDependencies) {
@@ -49,7 +50,7 @@ export function createProjectRuntime(dependencies: ProjectRuntimeDependencies) {
     owner.activePreview = null
     owner.recordingJournal = []
     owner.recordingPending = []
-    owner.store.setState({ ...next, session: initialSession() })
+    owner.store.setState({ ...next, session: createSessionTemplate(owner.preferences()) })
     owner.accepted = owner.checkpoint()
     owner.requestedBar = positionToBar(
       owner.get().session.position,
@@ -65,11 +66,14 @@ export function createProjectRuntime(dependencies: ProjectRuntimeDependencies) {
   }
 
   function resetProject(projectId: string): void {
-    hydrateState(owner.createProject(projectId))
+    hydrateState(owner.newProject(projectId))
   }
 
   return {
     get: owner.get,
+    configureProjectCreation: owner.configureProjectCreation,
+    projectCreationValues: owner.creationValues,
+    projectPreferences: owner.preferences,
     sameWorkspacePreferences,
     setPreciseTransportBar: backend.setPreciseTransportBar,
     configureProjectBackend: backend.configureProjectBackend,

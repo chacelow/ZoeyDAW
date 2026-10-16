@@ -73,5 +73,6 @@ export function markerPatch(
 
 /** Arrow keys move a marker one musical sixteenth; Shift moves a quarter of that. */
 export function markerKeyStep(numerator: number, denominator: number, fine: boolean): number {
+  // Sixteenth-note and fine-quarter conversion depends on meter, not editor preference.
   return denominator / (numerator * 16) / (fine ? 4 : 1)
 }

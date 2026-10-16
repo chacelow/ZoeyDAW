@@ -6,37 +6,39 @@ import { PopupButton } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { readProjectTelemetry, useProjectState } from "@/project/adapters"
 import type { TransportLabels } from "../labels"
-import { formatSampleTime } from "../metronome"
 
 export function PerformanceStatus({ labels }: { readonly labels: TransportLabels }) {
   const theme = useTheme()
   const phase = useProjectState(state => state.session.backend.phase)
   const playing = useProjectState(state => state.session.playing)
-  const hasTelemetry = useProjectState(state => state.session.levels.main !== undefined)
+  // A null read only means the engine has not yet published a frame for the latest control
+  // sequence; keep the last known clock instead of showing "Unavailable". Every telemetry frame
+  // replaces `levels`, so re-read on each one until a sample clock appears: previously the only read
+  // happened when `levels.main` first appeared, and a null there stuck until the popup was opened.
+  const levels = useProjectState(state => state.session.levels)
+  const hasTelemetry = levels.main !== undefined
   const [telemetry, setTelemetry] = useState<BackendTelemetry | null>(readProjectTelemetry)
   const [popupOpen, setPopupOpen] = useState(false)
-  useEffect(() => {
-    setTelemetry(readProjectTelemetry())
-  }, [hasTelemetry, playing])
-  const needsFrames = playing || (popupOpen && hasTelemetry)
   const refreshTelemetry = () => {
     const next = readProjectTelemetry()
+    if (!next) return
     setTelemetry(previous => {
-      if (previous === next) return previous
-      if (popupOpen) return next
-      const previousRate = previous?.clock.kind === "sample" ? previous.clock.sampleRate : null
-      const nextRate = next?.clock.kind === "sample" ? next.clock.sampleRate : null
+      if (popupOpen || previous === null) return next
+      const previousRate = previous.clock.kind === "sample" ? previous.clock.sampleRate : null
+      const nextRate = next.clock.kind === "sample" ? next.clock.sampleRate : null
       return previousRate === nextRate ? previous : next
     })
   }
+  useEffect(refreshTelemetry, [levels, phase, playing, popupOpen])
+  const needsFrames = playing || (popupOpen && hasTelemetry)
   useAnimationFrame(refreshTelemetry, needsFrames)
   useResumeFrame(() => flushSync(refreshTelemetry), needsFrames)
   const clock = telemetry?.clock
   const sampleRate = clock?.kind === "sample" ? clock.sampleRate : null
-  const rate = sampleRate === null ? labels.unavailable : `${sampleRate / 1000} kHz`
+  const rate = sampleRate === null ? labels.unavailable : labels.formats.sampleRate(sampleRate)
   const latency =
     sampleRate !== null && telemetry?.outputLatencyFrames != null
-      ? `${((telemetry.outputLatencyFrames / sampleRate) * 1000).toFixed(2)} ms`
+      ? labels.formats.latency((telemetry.outputLatencyFrames / sampleRate) * 1000)
       : labels.unavailable
   return (
     <PopupButton
@@ -60,7 +62,7 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
         <text>{`${labels.latency}: ${latency}`}</text>
         <text>{`${labels.buffer}: ${labels.unavailable}`}</text>
         <text>{`${labels.cpu}: ${labels.unavailable}`}</text>
-        <text>{`${labels.time}: ${clock?.kind === "sample" ? formatSampleTime(clock.frame, clock.sampleRate) : labels.unavailable}`}</text>
+        <text>{`${labels.time}: ${clock?.kind === "sample" ? labels.formats.duration(clock.frame / clock.sampleRate, "transport") : labels.unavailable}`}</text>
       </div>
     </PopupButton>
   )

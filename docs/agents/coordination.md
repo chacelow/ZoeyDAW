@@ -34,7 +34,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 ## 流程
 
-**派发**:`scripts/orchestration/start-worker.sh <worktree> <标题> <规格文件...>`。它把新 worktree 的 Orca 父级固定为 gpuix-migration,保证所有切片挂在同一棵树下。规格 = `common.md` +(B2 切片再加 `b2-common.md`)+ 本切片规格。
+**派发（2026-10-16 用户要求复用 lane）**：新任务优先派给空闲 lane，`scripts/orchestration/lane.sh assign <lane> <标题> <规格文件...>`。lane 就是一个长期保留的 gpuix-migration 子 worktree 加上它的 omp 终端，agent 保留之前读过的契约与文件地图，省掉重复的探索。`assign` 只接受“上次派发已结束、工作区干净、分支已合入主干”的 lane：它从 `gpuix-migration` 最新提交切出新分支 `lane/<lane>/<时间>-<slug>`，删掉已合入的旧分支，同步 renderer 链接与依赖，然后对同一个终端 `worker-start --terminal`。`lane.sh list` 查看所有 lane 的分支、是否已合入、终端与最近派发。只有所有 lane 都忙、又确实需要并行时，才用 `lane.sh new`（即 `start-worker.sh`）新建。规格 = `common.md` + 本任务规格。
 
 **模型按角色固定(2026-10-15 03:19 UTC 用户要求固定模型;同日 08:20 前后用户明确协调者用 Opus 5.5)**:协调者用 `cursor-claude/cc/claude-opus-5-5`;worker、临时起的 Orca 工作区 agent 用 `cursor-claude/cx/gpt-6.1-sol`。启动时手动指定,不依赖全局 omp 默认模型(其他会话可能改它)。Orca 拒绝 `worker-start --agent omp --model`,所以脚本先建 worktree,再开一个运行 `omp --model …` 的终端,最后用 `worker-start --terminal` 交付规格。不要直接调用 `worker-start --agent omp`。实现派工一律走 Orca worker,不用 omp `task` 子代理代替;`task` 只用于 worker 交付前的只读自审。
 
@@ -42,13 +42,13 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **合并前复核**:不信报告,自己在临时 worktree 里与主干合并后跑 tsc、bun test、eslint、`gpuix-review-scan`,做关键变异,比对失败名单与主干基线。改动了补丁序列的,先重建共享 vendor 再看结果。
 
-**释放(2026-10-14 15:26、2026-10-15 01:44 用户要求)**:切片合入并核对后当场做完三件事,不为"可能复用上下文"保留:
+**合入后（2026-10-16 用户要求，取代 2026-10-14/15“合入即删”的旧规则）**：切片合入并核对后，lane 保留，供下一个任务复用：
 
-1. `orca orchestration worker-release` 释放 worker 终端。返回 `user_takeover` 是因为 `start-worker.sh` 先建终端再交给 Orca,不代表用户接管;确认终端 TUI 空闲、派发已 completed 后,协调者直接 `orca terminal close --terminal <handle> --tab`,不留给用户。只有用户亲自开的终端才不碰。
-2. `orca worktree rm --worktree path:<dir>`(不加 `--force`)删除已合入的 worktree 与分支,步骤见 LESSONS「切片合入后立即删 worktree」;复核用的 `/tmp` worktree 用完就 `git worktree remove`。
-3. `ps` 确认该切片启动的 demo、gallery、service 已结束。
+1. 不关终端，不删 worktree。确认派发已 completed、`git status` 干净、分支已包含在主干里，它就是空闲 lane。
+2. `ps` 确认该任务启动的 demo、gallery、service 已经结束。
+3. lane 数量按需要的并行度保持，空闲太久或上下文已经太长的 lane，按旧流程释放：`worker-release`，`orca terminal close --terminal <handle> --tab`，`orca worktree rm --worktree path:<dir>`（不加 `--force`）。复核用的 `/tmp` worktree 用完就 `git worktree remove`。
 
-后续复验或返工另开新 worktree 加新 Dispatch。确实要保留的 worktree,必须用 `orca worktree set --worktree path:<dir> --comment "保留:<原因>;删除条件:<条件>"` 写明,并列进每次汇报。没有这条 comment 的已合入 worktree 视为漏删。
+返工或复验派给原 lane（它对这块代码最熟），不另开新 worktree。
 
 **共享资源只有一个 owner**:
 

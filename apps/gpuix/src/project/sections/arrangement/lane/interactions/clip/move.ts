@@ -39,7 +39,7 @@ export function createMoveGesture(
   let valid = true
   return {
     get cursor() {
-      return valid ? "grabbing" : "not-allowed"
+      return valid ? "grabbing" : "disabled"
     },
     autoScroll: "both",
     move(next) {

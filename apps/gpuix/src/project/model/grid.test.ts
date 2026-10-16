@@ -63,8 +63,6 @@ describe("adaptive arrangement grid", () => {
     expect(useProjectState.getState().workspace.scrollX).toBe(camera.scrollX)
   })
 
-  it.todo("Ctrl/Cmd+1/2 maps to adjustGrid through the Arrangement keyboard hook")
-
   it("retains explicit fixed note duration across 4/4 and 4/8 meter changes", () => {
     projectActions.setGrid({ mode: "fixed", bars: noteGridBars(256, 4, 4) })
     projectActions.setDenominator(8)

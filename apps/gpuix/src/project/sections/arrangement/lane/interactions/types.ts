@@ -1,3 +1,4 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import type { projectActions } from "@/project/adapters"
 import type { ProjectState } from "@/project/model/types"
 import type { SceneStore } from "../../core/scene"
@@ -23,12 +24,20 @@ export interface LaneKey {
 
 export interface LaneContext {
   scene: SceneStore
+  readPolicy: () => ArrangementPolicy
   actions: typeof projectActions
   getState: () => ProjectState
 }
 
 export type LaneCursor =
-  "default" | "grab" | "grabbing" | "not-allowed" | "ew-resize" | "move" | "crosshair" | "ns-resize"
+  | "default"
+  | "grab"
+  | "grabbing"
+  | "disabled"
+  | "horizontalResize"
+  | "fadeCurve"
+  | "automationDraw"
+  | "verticalResize"
 
 export interface LaneGesture {
   readonly cursor: LaneCursor

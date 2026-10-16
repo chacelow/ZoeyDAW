@@ -7,7 +7,7 @@ import { projectClipResize } from "../../../model/clip-edits"
 import { fadeControls } from "../../../model/fades"
 import { createSceneStore } from "./scene"
 import { clipRect, layoutTrackRows } from "./layout"
-import { clipVisualGeometry, RESIZE_EDGE_PX } from "./clip-geometry"
+import { clipVisualGeometry } from "./clip-geometry"
 import { hitTest } from "./hit-test"
 import { automationBar, automationX } from "./automation/geometry"
 import { rulerBar } from "./rulers/geometry"
@@ -59,7 +59,8 @@ test("property: clip interior hits and resize edge tolerance is symmetric", () =
     const x = visual.left + visual.width * rng()
     const hit = hitTest(scene, x, y)
     expect(hit && "clip" in hit && hit.clip.id).toBe(moved.id)
-    const tolerance = rng() * RESIZE_EDGE_PX
+    const resizeEdge = scene.geometry.arrangement.hit.clipResizeEdge
+    const tolerance = rng() * resizeEdge
     for (const [edge, px] of [
       ["left", visual.left + tolerance],
       ["right", visual.left + visual.width - tolerance],
@@ -70,8 +71,8 @@ test("property: clip interior hits and resize edge tolerance is symmetric", () =
     }
     expect(hitTest(scene, visual.left - 0.01, y)?.kind).toBe("track-lane")
     expect(hitTest(scene, visual.left + visual.width + 0.01, y)?.kind).toBe("track-lane")
-    expect(hitTest(scene, visual.left + RESIZE_EDGE_PX + 0.01, y)?.kind).toBe("clip-body")
-    expect(hitTest(scene, visual.left + visual.width - RESIZE_EDGE_PX - 0.01, y)?.kind).toBe(
+    expect(hitTest(scene, visual.left + resizeEdge + 0.01, y)?.kind).toBe("clip-body")
+    expect(hitTest(scene, visual.left + visual.width - resizeEdge - 0.01, y)?.kind).toBe(
       "clip-body"
     )
   }
@@ -200,7 +201,15 @@ test("property: fade anchors stay bounded through arbitrary drag and resize sequ
     const pxPerBar = 32 + rng() * 200
     const height = 40 + rng() * 150
     const handle = rng() < 0.5 ? "length" : "curve"
-    let state = beginFadeDrag(current, edge, handle, { x: 0, y: 0 }, pxPerBar, height)
+    let state = beginFadeDrag(
+      current,
+      edge,
+      handle,
+      { x: 0, y: 0 },
+      pxPerBar,
+      height,
+      DEFAULT_LAYOUT_TOKENS.arrangement.hit.clipFadeHandle
+    )
     const before = fadeControls(current, edge)
     const quiet = edge === "in" ? before.start : before.end
     for (let step = 0; step < 10; step++) {
@@ -227,6 +236,7 @@ test("property: fade anchors stay bounded through arbitrary drag and resize sequ
           projected,
           {
             trackGeometry: DEFAULT_LAYOUT_TOKENS.track,
+            arrangementGeometry: DEFAULT_LAYOUT_TOKENS.arrangement,
             track: owner,
             top: 34,
             height: height + 30,

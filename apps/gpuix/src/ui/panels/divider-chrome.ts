@@ -1,8 +1,12 @@
 import type { StyleDesc } from "@gpuix/react"
 import type { Theme } from "@/shared/theme/ThemeProvider"
 
-/** Shared state layers for every panel divider; hover and pressed reuse the canvas scrollbar tiers. */
-export function dividerChrome(theme: Theme, disabled = false): StyleDesc {
+/**
+ * Shared chrome for every panel divider. Pointer hover and press paint nothing (user 2026-10-16):
+ * the resize cursor alone signals the draggable hit area. Keyboard focus keeps its ring because a
+ * focused divider has no cursor to show it.
+ */
+export function dividerChrome(theme: Theme): StyleDesc {
   return {
     backgroundColor: theme.colors.card,
     userSelect: "none",
@@ -12,11 +16,5 @@ export function dividerChrome(theme: Theme, disabled = false): StyleDesc {
       outlineColor: theme.colors.ring,
       outlineOffset: -theme.design.shape.focusRingWidth,
     },
-    ...(disabled
-      ? {}
-      : {
-          hover: { backgroundColor: theme.colors.canvasScrollbarHover },
-          active: { backgroundColor: theme.colors.canvasScrollbarActive },
-        }),
   }
 }

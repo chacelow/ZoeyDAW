@@ -1,7 +1,11 @@
 import type { LaneLabels } from "@/project/sections/arrangement/lane"
+import { createDisplayFormats } from "../../i18n/display-formats"
+import { getCreationNames } from "../../i18n/creation-names"
 
 export const labelsByLocale: Record<"en" | "zh", LaneLabels> = {
   en: {
+    formats: createDisplayFormats("en-US"),
+    creationNames: getCreationNames("en-US"),
     "arrangement.timelineEditor": "Arrangement editor",
     "arrangement.rename": "Rename",
     "arrangement.editAutomationValue": "Edit value",
@@ -30,6 +34,8 @@ export const labelsByLocale: Record<"en" | "zh", LaneLabels> = {
     "arrangement.gridDensity.narrowest": "Narrowest",
   },
   zh: {
+    formats: createDisplayFormats("zh-CN"),
+    creationNames: getCreationNames("zh-CN"),
     "arrangement.timelineEditor": "编排编辑器",
     "arrangement.rename": "重命名",
     "arrangement.editAutomationValue": "编辑数值",

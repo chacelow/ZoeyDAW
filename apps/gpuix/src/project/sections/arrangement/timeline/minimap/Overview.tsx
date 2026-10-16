@@ -31,7 +31,7 @@ export const Overview = memo(function Overview({
             top: index * rowHeight,
             width,
             height: rowHeight,
-            borderBottomWidth: 1,
+            borderBottomWidth: theme.design.editor.dividerStrokeWidth,
             borderColor: theme.colors.arrangementLine,
             pointerEvents: "none",
           })}
@@ -39,7 +39,13 @@ export const Overview = memo(function Overview({
           {track.clips.map(clip => {
             const rect = clipRect(
               clip,
-              { track, top: 0, height: rowHeight, trackGeometry: theme.layout.track },
+              {
+                track,
+                top: 0,
+                height: rowHeight,
+                trackGeometry: theme.layout.track,
+                arrangementGeometry: theme.layout.arrangement,
+              },
               width / bars,
               0
             )
@@ -52,7 +58,8 @@ export const Overview = memo(function Overview({
                   left: rect.left,
                   top: 0,
                   width: rect.width,
-                  height: Math.max(1, rowHeight - 1),
+                  // Keep a drawable row when dense overviews exhaust the configured inset.
+                  height: Math.max(1, rowHeight - theme.layout.arrangement.minimapClipInset),
                   backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
                   pointerEvents: "none",
                 })}
@@ -69,7 +76,7 @@ export const Overview = memo(function Overview({
             position: "absolute",
             top: 0,
             left: ((marker.bar - 1) / bars) * width,
-            width: 1,
+            width: theme.design.editor.markerLineWidth,
             height,
             backgroundColor: theme.colors.mutedForeground,
             pointerEvents: "none",

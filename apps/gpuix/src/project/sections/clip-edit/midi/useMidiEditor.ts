@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { usePreference } from "@/platform/settings"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload, KeyEvent, PublicInstance } from "@gpuix/react"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
@@ -20,7 +21,6 @@ import {
 import { uniqueId } from "@/project/model/reducers"
 import { useClipEditorEnvironment } from "../environment"
 import { parseNotes, serializeNotes } from "./clipboard"
-import { NOTE_GRID_BEATS } from "./geometry"
 import { cellAt, hitNote, marqueeHits, pitchAt } from "./layout"
 import type { MidiClip, MidiNote } from "@/project/model/types"
 import type { RollGeometry } from "./layout"
@@ -55,8 +55,8 @@ export interface Marquee {
 }
 
 const MOVE_KEYS: Readonly<Record<string, readonly [beats: number, pitches: number]>> = {
-  left: [-NOTE_GRID_BEATS, 0],
-  right: [NOTE_GRID_BEATS, 0],
+  left: [-1, 0],
+  right: [1, 0],
   up: [0, 1],
   down: [0, -1],
 }
@@ -76,6 +76,7 @@ unmounts it and the transaction hook cancels whatever gesture was active.
 export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight: number) {
   const { renderer } = useGpuix()
   const environment = useClipEditorEnvironment()
+  const midi = usePreference("midi")
   const drawMode = useProjectState(effectiveDrawMode)
   const transaction = useProjectEditGesture((notes: MidiNote[]) =>
     projectActions.updateClip(clip.id, { notes })
@@ -165,8 +166,8 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       const beatDelta =
         Math.round(
           ((point.x - active.start.x) / Math.max(1, view.width)) *
-            (view.window.totalBeats / NOTE_GRID_BEATS)
-        ) * NOTE_GRID_BEATS
+            (view.window.totalBeats / midi.noteGridBeats)
+        ) * midi.noteGridBeats
       transaction.onChange(
         transformNotes({
           notes: active.notes,
@@ -175,6 +176,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
           beatDelta,
           pitchDelta: pitchAt(point.y, view) - active.pitch,
           window: view.window,
+          policy: midi,
         }).notes
       )
       return
@@ -195,7 +197,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       setMarquee(box)
       return
     }
-    const cell = cellAt(x, view)
+    const cell = cellAt(x, view, midi.noteGridBeats)
     const pitch = pitchAt(y, view)
     const firstCell = pitch === active.lastPitch ? active.lastCell : cell
     if (active.kind === "draw") {
@@ -208,6 +210,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         pitch,
         window: view.window,
         createId: () => uniqueId("note"),
+        policy: midi,
       })
       if (edit.notes.length !== notes.length) transaction.onChange(edit.notes)
     } else {
@@ -219,6 +222,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         pitch,
         window: view.window,
         erased: active.erased,
+        policy: midi,
       })
       active.erased = result.erased
       transaction.onChange(result.edit.notes)
@@ -246,7 +250,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       currentNoteIndex,
       pitch: pitchAt(y, view),
       lastPitch: pitchAt(y, view),
-      lastCell: cellAt(x, view),
+      lastCell: cellAt(x, view, midi.noteGridBeats),
       erased: new Set(),
     }
     gesture.current = next
@@ -277,6 +281,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         verticalRatio: (127 - pitch + 0.5) / 128,
         window: view.window,
         id: uniqueId("note"),
+        policy: midi,
       })
       projectActions.updateClip(clip.id, { notes: edit.notes })
       setSelected(edit.selection, edit.selection[0] ?? null)
@@ -351,7 +356,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
           notes: quantizeNotes({
             notes,
             selection: visibleSelection,
-            gridBeats: NOTE_GRID_BEATS,
+            gridBeats: midi.quantizeBeats,
             window: view.window,
           }).notes,
         })
@@ -373,7 +378,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         clipboardMemory.write(text)
         const copied = parseNotes(text)
         if (!copied) return false
-        const edit = pasteNotes(notes, copied, () => uniqueId("note"))
+        const edit = pasteNotes(notes, copied, () => uniqueId("note"), midi)
         projectActions.updateClip(clip.id, { notes: edit.notes })
         setSelected(edit.selection, edit.selection[0] ?? null)
         return true
@@ -416,7 +421,8 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
             notes: clip.notes,
             selection: visibleSelection,
             kind: "move",
-            beatDelta,
+            beatDelta: beatDelta * midi.noteGridBeats,
+            policy: midi,
             pitchDelta: pitchStep * (modifiers?.shift ? 12 : 1),
             window: latest.current.window,
           }).notes,

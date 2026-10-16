@@ -1,4 +1,5 @@
-import { DEFAULT_FADE_CURVE, fadeBezierSegments, fadeControls } from "@/project/model/fades"
+import { fadeBezierSegments, fadeControls } from "@/project/model/fades"
+import { PROJECT_TEMPLATE } from "@/project/defaults/template"
 import { Shape } from "@/shared/svg/Shape"
 import { cubicPath } from "@/shared/svg/paths"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -43,7 +44,9 @@ export function AudioWaveformLayer({
   const offset = clip.sourceOffsetBars ?? 0
   const toX = (bar: number) => ((bar - view.start) / view.span) * width
   const fadePaths = (["in", "out"] as const).flatMap(edge => {
-    const length = edge === "in" ? (clip.fadeInBars ?? 0) : (clip.fadeOutBars ?? 0)
+    const length =
+      (edge === "in" ? clip.fadeInBars : clip.fadeOutBars) ??
+      PROJECT_TEMPLATE.clip.fade.durationBars
     if (length <= 0 || width <= 0 || height <= 0) return []
     const controls = fadeControls(clip, edge)
     const x0 = toX(offset + controls.start)
@@ -54,8 +57,9 @@ export function AudioWaveformLayer({
       y0,
       x1,
       y1,
-      (edge === "in" ? clip.fadeInCurvePosition : clip.fadeOutCurvePosition) ?? 0.5,
-      (edge === "in" ? clip.fadeInCurve : clip.fadeOutCurve) ?? DEFAULT_FADE_CURVE
+      (edge === "in" ? clip.fadeInCurvePosition : clip.fadeOutCurvePosition) ??
+        PROJECT_TEMPLATE.clip.fade.position,
+      (edge === "in" ? clip.fadeInCurve : clip.fadeOutCurve) ?? PROJECT_TEMPLATE.clip.fade.curve
     )
     return [
       {
@@ -64,7 +68,7 @@ export function AudioWaveformLayer({
       },
     ]
   })
-  const markerProps = { clip, view, width }
+  const markerProps = { clip, view, width, formats: labels.formats }
   return (
     <div
       style={sx({

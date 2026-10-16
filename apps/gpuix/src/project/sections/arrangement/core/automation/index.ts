@@ -16,7 +16,7 @@ export function automationAction(
 export function automationCursor(
   hit: AutomationHit | null,
   drawMode: boolean
-): "crosshair" | "grab" | "ns-resize" | undefined {
-  if (drawMode && hit) return "crosshair"
-  return hit?.kind === "point" ? "grab" : hit?.kind === "segment" ? "ns-resize" : undefined
+): "automationDraw" | "grab" | "verticalResize" | undefined {
+  if (drawMode && hit) return "automationDraw"
+  return hit?.kind === "point" ? "grab" : hit?.kind === "segment" ? "verticalResize" : undefined
 }

@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { configureToastPolicy, dismissToast, Toaster } from "@/ui/controls"
-import { DEFAULT_TOAST_POLICY } from "@/ui/controls/Toaster"
+import { usePreference } from "@/platform/settings"
 import { useProjectState } from "@/project/adapters"
 import { HomePage } from "./home/HomePage"
 import { useAppTranslation } from "./i18n"
@@ -82,10 +82,11 @@ function AppFrame({
   readonly children: ReactNode
 }) {
   const theme = useTheme()
+  const policy = usePreference("notifications")
   useLayoutEffect(() => {
-    configureToastPolicy(DEFAULT_TOAST_POLICY)
-    return () => dismissToast()
-  }, [])
+    configureToastPolicy(policy)
+  }, [policy])
+  useLayoutEffect(() => () => dismissToast(), [])
   const route = useRoute()
   const router = useRouter()
   const { t } = useAppTranslation()
@@ -105,6 +106,10 @@ function AppFrame({
         backgroundColor: surface,
         color: theme.colors.foreground,
         fontSize: theme.control["--text-control-track"],
+        // Like Live, interface text is not drag-selectable: gpuix makes text selectable by
+        // default, so drags on the minimap, rulers and lanes painted a selection over labels.
+        // Inherited by the whole tree; editable fields own their own selection.
+        userSelect: "none",
       }}
     >
       <TitleBar
@@ -135,7 +140,7 @@ function AppFrame({
       </div>
       <UnsavedCloseDialog open={close.asking} onChoose={choice => void close.choose(choice)} />
       <Toaster
-        policy={DEFAULT_TOAST_POLICY}
+        policy={policy}
         position="bottom-left"
         aria-label={t("notifications.title")}
         dismissLabel={t("notifications.dismiss")}

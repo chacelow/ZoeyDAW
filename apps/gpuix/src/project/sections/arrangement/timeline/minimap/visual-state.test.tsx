@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { afterEach, expect, test } from "bun:test"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -44,6 +45,7 @@ test("overview pressed color survives leaving its bounds and cancellation restor
         height={32}
         label="Overview"
         geometry={{
+          policy: ARRANGEMENT_DEFAULTS,
           bars: 128,
           viewportWidth: 800,
           pxPerBar: workspace.pxPerBar,

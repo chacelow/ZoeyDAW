@@ -46,8 +46,11 @@ export function ProjectSections({
   const backendError = useProjectState(state => state.session.backend.error)
   const snapshotError = useProjectState(state => state.session.snapshotError)
   const timelineLabels = zh ? chineseLabels : englishLabels
-  const warning =
-    snapshotError ?? (backendError ? timelineLabels.backendErrors[backendError] : null)
+  const warning = snapshotError
+    ? timelineLabels.snapshotErrors[snapshotError]
+    : backendError
+      ? timelineLabels.backendErrors[backendError]
+      : null
   const { shell } = layout
   return (
     <ProjectLayout

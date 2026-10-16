@@ -89,7 +89,7 @@ describe("native resizable panel interactions", () => {
     expect(bounds(root, "left").width).toBeCloseTo(before)
   })
 
-  test("divider paints distinct idle, hover and pressed states and stays pressed while dragging", async () => {
+  test("divider paints nothing on hover or press; only the resize cursor marks the hit area", async () => {
     const directory = mkdtempSync(path.join(tmpdir(), "divider-states-"))
     const image = path.join(directory, "frame.png")
     try {
@@ -104,16 +104,12 @@ describe("native resizable panel interactions", () => {
       root.renderer.nativeSimulateMouseMove(point.x + 300, point.y)
       const idle = capture()
       root.renderer.nativeSimulateMouseMove(point.x, point.y)
-      const hover = capture()
-      root.renderer.nativeSimulateMouseDown(point.x, point.y)
-      const pressed = capture()
-      expect(hover.equals(idle)).toBe(false)
-      expect(pressed.equals(hover)).toBe(false)
-      expect(pressed.equals(idle)).toBe(false)
-      root.renderer.nativeSimulateMouseUp(point.x, point.y)
-      expect(capture().equals(hover)).toBe(true)
-      root.renderer.nativeSimulateMouseMove(point.x + 300, point.y)
       expect(capture().equals(idle)).toBe(true)
+      root.renderer.nativeSimulateMouseDown(point.x, point.y)
+      expect(capture().equals(idle)).toBe(true)
+      root.renderer.nativeSimulateMouseUp(point.x, point.y)
+      const handle = root.renderer.findByTestId("divider")
+      expect(handle?.style?.cursor).toBe("col-resize")
     } finally {
       rmSync(directory, { recursive: true, force: true })
     }

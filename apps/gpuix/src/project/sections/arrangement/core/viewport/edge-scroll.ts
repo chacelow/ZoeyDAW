@@ -1,13 +1,13 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { visibleTracks } from "@/project/model/types"
 import type { Track } from "@/project/model/types"
-import type { TrackGeometry } from "@/project/layout"
 import {
   arrangementBodyBottom,
   arrangementBodyTop,
   maxTrackScrollY,
   pinnedTrackHeight,
 } from "../layout"
-import type { ArrangementViewport } from "../scene"
+import type { ArrangementGeometry, ArrangementViewport } from "../scene"
 import { clampScrollX } from "./zoom"
 
 export function edgeScroll({
@@ -18,6 +18,7 @@ export function edgeScroll({
   axis,
   edge,
   elapsed,
+  policy,
   geometry,
 }: {
   viewport: ArrangementViewport
@@ -27,7 +28,8 @@ export function edgeScroll({
   axis: "horizontal" | "both"
   edge: number
   elapsed: number
-  geometry: TrackGeometry
+  policy: ArrangementPolicy["autoScroll"]
+  geometry: ArrangementGeometry
 }): { scrollX: number; scrollY: number } {
   const { width, height, pxPerBar, scrollX, scrollY } = viewport
   const { x, y } = pointer
@@ -38,8 +40,9 @@ export function edgeScroll({
         ? Math.min(1, (x - width + edge) / edge)
         : 0
   const visible = visibleTracks([...tracks])
-  const bottom = arrangementBodyBottom(height) - pinnedTrackHeight(visible, geometry)
-  const top = arrangementBodyTop()
+  const bottom =
+    arrangementBodyBottom(height, geometry.arrangement) - pinnedTrackHeight(visible, geometry.track)
+  const top = arrangementBodyTop(geometry.arrangement)
   const ySpeed =
     axis === "horizontal" || bottom <= top || y >= bottom
       ? 0
@@ -48,12 +51,17 @@ export function edgeScroll({
         : y > bottom - edge
           ? Math.min(1, (y - bottom + edge) / edge)
           : 0
-  const duration = Math.min(48, Math.max(0, elapsed))
+  const duration = Math.min(policy.maxElapsedMs, Math.max(0, elapsed))
   return {
-    scrollX: clampScrollX(scrollX + xSpeed * duration * 0.75, bars, pxPerBar, width),
+    scrollX: clampScrollX(
+      scrollX + xSpeed * duration * policy.horizontalPixelsPerMs,
+      bars,
+      pxPerBar,
+      width
+    ),
     scrollY: Math.min(
       maxTrackScrollY(visible, height, geometry),
-      Math.max(0, scrollY + ySpeed * duration * 0.6)
+      Math.max(0, scrollY + ySpeed * duration * policy.verticalPixelsPerMs)
     ),
   }
 }

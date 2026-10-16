@@ -123,7 +123,7 @@ Footer 的 `ClipEditorSlot` 和本切片保持同形。协调者批准在合入 
 | 根 | `pnpm exec eslint apps/gpuix/src/project/sections/clip-edit apps/gpuix/src/project/model/midi-editing` | 通过 |
 | 根 | `node scripts/gpuix-review-scan.mjs` | 6678d64 后 0 HARD、2 WARN。误报 process.exit 的 xit 正则由协调者修，未在本切片绕过 |
 | `apps/gpuix` | `bun src/project/sections/clip-edit/verification/mutations.mjs` | baseline 0 fail；30 项全部 KILLED，源文件恢复校验通过 |
-| `apps/gpuix` | `bun --hot src/project/sections/clip-edit/demo/index.tsx` | 真实窗口与真实后端，深色英文完整交互。其他三组合通过环境变量另开命名 service，截图后即关闭 |
+| `apps/gpuix` | `bun --hot src/app/verification/clip-edit/demo/index.tsx` | 真实窗口与真实后端，深色英文完整交互。其他三组合通过环境变量另开命名 service，截图后即关闭 |
 | 根 | commit hook `ultracite fix` | 实现与删除提交均通过，没有 `--no-verify` |
 
 ### 真实 renderer frame stats

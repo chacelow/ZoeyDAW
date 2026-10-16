@@ -9,13 +9,14 @@ import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { configureLogger } from "@/platform/log/logger"
 import { createLogPlatform, createNativeLogSink } from "./platform/log"
 import { createWindowKeyboard, WindowKeyboardProvider } from "./platform/keyboard"
-import { createSettingStorage, DEFAULT_THEME_MODE } from "./platform/settings"
+import { createSettingStorage, DEFAULT_THEME_MODE, getPreference } from "./platform/settings"
 import { createThemePresetSetting } from "./platform/settings/theme-preset"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "./shared/theme/presets"
 import { createSnapshotStorage } from "./platform/storage"
 import { LAUNCH_FOCUS } from "./platform/window"
 import { setSnapshotStorage } from "./project/adapters"
 import { initAppI18n } from "./app/i18n"
+import { i18next } from "./platform/i18n/core"
 import { NativeRoot } from "./app/NativeRoot"
 import { createRouter } from "./app/router/router"
 import { createPreferenceStore } from "./app/settings/preference-store"
@@ -37,6 +38,7 @@ const storage = createSnapshotStorage()
 setSnapshotStorage(storage)
 
 const keyboard = createWindowKeyboard()
+const startupWindow = getPreference("window")
 
 render(
   <WindowKeyboardProvider value={keyboard}>
@@ -48,10 +50,9 @@ render(
     />
   </WindowKeyboardProvider>,
   {
-    title: "zoeydaw",
-    // Initial window size from src-tauri/tauri.conf.json (app.windows[0]).
-    width: 1280,
-    height: 800,
+    title: i18next.t("app.name"),
+    width: startupWindow.width,
+    height: startupWindow.height,
     titlebarTransparent: true,
     trafficLightX: PROJECT_METRICS.trafficLightMargin,
     trafficLightY: (PROJECT_METRICS.titlebarHeight - PROJECT_METRICS.trafficLightFrameHeight) / 2,

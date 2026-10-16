@@ -1,3 +1,5 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { useSyncExternalStore } from "react"
 import { projectActions, readTransportBar, useProjectState } from "@/project/adapters"
 import { zoomAtAnchor } from "../core/viewport/zoom"
@@ -52,6 +54,7 @@ export interface TimelineController {
 
 export interface TimelineControllerDeps {
   sceneStore: SceneStore
+  readPolicy?: () => ArrangementPolicy
   keyboard: TimelineKeyboardDeps
   initialSize: TimelineSize
   metrics: Pick<
@@ -63,6 +66,7 @@ export interface TimelineControllerDeps {
 
 export function createTimelineController({
   sceneStore,
+  readPolicy = () => ARRANGEMENT_DEFAULTS,
   keyboard: keyboardDeps,
   initialSize,
   metrics,
@@ -77,9 +81,10 @@ export function createTimelineController({
   let minimap: MinimapGesture | null = null
   const viewport = createTimelineViewport(
     () => presentation.size,
-    () => sceneStore.get().geometry.track
+    () => sceneStore.get().geometry,
+    readPolicy
   )
-  const rulers = createRulerController(sceneStore)
+  const rulers = createRulerController(sceneStore, () => readPolicy().keyboard)
   const getViewport = () => sceneStore.get().viewport
 
   function setScroll(x: number, y: number): ArrangementViewport {
@@ -93,13 +98,17 @@ export function createTimelineController({
 
   const autoScroll = createTimelineAutoScroll({
     scene: sceneStore,
-    edge: metrics.timelineAutoScrollEdge,
+    get edge() {
+      return metrics.timelineAutoScrollEdge
+    },
+    readPolicy: () => readPolicy().autoScroll,
     setScroll,
     onScroll: pointer => rulers.move(pointer.x, pointer.shiftKey),
   })
 
   const keyboard = createTimelineKeyboard({
     ...keyboardDeps,
+    readPolicy: () => readPolicy().keyboard,
     claim(event) {
       const key = event.key?.toLowerCase()
       if (key === "escape" && (rulers.active || (minimap && minimap.phase !== "idle"))) {
@@ -212,7 +221,11 @@ export function createTimelineController({
       presentation = { ...presentation, overviewHeight: next }
       for (const listener of listeners) listener()
     },
-    overviewGeometry: () => ({ ...viewport.read(), viewportWidth: getViewport().width }),
+    overviewGeometry: () => ({
+      ...viewport.read(),
+      viewportWidth: getViewport().width,
+      policy: readPolicy(),
+    }),
     wheel: viewport.wheel,
     stepZoom: viewport.zoom,
     suspendFollow: viewport.suspendFollow,

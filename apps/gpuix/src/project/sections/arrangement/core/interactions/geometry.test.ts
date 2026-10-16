@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { createMockDocument } from "../../../../adapters/fixtures"
@@ -41,7 +42,7 @@ test("time range reverses musical endpoints and spans only visible rows", () => 
 })
 
 test("three-pixel drag threshold accepts equality and Euclidean diagonal travel", () => {
-  expect(dragStarted({ x: 0, y: 0 }, { x: 2.99, y: 0 })).toBe(false)
-  expect(dragStarted({ x: 0, y: 0 }, { x: 3, y: 0 })).toBe(true)
-  expect(dragStarted({ x: 1, y: 1 }, { x: 3.4, y: 2.8 })).toBe(true)
+  expect(dragStarted({ x: 0, y: 0 }, { x: 2.99, y: 0 }, ARRANGEMENT_DEFAULTS.pointer)).toBe(false)
+  expect(dragStarted({ x: 0, y: 0 }, { x: 3, y: 0 }, ARRANGEMENT_DEFAULTS.pointer)).toBe(true)
+  expect(dragStarted({ x: 1, y: 1 }, { x: 3.4, y: 2.8 }, ARRANGEMENT_DEFAULTS.pointer)).toBe(true)
 })
