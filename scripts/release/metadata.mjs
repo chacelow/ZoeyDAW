@@ -28,7 +28,6 @@ export function releasePlatform() {
   if (!Object.hasOwn(PLATFORMS, host)) throw new Error(`Unsupported release host: ${host}`)
   return PLATFORMS[host]
 }
-
 export function releaseMetadata(version) {
   if (
     typeof version !== "string" ||

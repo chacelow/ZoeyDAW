@@ -9,6 +9,9 @@
  */
 import { createContext, useContext, useMemo } from "react"
 import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
+import { createLayoutTokens } from "./layout-tokens"
+import type { LayoutTokens } from "./layout-tokens"
+import { derive } from "./colors"
 import { DEFAULT_THEME_PRESET, getThemePreset } from "./presets"
 import type { ReactNode } from "react"
 import type { ColorScheme, DerivedThemeColors } from "./colors"
@@ -26,6 +29,7 @@ export interface Theme {
   transportControl: typeof CONTROL_METRICS.transport
   project: typeof PROJECT_METRICS
   design: DesignTokens
+  layout: LayoutTokens
 }
 
 const ThemeContext = createContext<Theme | null>(null)
@@ -39,6 +43,10 @@ export interface ThemeProviderProps {
   /** Appearance for demos and tests that do not control it. */
   defaultAppearance?: Appearance
   design?: DesignTokens
+  layout?: LayoutTokens
+  control?: Theme["control"]
+  transportControl?: Theme["transportControl"]
+  project?: Theme["project"]
 }
 
 export function ThemeProvider({
@@ -47,19 +55,34 @@ export function ThemeProvider({
   preset = DEFAULT_THEME_PRESET,
   defaultAppearance = "dark",
   design = DEFAULT_DESIGN_TOKENS,
+  control = CONTROL_METRICS.default,
+  transportControl = CONTROL_METRICS.transport,
+  project = PROJECT_METRICS,
+  layout,
 }: ThemeProviderProps) {
   const scheme = appearance ?? defaultAppearance
+  const resolvedLayout = useMemo(
+    () => layout ?? createLayoutTokens(control, project),
+    [layout, control, project]
+  )
+  const colors = useMemo(() => {
+    const selected = getThemePreset(preset)
+    return design.colorRecipes === DEFAULT_DESIGN_TOKENS.colorRecipes
+      ? selected.colors[scheme]
+      : derive(selected.baseColors[scheme], scheme, design.colorRecipes)
+  }, [preset, scheme, design.colorRecipes])
   const theme = useMemo<Theme>(
     () => ({
       appearance: scheme,
       preset,
-      colors: getThemePreset(preset).colors[scheme],
-      control: CONTROL_METRICS.default,
-      transportControl: CONTROL_METRICS.transport,
-      project: PROJECT_METRICS,
+      colors,
+      control,
+      transportControl,
+      project,
+      layout: resolvedLayout,
       design,
     }),
-    [scheme, preset, design]
+    [scheme, preset, design, control, transportControl, project, resolvedLayout, colors]
   )
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
 }

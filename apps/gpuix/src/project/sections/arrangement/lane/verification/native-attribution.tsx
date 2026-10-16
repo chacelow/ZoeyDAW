@@ -86,7 +86,7 @@ export function useNativeAttribution(
             top: 0,
             width,
             height,
-            color: contentFill(token, theme.colors),
+            color: contentFill(token, theme.colors, theme.design.colorRecipes.contentPaperTint),
             opacity: 0.55,
             pointerEvents: "none",
           })}

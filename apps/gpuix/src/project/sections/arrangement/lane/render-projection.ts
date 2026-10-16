@@ -64,7 +64,10 @@ export interface PreviewRect {
 
 export function visibleRows(scene: ArrangementScene): VisibleRow[] {
   const bottom = arrangementBodyBottom(scene.viewport.height)
-  const pinnedTop = Math.max(arrangementBodyTop(), bottom - pinnedTrackHeight(scene.tracks))
+  const pinnedTop = Math.max(
+    arrangementBodyTop(),
+    bottom - pinnedTrackHeight(scene.tracks, scene.geometry.track)
+  )
   const result: VisibleRow[] = []
   for (const row of layoutTrackRows(scene)) {
     const clipTop = Math.max(row.top, isPinnedTrack(row.track) ? pinnedTop : arrangementBodyTop())

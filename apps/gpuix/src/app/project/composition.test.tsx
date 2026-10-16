@@ -3,6 +3,7 @@ import { useState } from "react"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
@@ -50,7 +51,11 @@ beforeEach(() => {
   hydrateProject(JSON.stringify({ version: 2, document, workspace }))
 })
 
-function mount({ autoFocusInput = false, readOnlyInput = false } = {}) {
+function mount({
+  autoFocusInput = false,
+  readOnlyInput = false,
+  layout: geometry = DEFAULT_LAYOUT_TOKENS,
+} = {}) {
   const keyboard = createWindowKeyboard()
   const interaction = createAppInteraction()
   let clipboard = ""
@@ -64,6 +69,7 @@ function mount({ autoFocusInput = false, readOnlyInput = false } = {}) {
       },
     },
     metrics: PROJECT_METRICS,
+    geometry,
     subscribeWindowActive: () => () => {},
     blurControl: () => {},
     browserCollapsed: () => true,
@@ -89,7 +95,7 @@ function mount({ autoFocusInput = false, readOnlyInput = false } = {}) {
   }
   root.render(
     <AnimationFrameProvider source={{ subscribe: () => () => {}, subscribeResume: () => () => {} }}>
-      <ThemeProvider>
+      <ThemeProvider layout={geometry}>
         <ControlEnvironmentProvider value={{ textFocus: interaction.textFocus }}>
           <WindowKeyboardProvider value={keyboard}>
             <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -241,11 +247,37 @@ test("real TrackRows lane slot uses the timeline time width and positions header
   const rows = bounds("track-rows")
   expect(lane.width).toBe(view.width)
   expect(contents.width).toBe(lane.width)
-  expect(rows.width).toBe(view.width + PROJECT_METRICS.controlsWidth)
+  expect(rows.width).toBe(view.width + DEFAULT_LAYOUT_TOKENS.track.controlsWidth)
   const viewport = bounds("timeline-layout")
   expect(rows.width).toBe(viewport.width)
   expect(lane.x + lane.width).toBe(viewport.x + view.width)
   expect(bounds("track-rails-source").x).toBe(lane.x + lane.width)
+})
+
+test("explicit layout control width keeps core viewport, rows, resize and mixer aligned", async () => {
+  const geometry = {
+    ...DEFAULT_LAYOUT_TOKENS,
+    track: { ...DEFAULT_LAYOUT_TOKENS.track, controlsWidth: 400 },
+  }
+  const { root, composition } = mount({ layout: geometry })
+  await layout(root)
+  const bounds = (id: string) => {
+    const box = root.renderer.getElementBounds(element(root, id).id)
+    if (!box) throw new Error(`Unpainted ${id}`)
+    return box
+  }
+  const view = composition.timeline.sceneStore.get().viewport
+  const viewport = bounds("timeline-layout")
+  expect(view.width).toBe(viewport.width - 400)
+  expect(bounds("track-rows").width).toBe(viewport.width)
+  expect(bounds("track-lane-source").width).toBe(view.width)
+  expect(bounds("track-resize-source").width).toBe(viewport.width)
+  const identity = bounds("track-identity-source")
+  const routing = bounds("track-routing-source")
+  const mixer = bounds("track-mixer-source")
+  expect(identity.width + routing.width + mixer.width).toBe(400)
+  expect(mixer.width).toBe(226)
+  expect(mixer.x + mixer.width).toBe(viewport.x + viewport.width)
 })
 
 test("timeline projection updates lane automation geometry when the track parameter changes", async () => {

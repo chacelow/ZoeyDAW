@@ -7,7 +7,7 @@ import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboar
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { clipRect, layoutTrackRows } from "@/project/sections/arrangement/core/layout"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { AppInteractionProvider } from "../interaction"
 import { AppNativeEnvironmentProvider } from "../native-environment"
@@ -136,7 +136,10 @@ test("real lane drag acquires frame demand after its threshold and releases it o
   const clip = row?.track.clips[0]
   if (!row || !clip) throw new Error("Missing lane drag fixture")
   const rect = clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
-  const start = pointer(rect.left + rect.width / 2, row.top + TRACK_TITLE_HEIGHT / 2)
+  const start = pointer(
+    rect.left + rect.width / 2,
+    row.top + DEFAULT_LAYOUT_TOKENS.track.titleHeight / 2
+  )
   const end = pointer(start.x + 48, start.y)
   flushSync(() => composition.lane.pointerDown(start))
   expect(native.active).toBe(false)

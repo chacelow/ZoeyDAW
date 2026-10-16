@@ -51,7 +51,10 @@ export function TrackMenu({
         >
           {t("duplicate")}
         </ContextMenuItem>
-        <ContextMenuItem disabled={!editable} onSelect={() => projectActions.groupTracks(targets)}>
+        <ContextMenuItem
+          disabled={!editable}
+          onSelect={() => projectActions.groupTracks(targets, theme.layout.track.defaultHeight)}
+        >
           {t("group")}
         </ContextMenuItem>
         {track.kind === "group" ? (
@@ -78,7 +81,13 @@ export function TrackMenu({
               testId={`track-color-${index}-${track.id}`}
               style={{
                 backgroundColor: resolveContentColor(color, theme.colors),
-                hover: { backgroundColor: contentFill(color, theme.colors) },
+                hover: {
+                  backgroundColor: contentFill(
+                    color,
+                    theme.colors,
+                    theme.design.colorRecipes.contentPaperTint
+                  ),
+                },
               }}
               onClick={() => {
                 const edit = projectActions.beginEdit("track-color")
@@ -89,13 +98,19 @@ export function TrackMenu({
           ))}
         </div>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => projectActions.addTrack("audio")}>
+        <ContextMenuItem
+          onSelect={() => projectActions.addTrack("audio", theme.layout.track.defaultHeight)}
+        >
           {t("addAudio")}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => projectActions.addTrack("midi")}>
+        <ContextMenuItem
+          onSelect={() => projectActions.addTrack("midi", theme.layout.track.defaultHeight)}
+        >
           {t("addMidi")}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => projectActions.addTrack("group")}>
+        <ContextMenuItem
+          onSelect={() => projectActions.addTrack("group", theme.layout.track.defaultHeight)}
+        >
           {t("addGroup")}
         </ContextMenuItem>
         <ContextMenuItem

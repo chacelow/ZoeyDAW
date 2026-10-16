@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { describe, expect, test } from "bun:test"
 import { adjustGrid, deriveGridPlan, gridZoomLimit, noteGridBars } from "@/project/model/grid"
 import { createSceneStore } from "../scene"
@@ -13,7 +14,7 @@ const METERS = [
 
 describe("Music-position grid invariants", () => {
   test("zoomed-out numbering cannot group Pattern shading into four-bar blocks", () => {
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     scene.setViewport({ pxPerBar: 24, scrollX: 0, scrollY: 0, width: 200, height: 200, dpr: 1 })
     const regions = patternRegions(scene.get())
     expect(
@@ -28,7 +29,7 @@ describe("Music-position grid invariants", () => {
   })
 
   test("fine ruler labels cannot leave full-height subdivision lines after Ctrl+2 widens the grid", () => {
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     scene.setViewport({ pxPerBar: 800, scrollX: 0, scrollY: 0, width: 1600, height: 200, dpr: 1 })
     scene.setMusic({ ...scene.get(), grid: { mode: "fixed", bars: 16 } })
     expect(gridLines(scene.get()).map(line => line.bar)).toEqual([1, 2, 3])
@@ -36,7 +37,7 @@ describe("Music-position grid invariants", () => {
 
   test("unreadable bars aggregate to power-of-two regions with model-backed minimum spacing", () => {
     const minimum = deriveGridPlan({ mode: "fixed", bars: 1 }, 1, 4, 4).minimumCellPx
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     let seed = 16231
     for (let iteration = 0; iteration < 1200; iteration++) {
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
@@ -76,7 +77,7 @@ describe("Music-position grid invariants", () => {
 
   test("ruler cadence, snapping and Pattern shading remain coherent across randomized zooms and five meters", () => {
     let seed = 71321
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     for (let i = 0; i < 500; i++) {
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
       const meter = METERS[i % METERS.length]
@@ -162,7 +163,7 @@ describe("Music-position grid invariants", () => {
       )
       expect(plan.cellBars).toBe(noteGridBars(16384, meter.numerator, meter.denominator))
       expect(plan.cellBars * pxPerBar).toBe(8)
-      const scene = createSceneStore()
+      const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
       scene.setViewport({
         pxPerBar,
         scrollX: pxPerBar * 4.3,

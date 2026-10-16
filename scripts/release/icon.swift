@@ -12,8 +12,15 @@ func color(_ hex: String) -> NSColor {
                    green: CGFloat((value >> 8) & 255) / 255,
                    blue: CGFloat(value & 255) / 255, alpha: 1)
 }
-let image = NSImage(size: NSSize(width: 1024, height: 1024))
-image.lockFocus()
+guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1024, pixelsHigh: 1024,
+                                  bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                  isPlanar: false, colorSpaceName: .deviceRGB,
+                                  bytesPerRow: 0, bitsPerPixel: 0),
+      let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
+    fatalError("Could not allocate icon bitmap")
+}
+NSGraphicsContext.saveGraphicsState()
+NSGraphicsContext.current = context
 color(arguments[2]).setFill()
 NSBezierPath(roundedRect: NSRect(x: 64, y: 64, width: 896, height: 896), xRadius: 180, yRadius: 180).fill()
 color(arguments[4]).setFill()
@@ -23,10 +30,8 @@ for (index, height) in [160, 320, 480, 640, 480, 320, 160].enumerated() {
 }
 color(arguments[3]).setFill()
 NSBezierPath(roundedRect: NSRect(x: 220, y: 486, width: 584, height: 52), xRadius: 26, yRadius: 26).fill()
-image.unlockFocus()
-guard let tiff = image.tiffRepresentation,
-      let bitmap = NSBitmapImageRep(data: tiff),
-      let png = bitmap.representation(using: .png, properties: [:]) else {
+NSGraphicsContext.restoreGraphicsState()
+guard let png = bitmap.representation(using: .png, properties: [:]) else {
     fatalError("Could not encode icon PNG")
 }
 try png.write(to: URL(fileURLWithPath: arguments[1]))

@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -21,7 +22,7 @@ for (const appearance of ["dark", "light"] as const) {
         })
       )
       const { document, workspace } = useProjectState.getState()
-      const scene = createSceneStore()
+      const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
       scene.setMusic({
         bars: 128,
         grid: workspace.grid,

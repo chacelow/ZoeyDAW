@@ -203,7 +203,7 @@ export function GalleryProjectCards({
         display: "flex",
         flexDirection: "column",
         gap: theme.design.spacing.stackGap,
-        width: theme.project.controlsWidth,
+        width: theme.layout.track.controlsWidth,
       }}
     >
       <CardTitle>

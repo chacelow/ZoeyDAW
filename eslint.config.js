@@ -128,9 +128,10 @@ export default [
     rules: { "unicorn/prefer-then-catch": "off" },
   },
   {
-    // Renderer probes and regressions under scripts/gpuix-main/<slice>/ run against the app's
-    // dependency tree (react, @gpuix/*), resolved through a node_modules link to apps/gpuix.
-    files: ["scripts/gpuix-main/*/**/*.{ts,tsx}"],
+    // Renderer probes and regressions under scripts/gpuix-main/<slice>/, and the release smoke, run
+    // against the app's dependency tree (react, @gpuix/*) through the app tsconfig or a node_modules
+    // link to apps/gpuix.
+    files: ["scripts/gpuix-main/*/**/*.{ts,tsx}", "scripts/release/*.{ts,tsx}"],
     rules: {
       "import-x/no-extraneous-dependencies": [
         "error",

@@ -1,4 +1,3 @@
-/* eslint-disable no-await-in-loop -- Windows hosted audio advances asynchronously within a bounded observation window. */
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -25,6 +24,7 @@ import { createRouter } from "@/app/router/router"
 import { createPreferenceStore } from "@/app/settings/preference-store"
 import { isThemeMode } from "@/app/settings/theme-mode"
 import { userDirectories } from "@zoeydaw/native"
+import type { BackendTelemetry } from "@/project/model/backend"
 
 const directory = process.argv[2]
 if (!directory) throw new Error("Pass an evidence directory")
@@ -71,6 +71,23 @@ async function present() {
   root.renderer.flush()
   root.renderer.dispatchNativeEvents()
 }
+/**
+ * Wait for engine telemetry that satisfies `accept`. Telemetry is null until the engine publishes a
+ * frame for the latest control sequence, and the hosted runner's virtual output device can run far
+ * below real time, so fixed sleeps flake there; the deadline only bounds a genuinely stuck engine.
+ */
+async function telemetryWhere(accept: (frame: BackendTelemetry) => boolean) {
+  const deadline = performance.now() + 20_000
+  let frame = readProjectTelemetry()
+  while (!(frame && accept(frame))) {
+    if (performance.now() > deadline)
+      throw new Error(`Native telemetry did not arrive: ${JSON.stringify(frame)}`)
+    // eslint-disable-next-line no-await-in-loop -- Polls one engine until its telemetry matches.
+    await Bun.sleep(20)
+    frame = readProjectTelemetry()
+  }
+  return frame
+}
 try {
   root.render(
     <AnimationFrameProvider source={frames}>
@@ -101,43 +118,13 @@ try {
     throw new Error("Arrangement did not mount")
   flushSync(projectActions.togglePlay)
   if (!(await whenProjectBackendIdle())) throw new Error("Native engine rejected play")
-  await Bun.sleep(100)
-  let first = readProjectTelemetry()
-  await Bun.sleep(150)
-  let second = readProjectTelemetry()
-  if (process.platform === "win32") {
-    const deadline = performance.now() + 20_000
-    while (!first?.playing && performance.now() < deadline) {
-      await Bun.sleep(20)
-      first = readProjectTelemetry()
-    }
-    second = readProjectTelemetry()
-    while (
-      first?.playing &&
-      (!second?.playing || second.clock.bar <= first.clock.bar) &&
-      performance.now() < deadline
-    ) {
-      await Bun.sleep(20)
-      second = readProjectTelemetry()
-    }
-  }
-  if (!first?.playing || !second?.playing || !(second.clock.bar > first.clock.bar)) {
-    throw new Error(`Native clock did not advance: ${JSON.stringify({ first, second })}`)
-  }
+  const first = await telemetryWhere(frame => frame.playing)
+  const second = await telemetryWhere(frame => frame.playing && frame.clock.bar > first.clock.bar)
   await present()
   root.renderer.captureScreenshot(path.join(directory, "arrangement-playing.png"))
   flushSync(projectActions.stop)
   if (!(await whenProjectBackendIdle())) throw new Error("Native engine rejected stop")
-  await Bun.sleep(80)
-  let stopped = readProjectTelemetry()
-  if (process.platform === "win32") {
-    const deadline = performance.now() + 20_000
-    while (stopped?.playing !== false && performance.now() < deadline) {
-      await Bun.sleep(20)
-      stopped = readProjectTelemetry()
-    }
-  }
-  if (stopped?.playing !== false) throw new Error("Native engine did not stop")
+  const stopped = await telemetryWhere(frame => !frame.playing)
   createSettingStorage("language", options).set("en-US")
   createLogPlatform({ configDir: directory, defaultDir: path.join(directory, "logs") }).initialize()
   const result = { cwd: process.cwd(), first, second, stopped, userDirectories: userDirectories() }

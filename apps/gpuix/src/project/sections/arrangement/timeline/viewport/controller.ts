@@ -12,6 +12,7 @@ import { revealTrackScrollY } from "../../core/layout"
 import type { EventPayload } from "@gpuix/react"
 import type { TimelineViewport as ClampedTimelineViewport } from "../../core/viewport/zoom"
 import type { Track } from "@/project/model/types"
+import type { TrackGeometry } from "@/project/layout"
 
 export interface TimelineSize {
   containerWidth: number
@@ -22,6 +23,7 @@ export interface TimelineSize {
 export interface TimelineViewportSnapshot extends ClampedTimelineViewport {
   bars: number
   tracks: readonly Track[]
+  geometry: TrackGeometry
 }
 
 export interface TimelineViewportController {
@@ -34,7 +36,10 @@ export interface TimelineViewportController {
   follow: (transportBar: number) => void
 }
 
-export function readTimelineViewport(size: TimelineSize): TimelineViewportSnapshot {
+export function readTimelineViewport(
+  size: TimelineSize,
+  geometry: TrackGeometry
+): TimelineViewportSnapshot {
   const { document: project, workspace, session } = useProjectState.getState()
   const bars = growTimelineBars(
     timelineBars(project),
@@ -47,6 +52,7 @@ export function readTimelineViewport(size: TimelineSize): TimelineViewportSnapsh
   return {
     bars,
     tracks,
+    geometry,
     ...clampTimelineViewport({
       bars,
       containerWidth: size.containerWidth,
@@ -54,6 +60,7 @@ export function readTimelineViewport(size: TimelineSize): TimelineViewportSnapsh
       numerator: project.transport.numerator,
       denominator: project.transport.denominator,
       tracks,
+      geometry,
       storedPxPerBar: workspace.pxPerBar,
       storedScrollX: workspace.scrollX,
       storedScrollY: workspace.scrollY,
@@ -61,16 +68,19 @@ export function readTimelineViewport(size: TimelineSize): TimelineViewportSnapsh
   }
 }
 
-export function createTimelineViewport(readSize: () => TimelineSize): TimelineViewportController {
+export function createTimelineViewport(
+  readSize: () => TimelineSize,
+  readGeometry: () => TrackGeometry
+): TimelineViewportController {
   let manualPanUntil = 0
   function suspendFollow() {
     manualPanUntil = performance.now() + 2000
   }
   return {
-    read: () => readTimelineViewport(readSize()),
+    read: () => readTimelineViewport(readSize(), readGeometry()),
     suspendFollow,
     clamp() {
-      const { pxPerBar, scrollX, scrollY } = readTimelineViewport(readSize())
+      const { pxPerBar, scrollX, scrollY } = readTimelineViewport(readSize(), readGeometry())
       const workspace = useProjectState.getState().workspace
       if (
         pxPerBar !== workspace.pxPerBar ||
@@ -82,7 +92,7 @@ export function createTimelineViewport(readSize: () => TimelineSize): TimelineVi
     },
     wheel(event: EventPayload) {
       const size = readSize()
-      const view = readTimelineViewport(size)
+      const view = readTimelineViewport(size, readGeometry())
       const modifiers = event.modifiers
       const deltaX = -(event.deltaX ?? 0)
       const deltaY = -(event.deltaY ?? 0)
@@ -114,18 +124,24 @@ export function createTimelineViewport(readSize: () => TimelineSize): TimelineVi
     },
     zoom(direction: -1 | 1) {
       suspendFollow()
-      const view = readTimelineViewport(readSize())
+      const view = readTimelineViewport(readSize(), readGeometry())
       projectActions.setViewport(
         stepZoom({ ...view, viewportWidth: view.timeViewportWidth, direction })
       )
     },
     reveal(trackId: string) {
-      const view = readTimelineViewport(readSize())
-      const scrollY = revealTrackScrollY(view.tracks, view.bodyHeight, view.scrollY, trackId)
+      const view = readTimelineViewport(readSize(), readGeometry())
+      const scrollY = revealTrackScrollY(
+        view.tracks,
+        view.bodyHeight,
+        view.scrollY,
+        trackId,
+        view.geometry
+      )
       if (scrollY !== view.scrollY) projectActions.setViewport({ scrollY })
     },
     follow(transportBar: number) {
-      const view = readTimelineViewport(readSize())
+      const view = readTimelineViewport(readSize(), readGeometry())
       const state = useProjectState.getState()
       const scrollX = followViewport({
         ...view,

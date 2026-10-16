@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { useState } from "react"
@@ -270,7 +271,7 @@ run("browser", browserViewport, root => {
 const footerViewport = { width: 955, height: 300 }
 run("footer", footerViewport, root => {
   const frames = createTestAnimationFrames()
-  projectActions.addTrack("audio")
+  projectActions.addTrack("audio", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
   const track = useProjectState.getState().document.tracks.find(item => item.kind === "audio")
   if (!track) throw new Error("Authored audio track was not created")
   const device = createDevice("utility")

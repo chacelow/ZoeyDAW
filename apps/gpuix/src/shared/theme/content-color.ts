@@ -15,9 +15,6 @@ export const CONTENT_PALETTE = [
   "var(--chart-5)",
 ] as const
 
-/** Web `--arrangement-clip-tint`: share of clip paper mixed into a content fill. */
-const CLIP_PAPER_TINT = 32
-
 /**
  * `var(--name)` resolves to the matching theme color; an unknown token falls
  * back to `primary`; any other string is already a concrete color.
@@ -29,11 +26,8 @@ export function resolveContentColor(color: string, colors: DerivedThemeColors): 
   return Object.hasOwn(colors, key) ? colors[key as keyof DerivedThemeColors] : colors.primary
 }
 
-/** Web `color-mix(in oklab, color, clip-paper 32%)`: track identity, group rail and clip body fill. */
-export function contentFill(color: string, colors: DerivedThemeColors): string {
-  return colorMix(
-    resolveContentColor(color, colors),
-    100 - CLIP_PAPER_TINT,
-    colors.arrangementClipPaper
-  )
+/** Mix resolved content color with the preset's paper using the injected recipe. */
+export function contentFill(color: string, colors: DerivedThemeColors, paperTint: number): string {
+  // 100 is the percentage complement; only the injected tint is a visual choice.
+  return colorMix(resolveContentColor(color, colors), 100 - paperTint, colors.arrangementClipPaper)
 }

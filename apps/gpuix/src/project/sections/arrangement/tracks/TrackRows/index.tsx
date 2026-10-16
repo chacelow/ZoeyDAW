@@ -121,7 +121,11 @@ export function TrackRows({
                   right: 0,
                   height,
                   borderWidth: 1,
-                  borderColor: contentFill(row.track.color, theme.colors),
+                  borderColor: contentFill(
+                    row.track.color,
+                    theme.colors,
+                    theme.design.colorRecipes.contentPaperTint
+                  ),
                   pointerEvents: "none",
                 }}
               />
@@ -156,7 +160,7 @@ export function TrackRows({
           testId="track-rows"
           style={{
             position: "relative",
-            width: viewport.width + theme.project.controlsWidth,
+            width: viewport.width + scene.geometry.track.controlsWidth,
             height: viewport.height,
             backgroundColor: theme.colors.arrangementSurfaceAlt,
             overflow: "hidden",

@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { useRef } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -18,7 +19,8 @@ function projectedRows() {
   return layoutTrackRowsForViewport(
     useProjectState.getState().document.tracks.filter(track => projectedIds.has(track.id)),
     0,
-    300
+    300,
+    DEFAULT_LAYOUT_TOKENS.track
   )
 }
 

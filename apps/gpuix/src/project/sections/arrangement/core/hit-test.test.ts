@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { describe, expect, it } from "bun:test"
 import { createMockDocument, createMockWorkspace } from "../../../adapters/fixtures"
 import { positionToBar } from "../../../model/types"
@@ -22,6 +23,7 @@ function fixtureScene(partial?: Partial<ArrangementScene>): ArrangementScene {
   }
   return {
     revision: 0,
+    geometry: DEFAULT_LAYOUT_TOKENS,
     viewport,
     bars,
     grid: workspace.grid,

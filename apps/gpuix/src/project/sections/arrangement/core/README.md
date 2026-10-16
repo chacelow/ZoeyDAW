@@ -4,15 +4,31 @@ B1，2026-10-15。这里只接收坐标、工程模型和显式手势数据，�
 
 ## 所有权与坐标
 
-- 工程数据由既有 project Store/runtime 持有。`createSceneStore()` 只保存实例内的展示投影、选择与预览，不导出全局实例。
+- 工程数据由既有 project Store/runtime 持有。`createSceneStore(geometry)` 显式接收解析后的 `ArrangementGeometry`，只保存实例内的展示投影、选择与预览，不导出全局实例。
 - 手势 baseline 与累积值由调用方持有。`moveFadeDrag()`、`paintAutomation()` 返回下一状态，不改输入。
 - 时间从 bar 1 开始。横坐标统一为 `(bar - 1) * pxPerBar - scrollX`。
 - `project/model/grid`、`grid-geometry` 和 `timeline-ticks` 保持唯一模型实现。`rulers/grid-lines.ts` 只把场景已有的 `gridPlan` 投影成有 major/minor 分类的可见线。
-- 轨道度量及 resize 直接使用 `project/layout`，不复制控件高度常量。
+- 轨道度量及 resize 使用 `project/layout` 的显式 `TrackGeometry` 输入端口；数值来自 `scene.geometry.track`，不读取 JSON，也不复制默认控件高度。
 - `meters/meter-peak.ts` 保持原来的显式时间输入与原位更新 API。它不读取时钟、不启动采样。
 - `SceneStore.setTimeSelection` 只接 timeline 的 committed 投影；lane 使用 `setTimeSelectionPreview`，显示 `timeSelection` 优先取预览，结束或取消传 `null` 恢复当前 committed 值。
 - `rulers/grid-quads.ts` 的 `packGridQuads(lines, left, width, height, majorWidth, uniform?)` 统一半开可见范围过滤与局部 quad 打包；`MINOR_GRID_OPACITY` 是 timeline/lane 普通细网格的同一材质值。Clip 的 uniform 分批仍保留原始粗细几何。
-- `viewport/edge-scroll.ts` 的 `edgeScroll({ viewport, bars, tracks, pointer, axis, edge, elapsed })` 返回夹取后的 `scrollX/scrollY`；固定轨道不触发垂直滚动，单帧 elapsed 上限 48ms。调用方仍拥有手势与帧生命周期。
+- `viewport/edge-scroll.ts` 的 `edgeScroll({ viewport, bars, tracks, geometry, pointer, axis, edge, elapsed })` 返回夹取后的 `scrollX/scrollY`；`geometry` 为必填 `TrackGeometry`，与行投影、viewport clamp 使用同一份输入。固定轨道不触发垂直滚动，单帧 elapsed 上限 48ms；手势与帧生命周期仍归调用方。
+
+## 公共接口：配置几何
+
+```ts
+type ArrangementGeometry = Pick<LayoutTokens, "track" | "arrangement">
+createSceneStore(geometry: ArrangementGeometry): SceneStore
+// 同一 SceneStore 的运行时更新方法，不新建工程或覆盖 music。
+SceneStore.setGeometry(geometry: ArrangementGeometry): void
+layoutTrackRowsForViewport(tracks: readonly Track[], scrollY: number, height: number, geometry: TrackGeometry): TrackRow[]
+```
+
+- `ArrangementScene.geometry` 保存组合根注入的只读引用。应用从 `Theme.layout` 创建 SceneStore；来源替换时调用 `setGeometry()`，timeline 重算唯一 viewport 投影，轨道保存的 `heightPx` 不变。
+- `scene.geometry.track.controlsWidth` 是轨道控制列总宽的唯一来源，`project` 不再另存同义总宽。identity/routing 子列仍由 project 提供，Mixer 用总宽减两个子列宽派生剩余宽度，原生回归断言三列之和与总宽相等。
+- `TrackRow.trackGeometry`、`ClipRect.trackGeometry` 携带同一结构输入；Clip 的局部几何缓存以该引用为键，更新标题高时也失效 body/fade/content 投影，不只在轨高变化时失效。
+- `TimelineViewportInput`、`PanViewportInput`、`edgeScroll` 均要求显式 `geometry`。以 scene 为输入的函数从 `scene.geometry` 获取它；以 tracks/viewport 为输入的 helper 不为读配置创建包装 Scene，也不依赖 React context。
+- `arrangement` 中标尺、Clip 与 hit 的来源已随 Scene 注入；这些新增条目的业务读取由 C3 接线，不代表 C1 已改完相应手势策略。完整字段与来源规则见 [统一配置契约](../../../../../../../docs/architecture/configuration.md)。
 
 ## 迁移文件
 
