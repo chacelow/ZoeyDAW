@@ -11,8 +11,24 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
+import * as ts from "typescript"
 
 const app = fileURLToPath(new URL("../../../", import.meta.url))
+
+function mutationRanges(file, source, from) {
+  const kind = file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, kind)
+  const ranges = []
+  const visit = node => {
+    if (node.getText(tree) === from) {
+      ranges.push({ start: node.getStart(tree), end: node.getEnd() })
+      return
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(tree)
+  return ranges.sort((left, right) => right.start - left.start)
+}
 
 /** Mutations run in a disposable app copy; concurrent source work remains untouched. */
 export function verifyConfigurationMutations({ testFiles, cases }) {
@@ -41,16 +57,24 @@ export function verifyConfigurationMutations({ testFiles, cases }) {
       cpSync(path.join(app, name), path.join(isolated, name))
     }
     symlinkSync(path.join(app, "node_modules"), path.join(isolated, "node_modules"), "dir")
-    const baseline = run()
-    if (baseline.status !== 0) throw new Error(`Configuration baseline failed:\n${baseline.output}`)
-    for (const mutation of cases) {
+    const operations = cases.map(mutation => {
       const file = path.join(isolated, "src", mutation.file)
       const original = readFileSync(file, "utf8")
-      if (!original.includes(mutation.from)) throw new Error(`Stale mutation: ${mutation.name}`)
-      writeFileSync(
-        file,
-        original.replaceAll(mutation.from, () => mutation.to)
-      )
+      return { ...mutation, file, original, ranges: mutationRanges(file, original, mutation.from) }
+    })
+    const stale = operations.filter(mutation => mutation.ranges.length === 0)
+    if (stale.length > 0) {
+      throw new Error(`Stale mutations:\n${stale.map(mutation => mutation.name).join("\n")}`)
+    }
+    const baseline = run()
+    if (baseline.status !== 0) throw new Error(`Configuration baseline failed:\n${baseline.output}`)
+    for (const mutation of operations) {
+      const { file, original, ranges } = mutation
+      let changed = original
+      for (const { start, end } of ranges) {
+        changed = `${changed.slice(0, start)}${mutation.to}${changed.slice(end)}`
+      }
+      writeFileSync(file, changed)
       const result = run(mutation.pattern)
       writeFileSync(file, original)
       const expected = new RegExp(mutation.pattern, "u")

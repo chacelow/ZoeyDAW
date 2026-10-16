@@ -43,6 +43,8 @@ export interface ThemeProviderProps {
   /** Appearance for demos and tests that do not control it. */
   defaultAppearance?: Appearance
   design?: DesignTokens
+  /** Complete runtime theme-color override, including semantic roles; also accepts native test inputs. */
+  colors?: Theme["colors"]
   layout?: LayoutTokens
   control?: Theme["control"]
   transportControl?: Theme["transportControl"]
@@ -55,6 +57,7 @@ export function ThemeProvider({
   preset = DEFAULT_THEME_PRESET,
   defaultAppearance = "dark",
   design = DEFAULT_DESIGN_TOKENS,
+  colors: colorsOverride,
   control = CONTROL_METRICS.default,
   transportControl = CONTROL_METRICS.transport,
   project = PROJECT_METRICS,
@@ -66,11 +69,12 @@ export function ThemeProvider({
     [layout, control, project]
   )
   const colors = useMemo(() => {
+    if (colorsOverride !== undefined) return colorsOverride
     const selected = getThemePreset(preset)
     return design.colorRecipes === DEFAULT_DESIGN_TOKENS.colorRecipes
       ? selected.colors[scheme]
       : derive(selected.baseColors[scheme], scheme, design.colorRecipes)
-  }, [preset, scheme, design.colorRecipes])
+  }, [preset, scheme, design.colorRecipes, colorsOverride])
   const theme = useMemo<Theme>(
     () => ({
       appearance: scheme,

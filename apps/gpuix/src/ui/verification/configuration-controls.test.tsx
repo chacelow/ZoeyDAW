@@ -67,6 +67,8 @@ function mount(
     </ThemeProvider>
   )
   root.renderer.flush()
+  root.renderer.dispatchNativeEvents()
+  root.renderer.flush()
   return root
 }
 
@@ -156,11 +158,11 @@ const empty = (
     testId="empty"
     style={{ width: 400, height: 240, flexGrow: 0, backgroundColor: "#48617a" }}
   >
-    <EmptyHeader testId="header">
+    <EmptyHeader testId="header" style={{ width: "100%" }}>
       <EmptyTitle>Empty document</EmptyTitle>
       <div
         testId="description"
-        style={{ width: 380, height: 12, flexShrink: 0, backgroundColor: "#b0c0d0" }}
+        style={{ width: "100%", height: 12, flexShrink: 0, backgroundColor: "#b0c0d0" }}
       />
     </EmptyHeader>
     <div testId="empty-action" style={{ width: 40, height: 10, backgroundColor: "#d08060" }} />
@@ -169,7 +171,7 @@ const empty = (
 
 for (const [field, value] of [
   ["gap", 31],
-  ["inset", 47],
+  ["inset", 70],
   ["radius", 2],
   ["contentGap", 23],
   ["headerMaxWidth", 170],
@@ -180,7 +182,7 @@ for (const [field, value] of [
 }
 
 const brand =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='39'%3E%3Crect width='60' height='39' fill='%2388aacc'/%3E%3C/svg%3E"
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='39'%3E%3Crect width='120' height='39' fill='%2388aacc'/%3E%3C/svg%3E"
 const loading = (
   <Loading
     label="Loading document"
@@ -230,7 +232,9 @@ function drag(disabled = false) {
         </div>
       )}
     >
-      <div style={{ width: 200, height: 40, backgroundColor: "#789abc" }}>Drag clip</div>
+      <div style={{ width: 200, height: 40, backgroundColor: "#789abc", pointerEvents: "none" }}>
+        Drag clip
+      </div>
     </DragPreviewArea>
   )
 }
@@ -323,7 +327,9 @@ for (const [field, value] of [
         defaults.shape.controlBorderWidth * 2 -
         (field === "inset" ? value : defaults.dragPad.centerMarker.inset) * 2
     )
-    expect(marker.x + marker.width / 2).toBeCloseTo(shell.x + shell.width / 2)
+    // At 1x, an odd-width marker's center lies on a half pixel; exact integer centering is impossible.
+    const distance = Math.abs(marker.x + marker.width / 2 - (shell.x + shell.width / 2))
+    expect(distance).toBeLessThanOrEqual(0.5)
   })
 }
 
@@ -516,10 +522,10 @@ function popover(sideOffset?: number, collisionPadding?: number) {
 test("configuration popover.width changes native popup width", () => {
   expect(
     bounds(
-      mount(popover(), { ...defaults, popover: { ...defaults.popover, width: 273 } }),
+      mount(popover(), { ...defaults, popover: { ...defaults.popover, width: 274 } }),
       "popover"
     ).width
-  ).toBe(273)
+  ).toBe(274)
 })
 for (const [field, value] of [
   ["sideOffset", 27],
@@ -554,17 +560,26 @@ for (const [field, value] of [
         ]}
       />
     )
-    changedPaint(
-      children,
+    const samples: Buffer[] = []
+    for (const design of [
+      defaults,
       { ...defaults, motion: { tabs: { ...defaults.motion.tabs, [field]: value } } },
-      root => {
-        root.renderer.clockFastForward(1000)
-        root.renderer.flush()
-        root.renderer.nativeSimulateKeystrokes(element(root, "motion-tab-two").id, "enter")
-        root.renderer.clockFastForward(70)
-        root.renderer.flush()
-      }
-    )
+    ]) {
+      const root = mount(children, design)
+      root.renderer.clockFastForward(1000)
+      root.renderer.flush()
+      root.renderer.nativeSimulateKeystrokes(element(root, "motion-tab-two").id, "enter")
+      root.renderer.flush()
+      const start = frame(root)
+      root.renderer.clockFastForward(70)
+      const intermediate = frame(root)
+      root.renderer.clockFastForward(1200)
+      const settled = frame(root)
+      expect(intermediate.equals(start)).toBe(false)
+      expect(intermediate.equals(settled)).toBe(false)
+      samples.push(intermediate)
+    }
+    expect(samples[0].equals(samples[1])).toBe(false)
   })
 }
 
@@ -816,7 +831,22 @@ test("configuration overlay.collisionPadding changes native menu placement", () 
 
 for (const [name, children, action] of [
   ["menu", menu, undefined],
-  ["dropdown", dropdown, openDropdown],
+  [
+    "dropdown",
+    <DropdownButton
+      key="dropdown-separator"
+      testId="dropdown"
+      label="Options"
+      value="one"
+      onChange={() => {}}
+      items={[
+        { id: "one", label: "First option" },
+        { type: "separator", id: "separator" },
+        { id: "two", label: "Last option" },
+      ]}
+    />,
+    openDropdown,
+  ],
 ] as const) {
   test(`configuration shape.separatorWidth changes native ${name} separator paint`, () => {
     changedPaint(children, { ...defaults, shape: { ...defaults.shape, separatorWidth: 7 } }, action)

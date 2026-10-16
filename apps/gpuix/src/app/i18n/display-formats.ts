@@ -149,7 +149,7 @@ export function createDisplayFormats(
     dateTime: (timestamp: number) =>
       new Intl.DateTimeFormat(locale, config.dateTime).format(timestamp),
     accessiblePixels: (px: number) => `${number(px, "integer")} ${config.units.pixels}`,
-    normalizeSearch: (text: string) => text.trim().toLocaleLowerCase(locale),
+    normalizeSearch: (text: string) => text.normalize("NFKC").trim().toLocaleLowerCase(locale),
     musicalPosition: formatAudioMusicalValue,
     musicalWidthSamples: (numerator, denominator, kind) =>
       config.musicalWidthSamples.map(value =>

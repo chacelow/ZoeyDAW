@@ -1,4 +1,5 @@
 import { verifyConfigurationMutations } from "@/app/verification/configuration-mutation-runner.mjs"
+import { getThemePreset } from "@/shared/theme/presets"
 
 const file = "ui/controls/Toaster/index.tsx"
 verifyConfigurationMutations({
@@ -52,5 +53,19 @@ verifyConfigurationMutations({
       to: literal,
       pattern: "toast geometry sources control native placement",
     })),
+    {
+      name: "success notice borrows chart2 instead of its semantic source",
+      file,
+      from: "theme.colors.success",
+      to: "theme.colors.chart2",
+      pattern: "success notice paint follows controlled success",
+    },
+    {
+      name: "success notice freezes the original color literal",
+      file,
+      from: "theme.colors.success",
+      to: JSON.stringify(getThemePreset("default").colors.dark.chart2),
+      pattern: "success notice paint follows controlled success",
+    },
   ],
 })

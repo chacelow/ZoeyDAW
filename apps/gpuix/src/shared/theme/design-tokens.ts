@@ -82,7 +82,6 @@ export interface DesignTokens {
     readonly width: number
     readonly itemGap: number
     readonly contentGap: number
-    readonly footerRadius: number
     readonly footerJoinedGroupGap: number
   }
   readonly trackCreationColors: DesignDetails["trackCreationColors"]
@@ -204,6 +203,6 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
     navigationInset: 8,
     contentInset: 16,
   },
-  tabs: { width: 120, itemGap: 4, contentGap: 8, footerRadius: 0, footerJoinedGroupGap: 0 },
+  tabs: { width: 120, itemGap: 4, contentGap: 8, footerJoinedGroupGap: 0 },
   ...DEFAULT_DESIGN_DETAILS,
 }

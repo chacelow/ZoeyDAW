@@ -107,6 +107,13 @@ mutation(
   "native keyboard focus paint follows focus ring width for midi-test"
 )
 mutation(
+  "velocity focus ring",
+  `${base}clip-edit/midi/VelocityLane.tsx`,
+  "theme.design.shape.focusRingWidth",
+  "1",
+  "native keyboard focus paint follows focus ring width for midi-test midi-velocity-retained"
+)
+mutation(
   "card border",
   `${footer}EffectChain/DeviceCard/index.tsx`,
   "theme.design.shape.cardBorderWidth",
@@ -120,14 +127,13 @@ mutation(
   "2",
   "device curve native paint"
 )
-for (const field of ["footerRadius", "footerJoinedGroupGap"])
-  mutation(
-    `tabs.${field}`,
-    `${footer}index.tsx`,
-    `theme.design.tabs.${field}`,
-    "0",
-    `footer native paint follows tabs ${field}`
-  )
+mutation(
+  "tabs.footerJoinedGroupGap",
+  `${footer}index.tsx`,
+  "theme.design.tabs.footerJoinedGroupGap",
+  "0",
+  "footer native paint follows tabs footerJoinedGroupGap"
+)
 for (const field of ["disabledOpacity", "deviceDragSourceOpacity"])
   mutation(
     `states.${field}`,
