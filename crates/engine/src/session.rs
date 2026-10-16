@@ -7,7 +7,7 @@ use crate::{
     transport::{bar_to_frame, source_offset_frame, Transport, TransportClock},
 };
 use firewheel::{
-    cpal::{CpalConfig, CpalStream},
+    cpal::{cpal::ErrorKind, CpalConfig, CpalStream, IoStreamError},
     FirewheelConfig, FirewheelContext,
 };
 use std::{
@@ -46,6 +46,11 @@ pub fn rejected(request: &BackendRequest, code: BackendFailureCode) -> BackendRe
         sequence: request.sequence,
         code,
     }
+}
+
+fn is_transient(error: &IoStreamError) -> bool {
+    let (IoStreamError::Input(error) | IoStreamError::Output(error)) = error;
+    error.kind() == ErrorKind::Xrun
 }
 
 impl DeviceSession {
@@ -95,9 +100,14 @@ impl DeviceSession {
     }
 
     fn healthy(&mut self) -> bool {
-        let failed = self.context.update().is_err()
-            || self.stream.poll_status().next().is_some()
-            || !self.stream.output_stream_ok();
+        // Firewheel reports underruns (xruns) through the same channel as fatal stream errors, but
+        // an underrun only means a late callback on a slow or busy device; the stream keeps running.
+        // Fatal kinds also clear `output_stream_ok`, so only those and context errors fault the
+        // session. Faulting on an xrun made the fault sticky and rejected every later request.
+        let mut failed = self.context.update().is_err() || !self.stream.output_stream_ok();
+        for error in self.stream.poll_status() {
+            failed |= !is_transient(&error);
+        }
         if failed {
             self.fault.store(true, Ordering::Release);
         }
@@ -300,4 +310,24 @@ fn local_path(uri: &str) -> Result<PathBuf, String> {
     String::from_utf8(decoded)
         .map(PathBuf::from)
         .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use firewheel::cpal::cpal;
+
+    #[test]
+    fn only_xruns_are_transient_stream_errors() {
+        let error = |kind| cpal::Error::new(kind);
+        assert!(is_transient(&IoStreamError::Output(error(ErrorKind::Xrun))));
+        assert!(is_transient(&IoStreamError::Input(error(ErrorKind::Xrun))));
+        for kind in [
+            ErrorKind::StreamInvalidated,
+            ErrorKind::DeviceNotAvailable,
+            ErrorKind::BackendError,
+        ] {
+            assert!(!is_transient(&IoStreamError::Output(error(kind))));
+        }
+    }
 }
