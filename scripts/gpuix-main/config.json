@@ -14,7 +14,8 @@
     "autofocus-focus-event.patch",
     "resume-frame.patch",
     "aria-toggled.patch",
-    "test-window-scale-factor.patch"
+    "test-window-scale-factor.patch",
+    "titlebar-double-click.patch"
   ],
   "zedPatches": [
     "zed-production-no-sync-draw.patch",

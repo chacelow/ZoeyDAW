@@ -15,6 +15,14 @@
 
 `getReducedMotion()` / `subscribeReducedMotion(listener)` 读取系统「减少动态效果」，由 `@zoeydaw/native` 提供：Rust 读 `NSWorkspace.accessibilityDisplayShouldReduceMotion`，并监听 `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification`。它们不依赖 renderer，整个进程只有一个 observer。约定同上：首帧用 getter 取值，订阅只通知变化。GPUI 自带的 `App::reduce_motion` 不从系统读取，不要拿它当来源。只有 macOS 实现，其它平台两个接口都会抛错。
 
+## 标题栏双击
+
+`titlebarDoubleClick()` 调用同一 renderer 的原生系统动作，缺少对应能力时抛错，不退回 `zoom()` 或 JS 偏好读取。`NativeRoot` 将该命令经 `AppShell` 注入 `TitleBar`；不拥有原生窗口的离屏 shell 可以省略回调。
+
+macOS 由 GPUI 读取 `NSGlobalDomain/AppleActionOnDoubleClick`，尊重窗口的 resizable/minimizable 能力。`None` 不执行，`Minimize` 最小化，`Maximize` 或缺省缩放。固定版本 GPUI 因缺少公开 Fill API，将 `Fill` 降级为缩放，不声称实现完整的原生填充；双击标题栏不是进入全屏。Linux/FreeBSD 的自绘标题栏以及 Windows 透明自绘标题栏经既有 UI command 执行 zoom/maximize，Windows 系统标题栏仍由平台处理。
+
+`TitleBar` 只处理左键且 `clickCount === 2` 的原生 mouse-down，不自行计时、不 claim drag。居中标题是展示层，`pointerEvents: "none"` 让事件落到标题栏；设置按钮以 `pointerEvents: "auto"` 在原生命中阶段阻挡标题栏。鼠标 payload 没有键盘事件的 `stopPropagation()` 包装，不能拿后者控制鼠标传播。
+
 ## 关闭守卫
 
 ```ts
