@@ -29,7 +29,7 @@
 
 时间选区拖动通过 `SceneStore.setTimeSelectionPreview` 呈现，未提交前不写 session；timeline 全量同步、Snap 切换不会覆盖它。释放后先提交选区再清除预览，取消只清除预览。边缘滚动纯计算复用 `core/viewport/edge-scroll`，网格 quad 打包与普通细线材质复用 `core/rulers/grid-quads`。
 
-唯一稳定 `LaneContextMenu` 只从 F2 归一化后的 `onContextMenu` payload 解析右键，不从 mouseDown button/ctrl 猜测。Shift+F10 从当前选中 Clip 的可见几何定位目标，未选 Clip 时从编辑面 bounds 定位。回归通过真实菜单动作验证删除命中 Clip，而不是之前选择；Ctrl+左键使用平台归一化后的右键 payload。
+唯一稳定 `LaneContextMenu` 从 F2 归一化后的 `onContextMenu` payload 解析鼠标右键，不从 mouseDown button/ctrl 猜测。Shift+F10 直接读取当前有效 Clip 或 Automation point 身份，不将键盘选择变成伪指针重命中；没有有效目标时不打开菜单。原生键盘及真实菜单动作回归覆盖裁剪 Clip 删除、菜单打开后恢复可见区域再重命名，以及第二轨自动化点编辑和删除。
 
 `evidence/context-*` 保存实际窗口证据：先选中 Pattern，再右键 Audio，菜单标题与 Rename 字段均为该 Audio Clip。物理 Ctrl+左键的后台修饰输入被 computer 拒绝，foreground 控制申请超时且没有确认批准，未发送前台点击；该物理路径未验证，归一化事件行为以回归与 F2 平台证据为准。
 

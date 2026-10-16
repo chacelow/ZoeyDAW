@@ -1,8 +1,6 @@
 import { useState, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import type { EventPayload } from "@gpuix/react"
-import { useGpuix } from "@gpuix/react"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -20,8 +18,6 @@ import type { LaneController } from "../interactions/controller"
 import type { LaneTranslate } from "../messages"
 import { ClipMenuItems } from "./ClipMenuItems"
 import { AutomationMenuItems } from "./AutomationMenuItems"
-import { clipRect } from "../../core/layout"
-import { visibleRows } from "../render-projection"
 
 export function LaneContextMenu({
   children,
@@ -29,7 +25,6 @@ export function LaneContextMenu({
   controller,
   resolveTarget,
   t,
-  originY,
 }: {
   children: ReactNode
   context: LaneContext
@@ -38,7 +33,6 @@ export function LaneContextMenu({
   t: LaneTranslate
   originY: number
 }) {
-  const { renderer } = useGpuix()
   const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)
   const [target, setTarget] = useState<LaneMenuTarget | null>(null)
   const [open, setOpen] = useState(false)
@@ -63,40 +57,7 @@ export function LaneContextMenu({
         onKeyDown={event => {
           const key = event.key?.toLowerCase()
           if (key !== "contextmenu" && !(key === "f10" && event.modifiers?.shift)) return
-          const focused = renderer?.getFocusedElementId?.()
-          const bounds =
-            focused === undefined || focused === null ? null : renderer?.getElementBounds?.(focused)
-          const selection = scene.targetSelection
-          const row =
-            selection.kind === "clip"
-              ? visibleRows(scene).find(item =>
-                  item.track.clips.some(clip => clip.id === selection.id)
-                )
-              : undefined
-          const clip =
-            selection.kind === "clip"
-              ? row?.track.clips.find(item => item.id === selection.id)
-              : undefined
-          const rect =
-            row && clip
-              ? clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
-              : null
-          setTarget(
-            bounds
-              ? resolveTarget({
-                  ...event,
-                  x:
-                    bounds.x +
-                    (rect
-                      ? Math.max(0, rect.left) + Math.min(rect.width, TRACK_TITLE_HEIGHT) / 2
-                      : bounds.width / 2),
-                  y:
-                    bounds.y +
-                    (rect ? rect.top - originY : 0) +
-                    Math.min(TRACK_TITLE_HEIGHT, bounds.height) / 2,
-                })
-              : null
-          )
+          setTarget(resolveKeyboardTarget(context))
         }}
       >
         {children}
@@ -147,4 +108,34 @@ export function LaneContextMenu({
       )}
     </ContextMenu>
   )
+}
+
+function resolveKeyboardTarget(context: LaneContext): LaneMenuTarget | null {
+  const selection = context.scene.get().targetSelection
+  const { document, session } = context.getState()
+  if (selection.kind === "automation" || selection.kind === "automation-value") {
+    const lane = document.tracks
+      .find(track => track.id === selection.trackId)
+      ?.automation.find(item => item.id === selection.laneId)
+    const pointId =
+      selection.kind === "automation-value"
+        ? selection.pointId
+        : selection.pointIds.find(id => lane?.points.some(point => point.id === id))
+    return pointId && lane?.points.some(point => point.id === pointId)
+      ? {
+          kind: "automation-point",
+          trackId: selection.trackId,
+          laneId: selection.laneId,
+          pointId,
+        }
+      : null
+  }
+  if (selection.kind !== "clip" && selection.kind !== "none") return null
+  const clipIds = session.selectedClipIds.filter(id =>
+    document.tracks.some(track => track.clips.some(clip => clip.id === id))
+  )
+  const clipId = selection.kind === "clip" ? selection.id : clipIds[0]
+  if (!clipId || !document.tracks.some(track => track.clips.some(clip => clip.id === clipId)))
+    return null
+  return { kind: "clip", clipId, clipIds: clipIds.includes(clipId) ? clipIds : [clipId] }
 }

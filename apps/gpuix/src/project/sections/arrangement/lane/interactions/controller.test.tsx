@@ -16,6 +16,7 @@ import { createSceneStore } from "../../core/scene"
 import type { SceneStore } from "../../core/scene"
 import { clipRect, layoutTrackRows } from "../../core/layout"
 import { clipVisualGeometry } from "../../core/clip-geometry"
+import { activeAutomationRows } from "../../core/automation/geometry"
 import { LaneRow } from "../LaneRow"
 import { LaneOverlay } from "../LaneOverlay"
 import { visibleRows } from "../render-projection"
@@ -598,6 +599,88 @@ it("opens the selected Clip context menu from the stable keyboard owner without 
   renderer.simulateKeystrokes("escape")
   expect(renderer.findByText(labelsByLocale.en["detail.openClip"])).toBeUndefined()
 })
+
+for (const action of ["rename", "delete"] as const) {
+  it(`keeps the selected clipped Clip identity for keyboard menu ${action}`, () => {
+    const { renderer, scene, host, sourceRow } = mount()
+    renderer.nativeSimulateClick(100, sourceRow.top + 6)
+    projectActions.setViewport({ scrollX: 317 })
+    const row = layoutTrackRows(scene.get()).find(item => item.track.id === "source")
+    const clip = row?.track.clips.find(item => item.id === "pattern")
+    if (!row || !clip) throw new Error("Missing selected Clip")
+    const rect = clipRect(clip, row, scene.get().viewport.pxPerBar, scene.get().viewport.scrollX)
+    expect(rect.left).toBeLessThan(0)
+    expect(rect.left + rect.width).toBe(3)
+    renderer.nativeSimulateKeystrokes(host, "shift-f10")
+    const item = renderer.findByText(
+      labelsByLocale.en[action === "rename" ? "arrangement.rename" : "arrangement.deleteClip"]
+    )
+    const bounds = item && renderer.getElementBounds(item.id)
+    if (!bounds) throw new Error(`Missing selected Clip ${action} action`)
+    if (action === "rename") projectActions.setViewport({ scrollX: 0 })
+    renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    if (action === "rename") {
+      const editor = renderer.findByTestId("clip-name-editor")
+      if (!editor) throw new Error("Missing selected Clip rename editor")
+      expect(renderer.getFocusedElementId()).toBe(editor.id)
+      renderer.simulateKeystrokes("t a i l enter")
+      expect(
+        useProjectState.getState().document.tracks[0]?.clips.find(item => item.id === "pattern")
+          ?.label
+      ).toBe("tail")
+    } else {
+      expect(useProjectState.getState().document.tracks[0]?.clips).toEqual([])
+    }
+  })
+}
+
+for (const action of ["edit", "delete"] as const) {
+  it(`keeps the second-track automation point identity for keyboard menu ${action}`, () => {
+    const { renderer, scene, host } = mount({ automation: true })
+    projectActions.setAutomationParameter("target", "volume")
+    const row = activeAutomationRows(scene.get()).find(item => item.track.id === "target")
+    if (!row) throw new Error("Missing second-track automation row")
+    projectActions.setAutomationPoint("target", row.laneId, {
+      id: "target-point",
+      bar: 2.5,
+      value: 0.5,
+    })
+    expect(useProjectState.getState().document.tracks[1]?.automation[0]?.points).toEqual([
+      { id: "target-point", bar: 2.5, value: 0.5 },
+    ])
+    scene.setTargetSelection({
+      kind: "automation",
+      trackId: "target",
+      laneId: row.laneId,
+      pointIds: ["target-point"],
+    })
+    renderer.nativeSimulateKeystrokes(host, "shift-f10")
+    const item = renderer.findByText(
+      labelsByLocale.en[
+        action === "edit" ? "arrangement.editAutomationValue" : "arrangement.deleteAutomationPoint"
+      ]
+    )
+    const bounds = item && renderer.getElementBounds(item.id)
+    if (!bounds) throw new Error(`Missing selected automation point ${action} action`)
+    renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    if (action === "edit") {
+      const editor = renderer.findByTestId("automation-value-editor")
+      if (!editor) throw new Error("Missing selected automation value editor")
+      expect(renderer.getFocusedElementId()).toBe(editor.id)
+      renderer.simulateKeystrokes("- 1 0 . 5 enter")
+      expect(useProjectState.getState().document.tracks[1]?.automation[0]?.points).toEqual([
+        { id: "target-point", bar: 2.5, value: 0.75 },
+      ])
+    } else {
+      expect(useProjectState.getState().document.tracks[1]?.automation[0]?.points).toEqual([])
+    }
+    expect(useProjectState.getState().document.tracks[0]?.automation[0]?.points).toEqual([
+      { id: "a", bar: 2.5, value: 0.5 },
+      { id: "b", bar: 5, value: 0.8 },
+      { id: "outside", bar: 20, value: 0.1 },
+    ])
+  })
+}
 
 for (const gesture of [
   { name: "native right click", modifiers: "" },

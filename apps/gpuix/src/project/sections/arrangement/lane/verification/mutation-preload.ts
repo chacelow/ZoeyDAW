@@ -7,6 +7,59 @@ interface MutationCase {
   replacements: [string, string][]
 }
 
+const keyboardPointerReplacements: MutationCase["replacements"] = [
+  [
+    'import type { EventPayload } from "@gpuix/react"',
+    `import type { EventPayload } from "@gpuix/react"
+import { useGpuix } from "@gpuix/react"
+import { TRACK_TITLE_HEIGHT } from "@/project/layout"
+import { clipRect } from "../../core/layout"
+import { visibleRows } from "../render-projection"`,
+  ],
+  ["  t,\n}: {", "  t,\n  originY,\n}: {"],
+  [
+    "  const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)",
+    "  const { renderer } = useGpuix()\n  const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)",
+  ],
+  [
+    "          setTarget(resolveKeyboardTarget(context))",
+    `          const focused = renderer?.getFocusedElementId?.()
+          const bounds =
+            focused === undefined || focused === null ? null : renderer?.getElementBounds?.(focused)
+          const selection = scene.targetSelection
+          const row =
+            selection.kind === "clip"
+              ? visibleRows(scene).find(item =>
+                  item.track.clips.some(clip => clip.id === selection.id)
+                )
+              : undefined
+          const clip =
+            selection.kind === "clip"
+              ? row?.track.clips.find(item => item.id === selection.id)
+              : undefined
+          const rect =
+            row && clip
+              ? clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
+              : null
+          setTarget(
+            bounds
+              ? resolveTarget({
+                  ...event,
+                  x:
+                    bounds.x +
+                    (rect
+                      ? Math.max(0, rect.left) + Math.min(rect.width, TRACK_TITLE_HEIGHT) / 2
+                      : bounds.width / 2),
+                  y:
+                    bounds.y +
+                    (rect ? rect.top - originY : 0) +
+                    Math.min(TRACK_TITLE_HEIGHT, bounds.height) / 2,
+                })
+              : null
+          )`,
+  ],
+]
+
 export const mutationCases: Record<string, MutationCase> = {
   "epoch-clip-transients": {
     file: "interactions/controller.ts",
@@ -146,6 +199,18 @@ export const mutationCases: Record<string, MutationCase> = {
         "onMouseDown={event => { if (event.button === 2 || event.isRightClick || event.modifiers?.ctrl) setTarget(resolveTarget(event)) }}",
       ],
     ],
+  },
+  "keyboard-clipped-clip-target": {
+    file: "ContextMenu/index.tsx",
+    testFile: "interactions/controller.test.tsx",
+    testName: "keeps the selected clipped Clip identity for keyboard menu delete",
+    replacements: keyboardPointerReplacements,
+  },
+  "keyboard-automation-point-target": {
+    file: "ContextMenu/index.tsx",
+    testFile: "interactions/controller.test.tsx",
+    testName: "keeps the second-track automation point identity for keyboard menu delete",
+    replacements: keyboardPointerReplacements,
   },
   "resume-position": {
     file: "LaneOverlay/index.tsx",
