@@ -17,22 +17,26 @@ PC 续跑基于 WIP `07b821d4456dcdbeb32f1fa896411ab89781e90e`，原始 T2 实�
 
 | 路径 | 实测结果 | 证据 |
 | --- | --- | --- |
-| 真正 main、production、DirectComposition 未禁用 | 子进程显式删除继承开关；preload 在启动前拒绝非空开关。真实窗口 PID 101796，最终 15 frames、13 successful presents | `native-caption.json`、`live-main.log` |
+| 真正 main、production、DirectComposition 未禁用 | 子进程显式删除继承开关；preload 在启动前拒绝非空开关。最终带事件完成屏障的窗口 PID 111296，16 frames、14 successful presents | `native-caption.json`、`live-main.log` |
 | 原生命中 | 空白 `(320,14)` 与标题中心 `(640,14)` 为 HTCAPTION=2；Settings `(1262,14)` 为 HTCLIENT=1；从实际 frame/client 差派生的左边框为 HTLEFT=10 | `native-caption.json` 的 points/hits |
 | 一次双击消息 | `WM_NCLBUTTONDBLCLK(HTCAPTION)` 后 IsZoomed false → true，client 1280×800 → 2483×1080 | `maximize.before/after` |
 | 第二次双击消息 | IsZoomed true → false，恢复原 client 1280×800 及窗口 bounds | `restore.before/after` |
-| JS 动作没有重复执行 | 同一 native 类 prototype 上的验证专用调用计数为 0 | `after.systemActions` |
+| JS 动作没有重复执行 | 两组真实 native clickCount 为 `[1,2,1,2]`，等待原 handler 返回后的 microtask 确认再读计数，JS 系统动作 0 | `after.nativeClickCounts`、`after.systemActions` |
 | Settings 隔离 | 原生 HTCLIENT 命中和原生组件回归证明它不属于 caption；没有把它伪装成 caption 发送非客户区双击消息 | hit-test 与 TitleBar 回归 |
 | 业务与 Gallery | 真实后端生成深浅、中英、Audio/MIDI 共 8 张业务组合；Gallery 4 张，退出检查 retained nodes 为 0 | `surfaces/`、`gallery/` |
+| 反双执行负对照 | 在内存中错误启用 Windows JS 回调，真实 native counts `[1,2]`、系统动作计数 1，探针非零退出；随后正常实现通过 | `duplicate-action/native-caption.json`、`windows-caption-mutations.mjs` |
 
 可重跑的验证入口：
 
 ```text
 rustc --edition=2021 apps/gpuix/src/app/shell/verification/windows-caption-driver.rs -o <evidence>/windows-caption-driver.exe
 bun apps/gpuix/src/app/shell/verification/windows-caption.mjs <evidence> <evidence>/windows-caption-driver.exe
+bun apps/gpuix/src/app/shell/verification/windows-caption-mutations.mjs <evidence> <evidence>/windows-caption-driver.exe
 ```
 
 runner 启动真实 `src/main.tsx`，只向其 PID 下标题恰为 `zoeydaw` 的唯一顶层窗口发送有超时的消息。点位取实际 renderer bounds；命中查询前先发送目标窗口的 `WM_MOUSEMOVE`，因为 GPUI 的 caption 查询读取已更新的 mouse hit-test。runner 在 finally 结束自己的 main，保留日志。它不使用 SetForegroundWindow、SendInput 或真实光标。
+
+驱动先等待系统双击时限结束，再发送 client down/up 和非客户区 double 消息，确保 GPUI 实际产生 count=1、count=2。验证专用 Bun preload 只在内存中包裹现有 TitleBar handler 表达式，原 handler 原样调用，返回后用 microtask 确认事件已进入 JS。Windows 没有产品 handler 时仍附加这个被动观察器，以获得同样的 native 事件屏障；不依赖 stdin snapshot 早于 native 投递时的零计数。负对照仅去掉 NativeRoot 的 Windows callback 排除条件，证明它确实执行了一次错误命令且被抓。
 
 ### 物理输入限制
 
@@ -55,6 +59,9 @@ runner 启动真实 `src/main.tsx`，只向其 PID 下标题恰为 `zoeydaw` 的
 | renderer `cargo check --release --target x86_64-pc-windows-msvc --features test-support` | 通过 |
 | renderer `cargo test --release --target x86_64-pc-windows-msvc --features test-support --lib` | 316 pass；包括新 Drag 字段的非法值边界回归 |
 | Win32 production caption probe | 退出 0；HTCAPTION/HTCAPTION/HTCLIENT/HTLEFT，false → true → false，JS actions=0 |
+| `windows-caption-mutations.mjs <evidence> <driver>` | native 反双执行变异被抓，错误回调计数 1；紧接的正常路径 count 序列 `[1,2,1,2]`、JS 计数 0，整体退出 0 |
+| `node scripts/gpuix-review-scan.mjs` | 接入共享修复 `2e470f1` 后 7 source、1 test：0 HARD / 1 WARN；固定验证尺寸已归为记录 |
+| `node scripts/gpuix-review-scan.mjs --absolute-paths` | 全仓 tracked source，0 HARD / 0 WARN |
 
 独立 vendor 是 `D:/Code/_vendor/pc-gpuix-p1-release/6a5c7c142ac32f9eb0caefe0121be995cfc18631`，target 为其父目录内的 `target`。共享 vendor 仅被只读复制，未重置、clean 或构建。
 
@@ -88,10 +95,13 @@ runner 启动真实 `src/main.tsx`，只向其 PID 下标题恰为 `zoeydaw` 的
 | 精确窗口前台激活被系统拒绝 | 汇报仲裁 | fail-closed 关闭并释放桌面；协调者改用定向 native 消息，不声称物理手势通过 |
 | 初次边框探针把 client x=0 当作 resize frame | 必修 | 从真实 bounds/clientOrigin/DPI 派生负 client x；HTLEFT=10 通过，不改变产品边框实现 |
 | service 的 `env -u` 未清除继承 DComp 开关 | 必修 | runner 显式删除子进程 env 键，preload 启动断言；纠正初次截图证据属性 |
+| 反双执行探针可能在非阻塞 native 事件投递前读到零，单条 NC double 不保证 count=2 | 必修 | 独立 reviewer 发现；驱动补完整 count 序列、真实 handler 完成屏障和错误 Windows callback 负对照，负例计数 1 被抓，正常例计数 0 通过 |
 | native-window.ts 的固定 640×480 触发 px-literal WARN | 记录 | OS 验证夹具，不是产品 UI token，不为消警新增主题度量 |
-| review scan 的 Windows eslint wrapper 报 HARD；commit hook 的 `/usr/bin/git` ENOENT | 汇报仲裁 | 协调者指定共享工具 owner 统一修复；没有独立改工具或绕过 hook |
+| review scan 的 Windows eslint wrapper 报 HARD；commit hook 的 `/usr/bin/git` ENOENT | 汇报仲裁 | Git 修复来自 W1 `c6e1566`，与主干 `cf0e77f` 等价，9 个调用方原样接入；merge `5f2abda` hook 通过。C5 扫描修复 `b90f55e` 原样接入为 `2e470f1`，完整 scan HARD 已清零，没有本 lane 专用方案 |
 
-macOS 原独立 pstack-reviewer 对两个代码提交的 Standards/Spec 结论均 Clean；此结论不覆盖本轮 Windows 增量。Windows 的最终扫描与独立审查结果在本轮收尾补入，未把历史 review 当作新 review。
+macOS 原独立 pstack-reviewer 对两个代码提交的 Standards/Spec 结论均 Clean；此结论不覆盖本轮 Windows 增量。本轮 `T2PCReviewer` 审阅 `4029041..5f2abda` 的 17 个 T2 文件，Spec 和生产实现 Clean，发现上表一项验证必修。修复后 `T2BarrierReviewer` 独立复核四个 native 验证文件，确认真实 count=2、原 handler 完成屏障、负对照与 finally 清理均闭合，Standards/Spec Clean，没有新增必修或仲裁项。两个 reviewer 均只读，不代跑检查。
+
+本轮 T2 实现提交 `5f2abda`，共享扫描入口接入提交 `2e470f1`。原始 T2 提交 `395ddffe`、`16722ce8` 和 WIP `07b821d` 保留。最终验证修复与本报告在后续独立提交中交付，确切 HEAD 由 merge_ready 消息提供。
 
 ## UI 第 13 节
 
@@ -103,8 +113,8 @@ macOS 原独立 pstack-reviewer 对两个代码提交的 Standards/Spec 结论�
 | 统一设计入口 | 仅新增原生语义 style 属性，没有业务实例自己的圆角、颜色、边框或尺寸 |
 | 尺寸与紧凑感 | titlebar/transport 共享尺寸不变；组合图保留原工作站密度 |
 | 深浅主题与中英文 | 8 业务、4 Gallery 在 PC 生成成功；查看上述四张代表组合，不声称逐控件全状态验收 |
-| 状态与键盘 | 42 scoped tests 与 4 mutants 覆盖相关 shell/window 行为；Settings native HTCLIENT 与组件回归通过。没有改键盘语义 |
-| 拖动、滚轮、弹层与性能 | native Drag/resize 命中和窗口状态转移通过；物理拖窗未验证。滚轮/弹层未改，15 frames/13 presents 不是满量性能门槛证明 |
+| 状态与键盘 | 42 scoped tests、4 原生组件 mutants 和 1 native 反双执行负对照通过；Settings native HTCLIENT 与组件回归通过。没有改键盘语义 |
+| 拖动、滚轮、弹层与性能 | native Drag/resize 命中和窗口状态转移通过；物理拖窗未验证。滚轮/弹层未改，16 frames/14 presents 不是满量性能门槛证明 |
 
 | 产品规则 | Live 观察 | 实现 | 差异/未验证 |
 | --- | --- | --- | --- |
@@ -116,6 +126,7 @@ macOS 原独立 pstack-reviewer 对两个代码提交的 Standards/Spec 结论�
 - 错：把透明标题栏等同于已接通 Windows 原生拖动。对：追踪 WindowControlArea → WM_NCHITTEST，实测 HTCAPTION/HTCLIENT/HTLEFT。因：renderer 原先没把 GPUI 控制区暴露到 style。
 - 错：加 Drag 后仍让 Windows JS handler zoom。对：OS 独占 caption 双击，组合根不注入重复命令。因：GPUI 会先投递 mouse-down，再让 DefWindowProc 处理未消费的非客户区双击。
 - 错：只相信启动命令里的 `env -u`。对：显式构造子进程 env，再在目标进程断言开关缺失；截图与日志分开标来源。
+- 错：发送 native 双击消息后立即读取 JS 零计数。对：确认真实 clickCount=2 的原 handler 已完成，再取窗口状态和计数，并用错误启用 Windows 回调的负对照证明会失败。因：native ThreadsafeFunction 非阻塞投递，stdin 先到不等于手势已处理完。
 - 错：把键盘的 stopPropagation 套到鼠标 payload。对：用原生命中排除 Settings；没有鼠标传播包装时不虚构 API。
 - 错：手动登记 Rust 改动却漏掉 NAPI 生成声明。对：历史 T2 从真实生成输出补入同一补丁，再验证 source/output manifest。
 
@@ -130,6 +141,6 @@ macOS 原独立 pstack-reviewer 对两个代码提交的 Standards/Spec 结论�
 
 所有本轮命名窗口 service 均已停止。最终 native runner 退出 0，finally 杀掉其 main，成功 service 约 5 秒即释放。failed preload launch 也立即停止；没有窗口闲置超过 5 分钟。
 
-交付前以 Windows 进程清单和 computer 窗口清单复核自己启动的进程，结果随最终收尾记录提供。不运行过时的 macOS ps 命令，不停止用户应用。共享 vendor 重建、main Actions、macOS 真机和物理输入属于协调者收尾项。
+交付前执行 PowerShell `Get-CimInstance Win32_Process`，筛选属于本 lane 的 bun、cargo、caption-driver 命令，输出 `No T2-owned bun/cargo/caption-driver processes remain.`，退出 0。`computer.windows({app: "Bun"})` 返回空数组，随后 `computer.close()` 释放会话。记录为 `dist/t2-pc-evidence/process-cleanup.txt`。不运行过时的 macOS ps 命令，不停止用户应用。共享 vendor 重建、main Actions、macOS 真机和物理输入属于协调者收尾项。
 
 上游依据：[GPUI Window::titlebar_double_click](https://docs.rs/gpui/latest/gpui/struct.Window.html#method.titlebar_double_click)，以及 pinned `zed/crates/gpui_macos/src/window.rs` 和 `gpui_windows/src/events.rs`。系统偏好不由 TS 复制。

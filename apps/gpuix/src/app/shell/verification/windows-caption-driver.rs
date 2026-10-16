@@ -3,6 +3,8 @@
 use std::{env, ffi::c_void};
 
 const WM_MOUSEMOVE: u32 = 0x0200;
+const WM_LBUTTONDOWN: u32 = 0x0201;
+const WM_LBUTTONUP: u32 = 0x0202;
 const WM_NCHITTEST: u32 = 0x0084;
 const WM_NCLBUTTONDBLCLK: u32 = 0x00a3;
 const HTCAPTION: usize = 2;
@@ -41,6 +43,7 @@ unsafe extern "system" {
     fn ClientToScreen(hwnd: Hwnd, point: *mut Point) -> i32;
     fn GetDpiForWindow(hwnd: Hwnd) -> u32;
     fn IsZoomed(hwnd: Hwnd) -> i32;
+    fn GetDoubleClickTime() -> u32;
     fn SetThreadDpiAwarenessContext(context: isize) -> isize;
     fn SendMessageTimeoutW(
         hwnd: Hwnd,
@@ -299,6 +302,13 @@ fn run() -> Result<(), String> {
     if hit_code != HTCAPTION as isize {
         return Err(format!("refusing WM_NCLBUTTONDBLCLK: hit-test returned {hit_code}, expected HTCAPTION ({HTCAPTION})"));
     }
+    // Reset GPUI's previous gesture, then produce count=1 and count=2 without
+    // entering DefWindowProc's modal caption move loop on the first press.
+    std::thread::sleep(std::time::Duration::from_millis(
+        unsafe { GetDoubleClickTime() } as u64 + 1,
+    ));
+    send(hwnd, pid, WM_LBUTTONDOWN, 1, packed(client.x, client.y)?)?;
+    send(hwnd, pid, WM_LBUTTONUP, 0, packed(client.x, client.y)?)?;
     send(
         hwnd,
         pid,
