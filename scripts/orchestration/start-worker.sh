@@ -10,8 +10,12 @@
 set -euo pipefail
 name="$1"; title="$2"; shift 2
 WORKER_MODEL=cursor-claude/cx/gpt-6.1-sol
-root=/Users/caishilong/orca/workspaces/zoeydaw
-orca_omp="/Users/caishilong/Library/Application Support/orca/omp-managed-status-extension/fresh-session.yml"
+# Paths come from this checkout: the coordinator worktree, its sibling workspace directory, and
+# the main repository behind the shared git dir. Nothing is hard-coded to one machine.
+coordinator=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
+root=$(dirname "$coordinator")
+repository=$(dirname "$(git -C "$coordinator" rev-parse --path-format=absolute --git-common-dir)")
+orca_omp="$HOME/Library/Application Support/orca/omp-managed-status-extension/fresh-session.yml"
 spec=$(cat "$@")
 
 field() { python3 -c '
@@ -25,8 +29,8 @@ for path in sys.argv[1:]:
     if v: print(v); break
 ' "$@"; }
 
-created=$(orca worktree create --name "$name" --repo path:/Volumes/PSSD/code/zoeydaw --base-branch gpuix-migration \
-  --setup skip --parent-worktree "path:$root/gpuix-migration" --json)
+created=$(orca worktree create --name "$name" --repo "path:$repository" --base-branch gpuix-migration \
+  --setup skip --parent-worktree "path:$coordinator" --json)
 printf '%s' "$created" | field worktree.path path >/dev/null
 # worktree create opens an idle shell; the worker gets its own omp terminal below.
 startup=$(printf '%s' "$created" | field startupTerminal.handle || true)

@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto"
 import { execFileSync } from "node:child_process"
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -19,9 +27,14 @@ const zedPatches = config.zedPatches.map(name => ({
 }))
 const pendingArgument = process.argv.indexOf("--pending")
 const sourceArgument = Math.max(process.argv.indexOf("--sources"), pendingArgument)
+const vendorArgument = process.argv.indexOf("--vendor")
 const vendor =
-  sourceArgument < 0 ? path.join(root, ".gpuix-main") : process.argv[sourceArgument + 1]
-const outputs = [
+  sourceArgument >= 0
+    ? process.argv[sourceArgument + 1]
+    : vendorArgument !== -1
+      ? process.argv[vendorArgument + 1]
+      : path.join(root, ".gpuix-main")
+const requiredOutputs = [
   "packages/native/index.js",
   "packages/native/index.d.ts",
   `packages/native/gpuix-native.${process.platform}-${process.arch}.node`,
@@ -36,11 +49,21 @@ const outputs = [
   "packages/react/dist/components/select.d.ts",
   "packages/react/dist/testing.js",
   "packages/react/jsx-runtime.js",
+  "packages/react/jsx-runtime.d.ts",
+  "packages/react/jsx-dev-runtime.js",
+  "packages/react/jsx-dev-runtime.d.ts",
   "node_modules/react/package.json",
 ]
 const digest = value => createHash("sha256").update(value).digest("hex")
 const git = (directory, ...args) =>
   execFileSync("/usr/bin/git", ["-C", directory, ...args], { encoding: "utf8" }).trimEnd()
+
+function compiledOutputs(directory) {
+  return readdirSync(path.join(vendor, directory), { withFileTypes: true }).flatMap(entry => {
+    const output = `${directory}/${entry.name}`
+    return entry.isDirectory() ? compiledOutputs(output) : [output]
+  })
+}
 
 function expectedSourceDiffs(repository, revision, series, submodules) {
   const temporary = mkdtempSync(path.join(tmpdir(), "gpuix-patch-index-"))
@@ -103,6 +126,13 @@ try {
     )
     process.exit(0)
   }
+  const outputs = [
+    ...new Set([
+      ...requiredOutputs,
+      ...compiledOutputs("packages/native/dist"),
+      ...compiledOutputs("packages/react/dist"),
+    ]),
+  ].sort((left, right) => left.localeCompare(right))
   const hashes = Object.fromEntries(
     outputs.map(output => {
       const filename = path.join(vendor, output)
@@ -111,6 +141,16 @@ try {
     })
   )
   const metadataPath = `${realpathSync(vendor)}.build.json`
+  const recording = process.argv.includes("--record")
+  const recorded =
+    !recording && existsSync(metadataPath)
+      ? JSON.parse(readFileSync(metadataPath, "utf8"))
+      : undefined
+  const modeArgument = process.argv.indexOf("--build-mode")
+  const buildMode =
+    modeArgument !== -1 ? process.argv[modeArgument + 1] : (recorded?.buildMode ?? "runtime")
+  if (!["runtime", "precompiled"].includes(buildMode))
+    throw new Error("Unknown renderer build mode")
   const metadata = {
     revision: config.revision,
     zedRevision: config.zedRevision,
@@ -118,13 +158,13 @@ try {
     zedPatches: Object.fromEntries(zedPatches.map(patch => [patch.name, digest(patch.content)])),
     platform: process.platform,
     arch: process.arch,
+    buildMode,
     outputs: hashes,
   }
-  if (process.argv.includes("--record")) {
+  if (recording) {
     writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`)
   } else {
-    if (!existsSync(metadataPath)) throw new Error("Missing renderer build manifest")
-    const recorded = JSON.parse(readFileSync(metadataPath, "utf8"))
+    if (!recorded) throw new Error("Missing renderer build manifest")
     if (JSON.stringify(recorded) !== JSON.stringify(metadata)) {
       throw new Error("Renderer outputs or patch changed since the recorded build")
     }

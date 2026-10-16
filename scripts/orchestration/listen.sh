@@ -5,7 +5,7 @@
 # Usage: listen.sh [ack-delivery-id] [timeout-ms]
 set -u
 ack="${1:-}"; timeout="${2:-540000}"
-cd /Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration || exit 1
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)" || exit 1
 pkill -f "orchestration check --run run_2ea0f3afbca8 .*--wait" 2>/dev/null && sleep 1
 args=(orchestration check --run run_2ea0f3afbca8 --wait --timeout-ms "$timeout"
       --types worker_done,merge_ready,escalation,question,status --json)
