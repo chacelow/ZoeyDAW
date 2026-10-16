@@ -28,7 +28,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 Header 只测 viewport，左右列由原生 flex 和 intrinsic minima 分配，不缓存子组 L/C/R 后再反馈列宽。首挂载回归覆盖 Helvetica、缺失字体和 1800/1070/900/620 四档宽度，保持原 mount 时序。`node scripts/gpuix-main/ci-geometry/mutations-header.mjs` 在隔离源码副本恢复旧反馈缓存，必须触发首次居中回归失败。
 
-CI 的 Bun 测试失败时输出完整日志，保留早期 Expected/Received；随后失败诊断步骤分别用 `PROBE_PASSES=1` 和 `PROBE_PASSES=4` 运行 `bun scripts/gpuix-main/ci-geometry/probe.tsx`。入口输出启用字体 family 列表、Header/Send 逐次布局 bounds、滚动与 resize 状态。`PROBE_NUMBER`、`PROBE_SANS` 只替换请求的字体 family，不安装或隐藏系统字体。
+CI 的 Bun 测试失败时输出完整日志，保留早期 Expected/Received；随后失败诊断步骤分别用 `PROBE_PASSES=1` 和 `PROBE_PASSES=4` 运行 `bun scripts/gpuix-main/ci-geometry/probe.tsx`。入口输出启用字体 family 列表、Header/Send 逐次布局 bounds 与 resize 状态。`PROBE_NUMBER`、`PROBE_SANS` 只替换请求的字体 family，不安装或隐藏系统字体。
 
 `bun scripts/gpuix-main/ci-geometry/gallery.tsx <外部证据目录>` 捕获深浅主题与中英文的完整 Gallery；业务组合沿用 `app/verification/r1c-surfaces.tsx`，配合 `native-fixture.ts` 接真实后端。生成 PNG 留在外部证据目录，不提交图片。
 
