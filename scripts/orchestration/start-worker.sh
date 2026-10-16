@@ -39,4 +39,10 @@ orca terminal wait --terminal "$terminal" --for tui-idle --timeout-ms 60000 --js
 
 dispatch=$(orca orchestration worker-start --run run_2ea0f3afbca8 --spec "$spec" --task-title "$title" \
   --terminal "$terminal" --worktree "path:$root/$name" --json | field dispatchId dispatch.id)
+# worker-start can leave the pasted brief sitting in the input box when omp is still loading MCP
+# servers; an unsubmitted brief idles forever. If the agent is idle afterwards, press Enter once.
+sleep 15
+if orca terminal wait --terminal "$terminal" --for tui-idle --timeout-ms 1000 --json >/dev/null 2>&1; then
+  orca terminal send --terminal "$terminal" --enter --text "" --json >/dev/null
+fi
 echo "$name ok $dispatch model=$WORKER_MODEL terminal=$terminal"
