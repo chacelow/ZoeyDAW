@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, expect, it } from "bun:test"
 import { create } from "zustand"
 import { createStore } from "zustand/vanilla"
@@ -615,7 +616,7 @@ it("opens external-backend projects without demo media and leaves empty audio cl
   restore = configureProjectBackend(createMockProjectBackend)
   setProjectStorageId("external-empty")
   expect(useProjectState.getState().document.tracks.map(track => track.id)).toEqual(["main"])
-  projectActions.addTrack("audio")
+  projectActions.addTrack("audio", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
   const track = useProjectState.getState().document.tracks.find(track => track.kind === "audio")
   if (!track) {
     throw new Error("Missing audio track")

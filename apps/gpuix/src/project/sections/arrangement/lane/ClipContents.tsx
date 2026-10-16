@@ -36,9 +36,9 @@ export const ClipContentsView = memo(function ClipContentsView({
   const paint = useMemo(
     () => ({
       title: resolveContentColor(token, theme.colors),
-      body: contentFill(token, theme.colors),
+      body: contentFill(token, theme.colors, theme.design.colorRecipes.contentPaperTint),
     }),
-    [token, theme.colors]
+    [token, theme.colors, theme.design.colorRecipes.contentPaperTint]
   )
   const color = paint.title
   const bodyColor = card.selected ? theme.colors.arrangementClipSelected : paint.body

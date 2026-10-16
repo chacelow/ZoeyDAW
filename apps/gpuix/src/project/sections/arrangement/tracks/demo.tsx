@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { useEffect, useMemo, useState } from "react"
 import { render, useGpuix, useWindowSize } from "@gpuix/react"
 import { nativeCursorLock } from "@/platform/cursor"
@@ -16,7 +17,6 @@ import {
 } from "@/project/adapters"
 import { createTrack } from "@/project/model/reducers"
 import { timelineBars } from "@/project/model/selectors"
-import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP } from "@/project/layout"
 import { clipRect } from "../core/layout"
 import { createSceneStore } from "../core/scene"
 import { TrackRows } from "./TrackRows"
@@ -29,7 +29,8 @@ const document = structuredClone(useProjectState.getState().document)
 const workspace = structuredClone(useProjectState.getState().workspace)
 const main = document.tracks.find(track => track.kind === "main")
 if (!main) throw new Error("Missing Main output")
-main.heightPx = COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP * 4
+main.heightPx =
+  DEFAULT_LAYOUT_TOKENS.track.collapsedHeight + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 4
 main.volumeDb = -36
 const group = createTrack("group", document.tracks, undefined, main.heightPx)
 group.name = "Group"
@@ -129,7 +130,7 @@ function TrackSurface({
     ]
   )
   const scene = useMemo(() => {
-    const store = createSceneStore()
+    const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     store.setMusic({
       bars: timelineBars(document),
       tracks: document.tracks,
@@ -181,7 +182,9 @@ function TrackSurface({
             for (const track of document.tracks)
               projectActions.updateTrack(track.id, {
                 collapsed: false,
-                heightPx: COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP * 4,
+                heightPx:
+                  DEFAULT_LAYOUT_TOKENS.track.collapsedHeight +
+                  DEFAULT_LAYOUT_TOKENS.track.resizeStep * 4,
               })
             projectActions.endEdit(edit)
           }}
@@ -266,7 +269,11 @@ function TrackSurface({
                       top: gap,
                       width: rect.width,
                       height: Math.max(0, row.height - gap * 2),
-                      backgroundColor: contentFill(clip.color ?? row.track.color, theme.colors),
+                      backgroundColor: contentFill(
+                        clip.color ?? row.track.color,
+                        theme.colors,
+                        theme.design.colorRecipes.contentPaperTint
+                      ),
                       overflow: "hidden",
                       padding: gap,
                       pointerEvents: "none",

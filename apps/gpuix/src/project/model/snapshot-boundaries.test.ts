@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { beforeEach, describe, expect, it } from "bun:test"
 import { hydrateProject, projectActions, serializeProject, useProjectState } from "../adapters"
 import { createMockDocument, createMockWorkspace, mockWaveformPeaks } from "../adapters/fixtures"
@@ -12,7 +13,7 @@ beforeEach(() => {
 
 describe("snapshot graph and identity boundaries", () => {
   it("promotes nested children into their parent's ordered membership when ungrouping", () => {
-    projectActions.addTrack("group")
+    projectActions.addTrack("group", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
     const parentId = useProjectState
       .getState()
       .document.tracks.find(track => track.kind === "group" && track.id !== "drums-group")!.id

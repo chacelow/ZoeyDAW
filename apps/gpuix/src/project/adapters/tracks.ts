@@ -1,13 +1,12 @@
 import { cloneTrack, createTrack } from "../model/reducers"
-import { DEFAULT_TRACK_HEIGHT } from "../layout"
 import { get, session, tracks, updateTrack } from "./context"
 
 export const trackActions = {
   updateTrack,
-  addTrack(kind: "audio" | "midi" | "group" | "return", parentId?: string) {
+  addTrack(kind: "audio" | "midi" | "group" | "return", heightPx: number, parentId?: string) {
     const source = get().document.tracks
     const parent = source.find(track => track.id === parentId && track.kind === "group")
-    const created = createTrack(kind, source, parent?.id, DEFAULT_TRACK_HEIGHT)
+    const created = createTrack(kind, source, parent?.id, heightPx)
     const index = parent
       ? source.indexOf(parent) + 1 + (parent.childTrackIds?.length ?? 0)
       : source.findIndex(track => track.id === "main")
@@ -110,7 +109,7 @@ export const trackActions = {
       })
     )
   },
-  groupTracks(ids: string[]) {
+  groupTracks(ids: string[], heightPx: number) {
     const source = get().document.tracks
     const chosen = source.filter(
       track =>
@@ -122,7 +121,7 @@ export const trackActions = {
       return
     }
     const group = {
-      ...createTrack("group", source, undefined, DEFAULT_TRACK_HEIGHT),
+      ...createTrack("group", source, undefined, heightPx),
       childTrackIds: chosen.map(track => track.id),
     }
     const next = source.filter(track => !chosen.includes(track))

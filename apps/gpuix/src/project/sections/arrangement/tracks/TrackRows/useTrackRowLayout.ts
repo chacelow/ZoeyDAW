@@ -12,12 +12,13 @@ import type { ArrangementScene, ArrangementViewport } from "../../core/scene"
 export function useTrackRowLayout(scene: ArrangementScene, viewport: ArrangementViewport) {
   const tracks = useMemo(() => visibleTracks([...scene.tracks]), [scene.tracks])
   const rows = useMemo(
-    () => layoutTrackRowsForViewport(tracks, viewport.scrollY, viewport.height),
-    [tracks, viewport.scrollY, viewport.height]
+    () =>
+      layoutTrackRowsForViewport(tracks, viewport.scrollY, viewport.height, scene.geometry.track),
+    [tracks, viewport.scrollY, viewport.height, scene.geometry.track]
   )
   const bodyTop = arrangementBodyTop()
   const bodyBottom = arrangementBodyBottom(viewport.height)
-  const pinnedTop = bodyBottom - pinnedTrackHeight(tracks)
+  const pinnedTop = bodyBottom - pinnedTrackHeight(tracks, scene.geometry.track)
   const pinnedViewportTop = Math.max(bodyTop, pinnedTop)
   const visibility = useMemo(() => {
     const visibleRows = rows.filter(

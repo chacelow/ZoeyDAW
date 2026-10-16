@@ -39,7 +39,11 @@ export function GroupRails({
             width: theme.project.groupRailWidth,
             height: "100%",
             flexShrink: 0,
-            backgroundColor: contentFill(group.color, theme.colors),
+            backgroundColor: contentFill(
+              group.color,
+              theme.colors,
+              theme.design.colorRecipes.contentPaperTint
+            ),
             borderLeftWidth: 1,
             borderRightWidth: 1,
             borderTopWidth: group.id === track.id ? 1 : 0,

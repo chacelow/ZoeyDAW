@@ -3,6 +3,7 @@ import { useState } from "react"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
@@ -64,6 +65,7 @@ function mount({ autoFocusInput = false, readOnlyInput = false } = {}) {
       },
     },
     metrics: PROJECT_METRICS,
+    geometry: DEFAULT_LAYOUT_TOKENS,
     subscribeWindowActive: () => () => {},
     blurControl: () => {},
     browserCollapsed: () => true,

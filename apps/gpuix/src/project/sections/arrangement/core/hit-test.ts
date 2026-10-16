@@ -43,7 +43,7 @@ export function hitTest(
   }
 
   const rows = layoutTrackRows(scene)
-  const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks)
+  const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks, scene.geometry.track)
   const row = rows.find(
     r =>
       pointY >= Math.max(bodyTop, r.top) &&

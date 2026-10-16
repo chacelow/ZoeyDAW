@@ -3,7 +3,7 @@ import { createClip, createTrack } from "@/project/model/reducers"
 import type { Track } from "@/project/model/types"
 import { PATTERN_STEPS_PER_BAR } from "@/project/model/types"
 import { defaultAudioClipSettings } from "@/project/model/audio-editor"
-import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { CONTENT_PALETTE } from "@/shared/theme/content-color"
 
 export function seedLaneProject(mediaUri: string, stress: boolean): void {
@@ -30,7 +30,7 @@ export function seedLaneProject(mediaUri: string, stress: boolean): void {
       kind === "audio" ? "audio" : "midi",
       tracks,
       undefined,
-      DEFAULT_TRACK_HEIGHT
+      DEFAULT_LAYOUT_TOKENS.track.defaultHeight
     )
     track.name = `Track ${String(index + 1).padStart(3, "0")}`
     track.color = CONTENT_PALETTE[index % CONTENT_PALETTE.length] ?? CONTENT_PALETTE[0]
@@ -80,13 +80,18 @@ export function seedLaneProject(mediaUri: string, stress: boolean): void {
     tracks.push(track)
   }
   if (!stress) {
-    const group = createTrack("group", tracks, undefined, DEFAULT_TRACK_HEIGHT)
+    const group = createTrack("group", tracks, undefined, DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
     group.name = "Group"
     group.color = CONTENT_PALETTE[2]
     group.childTrackIds = tracks.slice(0, 2).map(track => track.id)
     for (const track of tracks.slice(0, 2)) track.output = group.id
     tracks.unshift(group)
-    const returnTrack = createTrack("return", tracks, undefined, DEFAULT_TRACK_HEIGHT)
+    const returnTrack = createTrack(
+      "return",
+      tracks,
+      undefined,
+      DEFAULT_LAYOUT_TOKENS.track.defaultHeight
+    )
     returnTrack.name = "Return"
     returnTrack.color = CONTENT_PALETTE[3]
     tracks.push(returnTrack)

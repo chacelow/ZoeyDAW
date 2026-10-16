@@ -27,6 +27,7 @@ function resolve(input: string): Oklab {
  * are inherited from `a`, and only alpha interpolates toward 0.
  */
 export function colorMix(a: string, pctA: number, b: string): string {
+  // Percentage normalization and unit complements are mathematical constants, not theme choices.
   const weightA = pctA / 100
   const colorA = resolve(a)
   if (b === "transparent") {
