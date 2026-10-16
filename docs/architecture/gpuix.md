@@ -32,7 +32,7 @@ crates/
 
 1. **没有 DOM、没有 CSS、没有 Tailwind class**。样式是 `sx()` / `sv()` 产出的 style 对象；颜色与度量只经 `useTheme()`，不 import `colors.ts` 或 `shared/theme/metrics`（纯 `project/layout` 与窗口入口的既有直接度量读取除外）。
 2. **不堆样式文件**。共享外观进入控件的 `sv` variant；局部布局留在 TSX 的命名对象。
-3. **时间线、轨道、Clip 用原生 `<div>` + 可见范围裁剪**，不引入 Canvas2D。waveform 用裁剪后的竖线 div；automation 曲线用 `<svg source>`（单色 tint）。
+3. **时间线、轨道、Clip 的交互 host 用原生 `<div>` + 可见范围裁剪**，不引入 Canvas2D。波形复用 `shared/waveform/PeakColumns`；波形、网格与预览音符的非交互几何复用 `shared/quads/QuadBatch` 批绘制，不恢复逐列 div 路径。automation 曲线用 `<svg source>`（单色 tint）。
 4. **Rust 能做的就在 Rust 做，不绕路**：光标、文件原子写、设置落盘、日志、外链、窗口辅助、引擎全部是 `crates/native` / `crates/engine`。TS 只做适配。不用 `osascript`、`bun:ffi` struct 返回、子进程当原生桥。
 5. **接真实，不再造 Mock**。`ProjectBackend` 端口的真实实现是 Rust 引擎；`createMockProjectBackend` 只保留给不依赖原生的纯逻辑测试。集成测试直接调真实 napi 模块；只有会真实改变宿主状态的调用（隐藏/移动光标、写用户目录）才允许 mock 或指向临时目录。
 6. **一个状态一个 owner**。工程状态只在 `project/stores` + `project/adapters/runtime`。UI 与手势预览不持有第二份可写工程。
