@@ -5,6 +5,7 @@
 import { execFileSync } from "node:child_process"
 import { readdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
+import { gitExecutable } from "./gpuix-main/paths.mjs"
 
 const root = path.resolve(import.meta.dirname, "..")
 const src = path.join(root, "apps/gpuix/src")
@@ -25,17 +26,17 @@ const isHarness = file =>
 const staged = process.argv.includes("--stage") && !process.argv.includes("--check")
 const sourcePaths = (
   staged
-    ? execFileSync("/usr/bin/git", ["ls-files", "-z", "--cached", "--", "apps/gpuix/src"], {
+    ? execFileSync(gitExecutable(), ["ls-files", "-z", "--cached", "--", "apps/gpuix/src"], {
         cwd: root,
         encoding: "utf8",
       })
         .split("\0")
         .filter(Boolean)
-    : files(src).map(file => path.relative(root, file))
+    : files(src).map(file => path.relative(root, file).split(path.sep).join("/"))
 ).filter(file => /\.tsx?$/u.test(file) && !isTestCode(file))
 const indexedSources = new Map()
 if (staged) {
-  const batch = execFileSync("/usr/bin/git", ["cat-file", "--batch", "-z"], {
+  const batch = execFileSync(gitExecutable(), ["cat-file", "--batch", "-z"], {
     cwd: root,
     input: sourcePaths.map(file => `:${file}\0`).join(""),
     maxBuffer: 64 * 1024 * 1024,
@@ -56,7 +57,10 @@ if (staged) {
 const readSource = file =>
   staged ? indexedSources.get(file) : readFileSync(path.join(root, file), "utf8")
 const sources = sourcePaths
-  .map(file => ({ file: path.relative(src, path.join(root, file)), text: readSource(file) }))
+  .map(file => ({
+    file: path.relative(src, path.join(root, file)).split(path.sep).join("/"),
+    text: readSource(file),
+  }))
   .sort((a, b) => a.file.localeCompare(b.file))
 
 // A window entry calls gpuix render(<element>, { title, ... }) with a title option.
@@ -163,7 +167,7 @@ if (process.argv.includes("--check")) {
   )
 } else {
   if (staged) {
-    const file = path.relative(root, output)
+    const file = path.relative(root, output).split(path.sep).join("/")
     let workingMap
     let indexedMap
     try {
@@ -171,23 +175,23 @@ if (process.argv.includes("--check")) {
     } catch (error) {
       if (error.code !== "ENOENT") throw error
     }
-    const indexed = execFileSync("/usr/bin/git", ["ls-files", "--", file], {
+    const indexed = execFileSync(gitExecutable(), ["ls-files", "--", file], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     })
     if (indexed.trim())
-      indexedMap = execFileSync("/usr/bin/git", ["show", `:${file}`], {
+      indexedMap = execFileSync(gitExecutable(), ["show", `:${file}`], {
         cwd: root,
         encoding: "utf8",
       })
-    const hash = execFileSync("/usr/bin/git", ["hash-object", "-w", "--stdin"], {
+    const hash = execFileSync(gitExecutable(), ["hash-object", "-w", "--stdin"], {
       cwd: root,
       input: content,
       encoding: "utf8",
     }).trim()
     execFileSync(
-      "/usr/bin/git",
+      gitExecutable(),
       ["update-index", "--add", "--cacheinfo", `100644,${hash},${file}`],
       { cwd: root }
     )
@@ -196,6 +200,6 @@ if (process.argv.includes("--check")) {
     writeFileSync(output, content)
   }
   process.stdout.write(
-    `wrote ${path.relative(root, output)}: ${entries.length} entries, ${testIdCount} testIds\n`
+    `wrote ${path.relative(root, output).split(path.sep).join("/")}: ${entries.length} entries, ${testIdCount} testIds\n`
   )
 }

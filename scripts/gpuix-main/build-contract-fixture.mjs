@@ -2,10 +2,11 @@ import { execFileSync, spawnSync } from "node:child_process"
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { gitExecutable } from "./paths.mjs"
 
 const source = import.meta.dirname
 const git = (cwd, ...args) =>
-  execFileSync("/usr/bin/git", ["-C", cwd, ...args], {
+  execFileSync(gitExecutable(), ["-C", cwd, ...args], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   }).trimEnd()

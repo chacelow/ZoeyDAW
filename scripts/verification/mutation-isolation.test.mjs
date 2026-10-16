@@ -5,10 +5,11 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { buildFixture } from "../gpuix-main/build-contract-fixture.mjs"
+import { gitExecutable } from "../gpuix-main/paths.mjs"
 
 const repo = path.resolve(import.meta.dirname, "../..")
 const common = execFileSync(
-  "/usr/bin/git",
+  gitExecutable(),
   ["rev-parse", "--path-format=absolute", "--git-common-dir"],
   {
     cwd: repo,
