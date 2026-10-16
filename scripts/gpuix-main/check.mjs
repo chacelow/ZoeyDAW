@@ -13,6 +13,10 @@ const patches = config.patches.map(name => ({
   name,
   content: readFileSync(path.join(directory, "patches", name), "utf8"),
 }))
+const zedPatches = config.zedPatches.map(name => ({
+  name,
+  content: readFileSync(path.join(directory, "patches", name), "utf8"),
+}))
 const pendingArgument = process.argv.indexOf("--pending")
 const sourceArgument = Math.max(process.argv.indexOf("--sources"), pendingArgument)
 const vendor =
@@ -38,22 +42,38 @@ const digest = value => createHash("sha256").update(value).digest("hex")
 const git = (directory, ...args) =>
   execFileSync("/usr/bin/git", ["-C", directory, ...args], { encoding: "utf8" }).trimEnd()
 
-function expectedSourceDiffs() {
+function expectedSourceDiffs(repository, revision, series, submodules) {
   const temporary = mkdtempSync(path.join(tmpdir(), "gpuix-patch-index-"))
   const env = { ...process.env, GIT_INDEX_FILE: path.join(temporary, "index") }
   const indexedGit = (...args) =>
-    execFileSync("/usr/bin/git", ["-C", vendor, ...args], { encoding: "utf8", env }).trimEnd()
+    execFileSync("/usr/bin/git", ["-C", repository, ...args], { encoding: "utf8", env }).trimEnd()
   try {
-    indexedGit("read-tree", config.revision)
+    indexedGit("read-tree", revision)
     const diffs = [""]
-    for (const patch of patches) {
+    for (const patch of series) {
       indexedGit("apply", "--cached", path.join(directory, "patches", patch.name))
-      diffs.push(indexedGit("diff", "--binary", "--cached", "HEAD"))
+      diffs.push(
+        indexedGit("diff", `--ignore-submodules=${submodules}`, "--binary", "--cached", "HEAD")
+      )
     }
     return diffs
   } finally {
     rmSync(temporary, { recursive: true, force: true })
   }
+}
+
+function appliedPrefix(repository, revision, series, label, submodules = "none") {
+  const expectedDiffs = expectedSourceDiffs(repository, revision, series, submodules)
+  const appliedCount = expectedDiffs.indexOf(
+    git(repository, "diff", `--ignore-submodules=${submodules}`, "--binary", "HEAD")
+  )
+  if (appliedCount === -1 || (pendingArgument === -1 && appliedCount !== series.length)) {
+    throw new Error(`${label} must contain exactly the checked-in ordered patch series`)
+  }
+  if (git(repository, "ls-files", "--others", "--exclude-standard") !== "") {
+    throw new Error(`Refusing untracked ${label} sources`)
+  }
+  return appliedCount
 }
 
 try {
@@ -64,23 +84,23 @@ try {
   if (git(path.join(vendor, "zed"), "rev-parse", "HEAD") !== config.zedRevision) {
     throw new Error(`Expected zed ${config.zedRevision}`)
   }
-  const expectedDiffs = expectedSourceDiffs()
-  const appliedCount = expectedDiffs.indexOf(git(vendor, "diff", "--binary", "HEAD"))
-  if (appliedCount === -1 || (pendingArgument === -1 && appliedCount !== patches.length)) {
-    throw new Error("Vendor must contain exactly the checked-in ordered patch series")
-  }
-  if (git(vendor, "ls-files", "--others", "--exclude-standard") !== "") {
-    throw new Error("Refusing untracked vendor sources")
-  }
-  if (git(path.join(vendor, "zed"), "status", "--porcelain") !== "") {
-    throw new Error("Refusing a modified zed submodule")
-  }
+  const appliedCount = appliedPrefix(vendor, config.revision, patches, "Vendor", "dirty")
+  const zedAppliedCount = appliedPrefix(
+    path.join(vendor, "zed"),
+    config.zedRevision,
+    zedPatches,
+    "Zed"
+  )
   if (pendingArgument !== -1) {
     for (const patch of patches.slice(appliedCount)) process.stdout.write(`${patch.name}\n`)
+    for (const patch of zedPatches.slice(zedAppliedCount))
+      process.stdout.write(`zed/${patch.name}\n`)
     process.exit(0)
   }
   if (sourceArgument >= 0) {
-    process.stdout.write(`Applied renderer patches verified: ${config.patches.join(", ")}\n`)
+    process.stdout.write(
+      `Applied renderer patches verified: ${config.patches.join(", ")}; zed: ${zedPatches.map(patch => patch.name).join(", ")}\n`
+    )
     process.exit(0)
   }
   const hashes = Object.fromEntries(
@@ -95,6 +115,7 @@ try {
     revision: config.revision,
     zedRevision: config.zedRevision,
     patches: Object.fromEntries(patches.map(patch => [patch.name, digest(patch.content)])),
+    zedPatches: Object.fromEntries(zedPatches.map(patch => [patch.name, digest(patch.content)])),
     platform: process.platform,
     arch: process.arch,
     outputs: hashes,
@@ -132,7 +153,7 @@ try {
     process.stdout.write(`${JSON.stringify(resolved, null, 2)}\n`)
   }
   process.stdout.write(
-    `gpuix ${config.revision}: patched native, host and React build verified (${config.patches.join(", ")})\n`
+    `gpuix ${config.revision}: patched native, host and React build verified (${config.patches.join(", ")}; zed: ${zedPatches.map(patch => patch.name).join(", ")})\n`
   )
 } catch (error) {
   process.stderr.write(
