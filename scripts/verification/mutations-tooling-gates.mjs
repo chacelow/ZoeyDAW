@@ -72,6 +72,7 @@ for (const mutation of mutations) {
   try {
     for (const file of [
       "scripts/gpuix-review-scan.mjs",
+      "scripts/gpuix-main/paths.mjs",
       "scripts/check-commit-scope.mjs",
       "scripts/verification/tooling-gates-fixture.mjs",
       "scripts/verification/review-scan.test.mjs",
@@ -83,15 +84,24 @@ for (const mutation of mutations) {
       mkdirSync(path.dirname(target), { recursive: true })
       cpSync(path.join(projectRoot, file), target)
     }
-    symlinkSync(path.join(projectRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+    symlinkSync(
+      path.join(projectRoot, "node_modules"),
+      path.join(root, "node_modules"),
+      process.platform === "win32" ? "junction" : "dir"
+    )
     writeFileSync(path.join(root, "package.json"), '{"type":"module"}\n')
     replaceOnce(path.join(root, mutation.file), mutation.from, mutation.to)
     const isVitest = mutation.runner === "vitest"
-    const executable = isVitest ? path.join(root, "node_modules/.bin/vitest") : process.execPath
     const args = isVitest
-      ? ["run", mutation.test, "-t", mutation.pattern]
+      ? [
+          path.join(root, "node_modules/vitest/vitest.mjs"),
+          "run",
+          mutation.test,
+          "-t",
+          mutation.pattern,
+        ]
       : ["--test", "--test-reporter=tap", `--test-name-pattern=${mutation.pattern}`, mutation.test]
-    const result = spawnSync(executable, args, { cwd: root, encoding: "utf8" })
+    const result = spawnSync(process.execPath, args, { cwd: root, encoding: "utf8" })
     assert.equal(result.error, undefined, `${mutation.name}: ${result.error?.message}`)
     assert.equal(
       result.status,
