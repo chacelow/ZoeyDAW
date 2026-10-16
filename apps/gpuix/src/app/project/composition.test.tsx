@@ -242,7 +242,7 @@ test("real TrackRows lane slot uses the timeline time width and positions header
   expect(lane.width).toBe(view.width)
   expect(contents.width).toBe(lane.width)
   expect(rows.width).toBe(view.width + PROJECT_METRICS.controlsWidth)
-  const viewport = bounds("timeline-viewport")
+  const viewport = bounds("timeline-layout")
   expect(rows.width).toBe(viewport.width)
   expect(lane.x + lane.width).toBe(viewport.x + view.width)
   expect(bounds("track-rails-source").x).toBe(lane.x + lane.width)
