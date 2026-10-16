@@ -33,7 +33,7 @@ export function TrackMeter({
   readonly trackName: string
   readonly height: number
 }) {
-  const { t, formats } = useTrackLabels()
+  const { t } = useTrackLabels()
   const theme = useTheme()
   const { telemetry: readTelemetry, driver } = useMeterEnvironment()
   const reader = useRef(readTelemetry)
@@ -89,7 +89,7 @@ export function TrackMeter({
       aria-valuemin={METER_MIN_DB}
       aria-valuemax={METER_MAX_DB}
       aria-valuenow={Math.max(display.left, display.right)}
-      aria-valuetext={formats.meter(display.left, display.right)}
+      aria-valuetext={`L ${display.left.toFixed(1)} dB, R ${display.right.toFixed(1)} dB`}
       testId={`track-meter-${trackId}`}
       style={{
         position: "relative",

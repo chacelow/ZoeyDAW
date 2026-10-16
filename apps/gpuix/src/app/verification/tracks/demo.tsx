@@ -33,7 +33,6 @@ import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackR
 import { trackResources } from "@/project/sections/arrangement/tracks/locales"
 import { contentFill } from "@/shared/theme/content-color"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
-import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
 
 configureProjectCreation(TEST_PROJECT_CREATION)
 const document = createTestDocument()
@@ -116,7 +115,7 @@ function TrackSurface({
   const phase = useProjectState(state => state.session.backend.phase)
   const insertionPoint = useProjectState(state => state.session.insertionPoint)
   const selectedTrackIds = useProjectState(state => state.session.selectedTrackIds)
-  const labels = trackLabelsByLocale[language]
+  const labels = trackResources[language].arrangement
   const gallery = trackResources[language].gallery
   const overloaded = document.tracks.some(track =>
     track.clips.some(

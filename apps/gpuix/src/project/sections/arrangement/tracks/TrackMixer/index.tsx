@@ -8,6 +8,19 @@ import { Icon } from "@/ui/controls/Icon"
 import type { ReactNode } from "react"
 import type { Track } from "@/project/model/types"
 
+function formatPan(value: number): string {
+  return value === 0 ? "C" : `${value < 0 ? "L" : "R"}${Math.round(Math.abs(value) * 100)}`
+}
+
+function parsePan(raw: string): number {
+  const text = raw.trim().toUpperCase()
+  if (text === "C") return 0
+  if (text.startsWith("L")) return -Number(text.slice(1)) / 100
+  return text.startsWith("R") ? Number(text.slice(1)) / 100 : Number(text)
+}
+
+const PAN_WIDTH_SAMPLES = ["L100", "R100"]
+
 function MixerLevel({
   label,
   value,
@@ -25,7 +38,6 @@ function MixerLevel({
 }) {
   const gesture = useProjectEditGesture(onChange)
   const theme = useTheme()
-  const { formats } = useTrackLabels()
   return (
     <DragPadBar
       hideIcon={!icon}
@@ -39,8 +51,8 @@ function MixerLevel({
       disabled={disabled}
       icon={icon}
       testId={testId}
-      format={formats.db}
-      widthSamples={formats.widthSamples.db}
+      format={db => (db <= -60 ? "−∞" : db.toFixed(1))}
+      widthSamples={["−59.9", "6.0", "−∞"]}
       style={{ width: "100%", minWidth: 0 }}
       {...gesture}
     />
@@ -48,7 +60,7 @@ function MixerLevel({
 }
 
 export function TrackMixer({ track }: { readonly track: Track }) {
-  const { t, formats } = useTrackLabels()
+  const { t } = useTrackLabels()
   const theme = useTheme()
   const panGesture = useProjectEditGesture((pan: number) =>
     projectActions.updateTrack(track.id, { pan })
@@ -191,9 +203,9 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 label={`${t("pan")} ${track.name}`}
                 testId={`track-pan-${track.id}`}
                 value={track.pan}
-                format={value => formats.pan(value, "control")}
-                parse={formats.parsePan}
-                widthSamples={formats.widthSamples.pan}
+                format={formatPan}
+                parse={parsePan}
+                widthSamples={PAN_WIDTH_SAMPLES}
                 color={theme.colors.arrangementVolume}
                 style={{ ...column, width: isMain ? "100%" : "auto" }}
                 {...panGesture}
