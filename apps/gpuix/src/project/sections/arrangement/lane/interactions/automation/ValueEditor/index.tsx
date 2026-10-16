@@ -85,7 +85,9 @@ function ValueInput({
   const theme = useTheme()
   const [value, setValue] = useState(() => {
     const source = automationSourceValue(parameter, initial)
-    return parameter === "volume" ? formats.db(source, { unit: true }) : formats.pan(source)
+    return parameter === "volume"
+      ? formats.db(source, { unit: true })
+      : formats.pan(source, "automation")
   })
   const done = useRef(false)
   const epoch = useRef(context.getState().session.editEpoch)

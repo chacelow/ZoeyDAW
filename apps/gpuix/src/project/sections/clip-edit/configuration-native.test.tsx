@@ -11,7 +11,7 @@ import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { ClipEditor } from "."
 import type { ClipEditorEnvironment } from "./environment"
-import { demoLabels } from "./demo/labels"
+import { clipEditorLabels as demoLabels } from "@/app/locales/sections/clip-edit"
 import { AUDIO_ID, MIDI_ID, PATTERN_ID, seed } from "./harness.test"
 
 beforeEach(() => seed())

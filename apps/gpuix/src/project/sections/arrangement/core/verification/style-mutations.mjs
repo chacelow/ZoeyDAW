@@ -236,8 +236,8 @@ for (const [name, literal] of [
     "tracks",
     "tracks/TrackIdentity/index.tsx",
     `track-cursor-${name}`,
-    `theme.design.cursors.${name}`,
-    literal
+    `theme.design.cursors.${name}${name === "grab" ? "," : ""}`,
+    `${literal}${name === "grab" ? "," : ""}`
   )
 }
 for (const file of [

@@ -2,6 +2,9 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
+
+const appRoot = fileURLToPath(new URL("../../../../../../", import.meta.url))
 
 export function runMutations({ root, preload, suites, mutations, notes = [] }) {
   const filesBySuite = new Map(
@@ -21,7 +24,7 @@ export function runMutations({ root, preload, suites, mutations, notes = [] }) {
     if (suite.pattern) args.push("--test-name-pattern", suite.pattern)
     args.push(...suite.files)
     const result = spawnSync(process.execPath, args, {
-      cwd: root,
+      cwd: appRoot,
       encoding: "utf8",
       timeout: 180000,
       maxBuffer: 16 * 1024 * 1024,

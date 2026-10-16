@@ -13,7 +13,7 @@ import { LaneContents } from "../../lane/LaneRow/Contents"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackRows } from "../TrackRows"
 import { TrackResizeOverlay } from "../TrackResizeOverlay"
-import { createTrackLabels } from "@/app/locales/sections/tracks"
+import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "../verification/frame-source"
 
 for (const width of [800, 200]) {
@@ -59,7 +59,7 @@ for (const width of [800, 200]) {
                 focusedTrackId={null}
                 onFocusTrack={() => {}}
                 telemetry={() => null}
-                labels={createTrackLabels("en-US")}
+                labels={trackLabelsByLocale["en-US"]}
                 renderLane={row => (
                   <LaneContents
                     creationNames={TEST_CREATION_NAMES}
@@ -73,7 +73,7 @@ for (const width of [800, 200]) {
               <TrackResizeOverlay
                 scene={scene.get()}
                 viewport={scene.get().viewport}
-                labels={createTrackLabels("en-US")}
+                labels={trackLabelsByLocale["en-US"]}
               />
             </div>
           </ThemeProvider>

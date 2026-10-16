@@ -29,9 +29,11 @@ import { englishFooterLabels, chineseFooterLabels } from "@/app/locales/sections
 import type { ControlInfo } from "@/ui/controls"
 import type { FooterView } from "@/project/sections/footer"
 import type { PanelImperativeHandle } from "@/ui/panels"
+import { initializeVerificationProject } from "../project-creation"
 
 const chinese = process.env.B2_LANGUAGE === "zh"
 const appearance = process.env.B2_APPEARANCE === "light" ? "light" : "dark"
+initializeVerificationProject("footer-demo", chinese ? "zh-CN" : "en-US")
 const searchCommand: { current: (() => boolean) | null } = { current: null }
 const windowKeyboard = createWindowKeyboard()
 windowKeyboard.subscribe("keyDown", event => {

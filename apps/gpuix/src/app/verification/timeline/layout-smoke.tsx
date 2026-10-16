@@ -5,7 +5,9 @@ import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { createTimelineController } from "@/project/sections/arrangement/timeline/controller"
 import { englishLabels } from "@/app/locales/sections/timeline"
 import { Toolbar } from "@/project/sections/arrangement/timeline/toolbar"
+import { initializeVerificationProject } from "../project-creation"
 
+const releaseCreation = initializeVerificationProject("timeline-layout")
 const controller = createTimelineController({
   sceneStore: createSceneStore(DEFAULT_LAYOUT_TOKENS),
   initialSize: { containerWidth: 1280, bodyHeight: 400, timelineLeft: 0 },
@@ -59,4 +61,5 @@ try {
 } finally {
   root.unmount()
   controller.dispose()
+  releaseCreation()
 }

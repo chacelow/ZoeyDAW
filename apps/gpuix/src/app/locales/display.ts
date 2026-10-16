@@ -1,6 +1,6 @@
 import type { SupportedLocale } from "@/platform/i18n/core"
 
-import type { NumericKind } from "@/project/model/display-formats"
+import type { NumericKind, PanFormatVariant } from "@/project/model/display-formats"
 
 export type { NumericKind } from "@/project/model/display-formats"
 
@@ -10,7 +10,12 @@ export interface DisplayConfig {
   negativeInfinity: string
   infinityAliases: string[]
   dbFloor: number
-  pan: { center: string; left: string; right: string; centerThreshold: number }
+  pan: {
+    center: string
+    left: string
+    right: string
+    variants: Record<PanFormatVariant, { centerThreshold: number; separator: string }>
+  }
   units: {
     db: string
     sampleRate: string
@@ -28,13 +33,21 @@ export interface DisplayConfig {
     transportDigits: number
     rulerDigits: number
     rulerOmitZeroFraction: boolean
+    includeHours: Record<"ruler" | "transport", boolean>
   }
   parameter: { fractionalDigits: number; integerDigits: number }
   musicalWidthSamples: number[]
-  widthSamples: Record<NumericKind | "pan" | "parameter" | "audioGain", string[]>
+  widthSamples: Record<NumericKind | "pan" | "panAutomation" | "parameter" | "audioGain", string[]>
 }
 
-function config(pan: DisplayConfig["pan"], pixels: string): DisplayConfig {
+function config(
+  pan: Pick<DisplayConfig["pan"], "center" | "left" | "right">,
+  pixels: string
+): DisplayConfig {
+  const variants: DisplayConfig["pan"]["variants"] = {
+    control: { centerThreshold: 0, separator: "" },
+    automation: { centerThreshold: 0.005, separator: " " },
+  }
   return {
     precision: {
       bpm: 2,
@@ -52,7 +65,7 @@ function config(pan: DisplayConfig["pan"], pixels: string): DisplayConfig {
     negativeInfinity: "−∞",
     infinityAliases: ["−∞", "-∞", "-inf", "-infinity"],
     dbFloor: -60,
-    pan,
+    pan: { ...pan, variants },
     units: { db: "dB", sampleRate: "kHz", latency: "ms", pixels, percent: "%", zoom: "×" },
     meter: "{{leftLabel}} {{left}} dB, {{rightLabel}} {{right}} dB",
     dateTime: { dateStyle: "short", timeStyle: "short" },
@@ -62,6 +75,7 @@ function config(pan: DisplayConfig["pan"], pixels: string): DisplayConfig {
       transportDigits: 3,
       rulerDigits: 3,
       rulerOmitZeroFraction: true,
+      includeHours: { ruler: false, transport: true },
     },
     parameter: { fractionalDigits: 1, integerDigits: 0 },
     pitchClasses: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
@@ -78,13 +92,22 @@ function config(pan: DisplayConfig["pan"], pixels: string): DisplayConfig {
       ruler: ["1024.00"],
       zoom: ["16.0×"],
       viewport: ["16.000"],
-      pan: [pan.center, `${pan.left}100`, `${pan.right}100`],
+      pan: [
+        pan.center,
+        `${pan.left}${variants.control.separator}100`,
+        `${pan.right}${variants.control.separator}100`,
+      ],
+      panAutomation: [
+        pan.center,
+        `${pan.left}${variants.automation.separator}100`,
+        `${pan.right}${variants.automation.separator}100`,
+      ],
       parameter: ["100", "100.0"],
     },
   }
 }
 
 export const displayConfigByLocale: Record<SupportedLocale, DisplayConfig> = {
-  "en-US": config({ center: "C", left: "L", right: "R", centerThreshold: 0.005 }, "px"),
-  "zh-CN": config({ center: "中", left: "左", right: "右", centerThreshold: 0.005 }, "像素"),
+  "en-US": config({ center: "C", left: "L", right: "R" }, "px"),
+  "zh-CN": config({ center: "中", left: "左", right: "右" }, "像素"),
 }

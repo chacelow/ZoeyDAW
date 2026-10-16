@@ -1,4 +1,5 @@
 import { hydrateProject, useProjectState } from "@/project/adapters"
+import { TEST_CREATION } from "@/project/adapters/fixtures"
 import { defaultAudioClipSettings } from "@/project/model/audio-editor"
 import { createClip, createTrack } from "@/project/model/reducers"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
@@ -17,6 +18,7 @@ export function seedClipEditProject(mediaUri: string, workload: "normal" | "dens
   main.volumeDb = -30
   const tracks: Track[] = []
   const creation = {
+    ...TEST_CREATION,
     names: getCreationNames("en-US"),
     appearance: {
       heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight,

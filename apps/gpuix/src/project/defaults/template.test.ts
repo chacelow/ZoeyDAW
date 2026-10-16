@@ -61,7 +61,9 @@ it("projects an injected transport, musical and Main template without sharing au
     outputChannel: source.track.io.main.outputChannel,
   })
   first.document.transport.loop.endBar++
-  first.document.tracks[0].sends.test = -9
+  const sends = first.document.tracks[0].sends
+  if (!sends) throw new Error("New Main track must have sends")
+  sends.test = -9
   const second = createProjectTemplate({
     names,
     appearance,

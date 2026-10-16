@@ -1,5 +1,8 @@
 import { createDisplayFormats } from "@/app/i18n/display-formats"
 import type { TrackLabels } from "@/project/sections/arrangement/tracks/labels"
+import type { SupportedLocale } from "@/platform/i18n/core"
+import enUS from "../en-US"
+import zhCN from "../zh-CN"
 
 export const trackResources = {
   "zh-CN": {
@@ -127,5 +130,16 @@ export const trackResources = {
 }
 
 export function createTrackLabels(locale: keyof typeof trackResources): TrackLabels {
-  return { ...trackResources[locale].arrangement, formats: createDisplayFormats(locale) }
+  return {
+    ...trackResources[locale].arrangement,
+    formats: createDisplayFormats(locale),
+    monitorModes: locale === "zh-CN" ? zhCN.track.monitorModes : enUS.track.monitorModes,
+    // Compact In/Auto/Off captions retain Live's convention; descriptions use the current locale.
+    monitorShortNames: enUS.track.monitorModes,
+  }
+}
+
+export const trackLabelsByLocale: Record<SupportedLocale, TrackLabels> = {
+  "en-US": createTrackLabels("en-US"),
+  "zh-CN": createTrackLabels("zh-CN"),
 }

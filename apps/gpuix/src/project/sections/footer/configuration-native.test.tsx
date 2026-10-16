@@ -12,7 +12,7 @@ import { hydrateProject, projectActions, useProjectState } from "@/project/adapt
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createDevice } from "@/project/model/devices"
 import { FooterPanel } from "."
-import { englishFooterLabels } from "./demo-labels"
+import { englishFooterLabels } from "@/app/locales/sections/footer"
 
 const device = createDevice("filter")
 beforeEach(() => {

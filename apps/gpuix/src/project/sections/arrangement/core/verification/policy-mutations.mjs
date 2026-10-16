@@ -117,7 +117,7 @@ mutations.push(
       "Math.max(2,",
     ],
     ["clip-visual-min-width", "clip-geometry.ts", "Math.max(metrics.clip.minWidth,", "Math.max(2,"],
-    ["clip-min-height", "clip-geometry.ts", "Math.max(metrics.clip.minHeight,", "Math.max(4,"],
+    ["clip-min-height", "clip-geometry.ts", "metrics.clip.minHeight", "4"],
     ["clip-top-inset", "clip-geometry.ts", "rect.top + metrics.clip.verticalInset", "rect.top + 1"],
     [
       "clip-height-inset",

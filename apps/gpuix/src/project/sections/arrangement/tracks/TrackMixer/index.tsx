@@ -193,7 +193,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 label={`${t("pan")} ${track.name}`}
                 testId={`track-pan-${track.id}`}
                 value={track.pan}
-                format={formats.pan}
+                format={value => formats.pan(value, "control")}
                 parse={formats.parsePan}
                 widthSamples={formats.widthSamples.pan}
                 color={theme.colors.arrangementVolume}

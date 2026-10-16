@@ -15,7 +15,9 @@ import { FooterPanel } from "@/project/sections/footer"
 import { englishFooterLabels } from "@/app/locales/sections/footer"
 import { createTestWindowActivity } from "@/project/sections/footer/verification/test-activity"
 import type { FooterView } from "@/project/sections/footer"
+import { initializeVerificationProject } from "../project-creation"
 
+const releaseCreation = initializeVerificationProject("footer-measure")
 const activity = createTestWindowActivity()
 
 projectActions.addTrack("audio", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
@@ -150,3 +152,4 @@ const output = JSON.stringify(
 )
 if (process.argv[2]) writeFileSync(process.argv[2], `${output}\n`)
 process.stdout.write(`${output}\n`)
+releaseCreation()

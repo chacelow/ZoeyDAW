@@ -20,7 +20,9 @@ import { englishFooterLabels } from "@/app/locales/sections/footer"
 import { createTestAnimationFrames } from "@/project/sections/footer/verification/test-frame"
 import { createTestWindowActivity } from "@/project/sections/footer/verification/test-activity"
 import type { FooterView } from "@/project/sections/footer"
+import { initializeVerificationProject } from "../project-creation"
 
+const releaseCreation = initializeVerificationProject("footer-states")
 const outputDirectory = path.resolve(
   process.argv[2] ?? path.join(import.meta.dir, "../evidence/gpu-states")
 )
@@ -398,3 +400,4 @@ process.stdout.write(
   `${JSON.stringify({ outputDirectory, states: states.length, errors }, null, 2)}\n`
 )
 if (errors.length) process.exitCode = 1
+releaseCreation()

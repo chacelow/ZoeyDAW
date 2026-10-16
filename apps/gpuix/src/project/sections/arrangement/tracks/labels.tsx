@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo } from "react"
 import type { ReactNode } from "react"
 import type { DisplayFormats } from "@/project/model/display-formats"
+import type { Track } from "@/project/model/types"
 
 export interface TrackTextLabels {
   readonly rename: string
@@ -51,6 +52,8 @@ export interface TrackTextLabels {
 
 export interface TrackLabels extends TrackTextLabels {
   readonly formats: DisplayFormats
+  readonly monitorModes: Readonly<Record<NonNullable<Track["monitor"]>, string>>
+  readonly monitorShortNames: Readonly<Record<NonNullable<Track["monitor"]>, string>>
 }
 
 const TrackLabelsContext = createContext<TrackLabels | null>(null)
@@ -72,6 +75,8 @@ export function useTrackLabels() {
     () => ({
       t: (key: keyof TrackTextLabels) => labels[key],
       formats: labels.formats,
+      monitorModes: labels.monitorModes,
+      monitorShortNames: labels.monitorShortNames,
     }),
     [labels]
   )

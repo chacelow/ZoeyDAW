@@ -31,9 +31,11 @@ test("native mixer display, parsing and monitor labels follow their injected sou
   config.precision.db = 2
   config.pan = { ...config.pan, center: "MID", left: "W", right: "E" }
   config.widthSamples.pan = ["MID", "W100", "E100"]
+  const baseLabels = createTrackLabels("en-US")
   const labels = {
-    ...createTrackLabels("en-US"),
-    monitorOff: "MODE-OFF",
+    ...baseLabels,
+    monitorModes: { ...baseLabels.monitorModes, off: "MODE-OFF" },
+    monitorShortNames: { ...baseLabels.monitorShortNames, off: "MODE-OFF" },
     formats: createDisplayFormats("en-US", config),
   }
   const root = createTestRoot({ width: 304, height: 200 })

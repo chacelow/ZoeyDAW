@@ -10,16 +10,18 @@ export type NumericKind =
   | "zoom"
   | "viewport"
 
+export type PanFormatVariant = "control" | "automation"
+
 export interface DisplayFormats {
   number(value: number, kind: NumericKind): string
   parseNumber(text: string): number
   parseParameter(text: string, options?: { percentage?: boolean; step?: number }): number
   parameter(value: number, options?: { percentage?: boolean; step?: number }): string
   percent(valueFraction: number): string
-  db(value: number): string
+  db(value: number, options?: { unit?: boolean }): string
   audioGain(value: number): string
   parseDb(text: string): number
-  pan(value: number): string
+  pan(value: number, variant: PanFormatVariant): string
   parsePan(text: string): number
   meter(leftDb: number, rightDb: number): string
   sampleRate(hz: number): string
@@ -41,5 +43,8 @@ export interface DisplayFormats {
     kind: "position" | "duration"
   ): string[]
   pitchName(pitch: number, octaveLabelOffset: number): string
-  readonly widthSamples: Record<NumericKind | "pan" | "parameter" | "audioGain", string[]>
+  readonly widthSamples: Record<
+    NumericKind | "pan" | "panAutomation" | "parameter" | "audioGain",
+    string[]
+  >
 }

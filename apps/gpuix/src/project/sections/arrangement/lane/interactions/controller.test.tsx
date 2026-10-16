@@ -35,6 +35,8 @@ import { createTestTimeline } from "../testing/project-scene.test-helper"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createManualFrames } from "../testing/frames.test-helper"
 import { useLaneSurface } from "../useLaneSurface"
+import { createDisplayFormats } from "@/app/i18n/display-formats"
+import { displayConfigByLocale } from "@/app/locales/display"
 
 const overriddenDesign: DesignTokens = {
   ...DEFAULT_DESIGN_TOKENS,
@@ -69,10 +71,18 @@ afterEach(() => {
   projectStore.setState(savedState, true)
 })
 
-function Surface({ scene, controller }: { scene: SceneStore; controller: LaneController }) {
+function Surface({
+  scene,
+  controller,
+  labels = labelsByLocale.en,
+}: {
+  scene: SceneStore
+  controller: LaneController
+  labels?: typeof labelsByLocale.en
+}) {
   const snapshot = useSyncExternalStore(scene.subscribe, scene.get)
   const frames = useMemo(createManualFrames, [])
-  const { wrap, ...editSurface } = useLaneSurface(controller, labelsByLocale.en, 0)
+  const { wrap, ...editSurface } = useLaneSurface(controller, labels, 0)
   return (
     <AnimationFrameProvider source={frames}>
       <div style={{ position: "relative", width: 1000, height: 500 }}>
@@ -133,7 +143,14 @@ function Surface({ scene, controller }: { scene: SceneStore; controller: LaneCon
   )
 }
 
-function mount(options: { automation?: boolean; audio?: boolean; design?: DesignTokens } = {}) {
+function mount(
+  options: {
+    automation?: boolean
+    audio?: boolean
+    design?: DesignTokens
+    labels?: typeof labelsByLocale.en
+  } = {}
+) {
   const document = createMockDocument()
   const track = document.tracks.find(item => item.kind === "midi")
   const main = document.tracks.find(item => item.kind === "main")
@@ -223,7 +240,7 @@ function mount(options: { automation?: boolean; audio?: boolean; design?: Design
   root = currentRoot
   currentRoot.render(
     <ThemeProvider design={options.design}>
-      <Surface scene={scene} controller={current} />
+      <Surface scene={scene} controller={current} labels={options.labels} />
     </ThemeProvider>
   )
   const sourceRow = layoutTrackRows(scene.get()).find(row => row.track.id === "source")
@@ -746,6 +763,49 @@ for (const action of ["edit", "delete"] as const) {
       { id: "a", bar: 2.5, value: 0.5 },
       { id: "b", bar: 5, value: 0.8 },
       { id: "outside", bar: 20, value: 0.1 },
+    ])
+  })
+}
+
+for (const parameter of ["volume", "pan"] as const) {
+  it(`native automation ${parameter} editing follows injected display and parsing sources`, () => {
+    const config = structuredClone(displayConfigByLocale["en-US"])
+    config.negativeInfinity = "FLOOR"
+    config.units.db = "DBU"
+    config.pan.left = "W"
+    config.pan.right = "E"
+    config.pan.variants.automation.separator = "/"
+    const labels = { ...labelsByLocale.en, formats: createDisplayFormats("en-US", config) }
+    const { renderer, scene } = mount({ automation: true, labels })
+    projectActions.setAutomationParameter("target", parameter)
+    const row = activeAutomationRows(scene.get()).find(item => item.track.id === "target")
+    if (!row) throw new Error("Missing automation format row")
+    projectActions.setAutomationPoint("target", row.laneId, {
+      id: "format-point",
+      bar: 2.5,
+      value: parameter === "volume" ? 0 : 0.375,
+    })
+    flushSync(() =>
+      scene.setTargetSelection({
+        kind: "automation-value",
+        trackId: "target",
+        laneId: row.laneId,
+        pointId: "format-point",
+        pointIds: ["format-point"],
+      })
+    )
+    const editor = renderer.findByTestId("automation-value-editor")
+    if (!editor) throw new Error("Missing automation format editor")
+    const accessible = Object.values(renderer.getA11yTree().nodes ?? {}).find(
+      node => node.aria?.label === labels["arrangement.editAutomationValue"]
+    )
+    expect(accessible?.aria?.value).toBe(parameter === "volume" ? "FLOOR DBU" : "W/25")
+    renderer.nativeSimulateKeystrokes(
+      editor.id,
+      parameter === "volume" ? "- 1 0 . 5 space d b u enter" : "e 5 0 enter"
+    )
+    expect(useProjectState.getState().document.tracks[1]?.automation[0]?.points).toEqual([
+      { id: "format-point", bar: 2.5, value: 0.75 },
     ])
   })
 }

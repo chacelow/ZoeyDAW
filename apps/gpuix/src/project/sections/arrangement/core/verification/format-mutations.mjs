@@ -5,6 +5,34 @@ const root = fileURLToPath(new URL("../", import.meta.url))
 const preload = fileURLToPath(new URL("./mutation-preload.ts", import.meta.url))
 const mutations = [
   [
+    "automation-db-unit-omitted",
+    "../lane/interactions/automation/ValueEditor/index.tsx",
+    "formats.db(source, { unit: true })",
+    "formats.db(source)",
+    "automation",
+  ],
+  [
+    "automation-pan-wrong-variant",
+    "../lane/interactions/automation/ValueEditor/index.tsx",
+    'formats.pan(source, "automation")',
+    'formats.pan(source, "control")',
+    "automation",
+  ],
+  [
+    "automation-pan-local-parser",
+    "../lane/interactions/automation/ValueEditor/index.tsx",
+    "formats.parsePan(trimmed)",
+    "Number(trimmed)",
+    "automation",
+  ],
+  [
+    "automation-db-local-parser",
+    "../lane/interactions/automation/ValueEditor/index.tsx",
+    "formats.parseDb(trimmed)",
+    "Number(trimmed)",
+    "automation",
+  ],
+  [
     "mixer-db-local-precision",
     "../tracks/TrackMixer/index.tsx",
     "format={formats.db}",
@@ -14,7 +42,7 @@ const mutations = [
   [
     "mixer-pan-local-display",
     "../tracks/TrackMixer/index.tsx",
-    "format={formats.pan}",
+    'format={value => formats.pan(value, "control")}',
     'format={value => value === 0 ? "C" : (value < 0 ? "L" : "R") + Math.round(Math.abs(value) * 100)}',
     "tracks",
   ],
@@ -32,18 +60,24 @@ const mutations = [
     '"L " + display.left.toFixed(1) + " dB, R " + display.right.toFixed(1) + " dB"',
     "tracks",
   ],
-  ["monitor-local-aria", "../tracks/TrackRouting/index.tsx", `\${modeLabel}`, `\${mode}`, "tracks"],
+  [
+    "monitor-local-aria",
+    "../tracks/TrackRouting/index.tsx",
+    "monitorModes[mode]",
+    "mode",
+    "tracks",
+  ],
   [
     "monitor-local-on-caption",
     "../tracks/TrackRouting/index.tsx",
-    "labelOn={modeLabel}",
+    "labelOn={monitorShortNames[mode]}",
     "labelOn={mode}",
     "tracks",
   ],
   [
     "monitor-local-off-caption",
     "../tracks/TrackRouting/index.tsx",
-    "labelOff={modeLabel}",
+    "labelOff={monitorShortNames[mode]}",
     "labelOff={mode}",
     "tracks",
   ],
@@ -67,6 +101,10 @@ runMutations({
   root,
   preload,
   suites: {
+    automation: {
+      files: ["../lane/interactions/controller.test.tsx"],
+      pattern: "injected display and parsing sources",
+    },
     tracks: {
       files: ["../tracks/formatting.test.tsx", "../tracks/meter/TrackMeter.test.tsx"],
       pattern: "injected sources|injected numeric display policy",

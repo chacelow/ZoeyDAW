@@ -149,6 +149,9 @@ test("native track consumers honor design overrides and shared arrangement geome
         </ThemeProvider>
       </AnimationFrameProvider>
     )
+    for (const id of [`track-row-${group.id}`, `track-lane-${group.id}`]) {
+      expect(node(id).style.focusVisible).toMatchObject({ outlineWidth: 2, outlineOffset: -2 })
+    }
     expect(node(`track-label-${group.id}`).style.cursor).toBe("move")
     expect(bounds(`track-drop-target-${group.id}`).height).toBe(4)
   } finally {

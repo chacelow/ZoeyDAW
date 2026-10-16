@@ -357,7 +357,7 @@ mod tests {
             ("/preferences/numericInput/dragPixelsPerStep", serde_json::json!(0)),
             ("/preferences/pointer/dragThresholdPixels", serde_json::json!(-1)),
             ("/preferences/notifications/visibleLimit", serde_json::json!(9)),
-            ("/preferences/browser/libraryRoots", serde_json::json!([""])),
+            ("/preferences/browser/favorites", serde_json::json!([""])),
             ("/preferences/audioDevice/sampleRate", serde_json::json!(1)),
             ("/preferences/audioDevice/blockFrames", serde_json::json!(65_537)),
         ] {
