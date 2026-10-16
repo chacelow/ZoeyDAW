@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { parse } from "@typescript-eslint/parser"
 
 const base = process.argv[2] ?? "gpuix-migration"
 // Run the repo's own eslint binary by absolute path: no PATH lookup, and the scan lints against the same config the pre-commit hook uses.
@@ -23,6 +24,41 @@ const add = (kind, file, detail) => {
 
 const stripComments = text =>
   text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1")
+
+function testRoot(node) {
+  while (["MemberExpression", "CallExpression", "ChainExpression"].includes(node.type))
+    node = node.object ?? node.callee ?? node.expression
+  return node.type === "Identifier" && /^(describe|it|test)$/.test(node.name)
+}
+
+function disabledTest(node) {
+  if (node.type === "CallExpression") {
+    if (node.callee.type === "Identifier" && /^(xit|xtest|xdescribe)$/.test(node.callee.name))
+      return true
+    const callee = node.callee
+    if (
+      callee.type === "MemberExpression" &&
+      testRoot(callee) &&
+      (callee.computed ? callee.property.value : callee.property.name) === "if" &&
+      node.arguments[0]?.type === "Literal" &&
+      node.arguments[0].value === false
+    )
+      return true
+  }
+  if (
+    node.type === "MemberExpression" &&
+    testRoot(node) &&
+    ["skip", "todo", "only", "skipIf", "todoIf"].includes(
+      node.computed ? node.property.value : node.property.name
+    )
+  )
+    return true
+  return Object.values(node).some(value =>
+    Array.isArray(value)
+      ? value.some(child => child?.type && disabledTest(child))
+      : value?.type && disabledTest(value)
+  )
+}
 
 for (const file of code) {
   const raw = readFileSync(file, "utf8")
@@ -72,7 +108,12 @@ for (const file of code) {
 for (const file of source) {
   const text = stripComments(readFileSync(file, "utf8"))
   if (
-    /\b(it|test)\.skip\(|\b(describe|it|test)\.only\(|(?<![\w$.])x(it|test|describe)\(/.test(text)
+    disabledTest(
+      parse(readFileSync(file, "utf8"), {
+        sourceType: "module",
+        ecmaFeatures: { jsx: true },
+      })
+    )
   )
     add("skipped-test", file, "skipped/only test: delete or fix")
   if (/expect\([^)]*\)\.toBeTruthy\(\)\s*$/m.test(text) && /\.test\.(ts|tsx)$/.test(file))
