@@ -10,8 +10,6 @@ import { TransportNumber } from "./TransportNumber"
 import { PerformanceStatus } from "./PerformanceStatus"
 import { metronomePhase, tappedTempo } from "./metronome"
 import { MetronomeIndicator } from "./MetronomeIndicator"
-import { transportColumns } from "./layout"
-import type { TransportMeasurements } from "./layout"
 
 const SCALE_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] as const
 const SCALE_MODES = [
@@ -63,27 +61,7 @@ export function TransportBar({
   )
   const gap = theme.transportControl["--spacing-control-track-gap"]
   const iconSize = theme.transportControl["--spacing-control-icon"]
-  const [measurements, setMeasurements] = useState<TransportMeasurements>({
-    viewport: 0,
-    left: 0,
-    center: 0,
-    right: 0,
-  })
-  const columns = useMemo(
-    () => transportColumns(measurements, theme.project.transportColumnGap),
-    [measurements, theme.project.transportColumnGap]
-  )
-  const measured =
-    measurements.viewport > 0 &&
-    measurements.left > 0 &&
-    measurements.center > 0 &&
-    measurements.right > 0
-  function measure(part: keyof TransportMeasurements, width: number | undefined) {
-    if (width !== undefined)
-      setMeasurements(current =>
-        current[part] === width ? current : { ...current, [part]: width }
-      )
-  }
+  const [viewportWidth, setViewportWidth] = useState(0)
   const groupStyle = {
     display: "flex",
     flexDirection: "row",
@@ -98,7 +76,9 @@ export function TransportBar({
       fill
       aria-label={labels.controls}
       testId="transport-scroll"
-      onLayout={event => measure("viewport", event.width)}
+      onLayout={event => {
+        if (event.width !== undefined) setViewportWidth(event.width)
+      }}
       style={{
         height: theme.transportControl["--spacing-control-track"],
         flexShrink: 0,
@@ -111,8 +91,9 @@ export function TransportBar({
           flexDirection: "row",
           alignItems: "center",
           gap: theme.project.transportColumnGap,
-          minWidth: "100%",
-          width: measured ? columns.content : undefined,
+          minWidth: viewportWidth,
+          alignSelf: "flex-start",
+          flexShrink: 0,
           height: "100%",
         }}
       >
@@ -120,16 +101,12 @@ export function TransportBar({
           style={{
             display: "flex",
             flexDirection: "row",
-            width: measured ? columns.left : undefined,
-            flexGrow: measured ? 0 : 1,
+            flexGrow: 1,
+            flexBasis: 0,
             flexShrink: 0,
           }}
         >
-          <div
-            testId="transport-left"
-            style={groupStyle}
-            onLayout={event => measure("left", event.width)}
-          >
+          <div testId="transport-left" style={groupStyle}>
             <Button
               size="transport"
               iconOnly
@@ -253,11 +230,7 @@ export function TransportBar({
             />
           </div>
         </div>
-        <div
-          testId="transport-center"
-          style={groupStyle}
-          onLayout={event => measure("center", event.width)}
-        >
+        <div testId="transport-center" style={groupStyle}>
           <DragPadToggle
             size="transport"
             value={workspace.follow}
@@ -376,16 +349,12 @@ export function TransportBar({
             display: "flex",
             flexDirection: "row",
             justifyContent: "flex-end",
-            width: measured ? columns.right : undefined,
-            flexGrow: measured ? 0 : 1,
+            flexGrow: 1,
+            flexBasis: 0,
             flexShrink: 0,
           }}
         >
-          <div
-            testId="transport-right"
-            style={groupStyle}
-            onLayout={event => measure("right", event.width)}
-          >
+          <div testId="transport-right" style={groupStyle}>
             <DragPadToggle
               size="transport"
               value={drawMode}
