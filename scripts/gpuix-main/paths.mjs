@@ -20,7 +20,11 @@ export function sharedBuildPaths(repository) {
     { encoding: "utf8" }
   ).trim()
   const base = canonicalBuildPath(path.resolve(path.dirname(common), "../_vendor"))
-  return { base, vendorRoot: path.join(base, "zoeydaw-gpuix"), target: path.join(base, "target") }
+  return {
+    base,
+    vendorRoot: canonicalBuildPath(path.join(base, "zoeydaw-gpuix")),
+    target: canonicalBuildPath(path.join(base, "target")),
+  }
 }
 
 export function isWithinBuildPath(value, root) {

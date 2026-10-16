@@ -1,9 +1,10 @@
 import assert from "node:assert/strict"
 import { execFileSync, spawnSync } from "node:child_process"
-import { mkdtempSync, rmSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import test from "node:test"
+import { buildFixture } from "../gpuix-main/build-contract-fixture.mjs"
 
 const repo = path.resolve(import.meta.dirname, "../..")
 const common = execFileSync(
@@ -119,3 +120,57 @@ test("native mutation: local target outside shared build base is rejected", t =>
   const { vendor, target } = fixture(t)
   refused(run(scripts[1], { vendor, target }), /CARGO_TARGET_DIR.*base|cargo target.*base/i)
 })
+
+for (const script of scripts) {
+  test(`${script}: ancestor of shared vendor cannot be an isolated root`, t => {
+    const { target } = fixture(t)
+    refused(run(script, { vendor: base, target, ci: "true" }), /shared\/repository vendor root/i)
+  })
+  test(`${script}: ancestor of shared target cannot be an isolated target`, t => {
+    const { vendor } = fixture(t)
+    refused(run(script, { vendor, target: base, ci: "true" }), /shared\/repository cargo target/i)
+  })
+}
+
+for (const script of scripts) {
+  test(`${script}: shared vendor symlink is rejected through its real path`, t => {
+    const f = buildFixture()
+    t.after(f.close)
+    const actual = path.join(f.root, "../shared-vendor-real")
+    renameSync(f.vendorRoot, actual)
+    symlinkSync(actual, f.vendorRoot)
+    const entry = path.join(f.root, script)
+    mkdirSync(path.dirname(entry), { recursive: true })
+    copyFileSync(path.join(repo, script), entry)
+    const result = spawnSync(process.execPath, [entry], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CI: "true",
+        GPUIX_VENDOR_ROOT: actual,
+        CARGO_TARGET_DIR: path.join(f.root, "../isolated-target"),
+      },
+    })
+    refused(result, /shared\/repository vendor root/i)
+  })
+  test(`${script}: shared target symlink is rejected through its real path`, t => {
+    const f = buildFixture()
+    t.after(f.close)
+    const actual = path.join(f.root, "../shared-target-real")
+    mkdirSync(actual)
+    symlinkSync(actual, path.join(f.vendorRoot, "../target"))
+    const entry = path.join(f.root, script)
+    mkdirSync(path.dirname(entry), { recursive: true })
+    copyFileSync(path.join(repo, script), entry)
+    const result = spawnSync(process.execPath, [entry], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CI: "true",
+        GPUIX_VENDOR_ROOT: path.join(f.root, "../isolated-vendor"),
+        CARGO_TARGET_DIR: actual,
+      },
+    })
+    refused(result, /shared\/repository cargo target/i)
+  })
+}

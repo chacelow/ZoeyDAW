@@ -18,15 +18,12 @@ const repo = path.resolve(import.meta.dirname, "../..")
 const shared = sharedBuildPaths(repo)
 const isolatedRoot = canonicalBuildPath(root)
 const target = canonicalBuildPath(process.env.CARGO_TARGET_DIR ?? path.join(isolatedRoot, "target"))
+const protectedRoots = [shared.vendorRoot, shared.target, realpathSync(repo)]
 for (const [name, value] of [
   ["vendor root", isolatedRoot],
   ["cargo target", target],
 ]) {
-  if (
-    isWithinBuildPath(value, shared.vendorRoot) ||
-    isWithinBuildPath(value, shared.target) ||
-    isWithinBuildPath(value, realpathSync(repo))
-  )
+  if (protectedRoots.some(root => isWithinBuildPath(value, root) || isWithinBuildPath(root, value)))
     throw new Error(`Refusing shared/repository ${name}: ${value}`)
 }
 if (process.env.CI !== "true" && !isWithinBuildPath(target, shared.base))

@@ -89,15 +89,12 @@ async function main() {
     throw new Error("Set explicit isolated GPUIX_VENDOR_ROOT and CARGO_TARGET_DIR; see --help")
   const vendorRoot = canonical(resolve(process.env.GPUIX_VENDOR_ROOT))
   const target = canonical(resolve(process.env.CARGO_TARGET_DIR))
+  const protectedRoots = [shared.vendorRoot, shared.target, realpathSync(repo)]
   for (const [name, path] of [
     ["vendor root", vendorRoot],
     ["cargo target", target],
   ]) {
-    if (
-      inside(path, shared.vendorRoot) ||
-      inside(path, realpathSync(repo)) ||
-      inside(path, shared.target)
-    ) {
+    if (protectedRoots.some(root => inside(path, root) || inside(root, path))) {
       throw new Error(`Refusing shared/repository ${name}: ${path}`)
     }
   }
