@@ -1,4 +1,4 @@
-import { useImperativeHandle, useRef, useState } from "react"
+import { useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import {
   Button,
@@ -104,6 +104,7 @@ export function BrowserPanel({
   const tree = useRef<PublicInstance | null>(null)
   const nodes = useRef(new Map<string, PublicInstance>())
   const [hoveredResource, setHoveredResource] = useState<string | null>(null)
+  const [restoreResultsFocus, setRestoreResultsFocus] = useState(false)
   const [focusBySource, setFocusBySource] = useState<
     Partial<Record<typeof browser.source, string>>
   >({})
@@ -111,6 +112,15 @@ export function BrowserPanel({
     browser.rows.find(row => row.entry.id === focusBySource[browser.source])?.entry.id ??
     browser.rows[0]?.entry.id
   const resourceInfo = useInfoBinding({ type: "resources" })
+  useLayoutEffect(() => {
+    if (!restoreResultsFocus) return
+    const node = focusedId === undefined ? tree.current : nodes.current.get(focusedId)
+    if (node) {
+      renderer?.focusElement?.(node.id)
+      renderer?.scrollIntoView?.(node.id)
+    }
+    setRestoreResultsFocus(false)
+  }, [restoreResultsFocus, focusedId, renderer])
   const searchInfo = useInfoBinding({ type: "search" })
   const filterInfo = useInfoBinding({ type: "filters" })
   const selectedId = browser.selected?.entry.id
@@ -229,7 +239,7 @@ export function BrowserPanel({
           onKeyDown={event => {
             if (event.key === "escape") {
               browser.setQuery("")
-              if (tree.current) renderer?.focusElement?.(tree.current.id)
+              setRestoreResultsFocus(true)
             }
           }}
         />

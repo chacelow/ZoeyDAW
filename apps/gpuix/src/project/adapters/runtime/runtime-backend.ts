@@ -119,7 +119,6 @@ export function createRuntimeBackend(owner: RuntimeOwner, editing: RuntimeEditin
     owner.isExactSeekPending = false
     owner.requestedBar = owner.acceptedControl.seekBar
     const unreconciledRecording = owner.recordingPending
-    owner.recordingPending = []
     owner.store.setState(state => {
       return {
         document: owner.accepted.document,
