@@ -81,6 +81,10 @@ export function createTimelineKeyboard({
       if (!key || event.defaultPrevented || target === "text" || target === "menu") return false
       const { ctrl = false, cmd = false, alt = false, shift = false } = event.modifiers ?? {}
       const modified = ctrl || cmd
+      if (modified && !alt && key === "s") {
+        if (!event.isHeld) projectActions.saveSnapshot()
+        return true
+      }
       if ((key === "space" || key === " ") && !modified && !alt) {
         blurControl()
         if (!event.isHeld) projectActions.togglePlay()
@@ -100,9 +104,7 @@ export function createTimelineKeyboard({
       const state = useProjectState.getState()
       if (modified) {
         if (alt) return false
-        if (key === "s") {
-          if (!event.isHeld) projectActions.saveSnapshot()
-        } else if (key === "z") {
+        if (key === "z") {
           if (!event.isHeld) (shift ? projectActions.redo : projectActions.undo)()
         } else if ((key === "1" || key === "2") && !shift) {
           if (!event.isHeld) projectActions.adjustGrid(key === "2" ? 1 : -1)
