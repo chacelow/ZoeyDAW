@@ -205,7 +205,7 @@ index 8a19adc..9ff1acb 100644
  
 +    /// Initialize GPUI using the native event-loop architecture for this OS.
 +    #[cfg(target_os = "windows")]
-+    #[napi]
++    #[napi(skip_typescript)]
 +    pub fn init(&self, env: Env, options: Option<WindowOptions>) -> Result<()> {
 +        self.init_threaded(options)?;
 +        let owner = self.windows_owner.clone();
