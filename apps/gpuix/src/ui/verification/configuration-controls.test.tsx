@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../controls/ControlEnvironment"
+import { TEST_INPUT_POLICY } from "../controls/DragPad/input-policy.test-fixture"
 import { afterEach, expect, test } from "bun:test"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -59,7 +61,9 @@ function mount(
   root.renderer.clockPause()
   root.render(
     <ThemeProvider design={design} appearance={appearance}>
-      {children}
+      <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+        {children}
+      </ControlEnvironmentProvider>
     </ThemeProvider>
   )
   root.renderer.flush()

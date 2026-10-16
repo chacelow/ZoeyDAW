@@ -1,3 +1,4 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
 /**
 Manual verification window for the Clip editor: `bun --hot src/app/verification/clip-edit/demo/index.tsx`
 from apps/gpuix. CLIP_EDIT_THEME=light, CLIP_EDIT_LOCALE=zh. It acquires a real project runtime, so
@@ -202,7 +203,9 @@ function NativeRoot() {
   }, [renderer])
   return (
     <AnimationFrameProvider source={source}>
-      <ControlEnvironmentProvider value={{ cursorLock: nativeCursorLock }}>
+      <ControlEnvironmentProvider
+        value={{ cursorLock: nativeCursorLock, inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}
+      >
         <Demo />
       </ControlEnvironmentProvider>
     </AnimationFrameProvider>

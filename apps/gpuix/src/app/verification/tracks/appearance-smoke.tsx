@@ -1,3 +1,5 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
+import { ControlEnvironmentProvider } from "@/ui/controls"
 import { mkdirSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -63,22 +65,24 @@ for (const appearance of ["dark", "light"] as const) {
       root.render(
         <AnimationFrameProvider source={frames.source}>
           <ThemeProvider defaultAppearance={appearance}>
-            <div style={{ position: "relative", width: "100%", height: "100%" }}>
-              <TrackRows
-                scene={scene.get()}
-                viewport={viewport}
-                focusedTrackId={null}
-                onFocusTrack={id => projectActions.selectTracks([id], "header")}
-                telemetry={readProjectTelemetry}
-                labels={trackLabelsByLocale[language]}
-                renderLane={row => <text>{row.track.name}</text>}
-              />
-              <TrackResizeOverlay
-                scene={scene.get()}
-                viewport={viewport}
-                labels={trackLabelsByLocale[language]}
-              />
-            </div>
+            <ControlEnvironmentProvider value={{ inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}>
+              <div style={{ position: "relative", width: "100%", height: "100%" }}>
+                <TrackRows
+                  scene={scene.get()}
+                  viewport={viewport}
+                  focusedTrackId={null}
+                  onFocusTrack={id => projectActions.selectTracks([id], "header")}
+                  telemetry={readProjectTelemetry}
+                  labels={trackLabelsByLocale[language]}
+                  renderLane={row => <text>{row.track.name}</text>}
+                />
+                <TrackResizeOverlay
+                  scene={scene.get()}
+                  viewport={viewport}
+                  labels={trackLabelsByLocale[language]}
+                />
+              </div>
+            </ControlEnvironmentProvider>
           </ThemeProvider>
         </AnimationFrameProvider>
       )

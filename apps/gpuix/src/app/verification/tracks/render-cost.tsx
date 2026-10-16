@@ -1,3 +1,5 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
+import { ControlEnvironmentProvider } from "@/ui/controls"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import {
@@ -62,24 +64,26 @@ for (const sourceCount of [20, 2000]) {
     root.render(
       <AnimationFrameProvider source={controlledFrames.source}>
         <ThemeProvider>
-          <div style={{ position: "relative", width: "100%", height: "100%" }}>
-            <TrackRows
-              scene={store.get()}
-              viewport={viewport}
-              focusedTrackId={null}
-              onFocusTrack={id => projectActions.selectTracks([id], "header")}
-              telemetry={readProjectTelemetry}
-              labels={trackLabelsByLocale["en-US"]}
-              renderLane={row => (
-                <text testId={`profile-lane-${row.track.id}`}>{row.track.name}</text>
-              )}
-            />
-            <TrackResizeOverlay
-              scene={store.get()}
-              viewport={viewport}
-              labels={trackLabelsByLocale["en-US"]}
-            />
-          </div>
+          <ControlEnvironmentProvider value={{ inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}>
+            <div style={{ position: "relative", width: "100%", height: "100%" }}>
+              <TrackRows
+                scene={store.get()}
+                viewport={viewport}
+                focusedTrackId={null}
+                onFocusTrack={id => projectActions.selectTracks([id], "header")}
+                telemetry={readProjectTelemetry}
+                labels={trackLabelsByLocale["en-US"]}
+                renderLane={row => (
+                  <text testId={`profile-lane-${row.track.id}`}>{row.track.name}</text>
+                )}
+              />
+              <TrackResizeOverlay
+                scene={store.get()}
+                viewport={viewport}
+                labels={trackLabelsByLocale["en-US"]}
+              />
+            </div>
+          </ControlEnvironmentProvider>
         </ThemeProvider>
       </AnimationFrameProvider>
     )

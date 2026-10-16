@@ -1,3 +1,4 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { useEffect, useMemo, useState } from "react"
 import { render, useGpuix, useWindowSize } from "@gpuix/react"
@@ -345,7 +346,9 @@ function Demo() {
   return (
     <AnimationFrameProvider source={ports.frames}>
       <ThemeProvider key={appearance} defaultAppearance={appearance}>
-        <ControlEnvironmentProvider value={{ cursorLock: nativeCursorLock }}>
+        <ControlEnvironmentProvider
+          value={{ cursorLock: nativeCursorLock, inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}
+        >
           <PanelEnvironmentProvider environment={ports.panels}>
             <TrackSurface
               appearance={appearance}

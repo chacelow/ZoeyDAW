@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "@/ui/controls"
+import { TEST_INPUT_POLICY } from "@/ui/controls/DragPad/input-policy.test-fixture"
 import { beforeEach, expect, spyOn, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -47,25 +49,27 @@ function mount(width = 1800, numberFontFamily = DEFAULT_DESIGN_TOKENS.typography
         typography: { ...DEFAULT_DESIGN_TOKENS.typography, numberFontFamily },
       }}
     >
-      <WindowKeyboardProvider value={keyboard}>
-        <AnimationFrameProvider source={frames}>
-          <div
-            testId="keyboard-focus-surface"
-            tabIndex={-1}
-            style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}
-          >
-            <TransportBar
-              labels={englishTransportLabels}
-              reducedMotion={false}
-              onDrawModeChange={owner.timeline.keyboard.latchDraw}
-              onBack={projectActions.stop}
-              onToggleBrowser={() => {
-                throw new Error("Unexpected browser input")
-              }}
-            />
-          </div>
-        </AnimationFrameProvider>
-      </WindowKeyboardProvider>
+      <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+        <WindowKeyboardProvider value={keyboard}>
+          <AnimationFrameProvider source={frames}>
+            <div
+              testId="keyboard-focus-surface"
+              tabIndex={-1}
+              style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}
+            >
+              <TransportBar
+                labels={englishTransportLabels}
+                reducedMotion={false}
+                onDrawModeChange={owner.timeline.keyboard.latchDraw}
+                onBack={projectActions.stop}
+                onToggleBrowser={() => {
+                  throw new Error("Unexpected browser input")
+                }}
+              />
+            </div>
+          </AnimationFrameProvider>
+        </WindowKeyboardProvider>
+      </ControlEnvironmentProvider>
     </ThemeProvider>
   )
   root.renderer.dispatchNativeEvents()

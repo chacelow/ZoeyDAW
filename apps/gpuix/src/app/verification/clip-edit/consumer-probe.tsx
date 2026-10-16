@@ -1,3 +1,5 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
+import { ControlEnvironmentProvider } from "@/ui/controls"
 import { spyOn } from "bun:test"
 import { initializeVerificationProject } from "../project-creation"
 import { createHash } from "node:crypto"
@@ -212,9 +214,11 @@ try {
     const mountStart = performance.now()
     root.render(
       <ThemeProvider>
-        <div style={{ display: "flex", ...size }}>
-          <Consumer key={kind} kind={kind} />
-        </div>
+        <ControlEnvironmentProvider value={{ inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}>
+          <div style={{ display: "flex", ...size }}>
+            <Consumer key={kind} kind={kind} />
+          </div>
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
     settle()

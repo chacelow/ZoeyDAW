@@ -1,3 +1,4 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { PublicInstance } from "@gpuix/react"
@@ -179,7 +180,13 @@ function NativePanels() {
   return (
     <WindowKeyboardProvider value={windowKeyboard}>
       <AnimationFrameProvider source={frameSource}>
-        <ControlEnvironmentProvider value={{ setInfo, cursorLock: nativeCursorLock }}>
+        <ControlEnvironmentProvider
+          value={{
+            setInfo,
+            cursorLock: nativeCursorLock,
+            inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY,
+          }}
+        >
           <PanelEnvironmentProvider
             environment={{ subscribeWindowActive: windowPlatform.subscribeApplicationActive }}
           >

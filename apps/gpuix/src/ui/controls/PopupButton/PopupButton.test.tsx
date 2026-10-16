@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../ControlEnvironment"
+import { TEST_INPUT_POLICY } from "../DragPad/input-policy.test-fixture"
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -12,22 +14,24 @@ test("embedded numeric drag and repeated wheel adjustment keep popup open until 
     const [value, setValue] = useState(120)
     return (
       <ThemeProvider>
-        <div style={{ padding: 80 }}>
-          <PopupButton testId="popup" trigger="Adjust" label="Adjust values">
-            <DragPadNumber
-              testId="inner"
-              label="Value"
-              value={value}
-              onChange={next => {
-                latest = next
-                setValue(next)
-              }}
-              min={20}
-              max={300}
-              step={1}
-            />
-          </PopupButton>
-        </div>
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <div style={{ padding: 80 }}>
+            <PopupButton testId="popup" trigger="Adjust" label="Adjust values">
+              <DragPadNumber
+                testId="inner"
+                label="Value"
+                value={value}
+                onChange={next => {
+                  latest = next
+                  setValue(next)
+                }}
+                min={20}
+                max={300}
+                step={1}
+              />
+            </PopupButton>
+          </div>
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
   }

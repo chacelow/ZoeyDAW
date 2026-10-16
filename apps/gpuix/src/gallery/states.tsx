@@ -22,6 +22,7 @@ import {
 import { Icon } from "@/ui/controls/Icon"
 import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { DisplayFormats } from "@/project/model/display-formats"
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
 import type { ControlInfo, CursorLockPort } from "@/ui/controls"
 import { GalleryCard } from "./GalleryCard"
 import { GalleryMenus } from "./GalleryMenus"
@@ -67,7 +68,9 @@ export function StateGallery({
     gap: theme.design.spacing.cardGroupGap,
   }
   return (
-    <ControlEnvironmentProvider value={{ cursorLock, setInfo }}>
+    <ControlEnvironmentProvider
+      value={{ cursorLock, setInfo, inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}
+    >
       <div
         testId="gallery-root"
         role="application"

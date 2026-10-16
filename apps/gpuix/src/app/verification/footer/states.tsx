@@ -1,3 +1,5 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
+import { ControlEnvironmentProvider } from "@/ui/controls"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
@@ -128,19 +130,21 @@ run("transport", transportViewport, root => {
   const frames = createTestAnimationFrames()
   root.render(
     <ThemeProvider>
-      <AnimationFrameProvider source={frames}>
-        <TransportBar
-          labels={englishTransportLabels}
-          reducedMotion
-          onBack={projectActions.stop}
-          onDrawModeChange={() => {
-            throw new Error("Unexpected draw mode input")
-          }}
-          onToggleBrowser={() => {
-            throw new Error("Unexpected browser input")
-          }}
-        />
-      </AnimationFrameProvider>
+      <ControlEnvironmentProvider value={{ inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}>
+        <AnimationFrameProvider source={frames}>
+          <TransportBar
+            labels={englishTransportLabels}
+            reducedMotion
+            onBack={projectActions.stop}
+            onDrawModeChange={() => {
+              throw new Error("Unexpected draw mode input")
+            }}
+            onToggleBrowser={() => {
+              throw new Error("Unexpected browser input")
+            }}
+          />
+        </AnimationFrameProvider>
+      </ControlEnvironmentProvider>
     </ThemeProvider>
   )
   const bpmId = required(root, "transport-bpm").id
@@ -281,9 +285,11 @@ run("footer", footerViewport, root => {
   projectActions.selectTracks([track.id], "header")
   root.render(
     <ThemeProvider>
-      <AnimationFrameProvider source={frames}>
-        <FooterHarness />
-      </AnimationFrameProvider>
+      <ControlEnvironmentProvider value={{ inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}>
+        <AnimationFrameProvider source={frames}>
+          <FooterHarness />
+        </AnimationFrameProvider>
+      </ControlEnvironmentProvider>
     </ThemeProvider>
   )
   const cardId = `device-${device.id}`

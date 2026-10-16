@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "@/ui/controls"
+import { TEST_INPUT_POLICY } from "@/ui/controls/DragPad/input-policy.test-fixture"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { createWindowKeyboard } from "@/platform/keyboard"
@@ -121,16 +123,18 @@ export function mount(
     if (!track) throw new Error("Missing track")
     return (
       <ThemeProvider>
-        <div style={{ display: "flex", width: size.width, height: size.height }}>
-          <ClipEditor
-            clipId={clip.id}
-            trackId={track.id}
-            close={() => {}}
-            labels={labels}
-            readPeaks={(_source, _start, _end, pixels) => new Float32Array(pixels * 4).fill(0.5)}
-            environment={environment}
-          />
-        </div>
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <div style={{ display: "flex", width: size.width, height: size.height }}>
+            <ClipEditor
+              clipId={clip.id}
+              trackId={track.id}
+              close={() => {}}
+              labels={labels}
+              readPeaks={(_source, _start, _end, pixels) => new Float32Array(pixels * 4).fill(0.5)}
+              environment={environment}
+            />
+          </div>
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
   }
