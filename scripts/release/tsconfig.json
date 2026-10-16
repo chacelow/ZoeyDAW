@@ -1,0 +1,15 @@
+{
+  "extends": "../../apps/gpuix/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../../apps/gpuix",
+    "paths": {
+      "@/*": ["src/*"],
+      "@gpuix/react": ["node_modules/@gpuix/react"],
+      "@gpuix/react/testing": ["node_modules/@gpuix/react/dist/testing"],
+      "@gpuix/react/*": ["node_modules/@gpuix/react/*"],
+      "@zoeydaw/native": ["node_modules/@zoeydaw/native"]
+    },
+    "typeRoots": ["../../apps/gpuix/node_modules/@types"]
+  },
+  "include": ["smoke.tsx", "../../apps/gpuix/src/shared/svg/assets.d.ts"]
+}
