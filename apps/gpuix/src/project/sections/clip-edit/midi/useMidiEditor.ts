@@ -16,7 +16,6 @@ import {
   selectVisibleNotes,
   setNoteVelocity,
   transformNotes,
-  validSelection,
 } from "@/project/model/midi-editing"
 import { uniqueId } from "@/project/model/reducers"
 import { useClipEditorEnvironment } from "../environment"
@@ -45,8 +44,8 @@ interface Gesture {
 }
 
 interface NoteSelection {
-  readonly indices: number[]
-  readonly current: number | null
+  readonly ids: string[]
+  readonly current: string | null
 }
 
 export interface Marquee {
@@ -82,28 +81,38 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
   const transaction = useProjectEditGesture((notes: MidiNote[]) =>
     projectActions.updateClip(clip.id, { notes })
   )
-  const [selection, setSelection] = useState<NoteSelection>({ indices: [], current: null })
-  const selected = selection.indices
-  const setSelected = useCallback((indices: number[], preferred: number | null) => {
-    setSelection({
-      indices,
-      current: preferred !== null && indices.includes(preferred) ? preferred : (indices[0] ?? null),
-    })
-  }, [])
+  const [selection, setSelection] = useState<NoteSelection>({ ids: [], current: null })
+  const setSelected = useCallback(
+    (indices: number[], preferred: number | null) => {
+      const notes = storedNotes(clip.id)
+      const ids = indices.flatMap(index => {
+        const id = notes[index]?.id
+        return id === undefined ? [] : [id]
+      })
+      const current = preferred === null ? undefined : notes[preferred]?.id
+      setSelection({
+        ids,
+        current: current !== undefined && ids.includes(current) ? current : (ids[0] ?? null),
+      })
+    },
+    [clip.id]
+  )
   const [marquee, setMarquee] = useState<Marquee | null>(null)
   const gesture = useRef<Gesture | null>(null)
   const host = useRef<PublicInstance | null>(null)
   const velocityHost = useRef<PublicInstance | null>(null)
   const latest = useRef(roll)
   latest.current = roll
-  const visibleSelection = useMemo(
-    () => validSelection(clip.notes, selected),
-    [clip.notes, selected]
-  )
+  const visibleSelection = useMemo(() => {
+    const ids = new Set(selection.ids)
+    return clip.notes.flatMap((note, index) =>
+      note.id !== undefined && ids.has(note.id) ? [index] : []
+    )
+  }, [clip.notes, selection.ids])
   const currentNoteIndex =
-    selection.current !== null && visibleSelection.includes(selection.current)
-      ? selection.current
-      : (visibleSelection[0] ?? null)
+    visibleSelection.find(index => clip.notes[index]?.id === selection.current) ??
+    visibleSelection[0] ??
+    null
 
   const finish = useCallback(
     (cancel: boolean) => {
@@ -287,7 +296,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       return
     }
     if (hit.kind === "note") {
-      const selection = selectHit(selected, hit.index, extend)
+      const selection = selectHit(visibleSelection, hit.index, extend)
       setSelected(selection, selection.includes(hit.index) ? hit.index : currentNoteIndex)
       if (selection.includes(hit.index) && !extend) {
         transaction.onGestureStart()
@@ -454,13 +463,10 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     },
     activateNote: (index: number, preserveSelection: boolean) => {
       if (index < 0 || index >= clip.notes.length) return
-      setSelection(previous => {
-        const indices =
-          preserveSelection && previous.indices.includes(index) ? previous.indices : [index]
-        return indices === previous.indices && previous.current === index
-          ? previous
-          : { indices, current: index }
-      })
+      setSelected(
+        preserveSelection && visibleSelection.includes(index) ? visibleSelection : [index],
+        index
+      )
     },
     changeVelocity: (index: number, delta: number) => {
       const note = clip.notes[index]
