@@ -19,7 +19,6 @@
 | `frame-callback` | 原生帧回调，驱动播放头与电平 |
 | `input-select-all-on-focus` | 数值输入获焦全选 |
 | `anchored-center` | 弹层居中定位修正 |
-| `select-trigger-space` | Select 触发器 Space 策略 |
 | `window-active-change` | 窗口激活事件 |
 | `window-appearance-close` | 系统外观观察与程序化关闭 |
 | `context-menu` | 原生 `onContextMenu` |

@@ -1,5 +1,5 @@
 import { consumeKey } from "@/shared/keyboard"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   Select,
   SelectContent,
@@ -70,6 +70,7 @@ export function DropdownButton<T extends string = string>({
 }: DropdownButtonProps<T>) {
   const theme = useTheme()
   const [open, setOpen] = useState(false)
+  const spaceToggle = useRef(false)
   const metrics = size === "transport" ? theme.transportControl : theme.control
   const gap = metrics["--spacing-control-gap"]
   const info = useInfoBinding({ type: "dropdown", description })
@@ -107,7 +108,11 @@ export function DropdownButton<T extends string = string>({
       testId={testId ? `${testId}-root` : undefined}
       value={value}
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={next => {
+        const fromSpace = spaceToggle.current
+        spaceToggle.current = false
+        if (!fromSpace) setOpen(next)
+      }}
       disabled={disabled}
       style={{ width: fill ? "100%" : width, flexShrink: fill ? 1 : 0 }}
       onValueChange={next => {
@@ -127,7 +132,9 @@ export function DropdownButton<T extends string = string>({
         aria-disabled={disabled}
         {...info}
         disabled={disabled}
-        activateOnSpace={false}
+        onKeyDown={event => {
+          spaceToggle.current = event.key === "space"
+        }}
         style={sx(
           controlChrome(
             theme,

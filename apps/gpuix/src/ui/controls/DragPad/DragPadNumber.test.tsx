@@ -245,7 +245,10 @@ test("hidden icons remove their slot and editing keeps the same shell bounds", (
       </ControlEnvironmentProvider>
     </ThemeProvider>
   )
-  root.renderer.flush()
+  for (let pass = 0; pass < 4; pass++) {
+    root.renderer.flush()
+    root.renderer.dispatchNativeEvents()
+  }
   const shell = root.renderer.findByTestId("hidden")!
   const original = root.renderer.getElementBounds(shell!.id)!
   const text = root.renderer.getElementBounds(root.renderer.findByTestId("widest")!.id)!
