@@ -1,12 +1,15 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { createTimelineController } from "@/project/sections/arrangement/timeline/controller"
 import { englishLabels } from "@/app/locales/sections/timeline"
 import { Toolbar } from "@/project/sections/arrangement/timeline/toolbar"
+import { initializeVerificationProject } from "../project-creation"
 
+const releaseCreation = initializeVerificationProject("timeline-layout")
 const controller = createTimelineController({
-  sceneStore: createSceneStore(),
+  sceneStore: createSceneStore(DEFAULT_LAYOUT_TOKENS),
   initialSize: { containerWidth: 1280, bodyHeight: 400, timelineLeft: 0 },
   metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
   keyboard: { focus: () => "timeline", blurControl: () => {} },
@@ -58,4 +61,5 @@ try {
 } finally {
   root.unmount()
   controller.dispose()
+  releaseCreation()
 }

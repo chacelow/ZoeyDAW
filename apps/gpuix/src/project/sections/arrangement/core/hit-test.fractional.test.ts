@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { describe, expect, it } from "bun:test"
 import { createMockDocument } from "../../../adapters/fixtures"
 import { createSceneStore } from "./scene"
@@ -7,7 +8,7 @@ import { hitTest } from "./hit-test"
 describe("clip hit geometry at fractional zoom", () => {
   it("respects painted rounded bounds and aligned fade handle", () => {
     const score = createMockDocument()
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     scene.setMusic({
       bars: 128,
       grid: { mode: "fixed", bars: 0.25 },

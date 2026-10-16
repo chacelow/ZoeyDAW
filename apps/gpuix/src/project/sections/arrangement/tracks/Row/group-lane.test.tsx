@@ -1,9 +1,13 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { hydrateProject, useProjectState } from "@/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
-import { CONTROLS_WIDTH } from "@/project/layout"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  TEST_CREATION_NAMES,
+} from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import { LaneContents } from "../../lane/LaneRow/Contents"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
@@ -30,7 +34,7 @@ for (const width of [800, 200]) {
       },
     ]
     hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     scene.setMusic({
       bars: 128,
       grid: { mode: "fixed", bars: 0.25 },
@@ -40,7 +44,10 @@ for (const width of [800, 200]) {
       loop: document.transport.loop,
     })
     scene.setViewport({ width, height: 500, pxPerBar: 100, scrollX: 0, scrollY: 0, dpr: 1 })
-    const root = createTestRoot({ width: width + CONTROLS_WIDTH, height: 500 })
+    const root = createTestRoot({
+      width: width + DEFAULT_LAYOUT_TOKENS.track.controlsWidth,
+      height: 500,
+    })
     try {
       root.render(
         <AnimationFrameProvider source={createControlledFrames().source}>
@@ -59,6 +66,7 @@ for (const width of [800, 200]) {
                     scene={scene.get()}
                     automationMode={false}
                     readPeaks={() => new Float32Array(0)}
+                    creationNames={TEST_CREATION_NAMES}
                   />
                 )}
               />

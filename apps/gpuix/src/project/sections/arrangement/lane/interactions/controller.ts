@@ -245,6 +245,7 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
         viewport: scene.viewport,
         bars: scene.bars,
         tracks: scene.tracks,
+        geometry: scene.geometry.track,
         pointer,
         axis: current.gesture.autoScroll,
         edge: deps.edgePixels,

@@ -6,19 +6,16 @@ import path from "node:path"
 import { clipEditorLabels } from "@/app/locales/sections/clip-edit"
 import { configurePreferences, createPreferenceOwner } from "@/platform/settings"
 import type { PreferenceOwner } from "@/platform/settings"
-import { projectActions, useProjectState } from "@/project/adapters"
+import { projectActions } from "@/project/adapters"
 import { getAudioClipSettings } from "@/project/model/audio-editor"
 import { AUDIO_ID, MIDI_ID, clipById, mount, notes, seed } from "./harness.test"
 import type { Harness } from "./harness.test"
-import type { ProjectState } from "@/project/model/types"
 
 let directory: string
 let owner: PreferenceOwner
 let restore: () => void
 let view: Harness | undefined
-let previousState: ProjectState
 beforeEach(() => {
-  previousState = useProjectState.getState()
   directory = mkdtempSync(path.join(tmpdir(), "zoeydaw-editor-preferences-"))
   owner = createPreferenceOwner({ configDir: directory })
   restore = configurePreferences(owner)
@@ -27,8 +24,8 @@ beforeEach(() => {
 afterEach(() => {
   view?.unmount()
   view = undefined
-  useProjectState.setState(previousState)
   restore()
+  seed()
   rmSync(directory, { recursive: true, force: true })
 })
 

@@ -121,7 +121,11 @@ export function TrackRows({
                   right: 0,
                   height,
                   borderWidth: 1,
-                  borderColor: contentFill(row.track.color, theme.colors),
+                  borderColor: contentFill(
+                    row.track.color,
+                    theme.colors,
+                    theme.design.colorRecipes.contentPaperTint
+                  ),
                   pointerEvents: "none",
                 }}
               />

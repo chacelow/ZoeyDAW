@@ -17,7 +17,7 @@ import {
   TEST_PROJECT_CREATION,
   TEST_TRACK_APPEARANCE,
 } from "@/project/adapters/fixtures"
-import { CONTROLS_WIDTH, DEFAULT_TRACK_HEIGHT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
@@ -34,14 +34,14 @@ const workspace = createTestWorkspace()
 for (const kind of ["audio", "midi", "group", "return"] as const) {
   const track = createTrack(kind, document.tracks, undefined, {
     ...TEST_CREATION,
-    appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_TRACK_HEIGHT },
+    appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
   })
   track.name = `${kind} 音轨`
   document.tracks.splice(document.tracks.length - 1, 0, track)
 }
 hydrateProject(JSON.stringify({ version: 2, document, workspace }))
 const viewport = { width: 760, height: 720, pxPerBar: 32, scrollX: 0, scrollY: 0, dpr: 1 }
-const scene = createSceneStore()
+const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
 scene.setMusic({
   tracks: document.tracks,
   bars: 128,
@@ -55,7 +55,10 @@ const bounds = []
 for (const appearance of ["dark", "light"] as const) {
   for (const language of ["en-US", "zh-CN"] as const) {
     const frames = createControlledFrames()
-    const root = createTestRoot({ width: viewport.width + CONTROLS_WIDTH, height: viewport.height })
+    const root = createTestRoot({
+      width: viewport.width + DEFAULT_LAYOUT_TOKENS.track.controlsWidth,
+      height: viewport.height,
+    })
     try {
       root.render(
         <AnimationFrameProvider source={frames.source}>

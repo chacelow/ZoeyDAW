@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
@@ -29,7 +30,7 @@ afterEach(() => {
 
 function fixture() {
   const owner = createTimelineController({
-    sceneStore: createSceneStore(),
+    sceneStore: createSceneStore(DEFAULT_LAYOUT_TOKENS),
     initialSize: { containerWidth: 804, bodyHeight: 200, timelineLeft: 0 },
     metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
     keyboard: { focus: () => "timeline", blurControl: () => {} },

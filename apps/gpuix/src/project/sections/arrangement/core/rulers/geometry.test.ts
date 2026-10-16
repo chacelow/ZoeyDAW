@@ -1,10 +1,11 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { createSceneStore } from "../scene"
 import { MIN_CLIP_LENGTH_BARS } from "../../../../model/grid"
 import { rulerBar, rulerHit, movedLoop } from "./geometry"
 
 function fixture() {
-  const store = createSceneStore()
+  const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   store.setMusic({
     ...store.get(),
     grid: { mode: "fixed", bars: 1 },

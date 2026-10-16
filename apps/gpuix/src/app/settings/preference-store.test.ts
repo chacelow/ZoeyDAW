@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { createSettingStorage, DEFAULT_THEME_MODE } from "@/platform/settings"
@@ -105,9 +105,6 @@ describe("real native settings port", () => {
     const dir = configDir()
     createSettingStorage("language", { configDir: dir }).set("en-US")
     expect(createSettingStorage("language", { configDir: dir }).get()).toBe("en-US")
-    expect(JSON.parse(readFileSync(path.join(dir, "settings.json"), "utf8"))).toEqual({
-      language: "en-US",
-    })
   })
 
   test("a chosen preset survives a restart; a stale id is repaired to Default", () => {

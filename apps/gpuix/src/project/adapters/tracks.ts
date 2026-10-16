@@ -3,10 +3,14 @@ import { get, session, tracks, updateTrack, projectCreationValues } from "./cont
 
 export const trackActions = {
   updateTrack,
-  addTrack(kind: "audio" | "midi" | "group" | "return", parentId?: string) {
+  addTrack(kind: "audio" | "midi" | "group" | "return", heightPx: number, parentId?: string) {
     const source = get().document.tracks
     const parent = source.find(track => track.id === parentId && track.kind === "group")
-    const created = createTrack(kind, source, parent?.id, projectCreationValues())
+    const creation = projectCreationValues()
+    const created = createTrack(kind, source, parent?.id, {
+      ...creation,
+      appearance: { ...creation.appearance, heightPx },
+    })
     const index = parent
       ? source.indexOf(parent) + 1 + (parent.childTrackIds?.length ?? 0)
       : source.findIndex(track => track.id === "main")
@@ -107,7 +111,7 @@ export const trackActions = {
       })
     )
   },
-  groupTracks(ids: string[]) {
+  groupTracks(ids: string[], heightPx: number) {
     const source = get().document.tracks
     const chosen = source.filter(
       track =>
@@ -118,8 +122,12 @@ export const trackActions = {
     if (!chosen.length) {
       return
     }
+    const creation = projectCreationValues()
     const group = {
-      ...createTrack("group", source, undefined, projectCreationValues()),
+      ...createTrack("group", source, undefined, {
+        ...creation,
+        appearance: { ...creation.appearance, heightPx },
+      }),
       childTrackIds: chosen.map(track => track.id),
     }
     const next = source.filter(track => !chosen.includes(track))

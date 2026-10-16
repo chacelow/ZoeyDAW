@@ -11,7 +11,7 @@ import {
 } from "@/project/adapters"
 import { TEST_CREATION_NAMES } from "@/project/adapters/fixtures"
 import { createNativeClipboard } from "@/platform/clipboard"
-import { CONTROLS_WIDTH } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import type { Theme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -275,11 +275,11 @@ try {
     </ThemeProvider>
   )
   if (!projectMetrics) throw new Error("Theme metrics were not provided")
-  const sceneStore = createSceneStore()
+  const sceneStore = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   timeline = createTimelineController({
     sceneStore,
     initialSize: {
-      containerWidth: viewportWidth + CONTROLS_WIDTH,
+      containerWidth: viewportWidth + DEFAULT_LAYOUT_TOKENS.track.controlsWidth,
       bodyHeight: viewportHeight,
       timelineLeft: 0,
     },

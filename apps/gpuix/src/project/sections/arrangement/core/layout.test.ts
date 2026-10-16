@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { describe, expect, it } from "bun:test"
 import { createMockDocument } from "../../../adapters/fixtures"
 import { visibleTracks } from "../../../model/types"
@@ -16,8 +17,8 @@ describe("arrangement track geometry", () => {
   const height = 320
 
   it("moves ordinary headers and lanes together while return/main stay above the fixed time ruler", () => {
-    const initial = layoutTrackRowsForViewport(tracks, 0, height)
-    const scrolled = layoutTrackRowsForViewport(tracks, 80, height)
+    const initial = layoutTrackRowsForViewport(tracks, 0, height, DEFAULT_LAYOUT_TOKENS.track)
+    const scrolled = layoutTrackRowsForViewport(tracks, 80, height, DEFAULT_LAYOUT_TOKENS.track)
     const scrollable = initial.filter(
       row => row.track.kind !== "return" && row.track.kind !== "main"
     )
@@ -35,22 +36,24 @@ describe("arrangement track geometry", () => {
   })
 
   it("bounds scroll using only the unpinned viewport and keeps rulers fixed", () => {
-    expect(scrollableTrackViewportHeight(tracks, height)).toBe(
-      arrangementBodyBottom(height) - arrangementBodyTop() - pinnedTrackHeight(tracks)
+    expect(scrollableTrackViewportHeight(tracks, height, DEFAULT_LAYOUT_TOKENS.track)).toBe(
+      arrangementBodyBottom(height) -
+        arrangementBodyTop() -
+        pinnedTrackHeight(tracks, DEFAULT_LAYOUT_TOKENS.track)
     )
-    expect(maxTrackScrollY(tracks, height)).toBeGreaterThan(0)
-    expect(maxTrackScrollY(tracks, 5000)).toBe(0)
+    expect(maxTrackScrollY(tracks, height, DEFAULT_LAYOUT_TOKENS.track)).toBeGreaterThan(0)
+    expect(maxTrackScrollY(tracks, 5000, DEFAULT_LAYOUT_TOKENS.track)).toBe(0)
   })
 })
 
 it("anchors each pinned track's bottom while it folds downward", () => {
   const tracks = visibleTracks(createMockDocument().tracks)
   const pinned = tracks.filter(track => track.kind === "return" || track.kind === "main")
-  const expanded = layoutTrackRowsForViewport(tracks, 0, 320)
+  const expanded = layoutTrackRowsForViewport(tracks, 0, 320, DEFAULT_LAYOUT_TOKENS.track)
   for (const track of pinned) {
     const before = expanded.find(row => row.track.id === track.id)!
     track.collapsed = true
-    const after = layoutTrackRowsForViewport(tracks, 0, 320)
+    const after = layoutTrackRowsForViewport(tracks, 0, 320, DEFAULT_LAYOUT_TOKENS.track)
     const folded = after.find(row => row.track.id === track.id)!
     expect(folded.top + folded.height).toBe(before.top + before.height)
     expect(after[after.length - 1].top + after[after.length - 1].height).toBe(
@@ -64,9 +67,19 @@ it("keeps a folded group's compact summary lane while removing child rows", () =
   const { tracks } = createMockDocument()
   const group = tracks.find(track => track.id === "drums-group")!
   const child = tracks.find(track => track.id === "trager")!
-  const expanded = layoutTrackRowsForViewport(visibleTracks(tracks), 0, 320)
+  const expanded = layoutTrackRowsForViewport(
+    visibleTracks(tracks),
+    0,
+    320,
+    DEFAULT_LAYOUT_TOKENS.track
+  )
   group.collapsed = true
-  const folded = layoutTrackRowsForViewport(visibleTracks(tracks), 0, 320)
+  const folded = layoutTrackRowsForViewport(
+    visibleTracks(tracks),
+    0,
+    320,
+    DEFAULT_LAYOUT_TOKENS.track
+  )
   expect(folded.find(row => row.track.id === group.id)!.height).toBeLessThan(group.heightPx)
   expect(folded.some(row => row.track.id === child.id)).toBe(false)
   expect(folded.find(row => row.track.id === "3-audio")?.top).toBe(
@@ -92,16 +105,31 @@ it("folds nested groups independently into compact summary lanes", () => {
   inner.collapsed = false
   const [moved] = tracks.splice(tracks.indexOf(leaf), 1)
   tracks.splice(tracks.indexOf(inner) + 1, 0, moved)
-  const expanded = layoutTrackRowsForViewport(visibleTracks(tracks), 20, 320)
+  const expanded = layoutTrackRowsForViewport(
+    visibleTracks(tracks),
+    20,
+    320,
+    DEFAULT_LAYOUT_TOKENS.track
+  )
   expect(expanded.find(row => row.track.id === leaf.id)?.top).toBe(
     expanded.find(row => row.track.id === inner.id)!.top + inner.heightPx
   )
   inner.collapsed = true
-  const foldedInner = layoutTrackRowsForViewport(visibleTracks(tracks), 20, 320)
+  const foldedInner = layoutTrackRowsForViewport(
+    visibleTracks(tracks),
+    20,
+    320,
+    DEFAULT_LAYOUT_TOKENS.track
+  )
   expect(foldedInner.find(row => row.track.id === inner.id)!.height).toBeLessThan(inner.heightPx)
   expect(foldedInner.some(row => row.track.id === leaf.id)).toBe(false)
   outer.collapsed = true
-  const foldedOuter = layoutTrackRowsForViewport(visibleTracks(tracks), 20, 320)
+  const foldedOuter = layoutTrackRowsForViewport(
+    visibleTracks(tracks),
+    20,
+    320,
+    DEFAULT_LAYOUT_TOKENS.track
+  )
   expect(foldedOuter.find(row => row.track.id === outer.id)!.height).toBeLessThan(outer.heightPx)
   expect(foldedOuter.some(row => row.track.id === inner.id)).toBe(false)
   outer.collapsed = false
@@ -111,14 +139,16 @@ it("folds nested groups independently into compact summary lanes", () => {
 
 it("reveals the inspected track when an editor reduces the lane viewport", () => {
   const tracks = visibleTracks(createMockDocument().tracks)
-  const next = revealTrackScrollY(tracks, 320, 0, "4-midi")
-  const row = layoutTrackRowsForViewport(tracks, next, 320).find(row => row.track.id === "4-midi")
+  const next = revealTrackScrollY(tracks, 320, 0, "4-midi", DEFAULT_LAYOUT_TOKENS.track)
+  const row = layoutTrackRowsForViewport(tracks, next, 320, DEFAULT_LAYOUT_TOKENS.track).find(
+    row => row.track.id === "4-midi"
+  )
   if (!row) {
     throw new Error("Missing inspected track")
   }
   expect(row.top).toBeGreaterThanOrEqual(arrangementBodyTop())
   expect(row.top + row.height).toBeLessThanOrEqual(
-    arrangementBodyBottom(320) - pinnedTrackHeight(tracks)
+    arrangementBodyBottom(320) - pinnedTrackHeight(tracks, DEFAULT_LAYOUT_TOKENS.track)
   )
-  expect(revealTrackScrollY(tracks, 320, 20, "trager")).toBe(20)
+  expect(revealTrackScrollY(tracks, 320, 20, "trager", DEFAULT_LAYOUT_TOKENS.track)).toBe(20)
 })

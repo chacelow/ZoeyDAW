@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import {
   hydrateProject,
@@ -23,7 +24,7 @@ beforeEach(() => {
 function mount() {
   projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
   const owner = createTimelineController({
-    sceneStore: createSceneStore(),
+    sceneStore: createSceneStore(DEFAULT_LAYOUT_TOKENS),
     initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
     metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
     keyboard: { focus: () => "timeline", blurControl: () => {} },
@@ -62,7 +63,7 @@ test("Undo during a pressed locator gesture cancels the gesture without consumin
   if (!id) throw new Error("Marker not created")
   projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
   const owner = createTimelineController({
-    sceneStore: createSceneStore(),
+    sceneStore: createSceneStore(DEFAULT_LAYOUT_TOKENS),
     initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
     metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
     keyboard: { focus: () => "timeline", blurControl: () => {} },

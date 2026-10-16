@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { createMockDocument } from "../../../../adapters/fixtures"
 import { createSceneStore } from "../scene"
@@ -13,7 +14,7 @@ import type { DrawingState } from "./drawing"
 
 function setup() {
   const score = createMockDocument()
-  const store = createSceneStore()
+  const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   store.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 1 },

@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { useState } from "react"
@@ -19,7 +20,9 @@ import { englishFooterLabels } from "@/app/locales/sections/footer"
 import { createTestAnimationFrames } from "@/project/sections/footer/verification/test-frame"
 import { createTestWindowActivity } from "@/project/sections/footer/verification/test-activity"
 import type { FooterView } from "@/project/sections/footer"
+import { initializeVerificationProject } from "../project-creation"
 
+const releaseCreation = initializeVerificationProject("footer-states")
 const outputDirectory = path.resolve(
   process.argv[2] ?? path.join(import.meta.dir, "../evidence/gpu-states")
 )
@@ -270,7 +273,7 @@ run("browser", browserViewport, root => {
 const footerViewport = { width: 955, height: 300 }
 run("footer", footerViewport, root => {
   const frames = createTestAnimationFrames()
-  projectActions.addTrack("audio")
+  projectActions.addTrack("audio", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
   const track = useProjectState.getState().document.tracks.find(item => item.kind === "audio")
   if (!track) throw new Error("Authored audio track was not created")
   const device = createDevice("utility")
@@ -397,3 +400,4 @@ process.stdout.write(
   `${JSON.stringify({ outputDirectory, states: states.length, errors }, null, 2)}\n`
 )
 if (errors.length) process.exitCode = 1
+releaseCreation()

@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, expect, it } from "bun:test"
 import { useMemo, useSyncExternalStore } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -169,7 +170,7 @@ function mount(options: { automation?: boolean; audio?: boolean } = {}) {
   workspace.grid = { mode: "fixed", bars: 0.25 }
   workspace.automationMode = options.automation ?? false
   hydrateProject(JSON.stringify({ version: 2, document, workspace }))
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const clipboardState = { value: "" }
   const clipboard: NativeClipboard = {
     readText: () => clipboardState.value,

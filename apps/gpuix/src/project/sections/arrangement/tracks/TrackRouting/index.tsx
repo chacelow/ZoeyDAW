@@ -33,7 +33,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
     { id: "external", label: t("externalOutput") },
   ]
   const isMain = track.kind === "main"
-  const rows = trackControlRows(track)
+  const rows = trackControlRows(track, theme.layout.track)
   const hasInput = track.kind === "audio" || track.kind === "midi"
   const showInput = hasInput && rows >= 4
   const showMonitor = hasInput && (track.kind === "midi" || rows >= 3)

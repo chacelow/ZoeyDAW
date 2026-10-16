@@ -1,7 +1,8 @@
 import { hydrateProject, useProjectState } from "@/project/adapters"
+import { TEST_CREATION } from "@/project/adapters/fixtures"
 import { defaultAudioClipSettings } from "@/project/model/audio-editor"
 import { createClip, createTrack } from "@/project/model/reducers"
-import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { CONTENT_PALETTE } from "@/shared/theme/content-color"
 import type { Track } from "@/project/model/types"
 import { getCreationNames } from "@/app/i18n/creation-names"
@@ -17,17 +18,11 @@ export function seedClipEditProject(mediaUri: string, workload: "normal" | "dens
   main.volumeDb = -30
   const tracks: Track[] = []
   const creation = {
+    ...TEST_CREATION,
     names: getCreationNames("en-US"),
     appearance: {
-      heightPx: DEFAULT_TRACK_HEIGHT,
-      mainHeightPx: DEFAULT_TRACK_HEIGHT,
-      colors: {
-        audio: CONTENT_PALETTE[0],
-        midi: CONTENT_PALETTE[1],
-        group: CONTENT_PALETTE[0],
-        return: CONTENT_PALETTE[0],
-        main: CONTENT_PALETTE[0],
-      },
+      ...TEST_CREATION.appearance,
+      heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight,
     },
   }
   const midiTrack = createTrack("midi", tracks, undefined, creation)

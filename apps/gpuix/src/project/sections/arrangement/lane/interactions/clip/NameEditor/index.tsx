@@ -4,7 +4,6 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { clipLabel } from "@/project/model/clip-label"
 import { clipRect } from "@/project/sections/arrangement/core/layout"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { visibleRows } from "@/project/sections/arrangement/lane/render-projection"
 import type { LaneTranslate } from "@/project/sections/arrangement/lane/messages"
 import type { LaneContext } from "../../types"
@@ -52,7 +51,7 @@ export function ClipNameEditor({
       left={left}
       top={Math.round(rect.top + 1) - originY}
       width={width}
-      height={Math.min(TRACK_TITLE_HEIGHT, row.height - 2)}
+      height={Math.min(scene.geometry.track.titleHeight, row.height - 2)}
     />
   )
 }

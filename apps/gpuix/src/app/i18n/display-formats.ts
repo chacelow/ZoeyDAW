@@ -1,7 +1,7 @@
 import { displayConfigByLocale } from "../locales/display"
 import type { DisplayConfig, NumericKind } from "../locales/display"
 import type { SupportedLocale } from "@/platform/i18n/core"
-import type { DisplayFormats } from "@/project/model/display-formats"
+import type { DisplayFormats, PanFormatVariant } from "@/project/model/display-formats"
 import { formatAudioMusicalValue } from "@/project/model/audio-editor/musical-value"
 
 export type { DisplayConfig, NumericKind } from "../locales/display"
@@ -39,10 +39,12 @@ export function createDisplayFormats(
     return value <= config.dbFloor ? config.negativeInfinity : number(value, "db")
   }
   function parseDb(text: string) {
-    const raw = text
-      .trim()
-      .replace(new RegExp(`\\s*${config.units.db}$`, "i"), "")
-      .trim()
+    const input = text.trim()
+    const unit = config.units.db.trim()
+    const raw =
+      unit && input.toLocaleLowerCase(locale).endsWith(unit.toLocaleLowerCase(locale))
+        ? input.slice(0, -unit.length).trim()
+        : input
     if (
       [config.negativeInfinity, ...config.infinityAliases].some(
         alias => alias.toLocaleLowerCase(locale) === raw.toLocaleLowerCase(locale)
@@ -51,10 +53,11 @@ export function createDisplayFormats(
       return config.dbFloor
     return parseNumber(raw)
   }
-  function pan(value: number) {
-    return Math.abs(value) < config.pan.centerThreshold
+  function pan(value: number, variant: PanFormatVariant) {
+    const policy = config.pan.variants[variant]
+    return value === 0 || Math.abs(value) < policy.centerThreshold
       ? config.pan.center
-      : `${value < 0 ? config.pan.left : config.pan.right}${number(Math.abs(value) * 100, "integer")}`
+      : `${value < 0 ? config.pan.left : config.pan.right}${policy.separator}${number(Math.abs(value) * 100, "integer")}`
   }
   function parsePan(text: string) {
     const raw = text.trim().toLocaleUpperCase(locale)
@@ -76,13 +79,14 @@ export function createDisplayFormats(
     const scale = 10 ** digits
     const ticks = (variant === "ruler" ? Math.round : Math.floor)(Math.max(0, seconds) * scale)
     const whole = Math.floor(ticks / scale)
+    // Seconds per minute/hour are fixed unit conversions, independent of display policy.
     const hours = Math.floor(whole / 3600)
-    const minutes = Math.floor(whole / 60) % 60
+    const minutes = Math.floor(whole / 60)
     const remaining = whole % 60
-    const pieces =
-      variant === "transport" || hours > 0
-        ? [String(hours), String(minutes).padStart(2, "0"), String(remaining).padStart(2, "0")]
-        : [String(minutes), String(remaining).padStart(2, "0")]
+    const includeHours = config.duration.includeHours[variant]
+    const pieces = includeHours
+      ? [String(hours), String(minutes % 60).padStart(2, "0"), String(remaining).padStart(2, "0")]
+      : [String(minutes), String(remaining).padStart(2, "0")]
     const showFraction =
       digits > 0 &&
       !(variant === "ruler" && config.duration.rulerOmitZeroFraction && ticks % scale === 0)
@@ -132,7 +136,7 @@ export function createDisplayFormats(
     dateTime: (timestamp: number) =>
       new Intl.DateTimeFormat(locale, config.dateTime).format(timestamp),
     accessiblePixels: (px: number) => `${number(px, "integer")} ${config.units.pixels}`,
-    normalizeSearch: (text: string) => text.normalize("NFKC").trim().toLocaleLowerCase(locale),
+    normalizeSearch: (text: string) => text.trim().toLocaleLowerCase(locale),
     musicalPosition: formatAudioMusicalValue,
     musicalWidthSamples: (numerator, denominator, kind) =>
       config.musicalWidthSamples.map(value =>

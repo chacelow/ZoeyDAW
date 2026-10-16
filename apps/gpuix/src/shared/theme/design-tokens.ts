@@ -1,4 +1,7 @@
 import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
+import { DEFAULT_DESIGN_DETAILS, type DesignDetails } from "@/shared/theme/design-details"
+import { DEFAULT_COLOR_RECIPES } from "./color-recipes"
+import type { ColorRecipes } from "./color-recipes"
 
 export type CardSize = "default" | "sm" | "controls" | "project"
 export interface CardDesignTokens {
@@ -11,7 +14,11 @@ export interface CardDesignTokens {
   readonly hover: "none" | "accent"
 }
 export interface DesignTokens {
-  readonly typography: { readonly numberFontFamily: string }
+  readonly colorRecipes: ColorRecipes
+  readonly typography: {
+    readonly numberFontFamily: string
+    readonly weights: { readonly medium: number; readonly semibold: number }
+  }
   readonly shape: {
     readonly controlRadius: number
     readonly controlBorderWidth: number
@@ -22,6 +29,7 @@ export interface DesignTokens {
     readonly panelBorderWidth: number
     readonly indicatorRadius: number
     readonly indicatorStrokeWidth: number
+    readonly separatorWidth: number
     readonly focusRingWidth: number
   }
   readonly input: { readonly paddingInline: number }
@@ -38,6 +46,11 @@ export interface DesignTokens {
     readonly borderWidth: number
     readonly inset: number
     readonly labelInset: number
+    readonly maxWidth: number
+    readonly maxHeight: number
+    readonly width: number
+    readonly dropdownSeparatorInset: number
+    readonly contextSeparatorInset: number
   }
   readonly popover: {
     readonly radius: number
@@ -45,8 +58,17 @@ export interface DesignTokens {
     readonly inset: number
     readonly gap: number
     readonly headerGap: number
+    readonly width: number
   }
   readonly settings: {
+    readonly shellWidth: number
+    readonly shellHeight: number
+    readonly navigationWidth: number
+    readonly presetGrid: {
+      readonly columnWidth: number
+      readonly swatchHeight: number
+      readonly scrollHeight: number
+    }
     readonly paddingInline: number
     readonly itemGap: number
     readonly headerGap: number
@@ -56,11 +78,30 @@ export interface DesignTokens {
     readonly navigationInset: number
     readonly contentInset: number
   }
-  readonly tabs: { readonly itemGap: number; readonly contentGap: number }
+  readonly tabs: {
+    readonly itemGap: number
+    readonly contentGap: number
+    readonly footerRadius: number
+    readonly footerJoinedGroupGap: number
+  }
+  readonly trackCreationColors: DesignDetails["trackCreationColors"]
+  readonly overlay: DesignDetails["overlay"]
+  readonly dragPreview: DesignDetails["dragPreview"]
+  readonly empty: DesignDetails["empty"]
+  readonly loading: DesignDetails["loading"]
+  readonly toast: DesignDetails["toast"]
+  readonly states: DesignDetails["states"]
+  readonly editor: DesignDetails["editor"]
+  readonly dragPad: DesignDetails["dragPad"]
+  readonly progress: DesignDetails["progress"]
+  readonly motion: DesignDetails["motion"]
+  readonly cursors: DesignDetails["cursors"]
+  readonly icon: DesignDetails["icon"]
 }
 
 export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
-  typography: { numberFontFamily: "Menlo" },
+  colorRecipes: DEFAULT_COLOR_RECIPES,
+  typography: { numberFontFamily: "Menlo", weights: { medium: 500, semibold: 600 } },
   shape: {
     controlRadius: 3,
     controlBorderWidth: 1,
@@ -68,6 +109,7 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
     listRowRadius: 0,
     cardBorderWidth: 1,
     panelRadius: 7,
+    separatorWidth: 1,
     panelBorderWidth: PROJECT_METRICS.panelBorder,
     focusRingWidth: 1,
     indicatorStrokeWidth: 1,
@@ -127,9 +169,29 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
     borderWidth: 1,
     inset: 4,
     labelInset: 6,
+    maxWidth: 320,
+    maxHeight: 300,
+    width: CONTROL_METRICS.default["--spacing-control-track"] * 10,
+    dropdownSeparatorInset: 3,
+    contextSeparatorInset: 4,
   },
-  popover: { radius: 4, borderWidth: 1, inset: 8, gap: 6, headerGap: 4 },
+  popover: {
+    radius: 4,
+    borderWidth: 1,
+    inset: 8,
+    gap: 6,
+    headerGap: 4,
+    width: CONTROL_METRICS.default["--spacing-control-track"] * 12,
+  },
   settings: {
+    shellWidth: 720,
+    shellHeight: 520,
+    navigationWidth: 168,
+    presetGrid: {
+      columnWidth: PROJECT_METRICS.identityWidth * 2,
+      swatchHeight: CONTROL_METRICS.default["--spacing-control-track"] * 2,
+      scrollHeight: PROJECT_METRICS.defaultTrackHeight * 4,
+    },
     paddingInline: 8,
     itemGap: 6,
     headerGap: 8,
@@ -139,5 +201,6 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
     navigationInset: 8,
     contentInset: 16,
   },
-  tabs: { itemGap: 4, contentGap: 8 },
+  tabs: { itemGap: 4, contentGap: 8, footerRadius: 0, footerJoinedGroupGap: 0 },
+  ...DEFAULT_DESIGN_DETAILS,
 }

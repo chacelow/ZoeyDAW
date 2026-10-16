@@ -10,7 +10,7 @@ import { createClip, createTrack } from "@/project/model/reducers"
 import type { Track } from "@/project/model/types"
 import { PATTERN_STEPS_PER_BAR } from "@/project/model/types"
 import { defaultAudioClipSettings } from "@/project/model/audio-editor"
-import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { CONTENT_PALETTE } from "@/shared/theme/content-color"
 
 export function seedLaneProject(mediaUri: string, stress: boolean): void {
@@ -35,7 +35,7 @@ export function seedLaneProject(mediaUri: string, stress: boolean): void {
     const kind = index % 3 === 0 ? "audio" : index % 3 === 1 ? "midi" : "pattern"
     const track = createTrack(kind === "audio" ? "audio" : "midi", tracks, undefined, {
       ...TEST_CREATION,
-      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_TRACK_HEIGHT },
+      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
     })
     track.name = `Track ${String(index + 1).padStart(3, "0")}`
     track.color = CONTENT_PALETTE[index % CONTENT_PALETTE.length] ?? CONTENT_PALETTE[0]
@@ -87,7 +87,7 @@ export function seedLaneProject(mediaUri: string, stress: boolean): void {
   if (!stress) {
     const group = createTrack("group", tracks, undefined, {
       ...TEST_CREATION,
-      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_TRACK_HEIGHT },
+      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
     })
     group.name = "Group"
     group.color = CONTENT_PALETTE[2]
@@ -96,7 +96,7 @@ export function seedLaneProject(mediaUri: string, stress: boolean): void {
     tracks.unshift(group)
     const returnTrack = createTrack("return", tracks, undefined, {
       ...TEST_CREATION,
-      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_TRACK_HEIGHT },
+      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
     })
     returnTrack.name = "Return"
     returnTrack.color = CONTENT_PALETTE[3]

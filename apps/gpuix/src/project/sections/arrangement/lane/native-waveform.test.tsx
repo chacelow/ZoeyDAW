@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, expect, it } from "bun:test"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -23,7 +24,6 @@ import {
   TEST_TRACK_APPEARANCE,
 } from "@/project/adapters/fixtures"
 import { createTrack } from "@/project/model/reducers"
-import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import type { Appearance, Theme } from "@/shared/theme/ThemeProvider"
 import { resolveContentColor } from "@/shared/theme/content-color"
@@ -82,7 +82,10 @@ for (const appearance of appearances)
     if (!main) throw new Error("Missing Main output")
     const audio = createTrack("audio", [main], undefined, {
       ...TEST_CREATION,
-      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_TRACK_HEIGHT * 2 },
+      appearance: {
+        ...TEST_TRACK_APPEARANCE,
+        heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight * 2,
+      },
     })
     audio.id = "native-audio"
     audio.name = "Native audio fixture"
@@ -123,7 +126,7 @@ for (const appearance of appearances)
     )
     if (!capturedTheme) throw new Error("Missing fixture theme")
     const theme = capturedTheme
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     scene.setMusic({
       bars: 128,
       grid: workspace.grid,
@@ -135,7 +138,7 @@ for (const appearance of appearances)
     scene.setViewport({ width: 1280, height: 800, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
     const card = createClipCardProjection()(
       scene.get(),
-      { track: audio, top: 0, height: audio.heightPx },
+      { track: audio, top: 0, height: audio.heightPx, trackGeometry: DEFAULT_LAYOUT_TOKENS.track },
       false
     )[0]
     if (!card) throw new Error("Missing native fixture Clip")

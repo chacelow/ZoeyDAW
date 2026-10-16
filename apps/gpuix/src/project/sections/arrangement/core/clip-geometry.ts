@@ -5,7 +5,6 @@ import {
   fadeCurveProgress,
   fadeBezierSegments,
 } from "@/project/model/fades"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import type { FadeBezierSegment } from "@/project/model/fades"
 import type { AudioClip, Clip, Track } from "@/project/model/types"
 import type { ClipRect } from "./layout"
@@ -48,7 +47,9 @@ export function clipVisualGeometry(
   const width = Math.max(2, Math.round(rect.width))
   const height = Math.max(4, Math.round(rect.height - 2))
   const titleHeight =
-    track.collapsed || height <= TRACK_TITLE_HEIGHT + 4 ? height : TRACK_TITLE_HEIGHT
+    track.collapsed || height <= rect.trackGeometry.titleHeight + 4
+      ? height
+      : rect.trackGeometry.titleHeight
   const bodyHeight = height - titleHeight
   const bodyTop = top + titleHeight
   const fades =

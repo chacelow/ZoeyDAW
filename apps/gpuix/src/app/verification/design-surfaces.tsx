@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { render } from "@gpuix/react"
@@ -45,7 +46,7 @@ const stores = {
     DEFAULT_THEME_PRESET
   ),
 }
-const scene = createSceneStore()
+const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
 scene.setViewport({ width: 1100, height: 320, pxPerBar: 100, scrollX: 0, scrollY: 0, dpr: 1 })
 const owner = createTimelineController({
   sceneStore: scene,

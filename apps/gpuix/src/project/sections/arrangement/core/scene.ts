@@ -6,6 +6,8 @@ import {
   createWorkspaceTemplate,
 } from "@/project/defaults/template"
 import type { ProjectTemplateSource } from "@/project/defaults/template"
+import type { LayoutTokens } from "@/shared/theme/layout-tokens"
+
 import type { GridPlan, GridSettings } from "@/project/model/grid"
 import type {
   AutomationLane,
@@ -16,6 +18,7 @@ import type {
   TimeSelection,
   Track,
 } from "@/project/model/types"
+export type ArrangementGeometry = Pick<LayoutTokens, "track" | "arrangement">
 
 export interface ArrangementViewport {
   pxPerBar: number
@@ -51,6 +54,7 @@ export interface SceneMusic {
 
 export interface ArrangementScene extends SceneMusic {
   revision: number
+  geometry: ArrangementGeometry
   gridPlan: GridPlan
   playback: Pick<SessionState, "playing" | "insertionPoint">
   viewport: ArrangementViewport
@@ -72,6 +76,7 @@ export interface SceneStore {
   get: () => ArrangementScene
   subscribe: (listener: (scene: ArrangementScene) => void) => () => void
   setViewport: (viewport: ArrangementViewport) => void
+  setGeometry: (geometry: ArrangementGeometry) => void
   setMusic: (input: SceneMusic) => void
   setPlayback: (playback: ArrangementScene["playback"]) => void
   setSelection: (ids: ReadonlySet<string>) => void
@@ -86,13 +91,16 @@ export interface SceneStore {
   setTimeSelectionPreview: (selection: TimeSelection | null) => void
 }
 
-export function createSceneStore({
-  template = PROJECT_TEMPLATE,
-  preferences = PREFERENCE_DEFAULTS,
-}: {
-  template?: ProjectTemplateSource
-  preferences?: typeof PREFERENCE_DEFAULTS
-} = {}): SceneStore {
+export function createSceneStore(
+  geometry: ArrangementGeometry,
+  {
+    template = PROJECT_TEMPLATE,
+    preferences = PREFERENCE_DEFAULTS,
+  }: {
+    template?: ProjectTemplateSource
+    preferences?: typeof PREFERENCE_DEFAULTS
+  } = {}
+): SceneStore {
   const document = createUnopenedDocument(template)
   const workspace = createWorkspaceTemplate(preferences)
   const { bpm, numerator, denominator } = document.transport
@@ -108,6 +116,7 @@ export function createSceneStore({
   let scene: ArrangementScene = {
     ...source,
     revision: 0,
+    geometry,
     viewport: {
       pxPerBar: workspace.pxPerBar,
       scrollX: workspace.scrollX,
@@ -145,6 +154,10 @@ export function createSceneStore({
   }
   return {
     get: () => scene,
+    setGeometry(geometry) {
+      if (scene.geometry === geometry) return
+      bump({ ...scene, geometry })
+    },
     subscribe(listener) {
       listeners.add(listener)
       return () => {

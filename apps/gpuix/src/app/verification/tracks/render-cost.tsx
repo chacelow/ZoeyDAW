@@ -14,7 +14,7 @@ import {
   TEST_PROJECT_CREATION,
   TEST_TRACK_APPEARANCE,
 } from "@/project/adapters/fixtures"
-import { CONTROLS_WIDTH, DEFAULT_TRACK_HEIGHT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
 import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
@@ -35,7 +35,7 @@ for (const sourceCount of [20, 2000]) {
   for (let index = 0; index < sourceCount; index++) {
     const track = createTrack("audio", document.tracks, undefined, {
       ...TEST_CREATION,
-      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_TRACK_HEIGHT },
+      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
     })
     track.id = `perf-${index}`
     track.name = `Track ${index}`
@@ -44,7 +44,7 @@ for (const sourceCount of [20, 2000]) {
   document.tracks.push(structuredClone(main))
   hydrateProject(JSON.stringify({ version: 2, document, workspace }))
   const viewport = { width: 1000, height: 500, pxPerBar: 32, scrollX: 0, scrollY: 700, dpr: 1 }
-  const store = createSceneStore()
+  const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   store.setMusic({
     tracks: document.tracks,
     bars: 128,
@@ -54,7 +54,10 @@ for (const sourceCount of [20, 2000]) {
     transport: document.transport,
   })
   store.setViewport(viewport)
-  const root = createTestRoot({ width: viewport.width + CONTROLS_WIDTH, height: viewport.height })
+  const root = createTestRoot({
+    width: viewport.width + DEFAULT_LAYOUT_TOKENS.track.controlsWidth,
+    height: viewport.height,
+  })
   try {
     root.render(
       <AnimationFrameProvider source={controlledFrames.source}>

@@ -2,7 +2,6 @@ import { MINOR_GRID_OPACITY } from "../../core/rulers/grid-quads"
 import { useLayoutEffect, useMemo } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { projectTrackGroups } from "@/project/model/track-groups"
 import type { ArrangementScene } from "../../core/scene"
 import { visibleClipCards } from "../render-projection"
@@ -35,8 +34,8 @@ export function LaneContents({
   const projectCards = useMemo(createClipCardProjection, [])
   const { lines: grid, regions } = projectGrid(scene)
   const localRow = useMemo(
-    () => ({ track: row.track, top: 0, height: row.height }),
-    [row.track, row.height]
+    () => ({ track: row.track, top: 0, height: row.height, trackGeometry: row.trackGeometry }),
+    [row.track, row.height, row.trackGeometry]
   )
   const cards = projectCards(scene, localRow, automationMode)
   const backgroundBatch = useQuadBatch()
@@ -64,7 +63,8 @@ export function LaneContents({
   const groupPitch = descendants?.length
     ? Math.max(
         0,
-        Math.min(TRACK_TITLE_HEIGHT, row.height) - theme.project.arrangementGroupPreviewInset * 2
+        Math.min(scene.geometry.track.titleHeight, row.height) -
+          theme.project.arrangementGroupPreviewInset * 2
       ) / descendants.length
     : 0
   const groupBandHeight = Math.max(
@@ -152,34 +152,32 @@ export function LaneContents({
       {row.track.kind === "group" &&
         row.track.collapsed &&
         descendants?.flatMap((track, index) =>
-          visibleClipCards(scene, { track, top: row.top, height: row.height }, automationMode).map(
-            card => {
-              const clip = card.clip
-              const left = Math.max(0, card.geometry.left)
-              const right = Math.min(scene.viewport.width, card.geometry.left + card.geometry.width)
-              if (right <= left) return null
-              return (
-                <div
-                  key={`${track.id}:${card.ghost ? "ghost" : "source"}:${clip.id}`}
-                  testId={`group-clip-${track.id}-${card.ghost ? "ghost" : "source"}-${clip.id}`}
-                  aria-hidden
-                  style={sx({
-                    position: "absolute",
-                    left,
-                    top:
-                      theme.project.arrangementGroupPreviewInset +
-                      index * groupPitch +
-                      Math.max(0, (groupPitch - groupBandHeight) / 2),
-                    width: right - left,
-                    height: groupBandHeight,
-                    backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
-                    opacity: 0.85,
-                    pointerEvents: "none",
-                  })}
-                />
-              )
-            }
-          )
+          visibleClipCards(scene, { ...row, track }, automationMode).map(card => {
+            const clip = card.clip
+            const left = Math.max(0, card.geometry.left)
+            const right = Math.min(scene.viewport.width, card.geometry.left + card.geometry.width)
+            if (right <= left) return null
+            return (
+              <div
+                key={`${track.id}:${card.ghost ? "ghost" : "source"}:${clip.id}`}
+                testId={`group-clip-${track.id}-${card.ghost ? "ghost" : "source"}-${clip.id}`}
+                aria-hidden
+                style={sx({
+                  position: "absolute",
+                  left,
+                  top:
+                    theme.project.arrangementGroupPreviewInset +
+                    index * groupPitch +
+                    Math.max(0, (groupPitch - groupBandHeight) / 2),
+                  width: right - left,
+                  height: groupBandHeight,
+                  backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
+                  opacity: 0.85,
+                  pointerEvents: "none",
+                })}
+              />
+            )
+          })
         )}
       <div
         style={sx({

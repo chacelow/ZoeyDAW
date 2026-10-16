@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import {
   hydrateProject,
@@ -157,7 +158,7 @@ describe("project document and workspace commands", () => {
   })
 
   it("duplicates nested branches once and updates the containing group's membership", () => {
-    projectActions.addTrack("group")
+    projectActions.addTrack("group", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
     const parent = useProjectState
       .getState()
       .document.tracks.find(track => track.kind === "group" && track.id !== "drums-group")!
@@ -185,7 +186,7 @@ describe("project document and workspace commands", () => {
   })
 
   it("refuses routing cycles without changing document", () => {
-    projectActions.addTrack("group")
+    projectActions.addTrack("group", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
     const groupId = useProjectState
       .getState()
       .document.tracks.find(track => track.kind === "group" && track.id !== "drums-group")!.id
@@ -209,7 +210,7 @@ describe("project document and workspace commands", () => {
 
   it("moves selected clips across lanes with relative offsets intact", () => {
     projectActions.createClip("sidechain", "midi", 5, 2)
-    projectActions.addTrack("midi")
+    projectActions.addTrack("midi", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
     const destinationId = useProjectState
       .getState()
       .document.tracks.find(

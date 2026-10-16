@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { createRendererState } from "@gpuix/native/host"
@@ -25,7 +26,7 @@ beforeEach(() => {
 })
 
 function makeScene() {
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const { document: project, workspace } = useProjectState.getState()
   scene.setMusic({
     bars: 128,
@@ -39,7 +40,7 @@ function makeScene() {
   return scene
 }
 
-function timelineOwner(scene = createSceneStore()) {
+function timelineOwner(scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)) {
   const owner = createTimelineController({
     sceneStore: scene,
     initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
@@ -264,7 +265,7 @@ describe("Native timeline layout and hit testing", () => {
     if (!id) throw new Error("Locator missing")
     projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
     const owner = createTimelineController({
-      sceneStore: createSceneStore(),
+      sceneStore: createSceneStore(DEFAULT_LAYOUT_TOKENS),
       initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
       metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
       keyboard: { focus: () => "control", blurControl: () => {} },

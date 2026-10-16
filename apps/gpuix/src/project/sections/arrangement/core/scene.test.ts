@@ -1,9 +1,14 @@
+import { DEFAULT_LAYOUT_TOKENS, createLayoutTokens } from "@/shared/theme/layout-tokens"
 import { describe, expect, it, jest } from "bun:test"
 import { createSceneStore } from "./scene"
 import { PROJECT_TEMPLATE } from "@/project/defaults/template"
 import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { ArrangementViewport } from "./scene"
 import type { LoopRegion, Marker, Track } from "../../../model/types"
+import { createMockDocument } from "@/project/adapters/fixtures"
+import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
+import { layoutTrackRows } from "./layout"
+import { hitTest } from "./hit-test"
 
 const vp = (patch: Partial<ArrangementViewport> = {}): ArrangementViewport => ({
   pxPerBar: 24,
@@ -31,8 +36,9 @@ describe("arrangement scene store", () => {
     template.transport.loop.lengthBars = 6
     template.timeline.minimumBars = 96
     preferences.workspace.pxPerBar = 31
+    preferences.workspace.gridMode = "adaptive"
     preferences.workspace.gridDensity = "narrow"
-    const scene = createSceneStore({ template, preferences }).get()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS, { template, preferences }).get()
     expect(scene.bars).toBe(template.timeline.minimumBars)
     expect(scene.transport).toMatchObject({
       bpm: template.transport.bpm,
@@ -52,7 +58,7 @@ describe("arrangement scene store", () => {
   })
 
   it("bumps revision only when a field actually changes", () => {
-    const store = createSceneStore()
+    const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     store.setViewport(vp())
     const baseline = store.get().revision
     store.setViewport(vp())
@@ -64,7 +70,7 @@ describe("arrangement scene store", () => {
   })
 
   it("derives a new cell on zoom without rewriting grid preference", () => {
-    const store = createSceneStore()
+    const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     store.setMusic({
       bars: 128,
       grid: { mode: "adaptive", density: "narrowest" },
@@ -83,7 +89,7 @@ describe("arrangement scene store", () => {
   })
 
   it("bridges stopped playback and track-local insertion independently of music", () => {
-    const store = createSceneStore()
+    const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     store.setPlayback({
       playing: false,
       insertionPoint: { trackId: "3-audio", bar: 1 + 1 / 16_384 },
@@ -98,7 +104,7 @@ describe("arrangement scene store", () => {
   })
 
   it("notifies subscribers once per real change", () => {
-    const store = createSceneStore()
+    const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     const listener = jest.fn()
     const detach = store.subscribe(listener)
     store.setViewport(vp({ scrollX: 32 }))
@@ -109,7 +115,7 @@ describe("arrangement scene store", () => {
   })
 
   it("treats identical track and marker references as unchanged music", () => {
-    const store = createSceneStore()
+    const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     const r0 = store.get().revision
     store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks })
     const r1 = store.get().revision
@@ -128,7 +134,7 @@ describe("arrangement scene store", () => {
   })
 
   it("keeps transient gesture tracks out of the durable music update", () => {
-    const store = createSceneStore()
+    const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks })
     const preview: Track[] = [
       {
@@ -161,4 +167,37 @@ describe("arrangement scene store", () => {
     expect(store.get().tracks).toBe(tracks)
     expect(store.get().previewTracks).toBeNull()
   })
+})
+
+it("runtime geometry changes move rendering and hit ownership together without replacing music", () => {
+  const owner = createMockDocument().tracks.find(track => track.kind === "audio")
+  if (!owner) throw new Error("Missing audio fixture")
+  const first = { ...owner, id: "first", collapsed: true, clips: [] }
+  const second = { ...owner, id: "second", collapsed: true, clips: [] }
+  const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
+  store.setViewport(vp())
+  store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks: [first, second] })
+  store.setTrackSelection(new Set(["second"]))
+  expect(layoutTrackRows(store.get()).map(row => [row.top, row.height])).toEqual([
+    [34, 23],
+    [57, 23],
+  ])
+  expect(hitTest(store.get(), 100, 64)?.track.id).toBe("second")
+  store.setGeometry(
+    createLayoutTokens(
+      {
+        ...CONTROL_METRICS.default,
+        "--spacing-control-track": 20,
+        "--spacing-control-track-gap": 6,
+      },
+      { ...PROJECT_METRICS, trackBorder: 4 }
+    )
+  )
+  expect(layoutTrackRows(store.get()).map(row => [row.top, row.height])).toEqual([
+    [34, 36],
+    [70, 36],
+  ])
+  expect(hitTest(store.get(), 100, 64)?.track.id).toBe("first")
+  expect([...store.get().selectedTrackIds]).toEqual(["second"])
+  expect(store.get().tracks.map(track => track.id)).toEqual(["first", "second"])
 })

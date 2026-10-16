@@ -14,6 +14,7 @@ import {
   TEST_CREATION,
   TEST_TRACK_APPEARANCE,
 } from "@/project/adapters/fixtures"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 
 const evidence = process.env.B2_EVIDENCE_DIR
 if (!evidence) throw new Error("B2_EVIDENCE_DIR must point to a temporary fixture directory")
@@ -29,7 +30,7 @@ configureProjectBackend(createNativeBackend, {
     if (!main) throw new Error("Missing Main output")
     const appearance = {
       ...TEST_TRACK_APPEARANCE,
-      heightPx: TEST_TRACK_APPEARANCE.heightPx * 2,
+      heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight * 2,
     }
     const audio = createTrack("audio", [main], undefined, { ...TEST_CREATION, appearance })
     audio.id = "native-audio"

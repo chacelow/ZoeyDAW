@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { PublicInstance } from "@gpuix/react"
 import { render, useGpuix } from "@gpuix/react"
@@ -28,9 +29,11 @@ import { englishFooterLabels, chineseFooterLabels } from "@/app/locales/sections
 import type { ControlInfo } from "@/ui/controls"
 import type { FooterView } from "@/project/sections/footer"
 import type { PanelImperativeHandle } from "@/ui/panels"
+import { initializeVerificationProject } from "../project-creation"
 
 const chinese = process.env.B2_LANGUAGE === "zh"
 const appearance = process.env.B2_APPEARANCE === "light" ? "light" : "dark"
+initializeVerificationProject("footer-demo", chinese ? "zh-CN" : "en-US")
 const searchCommand: { current: (() => boolean) | null } = { current: null }
 const windowKeyboard = createWindowKeyboard()
 windowKeyboard.subscribe("keyDown", event => {
@@ -133,7 +136,7 @@ function NativePanels() {
     projectActions.setProject({ name: chinese ? "未命名项目" : "Untitled project" })
     if (process.env.B2_BPM) projectActions.setBpm(Number(process.env.B2_BPM))
     if (process.env.B2_RECORDING === "1") projectActions.toggleRecording()
-    projectActions.addTrack("audio")
+    projectActions.addTrack("audio", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
     const track = useProjectState.getState().document.tracks.find(item => item.kind === "audio")
     if (track) {
       projectActions.updateTrack(track.id, {

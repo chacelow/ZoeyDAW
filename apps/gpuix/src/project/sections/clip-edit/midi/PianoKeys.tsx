@@ -49,7 +49,7 @@ export function PianoKeys({
     release()
     held.current = { pitch, source }
     selectPitch(pitch, extend, source)
-    projectActions.noteOn(pitch, midi.velocity)
+    projectActions.noteOn(pitch)
   }
   const labelled = roll.pitches.length < 24
   // Keys keep piano colours in both schemes, as the Web editor's light/dark key styles did.

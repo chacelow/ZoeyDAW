@@ -1,4 +1,4 @@
-import { CONTROLS_WIDTH } from "@/project/layout"
+import type { TrackGeometry } from "@/project/layout"
 import { gridZoomLimit } from "@/project/model/grid"
 import type { Track } from "@/project/model/types"
 import { maxTrackScrollY } from "../layout"
@@ -127,6 +127,7 @@ export interface TimelineViewportInput {
   numerator: number
   denominator: number
   tracks: readonly Track[]
+  geometry: TrackGeometry
   storedPxPerBar: number
   storedScrollX: number
   storedScrollY: number
@@ -148,11 +149,12 @@ export function clampTimelineViewport({
   numerator,
   denominator,
   tracks,
+  geometry,
   storedPxPerBar,
   storedScrollX,
   storedScrollY,
 }: TimelineViewportInput): TimelineViewport {
-  const timeViewportWidth = Math.max(0, containerWidth - CONTROLS_WIDTH)
+  const timeViewportWidth = Math.max(0, containerWidth - geometry.controlsWidth)
   const minPxPerBar = timeViewportWidth > 0 ? timeViewportWidth / bars : 1
   const maxPxPerBar = Math.max(minPxPerBar, gridZoomLimit(numerator, denominator))
   const pxPerBar = clamp(storedPxPerBar || minPxPerBar, minPxPerBar, maxPxPerBar)
@@ -166,7 +168,7 @@ export function clampTimelineViewport({
     scrollX: clampScrollX(storedScrollX || 0, bars, pxPerBar, timeViewportWidth),
     scrollY:
       bodyHeight > 0
-        ? clamp(storedScrollY || 0, 0, maxTrackScrollY(tracks, bodyHeight))
+        ? clamp(storedScrollY || 0, 0, maxTrackScrollY(tracks, bodyHeight, geometry))
         : Math.max(0, storedScrollY || 0),
   }
 }
@@ -176,6 +178,7 @@ export interface PanViewportInput extends MinimapViewport {
   width: number
   height: number
   tracks: readonly Track[]
+  geometry: TrackGeometry
   scrollY: number
   deltaX: number
   deltaY: number
@@ -187,6 +190,7 @@ export function panViewport({
   width,
   height,
   tracks,
+  geometry,
   pxPerBar,
   scrollX,
   scrollY,
@@ -198,7 +202,7 @@ export function panViewport({
   const dy = shiftKey ? 0 : deltaY
   return {
     scrollX: clampScrollX(scrollX + dx, bars, pxPerBar, width),
-    scrollY: clamp(scrollY + dy, 0, maxTrackScrollY(tracks, height)),
+    scrollY: clamp(scrollY + dy, 0, maxTrackScrollY(tracks, height, geometry)),
   }
 }
 
