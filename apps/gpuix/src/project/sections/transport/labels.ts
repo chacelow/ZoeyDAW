@@ -1,3 +1,5 @@
+import type { ProjectRuntimeStatus } from "@/project/model/backend"
+
 export interface TransportLabels {
   readonly controls: string
   readonly toggleBrowser: string
@@ -31,6 +33,7 @@ export interface TransportLabels {
   readonly metronome: string
   readonly metronomeSilent: string
   readonly engine: string
+  readonly enginePhases: Readonly<Record<ProjectRuntimeStatus["phase"], string>>
   readonly unavailable: string
   readonly latency: string
   readonly cpu: string
