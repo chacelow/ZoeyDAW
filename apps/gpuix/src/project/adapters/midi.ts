@@ -43,6 +43,7 @@ export const midiActions = {
     if (!armedTrackIds.length) {
       return
     }
+    const clipLabel = projectCreationValues().names.clip("midi")
     recordDocument(document => ({
       ...document,
       tracks: document.tracks.map(track => {
@@ -75,7 +76,7 @@ export const midiActions = {
         if (fresh.kind !== "midi") return track
         const clip: MidiClip = {
           ...fresh,
-          label: projectCreationValues().names.clip("midi"),
+          label: clipLabel,
           notes: [note],
         }
         return { ...track, clips: [...track.clips, clip] }

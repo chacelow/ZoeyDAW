@@ -46,8 +46,8 @@ const mutations = [
   {
     name: "view unmount loses its lease cleanup",
     file: "project/ProjectPage.tsx",
-    from: "return startProjectRuntime()",
-    to: "startProjectRuntime()",
+    from: "releaseRuntime()",
+    to: "void releaseRuntime",
     tests: "src/app/AppShell.test.tsx",
   },
   {

@@ -20,6 +20,7 @@ import { createTestAnimationFrames } from "@/project/sections/footer/verificatio
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
+import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
 import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "@/project/sections/arrangement/tracks/verification/frame-source"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -38,6 +39,7 @@ const design = {
   },
 }
 const rootStyle = {
+  position: "relative" as const,
   width: "100%" as const,
   height: "100%" as const,
   display: "flex" as const,
@@ -73,6 +75,11 @@ function Tracks() {
             labels={createTrackLabels("en-US")}
             onFocusTrack={id => projectActions.selectTracks([id], "header")}
             renderLane={row => <text>{row.track.name}</text>}
+          />
+          <TrackResizeOverlay
+            scene={scene}
+            viewport={acceptedViewport}
+            labels={createTrackLabels("en-US")}
           />
         </div>
       </ThemeProvider>

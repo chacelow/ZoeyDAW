@@ -17,7 +17,7 @@
 | `controller.tick(nowMs)` | 由原生帧源驱动边缘滚动与 Follow；本模块不创建定时器或第二走带时钟 |
 | `controller.getFrameDemand()` / `subscribeFrameDemand(listener)` | 标尺 autoScroll 的稳定活动读取与通知，直接由 start/update/stop 的活动边界驱动。组合根合并播放与 lane 手势需求后再订阅帧，不读取 TimelineView 细项 |
 | `controller.keyboard` | 唯一键盘 owner；`markDrawGesture()` 由实际绘制/拖动消费者调用；组合根不能再创建独立键盘 |
-| `TimelineLabels` | 严格的可见文本契约；示例双语数据在 `demo-labels.ts`，不依赖 i18n 包 |
+| `TimelineLabels` | 严格的可见文本契约；双语数据在 `app/locales/sections/timeline.ts`，由组合根注入 |
 | `TimelineEditSurface` | 单一保留输入层的 ref、pointer/key/blur handlers、光标 style 与稳定菜单/inline editor `wrap` slot；owner 是 `timeline-viewport` |
 
 `TimelineView` 仅以 type 导出，供 `ArrangementTimeline` 使用；组合根不得依赖其细项，也没有可独立构造的 view。类型断言在 `public-contract.test.ts` 守住 view 与键盘工厂的运行时出口边界。
@@ -110,4 +110,4 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，仍未�
 
 A3b 消费回归复用 `ui/controls/Menu/{interaction,pointer}.test.tsx`、`DragPad/{DragPadNumber,variants}.test.tsx`、`platform/keyboard/keyboard-native.test.tsx`；最终文本焦点 lease 由 `app/project/composition.test.tsx` 的真实 DragPad→timeline 组合回归覆盖。`bun src/project/sections/arrangement/timeline/verification/mutations.ts` 运行内存变异，不写共享源码；每个变异必须实际加载且使行为断言失败。
 
-`bun src/project/sections/arrangement/timeline/verification/layout-smoke.tsx` 输出真实原生 toolbar、文字和图标的 bounds。1.5px padding 在 scale=1 的 GPUI pre-layout metric snapping 中按中点向零舍入为 1px，不是 AX 丢精度；不以业务实例补偿改变共享密度 token。
+`bun src/app/verification/timeline/layout-smoke.tsx` 输出真实原生 toolbar、文字和图标的 bounds。1.5px padding 在 scale=1 的 GPUI pre-layout metric snapping 中按中点向零舍入为 1px，不是 AX 丢精度；不以业务实例补偿改变共享密度 token。

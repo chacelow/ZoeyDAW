@@ -68,7 +68,7 @@ export function FooterPanel({
           expandedSize={theme.project.footerDeviceHeight}
           onExpandedChange={expanded => onCollapsedChange(!expanded)}
           aria-label={labels.toggle}
-          formatAccessiblePixels={pixels => `${pixels} pixels`}
+          formatAccessiblePixels={labels.formats.accessiblePixels}
           testId="footer-divider"
           style={{ backgroundColor: theme.colors.muted }}
         />
