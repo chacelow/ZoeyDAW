@@ -103,7 +103,7 @@ TrackResizeOverlay({ scene, viewport, labels })
 - `TrackResizeOverlay` 与 `TrackRows` 在同一个 Scene 坐标父节点中显式组合，Y 原点包含标尺，宽度为 `viewport.width + controlsWidth`。组合根把它放在稳定 lane 输入层之后，只有分隔条矩形接收命中，没有覆盖整面的 wrapper。
 - `TrackRows` 与 overlay 共用 `useTrackRowLayout`。空闲条只挂载边界的可见交集。活动 resize 保留按下时的透明 hitbox 和唯一 hook，直到释放或取消；即使边界或行随拖动离屏，也不销毁捕获。普通轨道从底部、Return/Main 从顶部调整，Escape、blur、失活和 epoch 仍取消。
 
-`useTrackRowLayout` 向 core 传入完整 `scene.geometry`，上下边界使用其中的 arrangement ruler 几何；固定轨道高度仍只依赖 track 几何。Group frame 使用 `design.shape.controlBorderWidth`，Group rails 使用 `design.editor.dividerStrokeWidth`，插入线使用 `design.editor.insertionLineWidth`，名称字重使用 `design.typography.weights.medium`。拖动与 resize 的 cursor 经 `design.cursors` 解析，其中 resize 保留原来的 `ns-resize`，读取 `verticalResize`。`style-layout.test.tsx` 在真实原生组件中覆盖这些来源，不检查源码文本。
+`useTrackRowLayout` 向 core 传入完整 `scene.geometry`，上下边界使用其中的 arrangement ruler 几何；固定轨道高度仍只依赖 track 几何。Group frame 使用 `design.shape.controlBorderWidth`，Group rails 使用 `design.editor.dividerStrokeWidth`，插入线使用 `design.editor.insertionLineWidth`，名称字重使用 `design.typography.weights.medium`。拖动与 resize 的 cursor 经 `design.cursors` 解析，其中 resize 保留原来的 `ns-resize`，读取 `verticalResize`。
 
 轨道行、Identity 与 resize separator 的焦点环读取 `design.shape.focusRingWidth`，内缩 offset 由该宽度取负。轨道上下边框仍平分 `project.trackBorder`，焦点环不再借用轨道边框宽度。
 

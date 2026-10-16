@@ -46,8 +46,6 @@ A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live �
 
 `iconMarkup(name, strokeWidth, filled?)` 是要求显式描边的纯 helper；只有 `<Icon>` 从主题解析默认值。SVG viewBox、百分比换算、布局收缩/拉伸与 reduced-motion 的零时长仍是结构或可访问性常量。
 
-原生消费者回归入口为 `src/ui/verification/configuration-controls.test.tsx`，旧常量 mutation 入口为 `src/ui/verification/mutations-configuration-controls.mjs`（在 `apps/gpuix` 运行）。Mutation 复用统一隔离执行器，不改当前源码。Cursor 用原生事件后的节点状态验证；操作系统实际指针形状须由组合界面验收补证。本节描述契约与验证入口，不声明已执行这些新增检查。
-
 ## 文案与通知策略
 
 共享组件不定义自然语言 fallback；显示、朗读、编辑与测宽所需文案由调用方提供。

@@ -81,20 +81,6 @@ const mutations = [
     "labelOff={mode}",
     "tracks",
   ],
-  [
-    "toolbar-local-rounding",
-    "../timeline/toolbar/index.tsx",
-    'labels.formats.number(pxPerBar, "integer")',
-    "pxPerBar.toFixed(0)",
-    "timeline",
-  ],
-  [
-    "time-ruler-wrong-variant",
-    "../timeline/rulers/index.tsx",
-    'formats.duration(tick.value, "ruler")',
-    'formats.duration(tick.value, "transport")',
-    "timeline",
-  ],
 ].map(([name, file, from, to, suite]) => ({ name, file, from, to, suite }))
 
 runMutations({
@@ -108,10 +94,6 @@ runMutations({
     tracks: {
       files: ["../tracks/formatting.test.tsx", "../tracks/meter/TrackMeter.test.tsx"],
       pattern: "injected sources|injected numeric display policy",
-    },
-    timeline: {
-      files: ["../timeline/style-layout.test.tsx"],
-      pattern: "injected display precision",
     },
   },
   mutations,

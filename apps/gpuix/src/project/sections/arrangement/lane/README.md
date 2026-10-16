@@ -33,7 +33,7 @@ controller 的 `LaneCursor` 只表达 `default`、`grab`、`grabbing`、`disable
 
 `theme.design.editor` 拥有 Clip body/grid/automation preview/ghost/hover shade、选区与分组预览透明度、loop/播放头/插入/对齐线宽、inline radius、fade stroke 与 minor grid stroke；`theme.project.gridMinorOpacity` 拥有车道 minor 网格透明度。diamond 的半描边 inset 是 SVG 边缘补偿，不是独立视觉来源。100% 拉伸、坐标原点、完整 opacity 1、空几何 0、quad 的四元组 stride 与二等分中心计算是结构或数学常量。
 
-`configuration.test.tsx` 对真实 Native lane、grid uploads、overlay、automation points 和 retained fade geometry 注入非默认来源；`interactions/controller.test.tsx` 通过真实输入 host 覆盖默认/重映射光标和两种 inline editor 圆角。回归会关闭 TestRoot 并恢复工程 store；验证由集成 owner 统一运行，不把新增用例视为已执行证据。
+`interactions/controller.test.tsx` 通过真实输入 host 覆盖默认/重映射光标和两种 inline editor 圆角。
 
 窗口键盘 owner 在 timeline。lane 选择、Split、副本、重命名、删除、复制/剪切/粘贴与拖动 Escape 经稳定编辑面分派；Space 继续传播给窗口播放 owner。Clip 标题点击设插入点到左起点；内容点击设到点击位置；点击不打开 Clip View。`timeline-viewport` 失焦取消手势，虚拟 source row 卸载不结束稳定捕获。
 

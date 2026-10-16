@@ -106,7 +106,7 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，仍未�
 
 外部 store/Scene 更新的原生组件测试必须用真实 `flushSync` 提交 React，再 `renderer.flush()` 绘制；单独 native flush 不能证明 UI 已跟随状态变化。永久测试保留音乐位置/时间缩放、事务/历史、epoch、MIDI/B 模式与真实按键传播，性质测试配实际变异检查。
 
-`style-layout.test.tsx` 覆盖原生标尺、Minimap 与完整时间线组合的 design/layout 覆盖输入。`grid/parity.test.tsx` 分别覆盖粗线宽、细线宽与细线透明度，用 div oracle 对照原生 PNG，并要求覆盖结果不同于默认图。新增回归的执行结果由协调者集成验证记录，不在此预先声明通过。
+`grid/parity.test.tsx` 分别覆盖粗线宽、细线宽与细线透明度，用 div oracle 对照原生 PNG。
 
 A3b 消费回归复用 `ui/controls/Menu/{interaction,pointer}.test.tsx`、`DragPad/{DragPadNumber,variants}.test.tsx`、`platform/keyboard/keyboard-native.test.tsx`；最终文本焦点 lease 由 `app/project/composition.test.tsx` 的真实 DragPad→timeline 组合回归覆盖。`bun src/project/sections/arrangement/timeline/verification/mutations.ts` 运行内存变异，不写共享源码；每个变异必须实际加载且使行为断言失败。
 

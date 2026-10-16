@@ -67,7 +67,7 @@ Clip slot 的唯一类型由 `clip-edit` 定义，只含 `clipId`、`trackId`、
 
 `AppFrame` 在 layout effect 配置 `ToastPolicy`，卸载时清空通知与 timer。`Toaster` 只消费调用方传入的 presentation policy、关闭/加载文字及区域名称；UI 不反向读取工程或设置模块。调整 queueLimit 会淘汰最早通知并清理 timer，已保留通知不重新计时；默认时长只影响之后新建或替换的通知。
 
-`verification/configuration-surfaces.mjs capture <外部目录>` 捕获 Gallery 与真实后端业务组合；`compare <迁移前目录> <迁移后目录>` 比较同名 PNG 字节。`configuration.test.tsx` 与 `verification/mutations-configuration.mjs` 验证布局、预设几何、字重和遮罩来源的消费者行为，变异只修改临时源码副本。
+`verification/configuration-surfaces.mjs capture <外部目录>` 捕获 Gallery 与真实后端业务组合；`compare <迁移前目录> <迁移后目录>` 比较同名 PNG 字节。
 
 ## 验证入口
 
