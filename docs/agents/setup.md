@@ -15,7 +15,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 ## 验证命令（gpuix）
 
-在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`），按顺序执行：渲染器身份校验（十一补丁，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、`bun test`、review scan（`baseRef...HEAD`，默认 `gpuix-migration`；未提交的改动不在扫描范围内），最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
+在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`），按顺序执行：渲染器身份校验（`scripts/gpuix-main/config.json` 登记的补丁序列，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、`bun test`、review scan（`baseRef...HEAD`，默认 `gpuix-migration`；未提交的改动不在扫描范围内），最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
 
 ## 根工具与度量
 
@@ -25,7 +25,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 正确性、类型、无障碍与项目架构/token 是硬门禁。自动检查只覆盖规则声明的静态范围，不代表完整依赖图或所有动态样式已验证。不要未经审查重跑 `ultracite init` 覆盖项目配置；升级时核对预设、peer 绑定与本地规则，再执行对应工具、类型、测试和界面验证。
 
-按纯本地开发验收，不上传 GitHub、不触发远程流程，不把 workflow 文件存在称为 CI 已运行。
+按纯本地开发验收，不上传 GitHub、不触发远程流程，不把 workflow 文件存在称为 CI 已运行。`.github/workflows/ci.yml` 在 macOS 上执行同一套 `build.sh` 与 `verify:gpuix`；`build.sh` 只在 `CI=true` 时允许 Cargo target 不在 `/Volumes/PSSD`。
 
 UI 改动必须在真实 gpuix 窗口验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制。
 

@@ -10,9 +10,10 @@ readonly vendor="$vendor_root/$revision"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/Volumes/PSSD/code/_vendor/target}"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-6}"
 
+# Local builds keep the large target on the external disk; hosted CI runners have no such volume.
 case "$CARGO_TARGET_DIR" in
   /Volumes/PSSD/*) ;;
-  *) echo "CARGO_TARGET_DIR must stay on /Volumes/PSSD" >&2; exit 1 ;;
+  *) [ "${CI:-}" = "true" ] || { echo "CARGO_TARGET_DIR must stay on /Volumes/PSSD" >&2; exit 1; } ;;
 esac
 case "$CARGO_BUILD_JOBS" in
   [1-6]) ;;
