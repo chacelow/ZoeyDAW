@@ -33,9 +33,6 @@ export interface TrackTextLabels {
   readonly noOutput: string
   readonly externalOutput: string
   readonly monitor: string
-  readonly monitorIn: string
-  readonly monitorAuto: string
-  readonly monitorOff: string
   readonly mixer: string
   readonly trackEnabled: string
   readonly recordArm: string
