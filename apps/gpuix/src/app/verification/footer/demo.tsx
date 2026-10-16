@@ -3,7 +3,7 @@ import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { PublicInstance } from "@gpuix/react"
 import { render, useGpuix } from "@gpuix/react"
-import { nativeCursorLock } from "@/platform/cursor"
+import { createNativeCursorLock } from "@/platform/cursor"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
 import { Group, Panel, PanelDivider, PanelEnvironmentProvider } from "@/ui/panels"
@@ -101,11 +101,12 @@ function NativeDiagnostics() {
 function NativePanels() {
   const theme = useTheme()
   const { renderer } = useGpuix()
-  const { windowPlatform, frameSource } = useMemo(() => {
+  const { windowPlatform, frameSource, cursorLock } = useMemo(() => {
     if (!renderer) throw new Error("Native verification requires its renderer")
     return {
       windowPlatform: createWindowPlatform(renderer),
       frameSource: createAnimationFrameSource(renderer),
+      cursorLock: createNativeCursorLock(renderer),
     }
   }, [renderer])
   const [view, setView] = useState<FooterView>("devices")
@@ -181,7 +182,7 @@ function NativePanels() {
         <ControlEnvironmentProvider
           value={{
             setInfo,
-            cursorLock: nativeCursorLock,
+            cursorLock,
             inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY,
           }}
         >

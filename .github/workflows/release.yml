@@ -26,6 +26,8 @@ jobs:
         include:
           - runner: macos-15
             platform: macos-arm64
+          - runner: windows-latest
+            platform: windows-x64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     defaults:
@@ -33,7 +35,11 @@ jobs:
         shell: bash
     env:
       CARGO_BUILD_JOBS: 3
+      GPUIX_FORCE_WARP: ${{ matrix.platform == 'windows-x64' && '1' || '0' }}
     steps:
+      - name: Configure Windows Git line endings
+        if: matrix.platform == 'windows-x64'
+        run: git config --global core.autocrlf false
       - name: Checkout release tag
         uses: actions/checkout@v4
         with:
@@ -69,15 +75,24 @@ jobs:
 
       # Match ci.yml: absolute paths without '..', immutable vendor and rolling Cargo caches.
       - name: Set build cache paths
+        if: matrix.platform == 'macos-arm64'
         run: |
           echo "GPUIX_VENDOR_ROOT=$RUNNER_WORKSPACE/gpuix-vendor" >> "$GITHUB_ENV"
           echo "CARGO_TARGET_DIR=$RUNNER_WORKSPACE/gpuix-target" >> "$GITHUB_ENV"
 
+      - name: Set Windows build cache paths
+        if: matrix.platform == 'windows-x64'
+        shell: pwsh
+        run: |
+          "GPUIX_VENDOR_ROOT=$env:RUNNER_WORKSPACE/gpuix-vendor" >> $env:GITHUB_ENV
+          "CARGO_TARGET_DIR=$env:RUNNER_WORKSPACE/gpuix-target" >> $env:GITHUB_ENV
+          "B2_EVIDENCE_DIR=$env:RUNNER_TEMP/windows-release-evidence" >> $env:GITHUB_ENV
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/windows-release-evidence" | Out-Null
       - name: Cache patched gpuix renderer
         uses: actions/cache@v4
         with:
           path: ${{ env.GPUIX_VENDOR_ROOT }}
-          key: gpuix-vendor-${{ runner.os }}-${{ hashFiles('scripts/gpuix-main/config.json', 'scripts/gpuix-main/patches/**', 'scripts/gpuix-main/build.sh') }}
+          key: gpuix-vendor-${{ runner.os }}-${{ hashFiles('scripts/gpuix-main/config.json', 'scripts/gpuix-main/patches/**', 'scripts/gpuix-main/build.sh', 'scripts/gpuix-main/build-windows.mjs', 'scripts/gpuix-main/check.mjs', 'scripts/gpuix-main/paths.mjs') }}
 
       - name: Cache Cargo target
         uses: actions/cache@v4
@@ -96,8 +111,15 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: verify:gpuix
+        if: matrix.platform == 'macos-arm64'
         run: pnpm verify:gpuix HEAD~1
 
+      - name: verify:windows
+        if: matrix.platform == 'windows-x64'
+        shell: pwsh
+        run: |
+          node scripts/verify-windows.mjs 2>&1 | Tee-Object -FilePath "$env:B2_EVIDENCE_DIR/verify-windows.log"
+          exit $LASTEXITCODE
       - name: Install packaging tool
         run: cargo install cargo-packager --version 0.11.8 --locked
 
@@ -114,6 +136,7 @@ jobs:
       # A downloaded app whose signature is invalid opens as "damaged". Verify the shipped DMG and
       # zip contents (not the build-tree app) with the strict check Gatekeeper relies on.
       - name: Verify shipped signatures
+        if: matrix.platform == 'macos-arm64'
         run: |
           scratch=$(mktemp -d)
           hdiutil attach -nobrowse -readonly -mountpoint "$scratch/mnt" dist/release-assets/*.dmg
@@ -132,8 +155,18 @@ jobs:
           path: |
             dist/release-assets/*.dmg
             dist/release-assets/*.app.zip
+            dist/release-assets/*.exe
             dist/release-assets/SHA256SUMS-*
 
+      - name: Upload release verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-release-${{ matrix.platform }}
+          if-no-files-found: warn
+          path: |
+            dist/release-evidence
+            ${{ runner.temp }}/windows-release-evidence
   draft:
     name: Create draft release
     needs: build

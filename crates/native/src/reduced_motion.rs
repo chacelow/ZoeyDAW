@@ -1,5 +1,5 @@
-//! 系统「减少动态效果」设置：同步读取与变化订阅。GPUI 的 `App::reduce_motion` 不从系统读取,
-//! 所以由这里直接读 NSWorkspace。只有 macOS 实现;其它平台返回明确错误,不猜默认值。
+//! 系统「减少动态效果」设置：macOS NSWorkspace 与 Windows client-area animation。
+//! Windows observer 的隐藏顶层窗口由独立消息线程持有,Env teardown 注销并 join。
 use napi::{
     bindgen_prelude::{Either, Function, Null},
     threadsafe_function::ThreadsafeFunctionCallMode,
@@ -20,6 +20,7 @@ pub fn reduced_motion() -> Result<bool> {
 /// the observer. One observer per process; a new callback replaces the old one.
 #[napi]
 pub fn on_reduced_motion_change(
+    env: napi::Env,
     #[napi(ts_arg_type = "((reduced: boolean) => void) | null")] callback: Either<
         Function<'_, bool, ()>,
         Null,
@@ -38,7 +39,15 @@ pub fn on_reduced_motion_change(
         }
         Either::B(_) => None,
     };
-    platform::set_listener(listener)
+    #[cfg(windows)]
+    {
+        platform::set_listener(env, listener)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = env;
+        platform::set_listener(listener)
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -175,11 +184,15 @@ mod platform {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(windows)]
+#[path = "reduced_motion/windows.rs"]
+mod platform;
+
+#[cfg(not(any(target_os = "macos", windows)))]
 mod platform {
     use super::Listener;
 
-    const UNSUPPORTED: &str = "reduced motion is only read on macOS";
+    const UNSUPPORTED: &str = "reduced motion is only read on macOS and Windows";
 
     pub fn reduced_motion() -> napi::Result<bool> {
         Err(napi::Error::from_reason(UNSUPPORTED))

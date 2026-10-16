@@ -1,23 +1,64 @@
 diff --git a/packages/native/src/custom_elements/anchored.rs b/packages/native/src/custom_elements/anchored.rs
-index fc8922d..07a2507 100644
+index fc8922d..53dee80 100644
 --- a/packages/native/src/custom_elements/anchored.rs
 +++ b/packages/native/src/custom_elements/anchored.rs
-@@ -150,7 +150,13 @@ impl AnchoredElement {
-         if let Some(anchor) = self.anchor {
-             return anchor;
-         }
--        match (self.side, self.align) {
-+        // Only snap-mode trigger wrappers own cross-axis centering.
-+        // Explicit positions and switch fitting retain GPUI's original anchors.
-+        let align = match (self.position, self.fit, self.align) {
-+            (None, FitMode::Snap, Alignment::Center) => Alignment::Start,
-+            _ => self.align,
-+        };
-+        match (self.side, align) {
-             (Side::Top, Alignment::Start) => AnchorPoint::BottomLeft,
-             (Side::Top, Alignment::Center) => AnchorPoint::BottomCenter,
-             (Side::Top, Alignment::End) => AnchorPoint::BottomRight,
-@@ -438,3 +444,282 @@ impl CustomElement for AnchoredElement {
+@@ -190,6 +190,13 @@ impl AnchoredElement {
+                 .size_0()
+                 .child(layer)
+                 .into_any_element(),
++            (Side::Top, Alignment::Center) if matches!(self.fit, FitMode::Snap) => gpui::div()
++                .absolute()
++                .top_0()
++                .left(gpui::relative(0.5))
++                .size_0()
++                .child(layer)
++                .into_any_element(),
+             (Side::Top, Alignment::Center) => gpui::div()
+                 .absolute()
+                 .top_0()
+@@ -214,6 +221,13 @@ impl AnchoredElement {
+                 .size_0()
+                 .child(layer)
+                 .into_any_element(),
++            (Side::Right, Alignment::Center) if matches!(self.fit, FitMode::Snap) => gpui::div()
++                .absolute()
++                .right_0()
++                .top(gpui::relative(0.5))
++                .size_0()
++                .child(layer)
++                .into_any_element(),
+             (Side::Right, Alignment::Center) => gpui::div()
+                 .absolute()
+                 .top_0()
+@@ -238,6 +252,13 @@ impl AnchoredElement {
+                 .size_0()
+                 .child(layer)
+                 .into_any_element(),
++            (Side::Bottom, Alignment::Center) if matches!(self.fit, FitMode::Snap) => gpui::div()
++                .absolute()
++                .bottom_0()
++                .left(gpui::relative(0.5))
++                .size_0()
++                .child(layer)
++                .into_any_element(),
+             (Side::Bottom, Alignment::Center) => gpui::div()
+                 .absolute()
+                 .bottom_0()
+@@ -262,6 +283,13 @@ impl AnchoredElement {
+                 .size_0()
+                 .child(layer)
+                 .into_any_element(),
++            (Side::Left, Alignment::Center) if matches!(self.fit, FitMode::Snap) => gpui::div()
++                .absolute()
++                .left_0()
++                .top(gpui::relative(0.5))
++                .size_0()
++                .child(layer)
++                .into_any_element(),
+             (Side::Left, Alignment::Center) => gpui::div()
+                 .absolute()
+                 .top_0()
+@@ -438,3 +466,282 @@ impl CustomElement for AnchoredElement {
  
      fn destroy(&mut self) {}
  }

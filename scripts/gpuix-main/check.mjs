@@ -38,7 +38,7 @@ const vendor =
 const requiredOutputs = [
   "packages/native/index.js",
   "packages/native/index.d.ts",
-  `packages/native/gpuix-native.${process.platform}-${process.arch}.node`,
+  `packages/native/gpuix-native.${process.platform}-${process.arch}${process.platform === "win32" ? "-msvc" : ""}.node`,
   "packages/native/dist/host.js",
   "packages/native/dist/host.d.ts",
   "packages/native/dist/mutations.js",

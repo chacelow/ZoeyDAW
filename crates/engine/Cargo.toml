@@ -14,3 +14,4 @@ audioadapter-buffers = "=5.2.0"
 symphonia = { version = "=0.6.1", features = ["all"] }
 rubato = "=5.0.1"
 triple_buffer = "=9.0.0"
+url = "2.5.8"
