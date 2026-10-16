@@ -18,7 +18,7 @@
 
 `project/adapters/context.ts` 已注册真实 native backend 工厂。入口不再注册第二个，也不在模块初始化时打开会话。入口只安装 `createSnapshotStorage()`，供快照和最近工程列表使用。
 
-已有工程（recent、启动路径、历史返回）在取得 runtime lease 前调用 `openProjectSnapshot(projectId)`：先隔离工程 identity，再读取并经现有 snapshot parser hydrate。缺失快照打开空工程且不报错；读取/校验失败显示 `session.snapshotError`，保留 runtime，但 `canSaveSnapshot()` 关闭该 key 的保存能力，避免默认数据覆盖原始字节。重新成功打开或切换 identity 后解除保护。新建路由带 `openMode: "new"`，不读取快照；离开该条历史记录后其标记被消费，再次返回按已有工程打开。
+已有工程（recent、启动路径、历史返回）在取得 runtime lease 前调用 `openProjectSnapshot(projectId)`：先隔离工程 identity，再读取并经现有 snapshot parser hydrate。缺失快照打开空工程且不报错；读取/校验失败显示 `session.snapshotError`，保留 runtime，但 `canSaveSnapshot()` 关闭该 key 的保存能力，避免默认数据覆盖原始字节。重新成功打开、显式 Restore 成功或切换 identity 后解除保护。新建路由带 `openMode: "new"`，不读取快照；离开该条历史记录后其标记被消费，再次返回按已有工程打开。
 
 ## 设置
 
@@ -77,4 +77,4 @@ bun --hot src/main.tsx
 
 `verification/r1c-surfaces.tsx` 配合同一 native fixture preload，向命令行参数指定的仓库外目录采集中英文、深浅主题、MIDI/Audio 的八个工程组合。采集前确认工程与编辑器存在，root 在 finally 中卸载。R1c 回归、变异、自审及前台验收边界见 [R1c 验证报告](verification/R1C-REPORT.md)。
 
-`verification/r2-lifecycle.tsx` 配合同一 native fixture preload，验证 dirty 离开保存 → recent hydrate → 损坏快照拒绝覆盖的实际 AppShell 路径，并采集少量完整组合截图/AX（中英文、深浅主题）。`verification/mutations-r2.mjs` 覆盖 UPA-01/02；locale 与 log 各自的 `verification/mutations-r2.mjs` 覆盖 UPA-03/08。R2 回归测试在 `project-lifecycle.test.tsx`，使用真实 native backend。
+`verification/r2-lifecycle.tsx` 配合同一 native fixture preload，验证 dirty 离开保存 → recent hydrate → 损坏快照拒绝覆盖 → 修复后 Restore 恢复保存的实际 AppShell 路径，并采集少量完整组合截图/AX（中英文、深浅主题）。`verification/mutations-r2.mjs` 覆盖 UPA-01/02；locale 与 log 各自的 `verification/mutations-r2.mjs` 覆盖 UPA-03/08。R2 回归测试在 `project-lifecycle.test.tsx`，使用真实 native backend。
