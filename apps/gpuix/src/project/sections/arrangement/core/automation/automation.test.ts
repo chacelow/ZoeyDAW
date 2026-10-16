@@ -10,7 +10,7 @@ import { marqueePointIds } from "./selection"
 import { flatLinePoint, shouldInsertFlatPoint } from "./flat"
 import { moveSegment, insertSegmentPoint, shouldInsertSegmentPoint } from "./segment"
 import { paintAutomation } from "./drawing"
-import { automationAction, automationCursor } from "."
+import { automationAction } from "."
 import type { DrawingState } from "./drawing"
 
 function setup() {
@@ -327,6 +327,4 @@ test("automation gesture routing prefers draw then point then segment then flat 
   expect(automationAction(line, false, 0)).toBe("flat")
   expect(automationAction(background, false, 0)).toBe("marquee")
   expect(automationAction(point, false, 2)).toBeNull()
-  expect(automationCursor(point, false)).toBe("grab")
-  expect(automationCursor(segment, false)).toBe("ns-resize")
 })

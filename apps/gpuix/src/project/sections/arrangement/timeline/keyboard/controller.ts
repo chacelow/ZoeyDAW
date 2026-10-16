@@ -41,7 +41,7 @@ export interface KeyboardOwner {
 }
 
 export interface TimelineKeyboardDeps {
-  policy?: ArrangementPolicy["keyboard"]
+  readPolicy?: () => ArrangementPolicy["keyboard"]
   focus: () => KeyboardFocus
   blurControl: () => void
   claim?: (event: TimelineKeyboardInput) => boolean
@@ -49,7 +49,7 @@ export interface TimelineKeyboardDeps {
 
 export function createTimelineKeyboard({
   focus,
-  policy = ARRANGEMENT_DEFAULTS.keyboard,
+  readPolicy = () => ARRANGEMENT_DEFAULTS.keyboard,
   blurControl,
   claim = () => false,
 }: TimelineKeyboardDeps): KeyboardOwner {
@@ -145,7 +145,7 @@ export function createTimelineKeyboard({
           if (!event.isHeld)
             projectActions.setMidiVelocity(
               state.session.midiVelocity +
-                (key === "v" ? policy.velocityStep : -policy.velocityStep)
+                (key === "v" ? readPolicy().velocityStep : -readPolicy().velocityStep)
             )
           return true
         }

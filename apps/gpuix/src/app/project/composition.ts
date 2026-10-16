@@ -25,7 +25,7 @@ export interface ProjectComposition {
 }
 
 export interface ProjectCompositionDependencies {
-  readonly policy?: ArrangementPolicy
+  readonly readPolicy?: () => ArrangementPolicy
   readonly interaction: AppInteraction
   readonly keyboard: WindowKeyboard
   readonly clipboard: NativeClipboard
@@ -39,7 +39,7 @@ export interface ProjectCompositionDependencies {
 
 /** Controllers share one scene; the timeline owns its projection and keyboard. */
 export function createProjectComposition(deps: ProjectCompositionDependencies): ProjectComposition {
-  const policy = deps.policy ?? ARRANGEMENT_DEFAULTS
+  const readPolicy = deps.readPolicy ?? (() => ARRANGEMENT_DEFAULTS)
   const sceneStore = createSceneStore(deps.geometry)
   let clipKey: number | undefined
   let windowKey: number | undefined
@@ -61,7 +61,7 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
   })
   const timeline = createTimelineController({
     sceneStore,
-    policy,
+    readPolicy,
     initialSize: { containerWidth: 0, bodyHeight: 0, timelineLeft: 0 },
     metrics: deps.metrics,
     subscribeWindowActive: deps.subscribeWindowActive,
@@ -86,7 +86,7 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
   })
   lane = createLaneController({
     scene: sceneStore,
-    policy,
+    readPolicy,
     actions: projectActions,
     getState: useProjectState.getState,
     clipboard: deps.clipboard,

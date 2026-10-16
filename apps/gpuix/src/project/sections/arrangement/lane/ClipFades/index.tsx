@@ -5,7 +5,7 @@ import { Shape } from "@/shared/svg/Shape"
 import type { ShapePath } from "@/shared/svg/Shape"
 import { cubicAreaPath, cubicPath, polygonPath } from "@/shared/svg/paths"
 import type { Point } from "@/shared/svg/paths"
-import { FADE_HANDLE_PX, fadeHandleX } from "../../core/clip-geometry"
+import { fadeHandleX } from "../../core/clip-geometry"
 import type { ClipVisualGeometry } from "../../core/clip-geometry"
 
 interface FadeAnchor {
@@ -31,16 +31,18 @@ export const ClipFades = memo(function ClipFades({
   const top = geometry.bodyHeight ? geometry.bodyTop : geometry.top
   const height = geometry.bodyHeight || geometry.height
   const size = theme.project.arrangementFadeHandleSize
+  const strokeWidth = theme.design.editor.fadeStrokeWidth
   const diamond = useMemo(() => {
     const half = size / 2
-    const inset = 1 / 2
+    // Half-stroke inset keeps the SVG diamond stroke inside its coordinate bounds.
+    const inset = strokeWidth / 2
     return polygonPath([
       { x: half, y: inset },
       { x: size - inset, y: half },
       { x: half, y: size - inset },
       { x: inset, y: half },
     ])
-  }, [size])
+  }, [size, strokeWidth])
   const visuals = useMemo(() => {
     const masks: ShapePath[] = []
     const strokes: ShapePath[] = []
@@ -55,7 +57,7 @@ export const ClipFades = memo(function ClipFades({
           outside.push({ id: fade.edge, left: fade.end.x, right: geometry.left + geometry.width })
       }
       if (!fade.handlesVisible) continue
-      if (fade.active) strokes.push({ d: cubicPath(fade.start, fade.segments), strokeWidth: 1 })
+      if (fade.active) strokes.push({ d: cubicPath(fade.start, fade.segments), strokeWidth })
       anchors.push({
         id: `${fade.edge}-peak`,
         kind: "peak",
@@ -66,11 +68,11 @@ export const ClipFades = memo(function ClipFades({
         kind: "quiet",
         point: fade.edge === "in" ? fade.start : fade.end,
       })
-      if (fade.end.x - fade.start.x >= FADE_HANDLE_PX * 2)
+      if (fade.end.x - fade.start.x >= geometry.fadeHitSize * 2)
         anchors.push({ id: `${fade.edge}-curve`, kind: "curve", point: fade.curve })
     }
     return { masks, strokes, outside, anchors }
-  }, [geometry, top])
+  }, [geometry, top, strokeWidth])
   const viewBox = `${visibleLeft} ${top} ${width} ${height}`
   const shapeStyle = sx({
     position: "absolute",
@@ -157,7 +159,7 @@ export const ClipFades = memo(function ClipFades({
             ),
             width: size,
             height: size,
-            borderWidth: anchor.kind === "curve" ? 0 : 1,
+            borderWidth: anchor.kind === "curve" ? 0 : strokeWidth,
             borderColor: theme.colors.arrangementClipInk,
             backgroundColor: anchor.kind === "curve" ? undefined : bodyFill,
             pointerEvents: "none",
@@ -175,7 +177,7 @@ export const ClipFades = memo(function ClipFades({
               <Shape
                 width={size}
                 height={size}
-                paths={[{ d: diamond, strokeWidth: 1 }]}
+                paths={[{ d: diamond, strokeWidth }]}
                 color={theme.colors.arrangementClipInk}
                 style={sx({ position: "absolute", left: 0, top: 0, pointerEvents: "none" })}
               />

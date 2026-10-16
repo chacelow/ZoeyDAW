@@ -131,7 +131,13 @@ for (const appearance of appearances)
     scene.setViewport({ width: 1280, height: 800, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
     const card = createClipCardProjection()(
       scene.get(),
-      { track: audio, top: 0, height: audio.heightPx, trackGeometry: DEFAULT_LAYOUT_TOKENS.track },
+      {
+        track: audio,
+        top: 0,
+        height: audio.heightPx,
+        trackGeometry: DEFAULT_LAYOUT_TOKENS.track,
+        arrangementGeometry: DEFAULT_LAYOUT_TOKENS.arrangement,
+      },
       false
     )[0]
     if (!card) throw new Error("Missing native fixture Clip")

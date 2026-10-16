@@ -55,7 +55,7 @@ test("follow trigger and recentering anchor are independent preferences", () => 
 
 test("minimum zoom fits the configured timeline extent and uses the unmeasured policy fallback", () => {
   const input = {
-    geometry: DEFAULT_LAYOUT_TOKENS.track,
+    geometry: DEFAULT_LAYOUT_TOKENS,
     bars: 128,
     containerWidth: DEFAULT_LAYOUT_TOKENS.track.controlsWidth + 800,
     bodyHeight: 300,

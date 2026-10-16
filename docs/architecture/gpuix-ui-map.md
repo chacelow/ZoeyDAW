@@ -80,11 +80,11 @@
 
 ### `project/sections/arrangement/timeline`
 
-`arrangement-timeline`、`marker-name-editor`、`minimap-clip-…`、`minimap-frame`、`minimap-marker-…`、`minimap-playhead`、`minimap-track-…`、`ruler-loop`、`ruler-marker-…`、`ruler-position-…`、`timeline-grid`、`timeline-grid-choice`、`timeline-horizontal-scroll`、`timeline-layout`、`timeline-minimap`、`timeline-rulers`、`timeline-save`、`timeline-time-ruler`、`timeline-toolbar`、`timeline-viewport`
+`arrangement-timeline`、`marker-name-editor`、`minimap-clip-…`、`minimap-frame`、`minimap-marker-…`、`minimap-playhead`、`minimap-track-…`、`ruler-loop`、`ruler-marker-…`、`ruler-position-…`、`time-ruler-label-…`、`time-ruler-tick-…`、`timeline-grid`、`timeline-grid-choice`、`timeline-horizontal-scroll`、`timeline-layout`、`timeline-minimap`、`timeline-rulers`、`timeline-save`、`timeline-time-ruler`、`timeline-toolbar`、`timeline-viewport`
 
 ### `project/sections/arrangement/tracks`
 
-`track-actions-…`、`track-arm-…`、`track-arm-space-…`、`track-automation-…`、`track-color-…`、`track-cue-output-…`、`track-cue-volume-…`、`track-delete-…`、`track-drop-target-…`、`track-enabled-…`、`track-fold-…`、`track-group-frame-…`、`track-identity-…`、`track-input-…`、`track-input-channel-…`、`track-label-…`、`track-lane-…`、`track-menu-…`、`track-meter-…`、`track-meter-floor-…`、`track-meter-peak-…`、`track-meter-zero-…`、`track-mixer-…`、`track-monitor-…`、`track-name-…`、`track-output-…`、`track-output-channel-…`、`track-pan-…`、`track-pinned-viewport`、`track-position-…`、`track-post-…`、`track-rail-…`、`track-rails-…`、`track-rename-…`、`track-resize-…`、`track-routing-…`、`track-row-…`、`track-rows`、`track-scrollable-viewport`、`track-send-…`、`track-sends-…`、`track-solo-…`、`track-title-…`、`track-volume-…`
+`track-actions-…`、`track-arm-…`、`track-arm-space-…`、`track-automation-…`、`track-color-…`、`track-cue-output-…`、`track-cue-volume-…`、`track-delete-…`、`track-drop-target-…`、`track-enabled-…`、`track-fold-…`、`track-group-frame-…`、`track-identity-…`、`track-input-…`、`track-input-channel-…`、`track-label-…`、`track-lane-…`、`track-menu-…`、`track-meter-…`、`track-meter-floor-…`、`track-meter-gradient-…`、`track-meter-peak-…`、`track-meter-zero-…`、`track-mixer-…`、`track-monitor-…`、`track-name-…`、`track-output-…`、`track-output-channel-…`、`track-pan-…`、`track-pinned-viewport`、`track-position-…`、`track-post-…`、`track-rail-…`、`track-rails-…`、`track-rename-…`、`track-resize-…`、`track-routing-…`、`track-row-…`、`track-rows`、`track-scrollable-viewport`、`track-send-…`、`track-sends-…`、`track-solo-…`、`track-title-…`、`track-volume-…`
 
 ### `project/sections/browser`
 

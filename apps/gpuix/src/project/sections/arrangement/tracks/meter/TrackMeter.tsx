@@ -75,8 +75,10 @@ export function TrackMeter({
     })
   }, [trackId, epoch, driver, policy, minDb, silentDisplay])
   const width = theme.control["--spacing-control-track"]
-  const channelWidth = Math.floor((width - 1) / 2)
-  const zeroY = Math.min(height - 1, Math.round((height * maxDb) / (maxDb - minDb)))
+  const { channelGap, peakWidth, zeroWidth, warningStop } = theme.design.editor.meter
+  // Stereo has two channels; level ratios remain normalized independently of visual metrics.
+  const channelWidth = Math.floor((width - channelGap) / 2)
+  const zeroY = Math.min(height - zeroWidth, Math.round((height * maxDb) / (maxDb - minDb)))
   return (
     <div
       role="meter"
@@ -99,7 +101,7 @@ export function TrackMeter({
         const peak = channel === "left" ? display.leftPeak : display.rightPeak
         const top = Math.round(height * (1 - (level - minDb) / (maxDb - minDb)))
         const peakY = Math.min(
-          height - 1,
+          height - peakWidth,
           Math.round(height * (1 - (peak - minDb) / (maxDb - minDb)))
         )
         return (
@@ -108,9 +110,9 @@ export function TrackMeter({
             testId={`track-meter-${channel}-${trackId}`}
             style={{
               position: "absolute",
-              left: index === 0 ? 0 : channelWidth + 1,
+              left: index === 0 ? 0 : channelWidth + channelGap,
               top: 0,
-              width: index === 0 ? channelWidth : width - channelWidth - 1,
+              width: index === 0 ? channelWidth : width - channelWidth - channelGap,
               height,
               overflow: "hidden",
               backgroundColor: theme.colors.arrangementMeterGood,
@@ -118,6 +120,7 @@ export function TrackMeter({
           >
             <div
               aria-hidden="true"
+              testId={`track-meter-gradient-${channel}-${trackId}`}
               style={{
                 position: "absolute",
                 top: zeroY,
@@ -126,10 +129,11 @@ export function TrackMeter({
                 right: 0,
                 background: {
                   type: "linear-gradient",
+                  // A half turn directs the normalized gradient downward; this is geometry, not style.
                   angle: 180,
                   stops: [
                     { position: 0, color: theme.colors.arrangementMeterWarn },
-                    { position: 0.3, color: theme.colors.arrangementMeterGood },
+                    { position: warningStop, color: theme.colors.arrangementMeterGood },
                   ],
                 },
               }}
@@ -166,7 +170,7 @@ export function TrackMeter({
                   top: peakY,
                   left: 0,
                   right: 0,
-                  height: 1,
+                  height: peakWidth,
                   backgroundColor: theme.colors.arrangementMeterPeak,
                 }}
               />
@@ -182,7 +186,7 @@ export function TrackMeter({
           left: 0,
           right: 0,
           top: zeroY,
-          height: 1,
+          height: zeroWidth,
           backgroundColor: theme.colors.arrangementSurfaceAlt,
         }}
       />

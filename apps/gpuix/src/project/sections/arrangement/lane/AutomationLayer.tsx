@@ -6,7 +6,6 @@ import { polylinePath } from "@/shared/svg/paths"
 import type { Point } from "@/shared/svg/paths"
 import {
   activeAutomationRows,
-  AUTOMATION_POINT_RADIUS,
   automationBar,
   automationRowValue,
   automationSegmentValue,
@@ -18,6 +17,7 @@ import type { ArrangementScene } from "../core/scene"
 export function AutomationLayer({ scene, trackId }: { scene: ArrangementScene; trackId: string }) {
   const theme = useTheme()
   const width = scene.viewport.width
+  const pointRadius = scene.geometry.arrangement.automationPointRadius
   const step = theme.control["--spacing-control-track-gap"]
   const rows = useMemo(
     () => activeAutomationRows(scene).filter(row => row.track.id === trackId),
@@ -88,8 +88,8 @@ export function AutomationLayer({ scene, trackId }: { scene: ArrangementScene; t
             {points
               .filter(
                 point =>
-                  automationX(scene, point.bar) + AUTOMATION_POINT_RADIUS > 0 &&
-                  automationX(scene, point.bar) - AUTOMATION_POINT_RADIUS < width
+                  automationX(scene, point.bar) + pointRadius > 0 &&
+                  automationX(scene, point.bar) - pointRadius < width
               )
               .map(point => {
                 const selection = scene.targetSelection
@@ -98,9 +98,7 @@ export function AutomationLayer({ scene, trackId }: { scene: ArrangementScene; t
                   selection.trackId === row.track.id &&
                   selection.laneId === row.laneId &&
                   selection.pointIds.includes(point.id)
-                const radius = selected
-                  ? AUTOMATION_POINT_RADIUS
-                  : theme.control["--spacing-control-gap"]
+                const radius = selected ? pointRadius : theme.control["--spacing-control-gap"]
                 return (
                   <div
                     key={point.id}

@@ -9,8 +9,8 @@ const mutations = [
   [
     "hit-left-tolerance",
     "hit-test.ts",
-    "fromLeft <= RESIZE_EDGE_PX",
-    "fromLeft <= RESIZE_EDGE_PX - 1",
+    "fromLeft <= hit.clipResizeEdge",
+    "fromLeft <= hit.clipResizeEdge - 1",
   ],
   ["hit-right-sign", "hit-test.ts", "left + width - pointX", "pointX - left - width"],
   [

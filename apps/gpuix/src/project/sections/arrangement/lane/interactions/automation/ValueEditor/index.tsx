@@ -157,7 +157,7 @@ function ValueInput({
         ),
         top: Math.max(0, y - theme.control["--spacing-control-icon"]),
         width: theme.project.identityWidth,
-        borderRadius: 0,
+        borderRadius: theme.design.editor.inlineRadius,
         borderColor: theme.colors.primary,
         paddingLeft: theme.control["--spacing-control-gap"],
         paddingRight: theme.control["--spacing-control-gap"],

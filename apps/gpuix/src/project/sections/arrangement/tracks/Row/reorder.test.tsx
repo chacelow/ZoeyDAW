@@ -20,7 +20,7 @@ function projectedRows() {
     useProjectState.getState().document.tracks.filter(track => projectedIds.has(track.id)),
     0,
     300,
-    DEFAULT_LAYOUT_TOKENS.track
+    DEFAULT_LAYOUT_TOKENS
   )
 }
 

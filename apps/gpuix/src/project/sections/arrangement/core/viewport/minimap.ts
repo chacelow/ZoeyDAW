@@ -2,8 +2,6 @@ import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { clampScrollX, minimapDragZoom } from "./zoom"
 import type { MinimapViewport } from "./zoom"
 
-const EDGE_HIT_WIDTH = 6
-
 export interface MinimapGeometry extends MinimapViewport {
   policy: ArrangementPolicy
   bars: number
@@ -22,13 +20,14 @@ export interface MinimapAnchor {
 }
 
 export function minimapHit(x: number, width: number, geometry: MinimapGeometry): MinimapHit {
+  const edgeWidth = geometry.policy.zoom.minimapEdgeHitPixels
   const span = Math.min(geometry.bars, geometry.viewportWidth / geometry.pxPerBar)
   const left = (geometry.scrollX / geometry.pxPerBar / geometry.bars) * width
   const right = left + (span / geometry.bars) * width
-  if (x < left - EDGE_HIT_WIDTH || x > right + EDGE_HIT_WIDTH) {
+  if (x < left - edgeWidth || x > right + edgeWidth) {
     return "jump"
   }
-  if (Math.min(Math.abs(x - left), Math.abs(x - right)) <= EDGE_HIT_WIDTH) {
+  if (Math.min(Math.abs(x - left), Math.abs(x - right)) <= edgeWidth) {
     return Math.abs(x - left) <= Math.abs(x - right) ? "left" : "right"
   }
   return "body"

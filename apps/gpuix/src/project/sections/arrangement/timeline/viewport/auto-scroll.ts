@@ -15,13 +15,13 @@ export interface TimelineAutoScroll {
 export function createTimelineAutoScroll({
   scene,
   edge,
-  policy,
+  readPolicy,
   setScroll,
   onScroll,
 }: {
   scene: SceneStore
   edge: number
-  policy: ArrangementPolicy["autoScroll"]
+  readPolicy: () => ArrangementPolicy["autoScroll"]
   setScroll: (x: number, y: number) => ArrangementViewport
   onScroll: (pointer: NativeTimelinePointer) => void
 }): TimelineAutoScroll {
@@ -42,11 +42,11 @@ export function createTimelineAutoScroll({
       viewport: current.viewport,
       bars: current.bars,
       tracks: current.tracks,
-      geometry: current.geometry.track,
+      geometry: current.geometry,
       pointer,
       axis,
       edge,
-      policy,
+      policy: readPolicy(),
       elapsed: last === null ? 0 : now - last,
     })
     last = now

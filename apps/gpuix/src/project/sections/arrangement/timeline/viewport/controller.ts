@@ -14,7 +14,7 @@ import { revealTrackScrollY } from "../../core/layout"
 import type { EventPayload } from "@gpuix/react"
 import type { TimelineViewport as ClampedTimelineViewport } from "../../core/viewport/zoom"
 import type { Track } from "@/project/model/types"
-import type { TrackGeometry } from "@/project/layout"
+import type { ArrangementGeometry } from "../../core/scene"
 
 export interface TimelineSize {
   containerWidth: number
@@ -25,7 +25,7 @@ export interface TimelineSize {
 export interface TimelineViewportSnapshot extends ClampedTimelineViewport {
   bars: number
   tracks: readonly Track[]
-  geometry: TrackGeometry
+  geometry: ArrangementGeometry
 }
 
 export interface TimelineViewportController {
@@ -40,7 +40,7 @@ export interface TimelineViewportController {
 
 export function readTimelineViewport(
   size: TimelineSize,
-  geometry: TrackGeometry,
+  geometry: ArrangementGeometry,
   policy: ArrangementPolicy
 ): TimelineViewportSnapshot {
   const { document: project, workspace, session } = useProjectState.getState()
@@ -76,21 +76,21 @@ export function readTimelineViewport(
 
 export function createTimelineViewport(
   readSize: () => TimelineSize,
-  readGeometry: () => TrackGeometry,
-  policy: ArrangementPolicy = ARRANGEMENT_DEFAULTS
+  readGeometry: () => ArrangementGeometry,
+  readPolicy: () => ArrangementPolicy = () => ARRANGEMENT_DEFAULTS
 ): TimelineViewportController {
   let manualPanUntil = 0
   function suspendFollow() {
-    manualPanUntil = performance.now() + policy.follow.manualPanPauseMs
+    manualPanUntil = performance.now() + readPolicy().follow.manualPanPauseMs
   }
   return {
-    read: () => readTimelineViewport(readSize(), readGeometry(), policy),
+    read: () => readTimelineViewport(readSize(), readGeometry(), readPolicy()),
     suspendFollow,
     clamp() {
       const { pxPerBar, scrollX, scrollY } = readTimelineViewport(
         readSize(),
         readGeometry(),
-        policy
+        readPolicy()
       )
       const workspace = useProjectState.getState().workspace
       if (
@@ -103,7 +103,7 @@ export function createTimelineViewport(
     },
     wheel(event: EventPayload) {
       const size = readSize()
-      const view = readTimelineViewport(size, readGeometry(), policy)
+      const view = readTimelineViewport(size, readGeometry(), readPolicy())
       const modifiers = event.modifiers
       const deltaX = -(event.deltaX ?? 0)
       const deltaY = -(event.deltaY ?? 0)
@@ -118,7 +118,7 @@ export function createTimelineViewport(
               anchorX: (event.x ?? size.timelineLeft) - size.timelineLeft,
               deltaY,
             },
-            policy.zoom
+            readPolicy().zoom
           )
         )
       } else {
@@ -138,13 +138,13 @@ export function createTimelineViewport(
     },
     zoom(direction: -1 | 1) {
       suspendFollow()
-      const view = readTimelineViewport(readSize(), readGeometry(), policy)
+      const view = readTimelineViewport(readSize(), readGeometry(), readPolicy())
       projectActions.setViewport(
-        stepZoom({ ...view, viewportWidth: view.timeViewportWidth, direction }, policy.zoom)
+        stepZoom({ ...view, viewportWidth: view.timeViewportWidth, direction }, readPolicy().zoom)
       )
     },
     reveal(trackId: string) {
-      const view = readTimelineViewport(readSize(), readGeometry(), policy)
+      const view = readTimelineViewport(readSize(), readGeometry(), readPolicy())
       const scrollY = revealTrackScrollY(
         view.tracks,
         view.bodyHeight,
@@ -155,7 +155,7 @@ export function createTimelineViewport(
       if (scrollY !== view.scrollY) projectActions.setViewport({ scrollY })
     },
     follow(transportBar: number) {
-      const view = readTimelineViewport(readSize(), readGeometry(), policy)
+      const view = readTimelineViewport(readSize(), readGeometry(), readPolicy())
       const state = useProjectState.getState()
       const scrollX = followViewport(
         {
@@ -167,7 +167,7 @@ export function createTimelineViewport(
           now: performance.now(),
           manualPanUntil,
         },
-        policy.follow
+        readPolicy().follow
       )
       if (scrollX !== view.scrollX) projectActions.setViewport({ scrollX })
     },

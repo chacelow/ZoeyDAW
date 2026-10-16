@@ -9,7 +9,7 @@ export function interactionLayer(
   pointer: Point,
   automationMode: boolean
 ): "ruler" | "clip" | "automation" {
-  if (pointer.y < arrangementBodyTop()) return "ruler"
+  if (pointer.y < arrangementBodyTop(scene.geometry.arrangement)) return "ruler"
   if (!automationMode) return "clip"
   return hitTest(scene, pointer.x, pointer.y, true)?.kind === "clip-title" ? "clip" : "automation"
 }

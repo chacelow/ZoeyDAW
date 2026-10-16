@@ -53,6 +53,10 @@ Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有�
 
 B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨道行位置沿用同一原点。时间线只裁剪整行 slot，负向内部偏移抵消外层标尺裁剪偏移，不拆开轨道头与车道。Minimap 在独立上方 Panel，纵向滚动不移动它。
 
+标尺高度与可编辑区域偏移读取 `theme.layout.arrangement`，组合根把同一 layout 注入 Scene。`barRulerHeight` 决定音乐标尺与编辑面起点，`timeRulerHeight` 决定底部裁剪。`MarkerEditor` 使用 `markerRulerHeight`；Minimap clip 行内距使用 `minimapClipInset`。
+
+标尺与 Minimap 的分界线、标记线、loop 边框和播放头读取 `design.editor` 的语义线宽。标记标签的 padding 扣除实际 `markerLineWidth`，保持文字起点。指针状态保存在组件内，原生 cursor 统一由 `design.cursors` 解析。
+
 音乐 `scrollX` 只有 **Minimap 下的一条 `ControlledScrollbar`**。它与标尺、车道共享逻辑范围，不构造整工程宽度的 native scroll 内容。工具栏自己的横向溢出仅用于访问控件，不是第二条音乐视口。全宽 `timeline-layout` 是唯一滚轮入口，透明 `timeline-viewport` 只处理 lane 指针、键盘与失焦。`interactionOverlay` 在它之上挂载 tracks 的分隔条矩形，不覆盖车道其他区域。原生组合回归覆盖一次 wheel 的平移量、车道与表头缩放比例，以及车道侧分隔条拖动。
 
 ## 网格的独立层
@@ -64,7 +68,7 @@ B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨�
 
 网格与音乐标尺的 Pattern 背景统一使用 `useQuadBatch` 命令式上传；网格按主题的粗/细线材质分批，不逐线挂载节点。可见几何仍来自 B1，不将 Float32Array 放入 React props/state。`grid/parity.test.tsx` 用固定的旧 div 绘制 oracle 对照深浅主题、标尺/车道高度、分数滚动与极端缩放的原生 PNG。标尺文字保留原生文本布局，时间刻度的短线与文字仍共用原位置节点；没有为少量文字标签另建绘制系统。
 
-GridLine 的半开可见范围过滤与 quad 打包由 `core/rulers/grid-quads.packGridQuads` 唯一实现；普通细线透明度与 lane 共用 `MINOR_GRID_OPACITY`。边缘滚动调用 `core/viewport/edge-scroll`，timeline 只持有活动指针、axis 与 last-frame 生命周期。Ruler 不再镜像写 `projectPreview/timeSelection`，这些工程投影仅由 TimelineController 订阅更新。
+GridLine 的半开可见范围过滤与 quad 打包由 `core/rulers/grid-quads.packGridQuads` 唯一实现，调用方显式传入粗线与细线宽度。粗线读取 `project.arrangementGridMajorLineWidth`，细线读取 `design.editor.gridMinorStrokeWidth`，细线透明度与 lane 共用 `project.gridMinorOpacity`。边缘滚动调用 `core/viewport/edge-scroll`，timeline 只持有活动指针、axis 与 last-frame 生命周期。Ruler 不再镜像写 `projectPreview/timeSelection`，这些工程投影仅由 TimelineController 订阅更新。
 
 标签间距的 38/56 默认来自 web，可读性配置集中在 `RULER_LABEL_SPACING`。多档 Live 阈值及极端缩小时的明暗合并未对照 Live，不把估计写成实测结论。
 
@@ -101,6 +105,8 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，本切�
 本轮跨目录修复、红绿变异、自审及组合截图边界见 [R2 验证报告](../R2-VERIFICATION.md)。
 
 外部 store/Scene 更新的原生组件测试必须用真实 `flushSync` 提交 React，再 `renderer.flush()` 绘制；单独 native flush 不能证明 UI 已跟随状态变化。永久测试保留音乐位置/时间缩放、事务/历史、epoch、MIDI/B 模式与真实按键传播，性质测试配实际变异检查。
+
+`style-layout.test.tsx` 覆盖原生标尺、Minimap 与完整时间线组合的 design/layout 覆盖输入。`grid/parity.test.tsx` 分别覆盖粗线宽、细线宽与细线透明度，用 div oracle 对照原生 PNG，并要求覆盖结果不同于默认图。新增回归的执行结果由协调者集成验证记录，不在此预先声明通过。
 
 A3b 消费回归复用 `ui/controls/Menu/{interaction,pointer}.test.tsx`、`DragPad/{DragPadNumber,variants}.test.tsx`、`platform/keyboard/keyboard-native.test.tsx`；最终文本焦点 lease 由 `app/project/composition.test.tsx` 的真实 DragPad→timeline 组合回归覆盖。`bun src/project/sections/arrangement/timeline/verification/mutations.ts` 运行内存变异，不写共享源码；每个变异必须实际加载且使行为断言失败。
 

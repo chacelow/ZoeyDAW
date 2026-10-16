@@ -31,11 +31,14 @@ export function ClipNameEditor({
   const clip = row?.track.clips.find(item => item.id === selection.id)
   if (!row || !clip || row.top < row.clipTop) return null
   const rect = clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
-  const left = Math.max(0, Math.round(rect.left) + 1)
+  const left = Math.max(
+    0,
+    Math.round(rect.left) + scene.geometry.arrangement.clip.nameEditorLeftInset
+  )
   const width = Math.min(
     theme.project.controlsWidth,
     scene.viewport.width - left,
-    rect.left + rect.width - left - 2
+    rect.left + rect.width - left - scene.geometry.arrangement.clip.nameEditorRightInset
   )
   if (width <= theme.control["--spacing-control-track-gap"]) return null
   return (
@@ -46,9 +49,12 @@ export function ClipNameEditor({
       initial={clipLabel(clip)}
       t={t}
       left={left}
-      top={Math.round(rect.top + 1) - originY}
+      top={Math.round(rect.top + scene.geometry.arrangement.clip.verticalInset) - originY}
       width={width}
-      height={Math.min(scene.geometry.track.titleHeight, row.height - 2)}
+      height={Math.min(
+        scene.geometry.track.titleHeight,
+        row.height - scene.geometry.arrangement.clip.verticalInset * 2
+      )}
     />
   )
 }
@@ -100,7 +106,7 @@ function NameInput({
         top,
         width,
         height,
-        borderRadius: 0,
+        borderRadius: theme.design.editor.inlineRadius,
         borderColor: theme.colors.primary,
         backgroundColor: theme.colors.arrangementClipSelected,
         color: theme.colors.arrangementClipInk,

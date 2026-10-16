@@ -15,9 +15,10 @@ export function useGridQuads(
   const major = useQuadBatch()
   const minor = useQuadBatch()
   const majorWidth = theme.project.arrangementGridMajorLineWidth
+  const minorWidth = theme.design.editor.gridMinorStrokeWidth
   const values = useMemo(
-    () => packGridQuads(lines, left, width, height, majorWidth, uniform),
-    [lines, left, width, height, uniform, majorWidth]
+    () => packGridQuads(lines, left, width, height, majorWidth, minorWidth, uniform),
+    [lines, left, width, height, uniform, majorWidth, minorWidth]
   )
   useLayoutEffect(() => {
     major.setQuads(values.major)

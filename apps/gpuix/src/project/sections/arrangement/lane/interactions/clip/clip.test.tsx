@@ -49,7 +49,7 @@ function mount() {
   const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const context: LaneContext = {
     scene,
-    policy: ARRANGEMENT_DEFAULTS,
+    readPolicy: () => ARRANGEMENT_DEFAULTS,
     actions: projectActions,
     getState: useProjectState.getState,
   }

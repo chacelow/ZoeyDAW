@@ -4,12 +4,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
-import {
-  arrangementBodyBottom,
-  BAR_RULER_HEIGHT,
-  layoutTrackRows,
-  pinnedTrackHeight,
-} from "../../core/layout"
+import { arrangementBodyBottom, layoutTrackRows, pinnedTrackHeight } from "../../core/layout"
 import { visibleTracks } from "@/project/model/types"
 import { createTimelineViewport } from "./controller"
 import { createTimelineController } from "../controller"
@@ -102,14 +97,14 @@ describe("Authoritative timeline viewport", () => {
     projectActions.setEditingClip("audio-1")
     const row = layoutTrackRows(owner.sceneStore.get()).find(item => item.track.id === "3-audio")
     if (!row) throw new Error("Audio track missing")
-    expect(row.top).toBe(BAR_RULER_HEIGHT)
+    expect(row.top).toBe(DEFAULT_LAYOUT_TOKENS.arrangement.barRulerHeight)
     expect(useProjectState.getState().workspace.scrollX).toBe(2000)
   })
 
   test("vertical wheel changes only tracks, horizontal or Shift wheel changes only musical scroll", () => {
     const viewport = createTimelineViewport(
       () => size,
-      () => DEFAULT_LAYOUT_TOKENS.track
+      () => DEFAULT_LAYOUT_TOKENS
     )
     viewport.wheel({ elementId: 0, eventType: "scroll", deltaY: -20 })
     expect(useProjectState.getState().workspace.scrollX).toBe(2000)
@@ -130,7 +125,7 @@ describe("Authoritative timeline viewport", () => {
   test("Ctrl wheel preserves the music point under the pointer", () => {
     const viewport = createTimelineViewport(
       () => size,
-      () => DEFAULT_LAYOUT_TOKENS.track
+      () => DEFAULT_LAYOUT_TOKENS
     )
     const anchor = (2000 + 240) / 100
     viewport.wheel({
@@ -149,7 +144,7 @@ describe("Authoritative timeline viewport", () => {
     const measured = { ...size }
     const viewport = createTimelineViewport(
       () => measured,
-      () => DEFAULT_LAYOUT_TOKENS.track
+      () => DEFAULT_LAYOUT_TOKENS
     )
     projectActions.setViewport({ pxPerBar: 1e10, scrollX: 1e20, scrollY: 1e20 })
     viewport.clamp()
@@ -208,7 +203,7 @@ describe("Authoritative timeline viewport", () => {
       dpr: 1,
     })
     const bottom =
-      arrangementBodyBottom(320) -
+      arrangementBodyBottom(320, DEFAULT_LAYOUT_TOKENS.arrangement) -
       pinnedTrackHeight(visibleTracks(project.tracks), DEFAULT_LAYOUT_TOKENS.track)
     const scroll = ownScene(scene).view.autoScroll
     scroll.start(
@@ -230,11 +225,11 @@ test("manual pan suspends follow only for the configured duration", () => {
   try {
     const viewport = createTimelineViewport(
       () => size,
-      () => DEFAULT_LAYOUT_TOKENS.track,
-      {
+      () => DEFAULT_LAYOUT_TOKENS,
+      () => ({
         ...ARRANGEMENT_DEFAULTS,
         follow: { ...ARRANGEMENT_DEFAULTS.follow, manualPanPauseMs: 500 },
-      }
+      })
     )
     projectActions.setFollow(true)
     projectActions.togglePlay()

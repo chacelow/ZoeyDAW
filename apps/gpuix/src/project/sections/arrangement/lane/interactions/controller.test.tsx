@@ -1,5 +1,7 @@
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
-import { afterEach, expect, it } from "bun:test"
+import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import type { DesignTokens } from "@/shared/theme/design-tokens"
+import { afterEach, beforeEach, expect, it } from "bun:test"
 import { useMemo, useSyncExternalStore } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -12,12 +14,13 @@ import {
   serializeProject,
   useProjectState,
 } from "../../../../adapters"
+import { useProjectState as projectStore } from "@/project/stores/useProjectState"
 import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import type { SceneStore } from "../../core/scene"
 import { clipRect, layoutTrackRows } from "../../core/layout"
 import { clipVisualGeometry } from "../../core/clip-geometry"
-import { activeAutomationRows } from "../../core/automation/geometry"
+import { activeAutomationRows, automationY } from "../../core/automation/geometry"
 import { LaneRow } from "../LaneRow"
 import { LaneOverlay } from "../LaneOverlay"
 import { visibleRows } from "../render-projection"
@@ -29,6 +32,26 @@ import { AnimationFrameProvider } from "@/platform/frame"
 import { createManualFrames } from "../testing/frames.test-helper"
 import { useLaneSurface } from "../useLaneSurface"
 
+const overriddenDesign: DesignTokens = {
+  ...DEFAULT_DESIGN_TOKENS,
+  editor: { ...DEFAULT_DESIGN_TOKENS.editor, inlineRadius: 7 },
+  spacing: { ...DEFAULT_DESIGN_TOKENS.spacing, stackGap: 11 },
+  cursors: {
+    ...DEFAULT_DESIGN_TOKENS.cursors,
+    default: "grab",
+    grab: "ew-resize",
+    grabbing: "crosshair",
+    disabled: "ns-resize",
+    horizontalResize: "grabbing",
+    fadeCurve: "not-allowed",
+    automationDraw: "move",
+    verticalResize: "default",
+  },
+}
+let savedState = useProjectState.getState()
+beforeEach(() => {
+  savedState = useProjectState.getState()
+})
 let root: TestRoot | undefined
 let controller: LaneController | undefined
 let releaseTimeline: (() => void) | undefined
@@ -39,6 +62,7 @@ afterEach(() => {
   root = undefined
   controller = undefined
   releaseTimeline = undefined
+  projectStore.setState(savedState, true)
 })
 
 function Surface({ scene, controller }: { scene: SceneStore; controller: LaneController }) {
@@ -47,66 +71,64 @@ function Surface({ scene, controller }: { scene: SceneStore; controller: LaneCon
   const { wrap, ...editSurface } = useLaneSurface(controller, labelsByLocale.en, 0)
   return (
     <AnimationFrameProvider source={frames}>
-      <ThemeProvider>
-        <div style={{ position: "relative", width: 1000, height: 500 }}>
-          {visibleRows(snapshot).map(row => (
+      <div style={{ position: "relative", width: 1000, height: 500 }}>
+        {visibleRows(snapshot).map(row => (
+          <div
+            key={row.track.id}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: row.clipTop,
+              width: 1000,
+              height: row.clipBottom - row.clipTop,
+              overflow: "hidden",
+            }}
+          >
             <div
-              key={row.track.id}
               style={{
                 position: "absolute",
                 left: 0,
-                top: row.clipTop,
+                top: row.top - row.clipTop,
                 width: 1000,
-                height: row.clipBottom - row.clipTop,
-                overflow: "hidden",
+                height: row.height,
               }}
             >
-              <div
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: row.top - row.clipTop,
-                  width: 1000,
-                  height: row.height,
-                }}
-              >
-                <LaneRow
-                  row={row}
-                  scene={snapshot}
-                  viewport={snapshot.viewport}
-                  readPeaks={() => new Float32Array(0)}
-                />
-              </div>
+              <LaneRow
+                row={row}
+                scene={snapshot}
+                viewport={snapshot.viewport}
+                readPeaks={() => new Float32Array(0)}
+              />
             </div>
-          ))}
-          <LaneOverlay
-            scene={snapshot}
-            viewport={snapshot.viewport}
-            transportBar={() => useProjectState.getState().session.position.bar}
+          </div>
+        ))}
+        <LaneOverlay
+          scene={snapshot}
+          viewport={snapshot.viewport}
+          transportBar={() => useProjectState.getState().session.position.bar}
+        />
+        {wrap(
+          <div
+            {...editSurface}
+            testId="lane-surface"
+            role="application"
+            tabIndex={0}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: 1000,
+              height: 500,
+              cursor: editSurface.style.cursor,
+            }}
           />
-          {wrap(
-            <div
-              {...editSurface}
-              testId="lane-surface"
-              role="application"
-              tabIndex={0}
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                width: 1000,
-                height: 500,
-                cursor: editSurface.style.cursor,
-              }}
-            />
-          )}
-        </div>
-      </ThemeProvider>
+        )}
+      </div>
     </AnimationFrameProvider>
   )
 }
 
-function mount(options: { automation?: boolean; audio?: boolean } = {}) {
+function mount(options: { automation?: boolean; audio?: boolean; design?: DesignTokens } = {}) {
   const document = createMockDocument()
   const track = document.tracks.find(item => item.kind === "midi")
   const main = document.tracks.find(item => item.kind === "main")
@@ -194,7 +216,11 @@ function mount(options: { automation?: boolean; audio?: boolean } = {}) {
     },
   })
   root = currentRoot
-  currentRoot.render(<Surface scene={scene} controller={current} />)
+  currentRoot.render(
+    <ThemeProvider design={options.design}>
+      <Surface scene={scene} controller={current} />
+    </ThemeProvider>
+  )
   const sourceRow = layoutTrackRows(scene.get()).find(row => row.track.id === "source")
   const targetRow = layoutTrackRows(scene.get()).find(row => row.track.id === "target")
   const host = currentRoot.renderer.findByTestId("lane-surface")
@@ -290,7 +316,7 @@ it.each([false, true])(
     const audioRow = layoutTrackRows(scene.get()).find(row => row.track.id === "audio")
     if (!audioRow) throw new Error("Missing audio target")
     controller.pointerMove(pointer(228, audioRow.top + 6), true)
-    expect(controller.getSnapshot().cursor).toBe("not-allowed")
+    expect(controller.getSnapshot().cursor).toBe("disabled")
     controller.pointerUp(pointer(228, audioRow.top + 6))
     expect(useProjectState.getState().document).toEqual(before)
     expect(useProjectState.getState().session.selectedClipIds).toEqual(selection)
@@ -524,26 +550,29 @@ it("moves the fade mask between title and body across collapse transitions", () 
   expect(fixture.renderer.findByTestId("fade-audio-clip-in-peak")).toBeUndefined()
 })
 
-it("the retained input surface presents grab resize and invalid-release cursors", () => {
-  const { renderer, host, scene, sourceRow } = mount({ audio: true })
-  renderer.nativeSimulateMouseMove(100, sourceRow.top + 6)
-  expect(renderer.getElement(host)?.style.cursor).toBe("grab")
-  renderer.nativeSimulateMouseMove(318, sourceRow.top + 6)
-  expect(renderer.getElement(host)?.style.cursor).toBe("ew-resize")
-  renderer.nativeSimulateMouseDown(100, sourceRow.top + 6)
-  renderer.nativeSimulateMouseMove(228, sourceRow.top + 6, 0)
-  expect(renderer.getElement(host)?.style.cursor).toBe("grabbing")
-  const audio = layoutTrackRows(scene.get()).find(row => row.track.id === "audio")
-  if (!audio) throw new Error("Missing incompatible track")
-  renderer.nativeSimulateMouseMove(228, audio.top + 6, 0)
-  expect(renderer.getElement(host)?.style.cursor).toBe("not-allowed")
-  renderer.nativeSimulateMouseUp(228, audio.top + 6)
-  expect(renderer.getElement(host)?.style.cursor).toBe("default")
-  expect(useProjectState.getState().document.tracks[0]?.clips[0]?.startBar).toBe(2)
-})
+it.each([DEFAULT_DESIGN_TOKENS, overriddenDesign])(
+  "maps retained input drag cursors through the supplied theme",
+  design => {
+    const { renderer, host, scene, sourceRow } = mount({ audio: true, design })
+    renderer.nativeSimulateMouseMove(100, sourceRow.top + 6)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.grab)
+    renderer.nativeSimulateMouseMove(318, sourceRow.top + 6)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.horizontalResize)
+    renderer.nativeSimulateMouseDown(100, sourceRow.top + 6)
+    renderer.nativeSimulateMouseMove(228, sourceRow.top + 6, 0)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.grabbing)
+    const audio = layoutTrackRows(scene.get()).find(row => row.track.id === "audio")
+    if (!audio) throw new Error("Missing incompatible track")
+    renderer.nativeSimulateMouseMove(228, audio.top + 6, 0)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.disabled)
+    renderer.nativeSimulateMouseUp(228, audio.top + 6)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.default)
+    expect(useProjectState.getState().document.tracks[0]?.clips[0]?.startBar).toBe(2)
+  }
+)
 
 it("double click on the retained surface creates a Clip that can be renamed inline", () => {
-  const { renderer, host, sourceRow } = mount()
+  const { renderer, host, sourceRow, scene } = mount({ design: overriddenDesign })
   flushSync(() =>
     handleGpuixEvent(
       {
@@ -561,9 +590,34 @@ it("double click on the retained surface creates a Clip that can be renamed inli
     .getState()
     .document.tracks[0]?.clips.find(clip => clip.startBar === 8)
   if (!created) throw new Error("Double click did not create Clip")
+  projectActions.updateTrack(sourceRow.track.id, { collapsed: true })
+  scene.setGeometry({
+    ...scene.get().geometry,
+    arrangement: {
+      ...scene.get().geometry.arrangement,
+      clip: {
+        ...scene.get().geometry.arrangement.clip,
+        nameEditorLeftInset: 5,
+        nameEditorRightInset: 9,
+        verticalInset: 3,
+      },
+    },
+  })
   renderer.nativeSimulateKeystrokes(host, "cmd-r")
   const editor = renderer.findByTestId("clip-name-editor")
   if (!editor) throw new Error("Missing inline name editor")
+  expect(editor.style.borderRadius).toBe(7)
+  const row = layoutTrackRows(scene.get()).find(item => item.track.id === sourceRow.track.id)
+  if (!row) throw new Error("Missing inline editor row")
+  const rect = clipRect(created, row, scene.get().viewport.pxPerBar, scene.get().viewport.scrollX)
+  expect(editor.style.left).toBe(rect.left + 5)
+  expect(editor.style.top).toBe(rect.top + 3)
+  expect(editor.style.width).toBe(
+    Math.min(DEFAULT_LAYOUT_TOKENS.track.controlsWidth, 1000 - rect.left - 5, rect.width - 14)
+  )
+  expect(editor.style.height).toBe(
+    Math.min(DEFAULT_LAYOUT_TOKENS.track.titleHeight, row.height - 6)
+  )
   renderer.simulateKeystrokes("r 2 enter")
   expect(
     useProjectState.getState().document.tracks[0]?.clips.find(clip => clip.id === created.id)?.label
@@ -637,7 +691,7 @@ for (const action of ["rename", "delete"] as const) {
 
 for (const action of ["edit", "delete"] as const) {
   it(`keeps the second-track automation point identity for keyboard menu ${action}`, () => {
-    const { renderer, scene, host } = mount({ automation: true })
+    const { renderer, scene, host } = mount({ automation: true, design: overriddenDesign })
     projectActions.setAutomationParameter("target", "volume")
     const row = activeAutomationRows(scene.get()).find(item => item.track.id === "target")
     if (!row) throw new Error("Missing second-track automation row")
@@ -667,6 +721,8 @@ for (const action of ["edit", "delete"] as const) {
     if (action === "edit") {
       const editor = renderer.findByTestId("automation-value-editor")
       if (!editor) throw new Error("Missing selected automation value editor")
+      expect(editor.style.borderRadius).toBe(7)
+      expect(editor.style.left).toBe(107)
       expect(renderer.getFocusedElementId()).toBe(editor.id)
       renderer.simulateKeystrokes("- 1 0 . 5 enter")
       expect(useProjectState.getState().document.tracks[1]?.automation[0]?.points).toEqual([
@@ -721,3 +777,109 @@ for (const gesture of [
     expect(tracks.find(track => track.id === "audio")?.clips).toEqual([])
   })
 }
+
+it.each([DEFAULT_DESIGN_TOKENS, overriddenDesign])(
+  "maps native fade curve hover and drag cursors",
+  design => {
+    const { renderer, scene, host } = mount({ audio: true, design })
+    const row = layoutTrackRows(scene.get()).find(item => item.track.id === "audio")
+    const clip = row?.track.clips[0]
+    if (!row || !clip) throw new Error("Missing fade cursor fixture")
+    const visual = clipVisualGeometry(clipRect(clip, row, 64, 0), clip, row.track, true)
+    const curve = visual.fades[0]?.curve
+    if (!curve) throw new Error("Missing fade curve")
+    renderer.nativeSimulateMouseMove(curve.x, curve.y)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.fadeCurve)
+    renderer.nativeSimulateMouseDown(curve.x, curve.y)
+    renderer.nativeSimulateMouseMove(curve.x + 4, curve.y + 4, 0)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.fadeCurve)
+    renderer.nativeSimulateMouseUp(curve.x + 4, curve.y + 4)
+  }
+)
+
+it.each([DEFAULT_DESIGN_TOKENS, overriddenDesign])(
+  "maps native automation segment and drawing cursors",
+  design => {
+    const { renderer, scene, host, controller } = mount({ automation: true, design })
+    projectActions.setAutomationParameter("source", "volume")
+    const row = activeAutomationRows(scene.get()).find(item => item.track.id === "source")
+    if (!row) throw new Error("Missing automation cursor row")
+    const x = (3.75 - 1) * scene.get().viewport.pxPerBar
+    const y = automationY(row, 0.65)
+    renderer.nativeSimulateMouseMove(x, y)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.verticalResize)
+    flushSync(() => {
+      handleGpuixEvent(
+        {
+          eventType: "mouseDown",
+          elementId: host,
+          x,
+          y,
+          button: 0,
+          modifiers: { alt: true, shift: false, cmd: false, ctrl: false },
+        },
+        renderer
+      )
+      handleGpuixEvent(
+        {
+          eventType: "mouseMove",
+          elementId: host,
+          x,
+          y: y + 4,
+          pressedButton: 0,
+          modifiers: { alt: true, shift: false, cmd: false, ctrl: false },
+        },
+        renderer
+      )
+    })
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.verticalResize)
+    controller.interrupt()
+    projectActions.setMode("drawMode", true)
+    renderer.nativeSimulateMouseMove(400, row.top + 6)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.automationDraw)
+    renderer.nativeSimulateMouseDown(400, row.top + 6)
+    renderer.nativeSimulateMouseMove(420, row.top + 10, 0)
+    expect(renderer.getElement(host)?.style.cursor).toBe(design.cursors.automationDraw)
+    renderer.nativeSimulateMouseUp(420, row.top + 10)
+  }
+)
+
+it("uses live injected ruler geometry for the retained input host origin", () => {
+  const f = mount({ design: overriddenDesign })
+  function GeometryOriginSurface() {
+    const scene = useSyncExternalStore(f.scene.subscribe, f.scene.get)
+    const { wrap, ...surface } = useLaneSurface(f.controller, labelsByLocale.en)
+    return wrap(
+      <div
+        {...surface}
+        testId="geometry-origin-host"
+        style={{
+          ...surface.style,
+          position: "absolute",
+          top: scene.geometry.arrangement.barRulerHeight,
+          width: 1000,
+          height: 400,
+        }}
+      />
+    )
+  }
+  f.scene.setGeometry({
+    ...f.scene.get().geometry,
+    arrangement: { ...f.scene.get().geometry.arrangement, barRulerHeight: 47 },
+  })
+  f.root.render(
+    <ThemeProvider design={overriddenDesign}>
+      <GeometryOriginSurface />
+    </ThemeProvider>
+  )
+  const host = f.renderer.findByTestId("geometry-origin-host")
+  if (!host) throw new Error("Missing injected-origin input host")
+  f.renderer.nativeSimulateMouseMove(100, 53)
+  expect(f.renderer.getElement(host.id)?.style.cursor).toBe(overriddenDesign.cursors.grab)
+  f.scene.setGeometry({
+    ...f.scene.get().geometry,
+    arrangement: { ...f.scene.get().geometry.arrangement, barRulerHeight: 61 },
+  })
+  f.renderer.nativeSimulateMouseMove(100, 67)
+  expect(f.renderer.getElement(host.id)?.style.cursor).toBe(overriddenDesign.cursors.grab)
+})

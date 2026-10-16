@@ -4,7 +4,6 @@ import {
   FADE_CURVE_VERTICAL_SCALE,
   fadeControls,
 } from "@/project/model/fades"
-import { FADE_HANDLE_PX } from "../clip-geometry"
 import type { AudioClip } from "@/project/model/types"
 import type { Point } from "../interactions/types"
 
@@ -27,7 +26,8 @@ export function beginFadeDrag(
   handle: FadeDrag["handle"],
   origin: Point,
   pxPerBar: number,
-  height: number
+  height: number,
+  fadeHitSize: number
 ): FadeDrag {
   const original = fadeControls(clip, edge)
   const width = Math.max(1, (original.end - original.start) * pxPerBar)
@@ -39,7 +39,8 @@ export function beginFadeDrag(
     last: origin,
     height,
     width,
-    gap: Math.min(0.5, Math.max(0.1, FADE_HANDLE_PX / width)),
+    // Normalized fade positions retain the shared 0.1..0.9 curve-model domain.
+    gap: Math.min(0.5, Math.max(0.1, fadeHitSize / width)),
     curve: clip[edge === "in" ? "fadeInCurve" : "fadeOutCurve"] ?? DEFAULT_FADE_CURVE,
     position: clip[edge === "in" ? "fadeInCurvePosition" : "fadeOutCurvePosition"] ?? 0.5,
   }

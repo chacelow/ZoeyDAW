@@ -28,7 +28,7 @@ import { demoLabels } from "@/project/sections/clip-edit/demo/labels"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { ControlEnvironmentProvider } from "@/ui/controls"
-import { BAR_RULER_HEIGHT, layoutTrackRows } from "../core/layout"
+import { layoutTrackRows } from "../core/layout"
 
 const cleanups: (() => void)[] = []
 afterEach(() => {
@@ -234,7 +234,9 @@ test("a retained lane capture completes a cross-track move after scrolling unmou
     row => row.track.id === "distant-6"
   )
   if (!distant) throw new Error("Missing distant track")
-  flushSync(() => composition.timeline.setScroll(0, distant.top - BAR_RULER_HEIGHT))
+  flushSync(() =>
+    composition.timeline.setScroll(0, distant.top - distant.arrangementGeometry.barRulerHeight)
+  )
   root.renderer.flush()
   root.renderer.dispatchNativeEvents()
   expect(root.renderer.findByTestId("lane-row-source")).toBeUndefined()
@@ -245,7 +247,7 @@ test("a retained lane capture completes a cross-track move after scrolling unmou
   )
   if (!retained || !row) throw new Error("Missing retained target geometry")
   const x = retained.x + 212
-  const y = retained.y + row.top - BAR_RULER_HEIGHT + 6
+  const y = retained.y + row.top - row.arrangementGeometry.barRulerHeight + 6
   root.renderer.nativeSimulateMouseMove(x, y, 0)
   root.renderer.nativeSimulateMouseUp(x, y)
   expect(
@@ -331,7 +333,7 @@ for (const trackId of ["source", "main"]) {
       const row = rows.find(item => item.track.id === trackId)
       const main = rows.find(item => item.track.id === "main")
       if (!row || !main) throw new Error("Missing current resize bounds")
-      if (trackId === "main") expect(row.top).toBeLessThan(BAR_RULER_HEIGHT)
+      if (trackId === "main") expect(row.top).toBeLessThan(row.arrangementGeometry.barRulerHeight)
       else expect(row.top + row.height).toBeGreaterThan(main.top)
       if (ending === "escape") {
         root.renderer.simulateKeystrokes("escape")

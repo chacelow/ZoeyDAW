@@ -18,7 +18,7 @@ test("shared drag threshold controls activation and preserves its inclusive Eucl
 test("autoscroll uses independent axis speeds and the configured elapsed cap", () => {
   const tracks = createMockDocument().tracks.map(track => ({ ...track, heightPx: 500 }))
   const base = {
-    geometry: DEFAULT_LAYOUT_TOKENS.track,
+    geometry: DEFAULT_LAYOUT_TOKENS,
     viewport: { width: 800, height: 400, pxPerBar: 100, scrollX: 100, scrollY: 100, dpr: 1 },
     bars: 128,
     tracks,

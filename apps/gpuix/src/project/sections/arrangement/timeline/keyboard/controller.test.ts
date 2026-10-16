@@ -35,7 +35,7 @@ test("computer keyboard velocity follows the injected step and ignores repeated 
   keyboard = createTimelineKeyboard({
     focus: () => "timeline",
     blurControl: () => {},
-    policy: { ...ARRANGEMENT_DEFAULTS.keyboard, velocityStep: 3 },
+    readPolicy: () => ({ ...ARRANGEMENT_DEFAULTS.keyboard, velocityStep: 3 }),
   })
   projectActions.setMode("computerKeyboard", true)
   projectActions.setMidiVelocity(100)

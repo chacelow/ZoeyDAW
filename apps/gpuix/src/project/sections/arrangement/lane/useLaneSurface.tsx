@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload, KeyEvent, PublicInstance } from "@gpuix/react"
 import { hitTest } from "../core/hit-test"
-import { BAR_RULER_HEIGHT } from "../core/layout"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import { LaneContextMenu } from "./ContextMenu"
 import { ClipNameEditor } from "./interactions/clip/NameEditor"
 import { AutomationValueEditor } from "./interactions/automation/ValueEditor"
@@ -12,12 +12,14 @@ import type { LanePointer } from "./interactions/types"
 import type { LaneLabels, LaneMessageKey } from "./messages"
 
 /** One retained hitbox owns input; virtual rows only describe and draw the scene. */
-export function useLaneSurface(
-  controller: LaneController,
-  labels: LaneLabels,
-  originY = BAR_RULER_HEIGHT
-) {
+export function useLaneSurface(controller: LaneController, labels: LaneLabels, originY?: number) {
   const { renderer } = useGpuix()
+  const theme = useTheme()
+  const scene = useSyncExternalStore(
+    controller.context.scene.subscribe,
+    controller.context.scene.get
+  )
+  const surfaceOriginY = originY ?? scene.geometry.arrangement.barRulerHeight
   const host = useRef<PublicInstance | null>(null)
   const interaction = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
   const ref = useCallback((instance: PublicInstance | null) => {
@@ -29,7 +31,7 @@ export function useLaneSurface(
       if (!bounds || event.x === undefined || event.y === undefined) return null
       return {
         x: event.x - bounds.x,
-        y: event.y - bounds.y + originY,
+        y: event.y - bounds.y + surfaceOriginY,
         button: event.button ?? 0,
         shiftKey: event.modifiers?.shift ?? false,
         altKey: event.modifiers?.alt ?? false,
@@ -39,7 +41,7 @@ export function useLaneSurface(
     }
     return {
       ref,
-      style: { cursor: interaction.cursor },
+      style: { cursor: theme.design.cursors[interaction.cursor] },
       wrap(surface: ReactNode) {
         return (
           <>
@@ -95,7 +97,7 @@ export function useLaneSurface(
         }
       },
     }
-  }, [controller, interaction.cursor, labels, originY, ref, renderer])
+  }, [controller, interaction.cursor, labels, surfaceOriginY, ref, renderer, theme.design.cursors])
 }
 
 function LaneEditors({ controller, labels }: { controller: LaneController; labels: LaneLabels }) {

@@ -1,5 +1,5 @@
 import type { ArrangementPolicy } from "@/project/defaults/arrangement"
-import type { TrackGeometry } from "@/project/layout"
+import type { ArrangementGeometry } from "../scene"
 import { gridZoomLimit } from "@/project/model/grid"
 import type { Track } from "@/project/model/types"
 import { maxTrackScrollY } from "../layout"
@@ -141,7 +141,7 @@ export interface TimelineViewportInput {
   numerator: number
   denominator: number
   tracks: readonly Track[]
-  geometry: TrackGeometry
+  geometry: ArrangementGeometry
   storedPxPerBar: number
   storedScrollX: number
   storedScrollY: number
@@ -171,7 +171,7 @@ export function clampTimelineViewport(
   }: TimelineViewportInput,
   policy: ArrangementPolicy["zoom"]
 ): TimelineViewport {
-  const timeViewportWidth = Math.max(0, containerWidth - geometry.controlsWidth)
+  const timeViewportWidth = Math.max(0, containerWidth - geometry.track.controlsWidth)
   const minPxPerBar =
     timeViewportWidth > 0
       ? timeViewportWidth / (bars * policy.minZoomTimelineRatio)
@@ -198,7 +198,7 @@ export interface PanViewportInput extends MinimapViewport {
   width: number
   height: number
   tracks: readonly Track[]
-  geometry: TrackGeometry
+  geometry: ArrangementGeometry
   scrollY: number
   deltaX: number
   deltaY: number

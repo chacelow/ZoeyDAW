@@ -19,7 +19,7 @@ export function createResizeGesture(
   const original = edge === "left" ? clip.startBar : clip.startBar + clip.lengthBars
   const grabOffset = automationBar(context.scene.get(), pointer.x) - original
   return {
-    cursor: "ew-resize",
+    cursor: "horizontalResize",
     autoScroll: "horizontal",
     move(next) {
       const scene = context.scene.get()

@@ -1,4 +1,4 @@
-import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import { useArrangementPolicy } from "../../configuration"
 import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { flushSync } from "@gpuix/react"
 import { createContext, useContext, useLayoutEffect, useMemo, useState } from "react"
@@ -25,6 +25,7 @@ export function TrackTelemetryProvider({
   readonly telemetry: TelemetryReader
   readonly children: ReactNode
 }) {
+  const { meter: policy } = useArrangementPolicy()
   const levels = useProjectState(state => state.session.levels)
   const epoch = useProjectState(state => state.session.backend.sessionId)
   const playing = useProjectState(state => state.session.playing)
@@ -37,11 +38,8 @@ export function TrackTelemetryProvider({
       driver.advance(timestampMs)
     })
   }, playing || active)
-  const environment = useMemo(
-    () => ({ telemetry, driver, policy: ARRANGEMENT_DEFAULTS.meter }),
-    [telemetry, driver]
-  )
-  useLayoutEffect(() => driver.wake(), [levels, epoch, telemetry, driver])
+  const environment = useMemo(() => ({ telemetry, driver, policy }), [telemetry, driver, policy])
+  useLayoutEffect(() => driver.wake(), [levels, epoch, telemetry, driver, policy])
   return <TelemetryContext.Provider value={environment}>{children}</TelemetryContext.Provider>
 }
 

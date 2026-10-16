@@ -62,7 +62,9 @@ function fixtureScene(partial?: Partial<ArrangementScene>): ArrangementScene {
 describe("arrangement hit-test", () => {
   it("returns null above the body ruler band", () => {
     const scene = fixtureScene()
-    expect(hitTest(scene, 100, arrangementBodyTop() - 1)).toBeNull()
+    expect(
+      hitTest(scene, 100, arrangementBodyTop(DEFAULT_LAYOUT_TOKENS.arrangement) - 1)
+    ).toBeNull()
   })
 
   it("returns a clip body for a point inside a clip rectangle", () => {

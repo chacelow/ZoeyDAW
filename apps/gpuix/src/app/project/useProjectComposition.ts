@@ -4,6 +4,7 @@ import { createNativeClipboard } from "@/platform/clipboard"
 import { useAnimationFrame, useResumeFrame } from "@/platform/frame"
 import { useWindowKeyboard } from "@/platform/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
+import { useArrangementPolicy } from "@/project/sections/arrangement/configuration"
 import { useAppInteraction } from "../interaction"
 import { useAppNativeEnvironment } from "../native-environment"
 import { createProjectComposition } from "./composition"
@@ -18,6 +19,10 @@ export function useProjectComposition(shell: ProjectShellApi) {
   const interaction = useAppInteraction()
   const { subscribeWindowActive } = useAppNativeEnvironment()
   const { project, layout } = useTheme()
+  const policy = useArrangementPolicy()
+  const policyRef = useRef(policy)
+  policyRef.current = policy
+  const readPolicy = useCallback(() => policyRef.current, [])
   const browserRef = useRef<BrowserPanelHandle | null>(null)
   const focusRef = useRef<PublicInstance | null>(null)
   const shellRef = useRef(shell)
@@ -33,6 +38,7 @@ export function useProjectComposition(shell: ProjectShellApi) {
       clipboard: createNativeClipboard(),
       metrics: { minimapMinHeight, minimapMaxHeight, timelineAutoScrollEdge },
       geometry: geometryRef.current,
+      readPolicy,
       subscribeWindowActive,
       blurControl: () => {
         if (focusRef.current) renderer?.focusElement?.(focusRef.current.id)
@@ -47,6 +53,7 @@ export function useProjectComposition(shell: ProjectShellApi) {
     keyboard,
     renderer,
     subscribeWindowActive,
+    readPolicy,
     minimapMinHeight,
     minimapMaxHeight,
     timelineAutoScrollEdge,
@@ -54,6 +61,10 @@ export function useProjectComposition(shell: ProjectShellApi) {
   useLayoutEffect(() => {
     composition?.timeline.sceneStore.setGeometry(layout)
   }, [composition, layout])
+  useLayoutEffect(() => {
+    composition?.lane.interrupt()
+    composition?.timeline.view.cancelGestures()
+  }, [composition, policy])
   const subscribeFrameDemand = useCallback(
     (listener: () => void) => composition?.subscribeFrameDemand(listener) ?? (() => {}),
     [composition]

@@ -41,8 +41,8 @@ export interface LaneController {
   dispose(): void
 }
 
-export interface LaneControllerDeps extends Omit<LaneContext, "policy"> {
-  policy?: ArrangementPolicy
+export interface LaneControllerDeps extends Omit<LaneContext, "readPolicy"> {
+  readPolicy?: () => ArrangementPolicy
   clipboard: NativeClipboard
   edgePixels: number
   setScroll(x: number, y: number): ArrangementViewport
@@ -54,7 +54,7 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
     scene: deps.scene,
     actions: deps.actions,
     getState: deps.getState,
-    policy: deps.policy ?? ARRANGEMENT_DEFAULTS,
+    readPolicy: deps.readPolicy ?? (() => ARRANGEMENT_DEFAULTS),
   }
   const clip = createClipInteractions(context)
   const automation = createAutomationInteractions(context)
@@ -151,7 +151,8 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
         return
       }
       active.pointer = pointer
-      if (!active.started && !dragStarted(active.origin, pointer, context.policy.pointer)) return
+      if (!active.started && !dragStarted(active.origin, pointer, context.readPolicy().pointer))
+        return
       if (!active.started) {
         active.started = true
         publish(interaction.cursor, !!active.gesture.autoScroll)
@@ -253,11 +254,11 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
         viewport: scene.viewport,
         bars: scene.bars,
         tracks: scene.tracks,
-        geometry: scene.geometry.track,
+        geometry: scene.geometry,
         pointer,
         axis: current.gesture.autoScroll,
         edge: deps.edgePixels,
-        policy: context.policy.autoScroll,
+        policy: context.readPolicy().autoScroll,
         elapsed: lastFrame === null ? 0 : timestampMs - lastFrame,
       })
       lastFrame = timestampMs

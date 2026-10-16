@@ -54,7 +54,7 @@ export interface TimelineController {
 
 export interface TimelineControllerDeps {
   sceneStore: SceneStore
-  policy?: ArrangementPolicy
+  readPolicy?: () => ArrangementPolicy
   keyboard: TimelineKeyboardDeps
   initialSize: TimelineSize
   metrics: Pick<
@@ -66,7 +66,7 @@ export interface TimelineControllerDeps {
 
 export function createTimelineController({
   sceneStore,
-  policy = ARRANGEMENT_DEFAULTS,
+  readPolicy = () => ARRANGEMENT_DEFAULTS,
   keyboard: keyboardDeps,
   initialSize,
   metrics,
@@ -81,10 +81,10 @@ export function createTimelineController({
   let minimap: MinimapGesture | null = null
   const viewport = createTimelineViewport(
     () => presentation.size,
-    () => sceneStore.get().geometry.track,
-    policy
+    () => sceneStore.get().geometry,
+    readPolicy
   )
-  const rulers = createRulerController(sceneStore, policy.keyboard)
+  const rulers = createRulerController(sceneStore, () => readPolicy().keyboard)
   const getViewport = () => sceneStore.get().viewport
 
   function setScroll(x: number, y: number): ArrangementViewport {
@@ -99,14 +99,14 @@ export function createTimelineController({
   const autoScroll = createTimelineAutoScroll({
     scene: sceneStore,
     edge: metrics.timelineAutoScrollEdge,
-    policy: policy.autoScroll,
+    readPolicy: () => readPolicy().autoScroll,
     setScroll,
     onScroll: pointer => rulers.move(pointer.x, pointer.shiftKey),
   })
 
   const keyboard = createTimelineKeyboard({
     ...keyboardDeps,
-    policy: policy.keyboard,
+    readPolicy: () => readPolicy().keyboard,
     claim(event) {
       const key = event.key?.toLowerCase()
       if (key === "escape" && (rulers.active || (minimap && minimap.phase !== "idle"))) {
@@ -221,7 +221,11 @@ export function createTimelineController({
       presentation = { ...presentation, overviewHeight: next }
       for (const listener of listeners) listener()
     },
-    overviewGeometry: () => ({ ...viewport.read(), viewportWidth: getViewport().width, policy }),
+    overviewGeometry: () => ({
+      ...viewport.read(),
+      viewportWidth: getViewport().width,
+      policy: readPolicy(),
+    }),
     wheel: viewport.wheel,
     stepZoom: viewport.zoom,
     suspendFollow: viewport.suspendFollow,

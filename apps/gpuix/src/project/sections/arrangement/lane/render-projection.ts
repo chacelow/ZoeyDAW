@@ -63,14 +63,17 @@ export interface PreviewRect {
 }
 
 export function visibleRows(scene: ArrangementScene): VisibleRow[] {
-  const bottom = arrangementBodyBottom(scene.viewport.height)
+  const bottom = arrangementBodyBottom(scene.viewport.height, scene.geometry.arrangement)
   const pinnedTop = Math.max(
-    arrangementBodyTop(),
+    arrangementBodyTop(scene.geometry.arrangement),
     bottom - pinnedTrackHeight(scene.tracks, scene.geometry.track)
   )
   const result: VisibleRow[] = []
   for (const row of layoutTrackRows(scene)) {
-    const clipTop = Math.max(row.top, isPinnedTrack(row.track) ? pinnedTop : arrangementBodyTop())
+    const clipTop = Math.max(
+      row.top,
+      isPinnedTrack(row.track) ? pinnedTop : arrangementBodyTop(scene.geometry.arrangement)
+    )
     const clipBottom = Math.min(row.top + row.height, isPinnedTrack(row.track) ? bottom : pinnedTop)
     if (clipBottom > clipTop) result.push({ ...row, clipTop, clipBottom })
   }
@@ -191,6 +194,7 @@ export function patternPreviewRects(
   )
   const result: PreviewRect[] = []
   if (cellWidth < 1) {
+    // Subpixel steps merge into one-pixel raster columns; these are sampling units.
     for (let x = Math.ceil(Math.max(0, left)); x < Math.min(viewportWidth, left + width); x++) {
       const from = source.origin + (x - left) / cellWidth
       const end = source.origin + (Math.min(x + 1, left + width) - left) / cellWidth

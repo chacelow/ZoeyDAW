@@ -63,6 +63,8 @@ export function createClipCardProjection() {
           previous.card.clip === rect.clip &&
           previous.collapsed === collapsed &&
           previous.fadesVisible === fadesVisible &&
+          previous.rect.trackGeometry === rect.trackGeometry &&
+          previous.rect.arrangementGeometry === rect.arrangementGeometry &&
           previous.rect.top === rect.top &&
           previous.rect.width === rect.width &&
           previous.rect.height === rect.height
@@ -86,6 +88,7 @@ export function createClipCardProjection() {
         const fadeGeometry = sameLocalGeometry
           ? previous.card.fadeGeometry
           : projectLocalFadeGeometry(rect, ghost, fadesVisible)
+        // One preceding raster column covers rounding to half-pixel grid centers at the Clip boundary.
         const grid = sameGrid
           ? previous.card.grid
           : gridLines(

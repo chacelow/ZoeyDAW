@@ -1,3 +1,5 @@
+import { PREFERENCE_DEFAULTS } from "./preferences"
+
 /** Editing policies for new Arrangement sessions; persisted viewport values remain project data. */
 export const ARRANGEMENT_DEFAULTS = {
   zoom: {
@@ -17,6 +19,8 @@ export const ARRANGEMENT_DEFAULTS = {
     minimapPixelsPerExponent: 100,
     /** Minimap horizontal projection multiplier; finite and >= 0. */
     minimapPanScale: 0.25,
+    /** Minimap resize-edge hit slop in pixels; finite and > 0. */
+    minimapEdgeHitPixels: 6,
   },
   follow: {
     /** Milliseconds; finite and >= 0. */
@@ -36,7 +40,7 @@ export const ARRANGEMENT_DEFAULTS = {
   },
   pointer: {
     /** Euclidean pointer travel in pixels; finite and >= 0. Shared pointer preference. */
-    dragThresholdPixels: 3,
+    dragThresholdPixels: PREFERENCE_DEFAULTS.pointer.dragThresholdPixels,
   },
   automation: {
     /** Horizontal pixels per freehand sample; finite and > 0. */

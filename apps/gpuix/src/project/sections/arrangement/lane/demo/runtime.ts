@@ -58,7 +58,7 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
     const state = useProjectState.getState()
     return clampTimelineViewport(
       {
-        geometry: scene.get().geometry.track,
+        geometry: scene.get().geometry,
         bars: scene.get().bars,
         containerWidth: width,
         bodyHeight: height,
@@ -249,7 +249,7 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
       } else {
         applyViewport(
           panViewport({
-            geometry: current.geometry.track,
+            geometry: current.geometry,
             ...current.viewport,
             bars: current.bars,
             tracks: visibleTracks(getEffectiveDocument().tracks),

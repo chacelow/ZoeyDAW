@@ -3,7 +3,6 @@ import { Input } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { projectActions, useProjectState } from "@/project/adapters"
-import { MARKER_RULER_HEIGHT } from "../../core/layout"
 import type { TimelineController } from "../controller"
 import type { TimelineLabels } from "../labels"
 
@@ -79,7 +78,10 @@ function MarkerNameInput({
       }}
       style={sx({
         position: "absolute",
-        top: Math.max(0, MARKER_RULER_HEIGHT - theme.project.arrangementMarkerInset),
+        top: Math.max(
+          0,
+          theme.layout.arrangement.markerRulerHeight - theme.project.arrangementMarkerInset
+        ),
         left: Math.max(
           0,
           Math.min(

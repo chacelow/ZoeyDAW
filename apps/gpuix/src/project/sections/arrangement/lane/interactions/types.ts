@@ -24,13 +24,20 @@ export interface LaneKey {
 
 export interface LaneContext {
   scene: SceneStore
-  policy: ArrangementPolicy
+  readPolicy: () => ArrangementPolicy
   actions: typeof projectActions
   getState: () => ProjectState
 }
 
 export type LaneCursor =
-  "default" | "grab" | "grabbing" | "not-allowed" | "ew-resize" | "move" | "crosshair" | "ns-resize"
+  | "default"
+  | "grab"
+  | "grabbing"
+  | "disabled"
+  | "horizontalResize"
+  | "fadeCurve"
+  | "automationDraw"
+  | "verticalResize"
 
 export interface LaneGesture {
   readonly cursor: LaneCursor

@@ -9,7 +9,7 @@ import { edgeScroll } from "./edge-scroll"
 const tracks = createMockDocument().tracks
 const viewport = { width: 800, height: 320, pxPerBar: 100, scrollX: 100, scrollY: 80, dpr: 1 }
 const bottom =
-  arrangementBodyBottom(viewport.height) -
+  arrangementBodyBottom(viewport.height, DEFAULT_LAYOUT_TOKENS.arrangement) -
   pinnedTrackHeight(visibleTracks(tracks), DEFAULT_LAYOUT_TOKENS.track)
 const base = {
   viewport,
@@ -19,7 +19,7 @@ const base = {
   edge: 40,
   elapsed: 20,
   policy: ARRANGEMENT_DEFAULTS.autoScroll,
-  geometry: DEFAULT_LAYOUT_TOKENS.track,
+  geometry: DEFAULT_LAYOUT_TOKENS,
 }
 
 test("edge scrolling respects pinned rows, horizontal mode and elapsed limits", () => {
@@ -32,10 +32,18 @@ test("edge scrolling respects pinned rows, horizontal mode and elapsed limits", 
     scrollY: 80,
   })
   expect(
-    edgeScroll({ ...base, axis: "horizontal", pointer: { x: 0, y: arrangementBodyTop() } })
+    edgeScroll({
+      ...base,
+      axis: "horizontal",
+      pointer: { x: 0, y: arrangementBodyTop(DEFAULT_LAYOUT_TOKENS.arrangement) },
+    })
   ).toEqual({ scrollX: 85, scrollY: 80 })
   expect(
-    edgeScroll({ ...base, elapsed: 500, pointer: { x: 800, y: arrangementBodyTop() } })
+    edgeScroll({
+      ...base,
+      elapsed: 500,
+      pointer: { x: 800, y: arrangementBodyTop(DEFAULT_LAYOUT_TOKENS.arrangement) },
+    })
   ).toEqual({ scrollX: 136, scrollY: 51.2 })
   expect(edgeScroll({ ...base, elapsed: -1, pointer: { x: 800, y: 0 } })).toEqual({
     scrollX: 100,

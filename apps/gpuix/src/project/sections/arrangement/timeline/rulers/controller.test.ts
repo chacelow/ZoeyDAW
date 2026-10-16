@@ -27,7 +27,7 @@ function mount(policy: ArrangementPolicy = ARRANGEMENT_DEFAULTS) {
   projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
   const owner = createTimelineController({
     sceneStore: createSceneStore(DEFAULT_LAYOUT_TOKENS),
-    policy,
+    readPolicy: () => policy,
     initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
     metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
     keyboard: { focus: () => "timeline", blurControl: () => {} },
