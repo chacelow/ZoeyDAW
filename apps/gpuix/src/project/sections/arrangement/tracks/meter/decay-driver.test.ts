@@ -1,20 +1,23 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { expect, test } from "bun:test"
-import { advanceMeterPeak, createMeterPeak, METER_MIN_DB } from "../../core/meters/meter-peak"
+import { advanceMeterPeak, createMeterPeak } from "../../core/meters/meter-peak"
 import { createMeterDecayDriver } from "./decay-driver"
+
+const METER_MIN_DB = ARRANGEMENT_DEFAULTS.meter.minDb
 
 test("one activity request serves meters and ends on silence or last unmount", () => {
   const activity: boolean[] = []
   const driver = createMeterDecayDriver(active => {
     activity.push(active)
   })
-  const peak = createMeterPeak()
+  const peak = createMeterPeak(ARRANGEMENT_DEFAULTS.meter)
   let level = 0
   driver.wake()
   expect(activity).toEqual([])
   const detach = driver.subscribe({
     active: () => level > METER_MIN_DB || peak.db > METER_MIN_DB,
     advance(timestampMs) {
-      advanceMeterPeak(peak, level, timestampMs)
+      advanceMeterPeak(peak, level, timestampMs, ARRANGEMENT_DEFAULTS.meter)
       return peak.db > METER_MIN_DB
     },
   })
@@ -47,12 +50,12 @@ test("inactive driver ignores unrelated frames and wakeups do not advance the pe
   const driver = createMeterDecayDriver(active => {
     activity.push(active)
   })
-  const peak = createMeterPeak()
-  let level = METER_MIN_DB
+  const peak = createMeterPeak(ARRANGEMENT_DEFAULTS.meter)
+  let level: number = METER_MIN_DB
   const detach = driver.subscribe({
     active: () => level > METER_MIN_DB || peak.db > METER_MIN_DB,
     advance(timestampMs) {
-      advanceMeterPeak(peak, level, timestampMs)
+      advanceMeterPeak(peak, level, timestampMs, ARRANGEMENT_DEFAULTS.meter)
       return peak.db > METER_MIN_DB
     },
   })

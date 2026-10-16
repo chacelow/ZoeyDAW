@@ -59,8 +59,8 @@ const mutations = [
   [
     "minimap-direction",
     "viewport/zoom.ts",
-    "Math.exp(-downwardPixels / 100)",
-    "Math.exp(downwardPixels / 100)",
+    "Math.exp(-downwardPixels / policy.minimapPixelsPerExponent)",
+    "Math.exp(downwardPixels / policy.minimapPixelsPerExponent)",
   ],
   [
     "freehand-original-samples-only",

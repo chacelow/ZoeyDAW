@@ -12,7 +12,9 @@ B1，2026-10-15。这里只接收坐标、工程模型和显式手势数据，�
 - `meters/meter-peak.ts` 保持原来的显式时间输入与原位更新 API。它不读取时钟、不启动采样。
 - `SceneStore.setTimeSelection` 只接 timeline 的 committed 投影；lane 使用 `setTimeSelectionPreview`，显示 `timeSelection` 优先取预览，结束或取消传 `null` 恢复当前 committed 值。
 - `rulers/grid-quads.ts` 的 `packGridQuads(lines, left, width, height, majorWidth, uniform?)` 统一半开可见范围过滤与局部 quad 打包；`MINOR_GRID_OPACITY` 是 timeline/lane 普通细网格的同一材质值。Clip 的 uniform 分批仍保留原始粗细几何。
-- `viewport/edge-scroll.ts` 的 `edgeScroll({ viewport, bars, tracks, pointer, axis, edge, elapsed })` 返回夹取后的 `scrollX/scrollY`；固定轨道不触发垂直滚动，单帧 elapsed 上限 48ms。调用方仍拥有手势与帧生命周期。
+- `viewport/edge-scroll.ts` 的 `edgeScroll({ viewport, bars, tracks, pointer, axis, edge, elapsed, policy })` 返回夹取后的 `scrollX/scrollY`；固定轨道不触发垂直滚动，单帧 elapsed 上限与独立轴速度由 `policy` 提供。调用方仍拥有手势与帧生命周期。
+- `project/defaults/arrangement.ts` 持有唯一的 Arrangement 编辑策略默认表。纯计算不读取 settings 或默认表：缩放、跟随、自动滚动、拖动阈值、自由画线采样和电平函数必须接收对应的 `ArrangementPolicy` 分组；timeline/lane controller 是策略注入 owner，完整对象覆盖，不做函数内局部合并。`MinimapGeometry.policy` 携带同一次手势的完整策略快照。
+- `createMeterPeak(policy)`、`meterDb(levelDb, policy)`、`advanceMeterPeak(peak, levelDb, nowMs, policy)` 共用 `ArrangementPolicy["meter"]`；没有第二份 meter 范围、hold 或 fall 常量。时间单位换算仍是数学常量。
 
 ## 迁移文件
 
@@ -55,7 +57,7 @@ alignmentBar(scene: ArrangementScene): number | null
 
 // interactions/layers.ts
 interactionLayer(scene: ArrangementScene, pointer: Point, automationMode: boolean): "ruler" | "clip" | "automation"
-dragStarted(origin: Point, current: Point): boolean
+dragStarted(origin: Point, current: Point, policy: ArrangementPolicy["pointer"]): boolean
 
 // clip/fade.ts
 beginFadeDrag(clip: AudioClip, edge: "in" | "out", handle: "length" | "curve", origin: Point, pxPerBar: number, height: number): FadeDrag
@@ -107,11 +109,11 @@ adjacentMarker(markers: readonly Marker[], position: number, direction: -1 | 1):
 
 // viewport/zoom.ts
 zoomAtAnchor(input: ZoomAnchorInput & { nextPxPerBar: number }): MinimapViewport
-wheelZoom(input: ZoomAnchorInput & { deltaY: number }): MinimapViewport
-stepZoom(input: Omit<ZoomAnchorInput, "anchorX"> & { direction: -1 | 1 }): MinimapViewport
-clampTimelineViewport(input: TimelineViewportInput): TimelineViewport
+wheelZoom(input: ZoomAnchorInput & { deltaY: number }, policy: ArrangementPolicy["zoom"]): MinimapViewport
+stepZoom(input: Omit<ZoomAnchorInput, "anchorX"> & { direction: -1 | 1 }, policy: ArrangementPolicy["zoom"]): MinimapViewport
+clampTimelineViewport(input: TimelineViewportInput, policy: ArrangementPolicy["zoom"]): TimelineViewport
 panViewport(input: PanViewportInput): { scrollX: number; scrollY: number }
-followViewport(input: FollowViewportInput): number
+followViewport(input: FollowViewportInput, policy: ArrangementPolicy["follow"]): number
 clampScrollX(scrollX: number, bars: number, pxPerBar: number, viewportWidth: number): number
 
 // viewport/minimap.ts
@@ -121,6 +123,8 @@ minimapDragBody(input: { geometry: MinimapGeometry; width: number; initialScroll
 ```
 
 `paintAutomation()` 的 `idPrefix` 由 B2 在手势开始时分配，必须在工程内唯一。`DrawingState.nextId` 是本手势计数器，重绘同一 cell 保留 ID。取消手势直接丢弃返回值，工程提交与撤销仍由 B2 的 runtime 事务负责。freehand 的 `DrawingState.swept` 保存已扫过的合并时间区间：原始点在覆盖区间内删除；回扫替换先前不重合的采样点，未绘制的 viewport 间隙与区间外点保留。新手势以 `{ painted: [], swept: [], last, nextId: 0 }` 初始化；状态及原始点不就地修改。
+
+`PaintInput.policy` 为 `ArrangementPolicy["automation"]`，只控制自由画线采样分辨率；网格 cell、音乐端点和归一化计算保持领域语义。来源覆盖回归在 `behavior-policy.test.ts`、`viewport/zoom-policy.test.ts`、`meters/meter-policy.test.ts` 与 timeline consumer 测试；运行 `bun src/project/sections/arrangement/core/verification/policy-mutations.mjs` 将使用处恢复字面量，逐项验证回归失效并校验磁盘源码未变。
 
 缩放锚点在未撞到工程边界时保持像素位置。到达 scroll clamp 后，边界优先，无法同时保持越界的锚点。Minimap 下拖减小 `pxPerBar`，上拖增大；水平锚点采用按下位置在选区内的比例，不固定中心。
 

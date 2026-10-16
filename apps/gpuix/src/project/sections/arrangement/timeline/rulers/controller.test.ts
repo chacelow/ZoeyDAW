@@ -1,3 +1,5 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import {
   hydrateProject,
@@ -20,10 +22,11 @@ beforeEach(() => {
   )
 })
 
-function mount() {
+function mount(policy: ArrangementPolicy = ARRANGEMENT_DEFAULTS) {
   projectActions.setViewport({ pxPerBar: 100, scrollX: 0, scrollY: 0 })
   const owner = createTimelineController({
     sceneStore: createSceneStore(),
+    policy,
     initialSize: { containerWidth: 1104, bodyHeight: 320, timelineLeft: 0 },
     metrics: { minimapMinHeight: 32, minimapMaxHeight: 90, timelineAutoScrollEdge: 42 },
     keyboard: { focus: () => "timeline", blurControl: () => {} },
@@ -83,4 +86,25 @@ test("Undo during a pressed locator gesture cancels the gesture without consumin
   } finally {
     owner.dispose()
   }
+})
+
+test("marker nudge reads the configured unsnapped step without replacing the active grid", () => {
+  const id = projectActions.addMarker(3)
+  if (!id) throw new Error("Marker not created")
+  const { scene, controller } = mount({
+    ...ARRANGEMENT_DEFAULTS,
+    keyboard: { ...ARRANGEMENT_DEFAULTS.keyboard, markerNudgeBars: 1 / 8 },
+  })
+  projectActions.setSnap(false)
+  scene.setTargetSelection({ kind: "marker", id, phase: "selected" })
+  expect(controller.keyDown({ key: "right", defaultPrevented: false })).toBe(true)
+  expect(useProjectState.getState().document.markers.find(marker => marker.id === id)?.bar).toBe(
+    3.125
+  )
+  projectActions.setGrid({ mode: "fixed", bars: 0.5 })
+  projectActions.setSnap(true)
+  expect(controller.keyDown({ key: "right", defaultPrevented: false })).toBe(true)
+  expect(useProjectState.getState().document.markers.find(marker => marker.id === id)?.bar).toBe(
+    3.625
+  )
 })

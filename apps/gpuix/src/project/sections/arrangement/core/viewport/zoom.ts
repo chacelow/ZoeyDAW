@@ -1,3 +1,4 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { CONTROLS_WIDTH } from "@/project/layout"
 import { gridZoomLimit } from "@/project/model/grid"
 import type { Track } from "@/project/model/types"
@@ -23,10 +24,15 @@ export function minimapDragZoom(
   startingClientY: number,
   clientY: number,
   minPxPerBar: number,
-  maxPxPerBar: number
+  maxPxPerBar: number,
+  policy: ArrangementPolicy["zoom"]
 ): number {
   const downwardPixels = clientY - startingClientY
-  return clamp(startingPxPerBar * Math.exp(-downwardPixels / 100), minPxPerBar, maxPxPerBar)
+  return clamp(
+    startingPxPerBar * Math.exp(-downwardPixels / policy.minimapPixelsPerExponent),
+    minPxPerBar,
+    maxPxPerBar
+  )
 }
 
 export function minimapDragLeftEdge({
@@ -106,17 +112,25 @@ export function zoomAtAnchor({
   }
 }
 
-export function wheelZoom(input: ZoomAnchorInput & { deltaY: number }): MinimapViewport {
-  return zoomAtAnchor({ ...input, nextPxPerBar: input.pxPerBar * Math.exp(-input.deltaY / 260) })
-}
-
-export function stepZoom(
-  input: Omit<ZoomAnchorInput, "anchorX"> & { direction: -1 | 1 }
+export function wheelZoom(
+  input: ZoomAnchorInput & { deltaY: number },
+  policy: ArrangementPolicy["zoom"]
 ): MinimapViewport {
   return zoomAtAnchor({
     ...input,
-    anchorX: input.viewportWidth / 2,
-    nextPxPerBar: input.pxPerBar * (input.direction > 0 ? 1.25 : 0.8),
+    nextPxPerBar: input.pxPerBar * Math.exp(-input.deltaY / policy.wheelPixelsPerExponent),
+  })
+}
+
+export function stepZoom(
+  input: Omit<ZoomAnchorInput, "anchorX"> & { direction: -1 | 1 },
+  policy: ArrangementPolicy["zoom"]
+): MinimapViewport {
+  return zoomAtAnchor({
+    ...input,
+    anchorX: input.viewportWidth * policy.stepAnchorRatio,
+    nextPxPerBar:
+      input.pxPerBar * (input.direction > 0 ? policy.stepInFactor : policy.stepOutFactor),
   })
 }
 
@@ -141,19 +155,25 @@ export interface TimelineViewport extends MinimapViewport {
   scrollY: number
 }
 
-export function clampTimelineViewport({
-  bars,
-  containerWidth,
-  bodyHeight,
-  numerator,
-  denominator,
-  tracks,
-  storedPxPerBar,
-  storedScrollX,
-  storedScrollY,
-}: TimelineViewportInput): TimelineViewport {
+export function clampTimelineViewport(
+  {
+    bars,
+    containerWidth,
+    bodyHeight,
+    numerator,
+    denominator,
+    tracks,
+    storedPxPerBar,
+    storedScrollX,
+    storedScrollY,
+  }: TimelineViewportInput,
+  policy: ArrangementPolicy["zoom"]
+): TimelineViewport {
   const timeViewportWidth = Math.max(0, containerWidth - CONTROLS_WIDTH)
-  const minPxPerBar = timeViewportWidth > 0 ? timeViewportWidth / bars : 1
+  const minPxPerBar =
+    timeViewportWidth > 0
+      ? timeViewportWidth / (bars * policy.minZoomTimelineRatio)
+      : policy.unmeasuredMinPxPerBar
   const maxPxPerBar = Math.max(minPxPerBar, gridZoomLimit(numerator, denominator))
   const pxPerBar = clamp(storedPxPerBar || minPxPerBar, minPxPerBar, maxPxPerBar)
   return {
@@ -212,23 +232,26 @@ export interface FollowViewportInput extends MinimapViewport {
   manualPanUntil: number
 }
 
-export function followViewport({
-  bars,
-  viewportWidth,
-  transportBar,
-  pxPerBar,
-  scrollX,
-  follow,
-  playing,
-  now,
-  manualPanUntil,
-}: FollowViewportInput): number {
+export function followViewport(
+  {
+    bars,
+    viewportWidth,
+    transportBar,
+    pxPerBar,
+    scrollX,
+    follow,
+    playing,
+    now,
+    manualPanUntil,
+  }: FollowViewportInput,
+  policy: ArrangementPolicy["follow"]
+): number {
   if (!follow || !playing || viewportWidth <= 0 || now < manualPanUntil) {
     return scrollX
   }
   const pixel = (transportBar - 1) * pxPerBar
-  if (pixel < scrollX || pixel >= scrollX + viewportWidth / 2) {
-    return clampScrollX(pixel - viewportWidth / 2, bars, pxPerBar, viewportWidth)
+  if (pixel < scrollX || pixel >= scrollX + viewportWidth * policy.triggerRatio) {
+    return clampScrollX(pixel - viewportWidth * policy.anchorRatio, bars, pxPerBar, viewportWidth)
   }
   return scrollX
 }

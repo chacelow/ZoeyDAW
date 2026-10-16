@@ -1,3 +1,4 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { MIN_CLIP_LENGTH_BARS } from "@/project/model/grid"
 import { positionToBar, visibleTracks } from "@/project/model/types"
@@ -19,7 +20,10 @@ export interface RulerController {
   dispose: () => void
 }
 
-export function createRulerController(scene: SceneStore): RulerController {
+export function createRulerController(
+  scene: SceneStore,
+  policy: ArrangementPolicy["keyboard"]
+): RulerController {
   let gesture: {
     move: (x: number, shift: boolean) => void
     finish: (cancelled: boolean) => void
@@ -209,7 +213,7 @@ export function createRulerController(scene: SceneStore): RulerController {
       } else if ((key === "f2" || key === "enter") && selected.kind === "marker") {
         scene.setTargetSelection({ ...selected, phase: "renaming" })
       } else if (key === "left" || key === "right") {
-        const step = state.workspace.snap ? current.gridPlan.cellBars : 1 / 16
+        const step = state.workspace.snap ? current.gridPlan.cellBars : policy.markerNudgeBars
         const delta = key === "right" ? step : -step
         if (selected.kind === "loop") {
           projectActions.setLoop(

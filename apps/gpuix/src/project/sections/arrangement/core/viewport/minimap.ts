@@ -1,10 +1,11 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { clampScrollX, minimapDragZoom } from "./zoom"
 import type { MinimapViewport } from "./zoom"
 
-const PAN_DRAG_SCALE = 0.25
 const EDGE_HIT_WIDTH = 6
 
 export interface MinimapGeometry extends MinimapViewport {
+  policy: ArrangementPolicy
   bars: number
   viewportWidth: number
   minPxPerBar: number
@@ -84,12 +85,13 @@ export function minimapDragBody({
     0,
     deltaY,
     geometry.minPxPerBar,
-    geometry.maxPxPerBar
+    geometry.maxPxPerBar,
+    geometry.policy.zoom
   )
   const anchorBar =
     1 +
     (initialScrollX + geometry.viewportWidth * zoomAnchorRatio) / geometry.pxPerBar +
-    deltaBars * PAN_DRAG_SCALE
+    deltaBars * geometry.policy.zoom.minimapPanScale
   return {
     pxPerBar,
     scrollX: clampScrollX(

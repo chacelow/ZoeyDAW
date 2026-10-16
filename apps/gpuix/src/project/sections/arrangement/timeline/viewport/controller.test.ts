@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
@@ -210,4 +211,25 @@ describe("Authoritative timeline viewport", () => {
     expect(useProjectState.getState().workspace.scrollY).toBe(30)
     scroll.stop()
   })
+})
+
+test("manual pan suspends follow only for the configured duration", () => {
+  const clock = jest.spyOn(performance, "now").mockReturnValue(100)
+  try {
+    const viewport = createTimelineViewport(() => size, {
+      ...ARRANGEMENT_DEFAULTS,
+      follow: { ...ARRANGEMENT_DEFAULTS.follow, manualPanPauseMs: 500 },
+    })
+    projectActions.setFollow(true)
+    projectActions.togglePlay()
+    viewport.suspendFollow()
+    clock.mockReturnValue(599)
+    viewport.follow(40)
+    expect(useProjectState.getState().workspace.scrollX).toBe(2000)
+    clock.mockReturnValue(600)
+    viewport.follow(40)
+    expect(useProjectState.getState().workspace.scrollX).toBe(3500)
+  } finally {
+    clock.mockRestore()
+  }
 })

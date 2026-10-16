@@ -1,3 +1,4 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { visibleTracks } from "@/project/model/types"
 import type { Track } from "@/project/model/types"
 import {
@@ -17,6 +18,7 @@ export function edgeScroll({
   axis,
   edge,
   elapsed,
+  policy,
 }: {
   viewport: ArrangementViewport
   bars: number
@@ -25,6 +27,7 @@ export function edgeScroll({
   axis: "horizontal" | "both"
   edge: number
   elapsed: number
+  policy: ArrangementPolicy["autoScroll"]
 }): { scrollX: number; scrollY: number } {
   const { width, height, pxPerBar, scrollX, scrollY } = viewport
   const { x, y } = pointer
@@ -45,12 +48,17 @@ export function edgeScroll({
         : y > bottom - edge
           ? Math.min(1, (y - bottom + edge) / edge)
           : 0
-  const duration = Math.min(48, Math.max(0, elapsed))
+  const duration = Math.min(policy.maxElapsedMs, Math.max(0, elapsed))
   return {
-    scrollX: clampScrollX(scrollX + xSpeed * duration * 0.75, bars, pxPerBar, width),
+    scrollX: clampScrollX(
+      scrollX + xSpeed * duration * policy.horizontalPixelsPerMs,
+      bars,
+      pxPerBar,
+      width
+    ),
     scrollY: Math.min(
       maxTrackScrollY(visible, height),
-      Math.max(0, scrollY + ySpeed * duration * 0.6)
+      Math.max(0, scrollY + ySpeed * duration * policy.verticalPixelsPerMs)
     ),
   }
 }

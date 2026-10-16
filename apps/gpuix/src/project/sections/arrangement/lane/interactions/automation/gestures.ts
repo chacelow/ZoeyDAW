@@ -132,6 +132,7 @@ export function drawGesture(
       state,
       current,
       scene: context.scene.get(),
+      policy: context.policy.automation,
       row,
       grid,
       freehand,

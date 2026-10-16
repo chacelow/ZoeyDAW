@@ -1,3 +1,4 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { edgeScroll } from "../../core/viewport/edge-scroll"
 import type { ArrangementViewport, SceneStore } from "../../core/scene"
 import type { NativeTimelinePointer } from "./coordinates"
@@ -14,11 +15,13 @@ export interface TimelineAutoScroll {
 export function createTimelineAutoScroll({
   scene,
   edge,
+  policy,
   setScroll,
   onScroll,
 }: {
   scene: SceneStore
   edge: number
+  policy: ArrangementPolicy["autoScroll"]
   setScroll: (x: number, y: number) => ArrangementViewport
   onScroll: (pointer: NativeTimelinePointer) => void
 }): TimelineAutoScroll {
@@ -42,6 +45,7 @@ export function createTimelineAutoScroll({
       pointer,
       axis,
       edge,
+      policy,
       elapsed: last === null ? 0 : now - last,
     })
     last = now

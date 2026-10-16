@@ -1,3 +1,4 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { hitTest } from "../hit-test"
 import { arrangementBodyTop } from "../layout"
 import type { ArrangementScene } from "../scene"
@@ -13,6 +14,10 @@ export function interactionLayer(
   return hitTest(scene, pointer.x, pointer.y, true)?.kind === "clip-title" ? "clip" : "automation"
 }
 
-export function dragStarted(origin: Point, current: Point): boolean {
-  return Math.hypot(current.x - origin.x, current.y - origin.y) >= 3
+export function dragStarted(
+  origin: Point,
+  current: Point,
+  policy: ArrangementPolicy["pointer"]
+): boolean {
+  return Math.hypot(current.x - origin.x, current.y - origin.y) >= policy.dragThresholdPixels
 }

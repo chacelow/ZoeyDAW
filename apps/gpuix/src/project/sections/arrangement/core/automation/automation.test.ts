@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { expect, test } from "bun:test"
 import { createMockDocument } from "../../../../adapters/fixtures"
 import { createSceneStore } from "../scene"
@@ -160,14 +161,24 @@ test("grid drawing paints each traversed cell without mutating the discarded bas
     freehand: false,
     idPrefix: "draw",
   }
-  const initial = paintAutomation(input)
-  const result = paintAutomation({ ...input, state: initial.state, current: pointer(6.2, 0.7) })
+  const initial = paintAutomation({ ...input, policy: ARRANGEMENT_DEFAULTS.automation })
+  const result = paintAutomation({
+    ...input,
+    state: initial.state,
+    current: pointer(6.2, 0.7),
+    policy: ARRANGEMENT_DEFAULTS.automation,
+  })
   expect([2, 3, 4, 5, 6].every(bar => result.points.some(point => point.bar === bar))).toBe(true)
   expect(result.points.find(point => point.bar === 6)?.value).toBeCloseTo(0.7)
   expect(result.points.find(point => point.id.endsWith("-end"))?.bar).toBeCloseTo(2.9999)
   expect(source).toEqual(before)
   expect(state).toEqual({ painted: [], swept: [], last: start, nextId: 0 })
-  const free = paintAutomation({ ...input, current: pointer(3.2, 0.8), freehand: true })
+  const free = paintAutomation({
+    ...input,
+    current: pointer(3.2, 0.8),
+    freehand: true,
+    policy: ARRANGEMENT_DEFAULTS.automation,
+  })
   expect(free.points.find(point => point.bar === 2.2)?.value).toBeCloseTo(0.2)
   expect(free.points.find(point => point.bar === 3.2)?.value).toBeCloseTo(0.8)
 })
@@ -190,6 +201,7 @@ test("freehand removes off-grid original spikes only inside the swept interval",
     grid: 1,
     freehand: true,
     idPrefix: "freehand",
+    policy: ARRANGEMENT_DEFAULTS.automation,
   })
   expect(result.points.filter(point => point.bar < 1.25 || point.bar > 2.25)).toEqual([
     original[0],
@@ -220,8 +232,13 @@ test("freehand reverse sweeps replace prior samples at different bar positions",
     freehand: true,
     idPrefix: "freehand",
   }
-  const forward = paintAutomation(input)
-  const reverse = paintAutomation({ ...input, state: forward.state, current: pointer(1.63, 0.8) })
+  const forward = paintAutomation({ ...input, policy: ARRANGEMENT_DEFAULTS.automation })
+  const reverse = paintAutomation({
+    ...input,
+    state: forward.state,
+    current: pointer(1.63, 0.8),
+    policy: ARRANGEMENT_DEFAULTS.automation,
+  })
   expect(reverse.points.filter(point => point.bar < 1.63)).toEqual(
     forward.points.filter(point => point.bar < 1.63)
   )
@@ -254,13 +271,14 @@ test("freehand retains earlier swept intervals without erasing unpainted viewpor
     freehand: true,
     idPrefix: "freehand",
   }
-  const first = paintAutomation(input)
+  const first = paintAutomation({ ...input, policy: ARRANGEMENT_DEFAULTS.automation })
   store.setViewport({ ...store.get().viewport, scrollX: 120 })
   const second = paintAutomation({
     ...input,
     state: first.state,
     current: pointer(6.25, 0.35),
     scene: store.get(),
+    policy: ARRANGEMENT_DEFAULTS.automation,
   })
   expect(second.points.filter(point => original.some(source => source.id === point.id))).toEqual([
     original[1],

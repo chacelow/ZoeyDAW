@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { describe, expect, it } from "bun:test"
 import { CONTROLS_WIDTH } from "../../../../layout"
 import { gridZoomLimit } from "../../../../model/grid"
@@ -71,17 +72,25 @@ describe("minimap vertical drag zoom", () => {
     const viewportWidth = 640
     const initialBars = viewportWidth / starting
     expect(
-      viewportWidth / minimapDragZoom(starting, 100, 160, 8, gridZoomLimit(4, 4))
+      viewportWidth /
+        minimapDragZoom(starting, 100, 160, 8, gridZoomLimit(4, 4), ARRANGEMENT_DEFAULTS.zoom)
     ).toBeGreaterThan(initialBars)
-    expect(viewportWidth / minimapDragZoom(starting, 100, 40, 8, gridZoomLimit(4, 4))).toBeLessThan(
-      initialBars
-    )
-    expect(minimapDragZoom(starting, 100, 100, 8, gridZoomLimit(4, 4))).toBe(starting)
+    expect(
+      viewportWidth /
+        minimapDragZoom(starting, 100, 40, 8, gridZoomLimit(4, 4), ARRANGEMENT_DEFAULTS.zoom)
+    ).toBeLessThan(initialBars)
+    expect(
+      minimapDragZoom(starting, 100, 100, 8, gridZoomLimit(4, 4), ARRANGEMENT_DEFAULTS.zoom)
+    ).toBe(starting)
   })
 
   it("stops at minimum and maximum zoom", () => {
-    expect(minimapDragZoom(32, 100, 1000, 8, gridZoomLimit(4, 4))).toBe(8)
-    expect(minimapDragZoom(32, 100, -1000, 8, gridZoomLimit(4, 4))).toBe(gridZoomLimit(4, 4))
+    expect(minimapDragZoom(32, 100, 1000, 8, gridZoomLimit(4, 4), ARRANGEMENT_DEFAULTS.zoom)).toBe(
+      8
+    )
+    expect(minimapDragZoom(32, 100, -1000, 8, gridZoomLimit(4, 4), ARRANGEMENT_DEFAULTS.zoom)).toBe(
+      gridZoomLimit(4, 4)
+    )
   })
 })
 
@@ -175,8 +184,11 @@ describe("anchored timeline zoom", () => {
   })
 
   it("clamps wheel zoom at both limits and clamps scroll at project boundaries", () => {
-    expect(wheelZoom({ ...zoomBase, deltaY: 1_000_000 })).toEqual({ pxPerBar: 5, scrollX: 0 })
-    const maximum = wheelZoom({ ...zoomBase, deltaY: -1_000_000 })
+    expect(wheelZoom({ ...zoomBase, deltaY: 1_000_000 }, ARRANGEMENT_DEFAULTS.zoom)).toEqual({
+      pxPerBar: 5,
+      scrollX: 0,
+    })
+    const maximum = wheelZoom({ ...zoomBase, deltaY: -1_000_000 }, ARRANGEMENT_DEFAULTS.zoom)
     expect(maximum.pxPerBar).toBe(zoomBase.maxPxPerBar)
     expect(maximum.scrollX).toBe(30 * zoomBase.maxPxPerBar - 320)
     expect(zoomAtAnchor({ ...zoomBase, scrollX: 0, nextPxPerBar: 16 }).scrollX).toBe(0)
@@ -185,16 +197,28 @@ describe("anchored timeline zoom", () => {
 
   it("clamps wheel anchor offsets to the canvas and applies exponential zoom", () => {
     expect(
-      wheelZoom({ ...zoomBase, anchorX: -20, deltaY: -260 * Math.log(2) }).scrollX
+      wheelZoom(
+        { ...zoomBase, anchorX: -20, deltaY: -260 * Math.log(2) },
+        ARRANGEMENT_DEFAULTS.zoom
+      ).scrollX
     ).toBeCloseTo(1280)
     expect(
-      wheelZoom({ ...zoomBase, anchorX: 900, deltaY: -260 * Math.log(2) }).scrollX
+      wheelZoom(
+        { ...zoomBase, anchorX: 900, deltaY: -260 * Math.log(2) },
+        ARRANGEMENT_DEFAULTS.zoom
+      ).scrollX
     ).toBeCloseTo(1920)
   })
 
   it("zooms buttons about the center using reciprocal steps", () => {
-    expect(stepZoom({ ...zoomBase, direction: 1 })).toEqual({ pxPerBar: 40, scrollX: 880 })
-    expect(stepZoom({ ...zoomBase, direction: -1 })).toEqual({ pxPerBar: 25.6, scrollX: 448 })
+    expect(stepZoom({ ...zoomBase, direction: 1 }, ARRANGEMENT_DEFAULTS.zoom)).toEqual({
+      pxPerBar: 40,
+      scrollX: 880,
+    })
+    expect(stepZoom({ ...zoomBase, direction: -1 }, ARRANGEMENT_DEFAULTS.zoom)).toEqual({
+      pxPerBar: 25.6,
+      scrollX: 448,
+    })
   })
 })
 
@@ -212,12 +236,15 @@ describe("viewport clamping and navigation", () => {
   }
 
   it("derives fit/grid zoom bounds and clamps both axes including pinned tracks", () => {
-    const minimum = clampTimelineViewport({
-      ...base,
-      storedPxPerBar: -1,
-      storedScrollX: 1e9,
-      storedScrollY: 1e9,
-    })
+    const minimum = clampTimelineViewport(
+      {
+        ...base,
+        storedPxPerBar: -1,
+        storedScrollX: 1e9,
+        storedScrollY: 1e9,
+      },
+      ARRANGEMENT_DEFAULTS.zoom
+    )
     expect(minimum.timeViewportWidth).toBe(640)
     expect(minimum.minPxPerBar).toBe(5)
     expect(minimum.maxPxPerBar).toBe(gridZoomLimit(4, 4))
@@ -225,34 +252,43 @@ describe("viewport clamping and navigation", () => {
     expect(minimum.timelineWidth).toBe(640)
     expect(minimum.scrollX).toBe(0)
     expect(minimum.scrollY).toBe(352)
-    const maximum = clampTimelineViewport({
-      ...base,
-      storedPxPerBar: 1e9,
-      storedScrollX: -1,
-      storedScrollY: -1,
-    })
+    const maximum = clampTimelineViewport(
+      {
+        ...base,
+        storedPxPerBar: 1e9,
+        storedScrollX: -1,
+        storedScrollY: -1,
+      },
+      ARRANGEMENT_DEFAULTS.zoom
+    )
     expect(maximum.pxPerBar).toBe(gridZoomLimit(4, 4))
     expect(maximum.scrollX).toBe(0)
     expect(maximum.scrollY).toBe(0)
   })
 
   it("preserves unmeasured vertical scroll and supplies initial zoom fallbacks", () => {
-    const unmeasured = clampTimelineViewport({
-      ...base,
-      containerWidth: 0,
-      bodyHeight: 0,
-      storedPxPerBar: 0,
-    })
+    const unmeasured = clampTimelineViewport(
+      {
+        ...base,
+        containerWidth: 0,
+        bodyHeight: 0,
+        storedPxPerBar: 0,
+      },
+      ARRANGEMENT_DEFAULTS.zoom
+    )
     expect(unmeasured.timeViewportWidth).toBe(0)
     expect(unmeasured.pxPerBar).toBe(1)
     expect(unmeasured.scrollY).toBe(100)
-    const fit = clampTimelineViewport({ ...base, storedPxPerBar: 0 })
+    const fit = clampTimelineViewport({ ...base, storedPxPerBar: 0 }, ARRANGEMENT_DEFAULTS.zoom)
     expect(fit.pxPerBar).toBe(5)
     expect(clampScrollX(100, 4, 10, 640)).toBe(0)
   })
 
   it("does not invert zoom bounds when fitting exceeds the grid limit", () => {
-    const wide = clampTimelineViewport({ ...base, bars: 1, containerWidth: CONTROLS_WIDTH + 1e6 })
+    const wide = clampTimelineViewport(
+      { ...base, bars: 1, containerWidth: CONTROLS_WIDTH + 1e6 },
+      ARRANGEMENT_DEFAULTS.zoom
+    )
     expect(wide.minPxPerBar).toBe(1e6)
     expect(wide.maxPxPerBar).toBe(1e6)
     expect(wide.pxPerBar).toBe(1e6)
@@ -289,12 +325,12 @@ describe("viewport clamping and navigation", () => {
       now: 2000,
       manualPanUntil: 2000,
     }
-    expect(followViewport(follow)).toBe(640)
-    expect(followViewport({ ...follow, transportBar: 31 })).toBe(640)
-    expect(followViewport({ ...follow, transportBar: 32 })).toBe(672)
-    expect(followViewport({ ...follow, transportBar: 20 })).toBe(288)
-    expect(followViewport({ ...follow, transportBar: 1 })).toBe(0)
-    expect(followViewport({ ...follow, transportBar: 200 })).toBe(3456)
+    expect(followViewport(follow, ARRANGEMENT_DEFAULTS.follow)).toBe(640)
+    expect(followViewport({ ...follow, transportBar: 31 }, ARRANGEMENT_DEFAULTS.follow)).toBe(640)
+    expect(followViewport({ ...follow, transportBar: 32 }, ARRANGEMENT_DEFAULTS.follow)).toBe(672)
+    expect(followViewport({ ...follow, transportBar: 20 }, ARRANGEMENT_DEFAULTS.follow)).toBe(288)
+    expect(followViewport({ ...follow, transportBar: 1 }, ARRANGEMENT_DEFAULTS.follow)).toBe(0)
+    expect(followViewport({ ...follow, transportBar: 200 }, ARRANGEMENT_DEFAULTS.follow)).toBe(3456)
   })
 
   it("leaves follow suspended until its deadline or while disabled, stopped or unmeasured", () => {
@@ -306,10 +342,10 @@ describe("viewport clamping and navigation", () => {
       now: 2000,
       manualPanUntil: 2000,
     }
-    expect(followViewport({ ...follow, now: 1999 })).toBe(640)
-    expect(followViewport({ ...follow, follow: false })).toBe(640)
-    expect(followViewport({ ...follow, playing: false })).toBe(640)
-    expect(followViewport({ ...follow, viewportWidth: 0 })).toBe(640)
-    expect(followViewport(follow)).toBe(2528)
+    expect(followViewport({ ...follow, now: 1999 }, ARRANGEMENT_DEFAULTS.follow)).toBe(640)
+    expect(followViewport({ ...follow, follow: false }, ARRANGEMENT_DEFAULTS.follow)).toBe(640)
+    expect(followViewport({ ...follow, playing: false }, ARRANGEMENT_DEFAULTS.follow)).toBe(640)
+    expect(followViewport({ ...follow, viewportWidth: 0 }, ARRANGEMENT_DEFAULTS.follow)).toBe(640)
+    expect(followViewport(follow, ARRANGEMENT_DEFAULTS.follow)).toBe(2528)
   })
 })

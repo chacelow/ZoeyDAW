@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { expect, test } from "bun:test"
 import { createMockDocument } from "@/project/adapters/fixtures"
 import { arrangementBodyBottom, arrangementBodyTop, pinnedTrackHeight } from "../layout"
@@ -7,7 +8,15 @@ import { edgeScroll } from "./edge-scroll"
 const tracks = createMockDocument().tracks
 const viewport = { width: 800, height: 320, pxPerBar: 100, scrollX: 100, scrollY: 80, dpr: 1 }
 const bottom = arrangementBodyBottom(viewport.height) - pinnedTrackHeight(visibleTracks(tracks))
-const base = { viewport, bars: 128, tracks, axis: "both" as const, edge: 40, elapsed: 20 }
+const base = {
+  viewport,
+  bars: 128,
+  tracks,
+  axis: "both" as const,
+  edge: 40,
+  elapsed: 20,
+  policy: ARRANGEMENT_DEFAULTS.autoScroll,
+}
 
 test("edge scrolling respects pinned rows, horizontal mode and elapsed limits", () => {
   expect(edgeScroll({ ...base, pointer: { x: 800, y: bottom - 20 } })).toEqual({

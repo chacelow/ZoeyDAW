@@ -1,3 +1,4 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import type { projectActions } from "@/project/adapters"
 import type { ProjectState } from "@/project/model/types"
 import type { SceneStore } from "../../core/scene"
@@ -23,6 +24,7 @@ export interface LaneKey {
 
 export interface LaneContext {
   scene: SceneStore
+  policy: ArrangementPolicy
   actions: typeof projectActions
   getState: () => ProjectState
 }

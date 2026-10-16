@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { createRendererState } from "@gpuix/native/host"
@@ -135,6 +136,7 @@ describe("Native timeline layout and hit testing", () => {
             onViewport={projectActions.setViewport}
             onFit={owner.fitToProject}
             geometry={{
+              policy: ARRANGEMENT_DEFAULTS,
               bars: 128,
               viewportWidth: 800,
               pxPerBar: workspace.pxPerBar,
@@ -192,6 +194,7 @@ describe("Native timeline layout and hit testing", () => {
           onViewport={projectActions.setViewport}
           onFit={owner.fitToProject}
           geometry={{
+            policy: ARRANGEMENT_DEFAULTS,
             bars: 128,
             viewportWidth: 800,
             pxPerBar: 100,

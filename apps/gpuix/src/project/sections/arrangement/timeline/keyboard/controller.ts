@@ -1,3 +1,5 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { deriveGridPlan } from "@/project/model/grid"
 import { positionToBar } from "@/project/model/types"
@@ -39,6 +41,7 @@ export interface KeyboardOwner {
 }
 
 export interface TimelineKeyboardDeps {
+  policy?: ArrangementPolicy["keyboard"]
   focus: () => KeyboardFocus
   blurControl: () => void
   claim?: (event: TimelineKeyboardInput) => boolean
@@ -46,6 +49,7 @@ export interface TimelineKeyboardDeps {
 
 export function createTimelineKeyboard({
   focus,
+  policy = ARRANGEMENT_DEFAULTS.keyboard,
   blurControl,
   claim = () => false,
 }: TimelineKeyboardDeps): KeyboardOwner {
@@ -139,7 +143,10 @@ export function createTimelineKeyboard({
         }
         if (key === "c" || key === "v") {
           if (!event.isHeld)
-            projectActions.setMidiVelocity(state.session.midiVelocity + (key === "v" ? 10 : -10))
+            projectActions.setMidiVelocity(
+              state.session.midiVelocity +
+                (key === "v" ? policy.velocityStep : -policy.velocityStep)
+            )
           return true
         }
         const semitone = NOTE_KEYS[key]

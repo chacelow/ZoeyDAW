@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { afterEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
@@ -79,6 +80,7 @@ function fixture(clipCount: number) {
         height={height}
         label="Overview"
         geometry={{
+          policy: ARRANGEMENT_DEFAULTS,
           bars,
           viewportWidth: 80,
           pxPerBar: 10,

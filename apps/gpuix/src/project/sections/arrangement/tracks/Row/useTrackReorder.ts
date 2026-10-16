@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { PanelEnvironmentContext } from "@/ui/panels/PanelEnvironment"
@@ -62,7 +63,11 @@ export function useTrackReorder(
             cancel()
             return
           }
-          if (!start.moved && !dragStarted(start, { x: event.x, y: event.y })) return
+          if (
+            !start.moved &&
+            !dragStarted(start, { x: event.x, y: event.y }, ARRANGEMENT_DEFAULTS.pointer)
+          )
+            return
           start.moved = true
           const bounds = container.current
             ? renderer?.getElementBounds?.(container.current.id)

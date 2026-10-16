@@ -1,9 +1,11 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { describe, expect, it } from "bun:test"
 import { gridZoomLimit } from "../../../../model/grid"
 import { minimapDragBody, minimapHit, minimapPointerDown } from "./minimap"
 import type { MinimapGeometry } from "./minimap"
 
 const geometry: MinimapGeometry = {
+  policy: ARRANGEMENT_DEFAULTS,
   bars: 128,
   viewportWidth: 640,
   pxPerBar: 32,

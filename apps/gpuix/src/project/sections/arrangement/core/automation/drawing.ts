@@ -1,3 +1,4 @@
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { clampAutomationValue } from "@/project/model/automation-curve"
 import { automationBar, automationValue } from "./geometry"
 import { sortedPoints } from "./points"
@@ -20,6 +21,7 @@ export interface PaintInput {
   state: DrawingState
   current: Point
   scene: ArrangementScene
+  policy: ArrangementPolicy["automation"]
   row: AutomationRow
   grid: number
   freehand: boolean
@@ -35,6 +37,7 @@ export function paintAutomation({
   state,
   current,
   scene,
+  policy,
   row,
   grid,
   freehand,
@@ -72,7 +75,10 @@ export function paintAutomation({
     }
     intervals.push(merged)
     swept = intervals
-    const samples = Math.max(1, Math.ceil(Math.abs(current.x - last.x) / 3))
+    const samples = Math.max(
+      1,
+      Math.ceil(Math.abs(current.x - last.x) / policy.freehandSamplePixels)
+    )
     for (let index = 0; index <= samples; index++) {
       const fraction = index / samples
       const bar = fromBar + (toBar - fromBar) * fraction

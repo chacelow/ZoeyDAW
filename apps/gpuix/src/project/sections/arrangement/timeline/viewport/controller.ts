@@ -1,3 +1,5 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import type { ArrangementPolicy } from "@/project/defaults/arrangement"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { growTimelineBars, timelineBars } from "@/project/model/selectors"
 import { positionToBar, visibleTracks } from "@/project/model/types"
@@ -34,7 +36,10 @@ export interface TimelineViewportController {
   follow: (transportBar: number) => void
 }
 
-export function readTimelineViewport(size: TimelineSize): TimelineViewportSnapshot {
+export function readTimelineViewport(
+  size: TimelineSize,
+  policy: ArrangementPolicy
+): TimelineViewportSnapshot {
   const { document: project, workspace, session } = useProjectState.getState()
   const bars = growTimelineBars(
     timelineBars(project),
@@ -47,30 +52,36 @@ export function readTimelineViewport(size: TimelineSize): TimelineViewportSnapsh
   return {
     bars,
     tracks,
-    ...clampTimelineViewport({
-      bars,
-      containerWidth: size.containerWidth,
-      bodyHeight: size.bodyHeight,
-      numerator: project.transport.numerator,
-      denominator: project.transport.denominator,
-      tracks,
-      storedPxPerBar: workspace.pxPerBar,
-      storedScrollX: workspace.scrollX,
-      storedScrollY: workspace.scrollY,
-    }),
+    ...clampTimelineViewport(
+      {
+        bars,
+        containerWidth: size.containerWidth,
+        bodyHeight: size.bodyHeight,
+        numerator: project.transport.numerator,
+        denominator: project.transport.denominator,
+        tracks,
+        storedPxPerBar: workspace.pxPerBar,
+        storedScrollX: workspace.scrollX,
+        storedScrollY: workspace.scrollY,
+      },
+      policy.zoom
+    ),
   }
 }
 
-export function createTimelineViewport(readSize: () => TimelineSize): TimelineViewportController {
+export function createTimelineViewport(
+  readSize: () => TimelineSize,
+  policy: ArrangementPolicy = ARRANGEMENT_DEFAULTS
+): TimelineViewportController {
   let manualPanUntil = 0
   function suspendFollow() {
-    manualPanUntil = performance.now() + 2000
+    manualPanUntil = performance.now() + policy.follow.manualPanPauseMs
   }
   return {
-    read: () => readTimelineViewport(readSize()),
+    read: () => readTimelineViewport(readSize(), policy),
     suspendFollow,
     clamp() {
-      const { pxPerBar, scrollX, scrollY } = readTimelineViewport(readSize())
+      const { pxPerBar, scrollX, scrollY } = readTimelineViewport(readSize(), policy)
       const workspace = useProjectState.getState().workspace
       if (
         pxPerBar !== workspace.pxPerBar ||
@@ -82,7 +93,7 @@ export function createTimelineViewport(readSize: () => TimelineSize): TimelineVi
     },
     wheel(event: EventPayload) {
       const size = readSize()
-      const view = readTimelineViewport(size)
+      const view = readTimelineViewport(size, policy)
       const modifiers = event.modifiers
       const deltaX = -(event.deltaX ?? 0)
       const deltaY = -(event.deltaY ?? 0)
@@ -90,12 +101,15 @@ export function createTimelineViewport(readSize: () => TimelineSize): TimelineVi
       if (modifiers?.ctrl || modifiers?.cmd) {
         suspendFollow()
         projectActions.setViewport(
-          wheelZoom({
-            ...view,
-            viewportWidth: view.timeViewportWidth,
-            anchorX: (event.x ?? size.timelineLeft) - size.timelineLeft,
-            deltaY,
-          })
+          wheelZoom(
+            {
+              ...view,
+              viewportWidth: view.timeViewportWidth,
+              anchorX: (event.x ?? size.timelineLeft) - size.timelineLeft,
+              deltaY,
+            },
+            policy.zoom
+          )
         )
       } else {
         if (deltaX || modifiers?.shift) suspendFollow()
@@ -114,28 +128,31 @@ export function createTimelineViewport(readSize: () => TimelineSize): TimelineVi
     },
     zoom(direction: -1 | 1) {
       suspendFollow()
-      const view = readTimelineViewport(readSize())
+      const view = readTimelineViewport(readSize(), policy)
       projectActions.setViewport(
-        stepZoom({ ...view, viewportWidth: view.timeViewportWidth, direction })
+        stepZoom({ ...view, viewportWidth: view.timeViewportWidth, direction }, policy.zoom)
       )
     },
     reveal(trackId: string) {
-      const view = readTimelineViewport(readSize())
+      const view = readTimelineViewport(readSize(), policy)
       const scrollY = revealTrackScrollY(view.tracks, view.bodyHeight, view.scrollY, trackId)
       if (scrollY !== view.scrollY) projectActions.setViewport({ scrollY })
     },
     follow(transportBar: number) {
-      const view = readTimelineViewport(readSize())
+      const view = readTimelineViewport(readSize(), policy)
       const state = useProjectState.getState()
-      const scrollX = followViewport({
-        ...view,
-        viewportWidth: view.timeViewportWidth,
-        transportBar,
-        follow: state.workspace.follow,
-        playing: state.session.playing,
-        now: performance.now(),
-        manualPanUntil,
-      })
+      const scrollX = followViewport(
+        {
+          ...view,
+          viewportWidth: view.timeViewportWidth,
+          transportBar,
+          follow: state.workspace.follow,
+          playing: state.session.playing,
+          now: performance.now(),
+          manualPanUntil,
+        },
+        policy.follow
+      )
       if (scrollX !== view.scrollX) projectActions.setViewport({ scrollX })
     },
   }

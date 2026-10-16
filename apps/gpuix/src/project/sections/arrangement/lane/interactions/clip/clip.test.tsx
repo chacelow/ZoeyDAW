@@ -1,3 +1,4 @@
+import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { afterEach, beforeEach, expect, it } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -47,6 +48,7 @@ function mount() {
   const scene = createSceneStore()
   const context: LaneContext = {
     scene,
+    policy: ARRANGEMENT_DEFAULTS,
     actions: projectActions,
     getState: useProjectState.getState,
   }
