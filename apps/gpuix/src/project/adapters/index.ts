@@ -13,6 +13,8 @@ export { createProjectRuntime, ProjectBackendNotConfiguredError } from "./runtim
 export type { ProjectSeed, ProjectBackendOptions, ProjectRuntimeDependencies } from "./runtime"
 export {
   setProjectStorageId,
+  openProjectSnapshot,
+  canSaveSnapshot,
   serializeProject,
   hydrateProject,
   setSnapshotStorage,

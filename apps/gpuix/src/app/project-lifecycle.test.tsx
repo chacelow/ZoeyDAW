@@ -1,0 +1,217 @@
+import { afterEach, beforeAll, expect, test } from "bun:test"
+import { flushSync } from "@gpuix/react"
+import { createTestRoot, type TestRoot } from "@gpuix/react/testing"
+import { AnimationFrameProvider } from "@/platform/frame"
+import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
+import {
+  createMemorySnapshotStorage,
+  configureProjectBackend,
+  projectActions,
+  serializeProject,
+  setSnapshotStorage,
+  useProjectState,
+  whenProjectBackendIdle,
+} from "@/project/adapters"
+import { createNativeBackend } from "@/project/adapters/backend/native"
+import { DEFAULT_THEME_MODE } from "@/platform/settings"
+import { DEFAULT_THEME_PRESET, isThemePresetId } from "@/shared/theme/presets"
+import { AppShell } from "./AppShell"
+import { initAppI18n } from "./i18n"
+import { AppNativeEnvironmentProvider } from "./native-environment"
+import { createRouter } from "./router/router"
+import { createPreferenceStore } from "./settings/preference-store"
+import { isThemeMode } from "./settings/theme-mode"
+
+const roots: TestRoot[] = []
+const cleanups: (() => void)[] = []
+beforeAll(() => initAppI18n({ initialLanguage: "zh-CN" }))
+afterEach(() => {
+  for (const root of roots.splice(0)) root.unmount()
+  for (const cleanup of cleanups.splice(0)) cleanup()
+  setSnapshotStorage(null)
+})
+
+function mount(initial = "/", storage = createMemorySnapshotStorage()) {
+  cleanups.push(configureProjectBackend(createNativeBackend))
+  const router = createRouter(initial)
+  setSnapshotStorage(storage)
+  const keyboard = createWindowKeyboard()
+  const root = createTestRoot({ width: 1280, height: 800, ...keyboard.rootHandlers })
+  roots.push(root)
+  root.render(
+    <AnimationFrameProvider source={{ subscribe: () => () => {}, subscribeResume: () => () => {} }}>
+      <AppNativeEnvironmentProvider value={{ subscribeWindowActive: () => () => {} }}>
+        <WindowKeyboardProvider value={keyboard}>
+          <AppShell
+            router={router}
+            storage={storage}
+            closeRenderer={null}
+            systemAppearance="dark"
+            appearance={{
+              themeMode: createPreferenceStore(
+                { get: () => null, set: () => {} },
+                isThemeMode,
+                DEFAULT_THEME_MODE
+              ),
+              themePreset: createPreferenceStore(
+                { get: () => null, set: () => {} },
+                isThemePresetId,
+                DEFAULT_THEME_PRESET
+              ),
+            }}
+            showErrorDetails
+          />
+        </WindowKeyboardProvider>
+      </AppNativeEnvironmentProvider>
+    </AnimationFrameProvider>
+  )
+  return { root, router, storage }
+}
+
+function act(root: TestRoot, action: () => void) {
+  flushSync(action)
+  root.renderer.flush()
+}
+function click(root: TestRoot, id: string) {
+  const node = root.renderer.findByTestId(id)
+  if (!node) throw new Error(`Missing ${id}`)
+  root.renderer.nativeSimulateKeystrokes(node.id, "enter")
+  root.renderer.flush()
+}
+async function settle(root: TestRoot) {
+  await whenProjectBackendIdle()
+  for (let i = 0; i < 5; i++) await Promise.resolve()
+  act(root, () => {})
+}
+const key = (id: string) => `zoeydaw:project:snapshot:v1:${encodeURIComponent(id)}`
+
+test("saved project reopens from recent with identical authored content", async () => {
+  const { root, router, storage } = mount()
+  click(root, "home-create")
+  const route = router.getRoute()
+  if (route.kind !== "project") throw new Error("Create did not open a project")
+  await settle(root)
+  act(root, () => projectActions.setBpm(151))
+  projectActions.saveSnapshot()
+  await settle(root)
+  const saved = storage.get(key(route.projectId))
+  if (saved === null) throw new Error("Snapshot was not saved")
+  act(root, () => router.navigate("/"))
+  act(root, () => router.navigate("/project/other"))
+  await settle(root)
+  act(root, () => router.navigate("/"))
+  click(root, `recent-${route.projectId}`)
+  await settle(root)
+  expect(serializeProject()).toBe(saved)
+  expect(useProjectState.getState().document.transport.bpm).toBe(151)
+  root.unmount()
+  roots.splice(roots.indexOf(root), 1)
+  const restarted = mount(`/project/${route.projectId}`, storage)
+  await settle(restarted.root)
+  expect(serializeProject()).toBe(saved)
+})
+
+test("corrupt saved project reports an error and save preserves the original bytes", async () => {
+  const { root, router, storage } = mount()
+  const damaged = '{"version":2,"document":"damaged"}'
+  storage.set(key("corrupt"), damaged)
+  act(root, () => router.navigate("/project/corrupt"))
+  await settle(root)
+  expect(useProjectState.getState().session.snapshotError).toContain("invalid")
+  expect(root.renderer.getAllText().join("\n")).toContain("invalid")
+  projectActions.saveSnapshot()
+  await settle(root)
+  expect(storage.get(key("corrupt"))).toBe(damaged)
+})
+
+test("missing saved project opens empty without a snapshot error", async () => {
+  const { root } = mount("/project/no-snapshot")
+  await settle(root)
+  expect(useProjectState.getState().session.snapshotError).toBeNull()
+  expect(useProjectState.getState().document.tracks.map(track => track.kind)).toEqual(["main"])
+})
+
+test("dirty Back can cancel without releasing project content or undo", async () => {
+  const { root, router } = mount()
+  act(root, () => router.navigate("/project/dirty-back"))
+  await settle(root)
+  act(root, () => projectActions.setBpm(142))
+  await settle(root)
+  act(root, () => {
+    router.back()
+  })
+  expect(router.getRoute()).toEqual({ kind: "project", projectId: "dirty-back" })
+  click(root, "unsaved-cancel")
+  await settle(root)
+  expect(useProjectState.getState().document.transport.bpm).toBe(142)
+  projectActions.undo()
+  await settle(root)
+  expect(useProjectState.getState().document.transport.bpm).toBe(120)
+})
+
+test("dirty replace saves before opening another project", async () => {
+  const { root, router, storage } = mount("/project/save-before-replace")
+  await settle(root)
+  act(root, () => projectActions.setBpm(143))
+  await settle(root)
+  act(root, () => router.navigate("/project/replaced", { replace: true }))
+  expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-before-replace" })
+  click(root, "unsaved-save")
+  await settle(root)
+  expect(router.getRoute()).toEqual({ kind: "project", projectId: "replaced" })
+  const saved = storage.get(key("save-before-replace"))
+  if (saved === null) throw new Error("Snapshot was not saved before leaving")
+  expect(JSON.parse(saved).document.transport.bpm).toBe(143)
+})
+
+test("dirty navigation save failure stays in the original project; discard may leave", async () => {
+  const { root, router } = mount("/project/save-failure")
+  await settle(root)
+  act(root, () => projectActions.setBpm(144))
+  await settle(root)
+  setSnapshotStorage({
+    get: () => null,
+    set: () => {
+      throw new Error("storage unavailable")
+    },
+  })
+  act(root, () => router.navigate("/project/next"))
+  expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-failure" })
+  click(root, "unsaved-save")
+  await settle(root)
+  expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-failure" })
+  expect(useProjectState.getState().document.transport.bpm).toBe(144)
+  expect(useProjectState.getState().session.dirty).toBe(true)
+  act(root, () => router.navigate("/project/next"))
+  click(root, "unsaved-discard")
+  await settle(root)
+  expect(router.getRoute()).toEqual({ kind: "project", projectId: "next" })
+})
+
+test("new project never reads snapshot storage", async () => {
+  const { root } = mount()
+  setSnapshotStorage({
+    get: () => {
+      throw new Error("new projects must not read storage")
+    },
+    set: () => {},
+  })
+  click(root, "home-create")
+  await settle(root)
+  expect(useProjectState.getState().session.snapshotError).toBeNull()
+  expect(useProjectState.getState().document.transport.bpm).toBe(120)
+})
+
+test("discard then reopening the same unsaved id starts empty", async () => {
+  const { root, router } = mount("/project/discard-same-id")
+  await settle(root)
+  act(root, () => projectActions.setBpm(177))
+  await settle(root)
+  act(root, () => router.navigate("/"))
+  click(root, "unsaved-discard")
+  await settle(root)
+  act(root, () => router.navigate("/project/discard-same-id"))
+  await settle(root)
+  expect(useProjectState.getState().document.transport.bpm).toBe(120)
+  expect(useProjectState.getState().session.dirty).toBe(false)
+})

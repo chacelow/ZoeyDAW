@@ -36,6 +36,7 @@ export function setSnapshotStorage(storage: SnapshotStorage | null): void {
 }
 
 let storageId: string | null = null
+let failedOpenKey: string | null = null
 const storageKey = () => `zoeydaw:project:snapshot:v1:${encodeURIComponent(storageId ?? "default")}`
 
 /**
@@ -47,6 +48,7 @@ export function setProjectStorageId(projectId: string): void {
   }
   resetProject(projectId)
   storageId = projectId
+  failedOpenKey = null
 }
 export function serializeProject(): string {
   return stringifyProject(getCommittedDocument(), getCommittedWorkspace())
@@ -54,8 +56,43 @@ export function serializeProject(): string {
 export function hydrateProject(json: string): void {
   hydrateState(parseProject(json))
 }
+
+/** Failed opens protect the saved bytes until a successful reopen or identity change. */
+export function canSaveSnapshot(): boolean {
+  return failedOpenKey !== storageKey()
+}
+
+/** Route opening treats absent snapshots as a new empty project, unlike explicit Restore. */
+export function openProjectSnapshot(projectId: string): boolean {
+  if (storageId === projectId) resetProject(projectId)
+  else setProjectStorageId(projectId)
+  const key = storageKey()
+  failedOpenKey = key
+  let saved: string | null
+  try {
+    if (!snapshotStorage) throw new Error("Snapshot storage is not configured")
+    saved = snapshotStorage.get(key)
+  } catch {
+    session({ snapshotError: "Could not read snapshot storage." })
+    return false
+  }
+  if (saved !== null) {
+    try {
+      hydrateProject(saved)
+    } catch {
+      session({
+        snapshotError: "The local snapshot is invalid or unsupported. Current project was kept.",
+      })
+      return false
+    }
+  }
+  failedOpenKey = null
+  session({ snapshotError: null })
+  return true
+}
 export const snapshotActions = {
   saveSnapshot(): void {
+    if (!canSaveSnapshot()) return
     const epoch = projectEpoch()
     const revision = projectRevision()
     const document = getCommittedDocument()

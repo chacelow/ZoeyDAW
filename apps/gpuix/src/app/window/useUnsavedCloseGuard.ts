@@ -5,7 +5,8 @@ import { projectActions, useProjectState, whenProjectBackendIdle } from "@/proje
 import { useAppTranslation } from "../i18n"
 import { createWindowCloseGuard } from "@/platform/window"
 import { chooseClose, IDLE_CLOSE, requestClose } from "./unsaved-close"
-import type { WindowRenderer, WindowCloseGuard } from "@/platform/window"
+import type { WindowRenderer } from "@/platform/window"
+import type { Router } from "../router/router"
 import type { UnsavedCloseChoice, UnsavedCloseState } from "./unsaved-close"
 
 /** Saves through the project's snapshot path and reports whether the project became clean. */
@@ -16,57 +17,70 @@ async function saveProject(): Promise<boolean> {
   return !dirty && snapshotError === null
 }
 
-/**
- * Vetoes closing a dirty project window and asks first. `renderer === null` (test roots and
- * renderers without the close-guard patch) leaves closing unguarded.
- */
-export function useUnsavedCloseGuard(renderer: WindowRenderer | null) {
+/** One save/discard/cancel decision owns both native close and project navigation. */
+export function useUnsavedCloseGuard(renderer: WindowRenderer | null, router: Router) {
   const { t } = useAppTranslation()
   const [asking, setAsking] = useState(false)
   const state = useRef<UnsavedCloseState>(IDLE_CLOSE)
-  const guard = useRef<WindowCloseGuard | null>(null)
+  const pending = useRef<(() => void) | null>(null)
   const labels = useRef(t)
   labels.current = t
 
   useLayoutEffect(() => {
-    if (!renderer) return
-    // The renderer keeps its predicate after unmount (the port has no unregister); a retired
-    // guard therefore allows closing and never touches this component's state again.
     let isRetired = false
-    const created = createWindowCloseGuard(renderer, {
-      shouldClose() {
-        if (isRetired) return true
-        const result = requestClose(state.current, useProjectState.getState().session.dirty)
-        state.current = result.next
-        // AppKit is waiting on this answer; open the dialog right after it returns, committed
-        // synchronously because the request arrives outside any React event.
-        if (!result.allow) {
-          queueMicrotask(() => {
-            if (!isRetired) flushSync(() => setAsking(true))
-          })
-        }
-        return result.allow
-      },
+    const dirty = () =>
+      router.getRoute().kind === "project" && useProjectState.getState().session.dirty
+    const unregister = router.registerLeaveGuard((_next, proceed) => {
+      if (pending.current) return false
+      const result = requestClose(state.current, dirty())
+      state.current = result.next
+      if (result.allow) return true
+      pending.current = proceed
+      setAsking(true)
+      return false
     })
-    guard.current = created
+    if (renderer) {
+      // AppKit needs a synchronous veto; dialog rendering happens after the callback returns.
+      const created = createWindowCloseGuard(renderer, {
+        shouldClose() {
+          if (isRetired) return true
+          if (pending.current) return false
+          const result = requestClose(state.current, dirty())
+          state.current = result.next
+          if (!result.allow) {
+            pending.current = () => created.close()
+            queueMicrotask(() => {
+              if (!isRetired && pending.current) flushSync(() => setAsking(true))
+            })
+          }
+          return result.allow
+        },
+      })
+    }
     return () => {
       isRetired = true
-      if (guard.current === created) guard.current = null
+      unregister()
+      pending.current = null
+      state.current = IDLE_CLOSE
     }
-  }, [renderer])
+  }, [renderer, router])
 
   const choose = useCallback(async (choice: UnsavedCloseChoice) => {
     setAsking(false)
-    const current = guard.current
+    const current = pending.current
+    if (!current) return
     const saved = choice === "save" && (await saveProject())
-    // Unmounted or replaced while saving: the decision belongs to a guard that no longer exists.
-    if (current !== guard.current) return
+    // A retired/replaced owner cannot complete an earlier decision after its save resolves.
+    if (current !== pending.current) return
     if (choice === "save" && !saved) toast.error(labels.current("windowClose.saveFailed"))
     state.current = chooseClose(state.current, choice, saved)
+    pending.current = null
     if (state.current.phase !== "armed") return
     try {
-      current?.close()
+      current()
+      state.current = IDLE_CLOSE
     } catch {
+      state.current = IDLE_CLOSE
       toast.error(labels.current("windowClose.closeFailed"))
     }
   }, [])
