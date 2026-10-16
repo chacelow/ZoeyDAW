@@ -443,7 +443,27 @@ export function parseProject(json: string): { document: DocumentState; workspace
           ...(track.returnPost === undefined ? {} : { returnPost: track.returnPost }),
           ...(track.sends === undefined ? {} : { sends: { ...track.sends } }),
           ...(track.devices === undefined ? {} : { devices: structuredClone(track.devices) }),
-          clips: track.clips.map(serializeClip),
+          clips: track.clips.map(clip => {
+            const copy = serializeClip(clip)
+            if (copy.kind === "midi") {
+              const ids = new Set(
+                copy.notes.flatMap(note => (note.id === undefined ? [] : [note.id]))
+              )
+              let nextId = 0
+              for (const note of copy.notes) {
+                if (note.id !== undefined) {
+                  continue
+                }
+                let id: string
+                do {
+                  id = `snapshot-note-${nextId++}`
+                } while (ids.has(id))
+                note.id = id
+                ids.add(id)
+              }
+            }
+            return copy
+          }),
           heightPx: track.heightPx,
           ...(track.childTrackIds === undefined ? {} : { childTrackIds: [...track.childTrackIds] }),
           ...(track.collapsed === undefined ? {} : { collapsed: track.collapsed }),

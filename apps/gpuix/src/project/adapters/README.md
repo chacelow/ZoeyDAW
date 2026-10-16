@@ -85,6 +85,8 @@ Peak output is channel-major, then pixel-major `[min, max]`: `[leftMin0, leftMax
 
 Snapshot bar positions (loop endpoints, clip starts, markers and automation points) are finite and at least 1. Durations remain strictly positive and may be less than one bar; source offsets retain their signed coordinate semantics. Invalid restore leaves the current document and undo history intact.
 
+Parsing assigns collision-free IDs to MIDI notes missing them, preserving every existing ID. Generated IDs are deterministic within each clip and survive snapshot serialization and reparse, so legacy snapshots enter the editor with stable note identity.
+
 `setSnapshotStorage(storage)` installs the synchronous `SnapshotStorage` port (`get(key): string | null`, `set(key, value): void`); passing `null` disconnects it. The platform/application composition root supplies the durable implementation. There is no default storage or filesystem access in this layer. `createMemorySnapshotStorage()` creates an isolated test implementation.
 
 Save captures the committed revision, its storage instance and route key, then waits for backend acceptance before writing. A newer edit is not marked clean by that older save. Project switching cancels the pending save. Restore returns false and sets `session.snapshotError` for missing, invalid or unavailable storage; failed reads or writes preserve authored data and dirty state. These are prototype snapshots, not `.zdaw` files or background autosave.

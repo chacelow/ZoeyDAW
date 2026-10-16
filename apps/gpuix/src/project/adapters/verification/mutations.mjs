@@ -97,10 +97,26 @@ const mutations = [
   {
     name: "leak-failed-native-construction",
     file: "backend/native.ts",
-    from: "disposed = true\n    engine.dispose(handle)\n    throw error",
-    to: "disposed = true\n    throw error",
+    from: "      engine.dispose(handle)\n    } catch {\n      throw error",
+    to: "      void handle\n    } catch {\n      throw error",
     test: "backend/native.test.ts",
     failure: "releases the opened native session",
+  },
+  {
+    name: "mask-original-native-construction-error",
+    file: "backend/native.ts",
+    from: "engine.dispose(handle)\n    } catch {\n      throw error",
+    to: "engine.dispose(handle)\n    } catch (cleanupError) {\n      throw cleanupError",
+    test: "backend/native.test.ts",
+    failure: "releases the opened native session",
+  },
+  {
+    name: "leave-legacy-midi-notes-without-ids",
+    file: "../model/persistence.ts",
+    from: "note.id = id",
+    to: "void id",
+    test: "../model/persistence-midi-identity.test.ts",
+    failure: "normalizes missing MIDI note IDs",
   },
 ]
 const tests = [...new Set(mutations.map(mutation => `${adapters}${mutation.test}`))]
