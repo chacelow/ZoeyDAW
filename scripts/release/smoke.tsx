@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop -- Windows hosted audio advances asynchronously within a bounded observation window. */
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -101,9 +102,25 @@ try {
   flushSync(projectActions.togglePlay)
   if (!(await whenProjectBackendIdle())) throw new Error("Native engine rejected play")
   await Bun.sleep(100)
-  const first = readProjectTelemetry()
+  let first = readProjectTelemetry()
   await Bun.sleep(150)
-  const second = readProjectTelemetry()
+  let second = readProjectTelemetry()
+  if (process.platform === "win32") {
+    const deadline = performance.now() + 20_000
+    while (!first?.playing && performance.now() < deadline) {
+      await Bun.sleep(20)
+      first = readProjectTelemetry()
+    }
+    second = readProjectTelemetry()
+    while (
+      first?.playing &&
+      (!second?.playing || second.clock.bar <= first.clock.bar) &&
+      performance.now() < deadline
+    ) {
+      await Bun.sleep(20)
+      second = readProjectTelemetry()
+    }
+  }
   if (!first?.playing || !second?.playing || !(second.clock.bar > first.clock.bar)) {
     throw new Error(`Native clock did not advance: ${JSON.stringify({ first, second })}`)
   }
@@ -112,7 +129,14 @@ try {
   flushSync(projectActions.stop)
   if (!(await whenProjectBackendIdle())) throw new Error("Native engine rejected stop")
   await Bun.sleep(80)
-  const stopped = readProjectTelemetry()
+  let stopped = readProjectTelemetry()
+  if (process.platform === "win32") {
+    const deadline = performance.now() + 20_000
+    while (stopped?.playing !== false && performance.now() < deadline) {
+      await Bun.sleep(20)
+      stopped = readProjectTelemetry()
+    }
+  }
   if (stopped?.playing !== false) throw new Error("Native engine did not stop")
   createSettingStorage("language", options).set("en-US")
   createLogPlatform({ configDir: directory, defaultDir: path.join(directory, "logs") }).initialize()

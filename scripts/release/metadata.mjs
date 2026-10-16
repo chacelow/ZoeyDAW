@@ -3,6 +3,32 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 export const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
+
+const PLATFORMS = {
+  "darwin-arm64": {
+    id: "macos-arm64",
+    bindingSuffix: "darwin-arm64",
+    bunTarget: "bun-darwin-arm64",
+    targetTriple: "aarch64-apple-darwin",
+    executableSuffix: "",
+    formats: ["app", "dmg"],
+  },
+  "win32-x64": {
+    id: "windows-x64",
+    bindingSuffix: "win32-x64-msvc",
+    bunTarget: "bun-windows-x64",
+    targetTriple: "x86_64-pc-windows-msvc",
+    executableSuffix: ".exe",
+    formats: ["nsis"],
+  },
+}
+
+export function releasePlatform() {
+  const host = `${process.platform}-${process.arch}`
+  if (!Object.hasOwn(PLATFORMS, host)) throw new Error(`Unsupported release host: ${host}`)
+  return PLATFORMS[host]
+}
+
 export function releaseMetadata(version) {
   if (
     typeof version !== "string" ||
