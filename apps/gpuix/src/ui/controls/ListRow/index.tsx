@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
 import type { Props, StyleDesc } from "@gpuix/react"
@@ -96,7 +97,10 @@ export function ListRow({
       onKeyDown={event => {
         if (disabled) return
         onKeyDown?.(event)
-        if (!event.defaultPrevented && event.key === "enter") onClick?.(event)
+        if (!event.defaultPrevented && event.key === "enter" && onClick) {
+          onClick(event)
+          consumeKey(event, "handled")
+        }
       }}
     >
       {leading ? <div style={{ flexShrink: 0 }}>{leading}</div> : null}

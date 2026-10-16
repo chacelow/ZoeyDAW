@@ -1073,3 +1073,13 @@ F6 使用独立 vendor 根 `/Volumes/PSSD/code/_vendor/f6-gpuix`，不修改共�
 此次触及 zed 经协调者批准，只维护固定 SHA 上的本地补丁，不推送 fork。`config.json` 为两仓分别登记有序补丁；`check.mjs` 的 `--pending` 同时校验两个已应用前缀，输出 `zed/<补丁名>` 给构建脚本。`--sources` 要求两侧完整序列，`--record` 把两侧补丁摘要一起登记；未登记的 zed 改动、未跟踪源码及 revision 变化仍被拒绝。已有十二补丁 vendor 可直接追加 zed 补丁，不需 reclone，不回退或改写已有补丁。
 
 隔离构建：`GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/f7-gpuix CARGO_TARGET_DIR=/Volumes/PSSD/code/_vendor/target-f7 bash scripts/gpuix-main/build.sh`。回归入口与实际执行结果见 [F7 报告](../../scripts/gpuix-main/evidence/f7/REPORT.md)。前台 lane 200×50 十步协议由协调者串行复测；后台窗口仅用于不依赖帧推进的同步上传断言，不代表前台 p90 验收。
+
+### TD-10 screen-independent macOS test windows
+
+`createTestRoot` 的 macOS 离屏窗口不再通过普通 AppKit 窗口类创建：专用 `GPUIOffscreenWindow` 保留请求的 frame，绕过 `constrainFrameRect:toScreen:`。正式窗口仍使用原窗口类、屏幕约束与 scale fallback。
+
+离屏 scale 是显式测试输入，`createTestRoot({ width, height, scaleFactor })` 默认 `1`；请求 `2` 时逻辑 viewport 不变，PNG 宽高为请求逻辑尺寸的两倍。真正离屏后 `NSWindow.screen` 为空，不能继续依赖 GPUI 原先固定 `2.0` 的 nil-screen fallback，否则机器间像素与布局不一致。专用窗口在初始化前保存标量 backing scale，普通窗口不读取该值。
+
+追加补丁：gpuix `test-window-scale-factor.patch`；zed 在 `zed-production-no-sync-draw.patch` 后依次应用 `zed-offscreen-window-bounds.patch`、`zed-test-window-scale-factor.patch`。构建与原生变异均使用独立 vendor 根和 Cargo target，不修改共享 vendor。入口为 `bun test scripts/gpuix-main/test-window/test-window.test.tsx`，同时纳入当前仅支持 macOS 的 `verify:gpuix`；非 macOS 在该回归入口显式报 unsupported 并非零退出，不跳过或假通过。
+
+**平台限制：Windows/Linux 的离屏 `scaleFactor` 尚未实现，不承诺跨平台像素或 viewport 等价。** 本轮不扩展其原生窗口实现。根因、红绿回归、AppKit 父类约束变异与完整验证见 [TD-10 报告](../../scripts/gpuix-main/evidence/td10/REPORT.md)。

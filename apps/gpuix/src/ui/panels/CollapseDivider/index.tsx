@@ -1,4 +1,5 @@
 import type { KeyEvent, StyleDesc } from "@gpuix/react"
+import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { computeLayout } from "../layout/computeLayout"
@@ -52,8 +53,7 @@ export function CollapseDivider({
     } else if (event.key === "up" || event.key === "home") onExpandedChange(true)
     else if (event.key === "down" || event.key === "end") onExpandedChange(false)
     else return
-    event.preventDefault()
-    event.stopPropagation()
+    consumeKey(event, "handled")
   }
   return (
     <div

@@ -15,7 +15,9 @@ const mutations = [
   ...["controls/RadioGroup/keyboard.ts", "panels/Separator/index.tsx"].map(file => ({
     name: `R1c consumed arrows bubble from ${file}`,
     file: `../ui/${file}`,
-    from: `event.preventDefault()\n${file.startsWith("panels") ? "    " : "  "}event.stopPropagation()`,
+    from: file.startsWith("panels")
+      ? "event.preventDefault()\n    event.stopPropagation()"
+      : 'consumeKey(event, "handled")',
     to: "void event",
     tests: "src/app/project/composition.test.tsx",
     pattern: "tab navigation",

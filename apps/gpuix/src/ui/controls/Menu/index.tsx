@@ -10,6 +10,7 @@ import {
 } from "react"
 import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { ReactNode } from "react"
+import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { MenuSub, useMenu } from "./context"
@@ -154,8 +155,7 @@ function MenuItem({
       onKeyDown?.(event)
       if (navigate(menu, renderer, event)) return
       if (!unavailable && isActivation(event)) {
-        event.preventDefault()
-        event.stopPropagation()
+        consumeKey(event, "handled")
         select(event)
       }
     },
@@ -299,8 +299,7 @@ function SubTrigger({
       onKeyDown={event => {
         onKeyDown?.(event)
         if (event.key?.toLowerCase() === "right" || event.key?.toLowerCase() === "arrowright") {
-          event.preventDefault()
-          event.stopPropagation()
+          consumeKey(event, "handled")
           open()
         }
       }}

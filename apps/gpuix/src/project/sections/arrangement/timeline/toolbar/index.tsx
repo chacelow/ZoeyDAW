@@ -1,3 +1,4 @@
+import { DEFAULT_KEYMAP } from "@/platform/keyboard"
 import { Button, DragPadNumber, DragPadToggle, DropdownButton } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -88,15 +89,15 @@ export function Toolbar({
         value={workspace.automationMode}
         onChange={enabled => projectActions.setMode("automationMode", enabled)}
         label={labels.automation}
-        labelOn="A"
-        labelOff="A"
+        labelOn={DEFAULT_KEYMAP.formatKeys("arrangement.toggleAutomation")}
+        labelOff={DEFAULT_KEYMAP.formatKeys("arrangement.toggleAutomation")}
       />
       <DragPadToggle
         value={draw}
         onChange={keyboard.latchDraw}
         label={labels.draw}
-        labelOn="B"
-        labelOff="B"
+        labelOn={DEFAULT_KEYMAP.formatKeys("arrangement.draw")}
+        labelOff={DEFAULT_KEYMAP.formatKeys("arrangement.draw")}
       />
       <Button
         iconOnly

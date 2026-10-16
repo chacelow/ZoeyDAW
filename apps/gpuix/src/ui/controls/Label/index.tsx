@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
@@ -63,6 +64,7 @@ export function Label({
         if (!disabled && (event.key === "enter" || event.key === "space" || event.key === " ")) {
           activate()
           onClick?.(event)
+          consumeKey(event, "handled")
         }
         onKeyDown?.(event)
       }}

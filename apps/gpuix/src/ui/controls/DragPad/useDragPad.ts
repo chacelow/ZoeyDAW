@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 import type { EventPayload, KeyEvent } from "@gpuix/react"
+import { consumeKey } from "@/shared/keyboard"
 import { CLICK_MOVE_THRESHOLD_PX } from "./constants"
 import { useControlEnvironment } from "../ControlEnvironment"
 import { stopTextShortcutPropagation } from "../keyboard"
@@ -203,14 +204,12 @@ export function useDragPad(options: UseDragPadOptions) {
       if (disabled) return
       if (event.key === "escape") {
         if (!anchorRef.current && mode !== "preEdit") return
-        event.preventDefault()
-        event.stopPropagation()
+        consumeKey(event, "handled")
         cancelDrag()
         return
       }
       if (event.key === "up" || event.key === "down") {
-        event.preventDefault()
-        event.stopPropagation()
+        consumeKey(event, "handled")
         callbacks.current.onGestureStart?.()
         commitNumber(valueRef.current + (event.key === "up" ? step : -step))
         callbacks.current.onGestureEnd?.()
@@ -218,8 +217,7 @@ export function useDragPad(options: UseDragPadOptions) {
       }
       if (!editable) return
       if (event.key === "enter") {
-        event.preventDefault()
-        event.stopPropagation()
+        consumeKey(event, "handled")
         startEditing(format(valueRef.current))
         return
       }
@@ -228,8 +226,7 @@ export function useDragPad(options: UseDragPadOptions) {
       else if (event.key && event.key.length === 1 && /[0-9.-]/.test(event.key))
         startEditing(event.key)
       else return
-      event.preventDefault()
-      event.stopPropagation()
+      consumeKey(event, "handled")
     },
     [disabled, cancelDrag, commitNumber, step, editable, mode, format, startEditing]
   )
@@ -264,8 +261,7 @@ export function useDragPad(options: UseDragPadOptions) {
     (event: KeyEvent) => {
       if (!disabled) stopTextShortcutPropagation(event)
       if (event.key !== "escape" || !editingRef.current) return
-      event.preventDefault()
-      event.stopPropagation()
+      consumeKey(event, "handled")
       editingRef.current = false
       commitNumber(originalValueRef.current)
       callbacks.current.onGestureCancel?.()
