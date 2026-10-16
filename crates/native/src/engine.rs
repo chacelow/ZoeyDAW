@@ -8,9 +8,9 @@ use napi_derive::napi;
 use std::{
     collections::BTreeMap,
     sync::{
-        atomic::{AtomicU32, Ordering},
+        atomic::{AtomicBool, AtomicU32, Ordering},
         mpsc::{self, Sender},
-        LazyLock, Mutex,
+        Arc, LazyLock, Mutex,
     },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -20,6 +20,10 @@ use zoeydaw_engine::{
     session::{rejected, DeviceSession},
 };
 
+mod cleanup;
+mod telemetry;
+#[cfg(feature = "verification")]
+mod verification;
 type TelemetryCallback = ThreadsafeFunction<String, (), String, Status, false, true, 1>;
 #[napi(object)]
 pub struct SourceInfo {
@@ -52,6 +56,7 @@ enum Command {
 struct Handle {
     sender: Sender<Command>,
     thread: JoinHandle<()>,
+    cleanup: Arc<cleanup::CleanupOwner>,
 }
 static HANDLES: LazyLock<Mutex<BTreeMap<u32, Handle>>> = LazyLock::new(Mutex::default);
 static NEXT_ID: AtomicU32 = AtomicU32::new(1);
@@ -72,6 +77,7 @@ fn sender(id: u32) -> Result<Sender<Command>> {
 fn run(receiver: mpsc::Receiver<Command>) {
     let mut session = DeviceSession::open();
     let mut callback: Option<TelemetryCallback> = None;
+    let pending = Arc::new(AtomicBool::new(false));
     let mut deadline = Instant::now();
     loop {
         match receiver.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
@@ -133,14 +139,22 @@ fn run(receiver: mpsc::Receiver<Command>) {
         }
         if Instant::now() >= deadline {
             deadline = Instant::now() + Duration::from_micros(33333);
-            if let (Ok(session), Some(callback)) = (session.as_mut(), callback.as_ref()) {
-                if let Some(frame) = session.telemetry() {
-                    if let Ok(json) = serde_json::to_string(&frame) {
-                        let _ = callback.call_with_return_value(
-                            json,
-                            ThreadsafeFunctionCallMode::NonBlocking,
-                            |_, _| Ok(()),
-                        );
+            if let (Ok(session), Some(sink)) = (session.as_mut(), callback.as_ref()) {
+                if let Some(pending) = telemetry::PendingTelemetry::acquire(&pending) {
+                    if let Some(frame) = session.telemetry() {
+                        if let Ok(json) = serde_json::to_string(&frame) {
+                            let status = sink.call_with_return_value(
+                                json,
+                                ThreadsafeFunctionCallMode::NonBlocking,
+                                move |_, _| {
+                                    drop(pending);
+                                    Ok(())
+                                },
+                            );
+                            if status != Status::Ok {
+                                callback = None;
+                            }
+                        }
                     }
                 }
             }
@@ -156,18 +170,28 @@ pub fn open_session(env: Env) -> Result<u32> {
     if id == 0 {
         return Err(error("engine handle ids exhausted"));
     }
+    let cleanup = cleanup::for_env(env)?;
+    let mut handles = handles()
+        .lock()
+        .map_err(|_| error("engine handle lock poisoned"))?;
+    let mut active = cleanup
+        .active
+        .lock()
+        .map_err(|_| error("engine cleanup lock poisoned"))?;
     let (sender, receiver) = mpsc::channel();
     let thread = thread::Builder::new()
         .name(format!("zoeydaw-engine-{id}"))
         .spawn(move || run(receiver))
         .map_err(|e| error(e.to_string()))?;
-    handles()
-        .lock()
-        .map_err(|_| error("engine handle lock poisoned"))?
-        .insert(id, Handle { sender, thread });
-    env.add_env_cleanup_hook(id, |id| {
-        let _ = dispose(id);
-    })?;
+    active.insert(id);
+    handles.insert(
+        id,
+        Handle {
+            sender,
+            thread,
+            cleanup: Arc::clone(&cleanup),
+        },
+    );
     Ok(id)
 }
 
@@ -205,8 +229,15 @@ pub fn dispose(session: u32) -> Result<()> {
         .map_err(|_| error("engine handle lock poisoned"))?
         .remove(&session);
     if let Some(handle) = handle {
+        let cleanup = handle
+            .cleanup
+            .active
+            .lock()
+            .map(|mut active| active.remove(&session))
+            .map_err(|_| error("engine cleanup lock poisoned"));
         let _ = handle.sender.send(Command::Dispose);
         let _ = handle.thread.join();
+        cleanup?;
     }
     Ok(())
 }

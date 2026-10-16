@@ -9,6 +9,7 @@ use crate::{
 };
 
 mod fade;
+mod solo;
 #[cfg(test)]
 mod tests;
 
@@ -44,6 +45,14 @@ pub struct Mixer {
 
 pub fn db_gain(db: f64) -> f32 {
     10.0_f64.powf(db / 20.0) as f32
+}
+
+fn mixer_gain(db: f64) -> f32 {
+    if db <= -60.0 {
+        0.0
+    } else {
+        db_gain(db)
+    }
 }
 
 pub fn pan_gain(pan: f64) -> [f32; 2] {
@@ -97,7 +106,7 @@ impl Mixer {
                 }
                 sends.push((
                     destination,
-                    db_gain(*db),
+                    mixer_gain(*db),
                     project.tracks[destination].return_post,
                 ));
             }
@@ -162,7 +171,7 @@ impl Mixer {
                 });
             }
             let pan = pan_gain(track.pan);
-            let volume = db_gain(track.volume_db);
+            let volume = mixer_gain(track.volume_db);
             let solo_allowed = !solo
                 || matches!(
                     track.kind,
@@ -205,6 +214,14 @@ impl Mixer {
                 .chain(tracks[index].sends.iter().map(|s| s.0))
             {
                 indegree[target] -= 1;
+            }
+        }
+        if let Some(solo) = solo::ReturnSolo::compile(project, &indices) {
+            for (index, track) in tracks.iter_mut().enumerate() {
+                track.output = track
+                    .output
+                    .filter(|target| solo.feeds[*target] || solo.outputs[index]);
+                track.sends.retain(|(target, _, _)| solo.feeds[*target]);
             }
         }
         let count = tracks.len();
