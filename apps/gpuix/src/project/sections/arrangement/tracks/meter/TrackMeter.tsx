@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react"
+import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useTrackLabels } from "../labels"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useProjectState } from "@/project/adapters"
@@ -31,20 +31,19 @@ export function TrackMeter({
   }, [readTelemetry])
   const epoch = useProjectState(state => state.session.backend.sessionId)
   const peaks = useRef({ left: createMeterPeak(policy), right: createMeterPeak(policy) })
-  const [display, setDisplay] = useState<MeterDisplay>(() => ({
-    left: minDb,
-    right: minDb,
-    leftPeak: minDb,
-    rightPeak: minDb,
-  }))
-  useLayoutEffect(() => {
-    peaks.current = { left: createMeterPeak(policy), right: createMeterPeak(policy) }
-    setDisplay({
+  const silentDisplay = useMemo<MeterDisplay>(
+    () => ({
       left: minDb,
       right: minDb,
       leftPeak: minDb,
       rightPeak: minDb,
-    })
+    }),
+    [minDb]
+  )
+  const [display, setDisplay] = useState(silentDisplay)
+  useLayoutEffect(() => {
+    peaks.current = { left: createMeterPeak(policy), right: createMeterPeak(policy) }
+    setDisplay(silentDisplay)
     return driver.subscribe({
       active() {
         const level = reader.current()?.levels[trackId]
@@ -74,7 +73,7 @@ export function TrackMeter({
         return leftPeak > minDb || rightPeak > minDb
       },
     })
-  }, [trackId, epoch, driver, policy, minDb])
+  }, [trackId, epoch, driver, policy, minDb, silentDisplay])
   const width = theme.control["--spacing-control-track"]
   const channelWidth = Math.floor((width - 1) / 2)
   const zeroY = Math.min(height - 1, Math.round((height * maxDb) / (maxDb - minDb)))
