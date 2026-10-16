@@ -83,6 +83,48 @@ describe("native logger behavior", () => {
       expect(cause.Password).toBe("cause-secret")
       expect(argument.rows[0]?.token).toBe("argument-secret")
     })
+    test(`UPA-08 serializes cyclic Error causes in ${json ? "JSON" : "formatted"} output`, () => {
+      const entries: LogEntry[] = []
+      const output = spyOn(console, "error").mockImplementation(() => {})
+      const outer = Object.assign(new Error("outer"), { token: "outer-secret" })
+      const inner = Object.assign(new Error("inner", { cause: outer }), {
+        PASSWORD: "inner-secret",
+      })
+      outer.cause = inner
+      const log = createLogger({
+        json,
+        showLogo: false,
+        redactKeys: ["token", "password"],
+        sinks: [
+          entry => {
+            entries.push(entry)
+          },
+        ],
+      })
+      log.error("cyclic failure", outer)
+      const sanitized = {
+        name: "Error",
+        message: "outer",
+        stack: outer.stack,
+        token: "[REDACTED]",
+        cause: {
+          name: "Error",
+          message: "inner",
+          stack: inner.stack,
+          PASSWORD: "[REDACTED]",
+          cause: "[Circular]",
+        },
+      }
+      expect(entries[0]?.args).toEqual(["cyclic failure", sanitized])
+      if (json)
+        expect(jsonEntry(output.mock.calls[0])).toMatchObject({
+          msg: "cyclic failure",
+          ...sanitized,
+        })
+      else expect(output).toHaveBeenCalledWith(expect.stringContaining("cyclic failure"), sanitized)
+      expect(outer.cause).toBe(inner)
+      expect(inner.cause).toBe(outer)
+    })
   }
 
   test("silent and minimum-level filtering suppress both console output and sinks", () => {
