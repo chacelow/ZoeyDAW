@@ -74,9 +74,7 @@ test("active detail switch collapses its Footer and another switch reopens the c
             labels={englishFooterLabels}
             view={view}
             collapsed={collapsed}
-            onViewChange={choose}
             onCollapsedChange={setCollapsed}
-            reducedMotion
             subscribeWindowActive={activity.subscribe}
             renderClipEditor={() => {
               throw new Error("No selected Clip")

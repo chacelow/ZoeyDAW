@@ -14,7 +14,6 @@ import { englishTransportLabels } from "../../transport/demo-labels"
 import { FooterPanel } from ".."
 import { englishFooterLabels } from "../demo-labels"
 import { createTestWindowActivity } from "./test-activity"
-import type { FooterView } from ".."
 
 const activity = createTestWindowActivity()
 
@@ -25,16 +24,13 @@ projectActions.updateTrack(track.id, { devices: DEVICE_KINDS.map(createDevice) }
 projectActions.selectTracks([track.id], "header")
 
 function FooterMeasurement() {
-  const [view, setView] = useState<FooterView>("devices")
   const [collapsed, setCollapsed] = useState(false)
   return (
     <FooterPanel
       labels={englishFooterLabels}
-      view={view}
+      view="devices"
       collapsed={collapsed}
-      onViewChange={setView}
       onCollapsedChange={setCollapsed}
-      reducedMotion
       subscribeWindowActive={activity.subscribe}
       renderClipEditor={() => {
         throw new Error("Measurement has no selected clip")

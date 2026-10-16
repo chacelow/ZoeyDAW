@@ -7,12 +7,10 @@ import { Group, Panel, PanelDivider, PanelEnvironmentProvider } from "@/ui/panel
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, readProjectPeaks, useProjectState } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
-import { createWindowKeyboard } from "@/platform/keyboard"
 import { createNativeClipboard } from "@/platform/clipboard"
 import { ClipEditor } from "@/project/sections/clip-edit"
 import { demoLabels } from "@/project/sections/clip-edit/demo/labels"
 import type { ClipEditorEnvironment } from "@/project/sections/clip-edit"
-import { createVerificationKeyboard } from "./verification/keyboard"
 import { FooterPanel } from "."
 import { englishFooterLabels } from "./demo-labels"
 import { createTestWindowActivity } from "./verification/test-activity"
@@ -26,8 +24,7 @@ beforeEach(() =>
     JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
   )
 )
-function FooterHarness() {
-  const [view, setView] = useState<FooterView>("devices")
+function FooterHarness({ view = "devices" }: { view?: FooterView }) {
   const [collapsed, setCollapsed] = useState(false)
   return (
     <ThemeProvider>
@@ -35,9 +32,7 @@ function FooterHarness() {
         labels={englishFooterLabels}
         view={view}
         collapsed={collapsed}
-        onViewChange={setView}
         onCollapsedChange={setCollapsed}
-        reducedMotion
         subscribeWindowActive={activity.subscribe}
         renderClipEditor={() => {
           throw new Error("Clip selection must not open its editor")
@@ -55,7 +50,9 @@ test("selecting a clip keeps Affect Chain visible and does not construct a clip 
     if (!clip) throw new Error("Missing clip fixture")
     flushSync(() => projectActions.selectClips([clip.id]))
     root.renderer.flush()
-    expect(root.renderer.findByTestId("motion-tab-devices")).toBeDefined()
+    expect(root.renderer.findByTestId("footer-content")?.customProps?.role).toBe("group")
+    expect(root.renderer.findByTestId("motion-tab-devices")).toBeUndefined()
+    expect(root.renderer.findByTestId("motion-tab-clip")).toBeUndefined()
     expect(root.renderer.getPaintedText().join(" ")).toContain(englishFooterLabels.title)
     expect(root.renderer.getPaintedText().join(" ")).not.toContain(englishFooterLabels.noClip)
   } finally {
@@ -81,40 +78,11 @@ test("footer divider only collapses and expands the fixed-height chain, preservi
     expect(root.renderer.getElementBounds(expanded.id)?.height).toBe(
       PROJECT_METRICS.footerDeviceHeight
     )
-    const clipTab = root.renderer.findByTestId("motion-tab-clip")
-    if (!clipTab) throw new Error("Missing Clip Edit tab")
-    root.renderer.nativeSimulateKeystrokes(clipTab.id, "enter")
+    root.render(<FooterHarness view="clip" />)
     expect(root.renderer.getPaintedText().join(" ")).toContain(englishFooterLabels.noClip)
     expect(root.renderer.getPaintedText().join(" ")).not.toContain(englishFooterLabels.noTrack)
   } finally {
     root.unmount()
-  }
-})
-
-test("Space on a Footer tab controls playback without switching the editor", () => {
-  const keyboard = createWindowKeyboard()
-  const root = createTestRoot({ width: 800, height: 400, ...keyboard.rootHandlers })
-  const owner = createVerificationKeyboard({
-    windowKeyboard: keyboard,
-    metrics: PROJECT_METRICS,
-    size: { containerWidth: 800, bodyHeight: 400, timelineLeft: 0 },
-    subscribeWindowActive: activity.subscribe,
-    blurControl: () => {
-      const divider = root.renderer.findByTestId("footer-divider")
-      if (divider) root.renderer.focusElement(divider.id)
-    },
-  })
-  try {
-    root.render(<FooterHarness />)
-    const clipTab = root.renderer.findByTestId("motion-tab-clip")
-    if (!clipTab) throw new Error("Missing Clip Edit tab")
-    root.renderer.nativeSimulateKeystrokes(clipTab.id, "space")
-    expect(root.renderer.getPaintedText().join(" ")).not.toContain(englishFooterLabels.noClip)
-    expect(useProjectState.getState().session.playing).toBe(true)
-  } finally {
-    root.unmount()
-    owner.dispose()
-    projectActions.stop()
   }
 })
 
@@ -128,16 +96,12 @@ test("Clip Edit follows its host height and does not expose the fixed-device div
             labels={englishFooterLabels}
             view="clip"
             collapsed={false}
-            onViewChange={() => {
-              throw new Error("Unexpected tab change")
-            }}
             onCollapsedChange={() => {
               throw new Error("Unexpected collapse")
             }}
             renderClipEditor={() => {
               throw new Error("No selected clip")
             }}
-            reducedMotion
             subscribeWindowActive={activity.subscribe}
           />
         </div>
@@ -224,11 +188,7 @@ test("native Clip host divider drag changes the Footer height continuously", () 
                 labels={englishFooterLabels}
                 view="clip"
                 collapsed={false}
-                reducedMotion
                 subscribeWindowActive={activity.subscribe}
-                onViewChange={() => {
-                  throw new Error("Unexpected tab")
-                }}
                 onCollapsedChange={() => {
                   throw new Error("Unexpected collapse")
                 }}
@@ -303,9 +263,7 @@ test("the ID slot keeps one real MIDI editor live through a velocity edit and Un
           labels={englishFooterLabels}
           view="clip"
           collapsed={false}
-          reducedMotion
           subscribeWindowActive={activity.subscribe}
-          onViewChange={unexpected}
           onCollapsedChange={unexpected}
           renderClipEditor={slot => (
             <ClipEditor

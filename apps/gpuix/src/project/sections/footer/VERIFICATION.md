@@ -4,7 +4,7 @@
 
 | Web 源 | 原生目标 | 行为 |
 | --- | --- | --- |
-| FooterPanel/index | footer/index | 单一互斥标签容器，设备固定高，Clip 填满宿主，编辑器槽以 Clip ID 定界 |
+| FooterPanel/index | footer/index | StatusStrip 唯一视图切换，内容为命名 group，设备固定高，Clip 填满宿主，编辑器槽以 Clip ID 定界 |
 | FooterPanel/EffectChain | footer/EffectChain | 添加、删除、重排、旁通、折叠，单轨设备选择与键盘焦点 |
 | EffectChain/DeviceCard | footer/EffectChain/DeviceCard | 共享命令菜单，正方形图标按钮，逐字竖排折叠标题 |
 | EffectChain/ParameterControl | footer/EffectChain/ParameterControl | 共享 DragPad 与工程事务，locale 格式化及解析 |
@@ -104,7 +104,7 @@ Space 的唯一生产 owner 是 Timeline keyboard。Transport 不保留自己的
 | 同组等高、图标正方形 | 原生 getElementBounds：play/stop/record 均20×20，分组均高20；共享 family 的实际窗口 AX 为补充 |
 | 与 Live 同区紧凑感 | `2026-10-15-live-browser-native-comparison.png` 左Live历史zoom、右当前native；拼接不二次缩放，历史zoom系数不完整，不声明物理DPI归一化。AX行高约18px、native17px；原生过滤区比Live多一行 |
 | 深浅与中英 | final-dark-en、final-light-en、final-dark-zh、final-light-zh 的真实窗口截图和 AX 均存在；后续状态 PNG 是深色英文，不替代四组合 |
-| Tab、焦点、Space | 原生输入回归全绿；真实 Tab 从结果树选中行直接到后继控件，跳过收藏与拖拽源。MotionTabs Space 不切换标签；唯一 Timeline owner 控制播放。focused/pre-edit 放大图已检查 |
+| Tab、焦点、Space | 视图切换只在 StatusStrip；Footer 不再提供 MotionTabs。当前 U1 原生输入回归与窗口证据见 `app/verification/U1-REPORT.md`；此前 MotionTabs 输入记录为历史证据 |
 | 拖动、滚轮、弹层保持打开 | nativeSimulate 驱动20px BPM粗拖动120→125并undo、最大值wheel clamp、Header纵轮横移、数值子控件隔离；暂停弹层延迟5→10ms。共享实际指针证据为 controls/evidence/popup-adjustment.* 与 DragPad/evidence/press-anchor-restored-2026-10-15.*；本切片 OS wheel/drag 仍为工具限制未验证 |
 | 性能与裁剪 | 实际窗口434帧日志与 native几何/帧/保留节点 JSON 分开。Browser滚动视口有界、保留节点1026→1026；不宣称虚拟化或屏外卸载。Timeline/Clip可见范围裁剪不在本切片 |
 
