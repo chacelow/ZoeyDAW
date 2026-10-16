@@ -77,3 +77,47 @@ it.each([
     unregister()
   }
 )
+
+it("retains submitted recording after commit and recovery reject across reopen", async () => {
+  const requests: BackendRequest[] = []
+  const backend: ProjectBackend = {
+    apply(request) {
+      requests.push(request)
+      return request.stage === "open"
+        ? {
+            kind: "accepted",
+            sessionId: request.sessionId,
+            sequence: request.sequence,
+            revision: request.revision,
+          }
+        : {
+            kind: "rejected",
+            sessionId: request.sessionId,
+            sequence: request.sequence,
+            code: "rejected",
+          }
+    },
+    subscribe: () => () => {},
+    readPeaks: () => new Float32Array(0),
+    dispose() {},
+  }
+  const store = createStore<ProjectState>(() => ({
+    document: initialDocument(),
+    workspace: initialWorkspace(),
+    session: initialSession(),
+  }))
+  const runtime = createProjectRuntime({ store, backendFactory: () => backend })
+  const release = runtime.startProjectRuntime()
+  runtime.recordDocument(document => ({
+    ...document,
+    markers: [...document.markers, { id: "recorded", label: "Recorded", bar: 4 }],
+  }))
+  expect(await runtime.whenProjectBackendIdle()).toBe(false)
+  expect(requests.map(request => request.stage)).toEqual(["open", "commit", "recover"])
+  expect(runtime.get().document.markers.map(marker => marker.id)).toEqual(["recorded"])
+  expect(runtime.get().session.dirty).toBe(true)
+  release()
+  const reopened = runtime.startProjectRuntime()
+  expect(runtime.get().document.markers.map(marker => marker.id)).toEqual(["recorded"])
+  reopened()
+})

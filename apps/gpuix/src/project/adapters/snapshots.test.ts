@@ -96,3 +96,50 @@ it("serializes and saves committed workspace preferences during a cancelled edit
   expect(useProjectState.getState().workspace.follow).toBe(before)
   expect(useProjectState.getState().workspace).toMatchObject(viewport)
 })
+
+it.each(["loop", "clip", "marker", "automation"] as const)(
+  "rejects a %s before bar one without replacing the current project",
+  field => {
+    const document = createMockDocument()
+    if (field === "loop") {
+      document.transport.loop = { enabled: true, startBar: 0.5, endBar: 3 }
+    } else if (field === "clip") {
+      document.tracks.find(track => track.id === "3-audio")!.clips[0].startBar = 0.5
+    } else if (field === "marker") {
+      document.markers[0].bar = 0.5
+    } else {
+      document.tracks.find(track => track.id === "3-audio")!.automation[0].points[0].bar = 0.5
+    }
+    const invalid = JSON.stringify({ version: 2, document, workspace: createMockWorkspace() })
+    setSnapshotStorage({ get: () => invalid, set() {} })
+    projectActions.setBpm(155)
+    const before = serializeProject()
+    expect(projectActions.restoreSnapshot()).toBe(false)
+    expect(useProjectState.getState().session.snapshotError).toMatch(/invalid/i)
+    expect(serializeProject()).toBe(before)
+    expect(useProjectState.getState().session.canUndo).toBe(true)
+    projectActions.undo()
+    expect(useProjectState.getState().document.transport.bpm).toBe(120)
+  }
+)
+
+it("restores fractional positions after bar one and sub-bar durations", () => {
+  const document = createMockDocument()
+  document.transport.loop = { enabled: true, startBar: 1, endBar: 1.25 }
+  const clip = document.tracks.find(track => track.id === "3-audio")!.clips[0]
+  clip.startBar = 1.125
+  clip.lengthBars = 0.25
+  if (clip.kind === "audio") {
+    clip.fadeInBars = 0
+    clip.fadeOutBars = 0
+    clip.fadeInOffsetBars = 0
+    clip.fadeOutOffsetBars = 0
+  }
+  const saved = JSON.stringify({ version: 2, document, workspace: createMockWorkspace() })
+  setSnapshotStorage({ get: () => saved, set() {} })
+  expect(projectActions.restoreSnapshot()).toBe(true)
+  expect(useProjectState.getState().document.transport.loop).toEqual(document.transport.loop)
+  expect(
+    useProjectState.getState().document.tracks.find(track => track.id === "3-audio")!.clips[0]
+  ).toMatchObject({ startBar: 1.125, lengthBars: 0.25 })
+})
