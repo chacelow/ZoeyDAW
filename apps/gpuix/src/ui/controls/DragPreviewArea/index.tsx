@@ -6,10 +6,13 @@ import { sx, sv } from "@/shared/theme/style"
 import type { EventPayload, KeyEvent, Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 
+export type DragSourceHandlers = Required<
+  Pick<Props, "onMouseDown" | "onMouseMove" | "onMouseUp" | "onBlur">
+>
 export interface DragPreviewItem<T> {
   key: string
   data: T
-  children: ReactNode
+  children: ReactNode | ((handlers: DragSourceHandlers) => ReactNode)
   disabled?: boolean
   label?: string
 }
@@ -174,6 +177,12 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
   const sources: readonly DragPreviewItem<T>[] = props.items
     ? props.items
     : [{ key: "source", data: props.data, children: props.children }]
+  const sourceHandlers = (key: string, sourceData: T, unavailable: boolean): DragSourceHandlers => ({
+    onMouseDown: event => begin(event, key, sourceData, unavailable),
+    onMouseMove: move,
+    onMouseUp: release,
+    onBlur: blur,
+  })
   return (
     <div {...native} role="group" style={sx({ display: "flex", flexDirection: "column" }, style)}>
       {items ? children : null}
@@ -193,18 +202,19 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
                   ? "dragging"
                   : "idle",
           })}
-          onMouseDown={event =>
-            begin(event, source.key, source.data, disabled || !!source.disabled)
-          }
-          onMouseMove={move}
-          onMouseUp={release}
+          {...(typeof source.children === "function"
+            ? {}
+            : sourceHandlers(source.key, source.data, disabled || !!source.disabled))}
           onKeyDown={keyDown}
-          onBlur={blur}
           onClick={event => {
             if (!source.disabled) click(event)
           }}
         >
-          {source.children}
+          {typeof source.children === "function"
+            ? source.children(
+                sourceHandlers(source.key, source.data, disabled || !!source.disabled)
+              )
+            : source.children}
         </div>
       ))}
       {preview ? (

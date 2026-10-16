@@ -388,8 +388,9 @@ export function BrowserPanel({
                           key: row.entry.id,
                           data: row.entry,
                           label: row.entry.name,
-                          children: (
+                          children: drag => (
                             <ListRow
+                              {...drag}
                               role="treeitem"
                               tabIndex={focusedId === row.entry.id ? 0 : -1}
                               label={row.entry.name}
@@ -493,7 +494,10 @@ export function BrowserPanel({
                                 }))
                                 resourceInfo.onFocus()
                               }}
-                              onBlur={resourceInfo.onBlur}
+                              onBlur={event => {
+                                drag.onBlur(event)
+                                resourceInfo.onBlur()
+                              }}
                               onKeyDown={event => keyboard(event, row.entry.id)}
                             />
                           ),

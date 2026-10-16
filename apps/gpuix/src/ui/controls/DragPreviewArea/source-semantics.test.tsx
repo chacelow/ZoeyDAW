@@ -1,7 +1,53 @@
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
+import { ListRow } from "../ListRow"
 import { DragPreviewArea } from "."
+
+test("a painted row that receives the source handlers starts and releases a drag", () => {
+  const root = createTestRoot({ width: 400, height: 200 })
+  const events: string[] = []
+  try {
+    root.render(
+      <ThemeProvider>
+        <DragPreviewArea
+          role="presentation"
+          tabIndex={-1}
+          items={[
+            {
+              key: "row",
+              data: "kick.wav",
+              label: "Kick",
+              children: drag => (
+                <ListRow {...drag} role="treeitem" label="Kick" testId="row">
+                  <text>Kick</text>
+                </ListRow>
+              ),
+            },
+          ]}
+          disabledDropLabel="Unavailable"
+          renderPreview={data => <text>{data}</text>}
+          onDragStart={data => {
+            events.push(`start ${data}`)
+          }}
+          onDragEnd={(data, result) => {
+            events.push(`end ${data} ${result.cancelled}`)
+          }}
+        />
+      </ThemeProvider>
+    )
+    root.renderer.flush()
+    const bounds = root.renderer.getElementBounds(root.renderer.findByTestId("row")!.id)!
+    root.renderer.nativeSimulateMouseDown(bounds.x + 10, bounds.y + 10)
+    root.renderer.nativeSimulateMouseMove(bounds.x + 40, bounds.y + 15, 0)
+    expect(root.renderer.findByTestId("drag-preview")).toBeDefined()
+    root.renderer.nativeSimulateMouseUp(bounds.x + 40, bounds.y + 15)
+    expect(events).toEqual(["start kick.wav", "end kick.wav false"])
+    expect(root.renderer.findByTestId("drag-preview")).toBeUndefined()
+  } finally {
+    root.unmount()
+  }
+})
 
 test("native Tab skips excluded drag sources without adding a wrapper focus owner", () => {
   const root = createTestRoot({ width: 500, height: 200 })
