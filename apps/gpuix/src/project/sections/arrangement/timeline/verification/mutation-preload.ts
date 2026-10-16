@@ -9,6 +9,13 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "save-snapshot-availability": {
+    file: "project/sections/arrangement/timeline/toolbar/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "Save control disables",
+    from: "disabled={!saveAvailable}",
+    to: "disabled={false}",
+  },
   "resize-capture-follows-hidden-boundary": {
     file: "project/sections/arrangement/tracks/TrackResizeOverlay/index.tsx",
     testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",

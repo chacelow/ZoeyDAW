@@ -6,6 +6,7 @@ import { createProjectComposition } from "@/app/project/composition"
 import { ArrangementPanel } from "@/app/project/ArrangementPanel"
 import { createAppInteraction } from "@/app/interaction"
 import { initAppI18n } from "@/app/i18n"
+import { englishLabels } from "@/app/locales/sections/timeline"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import {
@@ -16,6 +17,9 @@ import {
   startProjectRuntime,
   whenProjectBackendIdle,
   configureProjectBackend,
+  createMemorySnapshotStorage,
+  openProjectSnapshot,
+  setProjectStorageId,
 } from "@/project/adapters"
 import { TRACK_RESIZE_STEP } from "@/project/layout"
 import { createNativeBackend } from "@/project/adapters/backend/native"
@@ -348,3 +352,38 @@ for (const trackId of ["source", "main"]) {
     }
   )
 }
+
+test("the Save control disables for a damaged opened snapshot and re-enables for a clean project", async () => {
+  const { root } = await mount()
+  const save = root.renderer
+    .findByType("div")
+    .find(
+      node =>
+        node.customProps?.role === "button" &&
+        node.customProps?.["aria-label"] === englishLabels.save
+    )
+  if (!save) throw new Error("Missing real Save control")
+  const enabledOpacity = typeof save.style.opacity === "number" ? save.style.opacity : 1
+  const storage = createMemorySnapshotStorage()
+  const key = "zoeydaw:project:snapshot:v1:r2-damaged-toolbar"
+  const raw = "damaged snapshot must not be overwritten"
+  storage.set(key, raw)
+  setSnapshotStorage(storage)
+  cleanups.push(() => setProjectStorageId("default"))
+  let opened = true
+  flushSync(() => {
+    opened = openProjectSnapshot("r2-damaged-toolbar")
+  })
+  expect(opened).toBe(false)
+  expect(root.renderer.getElement(save.id)?.style.opacity ?? 1).toBeLessThan(enabledOpacity)
+  const bounds = root.renderer.getElementBounds(save.id)
+  if (!bounds) throw new Error("Missing Save bounds")
+  root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+  root.renderer.nativeSimulateKeystrokes(element(root, "timeline-viewport").id, "cmd-s")
+  expect(storage.get(key)).toBe(raw)
+  flushSync(() => {
+    opened = openProjectSnapshot("r2-clean-toolbar")
+  })
+  expect(opened).toBe(true)
+  expect(root.renderer.getElement(save.id)?.style.opacity ?? 1).toBe(enabledOpacity)
+})

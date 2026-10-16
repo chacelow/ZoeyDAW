@@ -37,6 +37,8 @@
 
 工程与 `scrollX/scrollY/pxPerBar` 的权威状态仍在 adapters/stores。controller 只同步只读 Scene 投影；手势保存的是按下基线与编辑 token，不是第二份可写工程。hydration、后端/路由 epoch 变化会取消旧手势。定位点与循环在按下时取得 preview 所有权，提交为一次历史，取消不消费前一条历史。
 
+Save 按钮通过 `useProjectState(canSaveSnapshot)` 读取当前 session 的快照保存许可。打开损坏快照时禁用；切换到可保存工程后恢复。键盘保存仍调用同一 `saveSnapshot`，由 adapters 的 session fence 防止覆盖原 key，timeline 不持有第二份许可状态。
+
 Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有效按下保持到释放或取消，即使指针离开选框、overview 或手势中发生 store 提交也不回落到 hover；epoch/失活取消同步恢复视觉与光标。静态 Minimap Overview 只订阅 tracks/markers，并按 bars/width/height/theme 失效；独立 Playhead 只订阅音乐位置。播放、viewport 和 hover 更新不会重建全工程 Clip 投影。`minimap/render-cost.test.tsx` 在 16/1024 Clip 下断言播放头实际移动、静态几何不变且不再读取未变 Clip 几何。
 
 组合根提供：
