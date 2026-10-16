@@ -44,7 +44,7 @@ export function AudioWaveformOverview({
       tabIndex={0}
       aria-label={labels.overview}
       aria-valuenow={view.start}
-      aria-valuetext={view.start.toFixed(3)}
+      aria-valuetext={labels.formats.number(view.start, "viewport")}
       style={sx({
         position: "relative",
         flexShrink: 0,

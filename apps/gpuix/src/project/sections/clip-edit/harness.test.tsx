@@ -6,9 +6,10 @@ import { hydrateProject, projectActions, useProjectState } from "@/project/adapt
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { ClipEditor } from "."
-import { demoLabels } from "./demo/labels"
+import { clipEditorLabels as demoLabels } from "@/app/locales/sections/clip-edit"
 import type { Clip, MidiNote } from "@/project/model/types"
 import type { ClipEditorEnvironment } from "./environment"
+import type { ClipEditorLabels } from "./labels"
 
 export const MIDI_ID = "midi-test"
 export const PATTERN_ID = "pattern-test"
@@ -72,7 +73,11 @@ export interface Harness {
 }
 const TEST_SIZE = { width: 900, height: 360 }
 
-export function mount(id = MIDI_ID, size = TEST_SIZE): Harness {
+export function mount(
+  id = MIDI_ID,
+  size = TEST_SIZE,
+  labels: ClipEditorLabels = demoLabels.en
+): Harness {
   const keyboard = createWindowKeyboard()
   const windowKeys: string[] = []
   keyboard.subscribe("keyDown", (event: WindowKeyEvent) => {
@@ -121,7 +126,7 @@ export function mount(id = MIDI_ID, size = TEST_SIZE): Harness {
             clipId={clip.id}
             trackId={track.id}
             close={() => {}}
-            labels={demoLabels.en}
+            labels={labels}
             readPeaks={(_source, _start, _end, pixels) => new Float32Array(pixels * 4).fill(0.5)}
             environment={environment}
           />

@@ -13,7 +13,7 @@ import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixt
 import { createMockProjectBackend } from "@/project/adapters/backend/mock"
 import type { BackendTelemetry } from "@/project/model/backend"
 import { createTestAnimationFrames } from "../../footer/verification/test-frame"
-import { englishTransportLabels } from "../demo-labels"
+import { englishTransportLabels } from "@/app/locales/sections/transport"
 import { PerformanceStatus } from "."
 
 test("native-frame readout receives the first paused telemetry and later latency changes", () => {
@@ -98,6 +98,28 @@ test("native-frame readout receives the first paused telemetry and later latency
     expect(root.renderer.getAllText().join(" ")).toContain("15.00 ms")
     expect(root.renderer.getAllText().join(" ")).toContain("0:00:02.000")
     expect(root.renderer.getAllText().join(" ")).not.toContain("10.00 ms")
+    root.render(
+      <ThemeProvider>
+        <AnimationFrameProvider source={frames}>
+          <PerformanceStatus
+            labels={{
+              ...englishTransportLabels,
+              formats: {
+                ...englishTransportLabels.formats,
+                sampleRate: hz => `rate:${hz}`,
+                latency: ms => `lag:${ms}`,
+                duration: (seconds, variant) => `clock:${variant}:${seconds}`,
+              },
+            }}
+          />
+        </AnimationFrameProvider>
+      </ThemeProvider>
+    )
+    root.renderer.flush()
+    const localized = root.renderer.getPaintedText().join(" ")
+    expect(localized).toContain("rate:48000")
+    expect(localized).toContain("lag:15")
+    expect(localized).toContain("clock:transport:2")
     root.renderer.nativeSimulateKeystrokes(trigger.id, "enter")
     expect(frames.subscriberCount).toBe(0)
   } finally {

@@ -1,10 +1,11 @@
-import { beforeEach, expect, test } from "bun:test"
+import { beforeEach, expect, spyOn, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
+import type { TestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, useProjectState } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
 import { TransportBar } from "."
-import { englishTransportLabels } from "./demo-labels"
+import { englishTransportLabels } from "@/app/locales/sections/transport"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
@@ -12,6 +13,12 @@ import { createVerificationKeyboard } from "../footer/verification/keyboard"
 import { createTestWindowActivity } from "../footer/verification/test-activity"
 import { createTestAnimationFrames } from "../footer/verification/test-frame"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import { handleGpuixEvent } from "@gpuix/react"
+import { PROJECT_TEMPLATE } from "@/project/defaults/template"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { configurePreferences, createPreferenceOwner } from "@/platform/settings"
 
 beforeEach(() =>
   hydrateProject(
@@ -314,3 +321,58 @@ for (const [family, numberFontFamily] of Object.entries(firstMountFonts)) {
     })
   }
 }
+
+test("BPM reset follows the project template source and remains undoable", () => {
+  const previousBpm = PROJECT_TEMPLATE.transport.bpm
+  let root: TestRoot | undefined
+  try {
+    PROJECT_TEMPLATE.transport.bpm = 137
+    projectActions.setBpm(180)
+    root = mount()
+    const element = root.renderer.findByTestId("transport-bpm")
+    const box = element && root.renderer.getElementBounds(element.id)
+    if (!element || !box) throw new Error("Missing BPM reset target")
+    handleGpuixEvent(
+      {
+        elementId: element.id,
+        eventType: "mouseDown",
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+        button: 0,
+        clickCount: 2,
+      },
+      root.renderer
+    )
+    expect(useProjectState.getState().document.transport.bpm).toBe(137)
+    projectActions.undo()
+    expect(useProjectState.getState().document.transport.bpm).toBe(180)
+  } finally {
+    root?.unmount()
+    PROJECT_TEMPLATE.transport.bpm = previousBpm
+  }
+})
+
+test("stop double activation follows the configured repeat window", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "zoeydaw-transport-preferences-"))
+  const owner = createPreferenceOwner({ configDir: directory })
+  owner.setPreference("transport", { ...owner.getPreference("transport"), stopRepeatMs: 1000 })
+  const restore = configurePreferences(owner)
+  const root = mount()
+  let now = 100
+  const clock = spyOn(performance, "now").mockImplementation(() => now)
+  try {
+    projectActions.setPosition({ bar: 8 })
+    const stop = root.renderer.findByTestId("transport-stop")
+    if (!stop) throw new Error("Missing stop button")
+    root.renderer.nativeSimulateKeystrokes(stop.id, "enter")
+    expect(useProjectState.getState().session.position.bar).toBe(8)
+    now += 700
+    root.renderer.nativeSimulateKeystrokes(stop.id, "enter")
+    expect(useProjectState.getState().session.position.bar).toBe(1)
+  } finally {
+    clock.mockRestore()
+    root.unmount()
+    restore()
+    rmSync(directory, { recursive: true, force: true })
+  }
+})

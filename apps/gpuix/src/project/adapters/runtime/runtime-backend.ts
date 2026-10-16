@@ -4,7 +4,7 @@ import { createBackendConnection } from "../backend/connection"
 import { getEffectiveDocument as projectEffectiveDocument } from "./effective-document"
 import { sameWorkspacePreferences } from "./workspace-preferences"
 import { snapshot } from "./history"
-import { createEmptyProject, ProjectBackendNotConfiguredError } from "./runtime-state"
+import { ProjectBackendNotConfiguredError } from "./runtime-state"
 import type { RuntimeOwner, ProjectBackendOptions } from "./runtime-state"
 import type {
   BackendControl,
@@ -296,7 +296,7 @@ export function createRuntimeBackend(owner: RuntimeOwner, editing: RuntimeEditin
     }
     const registration = {
       factory: next,
-      createProject: options.createProject ?? createEmptyProject,
+      createProject: options.createProject,
     }
     owner.backendFactories.push(registration)
     owner.factory = next

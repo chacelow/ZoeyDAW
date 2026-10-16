@@ -1,4 +1,5 @@
 import { ALL_PITCHES } from "./geometry"
+import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { MidiNote } from "@/project/model/types"
 import type { SourceWindow } from "./layout"
 
@@ -8,13 +9,15 @@ export interface RowLimits {
   readonly maxRowHeight: number
 }
 
-export const HORIZONTAL_ZOOM = { min: 0.25, max: 16, factor: 2 } as const
-
 /** Fold shows only pitches that hold notes, highest first; an empty clip keeps the C3 row. */
-export function rollPitches(notes: readonly MidiNote[], fold: boolean): readonly number[] {
+export function rollPitches(
+  notes: readonly MidiNote[],
+  fold: boolean,
+  initialPitch = PREFERENCE_DEFAULTS.midi.initialPitch
+): readonly number[] {
   if (!fold) return ALL_PITCHES
   const pitches = [...new Set(notes.map(note => note.pitch))].sort((a, b) => b - a)
-  return pitches.length ? pitches : [60]
+  return pitches.length ? pitches : [initialPitch]
 }
 
 /**
@@ -26,7 +29,8 @@ export function fitRows(
   pitches: readonly number[],
   window: SourceWindow,
   viewHeight: number,
-  limits: RowLimits
+  limits: RowLimits,
+  initialPitch = PREFERENCE_DEFAULTS.midi.initialPitch
 ): { rowHeight: number; scrollY: number } {
   const rowOf = new Map(pitches.map((pitch, row) => [pitch, row]))
   const rows = notes.flatMap(note => {
@@ -37,7 +41,7 @@ export function fitRows(
       ? [row]
       : []
   })
-  const firstRow = rows.length ? Math.min(...rows) : Math.max(0, pitches.indexOf(60))
+  const firstRow = rows.length ? Math.min(...rows) : Math.max(0, pitches.indexOf(initialPitch))
   const lastRow = rows.length ? Math.max(...rows) : firstRow
   const rowHeight =
     viewHeight > 0

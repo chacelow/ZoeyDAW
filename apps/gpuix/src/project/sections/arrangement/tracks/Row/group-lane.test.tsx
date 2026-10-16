@@ -3,7 +3,11 @@ import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { hydrateProject, useProjectState } from "@/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  TEST_CREATION_NAMES,
+} from "@/project/adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import { LaneContents } from "../../lane/LaneRow/Contents"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
@@ -58,6 +62,7 @@ for (const width of [800, 200]) {
                 labels={trackResources["en-US"].arrangement}
                 renderLane={row => (
                   <LaneContents
+                    creationNames={TEST_CREATION_NAMES}
                     row={row}
                     scene={scene.get()}
                     automationMode={false}

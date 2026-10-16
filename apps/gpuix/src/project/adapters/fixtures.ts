@@ -1,6 +1,48 @@
-import { initialDocument } from "../stores/slices/document"
-import { initialWorkspace } from "../stores/slices/workspace"
+import { PREFERENCE_DEFAULTS } from "../defaults/preferences"
+import {
+  createProjectTemplate,
+  createSessionTemplate,
+  createWorkspaceTemplate,
+} from "../defaults/template"
+import type { CreationNames, TrackCreationAppearance } from "../defaults/template"
+import type { ProjectCreationConfiguration } from "./runtime"
 import type { DocumentState, Track, WorkspaceState } from "../model/types"
+
+export const TEST_CREATION_NAMES: CreationNames = {
+  project: "Test project",
+  main: "Main",
+  marker: "Marker",
+  track: (kind, count) =>
+    `${count} ${{ audio: "Audio", midi: "MIDI", group: "Group", return: "Return" }[kind]}`,
+  copy: name => `${name} Copy`,
+  clip: kind => ({ audio: "Audio Clip", midi: "MIDI Clip", pattern: "Pattern" })[kind],
+}
+export const TEST_TRACK_APPEARANCE: TrackCreationAppearance = {
+  heightPx: 70,
+  mainHeightPx: 108,
+  colors: {
+    audio: "oklch(0.65 0.18 230)",
+    midi: "oklch(0.65 0.18 230)",
+    group: "oklch(0.65 0.17 265)",
+    return: "oklch(0.65 0.18 230)",
+    main: "var(--chart-3)",
+  },
+}
+export const TEST_CREATION = { names: TEST_CREATION_NAMES, appearance: TEST_TRACK_APPEARANCE }
+export const TEST_PROJECT_CREATION: ProjectCreationConfiguration = {
+  names: () => TEST_CREATION_NAMES,
+  appearance: () => TEST_TRACK_APPEARANCE,
+  preferences: () => PREFERENCE_DEFAULTS,
+}
+export function createTestDocument(): DocumentState {
+  return createProjectTemplate({ ...TEST_CREATION, preferences: PREFERENCE_DEFAULTS }).document
+}
+export function createTestWorkspace(): WorkspaceState {
+  return createWorkspaceTemplate(PREFERENCE_DEFAULTS)
+}
+export function createTestSession() {
+  return createSessionTemplate(PREFERENCE_DEFAULTS)
+}
 /**
 Derived preview samples from the visible source span; never serialized.
 */
@@ -179,7 +221,7 @@ const tracks: Track[] = [
 
 export function createMockDocument(): DocumentState {
   return {
-    ...initialDocument(),
+    ...createTestDocument(),
     tracks: tracks.map(track => structuredClone(track)),
     markers: [
       { id: "intro", bar: 1, label: "Intro" },
@@ -188,5 +230,5 @@ export function createMockDocument(): DocumentState {
   }
 }
 export function createMockWorkspace(): WorkspaceState {
-  return initialWorkspace()
+  return createTestWorkspace()
 }

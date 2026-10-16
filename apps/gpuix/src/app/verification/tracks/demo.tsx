@@ -10,32 +10,45 @@ import { createWindowPlatform, LAUNCH_FOCUS } from "@/platform/window"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import {
   hydrateProject,
+  configureProjectCreation,
   projectActions,
   readProjectTelemetry,
   startProjectRuntime,
   useProjectState,
 } from "@/project/adapters"
 import { createTrack } from "@/project/model/reducers"
+import {
+  createTestDocument,
+  createTestWorkspace,
+  TEST_CREATION_NAMES,
+  TEST_PROJECT_CREATION,
+  TEST_TRACK_APPEARANCE,
+} from "@/project/adapters/fixtures"
 import { timelineBars } from "@/project/model/selectors"
-import { clipRect } from "../core/layout"
-import { createSceneStore } from "../core/scene"
-import { TrackRows } from "./TrackRows"
-import { TrackResizeOverlay } from "./TrackResizeOverlay"
-import { trackResources } from "./locales"
+import { clipRect } from "@/project/sections/arrangement/core/layout"
+import { createSceneStore } from "@/project/sections/arrangement/core/scene"
+import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
+import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
+import { trackResources } from "@/project/sections/arrangement/tracks/locales"
 import { contentFill } from "@/shared/theme/content-color"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 
-const document = structuredClone(useProjectState.getState().document)
-const workspace = structuredClone(useProjectState.getState().workspace)
+configureProjectCreation(TEST_PROJECT_CREATION)
+const document = createTestDocument()
+const workspace = createTestWorkspace()
 const main = document.tracks.find(track => track.kind === "main")
 if (!main) throw new Error("Missing Main output")
 main.heightPx =
   DEFAULT_LAYOUT_TOKENS.track.collapsedHeight + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 4
 main.volumeDb = -36
-const group = createTrack("group", document.tracks, undefined, main.heightPx)
+const creation = {
+  names: TEST_CREATION_NAMES,
+  appearance: { ...TEST_TRACK_APPEARANCE, heightPx: main.heightPx },
+}
+const group = createTrack("group", document.tracks, undefined, creation)
 group.name = "Group"
 document.tracks.unshift(group)
-const audio = createTrack("audio", document.tracks, group.id, main.heightPx)
+const audio = createTrack("audio", document.tracks, group.id, creation)
 audio.name = "Audio 音频轨道"
 audio.volumeDb = -12
 audio.clips = [
@@ -45,14 +58,14 @@ audio.clips = [
     startBar: 1,
     lengthBars: 2,
     samplePath: fileURLToPath(
-      new URL("../../../../../../../crates/engine/spikes/assets/probe.wav", import.meta.url)
+      new URL("../../../../../../crates/engine/spikes/assets/probe.wav", import.meta.url)
     ),
     gainDb: 0,
   },
 ]
 group.childTrackIds = [audio.id]
 document.tracks.splice(1, 0, audio)
-const midi = createTrack("midi", document.tracks, undefined, main.heightPx)
+const midi = createTrack("midi", document.tracks, undefined, creation)
 midi.name = "MIDI"
 midi.volumeDb = -12
 midi.pan = -0.25
@@ -66,12 +79,12 @@ midi.clips = [
   },
 ]
 document.tracks.splice(2, 0, midi)
-const folded = createTrack("audio", document.tracks, undefined, main.heightPx)
+const folded = createTrack("audio", document.tracks, undefined, creation)
 folded.name = "Folded Audio"
 folded.collapsed = true
 document.tracks.splice(3, 0, folded)
 for (let index = 0; index < 5; index++) {
-  const destination = createTrack("return", document.tracks, undefined, main.heightPx)
+  const destination = createTrack("return", document.tracks, undefined, creation)
   destination.name = `${String.fromCharCode(65 + index)} Return`
   destination.collapsed = index > 0
   document.tracks.splice(document.tracks.length - 1, 0, destination)

@@ -5,31 +5,37 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { AnimationFrameProvider } from "@/platform/frame"
 import {
   hydrateProject,
+  configureProjectCreation,
   projectActions,
   readProjectTelemetry,
-  useProjectState,
 } from "@/project/adapters"
 import { createTrack } from "@/project/model/reducers"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
-import { createSceneStore } from "../../core/scene"
+import {
+  createTestDocument,
+  createTestWorkspace,
+  TEST_CREATION,
+  TEST_PROJECT_CREATION,
+  TEST_TRACK_APPEARANCE,
+} from "@/project/adapters/fixtures"
+import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
-import { TrackRows } from "../TrackRows"
-import { TrackResizeOverlay } from "../TrackResizeOverlay"
-import { trackResources } from "../locales"
-import { createControlledFrames } from "./frame-source"
+import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
+import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
+import { trackResources } from "@/project/sections/arrangement/tracks/locales"
+import { createControlledFrames } from "@/project/sections/arrangement/tracks/verification/frame-source"
 
 const directory =
   process.env.TRACKS_EVIDENCE_DIR ?? mkdtempSync(path.join(tmpdir(), "zoeydaw-tracks-"))
 mkdirSync(directory, { recursive: true })
-const document = structuredClone(useProjectState.getState().document)
-const workspace = structuredClone(useProjectState.getState().workspace)
+configureProjectCreation(TEST_PROJECT_CREATION)
+const document = createTestDocument()
+const workspace = createTestWorkspace()
 for (const kind of ["audio", "midi", "group", "return"] as const) {
-  const track = createTrack(
-    kind,
-    document.tracks,
-    undefined,
-    DEFAULT_LAYOUT_TOKENS.track.defaultHeight
-  )
+  const track = createTrack(kind, document.tracks, undefined, {
+    ...TEST_CREATION,
+    appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
+  })
   track.name = `${kind} 音轨`
   document.tracks.splice(document.tracks.length - 1, 0, track)
 }

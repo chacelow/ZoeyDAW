@@ -5,6 +5,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import type { RenderClipCard } from "./clip-card-projection"
 import type { PeakReader } from "@/project/model/backend"
 import { ClipContentsView } from "./ClipContents"
+import type { CreationNames } from "@/project/defaults/template"
 
 export const ClipCardView = memo(function ClipCardView({
   card,
@@ -13,6 +14,7 @@ export const ClipCardView = memo(function ClipCardView({
   numerator,
   automationMode,
   readPeaks,
+  creationNames,
 }: {
   card: RenderClipCard
   trackColor: string
@@ -20,6 +22,7 @@ export const ClipCardView = memo(function ClipCardView({
   numerator: number
   automationMode: boolean
   readPeaks: PeakReader
+  creationNames: Pick<CreationNames, "clip">
 }) {
   const theme = useTheme()
   const g = card.geometry
@@ -30,7 +33,7 @@ export const ClipCardView = memo(function ClipCardView({
     <div
       testId={`${card.ghost ? "clip-ghost" : "clip-source"}-${clip.id}`}
       role="group"
-      aria-label={clipLabel(clip)}
+      aria-label={clipLabel(clip, creationNames)}
       style={sx({
         position: "absolute",
         left: visibleLeft,
@@ -49,6 +52,7 @@ export const ClipCardView = memo(function ClipCardView({
         numerator={numerator}
         automationMode={automationMode}
         readPeaks={readPeaks}
+        creationNames={creationNames}
       />
     </div>
   )

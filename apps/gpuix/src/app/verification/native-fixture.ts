@@ -8,7 +8,12 @@ import {
 } from "@/project/adapters"
 import { createNativeBackend } from "@/project/adapters/backend/native"
 import { createTrack } from "@/project/model/reducers"
-import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
+import {
+  createTestDocument,
+  createTestWorkspace,
+  TEST_CREATION,
+  TEST_TRACK_APPEARANCE,
+} from "@/project/adapters/fixtures"
 
 const evidence = process.env.B2_EVIDENCE_DIR
 if (!evidence) throw new Error("B2_EVIDENCE_DIR must point to a temporary fixture directory")
@@ -18,16 +23,15 @@ const samplePath = path.resolve(
 )
 configureProjectBackend(createNativeBackend, {
   createProject() {
-    const { document: current, workspace } = useProjectState.getState()
-    const document = structuredClone(current)
+    const document = createTestDocument()
+    const workspace = createTestWorkspace()
     const main = document.tracks.find(track => track.kind === "main")
     if (!main) throw new Error("Missing Main output")
-    const audio = createTrack(
-      "audio",
-      [main],
-      undefined,
-      DEFAULT_LAYOUT_TOKENS.track.defaultHeight * 2
-    )
+    const appearance = {
+      ...TEST_TRACK_APPEARANCE,
+      heightPx: TEST_TRACK_APPEARANCE.heightPx * 2,
+    }
+    const audio = createTrack("audio", [main], undefined, { ...TEST_CREATION, appearance })
     audio.id = "native-audio"
     audio.name = "Native audio fixture"
     audio.clips = [
@@ -41,12 +45,7 @@ configureProjectBackend(createNativeBackend, {
         gainDb: 0,
       },
     ]
-    const midi = createTrack(
-      "midi",
-      [audio, main],
-      undefined,
-      DEFAULT_LAYOUT_TOKENS.track.defaultHeight * 2
-    )
+    const midi = createTrack("midi", [audio, main], undefined, { ...TEST_CREATION, appearance })
     midi.id = "native-midi"
     midi.name = "MIDI fixture"
     midi.clips = [

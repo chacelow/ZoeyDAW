@@ -9,31 +9,32 @@ import {
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
+import { TEST_CREATION_NAMES } from "@/project/adapters/fixtures"
 import { createNativeClipboard } from "@/platform/clipboard"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import type { Theme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { LaneRow } from "../LaneRow"
-import { visibleRows } from "../render-projection"
-import { useLaneSurface } from "../useLaneSurface"
-import { labelsByLocale } from "../demo/labels"
-import { createVerificationMedia } from "../demo/media"
-import { seedLaneProject } from "../demo/project"
-import { createTimelineController } from "../../timeline/controller"
-import type { TimelineController } from "../../timeline/controller"
-import { createSceneStore } from "../../core/scene"
-import { createLaneController } from "../interactions/controller"
-import type { LaneController } from "../interactions/controller"
-import { takeProfileCounters } from "./profile-counters"
+import { LaneRow } from "@/project/sections/arrangement/lane/LaneRow"
+import { visibleRows } from "@/project/sections/arrangement/lane/render-projection"
+import { useLaneSurface } from "@/project/sections/arrangement/lane/useLaneSurface"
+import { labelsByLocale } from "@/app/locales/sections/lane"
+import { createVerificationMedia } from "@/project/sections/arrangement/lane/demo/media"
+import { seedLaneProject } from "@/project/sections/arrangement/lane/demo/project"
+import { createTimelineController } from "@/project/sections/arrangement/timeline/controller"
+import type { TimelineController } from "@/project/sections/arrangement/timeline/controller"
+import { createSceneStore } from "@/project/sections/arrangement/core/scene"
+import { createLaneController } from "@/project/sections/arrangement/lane/interactions/controller"
+import type { LaneController } from "@/project/sections/arrangement/lane/interactions/controller"
+import { takeProfileCounters } from "@/project/sections/arrangement/lane/verification/profile-counters"
 import {
   beginFramePhases,
   markReactStart,
   recordNativeFlush,
   recordObserver,
   takeFramePhases,
-} from "./frame-phases"
-import { MutationProfile } from "./mutation-profile"
+} from "@/project/sections/arrangement/lane/verification/frame-phases"
+import { MutationProfile } from "@/project/sections/arrangement/lane/verification/mutation-profile"
 
 const viewportWidth = 976
 const viewportHeight = Number(process.env.LANE_PROFILE_VIEWPORT_HEIGHT ?? 758)
@@ -349,6 +350,7 @@ try {
                   })}
                 >
                   <LaneRow
+                    creationNames={TEST_CREATION_NAMES}
                     row={row}
                     scene={scene}
                     viewport={scene.viewport}

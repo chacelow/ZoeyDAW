@@ -1,6 +1,8 @@
 import type { TransportLabels } from "@/project/sections/transport"
+import { createDisplayFormats } from "../../i18n/display-formats"
 
 export const englishTransportLabels: TransportLabels = {
+  formats: createDisplayFormats("en-US"),
   controls: "Transport",
   toggleBrowser: "Toggle Browser",
   back: "Back",
@@ -66,6 +68,7 @@ export const englishTransportLabels: TransportLabels = {
   },
 }
 export const chineseTransportLabels: TransportLabels = {
+  formats: createDisplayFormats("zh-CN"),
   controls: "走带",
   toggleBrowser: "切换浏览器",
   back: "返回",

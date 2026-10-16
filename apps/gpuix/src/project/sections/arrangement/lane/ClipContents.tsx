@@ -11,6 +11,7 @@ import { ClipFades } from "./ClipFades"
 import { QuadBatch } from "@/shared/quads/QuadBatch"
 import { useQuadBatch } from "@/shared/quads/useQuadBatch"
 import { useGridQuads } from "./GridQuads"
+import type { CreationNames } from "@/project/defaults/template"
 
 export const ClipContentsView = memo(function ClipContentsView({
   card,
@@ -18,12 +19,14 @@ export const ClipContentsView = memo(function ClipContentsView({
   numerator,
   automationMode,
   readPeaks,
+  creationNames,
 }: {
   card: ClipLocalContent
   trackColor: string
   numerator: number
   automationMode: boolean
   readPeaks: PeakReader
+  creationNames: Pick<CreationNames, "clip">
 }) {
   const theme = useTheme()
   const g = card.geometry
@@ -214,7 +217,7 @@ export const ClipContentsView = memo(function ClipContentsView({
           pointerEvents: "none",
         })}
       >
-        {clipLabel(clip)}
+        {clipLabel(clip, creationNames)}
       </text>
     </>
   )

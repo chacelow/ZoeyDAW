@@ -6,7 +6,8 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import type { MidiNote } from "@/project/model/types"
 import type { RollGeometry } from "./layout"
-import { pitchName } from "./geometry"
+import { usePreference } from "@/platform/settings"
+import type { DisplayFormats } from "@/project/model/display-formats"
 import { QuadPaint, usePaintLayers } from "./QuadPaint"
 import { paintLayers } from "./paint-layers"
 
@@ -18,6 +19,7 @@ export function VelocityLane({
   selection,
   currentNoteIndex,
   label,
+  formats,
   color,
   onMouseDown,
   onMouseMove,
@@ -31,6 +33,7 @@ export function VelocityLane({
   readonly selection: readonly number[]
   readonly currentNoteIndex: number | null
   readonly label: string
+  readonly formats: DisplayFormats
   readonly color: string
   readonly onMouseDown: (event: EventPayload) => void
   readonly onMouseMove: (event: EventPayload) => void
@@ -39,6 +42,7 @@ export function VelocityLane({
   readonly onActivateNote: (index: number, preserveSelection: boolean) => void
 }) {
   const theme = useTheme()
+  const midi = usePreference("midi")
   const { renderer } = useGpuix()
   const notes = readNotes()
   const [focused, setFocused] = useState(false)
@@ -142,11 +146,11 @@ export function VelocityLane({
           testId={`midi-velocity-${active.note.id ?? active.index}`}
           role="slider"
           tabIndex={0}
-          aria-label={`${label} ${pitchName(active.note.pitch)} · ${active.note.startBeat}–${active.note.startBeat + active.note.lengthBeats} · ${active.note.velocity}/127`}
+          aria-label={`${label} ${formats.pitchName(active.note.pitch, midi.octaveLabelOffset)} · ${formats.number(active.note.startBeat, "midi")}–${formats.number(active.note.startBeat + active.note.lengthBeats, "midi")} · ${formats.number(active.note.velocity, "integer")}/127`}
           aria-valuemin={1}
           aria-valuemax={127}
           aria-valuenow={active.note.velocity}
-          aria-valuetext={String(active.note.velocity)}
+          aria-valuetext={formats.number(active.note.velocity, "integer")}
           style={sx({
             position: "absolute",
             left: active.x,

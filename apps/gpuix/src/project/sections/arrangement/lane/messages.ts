@@ -1,4 +1,6 @@
 import type { GridDensity } from "@/project/model/grid"
+import type { CreationNames } from "@/project/defaults/template"
+import type { DisplayFormats } from "@/project/model/display-formats"
 
 export type LaneMessageKey =
   | "arrangement.timelineEditor"
@@ -26,4 +28,7 @@ export type LaneMessageKey =
 
 export type LaneTranslate = (key: LaneMessageKey) => string
 
-export type LaneLabels = Readonly<Record<LaneMessageKey, string>>
+export type LaneLabels = Readonly<Record<LaneMessageKey, string>> & {
+  readonly creationNames: Pick<CreationNames, "clip">
+  readonly formats: DisplayFormats
+}

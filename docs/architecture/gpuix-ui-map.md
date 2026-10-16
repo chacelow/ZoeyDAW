@@ -16,13 +16,13 @@
 
 | 入口 | 后台启动 | 环境开关 |
 | --- | --- | --- |
+| `src/app/verification/clip-edit/demo/index.tsx` | 是 | `CLIP_EDIT_LOCALE`、`CLIP_EDIT_STRESS`、`CLIP_EDIT_THEME` |
 | `src/app/verification/design-surfaces.tsx` | 是 | `T1_APPEARANCE`、`T1_SURFACE` |
+| `src/app/verification/footer/demo.tsx` | 是 | `B2_APPEARANCE`、`B2_BPM`、`B2_LANGUAGE`、`B2_RECORDING` |
+| `src/app/verification/lane/demo.tsx` | 是 | `LANE_LOCALE`、`LANE_STRESS`、`LANE_THEME` |
+| `src/app/verification/tracks/demo.tsx` | 是 | `TRACK_LANGUAGE`、`TRACK_THEME` |
 | `src/gallery/controls.tsx` | 是 | `GALLERY_APPEARANCE`、`GALLERY_LOCALE` |
 | `src/main.tsx` | 是 | `NODE_ENV`、`ZOEYDAW_ROUTE` |
-| `src/project/sections/arrangement/lane/demo/index.tsx` | 是 | `LANE_LOCALE`、`LANE_STRESS`、`LANE_THEME` |
-| `src/project/sections/arrangement/tracks/demo.tsx` | 是 | `TRACK_LANGUAGE`、`TRACK_THEME` |
-| `src/project/sections/clip-edit/demo/index.tsx` | 是 | `CLIP_EDIT_LOCALE`、`CLIP_EDIT_STRESS`、`CLIP_EDIT_THEME` |
-| `src/project/sections/footer/demo.tsx` | 是 | `B2_APPEARANCE`、`B2_BPM`、`B2_LANGUAGE`、`B2_RECORDING` |
 | `src/shared/theme/demo.tsx` | 是 | — |
 | `src/ui/panels/gallery.tsx` | 是 | — |
 

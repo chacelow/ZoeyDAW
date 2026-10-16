@@ -1,5 +1,6 @@
 import type { EventPayload } from "@gpuix/react"
 import { useMemo } from "react"
+import { usePreference } from "@/platform/settings"
 import { useProjectEditGesture, projectActions } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -13,9 +14,6 @@ import { useMidiEditor } from "./useMidiEditor"
 import { useMidiViewport } from "./useMidiViewport"
 import type { MidiClip } from "@/project/model/types"
 import type { MidiEditorLabels } from "../labels"
-
-/** Loop length shares the audio editor's sixteenth step and lower bound. */
-const LOOP_STEP_BARS = 1 / 16
 
 /**
 Piano roll for one MIDI clip. Fold, zoom and scroll stay local; notes change only through the
@@ -33,6 +31,7 @@ export function MidiEditor({
   readonly labels: MidiEditorLabels
 }) {
   const theme = useTheme()
+  const midi = usePreference("midi")
   const clip = readClip()
   const window = useMemo(
     () => ({
@@ -155,13 +154,13 @@ export function MidiEditor({
           testId="midi-loop-bars"
           label={labels.loopBars}
           value={clip.loopBars ?? clip.lengthBars}
-          min={LOOP_STEP_BARS}
+          min={midi.loopStepBars}
           max={Math.max(clip.lengthBars, 1024)}
-          step={LOOP_STEP_BARS}
+          step={midi.loopStepBars}
           defaultValue={clip.lengthBars}
           hideIcon
-          format={value => value.toFixed(4).replace(/\.?0+$/, "")}
-          widthSamples={["1024.9375"]}
+          format={value => labels.formats.number(value, "midi")}
+          widthSamples={labels.formats.widthSamples.midi}
           onGestureStart={() => {
             editor.finish(true)
             loopGesture.onGestureStart()
@@ -172,7 +171,7 @@ export function MidiEditor({
         />
         <div style={{ flexGrow: 1 }} />
         <text style={muted}>
-          {`${labels.gridStep} · ${editor.visibleSelection.length} ${labels.selected}`}
+          {`${labels.gridStep} · ${labels.formats.number(editor.visibleSelection.length, "integer")} ${labels.selected}`}
         </text>
       </ScrollArea>
       <div style={sx({ display: "flex", flexDirection: "row", flexShrink: 0 })}>
@@ -198,7 +197,12 @@ export function MidiEditor({
         style={sx({ display: "flex", flexDirection: "row", flexGrow: 1, minHeight: 0 })}
         onScroll={wheel}
       >
-        <PianoKeys roll={view.roll} label={labels.audition} selectPitch={editor.selectPitch} />
+        <PianoKeys
+          roll={view.roll}
+          label={labels.audition}
+          formats={labels.formats}
+          selectPitch={editor.selectPitch}
+        />
         <NoteGrid
           hostRef={editor.host}
           roll={view.roll}
@@ -209,6 +213,7 @@ export function MidiEditor({
           numerator={numerator}
           drawMode={editor.drawMode}
           label={labels.pianoRoll}
+          formats={labels.formats}
           color={color}
           onLayout={event => {
             if (event.width !== undefined && event.height !== undefined)
@@ -247,11 +252,14 @@ export function MidiEditor({
           <DragPadNumber
             testId="midi-velocity-value"
             label={labels.velocity}
-            value={selectedNote?.velocity ?? 100}
+            value={selectedNote?.velocity ?? midi.velocity}
             min={1}
             max={127}
             step={1}
             hideIcon
+            defaultValue={midi.velocity}
+            format={value => labels.formats.number(value, "integer")}
+            widthSamples={labels.formats.widthSamples.integer}
             disabled={!selectedNote}
             onGestureStart={editor.velocityGesture.onGestureStart}
             onChange={editor.setSelectedVelocity}
@@ -260,6 +268,7 @@ export function MidiEditor({
           />
         </div>
         <VelocityLane
+          formats={labels.formats}
           hostRef={editor.velocityHost}
           roll={view.roll}
           readNotes={readNotes}

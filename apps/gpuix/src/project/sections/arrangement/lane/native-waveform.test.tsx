@@ -16,7 +16,13 @@ import {
   whenProjectBackendIdle,
 } from "@/project/adapters"
 import { createNativeBackend } from "@/project/adapters/backend/native"
-import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  TEST_CREATION,
+  TEST_CREATION_NAMES,
+  TEST_TRACK_APPEARANCE,
+} from "@/project/adapters/fixtures"
 import { createTrack } from "@/project/model/reducers"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import type { Appearance, Theme } from "@/shared/theme/ThemeProvider"
@@ -74,12 +80,13 @@ for (const appearance of appearances)
     const document = createMockDocument()
     const main = document.tracks.find(track => track.kind === "main")
     if (!main) throw new Error("Missing Main output")
-    const audio = createTrack(
-      "audio",
-      [main],
-      undefined,
-      DEFAULT_LAYOUT_TOKENS.track.defaultHeight * 2
-    )
+    const audio = createTrack("audio", [main], undefined, {
+      ...TEST_CREATION,
+      appearance: {
+        ...TEST_TRACK_APPEARANCE,
+        heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight * 2,
+      },
+    })
     audio.id = "native-audio"
     audio.name = "Native audio fixture"
     audio.clips = [
@@ -167,6 +174,7 @@ for (const appearance of appearances)
     }
     const lane = capture(
       <ClipCardView
+        creationNames={TEST_CREATION_NAMES}
         card={card}
         trackColor={audio.color}
         viewportWidth={1280}

@@ -1,6 +1,6 @@
+import { PROJECT_TEMPLATE } from "../defaults/template"
 import type { AudioClip } from "./types"
 
-export const DEFAULT_FADE_CURVE = 0.35
 export const FADE_CURVE_VERTICAL_SCALE = 0.4
 
 export const clampFadeCurve = (curve: number): number => Math.max(-1, Math.min(1, curve))
@@ -76,7 +76,7 @@ export function fadePath(
   start: number,
   length: number,
   curve: number,
-  position = 0.5
+  position = PROJECT_TEMPLATE.clip.fade.position
 ): string {
   const y0 = edge === "in" ? 100 : 0
   const y1 = edge === "in" ? 0 : 100
@@ -89,30 +89,39 @@ Quiet boundary and full-level peak in visible clip bars.
 */
 export function fadeControls(clip: AudioClip, edge: "in" | "out"): { start: number; end: number } {
   if (edge === "in") {
-    const start = clip.fadeInOffsetBars ?? 0
-    return { start, end: start + (clip.fadeInBars ?? 0) }
+    const start = clip.fadeInOffsetBars ?? PROJECT_TEMPLATE.clip.fade.offsetBars
+    return { start, end: start + (clip.fadeInBars ?? PROJECT_TEMPLATE.clip.fade.durationBars) }
   }
-  const end = clip.lengthBars - (clip.fadeOutOffsetBars ?? 0)
-  return { start: end - (clip.fadeOutBars ?? 0), end }
+  const end = clip.lengthBars - (clip.fadeOutOffsetBars ?? PROJECT_TEMPLATE.clip.fade.offsetBars)
+  return { start: end - (clip.fadeOutBars ?? PROJECT_TEMPLATE.clip.fade.durationBars), end }
 }
 
 /**
 Keep both attenuation intervals inside the visible window without overlap.
 */
 export function clampFadeIntervals(clip: AudioClip): AudioClip {
-  const fadeInOffsetBars = Math.max(0, Math.min(clip.lengthBars, clip.fadeInOffsetBars ?? 0))
+  const fadeInOffsetBars = Math.max(
+    0,
+    Math.min(clip.lengthBars, clip.fadeInOffsetBars ?? PROJECT_TEMPLATE.clip.fade.offsetBars)
+  )
   const fadeOutOffsetBars = Math.max(
     0,
-    Math.min(clip.lengthBars - fadeInOffsetBars, clip.fadeOutOffsetBars ?? 0)
+    Math.min(
+      clip.lengthBars - fadeInOffsetBars,
+      clip.fadeOutOffsetBars ?? PROJECT_TEMPLATE.clip.fade.offsetBars
+    )
   )
   const fadeInBars = Math.max(
     0,
-    Math.min(clip.fadeInBars ?? 0, clip.lengthBars - fadeInOffsetBars - fadeOutOffsetBars)
+    Math.min(
+      clip.fadeInBars ?? PROJECT_TEMPLATE.clip.fade.durationBars,
+      clip.lengthBars - fadeInOffsetBars - fadeOutOffsetBars
+    )
   )
   const fadeOutBars = Math.max(
     0,
     Math.min(
-      clip.fadeOutBars ?? 0,
+      clip.fadeOutBars ?? PROJECT_TEMPLATE.clip.fade.durationBars,
       clip.lengthBars - fadeInOffsetBars - fadeOutOffsetBars - fadeInBars
     )
   )

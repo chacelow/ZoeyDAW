@@ -1,6 +1,13 @@
 import type { BrowserLabels } from "@/project/sections/browser"
+import { createDisplayFormats } from "../../i18n/display-formats"
+import { getBrowserEntries } from "../../i18n/browser-catalog"
 
 export const englishBrowserLabels: BrowserLabels = {
+  locale: "en-US",
+  formats: createDisplayFormats("en-US"),
+  get entries() {
+    return getBrowserEntries("en-US")
+  },
   title: "Browser",
   demonstration: "Demonstration catalog — loading and placement disabled",
   back: "Back",
@@ -58,6 +65,11 @@ export const englishBrowserLabels: BrowserLabels = {
   },
 }
 export const chineseBrowserLabels: BrowserLabels = {
+  locale: "zh-CN",
+  formats: createDisplayFormats("zh-CN"),
+  get entries() {
+    return getBrowserEntries("zh-CN")
+  },
   title: "浏览器",
   demonstration: "演示目录：不可加载，不可放置",
   back: "后退",

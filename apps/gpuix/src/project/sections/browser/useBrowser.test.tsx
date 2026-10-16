@@ -1,13 +1,23 @@
-import { expect, test } from "bun:test"
+import { beforeEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
+import { changeLocale, initAppI18n, useAppTranslation } from "@/app/i18n"
+import { getPreference } from "@/platform/settings"
+import { browserCatalogByLocale } from "@/app/locales/browser-catalog"
 import { useBrowser } from "./useBrowser"
 import type { BrowserController } from "./useBrowser"
+import { englishBrowserLabels, chineseBrowserLabels } from "@/app/locales/sections/browser"
+
+beforeEach(async () => {
+  initAppI18n({ initialLanguage: "en-US" })
+  await changeLocale("en-US")
+})
 
 function mountBrowser() {
   let current: BrowserController | null = null
   function Probe() {
-    current = useBrowser()
+    const { locale } = useAppTranslation()
+    current = useBrowser(locale === "zh-CN" ? chineseBrowserLabels : englishBrowserLabels)
     return <div />
   }
   const root = createTestRoot({ width: 300, height: 200 })
@@ -99,6 +109,66 @@ test("source history clears forward navigation after branching and resets kind b
       .map(row => row.entry.name)
     expect(names).toEqual([...names].sort((a, b) => -a.localeCompare(b)))
   } finally {
+    root.unmount()
+  }
+})
+
+test("application locale changes display and search without changing selection or favorites", async () => {
+  const { root, state, flush } = mountBrowser()
+  try {
+    expect([...state().favorites]).toEqual(getPreference("browser").favorites)
+    flush(() => state().setSelectedId("instruments-wavetable"))
+    flush(() => state().navigate("favorites"))
+    flush(() => state().setSelectedId("instruments-wavetable"))
+    await changeLocale("zh-CN")
+    root.renderer.flush()
+    expect(state().selected?.entry.id).toBe("instruments-wavetable")
+    expect(state().favorites.has("audioEffects-hybrid-reverb")).toBe(true)
+    flush(() => state().setQuery("混响"))
+    expect(state().rows[0]?.entry).toMatchObject({
+      id: "audioEffects-hybrid-reverb",
+      name: "混合混响",
+    })
+    flush(() => state().navigate("instruments"))
+    flush(() => state().setQuery("温暖波形"))
+    expect(state().rows.map(row => row.entry.id)).toEqual([
+      "instruments-wavetable",
+      "instruments-wavetable-0",
+    ])
+    await changeLocale("en-US")
+    root.renderer.flush()
+    expect(state().rows).toEqual([])
+    flush(() => state().setQuery("  ＷＡＲＭ ＷＡＶＥＳ  "))
+    expect(state().rows.map(row => row.entry.name)).toEqual(["Wavetable", "Warm Waves"])
+  } finally {
+    root.unmount()
+    await changeLocale("en-US")
+  }
+})
+
+test("catalog display source changes flow through real browser search while collection metadata remains stable", () => {
+  const wavetable = browserCatalogByLocale["en-US"].find(
+    entry => entry.id === "instruments-wavetable"
+  )
+  if (!wavetable) throw new Error("Missing Wavetable catalog entry")
+  const originalName = wavetable.name
+  const originalTags = wavetable.tags
+  const { root, state, flush } = mountBrowser()
+  try {
+    wavetable.name = "Renamed oscillator"
+    wavetable.tags = ["Injectable search tag"]
+    flush(() => state().setQuery("injectable search tag"))
+    expect(state().rows[0]?.entry).toMatchObject({
+      id: "instruments-wavetable",
+      name: "Renamed oscillator",
+      purple: true,
+    })
+    expect(state().favorites.has("instruments-wavetable")).toBe(true)
+    flush(() => state().navigate("purple"))
+    expect(state().rows[0]?.entry.id).toBe("instruments-wavetable")
+  } finally {
+    wavetable.name = originalName
+    wavetable.tags = originalTags
     root.unmount()
   }
 })

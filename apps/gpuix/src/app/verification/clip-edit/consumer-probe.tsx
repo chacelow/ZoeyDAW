@@ -1,4 +1,5 @@
 import { spyOn } from "bun:test"
+import { initializeVerificationProject } from "../project-creation"
 import { createHash } from "node:crypto"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
@@ -14,11 +15,11 @@ import {
 } from "@/project/adapters"
 import type { PeakReader } from "@/project/model/backend"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
-import { ClipEditor } from "../ClipEditor"
-import { createVerificationMedia } from "../demo/media"
-import { seedClipEditProject } from "../demo/project"
-import { demoLabels } from "../demo/labels"
-import type { ClipEditorEnvironment } from "../environment"
+import { ClipEditor } from "@/project/sections/clip-edit/ClipEditor"
+import { createVerificationMedia } from "./demo/media"
+import { seedClipEditProject } from "./demo/project"
+import { clipEditorLabels as demoLabels } from "@/app/locales/sections/clip-edit"
+import type { ClipEditorEnvironment } from "@/project/sections/clip-edit/environment"
 
 interface CapturedBounds {
   readonly x: number
@@ -37,7 +38,12 @@ if (!label || !/^[a-z0-9-]+$/.test(label) || (workload !== "normal" && workload 
 const replayDoubleWheel = process.env.CLIP_EDIT_REPLAY_DOUBLE_WHEEL === "1"
 if (replayDoubleWheel && process.env.CLIP_EDIT_REFERENCE)
   throw new Error("Replay mode is only for the new single-owner consumer")
-const output = path.join(import.meta.dir, "../evidence", `f4-${label}-${workload}`)
+const releaseCreation = initializeVerificationProject(`clip-consumer-probe-${label}`)
+const output = path.join(
+  import.meta.dir,
+  "../../../project/sections/clip-edit/evidence",
+  `f4-${label}-${workload}`
+)
 mkdirSync(output, { recursive: true })
 const size = { width: 1100, height: 420 }
 const media = createVerificationMedia()
@@ -452,6 +458,7 @@ try {
   release?.()
   opened.mockRestore()
   media.dispose()
+  releaseCreation()
 }
 if (root.renderer.getRetainedElementCount() !== 0)
   throw new Error("Native tree leaked after unmount")

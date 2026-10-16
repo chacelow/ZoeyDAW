@@ -1,4 +1,5 @@
 import { spyOn } from "bun:test"
+import { initializeVerificationProject } from "../project-creation"
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -10,19 +11,20 @@ import {
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
-import { ClipEditor } from "../ClipEditor"
-import { createVerificationMedia } from "../demo/media"
-import { seedClipEditProject } from "../demo/project"
-import { demoLabels } from "../demo/labels"
+import { ClipEditor } from "@/project/sections/clip-edit/ClipEditor"
+import { createVerificationMedia } from "./demo/media"
+import { seedClipEditProject } from "./demo/project"
+import { clipEditorLabels as demoLabels } from "@/app/locales/sections/clip-edit"
 import { audioTiming as recorder } from "./audio-timing"
 import type { AudioPhase } from "./audio-timing"
-import type { ClipEditorEnvironment } from "../environment"
+import type { ClipEditorEnvironment } from "@/project/sections/clip-edit/environment"
 
 const mode = process.argv[2]
 if (mode !== "native-bounds" && mode !== "cached-bounds")
   throw new Error(
     "Usage: --preload audio-profile-preload.ts audio-render-cost.tsx native-bounds|cached-bounds"
   )
+const releaseCreation = initializeVerificationProject("clip-audio-render-cost")
 const media = createVerificationMedia()
 const ids = seedClipEditProject(media.uri, "dense")
 const root = createTestRoot({ width: 1100, height: 420 })
@@ -163,7 +165,7 @@ try {
     ),
   }
   Object.assign(result, { acceptance })
-  const directory = path.join(import.meta.dir, "../evidence")
+  const directory = path.join(import.meta.dir, "../../../project/sections/clip-edit/evidence")
   mkdirSync(directory, { recursive: true })
   writeFileSync(
     path.join(directory, `f4-audio-phases-${result.reactMode}-${mode}.json`),
@@ -177,6 +179,7 @@ try {
   applySpy.mockRestore()
   release?.()
   media.dispose()
+  releaseCreation()
 }
 if (root.renderer.getRetainedElementCount() !== 0 || listeners.size !== 0)
   throw new Error("Audio profile resources leaked")

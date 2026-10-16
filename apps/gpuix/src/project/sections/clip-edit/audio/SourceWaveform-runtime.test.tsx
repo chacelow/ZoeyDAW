@@ -14,9 +14,9 @@ import {
   whenProjectBackendIdle,
 } from "@/project/adapters"
 import { createNativeBackend } from "@/project/adapters/backend/native"
-import { createVerificationMedia } from "../demo/media"
-import type { VerificationMedia } from "../demo/media"
-import { seedClipEditProject } from "../demo/project"
+import { createVerificationMedia } from "../../../../app/verification/clip-edit/demo/media"
+import type { VerificationMedia } from "../../../../app/verification/clip-edit/demo/media"
+import { seedClipEditProject } from "../../../../app/verification/clip-edit/demo/project"
 import { SourceWaveform } from "./SourceWaveform"
 
 let root: TestRoot | undefined

@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
-import { createMockDocument } from "@/project/adapters/fixtures"
+import { createMockDocument, TEST_CREATION_NAMES } from "@/project/adapters/fixtures"
 import { useProjectState } from "@/project/adapters"
 import { useProjectState as projectStore } from "@/project/stores/useProjectState"
 import { AnimationFrameProvider } from "@/platform/frame"
@@ -104,6 +104,7 @@ function fixture() {
       <ThemeProvider design={design} layout={layout} project={project}>
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <LaneContents
+            creationNames={TEST_CREATION_NAMES}
             row={row()}
             scene={scene.get()}
             automationMode={automationMode}
@@ -339,6 +340,7 @@ it("renders the same automation preview opacity for native audio waveforms", () 
     <ThemeProvider design={design} layout={layout} project={project}>
       <div style={{ position: "relative", width: 500, height: 300 }}>
         <LaneContents
+          creationNames={TEST_CREATION_NAMES}
           row={f.row()}
           scene={f.scene.get()}
           automationMode

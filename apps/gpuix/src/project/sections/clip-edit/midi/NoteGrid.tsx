@@ -4,7 +4,8 @@ import type { Ref } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { colorMix } from "@/shared/theme/color-mix"
-import { pitchName } from "./geometry"
+import { usePreference } from "@/platform/settings"
+import type { DisplayFormats } from "@/project/model/display-formats"
 import { visibleNoteRects } from "./layout"
 import { QuadPaint, usePaintLayers } from "./QuadPaint"
 import { notePaint } from "./note-paint"
@@ -23,6 +24,7 @@ export function NoteGrid({
   numerator,
   drawMode,
   label,
+  formats,
   color,
   onLayout,
   onMouseDown,
@@ -40,6 +42,7 @@ export function NoteGrid({
   readonly numerator: number
   readonly drawMode: boolean
   readonly label: string
+  readonly formats: DisplayFormats
   readonly color: string
   readonly onLayout: (event: EventPayload) => void
   readonly onMouseDown: (event: EventPayload) => void
@@ -49,6 +52,8 @@ export function NoteGrid({
   readonly onBlur: () => void
 }) {
   const theme = useTheme()
+  const midi = usePreference("midi")
+  const pitchName = (pitch: number) => formats.pitchName(pitch, midi.octaveLabelOffset)
   const notes = readNotes()
   const rects = useMemo(() => visibleNoteRects(notes, roll), [notes, roll])
   const selected = useMemo(() => new Set(selection), [selection])
@@ -66,7 +71,7 @@ export function NoteGrid({
         descriptions.set(note.pitch, row)
       }
       row.notes.push(
-        `${note.startBeat}–${note.startBeat + note.lengthBeats} · ${note.velocity}/127${selected.has(rect.index) ? " *" : ""}`
+        `${formats.number(note.startBeat, "midi")}–${formats.number(note.startBeat + note.lengthBeats, "midi")} · ${formats.number(note.velocity, "integer")}/127${selected.has(rect.index) ? " *" : ""}`
       )
       row.selected ||= selected.has(rect.index)
     }
@@ -76,11 +81,21 @@ export function NoteGrid({
       selected: row.selected,
       description: row.notes.join("; "),
     }))
-  }, [rects, notes, selected])
+  }, [rects, notes, selected, formats])
   const paint = useMemo(
     () =>
-      notePaint({ notes, rects, roll, selected, numerator, color, colors: theme.colors, fontSize }),
-    [notes, rects, roll, selected, numerator, color, theme.colors, fontSize]
+      notePaint({
+        notes,
+        rects,
+        roll,
+        selected,
+        numerator,
+        color,
+        colors: theme.colors,
+        fontSize,
+        gridBeats: midi.noteGridBeats,
+      }),
+    [notes, rects, roll, selected, numerator, color, theme.colors, fontSize, midi.noteGridBeats]
   )
   const layers = useMemo(
     () => [...paint.background, ...paint.planes.flatMap(plane => plane.layers)],
@@ -164,7 +179,7 @@ export function NoteGrid({
               key={note.id ?? rect.index}
               testId={`midi-note-${note.id ?? rect.index}`}
               role="gridcell"
-              aria-label={`${pitchName(note.pitch)} · ${note.startBeat}–${note.startBeat + note.lengthBeats} · ${note.velocity}/127`}
+              aria-label={`${pitchName(note.pitch)} · ${formats.number(note.startBeat, "midi")}–${formats.number(note.startBeat + note.lengthBeats, "midi")} · ${formats.number(note.velocity, "integer")}/127`}
               aria-selected={selected.has(rect.index)}
               style={sx({
                 position: "absolute",
@@ -194,7 +209,7 @@ export function NoteGrid({
           testId={`midi-note-${activeNote.id ?? activeRect.index}`}
           role="gridcell"
           aria-selected
-          aria-label={`${pitchName(activeNote.pitch)} · ${activeNote.startBeat}–${activeNote.startBeat + activeNote.lengthBeats} · ${activeNote.velocity}/127`}
+          aria-label={`${pitchName(activeNote.pitch)} · ${formats.number(activeNote.startBeat, "midi")}–${formats.number(activeNote.startBeat + activeNote.lengthBeats, "midi")} · ${formats.number(activeNote.velocity, "integer")}/127`}
           style={{
             position: "absolute",
             left: activeRect.left - roll.scrollX,

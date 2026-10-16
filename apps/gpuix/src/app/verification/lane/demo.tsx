@@ -16,21 +16,25 @@ import {
   readTransportBar,
   useProjectState,
 } from "@/project/adapters"
+import { TEST_CREATION_NAMES } from "@/project/adapters/fixtures"
 import { resolveContentColor } from "@/shared/theme/content-color"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { Button, ScrollArea } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
-import { LaneRow } from "../LaneRow"
-import { LaneOverlay } from "../LaneOverlay"
-import { useLaneSurface } from "../useLaneSurface"
-import { visibleRows, visibleClipCards } from "../render-projection"
-import type { ArrangementScene } from "../../core/scene"
-import { createVerificationMedia } from "./media"
-import { seedLaneProject } from "./project"
-import { createLaneDemoRuntime } from "./runtime"
-import type { LaneDemoRuntime } from "./runtime"
-import { labelsByLocale } from "./labels"
+import { LaneRow } from "@/project/sections/arrangement/lane/LaneRow"
+import { LaneOverlay } from "@/project/sections/arrangement/lane/LaneOverlay"
+import { useLaneSurface } from "@/project/sections/arrangement/lane/useLaneSurface"
+import {
+  visibleRows,
+  visibleClipCards,
+} from "@/project/sections/arrangement/lane/render-projection"
+import type { ArrangementScene } from "@/project/sections/arrangement/core/scene"
+import { createVerificationMedia } from "@/project/sections/arrangement/lane/demo/media"
+import { seedLaneProject } from "@/project/sections/arrangement/lane/demo/project"
+import { createLaneDemoRuntime } from "@/project/sections/arrangement/lane/demo/runtime"
+import type { LaneDemoRuntime } from "@/project/sections/arrangement/lane/demo/runtime"
+import { labelsByLocale } from "@/app/locales/sections/lane"
 
 const stress = process.env.LANE_STRESS === "1"
 const locale = process.env.LANE_LOCALE === "zh" ? "zh" : "en"
@@ -276,6 +280,7 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
               })}
             >
               <LaneRow
+                creationNames={TEST_CREATION_NAMES}
                 row={row}
                 scene={scene}
                 viewport={scene.viewport}

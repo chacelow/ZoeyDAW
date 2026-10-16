@@ -1,6 +1,6 @@
+import { PROJECT_TEMPLATE } from "@/project/defaults/template"
 import {
   clampFadeCurvePosition,
-  DEFAULT_FADE_CURVE,
   fadeControls,
   fadeCurveProgress,
   fadeBezierSegments,
@@ -119,10 +119,13 @@ function fadeVisual(
   const x1 = left + position.end * scale
   const y0 = top + (edge === "in" ? height : 0)
   const y1 = top + (edge === "in" ? 0 : height)
-  const curve = clip[edge === "in" ? "fadeInCurve" : "fadeOutCurve"] ?? DEFAULT_FADE_CURVE
+  const curve =
+    clip[edge === "in" ? "fadeInCurve" : "fadeOutCurve"] ?? PROJECT_TEMPLATE.clip.fade.curve
   const positionY = fadeCurveProgress(curve)
   const midpoint = y0 + (y1 - y0) * positionY
-  const positionX = clip[edge === "in" ? "fadeInCurvePosition" : "fadeOutCurvePosition"] ?? 0.5
+  const positionX =
+    clip[edge === "in" ? "fadeInCurvePosition" : "fadeOutCurvePosition"] ??
+    PROJECT_TEMPLATE.clip.fade.position
   const middle = x0 + (x1 - x0) * clampFadeCurvePosition(positionX)
   return {
     edge,

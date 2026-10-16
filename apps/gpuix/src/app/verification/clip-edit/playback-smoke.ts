@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs"
+import { initializeVerificationProject } from "../project-creation"
 import path from "node:path"
 import { setTimeout as delayFor } from "node:timers/promises"
 import {
@@ -8,8 +9,8 @@ import {
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
-import { createVerificationMedia } from "../demo/media"
-import { seedClipEditProject } from "../demo/project"
+import { createVerificationMedia } from "./demo/media"
+import { seedClipEditProject } from "./demo/project"
 
 type Workload = "normal" | "dense" | "notes-only" | "steps-only"
 
@@ -17,6 +18,7 @@ const delay = Number(process.env.CLIP_EDIT_PLAY_DELAY_MS ?? 0)
 if (!Number.isFinite(delay) || delay < 0)
   throw new Error("Playback delay must be finite and nonnegative")
 async function run(workload: Workload, iteration: number) {
+  const releaseCreation = initializeVerificationProject(`clip-playback-${workload}-${iteration}`)
   const media = createVerificationMedia()
   let release: (() => void) | undefined
   try {
@@ -55,6 +57,7 @@ async function run(workload: Workload, iteration: number) {
   } finally {
     release?.()
     media.dispose()
+    releaseCreation()
   }
 }
 
@@ -69,7 +72,7 @@ if (
 ) {
   results.push(await run("notes-only", 1), await run("steps-only", 1))
 }
-const directory = path.join(import.meta.dir, "../evidence")
+const directory = path.join(import.meta.dir, "../../../project/sections/clip-edit/evidence")
 mkdirSync(directory, { recursive: true })
 writeFileSync(
   path.join(directory, delay ? "f4-playback-aged-diagnostic.json" : "f4-playback-diagnostic.json"),

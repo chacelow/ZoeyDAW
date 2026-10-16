@@ -1,3 +1,10 @@
+import { PROJECT_TEMPLATE } from "../defaults/template"
+import type {
+  CreationNames,
+  TrackCreationAppearance,
+  ProjectTemplateSource,
+} from "../defaults/template"
+import { clampFadeIntervals } from "./fades"
 import { PATTERN_STEPS_PER_BAR } from "./types"
 import { MIN_CLIP_LENGTH_BARS } from "./grid"
 import type { Clip, DocumentState, Track, TrackKind, WorkspaceState } from "./types"
@@ -53,34 +60,36 @@ export function createTrack(
   kind: Exclude<TrackKind, "main">,
   tracks: Track[],
   parentId: string | undefined,
-  heightPx: number
+  creation: {
+    names: CreationNames
+    appearance: TrackCreationAppearance
+    source?: ProjectTemplateSource
+  }
 ): Track {
   const count = tracks.filter(track => track.kind === kind).length + 1
+  const source = creation.source ?? PROJECT_TEMPLATE
   return {
     id: uniqueId("track"),
-    name: `${count} ${kind === "midi" ? "MIDI" : kind === "audio" ? "Audio" : kind === "group" ? "Group" : "Return"}`,
+    name: creation.names.track(kind, count),
     kind,
-    color: kind === "group" ? "oklch(0.65 0.17 265)" : "oklch(0.65 0.18 230)",
-    solo: false,
-    armed: false,
-    mute: false,
-    volumeDb: 0,
-    pan: 0,
-    input: kind === "audio" ? "external" : kind === "midi" ? "all" : "none",
-    output: parentId ?? (kind === "midi" ? "none" : "main"),
-    inputChannel: kind === "midi" ? "all" : kind === "audio" ? "1" : undefined,
-    outputChannel: kind === "midi" ? "none" : "1-2",
-    ...(kind === "return" && { returnPost: true }),
+    color: creation.appearance.colors[kind],
+    ...source.track.mixer,
+    ...source.track.io[kind],
+    output: parentId ?? source.track.io[kind].output,
     sends: {},
     clips: [],
-    heightPx,
-    monitor: "auto",
+    heightPx: creation.appearance.heightPx,
     automation: [],
     ...(kind === "group" && { childTrackIds: [], collapsed: false }),
   }
 }
 
-export function createClip(kind: Clip["kind"], startBar: number, lengthBars: number): Clip {
+export function createClip(
+  kind: Clip["kind"],
+  startBar: number,
+  lengthBars: number,
+  source: ProjectTemplateSource = PROJECT_TEMPLATE
+): Clip {
   const common = {
     id: uniqueId("clip"),
     startBar: Math.max(1, startBar),
@@ -88,7 +97,20 @@ export function createClip(kind: Clip["kind"], startBar: number, lengthBars: num
   }
   switch (kind) {
     case "audio": {
-      return { ...common, kind, samplePath: "", gainDb: 0 }
+      return clampFadeIntervals({
+        ...common,
+        kind,
+        samplePath: "",
+        gainDb: source.clip.gainDb,
+        fadeInBars: source.clip.fade.durationBars,
+        fadeOutBars: source.clip.fade.durationBars,
+        fadeInOffsetBars: source.clip.fade.offsetBars,
+        fadeOutOffsetBars: source.clip.fade.offsetBars,
+        fadeInCurve: source.clip.fade.curve,
+        fadeOutCurve: source.clip.fade.curve,
+        fadeInCurvePosition: source.clip.fade.position,
+        fadeOutCurvePosition: source.clip.fade.position,
+      })
     }
     case "midi": {
       return { ...common, kind, notes: [], loopBars: common.lengthBars }
@@ -107,11 +129,11 @@ export function createClip(kind: Clip["kind"], startBar: number, lengthBars: num
 export function cloneClip(clip: Clip): Clip {
   return { ...structuredClone(clip), id: uniqueId("clip") }
 }
-export function cloneTrack(track: Track): Track {
+export function cloneTrack(track: Track, names: Pick<CreationNames, "copy">): Track {
   return {
     ...structuredClone(track),
     id: uniqueId("track"),
-    name: `${track.name} Copy`,
+    name: names.copy(track.name),
     clips: track.clips.map(cloneClip),
     automation: track.automation.map(lane => ({
       ...lane,

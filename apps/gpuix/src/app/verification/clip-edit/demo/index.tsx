@@ -1,9 +1,10 @@
 /**
-Manual verification window for the Clip editor: `bun --hot src/project/sections/clip-edit/demo/index.tsx`
+Manual verification window for the Clip editor: `bun --hot src/app/verification/clip-edit/demo/index.tsx`
 from apps/gpuix. CLIP_EDIT_THEME=light, CLIP_EDIT_LOCALE=zh. It acquires a real project runtime, so
 the waveform comes from the native engine's peak reader for a generated WAV file.
 */
 import { useEffect, useMemo, useRef, useState } from "react"
+import { initializeVerificationProject } from "../../project-creation"
 import { render, useGpuix } from "@gpuix/react"
 import { createNativeClipboard } from "@/platform/clipboard"
 import { nativeCursorLock } from "@/platform/cursor"
@@ -19,14 +20,18 @@ import {
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
-import { ClipEditor } from ".."
+import { ClipEditor } from "@/project/sections/clip-edit"
 import { createVerificationMedia } from "./media"
-import { demoLabels } from "./labels"
+import { clipEditorLabels as demoLabels } from "@/app/locales/sections/clip-edit"
 import { seedClipEditProject } from "./project"
-import type { ClipEditorEnvironment } from "../environment"
+import type { ClipEditorEnvironment } from "@/project/sections/clip-edit/environment"
 
 const locale = process.env.CLIP_EDIT_LOCALE === "zh" ? "zh" : "en"
 const appearance = process.env.CLIP_EDIT_THEME === "light" ? "light" : "dark"
+const releaseCreation = initializeVerificationProject(
+  "clip-editor-demo",
+  locale === "zh" ? "zh-CN" : "en-US"
+)
 const media = createVerificationMedia()
 const seeded = seedClipEditProject(
   media.uri,
@@ -225,6 +230,7 @@ function dispose() {
   root.unmount()
   release()
   media.dispose()
+  releaseCreation()
 }
 import.meta.hot?.dispose(dispose)
 process.once("SIGTERM", () => {

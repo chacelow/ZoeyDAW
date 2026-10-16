@@ -3,7 +3,7 @@ import { afterEach, expect, it, spyOn } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
-import { createMockDocument } from "../../../../adapters/fixtures"
+import { createMockDocument, TEST_CREATION_NAMES } from "../../../../adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import { LaneContents } from "./Contents"
 import { layoutTrackRows } from "../../core/layout"
@@ -72,6 +72,7 @@ it("culls offscreen native cards and retains visible node identity while scrolli
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
             <LaneContents
+              creationNames={TEST_CREATION_NAMES}
               row={row}
               scene={scene.get()}
               automationMode={false}
@@ -127,6 +128,7 @@ it("moves a fully visible Clip without reuploading or remounting its unchanged c
       <ThemeProvider>
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <LaneContents
+            creationNames={TEST_CREATION_NAMES}
             row={row}
             scene={scene.get()}
             automationMode={false}
@@ -197,6 +199,7 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
           <div style={{ position: "relative", width: 500, height: 300 }}>
             <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
               <LaneContents
+                creationNames={TEST_CREATION_NAMES}
                 row={row}
                 scene={scene.get()}
                 automationMode={false}
@@ -322,6 +325,7 @@ it("preserves tiny Clip pixel width when projecting a collapsed group summary", 
       <ThemeProvider>
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <LaneContents
+            creationNames={TEST_CREATION_NAMES}
             row={row}
             scene={scene.get()}
             automationMode={false}
@@ -384,6 +388,7 @@ it("scrolls an already-visible unchanged Clip without rerendering its content", 
         <div style={{ position: "relative", width: 500, height: 300 }}>
           <div style={{ position: "absolute", top: row.top, width: 500, height: row.height }}>
             <LaneContents
+              creationNames={TEST_CREATION_NAMES}
               row={row}
               scene={scene.get()}
               automationMode={false}
@@ -450,6 +455,7 @@ it("refreshes a cached mounted Clip title when density changes without changing 
       <ThemeProvider control={control} layout={layout}>
         <div style={{ position: "relative", width: 500, height: 200 }}>
           <LaneContents
+            creationNames={TEST_CREATION_NAMES}
             row={row}
             scene={scene.get()}
             automationMode={false}
