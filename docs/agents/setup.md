@@ -18,6 +18,8 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 ## 验证命令（gpuix）
 
+当前 `verify:gpuix` 门禁只支持 macOS。Windows/Linux 的离屏 `scaleFactor` 未实现；test-window 回归在非 macOS 显式报 unsupported 并非零退出，不跳过或报告假通过。
+
 在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`）。先对全仓 Git 跟踪源码检查机器绝对路径，再依次执行渲染器身份校验（完整补丁与产物 manifest，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、架构规则回归、工具 CLI 回归、文档路由、`bun test`、review scan、UI 地图校验，最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。review scan 对比 `baseRef...HEAD`，默认 `gpuix-migration`，不扫描未提交的改动。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
 
 工具 CLI 回归覆盖产物身份、link-only 初始化、Git 缓存路径、隔离 mutation 入口、部分提交的 UI 地图、禁用测试扫描与提交标题。独立变异入口为 `node scripts/gpuix-main/mutations-build-contract.mjs`、`node scripts/verification/mutations-ui-map.mjs`、`node scripts/verification/mutations-tooling-gates.mjs`、`node scripts/verification/mutations-absolute-path.mjs`、`node scripts/verification/mutations-mutation-isolation.mjs`，只修改临时副本。

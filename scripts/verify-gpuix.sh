@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One gate for gpuix changes; run from the checkout root (slice worktree or coordinator merge tree).
-# Usage: bash scripts/verify-gpuix.sh [baseRef]   (baseRef defaults to gpuix-migration; scan diffs base...HEAD)
+# macOS only. Usage: bash scripts/verify-gpuix.sh [baseRef] (default gpuix-migration; scan base...HEAD)
 # Order is cheapest-first and stops on the first failure. Every step prints one result line.
 set -euo pipefail
 base="${1:-gpuix-migration}"
