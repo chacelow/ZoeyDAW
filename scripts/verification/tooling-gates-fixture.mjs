@@ -3,11 +3,12 @@ import { cpSync, mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } fr
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { gitExecutable } from "../gpuix-main/paths.mjs"
 
 export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
 function git(cwd, ...args) {
-  return execFileSync("/usr/bin/git", args, { cwd, encoding: "utf8" }).trim()
+  return execFileSync(gitExecutable(), args, { cwd, encoding: "utf8" }).trim()
 }
 
 export function withScanFixture(scenario) {
@@ -19,7 +20,16 @@ export function withScanFixture(scenario) {
       path.join(projectRoot, "scripts/gpuix-review-scan.mjs"),
       path.join(root, "scripts/gpuix-review-scan.mjs")
     )
-    symlinkSync(path.join(projectRoot, "node_modules"), path.join(root, "node_modules"), "dir")
+    mkdirSync(path.join(root, "scripts/gpuix-main"))
+    cpSync(
+      path.join(projectRoot, "scripts/gpuix-main/paths.mjs"),
+      path.join(root, "scripts/gpuix-main/paths.mjs")
+    )
+    symlinkSync(
+      path.join(projectRoot, "node_modules"),
+      path.join(root, "node_modules"),
+      process.platform === "win32" ? "junction" : "dir"
+    )
     writeFileSync(
       path.join(root, "eslint.config.js"),
       'export default [{ files: ["**/*.ts"], rules: {} }]\n'
