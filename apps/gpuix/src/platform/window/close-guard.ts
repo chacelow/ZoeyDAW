@@ -1,5 +1,5 @@
 export interface CloseGuardRenderer {
-  /** macOS: asked synchronously on the AppKit thread for the close button and ⌘W. */
+  /** macOS asks synchronously; Windows first vetoes then asks on the JS thread. */
   setWindowShouldClose?(callback: () => boolean): void
   /** Closes without asking `setWindowShouldClose`; the last window closing quits. */
   closeWindow?(): void
@@ -14,7 +14,7 @@ export interface WindowCloseGuardOptions {
 }
 
 export interface WindowCloseGuard {
-  /** Whether the close button and ⌘W consult `shouldClose`; only macOS today. */
+  /** Whether native close requests consult `shouldClose`; macOS and Windows provide it. */
   readonly supported: boolean
   /** Close the window after the user decided; does not consult `shouldClose`. */
   close(): void

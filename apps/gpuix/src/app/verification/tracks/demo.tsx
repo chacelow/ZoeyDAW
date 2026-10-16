@@ -2,7 +2,7 @@ import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { useEffect, useMemo, useState } from "react"
 import { render, useGpuix, useWindowSize } from "@gpuix/react"
-import { nativeCursorLock } from "@/platform/cursor"
+import { createNativeCursorLock } from "@/platform/cursor"
 import { fileURLToPath } from "node:url"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
@@ -332,6 +332,7 @@ function Demo() {
     const window = createWindowPlatform(renderer)
     return {
       frames: createAnimationFrameSource(renderer),
+      cursorLock: createNativeCursorLock(renderer),
       panels: { subscribeWindowActive: window.subscribeApplicationActive },
     }
   }, [renderer])
@@ -346,7 +347,7 @@ function Demo() {
     <AnimationFrameProvider source={ports.frames}>
       <ThemeProvider key={appearance} defaultAppearance={appearance}>
         <ControlEnvironmentProvider
-          value={{ cursorLock: nativeCursorLock, inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}
+          value={{ cursorLock: ports.cursorLock, inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}
         >
           <PanelEnvironmentProvider environment={ports.panels}>
             <TrackSurface

@@ -2549,6 +2549,7 @@ dependencies = [
  "serde_json",
  "symphonia",
  "triple_buffer",
+ "url",
 ]
 
 [[package]]
