@@ -16,9 +16,9 @@ function systemSetting() {
   }
 }
 
-describe.if(process.platform === "darwin")("reduced motion through the real napi module", () => {
+describe("reduced motion through the real napi module", () => {
   test("the getter and the observer baseline both report the live system setting", async () => {
-    const expected = systemSetting()
+    const expected = process.platform === "darwin" ? systemSetting() : getReducedMotion()
     expect(getReducedMotion()).toBe(expected)
 
     const baseline = Promise.withResolvers<boolean>()
@@ -33,5 +33,19 @@ describe.if(process.platform === "darwin")("reduced motion through the real napi
     } finally {
       onReducedMotionChange(null)
     }
+  })
+
+  test("replacing and removing the native observer leaves the current getter usable", async () => {
+    const first = Promise.withResolvers<boolean>()
+    const second = Promise.withResolvers<boolean>()
+    onReducedMotionChange(value => first.resolve(value))
+    try {
+      expect(await first.promise).toBe(getReducedMotion())
+      onReducedMotionChange(value => second.resolve(value))
+      expect(await second.promise).toBe(getReducedMotion())
+    } finally {
+      onReducedMotionChange(null)
+    }
+    expect(typeof getReducedMotion()).toBe("boolean")
   })
 })

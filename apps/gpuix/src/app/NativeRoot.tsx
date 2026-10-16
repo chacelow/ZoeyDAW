@@ -1,6 +1,6 @@
 import { useMemo, useSyncExternalStore } from "react"
 import { useGpuix } from "@gpuix/react"
-import { nativeCursorLock } from "@/platform/cursor"
+import { createNativeCursorLock } from "@/platform/cursor"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import { createWindowPlatform } from "@/platform/window"
 import { ControlEnvironmentProvider } from "@/ui/controls"
@@ -25,7 +25,7 @@ export function NativeRoot(props: NativeRootProps) {
       frames: createAnimationFrameSource(renderer),
       panels: { subscribeWindowActive: window.subscribeApplicationActive },
       controls: {
-        cursorLock: nativeCursorLock,
+        cursorLock: createNativeCursorLock(renderer),
         subscribeWindowActive: window.subscribeApplicationActive,
       },
       window,

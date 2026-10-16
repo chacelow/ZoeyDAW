@@ -6,7 +6,7 @@ the waveform comes from the native engine's peak reader for a generated WAV file
 import { useEffect, useMemo, useRef, useState } from "react"
 import { render, useGpuix } from "@gpuix/react"
 import { createNativeClipboard } from "@/platform/clipboard"
-import { nativeCursorLock } from "@/platform/cursor"
+import { createNativeCursorLock } from "@/platform/cursor"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { createWindowPlatform, LAUNCH_FOCUS } from "@/platform/window"
@@ -191,13 +191,16 @@ function Demo() {
 
 function NativeRoot() {
   const { renderer } = useGpuix()
-  const source = useMemo(() => {
+  const { source, cursorLock } = useMemo(() => {
     if (!renderer) throw new Error("Native renderer is unavailable")
-    return createAnimationFrameSource(renderer)
+    return {
+      source: createAnimationFrameSource(renderer),
+      cursorLock: createNativeCursorLock(renderer),
+    }
   }, [renderer])
   return (
     <AnimationFrameProvider source={source}>
-      <ControlEnvironmentProvider value={{ cursorLock: nativeCursorLock }}>
+      <ControlEnvironmentProvider value={{ cursorLock }}>
         <Demo />
       </ControlEnvironmentProvider>
     </AnimationFrameProvider>

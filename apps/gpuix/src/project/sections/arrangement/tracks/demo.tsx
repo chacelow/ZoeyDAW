@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { render, useGpuix, useWindowSize } from "@gpuix/react"
-import { nativeCursorLock } from "@/platform/cursor"
+import { createNativeCursorLock } from "@/platform/cursor"
 import { fileURLToPath } from "node:url"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { Button, ControlEnvironmentProvider } from "@/ui/controls"
@@ -311,6 +311,7 @@ function Demo() {
     const window = createWindowPlatform(renderer)
     return {
       frames: createAnimationFrameSource(renderer),
+      cursorLock: createNativeCursorLock(renderer),
       panels: { subscribeWindowActive: window.subscribeApplicationActive },
     }
   }, [renderer])
@@ -324,7 +325,7 @@ function Demo() {
   return (
     <AnimationFrameProvider source={ports.frames}>
       <ThemeProvider key={appearance} defaultAppearance={appearance}>
-        <ControlEnvironmentProvider value={{ cursorLock: nativeCursorLock }}>
+        <ControlEnvironmentProvider value={{ cursorLock: ports.cursorLock }}>
           <PanelEnvironmentProvider environment={ports.panels}>
             <TrackSurface
               appearance={appearance}

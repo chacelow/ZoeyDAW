@@ -8,9 +8,10 @@ export interface FrameRenderer {
 
 export interface AnimationFrameSource {
   subscribe(callback: AnimationFrameCallback): () => void
-  // Resume runs inside native prepaint; callers must commit first-present state synchronously.
-  // React consumers use flushSync around updates made by their resume listener.
-  // Retained applyBatch/setQuads writes are safe; GPUI reads and window mutations throw.
+  // Resume commits before the first restored present: macOS invokes inside prepaint;
+  // Windows defers present while the nonblocking JS callback commits and acknowledges.
+  // React consumers use flushSync. GPUI reads/window mutations are forbidden only
+  // inside macOS prepaint; the Windows UI thread keeps processing commands.
   subscribeResume(callback: AnimationFrameCallback): () => void
 }
 

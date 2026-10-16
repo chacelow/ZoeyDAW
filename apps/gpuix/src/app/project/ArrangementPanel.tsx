@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from "react"
-import { nativeCursorLock } from "@/platform/cursor"
+import { useMemo, useSyncExternalStore } from "react"
+import { useGpuix } from "@gpuix/react"
+import { createNativeCursorLock } from "@/platform/cursor"
 import {
   projectActions,
   readProjectPeaks,
@@ -21,6 +22,8 @@ import type { ProjectComposition } from "./composition"
 
 export function ArrangementPanel({ composition }: { readonly composition: ProjectComposition }) {
   const { timeline, lane } = composition
+  const { renderer } = useGpuix()
+  const cursor = useMemo(() => createNativeCursorLock(renderer), [renderer])
   const scene = useSyncExternalStore(timeline.sceneStore.subscribe, timeline.sceneStore.get)
   const viewport = timeline.useViewport()
   const { locale } = useAppTranslation()
@@ -32,7 +35,7 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
       controller={timeline}
       editSurface={editSurface}
       labels={locale === "zh-CN" ? chineseLabels : englishLabels}
-      cursor={nativeCursorLock}
+      cursor={cursor}
       tracks={
         <TrackRows
           scene={scene}
