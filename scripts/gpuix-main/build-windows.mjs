@@ -12,6 +12,10 @@ import {
 } from "node:fs"
 import path from "node:path"
 import { canonicalBuildPath, gitExecutable, isWithinBuildPath, sharedBuildPaths } from "./paths.mjs"
+import {
+  findDependencyJunctionRepairs,
+  repairDependencyJunctions,
+} from "./windows-dependency-links.mjs"
 
 const directory = import.meta.dirname
 const root = path.resolve(directory, "../..")
@@ -79,6 +83,19 @@ function linkCheckout() {
   }
 }
 
+function acquireBuildLock() {
+  mkdirSync(vendorRoot, { recursive: true })
+  const lock = path.join(vendorRoot, ".build-lock")
+  try {
+    mkdirSync(lock)
+  } catch (error) {
+    if (error.code === "EEXIST")
+      throw new Error(`Another gpuix build owns ${lock}; do not remove it`)
+    throw error
+  }
+  return lock
+}
+
 const cached = spawnSync(process.execPath, [check, "--vendor", vendor, "--build-mode", mode], {
   cwd: root,
   env,
@@ -86,19 +103,27 @@ const cached = spawnSync(process.execPath, [check, "--vendor", vendor, "--build-
 })
 if (cached.error) throw cached.error
 if (cached.status === 0) {
+  const needsRepair = findDependencyJunctionRepairs(vendor).length > 0
+  if (needsRepair) {
+    const lock = acquireBuildLock()
+    try {
+      console.log(
+        `Repaired ${repairDependencyJunctions(vendor)} dependency links as absolute junctions`
+      )
+    } finally {
+      rmdirSync(lock)
+    }
+  }
   linkCheckout()
-  console.log("Linked verified gpuix build without rebuilding or acquiring the build lock")
+  console.log(
+    needsRepair
+      ? "Linked verified gpuix build after dependency link repair without rebuilding"
+      : "Linked verified gpuix build without rebuilding or acquiring the build lock"
+  )
   process.exit(0)
 }
 
-mkdirSync(vendorRoot, { recursive: true })
-const lock = path.join(vendorRoot, ".build-lock")
-try {
-  mkdirSync(lock)
-} catch (error) {
-  if (error.code === "EEXIST") throw new Error(`Another gpuix build owns ${lock}; do not remove it`)
-  throw error
-}
+const lock = acquireBuildLock()
 try {
   if (!existsSync(path.join(vendor, ".git"))) {
     run(gitExecutable(), [
@@ -139,6 +164,9 @@ try {
   run(process.execPath, [check, "--sources", vendor])
   mkdirSync(target, { recursive: true })
   run("bun", ["install", "--frozen-lockfile"], vendor)
+  console.log(
+    `Repaired ${repairDependencyJunctions(vendor)} dependency links as absolute junctions`
+  )
   const native = path.join(vendor, "packages/native")
   run("rustc", ["-vV"], native)
   // DirectX compiles HLSL on Windows; the macOS Metal runtime/precompiled distinction
