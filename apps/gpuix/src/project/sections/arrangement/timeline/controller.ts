@@ -98,7 +98,9 @@ export function createTimelineController({
 
   const autoScroll = createTimelineAutoScroll({
     scene: sceneStore,
-    edge: metrics.timelineAutoScrollEdge,
+    get edge() {
+      return metrics.timelineAutoScrollEdge
+    },
     readPolicy: () => readPolicy().autoScroll,
     setScroll,
     onScroll: pointer => rulers.move(pointer.x, pointer.shiftKey),

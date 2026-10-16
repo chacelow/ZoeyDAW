@@ -35,6 +35,8 @@ import type { WorkspaceState } from "@/project/model/types"
 import type { CanvasTargetSelection } from "@/project/sections/arrangement/core/scene"
 import type { LanePointer } from "@/project/sections/arrangement/lane"
 import type { ProjectComposition } from "./composition"
+import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
+import type { ThemeProviderProps } from "@/shared/theme/ThemeProvider"
 
 const cleanups: (() => void)[] = []
 afterEach(() => {
@@ -59,6 +61,7 @@ interface LivePolicyFixture {
   readonly owners: ReadonlySet<ProjectComposition>
   readonly preferences: PreferenceOwner
   readonly configDir: string
+  readonly setMetrics: (project: NonNullable<ThemeProviderProps["project"]>) => void
 }
 
 function mount(): LivePolicyFixture {
@@ -113,6 +116,8 @@ function mount(): LivePolicyFixture {
   const frames = createManualFrames()
   let current: ProjectComposition | null = null
   const owners = new Set<ProjectComposition>()
+  let projectMetrics: ThemeProviderProps["project"]
+  const nativeEnvironment = { subscribeWindowActive: () => () => {} }
   function Harness() {
     const shell = useProjectShell()
     const { composition } = useProjectComposition(shell)
@@ -122,19 +127,22 @@ function mount(): LivePolicyFixture {
     }, [composition])
     return composition ? <SceneProjection composition={composition} /> : <div />
   }
-  root.render(
-    <AnimationFrameProvider source={frames}>
-      <ThemeProvider>
-        <AppNativeEnvironmentProvider value={{ subscribeWindowActive: () => () => {} }}>
-          <AppInteractionProvider>
-            <WindowKeyboardProvider value={keyboard}>
-              <Harness />
-            </WindowKeyboardProvider>
-          </AppInteractionProvider>
-        </AppNativeEnvironmentProvider>
-      </ThemeProvider>
-    </AnimationFrameProvider>
-  )
+  function render() {
+    root.render(
+      <AnimationFrameProvider source={frames}>
+        <ThemeProvider project={projectMetrics}>
+          <AppNativeEnvironmentProvider value={nativeEnvironment}>
+            <AppInteractionProvider>
+              <WindowKeyboardProvider value={keyboard}>
+                <Harness />
+              </WindowKeyboardProvider>
+            </AppInteractionProvider>
+          </AppNativeEnvironmentProvider>
+        </ThemeProvider>
+      </AnimationFrameProvider>
+    )
+  }
+  render()
   function owner(): ProjectComposition {
     if (!current) throw new Error("Actual useProjectComposition hook did not mount")
     return current
@@ -142,7 +150,17 @@ function mount(): LivePolicyFixture {
   act(root, () =>
     owner().timeline.view.measure({ containerWidth: 1104, bodyHeight: 500, timelineLeft: 0 })
   )
-  return { root, owner, owners, preferences, configDir }
+  return {
+    root,
+    owner,
+    owners,
+    preferences,
+    configDir,
+    setMetrics(project) {
+      projectMetrics = project
+      render()
+    },
+  }
 }
 
 function SceneProjection({ composition }: { readonly composition: ProjectComposition }) {
@@ -345,5 +363,67 @@ test.each(["lane", "ruler"])(
     await settle(root)
     expect(useProjectState.getState().document).toEqual(baseline.document)
     expect(useProjectState.getState().session.canRedo).toBe(false)
+  }
+)
+
+test.each(["minimapMinHeight", "minimapMaxHeight", "timelineAutoScrollEdge"] as const)(
+  "live project metric %s retains owner and selection, cancels preview and updates consumers",
+  async metric => {
+    const fixture = mount()
+    const { root } = fixture
+    await settle(root)
+    const initial = fixture.owner()
+    const scene = initial.timeline.sceneStore
+    const baseline = useProjectState.getState().document
+    const start = clipPointer(initial)
+    act(root, () => {
+      projectActions.setTimeSelection({ startBar: 2, endBar: 4, trackIds: ["source"] })
+      initial.lane.pointerDown(start)
+      initial.lane.pointerMove(pointer(start.x + 96, start.y), true)
+    })
+    expect(initial.lane.getSnapshot().dragActive).toBe(true)
+    const selection = scene.get().targetSelection
+    const timeSelection = scene.get().timeSelection
+    const project = { ...PROJECT_METRICS, [metric]: PROJECT_METRICS[metric] + 32 }
+    act(root, () => fixture.setMetrics(project))
+    expectSameOwners(fixture, initial)
+    expect(scene.get().targetSelection).toEqual(selection)
+    expect(scene.get().timeSelection).toEqual(timeSelection)
+    expect(initial.lane.getSnapshot().dragActive).toBe(false)
+    expect(useProjectState.getState().session.preview).toBeNull()
+    expect(useProjectState.getState().document).toEqual(baseline)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
+    act(root, () => initial.timeline.view.setOverviewHeight(0))
+    expect(initial.timeline.view.getSnapshot().overviewHeight).toBe(project.minimapMinHeight)
+    act(root, () => initial.timeline.view.setOverviewHeight(10000))
+    expect(initial.timeline.view.getSnapshot().overviewHeight).toBe(project.minimapMaxHeight)
+    if (metric === "timelineAutoScrollEdge") {
+      const nearEdge = pointer(
+        scene.get().viewport.width - PROJECT_METRICS.timelineAutoScrollEdge - 4,
+        start.y
+      )
+      act(root, () => {
+        initial.lane.pointerDown(start)
+        initial.lane.pointerMove(nearEdge, true)
+        initial.lane.step(0)
+        initial.lane.step(32)
+      })
+      expect(scene.get().viewport.scrollX).toBeGreaterThan(0)
+      act(root, () => {
+        initial.lane.interrupt()
+        projectActions.setViewport({ scrollX: 0, scrollY: 0 })
+        initial.timeline.view.autoScroll.start(
+          { ...nearEdge, windowX: nearEdge.x, windowY: nearEdge.y },
+          "horizontal"
+        )
+        initial.timeline.view.autoScroll.tick(0)
+        initial.timeline.view.autoScroll.tick(32)
+        initial.timeline.view.autoScroll.stop()
+      })
+      expect(scene.get().viewport.scrollX).toBeGreaterThan(0)
+    }
+    await settle(root)
+    expect(useProjectState.getState().document).toEqual(baseline)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
   }
 )

@@ -269,8 +269,8 @@ mutations.push(
   {
     name: "live-policy-owner-recreated",
     file: appHook,
-    from: "    readPolicy,\n    minimapMinHeight,",
-    to: "    readPolicy,\n    policy,\n    minimapMinHeight,",
+    from: "[interaction, keyboard, renderer, subscribeWindowActive, readPolicy, metrics]",
+    to: "[interaction, keyboard, renderer, subscribeWindowActive, readPolicy, metrics, policy]",
     suite: "live",
   },
   {
@@ -289,6 +289,51 @@ mutations.push(
   }
 )
 
+mutations.push(
+  ...["minimapMinHeight", "minimapMaxHeight", "timelineAutoScrollEdge"].map(field => ({
+    name: `live-metrics-${field}-stale`,
+    file: appHook,
+    from: `return projectRef.current.${field}`,
+    to: `return project.${field}`,
+    suite: "metrics",
+  })),
+  {
+    name: "live-metrics-owner-recreated",
+    file: appHook,
+    from: "[interaction, keyboard, renderer, subscribeWindowActive, readPolicy, metrics]",
+    to: "[interaction, keyboard, renderer, subscribeWindowActive, readPolicy, metrics, project]",
+    suite: "metrics",
+  },
+  {
+    name: "live-metrics-not-interrupted",
+    file: appHook,
+    from: "[composition, policy, project]",
+    to: "[composition, policy]",
+    suite: "metrics",
+  },
+  {
+    name: "live-metrics-lane-edge-literal",
+    file: "../../../../app/project/composition.ts",
+    from: "return deps.metrics.timelineAutoScrollEdge",
+    to: "return 42",
+    suite: "metrics",
+  },
+  {
+    name: "live-metrics-timeline-edge-literal",
+    file: "../timeline/controller.ts",
+    from: "return metrics.timelineAutoScrollEdge",
+    to: "return 42",
+    suite: "metrics",
+  },
+  {
+    name: "live-metrics-autoscroll-edge-literal",
+    file: "../timeline/viewport/auto-scroll.ts",
+    from: "edge: deps.edge",
+    to: "edge: 42",
+    suite: "metrics",
+  }
+)
+
 runMutations({
   root: core,
   preload,
@@ -296,6 +341,10 @@ runMutations({
     policy: { files: tests },
     geometry: { files: ["geometry-policy.test.ts"] },
     live: { files: ["../../../../app/project/live-policy.test.tsx"] },
+    metrics: {
+      files: ["../../../../app/project/live-policy.test.tsx"],
+      pattern: "live project metric",
+    },
   },
   mutations,
 })

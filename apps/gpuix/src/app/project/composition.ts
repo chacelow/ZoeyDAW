@@ -79,7 +79,9 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
     actions: projectActions,
     getState: useProjectState.getState,
     clipboard: deps.clipboard,
-    edgePixels: deps.metrics.timelineAutoScrollEdge,
+    get edgePixels() {
+      return deps.metrics.timelineAutoScrollEdge
+    },
     setScroll: timeline.setScroll,
     markDrawModeGesture: timeline.keyboard.markDrawGesture,
   })

@@ -12,19 +12,14 @@ export interface TimelineAutoScroll {
   subscribeFrameDemand: (listener: () => void) => () => void
 }
 
-export function createTimelineAutoScroll({
-  scene,
-  edge,
-  readPolicy,
-  setScroll,
-  onScroll,
-}: {
+export function createTimelineAutoScroll(deps: {
   scene: SceneStore
   edge: number
   readPolicy: () => ArrangementPolicy["autoScroll"]
   setScroll: (x: number, y: number) => ArrangementViewport
   onScroll: (pointer: NativeTimelinePointer) => void
 }): TimelineAutoScroll {
+  const { scene, readPolicy, setScroll, onScroll } = deps
   let pointer: NativeTimelinePointer | null = null
   let axis: "horizontal" | "both" = "both"
   let last: number | null = null
@@ -45,7 +40,7 @@ export function createTimelineAutoScroll({
       geometry: current.geometry,
       pointer,
       axis,
-      edge,
+      edge: deps.edge,
       policy: readPolicy(),
       elapsed: last === null ? 0 : now - last,
     })
