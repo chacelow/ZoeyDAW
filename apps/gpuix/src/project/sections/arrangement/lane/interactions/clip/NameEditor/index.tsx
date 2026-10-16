@@ -36,7 +36,7 @@ export function ClipNameEditor({
     Math.round(rect.left) + scene.geometry.arrangement.clip.nameEditorLeftInset
   )
   const width = Math.min(
-    theme.project.controlsWidth,
+    theme.layout.track.controlsWidth,
     scene.viewport.width - left,
     rect.left + rect.width - left - scene.geometry.arrangement.clip.nameEditorRightInset
   )

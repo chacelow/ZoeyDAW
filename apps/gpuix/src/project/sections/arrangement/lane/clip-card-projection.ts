@@ -62,6 +62,7 @@ export function createClipCardProjection() {
           previous &&
           previous.card.clip === rect.clip &&
           previous.collapsed === collapsed &&
+          previous.rect.trackGeometry === rect.trackGeometry &&
           previous.fadesVisible === fadesVisible &&
           previous.rect.trackGeometry === rect.trackGeometry &&
           previous.rect.arrangementGeometry === rect.arrangementGeometry &&

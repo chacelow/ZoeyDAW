@@ -65,7 +65,7 @@ export function Loading({
       ) : null}
       <div>{label}</div>
       {showProgress ? (
-        <div style={{ width: theme.project.controlsWidth }}>
+        <div style={{ width: theme.layout.track.controlsWidth }}>
           <Progress value={progress ?? 0} aria-label={label} />
         </div>
       ) : null}

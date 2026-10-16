@@ -75,7 +75,7 @@ export function LoadErrorScreen({
       {detail ? (
         <div
           style={{
-            maxWidth: theme.project.controlsWidth,
+            maxWidth: theme.layout.track.controlsWidth,
             textAlign: "center",
             color: theme.colors.mutedForeground,
           }}

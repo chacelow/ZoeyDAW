@@ -16,6 +16,21 @@ B1，2026-10-15。这里只接收坐标、工程模型和显式手势数据，�
 - `project/defaults/arrangement.ts` 持有编辑策略默认值，共享 pointer 初值来自纯 `project/defaults/preferences` 入口。`resolveArrangementPolicy(source, overrides, pointer)` 在配置边界逐字段解析稀疏偏好，保留合法的零值。controllers 通过 `readPolicy()` 读取最新完整策略，纯计算只接收对应分组。Minimap 保存按下时的策略快照。偏好改变取消正在进行的手势，不重建 SceneStore 或 controllers。
 - `createMeterPeak(policy)`、`meterDb(levelDb, policy)`、`advanceMeterPeak(peak, levelDb, nowMs, policy)` 共用 `ArrangementPolicy["meter"]`；没有第二份 meter 范围、hold 或 fall 常量。时间单位换算仍是数学常量。
 
+## 公共接口：配置几何
+
+```ts
+type ArrangementGeometry = Pick<LayoutTokens, "track" | "arrangement">
+createSceneStore(geometry: ArrangementGeometry): SceneStore
+SceneStore.setGeometry(geometry: ArrangementGeometry): void
+layoutTrackRowsForViewport(tracks: readonly Track[], scrollY: number, height: number, geometry: ArrangementGeometry): TrackRow[]
+```
+
+- `ArrangementScene.geometry` 保存组合根注入的只读引用。应用从 `Theme.layout` 创建 SceneStore，来源替换时调用 `setGeometry()`。timeline 重算唯一 viewport 投影，轨道保存的 `heightPx` 不变。
+- `scene.geometry.track.controlsWidth` 是轨道控制列总宽的唯一来源。identity/routing 子列仍由 project 提供，Mixer 用总宽减两个子列宽派生剩余宽度。
+- `TrackRow`、`ClipRect` 同时携带 `trackGeometry` 与 `arrangementGeometry`。Clip 局部缓存比较两个引用，标题高、Clip 和 fade 配置变化都会使投影失效。
+- `TimelineViewportInput`、`PanViewportInput`、`edgeScroll` 要求显式完整 `ArrangementGeometry`。独立 tracks/viewport helper 不为读取配置创建包装 Scene，也不依赖 React context。
+- `arrangement` 中标尺、Clip 与 hit 的读取使用注入来源。完整字段与来源规则见 [统一配置契约](../../../../../../../docs/architecture/configuration.md)。
+
 ## 迁移文件
 
 来源根目录为 `apps/web/src/pages/project/sections/ArrangementPanel/`，目标均相对本目录。原文件保留只读。

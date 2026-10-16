@@ -85,7 +85,7 @@ export interface DesignDetails {
 export const DEFAULT_DESIGN_DETAILS: DesignDetails = {
   overlay: { sideOffset: 4, collisionPadding: 8 },
   dragPreview: { maxWidth: 320, gap: 8, opacity: 0.85 },
-  toast: { edgeInset: 12, stackGap: 8, inset: 8, radius: 8, width: 304 },
+  toast: { edgeInset: 12, stackGap: 8, inset: 12, radius: 8, width: 304 },
   empty: { gap: 16, inset: 24, radius: 12, contentGap: 8, headerMaxWidth: 304 },
   loading: { gap: 12, brandWidth: 60, brandHeight: 39, progressWidth: 304 },
   states: { disabledOpacity: 0.5, dragSourceOpacity: 0.4 },

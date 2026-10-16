@@ -84,7 +84,7 @@ export function createLayoutTokens(control: ControlMetrics, project: ProjectMetr
       maxHeight: project.maxTrackHeight,
       resizeStep,
       revealThreshold: resizeStep / 2,
-      controlsWidth: project.controlsWidth,
+      controlsWidth: 304,
     },
     arrangement: {
       markerRulerHeight,
