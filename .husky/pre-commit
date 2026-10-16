@@ -49,7 +49,7 @@ Session 里更早的「我确认」不能复用. 每次 commit 都要新确认.
 收到:
   ${USER_CONFIRM_HASH:-<未提供>}
 
-参考: .agents/skills/commit-checklist/SKILL.md 的 G 门.
+参考: docs/agents/setup.md 的「提交授权」.
 
 EOF
     exit 1
