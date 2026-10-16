@@ -30,7 +30,7 @@ Header 只测 viewport，左右列由原生 flex 和 intrinsic minima 分配，�
 
 CI 的 Bun 测试失败时输出完整日志，保留早期 Expected/Received；随后失败诊断步骤分别用 `PROBE_PASSES=1` 和 `PROBE_PASSES=4` 运行 `bun scripts/gpuix-main/ci-geometry/probe.tsx`。入口输出启用字体 family 列表、Header/Send 逐次布局 bounds 与 resize 状态。`PROBE_NUMBER`、`PROBE_SANS` 只替换请求的字体 family，不安装或隐藏系统字体。
 
-离屏测试窗口不受宿主显示器可见区域限制：`VisualTestAppContext` 显式标记 offscreen，macOS 只对这类窗口使用 `GPUIOffscreenWindow` 跳过 AppKit 的 frame 约束；普通应用窗口保持原有屏幕约束。`bun test scripts/gpuix-main/test-window/test-window.test.tsx` 请求 `4000×3000` 并断言真实 viewport 与根元素 bounds，已纳入 `verify:gpuix`。对应补丁为 `zed-offscreen-window-bounds.patch`，追加在 `zed-production-no-sync-draw.patch` 后；修改时使用独立 vendor 根与 Cargo target。
+离屏测试窗口不受宿主显示器可见区域限制：`VisualTestAppContext` 显式传入 `offscreen_scale_factor`，macOS 只对这类窗口使用 `GPUIOffscreenWindow` 跳过 AppKit 的 frame 约束。`createTestRoot({ width, height, scaleFactor })` 的 macOS backing scale 默认为 `1`，可显式请求 `2`，不读取真实屏幕 scale；viewport 保持请求的逻辑尺寸，PNG 尺寸为逻辑尺寸乘以 scale。普通应用窗口保留原有屏幕约束与 scale fallback。`bun test scripts/gpuix-main/test-window/test-window.test.tsx` 请求 `4000×3000`，覆盖默认/1x/2x 的 viewport、根 bounds、PNG 尺寸及非法 scale，已纳入 `verify:gpuix`。对应序列为 `zed-offscreen-window-bounds.patch`、`zed-test-window-scale-factor.patch`，native 选项由 `test-window-scale-factor.patch` 持有；修改时使用独立 vendor 根与 Cargo target。
 
 `bun scripts/gpuix-main/ci-geometry/gallery.tsx <外部证据目录>` 捕获深浅主题与中英文的完整 Gallery；业务组合沿用 `app/verification/r1c-surfaces.tsx`，配合 `native-fixture.ts` 接真实后端。生成 PNG 留在外部证据目录，不提交图片。
 

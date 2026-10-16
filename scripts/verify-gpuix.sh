@@ -52,8 +52,9 @@ if [ "$status" -ne 0 ]; then
 fi
 rm -f "$tests"
 
-step "offscreen test-window bounds (independent of display size)"
-bun test scripts/gpuix-main/test-window/test-window.test.tsx
+step "offscreen test-window bounds and backing scale (independent of display)"
+bun test scripts/gpuix-main/test-window/test-window.test.tsx >"$logs/test-window.log" 2>&1 || { cat "$logs/test-window.log"; exit 1; }
+echo "ok"
 
 step "review scan ($base...HEAD; uncommitted changes are not scanned)"
 node scripts/gpuix-review-scan.mjs "$base" | tail -3
