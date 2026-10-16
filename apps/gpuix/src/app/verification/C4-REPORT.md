@@ -119,7 +119,7 @@
 
 ### scan WARN 逐项结论
 
-最终 `node scripts/gpuix-review-scan.mjs`：0 HARD、15 WARN。
+最初 C4 交付的 `node scripts/gpuix-review-scan.mjs` 为 0 HARD、15 WARN，逐项结论如下；后续 C3 集成修正的差异检查结果见末节。
 
 | 文件 | 结论 |
 | --- | --- |
@@ -164,3 +164,9 @@ ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
 ```
 
 输出为空，grep exit 1 表示没有匹配。自启的业务/Gallery/mutation/window service 均已关闭；未停止用户或其它 worker 的服务。临时 baseline 和 mutation checkout 位于仓库外，交付前清理；证据 PNG 留在上述外部证据目录供协调者复查。
+
+## C3 集成复核
+
+协调者退回 11 个冲突后，已合并最新 `gpuix-migration` 并提交 `88772cb6`。Track 资源、TrackLabels formats、TrackMixer 的 pan/db、monitor/meter 文案和 probe 几何遵循 C3 主干；保留 C4 DragPad 消费链、db unit、pan separator、notifications 独立 cleanup，Browser 测试保留主干的 React 提交边界。
+
+本轮 `tsc --noEmit` 通过；Track/timeline、Browser locale、C4 input、formatter、project lifecycle、theme override 定向检查 174 pass、0 fail。`review-scan` 相对当前 `gpuix-migration` 检查 3 source/4 test，0 HARD、0 WARN；生成 UI map current，9 entries、3 routes、237 testIds。上述 903 项、30 变异及像素证据为前一轮完整 C4 受影响范围的实跑结果，不把它们说成在本轮重新运行。
