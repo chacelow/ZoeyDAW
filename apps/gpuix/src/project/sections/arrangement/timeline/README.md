@@ -9,7 +9,7 @@
 | 接口 | 契约 |
 | --- | --- |
 | `createTimelineController(deps)` | 组合根创建并负责 `dispose()`；内部只有一个 `SceneStore` 投影、一个键盘 owner、标尺事务与自动滚动状态 |
-| `ArrangementTimeline({ controller, tracks, overlay, labels, cursor })` | `tracks` 是完整复合行；`overlay` 是单次挂载的跨行叠加层；标签由组合根注入，光标端口来自原生能力 |
+| `ArrangementTimeline({ controller, tracks, overlay, labels, cursor, editSurface?, interactionOverlay? })` | `tracks` 是完整复合行；`overlay` 是跨行叠加层；lane 注入 `editSurface`，tracks 注入位于其上方的唯一 resize strips；timeline 不依赖两个切片 |
 | `controller.useViewport()` | React hook，订阅同一个 `ArrangementViewport`；类型来自 B1 `core/scene` |
 | `controller.setScroll(x, y)` | 同步更新权威 workspace 并夹取；返回前 `sceneStore.get().viewport` 已是接受后的同一投影；手工导航暂时暂停 Follow |
 | `controller.zoomAt(anchorBar, anchorPx, factor)` | 显式音乐位置/像素锚点缩放；边界夹取优先 |
@@ -18,6 +18,7 @@
 | `controller.getFrameDemand()` / `subscribeFrameDemand(listener)` | 标尺 autoScroll 的稳定活动读取与通知，直接由 start/update/stop 的活动边界驱动。组合根合并播放与 lane 手势需求后再订阅帧，不读取 TimelineView 细项 |
 | `controller.keyboard` | 唯一键盘 owner；`markDrawGesture()` 由实际绘制/拖动消费者调用；组合根不能再创建独立键盘 |
 | `TimelineLabels` | 严格的可见文本契约；示例双语数据在 `demo-labels.ts`，不依赖 i18n 包 |
+| `TimelineEditSurface` | 单一保留输入层的 ref、pointer/key/blur handlers、光标 style 与稳定菜单/inline editor `wrap` slot；owner 是 `timeline-viewport` |
 
 `TimelineView` 仅以 type 导出，供 `ArrangementTimeline` 使用；组合根不得依赖其细项，也没有可独立构造的 view。类型断言在 `public-contract.test.ts` 守住 view 与键盘工厂的运行时出口边界。
 
@@ -36,7 +37,9 @@
 
 工程与 `scrollX/scrollY/pxPerBar` 的权威状态仍在 adapters/stores。controller 只同步只读 Scene 投影；手势保存的是按下基线与编辑 token，不是第二份可写工程。hydration、后端/路由 epoch 变化会取消旧手势。定位点与循环在按下时取得 preview 所有权，提交为一次历史，取消不消费前一条历史。
 
-Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有效按下保持到释放或取消，即使指针离开选框、overview 或手势中发生 store 提交也不回落到 hover；epoch/失活取消同步恢复视觉与光标。
+Save 按钮通过 `useProjectState(canSaveSnapshot)` 读取当前 session 的快照保存许可。打开损坏快照时禁用；切换到可保存工程后恢复。键盘保存仍调用同一 `saveSnapshot`，由 adapters 的 session fence 防止覆盖原 key，timeline 不持有第二份许可状态。
+
+Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有效按下保持到释放或取消，即使指针离开选框、overview 或手势中发生 store 提交也不回落到 hover；epoch/失活取消同步恢复视觉与光标。静态 Minimap Overview 只订阅 tracks/markers，并按 bars/width/height/theme 失效；独立 Playhead 只订阅音乐位置。播放、viewport 和 hover 更新不会重建全工程 Clip 投影。`minimap/render-cost.test.tsx` 在 16/1024 Clip 下断言播放头实际移动、静态几何不变且不再读取未变 Clip 几何。
 
 组合根提供：
 
@@ -50,7 +53,7 @@ Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有�
 
 B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨道行位置沿用同一原点。时间线只裁剪整行 slot，负向内部偏移抵消外层标尺裁剪偏移，不拆开轨道头与车道。Minimap 在独立上方 Panel，纵向滚动不移动它。
 
-音乐 `scrollX` 只有 **Minimap 下的一条 `ControlledScrollbar`**。它与标尺、车道共享逻辑范围，不构造整工程宽度的 native scroll 内容。工具栏自己的横向溢出仅用于访问控件，不是第二条音乐视口。
+音乐 `scrollX` 只有 **Minimap 下的一条 `ControlledScrollbar`**。它与标尺、车道共享逻辑范围，不构造整工程宽度的 native scroll 内容。工具栏自己的横向溢出仅用于访问控件，不是第二条音乐视口。全宽 `timeline-layout` 是唯一滚轮入口，透明 `timeline-viewport` 只处理 lane 指针、键盘与失焦。`interactionOverlay` 在它之上挂载 tracks 的分隔条矩形，不覆盖车道其他区域。原生组合回归覆盖一次 wheel 的平移量、车道与表头缩放比例，以及车道侧分隔条拖动。
 
 ## 网格的独立层
 
@@ -70,7 +73,7 @@ GridLine 的半开可见范围过滤与 quad 打包由 `core/rulers/grid-quads.p
 | 键 | owner / 条件 |
 | --- | --- |
 | Space | 播放；不重复触发，不激活聚焦按钮；输入框/菜单保持自己的输入语义 |
-| Ctrl/Cmd+S、Z、Shift+Z | 工程保存/撤销/重做；编辑输入由自身原生 owner 保护 |
+| Ctrl/Cmd+S、Z、Shift+Z | 保存先于 Clip Editor 局部命令隔离；Clip Editor 非文本焦点也保存。撤销/重做保留编辑器 owner，文本/菜单仍保护自身输入 |
 | Ctrl/Cmd+1、2 | 调整网格，固定网格可到 1/256 与 16 小节 |
 | Ctrl/Cmd+4 | 已核实的 Snap 切换，不改变网格或音乐位置 |
 | Ctrl/Cmd+E | 无选中时消费但不改网格；有 Clip 选择时由 lane Split，音乐插入点不取指针 |
@@ -94,6 +97,8 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，本切�
 ## 验证入口
 
 在仓库根先运行 `pnpm native:build`。在 `apps/gpuix` 运行 `pnpm exec tsc --noEmit`、`bun test src/project/sections/arrangement/timeline`；根目录运行对应目录 eslint 与 `node scripts/gpuix-review-scan.mjs`。
+
+本轮跨目录修复、红绿变异、自审及组合截图边界见 [R2 验证报告](../R2-VERIFICATION.md)。
 
 外部 store/Scene 更新的原生组件测试必须用真实 `flushSync` 提交 React，再 `renderer.flush()` 绘制；单独 native flush 不能证明 UI 已跟随状态变化。永久测试保留音乐位置/时间缩放、事务/历史、epoch、MIDI/B 模式与真实按键传播，性质测试配实际变异检查。
 

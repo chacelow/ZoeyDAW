@@ -21,13 +21,11 @@ export function LaneContents({
   scene,
   automationMode,
   readPeaks,
-  onActivate,
 }: {
   row: TrackRow
   scene: ArrangementScene
   automationMode: boolean
   readPeaks: PeakReader
-  onActivate: (id: string) => void
 }) {
   const theme = useTheme()
   const projectGrid = useMemo(createGridProjection, [])
@@ -199,7 +197,6 @@ export function LaneContents({
             numerator={scene.transport.numerator}
             automationMode={automationMode}
             readPeaks={readPeaks}
-            onActivate={onActivate}
           />
         ))}
       </div>

@@ -23,6 +23,7 @@ import { Button, ScrollArea } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import { LaneRow } from "../LaneRow"
 import { LaneOverlay } from "../LaneOverlay"
+import { useLaneSurface } from "../useLaneSurface"
 import { visibleRows, visibleClipCards } from "../render-projection"
 import type { ArrangementScene } from "../../core/scene"
 import { createVerificationMedia } from "./media"
@@ -73,6 +74,7 @@ function TransportOverlay({
 function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
   const theme = useTheme()
   const { renderer } = useGpuix()
+  const { wrap, ...editSurface } = useLaneSurface(runtime.lane, labelsByLocale[locale], 0)
   const scene = useSyncExternalStore(runtime.scene.subscribe, runtime.scene.get)
   const backend = useProjectState(state => state.session.backend)
   const playing = useProjectState(state => state.session.playing)
@@ -277,9 +279,7 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
                 row={row}
                 scene={scene}
                 viewport={scene.viewport}
-                controller={runtime.lane}
                 readPeaks={readProjectPeaks}
-                labels={labelsByLocale[locale]}
               />
             </div>
             <div
@@ -324,6 +324,22 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
           </div>
         ))}
         <TransportOverlay runtime={runtime} scene={scene} />
+        {wrap(
+          <div
+            {...editSurface}
+            testId="lane-surface"
+            role="application"
+            tabIndex={0}
+            style={sx({
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: scene.viewport.width,
+              height: scene.viewport.height,
+              cursor: editSurface.style.cursor,
+            })}
+          />
+        )}
       </div>
       <text
         testId="lane-status"

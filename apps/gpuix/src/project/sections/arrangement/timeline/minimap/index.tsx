@@ -1,13 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useProjectState } from "@/project/adapters"
-import { positionToBar } from "@/project/model/types"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { resolveContentColor } from "@/shared/theme/content-color"
-import { clipRect } from "../../core/layout"
 import { minimapHit } from "../../core/viewport/minimap"
 import { createMinimapGesture } from "./gesture"
+import { Overview } from "./Overview"
+import { Playhead } from "./Playhead"
 import type { PublicInstance } from "@gpuix/react"
 import type { MinimapGeometry } from "../../core/viewport/minimap"
 import type { MinimapViewport } from "../../core/viewport/zoom"
@@ -47,12 +46,7 @@ export function MiniMap({
   useLayoutEffect(() => {
     latest.current = { geometry, width, onNavigate, onViewport }
   }, [geometry, width, onNavigate, onViewport])
-  const tracks = useProjectState(state => state.document.tracks)
-  const markers = useProjectState(state => state.document.markers)
   const epoch = useProjectState(state => state.session.editEpoch)
-  const position = useProjectState(state =>
-    positionToBar(state.session.position, state.document.transport.numerator)
-  )
   const gesture = useMemo(
     () =>
       createMinimapGesture({
@@ -76,8 +70,6 @@ export function MiniMap({
     gesture.cancel()
   }, [epoch, gesture])
   useEffect(() => registerGesture?.(gesture), [gesture, registerGesture])
-  const rows = tracks.filter(track => track.kind !== "return" && track.kind !== "main")
-  const rowHeight = height / Math.max(1, rows.length)
   const viewportBars = Math.min(geometry.bars, geometry.viewportWidth / geometry.pxPerBar)
   const start = Math.max(
     0,
@@ -132,71 +124,8 @@ export function MiniMap({
         }
       }}
     >
-      {rows.map((track, index) => (
-        <div
-          key={track.id}
-          testId={`minimap-track-${track.id}`}
-          style={sx({
-            position: "absolute",
-            left: 0,
-            top: index * rowHeight,
-            width,
-            height: rowHeight,
-            borderBottomWidth: 1,
-            borderColor: theme.colors.arrangementLine,
-            pointerEvents: "none",
-          })}
-        >
-          {track.clips.map(clip => {
-            const rect = clipRect(
-              clip,
-              { track, top: 0, height: rowHeight },
-              width / geometry.bars,
-              0
-            )
-            return (
-              <div
-                key={clip.id}
-                testId={`minimap-clip-${clip.id}`}
-                style={sx({
-                  position: "absolute",
-                  left: rect.left,
-                  top: 0,
-                  width: rect.width,
-                  height: Math.max(1, rowHeight - 1),
-                  backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
-                  pointerEvents: "none",
-                })}
-              />
-            )
-          })}
-        </div>
-      ))}
-      {markers.map(marker => (
-        <div
-          key={marker.id}
-          style={sx({
-            position: "absolute",
-            top: 0,
-            left: ((marker.bar - 1) / geometry.bars) * width,
-            width: 1,
-            height,
-            backgroundColor: theme.colors.mutedForeground,
-            pointerEvents: "none",
-          })}
-        />
-      ))}
-      <div
-        style={sx({
-          position: "absolute",
-          top: 0,
-          left: ((position - 1) / geometry.bars) * width,
-          width: 1,
-          height,
-          backgroundColor: theme.colors.foreground,
-          pointerEvents: "none",
-        })}
-      />
+      <Overview bars={geometry.bars} width={width} height={height} />
+      <Playhead bars={geometry.bars} width={width} height={height} />
       <div
         testId="minimap-frame"
         style={sx({

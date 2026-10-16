@@ -14,6 +14,7 @@ import { CONTROLS_WIDTH, DEFAULT_TRACK_HEIGHT } from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackRows } from "../TrackRows"
+import { TrackResizeOverlay } from "../TrackResizeOverlay"
 import { trackResources } from "../locales"
 import { createControlledFrames } from "./frame-source"
 
@@ -48,15 +49,22 @@ for (const appearance of ["dark", "light"] as const) {
       root.render(
         <AnimationFrameProvider source={frames.source}>
           <ThemeProvider defaultAppearance={appearance}>
-            <TrackRows
-              scene={scene.get()}
-              viewport={viewport}
-              focusedTrackId={null}
-              onFocusTrack={id => projectActions.selectTracks([id], "header")}
-              telemetry={readProjectTelemetry}
-              labels={trackResources[language].arrangement}
-              renderLane={row => <text>{row.track.name}</text>}
-            />
+            <div style={{ position: "relative", width: "100%", height: "100%" }}>
+              <TrackRows
+                scene={scene.get()}
+                viewport={viewport}
+                focusedTrackId={null}
+                onFocusTrack={id => projectActions.selectTracks([id], "header")}
+                telemetry={readProjectTelemetry}
+                labels={trackResources[language].arrangement}
+                renderLane={row => <text>{row.track.name}</text>}
+              />
+              <TrackResizeOverlay
+                scene={scene.get()}
+                viewport={viewport}
+                labels={trackResources[language].arrangement}
+              />
+            </div>
           </ThemeProvider>
         </AnimationFrameProvider>
       )

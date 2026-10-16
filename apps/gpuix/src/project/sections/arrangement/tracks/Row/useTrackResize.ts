@@ -8,7 +8,8 @@ import type { Track } from "@/project/model/types"
 type HeightPatch = Pick<Track, "collapsed" | "heightPx">
 
 export function useTrackResize(
-  track: Track
+  track: Track,
+  onCaptureChange: (captured: boolean) => void
 ): Pick<Props, "onMouseDown" | "onMouseMove" | "onMouseUp" | "onKeyDown" | "onBlur"> {
   const gesture = useProjectEditGesture((patch: HeightPatch) =>
     projectActions.updateTrack(track.id, patch)
@@ -17,9 +18,11 @@ export function useTrackResize(
   const anchor = useRef<{ y: number; track: Track; last: HeightPatch } | null>(null)
   const pinned = track.kind === "main" || track.kind === "return"
   const cancel = useCallback(() => {
+    const captured = anchor.current !== null
     anchor.current = null
     gesture.onGestureCancel()
-  }, [gesture])
+    if (captured) onCaptureChange(false)
+  }, [gesture, onCaptureChange])
   useEffect(() => cancel, [cancel])
   useEffect(
     () =>
@@ -37,6 +40,7 @@ export function useTrackResize(
         last: { collapsed: track.collapsed, heightPx: track.heightPx },
       }
       gesture.onGestureStart()
+      onCaptureChange(true)
     },
     onMouseMove(event) {
       const start = anchor.current
@@ -54,6 +58,7 @@ export function useTrackResize(
       if (!anchor.current) return
       anchor.current = null
       gesture.onGestureEnd()
+      onCaptureChange(false)
     },
     onBlur: cancel,
     onKeyDown(event) {

@@ -20,6 +20,7 @@ import { COLLAPSED_TRACK_HEIGHT, TRACK_RESIZE_STEP } from "@/project/layout"
 import { clipRect } from "../core/layout"
 import { createSceneStore } from "../core/scene"
 import { TrackRows } from "./TrackRows"
+import { TrackResizeOverlay } from "./TrackResizeOverlay"
 import { trackResources } from "./locales"
 import { contentFill } from "@/shared/theme/content-color"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
@@ -233,51 +234,60 @@ function TrackSurface({
           {gallery.frameStats}
         </Button>
       </div>
-      <TrackRows
-        scene={scene}
-        viewport={viewport}
-        focusedTrackId={selectedTrackIds[0] ?? null}
-        onFocusTrack={id => {
-          if (!useProjectState.getState().session.selectedTrackIds.includes(id))
-            projectActions.selectTracks([id], "header")
+      <div
+        style={{
+          position: "relative",
+          width: viewport.width + theme.project.controlsWidth,
+          height: viewport.height,
         }}
-        telemetry={readProjectTelemetry}
-        labels={labels}
-        renderLane={row => (
-          <>
-            {row.track.clips.map(clip => {
-              const rect = clipRect(clip, { ...row, top: 0 }, viewport.pxPerBar, viewport.scrollX)
-              return (
-                <div
-                  key={clip.id}
-                  role="img"
-                  aria-label={clip.label ?? row.track.name}
-                  style={{
-                    position: "absolute",
-                    left: rect.left,
-                    top: gap,
-                    width: rect.width,
-                    height: Math.max(0, row.height - gap * 2),
-                    backgroundColor: contentFill(clip.color ?? row.track.color, theme.colors),
-                    overflow: "hidden",
-                    padding: gap,
-                    pointerEvents: "none",
-                  }}
-                >
-                  <text
+      >
+        <TrackRows
+          scene={scene}
+          viewport={viewport}
+          focusedTrackId={selectedTrackIds[0] ?? null}
+          onFocusTrack={id => {
+            if (!useProjectState.getState().session.selectedTrackIds.includes(id))
+              projectActions.selectTracks([id], "header")
+          }}
+          telemetry={readProjectTelemetry}
+          labels={labels}
+          renderLane={row => (
+            <>
+              {row.track.clips.map(clip => {
+                const rect = clipRect(clip, { ...row, top: 0 }, viewport.pxPerBar, viewport.scrollX)
+                return (
+                  <div
+                    key={clip.id}
+                    role="img"
+                    aria-label={clip.label ?? row.track.name}
                     style={{
-                      fontSize: theme.control["--text-control-track"],
-                      color: theme.colors.arrangementClipInk,
+                      position: "absolute",
+                      left: rect.left,
+                      top: gap,
+                      width: rect.width,
+                      height: Math.max(0, row.height - gap * 2),
+                      backgroundColor: contentFill(clip.color ?? row.track.color, theme.colors),
+                      overflow: "hidden",
+                      padding: gap,
+                      pointerEvents: "none",
                     }}
                   >
-                    {clip.label ?? row.track.name}
-                  </text>
-                </div>
-              )
-            })}
-          </>
-        )}
-      />
+                    <text
+                      style={{
+                        fontSize: theme.control["--text-control-track"],
+                        color: theme.colors.arrangementClipInk,
+                      }}
+                    >
+                      {clip.label ?? row.track.name}
+                    </text>
+                  </div>
+                )
+              })}
+            </>
+          )}
+        />
+        <TrackResizeOverlay scene={scene} viewport={viewport} labels={labels} />
+      </div>
       <text
         role="status"
         aria-label="Track verification"

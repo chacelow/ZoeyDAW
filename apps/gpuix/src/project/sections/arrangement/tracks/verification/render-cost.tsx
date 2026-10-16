@@ -10,6 +10,7 @@ import { createTrack } from "@/project/model/reducers"
 import { CONTROLS_WIDTH, DEFAULT_TRACK_HEIGHT } from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
+import { TrackResizeOverlay } from "../TrackResizeOverlay"
 import { trackResources } from "../locales"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createControlledFrames } from "./frame-source"
@@ -47,17 +48,24 @@ for (const sourceCount of [20, 2000]) {
     root.render(
       <AnimationFrameProvider source={controlledFrames.source}>
         <ThemeProvider>
-          <TrackRows
-            scene={store.get()}
-            viewport={viewport}
-            focusedTrackId={null}
-            onFocusTrack={id => projectActions.selectTracks([id], "header")}
-            telemetry={readProjectTelemetry}
-            labels={trackResources["en-US"].arrangement}
-            renderLane={row => (
-              <text testId={`profile-lane-${row.track.id}`}>{row.track.name}</text>
-            )}
-          />
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <TrackRows
+              scene={store.get()}
+              viewport={viewport}
+              focusedTrackId={null}
+              onFocusTrack={id => projectActions.selectTracks([id], "header")}
+              telemetry={readProjectTelemetry}
+              labels={trackResources["en-US"].arrangement}
+              renderLane={row => (
+                <text testId={`profile-lane-${row.track.id}`}>{row.track.name}</text>
+              )}
+            />
+            <TrackResizeOverlay
+              scene={store.get()}
+              viewport={viewport}
+              labels={trackResources["en-US"].arrangement}
+            />
+          </div>
         </ThemeProvider>
       </AnimationFrameProvider>
     )

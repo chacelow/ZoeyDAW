@@ -16,6 +16,7 @@ import { createSceneStore } from "../../core/scene"
 import type { SceneStore } from "../../core/scene"
 import { clipRect, layoutTrackRows } from "../../core/layout"
 import { clipVisualGeometry } from "../../core/clip-geometry"
+import { activeAutomationRows } from "../../core/automation/geometry"
 import { LaneRow } from "../LaneRow"
 import { LaneOverlay } from "../LaneOverlay"
 import { visibleRows } from "../render-projection"
@@ -25,6 +26,7 @@ import type { LaneController } from "./controller"
 import { createTestTimeline } from "../testing/project-scene.test-helper"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createManualFrames } from "../testing/frames.test-helper"
+import { useLaneSurface } from "../useLaneSurface"
 
 let root: TestRoot | undefined
 let controller: LaneController | undefined
@@ -41,6 +43,7 @@ afterEach(() => {
 function Surface({ scene, controller }: { scene: SceneStore; controller: LaneController }) {
   const snapshot = useSyncExternalStore(scene.subscribe, scene.get)
   const frames = useMemo(createManualFrames, [])
+  const { wrap, ...editSurface } = useLaneSurface(controller, labelsByLocale.en, 0)
   return (
     <AnimationFrameProvider source={frames}>
       <ThemeProvider>
@@ -70,9 +73,7 @@ function Surface({ scene, controller }: { scene: SceneStore; controller: LaneCon
                   row={row}
                   scene={snapshot}
                   viewport={snapshot.viewport}
-                  controller={controller}
                   readPeaks={() => new Float32Array(0)}
-                  labels={labelsByLocale.en}
                 />
               </div>
             </div>
@@ -82,6 +83,22 @@ function Surface({ scene, controller }: { scene: SceneStore; controller: LaneCon
             viewport={snapshot.viewport}
             transportBar={() => useProjectState.getState().session.position.bar}
           />
+          {wrap(
+            <div
+              {...editSurface}
+              testId="lane-surface"
+              role="application"
+              tabIndex={0}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: 1000,
+                height: 500,
+                cursor: editSurface.style.cursor,
+              }}
+            />
+          )}
         </div>
       </ThemeProvider>
     </AnimationFrameProvider>
@@ -179,7 +196,7 @@ function mount(options: { automation?: boolean; audio?: boolean } = {}) {
   currentRoot.render(<Surface scene={scene} controller={current} />)
   const sourceRow = layoutTrackRows(scene.get()).find(row => row.track.id === "source")
   const targetRow = layoutTrackRows(scene.get()).find(row => row.track.id === "target")
-  const host = currentRoot.renderer.findByTestId("lane-row-source")
+  const host = currentRoot.renderer.findByTestId("lane-surface")
   if (!sourceRow || !targetRow || !host) throw new Error("Missing lane geometry")
   return {
     root: currentRoot,
@@ -229,6 +246,58 @@ it("clears invalidated time-range preview without overwriting the hydrated proje
   expect(useProjectState.getState().session.timeSelection).toEqual(selection)
   expect(useProjectState.getState().session.insertionPoint).toBeNull()
 })
+
+it.each(["move", "resize"])(
+  "clears stale %s ink after hydrate without editing the replacement project",
+  kind => {
+    const { renderer, scene, sourceRow } = mount()
+    const x = kind === "move" ? 100 : 318
+    renderer.nativeSimulateMouseDown(x, sourceRow.top + 6)
+    renderer.nativeSimulateMouseMove(x + 128, sourceRow.top + 6, 0)
+    expect(kind === "move" ? scene.get().clipDrag : scene.get().clipResize).not.toBeNull()
+    const saved = serializeProject()
+    hydrateProject(saved)
+    const document = useProjectState.getState().document
+    renderer.nativeSimulateMouseUp(x + 128, sourceRow.top + 6)
+    expect(scene.get().clipDrag).toBeNull()
+    expect(scene.get().clipResize).toBeNull()
+    expect(renderer.findByTestId("clip-ghost-pattern")).toBeUndefined()
+    expect(useProjectState.getState().document).toEqual(document)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
+  }
+)
+
+it.each([false, true])(
+  "rejects an invalid release after a valid cross-track preview (copy=%s)",
+  copy => {
+    const { scene, controller, sourceRow, targetRow } = mount({ audio: true })
+    const before = useProjectState.getState().document
+    const pointer = (x: number, y: number) => ({
+      x,
+      y,
+      button: 0,
+      shiftKey: false,
+      altKey: copy,
+      metaKey: false,
+      ctrlKey: false,
+    })
+    controller.pointerDown(pointer(100, sourceRow.top + 6))
+    controller.pointerMove(pointer(228, targetRow.top + 6), true)
+    expect(scene.get().tracks.find(track => track.id === "target")?.clips[0]?.startBar).toBe(4)
+    const selection = useProjectState.getState().session.selectedClipIds
+    const insertion = useProjectState.getState().session.insertionPoint
+    const audioRow = layoutTrackRows(scene.get()).find(row => row.track.id === "audio")
+    if (!audioRow) throw new Error("Missing audio target")
+    controller.pointerMove(pointer(228, audioRow.top + 6), true)
+    expect(controller.getSnapshot().cursor).toBe("not-allowed")
+    controller.pointerUp(pointer(228, audioRow.top + 6))
+    expect(useProjectState.getState().document).toEqual(before)
+    expect(useProjectState.getState().session.selectedClipIds).toEqual(selection)
+    expect(useProjectState.getState().session.insertionPoint).toEqual(insertion)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
+    expect(scene.get().clipDrag).toBeNull()
+  }
+)
 
 it("keeps sub-threshold presses inert and rolls a native Ghost drag back on Escape", () => {
   const { renderer, scene, sourceRow, host } = mount()
@@ -296,9 +365,7 @@ it("splits at the stationary insertion anchor during playback and does nothing w
 
 it("uses current native clipboard text and leaves Clips intact when writing the clipboard fails", () => {
   const { renderer, host, sourceRow, controller, clipboardState, clipboard } = mount()
-  const clip = renderer.findByTestId("clip-source-pattern")
-  if (!clip) throw new Error("Missing Clip")
-  renderer.nativeSimulateKeystrokes(clip.id, "enter")
+  renderer.nativeSimulateClick(100, sourceRow.top + 6)
   renderer.nativeSimulateKeystrokes(host, "cmd-c")
   const copied = clipboardState.value
   clipboardState.value = "unrelated external text"
@@ -456,27 +523,67 @@ it("moves the fade mask between title and body across collapse transitions", () 
   expect(fixture.renderer.findByTestId("fade-audio-clip-in-peak")).toBeUndefined()
 })
 
-it("keeps Clip focus reachable by Tab and Space does not reopen a dismissed menu", () => {
+it("the retained input surface presents grab resize and invalid-release cursors", () => {
+  const { renderer, host, scene, sourceRow } = mount({ audio: true })
+  renderer.nativeSimulateMouseMove(100, sourceRow.top + 6)
+  expect(renderer.getElement(host)?.style.cursor).toBe("grab")
+  renderer.nativeSimulateMouseMove(318, sourceRow.top + 6)
+  expect(renderer.getElement(host)?.style.cursor).toBe("ew-resize")
+  renderer.nativeSimulateMouseDown(100, sourceRow.top + 6)
+  renderer.nativeSimulateMouseMove(228, sourceRow.top + 6, 0)
+  expect(renderer.getElement(host)?.style.cursor).toBe("grabbing")
+  const audio = layoutTrackRows(scene.get()).find(row => row.track.id === "audio")
+  if (!audio) throw new Error("Missing incompatible track")
+  renderer.nativeSimulateMouseMove(228, audio.top + 6, 0)
+  expect(renderer.getElement(host)?.style.cursor).toBe("not-allowed")
+  renderer.nativeSimulateMouseUp(228, audio.top + 6)
+  expect(renderer.getElement(host)?.style.cursor).toBe("default")
+  expect(useProjectState.getState().document.tracks[0]?.clips[0]?.startBar).toBe(2)
+})
+
+it("double click on the retained surface creates a Clip that can be renamed inline", () => {
+  const { renderer, host, sourceRow } = mount()
+  flushSync(() =>
+    handleGpuixEvent(
+      {
+        eventType: "mouseDown",
+        elementId: host,
+        x: 448,
+        y: sourceRow.top + 6,
+        button: 0,
+        clickCount: 2,
+      },
+      renderer
+    )
+  )
+  const created = useProjectState
+    .getState()
+    .document.tracks[0]?.clips.find(clip => clip.startBar === 8)
+  if (!created) throw new Error("Double click did not create Clip")
+  renderer.nativeSimulateKeystrokes(host, "cmd-r")
+  const editor = renderer.findByTestId("clip-name-editor")
+  if (!editor) throw new Error("Missing inline name editor")
+  renderer.simulateKeystrokes("r 2 enter")
+  expect(
+    useProjectState.getState().document.tracks[0]?.clips.find(clip => clip.id === created.id)?.label
+  ).toBe("r2")
+})
+
+it("Space reaches playback without reopening a dismissed lane menu", () => {
   const { renderer, host, sourceRow, windowKeys } = mount()
-  const clip = renderer.findByTestId("clip-source-pattern")
-  if (!clip) throw new Error("Missing keyboard Clip target")
-  renderer.nativeSimulateKeystrokes(host, "tab")
-  expect(renderer.getFocusedElementId()).toBe(clip.id)
   renderer.nativeSimulateClick(100, sourceRow.top + 6, 2)
   expect(renderer.findByText(labelsByLocale.en["detail.openClip"])).toBeDefined()
   renderer.simulateKeystrokes("escape")
   expect(renderer.findByText(labelsByLocale.en["detail.openClip"])).toBeUndefined()
-  renderer.nativeSimulateKeystrokes(clip.id, "space")
+  renderer.nativeSimulateKeystrokes(host, "space")
   expect(windowKeys.filter(key => key === "space")).toEqual(["space"])
   expect(useProjectState.getState().session.playing).toBe(true)
   expect(renderer.findByText(labelsByLocale.en["detail.openClip"])).toBeUndefined()
 })
 
-it("clears keyboard-activated Clip focus when an automation gesture takes ownership", () => {
+it("clears the selected Clip target when an automation gesture takes ownership", () => {
   const { renderer, scene, sourceRow } = mount()
-  const clip = renderer.findByTestId("clip-source-pattern")
-  if (!clip) throw new Error("Missing Clip")
-  renderer.nativeSimulateKeystrokes(clip.id, "enter")
+  renderer.nativeSimulateClick(100, sourceRow.top + 6)
   expect(scene.get().targetSelection.kind).toBe("clip")
   projectActions.setMode("automationMode", true)
   renderer.nativeSimulateMouseDown(900, sourceRow.top + 40)
@@ -484,15 +591,96 @@ it("clears keyboard-activated Clip focus when an automation gesture takes owners
   renderer.nativeSimulateMouseUp(900, sourceRow.top + 40)
 })
 
-it("opens the focused Clip context menu from the keyboard without a previous right click", () => {
-  const { renderer } = mount()
-  const clip = renderer.findByTestId("clip-source-pattern")
-  if (!clip) throw new Error("Missing keyboard Clip")
-  renderer.nativeSimulateKeystrokes(clip.id, "shift-f10")
+it("opens the selected Clip context menu from the stable keyboard owner without a previous right click", () => {
+  const { renderer, host, sourceRow } = mount()
+  renderer.nativeSimulateClick(100, sourceRow.top + 6)
+  renderer.nativeSimulateKeystrokes(host, "shift-f10")
   expect(renderer.findByText(labelsByLocale.en["detail.openClip"])).toBeDefined()
   renderer.simulateKeystrokes("escape")
   expect(renderer.findByText(labelsByLocale.en["detail.openClip"])).toBeUndefined()
 })
+
+for (const action of ["rename", "delete"] as const) {
+  it(`keeps the selected clipped Clip identity for keyboard menu ${action}`, () => {
+    const { renderer, scene, host, sourceRow } = mount()
+    renderer.nativeSimulateClick(100, sourceRow.top + 6)
+    projectActions.setViewport({ scrollX: 317 })
+    const row = layoutTrackRows(scene.get()).find(item => item.track.id === "source")
+    const clip = row?.track.clips.find(item => item.id === "pattern")
+    if (!row || !clip) throw new Error("Missing selected Clip")
+    const rect = clipRect(clip, row, scene.get().viewport.pxPerBar, scene.get().viewport.scrollX)
+    expect(rect.left).toBeLessThan(0)
+    expect(rect.left + rect.width).toBe(3)
+    renderer.nativeSimulateKeystrokes(host, "shift-f10")
+    const item = renderer.findByText(
+      labelsByLocale.en[action === "rename" ? "arrangement.rename" : "arrangement.deleteClip"]
+    )
+    const bounds = item && renderer.getElementBounds(item.id)
+    if (!bounds) throw new Error(`Missing selected Clip ${action} action`)
+    if (action === "rename") projectActions.setViewport({ scrollX: 0 })
+    renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    if (action === "rename") {
+      const editor = renderer.findByTestId("clip-name-editor")
+      if (!editor) throw new Error("Missing selected Clip rename editor")
+      expect(renderer.getFocusedElementId()).toBe(editor.id)
+      renderer.simulateKeystrokes("t a i l enter")
+      expect(
+        useProjectState.getState().document.tracks[0]?.clips.find(item => item.id === "pattern")
+          ?.label
+      ).toBe("tail")
+    } else {
+      expect(useProjectState.getState().document.tracks[0]?.clips).toEqual([])
+    }
+  })
+}
+
+for (const action of ["edit", "delete"] as const) {
+  it(`keeps the second-track automation point identity for keyboard menu ${action}`, () => {
+    const { renderer, scene, host } = mount({ automation: true })
+    projectActions.setAutomationParameter("target", "volume")
+    const row = activeAutomationRows(scene.get()).find(item => item.track.id === "target")
+    if (!row) throw new Error("Missing second-track automation row")
+    projectActions.setAutomationPoint("target", row.laneId, {
+      id: "target-point",
+      bar: 2.5,
+      value: 0.5,
+    })
+    expect(useProjectState.getState().document.tracks[1]?.automation[0]?.points).toEqual([
+      { id: "target-point", bar: 2.5, value: 0.5 },
+    ])
+    scene.setTargetSelection({
+      kind: "automation",
+      trackId: "target",
+      laneId: row.laneId,
+      pointIds: ["target-point"],
+    })
+    renderer.nativeSimulateKeystrokes(host, "shift-f10")
+    const item = renderer.findByText(
+      labelsByLocale.en[
+        action === "edit" ? "arrangement.editAutomationValue" : "arrangement.deleteAutomationPoint"
+      ]
+    )
+    const bounds = item && renderer.getElementBounds(item.id)
+    if (!bounds) throw new Error(`Missing selected automation point ${action} action`)
+    renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    if (action === "edit") {
+      const editor = renderer.findByTestId("automation-value-editor")
+      if (!editor) throw new Error("Missing selected automation value editor")
+      expect(renderer.getFocusedElementId()).toBe(editor.id)
+      renderer.simulateKeystrokes("- 1 0 . 5 enter")
+      expect(useProjectState.getState().document.tracks[1]?.automation[0]?.points).toEqual([
+        { id: "target-point", bar: 2.5, value: 0.75 },
+      ])
+    } else {
+      expect(useProjectState.getState().document.tracks[1]?.automation[0]?.points).toEqual([])
+    }
+    expect(useProjectState.getState().document.tracks[0]?.automation[0]?.points).toEqual([
+      { id: "a", bar: 2.5, value: 0.5 },
+      { id: "b", bar: 5, value: 0.8 },
+      { id: "outside", bar: 20, value: 0.1 },
+    ])
+  })
+}
 
 for (const gesture of [
   { name: "native right click", modifiers: "" },
@@ -503,7 +691,7 @@ for (const gesture of [
     const audioRow = layoutTrackRows(scene.get()).find(row => row.track.id === "audio")
     if (!audioRow) throw new Error("Missing audio target")
     projectActions.selectClips(["pattern"])
-    const host = renderer.findByTestId("lane-row-audio")
+    const host = renderer.findByTestId("lane-surface")
     if (!host) throw new Error("Missing context event host")
     const elementId = host.id
     flushSync(() =>

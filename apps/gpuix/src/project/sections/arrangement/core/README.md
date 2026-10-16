@@ -120,7 +120,7 @@ minimapPointerDown(input: { x: number; width: number; geometry: MinimapGeometry 
 minimapDragBody(input: { geometry: MinimapGeometry; width: number; initialScrollX: number; zoomAnchorRatio: number; deltaX: number; deltaY: number }): MinimapViewport
 ```
 
-`paintAutomation()` 的 `idPrefix` 由 B2 在手势开始时分配，必须在工程内唯一。`DrawingState.nextId` 是本手势计数器，重绘同一 cell 保留 ID。取消手势直接丢弃返回值，工程提交与撤销仍由 B2 的 runtime 事务负责。
+`paintAutomation()` 的 `idPrefix` 由 B2 在手势开始时分配，必须在工程内唯一。`DrawingState.nextId` 是本手势计数器，重绘同一 cell 保留 ID。取消手势直接丢弃返回值，工程提交与撤销仍由 B2 的 runtime 事务负责。freehand 的 `DrawingState.swept` 保存已扫过的合并时间区间：原始点在覆盖区间内删除；回扫替换先前不重合的采样点，未绘制的 viewport 间隙与区间外点保留。新手势以 `{ painted: [], swept: [], last, nextId: 0 }` 初始化；状态及原始点不就地修改。
 
 缩放锚点在未撞到工程边界时保持像素位置。到达 scroll clamp 后，边界优先，无法同时保持越界的锚点。Minimap 下拖减小 `pxPerBar`，上拖增大；水平锚点采用按下位置在选区内的比例，不固定中心。
 

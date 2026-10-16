@@ -9,6 +9,55 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "save-snapshot-availability": {
+    file: "project/sections/arrangement/timeline/toolbar/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "Save control disables",
+    from: "disabled={!saveAvailable}",
+    to: "disabled={false}",
+  },
+  "resize-capture-follows-hidden-boundary": {
+    file: "project/sections/arrangement/tracks/TrackResizeOverlay/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "active track resize crosses",
+    from: "const bounds = capturedBounds.current ?? { top, height }",
+    to: "const bounds = { top, height }",
+  },
+  "duplicate-lane-wheel": {
+    file: "project/sections/arrangement/timeline/ArrangementTimeline/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "native lane and header wheels",
+    from: '      testId="timeline-viewport"',
+    to: '      testId="timeline-viewport"\n      onScroll={view.wheel}',
+  },
+  "resize-overlay-behind-input": {
+    file: "project/sections/arrangement/timeline/ArrangementTimeline/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "lane-side track separator",
+    from: "            {wrap ? wrap(inputSurface) : inputSurface}\n            {interactionOverlay}",
+    to: "            {interactionOverlay}\n            {wrap ? wrap(inputSurface) : inputSurface}",
+  },
+  "clip-editor-save": {
+    file: "project/sections/arrangement/timeline/keyboard/controller.ts",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "real ClipEditor",
+    from: 'if (modified && !alt && key === "s")',
+    to: 'if (target !== "clip-editor" && modified && !alt && key === "s")',
+  },
+  "editing-surface-tab-owner": {
+    file: "project/sections/arrangement/lane/ClipCard.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "one stable Tab owner",
+    from: "      aria-label={clipLabel(clip)}",
+    to: "      aria-label={clipLabel(clip)}\n      tabIndex={0}",
+  },
+  "lane-focus-cancellation": {
+    file: "project/sections/arrangement/lane/useLaneSurface.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "focus leaving the stable editing surface",
+    from: "onBlur: () => controller.interrupt(),",
+    to: "",
+  },
   "range-preview-overwrite": {
     file: "project/sections/arrangement/core/scene.ts",
     testFile: "src/project/sections/arrangement/lane/interactions/controller.test.tsx",

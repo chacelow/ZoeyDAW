@@ -80,12 +80,13 @@ All icons now use `ui/controls/Icon` (`Headphones`, `Circle`, `ChevronDown`, `Ch
 
 ## 公共接口
 
-`index.ts` exports `TrackRows`, `TrackRowsProps`, `TrackLabels`, `TelemetryReader`, `TrackRowGeometry` and the paired `trackResources`. The combination contract is `docs/architecture/gpuix-arrangement-composition.md`; tracks do not import lane or timeline.
+`index.ts` exports `TrackRows`, `TrackRowsProps`, `TrackResizeOverlay`, `TrackResizeOverlayProps`, `TrackLabels`, `TelemetryReader`, `TrackRowGeometry` and the paired `trackResources`. The combination contract is `docs/architecture/gpuix-arrangement-composition.md`; tracks do not import lane or timeline.
 
 `TrackRow` 对所有可见行（包括折叠 Group）始终挂载 `renderLane` 提供的内容。Group 摘要仅由 lane 绘制；tracks 不再拥有独立摘要实现或重复扣除 `controlsWidth`。屏外保焦点的表头仍不挂载 lane。
 
 ```ts
 TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane, labels })
+TrackResizeOverlay({ scene, viewport, labels })
 ```
 
 - `scene` / `viewport`: the existing B1 `ArrangementScene` / `ArrangementViewport`; no second writable viewport or project is created.
@@ -93,6 +94,8 @@ TrackRows({ scene, viewport, focusedTrackId, onFocusTrack, telemetry, renderLane
 - `focusedTrackId`: preserves one offscreen header while its lane content remains unmounted. `onFocusTrack(id)` reports inline-name editing focus; ordinary lane/header selection remains owned by `projectActions.selectTracks` and its explicit surface.
 - `telemetry`: accepted backend telemetry reader; `labels`: immutable translated strings supplied by the composition root.
 - Mount `TrackRows` inside F1 `AnimationFrameProvider` using `createAnimationFrameSource(renderer)` at the composition root. The demo also injects native activation through `createWindowPlatform(renderer).subscribeApplicationActive`; no sampled activation singleton remains.
+- `TrackResizeOverlay` 与 `TrackRows` 在同一个 Scene 坐标父节点中显式组合，Y 原点包含标尺，宽度为 `viewport.width + controlsWidth`。组合根把它放在稳定 lane 输入层之后，只有分隔条矩形接收命中，没有覆盖整面的 wrapper。
+- `TrackRows` 与 overlay 共用 `useTrackRowLayout`。空闲条只挂载边界的可见交集。活动 resize 保留按下时的透明 hitbox 和唯一 hook，直到释放或取消；即使边界或行随拖动离屏，也不销毁捕获。普通轨道从底部、Return/Main 从顶部调整，Escape、blur、失活和 epoch 仍取消。
 
 `TrackRow` owns the whole track: lane on the left, then colored identity, routing and Mixer on the right, following the observed Live order. It owns the single outer top/bottom border. Group frames span the visible branch, rails are painted above row borders, expanded groups do not duplicate descendant previews, and folded groups render a shared-geometry descendant overview.
 

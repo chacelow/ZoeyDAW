@@ -8,27 +8,28 @@
 
 | 导出 | 职责 |
 | --- | --- |
-| `LaneRow`、`LaneRowProps` | 一条轨道的 Clip/Pattern/Automation、行内网格与输入副作用；`row` 使用 B1 `TrackRow`。行放置、可见行卸载、边框及分组围栏由 `tracks` 持有 |
+| `LaneRow`、`LaneRowProps` | 一条轨道的 Clip/Pattern/Automation 与行内网格绘制；仅 AX 描述，不持有输入。行放置、可见行卸载、边框及分组围栏由 `tracks` 持有 |
 | `LaneOverlay`、`LaneOverlayProps` | 全画布播放头、Ghost 左起点对齐线、停止时行内插入点及标尺三角；由 timeline 的 overlay slot 单次挂载 |
 | `createLaneController`、`LaneControllerDeps`、`LaneController` | 跨行手势、阈值、预览事务、Clip/Automation 键盘与系统剪贴板路由；由组合根创建并 dispose |
+| `useLaneSurface(controller, labels, originY?)` | 返回中立的 `TimelineEditSurface`；唯一稳定输入层、右键/键盘菜单、inline editors；默认坐标原点补回顶部标尺高度，独立 demo 可传 0 |
 | `LaneInteractionState` | `getSnapshot` / `subscribe` 的稳定交互快照；`dragActive` 标记需要帧驱动的拖动 |
 | `LaneKey`、`LanePointer` | 归一化输入；指针使用共享画布坐标，不是行内坐标 |
 | `PeakReader` | 黑盒只读音乐范围峰值查询，不传 PCM，不在 lane 假设采样率 |
 | `LaneLabels`、`LaneMessageKey` | 组合根注入的严格双语标签；demo 标签不作为应用默认翻译 |
 
-`LaneRow` 接收同一份 `scene` / `viewport`、controller、PeakReader 与标签。剪贴板仅通过 `LaneControllerDeps.clipboard` 注入，权威类型来自 `platform/clipboard`；行不接受第二个 clipboard 端口。`LaneOverlay.transportBar` 是读取函数，由内部 `useAnimationFrame` 在播放期间采样，不要求父组件逐帧重渲染。F3 恢复边界另经 `useResumeFrame`，在回调内部 `flushSync` 读取最新位置并提交，普通帧语义不变；停止或卸载同时释放普通帧与恢复订阅。
+`LaneRow` 只接收同一份 `scene` / `viewport`、`row` 与 `PeakReader`。controller 与标签在组合根注入 `useLaneSurface`，行不接受另一份输入 owner。剪贴板通过 `LaneControllerDeps.clipboard` 注入，权威类型来自 `platform/clipboard`。`LaneOverlay.transportBar` 由内部 `useAnimationFrame` 在播放期间采样；恢复边界经 `useResumeFrame` 同步读取最新位置；停止或卸载释放两种订阅。
 
 `LaneControllerDeps.setScroll(x, y)` 由 timeline 提供：返回前共享 SceneStore 的 viewport 投影必须已更新，并返回接受后的 ArrangementViewport。`step(timestampMs)` 只调用该命令并重算当前手势，不创建计时器、不拥有另一份 viewport。`interrupt()` 回滚未完成的手势；`dispose()` 释放订阅并拒绝之后的编辑输入。
 
 工程到共享 SceneStore 的投影只有 timeline controller 一个产品 owner。lane 的 preview、选择与播放命令只改工程 store；lane 仅写自身的拖动、缩放、悬停、targetSelection 与手势进行中的 timeSelection。独立 demo 无 timeline 时，由 demo/runtime 的一个订阅投影并在 dispose 时退订。
 
-卡片展示几何使用行内坐标，轨道行自身承担垂直滚动位移。`ClipCardView` 只拥有位置、透明度、AX 与键盘宿主，`ClipContentsView` 默认 memo 只消费局部内容。原有 display projector 在 source/Ghost 分离的可见 Clip 缓存内派生局部几何、网格与裁剪范围，横向纯位置变化复用内容引用；缩放、裁剪、编辑、选择、悬停和折叠仍使内容失效。loop tick 使用局部序号 key，不随全局 x 变动。网格继续调用 B1 范围接口，左侧 1px overscan 经 hook 可见边界过滤，行网格与交替区域共用横向投影缓存。没有第二个工程 owner、新缓存层或 React 深比较器。production 分段口径、所有重复轮与节点变化说明见 [滚动剖析](PROFILING.md)。
+卡片展示几何使用行内坐标，轨道行承担垂直滚动位移。`ClipCardView` 只拥有位置、透明度与 AX 描述，不持有键盘入口；`ClipContentsView` 默认 memo 只消费局部内容。原有 source/Ghost 可见 Clip 缓存派生局部几何、网格与裁剪范围，横向纯位置变化复用内容引用；缩放、裁剪、编辑、选择、悬停和折叠仍使内容失效。loop tick 使用局部序号 key，不随全局 x 变动。网格继续调用 B1 范围接口，没有第二个工程 owner、新缓存层或 React 深比较器。production 分段口径见 [滚动剖析](PROFILING.md)。
 
-窗口键盘 owner 在 timeline。lane 只消费选择、Ctrl/Cmd+E 裁剪、创建副本、重命名、删除、复制/剪切/粘贴与拖动 Escape；Space 不激活 Clip，并继续传播给窗口播放 owner。Clip 标题设插入点到左起点；内容点击设到点击位置；普通激活不打开 Clip View。
+窗口键盘 owner 在 timeline。lane 选择、Split、副本、重命名、删除、复制/剪切/粘贴与拖动 Escape 经稳定编辑面分派；Space 继续传播给窗口播放 owner。Clip 标题点击设插入点到左起点；内容点击设到点击位置；点击不打开 Clip View。`timeline-viewport` 失焦取消手势，虚拟 source row 卸载不结束稳定捕获。
 
 时间选区拖动通过 `SceneStore.setTimeSelectionPreview` 呈现，未提交前不写 session；timeline 全量同步、Snap 切换不会覆盖它。释放后先提交选区再清除预览，取消只清除预览。边缘滚动纯计算复用 `core/viewport/edge-scroll`，网格 quad 打包与普通细线材质复用 `core/rulers/grid-quads`。
 
-右键目标只由 F2 归一化后的 `onContextMenu` payload 设置，不再从 `onMouseDown` 的 button/ctrl 猜测右键。Shift+F10 保留独立的原生焦点 bounds 定位。回归只发送 context 事件，再通过真实菜单动作验证删除的是目标 Clip，而不是之前的选择；Ctrl+左键按平台归一化后的右键 payload 注入。
+唯一稳定 `LaneContextMenu` 从 F2 归一化后的 `onContextMenu` payload 解析鼠标右键，不从 mouseDown button/ctrl 猜测。Shift+F10 直接读取当前有效 Clip 或 Automation point 身份，不将键盘选择变成伪指针重命中；没有有效目标时不打开菜单。原生键盘及真实菜单动作回归覆盖裁剪 Clip 删除、菜单打开后恢复可见区域再重命名，以及第二轨自动化点编辑和删除。
 
 `evidence/context-*` 保存实际窗口证据：先选中 Pattern，再右键 Audio，菜单标题与 Rename 字段均为该 Audio Clip。物理 Ctrl+左键的后台修饰输入被 computer 拒绝，foreground 控制申请超时且没有确认批准，未发送前台点击；该物理路径未验证，归一化事件行为以回归与 F2 平台证据为准。
 
@@ -78,7 +79,7 @@ lane 在彩色 Clip 主体上使用 `theme.colors.arrangementClipInk`，与 Web 
 | 只有顶部 fade 锚点独立可拖，极端释放不重置 | 原任务明确产品规则；本轮未在 Live 编辑工程 | B1 几何及 preview/commit 手势；原生状态转换回归 | Live 行为未复验，实际桌面拖动仍按工具限制记录 |
 | 网格与落点对齐同一份 1/4 网格 | 原产品规则；本轮未取 Live 网格截图 | 全部位置消费 B1 `gridLines`，仅替换批量画面，不改 snap | Native 整体视觉与满量帧验收仍需本轮取证 |
 | 标题实心、body 透明、折叠只占第一行 | Web 源与既定产品契约；本轮未另取 Live 折叠截图 | 原生 Clip 外壳、分轨摘要与主题角色；batch 保持图层次序 | 不将 Web 源码等同于 Live 实测 |
-| 点击 Clip 不展开编辑器，Space 控制播放 | 产品规则优先；本轮未对 Live 快捷键复验 | 唯一窗口键盘 owner，Clip Enter 激活与 Space 透传；已有真实 normal 窗口记录 | 新 batch 全量组合窗口尚待验收 |
+| 点击 Clip 不展开编辑器，Space 控制播放 | 产品规则优先；本轮未对 Live 快捷键复验 | 单一编辑面选择与窗口键盘 owner，Space 透传；历史 normal 窗口记录 | R2 原生回归覆盖新输入路径，前台整体验收仍由协调者完成 |
 | 播放头到中心后轨道移动，停止无长线 | 原产品规则；本轮未对 Live follow 复验 | timeline 视口 owner、F1 帧采样与 overlay；已有 Native 播放/滚动记录 | 不把 Native 记录称为 Live 行为证据 |
 
 ## 验证状态

@@ -1,8 +1,6 @@
 import { useState, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import type { EventPayload } from "@gpuix/react"
-import { useGpuix } from "@gpuix/react"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -34,7 +32,6 @@ export function LaneContextMenu({
   resolveTarget: (event: EventPayload) => LaneMenuTarget | null
   t: LaneTranslate
 }) {
-  const { renderer } = useGpuix()
   const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)
   const [target, setTarget] = useState<LaneMenuTarget | null>(null)
   const [open, setOpen] = useState(false)
@@ -54,22 +51,12 @@ export function LaneContextMenu({
     <ContextMenu open={open && target !== null} onOpenChange={setOpen}>
       <ContextMenuTrigger
         asChild
+        role="application"
         onContextMenu={event => setTarget(resolveTarget(event))}
         onKeyDown={event => {
           const key = event.key?.toLowerCase()
           if (key !== "contextmenu" && !(key === "f10" && event.modifiers?.shift)) return
-          const focused = renderer?.getFocusedElementId?.()
-          const bounds =
-            focused === undefined || focused === null ? null : renderer?.getElementBounds?.(focused)
-          setTarget(
-            bounds
-              ? resolveTarget({
-                  ...event,
-                  x: bounds.x + bounds.width / 2,
-                  y: bounds.y + Math.min(TRACK_TITLE_HEIGHT, bounds.height) / 2,
-                })
-              : null
-          )
+          setTarget(resolveKeyboardTarget(context))
         }}
       >
         {children}
@@ -120,4 +107,34 @@ export function LaneContextMenu({
       )}
     </ContextMenu>
   )
+}
+
+function resolveKeyboardTarget(context: LaneContext): LaneMenuTarget | null {
+  const selection = context.scene.get().targetSelection
+  const { document, session } = context.getState()
+  if (selection.kind === "automation" || selection.kind === "automation-value") {
+    const lane = document.tracks
+      .find(track => track.id === selection.trackId)
+      ?.automation.find(item => item.id === selection.laneId)
+    const pointId =
+      selection.kind === "automation-value"
+        ? selection.pointId
+        : selection.pointIds.find(id => lane?.points.some(point => point.id === id))
+    return pointId && lane?.points.some(point => point.id === pointId)
+      ? {
+          kind: "automation-point",
+          trackId: selection.trackId,
+          laneId: selection.laneId,
+          pointId,
+        }
+      : null
+  }
+  if (selection.kind !== "clip" && selection.kind !== "none") return null
+  const clipIds = session.selectedClipIds.filter(id =>
+    document.tracks.some(track => track.clips.some(clip => clip.id === id))
+  )
+  const clipId = selection.kind === "clip" ? selection.id : clipIds[0]
+  if (!clipId || !document.tracks.some(track => track.clips.some(clip => clip.id === clipId)))
+    return null
+  return { kind: "clip", clipId, clipIds: clipIds.includes(clipId) ? clipIds : [clipId] }
 }

@@ -1,8 +1,10 @@
-import { readFileSync, writeFileSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 
 const core = fileURLToPath(new URL("../", import.meta.url))
+const preload = fileURLToPath(new URL("./mutation-preload.ts", import.meta.url))
 const mutations = [
   [
     "hit-left-tolerance",
@@ -60,39 +62,83 @@ const mutations = [
     "Math.exp(-downwardPixels / 100)",
     "Math.exp(downwardPixels / 100)",
   ],
+  [
+    "freehand-original-samples-only",
+    "automation/drawing.ts",
+    "swept.every(interval => point.bar < interval.start || point.bar > interval.end)",
+    "cells.every(cell => !(Math.abs(point.bar - cell.bar) < 0.000001))",
+    "freehand removes off-grid original spikes only inside the swept interval",
+  ],
+  [
+    "freehand-prior-samples-retained",
+    "automation/drawing.ts",
+    "painted.delete(point.key)",
+    "painted.get(point.key)",
+    "freehand reverse sweeps replace prior samples at different bar positions",
+  ],
+  [
+    "freehand-forget-swept-intervals",
+    "automation/drawing.ts",
+    "for (const interval of state.swept)",
+    "for (const interval of [])",
+    "freehand retains earlier swept intervals without erasing unpainted viewport gaps",
+  ],
 ]
 
-const baseline = spawnSync(process.execPath, ["test", core], { encoding: "utf8" })
+const fingerprints = new Map(
+  [...new Set(mutations.map(([, relative]) => `${core}${relative}`))].map(path => [
+    path,
+    createHash("sha256").update(readFileSync(path)).digest("hex"),
+  ])
+)
+
+function run(mutation = []) {
+  const [name = "", relative = "", from = "", to = ""] = mutation
+  const result = spawnSync(process.execPath, ["test", "--preload", preload, core], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      NO_COLOR: "1",
+      FORCE_COLOR: "0",
+      CORE_MUTATION: name,
+      CORE_MUTATION_FILE: relative,
+      CORE_MUTATION_FROM: from,
+      CORE_MUTATION_TO: to,
+    },
+    timeout: 120000,
+  })
+  if (result.error) throw result.error
+  return result
+}
+
+const baseline = run()
 if (baseline.status !== 0) throw new Error(`Baseline failed:\n${baseline.stdout}${baseline.stderr}`)
 process.stdout.write("| Mutation | Failing tests |\n| --- | ---: |\n")
-for (const [name, relative, from, to] of mutations) {
+for (const mutation of mutations) {
+  const [name, relative, from, , testName] = mutation
   const path = `${core}${relative}`
   const source = readFileSync(path, "utf8")
   if (source.split(from).length !== 2) throw new Error(`Mutation anchor must be unique: ${name}`)
-  let result
-  try {
-    writeFileSync(
-      path,
-      source.replace(from, () => to)
-    )
-    result = spawnSync(process.execPath, ["test", core], { encoding: "utf8" })
-  } finally {
-    writeFileSync(path, source)
-  }
+  const result = run(mutation)
   const output = `${result.stdout}${result.stderr}`
   const failures = Number(output.match(/(\d+) fail\b/u)?.[1] ?? 0)
-  const propertyName = name.startsWith("hit-")
-    ? "property: clip interior"
-    : name.startsWith("time-")
-      ? "property: time pixel"
-      : name.startsWith("snap-")
-        ? "property: snap lies"
-        : name.startsWith("fade-")
-          ? "property: fade anchors"
-          : name.startsWith("zoom-")
-            ? "preserves anchor pixels across seeded"
-            : "lowers pxPerBar downward"
-  if (!output.split("\n").some(line => line.includes("(fail)") && line.includes(propertyName))) {
+  const propertyName =
+    testName ??
+    (name.startsWith("hit-")
+      ? "property: clip interior"
+      : name.startsWith("time-")
+        ? "property: time pixel"
+        : name.startsWith("snap-")
+          ? "property: snap lies"
+          : name.startsWith("fade-")
+            ? "property: fade anchors"
+            : name.startsWith("zoom-")
+              ? "preserves anchor pixels across seeded"
+              : "lowers pxPerBar downward")
+  if (
+    !output.includes(`[core-mutation] applied ${name}`) ||
+    !output.split("\n").some(line => line.includes("(fail)") && line.includes(propertyName))
+  ) {
     throw new Error(`Target invariant did not fail: ${name}\n${output}`)
   }
   if (result.status === 0 || failures === 0 || /SyntaxError|ParseError/u.test(output)) {
@@ -100,3 +146,8 @@ for (const [name, relative, from, to] of mutations) {
   }
   process.stdout.write(`| ${name} | ${failures} |\n`)
 }
+for (const [path, before] of fingerprints) {
+  const after = createHash("sha256").update(readFileSync(path)).digest("hex")
+  if (before !== after) throw new Error(`Mutation target changed on disk: ${path}`)
+}
+process.stdout.write("Mutation targets unchanged on disk.\n")
