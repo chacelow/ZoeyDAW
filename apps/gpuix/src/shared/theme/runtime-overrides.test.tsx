@@ -17,6 +17,7 @@ import { resolveContentColor } from "./content-color"
 import { HomePage } from "@/app/home/HomePage"
 import { createRouter, RouterProvider } from "@/app/router/router"
 import { createMemorySnapshotStorage } from "@/project/adapters"
+import { initAppI18n } from "@/app/i18n"
 
 function bounds(root: TestRoot, id: string) {
   const node = root.renderer.findByTestId(id)
@@ -100,13 +101,16 @@ test("runtime group overrides resize real controls and track identity without st
 })
 
 test("Home uses its layout maximum width independently of the track control column", () => {
+  initAppI18n()
   // Fixed native viewport makes the Home maximum visible without a live window.
   const root = createTestRoot({ width: 1200, height: 300 })
   const storage = createMemorySnapshotStorage()
   const router = createRouter()
   const show = (maxWidth: number) =>
     root.render(
-      <ThemeProvider layout={{ ...DEFAULT_LAYOUT_TOKENS, home: { maxWidth } }}>
+      <ThemeProvider
+        layout={{ ...DEFAULT_LAYOUT_TOKENS, home: { ...DEFAULT_LAYOUT_TOKENS.home, maxWidth } }}
+      >
         <RouterProvider value={router}>
           <HomePage storage={storage} />
         </RouterProvider>

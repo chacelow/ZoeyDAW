@@ -20,7 +20,7 @@ HomePage 当前实例的左右 padding12、gap4、accent hover 属于 `project`�
   size="project"
   aria-label={project.name}
   onClick={() => open(project)}
-  style={{ width: theme.project.controlsWidth }}
+  style={{ width: theme.layout.track.controlsWidth }}
 >
   <text>{project.name}</text>
   <CardDescription>{openedAt}</CardDescription>
