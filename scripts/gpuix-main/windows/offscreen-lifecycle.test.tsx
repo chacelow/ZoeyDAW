@@ -8,7 +8,7 @@ import { decodeNativePng } from "../../../apps/gpuix/src/shared/waveform/testing
 
 if (process.platform !== "win32")
   throw new Error("This regression requires Windows DirectComposition")
-if (process.env.GPUI_DISABLE_DIRECT_COMPOSITION === "1")
+if (["1", "true"].includes(process.env.GPUI_DISABLE_DIRECT_COMPOSITION ?? ""))
   throw new Error("DirectComposition must be enabled for the native window lifetime regression")
 
 test("replacing 320 offscreen windows releases native DirectComposition resources", () => {

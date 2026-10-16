@@ -48,6 +48,11 @@ run("Windows User32 lifecycle driver", "rustc", [
 run("renderer identity", process.execPath, ["scripts/gpuix-main/check.mjs", "--resolution"])
 run("native bridge build", "bun", ["run", "build"], path.join(root, "crates/native"))
 const checks = [
+  [
+    "Windows dependency junction contracts",
+    process.execPath,
+    ["--test", "scripts/gpuix-main/windows-dependency-links.test.mjs"],
+  ],
   ["Windows Rust check", "cargo", ["check", "--locked", "--workspace"]],
   ["Windows Rust contracts", "cargo", ["test", "--locked", "--workspace"]],
   [
@@ -111,6 +116,16 @@ const checks = [
     "Offscreen scale and bounds",
     "bun",
     ["test", "scripts/gpuix-main/test-window/test-window.test.tsx"],
+  ],
+  [
+    "DirectComposition window resource lifetime",
+    "bun",
+    ["test", "scripts/gpuix-main/windows/offscreen-lifecycle.test.tsx"],
+  ],
+  [
+    "Anchored popup geometry",
+    "bun",
+    ["test", "scripts/gpuix-main/windows/anchored-geometry.test.tsx"],
   ],
   ["Production UI thread frame smoke", "bun", ["scripts/gpuix-main/windows/runtime.ts"]],
   ["Real backend offscreen smoke", "bun", ["scripts/gpuix-main/windows/smoke.tsx"]],
