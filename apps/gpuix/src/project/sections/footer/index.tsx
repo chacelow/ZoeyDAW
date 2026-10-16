@@ -90,7 +90,6 @@ export function FooterPanel({
           style={{ height, gap: theme.design.tabs.footerJoinedGroupGap, overflow: "hidden" }}
           containerStyle={{
             backgroundColor: theme.colors.muted,
-            borderRadius: theme.design.tabs.footerRadius,
           }}
           contentStyle={{ flexGrow: 1, minHeight: 0 }}
           options={[

@@ -128,7 +128,6 @@
 | `design.tabs.width` | `ui/controls/MotionTabs/index.tsx tabWidth = 120` | 120 | 120 | 一致 |
 | `design.tabs.itemGap` | `原 design.tabs.itemGap` | 4 | 4 | 一致 |
 | `design.tabs.contentGap` | `原 design.tabs.contentGap` | 8 | 8 | 一致 |
-| `design.tabs.footerRadius` | `project/sections/footer/index.tsx borderRadius: 0` | 0 | 0 | 一致 |
 | `design.tabs.footerJoinedGroupGap` | `project/sections/footer/index.tsx gap: 0` | 0 | 0 | 一致 |
 | `design.overlay.sideOffset` | `ui/controls/Popover/index.tsx sideOffset = 4` | 4 | 4 | 一致 |
 | `design.overlay.collisionPadding` | `ui/controls/Popover/index.tsx collisionPadding = 8` | 8 | 8 | 一致 |
@@ -587,4 +586,4 @@
 | `presets.sage-garden.dark.arrangementClipSelected` | `原 derive.arrangementClipSelected` | "oklch(87% 0.05 220deg)" | "oklch(87% 0.05 220deg)" | 一致 |
 | `presets.sage-garden.dark.arrangementClipPaper` | `原 derive.arrangementClipPaper` | "oklch(97% 0.005 90deg)" | "oklch(97% 0.005 90deg)" | 一致 |
 
-580 个叶子，0 个差异。
+579 个叶子，0 个差异。

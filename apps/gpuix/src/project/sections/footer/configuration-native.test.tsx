@@ -94,11 +94,12 @@ test("footer device border changes native content inset", () => {
     root.unmount()
   }
 })
-for (const field of ["footerRadius", "footerJoinedGroupGap"] as const) {
-  test(`footer native paint follows tabs ${field}`, () => {
-    compare({ ...DEFAULT_DESIGN_TOKENS, tabs: { ...DEFAULT_DESIGN_TOKENS.tabs, [field]: 7 } })
+test("footer native paint follows tabs footerJoinedGroupGap", () => {
+  compare({
+    ...DEFAULT_DESIGN_TOKENS,
+    tabs: { ...DEFAULT_DESIGN_TOKENS.tabs, footerJoinedGroupGap: 7 },
   })
-}
+})
 test("device curve native paint follows project response stroke", () => {
   compare(DEFAULT_DESIGN_TOKENS, { ...PROJECT_METRICS, deviceResponseStrokeWidth: 5 })
 })

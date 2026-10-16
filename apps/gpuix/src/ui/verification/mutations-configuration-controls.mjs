@@ -214,8 +214,8 @@ const cases = [
   ],
   [
     "DragPreviewArea/index.tsx",
-    "cursor: theme.design.cursors.grab,",
-    'cursor: "grab",',
+    "idle: { cursor: theme.design.cursors.grab }",
+    'idle: { cursor: "grab" }',
     "cursors grab and grabbing",
   ],
   [

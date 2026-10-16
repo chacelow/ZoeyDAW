@@ -66,19 +66,20 @@ function paintChange(
   id: string,
   design: DesignTokens,
   activate: (root: TestRoot) => void = () => {},
-  project = PROJECT_METRICS
+  project = PROJECT_METRICS,
+  baselineDesign = DEFAULT_DESIGN_TOKENS
 ) {
   const directory = mkdtempSync(path.join(tmpdir(), "zoeydaw-editor-configuration-"))
   const root = createTestRoot({ width: 900, height: 360 })
   try {
-    render(root, id, DEFAULT_DESIGN_TOKENS)
+    render(root, id, baselineDesign)
     activate(root)
     flush(root)
     const before = pixels(root, directory, "before")
     render(root, id, design, project)
     const after = pixels(root, directory, "after")
     expect(after.equals(before)).toBe(false)
-    render(root, id, DEFAULT_DESIGN_TOKENS)
+    render(root, id, baselineDesign)
     expect(pixels(root, directory, "restored").equals(before)).toBe(true)
   } finally {
     root.unmount()
@@ -178,14 +179,26 @@ for (const [id, testId] of [
   [PATTERN_ID, "pattern-steps"],
 ] as const) {
   test(`native keyboard focus paint follows focus ring width for ${id} ${testId}`, () => {
+    // A 1px velocity stem saturates both inset rings; leave room to distinguish their widths.
+    const baselineDesign =
+      testId === "midi-velocity-retained"
+        ? {
+            ...DEFAULT_DESIGN_TOKENS,
+            editor: { ...DEFAULT_DESIGN_TOKENS.editor, velocityLineWidth: 8 },
+          }
+        : DEFAULT_DESIGN_TOKENS
     paintChange(
       id,
-      { ...DEFAULT_DESIGN_TOKENS, shape: { ...DEFAULT_DESIGN_TOKENS.shape, focusRingWidth: 3 } },
+      { ...baselineDesign, shape: { ...baselineDesign.shape, focusRingWidth: 3 } },
       root => {
         const target = bounds(root, testId)
         root.renderer.nativeSimulateKeystrokes(target.element.id, "tab")
         root.renderer.focusElement(target.element.id)
-      }
+        flush(root)
+        expect(root.renderer.getFocusedElementId()).toBe(target.element.id)
+      },
+      PROJECT_METRICS,
+      baselineDesign
     )
   })
 }

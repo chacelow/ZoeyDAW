@@ -101,5 +101,16 @@ verifyConfigurationMutations({
       to: "608",
       pattern: "Gallery settings preview width follows its own layout",
     },
+    ...[
+      ["gap", "12"],
+      ["inset", "24"],
+      ["actionGap", "8"],
+    ].map(([field, literal]) => ({
+      name: `feedback ${field} bypasses its source`,
+      file: "ui/controls/LoadErrorScreen/index.tsx",
+      from: `theme.design.feedback.${field}`,
+      to: literal,
+      pattern: `feedback ${field} changes native error layout`,
+    })),
   ],
 })

@@ -10,6 +10,7 @@ import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { configureToastPolicy, dismissToast, toast, Toaster, toastLoading } from "./index"
 import type { ToastPolicy } from "./index"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import { getThemePreset } from "@/shared/theme/presets"
 
 const TEST_POLICY: ToastPolicy = { defaultDuration: 4200, queueLimit: 8, visibleLimit: 4 }
 const labels = { "aria-label": "Notifications", dismissLabel: "Dismiss", loadingLabel: "Loading" }
@@ -309,6 +310,47 @@ test("toast geometry sources control native placement, padding, stacking and cor
     root.renderer.captureScreenshot(image)
     expect(readFileSync(image).equals(square)).toBe(false)
     expect(bounds(root, "toaster-first")).toEqual(first)
+  } finally {
+    root.unmount()
+    rmSync(output, { recursive: true, force: true })
+  }
+})
+
+test("success notice paint follows controlled success independently of chart2", () => {
+  const output = mkdtempSync(path.join(tmpdir(), "configuration-toast-success-"))
+  const image = path.join(output, "frame.png")
+  const root = createTestRoot({ width: 600, height: 400 })
+  const base = getThemePreset("default").colors.dark
+  const render = (success: string) => {
+    root.render(
+      <ThemeProvider appearance="dark" colors={{ ...base, success, chart2: "#0000ff" }}>
+        <Toaster {...labels} position="top-left" policy={TEST_POLICY} />
+      </ThemeProvider>
+    )
+    root.renderer.flush()
+  }
+  const notice = () => {
+    const element = root.renderer.findByTestId("toaster-semantic")
+    if (!element) throw new Error("Missing success notice")
+    return element
+  }
+  try {
+    root.renderer.clockPause()
+    render("#ff0000")
+    flushSync(() => toast.success("Semantic success", { id: "semantic", duration: 0 }))
+    root.renderer.flush()
+    expect(notice().style.borderColor).toBe("#ff0000")
+    const original = bounds(root, "toaster-semantic")
+    root.renderer.captureScreenshot(image)
+    const red = readFileSync(image)
+    render("#00ff00")
+    expect(notice().style.borderColor).toBe("#00ff00")
+    root.renderer.captureScreenshot(image)
+    expect(readFileSync(image).equals(red)).toBe(false)
+    expect(bounds(root, "toaster-semantic")).toEqual(original)
+    render("#ff0000")
+    root.renderer.captureScreenshot(image)
+    expect(readFileSync(image).equals(red)).toBe(true)
   } finally {
     root.unmount()
     rmSync(output, { recursive: true, force: true })
