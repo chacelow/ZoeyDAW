@@ -70,6 +70,38 @@ const mutations = [
     test: "runtime/recording-lifecycle.test.ts",
     failure: "retains recording during",
   },
+  {
+    name: "drop-submitted-recording-on-rejection",
+    file: "runtime/runtime-backend.ts",
+    from: "const unreconciledRecording = owner.recordingPending",
+    to: "const unreconciledRecording = owner.recordingPending\n    owner.recordingPending = []",
+    test: "runtime/recording-lifecycle.test.ts",
+    failure: "retains submitted recording",
+  },
+  {
+    name: "accept-before-bar-one",
+    file: "../model/persistence.ts",
+    from: "const barPosition = (v: unknown): v is number => number(v) && v >= 1",
+    to: "const barPosition = (v: unknown): v is number => number(v) && v > 0",
+    test: "snapshots.test.ts",
+    failure: "before bar one",
+  },
+  {
+    name: "interleave-group-copies",
+    file: "tracks.ts",
+    from: "return [updated, ...(branchesAfter.get(track.id) ?? [])]",
+    to: "return [updated, ...remappedCopies.filter(item => item.sourceId === track.id).map(item => item.copy)]",
+    test: "../model/project.test.ts",
+    failure: "duplicates a complete group subtree",
+  },
+  {
+    name: "leak-failed-native-construction",
+    file: "backend/native.ts",
+    from: "disposed = true\n    engine.dispose(handle)\n    throw error",
+    to: "disposed = true\n    throw error",
+    test: "backend/native.test.ts",
+    failure: "releases the opened native session",
+  },
 ]
 const tests = [...new Set(mutations.map(mutation => `${adapters}${mutation.test}`))]
 const baseline = spawnSync(process.execPath, ["test", ...tests], { cwd: app, encoding: "utf8" })
