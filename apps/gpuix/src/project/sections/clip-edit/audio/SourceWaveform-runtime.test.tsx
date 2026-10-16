@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { decodeNativePng } from "@/shared/waveform/testing/native-png"
+import { decodeNativePng, type NativePng } from "@/shared/waveform/testing/native-png"
 import { afterEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -9,6 +9,7 @@ import {
   configureProjectBackend,
   projectActions,
   readProjectPeaks,
+  setProjectStorageId,
   startProjectRuntime,
   useProjectState,
   whenProjectBackendIdle,
@@ -40,8 +41,7 @@ afterEach(() => {
   captureDirectory = undefined
 })
 
-function firstStereoChannelHeight(filename: string, pixel: number): number {
-  const { width, height, rgba } = decodeNativePng(readFileSync(filename))
+function firstStereoChannelHeight({ width, height, rgba }: NativePng, pixel: number): number {
   if (pixel < 0 || pixel >= width) throw new Error("Waveform pixel outside native capture")
   let first = -1
   let last = -1
@@ -69,7 +69,9 @@ function columnHeight(pixel: number): number | null {
   captureDirectory ??= mkdtempSync(path.join(tmpdir(), "source-waveform-pixels-"))
   const filename = path.join(captureDirectory, "column.png")
   root.renderer.captureScreenshot(filename)
-  return firstStereoChannelHeight(filename, pixel)
+  const image = decodeNativePng(readFileSync(filename))
+  expect(firstStereoChannelHeight(image, 79)).toBe(0)
+  return firstStereoChannelHeight(image, pixel)
 }
 
 function visibleHeight(pixel: number): number {
@@ -81,6 +83,7 @@ function visibleHeight(pixel: number): number {
 test("stable peak reader follows native session opening, tempo, meter, and reopening", async () => {
   media = createVerificationMedia()
   restoreBackend = configureProjectBackend(createNativeBackend)
+  setProjectStorageId("source-waveform-runtime")
   const { audio } = seedClipEditProject(media.uri, "normal")
   const clip = useProjectState
     .getState()
@@ -91,7 +94,7 @@ test("stable peak reader follows native session opening, tempo, meter, and reope
   root = createTestRoot({ width: 80, height: 80 })
   redraw = () =>
     root?.render(
-      <div style={{ width: 80, height: 80 }}>
+      <div style={{ width: 80, height: 80, backgroundColor: "#000" }}>
         <SourceWaveform
           sourceId={clip.samplePath}
           view={{ start: 0, span: 1 }}

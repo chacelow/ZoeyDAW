@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { fileURLToPath } from "node:url"
 import { resolveLocale } from "./core"
 
 test("normalizes language families and falls back for unsupported locales", () => {
@@ -27,7 +28,7 @@ await first.changeLanguage("zh-CN");
 persistLocale("zh-CN");
 console.log(JSON.stringify({ initial, singleton: first === second, added, saved, language: first.language, probe: first.t("probe") }));`,
     ],
-    { cwd: new URL("../../../", import.meta.url).pathname }
+    { cwd: fileURLToPath(new URL("../../../", import.meta.url)) }
   )
   expect(result.exitCode).toBe(0)
   expect(JSON.parse(new TextDecoder().decode(result.stdout))).toEqual({
@@ -56,7 +57,7 @@ const instance = initAppI18n({
 });
 console.log(JSON.stringify({ language: instance.language, label: instance.t("language.zh-CN"), diagnostics }));`,
       ],
-      { cwd: new URL("../../../", import.meta.url).pathname }
+      { cwd: fileURLToPath(new URL("../../../", import.meta.url)) }
     )
     expect(result.exitCode, new TextDecoder().decode(result.stderr)).toBe(0)
     expect(JSON.parse(new TextDecoder().decode(result.stdout))).toEqual({
@@ -95,7 +96,7 @@ process.once("beforeExit", () => {
   console.log(JSON.stringify({ awaitedLanguage, language: instance.language, label: instance.t("language.zh-CN"), diagnostics }));
 });`,
     ],
-    { cwd: new URL("../../../", import.meta.url).pathname }
+    { cwd: fileURLToPath(new URL("../../../", import.meta.url)) }
   )
   expect(result.exitCode, new TextDecoder().decode(result.stderr)).toBe(0)
   expect(JSON.parse(new TextDecoder().decode(result.stdout))).toEqual({
