@@ -48,6 +48,36 @@ CI 的 Bun 测试失败时输出完整日志，保留早期 Expected/Received；
 
 UI 改动必须在真实 gpuix 窗口验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制。
 
+## 打包与发布
+
+在 macOS arm64 的已初始化 checkout 中安装固定构建工具并打包。版本号必须等于根目录与 `apps/gpuix/package.json` 的 `version`：
+
+```bash
+cargo install cargo-packager --version 0.11.8 --locked
+bun scripts/release/package.mjs "$(node -p 'require("./apps/gpuix/package.json").version')"
+```
+
+`package.mjs <version> [output-directory]` 默认输出 `dist/release/<version>`。脚本复用 `scripts/gpuix-main/build.sh` 与 `pnpm native:build`，再编译 Bun 单文件；不重新定义 Rust 或渲染器构建。可通过 `CARGO_PACKAGER_BIN` 指定隔离安装的工具路径。
+
+产物是 `zoeydaw.app`、`zoeydaw_<version>_aarch64.dmg`、`zoeydaw-<version>-macos-arm64.app.zip` 与 `SHA256SUMS-macos-arm64`。`build/` 保留单文件可执行程序、1024 PNG、iconset、icns 与本次 packager 配置。同版本同输出目录可重跑，不混放不同版本的 DMG。
+
+两个 NAPI-RS loader 使用运行时 `require`，Bun 无法自行发现 `.node`。`scripts/release/bundle.mjs` 只在打包时把两个包名解析为静态 `require`，把真实 `.node` 嵌入可执行文件；不改 vendor 或生成 loader，也不共用 `NAPI_RS_NATIVE_LIBRARY_PATH`。图标用 Default 深色预设的背景、前景与 chart2，由 `icon.swift` 生成占位 PNG，再通过 `sips`、`iconutil` 生成 icns。替换 `icon.swift` 可换品牌图标。
+
+`bun scripts/release/smoke.mjs <evidence-directory>` 用同一 bundler 编译独立离屏验证程序，在仓库外的临时目录启动，覆盖 Home → 新建 → Arrangement → 原生 sample clock 前进 → 停止与 session 释放。截图与 `smoke.json` 写入传入目录，临时可执行文件退出时删除。它使用默认真实后端与空工程，不声称验证音频素材播放或前台窗口帧。真实包另外用 `open -g` 启动，前台视觉验收仍由维护者完成。
+
+发布按以下顺序操作。推 tag 属于远程写入，须遵守本次授权边界，本机打包命令不会推送或创建 tag。
+
+1. 同步根目录、gpuix 应用与应用内展示版本，完成本地轻量检查，再合入 `main`。完整 `pnpm verify:gpuix` 在 GitHub Actions 运行。
+2. 在 `main` 的目标提交创建同版本 `v*` tag 并推到 GitHub。首个版本是 `v0.1.0-alpha.1`，之后依次使用 alpha、beta、稳定版。
+3. `.github/workflows/release.yml` 在 `macos-15` 上校验 tag 指向 `main` 的提交且匹配 manifest，执行完整 `verify:gpuix` 后打包。开发切片分支不推送。
+4. 流水线上传 `.dmg`、`.app.zip` 与 SHA-256 到 draft release。带预发布后缀的 tag 同时标记 Pre-release；维护者核对安装与真实播放后手动发布。
+
+`workflow_dispatch` 的 `tag` 输入只接受已有的版本 tag。重跑会覆盖同一 draft 的资产，已发布 release 不允许覆盖。matrix 每项独立构建并上传 `release-<platform>` artifact，draft job 聚合所有平台；Windows 合入后增加 matrix 项和打包的平台分支，不改 draft job。工具链与缓存保持 `ci.yml` 一致，vendor 与 Cargo target 使用 `RUNNER_WORKSPACE` 下不含 `..` 的绝对路径，分别缓存。暂不抽 composite action，避免本切片改变现有验证流水线。
+
+首版仅 macOS arm64，无 Developer ID 签名、无公证。安装时用右键 →「打开」，或只对可信的这一份应用运行 `xattr -dr com.apple.quarantine`，详见 [Release 安装说明](../../scripts/release/NOTES.md)。Bun 的 ad-hoc 签名不等于 Developer ID 签名。可执行文件声明的最低系统是 macOS 13，旧系统未实机验收；Intel、Windows、自动更新不在首版范围。
+
+设置与工程快照写入 `~/Library/Application Support/com.zoeydaw.desktop`，默认日志写入 `~/Library/Logs/com.zoeydaw.desktop`。字体使用系统字体，图标、语言资源、主题预设与度量是静态导入，随 Bun 可执行文件编译，不依赖 `.app` 内的可写目录或仓库的 `node_modules`。用户导入的音频仍保留外部文件路径，打包不把工程媒体搬入应用。
+
 ## 修改前确认
 
 问用户的范围只有根 `AGENTS.md`「决策默认归 Agent」那张封闭清单；清单外的技术决定（含共享 UI 公共 API）由协调者决定，见 [协调方式](coordination.md)。

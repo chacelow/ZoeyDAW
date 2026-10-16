@@ -4,6 +4,18 @@
 
 已有首页、单项目面板、Browser、Arrangement 与 Audio/MIDI/Pattern 编辑界面；工程状态通过 adapter 接入真实原生后端，设置、日志和快照使用原生存储。已实现与未实现的产品范围见 [产品范围](docs/product-prototype.md)，不把插件 host 或 `.als` 导入视为已完成。
 
+## 安装
+
+macOS arm64 安装包由 [Release 流水线](.github/workflows/release.yml) 构建为 draft，维护者手动发布后可在 [GitHub Releases](https://github.com/chacelow/ZoeyDAW/releases) 下载。尚未运行远程流水线不代表已有可下载版本。
+
+打开 `.dmg`，把 `zoeydaw.app` 拖到「应用程序」；或解压 `.app.zip` 后移动应用。首版不使用 Developer ID 签名、不公证。首次打开用右键 →「打开」；仍被拦截时，确认下载来源后运行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/zoeydaw.app
+```
+
+不要全局关闭 Gatekeeper。校验资产、用户数据目录与已知限制见 [安装说明](scripts/release/NOTES.md)，本机打包与 tag 流程见 [打包与发布](docs/agents/setup.md#打包与发布)。图标为占位，可替换。
+
 ## 开发
 
 新 checkout 在根目录依次执行：
