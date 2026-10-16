@@ -1,6 +1,6 @@
 import { floatingRootStyle } from "@gpuix/react/floating"
 import { createContext, useCallback, useContext, useRef, useState } from "react"
-import type { PublicInstance } from "@gpuix/react"
+import type { KeyEvent, PublicInstance } from "@gpuix/react"
 import { sx } from "@/shared/theme/style"
 import type { EntryEdge, MenuEntry, MenuProps, MenuState, Point } from "./model"
 
@@ -18,6 +18,7 @@ function MenuRoot({
   onOpenChange,
   children,
   style,
+  onKeyDown,
   contextMenu,
   submenu = false,
   ...props
@@ -28,6 +29,7 @@ function MenuRoot({
   const [internalOpen, setInternalOpen] = useState(defaultOpen)
   const [pointer, setPointer] = useState<Point | null>(null)
   const trigger = useRef<PublicInstance | null>(null)
+  const triggerKeyDown = useRef<((event: KeyEvent) => void) | null>(null)
   const entries = useRef(new Map<number, MenuEntry>()).current
   const ownSurfaces = useRef(new Map<number, PublicInstance>()).current
   const initialEdge = useRef<EntryEdge>("first")
@@ -50,6 +52,7 @@ function MenuRoot({
     setPointer,
     setOpen,
     trigger,
+    triggerKeyDown,
     entries,
     surfaces: parent?.surfaces ?? ownSurfaces,
     initialEdge,
@@ -58,7 +61,14 @@ function MenuRoot({
   }
   return (
     <MenuContext.Provider value={state}>
-      <div {...props} style={sx(floatingRootStyle(), submenu && { width: "100%" }, style)}>
+      <div
+        {...props}
+        style={sx(floatingRootStyle(), submenu && { width: "100%" }, style)}
+        onKeyDown={event => {
+          onKeyDown?.(event)
+          if (!event.defaultPrevented) triggerKeyDown.current?.(event)
+        }}
+      >
         <div style={sx(floatingRootStyle(), submenu && { width: "100%" })}>{children}</div>
       </div>
     </MenuContext.Provider>

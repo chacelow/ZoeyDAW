@@ -37,6 +37,17 @@ const cases = [
     test: "shortcut-menu.test.tsx",
     pattern: "",
   },
+  ...[
+    { name: "popover", file: "ui/controls/Popover/index.tsx" },
+    { name: "menu", file: "ui/controls/Menu/trigger.tsx" },
+  ].map(({ name, file }) => ({
+    name: `${name}-premature-slot-consumption`,
+    file,
+    from: "if (!unavailable) onKeyDown?.(event)",
+    to: 'if (!unavailable) { onKeyDown?.(event); if (event.key === "enter") consumeKey(event, "handled") }',
+    test: "slot-activation-native.test.tsx",
+    pattern: `${name} Enter preserves`,
+  })),
 ]
 const run = mutation =>
   spawnSync(

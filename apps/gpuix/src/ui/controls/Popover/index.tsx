@@ -37,6 +37,7 @@ interface PopoverState {
   disabled: boolean
   setOpen: (open: boolean) => void
   trigger: RefObject<PublicInstance | null>
+  triggerKeyDown: RefObject<((event: KeyEvent) => void) | null>
 }
 
 const PopoverContext = createContext<PopoverState | null>(null)
@@ -54,10 +55,13 @@ export function Popover({
   onOpenChange,
   children,
   style,
+  onKeyDown,
   ...props
 }: PopoverProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen)
   const trigger = useRef<PublicInstance | null>(null)
+  const triggerKeyDown = useRef<((event: KeyEvent) => void) | null>(null)
+  const { renderer } = useGpuix()
   const open = !disabled && (controlledOpen ?? internalOpen)
   const setOpen = useCallback(
     (next: boolean) => {
@@ -68,8 +72,20 @@ export function Popover({
     [controlledOpen, disabled, onOpenChange, open]
   )
   return (
-    <PopoverContext.Provider value={{ open, disabled, setOpen, trigger }}>
-      <div {...props} style={sx(floatingRootStyle(), style)}>
+    <PopoverContext.Provider value={{ open, disabled, setOpen, trigger, triggerKeyDown }}>
+      <div
+        {...props}
+        style={sx(floatingRootStyle(), style)}
+        onKeyDown={event => {
+          onKeyDown?.(event)
+          if (
+            !event.defaultPrevented &&
+            trigger.current &&
+            renderer?.getFocusedElementId?.() === trigger.current.id
+          )
+            triggerKeyDown.current?.(event)
+        }}
+      >
         <div style={floatingRootStyle()}>{children}</div>
       </div>
     </PopoverContext.Provider>
@@ -99,6 +115,26 @@ export function PopoverTrigger({
     },
     [popover.trigger, ref]
   )
+  useLayoutEffect(() => {
+    const handler = (event: KeyEvent) => {
+      if (unavailable) return
+      const key = event.key?.toLowerCase()
+      if (key === "enter") {
+        if (lastActivation.current === event) return
+        lastActivation.current = event
+        popover.setOpen(!popover.open)
+        consumeKey(event, "handled")
+      } else if ((key === "escape" || key === "esc") && popover.open) {
+        popover.setOpen(false)
+        consumeKey(event, "handled")
+      }
+    }
+    const owner = popover.triggerKeyDown
+    owner.current = handler
+    return () => {
+      if (owner.current === handler) owner.current = null
+    }
+  }, [popover, unavailable])
   const slotProps = {
     ...props,
     role: props.role ?? "button",
@@ -128,18 +164,7 @@ export function PopoverTrigger({
       popover.setOpen(!popover.open)
     },
     onKeyDown: (event: KeyEvent) => {
-      if (unavailable) return
-      onKeyDown?.(event)
-      const key = event.key?.toLowerCase()
-      if (key === "enter") {
-        if (lastActivation.current === event) return
-        lastActivation.current = event
-        popover.setOpen(!popover.open)
-        consumeKey(event, "handled")
-      } else if ((key === "escape" || key === "esc") && popover.open) {
-        popover.setOpen(false)
-        consumeKey(event, "handled")
-      }
+      if (!unavailable) onKeyDown?.(event)
     },
   } satisfies Props & {
     disabled: boolean
