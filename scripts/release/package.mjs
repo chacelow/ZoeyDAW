@@ -70,7 +70,7 @@ writeFileSync(
       description: "Native digital audio workstation",
       homepage: "https://github.com/chacelow/ZoeyDAW",
       category: "Music",
-      formats: ["app", "dmg"],
+      formats: ["app"],
       binaries: [{ path: productName, main: true }],
       binariesDir: work,
       outDir: destination,
@@ -94,6 +94,39 @@ writeFileSync(
 )
 run(process.env.CARGO_PACKAGER_BIN ?? "cargo-packager", ["--release", "--config", config])
 const appBundle = path.join(destination, "zoeydaw.app")
+// Bun 1.3.14's --compile writes an invalid ad-hoc signature on darwin-arm64 (wrong last-page hash,
+// stale bytes past the signature; oven-sh/bun#39837), and the bundle itself is left unsealed.
+// Gatekeeper reports a quarantined download with an invalid signature as "damaged". Re-sign the
+// whole bundle ad hoc and verify strictly so a broken signature can never reach a release.
+run("codesign", [
+  "--force",
+  "--deep",
+  "--sign",
+  "-",
+  "--identifier",
+  "com.zoeydaw.desktop",
+  appBundle,
+])
+run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appBundle])
+const diskImage = path.join(destination, `${productName}_${version}_aarch64.dmg`)
+const staging = path.join(work, "dmg")
+rmSync(staging, { recursive: true, force: true })
+rmSync(diskImage, { force: true })
+mkdirSync(staging, { recursive: true })
+run("ditto", [appBundle, path.join(staging, "zoeydaw.app")])
+run("ln", ["-s", "/Applications", path.join(staging, "Applications")])
+run("hdiutil", [
+  "create",
+  "-volname",
+  productName,
+  "-srcfolder",
+  staging,
+  "-fs",
+  "HFS+",
+  "-format",
+  "UDZO",
+  diskImage,
+])
 const archive = path.join(destination, `zoeydaw-${version}-macos-arm64.app.zip`)
 rmSync(archive, { force: true })
 run("ditto", ["-c", "-k", "--sequesterRsrc", "--keepParent", appBundle, archive])

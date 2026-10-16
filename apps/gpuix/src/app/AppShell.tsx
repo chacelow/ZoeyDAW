@@ -106,6 +106,10 @@ function AppFrame({
         backgroundColor: surface,
         color: theme.colors.foreground,
         fontSize: theme.control["--text-control-track"],
+        // Like Live, interface text is not drag-selectable: gpuix makes text selectable by
+        // default, so drags on the minimap, rulers and lanes painted a selection over labels.
+        // Inherited by the whole tree; editable fields own their own selection.
+        userSelect: "none",
       }}
     >
       <TitleBar
