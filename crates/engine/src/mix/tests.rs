@@ -421,3 +421,107 @@ fn signed_source_windows_cover_arbitrary_lengths_and_empty_media() {
         });
     }
 }
+
+fn render_constant(tracks: Vec<BackendTrack>) -> [f32; 2] {
+    let project = project(tracks);
+    let sources = BTreeMap::from([(
+        "source".into(),
+        Arc::new(AudioSource::from_pcm(vec![[1.0; 2]; 16], 1)),
+    )]);
+    let clock = TransportClock::new(1, 1.0).unwrap();
+    let mut transport = Transport::from_control(clock, &project, &control());
+    let mut output = [0.0; 2];
+    Mixer::compile(&project, clock, &sources)
+        .unwrap()
+        .render(&mut transport, 1, |_, sample| output = sample);
+    output
+}
+
+#[test]
+fn mixer_minimum_volume_is_exact_silence_but_clip_gain_is_not() {
+    let mut audio = track("audio", TrackKind::Audio, "main");
+    audio.clips.push(BackendClip::Audio(clip()));
+    let main = track("main", TrackKind::Main, "external");
+    for index in 0..2 {
+        let mut tracks = vec![audio.clone(), main.clone()];
+        tracks[index].volume_db = -60.0;
+        assert_eq!(render_constant(tracks), [0.0; 2]);
+    }
+    let mut quiet_clip = clip();
+    quiet_clip.gain_db = -60.0;
+    audio.clips = vec![BackendClip::Audio(quiet_clip)];
+    let output = render_constant(vec![audio, main]);
+    assert!((output[0] - 0.0005).abs() < 1e-9);
+    assert!((output[1] - 0.0005).abs() < 1e-9);
+}
+
+#[test]
+fn send_minimum_restores_the_silent_missing_send() {
+    for post in [false, true] {
+        let mut audio = track("audio", TrackKind::Audio, "none");
+        audio.clips.push(BackendClip::Audio(clip()));
+        let mut return_track = track("return", TrackKind::Return, "main");
+        return_track.return_post = post;
+        let main = track("main", TrackKind::Main, "external");
+        assert_eq!(
+            render_constant(vec![audio.clone(), return_track.clone(), main.clone()]),
+            [0.0; 2]
+        );
+        audio.sends.insert("return".into(), 0.0);
+        assert!(render_constant(vec![audio.clone(), return_track.clone(), main.clone()])[0] > 0.0);
+        audio.sends.insert("return".into(), -60.0);
+        assert_eq!(render_constant(vec![audio, return_track, main]), [0.0; 2]);
+    }
+}
+
+#[test]
+fn return_solo_keeps_only_selected_wet_route_and_respects_source_solo() {
+    for grouped in [false, true] {
+        for post in [false, true] {
+            let mut first = track(
+                "first",
+                TrackKind::Audio,
+                if grouped { "group" } else { "main" },
+            );
+            first.clips.push(BackendClip::Audio(clip()));
+            first.sends.insert("a".into(), 0.0);
+            first.sends.insert("b".into(), 0.0);
+            let mut second = first.clone();
+            second.id = "second".into();
+            let mut tracks = vec![first, second];
+            if grouped {
+                tracks[0].sends.clear();
+                tracks[1].sends.clear();
+                let mut group = track("group", TrackKind::Group, "main");
+                group.sends.insert("a".into(), 0.0);
+                group.sends.insert("b".into(), 0.0);
+                tracks.push(group);
+            }
+            let a_index = tracks.len();
+            let mut a = track("a", TrackKind::Return, "main");
+            a.pan = -1.0;
+            a.return_post = post;
+            let mut b = track("b", TrackKind::Return, "main");
+            b.pan = 1.0;
+            b.return_post = post;
+            tracks.extend([a, b, track("main", TrackKind::Main, "external")]);
+            let baseline = render_constant(tracks.clone());
+            assert!(baseline[0] > 0.0 && baseline[1] > 0.0);
+            tracks[a_index].solo = true;
+            let wet = render_constant(tracks.clone());
+            let expected = if grouped {
+                std::f32::consts::FRAC_1_SQRT_2
+            } else {
+                1.0
+            } * if post { 1.0 } else { std::f32::consts::SQRT_2 };
+            assert!((wet[0] - expected).abs() < 1e-6, "{wet:?} != {expected}");
+            assert_eq!(wet[1], 0.0);
+            tracks[0].solo = true;
+            let source_solo = render_constant(tracks.clone());
+            assert!((source_solo[0] - expected / 2.0).abs() < 1e-6);
+            assert_eq!(source_solo[1], 0.0);
+            tracks[a_index].mute = true;
+            assert_eq!(render_constant(tracks), [0.0; 2]);
+        }
+    }
+}
