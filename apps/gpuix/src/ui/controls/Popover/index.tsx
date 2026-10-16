@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { useGpuix, useWindowSize } from "@gpuix/react"
 import { FloatingLayer, floatingRootStyle, renderSlot, setRefs } from "@gpuix/react/floating"
 import {
@@ -134,7 +135,11 @@ export function PopoverTrigger({
         if (lastActivation.current === event) return
         lastActivation.current = event
         popover.setOpen(!popover.open)
-      } else if (key === "escape" || key === "esc") popover.setOpen(false)
+        consumeKey(event, "handled")
+      } else if ((key === "escape" || key === "esc") && popover.open) {
+        popover.setOpen(false)
+        consumeKey(event, "handled")
+      }
     },
   } satisfies Props & {
     disabled: boolean
@@ -236,6 +241,7 @@ export function PopoverContent({
         if (event.key?.toLowerCase() === "escape" || event.key?.toLowerCase() === "esc") {
           popover.setOpen(false)
           if (popover.trigger.current) renderer?.focusElement?.(popover.trigger.current.id)
+          consumeKey(event, "handled")
         }
       }}
     >

@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { useRef } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -93,7 +94,10 @@ export function SettingsNavItem({
       }}
       onKeyDown={event => {
         if (!item.disabled) {
-          if (isActivationKey(event)) onSelect(item.id)
+          if (isActivationKey(event)) {
+            onSelect(item.id)
+            consumeKey(event, "handled")
+          }
           onKeyDown?.(event)
         }
       }}
@@ -165,7 +169,10 @@ export function SettingsShell({
         style
       )}
       onKeyDown={event => {
-        if (event.key === "escape") onOpenChange(false)
+        if (event.key === "escape") {
+          onOpenChange(false)
+          consumeKey(event, "handled")
+        }
         onKeyDown?.(event)
       }}
     >
@@ -242,8 +249,10 @@ export function SettingsShell({
                 else entries.delete(item.id)
               }}
               onKeyDown={event => {
-                if (event.key === "escape") onOpenChange(false)
-                else
+                if (event.key === "escape") {
+                  onOpenChange(false)
+                  consumeKey(event, "handled")
+                } else
                   navigateSelection({
                     event,
                     value: item.id,

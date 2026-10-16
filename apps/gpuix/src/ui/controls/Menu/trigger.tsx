@@ -2,6 +2,7 @@ import { useGpuix } from "@gpuix/react"
 import { renderSlot, setRefs } from "@gpuix/react/floating"
 import { isValidElement, useCallback, useRef } from "react"
 import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
+import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { useMenu } from "./context"
@@ -99,8 +100,7 @@ export function MenuTrigger({
         key === "contextmenu"
       ) {
         if (lastActivation.current === event) return
-        event.preventDefault()
-        event.stopPropagation()
+        consumeKey(event, "handled")
         lastActivation.current = event
         menu.initialEdge.current = key === "up" || key === "arrowup" ? "last" : "first"
         menu.setPointer(null)
