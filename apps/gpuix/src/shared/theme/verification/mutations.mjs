@@ -152,6 +152,33 @@ mutations.push(
     failure: "refreshes a cached mounted Clip title",
   }
 )
+for (const [name, file, from] of [
+  ["viewport-control-width", "core/viewport/zoom.ts", "geometry.controlsWidth"],
+  ["rows-control-width", "tracks/TrackRows/index.tsx", "scene.geometry.track.controlsWidth"],
+  [
+    "resize-control-width",
+    "tracks/TrackResizeOverlay/index.tsx",
+    "scene.geometry.track.controlsWidth",
+  ],
+  ["mixer-control-width", "tracks/TrackMixer/index.tsx", "theme.layout.track.controlsWidth"],
+]) {
+  mutations.push({
+    name,
+    file: `src/project/sections/arrangement/${file}`,
+    from,
+    to: "304",
+    test: "src/app/project/composition.test.tsx",
+    failure: "explicit layout control width",
+  })
+}
+mutations.push({
+  name: "home-maximum-width",
+  file: "src/app/home/HomePage.tsx",
+  from: "theme.layout.home.maxWidth",
+  to: "912",
+  test: runtimeTest,
+  failure: "Home uses its layout maximum width",
+})
 try {
   cpSync(path.join(app, "src"), path.join(sandbox, "src"), { recursive: true })
   for (const file of ["tsconfig.json", "bunfig.toml"])

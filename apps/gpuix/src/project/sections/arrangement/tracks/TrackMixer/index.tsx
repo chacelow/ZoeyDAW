@@ -79,7 +79,9 @@ export function TrackMixer({ track }: { readonly track: Track }) {
         padding: inset,
         gap,
         width:
-          theme.project.controlsWidth - theme.project.identityWidth - theme.project.routingWidth,
+          theme.layout.track.controlsWidth -
+          theme.project.identityWidth -
+          theme.project.routingWidth,
         backgroundColor: theme.colors.arrangementSurfaceAlt,
         overflow: "hidden",
       }}

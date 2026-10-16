@@ -20,10 +20,11 @@ app-shell ──▶ ArrangementPanel (composition root, 在 app-shell 或 arrang
 视口（`scrollX`、`scrollY`、`pxPerBar`、可见行范围）只有一个 owner：`timeline`。
 
 - `ArrangementViewport`（`pxPerBar`、`scrollX`、`scrollY`、`width`、`height`、`dpr`）与 `ArrangementScene` 类型**定义在 `core/scene`（B1，已合入）**，三个切片都从那里取，不各自重新定义。
-- `ArrangementViewport.width` 是可编辑时间宽度（`timeViewportWidth`），不含右侧 `controlsWidth`；`tracks` 的整行与外框宽度是二者之和，车道槽宽度直接使用 `viewport.width`。
+- `ArrangementViewport.width` 是可编辑时间宽度（`timeViewportWidth`），不含右侧控制列。总宽只取 `scene.geometry.track.controlsWidth`（来源 `Theme.layout.track.controlsWidth`），`project` 不再保留同义字段；`tracks` 的整行与 resize 外框宽度是 viewport.width 与该总宽之和，车道槽宽度直接使用 viewport.width。identity/routing 子列宽继续取 project，Mixer 以总宽减子列宽派生，原生回归核对三列总和。
 - `timeline` 拥有视口**状态与操作**，经 `TimelineController` 暴露（见第 3 节）；缩放/平移的纯计算调用 `core/viewport`。`setScroll` 必须同步：返回前共享 `SceneStore` 的 viewport 投影已更新，并返回接受后的 `ArrangementViewport`，这样 lane 的边缘自动滚动在同一帧重算 Ghost 时读到的是新值，不读前一帧。
 - `lane` 与 `tracks` 只**读**视口（通过 props 传入同一个对象），不持有第二份。
 - 垂直滚动：`tracks` 的表头列与 `lane` 的车道共用同一个 `scrollY`，作为一个整体滚动；Minimap 固定，不随垂直滚动。
+- `core/scene` 导出 `ArrangementGeometry = Pick<LayoutTokens, "track" | "arrangement">`，`createSceneStore(geometry)` 的输入必填。组合根从 `theme.layout` 注入，运行时调用同一 store 的 `setGeometry(geometry)`；`ArrangementScene.geometry` 保存只读引用，不另建配置 state、不改写持久轨高。纯 tracks/viewport helper 显式接受 `TrackGeometry`，scene-based core 从 scene 读取，禁止静态 JSON 旁路。具体签名见 [core 公共接口](../../apps/gpuix/src/project/sections/arrangement/core/README.md)。
 
 ## 3. 各目录导出的组合接口
 
@@ -120,7 +121,7 @@ export function TrackResizeOverlay(props: {
 
 ## 5. 组合根
 
-`app/project/composition.ts` 创建共享 scene、timeline 和 lane controllers，注入唯一键盘、同步 setScroll 与 markDrawGesture。`app/project/ArrangementPanel.tsx` 读取这些 controller、viewport、scene、telemetry 与峰值，注入 labels，并组合 `TrackRows`、`LaneRow`、`LaneOverlay`、`useLaneSurface` 和 `TrackResizeOverlay`。timeline 不 import lane 或 tracks。Pattern 区域明暗仍只来自 core 的 `patternRegions(scene)`，车道不复制计算。
+`app/project/composition.ts` 创建共享 scene、timeline 和 lane controllers，注入完整 `geometry`、唯一键盘、同步 setScroll 与 markDrawGesture。`useProjectComposition` 读取 theme.layout，首次构造传入，运行时更新同一 SceneStore 的 `setGeometry`；timeline 仍是 viewport 的唯一 owner。`app/project/ArrangementPanel.tsx` 读取这些 controller、viewport、scene、telemetry 与峰值，注入 labels，并组合 `TrackRows`、`LaneRow`、`LaneOverlay`、`useLaneSurface` 和 `TrackResizeOverlay`。timeline 不 import lane 或 tracks。Pattern 区域明暗仍只来自 core 的 `patternRegions(scene)`，车道不复制计算。
 
 ## 6. 变更规则
 

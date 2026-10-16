@@ -81,7 +81,7 @@ function Row({ children }: { readonly children: ReactNode }) {
 }
 
 function Arrangement() {
-  const { colors, project, control } = useTheme()
+  const { colors, project, control, layout } = useTheme()
   const text = { fontSize: control["--text-control-track"], color: colors.foreground }
   const lane = (label: string, selected: boolean) => (
     <div
@@ -97,7 +97,7 @@ function Arrangement() {
     >
       <div
         style={{
-          width: project.controlsWidth,
+          width: layout.track.controlsWidth,
           display: "flex",
           flexDirection: "column",
           padding: control["--spacing-control-track-gap"],
@@ -121,7 +121,7 @@ function Arrangement() {
       >
         <div
           style={{
-            width: project.controlsWidth,
+            width: layout.track.controlsWidth,
             flexGrow: 1,
             backgroundColor: selected
               ? colors.arrangementClipSelected
