@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
+import { flushSync } from "@gpuix/react"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { PanelEnvironmentProvider } from "@/ui/panels"
 import { FooterPanel } from "@/project/sections/footer"
@@ -8,11 +9,14 @@ import { englishFooterLabels } from "@/app/locales/sections/footer"
 import { englishStatusLabels } from "@/app/locales/sections/status"
 import { ProjectLayout } from "./ProjectLayout"
 import { useProjectShell } from "./useProjectShell"
+import type { ProjectShellApi } from "./useProjectShell"
 
 const root = createTestRoot({ width: 1280, height: 800 })
+const observed: { shell: ProjectShellApi | null } = { shell: null }
 afterEach(() => root.unmount())
 function Shell() {
   const shell = useProjectShell()
+  observed.shell = shell
   return (
     <ProjectLayout
       projectId="shell-regression"
@@ -80,5 +84,14 @@ test("real Clip panel collapses without resize feedback reopening its content", 
   expect(root.renderer.findByTestId("footer-content")).toBeUndefined()
   const panel = root.renderer.findByTestId("clip-panel")
   if (!panel) throw new Error("Missing Clip panel")
+  expect(root.renderer.getElementBounds(panel.id)?.height).toBe(0)
+  const shell = observed.shell
+  if (!shell) throw new Error("Missing shell owner")
+  flushSync(() => {
+    shell.toggleFooter()
+    shell.toggleFooter()
+  })
+  settle()
+  expect(root.renderer.findByTestId("footer-content")).toBeUndefined()
   expect(root.renderer.getElementBounds(panel.id)?.height).toBe(0)
 })

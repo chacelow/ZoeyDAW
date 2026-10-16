@@ -36,5 +36,39 @@ verifyConfigurationMutations({
       to: "low > high",
       pattern: "fractional Clip panel allocation",
     },
+    {
+      name: "footer-command-closure-snapshot",
+      file: "app/project/useProjectShell.ts",
+      from: "reduceProjectShell(currentState.current, action)",
+      to: "reduceProjectShell(state, action)",
+      pattern: "real Clip panel collapses",
+    },
+    {
+      name: "footer-dispatch-before-panel-handle",
+      file: "app/project/useProjectShell.ts",
+      from: `(action: ProjectShellAction) => {
+    flushSync(() => {
+      const next = reduceProjectShell(currentState.current, action)
+      const handle = clipHandleRef.current
+      if (next.footerView === "clip" && handle) {
+        if (next.footerCollapsed) handle.collapse()
+        else handle.expand()
+      }
+      dispatch(action)
+    })
+  }`,
+      to: `(action: ProjectShellAction) => {
+    flushSync(() => dispatch(action))
+    const next = currentState.current
+    const handle = clipHandleRef.current
+    if (next.footerView === "clip" && handle) {
+      flushSync(() => {
+        if (next.footerCollapsed) handle.collapse()
+        else handle.expand()
+      })
+    }
+  }`,
+      pattern: "real Clip panel collapses",
+    },
   ],
 })

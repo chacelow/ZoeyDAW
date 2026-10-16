@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useReducer, useRef } from "react"
+import { flushSync } from "@gpuix/react"
 import { useProjectState } from "@/project/adapters"
 import { INITIAL_PROJECT_SHELL, reduceProjectShell } from "./project-shell"
 import type { PanelImperativeHandle } from "@/ui/panels"
@@ -21,20 +22,21 @@ export interface ProjectShellApi extends ProjectShellState {
  */
 export function useProjectShell(): ProjectShellApi {
   const [state, dispatch] = useReducer(reduceProjectShell, INITIAL_PROJECT_SHELL)
+  const currentState = useRef(state)
+  currentState.current = state
   const browserHandleRef = useRef<PanelImperativeHandle | null>(null)
   const clipHandleRef = useRef<PanelImperativeHandle | null>(null)
-  const command = useCallback(
-    (action: ProjectShellAction) => {
-      const next = reduceProjectShell(state, action)
+  const command = useCallback((action: ProjectShellAction) => {
+    flushSync(() => {
+      const next = reduceProjectShell(currentState.current, action)
       const handle = clipHandleRef.current
-      if (state.footerView === "clip" && next.footerView === "clip" && handle) {
+      if (next.footerView === "clip" && handle) {
         if (next.footerCollapsed) handle.collapse()
         else handle.expand()
       }
       dispatch(action)
-    },
-    [state]
-  )
+    })
+  }, [])
   const editorRequest = useProjectState(current => current.session.clipEditorRequest)
   const editingClipId = useProjectState(current => current.session.editingClipId)
 
@@ -49,8 +51,14 @@ export function useProjectShell(): ProjectShellApi {
     if (editorRequest === handledRequest.current) return
     handledRequest.current = editorRequest
     if (editorRequest === 0) return
-    command({ type: "clip-editor-request", editing: editing.current !== null })
-  }, [editorRequest, command])
+    const open = editing.current !== null
+    const handle = clipHandleRef.current
+    if (handle) {
+      if (open) handle.expand()
+      else handle.collapse()
+    }
+    dispatch({ type: "clip-editor-request", editing: open })
+  }, [editorRequest])
 
   return {
     ...state,
