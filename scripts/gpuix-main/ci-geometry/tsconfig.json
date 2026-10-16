@@ -1,0 +1,5 @@
+{
+  "extends": "../../../apps/gpuix/tsconfig.json",
+  "compilerOptions": { "types": ["bun"] },
+  "include": ["*.tsx", "*.ts", "../../../apps/gpuix/src/shared/svg/assets.d.ts"]
+}

@@ -45,7 +45,7 @@ status=0
 (cd apps/gpuix && bun test) >"$tests" 2>&1 || status=$?
 grep -E "^ [0-9]+ (pass|fail|todo)|^Ran |\(fail\)" "$tests" || true
 if [ "$status" -ne 0 ]; then
-  tail -40 "$tests"
+  cat "$tests"
   rm -f "$tests"
   echo "bun test exited $status"
   exit 1

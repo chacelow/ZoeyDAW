@@ -20,11 +20,17 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`）。先对全仓 Git 跟踪源码检查机器绝对路径，再依次执行渲染器身份校验（完整补丁与产物 manifest，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、架构规则回归、工具 CLI 回归、文档路由、`bun test`、review scan、UI 地图校验，最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。review scan 对比 `baseRef...HEAD`，默认 `gpuix-migration`，不扫描未提交的改动。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
 
-工具 CLI 回归覆盖产物身份、link-only 初始化、Git 缓存路径、隔离 mutation 入口、部分提交的 UI 地图、禁用测试扫描与提交标题。独立变异入口为 `node scripts/gpuix-main/mutations-build-contract.mjs`、`node scripts/verification/mutations-ui-map.mjs`、`node scripts/verification/mutations-tooling-gates.mjs`、`node scripts/verification/mutations-absolute-path.mjs`，只修改临时副本。
+工具 CLI 回归覆盖产物身份、link-only 初始化、Git 缓存路径、隔离 mutation 入口、部分提交的 UI 地图、禁用测试扫描与提交标题。独立变异入口为 `node scripts/gpuix-main/mutations-build-contract.mjs`、`node scripts/verification/mutations-ui-map.mjs`、`node scripts/verification/mutations-tooling-gates.mjs`、`node scripts/verification/mutations-absolute-path.mjs`、`node scripts/verification/mutations-mutation-isolation.mjs`，只修改临时副本。
 
 `node scripts/gpuix-review-scan.mjs --absolute-paths` 检查全仓 Git 跟踪的 `.mjs`、`.js`、`.ts`、`.tsx`、`.sh`、`.rs`、`.json` 文件，包括注释和 usage 示例。机器目录根的路径属于 HARD，包括 shell 默认值；相对路径不算。`evidence/` 运行记录、Markdown 和 `file://` URL 测试数据不在此门禁范围内。验证日志和 smoke 证据使用 `mktemp`，退出时清理，不依赖固定临时目录。
 
 预提交的 UI 地图从 Git index 读取源码，不包含完全未暂存或部分暂存文件的未暂存内容。生成器直接更新地图的 index 条目，只有工作树地图未被编辑时才同步刷新文件。日常生成与 `--check` 仍读取工作树；ClipCard 的条件前缀会生成 `clip-source-…`、`clip-ghost-…` 两个稳定 selector。
+
+Header 只测 viewport，左右列由原生 flex 和 intrinsic minima 分配，不缓存子组 L/C/R 后再反馈列宽。首挂载回归覆盖 Helvetica、缺失字体和 1800/1070/900/620 四档宽度，保持原 mount 时序。`node scripts/gpuix-main/ci-geometry/mutations-header.mjs` 在隔离源码副本恢复旧反馈缓存，必须触发首次居中回归失败。
+
+CI 的 Bun 测试失败时输出完整日志，保留早期 Expected/Received；随后失败诊断步骤分别用 `PROBE_PASSES=1` 和 `PROBE_PASSES=4` 运行 `bun scripts/gpuix-main/ci-geometry/probe.tsx`。入口输出启用字体 family 列表、Header/Send 逐次布局 bounds、滚动与 resize 状态。`PROBE_NUMBER`、`PROBE_SANS` 只替换请求的字体 family，不安装或隐藏系统字体。
+
+`bun scripts/gpuix-main/ci-geometry/gallery.tsx <外部证据目录>` 捕获深浅主题与中英文的完整 Gallery；业务组合沿用 `app/verification/r1c-surfaces.tsx`，配合 `native-fixture.ts` 接真实后端。生成 PNG 留在外部证据目录，不提交图片。
 
 ## 根工具与度量
 
