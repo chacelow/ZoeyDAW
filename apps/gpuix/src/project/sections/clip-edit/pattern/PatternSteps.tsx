@@ -122,7 +122,7 @@ export function PatternSteps({
           focusVisible: {
             outlineWidth: theme.design.shape.focusRingWidth,
             outlineColor: theme.colors.ring,
-            outlineOffset: -1,
+            outlineOffset: -theme.design.shape.focusRingWidth,
           },
         })}
         onLayout={event => {

@@ -44,7 +44,7 @@
 
 ### `app/router`
 
-`not-found-page`、`route-error`
+`not-found-page`、`route-error`、`route-error-details`
 
 ### `app/settings`
 
@@ -56,7 +56,7 @@
 
 ### `app/window`
 
-`unsaved-cancel`、`unsaved-close`、`unsaved-discard`、`unsaved-save`
+`unsaved-cancel`、`unsaved-close`、`unsaved-close-content`、`unsaved-discard`、`unsaved-save`
 
 ### `gallery/GalleryDemo.tsx`
 
@@ -64,7 +64,7 @@
 
 ### `gallery/GalleryExamples.tsx`
 
-`gallery-…`、`gallery-drag-preview`、`gallery-list-row-…`、`gallery-project-card`、`gallery-project-section`、`gallery-scroll`
+`gallery-…`、`gallery-drag-preview`、`gallery-list-row-…`、`gallery-open-settings`、`gallery-project-card`、`gallery-project-section`、`gallery-scroll`
 
 ### `gallery/GalleryMenus.tsx`
 
@@ -72,7 +72,7 @@
 
 ### `gallery/states.tsx`
 
-`gallery-bar`、`gallery-bipolar`、`gallery-body-scroll`、`gallery-button`、`gallery-default-toolbar`、`gallery-feedback-card`、`gallery-forms-card`、`gallery-icon`、`gallery-icon-free`、`gallery-input`、`gallery-input-shell`、`gallery-list-card`、`gallery-menu-card`、`gallery-number`、`gallery-numeric-card`、`gallery-pan`、`gallery-panel-card`、`gallery-root`、`gallery-transport-icon`、`gallery-transport-number`、`gallery-transport-toolbar`
+`gallery-bar`、`gallery-bipolar`、`gallery-body-scroll`、`gallery-button`、`gallery-default-toolbar`、`gallery-feedback-card`、`gallery-forms-card`、`gallery-icon`、`gallery-icon-free`、`gallery-input`、`gallery-input-shell`、`gallery-list-card`、`gallery-menu-card`、`gallery-number`、`gallery-numeric-card`、`gallery-pan`、`gallery-panel-card`、`gallery-root`、`gallery-settings-preview`、`gallery-transport-icon`、`gallery-transport-number`、`gallery-transport-toolbar`
 
 ### `project/sections/arrangement/lane`
 

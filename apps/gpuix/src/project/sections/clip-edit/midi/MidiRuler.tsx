@@ -54,7 +54,7 @@ export function MidiRuler({
         flexGrow: 1,
         minWidth: 0,
         overflow: "hidden",
-        borderBottomWidth: 1,
+        borderBottomWidth: theme.design.editor.dividerStrokeWidth,
         borderColor: theme.colors.arrangementLine,
         backgroundColor: theme.colors.arrangementSurfaceAlt,
       })}
@@ -67,7 +67,7 @@ export function MidiRuler({
           width: roll.width,
           height: strip,
           backgroundColor: theme.colors.primary,
-          opacity: 0.35,
+          opacity: theme.design.editor.midiLoopOpacity,
         })}
       />
       {loops.map(x => (
@@ -79,7 +79,7 @@ export function MidiRuler({
             position: "absolute",
             left: x,
             top: 0,
-            width: 1,
+            width: theme.design.editor.loopLineWidth,
             height: strip,
             backgroundColor: theme.colors.primary,
           })}
@@ -98,7 +98,7 @@ export function MidiRuler({
               top: strip,
               bottom: 0,
               paddingLeft: labelGap,
-              borderLeftWidth: 1,
+              borderLeftWidth: theme.design.editor.dividerStrokeWidth,
               borderColor: theme.colors.arrangementLine,
               color: theme.colors.mutedForeground,
               fontSize,

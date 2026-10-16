@@ -14,6 +14,7 @@ import { PanelDivider } from "./PanelDivider"
 import { PanelShell } from "./PanelShell"
 import { PanelGallery, GALLERY_DEVICE_HEIGHT } from "./PanelGallery"
 import { PanelEnvironmentProvider } from "./PanelEnvironment"
+import { CollapseDivider } from "./CollapseDivider"
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -216,6 +217,8 @@ describe("native resizable panel interactions", () => {
         <div style={{ width: 300, height: 200 }}>
           <PanelShell
             id="browser"
+            aria-label="资源浏览器"
+            activeDescription="当前活动面板"
             active={section}
             onActivate={id => {
               active = id
@@ -240,11 +243,54 @@ describe("native resizable panel interactions", () => {
     }
     const root = await mount(<Harness />)
     const before = bounds(root, "shell")
+    const inactiveShell = Object.values(root.renderer.getA11yTree().nodes ?? {}).find(
+      node => node.aria?.label === "资源浏览器"
+    )
+    expect(inactiveShell).toBeDefined()
+    expect(inactiveShell?.aria?.description).toBeUndefined()
+    expect(
+      Object.values(root.renderer.getA11yTree().nodes ?? {}).some(
+        node => node.aria?.label === "browser"
+      )
+    ).toBe(false)
     const child = divider(root, "child")
     root.renderer.nativeSimulateClick(child.x, child.y)
     expect(active).toBe("browser")
     expect(childPresses).toBe(1)
     expect(bounds(root, "shell")).toEqual(before)
+    expect(
+      Object.values(root.renderer.getA11yTree().nodes ?? {}).find(
+        node => node.aria?.label === "资源浏览器"
+      )?.aria?.description
+    ).toBe("当前活动面板")
+  })
+
+  test("fixed divider formats collapsed zero and expanded fractional pixels after keyboard changes", async () => {
+    function Harness() {
+      const [expanded, setExpanded] = useState(false)
+      return (
+        <CollapseDivider
+          testId="fixed-divider"
+          expanded={expanded}
+          expandedSize={160.5}
+          onExpandedChange={setExpanded}
+          aria-label="Ajuster le panneau"
+          formatAccessiblePixels={pixels => `${pixels.toFixed(1).replace(".", ",")} points`}
+        />
+      )
+    }
+    const root = await mount(<Harness />)
+    const handle = root.renderer.findByTestId("fixed-divider")
+    if (!handle) throw new Error("Missing fixed divider")
+    const valueText = () =>
+      Object.values(root.renderer.getA11yTree().nodes ?? {}).find(
+        node => node.aria?.label === "Ajuster le panneau"
+      )?.aria?.value
+    expect(valueText()).toBe("0,0 points")
+    root.renderer.nativeSimulateKeystrokes(handle.id, "up")
+    expect(valueText()).toBe("160,5 points")
+    root.renderer.nativeSimulateKeystrokes(handle.id, "down")
+    expect(valueText()).toBe("0,0 points")
   })
 
   test("gallery Clip expansion leaves Device fixed and Device threshold reverses before release", async () => {

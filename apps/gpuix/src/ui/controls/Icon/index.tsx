@@ -31,7 +31,7 @@ const markupCache = new Map<string, string>()
  * `filled` paints the glyph's interior with the current colour (transport play/stop/record, a
  * lit beat): lucide outlines get `fill="currentColor"`, Phosphor glyphs switch to their fill asset.
  */
-export function iconMarkup(name: IconName, strokeWidth = 2, filled = false): string {
+export function iconMarkup(name: IconName, strokeWidth: number, filled = false): string {
   const key = `${name}:${strokeWidth}:${filled ? "fill" : "line"}`
   const cached = markupCache.get(key)
   if (cached) {
@@ -48,6 +48,7 @@ export function iconMarkup(name: IconName, strokeWidth = 2, filled = false): str
     throw new RangeError(`Unknown icon: ${String(name)}`)
   }
   const markup = serialiseSvg(node, {
+    // Lucide assets use this fixed coordinate system; screen size comes from icon metrics.
     viewBox: "0 0 24 24",
     attributes: {
       fill: filled ? "currentColor" : "none",
@@ -77,7 +78,7 @@ export function Icon({ name, size, color, strokeWidth, filled }: IconProps) {
   const dimension = size ?? theme.control["--spacing-control-icon"]
   return (
     <svg
-      source={iconMarkup(name, strokeWidth, filled)}
+      source={iconMarkup(name, strokeWidth ?? theme.design.icon.strokeWidth, filled)}
       aria-hidden="true"
       style={{
         width: dimension,

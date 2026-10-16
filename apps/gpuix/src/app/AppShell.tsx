@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react"
+import { useCallback, useLayoutEffect, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { Toaster } from "@/ui/controls"
+import { configureToastPolicy, dismissToast, Toaster } from "@/ui/controls"
+import { DEFAULT_TOAST_POLICY } from "@/ui/controls/Toaster"
 import { useProjectState } from "@/project/adapters"
 import { HomePage } from "./home/HomePage"
 import { useAppTranslation } from "./i18n"
@@ -81,6 +82,10 @@ function AppFrame({
   readonly children: ReactNode
 }) {
   const theme = useTheme()
+  useLayoutEffect(() => {
+    configureToastPolicy(DEFAULT_TOAST_POLICY)
+    return () => dismissToast()
+  }, [])
   const route = useRoute()
   const router = useRouter()
   const { t } = useAppTranslation()
@@ -92,6 +97,7 @@ function AppFrame({
     <div
       testId="app-frame"
       style={{
+        // Full extents and flex shrink minima are structural containment, not layout defaults.
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -129,6 +135,7 @@ function AppFrame({
       </div>
       <UnsavedCloseDialog open={close.asking} onChoose={choice => void close.choose(choice)} />
       <Toaster
+        policy={DEFAULT_TOAST_POLICY}
         position="bottom-left"
         aria-label={t("notifications.title")}
         dismissLabel={t("notifications.dismiss")}

@@ -81,7 +81,7 @@ export function BrowserSplitBody({
         testId="browser-navigation-divider"
         style={{
           backgroundColor: theme.colors.muted,
-          borderLeftWidth: 1,
+          borderLeftWidth: theme.design.editor.dividerStrokeWidth,
           borderColor: theme.colors.border,
         }}
       />

@@ -37,7 +37,7 @@ export function PopupButton({
   onOpenChange,
   side = "bottom",
   align = "start",
-  sideOffset = 4,
+  sideOffset,
   style,
   contentStyle,
   testId,
@@ -75,7 +75,7 @@ export function PopupButton({
         aria-label={label}
         side={side}
         align={align}
-        sideOffset={sideOffset}
+        sideOffset={sideOffset ?? theme.design.overlay.sideOffset}
         style={contentStyle}
       >
         {children}

@@ -74,7 +74,11 @@ export function Separator({
       onBlur={drag.onBlur}
       onKeyDown={onKeyDown}
       style={sx(dividerChrome(theme, disabled), style, {
-        cursor: disabled ? "default" : vertical ? "col-resize" : "row-resize",
+        cursor: disabled
+          ? theme.design.cursors.default
+          : vertical
+            ? theme.design.cursors.columnResize
+            : theme.design.cursors.rowResize,
         ...(vertical
           ? { width: theme.project.panelGap, height: "100%" }
           : { height: theme.project.panelGap, width: "100%" }),

@@ -125,6 +125,7 @@ export function Group({ orientation, children, style, id, testId }: GroupProps) 
         role="group"
         testId={testId ?? id}
         style={sx({ width: "100%", height: "100%" }, style, {
+          // Full extents and zero minima are flex containment rules, not density preferences.
           display: "flex",
           flexDirection: orientation === "horizontal" ? "row" : "column",
           minWidth: 0,

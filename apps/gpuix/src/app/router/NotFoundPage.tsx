@@ -24,7 +24,10 @@ export function NotFoundPage() {
       <div
         role="heading"
         aria-level={1}
-        style={{ fontSize: theme.transportControl["--text-control-track"], fontWeight: 600 }}
+        style={{
+          fontSize: theme.transportControl["--text-control-track"],
+          fontWeight: theme.design.typography.weights.semibold,
+        }}
       >
         {t("notFound.title")}
       </div>

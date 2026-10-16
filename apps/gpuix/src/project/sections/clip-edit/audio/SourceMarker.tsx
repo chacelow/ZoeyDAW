@@ -4,7 +4,6 @@ import type { EventPayload } from "@gpuix/react"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { colorMix } from "@/shared/theme/color-mix"
 import { Shape } from "@/shared/svg/Shape"
 import { polygonPath } from "@/shared/svg/paths"
 import { useClipEditorEnvironment } from "../environment"
@@ -14,7 +13,7 @@ import type { MarkerKind } from "./markers"
 import type { SourceView } from "./source-view"
 
 /**
-A draggable source marker: a 1px line with a flag at the top (Start/End, loop) or a small square
+A draggable source marker: a line with a flag at the top (Start/End, loop) or a small square
 (fade edges, `lower`). Dragging is relative to the press and edits through one project transaction;
 Escape or window deactivation cancels it. Arrow keys nudge one musical sixteenth.
 */
@@ -89,10 +88,14 @@ export function SourceMarker({
         top: 0,
         width: hit,
         height: lower ? hit : height,
-        cursor: "ew-resize",
-        hover: { backgroundColor: colorMix(theme.colors.primary, 30, "transparent") },
+        cursor: theme.design.cursors.horizontalResize,
+        hover: { backgroundColor: theme.colors.editorMarkerHover },
         keyboardFocusDim: false,
-        focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+        focusVisible: {
+          outlineWidth: theme.design.shape.focusRingWidth,
+          outlineColor: theme.colors.ring,
+          outlineOffset: -theme.design.shape.focusRingWidth,
+        },
       })}
       onMouseDown={event => {
         if ((event.button ?? 0) !== 0 || width <= 0) return
@@ -153,7 +156,7 @@ export function SourceMarker({
             top: 0,
             width: flag,
             height: flag,
-            borderWidth: 1,
+            borderWidth: theme.design.shape.controlBorderWidth,
             borderColor: theme.colors.primary,
             backgroundColor: theme.colors.background,
             pointerEvents: "none",
@@ -164,10 +167,10 @@ export function SourceMarker({
           <div
             style={sx({
               position: "absolute",
-              left: right ? hit - 1 : 0,
+              left: right ? hit - theme.design.editor.markerLineWidth : 0,
               top: 0,
               bottom: 0,
-              width: 1,
+              width: theme.design.editor.markerLineWidth,
               backgroundColor: theme.colors.primary,
               pointerEvents: "none",
             })}

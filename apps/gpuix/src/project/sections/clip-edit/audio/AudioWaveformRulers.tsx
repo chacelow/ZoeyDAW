@@ -1,4 +1,3 @@
-import { colorMix } from "@/shared/theme/color-mix"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { SourceMarker } from "./SourceMarker"
@@ -50,7 +49,7 @@ export function AudioWaveformRulers({
         top: 0,
         height: strip,
         paddingLeft: gap,
-        borderLeftWidth: 1,
+        borderLeftWidth: theme.design.editor.gridMinorStrokeWidth,
         borderColor: line,
         color: theme.colors.mutedForeground,
         fontSize,
@@ -72,7 +71,7 @@ export function AudioWaveformRulers({
           right: 0,
           top: 0,
           height: strip,
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.design.editor.dividerStrokeWidth,
           borderColor: line,
           pointerEvents: "none",
         })}
@@ -91,7 +90,7 @@ export function AudioWaveformRulers({
           right: 0,
           top: strip,
           height: rulerHeight - strip,
-          borderBottomWidth: 1,
+          borderBottomWidth: theme.design.editor.dividerStrokeWidth,
           borderColor: line,
           pointerEvents: "none",
         })}
@@ -106,10 +105,8 @@ export function AudioWaveformRulers({
             width: (settings.loopLengthBars / view.span) * width,
             top: gap,
             bottom: gap,
-            backgroundColor: settings.loop
-              ? colorMix(theme.colors.primary, 45, "transparent")
-              : theme.colors.muted,
-            borderWidth: 1,
+            backgroundColor: settings.loop ? theme.colors.editorAudioLoop : theme.colors.muted,
+            borderWidth: theme.design.editor.loopStrokeWidth,
             borderColor: settings.loop ? theme.colors.primary : theme.colors.mutedForeground,
             pointerEvents: "none",
           })}
@@ -139,7 +136,7 @@ export function AudioWaveformRulers({
           right: 0,
           bottom: 0,
           height: strip,
-          borderTopWidth: 1,
+          borderTopWidth: theme.design.editor.dividerStrokeWidth,
           borderColor: line,
           pointerEvents: "none",
         })}

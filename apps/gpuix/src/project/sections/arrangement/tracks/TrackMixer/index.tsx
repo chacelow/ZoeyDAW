@@ -8,6 +8,19 @@ import { Icon } from "@/ui/controls/Icon"
 import type { ReactNode } from "react"
 import type { Track } from "@/project/model/types"
 
+function formatPan(value: number): string {
+  return value === 0 ? "C" : `${value < 0 ? "L" : "R"}${Math.round(Math.abs(value) * 100)}`
+}
+
+function parsePan(raw: string): number {
+  const text = raw.trim().toUpperCase()
+  if (text === "C") return 0
+  if (text.startsWith("L")) return -Number(text.slice(1)) / 100
+  return text.startsWith("R") ? Number(text.slice(1)) / 100 : Number(text)
+}
+
+const PAN_WIDTH_SAMPLES = ["L100", "R100"]
+
 function MixerLevel({
   label,
   value,
@@ -191,6 +204,9 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 label={`${t("pan")} ${track.name}`}
                 testId={`track-pan-${track.id}`}
                 value={track.pan}
+                format={formatPan}
+                parse={parsePan}
+                widthSamples={PAN_WIDTH_SAMPLES}
                 color={theme.colors.arrangementVolume}
                 style={{ ...column, width: isMain ? "100%" : "auto" }}
                 {...panGesture}

@@ -2,6 +2,10 @@ import { cubicPath, polylinePath, segmentsPath } from "@/shared/svg/paths"
 import type { CubicSegment, Point } from "@/shared/svg/paths"
 import type { Device } from "@/project/model/devices"
 
+// Stable SVG coordinates, stretched to the host bounds; these are not screen-size preferences.
+export const DEVICE_DISPLAY_VIEWBOX = { width: 200, height: 60 }
+
+// Two thirds is the exact quadratic-to-cubic Bézier conversion factor, not a visual preference.
 export function quadraticAsCubic(start: Point, control: Point, end: Point): CubicSegment {
   return {
     control1: {
@@ -19,19 +23,19 @@ export function quadraticAsCubic(start: Point, control: Point, end: Point): Cubi
 export const DEVICE_GRID_PATH = segmentsPath([
   [
     { x: 0, y: 54 },
-    { x: 200, y: 54 },
+    { x: DEVICE_DISPLAY_VIEWBOX.width, y: 54 },
   ],
   [
     { x: 50, y: 0 },
-    { x: 50, y: 60 },
+    { x: 50, y: DEVICE_DISPLAY_VIEWBOX.height },
   ],
   [
     { x: 100, y: 0 },
-    { x: 100, y: 60 },
+    { x: 100, y: DEVICE_DISPLAY_VIEWBOX.height },
   ],
   [
     { x: 150, y: 0 },
-    { x: 150, y: 60 },
+    { x: 150, y: DEVICE_DISPLAY_VIEWBOX.height },
   ],
 ])
 
@@ -56,7 +60,11 @@ export function deviceResponsePath(device: Device): string {
       return cubicPath(start, [
         { control1: start, control2: shoulder, end: shoulder },
         quadraticAsCubic(shoulder, { x: cutoff, y: 24 - device.resonance * 35 }, bend),
-        quadraticAsCubic(bend, { x: cutoff + 24, y: 52 }, { x: 200, y: 55 }),
+        quadraticAsCubic(
+          bend,
+          { x: cutoff + 24, y: 52 },
+          { x: DEVICE_DISPLAY_VIEWBOX.width, y: 55 }
+        ),
       ])
     }
     case "delay": {

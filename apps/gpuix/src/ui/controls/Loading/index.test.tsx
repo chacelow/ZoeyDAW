@@ -7,14 +7,14 @@ test("loading visibility, accessible status, and optional progress transition to
   const root = createTestRoot({ width: 400, height: 300 })
   root.render(
     <ThemeProvider>
-      <Loading show={false} tip="Loading project" />
+      <Loading show={false} label="Loading project" />
     </ThemeProvider>
   )
   root.renderer.flush()
   expect(root.renderer.findByText("Loading project")).toBeUndefined()
   root.render(
     <ThemeProvider>
-      <Loading show tip="Loading project" progress={50} />
+      <Loading show label="Loading project" progress={50} progressValueText="一半已完成" />
     </ThemeProvider>
   )
   root.renderer.flush()
@@ -24,11 +24,11 @@ test("loading visibility, accessible status, and optional progress transition to
     nodes.some(node => node.aria?.role === "Status" && node.aria.label === "Loading project")
   ).toBe(true)
   expect(
-    nodes.some(node => node.aria?.role === "ProgressIndicator" && node.aria.value === "50%")
+    nodes.some(node => node.aria?.role === "ProgressIndicator" && node.aria.value === "一半已完成")
   ).toBe(true)
   root.render(
     <ThemeProvider>
-      <Loading message="Preparing audio" />
+      <Loading label="Preparing audio" />
     </ThemeProvider>
   )
   root.renderer.flush()

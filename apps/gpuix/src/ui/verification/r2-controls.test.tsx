@@ -134,6 +134,8 @@ for (const key of ["home", "end", "up", "down"]) {
       return (
         <CollapseDivider
           testId="divider"
+          aria-label="Toggle fixed panel"
+          formatAccessiblePixels={pixels => `${pixels} pixels`}
           expanded={value}
           expandedSize={160}
           onExpandedChange={next => {
@@ -163,6 +165,8 @@ test("UPA-06 idle divider Escape reaches the window but an active drag Escape on
     return (
       <CollapseDivider
         testId="divider"
+        aria-label="Toggle fixed panel"
+        formatAccessiblePixels={pixels => `${pixels} pixels`}
         expanded={value}
         expandedSize={160}
         onExpandedChange={next => {
