@@ -12,23 +12,26 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
   const theme = useTheme()
   const phase = useProjectState(state => state.session.backend.phase)
   const playing = useProjectState(state => state.session.playing)
-  const hasTelemetry = useProjectState(state => state.session.levels.main !== undefined)
+  // A null read only means the engine has not yet published a frame for the latest control
+  // sequence; keep the last known clock instead of showing "Unavailable". Every telemetry frame
+  // replaces `levels`, so re-read on each one until a sample clock appears: previously the only read
+  // happened when `levels.main` first appeared, and a null there stuck until the popup was opened.
+  const levels = useProjectState(state => state.session.levels)
+  const hasTelemetry = levels.main !== undefined
   const [telemetry, setTelemetry] = useState<BackendTelemetry | null>(readProjectTelemetry)
   const [popupOpen, setPopupOpen] = useState(false)
-  useEffect(() => {
-    setTelemetry(readProjectTelemetry())
-  }, [hasTelemetry, playing])
-  const needsFrames = playing || (popupOpen && hasTelemetry)
   const refreshTelemetry = () => {
     const next = readProjectTelemetry()
+    if (!next) return
     setTelemetry(previous => {
-      if (previous === next) return previous
-      if (popupOpen) return next
-      const previousRate = previous?.clock.kind === "sample" ? previous.clock.sampleRate : null
-      const nextRate = next?.clock.kind === "sample" ? next.clock.sampleRate : null
+      if (popupOpen || previous === null) return next
+      const previousRate = previous.clock.kind === "sample" ? previous.clock.sampleRate : null
+      const nextRate = next.clock.kind === "sample" ? next.clock.sampleRate : null
       return previousRate === nextRate ? previous : next
     })
   }
+  useEffect(refreshTelemetry, [levels, phase, playing, popupOpen])
+  const needsFrames = playing || (popupOpen && hasTelemetry)
   useAnimationFrame(refreshTelemetry, needsFrames)
   useResumeFrame(() => flushSync(refreshTelemetry), needsFrames)
   const clock = telemetry?.clock
