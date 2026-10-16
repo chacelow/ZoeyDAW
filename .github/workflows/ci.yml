@@ -18,8 +18,6 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     env:
-      GPUIX_VENDOR_ROOT: ${{ github.workspace }}/../gpuix-vendor
-      CARGO_TARGET_DIR: ${{ github.workspace }}/../gpuix-target
       CARGO_BUILD_JOBS: 3
     steps:
       - name: Checkout
@@ -44,15 +42,34 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@1.97.1
 
-      - name: Cache gpuix vendor and Cargo target
+      # actions/cache rejects paths containing "..", so the vendor and target live under
+      # RUNNER_WORKSPACE (the checkout's parent) as plain absolute paths. A "../" path silently
+      # disabled the cache before, and every run rebuilt the renderer from scratch. Job-level env
+      # cannot read the runner context, hence this step.
+      - name: Set build cache paths
+        run: |
+          echo "GPUIX_VENDOR_ROOT=$RUNNER_WORKSPACE/gpuix-vendor" >> "$GITHUB_ENV"
+          echo "CARGO_TARGET_DIR=$RUNNER_WORKSPACE/gpuix-target" >> "$GITHUB_ENV"
+
+      # The patched renderer is a pure function of the pinned config and patch series: on a hit,
+      # build.sh verifies the manifest and only links it (seconds instead of ~4 minutes).
+      - name: Cache patched gpuix renderer
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.workspace }}/gpuix-vendor
+          key: gpuix-vendor-${{ runner.os }}-${{ hashFiles('scripts/gpuix-main/config.json', 'scripts/gpuix-main/patches/**', 'scripts/gpuix-main/build.sh') }}
+
+      # Cargo target and registry roll forward: an exact miss restores the newest previous target so
+      # only changed crates recompile (@zoeydaw/native, and the renderer when patches change).
+      - name: Cache Cargo target
         uses: actions/cache@v4
         with:
           path: |
-            ${{ github.workspace }}/../gpuix-vendor
-            ${{ github.workspace }}/../gpuix-target
+            ${{ runner.workspace }}/gpuix-target
             ~/.cargo/registry
             ~/.cargo/git
-          key: gpuix-${{ runner.os }}-${{ hashFiles('scripts/gpuix-main/config.json', 'scripts/gpuix-main/patches/**', 'Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/**/*.rs', 'crates/**/Cargo.toml', 'scripts/gpuix-main/patches/**') }}
+          restore-keys: cargo-${{ runner.os }}-
 
       - name: Build patched gpuix renderer
         run: bash scripts/gpuix-main/build.sh

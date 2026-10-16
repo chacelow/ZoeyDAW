@@ -33,7 +33,7 @@ DAW，使用 gpuix 原生应用：`apps/gpuix`（React 逻辑 + gpuix 原生元�
 - 拿不准时按三问自己判：能不能撤回？会不会动到用户的数据或外部？是不是改方向？三个都是否就直接做。规则之间冲突或没覆盖到，选更保守、可撤回的做法，事后把判断补进规则，不停下来等用户。worker 卡在工具或权限上，先查以前切片的做法给出路线。细则见 [协调方式](docs/agents/coordination.md)。
 - gpuix 的验证窗口由 Agent 自己用 `bun --hot` 启动，验证完立即关闭；Rust 改动重跑 `pnpm native:build` 后重启自己的窗口，不要求用户重启其服务。
 - 提交授权：`gpuix-migration` 及其切片分支的本地提交已由用户授权（2026-10-14 12:40 UTC，撤销逐次“我确认”）；`main` 与其它分支仍须用户在本次提交上下文说 **“我确认”**。细节见 setup。
-- 推送授权（用户 2026-10-16）：把 `gpuix-migration` 推到 GitHub `chacelow/ZoeyDAW` 的 `main`，满足“快进、本地 `pnpm verify:gpuix` 全过、密钥与 >2MB 文件扫描通过”时可直接推，不逐次询问；每次推完在汇报里写明推送范围与 CI 结果。强推、改写历史、推其它分支或发布仍须先问。
+- 推送与验证（用户 2026-10-16）：本机性能不足，完整门禁 `pnpm verify:gpuix`、打包与 Windows 构建都放在 GitHub Actions 上跑，只在 `main` 上跑，不推其它分支。worker 与协调者本地只跑轻量检查：`tsc --noEmit`、改动范围内的 `bun test`/eslint、变异入口与必要的单窗口 smoke。把 `gpuix-migration` 推到 `chacelow/ZoeyDAW` 的 `main` 满足“快进、轻量检查全过、密钥与 >2MB 文件扫描通过”即可直接推，不逐次询问；推后看 Actions，红了在 `main` 上向前修，不回滚改写历史。每次推完在汇报里写明推送范围与 CI 结果。强推、改写历史、推其它分支或发布正式版仍须先问。
 
 ## 设计与完成门槛
 
