@@ -58,14 +58,14 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **桌面时段**:真实窗口输入一次只给一个 worker,用 reply 给出 UTC 起止时间,同时通知其余 worker 暂停输入;到点就停,发「桌面释放」。worker 只操作自己启动的窗口,用 `computer.window(...)` 加 AX `el.press()`、`win.observe()`/`screenshot()` 与窗口级输入,**不调用 `computer.control.acquire`**(它要人类实时批准,本项目不用;app-shell 阶段 1、clip-lane、a3b 都是这样完成的)。worker 被工具或权限卡住时,协调者先查以前切片的做法给出可行路线,不转问用户。
 
-**巡检（2026-10-17 PC 接管）**：PC 用 Windows 计划任务每五分钟执行 `node scripts/orchestration/runtime.mjs tick <binding.json>`；macOS 旧 `coordinator-tick.sh` 不在 PC 运行。巡检读取新 Run 的全部 worker projection，并唤醒主编排处理 attention 和消息，不擅自重启或唤醒 worker。`unverifiable` 不是死亡。主编排先处理待回复 question，再判断以下状态；同一 worker 的提醒需节流：
+**巡检（2026-10-17 用户要求）**：主编排用 OMP 内置 `/loop` 驱动，不用计划任务、launchd 或脚本定时向终端发提示。每轮先处理 listener 交付的消息，再用 `worker-list` 判断以下状态。`unverifiable` 不是死亡，不重启、不重复派发；同一 worker 的提醒需节流：
 
 - ASKING:该 worker 发出的 `question` 还没有回复。不唤醒 worker,把消息 id 交给协调者,协调者用 `reply --id` 回答。worker 停下时,先查这一项。
 - IDLE:回合已结束(TUI 空闲)超过 3 分钟,但派发没关,也没有待回复的 question。唤醒提示要求它继续做,或者用 `ask` 发出等待原因。
 - STALE:会话 10 分钟没有新消息。
 - ERROR:最后一条消息是模型报错,比如流超时。
 
-协调者空闲时也会收到一次巡检提示。worker 端的规则是不允许静默停下,写在 `specs/common.md`。
+worker 端的规则是不允许静默停下，写在 `specs/common.md`。
 
 **协调者的 loop(2026-10-15 02:58 UTC 用户要求)**:`/loop` 只发一句短提示,规则全在文件里,不每轮重读:
 
@@ -79,15 +79,13 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 - `node scripts/orchestration/runtime.mjs listen <binding.json> [processed-delivery-id]` 调用新 Run 的 `check --wait`，等待一次 Delivery 或五分钟超时。只把已处理完成的 Delivery ID 作为可选参数；没有参数时不 ack。
 - 一个 Run 只启动一个 listener。Delivery 到达后先逐条处理，question 用 `reply --id`，然后用上述可选参数 ack 并继续等待。超时后重新 listen；监听错误不得自行清除其它会话的进程。
-- `node scripts/orchestration/runtime.mjs tick <binding.json>` 读取 worker-list 分页并向 binding 指定的主编排终端发一次巡检提示。它不消费 inbox，也不 ack，不停止进程或释放派发。
-- Windows 计划任务使用当前用户、五分钟间隔、交互登录会话与显式 Node/脚本/binding 绝对路径，不依赖 Orca 启动时继承的 PATH。任务名包含 Run ID；接管新 Run 前检查旧任务，不留两个主编排巡检者。
 - PC Orca 不持有 Mac Run 的生命周期。跨机器接管创建一个新 Run，四个原会话用 `worker-start --terminal` 接入，只接受新派发的生命周期 ID；分支内容以 PC 为准。
 
 
 **交接协调者(2026-10-15 07:12 UTC 用户要求)**:
 
 1. 旧协调者停止派发和收消息,写交接目录:HANDOFF.md(用户当前要求、Run、活跃 Dispatch、未处理消息、未提交现场、保留的 worktree 及原因)、完整 TODO(completed/abandoned/open 分开,不把未完成标完成)。
-2. 在 `gpuix-migration` worktree 显式固定模型并 resume 原会话。同一 Orca runtime 用 `run-use --id <run>` 绑定；跨机器 runtime 创建新 Run，再用 `worker-start --terminal` 接回原 lane。保留完整 TODO，更新当前平台的巡检 binding，写回执 `ACCEPTED.json`，记录实际终端、Run、TODO 计数与主干 HEAD。规则更新后需要重新注入时使用 `/restart`，它沿用启动时的显式模型；不通过历史终端 handle 切换模型。
+2. 在 `gpuix-migration` worktree 显式固定模型并 resume 原会话。同一 Orca runtime 用 `run-use --id <run>` 绑定；跨机器 runtime 创建新 Run，再用 `worker-start --terminal` 接回原 lane。保留完整 TODO，更新 listener binding 的 `coordinator`，写回执 `ACCEPTED.json`，记录实际终端、Run、TODO 计数与主干 HEAD。规则更新后需要重新注入时使用 `/restart`，它沿用启动时的显式模型；不通过历史终端 handle 切换模型。
 3. 旧协调者核对 `run-show` 与回执,把自己的 TODO 标为已移交(不是完成),告诉用户可以关闭。
 4. HANDOFF 只写现场和指针,不复述或改写本文规则;规则有冲突就先改本文,再交接。
 
@@ -98,4 +96,4 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 | 本文 | 决策权、加载路径、流程 |
 | `LESSONS.md` 的「gpuix 迁移」各节 | 已经踩过的坑及对应做法 |
 | `scripts/orchestration/specs/` | `common.md`、`b2-common.md` 与各切片规格 |
-| `scripts/orchestration/runtime.mjs` 与旧 `*.sh` | PC 使用可移植的 `runtime.mjs` 监听和巡检；旧 shell 脚本保留给原 macOS 运行时，不在 PC 执行。一个 Run 只保留一个等待者，先处理消息再 ack。 |
+| `scripts/orchestration/runtime.mjs` 与旧 `*.sh` | PC 用可移植的 `runtime.mjs listen` 收消息，巡检由 OMP `/loop` 驱动；旧 shell 脚本保留给原 macOS 运行时，不在 PC 执行。一个 Run 只保留一个等待者，先处理消息再 ack。 |

@@ -4,7 +4,7 @@
 
 ### PC orchestration (2026-10-17)
 
-- Resume the coordinator and existing worker sessions on Windows. Add a portable Orca listener with explicit delivery acknowledgement and a five-minute patrol entry point for Windows Task Scheduler; keep machine paths and Run bindings outside the repository.
+- Resume the coordinator and existing worker sessions on Windows. Add a portable Orca listener with explicit delivery acknowledgement; the coordinator patrols through the built-in OMP loop. Machine paths and Run bindings stay outside the repository.
 
 ### gpuix native rewrite (2026-10-14 – 2026-10-15)
 
