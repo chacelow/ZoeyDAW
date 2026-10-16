@@ -25,7 +25,7 @@
 | dirty Back/replace/navigate | 三条路径直接离开，没有决策 | Cancel 保留 BPM142 及 undo；replace 先保存 BPM143；存储失败保留 BPM144/dirty，discard 可离开；绕过 guard、失败保存仍离开两个变异失败 |
 | 语言 I/O | 3 个测试失败，settings unreadable/unwritable 沿启动或 changeLocale 抛出 | 独立子进程隔离 singleton，5 pass；读边界、写边界两个变异失败 |
 | console/sink 脱敏 | JSON/formatted 两个 sink 泄露原始字段 | 两种输出一致脱敏，保留诊断字段；raw sink 变异使 4 个测试失败 |
-| Restore 恢复保存 | Restore 成功后保存仍保留 BPM120，目标163未落盘 | 保存163且 dirty 清除；遗漏成功清 fence 变异失败 |
+| Restore 恢复保存 | Restore 成功后保存仍保留 BPM120，目标163未落盘 | 保存163且dirty清除；恢复后仍阻止保存的变异失败 |
 | 循环 Error.cause | JSON/formatted 均 Maximum call stack size exceeded | console/sink 输出完整诊断与 `[Circular]`，输入不变；恢复递归 normalizer 变异使2个测试失败 |
 | 订阅保存可用性 | 模块fence使历史ready state的selector读到false，而不是true | 同一组件false→Restore true→切换true，损坏字节不变，历史selector独立；恢复模块fence变异失败 |
 
@@ -128,7 +128,7 @@ git diff ea11b3f1..HEAD -- apps/gpuix/src/app apps/gpuix/src/platform/i18n \
 
 首轮在worktree根执行 `pnpm verify:gpuix` 全部通过：renderer身份、native构建、tsc0错误、eslint0warning、architecture80pass、文档路由9项、bun1226pass/1既有todo/0fail、scan0HARD/1WARN、UI map current、真实后端resume smoke released idle。审查边界修复后的 app-local `pnpm exec tsc --noEmit` 也通过。
 
-纯selector返工前的 `pnpm verify:gpuix` 已在同步后的worktree根完整通过，保持默认测试超时：tsc0错误、eslint0warning、architecture80pass、bun1255pass/1既有todo/0fail，200个测试文件；review scan为15个源码文件与4个测试文件、0HARD/1WARN；UI map current为224个testIds；真实native resume smoke输出21帧并released idle。
+纯selector返工后的最终 `pnpm verify:gpuix` 在worktree根完整通过，保持默认测试超时：tsc0错误、eslint0warning、architecture80pass、bun1256pass/1既有todo/0fail，201个测试文件；review scan为17个源码文件与5个测试文件、0HARD/1WARN；UI map current为224个testIds；真实native resume smoke输出21帧并released idle。最后一行为 `verify:gpuix passed`。
 
 最终复跑曾被共享renderer manifest格式变更阻断。按协调者指令合入主干相容tooling后，`build.sh` 输出“Linked verified gpuix build without rebuilding or acquiring the build lock”，未修改或重录共享vendor。随后整套测试的唯一失败为既有Cmd+F组合测试5010ms超时，其余1254pass；按协调者裁定删除固定sleep，改同步布局/事件/微任务推进。AppShell19个测试在默认超时下通过，原有modal/globalCmd行为变异被抓住。
 
@@ -156,7 +156,7 @@ git diff ea11b3f1..HEAD -- apps/gpuix/src/app apps/gpuix/src/platform/i18n \
 
 ## 本地提交
 
-功能提交为 `8867239e`、`4c2b1cd2`、`ecd88765`、`d126008c`、`31bd2cae`；证据提交为 `b66411bc`；确定性布局验证为 `b4929c5c`。按协调者指令合入gpuix-migration以同步共享renderer清单工具，没有自行修改共享vendor或其它切片源码。未push。
+功能提交为 `8867239e`、`4c2b1cd2`、`ecd88765`、`d126008c`、`31bd2cae`；证据提交为 `b66411bc`、`f91684a2`；确定性布局验证为 `b4929c5c`；store-owned纯selector修复为 `ce490221`。按协调者指令合入gpuix-migration以同步共享renderer清单工具；SessionState字段变更已明确授权，没有自行修改共享vendor或其它切片源码。未push。
 
 ## 进程清理
 
