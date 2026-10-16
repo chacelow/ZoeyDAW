@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { withScanFixture } from "./tooling-gates-fixture.mjs"
+import { execFileSync } from "node:child_process"
+import { mkdirSync, writeFileSync } from "node:fs"
+import path from "node:path"
 
 const normal = 'describe("active suite", () => { test("active test", () => {}) })'
 const disabled = [
@@ -52,5 +55,40 @@ test("review scan ignores disabled API examples in strings and comments", () => 
     const result = scan(`const help = "test.skip( is disabled"; // test.skip("example")\n${normal}`)
     assert.equal(result.status, 0, result.stdout + result.stderr)
     assert.doesNotMatch(result.stdout, /HARD\s+skipped-test/)
+  })
+})
+
+test("review scan exempts only the central native SVG host", () => {
+  withScanFixture(({ root, scan }) => {
+    writeFileSync(
+      path.join(root, "eslint.config.js"),
+      'export default [{ files: ["**/*.{ts,tsx}"], languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } }, rules: {} }]\n'
+    )
+    const fixtures = [
+      ["ui/controls/Icon/index.tsx", 'export const Icon = () => <svg source="library-markup" />'],
+      ["ui/controls/IconShadow/index.tsx", 'export const Other = () => <svg source="markup" />'],
+      ["app/inline-svg.ts", 'export const source = "<svg></svg>"'],
+      ["app/inline-path.ts", 'export const source = "<path d=\\"fixture\\" />"'],
+    ]
+    const files = fixtures.map(([relative, body]) => {
+      const file = path.join("apps/gpuix/src", relative)
+      mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
+      writeFileSync(path.join(root, file), `${body}\n`)
+      return file
+    })
+    execFileSync("/usr/bin/git", ["add", ...files], { cwd: root })
+    const result = scan(normal)
+    assert.equal(result.status, 1, result.stdout + result.stderr)
+    assert.doesNotMatch(
+      result.stdout,
+      /HARD\s+hand-written-svg\s+apps\/gpuix\/src\/ui\/controls\/Icon\/index\.tsx/u
+    )
+    for (const relative of fixtures.slice(1).map(([file]) => file)) {
+      assert.ok(
+        result.stdout.includes(`apps/gpuix/src/${relative}`),
+        `Missing foreign SVG/path hard finding: ${result.stdout}`
+      )
+    }
+    assert.match(result.stdout, /3 hard, 0 warn/u)
   })
 })

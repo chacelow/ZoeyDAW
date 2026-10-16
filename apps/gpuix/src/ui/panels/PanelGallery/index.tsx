@@ -19,6 +19,7 @@ export function PanelGallery() {
   const [devices, setDevices] = useState(true)
   const browser = useRef<PanelImperativeHandle | null>(null)
   const clip = useRef<PanelImperativeHandle | null>(null)
+  // Fixed typography and sample widths below belong to this panel-geometry verification fixture.
   const textStyle = { color: theme.colors.foreground, fontSize: 13 }
   const actions = [
     {
