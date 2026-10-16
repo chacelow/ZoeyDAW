@@ -6,7 +6,6 @@ import { createProjectComposition } from "@/app/project/composition"
 import { ArrangementPanel } from "@/app/project/ArrangementPanel"
 import { createAppInteraction } from "@/app/interaction"
 import { initAppI18n } from "@/app/i18n"
-import { englishLabels } from "@/app/locales/sections/timeline"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import {
@@ -355,14 +354,7 @@ for (const trackId of ["source", "main"]) {
 
 test("the Save control disables for a damaged opened snapshot and re-enables for a clean project", async () => {
   const { root } = await mount()
-  const save = root.renderer
-    .findByType("div")
-    .find(
-      node =>
-        node.customProps?.role === "button" &&
-        node.customProps?.["aria-label"] === englishLabels.save
-    )
-  if (!save) throw new Error("Missing real Save control")
+  const save = element(root, "timeline-save")
   const enabledOpacity = typeof save.style.opacity === "number" ? save.style.opacity : 1
   const storage = createMemorySnapshotStorage()
   const key = "zoeydaw:project:snapshot:v1:r2-damaged-toolbar"
