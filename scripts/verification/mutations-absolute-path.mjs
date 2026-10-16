@@ -18,6 +18,7 @@ const root = mkdtempSync(path.join(os.tmpdir(), "gpuix-absolute-mutation-"))
 try {
   for (const file of [
     "scripts/gpuix-review-scan.mjs",
+    "scripts/gpuix-main/paths.mjs",
     "scripts/verification/absolute-path-fixture.mjs",
     "scripts/verification/absolute-path.test.mjs",
   ]) {

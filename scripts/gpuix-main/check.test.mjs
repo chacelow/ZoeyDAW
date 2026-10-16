@@ -4,11 +4,12 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { gitExecutable } from "./paths.mjs"
 import test from "node:test"
 
 const source = path.dirname(fileURLToPath(import.meta.url))
 const git = (cwd, ...args) =>
-  execFileSync("/usr/bin/git", ["-C", cwd, ...args], { encoding: "utf8" }).trimEnd()
+  execFileSync(gitExecutable(), ["-C", cwd, ...args], { encoding: "utf8" }).trimEnd()
 
 function fixture() {
   const root = mkdtempSync(path.join(tmpdir(), "gpuix-patch-check-"))

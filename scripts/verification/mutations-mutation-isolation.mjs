@@ -3,6 +3,7 @@ import { execFileSync, spawnSync } from "node:child_process"
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { gitExecutable } from "../gpuix-main/paths.mjs"
 
 const project = path.resolve(import.meta.dirname, "../..")
 const mutations = [
@@ -39,7 +40,7 @@ const workspace = mkdtempSync(path.join(tmpdir(), "gpuix-isolation-mutations-"))
 const root = path.join(workspace, "repo")
 try {
   mkdirSync(root)
-  execFileSync("/usr/bin/git", ["init", "--quiet"], { cwd: root })
+  execFileSync(gitExecutable(), ["init", "--quiet"], { cwd: root })
   for (const file of [
     "scripts/gpuix-main/paths.mjs",
     "scripts/gpuix-main/build.sh",
