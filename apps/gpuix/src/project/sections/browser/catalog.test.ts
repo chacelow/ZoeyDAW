@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { getBrowserEntries } from "@/app/i18n/browser-catalog"
+import { browserCatalogByLocale } from "@/app/locales/browser-catalog"
 import type { BrowserEntry } from "./catalog"
 
 const devicePresetCounts: Record<string, number> = {
@@ -77,7 +77,7 @@ test("all 132 catalog identities preserve legacy IDs across locales and display 
     ...resourceIds,
   ].sort((left, right) => left.localeCompare(right))
   for (const locale of ["en-US", "zh-CN"] as const) {
-    const entries = getBrowserEntries(locale)
+    const entries = browserCatalogByLocale[locale]
     const all = flatten(entries)
     expect(entries.filter(entry => entry.kind === "device")).toHaveLength(37)
     expect(
@@ -92,8 +92,8 @@ test("all 132 catalog identities preserve legacy IDs across locales and display 
 })
 
 test("localized catalog names and tags preserve brands and real resource basenames", () => {
-  const english = flatten(getBrowserEntries("en-US"))
-  const chinese = flatten(getBrowserEntries("zh-CN"))
+  const english = flatten(browserCatalogByLocale["en-US"])
+  const chinese = flatten(browserCatalogByLocale["zh-CN"])
   for (const original of english) {
     const translated = chinese.find(entry => entry.id === original.id)
     expect(translated).toBeDefined()
@@ -124,7 +124,7 @@ test("purple collection membership is explicit metadata rather than translated t
   ].sort((left, right) => left.localeCompare(right))
   for (const locale of ["en-US", "zh-CN"] as const)
     expect(
-      flatten(getBrowserEntries(locale))
+      flatten(browserCatalogByLocale[locale])
         .filter(entry => entry.purple)
         .map(entry => entry.id)
         .sort((left, right) => left.localeCompare(right))
