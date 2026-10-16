@@ -14,11 +14,13 @@
     "autofocus-focus-event.patch",
     "resume-frame.patch",
     "aria-toggled.patch",
-    "test-window-scale-factor.patch"
+    "test-window-scale-factor.patch",
+    "windows-ui-bridge.patch"
   ],
   "zedPatches": [
     "zed-production-no-sync-draw.patch",
     "zed-offscreen-window-bounds.patch",
-    "zed-test-window-scale-factor.patch"
+    "zed-test-window-scale-factor.patch",
+    "zed-windows-resume-offscreen.patch"
   ]
 }

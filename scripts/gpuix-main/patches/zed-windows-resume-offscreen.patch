@@ -1,0 +1,435 @@
+diff --git a/crates/gpui/src/platform.rs b/crates/gpui/src/platform.rs
+index 62f6717..47dc35a 100644
+--- a/crates/gpui/src/platform.rs
++++ b/crates/gpui/src/platform.rs
+@@ -848,6 +848,7 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
+     /// Requests that the operating system draw attention to this window.
+     fn request_attention(&self) {}
+     fn is_active(&self) -> bool;
++    fn resume_generation(&self) -> u64 { 0 }
+     fn is_hovered(&self) -> bool;
+     fn background_appearance(&self) -> WindowBackgroundAppearance;
+     fn set_title(&mut self, title: &str);
+diff --git a/crates/gpui/src/window.rs b/crates/gpui/src/window.rs
+index 160cdf5..b09d43a 100644
+--- a/crates/gpui/src/window.rs
++++ b/crates/gpui/src/window.rs
+@@ -1176,6 +1176,8 @@ pub struct Window {
+     pub(crate) next_tooltip_id: TooltipId,
+     pub(crate) tooltip_bounds: Option<TooltipBounds>,
+     pub(crate) next_frame_callbacks: Rc<RefCell<Vec<FrameCallback>>>,
++    before_present: Option<Box<dyn FnMut(&mut Window, &mut App) -> bool>>,
++    presentation_deferred: bool,
+     pub(crate) dirty_views: FxHashSet<EntityId>,
+     focus_listeners: SubscriberSet<(), AnyWindowFocusListener>,
+     pub(crate) focus_lost_listeners: SubscriberSet<(), AnyObserver>,
+@@ -1646,6 +1648,16 @@ impl Window {
+                         .log_err();
+                 }
+ 
++                let can_present = handle.update(&mut cx, |_, window, cx| {
++                    window.prepare_presentation(cx)
++                }).log_err().unwrap_or(false);
++                if !can_present {
++                    // The owner wakes the frame source after its async commit.
++                    // Do not spin on dirty views while JavaScript is outstanding.
++                    deferred_force_render |= force_render;
++                    return;
++                }
++
+                 // Keep presenting if input was recently arriving at a high rate (>= 60fps).
+                 // Once high-rate input is detected, we sustain presentation for 1 second
+                 // to prevent display underclocking during active input.
+@@ -1865,6 +1877,8 @@ impl Window {
+             rendered_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
+             next_frame: Frame::new(DispatchTree::new(cx.keymap.clone(), cx.actions.clone())),
+             next_frame_callbacks,
++            before_present: None,
++            presentation_deferred: false,
+             next_hitbox_id: HitboxId(0),
+             next_tooltip_id: TooltipId::default(),
+             tooltip_bounds: None,
+@@ -2403,6 +2417,38 @@ impl Window {
+         AsyncWindowContext::new_context(cx.to_async(), self.handle)
+     }
+ 
++    /// Install a nonblocking gate before a platform frame is drawn or presented.
++    /// Returning false retains frame demand without presenting stale content.
++    /// The owner must call `resume_presentation` when its async work completes.
++    pub fn on_before_present(
++        &mut self,
++        callback: Option<Box<dyn FnMut(&mut Window, &mut App) -> bool>>,
++    ) {
++        self.before_present = callback;
++        self.resume_presentation();
++    }
++
++    fn prepare_presentation(&mut self, cx: &mut App) -> bool {
++        let mut callback = self.before_present.take();
++        let allow = callback.as_mut().map(|callback| callback(self, cx)).unwrap_or(true);
++        self.before_present = callback;
++        self.presentation_deferred = !allow;
++        allow
++    }
++
++    /// Release deferred presentation and request a fresh draw, not a cached scene.
++    pub fn resume_presentation(&mut self) {
++        self.presentation_deferred = false;
++        self.refresh();
++        self.platform_window.schedule_frame();
++        self.invalidator.wake_platform();
++    }
++
++    /// Native show/restore generation, sampled before presentation by async hosts.
++    pub fn resume_generation(&self) -> u64 {
++        self.platform_window.resume_generation()
++    }
++
+     /// Schedule the given closure to be run directly after the current frame is rendered.
+     pub fn on_next_frame(&self, callback: impl FnOnce(&mut Window, &mut App) + 'static) {
+         RefCell::borrow_mut(&self.next_frame_callbacks).push(Box::new(callback));
+@@ -3088,6 +3134,7 @@ impl Window {
+ 
+     #[profiling::function]
+     fn present(&mut self) {
++        if self.presentation_deferred { return; }
+         #[cfg(feature = "profiler")]
+         let _foreground_turn = profiler::journal::foreground_turn();
+         #[cfg(feature = "profiler")]
+@@ -7349,6 +7396,40 @@ mod tests {
+         );
+     }
+ 
++    #[gpui::test]
++    fn async_pre_present_gate_draws_latest_commit_and_removal_releases(cx: &mut TestAppContext) {
++        struct VersionView { value: u32, rendered: Rc<Cell<u32>> }
++        impl Render for VersionView {
++            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
++                self.rendered.set(self.value);
++                div()
++            }
++        }
++        let rendered = Rc::new(Cell::new(0));
++        let window = cx.add_window({
++            let rendered = rendered.clone();
++            move |_, _| VersionView { value: 1, rendered }
++        });
++        let platform = cx.test_window(window.into());
++        platform.simulate_frame_request(RequestFrameOptions { force_render: true, ..Default::default() });
++        assert_eq!(rendered.get(), 1);
++        window.update(cx, |_, window, _| {
++            window.on_before_present(Some(Box::new(|_, _| false)));
++        }).unwrap();
++        platform.simulate_frame_request(RequestFrameOptions { force_render: true, ..Default::default() });
++        window.update(cx, |view, window, cx| {
++            assert!(window.presentation_deferred);
++            view.value = 2;
++            cx.notify();
++        }).unwrap();
++        platform.simulate_frame_request(RequestFrameOptions { force_render: true, ..Default::default() });
++        assert_eq!(rendered.get(), 1, "no stale draw while the JS commit is outstanding");
++        window.update(cx, |_, window, _| window.on_before_present(None)).unwrap();
++        platform.simulate_frame_request(RequestFrameOptions { force_render: true, ..Default::default() });
++        assert_eq!(rendered.get(), 2, "first released frame uses the latest retained commit");
++        window.update(cx, |_, window, _| assert!(!window.presentation_deferred)).unwrap();
++    }
++
+     /// A frame request that arrives while next-frame callbacks are pending
+     /// must never strand them: either the frame runs them, or (when the
+     /// inactive-window frame-rate throttle defers the frame) the waker fires
+diff --git a/crates/gpui_windows/src/directx_devices.rs b/crates/gpui_windows/src/directx_devices.rs
+index 8e65e6e..04f5290 100644
+--- a/crates/gpui_windows/src/directx_devices.rs
++++ b/crates/gpui_windows/src/directx_devices.rs
+@@ -112,6 +112,16 @@ fn get_adapter(
+     ID3D11DeviceContext,
+     D3D_FEATURE_LEVEL,
+ )> {
++    if std::env::var("GPUIX_FORCE_WARP").as_deref() == Ok("1") {
++        let adapter: IDXGIAdapter1 = unsafe { dxgi_factory.EnumWarpAdapter()? };
++        let mut context = None;
++        let mut feature_level = D3D_FEATURE_LEVEL::default();
++        let device = get_device(&adapter, Some(&mut context), Some(&mut feature_level), debug_layer_available)
++            .context("Creating explicitly requested WARP device")?;
++        log::info!("Using WARP software adapter (GPUIX_FORCE_WARP=1)");
++        return Ok((adapter, device, context.context("WARP device context is unavailable")?, feature_level));
++    }
++
+     for adapter_index in 0.. {
+         let adapter: IDXGIAdapter1 = unsafe { dxgi_factory.EnumAdapters(adapter_index)?.cast()? };
+         if let Ok(desc) = unsafe { adapter.GetDesc1() } {
+diff --git a/crates/gpui_windows/src/events.rs b/crates/gpui_windows/src/events.rs
+index e700cb0..526d5ae 100644
+--- a/crates/gpui_windows/src/events.rs
++++ b/crates/gpui_windows/src/events.rs
+@@ -222,6 +222,14 @@ impl WindowsWindowInner {
+     }
+ 
+     fn handle_get_min_max_info_msg(&self, lparam: LPARAM) -> Option<isize> {
++        if self.state.offscreen_scale_factor.is_some() {
++            unsafe {
++                let info = &mut *(lparam.0 as *mut MINMAXINFO);
++                info.ptMinTrackSize = POINT { x: 1, y: 1 };
++                info.ptMaxTrackSize = POINT { x: i32::MAX, y: i32::MAX };
++            }
++            return Some(0);
++        }
+         let min_size = self.state.min_size?;
+         let scale_factor = self.state.scale_factor.get();
+         let boarder_offset = &self.state.border_offset;
+@@ -237,12 +245,13 @@ impl WindowsWindowInner {
+     }
+ 
+     fn handle_size_msg(&self, wparam: WPARAM, lparam: LPARAM) -> Option<isize> {
++        self.state.note_minimized(wparam.0 == SIZE_MINIMIZED as usize);
+         // Don't resize the renderer when the window is minimized, but record that it was minimized so
+         // that on restore the swap chain can be recreated via `update_drawable_size_even_if_unchanged`.
+         if wparam.0 == SIZE_MINIMIZED as usize {
+-            self.state
+-                .restore_from_minimized
+-                .set(self.state.callbacks.request_frame.take());
++            if let Some(callback) = self.state.callbacks.request_frame.take() {
++                self.state.restore_from_minimized.set(Some(callback));
++            }
+             return Some(0);
+         }
+ 
+@@ -877,6 +886,8 @@ impl WindowsWindowInner {
+         wparam: WPARAM,
+         lparam: LPARAM,
+     ) -> Option<isize> {
++        // Test-window scale is independent of whichever monitor owns its HWND.
++        if self.state.offscreen_scale_factor.is_some() { return Some(0); }
+         let new_dpi = wparam.loword() as f32;
+ 
+         let is_maximized = self.state.is_maximized();
+@@ -1262,6 +1273,7 @@ impl WindowsWindowInner {
+     }
+ 
+     fn handle_window_visibility_changed(&self, handle: HWND, wparam: WPARAM) -> Option<isize> {
++        self.state.note_visibility(wparam.0 == 1);
+         if wparam.0 == 1 {
+             self.draw_window(handle, false);
+         }
+diff --git a/crates/gpui_windows/src/window.rs b/crates/gpui_windows/src/window.rs
+index 1a942ec..4e454ee 100644
+--- a/crates/gpui_windows/src/window.rs
++++ b/crates/gpui_windows/src/window.rs
+@@ -51,6 +51,8 @@ pub struct WindowsWindowState {
+     pub appearance: Cell<WindowAppearance>,
+     pub background_appearance: Cell<WindowBackgroundAppearance>,
+     pub scale_factor: Cell<f32>,
++    pub offscreen_scale_factor: Option<f32>,
++    resume: Cell<ResumeState>,
+     pub restore_from_minimized: Cell<Option<Box<dyn FnMut(RequestFrameOptions)>>>,
+ 
+     pub callbacks: Callbacks,
+@@ -107,7 +109,40 @@ pub(crate) struct WindowsWindowInner {
+     pub(crate) parent_hwnd: Option<HWND>,
+ }
+ 
++#[derive(Clone, Copy, Default)]
++struct ResumeState {
++    visible: bool,
++    minimized: bool,
++    generation: u64,
++}
++
++impl ResumeState {
++    fn show(&mut self, visible: bool) {
++        let was_visible = self.visible && !self.minimized;
++        self.visible = visible;
++        if !was_visible && self.visible && !self.minimized { self.generation += 1; }
++    }
++
++    fn minimize(&mut self, minimized: bool) {
++        let was_visible = self.visible && !self.minimized;
++        self.minimized = minimized;
++        if !was_visible && self.visible && !self.minimized { self.generation += 1; }
++    }
++}
++
+ impl WindowsWindowState {
++    pub(crate) fn note_visibility(&self, visible: bool) {
++        let mut state = self.resume.get();
++        state.show(visible);
++        self.resume.set(state);
++    }
++
++    pub(crate) fn note_minimized(&self, minimized: bool) {
++        let mut state = self.resume.get();
++        state.minimize(minimized);
++        self.resume.set(state);
++    }
++
+     fn new(
+         hwnd: HWND,
+         directx_devices: &DirectXDevices,
+@@ -120,11 +155,12 @@ impl WindowsWindowState {
+         disable_direct_composition: bool,
+         invalidate_devices: Arc<AtomicBool>,
+         draw_coordinator: Rc<DrawCoordinator>,
++        offscreen_scale_factor: Option<f32>,
+     ) -> Result<Self> {
+-        let scale_factor = {
++        let scale_factor = offscreen_scale_factor.unwrap_or_else(|| {
+             let monitor_dpi = unsafe { GetDpiForWindow(hwnd) } as f32;
+             monitor_dpi / USER_DEFAULT_SCREEN_DPI as f32
+-        };
++        });
+         let origin = logical_point(window_params.x as f32, window_params.y as f32, scale_factor);
+         let logical_size = {
+             let physical_size = size(
+@@ -163,6 +199,8 @@ impl WindowsWindowState {
+             appearance: Cell::new(appearance),
+             background_appearance: Cell::new(WindowBackgroundAppearance::Opaque),
+             scale_factor: Cell::new(scale_factor),
++            offscreen_scale_factor,
++            resume: Cell::new(ResumeState::default()),
+             restore_from_minimized: Cell::new(restore_from_minimized),
+             min_size,
+             callbacks,
+@@ -262,6 +300,7 @@ impl WindowsWindowInner {
+             context.disable_direct_composition,
+             context.invalidate_devices.clone(),
+             context.draw_coordinator.clone(),
++            context.offscreen_scale_factor,
+         )?;
+ 
+         Ok(Rc::new(Self {
+@@ -411,6 +450,7 @@ struct WindowCreateContext {
+     invalidate_devices: Arc<AtomicBool>,
+     draw_coordinator: Rc<DrawCoordinator>,
+     parent_hwnd: Option<HWND>,
++    offscreen_scale_factor: Option<f32>,
+ }
+ 
+ impl WindowsWindow {
+@@ -424,6 +464,10 @@ impl WindowsWindow {
+         if let WindowKind::AnchoredPopup(_) = params.kind {
+             return Err(popup::PopupNotSupportedError.into());
+         }
++        #[cfg(any(test, feature = "test-support"))]
++        let offscreen_scale_factor = params.offscreen_scale_factor;
++        #[cfg(not(any(test, feature = "test-support")))]
++        let offscreen_scale_factor = None;
+ 
+         let WindowCreationInfo {
+             icon,
+@@ -524,6 +568,7 @@ impl WindowsWindow {
+             invalidate_devices,
+             draw_coordinator,
+             parent_hwnd,
++            offscreen_scale_factor,
+         };
+         let creation_result = unsafe {
+             CreateWindowExW(
+@@ -552,8 +597,31 @@ impl WindowsWindow {
+         set_non_rude_hwnd(hwnd, true);
+         configure_dwm_dark_mode(hwnd, appearance);
+         this.state.border_offset.update(hwnd)?;
+-        let placement =
+-            retrieve_window_placement(hwnd, display, params.bounds, &this.state.border_offset)?;
++        let placement = retrieve_window_placement(
++            hwnd, display, params.bounds, &this.state.border_offset, offscreen_scale_factor,
++        )?;
++        if let Some(scale) = offscreen_scale_factor {
++            // SetWindowPlacement may move wholly offscreen windows back onscreen.
++            // SetWindowPos preserves the test's requested physical client extent.
++            let rect = placement.rcNormalPosition;
++            let mut flags = SWP_NOACTIVATE | SWP_NOZORDER;
++            if params.show { flags |= SWP_SHOWWINDOW; }
++            unsafe {
++                SetWindowPos(hwnd, None, rect.left, rect.top,
++                    rect.right - rect.left, rect.bottom - rect.top,
++                    flags)?;
++            }
++            this.state.origin.set(params.bounds.origin);
++            this.state.logical_size.set(params.bounds.size);
++            this.state.renderer.borrow_mut().resize(params.bounds.size.to_device_pixels(scale))?;
++            if !params.show {
++                this.state.initial_placement.set(Some(WindowOpenStatus {
++                    placement,
++                    state: WindowOpenState::Windowed,
++                }));
++            }
++            return Ok(Self(this));
++        }
+         if params.show {
+             let mut placement = placement;
+             if !params.focus {
+@@ -852,6 +920,10 @@ impl PlatformWindow for WindowsWindow {
+         self.0.hwnd == unsafe { GetActiveWindow() }
+     }
+ 
++    fn resume_generation(&self) -> u64 {
++        self.state.resume.get().generation
++    }
++
+     fn is_hovered(&self) -> bool {
+         self.state.hovered.get()
+     }
+@@ -1522,6 +1594,7 @@ fn retrieve_window_placement(
+     display: WindowsDisplay,
+     initial_bounds: Bounds<Pixels>,
+     border_offset: &WindowBorderOffset,
++    offscreen_scale_factor: Option<f32>,
+ ) -> Result<WINDOWPLACEMENT> {
+     let mut placement = WINDOWPLACEMENT {
+         length: std::mem::size_of::<WINDOWPLACEMENT>() as u32,
+@@ -1529,7 +1602,7 @@ fn retrieve_window_placement(
+     };
+     unsafe { GetWindowPlacement(hwnd, &mut placement)? };
+     // the bounds may be not inside the display
+-    let bounds = if display.check_given_bounds(initial_bounds) {
++    let bounds = if offscreen_scale_factor.is_some() || display.check_given_bounds(initial_bounds) {
+         initial_bounds
+     } else {
+         display.default_bounds()
+@@ -1541,11 +1614,45 @@ fn retrieve_window_placement(
+     // monitor Windows picked by default, which can have a different DPI than `display`
+     // and would otherwise throw off the physical position (e.g. leaving the window
+     // partially off-screen when moved to a monitor with a different scale factor).
+-    let bounds = bounds.to_device_pixels(display.scale_factor());
++    let bounds = bounds.to_device_pixels(offscreen_scale_factor.unwrap_or_else(|| display.scale_factor()));
+     placement.rcNormalPosition = calculate_window_rect(bounds, border_offset);
+     Ok(placement)
+ }
+ 
++#[cfg(test)]
++mod windows_resume_tests {
++    use super::*;
++
++    #[test]
++    fn native_resume_generation_coalesces_duplicate_show_and_restore() {
++        let mut state = ResumeState::default();
++        state.show(true);
++        let shown = state.generation;
++        state.show(true);
++        assert_eq!(state.generation, shown);
++        state.minimize(true);
++        state.minimize(true);
++        assert_eq!(state.generation, shown);
++        state.minimize(false);
++        assert_eq!(state.generation, shown + 1);
++        state.minimize(false);
++        state.show(true);
++        assert_eq!(state.generation, shown + 1);
++        state.show(false);
++        state.show(true);
++        assert_eq!(state.generation, shown + 2);
++        state.minimize(true);
++        state.show(false);
++        state.minimize(false);
++        assert_eq!(state.generation, shown + 2);
++        state.show(true);
++        assert_eq!(state.generation, shown + 3);
++        state.show(true);
++        state.minimize(false);
++        assert_eq!(state.generation, shown + 3);
++    }
++}
++
+ fn dwm_set_window_composition_attribute(hwnd: HWND, backdrop_type: u32) {
+     let mut version = unsafe { std::mem::zeroed() };
+     let status = unsafe { windows::Wdk::System::SystemServices::RtlGetVersion(&mut version) };
