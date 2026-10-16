@@ -25,6 +25,28 @@ test("importing the default project context never opens a native session", async
   }
 })
 
+test("releases the opened native session when telemetry registration fails", () => {
+  const failure = new Error("Telemetry registration failed")
+  let handle: number | undefined
+  const subscribe = jest.spyOn(engine, "subscribeTelemetry").mockImplementation(opened => {
+    handle = opened
+    throw failure
+  })
+  try {
+    expect(createNativeBackend).toThrow(failure)
+    if (handle === undefined) {
+      throw new Error("Expected an opened native session")
+    }
+    const openedHandle = handle
+    expect(() => engine.sourceInfo(openedHandle, "missing-source")).toThrow()
+  } finally {
+    subscribe.mockRestore()
+    if (handle !== undefined) {
+      engine.dispose(handle)
+    }
+  }
+})
+
 function wav(rate: number, seconds: number): Buffer {
   const frames = rate * seconds
   const bytes = Buffer.alloc(44 + frames * 2)
