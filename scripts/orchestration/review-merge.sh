@@ -29,7 +29,7 @@ status=${PIPESTATUS[0]}
 echo "verify exit=$status"
 for entry in "$@"; do
   echo "== mutations $entry"
-  (cd apps/gpuix && bun $entry 2>&1 | grep -iE "caught|survived|SURVIV|KILLED|baseline|\| *0 *\||: 0 failing|error" | tail -40)
+  (cd apps/gpuix && bun $entry 2>&1 | grep -iE "caught|survived|SURVIV|KILLED|baseline|^\| [A-Za-z0-9]|: 0 failing|escaped|error" | tail -40)
 done
 [ -z "$(git status --short apps/gpuix/src)" ] || { echo "mutation left source changes"; status=3; }
 exit "$status"
