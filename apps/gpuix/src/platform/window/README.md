@@ -15,6 +15,16 @@
 
 `getReducedMotion()` / `subscribeReducedMotion(listener)` 读取系统「减少动态效果」，由 `@zoeydaw/native` 提供。macOS 保持 `NSWorkspace.accessibilityDisplayShouldReduceMotion` 与 `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification`。Windows 取反 `SPI_GETCLIENTAREAANIMATION`，独立消息线程的隐藏顶层 HWND 接收 `WM_SETTINGCHANGE`，不依赖 JS timer；注册替换、移除及所属 Env cleanup 会停止线程并 join，销毁 HWND/注销 window class。它们不依赖 renderer，整个进程只有一个 observer。约定同上：首帧用 getter 取值，订阅只通知变化。GPUI 自带的 `App::reduce_motion` 不从系统读取，不要拿它当来源。Windows 实际设置切换广播尚未经过实机验收；macOS 断言不放宽，其它平台接口仍抛错。
 
+## 标题栏双击
+
+`titlebarDoubleClick()` 调用同一 renderer 的原生系统动作，缺少对应能力时抛错，不退回 `zoom()` 或 JS 偏好读取。macOS/Linux/FreeBSD 的 `NativeRoot` 将该命令经 `AppShell` 注入 `TitleBar`。Windows 不注入该回调，由原生 caption 处理双击，避免 JS 与系统各切换一次；不拥有原生窗口的离屏 shell 也可以省略回调。
+
+macOS 由 GPUI 读取 `NSGlobalDomain/AppleActionOnDoubleClick`，尊重窗口的 resizable/minimizable 能力。`None` 不执行，`Minimize` 最小化，`Maximize` 或缺省缩放。固定版本 GPUI 因缺少公开 Fill API，将 `Fill` 降级为缩放，不声称实现完整的原生填充；双击标题栏不是进入全屏。Linux/FreeBSD 的自绘标题栏经既有 UI command 执行 zoom。Windows 的显式 `titlebarDoubleClick()` 命令仍可执行 maximize，但不是标题栏手势的入口。
+
+`window-control-area.patch` 将 `Style.windowControlArea: "drag"` 接到 GPUI `WindowControlArea::Drag`。`TitleBar` 标记这个原生拖动区；居中标题用 `pointerEvents: "none"`，设置按钮用 `pointerEvents: "auto"`。GPUI 命中遍历遇到按钮的 BlockMouse 就停止，父拖动 hitbox 不在命中集合内，因此 Windows 在按钮上返回 HTCLIENT，在空白区返回 HTCAPTION。原生 resize border 保持 GPUI 的既有处理。
+
+只有注入双击动作时，`TitleBar` 才注册 mouse-down handler，并只接受左键且 `clickCount === 2`。它不自行计时、捕获鼠标或模拟拖窗。鼠标 payload 没有键盘事件的 `stopPropagation()` 包装，不能拿后者控制鼠标传播。
+
 ## 关闭守卫
 
 ```ts

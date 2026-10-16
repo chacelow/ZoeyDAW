@@ -1,0 +1,78 @@
+diff --git a/packages/native/js/host.ts b/packages/native/js/host.ts
+index f8eb341..1c7019f 100644
+--- a/packages/native/js/host.ts
++++ b/packages/native/js/host.ts
+@@ -217,6 +217,8 @@ export interface StyleDesc {
+    *  blocks. Unset blocks clicks when the element paints a fill or is
+    *  positioned, but lets the wheel reach the ancestor scroller, like HTML. */
+   pointerEvents?: "auto" | "none"
++  /** Native caption drag hitbox; interactive descendants should occlude it. */
++  windowControlArea?: "drag"
+ 
+   /** "none" opts this element and its subtree out of text selection.
+    *  Inherited like the CSS property, so a toolbar can disable it once. */
+diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
+index 5939183..821af6b 100644
+--- a/packages/native/src/renderer.rs
++++ b/packages/native/src/renderer.rs
+@@ -43,7 +43,7 @@ use crate::accessibility::{apply_a11y_click, apply_accessibility};
+ use crate::custom_elements::{CustomElementRegistry, CustomRenderContext};
+ use crate::element_tree::EventPayload;
+ use crate::retained_tree::{RetainedTree, StyleTable};
+-use crate::style::StyleDesc;
++use crate::style::{StyleDesc, WindowControlAreaStyle};
+ use crate::text::{selectable_text, selection_frame_reset, SharedSelection};
+ use crate::theme::Theme;
+ 
+@@ -7482,6 +7482,9 @@ where
+     E: gpui::Styled + gpui::StatefulInteractiveElement,
+ {
+     el = apply_styles(el, style);
++    if let Some(WindowControlAreaStyle::Drag) = style.window_control_area {
++        el = el.window_control_area(gpui::WindowControlArea::Drag);
++    }
+     if let Some(hover_style) = style.hover.as_deref() {
+         el = el.hover(|refinement| apply_styles(refinement, hover_style));
+     }
+diff --git a/packages/native/src/style.rs b/packages/native/src/style.rs
+index 5c2aba8..84d33eb 100644
+--- a/packages/native/src/style.rs
++++ b/packages/native/src/style.rs
+@@ -143,6 +143,12 @@ impl<'de> Deserialize<'de> for DimensionValue {
+     }
+ }
+ 
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
++#[serde(rename_all = "kebab-case")]
++pub enum WindowControlAreaStyle {
++    Drag,
++}
++
+ /// Style description that can be serialized from JS
+ /// Note: This is only used for JSON deserialization, not direct napi binding
+ #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
+@@ -254,6 +260,9 @@ pub struct StyleDesc {
+     /// `"auto"` blocks mouse hits behind this element. `"none"` never does.
+     /// Unset: block when this element paints a fill or is absolutely positioned.
+     pub pointer_events: Option<String>,
++    /// Native caption drag hitbox, resolved after interactive descendants occlude it.
++    pub window_control_area: Option<WindowControlAreaStyle>,
++
+ 
+     // Text selection. "none" opts an element and its subtree out of the
+     // selection registry, so buttons and toolbars never start a drag.
+@@ -407,6 +416,14 @@ mod tests {
+         }
+     }
+ 
++    #[test]
++    fn window_control_area_accepts_only_drag() {
++        let style: StyleDesc = serde_json::from_str(r#"{"windowControlArea":"drag"}"#).unwrap();
++        assert_eq!(style.window_control_area, Some(WindowControlAreaStyle::Drag));
++        assert!(serde_json::from_str::<StyleDesc>(r#"{"windowControlArea":"close"}"#).is_err());
++    }
++
++
+     #[test]
+     fn transparent_function_does_not_occlude() {
+         assert!(!should_occlude(&with_fill("transparent")));

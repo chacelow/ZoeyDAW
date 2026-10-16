@@ -31,6 +31,7 @@ export interface AppShellProps {
   readonly systemAppearance: Appearance | null
   readonly storage: SnapshotStorage
   readonly closeRenderer: WindowRenderer | null
+  readonly onTitlebarDoubleClick?: () => void
   readonly renderProjectSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
   readonly showErrorDetails: boolean
 }
@@ -41,6 +42,7 @@ export function AppShell({
   systemAppearance,
   storage,
   closeRenderer,
+  onTitlebarDoubleClick,
   renderProjectSlots,
   showErrorDetails,
 }: AppShellProps) {
@@ -53,6 +55,7 @@ export function AppShell({
           <AppFrame
             storage={storage}
             closeRenderer={closeRenderer}
+            onTitlebarDoubleClick={onTitlebarDoubleClick}
             renderProjectSlots={renderProjectSlots}
             showErrorDetails={showErrorDetails}
             onOpenSettings={openSettings}
@@ -68,11 +71,15 @@ export function AppShell({
 function AppFrame({
   storage,
   closeRenderer,
+  onTitlebarDoubleClick,
   renderProjectSlots,
   showErrorDetails,
   onOpenSettings,
   children,
-}: Pick<AppShellProps, "storage" | "closeRenderer" | "renderProjectSlots" | "showErrorDetails"> & {
+}: Pick<
+  AppShellProps,
+  "storage" | "closeRenderer" | "onTitlebarDoubleClick" | "renderProjectSlots" | "showErrorDetails"
+> & {
   readonly onOpenSettings: () => void
   readonly children: ReactNode
 }) {
@@ -107,6 +114,7 @@ function AppFrame({
         title={isProject ? projectName : undefined}
         settingsLabel={t("titlebar.settings")}
         onOpenSettings={onOpenSettings}
+        onTitlebarDoubleClick={onTitlebarDoubleClick}
         surface={surface}
       />
       <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0 }}>

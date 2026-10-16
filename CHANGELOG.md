@@ -5,6 +5,7 @@
 ### Windows and repository cleanup (2026-10-17)
 
 - Add Windows x64: renderer UI bridge and cleanup patches, DirectComposition offscreen lifecycle, native clipboard, cursor, window geometry and reduced motion on Windows, a Windows build driver, `verify-windows.mjs`, a Windows CI job and an NSIS release matrix entry.
+- Respect the macOS titlebar double-click preference and mark the transparent titlebar as a native drag region; Windows handles caption double-clicks itself and Settings stays outside the drag region.
 - Move clip editor header and ScrollArea default heights into layout tokens; size DropdownButton triggers with the icon gap only when an icon is present.
 - Development is single-agent: delete the orchestration scripts, slice specs and coordination rules.
 - Delete committed verification evidence, slice reports, one-off probes, unused verification harnesses and mutation runners, stale research notes and source comments. Rewrite the renderer, Windows and engine research notes as current references.

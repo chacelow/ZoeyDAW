@@ -18,6 +18,7 @@ export interface WindowRenderer extends CloseGuardRenderer {
   setWindowTitle?(title: string): void
   minimizeWindow?(): void
   zoomWindow?(): void
+  titlebarDoubleClick?(): void
   toggleFullscreen?(): void
   activateWindow?(): void
   promptForPaths?(options?: PathPromptOptions): Promise<string[] | null>
@@ -48,6 +49,12 @@ export function createWindowPlatform(renderer: WindowRenderer) {
     setTitle: (title: string) => renderer.setWindowTitle?.(title),
     minimize: () => renderer.minimizeWindow?.(),
     zoom: () => renderer.zoomWindow?.(),
+    titlebarDoubleClick() {
+      if (!renderer.titlebarDoubleClick) {
+        throw new Error("Renderer does not support the native titlebar double-click action")
+      }
+      renderer.titlebarDoubleClick()
+    },
     toggleFullscreen: () => renderer.toggleFullscreen?.(),
     activate: () => renderer.activateWindow?.(),
     promptForPaths: (options?: PathPromptOptions) => renderer.promptForPaths?.(options),

@@ -17,7 +17,9 @@
     "test-window-scale-factor.patch",
     "windows-ui-bridge.patch",
     "windows-renderer-cleanup.patch",
-    "test-window-teardown.patch"
+    "test-window-teardown.patch",
+    "titlebar-double-click.patch",
+    "window-control-area.patch"
   ],
   "zedPatches": [
     "zed-production-no-sync-draw.patch",

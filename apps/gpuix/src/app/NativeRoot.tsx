@@ -9,7 +9,10 @@ import { AppShell } from "./AppShell"
 import { AppNativeEnvironmentProvider } from "./native-environment"
 import type { AppShellProps } from "./AppShell"
 
-export type NativeRootProps = Omit<AppShellProps, "closeRenderer" | "systemAppearance">
+export type NativeRootProps = Omit<
+  AppShellProps,
+  "closeRenderer" | "systemAppearance" | "onTitlebarDoubleClick"
+>
 
 export function NativeRoot(props: NativeRootProps) {
   const { renderer } = useGpuix()
@@ -35,7 +38,14 @@ export function NativeRoot(props: NativeRootProps) {
       <ControlEnvironmentProvider value={native.controls}>
         <PanelEnvironmentProvider environment={native.panels}>
           <AppNativeEnvironmentProvider value={native.panels}>
-            <AppShell {...props} closeRenderer={renderer} systemAppearance={systemAppearance} />
+            <AppShell
+              {...props}
+              closeRenderer={renderer}
+              systemAppearance={systemAppearance}
+              onTitlebarDoubleClick={
+                process.platform === "win32" ? undefined : native.window.titlebarDoubleClick
+              }
+            />
           </AppNativeEnvironmentProvider>
         </PanelEnvironmentProvider>
       </ControlEnvironmentProvider>
