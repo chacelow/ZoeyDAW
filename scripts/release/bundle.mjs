@@ -1,6 +1,6 @@
 import path from "node:path"
-import { readFileSync, realpathSync } from "node:fs"
-import { releaseMetadata, releasePlatform, repository } from "./metadata.mjs"
+import { realpathSync } from "node:fs"
+import { repository } from "./metadata.mjs"
 
 /** Resolve fixed-platform addons at build time, never through NAPI-RS's dynamic loader. */
 export async function compileApplication({
@@ -8,18 +8,12 @@ export async function compileApplication({
   outfile,
   tsconfig = path.join(repository, "apps/gpuix/tsconfig.json"),
 }) {
-  const platform = releasePlatform()
-  const product = JSON.parse(readFileSync(path.join(repository, "package.json"), "utf8"))
-  const { version, productName } = releaseMetadata(product.version)
   const addons = {
     "@gpuix/native": path.join(
       repository,
-      `.gpuix-main/packages/native/gpuix-native.${platform.bindingSuffix}.node`
+      ".gpuix-main/packages/native/gpuix-native.darwin-arm64.node"
     ),
-    "@zoeydaw/native": path.join(
-      repository,
-      `crates/native/zoeydaw-native.${platform.bindingSuffix}.node`
-    ),
+    "@zoeydaw/native": path.join(repository, "crates/native/zoeydaw-native.darwin-arm64.node"),
   }
   const nativeLoaders = new Map(
     Object.entries(addons).map(([name, binary]) => [
@@ -36,21 +30,10 @@ export async function compileApplication({
     entrypoints: [entrypoint],
     tsconfig,
     compile: {
-      target: platform.bunTarget,
+      target: "bun-darwin-arm64",
       outfile,
       autoloadDotenv: false,
       autoloadBunfig: false,
-      ...(platform.id === "windows-x64"
-        ? {
-            windows: {
-              hideConsole: true,
-              title: productName,
-              publisher: productName,
-              version: `${version.split("-")[0]}.0`,
-              description: "Native digital audio workstation",
-            },
-          }
-        : {}),
     },
     minify: true,
     define: { "process.env.NODE_ENV": JSON.stringify("production") },
@@ -65,8 +48,8 @@ export async function compileApplication({
           build.onLoad({ filter: /.*/, namespace: "release-binding" }, args =>
             bindingModule(args.path)
           )
-          build.onLoad({ filter: /[\\/]native[\\/]index\.js$/ }, args => {
-            const name = nativeLoaders.get(realpathSync(args.path))
+          build.onLoad({ filter: /\/native\/index\.js$/ }, args => {
+            const name = nativeLoaders.get(args.path)
             return name ? bindingModule(name) : undefined
           })
         },

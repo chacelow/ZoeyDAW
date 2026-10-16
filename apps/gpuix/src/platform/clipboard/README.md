@@ -7,16 +7,13 @@
 | 平台 | `readText()` | `writeText(text)` |
 | --- | --- | --- |
 | macOS | `NSPasteboard.generalPasteboard().stringForType(NSPasteboardTypeString)`，无文本返回 `null` | 清空原有内容，写入字符串。`setString_forType` 返回 false 时抛出 napi 错误 |
-| Windows | `CF_UNICODETEXT`，有界 UTF-16 解码；无文本、忙碌或无效块返回 `null` | 有效隐藏 owner HWND + `OpenClipboard`/`EmptyClipboard`/`SetClipboardData`，失败抛错；嵌入 U+0000 在清空前拒绝 |
-| Linux | `null` | 抛出 `System clipboard text writing is not implemented on this platform` |
+| Windows、Linux | `null` | 抛出 `System clipboard text writing is not implemented on this platform` |
 
 写入空字符串与无文本不同。写入替换整个剪贴板，不保留富文本、图片或文件 representation。剪贴板由操作系统持有，不缓存文本，不创建第二个状态 owner。单次同步调用不代表跨进程或跨线程的读写事务。
 
 Rust 仅启用已有 `objc2-app-kit` 依赖的 `NSPasteboard` feature。`NSPasteboardType` 是公开的 `NSString` 类型别名，可用 `from_str` 构造文本，无需新增 Foundation 直接依赖。每次调用用独立 autorelease pool 管理临时 Objective-C 对象。
 
 API 来源：[NSPasteboard](https://docs.rs/objc2-app-kit/0.3.2/objc2_app_kit/struct.NSPasteboard.html)、[NSPasteboardType](https://docs.rs/objc2-app-kit/0.3.2/objc2_app_kit/type.NSPasteboardType.html)。
-
-Windows 源码使用临时隐藏 HWND；作用域析构保证 CloseClipboard/DestroyWindow、GlobalUnlock 与尚未转移的 GlobalFree。先拒绝 U+0000、编码/分配/填充 UTF-16，再打开与清空剪贴板；成功 SetClipboardData 后 HGLOBAL 交给 OS，失败仍由本模块释放。空字符串合法，读到的块只借用、不释放，GlobalSize 限定终止符搜索，缺失 NUL 或无效 UTF-16 返回 null。无重试、缓存、私有格式。macOS 的任意 NSString 行为不变，下面含 U+0000 的 macOS 实测不适用于 Windows。Windows 跨进程/Worker、忙碌与 owner 生命周期仍待 Windows 运行验收。
 
 ## 线程及初始化顺序实测
 
@@ -78,7 +75,7 @@ originalNoTextStateRestored: true
 | `bun --hot src/platform/clipboard/smoke.tmp.ts`，临时入口 | 四条真实 native 路径通过，窗口截图及 AX 已观察 |
 | `pnpm exec ultracite check apps/gpuix/src/platform/clipboard/index.ts apps/gpuix/src/platform/clipboard/clipboard.test.ts` | 通过 |
 
-上述为 2026-10-15 macOS 验证记录，不是 W1 Windows 的验证结果。W1 新增 UTF-16 编解码边界测试，以及 Windows NUL 拒绝不改变原剪贴板、分配锁定/失败转移保留所有权测试，尚未执行。Linux 分支仍明确拒绝写入。Cargo 输出既有非根 package profile 警告。Bun 全套历史输出 `Context leak detected, CoreAnalytics returned false`，测试退出码为 0。
+macOS 实现没有需要单独提取的纯 Rust 业务逻辑，不为 AppKit 转发添加无效单元测试。非 macOS 分支保留拒绝写入的条件测试，但本机未运行 Windows 或 Linux 目标。Cargo 输出既有非根 package profile 警告。Bun 全套输出 `Context leak detected, CoreAnalytics returned false`，测试退出码为 0。
 
 ## 进程清理证据
 
@@ -103,4 +100,4 @@ originalNoTextStateRestored: true
 
 - 对：直接使用 `NSPasteboard.generalPasteboard`，不要为剪贴板创建 `NSApplication.sharedApplication`。调用内使用 autorelease pool。
 - 验证：macOS arm64、Bun 1.3.14、gpuix 0.10.0，窗口前后各一次主线程及 Worker 调用，59 字节 UTF-8 与空字符串往返均通过，随后原生窗口正常创建。
-- 范围：macOS 上述版本实测；Windows 已有独立 Win32 源码但未实机验证，Linux 未实现。不承诺并发读写事务，不把本机版本实测推广到所有系统。
+- 范围：其他平台没有实现，不承诺并发读写事务，不把本机版本实测推广到所有系统。

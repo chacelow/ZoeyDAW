@@ -1,6 +1,6 @@
-//! 原生光标位置/归位。macOS 隐藏由本模块负责;Windows 持续隐藏由 renderer UI owner 负责。
+//! 原生光标锁定:拖动数值时隐藏光标、松手后精确放回按下像素。
 //!
-//! macOS 不使用 `CGAssociateMouseAndMouseCursorPosition`:GPUI 的 mouseMove 全部取自
+//! 不使用 `CGAssociateMouseAndMouseCursorPosition`:GPUI 的 mouseMove 全部取自
 //! `NSEvent.locationInWindow`(绝对位置),断开关联会冻结该位置、让 mouseMove 停发。
 //! 只做"隐藏 + 记录锚点 + 松手 warp 回锚点再显示",真实光标不可见地继续移动,
 //! gpuix 照常通过 pointer capture 收到 move/up。
@@ -31,10 +31,7 @@ mod platform {
     pub fn position() -> Option<ScreenPoint> {
         let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState).ok()?;
         let location = CGEvent::new(source).ok()?.location();
-        Some(ScreenPoint {
-            x: location.x,
-            y: location.y,
-        })
+        Some(ScreenPoint { x: location.x, y: location.y })
     }
 
     pub fn hide() -> bool {
@@ -52,98 +49,27 @@ mod platform {
     }
 }
 
-#[cfg(any(windows, test))]
-pub(crate) fn physical_coordinate(value: f64) -> Option<i32> {
-    let rounded = value.round();
-    (rounded.is_finite() && rounded >= i32::MIN as f64 && rounded <= i32::MAX as f64)
-        .then_some(rounded as i32)
-}
-
-#[cfg(windows)]
-mod platform {
-    use super::{physical_coordinate, ScreenPoint};
-    use windows_sys::Win32::{
-        Foundation::POINT,
-        UI::WindowsAndMessaging::{GetPhysicalCursorPos, SetPhysicalCursorPos},
-    };
-
-    pub fn position() -> Option<ScreenPoint> {
-        let mut point = POINT { x: 0, y: 0 };
-        (unsafe { GetPhysicalCursorPos(&mut point) } != 0).then_some(ScreenPoint {
-            x: point.x as f64,
-            y: point.y as f64,
-        })
-    }
-
-    // ShowCursor is thread-owned. Only renderer's UI thread may hide/show;
-    // this standalone bridge intentionally cannot claim to hide on Windows.
-    pub fn hide() -> bool {
-        false
-    }
-
-    pub fn restore(point: ScreenPoint) -> bool {
-        let (Some(x), Some(y)) = (physical_coordinate(point.x), physical_coordinate(point.y))
-        else {
-            return false;
-        };
-        unsafe { SetPhysicalCursorPos(x, y) != 0 }
-    }
-}
-
-#[cfg(test)]
-mod physical_tests {
-    use super::physical_coordinate;
-
-    #[test]
-    fn rounds_physical_pixels_on_both_sides_of_virtual_desktop_origin() {
-        assert_eq!(physical_coordinate(12.5), Some(13));
-        assert_eq!(physical_coordinate(-12.5), Some(-13));
-        assert_eq!(physical_coordinate(-0.1), Some(0));
-        assert_eq!(physical_coordinate(i32::MIN as f64), Some(i32::MIN));
-        assert_eq!(physical_coordinate(i32::MAX as f64), Some(i32::MAX));
-    }
-
-    #[test]
-    fn invalid_or_out_of_range_coordinates_never_saturate_to_another_pixel() {
-        for value in [
-            f64::NAN,
-            f64::INFINITY,
-            f64::NEG_INFINITY,
-            i32::MAX as f64 + 1.0,
-            i32::MIN as f64 - 1.0,
-        ] {
-            assert_eq!(physical_coordinate(value), None);
-        }
-    }
-}
-
-#[cfg(not(any(target_os = "macos", windows)))]
+#[cfg(not(target_os = "macos"))]
 mod platform {
     use super::ScreenPoint;
-    pub fn position() -> Option<ScreenPoint> {
-        None
-    }
-    pub fn hide() -> bool {
-        false
-    }
-    pub fn restore(_: ScreenPoint) -> bool {
-        false
-    }
+    pub fn position() -> Option<ScreenPoint> { None }
+    pub fn hide() -> bool { false }
+    pub fn restore(_: ScreenPoint) -> bool { false }
 }
 
-/// 读取 OS 光标坐标;macOS 为点,Windows 为虚拟桌面物理像素。失败返回 null。
+/// 读取 OS 光标的屏幕坐标,不改变可见性。非 macOS 或失败返回 null。
 #[napi]
 pub fn cursor_position() -> Option<ScreenPoint> {
     platform::position()
 }
 
-/// macOS 隐藏 OS 光标。Windows 必须由 renderer UI 线程隐藏,本接口返回 false。
+/// 隐藏 OS 光标。确认进入拖动后调用;锚点应已在 mouseDown 由 `windowPointToScreen` 取得。
 #[napi]
 pub fn cursor_hide() -> bool {
     platform::hide()
 }
 
-/// 把光标放回 `point`;macOS 同时显示,Windows 显示由 renderer UI owner 负责。
+/// 先把光标放回 `point`,再显示。
 #[napi]
 pub fn cursor_restore(point: ScreenPoint) -> bool {
     platform::restore(point)

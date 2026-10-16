@@ -5,10 +5,8 @@ import path from "node:path"
 import { useWindowSize } from "@gpuix/react"
 import { createTestRoot, type TestRoot } from "@gpuix/react/testing"
 
-if (process.platform !== "darwin" && process.platform !== "win32")
-  throw new Error(
-    "Unsupported platform: offscreen scaleFactor regression requires macOS or Windows"
-  )
+if (process.platform !== "darwin")
+  throw new Error("Unsupported platform: offscreen scaleFactor regression requires macOS")
 
 let root: TestRoot | undefined
 

@@ -18,9 +18,9 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 ## 验证命令（gpuix）
 
-`verify:gpuix` 保留 macOS 完整门禁。Windows x64 使用独立的 `node scripts/verify-windows.mjs`，覆盖原生构建、Rust、TypeScript、Bun、离屏 scale、生产 UI 帧与真实后端截图。Windows job 首轮为 `continue-on-error`，是否转为必过由协调者根据 Actions 结果决定。Linux 不在本次移植范围，离屏 scale 回归仍显式报 unsupported。实际支持状态见 [Windows 移植报告](../research/windows-port.md)。
+当前 `verify:gpuix` 门禁只支持 macOS。Windows/Linux 的离屏 `scaleFactor` 未实现；test-window 回归在非 macOS 显式报 unsupported 并非零退出，不跳过或报告假通过。
 
-完整门禁只在 GitHub Actions 运行，不在本机重复跑 `pnpm verify:gpuix`。本地交付执行 `tsc --noEmit`、改动范围的 Bun 测试与 eslint、本切片变异入口、必要的单窗口 smoke；Rust 只检查和测试改动 crate。`verify:gpuix [baseRef]` 依次检查绝对路径、渲染器身份与单一解析、native 构建、类型、lint、架构与工具回归、文档路由、Bun、离屏 scale、review scan、UI 地图和真实后端应用 smoke。任一步失败即非零退出，全部通过打印 `verify:gpuix passed`。review scan 默认对比 `gpuix-migration...HEAD`，不覆盖未提交改动。
+在 worktree 或合入树的根目录运行 `pnpm verify:gpuix [baseRef]`（`scripts/verify-gpuix.sh`）。先对全仓 Git 跟踪源码检查机器绝对路径，再依次执行渲染器身份校验（完整补丁与产物 manifest，单一 native/React 解析）、`pnpm native:build`、`tsc --noEmit`、`eslint apps/gpuix/src`（0 warning）、架构规则回归、工具 CLI 回归、文档路由、`bun test`、review scan、UI 地图校验，最后用真实后端跑离屏应用 smoke（Home → 工程 → 恢复首帧）。review scan 对比 `baseRef...HEAD`，默认 `gpuix-migration`，不扫描未提交的改动。任何一步失败就停，退出码非 0；全部通过时最后一行是 `verify:gpuix passed`。worker 交付前在自己的 worktree 跑一次，协调者在合入树再跑一次。涉及 Rust 时另跑 `cargo check`、`cargo test`。
 
 工具 CLI 回归覆盖产物身份、link-only 初始化、Git 缓存路径、隔离 mutation 入口、部分提交的 UI 地图、禁用测试扫描与提交标题。独立变异入口为 `node scripts/gpuix-main/mutations-build-contract.mjs`、`node scripts/verification/mutations-ui-map.mjs`、`node scripts/verification/mutations-tooling-gates.mjs`、`node scripts/verification/mutations-absolute-path.mjs`、`node scripts/verification/mutations-mutation-isolation.mjs`，只修改临时副本。
 
@@ -50,23 +50,18 @@ UI 改动必须在真实 gpuix 窗口验证主路径，观察新截图或实际�
 
 ## 打包与发布
 
-打包在 GitHub Actions 的 macOS arm64 或 Windows x64 runner 上执行，本机不重复构建整包。版本号必须等于根目录与 `apps/gpuix/package.json` 的 `version`。固定工具与打包入口如下：
+在 macOS arm64 的已初始化 checkout 中安装固定构建工具并打包。版本号必须等于根目录与 `apps/gpuix/package.json` 的 `version`：
 
 ```bash
 cargo install cargo-packager --version 0.11.8 --locked
 bun scripts/release/package.mjs "$(node -p 'require("./apps/gpuix/package.json").version')"
 ```
 
-`package.mjs <version> [output-directory]` 默认输出 `dist/release/<version>`。macOS 复用 `build.sh` 与 `pnpm native:build`；Windows 复用 `build-windows.mjs` 与 native package 的同一个 build script。然后 Bun 编译单文件，cargo-packager 生成宿主安装包。`CARGO_PACKAGER_BIN` 可指定隔离安装的工具路径。
+`package.mjs <version> [output-directory]` 默认输出 `dist/release/<version>`。脚本复用 `scripts/gpuix-main/build.sh` 与 `pnpm native:build`，再编译 Bun 单文件；不重新定义 Rust 或渲染器构建。可通过 `CARGO_PACKAGER_BIN` 指定隔离安装的工具路径。
 
-| 目标 | 产物 |
-| --- | --- |
-| macOS arm64 | `zoeydaw.app`、`zoeydaw_<version>_aarch64.dmg`、`zoeydaw-<version>-macos-arm64.app.zip`、`SHA256SUMS-macos-arm64` |
-| Windows x64 | `zoeydaw_<version>_x64-setup.exe`、`SHA256SUMS-windows-x64` |
+产物是 `zoeydaw.app`、`zoeydaw_<version>_aarch64.dmg`、`zoeydaw-<version>-macos-arm64.app.zip` 与 `SHA256SUMS-macos-arm64`。`build/` 保留单文件可执行程序、1024 PNG、iconset、icns 与本次 packager 配置。同版本同输出目录可重跑，不混放不同版本的 DMG。
 
-`build/` 保留编译产物与 packager 配置。macOS 还保留 PNG、iconset 和 icns；Windows 暂用默认安装器图标。Windows 单文件 exe 留在 `build/` 供安装器使用，只分发包含许可证资源的 NSIS 包。输出目录不混放不同版本的安装器。Windows PE 的数值 FileVersion 不含 alpha 后缀，应用与安装器版本保留完整 semver。
-
-两个 NAPI-RS loader 使用运行时 `require`，Bun 无法自行发现 `.node`。`bundle.mjs` 在打包时把包名和真实 loader 路径都解析为静态 `require`，将两个 binding 嵌入可执行文件；Windows 使用 `win32-x64-msvc` ABI 后缀。不改 vendor 生成 loader，不共用 `NAPI_RS_NATIVE_LIBRARY_PATH`。macOS 占位图标仍由 Default 预设与 `icon.swift` 生成，替换该文件可换品牌图标。
+两个 NAPI-RS loader 使用运行时 `require`，Bun 无法自行发现 `.node`。`scripts/release/bundle.mjs` 只在打包时把两个包名解析为静态 `require`，把真实 `.node` 嵌入可执行文件；不改 vendor 或生成 loader，也不共用 `NAPI_RS_NATIVE_LIBRARY_PATH`。图标用 Default 深色预设的背景、前景与 chart2，由 `icon.swift` 生成占位 PNG，再通过 `sips`、`iconutil` 生成 icns。替换 `icon.swift` 可换品牌图标。
 
 `bun scripts/release/smoke.mjs <evidence-directory>` 用同一 bundler 编译独立离屏验证程序，在仓库外的临时目录启动，覆盖 Home → 新建 → Arrangement → 原生 sample clock 前进 → 停止与 session 释放。截图与 `smoke.json` 写入传入目录，临时可执行文件退出时删除。它使用默认真实后端与空工程，不声称验证音频素材播放或前台窗口帧。真实包另外用 `open -g` 启动，前台视觉验收仍由维护者完成。
 
@@ -74,14 +69,14 @@ bun scripts/release/package.mjs "$(node -p 'require("./apps/gpuix/package.json")
 
 1. 同步根目录、gpuix 应用与应用内展示版本，完成本地轻量检查，再合入 `main`。完整 `pnpm verify:gpuix` 在 GitHub Actions 运行。
 2. 在 `main` 的目标提交创建同版本 `v*` tag 并推到 GitHub。首个版本是 `v0.1.0-alpha.1`，之后依次使用 alpha、beta、稳定版。
-3. `release.yml` 的 macOS 和 Windows matrix 分别校验 tag 指向 `main` 且匹配 manifest，执行对应门禁后打包。开发切片分支不推送。Windows 必须通过才产生包含 Windows 资产的 draft。
-4. 流水线上传安装包与 SHA-256 到 draft release。带预发布后缀的 tag 同时标记 Pre-release；维护者核对安装与真实播放后手动发布。
+3. `.github/workflows/release.yml` 在 `macos-15` 上校验 tag 指向 `main` 的提交且匹配 manifest，执行完整 `verify:gpuix` 后打包。开发切片分支不推送。
+4. 流水线上传 `.dmg`、`.app.zip` 与 SHA-256 到 draft release。带预发布后缀的 tag 同时标记 Pre-release；维护者核对安装与真实播放后手动发布。
 
-`workflow_dispatch` 只接受已有版本 tag。重跑覆盖同一 draft 的资产，已发布 release 不允许覆盖。matrix 每项上传 `release-<platform>` artifact，draft job 聚合资产并校验 checksum；验证截图使用 `evidence-release-<platform>`，不会混进 release 下载。工具链与缓存保持 `ci.yml` 一致：step 将 `RUNNER_WORKSPACE` 下的绝对路径写入 `GITHUB_ENV`，actions/cache 读取 `env.GPUIX_VENDOR_ROOT` 和 `env.CARGO_TARGET_DIR`，分别缓存。
+`workflow_dispatch` 的 `tag` 输入只接受已有的版本 tag。重跑会覆盖同一 draft 的资产，已发布 release 不允许覆盖。matrix 每项独立构建并上传 `release-<platform>` artifact，draft job 聚合所有平台；Windows 合入后增加 matrix 项和打包的平台分支，不改 draft job。工具链与缓存保持 `ci.yml` 一致，vendor 与 Cargo target 使用 `RUNNER_WORKSPACE` 下不含 `..` 的绝对路径，分别缓存。暂不抽 composite action，避免本切片改变现有验证流水线。
 
-安装包目标为 macOS arm64 和 Windows x64。Windows 构建、NSIS 安装与真实桌面尚需 Actions 和实机证据，不能仅凭 workflow 声称已支持。macOS 无 Developer ID 签名、无公证，首次打开方法见 [Release 安装说明](../../scripts/release/NOTES.md)。Bun ad-hoc 签名不等于 Developer ID 签名。macOS 最低系统声明为 13，旧系统未实机验收；Intel、Linux、自动更新不在本次范围。
+首版仅 macOS arm64，无 Developer ID 签名、无公证。安装时用右键 →「打开」，或只对可信的这一份应用运行 `xattr -dr com.apple.quarantine`，详见 [Release 安装说明](../../scripts/release/NOTES.md)。Bun 的 ad-hoc 签名不等于 Developer ID 签名。可执行文件声明的最低系统是 macOS 13，旧系统未实机验收；Intel、Windows、自动更新不在首版范围。
 
-macOS 的设置与工程快照写入 `~/Library/Application Support/com.zoeydaw.desktop`，默认日志写入 `~/Library/Logs/com.zoeydaw.desktop`。Windows 目录由原生 `userDirectories()` 选择，日志位于 data_dir/logs。字体使用系统字体；图标、语言资源、主题预设与度量随 Bun 可执行文件编译，不依赖可写安装目录或仓库的 `node_modules`。用户导入的音频仍保留外部文件路径，打包不搬入工程媒体。
+设置与工程快照写入 `~/Library/Application Support/com.zoeydaw.desktop`，默认日志写入 `~/Library/Logs/com.zoeydaw.desktop`。字体使用系统字体，图标、语言资源、主题预设与度量是静态导入，随 Bun 可执行文件编译，不依赖 `.app` 内的可写目录或仓库的 `node_modules`。用户导入的音频仍保留外部文件路径，打包不把工程媒体搬入应用。
 
 ## 修改前确认
 

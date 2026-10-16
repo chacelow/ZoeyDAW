@@ -17,8 +17,7 @@ function fixture() {
   const zed = path.join(vendor, "zed")
   mkdirSync(path.join(script, "patches"), { recursive: true })
   mkdirSync(zed, { recursive: true })
-  for (const name of ["check.mjs", "paths.mjs"])
-    copyFileSync(path.join(source, name), path.join(script, name))
+  copyFileSync(path.join(source, "check.mjs"), path.join(script, "check.mjs"))
   for (const repo of [zed, vendor]) {
     git(repo, "init", "--quiet")
     git(repo, "config", "user.name", "Patch identity test")

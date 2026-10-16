@@ -16,7 +16,6 @@ pub fn window_diagnostics(window_title: String) -> napi::Result<Option<WindowDia
     platform::read(&window_title)
 }
 
-#[cfg(any(target_os = "macos", test))]
 fn find_window_index(title: &str, titles: impl Iterator<Item = String>) -> Option<usize> {
     titles
         .enumerate()

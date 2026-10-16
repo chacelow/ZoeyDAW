@@ -13,7 +13,6 @@ import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { gitExecutable } from "./paths.mjs"
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(directory, "../..")
@@ -38,7 +37,7 @@ const vendor =
 const requiredOutputs = [
   "packages/native/index.js",
   "packages/native/index.d.ts",
-  `packages/native/gpuix-native.${process.platform}-${process.arch}${process.platform === "win32" ? "-msvc" : ""}.node`,
+  `packages/native/gpuix-native.${process.platform}-${process.arch}.node`,
   "packages/native/dist/host.js",
   "packages/native/dist/host.d.ts",
   "packages/native/dist/mutations.js",
@@ -57,7 +56,7 @@ const requiredOutputs = [
 ]
 const digest = value => createHash("sha256").update(value).digest("hex")
 const git = (directory, ...args) =>
-  execFileSync(gitExecutable(), ["-C", directory, ...args], { encoding: "utf8" }).trimEnd()
+  execFileSync("/usr/bin/git", ["-C", directory, ...args], { encoding: "utf8" }).trimEnd()
 
 function compiledOutputs(directory) {
   return readdirSync(path.join(vendor, directory), { withFileTypes: true }).flatMap(entry => {
@@ -70,7 +69,7 @@ function expectedSourceDiffs(repository, revision, series, submodules) {
   const temporary = mkdtempSync(path.join(tmpdir(), "gpuix-patch-index-"))
   const env = { ...process.env, GIT_INDEX_FILE: path.join(temporary, "index") }
   const indexedGit = (...args) =>
-    execFileSync(gitExecutable(), ["-C", repository, ...args], { encoding: "utf8", env }).trimEnd()
+    execFileSync("/usr/bin/git", ["-C", repository, ...args], { encoding: "utf8", env }).trimEnd()
   try {
     indexedGit("read-tree", revision)
     const diffs = [""]
