@@ -26,7 +26,8 @@ export interface LayoutTokens {
       readonly clipMaxSize: number | `${number}%`
     }
   }
-  readonly home: { readonly maxWidth: number }
+  readonly home: { readonly maxWidth: number; readonly recentCardWidth: number }
+  readonly gallery: { readonly cardWidth: number; readonly settingsPreviewWidth: number }
   readonly track: TrackGeometry
   readonly arrangement: {
     readonly markerRulerHeight: number
@@ -35,12 +36,20 @@ export interface LayoutTokens {
     readonly barRulerHeight: number
     readonly minimapClipInset: number
     readonly automationPointRadius: number
+    readonly rulerLabelSpacing: {
+      readonly subdivision: number
+      readonly beat: number
+      readonly bar: number
+    }
+    readonly gridMinSubdivisionWidth: number
     readonly clip: {
       readonly minWidth: number
       readonly minHeight: number
       readonly verticalInset: number
       readonly bodyThresholdInset: number
       readonly fadeHandleMargin: number
+      readonly nameEditorLeftInset: number
+      readonly nameEditorRightInset: number
     }
     readonly hit: {
       readonly clipResizeEdge: number
@@ -50,6 +59,8 @@ export interface LayoutTokens {
       readonly automationSegmentMax: number
       readonly automationSegmentHeightFraction: number
       readonly automationNear: number
+      readonly rulerMarker: number
+      readonly rulerLoopEdge: number
     }
   }
 }
@@ -73,7 +84,8 @@ export function createLayoutTokens(control: ControlMetrics, project: ProjectMetr
         clipMaxSize: "70%",
       },
     },
-    home: { maxWidth: 912 },
+    home: { maxWidth: 912, recentCardWidth: 304 },
+    gallery: { cardWidth: 304, settingsPreviewWidth: 608 },
     track: {
       controlHeight,
       spacing,
@@ -93,12 +105,16 @@ export function createLayoutTokens(control: ControlMetrics, project: ProjectMetr
       barRulerHeight: markerRulerHeight + loopRulerHeight,
       minimapClipInset: 1,
       automationPointRadius: 4,
+      rulerLabelSpacing: { subdivision: 38, beat: 56, bar: 56 },
+      gridMinSubdivisionWidth: 2,
       clip: {
         minWidth: 2,
         minHeight: 4,
         verticalInset: 1,
         bodyThresholdInset: 4,
         fadeHandleMargin: 3,
+        nameEditorLeftInset: 1,
+        nameEditorRightInset: 2,
       },
       hit: {
         clipResizeEdge: 6,
@@ -108,6 +124,8 @@ export function createLayoutTokens(control: ControlMetrics, project: ProjectMetr
         automationSegmentMax: 14,
         automationSegmentHeightFraction: 0.125,
         automationNear: 4,
+        rulerMarker: 9,
+        rulerLoopEdge: 5,
       },
     },
   }
