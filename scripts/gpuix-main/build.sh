@@ -3,6 +3,9 @@ set -euo pipefail
 
 readonly script_dir="$(cd "$(dirname "$0")" && pwd)"
 readonly root="$(cd "$script_dir/../.." && pwd)"
+if [ "$(node -p process.platform)" = "win32" ]; then
+  exec node "$script_dir/build-windows.mjs" "${1:-runtime}"
+fi
 readonly revision="$(node -p "require('$script_dir/config.json').revision")"
 readonly zed_revision="$(node -p "require('$script_dir/config.json').zedRevision")"
 vendor_base="$(node "$script_dir/paths.mjs")"
