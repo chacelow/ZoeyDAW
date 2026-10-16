@@ -1,4 +1,5 @@
 import { MIN_GRID_CELL_PX } from "@/project/model/grid"
+import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { MidiNote } from "@/project/model/types"
 import { colorMix } from "@/shared/theme/color-mix"
 import type { DerivedThemeColors } from "@/shared/theme/colors"
@@ -43,6 +44,7 @@ export function notePaint({
   color,
   colors,
   fontSize,
+  gridBeats = PREFERENCE_DEFAULTS.midi.noteGridBeats,
 }: {
   notes: readonly MidiNote[]
   rects: readonly NoteRect[]
@@ -52,6 +54,7 @@ export function notePaint({
   color: string
   colors: DerivedThemeColors
   fontSize: number
+  gridBeats?: number
 }) {
   const background: Groups = new Map()
   background.set("midi-row-fill", {
@@ -87,7 +90,7 @@ export function notePaint({
       1
     )
   }
-  for (const line of rollGridLines(roll, numerator, MIN_GRID_CELL_PX))
+  for (const line of rollGridLines(roll, numerator, MIN_GRID_CELL_PX, gridBeats))
     add(
       background,
       `midi-grid-lines-${line.level}`,

@@ -10,7 +10,7 @@ import {
 } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { TransportBar } from "@/project/sections/transport"
-import { englishTransportLabels } from "@/project/sections/transport/demo-labels"
+import { englishTransportLabels } from "@/app/locales/sections/transport"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"

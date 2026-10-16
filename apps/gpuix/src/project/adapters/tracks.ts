@@ -1,13 +1,12 @@
 import { cloneTrack, createTrack } from "../model/reducers"
-import { DEFAULT_TRACK_HEIGHT } from "../layout"
-import { get, session, tracks, updateTrack } from "./context"
+import { get, session, tracks, updateTrack, projectCreationValues } from "./context"
 
 export const trackActions = {
   updateTrack,
   addTrack(kind: "audio" | "midi" | "group" | "return", parentId?: string) {
     const source = get().document.tracks
     const parent = source.find(track => track.id === parentId && track.kind === "group")
-    const created = createTrack(kind, source, parent?.id, DEFAULT_TRACK_HEIGHT)
+    const created = createTrack(kind, source, parent?.id, projectCreationValues())
     const index = parent
       ? source.indexOf(parent) + 1 + (parent.childTrackIds?.length ?? 0)
       : source.findIndex(track => track.id === "main")
@@ -63,12 +62,10 @@ export const trackActions = {
       }
     }
     ids.forEach(id => includeChildren(id))
-    const copies = source
-      .filter(track => selected.has(track.id) && track.kind !== "main")
-      .map(track => ({ sourceId: track.id, copy: cloneTrack(track) }))
-    if (!copies.length) {
-      return
-    }
+    const originals = source.filter(track => selected.has(track.id) && track.kind !== "main")
+    if (!originals.length) return
+    const { names } = projectCreationValues()
+    const copies = originals.map(track => ({ sourceId: track.id, copy: cloneTrack(track, names) }))
     const idMap = new Map(copies.map(item => [item.sourceId, item.copy.id]))
     const remappedCopies = copies.map(({ sourceId, copy }) => ({
       sourceId,
@@ -122,7 +119,7 @@ export const trackActions = {
       return
     }
     const group = {
-      ...createTrack("group", source, undefined, DEFAULT_TRACK_HEIGHT),
+      ...createTrack("group", source, undefined, projectCreationValues()),
       childTrackIds: chosen.map(track => track.id),
     }
     const next = source.filter(track => !chosen.includes(track))

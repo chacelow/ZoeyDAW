@@ -1,10 +1,11 @@
 import { useRef } from "react"
+import { usePreference } from "@/platform/settings"
+import { PROJECT_TEMPLATE } from "@/project/defaults/template"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
 import {
   AUDIO_WARP_MODES,
   audioLoopWindow,
   audioSourceWindow,
-  formatAudioMusicalValue,
   getAudioClipSettings,
   parseAudioMusicalValue,
 } from "@/project/model/audio-editor"
@@ -19,12 +20,10 @@ import type { AudioEditorLabels } from "../labels"
 type MusicalField = "startMarkerBars" | "endMarkerBars" | "loopStartBars" | "loopLengthBars"
 type NumberField = "sourceBpm" | "transpose" | "detune"
 
-const NUMBER_FIELDS: Readonly<
-  Record<NumberField, { min: number; max: number; step: number; digits: number }>
-> = {
-  sourceBpm: { min: 1, max: 999, step: 0.01, digits: 2 },
-  transpose: { min: -48, max: 48, step: 1, digits: 0 },
-  detune: { min: -50, max: 50, step: 1, digits: 0 },
+const NUMBER_FIELDS: Readonly<Record<NumberField, { min: number; max: number; step: number }>> = {
+  sourceBpm: { min: 1, max: 999, step: 0.01 },
+  transpose: { min: -48, max: 48, step: 1 },
+  detune: { min: -50, max: 50, step: 1 },
 }
 
 function Field({ label, children }: { readonly label: string; readonly children: ReactNode }) {
@@ -58,11 +57,13 @@ function MusicalNumber({
   bpm,
   field,
   label,
+  labels,
 }: {
   readonly clip: AudioClip
   readonly bpm: number
   readonly field: MusicalField
   readonly label: string
+  readonly labels: AudioEditorLabels
 }) {
   const { numerator, denominator } = useProjectState(state => state.document.transport)
   const settings = getAudioClipSettings(clip, bpm)
@@ -96,7 +97,8 @@ function MusicalNumber({
       ),
     })
   })
-  const format = (value: number) => formatAudioMusicalValue(value, numerator, denominator, kind)
+  const format = (value: number) =>
+    labels.formats.musicalPosition(value, numerator, denominator, kind)
   return (
     <Field label={label}>
       <DragPadNumber
@@ -115,7 +117,7 @@ function MusicalNumber({
               : Math.max(0, clip.sourceOffsetBars ?? 0)
         }
         format={format}
-        widthSamples={[format(999.9375)]}
+        widthSamples={labels.formats.musicalWidthSamples(numerator, denominator, kind)}
         parse={raw => {
           const bounds = frozen.current
           let parsed = parseAudioMusicalValue(
@@ -159,19 +161,23 @@ function SettingNumber({
   field,
   label,
   unit,
+  labels,
 }: {
   readonly clip: AudioClip
   readonly bpm: number
   readonly field: NumberField
   readonly label: string
   readonly unit: string
+  readonly labels: AudioEditorLabels
 }) {
   const settings = getAudioClipSettings(clip, bpm)
+  const audio = usePreference("audio")
   const spec = NUMBER_FIELDS[field]
   const gesture = useProjectEditGesture((value: number) =>
     projectActions.updateClip(clip.id, { audioSettings: { ...settings, [field]: value } })
   )
-  const format = (value: number) => `${value.toFixed(spec.digits)}${unit ? ` ${unit}` : ""}`
+  const format = (value: number) =>
+    `${labels.formats.number(value, field === "sourceBpm" ? "bpm" : "integer")}${unit ? ` ${unit}` : ""}`
   return (
     <Field label={label}>
       <DragPadNumber
@@ -181,7 +187,7 @@ function SettingNumber({
         min={spec.min}
         max={spec.max}
         step={spec.step}
-        defaultValue={field === "sourceBpm" ? bpm : 0}
+        defaultValue={field === "sourceBpm" ? bpm : audio[field]}
         hideIcon
         format={format}
         {...gesture}
@@ -194,10 +200,12 @@ function ClipNumber({
   clip,
   field,
   label,
+  labels,
 }: {
   readonly clip: AudioClip
   readonly field: "gainDb" | "fadeInBars" | "fadeOutBars"
   readonly label: string
+  readonly labels: AudioEditorLabels
 }) {
   const fadeRoom = Math.max(
     0,
@@ -215,14 +223,21 @@ function ClipNumber({
       <DragPadNumber
         testId={`audio-${field}`}
         label={label}
-        value={clip[field] ?? 0}
+        value={
+          clip[field] ??
+          (gain ? PROJECT_TEMPLATE.clip.gainDb : PROJECT_TEMPLATE.clip.fade.durationBars)
+        }
         min={gain ? -60 : 0}
         max={gain ? 24 : fadeRoom}
         step={gain ? 0.1 : 1 / 64}
-        defaultValue={0}
+        defaultValue={gain ? PROJECT_TEMPLATE.clip.gainDb : PROJECT_TEMPLATE.clip.fade.durationBars}
         hideIcon
-        format={value => (gain ? `${value.toFixed(1)} dB` : value.toFixed(3))}
-        widthSamples={gain ? ["-60.0 dB"] : ["1024.000"]}
+        format={value =>
+          gain ? labels.formats.audioGain(value) : labels.formats.number(value, "fade")
+        }
+        widthSamples={
+          gain ? labels.formats.widthSamples.audioGain : labels.formats.widthSamples.fade
+        }
         {...gesture}
       />
     </Field>
@@ -274,8 +289,20 @@ export function AudioParameters({
     >
       <div style={column}>
         <text style={heading}>{labels.source}</text>
-        <MusicalNumber clip={clip} bpm={bpm} field="startMarkerBars" label={labels.start} />
-        <MusicalNumber clip={clip} bpm={bpm} field="endMarkerBars" label={labels.end} />
+        <MusicalNumber
+          clip={clip}
+          bpm={bpm}
+          field="startMarkerBars"
+          label={labels.start}
+          labels={labels}
+        />
+        <MusicalNumber
+          clip={clip}
+          bpm={bpm}
+          field="endMarkerBars"
+          label={labels.end}
+          labels={labels}
+        />
         <DragPadToggle
           testId="audio-loop"
           label={labels.loop}
@@ -284,10 +311,22 @@ export function AudioParameters({
           value={settings.loop}
           onChange={loop => change({ loop })}
         />
-        <MusicalNumber clip={clip} bpm={bpm} field="loopStartBars" label={labels.loopPosition} />
-        <MusicalNumber clip={clip} bpm={bpm} field="loopLengthBars" label={labels.loopLength} />
-        <ClipNumber clip={clip} field="fadeInBars" label={labels.fadeIn} />
-        <ClipNumber clip={clip} field="fadeOutBars" label={labels.fadeOut} />
+        <MusicalNumber
+          clip={clip}
+          bpm={bpm}
+          field="loopStartBars"
+          label={labels.loopPosition}
+          labels={labels}
+        />
+        <MusicalNumber
+          clip={clip}
+          bpm={bpm}
+          field="loopLengthBars"
+          label={labels.loopLength}
+          labels={labels}
+        />
+        <ClipNumber clip={clip} field="fadeInBars" label={labels.fadeIn} labels={labels} />
+        <ClipNumber clip={clip} field="fadeOutBars" label={labels.fadeOut} labels={labels} />
       </div>
       <div style={sx(column, { borderLeftWidth: 1, borderColor: theme.colors.arrangementLine })}>
         <text style={heading}>{labels.sample}</text>
@@ -309,9 +348,17 @@ export function AudioParameters({
           items={AUDIO_WARP_MODES.map(mode => ({ id: mode, label: labels.modes[mode] }))}
           onChange={warpMode => change({ warpMode })}
         />
-        <SettingNumber clip={clip} bpm={bpm} field="sourceBpm" label={labels.sourceBpm} unit="" />
-        <ClipNumber clip={clip} field="gainDb" label={labels.gain} />
         <SettingNumber
+          clip={clip}
+          bpm={bpm}
+          field="sourceBpm"
+          label={labels.sourceBpm}
+          unit=""
+          labels={labels}
+        />
+        <ClipNumber clip={clip} field="gainDb" label={labels.gain} labels={labels} />
+        <SettingNumber
+          labels={labels}
           clip={clip}
           bpm={bpm}
           field="transpose"
@@ -319,6 +366,7 @@ export function AudioParameters({
           unit={labels.semitones}
         />
         <SettingNumber
+          labels={labels}
           clip={clip}
           bpm={bpm}
           field="detune"

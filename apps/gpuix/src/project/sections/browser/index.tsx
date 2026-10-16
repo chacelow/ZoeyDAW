@@ -99,7 +99,7 @@ export function BrowserPanel({
 }: BrowserPanelProps) {
   const theme = useTheme()
   const { renderer } = useGpuix()
-  const browser = useBrowser()
+  const browser = useBrowser(labels)
   const search = useRef<PublicInstance | null>(null)
   const tree = useRef<PublicInstance | null>(null)
   const nodes = useRef(new Map<string, PublicInstance>())

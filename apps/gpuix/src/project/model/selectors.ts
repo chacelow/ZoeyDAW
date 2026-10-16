@@ -1,18 +1,23 @@
-import { MIN_TIMELINE_BARS } from "./types"
+import { PROJECT_TEMPLATE } from "../defaults/template"
 import type { DocumentState } from "./types"
 
 /**
-Round the last occupied bar up with a full 16-bar region for editing room.
+Round the last occupied bar up to the template region step, then add editing padding.
 */
-export function growTimelineBars(baseBars: number, throughBar: number): number {
+export function growTimelineBars(
+  baseBars: number,
+  throughBar: number,
+  policy = PROJECT_TEMPLATE.timeline
+): number {
   if (!Number.isFinite(throughBar) || throughBar <= 1) {
-    return Math.max(MIN_TIMELINE_BARS, baseBars)
+    return Math.max(policy.minimumBars, baseBars)
   }
-  const rounded = Math.ceil((throughBar - 1) / 16) * 16 + 16
-  return Math.max(MIN_TIMELINE_BARS, baseBars, Number.isFinite(rounded) ? rounded : throughBar)
+  const { minimumBars, growthStepBars, paddingBars } = policy
+  const rounded = Math.ceil((throughBar - 1) / growthStepBars) * growthStepBars + paddingBars
+  return Math.max(minimumBars, baseBars, Number.isFinite(rounded) ? rounded : throughBar)
 }
 
-export function timelineBars(document: DocumentState): number {
+export function timelineBars(document: DocumentState, policy = PROJECT_TEMPLATE.timeline): number {
   let throughBar = document.transport.loop.endBar
   for (const marker of document.markers) {
     throughBar = Math.max(throughBar, marker.bar)
@@ -27,5 +32,5 @@ export function timelineBars(document: DocumentState): number {
       }
     }
   }
-  return growTimelineBars(MIN_TIMELINE_BARS, throughBar)
+  return growTimelineBars(policy.minimumBars, throughBar, policy)
 }

@@ -1,11 +1,12 @@
 import type { Clip } from "./types"
+import type { CreationNames } from "../defaults/template"
 
-export function clipLabel(clip: Clip): string {
+export function clipLabel(clip: Clip, names: Pick<CreationNames, "clip">): string {
   if (clip.label) {
     return clip.label
   }
   if (clip.kind === "audio") {
-    return clip.samplePath.split(/[\\/]/).at(-1) || "Audio Clip"
+    return clip.samplePath.split(/[\\/]/).at(-1) || names.clip(clip.kind)
   }
-  return clip.kind === "pattern" ? "Pattern" : "MIDI Clip"
+  return names.clip(clip.kind)
 }

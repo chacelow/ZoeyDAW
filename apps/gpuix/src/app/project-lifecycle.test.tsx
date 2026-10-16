@@ -1,8 +1,9 @@
-import { afterEach, beforeAll, expect, test } from "bun:test"
+import { afterEach, beforeAll, beforeEach, expect, test } from "bun:test"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot, type TestRoot } from "@gpuix/react/testing"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
+import { i18next } from "@/platform/i18n/core"
 import {
   createMemorySnapshotStorage,
   configureProjectBackend,
@@ -21,10 +22,14 @@ import { AppNativeEnvironmentProvider } from "./native-environment"
 import { createRouter } from "./router/router"
 import { createPreferenceStore } from "./settings/preference-store"
 import { isThemeMode } from "./settings/theme-mode"
+import { englishLabels, chineseLabels } from "./locales/sections/timeline"
 
 const roots: TestRoot[] = []
 const cleanups: (() => void)[] = []
 beforeAll(() => initAppI18n({ initialLanguage: "zh-CN" }))
+beforeEach(async () => {
+  await i18next.changeLanguage("en-US")
+})
 afterEach(() => {
   for (const root of roots.splice(0)) root.unmount()
   for (const cleanup of cleanups.splice(0)) cleanup()
@@ -117,8 +122,14 @@ test("corrupt saved project reports an error and save preserves the original byt
   storage.set(key("corrupt"), damaged)
   act(root, () => router.navigate("/project/corrupt"))
   await settle(root)
-  expect(useProjectState.getState().session.snapshotError).toContain("invalid")
-  expect(root.renderer.getAllText().join("\n")).toContain("invalid")
+  expect(useProjectState.getState().session.snapshotError).toBe("invalid")
+  expect(root.renderer.getAllText()).toContain(englishLabels.snapshotErrors.invalid)
+  const unchanged = serializeProject()
+  await i18next.changeLanguage("zh-CN")
+  await settle(root)
+  expect(root.renderer.getAllText()).toContain(chineseLabels.snapshotErrors.invalid)
+  expect(useProjectState.getState().session.snapshotError).toBe("invalid")
+  expect(serializeProject()).toBe(unchanged)
   projectActions.saveSnapshot()
   await settle(root)
   expect(storage.get(key("corrupt"))).toBe(damaged)
@@ -223,7 +234,7 @@ test("successful Restore after a failed open permits saving the repaired project
   storage.set(key("repair-and-restore"), "corrupt")
   act(root, () => router.navigate("/project/repair-and-restore"))
   await settle(root)
-  expect(useProjectState.getState().session.snapshotError).toContain("invalid")
+  expect(useProjectState.getState().session.snapshotError).toBe("invalid")
   storage.set(key("repair-and-restore"), valid)
   act(root, () => {
     expect(projectActions.restoreSnapshot()).toBe(true)

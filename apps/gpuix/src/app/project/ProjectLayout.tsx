@@ -24,7 +24,14 @@ export interface ProjectLayoutProps extends ProjectLayoutSlots {
   readonly projectId: string
   readonly shell: ProjectShellApi
   readonly focusRef: Ref<PublicInstance>
-  readonly labels: { readonly resizeClipEdit: string; readonly resizeBrowser: string }
+  readonly labels: {
+    readonly resizeClipEdit: string
+    readonly resizeBrowser: string
+    readonly browserPanel: string
+    readonly arrangementPanel: string
+    readonly footerPanel: string
+    readonly activeDescription: string
+  }
 }
 
 /**
@@ -48,7 +55,13 @@ export function ProjectLayout({
   const clipView = shell.footerView === "clip"
   const footerShell =
     footer === null ? null : (
-      <PanelShell id="footer" active={shell.activeSection} onActivate={shell.setActiveSection}>
+      <PanelShell
+        id="footer"
+        aria-label={labels.footerPanel}
+        activeDescription={labels.activeDescription}
+        active={shell.activeSection}
+        onActivate={shell.setActiveSection}
+      >
         {footer}
       </PanelShell>
     )
@@ -63,7 +76,13 @@ export function ProjectLayout({
         collapsedSize={0}
         testId="browser-panel"
       >
-        <PanelShell id="browser" active={shell.activeSection} onActivate={shell.setActiveSection}>
+        <PanelShell
+          id="browser"
+          aria-label={labels.browserPanel}
+          activeDescription={labels.activeDescription}
+          active={shell.activeSection}
+          onActivate={shell.setActiveSection}
+        >
           {browser}
         </PanelShell>
       </Panel>
@@ -75,6 +94,8 @@ export function ProjectLayout({
       <Panel minSize={PROJECT_LAYOUT.arrangementMinWidth} testId="arrangement-panel">
         <PanelShell
           id="arrangement"
+          aria-label={labels.arrangementPanel}
+          activeDescription={labels.activeDescription}
           active={shell.activeSection}
           onActivate={shell.setActiveSection}
         >

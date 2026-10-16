@@ -1,8 +1,12 @@
 import type { BackendClip, BackendProject, BackendSource, BackendTrack } from "../../model/backend"
-import { DEFAULT_FADE_CURVE } from "../../model/fades"
+import { PROJECT_TEMPLATE } from "../../defaults/template"
+import type { ProjectTemplateSource } from "../../defaults/template"
 import type { DocumentState } from "../../model/types"
 
-export function projectBackendDocument(document: DocumentState): BackendProject {
+export function projectBackendDocument(
+  document: DocumentState,
+  source: ProjectTemplateSource = PROJECT_TEMPLATE
+): BackendProject {
   const sources: BackendSource[] = []
   const sourceIds = new Set<string>()
   const tracks: BackendTrack[] = document.tracks.map(track => ({
@@ -51,14 +55,14 @@ export function projectBackendDocument(document: DocumentState): BackendProject 
             kind: "audio",
             sourceId,
             gainDb: clip.gainDb,
-            fadeInBars: clip.fadeInBars ?? 0,
-            fadeOutBars: clip.fadeOutBars ?? 0,
-            fadeInOffsetBars: clip.fadeInOffsetBars ?? 0,
-            fadeOutOffsetBars: clip.fadeOutOffsetBars ?? 0,
-            fadeInCurve: clip.fadeInCurve ?? DEFAULT_FADE_CURVE,
-            fadeOutCurve: clip.fadeOutCurve ?? DEFAULT_FADE_CURVE,
-            fadeInCurvePosition: clip.fadeInCurvePosition ?? 0.5,
-            fadeOutCurvePosition: clip.fadeOutCurvePosition ?? 0.5,
+            fadeInBars: clip.fadeInBars ?? source.clip.fade.durationBars,
+            fadeOutBars: clip.fadeOutBars ?? source.clip.fade.durationBars,
+            fadeInOffsetBars: clip.fadeInOffsetBars ?? source.clip.fade.offsetBars,
+            fadeOutOffsetBars: clip.fadeOutOffsetBars ?? source.clip.fade.offsetBars,
+            fadeInCurve: clip.fadeInCurve ?? source.clip.fade.curve,
+            fadeOutCurve: clip.fadeOutCurve ?? source.clip.fade.curve,
+            fadeInCurvePosition: clip.fadeInCurvePosition ?? source.clip.fade.position,
+            fadeOutCurvePosition: clip.fadeOutCurvePosition ?? source.clip.fade.position,
           }
         }
         case "midi":

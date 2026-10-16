@@ -1,21 +1,21 @@
 import { strict as assert } from "node:assert"
+import { initializeVerificationProject } from "../project-creation"
 import { mkdirSync } from "node:fs"
 import path from "node:path"
 import { handleGpuixEvent } from "@gpuix/react"
 import {
   projectActions,
-  setProjectStorageId,
   startProjectRuntime,
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
-import { mount } from "../harness.test"
-import type { Harness } from "../harness.test"
+import { mount } from "@/project/sections/clip-edit/harness.test"
+import type { Harness } from "@/project/sections/clip-edit/harness.test"
 
 const output = process.env.B2_EVIDENCE_DIR
 if (!output) throw new Error("B2_EVIDENCE_DIR must name an external evidence directory")
 mkdirSync(output, { recursive: true })
-setProjectStorageId("r2-sections-native-smoke")
+const releaseCreation = initializeVerificationProject("r2-sections-native-smoke")
 const id = "native-midi-clip"
 const readNotes = () => {
   const clip = useProjectState
@@ -99,4 +99,5 @@ try {
 } finally {
   view?.unmount()
   release()
+  releaseCreation()
 }

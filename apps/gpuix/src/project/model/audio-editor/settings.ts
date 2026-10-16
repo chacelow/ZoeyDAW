@@ -1,3 +1,5 @@
+import { PREFERENCE_DEFAULTS } from "../../defaults/preferences"
+import { PROJECT_TEMPLATE } from "../../defaults/template"
 import type { AudioClip } from "../types"
 
 export const AUDIO_WARP_MODES = [
@@ -39,16 +41,13 @@ const AUDIO_SETTINGS_FIELDS = [
 
 export function defaultAudioClipSettings(
   bpm: number,
-  clip: Pick<AudioClip, "sourceOffsetBars" | "lengthBars">
+  clip: Pick<AudioClip, "sourceOffsetBars" | "lengthBars">,
+  preferences = PREFERENCE_DEFAULTS.audio
 ): AudioClipSettings {
   return {
-    warp: true,
-    warpMode: "beats",
-    sourceBpm: Number.isFinite(bpm) && bpm > 0 ? Math.min(999, bpm) : 120,
-    transpose: 0,
-    detune: 0,
-    reverse: false,
-    loop: true,
+    ...preferences,
+    sourceBpm:
+      Number.isFinite(bpm) && bpm > 0 ? Math.min(999, bpm) : PROJECT_TEMPLATE.transport.bpm,
     loopStartBars: Math.max(0, clip.sourceOffsetBars ?? 0),
     loopLengthBars: clip.lengthBars,
     startMarkerBars: Math.max(0, clip.sourceOffsetBars ?? 0),

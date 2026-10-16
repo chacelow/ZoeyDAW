@@ -1,12 +1,16 @@
 import type { ClipEditorLabels } from "@/project/sections/clip-edit"
+import { createDisplayFormats } from "../../i18n/display-formats"
+import { getCreationNames } from "../../i18n/creation-names"
 
 const en: ClipEditorLabels = {
+  creationNames: getCreationNames("en-US"),
   clipEditor: "Clip editor",
   close: "Close clip editor",
   rename: "Rename",
   kind: { audio: "Audio Clip", midi: "MIDI Clip", pattern: "Pattern Clip" },
   step: "Step",
   midi: {
+    formats: createDisplayFormats("en-US"),
     pianoRoll: "MIDI piano roll",
     fold: "Fold",
     draw: "Draw · B",
@@ -26,6 +30,8 @@ const en: ClipEditorLabels = {
     velocityLane: "Per-note velocity lane",
   },
   audio: {
+    formats: createDisplayFormats("en-US"),
+    unavailable: "—",
     title: "Audio Clip",
     source: "Source window",
     sample: "Sample",
@@ -78,12 +84,14 @@ const en: ClipEditorLabels = {
 }
 
 const zh: ClipEditorLabels = {
+  creationNames: getCreationNames("zh-CN"),
   clipEditor: "片段编辑器",
   close: "关闭片段编辑器",
   rename: "重命名",
   kind: { audio: "音频 Clip", midi: "MIDI Clip", pattern: "Pattern Clip" },
   step: "步",
   midi: {
+    formats: createDisplayFormats("zh-CN"),
     pianoRoll: "MIDI 钢琴卷帘",
     fold: "折叠音高",
     draw: "绘制 · B",
@@ -103,6 +111,8 @@ const zh: ClipEditorLabels = {
     velocityLane: "逐音符力度通道",
   },
   audio: {
+    formats: createDisplayFormats("zh-CN"),
+    unavailable: "—",
     title: "音频 Clip",
     source: "源片段范围",
     sample: "采样",

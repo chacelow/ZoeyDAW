@@ -1,4 +1,5 @@
 import type { Position } from "../../model/types"
+import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 
 export interface MetronomePhase {
   readonly side: -1 | 0 | 1
@@ -20,16 +21,14 @@ export function metronomePhase(
 
 export function tappedTempo(
   taps: readonly number[],
-  now: number
+  now: number,
+  policy: typeof PREFERENCE_DEFAULTS.transport = PREFERENCE_DEFAULTS.transport
 ): { taps: number[]; bpm: number | null } {
-  const next = [...taps.filter(time => now - time < 2500), now].slice(-5)
+  const next = [...taps.filter(time => now - time < policy.tapWindowMs), now].slice(
+    -policy.tapSamples
+  )
   const first = next[0]
   if (next.length < 2 || first === undefined || now <= first) return { taps: next, bpm: null }
+  // Milliseconds per minute is a unit conversion, not an editor preference.
   return { taps: next, bpm: (60_000 * (next.length - 1)) / (now - first) }
-}
-
-export function formatSampleTime(frame: number, sampleRate: number): string {
-  const millis = Math.floor((frame / sampleRate) * 1000)
-  const seconds = Math.floor(millis / 1000)
-  return `${Math.floor(seconds / 3600)}:${String(Math.floor(seconds / 60) % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}.${String(millis % 1000).padStart(3, "0")}`
 }

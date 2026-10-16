@@ -30,9 +30,9 @@ TestRenderer的surface getBounds会隐式flush；live renderer读取缓存bounds
 从apps/gpuix执行：
 
 ```sh
-bun --preload ./src/project/sections/clip-edit/verification/audio-profile-preload.ts src/project/sections/clip-edit/verification/audio-render-cost.tsx native-bounds
-bun --preload ./src/project/sections/clip-edit/verification/audio-profile-preload.ts src/project/sections/clip-edit/verification/audio-render-cost.tsx cached-bounds
-NODE_ENV=production bun --preload ./src/project/sections/clip-edit/verification/audio-profile-preload.ts src/project/sections/clip-edit/verification/audio-render-cost.tsx cached-bounds
+bun --preload ./src/app/verification/clip-edit/audio-profile-preload.ts src/app/verification/clip-edit/audio-render-cost.tsx native-bounds
+bun --preload ./src/app/verification/clip-edit/audio-profile-preload.ts src/app/verification/clip-edit/audio-render-cost.tsx cached-bounds
+NODE_ENV=production bun --preload ./src/app/verification/clip-edit/audio-profile-preload.ts src/app/verification/clip-edit/audio-render-cost.tsx cached-bounds
 ```
 
 ## 真实窗口与播放

@@ -1,9 +1,9 @@
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
-import { createSceneStore } from "../../core/scene"
-import { createTimelineController } from "../controller"
-import { englishLabels } from "../demo-labels"
-import { Toolbar } from "../toolbar"
+import { createSceneStore } from "@/project/sections/arrangement/core/scene"
+import { createTimelineController } from "@/project/sections/arrangement/timeline/controller"
+import { englishLabels } from "@/app/locales/sections/timeline"
+import { Toolbar } from "@/project/sections/arrangement/timeline/toolbar"
 
 const controller = createTimelineController({
   sceneStore: createSceneStore(),

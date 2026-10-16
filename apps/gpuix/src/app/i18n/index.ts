@@ -6,6 +6,9 @@ import zhCN from "../locales/zh-CN"
 
 export { SUPPORTED_LOCALES } from "@/platform/i18n/core"
 export type { SupportedLocale } from "@/platform/i18n/core"
+export { createDisplayFormats } from "./display-formats"
+export { getCreationNames } from "./creation-names"
+export type { CreationNames } from "./creation-names"
 
 /**
  * gpuix binding for the shared i18next singleton. react-i18next resolves a second React

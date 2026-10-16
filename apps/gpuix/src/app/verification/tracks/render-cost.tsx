@@ -2,21 +2,29 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import {
   hydrateProject,
+  configureProjectCreation,
   projectActions,
   readProjectTelemetry,
-  useProjectState,
 } from "@/project/adapters"
 import { createTrack } from "@/project/model/reducers"
+import {
+  createTestDocument,
+  createTestWorkspace,
+  TEST_CREATION,
+  TEST_PROJECT_CREATION,
+  TEST_TRACK_APPEARANCE,
+} from "@/project/adapters/fixtures"
 import { CONTROLS_WIDTH, DEFAULT_TRACK_HEIGHT } from "@/project/layout"
-import { createSceneStore } from "../../core/scene"
-import { TrackRows } from "../TrackRows"
-import { TrackResizeOverlay } from "../TrackResizeOverlay"
-import { trackResources } from "../locales"
+import { createSceneStore } from "@/project/sections/arrangement/core/scene"
+import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
+import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
+import { trackResources } from "@/project/sections/arrangement/tracks/locales"
 import { AnimationFrameProvider } from "@/platform/frame"
-import { createControlledFrames } from "./frame-source"
+import { createControlledFrames } from "@/project/sections/arrangement/tracks/verification/frame-source"
 
-const baseline = structuredClone(useProjectState.getState().document)
-const workspace = structuredClone(useProjectState.getState().workspace)
+configureProjectCreation(TEST_PROJECT_CREATION)
+const baseline = createTestDocument()
+const workspace = createTestWorkspace()
 const main = baseline.tracks.find(track => track.kind === "main")
 if (!main) throw new Error("Missing Main output")
 const results = []
@@ -25,7 +33,10 @@ for (const sourceCount of [20, 2000]) {
   const document = structuredClone(baseline)
   document.tracks = []
   for (let index = 0; index < sourceCount; index++) {
-    const track = createTrack("audio", document.tracks, undefined, DEFAULT_TRACK_HEIGHT)
+    const track = createTrack("audio", document.tracks, undefined, {
+      ...TEST_CREATION,
+      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_TRACK_HEIGHT },
+    })
     track.id = `perf-${index}`
     track.name = `Track ${index}`
     document.tracks.push(track)

@@ -1,6 +1,8 @@
 import type { FooterLabels } from "@/project/sections/footer"
+import { createDisplayFormats } from "../../i18n/display-formats"
 
 export const englishFooterLabels: FooterLabels = {
+  formats: createDisplayFormats("en-US"),
   locale: "en",
   devicesTab: "Affect Chain",
   clipTab: "Clip Edit",
@@ -41,6 +43,7 @@ export const englishFooterLabels: FooterLabels = {
   },
 }
 export const chineseFooterLabels: FooterLabels = {
+  formats: createDisplayFormats("zh-CN"),
   locale: "zh-CN",
   devicesTab: "效果链",
   clipTab: "片段编辑",

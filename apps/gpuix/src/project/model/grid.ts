@@ -3,7 +3,6 @@ export type GridDensity = (typeof GRID_DENSITIES)[number]
 export type GridSettings =
   { mode: "adaptive"; density: GridDensity } | { mode: "fixed"; bars: number }
 
-export const DEFAULT_GRID: GridSettings = { mode: "adaptive", density: "medium" }
 export const MAX_NOTE_DENOMINATOR = 16_384
 export const MIN_GRID_CELL_PX = 8
 export const MIN_CLIP_LENGTH_BARS = 1 / (MAX_NOTE_DENOMINATOR * 32)

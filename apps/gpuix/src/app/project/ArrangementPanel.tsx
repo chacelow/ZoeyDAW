@@ -24,7 +24,8 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
   const scene = useSyncExternalStore(timeline.sceneStore.subscribe, timeline.sceneStore.get)
   const viewport = timeline.useViewport()
   const { locale } = useAppTranslation()
-  const editSurface = useLaneSurface(lane, labelsByLocale[locale === "zh-CN" ? "zh" : "en"])
+  const laneLabels = labelsByLocale[locale === "zh-CN" ? "zh" : "en"]
+  const editSurface = useLaneSurface(lane, laneLabels)
   const selectedTrackIds = useProjectState(state => state.session.selectedTrackIds)
   const selectionSurface = useProjectState(state => state.session.trackSelectionSurface)
   return (
@@ -42,7 +43,13 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
           telemetry={readProjectTelemetry}
           labels={trackResources[locale].arrangement}
           renderLane={row => (
-            <LaneRow row={row} scene={scene} viewport={viewport} readPeaks={readProjectPeaks} />
+            <LaneRow
+              row={row}
+              scene={scene}
+              viewport={viewport}
+              readPeaks={readProjectPeaks}
+              creationNames={laneLabels.creationNames}
+            />
           )}
         />
       }

@@ -1,3 +1,4 @@
+import { PROJECT_TEMPLATE } from "../defaults/template"
 import { useProjectState } from "../stores/useProjectState"
 import { reduceDocument, reduceWorkspace } from "../model/reducers"
 import { reconcileGridForMeterChange } from "./grid"
@@ -127,7 +128,7 @@ export const transportActions = {
     session({ recording: !get().session.recording })
   },
   rewindToStart() {
-    session({ insertionPoint: null, position: { bar: 1, beat: 1, sixteenth: 1 } })
+    session({ insertionPoint: null, position: { ...PROJECT_TEMPLATE.position } })
   },
   setFollow(follow: boolean) {
     workspace(reduceWorkspace(get().workspace, { follow }))

@@ -9,7 +9,7 @@ import {
   EmptyTitle,
   ScrollArea,
 } from "@/ui/controls"
-import { useAppTranslation } from "../i18n"
+import { createDisplayFormats, useAppTranslation } from "../i18n"
 import { useRouter } from "../router/router"
 import { bumpRecentProject, loadRecentProjects, saveRecentProjects } from "./recent-projects"
 import type { SnapshotStorage } from "@/platform/storage"
@@ -37,7 +37,7 @@ export function HomePage({ storage }: HomePageProps) {
   }
   const create = () =>
     open({ id: crypto.randomUUID(), name: t("project.untitled"), openedAt: Date.now() }, "new")
-  const formatTime = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" })
+  const formats = createDisplayFormats(locale)
   return (
     <div
       testId="home-page"
@@ -100,7 +100,7 @@ export function HomePage({ storage }: HomePageProps) {
                 >
                   <text style={{ fontWeight: 500 }}>{project.name}</text>
                   <text style={{ color: theme.colors.mutedForeground }}>
-                    {formatTime.format(project.openedAt)}
+                    {formats.dateTime(project.openedAt)}
                   </text>
                 </Card>
               ))}

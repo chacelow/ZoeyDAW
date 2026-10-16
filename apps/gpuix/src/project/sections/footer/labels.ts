@@ -1,7 +1,9 @@
 import type { DeviceKind, DeviceParameter } from "../../model/devices"
+import type { DisplayFormats } from "../../model/display-formats"
 
 export interface FooterLabels {
   readonly locale: string
+  readonly formats: DisplayFormats
   readonly devicesTab: string
   readonly clipTab: string
   readonly title: string

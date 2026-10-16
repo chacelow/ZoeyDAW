@@ -4,6 +4,7 @@ import { createClip, createTrack } from "@/project/model/reducers"
 import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
 import { CONTENT_PALETTE } from "@/shared/theme/content-color"
 import type { Track } from "@/project/model/types"
+import { getCreationNames } from "@/app/i18n/creation-names"
 
 /** One MIDI, one Audio (real generated WAV) and one Pattern clip; returns their ids. */
 export function seedClipEditProject(mediaUri: string, workload: "normal" | "dense") {
@@ -15,7 +16,21 @@ export function seedClipEditProject(mediaUri: string, workload: "normal" | "dens
   document.transport = { ...document.transport, bpm: 120, numerator: 4, denominator: 4 }
   main.volumeDb = -30
   const tracks: Track[] = []
-  const midiTrack = createTrack("midi", tracks, undefined, DEFAULT_TRACK_HEIGHT)
+  const creation = {
+    names: getCreationNames("en-US"),
+    appearance: {
+      heightPx: DEFAULT_TRACK_HEIGHT,
+      mainHeightPx: DEFAULT_TRACK_HEIGHT,
+      colors: {
+        audio: CONTENT_PALETTE[0],
+        midi: CONTENT_PALETTE[1],
+        group: CONTENT_PALETTE[0],
+        return: CONTENT_PALETTE[0],
+        main: CONTENT_PALETTE[0],
+      },
+    },
+  }
+  const midiTrack = createTrack("midi", tracks, undefined, creation)
   midiTrack.color = CONTENT_PALETTE[1]
   const midi = createClip("midi", 1, 2)
   if (midi.kind !== "midi") throw new Error("Expected a MIDI clip")
@@ -71,7 +86,7 @@ export function seedClipEditProject(mediaUri: string, workload: "normal" | "dens
   }
   midiTrack.clips = [midi, pattern]
   tracks.push(midiTrack)
-  const audioTrack = createTrack("audio", tracks, undefined, DEFAULT_TRACK_HEIGHT)
+  const audioTrack = createTrack("audio", tracks, undefined, creation)
   audioTrack.color = CONTENT_PALETTE[0]
   audioTrack.output = "main"
   audioTrack.volumeDb = -30
