@@ -25,6 +25,23 @@ case "${1:-runtime}" in
   *) echo "Usage: bash scripts/gpuix-main/build.sh [runtime|precompiled]" >&2; exit 1 ;;
 esac
 
+link_checkout() {
+  if [ -e "$root/.gpuix-main" ] && [ ! -L "$root/.gpuix-main" ]; then
+    echo "Refusing to replace a non-symlink .gpuix-main" >&2; exit 1
+  fi
+  ln -sfn "$vendor" "$root/.gpuix-main"
+  for config in "$script_dir"/*/tsconfig.json; do
+    [ -f "$config" ] || continue
+    ln -sfn "$root/apps/gpuix/node_modules" "$(dirname "$config")/node_modules"
+  done
+}
+
+if node "$script_dir/check.mjs" --vendor "$vendor" --build-mode "${1:-runtime}"; then
+  link_checkout
+  echo "Linked verified gpuix build without rebuilding or acquiring the build lock"
+  exit 0
+fi
+
 mkdir -p "$vendor_root"
 if ! mkdir "$vendor_root/.build-lock"; then
   echo "Another gpuix build owns $vendor_root/.build-lock; do not build concurrently" >&2
@@ -79,14 +96,5 @@ pushd "$vendor/packages/react" >/dev/null
 bun run build
 popd >/dev/null
 du -sk "$CARGO_TARGET_DIR"
-if [ -e "$root/.gpuix-main" ] && [ ! -L "$root/.gpuix-main" ]; then
-  echo "Refusing to replace a non-symlink .gpuix-main" >&2; exit 1
-fi
-ln -sfn "$vendor" "$root/.gpuix-main"
-# The renderer regression tests under scripts/gpuix-main resolve react and @gpuix/* through the
-# app's dependency tree; node_modules is gitignored, so recreate the link on every build.
-for config in "$script_dir"/*/tsconfig.json; do
-  [ -f "$config" ] || continue
-  ln -sfn "$root/apps/gpuix/node_modules" "$(dirname "$config")/node_modules"
-done
-node "$script_dir/check.mjs" --record
+link_checkout
+node "$script_dir/check.mjs" --record --build-mode "${1:-runtime}"
