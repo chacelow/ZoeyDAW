@@ -85,7 +85,7 @@ function AppFrame({
   const router = useRouter()
   const { t } = useAppTranslation()
   const projectName = useProjectState(state => state.document.name)
-  const close = useUnsavedCloseGuard(closeRenderer)
+  const close = useUnsavedCloseGuard(closeRenderer, router)
   const isProject = route.kind === "project"
   const surface = isProject ? theme.colors.muted : theme.colors.background
   return (
@@ -119,6 +119,7 @@ function AppFrame({
             <ProjectPage
               key={route.projectId}
               projectId={route.projectId}
+              openMode={route.openMode}
               renderSlots={renderProjectSlots}
             />
           ) : (

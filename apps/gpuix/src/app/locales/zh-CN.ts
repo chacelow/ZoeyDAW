@@ -58,10 +58,10 @@ export default {
   },
   windowClose: {
     title: "当前工程有未保存的修改",
-    description: "关闭窗口前，请选择保存、不保存或取消。",
+    description: "离开工程前，请选择保存、不保存或取消。",
     save: "保存",
     discard: "不保存",
-    saveFailed: "保存失败，窗口仍保持打开。",
+    saveFailed: "保存失败，当前工程仍保持打开。",
     closeFailed: "窗口关闭失败，请重试关闭。",
   },
   notifications: {

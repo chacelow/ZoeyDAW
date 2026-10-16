@@ -162,12 +162,12 @@ function act(root: TestRoot, change: () => void) {
   root.renderer.flush()
 }
 
-/** Panel geometry follows onLayout, which arrives after paint (same settle as ui/panels tests). */
+/** Flush native layout, its events and React microtasks without wall-clock timers. */
 async function layout(root: TestRoot) {
   for (let pass = 0; pass < 4; pass++) {
-    await Bun.sleep(40)
     root.renderer.flush()
-    root.renderer.dispatchNativeEvents()
+    flushSync(() => root.renderer.dispatchNativeEvents())
+    await Promise.resolve()
   }
 }
 
