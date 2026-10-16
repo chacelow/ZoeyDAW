@@ -2,20 +2,24 @@
 
 你是 zoeydaw gpuix 全量重构的一个并行 worker。先读 `AGENTS.md` 与 `apps/gpuix/AGENTS.md` 的路由表，再读 `docs/architecture/gpuix.md`（目标架构、硬规则、测试约定、完成定义）；**涉及可见界面时必读 `docs/architecture/gpuix-ui-standards.md`**，交付按其第 13 节逐条给证据。再动手。本切片的 Target/Ownership 在下方；不属于你的路径不要改。
 
-- 基线：分支 `gpuix-migration`，提交 `d0db74c`。参考源码在 `apps/web/src/**`、`packages/**`、`src-tauri/**`（只读，迁移完成后统一删除，你不要删）。
+- 基线是本次派发明确给出的固定提交与当前分支，不沿用历史规格的迁移起点。旧 Web/Tauri 与共享 packages 已删除，不再把它们当可读参考。只在确需追溯时用 Git 历史读取。
 - 原生能力放 `crates/native`、引擎放 `crates/engine`，能用 Rust 直接做的不要在 TS 里绕路。
 - 需要 `pnpm native:build`（根目录）后才有 `@zoeydaw/native` 二进制。
-- 每个切片都要真实运行，不能只靠类型检查。验证顺序：① 离屏 `createTestRoot` 配合真实后端（`app/verification/native-fixture.ts`）和 `captureScreenshot` 做原生像素与行为验证，这是常规证据；② 需要真实窗口时，用 `GPUIX_BACKGROUND=1 bun --hot <入口>` 启动自己的命名 service，只做不依赖帧推进的检查（启动、AX 只读量值、资源释放）。后台窗口通常被前台遮挡，不出帧，截图会全黑（见 `docs/agents/setup.md`「后台启动」）。**不要为帧相关的验收申请桌面时段**，真实可见窗口的视觉和性能由协调者在收尾时在前台串行验收。只操作自己启动的窗口，**不调用 `computer.control.acquire`**。
+- 验证本轮实际改动路径。界面用真实 gpuix，后端用真实引擎；工具规则运行真实 CLI。复用已取得且仍适用的证据，不每个里程碑重复完整验收。离屏用 `createTestRoot`，窗口用自己启动的命名 service，验完立即关闭。后台窗口不保证帧推进；操作真实窗口必须满足 computer 工具实时批准边界，不绕过前台锁或改用另一种注入机制。
 - 提交：自己的分支内多次小提交，每次一件事；标题避免 `+ & 和 与` 与多个 Conventional Commit 类型；`ultracite` 预提交门禁必须通过，不用 `--no-verify`。非交互提交带 `USER_CONFIRM_HASH=$(git write-tree)`——用户已授权本次重构任务内 `gpuix-migration` 及切片分支的全部本地提交（见 `docs/agents/setup.md`「提交授权」），不向用户或协调者索取“我确认”。
 - 不 push，不碰 `main`，不碰其他 worktree，不启动或停止用户已有服务。
 - 决策：自己路径内、可撤回、不改方向的事自己决定并在报告里写理由，规则没写到的也一样。需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、跨切片、与契约冲突，或属于根 `AGENTS.md`「决策默认归 Agent」清单的事：用 `orca orchestration ask` 问协调者，带上候选与建议。worker 不直接问用户。
-- **不允许静默停下**:你一旦结束回合,协调者就收不到你的任何状态,只有发出的 Orca 消息才算上报。每次结束回合前必须已经发出其中一种:还有工作就继续做,不结束回合;等待协调者、其它切片或桌面时段,发 `orca orchestration ask`(它会阻塞到协调者 reply,把你直接唤醒);阶段完成,发 `merge_ready`;全部完成,发 `worker_done`。只在终端里写"等待中"不算上报。巡检会自动唤醒停在空闲状态、却没有关闭派发的 worker。
-- **你是长期 lane（用户 2026-10-16）**：交付 `worker_done` 后，你的 worktree 和终端都会保留，下一个任务直接派给你，所以不要删 worktree、关终端或清理分支，这些由协调者的 `lane.sh` 负责。新任务的规格开头会写你所在的新分支（基于最新 `gpuix-migration`）：以前读过的契约和文件地图可以继续用，但具体文件以当前分支内容为准，改之前重新读要改的文件；不要沿用上一个任务的分支或未提交改动。开工时如果又收到上一个已结算任务的完整 brief，那是重放：以当前派发的 task/dispatch ID 和分支为准，旧 brief 忽略，不需要问。上下文压缩之后照样按本规格和 `AGENTS.md` 继续，不需要协调者重发。
-- 交付前验证（用户 2026-10-16：本机性能不足，完整门禁在 GitHub Actions 的 `main` 上跑）：本地只跑轻量检查，`tsc --noEmit`、改动范围内的 `bun test` 与 eslint、本切片的变异入口、必要的单窗口 smoke；涉及 Rust 时跑改动 crate 的 `cargo check` 与 `cargo test`。不在本地跑完整 `pnpm verify:gpuix`，合入后由协调者推 main 看 Actions 结果。报告里写清命令、结果、未实现项及原因。不得把未实现的部分描述成完成。报告单列「错题」与「已验证做法」两节（LESSONS 格式）；不要直接改 `LESSONS.md`，由协调者整理。
+- **不允许静默停下**：同一模块内按里程碑继续实现、运行、观察并反馈。遇到阻塞用 `orca orchestration ask`，同一问题沿原 messageId 续等，不重复发问。协调者答复前先做模块内不依赖该项的工作，全部阻塞才等待。发 `merge_ready` 后主编排将它放入复核队列，不需要再发一个“是否收到”的 ask；`worker_done` 只表示本轮实现已交付，不等于已合入，不复用已结算的生命周期 ID。
+- **长期 lane 与原会话复用**：新模块优先交给熟悉该模块的空闲 lane，保留 worktree、终端和上下文，不为几行改动另起 Agent。派发必须给出当前分支与固定基线；重新 resume 只核对现场、变化的契约和当前范围，不全文重读未变化文档。旧 brief 重放以当前 Task/Dispatch 为准。交付后不删除分支或终端；派发接口与平台操作以 `docs/agents/coordination.md` 为准。
+- 本地只跑 `docs/agents/setup.md` 规定的轻量检查、改动范围的回归与必要单窗口 smoke，完整门禁留给 main Actions。新增永久测试必须抓真实消费行为、边界或状态转换，不为改文案、复制配置或凑 no-tests 新增测试。报告记录命令、结果、未验证项，放在仓库外或 Git 忽略的证据目录；仓库只保存稳定契约，不提交本轮会话记录或每切片 REPORT.md。错题交主编排整理，不直接改 LESSONS。
 - 涉及 Live 已有行为的切片，实现前先观察 Ableton Live，报告附「产品规则 → Live 观察 → 实现 → 差异/未验证」对照表。
 - UI 以真实 Gallery 和业务组合视图作整体评审，按 `gpuix-ui-standards.md` 第 13 节执行；生成截图默认放仓库外或 Git 忽略目录，不批量提交逐按钮/逐状态 PNG。圆角、边框、gap、padding 通过共享组件与 token 统一调整。
 - 卡在能力缺口或方案选择时，先用 Context7、GitHub 查最新方案（必要时请协调者用 Ego Browser 搜 X），把候选与实测证据随 `ask` 一起发。
-- **进程清理(强制,用户明确要求)**:你启动的一切东西——`bun --hot` demo/gallery、测试用窗口、`cargo run` 的 spike、任何后台 service——**验证完立刻关闭,不要留到下一步**。窗口和进程会占用户本机的内存与 GPU。具体做法:启动时一律用带 `name` 的 bash service(`proc://<name>` 可见、可 `kill`),不要裸启动;每次截图/AX 验证拿到结果后马上 `write proc://<name>/kill`;`worker_done` 之前自己跑一遍 `ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"` 确认**零残留**,报告里附这条命令的输出。长时间存活的 demo(超过 5 分钟没有交互)视为泄漏。
+- **进程清理**：只管理自己启动的命名 service、测试窗口和子进程，拿到证据立即关闭。交付前按当前平台列出这些进程的 PID 和状态，Windows 不使用 macOS 的 `ps -axo`。不得批量 kill 同名用户进程，不能把全部 Bun 窗口为空当作自己的唯一清理证明。
+
+## 模块与里程碑
+
+每个派发覆盖一个内聚模块的功能实现、相关缺陷修复与集成验收，不能把几行文案、几个测试或一篇 README 单独作为一个 lane 的全部工作。每个里程碑形成可运行行为，顺序为实现、真实运行、观察结果、反馈修正；保留有效证据后立即用正式 hook 提交。原生 vendor 的实质改动要导出到有序补丁并跟踪提交，不把唯一实现留在仓库外或未跟踪文件中。里程碑之间持续推进，不等整块模块全部完成才提交，也不为每个小改动重开审查和报告链。
 
 ## 交付前自审(强制,见 docs/architecture/gpuix.md「交付前自审与协调者仲裁」)
 

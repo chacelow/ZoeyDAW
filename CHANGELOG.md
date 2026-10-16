@@ -5,6 +5,8 @@
 ### PC orchestration (2026-10-17)
 
 - Resume the coordinator and existing worker sessions on Windows. Add a portable Orca listener with explicit delivery acknowledgement; the coordinator patrols through the built-in OMP loop. Machine paths and Run bindings stay outside the repository.
+- Dispatch complete modules to retained lane sessions, commit runnable milestones, and keep transient reports outside the source tree. Register review-ready work before acknowledging its delivery so deep review cannot block later worker questions.
+- Normalize required documentation paths before route comparisons on Windows.
 
 ### gpuix native rewrite (2026-10-14 – 2026-10-15)
 

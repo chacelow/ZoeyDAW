@@ -33,7 +33,7 @@ const required = [
   "apps/gpuix/src/project/sections/arrangement/core/README.md",
   "apps/gpuix/src/ui/panels/README.md",
 ]
-const missing = required.filter(f => !linked.has(f))
+const missing = required.filter(f => !linked.has(path.normalize(f)))
 const absent = required.filter(f => !existsSync(f))
 if (missing.length || absent.length) {
   if (missing.length) {

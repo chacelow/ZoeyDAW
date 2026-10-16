@@ -34,13 +34,16 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 ## 流程
 
-**派发（2026-10-16 用户要求复用 lane）**：新任务优先派给空闲 lane，`scripts/orchestration/lane.sh assign <lane> <标题> <规格文件...>`。lane 就是一个长期保留的 gpuix-migration 子 worktree 加上它的 omp 终端，agent 保留之前读过的契约与文件地图，省掉重复的探索。`assign` 只接受“上次派发已结束、工作区干净、分支已合入主干”的 lane：它从 `gpuix-migration` 最新提交切出新分支 `lane/<lane>/<时间>-<slug>`，删掉已合入的旧分支，同步 renderer 链接与依赖，然后对同一个终端 `worker-start --terminal`。`lane.sh list` 查看所有 lane 的分支、是否已合入、终端与最近派发。只有所有 lane 都忙、又确实需要并行时，才用 `lane.sh new`（即 `start-worker.sh`）新建。规格 = `common.md` + 本任务规格。
+**模块派发（2026-10-17 用户要求）**：一个 Agent 负责一个内聚的大模块，包含功能实现、相关修复与集成验收，不把几行文案、测试文件或 README 拆成独立 lane。模块内分可运行里程碑，按实现、运行、观察、反馈修正推进，每个有效阶段立即提交。优先复用熟悉该模块的原 lane 与会话，只补充当前基线、变更契约和未完项；启动前由协调者检查 CLI、Git 路径、依赖身份与实际平台，不让所有 worker 各自探索同一个环境问题。macOS 使用 `lane.sh assign`；PC 显式在已结算、已合入且干净的 lane 建任务分支，用同一终端 `worker-start --terminal`，中断恢复用原会话 resume。返工在原分支继续，不混入历史撤回或已结束派发。
 
 **模型按角色固定**：2026-10-17 PC 接管的协调者与四个原 lane 均以 `cursor-claude/cx/gpt-6.1-sol` resume，显式指定模型，不依赖全局默认值。Orca 拒绝 `worker-start --agent omp --model`，所以先起固定模型的 omp 终端，再用 `worker-start --terminal` 绑定派发。原 lane 保留会话和 worktree，不以新 agent 替代；实现派工一律走 Orca worker，`task` 只用于只读自审。
 
 **回答问题**:worker 的 `question` 一律用 `orca orchestration reply --id`;`send` 用于通知。
 
-**合并前复核**:不信报告,自己在临时 worktree 里与主干合并后跑 tsc、bun test、eslint、`gpuix-review-scan`,做关键变异,比对失败名单与主干基线。改动了补丁序列的,先重建共享 vendor 再看结果。
+**合并前复核**：固定 SHA 与明确基线，协调者阅读实际生产 diff、native 补丁、关键测试和接口调用链，独立审查只能补充，不能替代这一判断。检查重复设计、无效测试、注释式改动、目录和报告污染，再在临时合入树复跑受影响检查并观察真实行为。发现问题以具体文件、原因和验收退回原 lane；不因测试数量多或报告声称通过就接受。历史合并提交的文件总量不算本轮产出，源码变更与证据变更分开评价。
+
+**消息与复核分离**：收到 `merge_ready` 立即登记固定 SHA、owner、复核状态，并回复阻塞中的问题；登记后即可 ack，该 Delivery 的确认不表示批准合入。然后继续消费后续批次，不让一条待 review 消息堵住整个 FIFO。每轮优先回答 question，再处理升级和交付；之后才做深审。`worker_done` 的终端要明确保留或复用，已结束派发不再发送生命周期消息。只保留一个 listener，由 OMP loop 驱动，不定时向用户刷进度。
+
 
 **合入后（2026-10-16 用户要求，取代 2026-10-14/15“合入即删”的旧规则）**：切片合入并核对后，lane 保留，供下一个任务复用：
 
@@ -56,7 +59,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 - 共享组件发现两份实现时,由协调者抽到 `shared/` 或拥有它的切片,另一份删除。
 - vendor 补丁序列的变更合入后,由协调者重建共享 vendor 并通知各 worker。
 
-**桌面时段**:真实窗口输入一次只给一个 worker,用 reply 给出 UTC 起止时间,同时通知其余 worker 暂停输入;到点就停,发「桌面释放」。worker 只操作自己启动的窗口,用 `computer.window(...)` 加 AX `el.press()`、`win.observe()`/`screenshot()` 与窗口级输入,**不调用 `computer.control.acquire`**(它要人类实时批准,本项目不用;app-shell 阶段 1、clip-lane、a3b 都是这样完成的)。worker 被工具或权限卡住时,协调者先查以前切片的做法给出可行路线,不转问用户。
+**桌面时段**：真实窗口输入一次只给一个 worker，给出绝对 UTC 起止并通知其它 lane 暂停输入。只操作自己启动的窗口，遵守 computer 工具实时批准边界；工具拒绝或时段过期即停止，不用另一种输入机制绕过。可用离屏或程序自身的验证入口补充不依赖真实输入的证据，但必须分别标明已验证行为与未验证物理输入，不能等同。
 
 **巡检（2026-10-17 用户要求）**：主编排用 OMP 内置 `/loop` 驱动，不用计划任务、launchd 或脚本定时向终端发提示。每轮先处理 listener 交付的消息，再用 `worker-list` 判断以下状态。`unverifiable` 不是死亡，不重启、不重复派发；同一 worker 的提醒需节流：
 
