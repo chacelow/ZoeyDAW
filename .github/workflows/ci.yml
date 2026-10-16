@@ -56,7 +56,7 @@ jobs:
       - name: Cache patched gpuix renderer
         uses: actions/cache@v4
         with:
-          path: ${{ runner.workspace }}/gpuix-vendor
+          path: ${{ env.GPUIX_VENDOR_ROOT }}
           key: gpuix-vendor-${{ runner.os }}-${{ hashFiles('scripts/gpuix-main/config.json', 'scripts/gpuix-main/patches/**', 'scripts/gpuix-main/build.sh') }}
 
       # Cargo target and registry roll forward: an exact miss restores the newest previous target so
@@ -65,7 +65,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ${{ runner.workspace }}/gpuix-target
+            ${{ env.CARGO_TARGET_DIR }}
             ~/.cargo/registry
             ~/.cargo/git
           key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/**/*.rs', 'crates/**/Cargo.toml', 'scripts/gpuix-main/patches/**') }}
