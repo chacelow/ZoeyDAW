@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { writeFileSync } from "node:fs"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -17,7 +18,7 @@ import type { FooterView } from ".."
 
 const activity = createTestWindowActivity()
 
-projectActions.addTrack("audio")
+projectActions.addTrack("audio", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
 const track = useProjectState.getState().document.tracks.find(item => item.kind === "audio")
 if (!track) throw new Error("No authored measurement track")
 projectActions.updateTrack(track.id, { devices: DEVICE_KINDS.map(createDevice) })

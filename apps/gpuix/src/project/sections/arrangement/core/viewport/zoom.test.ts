@@ -1,6 +1,6 @@
 import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
 import { describe, expect, it } from "bun:test"
-import { CONTROLS_WIDTH } from "../../../../layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { gridZoomLimit } from "../../../../model/grid"
 import type { Track } from "../../../../model/types"
 import {
@@ -225,11 +225,12 @@ describe("anchored timeline zoom", () => {
 describe("viewport clamping and navigation", () => {
   const base = {
     bars: 128,
-    containerWidth: CONTROLS_WIDTH + 640,
+    containerWidth: DEFAULT_LAYOUT_TOKENS.track.controlsWidth + 640,
     bodyHeight: 400,
     numerator: 4,
     denominator: 4,
     tracks,
+    geometry: DEFAULT_LAYOUT_TOKENS.track,
     storedPxPerBar: 32,
     storedScrollX: 320,
     storedScrollY: 100,
@@ -286,7 +287,7 @@ describe("viewport clamping and navigation", () => {
 
   it("does not invert zoom bounds when fitting exceeds the grid limit", () => {
     const wide = clampTimelineViewport(
-      { ...base, bars: 1, containerWidth: CONTROLS_WIDTH + 1e6 },
+      { ...base, bars: 1, containerWidth: DEFAULT_LAYOUT_TOKENS.track.controlsWidth + 1e6 },
       ARRANGEMENT_DEFAULTS.zoom
     )
     expect(wide.minPxPerBar).toBe(1e6)
@@ -300,6 +301,7 @@ describe("viewport clamping and navigation", () => {
       width: 640,
       height: 400,
       tracks,
+      geometry: DEFAULT_LAYOUT_TOKENS.track,
       pxPerBar: 32,
       scrollX: 320,
       scrollY: 100,

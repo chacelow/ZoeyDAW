@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync, useWindowSize } from "@gpuix/react"
@@ -10,12 +11,6 @@ import {
   serializeProject,
 } from "../../../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
-import {
-  COLLAPSED_TRACK_HEIGHT,
-  CONTROLS_WIDTH,
-  TRACK_RESIZE_STEP,
-  TRACK_LAYOUT,
-} from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import { TrackRows } from "../TrackRows"
 import { TrackResizeOverlay } from "../TrackResizeOverlay"
@@ -60,12 +55,12 @@ function Surface({
   const size = useWindowSize()
   const acceptedViewport = {
     ...view,
-    width: Math.max(0, size.width - CONTROLS_WIDTH),
+    width: Math.max(0, size.width - DEFAULT_LAYOUT_TOKENS.track.controlsWidth),
     height: size.height,
   }
   const document = useProjectState(state => state.document)
   const scene = {
-    ...createSceneStore().get(),
+    ...createSceneStore(DEFAULT_LAYOUT_TOKENS).get(),
     tracks: document.tracks,
     viewport: acceptedViewport,
   }
@@ -148,7 +143,7 @@ test("composite rows fill the viewport and give the lane remaining width", () =>
   expect(lane.width + identity.width + routing.width + mixer.width).toBe(row.width)
   expect(identity.x).toBe(lane.x + lane.width)
   expect(mixer.x + mixer.width).toBe(row.x + row.width)
-  const routingInnerWidth = routing.width - TRACK_LAYOUT.spacing * 2
+  const routingInnerWidth = routing.width - DEFAULT_LAYOUT_TOKENS.track.spacing * 2
   expect(bounds(root, "track-output-3-audio").width).toBe(routingInnerWidth)
 })
 
@@ -226,13 +221,13 @@ test("ordinary tracks resize in control-row steps and keep undo atomic", () => {
   root.renderer.nativeSimulateMouseDown(rect.x + rect.width / 2, rect.y + rect.height / 2)
   root.renderer.nativeSimulateMouseMove(
     rect.x + rect.width / 2,
-    rect.y + rect.height / 2 + TRACK_RESIZE_STEP * 2,
+    rect.y + rect.height / 2 + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2,
     0
   )
   expect(current("trager").heightPx).toBe(104)
   root.renderer.nativeSimulateMouseUp(
     rect.x + rect.width / 2,
-    rect.y + rect.height / 2 + TRACK_RESIZE_STEP * 2
+    rect.y + rect.height / 2 + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2
   )
   projectActions.undo()
   expect(current("trager").heightPx).toBe(70)
@@ -244,11 +239,11 @@ test("Escape rolls back a height preview instead of consuming the previous undo 
   const x = rect.x + rect.width / 2
   const y = rect.y + rect.height / 2
   root.renderer.nativeSimulateMouseDown(x, y)
-  root.renderer.nativeSimulateMouseMove(x, y + TRACK_RESIZE_STEP * 2, 0)
+  root.renderer.nativeSimulateMouseMove(x, y + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2, 0)
   expect(current("trager").heightPx).toBe(104)
   root.renderer.nativeSimulateKeystrokes(element(root, "track-resize-trager").id, "escape")
   expect(current("trager").heightPx).toBe(70)
-  root.renderer.nativeSimulateMouseUp(x, y + TRACK_RESIZE_STEP * 2)
+  root.renderer.nativeSimulateMouseUp(x, y + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2)
   expect(current("trager").heightPx).toBe(70)
 })
 
@@ -276,7 +271,7 @@ for (const id of ["3-audio", "trager", "drums-group", "a-apply", "main"]) {
         expect(root.renderer.findByTestId(`track-arm-space-${id}`)).toBeDefined()
       if (kind === "return") expect(root.renderer.findByTestId(`track-post-${id}`)).toBeDefined()
     }
-    expect(bounds(root, `track-row-${id}`).height).toBe(COLLAPSED_TRACK_HEIGHT)
+    expect(bounds(root, `track-row-${id}`).height).toBe(DEFAULT_LAYOUT_TOKENS.track.collapsedHeight)
     click(root, `track-fold-${id}`)
     expect(current(id).collapsed).toBe(false)
     expect(root.renderer.findByTestId(`track-volume-${id}`)).toBeDefined()
@@ -285,7 +280,8 @@ for (const id of ["3-audio", "trager", "drums-group", "a-apply", "main"]) {
 }
 
 test("routing restores input only when four complete uniform rows fit", () => {
-  const requiredHeight = COLLAPSED_TRACK_HEIGHT + 3 * TRACK_RESIZE_STEP
+  const requiredHeight =
+    DEFAULT_LAYOUT_TOKENS.track.collapsedHeight + 3 * DEFAULT_LAYOUT_TOKENS.track.resizeStep
   projectActions.updateTrack("3-audio", { heightPx: requiredHeight - 1 })
   const root = mount()
   expect(root.renderer.findByTestId("track-input-3-audio")).toBeUndefined()
@@ -323,17 +319,21 @@ test("send rows fill horizontally in equal thirds before adding a second row", (
   const second = bounds(root, "track-send-return-0-3-audio")
   const third = bounds(root, "track-send-return-1-3-audio")
   const containerWidth = bounds(root, "track-sends-3-audio").width
-  const idealWidth = (containerWidth - TRACK_LAYOUT.spacing * 2) / 3
+  const idealWidth = (containerWidth - DEFAULT_LAYOUT_TOKENS.track.spacing * 2) / 3
   for (const column of [first, second, third])
     expect(Math.abs(column.width - idealWidth)).toBeLessThanOrEqual(1)
-  expect(first.width + second.width + third.width + TRACK_LAYOUT.spacing * 2).toBe(containerWidth)
+  expect(first.width + second.width + third.width + DEFAULT_LAYOUT_TOKENS.track.spacing * 2).toBe(
+    containerWidth
+  )
   expect(first.y).toBe(second.y)
   expect(second.y).toBe(third.y)
   expect(first.x).toBeLessThan(second.x)
   expect(second.x).toBeLessThan(third.x)
   expect(root.renderer.findByTestId("track-send-return-2-3-audio")).toBeUndefined()
   root.renderer.nativeSimulateKeystrokes(element(root, "track-resize-3-audio").id, "down")
-  expect(bounds(root, "track-send-return-2-3-audio").y).toBe(first.y + TRACK_RESIZE_STEP)
+  expect(bounds(root, "track-send-return-2-3-audio").y).toBe(
+    first.y + DEFAULT_LAYOUT_TOKENS.track.resizeStep
+  )
   root.renderer.simulateKeystrokes("up up")
   expect(root.renderer.findByTestId("track-send-a-apply-3-audio")).toBeUndefined()
 })
@@ -351,7 +351,9 @@ test("folding Group unmounts children and shows only the folded descendant overv
   for (const child of children)
     expect(root.renderer.findByTestId(`track-row-${child}`)).toBeUndefined()
   expect(root.renderer.findByTestId("lane-content-drums-group")).toBeDefined()
-  expect(bounds(root, "track-group-frame-drums-group").height).toBe(COLLAPSED_TRACK_HEIGHT)
+  expect(bounds(root, "track-group-frame-drums-group").height).toBe(
+    DEFAULT_LAYOUT_TOKENS.track.collapsedHeight
+  )
   click(root, "track-fold-drums-group")
   for (const child of children)
     expect(root.renderer.findByTestId(`track-row-${child}`)).toBeDefined()

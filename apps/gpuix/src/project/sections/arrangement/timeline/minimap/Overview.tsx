@@ -37,7 +37,12 @@ export const Overview = memo(function Overview({
           })}
         >
           {track.clips.map(clip => {
-            const rect = clipRect(clip, { track, top: 0, height: rowHeight }, width / bars, 0)
+            const rect = clipRect(
+              clip,
+              { track, top: 0, height: rowHeight, trackGeometry: theme.layout.track },
+              width / bars,
+              0
+            )
             return (
               <div
                 key={clip.id}

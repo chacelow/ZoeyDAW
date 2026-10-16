@@ -1,12 +1,8 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { createMockDocument } from "../../../adapters/fixtures"
 import { deriveGridPlan, gridZoomLimit } from "../../../model/grid"
-import {
-  resizeTrackHeight,
-  TRACK_RESIZE_STEP,
-  TRACK_REVEAL_THRESHOLD,
-  COLLAPSED_TRACK_HEIGHT,
-} from "../../../layout"
+import { resizeTrackHeight } from "../../../layout"
 import { projectClipResize } from "../../../model/clip-edits"
 import { fadeControls } from "../../../model/fades"
 import { createSceneStore } from "./scene"
@@ -33,7 +29,7 @@ function fixture() {
   const clip = track.clips.find(item => item.kind === "audio")!
   if (clip.kind !== "audio") throw new Error("Expected audio fixture")
   const owner = { ...track, collapsed: false, heightPx: 120, clips: [clip] }
-  const store = createSceneStore()
+  const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   store.setMusic({
     bars: 128,
     grid: { mode: "adaptive", density: "medium" },
@@ -141,17 +137,49 @@ test("grid subdivisions remain adaptive through 1/16384 and quarter snapping mat
 
 test("track resize snaps by shared control rows and folds across thresholds", () => {
   const { owner } = fixture()
-  const expanded = { ...owner, heightPx: COLLAPSED_TRACK_HEIGHT + 4 * TRACK_RESIZE_STEP }
-  expect(resizeTrackHeight(expanded, TRACK_RESIZE_STEP * 0.49).heightPx).toBe(expanded.heightPx)
-  expect(resizeTrackHeight(expanded, TRACK_RESIZE_STEP * 0.51).heightPx).toBe(
-    expanded.heightPx + TRACK_RESIZE_STEP
-  )
-  expect(resizeTrackHeight(expanded, -4 * TRACK_RESIZE_STEP).collapsed).toBe(true)
+  const expanded = {
+    ...owner,
+    heightPx:
+      DEFAULT_LAYOUT_TOKENS.track.collapsedHeight + 4 * DEFAULT_LAYOUT_TOKENS.track.resizeStep,
+  }
+  expect(
+    resizeTrackHeight(
+      expanded,
+      DEFAULT_LAYOUT_TOKENS.track.resizeStep * 0.49,
+      DEFAULT_LAYOUT_TOKENS.track
+    ).heightPx
+  ).toBe(expanded.heightPx)
+  expect(
+    resizeTrackHeight(
+      expanded,
+      DEFAULT_LAYOUT_TOKENS.track.resizeStep * 0.51,
+      DEFAULT_LAYOUT_TOKENS.track
+    ).heightPx
+  ).toBe(expanded.heightPx + DEFAULT_LAYOUT_TOKENS.track.resizeStep)
+  expect(
+    resizeTrackHeight(
+      expanded,
+      -4 * DEFAULT_LAYOUT_TOKENS.track.resizeStep,
+      DEFAULT_LAYOUT_TOKENS.track
+    ).collapsed
+  ).toBe(true)
   const collapsed = { ...expanded, collapsed: true }
-  expect(resizeTrackHeight(collapsed, TRACK_REVEAL_THRESHOLD - 0.01).collapsed).toBe(true)
-  expect(resizeTrackHeight(collapsed, TRACK_REVEAL_THRESHOLD)).toEqual({
+  expect(
+    resizeTrackHeight(
+      collapsed,
+      DEFAULT_LAYOUT_TOKENS.track.revealThreshold - 0.01,
+      DEFAULT_LAYOUT_TOKENS.track
+    ).collapsed
+  ).toBe(true)
+  expect(
+    resizeTrackHeight(
+      collapsed,
+      DEFAULT_LAYOUT_TOKENS.track.revealThreshold,
+      DEFAULT_LAYOUT_TOKENS.track
+    )
+  ).toEqual({
     collapsed: false,
-    heightPx: COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP,
+    heightPx: DEFAULT_LAYOUT_TOKENS.track.collapsedHeight + DEFAULT_LAYOUT_TOKENS.track.resizeStep,
   })
 })
 
@@ -195,7 +223,17 @@ test("property: fade anchors stay bounded through arbitrary drag and resize sequ
         expect(state.position).toBeLessThanOrEqual(1 - state.gap)
       }
       const visual = clipVisualGeometry(
-        clipRect(projected, { track: owner, top: 34, height: height + 30 }, pxPerBar, 0),
+        clipRect(
+          projected,
+          {
+            trackGeometry: DEFAULT_LAYOUT_TOKENS.track,
+            track: owner,
+            top: 34,
+            height: height + 30,
+          },
+          pxPerBar,
+          0
+        ),
         projected,
         owner,
         true

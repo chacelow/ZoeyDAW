@@ -79,7 +79,11 @@ export function createTimelineController({
   }
   const listeners = new Set<() => void>()
   let minimap: MinimapGesture | null = null
-  const viewport = createTimelineViewport(() => presentation.size, policy)
+  const viewport = createTimelineViewport(
+    () => presentation.size,
+    () => sceneStore.get().geometry.track,
+    policy
+  )
   const rulers = createRulerController(sceneStore, policy.keyboard)
   const getViewport = () => sceneStore.get().viewport
 
@@ -231,6 +235,13 @@ export function createTimelineController({
   }
 
   const unsubscribeProject = useProjectState.subscribe(synchronize)
+  let geometry = sceneStore.get().geometry
+  const unsubscribeGeometry = sceneStore.subscribe(scene => {
+    if (scene.geometry === geometry) return
+    geometry = scene.geometry
+    cancelGestures()
+    synchronize()
+  })
   const unsubscribeWindow = subscribeWindowActive(active => {
     if (!active) cancelGestures()
   })
@@ -286,6 +297,7 @@ export function createTimelineController({
       rulers.dispose()
       unsubscribeProject()
       unsubscribeWindow()
+      unsubscribeGeometry()
       disposed = true
       minimap = null
       listeners.clear()

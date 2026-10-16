@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, it } from "bun:test"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { createMockDocument } from "../../../adapters/fixtures"
@@ -29,7 +30,7 @@ it("keeps Clip-local grids phase-aligned across fractional viewports and vertica
       steps: [true],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 0.25 },
@@ -87,7 +88,7 @@ it("culls every non-intersecting row and clip through randomized viewport transf
     clips,
     childTrackIds: undefined,
   }))
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 256,
     grid: { mode: "fixed", bars: 0.25 },
@@ -151,7 +152,7 @@ it("clips retained MIDI repetitions and Pattern activity to the visible source w
         { pitch: 72, startBeat: 3, lengthBeats: 1, velocity: 100 },
       ],
     }
-    const row = { track, top: 50, height: 100 }
+    const row = { trackGeometry: DEFAULT_LAYOUT_TOKENS.track, track, top: 50, height: 100 }
     const geometry = clipVisualGeometry(
       { ...clipRect(midi, row, width / lengthBars, -left), left, width },
       midi,
@@ -194,7 +195,7 @@ it("renders only the active Ghost while the source remains at its committed posi
   const track = score.tracks.find(item => item.kind === "midi")
   const clip = track?.clips[0]
   if (!track || !clip) throw new Error("Missing MIDI clip")
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 0.25 },
@@ -224,7 +225,7 @@ it("retains MIDI source phase after trimming and across equivalent loop windows"
   const score = createMockDocument()
   const track = score.tracks.find(item => item.kind === "midi")
   if (!track) throw new Error("Missing MIDI track")
-  const row = { track, top: 50, height: 100 }
+  const row = { trackGeometry: DEFAULT_LAYOUT_TOKENS.track, track, top: 50, height: 100 }
   const base: MidiClip = {
     kind: "midi",
     id: "m",

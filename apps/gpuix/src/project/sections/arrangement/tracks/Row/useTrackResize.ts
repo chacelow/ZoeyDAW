@@ -1,7 +1,8 @@
 import { useCallback, useContext, useEffect, useRef } from "react"
 import { PanelEnvironmentContext } from "@/ui/panels/PanelEnvironment"
 import { projectActions, useProjectEditGesture } from "@/project/adapters"
-import { resizeTrackHeight, TRACK_REVEAL_THRESHOLD, TRACK_RESIZE_STEP } from "@/project/layout"
+import { resizeTrackHeight } from "@/project/layout"
+import type { TrackGeometry } from "@/project/layout"
 import type { Props } from "@gpuix/react"
 import type { Track } from "@/project/model/types"
 
@@ -9,7 +10,8 @@ type HeightPatch = Pick<Track, "collapsed" | "heightPx">
 
 export function useTrackResize(
   track: Track,
-  onCaptureChange: (captured: boolean) => void
+  onCaptureChange: (captured: boolean) => void,
+  geometry: TrackGeometry
 ): Pick<Props, "onMouseDown" | "onMouseMove" | "onMouseUp" | "onKeyDown" | "onBlur"> {
   const gesture = useProjectEditGesture((patch: HeightPatch) =>
     projectActions.updateTrack(track.id, patch)
@@ -23,7 +25,7 @@ export function useTrackResize(
     gesture.onGestureCancel()
     if (captured) onCaptureChange(false)
   }, [gesture, onCaptureChange])
-  useEffect(() => cancel, [cancel])
+  useEffect(() => cancel, [cancel, geometry])
   useEffect(
     () =>
       subscribeWindowActive?.(active => {
@@ -49,7 +51,7 @@ export function useTrackResize(
         cancel()
         return
       }
-      const next = resizeTrackHeight(start.track, (event.y - start.y) * (pinned ? -1 : 1))
+      const next = resizeTrackHeight(start.track, (event.y - start.y) * (pinned ? -1 : 1), geometry)
       if (next.collapsed === start.last.collapsed && next.heightPx === start.last.heightPx) return
       start.last = next
       gesture.onChange(next)
@@ -85,9 +87,10 @@ export function useTrackResize(
           track,
           up === pinned
             ? track.collapsed
-              ? TRACK_REVEAL_THRESHOLD
-              : TRACK_RESIZE_STEP
-            : -TRACK_RESIZE_STEP
+              ? geometry.revealThreshold
+              : geometry.resizeStep
+            : -geometry.resizeStep,
+          geometry
         )
       )
     },

@@ -5,6 +5,7 @@
  */
 import { visibleTracks } from "@/project/model/types"
 import { trackHeight } from "@/project/layout"
+import type { TrackGeometry } from "@/project/layout"
 import type { Clip, Track } from "@/project/model/types"
 import type { ArrangementScene } from "./scene"
 
@@ -17,6 +18,7 @@ export interface TrackRow {
   track: Track
   top: number
   height: number
+  trackGeometry: TrackGeometry
 }
 
 export interface ClipRect {
@@ -26,6 +28,7 @@ export interface ClipRect {
   top: number
   width: number
   height: number
+  trackGeometry: TrackGeometry
 }
 
 /**
@@ -49,16 +52,16 @@ export function isPinnedTrack(track: Track): boolean {
   return track.kind === "return" || track.kind === "main"
 }
 
-export function pinnedTrackHeight(tracks: readonly Track[]): number {
+export function pinnedTrackHeight(tracks: readonly Track[], geometry: TrackGeometry): number {
   return tracks.reduce(
-    (height, track) => height + (isPinnedTrack(track) ? trackHeight(track) : 0),
+    (height, track) => height + (isPinnedTrack(track) ? trackHeight(track, geometry) : 0),
     0
   )
 }
 
-export function scrollableTrackHeight(tracks: readonly Track[]): number {
+export function scrollableTrackHeight(tracks: readonly Track[], geometry: TrackGeometry): number {
   return tracks.reduce(
-    (height, track) => height + (isPinnedTrack(track) ? 0 : trackHeight(track)),
+    (height, track) => height + (isPinnedTrack(track) ? 0 : trackHeight(track, geometry)),
     0
   )
 }
@@ -66,15 +69,27 @@ export function scrollableTrackHeight(tracks: readonly Track[]): number {
 /**
 Scrollable lane height excludes both fixed rulers and the bottom-anchored tracks.
 */
-export function scrollableTrackViewportHeight(tracks: readonly Track[], height: number): number {
+export function scrollableTrackViewportHeight(
+  tracks: readonly Track[],
+  height: number,
+  geometry: TrackGeometry
+): number {
   return Math.max(
     0,
-    arrangementBodyBottom(height) - arrangementBodyTop() - pinnedTrackHeight(tracks)
+    arrangementBodyBottom(height) - arrangementBodyTop() - pinnedTrackHeight(tracks, geometry)
   )
 }
 
-export function maxTrackScrollY(tracks: readonly Track[], height: number): number {
-  return Math.max(0, scrollableTrackHeight(tracks) - scrollableTrackViewportHeight(tracks, height))
+export function maxTrackScrollY(
+  tracks: readonly Track[],
+  height: number,
+  geometry: TrackGeometry
+): number {
+  return Math.max(
+    0,
+    scrollableTrackHeight(tracks, geometry) -
+      scrollableTrackViewportHeight(tracks, height, geometry)
+  )
 }
 
 /**
@@ -83,18 +98,19 @@ Shared CSS-pixel row origins for canvas, hit tests, and the header column.
 export function layoutTrackRowsForViewport(
   tracks: readonly Track[],
   scrollY: number,
-  height: number
+  height: number,
+  geometry: TrackGeometry
 ): TrackRow[] {
   const rows: TrackRow[] = []
   let y = arrangementBodyTop() - scrollY
-  let pinnedY = arrangementBodyBottom(height) - pinnedTrackHeight(tracks)
+  let pinnedY = arrangementBodyBottom(height) - pinnedTrackHeight(tracks, geometry)
   for (const track of tracks) {
-    const rowHeight = trackHeight(track)
+    const rowHeight = trackHeight(track, geometry)
     if (isPinnedTrack(track)) {
-      rows.push({ track, top: pinnedY, height: rowHeight })
+      rows.push({ track, top: pinnedY, height: rowHeight, trackGeometry: geometry })
       pinnedY += rowHeight
     } else {
-      rows.push({ track, top: y, height: rowHeight })
+      rows.push({ track, top: y, height: rowHeight, trackGeometry: geometry })
       y += rowHeight
     }
   }
@@ -105,7 +121,8 @@ export function layoutTrackRows(scene: ArrangementScene): TrackRow[] {
   return layoutTrackRowsForViewport(
     visibleTracks([...scene.tracks]),
     scene.viewport.scrollY,
-    scene.viewport.height
+    scene.viewport.height,
+    scene.geometry.track
   )
 }
 
@@ -115,28 +132,37 @@ Rect of a clip in CSS pixel coordinates relative to the canvas.
 export function clipRect(clip: Clip, row: TrackRow, pxPerBar: number, scrollX: number): ClipRect {
   const left = (clip.startBar - 1) * pxPerBar - scrollX
   const width = Math.max(2, clip.lengthBars * pxPerBar)
-  return { clip, track: row.track, left, top: row.top, width, height: row.height }
+  return {
+    clip,
+    track: row.track,
+    left,
+    top: row.top,
+    width,
+    height: row.height,
+    trackGeometry: row.trackGeometry,
+  }
 }
 
 export function revealTrackScrollY(
   tracks: readonly Track[],
   height: number,
   scrollY: number,
-  trackId: string
+  trackId: string,
+  geometry: TrackGeometry
 ): number {
-  const row = layoutTrackRowsForViewport(tracks, scrollY, height).find(
+  const row = layoutTrackRowsForViewport(tracks, scrollY, height, geometry).find(
     row => row.track.id === trackId
   )
   if (!row || isPinnedTrack(row.track)) {
     return scrollY
   }
   const top = arrangementBodyTop()
-  const bottom = arrangementBodyBottom(height) - pinnedTrackHeight(tracks)
+  const bottom = arrangementBodyBottom(height) - pinnedTrackHeight(tracks, geometry)
   const next =
     row.top < top || row.height > bottom - top
       ? scrollY + row.top - top
       : row.top + row.height > bottom
         ? scrollY + row.top + row.height - bottom
         : scrollY
-  return Math.max(0, Math.min(maxTrackScrollY(tracks, height), next))
+  return Math.max(0, Math.min(maxTrackScrollY(tracks, height, geometry), next))
 }

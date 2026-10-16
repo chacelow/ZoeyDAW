@@ -56,10 +56,10 @@ export function TrackMixer({ track }: { readonly track: Track }) {
   const returns = tracks.filter(item => item.kind === "return")
   const index = tracks.findIndex(item => item.id === track.id) + 1
   const isMain = track.kind === "main"
-  const rows = trackControlRows(track)
+  const rows = trackControlRows(track, theme.layout.track)
   const gap = theme.control["--spacing-control-track-gap"]
   const inset = theme.design.cards.controls.inset
-  const height = trackHeight(track) - theme.project.trackBorder - inset * 2
+  const height = trackHeight(track, theme.layout.track) - theme.project.trackBorder - inset * 2
   const label =
     track.kind === "return"
       ? String.fromCharCode(65 + returns.findIndex(item => item.id === track.id))

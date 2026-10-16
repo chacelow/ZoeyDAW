@@ -1,7 +1,7 @@
 // gpuix 主题预设数据源；原从 web 生成，2026-10 迁移后直接维护。
 import type { ThemeColors } from "./colors"
 
-export const PRESET_DATA = [
+const RAW_PRESET_DATA = [
   {
     id: "default",
     label: "Default",
@@ -2327,6 +2327,27 @@ export const PRESET_DATA = [
 ] as const satisfies readonly {
   id: string
   label: string
-  light: ThemeColors
-  dark: ThemeColors
+  light: Omit<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper"> &
+    Partial<Pick<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper">>
+  dark: Omit<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper"> &
+    Partial<Pick<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper">>
 }[]
+
+const DEFAULT_SEMANTIC_COLORS = {
+  arrangementClipSelected: "oklch(87% 0.05 220deg)",
+  arrangementClipPaper: "oklch(97% 0.005 90deg)",
+}
+
+function withSemanticColors(
+  base: Omit<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper"> &
+    Partial<Pick<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper">>
+): ThemeColors {
+  return { ...DEFAULT_SEMANTIC_COLORS, success: base.chart2, ...base }
+}
+
+export const PRESET_DATA = RAW_PRESET_DATA.map(preset => ({
+  id: preset.id,
+  label: preset.label,
+  light: withSemanticColors(preset.light),
+  dark: withSemanticColors(preset.dark),
+}))

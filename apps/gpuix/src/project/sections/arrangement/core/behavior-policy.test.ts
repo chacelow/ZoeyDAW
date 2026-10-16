@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createMockDocument } from "@/project/adapters/fixtures"
 import { createSceneStore } from "./scene"
 import { activeAutomationRows } from "./automation/geometry"
@@ -17,6 +18,7 @@ test("shared drag threshold controls activation and preserves its inclusive Eucl
 test("autoscroll uses independent axis speeds and the configured elapsed cap", () => {
   const tracks = createMockDocument().tracks.map(track => ({ ...track, heightPx: 500 }))
   const base = {
+    geometry: DEFAULT_LAYOUT_TOKENS.track,
     viewport: { width: 800, height: 400, pxPerBar: 100, scrollX: 100, scrollY: 100, dpr: 1 },
     bars: 128,
     tracks,
@@ -58,7 +60,7 @@ test("minimap horizontal drag follows its policy independently of vertical zoom"
 })
 
 test("automation freehand samples at the configured pixel resolution and keeps interpolated values", () => {
-  const store = createSceneStore()
+  const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const track = createMockDocument().tracks.find(item => item.kind === "audio")
   if (!track) throw new Error("Missing audio fixture track")
   store.setMusic({ ...store.get(), tracks: [{ ...track, collapsed: false, heightPx: 120 }] })

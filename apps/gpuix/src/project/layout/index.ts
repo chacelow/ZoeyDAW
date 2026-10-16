@@ -1,13 +1,2 @@
-export {
-  TRACK_LAYOUT,
-  COLLAPSED_TRACK_HEIGHT,
-  TRACK_TITLE_HEIGHT,
-  DEFAULT_TRACK_HEIGHT,
-  MAX_TRACK_HEIGHT,
-  TRACK_RESIZE_STEP,
-  TRACK_REVEAL_THRESHOLD,
-  CONTROLS_WIDTH,
-  trackHeight,
-  trackControlRows,
-  resizeTrackHeight,
-} from "./track"
+export { trackHeight, trackControlRows, resizeTrackHeight } from "./track"
+export type { TrackGeometry } from "./track"

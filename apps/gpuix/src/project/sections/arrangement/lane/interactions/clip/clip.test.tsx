@@ -1,4 +1,5 @@
 import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, expect, it } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -45,7 +46,7 @@ afterEach(() => {
 })
 
 function mount() {
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const context: LaneContext = {
     scene,
     policy: ARRANGEMENT_DEFAULTS,

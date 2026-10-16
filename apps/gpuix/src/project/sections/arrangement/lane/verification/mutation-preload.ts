@@ -12,7 +12,6 @@ const keyboardPointerReplacements: MutationCase["replacements"] = [
     'import type { EventPayload } from "@gpuix/react"',
     `import type { EventPayload } from "@gpuix/react"
 import { useGpuix } from "@gpuix/react"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { clipRect } from "../../core/layout"
 import { visibleRows } from "../render-projection"`,
   ],
@@ -48,12 +47,12 @@ import { visibleRows } from "../render-projection"`,
                   x:
                     bounds.x +
                     (rect
-                      ? Math.max(0, rect.left) + Math.min(rect.width, TRACK_TITLE_HEIGHT) / 2
+                      ? Math.max(0, rect.left) + Math.min(rect.width, scene.geometry.track.titleHeight) / 2
                       : bounds.width / 2),
                   y:
                     bounds.y +
                     (rect ? rect.top - originY : 0) +
-                    Math.min(TRACK_TITLE_HEIGHT, bounds.height) / 2,
+                    Math.min(scene.geometry.track.titleHeight, bounds.height) / 2,
                 })
               : null
           )`,

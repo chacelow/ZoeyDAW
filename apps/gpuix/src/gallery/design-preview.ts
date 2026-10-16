@@ -89,6 +89,10 @@ export const GALLERY_DESIGNS: Readonly<Record<GalleryDesignMode, DesignTokens>> 
       navigationInset: defaults.settings.navigationInset * 2,
       contentInset: defaults.settings.contentInset * 2,
     },
-    tabs: { itemGap: defaults.tabs.itemGap * 2, contentGap: defaults.tabs.contentGap * 2 },
+    tabs: {
+      ...defaults.tabs,
+      itemGap: defaults.tabs.itemGap * 2,
+      contentGap: defaults.tabs.contentGap * 2,
+    },
   },
 }

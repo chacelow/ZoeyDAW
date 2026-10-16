@@ -6,6 +6,8 @@ import { ThemeProvider, useTheme } from "./ThemeProvider"
 import type { TestRoot } from "@gpuix/react/testing"
 import type { Appearance } from "./ThemeProvider"
 import type { ThemePresetId } from "./presets"
+import { DEFAULT_DESIGN_TOKENS } from "./design-tokens"
+import { colorMix } from "./color-mix"
 
 /** Renders the theme it reads plus a click counter that only survives if it is not remounted. */
 function Probe() {
@@ -86,4 +88,33 @@ test("without controlled props, defaultAppearance picks the scheme and Default t
   )
   expect(read(root)).toBe(`default|dark|${dark.primary}|0`)
   root.unmount()
+})
+
+test("controlled color recipes recolor the mounted surface without resetting child state", () => {
+  const root = createTestRoot({ width: 300, height: 100 })
+  try {
+    root.render(
+      <ThemeProvider>
+        <Probe />
+      </ThemeProvider>
+    )
+    click(root)
+    const base = getThemePreset("default").baseColors.dark
+    root.render(
+      <ThemeProvider
+        design={{
+          ...DEFAULT_DESIGN_TOKENS,
+          colorRecipes: { ...DEFAULT_DESIGN_TOKENS.colorRecipes, arrangementSurface: 61 },
+        }}
+      >
+        <Probe />
+      </ThemeProvider>
+    )
+    expect(root.renderer.findByTestId("probe")?.style.backgroundColor).toBe(
+      colorMix(base.card, 61, base.foreground)
+    )
+    expect(read(root)).toBe(`default|dark|${base.primary}|1`)
+  } finally {
+    root.unmount()
+  }
 })

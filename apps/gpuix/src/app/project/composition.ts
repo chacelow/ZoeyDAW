@@ -12,6 +12,7 @@ import type { LaneController } from "@/project/sections/arrangement/lane"
 import type { NativeClipboard } from "@/platform/clipboard"
 import type { WindowKeyboard } from "@/platform/keyboard"
 import type { AppInteraction } from "../interaction"
+import type { ArrangementGeometry } from "@/project/sections/arrangement/core/scene"
 
 export interface ProjectComposition {
   readonly timeline: TimelineController
@@ -29,6 +30,7 @@ export interface ProjectCompositionDependencies {
   readonly keyboard: WindowKeyboard
   readonly clipboard: NativeClipboard
   readonly metrics: TimelineControllerDeps["metrics"]
+  readonly geometry: ArrangementGeometry
   readonly subscribeWindowActive: TimelineControllerDeps["subscribeWindowActive"]
   readonly blurControl: () => void
   readonly browserCollapsed: () => boolean
@@ -38,7 +40,7 @@ export interface ProjectCompositionDependencies {
 /** Controllers share one scene; the timeline owns its projection and keyboard. */
 export function createProjectComposition(deps: ProjectCompositionDependencies): ProjectComposition {
   const policy = deps.policy ?? ARRANGEMENT_DEFAULTS
-  const sceneStore = createSceneStore()
+  const sceneStore = createSceneStore(deps.geometry)
   let clipKey: number | undefined
   let windowKey: number | undefined
   let lane: LaneController

@@ -14,6 +14,7 @@ import { revealTrackScrollY } from "../../core/layout"
 import type { EventPayload } from "@gpuix/react"
 import type { TimelineViewport as ClampedTimelineViewport } from "../../core/viewport/zoom"
 import type { Track } from "@/project/model/types"
+import type { TrackGeometry } from "@/project/layout"
 
 export interface TimelineSize {
   containerWidth: number
@@ -24,6 +25,7 @@ export interface TimelineSize {
 export interface TimelineViewportSnapshot extends ClampedTimelineViewport {
   bars: number
   tracks: readonly Track[]
+  geometry: TrackGeometry
 }
 
 export interface TimelineViewportController {
@@ -38,6 +40,7 @@ export interface TimelineViewportController {
 
 export function readTimelineViewport(
   size: TimelineSize,
+  geometry: TrackGeometry,
   policy: ArrangementPolicy
 ): TimelineViewportSnapshot {
   const { document: project, workspace, session } = useProjectState.getState()
@@ -52,6 +55,7 @@ export function readTimelineViewport(
   return {
     bars,
     tracks,
+    geometry,
     ...clampTimelineViewport(
       {
         bars,
@@ -60,6 +64,7 @@ export function readTimelineViewport(
         numerator: project.transport.numerator,
         denominator: project.transport.denominator,
         tracks,
+        geometry,
         storedPxPerBar: workspace.pxPerBar,
         storedScrollX: workspace.scrollX,
         storedScrollY: workspace.scrollY,
@@ -71,6 +76,7 @@ export function readTimelineViewport(
 
 export function createTimelineViewport(
   readSize: () => TimelineSize,
+  readGeometry: () => TrackGeometry,
   policy: ArrangementPolicy = ARRANGEMENT_DEFAULTS
 ): TimelineViewportController {
   let manualPanUntil = 0
@@ -78,10 +84,14 @@ export function createTimelineViewport(
     manualPanUntil = performance.now() + policy.follow.manualPanPauseMs
   }
   return {
-    read: () => readTimelineViewport(readSize(), policy),
+    read: () => readTimelineViewport(readSize(), readGeometry(), policy),
     suspendFollow,
     clamp() {
-      const { pxPerBar, scrollX, scrollY } = readTimelineViewport(readSize(), policy)
+      const { pxPerBar, scrollX, scrollY } = readTimelineViewport(
+        readSize(),
+        readGeometry(),
+        policy
+      )
       const workspace = useProjectState.getState().workspace
       if (
         pxPerBar !== workspace.pxPerBar ||
@@ -93,7 +103,7 @@ export function createTimelineViewport(
     },
     wheel(event: EventPayload) {
       const size = readSize()
-      const view = readTimelineViewport(size, policy)
+      const view = readTimelineViewport(size, readGeometry(), policy)
       const modifiers = event.modifiers
       const deltaX = -(event.deltaX ?? 0)
       const deltaY = -(event.deltaY ?? 0)
@@ -128,18 +138,24 @@ export function createTimelineViewport(
     },
     zoom(direction: -1 | 1) {
       suspendFollow()
-      const view = readTimelineViewport(readSize(), policy)
+      const view = readTimelineViewport(readSize(), readGeometry(), policy)
       projectActions.setViewport(
         stepZoom({ ...view, viewportWidth: view.timeViewportWidth, direction }, policy.zoom)
       )
     },
     reveal(trackId: string) {
-      const view = readTimelineViewport(readSize(), policy)
-      const scrollY = revealTrackScrollY(view.tracks, view.bodyHeight, view.scrollY, trackId)
+      const view = readTimelineViewport(readSize(), readGeometry(), policy)
+      const scrollY = revealTrackScrollY(
+        view.tracks,
+        view.bodyHeight,
+        view.scrollY,
+        trackId,
+        view.geometry
+      )
       if (scrollY !== view.scrollY) projectActions.setViewport({ scrollY })
     },
     follow(transportBar: number) {
-      const view = readTimelineViewport(readSize(), policy)
+      const view = readTimelineViewport(readSize(), readGeometry(), policy)
       const state = useProjectState.getState()
       const scrollX = followViewport(
         {

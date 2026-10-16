@@ -42,6 +42,7 @@ export function createTimelineAutoScroll({
       viewport: current.viewport,
       bars: current.bars,
       tracks: current.tracks,
+      geometry: current.geometry.track,
       pointer,
       axis,
       edge,

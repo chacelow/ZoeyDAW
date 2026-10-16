@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createTimelineController } from "@/project/sections/arrangement/timeline"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import type {
@@ -27,7 +28,7 @@ export function createVerificationKeyboard({
   blurControl,
 }: VerificationKeyboardOptions): VerificationKeyboardOwner {
   const timeline = createTimelineController({
-    sceneStore: createSceneStore(),
+    sceneStore: createSceneStore(DEFAULT_LAYOUT_TOKENS),
     metrics,
     initialSize: size,
     subscribeWindowActive,

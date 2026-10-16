@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
-import { CONTROLS_WIDTH } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { clampTimelineViewport, followViewport, minimapDragZoom, stepZoom, wheelZoom } from "./zoom"
 
 const viewport = {
@@ -55,8 +55,9 @@ test("follow trigger and recentering anchor are independent preferences", () => 
 
 test("minimum zoom fits the configured timeline extent and uses the unmeasured policy fallback", () => {
   const input = {
+    geometry: DEFAULT_LAYOUT_TOKENS.track,
     bars: 128,
-    containerWidth: CONTROLS_WIDTH + 800,
+    containerWidth: DEFAULT_LAYOUT_TOKENS.track.controlsWidth + 800,
     bodyHeight: 300,
     numerator: 4,
     denominator: 4,

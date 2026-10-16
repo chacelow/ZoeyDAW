@@ -1,4 +1,5 @@
 import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import type { EventPayload } from "@gpuix/react"
 import { createNativeClipboard } from "@/platform/clipboard"
 import type { NativeClipboard } from "@/platform/clipboard"
@@ -14,7 +15,6 @@ import {
 import { timelineBars, growTimelineBars } from "@/project/model/selectors"
 import { positionToBar, visibleTracks } from "@/project/model/types"
 import type { ProjectState } from "@/project/model/types"
-import { TRACK_RESIZE_STEP } from "@/project/layout"
 import { createSceneStore } from "../../core/scene"
 import type { ArrangementViewport, SceneStore } from "../../core/scene"
 import {
@@ -42,7 +42,7 @@ export interface LaneDemoRuntime {
 
 export function createLaneDemoRuntime(): LaneDemoRuntime {
   const release = startProjectRuntime()
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const clipboard = createNativeClipboard()
   const keyboard = createWindowKeyboard()
   let width = 0
@@ -58,6 +58,7 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
     const state = useProjectState.getState()
     return clampTimelineViewport(
       {
+        geometry: scene.get().geometry.track,
         bars: scene.get().bars,
         containerWidth: width,
         bodyHeight: height,
@@ -155,7 +156,7 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
     actions: projectActions,
     getState: useProjectState.getState,
     clipboard,
-    edgePixels: TRACK_RESIZE_STEP * 2,
+    edgePixels: DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2,
     setScroll: (x, y) => applyViewport({ scrollX: x, scrollY: y }),
   })
 
@@ -228,7 +229,7 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
     wheel(event) {
       manualPanUntil = nativeTime + 3000
       const current = scene.get()
-      const scale = event.precise ? 1 : TRACK_RESIZE_STEP
+      const scale = event.precise ? 1 : DEFAULT_LAYOUT_TOKENS.track.resizeStep
       if (event.modifiers?.cmd || event.modifiers?.ctrl) {
         const solved = layout()
         applyViewport(
@@ -248,6 +249,7 @@ export function createLaneDemoRuntime(): LaneDemoRuntime {
       } else {
         applyViewport(
           panViewport({
+            geometry: current.geometry.track,
             ...current.viewport,
             bars: current.bars,
             tracks: visibleTracks(getEffectiveDocument().tracks),

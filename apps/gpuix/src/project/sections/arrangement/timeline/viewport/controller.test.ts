@@ -1,4 +1,5 @@
 import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test"
 import { hydrateProject, projectActions, useProjectState } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
@@ -48,7 +49,7 @@ describe("Authoritative timeline viewport", () => {
   test("native frame ticks follow only after playback reaches the music viewport center", () => {
     projectActions.setViewport({ scrollX: 0, scrollY: 0 })
     projectActions.setFollow(true)
-    const owner = ownScene(createSceneStore(), {
+    const owner = ownScene(createSceneStore(DEFAULT_LAYOUT_TOKENS), {
       containerWidth: 704,
       bodyHeight: 300,
       timelineLeft: 0,
@@ -71,7 +72,7 @@ describe("Authoritative timeline viewport", () => {
   test("Follow disabled or stopped playback cannot move the viewport", () => {
     projectActions.setViewport({ scrollX: 0, scrollY: 0 })
     projectActions.setFollow(true)
-    const owner = ownScene(createSceneStore(), {
+    const owner = ownScene(createSceneStore(DEFAULT_LAYOUT_TOKENS), {
       containerWidth: 704,
       bodyHeight: 300,
       timelineLeft: 0,
@@ -93,7 +94,7 @@ describe("Authoritative timeline viewport", () => {
   })
 
   test("explicit editor focus reveals its offscreen track without resetting musical scroll", () => {
-    const owner = ownScene(createSceneStore(), {
+    const owner = ownScene(createSceneStore(DEFAULT_LAYOUT_TOKENS), {
       containerWidth: 1104,
       bodyHeight: 200,
       timelineLeft: 0,
@@ -106,7 +107,10 @@ describe("Authoritative timeline viewport", () => {
   })
 
   test("vertical wheel changes only tracks, horizontal or Shift wheel changes only musical scroll", () => {
-    const viewport = createTimelineViewport(() => size)
+    const viewport = createTimelineViewport(
+      () => size,
+      () => DEFAULT_LAYOUT_TOKENS.track
+    )
     viewport.wheel({ elementId: 0, eventType: "scroll", deltaY: -20 })
     expect(useProjectState.getState().workspace.scrollX).toBe(2000)
     expect(useProjectState.getState().workspace.scrollY).toBe(50)
@@ -124,7 +128,10 @@ describe("Authoritative timeline viewport", () => {
   })
 
   test("Ctrl wheel preserves the music point under the pointer", () => {
-    const viewport = createTimelineViewport(() => size)
+    const viewport = createTimelineViewport(
+      () => size,
+      () => DEFAULT_LAYOUT_TOKENS.track
+    )
     const anchor = (2000 + 240) / 100
     viewport.wheel({
       elementId: 0,
@@ -140,7 +147,10 @@ describe("Authoritative timeline viewport", () => {
 
   test("layout changes clamp logical scroll and no negative viewport survives zero-size windows", () => {
     const measured = { ...size }
-    const viewport = createTimelineViewport(() => measured)
+    const viewport = createTimelineViewport(
+      () => measured,
+      () => DEFAULT_LAYOUT_TOKENS.track
+    )
     projectActions.setViewport({ pxPerBar: 1e10, scrollX: 1e20, scrollY: 1e20 })
     viewport.clamp()
     const clamped = viewport.read()
@@ -156,7 +166,7 @@ describe("Authoritative timeline viewport", () => {
   })
 
   test("frame ticks keep scrolling a stationary edge pointer, horizontal mode never scrolls tracks, and stop releases ownership", () => {
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     const project = useProjectState.getState().document
     scene.setMusic({ ...scene.get(), tracks: project.tracks, transport: project.transport })
     scene.setViewport({
@@ -186,7 +196,7 @@ describe("Authoritative timeline viewport", () => {
   })
 
   test("pinned Return/Main region never causes vertical autoscroll", () => {
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     const project = useProjectState.getState().document
     scene.setMusic({ ...scene.get(), tracks: project.tracks, transport: project.transport })
     scene.setViewport({
@@ -197,7 +207,9 @@ describe("Authoritative timeline viewport", () => {
       height: 320,
       dpr: 1,
     })
-    const bottom = arrangementBodyBottom(320) - pinnedTrackHeight(visibleTracks(project.tracks))
+    const bottom =
+      arrangementBodyBottom(320) -
+      pinnedTrackHeight(visibleTracks(project.tracks), DEFAULT_LAYOUT_TOKENS.track)
     const scroll = ownScene(scene).view.autoScroll
     scroll.start(
       timelinePointer(
@@ -216,10 +228,14 @@ describe("Authoritative timeline viewport", () => {
 test("manual pan suspends follow only for the configured duration", () => {
   const clock = jest.spyOn(performance, "now").mockReturnValue(100)
   try {
-    const viewport = createTimelineViewport(() => size, {
-      ...ARRANGEMENT_DEFAULTS,
-      follow: { ...ARRANGEMENT_DEFAULTS.follow, manualPanPauseMs: 500 },
-    })
+    const viewport = createTimelineViewport(
+      () => size,
+      () => DEFAULT_LAYOUT_TOKENS.track,
+      {
+        ...ARRANGEMENT_DEFAULTS,
+        follow: { ...ARRANGEMENT_DEFAULTS.follow, manualPanPauseMs: 500 },
+      }
+    )
     projectActions.setFollow(true)
     projectActions.togglePlay()
     viewport.suspendFollow()

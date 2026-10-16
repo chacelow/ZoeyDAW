@@ -1,7 +1,7 @@
 import { hydrateProject, useProjectState } from "@/project/adapters"
 import { defaultAudioClipSettings } from "@/project/model/audio-editor"
 import { createClip, createTrack } from "@/project/model/reducers"
-import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { CONTENT_PALETTE } from "@/shared/theme/content-color"
 import type { Track } from "@/project/model/types"
 
@@ -15,7 +15,12 @@ export function seedClipEditProject(mediaUri: string, workload: "normal" | "dens
   document.transport = { ...document.transport, bpm: 120, numerator: 4, denominator: 4 }
   main.volumeDb = -30
   const tracks: Track[] = []
-  const midiTrack = createTrack("midi", tracks, undefined, DEFAULT_TRACK_HEIGHT)
+  const midiTrack = createTrack(
+    "midi",
+    tracks,
+    undefined,
+    DEFAULT_LAYOUT_TOKENS.track.defaultHeight
+  )
   midiTrack.color = CONTENT_PALETTE[1]
   const midi = createClip("midi", 1, 2)
   if (midi.kind !== "midi") throw new Error("Expected a MIDI clip")
@@ -71,7 +76,12 @@ export function seedClipEditProject(mediaUri: string, workload: "normal" | "dens
   }
   midiTrack.clips = [midi, pattern]
   tracks.push(midiTrack)
-  const audioTrack = createTrack("audio", tracks, undefined, DEFAULT_TRACK_HEIGHT)
+  const audioTrack = createTrack(
+    "audio",
+    tracks,
+    undefined,
+    DEFAULT_LAYOUT_TOKENS.track.defaultHeight
+  )
   audioTrack.color = CONTENT_PALETTE[0]
   audioTrack.output = "main"
   audioTrack.volumeDb = -30

@@ -1,4 +1,5 @@
 import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { createMockDocument } from "@/project/adapters/fixtures"
 import { arrangementBodyBottom, arrangementBodyTop, pinnedTrackHeight } from "../layout"
@@ -7,7 +8,9 @@ import { edgeScroll } from "./edge-scroll"
 
 const tracks = createMockDocument().tracks
 const viewport = { width: 800, height: 320, pxPerBar: 100, scrollX: 100, scrollY: 80, dpr: 1 }
-const bottom = arrangementBodyBottom(viewport.height) - pinnedTrackHeight(visibleTracks(tracks))
+const bottom =
+  arrangementBodyBottom(viewport.height) -
+  pinnedTrackHeight(visibleTracks(tracks), DEFAULT_LAYOUT_TOKENS.track)
 const base = {
   viewport,
   bars: 128,
@@ -16,6 +19,7 @@ const base = {
   edge: 40,
   elapsed: 20,
   policy: ARRANGEMENT_DEFAULTS.autoScroll,
+  geometry: DEFAULT_LAYOUT_TOKENS.track,
 }
 
 test("edge scrolling respects pinned rows, horizontal mode and elapsed limits", () => {

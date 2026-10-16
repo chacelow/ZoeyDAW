@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, expect, it, spyOn } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -50,7 +51,7 @@ it("culls offscreen native cards and retains visible node identity while scrolli
       steps: [true],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 1024,
     grid: { mode: "fixed", bars: 0.25 },
@@ -105,7 +106,7 @@ it("moves a fully visible Clip without reuploading or remounting its unchanged c
       steps: [true, false, true, false],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 0.25 },
@@ -162,7 +163,7 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
   track.clips = [
     { kind: "pattern", id: "pattern", patternId: "p", startBar: 2, lengthBars: 2, steps: [true] },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 0.25 },
@@ -232,7 +233,7 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
 })
 
 it("presents the latest playhead on resume and releases frame leases when stopped or unmounted", () => {
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setViewport({ width: 500, height: 300, scrollX: 32, scrollY: 0, pxPerBar: 64, dpr: 1 })
   scene.setPlayback({ playing: true, insertionPoint: null })
   const frames = createManualFrames()
@@ -300,7 +301,7 @@ it("preserves tiny Clip pixel width when projecting a collapsed group summary", 
       steps: [true],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const music: Parameters<typeof scene.setMusic>[0] = {
     bars: 1024,
     grid: { mode: "fixed", bars: 0.25 },
@@ -360,7 +361,7 @@ it("scrolls an already-visible unchanged Clip without rerendering its content", 
       steps: [true, false],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 0.25 },
