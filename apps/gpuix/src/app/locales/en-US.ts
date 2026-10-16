@@ -61,10 +61,10 @@ export default {
   },
   windowClose: {
     title: "The project has unsaved changes",
-    description: "Before closing, save, discard the changes, or cancel.",
+    description: "Before leaving, save, discard the changes, or cancel.",
     save: "Save",
     discard: "Don't save",
-    saveFailed: "Saving failed. The window remains open.",
+    saveFailed: "Saving failed. The current project remains open.",
     closeFailed: "The window could not close. Try closing it again.",
   },
   notifications: {

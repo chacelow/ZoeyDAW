@@ -12,22 +12,26 @@
 | 工程文档、编辑事务、走带 | `project/adapters` 与 `project/stores` | `ProjectPage` 显示时取得 `startProjectRuntime` lease，卸载时释放 |
 | 面板激活、Browser handle、Footer view 与折叠 | `project/useProjectShell` | 随工程视图卸载 |
 | 帧源、窗口激活、光标能力 | `NativeRoot` 绑定当前 renderer | Provider 与订阅各自退订，不新增动画定时链 |
-| 未保存关闭判定 | `window/useUnsavedCloseGuard` | 旧 predicate 在卸载后放行，不再修改 React 状态 |
+| 未保存离开判定 | `window/useUnsavedCloseGuard` | router 守卫卸载时注销，旧 native predicate 放行；异步保存不能完成已退休的决定 |
 | Arrangement scene、timeline 与 lane controller | `project/createProjectComposition` | 工程视图卸载时 dispose，取消手势并退订窗口与工程 |
 | 文本焦点 lease、ModalDialog 打开状态 | `AppInteractionProvider` | Input 与实际数值编辑框的原生 focus/blur/unmount，ModalDialog 的 open/unmount |
 
 `project/adapters/context.ts` 已注册真实 native backend 工厂。入口不再注册第二个，也不在模块初始化时打开会话。入口只安装 `createSnapshotStorage()`，供快照和最近工程列表使用。
 
+已有工程（recent、启动路径、历史返回）在取得 runtime lease 前调用 `openProjectSnapshot(projectId)`：先隔离工程 identity，再读取并经现有 snapshot parser hydrate。缺失快照打开空工程且不报错；读取/校验失败显示 `session.snapshotError`，保留 runtime。保存保护由 `SessionState.snapshotSaveBlocked` 唯一持有，纯 `canSaveSnapshot(state)` selector 用于 `useProjectState(canSaveSnapshot)`；保存命令读取同一字段，不能用默认数据覆盖原始字节。成功 hydrate/reset、显式 Restore 或切换 identity 后恢复保存。
+
+新建路由带 `openMode: "new"`，不读取快照；离开该条历史记录后其标记被消费，再次返回按已有工程打开。
+
 ## 设置
 
 - 外观页保留明、暗、跟随系统的分段控件，以及 Web 顺序的 43 项预设网格。
 - 预设经 `createThemePresetSetting` 存储，启动时先 `repair()`，再读取。切换只改变受控 ThemeProvider 的 context，不重挂载工程。
-- 语言经 `createSettingStorage("language")` 持久化。`app/i18n` 只消费 React-free `@/platform/i18n/core`，不加载 react-i18next 的第二份 React。
+- 语言经 `createSettingStorage("language")` 持久化。读取失败使用显式初始语言或默认语言并记诊断；写入失败记诊断，保留内存选择且不抛出 rejection。`app/i18n` 只消费 React-free `@/platform/i18n/core`，不加载 react-i18next 的第二份 React。
 - 模式经 `createSettingStorage("themeMode")` 持久化。`NativeRoot` 同步读取系统外观并订阅变化，跟随系统会更新同一工程，不重开后端。
 - 失效预设修复的读写失败落入 preference store 的失败边界。记录日志，保留内存选择，不阻断启动。
-- dirty 关闭先由原生 should-close 否决。保存成功或不保存后调用原生 `closeWindow()`，不再要求再按一次关闭。
+- dirty 关闭与工程离开共用 save/discard/cancel 决策。router 在 navigate、replace、back 提交前执行唯一 leave guard；Cancel 或保存失败保持原路由、文档与 undo，成功后才释放 ProjectPage lease。原生关闭仍同步 should-close 否决，成功选择后在回调外 `closeWindow()`。同时到来的请求不替换当前决定。
 - `ModalDialog` 是应用内唯一的模态包裹。设置和未保存关闭提示都使用它。所有弹层必须留在 `AppFrame` 这个唯一根 host 节点内；gpuix 的窗口 container 不支持并列根 host 节点。
-- 原 Web 日志页仍是说明文字。本阶段初始化真实日志 sink，但不增加原 Web 没有的日志管理交互。
+- 原 Web 日志页仍是说明文字。本阶段初始化真实日志 sink，但不增加日志管理交互。console 与 native sink 分流前统一递归展开 Error 并按配置脱敏，包含嵌套字段、大小写与上下文，sink 不接收原始参数。
 
 ## 工程组合
 
@@ -74,3 +78,7 @@ bun --hot src/main.tsx
 `verification/resume-smoke.tsx` 配合 `native-fixture.ts` preload 可重跑实际 AppShell、真实 NativeBackend 与离屏 GPUI 的恢复提交。要求 `B2_EVIDENCE_DIR` 指向已创建的临时目录，配置/存储也限定在该目录；建议同时隔离 HOME。它手动投递 frame host 的 resume 事件，不替代真实桌面 occlusion 评审。
 
 `verification/r1c-surfaces.tsx` 配合同一 native fixture preload，向命令行参数指定的仓库外目录采集中英文、深浅主题、MIDI/Audio 的八个工程组合。采集前确认工程与编辑器存在，root 在 finally 中卸载。R1c 回归、变异、自审及前台验收边界见 [R1c 验证报告](verification/R1C-REPORT.md)。
+
+`verification/r2-lifecycle.tsx` 配合同一 native fixture preload，验证 dirty 离开保存 → recent hydrate → 损坏快照拒绝覆盖 → 修复后 Restore 恢复保存的实际 AppShell 路径，并采集少量完整组合截图/AX（中英文、深浅主题）。`verification/mutations-r2.mjs` 覆盖 UPA-01/02；locale 与 log 各自的 `verification/mutations-r2.mjs` 覆盖 UPA-03/08。R2 回归测试在 `project-lifecycle.test.tsx`，使用真实 native backend。
+
+`snapshot-availability.test.tsx` 用单次挂载的 `useProjectState(canSaveSnapshot)` 组件验证损坏打开为false、Restore成功及切换工程为true，并验证历史state选择结果不受当前工程影响；`verification/mutations-save-availability.mjs` 恢复模块fence时该回归失败。

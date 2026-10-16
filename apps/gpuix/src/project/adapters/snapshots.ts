@@ -1,5 +1,6 @@
 import { parseProject, stringifyProject } from "../model/persistence"
 import { useProjectState } from "../stores/useProjectState"
+import type { ProjectState } from "../model/types"
 import {
   get,
   hydrateState,
@@ -54,8 +55,42 @@ export function serializeProject(): string {
 export function hydrateProject(json: string): void {
   hydrateState(parseProject(json))
 }
+
+/** Save availability belongs to the selected session snapshot, not module state. */
+export function canSaveSnapshot(state: Pick<ProjectState, "session">): boolean {
+  return !state.session.snapshotSaveBlocked
+}
+
+/** Route opening treats absent snapshots as a new empty project, unlike explicit Restore. */
+export function openProjectSnapshot(projectId: string): boolean {
+  if (storageId === projectId) resetProject(projectId)
+  else setProjectStorageId(projectId)
+  const key = storageKey()
+  let saved: string | null
+  try {
+    if (!snapshotStorage) throw new Error("Snapshot storage is not configured")
+    saved = snapshotStorage.get(key)
+  } catch {
+    session({ snapshotError: "Could not read snapshot storage.", snapshotSaveBlocked: true })
+    return false
+  }
+  if (saved !== null) {
+    try {
+      hydrateProject(saved)
+    } catch {
+      session({
+        snapshotError: "The local snapshot is invalid or unsupported. Current project was kept.",
+        snapshotSaveBlocked: true,
+      })
+      return false
+    }
+  }
+  session({ snapshotError: null, snapshotSaveBlocked: false })
+  return true
+}
 export const snapshotActions = {
   saveSnapshot(): void {
+    if (!canSaveSnapshot(get())) return
     const epoch = projectEpoch()
     const revision = projectRevision()
     const document = getCommittedDocument()
@@ -122,6 +157,7 @@ export const snapshotActions = {
     }
     try {
       hydrateProject(saved)
+      session({ snapshotError: null, snapshotSaveBlocked: false })
       return true
     } catch {
       session({

@@ -29,14 +29,14 @@ export function HomePage({ storage }: HomePageProps) {
   const { t, locale } = useAppTranslation()
   const [recent, setRecent] = useState(() => loadRecentProjects(storage))
   const gap = theme.design.spacing.stackGap
-  const open = (project: RecentProject) => {
+  const open = (project: RecentProject, openMode?: "new") => {
     const next = bumpRecentProject(recent, { ...project, openedAt: Date.now() })
     saveRecentProjects(storage, next)
     setRecent(next)
-    router.navigate({ kind: "project", projectId: project.id })
+    router.navigate({ kind: "project", projectId: project.id, ...(openMode && { openMode }) })
   }
   const create = () =>
-    open({ id: crypto.randomUUID(), name: t("project.untitled"), openedAt: Date.now() })
+    open({ id: crypto.randomUUID(), name: t("project.untitled"), openedAt: Date.now() }, "new")
   const formatTime = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" })
   return (
     <div
