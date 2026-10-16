@@ -10,7 +10,7 @@ import { TrackTelemetryProvider } from "./telemetry"
 import { TrackMeter } from "./TrackMeter"
 import type { BackendTelemetry } from "@/project/model/backend"
 import type { TestRoot } from "@gpuix/react/testing"
-import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
+import { trackResources } from "../locales"
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -42,7 +42,7 @@ function mountMeter(
     root.render(
       <AnimationFrameProvider source={frames.source}>
         <ThemeProvider>
-          <TrackLabelsProvider labels={trackLabelsByLocale[language]}>
+          <TrackLabelsProvider labels={trackResources[language].arrangement}>
             <TrackTelemetryProvider telemetry={() => readTelemetry()}>
               <TrackMeter
                 trackId={id}

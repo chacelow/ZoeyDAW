@@ -116,8 +116,8 @@ The ten files under `features/track-mixer` are removed. LSP reference checks fou
 From `apps/gpuix` after the repository's native build:
 
 ```sh
-bun --hot src/project/sections/arrangement/tracks/demo.tsx
-bun src/project/sections/arrangement/tracks/verification/render-cost.tsx
+bun --hot src/app/verification/tracks/demo.tsx
+bun src/app/verification/tracks/render-cost.tsx
 bun test src/project/sections/arrangement/tracks
 ```
 

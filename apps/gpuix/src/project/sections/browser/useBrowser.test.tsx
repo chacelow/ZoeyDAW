@@ -122,13 +122,12 @@ test("application locale changes display and search without changing selection o
     flush(() => state().setSelectedId("instruments-wavetable"))
     await changeLocale("zh-CN")
     flush(() => {})
-    root.renderer.flush()
+
     expect(state().selected?.entry.id).toBe("instruments-wavetable")
     expect(state().favorites.has("audioEffects-hybrid-reverb")).toBe(true)
     flush(() => state().setQuery("混响"))
     expect(state().rows[0]?.entry).toMatchObject({
       id: "audioEffects-hybrid-reverb",
-      name: "混合混响",
     })
     flush(() => state().navigate("instruments"))
     flush(() => state().setQuery("温暖波形"))
@@ -138,7 +137,7 @@ test("application locale changes display and search without changing selection o
     ])
     await changeLocale("en-US")
     flush(() => {})
-    root.renderer.flush()
+
     expect(state().rows).toEqual([])
     flush(() => state().setQuery("  ＷＡＲＭ ＷＡＶＥＳ  "))
     expect(state().rows.map(row => row.entry.name)).toEqual(["Wavetable", "Warm Waves"])

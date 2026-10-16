@@ -9,12 +9,15 @@ import {
 } from "@/project/adapters"
 import { ArrangementTimeline } from "@/project/sections/arrangement/timeline"
 import { LaneRow, LaneOverlay, useLaneSurface } from "@/project/sections/arrangement/lane"
-import { TrackRows, TrackResizeOverlay } from "@/project/sections/arrangement/tracks"
+import {
+  TrackRows,
+  TrackResizeOverlay,
+  trackResources,
+} from "@/project/sections/arrangement/tracks"
 import { useAppTranslation } from "../i18n"
 import { englishLabels, chineseLabels } from "../locales/sections/timeline"
 import { labelsByLocale } from "../locales/sections/lane"
 import type { ProjectComposition } from "./composition"
-import { trackLabelsByLocale } from "../locales/sections/tracks"
 
 export function ArrangementPanel({ composition }: { readonly composition: ProjectComposition }) {
   const { timeline, lane } = composition
@@ -38,7 +41,7 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
           focusedTrackId={selectionSurface === "header" ? (selectedTrackIds.at(-1) ?? null) : null}
           onFocusTrack={id => projectActions.selectTracks([id], "header")}
           telemetry={readProjectTelemetry}
-          labels={trackLabelsByLocale[locale]}
+          labels={trackResources[locale].arrangement}
           renderLane={row => (
             <LaneRow
               row={row}
@@ -55,7 +58,7 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
         <TrackResizeOverlay
           scene={scene}
           viewport={viewport}
-          labels={trackLabelsByLocale[locale]}
+          labels={trackResources[locale].arrangement}
         />
       }
     />

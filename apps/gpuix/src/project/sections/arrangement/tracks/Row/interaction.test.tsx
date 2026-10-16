@@ -22,7 +22,7 @@ import type { Appearance } from "@/shared/theme/ThemeProvider"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createControlledFrames } from "../verification/frame-source"
 import type { TrackRowsProps } from "../TrackRows"
-import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
+import { trackResources } from "../locales"
 
 const controlledFrames = createControlledFrames()
 
@@ -75,7 +75,7 @@ function Surface({
               viewport={acceptedViewport}
               focusedTrackId={focusedTrackId}
               telemetry={readProjectTelemetry}
-              labels={trackLabelsByLocale["en-US"]}
+              labels={trackResources["en-US"].arrangement}
               onFocusTrack={id => {
                 if (!useProjectState.getState().session.selectedTrackIds.includes(id))
                   projectActions.selectTracks([id], "header")
@@ -85,7 +85,7 @@ function Surface({
             <TrackResizeOverlay
               scene={scene}
               viewport={acceptedViewport}
-              labels={trackLabelsByLocale["en-US"]}
+              labels={trackResources["en-US"].arrangement}
             />
           </div>
         </ControlEnvironmentProvider>

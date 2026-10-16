@@ -373,6 +373,20 @@ const mutations = [
     tests: ["src/app/project/creation-source.test.tsx"],
   })),
   {
+    name: "C4 recorded names reread locale during journal execution",
+    file: "src/project/adapters/midi.ts",
+    from: "label: clipLabel,",
+    to: 'label: projectCreationValues().names.clip("midi"),',
+    tests: ["src/project/adapters/creation-preferences.test.ts"],
+  },
+  {
+    name: "C4 recorded names bypass creation source",
+    file: "src/project/adapters/midi.ts",
+    from: "label: clipLabel,",
+    to: 'label: "MIDI Clip",',
+    tests: ["src/project/adapters/creation-preferences.test.ts"],
+  },
+  {
     name: "C4 new names ignore current locale",
     file: "src/app/project/ProjectPage.tsx",
     from: "getCreationNames(creation.current.locale)",

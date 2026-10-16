@@ -17,7 +17,7 @@ import { HomePage } from "@/app/home/HomePage"
 import { createRouter, RouterProvider } from "@/app/router/router"
 import { createMemorySnapshotStorage } from "@/project/adapters"
 import { initAppI18n } from "@/app/i18n"
-import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
+import { trackResources } from "@/project/sections/arrangement/tracks/locales"
 
 function bounds(root: TestRoot, id: string) {
   const node = root.renderer.findByTestId(id)
@@ -36,7 +36,7 @@ test("runtime group overrides resize real controls and track identity without st
         <div style={{ display: "flex", alignItems: "start", height: 150 }}>
           <Button testId="default-control" label="Default" iconOnly />
           <Button testId="transport-control" label="Transport" iconOnly size="transport" />
-          <TrackLabelsProvider labels={trackLabelsByLocale["en-US"]}>
+          <TrackLabelsProvider labels={trackResources["en-US"].arrangement}>
             <TrackIdentity
               track={track}
               selected={false}

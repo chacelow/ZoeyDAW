@@ -77,6 +77,43 @@ it("keyboard range, initial velocity and recorded note/clip lengths follow curre
   })
 })
 
+it.each(["finish", "cancel"])(
+  "recorded clip names retain their event-time source when an edit is %s-ed",
+  completion => {
+    const eventLabel = "Event-time recorded MIDI"
+    names = { ...names, clip: () => eventLabel }
+    release = startProjectRuntime()
+    projectActions.togglePlay()
+    projectActions.toggleRecording()
+    const token = projectActions.beginEdit("recorded-name-source")
+    projectActions.setBpm(145)
+    projectActions.noteOn(72)
+    projectActions.noteOff(72)
+    expect(
+      useProjectState.getState().document.tracks.find(track => track.id === "trager")?.clips
+    ).toHaveLength(0)
+
+    names = { ...names, clip: kind => `Changed source ${kind}` }
+    if (completion === "finish") projectActions.endEdit(token)
+    else projectActions.cancelEdit(token)
+
+    const recorded = useProjectState.getState().document.tracks.find(track => track.id === "trager")
+      ?.clips[0]
+    if (!recorded || recorded.kind !== "midi") throw new Error("Missing recorded MIDI clip")
+    expect(recorded.label).toBe(eventLabel)
+    expect(recorded.notes.map(note => note.pitch)).toEqual([72])
+
+    projectActions.noteOn(74)
+    projectActions.noteOff(74)
+    const appended = useProjectState.getState().document.tracks.find(track => track.id === "trager")
+      ?.clips[0]
+    if (!appended || appended.kind !== "midi") throw new Error("Missing appended MIDI clip")
+    expect(appended.id).toBe(recorded.id)
+    expect(appended.label).toBe(eventLabel)
+    expect(appended.notes.map(note => note.pitch)).toEqual([72, 74])
+  }
+)
+
 it("new audio metadata and labels sample configuration once, leaving already-authored clips unchanged", () => {
   preferences.audio.reverse = true
   preferences.audio.warp = false
