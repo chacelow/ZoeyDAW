@@ -1,6 +1,26 @@
 import type { Expectation } from "./types"
 
 export const COLOR_EXPECTATIONS: Readonly<Record<string, Expectation>> = {
+  "trackCreationColors.audio": {
+    expression: "project/model/reducers.ts non-group color: 'oklch(0.65 0.18 230)'",
+    value: "oklch(0.65 0.18 230)",
+  },
+  "trackCreationColors.midi": {
+    expression: "project/model/reducers.ts non-group color: 'oklch(0.65 0.18 230)'",
+    value: "oklch(0.65 0.18 230)",
+  },
+  "trackCreationColors.group": {
+    expression: "project/model/reducers.ts group color: 'oklch(0.65 0.17 265)'",
+    value: "oklch(0.65 0.17 265)",
+  },
+  "trackCreationColors.return": {
+    expression: "project/model/reducers.ts non-group color: 'oklch(0.65 0.18 230)'",
+    value: "oklch(0.65 0.18 230)",
+  },
+  "trackCreationColors.main": {
+    expression: "project/stores/slices/document.ts Main color: 'var(--chart-3)'",
+    value: "var(--chart-3)",
+  },
   "colorRecipes.contentPaperTint": {
     expression: "shared/theme/content-color.ts CLIP_PAPER_TINT = 32",
     value: 32,
