@@ -1,3 +1,4 @@
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { COLLAPSED_TRACK_HEIGHT, MAX_TRACK_HEIGHT } from "@/project/layout"
 import { isPinnedTrack } from "../../core/layout"
@@ -19,15 +20,31 @@ function TrackResizeHandle({
   height,
   width,
   label,
+  onCapture,
 }: {
   readonly row: TrackRow
   readonly top: number
   readonly height: number
   readonly width: number
   readonly label: string
+  readonly onCapture: (trackId: string, captured: boolean) => void
 }) {
   const theme = useTheme()
-  const resizeHandlers = useTrackResize(row.track)
+  const currentBounds = useRef({ top, height })
+  const capturedBounds = useRef<{ top: number; height: number } | null>(null)
+  useLayoutEffect(() => {
+    currentBounds.current = { top, height }
+  }, [top, height])
+  const capture = useCallback(
+    (captured: boolean) => {
+      capturedBounds.current = captured ? currentBounds.current : null
+      onCapture(row.track.id, captured)
+    },
+    [onCapture, row.track.id]
+  )
+  const resizeHandlers = useTrackResize(row.track, capture)
+  const bounds = capturedBounds.current ?? { top, height }
+  if (bounds.height <= 0) return null
   return (
     <div
       role="separator"
@@ -41,9 +58,9 @@ function TrackResizeHandle({
       style={{
         position: "absolute",
         left: 0,
-        top,
+        top: bounds.top,
         width,
-        height,
+        height: bounds.height,
         cursor: "ns-resize",
         focusVisible: {
           outlineWidth: theme.project.trackBorder / 2,
@@ -58,7 +75,11 @@ function TrackResizeHandle({
 
 export function TrackResizeOverlay({ scene, viewport, labels }: TrackResizeOverlayProps) {
   const theme = useTheme()
-  const { bodyTop, bodyBottom, pinnedTop, pinnedViewportTop, visibility } = useTrackRowLayout(
+  const [capturedTrackId, setCapturedTrackId] = useState<string | null>(null)
+  const capture = useCallback((trackId: string, captured: boolean) => {
+    setCapturedTrackId(current => (captured ? trackId : current === trackId ? null : current))
+  }, [])
+  const { bodyTop, bodyBottom, pinnedTop, pinnedViewportTop, rows, visibility } = useTrackRowLayout(
     scene,
     viewport
   )
@@ -67,25 +88,27 @@ export function TrackResizeOverlay({ scene, viewport, labels }: TrackResizeOverl
   const width = viewport.width + theme.project.controlsWidth
   return (
     <>
-      {visibility.rows.map(row => {
-        const pinned = isPinnedTrack(row.track)
-        const boundaryTop = pinned
-          ? row.top + borderInset
-          : row.top + row.height - borderInset - gap
-        const top = Math.max(boundaryTop, pinned ? pinnedViewportTop : bodyTop)
-        const bottom = Math.min(boundaryTop + gap, pinned ? bodyBottom : pinnedTop)
-        if (bottom <= top) return null
-        return (
-          <TrackResizeHandle
-            key={row.track.id}
-            row={row}
-            top={top}
-            height={bottom - top}
-            width={width}
-            label={labels.trackHeight}
-          />
-        )
-      })}
+      {rows
+        .filter(row => visibility.ids.has(row.track.id) || row.track.id === capturedTrackId)
+        .map(row => {
+          const pinned = isPinnedTrack(row.track)
+          const boundaryTop = pinned
+            ? row.top + borderInset
+            : row.top + row.height - borderInset - gap
+          const top = Math.max(boundaryTop, pinned ? pinnedViewportTop : bodyTop)
+          const bottom = Math.min(boundaryTop + gap, pinned ? bodyBottom : pinnedTop)
+          return (
+            <TrackResizeHandle
+              key={row.track.id}
+              row={row}
+              top={top}
+              height={bottom > top ? bottom - top : 0}
+              width={width}
+              label={labels.trackHeight}
+              onCapture={capture}
+            />
+          )
+        })}
     </>
   )
 }

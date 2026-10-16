@@ -101,7 +101,7 @@ export function TrackResizeOverlay(props: {
 - 屏外只保留 `focusedTrackId` 对应行的表头部分（输入框焦点不丢），其车道内容仍按可见范围卸载。
 - 焦点：`focusedTrackId` 来自 store 的 `session.selectedTrackIds` 与 `trackSelectionSurface`，不靠 JS 轮询查询原生焦点。原生输入焦点由 A3 的 `Input` 控件自己持有；`tracks` 在表头名称编辑态时通过 `onFocusTrack` 报告 id。
 - 二维编辑面只有一个稳定的 `timeline-viewport` Tab owner：它是覆盖车道可编辑区域的持续挂载透明输入层，原生指针捕获不依附虚拟行。`useLaneSurface` 归一化输入到同一 Scene 坐标，调用 lane controller；唯一 `LaneContextMenu` 包住这个 owner，inline editors 在输入层之上。行与 Clip 只保留绘制及 AX 描述，不注册鼠标/键盘，不进入 Tab 顺序。`timeline-viewport.onBlur` 调 `lane.interrupt()`，Tab 离开后释放不提交；滚动卸载 source row 不结束跨行捕获。标尺和轨道头仍拥有各自独立的交互区域。
-- `TrackResizeOverlay` 是 tracks 唯一的高度分隔条 owner，`TrackRow` 不再挂载 resize handle/hook。组合根把它注入 `interactionOverlay`，在 lane 输入层之上只绘制实际可见分隔条 hitbox，横跨车道与表头；屏外边界不挂载。它与 `TrackRows` 共用行布局及裁剪投影，不覆盖其他车道区域。
+- `TrackResizeOverlay` 是 tracks 唯一的高度分隔条 owner，`TrackRow` 不再挂载 resize handle/hook。组合根把它注入 `interactionOverlay`，在 lane 输入层之上绘制分隔条 hitbox，横跨车道与表头。空闲时按共享行布局裁剪；活动时保留按下 hitbox 和 owner 到释放或取消，不能因自身高度变化使边界离屏而卸载。不覆盖车道其他区域。
 - 滚轮只由全宽 `timeline-layout.onScroll` 分派。透明 lane 输入层不注册第二个滚轮入口，车道与表头使用同一平移量、缩放比例。
 
 ## 4. 键盘 owner（避免双触发）

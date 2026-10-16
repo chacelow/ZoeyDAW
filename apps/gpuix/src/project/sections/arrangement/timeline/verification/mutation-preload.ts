@@ -9,6 +9,13 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "resize-capture-follows-hidden-boundary": {
+    file: "project/sections/arrangement/tracks/TrackResizeOverlay/index.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "active track resize crosses",
+    from: "const bounds = capturedBounds.current ?? { top, height }",
+    to: "const bounds = { top, height }",
+  },
   "duplicate-lane-wheel": {
     file: "project/sections/arrangement/timeline/ArrangementTimeline/index.tsx",
     testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",

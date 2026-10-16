@@ -39,7 +39,7 @@ function element(root: TestRoot, id: string) {
   return node
 }
 
-async function mount(manyTracks = false) {
+async function mount(manyTracks = false, arrangementHeight = 500) {
   initAppI18n({ initialLanguage: "en-US" })
   const document = createMockDocument()
   const source = document.tracks.find(track => track.kind === "midi")
@@ -99,7 +99,7 @@ async function mount(manyTracks = false) {
             <div
               style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}
             >
-              <div style={{ height: 500 }}>
+              <div style={{ height: arrangementHeight }}>
                 <ArrangementPanel composition={composition} />
               </div>
               <div role="button" testId="after-arrangement" tabIndex={0}>
@@ -296,3 +296,55 @@ test("the lane-side track separator resizes above the input layer without steali
   expect(useProjectState.getState().session.selectedClipIds).toEqual(["r2-midi"])
   expect(root.renderer.getFocusedElementId()).toBe(element(root, "timeline-viewport").id)
 })
+
+for (const trackId of ["source", "main"]) {
+  test.each(["commit", "escape"])(
+    `an active track resize crosses the visible boundary for ${trackId} and can %s`,
+    async ending => {
+      const { root, composition } = await mount(false, 320)
+      const separator = element(root, `track-resize-${trackId}`)
+      const bounds = root.renderer.getElementBounds(separator.id)
+      const before = useProjectState
+        .getState()
+        .document.tracks.find(track => track.id === trackId)?.heightPx
+      if (!bounds || before === undefined) throw new Error("Missing resize baseline")
+      const direction = trackId === "main" ? -1 : 1
+      const x = bounds.x + 20
+      const y = bounds.y + bounds.height / 2
+      root.renderer.nativeSimulateMouseDown(x, y)
+      root.renderer.nativeSimulateMouseMove(x, y + direction * TRACK_RESIZE_STEP * 8, 0)
+      root.renderer.flush()
+      root.renderer.dispatchNativeEvents()
+      expect(
+        useProjectState.getState().document.tracks.find(track => track.id === trackId)?.heightPx
+      ).toBe(before + TRACK_RESIZE_STEP * 8)
+      expect(root.renderer.getFocusedElementId()).toBe(separator.id)
+      const rows = layoutTrackRows(composition.timeline.sceneStore.get())
+      const row = rows.find(item => item.track.id === trackId)
+      const main = rows.find(item => item.track.id === "main")
+      if (!row || !main) throw new Error("Missing current resize bounds")
+      if (trackId === "main") expect(row.top).toBeLessThan(BAR_RULER_HEIGHT)
+      else expect(row.top + row.height).toBeGreaterThan(main.top)
+      if (ending === "escape") {
+        root.renderer.simulateKeystrokes("escape")
+        root.renderer.nativeSimulateMouseUp(x, y + direction * TRACK_RESIZE_STEP * 8)
+        expect(
+          useProjectState.getState().document.tracks.find(track => track.id === trackId)?.heightPx
+        ).toBe(before)
+        expect(useProjectState.getState().session.canUndo).toBe(false)
+      } else {
+        root.renderer.nativeSimulateMouseMove(x, y + direction * TRACK_RESIZE_STEP * 9, 0)
+        root.renderer.nativeSimulateMouseUp(x, y + direction * TRACK_RESIZE_STEP * 9)
+        expect(
+          useProjectState.getState().document.tracks.find(track => track.id === trackId)?.heightPx
+        ).toBe(before + TRACK_RESIZE_STEP * 9)
+        expect(useProjectState.getState().session.canUndo).toBe(true)
+        flushSync(projectActions.undo)
+        expect(
+          useProjectState.getState().document.tracks.find(track => track.id === trackId)?.heightPx
+        ).toBe(before)
+        expect(useProjectState.getState().session.canUndo).toBe(false)
+      }
+    }
+  )
+}

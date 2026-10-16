@@ -95,7 +95,7 @@ TrackResizeOverlay({ scene, viewport, labels })
 - `telemetry`: accepted backend telemetry reader; `labels`: immutable translated strings supplied by the composition root.
 - Mount `TrackRows` inside F1 `AnimationFrameProvider` using `createAnimationFrameSource(renderer)` at the composition root. The demo also injects native activation through `createWindowPlatform(renderer).subscribeApplicationActive`; no sampled activation singleton remains.
 - `TrackResizeOverlay` 与 `TrackRows` 在同一个 Scene 坐标父节点中显式组合，Y 原点包含标尺，宽度为 `viewport.width + controlsWidth`。组合根把它放在稳定 lane 输入层之后，只有分隔条矩形接收命中，没有覆盖整面的 wrapper。
-- `TrackRows` 与 overlay 共用 `useTrackRowLayout` 的行布局和裁剪范围。普通轨道使用底部分隔条，Return/Main 使用顶部分隔条。分隔条只保留与所在 viewport 的交集，完全不可见的边界和屏外保焦点表头不挂载 resize hook。
+- `TrackRows` 与 overlay 共用 `useTrackRowLayout`。空闲条只挂载边界的可见交集。活动 resize 保留按下时的透明 hitbox 和唯一 hook，直到释放或取消；即使边界或行随拖动离屏，也不销毁捕获。普通轨道从底部、Return/Main 从顶部调整，Escape、blur、失活和 epoch 仍取消。
 
 `TrackRow` owns the whole track: lane on the left, then colored identity, routing and Mixer on the right, following the observed Live order. It owns the single outer top/bottom border. Group frames span the visible branch, rails are painted above row borders, expanded groups do not duplicate descendant previews, and folded groups render a shared-geometry descendant overview.
 
