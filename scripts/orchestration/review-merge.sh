@@ -22,6 +22,9 @@ ln -s "$(readlink "$root/.gpuix-main")" "$tree/.gpuix-main"
 ln -s "$root/node_modules" "$tree/node_modules"
 for package in apps/gpuix crates/native; do cp -a "$root/$package/node_modules" "$tree/$package/node_modules"; done
 cp "$root"/crates/native/{index.js,index.d.ts,*.node} "$tree/crates/native/" 2>/dev/null
+for config in "$tree"/scripts/gpuix-main/*/tsconfig.json; do
+  [ -f "$config" ] && ln -sfn "$tree/apps/gpuix/node_modules" "$(dirname "$config")/node_modules"
+done
 
 cd "$tree" || exit 1
 bash scripts/verify-gpuix.sh HEAD~1 2>&1 | grep -E "^== |errors|^ok|pass$|fail$|todo$|Tests |hard|current|passed|exited|error|WARN|HARD"
