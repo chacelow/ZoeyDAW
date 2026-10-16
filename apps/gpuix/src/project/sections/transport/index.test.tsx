@@ -34,7 +34,12 @@ function mount(width = 1800, numberFontFamily = DEFAULT_DESIGN_TOKENS.typography
     },
   })
   root.render(
-    <ThemeProvider design={{ ...DEFAULT_DESIGN_TOKENS, typography: { numberFontFamily } }}>
+    <ThemeProvider
+      design={{
+        ...DEFAULT_DESIGN_TOKENS,
+        typography: { ...DEFAULT_DESIGN_TOKENS.typography, numberFontFamily },
+      }}
+    >
       <WindowKeyboardProvider value={keyboard}>
         <AnimationFrameProvider source={frames}>
           <div

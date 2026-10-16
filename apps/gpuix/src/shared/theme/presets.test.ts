@@ -24,6 +24,7 @@ const DERIVED_ROLES: Record<keyof DerivedThemeColors, true> = {
   mutedForeground: true,
   accent: true,
   accentForeground: true,
+  success: true,
   destructive: true,
   border: true,
   input: true,
@@ -52,6 +53,18 @@ const DERIVED_ROLES: Record<keyof DerivedThemeColors, true> = {
   arrangementMeterPeak: true,
   arrangementClipInk: true,
   arrangementFadeMask: true,
+  destructiveActive: true,
+  destructiveHighlight: true,
+  destructiveFocusBorder: true,
+  destructiveFocusOutline: true,
+  listRowHover: true,
+  dialogBackdrop: true,
+  editorOverviewViewport: true,
+  editorAudioLoop: true,
+  editorMarkerHover: true,
+  editorMarquee: true,
+  pianoIvory: true,
+  pianoEbony: true,
 }
 
 /** Literal forms gpuix's native parser (csscolorparser) is tested against. */

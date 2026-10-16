@@ -1,66 +1,56 @@
-import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import type { Track } from "../model/types"
 
-export const TRACK_LAYOUT = {
-  controlHeight: CONTROL_METRICS.default["--spacing-control-track"],
-  spacing: CONTROL_METRICS.default["--spacing-control-track-gap"],
-} as const
-export const COLLAPSED_TRACK_HEIGHT =
-  TRACK_LAYOUT.controlHeight + TRACK_LAYOUT.spacing * 2 + PROJECT_METRICS.trackBorder
-export const TRACK_TITLE_HEIGHT = COLLAPSED_TRACK_HEIGHT - PROJECT_METRICS.trackBorder
-export const DEFAULT_TRACK_HEIGHT = PROJECT_METRICS.defaultTrackHeight
-export const MAX_TRACK_HEIGHT = 4 * DEFAULT_TRACK_HEIGHT
-export const TRACK_RESIZE_STEP = TRACK_LAYOUT.controlHeight + TRACK_LAYOUT.spacing
-export const TRACK_REVEAL_THRESHOLD = TRACK_RESIZE_STEP / 2
-export const CONTROLS_WIDTH = PROJECT_METRICS.controlsWidth
+/** Structural input port: pure layout does not depend on React or theme modules. */
+export interface TrackGeometry {
+  readonly spacing: number
+  readonly border: number
+  readonly collapsedHeight: number
+  readonly titleHeight: number
+  readonly maxHeight: number
+  readonly resizeStep: number
+  readonly revealThreshold: number
+  readonly controlsWidth: number
+}
 
-/**
-One layout measurement for header, lane and minimap alike.
-*/
-export function trackHeight(track: Track): number {
+/** One injected geometry for header, lane and minimap alike. */
+export function trackHeight(track: Track, geometry: TrackGeometry): number {
   return track.collapsed
-    ? COLLAPSED_TRACK_HEIGHT
-    : Math.max(COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP, track.heightPx)
+    ? geometry.collapsedHeight
+    : Math.max(geometry.collapsedHeight + geometry.resizeStep, track.heightPx)
 }
 
-export function trackControlRows(track: Track): number {
-  const contentHeight = trackHeight(track) - PROJECT_METRICS.trackBorder - TRACK_LAYOUT.spacing * 2
-  return Math.floor((contentHeight + TRACK_LAYOUT.spacing) / TRACK_RESIZE_STEP)
+export function trackControlRows(track: Track, geometry: TrackGeometry): number {
+  const contentHeight = trackHeight(track, geometry) - geometry.border - geometry.spacing * 2
+  return Math.floor((contentHeight + geometry.spacing) / geometry.resizeStep)
 }
 
-/**
-Apply a pointer delta from the gesture's starting track, snapping to control-row heights.
-*/
+/** Apply a pointer delta from the starting track, snapping to complete control rows. */
 export function resizeTrackHeight(
   track: Track,
-  deltaY: number
+  deltaY: number,
+  geometry: TrackGeometry
 ): Pick<Track, "collapsed" | "heightPx"> {
-  if (track.collapsed && deltaY < TRACK_REVEAL_THRESHOLD) {
+  const { collapsedHeight, maxHeight, resizeStep, revealThreshold } = geometry
+  if (track.collapsed && deltaY < revealThreshold) {
     return { collapsed: true, heightPx: track.heightPx }
   }
   if (track.collapsed) {
     const steps = Math.max(
       1,
       Math.min(
-        Math.floor((MAX_TRACK_HEIGHT - COLLAPSED_TRACK_HEIGHT) / TRACK_RESIZE_STEP),
-        Math.round((deltaY - TRACK_REVEAL_THRESHOLD) / TRACK_RESIZE_STEP) + 1
+        Math.floor((maxHeight - collapsedHeight) / resizeStep),
+        Math.round((deltaY - revealThreshold) / resizeStep) + 1
       )
     )
-    return {
-      collapsed: false,
-      heightPx: COLLAPSED_TRACK_HEIGHT + steps * TRACK_RESIZE_STEP,
-    }
+    return { collapsed: false, heightPx: collapsedHeight + steps * resizeStep }
   }
-  const desired = trackHeight(track) + deltaY
-  if (desired <= COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP) {
+  const desired = trackHeight(track, geometry) + deltaY
+  if (desired <= collapsedHeight + resizeStep) {
     return { collapsed: true, heightPx: track.heightPx }
   }
   const steps = Math.max(
-    Math.ceil((COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP - track.heightPx) / TRACK_RESIZE_STEP),
-    Math.min(
-      Math.floor((MAX_TRACK_HEIGHT - track.heightPx) / TRACK_RESIZE_STEP),
-      Math.round(deltaY / TRACK_RESIZE_STEP)
-    )
+    Math.ceil((collapsedHeight + resizeStep - track.heightPx) / resizeStep),
+    Math.min(Math.floor((maxHeight - track.heightPx) / resizeStep), Math.round(deltaY / resizeStep))
   )
-  return { collapsed: false, heightPx: track.heightPx + steps * TRACK_RESIZE_STEP }
+  return { collapsed: false, heightPx: track.heightPx + steps * resizeStep }
 }

@@ -1,6 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { COLLAPSED_TRACK_HEIGHT, MAX_TRACK_HEIGHT } from "@/project/layout"
 import { isPinnedTrack } from "../../core/layout"
 import { useTrackResize } from "../Row/useTrackResize"
 import { useTrackRowLayout } from "../TrackRows/useTrackRowLayout"
@@ -42,7 +41,7 @@ function TrackResizeHandle({
     },
     [onCapture, row.track.id]
   )
-  const resizeHandlers = useTrackResize(row.track, capture)
+  const resizeHandlers = useTrackResize(row.track, capture, row.trackGeometry)
   const bounds = capturedBounds.current ?? { top, height }
   if (bounds.height <= 0) return null
   return (
@@ -51,8 +50,8 @@ function TrackResizeHandle({
       tabIndex={0}
       aria-label={`${label} ${row.track.name}`}
       aria-orientation="horizontal"
-      aria-valuemin={COLLAPSED_TRACK_HEIGHT}
-      aria-valuemax={MAX_TRACK_HEIGHT}
+      aria-valuemin={row.trackGeometry.collapsedHeight}
+      aria-valuemax={row.trackGeometry.maxHeight}
       aria-valuenow={row.height}
       testId={`track-resize-${row.track.id}`}
       style={{
@@ -85,7 +84,7 @@ export function TrackResizeOverlay({ scene, viewport, labels }: TrackResizeOverl
   )
   const gap = theme.control["--spacing-control-track-gap"]
   const borderInset = theme.project.trackBorder / 2
-  const width = viewport.width + theme.project.controlsWidth
+  const width = viewport.width + scene.geometry.track.controlsWidth
   return (
     <>
       {rows

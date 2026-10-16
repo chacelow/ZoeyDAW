@@ -352,7 +352,7 @@ export function StateGallery({
                 },
               ]}
               style={{
-                width: theme.project.controlsWidth * 2,
+                width: theme.layout.track.controlsWidth * 2,
                 height: theme.project.defaultTrackHeight * 3,
               }}
             />

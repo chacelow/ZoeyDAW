@@ -11,7 +11,6 @@ import {
   interpolateAutomation,
   normalizedAutomationValue,
 } from "@/project/model/automation-curve"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import type { ArrangementScene } from "../scene"
 import type { AutomationLane, Track } from "@/project/model/types"
 
@@ -30,11 +29,13 @@ export interface AutomationRow {
 
 export function activeAutomationRows(scene: ArrangementScene): AutomationRow[] {
   const bodyBottom = arrangementBodyBottom(scene.viewport.height)
-  const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks)
+  const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks, scene.geometry.track)
   return layoutTrackRows(scene).flatMap(row => {
-    if (row.track.collapsed || row.height <= TRACK_TITLE_HEIGHT + 4) return []
+    if (row.track.collapsed || row.height <= scene.geometry.track.titleHeight + 4) return []
     const titleInset =
-      row.track.kind === "audio" || row.track.kind === "midi" ? TRACK_TITLE_HEIGHT + 1 : 0
+      row.track.kind === "audio" || row.track.kind === "midi"
+        ? scene.geometry.track.titleHeight + 1
+        : 0
     const top = Math.max(
       row.top + titleInset,
       isPinnedTrack(row.track) ? pinnedTop : arrangementBodyTop()

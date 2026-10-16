@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { createMockDocument } from "../../../../adapters/fixtures"
 import { fadeControls } from "../../../../model/fades"
@@ -64,7 +65,7 @@ test("resizing either clip edge carries both fade anchors together", () => {
       fadeOutOffsetBars: 1,
       fadeOutBars: 2,
     })
-    const row = { track, top: 34, height: 121 }
+    const row = { trackGeometry: DEFAULT_LAYOUT_TOKENS.track, track, top: 34, height: 121 }
     const before = clipVisualGeometry(clipRect(clip, row, 32, 0), clip, track, true)
     const after = clipVisualGeometry(clipRect(next, row, 32, 0), next, track, true)
     const affected = edge === "left" ? 0 : 1
@@ -79,7 +80,7 @@ for (const edge of ["in", "out"] as const) {
       const { clip: source, track: owner } = fixture()
       const clip = { ...source, fadeInCurve: 0, fadeOutCurve: 0, fadeInBars: 3, fadeOutBars: 3 }
       const track = { ...owner, collapsed: false, heightPx: height }
-      const row = { track, top: 34, height }
+      const row = { trackGeometry: DEFAULT_LAYOUT_TOKENS.track, track, top: 34, height }
       const visual = clipVisualGeometry(clipRect(clip, row, 32, 0), clip, track, true)
       const fade = visual.fades.find(item => item.edge === edge)!
       const pointer = fade.curve

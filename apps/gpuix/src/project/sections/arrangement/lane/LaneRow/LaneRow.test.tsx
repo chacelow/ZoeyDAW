@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS, createLayoutTokens } from "@/shared/theme/layout-tokens"
 import { afterEach, expect, it, spyOn } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -11,6 +12,8 @@ import { flushSync } from "@gpuix/react"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createManualFrames } from "../testing/frames.test-helper"
 import * as clipLabels from "@/project/model/clip-label"
+import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
+import { hitTest } from "../../core/hit-test"
 
 let root: TestRoot | undefined
 afterEach(() => {
@@ -50,7 +53,7 @@ it("culls offscreen native cards and retains visible node identity while scrolli
       steps: [true],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 1024,
     grid: { mode: "fixed", bars: 0.25 },
@@ -105,7 +108,7 @@ it("moves a fully visible Clip without reuploading or remounting its unchanged c
       steps: [true, false, true, false],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 0.25 },
@@ -162,7 +165,7 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
   track.clips = [
     { kind: "pattern", id: "pattern", patternId: "p", startBar: 2, lengthBars: 2, steps: [true] },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 0.25 },
@@ -232,7 +235,7 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
 })
 
 it("presents the latest playhead on resume and releases frame leases when stopped or unmounted", () => {
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setViewport({ width: 500, height: 300, scrollX: 32, scrollY: 0, pxPerBar: 64, dpr: 1 })
   scene.setPlayback({ playing: true, insertionPoint: null })
   const frames = createManualFrames()
@@ -300,7 +303,7 @@ it("preserves tiny Clip pixel width when projecting a collapsed group summary", 
       steps: [true],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const music: Parameters<typeof scene.setMusic>[0] = {
     bars: 1024,
     grid: { mode: "fixed", bars: 0.25 },
@@ -360,7 +363,7 @@ it("scrolls an already-visible unchanged Clip without rerendering its content", 
       steps: [true, false],
     },
   ]
-  const scene = createSceneStore()
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   scene.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 0.25 },
@@ -407,4 +410,75 @@ it("scrolls an already-visible unchanged Clip without rerendering its content", 
   } finally {
     label.mockRestore()
   }
+})
+
+it("refreshes a cached mounted Clip title when density changes without changing track height", () => {
+  const score = createMockDocument()
+  const owner = score.tracks.find(track => track.kind === "audio")
+  if (!owner) throw new Error("Missing audio track")
+  const track = { ...owner, collapsed: false, heightPx: 70 }
+  track.clips = [
+    {
+      kind: "audio",
+      id: "density-clip",
+      label: "Density clip",
+      startBar: 1,
+      lengthBars: 2,
+      samplePath: "unloaded.wav",
+      gainDb: 0,
+    },
+  ]
+  const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
+  scene.setMusic({
+    bars: 128,
+    grid: { mode: "fixed", bars: 0.25 },
+    transport: score.transport,
+    tracks: [track],
+    markers: [],
+    loop: score.transport.loop,
+  })
+  scene.setViewport({ width: 500, height: 200, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
+  // Fixed offscreen viewport isolates the visible title/body boundary, not a product layout default.
+  const mounted = createTestRoot({ width: 500, height: 200 })
+  root = mounted
+  const readPeaks = () => new Float32Array(0)
+  const show = (control: typeof CONTROL_METRICS.default, layout = DEFAULT_LAYOUT_TOKENS) => {
+    scene.setGeometry(layout)
+    const row = layoutTrackRows(scene.get())[0]
+    if (!row) throw new Error("Missing density row")
+    mounted.render(
+      <ThemeProvider control={control} layout={layout}>
+        <div style={{ position: "relative", width: 500, height: 200 }}>
+          <LaneContents
+            row={row}
+            scene={scene.get()}
+            automationMode={false}
+            readPeaks={readPeaks}
+          />
+        </div>
+      </ThemeProvider>
+    )
+    return row
+  }
+  const titleBounds = () => {
+    const card = mounted.renderer.findByTestId("clip-source-density-clip")
+    const label = card?.children.find(id => mounted.renderer.getElement(id)?.type === "text")
+    const bounds = label === undefined ? undefined : mounted.renderer.getElementBounds(label)
+    if (!card || !bounds) throw new Error("Missing native Clip label bounds")
+    return { cardId: card.id, ...bounds }
+  }
+  const original = show(CONTROL_METRICS.default)
+  const before = titleBounds()
+  expect(before.height).toBe(21)
+  expect(hitTest(scene.get(), 32, original.top + 25)?.kind).toBe("clip-body")
+  const control = {
+    ...CONTROL_METRICS.default,
+    "--spacing-control-track": 20,
+    "--spacing-control-track-gap": 6,
+  }
+  const updated = show(control, createLayoutTokens(control, PROJECT_METRICS))
+  expect(updated.height).toBe(original.height)
+  expect(hitTest(scene.get(), 32, updated.top + 25)?.kind).toBe("clip-title")
+  expect(titleBounds().cardId).toBe(before.cardId)
+  expect(titleBounds().height).toBe(32)
 })

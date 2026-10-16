@@ -20,7 +20,7 @@ import {
   openProjectSnapshot,
   setProjectStorageId,
 } from "@/project/adapters"
-import { TRACK_RESIZE_STEP } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createNativeBackend } from "@/project/adapters/backend/native"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { ClipEditor } from "@/project/sections/clip-edit"
@@ -82,6 +82,7 @@ async function mount(manyTracks = false, arrangementHeight = 500) {
   const interaction = createAppInteraction()
   const clipboard = { readText: () => "", writeText: (_value: string) => {} }
   const composition = createProjectComposition({
+    geometry: DEFAULT_LAYOUT_TOKENS,
     interaction,
     keyboard,
     clipboard,
@@ -289,11 +290,11 @@ test("the lane-side track separator resizes above the input layer without steali
   const x = separator.x + 20
   const y = separator.y + separator.height / 2
   root.renderer.nativeSimulateMouseDown(x, y)
-  root.renderer.nativeSimulateMouseMove(x, y + TRACK_RESIZE_STEP * 2, 0)
-  root.renderer.nativeSimulateMouseUp(x, y + TRACK_RESIZE_STEP * 2)
+  root.renderer.nativeSimulateMouseMove(x, y + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2, 0)
+  root.renderer.nativeSimulateMouseUp(x, y + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2)
   expect(
     useProjectState.getState().document.tracks.find(track => track.id === "source")?.heightPx
-  ).toBe(source.heightPx + TRACK_RESIZE_STEP * 2)
+  ).toBe(source.heightPx + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2)
   expect(composition.timeline.sceneStore.get().clipDrag).toBeNull()
   root.renderer.nativeSimulateClick(clip.x + 20, clip.y + 6)
   expect(useProjectState.getState().session.selectedClipIds).toEqual(["r2-midi"])
@@ -315,12 +316,16 @@ for (const trackId of ["source", "main"]) {
       const x = bounds.x + 20
       const y = bounds.y + bounds.height / 2
       root.renderer.nativeSimulateMouseDown(x, y)
-      root.renderer.nativeSimulateMouseMove(x, y + direction * TRACK_RESIZE_STEP * 8, 0)
+      root.renderer.nativeSimulateMouseMove(
+        x,
+        y + direction * DEFAULT_LAYOUT_TOKENS.track.resizeStep * 8,
+        0
+      )
       root.renderer.flush()
       root.renderer.dispatchNativeEvents()
       expect(
         useProjectState.getState().document.tracks.find(track => track.id === trackId)?.heightPx
-      ).toBe(before + TRACK_RESIZE_STEP * 8)
+      ).toBe(before + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 8)
       expect(root.renderer.getFocusedElementId()).toBe(separator.id)
       const rows = layoutTrackRows(composition.timeline.sceneStore.get())
       const row = rows.find(item => item.track.id === trackId)
@@ -330,17 +335,27 @@ for (const trackId of ["source", "main"]) {
       else expect(row.top + row.height).toBeGreaterThan(main.top)
       if (ending === "escape") {
         root.renderer.simulateKeystrokes("escape")
-        root.renderer.nativeSimulateMouseUp(x, y + direction * TRACK_RESIZE_STEP * 8)
+        root.renderer.nativeSimulateMouseUp(
+          x,
+          y + direction * DEFAULT_LAYOUT_TOKENS.track.resizeStep * 8
+        )
         expect(
           useProjectState.getState().document.tracks.find(track => track.id === trackId)?.heightPx
         ).toBe(before)
         expect(useProjectState.getState().session.canUndo).toBe(false)
       } else {
-        root.renderer.nativeSimulateMouseMove(x, y + direction * TRACK_RESIZE_STEP * 9, 0)
-        root.renderer.nativeSimulateMouseUp(x, y + direction * TRACK_RESIZE_STEP * 9)
+        root.renderer.nativeSimulateMouseMove(
+          x,
+          y + direction * DEFAULT_LAYOUT_TOKENS.track.resizeStep * 9,
+          0
+        )
+        root.renderer.nativeSimulateMouseUp(
+          x,
+          y + direction * DEFAULT_LAYOUT_TOKENS.track.resizeStep * 9
+        )
         expect(
           useProjectState.getState().document.tracks.find(track => track.id === trackId)?.heightPx
-        ).toBe(before + TRACK_RESIZE_STEP * 9)
+        ).toBe(before + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 9)
         expect(useProjectState.getState().session.canUndo).toBe(true)
         flushSync(projectActions.undo)
         expect(

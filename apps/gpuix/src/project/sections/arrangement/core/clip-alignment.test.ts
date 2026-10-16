@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { describe, expect, it } from "bun:test"
 import { createMockDocument } from "../../../adapters/fixtures"
 import { alignmentBar } from "./clip-alignment"
@@ -19,7 +20,7 @@ function patternScene() {
     steps: [true, false, false, false],
   }
   track.clips = [pattern]
-  const store = createSceneStore()
+  const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   store.setMusic({
     bars: 128,
     grid: { mode: "fixed", bars: 1 },

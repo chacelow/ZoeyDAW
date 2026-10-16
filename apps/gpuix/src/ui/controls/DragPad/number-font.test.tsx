@@ -47,7 +47,10 @@ test("numeric font token controls measured width, display and editing", async ()
   try {
     root.render(
       <ThemeProvider
-        design={{ ...DEFAULT_DESIGN_TOKENS, typography: { numberFontFamily: "Helvetica" } }}
+        design={{
+          ...DEFAULT_DESIGN_TOKENS,
+          typography: { ...DEFAULT_DESIGN_TOKENS.typography, numberFontFamily: "Helvetica" },
+        }}
       >
         <Harness />
       </ThemeProvider>

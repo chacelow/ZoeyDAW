@@ -8,7 +8,7 @@ import {
 } from "@/project/adapters"
 import { createNativeBackend } from "@/project/adapters/backend/native"
 import { createTrack } from "@/project/model/reducers"
-import { DEFAULT_TRACK_HEIGHT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 
 const evidence = process.env.B2_EVIDENCE_DIR
 if (!evidence) throw new Error("B2_EVIDENCE_DIR must point to a temporary fixture directory")
@@ -22,7 +22,12 @@ configureProjectBackend(createNativeBackend, {
     const document = structuredClone(current)
     const main = document.tracks.find(track => track.kind === "main")
     if (!main) throw new Error("Missing Main output")
-    const audio = createTrack("audio", [main], undefined, DEFAULT_TRACK_HEIGHT * 2)
+    const audio = createTrack(
+      "audio",
+      [main],
+      undefined,
+      DEFAULT_LAYOUT_TOKENS.track.defaultHeight * 2
+    )
     audio.id = "native-audio"
     audio.name = "Native audio fixture"
     audio.clips = [
@@ -36,7 +41,12 @@ configureProjectBackend(createNativeBackend, {
         gainDb: 0,
       },
     ]
-    const midi = createTrack("midi", [audio, main], undefined, DEFAULT_TRACK_HEIGHT * 2)
+    const midi = createTrack(
+      "midi",
+      [audio, main],
+      undefined,
+      DEFAULT_LAYOUT_TOKENS.track.defaultHeight * 2
+    )
     midi.id = "native-midi"
     midi.name = "MIDI fixture"
     midi.clips = [

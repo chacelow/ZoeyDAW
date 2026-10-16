@@ -247,7 +247,7 @@ export function ArrangementTimeline({
               aria-label={labels.grid}
               style={sx({
                 position: "absolute",
-                right: theme.project.controlsWidth + theme.control["--spacing-control-gap"],
+                right: theme.layout.track.controlsWidth + theme.control["--spacing-control-gap"],
                 bottom: TIME_RULER_HEIGHT + theme.control["--spacing-control-gap"],
                 backgroundColor: theme.colors.arrangementSurfaceAlt,
                 color: theme.colors.mutedForeground,
@@ -288,7 +288,7 @@ function TimelineStatus({ labels }: { labels: TimelineLabels }) {
           theme.control["--spacing-control-track"] +
           theme.control["--spacing-control-track-pad"] * 2 +
           theme.control["--spacing-control-gap"],
-        maxWidth: theme.project.controlsWidth,
+        maxWidth: theme.layout.track.controlsWidth,
         padding: theme.control["--spacing-control-gap"],
         fontSize: theme.control["--text-control-track"],
         backgroundColor: theme.colors.arrangementSurfaceAlt,

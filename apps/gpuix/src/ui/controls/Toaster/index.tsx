@@ -146,7 +146,7 @@ export function Toaster({
           flexDirection: "column",
           alignItems: center ? "center" : "stretch",
           gap: gap * 2,
-          width: center ? undefined : theme.project.controlsWidth,
+          width: center ? undefined : theme.layout.track.controlsWidth,
           pointerEvents: "none",
         },
         style
@@ -165,7 +165,7 @@ export function Toaster({
             flexDirection: "column",
             gap,
             padding: gap * 3,
-            width: theme.project.controlsWidth,
+            width: theme.layout.track.controlsWidth,
             borderWidth: 1,
             borderRadius: gap * 2,
             borderColor:

@@ -1,4 +1,6 @@
 import { DEFAULT_GRID, deriveGridPlan } from "@/project/model/grid"
+import type { LayoutTokens } from "@/shared/theme/layout-tokens"
+export type ArrangementGeometry = Pick<LayoutTokens, "track" | "arrangement">
 import type { GridPlan, GridSettings } from "@/project/model/grid"
 import type {
   AutomationLane,
@@ -44,6 +46,7 @@ export interface SceneMusic {
 
 export interface ArrangementScene extends SceneMusic {
   revision: number
+  geometry: ArrangementGeometry
   gridPlan: GridPlan
   playback: Pick<SessionState, "playing" | "insertionPoint">
   viewport: ArrangementViewport
@@ -65,6 +68,7 @@ export interface SceneStore {
   get: () => ArrangementScene
   subscribe: (listener: (scene: ArrangementScene) => void) => () => void
   setViewport: (viewport: ArrangementViewport) => void
+  setGeometry: (geometry: ArrangementGeometry) => void
   setMusic: (input: SceneMusic) => void
   setPlayback: (playback: ArrangementScene["playback"]) => void
   setSelection: (ids: ReadonlySet<string>) => void
@@ -79,7 +83,7 @@ export interface SceneStore {
   setTimeSelectionPreview: (selection: TimeSelection | null) => void
 }
 
-export function createSceneStore(): SceneStore {
+export function createSceneStore(geometry: ArrangementGeometry): SceneStore {
   let committedTimeSelection: TimeSelection | null = null
   let source: SceneMusic = {
     bars: 128,
@@ -92,6 +96,7 @@ export function createSceneStore(): SceneStore {
   let scene: ArrangementScene = {
     ...source,
     revision: 0,
+    geometry,
     viewport: { pxPerBar: 24, scrollX: 0, scrollY: 0, width: 0, height: 0, dpr: 1 },
     gridPlan: deriveGridPlan(source.grid, 24, 4, 4),
     playback: { playing: false, insertionPoint: null },
@@ -117,6 +122,10 @@ export function createSceneStore(): SceneStore {
   }
   return {
     get: () => scene,
+    setGeometry(geometry) {
+      if (scene.geometry === geometry) return
+      bump({ ...scene, geometry })
+    },
     subscribe(listener) {
       listeners.add(listener)
       return () => {

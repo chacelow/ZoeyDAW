@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, test } from "bun:test"
 import { createMockDocument } from "../../../../adapters/fixtures"
 import { createSceneStore } from "../scene"
@@ -7,7 +8,7 @@ import { timeRangeSelection, committedTimeRange } from "../clip/timeRange"
 
 test("time range reverses musical endpoints and spans only visible rows", () => {
   const score = createMockDocument()
-  const store = createSceneStore()
+  const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
   const tracks = score.tracks
     .filter(track => track.kind === "audio" || track.kind === "midi")
     .map(track => ({ ...track, collapsed: false }))

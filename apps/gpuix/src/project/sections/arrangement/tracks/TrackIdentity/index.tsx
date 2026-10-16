@@ -4,7 +4,6 @@ import { useTrackLabels } from "../labels"
 import { Button } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
-import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { contentFill } from "@/shared/theme/content-color"
 import { TrackNameInput } from "./NameInput"
 import { AutomationSelector } from "./AutomationSelector"
@@ -79,7 +78,7 @@ export function TrackIdentity({
         userSelect: "none",
         backgroundColor: selected
           ? theme.colors.arrangementClipSelected
-          : contentFill(track.color, theme.colors),
+          : contentFill(track.color, theme.colors, theme.design.colorRecipes.contentPaperTint),
         focusVisible: focusRing,
       }}
       onKeyDown={event => {
@@ -92,7 +91,7 @@ export function TrackIdentity({
           display: "flex",
           alignItems: "center",
           minWidth: 0,
-          height: TRACK_TITLE_HEIGHT,
+          height: theme.layout.track.titleHeight,
           flexShrink: 0,
           gap: theme.control["--spacing-control-track-gap"],
           paddingLeft: theme.control["--spacing-control-track-gap"],

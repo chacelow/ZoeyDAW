@@ -6,6 +6,8 @@
  * table or a second derivation in a feature slice.
  */
 import { colorMix } from "./color-mix"
+import { DEFAULT_COLOR_RECIPES } from "./color-recipes"
+import type { ColorRecipes } from "./color-recipes"
 
 /** One preset's colors for one scheme. */
 export interface ThemeColors {
@@ -24,6 +26,7 @@ export interface ThemeColors {
   readonly accent: string
   readonly accentForeground: string
   readonly destructive: string
+  readonly success: string
   readonly border: string
   readonly input: string
   readonly ring: string
@@ -32,76 +35,99 @@ export interface ThemeColors {
   readonly chart3: string
   readonly chart4: string
   readonly chart5: string
+  readonly arrangementClipSelected: string
+  readonly arrangementClipPaper: string
 }
 
 export type ColorScheme = "light" | "dark"
 
-/** Web `:root` constants that no preset and no scheme overrides. */
-const ARRANGEMENT_CLIP_SELECTED = "oklch(87% 0.05 220deg)"
-const ARRANGEMENT_CLIP_PAPER = "oklch(97% 0.005 90deg)"
-
 export interface DerivedThemeColors extends ThemeColors {
-  /** Web `--arrangement-clip-selected`; same in every preset and scheme. */
-  arrangementClipSelected: string
-  /** Web `--arrangement-clip-paper`; same in every preset and scheme. */
-  arrangementClipPaper: string
-  /** `color-mix(in oklab, muted 30%, background)`. */
+  /** Mixed from muted and background. */
   editorShell: string
-  /** `color-mix(in oklab, foreground 10%, transparent)`. */
+  /** Foreground wash over transparent. */
   canvasScrollbar: string
   canvasScrollbarHover: string
   canvasScrollbarActive: string
-  /** `color-mix(in oklab, foreground 4%, background)`. */
   scrollbarTrack: string
-  /** `color-mix(in oklab, card 78%, foreground)`. */
   arrangementSurfaceSelected: string
-  /** `color-mix(in oklab, card 86%, foreground)`; timeline lane background. */
   arrangementSurface: string
-  /** `color-mix(in oklab, card 84%, foreground)`; also the ruler, toolbar and track-header background. */
   arrangementSurfaceAlt: string
-  /** `light-dark(border, muted)`; grid lines, separators and meter cutouts. */
   arrangementLine: string
-  /** `destructive`; automation curves and recording. */
   arrangementAutomation: string
-  /** `chart-2`; volume and pan lanes. */
   arrangementVolume: string
-  /** `chart-2`. */
   arrangementMeterGood: string
-  /** `light-dark(chart-4, chart-3)`. */
   arrangementMeterWarn: string
-  /** `destructive`. */
   arrangementMeterDanger: string
-  /** `muted-foreground`; meter peak-hold bar. */
   arrangementMeterPeak: string
-  /** `light-dark(foreground, card)`; text, waveform and fade stroke drawn on clips. */
   arrangementClipInk: string
-  /** `color-mix(in oklab, clip-ink 50%, transparent)`. */
   arrangementFadeMask: string
+  destructiveActive: string
+  destructiveHighlight: string
+  destructiveFocusBorder: string
+  destructiveFocusOutline: string
+  listRowHover: string
+  dialogBackdrop: string
+  editorOverviewViewport: string
+  editorAudioLoop: string
+  editorMarkerHover: string
+  editorMarquee: string
+  pianoIvory: string
+  pianoEbony: string
 }
 
-export function derive(base: ThemeColors, scheme: ColorScheme): DerivedThemeColors {
-  const lightDark = (light: string, dark: string) => (scheme === "light" ? light : dark)
-  const arrangementClipInk = lightDark(base.foreground, base.card)
+export function derive(
+  base: ThemeColors,
+  scheme: ColorScheme,
+  recipes: ColorRecipes = DEFAULT_COLOR_RECIPES
+): DerivedThemeColors {
+  const aliases = recipes.aliases
+  const arrangementClipInk = base[aliases.arrangementClipInk[scheme]]
+  const destructive = recipes.destructive
+  const editor = recipes.editor
   return {
     ...base,
-    arrangementClipSelected: ARRANGEMENT_CLIP_SELECTED,
-    arrangementClipPaper: ARRANGEMENT_CLIP_PAPER,
-    editorShell: colorMix(base.muted, 30, base.background),
-    canvasScrollbar: colorMix(base.foreground, 10, "transparent"),
-    canvasScrollbarHover: colorMix(base.foreground, 18, "transparent"),
-    canvasScrollbarActive: colorMix(base.foreground, 26, "transparent"),
-    scrollbarTrack: colorMix(base.foreground, 4, base.background),
-    arrangementSurfaceSelected: colorMix(base.card, 78, base.foreground),
-    arrangementSurface: colorMix(base.card, 86, base.foreground),
-    arrangementSurfaceAlt: colorMix(base.card, 84, base.foreground),
-    arrangementLine: lightDark(base.border, base.muted),
-    arrangementAutomation: base.destructive,
-    arrangementVolume: base.chart2,
-    arrangementMeterGood: base.chart2,
-    arrangementMeterWarn: lightDark(base.chart4, base.chart3),
-    arrangementMeterDanger: base.destructive,
-    arrangementMeterPeak: base.mutedForeground,
+    editorShell: colorMix(base.muted, recipes.editorShell, base.background),
+    canvasScrollbar: colorMix(base.foreground, recipes.canvasScrollbar, "transparent"),
+    canvasScrollbarHover: colorMix(base.foreground, recipes.canvasScrollbarHover, "transparent"),
+    canvasScrollbarActive: colorMix(base.foreground, recipes.canvasScrollbarActive, "transparent"),
+    scrollbarTrack: colorMix(base.foreground, recipes.scrollbarTrack, base.background),
+    arrangementSurfaceSelected: colorMix(
+      base.card,
+      recipes.arrangementSurfaceSelected,
+      base.foreground
+    ),
+    arrangementSurface: colorMix(base.card, recipes.arrangementSurface, base.foreground),
+    arrangementSurfaceAlt: colorMix(base.card, recipes.arrangementSurfaceAlt, base.foreground),
+    arrangementLine: base[aliases.arrangementLine[scheme]],
+    arrangementAutomation: base[aliases.arrangementAutomation],
+    arrangementVolume: base[aliases.arrangementVolume],
+    arrangementMeterGood: base[aliases.arrangementMeterGood],
+    arrangementMeterWarn: base[aliases.arrangementMeterWarn[scheme]],
+    arrangementMeterDanger: base[aliases.arrangementMeterDanger],
+    arrangementMeterPeak: base[aliases.arrangementMeterPeak],
     arrangementClipInk,
-    arrangementFadeMask: colorMix(arrangementClipInk, 50, "transparent"),
+    arrangementFadeMask: colorMix(arrangementClipInk, recipes.arrangementFadeMask, "transparent"),
+    destructiveActive: colorMix(base.destructive, destructive.active[scheme], "transparent"),
+    destructiveHighlight: colorMix(base.destructive, destructive.highlight[scheme], "transparent"),
+    destructiveFocusBorder: colorMix(base.destructive, destructive.focusBorder, "transparent"),
+    destructiveFocusOutline: colorMix(
+      base.destructive,
+      destructive.focusOutline[scheme],
+      "transparent"
+    ),
+    listRowHover: colorMix(base.muted, recipes.listRowHover, base.foreground),
+    dialogBackdrop: colorMix(base.foreground, recipes.dialogBackdrop, "transparent"),
+    editorOverviewViewport: colorMix(base.primary, editor.overviewViewport, "transparent"),
+    editorAudioLoop: colorMix(base.primary, editor.audioLoop, "transparent"),
+    editorMarkerHover: colorMix(base.primary, editor.markerHover, "transparent"),
+    editorMarquee: colorMix(base.primary, editor.marquee, "transparent"),
+    pianoIvory:
+      scheme === "dark"
+        ? colorMix(base.foreground, editor.pianoIvoryDark, base.background)
+        : base.background,
+    pianoEbony:
+      scheme === "dark"
+        ? colorMix(base.background, editor.pianoEbony, base.foreground)
+        : colorMix(base.foreground, editor.pianoEbony, base.background),
   }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { getThemePreset } from "./presets"
 import { CONTENT_PALETTE, contentFill, resolveContentColor } from "./content-color"
+import { DEFAULT_COLOR_RECIPES } from "./color-recipes"
 
 const { light: lightColors, dark: darkColors } = getThemePreset("default").colors
 
@@ -27,8 +28,9 @@ describe("resolveContentColor", () => {
 })
 
 test("contentFill mixes the resolved color with clip paper, not the raw token", () => {
-  const fill = contentFill("var(--chart-1)", lightColors)
-  expect(fill).toBe(contentFill(lightColors.chart1, lightColors))
-  expect(fill).not.toBe(contentFill("var(--chart-2)", lightColors))
-  expect(contentFill("var(--chart-1)", darkColors)).not.toBe(fill)
+  const tint = DEFAULT_COLOR_RECIPES.contentPaperTint
+  const fill = contentFill("var(--chart-1)", lightColors, tint)
+  expect(fill).toBe(contentFill(lightColors.chart1, lightColors, tint))
+  expect(fill).not.toBe(contentFill("var(--chart-2)", lightColors, tint))
+  expect(contentFill("var(--chart-1)", darkColors, tint)).not.toBe(fill)
 })

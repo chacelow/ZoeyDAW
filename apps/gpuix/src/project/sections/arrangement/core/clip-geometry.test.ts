@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { expect, it } from "bun:test"
 import { createMockDocument } from "../../../adapters/fixtures"
 import { clipVisualGeometry } from "./clip-geometry"
@@ -17,7 +18,7 @@ it.each([0.1, 0.5, 0.9])(
     clip.fadeOutBars = 3
     clip.fadeInCurvePosition = position
     clip.fadeOutCurvePosition = position
-    const scene = createSceneStore()
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     scene.setMusic({
       bars: 128,
       grid: { mode: "fixed", bars: 1 },

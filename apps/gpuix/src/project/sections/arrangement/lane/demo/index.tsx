@@ -1,3 +1,4 @@
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react"
 import type { ReactNode } from "react"
 import { render, useGpuix } from "@gpuix/react"
@@ -15,7 +16,6 @@ import {
   readTransportBar,
   useProjectState,
 } from "@/project/adapters"
-import { CONTROLS_WIDTH, TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { resolveContentColor } from "@/shared/theme/content-color"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -172,7 +172,7 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
       <ScrollArea
         orientation="horizontal"
         fill
-        height={TRACK_TITLE_HEIGHT}
+        height={DEFAULT_LAYOUT_TOKENS.track.titleHeight}
         role="toolbar"
         aria-label="Lane verification controls"
       >
@@ -181,7 +181,7 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
             display: "flex",
             gap: theme.control["--spacing-control-gap"],
             alignItems: "center",
-            height: TRACK_TITLE_HEIGHT,
+            height: DEFAULT_LAYOUT_TOKENS.track.titleHeight,
             paddingLeft: theme.control["--spacing-control-gap"],
             paddingRight: theme.control["--spacing-control-gap"],
           })}
@@ -259,7 +259,7 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
               position: "absolute",
               left: 0,
               top: row.clipTop,
-              width: scene.viewport.width + CONTROLS_WIDTH,
+              width: scene.viewport.width + DEFAULT_LAYOUT_TOKENS.track.controlsWidth,
               height: row.clipBottom - row.clipTop,
               overflow: "hidden",
               borderBottomWidth: 1,
@@ -287,7 +287,7 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
                 position: "absolute",
                 left: scene.viewport.width,
                 top: 0,
-                width: CONTROLS_WIDTH,
+                width: DEFAULT_LAYOUT_TOKENS.track.controlsWidth,
                 height: row.clipBottom - row.clipTop,
                 backgroundColor: theme.colors.arrangementSurfaceAlt,
                 paddingLeft: theme.control["--spacing-control-gap"],
@@ -345,7 +345,7 @@ function LaneDemo({ runtime }: { runtime: LaneDemoRuntime }) {
         testId="lane-status"
         role="status"
         style={sx({
-          height: TRACK_TITLE_HEIGHT,
+          height: DEFAULT_LAYOUT_TOKENS.track.titleHeight,
           fontSize: theme.control["--text-control-track"],
           color: theme.colors.mutedForeground,
           whiteSpace: "nowrap",
