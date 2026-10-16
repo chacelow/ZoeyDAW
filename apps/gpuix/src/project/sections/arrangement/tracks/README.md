@@ -39,7 +39,11 @@ The driver consumes F1 callback timestamps directly. Wakeups only request a fram
 
 Meter 的声道间距、peak 线高、zero 线高和警告渐变位置读取 `design.editor.meter`。显示范围、hold 和 decay 仍来自注入的行为策略；样式覆盖不修改遥测或电平计算。`meter/TrackMeter.test.tsx` 增加原生消费回归，覆盖这些 design 输入。
 
-`TrackLabels` 注入文案与 `DisplayFormats` 纯端口。唯一文本数据在 `app/locales/sections/tracks.ts`，组合根通过 `createTrackLabels(locale)` 构造并缓存标签。project 组件不导入 app、不持有第二份语言状态。Mixer 的 dB/Pan 显示和解析、Meter 声道朗读、monitor mode 文案都消费这份输入。
+轨道边框几何以解析后的 `layout.track.border` 为准：Row 使用其 `trackGeometry.border`，resize 使用 scene geometry，Mixer 的 meter 可用高度读取同一 layout 来源。显式 layout 覆盖优先于由 project 初值派生的默认 layout；消费者不再回读 `project.trackBorder`。
+
+`TrackLabels` 注入文案与 `DisplayFormats` 纯端口。唯一文本数据在 `app/locales/sections/tracks.ts`，组合根通过 `createTrackLabels(locale)` 构造标签并在自身生命周期内复用。project 组件不导入 app、不持有第二份语言状态。Mixer 的 dB/Pan 显示和解析、Meter 声道朗读、monitor mode 文案都消费这份输入。
+
+Mixer 使用 `formats.pan(value, "control")`；自动化 ValueEditor 使用 `"automation"` 变体，并通过 `formats.db(value, { unit: true })` 保留单位。中心 `C` 是跨语言协议表示，文案来源由共享 formatter 统一拥有，不在业务组件另加 locale 特例。C3 的完整来源/变异/像素证据见 [C3-REPORT.md](../C3-REPORT.md)。
 
 ### Exercised proof
 

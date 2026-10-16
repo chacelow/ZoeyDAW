@@ -15,6 +15,7 @@ B1，2026-10-15。这里只接收坐标、工程模型和显式手势数据，�
 - `edgeScroll({ viewport, bars, tracks, pointer, axis, edge, elapsed, geometry, policy })` 返回夹取后的 `scrollX/scrollY`。固定轨道不触发垂直滚动。`geometry` 提供轨道与标尺边界，`policy` 提供单帧上限与独立轴速度。调用方拥有手势与帧生命周期。
 - `project/defaults/arrangement.ts` 持有编辑策略默认值，共享 pointer 初值来自纯 `project/defaults/preferences` 入口。`resolveArrangementPolicy(source, overrides, pointer)` 在配置边界逐字段解析稀疏偏好，保留合法的零值。controllers 通过 `readPolicy()` 读取最新完整策略，纯计算只接收对应分组。Minimap 保存按下时的策略快照。偏好改变取消正在进行的手势，不重建 SceneStore 或 controllers。
 - `createMeterPeak(policy)`、`meterDb(levelDb, policy)`、`advanceMeterPeak(peak, levelDb, nowMs, policy)` 共用 `ArrangementPolicy["meter"]`；没有第二份 meter 范围、hold 或 fall 常量。时间单位换算仍是数学常量。
+- App composition 的生命周期由 keyboard/interaction/native renderer 等服务身份决定，不由 `project` 度量值决定。稳定的只读 metrics 视图读取最新受控来源；minimap 上下限、lane 与 ruler autoscroll 的 edge 不冻结初值。度量更新取消活动手势，不替换 SceneStore、controllers 或选择。真实 hook/native backend 回归在 `app/project/live-policy.test.tsx`。
 
 ## 公共接口：配置几何
 
