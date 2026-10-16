@@ -114,12 +114,15 @@ Provider 的 `design/layout/control/transportControl/project` 均接受完整对
 - 颜色回归覆盖所有新增 mix/alias、明暗分支与 MIDI velocity；`bun apps/gpuix/src/shared/theme/verification/mutations.mjs`：52/52 source-bypass 变异均触发目标回归失败，含缓存键、4 条总宽读取及 Home 最大宽度旁路。临时源码副本退出即清理，不修改工作区进行变异。
 - 后台真实窗口：命名 service `c1-theme-background`，`GPUIX_BACKGROUND=1 bun --hot apps/gpuix/src/shared/theme/demo.tsx`；窗口 960×448（含系统 chrome），focused=false，AX 可见标题。后台未出业务帧，未宣称窗口视觉/性能验收；8.1 秒内关闭。AX：证据目录的 `native-window-ax.txt`。
 - 修复前的完整 `pnpm verify:gpuix` 已两次返回 0：805 个跟踪源码绝对路径门禁 0 hard；renderer 身份、native build、tsc、eslint 通过；架构 87/87、工具 CLI 81/81；Bun 1325 pass / 1 todo / 0 fail（205 文件）；文档路由、UI map 与真实后端 Home→工程→恢复首帧 smoke 通过。
-- 最新 `node scripts/gpuix-review-scan.mjs`：72 source / 41 test，0 HARD / 10 WARN；逐条处置见下表。
+- 最新 `node scripts/gpuix-review-scan.mjs`：78 source / 41 test，0 HARD / 10 WARN；同 10 条 WARN 的逐条处置见下表。
 - P1 先红后绿：`bun test src/project/sections/arrangement/lane/LaneRow/LaneRow.test.tsx -t 'refreshes a cached mounted Clip title'`，修复前 Expected32/Received21，修复后 1 pass；相邻 LaneRow/render-projection 12 pass。缓存键变异会重现该失败。
 - P2 先红后绿：`bun test src/app/project/composition.test.tsx -t 'explicit layout control width'`，修复前整行 Expected1280/Received1184，修复后同宽与三列和断言通过。composition 与 runtime-overrides 共 12 pass，tsc 通过；Home 实际宽度随独立布局来源 912→600。
 - P1/P2 修复后重新捕获全部 12 张组合 PNG，与迁移前基线仍字节一致。
 - N1 两个既有变异入口也在隔离副本实测：app 的 `track rails deduct` 触发 1 个目标回归失败，timeline 的 `TIMELINE_MUTATION=collapsed-group-width` 触发 800/200px 两个 summary 可见性回归失败，没有 NaN 或语法失败。临时副本与烟测脚本均已清理。
 - 可重跑默认核对：`bun apps/gpuix/src/shared/theme/verification/defaults-audit/index.ts a4a9d11c927e71ea69ab8299d89d29fe996ba03b apps/gpuix/src/shared/theme/verification/C1-DEFAULTS.md`，580 个来源叶子、0 差异。旧设计对象、度量与 palette 从原 Git 文件加载，算式按旧默认度量求值；未知新叶子会直接失败。完整「字段 / 原表达式 / 原值 / 新默认值 / 一致」表见 [C1-DEFAULTS.md](C1-DEFAULTS.md)。默认忠实核对与消费者回归分开，不用截图零差冒充未接线字段的默认值证明。
+- 同步主干：`1c84bd9a` 合入 `7839828ddde50912a69d3553f52024d35349e268`，自动合并无冲突，保留 K1 命令注册。`node scripts/gpuix-main/check.mjs --resolution` 通过，身份漂移由同步已注册的 test-window scale/bounds 补丁解决，未重建或回滚共享 vendor。
+- 合并后轻量验证：`pnpm exec tsc --noEmit` 通过。在 `apps/gpuix` 执行 `bun test src/shared/theme src/project/layout src/app/project/composition.test.tsx src/project/sections/arrangement/core/scene.test.ts src/project/sections/arrangement/lane/LaneRow/LaneRow.test.tsx src/project/sections/arrangement/lane/render-projection.test.ts src/project/sections/arrangement/timeline/keyboard/controller.test.ts`：199 pass / 0 fail，11 文件。默认核对仍 580/0 差异，切片变异仍 52/52。
+- 最终单窗口 smoke：`c1-final-theme-smoke` 后台窗口 focused=false，AX 标题正确，11.4 秒内关闭；未等待帧或操作用户窗口。AX 保存在证据目录 `final-native-window-ax.txt`。
 
 ## UI 规范第 13 节
 
@@ -162,6 +165,8 @@ Live 截图：`/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/omp-computer-15a
 - 错：velocity 选中回归在近白色前景之间混色，系数变化被 hex8 量化吞掉。对：覆盖系数回归用高对比红/蓝输入，保持生产公式不变；恢复每条 velocity 配方的变异已杀死。
 - 错：纯 `project/layout` 直接 import 主题类型，触发分层门禁。对：在布局模块声明最小只读结构端口，由组合根传入符合形状的 theme 几何，运行时配置仍只有一份。
 - 错：来源先行时把 Toast padding 误按 stack gap 填成 8，截图因消费者尚未迁移而不会发现。对：逐项核对实际调用表达式；`Toaster` 的 gap=4、padding=gap×3，来源已修为 12，不依靠未来接线时的截图才纠错。
+- 错：`orca orchestration check --json` 返回旧 Delivery 后没有 ack，后续追加项被最旧批次的重放挡住。对：将整批指令登记到 Session 后，立即用返回的 deliveryId 调 `check --ack`，继续读取下一批；不能等全部实现完才 ack。
+- 错：Home 来源回归依赖另一测试文件先初始化 i18n，主题目录单独运行时译函数未就绪。对：测试显式调用既有幂等 `initAppI18n()`，单文件与主题目录独立运行均通过，不改生产代码兜底。
 
 ## 已验证做法
 
@@ -172,7 +177,7 @@ Live 截图：`/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/omp-computer-15a
 
 ## 自审结果
 
-审查 diff：`git diff a4a9d11c927e71ea69ab8299d89d29fe996ba03b...HEAD`。实现提交：`aa257ba3`、`803aa5e6`、`c7e65b10`、`b573d291`、`f39b1ec8`；ultracite/UI map 预提交门禁均通过，没有 `--no-verify`。独立 pstack-reviewer 完整审查及修复复核确认 P1/P2/S1/N1 均 closed，无剩余必修项。
+审查 diff：`git diff a4a9d11c927e71ea69ab8299d89d29fe996ba03b...HEAD`。实现提交：`aa257ba3`、`803aa5e6`、`c7e65b10`、`b573d291`、`f39b1ec8`、`a3f058ff`；`1c84bd9a` 同步主干。ultracite/UI map 预提交门禁均通过，没有 `--no-verify`。独立 pstack-reviewer 完整审查及修复复核确认 P1/P2/S1/N1 均 closed；追加来源及核对工具的 Standards/Spec 复核均无 findings。
 
 | 发现 | 类别 | 处置 | 证据 |
 | --- | --- | --- | --- |
@@ -193,6 +198,8 @@ Live 截图：`/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/omp-computer-15a
 | P2：显式 layout 总宽与 project 总宽分叉 | 汇报仲裁 | 协调者确定 layout.track.controlsWidth 唯一权威，删除 project 同义字段，迁移全部调用；原非轨道借用行为由 C2 继续收敛 | `b573d291`；400 总宽、226 Mixer、core/row/resize 同宽原生回归及四处变异通过 |
 | S1：core README 与组合契约仍写旧构造签名 | 汇报仲裁 | 协调者授权补两份公共接口文档，已同步，不动键盘 owner | `b573d291`；`node scripts/check-doc-routes.mjs` 通过 |
 | N1：两个旧 mutation 字符串仍引用已删除字段 | 必修 | 载荷改用 scene.geometry.track.controlsWidth，保留“重复扣宽”语义，不以 NaN 冒充失败 | `f39b1ec8`；既有 app filter 与 timeline preload 实测目标回归失败，独立复核 closed |
+| 追加来源与逐字段核对工具 | 记录 | 独立只读复核无 Standards/Spec findings；核对工具为历史对象加维护的原式映射，不声称自动解析所有消费者 | `a3f058ff`；580 叶/0 差异，代码模块均低于 600 行 |
+| Card README 的旧总宽示例 | 记录 | 协调者授权单行适配，已改为 theme.layout.track.controlsWidth；业务专用宽度后续仍由 C2 收敛 | `ui/controls/Card/README.md:23` |
 
 ## 进程清理
 
@@ -202,4 +209,4 @@ Live 截图：`/var/folders/xy/r_fhmdcn0zncbb_tsm33cjfw0000gn/T/omp-computer-15a
 (no matching native demo/gallery processes)
 ```
 
-只启动过 `c1-theme-background`，取 AX 后立即关闭；没有启动、停止或移动用户已有服务。
+只启动过 `c1-theme-background` 与最终 `c1-final-theme-smoke`，同一时刻只保留一个自己的窗口，取 AX 后立即关闭；没有启动、停止或移动用户已有服务。

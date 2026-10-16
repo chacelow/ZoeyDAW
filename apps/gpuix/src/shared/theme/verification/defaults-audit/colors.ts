@@ -110,7 +110,7 @@ export const COLOR_EXPECTATIONS: Readonly<Record<string, Expectation>> = {
   },
   "colorRecipes.editor.pianoEbony": {
     expression:
-      "project/sections/clip-edit/midi/PianoKeys.tsx colorMix(background/foreground, 80, foreground/background)",
+      "project/sections/clip-edit/midi/PianoKeys.tsx dark ? colorMix(background, 80, foreground) : colorMix(foreground, 80, background)",
     value: 80,
   },
   "colorRecipes.editor.velocityNoteBorder": {
