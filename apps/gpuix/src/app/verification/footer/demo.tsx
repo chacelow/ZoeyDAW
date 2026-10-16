@@ -166,10 +166,8 @@ function NativePanels() {
       labels={footerLabels}
       view={view}
       collapsed={collapsed}
-      onViewChange={changeView}
       onCollapsedChange={changeCollapsed}
       subscribeWindowActive={windowPlatform.subscribeApplicationActive}
-      reducedMotion={reducedMotion}
       renderClipEditor={() => {
         throw new Error(
           "Standalone verification contains no selected Clip; the application supplies the real editor"

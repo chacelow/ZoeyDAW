@@ -157,7 +157,7 @@ export function ProjectLayout({
               maxSize={panels.clipMaxSize}
               collapsible
               collapsedSize={0}
-              onResize={size => shell.setFooterCollapsed(size.inPixels === 0)}
+              onResize={size => shell.reportClipCollapsed(size.inPixels === 0)}
               testId="clip-panel"
             >
               {footerShell}

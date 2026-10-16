@@ -95,6 +95,19 @@ describe("panel dimensions and reflow", () => {
 })
 
 describe("divider transfer", () => {
+  test("fractional Clip panel allocation still reaches the exact collapsed endpoint", () => {
+    const constraints = resolveConstraints(
+      [{ minSize: 140 }, { minSize: "20%", maxSize: "60%", collapsible: true, collapsedSize: 0 }],
+      729
+    )
+    const result = computeLayout([440.17336956521734, 288.8266304347827], constraints, {
+      separator: 0,
+      delta: 288.8266304347827,
+    })
+    expect(result).toEqual([729, 0])
+    expect(reflowLayout(result, constraints, 736)[1]).toBe(0)
+  })
+
   test("adjacent panels change first, then further panels when a neighbour reaches its bound", () => {
     const constraints = [plain, { ...plain, max: 250 }, { ...plain, min: 150 }, plain]
     expect(computeLayout([200, 200, 200, 200], constraints, { separator: 1, delta: 100 })).toEqual([

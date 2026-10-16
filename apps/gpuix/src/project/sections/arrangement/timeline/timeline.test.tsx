@@ -53,6 +53,18 @@ function timelineOwner(scene = createSceneStore(DEFAULT_LAYOUT_TOKENS)) {
   return owner
 }
 
+test("footer height changes clamp the viewport without revealing the editing track again", () => {
+  const owner = timelineOwner()
+  projectActions.setEditingClip("audio-1")
+  owner.setScroll(0, 0)
+  owner.view.measure({ containerWidth: 1104, bodyHeight: 160, timelineLeft: 0 })
+  expect(owner.sceneStore.get().viewport.scrollY).toBe(0)
+  expect(useProjectState.getState().workspace.scrollY).toBe(0)
+  projectActions.setEditingClip("trager-1")
+  projectActions.setEditingClip("audio-1")
+  expect(owner.sceneStore.get().viewport.scrollY).toBeGreaterThan(0)
+})
+
 describe("Native timeline layout and hit testing", () => {
   for (const coordinates of [{}, { x: 450 }, { y: 20 }]) {
     test(`Minimap ignores an incomplete press ${JSON.stringify(coordinates)}`, () => {

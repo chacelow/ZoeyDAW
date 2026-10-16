@@ -23,9 +23,9 @@ function MixerLevel({
   readonly icon?: ReactNode
   readonly testId: string
 }) {
+  const { formats } = useTrackLabels()
   const gesture = useProjectEditGesture(onChange)
   const theme = useTheme()
-  const { formats } = useTrackLabels()
   return (
     <DragPadBar
       hideIcon={!icon}
