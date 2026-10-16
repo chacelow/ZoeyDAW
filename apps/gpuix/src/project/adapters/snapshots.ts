@@ -159,6 +159,8 @@ export const snapshotActions = {
     }
     try {
       hydrateProject(saved)
+      failedOpenKey = null
+      session({ snapshotError: null })
       return true
     } catch {
       session({

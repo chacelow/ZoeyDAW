@@ -122,11 +122,22 @@ try {
   await settle()
   if (storage.get(corruptKey) !== corrupt) throw new Error("Save overwrote the corrupt bytes")
   capture("corrupt-zh-CN-light")
+  storage.set(corruptKey, saved)
+  if (!projectActions.restoreSnapshot()) throw new Error("Repaired snapshot did not restore")
+  await settle()
+  flushSync(() => projectActions.setBpm(163))
+  await settle()
+  projectActions.saveSnapshot()
+  await settle()
+  const repaired = storage.get(corruptKey)
+  if (!repaired || JSON.parse(repaired).document.transport.bpm !== 163)
+    throw new Error("Successful Restore did not re-enable saving")
   console.log(
     JSON.stringify({
       output,
       restoredBpm: 151,
       corruptBytesPreserved: true,
+      restoreRecovered: true,
       nativeBackend: useProjectState.getState().session.backend.phase,
     })
   )

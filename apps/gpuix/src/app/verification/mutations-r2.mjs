@@ -34,6 +34,13 @@ const mutations = [
     pattern: "discard then reopening",
   },
   {
+    name: "UPA-01 successful Restore leaves save fenced",
+    file: "project/adapters/snapshots.ts",
+    from: "hydrateProject(saved)\n      failedOpenKey = null",
+    to: "hydrateProject(saved)",
+    pattern: "successful Restore",
+  },
+  {
     name: "UPA-02 navigation bypasses dirty decision",
     file: "app/router/router.ts",
     from: "if (leaveGuard && !leaveGuard(route, commit)) return false",
