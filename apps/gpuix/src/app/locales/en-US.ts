@@ -46,6 +46,7 @@ export default {
     untitled: "Untitled project",
   },
   about: {
+    github: "GitHub",
     prototype: "prototype scaffold",
     sourceHint: "Audio engine, CLAP + VST3 host, Browser, .als import land as the UI needs them.",
   },

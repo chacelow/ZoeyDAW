@@ -75,6 +75,10 @@ export function layoutExpectations(
       expression: "project/layout/track.ts PROJECT_METRICS.defaultTrackHeight",
       value: project.defaultTrackHeight,
     },
+    "track.mainHeight": {
+      expression: "project/stores/slices/document.ts Main heightPx: 108",
+      value: 108,
+    },
     "track.maxHeight": {
       expression: "project/layout/track.ts DEFAULT_TRACK_HEIGHT * 4",
       value: project.defaultTrackHeight * 4,

@@ -208,6 +208,7 @@ function AboutSection() {
   const theme = useTheme()
   const { t } = useAppTranslation()
   const styles = useSectionStyle()
+  const githubLabel = t("about.github")
   return (
     <div style={styles.section}>
       <text style={{ fontWeight: theme.design.typography.weights.semibold }}>{t("app.name")}</text>
@@ -215,8 +216,8 @@ function AboutSection() {
       <text style={styles.muted}>{t("about.sourceHint")}</text>
       <Separator />
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <Button variant="outline" label="GitHub" onClick={() => openExternalUrl(GITHUB_URL)}>
-          GitHub
+        <Button variant="outline" label={githubLabel} onClick={() => openExternalUrl(GITHUB_URL)}>
+          {githubLabel}
         </Button>
       </div>
     </div>
