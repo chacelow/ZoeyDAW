@@ -1,4 +1,4 @@
-import type { EventPayload, NativeRenderer } from "@gpuix/react"
+import type { EventPayload, KeyEvent, NativeRenderer } from "@gpuix/react"
 import type { EntryEdge, MenuEntry, MenuState } from "./model"
 
 export function focusEntry(
@@ -26,7 +26,7 @@ export function finishSelection(menu: MenuState, renderer: NativeRenderer | null
 export function navigate(
   menu: MenuState,
   renderer: NativeRenderer | null,
-  event: EventPayload
+  event: KeyEvent
 ): boolean {
   const key = event.key?.toLowerCase()
   const activeChild = menu.activeChild.current
@@ -40,6 +40,8 @@ export function navigate(
     key === "esc" ||
     (menu.parent && (key === "left" || key === "arrowleft"))
   ) {
+    event.preventDefault()
+    event.stopPropagation()
     menu.setOpen(false)
     if (menu.trigger.current) renderer?.focusElement?.(menu.trigger.current.id)
     return true
@@ -49,12 +51,16 @@ export function navigate(
     return true
   }
   if (key === "home" || key === "end") {
+    event.preventDefault()
+    event.stopPropagation()
     focusEntry(menu.entries, renderer, key === "home" ? "first" : "last")
     return true
   }
   const direction =
     key === "down" || key === "arrowdown" ? 1 : key === "up" || key === "arrowup" ? -1 : 0
   if (!direction) return false
+  event.preventDefault()
+  event.stopPropagation()
   const enabled = [...menu.entries.values()].filter(entry => !entry.disabled)
   const index = enabled.findIndex(entry => entry.instance.id === event.elementId)
   const next =

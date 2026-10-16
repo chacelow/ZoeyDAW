@@ -35,7 +35,9 @@ export function useDividerDrag<Snapshot>({
   const cancel = useCallback(() => {
     const active = drag.current
     drag.current = null
-    if (active) onRestore.current(active.snapshot)
+    if (!active) return false
+    onRestore.current(active.snapshot)
+    return true
   }, [])
   const complete = useCallback(() => {
     const active = drag.current

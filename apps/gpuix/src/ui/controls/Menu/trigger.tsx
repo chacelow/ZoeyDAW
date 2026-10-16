@@ -39,7 +39,7 @@ export function MenuTrigger({
   const slotProps = {
     ...props,
     role: props.role ?? "button",
-    tabIndex: 0,
+    tabIndex: props.tabIndex ?? 0,
     disabled: unavailable,
     "aria-disabled": unavailable,
     "aria-haspopup": "menu",
@@ -99,6 +99,8 @@ export function MenuTrigger({
         key === "contextmenu"
       ) {
         if (lastActivation.current === event) return
+        event.preventDefault()
+        event.stopPropagation()
         lastActivation.current = event
         menu.initialEdge.current = key === "up" || key === "arrowup" ? "last" : "first"
         menu.setPointer(null)
