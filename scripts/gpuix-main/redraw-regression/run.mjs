@@ -209,6 +209,8 @@ try {
       if (!cleanup.offscreenHostReleased) errors.push("Offscreen reference retained host leaked")
     } catch (error) {
       errors.push(`Offscreen cleanup: ${error.stack || String(error)}`)
+    } finally {
+      reference.dispose()
     }
   }
   if (renderer?.isInitialized()) {

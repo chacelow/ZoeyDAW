@@ -1,0 +1,155 @@
+diff --git a/packages/native/src/test_renderer.rs b/packages/native/src/test_renderer.rs
+index d994bc8..470f123 100644
+--- a/packages/native/src/test_renderer.rs
++++ b/packages/native/src/test_renderer.rs
+@@ -38,6 +38,7 @@ struct VisualTestState {
+     view: gpui::Entity<GpuixView>,
+     window: gpui::AnyWindowHandle,
+     cx: gpui::VisualTestAppContext,
++    owner: std::sync::Weak<Mutex<RetainedTree>>,
+ }
+ 
+ /// Release every `Entity` handle the view is holding, while the `App` is alive.
+@@ -77,6 +78,10 @@ impl Drop for VisualTestState {
+             .update_window(self.window, |_, window, _| window.refresh())
+             .ok();
+         self.cx.run_until_parked();
++        self.cx
++            .update_window(self.window, |_, window, _| window.remove_window())
++            .ok();
++        self.cx.run_until_parked();
+     }
+ }
+ 
+@@ -209,6 +214,14 @@ pub struct TestGpuixRenderer {
+     selection: crate::text::SharedSelection,
+ }
+ 
++impl TestGpuixRenderer {
++    fn owns_test_window(&self) -> bool {
++        TEST_STATE.with(|state| state.borrow().as_ref().is_some_and(|state| {
++            std::ptr::eq(state.owner.as_ptr(), Arc::as_ptr(&self.tree))
++        }))
++    }
++}
++
+ #[napi]
+ impl TestGpuixRenderer {
+     #[napi(constructor)]
+@@ -278,7 +291,7 @@ impl TestGpuixRenderer {
+ 
+         // Store !Send types on the JS main thread.
+         TEST_STATE.with(|cell| {
+-            *cell.borrow_mut() = Some(VisualTestState { cx, window, view });
++            *cell.borrow_mut() = Some(VisualTestState { cx, window, view, owner: Arc::downgrade(&tree) });
+         });
+ 
+         Ok(Self {
+@@ -288,6 +301,13 @@ impl TestGpuixRenderer {
+         })
+     }
+ 
++    #[napi]
++    pub fn dispose(&self) {
++        if self.owns_test_window() {
++            TEST_STATE.with(|state| { state.borrow_mut().take(); });
++        }
++    }
++
+     /// How many elements the retained tree holds, reachable from the root or
+     /// not. `getTreeJson` walks from the root, so it cannot see a node that was
+     /// detached and never destroyed. This is the only way a test can prove a
+@@ -595,6 +615,9 @@ impl TestGpuixRenderer {
+     #[napi]
+     pub fn set_window_key_events(&self, key_down: bool, key_up: bool, event_id: f64) -> Result<()> {
+         let event_id = to_element_id(event_id)?;
++        if !key_down && !key_up && !self.owns_test_window() {
++            return Ok(());
++        }
+         with_test_state(|cx, window, view| {
+             let view = view.clone();
+             cx.update_window(window, |_, window, app| {
+@@ -615,6 +638,9 @@ impl TestGpuixRenderer {
+     #[napi]
+     pub fn set_window_selection_change(&self, enabled: bool, event_id: f64) -> Result<()> {
+         let event_id = to_element_id(event_id)?;
++        if !enabled && !self.owns_test_window() {
++            return Ok(());
++        }
+         with_test_state(|cx, window, view| {
+             let view = view.clone();
+             cx.update_window(window, |_, window, app| {
+@@ -1324,7 +1350,7 @@ mod windows_scale_tests {
+                 Ok(image.dimensions())
+             }).unwrap();
+             assert_eq!(dimensions, ((400.0 * expected_scale) as u32, (300.0 * expected_scale) as u32));
+-            TEST_STATE.with(|state| state.borrow_mut().take());
++            renderer.dispose();
+         }
+     }
+ }
+diff --git a/packages/native/js/testing.ts b/packages/native/js/testing.ts
+index 265c8bf..ac2b705 100644
+--- a/packages/native/js/testing.ts
++++ b/packages/native/js/testing.ts
+@@ -36,6 +36,7 @@ interface NativeTestRendererApi extends NativeRenderer {
+   promptForPaths(options?: PathPromptOptions): Promise<string[] | null>
+   setQuads(elementId: number, quads: Float32Array): void
+   flush(): void
++  dispose(): void
+   drainEvents(): EventPayload[]
+   simulateKeystrokes(keystrokes: string): void
+   focusElement(elementId: number): void
+@@ -178,6 +179,7 @@ export class TestRenderer implements NativeRenderer {
+   /** Native TestGpuixRenderer — all state lives here in Rust's RetainedTree. */
+   private native: NativeTestRendererApi
+   readonly applyBatch: NativeRenderer["applyBatch"]
++  readonly dispose: () => void
+   readonly setQuads: NonNullable<NativeRenderer["setQuads"]>
+   readonly focusNext: () => void
+   readonly focusPrevious: () => void
+@@ -196,6 +198,7 @@ export class TestRenderer implements NativeRenderer {
+     }
+     this.native = new NativeTestRenderer(options.width, options.height, options.scaleFactor)
+     this.applyBatch = this.native.applyBatch.bind(this.native)
++    this.dispose = this.native.dispose.bind(this.native)
+     this.setQuads = this.native.setQuads.bind(this.native)
+     this.focusNext = this.native.focusNext.bind(this.native)
+     this.focusPrevious = this.native.focusPrevious.bind(this.native)
+diff --git a/packages/react/src/testing.ts b/packages/react/src/testing.ts
+index d84a1a8..66332f4 100644
+--- a/packages/react/src/testing.ts
++++ b/packages/react/src/testing.ts
+@@ -36,7 +36,19 @@ export function createTestRoot(options: TestWindowOptions = {}): TestRoot {
+     flushSync(() => root.render(node))
+     renderer.flush()
+   }
+-  return { root, renderer, render, unmount: root.unmount }
++  let mounted = true
++  return {
++    root, renderer, render,
++    unmount: () => {
++      if (!mounted) return
++      mounted = false
++      try {
++        root.unmount()
++      } finally {
++        renderer.dispose()
++      }
++    },
++  }
+ }
+ 
+ export { TestRenderer, hasNativeTestRenderer }
+diff --git a/packages/native/index.d.ts b/packages/native/index.d.ts
+index facfe98..0693574 100644
+--- a/packages/native/index.d.ts
++++ b/packages/native/index.d.ts
+@@ -279,6 +279,7 @@ export declare class GpuixRenderer {
+  */
+ export declare class TestGpuixRenderer {
+   constructor(width?: number | undefined | null, height?: number | undefined | null, scaleFactor?: number | undefined | null)
++  dispose(): void
+   /**
+    * How many elements the retained tree holds, reachable from the root or
+    * not. `getTreeJson` walks from the root, so it cannot see a node that was
