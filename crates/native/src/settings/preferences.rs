@@ -172,8 +172,6 @@ pub struct BrowserPreferences {
     #[napi(ts_type = "`${BrowserContentKind}`")]
     pub kind: BrowserContentKind,
     pub descending: bool,
-    pub library_roots: Vec<String>,
-    pub pack_roots: Vec<String>,
 }
 
 #[napi(object)]
@@ -310,11 +308,8 @@ impl Preferences {
         if self.notifications.visible_limit > self.notifications.queue_limit {
             return Err("notifications.visibleLimit must not exceed queueLimit".into());
         }
-        if self.browser.favorites.iter().any(String::is_empty)
-            || self.browser.library_roots.iter().any(String::is_empty)
-            || self.browser.pack_roots.iter().any(String::is_empty)
-        {
-            return Err("browser ids and configured roots must not be empty".into());
+        if self.browser.favorites.iter().any(String::is_empty) {
+            return Err("browser favorite ids must not be empty".into());
         }
         if let Some(arrangement) = &self.arrangement {
             arrangement.validate()?;

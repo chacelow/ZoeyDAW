@@ -67,9 +67,7 @@
   "browser": {
     "favorites": ["instruments-wavetable", "audioEffects-hybrid-reverb", "drums-drum-rack"],
     "kind": "all",
-    "descending": false,
-    "libraryRoots": [],
-    "packRoots": []
+    "descending": false
   },
   "audioDevice": { "sampleRate": 48000, "blockFrames": 256 }
 }

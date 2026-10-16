@@ -114,11 +114,16 @@ describe("single preference owner", () => {
 
     let notifications = 0
     const unsubscribe = owner.subscribe(() => notifications++)
-    owner.setPreference("browser", { ...browser, descending: true, libraryRoots: ["library"] })
+    owner.setPreference("browser", {
+      ...browser,
+      descending: true,
+      favorites: ["instruments-wavetable"],
+    })
     expect(notifications).toBe(1)
     owner.setPreference("browser", owner.getPreference("browser"))
     expect(notifications).toBe(1)
     expect(owner.getPreference("browser").descending).toBe(true)
+    expect(owner.getPreference("browser").favorites).toEqual(["instruments-wavetable"])
     expect(createPreferenceOwner({ configDir }).getPreference("browser")).toEqual(
       owner.getPreference("browser")
     )
