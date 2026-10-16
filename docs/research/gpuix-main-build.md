@@ -1060,3 +1060,16 @@ pending intent 的基线字段与 deferred focus 均持有稳定 `FocusHandle` �
 | `aria-toggled.patch` | `resume-frame.patch` 之后 | `aria-pressed`、`aria-checked` 的 boolean / `"mixed"` 映射到 AccessKit `Toggled`；两者同时给时 checked 优先，删除属性后清空 |
 
 F6 使用独立 vendor 根 `/Volumes/PSSD/code/_vendor/f6-gpuix`，不修改共享 vendor 或业务控件。沿用 `bool_prop`，不接受字符串 `"true"` / `"false"`。macOS 实测 button 加 pressed 暴露为 `AXCheckBox` / `AXToggle`（role description 为 `toggle button`），`AXValue` 随 false → true 更新；删除状态后恢复普通 button。原生 AccessKit 的 Mixed 在本机 AX 读取中显示为 `true`，不据此改变业务 role。验证入口与原始 AX 见 [F6 报告](../../scripts/gpuix-main/evidence/f6/REPORT.md)。
+
+### F7 production frame scheduling
+
+| 补丁序列 | 文件 | 应用位置 | 契约 |
+| --- | --- | --- | --- |
+| gpuix `patches` | 原有十二个补丁，末项 `aria-toggled.patch` | vendor 根 | 保持现有 API 与离屏测试能力 |
+| zed `zedPatches` | `zed-production-no-sync-draw.patch` | `vendor/zed`，gpuix 补丁之后 | `flush_effects` 只有 `GpuiMode::Test` 同步 draw；`Production` 使用已有 dirty-window `schedule_frame` |
+
+保留 `test-support` 构建 feature：`TestGpuixRenderer` / `createTestRoot` 依赖其 context 与 platform API。原故障是测试同步绘制只由编译 cfg 控制，导致正式窗口每次 `App::update` 都整窗绘制；运行时已有 `GpuiMode` 是正式与测试调度的正确边界。补丁不改变 `RESUME_FRAME.invalidated`、setter 返回值、retained tree、绘制内容或正常平台帧逻辑；一次同步 commit 的多次 `setQuads` 只更新 retained 数据及 dirty 状态。
+
+此次触及 zed 经协调者批准，只维护固定 SHA 上的本地补丁，不推送 fork。`config.json` 为两仓分别登记有序补丁；`check.mjs` 的 `--pending` 同时校验两个已应用前缀，输出 `zed/<补丁名>` 给构建脚本。`--sources` 要求两侧完整序列，`--record` 把两侧补丁摘要一起登记；未登记的 zed 改动、未跟踪源码及 revision 变化仍被拒绝。已有十二补丁 vendor 可直接追加 zed 补丁，不需 reclone，不回退或改写已有补丁。
+
+隔离构建：`GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/f7-gpuix CARGO_TARGET_DIR=/Volumes/PSSD/code/_vendor/target-f7 bash scripts/gpuix-main/build.sh`。回归入口与实际执行结果见 [F7 报告](../../scripts/gpuix-main/evidence/f7/REPORT.md)。前台 lane 200×50 十步协议由协调者串行复测；后台窗口仅用于不依赖帧推进的同步上传断言，不代表前台 p90 验收。
