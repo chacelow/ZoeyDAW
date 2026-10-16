@@ -34,6 +34,7 @@ DAW，使用 gpuix 原生应用：`apps/gpuix`（React 逻辑 + gpuix 原生元�
 - gpuix 的验证窗口由 Agent 自己用 `bun --hot` 启动，验证完立即关闭；Rust 改动重跑 `pnpm native:build` 后重启自己的窗口，不要求用户重启其服务。
 - 提交授权：`gpuix-migration` 及其切片分支的本地提交已由用户授权（2026-10-14 12:40 UTC，撤销逐次“我确认”）；`main` 与其它分支仍须用户在本次提交上下文说 **“我确认”**。细节见 setup。
 - 推送与验证（用户 2026-10-16）：本机性能不足，完整门禁 `pnpm verify:gpuix`、打包与 Windows 构建都放在 GitHub Actions 上跑，只在 `main` 上跑，不推其它分支。worker 与协调者本地只跑轻量检查：`tsc --noEmit`、改动范围内的 `bun test`/eslint、变异入口与必要的单窗口 smoke。把 `gpuix-migration` 推到 `chacelow/ZoeyDAW` 的 `main` 满足“快进、轻量检查全过、密钥与 >2MB 文件扫描通过”即可直接推，不逐次询问；推后看 Actions，红了在 `main` 上向前修，不回滚改写历史。每次推完在汇报里写明推送范围与 CI 结果。强推、改写历史、推其它分支或发布正式版仍须先问。
+- 派发复用 lane（用户 2026-10-16）：worker 是长期保留的 lane（gpuix-migration 子 worktree 加它的 omp 终端），新任务和返工用 `scripts/orchestration/lane.sh assign` 派给空闲 lane 的同一个 agent，保留它读过的上下文；只有并行不够时才 `lane.sh new`。切片合入后不删 worktree、不关终端。细则见 [协调方式](docs/agents/coordination.md)「派发」「合入后」。
 
 ## 设计与完成门槛
 

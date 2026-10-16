@@ -1,4 +1,5 @@
 import { MIN_GRID_CELL_PX } from "@/project/model/grid"
+import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { MidiNote } from "@/project/model/types"
 import { velocityNoteBorder, velocityNoteFill } from "@/shared/theme/color-recipes"
 import type { DesignTokens } from "@/shared/theme/design-tokens"
@@ -45,6 +46,7 @@ export function notePaint({
   color,
   colors,
   fontSize,
+  gridBeats = PREFERENCE_DEFAULTS.midi.noteGridBeats,
   design,
   project,
 }: {
@@ -56,6 +58,7 @@ export function notePaint({
   color: string
   colors: DerivedThemeColors
   fontSize: number
+  gridBeats?: number
   design: DesignTokens
   project: ProjectMetrics
 }) {
@@ -93,7 +96,7 @@ export function notePaint({
       design.editor.dividerStrokeWidth
     )
   }
-  for (const line of rollGridLines(roll, numerator, MIN_GRID_CELL_PX))
+  for (const line of rollGridLines(roll, numerator, MIN_GRID_CELL_PX, gridBeats))
     add(
       background,
       `midi-grid-lines-${line.level}`,

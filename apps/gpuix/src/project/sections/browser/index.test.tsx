@@ -9,8 +9,14 @@ import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { createVerificationKeyboard } from "../footer/verification/keyboard"
 import { createTestWindowActivity } from "../footer/verification/test-activity"
 import { BrowserPanel } from "."
-import { englishBrowserLabels, chineseBrowserLabels } from "./demo-labels"
+import { englishBrowserLabels, chineseBrowserLabels } from "@/app/locales/sections/browser"
 import type { BrowserPanelHandle } from "."
+import { changeLocale, initAppI18n } from "@/app/i18n"
+
+beforeEach(async () => {
+  initAppI18n({ initialLanguage: "en-US" })
+  await changeLocale("en-US")
+})
 
 beforeEach(() =>
   hydrateProject(

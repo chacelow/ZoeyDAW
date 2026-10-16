@@ -37,7 +37,13 @@ The coordinator-provided Live frames show routing input activity but no illumina
 
 The driver consumes F1 callback timestamps directly. Wakeups only request a frame for a live signal/held peak; they do not advance a separate clock. The optional test driver and `now` injection have been deleted. Meter tests exercise this same provider/hook/driver path through the canonical `AnimationFrameSource`; disabling the production subscription produces two failures.
 
-`TrackLabels` is injected, with paired Chinese/English resources in `locales.ts`; no i18n dependency or second language state was added to project components.
+Meter 的声道间距、peak 线高、zero 线高和警告渐变位置读取 `design.editor.meter`。显示范围、hold 和 decay 仍来自注入的行为策略；样式覆盖不修改遥测或电平计算。`meter/TrackMeter.test.tsx` 增加原生消费回归，覆盖这些 design 输入。
+
+轨道边框几何以解析后的 `layout.track.border` 为准：Row 使用其 `trackGeometry.border`，resize 使用 scene geometry，Mixer 的 meter 可用高度读取同一 layout 来源。显式 layout 覆盖优先于由 project 初值派生的默认 layout；消费者不再回读 `project.trackBorder`。
+
+`TrackLabels` 注入文案与 `DisplayFormats` 纯端口。唯一文本数据在 `app/locales/sections/tracks.ts`，组合根通过 `createTrackLabels(locale)` 构造标签并在自身生命周期内复用。project 组件不导入 app、不持有第二份语言状态。Mixer 的 dB/Pan 显示和解析、Meter 声道朗读、monitor mode 文案都消费这份输入。
+
+Mixer 使用 `formats.pan(value, "control")`；自动化 ValueEditor 使用 `"automation"` 变体，并通过 `formats.db(value, { unit: true })` 保留单位。中心 `C` 是跨语言协议表示，文案来源由共享 formatter 统一拥有，不在业务组件另加 locale 特例。C3 的完整来源/变异/像素证据见 [C3-REPORT.md](../C3-REPORT.md)。
 
 ### Exercised proof
 
@@ -80,7 +86,7 @@ All icons now use `ui/controls/Icon` (`Headphones`, `Circle`, `ChevronDown`, `Ch
 
 ## 公共接口
 
-`index.ts` exports `TrackRows`, `TrackRowsProps`, `TrackResizeOverlay`, `TrackResizeOverlayProps`, `TrackLabels`, `TelemetryReader`, `TrackRowGeometry` and the paired `trackResources`. The combination contract is `docs/architecture/gpuix-arrangement-composition.md`; tracks do not import lane or timeline.
+`index.ts` exports `TrackRows`, `TrackRowsProps`, `TrackResizeOverlay`, `TrackResizeOverlayProps`, `TrackLabels`, `TelemetryReader` and `TrackRowGeometry`. Locale data is not re-exported from project. The combination contract is `docs/architecture/gpuix-arrangement-composition.md`; tracks do not import lane or timeline.
 
 `TrackRow` 对所有可见行（包括折叠 Group）始终挂载 `renderLane` 提供的内容。Group 摘要仅由 lane 绘制；tracks 不再拥有独立摘要实现或重复扣除 `controlsWidth`。屏外保焦点的表头仍不挂载 lane。
 
@@ -96,6 +102,10 @@ TrackResizeOverlay({ scene, viewport, labels })
 - Mount `TrackRows` inside F1 `AnimationFrameProvider` using `createAnimationFrameSource(renderer)` at the composition root. The demo also injects native activation through `createWindowPlatform(renderer).subscribeApplicationActive`; no sampled activation singleton remains.
 - `TrackResizeOverlay` 与 `TrackRows` 在同一个 Scene 坐标父节点中显式组合，Y 原点包含标尺，宽度为 `viewport.width + controlsWidth`。组合根把它放在稳定 lane 输入层之后，只有分隔条矩形接收命中，没有覆盖整面的 wrapper。
 - `TrackRows` 与 overlay 共用 `useTrackRowLayout`。空闲条只挂载边界的可见交集。活动 resize 保留按下时的透明 hitbox 和唯一 hook，直到释放或取消；即使边界或行随拖动离屏，也不销毁捕获。普通轨道从底部、Return/Main 从顶部调整，Escape、blur、失活和 epoch 仍取消。
+
+`useTrackRowLayout` 向 core 传入完整 `scene.geometry`，上下边界使用其中的 arrangement ruler 几何；固定轨道高度仍只依赖 track 几何。Group frame 使用 `design.shape.controlBorderWidth`，Group rails 使用 `design.editor.dividerStrokeWidth`，插入线使用 `design.editor.insertionLineWidth`，名称字重使用 `design.typography.weights.medium`。拖动与 resize 的 cursor 经 `design.cursors` 解析，其中 resize 保留原来的 `ns-resize`，读取 `verticalResize`。`style-layout.test.tsx` 在真实原生组件中覆盖这些来源，不检查源码文本。
+
+轨道行、Identity 与 resize separator 的焦点环读取 `design.shape.focusRingWidth`，内缩 offset 由该宽度取负。轨道上下边框仍平分 `project.trackBorder`，焦点环不再借用轨道边框宽度。
 
 `TrackRow` owns the whole track: lane on the left, then colored identity, routing and Mixer on the right, following the observed Live order. It owns the single outer top/bottom border. Group frames span the visible branch, rails are painted above row borders, expanded groups do not duplicate descendant previews, and folded groups render a shared-geometry descendant overview.
 
@@ -116,8 +126,8 @@ The ten files under `features/track-mixer` are removed. LSP reference checks fou
 From `apps/gpuix` after the repository's native build:
 
 ```sh
-bun --hot src/project/sections/arrangement/tracks/demo.tsx
-bun src/project/sections/arrangement/tracks/verification/render-cost.tsx
+bun --hot src/app/verification/tracks/demo.tsx
+bun src/app/verification/tracks/render-cost.tsx
 bun test src/project/sections/arrangement/tracks
 ```
 

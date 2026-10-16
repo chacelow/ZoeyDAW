@@ -1,5 +1,6 @@
 //! Per-channel waveform envelopes; PCM never leaves the precomputation boundary.
 
+use crate::defaults::MAX_PEAK_PIXELS;
 use serde::Serialize;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -173,7 +174,7 @@ impl PeakPyramid {
         frames: usize,
         sample_at: impl Fn(usize, usize) -> f32,
     ) -> Result<Vec<f32>, &'static str> {
-        if pixels == 0 || pixels > 16384 || end <= start {
+        if pixels == 0 || pixels > MAX_PEAK_PIXELS || end <= start {
             return Err("invalid peak range or pixel count");
         }
         let width = u64::from(self.levels[0].frames_per_bin);
@@ -406,5 +407,15 @@ mod tests {
         let pyramid = PeakPyramid::build(&[&[1.0]], u32::MAX, 10);
         assert_eq!(pyramid.levels().len(), 1);
         assert_eq!(pyramid.level_for(f64::INFINITY).frames_per_bin, u32::MAX);
+    }
+
+    #[test]
+    fn peak_requests_share_the_protocol_pixel_limit() {
+        let pyramid = PeakPyramid::build(&[&[0.5]], 1, 1);
+        assert_eq!(
+            pyramid.read_pixels(0, 1, MAX_PEAK_PIXELS, 1, |_, _| 0.5).unwrap().len(),
+            MAX_PEAK_PIXELS * 2
+        );
+        assert!(pyramid.read_pixels(0, 1, MAX_PEAK_PIXELS + 1, 1, |_, _| 0.5).is_err());
     }
 }

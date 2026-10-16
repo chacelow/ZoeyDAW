@@ -4,6 +4,10 @@
 
 BPM、拍号、律动和位置复用共享 DragPad 事务。BPM 的 `step=0.01` 用于键入与方向键精度，`dragStep=1` 用于拖动与滚轮的粗调整。Tap Tempo 只使用真实点击间隔，不启动时钟。停止保留当前位置，连续两次停止回到起点；独立回到起点按钮直接定位到 1.1.1。
 
+数值、单位、采样时长与测宽样本由应用 locale 创建的 `labels.formats` 注入，section 不依赖 app。BPM、拍号、律动与位置 reset 读取 `PROJECT_TEMPLATE`；停止连击窗口、Tap 过期窗口与采样数量读取当前 `transport` 偏好。`tappedTempo` 的纯函数默认参数来自纯 `PREFERENCE_DEFAULTS`，测试可以传不同策略覆盖真实计算。
+
+`index.test.tsx` 覆盖模板 BPM override 后双击 reset 与 Undo、不同停止连击窗口；`PerformanceStatus/index.test.tsx` 覆盖替换 locale formatter 后真实 telemetry 的采样率、延迟与时长输出。C4 变异与编辑器共用 `bun src/project/sections/clip-edit/verification/mutations.mjs C4`。
+
 位置与节拍器动画消费 `session.position`。`PerformanceStatus` 读取 C1 接受的 sample clock 和 outputLatencyFrames，显示真实采样率、输出延迟及采样时间。没有 CPU 遥测时显示不可用，不复制 Web 的固定预览值。
 
 性能弹层只显示注入的 `labels.enginePhases[phase]`，标签类型从 `ProjectRuntimeStatus["phase"]` 派生并用 `Record` 穷尽；中英文组合根与 demo 均提供全部五种状态，不向用户显示协议值。`PerformanceStatus/localization.test.tsx` 覆盖所有状态；在 `apps/gpuix` 执行 `bun src/project/sections/transport/verification/mutations.mjs` 可证明恢复原始 phase 会失败。

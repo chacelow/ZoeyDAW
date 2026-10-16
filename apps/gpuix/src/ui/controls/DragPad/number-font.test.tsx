@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../ControlEnvironment"
+import { TEST_INPUT_POLICY } from "./input-policy.test-fixture"
 import { expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
@@ -52,7 +54,9 @@ test("numeric font token controls measured width, display and editing", async ()
           typography: { ...DEFAULT_DESIGN_TOKENS.typography, numberFontFamily: "Helvetica" },
         }}
       >
-        <Harness />
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <Harness />
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
     for (let attempt = 0; attempt < 20; attempt++) {

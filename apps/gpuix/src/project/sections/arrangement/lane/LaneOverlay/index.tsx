@@ -30,6 +30,7 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
     flushSync(() => setPosition(transportBar()))
   }, scene.playback.playing)
   const insertionPath = useMemo(
+    // Normalized triangle coordinates; theme metrics supply its screen dimensions.
     () =>
       polygonPath([
         { x: 0, y: 0 },
@@ -39,8 +40,8 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
     []
   )
   const recording = useProjectState(state => state.session.recording)
-  const top = arrangementBodyTop()
-  const bottom = arrangementBodyBottom(viewport.height)
+  const top = arrangementBodyTop(scene.geometry.arrangement)
+  const bottom = arrangementBodyBottom(viewport.height, scene.geometry.arrangement)
   const alignment = alignmentBar(scene)
   const anchor = scene.playback.insertionPoint
   const projected = scene.viewport === viewport ? scene : { ...scene, viewport }
@@ -77,7 +78,7 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
                 position: "absolute",
                 left: insertionX,
                 top: row.clipTop,
-                width: 1,
+                width: theme.design.editor.insertionLineWidth,
                 height: row.clipBottom - row.clipTop,
                 backgroundColor: theme.colors.primary,
                 pointerEvents: "none",
@@ -106,7 +107,7 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
             position: "absolute",
             left: playheadX,
             top,
-            width: 1,
+            width: theme.design.editor.playheadLineWidth,
             height: bottom - top,
             backgroundColor: recording ? theme.colors.arrangementAutomation : theme.colors.primary,
             pointerEvents: "none",
@@ -121,7 +122,7 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
             position: "absolute",
             left: alignmentX,
             top,
-            width: 1,
+            width: theme.design.editor.selectionLineWidth,
             height: bottom - top,
             backgroundColor: theme.colors.mutedForeground,
             pointerEvents: "none",

@@ -11,7 +11,7 @@
 | `LaneRow`、`LaneRowProps` | 一条轨道的 Clip/Pattern/Automation 与行内网格绘制；仅 AX 描述，不持有输入。行放置、可见行卸载、边框及分组围栏由 `tracks` 持有 |
 | `LaneOverlay`、`LaneOverlayProps` | 全画布播放头、Ghost 左起点对齐线、停止时行内插入点及标尺三角；由 timeline 的 overlay slot 单次挂载 |
 | `createLaneController`、`LaneControllerDeps`、`LaneController` | 跨行手势、阈值、预览事务、Clip/Automation 键盘与系统剪贴板路由；由组合根创建并 dispose |
-| `useLaneSurface(controller, labels, originY?)` | 返回中立的 `TimelineEditSurface`；唯一稳定输入层、右键/键盘菜单、inline editors；默认坐标原点补回顶部标尺高度，独立 demo 可传 0 |
+| `useLaneSurface(controller, labels, originY?)` | 必须位于 `ThemeProvider` 内；返回中立的 `TimelineEditSurface`，拥有唯一稳定输入层、菜单与 inline editors；默认原点读取 `scene.geometry.arrangement.barRulerHeight`，独立 demo 可传 0 |
 | `LaneInteractionState` | `getSnapshot` / `subscribe` 的稳定交互快照；`dragActive` 标记需要帧驱动的拖动 |
 | `LaneKey`、`LanePointer` | 归一化输入；指针使用共享画布坐标，不是行内坐标 |
 | `PeakReader` | 黑盒只读音乐范围峰值查询，不传 PCM，不在 lane 假设采样率 |
@@ -24,6 +24,16 @@
 工程到共享 SceneStore 的投影只有 timeline controller 一个产品 owner。lane 的 preview、选择与播放命令只改工程 store；lane 仅写自身的拖动、缩放、悬停、targetSelection 与手势进行中的 timeSelection。独立 demo 无 timeline 时，由 demo/runtime 的一个订阅投影并在 dispose 时退订。
 
 卡片展示几何使用行内坐标，轨道行承担垂直滚动位移。`ClipCardView` 只拥有位置、透明度与 AX 描述，不持有键盘入口；`ClipContentsView` 默认 memo 只消费局部内容。原有 source/Ghost 可见 Clip 缓存派生局部几何、网格与裁剪范围，横向纯位置变化复用内容引用；缩放、裁剪、编辑、选择、悬停和折叠仍使内容失效。loop tick 使用局部序号 key，不随全局 x 变动。网格继续调用 B1 范围接口，没有第二个工程 owner、新缓存层或 React 深比较器。production 分段口径见 [滚动剖析](PROFILING.md)。
+
+### 配置来源（C3）
+
+controller 的 `LaneCursor` 只表达 `default`、`grab`、`grabbing`、`disabled`、`horizontalResize`、`fadeCurve`、`automationDraw`、`verticalResize`，不输出 CSS 光标。唯一输入 host 经 `useLaneSurface` 读取 `theme.design.cursors`；默认 automationDraw 为 crosshair、fadeCurve 为 move，主题可分别覆盖。
+
+`scene.geometry.arrangement` 拥有标尺、Clip inset/minimum/body threshold、fade hit size/margin 与自动化选中点半径；`TrackRow` 同时携带 `trackGeometry` 和 `arrangementGeometry` 原引用。局部行投影保留两者，卡片缓存遇到任一引用切换必须重新计算几何。fade 曲线手柄显示阈值与纯命中共用 `ClipVisualGeometry.fadeHitSize`。
+
+`theme.design.editor` 拥有 Clip body/grid/automation preview/ghost/hover shade、选区与分组预览透明度、loop/播放头/插入/对齐线宽、inline radius、fade stroke 与 minor grid stroke；`theme.project.gridMinorOpacity` 拥有车道 minor 网格透明度。diamond 的半描边 inset 是 SVG 边缘补偿，不是独立视觉来源。100% 拉伸、坐标原点、完整 opacity 1、空几何 0、quad 的四元组 stride 与二等分中心计算是结构或数学常量。
+
+`configuration.test.tsx` 对真实 Native lane、grid uploads、overlay、automation points 和 retained fade geometry 注入非默认来源；`interactions/controller.test.tsx` 通过真实输入 host 覆盖默认/重映射光标和两种 inline editor 圆角。回归会关闭 TestRoot 并恢复工程 store；验证由集成 owner 统一运行，不把新增用例视为已执行证据。
 
 窗口键盘 owner 在 timeline。lane 选择、Split、副本、重命名、删除、复制/剪切/粘贴与拖动 Escape 经稳定编辑面分派；Space 继续传播给窗口播放 owner。Clip 标题点击设插入点到左起点；内容点击设到点击位置；点击不打开 Clip View。`timeline-viewport` 失焦取消手势，虚拟 source row 卸载不结束稳定捕获。
 
@@ -61,7 +71,7 @@
 
 返回值是 channel-major → pixel-major → `[min,max]` 的 Float32Array：先一个声道的全部像素，再下一个声道；声道数为 `length / (2 * pixels)`。渲染器直接索引，不转置或复制。空音频片段不生成假波形。
 
-原生元素只为相交 Clip 挂载；B1 像素取整之后再裁剪一次，避免亚像素交集最终落到屏外仍挂载。标题实心，下半部透明；网格位于下半部填色之上。fadeMask 常驻：折叠时在标题、展开时在 body；显式曲线与锚点只在展开音频片段的下半内容悬停时出现。锚点按 Live 仲裁采用 5px 空心方点与菱形，1px 描边，内部使用 Clip 体填充色。
+原生元素只为相交 Clip 挂载；B1 像素取整之后再裁剪一次，避免亚像素交集最终落到屏外仍挂载。标题实心，下半部透明；网格位于下半部填色之上。fadeMask 常驻：折叠时在标题、展开时在 body；显式曲线与锚点只在展开音频片段的下半内容悬停时出现。锚点大小与描边分别读取 `theme.project.arrangementFadeHandleSize`、`theme.design.editor.fadeStrokeWidth`（默认 5px、1px），内部使用 Clip 体填充色。
 
 ## probe.wav 实源波形回归
 
@@ -97,7 +107,7 @@ lane 在彩色 Clip 主体上使用 `theme.colors.arrangementClipInk`，与 Web 
 | `bun test src/project/sections/arrangement/lane/interactions/controller.test.tsx -t 'fade mask between'` | 1 pass，0 fail，10 assertions；折叠→展开→再折叠 |
 | `bun test src/project/sections/arrangement/lane` | 局部内容回归后 baseline 30 pass，0 fail |
 | `bun src/project/sections/arrangement/lane/verification/mutations.mjs` | baseline 30 pass，0 fail；16 个变异命中预期失败；源目标 SHA-256 前后相同 |
-| `bun test` | A 阶段历史结果 1071 pass，1 todo，0 fail；当前交付另跑 `pnpm verify:gpuix` |
+| `bun test` | A 阶段历史结果 1071 pass，1 todo，0 fail；当前交付按 setup 的轻量检查，完整 `verify:gpuix` 仅由 Actions 执行 |
 | lane、共享 PeakColumns 与 SourceWaveform-runtime 受影响测试 | 35 pass，0 fail，103112 assertions；8 files |
 
 变异通过 Bun runtime preload 在内存替换模块，不写源文件；脚本验证预期用例确实失败，不能以语法错误代替变异被捕获。
@@ -140,7 +150,7 @@ F3 原生回归 `presents the latest playhead on resume and releases frame lease
 
 本轮仅暂停了其他 Agent 的重任务，整机仍有内存压力。前后 `sysctl vm.swapusage hw.memsize && vm_stat` 显示 16GiB 内存，swap 使用 10505.50 至 10778.25MiB；compressor 占用 445828 至 442428 个 16KiB 页。完整六轮各步数据与前后原始输出保存在本次运行的 `evidence/verification/quiet-all-rounds.json.local`，SHA-256 为 `17aa33700ecc905a3449b282bef9ad834d30ceb6c4c959a5633aa353f2ba9ccd`，由已有 `*.local` 规则忽略，不提交完整 trace。
 
-复跑每轮使用 `NODE_ENV=development bun src/project/sections/arrangement/lane/verification/render-cost.tsx` 或 `NODE_ENV=production bun src/project/sections/arrangement/lane/verification/render-cost.tsx`。新增满量性能批次仍须协调者安排静默窗口；本批均为有限离屏进程，结束已释放资源，无桌面输入。
+复跑每轮使用 `NODE_ENV=development bun src/app/verification/lane/render-cost.tsx` 或 `NODE_ENV=production bun src/app/verification/lane/render-cost.tsx`。新增满量性能批次仍须协调者安排静默窗口；本批均为有限离屏进程，结束已释放资源，无桌面输入。
 
 小规模诊断使用 `LANE_PROFILE_VIEWPORT_HEIGHT=196`，仍保留 200×50 工程，只缩小可见视口。80px 仅显示固定 Main 的尝试不含 Clip，已判无效，入口现有非空 Clip 守卫。`react-profile-preload.ts` 可配 `LANE_MEASURE_LOG` 透明记录 React DEV 的原始 `performance.measure`，不关闭 DEV tracing。原反事实 `LANE_PROFILE_NARROW_GRID` 已在 A 切换后删除，局部网格成为产品投影。`LANE_PROFILE_CAPTURE` 保存当前 Native PNG。
 
@@ -193,7 +203,7 @@ A 以 `86a9de4` 为审查固定点，由两个独立只读 reviewer 上下文分
 探针使用真实 `createTimelineController`、同一工程 runtime 与 `readProjectPeaks`，不以离屏成本代替真实窗口帧验收。命令：
 
 ```sh
-bun --preload ./src/project/sections/arrangement/lane/verification/react-profile-preload.ts src/project/sections/arrangement/lane/verification/render-cost.tsx
+bun --preload ./src/project/sections/arrangement/lane/verification/react-profile-preload.ts src/app/verification/lane/render-cost.tsx
 ```
 
 近邻 A/B 在同一十步滚动/缩放输入下运行，关闭复用使用内存变异，不改磁盘源文件。完整数据：`evidence/render-profile-identity-disabled.json`、`evidence/render-profile-identity-stable.json`。

@@ -57,10 +57,10 @@ export function ProjectLayout({
     footer === null ? null : (
       <PanelShell
         id="footer"
-        active={shell.activeSection}
-        onActivate={shell.setActiveSection}
         aria-label={labels.footerPanel}
         activeDescription={labels.activeDescription}
+        active={shell.activeSection}
+        onActivate={shell.setActiveSection}
       >
         {footer}
       </PanelShell>
@@ -78,10 +78,10 @@ export function ProjectLayout({
       >
         <PanelShell
           id="browser"
-          active={shell.activeSection}
-          onActivate={shell.setActiveSection}
           aria-label={labels.browserPanel}
           activeDescription={labels.activeDescription}
+          active={shell.activeSection}
+          onActivate={shell.setActiveSection}
         >
           {browser}
         </PanelShell>
@@ -94,10 +94,10 @@ export function ProjectLayout({
       <Panel minSize={panels.arrangementMinWidth} testId="arrangement-panel">
         <PanelShell
           id="arrangement"
-          active={shell.activeSection}
-          onActivate={shell.setActiveSection}
           aria-label={labels.arrangementPanel}
           activeDescription={labels.activeDescription}
+          active={shell.activeSection}
+          onActivate={shell.setActiveSection}
         >
           {arrangement}
         </PanelShell>
@@ -157,7 +157,7 @@ export function ProjectLayout({
               maxSize={panels.clipMaxSize}
               collapsible
               collapsedSize={0}
-              onResize={size => shell.setFooterCollapsed(size.inPixels === 0)}
+              onResize={size => shell.reportClipCollapsed(size.inPixels === 0)}
               testId="clip-panel"
             >
               {footerShell}

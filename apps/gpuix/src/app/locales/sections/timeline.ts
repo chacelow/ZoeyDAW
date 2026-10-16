@@ -1,6 +1,11 @@
 import type { TimelineLabels } from "@/project/sections/arrangement/timeline"
+import { createDisplayFormats } from "../../i18n/display-formats"
+import enUS from "../en-US"
+import zhCN from "../zh-CN"
 
 export const englishLabels: TimelineLabels = {
+  formats: createDisplayFormats("en-US"),
+  snapshotErrors: enUS.snapshotErrors,
   timeline: "Arrangement timeline",
   backendOpening: "Opening engine",
   backendPending: "Applying edit",
@@ -52,6 +57,8 @@ export const englishLabels: TimelineLabels = {
 }
 
 export const chineseLabels: TimelineLabels = {
+  formats: createDisplayFormats("zh-CN"),
+  snapshotErrors: zhCN.snapshotErrors,
   timeline: "编排时间线",
   backendOpening: "正在打开引擎",
   backendPending: "正在应用编辑",

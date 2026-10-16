@@ -16,6 +16,8 @@ xattr -dr com.apple.quarantine /Applications/zoeydaw.app
 
 不要全局关闭 Gatekeeper。校验资产、用户数据目录与已知限制见 [安装说明](scripts/release/NOTES.md)，本机打包与 tag 流程见 [打包与发布](docs/agents/setup.md#打包与发布)。图标为占位，可替换。
 
+Windows x64 的 NSIS 安装器使用同一条 release matrix。Windows 构建、离屏截图与真实后端 smoke 由独立 Actions job 验证，当前不能据 workflow 文件宣称已有可用安装包；结果和实机限制见 [Windows 移植报告](docs/research/windows-port.md)。
+
 ## 开发
 
 新 checkout 在根目录依次执行：
@@ -24,7 +26,6 @@ xattr -dr com.apple.quarantine /Applications/zoeydaw.app
 bash scripts/gpuix-main/build.sh
 pnpm install --frozen-lockfile
 pnpm native:build
-pnpm verify:gpuix
 ```
 
 开发窗口：
@@ -33,7 +34,7 @@ pnpm verify:gpuix
 pnpm --filter @zoeydaw/gpuix-prototype dev
 ```
 
-工具链、固定渲染器构建、热更新与原生重启规则见 [setup](docs/agents/setup.md)。Node 版本以根 `package.json` 为准，pnpm 使用项目固定版本；当前自建渲染器的验收平台是 macOS arm64。
+工具链、固定渲染器构建、热更新与原生重启规则见 [setup](docs/agents/setup.md)。Node 版本以根 `package.json` 为准，pnpm 使用项目固定版本。完整门禁与打包在 Actions 运行；本地只跑范围内检查和必要 smoke。macOS arm64 已有运行证据，Windows x64 仍需远程构建与实机验收。
 
 ## 结构
 

@@ -1,4 +1,4 @@
-import { NOTE_GRID_BEATS } from "./geometry"
+import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { MidiNote } from "@/project/model/types"
 
 /** Source interval shown by a MIDI clip, in retained-source beats. */
@@ -44,7 +44,7 @@ export function xToBeat(x: number, roll: RollGeometry): number {
 /** Row under a content y, clamped to the first and last pitch rows. */
 export function pitchAt(y: number, roll: Pick<RollGeometry, "pitches" | "rowHeight">): number {
   const row = Math.max(0, Math.min(roll.pitches.length - 1, Math.floor(y / roll.rowHeight)))
-  return roll.pitches[row] ?? 60
+  return roll.pitches[row] ?? PREFERENCE_DEFAULTS.midi.initialPitch
 }
 
 /** First and one-past-last row intersecting the viewport. */
@@ -140,13 +140,15 @@ export function marqueeHits(
 }
 
 /** Cell index relative to the first absolute-grid cell intersecting the source window. */
-export function cellAt(x: number, roll: Pick<RollGeometry, "width" | "window">): number {
+export function cellAt(
+  x: number,
+  roll: Pick<RollGeometry, "width" | "window">,
+  gridBeats = PREFERENCE_DEFAULTS.midi.noteGridBeats
+): number {
   const beat =
     roll.window.sourceOffsetBeats +
     (Math.max(0, Math.min(roll.width, x)) / Math.max(1, roll.width)) * roll.window.totalBeats
-  return (
-    Math.floor(beat / NOTE_GRID_BEATS) - Math.floor(roll.window.sourceOffsetBeats / NOTE_GRID_BEATS)
-  )
+  return Math.floor(beat / gridBeats) - Math.floor(roll.window.sourceOffsetBeats / gridBeats)
 }
 
 /** Keep scroll offsets inside the content. */
@@ -177,12 +179,13 @@ then whole bars while a step would be narrower than `minCellPx`.
 export function rollGridLines(
   roll: Pick<RollGeometry, "width" | "scrollX" | "viewWidth" | "window">,
   numerator: number,
-  minCellPx: number
+  minCellPx: number,
+  gridBeats = PREFERENCE_DEFAULTS.midi.noteGridBeats
 ): RollLine[] {
   const { sourceOffsetBeats, totalBeats } = roll.window
   const beatPx = roll.width / totalBeats
   if (!(beatPx > 0)) return []
-  let step = NOTE_GRID_BEATS
+  let step = gridBeats
   if (step * beatPx < minCellPx) step = 1
   while (step * beatPx < minCellPx) step = step < numerator ? numerator : step * 2
   const firstBeat = sourceOffsetBeats + (roll.scrollX / roll.width) * totalBeats

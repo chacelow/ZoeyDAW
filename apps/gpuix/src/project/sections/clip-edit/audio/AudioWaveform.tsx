@@ -1,6 +1,5 @@
 import { useProjectState } from "@/project/adapters"
 import { getAudioClipSettings } from "@/project/model/audio-editor"
-import { timeTickLabel } from "@/project/model/timeline-ticks"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { Button } from "@/ui/controls"
@@ -162,8 +161,8 @@ export function AudioWaveform({
           fontSize,
         })}
       >
-        <text>{`${labels.zoom} ${(clip.lengthBars / view.span).toFixed(1)}×`}</text>
-        <text>{`${labels.selection}: ${selection === null ? "—" : timeTickLabel(selection * secondsPerBar)}`}</text>
+        <text>{`${labels.zoom} ${labels.formats.zoom(clip.lengthBars / view.span)}`}</text>
+        <text>{`${labels.selection}: ${selection === null ? labels.unavailable : labels.formats.duration(selection * secondsPerBar, "ruler")}`}</text>
       </div>
     </div>
   )

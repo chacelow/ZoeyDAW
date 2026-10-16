@@ -1,53 +1,56 @@
+import { PREFERENCE_DEFAULTS } from "../defaults/preferences"
 import type { MidiNote } from "./types"
-
-const NOTE_GRID_BEATS = 0.25
 
 /**
 The clip's right edge is exclusive, even when rounding to the nearest grid cell.
 */
-export function midiInsertionBeat({
-  horizontalRatio,
-  sourceOffsetBeats,
-  totalBeats,
-}: {
-  horizontalRatio: number
-  sourceOffsetBeats: number
-  totalBeats: number
-}): number {
-  const firstGridCell = Math.max(0, Math.floor(sourceOffsetBeats / NOTE_GRID_BEATS))
+export function midiInsertionBeat(
+  {
+    horizontalRatio,
+    sourceOffsetBeats,
+    totalBeats,
+  }: {
+    horizontalRatio: number
+    sourceOffsetBeats: number
+    totalBeats: number
+  },
+  policy = PREFERENCE_DEFAULTS.midi
+): number {
+  const gridBeats = policy.noteGridBeats
+  const firstGridCell = Math.max(0, Math.floor(sourceOffsetBeats / gridBeats))
   const lastGridCell = Math.max(
     firstGridCell,
-    Math.ceil((sourceOffsetBeats + totalBeats) / NOTE_GRID_BEATS) - 1
+    Math.ceil((sourceOffsetBeats + totalBeats) / gridBeats) - 1
   )
   const target = sourceOffsetBeats + horizontalRatio * totalBeats
-  const gridCell = Math.max(
-    firstGridCell,
-    Math.min(lastGridCell, Math.round(target / NOTE_GRID_BEATS))
-  )
-  return gridCell * NOTE_GRID_BEATS
+  const gridCell = Math.max(firstGridCell, Math.min(lastGridCell, Math.round(target / gridBeats)))
+  return gridCell * gridBeats
 }
 
 /**
 Keep a partially visible note's original position available while moving it.
 */
-export function moveMidiNote({
-  note,
-  originalStartBeat,
-  originalPitch,
-  beatDelta,
-  pitchDelta,
-  sourceOffsetBeats,
-  totalBeats,
-}: {
-  note: MidiNote
-  originalStartBeat: number
-  originalPitch: number
-  beatDelta: number
-  pitchDelta: number
-  sourceOffsetBeats: number
-  totalBeats: number
-}): MidiNote {
-  const visibleStep = Math.min(NOTE_GRID_BEATS, note.lengthBeats, totalBeats)
+export function moveMidiNote(
+  {
+    note,
+    originalStartBeat,
+    originalPitch,
+    beatDelta,
+    pitchDelta,
+    sourceOffsetBeats,
+    totalBeats,
+  }: {
+    note: MidiNote
+    originalStartBeat: number
+    originalPitch: number
+    beatDelta: number
+    pitchDelta: number
+    sourceOffsetBeats: number
+    totalBeats: number
+  },
+  policy = PREFERENCE_DEFAULTS.midi
+): MidiNote {
+  const visibleStep = Math.min(policy.noteGridBeats, note.lengthBeats, totalBeats)
   const earliestStart = Math.max(
     0,
     Math.min(originalStartBeat, sourceOffsetBeats - note.lengthBeats + visibleStep)

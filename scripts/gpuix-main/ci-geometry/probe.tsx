@@ -10,17 +10,18 @@ import {
 } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { TransportBar } from "@/project/sections/transport"
-import { englishTransportLabels } from "@/project/sections/transport/demo-labels"
+import { englishTransportLabels } from "@/app/locales/sections/transport"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { createVerificationKeyboard } from "@/project/sections/footer/verification/keyboard"
 import { createTestWindowActivity } from "@/project/sections/footer/verification/test-activity"
 import { createTestAnimationFrames } from "@/project/sections/footer/verification/test-frame"
-import { CONTROLS_WIDTH, TRACK_LAYOUT } from "@/project/layout"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
-import { trackResources } from "@/project/sections/arrangement/tracks/locales"
+import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
+import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "@/project/sections/arrangement/tracks/verification/frame-source"
 import type { TestRoot } from "@gpuix/react/testing"
 import { fontInventory } from "./font-inventory"
@@ -32,9 +33,13 @@ if (!Number.isSafeInteger(passes) || passes < 1)
 const sans = process.env.PROBE_SANS
 const design = {
   ...DEFAULT_DESIGN_TOKENS,
-  typography: { numberFontFamily: process.env.PROBE_NUMBER ?? "Menlo" },
+  typography: {
+    ...DEFAULT_DESIGN_TOKENS.typography,
+    numberFontFamily: process.env.PROBE_NUMBER ?? DEFAULT_DESIGN_TOKENS.typography.numberFontFamily,
+  },
 }
 const rootStyle = {
+  position: "relative" as const,
   width: "100%" as const,
   height: "100%" as const,
   display: "flex" as const,
@@ -42,17 +47,22 @@ const rootStyle = {
   ...(sans ? { fontFamily: sans } : {}),
 }
 const frames = createControlledFrames()
+// This viewport is a fixed verification fixture, not a product window default.
 const view = { width: 1000, height: 1600, pxPerBar: 32, scrollX: 0, scrollY: 0, dpr: 1 }
 
 function Tracks() {
   const size = useWindowSize()
   const acceptedViewport = {
     ...view,
-    width: Math.max(0, size.width - CONTROLS_WIDTH),
+    width: Math.max(0, size.width - DEFAULT_LAYOUT_TOKENS.track.controlsWidth),
     height: size.height,
   }
   const document = useProjectState(state => state.document)
-  const scene = { ...createSceneStore().get(), tracks: document.tracks, viewport: acceptedViewport }
+  const scene = {
+    ...createSceneStore(DEFAULT_LAYOUT_TOKENS).get(),
+    tracks: document.tracks,
+    viewport: acceptedViewport,
+  }
   return (
     <AnimationFrameProvider source={frames.source}>
       <ThemeProvider design={design}>
@@ -62,9 +72,14 @@ function Tracks() {
             viewport={acceptedViewport}
             focusedTrackId={null}
             telemetry={readProjectTelemetry}
-            labels={trackResources["en-US"].arrangement}
+            labels={createTrackLabels("en-US")}
             onFocusTrack={id => projectActions.selectTracks([id], "header")}
             renderLane={row => <text>{row.track.name}</text>}
+          />
+          <TrackResizeOverlay
+            scene={scene}
+            viewport={acceptedViewport}
+            labels={createTrackLabels("en-US")}
           />
         </div>
       </ThemeProvider>
@@ -113,7 +128,7 @@ function snapshot(root: TestRoot, surface: "header" | "sends", pass: number) {
     const container = groups[0].bounds
     const columns = groups.slice(1).map(group => group.bounds)
     const widths = columns.map(column => column?.width ?? NaN)
-    const ideal = ((container?.width ?? NaN) - TRACK_LAYOUT.spacing * 2) / 3
+    const ideal = ((container?.width ?? NaN) - DEFAULT_LAYOUT_TOKENS.track.spacing * 2) / 3
     console.log(
       JSON.stringify({
         surface,
@@ -124,7 +139,7 @@ function snapshot(root: TestRoot, surface: "header" | "sends", pass: number) {
         ideal,
         widthErrors: widths.map(width => width - ideal),
         sumError:
-          widths.reduce((sum, width) => sum + width, TRACK_LAYOUT.spacing * 2) -
+          widths.reduce((sum, width) => sum + width, DEFAULT_LAYOUT_TOKENS.track.spacing * 2) -
           (container?.width ?? NaN),
       })
     )

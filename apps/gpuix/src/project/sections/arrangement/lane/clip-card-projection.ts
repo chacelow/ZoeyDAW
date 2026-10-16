@@ -36,6 +36,8 @@ function sameGridViewport(previous: ArrangementScene | undefined, next: Arrangem
     !!previous &&
     previous.bars === next.bars &&
     previous.gridPlan.cellBars === next.gridPlan.cellBars &&
+    previous.geometry.arrangement.gridMinSubdivisionWidth ===
+      next.geometry.arrangement.gridMinSubdivisionWidth &&
     previous.viewport.width === next.viewport.width &&
     previous.viewport.scrollX === next.viewport.scrollX &&
     previous.viewport.pxPerBar === next.viewport.pxPerBar
@@ -62,8 +64,9 @@ export function createClipCardProjection() {
           previous &&
           previous.card.clip === rect.clip &&
           previous.collapsed === collapsed &&
-          previous.rect.trackGeometry === rect.trackGeometry &&
           previous.fadesVisible === fadesVisible &&
+          previous.rect.trackGeometry === rect.trackGeometry &&
+          previous.rect.arrangementGeometry === rect.arrangementGeometry &&
           previous.rect.top === rect.top &&
           previous.rect.width === rect.width &&
           previous.rect.height === rect.height
@@ -87,6 +90,7 @@ export function createClipCardProjection() {
         const fadeGeometry = sameLocalGeometry
           ? previous.card.fadeGeometry
           : projectLocalFadeGeometry(rect, ghost, fadesVisible)
+        // One preceding raster column covers rounding to half-pixel grid centers at the Clip boundary.
         const grid = sameGrid
           ? previous.card.grid
           : gridLines(

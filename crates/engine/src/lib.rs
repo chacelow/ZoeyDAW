@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 pub mod assets;
+pub mod defaults;
 pub mod mix;
 pub mod session;
 mod realtime;

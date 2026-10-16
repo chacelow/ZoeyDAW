@@ -7,17 +7,16 @@ export interface TitleBarProps {
   readonly title?: string
   readonly settingsLabel: string
   readonly onOpenSettings: () => void
-  /** Omitted by offscreen views that do not own a native window. */
+  /** Omitted for Windows system caption gestures and views without a native window. */
   readonly onTitlebarDoubleClick?: () => void
   /** Surface of the page directly below, so titlebar and Header read as one strip. */
   readonly surface: string
 }
 
 /**
- * macOS transparent titlebar row. The native traffic lights sit in the left inset (positioned
- * by the window options), the muted title is centered on the window like Live's, and the row shares the Header's
- * surface so the two read as one continuous strip. Dragging stays native: GPUI keeps
- * AppKit's titlebar move region because the app does not claim the drag.
+ * Transparent native titlebar. GPUI owns the drag region; interactive descendants
+ * occlude it. Windows handles caption double-clicks, while the composition root
+ * supplies the system-preference action on macOS.
  */
 export function TitleBar({
   title,
@@ -31,10 +30,15 @@ export function TitleBar({
   return (
     <div
       testId="titlebar"
-      onMouseDown={event => {
-        if (event.button === 0 && event.clickCount === 2) onTitlebarDoubleClick?.()
-      }}
+      onMouseDown={
+        onTitlebarDoubleClick
+          ? event => {
+              if (event.button === 0 && event.clickCount === 2) onTitlebarDoubleClick()
+            }
+          : undefined
+      }
       style={{
+        windowControlArea: "drag",
         display: "flex",
         flexDirection: "row",
         alignItems: "center",

@@ -29,12 +29,13 @@ export function createFadeGesture(
     handle,
     pointer,
     scene.viewport.pxPerBar,
-    geometry.bodyHeight
+    geometry.bodyHeight,
+    geometry.fadeHitSize
   )
   let patch: Partial<AudioClip> | null = null
   const preview = beginTracksPreview(context)
   return {
-    cursor: handle === "curve" ? "move" : "ew-resize",
+    cursor: handle === "curve" ? "fadeCurve" : "horizontalResize",
     autoScroll: false,
     move(next) {
       const result = moveFadeDrag(drag, next, context.scene.get().viewport.pxPerBar)

@@ -1,0 +1,443 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1033,6 +1033,12 @@
+ 
+ `p90Ms` is the overlay **10%** line. `p99Ms` is the **1%** line. Those are the slow tail.
+ 
++`frames` counts GPUI draws, not presentations: a cached scene can be presented
++without another draw. On Windows, `successfulPresents` counts successful DXGI
++`Present` calls, including cached scenes. Failed presents and draws skipped during
++device recovery do not increment it. Other platforms omit this field. A successful
++call is not a guarantee that the frame became visible on the physical display.
++
+ The overlay shows **draw time**, not FPS. `8.3 MS` is about 120 Hz.
+ 
+ The chat example has a regression test for this: `examples/chat.perf.test.tsx`. It times mount, wheel draw, and sidebar clicks. It asserts p95, not every frame.
+@@ -1118,6 +1124,13 @@
+ window, renderer, input, scroll, clipboard, keyboard, and IME implementations.
+ The embedded macOS run-loop extension comes from the pinned GPUIX fork. CI runs
+ the full React and example test suites through DirectX on Windows.
++
++On Windows, `closeWindow()` and native renderer destruction invalidate frame and
++close callbacks, unregister the renderer, and enqueue one terminal UI shutdown.
++The UI loop exits on that command even if an outstanding callback still retains a
++completion sender. Each JavaScript environment has one cleanup hook; environment
++teardown shuts down only renderers that remain registered. Repeated close followed
++by destruction does not enqueue another shutdown.
+ 
+ > [!IMPORTANT]
+ > On macOS, never drive `tick()` from a `setImmediate` loop. That spins at tens of thousands of
+diff --git a/packages/native/index.d.ts b/packages/native/index.d.ts
+--- a/packages/native/index.d.ts
++++ b/packages/native/index.d.ts
+@@ -530,6 +530,8 @@
+   p99Ms?: number
+   maxMs?: number
+   frames: number
++  /** Successful Windows DXGI Present calls, including cached frames; absent elsewhere. */
++  successfulPresents?: number
+   samples: number
+ }
+ 
+diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
+--- a/packages/native/src/renderer.rs
++++ b/packages/native/src/renderer.rs
+@@ -57,6 +57,12 @@
+ #[cfg(target_os = "windows")]
+ #[path = "windows_bridge.rs"]
+ mod windows_bridge;
++#[cfg(any(test, target_os = "windows"))]
++#[path = "windows_lifecycle.rs"]
++mod windows_lifecycle;
++#[cfg(target_os = "windows")]
++#[path = "windows_cleanup.rs"]
++mod windows_cleanup;
+ 
+ /// The Window menu items act on the focused window, and the root element is the
+ /// only place in GPUIX that has one. `crate::app_menu` owns everything else.
+@@ -926,6 +932,7 @@
+         p99_ms: stats.p99_ms.map(|ms| ms as f64),
+         max_ms: stats.max_ms.map(|ms| ms as f64),
+         frames: stats.frames as f64,
++        successful_presents: stats.successful_presents.map(|count| count as f64),
+         samples: stats.samples as f64,
+     }
+ }
+@@ -1075,6 +1082,7 @@
+     WindowsShutdownBridge,
+     ActivateWindow,
+     MinimizeWindow,
++    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+     CloseWindow,
+     ZoomWindow,
+     ToggleFullscreen,
+@@ -1234,10 +1242,15 @@
+                 windows_bridge::restore_cursor(x, y);
+             }),
+             #[cfg(target_os = "windows")]
+-            UiCommand::WindowsShutdownBridge => window.update(cx, |_, window, _| {
+-                windows_bridge::shutdown(window);
+-                window.remove_window();
+-            }),
++            UiCommand::WindowsShutdownBridge => {
++                let _ = window.update(cx, |_, window, _| {
++                    windows_bridge::shutdown(window);
++                    window.remove_window();
++                });
++                windows_bridge::clear();
++                // Completion TSFNs can retain senders, so shutdown cannot wait for EOF.
++                break;
++            }
+             UiCommand::Invalidate => refresh_ui_window(window, cx),
+             UiCommand::ActivateWindow => window.update(cx, |_view, window, cx| {
+                 cx.activate(true);
+@@ -1246,9 +1259,8 @@
+             UiCommand::MinimizeWindow => {
+                 window.update(cx, |_view, window, _cx| window.minimize_window())
+             }
++            #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+             UiCommand::CloseWindow => window.update(cx, |_view, window, _cx| {
+-                #[cfg(target_os = "windows")]
+-                windows_bridge::shutdown(window);
+                 window.remove_window();
+             }),
+             UiCommand::ZoomWindow => window.update(cx, |_view, window, _cx| window.zoom_window()),
+@@ -1663,6 +1675,8 @@
+     ui_running: Arc<AtomicBool>,
+     #[cfg(target_os = "windows")]
+     windows_owner: Arc<windows_bridge::Owner>,
++    #[cfg(target_os = "windows")]
++    windows_registration: parking_lot::Mutex<Option<windows_cleanup::RendererRegistration>>,
+ }
+ 
+ #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+@@ -1685,6 +1699,12 @@
+             .ok_or_else(|| Error::from_reason("GPUI application is not initialized"))?
+             .unbounded_send(command)
+             .map_err(|_| Error::from_reason("The GPUI UI thread is not running"))
++    }
++
++    #[cfg(target_os = "windows")]
++    fn shutdown_windows(&self) {
++        drop(self.windows_registration.lock().take());
++        self.ui_commands.lock().unwrap().take();
+     }
+ 
+     fn begin_path_prompt(&self, options: gpui::PathPromptOptions, deferred: PathPromptDeferred) {
+@@ -1883,6 +1903,8 @@
+             ui_running: Arc::new(AtomicBool::new(false)),
+             #[cfg(target_os = "windows")]
+             windows_owner: Arc::new(windows_bridge::Owner::default()),
++            #[cfg(target_os = "windows")]
++            windows_registration: parking_lot::Mutex::new(None),
+         }
+     }
+ 
+@@ -1916,17 +1938,12 @@
+     #[cfg(target_os = "windows")]
+     #[napi(skip_typescript)]
+     pub fn init(&self, env: Env, options: Option<WindowOptions>) -> Result<()> {
++        let registry = windows_cleanup::for_env(env)?;
+         self.init_threaded(options)?;
+-        let owner = self.windows_owner.clone();
+-        let sender = self.ui_commands.lock().unwrap().as_ref().unwrap().clone();
+-        if let Err(error) = env.add_env_cleanup_hook((owner.clone(), sender.clone()), |(owner, sender)| {
+-            owner.shutdown();
+-            sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
+-        }) {
+-            owner.shutdown();
+-            sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
+-            return Err(error);
+-        }
++        *self.windows_registration.lock() = Some(registry.register(windows_cleanup::RendererShutdown {
++            owner: Arc::clone(&self.windows_owner),
++            sender: self.windows_command_sender()?,
++        }));
+         Ok(())
+     }
+ 
+@@ -2327,6 +2344,9 @@
+         {
+             let running = self.ui_running.load(Ordering::Acquire);
+             if !running {
++                #[cfg(target_os = "windows")]
++                self.shutdown_windows();
++                #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+                 self.ui_commands.lock().unwrap().take();
+             }
+             return Ok(running);
+@@ -2825,7 +2845,16 @@
+         #[cfg(target_os = "macos")]
+         return update_window_without_view(|window, _cx| window.remove_window());
+ 
+-        #[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
++        #[cfg(target_os = "windows")]
++        {
++            if !*self.initialized.lock().unwrap() {
++                return Err(Error::from_reason("GPUI application is not initialized"));
++            }
++            self.shutdown_windows();
++            return Ok(());
++        }
++
++        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+         return self.send_ui_command(UiCommand::CloseWindow);
+ 
+         #[cfg(not(any(
+@@ -4672,6 +4701,9 @@
+ #[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
+ impl Drop for GpuixRenderer {
+     fn drop(&mut self) {
++        #[cfg(target_os = "windows")]
++        self.shutdown_windows();
++        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+         self.ui_commands.lock().unwrap().take();
+     }
+ }
+@@ -8623,6 +8655,8 @@
+     pub p99_ms: Option<f64>,
+     pub max_ms: Option<f64>,
+     pub frames: f64,
++    /// Successful Windows DXGI Present calls, including cached frames; absent elsewhere.
++    pub successful_presents: Option<f64>,
+     pub samples: f64,
+ }
+ 
+diff --git a/packages/native/src/windows_bridge.rs b/packages/native/src/windows_bridge.rs
+--- a/packages/native/src/windows_bridge.rs
++++ b/packages/native/src/windows_bridge.rs
+@@ -5,6 +5,7 @@
+ use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
+ use std::cell::RefCell;
+ use std::rc::Rc;
++use std::sync::atomic::{AtomicBool, Ordering};
+ use std::sync::Arc;
+ use parking_lot::Mutex;
+ use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+@@ -16,10 +17,12 @@
+ pub(super) struct Owner {
+     pub frames: Mutex<FrameProtocol>,
+     pub close: Mutex<CloseProtocol>,
++    shutdown: AtomicBool,
+ }
+ 
+ impl Owner {
+     pub fn shutdown(&self) {
++        if self.shutdown.swap(true, Ordering::AcqRel) { return; }
+         self.frames.lock().shutdown();
+         self.close.lock().replace(false);
+     }
+diff --git a/packages/native/src/windows_cleanup.rs b/packages/native/src/windows_cleanup.rs
+new file mode 100644
+--- /dev/null
++++ b/packages/native/src/windows_cleanup.rs
+@@ -0,0 +1,40 @@
++use super::windows_bridge::Owner;
++use super::windows_lifecycle::{Registration, Registry};
++use super::UiCommand;
++use futures::channel::mpsc;
++use napi::{Env, Result};
++use std::cell::RefCell;
++use std::collections::BTreeMap;
++use std::sync::Arc;
++
++pub(super) struct RendererShutdown {
++    pub owner: Arc<Owner>,
++    pub sender: mpsc::UnboundedSender<UiCommand>,
++}
++
++pub(super) type RendererRegistration = Registration<RendererShutdown>;
++type CleanupRegistry = Registry<RendererShutdown>;
++
++thread_local! {
++    static OWNERS: RefCell<BTreeMap<usize, Arc<CleanupRegistry>>> = const { RefCell::new(BTreeMap::new()) };
++}
++
++pub(super) fn for_env(env: Env) -> Result<Arc<CleanupRegistry>> {
++    let key = env.raw() as usize;
++    OWNERS.with(|owners| {
++        let mut owners = owners.borrow_mut();
++        if let Some(owner) = owners.get(&key) {
++            return Ok(Arc::clone(owner));
++        }
++        let owner = Arc::new(Registry::new(|resource: RendererShutdown| {
++            resource.owner.shutdown();
++            resource.sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
++        }));
++        env.add_env_cleanup_hook((key, Arc::clone(&owner)), |(key, owner)| {
++            OWNERS.with(|owners| owners.borrow_mut().remove(&key));
++            owner.shutdown();
++        })?;
++        owners.insert(key, Arc::clone(&owner));
++        Ok(owner)
++    })
++}
+diff --git a/packages/native/src/windows_lifecycle.rs b/packages/native/src/windows_lifecycle.rs
+new file mode 100644
+--- /dev/null
++++ b/packages/native/src/windows_lifecycle.rs
+@@ -0,0 +1,163 @@
++use std::collections::BTreeMap;
++use parking_lot::Mutex;
++use std::sync::Arc;
++
++struct State<T> {
++    next_id: u64,
++    active: BTreeMap<u64, T>,
++}
++
++pub(super) struct Registry<T> {
++    state: Mutex<State<T>>,
++    shutdown: fn(T),
++}
++
++pub(super) struct Registration<T> {
++    registry: Arc<Registry<T>>,
++    id: u64,
++}
++
++impl<T> Registry<T> {
++    pub fn new(shutdown: fn(T)) -> Self {
++        Self {
++            state: Mutex::new(State {
++                next_id: 0,
++                active: BTreeMap::new(),
++            }),
++            shutdown,
++        }
++    }
++
++    pub fn register(self: &Arc<Self>, resource: T) -> Registration<T> {
++        let mut state = self.state.lock();
++        let id = state.next_id;
++        state.next_id += 1;
++        state.active.insert(id, resource);
++        Registration {
++            registry: Arc::clone(self),
++            id,
++        }
++    }
++
++    pub fn shutdown(&self) {
++        let active = std::mem::take(&mut self.state.lock().active);
++        for resource in active.into_values() {
++            (self.shutdown)(resource);
++        }
++    }
++
++    fn close(&self, id: u64) {
++        let resource = self.state.lock().active.remove(&id);
++        if let Some(resource) = resource {
++            (self.shutdown)(resource);
++        }
++    }
++
++    #[cfg(test)]
++    fn active_count(&self) -> usize {
++        self.state.lock().active.len()
++    }
++}
++
++impl<T> Registration<T> {
++    pub fn close(&self) {
++        self.registry.close(self.id);
++    }
++}
++
++impl<T> Drop for Registration<T> {
++    fn drop(&mut self) {
++        self.close();
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use std::sync::atomic::{AtomicUsize, Ordering};
++    use std::sync::mpsc;
++
++    fn count_shutdown(count: Arc<AtomicUsize>) {
++        count.fetch_add(1, Ordering::Relaxed);
++    }
++
++    #[test]
++    fn repeated_instances_unregister_without_retaining_resources() {
++        let registry = Arc::new(Registry::new(count_shutdown));
++        let count = Arc::new(AtomicUsize::new(0));
++        for expected in 1..=256 {
++            let registration = registry.register(Arc::clone(&count));
++            assert_eq!(registry.active_count(), 1);
++            assert_eq!(Arc::strong_count(&count), 2);
++            drop(registration);
++            assert_eq!(registry.active_count(), 0);
++            assert_eq!(Arc::strong_count(&count), 1);
++            assert_eq!(count.load(Ordering::Relaxed), expected);
++        }
++        registry.shutdown();
++        assert_eq!(count.load(Ordering::Relaxed), 256);
++    }
++
++    #[test]
++    fn close_then_drop_does_not_repeat_shutdown() {
++        let registry = Arc::new(Registry::new(count_shutdown));
++        let count = Arc::new(AtomicUsize::new(0));
++        let registration = registry.register(Arc::clone(&count));
++        registration.close();
++        registration.close();
++        assert_eq!(registry.active_count(), 0);
++        assert_eq!(count.load(Ordering::Relaxed), 1);
++        drop(registration);
++        registry.shutdown();
++        assert_eq!(count.load(Ordering::Relaxed), 1);
++        assert_eq!(Arc::strong_count(&count), 1);
++    }
++
++    #[test]
++    fn env_teardown_shuts_down_only_remaining_instances() {
++        let registry = Arc::new(Registry::new(count_shutdown));
++        let count = Arc::new(AtomicUsize::new(0));
++        let first = registry.register(Arc::clone(&count));
++        let second = registry.register(Arc::clone(&count));
++        let third = registry.register(Arc::clone(&count));
++        first.close();
++        assert_eq!(registry.active_count(), 2);
++        registry.shutdown();
++        registry.shutdown();
++        assert_eq!(registry.active_count(), 0);
++        assert_eq!(count.load(Ordering::Relaxed), 3);
++        drop((first, second, third));
++        assert_eq!(count.load(Ordering::Relaxed), 3);
++        assert_eq!(Arc::strong_count(&count), 1);
++    }
++
++    #[test]
++    fn retained_completion_sender_does_not_delay_shutdown_request() {
++        let registry = Arc::new(Registry::new(|sender: mpsc::Sender<()>| {
++            sender.send(()).unwrap();
++        }));
++        let (sender, receiver) = mpsc::channel();
++        let completion_sender = sender.clone();
++        let registration = registry.register(sender);
++        drop(registration);
++        assert_eq!(registry.active_count(), 0);
++        receiver.try_recv().unwrap();
++        assert_eq!(receiver.try_recv(), Err(mpsc::TryRecvError::Empty));
++        drop(receiver);
++        assert!(completion_sender.send(()).is_err());
++    }
++
++    #[test]
++    fn env_teardown_racing_drop_shuts_down_once() {
++        let registry = Arc::new(Registry::new(count_shutdown));
++        let count = Arc::new(AtomicUsize::new(0));
++        let registration = registry.register(Arc::clone(&count));
++        std::thread::scope(|scope| {
++            scope.spawn(|| registry.shutdown());
++            scope.spawn(move || drop(registration));
++        });
++        assert_eq!(registry.active_count(), 0);
++        assert_eq!(count.load(Ordering::Relaxed), 1);
++        assert_eq!(Arc::strong_count(&count), 1);
++    }
++}

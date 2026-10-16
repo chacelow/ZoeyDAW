@@ -1,5 +1,12 @@
 import { createClip, uniqueId } from "../model/reducers"
-import { get, recordDocument, session, readRecordingBar } from "./context"
+import {
+  get,
+  recordDocument,
+  session,
+  readRecordingBar,
+  projectPreferences,
+  projectCreationValues,
+} from "./context"
 import type { MidiClip, MidiNote } from "../model/types"
 
 /**
@@ -16,6 +23,7 @@ export const midiActions = {
       return
     }
     const state = get()
+    const policy = projectPreferences().midi
     session({ activeMidiNotes: [...state.session.activeMidiNotes, pitch] })
     const bar = readRecordingBar()
     if (bar === null) {
@@ -26,7 +34,7 @@ export const midiActions = {
       id: uniqueId("note"),
       pitch,
       startBeat: beatInBar,
-      lengthBeats: 0.25,
+      lengthBeats: policy.recordedNoteLengthBeats,
       velocity: state.session.midiVelocity,
     }
     const armedTrackIds = state.document.tracks
@@ -35,6 +43,7 @@ export const midiActions = {
     if (!armedTrackIds.length) {
       return
     }
+    const clipLabel = projectCreationValues().names.clip("midi")
     recordDocument(document => ({
       ...document,
       tracks: document.tracks.map(track => {
@@ -63,9 +72,13 @@ export const midiActions = {
                 : clip
             ),
           }
-        const fresh = createClip("midi", Math.floor(bar), 1)
+        const fresh = createClip("midi", Math.floor(bar), policy.recordedClipBars)
         if (fresh.kind !== "midi") return track
-        const clip: MidiClip = { ...fresh, notes: [note] }
+        const clip: MidiClip = {
+          ...fresh,
+          label: clipLabel,
+          notes: [note],
+        }
         return { ...track, clips: [...track.clips, clip] }
       }),
     }))
@@ -82,7 +95,10 @@ export const midiActions = {
   },
   setMidiOctave(octave: number) {
     if (Number.isInteger(octave)) {
-      session({ midiOctave: Math.max(0, Math.min(8, octave)) })
+      const policy = projectPreferences().midi
+      session({
+        midiOctave: Math.max(policy.minimumOctave, Math.min(policy.maximumOctave, octave)),
+      })
     }
   },
   setMidiVelocity(velocity: number) {

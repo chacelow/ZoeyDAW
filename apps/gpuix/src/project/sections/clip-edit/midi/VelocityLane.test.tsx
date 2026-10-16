@@ -5,6 +5,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { VelocityLane } from "./VelocityLane"
+import { clipEditorLabels as demoLabels } from "@/app/locales/sections/clip-edit"
 import type { MidiNote } from "@/project/model/types"
 
 const notes: readonly MidiNote[] = [
@@ -48,6 +49,7 @@ function Surface({ x, reference }: { x: number; reference: boolean }) {
         </>
       ) : (
         <VelocityLane
+          formats={demoLabels.en.midi.formats}
           hostRef={null}
           roll={{
             pitches: [60],

@@ -12,7 +12,7 @@ import { hydrateProject, projectActions, useProjectState } from "@/project/adapt
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { createDevice } from "@/project/model/devices"
 import { FooterPanel } from "."
-import { englishFooterLabels } from "./demo-labels"
+import { englishFooterLabels } from "@/app/locales/sections/footer"
 
 const device = createDevice("filter")
 beforeEach(() => {
@@ -36,8 +36,6 @@ function render(root: TestRoot, design = DEFAULT_DESIGN_TOKENS, project = PROJEC
         labels={englishFooterLabels}
         view="devices"
         collapsed={false}
-        reducedMotion
-        onViewChange={() => {}}
         onCollapsedChange={() => {}}
         renderClipEditor={() => null}
         subscribeWindowActive={() => () => {}}
@@ -93,12 +91,6 @@ test("footer device border changes native content inset", () => {
   } finally {
     root.unmount()
   }
-})
-test("footer native paint follows tabs footerJoinedGroupGap", () => {
-  compare({
-    ...DEFAULT_DESIGN_TOKENS,
-    tabs: { ...DEFAULT_DESIGN_TOKENS.tabs, footerJoinedGroupGap: 7 },
-  })
 })
 test("device curve native paint follows project response stroke", () => {
   compare(DEFAULT_DESIGN_TOKENS, { ...PROJECT_METRICS, deviceResponseStrokeWidth: 5 })

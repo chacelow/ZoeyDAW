@@ -6,7 +6,7 @@ import type { ProjectRuntimeStatus } from "@/project/model/backend"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { createTestAnimationFrames } from "../../footer/verification/test-frame"
-import { chineseTransportLabels } from "../demo-labels"
+import { chineseTransportLabels } from "@/app/locales/sections/transport"
 import { PerformanceStatus } from "."
 
 const phases: Readonly<Record<ProjectRuntimeStatus["phase"], string>> = {

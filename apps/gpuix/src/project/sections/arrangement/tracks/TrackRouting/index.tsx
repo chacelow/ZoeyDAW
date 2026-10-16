@@ -13,6 +13,7 @@ const HARDWARE_CHANNELS = [
   { id: "1", label: "1" },
   { id: "2", label: "2" },
 ]
+// MIDI defines exactly sixteen addressable channels, independent of UI density.
 const MIDI_CHANNELS = Array.from({ length: 16 }, (_, index) => ({
   id: String(index + 1),
   label: String(index + 1),
@@ -20,7 +21,7 @@ const MIDI_CHANNELS = Array.from({ length: 16 }, (_, index) => ({
 const EMPTY_CHANNEL = [{ id: "", label: "" }]
 
 export function TrackRouting({ track }: { readonly track: Track }) {
-  const { t } = useTrackLabels()
+  const { t, monitorModes, monitorShortNames } = useTrackLabels()
   const theme = useTheme()
   const tracks = useProjectState(state => state.document.tracks)
   const destinations = useMemo(() => routingDestinations(track, tracks), [track, tracks])
@@ -120,12 +121,12 @@ export function TrackRouting({ track }: { readonly track: Track }) {
               {(["in", "auto", "off"] satisfies Track["monitor"][]).map(mode => (
                 <DragPadToggle
                   key={mode}
-                  label={`${t("monitor")} ${mode} ${track.name}`}
+                  label={`${t("monitor")} ${monitorModes[mode]} ${track.name}`}
                   testId={`track-monitor-${mode}-${track.id}`}
                   value={track.monitor === mode}
                   onChange={() => projectActions.updateTrack(track.id, { monitor: mode })}
-                  labelOn={mode === "auto" ? "Auto" : mode === "in" ? "In" : "Off"}
-                  labelOff={mode === "auto" ? "Auto" : mode === "in" ? "In" : "Off"}
+                  labelOn={monitorShortNames[mode]}
+                  labelOff={monitorShortNames[mode]}
                   style={{
                     flexGrow: 1,
                     flexBasis: 0,

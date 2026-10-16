@@ -14,6 +14,7 @@
 - Consume handled arrow keys in RadioGroup and Separator so they no longer seek the timeline. Express toggle state through `aria-pressed` (macOS exposes a toggle button with a live value) and inject locale names instead of hard-coded English on/off suffixes. Treat a panel as fixed only when its min and max are authored in the same unit, so small viewports shrink flexible minima instead of crashing the project page.
 - Recover the latest playhead and meters on the first frame after a background window becomes active again.
 - Add `pnpm verify:gpuix` (renderer identity, native build, tsc, eslint, architecture rules, doc routes, bun test, review scan, UI map, real-backend offscreen smoke; fails closed), `GPUIX_BACKGROUND=1` background launch for every entry, a generated UI map, and lint rules that encode recurring lessons (no JS timers for native events, no appearance override, no invented business shape).
+- Respect macOS titlebar double-click preferences and expose native drag hitboxes for the transparent Windows titlebar. Windows owns caption maximize/restore; Settings is excluded from the drag region. Physical Windows gesture acceptance remains pending because the desktop input tool refused foreground activation.
 - Known limits: visible-window visual and full-scale 16ms acceptance, physical drag/wheel/focus, and background-window playback still need a serial foreground pass; device DSP, warp/pitch processing and real Browser resource placement remain metadata-only.
 
 ### Web prototype (before the rewrite)

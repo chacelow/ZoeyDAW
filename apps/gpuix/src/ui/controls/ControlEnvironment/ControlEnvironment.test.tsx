@@ -3,8 +3,9 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { Button } from "../Button"
 import { DragPadNumber } from "../DragPad"
-import { ControlEnvironmentProvider } from "."
-import type { ControlInfo } from "."
+import { ControlEnvironmentProvider, useControlEnvironment } from "."
+import type { ControlEnvironment, ControlInfo } from "."
+import { TEST_INPUT_POLICY } from "../DragPad/input-policy.test-fixture"
 
 test("nearest environment receives only component kind, never a resource label or input value", () => {
   const app: Array<ControlInfo | null> = []
@@ -78,4 +79,37 @@ test("native focus and blur move control info between controls without a sampler
   root.renderer.focusElement(root.renderer.findByTestId("outside")!.id)
   expect(updates.at(-1)).toBeNull()
   root.unmount()
+})
+
+test("nested environments inherit only input policy and allow explicit policy replacement", () => {
+  const root = createTestRoot({ width: 360, height: 160 })
+  const observed: ControlEnvironment[] = []
+  const replacement = { ...TEST_INPUT_POLICY, dragPixelsPerStep: 8 }
+  function Probe() {
+    observed.push(useControlEnvironment())
+    return null
+  }
+  try {
+    root.render(
+      <ControlEnvironmentProvider
+        value={{ inputPolicy: TEST_INPUT_POLICY, mappingActive: true, setInfo: () => {} }}
+      >
+        <ControlEnvironmentProvider value={{}}>
+          <Probe />
+        </ControlEnvironmentProvider>
+        <ControlEnvironmentProvider value={{ inputPolicy: replacement }}>
+          <Probe />
+        </ControlEnvironmentProvider>
+      </ControlEnvironmentProvider>
+    )
+    expect(observed).toHaveLength(2)
+    expect(observed[0]?.inputPolicy).toBe(TEST_INPUT_POLICY)
+    expect(observed[1]?.inputPolicy).toBe(replacement)
+    for (const environment of observed) {
+      expect(environment.mappingActive).toBeUndefined()
+      expect(environment.setInfo).toBeUndefined()
+    }
+  } finally {
+    root.unmount()
+  }
 })

@@ -1,6 +1,14 @@
-import { useLayoutEffect } from "react"
-import { openProjectSnapshot, setProjectStorageId, startProjectRuntime } from "@/project/adapters"
+import { useLayoutEffect, useRef } from "react"
+import {
+  configureProjectCreation,
+  openProjectSnapshot,
+  setProjectStorageId,
+  startProjectRuntime,
+} from "@/project/adapters"
+import { getPreferences } from "@/platform/settings"
+import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useAppTranslation } from "../i18n"
+import { getCreationNames } from "../i18n/creation-names"
 import { ProjectLayout } from "./ProjectLayout"
 import { useProjectComposition } from "./useProjectComposition"
 import { ProjectSections } from "./ProjectSections"
@@ -20,20 +28,50 @@ export interface ProjectPageProps {
  */
 export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPageProps) {
   const shell = useProjectShell()
-  const { t } = useAppTranslation()
+  const { t, locale } = useAppTranslation()
+  const theme = useTheme()
+  const creation = useRef({ locale, theme })
   useLayoutEffect(() => {
-    if (openMode === "new") setProjectStorageId(projectId)
-    else openProjectSnapshot(projectId)
-    return startProjectRuntime()
+    creation.current = { locale, theme }
+  }, [locale, theme])
+  useLayoutEffect(() => {
+    const releaseCreation = configureProjectCreation({
+      names: () => getCreationNames(creation.current.locale),
+      appearance: () => {
+        const current = creation.current.theme
+        return {
+          heightPx: current.layout.track.defaultHeight,
+          mainHeightPx: current.layout.track.mainHeight,
+          colors: current.design.trackCreationColors,
+        }
+      },
+      preferences: getPreferences,
+    })
+    let releaseRuntime: () => void
+    try {
+      if (openMode === "new") setProjectStorageId(projectId)
+      else openProjectSnapshot(projectId)
+      releaseRuntime = startProjectRuntime()
+    } catch (error) {
+      releaseCreation()
+      throw error
+    }
+    return () => {
+      try {
+        releaseRuntime()
+      } finally {
+        releaseCreation()
+      }
+    }
   }, [projectId, openMode])
   const { composition, browserRef, focusRef } = useProjectComposition(shell)
   const labels = {
     resizeBrowser: t("project.resizeBrowser"),
     resizeClipEdit: t("project.resizeClipEdit"),
-    browserPanel: "Browser",
-    arrangementPanel: "Arrangement",
-    footerPanel: "Footer",
-    activeDescription: "Active panel",
+    browserPanel: t("panel.browser"),
+    arrangementPanel: t("panel.arrangement"),
+    footerPanel: t("panel.footer"),
+    activeDescription: t("panel.activeDescription"),
   }
   if (!renderSlots)
     return composition ? (

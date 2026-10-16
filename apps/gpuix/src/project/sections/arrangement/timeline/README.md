@@ -17,7 +17,7 @@
 | `controller.tick(nowMs)` | 由原生帧源驱动边缘滚动与 Follow；本模块不创建定时器或第二走带时钟 |
 | `controller.getFrameDemand()` / `subscribeFrameDemand(listener)` | 标尺 autoScroll 的稳定活动读取与通知，直接由 start/update/stop 的活动边界驱动。组合根合并播放与 lane 手势需求后再订阅帧，不读取 TimelineView 细项 |
 | `controller.keyboard` | 唯一键盘 owner；`markDrawGesture()` 由实际绘制/拖动消费者调用；组合根不能再创建独立键盘 |
-| `TimelineLabels` | 严格的可见文本契约；示例双语数据在 `demo-labels.ts`，不依赖 i18n 包 |
+| `TimelineLabels` | 严格的可见文本契约；双语数据在 `app/locales/sections/timeline.ts`，由组合根注入 |
 | `TimelineEditSurface` | 单一保留输入层的 ref、pointer/key/blur handlers、光标 style 与稳定菜单/inline editor `wrap` slot；owner 是 `timeline-viewport` |
 
 `TimelineView` 仅以 type 导出，供 `ArrangementTimeline` 使用；组合根不得依赖其细项，也没有可独立构造的 view。类型断言在 `public-contract.test.ts` 守住 view 与键盘工厂的运行时出口边界。
@@ -27,7 +27,7 @@
 - `rulers`：定位点/循环的按下、移动、提交、取消、键盘与选区循环事务。
 - `autoScroll`：`start/update/stop/tick` 的单一状态机；滚动经同步 `setScroll` 后才重算预览。活动由内部 pointer 推导，通知只在空闲/活动边界发出，不建立第二份活动状态。
 - `getSnapshot/subscribe`：只持有测量尺寸和 overview 高度，不复制工程数据。
-- `measure`：由原生 `onLayout` 提供尺寸；不另做采样或滚轮测量。
+- `measure`：由原生 `onLayout` 提供尺寸；不另做采样或滚轮测量。仅编辑目标变化时 reveal 所在轨道，纯尺寸变化只 clamp 视口，不重复定位编辑轨道。
 - `setOverviewHeight`：共享 32–90px 约束；Panel/Divider 复用 A4。
 - `overviewGeometry`：读取 B1 夹取后的同一视口。
 - `wheel/stepZoom/suspendFollow`：视口命令；原生 wheel 的负向下/右符号在输入边界转换。
@@ -53,6 +53,10 @@ Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有�
 
 B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨道行位置沿用同一原点。时间线只裁剪整行 slot，负向内部偏移抵消外层标尺裁剪偏移，不拆开轨道头与车道。Minimap 在独立上方 Panel，纵向滚动不移动它。
 
+标尺高度与可编辑区域偏移读取 `theme.layout.arrangement`，组合根把同一 layout 注入 Scene。`barRulerHeight` 决定音乐标尺与编辑面起点，`timeRulerHeight` 决定底部裁剪。`MarkerEditor` 使用 `markerRulerHeight`；Minimap clip 行内距使用 `minimapClipInset`。
+
+标尺与 Minimap 的分界线、标记线、loop 边框和播放头读取 `design.editor` 的语义线宽。标记标签的 padding 扣除实际 `markerLineWidth`，保持文字起点。指针状态保存在组件内，原生 cursor 统一由 `design.cursors` 解析。
+
 音乐 `scrollX` 只有 **Minimap 下的一条 `ControlledScrollbar`**。它与标尺、车道共享逻辑范围，不构造整工程宽度的 native scroll 内容。工具栏自己的横向溢出仅用于访问控件，不是第二条音乐视口。全宽 `timeline-layout` 是唯一滚轮入口，透明 `timeline-viewport` 只处理 lane 指针、键盘与失焦。`interactionOverlay` 在它之上挂载 tracks 的分隔条矩形，不覆盖车道其他区域。原生组合回归覆盖一次 wheel 的平移量、车道与表头缩放比例，以及车道侧分隔条拖动。
 
 ## 网格的独立层
@@ -64,7 +68,7 @@ B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨�
 
 网格与音乐标尺的 Pattern 背景统一使用 `useQuadBatch` 命令式上传；网格按主题的粗/细线材质分批，不逐线挂载节点。可见几何仍来自 B1，不将 Float32Array 放入 React props/state。`grid/parity.test.tsx` 用固定的旧 div 绘制 oracle 对照深浅主题、标尺/车道高度、分数滚动与极端缩放的原生 PNG。标尺文字保留原生文本布局，时间刻度的短线与文字仍共用原位置节点；没有为少量文字标签另建绘制系统。
 
-GridLine 的半开可见范围过滤与 quad 打包由 `core/rulers/grid-quads.packGridQuads` 唯一实现；普通细线透明度与 lane 共用 `MINOR_GRID_OPACITY`。边缘滚动调用 `core/viewport/edge-scroll`，timeline 只持有活动指针、axis 与 last-frame 生命周期。Ruler 不再镜像写 `projectPreview/timeSelection`，这些工程投影仅由 TimelineController 订阅更新。
+GridLine 的半开可见范围过滤与 quad 打包由 `core/rulers/grid-quads.packGridQuads` 唯一实现，调用方显式传入粗线与细线宽度。粗线读取 `project.arrangementGridMajorLineWidth`，细线读取 `design.editor.gridMinorStrokeWidth`，细线透明度与 lane 共用 `project.gridMinorOpacity`。边缘滚动调用 `core/viewport/edge-scroll`，timeline 只持有活动指针、axis 与 last-frame 生命周期。Ruler 不再镜像写 `projectPreview/timeSelection`，这些工程投影仅由 TimelineController 订阅更新。
 
 标签间距的 38/56 默认来自 web，可读性配置集中在 `RULER_LABEL_SPACING`。多档 Live 阈值及极端缩小时的明暗合并未对照 Live，不把估计写成实测结论。
 
@@ -102,6 +106,8 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，仍未�
 
 外部 store/Scene 更新的原生组件测试必须用真实 `flushSync` 提交 React，再 `renderer.flush()` 绘制；单独 native flush 不能证明 UI 已跟随状态变化。永久测试保留音乐位置/时间缩放、事务/历史、epoch、MIDI/B 模式与真实按键传播，性质测试配实际变异检查。
 
+`style-layout.test.tsx` 覆盖原生标尺、Minimap 与完整时间线组合的 design/layout 覆盖输入。`grid/parity.test.tsx` 分别覆盖粗线宽、细线宽与细线透明度，用 div oracle 对照原生 PNG，并要求覆盖结果不同于默认图。新增回归的执行结果由协调者集成验证记录，不在此预先声明通过。
+
 A3b 消费回归复用 `ui/controls/Menu/{interaction,pointer}.test.tsx`、`DragPad/{DragPadNumber,variants}.test.tsx`、`platform/keyboard/keyboard-native.test.tsx`；最终文本焦点 lease 由 `app/project/composition.test.tsx` 的真实 DragPad→timeline 组合回归覆盖。`bun src/project/sections/arrangement/timeline/verification/mutations.ts` 运行内存变异，不写共享源码；每个变异必须实际加载且使行为断言失败。
 
-`bun src/project/sections/arrangement/timeline/verification/layout-smoke.tsx` 输出真实原生 toolbar、文字和图标的 bounds。1.5px padding 在 scale=1 的 GPUI pre-layout metric snapping 中按中点向零舍入为 1px，不是 AX 丢精度；不以业务实例补偿改变共享密度 token。
+`bun src/app/verification/timeline/layout-smoke.tsx` 输出真实原生 toolbar、文字和图标的 bounds。1.5px padding 在 scale=1 的 GPUI pre-layout metric snapping 中按中点向零舍入为 1px，不是 AX 丢精度；不以业务实例补偿改变共享密度 token。

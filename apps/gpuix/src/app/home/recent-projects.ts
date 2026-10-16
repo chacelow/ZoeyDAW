@@ -1,8 +1,8 @@
+import { getPreference } from "@/platform/settings"
 import type { SnapshotStorage } from "@/platform/storage"
 
-/** Same key and shape as the web home page's localStorage entry. */
+/** This storage namespace preserves existing recent-project entries across upgrades. */
 export const RECENT_PROJECTS_KEY = "zoeydaw:recent-projects"
-export const RECENT_PROJECTS_LIMIT = 20
 
 export interface RecentProject {
   readonly id: string
@@ -12,11 +12,11 @@ export interface RecentProject {
 
 function isRecentProject(value: unknown): value is RecentProject {
   if (typeof value !== "object" || value === null) return false
-  const item = value as Record<string, unknown>
+  if (!("id" in value && "name" in value && "openedAt" in value)) return false
   return (
-    typeof item.id === "string" &&
-    typeof item.name === "string" &&
-    typeof item.openedAt === "number"
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.openedAt === "number"
   )
 }
 
@@ -32,14 +32,20 @@ export function loadRecentProjects(storage: SnapshotStorage): RecentProject[] {
   }
 }
 
-/** Moves `project` to the front, de-duplicated by id, capped at the web limit. */
+/** Moves a project to the front, de-duplicated by id, using the selected capacity. */
 export function bumpRecentProject(
   list: readonly RecentProject[],
   project: RecentProject
 ): RecentProject[] {
-  return [project, ...list.filter(item => item.id !== project.id)].slice(0, RECENT_PROJECTS_LIMIT)
+  return [project, ...list.filter(item => item.id !== project.id)].slice(
+    0,
+    getPreference("recentProjectCapacity")
+  )
 }
 
 export function saveRecentProjects(storage: SnapshotStorage, list: readonly RecentProject[]): void {
-  storage.set(RECENT_PROJECTS_KEY, JSON.stringify(list.slice(0, RECENT_PROJECTS_LIMIT)))
+  storage.set(
+    RECENT_PROJECTS_KEY,
+    JSON.stringify(list.slice(0, getPreference("recentProjectCapacity")))
+  )
 }

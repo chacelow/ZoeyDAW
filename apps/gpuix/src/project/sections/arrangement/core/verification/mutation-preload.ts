@@ -17,7 +17,10 @@ if (id) {
         if (first === -1 || source.indexOf(from, first + from.length) >= 0)
           throw new Error(`Mutation target drift: ${id}`)
         process.stderr.write(`[core-mutation] applied ${id}\n`)
-        return { contents: source.replace(from, () => to), loader: "ts" }
+        return {
+          contents: source.replace(from, () => to),
+          loader: args.path.endsWith(".tsx") ? "tsx" : "ts",
+        }
       })
     },
   })

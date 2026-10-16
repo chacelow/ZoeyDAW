@@ -5,7 +5,7 @@ import {
   layoutTrackRows,
   pinnedTrackHeight,
 } from "./layout"
-import { clipVisualGeometry, fadeHandleX, FADE_HANDLE_PX, RESIZE_EDGE_PX } from "./clip-geometry"
+import { clipVisualGeometry, fadeHandleX } from "./clip-geometry"
 import type { Clip, Track } from "@/project/model/types"
 import type { ArrangementScene } from "./scene"
 
@@ -34,10 +34,11 @@ export function hitTest(
   pointY: number,
   automationMode = false
 ): HitTarget {
-  const { viewport, bars } = scene
+  const { viewport, bars, geometry } = scene
   const { height, pxPerBar, scrollX } = viewport
-  const bodyTop = arrangementBodyTop()
-  const bodyBottom = arrangementBodyBottom(height)
+  const hit = geometry.arrangement.hit
+  const bodyTop = arrangementBodyTop(geometry.arrangement)
+  const bodyBottom = arrangementBodyBottom(height, geometry.arrangement)
   if (pointY < bodyTop || pointY > bodyBottom || pxPerBar <= 0) {
     return null
   }
@@ -76,8 +77,8 @@ export function hitTest(
       }
       const peak = fade.edge === "in" ? fade.end : fade.start
       if (
-        Math.abs(pointX - fadeHandleX(visual, peak.x)) <= FADE_HANDLE_PX &&
-        Math.abs(pointY - peak.y) <= FADE_HANDLE_PX
+        Math.abs(pointX - fadeHandleX(visual, peak.x)) <= hit.clipFadeHandle &&
+        Math.abs(pointY - peak.y) <= hit.clipFadeHandle
       ) {
         return {
           kind: "clip-fade",
@@ -88,18 +89,18 @@ export function hitTest(
         }
       }
       if (
-        fade.end.x - fade.start.x >= FADE_HANDLE_PX * 2 &&
-        Math.abs(pointX - fade.curve.x) <= FADE_HANDLE_PX &&
-        Math.abs(pointY - fade.curve.y) <= FADE_HANDLE_PX
+        fade.end.x - fade.start.x >= hit.clipFadeHandle * 2 &&
+        Math.abs(pointX - fade.curve.x) <= hit.clipFadeHandle &&
+        Math.abs(pointY - fade.curve.y) <= hit.clipFadeHandle
       ) {
         return { kind: "clip-fade", clip, track: row.track, edge: fade.edge, handle: "curve" }
       }
     }
     const region = pointY < bodyTopY || bodyHeight === 0 ? "title" : "body"
-    if (fromLeft <= RESIZE_EDGE_PX) {
+    if (fromLeft <= hit.clipResizeEdge) {
       return { kind: "clip-resize", clip, track: row.track, edge: "left", region }
     }
-    if (fromRight <= RESIZE_EDGE_PX) {
+    if (fromRight <= hit.clipResizeEdge) {
       return { kind: "clip-resize", clip, track: row.track, edge: "right", region }
     }
     return {

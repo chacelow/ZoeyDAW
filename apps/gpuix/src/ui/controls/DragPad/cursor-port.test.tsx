@@ -1,3 +1,4 @@
+import { TEST_INPUT_POLICY } from "./input-policy.test-fixture"
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { handleGpuixEvent } from "@gpuix/react"
@@ -33,7 +34,7 @@ function mount(initialPort: CursorLockPort) {
     const [value, setValue] = useState(120)
     return (
       <ThemeProvider>
-        <ControlEnvironmentProvider value={{ cursorLock: port }}>
+        <ControlEnvironmentProvider value={{ cursorLock: port, inputPolicy: TEST_INPUT_POLICY }}>
           <div style={{ padding: 80 }}>
             <DragPadNumber
               testId="pad"

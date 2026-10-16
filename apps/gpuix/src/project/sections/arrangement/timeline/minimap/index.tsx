@@ -39,7 +39,7 @@ export function MiniMap({
   const theme = useTheme()
   const { renderer } = useGpuix()
   const element = useRef<PublicInstance | null>(null)
-  const [pointer, setPointer] = useState<"grab" | "ew-resize">("grab")
+  const [pointer, setPointer] = useState<"grab" | "horizontalResize">("grab")
   const [hovered, setHovered] = useState(false)
   const [phase, setPhase] = useState<MinimapGesture["phase"]>("idle")
   const latest = useRef({ geometry, width, onNavigate, onViewport })
@@ -88,7 +88,7 @@ export function MiniMap({
         position: "relative",
         overflow: "hidden",
         backgroundColor: theme.colors.arrangementSurfaceAlt,
-        cursor: pointer,
+        cursor: theme.design.cursors[pointer],
       })}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -107,7 +107,7 @@ export function MiniMap({
         const bounds = renderer?.getElementBounds?.(element.current.id)
         if (!bounds) return
         const hit = minimapHit((event.x ?? bounds.x) - bounds.x, width, geometry)
-        setPointer(hit === "left" || hit === "right" ? "ew-resize" : "grab")
+        setPointer(hit === "left" || hit === "right" ? "horizontalResize" : "grab")
       }}
       onMouseUp={() => gesture.up()}
       onBlur={() => gesture.cancel()}

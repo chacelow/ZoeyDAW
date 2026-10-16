@@ -1,4 +1,5 @@
 use crate::{
+    defaults::TELEMETRY_FLOOR_DB,
     mix::Mixer,
     protocol::BackendTelemetry,
     transport::{bar_to_frame, frame_to_bar, Transport},
@@ -79,9 +80,9 @@ impl Snapshot {
 
 pub fn amplitude_db(amplitude: f32) -> f64 {
     if amplitude > 0.0 && amplitude.is_finite() {
-        (20.0 * f64::from(amplitude).log10()).max(-120.0)
+        (20.0 * f64::from(amplitude).log10()).max(TELEMETRY_FLOOR_DB)
     } else {
-        -120.0
+        TELEMETRY_FLOOR_DB
     }
 }
 
@@ -275,5 +276,14 @@ mod tests {
             expected.advance(frames);
             assert_eq!(actual.position_frame, expected.position_frame);
         }
+    }
+
+    #[test]
+    fn telemetry_is_finite_and_uses_the_shared_silence_floor() {
+        for amplitude in [0.0, -1.0, f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 1e-30] {
+            assert_eq!(amplitude_db(amplitude), TELEMETRY_FLOOR_DB);
+        }
+        assert_eq!(amplitude_db(1.0), 0.0);
+        assert!((amplitude_db(0.5) + 6.020_599_913).abs() < 1e-8);
     }
 }

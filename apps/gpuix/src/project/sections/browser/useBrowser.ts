@@ -1,6 +1,7 @@
 import { useState } from "react"
-import { BROWSER_ENTRIES, INITIAL_FAVORITES } from "./catalog"
+import { getPreference } from "@/platform/settings"
 import type { BrowserEntry, BrowserKind, BrowserSource } from "./catalog"
+import type { BrowserLabels } from "./labels"
 
 const INITIAL_MATCH: { readonly source: boolean; readonly search: boolean } = Object.freeze({
   source: false,
@@ -44,18 +45,22 @@ interface BrowserHistory {
   forward: BrowserSource[]
 }
 
-export function useBrowser(): BrowserController {
+export function useBrowser({
+  locale,
+  formats,
+  entries,
+}: Pick<BrowserLabels, "locale" | "formats" | "entries">): BrowserController {
   const [history, setHistory] = useState<BrowserHistory>({ back: [], current: "all", forward: [] })
   const [query, setQuery] = useState("")
-  const [kind, setKind] = useState<BrowserKind | "all">("all")
-  const [favorites, setFavorites] = useState(() => new Set(INITIAL_FAVORITES))
+  const [kind, setKind] = useState<BrowserKind | "all">(() => getPreference("browser").kind)
+  const [favorites, setFavorites] = useState(() => new Set(getPreference("browser").favorites))
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [selection, setSelection] = useState<Partial<Record<BrowserSource, string>>>({})
-  const [descending, setDescending] = useState(false)
+  const [descending, setDescending] = useState(() => getPreference("browser").descending)
   const [filtersVisible, setFiltersVisible] = useState(true)
   const source = history.current
   const selectedId = selection[source]
-  const search = query.trim().toLocaleLowerCase()
+  const search = formats.normalizeSearch(query)
   const isFiltering = search.length > 0 || kind !== "all"
   const expansionContext = isFiltering ? `${source}/${kind}/${search}` : "browse"
 
@@ -79,7 +84,7 @@ export function useBrowser(): BrowserController {
         const matchesSearch =
           inherited.search ||
           !search ||
-          `${entry.name} ${entry.tags.join(" ")}`.toLocaleLowerCase().includes(search)
+          formats.normalizeSearch(`${entry.name} ${entry.tags.join(" ")}`).includes(search)
         const matches = matchesScope && matchesSearch && (kind === "all" || entry.kind === kind)
         if (entry.kind !== "device") {
           return matches ? [entry] : []
@@ -90,7 +95,7 @@ export function useBrowser(): BrowserController {
         })
         return matches || children.length ? [{ ...entry, children }] : []
       })
-      .sort((a, b) => (descending ? -1 : 1) * a.name.localeCompare(b.name))
+      .sort((a, b) => (descending ? -1 : 1) * a.name.localeCompare(b.name, locale))
   }
 
   const rows: BrowserRow[] = []
@@ -105,7 +110,7 @@ export function useBrowser(): BrowserController {
       }
     }
   }
-  addRows(filterEntries(BROWSER_ENTRIES), 0, null)
+  addRows(filterEntries(entries), 0, null)
   const selected = rows.find(row => row.entry.id === selectedId)
 
   function setSelectedId(id: string) {

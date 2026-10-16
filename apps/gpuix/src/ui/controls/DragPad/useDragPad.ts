@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 import type { EventPayload, KeyEvent } from "@gpuix/react"
 import { consumeKey } from "@/shared/keyboard"
-import { CLICK_MOVE_THRESHOLD_PX } from "./constants"
+import type { ControlInputPolicy } from "../ControlEnvironment"
 import { useControlEnvironment } from "../ControlEnvironment"
 import { stopTextShortcutPropagation } from "../keyboard"
 import type { CursorLockPort, ScreenPoint } from "./cursor-port"
@@ -33,6 +33,7 @@ interface DragAnchor {
   dragging: boolean
   cursorAnchor: ScreenPoint | null
   cursorLock: CursorLockPort | undefined
+  inputPolicy: ControlInputPolicy
 }
 
 export function useDragPad(options: UseDragPadOptions) {
@@ -52,7 +53,7 @@ export function useDragPad(options: UseDragPadOptions) {
     onGestureEnd,
     onGestureCancel,
   } = options
-  const { cursorLock, subscribeWindowActive } = useControlEnvironment()
+  const { cursorLock, subscribeWindowActive, inputPolicy } = useControlEnvironment()
   const [mode, setMode] = useState<DragPadMode>("idle")
   const [dragging, setDragging] = useState(false)
   const [draft, setDraft] = useState("")
@@ -116,6 +117,7 @@ export function useDragPad(options: UseDragPadOptions) {
         setMode("idle")
         return
       }
+      if (!inputPolicy) throw new Error("DragPad pointer interaction requires ControlInputPolicy")
       const pressPoint =
         event.x === undefined || event.y === undefined ? null : { x: event.x, y: event.y }
       anchorRef.current = {
@@ -125,9 +127,10 @@ export function useDragPad(options: UseDragPadOptions) {
         dragging: false,
         cursorAnchor: pressPoint && cursorLock ? cursorLock.capture(pressPoint) : null,
         cursorLock,
+        inputPolicy,
       }
     },
-    [disabled, mode, defaultValue, commitNumber, cursorLock]
+    [disabled, mode, defaultValue, commitNumber, cursorLock, inputPolicy]
   )
 
   const handleMouseMove = useCallback(
@@ -137,7 +140,8 @@ export function useDragPad(options: UseDragPadOptions) {
       const deltaY = (event.y ?? anchor.startY) - anchor.startY
       if (!anchor.dragging) {
         if (
-          Math.hypot((event.x ?? anchor.startX) - anchor.startX, deltaY) < CLICK_MOVE_THRESHOLD_PX
+          Math.hypot((event.x ?? anchor.startX) - anchor.startX, deltaY) <
+          anchor.inputPolicy.dragThresholdPixels
         )
           return
         anchor.dragging = true
@@ -147,7 +151,14 @@ export function useDragPad(options: UseDragPadOptions) {
         setMode("idle")
       }
       commitNumber(
-        valueAfterDrag({ startValue: anchor.startValue, deltaY, step: dragStep, min, max })
+        valueAfterDrag({
+          startValue: anchor.startValue,
+          deltaY,
+          step: dragStep,
+          min,
+          max,
+          dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep,
+        })
       )
     },
     [dragStep, min, max, commitNumber]
@@ -170,6 +181,7 @@ export function useDragPad(options: UseDragPadOptions) {
   const handleScroll = useCallback(
     (event: EventPayload) => {
       if (disabled || dragging || mode === "editing" || !event.deltaY) return
+      if (!inputPolicy) throw new Error("DragPad wheel interaction requires ControlInputPolicy")
       callbacks.current.onGestureStart?.()
       commitNumber(
         valueAfterWheel({
@@ -179,11 +191,13 @@ export function useDragPad(options: UseDragPadOptions) {
           step: dragStep,
           min,
           max,
+          wheelPixelsPerStep: inputPolicy.wheelPixelsPerStep,
+          wheelLinePixels: inputPolicy.wheelLinePixels,
         })
       )
       callbacks.current.onGestureEnd?.()
     },
-    [disabled, dragging, mode, dragStep, min, max, commitNumber]
+    [disabled, dragging, mode, dragStep, min, max, commitNumber, inputPolicy]
   )
 
   const startEditing = useCallback(

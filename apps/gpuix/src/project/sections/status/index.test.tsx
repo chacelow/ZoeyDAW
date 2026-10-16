@@ -3,7 +3,7 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { useState } from "react"
 import { FooterPanel } from "../footer"
 import type { FooterView } from "../footer"
-import { englishFooterLabels } from "../footer/demo-labels"
+import { englishFooterLabels } from "@/app/locales/sections/footer"
 import { createTestWindowActivity } from "../footer/verification/test-activity"
 import { hydrateProject } from "../../adapters"
 import { createMockDocument, createMockWorkspace } from "../../adapters/fixtures"
@@ -74,9 +74,7 @@ test("active detail switch collapses its Footer and another switch reopens the c
             labels={englishFooterLabels}
             view={view}
             collapsed={collapsed}
-            onViewChange={choose}
             onCollapsedChange={setCollapsed}
-            reducedMotion
             subscribeWindowActive={activity.subscribe}
             renderClipEditor={() => {
               throw new Error("No selected Clip")

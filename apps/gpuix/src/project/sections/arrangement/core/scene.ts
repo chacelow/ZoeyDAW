@@ -1,6 +1,13 @@
-import { DEFAULT_GRID, deriveGridPlan } from "@/project/model/grid"
+import { deriveGridPlan } from "@/project/model/grid"
 import type { LayoutTokens } from "@/shared/theme/layout-tokens"
-export type ArrangementGeometry = Pick<LayoutTokens, "track" | "arrangement">
+import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
+import {
+  PROJECT_TEMPLATE,
+  createUnopenedDocument,
+  createWorkspaceTemplate,
+} from "@/project/defaults/template"
+import type { ProjectTemplateSource } from "@/project/defaults/template"
+
 import type { GridPlan, GridSettings } from "@/project/model/grid"
 import type {
   AutomationLane,
@@ -11,6 +18,7 @@ import type {
   TimeSelection,
   Track,
 } from "@/project/model/types"
+export type ArrangementGeometry = Pick<LayoutTokens, "track" | "arrangement">
 
 export interface ArrangementViewport {
   pxPerBar: number
@@ -83,22 +91,46 @@ export interface SceneStore {
   setTimeSelectionPreview: (selection: TimeSelection | null) => void
 }
 
-export function createSceneStore(geometry: ArrangementGeometry): SceneStore {
+export function createSceneStore(
+  geometry: ArrangementGeometry,
+  {
+    template = PROJECT_TEMPLATE,
+    preferences = PREFERENCE_DEFAULTS,
+  }: {
+    template?: ProjectTemplateSource
+    preferences?: typeof PREFERENCE_DEFAULTS
+  } = {}
+): SceneStore {
+  const document = createUnopenedDocument(template)
+  const workspace = createWorkspaceTemplate(preferences)
+  const { bpm, numerator, denominator } = document.transport
   let committedTimeSelection: TimeSelection | null = null
   let source: SceneMusic = {
-    bars: 128,
-    grid: DEFAULT_GRID,
-    transport: { bpm: 120, numerator: 4, denominator: 4 },
-    markers: [],
-    loop: { enabled: false, startBar: 1, endBar: 5 },
-    tracks: [],
+    bars: template.timeline.minimumBars,
+    grid: workspace.grid,
+    transport: { bpm, numerator, denominator },
+    markers: document.markers,
+    loop: document.transport.loop,
+    tracks: document.tracks,
   }
   let scene: ArrangementScene = {
     ...source,
     revision: 0,
     geometry,
-    viewport: { pxPerBar: 24, scrollX: 0, scrollY: 0, width: 0, height: 0, dpr: 1 },
-    gridPlan: deriveGridPlan(source.grid, 24, 4, 4),
+    viewport: {
+      pxPerBar: workspace.pxPerBar,
+      scrollX: workspace.scrollX,
+      scrollY: workspace.scrollY,
+      width: 0,
+      height: 0,
+      dpr: 1,
+    },
+    gridPlan: deriveGridPlan(
+      source.grid,
+      workspace.pxPerBar,
+      source.transport.numerator,
+      source.transport.denominator
+    ),
     playback: { playing: false, insertionPoint: null },
     previewTracks: null,
     clipDrag: null,
