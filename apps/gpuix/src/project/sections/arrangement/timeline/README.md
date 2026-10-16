@@ -98,6 +98,8 @@ Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，本切�
 
 在仓库根先运行 `pnpm native:build`。在 `apps/gpuix` 运行 `pnpm exec tsc --noEmit`、`bun test src/project/sections/arrangement/timeline`；根目录运行对应目录 eslint 与 `node scripts/gpuix-review-scan.mjs`。
 
+本轮跨目录修复、红绿变异、自审及组合截图边界见 [R2 验证报告](../R2-VERIFICATION.md)。
+
 外部 store/Scene 更新的原生组件测试必须用真实 `flushSync` 提交 React，再 `renderer.flush()` 绘制；单独 native flush 不能证明 UI 已跟随状态变化。永久测试保留音乐位置/时间缩放、事务/历史、epoch、MIDI/B 模式与真实按键传播，性质测试配实际变异检查。
 
 A3b 消费回归复用 `ui/controls/Menu/{interaction,pointer}.test.tsx`、`DragPad/{DragPadNumber,variants}.test.tsx`、`platform/keyboard/keyboard-native.test.tsx`；最终文本焦点 lease 由 `app/project/composition.test.tsx` 的真实 DragPad→timeline 组合回归覆盖。`bun src/project/sections/arrangement/timeline/verification/mutations.ts` 运行内存变异，不写共享源码；每个变异必须实际加载且使行为断言失败。
