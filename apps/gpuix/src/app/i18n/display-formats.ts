@@ -70,8 +70,16 @@ export function createDisplayFormats(
       for (const label of labels) {
         if (raw.startsWith(label.toLocaleUpperCase(locale))) {
           const magnitude = raw.slice(label.length).trim()
-          // ASCII '%' is a stable input alias, independent of translated display labels.
-          const numeric = magnitude.endsWith("%") ? magnitude.slice(0, -1).trim() : magnitude
+          let separator = ""
+          for (const policy of Object.values(config.pan.variants)) {
+            const candidate = policy.separator.trim().toLocaleUpperCase(locale)
+            if (candidate.length > separator.length && magnitude.startsWith(candidate)) {
+              separator = candidate
+            }
+          }
+          const value = magnitude.slice(separator.length).trim()
+          // ASCII '%' remains an input alias independently of the configured separator.
+          const numeric = value.endsWith("%") ? value.slice(0, -1).trim() : value
           return (sign * parseNumber(numeric)) / 100
         }
       }

@@ -180,3 +180,24 @@ test.each(["en-US", "zh-CN"] as const)(
     expect(Number.isNaN(formats.parsePan("Lbad%"))).toBe(true)
   }
 )
+
+test("Chinese pan uses stable protocol symbols", () => {
+  const formats = createDisplayFormats("zh-CN")
+  expect(formats.pan(0, "control")).toBe("C")
+  expect(formats.pan(0.25, "control")).toBe("R25")
+  expect(formats.pan(-0.25, "automation")).toBe("L 25")
+})
+
+test("pan parser round-trips each configured separator", () => {
+  const config = structuredClone(displayConfigByLocale["en-US"])
+  config.pan.variants.control.separator = ":"
+  config.pan.variants.automation.separator = " :: "
+  const formats = createDisplayFormats("en-US", config)
+  for (const variant of ["control", "automation"] as const) {
+    for (const value of [-1, -0.25, 0, 0.25, 1]) {
+      expect(formats.parsePan(formats.pan(value, variant))).toBe(value)
+    }
+  }
+  expect(formats.parsePan("L::25%")).toBe(-0.25)
+  expect(formats.parsePan("0.25")).toBe(0.25)
+})

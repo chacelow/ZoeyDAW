@@ -380,6 +380,20 @@ const mutations = [
     tests: ["src/app/project/creation-source.test.tsx"],
   },
   {
+    name: "C4 Chinese pan translates protocol notation",
+    file: "src/app/locales/display.ts",
+    from: '"zh-CN": config(PAN_SYMBOLS, "像素")',
+    to: '"zh-CN": config({ center: "中", left: "左", right: "右" }, "像素")',
+    tests: ["src/app/i18n/display-formats.test.ts"],
+  },
+  {
+    name: "C4 pan parser ignores configured separator",
+    file: "src/app/i18n/display-formats.ts",
+    from: "const value = magnitude.slice(separator.length).trim()",
+    to: "const value = magnitude",
+    tests: ["src/app/i18n/display-formats.test.ts"],
+  },
+  {
     name: "C4 duration ignores locale hour policy",
     file: "src/app/i18n/display-formats.ts",
     from: "const includeHours = config.duration.includeHours[variant]",
