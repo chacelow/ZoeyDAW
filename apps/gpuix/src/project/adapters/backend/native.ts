@@ -22,7 +22,11 @@ export function createNativeBackend(): ProjectBackend {
     })
   } catch (error) {
     disposed = true
-    engine.dispose(handle)
+    try {
+      engine.dispose(handle)
+    } catch {
+      throw error
+    }
     throw error
   }
   return {
