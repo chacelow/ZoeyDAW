@@ -14,8 +14,9 @@ const mutations = [
   {
     name: "W1-file-uri-manual-path-regression",
     file: "crates/engine/src/session.rs",
-    from: ".to_file_path()",
-    to: ".path().parse::<PathBuf>()",
+    from: process.platform === "win32" ? ".to_file_path()" : "(high * 16 + low) as u8",
+    to:
+      process.platform === "win32" ? ".path().parse::<PathBuf>()" : "((high * 16 + low) as u8) ^ 1",
     package: "zoeydaw-engine",
     test:
       process.platform === "win32"

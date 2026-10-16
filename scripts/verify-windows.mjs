@@ -17,6 +17,7 @@ const paths = sharedBuildPaths(root)
 const env = {
   ...process.env,
   B2_EVIDENCE_DIR: output,
+  GPUIX_WINDOWS_SMOKE_DRIVER: path.join(output, "window-driver.exe"),
   GPUIX_VENDOR_ROOT: process.env.GPUIX_VENDOR_ROOT ?? paths.vendorRoot,
   CARGO_TARGET_DIR: process.env.CARGO_TARGET_DIR ?? paths.target,
 }
@@ -30,6 +31,17 @@ function run(name, command, args, cwd = root) {
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error(`${name} exited ${result.status ?? result.signal}`)
 }
+
+if (process.env.GITHUB_ACTIONS !== "true")
+  throw new Error("The native Windows lifecycle driver is compiled only on Windows Actions")
+run("Windows User32 lifecycle driver", "rustc", [
+  "--edition=2021",
+  "-C",
+  "opt-level=1",
+  path.join(root, "scripts/gpuix-main/windows/window-driver.rs"),
+  "-o",
+  env.GPUIX_WINDOWS_SMOKE_DRIVER,
+])
 
 // A missing binding is a prerequisite failure. After this, independent checks
 // still run after a failure so native pixels and audio faults remain inspectable.
