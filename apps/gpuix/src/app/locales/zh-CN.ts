@@ -46,6 +46,7 @@ export default {
     untitled: "未命名项目",
   },
   about: {
+    github: "GitHub",
     prototype: "prototype 骨架",
     sourceHint: "音频核心、CLAP + VST3 host、Browser、.als 导入等按界面需求迭代。",
   },
