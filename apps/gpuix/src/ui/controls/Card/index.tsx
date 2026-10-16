@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { createContext, useCallback, useContext, useRef } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -86,6 +87,7 @@ export function Card({
               (event.key === "enter" || event.key === "space" || event.key === " ")
             ) {
               onClick(event)
+              consumeKey(event, "handled")
             }
           }}
           style={cardStyle}
@@ -151,9 +153,6 @@ export function CardHeader({ disclosure, children, style, ...props }: CardHeader
                 size={theme.control["--spacing-control-icon"]}
               />
             }
-            onKeyDown={event => {
-              if (event.key === "enter") event.stopPropagation()
-            }}
             onClick={() => disclosure.onExpandedChange(!disclosure.expanded)}
           />
         </>

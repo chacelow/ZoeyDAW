@@ -3,6 +3,7 @@ import { i18next, initI18nCore, persistLocale, resolveLocale } from "@/platform/
 import type { InitI18nOptions, SupportedLocale } from "@/platform/i18n/core"
 import enUS from "../locales/en-US"
 import zhCN from "../locales/zh-CN"
+import { chineseCommandTitles, englishCommandTitles } from "../locales/sections/commands"
 
 export { SUPPORTED_LOCALES } from "@/platform/i18n/core"
 export type { SupportedLocale } from "@/platform/i18n/core"
@@ -16,7 +17,13 @@ export type { CreationNames } from "./creation-names"
  * under gpuix; this subscribes to i18next directly instead.
  */
 export function initAppI18n(options: InitI18nOptions = {}) {
-  return initI18nCore({ "zh-CN": zhCN, "en-US": enUS }, options)
+  return initI18nCore(
+    {
+      "zh-CN": { ...zhCN, commands: chineseCommandTitles },
+      "en-US": { ...enUS, commands: englishCommandTitles },
+    },
+    options
+  )
 }
 
 function subscribeLanguage(listener: () => void): () => void {

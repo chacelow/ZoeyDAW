@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
+import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { scrollbarGeometry } from "./scrollbar-geometry"
@@ -143,8 +144,7 @@ export function ControlledScrollbar({
           setDragging(false)
         } else handled = false
         if (handled) {
-          event.preventDefault()
-          event.stopPropagation()
+          consumeKey(event, "handled")
         }
       }}
     >

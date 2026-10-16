@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { useRef, useState } from "react"
 import { motion, useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -170,8 +171,10 @@ export function MotionTabs({
             }}
             onKeyDown={event => {
               if (option.disabled) return
-              if (event.key === "enter") select(option.key)
-              else
+              if (event.key === "enter") {
+                select(option.key)
+                consumeKey(event, "handled")
+              } else
                 navigateSelection({
                   event,
                   value: option.key,

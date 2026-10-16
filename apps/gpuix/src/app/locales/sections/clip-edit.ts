@@ -1,3 +1,4 @@
+import { DEFAULT_KEYMAP } from "@/platform/keyboard"
 import type { ClipEditorLabels } from "@/project/sections/clip-edit"
 import { createDisplayFormats } from "../../i18n/display-formats"
 import { getCreationNames } from "../../i18n/creation-names"
@@ -13,7 +14,7 @@ const en: ClipEditorLabels = {
     formats: createDisplayFormats("en-US"),
     pianoRoll: "MIDI piano roll",
     fold: "Fold",
-    draw: "Draw · B",
+    draw: `Draw · ${DEFAULT_KEYMAP.formatKeys("arrangement.draw")}`,
     timeZoom: "Time",
     pitchZoom: "Pitch",
     zoomOutTime: "Zoom out time",
@@ -94,7 +95,7 @@ const zh: ClipEditorLabels = {
     formats: createDisplayFormats("zh-CN"),
     pianoRoll: "MIDI 钢琴卷帘",
     fold: "折叠音高",
-    draw: "绘制 · B",
+    draw: `绘制 · ${DEFAULT_KEYMAP.formatKeys("arrangement.draw")}`,
     timeZoom: "时间",
     pitchZoom: "音高",
     zoomOutTime: "缩小时间",

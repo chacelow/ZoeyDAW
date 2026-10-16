@@ -127,8 +127,15 @@ try {
   })
   if (!(await whenProjectBackendIdle()))
     throw new Error("Native transport did not accept playback/seek")
-  await Bun.sleep(120)
-  const telemetry = readProjectTelemetry()
+  // Telemetry stays null until the engine publishes a frame that applied this control sequence;
+  // on a loaded CI runner that can take longer than any fixed sleep, so wait for it with a deadline.
+  const deadline = performance.now() + 5000
+  let telemetry = readProjectTelemetry()
+  while (!telemetry?.playing && performance.now() < deadline) {
+    // eslint-disable-next-line no-await-in-loop -- Polls one engine until it reports playback.
+    await Bun.sleep(20)
+    telemetry = readProjectTelemetry()
+  }
   if (!telemetry?.playing) throw new Error("The real native engine is not playing")
   const before = retainedScroll()
   if (before !== 0) throw new Error("Fixture already followed before any frame delivery")
