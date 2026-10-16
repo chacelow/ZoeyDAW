@@ -1,5 +1,4 @@
-import { useRef, useState } from "react"
-import { useGpuix } from "@gpuix/react"
+import { useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { COLLAPSED_TRACK_HEIGHT, MAX_TRACK_HEIGHT } from "@/project/layout"
@@ -11,7 +10,7 @@ import { TrackMixer } from "../TrackMixer"
 import { TrackMenu } from "../TrackMenu"
 import { useTrackResize } from "./useTrackResize"
 import type { ReactNode } from "react"
-import type { KeyEvent, Props, PublicInstance } from "@gpuix/react"
+import type { Props } from "@gpuix/react"
 import type { GroupRail } from "@/project/model/track-groups"
 import type { TrackRow as TrackRowGeometry } from "../../core/layout"
 
@@ -36,8 +35,6 @@ export function TrackRow({
 }) {
   const { track } = row
   const theme = useTheme()
-  const { renderer } = useGpuix()
-  const laneElement = useRef<PublicInstance | null>(null)
   const { t } = useTrackLabels()
   const selection = useProjectState(state => state.session.selectedTrackIds)
   const surface = useProjectState(state => state.session.trackSelectionSurface)
@@ -72,16 +69,6 @@ export function TrackRow({
     outlineOffset: -theme.project.trackBorder / 2,
     outlineColor: theme.colors.ring,
   }
-  const selectFromKeyboard = (event: KeyEvent) => {
-    if (event.key !== "enter") return
-    event.preventDefault()
-    event.stopPropagation()
-    choose(
-      "arrangement",
-      Boolean(event.modifiers?.shift),
-      Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
-    )
-  }
   return (
     <TrackMenu
       track={track}
@@ -110,10 +97,8 @@ export function TrackRow({
         }}
       >
         <div
-          ref={laneElement}
           role="group"
           aria-label={`${t("trackLane")} ${track.name}`}
-          tabIndex={0}
           testId={`track-lane-${track.id}`}
           style={{
             position: "relative",
@@ -126,18 +111,6 @@ export function TrackRow({
                 ? theme.colors.arrangementSurfaceSelected
                 : theme.colors.arrangementSurface,
             focusVisible: focusRing,
-          }}
-          onMouseDown={event => {
-            if (event.button === 0)
-              choose(
-                "arrangement",
-                Boolean(event.modifiers?.shift),
-                Boolean(event.modifiers?.cmd || event.modifiers?.ctrl)
-              )
-          }}
-          onKeyDown={event => {
-            if (renderer?.getFocusedElementId?.() === laneElement.current?.id)
-              selectFromKeyboard(event)
           }}
         >
           {showLane ? lane : null}

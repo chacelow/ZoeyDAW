@@ -57,7 +57,6 @@ for (const width of [800, 200]) {
                   scene={scene.get()}
                   automationMode={false}
                   readPeaks={() => new Float32Array(0)}
-                  onActivate={() => {}}
                 />
               )}
             />

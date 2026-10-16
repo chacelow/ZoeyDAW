@@ -8,6 +8,23 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "epoch-clip-transients": {
+    file: "interactions/controller.ts",
+    testFile: "interactions/controller.test.tsx",
+    testName: "clears stale move ink after hydrate without editing the replacement project",
+    replacements: [
+      ["    context.scene.setClipDrag(null)\n    context.scene.setClipResize(null)\n", ""],
+    ],
+  },
+  "invalid-release": {
+    file: "interactions/clip/move.ts",
+    testFile: "interactions/controller.test.tsx",
+    testName: "rejects an invalid release after a valid cross-track preview (copy=%s)",
+    replacements: [
+      ["cancelled || !valid || plan === null", "cancelled || plan === null"],
+      ["cancelled || !valid || !plan", "cancelled || !plan"],
+    ],
+  },
   "global-content-position": {
     file: "clip-card-projection.ts",
     testFile: "LaneRow/LaneRow.test.tsx",

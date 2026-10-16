@@ -26,7 +26,6 @@ export interface LaneController {
   readonly context: LaneContext
   getSnapshot(): LaneInteractionState
   subscribe(listener: () => void): () => void
-  activateClip(clipId: string): boolean
   pointerDown(pointer: LanePointer): void
   pointerMove(pointer: LanePointer, pressed: boolean): void
   pointerUp(pointer: LanePointer): void
@@ -76,6 +75,8 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
     publish("default", false)
     if (!current) return
     if (current.epoch === context.getState().session.editEpoch) current.gesture.finish(cancelled)
+    context.scene.setClipDrag(null)
+    context.scene.setClipResize(null)
     context.scene.setTimeSelectionPreview(null)
   }
   function layer(pointer: LanePointer) {
@@ -94,11 +95,6 @@ export function createLaneController(deps: LaneControllerDeps): LaneController {
       return () => {
         listeners.delete(listener)
       }
-    },
-    activateClip(clipId) {
-      if (disposed || active || context.getState().session.preview) return false
-      automation.deactivate()
-      return clip.activate(clipId)
     },
     pointerDown(pointer: LanePointer) {
       if (disposed || pointer.button !== 0 || active) return

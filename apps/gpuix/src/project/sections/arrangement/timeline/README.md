@@ -9,7 +9,7 @@
 | 接口 | 契约 |
 | --- | --- |
 | `createTimelineController(deps)` | 组合根创建并负责 `dispose()`；内部只有一个 `SceneStore` 投影、一个键盘 owner、标尺事务与自动滚动状态 |
-| `ArrangementTimeline({ controller, tracks, overlay, labels, cursor })` | `tracks` 是完整复合行；`overlay` 是单次挂载的跨行叠加层；标签由组合根注入，光标端口来自原生能力 |
+| `ArrangementTimeline({ controller, tracks, overlay, labels, cursor, editSurface? })` | `tracks` 是完整复合行；`overlay` 是跨行叠加层；`editSurface` 由 lane hook 经组合根注入，timeline 不依赖 lane |
 | `controller.useViewport()` | React hook，订阅同一个 `ArrangementViewport`；类型来自 B1 `core/scene` |
 | `controller.setScroll(x, y)` | 同步更新权威 workspace 并夹取；返回前 `sceneStore.get().viewport` 已是接受后的同一投影；手工导航暂时暂停 Follow |
 | `controller.zoomAt(anchorBar, anchorPx, factor)` | 显式音乐位置/像素锚点缩放；边界夹取优先 |
@@ -18,6 +18,7 @@
 | `controller.getFrameDemand()` / `subscribeFrameDemand(listener)` | 标尺 autoScroll 的稳定活动读取与通知，直接由 start/update/stop 的活动边界驱动。组合根合并播放与 lane 手势需求后再订阅帧，不读取 TimelineView 细项 |
 | `controller.keyboard` | 唯一键盘 owner；`markDrawGesture()` 由实际绘制/拖动消费者调用；组合根不能再创建独立键盘 |
 | `TimelineLabels` | 严格的可见文本契约；示例双语数据在 `demo-labels.ts`，不依赖 i18n 包 |
+| `TimelineEditSurface` | 单一保留输入层的 ref、pointer/key/blur handlers、光标 style 与稳定菜单/inline editor `wrap` slot；owner 是 `timeline-viewport` |
 
 `TimelineView` 仅以 type 导出，供 `ArrangementTimeline` 使用；组合根不得依赖其细项，也没有可独立构造的 view。类型断言在 `public-contract.test.ts` 守住 view 与键盘工厂的运行时出口边界。
 
@@ -36,7 +37,7 @@
 
 工程与 `scrollX/scrollY/pxPerBar` 的权威状态仍在 adapters/stores。controller 只同步只读 Scene 投影；手势保存的是按下基线与编辑 token，不是第二份可写工程。hydration、后端/路由 epoch 变化会取消旧手势。定位点与循环在按下时取得 preview 所有权，提交为一次历史，取消不消费前一条历史。
 
-Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有效按下保持到释放或取消，即使指针离开选框、overview 或手势中发生 store 提交也不回落到 hover；epoch/失活取消同步恢复视觉与光标。
+Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有效按下保持到释放或取消，即使指针离开选框、overview 或手势中发生 store 提交也不回落到 hover；epoch/失活取消同步恢复视觉与光标。静态 Minimap Overview 只订阅 tracks/markers，并按 bars/width/height/theme 失效；独立 Playhead 只订阅音乐位置。播放、viewport 和 hover 更新不会重建全工程 Clip 投影。`minimap/render-cost.test.tsx` 在 16/1024 Clip 下断言播放头实际移动、静态几何不变且不再读取未变 Clip 几何。
 
 组合根提供：
 
@@ -70,7 +71,7 @@ GridLine 的半开可见范围过滤与 quad 打包由 `core/rulers/grid-quads.p
 | 键 | owner / 条件 |
 | --- | --- |
 | Space | 播放；不重复触发，不激活聚焦按钮；输入框/菜单保持自己的输入语义 |
-| Ctrl/Cmd+S、Z、Shift+Z | 工程保存/撤销/重做；编辑输入由自身原生 owner 保护 |
+| Ctrl/Cmd+S、Z、Shift+Z | 保存先于 Clip Editor 局部命令隔离；Clip Editor 非文本焦点也保存。撤销/重做保留编辑器 owner，文本/菜单仍保护自身输入 |
 | Ctrl/Cmd+1、2 | 调整网格，固定网格可到 1/256 与 16 小节 |
 | Ctrl/Cmd+4 | 已核实的 Snap 切换，不改变网格或音乐位置 |
 | Ctrl/Cmd+E | 无选中时消费但不改网格；有 Clip 选择时由 lane Split，音乐插入点不取指针 |

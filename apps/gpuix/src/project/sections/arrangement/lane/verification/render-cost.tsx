@@ -16,6 +16,7 @@ import type { Theme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { LaneRow } from "../LaneRow"
 import { visibleRows } from "../render-projection"
+import { useLaneSurface } from "../useLaneSurface"
 import { labelsByLocale } from "../demo/labels"
 import { createVerificationMedia } from "../demo/media"
 import { seedLaneProject } from "../demo/project"
@@ -48,6 +49,24 @@ const profileEnabled = process.env.LANE_REACT_PROFILE === "1"
 const phaseEnabled = process.env.LANE_PHASE_PROFILE === "1"
 const reactProfilerEnabled = profileEnabled && process.env.NODE_ENV !== "production"
 const renderDurations = new Map<string, { commits: number; actualMs: number; maxMs: number }>()
+function ProfileInput({ controller }: { controller: LaneController }) {
+  const { wrap, ...handlers } = useLaneSurface(controller, labelsByLocale.en, 0)
+  return wrap(
+    <div
+      {...handlers}
+      role="application"
+      tabIndex={0}
+      style={sx({
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width: viewportWidth,
+        height: viewportHeight,
+        cursor: handlers.style.cursor,
+      })}
+    />
+  )
+}
 
 function CaptureMetrics({ onMetrics }: { onMetrics: (metrics: Theme["project"]) => void }) {
   const theme = useTheme()
@@ -333,9 +352,7 @@ try {
                     row={row}
                     scene={scene}
                     viewport={scene.viewport}
-                    controller={controller}
                     readPeaks={readProjectPeaks}
-                    labels={labelsByLocale.en}
                   />
                 </div>
               </div>
@@ -348,6 +365,9 @@ try {
               element
             )
           })}
+          {process.env.LANE_PROFILE_INPUT_SURFACE !== "0" && (
+            <ProfileInput controller={controller} />
+          )}
         </div>
       </ThemeProvider>
     )

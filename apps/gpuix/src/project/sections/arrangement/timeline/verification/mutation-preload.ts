@@ -9,6 +9,27 @@ interface MutationCase {
 }
 
 export const mutationCases: Record<string, MutationCase> = {
+  "clip-editor-save": {
+    file: "project/sections/arrangement/timeline/keyboard/controller.ts",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "real ClipEditor",
+    from: 'if (modified && !alt && key === "s")',
+    to: 'if (target !== "clip-editor" && modified && !alt && key === "s")',
+  },
+  "editing-surface-tab-owner": {
+    file: "project/sections/arrangement/lane/ClipCard.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "one stable Tab owner",
+    from: "      aria-label={clipLabel(clip)}",
+    to: "      aria-label={clipLabel(clip)}\n      tabIndex={0}",
+  },
+  "lane-focus-cancellation": {
+    file: "project/sections/arrangement/lane/useLaneSurface.tsx",
+    testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
+    testName: "focus leaving the stable editing surface",
+    from: "onBlur: () => controller.interrupt(),",
+    to: "",
+  },
   "range-preview-overwrite": {
     file: "project/sections/arrangement/core/scene.ts",
     testFile: "src/project/sections/arrangement/lane/interactions/controller.test.tsx",

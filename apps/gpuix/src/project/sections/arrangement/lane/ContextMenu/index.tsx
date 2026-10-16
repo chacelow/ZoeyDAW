@@ -20,6 +20,8 @@ import type { LaneController } from "../interactions/controller"
 import type { LaneTranslate } from "../messages"
 import { ClipMenuItems } from "./ClipMenuItems"
 import { AutomationMenuItems } from "./AutomationMenuItems"
+import { clipRect } from "../../core/layout"
+import { visibleRows } from "../render-projection"
 
 export function LaneContextMenu({
   children,
@@ -27,12 +29,14 @@ export function LaneContextMenu({
   controller,
   resolveTarget,
   t,
+  originY,
 }: {
   children: ReactNode
   context: LaneContext
   controller: LaneController
   resolveTarget: (event: EventPayload) => LaneMenuTarget | null
   t: LaneTranslate
+  originY: number
 }) {
   const { renderer } = useGpuix()
   const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)
@@ -54,6 +58,7 @@ export function LaneContextMenu({
     <ContextMenu open={open && target !== null} onOpenChange={setOpen}>
       <ContextMenuTrigger
         asChild
+        role="application"
         onContextMenu={event => setTarget(resolveTarget(event))}
         onKeyDown={event => {
           const key = event.key?.toLowerCase()
@@ -61,12 +66,34 @@ export function LaneContextMenu({
           const focused = renderer?.getFocusedElementId?.()
           const bounds =
             focused === undefined || focused === null ? null : renderer?.getElementBounds?.(focused)
+          const selection = scene.targetSelection
+          const row =
+            selection.kind === "clip"
+              ? visibleRows(scene).find(item =>
+                  item.track.clips.some(clip => clip.id === selection.id)
+                )
+              : undefined
+          const clip =
+            selection.kind === "clip"
+              ? row?.track.clips.find(item => item.id === selection.id)
+              : undefined
+          const rect =
+            row && clip
+              ? clipRect(clip, row, scene.viewport.pxPerBar, scene.viewport.scrollX)
+              : null
           setTarget(
             bounds
               ? resolveTarget({
                   ...event,
-                  x: bounds.x + bounds.width / 2,
-                  y: bounds.y + Math.min(TRACK_TITLE_HEIGHT, bounds.height) / 2,
+                  x:
+                    bounds.x +
+                    (rect
+                      ? Math.max(0, rect.left) + Math.min(rect.width, TRACK_TITLE_HEIGHT) / 2
+                      : bounds.width / 2),
+                  y:
+                    bounds.y +
+                    (rect ? rect.top - originY : 0) +
+                    Math.min(TRACK_TITLE_HEIGHT, bounds.height) / 2,
                 })
               : null
           )

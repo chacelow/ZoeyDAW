@@ -278,27 +278,6 @@ test("send rows fill horizontally in equal thirds before adding a second row", (
   expect(root.renderer.findByTestId("track-send-a-apply-3-audio")).toBeUndefined()
 })
 
-test("lane and identity selection are independent without moving the insertion point", () => {
-  const root = mount()
-  const insertion = { trackId: "3-audio", bar: 4.25 }
-  projectActions.setInsertionPoint(insertion)
-  const normalMixer = element(root, "track-mixer-4-midi").style.backgroundColor
-  const normalIdentity = element(root, "track-identity-4-midi").style.backgroundColor
-  click(root, "track-label-4-midi")
-  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
-  expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
-  expect(element(root, "track-identity-4-midi").style.backgroundColor).not.toBe(normalIdentity)
-  expect(element(root, "track-mixer-4-midi").style.backgroundColor).toBe(normalMixer)
-  click(root, "track-lane-4-midi")
-  expect(useProjectState.getState().session.trackSelectionSurface).toBe("arrangement")
-  expect(element(root, "track-identity-4-midi").style.backgroundColor).toBe(normalIdentity)
-  expect(element(root, "track-mixer-4-midi").style.backgroundColor).toBe(normalMixer)
-  expect(useProjectState.getState().session.insertionPoint).toEqual(insertion)
-  click(root, "track-solo-4-midi")
-  expect(current("4-midi").solo).toBe(true)
-  expect(useProjectState.getState().session.trackSelectionSurface).toBe("arrangement")
-})
-
 test("folding Group unmounts children and shows only the folded descendant overview", () => {
   const root = mount()
   const children = current("drums-group").childTrackIds ?? []
@@ -469,22 +448,6 @@ test("native name input keeps printable Space away from the window transport", (
   expect(spaces).toBe(0)
 })
 
-test("Tab follows lane, identity, fold and title before enabled routing controls", () => {
-  projectActions.updateTrack("3-audio", { heightPx: 35 })
-  const root = mount()
-  root.renderer.nativeSimulateKeystrokes(element(root, "track-row-3-audio").id, "tab")
-  expect(root.renderer.getFocusedElementId()).toBe(element(root, "track-lane-3-audio").id)
-  for (const id of [
-    "track-identity-3-audio",
-    "track-fold-3-audio",
-    "track-label-3-audio",
-    "track-output-3-audio",
-  ]) {
-    root.renderer.simulateKeystrokes("tab")
-    expect(root.renderer.getFocusedElementId()).toBe(element(root, id).id)
-  }
-})
-
 test("hovered 16px level wheel commits one undoable value change", () => {
   const root = mount()
   const level = bounds(root, "track-volume-3-audio")
@@ -624,14 +587,9 @@ test("interactive lane children keep their mouse and keyboard selection ownershi
   expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
 })
 
-test("focused lane and identity containers select their own surfaces with modifiers", () => {
+test("identity keyboard selection supports the header range surface", () => {
   projectActions.selectTracks(["4-midi"], "header")
   const root = mount()
-  root.renderer.nativeSimulateKeystrokes(element(root, "track-lane-3-audio").id, "enter")
-  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["3-audio"])
-  expect(useProjectState.getState().session.trackSelectionSurface).toBe("arrangement")
-  root.renderer.nativeSimulateKeystrokes(element(root, "track-lane-3-audio").id, "cmd-enter")
-  expect(useProjectState.getState().session.selectedTrackIds).toEqual([])
   root.renderer.nativeSimulateKeystrokes(element(root, "track-identity-3-audio").id, "enter")
   expect(useProjectState.getState().session.selectedTrackIds).toEqual(["3-audio"])
   expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")

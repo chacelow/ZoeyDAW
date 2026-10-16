@@ -92,9 +92,9 @@ export function createMoveGesture(
     },
     finish(cancelled) {
       const plan = lastPlan
-      preview.finish(cancelled || plan === null)
+      preview.finish(cancelled || !valid || plan === null)
       context.scene.setClipDrag(null)
-      if (cancelled || !plan) return
+      if (cancelled || !valid || !plan) return
       context.actions.selectClips(plan.selectedIds)
       const selectedId = context.getState().session.selectedClipIds[0]
       const owner = context

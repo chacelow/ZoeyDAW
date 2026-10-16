@@ -8,11 +8,7 @@ import { createFadeGesture } from "./fade"
 import { createTimeRangeGesture } from "./timeRange"
 import type { LaneContext, LaneInteraction } from "../types"
 
-interface ClipInteraction extends LaneInteraction {
-  activate(clipId: string): boolean
-}
-
-export function createClipInteractions(context: LaneContext): ClipInteraction {
+export function createClipInteractions(context: LaneContext): LaneInteraction {
   const { scene, actions } = context
   let ownsTarget = false
   function select(ids: string[], clipId: string) {
@@ -27,21 +23,6 @@ export function createClipInteractions(context: LaneContext): ClipInteraction {
     actions.setInsertionPoint({ trackId, bar })
   }
   return {
-    activate(clipId) {
-      const state = context.getState()
-      const owner = state.document.tracks.find(track =>
-        track.clips.some(clip => clip.id === clipId)
-      )
-      const clip = owner?.clips.find(item => item.id === clipId)
-      if (!owner || !clip) return false
-      actions.selectTracks([owner.id], "arrangement")
-      select(
-        state.session.selectedClipIds.includes(clipId) ? state.session.selectedClipIds : [clipId],
-        clipId
-      )
-      seekToStart(owner.id, clip.startBar)
-      return true
-    },
     start(pointer) {
       const state = context.getState()
       const hit = hitTest(scene.get(), pointer.x, pointer.y, state.workspace.automationMode)

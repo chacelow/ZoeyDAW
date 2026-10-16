@@ -73,7 +73,6 @@ it("culls offscreen native cards and retains visible node identity while scrolli
               scene={scene.get()}
               automationMode={false}
               readPeaks={() => new Float32Array(0)}
-              onActivate={() => {}}
             />
           </div>
         </div>
@@ -119,7 +118,6 @@ it("moves a fully visible Clip without reuploading or remounting its unchanged c
   const row = layoutTrackRows(scene.get())[0]
   if (!row) throw new Error("Missing track row")
   const readPeaks = () => new Float32Array(0)
-  const onActivate = () => {}
   root = createTestRoot({ width: 500, height: 300 })
   const render = () =>
     root?.render(
@@ -130,7 +128,6 @@ it("moves a fully visible Clip without reuploading or remounting its unchanged c
             scene={scene.get()}
             automationMode={false}
             readPeaks={readPeaks}
-            onActivate={onActivate}
           />
         </div>
       </ThemeProvider>
@@ -201,9 +198,6 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
                 scene={scene.get()}
                 automationMode={false}
                 readPeaks={() => new Float32Array(0)}
-                onActivate={() => {
-                  activations++
-                }}
               />
             </div>
             <LaneOverlay
@@ -329,7 +323,6 @@ it("preserves tiny Clip pixel width when projecting a collapsed group summary", 
             scene={scene.get()}
             automationMode={false}
             readPeaks={() => new Float32Array(0)}
-            onActivate={() => {}}
           />
         </div>
       </ThemeProvider>
@@ -379,7 +372,6 @@ it("scrolls an already-visible unchanged Clip without rerendering its content", 
   scene.setViewport({ width: 500, height: 300, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
   const label = spyOn(clipLabels, "clipLabel")
   const readPeaks = () => new Float32Array(0)
-  const onActivate = () => {}
   root = createTestRoot({ width: 500, height: 300 })
   const paint = () => {
     const row = layoutTrackRows(scene.get())[0]
@@ -393,7 +385,6 @@ it("scrolls an already-visible unchanged Clip without rerendering its content", 
               scene={scene.get()}
               automationMode={false}
               readPeaks={readPeaks}
-              onActivate={onActivate}
             />
           </div>
         </div>

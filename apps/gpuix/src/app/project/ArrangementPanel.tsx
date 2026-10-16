@@ -8,7 +8,7 @@ import {
   useProjectState,
 } from "@/project/adapters"
 import { ArrangementTimeline } from "@/project/sections/arrangement/timeline"
-import { LaneRow, LaneOverlay } from "@/project/sections/arrangement/lane"
+import { LaneRow, LaneOverlay, useLaneSurface } from "@/project/sections/arrangement/lane"
 import { TrackRows, trackResources } from "@/project/sections/arrangement/tracks"
 import { useAppTranslation } from "../i18n"
 import { englishLabels, chineseLabels } from "../locales/sections/timeline"
@@ -20,11 +20,13 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
   const scene = useSyncExternalStore(timeline.sceneStore.subscribe, timeline.sceneStore.get)
   const viewport = timeline.useViewport()
   const { locale } = useAppTranslation()
+  const editSurface = useLaneSurface(lane, labelsByLocale[locale === "zh-CN" ? "zh" : "en"])
   const selectedTrackIds = useProjectState(state => state.session.selectedTrackIds)
   const selectionSurface = useProjectState(state => state.session.trackSelectionSurface)
   return (
     <ArrangementTimeline
       controller={timeline}
+      editSurface={editSurface}
       labels={locale === "zh-CN" ? chineseLabels : englishLabels}
       cursor={nativeCursorLock}
       tracks={
@@ -36,14 +38,7 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
           telemetry={readProjectTelemetry}
           labels={trackResources[locale].arrangement}
           renderLane={row => (
-            <LaneRow
-              row={row}
-              scene={scene}
-              viewport={viewport}
-              controller={lane}
-              readPeaks={readProjectPeaks}
-              labels={labelsByLocale[locale === "zh-CN" ? "zh" : "en"]}
-            />
+            <LaneRow row={row} scene={scene} viewport={viewport} readPeaks={readProjectPeaks} />
           )}
         />
       }

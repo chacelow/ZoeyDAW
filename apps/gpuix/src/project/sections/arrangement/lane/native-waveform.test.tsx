@@ -162,7 +162,6 @@ for (const appearance of appearances)
         numerator={document.transport.numerator}
         automationMode={false}
         readPeaks={readProjectPeaks}
-        onActivate={() => {}}
       />,
       "lane"
     )

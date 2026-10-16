@@ -10,12 +10,20 @@ import { Grid } from "../grid"
 import { MiniMap } from "../minimap"
 import { Rulers, TimeRuler } from "../rulers"
 import { Toolbar } from "../toolbar"
-import type { EventPayload } from "@gpuix/react"
+import type { EventPayload, Props, PublicInstance } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { CursorLockPort } from "@/ui/controls"
 import type { PanelDimensions } from "@/ui/panels"
 import type { TimelineController } from "../controller"
 import type { TimelineLabels } from "../labels"
+
+export type TimelineEditSurface = Pick<
+  Props,
+  "onMouseDown" | "onMouseMove" | "onMouseUp" | "onMouseLeave" | "onKeyDown" | "onBlur" | "style"
+> & {
+  ref: (instance: PublicInstance | null) => void
+  wrap: (surface: ReactNode) => ReactNode
+}
 
 export interface ArrangementTimelineProps {
   controller: TimelineController
@@ -23,6 +31,7 @@ export interface ArrangementTimelineProps {
   overlay: ReactNode
   labels: TimelineLabels
   cursor: CursorLockPort
+  editSurface?: TimelineEditSurface
 }
 
 export function ArrangementTimeline({
@@ -31,6 +40,7 @@ export function ArrangementTimeline({
   overlay,
   labels,
   cursor,
+  editSurface,
 }: ArrangementTimelineProps) {
   const theme = useTheme()
   const keyboard = useWindowKeyboard()
@@ -42,6 +52,29 @@ export function ArrangementTimeline({
   const width = presentation.size.containerWidth
   const geometry = view.overviewGeometry()
   const trackBodyHeight = Math.max(0, viewport.height - BAR_RULER_HEIGHT - TIME_RULER_HEIGHT)
+  const { wrap, ...surfaceHandlers } = editSurface ?? { wrap: undefined }
+  const inputSurface = (
+    <div
+      {...surfaceHandlers}
+      role="application"
+      aria-label={labels.timeline}
+      tabIndex={0}
+      testId="timeline-viewport"
+      onScroll={view.wheel}
+      style={sx(
+        {
+          position: "absolute",
+          left: 0,
+          top: BAR_RULER_HEIGHT,
+          width: viewport.width,
+          height: trackBodyHeight,
+          keyboardFocusDim: false,
+          focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+        },
+        editSurface?.style
+      )}
+    />
+  )
 
   useEffect(() => {
     const down = keyboard.subscribe("keyDown", event => {
@@ -142,10 +175,7 @@ export function ArrangementTimeline({
         <PanelDivider orientation="horizontal" aria-label={labels.resizeOverview} />
         <Panel minSize={theme.project.timelineMinHeight}>
           <div
-            role="application"
-            aria-label={labels.timeline}
-            tabIndex={0}
-            testId="timeline-viewport"
+            testId="timeline-layout"
             style={sx({
               position: "relative",
               width: "100%",
@@ -209,6 +239,7 @@ export function ArrangementTimeline({
             >
               {overlay}
             </div>
+            {wrap ? wrap(inputSurface) : inputSurface}
             <text
               role="status"
               aria-label={labels.grid}

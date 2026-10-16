@@ -53,6 +53,7 @@ export function ArrangementTimeline(props: {
   overlay: ReactNode // 由组合根传入 <LaneOverlay .../>，timeline 把它叠在 tracks 上方单次挂载
   labels: TimelineLabels // 双语标签由组合根注入，timeline 不依赖 i18n 包
   cursor: CursorLockPort // 光标锁（Minimap 拖动），组合根传 @/platform/cursor 的 nativeCursorLock
+  editSurface?: TimelineEditSurface // renderer-neutral input/ref/wrap port; lane hook supplies it, no timeline → lane import
 }): ReactNode
 
 // lane/index.ts
@@ -60,9 +61,7 @@ export function LaneRow(props: {
   row: TrackRow // core/layout.TrackRow（tracks 传结构兼容的 TrackRowGeometry）
   scene: ArrangementScene
   viewport: ArrangementViewport
-  controller: LaneController // createLaneController() 的返回值，由组合根创建
   readPeaks: PeakReader // 类型来自 project/model/backend；组合根传 adapters 的 readProjectPeaks（与传输、电平同一个工程会话）。(sourceId, startBar, endBar, pixels, contentOffsetBars) => Float32Array；startBar/endBar 是 one-based 的 Clip 局部可见范围（1+visibleOffsetBars），contentOffsetBars=clip.sourceOffsetBars；小节→源帧换算、带符号偏移与跨末尾回绕都在 Rust；返回布局为 **channel-major，其次 pixel-major，每项 [min,max]**（立体声共 pixels*4 个 f32，先左声道全部像素的 [min,max]，再右声道），声道数=length/(2*pixels)，不转置不复制；后端未打开时返回空数组。lane 不假设采样率、不自己换算
-  labels: LaneLabels // 菜单/名称编辑/数值编辑的双语标签，由组合根注入，lane 不依赖 i18n 包
 }): ReactNode
 // 跨行的叠加层：全画布播放头、Pattern Ghost 起点对齐长线、停止时的行内插入线与标尺三角。
 // 它们必须跨越多行与空白区域，不能塞进单行，所以独立导出，由 ArrangementTimeline 在 tracks 上方单次挂载。
@@ -72,6 +71,12 @@ export function LaneOverlay(props: {
   transportBar: () => number // 当前播放位置（小节），来自 runtime 的 readTransportBar
 }): ReactNode
 export function createLaneController(deps: LaneControllerDeps): LaneController
+// Stable input owner, menu and inline editors; originY defaults to BAR_RULER_HEIGHT.
+export function useLaneSurface(
+  controller: LaneController,
+  labels: LaneLabels,
+  originY?: number
+): TimelineEditSurface
 
 // tracks/index.ts
 export function TrackRows(props: {
@@ -89,6 +94,7 @@ export function TrackRows(props: {
 - 因此 `lane` 不再单独铺满整块区域：它导出 `LaneRow`，只渲染**一条轨道的车道内容**（Clip、Pattern、Automation、行内网格线），行的可见范围裁剪与屏外卸载由 `tracks` 的 `TrackRows` 做；`lane` 仍拥有手势 controller（跨行拖动靠 controller 持有的 scene，不靠 DOM）。
 - 屏外只保留 `focusedTrackId` 对应行的表头部分（输入框焦点不丢），其车道内容仍按可见范围卸载。
 - 焦点：`focusedTrackId` 来自 store 的 `session.selectedTrackIds` 与 `trackSelectionSurface`，不靠 JS 轮询查询原生焦点。原生输入焦点由 A3 的 `Input` 控件自己持有；`tracks` 在表头名称编辑态时通过 `onFocusTrack` 报告 id。
+- 二维编辑面只有一个稳定的 `timeline-viewport` Tab owner：它是覆盖车道可编辑区域的持续挂载透明输入层，原生指针捕获不依附虚拟行。`useLaneSurface` 归一化输入到同一 Scene 坐标，调用 lane controller；唯一 `LaneContextMenu` 包住这个 owner，inline editors 在输入层之上。行与 Clip 只保留绘制及 AX 描述，不注册鼠标/键盘，不进入 Tab 顺序。`timeline-viewport.onBlur` 调 `lane.interrupt()`，Tab 离开后释放不提交；滚动卸载 source row 不结束跨行捕获。标尺和轨道头仍拥有各自独立的交互区域。
 
 ## 4. 键盘 owner（避免双触发）
 
@@ -102,6 +108,7 @@ export function TrackRows(props: {
 
 - 同一个 keyDown 序列只被一个 owner 处理，有一条跨切片测试在集成步骤证明。
 - 输入框聚焦时，元素对可打印键 `stopPropagation`，窗口 owner 不处理。
+- Cmd/Ctrl+S 在 Clip Editor 的非文本区域同样由窗口 timeline owner 处理，在 Clip Editor 局部编辑命令隔离之前分派；文本与菜单仍保持原边界。
 
 ## 5. 组合根
 
