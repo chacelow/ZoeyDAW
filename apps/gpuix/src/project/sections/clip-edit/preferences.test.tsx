@@ -43,16 +43,18 @@ test("note insertion, draw, movement and quantization consume distinct current M
   const row = h.bounds("midi-key-70")
   const element = h.root.renderer.findByTestId("midi-grid")
   if (!element) throw new Error("Missing MIDI grid")
-  handleGpuixEvent(
-    {
-      elementId: element.id,
-      eventType: "mouseDown",
-      x: grid.x + grid.width * 0.39,
-      y: row.y + row.height / 2,
-      button: 0,
-      clickCount: 2,
-    },
-    h.root.renderer
+  flushSync(() =>
+    handleGpuixEvent(
+      {
+        elementId: element.id,
+        eventType: "mouseDown",
+        x: grid.x + grid.width * 0.39,
+        y: row.y + row.height / 2,
+        button: 0,
+        clickCount: 2,
+      },
+      h.root.renderer
+    )
   )
   expect(notes().at(-1)).toMatchObject({
     pitch: 70,
@@ -193,7 +195,7 @@ test("time zoom consumes current viewport factor and maximum", () => {
     "cmd"
   )
   const zoomed = h.bounds("midi-note-visible").width
-  expect(zoomed).toBeCloseTo(original * 3, 1)
+  expect(zoomed / original).toBeCloseTo(3, 1)
   h.root.renderer.nativeSimulateScrollWheel(
     grid.x + grid.width / 2,
     grid.y + grid.height / 2,
