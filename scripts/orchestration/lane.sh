@@ -7,6 +7,9 @@
 #   lane.sh assign <lane> <title> <spec>… reset an idle lane to a new branch off gpuix-migration and
 #                                         dispatch the task to its existing agent terminal
 #   lane.sh new <lane> <title> <spec>…    create a lane (worktree + agent) when every lane is busy
+#   lane.sh rework <lane> <title> <spec>… send a follow-up task to a lane whose last dispatch settled
+#                                         but whose branch is not merged yet (review returned it); the
+#                                         agent continues on the same branch, nothing is reset
 #
 # A lane is a long-lived worktree plus its agent terminal. Any child worktree of gpuix-migration
 # (sibling directory gpuix-*) qualifies, so existing slice worktrees become lanes as they are. Each
@@ -93,10 +96,31 @@ assign)
   orca worktree set --worktree "path:$dir" --comment "lane；当前任务：${title}（${dispatch}）" --json >/dev/null
   echo "$lane ok $dispatch branch=$new terminal=$terminal"
   ;;
+rework)
+  lane=$1; title=$2; shift 2
+  dir="$root/$lane"
+  [ -d "$dir" ] || { echo "no lane $lane" >&2; exit 1; }
+  terminal=$(agent_terminal "$dir")
+  [ -n "$terminal" ] || { echo "$lane has no live agent terminal" >&2; exit 1; }
+  read -r dispatch status <<<"$(last_dispatch "$terminal")"
+  case "$status" in completed|failed|stopped|abandoned|"") ;; *)
+    echo "$lane is busy: $dispatch is $status; send the follow-up to that dispatch instead" >&2; exit 1 ;;
+  esac
+  branch=$(git -C "$dir" branch --show-current)
+  spec=$(printf '返工：上一个任务的 review 退回。继续在当前分支 %s 上做，不要切分支，也不要丢已有提交。\n\n' "$branch"; cat "$@")
+  dispatch=$(orca orchestration worker-start --run "$run" --spec "$spec" --task-title "$title" \
+    --terminal "$terminal" --worktree "path:$dir" --json | field dispatchId dispatch.id)
+  sleep 10
+  if orca terminal wait --terminal "$terminal" --for tui-idle --timeout-ms 1000 --json >/dev/null 2>&1; then
+    orca terminal send --terminal "$terminal" --enter --text "" --json >/dev/null
+  fi
+  orca worktree set --worktree "path:$dir" --comment "lane；当前任务：${title}（${dispatch}）" --json >/dev/null
+  echo "$lane ok $dispatch branch=$branch terminal=$terminal"
+  ;;
 new)
   lane=$1; shift
   bash "$here/start-worker.sh" "$lane" "$@"
   ;;
 *)
-  echo "usage: lane.sh list | assign <lane> <title> <spec>… | new <lane> <title> <spec>…" >&2; exit 2 ;;
+  echo "usage: lane.sh list | assign | rework | new <lane> <title> <spec>…" >&2; exit 2 ;;
 esac
