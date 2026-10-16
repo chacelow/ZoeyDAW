@@ -10,7 +10,7 @@
 - 不 push，不碰 `main`，不碰其他 worktree，不启动或停止用户已有服务。
 - 决策：自己路径内、可撤回、不改方向的事自己决定并在报告里写理由，规则没写到的也一样。需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、跨切片、与契约冲突，或属于根 `AGENTS.md`「决策默认归 Agent」清单的事：用 `orca orchestration ask` 问协调者，带上候选与建议。worker 不直接问用户。
 - **不允许静默停下**:你一旦结束回合,协调者就收不到你的任何状态,只有发出的 Orca 消息才算上报。每次结束回合前必须已经发出其中一种:还有工作就继续做,不结束回合;等待协调者、其它切片或桌面时段,发 `orca orchestration ask`(它会阻塞到协调者 reply,把你直接唤醒);阶段完成,发 `merge_ready`;全部完成,发 `worker_done`。只在终端里写"等待中"不算上报。巡检会自动唤醒停在空闲状态、却没有关闭派发的 worker。
-- **你是长期 lane（用户 2026-10-16）**：交付 `worker_done` 后，你的 worktree 和终端都会保留，下一个任务直接派给你，所以不要删 worktree、关终端或清理分支，这些由协调者的 `lane.sh` 负责。新任务的规格开头会写你所在的新分支（基于最新 `gpuix-migration`）：以前读过的契约和文件地图可以继续用，但具体文件以当前分支内容为准，改之前重新读要改的文件；不要沿用上一个任务的分支或未提交改动。上下文压缩之后照样按本规格和 `AGENTS.md` 继续，不需要协调者重发。
+- **你是长期 lane（用户 2026-10-16）**：交付 `worker_done` 后，你的 worktree 和终端都会保留，下一个任务直接派给你，所以不要删 worktree、关终端或清理分支，这些由协调者的 `lane.sh` 负责。新任务的规格开头会写你所在的新分支（基于最新 `gpuix-migration`）：以前读过的契约和文件地图可以继续用，但具体文件以当前分支内容为准，改之前重新读要改的文件；不要沿用上一个任务的分支或未提交改动。开工时如果又收到上一个已结算任务的完整 brief，那是重放：以当前派发的 task/dispatch ID 和分支为准，旧 brief 忽略，不需要问。上下文压缩之后照样按本规格和 `AGENTS.md` 继续，不需要协调者重发。
 - 交付前验证（用户 2026-10-16：本机性能不足，完整门禁在 GitHub Actions 的 `main` 上跑）：本地只跑轻量检查，`tsc --noEmit`、改动范围内的 `bun test` 与 eslint、本切片的变异入口、必要的单窗口 smoke；涉及 Rust 时跑改动 crate 的 `cargo check` 与 `cargo test`。不在本地跑完整 `pnpm verify:gpuix`，合入后由协调者推 main 看 Actions 结果。报告里写清命令、结果、未实现项及原因。不得把未实现的部分描述成完成。报告单列「错题」与「已验证做法」两节（LESSONS 格式）；不要直接改 `LESSONS.md`，由协调者整理。
 - 涉及 Live 已有行为的切片，实现前先观察 Ableton Live，报告附「产品规则 → Live 观察 → 实现 → 差异/未验证」对照表。
 - UI 以真实 Gallery 和业务组合视图作整体评审，按 `gpuix-ui-standards.md` 第 13 节执行；生成截图默认放仓库外或 Git 忽略目录，不批量提交逐按钮/逐状态 PNG。圆角、边框、gap、padding 通过共享组件与 token 统一调整。
