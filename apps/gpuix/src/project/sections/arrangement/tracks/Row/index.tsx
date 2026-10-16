@@ -84,8 +84,8 @@ export function TrackRow({
           width: "100%",
           height: row.height,
           // Each neighboring row contributes half of the shared track border.
-          borderTopWidth: theme.project.trackBorder / 2,
-          borderBottomWidth: theme.project.trackBorder / 2,
+          borderTopWidth: row.trackGeometry.border / 2,
+          borderBottomWidth: row.trackGeometry.border / 2,
           borderColor: theme.colors.arrangementLine,
           minWidth: 0,
           backgroundColor: theme.colors.arrangementSurfaceAlt,

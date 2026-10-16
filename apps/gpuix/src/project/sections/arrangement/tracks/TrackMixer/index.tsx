@@ -61,7 +61,7 @@ export function TrackMixer({ track }: { readonly track: Track }) {
   const rows = trackControlRows(track, theme.layout.track)
   const gap = theme.control["--spacing-control-track-gap"]
   const inset = theme.design.cards.controls.inset
-  const height = trackHeight(track, theme.layout.track) - theme.project.trackBorder - inset * 2
+  const height = trackHeight(track, theme.layout.track) - theme.layout.track.border - inset * 2
   // Return labels use the Unicode code point for A; the saved ordinal is content.
   const label =
     track.kind === "return"

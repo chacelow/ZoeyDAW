@@ -31,6 +31,7 @@ test("native track consumers honor design overrides and shared arrangement geome
   hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
   const layout = {
     ...DEFAULT_LAYOUT_TOKENS,
+    track: { ...DEFAULT_LAYOUT_TOKENS.track, border: 6 },
     arrangement: {
       ...DEFAULT_LAYOUT_TOKENS.arrangement,
       markerRulerHeight: 22,
@@ -130,6 +131,11 @@ test("native track consumers honor design overrides and shared arrangement geome
     expect(mainBounds.y + mainBounds.height).toBe(473)
     const row = layoutTrackRows(scene.get()).find(item => item.track.id === group.id)
     if (!row) throw new Error("Missing group row")
+    const resize = bounds(`track-resize-${group.id}`)
+    expect(resize.y + resize.height).toBe(row.top + row.height - 3)
+    expect(bounds(`track-meter-${main.id}`).height).toBe(
+      main.heightPx - 6 - design.cards.controls.inset * 2
+    )
     root.render(
       <AnimationFrameProvider source={createControlledFrames().source}>
         <ThemeProvider design={design} layout={layout}>
@@ -149,6 +155,8 @@ test("native track consumers honor design overrides and shared arrangement geome
         </ThemeProvider>
       </AnimationFrameProvider>
     )
+    expect(node(`track-row-${group.id}`).style.borderTopWidth).toBe(3)
+    expect(node(`track-row-${group.id}`).style.borderBottomWidth).toBe(3)
     for (const id of [`track-row-${group.id}`, `track-lane-${group.id}`]) {
       expect(node(id).style.focusVisible).toMatchObject({ outlineWidth: 2, outlineOffset: -2 })
     }

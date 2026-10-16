@@ -24,6 +24,30 @@ function add(suite, file, name, from, to) {
 }
 
 add(
+  "tracks",
+  "tracks/TrackMixer/index.tsx",
+  "meter-layout-border",
+  "theme.layout.track.border",
+  "theme.project.trackBorder"
+)
+add(
+  "tracks",
+  "tracks/TrackResizeOverlay/index.tsx",
+  "resize-layout-border",
+  "scene.geometry.track.border",
+  "theme.project.trackBorder"
+)
+for (const side of ["Top", "Bottom"]) {
+  add(
+    "tracks",
+    "tracks/Row/index.tsx",
+    `row-layout-border-${side}`,
+    `border${side}Width: row.trackGeometry.border`,
+    `border${side}Width: theme.project.trackBorder`
+  )
+}
+
+add(
   "lane",
   "lane/ClipCard.tsx",
   "clip-ghost-opacity",
