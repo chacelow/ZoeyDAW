@@ -1,0 +1,185 @@
+diff --git a/crates/gpui/src/app/visual_test_context.rs b/crates/gpui/src/app/visual_test_context.rs
+index b236475..2059438 100644
+--- a/crates/gpui/src/app/visual_test_context.rs
++++ b/crates/gpui/src/app/visual_test_context.rs
+@@ -91,10 +91,12 @@ impl VisualTestAppContext {
+     ///
+     /// # Arguments
+     /// * `size` - The size of the window to create
++    /// * `scale_factor` - The explicit macOS backing scale, independent of displays
+     /// * `build_root` - A closure that builds the root view for the window
+     pub fn open_offscreen_window<V: Render + 'static>(
+         &mut self,
+         size: Size<Pixels>,
++        scale_factor: f32,
+         build_root: impl FnOnce(&mut Window, &mut App) -> Entity<V>,
+     ) -> Result<WindowHandle<V>> {
+         use crate::{point, px};
+@@ -110,7 +112,7 @@ impl VisualTestAppContext {
+                 window_bounds: Some(WindowBounds::Windowed(bounds)),
+                 focus: false,
+                 show: true,
+-                offscreen: true,
++                offscreen_scale_factor: Some(scale_factor),
+                 ..Default::default()
+             },
+             build_root,
+@@ -123,7 +125,7 @@ impl VisualTestAppContext {
+         build_root: impl FnOnce(&mut Window, &mut App) -> Entity<V>,
+     ) -> Result<WindowHandle<V>> {
+         use crate::{px, size};
+-        self.open_offscreen_window(size(px(1280.0), px(800.0)), build_root)
++        self.open_offscreen_window(size(px(1280.0), px(800.0)), 1.0, build_root)
+     }
+ 
+     /// Returns whether screen capture is supported on this platform.
+diff --git a/crates/gpui/src/platform.rs b/crates/gpui/src/platform.rs
+index 86dd022..62f6717 100644
+--- a/crates/gpui/src/platform.rs
++++ b/crates/gpui/src/platform.rs
+@@ -1876,10 +1876,10 @@ pub struct WindowOptions {
+     /// - `Some(WindowBounds)`: Open a window with corresponding state and its restore size.
+     pub window_bounds: Option<WindowBounds>,
+ 
+-    /// Preserve offscreen visual-test bounds instead of constraining them to a display.
+-    /// Normal application windows leave this disabled, including in test-support builds.
++    /// Offscreen visual-test backing scale, independent of real displays.
++    /// `None` preserves normal application window sizing and scale behavior.
+     #[cfg(any(test, feature = "test-support"))]
+-    pub offscreen: bool,
++    pub offscreen_scale_factor: Option<f32>,
+ 
+     /// The titlebar configuration of the window
+     pub titlebar: Option<TitlebarOptions>,
+@@ -1960,7 +1960,7 @@ pub struct WindowParams {
+     pub bounds: Bounds<Pixels>,
+ 
+     #[cfg(any(test, feature = "test-support"))]
+-    pub offscreen: bool,
++    pub offscreen_scale_factor: Option<f32>,
+ 
+     /// The titlebar configuration of the window
+     #[cfg_attr(feature = "wayland", allow(dead_code))]
+@@ -2054,7 +2054,7 @@ impl Default for WindowOptions {
+         Self {
+             window_bounds: None,
+             #[cfg(any(test, feature = "test-support"))]
+-            offscreen: false,
++            offscreen_scale_factor: None,
+             titlebar: Some(TitlebarOptions {
+                 title: Default::default(),
+                 appears_transparent: Default::default(),
+diff --git a/crates/gpui/src/window.rs b/crates/gpui/src/window.rs
+index fb2a803..160cdf5 100644
+--- a/crates/gpui/src/window.rs
++++ b/crates/gpui/src/window.rs
+@@ -1376,7 +1376,7 @@ impl Window {
+         let WindowOptions {
+             window_bounds,
+             #[cfg(any(test, feature = "test-support"))]
+-            offscreen,
++            offscreen_scale_factor,
+             titlebar,
+             focus,
+             show,
+@@ -1410,7 +1410,7 @@ impl Window {
+             WindowParams {
+                 bounds: window_bounds.get_bounds(),
+                 #[cfg(any(test, feature = "test-support"))]
+-                offscreen,
++                offscreen_scale_factor,
+                 titlebar,
+                 kind,
+                 is_movable,
+diff --git a/crates/gpui_macos/src/window.rs b/crates/gpui_macos/src/window.rs
+index f7fbb30..332324d 100644
+--- a/crates/gpui_macos/src/window.rs
++++ b/crates/gpui_macos/src/window.rs
+@@ -75,6 +75,8 @@ use std::{
+ };
+ 
+ const WINDOW_STATE_IVAR: &str = "windowState";
++#[cfg(any(test, feature = "test-support"))]
++const OFFSCREEN_SCALE_IVAR: &str = "offscreenScaleFactor";
+ 
+ static mut WINDOW_CLASS: *const Class = ptr::null();
+ #[cfg(any(test, feature = "test-support"))]
+@@ -138,6 +140,12 @@ extern "C" fn constrain_offscreen_frame(
+ ) -> NSRect {
+     frame
+ }
++
++#[cfg(any(test, feature = "test-support"))]
++extern "C" fn offscreen_backing_scale_factor(this: &Object, _sel: Sel) -> f64 {
++    unsafe { *this.get_ivar::<f64>(OFFSCREEN_SCALE_IVAR) }
++}
++
+ #[ctor(unsafe)]
+ unsafe fn build_classes() {
+     unsafe {
+@@ -146,6 +154,11 @@ unsafe fn build_classes() {
+         #[cfg(any(test, feature = "test-support"))]
+         {
+             let mut decl = ClassDecl::new("GPUIOffscreenWindow", &*WINDOW_CLASS).unwrap();
++            decl.add_ivar::<f64>(OFFSCREEN_SCALE_IVAR);
++            decl.add_method(
++                sel!(backingScaleFactor),
++                offscreen_backing_scale_factor as extern "C" fn(&Object, Sel) -> f64,
++            );
+             decl.add_method(
+                 sel!(constrainFrameRect:toScreen:),
+                 constrain_offscreen_frame as extern "C" fn(&Object, Sel, NSRect, id) -> NSRect,
+@@ -907,7 +920,7 @@ impl MacWindow {
+         WindowParams {
+             bounds,
+             #[cfg(any(test, feature = "test-support"))]
+-            offscreen,
++            offscreen_scale_factor,
+             titlebar,
+             kind,
+             is_movable,
+@@ -961,12 +974,17 @@ impl MacWindow {
+                 WindowKind::Normal => {
+                     let window_class = WINDOW_CLASS;
+                     #[cfg(any(test, feature = "test-support"))]
+-                    let window_class = if offscreen {
++                    let window_class = if offscreen_scale_factor.is_some() {
+                         OFFSCREEN_WINDOW_CLASS
+                     } else {
+                         window_class
+                     };
+-                    msg_send![window_class, alloc]
++                    let native_window: id = msg_send![window_class, alloc];
++                    #[cfg(any(test, feature = "test-support"))]
++                    if let Some(scale_factor) = offscreen_scale_factor {
++                        (*native_window).set_ivar(OFFSCREEN_SCALE_IVAR, f64::from(scale_factor));
++                    }
++                    native_window
+                 }
+                 // `AnchoredPopup` is rejected in `MacPlatform::open_window`, grouped here only
+                 // for exhaustiveness.
+@@ -2248,6 +2266,11 @@ impl rwh::HasDisplayHandle for MacWindow {
+ 
+ fn get_scale_factor(native_window: id) -> f32 {
+     let factor = unsafe {
++        #[cfg(any(test, feature = "test-support"))]
++        if msg_send![native_window, isKindOfClass: OFFSCREEN_WINDOW_CLASS] {
++            let scale_factor: f64 = msg_send![native_window, backingScaleFactor];
++            return scale_factor as f32;
++        }
+         let screen: id = msg_send![native_window, screen];
+         if screen.is_null() {
+             return 2.0;
+diff --git a/crates/zed/src/zed/visual_tests.rs b/crates/zed/src/zed/visual_tests.rs
+index bfe3d3b..ba72e04 100644
+--- a/crates/zed/src/zed/visual_tests.rs
++++ b/crates/zed/src/zed/visual_tests.rs
+@@ -99,7 +99,7 @@ pub async fn open_test_workspace(
+         )
+     });
+ 
+-    let window = cx.open_offscreen_window(window_size, |window, cx| {
++    let window = cx.open_offscreen_window(window_size, 1.0, |window, cx| {
+         cx.new(|cx| workspace::Workspace::new(None, project.clone(), app_state.clone(), window, cx))
+     })?;
+ 
