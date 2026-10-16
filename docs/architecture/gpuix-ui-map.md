@@ -76,7 +76,7 @@
 
 ### `project/sections/arrangement/lane`
 
-`automation-…`、`automation-point-…`、`automation-value-editor`、`clip-alignment`、`clip-name-editor`、`fade-…`、`fade-mask-…`、`group-clip-…`、`insertion-point`、`lane-row-…`、`lane-row-content-…`、`transport-playhead`、`waveform-…`
+`automation-…`、`automation-point-…`、`automation-value-editor`、`clip-alignment`、`clip-ghost-…`、`clip-name-editor`、`clip-source-…`、`fade-…`、`fade-mask-…`、`group-clip-…`、`insertion-point`、`lane-row-…`、`lane-row-content-…`、`transport-playhead`、`waveform-…`
 
 ### `project/sections/arrangement/timeline`
 
