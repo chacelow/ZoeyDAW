@@ -33,4 +33,4 @@ const guard = createWindowCloseGuard(renderer, {
 - `supported` 只表示关闭按钮和 ⌘W 能否被否决。目前只有 macOS 为 true，Windows、Linux 的 renderer 没有 `setWindowShouldClose`。`close()` 只依赖 `closeWindow()`，三个平台都可用。renderer 连 `closeWindow` 都没有时，`close()` 会抛错，不会静默不关。
 - `actionAfterGuard` / `closeButtonAction` 仍负责根据 `closeBehavior` 决定是问、隐藏到托盘还是直接退出。
 
-从仓库根运行 `bun --hot scripts/gpuix-main/probe.mjs` 可以看激活事件。外观和关闭的真实窗口验证记录在 `docs/research/gpuix-main-build.md` 的 H1 一节。
+外观和关闭的真实窗口验证记录在 `docs/research/gpuix-main-build.md` 的 H1 一节。

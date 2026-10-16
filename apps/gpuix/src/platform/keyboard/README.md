@@ -24,8 +24,6 @@ section 通过 `useWindowKeyboard()` 取得同一实例，在 effect 中订阅�
 - `WindowKeyEvent` 是 platform 拥有的最小结构类型。platform 不 import `@gpuix/*`，也不拥有 renderer 或全局键盘单例。
 - `ui` 不 import 此模块。通用控件经 props 或它们的环境端口接收应用能力。
 
-从仓库根运行 `bun --hot scripts/gpuix-main/probe.mjs`，向探针窗口发送 Space。日志应出现 `windowKeyDown`、`windowKeyUp`，AX 文本变为 `Window key: space`。验证后立即结束该进程。
-
 `keyboard-native.test.tsx` 在真实 `createTestRoot` 中挂载共享 `Button` 与 `Input`，用 `nativeSimulateKeystrokes` 检查 Button 聚焦时 Space 不改变激活状态且到达窗口订阅，Input 聚焦时 Space 不到达窗口订阅。测试直接锁住控件与窗口之间的事件契约，不在 WindowKeyboard 中替控件屏蔽键盘事件。
 
-K1 行为回归：`bun test apps/gpuix/src/platform/keyboard`。在 `apps/gpuix` 执行 `bun src/platform/keyboard/mutations.mjs`：六个变异分别破坏冲突检测、上下文匹配、默认消费、菜单快捷键展示，以及 Popover/Menu 的 slotted Button 激活顺序，测试必须失败。
+K1 行为回归：`bun test apps/gpuix/src/platform/keyboard`。

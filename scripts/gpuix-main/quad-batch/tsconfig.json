@@ -1,4 +1,0 @@
-{
-  "extends": "../../../apps/gpuix/tsconfig.json",
-  "include": ["./*.ts", "./*.tsx"]
-}
