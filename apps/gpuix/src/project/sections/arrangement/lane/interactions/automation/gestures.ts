@@ -125,7 +125,7 @@ export function drawGesture(
   const grid = context.scene.get().gridPlan.cellBars
   const freehand = pointer.altKey || pointer.metaKey
   const idPrefix = uniqueId("point")
-  let state: DrawingState = { painted: [], last: pointer, nextId: 0 }
+  let state: DrawingState = { painted: [], swept: [], last: pointer, nextId: 0 }
   const paint = (current: LanePointer) => {
     const result = paintAutomation({
       original,

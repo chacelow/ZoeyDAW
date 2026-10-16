@@ -149,7 +149,7 @@ test("grid drawing paints each traversed cell without mutating the discarded bas
   const { source, row, store, pointer } = setup()
   const before = structuredClone(source)
   const start = pointer(2.2, 0.2)
-  const state: DrawingState = { painted: [], last: start, nextId: 0 }
+  const state: DrawingState = { painted: [], swept: [], last: start, nextId: 0 }
   const input = {
     original: source,
     state,
@@ -166,10 +166,112 @@ test("grid drawing paints each traversed cell without mutating the discarded bas
   expect(result.points.find(point => point.bar === 6)?.value).toBeCloseTo(0.7)
   expect(result.points.find(point => point.id.endsWith("-end"))?.bar).toBeCloseTo(2.9999)
   expect(source).toEqual(before)
-  expect(state).toEqual({ painted: [], last: start, nextId: 0 })
+  expect(state).toEqual({ painted: [], swept: [], last: start, nextId: 0 })
   const free = paintAutomation({ ...input, current: pointer(3.2, 0.8), freehand: true })
   expect(free.points.find(point => point.bar === 2.2)?.value).toBeCloseTo(0.2)
   expect(free.points.find(point => point.bar === 3.2)?.value).toBeCloseTo(0.8)
+})
+
+test("freehand removes off-grid original spikes only inside the swept interval", () => {
+  const { row, store, pointer } = setup()
+  const original = [
+    { id: "outside-before", bar: 1.1, value: 0.9 },
+    { id: "off-grid-spike", bar: 1.63, value: 1 },
+    { id: "outside-after", bar: 3, value: 0.7 },
+  ]
+  const before = structuredClone(original)
+  const start = pointer(1.25, 0.35)
+  const result = paintAutomation({
+    original,
+    state: { painted: [], swept: [], last: start, nextId: 0 },
+    current: pointer(2.25, 0.35),
+    scene: store.get(),
+    row,
+    grid: 1,
+    freehand: true,
+    idPrefix: "freehand",
+  })
+  expect(result.points.filter(point => point.bar < 1.25 || point.bar > 2.25)).toEqual([
+    original[0],
+    original[2],
+  ])
+  expect(result.points.some(point => point.id === "off-grid-spike")).toBe(false)
+  const swept = result.points.filter(point => point.bar >= 1.25 && point.bar <= 2.25)
+  expect(swept.length).toBeGreaterThan(1)
+  for (const point of swept) expect(point.value).toBeCloseTo(0.35)
+  expect(original).toEqual(before)
+})
+
+test("freehand reverse sweeps replace prior samples at different bar positions", () => {
+  const { row, store, pointer } = setup()
+  const original = [
+    { id: "outside-before", bar: 1.1, value: 0.9 },
+    { id: "off-grid-spike", bar: 2.03, value: 1 },
+    { id: "outside-after", bar: 4, value: 0.7 },
+  ]
+  const start = pointer(1.25, 0.2)
+  const input = {
+    original,
+    state: { painted: [], swept: [], last: start, nextId: 0 },
+    current: pointer(3.25, 0.2),
+    scene: store.get(),
+    row,
+    grid: 1,
+    freehand: true,
+    idPrefix: "freehand",
+  }
+  const forward = paintAutomation(input)
+  const reverse = paintAutomation({ ...input, state: forward.state, current: pointer(1.63, 0.8) })
+  expect(reverse.points.filter(point => point.bar < 1.63)).toEqual(
+    forward.points.filter(point => point.bar < 1.63)
+  )
+  expect(reverse.points.find(point => point.id === "outside-after")).toEqual(original[2])
+  expect(reverse.points.some(point => point.id === "off-grid-spike")).toBe(false)
+  const swept = reverse.points.filter(point => point.bar >= 1.63 && point.bar <= 3.25)
+  expect(swept.length).toBeGreaterThan(1)
+  for (const point of swept) {
+    const expected = 0.2 + ((3.25 - point.bar) / (3.25 - 1.63)) * 0.6
+    expect(point.value).toBeCloseTo(expected)
+  }
+})
+
+test("freehand retains earlier swept intervals without erasing unpainted viewport gaps", () => {
+  const { row, store, pointer } = setup()
+  const original = [
+    { id: "first-spike", bar: 1.63, value: 1 },
+    { id: "untouched-gap", bar: 4, value: 0.7 },
+    { id: "second-spike", bar: 6.63, value: 1 },
+    { id: "outside-after", bar: 8, value: 0.9 },
+  ]
+  const start = pointer(1.25, 0.35)
+  const input = {
+    original,
+    state: { painted: [], swept: [], last: start, nextId: 0 },
+    current: pointer(2.25, 0.35),
+    scene: store.get(),
+    row,
+    grid: 1,
+    freehand: true,
+    idPrefix: "freehand",
+  }
+  const first = paintAutomation(input)
+  store.setViewport({ ...store.get().viewport, scrollX: 120 })
+  const second = paintAutomation({
+    ...input,
+    state: first.state,
+    current: pointer(6.25, 0.35),
+    scene: store.get(),
+  })
+  expect(second.points.filter(point => original.some(source => source.id === point.id))).toEqual([
+    original[1],
+    original[3],
+  ])
+  expect(second.points.filter(point => point.bar >= 1.25 && point.bar <= 2.25)).toEqual(
+    first.points.filter(point => point.bar >= 1.25 && point.bar <= 2.25)
+  )
+  for (const point of second.points.filter(point => point.bar >= 6.25 && point.bar <= 7.25)) {
+    expect(point.value).toBeCloseTo(0.35)
+  }
 })
 
 test("fine-grid insertion shares the 1/256 snapping cell", () => {

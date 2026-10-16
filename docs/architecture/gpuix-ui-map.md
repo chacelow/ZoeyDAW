@@ -80,7 +80,7 @@
 
 ### `project/sections/arrangement/timeline`
 
-`arrangement-timeline`、`marker-name-editor`、`minimap-clip-…`、`minimap-frame`、`minimap-track-…`、`ruler-loop`、`ruler-marker-…`、`ruler-position-…`、`timeline-grid`、`timeline-grid-choice`、`timeline-horizontal-scroll`、`timeline-minimap`、`timeline-rulers`、`timeline-time-ruler`、`timeline-toolbar`、`timeline-viewport`
+`arrangement-timeline`、`marker-name-editor`、`minimap-clip-…`、`minimap-frame`、`minimap-marker-…`、`minimap-playhead`、`minimap-track-…`、`ruler-loop`、`ruler-marker-…`、`ruler-position-…`、`timeline-grid`、`timeline-grid-choice`、`timeline-horizontal-scroll`、`timeline-layout`、`timeline-minimap`、`timeline-rulers`、`timeline-time-ruler`、`timeline-toolbar`、`timeline-viewport`
 
 ### `project/sections/arrangement/tracks`
 

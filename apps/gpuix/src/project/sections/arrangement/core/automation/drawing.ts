@@ -11,6 +11,7 @@ export interface DrawingSample extends AutomationPoint {
 }
 export interface DrawingState {
   painted: readonly DrawingSample[]
+  swept: readonly { start: number; end: number }[]
   last: Point
   nextId: number
 }
@@ -42,6 +43,7 @@ export function paintAutomation({
   const painted = new Map(state.painted.map(point => [point.key, point]))
   const { last } = state
   let nextId = state.nextId
+  let swept = state.swept
   const { width } = scene.viewport
   const fromBar = Math.max(
     1,
@@ -52,6 +54,24 @@ export function paintAutomation({
     Math.min(scene.bars + 1, automationBar(scene, Math.max(0, Math.min(width, current.x))))
   )
   if (freehand) {
+    const start = Math.min(fromBar, toBar)
+    const end = Math.max(fromBar, toBar)
+    const intervals: { start: number; end: number }[] = []
+    let merged = { start, end }
+    for (const interval of state.swept) {
+      if (interval.end < merged.start) intervals.push(interval)
+      else if (interval.start > merged.end) {
+        intervals.push(merged)
+        merged = interval
+      } else {
+        merged = {
+          start: Math.min(merged.start, interval.start),
+          end: Math.max(merged.end, interval.end),
+        }
+      }
+    }
+    intervals.push(merged)
+    swept = intervals
     const samples = Math.max(1, Math.ceil(Math.abs(current.x - last.x) / 3))
     for (let index = 0; index <= samples; index++) {
       const fraction = index / samples
@@ -63,6 +83,11 @@ export function paintAutomation({
         bar,
         value: automationValue(row, last.y + (current.y - last.y) * fraction),
       })
+    }
+    for (const point of state.painted) {
+      if (point.bar >= start && point.bar <= end && painted.get(point.key) === point) {
+        painted.delete(point.key)
+      }
     }
   } else {
     const startCell = Math.round((fromBar - 1) / grid)
@@ -87,7 +112,7 @@ export function paintAutomation({
   const points = freehand
     ? sortedPoints([
         ...original.filter(point =>
-          cells.every(cell => !(Math.abs(point.bar - cell.bar) < 0.000001))
+          swept.every(interval => point.bar < interval.start || point.bar > interval.end)
         ),
         ...cells.map(({ key: _key, ...point }) => point),
       ])
@@ -102,5 +127,5 @@ export function paintAutomation({
             : [cell]
         }),
       ])
-  return { state: { painted: cells, last: current, nextId }, points }
+  return { state: { painted: cells, swept, last: current, nextId }, points }
 }
