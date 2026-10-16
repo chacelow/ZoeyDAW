@@ -33,6 +33,8 @@ MIDI 音符编辑调用 `project/model/midi-editing`。grid 中方向键移动�
 
 钢琴卷帘绘制与命中共用可见音符几何。屏外音符不挂载，琴键、网格线与力度杆也按可见范围裁剪。滚轮调整视口，Shift 滚轮横向滚动。Cmd 或 Ctrl 滚轮改变时间缩放。显示、插入、刷写、擦除和量化使用源绝对 beat 0 的网格。首尾半格只按可见交集判断占用与擦除，不删除窗口外的保留音符。窗口 resize 和 Fold 音高集合变化重新夹取 scroll，普通音符编辑不自动重新 fit。移动和拉长音符使用 content-space 位移，包含拖动中的 Shift 滚轮横移，释放仍只产生一条 Undo。时间比例、源窗口起点或 pitch 行高改变时取消当前手势并回滚，避免缩放后用新分母解释旧起点。`midi/scroll-gesture.test.tsx` 与 `mutations.mjs SEC-03` 覆盖横移和缩放取消。
 
+时间和音高缩放入口在排队更新视口之前同步取消事务；几何 effect 只负责外部 resize 等后提交变化。回归直接向 `midi-body` 派发 wheel、紧接 release，不经过测试 renderer 的逐事件 `flushSync`，防止快速松手先提交再取消。
+
 视口 wheel 只有 MIDI body 一个 owner，琴键和 grid 不重复消费事件；一次 Cmd/Ctrl wheel 与工具栏一样只缩放一级。被动网格、无文字音符和力度杆经 `useQuadBatch` 命令式上传，几何与 typed array 不进入 React props；有文字的音符保留原生文字盒的边框、裁切与绘制层级。屏外音符不给几何或语义节点。可见 pitch 行的 AX 标签保留音符时间范围、力度与选择标记，当前选中音符保留 gridcell；力度只保留一个活动 slider，原生值经 `aria-valuetext` 暴露。
 
 唯一 selection owner 原子持有稳定音符 `{ids,current}`，渲染和 model API 的下标从当前 notes 派生；Undo/Redo 插入或删除前序成员不会转移选择，消失的 ID 不会选中替代成员。旧数据缺 ID 的归一化由工程解析边界负责，UI 不写 ID。组内点击与 Shift 添加音符更新 current 而不重排成员，Cmd+A 扩展成员并保留 current，gridcell、slider 与力度数值使用同一锚点。Left/Right 导航改为单选；Up/Down 保留组成员与 Undo 事务。聚焦项滚出可见范围后同步到可见候选项，选择变化不产生工程 Undo。二维编辑面保留唯一根 Tab 入口及原箭头编辑语义（`gpuix-ui-standards.md:74`），pitch 行不进入 Tab。quad 像素对齐只有共享原生路径，UI 不做逻辑像素舍入。`midi/history-selection.test.tsx` 与 `mutations.mjs SEC-02` 覆盖历史恢复后的继续编辑。
@@ -68,6 +70,13 @@ bun src/project/sections/clip-edit/verification/mutations.mjs
 bun --hot src/project/sections/clip-edit/demo/index.tsx
 bun src/project/sections/clip-edit/verification/consumer-probe.tsx current dense
 NODE_ENV=production bun src/project/sections/clip-edit/verification/consumer-probe.tsx current-production dense
+```
+
+R2 的真实后端离屏回归不改宿主剪贴板，输出在仓库外。先创建目录，再用 app 的 native fixture preload 配置真实引擎，section 不反向依赖 app：
+
+```sh
+mkdir -p /tmp/zoeydaw-r2-sections
+B2_EVIDENCE_DIR=/tmp/zoeydaw-r2-sections bun --preload ./src/app/verification/native-fixture.ts src/project/sections/clip-edit/verification/r2-smoke.tsx
 ```
 
 Demo 使用真实 runtime 与临时生成的立体声 WAV。`CLIP_EDIT_THEME=light`、`CLIP_EDIT_LOCALE=zh` 切换外观和语言，`CLIP_EDIT_STRESS=1` 使用与 headless probe 相同的完整 10000 notes / 1024 steps 工程；结束时删除临时媒体。窗口先申请桌面时段，以命名 service 启动，验证后立即结束。生成 PNG 在 ignored evidence 中，不批量提交；JSON 记录解码元数据、真实 peak 请求、节点、单帧/编辑计时及输入序列。

@@ -51,11 +51,19 @@ export function MidiEditor({
   const trackGap = theme.control["--spacing-control-track-gap"]
   const fontSize = theme.control["--text-control-track"]
   const selectedNote = clip.notes[editor.currentNoteIndex ?? -1]
+  const zoomTime = (direction: -1 | 1) => {
+    editor.finish(true)
+    view.zoomTime(direction)
+  }
+  const zoomPitch = (direction: -1 | 1) => {
+    editor.finish(true)
+    view.zoomPitch(direction)
+  }
   const wheel = (event: EventPayload) => {
     const dx = event.deltaX ?? 0
     const dy = event.deltaY ?? 0
     if (event.modifiers?.cmd || event.modifiers?.ctrl) {
-      if (dy) view.zoomTime(dy > 0 ? 1 : -1)
+      if (dy) zoomTime(dy > 0 ? 1 : -1)
       return
     }
     // GPUI deltas are negative while content moves toward later positions.
@@ -117,14 +125,14 @@ export function MidiEditor({
           iconOnly
           label={labels.zoomOutTime}
           disabled={!view.canZoomTime.out}
-          onClick={() => view.zoomTime(-1)}
+          onClick={() => zoomTime(-1)}
           icon={<Icon name="Minus" />}
         />
         <Button
           iconOnly
           label={labels.zoomInTime}
           disabled={!view.canZoomTime.in}
-          onClick={() => view.zoomTime(1)}
+          onClick={() => zoomTime(1)}
           icon={<Icon name="Plus" />}
         />
         <text style={muted}>{labels.pitchZoom}</text>
@@ -132,14 +140,14 @@ export function MidiEditor({
           iconOnly
           label={labels.zoomOutPitch}
           disabled={!view.canZoomPitch.out}
-          onClick={() => view.zoomPitch(-1)}
+          onClick={() => zoomPitch(-1)}
           icon={<Icon name="Minus" />}
         />
         <Button
           iconOnly
           label={labels.zoomInPitch}
           disabled={!view.canZoomPitch.in}
-          onClick={() => view.zoomPitch(1)}
+          onClick={() => zoomPitch(1)}
           icon={<Icon name="Plus" />}
         />
         <text style={muted}>{labels.loopBars}</text>
@@ -186,6 +194,7 @@ export function MidiEditor({
         />
       </div>
       <div
+        testId="midi-body"
         style={sx({ display: "flex", flexDirection: "row", flexGrow: 1, minHeight: 0 })}
         onScroll={wheel}
       >

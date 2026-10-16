@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it } from "bun:test"
+import { handleGpuixEvent } from "@gpuix/react"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { MIDI_ID, mount, notes, seed } from "../harness.test"
 import type { Harness } from "../harness.test"
@@ -53,6 +54,57 @@ it("cancels an active note move before changing time zoom", () => {
   h.root.renderer.nativeSimulateMouseMove(x + 80, y, 0)
   expect(notes()[1]?.startBeat).not.toBe(3)
   h.root.renderer.nativeSimulateScrollWheel(x, y, 0, 120, "cmd")
+  h.root.renderer.nativeSimulateMouseUp(x + 80, y)
+  expect(notes()[1]?.startBeat).toBe(3)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("cancels wheel zoom synchronously before an unflushed release can commit the move", () => {
+  const h = (view = mount())
+  const box = h.bounds("midi-note-visible")
+  const grid = h.root.renderer.findByTestId("midi-grid")
+  if (!grid) throw new Error("Missing grid")
+  const body = h.root.renderer.findByTestId("midi-body")
+  if (!body) throw new Error("Missing MIDI wheel owner")
+  const x = box.x + 2
+  const y = box.y + box.height / 2
+  h.root.renderer.nativeSimulateMouseDown(x, y)
+  h.root.renderer.nativeSimulateMouseMove(x + 80, y, 0)
+  expect(notes()[1]?.startBeat).not.toBe(3)
+  // Direct dispatch avoids TestRoot's per-native-event flushSync wrapper.
+  handleGpuixEvent(
+    {
+      elementId: body.id,
+      eventType: "scroll",
+      x,
+      y,
+      deltaY: 120,
+      modifiers: { cmd: true, shift: false, ctrl: false, alt: false },
+    },
+    h.root.renderer
+  )
+  handleGpuixEvent(
+    { elementId: grid.id, eventType: "mouseUp", x: x + 80, y, button: 0 },
+    h.root.renderer
+  )
+  expect(notes()[1]?.startBeat).toBe(3)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("rolls back an active note move when layout changes its time scale", () => {
+  const size = { width: 900, height: 360 }
+  const h = (view = mount(MIDI_ID, size))
+  const box = h.bounds("midi-note-visible")
+  const x = box.x + 2
+  const y = box.y + box.height / 2
+  h.root.renderer.nativeSimulateMouseDown(x, y)
+  h.root.renderer.nativeSimulateMouseMove(x + 80, y, 0)
+  expect(notes()[1]?.startBeat).not.toBe(3)
+  size.width = 620
+  h.render()
+  h.root.renderer.flush()
+  h.root.renderer.dispatchNativeEvents()
+  h.root.renderer.flush()
   h.root.renderer.nativeSimulateMouseUp(x + 80, y)
   expect(notes()[1]?.startBeat).toBe(3)
   expect(useProjectState.getState().session.canUndo).toBe(false)

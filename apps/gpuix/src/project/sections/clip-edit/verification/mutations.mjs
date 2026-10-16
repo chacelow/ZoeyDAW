@@ -6,6 +6,13 @@ import { readFileSync, writeFileSync } from "node:fs"
 
 const mutations = [
   {
+    name: "SEC-03 defer zoom cancellation until React commit",
+    file: "src/project/sections/clip-edit/midi/MidiEditor.tsx",
+    from: "const zoomTime = (direction: -1 | 1) => {\n    editor.finish(true)",
+    to: "const zoomTime = (direction: -1 | 1) => {",
+    tests: ["src/project/sections/clip-edit/midi/scroll-gesture.test.tsx"],
+  },
+  {
     name: "SEC-02 bind selection to array positions",
     file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
     from: "ids.has(note.id)",

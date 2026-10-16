@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert"
 import { mkdirSync } from "node:fs"
 import path from "node:path"
+import { handleGpuixEvent } from "@gpuix/react"
 import {
   projectActions,
   setProjectStorageId,
@@ -57,6 +58,34 @@ try {
       [3.25, 65],
     ]
   )
+  const beforeZoom = structuredClone(readNotes())
+  const box = view.bounds(`midi-note-${beforeZoom[1]?.id}`)
+  const body = view.root.renderer.findByTestId("midi-body")
+  const grid = view.root.renderer.findByTestId("midi-grid")
+  if (!body || !grid) throw new Error("Missing native MIDI event owners")
+  const x = box.x + 2
+  const y = box.y + box.height / 2
+  view.root.renderer.nativeSimulateMouseDown(x, y)
+  view.root.renderer.nativeSimulateMouseMove(x + 80, y, 0)
+  await whenProjectBackendIdle()
+  assert.notDeepEqual(readNotes(), beforeZoom)
+  handleGpuixEvent(
+    {
+      elementId: body.id,
+      eventType: "scroll",
+      x,
+      y,
+      deltaY: 120,
+      modifiers: { cmd: true, shift: false, ctrl: false, alt: false },
+    },
+    view.root.renderer
+  )
+  handleGpuixEvent(
+    { elementId: grid.id, eventType: "mouseUp", x: x + 80, y, button: 0 },
+    view.root.renderer
+  )
+  await whenProjectBackendIdle()
+  assert.deepEqual(readNotes(), beforeZoom)
   assert.equal(useProjectState.getState().session.backend.phase, "ready")
   assert.equal(useProjectState.getState().session.backend.error, null)
   view.root.renderer.captureScreenshot(path.join(output, "r2-midi.png"))
