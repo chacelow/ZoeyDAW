@@ -11,13 +11,14 @@ import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { createVerificationKeyboard } from "../footer/verification/keyboard"
 import { createTestWindowActivity } from "../footer/verification/test-activity"
 import { createTestAnimationFrames } from "../footer/verification/test-frame"
+import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 
 beforeEach(() =>
   hydrateProject(
     JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
   )
 )
-function mount(width = 1800) {
+function mount(width = 1800, numberFontFamily = DEFAULT_DESIGN_TOKENS.typography.numberFontFamily) {
   const keyboard = createWindowKeyboard()
   const root = createTestRoot({ width, height: 400, ...keyboard.rootHandlers })
   const activity = createTestWindowActivity()
@@ -33,7 +34,7 @@ function mount(width = 1800) {
     },
   })
   root.render(
-    <ThemeProvider>
+    <ThemeProvider design={{ ...DEFAULT_DESIGN_TOKENS, typography: { numberFontFamily } }}>
       <WindowKeyboardProvider value={keyboard}>
         <AnimationFrameProvider source={frames}>
           <div
@@ -257,3 +258,54 @@ test("BPM keyboard fine adjustment preserves decimals independently of coarse mo
     root.unmount()
   }
 })
+
+const firstMountFonts: Record<"Helvetica" | "missing", string> = {
+  Helvetica: "Helvetica",
+  missing: "__zoeydaw_header_missing_font__",
+}
+for (const [family, numberFontFamily] of Object.entries(firstMountFonts)) {
+  for (const width of [1800, 1070, 900, 620]) {
+    test(`first mount Header ${family} at ${width} preserves native columns and overflow`, () => {
+      const root = mount(width, numberFontFamily)
+      try {
+        const read = (testId: string) => {
+          const element = root.renderer.findByTestId(testId)
+          const bounds = element && root.renderer.getElementBounds(element.id)
+          if (!element || !bounds) throw new Error(`Missing ${testId}`)
+          return { element, bounds }
+        }
+        const { element: scroll, bounds: viewport } = read("transport-scroll")
+        const { bounds: left } = read("transport-left")
+        const { bounds: center } = read("transport-center")
+        const { bounds: right } = read("transport-right")
+        const gap = PROJECT_METRICS.transportColumnGap
+        expect(viewport.width).toBe(width)
+        expect(center.x).toBeGreaterThanOrEqual(left.x + left.width + gap)
+        expect(right.x).toBeGreaterThanOrEqual(center.x + center.width + gap)
+        if (width === 1800) {
+          expect(Math.abs(center.x + center.width / 2 - width / 2)).toBeLessThanOrEqual(0.5)
+        } else {
+          expect(Math.abs(center.x - left.x - left.width - gap)).toBeLessThanOrEqual(0.5)
+        }
+        if (width >= 1070) {
+          expect(Math.abs(right.x + right.width - width)).toBeLessThanOrEqual(0.5)
+          expect(root.renderer.getScrollOffset(scroll.id)).toEqual([0, 0])
+        } else {
+          root.renderer.nativeSimulateScrollWheel(
+            left.x + left.width + gap / 2,
+            center.y + center.height / 2,
+            0,
+            -80
+          )
+          const offset = root.renderer.getScrollOffset(scroll.id)?.[0]
+          if (offset === undefined) throw new Error("Missing Header scroll offset")
+          expect(offset).toBeLessThan(0)
+          expect(center.width).toBe(read("transport-center").bounds.width)
+          expect(read("transport-right").bounds.x).toBeLessThan(right.x)
+        }
+      } finally {
+        root.unmount()
+      }
+    })
+  }
+}

@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process"
 import {
   closeSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
   openSync,
@@ -13,31 +12,36 @@ import {
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import {
+  canonicalBuildPath as canonical,
+  isWithinBuildPath as inside,
+  sharedBuildPaths,
+} from "../paths.mjs"
 
-const { dirname, isAbsolute, join, relative, resolve, sep } = path
+const { dirname, join, resolve } = path
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../../..")
 const regression = join(repo, "scripts/gpuix-main/redraw-regression/run.mjs")
-const sharedRoot = "/Volumes/PSSD/code/_vendor/zoeydaw-gpuix"
+const shared = sharedBuildPaths(repo)
 const guard = "if !matches!(self.mode, GpuiMode::Production) {"
 const features = "test-support,gpui_platform/runtime_shaders"
 const usage = `Isolated native production-draw mutation (macOS, real binary; no desktop control).
 
-First prepare a FIXED isolated checkout using the repository build entrypoint:
-  GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/f7-gpuix \\
-  CARGO_TARGET_DIR=/Volumes/PSSD/code/_vendor/target-f7 \\
+Set GPUIX_VENDOR_ROOT and CARGO_TARGET_DIR to owned isolated paths, then prepare a FIXED checkout:
+  GPUIX_VENDOR_ROOT="$GPUIX_VENDOR_ROOT" \\
+  CARGO_TARGET_DIR="$CARGO_TARGET_DIR" \\
   RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin CARGO_BUILD_JOBS=6 \\
     bash scripts/gpuix-main/build.sh
 
 Then run this executable against that same already-owned isolated checkout:
-  GPUIX_VENDOR_ROOT=/Volumes/PSSD/code/_vendor/f7-gpuix \\
-  CARGO_TARGET_DIR=/Volumes/PSSD/code/_vendor/target-f7 \\
+  GPUIX_VENDOR_ROOT="$GPUIX_VENDOR_ROOT" \\
+  CARGO_TARGET_DIR="$CARGO_TARGET_DIR" \\
   RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin CARGO_BUILD_JOBS=6 \\
     node scripts/gpuix-main/redraw-regression/mutate.mjs
 
 GPUIX_VENDOR_ROOT and CARGO_TARGET_DIR are required. Both must be isolated from
 shared vendor/target and the repository. Source must already contain the F7
-runtime guard. No separate clone is needed; use the primary owned F7 checkout.
+runtime guard. Local Cargo targets must stay under the Git-derived build base unless CI=true.
 Uses existing vendor Bun/napi dependencies; performs direct release napi rebuilds
 with --features ${features}. It deliberately does not invoke build.sh on
 mutated sources or rewrite repository manifests/symlinks. Only the flush_effects
@@ -56,19 +60,6 @@ if (process.argv.includes("--help")) {
 }
 const unknown = process.argv.slice(2)
 if (unknown.length) throw new Error(`Unknown arguments: ${unknown.join(" ")}; use --help`)
-
-function inside(path, root) {
-  const fromRoot = relative(root, path)
-  return (
-    fromRoot === "" ||
-    (fromRoot !== ".." && !fromRoot.startsWith(`..${sep}`) && !isAbsolute(fromRoot))
-  )
-}
-
-function canonical(path) {
-  if (existsSync(path)) return realpathSync(path)
-  return join(canonical(dirname(path)), path.slice(dirname(path).length + 1))
-}
 
 function replaceGuard(source, from, to) {
   const start = source.indexOf("    fn flush_effects(&mut self) {")
@@ -98,20 +89,17 @@ async function main() {
     throw new Error("Set explicit isolated GPUIX_VENDOR_ROOT and CARGO_TARGET_DIR; see --help")
   const vendorRoot = canonical(resolve(process.env.GPUIX_VENDOR_ROOT))
   const target = canonical(resolve(process.env.CARGO_TARGET_DIR))
+  const protectedRoots = [shared.vendorRoot, shared.target, realpathSync(repo)]
   for (const [name, path] of [
     ["vendor root", vendorRoot],
     ["cargo target", target],
   ]) {
-    if (
-      inside(path, canonical(sharedRoot)) ||
-      inside(path, realpathSync(repo)) ||
-      inside(path, "/Volumes/PSSD/code/_vendor/target")
-    ) {
+    if (protectedRoots.some(root => inside(path, root) || inside(root, path))) {
       throw new Error(`Refusing shared/repository ${name}: ${path}`)
     }
   }
-  if (!target.startsWith("/Volumes/PSSD/"))
-    throw new Error("CARGO_TARGET_DIR must stay on /Volumes/PSSD")
+  if (process.env.CI !== "true" && !inside(target, shared.base))
+    throw new Error("CARGO_TARGET_DIR must stay within shared build base")
   const jobs = process.env.CARGO_BUILD_JOBS || "6"
   if (!/^[1-6]$/.test(jobs)) throw new Error("CARGO_BUILD_JOBS must be between 1 and 6")
   const { revision } = JSON.parse(

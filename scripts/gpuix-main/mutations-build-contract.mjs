@@ -10,6 +10,7 @@ try {
   for (const name of [
     "check.mjs",
     "build.sh",
+    "paths.mjs",
     "build-contract-fixture.mjs",
     "build-contract.test.mjs",
   ])

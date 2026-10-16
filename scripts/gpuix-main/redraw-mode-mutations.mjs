@@ -3,18 +3,38 @@ import { spawnSync } from "node:child_process"
 import { readFileSync, realpathSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import path from "node:path"
+import { canonicalBuildPath, isWithinBuildPath, sharedBuildPaths } from "./paths.mjs"
 
+if (process.argv.includes("--help")) {
+  console.log(
+    "Isolated GPUI mode mutation. Set GPUIX_VENDOR_ROOT to an owned isolated vendor. CARGO_TARGET_DIR defaults to <isolated vendor>/target. Local targets must stay under the Git-derived build base unless CI=true. Shared vendor, shared target and repository paths are always rejected."
+  )
+  process.exit(0)
+}
+if (process.argv.length > 2) throw new Error("Unknown arguments; use --help")
 const root = process.env.GPUIX_VENDOR_ROOT
-if (!root) throw new Error("Set GPUIX_VENDOR_ROOT to the isolated F7 vendor root")
-const isolatedRoot = realpathSync(root)
-if (
-  isolatedRoot !== "/Volumes/PSSD/code/_vendor/f7-gpuix" &&
-  !isolatedRoot.startsWith("/Volumes/PSSD/code/_vendor/f7-gpuix/")
-)
-  throw new Error("Mutation runner only accepts the isolated F7 vendor")
-const vendor = path.join(isolatedRoot, "6a5c7c142ac32f9eb0caefe0121be995cfc18631")
+if (!root) throw new Error("Set GPUIX_VENDOR_ROOT to an isolated vendor root")
+const repo = path.resolve(import.meta.dirname, "../..")
+const shared = sharedBuildPaths(repo)
+const isolatedRoot = canonicalBuildPath(root)
+const target = canonicalBuildPath(process.env.CARGO_TARGET_DIR ?? path.join(isolatedRoot, "target"))
+const protectedRoots = [shared.vendorRoot, shared.target, realpathSync(repo)]
+for (const [name, value] of [
+  ["vendor root", isolatedRoot],
+  ["cargo target", target],
+]) {
+  if (protectedRoots.some(root => isWithinBuildPath(value, root) || isWithinBuildPath(root, value)))
+    throw new Error(`Refusing shared/repository ${name}: ${value}`)
+}
+if (process.env.CI !== "true" && !isWithinBuildPath(target, shared.base))
+  throw new Error("CARGO_TARGET_DIR must stay within shared build base")
+const vendor = realpathSync(path.join(isolatedRoot, "6a5c7c142ac32f9eb0caefe0121be995cfc18631"))
+if (!isWithinBuildPath(vendor, isolatedRoot))
+  throw new Error("Vendor checkout escapes isolated root through a symlink")
 const zed = path.join(vendor, "zed")
-const source = path.join(zed, "crates/gpui/src/app.rs")
+const source = realpathSync(path.join(zed, "crates/gpui/src/app.rs"))
+if (!isWithinBuildPath(source, vendor))
+  throw new Error("GPUI app.rs escapes isolated vendor through a symlink")
 const original = readFileSync(source, "utf8")
 const guard = "if !matches!(self.mode, GpuiMode::Production) {"
 assert.equal(
@@ -22,11 +42,7 @@ assert.equal(
   2,
   "Expected exactly one registered production draw guard"
 )
-const environment = {
-  ...process.env,
-  CARGO_TARGET_DIR: process.env.CARGO_TARGET_DIR ?? "/Volumes/PSSD/code/_vendor/target-f7",
-  CARGO_BUILD_JOBS: "6",
-}
+const environment = { ...process.env, CARGO_TARGET_DIR: target, CARGO_BUILD_JOBS: "6" }
 function run() {
   const result = spawnSync(
     path.join(homedir(), ".cargo/bin/cargo"),

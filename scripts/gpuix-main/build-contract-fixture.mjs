@@ -11,13 +11,15 @@ const git = (cwd, ...args) =>
   }).trimEnd()
 
 export function buildFixture() {
-  const root = mkdtempSync(path.join(tmpdir(), "gpuix-build-contract-"))
+  const workspace = mkdtempSync(path.join(tmpdir(), "gpuix-build-contract-"))
+  const root = path.join(workspace, "repo")
   const scripts = path.join(root, "scripts/gpuix-main")
-  const vendorRoot = path.join(root, "vendor")
+  const vendorRoot = path.join(workspace, "_vendor/zoeydaw-gpuix")
   const checkout = path.join(root, "checkout")
   mkdirSync(path.join(scripts, "patches"), { recursive: true })
   mkdirSync(path.join(checkout, "zed"), { recursive: true })
-  for (const name of ["check.mjs", "build.sh"])
+  git(root, "init", "--quiet")
+  for (const name of ["check.mjs", "build.sh", "paths.mjs"])
     copyFileSync(path.join(source, name), path.join(scripts, name))
   for (const repo of [path.join(checkout, "zed"), checkout]) {
     git(repo, "init", "--quiet")
@@ -30,7 +32,7 @@ export function buildFixture() {
   }
   const revision = git(checkout, "rev-parse", "HEAD")
   const vendor = path.join(vendorRoot, revision)
-  mkdirSync(vendorRoot)
+  mkdirSync(vendorRoot, { recursive: true })
   symlinkSync(checkout, vendor)
   symlinkSync(vendor, path.join(root, ".gpuix-main"))
   writeFileSync(
@@ -95,6 +97,6 @@ export function buildFixture() {
           CI: "true",
         },
       }),
-    close: () => rmSync(root, { recursive: true, force: true }),
+    close: () => rmSync(workspace, { recursive: true, force: true }),
   }
 }

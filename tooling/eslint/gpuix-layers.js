@@ -228,7 +228,11 @@ export const gpuixLayers = {
     if (isTest(file)) {
       return {}
     }
-    const layer = LAYERS.find(item => item.match.test(file))
+    const layer =
+      LAYERS.find(item => item.match.test(file)) ??
+      (file.includes("/apps/gpuix/src/")
+        ? { name: "gpuix", forbidPackages: [], forbidLayers: [], forbidGlobals: true }
+        : null)
     if (!layer) {
       return {}
     }

@@ -66,3 +66,9 @@ jobs:
         run: |
           case "$SCAN_BASE" in ""|0000000000000000000000000000000000000000) SCAN_BASE=HEAD~1 ;; esac
           bash scripts/verify-gpuix.sh "$SCAN_BASE"
+
+      - name: Native geometry diagnostics
+        if: failure()
+        run: |
+          PROBE_PASSES=1 bun scripts/gpuix-main/ci-geometry/probe.tsx
+          PROBE_PASSES=4 bun scripts/gpuix-main/ci-geometry/probe.tsx

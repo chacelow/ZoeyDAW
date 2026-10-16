@@ -1,7 +1,7 @@
 // Generates docs/architecture/gpuix-ui-map.md from apps/gpuix/src so the map cannot drift from code.
 // Usage: node scripts/gpuix-ui-map.mjs          (rewrite the map)
 //        node scripts/gpuix-ui-map.mjs --check  (exit 1 when the committed map is stale)
-//        node scripts/gpuix-ui-map.mjs --stage  (rewrite and git add; run by lint-staged on gpuix source)
+//        node scripts/gpuix-ui-map.mjs --stage  (generate from Git index; run by lint-staged)
 import { execFileSync } from "node:child_process"
 import { readdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
@@ -22,9 +22,41 @@ const isTestCode = file => /\.test\.|test-helper|\/testing\//u.test(file)
 // Demo and verification harnesses are not product surfaces; their testIds stay out of the map.
 const isHarness = file =>
   /(^|\/)(demo|verification)\//u.test(file) || /(^|\/)demo\.tsx$/u.test(file)
-const sources = files(src)
-  .filter(file => !isTestCode(file))
-  .map(file => ({ file: path.relative(src, file), text: readFileSync(file, "utf8") }))
+const staged = process.argv.includes("--stage") && !process.argv.includes("--check")
+const sourcePaths = (
+  staged
+    ? execFileSync("/usr/bin/git", ["ls-files", "-z", "--cached", "--", "apps/gpuix/src"], {
+        cwd: root,
+        encoding: "utf8",
+      })
+        .split("\0")
+        .filter(Boolean)
+    : files(src).map(file => path.relative(root, file))
+).filter(file => /\.tsx?$/u.test(file) && !isTestCode(file))
+const indexedSources = new Map()
+if (staged) {
+  const batch = execFileSync("/usr/bin/git", ["cat-file", "--batch", "-z"], {
+    cwd: root,
+    input: sourcePaths.map(file => `:${file}\0`).join(""),
+    maxBuffer: 64 * 1024 * 1024,
+  })
+  let offset = 0
+  for (const file of sourcePaths) {
+    const end = batch.indexOf(10, offset)
+    const header = batch
+      .subarray(offset, end)
+      .toString("utf8")
+      .match(/^[a-f\d]+ blob (\d+)$/u)
+    if (!header) throw new Error(`Cannot read staged source: ${file}`)
+    const size = Number(header[1])
+    indexedSources.set(file, batch.subarray(end + 1, end + 1 + size).toString("utf8"))
+    offset = end + size + 2
+  }
+}
+const readSource = file =>
+  staged ? indexedSources.get(file) : readFileSync(path.join(root, file), "utf8")
+const sources = sourcePaths
+  .map(file => ({ file: path.relative(src, path.join(root, file)), text: readSource(file) }))
   .sort((a, b) => a.file.localeCompare(b.file))
 
 // A window entry calls gpuix render(<element>, { title, ... }) with a title option.
@@ -41,7 +73,7 @@ const entries = sources
     background: /LAUNCH_FOCUS|GPUIX_BACKGROUND/u.test(text),
   }))
 
-const routeText = readFileSync(path.join(src, "app/router/route.ts"), "utf8")
+const routeText = readSource("apps/gpuix/src/app/router/route.ts")
 const routes = [...new Set([...routeText.matchAll(/kind: "([a-z-]+)"/gu)].map(m => m[1]))]
 
 function area(file) {
@@ -54,13 +86,19 @@ function area(file) {
 // Static testIds grouped by owning area; template ids keep their literal prefix and mark the dynamic tail.
 const testIds = new Map()
 for (const { file, text } of sources.filter(({ file }) => !isHarness(file))) {
-  for (const match of text.matchAll(/testId=(?:"([^"]+)"|\{`([^`$]*)\$\{)/gu)) {
+  for (const match of text.matchAll(
+    /testId=(?:"([^"]+)"|\{`([^`$]*)\$\{(?:[^?}]+\?\s*"([^"]+)"\s*:\s*"([^"]+)"\}([^`$]*)\$\{)?)/gu
+  )) {
     const prefix = match[1] ?? match[2]
-    if (!prefix) continue
-    const id = match[1] ?? `${prefix}…`
+    const ids = match[3]
+      ? [`${prefix}${match[3]}${match[5]}…`, `${prefix}${match[4]}${match[5]}…`]
+      : prefix
+        ? [match[1] ?? `${prefix}…`]
+        : []
+    if (ids.length === 0) continue
     const key = area(file)
     if (!testIds.has(key)) testIds.set(key, new Set())
-    testIds.get(key).add(id)
+    for (const id of ids) testIds.get(key).add(id)
   }
 }
 const testIdCount = [...testIds.values()].reduce((count, set) => count + set.size, 0)
@@ -124,11 +162,39 @@ if (process.argv.includes("--check")) {
     `ui map current: ${entries.length} entries, ${routes.length} routes, ${testIdCount} testIds\n`
   )
 } else {
-  writeFileSync(output, content)
-  // --stage (pre-commit via lint-staged): fold the regenerated map into the commit being made,
-  // so a testId change can never land with a stale map.
-  if (process.argv.includes("--stage"))
-    execFileSync("/usr/bin/git", ["add", path.relative(root, output)], { cwd: root })
+  if (staged) {
+    const file = path.relative(root, output)
+    let workingMap
+    let indexedMap
+    try {
+      workingMap = readFileSync(output, "utf8")
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error
+    }
+    const indexed = execFileSync("/usr/bin/git", ["ls-files", "--", file], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+    if (indexed.trim())
+      indexedMap = execFileSync("/usr/bin/git", ["show", `:${file}`], {
+        cwd: root,
+        encoding: "utf8",
+      })
+    const hash = execFileSync("/usr/bin/git", ["hash-object", "-w", "--stdin"], {
+      cwd: root,
+      input: content,
+      encoding: "utf8",
+    }).trim()
+    execFileSync(
+      "/usr/bin/git",
+      ["update-index", "--add", "--cacheinfo", `100644,${hash},${file}`],
+      { cwd: root }
+    )
+    if (workingMap === indexedMap) writeFileSync(output, content)
+  } else {
+    writeFileSync(output, content)
+  }
   process.stdout.write(
     `wrote ${path.relative(root, output)}: ${entries.length} entries, ${testIdCount} testIds\n`
   )
