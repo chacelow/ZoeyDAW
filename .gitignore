@@ -1,4 +1,3 @@
-# Logs
 logs
 *.log
 npm-debug.log*
@@ -12,11 +11,9 @@ dist
 dist-ssr
 *.local
 
-# Generated validation reports
 coverage/
 /apps/web/artifacts/document-portal-reliability-benchmark.json
 
-# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -27,29 +24,24 @@ coverage/
 *.sln
 *.sw?
 
-# Packaged license artifacts staged by prepack
 apps/cli/LICENSE
 apps/cli/LICENSING.md
 apps/mcp/LICENSE
 apps/mcp/LICENSING.md
 
-# Retained local screenshots from the source project; not part of zoeydaw.
 .github/assets/library.jpeg
 .github/assets/canvas-overview.jpeg
 .github/assets/agent-mode.jpeg
 .github/assets/agent-in-action.jpeg
 
-# Rust
 /target
 crates/native/*.node
 crates/native/index.js
 crates/native/index.d.ts
 crates/native/browser.js
 
-# Local self-built renderer; build.sh owns this symlink, never its external contents.
 /.gpuix-main
 
-# Verification output (screenshots, AX dumps, timing logs) lives outside the repository.
 **/evidence/
 **/verification/**/*.png
 **/verification/**/*.jpg

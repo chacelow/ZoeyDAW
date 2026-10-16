@@ -44,9 +44,6 @@ function niceSecondsAtLeast(value: number): number {
   return value
 }
 
-/**
-Ruler values are absolute musical bar numbers; x coordinates share the clip axis.
-*/
 export function musicalTicks(input: VisibleBars): RulerTick[] {
   const range = visibleRange(input)
   if (!range || range.start >= range.end) {
@@ -74,9 +71,6 @@ export function musicalTicks(input: VisibleBars): RulerTick[] {
   return ticks
 }
 
-/**
-Time ticks use actual beat duration (quarter note = 60 / BPM seconds).
-*/
 export function timeTicks(
   input: VisibleBars & { bpm: number; numerator: number; denominator: number }
 ): RulerTick[] {

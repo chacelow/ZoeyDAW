@@ -16,7 +16,6 @@ cargo_target="$(node "$script_dir/paths.mjs" --canonical "${CARGO_TARGET_DIR:-$v
 export CARGO_TARGET_DIR="$cargo_target"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-6}"
 
-# Local builds keep Cargo outputs beside the primary repository; hosted CI can use its own cache.
 case "$CARGO_TARGET_DIR" in
   "$vendor_base"/*) ;;
   *) [ "${CI:-}" = "true" ] || { echo "CARGO_TARGET_DIR must stay under the derived vendor base: $vendor_base" >&2; exit 1; } ;;
@@ -68,13 +67,8 @@ git -C "$vendor" submodule update --init --depth 1
 [ -z "$(git -C "$vendor" ls-files --others --exclude-standard)" ] || {
   echo "Refusing untracked gpuix sources" >&2; exit 1;
 }
-# Only extend a checkout that exactly matches a reviewed prefix of the series.
 pending_patches="$(node "$script_dir/check.mjs" --pending "$vendor")"
 readonly pending_patches
-# Files a patch creates are recorded with `git add --intent-to-add`, so the next build's
-# untracked-source guard does not mistake them for stray edits (context-menu.patch adds
-# context_menu.rs). Not `git apply --intent-to-add`: Apple Git 2.50.1 drops every index entry the
-# patch does not touch, which then reads as deleting the rest of the tree.
 while IFS= read -r patch; do
   case "$patch" in
     "") ;;
@@ -86,7 +80,6 @@ for repository in "$vendor" "$vendor/zed"; do
   created="$(git -C "$repository" ls-files --others --exclude-standard)"
   [ -z "$created" ] || printf '%s\n' "$created" | git -C "$repository" add --intent-to-add --pathspec-from-file=-
 done
-# Both repositories must now match their full registered series, with no other edits.
 node "$script_dir/check.mjs" --sources "$vendor"
 mkdir -p "$CARGO_TARGET_DIR"
 pushd "$vendor" >/dev/null

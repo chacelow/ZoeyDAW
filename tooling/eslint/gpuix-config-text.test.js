@@ -39,7 +39,6 @@ tester.run("architecture/gpuix-config-text", gpuixConfigText, {
       filename: product,
       code: '<Button aria-label="中文" aria-description="！42" title={"  "} />',
     },
-    // This rule is inert in generated/config data, demos, tests and other packages.
     ...[
       `${src}/app/home/HomePage.test.tsx`,
       `${src}/app/home/HomePage.spec.tsx`,

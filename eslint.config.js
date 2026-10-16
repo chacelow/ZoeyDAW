@@ -31,12 +31,10 @@ export default [
   {
     files: ["**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"],
     rules: {
-      // The repository already uses descriptive PascalCase component files and directories.
       "github/filenames-match-regex": ["error", "^[A-Za-z][A-Za-z0-9]*(?:[-.][A-Za-z0-9]+)*$"],
       "sort-keys": "off",
       "no-nested-ternary": "off",
       "no-use-before-define": ["error", { functions: false }],
-      // Whole-graph cycle search took 73 of 137 seconds of a full lint on 2026-10-17; checks over a minute stay out of the gate.
       "import-x/no-cycle": "off",
     },
     settings: {
@@ -128,7 +126,6 @@ export default [
     },
   },
   {
-    // 唯一允许写 SVG 标记的文件;其余手写 SVG 一律由 architecture/gpuix-imports 拦截。
     files: ["apps/gpuix/src/shared/svg/serialise.ts"],
     plugins: { architecture: localRules },
     rules: { "architecture/gpuix-imports": "off" },
@@ -138,9 +135,6 @@ export default [
     rules: { "unicorn/prefer-then-catch": "off" },
   },
   {
-    // Renderer probes and regressions under scripts/gpuix-main/<slice>/, and the release smoke, run
-    // against the app's dependency tree (react, @gpuix/*) through the app tsconfig or a node_modules
-    // link to apps/gpuix.
     files: ["scripts/gpuix-main/*/**/*.{ts,tsx}", "scripts/release/*.{ts,tsx}"],
     rules: {
       "import-x/no-extraneous-dependencies": [
@@ -157,8 +151,6 @@ export default [
     },
   },
   {
-    // These two shared controls take role from the caller (a composite widget such as the Browser
-    // tree gives its rows one Tab entry). Elements without a role are still checked.
     files: [
       "apps/gpuix/src/ui/controls/Button/index.tsx",
       "apps/gpuix/src/ui/controls/DragPreviewArea/index.tsx",

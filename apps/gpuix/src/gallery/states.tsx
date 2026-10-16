@@ -372,7 +372,6 @@ export function StateGallery({
               ]}
               style={{
                 width: theme.layout.gallery.settingsPreviewWidth,
-                // Fixed Gallery fixture height; it is unrelated to track density.
                 height: 210,
               }}
             />

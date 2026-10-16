@@ -15,10 +15,6 @@ import { useMidiViewport } from "./useMidiViewport"
 import type { MidiClip } from "@/project/model/types"
 import type { MidiEditorLabels } from "../labels"
 
-/**
-Piano roll for one MIDI clip. Fold, zoom and scroll stay local; notes change only through the
-editor's project transactions. Wheel scrolls (Shift for time), Cmd/Ctrl+wheel zooms time.
-*/
 export function MidiEditor({
   readClip,
   color,
@@ -65,7 +61,6 @@ export function MidiEditor({
       if (dy) zoomTime(dy > 0 ? 1 : -1)
       return
     }
-    // GPUI deltas are negative while content moves toward later positions.
     if (event.modifiers?.shift) view.scrollTo(view.roll.scrollX - (dy || dx), view.roll.scrollY)
     else view.scrollTo(view.roll.scrollX - dx, view.roll.scrollY - dy)
   }

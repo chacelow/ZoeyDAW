@@ -3,20 +3,12 @@ import { Button } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 
 export interface TitleBarProps {
-  /** Project name on the project route; absent elsewhere. */
   readonly title?: string
   readonly settingsLabel: string
   readonly onOpenSettings: () => void
-  /** Surface of the page directly below, so titlebar and Header read as one strip. */
   readonly surface: string
 }
 
-/**
- * macOS transparent titlebar row. The native traffic lights sit in the left inset (positioned
- * by the window options), the muted title is centered on the window like Live's, and the row shares the Header's
- * surface so the two read as one continuous strip. Dragging stays native: GPUI keeps
- * AppKit's titlebar move region because the app does not claim the drag.
- */
 export function TitleBar({ title, settingsLabel, onOpenSettings, surface }: TitleBarProps) {
   const theme = useTheme()
   const inset = theme.project.trafficLightInset

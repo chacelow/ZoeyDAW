@@ -22,10 +22,6 @@ export interface ProjectPageProps {
   readonly renderSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
 }
 
-/**
- * Route entry: isolates the project's editing session and snapshot key, then holds a runtime
- * lease (opening the native backend) for exactly as long as the view is mounted.
- */
 export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPageProps) {
   const shell = useProjectShell()
   const { t, locale } = useAppTranslation()

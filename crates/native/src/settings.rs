@@ -11,9 +11,7 @@ use crate::atomic_file::write_atomically;
 mod preferences;
 use preferences::{preferences_defaults, Preferences};
 
-// Platform directory identifier is an on-disk compatibility contract, not a preference.
 const APP_DIR: &str = "com.zoeydaw.desktop";
-// Schema versions identify persisted formats; unversioned files migrate to version 1 in memory.
 const SETTINGS_SCHEMA_VERSION: u32 = 1;
 
 #[napi(object)]
@@ -143,7 +141,6 @@ pub fn settings_set(config_dir: String, json: String) -> napi::Result<()> {
     let directory = Path::new(&config_dir);
     let settings = parse_settings(json.as_bytes())
         .map_err(|error| napi::Error::from_reason(error.to_string()))?;
-    // Refuse to overwrite unreadable or future-version data, even with a valid input.
     get_settings(directory).map_err(|error| napi::Error::from_reason(error.to_string()))?;
     let bytes = serde_json::to_vec(&settings)
         .map_err(|error| napi::Error::from_reason(error.to_string()))?;

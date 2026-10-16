@@ -51,8 +51,6 @@ struct Registration {
 
 impl Registration {
     fn stop(self) {
-        // The message queue exists before the registration becomes visible. A
-        // thread message avoids a dangling HWND and is also safe after exit.
         unsafe {
             PostThreadMessageW(self.thread_id, WM_QUIT, 0, 0);
         }
@@ -114,7 +112,6 @@ impl MessageWindow {
         if unsafe { RegisterClassW(&class) } == 0 {
             return Err("RegisterClassW failed for reduced motion observer".into());
         }
-        // Not HWND_MESSAGE: only a hidden top-level window receives broadcasts.
         let hwnd = unsafe {
             CreateWindowExW(
                 0,

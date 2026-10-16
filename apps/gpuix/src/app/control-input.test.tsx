@@ -76,7 +76,6 @@ function mount() {
       root.renderer.flush()
     },
     lineWheel(deltaY: number) {
-      // The native test helper emits only pixel wheels; dispatch the real host line payload.
       flushSync(() =>
         createRendererState(root.renderer).dispatch({
           elementId: element.id,

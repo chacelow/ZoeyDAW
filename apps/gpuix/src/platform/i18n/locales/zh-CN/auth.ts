@@ -1,6 +1,3 @@
-/**
- * gpuix i18n core resources — auth (zh-CN)
- */
 export default {
   welcomeBack: "欢迎回来",
   login: "登录",

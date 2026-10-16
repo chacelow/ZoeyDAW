@@ -37,12 +37,8 @@ export function setSnapshotStorage(storage: SnapshotStorage | null): void {
 }
 
 let storageId: string | null = null
-// The v1 storage namespace identifies existing local snapshots; changing it requires migration.
 const storageKey = () => `zoeydaw:project:snapshot:v1:${encodeURIComponent(storageId ?? "default")}`
 
-/**
-Changing project route isolates its in-memory editing session and snapshot key.
-*/
 export function setProjectStorageId(projectId: string): void {
   if (storageId === projectId) {
     return
@@ -57,12 +53,10 @@ export function hydrateProject(json: string): void {
   hydrateState(parseProject(json))
 }
 
-/** Save availability belongs to the selected session snapshot, not module state. */
 export function canSaveSnapshot(state: Pick<ProjectState, "session">): boolean {
   return !state.session.snapshotSaveBlocked
 }
 
-/** Route opening treats absent snapshots as a new empty project, unlike explicit Restore. */
 export function openProjectSnapshot(projectId: string): boolean {
   if (storageId === projectId) resetProject(projectId)
   else setProjectStorageId(projectId)

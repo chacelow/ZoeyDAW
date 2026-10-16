@@ -76,7 +76,6 @@ export function TrackMeter({
   }, [trackId, epoch, driver, policy, minDb, silentDisplay])
   const width = theme.control["--spacing-control-track"]
   const { channelGap, peakWidth, zeroWidth, warningStop } = theme.design.editor.meter
-  // Stereo has two channels; level ratios remain normalized independently of visual metrics.
   const channelWidth = Math.floor((width - channelGap) / 2)
   const zeroY = Math.min(height - zeroWidth, Math.round((height * maxDb) / (maxDb - minDb)))
   return (
@@ -129,7 +128,6 @@ export function TrackMeter({
                 right: 0,
                 background: {
                   type: "linear-gradient",
-                  // A half turn directs the normalized gradient downward; this is geometry, not style.
                   angle: 180,
                   stops: [
                     { position: 0, color: theme.colors.arrangementMeterWarn },

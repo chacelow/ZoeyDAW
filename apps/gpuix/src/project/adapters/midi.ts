@@ -9,9 +9,6 @@ import {
 } from "./context"
 import type { MidiClip, MidiNote } from "../model/types"
 
-/**
-Keyboard events are visual/mock input only. MIDI notes go into armed tracks while recording.
-*/
 export const midiActions = {
   noteOn(pitch: number) {
     if (

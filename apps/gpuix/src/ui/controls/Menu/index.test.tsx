@@ -425,7 +425,6 @@ describe("native command menus", () => {
     expect(box.y).toBeLessThanOrEqual(94)
     root.renderer.nativeSimulateMouseDown(610, 370)
     root.renderer.nativeSimulateMouseUp(610, 370)
-    // macOS converts Ctrl+left to Right in GPUI's NSEvent path.
     root.renderer.nativeSimulateClick(100, 60, 2, "ctrl")
     expect(root.renderer.findByTestId("content")).toBeDefined()
   })

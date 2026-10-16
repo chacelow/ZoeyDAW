@@ -1,5 +1,3 @@
-// Pre-delivery scan for a gpuix slice. Run from the slice worktree root: node scripts/gpuix-review-scan.mjs [baseRef]
-// Cheap, deterministic checks that a reviewer would otherwise find by reading the diff. Exit 1 on any hard finding.
 import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
@@ -9,7 +7,6 @@ import { gitExecutable } from "./gpuix-main/paths.mjs"
 
 const absoluteOnly = process.argv[2] === "--absolute-paths"
 const base = process.argv[2] ?? "gpuix-migration"
-// Execute the repo's ESLint JS entry with this Node runtime; Windows cannot exec the extensionless .bin shim.
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const eslintBin = path.join(repoRoot, "node_modules", "eslint", "bin", "eslint.js")
 const eslintConfig = path.join(repoRoot, "eslint.config.js")
@@ -94,11 +91,9 @@ for (const file of code) {
   }
   if (/from "(\.\.\/){3,}/.test(text))
     add("deep-relative-import", file, "use the @/ alias (eslint --fix)")
-  // Configuration literals are AST-checked once by architecture/gpuix-config-* through eslint.
   if (/\bas any\b|: any\b|<any>/.test(text)) add("any", file, "avoid any: type the boundary")
   if (
     /\bmock\w*\(|createMock|simulat/i.test(text) &&
-    // verification/ entry points drive the real app with nativeSimulate; they are not product code.
     !/backend\/mock|test-setup|fixtures|\/verification\//.test(file)
   ) {
     add(
@@ -121,12 +116,10 @@ for (const file of source) {
     add("skipped-test", file, "skipped/only test: delete or fix")
   if (/expect\([^)]*\)\.toBeTruthy\(\)\s*$/m.test(text) && /\.test\.(ts|tsx)$/.test(file))
     add("weak-assertion", file, "toBeTruthy-only assertion: assert the behaviour")
-  // Bounds already include border/padding on the pinned renderer; compatibility shims are obsolete.
   if (/\b(readOuterBounds|useFloatingCenterOffset)\b/.test(text))
     add("legacy-bounds-shim", file, "0.10 bounds shim: use renderer.getElementBounds / onLayout")
 }
 
-// Everything eslint already knows (layers, DOM globals, @/ alias, no hand-written SVG, JS timers, appearance override) comes from eslint, not from regexes here.
 if (source.length > 0) {
   try {
     execFileSync(

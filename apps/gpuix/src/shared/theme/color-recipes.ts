@@ -1,7 +1,6 @@
 import { colorMix } from "./color-mix"
 import type { ThemeColors } from "./colors"
 
-/** Percentages passed to colorMix, plus the semantic sources of derived roles. */
 export interface ColorRecipes {
   readonly contentPaperTint: number
   readonly editorShell: number
@@ -95,7 +94,6 @@ export const DEFAULT_COLOR_RECIPES: ColorRecipes = {
   },
 }
 
-/** MIDI velocity is a protocol value in [0, 127]; the backdrop is foreground or arrangementSurface. */
 export function velocityNoteFill(
   color: string,
   velocity: number,

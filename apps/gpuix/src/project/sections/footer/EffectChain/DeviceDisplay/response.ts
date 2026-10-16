@@ -2,10 +2,8 @@ import { cubicPath, polylinePath, segmentsPath } from "@/shared/svg/paths"
 import type { CubicSegment, Point } from "@/shared/svg/paths"
 import type { Device } from "@/project/model/devices"
 
-// Stable SVG coordinates, stretched to the host bounds; these are not screen-size preferences.
 export const DEVICE_DISPLAY_VIEWBOX = { width: 200, height: 60 }
 
-// Two thirds is the exact quadratic-to-cubic Bézier conversion factor, not a visual preference.
 export function quadraticAsCubic(start: Point, control: Point, end: Point): CubicSegment {
   return {
     control1: {

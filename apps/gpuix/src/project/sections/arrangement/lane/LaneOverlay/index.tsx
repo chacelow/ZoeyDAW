@@ -30,7 +30,6 @@ export function LaneOverlay({ scene, viewport, transportBar }: LaneOverlayProps)
     flushSync(() => setPosition(transportBar()))
   }, scene.playback.playing)
   const insertionPath = useMemo(
-    // Normalized triangle coordinates; theme metrics supply its screen dimensions.
     () =>
       polygonPath([
         { x: 0, y: 0 },

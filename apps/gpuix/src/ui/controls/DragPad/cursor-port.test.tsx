@@ -9,8 +9,6 @@ import { ControlEnvironmentProvider } from "../ControlEnvironment"
 import { DragPadNumber } from "./DragPadNumber"
 import type { CursorLockPort, ScreenPoint } from "./cursor-port"
 
-// Host model: a window whose content origin sits at `origin` on screen. Only cursor
-// operations are replaced; gpuix input, hit testing and layout stay real.
 function cursorHost(origin: ScreenPoint) {
   const state = { position: origin, visible: true, hides: 0 }
   const port: CursorLockPort = {

@@ -1,5 +1,3 @@
-//! 系统「减少动态效果」设置：macOS NSWorkspace 与 Windows client-area animation。
-//! Windows observer 的隐藏顶层窗口由独立消息线程持有,Env teardown 注销并 join。
 use napi::{
     bindgen_prelude::{Either, Function, Null},
     threadsafe_function::ThreadsafeFunctionCallMode,
@@ -9,15 +7,11 @@ use napi_derive::napi;
 
 type Listener = Box<dyn Fn(bool) + Send + Sync>;
 
-/// Whether the user asked the system to reduce motion.
 #[napi]
 pub fn reduced_motion() -> Result<bool> {
     platform::reduced_motion()
 }
 
-/// Subscribe to the system reduce-motion setting. The first asynchronous callback
-/// reports the current value; later callbacks report changes. Passing null removes
-/// the observer. One observer per process; a new callback replaces the old one.
 #[napi]
 pub fn on_reduced_motion_change(
     env: napi::Env,
@@ -67,7 +61,6 @@ mod platform {
     }
 
     define_class!(
-        // SAFETY: NSObject has no subclassing requirements and this class does not implement Drop.
         #[unsafe(super(NSObject))]
         #[name = "ZoeydawReducedMotionObserver"]
         #[ivars = Ivars]
@@ -99,21 +92,17 @@ mod platform {
             .lock()
             .map_err(|_| napi::Error::from_reason("reduced motion observer lock poisoned"))?;
         if let Some(observer) = registration.take() {
-            // SAFETY: `observer` was added to this center by this module.
             unsafe { center.removeObserver(&observer) };
         }
         let Some(listener) = listener else {
             return Ok(());
         };
-        // SAFETY: NSObject init accepts this allocated subclass with initialized ivars.
         let observer: Retained<ReducedMotionObserver> = unsafe {
             msg_send![
                 super(ReducedMotionObserver::alloc().set_ivars(Ivars { listener })),
                 init
             ]
         };
-        // SAFETY: the selector matches `displayOptionsDidChange:` defined above and the
-        // observer is retained in REGISTRATION until it is removed.
         unsafe {
             center.addObserver_selector_name_object(
                 &observer,
@@ -135,7 +124,6 @@ mod platform {
 
         fn post_display_options_change() {
             let center = NSWorkspace::sharedWorkspace().notificationCenter();
-            // SAFETY: a nil object is valid for this workspace notification.
             unsafe {
                 center.postNotificationName_object(
                     NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification,

@@ -11,11 +11,6 @@ export { createDisplayFormats } from "./display-formats"
 export { getCreationNames } from "./creation-names"
 export type { CreationNames } from "./creation-names"
 
-/**
- * gpuix binding for the shared i18next singleton. react-i18next resolves a second React
- * (the workspace's react@19.2.8, not the renderer's vendor React), so its hooks cannot run
- * under gpuix; this subscribes to i18next directly instead.
- */
 export function initAppI18n(options: InitI18nOptions = {}) {
   return initI18nCore(
     {
@@ -37,7 +32,6 @@ export function useAppTranslation() {
   return { t, locale }
 }
 
-/** Switches the interface language and persists it through the storage given to `initAppI18n`. */
 export async function changeLocale(locale: SupportedLocale): Promise<void> {
   await i18next.changeLanguage(locale)
   persistLocale(locale)

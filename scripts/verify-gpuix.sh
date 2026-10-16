@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# One gate for gpuix changes; run from the checkout root (slice worktree or coordinator merge tree).
-# macOS only. Usage: bash scripts/verify-gpuix.sh [baseRef] (default gpuix-migration; scan base...HEAD)
-# Order is cheapest-first and stops on the first failure. Every step prints one result line.
 set -euo pipefail
 base="${1:-gpuix-migration}"
 root="$(git rev-parse --show-toplevel)"
@@ -22,7 +19,6 @@ pnpm native:build >"$logs/native.log" 2>&1 || { cat "$logs/native.log"; exit 1; 
 echo "ok"
 
 step "tsc --noEmit"
-# `a && b` is exempt from `set -e`, so each gate is a plain statement whose failure stops the script.
 (cd apps/gpuix && pnpm exec tsc --noEmit)
 echo "0 errors"
 

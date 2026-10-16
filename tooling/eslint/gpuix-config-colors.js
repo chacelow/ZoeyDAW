@@ -74,7 +74,6 @@ export const gpuixConfigColors = {
       context.report({ node, messageId: "literalColor" })
     }
 
-    // Resolve lexical consts only: mutable bindings and imports are not statically known colors.
     function resolve(node, seen) {
       if (!node) return null
       if (

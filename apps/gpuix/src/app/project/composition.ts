@@ -37,7 +37,6 @@ export interface ProjectCompositionDependencies {
   readonly focusBrowserSearch: () => void
 }
 
-/** Controllers share one scene; the timeline owns its projection and keyboard. */
 export function createProjectComposition(deps: ProjectCompositionDependencies): ProjectComposition {
   const readPolicy = deps.readPolicy ?? (() => ARRANGEMENT_DEFAULTS)
   const sceneStore = createSceneStore(deps.geometry)

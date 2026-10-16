@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — oauth (zh-CN)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   processing: "登录处理中,请稍候...",
   githubProcessing: "正在处理 GitHub 登录...",

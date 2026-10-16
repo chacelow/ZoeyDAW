@@ -1,9 +1,3 @@
-/**
- * The only file in apps/gpuix that writes SVG markup. gpuix paints raw markup through the native
- * `<svg source>`; everything else describes shapes as data (lucide icon nodes, d3-shape paths) and
- * hands them to `serialiseSvg`. The lint rule `architecture/gpuix-imports` bans SVG literals
- * everywhere else, so a hand-written `<path d="…">` cannot slip back in.
- */
 export type SvgNode = readonly [tag: string, attributes: Readonly<Record<string, string | number>>]
 
 export interface SvgDocumentOptions {

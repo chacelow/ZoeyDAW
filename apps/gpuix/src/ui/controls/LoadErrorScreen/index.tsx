@@ -62,7 +62,6 @@ export function LoadErrorScreen({
       aria-label={props["aria-label"] ?? title}
       style={sx(
         {
-          // Zero origins cover the host bounds; spacing comes from the feedback design group.
           position: "absolute",
           top: 0,
           bottom: 0,

@@ -42,7 +42,6 @@ const store: { snapshot: readonly Notice[]; idSeed: number; policy: ToastPolicy 
 const subscribers = new Set<() => void>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 
-/** The composition root owns the preference; pending notices retain their existing expiry. */
 export function configureToastPolicy(next: ToastPolicy) {
   store.policy = next
   const evicted = store.snapshot.slice(0, Math.max(0, store.snapshot.length - next.queueLimit))
@@ -85,7 +84,6 @@ export function dismissToast(id?: string | number) {
 
 function upsert(options: ToastOptions, status: Notice["status"] = options.variant ?? "default") {
   const policy = store.policy
-  // A configured policy is an application-composition invariant, not user-facing fallback text.
   if (!policy) throw new Error("Configure toast policy before publishing notifications")
   const id = options.id ?? `toast-${++store.idSeed}`
   const previous = store.snapshot.find(notice => notice.id === id)
@@ -117,7 +115,6 @@ function variantMethod(variant: ToastVariant) {
 }
 
 export function toastLoading(message: string, id?: string) {
-  // Zero denotes a persistent notification until replacement or dismissal, not a duration default.
   return upsert({ id, description: message, duration: 0 }, "loading")
 }
 

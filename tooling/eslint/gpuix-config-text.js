@@ -13,8 +13,6 @@ function reportEnglish(node, value, context) {
   if (ENGLISH.test(value.trim())) context.report({ node, messageId: "untranslatedText" })
 }
 
-// Only walk expressions that contribute their literal text to the rendered value.
-// In particular, arguments to t() and identifiers are not literal UI copy.
 function reportStaticText(node, context) {
   if (!node) return
   switch (node.type) {

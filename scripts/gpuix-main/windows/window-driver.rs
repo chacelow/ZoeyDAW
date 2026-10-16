@@ -123,7 +123,6 @@ fn run() -> Result<(), String> {
         }
         _ => unreachable!(),
     }
-    // WM_CLOSE may already have removed the target. Never inspect a recycled HWND.
     let found = target.owns(window);
     let minimized = found && unsafe { IsIconic(window) } != 0;
     println!("{{\"found\":{found},\"minimized\":{minimized}}}");

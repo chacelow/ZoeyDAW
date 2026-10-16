@@ -3,13 +3,11 @@ import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { MidiNote } from "@/project/model/types"
 import type { SourceWindow } from "./layout"
 
-/** Shared metric bounds that a viewport solve needs; supplied from `PROJECT_METRICS` by the caller. */
 export interface RowLimits {
   readonly minRowHeight: number
   readonly maxRowHeight: number
 }
 
-/** Fold shows only pitches that hold notes, highest first; an empty clip keeps the C3 row. */
 export function rollPitches(
   notes: readonly MidiNote[],
   fold: boolean,
@@ -20,10 +18,6 @@ export function rollPitches(
   return pitches.length ? pitches : [initialPitch]
 }
 
-/**
-Fits the rows holding notes inside the source window, with one spare row above and below, into the
-measured height, then centers them. Without notes the C3 row is centered at the largest row height.
-*/
 export function fitRows(
   notes: readonly MidiNote[],
   pitches: readonly number[],
@@ -55,7 +49,6 @@ export function fitRows(
   return { rowHeight, scrollY: Math.max(0, Math.min(maxScroll, center - viewHeight / 2)) }
 }
 
-/** Rescale a scroll offset so the content point at the viewport center stays centered. */
 export function rescaleScroll(
   scroll: number,
   viewSize: number,

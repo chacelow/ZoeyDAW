@@ -19,10 +19,6 @@ export interface HomePageProps {
   readonly storage: SnapshotStorage
 }
 
-/**
- * Project list entry. As on the web, "Open" has no file picker yet and also creates a project;
- * recents persist through the native data directory instead of localStorage.
- */
 export function HomePage({ storage }: HomePageProps) {
   const theme = useTheme()
   const router = useRouter()

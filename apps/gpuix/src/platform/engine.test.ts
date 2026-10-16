@@ -6,14 +6,11 @@ import { pathToFileURL } from "node:url"
 import { apply, dispose, openSession, readPeaksAtBars, sourceInfo } from "./engine"
 import type { BackendRequest, PeakReader } from "@/project/model/backend"
 
-// 120 BPM in 4/4 is two seconds per bar: the 44.1 kHz source is exactly one bar.
 const SOURCE_RATE = 44_100
 const SOURCE_FRAMES = SOURCE_RATE * 2
 const QUARTER = SOURCE_FRAMES / 4
 const PIXELS = 4
 
-// Smooth, asymmetric and zero at both ends, so each quarter has a distinct
-// envelope and resampling to the device rate adds no ringing.
 const samples = Array.from({ length: SOURCE_FRAMES }, (_, frame) => {
   const x = frame / SOURCE_FRAMES
   return Math.round(0.9 * 6.75 * x * x * (1 - x) * 32_767)
@@ -37,13 +34,11 @@ function wav(): Buffer {
   return bytes
 }
 
-/** [min,max] of source quarter `q`, straight from the PCM written to disk. */
 function quarter(q: number): [number, number] {
   const slice = samples.slice(q * QUARTER, (q + 1) * QUARTER).map(sample => sample / 32_768)
   return [Math.min(...slice), Math.max(...slice)]
 }
 
-/** Expected stereo channel-major layout for a mono source read as four quarters. */
 function expected(quarters: number[]): number[] {
   const channel = quarters.flatMap(quarter)
   return [...channel, ...channel]

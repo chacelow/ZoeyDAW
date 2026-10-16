@@ -47,7 +47,6 @@ test(
       projectActions.saveSnapshot()
       expect(await whenProjectBackendIdle()).toBe(true)
       expect(storage.get(corruptKey)).toBe(damaged)
-      // A selector must keep historical state readable after the live project changes.
       expect(canSaveSnapshot(ready)).toBe(true)
       storage.set(corruptKey, valid)
       flushSync(() => {

@@ -78,7 +78,6 @@ export function createDisplayFormats(
             }
           }
           const value = magnitude.slice(separator.length).trim()
-          // ASCII '%' remains an input alias independently of the configured separator.
           const numeric = value.endsWith("%") ? value.slice(0, -1).trim() : value
           return (sign * parseNumber(numeric)) / 100
         }
@@ -92,7 +91,6 @@ export function createDisplayFormats(
     const scale = 10 ** digits
     const ticks = (variant === "ruler" ? Math.round : Math.floor)(Math.max(0, seconds) * scale)
     const whole = Math.floor(ticks / scale)
-    // Seconds per minute/hour are fixed unit conversions, independent of display policy.
     const hours = Math.floor(whole / 3600)
     const minutes = Math.floor(whole / 60)
     const remaining = whole % 60

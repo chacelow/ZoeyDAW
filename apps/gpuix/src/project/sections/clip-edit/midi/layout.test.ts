@@ -138,7 +138,6 @@ it("selects every note whose rectangle meets the marquee, wherever the roll is s
           rect.top + rect.height > box.top
       )
       .map(rect => rect.index)
-    // Marquee measures the full note, visible rects the window-clipped part; both agree on overlap.
     for (const index of expected) expect(hits).toContain(index)
   }
 })

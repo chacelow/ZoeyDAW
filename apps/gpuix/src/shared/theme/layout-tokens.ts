@@ -1,7 +1,6 @@
 import { CONTROL_METRICS, PROJECT_METRICS } from "./metrics/config"
 import type { ControlMetrics, ProjectMetrics } from "./metrics/config"
 
-/** Resolved geometry shared by rendering, hit testing, scrolling and resize. */
 export interface TrackGeometry {
   readonly controlHeight: number
   readonly spacing: number
@@ -68,7 +67,6 @@ export interface LayoutTokens {
   }
 }
 
-/** Default relationships are resolved here, never independently at a consumer. */
 export function createLayoutTokens(control: ControlMetrics, project: ProjectMetrics): LayoutTokens {
   const controlHeight = control["--spacing-control-track"]
   const spacing = control["--spacing-control-track-gap"]

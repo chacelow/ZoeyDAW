@@ -10,7 +10,6 @@ import { useClipEditorEnvironment } from "../environment"
 import { patternGeometry, patternScrollToStep, patternStepAt, patternStepRect } from "./geometry"
 import type { PatternClip } from "@/project/model/types"
 
-/** One source cycle, one editing focus owner, and the same rectangles for paint and picking. */
 export function PatternSteps({
   clip,
   label,

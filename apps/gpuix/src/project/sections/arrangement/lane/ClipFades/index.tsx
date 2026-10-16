@@ -34,7 +34,6 @@ export const ClipFades = memo(function ClipFades({
   const strokeWidth = theme.design.editor.fadeStrokeWidth
   const diamond = useMemo(() => {
     const half = size / 2
-    // Half-stroke inset keeps the SVG diamond stroke inside its coordinate bounds.
     const inset = strokeWidth / 2
     return polygonPath([
       { x: half, y: inset },

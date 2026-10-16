@@ -38,7 +38,6 @@ export interface SettingsDialogProps {
   readonly onOpenChange: (open: boolean) => void
 }
 
-/** Web parity: left navigation + right pane with Appearance / Language / Logs / About. */
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const theme = useTheme()
   const { t } = useAppTranslation()
@@ -122,7 +121,6 @@ function AppearanceSection() {
             if (isThemeMode(value)) setThemeMode(value)
           }}
           aria-label={t("settings.themeMode")}
-          // Web parity: a full-width segmented track (`bg-muted/60 p-1`), items share the width.
           style={{
             padding: theme.control["--spacing-control-track-pad"],
             borderRadius: theme.design.shape.controlRadius,

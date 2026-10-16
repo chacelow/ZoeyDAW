@@ -47,7 +47,6 @@ export function LaneContents({
   const backgroundQuads = useMemo(() => {
     let count = 0
     for (const region of regions) if (region.alternate && region.width > 0) count++
-    // Native quad uploads encode each rectangle as x/y/width/height.
     const values = new Float32Array(count * 4)
     let offset = 0
     for (const region of regions) {

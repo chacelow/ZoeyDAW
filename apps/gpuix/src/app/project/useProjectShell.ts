@@ -16,10 +16,6 @@ export interface ProjectShellApi extends ProjectShellState {
   readonly reportClipCollapsed: (collapsed: boolean) => void
 }
 
-/**
- * Clip panel commands drive its imperative handle once; resize reports only publish accepted
- * geometry. Feeding reports back into another imperative layout effect creates a collapse loop.
- */
 export function useProjectShell(): ProjectShellApi {
   const [state, dispatch] = useReducer(reduceProjectShell, INITIAL_PROJECT_SHELL)
   const currentState = useRef(state)
@@ -40,10 +36,6 @@ export function useProjectShell(): ProjectShellApi {
   const editorRequest = useProjectState(current => current.session.clipEditorRequest)
   const editingClipId = useProjectState(current => current.session.editingClipId)
 
-  // Only an explicit request opens or closes Clip Edit; selecting a Clip does not, so the
-  // editing id is read at request time rather than tracked. The request counter seen at
-  // mount belongs to whatever ran before this view (e.g. the previous project), so it is
-  // the baseline, not a request.
   const editing = useRef(editingClipId)
   editing.current = editingClipId
   const handledRequest = useRef(editorRequest)

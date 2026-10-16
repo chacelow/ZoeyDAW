@@ -5,7 +5,6 @@ import { redact } from "./serialize"
 import { isProduction } from "./env"
 import type { LogLevel, LoggerConfig, Logger, LogEntry } from "./types"
 
-// Native production keeps info; development keeps all levels.
 const productionMinLevel: LogLevel = "info"
 
 const defaultConfig: LoggerConfig = {
@@ -18,16 +17,10 @@ const defaultConfig: LoggerConfig = {
   json: isProduction,
 }
 
-/**
- * 创建Logger实例
- */
 export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger {
   let config: LoggerConfig = { ...defaultConfig, ...initialConfig }
   let isLogoShown = false
 
-  /**
-   * 显示Logo（仅显示一次）
-   */
   function displayLogo(): void {
     if (!config.showLogo || isLogoShown) {
       return
@@ -37,9 +30,6 @@ export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger 
     isLogoShown = true
   }
 
-  /**
-   * 检查日志级别是否应该显示
-   */
   function shouldLog(level: LogLevel): boolean {
     if (!config.show) {
       return false
@@ -93,7 +83,6 @@ export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger 
       if (config.prefix) {
         entry.prefix = config.prefix
       }
-      // 环境上下文（requestId/userId 等）先注入，作为权威字段
       if (sanitizedContext) {
         Object.assign(entry, sanitizedContext)
       }
@@ -155,7 +144,7 @@ export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger 
     warn: (...arguments_: unknown[]) => log("warn", ...arguments_),
     error: (...arguments_: unknown[]) => log("error", ...arguments_),
     success: (...arguments_: unknown[]) => log("success", ...arguments_),
-    log: (...arguments_: unknown[]) => log("info", ...arguments_), // 默认使用info级别
+    log: (...arguments_: unknown[]) => log("info", ...arguments_),
 
     setConfig: (newConfig: Partial<LoggerConfig>) => {
       config = { ...config, ...newConfig }
@@ -165,7 +154,6 @@ export function createLogger(initialConfig: Partial<LoggerConfig> = {}): Logger 
   }
 }
 
-// 生产 JSON 模式默认脱敏的高危字段（大小写不敏感）。业务可用 configureLogger 追加。
 export const DEFAULT_REDACT_KEYS = [
   "password",
   "token",

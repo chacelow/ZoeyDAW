@@ -165,5 +165,4 @@ const zh: ClipEditorLabels = {
   },
 }
 
-/** Bilingual Clip editor labels supplied by the application. */
 export const clipEditorLabels = { en, zh } as const

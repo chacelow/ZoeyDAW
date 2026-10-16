@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — onboarding (zh-CN)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   welcomeTitle: "欢迎使用",
   welcomeSubtitle: "让我们花一分钟完成账号设置",

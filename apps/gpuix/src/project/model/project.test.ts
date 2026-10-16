@@ -263,7 +263,6 @@ describe("project document and workspace commands", () => {
     projectActions.toggleRecording()
     projectActions.togglePlay()
     projectActions.noteOn(72)
-    // Bun #35452: toMatchObject rewrites received; keep the live store untouched.
     expect(
       structuredClone(
         useProjectState.getState().document.tracks.find(track => track.id === "trager")?.clips[0]

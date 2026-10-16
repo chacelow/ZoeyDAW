@@ -48,8 +48,6 @@ const appearance = {
 }
 const frames = new Set<AnimationFrameCallback>()
 const resumeFrames = new Set<AnimationFrameCallback>()
-// VisualTestAppContext has no production HWND loop. Advancing this test frame
-// commits its consumers before the real native offscreen renderer paints.
 const source = {
   subscribe(callback: AnimationFrameCallback) {
     frames.add(callback)

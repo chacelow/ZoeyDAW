@@ -49,7 +49,6 @@ export function findDependencyJunctionRepairs(vendor) {
   }
   const visit = directory => {
     const entries = readdirSync(directory, { withFileTypes: true })
-    // The renamed relative link survives an interrupted junction creation, at the same depth.
     for (const entry of entries.filter(item => item.name.endsWith(backupSuffix))) {
       const backup = path.join(directory, entry.name)
       if (!entry.isSymbolicLink() || path.isAbsolute(readlinkSync(backup))) {

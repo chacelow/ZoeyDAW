@@ -43,8 +43,6 @@ run("Windows User32 lifecycle driver", "rustc", [
   env.GPUIX_WINDOWS_SMOKE_DRIVER,
 ])
 
-// A missing binding is a prerequisite failure. After this, independent checks
-// still run after a failure so native pixels and audio faults remain inspectable.
 run("renderer identity", process.execPath, ["scripts/gpuix-main/check.mjs", "--resolution"])
 run("native bridge build", "bun", ["run", "build"], path.join(root, "crates/native"))
 const checks = [

@@ -117,7 +117,6 @@ async function runSession(index: number, closeMode: SessionEvidence["closeMode"]
           "Frame time is not monotonic"
         )
         record.previousTimestamp = timestamp
-        // A synchronous UI query must not deadlock a nonblocking JS dispatch.
         const size = renderer.getWindowSize()
         assert.equal(size.width, 320)
         assert.equal(size.height, 200)
@@ -143,7 +142,6 @@ async function runSession(index: number, closeMode: SessionEvidence["closeMode"]
 
     assert.equal(drive(title, "minimize").minimized, true)
     await Bun.sleep(150)
-    // Register while minimized, so activation during setup is not a fake restore.
     let baseline = stats(renderer)
     let resumed = 0
     renderer.setResumeFrameCallback(() => {
@@ -156,7 +154,6 @@ async function runSession(index: number, closeMode: SessionEvidence["closeMode"]
           baseline.presents,
           "Restored window presented before the native resume JS commit"
         )
-        // Keep the real JS callback/ack pending while the independent UI runs.
         Atomics.wait(ackHold, 0, 0, 150)
         const held = stats(renderer)
         record.resume.push({ stage: "native-resume-ack-pending", ...held })
@@ -178,7 +175,6 @@ async function runSession(index: number, closeMode: SessionEvidence["closeMode"]
         callbackFailure = error
       }
     })
-    // This synchronous UI read drains registration before the external native restore.
     stats(renderer)
     await Bun.sleep(150)
     baseline = stats(renderer)
@@ -200,7 +196,6 @@ async function runSession(index: number, closeMode: SessionEvidence["closeMode"]
 
       renderer.setWindowShouldClose(() => {
         record.predicates.staleAllow++
-        // Replacement invalidates this in-flight allow before its native response.
         renderer.setWindowShouldClose(() => {
           record.predicates.replacementVeto++
           return false
@@ -263,8 +258,6 @@ async function runSession(index: number, closeMode: SessionEvidence["closeMode"]
 
 let scenarioFailure: { error: unknown } | null = null
 try {
-  // Each scope releases its renderer after close. GC exercises post-close Drop,
-  // not Drop-with-live-window leak freedom, which needs separate registry evidence.
   for (let index = 0; index < 4; index++) {
     await runSession(index, index % 2 === 0 ? "guarded" : "bypass")
     Bun.gc(true)

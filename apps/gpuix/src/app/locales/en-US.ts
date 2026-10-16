@@ -1,9 +1,5 @@
 import { creationNamesByLocale } from "./creation-names"
 
-/**
- * Application shell copy. Keys follow apps/web/src/locales/shared.en-US.ts, limited to
- * what the shell renders; section copy is injected by the composition root as labels.
- */
 export default {
   creationNames: creationNamesByLocale["en-US"],
   snapshotErrors: {

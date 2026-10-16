@@ -13,9 +13,6 @@ const FIXED_NOTE_DENOMINATORS = [2, 4, 8, 16, 32, 64, 128, 256] as const
 export interface GridPlan {
   cellBars: number
   label: string
-  /**
-  Bar boundaries, beat boundaries, then the remaining cell boundaries share origin bar 1.
-  */
   barBars: number
   beatBars: number
   minimumCellPx: number
@@ -51,9 +48,6 @@ export function fixedGridSteps(numerator: number, denominator: number) {
   )
 }
 
-/**
-Legacy v1 snapshots stored explicit bar durations, including older bar-based choices.
-*/
 export function isLegacyGridBars(bars: number, numerator: number, denominator: number): boolean {
   return (
     Number.isFinite(bars) &&
@@ -81,9 +75,6 @@ export function isGridSettings(value: unknown): value is GridSettings {
     : false
 }
 
-/**
-Zoom affects only this projection, never the persisted workspace or its undo history.
-*/
 export function deriveGridPlan(
   settings: GridSettings,
   pxPerBar: number,
@@ -161,9 +152,6 @@ export function gridForMeterChange(
   }
 }
 
-/**
-Keep a 1/16384 note at least 8 logical pixels wide at maximum zoom.
-*/
 export function gridZoomLimit(numerator: number, denominator: number): number {
   return (MIN_GRID_CELL_PX * MAX_NOTE_DENOMINATOR * numerator) / denominator
 }

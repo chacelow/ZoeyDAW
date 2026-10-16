@@ -1,6 +1,6 @@
 # shared/theme
 
-主题的唯一 owner：颜色、配色预设、共享几何、原生语义外观 token、`sx`/`sv`。各切片只经 `useTheme()` 读取，不 import `colors.ts` 或 `presets.data.ts`。
+主题的唯一 owner：颜色、配色预设、共享几何、原生语义外观 token、`sx`/`sv`。业务只经 `useTheme()` 读取，不 import `colors.ts` 或 `presets.data.ts`。
 
 ## 文件
 
@@ -34,8 +34,6 @@
 - `layout.clipEditor.colorSwatchSize/nameWidth` 与 `layout.scrollArea.defaultHeight` 分别拥有 Clip 色块、名称输入宽度和滚动区域缺省高度。省略 layout 时在 `createLayoutTokens()` 中按原关系解析（默认8/200/260）；完整 layout 显式值优先。ScrollArea 的 `size`、`height`、`style.height` 和 `fill` 仍优先于缺省高度。
 
 组合 Gallery 的默认、flat、加大间距是只读演示配置，不是用户主题编辑器。后台启动使用 `GPUIX_BACKGROUND=1 bun --hot apps/gpuix/src/gallery/controls.tsx`，只验证不依赖帧推进的启动与 AX；真实可见组合在前台验收。离屏整页取证入口见 [setup](../../../../../docs/agents/setup.md)。
-
-来源已建立不代表业务全部迁移。C1 只迁本模块内部配方、Provider 与轨道几何注入，业务样式及新条目的消费者由 C2/C3 接线。
 
 ## 预设来源
 
@@ -94,7 +92,7 @@
 | `--arrangement-clip-ink` | `arrangementClipInk` | `light-dark(foreground, card)` |
 | `--arrangement-fade-mask` | `arrangementFadeMask` | `color-mix(clip-ink 50%, transparent)` |
 
-上述历史配方的比例与语义别名现均在 `design.colorRecipes`，默认结果不变。新增 destructive 状态、listRowHover、dialogBackdrop、编辑器洗色与钢琴键配方已具备来源，业务接线由对应切片完成。
+上述历史配方的比例与语义别名现均在 `design.colorRecipes`，默认结果不变。新增 destructive 状态、listRowHover、dialogBackdrop、编辑器洗色与钢琴键配方已具备来源。
 
 ## 不变量（`presets.test.ts`）
 

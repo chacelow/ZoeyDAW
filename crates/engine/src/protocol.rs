@@ -1,5 +1,3 @@
-//! JSON port matching `apps/gpuix/src/project/model/backend.ts`.
-
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
@@ -289,16 +287,6 @@ pub struct BackendTelemetry {
     pub output_latency_frames: Option<u64>,
 }
 
-/// Mirrors the mock backend, not a second document editor. `open` is accepted
-/// only once with sequence/base/target revision zero. Later requests require
-/// the same session, a strictly increasing (not necessarily contiguous)
-/// sequence and the current base revision. Rejections change nothing.
-///
-/// Every stage replaces the entire effective state. In particular, `cancel`
-/// restores the committed project supplied by the caller; it does not roll
-/// back control or retain an internal document snapshot. Only open/commit/
-/// recover assign the target revision, without enforcing a +1 increment.
-/// Disposal is terminal, including for subsequent open requests.
 #[derive(Debug, Default)]
 pub struct SessionFence {
     session_id: Option<String>,

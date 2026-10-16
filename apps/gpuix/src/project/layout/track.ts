@@ -1,6 +1,5 @@
 import type { Track } from "../model/types"
 
-/** Structural input port: pure layout does not depend on React or theme modules. */
 export interface TrackGeometry {
   readonly spacing: number
   readonly border: number
@@ -12,7 +11,6 @@ export interface TrackGeometry {
   readonly controlsWidth: number
 }
 
-/** One injected geometry for header, lane and minimap alike. */
 export function trackHeight(track: Track, geometry: TrackGeometry): number {
   return track.collapsed
     ? geometry.collapsedHeight
@@ -24,7 +22,6 @@ export function trackControlRows(track: Track, geometry: TrackGeometry): number 
   return Math.floor((contentHeight + geometry.spacing) / geometry.resizeStep)
 }
 
-/** Apply a pointer delta from the starting track, snapping to complete control rows. */
 export function resizeTrackHeight(
   track: Track,
   deltaY: number,

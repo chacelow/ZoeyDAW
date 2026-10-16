@@ -57,7 +57,6 @@ export function activeAutomationRows(scene: ArrangementScene): AutomationRow[] {
         top,
         bottom,
         valueTop: row.top + titleInset + geometry.automationPointRadius,
-        // One pixel keeps normalization well-defined when both endpoint radii consume the row.
         valueHeight: Math.max(1, row.height - titleInset - geometry.automationPointRadius * 2),
       },
     ]

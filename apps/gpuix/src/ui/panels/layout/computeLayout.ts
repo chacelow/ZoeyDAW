@@ -46,8 +46,6 @@ function sideIntervals(
   return { changes, suffix }
 }
 
-/** The closest feasible transfer makes a collapse/expand jump only after its midpoint.
- * Both sides must admit the same transfer: a snap can never overflow its neighbour. */
 export function computeLayout(
   sizes: readonly number[],
   constraints: readonly ResolvedConstraints[],

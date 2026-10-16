@@ -51,7 +51,6 @@ function Field({ label, children }: { readonly label: string; readonly children:
   )
 }
 
-/** Bars.beats.sixteenths position or duration; dragging steps one sixteenth, typing parses Live syntax. */
 function MusicalNumber({
   clip,
   bpm,
@@ -70,7 +69,6 @@ function MusicalNumber({
   const kind: AudioMusicalValueKind = field === "loopLengthBars" ? "duration" : "position"
   const min = field === "endMarkerBars" ? settings.startMarkerBars : 0
   const max = field === "startMarkerBars" ? settings.endMarkerBars : Number.MAX_SAFE_INTEGER
-  // Bounds and the interval check are frozen at gesture start, so live previews cannot move them.
   const frozen = useRef({
     min,
     max,
@@ -244,10 +242,6 @@ function ClipNumber({
   )
 }
 
-/**
-Two compact columns like Live's Clip box: source window (Start/End, Loop, fades) and Sample
-(Warp, mode, tempo, gain, pitch, Reverse). Every number is a shared DragPad with a stable width.
-*/
 export function AudioParameters({
   clip,
   bpm,

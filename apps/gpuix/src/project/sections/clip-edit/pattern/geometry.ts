@@ -48,7 +48,6 @@ export function patternGeometry({
   }
 }
 
-/** The same viewport-local rectangle is used for drawing, picking and keyboard reveal. */
 export function patternStepRect(geometry: PatternGeometry, index: number) {
   return { x: index * geometry.stride - geometry.offset, width: geometry.stepWidth }
 }

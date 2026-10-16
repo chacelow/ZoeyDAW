@@ -138,7 +138,6 @@ describe("clip source boundaries", () => {
     projectActions.toggleRecording()
     projectActions.noteOn(72)
     projectActions.noteOff(72)
-    // Bun #35452: toMatchObject rewrites received; keep the live store untouched.
     expect(structuredClone(findClip("trager-1"))).toMatchObject({
       notes: [
         { id: expect.any(String), pitch: 72, startBeat: 4, lengthBeats: 0.25, velocity: 100 },

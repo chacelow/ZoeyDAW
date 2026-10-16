@@ -8,12 +8,10 @@ export { createKeymap, normalizeKey } from "./keymap"
 export type { KeyBinding, Keymap, KeyboardContext, KeyboardFocus, ContextPredicate } from "./keymap"
 export { DEFAULT_BINDINGS, DEFAULT_KEYMAP, COMPUTER_NOTE_KEYS } from "./default-keymap"
 
-/** Structural port: the application root injects renderer callbacks, not a renderer singleton. */
 export interface WindowKeyEvent {
   readonly key?: string
   readonly keyChar?: string
   readonly isHeld?: boolean
-  /** Native id shared by every element and window handler of one keystroke; correlates bubbling with the window phase. */
   readonly keystrokeId?: number
   readonly modifiers?: {
     readonly shift: boolean
@@ -37,7 +35,6 @@ export interface WindowKeyboard {
   }
 }
 
-/** One instance per render root; subscriptions live until their returned cleanup runs. */
 export function createWindowKeyboard(): WindowKeyboard {
   const listeners = {
     keyDown: new Set<WindowKeyListener>(),
@@ -66,7 +63,6 @@ export function createWindowKeyboard(): WindowKeyboard {
 const WindowKeyboardContext = createContext<WindowKeyboard | null>(null)
 export const WindowKeyboardProvider = WindowKeyboardContext.Provider
 
-/** Sections subscribe inside an effect and return its unsubscribe function. */
 export function useWindowKeyboard(): WindowKeyboard {
   const keyboard = useContext(WindowKeyboardContext)
   if (!keyboard) throw new Error("WindowKeyboardProvider is missing at the application render root")

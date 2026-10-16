@@ -10,10 +10,6 @@ import { isBlackKey } from "./geometry"
 import { visibleRows } from "./layout"
 import type { RollGeometry } from "./layout"
 
-/**
-Audition keys for the visible rows only. Pressing a key sounds it through the shared held-note path
-and selects that row's notes; release, cancellation and window deactivation end the note.
-*/
 export function PianoKeys({
   roll,
   label,
@@ -51,7 +47,6 @@ export function PianoKeys({
     projectActions.noteOn(pitch)
   }
   const labelled = roll.pitches.length < 24
-  // Keys keep piano colours in both schemes, as the Web editor's light/dark key styles did.
   const ivory = theme.colors.pianoIvory
   const ebony = theme.colors.pianoEbony
   return (

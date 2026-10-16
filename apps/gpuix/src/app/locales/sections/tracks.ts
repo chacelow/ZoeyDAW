@@ -128,7 +128,6 @@ export function createTrackLabels(locale: keyof typeof trackResources): TrackLab
     ...trackResources[locale].arrangement,
     formats: createDisplayFormats(locale),
     monitorModes: locale === "zh-CN" ? zhCN.track.monitorModes : enUS.track.monitorModes,
-    // Compact In/Auto/Off captions retain Live's convention; descriptions use the current locale.
     monitorShortNames: enUS.track.monitorModes,
   }
 }

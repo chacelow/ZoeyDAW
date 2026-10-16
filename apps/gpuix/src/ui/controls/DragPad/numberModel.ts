@@ -1,10 +1,3 @@
-/**
- * Pure numeric model for DragPad controls: clamping, step quantization,
- * display formatting, and the drag/wheel → value mappings.
- *
- * No React, no gpuix host types. Testable with plain `bun:test`.
- */
-
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
@@ -27,12 +20,6 @@ function decimalPlaces(value: number): number {
   return 6
 }
 
-/**
- * Builds a formatter whose precision follows `step` (falling back to a
- * range-derived guess for a continuous, step-less control), floored by
- * whatever decimals `min`/`max` themselves need so an endpoint never
- * truncates.
- */
 export function formatNumericValue(min: number, max: number, step = 0): (value: number) => string {
   const range = Math.abs(max - min)
   const basePrecision =
@@ -47,7 +34,6 @@ export function formatNumericValue(min: number, max: number, step = 0): (value: 
 
 export interface ValueAfterDragInput {
   startValue: number
-  /** Vertical pixels travelled since the drag's start position (current Y − start Y). */
   deltaY: number
   step: number
   min: number
@@ -55,12 +41,6 @@ export interface ValueAfterDragInput {
   dragPixelsPerStep: number
 }
 
-/**
- * Relative-drag mapping: output depends only on `deltaY`, the distance
- * travelled since the press, never on the pointer's absolute position. One
- * `dragPixelsPerStep` of upward travel (negative deltaY) adds one `step`;
- * downward subtracts. Linear — no velocity term, no easing curve.
- */
 export function valueAfterDrag({
   startValue,
   deltaY,
@@ -76,7 +56,6 @@ export function valueAfterDrag({
 export interface ValueAfterWheelInput {
   currentValue: number
   deltaY: number
-  /** GPUI `event.precise`: true for pixel deltas, false for line deltas. */
   precise: boolean
   step: number
   min: number
@@ -85,7 +64,6 @@ export interface ValueAfterWheelInput {
   wheelLinePixels: number
 }
 
-/** GPUI wheel mapping: positive `deltaY` scrolls toward earlier content and increases the value. */
 export function valueAfterWheel({
   currentValue,
   deltaY,

@@ -62,7 +62,6 @@ export function TrackMixer({ track }: { readonly track: Track }) {
   const gap = theme.control["--spacing-control-track-gap"]
   const inset = theme.design.cards.controls.inset
   const height = trackHeight(track, theme.layout.track) - theme.layout.track.border - inset * 2
-  // Return labels use the Unicode code point for A; the saved ordinal is content.
   const label =
     track.kind === "return"
       ? String.fromCharCode(65 + returns.findIndex(item => item.id === track.id))
@@ -206,7 +205,6 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 testId={`track-sends-${track.id}`}
                 style={{ display: "flex", flexDirection: "column", gap, minWidth: 0 }}
               >
-                {/* Two control rows precede the fixed three-column send matrix. */}
                 {Array.from(
                   { length: Math.min(rows - 2, Math.ceil(returns.length / 3)) },
                   (_, sendRow) => (

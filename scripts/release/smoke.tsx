@@ -71,11 +71,6 @@ async function present() {
   root.renderer.flush()
   root.renderer.dispatchNativeEvents()
 }
-/**
- * Wait for engine telemetry that satisfies `accept`. Telemetry is null until the engine publishes a
- * frame for the latest control sequence, and the hosted runner's virtual output device can run far
- * below real time, so fixed sleeps flake there; the deadline only bounds a genuinely stuck engine.
- */
 async function telemetryWhere(accept: (frame: BackendTelemetry) => boolean) {
   const deadline = performance.now() + 20_000
   let frame = readProjectTelemetry()

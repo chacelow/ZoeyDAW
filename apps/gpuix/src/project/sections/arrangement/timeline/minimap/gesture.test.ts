@@ -23,7 +23,6 @@ function mount() {
     },
     navigate: () => {},
     cursor: {
-      // Window origin at screen (1000, 500): the anchor must be the press point, not a later move.
       capture: point => ({ x: 1000 + point.x, y: 500 + point.y }),
       hide: () => {
         hidden = true

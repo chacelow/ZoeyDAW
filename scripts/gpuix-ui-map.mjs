@@ -1,7 +1,3 @@
-// Generates docs/architecture/gpuix-ui-map.md from apps/gpuix/src so the map cannot drift from code.
-// Usage: node scripts/gpuix-ui-map.mjs          (rewrite the map)
-//        node scripts/gpuix-ui-map.mjs --check  (exit 1 when the committed map is stale)
-//        node scripts/gpuix-ui-map.mjs --stage  (generate from Git index; run by lint-staged)
 import { execFileSync } from "node:child_process"
 import { readdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
@@ -20,7 +16,6 @@ function files(dir) {
 }
 
 const isTestCode = file => /\.test\.|test-helper|\/testing\//u.test(file)
-// Demo and verification harnesses are not product surfaces; their testIds stay out of the map.
 const isHarness = file =>
   /(^|\/)(demo|verification)\//u.test(file) || /(^|\/)demo\.tsx$/u.test(file)
 const staged = process.argv.includes("--stage") && !process.argv.includes("--check")
@@ -63,7 +58,6 @@ const sources = sourcePaths
   }))
   .sort((a, b) => a.file.localeCompare(b.file))
 
-// A window entry calls gpuix render(<element>, { title, ... }) with a title option.
 const entries = sources
   .filter(
     ({ text }) =>
@@ -87,7 +81,6 @@ function area(file) {
   return parts.slice(0, 2).join("/")
 }
 
-// Static testIds grouped by owning area; template ids keep their literal prefix and mark the dynamic tail.
 const testIds = new Map()
 for (const { file, text } of sources.filter(({ file }) => !isHarness(file))) {
   for (const match of text.matchAll(

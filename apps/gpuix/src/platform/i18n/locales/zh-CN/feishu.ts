@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — feishu (zh-CN)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   binding: "正在绑定飞书账号...",
   bindingWait: "请稍候,正在完成授权",

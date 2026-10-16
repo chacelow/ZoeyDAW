@@ -141,7 +141,6 @@ test("first resume commits newest stereo telemetry even when the decay driver wa
     expect(
       view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
     ).toBe("L -60.0 dB, R -60.0 dB")
-    // No ordinary frame or provider rerender occurs while the window is hidden.
     telemetry = { ...frame({ audio: [-38, -41] }), sequence: 10529, playing: true }
     view.frames.resume(5500)
     expect(
@@ -164,7 +163,6 @@ test("stopped held peaks catch up on resume and release all frame demand after d
     useProjectState.setState({ session: { ...useProjectState.getState().session, playing: false } })
     telemetry = frame({ audio: [-120, -120] })
     view.render()
-    // Playback stopped, but the held peak still needs elapsed-time decay after occlusion.
     view.frames.resume(5000)
     expect(view.root.renderer.findByTestId("track-meter-peak-left-audio")).toBeUndefined()
     expect(view.root.renderer.findByTestId("track-meter-peak-right-audio")).toBeUndefined()

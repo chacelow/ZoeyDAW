@@ -10,9 +10,6 @@ export interface TrackGroupProjection {
   leafDescendantsByGroupId: ReadonlyMap<string, readonly Track[]>
 }
 
-/**
-One ancestry/leaf projection for both header rails and group-lane summaries.
-*/
 export function projectTrackGroups(tracks: readonly Track[]): TrackGroupProjection {
   const parentById = new Map<string, { group: Track; lastChild: boolean }>()
   const leaves = new Map<string, Track[]>()

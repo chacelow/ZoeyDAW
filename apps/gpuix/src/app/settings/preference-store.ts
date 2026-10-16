@@ -3,23 +3,16 @@ import { logger } from "@/platform/log/logger"
 export interface PreferenceSetting<T extends string> {
   get(): string | null
   set(value: T): void
-  /** Optional storage migration, executed once before reading, within the failure boundary. */
   repair?(): boolean
 }
 
 export interface PreferenceStore<T extends string> {
   get(): T
-  /** False while the last read or write failed; the value then lives in memory only. */
   isPersisted(): boolean
   set(value: T): void
   subscribe(listener: () => void): () => void
 }
 
-/**
- * One persisted appearance preference (theme mode, color preset). Stored values are checked
- * at the boundary; a failing settings port keeps the choice in memory instead of throwing
- * into the application root.
- */
 export function createPreferenceStore<T extends string>(
   setting: PreferenceSetting<T>,
   isValue: (value: string) => value is T,

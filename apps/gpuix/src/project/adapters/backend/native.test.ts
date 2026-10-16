@@ -17,7 +17,6 @@ test("importing the default project context never opens a native session", async
     throw new Error("Module import attempted to open the device")
   })
   try {
-    // A fresh module evaluation is the behavior under test; a static import would run before the spy.
     await import(new URL("../context.ts?native-import-only", import.meta.url).href)
     expect(open).not.toHaveBeenCalled()
   } finally {
@@ -97,10 +96,6 @@ function receive(
   }
   return new Promise((resolve, reject) => {
     let unsubscribe: () => void
-    // The CPAL clock is real; fake JS timers cannot drive a native audio callback. Hosted macOS
-    // runners have only a virtual output device that can run far below real time under load
-    // (observed: 0.44 s of device clock in 5 s of wall time), so the budget is generous; the
-    // predicate resolves as soon as the device gets there, so a real device still takes ~1 s.
     const timeout = setTimeout(() => {
       unsubscribe()
       reject(new Error(`Native telemetry timed out: ${JSON.stringify(frames.at(-1))}`))
@@ -209,7 +204,6 @@ test("real decoder, device clock, seeks, finite meters and visible peaks", async
     const stopped = await receive(backend, frames, frame => frame.appliedSequence === 0)
     expect(stopped.clock.kind).toBe("sample")
     expect(stopped.levels.main).toEqual([-120, -120])
-    // 120 BPM 4/4: bars 1–1.05 are the first 0.1 s of the 3 s sine.
     const peaks = backend.readPeaks("sine", 1, 1.05, 64, 0)
     expect(peaks).toBeInstanceOf(Float32Array)
     expect(peaks.length).toBe(256)

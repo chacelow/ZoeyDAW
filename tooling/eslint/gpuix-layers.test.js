@@ -21,12 +21,10 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
       fixture(`${src}/${file}`, 'import { consumeKey } from "@/shared/keyboard"; void consumeKey')
     ),
     fixture(`${src}/shared/keyboard/index.ts`, 'export type Result = "handled" | "pass"'),
-    // 别名指向允许的层。
     fixture(
       `${src}/ui/controls/Button/index.tsx`,
       'import { sx } from "@/shared/theme/style"; void sx'
     ),
-    // 误报回归:工程领域字段 `document` 是属性访问或局部变量,不是 DOM 全局。
     fixture(`${src}/project/model/clip.ts`, "const tracks = get().document.tracks; void tracks"),
     fixture(
       `${src}/project/model/clip.ts`,
@@ -36,12 +34,10 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
       `${src}/project/model/clip.ts`,
       "export function f(document: { tracks: number[] }) { return document.tracks }"
     ),
-    // model 只依赖同层与类型。
     fixture(
       `${src}/project/model/grid.ts`,
       'import type { Clip } from "./types"; void (0 as unknown as Clip)'
     ),
-    // Pure layout reads shared metrics without gaining access to theme hooks or colours.
     fixture(
       `${src}/project/layout/track.ts`,
       'import { CONTROL_METRICS } from "@/shared/theme/metrics"; void CONTROL_METRICS'
@@ -50,7 +46,6 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
       `${src}/project/layout/track.ts`,
       'import { PROJECT_METRICS } from "../../shared/theme/metrics/config"; void PROJECT_METRICS'
     ),
-    // stores 可用 zustand 与 react;adapters 可用 stores 与 platform 接口。
     fixture(
       `${src}/project/stores/useProjectState.ts`,
       'import { create } from "zustand"; void create'
@@ -63,27 +58,22 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
       `${src}/project/adapters/snapshots.ts`,
       'import { model } from "../model/grid"; void model'
     ),
-    // sections 可依赖 ui、shared 与 project 内部各层(不在规则范围)。
     fixture(
       `${src}/project/sections/Arrangement/index.tsx`,
       'import { Button } from "../../../ui/controls/Button"; void Button'
     ),
-    // ui 可依赖 shared/theme 与 @gpuix。
     fixture(
       `${src}/ui/controls/Button/index.tsx`,
       'import { useTheme } from "../../../shared/theme/ThemeProvider"; import { x } from "@gpuix/react"; void useTheme; void x'
     ),
-    // platform 可用原生包。
     fixture(
       `${src}/platform/storage/index.ts`,
       'import { settingsGet } from "@zoeydaw/native"; void settingsGet'
     ),
-    // sections 经 platform 的 TS 端口使用原生能力,经 adapters 使用工程能力。
     fixture(
       `${src}/project/sections/arrangement/tracks/meter.tsx`,
       'import { useAnimationFrame } from "@/platform/frame"; import { tracks } from "@/project/adapters"; void useAnimationFrame; void tracks'
     ),
-    // 测试文件不受限。
     fixture(
       `${src}/project/model/clip.test.ts`,
       'import { x } from "react"; window.foo = 1; void x'
@@ -105,7 +95,6 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
     fixture(`${src}/shared/keyboard/index.ts`, 'import { useState } from "react"; void useState', [
       { messageId: "forbiddenPackage" },
     ]),
-    // `@/` 别名与相对路径指向同一层,不能绕过分层。
     fixture(
       `${src}/ui/controls/Button/index.tsx`,
       'import { get } from "@/project/adapters/context"; void get',

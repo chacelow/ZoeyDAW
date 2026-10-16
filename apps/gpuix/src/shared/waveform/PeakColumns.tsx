@@ -5,13 +5,6 @@ import { useQuadBatch } from "@/shared/quads/useQuadBatch"
 
 const EMPTY_QUADS = new Float32Array(0)
 
-/**
- * Draws backend peak envelopes as one 1px column per pixel and channel.
- * `peaks` is channel-major, then pixel-major `[min, max]` (the `PeakReader` layout);
- * channel count is `peaks.length / (pixels * 2)`. Values are clamped to [-1, 1].
- * `inset` keeps that many pixels clear above and below full scale in every channel
- * (web clip waveform: amplitude = channelHeight / 2 - 1).
- */
 export const PeakColumns = memo(function PeakColumns({
   peaks,
   pixels,

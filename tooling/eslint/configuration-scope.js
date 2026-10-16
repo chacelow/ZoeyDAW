@@ -1,4 +1,3 @@
-/** Configuration data and executable verification fixtures are not product call sites. */
 export function isProductFile(filename) {
   const file = filename.replaceAll("\\", "/")
   return (

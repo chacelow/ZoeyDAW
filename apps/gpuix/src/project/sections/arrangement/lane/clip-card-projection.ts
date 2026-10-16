@@ -90,7 +90,6 @@ export function createClipCardProjection() {
         const fadeGeometry = sameLocalGeometry
           ? previous.card.fadeGeometry
           : projectLocalFadeGeometry(rect, ghost, fadesVisible)
-        // One preceding raster column covers rounding to half-pixel grid centers at the Clip boundary.
         const grid = sameGrid
           ? previous.card.grid
           : gridLines(

@@ -58,7 +58,6 @@ export const Overview = memo(function Overview({
                   left: rect.left,
                   top: 0,
                   width: rect.width,
-                  // Keep a drawable row when dense overviews exhaust the configured inset.
                   height: Math.max(1, rowHeight - theme.layout.arrangement.minimapClipInset),
                   backgroundColor: resolveContentColor(clip.color ?? track.color, theme.colors),
                   pointerEvents: "none",

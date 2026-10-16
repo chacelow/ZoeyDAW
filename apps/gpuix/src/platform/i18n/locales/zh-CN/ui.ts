@@ -1,10 +1,3 @@
-/**
- * gpuix i18n core resources — ui (zh-CN)
- *
- * gpuix UI 设计系统组件内置文案（默认值 / aria-label / 状态页）。
- * This file is the source of truth for this namespace.
- */
-
 export default {
   theme: {
     light: "亮色模式",

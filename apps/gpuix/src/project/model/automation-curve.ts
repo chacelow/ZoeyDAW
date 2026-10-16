@@ -12,9 +12,6 @@ export function clampAutomationCurve(curve: number): number {
   return Math.max(MIN_AUTOMATION_CURVE, Math.min(MAX_AUTOMATION_CURVE, curve))
 }
 
-/**
-Curve belongs to the left breakpoint of a segment; zero is linear.
-*/
 export function interpolateAutomation(
   from: number,
   to: number,
@@ -26,9 +23,6 @@ export function interpolateAutomation(
   const eased = Math.abs(bend) < 0.000001 ? t : Math.expm1(bend * t) / Math.expm1(bend)
   return clampAutomationValue(from + (to - from) * eased)
 }
-/**
-Sorted points are the domain invariant enforced at the adapter and snapshot boundary.
-*/
 export function automationValueAt(
   points: readonly AutomationPoint[],
   bar: number,

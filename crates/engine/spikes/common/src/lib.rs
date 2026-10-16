@@ -41,7 +41,6 @@ pub fn report_samples(label: &str, actual: &[[f32; 2]], expected_start: usize) {
 }
 
 pub fn bench(label: &str, voices: usize, mut render: impl FnMut()) {
-    // Total 1016 blocks stay within the 10-second asset, even for nonlooping voices.
     for _ in 0..16 {
         render();
     }

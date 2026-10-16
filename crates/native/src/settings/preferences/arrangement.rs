@@ -1,4 +1,3 @@
-//! Persisted Arrangement policy overrides; numeric defaults belong to ARRANGEMENT_DEFAULTS.
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 

@@ -13,7 +13,6 @@ fn main() {
     .unwrap();
     for frame in 0..FRAMES {
         let t = frame as f64 / RATE as f64;
-        // Left is periodic; right chirp disambiguates source offsets. Both loop-seam values tend to zero.
         let envelope = (std::f64::consts::PI * (frame % 4800) as f64 / 4800.0)
             .sin()
             .powi(2);

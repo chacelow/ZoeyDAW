@@ -1,9 +1,6 @@
 import { PROJECT_TEMPLATE } from "../defaults/template"
 import type { DocumentState } from "./types"
 
-/**
-Round the last occupied bar up to the template region step, then add editing padding.
-*/
 export function growTimelineBars(
   baseBars: number,
   throughBar: number,

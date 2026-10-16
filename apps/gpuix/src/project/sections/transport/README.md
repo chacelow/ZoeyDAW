@@ -8,7 +8,7 @@ BPM、拍号、律动和位置复用共享 DragPad 事务。BPM 的 `step=0.01` 
 
 `index.test.tsx` 覆盖模板 BPM override 后双击 reset 与 Undo、不同停止连击窗口；`PerformanceStatus/index.test.tsx` 覆盖替换 locale formatter 后真实 telemetry 的采样率、延迟与时长输出。
 
-位置与节拍器动画消费 `session.position`。`PerformanceStatus` 读取 C1 接受的 sample clock 和 outputLatencyFrames，显示真实采样率、输出延迟及采样时间。没有 CPU 遥测时显示不可用，不复制 Web 的固定预览值。
+位置与节拍器动画消费 `session.position`。`PerformanceStatus` 读取引擎接受的 sample clock 和 outputLatencyFrames，显示真实采样率、输出延迟及采样时间。没有 CPU 遥测时显示不可用，不复制 Web 的固定预览值。
 
 性能弹层只显示注入的 `labels.enginePhases[phase]`，标签类型从 `ProjectRuntimeStatus["phase"]` 派生并用 `Record` 穷尽；中英文组合根均提供全部五种状态，不向用户显示协议值。
 

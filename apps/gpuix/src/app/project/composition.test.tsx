@@ -222,7 +222,6 @@ for (const kind of ["Input", "Input autoFocus", "DragPad"] as const) {
       expect(root.renderer.getElement(element(root, "text-editor").id)?.customProps?.value).toBe(
         "amb"
       )
-    // Exercise the composition focus port even when the native editor consumes printable keys.
     expect(composition.timeline.keyboard.down({ key: "a", defaultPrevented: false })).toBe(false)
     expect(useProjectState.getState().workspace.automationMode).toBe(before.automationMode)
     root.renderer.nativeSimulateKeystrokes(element(root, "timeline-viewport").id, "a")

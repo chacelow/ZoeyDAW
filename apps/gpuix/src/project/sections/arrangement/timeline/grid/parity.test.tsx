@@ -137,7 +137,6 @@ for (const changedSource of ["majorWidth", "minorWidth", "minorOpacity"] as cons
     }
     const directory = mkdtempSync(path.join(tmpdir(), "timeline-grid-config-"))
     const root = createTestRoot({ width: 640, height: 100 })
-    // Use one native render target, then retain Grid across the default-to-override transition.
     try {
       root.render(
         <ThemeProvider design={design} project={project}>

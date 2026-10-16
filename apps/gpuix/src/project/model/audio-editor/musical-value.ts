@@ -1,6 +1,5 @@
 export type AudioMusicalValueKind = "position" | "duration"
 
-/** Positions use 1.1.1 at source zero; durations use 0.0.0. */
 export function formatAudioMusicalValue(
   value: number,
   numerator: number,
@@ -10,7 +9,6 @@ export function formatAudioMusicalValue(
   const sixteenthsPerBeat = 16 / denominator
   const subdivisions = numerator * sixteenthsPerBeat
   if (!Number.isSafeInteger(Math.floor(value * subdivisions))) return String(value)
-  // Preserve sub-sixteenth authored positions rather than rounding the source window.
   const total = Math.round(value * subdivisions * 1e10) / 1e10
   const bars = Math.floor(total / subdivisions)
   const remaining = total - bars * subdivisions
@@ -22,7 +20,6 @@ export function formatAudioMusicalValue(
   return `${bars + base}.${beats + base}.${third}`
 }
 
-/** Invalid syntax or bounds returns NaN so the input transaction can be cancelled. */
 export function parseAudioMusicalValue(
   raw: string,
   numerator: number,

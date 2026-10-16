@@ -30,7 +30,6 @@ for (const kind of ["move", "resize"] as const) {
     const x = kind === "resize" ? box.x + box.width - 1 : box.x + 2
     const y = box.y + box.height / 2
     h.root.renderer.nativeSimulateMouseDown(x, y)
-    // Zoom doubles content width: one beat is half the visible grid width.
     h.root.renderer.nativeSimulateScrollWheel(x, y, 0, -grid.width / 2, "shift")
     h.root.renderer.nativeSimulateMouseMove(x + 1, y, 0)
     h.root.renderer.nativeSimulateMouseUp(x + 1, y)
@@ -71,7 +70,6 @@ it("cancels wheel zoom synchronously before an unflushed release can commit the 
   h.root.renderer.nativeSimulateMouseDown(x, y)
   h.root.renderer.nativeSimulateMouseMove(x + 80, y, 0)
   expect(notes()[1]?.startBeat).not.toBe(3)
-  // Direct dispatch avoids TestRoot's per-native-event flushSync wrapper.
   handleGpuixEvent(
     {
       elementId: body.id,

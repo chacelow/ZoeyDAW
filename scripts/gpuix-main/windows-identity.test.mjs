@@ -13,7 +13,6 @@ test("renderer identity accepts the MSVC artifact and rejects an ABI-less Window
     const binding = path.join(native, "gpuix-native.win32-x64-msvc.node")
     writeFileSync(binding, "reviewed Windows MSVC fixture\n")
     const preload = path.join(fixture.root, "windows-host.mjs")
-    // This exercises artifact selection, not Win32 execution or Windows path semantics.
     writeFileSync(
       preload,
       'Object.defineProperty(process, "platform", { value: "win32" }); Object.defineProperty(process, "arch", { value: "x64" });\n'

@@ -130,7 +130,6 @@ export function MotionTabs({
         )}
       >
         {selectedIndex !== -1 ? (
-          // Fade endpoints and reduced-motion zero duration preserve the accessibility contract.
           <motion.div
             key={selected?.key}
             initial={{ opacity: reducedMotion ? 1 : 0 }}

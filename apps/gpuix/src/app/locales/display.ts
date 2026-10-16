@@ -40,7 +40,6 @@ export interface DisplayConfig {
   widthSamples: Record<NumericKind | "pan" | "panAutomation" | "parameter" | "audioGain", string[]>
 }
 
-// C/L/R are stable pan notation, not translated natural-language labels.
 const PAN_SYMBOLS = { center: "C", left: "L", right: "R" }
 
 function config(

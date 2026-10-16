@@ -17,7 +17,6 @@ export const MIDI_ID = "midi-test"
 export const PATTERN_ID = "pattern-test"
 export const AUDIO_ID = "audio-1"
 
-/** Web fixture: a one-bar MIDI clip showing source beats 2–6, one note crossing its left edge. */
 export function seed(extra: (clips: Clip[]) => void = () => {}) {
   const document = createMockDocument()
   const track = document.tracks.find(item => item.id === "trager")
@@ -68,7 +67,6 @@ export interface Harness {
   setActive(active: boolean): void
   render(id?: string): void
   bounds(testId: string): { x: number; y: number; width: number; height: number }
-  /** Content point → window point inside the piano-roll grid. */
   gridPoint(x: number, y: number): [number, number]
   key(testId: string, keystrokes: string): void
   unmount(): void
@@ -140,7 +138,6 @@ export function mount(
   }
   const unsubscribe = useProjectState.subscribe(() => root.render(view()))
   root.render(view())
-  // onLayout arrives after paint; dispatch it and render the measured layout.
   root.renderer.flush()
   root.renderer.dispatchNativeEvents()
   root.renderer.flush()

@@ -1,4 +1,3 @@
-//! Blocking decoding/resampling belongs to the session control thread, never to the audio callback.
 use crate::{
     defaults::{MAX_PEAK_PIXELS, PEAK_BIN_FRAMES, PEAK_LEVELS, RESAMPLE_CHUNK_FRAMES},
     peaks::PeakPyramid,
@@ -19,8 +18,6 @@ pub struct SourceInfo {
     pub channels: u32,
 }
 
-/// `pcm` is the only PCM buffer, resampled to the device rate for playback.
-/// `peaks` stays in the decoded source frame domain described by `source_info`.
 #[derive(Debug)]
 pub struct AudioSource {
     pub pcm: Vec<[f32; 2]>,
@@ -50,9 +47,6 @@ impl AudioSource {
         }
     }
 
-    /// Source-frame envelopes. Pyramid bins cover the interior; partial edge
-    /// bins sample `pcm` at the device frame that starts at the source frame,
-    /// clamped to the last one, which is exact when the rates match.
     pub fn read_peaks(
         &self,
         start: u64,
@@ -76,9 +70,6 @@ impl AudioSource {
         )
     }
 
-    /// `span` source frames from `start`, wrapping at the source end exactly
-    /// like looped playback. Pixel boundaries and layout match `read_peaks`,
-    /// so a span that never wraps yields the same envelopes.
     pub fn read_looped_peaks(
         &self,
         start: u64,
@@ -256,7 +247,6 @@ mod tests {
         let path = mono_wav("single-pcm", 44100, &[0; 44100]);
         let decoded = AudioSource::decode(&path, 48000);
         std::fs::remove_file(&path).unwrap();
-        // Exhaustive destructuring: a second PCM field fails to compile here.
         let AudioSource {
             pcm,
             sample_rate,
@@ -285,7 +275,6 @@ mod tests {
         std::fs::remove_file(&path).unwrap();
         let hit = source.read_peaks(29952, 30016, 1).unwrap();
         assert!(hit[1] > 0.9 && hit[3] > 0.9, "{hit:?}");
-        // The spike sits at device frame 32653; a device-domain read would hit here.
         let miss = source.read_peaks(32576, 32704, 1).unwrap();
         assert!(miss[1] < 0.01, "{miss:?}");
     }

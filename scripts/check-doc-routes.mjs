@@ -1,6 +1,3 @@
-// Routing check: an agent reads AGENTS.md first, then the AGENTS.md of the directory it edits.
-// Every document an agent must know about has to be linked from one of those entry files,
-// otherwise nothing tells the agent it exists. Run: node scripts/check-doc-routes.mjs
 import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 
@@ -17,7 +14,6 @@ for (const entry of entries) {
     if (/^https?:/.test(m[1])) continue
     linked.add(path.normalize(path.join(path.dirname(entry), m[1])))
   }
-  // Plain-text paths in backticks also count (READMEs are referenced that way).
   for (const m of text.matchAll(/`((?:src|docs|apps|crates)\/[^`\s]+\.md)`/g)) {
     linked.add(path.normalize(path.join(entry === "AGENTS.md" ? "." : path.dirname(entry), m[1])))
   }

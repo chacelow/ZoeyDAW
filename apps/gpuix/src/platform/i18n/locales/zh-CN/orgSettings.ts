@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — orgSettings (zh-CN)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   danger: {
     deleteAction: "删除组织",

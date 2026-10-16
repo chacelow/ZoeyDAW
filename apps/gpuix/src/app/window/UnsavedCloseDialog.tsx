@@ -9,7 +9,6 @@ export interface UnsavedCloseDialogProps {
   readonly onChoose: (choice: UnsavedCloseChoice) => void
 }
 
-/** Save / Don't save / Cancel before a dirty project window closes. */
 export function UnsavedCloseDialog({ open, onChoose }: UnsavedCloseDialogProps) {
   const theme = useTheme()
   const { t } = useAppTranslation()

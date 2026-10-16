@@ -1,7 +1,6 @@
 import { getPreference } from "@/platform/settings"
 import type { SnapshotStorage } from "@/platform/storage"
 
-/** This storage namespace preserves existing recent-project entries across upgrades. */
 export const RECENT_PROJECTS_KEY = "zoeydaw:recent-projects"
 
 export interface RecentProject {
@@ -20,7 +19,6 @@ function isRecentProject(value: unknown): value is RecentProject {
   )
 }
 
-/** Unreadable or malformed storage yields an empty list, as on the web. */
 export function loadRecentProjects(storage: SnapshotStorage): RecentProject[] {
   try {
     const raw = storage.get(RECENT_PROJECTS_KEY)
@@ -32,7 +30,6 @@ export function loadRecentProjects(storage: SnapshotStorage): RecentProject[] {
   }
 }
 
-/** Moves a project to the front, de-duplicated by id, using the selected capacity. */
 export function bumpRecentProject(
   list: readonly RecentProject[],
   project: RecentProject

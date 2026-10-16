@@ -102,7 +102,6 @@ test("runtime group overrides resize real controls and track identity without st
 
 test("Home uses its layout maximum width independently of the track control column", () => {
   initAppI18n()
-  // Fixed native viewport makes the Home maximum visible without a live window.
   const root = createTestRoot({ width: 1200, height: 300 })
   const storage = createMemorySnapshotStorage()
   const router = createRouter()

@@ -47,7 +47,6 @@ test("an unlisted stored id reads as null without writing; repair replaces it wi
     expect({ legacy, read: preset.get() }).toEqual({ legacy, read: null })
     expect(readFileSync(settingsFile(configDir), "utf8")).toBe(before)
 
-    // Another setting's write carries the stale id forward; only repair clears it.
     createSettingStorage("language", { configDir }).set("zh-CN")
     expect(stored(configDir).themePreset).toBe(legacy)
     expect({ legacy, repaired: preset.repair() }).toEqual({ legacy, repaired: true })

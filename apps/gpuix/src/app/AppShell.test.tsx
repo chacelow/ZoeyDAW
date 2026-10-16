@@ -62,14 +62,12 @@ const roots: TestRoot[] = []
 const cleanups: (() => void)[] = []
 afterEach(async () => {
   for (const root of roots.splice(0)) root.unmount()
-  // Retire the temporary settings port before a later keyboard test can persist a language.
   initAppI18n({ storage: languageStorage })
   for (const cleanup of cleanups.splice(0)) cleanup()
   setSnapshotStorage(null)
   await i18next.changeLanguage("zh-CN")
 })
 
-/** Counts the sessions a real runtime lease opens and disposes through the backend port. */
 function countSessions() {
   const sessions = { opened: 0, disposed: 0 }
   cleanups.push(
@@ -156,13 +154,11 @@ function mount(overrides: Partial<AppShellProps> = {}, wrap = (node: ReactNode) 
   return { root, router, saved, keyboard, rerender: () => root.render(node()) }
 }
 
-/** Applies an external store change (router, project actions) and paints it. */
 function act(root: TestRoot, change: () => void) {
   flushSync(change)
   root.renderer.flush()
 }
 
-/** Flush native layout, its events and React microtasks without wall-clock timers. */
 async function layout(root: TestRoot) {
   for (let pass = 0; pass < 4; pass++) {
     root.renderer.flush()
@@ -171,7 +167,6 @@ async function layout(root: TestRoot) {
   }
 }
 
-/** Lets queued microtasks (dialog open after the native veto, async choices) commit. */
 async function settle(root: TestRoot) {
   for (let tick = 0; tick < 5; tick++) await Promise.resolve()
   act(root, () => undefined)
@@ -252,7 +247,6 @@ describe("project runtime lease", () => {
     })
     cleanups.push(() => {
       opening.mockRestore()
-      // Also clean up a session if an assertion or a disposal mutation fails.
       for (const handle of handles) originalDispose(handle)
     })
     const requests: BackendRequest[] = []
@@ -279,7 +273,6 @@ describe("project runtime lease", () => {
       if (handle === undefined || !request) throw new Error("No real native session was opened")
       root.renderer.nativeSimulateKeystrokes(button(root, "返回").id, "enter")
       expect(router.getRoute().kind).toBe("home")
-      // Call napi directly, bypassing createNativeBackend's JS disposed short circuit.
       const result: unknown = JSON.parse(engine.apply(handle, JSON.stringify(request)))
       expect(result).toMatchObject({ kind: "rejected", code: "disposed" })
     }

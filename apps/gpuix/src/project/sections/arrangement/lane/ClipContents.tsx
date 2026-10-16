@@ -57,7 +57,6 @@ export const ClipContentsView = memo(function ClipContentsView({
   )
   const noteBatch = useQuadBatch()
   const noteQuads = useMemo(() => {
-    // Native quad uploads encode each rectangle as x/y/width/height.
     const values = new Float32Array(notes.length * 4)
     let offset = 0
     for (const note of notes) {

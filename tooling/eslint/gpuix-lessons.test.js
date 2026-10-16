@@ -13,12 +13,10 @@ const src = "/repo/apps/gpuix/src"
 
 tester.run("architecture/gpuix-lessons", gpuixLessons, {
   valid: [
-    // Frame-driven code is the sanctioned path.
     {
       filename: `${src}/project/sections/arrangement/tracks/meter/telemetry.tsx`,
       code: 'import { useAnimationFrame } from "@/platform/frame"; useAnimationFrame(() => {})',
     },
-    // Allow-listed wall-clock delays.
     {
       filename: `${src}/ui/controls/Toaster/index.tsx`,
       code: "setTimeout(() => {}, 4200)",
@@ -27,18 +25,14 @@ tester.run("architecture/gpuix-lessons", gpuixLessons, {
       filename: `${src}/project/adapters/backend/mock.ts`,
       code: "setInterval(() => {}, 16)",
     },
-    // Tests, verification harnesses and demos may drive time.
     { filename: `${src}/ui/panels/panels.test.tsx`, code: "setTimeout(() => {}, 0)" },
     {
       filename: `${src}/project/sections/arrangement/lane/verification/render-cost.tsx`,
       code: "setTimeout(() => {}, 0)",
     },
     { filename: `${src}/project/sections/footer/demo.tsx`, code: "setTimeout(() => {}, 0)" },
-    // Outside the gpuix app the rule is inert.
     { filename: "/repo/tooling/fixture.ts", code: "setInterval(() => {}, 32)" },
-    // An unrelated renderer getter is not an appearance override.
     { filename: `${src}/app/x.ts`, code: "const appearance = renderer.getWindowAppearance()" },
-    // Business surfaces may read design roles, 0/1 radii, and derive geometry from an inset token.
     {
       filename: `${src}/app/window/UnsavedCloseDialog.tsx`,
       code: "const s = { borderRadius: theme.design.popover.radius, padding: theme.design.popover.inset, gap }",
@@ -48,14 +42,12 @@ tester.run("architecture/gpuix-lessons", gpuixLessons, {
       filename: `${src}/project/sections/footer/EffectChain/DeviceCard/index.tsx`,
       code: 'const s = { width: theme.control["--spacing-control-track"] + inset * 2 }',
     },
-    // ui/** owns shape and is not a business surface.
     {
       filename: `${src}/ui/controls/Card/index.tsx`,
       code: "const s = { borderRadius: 8, gap: gap * 2 }",
     },
   ],
   invalid: [
-    // The 32ms focus poll removed from useDividerDrag (fabe4fb) must not come back.
     {
       filename: `${src}/ui/panels/useDividerDrag.ts`,
       code: "const timer = setInterval(checkFocus, 32)",
@@ -71,7 +63,6 @@ tester.run("architecture/gpuix-lessons", gpuixLessons, {
       code: 'renderer.setWindowAppearance("dark")',
       errors: [{ messageId: "appearanceOverride" }],
     },
-    // T1 cases that must not come back.
     {
       filename: `${src}/app/settings/ThemePresetGrid.tsx`,
       code: 'const s = { borderRadius: theme.control["--spacing-control-track"] }',

@@ -17,9 +17,6 @@ export interface FadeBezierSegment {
   end: { x: number; y: number }
 }
 
-/**
-A single smooth gain curve passes through the anchor; cubic spans approximate it within 0.2px.
-*/
 export function fadeBezierSegments(
   x0: number,
   y0: number,
@@ -84,9 +81,6 @@ export function fadePath(
   return `M ${start} ${y0} ${segments.map(({ control1: a, control2: b, end }) => `C ${a.x} ${a.y}, ${b.x} ${b.y}, ${end.x} ${end.y}`).join(" ")}`
 }
 
-/**
-Quiet boundary and full-level peak in visible clip bars.
-*/
 export function fadeControls(clip: AudioClip, edge: "in" | "out"): { start: number; end: number } {
   if (edge === "in") {
     const start = clip.fadeInOffsetBars ?? PROJECT_TEMPLATE.clip.fade.offsetBars
@@ -96,9 +90,6 @@ export function fadeControls(clip: AudioClip, edge: "in" | "out"): { start: numb
   return { start: end - (clip.fadeOutBars ?? PROJECT_TEMPLATE.clip.fade.durationBars), end }
 }
 
-/**
-Keep both attenuation intervals inside the visible window without overlap.
-*/
 export function clampFadeIntervals(clip: AudioClip): AudioClip {
   const fadeInOffsetBars = Math.max(
     0,
@@ -128,9 +119,6 @@ export function clampFadeIntervals(clip: AudioClip): AudioClip {
   return { ...clip, fadeInOffsetBars, fadeOutOffsetBars, fadeInBars, fadeOutBars }
 }
 
-/**
-Reproject retained-source anchors into a new visible window; negative delta extends left.
-*/
 export function fadeWindow(
   clip: AudioClip,
   deltaLeft: number,

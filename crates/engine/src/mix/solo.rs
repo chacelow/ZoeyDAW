@@ -19,8 +19,6 @@ impl ReturnSolo {
         }
         let mut feeds = selected.clone();
         let mut outputs = selected;
-        // The original graph is validated separately; a bounded fixed point also
-        // handles arbitrary track order without following a possible routing cycle.
         for _ in 0..project.tracks.len() {
             let mut changed = false;
             for (index, track) in project.tracks.iter().enumerate() {

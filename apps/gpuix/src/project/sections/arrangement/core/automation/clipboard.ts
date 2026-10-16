@@ -1,6 +1,5 @@
 import type { AutomationPoint } from "@/project/model/types"
 
-// Clipboard identity and schema version 1 are compatibility constants, not editable preferences.
 export const AUTOMATION_MIME = "application/x-zoeymind-automation+json"
 
 export interface AutomationClipboard {
@@ -62,7 +61,6 @@ export function parseAutomationClipboard(raw: string): AutomationClipboard | nul
     })
   }
   points.sort((a, b) => a.bar - b.bar)
-  // One-millionth of a bar separates serialized points safely despite floating-point rounding.
   return points.length &&
     points.every((point, index) => index === 0 || point.bar - points[index - 1].bar >= 0.000001)
     ? { parameter: parsed.parameter, points }

@@ -6,12 +6,6 @@ import type { SourceView } from "./source-view"
 
 const EMPTY = new Float32Array(0)
 
-/**
-Exact envelope of the visible part of the retained window at one column per pixel, read from the
-engine session. The reader takes clip-local one-based bars plus the signed source offset, so the
-engine wraps negative or long offsets exactly like playback. Reverse reads the mirrored window range
-and flips the columns; gain scales them, as the engine applies it at playback.
-*/
 export function SourceWaveform({
   sourceId,
   view,
@@ -27,7 +21,6 @@ export function SourceWaveform({
 }: {
   readonly sourceId: string
   readonly view: SourceView
-  /** Retained source window in source bars; peaks are read only inside it. */
   readonly window: { readonly start: number; readonly end: number }
   readonly width: number
   readonly height: number
@@ -45,7 +38,6 @@ export function SourceWaveform({
   const bpm = useProjectState(state => state.document.transport.bpm)
   const numerator = useProjectState(state => state.document.transport.numerator)
   const denominator = useProjectState(state => state.document.transport.denominator)
-  // PeakReader intentionally hides the backend handle; its musical frame mapping still changes.
   const generation = useMemo(
     () => ({
       sessionId,

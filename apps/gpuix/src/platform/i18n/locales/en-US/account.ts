@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — account (en-US)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   dialog: {
     title: "Account",

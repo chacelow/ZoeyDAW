@@ -8,10 +8,6 @@ export interface FrameRenderer {
 
 export interface AnimationFrameSource {
   subscribe(callback: AnimationFrameCallback): () => void
-  // Resume commits before the first restored present: macOS invokes inside prepaint;
-  // Windows defers present while the nonblocking JS callback commits and acknowledges.
-  // React consumers use flushSync. GPUI reads/window mutations are forbidden only
-  // inside macOS prepaint; the Windows UI thread keeps processing commands.
   subscribeResume(callback: AnimationFrameCallback): () => void
 }
 
@@ -45,7 +41,6 @@ export function createAnimationFrameSource(renderer: Partial<FrameRenderer>): An
         setCallback(timestampMs => {
           if (session !== current) return
           const pending = [...current.subscribers]
-          // Native invokes this inside GPUI; consumers may only mutate it after returning.
           queueMicrotask(() => {
             for (const listener of pending) {
               if (session !== current) return

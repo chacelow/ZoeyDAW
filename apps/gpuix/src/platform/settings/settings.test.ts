@@ -81,7 +81,6 @@ describe("versioned settings through the real napi module", () => {
 
   test("module import and owner construction do not read user settings", () => {
     const moduleUrl = new URL("./index.ts", import.meta.url).href
-    // Dynamic import is intentional: the spies must exist before module initialization.
     const script = `
       import { spyOn } from "bun:test";
       import * as native from "@zoeydaw/native";

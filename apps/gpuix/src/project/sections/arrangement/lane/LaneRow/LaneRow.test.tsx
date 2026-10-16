@@ -443,7 +443,6 @@ it("refreshes a cached mounted Clip title when density changes without changing 
     loop: score.transport.loop,
   })
   scene.setViewport({ width: 500, height: 200, scrollX: 0, scrollY: 0, pxPerBar: 64, dpr: 1 })
-  // Fixed offscreen viewport isolates the visible title/body boundary, not a product layout default.
   const mounted = createTestRoot({ width: 500, height: 200 })
   root = mounted
   const readPeaks = () => new Float32Array(0)

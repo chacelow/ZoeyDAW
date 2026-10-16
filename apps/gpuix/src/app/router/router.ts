@@ -4,18 +4,11 @@ import type { Route } from "./route"
 
 type LeaveGuard = (next: Route, proceed: () => void) => boolean
 
-/**
- * In-memory history for the single native window. gpuix has no DOM history, and
- * @gpuix/react ships no router, so this is the only navigation owner.
- */
 export interface Router {
   getRoute(): Route
-  /** Pushes a route; `replace` swaps the current entry instead. */
   navigate(to: string | Route, options?: { readonly replace?: boolean }): void
-  /** Pops one entry; at the first entry it stays put and returns false. */
   back(): boolean
   subscribe(listener: () => void): () => void
-  /** Vetoes a transition; `proceed` resumes exactly that transition after a decision. */
   registerLeaveGuard(guard: LeaveGuard): () => void
 }
 

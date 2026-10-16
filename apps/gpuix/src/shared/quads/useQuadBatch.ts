@@ -6,9 +6,6 @@ export interface QuadBatchController {
   setQuads(quads: Float32Array): void
 }
 
-/** Keeps geometry outside React props and state. Buffers are immutable snapshots:
- * unchanged references do not upload; a newly mounted host receives the latest buffer.
- */
 export function useQuadBatch(): QuadBatchController {
   return useMemo(() => {
     let host: QuadBatchInstance | null = null

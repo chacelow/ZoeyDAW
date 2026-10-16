@@ -9,7 +9,6 @@ import type { AudioClip } from "@/project/model/types"
 
 export type MarkerKind = "start" | "end" | "loopStart" | "loopEnd" | "fadeIn" | "fadeOut"
 
-/** Source-bar position of each marker; fades are drawn relative to the retained source offset. */
 export function markerPosition(clip: AudioClip, kind: MarkerKind, bpm: number): number {
   const settings = getAudioClipSettings(clip, bpm)
   const offset = clip.sourceOffsetBars ?? 0
@@ -29,11 +28,6 @@ export function markerPosition(clip: AudioClip, kind: MarkerKind, bpm: number): 
   }
 }
 
-/**
-Patch for dragging one marker to `value` from the press-time `baseline`. Start/End and the loop
-window keep a minimum length against their partner; fade edges stay inside the visible fades'
-interval. Start/End only edit playback metadata, never Arrangement placement.
-*/
 export function markerPatch(
   baseline: AudioClip,
   kind: MarkerKind,
@@ -71,8 +65,6 @@ export function markerPatch(
     : { fadeOutBars: Math.max(0, outFade.end - Math.max(inFade.end, value - offset)) }
 }
 
-/** Arrow keys move a marker one musical sixteenth; Shift moves a quarter of that. */
 export function markerKeyStep(numerator: number, denominator: number, fine: boolean): number {
-  // Sixteenth-note and fine-quarter conversion depends on meter, not editor preference.
   return denominator / (numerator * 16) / (fine ? 4 : 1)
 }

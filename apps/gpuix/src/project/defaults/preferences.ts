@@ -7,7 +7,6 @@ function preferenceChoice<T extends string>(value: string, choices: readonly T[]
   return selected
 }
 
-// Pure policy consumers must not load native persistence or the React preference owner.
 export const PREFERENCE_DEFAULTS: Preferences = {
   ...defaults,
   workspace: {

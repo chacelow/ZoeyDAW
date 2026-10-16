@@ -264,7 +264,6 @@ test("centered native Select anchors to the compact trigger rather than a stretc
   }
   const trigger = root.renderer.getElementBounds(root.renderer.findByTestId("center")!.id)!
   const content = root.renderer.getElementBounds(root.renderer.findByTestId("center-content")!.id)!
-  // Native anchored positions snap to pixels; odd surface widths can differ by half a point.
   expect(
     Math.abs(content.x + content.width / 2 - trigger.x - trigger.width / 2)
   ).toBeLessThanOrEqual(0.5)

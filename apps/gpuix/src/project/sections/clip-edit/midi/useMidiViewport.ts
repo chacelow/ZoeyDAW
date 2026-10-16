@@ -6,11 +6,6 @@ import { fitRows, rescaleScroll, rollPitches } from "./viewport"
 import type { MidiClip } from "@/project/model/types"
 import type { RollGeometry, SourceWindow } from "./layout"
 
-/**
-Local view state of one piano roll: fold, zoom and scroll never enter the project or its history.
-The measured size arrives through `onLayout`; a fit runs when the clip, fold or source window changes
-and once the first non-zero height is known.
-*/
 export function useMidiViewport(clip: MidiClip, window: SourceWindow) {
   const theme = useTheme()
   const midi = usePreference("midi")
@@ -33,7 +28,6 @@ export function useMidiViewport(clip: MidiClip, window: SourceWindow) {
     () => rollPitches(clip.notes, fold, midi.initialPitch),
     [clip.notes, fold, midi.initialPitch]
   )
-  // Like Live, zoom 1 fits the whole source window to the editor width.
   const width = size.width * horizontalZoom
   const roll = useMemo<RollGeometry>(
     () => ({

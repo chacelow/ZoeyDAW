@@ -269,10 +269,6 @@ export function eraseCells({
 
 const GRID_EPSILON = 1e-9
 
-/**
-Live's Cmd+U: snap selected note starts to the editor grid, keeping lengths. A start that the
-source-window move rules cannot place on any nearby grid line is left where it is.
-*/
 export function quantizeNotes({
   notes,
   selection,

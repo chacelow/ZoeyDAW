@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test"
 import { createWindowCloseGuard } from "./close-guard"
 import type { CloseGuardRenderer, WindowCloseGuard } from "./close-guard"
 
-/** Mirrors the patched renderer: the close button asks the handler, `closeWindow` does not. */
 function closableRenderer() {
   let handler: (() => boolean) | null = null
   const state = { open: true, queries: 0 }

@@ -1,6 +1,6 @@
 # Arrangement 组合契约
 
-2026-10-14。`project/sections/arrangement/` 下四个目录（`core`、`tracks`、`lane`、`timeline`）由不同切片并行实现，本文规定它们之间唯一的组合接口。各切片对着同一份接口写，集成步骤（`app-shell`）只做装配，不写适配层。
+`project/sections/arrangement/` 下四个目录（`core`、`tracks`、`lane`、`timeline`）之间唯一的组合接口。组合根只做装配，不写适配层。
 
 ## 1. 依赖方向
 
@@ -19,7 +19,7 @@ app-shell ──▶ ArrangementPanel (composition root, 在 app-shell 或 arrang
 
 视口（`scrollX`、`scrollY`、`pxPerBar`、可见行范围）只有一个 owner：`timeline`。
 
-- `ArrangementViewport`（`pxPerBar`、`scrollX`、`scrollY`、`width`、`height`、`dpr`）与 `ArrangementScene` 类型**定义在 `core/scene`（B1，已合入）**，三个切片都从那里取，不各自重新定义。
+- `ArrangementViewport`（`pxPerBar`、`scrollX`、`scrollY`、`width`、`height`、`dpr`）与 `ArrangementScene` 类型**定义在 `core/scene`**，三个目录都从那里取，不各自重新定义。
 - `ArrangementViewport.width` 是可编辑时间宽度（`timeViewportWidth`），不含右侧控制列。总宽只取 `scene.geometry.track.controlsWidth`（来源 `Theme.layout.track.controlsWidth`），`project` 不再保留同义字段；`tracks` 的整行与 resize 外框宽度是 viewport.width 与该总宽之和，车道槽宽度直接使用 viewport.width。identity/routing 子列宽继续取 project，Mixer 以总宽减子列宽派生，原生回归核对三列总和。
 - `timeline` 拥有视口**状态与操作**，经 `TimelineController` 暴露（见第 3 节）；缩放/平移的纯计算调用 `core/viewport`。`setScroll` 必须同步：返回前共享 `SceneStore` 的 viewport 投影已更新，并返回接受后的 `ArrangementViewport`，这样 lane 的边缘自动滚动在同一帧重算 Ghost 时读到的是新值，不读前一帧。
 - `lane` 与 `tracks` 只**读**视口（通过 props 传入同一个对象），不持有第二份。
@@ -42,7 +42,7 @@ export interface TimelineController {
   zoomAt(anchorBar: number, anchorPx: number, factor: number): ArrangementViewport
   fitToProject(): ArrangementViewport
   readonly view: TimelineView // 命名的视图交互端口，仅供 ArrangementTimeline 消费（标尺、测量、滚轮、暂停跟随、minimap 高度）；组合根与 app-shell 不依赖其细项
-  tick(nowMs: number): void // 由组合根的帧源（F1 合入后为原生帧回调）喂入，驱动边缘自动滚动与跟随播放
+  tick(nowMs: number): void // 由组合根的帧源（原生帧回调）喂入，驱动边缘自动滚动与跟随播放
   getFrameDemand(): boolean // 标尺 autoScroll 的实际活动；组合根再合并 playing 与 lane.dragActive
   subscribeFrameDemand(listener: () => void): () => void // 空闲/活动边界通知，不轮询、不把 view 细项泄漏给组合根
   dispose(): void
@@ -100,7 +100,7 @@ export function TrackResizeOverlay(props: {
 - **复合轨道行归 `tracks`**：每条轨道是一个整体组件 `TrackRow`（产品规则：左、中、右三段；**Live 实测：车道在左，轨道头在窗口右侧**，头部从左到右是颜色标题条、路由列、Mixer 列，整体很窄）。三段的具体排布以 Live 的观察为准，由 `tracks` 决定；车道槽的位置由 `tracks` 摆放，外层**唯一**的轨道边框与分组外框（含折叠组向下包住子轨、围栏层级在轨道边框之上、高度分隔条不截断围栏）都由 `tracks` 画。中间的车道槽由 `renderLane(row)` 填充，`lane` 只提供行内内容，不画轨道边框。
 - 因此 `lane` 不再单独铺满整块区域：它导出 `LaneRow`，只渲染**一条轨道的车道内容**（Clip、Pattern、Automation、行内网格线），行的可见范围裁剪与屏外卸载由 `tracks` 的 `TrackRows` 做；`lane` 仍拥有手势 controller（跨行拖动靠 controller 持有的 scene，不靠 DOM）。
 - 屏外只保留 `focusedTrackId` 对应行的表头部分（输入框焦点不丢），其车道内容仍按可见范围卸载。
-- 焦点：`focusedTrackId` 来自 store 的 `session.selectedTrackIds` 与 `trackSelectionSurface`，不靠 JS 轮询查询原生焦点。原生输入焦点由 A3 的 `Input` 控件自己持有；`tracks` 在表头名称编辑态时通过 `onFocusTrack` 报告 id。
+- 焦点：`focusedTrackId` 来自 store 的 `session.selectedTrackIds` 与 `trackSelectionSurface`，不靠 JS 轮询查询原生焦点。原生输入焦点由共享 `Input` 控件自己持有；`tracks` 在表头名称编辑态时通过 `onFocusTrack` 报告 id。
 - 二维编辑面只有一个稳定的 `timeline-viewport` Tab owner：它是覆盖车道可编辑区域的持续挂载透明输入层，原生指针捕获不依附虚拟行。`useLaneSurface` 归一化输入到同一 Scene 坐标，调用 lane controller；唯一 `LaneContextMenu` 包住这个 owner，inline editors 在输入层之上。行与 Clip 只保留绘制及 AX 描述，不注册鼠标/键盘，不进入 Tab 顺序。`timeline-viewport.onBlur` 调 `lane.interrupt()`，Tab 离开后释放不提交；滚动卸载 source row 不结束跨行捕获。标尺和轨道头仍拥有各自独立的交互区域。
 - `TrackResizeOverlay` 是 tracks 唯一的高度分隔条 owner，`TrackRow` 不再挂载 resize handle/hook。组合根把它注入 `interactionOverlay`，在 lane 输入层之上绘制分隔条 hitbox，横跨车道与表头。空闲时按共享行布局裁剪；活动时保留按下 hitbox 和 owner 到释放或取消，不能因自身高度变化使边界离屏而卸载。不覆盖车道其他区域。
 - 滚轮只由全宽 `timeline-layout.onScroll` 分派。透明 lane 输入层不注册第二个滚轮入口，车道与表头使用同一平移量、缩放比例。

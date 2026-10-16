@@ -1,7 +1,6 @@
 import type { Props } from "@gpuix/react"
 import { useCallback, useState } from "react"
 
-/** The painted border box is owned by the renderer's layout events. */
 export function useElementSize() {
   const [size, setSize] = useState({ width: 0, height: 0 })
   const onLayout = useCallback<NonNullable<Props["onLayout"]>>(event => {

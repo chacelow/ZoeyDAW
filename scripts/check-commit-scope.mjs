@@ -1,33 +1,3 @@
-/**
- * check-commit-scope.mjs —— commit-msg 阶段检查, 拦截明显的多目的 commit.
- *
- * 单一职责原则: 一个 commit 只解决一件事. 多个功能/修复混在一起会让
- *   - 代码审查视线分散
- *   - revert 变粗粒度 (想撤 A 必须连 B 一起)
- *   - bisect 无法定位是哪块引入的
- *
- * 只看 commit message 的 subject (第一行), 因为标题最直接暴露作者是否把
- * 多件事捆一起. body 里的 bullet 是解释, 允许列多点; 单个功能可以有很多细节.
- *
- *   1. ' + '   —— 用加号把两件事列出来 (最强信号)
- *   2. ' & '   —— 同义
- *   3. ' 和 '  —— 中文并列
- *   4. ' 与 '  —— 中文并列
- *   5. 多个 Conventional Commit 类型: 一行里出现 >= 2 个
- *      feat/fix/chore/refactor/docs/perf/test/build/ci/style
- *
- * '、' 单独出现不拦截: 它常用于列举同一职责下的并列组成部分
- * (例如 "建立共享主题、样式与类型基础" 是一个职责, 只是列了三个产物)。
- * 只有上面 1-5 的信号已经判定这是多职责 commit 时, '、' 才作为补充证据
- * 一并列出, 不单独触发拦截。
- *
- * 例:
- *   BAD:  feat(diff-view): 编辑器 diff 可视化 + 软删除 + fs 竞态修复
- *   GOOD: feat(diff-view): 编辑器 diff 可视化
- *
- * 绕过 (谨慎): git commit --no-verify
- * 例外: revert commit / merge commit 直接放行 (格式由 git 生成).
- */
 import fs from "node:fs"
 
 const MULTI_MARKERS = [
@@ -51,7 +21,6 @@ const CC_TYPES = [
 ]
 
 function stripScope(subject) {
-  // 把括号里的 scope 挖掉 (scope 里的 、 是合法的, 不算并列)
   return subject.replaceAll(/\([^)]*\)/g, "")
 }
 
@@ -62,11 +31,9 @@ function main() {
     process.exit(1)
   }
   const raw = fs.readFileSync(messageFile, "utf-8")
-  // 剔除注释行 (# 开头 git 自动加的说明), 首行拿到 subject
   const line_ = raw.split("\n").find(line => !line.startsWith("#"))
   const subject = line_ ?? ""
 
-  // 特例放行: revert / merge / fixup / squash 的自动格式
   if (
     /^revert\s/i.test(subject) ||
     /^merge\s/i.test(subject) ||
@@ -97,8 +64,6 @@ function main() {
     )
   }
 
-  // 中文顿号: 只有和其他信号一起出现才算补充证据, 单独出现不拦截
-  // (列举同一职责的并列组成部分是合法写法, 例如 "主题、样式与类型基础")
   if (violations.length > 0 && /、/.test(withoutScope)) {
     violations.push("subject 出现 '、' (scope 外): 补充证据, 与其他信号一并出现")
   }

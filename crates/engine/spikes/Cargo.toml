@@ -1,4 +1,3 @@
-# 独立 workspace:spike 依赖(firewheel/kira/rodio/cpal…)不进根 workspace 默认构建。
 [workspace]
 resolver = "2"
 members = ["common", "firewheel", "kira", "rodio"]

@@ -6,10 +6,6 @@ import { MIN_GRID_CELL_PX } from "@/project/model/grid"
 import { rollGridLines } from "./layout"
 import type { RollGeometry } from "./layout"
 
-/**
-Source-window strip with loop boundary marks above bar.beat labels. Like Live's Clip ruler, labels
-are one-based musical positions inside the retained source; only labels in view are mounted.
-*/
 export function MidiRuler({
   roll,
   numerator,
@@ -28,7 +24,6 @@ export function MidiRuler({
   const fontSize = theme.control["--text-control-track"]
   const labelGap = theme.control["--spacing-control-gap"]
   const { sourceOffsetBeats, totalBeats } = roll.window
-  // Label every line that has room for "bar.beat"; otherwise only bars.
   const labelled = rollGridLines(roll, numerator, fontSize * 4, midi.noteGridBeats).filter(
     line => line.level > 0
   )

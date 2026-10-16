@@ -10,7 +10,7 @@
 | --- | --- |
 | `createTimelineController(deps)` | 组合根创建并负责 `dispose()`；内部只有一个 `SceneStore` 投影、一个键盘 owner、标尺事务与自动滚动状态 |
 | `ArrangementTimeline({ controller, tracks, overlay, labels, cursor, editSurface?, interactionOverlay? })` | `tracks` 是完整复合行；`overlay` 是跨行叠加层；lane 注入 `editSurface`，tracks 注入位于其上方的唯一 resize strips；timeline 不依赖两个切片 |
-| `controller.useViewport()` | React hook，订阅同一个 `ArrangementViewport`；类型来自 B1 `core/scene` |
+| `controller.useViewport()` | React hook，订阅同一个 `ArrangementViewport`；类型来自 `core/scene` |
 | `controller.setScroll(x, y)` | 同步更新权威 workspace 并夹取；返回前 `sceneStore.get().viewport` 已是接受后的同一投影；手工导航暂时暂停 Follow |
 | `controller.zoomAt(anchorBar, anchorPx, factor)` | 显式音乐位置/像素锚点缩放；边界夹取优先 |
 | `controller.fitToProject()` | 使用统一的派生工程范围适配，包括最小编辑范围与当前播放/时间选区；Minimap 不再另算一套 fit |
@@ -29,7 +29,7 @@
 - `getSnapshot/subscribe`：只持有测量尺寸和 overview 高度，不复制工程数据。
 - `measure`：由原生 `onLayout` 提供尺寸；不另做采样或滚轮测量。仅编辑目标变化时 reveal 所在轨道，纯尺寸变化只 clamp 视口，不重复定位编辑轨道。
 - `setOverviewHeight`：共享 32–90px 约束；Panel/Divider 复用 A4。
-- `overviewGeometry`：读取 B1 夹取后的同一视口。
+- `overviewGeometry`：读取 core 夹取后的同一视口。
 - `wheel/stepZoom/suspendFollow`：视口命令；原生 wheel 的负向下/右符号在输入边界转换。
 - `registerMinimap/cancelGestures`：统一失活、卸载、Escape 与项目 epoch 取消路径；旧项目回调不能写入新项目。
 
@@ -43,7 +43,7 @@ Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有�
 
 组合根提供：
 
-1. 同一真实 renderer 的 `createWindowPlatform(renderer).subscribeApplicationActive`，不用旧 A2 采样 singleton。
+1. 同一真实 renderer 的 `createWindowPlatform(renderer).subscribeApplicationActive`。
 2. 一份 `WindowKeyboardProvider`，根 `render` 使用同一 bus 的 `rootHandlers`。时间线的命令注册表经 `DEFAULT_KEYMAP` 解析上下文，窗口订阅用 `consumeKey` 默认消费已处理键；原生元素先处理，窗口回调在后。
 3. 一份 `AnimationFrameProvider`。普通帧通过 `useAnimationFrame` 喂 `tick`，恢复 prepaint 通过同一 demand 的 `useResumeFrame` 显式 `flushSync` 同一个 tick；不保留 JS timer 链或第二帧源。
 4. 从 `@/platform/cursor` 注入同一 `nativeCursorLock` 到 `ControlEnvironmentProvider` 与时间线；Panel 环境复用同一窗口失活订阅。sections 不直接 import napi 包。
@@ -51,7 +51,7 @@ Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有�
 
 ## 坐标与布局
 
-B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨道行位置沿用同一原点。时间线只裁剪整行 slot，负向内部偏移抵消外层标尺裁剪偏移，不拆开轨道头与车道。Minimap 在独立上方 Panel，纵向滚动不移动它。
+core 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨道行位置沿用同一原点。时间线只裁剪整行 slot，负向内部偏移抵消外层标尺裁剪偏移，不拆开轨道头与车道。Minimap 在独立上方 Panel，纵向滚动不移动它。
 
 标尺高度与可编辑区域偏移读取 `theme.layout.arrangement`，组合根把同一 layout 注入 Scene。`barRulerHeight` 决定音乐标尺与编辑面起点，`timeRulerHeight` 决定底部裁剪。`MarkerEditor` 使用 `markerRulerHeight`；Minimap clip 行内距使用 `minimapClipInset`。
 
@@ -64,7 +64,7 @@ B1 的 viewport 高度包含顶部音乐标尺和底部时间标尺，复合轨�
 - `patternRegions`：正常可读缩放逐小节交替；低于 model/grid 的既有 `MIN_GRID_CELL_PX` 时按 2 幂整数小节合并，防止整面密线。合并不跟随标签步长或网格偏好。
 - `gridLines.major`：只在整数小节区域边界上；其余线只来自 `gridPlan.cellBars`，不把拍/十六分音符标签变成粗线。
 - `rulerTicks`：独立的可读标签层，按真实 `16 / denominator` 换算每拍十六分音符数量。
-- `rulerLabel/adjacentMarker`：由批准的 B1 纯函数提供展示位置与邻近定位点，不在组件内排序或拼位置规则。
+- `rulerLabel/adjacentMarker`：由 core 纯函数提供展示位置与邻近定位点，不在组件内排序或拼位置规则。
 
 网格与音乐标尺的 Pattern 背景统一使用 `useQuadBatch` 命令式上传；网格按主题的粗/细线材质分批，不逐线挂载节点。可见几何仍来自 B1，不将 Float32Array 放入 React props/state。`grid/parity.test.tsx` 用固定的旧 div 绘制 oracle 对照深浅主题、标尺/车道高度、分数滚动与极端缩放的原生 PNG。标尺文字保留原生文本布局，时间刻度的短线与文字仍共用原位置节点；没有为少量文字标签另建绘制系统。
 

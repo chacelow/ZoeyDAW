@@ -40,7 +40,6 @@ export interface MinimapGesture {
   dispose: () => void
 }
 
-/** The store owns the viewport; this controller owns only a pointer-down baseline. */
 export function createMinimapGesture({
   read,
   publish,

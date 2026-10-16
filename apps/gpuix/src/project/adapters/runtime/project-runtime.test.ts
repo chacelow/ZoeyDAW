@@ -247,7 +247,6 @@ it("keeps canonical previews out of snapshots and journals recorded notes across
     notes: expect.arrayContaining([expect.objectContaining({ pitch: 82 })]),
   })
   projectActions.cancelPreview(token)
-  // Bun #35452: toMatchObject rewrites received; keep the live store untouched.
   expect(
     structuredClone(
       useProjectState.getState().document.tracks.find(track => track.id === "trager")?.clips[0]
@@ -296,7 +295,6 @@ it("cancels a legacy edit without swallowing independent recording, preserving t
   expect(useProjectState.getState().document.transport.bpm).toBe(120)
 
   expect(useProjectState.getState().workspace.scrollX).toBe(75)
-  // Bun #35452: toMatchObject rewrites received; keep the live store untouched.
   expect(
     structuredClone(
       useProjectState.getState().document.tracks.find(track => track.id === "trager")?.clips[0]
@@ -735,7 +733,6 @@ it("does not record optimistic seek positions before backend acceptance", async 
     await Promise.resolve()
   }
   projectActions.noteOn(83)
-  // Bun #35452: toMatchObject rewrites received; keep the live store untouched.
   expect(
     structuredClone(
       useProjectState.getState().document.tracks.find(track => track.id === "trager")?.clips[0]
@@ -777,7 +774,6 @@ it("stops recording on accepted record-off even before the next telemetry frame"
       outputLatencyFrames: null,
     })
     projectActions.noteOn(80)
-    // Bun #35452: toMatchObject rewrites received; keep the live store untouched.
     expect(
       structuredClone(
         useProjectState.getState().document.tracks.find(track => track.id === "trager")?.clips[0]
@@ -812,7 +808,6 @@ it("retains independent recorded notes when the last lease cancels a numeric edi
   releaseRuntime = null
   expect(useProjectState.getState().session.backend.phase).toBe("idle")
   expect(useProjectState.getState().document.transport.bpm).toBe(120)
-  // Bun #35452: toMatchObject rewrites received; keep the live store untouched.
   expect(
     structuredClone(
       useProjectState.getState().document.tracks.find(track => track.id === "trager")?.clips[0]

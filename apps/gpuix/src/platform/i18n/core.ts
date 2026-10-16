@@ -1,5 +1,3 @@
-/** React-free locale resources, injected storage and the application i18next singleton. */
-
 import i18next from "i18next"
 import zhCN from "./locales/zh-CN"
 import enUS from "./locales/en-US"
@@ -15,10 +13,6 @@ export interface I18nStorage {
   set(locale: SupportedLocale): void
 }
 
-/**
- * App-level locale bundles — merged on top of the core namespaces at the top level.
- * Top-level keys (e.g. `mindmap`, `qms`) MUST NOT collide with core (`common`, `auth`, ...).
- */
 export interface AppLocaleResources {
   "zh-CN": Record<string, unknown>
   "en-US": Record<string, unknown>
@@ -38,14 +32,6 @@ export function resolveLocale(locale: string | null | undefined): SupportedLocal
   return DEFAULT_LOCALE
 }
 
-/**
- * Initialize the i18next singleton; safe to call multiple times.
- * On the first call, options + core resources + optional appResources are bound.
- * Subsequent calls keep the existing instance and merge any new `appResources`
- * via `addResourceBundle` (deep + overwrite) so HMR-rerendered providers stay consistent.
- * Storage read failures use the explicit initial language or the default locale.
- * `plugins` only apply on the first call.
- */
 export function initI18nCore(
   appResources?: AppLocaleResources,
   options?: InitI18nOptions,
@@ -89,7 +75,6 @@ export function initI18nCore(
   return i18next
 }
 
-/** Best-effort persistence: storage failures never roll back the selected in-memory language. */
 export function persistLocale(locale: SupportedLocale): void {
   try {
     storage?.set(locale)
@@ -103,8 +88,6 @@ export function persistLocale(locale: SupportedLocale): void {
 }
 
 function registerAppResources(res: AppLocaleResources) {
-  // deep=true (merge), overwrite=true (app wins for matching subtrees).
-  // Core 与 app 的顶层 namespace 不重叠 (mindmap/qms/kb/projects vs common/auth/...).
   i18next.addResourceBundle("zh-CN", "translation", res["zh-CN"], true, true)
   i18next.addResourceBundle("en-US", "translation", res["en-US"], true, true)
 }

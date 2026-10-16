@@ -13,7 +13,6 @@ import type { PeakReader } from "@/project/model/backend"
 import type { AudioClip } from "@/project/model/types"
 import type { AudioEditorLabels } from "../labels"
 
-/** Source view of an audio clip: rulers, loop strip, envelope and overview. */
 export function AudioWaveform({
   clip,
   color,

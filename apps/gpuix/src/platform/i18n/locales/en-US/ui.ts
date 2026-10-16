@@ -1,10 +1,3 @@
-/**
- * gpuix i18n core resources — ui (en-US)
- *
- * Built-in copy for gpuix UI design-system components (defaults / aria-labels / status pages).
- * This file is the source of truth for this namespace.
- */
-
 export default {
   theme: {
     light: "Light",

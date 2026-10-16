@@ -127,8 +127,6 @@ try {
   })
   if (!(await whenProjectBackendIdle()))
     throw new Error("Native transport did not accept playback/seek")
-  // Telemetry stays null until the engine publishes a frame that applied this control sequence;
-  // on a loaded CI runner that can take longer than any fixed sleep, so wait for it with a deadline.
   const deadline = performance.now() + 5000
   let telemetry = readProjectTelemetry()
   while (!telemetry?.playing && performance.now() < deadline) {

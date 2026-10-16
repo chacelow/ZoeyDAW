@@ -1,12 +1,10 @@
 use napi_derive::napi;
 
-/// Read UTF-8 text from the system clipboard; absent text or unsupported platforms return None.
 #[napi]
 pub fn clipboard_read_text() -> Option<String> {
     platform::read_text()
 }
 
-/// Replace system clipboard contents with text; unsupported platforms return an error.
 #[napi]
 pub fn clipboard_write_text(text: String) -> napi::Result<()> {
     platform::write_text(&text)
@@ -17,15 +15,9 @@ mod platform {
     use objc2::rc::autoreleasepool;
     use objc2_app_kit::{NSPasteboard, NSPasteboardType, NSPasteboardTypeString};
 
-    // Verified on macOS arm64, Bun 1.3.14 / gpuix 0.10.0: both main-thread and
-    // Bun Worker calls roundtrip UTF-8 before and after gpuix creates its window.
-    // generalPasteboard does not pre-create an incompatible NSApplication (no
-    // GPUI initialization panic). Do not replace it with sharedApplication.
-    // Each call owns an autorelease pool, including workers without an AppKit loop.
     pub fn read_text() -> Option<String> {
         autoreleasepool(|_| {
             let pasteboard = NSPasteboard::generalPasteboard();
-            // SAFETY: AppKit exports this immutable NSString constant for the process lifetime.
             pasteboard
                 .stringForType(unsafe { NSPasteboardTypeString })
                 .map(|text| text.to_string())
@@ -35,10 +27,8 @@ mod platform {
     pub fn write_text(text: &str) -> napi::Result<()> {
         autoreleasepool(|_| {
             let pasteboard = NSPasteboard::generalPasteboard();
-            // NSPasteboardType is AppKit's NSString alias, avoiding another direct crate dependency.
             let text = NSPasteboardType::from_str(text);
             pasteboard.clearContents();
-            // SAFETY: AppKit exports this immutable NSString constant for the process lifetime.
             if pasteboard.setString_forType(&text, unsafe { NSPasteboardTypeString }) {
                 Ok(())
             } else {
@@ -82,13 +72,11 @@ mod platform {
         },
     };
 
-    const UNICODE_TEXT: u32 = 13; // CF_UNICODETEXT
+    const UNICODE_TEXT: u32 = 13;
 
     struct Owner(HWND);
     impl Owner {
         fn new() -> Option<Self> {
-            // A hidden top-level STATIC window has a system-owned class and a
-            // valid owner on this calling thread, without initializing GPUI.
             let hwnd = unsafe {
                 CreateWindowExW(
                     0,
@@ -194,15 +182,11 @@ mod platform {
             return None;
         }
         let locked = Locked::new(handle)?;
-        // The borrowed OS block is never freed. Search only within GlobalSize,
-        // reject missing terminators and ill-formed UTF-16 rather than overread.
         let units = unsafe { std::slice::from_raw_parts(locked.1, bytes / size_of::<u16>()) };
         super::decode_unicode_text(units)
     }
 
     pub fn write_text(text: &str) -> napi::Result<()> {
-        // Validate and allocate before opening/emptying: failures here cannot
-        // mutate the existing clipboard, including embedded NUL input.
         let units = super::unicode_text(text).map_err(napi::Error::from_reason)?;
         let mut allocation = Allocation::new(units).ok_or_else(|| {
             napi::Error::from_reason("GlobalAlloc/GlobalLock failed for clipboard text")
@@ -268,8 +252,6 @@ mod platform {
                 0,
                 "GlobalLock count must return to zero before transfer"
             );
-            // This thread never opened the clipboard, so the transfer must fail
-            // and the RAII allocation must retain ownership for its Drop.
             let handle = allocation.0;
             assert!(!allocation.transfer());
             assert_eq!(allocation.0, handle);

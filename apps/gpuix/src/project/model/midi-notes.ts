@@ -1,9 +1,6 @@
 import { PREFERENCE_DEFAULTS } from "../defaults/preferences"
 import type { MidiNote } from "./types"
 
-/**
-The clip's right edge is exclusive, even when rounding to the nearest grid cell.
-*/
 export function midiInsertionBeat(
   {
     horizontalRatio,
@@ -27,9 +24,6 @@ export function midiInsertionBeat(
   return gridCell * gridBeats
 }
 
-/**
-Keep a partially visible note's original position available while moving it.
-*/
 export function moveMidiNote(
   {
     note,

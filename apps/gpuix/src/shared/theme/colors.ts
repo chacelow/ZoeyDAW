@@ -1,15 +1,7 @@
-/**
- * Theme color model. Presets are maintained directly in `presets.data.ts`.
- * `derive()` resolves semantic roles once because gpuix has no CSS engine.
- *
- * Shared by every gpuix module in this app: do not hand-roll a second color
- * table or a second derivation in a feature slice.
- */
 import { colorMix } from "./color-mix"
 import { DEFAULT_COLOR_RECIPES } from "./color-recipes"
 import type { ColorRecipes } from "./color-recipes"
 
-/** One preset's colors for one scheme. */
 export interface ThemeColors {
   readonly background: string
   readonly foreground: string
@@ -42,9 +34,7 @@ export interface ThemeColors {
 export type ColorScheme = "light" | "dark"
 
 export interface DerivedThemeColors extends ThemeColors {
-  /** Mixed from muted and background. */
   editorShell: string
-  /** Foreground wash over transparent. */
   canvasScrollbar: string
   canvasScrollbarHover: string
   canvasScrollbarActive: string

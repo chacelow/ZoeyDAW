@@ -28,7 +28,6 @@ test("autoscroll uses independent axis speeds and the configured elapsed cap", (
     elapsed: 100,
     policy: { maxElapsedMs: 10, horizontalPixelsPerMs: 2, verticalPixelsPerMs: 3 },
   }
-  // Omit pinned tracks so a vertical scrollable region exists in the fixture viewport.
   base.tracks = tracks.filter(track => track.kind !== "return" && track.kind !== "main")
   expect(edgeScroll(base)).toEqual({ scrollX: 120, scrollY: 70 })
   expect(edgeScroll({ ...base, elapsed: 5 })).toEqual({ scrollX: 110, scrollY: 85 })

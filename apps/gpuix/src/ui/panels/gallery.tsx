@@ -10,7 +10,6 @@ render(
     title: "gpuix panel gallery A4",
     width: 1120,
     height: 760,
-    // Same contract as platform/window/launch.ts; ui cannot import platform.
     focus: process.env.GPUIX_BACKGROUND !== "1",
   }
 )

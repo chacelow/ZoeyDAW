@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — feishu (en-US)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   binding: "Binding Feishu account...",
   bindingWait: "Please wait, completing authorization",

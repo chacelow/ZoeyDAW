@@ -1,4 +1,3 @@
-//! Authoritative preference schema, shared defaults and range validation.
 use std::sync::LazyLock;
 
 use napi_derive::napi;

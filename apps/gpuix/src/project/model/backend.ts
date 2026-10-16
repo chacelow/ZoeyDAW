@@ -54,9 +54,6 @@ export interface BackendTrack {
   automation: readonly AutomationLane[]
 }
 
-/**
-Musical coordinates are one-based bars; MIDI beats retain the document's meter-beat convention.
-*/
 export interface BackendProject {
   bpm: number
   numerator: number
@@ -97,28 +94,15 @@ export type BackendClock =
   | { kind: "sample"; bar: number; barsPerSecond: number; frame: number; sampleRate: number }
 export interface BackendTelemetry {
   sessionId: string
-  /**
-  Monotone telemetry sample sequence, independent from command sequence.
-  */
   sequence: number
   appliedSequence: number
   clock: BackendClock
   playing: boolean
   recording: boolean
-  /**
-  Finite dBFS levels; providers encode silence at a finite floor.
-  */
   levels: Readonly<Record<string, readonly [number, number]>>
   outputLatencyFrames: number | null
 }
 
-/**
-Waveform envelopes for a clip-local musical range: one-based `startBar`/`endBar`, signed
-`contentOffsetBars` wrapping like clip playback. Bar-to-frame conversion and looping happen in the
-backend on the applied tempo. Layout is channel-major, then pixel-major `[min, max]`; stereo yields
-`pixels * 4` floats, never PCM. Unknown sources and empty ranges yield zeros; no open backend yields
-an empty array.
-*/
 export type PeakReader = (
   sourceId: string,
   startBar: number,
@@ -127,9 +111,6 @@ export type PeakReader = (
   contentOffsetBars: number
 ) => Float32Array
 
-/**
-Implementations atomically apply state, fence sessions/sequences, and never receive UI or PCM buffers.
-*/
 export interface ProjectBackend {
   apply: (request: BackendRequest) => BackendResult | Promise<BackendResult>
   subscribe: (listener: (telemetry: BackendTelemetry) => void) => () => void

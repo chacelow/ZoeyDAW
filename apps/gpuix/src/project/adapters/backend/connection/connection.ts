@@ -33,7 +33,6 @@ export interface BackendConnection {
   submit: (input: BackendSubmission) => number
   start: () => () => void
   readTelemetry: () => BackendTelemetry | null
-  /** Empty when no backend is open; the engine session never leaves the connection. */
   readPeaks: PeakReader
   whenIdle: () => Promise<boolean>
   dispose: () => void

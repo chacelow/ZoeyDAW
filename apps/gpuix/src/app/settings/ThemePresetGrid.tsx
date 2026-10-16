@@ -11,11 +11,6 @@ export interface ThemePresetGridProps {
   readonly label: string
 }
 
-/**
- * Web parity (apps/web/src/shared/app-shared/ThemeMenu.tsx `ThemePresetGrid`): two columns,
- * each option a three-color strip, a check badge when selected and the preset name. Built
- * from ToggleGroup so selection, Enter and arrow keys follow the shared control.
- */
 export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGridProps) {
   const theme = useTheme()
   const { renderer } = useGpuix()
@@ -32,7 +27,6 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
       orientation="vertical"
       aria-label={label}
     >
-      {/* Each option is a direct scroll child: native scrollIntoView addresses child indices. */}
       <ScrollArea
         testId="theme-preset-scroll"
         aria-label={label}
@@ -53,7 +47,6 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
                   if (!event.isHeld) onValueChange(preset.id)
                 }
                 if (!["up", "down", "home", "end"].includes(event.key ?? "")) return
-                // ToggleGroupItem moved focus before invoking this callback.
                 const focused = renderer?.getFocusedElementId?.()
                 if (focused !== null && focused !== undefined) renderer?.scrollIntoView?.(focused)
               }}
@@ -80,7 +73,6 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
                   overflow: "hidden",
                 }}
               >
-                {/* Web's light-mode preview swatches: background, primary, accent. */}
                 {[
                   preset.colors.light.background,
                   preset.colors.light.primary,

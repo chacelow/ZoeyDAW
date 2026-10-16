@@ -28,7 +28,6 @@ export function advanceMeterPeak(
     peak.holdUntil = now + policy.holdMs
   } else {
     const elapsed = Math.max(0, now - Math.max(peak.updatedAt, peak.holdUntil))
-    // Milliseconds-to-seconds conversion is a time-unit constant, not a meter preference.
     peak.db = Math.max(level, peak.db - (elapsed * policy.fallDbPerSecond) / 1000)
   }
   peak.updatedAt = now

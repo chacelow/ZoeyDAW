@@ -8,7 +8,6 @@ const toRgb = converter("rgb")
 const toOklab = converter("oklab")
 const SCHEMES = ["light", "dark"] as const
 
-/** Compile-time exhaustive: adding or removing a role without updating this table fails `tsc`. */
 const DERIVED_ROLES: Record<keyof DerivedThemeColors, true> = {
   background: true,
   foreground: true,
@@ -67,7 +66,6 @@ const DERIVED_ROLES: Record<keyof DerivedThemeColors, true> = {
   pianoEbony: true,
 }
 
-/** Literal forms gpuix's native parser (csscolorparser) is tested against. */
 const GPUIX_COLOR = /^(?:#[0-9a-f]{6}(?:[0-9a-f]{2})?|oklch\([^)]+\))$/i
 
 const lightness = (color: string) => {
@@ -115,10 +113,8 @@ describe.each(cases)("$id/$scheme", ({ colors }) => {
 describe("scheme orientation matches Default in every preset", () => {
   test.each(THEME_PRESETS.map(preset => [preset.id, preset] as const))("%s", (_, preset) => {
     const { light, dark } = preset.colors
-    // Swapping light/dark data flips both of these.
     expect(lightness(light.background)).toBeGreaterThan(lightness(dark.background))
     expect(lightness(light.foreground)).toBeLessThan(lightness(dark.foreground))
-    // Arrangement surfaces step toward the foreground: darker in light, lighter in dark.
     expect(lightness(light.arrangementSurfaceAlt)).toBeLessThan(lightness(light.arrangementSurface))
     expect(lightness(light.arrangementSurfaceSelected)).toBeLessThan(
       lightness(light.arrangementSurfaceAlt)
@@ -129,7 +125,6 @@ describe("scheme orientation matches Default in every preset", () => {
     expect(lightness(dark.arrangementSurfaceSelected)).toBeGreaterThan(
       lightness(dark.arrangementSurfaceAlt)
     )
-    // Clip ink must read on clip paper in both schemes.
     expect(lightness(light.arrangementClipInk)).toBeLessThan(lightness(light.arrangementClipPaper))
     expect(lightness(dark.arrangementClipInk)).toBeLessThan(lightness(dark.arrangementClipPaper))
   })

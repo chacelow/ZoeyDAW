@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — common (en-US)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   confirm: "Confirm",
   cancel: "Cancel",
@@ -183,7 +177,6 @@ export default {
       filteredRowCount: "Showing {{filtered}} / {{total}}",
     },
   },
-  // 审计事件 action code → 可读文案. 后端写入的机器码, 前端 t(`common.auditAction.${code}`, { defaultValue: code }) 兜底.
   auditAction: {
     "sso.provider.created": "SSO provider created",
     "sso.provider.updated": "SSO provider updated",
@@ -210,7 +203,6 @@ export default {
     "user.locked": "User locked",
     "user.unlocked": "User unlocked",
   },
-  // 审计目标类型 targetType → 可读文案.
   auditTarget: {
     OrgSsoProvider: "SSO provider",
     Mindmap: "Mind map",

@@ -59,7 +59,6 @@ export function useControlEnvironment(): ControlEnvironment {
   return useContext(EnvironmentContext)
 }
 
-/** Native editor focus owns a lease; blur and unmount release it idempotently. */
 export function useTextFocusBinding(active = true) {
   const { textFocus } = useControlEnvironment()
   const release = useRef<(() => void) | null>(null)

@@ -32,5 +32,3 @@ const guard = createWindowCloseGuard(renderer, {
 - 在 `shouldClose` 内部同步调用 `close()` 会重入 GPUI，在 AppKit 回调里 panic，可能直接 abort 进程。守卫会抛错拦住这种调用。对话框必须在 `shouldClose` 返回之后再做选择。
 - `supported` 表示 renderer 是否提供可否决关闭的 `setWindowShouldClose`；macOS 和 Windows 源码已提供，Windows 桌面流程仍待实机验证。`close()` 依赖 `closeWindow()`，是用户确认后的 bypass。renderer 连 `closeWindow` 都没有时，`close()` 会抛错，不会静默不关。
 - `actionAfterGuard` / `closeButtonAction` 仍负责根据 `closeBehavior` 决定是问、隐藏到托盘还是直接退出。
-
-外观和关闭的真实窗口验证记录在 `docs/research/gpuix-main-build.md` 的 H1 一节。

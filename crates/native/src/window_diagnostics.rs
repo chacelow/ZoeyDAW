@@ -10,7 +10,6 @@ pub struct WindowDiagnostics {
     pub app_is_active: bool,
 }
 
-/// Read AppKit on Bun's calling main thread; never dispatch this onto a napi worker.
 #[napi]
 pub fn window_diagnostics(window_title: String) -> napi::Result<Option<WindowDiagnostics>> {
     platform::read(&window_title)
@@ -37,7 +36,6 @@ mod platform {
         MainThreadMarker::new().ok_or_else(|| {
             napi::Error::from_reason("Window diagnostics require the main thread")
         })?;
-        // SAFETY: NSApp is read only on AppKit's main thread and remains owned by AppKit.
         let Some(app) = (unsafe { core::ptr::addr_of!(NSApp).read().as_ref() }) else {
             return Ok(None);
         };

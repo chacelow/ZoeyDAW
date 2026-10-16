@@ -11,10 +11,6 @@ export function PerformanceStatus({ labels }: { readonly labels: TransportLabels
   const theme = useTheme()
   const phase = useProjectState(state => state.session.backend.phase)
   const playing = useProjectState(state => state.session.playing)
-  // A null read only means the engine has not yet published a frame for the latest control
-  // sequence; keep the last known clock instead of showing "Unavailable". Every telemetry frame
-  // replaces `levels`, so re-read on each one until a sample clock appears: previously the only read
-  // happened when `levels.main` first appeared, and a null there stuck until the popup was opened.
   const levels = useProjectState(state => state.session.levels)
   const hasTelemetry = levels.main !== undefined
   const [telemetry, setTelemetry] = useState<BackendTelemetry | null>(readProjectTelemetry)

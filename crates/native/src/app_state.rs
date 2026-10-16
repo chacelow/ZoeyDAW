@@ -1,6 +1,5 @@
 use napi_derive::napi;
 
-/// Read-only application activation state; unsupported platforms return unknown.
 #[napi]
 pub fn is_application_active() -> Option<bool> {
     platform::is_application_active()
@@ -28,13 +27,6 @@ mod platform {
     use objc2_app_kit::NSRunningApplication;
 
     pub fn is_application_active() -> Option<bool> {
-        // Measured on macOS with Bun 1.3.14 / gpuix 0.10.0: bun --hot calls
-        // napi on the main thread, but Bun Worker calls have no MainThreadMarker.
-        // NSApplication::sharedApplication would create a plain NSApplication before
-        // gpuix initializes, causing GPUI to panic: "Ivar platform not found".
-        // NSRunningApplication is read-only and its properties are atomic/thread-safe;
-        // both calling threads were observed tracking Finder activation transitions.
-        // The native UI must keep its main run loop running to refresh this state.
         Some(NSRunningApplication::currentApplication().isActive())
     }
 }
@@ -48,8 +40,6 @@ mod platform {
     };
 
     pub fn is_application_active() -> Option<bool> {
-        // These read-only APIs accept no owned resources. A missing foreground window
-        // or failed process lookup is unknown, not evidence that this app is inactive.
         unsafe {
             let window = GetForegroundWindow();
             if window.is_null() {

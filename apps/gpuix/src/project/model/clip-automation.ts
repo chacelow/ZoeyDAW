@@ -4,9 +4,6 @@ import type { AutomationLane, AutomationPoint, Track } from "./types"
 
 const POINT_EPSILON = 0.000001
 
-/**
-Resolve overlapping selected Clips against the original document, then apply each breakpoint once.
-*/
 export function moveClipAutomation(
   source: readonly Track[],
   projected: Track[],
@@ -108,9 +105,6 @@ export function moveClipAutomation(
   })
 }
 
-/**
-Breakpoint positions are unique to the same tolerance as the automation edit adapter.
-*/
 function mergePoints(
   existing: readonly AutomationPoint[],
   incoming: readonly AutomationPoint[]

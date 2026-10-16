@@ -83,7 +83,6 @@ export function Panel({
       role="group"
       testId={testId ?? id}
       style={sx(style, {
-        // Zero minima and flex factors keep the solver's pixel allocation authoritative.
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",

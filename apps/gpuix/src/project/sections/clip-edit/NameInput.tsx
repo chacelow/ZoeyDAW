@@ -3,10 +3,6 @@ import { projectActions, useProjectEditGesture } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { Input } from "@/ui/controls"
 
-/**
-Clip name, edited live as one transaction: the first keystroke opens it, Enter, blur or an outside
-press commits, Escape restores. The text field owns its keys, so nothing reaches window shortcuts.
-*/
 export function ClipNameInput({
   clipId,
   value,

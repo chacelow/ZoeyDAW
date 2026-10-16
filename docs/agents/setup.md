@@ -10,7 +10,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 - `build.sh` 在取构建锁前校验 vendor 的 revision、完整补丁序列、native 与 React 的全部 dist 文件、根入口及 JSX runtime 产物哈希、构建模式。校验通过时只生成本 checkout 的 `.gpuix-main` 与测试依赖链接，不执行安装、编译或取锁，已有构建锁也不阻止链接。产物失效或构建模式不符时才由持锁 owner 重建并记录 manifest。不要删构建锁；补丁序列不一致的处理见 LESSONS「修改补丁序列中间的补丁」。
 - 缓存基目录由 `git rev-parse --path-format=absolute --git-common-dir` 推导，为 `resolve(dirname(commonDir), "../_vendor")`，与主仓库位于同一磁盘。所有 linked worktree 使用同一个基目录。`GPUIX_VENDOR_ROOT` 默认是基目录下的 `zoeydaw-gpuix`，`CARGO_TARGET_DIR` 默认是基目录下的 `target`，两者都可用环境变量覆盖。除 `CI=true` 外，规范化后的 Cargo target 必须位于基目录内，符号链接不能绕过限制。
 - 原生 redraw mutation 必须显式传入隔离的 `GPUIX_VENDOR_ROOT`；native mutation 还要求 `CARGO_TARGET_DIR`，mode mutation 默认使用隔离 vendor 下的 `target`。两种入口都拒绝共享 vendor、共享 target 和仓库内路径，`CI=true` 只豁免 target 的磁盘位置约束，不豁免隔离要求。
-- 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，切片 demo 与画廊各有入口）。改 TS/TSX 保存即热更新。
+- 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，画廊另有入口）。改 TS/TSX 保存即热更新。
 - Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。
 - Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；收尾前确认零残留。
 - 后台启动：任何入口（`src/main.tsx`、Gallery、各 demo）加 `GPUIX_BACKGROUND=1`，窗口打开时不抢键盘焦点，用户的前台应用保持不变，统一由 `platform/window` 的 `LAUNCH_FOCUS` 控制。AX 只读量值、离屏截图（`createTestRoot`）和例行回归都用这种方式。后台窗口不能替代真实桌面验收：它通常被前台应用遮挡，macOS 会停发遮挡窗口的 animation frame（F3 实测），所以窗口截图可能全黑，等待原生帧的测量（性能、首帧）会一直卡住；`el.press()` 等输入还可能报 `BackgroundUnavailable`。遇到这些情况，把对应项标为未验证，不要用 headless 数据冒充窗口数据；需要真实帧的验收在真实桌面上串行完成。
@@ -20,7 +20,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 `verify:gpuix` 保留 macOS 完整门禁。Windows x64 使用独立的 `node scripts/verify-windows.mjs`，覆盖原生构建、Rust、TypeScript、Bun、离屏 scale、生产 UI 帧与真实后端截图。Windows job 首轮为 `continue-on-error`，看到 Actions 稳定通过后转为必过。Linux 不在本次移植范围，离屏 scale 回归仍显式报 unsupported。实际支持状态见 [Windows 移植报告](../research/windows-port.md)。
 
-完整门禁只在 GitHub Actions 运行，不在本机重复跑 `pnpm verify:gpuix`。本地交付执行 `tsc --noEmit`、改动范围的 Bun 测试与 eslint、本切片变异入口、必要的单窗口 smoke；Rust 只检查和测试改动 crate。`verify:gpuix [baseRef]` 依次检查绝对路径、渲染器身份与单一解析、native 构建、类型、lint、架构与工具回归、文档路由、Bun、离屏 scale、review scan、UI 地图和真实后端应用 smoke。任一步失败即非零退出，全部通过打印 `verify:gpuix passed`。review scan 默认对比 `gpuix-migration...HEAD`，不覆盖未提交改动。
+完整门禁只在 GitHub Actions 运行，不在本机重复跑 `pnpm verify:gpuix`。本地交付执行 `tsc --noEmit`、改动范围的 Bun 测试与 eslint、必要的单窗口 smoke；Rust 只检查和测试改动 crate。`verify:gpuix [baseRef]` 依次检查绝对路径、渲染器身份与单一解析、native 构建、类型、lint、架构与工具回归、文档路由、Bun、离屏 scale、review scan、UI 地图和真实后端应用 smoke。任一步失败即非零退出，全部通过打印 `verify:gpuix passed`。review scan 默认对比 `gpuix-migration...HEAD`，不覆盖未提交改动。
 
 `node scripts/gpuix-review-scan.mjs --absolute-paths` 检查全仓 Git 跟踪的 `.mjs`、`.js`、`.ts`、`.tsx`、`.sh`、`.rs`、`.json` 文件，包括注释和 usage 示例。机器目录根的路径属于 HARD，包括 shell 默认值；相对路径不算。`evidence/` 运行记录、Markdown 和 `file://` URL 测试数据不在此门禁范围内。验证日志和 smoke 证据使用 `mktemp`，退出时清理，不依赖固定临时目录。
 
@@ -74,7 +74,7 @@ bun scripts/release/package.mjs "$(node -p 'require("./apps/gpuix/package.json")
 
 1. 同步根目录、gpuix 应用与应用内展示版本，完成本地轻量检查，再合入 `main`。完整 `pnpm verify:gpuix` 在 GitHub Actions 运行。
 2. 在 `main` 的目标提交创建同版本 `v*` tag 并推到 GitHub。首个版本是 `v0.1.0-alpha.1`，之后依次使用 alpha、beta、稳定版。
-3. `release.yml` 的 macOS 和 Windows matrix 分别校验 tag 指向 `main` 且匹配 manifest，执行对应门禁后打包。开发切片分支不推送。Windows 必须通过才产生包含 Windows 资产的 draft。
+3. `release.yml` 的 macOS 和 Windows matrix 分别校验 tag 指向 `main` 且匹配 manifest，执行对应门禁后打包。Windows 必须通过才产生包含 Windows 资产的 draft。
 4. 流水线上传安装包与 SHA-256 到 draft release。带预发布后缀的 tag 同时标记 Pre-release；维护者核对安装与真实播放后手动发布。
 
 `workflow_dispatch` 只接受已有版本 tag。重跑覆盖同一 draft 的资产，已发布 release 不允许覆盖。matrix 每项上传 `release-<platform>` artifact，draft job 聚合资产并校验 checksum；验证截图使用 `evidence-release-<platform>`，不会混进 release 下载。工具链与缓存保持 `ci.yml` 一致：step 将 `RUNNER_WORKSPACE` 下的绝对路径写入 `GITHUB_ENV`，actions/cache 读取 `env.GPUIX_VENDOR_ROOT` 和 `env.CARGO_TARGET_DIR`，分别缓存。

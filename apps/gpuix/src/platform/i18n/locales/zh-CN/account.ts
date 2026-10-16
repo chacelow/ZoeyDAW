@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — account (zh-CN)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   dialog: {
     title: "账户",

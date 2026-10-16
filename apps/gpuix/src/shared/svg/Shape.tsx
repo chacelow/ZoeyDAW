@@ -2,11 +2,6 @@ import { serialiseSvg } from "./serialise"
 import type { SvgNode } from "./serialise"
 import type { StyleInput } from "@/shared/theme/style"
 
-/**
- * A single-colour native shape. gpuix paints `<svg source>` as a tinted image, so every shape takes
- * its colour from `style.color` (`currentColor` inside the markup) and is described as data:
- * `paths` come from `shared/svg/paths`, `circles` from plain numbers. Nothing here is hand-written markup.
- */
 export interface ShapePath {
   readonly d: string
   readonly fill?: boolean
@@ -22,7 +17,6 @@ export interface ShapeCircle {
 export interface ShapeProps {
   readonly width: number
   readonly height: number
-  /** Coordinate space of the paths; defaults to `0 0 width height`. */
   readonly viewBox?: string
   readonly paths: readonly ShapePath[]
   readonly circles?: readonly ShapeCircle[]

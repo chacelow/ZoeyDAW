@@ -1,8 +1,3 @@
-/**
- * Shared geometry helpers for canvas painters and hit-tests.
- *
- * Painters and hit-test both need the same track-row Y positions and clip rects, computed from the scene. Keeping this math in one module keeps draw and input aligned at every zoom and scroll.
- */
 import { visibleTracks } from "@/project/model/types"
 import { trackHeight } from "@/project/layout"
 import type { TrackGeometry } from "@/project/layout"
@@ -28,16 +23,10 @@ export interface ClipRect {
   arrangementGeometry: ArrangementGeometry["arrangement"]
 }
 
-/**
-Y position of the first row, from the top of the canvas.
-*/
 export function arrangementBodyTop(geometry: ArrangementGeometry["arrangement"]): number {
   return geometry.barRulerHeight
 }
 
-/**
-Y position of the bottom time ruler, from the top of the canvas.
-*/
 export function arrangementBodyBottom(
   height: number,
   geometry: ArrangementGeometry["arrangement"]
@@ -45,9 +34,6 @@ export function arrangementBodyBottom(
   return Math.max(arrangementBodyTop(geometry), height - geometry.timeRulerHeight)
 }
 
-/**
-Return and main tracks remain anchored above the bottom ruler, regardless of Y scroll.
-*/
 export function isPinnedTrack(track: Track): boolean {
   return track.kind === "return" || track.kind === "main"
 }
@@ -66,9 +52,6 @@ export function scrollableTrackHeight(tracks: readonly Track[], geometry: TrackG
   )
 }
 
-/**
-Scrollable lane height excludes both fixed rulers and the bottom-anchored tracks.
-*/
 export function scrollableTrackViewportHeight(
   tracks: readonly Track[],
   height: number,
@@ -94,9 +77,6 @@ export function maxTrackScrollY(
   )
 }
 
-/**
-Shared CSS-pixel row origins for canvas, hit tests, and the header column.
-*/
 export function layoutTrackRowsForViewport(
   tracks: readonly Track[],
   scrollY: number,
@@ -141,9 +121,6 @@ export function layoutTrackRows(scene: ArrangementScene): TrackRow[] {
   )
 }
 
-/**
-Rect of a clip in CSS pixel coordinates relative to the canvas.
-*/
 export function clipRect(clip: Clip, row: TrackRow, pxPerBar: number, scrollX: number): ClipRect {
   const left = (clip.startBar - 1) * pxPerBar - scrollX
   const width = Math.max(row.arrangementGeometry.clip.minWidth, clip.lengthBars * pxPerBar)

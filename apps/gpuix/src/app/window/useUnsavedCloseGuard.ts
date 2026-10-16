@@ -9,7 +9,6 @@ import type { WindowRenderer } from "@/platform/window"
 import type { Router } from "../router/router"
 import type { UnsavedCloseChoice, UnsavedCloseState } from "./unsaved-close"
 
-/** Saves through the project's snapshot path and reports whether the project became clean. */
 async function saveProject(): Promise<boolean> {
   projectActions.saveSnapshot()
   if (!(await whenProjectBackendIdle())) return false
@@ -17,7 +16,6 @@ async function saveProject(): Promise<boolean> {
   return !dirty && snapshotError === null
 }
 
-/** One save/discard/cancel decision owns both native close and project navigation. */
 export function useUnsavedCloseGuard(renderer: WindowRenderer | null, router: Router) {
   const { t } = useAppTranslation()
   const [asking, setAsking] = useState(false)
@@ -40,7 +38,6 @@ export function useUnsavedCloseGuard(renderer: WindowRenderer | null, router: Ro
       return false
     })
     if (renderer) {
-      // AppKit needs a synchronous veto; dialog rendering happens after the callback returns.
       const created = createWindowCloseGuard(renderer, {
         shouldClose() {
           if (isRetired) return true
@@ -70,7 +67,6 @@ export function useUnsavedCloseGuard(renderer: WindowRenderer | null, router: Ro
     const current = pending.current
     if (!current) return
     const saved = choice === "save" && (await saveProject())
-    // A retired/replaced owner cannot complete an earlier decision after its save resolves.
     if (current !== pending.current) return
     if (choice === "save" && !saved) toast.error(labels.current("windowClose.saveFailed"))
     state.current = chooseClose(state.current, choice, saved)

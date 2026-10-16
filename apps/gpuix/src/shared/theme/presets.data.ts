@@ -1,4 +1,3 @@
-// gpuix 主题预设数据源；原从 web 生成，2026-10 迁移后直接维护。
 import type { ThemeColors } from "./colors"
 
 const RAW_PRESET_DATA = [

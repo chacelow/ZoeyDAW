@@ -1,6 +1,6 @@
-# gpuix 目标架构与切片契约
+# gpuix 架构
 
-2026-10-14。`apps/gpuix` 取代 `apps/web` + `src-tauri`：React 逻辑层不变，渲染换成 gpuix 原生元素，原生能力由 Rust napi 提供。本文是迁移期间所有切片的验收基准，与 [modules](modules.md) 的职责规则叠加生效，冲突时以本文为准。选型证据见 `docs/research/gpuix-*.md`。
+`apps/gpuix` 是 React 逻辑层加 gpuix 原生元素，原生能力由 Rust napi 提供。本文与 [modules](modules.md) 的职责规则叠加生效，冲突时以本文为准。
 
 ## 目录与依赖方向
 
@@ -26,7 +26,7 @@ crates/
 
 依赖只能向下：`app → project/sections → ui → shared`；`project/sections → project/adapters`；`project/sections → platform` 与 `project/adapters → platform` 只经 platform 的 TS 端口（帧 `platform/frame`、窗口激活 `platform/window`、剪贴板、键盘、光标 `platform/cursor` 等），不直接 import `@zoeydaw/native`；`project/model` 不依赖任何上层。`ui` 不得 import `project` 或 `platform`，原生能力由组合根经 Provider 注入（如 `ControlEnvironmentProvider` 的 `cursorLock`）。`crates/engine` 不得依赖 napi。以上由 `tooling/eslint/gpuix-layers.js` 强制。`features/*` 是迁移期的过渡目录，对应面板迁入 `project/sections` 后删除。
 
-原生帧：动画与电平衰减只用 `platform/frame` 的 `useAnimationFrame`，不写 `setInterval`/`setTimeout` 定时链。它要求祖先有 `AnimationFrameProvider`。整个应用只在组合根挂一个 Provider，`source` 是同一个 renderer 上的 `createAnimationFrameSource(renderer)`；各切片的 demo 自己挂一个，代替组合根。
+原生帧：动画与电平衰减只用 `platform/frame` 的 `useAnimationFrame`，不写 `setInterval`/`setTimeout` 定时链。它要求祖先有 `AnimationFrameProvider`。整个应用只在组合根挂一个 Provider，`source` 是同一个 renderer 上的 `createAnimationFrameSource(renderer)`；独立验证入口自己挂一个，代替组合根。
 
 ## 硬规则
 
@@ -102,12 +102,3 @@ UI 外观与交互由真实窗口观察验收，不用逐控件逐状态的单�
 4. **统一入口**：圆角、边框、gap、padding 由共享 token 或组件变体拥有，业务实例不另写一套；用代表性组合的 AX bounds 核对疑点，改变一个入口应影响所有同类调用。
 5. **发现问题要修，不要只记录**：看出来的间距不齐、没居中、过松，先改再重新截图确认。
 6. **证据可复查**：提交可重跑的 Gallery/业务验证入口。截图默认保存在仓库外或 Git 忽略目录，不批量提交生成图片。
-
-## 渲染器版本决策
-
-2026-10-14 采纳 [gpuix 主干自建](../research/gpuix-main-build.md)方案 B：固定 `remorses/gpuix` `6a5c7c142ac32f9eb0caefe0121be995cfc18631`，经 `scripts/gpuix-main/build.sh` 构建，包名 `@zoeydaw/gpuix-native`。
-
-- 依据：npm 0.10.0 缺 `onLayout`，主干已有（比 0.10.0 多 70 个提交与 37 个未发布 changeset）；上游近 30 天 109 个提交，更新频繁，等发布无法定期；同类 `react-native-gpui`（14 星，仅 macOS arm64）、`gpui-react`（21 星，demo 级）成熟度不足。
-- 代价：干净构建约 400 秒、1.8 GiB 磁盘、最大 RSS 约 884 MiB；改 renderer 一行重建约 67 秒；上游主要由单人维护，必须固定 SHA 与 Cargo.lock，升级时同时核对 native、JS host、React 三者。
-- 落地条件：切换包解析时统一为一份 renderer，不保留两套；保留上游许可证与 THIRD_PARTY_NOTICES；升级验收沿用报告中的 31 个测试、四个真实窗口、`onLayout` 时序与关闭拦截转换。
-- 另：A3、A4 保留的文字宽度估算与测量采样，在切换后改用 `onLayout` 事件和后续的 `measureText`，同一时刻只保留一种 owner。

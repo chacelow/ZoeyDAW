@@ -98,7 +98,6 @@ function mount(): LivePolicyFixture {
   } satisfies WorkspaceState
   const fixtureSnapshot = JSON.stringify({ version: 2, document, workspace })
   cleanups.push(() => {
-    // Unopened bootstrap state is not a persistable project; reset history with this valid fixture.
     try {
       hydrateProject(fixtureSnapshot)
     } finally {
@@ -112,7 +111,6 @@ function mount(): LivePolicyFixture {
   const keyboard = createWindowKeyboard()
   const root = createTestRoot({ width: 1280, height: 800, ...keyboard.rootHandlers })
   cleanups.push(() => root.unmount())
-  // Offscreen TestRenderer has no native frame callbacks; editing does not depend on frame advance.
   const frames = createManualFrames()
   let current: ProjectComposition | null = null
   const owners = new Set<ProjectComposition>()
@@ -321,7 +319,6 @@ test.each(["lane", "ruler"])(
     expect(useProjectState.getState().document).toEqual(baseline.document)
     expect(serializeProject()).toBe(snapshot)
 
-    // Only the real app hook's preference effect may cancel these genuine controller gestures.
     act(root, () => {
       if (gesture === "lane") {
         setPreference("pointer", {

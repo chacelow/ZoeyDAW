@@ -1,4 +1,3 @@
-/** Callback registration shared by native window and process-level values. */
 export type NativeObserverRegistration<T> = (callback: ((value: T) => void) | null) => void
 
 interface Lease<T> {
@@ -10,11 +9,6 @@ interface Session<T> {
   readonly leases: Set<Lease<T>>
 }
 
-/**
- * One lazy native observer per source. The first native value only establishes the
- * baseline; listeners hear later changes, delivered in a microtask so they never run
- * inside the native callback. The last unsubscribe releases the observer.
- */
 export function createNativeValueSubscription<T>(
   register: NativeObserverRegistration<T> | undefined,
   capability: string

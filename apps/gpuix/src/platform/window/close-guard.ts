@@ -1,22 +1,14 @@
 export interface CloseGuardRenderer {
-  /** macOS asks synchronously; Windows first vetoes then asks on the JS thread. */
   setWindowShouldClose?(callback: () => boolean): void
-  /** Closes without asking `setWindowShouldClose`; the last window closing quits. */
   closeWindow?(): void
 }
 
 export interface WindowCloseGuardOptions {
-  /**
-   * Return true to let the close proceed. To ask the user first, return false, open
-   * the dialog, and call `close()` once they choose; never call `close()` from here.
-   */
   readonly shouldClose: () => boolean
 }
 
 export interface WindowCloseGuard {
-  /** Whether native close requests consult `shouldClose`; macOS and Windows provide it. */
   readonly supported: boolean
-  /** Close the window after the user decided; does not consult `shouldClose`. */
   close(): void
 }
 
@@ -39,7 +31,6 @@ export function createWindowCloseGuard(
     supported: register !== undefined,
     close() {
       if (!closeWindow) throw new Error("Renderer does not support closeWindow")
-      // AppKit holds GPUI while asking; closing from inside would re-enter it.
       if (deciding) throw new Error("close() must run after shouldClose returns")
       closeWindow()
     },

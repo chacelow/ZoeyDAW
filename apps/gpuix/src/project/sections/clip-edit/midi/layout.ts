@@ -1,21 +1,17 @@
 import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { MidiNote } from "@/project/model/types"
 
-/** Source interval shown by a MIDI clip, in retained-source beats. */
 export interface SourceWindow {
   readonly sourceOffsetBeats: number
   readonly totalBeats: number
 }
 
-/** Pixel geometry of the scrollable note area; scroll offsets are content pixels from the top-left. */
 export interface RollGeometry {
   readonly pitches: readonly number[]
   readonly rowHeight: number
-  /** Content width covering the whole source window. */
   readonly width: number
   readonly scrollX: number
   readonly scrollY: number
-  /** Measured viewport size. */
   readonly viewWidth: number
   readonly viewHeight: number
   readonly window: SourceWindow
@@ -41,13 +37,11 @@ export function xToBeat(x: number, roll: RollGeometry): number {
   return roll.window.sourceOffsetBeats + (x / Math.max(1, roll.width)) * roll.window.totalBeats
 }
 
-/** Row under a content y, clamped to the first and last pitch rows. */
 export function pitchAt(y: number, roll: Pick<RollGeometry, "pitches" | "rowHeight">): number {
   const row = Math.max(0, Math.min(roll.pitches.length - 1, Math.floor(y / roll.rowHeight)))
   return roll.pitches[row] ?? PREFERENCE_DEFAULTS.midi.initialPitch
 }
 
-/** First and one-past-last row intersecting the viewport. */
 export function visibleRows(roll: RollGeometry): { first: number; end: number } {
   const first = Math.max(0, Math.floor(roll.scrollY / roll.rowHeight))
   const end = Math.min(
@@ -57,10 +51,6 @@ export function visibleRows(roll: RollGeometry): { first: number; end: number } 
   return { first, end: Math.max(first, end) }
 }
 
-/**
-Content rectangles of notes that intersect both the source window and the viewport. Offscreen notes
-get no rectangle, so the view never mounts a node for them.
-*/
 export function visibleNoteRects(notes: readonly MidiNote[], roll: RollGeometry): NoteRect[] {
   const rows = new Map(roll.pitches.map((pitch, row) => [pitch, row]))
   const { sourceOffsetBeats, totalBeats } = roll.window
@@ -86,10 +76,6 @@ export function visibleNoteRects(notes: readonly MidiNote[], roll: RollGeometry)
   return rects
 }
 
-/**
-Topmost note under a content point; later notes paint above earlier ones. The resize edge is the
-right part of a note, never more than a third of it so short notes stay movable.
-*/
 export function hitNote(
   notes: readonly MidiNote[],
   roll: RollGeometry,
@@ -111,7 +97,6 @@ export function hitNote(
   return { kind: "empty" }
 }
 
-/** Notes intersecting a content rectangle; the marquee ignores the viewport so scrolling keeps hits. */
 export function marqueeHits(
   notes: readonly MidiNote[],
   roll: Pick<RollGeometry, "pitches" | "rowHeight" | "width" | "window">,
@@ -139,7 +124,6 @@ export function marqueeHits(
   })
 }
 
-/** Cell index relative to the first absolute-grid cell intersecting the source window. */
 export function cellAt(
   x: number,
   roll: Pick<RollGeometry, "width" | "window">,
@@ -151,7 +135,6 @@ export function cellAt(
   return Math.floor(beat / gridBeats) - Math.floor(roll.window.sourceOffsetBeats / gridBeats)
 }
 
-/** Keep scroll offsets inside the content. */
 export function clampScroll(
   scrollX: number,
   scrollY: number,
@@ -168,14 +151,9 @@ export function clampScroll(
 
 export interface RollLine {
   readonly x: number
-  /** 2 = bar, 1 = beat, 0 = finer grid cell. */
   readonly level: 0 | 1 | 2
 }
 
-/**
-Vertical lines inside the viewport. The finest drawn step is the note grid, coarsened to beats and
-then whole bars while a step would be narrower than `minCellPx`.
-*/
 export function rollGridLines(
   roll: Pick<RollGeometry, "width" | "scrollX" | "viewWidth" | "window">,
   numerator: number,
@@ -195,7 +173,6 @@ export function rollGridLines(
   )
   const lines: RollLine[] = []
   for (let beat = Math.ceil(firstBeat / step) * step; beat <= lastBeat; beat += step) {
-    // This tolerance only absorbs floating-point grid arithmetic, not a display threshold.
     const bar = Math.abs(beat / numerator - Math.round(beat / numerator)) < 1e-9
     const whole = Math.abs(beat - Math.round(beat)) < 1e-9
     lines.push({

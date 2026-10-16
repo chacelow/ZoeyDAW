@@ -364,9 +364,6 @@ export function serializeClip(clip: Clip): Clip {
     }
   }
 }
-/**
-Parse first, then atomically replace state. Unknown keys never cross this boundary.
-*/
 export function parseProject(json: string): { document: DocumentState; workspace: WorkspaceState } {
   const payload: unknown = JSON.parse(json)
   if (

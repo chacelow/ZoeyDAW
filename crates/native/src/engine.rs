@@ -1,4 +1,3 @@
-//! napi owns only handles and marshaling. All device/DSP/state work runs in Rust.
 use napi::{
     bindgen_prelude::{Float32Array, Function},
     threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode},
@@ -26,7 +25,6 @@ mod cleanup;
 mod telemetry;
 #[cfg(feature = "verification")]
 mod verification;
-// Protocol backpressure allows one pending telemetry callback, not an unbounded event queue.
 type TelemetryCallback = ThreadsafeFunction<String, (), String, Status, false, true, 1>;
 #[napi(object)]
 pub struct SourceInfo {
@@ -261,7 +259,6 @@ pub fn dispose(session: u32) -> Result<()> {
     Ok(())
 }
 
-/// Channel-major, then pixel-major [min,max]. Stereo output has pixels*4 f32s.
 #[napi]
 pub fn read_peaks(
     session: u32,
@@ -306,11 +303,6 @@ pub fn source_info(session: u32, source_id: String) -> Result<Option<SourceInfo>
     receiver.recv().map_err(|e| error(e.to_string()))
 }
 
-/// One-based clip-local bars on the applied project tempo, sampled at the
-/// decoded source rate. Signed `contentOffsetBars` wraps like clip playback.
-/// Same layout as `readPeaks`. Unknown sources and empty or non-finite
-/// ranges yield `pixels*4` zeros; `pixels` of 0 or above 16384, or a session
-/// whose device failed to open, yield an empty array.
 #[napi]
 pub fn read_peaks_at_bars(
     session: u32,

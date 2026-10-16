@@ -10,7 +10,6 @@ test("normalizes language families and falls back for unsupported locales", () =
 })
 
 test("first initialization honors storage and later registration preserves the singleton", () => {
-  // A fresh process isolates first initialization from AppShell and other singleton consumers.
   const result = Bun.spawnSync(
     [
       process.execPath,

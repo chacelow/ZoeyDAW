@@ -29,16 +29,12 @@ export interface AppShellProps {
   readonly router: Router
   readonly appearance: AppearanceStores
   readonly systemAppearance: Appearance | null
-  /** Durable app data (recent projects); the native data directory in production. */
   readonly storage: SnapshotStorage
-  /** Window close interception; `null` leaves closing unguarded. */
   readonly closeRenderer: WindowRenderer | null
   readonly renderProjectSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
-  /** Show raw route-error messages (web shows them only in DEV). */
   readonly showErrorDetails: boolean
 }
 
-/** Everything below the render root: preferences, routes, titlebar, dialogs. */
 export function AppShell({
   router,
   appearance,
@@ -78,7 +74,6 @@ function AppFrame({
   children,
 }: Pick<AppShellProps, "storage" | "closeRenderer" | "renderProjectSlots" | "showErrorDetails"> & {
   readonly onOpenSettings: () => void
-  /** App-level overlays; they must stay inside this frame, the window root's only host child. */
   readonly children: ReactNode
 }) {
   const theme = useTheme()
@@ -98,7 +93,6 @@ function AppFrame({
     <div
       testId="app-frame"
       style={{
-        // Full extents and flex shrink minima are structural containment, not layout defaults.
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -106,9 +100,6 @@ function AppFrame({
         backgroundColor: surface,
         color: theme.colors.foreground,
         fontSize: theme.control["--text-control-track"],
-        // Like Live, interface text is not drag-selectable: gpuix makes text selectable by
-        // default, so drags on the minimap, rulers and lanes painted a selection over labels.
-        // Inherited by the whole tree; editable fields own their own selection.
         userSelect: "none",
       }}
     >

@@ -32,7 +32,7 @@ layoutTrackRowsForViewport(tracks: readonly Track[], scrollY: number, height: nu
 - `TimelineViewportInput`、`PanViewportInput`、`edgeScroll` 要求显式完整 `ArrangementGeometry`。独立 tracks/viewport helper 不为读取配置创建包装 Scene，也不依赖 React context。
 - `arrangement` 中标尺、Clip 与 hit 的读取使用注入来源。完整字段与来源规则见 [统一配置契约](../../../../../../../docs/architecture/configuration.md)。
 
-## B2 计算接口
+## 计算接口
 
 具体输入结构与导出类型同实现文件。以下签名列出从副作用文件抽出的计算入口。`Point` 为 `{ x: number; y: number }`。
 
@@ -107,7 +107,7 @@ minimapPointerDown(input: { x: number; width: number; geometry: MinimapGeometry 
 minimapDragBody(input: { geometry: MinimapGeometry; width: number; initialScrollX: number; zoomAnchorRatio: number; deltaX: number; deltaY: number }): MinimapViewport
 ```
 
-`paintAutomation()` 的 `idPrefix` 由 B2 在手势开始时分配，必须在工程内唯一。`DrawingState.nextId` 是本手势计数器，重绘同一 cell 保留 ID。取消手势直接丢弃返回值，工程提交与撤销仍由 B2 的 runtime 事务负责。freehand 的 `DrawingState.swept` 保存已扫过的合并时间区间：原始点在覆盖区间内删除；回扫替换先前不重合的采样点，未绘制的 viewport 间隙与区间外点保留。新手势以 `{ painted: [], swept: [], last, nextId: 0 }` 初始化；状态及原始点不就地修改。
+`paintAutomation()` 的 `idPrefix` 由调用方在手势开始时分配，必须在工程内唯一。`DrawingState.nextId` 是本手势计数器，重绘同一 cell 保留 ID。取消手势直接丢弃返回值，工程提交与撤销仍由 B2 的 runtime 事务负责。freehand 的 `DrawingState.swept` 保存已扫过的合并时间区间：原始点在覆盖区间内删除；回扫替换先前不重合的采样点，未绘制的 viewport 间隙与区间外点保留。新手势以 `{ painted: [], swept: [], last, nextId: 0 }` 初始化；状态及原始点不就地修改。
 
 `PaintInput.policy` 是 `ArrangementPolicy["automation"]`，控制自由画线采样分辨率。网格 cell、音乐端点和归一化计算保持领域语义。
 

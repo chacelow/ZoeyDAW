@@ -54,7 +54,6 @@ it("snaps every movable selected start onto the grid and is idempotent", () => {
         )
         snapped++
       } else if (Math.abs(note.startBeat / grid - Math.round(note.startBeat / grid)) >= 1e-9) {
-        // A start the source-window move rules keep off-grid: neither neighbouring line is reachable.
         expect(original.startBeat + original.lengthBeats).toBeLessThanOrEqual(
           input.window.sourceOffsetBeats + input.gridBeats + 1e-9
         )

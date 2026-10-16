@@ -1,16 +1,7 @@
-/**
- * gpuix i18n core resources — project (zh-CN)
- *
- * "项目空间" (workspace) 是所有业务数据的容器 — mind/kb/qms 都基于当前项目空间过滤.
- * QMS 保留旧 createFirst* 键做兼容, 语义统一到"项目空间".
- */
-
 export default {
-  // 通用命名
   workspace: "项目空间",
   workspacePlural: "项目空间",
 
-  // 首次引导 wizard (mind/kb/qms 共用)
   createFirstTitle: "创建你的第一个项目空间",
   createFirstSubtitle: "所有数据都归属项目空间, 先起一个名字开始",
   projectName: "项目名称",
@@ -28,7 +19,6 @@ export default {
 
   avatarLabel: "项目空间头像",
   avatarHint: "选填, 建议正方形图片, ≤ 2MB",
-  // 顶栏项目空间切换器
   switcher: {
     placeholder: "选择项目空间",
     newProject: "新建项目空间",
@@ -54,7 +44,6 @@ export default {
     other: "其它",
   },
 
-  // 空状态引导 (等价于 wizard, 作为 fallback 使用)
   empty: {
     title: "还没有项目空间",
     descAdmin: "创建你的第一个项目空间, 开始组织团队工作",
@@ -62,7 +51,6 @@ export default {
     create: "创建项目空间",
   },
 
-  // 项目空间成员管理
   member: {
     title: "成员",
     add: "添加成员",
@@ -102,7 +90,6 @@ export default {
     },
   },
 
-  // 项目角色管理
   roles: {
     title: "项目角色",
     description: "管理项目内的角色与权限。内置角色不可编辑，可复制为自定义角色。",
@@ -134,7 +121,6 @@ export default {
     },
   },
 
-  // 项目空间设置对话框
   settings: {
     subtitle: "管理项目空间的基础信息和成员",
     tab: {

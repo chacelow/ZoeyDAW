@@ -43,9 +43,6 @@ export function createTestWorkspace(): WorkspaceState {
 export function createTestSession() {
   return createSessionTemplate(PREFERENCE_DEFAULTS)
 }
-/**
-Derived preview samples from the visible source span; never serialized.
-*/
 export function mockWaveformPeaks(
   samplePath: string,
   sourceOffsetBars = 0,

@@ -16,7 +16,6 @@ export interface CollapseDividerProps {
   formatAccessiblePixels: (pixels: number) => string
 }
 
-/** A binary divider for a fixed-height region outside the adjustable Group. */
 export function CollapseDivider({
   expanded,
   expandedSize,

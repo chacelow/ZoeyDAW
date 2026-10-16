@@ -47,7 +47,6 @@ const rootStyle = {
   ...(sans ? { fontFamily: sans } : {}),
 }
 const frames = createControlledFrames()
-// This viewport is a fixed verification fixture, not a product window default.
 const view = { width: 1000, height: 1600, pxPerBar: 32, scrollX: 0, scrollY: 0, dpr: 1 }
 
 function Tracks() {

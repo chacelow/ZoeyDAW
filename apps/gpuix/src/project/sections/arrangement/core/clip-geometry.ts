@@ -32,9 +32,6 @@ export interface ClipVisualGeometry {
   fades: readonly FadeVisual[]
 }
 
-/**
-CSS-pixel projection consumed by both the painter and pointer hit test.
-*/
 export function clipVisualGeometry(
   rect: ClipRect,
   clip: Clip,
@@ -45,7 +42,6 @@ export function clipVisualGeometry(
   const left = Math.round(rect.left)
   const top = Math.round(rect.top + metrics.clip.verticalInset)
   const width = Math.max(metrics.clip.minWidth, Math.round(rect.width))
-  // Equal insets trim the two vertical sides of the clip rectangle.
   const height = Math.max(
     metrics.clip.minHeight,
     Math.round(rect.height - metrics.clip.verticalInset * 2)
@@ -134,7 +130,6 @@ function fadeVisual(
     curve: { x: middle, y: midpoint },
     segments: fadeBezierSegments(x0, y0, x1, y1, positionX, curve),
     active: position.end > position.start,
-    // Two distinct endpoint hit targets must fit side by side.
     handlesVisible: handlesVisible && width >= fadeHitSize * 2,
   }
 }

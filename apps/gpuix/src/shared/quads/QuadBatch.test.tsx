@@ -144,7 +144,6 @@ test("invalid native stroke updates leave the prior tree unchanged", () => {
       )
     }
     for (const strokeWidth of [null, NaN, Infinity]) {
-      // The JSON protocol reserves null for removing a prop; nonfinite JS numbers encode as null.
       root.renderer.applyBatch(JSON.stringify([["setCustomProp", 700, "strokeWidth", strokeWidth]]))
       root.renderer.captureScreenshot(path.join(directory, "removed.png"))
       expect(readFileSync(path.join(directory, "removed.png"))).toEqual(

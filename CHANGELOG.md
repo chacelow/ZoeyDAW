@@ -2,11 +2,12 @@
 
 ## 0.1.0 - unreleased
 
-### PC orchestration (2026-10-17)
+### Windows and repository cleanup (2026-10-17)
 
-- Resume the coordinator and existing worker sessions on Windows. Add a portable Orca listener with explicit delivery acknowledgement; the coordinator patrols through the built-in OMP loop. Machine paths and Run bindings stay outside the repository.
-- Dispatch complete modules to retained lane sessions, commit runnable milestones, and keep transient reports outside the source tree. Register review-ready work before acknowledging its delivery so deep review cannot block later worker questions.
-- Normalize required documentation paths before route comparisons on Windows.
+- Add Windows x64: renderer UI bridge and cleanup patches, DirectComposition offscreen lifecycle, native clipboard, cursor, window geometry and reduced motion on Windows, a Windows build driver, `verify-windows.mjs`, a Windows CI job and an NSIS release matrix entry.
+- Move clip editor header and ScrollArea default heights into layout tokens; size DropdownButton triggers with the icon gap only when an icon is present.
+- Development is single-agent: delete the orchestration scripts, slice specs and coordination rules.
+- Delete committed verification evidence, slice reports, one-off probes, unused verification harnesses and mutation runners, stale research notes and source comments. Rewrite the renderer, Windows and engine research notes as current references.
 
 ### gpuix native rewrite (2026-10-14 – 2026-10-15)
 

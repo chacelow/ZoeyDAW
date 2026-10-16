@@ -6,7 +6,6 @@ import type { PaintLayer } from "./paint-layers"
 
 type PaintBinding = (key: string, batch: QuadBatchController | null) => void
 
-/** The view owns geometry and uploads it without sending buffers or geometry callbacks through nodes. */
 export function usePaintLayers(layers: readonly PaintLayer[]): PaintBinding {
   const controllers = useMemo(() => new Map<string, QuadBatchController>(), [])
   const bind = useCallback<PaintBinding>(

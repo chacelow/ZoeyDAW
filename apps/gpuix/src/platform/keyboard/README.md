@@ -26,4 +26,4 @@ section 通过 `useWindowKeyboard()` 取得同一实例，在 effect 中订阅�
 
 `keyboard-native.test.tsx` 在真实 `createTestRoot` 中挂载共享 `Button` 与 `Input`，用 `nativeSimulateKeystrokes` 检查 Button 聚焦时 Space 不改变激活状态且到达窗口订阅，Input 聚焦时 Space 不到达窗口订阅。测试直接锁住控件与窗口之间的事件契约，不在 WindowKeyboard 中替控件屏蔽键盘事件。
 
-K1 行为回归：`bun test apps/gpuix/src/platform/keyboard`。
+行为回归：`bun test apps/gpuix/src/platform/keyboard`。

@@ -13,7 +13,6 @@ export interface AppPreferences {
   readonly themeModePersisted: boolean
   readonly themePreset: ThemePresetId
   readonly setThemePreset: (preset: ThemePresetId) => void
-  /** Native system appearance; renderer-free hosts can report `null`. */
   readonly systemAppearance: Appearance | null
 }
 
@@ -36,7 +35,6 @@ export interface AppPreferencesProviderProps {
   readonly children: ReactNode
 }
 
-/** Feeds the persisted mode and preset into the single, controlled ThemeProvider. */
 export function AppPreferencesProvider({
   stores,
   systemAppearance,

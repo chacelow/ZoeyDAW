@@ -1,27 +1,8 @@
 #!/usr/bin/env sh
-# 每次 commit 前显式确认，与 commit-checklist skill 的 G 门对齐。
-#
-# 规则:
-# - 交互式终端: 提示输入 "我确认"，非精确匹配即取消。
-# - 非交互式 (agent / CI / 脚本): 必须显式携带
-#     USER_CONFIRM_HASH=<当前 staged tree 的 git write-tree SHA>
-#   这个 SHA 绑定到"当前这一次 commit"的具体 staged 内容; 换一次 commit
-#   staged 变了, SHA 也变, agent 必须重新拿用户的「我确认」并重新计算.
-#
-# 【重要】Agent 使用 USER_CONFIRM_HASH 的边界:
-#   1. 用户必须在【本次 commit 上下文】里显式说出「我确认」这三个字.
-#   2. 每一次 commit 都独立. Session 里更早的「我确认」不能复用.
-#   3. 「提交吧」/「commit 一下」等隐含语气不算, 必须原文包含「我确认」.
-#   4. Batch commit / amend / rebase 每次都算新 commit, 各自需要新确认.
-#
-# 每次 non-interactive 通过都写审计日志 .git/commit-audit.log, 用户可以 grep 检查.
-#
-# 绕过: git commit --no-verify (跳过所有门, 责任在 caller).
 
 set -e
 
 if [ -t 0 ]; then
-  # Interactive: prompt for exact keyword.
   printf '\n> 输入「我确认」继续本次 commit（其它任何输入取消）：\n> '
   read reply < /dev/tty || reply=""
   if [ "$reply" != "我确认" ]; then
@@ -30,7 +11,6 @@ if [ -t 0 ]; then
     exit 1
   fi
 else
-  # Non-interactive: env var must match current staged tree SHA.
   expected_hash="$(git write-tree)"
   if [ "${USER_CONFIRM_HASH:-}" != "$expected_hash" ]; then
     cat >&2 <<EOF
@@ -54,7 +34,6 @@ Session 里更早的「我确认」不能复用. 每次 commit 都要新确认.
 EOF
     exit 1
   fi
-  # 审计: 记录时间、staged 文件列表、tree SHA.
   {
     printf '\n=== %s ===\n' "$(date '+%Y-%m-%d %H:%M:%S')"
     printf 'mode: non-interactive USER_CONFIRM_HASH match\n'
@@ -65,5 +44,4 @@ EOF
   } >> "$(git rev-parse --git-dir)/commit-audit.log"
 fi
 
-# 通过确认后跑常规质量门
 pnpm exec lint-staged

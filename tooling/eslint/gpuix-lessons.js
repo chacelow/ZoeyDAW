@@ -1,24 +1,8 @@
 import path from "node:path"
 
-/**
- * Mechanical LESSONS.md entries enforced as lint, so they are not rediscovered in review.
- *
- * 1. No JS timers standing in for native events (LESSONS「光标锁定」「gpuix 0.10.0 的原生缺口」; B2 公共契约
- *    「不要用 JS 定时器/轮询去模拟原生事件」). Frames come from platform/frame, focus and activation from
- *    native events. A genuine wall-clock delay (toast auto-dismiss) or the mock backend's tick is
- *    allowed only in the files listed here, so every exception stays auditable in one place.
- * 2. No application-level window appearance override (LESSONS「跟随系统读的是窗口外观」): once set,
- *    `onWindowAppearanceChange` reports our own value and "follow system" silently stops working.
- * 3. Business surfaces (app/**, project/sections/**) do not invent shape: `borderRadius` takes a
- *    `theme.design` value (or 0/1), never a pixel literal ≥ 2 or a raw control metric, and spacing is
- *    not a token multiplied by N (T1 token convergence; ui-standards §14). Geometry derived from an
- *    inset token ("control + inset × 2" in a width/height) is allowed: only spacing keys are checked.
- */
 const TIMER_CALLS = new Set(["setInterval", "setTimeout"])
 const TIMER_ALLOWED = [
-  // Toast auto-dismiss is a user-facing duration, not a substitute for a native event.
   "/apps/gpuix/src/ui/controls/Toaster/index.tsx",
-  // The mock backend simulates engine telemetry ticks for tests and demos only.
   "/apps/gpuix/src/project/adapters/backend/mock.ts",
 ]
 const APPEARANCE_OVERRIDES = new Set(["setWindowAppearance", "set_window_appearance"])
@@ -62,7 +46,6 @@ function propertyKey(node) {
   return node.key.type === "Literal" ? String(node.key.value) : ""
 }
 
-/** `theme.control["--spacing-…"]` / `theme.transportControl[…]`: a raw metric, not a design role. */
 function isControlMetric(node) {
   return (
     node.type === "MemberExpression" &&

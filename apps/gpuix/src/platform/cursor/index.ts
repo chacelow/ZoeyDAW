@@ -17,7 +17,6 @@ function isCursorRenderer(value: unknown): value is CursorRenderer {
   )
 }
 
-/** Event anchors are macOS screen points or Windows virtual-desktop physical pixels. */
 export function createNativeCursorLock(renderer: unknown) {
   if (process.platform === "win32") {
     return {
@@ -45,5 +44,4 @@ export function createNativeCursorLock(renderer: unknown) {
   }
 }
 
-/** Live OS cursor position; for read-back verification only, never a drag anchor. */
 export const currentCursorPosition: () => ScreenPoint | null = cursorPosition

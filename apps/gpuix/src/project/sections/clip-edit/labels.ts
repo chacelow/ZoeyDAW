@@ -2,7 +2,6 @@ import type { AUDIO_WARP_MODES } from "@/project/model/audio-editor"
 import type { DisplayFormats } from "@/project/model/display-formats"
 import type { CreationNames } from "@/project/defaults/template"
 
-/** Every visible or announced string of the Clip editor; the composition root supplies one locale. */
 export interface ClipEditorLabels {
   readonly creationNames: Pick<CreationNames, "clip">
   readonly clipEditor: string

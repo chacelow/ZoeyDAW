@@ -1,12 +1,3 @@
-/**
- * Theme context: the single source every slice reads colors and control
- * metrics from. No feature directory should import `colors.ts` or
- * `shared/theme/metrics` directly; go through `useTheme()`.
- *
- * The provider holds no state: the composition root owns appearance and
- * preset (settings, system appearance) and passes them in. Changing either
- * only swaps the context value, so the subtree keeps its component state.
- */
 import { createContext, useContext, useMemo } from "react"
 import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { createLayoutTokens } from "./layout-tokens"
@@ -36,14 +27,10 @@ const ThemeContext = createContext<Theme | null>(null)
 
 export interface ThemeProviderProps {
   children: ReactNode
-  /** Controlled appearance; falls back to `defaultAppearance` when omitted. */
   appearance?: Appearance
-  /** Controlled color preset; Default when omitted. */
   preset?: ThemePresetId
-  /** Appearance for demos and tests that do not control it. */
   defaultAppearance?: Appearance
   design?: DesignTokens
-  /** Complete runtime theme-color override, including semantic roles; also accepts native test inputs. */
   colors?: Theme["colors"]
   layout?: LayoutTokens
   control?: Theme["control"]

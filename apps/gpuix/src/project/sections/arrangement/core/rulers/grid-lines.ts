@@ -26,7 +26,6 @@ export interface RulerTick {
   x: number
 }
 
-/** Readable labels may subdivide a bar; they never create canvas Pattern lines. */
 export function rulerTicks(scene: ArrangementScene): RulerTick[] {
   const { pxPerBar, scrollX, width } = scene.viewport
   if (!(pxPerBar > 0) || !(width > 0)) return []
@@ -41,7 +40,6 @@ export function rulerTicks(scene: ArrangementScene): RulerTick[] {
   const last = Math.min(Math.floor(scene.bars / stepBars), Math.floor((scrollX + width) / stepPx))
   const ticks: RulerTick[] = []
   for (let index = first; index <= last; index++) {
-    // Half-pixel centers are the native raster coordinate convention, not a density preference.
     ticks.push({ bar: 1 + index * stepBars, x: Math.round(index * stepPx - scrollX) + 0.5 })
   }
   return ticks
@@ -53,7 +51,6 @@ export interface GridLine {
   kind: "minor" | "major"
 }
 
-/** Only unreadable whole bars aggregate; label cadence and grid preferences never choose this step. */
 function patternStepBars(pxPerBar: number, minimumCellPx: number): number {
   return Math.max(1, 2 ** Math.ceil(Math.log2(minimumCellPx / pxPerBar)))
 }
@@ -75,7 +72,6 @@ export function gridLines(
     const last = Math.min(Math.floor(scene.bars / cellBars), Math.floor((scrollX + right) / cellPx))
     for (let cell = first; cell <= last; cell++) {
       const offset = cell * cellBars
-      // Floating-point equality tolerance and half-pixel raster centers are numerical constants.
       if (Math.abs(offset / majorBars - Math.round(offset / majorBars)) < 1e-8) continue
       lines.push({ bar: 1 + offset, x: Math.round(cell * cellPx - scrollX) + 0.5, kind: "minor" })
     }
@@ -99,7 +95,6 @@ export interface PatternRegion {
   alternate: boolean
 }
 
-/** Pattern regions follow numbered bars, never the finer grid cells. */
 export function patternRegions(scene: ArrangementScene): PatternRegion[] {
   const { pxPerBar, scrollX, width } = scene.viewport
   if (!(pxPerBar > 0) || !(width > 0)) return []

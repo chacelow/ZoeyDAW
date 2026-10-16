@@ -12,11 +12,6 @@ import type { AudioClip } from "@/project/model/types"
 import type { MarkerKind } from "./markers"
 import type { SourceView } from "./source-view"
 
-/**
-A draggable source marker: a line with a flag at the top (Start/End, loop) or a small square
-(fade edges, `lower`). Dragging is relative to the press and edits through one project transaction;
-Escape or window deactivation cancels it. Arrow keys nudge one musical sixteenth.
-*/
 export function SourceMarker({
   clip,
   kind,

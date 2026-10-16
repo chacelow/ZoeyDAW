@@ -1,5 +1,3 @@
-//! Per-channel waveform envelopes; PCM never leaves the precomputation boundary.
-
 use crate::defaults::MAX_PEAK_PIXELS;
 use serde::Serialize;
 
@@ -32,10 +30,6 @@ pub struct PeakBin {
 }
 
 impl PeakPyramid {
-    /// Builds at least one level, even for empty input or `levels == 0`.
-    /// A zero base size is normalized to one frame. Unequal channel lengths
-    /// retain their individual final bins; no samples are synthesized. NaNs
-    /// become zero. Higher levels stop before a u32 bin-size overflow.
     pub fn build(channels: &[&[f32]], base_frames_per_bin: u32, levels: usize) -> Self {
         let frames_per_bin = base_frames_per_bin.max(1);
         let channels = channels
@@ -51,8 +45,6 @@ impl PeakPyramid {
         )
     }
 
-    /// `channels` must be nonzero. A trailing incomplete interleaved frame is
-    /// retained: each channel keeps only its actual samples, without padding.
     pub fn from_interleaved(
         samples: &[f32],
         channels: usize,
@@ -130,9 +122,6 @@ impl PeakPyramid {
             .unwrap_or(&self.levels[0])
     }
 
-    /// Yields channel-major bins intersecting the half-open visible frame
-    /// range. The edge bins are retained whole. Missing levels, reversed or
-    /// empty ranges yield no bins; channel lengths bound cropping independently.
     pub fn range(
         &self,
         level: usize,
@@ -164,8 +153,6 @@ impl PeakPyramid {
         })
     }
 
-    /// Exact channel-major pixel envelopes. PCM supplies only partial edge bins;
-    /// aligned interiors use the pyramid without requiring a frame-sized base level.
     pub fn read_pixels(
         &self,
         start: u64,

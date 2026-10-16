@@ -44,8 +44,6 @@ describe("formatNumericValue", () => {
 
 describe("valueAfterDrag", () => {
   test("maps distance × step, not absolute position", () => {
-    // Two drags that start from different values but travel the same
-    // distance produce the same step delta.
     const a = valueAfterDrag({
       ...TEST_INPUT_POLICY,
       startValue: 10,

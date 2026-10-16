@@ -190,7 +190,6 @@ export const transportActions = {
   },
 }
 
-// Position doubles as the transport's high-precision bar, including fractional sixteenths.
 function positionAtBar(bar: number): Position {
   const { numerator } = get().document.transport
   const beats = (Math.max(1, bar) - 1) * numerator

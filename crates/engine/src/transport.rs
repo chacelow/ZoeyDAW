@@ -1,10 +1,7 @@
-//! One-based musical bars backed by an integer sample clock.
-
 use std::ops::Range;
 
 use crate::protocol::{BackendClock, BackendControl, BackendProject};
 
-/// `sample_rate` and `bars_per_second` must be positive; the latter must be finite.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TransportClock {
     pub sample_rate: u32,
@@ -20,7 +17,6 @@ impl TransportClock {
     }
 }
 
-/// Half-open source-frame interval. Construction guarantees a nonzero length.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LoopRegion {
     start_frame: u64,
@@ -59,18 +55,12 @@ pub fn frame_to_bar(clock: TransportClock, frame: u64) -> f64 {
     1.0 + (frame as f64 / f64::from(clock.sample_rate)) * clock.bars_per_second
 }
 
-/// Signed source offset in bars, wrapped into `0..frames` like looped clip
-/// playback. `None` for an empty source.
 pub fn source_offset_frame(clock: TransportClock, offset_bars: f64, frames: u64) -> Option<u64> {
     let offset =
         (offset_bars / clock.bars_per_second * f64::from(clock.sample_rate)).round() as i128;
     (frames > 0).then(|| offset.rem_euclid(i128::from(frames)) as u64)
 }
 
-/// Allocation-free source ranges for a render block, including repeated loops.
-/// Positions before the loop start play through normally; positions at or past
-/// the loop end wrap before rendering. Without a loop, the frame domain ends
-/// at `u64::MAX`, so a block at that boundary is truncated rather than overflowed.
 #[derive(Clone, Debug)]
 pub struct Segments {
     position: u64,
@@ -163,8 +153,6 @@ impl Transport {
         }
     }
 
-    /// Seeking stores the exact frame, even outside an enabled loop. Wrapping
-    /// happens at the next nonempty playing block, never during a stopped seek.
     pub fn seek(&mut self, frame: u64) {
         self.position_frame = frame;
     }

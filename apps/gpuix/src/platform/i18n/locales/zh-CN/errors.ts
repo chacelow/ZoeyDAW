@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — errors (zh-CN)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   pageNotFoundTitle: "页面不存在",
   pageNotFoundDescription: "您访问的页面不存在或已被移除",

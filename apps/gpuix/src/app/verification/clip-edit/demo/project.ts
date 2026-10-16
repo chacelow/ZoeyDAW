@@ -7,7 +7,6 @@ import { CONTENT_PALETTE } from "@/shared/theme/content-color"
 import type { Track } from "@/project/model/types"
 import { getCreationNames } from "@/app/i18n/creation-names"
 
-/** One MIDI, one Audio (real generated WAV) and one Pattern clip; returns their ids. */
 export function seedClipEditProject(mediaUri: string, workload: "normal" | "dense") {
   const current = useProjectState.getState()
   const document = structuredClone(current.document)

@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — org (zh-CN)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   organization: "组织",
   personal: "个人空间",

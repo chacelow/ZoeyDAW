@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — zh-CN
- *
- * This file is the source of truth for this namespace.
- */
-
 import common from "./common"
 import language from "./language"
 import errors from "./errors"

@@ -12,7 +12,6 @@ import type { MidiNote } from "@/project/model/types"
 import type { RollGeometry } from "./layout"
 import type { Marquee } from "./useMidiEditor"
 
-/** One grid owns pointer capture, hit testing and edit shortcuts; quads are visual-only. */
 export function NoteGrid({
   hostRef,
   roll,

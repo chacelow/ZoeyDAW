@@ -36,7 +36,6 @@ function add(
   group.rectangles.push(x, y, width, height)
 }
 
-/** Preserve source paint order across overlaps, with text-bearing notes kept in their native box. */
 export function notePaint({
   notes,
   rects,
@@ -140,7 +139,6 @@ export function notePaint({
     const palette = isSelected ? selectedFills : fills
     let fill = palette.get(note.velocity)
     if (!fill) {
-      // MIDI note-on velocity is a seven-bit protocol value, so normalization uses 127.
       fill = velocityNoteFill(
         color,
         note.velocity,

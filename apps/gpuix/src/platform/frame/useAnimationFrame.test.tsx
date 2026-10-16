@@ -59,7 +59,6 @@ function fakeFrameSource() {
     },
     queue(timestampMs: number) {
       const pending = [...listeners]
-      // Retain the callbacks to exercise the hook's own cancellation guard.
       queueMicrotask(() => {
         for (const callback of pending) callback(timestampMs)
       })

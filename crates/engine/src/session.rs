@@ -1,4 +1,3 @@
-//! One control-thread owner for device, decoded media, protocol fence and graph updates.
 use crate::{
     assets::AudioSource,
     defaults::MAX_PEAK_PIXELS,
@@ -112,10 +111,6 @@ impl DeviceSession {
     }
 
     fn healthy(&mut self) -> bool {
-        // Firewheel reports underruns (xruns) through the same channel as fatal stream errors, but
-        // an underrun only means a late callback on a slow or busy device; the stream keeps running.
-        // Fatal kinds also clear `output_stream_ok`, so only those and context errors fault the
-        // session. Faulting on an xrun made the fault sticky and rejected every later request.
         let mut failed = self.context.update().is_err() || !self.stream.output_stream_ok();
         for error in self.stream.poll_status() {
             failed |= !is_transient(&error);
@@ -258,10 +253,6 @@ impl DeviceSession {
             .map(|cached| cached.audio.source_info)
     }
 
-    /// Clip-local one-based bars to source frames on the project tempo at the
-    /// decoded source rate; `content_offset_bars` wraps exactly like playback.
-    /// Stereo channel-major `[min,max]` pixels. Unknown sources, empty or
-    /// non-finite ranges read as silence; invalid pixel counts as empty.
     pub fn read_peaks_at_bars(
         &self,
         source: &str,
@@ -301,8 +292,6 @@ fn local_path(uri: &str) -> Result<PathBuf, String> {
     }
     #[cfg(windows)]
     {
-        // URL parsing deliberately tolerates malformed percent escapes; our source
-        // contract does not. Validate them before delegating OS path conversion.
         let bytes = uri.as_bytes();
         let mut index = 0;
         while index < bytes.len() {

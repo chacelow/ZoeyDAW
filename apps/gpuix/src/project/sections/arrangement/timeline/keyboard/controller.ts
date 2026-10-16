@@ -61,7 +61,6 @@ export function createTimelineKeyboard({
       if (!event.isHeld) action()
       return "handled"
     }
-  // Section owners can claim selection/gesture commands, never project-wide commands.
   const local =
     (handler: CommandHandler): CommandHandler =>
     event => {
@@ -154,7 +153,6 @@ export function createTimelineKeyboard({
       const key = normalizeKey(event.key)
       const semitone = COMPUTER_NOTE_KEYS[key]
       if (semitone === undefined) return "pass"
-      // The keyboard octave mapping and MIDI's twelve-semitone, 7-bit pitch domain are constants.
       const pitch = (useProjectState.getState().session.midiOctave + 1) * 12 + semitone
       if (!event.isHeld && !notes.has(key) && pitch <= 127) {
         notes.set(key, pitch)

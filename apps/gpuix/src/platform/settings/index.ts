@@ -93,7 +93,6 @@ function preferences() {
   return (registration.owner ??= createPreferenceOwner())
 }
 
-/** Install the composition root's owner before mounting preference consumers. */
 export function configurePreferences(next: PreferenceOwner): () => void {
   const previous = registration.owner
   registration.owner = next

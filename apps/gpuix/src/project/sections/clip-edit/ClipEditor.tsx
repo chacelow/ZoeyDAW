@@ -15,7 +15,6 @@ import type { PeakReader } from "@/project/model/backend"
 import type { ClipEditorEnvironment } from "./environment"
 import type { ClipEditorLabels } from "./labels"
 
-/** Footer imports this sole ID-only editor slot contract. */
 export interface ClipEditorSlot {
   readonly clipId: string
   readonly trackId: string
@@ -28,11 +27,6 @@ export interface ClipEditorProps extends ClipEditorSlot {
   readonly environment: ClipEditorEnvironment
 }
 
-/**
-Clip View for exactly one clip: the editor follows `clip.kind` (audio, MIDI or Pattern), never two
-at once. Editing happens only here. Unhandled keys bubble to the window owner (Space plays), and
-Cmd/Ctrl+Z from any non-text control in the editor is project undo/redo.
-*/
 export function ClipEditor({
   clipId,
   trackId,

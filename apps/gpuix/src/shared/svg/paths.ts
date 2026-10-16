@@ -1,7 +1,3 @@
-/**
- * Path data for gpuix shapes, built with d3 (never concatenated by hand). Every function returns a
- * path `d` string; `Shape` turns one or more of them into a tinted native `<svg>`.
- */
 import { path as d3path } from "d3-path"
 import { line } from "d3-shape"
 
@@ -18,7 +14,6 @@ export interface CubicSegment {
 
 const DIGITS = 2
 
-/** Polyline through the given samples (automation curves, waveforms, envelopes). Empty input is a bug, not a blank path. */
 export function polylinePath(points: readonly Point[]): string {
   if (points.length === 0) {
     throw new RangeError("polylinePath needs at least one point")
@@ -33,7 +28,6 @@ export function polylinePath(points: readonly Point[]): string {
   return d
 }
 
-/** One continuous cubic Bézier chain starting at `start` (clip fades and other explicit curves). */
 export function cubicPath(start: Point, segments: readonly CubicSegment[]): string {
   const context = d3path()
   context.moveTo(start.x, start.y)
@@ -50,11 +44,6 @@ export function cubicPath(start: Point, segments: readonly CubicSegment[]): stri
   return context.toString()
 }
 
-/**
- * Closed region between a cubic Bézier chain and a horizontal baseline: the chain, then straight
- * to (lastEnd.x, baselineY), back to (start.x, baselineY), closed. Clip fade masks use this so the
- * mask follows the curve instead of closing along the diagonal between the curve's end points.
- */
 export function cubicAreaPath(
   start: Point,
   segments: readonly CubicSegment[],
@@ -79,7 +68,6 @@ export function cubicAreaPath(
   return context.toString()
 }
 
-/** Closed polygon (markers, arrows). */
 export function polygonPath(points: readonly Point[]): string {
   const context = d3path()
   points.forEach((point, index) => {
@@ -93,7 +81,6 @@ export function polygonPath(points: readonly Point[]): string {
   return context.toString()
 }
 
-/** Straight segments that are not connected to each other (grid lines): one `M…L…` pair each. */
 export function segmentsPath(segments: ReadonlyArray<readonly [Point, Point]>): string {
   const context = d3path()
   for (const [from, to] of segments) {

@@ -16,9 +16,6 @@ export interface ClipMovePlan {
   targetTrackId: string
 }
 
-/**
-Project a source window without changing its retained audio, MIDI, or pattern data.
-*/
 export function projectClipResize(clip: Clip, edge: "left" | "right", bar: number): Clip {
   if (!Number.isFinite(bar)) {
     return clip
@@ -48,9 +45,6 @@ export function projectClipResize(clip: Clip, edge: "left" | "right", bar: numbe
     : { ...clip, startBar, lengthBars, sourceOffsetBars }
 }
 
-/**
-Validate the entire selection before projecting any clip or accompanying automation.
-*/
 export function projectClipMove(
   source: readonly Track[],
   ids: readonly string[],

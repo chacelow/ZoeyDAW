@@ -6,10 +6,8 @@ import { useAppTranslation } from "../i18n"
 import type { ErrorInfo, ReactNode } from "react"
 
 export interface RouteErrorBoundaryProps {
-  /** Identity of the current route; a new route clears a previous failure. */
   readonly routeKey: string
   readonly onHome: () => void
-  /** Show the raw error message (web shows it only in DEV builds). */
   readonly showDetails: boolean
   readonly children: ReactNode
 }
@@ -20,7 +18,6 @@ interface RouteErrorBoundaryState {
   readonly attempt: number
 }
 
-/** Replaces a failed route with the shell's error screen instead of unmounting the window. */
 export class RouteErrorBoundary extends Component<
   RouteErrorBoundaryProps,
   RouteErrorBoundaryState

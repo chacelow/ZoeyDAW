@@ -83,7 +83,6 @@ export function TrackResizeOverlay({ scene, viewport, labels }: TrackResizeOverl
     viewport
   )
   const gap = theme.control["--spacing-control-track-gap"]
-  // Separator bounds meet the row's half-border; this is shared-edge geometry.
   const borderInset = scene.geometry.track.border / 2
   const width = viewport.width + scene.geometry.track.controlsWidth
   return (

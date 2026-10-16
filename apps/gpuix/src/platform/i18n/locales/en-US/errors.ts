@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — errors (en-US)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   pageNotFoundTitle: "Page not found",
   pageNotFoundDescription: "The page you're looking for doesn't exist or has been moved.",

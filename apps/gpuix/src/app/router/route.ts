@@ -1,7 +1,3 @@
-/**
- * Single-window, single-project routes. The web app's paths remain the identity so
- * `parseRoute`/`routePath` round-trip anything a future deep link or menu supplies.
- */
 export type Route =
   | { readonly kind: "home" }
   | { readonly kind: "project"; readonly projectId: string; readonly openMode?: "new" }

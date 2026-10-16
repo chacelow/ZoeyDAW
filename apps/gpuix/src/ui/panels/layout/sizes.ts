@@ -79,9 +79,6 @@ export function initialLayout(
   )
 }
 
-/** Reflow keeps collapsed panels closed and pixel-fixed panels fixed. If the viewport
- * cannot fit flexible minima, only those minima relax; fixed reservations never shrink.
- * When every maximum is reached the remainder stays empty rather than violating maxSize. */
 export function fitLayout(
   sizes: readonly number[],
   constraints: readonly ResolvedConstraints[],

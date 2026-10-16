@@ -1,5 +1,3 @@
-//! Control-thread compiled routing. The render path only reads PCM and mutates preallocated buffers.
-
 use std::{collections::BTreeMap, sync::Arc};
 
 use crate::{

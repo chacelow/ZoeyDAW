@@ -143,9 +143,6 @@ export function cloneTrack(track: Track, names: Pick<CreationNames, "copy">): Tr
   }
 }
 
-/**
-Keeps every copy separate from source objects, including nested note/peak/automation arrays.
-*/
 export function mapClips(
   tracks: Track[],
   ids: string[],

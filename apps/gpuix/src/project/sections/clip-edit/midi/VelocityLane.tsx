@@ -11,7 +11,6 @@ import type { DisplayFormats } from "@/project/model/display-formats"
 import { QuadPaint, usePaintLayers } from "./QuadPaint"
 import { paintLayers } from "./paint-layers"
 
-/** One Tab entry, backed by the editor's selection. Paint-only stems have no native semantics. */
 export function VelocityLane({
   hostRef,
   roll,
@@ -66,7 +65,6 @@ export function VelocityLane({
           roll.width -
         roll.scrollX
       if (x < -handle || x > roll.viewWidth + handle) continue
-      // MIDI velocity is seven-bit protocol data; the scale is independent of editor density.
       visible.push({ index, note, x, stem: (note.velocity / 127) * height })
     }
     return visible
@@ -151,7 +149,6 @@ export function VelocityLane({
         />
       ))}
       {active ? (
-        // Audible MIDI note-on velocities span 1–127; zero belongs to the note-off protocol.
         <div
           key="active-stem"
           ref={activeHost}

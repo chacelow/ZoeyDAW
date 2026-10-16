@@ -17,7 +17,6 @@ export function PatternRegions({ scene, height }: { scene: SceneStore; height: n
     const regions = patternRegions(current)
     let alternateCount = 0
     for (const region of regions) if (region.alternate) alternateCount++
-    // Quad batches serialize each rectangle as the fixed [x, y, width, height] tuple.
     const normal = new Float32Array((regions.length - alternateCount) * 4)
     const alternating = new Float32Array(alternateCount * 4)
     let normalOffset = 0

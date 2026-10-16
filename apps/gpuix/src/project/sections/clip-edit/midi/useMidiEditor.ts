@@ -29,9 +29,7 @@ type GestureKind = "move" | "resize" | "draw" | "erase" | "marquee" | "velocity"
 
 interface Gesture {
   readonly kind: GestureKind
-  /** Window position of the host's top-left at press time; content = window − origin + scroll. */
   readonly origin: { x: number; y: number }
-  /** Content position of the press, fixed while the roll scrolls. */
   readonly start: { x: number; y: number }
   readonly notes: MidiNote[]
   readonly selection: number[]
@@ -68,11 +66,6 @@ function storedNotes(id: string): MidiNote[] {
   return []
 }
 
-/**
-One piano roll's editing state. Selection is local; every note change goes through a single project
-edit transaction (one undo entry, cancel restores). The editor is keyed by clip, so a clip switch
-unmounts it and the transaction hook cancels whatever gesture was active.
-*/
 export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight: number) {
   const { renderer } = useGpuix()
   const environment = useClipEditorEnvironment()
@@ -445,7 +438,6 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     currentNoteIndex,
     finish,
     blur: () => {
-      // Native preview repaint can report a transient null focus; application loss has its own port.
       const focused = renderer?.getFocusedElementId?.()
       if (focused !== undefined && focused !== null && focused !== host.current?.id) finish(true)
     },
@@ -485,17 +477,12 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
         notes: setNoteVelocity(storedNotes(clip.id), selection, note.velocity + delta).notes,
       })
     },
-    /** Applies one velocity to the selection as a single undo entry (numeric control path). */
     velocityGesture: transaction,
     setSelectedVelocity: (value: number) =>
       transaction.onChange(setNoteVelocity(storedNotes(clip.id), visibleSelection, value).notes),
   }
 }
 
-/**
-Velocity stem under a lane point. Stems sharing an x (chords) are told apart by their handle height;
-a selected note wins a tie so its handle stays draggable over a coincident louder note.
-*/
 export function velocityStemAt(
   notes: readonly MidiNote[],
   selection: readonly number[],

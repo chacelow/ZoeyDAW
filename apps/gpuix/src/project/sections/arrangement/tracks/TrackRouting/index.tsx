@@ -13,7 +13,6 @@ const HARDWARE_CHANNELS = [
   { id: "1", label: "1" },
   { id: "2", label: "2" },
 ]
-// MIDI defines exactly sixteen addressable channels, independent of UI density.
 const MIDI_CHANNELS = Array.from({ length: 16 }, (_, index) => ({
   id: String(index + 1),
   label: String(index + 1),

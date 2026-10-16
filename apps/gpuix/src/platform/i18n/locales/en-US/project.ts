@@ -1,15 +1,7 @@
-/**
- * gpuix i18n core resources — project (en-US)
- *
- * A "workspace" is the container for all business data — mindmaps/KBs/QMS projects all live inside a workspace. QMS keeps the old createFirst* keys for compatibility, semantics unified to "workspace".
- */
-
 export default {
-  // Generic naming
   workspace: "Workspace",
   workspacePlural: "Workspaces",
 
-  // First-run wizard (shared by mind/kb/qms)
   createFirstTitle: "Create your first workspace",
   createFirstSubtitle:
     "Every piece of data lives inside a workspace. Just give it a name to start.",
@@ -28,7 +20,6 @@ export default {
 
   avatarLabel: "Workspace avatar",
   avatarHint: "Optional, square image recommended, ≤ 2MB",
-  // Top-bar workspace switcher
   switcher: {
     placeholder: "Select workspace",
     newProject: "New workspace",
@@ -54,7 +45,6 @@ export default {
     other: "Other",
   },
 
-  // Empty state (fallback for wizard)
   empty: {
     title: "No workspaces yet",
     descAdmin: "Create your first workspace to start organizing your team work",
@@ -62,7 +52,6 @@ export default {
     create: "Create workspace",
   },
 
-  // Workspace member management
   member: {
     title: "Members",
     add: "Add member",
@@ -103,7 +92,6 @@ export default {
     },
   },
 
-  // Project role management
   roles: {
     title: "Project Roles",
     description:
@@ -136,7 +124,6 @@ export default {
     },
   },
 
-  // Project settings dialog
   settings: {
     subtitle: "Manage this workspace basic info and members",
     tab: {

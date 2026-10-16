@@ -58,7 +58,6 @@ function git(repository, ...args) {
 }
 
 function linkDirectory(destination, link) {
-  // Junctions do not need Developer Mode or the symlink privilege on a hosted runner.
   let existing
   try {
     existing = lstatSync(link)
@@ -169,8 +168,6 @@ try {
   )
   const native = path.join(vendor, "packages/native")
   run("rustc", ["-vV"], native)
-  // DirectX compiles HLSL on Windows; the macOS Metal runtime/precompiled distinction
-  // remains part of the manifest, but neither Windows mode invokes xcrun or BSD time/stat.
   run(
     "bun",
     [
@@ -193,6 +190,5 @@ try {
   linkCheckout()
   run(process.execPath, [check, "--record", "--build-mode", mode])
 } finally {
-  // Only this invocation created the lock; a failed build never removes somebody else's lock.
   rmdirSync(lock)
 }

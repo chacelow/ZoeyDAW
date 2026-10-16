@@ -1,6 +1,3 @@
-/**
- * gpuix i18n core resources — auth (en-US)
- */
 export default {
   welcomeBack: "Welcome back",
   login: "Sign in",

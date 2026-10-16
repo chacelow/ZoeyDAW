@@ -9,7 +9,6 @@ import type { ThemePresetId } from "./presets"
 import { DEFAULT_DESIGN_TOKENS } from "./design-tokens"
 import { colorMix } from "./color-mix"
 
-/** Renders the theme it reads plus a click counter that only survives if it is not remounted. */
 function Probe() {
   const theme = useTheme()
   const [clicks, setClicks] = useState(0)

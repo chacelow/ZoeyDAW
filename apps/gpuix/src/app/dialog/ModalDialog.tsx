@@ -10,15 +10,10 @@ export interface ModalDialogProps {
   readonly onOpenChange: (open: boolean) => void
   readonly label: string
   readonly children: ReactNode
-  /** Keep the dialog open when the dimmed backdrop is pressed. */
   readonly persistent?: boolean
   readonly testId?: string
 }
 
-/**
- * The application's only modal surface: a full-window backdrop and a centered popup.
- * The backdrop uses the theme's semantic dialog recipe, independently of scrollbar styling.
- */
 export function ModalDialog({
   open,
   onOpenChange,

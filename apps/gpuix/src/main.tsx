@@ -1,10 +1,4 @@
-/**
- * Application entry: create the window, wire process-wide platform ports, mount the app.
- * No project session opens here; the project route acquires and releases its own lease.
- */
 import { render } from "@gpuix/react"
-// Composition-root exception (coordinator-approved): window options are computed before
-// render(), so there is no useTheme() yet; only this file reads the metrics directly.
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { configureLogger } from "@/platform/log/logger"
 import { createLogPlatform, createNativeLogSink } from "./platform/log"

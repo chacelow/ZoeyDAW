@@ -29,6 +29,5 @@ export function tappedTempo(
   )
   const first = next[0]
   if (next.length < 2 || first === undefined || now <= first) return { taps: next, bpm: null }
-  // Milliseconds per minute is a unit conversion, not an editor preference.
   return { taps: next, bpm: (60_000 * (next.length - 1)) / (now - first) }
 }

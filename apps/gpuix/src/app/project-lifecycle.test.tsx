@@ -279,7 +279,6 @@ test("notification preferences update limits without clearing retained notices o
     rmSync(directory, { recursive: true, force: true })
   )
   dismissToast()
-  // Home has no native backend clock; fake timers control only notification expiry here.
   jest.useFakeTimers()
   try {
     const { root } = mount()

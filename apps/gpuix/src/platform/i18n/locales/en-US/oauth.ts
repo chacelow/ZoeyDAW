@@ -1,9 +1,3 @@
-/**
- * gpuix i18n core resources — oauth (en-US)
- *
- * This file is the source of truth for this namespace.
- */
-
 export default {
   processing: "Processing sign in, please wait...",
   githubProcessing: "Processing GitHub sign in...",

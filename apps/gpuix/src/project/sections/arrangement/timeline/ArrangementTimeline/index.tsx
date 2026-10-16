@@ -216,7 +216,6 @@ export function ArrangementTimeline({
                 overflow: "hidden",
               })}
             >
-              {/* B1 rows include rulers; clipping preserves their shared viewport origin. */}
               <div
                 style={sx({
                   position: "absolute",

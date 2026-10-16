@@ -11,7 +11,6 @@ import type { LaneController } from "./interactions/controller"
 import type { LanePointer } from "./interactions/types"
 import type { LaneLabels, LaneMessageKey } from "./messages"
 
-/** One retained hitbox owns input; virtual rows only describe and draw the scene. */
 export function useLaneSurface(controller: LaneController, labels: LaneLabels, originY?: number) {
   const { renderer } = useGpuix()
   const theme = useTheme()

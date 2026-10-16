@@ -1,10 +1,3 @@
-/**
- * Panel chrome state for the single project view. It is view state, not project data:
- * nothing here enters the document, history or snapshots.
- *
- * The footer hosts one of two mutually exclusive views (Affect Chain / Clip Edit), following
- * the footer section's contract; StatusStrip consumes the same `footer` state.
- */
 export type SectionId = "browser" | "arrangement" | "footer"
 export type FooterView = "devices" | "clip"
 
@@ -25,7 +18,6 @@ export type ProjectShellAction =
   | { readonly type: "toggle-footer" }
   | { readonly type: "set-footer-collapsed"; readonly collapsed: boolean }
   | { readonly type: "select-footer-view"; readonly view: FooterView }
-  /** Explicit Open/close Clip View request from the project session (`clipEditorRequest`). */
   | { readonly type: "clip-editor-request"; readonly editing: boolean }
 
 export function reduceProjectShell(

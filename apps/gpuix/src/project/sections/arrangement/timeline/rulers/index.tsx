@@ -20,7 +20,6 @@ import type { TimelineLabels } from "../labels"
 import type { RulerMenuTarget } from "./Menu"
 import type { DisplayFormats } from "@/project/model/display-formats"
 
-// Normalized SVG coordinate domain; screen marker dimensions come from the theme below.
 const markerPaths: readonly ShapePath[] = [
   {
     d: polygonPath([

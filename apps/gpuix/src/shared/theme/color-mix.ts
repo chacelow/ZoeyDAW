@@ -1,11 +1,3 @@
-/**
- * Resolves CSS `color-mix(in oklab, …)` expressions into concrete hex colors.
- *
- * gpuix's native style parser accepts hex, rgb/hsl/hwb/hsv and oklab/oklch
- * literals, but not the CSS `color-mix()` function. The current Web theme
- * derives several tokens from `color-mix`, so each one must be resolved once
- * here instead of relying on runtime CSS evaluation.
- */
 import { converter, formatHex8, parse } from "culori"
 import type { Oklab } from "culori"
 
@@ -19,15 +11,7 @@ function resolve(input: string): Oklab {
   return toOklab(parsed)
 }
 
-/**
- * Mirrors `color-mix(in oklab, a pctA%, b)`.
- *
- * `b === "transparent"` is the common case in this theme (a translucent wash
- * of `a`): CSS treats transparent's hue/lightness/chroma as missing, so they
- * are inherited from `a`, and only alpha interpolates toward 0.
- */
 export function colorMix(a: string, pctA: number, b: string): string {
-  // Percentage normalization and unit complements are mathematical constants, not theme choices.
   const weightA = pctA / 100
   const colorA = resolve(a)
   if (b === "transparent") {

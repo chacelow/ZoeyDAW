@@ -2,7 +2,6 @@ import path from "node:path"
 import { readFileSync, realpathSync } from "node:fs"
 import { releaseMetadata, releasePlatform, repository } from "./metadata.mjs"
 
-/** Resolve fixed-platform addons at build time, never through NAPI-RS's dynamic loader. */
 export async function compileApplication({
   entrypoint,
   outfile,

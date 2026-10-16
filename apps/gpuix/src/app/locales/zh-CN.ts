@@ -1,9 +1,5 @@
 import { creationNamesByLocale } from "./creation-names"
 
-/**
- * 应用外壳文案。键名沿用 apps/web/src/locales/shared.zh-CN.ts,只保留外壳用到的键;
- * 各 section 的文案由组合根以 labels 注入,不放在这里。
- */
 export default {
   creationNames: creationNamesByLocale["zh-CN"],
   snapshotErrors: {

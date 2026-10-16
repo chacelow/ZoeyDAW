@@ -89,7 +89,6 @@ test("End/Home and Tab/Shift-Tab keep the focused preset inside the scroll viewp
     expect(root.renderer.getFocusedElementId()).toBe(node(root, firstId).id)
     expectVisible(root, firstId)
 
-    // Native focusing alone does not scroll. Tab from a clipped item must reveal its target.
     root.renderer.nativeSimulateKeystrokes(node(root, previousId).id, "tab")
     root.renderer.flush()
     expect(root.renderer.getFocusedElementId()).toBe(node(root, lastId).id)

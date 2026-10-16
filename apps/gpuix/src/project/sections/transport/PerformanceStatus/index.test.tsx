@@ -144,9 +144,6 @@ test("stopping keeps the header rate and later telemetry refreshes it without th
     return {
       ...backend,
       subscribe(listener) {
-        // Hold the engine's frames back and deliver them only through `publish`: a real engine
-        // publishes its first frame for a new control sequence a moment after accepting it, so a
-        // read right after Play/Stop sees no telemetry for that sequence yet.
         let held: BackendTelemetry | null = null
         const unsubscribe = backend.subscribe(frame => {
           held = frame
@@ -195,7 +192,6 @@ test("stopping keeps the header rate and later telemetry refreshes it without th
         if (!publish) throw new Error("Missing producer")
         publish()
       })
-      // The readout re-reads in an effect; its state update lands after the current task.
       await Bun.sleep(0)
     }
     await deliver()
@@ -206,7 +202,6 @@ test("stopping keeps the header rate and later telemetry refreshes it without th
     flushSync(projectActions.togglePlay)
     expect(await whenProjectBackendIdle()).toBe(true)
     await Bun.sleep(0)
-    // Stopped: no animation frames run, and the engine has not published for the Stop yet.
     expect(frames.subscriberCount).toBe(0)
     expect(text()).toContain("48 kHz")
     await deliver()

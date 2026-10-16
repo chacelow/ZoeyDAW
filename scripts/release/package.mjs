@@ -105,7 +105,6 @@ run(process.env.CARGO_PACKAGER_BIN ?? "cargo-packager", ["--release", "--config"
 let files
 if (platform.id === "macos-arm64") {
   const appBundle = path.join(destination, "zoeydaw.app")
-  // Re-sign Bun's executable and seal the bundle before either distributed archive is created.
   run("codesign", [
     "--force",
     "--deep",

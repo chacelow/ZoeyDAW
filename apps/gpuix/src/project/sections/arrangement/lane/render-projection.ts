@@ -194,7 +194,6 @@ export function patternPreviewRects(
   )
   const result: PreviewRect[] = []
   if (cellWidth < 1) {
-    // Subpixel steps merge into one-pixel raster columns; these are sampling units.
     for (let x = Math.ceil(Math.max(0, left)); x < Math.min(viewportWidth, left + width); x++) {
       const from = source.origin + (x - left) / cellWidth
       const end = source.origin + (Math.min(x + 1, left + width) - left) / cellWidth

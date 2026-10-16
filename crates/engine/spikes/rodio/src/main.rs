@@ -85,7 +85,6 @@ fn offline() {
         player.get_pos().as_secs_f64() * RATE as f64
     );
 
-    // Player::try_seek waits for audio-thread acknowledgement. Keep pulling while it waits.
     let started = AtomicBool::new(false);
     std::thread::scope(|scope| {
         let seeker = scope.spawn(|| {
@@ -95,7 +94,6 @@ fn offline() {
         while !started.load(Ordering::Acquire) {
             std::thread::yield_now();
         }
-        // Let the control thread publish its command; this is NOT included in latency frames.
         std::thread::sleep(Duration::from_millis(10));
         let seek_output = pull(&mut output, 1024);
         let target = &reference[12345..12345 + 8];

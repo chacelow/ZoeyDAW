@@ -35,7 +35,6 @@ export function beginFadeDrag(
     last: origin,
     height,
     width,
-    // Normalized fade positions retain the shared 0.1..0.9 curve-model domain.
     gap: Math.min(0.5, Math.max(0.1, fadeHitSize / width)),
     curve: clip[edge === "in" ? "fadeInCurve" : "fadeOutCurve"] ?? PROJECT_TEMPLATE.clip.fade.curve,
     position:

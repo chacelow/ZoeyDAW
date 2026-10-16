@@ -17,7 +17,6 @@ function open(id = MIDI_ID) {
   return view
 }
 
-/** Content y at the vertical centre of a pitch row. */
 function rowCenter(h: Harness, pitch: number) {
   const key = h.bounds(`midi-key-${pitch}`)
   const grid = h.bounds("midi-grid")
@@ -109,7 +108,6 @@ it("double-click creates a note on the grid row and double-click on a note delet
   const grid = h.bounds("midi-grid")
   const y = grid.y + rowCenter(h, 70)
   const x = grid.x + grid.width / 2 + 1
-  // Native test clicks report clickCount 1; send the double-click payload the OS produces.
   const element = h.root.renderer.findByTestId("midi-grid")
   if (!element) throw new Error("Missing grid")
   handleGpuixEvent(

@@ -42,25 +42,17 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@1.97.1
 
-      # actions/cache rejects paths containing "..", so the vendor and target live under
-      # RUNNER_WORKSPACE (the checkout's parent) as plain absolute paths. A "../" path silently
-      # disabled the cache before, and every run rebuilt the renderer from scratch. Job-level env
-      # cannot read the runner context, hence this step.
       - name: Set build cache paths
         run: |
           echo "GPUIX_VENDOR_ROOT=$RUNNER_WORKSPACE/gpuix-vendor" >> "$GITHUB_ENV"
           echo "CARGO_TARGET_DIR=$RUNNER_WORKSPACE/gpuix-target" >> "$GITHUB_ENV"
 
-      # The patched renderer is a pure function of the pinned config and patch series: on a hit,
-      # build.sh verifies the manifest and only links it (seconds instead of ~4 minutes).
       - name: Cache patched gpuix renderer
         uses: actions/cache@v4
         with:
           path: ${{ env.GPUIX_VENDOR_ROOT }}
           key: gpuix-vendor-${{ runner.os }}-${{ hashFiles('scripts/gpuix-main/config.json', 'scripts/gpuix-main/patches/**', 'scripts/gpuix-main/build.sh') }}
 
-      # Cargo target and registry roll forward: an exact miss restores the newest previous target so
-      # only changed crates recompile (@zoeydaw/native, and the renderer when patches change).
       - name: Cache Cargo target
         uses: actions/cache@v4
         with:

@@ -114,7 +114,6 @@ export function isAudioClipSettings(value: unknown): value is AudioClipSettings 
   )
 }
 
-/** Playback markers are independent of arrangement placement, retained preview and fades. */
 export function audioSourceWindow(clip: AudioClip, start: number, end: number, bpm: number) {
   const settings = getAudioClipSettings(clip, bpm)
   if (!Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end <= start) {

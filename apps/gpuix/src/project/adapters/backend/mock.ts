@@ -16,7 +16,6 @@ function wrapBar(bar: number, state: BackendState): number {
     : loop.startBar + ((bar - loop.startBar) % (loop.endBar - loop.startBar))
 }
 
-/** Pure-logic test backend. It owns no device, decoder or simulated audio levels. */
 export function createMockProjectBackend(): ProjectBackend {
   let state: BackendState | null = null
   let sessionId = ""

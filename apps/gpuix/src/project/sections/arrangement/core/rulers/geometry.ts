@@ -75,10 +75,8 @@ export function rulerLabel(bar: number, numerator: number, denominator: number):
     .replace(/\.1$/, "")
 }
 
-// Numerical locator equality tolerance in bars; changing it would change ordering, not presentation.
 const LOCATOR_POSITION_EPSILON = 1e-6
 
-/** Previous ties choose the last source locator, matching web's reversed stable order. */
 export function adjacentMarker(
   markers: readonly Marker[],
   position: number,
