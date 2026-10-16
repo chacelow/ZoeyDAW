@@ -20,6 +20,7 @@ export interface ControlEnvironment {
   readonly mappingActive?: boolean
   readonly cursorLock?: CursorLockPort
   readonly textFocus?: { enter(): () => void }
+  readonly subscribeWindowActive?: (listener: (active: boolean) => void) => () => void
 }
 const EnvironmentContext = createContext<ControlEnvironment>({})
 

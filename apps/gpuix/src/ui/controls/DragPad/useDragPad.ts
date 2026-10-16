@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 import type { EventPayload, KeyEvent } from "@gpuix/react"
 import { CLICK_MOVE_THRESHOLD_PX } from "./constants"
 import { useControlEnvironment } from "../ControlEnvironment"
@@ -51,7 +51,7 @@ export function useDragPad(options: UseDragPadOptions) {
     onGestureEnd,
     onGestureCancel,
   } = options
-  const { cursorLock } = useControlEnvironment()
+  const { cursorLock, subscribeWindowActive } = useControlEnvironment()
   const [mode, setMode] = useState<DragPadMode>("idle")
   const [dragging, setDragging] = useState(false)
   const [draft, setDraft] = useState("")
@@ -94,6 +94,14 @@ export function useDragPad(options: UseDragPadOptions) {
     }
     setMode("idle")
   }, [commitNumber])
+
+  const onWindowActive = useEffectEvent((active: boolean) => {
+    if (!active && anchorRef.current) cancelDrag()
+  })
+  useEffect(
+    () => subscribeWindowActive?.(active => onWindowActive(active)),
+    [subscribeWindowActive]
+  )
 
   const handleMouseDown = useCallback(
     (event: EventPayload) => {
@@ -191,13 +199,17 @@ export function useDragPad(options: UseDragPadOptions) {
   )
 
   const handlePreEditKeyDown = useCallback(
-    (event: EventPayload) => {
+    (event: KeyEvent) => {
       if (disabled) return
       if (event.key === "escape") {
+        event.preventDefault()
+        event.stopPropagation()
         cancelDrag()
         return
       }
       if (event.key === "up" || event.key === "down") {
+        event.preventDefault()
+        event.stopPropagation()
         callbacks.current.onGestureStart?.()
         commitNumber(valueRef.current + (event.key === "up" ? step : -step))
         callbacks.current.onGestureEnd?.()
@@ -205,6 +217,8 @@ export function useDragPad(options: UseDragPadOptions) {
       }
       if (!editable) return
       if (event.key === "enter") {
+        event.preventDefault()
+        event.stopPropagation()
         startEditing(format(valueRef.current))
         return
       }
@@ -212,6 +226,9 @@ export function useDragPad(options: UseDragPadOptions) {
       if (event.key === "backspace") startEditing(format(valueRef.current).slice(0, -1))
       else if (event.key && event.key.length === 1 && /[0-9.-]/.test(event.key))
         startEditing(event.key)
+      else return
+      event.preventDefault()
+      event.stopPropagation()
     },
     [disabled, cancelDrag, commitNumber, step, editable, mode, format, startEditing]
   )
@@ -246,6 +263,8 @@ export function useDragPad(options: UseDragPadOptions) {
     (event: KeyEvent) => {
       if (!disabled) stopTextShortcutPropagation(event)
       if (event.key !== "escape" || !editingRef.current) return
+      event.preventDefault()
+      event.stopPropagation()
       editingRef.current = false
       commitNumber(originalValueRef.current)
       callbacks.current.onGestureCancel?.()
