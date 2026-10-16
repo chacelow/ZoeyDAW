@@ -123,6 +123,67 @@ describe("project document and workspace commands", () => {
     ).toBe(9)
   })
 
+  it("duplicates a complete group subtree after the original subtree", () => {
+    projectActions.duplicateTracks(["drums-group", "trager"])
+    const { tracks } = useProjectState.getState().document
+    const index = tracks.findIndex(track => track.id === "drums-group")
+    expect(tracks.slice(index, index + 6).map(track => track.name)).toEqual([
+      "Drums",
+      "trager",
+      "sidechain",
+      "Drums Copy",
+      "trager Copy",
+      "sidechain Copy",
+    ])
+    const copiedGroup = tracks[index + 3]
+    expect(copiedGroup.childTrackIds).toEqual(
+      tracks.slice(index + 4, index + 6).map(track => track.id)
+    )
+    expect(tracks.slice(index + 4, index + 6).map(track => track.output)).toEqual([
+      copiedGroup.id,
+      copiedGroup.id,
+    ])
+    projectActions.undo()
+    expect(useProjectState.getState().document.tracks.map(track => track.name)).not.toContain(
+      "Drums Copy"
+    )
+    projectActions.redo()
+    expect(
+      useProjectState
+        .getState()
+        .document.tracks.slice(index, index + 6)
+        .map(track => track.name)
+    ).toEqual(tracks.slice(index, index + 6).map(track => track.name))
+  })
+
+  it("duplicates nested branches once and updates the containing group's membership", () => {
+    projectActions.addTrack("group")
+    const parent = useProjectState
+      .getState()
+      .document.tracks.find(track => track.kind === "group" && track.id !== "drums-group")!
+    projectActions.updateTrack("drums-group", { output: parent.id })
+    projectActions.reorderTrack("drums-group", "4-midi")
+    projectActions.updateTrack("drums-group", { output: parent.id })
+    projectActions.duplicateTracks(["drums-group", "sidechain"])
+    const { tracks } = useProjectState.getState().document
+    const index = tracks.findIndex(track => track.id === "drums-group")
+    const copiedGroup = tracks[index + 3]
+    expect(tracks.slice(index, index + 6).map(track => track.name)).toEqual([
+      "Drums",
+      "trager",
+      "sidechain",
+      "Drums Copy",
+      "trager Copy",
+      "sidechain Copy",
+    ])
+    expect(tracks.find(track => track.id === parent.id)?.childTrackIds).toEqual([
+      "drums-group",
+      copiedGroup.id,
+    ])
+    expect(copiedGroup.output).toBe(parent.id)
+    expect(() => hydrateProject(serializeProject())).not.toThrow()
+  })
+
   it("refuses routing cycles without changing document", () => {
     projectActions.addTrack("group")
     const groupId = useProjectState
