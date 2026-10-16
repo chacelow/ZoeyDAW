@@ -5,6 +5,7 @@ verifyConfigurationMutations({
     "src/project/sections/footer/index.test.tsx",
     "src/project/sections/arrangement/timeline/timeline.test.tsx",
     "src/app/project/useProjectShell.test.tsx",
+    "src/ui/panels/layout/layout.test.ts",
   ],
   cases: [
     {
@@ -27,6 +28,13 @@ verifyConfigurationMutations({
       from: "revealedClip !== current.session.editingClipId",
       to: "true",
       pattern: "footer height changes",
+    },
+    {
+      name: "collapse-strict-interval-comparison",
+      file: "ui/panels/layout/computeLayout.ts",
+      from: "low > high + 0.000001",
+      to: "low > high",
+      pattern: "fractional Clip panel allocation",
     },
   ],
 })
