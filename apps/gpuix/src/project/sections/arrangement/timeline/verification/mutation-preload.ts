@@ -38,11 +38,11 @@ export const mutationCases: Record<string, MutationCase> = {
     to: "            {interactionOverlay}\n            {wrap ? wrap(inputSurface) : inputSurface}",
   },
   "clip-editor-save": {
-    file: "project/sections/arrangement/timeline/keyboard/controller.ts",
+    file: "platform/keyboard/default-keymap.ts",
     testFile: "src/project/sections/arrangement/timeline/r2-composition.test.tsx",
     testName: "real ClipEditor",
-    from: 'if (modified && !alt && key === "s")',
-    to: 'if (target !== "clip-editor" && modified && !alt && key === "s")',
+    from: '{ keys: "Shift?+Mod+S", command: "project.save", context: project }',
+    to: '{ keys: "Shift?+Mod+S", command: "project.save", context: arrangement }',
   },
   "editing-surface-tab-owner": {
     file: "project/sections/arrangement/lane/ClipCard.tsx",

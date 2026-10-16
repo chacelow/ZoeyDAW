@@ -106,17 +106,24 @@ export function TrackResizeOverlay(props: {
 
 ## 4. 键盘 owner（避免双触发）
 
-窗口键盘事件在同一次按键的所有元素事件**之后**触发（见 LESSONS）。
+窗口键盘事件在同一次按键的所有元素事件**之后**触发（见 LESSONS）。每个 render root 保持唯一 `WindowKeyboard`，`ArrangementTimeline` 订阅 timeline owner；组合根的先行订阅只关联本次 `keystrokeId`，不执行第二套窗口快捷键。
 
-| 键 | owner |
+| 命令 / 键 | owner |
 | --- | --- |
-| Space（播放）、M、A、B、Ctrl/Cmd+1、+2、+4（网格）、Ctrl/Cmd+Z/Shift+Z、Ctrl/Cmd+S | `timeline`（`createTimelineController` 内部唯一的 keyboard，窗口根监听）；+3（三连音）与 +5（固定网格）未实现 |
-| Clip/Automation 选择、split（Ctrl/Cmd+E，有选中时）、duplicate、rename、delete、复制剪切粘贴、拖动中 Escape | `lane`（`LaneController.keyDown`） |
-| 轨道名称输入、Mixer 数值编辑 | `tracks`（控件自己） |
+| `project.save`、`transport.togglePlay`、`arrangement.draw`（Cmd/Ctrl+S、Space、B） | timeline 的项目级命令；非文本 Clip Editor 同样生效 |
+| `edit.undo/redo`、`grid.narrow/widen/toggleSnap`、`edit.cancel`、`transport.rewind/seekLeft/seekRight`、电脑 MIDI、Automation | timeline 的 Arrangement 命令；只在 timeline/control 上下文解析 |
+| `browser.focusSearch`（Cmd/Ctrl+F） | 同一 timeline 命令注册表；组合根注入 Browser 可用性与实际 `focusSearch`，文本上下文允许查找，菜单不允许 |
+| Clip/Automation 选择、split、duplicate、rename、delete、复制剪切粘贴、拖动取消；定位点与 Loop 命令 | 仍由 lane / rulers 的既有 owner 执行；timeline 上下文的局部命令先让这些 owner 认领，未认领才执行对应全局后备；项目级保存、播放和 B 不进入认领链 |
+| 轨道名称输入、Mixer 数值编辑、菜单导航与共享控件操作 | 对应元素 owner；只消费实际处理的命令，不消费原生文本默认输入 |
 
-- 同一个 keyDown 序列只被一个 owner 处理，有一条跨切片测试在集成步骤证明。
-- 输入框聚焦时，元素对可打印键 `stopPropagation`，窗口 owner 不处理。
-- Cmd/Ctrl+S 在 Clip Editor 的非文本区域同样由窗口 timeline owner 处理，在 Clip Editor 局部编辑命令隔离之前分派；文本与菜单仍保持原边界。
+- **命令**：`platform/keyboard` 的 `CommandId` 是字符串字面量联合；`createCommandRegistry` 为每个 id 注册真实双语 `commands.${id}` 标题 key 与返回 `handled | pass` 的处理函数。业务仍调用原有 `projectActions`；命令表不是第二份工程状态。
+- **绑定**：`DEFAULT_BINDINGS` 是唯一默认键位数据，元素为 `{ keys, command, context }`。`Mod` 表示 Cmd 或 Ctrl，`Shift?` 明确保留原快捷键允许 Shift 的规则。`createKeymap` 在构造时检查同一键、修饰键交集与上下文交集；冲突抛错，不按条目顺序覆盖。
+- **上下文**：`focus` 为互斥的 text/menu/clip-editor/timeline/control，来自组合根已有 text/modal lease 与同次 `keystrokeId` 关联；computerKeyboard 与 browserSearch 为当前 workspace 与组合根能力的谓词。不重建原生焦点树。保存、播放、B 的 Clip Editor 例外由数据声明，而非提前 return 的位置决定。
+- **默认消费**：窗口和共享控件统一经 `shared/keyboard.consumeKey(event, result)`；`handled` 同时调用 `preventDefault` 与 `stopPropagation`，`pass` 不改变事件。文本输入的 shortcut isolation 仍只停止传播，不阻止文字默认输入；Menu Tab 仍保留默认焦点移动。
+- **Space**：工具栏、Transport、表头按钮与切换控件不激活、不进入按下样式、不消费 Space；事件到窗口执行播放。菜单选项 Space 由选项消费，输入框 Space 由原生编辑器输入。
+- **状态生命周期**：B 的轻按锁定、按住绘制与松键释放，电脑 MIDI noteOn/noteOff，以及失活/关闭电脑键盘/editEpoch/dispose 释放仍由同一 timeline keyboard owner 持有；松键按按下时的键身份释放，不因中途修饰键或焦点变化漏释放。
+- **显示**：已有快捷键文字使用 `keymap.formatKeys(command)`；共享菜单只接收格式化结果，不依赖 project/platform。用户 keymap 文件、命令面板、renderer 级焦点身份不在本次范围：后续分别接 `createKeymap`、命令注册表、composition 的上下文输入，不另起窗口 owner。
+- Cmd/Ctrl+3（三连音）与 +5（固定网格模式切换）仍未实现。
 
 ## 5. 组合根
 
