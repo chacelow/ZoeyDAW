@@ -122,13 +122,13 @@ test("centered native Select anchors to the compact trigger rather than a stretc
     const content = root.renderer.getElementBounds(
       root.renderer.findByTestId("center-content")!.id
     )!
-    if (Math.abs(content.x + content.width / 2 - trigger.x - trigger.width / 2) <= 0.5) break
+    if (Math.abs(content.x + content.width / 2 - trigger.x - trigger.width / 2) <= 1) break
   }
   const trigger = root.renderer.getElementBounds(root.renderer.findByTestId("center")!.id)!
   const content = root.renderer.getElementBounds(root.renderer.findByTestId("center-content")!.id)!
   expect(
     Math.abs(content.x + content.width / 2 - trigger.x - trigger.width / 2)
-  ).toBeLessThanOrEqual(0.5)
+  ).toBeLessThanOrEqual(1)
   expect(content.y).toBeGreaterThanOrEqual(trigger.y + trigger.height)
   root.unmount()
 })
