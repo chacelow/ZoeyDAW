@@ -76,6 +76,16 @@ writeFileSync(
       outDir: destination,
       targetTriple: "aarch64-apple-darwin",
       icons: [path.join(work, "zoeydaw.icns")],
+      resources: [
+        ...["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES"].map(name => ({
+          src: path.join(repository, name),
+          target: `licenses/${name}`,
+        })),
+        ...["LICENSE", "THIRD_PARTY_NOTICES.md"].map(name => ({
+          src: path.join(repository, ".gpuix-main", name),
+          target: `licenses/gpuix/${name}`,
+        })),
+      ],
       macos: { minimumSystemVersion: "13.0" },
     },
     null,
