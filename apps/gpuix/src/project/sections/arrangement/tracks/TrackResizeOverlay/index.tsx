@@ -60,11 +60,11 @@ function TrackResizeHandle({
         top: bounds.top,
         width,
         height: bounds.height,
-        cursor: "ns-resize",
+        cursor: theme.design.cursors.verticalResize,
         focusVisible: {
-          outlineWidth: theme.project.trackBorder / 2,
+          outlineWidth: theme.design.shape.focusRingWidth,
           outlineColor: theme.colors.ring,
-          outlineOffset: -theme.project.trackBorder / 2,
+          outlineOffset: -theme.design.shape.focusRingWidth,
         },
       }}
       {...resizeHandlers}
@@ -83,7 +83,8 @@ export function TrackResizeOverlay({ scene, viewport, labels }: TrackResizeOverl
     viewport
   )
   const gap = theme.control["--spacing-control-track-gap"]
-  const borderInset = theme.project.trackBorder / 2
+  // Separator bounds meet the row's half-border; this is shared-edge geometry.
+  const borderInset = scene.geometry.track.border / 2
   const width = viewport.width + scene.geometry.track.controlsWidth
   return (
     <>

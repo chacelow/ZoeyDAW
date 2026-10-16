@@ -152,7 +152,13 @@ it("clips retained MIDI repetitions and Pattern activity to the visible source w
         { pitch: 72, startBeat: 3, lengthBeats: 1, velocity: 100 },
       ],
     }
-    const row = { trackGeometry: DEFAULT_LAYOUT_TOKENS.track, track, top: 50, height: 100 }
+    const row = {
+      trackGeometry: DEFAULT_LAYOUT_TOKENS.track,
+      arrangementGeometry: DEFAULT_LAYOUT_TOKENS.arrangement,
+      track,
+      top: 50,
+      height: 100,
+    }
     const geometry = clipVisualGeometry(
       { ...clipRect(midi, row, width / lengthBars, -left), left, width },
       midi,
@@ -225,7 +231,13 @@ it("retains MIDI source phase after trimming and across equivalent loop windows"
   const score = createMockDocument()
   const track = score.tracks.find(item => item.kind === "midi")
   if (!track) throw new Error("Missing MIDI track")
-  const row = { trackGeometry: DEFAULT_LAYOUT_TOKENS.track, track, top: 50, height: 100 }
+  const row = {
+    trackGeometry: DEFAULT_LAYOUT_TOKENS.track,
+    arrangementGeometry: DEFAULT_LAYOUT_TOKENS.arrangement,
+    track,
+    top: 50,
+    height: 100,
+  }
   const base: MidiClip = {
     kind: "midi",
     id: "m",

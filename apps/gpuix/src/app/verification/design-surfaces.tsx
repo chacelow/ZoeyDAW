@@ -80,7 +80,7 @@ function Surface({ name }: { name: (typeof surfaces)[number] }) {
       return (
         <div style={{ display: "flex", flexDirection: "column" }}>
           <Rulers owner={owner} labels={labels} />
-          <TimeRuler scene={scene} label={labels.timeRuler} />
+          <TimeRuler scene={scene} label={labels.timeRuler} formats={labels.formats} />
         </div>
       )
   }

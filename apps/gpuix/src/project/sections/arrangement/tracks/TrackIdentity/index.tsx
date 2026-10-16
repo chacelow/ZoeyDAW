@@ -40,8 +40,8 @@ export function TrackIdentity({
   const automation = useProjectState(state => state.workspace.automationMode)
   const gutter = (railCount + (track.kind === "group" ? 1 : 0)) * theme.project.groupRailWidth
   const focusRing = {
-    outlineWidth: theme.project.trackBorder / 2,
-    outlineOffset: -theme.project.trackBorder / 2,
+    outlineWidth: theme.design.shape.focusRingWidth,
+    outlineOffset: -theme.design.shape.focusRingWidth,
     outlineColor: theme.colors.ring,
   }
   const handleKeyDown = (event: KeyEvent) => {
@@ -126,7 +126,11 @@ export function TrackIdentity({
               height: theme.control["--spacing-control-track"],
               justifyContent: "flex-start",
               color: ink,
-              cursor: dragging ? "grabbing" : track.kind === "main" ? "default" : "grab",
+              cursor: dragging
+                ? theme.design.cursors.grabbing
+                : track.kind === "main"
+                  ? theme.design.cursors.default
+                  : theme.design.cursors.grab,
               focusVisible: focusRing,
             }}
             onMouseDown={event => {
@@ -143,10 +147,11 @@ export function TrackIdentity({
             onKeyDown={handleKeyDown}
           >
             <text
+              testId={`track-name-${track.id}`}
               style={{
                 fontSize: theme.control["--text-control-track"],
                 color: ink,
-                fontWeight: 500,
+                fontWeight: theme.design.typography.weights.medium,
                 whiteSpace: "nowrap",
                 textOverflow: "ellipsis",
                 userSelect: "none",

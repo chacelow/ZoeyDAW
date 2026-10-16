@@ -9,6 +9,7 @@ import {
   readProjectTelemetry,
 } from "@/project/adapters"
 import { createTrack } from "@/project/model/reducers"
+import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import {
   createTestDocument,
   createTestWorkspace,
@@ -16,13 +17,12 @@ import {
   TEST_PROJECT_CREATION,
   TEST_TRACK_APPEARANCE,
 } from "@/project/adapters/fixtures"
-import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createSceneStore } from "@/project/sections/arrangement/core/scene"
 import { TrackRows } from "@/project/sections/arrangement/tracks/TrackRows"
 import { TrackResizeOverlay } from "@/project/sections/arrangement/tracks/TrackResizeOverlay"
+import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createControlledFrames } from "@/project/sections/arrangement/tracks/verification/frame-source"
-import { trackResources } from "@/project/sections/arrangement/tracks/locales"
 
 configureProjectCreation(TEST_PROJECT_CREATION)
 const baseline = createTestDocument()
@@ -72,7 +72,7 @@ for (const sourceCount of [20, 2000]) {
                 focusedTrackId={null}
                 onFocusTrack={id => projectActions.selectTracks([id], "header")}
                 telemetry={readProjectTelemetry}
-                labels={trackResources["en-US"].arrangement}
+                labels={createTrackLabels("en-US")}
                 renderLane={row => (
                   <text testId={`profile-lane-${row.track.id}`}>{row.track.name}</text>
                 )}
@@ -80,7 +80,7 @@ for (const sourceCount of [20, 2000]) {
               <TrackResizeOverlay
                 scene={store.get()}
                 viewport={viewport}
-                labels={trackResources["en-US"].arrangement}
+                labels={createTrackLabels("en-US")}
               />
             </div>
           </ControlEnvironmentProvider>

@@ -44,7 +44,7 @@ done
 if orca terminal wait --terminal "$COORD" --for tui-idle --timeout-ms 1000 >/dev/null 2>&1; then
   summary=$(printf "%s\n" "$report" | grep -cE "^(IDLE|STALE|ERROR) ")
   asks=$(printf "%s\n" "$report" | grep -oE "asks=[^ )]+" | sed 's/asks=//' | tr ',\n' '  ' | xargs)
-  orca terminal send --terminal "$COORD" --enter --text "[定时巡检] 待你 reply 的 question: ${asks:-无}。有 ${summary} 个 worker 为 IDLE/STALE/ERROR(已自动唤醒)。运行 scripts/orchestration/health-check.sh 复核;清理已合入的 worktree、已结束的终端与超时 demo 进程;处理积压的 orchestration 消息后继续监听。" >> "$LOG" 2>&1
+  orca terminal send --terminal "$COORD" --enter --text "[定时巡检] 待你 reply 的 question: ${asks:-无}。有 ${summary} 个 worker 为 IDLE/STALE/ERROR(已自动唤醒)。运行 scripts/orchestration/health-check.sh 复核;已合入的 worktree 和终端留作 lane 复用,新任务用 scripts/orchestration/lane.sh assign 派给空闲 lane,不删除;清理超时 demo 进程;处理积压的 orchestration 消息后继续监听。" >> "$LOG" 2>&1
   echo "$(ts) coordinator pinged" >> "$LOG"
 else
   echo "$(ts) coordinator busy, ping skipped" >> "$LOG"

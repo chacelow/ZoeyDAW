@@ -4,6 +4,7 @@ import { createNativeClipboard } from "@/platform/clipboard"
 import { useAnimationFrame, useResumeFrame } from "@/platform/frame"
 import { useWindowKeyboard } from "@/platform/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
+import { useArrangementPolicy } from "@/project/sections/arrangement/configuration"
 import { useAppInteraction } from "../interaction"
 import { useAppNativeEnvironment } from "../native-environment"
 import { createProjectComposition } from "./composition"
@@ -18,6 +19,23 @@ export function useProjectComposition(shell: ProjectShellApi) {
   const interaction = useAppInteraction()
   const { subscribeWindowActive } = useAppNativeEnvironment()
   const { project, layout } = useTheme()
+  const projectRef = useRef(project)
+  projectRef.current = project
+  const [metrics] = useState(() => ({
+    get minimapMinHeight() {
+      return projectRef.current.minimapMinHeight
+    },
+    get minimapMaxHeight() {
+      return projectRef.current.minimapMaxHeight
+    },
+    get timelineAutoScrollEdge() {
+      return projectRef.current.timelineAutoScrollEdge
+    },
+  }))
+  const policy = useArrangementPolicy()
+  const policyRef = useRef(policy)
+  policyRef.current = policy
+  const readPolicy = useCallback(() => policyRef.current, [])
   const browserRef = useRef<BrowserPanelHandle | null>(null)
   const focusRef = useRef<PublicInstance | null>(null)
   const shellRef = useRef(shell)
@@ -25,14 +43,14 @@ export function useProjectComposition(shell: ProjectShellApi) {
   const geometryRef = useRef(layout)
   geometryRef.current = layout
   const [composition, setComposition] = useState<ProjectComposition | null>(null)
-  const { minimapMinHeight, minimapMaxHeight, timelineAutoScrollEdge } = project
   useLayoutEffect(() => {
     const owner = createProjectComposition({
       interaction,
       keyboard,
       clipboard: createNativeClipboard(),
-      metrics: { minimapMinHeight, minimapMaxHeight, timelineAutoScrollEdge },
+      metrics,
       geometry: geometryRef.current,
+      readPolicy,
       subscribeWindowActive,
       blurControl: () => {
         if (focusRef.current) renderer?.focusElement?.(focusRef.current.id)
@@ -42,18 +60,14 @@ export function useProjectComposition(shell: ProjectShellApi) {
     })
     setComposition(owner)
     return owner.dispose
-  }, [
-    interaction,
-    keyboard,
-    renderer,
-    subscribeWindowActive,
-    minimapMinHeight,
-    minimapMaxHeight,
-    timelineAutoScrollEdge,
-  ])
+  }, [interaction, keyboard, renderer, subscribeWindowActive, readPolicy, metrics])
   useLayoutEffect(() => {
     composition?.timeline.sceneStore.setGeometry(layout)
   }, [composition, layout])
+  useLayoutEffect(() => {
+    composition?.lane.interrupt()
+    composition?.timeline.view.cancelGestures()
+  }, [composition, policy, project])
   const subscribeFrameDemand = useCallback(
     (listener: () => void) => composition?.subscribeFrameDemand(listener) ?? (() => {}),
     [composition]

@@ -1,4 +1,5 @@
 import { deriveGridPlan } from "@/project/model/grid"
+import type { LayoutTokens } from "@/shared/theme/layout-tokens"
 import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import {
   PROJECT_TEMPLATE,
@@ -6,7 +7,6 @@ import {
   createWorkspaceTemplate,
 } from "@/project/defaults/template"
 import type { ProjectTemplateSource } from "@/project/defaults/template"
-import type { LayoutTokens } from "@/shared/theme/layout-tokens"
 
 import type { GridPlan, GridSettings } from "@/project/model/grid"
 import type {

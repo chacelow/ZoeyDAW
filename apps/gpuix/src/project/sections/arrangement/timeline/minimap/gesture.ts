@@ -96,7 +96,7 @@ export function createMinimapGesture({
       const deltaX = point.x - press.origin.x
       const deltaY = point.y - press.origin.y
       if (press.phase === "pressed") {
-        if (!dragStarted(press.origin, point)) return
+        if (!dragStarted(press.origin, point, press.geometry.policy.pointer)) return
         press.phase = "dragging"
         onPhaseChange?.("dragging")
         if (press.cursor) {

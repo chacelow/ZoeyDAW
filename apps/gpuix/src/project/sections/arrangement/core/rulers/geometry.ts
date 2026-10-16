@@ -1,7 +1,6 @@
 import { MIN_CLIP_LENGTH_BARS } from "@/project/model/grid"
 import { snapBar } from "@/project/model/grid-geometry"
 import { formatAudioMusicalValue } from "@/project/model/audio-editor/musical-value"
-import { BAR_RULER_HEIGHT, MARKER_RULER_HEIGHT } from "../layout"
 import type { LoopRegion, Marker } from "@/project/model/types"
 import type { ArrangementScene } from "../scene"
 import type { Point } from "../interactions/types"
@@ -26,10 +25,11 @@ export function rulerBar(
 
 export function rulerHit(scene: ArrangementScene, { x, y }: Point): RulerHit | null {
   const { width, pxPerBar, scrollX } = scene.viewport
-  if (x < 0 || x > width || y < 0 || y >= BAR_RULER_HEIGHT || pxPerBar <= 0) return null
-  if (y < MARKER_RULER_HEIGHT) {
+  const { hit, barRulerHeight, markerRulerHeight } = scene.geometry.arrangement
+  if (x < 0 || x > width || y < 0 || y >= barRulerHeight || pxPerBar <= 0) return null
+  if (y < markerRulerHeight) {
     let nearest: Marker | null = null
-    let distance = 9
+    let distance = hit.rulerMarker
     for (const marker of scene.markers) {
       const delta = Math.abs(x - ((marker.bar - 1) * pxPerBar - scrollX))
       if (!(delta < distance)) continue
@@ -42,8 +42,8 @@ export function rulerHit(scene: ArrangementScene, { x, y }: Point): RulerHit | n
   if (!loop.enabled) return { kind: "bar" }
   const left = (loop.startBar - 1) * pxPerBar - scrollX
   const right = (loop.endBar - 1) * pxPerBar - scrollX
-  if (Math.abs(x - left) <= 5) return { kind: "loop", edge: "start" }
-  if (Math.abs(x - right) <= 5) return { kind: "loop", edge: "end" }
+  if (Math.abs(x - left) <= hit.rulerLoopEdge) return { kind: "loop", edge: "start" }
+  if (Math.abs(x - right) <= hit.rulerLoopEdge) return { kind: "loop", edge: "end" }
   return x > left && x < right ? { kind: "loop", edge: "body" } : { kind: "bar" }
 }
 
@@ -75,6 +75,7 @@ export function rulerLabel(bar: number, numerator: number, denominator: number):
     .replace(/\.1$/, "")
 }
 
+// Numerical locator equality tolerance in bars; changing it would change ordering, not presentation.
 const LOCATOR_POSITION_EPSILON = 1e-6
 
 /** Previous ties choose the last source locator, matching web's reversed stable order. */

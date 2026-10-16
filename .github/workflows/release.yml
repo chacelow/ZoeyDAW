@@ -111,6 +111,19 @@ jobs:
           pnpm --filter @zoeydaw/gpuix-prototype exec tsc -p ../../scripts/release/tsconfig.json
           bun scripts/release/smoke.mjs dist/release-evidence
 
+      # A downloaded app whose signature is invalid opens as "damaged". Verify the shipped DMG and
+      # zip contents (not the build-tree app) with the strict check Gatekeeper relies on.
+      - name: Verify shipped signatures
+        run: |
+          scratch=$(mktemp -d)
+          hdiutil attach -nobrowse -readonly -mountpoint "$scratch/mnt" dist/release-assets/*.dmg
+          ditto "$scratch/mnt/zoeydaw.app" "$scratch/dmg/zoeydaw.app"
+          hdiutil detach "$scratch/mnt"
+          ditto -x -k dist/release-assets/*.app.zip "$scratch/zip"
+          for app in "$scratch/dmg/zoeydaw.app" "$scratch/zip/zoeydaw.app"; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+          done
+
       - name: Upload release assets
         uses: actions/upload-artifact@v4
         with:

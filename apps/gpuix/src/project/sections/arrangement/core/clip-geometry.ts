@@ -9,9 +9,6 @@ import type { FadeBezierSegment } from "@/project/model/fades"
 import type { AudioClip, Clip, Track } from "@/project/model/types"
 import type { ClipRect } from "./layout"
 
-export const RESIZE_EDGE_PX = 6
-export const FADE_HANDLE_PX = 7
-
 export interface FadeVisual {
   edge: "in" | "out"
   start: { x: number; y: number }
@@ -30,6 +27,8 @@ export interface ClipVisualGeometry {
   titleHeight: number
   bodyTop: number
   bodyHeight: number
+  fadeHandleMargin: number
+  fadeHitSize: number
   fades: readonly FadeVisual[]
 }
 
@@ -42,12 +41,17 @@ export function clipVisualGeometry(
   track: Track,
   fadesVisible: boolean
 ): ClipVisualGeometry {
+  const metrics = rect.arrangementGeometry
   const left = Math.round(rect.left)
-  const top = Math.round(rect.top + 1)
-  const width = Math.max(2, Math.round(rect.width))
-  const height = Math.max(4, Math.round(rect.height - 2))
+  const top = Math.round(rect.top + metrics.clip.verticalInset)
+  const width = Math.max(metrics.clip.minWidth, Math.round(rect.width))
+  // Equal insets trim the two vertical sides of the clip rectangle.
+  const height = Math.max(
+    metrics.clip.minHeight,
+    Math.round(rect.height - metrics.clip.verticalInset * 2)
+  )
   const titleHeight =
-    track.collapsed || height <= rect.trackGeometry.titleHeight + 4
+    track.collapsed || height <= rect.trackGeometry.titleHeight + metrics.clip.bodyThresholdInset
       ? height
       : rect.trackGeometry.titleHeight
   const bodyHeight = height - titleHeight
@@ -62,7 +66,8 @@ export function clipVisualGeometry(
             bodyHeight ? bodyTop : top,
             width,
             bodyHeight || height,
-            fadesVisible && bodyHeight > 0
+            fadesVisible && bodyHeight > 0,
+            metrics.hit.clipFadeHandle
           ),
           fadeVisual(
             clip,
@@ -71,18 +76,30 @@ export function clipVisualGeometry(
             bodyHeight ? bodyTop : top,
             width,
             bodyHeight || height,
-            fadesVisible && bodyHeight > 0
+            fadesVisible && bodyHeight > 0,
+            metrics.hit.clipFadeHandle
           ),
         ]
       : []
-  return { left, top, width, height, titleHeight, bodyTop, bodyHeight, fades }
+  return {
+    left,
+    top,
+    width,
+    height,
+    titleHeight,
+    bodyTop,
+    bodyHeight,
+    fades,
+    fadeHandleMargin: metrics.clip.fadeHandleMargin,
+    fadeHitSize: metrics.hit.clipFadeHandle,
+  }
 }
 
 export function fadeHandleX(
-  geometry: Pick<ClipVisualGeometry, "left" | "width">,
+  geometry: Pick<ClipVisualGeometry, "left" | "width" | "fadeHandleMargin">,
   x: number
 ): number {
-  const margin = Math.min(3, geometry.width / 2)
+  const margin = Math.min(geometry.fadeHandleMargin, geometry.width / 2)
   return Math.max(geometry.left + margin, Math.min(geometry.left + geometry.width - margin, x))
 }
 
@@ -93,7 +110,8 @@ function fadeVisual(
   top: number,
   width: number,
   height: number,
-  handlesVisible: boolean
+  handlesVisible: boolean,
+  fadeHitSize: number
 ): FadeVisual {
   const position = fadeControls(clip, edge)
   const scale = width / clip.lengthBars
@@ -116,6 +134,7 @@ function fadeVisual(
     curve: { x: middle, y: midpoint },
     segments: fadeBezierSegments(x0, y0, x1, y1, positionX, curve),
     active: position.end > position.start,
-    handlesVisible: handlesVisible && width >= FADE_HANDLE_PX * 2,
+    // Two distinct endpoint hit targets must fit side by side.
+    handlesVisible: handlesVisible && width >= fadeHitSize * 2,
   }
 }

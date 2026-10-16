@@ -87,3 +87,5 @@ for line in sys.stdin:
 '
 echo "== demo processes"
 ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo|smoke" | grep -vE "grep|Orca.app" | cut -c1-140 || true
+echo "== idle lanes (reuse with lane.sh assign)"
+bash "$(dirname "$0")/lane.sh" list 2>/dev/null | grep -E "dirty=0 merged=yes .*:(completed|failed|stopped|abandoned)$" || echo "none"

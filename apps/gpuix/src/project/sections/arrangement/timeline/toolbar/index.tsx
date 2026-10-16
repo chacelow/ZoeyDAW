@@ -115,7 +115,7 @@ export function Toolbar({
       />
       <text
         style={sx({ fontSize: theme.control["--text-control-track"], flexShrink: 0 })}
-      >{`${pxPerBar.toFixed(0)} ${labels.pixelsPerBar}`}</text>
+      >{`${labels.formats.number(pxPerBar, "integer")} ${labels.pixelsPerBar}`}</text>
       <Button
         testId="timeline-save"
         icon={<Icon name="Save" />}

@@ -4,13 +4,18 @@ import { flushSync } from "@gpuix/react"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { useProjectState } from "@/project/stores/useProjectState"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
+import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import type { DesignTokens } from "@/shared/theme/design-tokens"
 import { TrackLabelsProvider } from "../labels"
+import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "../verification/frame-source"
 import { TrackTelemetryProvider } from "./telemetry"
 import { TrackMeter } from "./TrackMeter"
 import type { BackendTelemetry } from "@/project/model/backend"
 import type { TestRoot } from "@gpuix/react/testing"
-import { trackResources } from "../locales"
+import { createDisplayFormats } from "@/app/i18n/display-formats"
+import { displayConfigByLocale } from "@/app/locales/display"
+import type { TrackLabels } from "../labels"
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -33,7 +38,9 @@ function frame(levels: BackendTelemetry["levels"]): BackendTelemetry {
 function mountMeter(
   readTelemetry: () => BackendTelemetry | null,
   id = "audio",
-  language: "en-US" | "zh-CN" = "en-US"
+  language: "en-US" | "zh-CN" = "en-US",
+  design: DesignTokens = DEFAULT_DESIGN_TOKENS,
+  labels: TrackLabels = createTrackLabels(language)
 ) {
   const frames = createControlledFrames()
   const root = createTestRoot({ width: 120, height: 160 })
@@ -41,8 +48,8 @@ function mountMeter(
   const render = () =>
     root.render(
       <AnimationFrameProvider source={frames.source}>
-        <ThemeProvider>
-          <TrackLabelsProvider labels={trackResources[language].arrangement}>
+        <ThemeProvider design={design}>
+          <TrackLabelsProvider labels={labels}>
             <TrackTelemetryProvider telemetry={() => readTelemetry()}>
               <TrackMeter
                 trackId={id}
@@ -101,9 +108,7 @@ test("production frame bridge renders stereo overload, holds peaks and stops aft
 
 test("missing track telemetry stays at floor without starting native frame subscriptions", () => {
   const view = mountMeter(() => frame({ unrelated: [6, 6] }), "missing", "zh-CN")
-  const meter = view.root.renderer.findByTestId("track-meter-missing")
-  if (!meter) throw new Error("Missing native meter")
-  expect(meter.customProps?.["aria-valuenow"]).toBe(meter.customProps?.["aria-valuemin"])
+  expect(view.root.renderer.findByTestId("track-meter-floor-left-missing")?.style.height).toBe(132)
   expect(view.root.renderer.findByTestId("track-meter-peak-left-missing")).toBeUndefined()
   expect(view.frames.subscribers).toBe(0)
 })
@@ -203,4 +208,56 @@ test("stopping playback preserves peak hold then gradually decays to floor", () 
     view.close()
     useProjectState.setState({ session: previousSession })
   }
+})
+
+test("native meter channels, peak, zero line and warning gradient consume design metrics", () => {
+  const design = {
+    ...DEFAULT_DESIGN_TOKENS,
+    editor: {
+      ...DEFAULT_DESIGN_TOKENS.editor,
+      meter: { channelGap: 3, peakWidth: 4, zeroWidth: 2, warningStop: 0.65 },
+    },
+  }
+  const view = mountMeter(() => frame({ audio: [3, 0] }), "audio", "en-US", design)
+  view.advance(0)
+  const node = (id: string) => {
+    const found = view.root.renderer.findByTestId(id)
+    if (!found) throw new Error(`Missing ${id}`)
+    return found
+  }
+  const bounds = (id: string) => {
+    const nativeId = node(id).id
+    const measured = view.root.renderer.getElementBounds(nativeId)
+    if (!measured) throw new Error(`Missing native bounds for ${id}`)
+    return measured
+  }
+  const left = bounds("track-meter-left-audio")
+  const right = bounds("track-meter-right-audio")
+  expect(left.width).toBe(5)
+  expect(right.x - left.x - left.width).toBe(3)
+  expect(right.width).toBe(5)
+  expect(bounds("track-meter-peak-left-audio").height).toBe(4)
+  expect(bounds("track-meter-zero-audio").height).toBe(2)
+  expect(node("track-meter-gradient-left-audio").style.background).toMatchObject({
+    type: "linear-gradient",
+    angle: 180,
+    stops: [{ position: 0 }, { position: 0.65 }],
+  })
+})
+
+test("native meter readout follows the injected numeric display policy", () => {
+  const config = structuredClone(displayConfigByLocale["en-US"])
+  config.precision.db = 2
+  const labels = { ...createTrackLabels("en-US"), formats: createDisplayFormats("en-US", config) }
+  const view = mountMeter(
+    () => frame({ audio: [3, 0] }),
+    "audio",
+    "en-US",
+    DEFAULT_DESIGN_TOKENS,
+    labels
+  )
+  view.advance(0)
+  expect(
+    view.root.renderer.findByTestId("track-meter-audio")?.customProps?.["aria-valuetext"]
+  ).toMatch(/3\.00.*0\.00/)
 })

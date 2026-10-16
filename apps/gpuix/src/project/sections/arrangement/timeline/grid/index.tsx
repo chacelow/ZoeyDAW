@@ -5,7 +5,7 @@ import { useQuadBatch } from "@/shared/quads/useQuadBatch"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { gridLines, patternRegions } from "../../core/rulers/grid-lines"
-import { MINOR_GRID_OPACITY, packGridQuads } from "../../core/rulers/grid-quads"
+import { packGridQuads } from "../../core/rulers/grid-quads"
 import type { SceneStore } from "../../core/scene"
 
 export function PatternRegions({ scene, height }: { scene: SceneStore; height: number }) {
@@ -17,6 +17,7 @@ export function PatternRegions({ scene, height }: { scene: SceneStore; height: n
     const regions = patternRegions(current)
     let alternateCount = 0
     for (const region of regions) if (region.alternate) alternateCount++
+    // Quad batches serialize each rectangle as the fixed [x, y, width, height] tuple.
     const normal = new Float32Array((regions.length - alternateCount) * 4)
     const alternating = new Float32Array(alternateCount * 4)
     let normalOffset = 0
@@ -61,9 +62,11 @@ export function Grid({ scene, height }: { scene: SceneStore; height: number }) {
   const major = useQuadBatch()
   const minor = useQuadBatch()
   const majorWidth = theme.project.arrangementGridMajorLineWidth
+  const minorWidth = theme.design.editor.gridMinorStrokeWidth
   const values = useMemo(
-    () => packGridQuads(gridLines(current), 0, current.viewport.width, height, majorWidth),
-    [current, height, majorWidth]
+    () =>
+      packGridQuads(gridLines(current), 0, current.viewport.width, height, majorWidth, minorWidth),
+    [current, height, majorWidth, minorWidth]
   )
   useLayoutEffect(() => {
     major.setQuads(values.major)
@@ -91,7 +94,7 @@ export function Grid({ scene, height }: { scene: SceneStore; height: number }) {
     >
       <PatternRegions scene={scene} height={height} />
       <QuadBatch ref={major.ref} style={style} />
-      <QuadBatch ref={minor.ref} style={sx(style, { opacity: MINOR_GRID_OPACITY })} />
+      <QuadBatch ref={minor.ref} style={sx(style, { opacity: theme.project.gridMinorOpacity })} />
     </div>
   )
 }
