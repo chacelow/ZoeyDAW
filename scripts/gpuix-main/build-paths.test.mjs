@@ -5,6 +5,7 @@ import path from "node:path"
 import test from "node:test"
 import { pathToFileURL } from "node:url"
 import { buildFixture } from "./build-contract-fixture.mjs"
+import { gitExecutable } from "./paths.mjs"
 
 for (const overrideVendor of [false, true]) {
   test(`build links a verified vendor on the repository disk, vendor override ${overrideVendor}`, () => {
@@ -61,7 +62,7 @@ test("linked worktrees derive the same vendor base as their primary repository",
   const fixture = buildFixture()
   try {
     const git = (...args) =>
-      execFileSync("/usr/bin/git", ["-C", fixture.root, ...args], {
+      execFileSync(gitExecutable(), ["-C", fixture.root, ...args], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       }).trim()

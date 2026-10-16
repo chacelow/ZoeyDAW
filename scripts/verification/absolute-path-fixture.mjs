@@ -3,11 +3,12 @@ import { cpSync, mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } fr
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { gitExecutable } from "../gpuix-main/paths.mjs"
 
 export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
 const git = (root, ...args) =>
-  execFileSync("/usr/bin/git", args, { cwd: root, encoding: "utf8" }).trim()
+  execFileSync(gitExecutable(), args, { cwd: root, encoding: "utf8" }).trim()
 
 export function withAbsolutePathFixture(scenario) {
   const root = mkdtempSync(path.join(os.tmpdir(), "gpuix-absolute-path-"))
@@ -16,6 +17,11 @@ export function withAbsolutePathFixture(scenario) {
     cpSync(
       path.join(projectRoot, "scripts/gpuix-review-scan.mjs"),
       path.join(root, "scripts/gpuix-review-scan.mjs")
+    )
+    mkdirSync(path.join(root, "scripts/gpuix-main"))
+    cpSync(
+      path.join(projectRoot, "scripts/gpuix-main/paths.mjs"),
+      path.join(root, "scripts/gpuix-main/paths.mjs")
     )
     symlinkSync(path.join(projectRoot, "node_modules"), path.join(root, "node_modules"), "dir")
     writeFileSync(path.join(root, "package.json"), '{"type":"module"}\n')
