@@ -1,4 +1,5 @@
 import type { EventPayload, KeyEvent, NativeRenderer, PublicInstance } from "@gpuix/react"
+import { consumeKey } from "@/shared/keyboard"
 
 export interface SelectionEntry {
   value: string
@@ -42,8 +43,7 @@ export function navigateSelection({
         ? enabled.at(-1)
         : enabled[(index + (backward ? -1 : 1) + enabled.length) % enabled.length]
   if (!target) return
-  event.preventDefault()
-  event.stopPropagation()
+  consumeKey(event, "handled")
   renderer?.focusElement?.(target.node.id)
   select?.(target.value)
 }

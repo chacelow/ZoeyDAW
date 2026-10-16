@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { useState } from "react"
 import {
   Select,
@@ -164,7 +165,7 @@ export function DropdownButton<T extends string = string>({
         sideOffset={sideOffset}
         style={contentStyle}
         onKeyDown={event => {
-          if (event.key === "enter" || event.key === "space") event.stopPropagation()
+          if (event.key === "enter" || event.key === "space") consumeKey(event, "handled")
         }}
       >
         {items.map(item =>

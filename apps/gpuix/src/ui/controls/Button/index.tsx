@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sv, sx } from "@/shared/theme/style"
 import { colorMix } from "@/shared/theme/color-mix"
@@ -124,7 +125,10 @@ export function Button({
       onClick={activate}
       onKeyDown={event => {
         onKeyDown?.(event)
-        if (!event.defaultPrevented && event.key === "enter") activate(event)
+        if (!event.defaultPrevented && event.key === "enter" && !disabled) {
+          activate(event)
+          consumeKey(event, "handled")
+        }
       }}
       onMouseEnter={event => {
         info.onMouseEnter()

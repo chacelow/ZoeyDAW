@@ -227,4 +227,14 @@ describe("Arrangement keyboard boundaries", () => {
       sixteenth: 1,
     })
   })
+  test("held draw releases its original key after focus and modifier changes", () => {
+    projectActions.setMode("computerKeyboard", false)
+    const original = useProjectState.getState().workspace.drawMode
+    expect(keyboard.down(key("b"))).toBe(true)
+    keyboard.markDrawGesture()
+    focus = "text"
+    expect(keyboard.up(key("b", control))).toBe(true)
+    expect(useProjectState.getState().session.drawModeOverride).toBeNull()
+    expect(useProjectState.getState().workspace.drawMode).toBe(original)
+  })
 })

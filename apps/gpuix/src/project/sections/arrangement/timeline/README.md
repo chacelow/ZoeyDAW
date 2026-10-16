@@ -44,7 +44,7 @@ Minimap 选框复用 scrollbar 默认、hover、pressed 色层。pressed 从有�
 组合根提供：
 
 1. 同一真实 renderer 的 `createWindowPlatform(renderer).subscribeApplicationActive`，不用旧 A2 采样 singleton。
-2. 一份 `WindowKeyboardProvider`，根 `render` 使用同一 bus 的 `rootHandlers`。时间线只在已处理键上 `preventDefault()`；原生元素先处理，窗口回调在后。
+2. 一份 `WindowKeyboardProvider`，根 `render` 使用同一 bus 的 `rootHandlers`。时间线的命令注册表经 `DEFAULT_KEYMAP` 解析上下文，窗口订阅用 `consumeKey` 默认消费已处理键；原生元素先处理，窗口回调在后。
 3. 一份 `AnimationFrameProvider`。普通帧通过 `useAnimationFrame` 喂 `tick`，恢复 prepaint 通过同一 demand 的 `useResumeFrame` 显式 `flushSync` 同一个 tick；不保留 JS timer 链或第二帧源。
 4. 从 `@/platform/cursor` 注入同一 `nativeCursorLock` 到 `ControlEnvironmentProvider` 与时间线；Panel 环境复用同一窗口失活订阅。sections 不直接 import napi 包。
 5. 配置好的真实 project runtime lease、原生快照存储及最后的释放。
@@ -87,7 +87,7 @@ GridLine 的半开可见范围过滤与 quad 打包由 `core/rulers/grid-quads.p
 | M、Z/X、C/V、音符键 | 电脑 MIDI 模式、八度、力度与音符；MIDI 模式 B 不改绘制偏好 |
 | B | timeline 唯一持有，含 clip-editor 焦点；轻按锁定一次偏好，绘制手势中仅临时覆盖。文本/菜单与电脑 MIDI 模式仍保留原边界，不新增工具历史 |
 
-Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，本切片未实现，不冒充支持。键盘的选择类分派只在 `focus() === "timeline"`；真实原生控件的已处理按键与 wheel 必须由共享控件/原生命中截住，不能传假的 consumed 标志。
+Ctrl/Cmd+3（三连音）与 +5（模式切换）超出 web 原行为，仍未实现。窗口键位只有 `platform/keyboard.DEFAULT_BINDINGS` 一份；保存、播放、B 的 Clip Editor 范围由绑定 context 声明，不靠 if 顺序。局部选择类命令只在 timeline 上下文先交 rulers/lane 认领；共享控件的已处理键经 `shared/keyboard.consumeKey` 截住，文本输入只停传播而保留原生默认。已有 A/B 提示来自 `DEFAULT_KEYMAP.formatKeys`。
 
 ## 来源度量
 

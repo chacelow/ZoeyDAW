@@ -93,10 +93,16 @@ const mutations = [
     ": 1 / 16",
   ],
   [
-    "keyboard-velocity",
+    "keyboard-velocity-down",
     "../timeline/keyboard/controller.ts",
-    'key === "v" ? readPolicy().velocityStep : -readPolicy().velocityStep',
-    'key === "v" ? 10 : -10',
+    "session.midiVelocity - readPolicy().velocityStep",
+    "session.midiVelocity - 10",
+  ],
+  [
+    "keyboard-velocity-up",
+    "../timeline/keyboard/controller.ts",
+    "session.midiVelocity + readPolicy().velocityStep",
+    "session.midiVelocity + 10",
   ],
 ].map(([name, file, from, to]) => ({ name, file, from, to, suite: "policy" }))
 

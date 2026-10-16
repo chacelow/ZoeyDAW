@@ -1,3 +1,4 @@
+import { DEFAULT_KEYMAP } from "@/platform/keyboard"
 import type { ClipEditorLabels } from "../labels"
 
 const en: ClipEditorLabels = {
@@ -9,7 +10,7 @@ const en: ClipEditorLabels = {
   midi: {
     pianoRoll: "MIDI piano roll",
     fold: "Fold",
-    draw: "Draw · B",
+    draw: `Draw · ${DEFAULT_KEYMAP.formatKeys("arrangement.draw")}`,
     timeZoom: "Time",
     pitchZoom: "Pitch",
     zoomOutTime: "Zoom out time",
@@ -86,7 +87,7 @@ const zh: ClipEditorLabels = {
   midi: {
     pianoRoll: "MIDI 钢琴卷帘",
     fold: "折叠音高",
-    draw: "绘制 · B",
+    draw: `绘制 · ${DEFAULT_KEYMAP.formatKeys("arrangement.draw")}`,
     timeZoom: "时间",
     pitchZoom: "音高",
     zoomOutTime: "缩小时间",

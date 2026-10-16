@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react"
-import { useWindowKeyboard } from "@/platform/keyboard"
+import { consumeKey, useWindowKeyboard } from "@/platform/keyboard"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -83,10 +83,10 @@ export function ArrangementTimeline({
 
   useEffect(() => {
     const down = keyboard.subscribe("keyDown", event => {
-      if (controller.keyboard.down(event)) event.preventDefault()
+      consumeKey(event, controller.keyboard.down(event) ? "handled" : "pass")
     })
     const up = keyboard.subscribe("keyUp", event => {
-      if (controller.keyboard.up(event)) event.preventDefault()
+      consumeKey(event, controller.keyboard.up(event) ? "handled" : "pass")
     })
     return () => {
       down()

@@ -17,6 +17,10 @@ function fixture(filename, code, errors) {
 
 tester.run("architecture/gpuix-layers", gpuixLayers, {
   valid: [
+    ...["platform/keyboard/index.ts", "ui/controls/Button/index.tsx"].map(file =>
+      fixture(`${src}/${file}`, 'import { consumeKey } from "@/shared/keyboard"; void consumeKey')
+    ),
+    fixture(`${src}/shared/keyboard/index.ts`, 'export type Result = "handled" | "pass"'),
     // 别名指向允许的层。
     fixture(
       `${src}/ui/controls/Button/index.tsx`,
@@ -86,6 +90,21 @@ tester.run("architecture/gpuix-layers", gpuixLayers, {
     ),
   ],
   invalid: [
+    ...["platform/keyboard", "project/model", "ui/controls", "app", "shared/theme"].map(target =>
+      fixture(
+        `${src}/shared/keyboard/index.ts`,
+        `import { dependency } from "@/${target}"; void dependency`,
+        [{ messageId: "forbiddenLayer" }]
+      )
+    ),
+    fixture(
+      `${src}/platform/keyboard/index.ts`,
+      'import { useTheme } from "@/shared/theme"; void useTheme',
+      [{ messageId: "forbiddenLayer" }]
+    ),
+    fixture(`${src}/shared/keyboard/index.ts`, 'import { useState } from "react"; void useState', [
+      { messageId: "forbiddenPackage" },
+    ]),
     // `@/` 别名与相对路径指向同一层,不能绕过分层。
     fixture(
       `${src}/ui/controls/Button/index.tsx`,
