@@ -7,9 +7,6 @@ export function serializeNotes(notes: readonly MidiNote[]): string {
 }
 
 export function parseNotes(text: string): MidiNote[] | null {
-  if (text.length > 250_000) {
-    return null
-  }
   let value: unknown
   try {
     value = JSON.parse(text)
@@ -25,8 +22,7 @@ export function parseNotes(text: string): MidiNote[] | null {
     value.version !== 1 ||
     !("notes" in value) ||
     !Array.isArray(value.notes) ||
-    value.notes.length === 0 ||
-    value.notes.length > 2048
+    value.notes.length === 0
   ) {
     return null
   }

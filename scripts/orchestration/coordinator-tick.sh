@@ -9,15 +9,17 @@
 # 2. Types a patrol prompt into the coordinator terminal when it is idle, naming unanswered questions.
 set -u
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
-DIR=/Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration/scripts/orchestration
+DIR=$(cd "$(dirname "$0")" && pwd)
 COORD="term_abc5c16c-c9a2-4e3e-8e4e-6c98a70ec114"
 LOG="$HOME/Library/Logs/zoeydaw-coordinator-tick.log"
 STAMP="$HOME/Library/Caches/zoeydaw-tick"
 mkdir -p "$STAMP"
 ts() { date -u +%FT%TZ; }
 
-git_probe=$(cd /Users/caishilong/orca/workspaces/zoeydaw/gpuix-migration && git rev-parse --git-dir 2>&1)
-git_access=$(head -c 40 /Volumes/PSSD/code/zoeydaw/.git/worktrees/gpuix-migration/HEAD 2>&1; printf ' commondir='; cat /Volumes/PSSD/code/zoeydaw/.git/worktrees/gpuix-migration/commondir 2>&1; printf ' common='; head -c 40 /Volumes/PSSD/code/zoeydaw/.git/HEAD 2>&1)
+checkout=$(git -C "$DIR" rev-parse --show-toplevel 2>&1)
+git_probe=$(git -C "$DIR" rev-parse --git-dir 2>&1)
+common=$(git -C "$DIR" rev-parse --path-format=absolute --git-common-dir 2>&1)
+git_access=$(head -c 40 "$common/HEAD" 2>&1; printf ' checkout=%s' "$checkout")
 report=$("$DIR/health-check.sh" 2>&1)
 echo "$(ts) ---" >> "$LOG"
 echo "$(ts) launchd uid=$(id -u) home=$HOME path=$PATH git=${git_probe//$'\n'/ } gitdir=${git_access//$'\n'/ }" >> "$LOG"

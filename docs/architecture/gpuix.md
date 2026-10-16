@@ -37,6 +37,7 @@ crates/
 5. **接真实，不再造 Mock**。`ProjectBackend` 端口的真实实现是 Rust 引擎；`createMockProjectBackend` 只保留给不依赖原生的纯逻辑测试。集成测试直接调真实 napi 模块；只有会真实改变宿主状态的调用（隐藏/移动光标、写用户目录）才允许 mock 或指向临时目录。
 6. **一个状态一个 owner**。工程状态只在 `project/stores` + `project/adapters/runtime`。UI 与手势预览不持有第二份可写工程。
 7. 单一职责提交；提交标题避免 `+ & 和 与` 并列与多个 Conventional Commit 类型。
+8. **提交的代码、脚本、测试与配置不写死绝对路径**（`/Volumes`、`/Users`、`/tmp`、`/private`、`/var/folders` 等）。仓库内路径从仓库根、`import.meta.dir` 或 `git rev-parse` 推导；仓库外目录（vendor 根、Cargo target、证据输出）用环境变量或命令行参数传入，默认值也从 git 推导；临时目录用 `mktemp` / `os.tmpdir()`。报告与证据 markdown 里引用实际路径不受限。review scan 的 `absolute-path` 规则执行这一条（2026-10-16 用户要求）。
 
 ## 测试
 

@@ -52,18 +52,17 @@ export const trackActions = {
   },
   duplicateTracks(ids: string[]) {
     const source = get().document.tracks
-    const selected = new Set(ids)
-    function includeChildren(id: string) {
+    const selected = new Set<string>()
+    function includeChildren(id: string, branch = selected) {
+      if (branch.has(id)) {
+        return
+      }
+      branch.add(id)
       for (const child of source.find(track => track.id === id)?.childTrackIds ?? []) {
-        if (selected.has(child)) {
-          continue
-        }
-
-        selected.add(child)
-        includeChildren(child)
+        includeChildren(child, branch)
       }
     }
-    ids.forEach(includeChildren)
+    ids.forEach(id => includeChildren(id))
     const copies = source
       .filter(track => selected.has(track.id) && track.kind !== "main")
       .map(track => ({ sourceId: track.id, copy: cloneTrack(track) }))
@@ -71,9 +70,32 @@ export const trackActions = {
       return
     }
     const idMap = new Map(copies.map(item => [item.sourceId, item.copy.id]))
+    const remappedCopies = copies.map(({ sourceId, copy }) => ({
+      sourceId,
+      copy: {
+        ...copy,
+        childTrackIds: copy.childTrackIds?.map(id => idMap.get(id) ?? id),
+        sends: Object.fromEntries(
+          Object.entries(copy.sends ?? {}).map(([id, level]) => [idMap.get(id) ?? id, level])
+        ),
+        output: idMap.get(copy.output) ?? copy.output,
+      },
+    }))
+    const branchesAfter = new Map<string, typeof source>()
+    for (const { sourceId, copy } of copies) {
+      if (idMap.has(copy.output)) {
+        continue
+      }
+      const branch = new Set<string>()
+      includeChildren(sourceId, branch)
+      const branchCopies = remappedCopies.filter(item => branch.has(item.sourceId))
+      branchesAfter.set(
+        branchCopies[branchCopies.length - 1].sourceId,
+        branchCopies.map(item => item.copy)
+      )
+    }
     tracks(
       source.flatMap(track => {
-        const match = copies.find(item => item.sourceId === track.id)
         const updated =
           track.kind === "group" && !selected.has(track.id)
             ? {
@@ -84,22 +106,7 @@ export const trackActions = {
                 }),
               }
             : track
-        return match
-          ? [
-              updated,
-              {
-                ...match.copy,
-                childTrackIds: match.copy.childTrackIds?.map(id => idMap.get(id) ?? id),
-                sends: Object.fromEntries(
-                  Object.entries(match.copy.sends ?? {}).map(([id, level]) => [
-                    idMap.get(id) ?? id,
-                    level,
-                  ])
-                ),
-                output: idMap.get(match.copy.output) ?? match.copy.output,
-              },
-            ]
-          : [updated]
+        return [updated, ...(branchesAfter.get(track.id) ?? [])]
       })
     )
   },

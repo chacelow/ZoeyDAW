@@ -9,6 +9,9 @@ rust-version.workspace = true
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+verification = []
+
 [dependencies]
 napi = { version = "3", default-features = false, features = ["napi9", "dyn-symbols"] }
 napi-derive = "3"

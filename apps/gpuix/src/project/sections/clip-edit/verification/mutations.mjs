@@ -6,6 +6,48 @@ import { readFileSync, writeFileSync } from "node:fs"
 
 const mutations = [
   {
+    name: "SEC-03 defer zoom cancellation until React commit",
+    file: "src/project/sections/clip-edit/midi/MidiEditor.tsx",
+    from: "const zoomTime = (direction: -1 | 1) => {\n    editor.finish(true)",
+    to: "const zoomTime = (direction: -1 | 1) => {",
+    tests: ["src/project/sections/clip-edit/midi/scroll-gesture.test.tsx"],
+  },
+  {
+    name: "SEC-02 bind selection to array positions",
+    file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
+    from: "ids.has(note.id)",
+    to: "index < ids.size",
+    tests: ["src/project/sections/clip-edit/midi/history-selection.test.tsx"],
+  },
+  {
+    name: "SEC-03 restore window-only drag delta",
+    file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
+    from: "point.x - active.start.x",
+    to: "point.x - active.start.x - view.scrollX",
+    tests: ["src/project/sections/clip-edit/midi/scroll-gesture.test.tsx"],
+  },
+  {
+    name: "SEC-03 keep gesture through geometry change",
+    file: "src/project/sections/clip-edit/midi/useMidiEditor.ts",
+    from: "    finish(true)\n  }, [roll.width",
+    to: "    finish(false)\n  }, [roll.width",
+    tests: ["src/project/sections/clip-edit/midi/scroll-gesture.test.tsx"],
+  },
+  {
+    name: "SEC-01 restore clipboard character ceiling",
+    file: "src/project/sections/clip-edit/midi/clipboard.ts",
+    from: "  let value: unknown",
+    to: "  if (text.length > 250_000) return null\n  let value: unknown",
+    tests: ["src/project/sections/clip-edit/midi/large-selection.test.tsx"],
+  },
+  {
+    name: "SEC-01 restore clipboard note ceiling",
+    file: "src/project/sections/clip-edit/midi/clipboard.ts",
+    from: "    value.notes.length === 0",
+    to: "    value.notes.length === 0 || value.notes.length > 2048",
+    tests: ["src/project/sections/clip-edit/midi/large-selection.test.tsx"],
+  },
+  {
     name: "R1c MIDI toolbar loses wheel translation",
     file: "src/project/sections/clip-edit/midi/MidiEditor.tsx",
     from: "wheelToHorizontal",

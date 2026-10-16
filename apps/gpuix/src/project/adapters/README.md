@@ -39,6 +39,8 @@ The implementation applies a request atomically before acknowledging it. An acce
 
 On failure the runtime drops queued dependent edits, restores the accepted document and history, preserves current viewport/preferences and independent recording edits, and sends a recovery state. `session.backend` exposes phase, pending count, accepted revision and error; the Arrangement toolbar displays pending/error feedback. Successful recovery permits saving again while retaining the error indication until a later commit succeeds. `whenProjectBackendIdle()` waits for the current session's queue to settle and returns false for an unrecovered failure or disposed session.
 
+Submitted recording entries remain pending until a commit or recovery containing them is accepted. Consecutive commit/recovery rejection replays them over the accepted checkpoint without consuming the journal, so last release and reopen retain the authored recording without duplicating it.
+
 The engine DTO excludes names, colors, view geometry, waveform caches and PCM buffers. It includes timing, routing, mixing, automation metadata, source windows, MIDI/Pattern content and fade controls. `BackendAudioClip.sourceId === null` denotes an empty, silent clip. Other source IDs refer to entries in `project.sources`. Musical coordinates are one-based bars. Audio source offsets are signed, rounded to sample frames, and wrapped modulo decoded source length, including left extensions and exact cycle multiples. Empty PCM is silent. Rust applies clip gain and the same rational fade curve defined by the UI's anchor position and curve value.
 
 ## Editing and rendering
@@ -46,6 +48,8 @@ The engine DTO excludes names, colors, view geometry, waveform caches and PCM bu
 Canvas gestures use `beginPreview()`, `previewTracks()` / `previewMarkers()` / `previewLoop()`, then `commitPreview()` or `cancelPreview()`. The runtime owns the effective edit and backend stream. `getEffectiveDocument()` projects the current temporary state; Canvas Scene consumes that projection rather than owning a second editable document. Shared Clip move/resize and automation projections keep preview and commit placement identical.
 
 Continuous controls use `useProjectEditGesture(onChange)`, which owns a session-scoped token and guards value updates as well as `beginEdit`, `endEdit` and `cancelEdit`. Rejected or stale gestures cannot turn later pointer movement into unowned commits. A stale component cleanup cannot commit or cancel another control's edit. A completed gesture creates one undo entry; cancellation restores authored values without resetting viewport movement. Explicit workspace toggles are undoable, but pan/zoom/scroll, playback, selection and edit focus are not. Undo/redo uses the same backend commit path and preserves a surviving Clip editor.
+
+Track duplication treats each selected root and its descendants as one branch. Original rows remain contiguous; the complete copied branch is inserted after the original branch, with copied routing and child membership remapped. Selecting a group and one of its descendants copies that descendant only once.
 
 ## Telemetry and native integration
 
@@ -69,6 +73,8 @@ Keyboard note input, authored MIDI recording and accepted recording clocks retai
 | `sourceInfo(handle, sourceId): { sampleRate, frames, channels } \| null` | Decoded source metadata; `null` for an unknown source. |
 | `readPeaksAtBars(handle, sourceId, startBar, endBar, pixels, contentOffsetBars): Float32Array` | Peaks for a musical range. Bar-to-frame conversion, the signed content offset and wrapping past the source end all happen in Rust (`source_offset_frame`, shared with the mixer). |
 
+If telemetry registration throws after opening a native session, backend construction disposes that handle before propagating the failure; no incomplete backend escapes.
+
 Peak output is channel-major, then pixel-major `[min, max]`: `[leftMin0, leftMax0, …, rightMin0, rightMax0, …]`. Mono sources are duplicated to stereo, so output length is `pixels * 4`. Ranges are half-open, integer and nonnegative; `pixels` is 1–16384. The source bounds crop the requested range; empty pixels contain `[0, 0]`. Local filesystem paths and `file:///` URIs are supported, with Symphonia decoding mono/stereo media and Rubato converting rates off the realtime thread. Unsupported multichannel media is rejected.
 
 `outputLatencyFrames` comes from Firewheel's CPAL `process_to_playback_delay`, rounded to device frames. macOS measured 284 frames at 48kHz on the verification host. Platforms or callbacks without a playback timestamp report `null`; no buffer-size guess substitutes for unavailable latency. A device fault or changed sample rate is terminal for that session and rejects subsequent applies; reopening requires a new session.
@@ -76,6 +82,10 @@ Peak output is channel-major, then pixel-major `[min, max]`: `[leftMin0, leftMax
 ## Snapshots and source data
 
 `serializeProject()` returns version-2 JSON containing committed `document` and `workspace` preferences only; the current non-transactional pan/zoom/scroll viewport is retained. Temporary numeric edits and Arrangement previews do not leak into serialization or saves. `hydrateProject(json)` validates and clones the complete payload before replacing state and resetting session/history. Invalid JSON, version or schema leaves the current project intact.
+
+Snapshot bar positions (loop endpoints, clip starts, markers and automation points) are finite and at least 1. Durations remain strictly positive and may be less than one bar; source offsets retain their signed coordinate semantics. Invalid restore leaves the current document and undo history intact.
+
+Parsing assigns collision-free IDs to MIDI notes missing them, preserving every existing ID. Generated IDs are deterministic within each clip and survive snapshot serialization and reparse, so legacy snapshots enter the editor with stable note identity.
 
 `setSnapshotStorage(storage)` installs the synchronous `SnapshotStorage` port (`get(key): string | null`, `set(key, value): void`); passing `null` disconnects it. The platform/application composition root supplies the durable implementation. There is no default storage or filesystem access in this layer. `createMemorySnapshotStorage()` creates an isolated test implementation.
 
