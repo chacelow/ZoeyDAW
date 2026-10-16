@@ -277,27 +277,96 @@ fn local_path(uri: &str) -> Result<PathBuf, String> {
         }
         return Ok(PathBuf::from(uri));
     }
-    let path = uri
-        .strip_prefix("file://localhost/")
-        .map(|rest| format!("/{rest}"))
-        .or_else(|| uri.strip_prefix("file:///").map(|rest| format!("/{rest}")))
-        .ok_or("invalid local file URI")?;
-    let mut decoded = Vec::with_capacity(path.len());
-    let mut bytes = path.bytes();
-    while let Some(byte) = bytes.next() {
-        decoded.push(if byte == b'%' {
-            let high = char::from(bytes.next().ok_or("truncated URI escape")?)
-                .to_digit(16)
-                .ok_or("invalid URI escape")?;
-            let low = char::from(bytes.next().ok_or("truncated URI escape")?)
-                .to_digit(16)
-                .ok_or("invalid URI escape")?;
-            (high * 16 + low) as u8
+    // URL parsing deliberately tolerates malformed percent escapes; our source
+    // contract does not. Validate them before delegating OS path conversion.
+    let bytes = uri.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' {
+            let escape = bytes
+                .get(index + 1..index + 3)
+                .ok_or("truncated URI escape")?;
+            if !escape.iter().all(u8::is_ascii_hexdigit) {
+                return Err("invalid URI escape".into());
+            }
+            index += 3;
         } else {
-            byte
-        });
+            index += 1;
+        }
     }
-    String::from_utf8(decoded)
-        .map(PathBuf::from)
-        .map_err(|e| e.to_string())
+    let path = url::Url::parse(uri)
+        .map_err(|error| error.to_string())?
+        .to_file_path()
+        .map_err(|_| "invalid local file URI")?;
+    #[cfg(not(windows))]
+    if path.to_str().is_none() {
+        return Err("local file URI is not valid UTF-8".into());
+    }
+    Ok(path)
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::local_path;
+    use std::path::PathBuf;
+
+    #[test]
+    fn local_paths_are_not_treated_as_urls() {
+        for path in [
+            "audio/clip.wav",
+            "C:\\Audio\\clip.wav",
+            "//server/share/clip.wav",
+        ] {
+            assert_eq!(local_path(path).unwrap(), PathBuf::from(path));
+        }
+        assert!(local_path("https://example.com/clip.wav").is_err());
+    }
+
+    #[test]
+    fn malformed_percent_escapes_remain_errors() {
+        for uri in [
+            "file:///audio/clip%",
+            "file:///audio/clip%2",
+            "file:///audio/clip%GG",
+        ] {
+            assert!(local_path(uri).is_err(), "accepted {uri}");
+        }
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn unix_file_uris_decode_escaped_local_paths() {
+        assert_eq!(
+            local_path("file:///audio/piano%20%E4%B8%AD%23.wav").unwrap(),
+            PathBuf::from("/audio/piano 中#.wav")
+        );
+        assert_eq!(
+            local_path("file://localhost/audio/clip.wav").unwrap(),
+            PathBuf::from("/audio/clip.wav")
+        );
+        assert!(local_path("file://server/share/clip.wav").is_err());
+        assert!(local_path("file:///tmp/clip%FF.wav").is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_file_uris_resolve_drive_unc_and_escapes() {
+        assert_eq!(
+            local_path("file:///C:/Audio/clip.wav").unwrap(),
+            PathBuf::from("C:\\Audio\\clip.wav")
+        );
+        assert_eq!(
+            local_path("file:///C:/Audio/piano%20%E4%B8%AD%23.wav").unwrap(),
+            PathBuf::from("C:\\Audio\\piano 中#.wav")
+        );
+        assert_eq!(
+            local_path("file://localhost/C:/Audio/clip.wav").unwrap(),
+            PathBuf::from("C:\\Audio\\clip.wav")
+        );
+        assert_eq!(
+            local_path("file://server/share/clip%20one.wav").unwrap(),
+            PathBuf::from("\\\\server\\share\\clip one.wav")
+        );
+        assert!(local_path("file:///Audio/clip.wav").is_err());
+    }
 }

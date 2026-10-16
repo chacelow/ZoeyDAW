@@ -12,6 +12,17 @@ const cargo =
   path.join(homedir(), ".cargo", "bin", process.platform === "win32" ? "cargo.exe" : "cargo")
 const mutations = [
   {
+    name: "W1-file-uri-manual-path-regression",
+    file: "crates/engine/src/session.rs",
+    from: ".to_file_path()",
+    to: ".path().parse::<PathBuf>()",
+    package: "zoeydaw-engine",
+    test:
+      process.platform === "win32"
+        ? "windows_file_uris_resolve_drive_unc_and_escapes"
+        : "unix_file_uris_decode_escaped_local_paths",
+  },
+  {
     name: "RUST-01-ignore-return-solo",
     file: "crates/engine/src/mix/solo.rs",
     from: "if !selected.iter().any(|selected| *selected) {",
@@ -88,7 +99,12 @@ function run(mutation) {
   })
 }
 
-for (const mutation of mutations) {
+const requested = process.argv.slice(2)
+const selected = mutations.filter(
+  mutation => requested.length === 0 || requested.some(name => mutation.name.includes(name))
+)
+if (selected.length === 0) throw new Error(`No mutation matches: ${requested.join(", ")}`)
+for (const mutation of selected) {
   const baseline = run(mutation)
   if (baseline.status !== 0)
     throw new Error(`Baseline failed: ${mutation.name}\n${baseline.stdout}${baseline.stderr}`)
