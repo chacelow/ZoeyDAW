@@ -17,6 +17,7 @@ DAW，使用 gpuix 原生应用：`apps/gpuix`（React 逻辑 + gpuix 原生元�
 | 协调者会话、派发切片、review 与合入、决策权 | [gpuix 重构的协调方式](docs/agents/coordination.md) |
 | 命令、工具链、HMR、原生重启或提交 | [setup](docs/agents/setup.md) |
 | 新模块、多文件修改、状态/目录/依赖调整 | [modules](docs/architecture/modules.md) |
+| 任何颜色、尺寸、间距、字体、动效、文案、默认值、阈值、快捷键（不写死，统一来源） | [统一配置契约](docs/architecture/configuration.md) |
 | 工程数据、编辑事务、保存或后端接口 | `apps/gpuix/src/project/stores/README.md` 与 `apps/gpuix/src/project/adapters/README.md` |
 | 产品范围、长期功能清单、Rust/插件/文件格式方向 | [产品范围](docs/product-prototype.md) |
 
