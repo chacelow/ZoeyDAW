@@ -40,18 +40,6 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
   let lane: LaneController
   const unsubscribeGlobal = deps.keyboard.subscribe("keyDown", event => {
     windowKey = event.keystrokeId
-    if (event.defaultPrevented || deps.interaction.isModalOpen()) return
-    const modifiers = event.modifiers
-    if (
-      event.key?.toLowerCase() !== "f" ||
-      !(modifiers?.cmd || modifiers?.ctrl) ||
-      modifiers.alt ||
-      modifiers.shift ||
-      deps.browserCollapsed()
-    )
-      return
-    event.preventDefault()
-    if (!event.isHeld) deps.focusBrowserSearch()
   })
   const timeline = createTimelineController({
     sceneStore,
@@ -66,6 +54,7 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
         return "timeline"
       },
       blurControl: deps.blurControl,
+      browserSearch: { available: () => !deps.browserCollapsed(), focus: deps.focusBrowserSearch },
       claim: event =>
         lane.keyDown({
           key: event.key ?? "",

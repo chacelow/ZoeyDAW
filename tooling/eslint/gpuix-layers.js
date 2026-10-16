@@ -114,6 +114,19 @@ const LAYERS = [
     forbidGlobals: true,
   },
   {
+    name: "shared/keyboard",
+    match: /\/apps\/gpuix\/src\/shared\/keyboard\//u,
+    forbidPackages: [
+      /^react(?:\/|$)/u,
+      /^react-dom(?:\/|$)/u,
+      /^zustand(?:\/|$)/u,
+      /^@gpuix\//u,
+      /^@zoeydaw\/native(?:\/|$)/u,
+    ],
+    forbidLayers: ["project", "ui", "platform", "app", "shared/theme"],
+    forbidGlobals: true,
+  },
+  {
     name: "shared/theme",
     match: /\/apps\/gpuix\/src\/shared\//u,
     forbidPackages: [/^react-dom(?:\/|$)/u, /^zustand(?:\/|$)/u, /^@zoeydaw\/native(?:\/|$)/u],
@@ -132,6 +145,7 @@ const LAYER_ROOTS = [
   ["project", "/apps/gpuix/src/project"],
   ["ui", "/apps/gpuix/src/ui"],
   ["platform", "/apps/gpuix/src/platform"],
+  ["shared/keyboard", "/apps/gpuix/src/shared/keyboard"],
   ["shared/theme/metrics", "/apps/gpuix/src/shared/theme/metrics"],
   ["shared/theme", "/apps/gpuix/src/shared"],
   ["app", "/apps/gpuix/src/app"],

@@ -1,4 +1,4 @@
-import type { EventPayload, Props, PublicInstance } from "@gpuix/react"
+import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { FloatingContentProps } from "@gpuix/react/floating"
 import type { RefObject } from "react"
 
@@ -54,6 +54,7 @@ export interface MenuState {
   setOpen: (open: boolean) => void
   closeAll: () => void
   trigger: RefObject<PublicInstance | null>
+  triggerKeyDown: RefObject<((event: KeyEvent) => void) | null>
   entries: Map<number, MenuEntry>
   surfaces: Map<number, PublicInstance>
   initialEdge: RefObject<EntryEdge>

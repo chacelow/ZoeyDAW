@@ -1,7 +1,8 @@
 import { useGpuix } from "@gpuix/react"
 import { renderSlot, setRefs } from "@gpuix/react/floating"
-import { isValidElement, useCallback, useRef } from "react"
+import { isValidElement, useCallback, useLayoutEffect, useRef } from "react"
 import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
+import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { useMenu } from "./context"
@@ -36,6 +37,42 @@ export function MenuTrigger({
     },
     [menu.surfaces, menu.trigger, ref]
   )
+  useLayoutEffect(() => {
+    const handler = (event: KeyEvent) => {
+      if (unavailable || event.defaultPrevented) return
+      const target = renderer?.getFocusedElementId?.()
+      const key = event.key?.toLowerCase()
+      const contextShortcut =
+        menu.contextMenu && ((key === "f10" && event.modifiers?.shift) || key === "contextmenu")
+      if (!contextShortcut && target !== menu.trigger.current?.id) return
+      if (
+        (!menu.contextMenu &&
+          (key === "enter" ||
+            key === "down" ||
+            key === "arrowdown" ||
+            key === "up" ||
+            key === "arrowup")) ||
+        (key === "f10" && event.modifiers?.shift) ||
+        key === "contextmenu"
+      ) {
+        if (lastActivation.current === event) return
+        consumeKey(event, "handled")
+        lastActivation.current = event
+        menu.initialEdge.current = key === "up" || key === "arrowup" ? "last" : "first"
+        menu.setPointer(null)
+        menu.setOpen(key === "enter" ? !menu.open : true)
+        if (menu.open && key !== "enter")
+          focusEntry(menu.entries, renderer, menu.initialEdge.current)
+      } else if (menu.open && (key === "escape" || key === "esc")) {
+        navigate(menu, renderer, event)
+      }
+    }
+    const owner = menu.triggerKeyDown
+    owner.current = handler
+    return () => {
+      if (owner.current === handler) owner.current = null
+    }
+  }, [menu, renderer, unavailable])
   const slotProps = {
     ...props,
     role: props.role ?? "button",
@@ -77,39 +114,14 @@ export function MenuTrigger({
       onClick?.(event)
       if (lastActivation.current === event) return
       lastActivation.current = event
+      if (event.key === "enter") {
+        menu.initialEdge.current = "first"
+        menu.setPointer(null)
+      }
       if (!menu.contextMenu) menu.setOpen(!menu.open)
     },
     onKeyDown: (event: KeyEvent) => {
-      if (unavailable) return
-      const target = renderer?.getFocusedElementId?.()
-      onKeyDown?.(event)
-      if (event.defaultPrevented) return
-      const key = event.key?.toLowerCase()
-      const contextShortcut =
-        menu.contextMenu && ((key === "f10" && event.modifiers?.shift) || key === "contextmenu")
-      if (!contextShortcut && target !== menu.trigger.current?.id) return
-      if (
-        (!menu.contextMenu &&
-          (key === "enter" ||
-            key === "down" ||
-            key === "arrowdown" ||
-            key === "up" ||
-            key === "arrowup")) ||
-        (key === "f10" && event.modifiers?.shift) ||
-        key === "contextmenu"
-      ) {
-        if (lastActivation.current === event) return
-        event.preventDefault()
-        event.stopPropagation()
-        lastActivation.current = event
-        menu.initialEdge.current = key === "up" || key === "arrowup" ? "last" : "first"
-        menu.setPointer(null)
-        menu.setOpen(key === "enter" ? !menu.open : true)
-        if (menu.open && key !== "enter")
-          focusEntry(menu.entries, renderer, menu.initialEdge.current)
-      } else if (menu.open && (key === "escape" || key === "esc")) {
-        navigate(menu, renderer, event)
-      }
+      if (!unavailable) onKeyDown?.(event)
     },
   } satisfies Props & {
     disabled: boolean

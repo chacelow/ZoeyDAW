@@ -1,5 +1,13 @@
 import { createContext, useContext } from "react"
 
+export { consumeKey } from "@/shared/keyboard"
+export type { CommandResult } from "@/shared/keyboard"
+export { COMMAND_IDS, createCommandRegistry } from "./commands"
+export type { CommandId, CommandInput, CommandHandler, CommandDefinition } from "./commands"
+export { createKeymap, normalizeKey } from "./keymap"
+export type { KeyBinding, Keymap, KeyboardContext, KeyboardFocus, ContextPredicate } from "./keymap"
+export { DEFAULT_BINDINGS, DEFAULT_KEYMAP, COMPUTER_NOTE_KEYS } from "./default-keymap"
+
 /** Structural port: the application root injects renderer callbacks, not a renderer singleton. */
 export interface WindowKeyEvent {
   readonly key?: string
