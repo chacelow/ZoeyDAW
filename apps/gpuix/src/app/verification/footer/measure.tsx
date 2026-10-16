@@ -1,3 +1,5 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
+import { ControlEnvironmentProvider } from "@/ui/controls"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { writeFileSync } from "node:fs"
 import { useState } from "react"
@@ -111,7 +113,9 @@ for (const entry of cases) {
   try {
     root.render(
       <ThemeProvider>
-        <AnimationFrameProvider source={frames}>{entry.content}</AnimationFrameProvider>
+        <ControlEnvironmentProvider value={{ inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}>
+          <AnimationFrameProvider source={frames}>{entry.content}</AnimationFrameProvider>
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
     root.renderer.flush()

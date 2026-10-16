@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider, Button } from "@/ui/controls"
+import { TEST_INPUT_POLICY } from "@/ui/controls/DragPad/input-policy.test-fixture"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -20,7 +22,6 @@ import type { ArrangementViewport } from "../../core/scene"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createControlledFrames } from "../verification/frame-source"
-import { Button } from "@/ui/controls"
 import type { TrackRowsProps } from "../TrackRows"
 import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
 
@@ -68,25 +69,27 @@ function Surface({
   return (
     <AnimationFrameProvider source={controlledFrames.source}>
       <ThemeProvider key={appearance} defaultAppearance={appearance}>
-        <div style={{ position: "relative", width: "100%", height: "100%" }}>
-          <TrackRows
-            scene={scene}
-            viewport={acceptedViewport}
-            focusedTrackId={focusedTrackId}
-            telemetry={readProjectTelemetry}
-            labels={trackLabelsByLocale["en-US"]}
-            onFocusTrack={id => {
-              if (!useProjectState.getState().session.selectedTrackIds.includes(id))
-                projectActions.selectTracks([id], "header")
-            }}
-            renderLane={renderLane}
-          />
-          <TrackResizeOverlay
-            scene={scene}
-            viewport={acceptedViewport}
-            labels={trackLabelsByLocale["en-US"]}
-          />
-        </div>
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <TrackRows
+              scene={scene}
+              viewport={acceptedViewport}
+              focusedTrackId={focusedTrackId}
+              telemetry={readProjectTelemetry}
+              labels={trackLabelsByLocale["en-US"]}
+              onFocusTrack={id => {
+                if (!useProjectState.getState().session.selectedTrackIds.includes(id))
+                  projectActions.selectTracks([id], "header")
+              }}
+              renderLane={renderLane}
+            />
+            <TrackResizeOverlay
+              scene={scene}
+              viewport={acceptedViewport}
+              labels={trackLabelsByLocale["en-US"]}
+            />
+          </div>
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     </AnimationFrameProvider>
   )

@@ -40,6 +40,9 @@ export interface DisplayConfig {
   widthSamples: Record<NumericKind | "pan" | "panAutomation" | "parameter" | "audioGain", string[]>
 }
 
+// C/L/R are stable pan notation, not translated natural-language labels.
+const PAN_SYMBOLS = { center: "C", left: "L", right: "R" }
+
 function config(
   pan: Pick<DisplayConfig["pan"], "center" | "left" | "right">,
   pixels: string
@@ -108,6 +111,6 @@ function config(
 }
 
 export const displayConfigByLocale: Record<SupportedLocale, DisplayConfig> = {
-  "en-US": config({ center: "C", left: "L", right: "R" }, "px"),
-  "zh-CN": config({ center: "中", left: "左", right: "右" }, "像素"),
+  "en-US": config(PAN_SYMBOLS, "px"),
+  "zh-CN": config(PAN_SYMBOLS, "像素"),
 }

@@ -380,6 +380,20 @@ const mutations = [
     tests: ["src/app/project/creation-source.test.tsx"],
   },
   {
+    name: "C4 Chinese pan translates protocol notation",
+    file: "src/app/locales/display.ts",
+    from: '"zh-CN": config(PAN_SYMBOLS, "像素")',
+    to: '"zh-CN": config({ center: "中", left: "左", right: "右" }, "像素")',
+    tests: ["src/app/i18n/display-formats.test.ts"],
+  },
+  {
+    name: "C4 pan parser ignores configured separator",
+    file: "src/app/i18n/display-formats.ts",
+    from: "const value = magnitude.slice(separator.length).trim()",
+    to: "const value = magnitude",
+    tests: ["src/app/i18n/display-formats.test.ts"],
+  },
+  {
     name: "C4 duration ignores locale hour policy",
     file: "src/app/i18n/display-formats.ts",
     from: "const includeHours = config.duration.includeHours[variant]",
@@ -463,6 +477,27 @@ const mutations = [
     to: "horizontalZoom * 2 ** direction",
     tests: ["src/project/sections/clip-edit/preferences.test.tsx"],
   },
+  ...[
+    [
+      "drag ratio",
+      "dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep",
+      "dragPixelsPerStep: 4",
+    ],
+    ["wheel ratio", "wheelPixelsPerStep: inputPolicy.wheelPixelsPerStep", "wheelPixelsPerStep: 16"],
+    ["line conversion", "wheelLinePixels: inputPolicy.wheelLinePixels", "wheelLinePixels: 16"],
+    ["activation threshold", "anchor.inputPolicy.dragThresholdPixels", "3"],
+    [
+      "gesture snapshot",
+      "dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep",
+      "dragPixelsPerStep: inputPolicy?.dragPixelsPerStep ?? anchor.inputPolicy.dragPixelsPerStep",
+    ],
+  ].map(([name, from, to]) => ({
+    name: `C4 shared input bypasses ${name}`,
+    file: "src/ui/controls/DragPad/useDragPad.ts",
+    from,
+    to,
+    tests: ["src/app/control-input.test.tsx"],
+  })),
   {
     name: "C4 MIDI loop step ignores its independent preference",
     file: "src/project/sections/clip-edit/midi/MidiEditor.tsx",

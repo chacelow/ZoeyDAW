@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../ControlEnvironment"
+import { TEST_INPUT_POLICY } from "./input-policy.test-fixture"
 import { describe, expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
@@ -17,28 +19,30 @@ function mount({
     const [value, setValue] = useState(initial)
     return (
       <ThemeProvider>
-        <DragPadNumber
-          label="Precision"
-          testId="precision"
-          value={value}
-          min={min}
-          max={max}
-          step={0.01}
-          dragStep={dragStep}
-          onChange={next => {
-            latest = next
-            setValue(next)
-          }}
-          onGestureStart={() => {
-            gestures.push("start")
-          }}
-          onGestureEnd={() => {
-            gestures.push("end")
-          }}
-          onGestureCancel={() => {
-            gestures.push("cancel")
-          }}
-        />
+        <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+          <DragPadNumber
+            label="Precision"
+            testId="precision"
+            value={value}
+            min={min}
+            max={max}
+            step={0.01}
+            dragStep={dragStep}
+            onChange={next => {
+              latest = next
+              setValue(next)
+            }}
+            onGestureStart={() => {
+              gestures.push("start")
+            }}
+            onGestureEnd={() => {
+              gestures.push("end")
+            }}
+            onGestureCancel={() => {
+              gestures.push("cancel")
+            }}
+          />
+        </ControlEnvironmentProvider>
       </ThemeProvider>
     )
   }

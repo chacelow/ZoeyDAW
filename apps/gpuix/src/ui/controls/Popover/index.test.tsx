@@ -1,3 +1,5 @@
+import { ControlEnvironmentProvider } from "../ControlEnvironment"
+import { TEST_INPUT_POLICY } from "../DragPad/input-policy.test-fixture"
 import { afterEach, describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
@@ -21,7 +23,13 @@ afterEach(() => {
 function mount(children: ReactNode, width = 640, height = 400) {
   const root = createTestRoot({ width, height })
   roots.push(root)
-  root.render(<ThemeProvider>{children}</ThemeProvider>)
+  root.render(
+    <ThemeProvider>
+      <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
+        {children}
+      </ControlEnvironmentProvider>
+    </ThemeProvider>
+  )
   root.renderer.flush()
   return root
 }

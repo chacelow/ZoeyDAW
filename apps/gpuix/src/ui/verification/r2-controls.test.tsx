@@ -1,3 +1,4 @@
+import { TEST_INPUT_POLICY } from "../controls/DragPad/input-policy.test-fixture"
 import { afterEach, expect, test } from "bun:test"
 import { useState } from "react"
 import type { ReactNode } from "react"
@@ -200,6 +201,7 @@ function padHost() {
   const cursor = { visible: true, x: 0, y: 0 }
   const values = { current: 120, gesture: "idle" }
   const environment = {
+    inputPolicy: TEST_INPUT_POLICY,
     subscribeWindowActive(listener: (active: boolean) => void) {
       listeners.add(listener)
       return () => {

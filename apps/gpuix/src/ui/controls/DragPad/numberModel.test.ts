@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { DRAG_PIXELS_PER_STEP, WHEEL_PIXELS_PER_STEP } from "./constants"
+import { TEST_INPUT_POLICY } from "./input-policy.test-fixture"
 import { clamp, formatNumericValue, quantize, valueAfterDrag, valueAfterWheel } from "./numberModel"
 
 describe("clamp", () => {
@@ -46,15 +46,30 @@ describe("valueAfterDrag", () => {
   test("maps distance × step, not absolute position", () => {
     // Two drags that start from different values but travel the same
     // distance produce the same step delta.
-    const a = valueAfterDrag({ startValue: 10, deltaY: -40, step: 1, min: 0, max: 1000 })
-    const b = valueAfterDrag({ startValue: 500, deltaY: -40, step: 1, min: 0, max: 1000 })
+    const a = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
+      startValue: 10,
+      deltaY: -40,
+      step: 1,
+      min: 0,
+      max: 1000,
+    })
+    const b = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
+      startValue: 500,
+      deltaY: -40,
+      step: 1,
+      min: 0,
+      max: 1000,
+    })
     expect(a - 10).toBe(b - 500)
   })
 
   test("dragging up (negative deltaY) increases the value", () => {
     const next = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
       startValue: 10,
-      deltaY: -DRAG_PIXELS_PER_STEP * 3,
+      deltaY: -TEST_INPUT_POLICY.dragPixelsPerStep * 3,
       step: 1,
       min: 0,
       max: 1000,
@@ -64,8 +79,9 @@ describe("valueAfterDrag", () => {
 
   test("dragging down decreases the value", () => {
     const next = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
       startValue: 10,
-      deltaY: DRAG_PIXELS_PER_STEP * 3,
+      deltaY: TEST_INPUT_POLICY.dragPixelsPerStep * 3,
       step: 1,
       min: 0,
       max: 1000,
@@ -76,6 +92,7 @@ describe("valueAfterDrag", () => {
   test("is linear: doubling the distance exactly doubles the delta (no velocity damping)", () => {
     const start = 0
     const short = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
       startValue: start,
       deltaY: -40,
       step: 1,
@@ -83,6 +100,7 @@ describe("valueAfterDrag", () => {
       max: 10_000,
     })
     const long = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
       startValue: start,
       deltaY: -80,
       step: 1,
@@ -93,8 +111,16 @@ describe("valueAfterDrag", () => {
   })
 
   test("uses the same pixel scale for a small-range control as a large-range one", () => {
-    const smallRange = valueAfterDrag({ startValue: 0, deltaY: -40, step: 0.01, min: -1, max: 1 })
+    const smallRange = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
+      startValue: 0,
+      deltaY: -40,
+      step: 0.01,
+      min: -1,
+      max: 1,
+    })
     const largeRange = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
       startValue: 0,
       deltaY: -40,
       step: 0.01,
@@ -105,7 +131,14 @@ describe("valueAfterDrag", () => {
   })
 
   test("clamps at the range boundary", () => {
-    const next = valueAfterDrag({ startValue: 99, deltaY: -1000, step: 1, min: 0, max: 100 })
+    const next = valueAfterDrag({
+      ...TEST_INPUT_POLICY,
+      startValue: 99,
+      deltaY: -1000,
+      step: 1,
+      min: 0,
+      max: 100,
+    })
     expect(next).toBe(100)
   })
 })
@@ -113,6 +146,7 @@ describe("valueAfterDrag", () => {
 describe("valueAfterWheel", () => {
   test("scrolling toward later content (negative GPUI deltaY) decreases the value", () => {
     const next = valueAfterWheel({
+      ...TEST_INPUT_POLICY,
       currentValue: 10,
       deltaY: -16,
       precise: true,
@@ -125,6 +159,7 @@ describe("valueAfterWheel", () => {
 
   test("scrolling toward earlier content (positive GPUI deltaY) increases the value", () => {
     const next = valueAfterWheel({
+      ...TEST_INPUT_POLICY,
       currentValue: 10,
       deltaY: 16,
       precise: true,
@@ -137,6 +172,7 @@ describe("valueAfterWheel", () => {
 
   test("a line-based wheel notch scales deltaY before converting to steps", () => {
     const preciseResult = valueAfterWheel({
+      ...TEST_INPUT_POLICY,
       currentValue: 0,
       deltaY: 16,
       precise: true,
@@ -145,6 +181,7 @@ describe("valueAfterWheel", () => {
       max: 100,
     })
     const lineResult = valueAfterWheel({
+      ...TEST_INPUT_POLICY,
       currentValue: 0,
       deltaY: 1,
       precise: false,
@@ -163,7 +200,15 @@ describe("valueAfterWheel", () => {
         for (let index = -20; index <= 20; index++) {
           const currentValue = index * step
           for (const deltaY of [-1600, -80, -16, -1, 0, 1, 16, 80, 1600]) {
-            const next = valueAfterWheel({ currentValue, deltaY, precise, step, min, max })
+            const next = valueAfterWheel({
+              ...TEST_INPUT_POLICY,
+              currentValue,
+              deltaY,
+              precise,
+              step,
+              min,
+              max,
+            })
             expect(next).toBeGreaterThanOrEqual(min)
             expect(next).toBeLessThanOrEqual(max)
             expect(next / step).toBeCloseTo(Math.round(next / step), 8)
@@ -179,16 +224,18 @@ describe("valueAfterWheel", () => {
   test("wheel sensitivity stays step-based across ranges in both directions", () => {
     for (const direction of [-1, 1]) {
       const small = valueAfterWheel({
+        ...TEST_INPUT_POLICY,
         currentValue: 0,
-        deltaY: direction * WHEEL_PIXELS_PER_STEP,
+        deltaY: direction * TEST_INPUT_POLICY.wheelPixelsPerStep,
         precise: true,
         step: 0.01,
         min: -1,
         max: 1,
       })
       const large = valueAfterWheel({
+        ...TEST_INPUT_POLICY,
         currentValue: 0,
-        deltaY: direction * WHEEL_PIXELS_PER_STEP,
+        deltaY: direction * TEST_INPUT_POLICY.wheelPixelsPerStep,
         precise: true,
         step: 1,
         min: -1000,

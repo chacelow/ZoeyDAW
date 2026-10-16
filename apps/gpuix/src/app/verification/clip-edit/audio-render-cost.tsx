@@ -1,3 +1,5 @@
+import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
+import { ControlEnvironmentProvider } from "@/ui/controls"
 import { spyOn } from "bun:test"
 import { initializeVerificationProject } from "../project-creation"
 import { mkdirSync, writeFileSync } from "node:fs"
@@ -77,18 +79,20 @@ try {
   if (!track) throw new Error("Missing audio track")
   root.render(
     <ThemeProvider>
-      <div style={{ display: "flex", width: 1100, height: 420 }}>
-        <ClipEditor
-          clipId={ids.audio}
-          trackId={track.id}
-          close={() => {
-            throw new Error("Unexpected close")
-          }}
-          labels={demoLabels.en}
-          readPeaks={readProjectPeaks}
-          environment={environment}
-        />
-      </div>
+      <ControlEnvironmentProvider value={{ inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}>
+        <div style={{ display: "flex", width: 1100, height: 420 }}>
+          <ClipEditor
+            clipId={ids.audio}
+            trackId={track.id}
+            close={() => {
+              throw new Error("Unexpected close")
+            }}
+            labels={demoLabels.en}
+            readPeaks={readProjectPeaks}
+            environment={environment}
+          />
+        </div>
+      </ControlEnvironmentProvider>
     </ThemeProvider>
   )
   root.renderer.flush()
