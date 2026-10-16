@@ -15,5 +15,5 @@
     "resume-frame.patch",
     "aria-toggled.patch"
   ],
-  "zedPatches": ["zed-production-no-sync-draw.patch"]
+  "zedPatches": ["zed-production-no-sync-draw.patch", "zed-offscreen-window-bounds.patch"]
 }
