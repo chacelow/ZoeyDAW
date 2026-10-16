@@ -94,24 +94,7 @@ for (const file of code) {
   }
   if (/from "(\.\.\/){3,}/.test(text))
     add("deep-relative-import", file, "use the @/ alias (eslint --fix)")
-  if (
-    /["'`]#[0-9a-fA-F]{3,8}["'`]|["'`](?:rgba?|oklch|hsla?)\(/.test(text) &&
-    !/shared\/theme|\/tokens?\./.test(file)
-  ) {
-    add("color-literal", file, "colour literal: take colours from useTheme()")
-  }
-  const px = [
-    ...text.matchAll(
-      /\b(?:gap|padding\w*|margin\w*|width|height|fontSize|borderRadius)\s*:\s*(\d{2,})\b/g
-    ),
-  ]
-  // Token owner files are where literal pixel values belong, same exemption as colour literals.
-  if (px.length && !/shared\/theme|\/tokens?\./.test(file))
-    add(
-      "px-literal",
-      file,
-      `${px.length} raw pixel value(s) like ${px[0][0]}: use CONTROL_METRICS/PROJECT_METRICS/theme tokens`
-    )
+  // Configuration literals are AST-checked once by architecture/gpuix-config-* through eslint.
   if (/\bas any\b|: any\b|<any>/.test(text)) add("any", file, "avoid any: type the boundary")
   if (
     /\bmock\w*\(|createMock|simulat/i.test(text) &&

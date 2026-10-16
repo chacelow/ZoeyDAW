@@ -4,6 +4,9 @@ import {
   gpuixLayers,
   gpuixImports,
   gpuixLessons,
+  gpuixConfigColors,
+  gpuixConfigNumbers,
+  gpuixConfigText,
   correctnessProfile,
 } from "./tooling/eslint/index.js"
 
@@ -12,6 +15,9 @@ const localRules = {
     "gpuix-layers": gpuixLayers,
     "gpuix-imports": gpuixImports,
     "gpuix-lessons": gpuixLessons,
+    "gpuix-config-colors": gpuixConfigColors,
+    "gpuix-config-numbers": gpuixConfigNumbers,
+    "gpuix-config-text": gpuixConfigText,
   },
 }
 
@@ -116,6 +122,9 @@ export default [
       "architecture/gpuix-layers": "error",
       "architecture/gpuix-imports": "error",
       "architecture/gpuix-lessons": "error",
+      "architecture/gpuix-config-colors": "error",
+      "architecture/gpuix-config-numbers": "error",
+      "architecture/gpuix-config-text": "error",
     },
   },
   {
