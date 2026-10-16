@@ -62,7 +62,7 @@ export function DropdownButton<T extends string = string>({
   icon,
   side = "bottom",
   align = "start",
-  sideOffset = 4,
+  sideOffset,
   matchTriggerWidth = true,
   fill = false,
   style,
@@ -90,8 +90,8 @@ export function DropdownButton<T extends string = string>({
   const display = renderValue ? renderValue(selected) : (selected?.label ?? value)
   const contentStyle: StyleDesc = {
     minWidth: matchTriggerWidth ? width : theme.project.dropdownMinWidth,
-    maxWidth: 320,
-    maxHeight: 300,
+    maxWidth: theme.design.menu.maxWidth,
+    maxHeight: theme.design.menu.maxHeight,
     overflowY: "scroll",
     padding: theme.design.menu.inset,
     display: "flex",
@@ -162,7 +162,7 @@ export function DropdownButton<T extends string = string>({
         aria-label={label}
         side={side}
         align={align}
-        sideOffset={sideOffset}
+        sideOffset={sideOffset ?? theme.design.overlay.sideOffset}
         style={contentStyle}
         onKeyDown={event => {
           if (event.key === "enter" || event.key === "space") consumeKey(event, "handled")
@@ -174,10 +174,10 @@ export function DropdownButton<T extends string = string>({
               <SelectSeparator
                 key={item.id}
                 style={{
-                  height: 1,
+                  height: theme.design.shape.separatorWidth,
                   backgroundColor: theme.colors.border,
-                  marginTop: 3,
-                  marginBottom: 3,
+                  marginTop: theme.design.menu.dropdownSeparatorInset,
+                  marginBottom: theme.design.menu.dropdownSeparatorInset,
                 }}
               />
             ) : (
@@ -216,7 +216,7 @@ export function DropdownButton<T extends string = string>({
                 color: state.selected
                   ? theme.colors.primaryForeground
                   : theme.colors.popoverForeground,
-                opacity: state.disabled ? 0.5 : 1,
+                opacity: state.disabled ? theme.design.states.disabledOpacity : 1,
               })}
             >
               <text style={{ flexGrow: 1, whiteSpace: "normal" }}>{item.label}</text>

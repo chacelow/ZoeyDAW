@@ -180,8 +180,8 @@ export function PopoverContent({
   side = "bottom",
   align = "center",
   alignOffset = 0,
-  sideOffset = 4,
-  collisionPadding = 8,
+  sideOffset: providedSideOffset,
+  collisionPadding: providedCollisionPadding,
   onMouseDownOutside,
   onKeyDown,
   style,
@@ -190,6 +190,8 @@ export function PopoverContent({
 }: PopoverContentProps) {
   const popover = usePopover()
   const theme = useTheme()
+  const sideOffset = providedSideOffset ?? theme.design.overlay.sideOffset
+  const collisionPadding = providedCollisionPadding ?? theme.design.overlay.collisionPadding
   const { renderer } = useGpuix()
   const viewport = useWindowSize()
   const surface = useRef<PublicInstance | null>(null)
@@ -210,7 +212,7 @@ export function PopoverContent({
       display: "flex",
       flexDirection: "column",
       gap: theme.design.popover.gap,
-      width: theme.control["--spacing-control-track"] * 12,
+      width: theme.design.popover.width,
       padding: theme.design.popover.inset,
       borderWidth: theme.design.popover.borderWidth,
       borderColor: theme.colors.border,
@@ -303,7 +305,7 @@ export function PopoverTitle({ style, ...props }: PopoverTitleProps) {
       style={sx(
         {
           fontSize: theme.control["--text-control-track"],
-          fontWeight: 600,
+          fontWeight: theme.design.typography.weights.semibold,
           color: theme.colors.popoverForeground,
           whiteSpace: "normal",
         },

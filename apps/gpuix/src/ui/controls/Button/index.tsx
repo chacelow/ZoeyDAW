@@ -1,7 +1,6 @@
 import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sv, sx } from "@/shared/theme/style"
-import { colorMix } from "@/shared/theme/color-mix"
 import { controlChrome } from "../chrome"
 import { IconSlot } from "../IconSlot"
 import { useInfoBinding } from "../ControlEnvironment"
@@ -48,12 +47,10 @@ export function Button({
   const info = useInfoBinding({ type: "button" })
   const name = label ?? props["aria-label"] ?? (typeof children === "string" ? children : undefined)
   const activeDestructive = active && variant === "destructive"
-  const destructiveBackground = activeDestructive
-    ? colorMix(theme.colors.destructive, theme.appearance === "dark" ? 20 : 10, "transparent")
-    : undefined
+  const destructiveBackground = activeDestructive ? theme.colors.destructiveActive : undefined
   const destructiveHighlight =
     activeDestructive && highlight && !disabled
-      ? colorMix(theme.colors.destructive, theme.appearance === "dark" ? 30 : 20, "transparent")
+      ? theme.colors.destructiveHighlight
       : destructiveBackground
   const appearances = sv({
     variants: {
@@ -94,13 +91,9 @@ export function Button({
       hover: { backgroundColor: destructiveHighlight, color: theme.colors.destructive },
       active: { backgroundColor: destructiveHighlight, color: theme.colors.destructive },
       focusVisible: {
-        borderColor: colorMix(theme.colors.destructive, 40, "transparent"),
+        borderColor: theme.colors.destructiveFocusBorder,
         outlineWidth: theme.design.shape.focusRingWidth,
-        outlineColor: colorMix(
-          theme.colors.destructive,
-          theme.appearance === "dark" ? 40 : 20,
-          "transparent"
-        ),
+        outlineColor: theme.colors.destructiveFocusOutline,
         outlineOffset: -theme.design.shape.focusRingWidth,
       },
     }

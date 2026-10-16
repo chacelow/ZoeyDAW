@@ -84,6 +84,7 @@ for (const file of code) {
     add("file-size", file, `${lines.length} lines (>600): split by responsibility`)
   if (
     !file.endsWith("shared/svg/serialise.ts") &&
+    file !== "apps/gpuix/src/ui/controls/Icon/index.tsx" &&
     /<(svg|path|circle|rect|polyline|polygon|line|ellipse)[\s>]/i.test(text)
   ) {
     add("hand-written-svg", file, "SVG literal: use <Icon/> (lucide) or d3-shape + serialiseSvg")

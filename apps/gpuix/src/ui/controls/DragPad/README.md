@@ -1,8 +1,10 @@
 # Native DragPad family
 
-`DragPadNumber`、`DragPadBar`、`DragPadBipolar` 共享 `NumericPad` 外壳、`useDragPad` 状态机和 `DRAG_PIXELS_PER_STEP = 4`。`PanControl` 是 bipolar 的 −1..1、0.01 步进格式化适配。`DragPadToggle` 复用 Button 的激活与键盘行为，不启动拖动。
+`DragPadNumber`、`DragPadBar`、`DragPadBipolar` 共享 `NumericPad` 外壳、`useDragPad` 状态机和 `DRAG_PIXELS_PER_STEP = 4`。`PanControl` 固定 bipolar 的 −1..1 范围、0.01 步进和归零值，显示与输入格式由调用方持有。`DragPadToggle` 复用 Button 的激活与键盘行为，不启动拖动。
 
 - 数值由消费者持有。拖动锚点、预编辑、输入草稿只属于短生命周期 UI 状态。
+- `PanControl` 必须注入 `label`、`format`、`parse` 和 `widthSamples`；显示、输入与测宽使用同一份业务格式配置，共享控件不定义方向文字或解析别名。
+- `DragPadToggle` 的纯文字状态必须成对注入 `labelOn`/`labelOff`；提供显式 `icon` 或 `children` 时不需要状态文字，不内置默认文案。
 - 上拖 40px 改变 10 个 `dragStep`，与 range、横向距离和 move 分段无关。`dragStep` 默认等于 `step`；拖动每步 4px，滚轮每步等效 16px，不改变共享比例。
 - 点击进入 `preEdit`，数字字符进入 live editing；Enter 直接开始/提交编辑；Escape 撤销，失焦提交。
 - 方向键按 step 调整；双击还原 defaultValue。拖动 Escape/失焦取消；卸载释放光标和手势资源。

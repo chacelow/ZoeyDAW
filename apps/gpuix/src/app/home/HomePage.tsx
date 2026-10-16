@@ -60,7 +60,10 @@ export function HomePage({ storage }: HomePageProps) {
           <div
             role="heading"
             aria-level={1}
-            style={{ fontSize: theme.transportControl["--text-control-track"], fontWeight: 600 }}
+            style={{
+              fontSize: theme.transportControl["--text-control-track"],
+              fontWeight: theme.design.typography.weights.semibold,
+            }}
           >
             {t("home.title")}
           </div>
@@ -95,10 +98,12 @@ export function HomePage({ storage }: HomePageProps) {
                   aria-label={project.name}
                   onClick={() => open(project)}
                   style={{
-                    width: theme.layout.track.controlsWidth,
+                    width: theme.layout.home.recentCardWidth,
                   }}
                 >
-                  <text style={{ fontWeight: 500 }}>{project.name}</text>
+                  <text style={{ fontWeight: theme.design.typography.weights.medium }}>
+                    {project.name}
+                  </text>
                   <text style={{ color: theme.colors.mutedForeground }}>
                     {formatTime.format(project.openedAt)}
                   </text>

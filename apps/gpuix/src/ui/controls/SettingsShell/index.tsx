@@ -43,7 +43,7 @@ export function SettingsNavItem({
       paddingLeft: theme.design.settings.paddingInline,
       paddingRight: theme.design.settings.paddingInline,
       borderRadius: theme.design.shape.controlRadius,
-      cursor: "pointer",
+      cursor: theme.design.cursors.action,
       userSelect: "none",
       keyboardFocusDim: false,
       focusVisible: item.disabled
@@ -61,8 +61,8 @@ export function SettingsNavItem({
       },
       disabled: {
         true: {
-          opacity: 0.5,
-          cursor: "not-allowed",
+          opacity: theme.design.states.disabledOpacity,
+          cursor: theme.design.cursors.disabled,
           hover: { backgroundColor: selected ? theme.colors.primary : "transparent" },
           active: { backgroundColor: selected ? theme.colors.primary : "transparent" },
         },
@@ -120,8 +120,8 @@ export interface SettingsShellProps extends Omit<Props, "children"> {
   renderPane?: (id: string) => ReactNode
   contentStyle?: StyleDesc
   navigationWidth?: number
-  closeLabel?: string
-  navigationLabel?: string
+  closeLabel: string
+  navigationLabel: string
 }
 export function SettingsShell({
   open,
@@ -134,9 +134,9 @@ export function SettingsShell({
   children,
   renderPane,
   contentStyle,
-  navigationWidth = 168,
-  closeLabel = "Close settings",
-  navigationLabel = "Settings sections",
+  navigationWidth,
+  closeLabel,
+  navigationLabel,
   style,
   onKeyDown,
   ...props
@@ -156,8 +156,8 @@ export function SettingsShell({
         {
           display: "flex",
           flexDirection: "column",
-          width: 720,
-          height: 520,
+          width: theme.design.settings.shellWidth,
+          height: theme.design.settings.shellHeight,
           backgroundColor: theme.colors.background,
           color: theme.colors.foreground,
           borderWidth: theme.design.popover.borderWidth,
@@ -198,7 +198,10 @@ export function SettingsShell({
           <div
             role="heading"
             aria-level={1}
-            style={{ fontSize: theme.control["--text-control-track"], fontWeight: 600 }}
+            style={{
+              fontSize: theme.control["--text-control-track"],
+              fontWeight: theme.design.typography.weights.semibold,
+            }}
           >
             {title}
           </div>
@@ -227,7 +230,7 @@ export function SettingsShell({
           style={{
             display: "flex",
             flexDirection: "column",
-            width: navigationWidth,
+            width: navigationWidth ?? theme.design.settings.navigationWidth,
             flexShrink: 0,
             gap: theme.design.settings.navigationGap,
             padding: theme.design.settings.navigationInset,

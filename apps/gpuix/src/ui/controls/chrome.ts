@@ -24,7 +24,7 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
       backgroundColor: theme.colors.muted,
       color: theme.colors.foreground,
       fontSize: metrics["--text-control-track"],
-      cursor: "pointer",
+      cursor: theme.design.cursors.action,
       userSelect: "none",
       keyboardFocusDim: false,
       focusVisible: {
@@ -56,8 +56,8 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
       },
       disabled: {
         on: {
-          opacity: 0.5,
-          cursor: "not-allowed",
+          opacity: theme.design.states.disabledOpacity,
+          cursor: theme.design.cursors.disabled,
           hover: { backgroundColor: theme.colors.muted },
           active: { backgroundColor: theme.colors.muted },
         },

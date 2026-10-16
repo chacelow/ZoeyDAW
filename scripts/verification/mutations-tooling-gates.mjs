@@ -33,6 +33,22 @@ const mutations = [
     pattern: "review scan: suite skip",
   },
   {
+    name: "central SVG host exemption removed",
+    file: "scripts/gpuix-review-scan.mjs",
+    from: '    file !== "apps/gpuix/src/ui/controls/Icon/index.tsx" &&\n',
+    to: "",
+    test: "scripts/verification/review-scan.test.mjs",
+    pattern: "central native SVG host",
+  },
+  {
+    name: "central SVG host exemption broadened",
+    file: "scripts/gpuix-review-scan.mjs",
+    from: 'file !== "apps/gpuix/src/ui/controls/Icon/index.tsx"',
+    to: '!file.startsWith("apps/gpuix/src/ui/controls/Icon")',
+    test: "scripts/verification/review-scan.test.mjs",
+    pattern: "central native SVG host",
+  },
+  {
     name: "unmapped gpuix DOM global",
     file: "tooling/eslint/gpuix-layers.js",
     from: 'file.includes("/apps/gpuix/src/")',

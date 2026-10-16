@@ -23,7 +23,7 @@ export function GalleryCard({
       size="controls"
       testId={testId}
       aria-label={title}
-      style={{ width: theme.layout.track.controlsWidth, flexShrink: 0 }}
+      style={{ width: theme.layout.gallery.cardWidth, flexShrink: 0 }}
     >
       <CardHeader
         testId={`${testId}-header`}

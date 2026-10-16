@@ -1,6 +1,8 @@
 import { MIN_GRID_CELL_PX } from "@/project/model/grid"
 import type { MidiNote } from "@/project/model/types"
-import { colorMix } from "@/shared/theme/color-mix"
+import { velocityNoteBorder, velocityNoteFill } from "@/shared/theme/color-recipes"
+import type { DesignTokens } from "@/shared/theme/design-tokens"
+import type { ProjectMetrics } from "@/shared/theme/metrics/config"
 import type { DerivedThemeColors } from "@/shared/theme/colors"
 import { isBlackKey } from "./geometry"
 import { rollGridLines, visibleRows } from "./layout"
@@ -43,6 +45,8 @@ export function notePaint({
   color,
   colors,
   fontSize,
+  design,
+  project,
 }: {
   notes: readonly MidiNote[]
   rects: readonly NoteRect[]
@@ -52,6 +56,8 @@ export function notePaint({
   color: string
   colors: DerivedThemeColors
   fontSize: number
+  design: DesignTokens
+  project: ProjectMetrics
 }) {
   const background: Groups = new Map()
   background.set("midi-row-fill", {
@@ -82,9 +88,9 @@ export function notePaint({
       colors.arrangementLine,
       1,
       0,
-      y + roll.rowHeight - 1,
+      y + roll.rowHeight - design.editor.dividerStrokeWidth,
       roll.viewWidth,
-      1
+      design.editor.dividerStrokeWidth
     )
   }
   for (const line of rollGridLines(roll, numerator, MIN_GRID_CELL_PX))
@@ -92,15 +98,16 @@ export function notePaint({
       background,
       `midi-grid-lines-${line.level}`,
       line.level === 2 ? colors.mutedForeground : colors.arrangementLine,
-      line.level === 2 ? 0.45 : line.level === 1 ? 1 : 0.55,
+      line.level === 2 ? project.gridMajorOpacity : line.level === 1 ? 1 : project.gridMinorOpacity,
       line.x - roll.scrollX,
       0,
-      1,
+      line.level > 0 ? project.arrangementGridMajorLineWidth : design.editor.gridMinorStrokeWidth,
       roll.viewHeight
     )
   const fills = new Map<number, string>()
   const selectedFills = new Map<number, string>()
-  const unselectedBorder = colorMix(color, 60, colors.background)
+  const recipe = design.colorRecipes.editor
+  const unselectedBorder = velocityNoteBorder(color, colors.background, recipe)
   const history = new Map<
     number,
     { right: number; boxes: { left: number; right: number; plane: number }[] }
@@ -130,9 +137,14 @@ export function notePaint({
     const palette = isSelected ? selectedFills : fills
     let fill = palette.get(note.velocity)
     if (!fill) {
-      fill = isSelected
-        ? colorMix(color, 55 + (note.velocity / 127) * 45, colors.foreground)
-        : colorMix(color, 35 + (note.velocity / 127) * 65, colors.arrangementSurface)
+      // MIDI note-on velocity is a seven-bit protocol value, so normalization uses 127.
+      fill = velocityNoteFill(
+        color,
+        note.velocity,
+        isSelected ? colors.foreground : colors.arrangementSurface,
+        isSelected,
+        recipe
+      )
       palette.set(note.velocity, fill)
     }
     const border = isSelected ? colors.foreground : unselectedBorder
@@ -141,13 +153,19 @@ export function notePaint({
       continue
     }
     const x = rect.left - roll.scrollX
-    const y = rect.top - roll.scrollY + 1
+    const y = rect.top - roll.scrollY + design.editor.noteInset
     const width = Math.max(1, rect.width)
-    const height = Math.max(1, rect.height - 1)
+    const height = Math.max(1, rect.height - design.editor.noteInset)
     const key = `midi-note-${plane}-${isSelected ? "selected" : "plain"}-${fill}`
     let group = paint.groups.get(key)
     if (!group) {
-      group = { color: fill, opacity: 1, strokeWidth: 1, strokeColor: border, rectangles: [] }
+      group = {
+        color: fill,
+        opacity: 1,
+        strokeWidth: design.shape.controlBorderWidth,
+        strokeColor: border,
+        rectangles: [],
+      }
       paint.groups.set(key, group)
     }
     group.rectangles.push(x, y, width, height)

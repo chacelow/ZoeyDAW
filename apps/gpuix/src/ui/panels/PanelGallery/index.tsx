@@ -9,6 +9,7 @@ import { PanelShell } from "../PanelShell"
 
 type Section = "browser" | "arrangement" | "clip" | "devices"
 export const GALLERY_DEVICE_HEIGHT = 160
+const ACTIVE_DESCRIPTION = "Active panel"
 
 export function PanelGallery() {
   const theme = useTheme()
@@ -18,6 +19,7 @@ export function PanelGallery() {
   const [devices, setDevices] = useState(true)
   const browser = useRef<PanelImperativeHandle | null>(null)
   const clip = useRef<PanelImperativeHandle | null>(null)
+  // Fixed typography and sample widths below belong to this panel-geometry verification fixture.
   const textStyle = { color: theme.colors.foreground, fontSize: 13 }
   const actions = [
     {
@@ -87,6 +89,8 @@ export function PanelGallery() {
             >
               <PanelShell
                 id="browser"
+                aria-label="Browser"
+                activeDescription={ACTIVE_DESCRIPTION}
                 active={active}
                 onActivate={setActive}
                 testId="browser-shell"
@@ -125,6 +129,8 @@ export function PanelGallery() {
             <Panel defaultSize="75" minSize="30" testId="arrangement-panel">
               <PanelShell
                 id="arrangement"
+                aria-label="Arrangement"
+                activeDescription={ACTIVE_DESCRIPTION}
                 active={active}
                 onActivate={setActive}
                 testId="arrangement-shell"
@@ -183,7 +189,13 @@ export function PanelGallery() {
           onResize={size => setClipHeight(size.inPixels)}
           testId="clip-panel"
         >
-          <PanelShell id="clip" active={active} onActivate={setActive}>
+          <PanelShell
+            id="clip"
+            active={active}
+            onActivate={setActive}
+            aria-label="Clip"
+            activeDescription={ACTIVE_DESCRIPTION}
+          >
             <div style={{ padding: theme.project.panelGap }}>
               <text style={textStyle}>Clip — continuous height, Device stays fixed</text>
             </div>
@@ -195,6 +207,7 @@ export function PanelGallery() {
         expandedSize={GALLERY_DEVICE_HEIGHT}
         onExpandedChange={setDevices}
         aria-label="Toggle device by dragging"
+        formatAccessiblePixels={pixels => `${pixels} pixels`}
         testId="device-divider"
       />
       <div
@@ -206,7 +219,13 @@ export function PanelGallery() {
         }}
         testId="device-panel"
       >
-        <PanelShell id="devices" active={active} onActivate={setActive}>
+        <PanelShell
+          id="devices"
+          active={active}
+          onActivate={setActive}
+          aria-label="Devices"
+          activeDescription={ACTIVE_DESCRIPTION}
+        >
           {devices && (
             <div style={{ padding: theme.project.panelGap }}>
               <text

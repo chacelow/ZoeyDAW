@@ -22,23 +22,40 @@ export function DragPadBipolar(props: DragPadBipolarProps) {
   return <NumericPad {...props} displayVariant="bipolar" />
 }
 
-export interface DragPadToggleProps extends Omit<
+export type DragPadToggleProps = Omit<
   ButtonProps,
-  "value" | "onChange" | "active" | "onActiveChange"
-> {
+  "value" | "onChange" | "active" | "onActiveChange" | "icon" | "children"
+> & {
   readonly value: boolean
   readonly onChange: (value: boolean) => void
   readonly label: string
-  readonly labelOn?: string
-  readonly labelOff?: string
   readonly description?: string
-}
+} & (
+    | {
+        readonly labelOn: string
+        readonly labelOff: string
+        readonly icon?: ButtonProps["icon"]
+        readonly children?: ButtonProps["children"]
+      }
+    | {
+        readonly icon: Exclude<ButtonProps["icon"], null | undefined | boolean>
+        readonly children?: ButtonProps["children"]
+        readonly labelOn?: never
+        readonly labelOff?: never
+      }
+    | {
+        readonly children: Exclude<ButtonProps["children"], null | undefined | boolean>
+        readonly icon?: ButtonProps["icon"]
+        readonly labelOn?: never
+        readonly labelOff?: never
+      }
+  )
 
 export function DragPadToggle({
   value,
   onChange,
-  labelOn = "ON",
-  labelOff = "OFF",
+  labelOn,
+  labelOff,
   icon,
   children,
   description,

@@ -56,7 +56,7 @@ export function ControlGroup({
                   key={`separator-${index}`}
                   aria-hidden="true"
                   style={{
-                    width: 1,
+                    width: theme.design.shape.separatorWidth,
                     height:
                       size === "transport"
                         ? theme.transportControl["--spacing-control-track"]
