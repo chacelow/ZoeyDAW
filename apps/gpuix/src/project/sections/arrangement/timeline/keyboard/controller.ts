@@ -1,33 +1,16 @@
 import { projectActions, useProjectState } from "@/project/adapters"
 import { deriveGridPlan } from "@/project/model/grid"
 import { positionToBar } from "@/project/model/types"
-import type { WindowKeyEvent } from "@/platform/keyboard"
+import {
+  createCommandRegistry,
+  DEFAULT_KEYMAP,
+  COMPUTER_NOTE_KEYS,
+  normalizeKey,
+} from "@/platform/keyboard"
+import type { CommandHandler, CommandInput, KeyboardFocus } from "@/platform/keyboard"
 
-const NOTE_KEYS: Readonly<Record<string, number>> = {
-  a: 0,
-  w: 1,
-  s: 2,
-  e: 3,
-  d: 4,
-  f: 5,
-  t: 6,
-  g: 7,
-  y: 8,
-  h: 9,
-  u: 10,
-  j: 11,
-  k: 12,
-  o: 13,
-  l: 14,
-  p: 15,
-}
-
-export type KeyboardFocus = "text" | "menu" | "control" | "timeline" | "clip-editor"
-
-export type TimelineKeyboardInput = Pick<
-  WindowKeyEvent,
-  "key" | "keyChar" | "isHeld" | "modifiers" | "defaultPrevented"
->
+export type { KeyboardFocus } from "@/platform/keyboard"
+export type TimelineKeyboardInput = CommandInput
 
 export interface KeyboardOwner {
   markDrawGesture: () => void
@@ -42,15 +25,17 @@ export interface TimelineKeyboardDeps {
   focus: () => KeyboardFocus
   blurControl: () => void
   claim?: (event: TimelineKeyboardInput) => boolean
+  browserSearch?: { available: () => boolean; focus: () => void }
 }
 
 export function createTimelineKeyboard({
   focus,
   blurControl,
   claim = () => false,
+  browserSearch,
 }: TimelineKeyboardDeps): KeyboardOwner {
   const notes = new Map<string, number>()
-  let draw: { original: boolean; used: boolean } | null = null
+  let draw: { key: string; original: boolean; used: boolean } | null = null
 
   function release() {
     for (const pitch of notes.values()) projectActions.noteOff(pitch)
@@ -66,6 +51,125 @@ export function createTimelineKeyboard({
     if (next.session.editEpoch !== previous.session.editEpoch) release()
   })
 
+  const once =
+    (action: () => void): CommandHandler =>
+    event => {
+      if (!event.isHeld) action()
+      return "handled"
+    }
+  // Section owners can claim selection/gesture commands, never project-wide commands.
+  const local =
+    (handler: CommandHandler): CommandHandler =>
+    event => {
+      if (focus() === "timeline" && claim(event)) return "handled"
+      return handler(event)
+    }
+  const seek =
+    (direction: -1 | 1): CommandHandler =>
+    () => {
+      const state = useProjectState.getState()
+      const { numerator, denominator } = state.document.transport
+      const plan = deriveGridPlan(
+        state.workspace.grid,
+        state.workspace.pxPerBar,
+        numerator,
+        denominator
+      )
+      projectActions.seekBar(
+        Math.max(1, positionToBar(state.session.position, numerator) + direction * plan.cellBars)
+      )
+      return "handled"
+    }
+  const commands = createCommandRegistry({
+    "project.save": once(projectActions.saveSnapshot),
+    "transport.togglePlay": event => {
+      blurControl()
+      if (!event.isHeld) projectActions.togglePlay()
+      return "handled"
+    },
+    "arrangement.draw": event => {
+      if (!draw && !event.isHeld) {
+        draw = {
+          key: normalizeKey(event.key),
+          original: useProjectState.getState().workspace.drawMode,
+          used: false,
+        }
+        projectActions.setDrawModeOverride(!draw.original)
+      }
+      return "handled"
+    },
+    "edit.undo": local(once(projectActions.undo)),
+    "edit.redo": local(once(projectActions.redo)),
+    "grid.narrow": local(once(() => projectActions.adjustGrid(-1))),
+    "grid.widen": local(once(() => projectActions.adjustGrid(1))),
+    "grid.toggleSnap": local(
+      once(() => projectActions.setSnap(!useProjectState.getState().workspace.snap))
+    ),
+    "edit.split": local(() =>
+      useProjectState.getState().session.selectedClipIds.length ? "pass" : "handled"
+    ),
+    "edit.cancel": local(() => {
+      release()
+      projectActions.setEditingClip(null)
+      projectActions.cancelEdit()
+      return "handled"
+    }),
+    "transport.rewind": local(() => {
+      projectActions.rewindToStart()
+      return "handled"
+    }),
+    "computerKeyboard.toggle": local(
+      once(() =>
+        projectActions.setMode(
+          "computerKeyboard",
+          !useProjectState.getState().workspace.computerKeyboard
+        )
+      )
+    ),
+    "computerKeyboard.octaveDown": local(
+      once(() => projectActions.setMidiOctave(useProjectState.getState().session.midiOctave - 1))
+    ),
+    "computerKeyboard.octaveUp": local(
+      once(() => projectActions.setMidiOctave(useProjectState.getState().session.midiOctave + 1))
+    ),
+    "computerKeyboard.velocityDown": local(
+      once(() =>
+        projectActions.setMidiVelocity(useProjectState.getState().session.midiVelocity - 10)
+      )
+    ),
+    "computerKeyboard.velocityUp": local(
+      once(() =>
+        projectActions.setMidiVelocity(useProjectState.getState().session.midiVelocity + 10)
+      )
+    ),
+    "computerKeyboard.note": local(event => {
+      const key = normalizeKey(event.key)
+      const semitone = COMPUTER_NOTE_KEYS[key]
+      if (semitone === undefined) return "pass"
+      const pitch = (useProjectState.getState().session.midiOctave + 1) * 12 + semitone
+      if (!event.isHeld && !notes.has(key) && pitch <= 127) {
+        notes.set(key, pitch)
+        projectActions.noteOn(pitch)
+      }
+      return "handled"
+    }),
+    "arrangement.toggleAutomation": local(
+      once(() =>
+        projectActions.setMode(
+          "automationMode",
+          !useProjectState.getState().workspace.automationMode
+        )
+      )
+    ),
+    "transport.seekLeft": local(seek(-1)),
+    "transport.seekRight": local(seek(1)),
+    "browser.focusSearch": event => {
+      if (!browserSearch) return "pass"
+      if (!event.isHeld) browserSearch.focus()
+      return "handled"
+    },
+  })
+
   return {
     markDrawGesture() {
       if (draw) draw.used = true
@@ -76,107 +180,18 @@ export function createTimelineKeyboard({
       projectActions.setMode("drawMode", enabled)
     },
     down(event: TimelineKeyboardInput): boolean {
-      const key = event.key?.toLowerCase()
+      if (event.defaultPrevented) return false
       const target = focus()
-      if (!key || event.defaultPrevented || target === "text" || target === "menu") return false
-      const { ctrl = false, cmd = false, alt = false, shift = false } = event.modifiers ?? {}
-      const modified = ctrl || cmd
-      if (modified && !alt && key === "s") {
-        if (!event.isHeld) projectActions.saveSnapshot()
-        return true
-      }
-      if ((key === "space" || key === " ") && !modified && !alt) {
-        blurControl()
-        if (!event.isHeld) projectActions.togglePlay()
-        return true
-      }
-      if (key === "b" && !modified && !alt) {
-        const state = useProjectState.getState()
-        if (state.workspace.computerKeyboard) return false
-        if (!draw && !event.isHeld) {
-          draw = { original: state.workspace.drawMode, used: false }
-          projectActions.setDrawModeOverride(!draw.original)
-        }
-        return true
-      }
-      if (target === "clip-editor") return false
-      if (target === "timeline" && claim(event)) return true
-      const state = useProjectState.getState()
-      if (modified) {
-        if (alt) return false
-        if (key === "z") {
-          if (!event.isHeld) (shift ? projectActions.redo : projectActions.undo)()
-        } else if ((key === "1" || key === "2") && !shift) {
-          if (!event.isHeld) projectActions.adjustGrid(key === "2" ? 1 : -1)
-        } else if (key === "4" && !shift) {
-          if (!event.isHeld) projectActions.setSnap(!state.workspace.snap)
-        } else if (key === "e" && !shift && !state.session.selectedClipIds.length) {
-          return true
-        } else return false
-        return true
-      }
-      if (alt) return false
-      if (key === "escape") {
-        release()
-        projectActions.setEditingClip(null)
-        projectActions.cancelEdit()
-        return true
-      }
-      if (key === "home") {
-        projectActions.rewindToStart()
-        return true
-      }
-      if (key === "m") {
-        if (!event.isHeld)
-          projectActions.setMode("computerKeyboard", !state.workspace.computerKeyboard)
-        return true
-      }
-      if (state.workspace.computerKeyboard) {
-        if (key === "z" || key === "x") {
-          if (!event.isHeld)
-            projectActions.setMidiOctave(state.session.midiOctave + (key === "x" ? 1 : -1))
-          return true
-        }
-        if (key === "c" || key === "v") {
-          if (!event.isHeld)
-            projectActions.setMidiVelocity(state.session.midiVelocity + (key === "v" ? 10 : -10))
-          return true
-        }
-        const semitone = NOTE_KEYS[key]
-        if (semitone !== undefined) {
-          const pitch = (state.session.midiOctave + 1) * 12 + semitone
-          if (!event.isHeld && !notes.has(key) && pitch <= 127) {
-            notes.set(key, pitch)
-            projectActions.noteOn(pitch)
-          }
-          return true
-        }
-      }
-      if (key === "a") {
-        if (!event.isHeld) projectActions.setMode("automationMode", !state.workspace.automationMode)
-        return true
-      }
-      if (key === "left" || key === "right") {
-        const { numerator, denominator } = state.document.transport
-        const plan = deriveGridPlan(
-          state.workspace.grid,
-          state.workspace.pxPerBar,
-          numerator,
-          denominator
-        )
-        projectActions.seekBar(
-          Math.max(
-            1,
-            positionToBar(state.session.position, numerator) +
-              (key === "right" ? plan.cellBars : -plan.cellBars)
-          )
-        )
-        return true
-      }
-      return false
+      const command = DEFAULT_KEYMAP.resolve(event, {
+        focus: target,
+        computerKeyboard: useProjectState.getState().workspace.computerKeyboard,
+        browserSearch: browserSearch?.available() ?? false,
+      })
+      if (command) return commands.execute(command, event) === "handled"
+      return target === "timeline" && claim(event)
     },
     up(event: TimelineKeyboardInput): boolean {
-      const key = event.key?.toLowerCase()
+      const key = normalizeKey(event.key)
       if (!key) return false
       const pitch = notes.get(key)
       if (pitch !== undefined) {
@@ -184,21 +199,22 @@ export function createTimelineKeyboard({
         projectActions.noteOff(pitch)
         return true
       }
-      if (key === "b" && draw) {
+      if (draw?.key === key) {
         const previous = draw
         draw = null
         if (!previous.used) projectActions.setMode("drawMode", !previous.original)
         projectActions.setDrawModeOverride(null)
         return true
       }
-      const modifiers = event.modifiers
       return (
-        (key === "space" || key === " ") &&
-        focus() !== "text" &&
-        focus() !== "menu" &&
-        !modifiers?.ctrl &&
-        !modifiers?.cmd &&
-        !modifiers?.alt
+        DEFAULT_KEYMAP.resolve(
+          { ...event, defaultPrevented: false },
+          {
+            focus: focus(),
+            computerKeyboard: useProjectState.getState().workspace.computerKeyboard,
+            browserSearch: false,
+          }
+        ) === "transport.togglePlay"
       )
     },
     deactivate: release,

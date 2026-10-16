@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { createContext, useContext, useRef } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -169,8 +170,10 @@ export function ToggleGroupItem({
       }}
       onKeyDown={event => {
         if (unavailable) return
-        if (event.key === "enter") toggle()
-        else
+        if (event.key === "enter") {
+          toggle()
+          consumeKey(event, "handled")
+        } else
           navigateSelection({
             event,
             value,

@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -129,8 +130,10 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
     onMouseUp?.(event)
   }
   const keyDown = (event: KeyEvent) => {
-    if (event.key === "escape") finish(true)
-    else onKeyDown?.(event)
+    if (event.key === "escape") {
+      if (pressed.current) consumeKey(event, "handled")
+      finish(true)
+    } else onKeyDown?.(event)
   }
   const blur = (event: EventPayload) => {
     finish(true)

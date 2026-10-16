@@ -97,11 +97,14 @@ function receive(
   }
   return new Promise((resolve, reject) => {
     let unsubscribe: () => void
-    // The CPAL clock is real; fake JS timers cannot drive a native audio callback.
+    // The CPAL clock is real; fake JS timers cannot drive a native audio callback. Hosted macOS
+    // runners have only a virtual output device that can run far below real time under load
+    // (observed: 0.44 s of device clock in 5 s of wall time), so the budget is generous; the
+    // predicate resolves as soon as the device gets there, so a real device still takes ~1 s.
     const timeout = setTimeout(() => {
       unsubscribe()
       reject(new Error(`Native telemetry timed out: ${JSON.stringify(frames.at(-1))}`))
-    }, 5000)
+    }, 20_000)
     unsubscribe = backend.subscribe(frame => {
       if (predicate(frame)) {
         clearTimeout(timeout)
@@ -294,4 +297,4 @@ test("real decoder, device clock, seeks, finite meters and visible peaks", async
     backend.dispose()
     rmSync(directory, { recursive: true, force: true })
   }
-}, 10000)
+}, 60_000)

@@ -1,3 +1,4 @@
+import { consumeKey } from "@/shared/keyboard"
 import { createContext, useContext, useRef } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -114,8 +115,10 @@ export function RadioGroupItem({
       }}
       onKeyDown={event => {
         if (unavailable) return
-        if (isActivationKey(event)) group.select(value)
-        else
+        if (isActivationKey(event)) {
+          group.select(value)
+          consumeKey(event, "handled")
+        } else
           navigateSelection({
             event,
             value,
