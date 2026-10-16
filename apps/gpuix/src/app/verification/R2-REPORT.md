@@ -117,13 +117,18 @@ git diff ea11b3f1..HEAD -- apps/gpuix/src/app apps/gpuix/src/platform/i18n \
 | Error.cause循环在独立normalizer中溢出，P2 | 必修 | normalizer改私有浅展开，统一递归owner | `31bd2cae`；两个回归红→绿、循环变异失败 |
 | verification/r2-lifecycle.tsx的1280×800 root，WARN px-literal | 记录 | 固定测试视口输入，不是产品样式或token副本，保留 | 扫描0 HARD、1 WARN |
 | Standards轴 | 记录 | 没有独立规范发现 | reviewer初审及定向复核；两项发现复核均关闭，无新增Standards/Spec发现 |
+| 既有Cmd+F原生组合测试默认5秒超时 | 汇报仲裁 | 协调者拒绝放宽超时，要求移除layout固定sleep；改为native flush/event dispatch与React微任务推进 | AppShell19pass；既有modal/globalCmd变异1caught；reviewer复核断言/超时未弱化，625行无增长 |
 | 既有grid.test.ts:66 todo | 记录 | 非本切片新增，不修改project/model所有权 | 首次完整门禁1226pass、1todo、0fail |
 
 ## 完整门禁与环境
 
 首轮在worktree根执行 `pnpm verify:gpuix` 全部通过：renderer身份、native构建、tsc0错误、eslint0warning、architecture80pass、文档路由9项、bun1226pass/1既有todo/0fail、scan0HARD/1WARN、UI map current、真实后端resume smoke released idle。审查边界修复后的 app-local `pnpm exec tsc --noEmit` 也通过。
 
-最终复跑目前被共享renderer manifest格式阻断。共享manifest新增 `buildMode:"runtime"` 和完整outputs，当前切片旧check.mjs不认识新结构；已向协调者请求相容tooling提交，未修改或重录共享vendor。后续最终门禁结果由本节更新。
+最终 `pnpm verify:gpuix` 已在同步后的worktree根完整通过，保持默认测试超时：tsc0错误、eslint0warning、architecture80pass、bun1255pass/1既有todo/0fail，200个测试文件；review scan为15个源码文件与4个测试文件、0HARD/1WARN；UI map current为224个testIds；真实native resume smoke输出21帧并released idle。最后一行为 `verify:gpuix passed`。
+
+最终复跑曾被共享renderer manifest格式变更阻断。按协调者指令合入主干相容tooling后，`build.sh` 输出“Linked verified gpuix build without rebuilding or acquiring the build lock”，未修改或重录共享vendor。随后整套测试的唯一失败为既有Cmd+F组合测试5010ms超时，其余1254pass；按协调者裁定删除固定sleep，改同步布局/事件/微任务推进。AppShell19个测试在默认超时下通过，原有modal/globalCmd行为变异被抓住。
+
+本切片没有Rust源码改动，因此没有额外执行cargo check/test。需要协调者收尾的项目仅为真实前台视觉/帧性能审查，以及R2-arrangement拥有的Save按钮disabled接线；本切片所有四项功能已实现。
 
 根目录直接 `pnpm exec tsc --noEmit -p apps/gpuix` 曾命中全局TS6并报baseUrl弃用；正确入口是在apps/gpuix运行 `pnpm exec tsc --noEmit`，完整门禁也采用这个入口。未以修改配置掩盖命令选错。
 
@@ -132,6 +137,7 @@ git diff ea11b3f1..HEAD -- apps/gpuix/src/app apps/gpuix/src/platform/i18n \
 - 错：failed-open保护只在重新打开时清除，漏掉显式Restore成功。对：恢复成功的每个公开入口都完成保存能力状态转换。因：新增保护状态必须检查现有恢复路径，而不只是新入口。
 - 错：Error先递归展开，再交给脱敏的循环检测。对：normalizer只展开当前Error字段，全部递归由同一个WeakSet控制。因：两套递归使循环保护晚于栈溢出。
 - 错：在worktree根调用未本地锁定的tsc。对：使用app-local工具链或verify:gpuix。因：根目录可解析到宿主全局TypeScript版本。
+- 错：用固定40ms sleep等待原生布局，受并发负载影响且不能证明状态已就绪。对：显式flush原生布局、同步分派事件，再推进React微任务。因：事件完成不等于经过一个任意时间间隔。
 
 ## 已验证做法
 
@@ -140,6 +146,11 @@ git diff ea11b3f1..HEAD -- apps/gpuix/src/app apps/gpuix/src/platform/i18n \
 - 变异脚本恢复原始缺陷并要求行为断言失败，finally恢复源码；本轮11个变异均被抓住。
 - 新建意图只存在当前历史入口，离开后消费，避免历史返回把已保存工程当成新建。
 - 背景窗口只验证启动与释放；视觉取证用真实原生离屏组合，前台性能/像素审查留给协调者。
+- AppShell既有键盘和面板几何断言全部保留，用原有modal/globalCmd变异确认同步settle没有让测试空转；没有放宽超时。
+
+## 本地提交
+
+功能提交为 `8867239e`、`4c2b1cd2`、`ecd88765`、`d126008c`、`31bd2cae`；证据提交为 `b66411bc`；确定性布局验证为 `b4929c5c`。按协调者指令合入gpuix-migration以同步共享renderer清单工具，没有自行修改共享vendor或其它切片源码。未push。
 
 ## 进程清理
 
