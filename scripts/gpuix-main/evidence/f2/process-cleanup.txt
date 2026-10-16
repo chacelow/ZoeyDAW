@@ -1,3 +1,0 @@
-(no output)
-
-Command exited with code 1

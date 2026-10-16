@@ -1,7 +1,0 @@
-b2-main-native [service] — exited — up 5m31s
-ready=false persist=false detached=false exit=1
-[gpuix] created native window
-[gpuix] mount complete
-2026-10-15 16:30:33.633 bun[65119:54989673] error messaging the mach port for IMKCFRunLoopWakeUpReliable
-2026-10-15 16:32:55.165 bun[65119:54989673] TSM AdjustCapsLockLEDForKeyTransitionHandling - _ISSetPhysicalKeyboardCapsLo
-ckLED Inhibit

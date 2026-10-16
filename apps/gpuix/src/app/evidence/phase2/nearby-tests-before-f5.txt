@@ -1,6 +1,0 @@
-(fail) End/Home and Tab/Shift-Tab keep the focused preset inside the scroll viewport [57.77ms]
-(fail) native wheel scrolling reveals later preset rows [64.89ms]
- 205 pass
- 2 fail
-Ran 207 tests across 25 files. [52.58s]
-Wall time: 52.76 seconds

@@ -1,7 +1,0 @@
-Commit: 038ed87
-Command: node scripts/gpuix-review-scan.mjs
-Observed stdout:
-0 source files, 0 test files scanned vs gpuix-migration: 0 hard, 0 warn
-Exit code: 0
-
-The committed cleanup removes the temporary demo diagnostics. Net source code matches the shared baseline; the remaining owned delta consists of historical evidence and documentation. No scan exception or forwarding/logging test was added.

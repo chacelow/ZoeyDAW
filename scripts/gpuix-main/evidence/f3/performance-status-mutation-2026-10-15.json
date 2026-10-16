@@ -1,8 +1,0 @@
-{
-  "test": "PerformanceStatus/index.test.tsx paused popup recovery",
-  "positive": "resume emission returns with retained latency 15.00 ms and sample time 0:00:02.000, without an ordinary frame",
-  "mutation": "remove consumer flushSync from useResumeFrame",
-  "negative": "1 fail: latency remained 10.00 ms and sample time 0:00:00.100",
-  "predicate": "playing || (popupOpen && hasTelemetry), shared by ordinary and resume subscriptions",
-  "restored": true
-}

@@ -1,3 +1,0 @@
-(no output)
-
-Wall time: 22.81 seconds

@@ -1,9 +1,0 @@
-Command:
-ps -axo pid,etime,command | grep -E "bun .*--hot|cargo run|gallery|demo"
-
-Observed stdout:
-53396 01:07       bun --hot src/project/sections/arrangement/lane/demo/index.tsx
-
-B2-owned residual processes: 0.
-The remaining lane demo belongs to the next desktop lease owner; preserved, not stopped.
-B2 final service b2-final-readonly-0638 (pid 37866) was stopped immediately after capture at 06:40:25 UTC, after 34 seconds uptime.

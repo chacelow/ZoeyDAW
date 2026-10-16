@@ -25,9 +25,9 @@ import type { FooterView } from "@/project/sections/footer"
 import { initializeVerificationProject } from "../project-creation"
 
 const releaseCreation = initializeVerificationProject("footer-states")
-const outputDirectory = path.resolve(
-  process.argv[2] ?? path.join(import.meta.dir, "../evidence/gpu-states")
-)
+const outputArgument = process.argv[2]
+if (!outputArgument) throw new Error("Usage: bun footer/states.tsx <output directory outside the repository>")
+const outputDirectory = path.resolve(outputArgument)
 mkdirSync(outputDirectory, { recursive: true })
 const states: Array<{
   name: string

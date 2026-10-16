@@ -1,9 +1,0 @@
-(node:6951) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
-(Use `node --trace-deprecation ...` to show where the warning was created)
-
-> @zoeydaw/gpuix-prototype@0.0.0 typecheck /Users/caishilong/orca/workspaces/zoeydaw/gpuix-b2-app-shell/apps/gpuix
-> tsc --noEmit
-
-
-
-Wall time: 2.96 seconds

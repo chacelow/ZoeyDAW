@@ -49,9 +49,8 @@ Mixer 使用 `formats.pan(value, "control")`；自动化 ValueEditor 使用 `"au
 
 - `bun test src/project/sections/arrangement/tracks/meter`: 6 pass, 0 fail, 40 assertions, covering production frame activation, native timestamp hold/fall, silence/unmount unsubscribe and inline-reader preservation.
 - Initial C1 window, before F1 frame integration: AX playback changed Stopped → Playing; Audio reported L −23.0 / R −27.0 dBFS, Group L −26.0 / R −28.5, Return L −38.0 / R −45.0. A real authored Clip gain change to 24 dB produced Audio L +1.0 / R −1.8 dBFS while Main remained at low output level.
-- Evidence: `evidence/2026-10-15-real-meter-playing.ax.txt` and `evidence/2026-10-15-real-meter-overload.ax.txt`.
 - The display layout changed during this run; screenshots were black and a display capture reported `InvalidCoordinateFrame`. AX proves the command/telemetry path, not the missing meter pixels. The service was killed after 1m55s; visual meter-state verification remains pending.
-- Production-frame smoke at `8d34ed1`: AX changed Stopped → Playing → Stopped, but all meters stayed at the floor and window capture was black despite granted permissions and an unlocked/awake display. The service was killed after 1m25s. This attempt does not prove live signal or peak-decay pixels; see `evidence/2026-10-15-production-frame-smoke.ax.txt` and the matching black screenshot.
+- Production-frame smoke at `8d34ed1`: AX changed Stopped → Playing → Stopped, but all meters stayed at the floor and window capture was black despite granted permissions and an unlocked/awake display. This attempt does not prove live signal or peak-decay pixels.
 - The later G1 slot produced a clear real-WAV meter image and native cursor restore readback at exactly the press anchor. The background-frame state is not classified: key/main, occlusion and callback counts were not recorded. Peak-decay visuals remain incomplete. Exact results and the late-shutdown incident are in [VERIFICATION.md](VERIFICATION.md).
 
 ## Track header controls

@@ -1,4 +1,0 @@
-Native context smoke, 2026-10-15, authorized 06:57–07:02 UTC.
-Pattern was selected first; right click on Audio Clip 01 opened its menu. Menu header and status identified Track 001 Clip 01; Rename opened a focused field with that Audio label. Escape canceled without edits.
-Physical Ctrl-left background input was refused with BackgroundUnavailable. Foreground control acquisition timed out without confirmed approval; no foreground modified click was sent. Physical Ctrl-left remains unverified; normalized-context regression is verified by native-host event injection and real menu actions.
-Window is closed immediately on this exit; screenshots context-initial.png, context-right-audio.png, context-audio-rename.png.

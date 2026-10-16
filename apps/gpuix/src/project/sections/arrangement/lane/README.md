@@ -41,7 +41,7 @@ controller 的 `LaneCursor` 只表达 `default`、`grab`、`grabbing`、`disable
 
 唯一稳定 `LaneContextMenu` 从 F2 归一化后的 `onContextMenu` payload 解析鼠标右键，不从 mouseDown button/ctrl 猜测。Shift+F10 直接读取当前有效 Clip 或 Automation point 身份，不将键盘选择变成伪指针重命中；没有有效目标时不打开菜单。原生键盘及真实菜单动作回归覆盖裁剪 Clip 删除、菜单打开后恢复可见区域再重命名，以及第二轨自动化点编辑和删除。
 
-`evidence/context-*` 保存实际窗口证据：先选中 Pattern，再右键 Audio，菜单标题与 Rename 字段均为该 Audio Clip。物理 Ctrl+左键的后台修饰输入被 computer 拒绝，foreground 控制申请超时且没有确认批准，未发送前台点击；该物理路径未验证，归一化事件行为以回归与 F2 平台证据为准。
+物理 Ctrl+左键的后台修饰输入被 computer 拒绝，该物理路径未验证，归一化事件行为以回归与 F2 平台证据为准。
 
 ## 迁入清单
 
@@ -85,7 +85,7 @@ lane 在彩色 Clip 主体上使用 `theme.colors.arrangementClipInk`，与 Web 
 
 | 产品规则 | Live 观察 | 实现 | 差异或未验证 |
 | --- | --- | --- | --- |
-| fade 锚点与遮罩的视觉 | 先前已批准的 Live 悬停对照，原图在 `scripts/gpuix-main/evidence/live-fade-hover/` | 5px 空心方点/菱形、常驻遮罩、展开 body 悬停才显示曲线 | 本轮 batch 迁移未重新操作 Live；不把静态观察当作 Live 拖动证明 |
+| fade 锚点与遮罩的视觉 | 先前已批准的 Live 悬停对照 | 5px 空心方点/菱形、常驻遮罩、展开 body 悬停才显示曲线 | 本轮 batch 迁移未重新操作 Live；不把静态观察当作 Live 拖动证明 |
 | 只有顶部 fade 锚点独立可拖，极端释放不重置 | 原任务明确产品规则；本轮未在 Live 编辑工程 | B1 几何及 preview/commit 手势；原生状态转换回归 | Live 行为未复验，实际桌面拖动仍按工具限制记录 |
 | 网格与落点对齐同一份 1/4 网格 | 原产品规则；本轮未取 Live 网格截图 | 全部位置消费 B1 `gridLines`，仅替换批量画面，不改 snap | Native 整体视觉与满量帧验收仍需本轮取证 |
 | 标题实心、body 透明、折叠只占第一行 | Web 源与既定产品契约；本轮未另取 Live 折叠截图 | 原生 Clip 外壳、分轨摘要与主题角色；batch 保持图层次序 | 不将 Web 源码等同于 Live 实测 |

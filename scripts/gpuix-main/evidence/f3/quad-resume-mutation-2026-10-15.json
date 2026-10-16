@@ -1,8 +1,0 @@
-{
-  "test": "resume_quad_upload_is_retained_only_and_paints_new_geometry",
-  "positive": "1 pass: retained setQuads uploads new (4,6,32,20) geometry during synchronous resume without borrowing GPUI",
-  "mutation": "replace GpuixRenderer.set_quads request_invalidate with Ok(())",
-  "negative": "1 fail: painted origin x remained 0.0 instead of 4.0",
-  "restored": true,
-  "measurementKind": "headless GPUI dirty-gated paint; not a new desktop presentation capture"
-}

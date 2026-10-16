@@ -41,5 +41,3 @@ bun test src/ui/panels
 bun test
 bun --hot src/ui/panels/gallery.tsx
 ```
-
-`evidence/os-drag.swift` 是 macOS 的真实 CGEventPost 验证工具，先校验目标进程持有名为 `gpuix panel gallery A4` 的窗口。参数为 `PID X Y DX DY drag|escape|windowblur|reverse`，坐标使用 AX 返回的全局屏幕坐标。工具记录按下前、拖动预览与松开后的真实 AX 状态，窗口的位置或进程变化后必须重新读取坐标与 PID。

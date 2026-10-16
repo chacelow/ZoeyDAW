@@ -45,7 +45,7 @@ window "gpuix foundation check", pid=27004, bounds=480×268
   statictext "gpuix foundation: tokens + style helpers booted"
 ```
 
-截图见 [窗口初始化成功](evidence/2026-10-15-window-after-clipboard.png)。本切片未改任何可见控件或布局，UI 规范第 13 节的视觉改动验收不适用。
+本切片未改任何可见控件或布局，UI 规范第 13 节的视觉改动验收不适用。
 
 ## 剪贴板恢复
 

@@ -1,5 +1,0 @@
-{"nativePlaying":true,"nativeBar":20.070159146,"before":0,"retainedBeforePresent":905.6280320000001,"workspace":905.6280320000001,"frames":11}
-released idle
-
-
-Wall time: 1.28 seconds
