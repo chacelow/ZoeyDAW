@@ -185,13 +185,12 @@
 
 - 2026-10-14 16:02、2026-10-15 02:22 用户要求：所有切片在 Orca 里挂在 gpuix-migration 一个父级下。派发方式见上面「review 退回要重新派发」一节末两条与 `start-worker.sh`。
 
-## gpuix 迁移：切片合入后立即删 worktree，不复用上下文
+## gpuix 迁移：worker 用可复用的 lane，不是一次性 worktree
 
-- 决策（2026-10-14 15:26 UTC，用户关注本机性能）：切片**合入并核对无残留后立即**删除其 worktree、分支与对应 OMP 终端；不为"可能复用上下文"或"留着最终复验"保留，复验另开新 worktree。
-- 因：每个存活的 OMP/agent 进程常驻内存（实测单个约 0.6–2.7% 内存），还会带着 LSP、rust-analyzer 等子进程；旧切片上下文已被合并提交和 LESSONS 取代。
-- 例外：有未提交改动或任务未完成的保留，并用 `orca worktree set --comment "保留:<原因>;删除条件:<条件>"` 写明。2026-10-15 审计时 tracks、timeline 两个已合入 worktree 以"最终复验"为由保留且无说明，被用户指出不知道是有意保留还是漏删。
-- 做法：① `git rev-list --count gpuix-migration..<branch>` 为 0 且 `git merge-base --is-ancestor` 为真；② `git status --short` 干净；③ `lsof +D <dir>` 确认没有 agent 进程还在用；④ `orca worktree rm --worktree path:<dir>`，**不加 `--force`**，它会顺带删除已合入的分支。
-- 终端：`worker-release` 对派发脚本建的终端返回 `user_takeover`，这只是创建方式的标记。错：2026-10-15 据此把 4 个已完成终端留给用户手动关，用户指出不要把可自行处理的清理留给他。对：确认 TUI 空闲、派发 completed 后，协调者用 `orca terminal close --terminal <handle> --tab` 关闭，再 `lsof +D` 确认进程已退出、删除 worktree。
+- 决策（2026-10-16，用户）：固定几个 lane（worktree + agent 终端）长期保留，新任务派给空闲 lane 的同一个 agent；并行不够时才新建。取代 2026-10-14 “合入即删、不复用上下文”。
+- 因：每个新 agent 开工都要搜索、阅读大量文件，耗时又耗 token，往往只改几个文件就被销毁；复用的 agent 保留着之前读过的契约和文件地图。本机内存压力用控制 lane 数量来解决，而不是每次销毁。
+- 做法：`scripts/orchestration/lane.sh`（`list` / `assign` / `new`），细节见 `docs/agents/coordination.md`「派发」「合入后」。`assign` 只在“派发已结束、工作区干净、分支已合入”时才切新分支，不会丢未合入的工作。
+- 终端：`worker-release` 对派发脚本建的终端返回 `user_takeover`，这只是创建方式的标记。真要释放 lane 时，协调者确认 TUI 空闲、派发 completed 后自己 `orca terminal close --terminal <handle> --tab`，不留给用户（2026-10-15 用户纠正）。
 
 ## gpuix 迁移：协调者把能自己决定的事转问用户
 

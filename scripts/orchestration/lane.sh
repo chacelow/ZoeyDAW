@@ -72,7 +72,8 @@ assign)
     echo "$lane is busy: $dispatch is $status" >&2; exit 1 ;;
   esac
   old=$(git -C "$dir" branch --show-current)
-  new="lane/$lane/$(slug "$title")"
+  # ASCII slug of the title plus a timestamp: CJK titles slug to almost nothing.
+  new="lane/$lane/$(date -u +%m%d%H%M)-$(slug "$title")"
   git -C "$dir" switch -q -c "$new" "$base"
   # The previous task branch is merged (checked above); drop it so lanes do not accumulate refs.
   [ -n "$old" ] && [ "$old" != "$new" ] && git -C "$dir" branch -q -d "$old" 2>/dev/null || true
@@ -85,7 +86,7 @@ assign)
   if orca terminal wait --terminal "$terminal" --for tui-idle --timeout-ms 1000 --json >/dev/null 2>&1; then
     orca terminal send --terminal "$terminal" --enter --text "" --json >/dev/null
   fi
-  orca worktree set --worktree "path:$dir" --comment "lane；当前任务：$title（$dispatch）" --json >/dev/null
+  orca worktree set --worktree "path:$dir" --comment "lane；当前任务：${title}（${dispatch}）" --json >/dev/null
   echo "$lane ok $dispatch branch=$new terminal=$terminal"
   ;;
 new)
