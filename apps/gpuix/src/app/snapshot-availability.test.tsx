@@ -15,6 +15,7 @@ import {
   whenProjectBackendIdle,
 } from "@/project/adapters"
 import { createNativeBackend } from "@/project/adapters/backend/native"
+import { NATIVE_MULTI_SESSION_TEST_TIMEOUT } from "@/app/verification/native-session-budget"
 
 function SaveAvailability() {
   const allowed = useProjectState(canSaveSnapshot)
@@ -68,5 +69,5 @@ test(
       setSnapshotStorage(null)
     }
   },
-  process.platform === "win32" ? 15_000 : undefined
+  NATIVE_MULTI_SESSION_TEST_TIMEOUT
 )

@@ -18,6 +18,7 @@ import {
   whenProjectBackendIdle,
 } from "@/project/adapters"
 import { createNativeBackend } from "@/project/adapters/backend/native"
+import { NATIVE_MULTI_SESSION_TEST_TIMEOUT } from "@/app/verification/native-session-budget"
 import {
   configurePreferences,
   createPreferenceOwner,
@@ -125,7 +126,7 @@ test(
     await settle(restarted.root)
     expect(serializeProject()).toBe(saved)
   },
-  process.platform === "win32" ? 15_000 : undefined
+  NATIVE_MULTI_SESSION_TEST_TIMEOUT
 )
 
 test("corrupt saved project reports an error and save preserves the original bytes", async () => {
@@ -172,44 +173,52 @@ test("dirty Back can cancel without releasing project content or undo", async ()
   expect(useProjectState.getState().document.transport.bpm).toBe(120)
 })
 
-test("dirty replace saves before opening another project", async () => {
-  const { root, router, storage } = mount("/project/save-before-replace")
-  await settle(root)
-  act(root, () => projectActions.setBpm(143))
-  await settle(root)
-  act(root, () => router.navigate("/project/replaced", { replace: true }))
-  expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-before-replace" })
-  click(root, "unsaved-save")
-  await settle(root)
-  expect(router.getRoute()).toEqual({ kind: "project", projectId: "replaced" })
-  const saved = storage.get(key("save-before-replace"))
-  if (saved === null) throw new Error("Snapshot was not saved before leaving")
-  expect(JSON.parse(saved).document.transport.bpm).toBe(143)
-})
+test(
+  "dirty replace saves before opening another project",
+  async () => {
+    const { root, router, storage } = mount("/project/save-before-replace")
+    await settle(root)
+    act(root, () => projectActions.setBpm(143))
+    await settle(root)
+    act(root, () => router.navigate("/project/replaced", { replace: true }))
+    expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-before-replace" })
+    click(root, "unsaved-save")
+    await settle(root)
+    expect(router.getRoute()).toEqual({ kind: "project", projectId: "replaced" })
+    const saved = storage.get(key("save-before-replace"))
+    if (saved === null) throw new Error("Snapshot was not saved before leaving")
+    expect(JSON.parse(saved).document.transport.bpm).toBe(143)
+  },
+  NATIVE_MULTI_SESSION_TEST_TIMEOUT
+)
 
-test("dirty navigation save failure stays in the original project; discard may leave", async () => {
-  const { root, router } = mount("/project/save-failure")
-  await settle(root)
-  act(root, () => projectActions.setBpm(144))
-  await settle(root)
-  setSnapshotStorage({
-    get: () => null,
-    set: () => {
-      throw new Error("storage unavailable")
-    },
-  })
-  act(root, () => router.navigate("/project/next"))
-  expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-failure" })
-  click(root, "unsaved-save")
-  await settle(root)
-  expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-failure" })
-  expect(useProjectState.getState().document.transport.bpm).toBe(144)
-  expect(useProjectState.getState().session.dirty).toBe(true)
-  act(root, () => router.navigate("/project/next"))
-  click(root, "unsaved-discard")
-  await settle(root)
-  expect(router.getRoute()).toEqual({ kind: "project", projectId: "next" })
-})
+test(
+  "dirty navigation save failure stays in the original project; discard may leave",
+  async () => {
+    const { root, router } = mount("/project/save-failure")
+    await settle(root)
+    act(root, () => projectActions.setBpm(144))
+    await settle(root)
+    setSnapshotStorage({
+      get: () => null,
+      set: () => {
+        throw new Error("storage unavailable")
+      },
+    })
+    act(root, () => router.navigate("/project/next"))
+    expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-failure" })
+    click(root, "unsaved-save")
+    await settle(root)
+    expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-failure" })
+    expect(useProjectState.getState().document.transport.bpm).toBe(144)
+    expect(useProjectState.getState().session.dirty).toBe(true)
+    act(root, () => router.navigate("/project/next"))
+    click(root, "unsaved-discard")
+    await settle(root)
+    expect(router.getRoute()).toEqual({ kind: "project", projectId: "next" })
+  },
+  NATIVE_MULTI_SESSION_TEST_TIMEOUT
+)
 
 test("new project never reads snapshot storage", async () => {
   const { root } = mount()
