@@ -14,5 +14,6 @@
     "autofocus-focus-event.patch",
     "resume-frame.patch",
     "aria-toggled.patch"
-  ]
+  ],
+  "zedPatches": ["zed-production-no-sync-draw.patch"]
 }
