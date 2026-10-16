@@ -7,7 +7,7 @@ set -uo pipefail
 sha="$1"; shift
 root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 base=$(git -C "$root" rev-parse HEAD)
-tree=$(mktemp -d "${TMPDIR:-/tmp}/zoeydaw-review.XXXXXX")
+tree=$(mktemp -d -t zoeydaw-review)
 trap 'git -C "$root" worktree remove --force "$tree" >/dev/null 2>&1' EXIT
 
 echo "== merge $sha onto $(git -C "$root" rev-parse --short HEAD)"
