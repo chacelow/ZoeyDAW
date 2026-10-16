@@ -1,5 +1,8 @@
 //! Blocking decoding/resampling belongs to the session control thread, never to the audio callback.
-use crate::peaks::PeakPyramid;
+use crate::{
+    defaults::{MAX_PEAK_PIXELS, PEAK_BIN_FRAMES, PEAK_LEVELS, RESAMPLE_CHUNK_FRAMES},
+    peaks::PeakPyramid,
+};
 use audioadapter_buffers::direct::InterleavedSlice;
 use rubato::{Fft, FixedSync, Resampler};
 use std::{fs::File, path::Path};
@@ -16,10 +19,6 @@ pub struct SourceInfo {
     pub channels: u32,
 }
 
-/// Matches the `PeakPyramid::read_pixels` limit; callers reject larger requests
-/// before allocating output.
-pub const MAX_PEAK_PIXELS: usize = 16384;
-
 /// `pcm` is the only PCM buffer, resampled to the device rate for playback.
 /// `peaks` stays in the decoded source frame domain described by `source_info`.
 #[derive(Debug)]
@@ -32,7 +31,12 @@ pub struct AudioSource {
 
 impl AudioSource {
     pub fn from_pcm(pcm: Vec<[f32; 2]>, sample_rate: u32) -> Self {
-        let peaks = PeakPyramid::from_interleaved(pcm.as_flattened(), 2, 64, 32);
+        let peaks = PeakPyramid::from_interleaved(
+            pcm.as_flattened(),
+            2,
+            PEAK_BIN_FRAMES,
+            PEAK_LEVELS,
+        );
         let source_info = SourceInfo {
             sample_rate,
             frames: pcm.len() as u64,
@@ -176,9 +180,9 @@ impl AudioSource {
             channels: channels as u32,
         };
         let peaks = if channels == 1 {
-            PeakPyramid::build(&[&interleaved, &interleaved], 64, 32)
+            PeakPyramid::build(&[&interleaved, &interleaved], PEAK_BIN_FRAMES, PEAK_LEVELS)
         } else {
-            PeakPyramid::from_interleaved(&interleaved, channels, 64, 32)
+            PeakPyramid::from_interleaved(&interleaved, channels, PEAK_BIN_FRAMES, PEAK_LEVELS)
         };
         if rate != target_rate {
             let frames = interleaved.len() / channels;
@@ -187,7 +191,7 @@ impl AudioSource {
             let mut resampler = Fft::<f32>::new(
                 rate as usize,
                 target_rate as usize,
-                1024,
+                RESAMPLE_CHUNK_FRAMES,
                 channels,
                 FixedSync::Both,
             )

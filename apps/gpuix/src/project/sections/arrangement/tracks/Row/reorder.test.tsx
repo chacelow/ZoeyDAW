@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { Button } from "@/ui/controls"
 import { createTrack } from "@/project/model/reducers"
 import { hydrateProject, useProjectState } from "@/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
+import { createMockDocument, createMockWorkspace, TEST_CREATION } from "@/project/adapters/fixtures"
 import { layoutTrackRowsForViewport } from "../../core/layout"
 import { useTrackReorder } from "./useTrackReorder"
 import type { PublicInstance } from "@gpuix/react"
@@ -46,7 +46,7 @@ function ReorderSurface() {
 
 beforeEach(() => {
   const document = createMockDocument()
-  const extra = createTrack("audio", document.tracks, undefined, 70)
+  const extra = createTrack("audio", document.tracks, undefined, TEST_CREATION)
   extra.id = "boundary-target"
   document.tracks.splice(document.tracks.length - 1, 0, extra)
   for (const track of document.tracks) {

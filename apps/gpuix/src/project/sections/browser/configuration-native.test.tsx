@@ -8,7 +8,7 @@ import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { hydrateProject } from "@/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { BrowserPanel } from "."
-import { englishBrowserLabels } from "./demo-labels"
+import { englishBrowserLabels } from "@/app/locales/sections/browser"
 
 test("browser divider native paint follows editor divider stroke source", () => {
   hydrateProject(

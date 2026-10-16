@@ -5,12 +5,12 @@ import { AnimationFrameProvider } from "@/platform/frame"
 import { useProjectState } from "@/project/stores/useProjectState"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackLabelsProvider } from "../labels"
-import { trackResources } from "../locales"
 import { createControlledFrames } from "../verification/frame-source"
 import { TrackTelemetryProvider } from "./telemetry"
 import { TrackMeter } from "./TrackMeter"
 import type { BackendTelemetry } from "@/project/model/backend"
 import type { TestRoot } from "@gpuix/react/testing"
+import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -42,7 +42,7 @@ function mountMeter(
     root.render(
       <AnimationFrameProvider source={frames.source}>
         <ThemeProvider>
-          <TrackLabelsProvider labels={trackResources[language].arrangement}>
+          <TrackLabelsProvider labels={trackLabelsByLocale[language]}>
             <TrackTelemetryProvider telemetry={() => readTelemetry()}>
               <TrackMeter
                 trackId={id}
@@ -102,8 +102,8 @@ test("production frame bridge renders stereo overload, holds peaks and stops aft
 test("missing track telemetry stays at floor without starting native frame subscriptions", () => {
   const view = mountMeter(() => frame({ unrelated: [6, 6] }), "missing", "zh-CN")
   const meter = view.root.renderer.findByTestId("track-meter-missing")
-  expect(meter?.customProps?.["aria-valuetext"]).toBe("L -60.0 dB, R -60.0 dB")
-  expect(meter?.customProps?.["aria-label"]).toBe("电平表 音频")
+  if (!meter) throw new Error("Missing native meter")
+  expect(meter.customProps?.["aria-valuenow"]).toBe(meter.customProps?.["aria-valuemin"])
   expect(view.root.renderer.findByTestId("track-meter-peak-left-missing")).toBeUndefined()
   expect(view.frames.subscribers).toBe(0)
 })

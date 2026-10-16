@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react"
 import type { ReactNode } from "react"
 import type { CursorLockPort } from "../DragPad/cursor-port"
 
@@ -15,7 +23,15 @@ export type ControlInfo =
   | "resources"
   | "filters"
 
+export interface ControlInputPolicy {
+  readonly dragPixelsPerStep: number
+  readonly wheelPixelsPerStep: number
+  readonly wheelLinePixels: number
+  readonly dragThresholdPixels: number
+}
+
 export interface ControlEnvironment {
+  readonly inputPolicy?: ControlInputPolicy
   readonly setInfo?: (info: ControlInfo | null) => void
   readonly mappingActive?: boolean
   readonly cursorLock?: CursorLockPort
@@ -31,7 +47,12 @@ export function ControlEnvironmentProvider({
   readonly value: ControlEnvironment
   readonly children: ReactNode
 }) {
-  return <EnvironmentContext.Provider value={value}>{children}</EnvironmentContext.Provider>
+  const inherited = useContext(EnvironmentContext).inputPolicy
+  const environment = useMemo(
+    () => ({ ...value, inputPolicy: value.inputPolicy ?? inherited }),
+    [value, inherited]
+  )
+  return <EnvironmentContext.Provider value={environment}>{children}</EnvironmentContext.Provider>
 }
 
 export function useControlEnvironment(): ControlEnvironment {

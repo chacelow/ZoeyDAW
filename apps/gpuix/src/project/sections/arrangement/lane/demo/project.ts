@@ -1,4 +1,11 @@
-import { hydrateProject, useProjectState } from "@/project/adapters"
+import { hydrateProject, configureProjectCreation } from "@/project/adapters"
+import {
+  createTestDocument,
+  createTestWorkspace,
+  TEST_CREATION,
+  TEST_PROJECT_CREATION,
+  TEST_TRACK_APPEARANCE,
+} from "@/project/adapters/fixtures"
 import { createClip, createTrack } from "@/project/model/reducers"
 import type { Track } from "@/project/model/types"
 import { PATTERN_STEPS_PER_BAR } from "@/project/model/types"
@@ -7,9 +14,9 @@ import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { CONTENT_PALETTE } from "@/shared/theme/content-color"
 
 export function seedLaneProject(mediaUri: string, stress: boolean): void {
-  const current = useProjectState.getState()
-  const document = structuredClone(current.document)
-  const workspace = structuredClone(current.workspace)
+  configureProjectCreation(TEST_PROJECT_CREATION)
+  const document = createTestDocument()
+  const workspace = createTestWorkspace()
   const main = document.tracks.find(track => track.kind === "main")
   if (!main) throw new Error("Verification project requires the existing Main output")
   document.name = "Lane native verification"
@@ -26,12 +33,10 @@ export function seedLaneProject(mediaUri: string, stress: boolean): void {
   const clipsPerTrack = stress ? 50 : 3
   for (let index = 0; index < count; index++) {
     const kind = index % 3 === 0 ? "audio" : index % 3 === 1 ? "midi" : "pattern"
-    const track = createTrack(
-      kind === "audio" ? "audio" : "midi",
-      tracks,
-      undefined,
-      DEFAULT_LAYOUT_TOKENS.track.defaultHeight
-    )
+    const track = createTrack(kind === "audio" ? "audio" : "midi", tracks, undefined, {
+      ...TEST_CREATION,
+      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
+    })
     track.name = `Track ${String(index + 1).padStart(3, "0")}`
     track.color = CONTENT_PALETTE[index % CONTENT_PALETTE.length] ?? CONTENT_PALETTE[0]
     track.output = "main"
@@ -80,18 +85,19 @@ export function seedLaneProject(mediaUri: string, stress: boolean): void {
     tracks.push(track)
   }
   if (!stress) {
-    const group = createTrack("group", tracks, undefined, DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
+    const group = createTrack("group", tracks, undefined, {
+      ...TEST_CREATION,
+      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
+    })
     group.name = "Group"
     group.color = CONTENT_PALETTE[2]
     group.childTrackIds = tracks.slice(0, 2).map(track => track.id)
     for (const track of tracks.slice(0, 2)) track.output = group.id
     tracks.unshift(group)
-    const returnTrack = createTrack(
-      "return",
-      tracks,
-      undefined,
-      DEFAULT_LAYOUT_TOKENS.track.defaultHeight
-    )
+    const returnTrack = createTrack("return", tracks, undefined, {
+      ...TEST_CREATION,
+      appearance: { ...TEST_TRACK_APPEARANCE, heightPx: DEFAULT_LAYOUT_TOKENS.track.defaultHeight },
+    })
     returnTrack.name = "Return"
     returnTrack.color = CONTENT_PALETTE[3]
     tracks.push(returnTrack)

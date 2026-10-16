@@ -1,3 +1,4 @@
+import { PREFERENCE_DEFAULTS } from "../../defaults/preferences"
 import { midiInsertionBeat, moveMidiNote } from "../midi-notes"
 import type { MidiNote } from "../types"
 
@@ -57,11 +58,20 @@ export function duplicateNotes(
   }
 }
 
-export function pasteNotes(notes: MidiNote[], copied: MidiNote[], createId: () => string): Edit {
+export function pasteNotes(
+  notes: MidiNote[],
+  copied: MidiNote[],
+  createId: () => string,
+  policy = PREFERENCE_DEFAULTS.midi
+): Edit {
   return {
     notes: [
       ...notes,
-      ...copied.map(note => ({ ...note, id: createId(), startBeat: note.startBeat + 0.25 })),
+      ...copied.map(note => ({
+        ...note,
+        id: createId(),
+        startBeat: note.startBeat + policy.noteGridBeats,
+      })),
     ],
     selection: copied.map((_, index) => notes.length + index),
   }
@@ -73,12 +83,14 @@ export function insertNote({
   verticalRatio,
   window,
   id,
+  policy = PREFERENCE_DEFAULTS.midi,
 }: {
   notes: MidiNote[]
   horizontalRatio: number
   verticalRatio: number
   window: Window
   id: string
+  policy?: typeof PREFERENCE_DEFAULTS.midi
 }): Edit {
   return {
     notes: [
@@ -86,9 +98,9 @@ export function insertNote({
       {
         id,
         pitch: Math.max(0, Math.min(127, 127 - Math.floor(verticalRatio * 128))),
-        startBeat: midiInsertionBeat({ horizontalRatio, ...window }),
-        lengthBeats: 1,
-        velocity: 100,
+        startBeat: midiInsertionBeat({ horizontalRatio, ...window }, policy),
+        lengthBeats: policy.insertLengthBeats,
+        velocity: policy.velocity,
       },
     ],
     selection: [notes.length],
@@ -102,6 +114,7 @@ export function transformNotes({
   beatDelta,
   pitchDelta,
   window,
+  policy = PREFERENCE_DEFAULTS.midi,
 }: {
   notes: MidiNote[]
   selection: number[]
@@ -109,6 +122,7 @@ export function transformNotes({
   beatDelta: number
   pitchDelta: number
   window: Window
+  policy?: typeof PREFERENCE_DEFAULTS.midi
 }): Edit {
   const valid = validSelection(notes, selection)
   const indices = new Set(valid)
@@ -120,17 +134,23 @@ export function transformNotes({
       if (kind === "resize") {
         return {
           ...note,
-          lengthBeats: Math.max(0.25, Math.round((note.lengthBeats + beatDelta) * 4) / 4),
+          lengthBeats: Math.max(
+            policy.noteGridBeats,
+            Math.round((note.lengthBeats + beatDelta) / policy.noteGridBeats) * policy.noteGridBeats
+          ),
         }
       }
-      const moved = moveMidiNote({
-        note,
-        originalStartBeat: note.startBeat,
-        originalPitch: note.pitch,
-        beatDelta,
-        pitchDelta,
-        ...window,
-      })
+      const moved = moveMidiNote(
+        {
+          note,
+          originalStartBeat: note.startBeat,
+          originalPitch: note.pitch,
+          beatDelta,
+          pitchDelta,
+          ...window,
+        },
+        policy
+      )
       return moved
     }),
     selection: valid,
@@ -158,6 +178,7 @@ export function drawCells({
   pitch,
   window,
   createId,
+  policy = PREFERENCE_DEFAULTS.midi,
 }: {
   notes: MidiNote[]
   selection: number[]
@@ -166,15 +187,19 @@ export function drawCells({
   pitch: number
   window: Window
   createId: () => string
+  policy?: typeof PREFERENCE_DEFAULTS.midi
 }): Edit {
   const added: MidiNote[] = []
-  const origin = Math.floor(window.sourceOffsetBeats * 4) / 4
+  const origin = Math.floor(window.sourceOffsetBeats / policy.noteGridBeats) * policy.noteGridBeats
   for (let cell = Math.min(firstCell, lastCell); cell <= Math.max(firstCell, lastCell); cell++) {
-    const beat = origin + cell / 4
+    const beat = origin + cell * policy.noteGridBeats
     const visibleStart = Math.max(beat, window.sourceOffsetBeats)
-    const visibleEnd = Math.min(beat + 0.25, window.sourceOffsetBeats + window.totalBeats)
+    const visibleEnd = Math.min(
+      beat + policy.drawLengthBeats,
+      window.sourceOffsetBeats + window.totalBeats
+    )
     if (
-      beat + 0.25 <= window.sourceOffsetBeats ||
+      beat + policy.drawLengthBeats <= window.sourceOffsetBeats ||
       beat >= window.sourceOffsetBeats + window.totalBeats ||
       notes.some(note => {
         return (
@@ -186,7 +211,13 @@ export function drawCells({
     ) {
       continue
     }
-    added.push({ id: createId(), pitch, startBeat: beat, lengthBeats: 0.25, velocity: 100 })
+    added.push({
+      id: createId(),
+      pitch,
+      startBeat: beat,
+      lengthBeats: policy.drawLengthBeats,
+      velocity: policy.velocity,
+    })
   }
   return { notes: [...notes, ...added], selection: validSelection(notes, selection) }
 }
@@ -199,6 +230,7 @@ export function eraseCells({
   pitch,
   window,
   erased,
+  policy = PREFERENCE_DEFAULTS.midi,
 }: {
   notes: MidiNote[]
   selection: number[]
@@ -207,19 +239,21 @@ export function eraseCells({
   pitch: number
   window: Window
   erased: ReadonlySet<number>
+  policy?: typeof PREFERENCE_DEFAULTS.midi
 }): { edit: Edit; erased: Set<number> } {
   const next = new Set(erased)
   const low = Math.min(firstCell, lastCell)
   const high = Math.max(firstCell, lastCell)
-  const origin = Math.floor(window.sourceOffsetBeats * 4) / 4
+  const origin = Math.floor(window.sourceOffsetBeats / policy.noteGridBeats) * policy.noteGridBeats
   notes.forEach((note, index) => {
     if (
       note.startBeat + note.lengthBeats <= window.sourceOffsetBeats ||
       note.startBeat >= window.sourceOffsetBeats + window.totalBeats
     )
       return
-    const startCell = Math.floor((note.startBeat - origin) * 4)
-    const endCell = Math.ceil((note.startBeat + note.lengthBeats - origin) * 4) - 1
+    const startCell = Math.floor((note.startBeat - origin) / policy.noteGridBeats)
+    const endCell =
+      Math.ceil((note.startBeat + note.lengthBeats - origin) / policy.noteGridBeats) - 1
     if (note.pitch === pitch && startCell <= high && endCell >= low) {
       next.add(index)
     }

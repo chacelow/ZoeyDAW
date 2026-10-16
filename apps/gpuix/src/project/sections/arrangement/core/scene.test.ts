@@ -1,6 +1,8 @@
 import { DEFAULT_LAYOUT_TOKENS, createLayoutTokens } from "@/shared/theme/layout-tokens"
 import { describe, expect, it, jest } from "bun:test"
 import { createSceneStore } from "./scene"
+import { PROJECT_TEMPLATE } from "@/project/defaults/template"
+import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { ArrangementViewport } from "./scene"
 import type { LoopRegion, Marker, Track } from "../../../model/types"
 import { createMockDocument } from "@/project/adapters/fixtures"
@@ -25,6 +27,36 @@ const transport = { bpm: 120, numerator: 4, denominator: 4 }
 const fixedOne = { mode: "fixed", bars: 1 } as const
 
 describe("arrangement scene store", () => {
+  it("samples pure project and workspace templates without authoring a named project", () => {
+    const template = structuredClone(PROJECT_TEMPLATE)
+    const preferences = structuredClone(PREFERENCE_DEFAULTS)
+    template.transport.bpm = 137
+    template.transport.numerator = 3
+    template.transport.loop.startBar = 4
+    template.transport.loop.lengthBars = 6
+    template.timeline.minimumBars = 96
+    preferences.workspace.pxPerBar = 31
+    preferences.workspace.gridMode = "adaptive"
+    preferences.workspace.gridDensity = "narrow"
+    const scene = createSceneStore(DEFAULT_LAYOUT_TOKENS, { template, preferences }).get()
+    expect(scene.bars).toBe(template.timeline.minimumBars)
+    expect(scene.transport).toMatchObject({
+      bpm: template.transport.bpm,
+      numerator: template.transport.numerator,
+    })
+    expect(scene.loop).toEqual({
+      enabled: template.transport.loop.enabled,
+      startBar: template.transport.loop.startBar,
+      endBar: template.transport.loop.startBar + template.transport.loop.lengthBars,
+    })
+    expect(scene.viewport.pxPerBar).toBe(preferences.workspace.pxPerBar)
+    expect(scene.grid).toEqual({
+      mode: preferences.workspace.gridMode,
+      density: preferences.workspace.gridDensity,
+    })
+    expect(scene.tracks).toEqual([])
+  })
+
   it("bumps revision only when a field actually changes", () => {
     const store = createSceneStore(DEFAULT_LAYOUT_TOKENS)
     store.setViewport(vp())

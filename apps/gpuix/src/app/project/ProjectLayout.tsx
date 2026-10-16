@@ -57,10 +57,10 @@ export function ProjectLayout({
     footer === null ? null : (
       <PanelShell
         id="footer"
-        active={shell.activeSection}
-        onActivate={shell.setActiveSection}
         aria-label={labels.footerPanel}
         activeDescription={labels.activeDescription}
+        active={shell.activeSection}
+        onActivate={shell.setActiveSection}
       >
         {footer}
       </PanelShell>
@@ -78,10 +78,10 @@ export function ProjectLayout({
       >
         <PanelShell
           id="browser"
-          active={shell.activeSection}
-          onActivate={shell.setActiveSection}
           aria-label={labels.browserPanel}
           activeDescription={labels.activeDescription}
+          active={shell.activeSection}
+          onActivate={shell.setActiveSection}
         >
           {browser}
         </PanelShell>
@@ -94,10 +94,10 @@ export function ProjectLayout({
       <Panel minSize={panels.arrangementMinWidth} testId="arrangement-panel">
         <PanelShell
           id="arrangement"
-          active={shell.activeSection}
-          onActivate={shell.setActiveSection}
           aria-label={labels.arrangementPanel}
           activeDescription={labels.activeDescription}
+          active={shell.activeSection}
+          onActivate={shell.setActiveSection}
         >
           {arrangement}
         </PanelShell>

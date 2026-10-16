@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react"
+import type { DisplayFormats } from "@/project/model/display-formats"
 import type { EventPayload } from "@gpuix/react"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -25,6 +26,7 @@ export function SourceMarker({
   height,
   lower = false,
   label,
+  formats,
 }: {
   readonly clip: AudioClip
   readonly kind: MarkerKind
@@ -34,6 +36,7 @@ export function SourceMarker({
   readonly height: number
   readonly lower?: boolean
   readonly label: string
+  readonly formats: DisplayFormats
 }) {
   const theme = useTheme()
   const environment = useClipEditorEnvironment()
@@ -78,7 +81,7 @@ export function SourceMarker({
       tabIndex={0}
       aria-label={label}
       aria-valuenow={position}
-      aria-valuetext={position.toFixed(4)}
+      aria-valuetext={formats.number(position, "sourceMarker")}
       style={sx({
         position: "absolute",
         left: right ? left - hit : left,

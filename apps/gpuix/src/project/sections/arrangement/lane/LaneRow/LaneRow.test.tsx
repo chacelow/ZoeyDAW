@@ -3,7 +3,7 @@ import { afterEach, expect, it, spyOn } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../../../../shared/theme/ThemeProvider"
-import { createMockDocument } from "../../../../adapters/fixtures"
+import { createMockDocument, TEST_CREATION_NAMES } from "../../../../adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import { LaneContents } from "./Contents"
 import { layoutTrackRows } from "../../core/layout"
@@ -76,6 +76,7 @@ it("culls offscreen native cards and retains visible node identity while scrolli
               scene={scene.get()}
               automationMode={false}
               readPeaks={() => new Float32Array(0)}
+              creationNames={TEST_CREATION_NAMES}
             />
           </div>
         </div>
@@ -131,6 +132,7 @@ it("moves a fully visible Clip without reuploading or remounting its unchanged c
             scene={scene.get()}
             automationMode={false}
             readPeaks={readPeaks}
+            creationNames={TEST_CREATION_NAMES}
           />
         </div>
       </ThemeProvider>
@@ -201,6 +203,7 @@ it("keeps a focused Clip Space-transparent and exposes only the playing transpor
                 scene={scene.get()}
                 automationMode={false}
                 readPeaks={() => new Float32Array(0)}
+                creationNames={TEST_CREATION_NAMES}
               />
             </div>
             <LaneOverlay
@@ -326,6 +329,7 @@ it("preserves tiny Clip pixel width when projecting a collapsed group summary", 
             scene={scene.get()}
             automationMode={false}
             readPeaks={() => new Float32Array(0)}
+            creationNames={TEST_CREATION_NAMES}
           />
         </div>
       </ThemeProvider>
@@ -388,6 +392,7 @@ it("scrolls an already-visible unchanged Clip without rerendering its content", 
               scene={scene.get()}
               automationMode={false}
               readPeaks={readPeaks}
+              creationNames={TEST_CREATION_NAMES}
             />
           </div>
         </div>
@@ -454,6 +459,7 @@ it("refreshes a cached mounted Clip title when density changes without changing 
             scene={scene.get()}
             automationMode={false}
             readPeaks={readPeaks}
+            creationNames={TEST_CREATION_NAMES}
           />
         </div>
       </ThemeProvider>

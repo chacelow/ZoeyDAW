@@ -14,17 +14,20 @@ import { createClipCardProjection, createGridProjection } from "../clip-card-pro
 import { useGridQuads } from "../GridQuads"
 import { QuadBatch } from "@/shared/quads/QuadBatch"
 import { useQuadBatch } from "@/shared/quads/useQuadBatch"
+import type { CreationNames } from "@/project/defaults/template"
 
 export function LaneContents({
   row,
   scene,
   automationMode,
   readPeaks,
+  creationNames,
 }: {
   row: TrackRow
   scene: ArrangementScene
   automationMode: boolean
   readPeaks: PeakReader
+  creationNames: Pick<CreationNames, "clip">
 }) {
   const theme = useTheme()
   const projectGrid = useMemo(createGridProjection, [])
@@ -195,6 +198,7 @@ export function LaneContents({
             numerator={scene.transport.numerator}
             automationMode={automationMode}
             readPeaks={readPeaks}
+            creationNames={creationNames}
           />
         ))}
       </div>

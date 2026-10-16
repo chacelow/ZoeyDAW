@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef } from "react"
+import { usePreference } from "@/platform/settings"
+import type { DisplayFormats } from "@/project/model/display-formats"
 import type { EventPayload } from "@gpuix/react"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { useClipEditorEnvironment } from "../environment"
-import { isBlackKey, pitchName } from "./geometry"
+import { isBlackKey } from "./geometry"
 import { visibleRows } from "./layout"
 import type { RollGeometry } from "./layout"
 
@@ -15,13 +17,16 @@ and selects that row's notes; release, cancellation and window deactivation end 
 export function PianoKeys({
   roll,
   label,
+  formats,
   selectPitch,
 }: {
   readonly roll: RollGeometry
   readonly label: string
+  readonly formats: DisplayFormats
   readonly selectPitch: (pitch: number, extend: boolean, source: "pointer" | "keyboard") => void
 }) {
   const theme = useTheme()
+  const midi = usePreference("midi")
   const environment = useClipEditorEnvironment()
   const sounding = useProjectState(state => state.session.activeMidiNotes)
   const held = useRef<{ pitch: number; source: "pointer" | "keyboard" } | null>(null)
@@ -73,7 +78,7 @@ export function PianoKeys({
             key={pitch}
             role="button"
             tabIndex={0}
-            aria-label={`${label} ${pitchName(pitch)}`}
+            aria-label={`${label} ${formats.pitchName(pitch, midi.octaveLabelOffset)}`}
             aria-pressed={active}
             testId={`midi-key-${pitch}`}
             style={sx({
@@ -127,7 +132,9 @@ export function PianoKeys({
             }}
           >
             {pitch % 12 === 0 || labelled ? (
-              <text style={{ pointerEvents: "none" }}>{pitchName(pitch)}</text>
+              <text style={{ pointerEvents: "none" }}>
+                {formats.pitchName(pitch, midi.octaveLabelOffset)}
+              </text>
             ) : null}
           </div>
         )

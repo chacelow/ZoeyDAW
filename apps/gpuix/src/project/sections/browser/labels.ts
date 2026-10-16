@@ -1,6 +1,11 @@
-import type { BrowserKind, BrowserSource } from "./catalog"
+import type { BrowserEntry, BrowserKind, BrowserSource } from "./catalog"
+import type { DisplayFormats } from "@/project/model/display-formats"
+import type { SupportedLocale } from "@/platform/i18n/core"
 
 export interface BrowserLabels {
+  readonly locale: SupportedLocale
+  readonly formats: DisplayFormats
+  readonly entries: readonly BrowserEntry[]
   readonly title: string
   readonly demonstration: string
   readonly back: string

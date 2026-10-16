@@ -1,9 +1,5 @@
-import {
-  clampFadeCurve,
-  DEFAULT_FADE_CURVE,
-  FADE_CURVE_VERTICAL_SCALE,
-  fadeControls,
-} from "@/project/model/fades"
+import { PROJECT_TEMPLATE } from "@/project/defaults/template"
+import { clampFadeCurve, FADE_CURVE_VERTICAL_SCALE, fadeControls } from "@/project/model/fades"
 import { FADE_HANDLE_PX } from "../clip-geometry"
 import type { AudioClip } from "@/project/model/types"
 import type { Point } from "../interactions/types"
@@ -40,8 +36,10 @@ export function beginFadeDrag(
     height,
     width,
     gap: Math.min(0.5, Math.max(0.1, FADE_HANDLE_PX / width)),
-    curve: clip[edge === "in" ? "fadeInCurve" : "fadeOutCurve"] ?? DEFAULT_FADE_CURVE,
-    position: clip[edge === "in" ? "fadeInCurvePosition" : "fadeOutCurvePosition"] ?? 0.5,
+    curve: clip[edge === "in" ? "fadeInCurve" : "fadeOutCurve"] ?? PROJECT_TEMPLATE.clip.fade.curve,
+    position:
+      clip[edge === "in" ? "fadeInCurvePosition" : "fadeOutCurvePosition"] ??
+      PROJECT_TEMPLATE.clip.fade.position,
   }
 }
 
@@ -66,7 +64,8 @@ export function moveFadeDrag(
       Math.min(1 - state.gap, state.position + (current.x - state.last.x) / state.width)
     )
     const patch =
-      curve === (clip[curveKey] ?? DEFAULT_FADE_CURVE) && position === (clip[positionKey] ?? 0.5)
+      curve === (clip[curveKey] ?? PROJECT_TEMPLATE.clip.fade.curve) &&
+      position === (clip[positionKey] ?? PROJECT_TEMPLATE.clip.fade.position)
         ? null
         : { [curveKey]: curve, [positionKey]: position }
     return { state: { ...state, curve, position, last: current }, patch }

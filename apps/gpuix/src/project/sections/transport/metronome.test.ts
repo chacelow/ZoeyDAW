@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { formatSampleTime, metronomePhase, tappedTempo } from "./metronome"
+import { metronomePhase, tappedTempo } from "./metronome"
 
 test("property: adjacent accepted beats alternate across meters and bar boundaries", () => {
   for (let numerator = 1; numerator <= 32; numerator++) {
@@ -42,8 +42,11 @@ test("tap tempo averages recent intervals, expires stale taps and limits history
   expect(tappedTempo([1000], 1000).bpm).toBeNull()
 })
 
-test("sample time uses the accepted sample clock including subsecond carry", () => {
-  expect(formatSampleTime(0, 48000)).toBe("0:00:00.000")
-  expect(formatSampleTime(48000 * 3661 + 24000, 48000)).toBe("1:01:01.500")
-  expect(formatSampleTime(44100 * 60, 44100)).toBe("0:01:00.000")
+test("tap tempo follows explicit window and sample preferences", () => {
+  const policy = { stopRepeatMs: 450, tapWindowMs: 900, tapSamples: 3 }
+  expect(tappedTempo([0, 500, 1000], 1400, policy)).toEqual({ taps: [1000, 1400], bpm: 150 })
+  expect(tappedTempo([1000, 1200, 1400], 1600, policy)).toEqual({
+    taps: [1200, 1400, 1600],
+    bpm: 300,
+  })
 })

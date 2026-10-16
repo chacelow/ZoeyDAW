@@ -7,8 +7,17 @@ import {
   clampFadeIntervals,
   fadeWindow,
 } from "../model/fades"
-import { editClip, get, session, tracks, updateTrack } from "./context"
+import {
+  editClip,
+  get,
+  session,
+  tracks,
+  updateTrack,
+  projectCreationValues,
+  projectPreferences,
+} from "./context"
 import type { AudioClip, Clip } from "../model/types"
+import { defaultAudioClipSettings } from "../model/audio-editor/settings"
 
 export const clipActions = {
   createClip(trackId: string, kind: Clip["kind"], startBar: number, lengthBars: number) {
@@ -21,7 +30,17 @@ export const clipActions = {
     ) {
       return
     }
-    const clip = createClip(kind, startBar, lengthBars)
+    const clip = {
+      ...createClip(kind, startBar, lengthBars),
+      label: projectCreationValues().names.clip(kind),
+    }
+    if (clip.kind === "audio") {
+      clip.audioSettings = defaultAudioClipSettings(
+        get().document.transport.bpm,
+        clip,
+        projectPreferences().audio
+      )
+    }
     updateTrack(trackId, {
       clips: [...target.clips, clip],
     })

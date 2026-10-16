@@ -3,12 +3,16 @@ import { afterEach, beforeEach, expect, it } from "bun:test"
 import { create } from "zustand"
 import { createStore } from "zustand/vanilla"
 import { parseProject } from "../../model/persistence"
-import { initialSession } from "../../stores/useProjectState"
-import { initialDocument } from "../../stores/slices/document"
-import { initialWorkspace } from "../../stores/slices/workspace"
 import { createProjectRuntime } from "."
 import { createMockProjectBackend } from "../backend/mock"
-import { createMockDocument, createMockWorkspace } from "../fixtures"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  createTestDocument,
+  createTestWorkspace,
+  createTestSession,
+  TEST_PROJECT_CREATION,
+} from "../fixtures"
 import {
   configureProjectBackend,
   hydrateProject,
@@ -143,12 +147,20 @@ it("does not create backend resources on import, factory construction, or hydrat
   removeDefault()
   const makeStore = () =>
     create<ProjectState>(() => ({
-      document: initialDocument(),
-      workspace: initialWorkspace(),
-      session: initialSession(),
+      document: createTestDocument(),
+      workspace: createTestWorkspace(),
+      session: createTestSession(),
     }))
-  const first = createProjectRuntime({ store: makeStore(), backendFactory })
-  const second = createProjectRuntime({ store: makeStore(), backendFactory })
+  const first = createProjectRuntime({
+    store: makeStore(),
+    backendFactory,
+    creation: TEST_PROJECT_CREATION,
+  })
+  const second = createProjectRuntime({
+    store: makeStore(),
+    backendFactory,
+    creation: TEST_PROJECT_CREATION,
+  })
   expect(opened).toBe(0)
   first.hydrateState({ document: createMockDocument(), workspace: createMockWorkspace() })
   second.hydrateState({ document: createMockDocument(), workspace: createMockWorkspace() })
@@ -641,8 +653,8 @@ it("opens external-backend projects without demo media and leaves empty audio cl
 it("initializes each project from its backend registration and restores the previous initializer", () => {
   const removeFirst = configureProjectBackend(createMockProjectBackend, {
     createProject: projectId => ({
-      document: { ...initialDocument(), name: projectId },
-      workspace: initialWorkspace(),
+      document: { ...createTestDocument(), name: projectId },
+      workspace: createTestWorkspace(),
     }),
   })
   const removeSecond = configureProjectBackend(createMockProjectBackend)
@@ -651,7 +663,7 @@ it("initializes each project from its backend registration and restores the prev
     removeFirst()
   }
   setProjectStorageId("external-second")
-  expect(useProjectState.getState().document.name).toBe(initialDocument().name)
+  expect(useProjectState.getState().document.name).toBe(createTestDocument().name)
   removeSecond()
   setProjectStorageId("external-first")
   expect(useProjectState.getState().document.name).toBe("external-first")
@@ -818,11 +830,15 @@ it("retains independent recorded notes when the last lease cancels a numeric edi
 
 it("starts independently injected runtime projects without fabricated demo media", () => {
   const store = createStore<ProjectState>(() => ({
-    document: initialDocument(),
-    workspace: initialWorkspace(),
-    session: initialSession(),
+    document: createTestDocument(),
+    workspace: createTestWorkspace(),
+    session: createTestSession(),
   }))
-  const runtime = createProjectRuntime({ store, backendFactory: createMockProjectBackend })
+  const runtime = createProjectRuntime({
+    store,
+    backendFactory: createMockProjectBackend,
+    creation: TEST_PROJECT_CREATION,
+  })
   runtime.resetProject("native-bootstrap")
   expect(runtime.get().document.tracks.map(track => track.id)).toEqual(["main"])
   expect(runtime.get().document.tracks.flatMap(track => track.clips)).toEqual([])
@@ -840,11 +856,15 @@ it.each([
   async ({ owner, lifecycle }) => {
     const remote = deferredBackend()
     const store = createStore<ProjectState>(() => ({
-      document: initialDocument(),
-      workspace: initialWorkspace(),
-      session: initialSession(),
+      document: createTestDocument(),
+      workspace: createTestWorkspace(),
+      session: createTestSession(),
     }))
-    const runtime = createProjectRuntime({ store, backendFactory: () => remote.backend })
+    const runtime = createProjectRuntime({
+      store,
+      backendFactory: () => remote.backend,
+      creation: TEST_PROJECT_CREATION,
+    })
     const release = runtime.startProjectRuntime()
     if (owner === "edit") {
       runtime.beginEdit("failed-recording")

@@ -8,6 +8,7 @@ import { visibleRows } from "@/project/sections/arrangement/lane/render-projecti
 import type { LaneTranslate } from "@/project/sections/arrangement/lane/messages"
 import type { LaneContext } from "../../types"
 import type { ArrangementScene } from "@/project/sections/arrangement/core/scene"
+import type { CreationNames } from "@/project/defaults/template"
 
 export function ClipNameEditor({
   context,
@@ -15,12 +16,14 @@ export function ClipNameEditor({
   trackId,
   originY,
   t,
+  creationNames,
 }: {
   context: LaneContext
   scene: ArrangementScene
   trackId: string
   originY: number
   t: LaneTranslate
+  creationNames: Pick<CreationNames, "clip">
 }) {
   const theme = useTheme()
   const selection = scene.targetSelection
@@ -43,7 +46,7 @@ export function ClipNameEditor({
       key={clip.id}
       context={context}
       id={clip.id}
-      initial={clipLabel(clip)}
+      initial={clipLabel(clip, creationNames)}
       t={t}
       left={left}
       top={Math.round(rect.top + 1) - originY}

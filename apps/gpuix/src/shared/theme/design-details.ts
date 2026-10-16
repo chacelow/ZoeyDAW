@@ -6,6 +6,9 @@ type MotionEasing = NonNullable<
 >
 
 export interface DesignDetails {
+  readonly trackCreationColors: Readonly<
+    Record<"audio" | "midi" | "group" | "return" | "main", string>
+  >
   readonly overlay: { readonly sideOffset: number; readonly collisionPadding: number }
   readonly dragPreview: {
     readonly maxWidth: number
@@ -103,7 +106,16 @@ export interface DesignDetails {
   readonly icon: { readonly strokeWidth: number }
 }
 
+const DEFAULT_TRACK_COLOR = "oklch(0.65 0.18 230)"
+
 export const DEFAULT_DESIGN_DETAILS: DesignDetails = {
+  trackCreationColors: {
+    audio: DEFAULT_TRACK_COLOR,
+    midi: DEFAULT_TRACK_COLOR,
+    group: "oklch(0.65 0.17 265)",
+    return: DEFAULT_TRACK_COLOR,
+    main: "var(--chart-3)",
+  },
   overlay: { sideOffset: 4, collisionPadding: 8 },
   dragPreview: { maxWidth: 320, gap: 8, opacity: 0.85, pointerOffset: { x: 12, y: 12 } },
   toast: { edgeInset: 12, stackGap: 8, inset: 12, radius: 8, width: 304 },

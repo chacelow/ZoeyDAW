@@ -12,7 +12,11 @@ import {
   serializeProject,
   useProjectState,
 } from "../../../../adapters"
-import { createMockDocument, createMockWorkspace } from "../../../../adapters/fixtures"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  TEST_CREATION_NAMES,
+} from "../../../../adapters/fixtures"
 import { createSceneStore } from "../../core/scene"
 import type { SceneStore } from "../../core/scene"
 import { clipRect, layoutTrackRows } from "../../core/layout"
@@ -21,7 +25,7 @@ import { activeAutomationRows } from "../../core/automation/geometry"
 import { LaneRow } from "../LaneRow"
 import { LaneOverlay } from "../LaneOverlay"
 import { visibleRows } from "../render-projection"
-import { labelsByLocale } from "../demo/labels"
+import { labelsByLocale } from "@/app/locales/sections/lane"
 import { createLaneController } from "./controller"
 import type { LaneController } from "./controller"
 import { createTestTimeline } from "../testing/project-scene.test-helper"
@@ -71,6 +75,7 @@ function Surface({ scene, controller }: { scene: SceneStore; controller: LaneCon
                 }}
               >
                 <LaneRow
+                  creationNames={TEST_CREATION_NAMES}
                   row={row}
                   scene={snapshot}
                   viewport={snapshot.viewport}

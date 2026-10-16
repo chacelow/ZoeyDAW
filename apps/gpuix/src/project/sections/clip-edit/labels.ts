@@ -1,7 +1,10 @@
 import type { AUDIO_WARP_MODES } from "@/project/model/audio-editor"
+import type { DisplayFormats } from "@/project/model/display-formats"
+import type { CreationNames } from "@/project/defaults/template"
 
 /** Every visible or announced string of the Clip editor; the composition root supplies one locale. */
 export interface ClipEditorLabels {
+  readonly creationNames: Pick<CreationNames, "clip">
   readonly clipEditor: string
   readonly close: string
   readonly rename: string
@@ -12,6 +15,7 @@ export interface ClipEditorLabels {
 }
 
 export interface MidiEditorLabels {
+  readonly formats: DisplayFormats
   readonly pianoRoll: string
   readonly fold: string
   readonly draw: string
@@ -32,6 +36,8 @@ export interface MidiEditorLabels {
 }
 
 export interface AudioEditorLabels {
+  readonly formats: DisplayFormats
+  readonly unavailable: string
   readonly title: string
   readonly source: string
   readonly sample: string

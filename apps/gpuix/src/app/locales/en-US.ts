@@ -1,8 +1,26 @@
+import { creationNamesByLocale } from "./creation-names"
+
 /**
  * Application shell copy. Keys follow apps/web/src/locales/shared.en-US.ts, limited to
  * what the shell renders; section copy is injected by the composition root as labels.
  */
 export default {
+  creationNames: creationNamesByLocale["en-US"],
+  snapshotErrors: {
+    read: "Could not read snapshot storage.",
+    invalid: "The local snapshot is invalid or unsupported. Current project was kept.",
+    write: "Could not save the local snapshot. Check storage availability.",
+    missing: "No local snapshot exists for this project.",
+  },
+  panel: {
+    footer: "Footer",
+    browser: "Browser",
+    arrangement: "Arrangement",
+    activeDescription: "Active panel",
+    toggleFixed: "Toggle {{panel}}",
+  },
+  control: { on: "ON", off: "OFF" },
+  track: { monitorModes: { off: "Off", auto: "Auto", in: "In" } },
   app: {
     name: "zoeydaw",
     tagline: "Web UI DAW",
@@ -11,6 +29,8 @@ export default {
     loading: "Loading…",
     back: "Back",
     cancel: "Cancel",
+    retry: "Retry",
+    loadFailed: "Loading failed",
   },
   home: {
     title: "Projects",

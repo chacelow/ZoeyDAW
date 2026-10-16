@@ -75,8 +75,8 @@
 复跑入口，从 `apps/gpuix` 执行：
 
 ```sh
-NODE_ENV=production bun --preload ./src/project/sections/clip-edit/verification/audio-profile-preload.ts src/project/sections/clip-edit/verification/audio-render-cost.tsx cached-bounds
-bun src/project/sections/clip-edit/verification/consumer-probe.tsx s1-recheck dense audio
+NODE_ENV=production bun --preload ./src/app/verification/clip-edit/audio-profile-preload.ts src/app/verification/clip-edit/audio-render-cost.tsx cached-bounds
+bun src/app/verification/clip-edit/consumer-probe.tsx s1-recheck dense audio
 ```
 
 现有入口默认把 JSON 写到 clip-edit/evidence；不要把复跑产物误提交为源码。
