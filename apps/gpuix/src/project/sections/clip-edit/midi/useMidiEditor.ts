@@ -31,7 +31,6 @@ interface Gesture {
   readonly kind: GestureKind
   /** Window position of the host's top-left at press time; content = window − origin + scroll. */
   readonly origin: { x: number; y: number }
-  readonly press: { x: number; y: number }
   /** Content position of the press, fixed while the roll scrolls. */
   readonly start: { x: number; y: number }
   readonly notes: MidiNote[]
@@ -134,6 +133,9 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
       }),
     [environment, finish]
   )
+  useEffect(() => {
+    finish(true)
+  }, [roll.width, roll.rowHeight, roll.window.totalBeats, roll.window.sourceOffsetBeats, finish])
 
   function content(event: EventPayload, active: Pick<Gesture, "origin">) {
     const view = latest.current
@@ -162,7 +164,7 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     if (active.kind === "move" || active.kind === "resize") {
       const beatDelta =
         Math.round(
-          (((event.x ?? active.press.x) - active.press.x) / Math.max(1, view.width)) *
+          ((point.x - active.start.x) / Math.max(1, view.width)) *
             (view.window.totalBeats / NOTE_GRID_BEATS)
         ) * NOTE_GRID_BEATS
       transaction.onChange(
@@ -238,7 +240,6 @@ export function useMidiEditor(clip: MidiClip, roll: RollGeometry, velocityHeight
     const next: Gesture = {
       kind,
       origin,
-      press,
       start: { x, y },
       notes: storedNotes(clip.id),
       selection,
