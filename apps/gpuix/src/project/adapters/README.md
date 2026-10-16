@@ -63,6 +63,8 @@ The native provider reports a sample clock from the Rust `Transport`, not Firewh
 
 Keyboard note input, authored MIDI recording and accepted recording clocks retain their existing project-state behavior. MIDI/Pattern clips and held notes are stored and participate in transport telemetry but produce no audio. MIDI synthesis, plugin hosting and native recording are not implemented. Automation lanes are retained in the protocol but are not applied to DSP by this backend.
 
+Recording clip names are sampled before their document callback enters the journal. Delayed execution and recovery replay reuse the captured name, so a later locale change does not rename that recording event.
+
 ### Native session API
 
 `@zoeydaw/native` exports the following engine functions. The adapter uses only the platform re-export. Views read waveforms through `readProjectPeaks` (a `PeakReader` from `model/backend`): the runtime forwards to whichever backend its connection currently owns, so peaks come from the same session as transport and meters, and the engine handle never leaves the adapter. With no open backend it returns an empty array.
@@ -94,6 +96,8 @@ Parsing assigns collision-free IDs to MIDI notes missing them, preserving every 
 `setSnapshotStorage(storage)` installs the synchronous `SnapshotStorage` port (`get(key): string | null`, `set(key, value): void`); passing `null` disconnects it. The platform/application composition root supplies the durable implementation. There is no default storage or filesystem access in this layer. `createMemorySnapshotStorage()` creates an isolated test implementation.
 
 Save captures the committed revision, its storage instance and route key, then waits for backend acceptance before writing. A newer edit is not marked clean by that older save. Project switching cancels the pending save. Restore returns false and sets `session.snapshotError` for missing, invalid or unavailable storage; failed reads or writes preserve authored data and dirty state. These are prototype snapshots, not `.zdaw` files or background autosave.
+
+`session.snapshotError` stores `read`, `invalid`, `write`, or `missing`, not a sentence. Application composition maps the code to the current locale without changing the saved project.
 
 Restore requires exactly one Main output with ID `main`. Audio tracks own audio clips; MIDI tracks own MIDI or Pattern clips. Group, Return and Main cannot own clips. Commands and snapshot validation share `acceptsClip`.
 

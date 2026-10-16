@@ -61,26 +61,43 @@ test("disposing a superseded renderer cannot close the active native window", ()
   }
 })
 
-test("unmounting a superseded root preserves the active window keyboard owner", () => {
+test("unmounting a superseded root preserves active keyboard and selection owners", () => {
   const previous = createTestRoot({ width: 40, height: 40 })
   previous.render(<div />)
   const received: string[] = []
+  const selections: Array<string | null> = []
   const current = createTestRoot({
-    width: 50,
-    height: 50,
+    width: 320,
+    height: 120,
     onKeyDown: event => {
       received.push(event.key ?? "")
+    },
+    onSelectionChange: event => {
+      selections.push(event.value ?? null)
     },
   })
   try {
     current.render(
-      <div testId="current" role="application" tabIndex={0} style={{ width: 30, height: 30 }} />
+      <div
+        testId="current"
+        role="application"
+        tabIndex={0}
+        style={{ display: "flex", flexDirection: "column", padding: 20 }}
+      >
+        <text style={{ fontSize: 20 }}>hello world</text>
+      </div>
     )
     previous.unmount()
     const host = current.renderer.findByTestId("current")
     if (!host) throw new Error("Active window host is missing")
     current.renderer.nativeSimulateKeystrokes(host.id, "home")
     expect(received).toEqual(["home"])
+    expect(current.renderer.dragSelect(21, 30, 300, 30)).toBe("hello world")
+    current.renderer.dispatchNativeEvents()
+    expect(selections).toEqual(["hello world"])
+    current.renderer.clearSelection()
+    current.renderer.dispatchNativeEvents()
+    expect(selections).toEqual(["hello world", null])
   } finally {
     current.unmount()
     previous.unmount()

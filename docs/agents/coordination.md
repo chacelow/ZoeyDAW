@@ -12,7 +12,7 @@
 
 **协调者的职责边界**:
 
-- **用户只和协调者对话**(2026-10-15 用户原话:"我主要和你对话,其他都是你来调")。协调者用 Opus 5.5,它调起的所有 Agent 用 gpt-6.1-sol。汇报里不出现"新协调者/临时 agent"之类需要用户分辨的角色。
+- **用户只和协调者对话**(2026-10-15 用户原话:"我主要和你对话,其他都是你来调")。2026-10-17 PC 接管沿用原主编排会话与四个 lane 会话；本轮启动模型均固定为 `cursor-claude/cx/gpt-6.1-sol`。用户不需要分辨临时角色。
 - **主动排查与审查,不把收尾留给用户**:每轮主动核对所有 Workspace、终端、进程与派发状态,发现漏清理、停滞、规则冲突当场处理。
 - **只统筹,不包办实现**。业务实现与返工交给对应切片的 worker;协调者写的只有合并、冲突解决、共享契约/规范/脚本和复核用的临时探针。
 - **能并行的先派出去**。不要让一条调查或验证链拖住其它切片;先派,再在等待期间复核。
@@ -27,7 +27,7 @@
 
 omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker 起在 gpuix-migration 的子 worktree,读到的是 gpuix-migration 分支的规则;协调者如果起在仓库根(`main`),读到的就是旧规则。所以:
 
-- 协调者会话的工作目录必须是 `gpuix-migration` worktree,启动命令 `omp --model cursor-claude/cc/claude-opus-5-5`。起在别处时,开工先读本文与该分支的 `AGENTS.md`、`LESSONS.md`。
+- 协调者会话的工作目录必须是 `gpuix-migration` worktree。PC 接管使用原会话的显式 `--resume`，启动时固定 `--model cursor-claude/cx/gpt-6.1-sol`。起在别处时，开工先读本文与该分支规则、`LESSONS.md`。
 - `AGENTS.md` 只在会话启动时注入,压缩后不会重读。入口文件改了,正在运行的会话要么手动读改后的文件,要么重启(见下面「交接」)。
 - 所有长期规则写进 gpuix-migration 分支的文件,不只留在会话里。用户在会话里给的规则,当轮就写进对应文件。
 - 协调用的脚本与切片规格放在 `scripts/orchestration/`,纳入版本管理(见下)。
@@ -36,7 +36,7 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **派发（2026-10-16 用户要求复用 lane）**：新任务优先派给空闲 lane，`scripts/orchestration/lane.sh assign <lane> <标题> <规格文件...>`。lane 就是一个长期保留的 gpuix-migration 子 worktree 加上它的 omp 终端，agent 保留之前读过的契约与文件地图，省掉重复的探索。`assign` 只接受“上次派发已结束、工作区干净、分支已合入主干”的 lane：它从 `gpuix-migration` 最新提交切出新分支 `lane/<lane>/<时间>-<slug>`，删掉已合入的旧分支，同步 renderer 链接与依赖，然后对同一个终端 `worker-start --terminal`。`lane.sh list` 查看所有 lane 的分支、是否已合入、终端与最近派发。只有所有 lane 都忙、又确实需要并行时，才用 `lane.sh new`（即 `start-worker.sh`）新建。规格 = `common.md` + 本任务规格。
 
-**模型按角色固定(2026-10-15 03:19 UTC 用户要求固定模型;同日 08:20 前后用户明确协调者用 Opus 5.5)**:协调者用 `cursor-claude/cc/claude-opus-5-5`;worker、临时起的 Orca 工作区 agent 用 `cursor-claude/cx/gpt-6.1-sol`。启动时手动指定,不依赖全局 omp 默认模型(其他会话可能改它)。Orca 拒绝 `worker-start --agent omp --model`,所以脚本先建 worktree,再开一个运行 `omp --model …` 的终端,最后用 `worker-start --terminal` 交付规格。不要直接调用 `worker-start --agent omp`。实现派工一律走 Orca worker,不用 omp `task` 子代理代替;`task` 只用于 worker 交付前的只读自审。
+**模型按角色固定**：2026-10-17 PC 接管的协调者与四个原 lane 均以 `cursor-claude/cx/gpt-6.1-sol` resume，显式指定模型，不依赖全局默认值。Orca 拒绝 `worker-start --agent omp --model`，所以先起固定模型的 omp 终端，再用 `worker-start --terminal` 绑定派发。原 lane 保留会话和 worktree，不以新 agent 替代；实现派工一律走 Orca worker，`task` 只用于只读自审。
 
 **回答问题**:worker 的 `question` 一律用 `orca orchestration reply --id`;`send` 用于通知。
 
@@ -58,25 +58,33 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 
 **桌面时段**:真实窗口输入一次只给一个 worker,用 reply 给出 UTC 起止时间,同时通知其余 worker 暂停输入;到点就停,发「桌面释放」。worker 只操作自己启动的窗口,用 `computer.window(...)` 加 AX `el.press()`、`win.observe()`/`screenshot()` 与窗口级输入,**不调用 `computer.control.acquire`**(它要人类实时批准,本项目不用;app-shell 阶段 1、clip-lane、a3b 都是这样完成的)。worker 被工具或权限卡住时,协调者先查以前切片的做法给出可行路线,不转问用户。
 
-**巡检(2026-10-15 01:45、01:49 UTC 用户要求)**:launchd 每 10 分钟运行 `scripts/orchestration/coordinator-tick.sh`,检查所有派发未关闭的 worker(包括终端状态为 retained 的空闲 worker)。判断依据是该 worker 会话最后一条消息距现在的时间。同一个 worker 每 10 分钟最多唤醒一次:
+**巡检（2026-10-17 用户要求）**：主编排用 OMP 内置 `/loop` 驱动，不用计划任务、launchd 或脚本定时向终端发提示。每轮先处理 listener 交付的消息，再用 `worker-list` 判断以下状态。`unverifiable` 不是死亡，不重启、不重复派发；同一 worker 的提醒需节流：
 
 - ASKING:该 worker 发出的 `question` 还没有回复。不唤醒 worker,把消息 id 交给协调者,协调者用 `reply --id` 回答。worker 停下时,先查这一项。
 - IDLE:回合已结束(TUI 空闲)超过 3 分钟,但派发没关,也没有待回复的 question。唤醒提示要求它继续做,或者用 `ask` 发出等待原因。
 - STALE:会话 10 分钟没有新消息。
 - ERROR:最后一条消息是模型报错,比如流超时。
 
-协调者空闲时也会收到一次巡检提示。worker 端的规则是不允许静默停下,写在 `specs/common.md`。
+worker 端的规则是不允许静默停下，写在 `specs/common.md`。
 
 **协调者的 loop(2026-10-15 02:58 UTC 用户要求)**:`/loop` 只发一句短提示,规则全在文件里,不每轮重读:
 
 ```
-/loop 继续:处理 listen.sh 的积压消息并推进未完成切片;无事可做就继续 listen。
+/loop 继续:处理当前平台 listener 的积压消息并推进未完成切片;无事可做就继续 listen。
 ```
+
+### PC 消息运行时
+
+`scripts/orchestration/runtime.mjs` 读取仓库外的 binding JSON，字段为 `runId`、`coordinator`、`executable` 和 `intervalMs`。`executable` 是实际用于读取 Orca 指南的 CLI 路径，`intervalMs` 为 `300000`。不在源文件里写机器目录、Run ID 或终端 handle。
+
+- `node scripts/orchestration/runtime.mjs listen <binding.json> [processed-delivery-id]` 调用新 Run 的 `check --wait`，等待一次 Delivery 或五分钟超时。只把已处理完成的 Delivery ID 作为可选参数；没有参数时不 ack。
+- 一个 Run 只启动一个 listener。Delivery 到达后先逐条处理，question 用 `reply --id`，然后用上述可选参数 ack 并继续等待。超时后重新 listen；监听错误不得自行清除其它会话的进程。
+- PC Orca 不持有 Mac Run 的生命周期。跨机器接管创建一个新 Run，四个原会话用 `worker-start --terminal` 接入，只接受新派发的生命周期 ID；分支内容以 PC 为准。
 
 **交接协调者(2026-10-15 07:12 UTC 用户要求)**:
 
 1. 旧协调者停止派发和收消息,写交接目录:HANDOFF.md(用户当前要求、Run、活跃 Dispatch、未处理消息、未提交现场、保留的 worktree 及原因)、完整 TODO(completed/abandoned/open 分开,不把未完成标完成)。
-2. 在 `gpuix-migration` worktree 用 `omp --model cursor-claude/cc/claude-opus-5-5` 起新终端;新协调者在自己的终端执行 `orca orchestration run-use --id <run>`,导入 TODO,把 `coordinator-tick.sh` 的 `COORD` 改成自己的终端,写回执 `ACCEPTED.json`(实际终端、Run、TODO 计数、主干 HEAD)。规则文件改动后不需要交接,在协调者终端 `/restart` 即可重新注入 `AGENTS.md`,上下文、TODO 与 Run 绑定保留。`/restart` 沿用进程启动时的 `--model`:当前协调者终端(term_abc5c16c)是以 `--model cursor-claude/cx/gpt-6.1-sol` 启动的,每次重启后都要再执行 `/model:cursor-claude/cc/claude-opus-5-5`。
+2. 在 `gpuix-migration` worktree 显式固定模型并 resume 原会话。同一 Orca runtime 用 `run-use --id <run>` 绑定；跨机器 runtime 创建新 Run，再用 `worker-start --terminal` 接回原 lane。保留完整 TODO，更新 listener binding 的 `coordinator`，写回执 `ACCEPTED.json`，记录实际终端、Run、TODO 计数与主干 HEAD。规则更新后需要重新注入时使用 `/restart`，它沿用启动时的显式模型；不通过历史终端 handle 切换模型。
 3. 旧协调者核对 `run-show` 与回执,把自己的 TODO 标为已移交(不是完成),告诉用户可以关闭。
 4. HANDOFF 只写现场和指针,不复述或改写本文规则;规则有冲突就先改本文,再交接。
 
@@ -87,4 +95,4 @@ omp 从会话的工作目录向上找 `AGENTS.md` 注入系统提示。worker �
 | 本文 | 决策权、加载路径、流程 |
 | `LESSONS.md` 的「gpuix 迁移」各节 | 已经踩过的坑及对应做法 |
 | `scripts/orchestration/specs/` | `common.md`、`b2-common.md` 与各切片规格 |
-| `scripts/orchestration/*.sh` | 派发、健康检查、定时巡检；`listen.sh [ack] [timeout]` 是协调者唯一的消息监听入口，启动前先清掉残留的等待进程（Orca 每个 run 只允许一个等待者，残留会让之后的监听报 `waiter_exists`） |
+| `scripts/orchestration/runtime.mjs` 与旧 `*.sh` | PC 用可移植的 `runtime.mjs listen` 收消息，巡检由 OMP `/loop` 驱动；旧 shell 脚本保留给原 macOS 运行时，不在 PC 执行。一个 Run 只保留一个等待者，先处理消息再 ack。 |
