@@ -76,9 +76,7 @@ export function ProjectSections({
           labels={zh ? chineseFooterLabels : englishFooterLabels}
           view={shell.footerView}
           collapsed={shell.footerCollapsed}
-          onViewChange={shell.selectFooterView}
           onCollapsedChange={shell.setFooterCollapsed}
-          reducedMotion={reducedMotion}
           subscribeWindowActive={subscribeWindowActive}
           renderClipEditor={({ clipId, trackId, close }) => (
             <ClipEditor

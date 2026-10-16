@@ -27,7 +27,7 @@
 - `rulers`：定位点/循环的按下、移动、提交、取消、键盘与选区循环事务。
 - `autoScroll`：`start/update/stop/tick` 的单一状态机；滚动经同步 `setScroll` 后才重算预览。活动由内部 pointer 推导，通知只在空闲/活动边界发出，不建立第二份活动状态。
 - `getSnapshot/subscribe`：只持有测量尺寸和 overview 高度，不复制工程数据。
-- `measure`：由原生 `onLayout` 提供尺寸；不另做采样或滚轮测量。
+- `measure`：由原生 `onLayout` 提供尺寸；不另做采样或滚轮测量。仅编辑目标变化时 reveal 所在轨道，纯尺寸变化只 clamp 视口，不重复定位编辑轨道。
 - `setOverviewHeight`：共享 32–90px 约束；Panel/Divider 复用 A4。
 - `overviewGeometry`：读取 B1 夹取后的同一视口。
 - `wheel/stepZoom/suspendFollow`：视口命令；原生 wheel 的负向下/右符号在输入边界转换。

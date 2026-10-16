@@ -105,8 +105,7 @@ function run(
   }
 }
 
-function FooterHarness() {
-  const [view, setView] = useState<FooterView>("devices")
+function FooterHarness({ view = "devices" }: { view?: FooterView }) {
   const [collapsed, setCollapsed] = useState(false)
   const [activity] = useState(createTestWindowActivity)
   return (
@@ -114,9 +113,7 @@ function FooterHarness() {
       labels={englishFooterLabels}
       view={view}
       collapsed={collapsed}
-      onViewChange={setView}
       onCollapsedChange={setCollapsed}
-      reducedMotion
       subscribeWindowActive={activity.subscribe}
       renderClipEditor={() => {
         throw new Error("No clip was selected for this proof")
@@ -337,7 +334,13 @@ run("footer", footerViewport, root => {
     { deviceId: device.id, enabled: false, collapsed: true }
   )
 
-  root.renderer.nativeSimulateKeystrokes(required(root, "motion-tab-clip").id, "enter")
+  root.render(
+    <ThemeProvider>
+      <AnimationFrameProvider source={frames}>
+        <FooterHarness view="clip" />
+      </AnimationFrameProvider>
+    </ThemeProvider>
+  )
   assert(
     root.renderer.getPaintedText().join(" ").includes(englishFooterLabels.noClip),
     "Empty Clip Edit message was not painted"
@@ -346,7 +349,7 @@ run("footer", footerViewport, root => {
     !root.renderer.findByTestId("footer-divider"),
     "Clip Edit unexpectedly retained the device divider"
   )
-  capture(root, "footer-clip-empty", footerViewport, ["footer-content", "motion-tab-clip"], {
+  capture(root, "footer-clip-empty", footerViewport, ["footer-content"], {
     view: "clip",
     selectedClipIds: useProjectState.getState().session.selectedClipIds,
     emptyMessage: englishFooterLabels.noClip,

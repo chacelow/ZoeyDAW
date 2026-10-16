@@ -1,4 +1,3 @@
-import { MotionTabs } from "@/ui/controls"
 import { CollapseDivider } from "@/ui/panels"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useProjectState } from "../../adapters"
@@ -13,10 +12,8 @@ export interface FooterPanelProps {
   readonly labels: FooterLabels
   readonly view: FooterView
   readonly collapsed: boolean
-  readonly onViewChange: (view: FooterView) => void
   readonly onCollapsedChange: (collapsed: boolean) => void
   readonly renderClipEditor: (slot: ClipEditorSlot) => ReactNode
-  readonly reducedMotion: boolean
   readonly subscribeWindowActive: (listener: (active: boolean) => void) => () => void
 }
 
@@ -24,10 +21,8 @@ export function FooterPanel({
   labels,
   view,
   collapsed,
-  onViewChange,
   onCollapsedChange,
   renderClipEditor,
-  reducedMotion,
   subscribeWindowActive,
 }: FooterPanelProps) {
   const theme = useTheme()
@@ -79,49 +74,30 @@ export function FooterPanel({
         />
       ) : null}
       {!collapsed ? (
-        <MotionTabs
+        <div
           testId="footer-content"
-          value={view}
-          onChange={next => {
-            if (next === "devices" || next === "clip") onViewChange(next)
-          }}
-          reducedMotion={reducedMotion}
-          tabWidth={theme.project.identityWidth}
-          style={{ height, gap: theme.design.tabs.footerJoinedGroupGap, overflow: "hidden" }}
-          containerStyle={{
-            backgroundColor: theme.colors.muted,
-          }}
-          contentStyle={{ flexGrow: 1, minHeight: 0 }}
-          options={[
-            {
-              key: "devices",
-              label: labels.devicesTab,
-              content: (
-                <EffectChain
-                  track={track}
-                  labels={labels}
-                  subscribeWindowActive={subscribeWindowActive}
-                />
-              ),
-            },
-            {
-              key: "clip",
-              label: labels.clipTab,
-              content:
-                view === "clip" && clip && owner ? (
-                  <Fragment key={clip.id}>
-                    {renderClipEditor({
-                      clipId: clip.id,
-                      trackId: owner.id,
-                      close: () => onCollapsedChange(true),
-                    })}
-                  </Fragment>
-                ) : (
-                  emptyClip
-                ),
-            },
-          ]}
-        />
+          role="group"
+          aria-label={view === "devices" ? labels.devicesTab : labels.clipTab}
+          style={{ height, minHeight: 0, overflow: "hidden" }}
+        >
+          {view === "devices" ? (
+            <EffectChain
+              track={track}
+              labels={labels}
+              subscribeWindowActive={subscribeWindowActive}
+            />
+          ) : clip && owner ? (
+            <Fragment key={clip.id}>
+              {renderClipEditor({
+                clipId: clip.id,
+                trackId: owner.id,
+                close: () => onCollapsedChange(true),
+              })}
+            </Fragment>
+          ) : (
+            emptyClip
+          )}
+        </div>
       ) : null}
     </div>
   )
