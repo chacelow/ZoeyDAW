@@ -134,30 +134,30 @@ diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
          }
      }
  
-@@ -1916,17 +1938,12 @@
-     #[cfg(target_os = "windows")]
-     #[napi(skip_typescript)]
-     pub fn init(&self, env: Env, options: Option<WindowOptions>) -> Result<()> {
-+        let registry = windows_cleanup::for_env(env)?;
-         self.init_threaded(options)?;
--        let owner = self.windows_owner.clone();
--        let sender = self.ui_commands.lock().unwrap().as_ref().unwrap().clone();
--        if let Err(error) = env.add_env_cleanup_hook((owner.clone(), sender.clone()), |(owner, sender)| {
--            owner.shutdown();
--            sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
--        }) {
--            owner.shutdown();
--            sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
--            return Err(error);
--        }
-+        *self.windows_registration.lock() = Some(registry.register(windows_cleanup::RendererShutdown {
-+            owner: Arc::clone(&self.windows_owner),
-+            sender: self.windows_command_sender()?,
-+        }));
-         Ok(())
+@@ -1915,17 +1937,12 @@
+         #[cfg(target_os = "windows")]
+         {
++            let registry = windows_cleanup::for_env(env)?;
+             self.init_threaded(options)?;
+-            let owner = self.windows_owner.clone();
+-            let sender = self.ui_commands.lock().unwrap().as_ref().unwrap().clone();
+-            if let Err(error) = env.add_env_cleanup_hook((owner.clone(), sender.clone()), |(owner, sender)| {
+-                owner.shutdown();
+-                sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
+-            }) {
+-                owner.shutdown();
+-                sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
+-                return Err(error);
+-            }
++            *self.windows_registration.lock() = Some(registry.register(windows_cleanup::RendererShutdown {
++                owner: Arc::clone(&self.windows_owner),
++                sender: self.windows_command_sender()?,
++            }));
+             Ok(())
+         }
      }
  
-@@ -2327,6 +2344,9 @@
+@@ -2326,6 +2343,9 @@
          {
              let running = self.ui_running.load(Ordering::Acquire);
              if !running {
@@ -167,7 +167,7 @@ diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
                  self.ui_commands.lock().unwrap().take();
              }
              return Ok(running);
-@@ -2825,7 +2845,16 @@
+@@ -2824,7 +2844,16 @@
          #[cfg(target_os = "macos")]
          return update_window_without_view(|window, _cx| window.remove_window());
  
@@ -185,7 +185,7 @@ diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
          return self.send_ui_command(UiCommand::CloseWindow);
  
          #[cfg(not(any(
-@@ -4672,6 +4701,9 @@
+@@ -4671,6 +4700,9 @@
  #[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
  impl Drop for GpuixRenderer {
      fn drop(&mut self) {
@@ -195,7 +195,7 @@ diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
          self.ui_commands.lock().unwrap().take();
      }
  }
-@@ -8623,6 +8655,8 @@
+@@ -8622,6 +8654,8 @@
      pub p99_ms: Option<f64>,
      pub max_ms: Option<f64>,
      pub frames: f64,

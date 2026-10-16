@@ -180,7 +180,7 @@ index 8a19adc..9ff1acb 100644
  }
  
  #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
-@@ -1813,10 +1881,13 @@ impl GpuixRenderer {
+@@ -1813,10 +1881,14 @@ impl GpuixRenderer {
              ui_commands: Mutex::new(None),
              #[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
              ui_running: Arc::new(AtomicBool::new(false)),
@@ -190,37 +190,37 @@ index 8a19adc..9ff1acb 100644
      }
  
      /// Initialize GPUI using the native event-loop architecture for this OS.
-+    #[cfg(not(target_os = "windows"))]
      #[napi]
-     pub fn init(&self, options: Option<WindowOptions>) -> Result<()> {
+-    pub fn init(&self, options: Option<WindowOptions>) -> Result<()> {
++    pub fn init(&self, env: Env, options: Option<WindowOptions>) -> Result<()> {
++        #[cfg(not(target_os = "windows"))]
++        let _ = env;
          #[cfg(target_os = "macos")]
-@@ -1837,10 +1908,54 @@ impl GpuixRenderer {
+@@ -1837,10 +1909,52 @@ impl GpuixRenderer {
          #[cfg(target_os = "macos")]
          return self.init_macos(options);
  
 -        #[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
 +        #[cfg(any(target_os = "linux", target_os = "freebsd"))]
          return self.init_threaded(options);
++
++        #[cfg(target_os = "windows")]
++        {
++            self.init_threaded(options)?;
++            let owner = self.windows_owner.clone();
++            let sender = self.ui_commands.lock().unwrap().as_ref().unwrap().clone();
++            if let Err(error) = env.add_env_cleanup_hook((owner.clone(), sender.clone()), |(owner, sender)| {
++                owner.shutdown();
++                sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
++            }) {
++                owner.shutdown();
++                sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
++                return Err(error);
++            }
++            Ok(())
++        }
      }
  
-+    /// Initialize GPUI using the native event-loop architecture for this OS.
-+    #[cfg(target_os = "windows")]
-+    #[napi(skip_typescript)]
-+    pub fn init(&self, env: Env, options: Option<WindowOptions>) -> Result<()> {
-+        self.init_threaded(options)?;
-+        let owner = self.windows_owner.clone();
-+        let sender = self.ui_commands.lock().unwrap().as_ref().unwrap().clone();
-+        if let Err(error) = env.add_env_cleanup_hook((owner.clone(), sender.clone()), |(owner, sender)| {
-+            owner.shutdown();
-+            sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
-+        }) {
-+            owner.shutdown();
-+            sender.unbounded_send(UiCommand::WindowsShutdownBridge).ok();
-+            return Err(error);
-+        }
-+        Ok(())
-+    }
-+
 +    #[cfg(target_os = "windows")]
 +    fn windows_command_sender(&self) -> Result<mpsc::UnboundedSender<UiCommand>> {
 +        self.ui_commands.lock().unwrap().as_ref().cloned()
@@ -250,7 +250,7 @@ index 8a19adc..9ff1acb 100644
      #[cfg(target_os = "macos")]
      fn init_macos(&self, options: Option<WindowOptions>) -> Result<()> {
          let options = options.unwrap_or_default();
-@@ -2027,6 +2142,8 @@ impl GpuixRenderer {
+@@ -2027,6 +2141,8 @@ impl GpuixRenderer {
          let exit_startup_sender = startup_sender.clone();
          let ui_running = self.ui_running.clone();
          let ui_running_for_run = ui_running.clone();
@@ -259,7 +259,7 @@ index 8a19adc..9ff1acb 100644
  
          std::thread::Builder::new()
              .name("gpuix-ui".to_string())
-@@ -2055,8 +2172,12 @@ impl GpuixRenderer {
+@@ -2055,8 +2171,12 @@ impl GpuixRenderer {
                              };
                              let window = match cx.open_window(
                                  to_gpui_window_options(&window_options, bounds),
@@ -274,7 +274,7 @@ index 8a19adc..9ff1acb 100644
                                  },
                              ) {
                                  Ok(window) => window,
-@@ -2070,6 +2191,13 @@ impl GpuixRenderer {
+@@ -2070,6 +2190,13 @@ impl GpuixRenderer {
                                      return;
                                  }
                              };
@@ -288,7 +288,7 @@ index 8a19adc..9ff1acb 100644
  
                              cx.spawn(async move |cx| {
                                  run_ui_commands(command_receiver, window, cx).await;
-@@ -2082,6 +2210,8 @@ impl GpuixRenderer {
+@@ -2082,6 +2209,8 @@ impl GpuixRenderer {
                              startup_sender.send(Ok(())).ok();
                          });
                  }));
@@ -297,7 +297,7 @@ index 8a19adc..9ff1acb 100644
                  ui_running.store(false, Ordering::Release);
  
                  let error = match result {
-@@ -2404,11 +2534,23 @@ impl GpuixRenderer {
+@@ -2404,11 +2533,23 @@ impl GpuixRenderer {
          Err(Error::from_reason("Unsupported operating system"))
      }
  
@@ -324,7 +324,7 @@ index 8a19adc..9ff1acb 100644
          let handler: Rc<dyn Fn() -> bool> = Rc::new(move || {
              match callback.borrow_back(&env).and_then(|callback| callback.call(())) {
                  Ok(allow) => allow,
-@@ -2422,13 +2564,13 @@ impl GpuixRenderer {
+@@ -2422,13 +2563,13 @@ impl GpuixRenderer {
              window.on_window_should_close(cx, |_, _| query_window_should_close());
              WINDOW_CLOSE_HANDLER.with(|stored| *stored.borrow_mut() = Some(handler));
          })
@@ -343,7 +343,7 @@ index 8a19adc..9ff1acb 100644
      #[napi]
      pub fn set_animation_frame_callback(
          &self,
-@@ -2438,6 +2580,10 @@ impl GpuixRenderer {
+@@ -2438,6 +2579,10 @@ impl GpuixRenderer {
              Null,
          >,
      ) -> Result<()> {
@@ -354,7 +354,7 @@ index 8a19adc..9ff1acb 100644
          let handler = match callback {
              Either::A(callback) => Some(Rc::new(move |timestamp_ms| {
                  if let Err(error) = callback
-@@ -2454,25 +2600,35 @@ impl GpuixRenderer {
+@@ -2454,25 +2599,35 @@ impl GpuixRenderer {
              return Ok(());
          }
          update_window_without_view(|window, _cx| schedule_animation_frame(window))
@@ -396,7 +396,7 @@ index 8a19adc..9ff1acb 100644
      #[napi]
      pub fn set_resume_frame_callback(
          &self,
-@@ -2482,6 +2638,10 @@ impl GpuixRenderer {
+@@ -2482,6 +2637,10 @@ impl GpuixRenderer {
              Null,
          >,
      ) -> Result<()> {
@@ -407,7 +407,7 @@ index 8a19adc..9ff1acb 100644
          if matches!(callback, Either::A(_)) && !RESUME_FRAME.with(|stored| {
              let state = stored.borrow();
              state.dispatching || state.window.is_some()
-@@ -2515,6 +2675,35 @@ impl GpuixRenderer {
+@@ -2515,6 +2674,35 @@ impl GpuixRenderer {
              return Ok(());
          }
          update_window_without_view(|window, _cx| schedule_resume_frame(window))
