@@ -33,6 +33,8 @@ export interface AppShellProps {
   readonly storage: SnapshotStorage
   /** Window close interception; `null` leaves closing unguarded. */
   readonly closeRenderer: WindowRenderer | null
+  /** NativeRoot supplies the OS titlebar action; offscreen shells have no native window. */
+  readonly onTitlebarDoubleClick?: () => void
   readonly renderProjectSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
   /** Show raw route-error messages (web shows them only in DEV). */
   readonly showErrorDetails: boolean
@@ -45,6 +47,7 @@ export function AppShell({
   systemAppearance,
   storage,
   closeRenderer,
+  onTitlebarDoubleClick,
   renderProjectSlots,
   showErrorDetails,
 }: AppShellProps) {
@@ -57,6 +60,7 @@ export function AppShell({
           <AppFrame
             storage={storage}
             closeRenderer={closeRenderer}
+            onTitlebarDoubleClick={onTitlebarDoubleClick}
             renderProjectSlots={renderProjectSlots}
             showErrorDetails={showErrorDetails}
             onOpenSettings={openSettings}
@@ -72,11 +76,15 @@ export function AppShell({
 function AppFrame({
   storage,
   closeRenderer,
+  onTitlebarDoubleClick,
   renderProjectSlots,
   showErrorDetails,
   onOpenSettings,
   children,
-}: Pick<AppShellProps, "storage" | "closeRenderer" | "renderProjectSlots" | "showErrorDetails"> & {
+}: Pick<
+  AppShellProps,
+  "storage" | "closeRenderer" | "onTitlebarDoubleClick" | "renderProjectSlots" | "showErrorDetails"
+> & {
   readonly onOpenSettings: () => void
   /** App-level overlays; they must stay inside this frame, the window root's only host child. */
   readonly children: ReactNode
@@ -115,6 +123,7 @@ function AppFrame({
         title={isProject ? projectName : undefined}
         settingsLabel={t("titlebar.settings")}
         onOpenSettings={onOpenSettings}
+        onTitlebarDoubleClick={onTitlebarDoubleClick}
         surface={surface}
       />
       <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0 }}>

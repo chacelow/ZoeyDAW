@@ -7,6 +7,8 @@ export interface TitleBarProps {
   readonly title?: string
   readonly settingsLabel: string
   readonly onOpenSettings: () => void
+  /** Omitted by offscreen views that do not own a native window. */
+  readonly onTitlebarDoubleClick?: () => void
   /** Surface of the page directly below, so titlebar and Header read as one strip. */
   readonly surface: string
 }
@@ -17,12 +19,21 @@ export interface TitleBarProps {
  * surface so the two read as one continuous strip. Dragging stays native: GPUI keeps
  * AppKit's titlebar move region because the app does not claim the drag.
  */
-export function TitleBar({ title, settingsLabel, onOpenSettings, surface }: TitleBarProps) {
+export function TitleBar({
+  title,
+  settingsLabel,
+  onOpenSettings,
+  onTitlebarDoubleClick,
+  surface,
+}: TitleBarProps) {
   const theme = useTheme()
   const inset = theme.project.trafficLightInset
   return (
     <div
       testId="titlebar"
+      onMouseDown={event => {
+        if (event.button === 0 && event.clickCount === 2) onTitlebarDoubleClick?.()
+      }}
       style={{
         display: "flex",
         flexDirection: "row",
@@ -36,11 +47,13 @@ export function TitleBar({ title, settingsLabel, onOpenSettings, surface }: Titl
       }}
     >
       <div
+        testId="titlebar-title"
         role="heading"
         aria-level={1}
         aria-label={title}
         style={{
           position: "absolute",
+          pointerEvents: "none",
           top: 0,
           bottom: 0,
           left: inset,
@@ -66,6 +79,7 @@ export function TitleBar({ title, settingsLabel, onOpenSettings, surface }: Titl
         testId="titlebar-settings"
         label={settingsLabel}
         onClick={onOpenSettings}
+        style={{ pointerEvents: "auto" }}
       >
         <Icon
           name="Settings"

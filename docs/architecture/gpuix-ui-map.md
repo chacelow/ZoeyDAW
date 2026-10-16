@@ -52,7 +52,7 @@
 
 ### `app/shell`
 
-`titlebar`、`titlebar-settings`
+`titlebar`、`titlebar-settings`、`titlebar-title`
 
 ### `app/window`
 

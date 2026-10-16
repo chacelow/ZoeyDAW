@@ -9,7 +9,10 @@ import { AppShell } from "./AppShell"
 import { AppNativeEnvironmentProvider } from "./native-environment"
 import type { AppShellProps } from "./AppShell"
 
-export type NativeRootProps = Omit<AppShellProps, "closeRenderer" | "systemAppearance">
+export type NativeRootProps = Omit<
+  AppShellProps,
+  "closeRenderer" | "systemAppearance" | "onTitlebarDoubleClick"
+>
 
 /**
  * Binds renderer-scoped native capabilities exactly once: the single animation-frame source,
@@ -40,7 +43,12 @@ export function NativeRoot(props: NativeRootProps) {
       <ControlEnvironmentProvider value={native.controls}>
         <PanelEnvironmentProvider environment={native.panels}>
           <AppNativeEnvironmentProvider value={native.panels}>
-            <AppShell {...props} closeRenderer={renderer} systemAppearance={systemAppearance} />
+            <AppShell
+              {...props}
+              closeRenderer={renderer}
+              systemAppearance={systemAppearance}
+              onTitlebarDoubleClick={native.window.titlebarDoubleClick}
+            />
           </AppNativeEnvironmentProvider>
         </PanelEnvironmentProvider>
       </ControlEnvironmentProvider>
