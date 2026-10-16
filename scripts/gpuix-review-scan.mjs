@@ -164,8 +164,6 @@ if (source.length > 0) {
 }
 
 const tests = changed.filter(f => /\.test\.(ts|tsx)$/.test(f))
-if (code.length > 0 && tests.length === 0)
-  add("no-tests", "(slice)", "source changed but no test file added or changed")
 
 const order = [
   "eslint",
@@ -182,7 +180,6 @@ const hard = new Set([
   "eslint",
   "mock-in-product-code",
   "skipped-test",
-  "no-tests",
   "any",
   "legacy-bounds-shim",
 ])

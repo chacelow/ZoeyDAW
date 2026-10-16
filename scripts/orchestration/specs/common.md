@@ -11,7 +11,7 @@
 - 决策：自己路径内、可撤回、不改方向的事自己决定并在报告里写理由，规则没写到的也一样。需要改共享契约（`shared/theme`、`crates/native` 公共导出、`docs/architecture/gpuix.md`）、新增 npm/Rust 依赖、跨切片、与契约冲突，或属于根 `AGENTS.md`「决策默认归 Agent」清单的事：用 `orca orchestration ask` 问协调者，带上候选与建议。worker 不直接问用户。
 - **不允许静默停下**：同一模块内按里程碑继续实现、运行、观察并反馈。遇到阻塞用 `orca orchestration ask`，同一问题沿原 messageId 续等，不重复发问。协调者答复前先做模块内不依赖该项的工作，全部阻塞才等待。发 `merge_ready` 后主编排将它放入复核队列，不需要再发一个“是否收到”的 ask；`worker_done` 只表示本轮实现已交付，不等于已合入，不复用已结算的生命周期 ID。
 - **长期 lane 与原会话复用**：新模块优先交给熟悉该模块的空闲 lane，保留 worktree、终端和上下文，不为几行改动另起 Agent。派发必须给出当前分支与固定基线；重新 resume 只核对现场、变化的契约和当前范围，不全文重读未变化文档。旧 brief 重放以当前 Task/Dispatch 为准。交付后不删除分支或终端；派发接口与平台操作以 `docs/agents/coordination.md` 为准。
-- 本地只跑 `docs/agents/setup.md` 规定的轻量检查、改动范围的回归与必要单窗口 smoke，完整门禁留给 main Actions。新增永久测试必须抓真实消费行为、边界或状态转换，不为改文案、复制配置或凑 no-tests 新增测试。报告记录命令、结果、未验证项，放在仓库外或 Git 忽略的证据目录；仓库只保存稳定契约，不提交本轮会话记录或每切片 REPORT.md。错题交主编排整理，不直接改 LESSONS。
+- 本地只跑 `docs/agents/setup.md` 规定的轻量检查、改动范围的回归与必要单窗口 smoke，完整门禁留给 main Actions。测试只写核心与主流程，范围见 `docs/architecture/gpuix.md`「测试范围」；改文案、配置、样式或接线不加测试，不为扫描新增测试，不为每次改动写变异入口。报告记录命令、结果、未验证项，放在仓库外或 Git 忽略的证据目录；仓库只保存稳定契约，不提交本轮会话记录或每切片 REPORT.md。错题交主编排整理，不直接改 LESSONS。
 - 涉及 Live 已有行为的切片，实现前先观察 Ableton Live，报告附「产品规则 → Live 观察 → 实现 → 差异/未验证」对照表。
 - UI 以真实 Gallery 和业务组合视图作整体评审，按 `gpuix-ui-standards.md` 第 13 节执行；生成截图默认放仓库外或 Git 忽略目录，不批量提交逐按钮/逐状态 PNG。圆角、边框、gap、padding 通过共享组件与 token 统一调整。
 - 卡在能力缺口或方案选择时，先用 Context7、GitHub 查最新方案（必要时请协调者用 Ego Browser 搜 X），把候选与实测证据随 `ask` 一起发。
@@ -23,4 +23,4 @@
 
 ## 交付前自审(强制,见 docs/architecture/gpuix.md「交付前自审与协调者仲裁」)
 
-发 `worker_done` 之前依次做:① 在你的 worktree 根跑 `node scripts/gpuix-review-scan.mjs`,`HARD` 清零、`WARN` 逐条给结论;② 用 `task` 起一个 `pstack-reviewer` 只读子代理,按 Standards 与 Spec 两条轴审你自己的 diff(附完整 diff 命令与提交列表,Standards 轴要带上该文档的「代码质量底线」);③ 把发现分类为**必修 / 汇报仲裁 / 记录**:必修(违反成文规范、在你的路径内、修法唯一)你立刻修并重跑;汇报仲裁(涉及别的切片或共享契约、有多种方案、会改产品行为、你不确定)**先别动**,用 `orca orchestration ask` 汇报证据、方案与你的建议,由协调者统一决定并通知所有受影响的分支。报告里放『自审结果』表(发现/类别/处置/证据)。同一问题在多个切片出现时只修一次,修在拥有它的切片。协调者合并前会独立复跑扫描并抽查,表缺失或与扫描结果不符一律退回。
+发 `worker_done` 之前依次做:① 在你的 worktree 根跑 `node scripts/gpuix-review-scan.mjs`,`HARD` 清零、`WARN` 逐条给结论;② 改动涉及工程模型、引擎、native 补丁、共享 UI 或组合契约时，用 `task` 起一个 `pstack-reviewer` 只读子代理按 Standards 与 Spec 两条轴审你自己的 diff 并读完结论，其它改动不派;③ 把发现分类为**必修 / 汇报仲裁 / 记录**:必修(违反成文规范、在你的路径内、修法唯一)你立刻修并重跑;汇报仲裁(涉及别的切片或共享契约、有多种方案、会改产品行为、你不确定)**先别动**,用 `orca orchestration ask` 汇报证据、方案与你的建议,由协调者统一决定并通知所有受影响的分支。报告里放『自审结果』表(发现/类别/处置/证据)。同一问题在多个切片出现时只修一次,修在拥有它的切片。协调者合并前会独立复跑扫描并抽查,表缺失或与扫描结果不符一律退回。

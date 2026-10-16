@@ -30,7 +30,8 @@ export default [
       "sort-keys": "off",
       "no-nested-ternary": "off",
       "no-use-before-define": ["error", { functions: false }],
-      "import-x/no-cycle": ["error", { ignoreExternal: true }],
+      // Whole-graph cycle search took 73 of 137 seconds of a full lint on 2026-10-17; checks over a minute stay out of the gate.
+      "import-x/no-cycle": "off",
     },
     settings: {
       "import-x/internal-regex": "^@zoeydaw/",

@@ -44,7 +44,9 @@ CI 的 Bun 测试失败时输出完整日志，保留早期 Expected/Received；
 
 正确性、类型、无障碍与项目架构/token 是硬门禁。自动检查只覆盖规则声明的静态范围，不代表完整依赖图或所有动态样式已验证。不要未经审查重跑 `ultracite init` 覆盖项目配置；升级时核对预设、peer 绑定与本地规则，再执行对应工具、类型、测试和界面验证。
 
-完整门禁在 GitHub Actions 的 `main` 上跑（用户 2026-10-16：本机性能不足）：`.github/workflows/ci.yml` 在 macOS 上执行同一套 `build.sh` 与 `verify:gpuix`；只有 `CI=true` 允许 Cargo target 位于 Git 推导的缓存基目录之外。本地只跑轻量检查（`tsc --noEmit`、改动范围的 `bun test`/eslint、变异与必要的单窗口 smoke），本地 `verify:gpuix` 留作排查 CI 失败时使用。不把 workflow 文件存在称为 CI 已运行，只报告实际看到的 run 结果。
+完整门禁在 GitHub Actions 的 `main` 上跑（用户 2026-10-16：本机性能不足）：`.github/workflows/ci.yml` 在 macOS 上执行同一套 `build.sh` 与 `verify:gpuix`；只有 `CI=true` 允许 Cargo target 位于 Git 推导的缓存基目录之外。本地只跑轻量检查：`tsc --noEmit`、改动文件的 eslint 与相关 `bun test`、必要的单窗口 smoke。本地 `verify:gpuix` 只在排查 CI 失败时使用。不把 workflow 文件存在称为 CI 已运行，只报告实际看到的 run 结果。
+
+**本地检查不超过 1 分钟（用户 2026-10-17）**：单个本地检查命令超过 1 分钟就不进日常流程。只对改动文件跑 eslint，不对整个 `apps/gpuix/src` 跑；测试只跑改动模块附近的文件；变异入口和全仓扫描不在每次改动时跑，交给 CI 或核心算法重写时一次性运行。工具或规则变慢到超过 1 分钟，先找出耗时项删掉或改成 CI 专用，不让每个 lane 反复等待。`import-x/no-cycle` 在全仓 lint 中耗时 73 秒，已关闭。
 
 UI 改动必须在真实 gpuix 窗口验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制。
 

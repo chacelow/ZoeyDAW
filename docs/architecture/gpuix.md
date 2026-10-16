@@ -62,7 +62,7 @@ crates/
 
 ## 完成定义（每个切片）
 
-- `tsc --noEmit`、`bun test`、`cargo check`（涉及 Rust）通过；`ultracite` 预提交门禁通过，不用 `--no-verify`。
+- `tsc --noEmit` 与改动范围内的 `bun test`、`cargo check`（涉及 Rust）通过；`ultracite` 预提交门禁通过，不用 `--no-verify`。
 - 本切片无 `react-dom`、`@tauri-apps/*`、`document`/`window`/`localStorage` 引用。
 - 不新增 npm 依赖；确需新增先 escalation。Rust 依赖限于本文与研究文档点名的 crate，新增同样先 escalation。
 - 在自己的分支提交，不 push、不碰 `main`、不碰其他 worktree。
@@ -74,8 +74,8 @@ crates/
 
 规范类问题（手写 SVG、深层相对导入、重复实现、越界）靠**扫描和独立审查**发现，不靠读 diff。交付前按下面三步走，缺一步不发 `worker_done`。
 
-1. **跑扫描**：在切片 worktree 根目录执行 `node scripts/gpuix-review-scan.mjs`（对比基线 `gpuix-migration`）。它调用 eslint（分层、DOM 全局、`@/` 别名、手写 SVG）并补查文件过大、裸像素与颜色字面量、JS 定时器、`any`、产品代码里的 mock、被跳过的测试、只改源码没有测试。`HARD` 必须清零，`WARN` 逐条在报告里给结论。
-2. **派独立审查**：用 `task` 起一个 `pstack-reviewer`（或 `reviewer`）子代理，按两条轴审你自己的 diff，两个提示都附完整 diff 命令与提交列表：
+1. **跑扫描**：在切片 worktree 根目录执行 `node scripts/gpuix-review-scan.mjs`（对比基线 `gpuix-migration`）。它调用 eslint（分层、DOM 全局、`@/` 别名、手写 SVG）并补查文件过大、裸像素与颜色字面量、JS 定时器、`any`、产品代码里的 mock、被跳过的测试。`HARD` 必须清零，`WARN` 逐条在报告里给结论。
+2. **独立审查（只在核心或跨模块改动时）**：改动涉及工程模型、引擎、`crates/native` 补丁、共享 UI 契约或组合契约时，用 `task` 起一个只读 `pstack-reviewer` 子代理，按两条轴审你的 diff，并读完它的结论再交付；纯文案、配置、样式、局部 UI 改动不派。两个提示都附完整 diff 命令与提交列表：
    - **Standards 轴**：对照 `docs/architecture/gpuix.md`、`gpuix-ui-standards.md`、`gpuix-arrangement-composition.md`、`LESSONS.md`，并带上下面的「代码质量底线」。
    - **Spec 轴**：对照你的切片规格（`scripts/orchestration/specs/<slice>.md`）与 `b2-common.md`，找缺失、越界、实现看似对但实则错的地方。审查是只读的，子代理不改文件，你自己改。
 3. **分类处置**：把审查与扫描的每条发现归入三类，写进报告的「自审结果」表（发现、类别、处置、证据）。
@@ -97,8 +97,21 @@ crates/
 - **类型边界清晰**：不用 `any`、不为了过编译乱加 `as`、不用可选参数掩盖未定的不变量；边界处校验，内部用可信类型。
 - **逻辑放对层**：纯计算进 `core`/`model`，原生能力进 `crates/*`，UI 只拼装；不让特性逻辑漏进共享路径。
 - **一个状态一个 owner**：不出现第二份可写状态、第二套定时器、第二个事件注册点。
-- **产品代码不含 mock、模拟数据、被跳过的测试、只测转发的测试**；测试要能抓到真实的消费者可见缺陷，并做过变异检查。
+- **产品代码不含 mock、模拟数据或被跳过的测试。**
 - **没有 TODO 占位**：未实现的部分在报告里写明，不留 stub 冒充完成。
+
+### 测试范围（用户 2026-10-17）
+
+测试只写在核心与主流程：工程模型与编辑事务、保存与打开、引擎播放与遥测、Arrangement 的时间线与选择拖动、Clip 编辑器的编辑主路径、跨面板组合契约。这些地方的缺陷会让用户丢数据或主流程失效，一条测试要能在真实实现上抓到一个用户可见缺陷。
+
+不写下列测试：
+
+- 文案、i18n 键值、默认值、配置字段的逐项复述；改一个字符串不需要测试。
+- 只验证参数转发、Provider 接线、组件能渲染、样式值等于 token。
+- 同一行为按多种写法、多种语法、多个路径重复断言。
+- 为了让扫描出现测试文件而新增的测试。
+
+UI 外观与交互由真实窗口观察验收，不用逐控件逐状态的单元测试代替。变异检查只在重写核心算法或修复曾经回归的缺陷时做一次，结果写进报告，不为每个改动新增变异入口脚本。现有测试中属于上述“不写”的，修改附近代码时顺手删除。
 
 协调者合并前会独立复跑扫描并抽查这份清单；报告里的自审表缺失或与扫描结果不符，退回。
 
