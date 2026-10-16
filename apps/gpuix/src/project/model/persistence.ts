@@ -11,8 +11,10 @@ const text = (v: unknown): v is string => typeof v === "string"
 const bool = (v: unknown): v is boolean => typeof v === "boolean"
 const number = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v)
 const positive = (v: unknown): v is number => number(v) && v > 0
+const barPosition = (v: unknown): v is number => number(v) && v >= 1
 const strings = (v: unknown): v is string[] => Array.isArray(v) && v.every(text)
-const range = (start: unknown, end: unknown) => positive(start) && positive(end) && end > start
+const range = (start: unknown, end: unknown) =>
+  barPosition(start) && barPosition(end) && end > start
 function uniqueIds(values: readonly { id?: string }[]): boolean {
   const ids = new Set<string>()
   for (const value of values) {
@@ -31,7 +33,7 @@ export function isClip(v: unknown): v is Clip {
   if (
     !record(v) ||
     !text(v.id) ||
-    !positive(v.startBar) ||
+    !barPosition(v.startBar) ||
     !positive(v.lengthBars) ||
     (v.sourceOffsetBars !== undefined && !number(v.sourceOffsetBars)) ||
     (v.label !== undefined && !text(v.label)) ||
@@ -155,7 +157,7 @@ function isTrack(v: unknown): v is Track {
           point =>
             record(point) &&
             text(point.id) &&
-            positive(point.bar) &&
+            barPosition(point.bar) &&
             number(point.value) &&
             point.value >= 0 &&
             point.value <= 1 &&
@@ -202,7 +204,7 @@ function isDocument(v: unknown): v is DocumentState {
         !(
           record(marker) &&
           text(marker.id) &&
-          positive(marker.bar) &&
+          barPosition(marker.bar) &&
           text(marker.label) &&
           (marker.color === undefined || text(marker.color))
         )
