@@ -33,6 +33,7 @@
 - `shared/theme/design-tokens.ts` 的 `DEFAULT_DESIGN_TOKENS` 组合控件形状、字体字重、状态、指针、动效、浮层、空态、通知几何与 `colorRecipes`；明暗混色、语义别名及 MIDI 力度配方由 `color-recipes.ts` 定义。配方只经 `Theme.design.colorRecipes` 传给使用者。
 - `presets.data.ts` 的完整语义 palette 包含 `success`、`arrangementClipSelected`、`arrangementClipPaper`。预设可分别覆盖；未声明时由该文件集中填入默认语义色。`getThemePreset().baseColors` 是派生输入，`colors` 是默认配方的缓存结果；Provider 覆盖配方时重新派生，不改写预设。
 - `shared/theme/layout-tokens.ts` 的 `LayoutTokens` 拥有 `project.panels`、`home`、`track` 与 `arrangement`（标尺、Clip、命中几何）。窗口初始尺寸属于用户偏好，由 settings 迁移维护，不在布局与设置各存一份。
+- 轨道控制列总宽只有 `layout.track.controlsWidth` 一份来源，`project` 不保留同义总宽。identity/routing 子列仍取 project，Mixer 的剩余宽度由总宽减两个子列宽派生；core viewport、整行与 resize 外框读取相同的解析几何，原生回归核对三列之和。非轨道组件暂借该总宽的旧行为由 C2 迁到各自语义来源，不恢复旧字段或兼容别名。
 - 应用组合根把 `theme.layout` 注入 `createSceneStore(geometry)`，并在运行时调用 `setGeometry(geometry)`；`ArrangementScene.geometry` 只保存这份只读引用。纯 core 从 scene 获取几何；以 tracks/viewport 为输入的纯函数显式接受解析后的 `TrackGeometry`，不读取 JSON 或 React context。
 - `trackHeight(track, geometry)`、`trackControlRows(track, geometry)`、`resizeTrackHeight(track, deltaY, geometry)` 不再提供静态默认参数或旧常量导出。行与 Clip 投影携带同一 `trackGeometry` 引用，使绘制、命中、滚动与 resize 共用度量；几何切换不重写已保存的 `heightPx`。
 - 新建轨道/分组的 `heightPx` 由 UI 组合调用方注入编辑命令；adapter 不再导入静态 theme 度量。业务来源接线由各拥有切片完成，不把“字段已存在”称为“所有调用已迁移”。

@@ -84,7 +84,7 @@ export const mutationCases: Record<string, MutationCase> = {
     testFile: "src/project/sections/arrangement/tracks/Row/group-lane.test.tsx",
     testName: "collapsed group retains lane summary",
     from: "Math.min(scene.viewport.width, card.geometry.left + card.geometry.width)",
-    to: "Math.min(scene.viewport.width - theme.project.controlsWidth, card.geometry.left + card.geometry.width)",
+    to: "Math.min(scene.viewport.width - scene.geometry.track.controlsWidth, card.geometry.left + card.geometry.width)",
   },
   "grid-local-origin": {
     file: "project/sections/arrangement/core/rulers/grid-quads.ts",
