@@ -19,11 +19,19 @@ export interface MinimapAnchor {
   zoomAnchorRatio: number
 }
 
+export function minimapSelection(
+  viewport: MinimapViewport,
+  width: number,
+  geometry: Pick<MinimapGeometry, "bars" | "viewportWidth">
+): { left: number; right: number } {
+  const span = Math.min(geometry.bars, geometry.viewportWidth / viewport.pxPerBar)
+  const left = (viewport.scrollX / viewport.pxPerBar / geometry.bars) * width
+  return { left, right: left + (span / geometry.bars) * width }
+}
+
 export function minimapHit(x: number, width: number, geometry: MinimapGeometry): MinimapHit {
   const edgeWidth = geometry.policy.zoom.minimapEdgeHitPixels
-  const span = Math.min(geometry.bars, geometry.viewportWidth / geometry.pxPerBar)
-  const left = (geometry.scrollX / geometry.pxPerBar / geometry.bars) * width
-  const right = left + (span / geometry.bars) * width
+  const { left, right } = minimapSelection(geometry, width, geometry)
   if (x < left - edgeWidth || x > right + edgeWidth) {
     return "jump"
   }

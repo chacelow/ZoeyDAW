@@ -88,6 +88,8 @@ describe("Minimap navigation ownership", () => {
     expect(b.state()).toEqual(a.state())
     a.gesture.up()
     b.gesture.up()
+    expect(a.restored()).toEqual({ x: 1465, y: 521 })
+    expect(b.restored()).toEqual(a.restored())
   })
 
   test("each edge pins the opposite musical boundary", () => {
@@ -101,6 +103,12 @@ describe("Minimap navigation ownership", () => {
         side === "left" ? (state.scrollX + 800) / state.pxPerBar : state.scrollX / state.pxPerBar
       expect(pinned).toBeCloseTo(side === "left" ? 48 : 40)
       a.gesture.up()
+      const edge = side === "left" ? 400 : 480
+      const moved =
+        side === "left"
+          ? (state.scrollX / state.pxPerBar / 128) * 1280
+          : ((state.scrollX + 800) / state.pxPerBar / 128) * 1280
+      expect(a.restored()?.x).toBeCloseTo(1000 + x + (moved - edge))
     }
   })
 

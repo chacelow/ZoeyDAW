@@ -1,4 +1,4 @@
-import { minimapDragBody, minimapPointerDown } from "../../core/viewport/minimap"
+import { minimapDragBody, minimapPointerDown, minimapSelection } from "../../core/viewport/minimap"
 import { minimapDragLeftEdge, minimapDragRightEdge } from "../../core/viewport/zoom"
 import { dragStarted } from "../../core/interactions/layers"
 import type { MinimapAnchor, MinimapGeometry } from "../../core/viewport/minimap"
@@ -16,6 +16,8 @@ interface Press {
   cursor: ScreenPoint | null
   hidden: boolean
   epoch: SessionState["editEpoch"]
+  grab: number
+  viewport: MinimapViewport
 }
 
 export interface MinimapGestureOptions {
@@ -57,7 +59,20 @@ export function createMinimapGesture({
     if (cancelled && previous.epoch === read().epoch) {
       publish({ pxPerBar: previous.geometry.pxPerBar, scrollX: previous.geometry.scrollX })
     }
-    if (previous.hidden && previous.cursor) cursor.restore(previous.cursor)
+    if (previous.hidden && previous.cursor) {
+      const moved = cancelled ? 0 : releaseOffset(previous)
+      cursor.restore({ x: previous.cursor.x + moved, y: previous.cursor.y })
+    }
+  }
+
+  function releaseOffset({ anchor, geometry, width, viewport, grab }: Press) {
+    const start = minimapSelection(
+      { pxPerBar: geometry.pxPerBar, scrollX: anchor.initialScrollX },
+      width,
+      geometry
+    )
+    const end = minimapSelection(viewport, width, geometry)
+    return end.left + (end.right - end.left) * grab - (start.left + (start.right - start.left) * grab)
   }
 
   return {
@@ -70,6 +85,17 @@ export function createMinimapGesture({
       const { geometry, width, left, epoch } = read()
       const anchor = minimapPointerDown({ x: point.x - left, width, geometry })
       if (!anchor) return
+      const initial = { pxPerBar: geometry.pxPerBar, scrollX: anchor.initialScrollX }
+      const selection = minimapSelection(initial, width, geometry)
+      const span = selection.right - selection.left
+      const grab =
+        anchor.mode === "left"
+          ? 0
+          : anchor.mode === "right"
+            ? 1
+            : span > 0
+              ? Math.min(1, Math.max(0, (point.x - left - selection.left) / span))
+              : 0
       press = {
         phase: "pressed",
         anchor,
@@ -79,6 +105,8 @@ export function createMinimapGesture({
         cursor: cursor.capture(point),
         hidden: false,
         epoch,
+        grab,
+        viewport: initial,
       }
       onPhaseChange?.("pressed")
       navigate()
@@ -114,7 +142,7 @@ export function createMinimapGesture({
         startingScrollX: anchor.initialScrollX,
         deltaBars: (deltaX * geometry.bars) / width,
       }
-      publish(
+      press.viewport =
         anchor.mode === "left"
           ? minimapDragLeftEdge(input)
           : anchor.mode === "right"
@@ -126,7 +154,7 @@ export function createMinimapGesture({
                 deltaX,
                 deltaY,
               })
-      )
+      publish(press.viewport)
     },
     up: () => finish(),
     cancel: () => finish(true),
