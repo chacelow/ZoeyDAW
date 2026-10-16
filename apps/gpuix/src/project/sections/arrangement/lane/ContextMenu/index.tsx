@@ -31,7 +31,6 @@ export function LaneContextMenu({
   controller: LaneController
   resolveTarget: (event: EventPayload) => LaneMenuTarget | null
   t: LaneTranslate
-  originY: number
 }) {
   const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)
   const [target, setTarget] = useState<LaneMenuTarget | null>(null)

@@ -16,7 +16,7 @@ import { TRACK_TITLE_HEIGHT } from "@/project/layout"
 import { clipRect } from "../../core/layout"
 import { visibleRows } from "../render-projection"`,
   ],
-  ["  t,\n}: {", "  t,\n  originY,\n}: {"],
+  ["  t,\n}: {", "  t,\n  originY = 0,\n}: {"],
   [
     "  const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)",
     "  const { renderer } = useGpuix()\n  const scene = useSyncExternalStore(context.scene.subscribe, context.scene.get)",

@@ -46,7 +46,6 @@ export function useLaneSurface(
             <LaneContextMenu
               context={controller.context}
               controller={controller}
-              originY={originY}
               t={key => labels[key]}
               resolveTarget={event => {
                 const next = pointer(event)
