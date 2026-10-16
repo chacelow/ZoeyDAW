@@ -83,7 +83,7 @@
 ## gpuix 迁移：review 退回要重新派发，worker 交付后就不再收信
 
 - 现象：C2 发完 `worker_done` 后，协调者的退回意见发到它的 dispatch，报错「Dispatch is completed; its worker will never read that mailbox」。`--retry-of` 只能接已失败的 task，不能用于返工。
-- 对：返工派回原 lane：`scripts/orchestration/lane.sh assign <原 lane> <标题> <规格>`，同一个 agent 接着做，规格写明已有提交、review 结论与必修项（未合入的返工直接对同一终端 `worker-start --terminal`，不切新分支）。不另开新 worktree，也不释放原终端。
+- 对：返工派回原 lane 的同一个 agent。已合入后的新需求用 `scripts/orchestration/lane.sh assign`；review 退回的未合入工作用 `lane.sh rework <lane> <标题> <规格>`，在原分支上继续，不切分支。规格写明已有提交、review 结论与必修项。不另开新 worktree，也不释放原终端。
 - 预防：common 规格要求先自审（扫描 + 独立审查子代理）再 `worker_done`；越界改动必须先 ask。C2 这次越界改了 `crates/engine`、在 TS 里重写了 bar→frame 公式、并让每个素材多存一份 PCM——这三点自审都应该发现。
 - 回答 worker 的 `question` 用 `orca orchestration reply --id <msg_id>`，不要另发 `send --type status`。`question` 是阻塞调用，worker 只等这条消息的回复；23:40 批准 lane 桌面时段的 status 消息没有被读到，15 分钟时段白白过去。限时授权（桌面时段）以回复送达时刻起算，过期就重发。
 - 主干把测试从 `timeline/` 移到 `core/rulers/` 后，timeline 分支 merge 主干时，Git 的目录重命名推断把整个 `timeline/` 判成已移到 `core/rulers/`，产生 25 个文件的 location 冲突。切片 worktree 共用同一个仓库配置，已设置 `git config merge.directoryRenames false`。协调者在主干之间移动文件后，通知受影响切片：冲突要按 HEAD 和 MERGE_HEAD 逐个核对，不 abort，也不丢代码。
