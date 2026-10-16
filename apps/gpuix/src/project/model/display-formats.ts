@@ -18,7 +18,7 @@ export interface DisplayFormats {
   parseParameter(text: string, options?: { percentage?: boolean; step?: number }): number
   parameter(value: number, options?: { percentage?: boolean; step?: number }): string
   percent(valueFraction: number): string
-  db(value: number): string
+  db(value: number, options?: { unit?: boolean }): string
   audioGain(value: number): string
   parseDb(text: string): number
   pan(value: number, variant: PanFormatVariant): string

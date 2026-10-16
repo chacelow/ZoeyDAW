@@ -4,7 +4,6 @@ import type { Props } from "@gpuix/react"
 
 export function Empty({ style, ...props }: Props) {
   const theme = useTheme()
-  const gap = theme.control["--spacing-control-track-gap"]
   return (
     <div
       role="group"
@@ -18,9 +17,9 @@ export function Empty({ style, ...props }: Props) {
           minWidth: 0,
           alignItems: "center",
           justifyContent: "center",
-          gap: gap * 4,
-          padding: gap * 6,
-          borderRadius: gap * 3,
+          gap: theme.design.empty.gap,
+          padding: theme.design.empty.inset,
+          borderRadius: theme.design.empty.radius,
           textAlign: "center",
           color: theme.colors.foreground,
           fontSize: theme.control["--text-control-track"],
@@ -41,8 +40,8 @@ export function EmptyHeader({ style, ...props }: Props) {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          maxWidth: theme.layout.track.controlsWidth,
-          gap: theme.control["--spacing-control-track-gap"] * 2,
+          maxWidth: theme.design.empty.headerMaxWidth,
+          gap: theme.design.empty.contentGap,
         },
         style
       )}
@@ -60,7 +59,7 @@ export function EmptyTitle({ style, ...props }: Props) {
       style={sx(
         {
           fontSize: theme.control["--text-control-track"],
-          fontWeight: 600,
+          fontWeight: theme.design.typography.weights.semibold,
           color: theme.colors.foreground,
           textAlign: "center",
         },

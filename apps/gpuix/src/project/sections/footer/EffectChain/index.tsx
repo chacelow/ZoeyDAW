@@ -255,7 +255,13 @@ function TrackDeviceChain({
               />
             ))}
             {preview && preview.beforeId === null ? (
-              <div aria-hidden="true" style={{ width: 1, backgroundColor: theme.colors.primary }} />
+              <div
+                aria-hidden="true"
+                style={{
+                  width: theme.design.editor.insertionLineWidth,
+                  backgroundColor: theme.colors.primary,
+                }}
+              />
             ) : null}
           </div>
         )}

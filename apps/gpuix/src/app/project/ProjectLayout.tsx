@@ -1,6 +1,5 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { Group, Panel, PanelDivider, PanelShell } from "@/ui/panels"
-import { PROJECT_LAYOUT } from "./layout-constraints"
 import type { ReactNode, Ref } from "react"
 import type { PublicInstance } from "@gpuix/react"
 import type { ProjectShellApi } from "./useProjectShell"
@@ -51,6 +50,7 @@ export function ProjectLayout({
   status,
 }: ProjectLayoutProps) {
   const theme = useTheme()
+  const panels = theme.layout.project.panels
   const gap = theme.project.panelGap
   const clipView = shell.footerView === "clip"
   const footerShell =
@@ -69,9 +69,9 @@ export function ProjectLayout({
     <Group orientation="horizontal" testId="project-workspace">
       <Panel
         panelRef={shell.browserHandleRef}
-        defaultSize={PROJECT_LAYOUT.browserDefaultSize}
+        defaultSize={panels.browserDefaultSize}
         minSize={theme.project.browserNavigationWidth + theme.project.browserResultsWidth + gap}
-        maxSize={PROJECT_LAYOUT.browserMaxSize}
+        maxSize={panels.browserMaxSize}
         collapsible
         collapsedSize={0}
         testId="browser-panel"
@@ -91,7 +91,7 @@ export function ProjectLayout({
         aria-label={labels.resizeBrowser}
         testId="browser-divider"
       />
-      <Panel minSize={PROJECT_LAYOUT.arrangementMinWidth} testId="arrangement-panel">
+      <Panel minSize={panels.arrangementMinWidth} testId="arrangement-panel">
         <PanelShell
           id="arrangement"
           aria-label={labels.arrangementPanel}
@@ -112,6 +112,7 @@ export function ProjectLayout({
       role="group"
       aria-label={projectId}
       style={{
+        // Full extents, zero minimums, and flex factors are containment invariants, not panel defaults.
         display: "flex",
         flexDirection: "column",
         width: "100%",
@@ -151,9 +152,9 @@ export function ProjectLayout({
           {clipView ? (
             <Panel
               panelRef={shell.clipHandleRef}
-              defaultSize={PROJECT_LAYOUT.clipDefaultSize}
-              minSize={PROJECT_LAYOUT.clipMinSize}
-              maxSize={PROJECT_LAYOUT.clipMaxSize}
+              defaultSize={panels.clipDefaultSize}
+              minSize={panels.clipMinSize}
+              maxSize={panels.clipMaxSize}
               collapsible
               collapsedSize={0}
               onResize={size => shell.setFooterCollapsed(size.inPixels === 0)}

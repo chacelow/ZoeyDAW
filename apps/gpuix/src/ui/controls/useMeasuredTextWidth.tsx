@@ -36,6 +36,7 @@ export function useMeasuredTextWidth(
         position: "absolute",
         left: 0,
         top: 0,
+        // Measurement samples must stay invisible regardless of theme opacity preferences.
         opacity: 0,
         pointerEvents: "none",
         display: "flex",

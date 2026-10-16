@@ -35,8 +35,9 @@ export function createDisplayFormats(
     if (!normalized) return Number.NaN
     return Number(normalized)
   }
-  function db(value: number) {
-    return value <= config.dbFloor ? config.negativeInfinity : number(value, "db")
+  function db(value: number, options?: Parameters<DisplayFormats["db"]>[1]) {
+    const formatted = value <= config.dbFloor ? config.negativeInfinity : number(value, "db")
+    return options?.unit ? `${formatted} ${config.units.db}` : formatted
   }
   function parseDb(text: string) {
     const input = text.trim()
@@ -67,8 +68,12 @@ export function createDisplayFormats(
       [[config.pan.right, "R"], 1],
     ] satisfies [string[], number][]) {
       for (const label of labels) {
-        if (raw.startsWith(label.toLocaleUpperCase(locale)))
-          return (sign * parseNumber(raw.slice(label.length))) / 100
+        if (raw.startsWith(label.toLocaleUpperCase(locale))) {
+          const magnitude = raw.slice(label.length).trim()
+          // ASCII '%' is a stable input alias, independent of translated display labels.
+          const numeric = magnitude.endsWith("%") ? magnitude.slice(0, -1).trim() : magnitude
+          return (sign * parseNumber(numeric)) / 100
+        }
       }
     }
     return parseNumber(raw)

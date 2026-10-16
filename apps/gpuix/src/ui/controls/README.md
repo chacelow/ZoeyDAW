@@ -40,6 +40,30 @@ A3b 的当前窗口补证、历史状态索引、像素与 token 对照、Live �
 - `SettingsShell` 是非模态导航和内容容器，不宣称实现模态 focus trap。RadioGroup 与对话框内 SettingsNavItem 保留标准 Space 选择；工具栏 `MotionTabs` 只用 Enter 激活，Space 不切换。Tabs 使用静态指示器和原生 opacity 过渡。
 - `DragPreviewArea` 删除 DOM selector/HTMLElement 接口，改为显式 `data` 或 `items` 和 `renderPreview(data)`。预览支持阈值、释放、Esc 和取消；实际资源放置保持禁用。
 
+## 统一样式配置（2026-10-16）
+
+控件经 `useTheme()` 消费完整 `design` 分组：SettingsShell、菜单和浮层尺寸，空态和加载态几何，拖动预览、数值填充/中心标记/预编辑 caret，禁用透明度，语义 cursor，字体权重、图标描边和 tabs 动效。Button destructive 状态与 ListRow hover 使用统一派生颜色，不在消费者重算配方。显式传入的尺寸或偏移 `0` 不触发默认值。
+
+`iconMarkup(name, strokeWidth, filled?)` 是要求显式描边的纯 helper；只有 `<Icon>` 从主题解析默认值。SVG viewBox、百分比换算、布局收缩/拉伸与 reduced-motion 的零时长仍是结构或可访问性常量。
+
+原生消费者回归入口为 `src/ui/verification/configuration-controls.test.tsx`，旧常量 mutation 入口为 `src/ui/verification/mutations-configuration-controls.mjs`（在 `apps/gpuix` 运行）。Mutation 复用统一隔离执行器，不改当前源码。Cursor 用原生事件后的节点状态验证；操作系统实际指针形状须由组合界面验收补证。本节描述契约与验证入口，不声明已执行这些新增检查。
+
+## 文案与通知策略
+
+共享组件不定义自然语言 fallback；显示、朗读、编辑与测宽所需文案由调用方提供。
+
+| 组件              | 必填输入                                                                   |
+| ----------------- | -------------------------------------------------------------------------- |
+| `Loading`         | `label`；有 logo 时配 `logoAlt`，有 progress 时配 `progressValueText`      |
+| `Progress`        | `aria-valuetext`，包括加载中与确定进度的本地化表示                         |
+| `SettingsShell`   | `closeLabel`、`navigationLabel`                                            |
+| `LoadErrorScreen` | `title`；retry 操作配 `retryLabel`，primary 操作配 `primaryLabel`          |
+| `PanControl`      | `label`、`format`、`parse`、`widthSamples`                                 |
+| `DragPadToggle`   | 纯文字分支配 `labelOn`、`labelOff`；显式 icon 或 children 分支无需无用标签 |
+| `Toaster`         | `aria-label`、`dismissLabel`、`loadingLabel`、`policy`                     |
+
+组合根在发布通知前调用 `configureToastPolicy({ defaultDuration, queueLimit, visibleLimit })`。唯一通知 store 持有配置引用、notice 与 timer；`Toaster` 只读 presentation，卸载 owner 调用 `dismissToast()` 释放通知资源。持续通知的 duration=0 是状态语义，不属于动画时长或主题。
+
 ## 实跑命令
 
 在本 worktree 执行，未把代理自报作为结果。

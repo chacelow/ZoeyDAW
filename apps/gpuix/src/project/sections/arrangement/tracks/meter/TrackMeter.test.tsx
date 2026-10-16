@@ -5,12 +5,12 @@ import { AnimationFrameProvider } from "@/platform/frame"
 import { useProjectState } from "@/project/stores/useProjectState"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { TrackLabelsProvider } from "../labels"
-import { trackResources } from "../locales"
 import { createControlledFrames } from "../verification/frame-source"
 import { TrackTelemetryProvider } from "./telemetry"
 import { TrackMeter } from "./TrackMeter"
 import type { BackendTelemetry } from "@/project/model/backend"
 import type { TestRoot } from "@gpuix/react/testing"
+import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -42,7 +42,7 @@ function mountMeter(
     root.render(
       <AnimationFrameProvider source={frames.source}>
         <ThemeProvider>
-          <TrackLabelsProvider labels={trackResources[language].arrangement}>
+          <TrackLabelsProvider labels={trackLabelsByLocale[language]}>
             <TrackTelemetryProvider telemetry={() => readTelemetry()}>
               <TrackMeter
                 trackId={id}

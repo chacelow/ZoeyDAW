@@ -3,7 +3,6 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { Button } from "@/ui/controls/Button"
 import { TrackIdentity } from "@/project/sections/arrangement/tracks/TrackIdentity"
 import { TrackLabelsProvider } from "@/project/sections/arrangement/tracks/labels"
-import { trackResources } from "@/project/sections/arrangement/tracks/locales"
 import { createMockDocument } from "@/project/adapters/fixtures"
 import { CONTROL_METRICS, PROJECT_METRICS } from "./metrics/config"
 import { DEFAULT_DESIGN_TOKENS } from "./design-tokens"
@@ -18,6 +17,7 @@ import { HomePage } from "@/app/home/HomePage"
 import { createRouter, RouterProvider } from "@/app/router/router"
 import { createMemorySnapshotStorage } from "@/project/adapters"
 import { initAppI18n } from "@/app/i18n"
+import { trackLabelsByLocale } from "@/app/locales/sections/tracks"
 
 function bounds(root: TestRoot, id: string) {
   const node = root.renderer.findByTestId(id)
@@ -36,7 +36,7 @@ test("runtime group overrides resize real controls and track identity without st
         <div style={{ display: "flex", alignItems: "start", height: 150 }}>
           <Button testId="default-control" label="Default" iconOnly />
           <Button testId="transport-control" label="Transport" iconOnly size="transport" />
-          <TrackLabelsProvider labels={trackResources["en-US"].arrangement}>
+          <TrackLabelsProvider labels={trackLabelsByLocale["en-US"]}>
             <TrackIdentity
               track={track}
               selected={false}

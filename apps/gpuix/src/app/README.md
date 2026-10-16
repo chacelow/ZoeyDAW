@@ -35,7 +35,7 @@
 
 ## 工程组合
 
-`ProjectSections` 用 `ProjectLayoutSlots` 装配 sections。`ProjectLayout` 只管理面板几何与激活外观，不持有第二份工程或视口。Browser 最小宽度直接取 `theme.project.browserNavigationWidth` 与 `browserResultsWidth`。
+`ProjectSections` 用 `ProjectLayoutSlots` 装配 sections。`ProjectLayout` 只管理面板几何与激活外观，不持有第二份工程或视口；默认/最小/最大比例来自 `theme.layout.project.panels`，Browser 像素最小宽度来自 `theme.project.browserNavigationWidth` 与 `browserResultsWidth`。`labels` 显式提供 Browser、Arrangement、Footer 的可读名称和活动描述，内部 section id 不作为用户文案。
 
 | 槽 | 内容 | 所需 shell 接口 |
 | --- | --- | --- |
@@ -60,6 +60,14 @@ Clip slot 的唯一类型由 `clip-edit` 定义，只含 `clipId`、`trackId`、
 帧需求由 `playing`、lane 的真实 `dragActive` 与 timeline 的 autoScroll 活动共同派生，经稳定的 external-store 订阅通知组合根。停止且无手势时取消 native frame 订阅，播放或手势开始时恢复；不缓存第二份可写需求状态，不轮询 pointer。只读 Input 仍是文本焦点，不能把 A/M 或 Cmd+A 送给 Arrangement。
 
 普通帧继续使用 `useAnimationFrame`。同一个 source 的 `useResumeFrame` 使用同一需求谓词，在原生 prepaint 中显式 `flushSync` 执行同一个 `composition.tick`，使首次恢复 present 使用最新视口。无需求时两类订阅都释放，不另建 source 或 timer。
+
+## 配置与通知
+
+首页最大内容宽来自 `theme.layout.home.maxWidth`，预设网格的列宽、色块高、滚动高度来自 `theme.design.settings.presetGrid`。字重和模态遮罩分别读取 `theme.design.typography.weights` 与 `theme.colors.dialogBackdrop`，不借轨道尺寸或在调用处重算混色。
+
+`AppFrame` 在 layout effect 配置 `ToastPolicy`，卸载时清空通知与 timer。`Toaster` 只消费调用方传入的 presentation policy、关闭/加载文字及区域名称；UI 不反向读取工程或设置模块。调整 queueLimit 会淘汰最早通知并清理 timer，已保留通知不重新计时；默认时长只影响之后新建或替换的通知。
+
+`verification/configuration-surfaces.mjs capture <外部目录>` 捕获 Gallery 与真实后端业务组合；`compare <迁移前目录> <迁移后目录>` 比较同名 PNG 字节。`configuration.test.tsx` 与 `verification/mutations-configuration.mjs` 验证布局、预设几何、字重和遮罩来源的消费者行为，变异只修改临时源码副本。
 
 ## 验证入口
 

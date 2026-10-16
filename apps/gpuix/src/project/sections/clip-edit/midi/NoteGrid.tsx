@@ -3,7 +3,6 @@ import { useMemo } from "react"
 import type { Ref } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { colorMix } from "@/shared/theme/color-mix"
 import { usePreference } from "@/platform/settings"
 import type { DisplayFormats } from "@/project/model/display-formats"
 import { visibleNoteRects } from "./layout"
@@ -94,8 +93,22 @@ export function NoteGrid({
         colors: theme.colors,
         fontSize,
         gridBeats: midi.noteGridBeats,
+        design: theme.design,
+        project: theme.project,
       }),
-    [notes, rects, roll, selected, numerator, color, theme.colors, fontSize, midi.noteGridBeats]
+    [
+      notes,
+      rects,
+      roll,
+      selected,
+      numerator,
+      color,
+      theme.colors,
+      theme.design,
+      theme.project,
+      fontSize,
+      midi.noteGridBeats,
+    ]
   )
   const layers = useMemo(
     () => [...paint.background, ...paint.planes.flatMap(plane => plane.layers)],
@@ -115,10 +128,14 @@ export function NoteGrid({
         minWidth: 0,
         height: "100%",
         overflow: "hidden",
-        cursor: drawMode ? "pointer" : "default",
+        cursor: drawMode ? theme.design.cursors.action : theme.design.cursors.default,
         backgroundColor: theme.colors.arrangementSurface,
         keyboardFocusDim: false,
-        focusVisible: { outlineWidth: 1, outlineColor: theme.colors.ring, outlineOffset: -1 },
+        focusVisible: {
+          outlineWidth: theme.design.shape.focusRingWidth,
+          outlineColor: theme.colors.ring,
+          outlineOffset: -theme.design.shape.focusRingWidth,
+        },
       })}
       onLayout={onLayout}
       onMouseDown={onMouseDown}
@@ -184,11 +201,11 @@ export function NoteGrid({
               style={sx({
                 position: "absolute",
                 left: rect.left - roll.scrollX,
-                top: rect.top - roll.scrollY + 1,
+                top: rect.top - roll.scrollY + theme.design.editor.noteInset,
                 width: Math.max(1, rect.width),
-                height: Math.max(1, rect.height - 1),
+                height: Math.max(1, rect.height - theme.design.editor.noteInset),
                 overflow: "hidden",
-                borderWidth: 1,
+                borderWidth: theme.design.shape.controlBorderWidth,
                 borderColor: rect.border,
                 backgroundColor: rect.fill,
                 color:
@@ -213,9 +230,9 @@ export function NoteGrid({
           style={{
             position: "absolute",
             left: activeRect.left - roll.scrollX,
-            top: activeRect.top - roll.scrollY + 1,
+            top: activeRect.top - roll.scrollY + theme.design.editor.noteInset,
             width: Math.max(1, activeRect.width),
-            height: Math.max(1, activeRect.height - 1),
+            height: Math.max(1, activeRect.height - theme.design.editor.noteInset),
             pointerEvents: "none",
           }}
         />
@@ -229,9 +246,9 @@ export function NoteGrid({
             top: marquee.top - roll.scrollY,
             width: marquee.right - marquee.left,
             height: marquee.bottom - marquee.top,
-            borderWidth: 1,
+            borderWidth: theme.design.editor.selectionStrokeWidth,
             borderColor: theme.colors.primary,
-            backgroundColor: colorMix(theme.colors.primary, 20, "transparent"),
+            backgroundColor: theme.colors.editorMarquee,
             pointerEvents: "none",
           })}
         />

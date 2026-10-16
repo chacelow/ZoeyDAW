@@ -20,6 +20,12 @@ export interface ToastOptions {
   readonly duration?: number
   readonly action?: ToastAction
 }
+export interface ToastPolicy {
+  readonly defaultDuration: number
+  readonly queueLimit: number
+  readonly visibleLimit: number
+}
+
 interface Notice extends ToastOptions {
   readonly id: string
   readonly status: ToastVariant | "loading"
@@ -28,13 +34,24 @@ interface Notice extends ToastOptions {
 type ToastInput = ToastOptions | string | number
 type ToastMethodOptions = Omit<ToastOptions, "description" | "message" | "variant">
 const emptySnapshot: readonly Notice[] = []
-const store: { snapshot: readonly Notice[]; idSeed: number } = {
+const store: { snapshot: readonly Notice[]; idSeed: number; policy: ToastPolicy | null } = {
   snapshot: emptySnapshot,
   idSeed: 0,
+  policy: null,
 }
 const subscribers = new Set<() => void>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
-const defaultDuration = 4200
+
+/** The composition root owns the preference; pending notices retain their existing expiry. */
+export function configureToastPolicy(next: ToastPolicy) {
+  store.policy = next
+  const evicted = store.snapshot.slice(0, Math.max(0, store.snapshot.length - next.queueLimit))
+  for (const notice of evicted) clearTimer(notice.id)
+  if (evicted.length > 0) {
+    store.snapshot = store.snapshot.slice(-next.queueLimit)
+    publish()
+  }
+}
 
 function subscribe(listener: () => void) {
   subscribers.add(listener)
@@ -67,6 +84,9 @@ export function dismissToast(id?: string | number) {
 }
 
 function upsert(options: ToastOptions, status: Notice["status"] = options.variant ?? "default") {
+  const policy = store.policy
+  // A configured policy is an application-composition invariant, not user-facing fallback text.
+  if (!policy) throw new Error("Configure toast policy before publishing notifications")
   const id = options.id ?? `toast-${++store.idSeed}`
   const previous = store.snapshot.find(notice => notice.id === id)
   const notice: Notice = { ...options, id, status }
@@ -74,10 +94,10 @@ function upsert(options: ToastOptions, status: Notice["status"] = options.varian
   const updated = previous
     ? store.snapshot.map(item => (item.id === id ? notice : item))
     : [...store.snapshot, notice]
-  const evicted = updated.slice(0, Math.max(0, updated.length - 8))
+  const evicted = updated.slice(0, Math.max(0, updated.length - policy.queueLimit))
   for (const item of evicted) clearTimer(item.id)
-  store.snapshot = updated.slice(-8)
-  const duration = notice.duration ?? defaultDuration
+  store.snapshot = updated.slice(-policy.queueLimit)
+  const duration = notice.duration ?? policy.defaultDuration
   if (Number.isFinite(duration) && duration > 0) {
     timers.set(
       id,
@@ -97,6 +117,7 @@ function variantMethod(variant: ToastVariant) {
 }
 
 export function toastLoading(message: string, id?: string) {
+  // Zero denotes a persistent notification until replacement or dismissal, not a duration default.
   return upsert({ id, description: message, duration: 0 }, "loading")
 }
 
@@ -111,19 +132,23 @@ export const toast = Object.assign(notify, {
 
 export interface ToasterProps extends Props {
   readonly position?: ToastPosition
-  readonly dismissLabel?: string
-  readonly loadingLabel?: string
+  readonly dismissLabel: string
+  readonly loadingLabel: string
+  readonly "aria-label": string
+  readonly policy: ToastPolicy
 }
 
 export function Toaster({
   position = "bottom-right",
-  dismissLabel = "Dismiss",
-  loadingLabel = "Loading",
+  dismissLabel,
+  loadingLabel,
+  policy: presentation,
   style,
   testId = "toaster",
   ...props
 }: ToasterProps) {
   const theme = useTheme()
+  const metrics = theme.design.toast
   const notices = useSyncExternalStore(subscribe, getSnapshot, () => emptySnapshot)
   const gap = theme.control["--spacing-control-track-gap"]
   const top = position.startsWith("top")
@@ -134,25 +159,25 @@ export function Toaster({
       {...props}
       testId={testId}
       role="region"
-      aria-label={props["aria-label"] ?? "Notifications"}
+      aria-label={props["aria-label"]}
       style={sx(
         {
           position: "absolute",
-          top: top ? gap * 3 : undefined,
-          bottom: top ? undefined : gap * 3,
-          left: left || center ? gap * 3 : undefined,
-          right: left ? undefined : gap * 3,
+          top: top ? metrics.edgeInset : undefined,
+          bottom: top ? undefined : metrics.edgeInset,
+          left: left || center ? metrics.edgeInset : undefined,
+          right: left ? undefined : metrics.edgeInset,
           display: "flex",
           flexDirection: "column",
           alignItems: center ? "center" : "stretch",
-          gap: gap * 2,
-          width: center ? undefined : theme.layout.track.controlsWidth,
+          gap: metrics.stackGap,
+          width: center ? undefined : metrics.width,
           pointerEvents: "none",
         },
         style
       )}
     >
-      {notices.slice(-4).map(notice => (
+      {notices.slice(-presentation.visibleLimit).map(notice => (
         <div
           key={notice.id}
           testId={`${testId}-${notice.id}`}
@@ -164,15 +189,15 @@ export function Toaster({
             display: "flex",
             flexDirection: "column",
             gap,
-            padding: gap * 3,
-            width: theme.layout.track.controlsWidth,
-            borderWidth: 1,
-            borderRadius: gap * 2,
+            padding: metrics.inset,
+            width: metrics.width,
+            borderWidth: theme.design.shape.cardBorderWidth,
+            borderRadius: metrics.radius,
             borderColor:
               notice.status === "destructive"
                 ? theme.colors.destructive
                 : notice.status === "success"
-                  ? theme.colors.chart2
+                  ? theme.colors.success
                   : theme.colors.border,
             backgroundColor: theme.colors.card,
             color: theme.colors.cardForeground,
@@ -180,7 +205,11 @@ export function Toaster({
             pointerEvents: "auto",
           }}
         >
-          {notice.title ? <div style={{ fontWeight: 600 }}>{notice.title}</div> : null}
+          {notice.title ? (
+            <div style={{ fontWeight: theme.design.typography.weights.semibold }}>
+              {notice.title}
+            </div>
+          ) : null}
           {(notice.description ?? notice.message) ? (
             <div style={{ color: theme.colors.mutedForeground }}>
               {notice.description ?? notice.message}

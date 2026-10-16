@@ -75,14 +75,14 @@ export function DeviceCard({
         width: device.collapsed
           ? theme.control["--spacing-control-track"] + inset * 2
           : theme.project.deviceCardWidth,
-        borderWidth: 1,
+        borderWidth: theme.design.shape.cardBorderWidth,
         borderColor: dropTarget
           ? theme.colors.primary
           : selected
             ? theme.colors.ring
             : theme.colors.border,
         backgroundColor: theme.colors.muted,
-        opacity: dragging ? 0.5 : 1,
+        opacity: dragging ? theme.design.states.deviceDragSourceOpacity : 1,
         overflow: "hidden",
       }}
     >
@@ -137,7 +137,7 @@ export function DeviceCard({
             flexGrow: device.collapsed ? 0 : 1,
             minWidth: 0,
             justifyContent: "flex-start",
-            cursor: dragging ? "grabbing" : "grab",
+            cursor: dragging ? theme.design.cursors.grabbing : theme.design.cursors.grab,
           }}
         >
           {device.collapsed ? null : name}
@@ -185,7 +185,7 @@ export function DeviceCard({
             padding: theme.control["--spacing-control-track-pad"],
             flexGrow: 1,
             minHeight: 0,
-            opacity: device.enabled ? 1 : 0.5,
+            opacity: device.enabled ? 1 : theme.design.states.disabledOpacity,
           }}
         >
           <DeviceDisplay device={device} />

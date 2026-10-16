@@ -283,7 +283,7 @@ export function AudioParameters({
         display: "flex",
         flexDirection: "row",
         flexShrink: 0,
-        borderRightWidth: 1,
+        borderRightWidth: theme.design.editor.dividerStrokeWidth,
         borderColor: theme.colors.arrangementLine,
       })}
     >
@@ -328,7 +328,12 @@ export function AudioParameters({
         <ClipNumber clip={clip} field="fadeInBars" label={labels.fadeIn} labels={labels} />
         <ClipNumber clip={clip} field="fadeOutBars" label={labels.fadeOut} labels={labels} />
       </div>
-      <div style={sx(column, { borderLeftWidth: 1, borderColor: theme.colors.arrangementLine })}>
+      <div
+        style={sx(column, {
+          borderLeftWidth: theme.design.editor.dividerStrokeWidth,
+          borderColor: theme.colors.arrangementLine,
+        })}
+      >
         <text style={heading}>{labels.sample}</text>
         <DragPadToggle
           testId="audio-warp"

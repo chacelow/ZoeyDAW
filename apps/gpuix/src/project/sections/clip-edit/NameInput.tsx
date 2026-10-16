@@ -51,7 +51,7 @@ export function ClipNameInput({
       style={{
         width: theme.project.identityWidth * 2,
         flexShrink: 1,
-        fontWeight: 600,
+        fontWeight: theme.design.typography.weights.semibold,
         backgroundColor: "transparent",
         borderColor: "transparent",
       }}

@@ -48,7 +48,13 @@ export function Input({
         default: {},
         invalid: { borderColor: theme.colors.destructive },
       },
-      disabled: { true: { opacity: 0.5, cursor: "not-allowed" }, false: {} },
+      disabled: {
+        true: {
+          opacity: theme.design.states.disabledOpacity,
+          cursor: theme.design.cursors.disabled,
+        },
+        false: {},
+      },
     },
   })
   return (

@@ -1,6 +1,10 @@
-import { afterEach, beforeAll, beforeEach, expect, test } from "bun:test"
+import { afterEach, beforeAll, beforeEach, expect, jest, test } from "bun:test"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot, type TestRoot } from "@gpuix/react/testing"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { dismissToast, toast } from "@/ui/controls"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { i18next } from "@/platform/i18n/core"
@@ -14,7 +18,11 @@ import {
   whenProjectBackendIdle,
 } from "@/project/adapters"
 import { createNativeBackend } from "@/project/adapters/backend/native"
-import { DEFAULT_THEME_MODE } from "@/platform/settings"
+import {
+  configurePreferences,
+  createPreferenceOwner,
+  DEFAULT_THEME_MODE,
+} from "@/platform/settings"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "@/shared/theme/presets"
 import { AppShell } from "./AppShell"
 import { initAppI18n } from "./i18n"
@@ -249,3 +257,61 @@ test("successful Restore after a failed open permits saving the repaired project
   expect(JSON.parse(saved).document.transport.bpm).toBe(163)
   expect(useProjectState.getState().session.dirty).toBe(false)
 }, 30000)
+
+test("notification preferences update limits without clearing retained notices or restarting expiry", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "zoeydaw-notification-preferences-"))
+  const owner = createPreferenceOwner({ configDir: directory })
+  owner.setPreference("notifications", { defaultDuration: 100, queueLimit: 5, visibleLimit: 3 })
+  cleanups.push(configurePreferences(owner), () =>
+    rmSync(directory, { recursive: true, force: true })
+  )
+  dismissToast()
+  // Home has no native backend clock; fake timers control only notification expiry here.
+  jest.useFakeTimers()
+  try {
+    const { root } = mount()
+    const notice = (id: string) => root.renderer.findByTestId(`toaster-${id}`)
+    act(root, () => {
+      toast("first", { id: "first" })
+      for (const id of ["second", "third", "fourth"]) toast(id, { id, duration: 0 })
+    })
+    expect(notice("first")).toBeUndefined()
+    expect(notice("second")).toBeDefined()
+    act(root, () => jest.advanceTimersByTime(20))
+    act(root, () =>
+      owner.setPreference("notifications", { defaultDuration: 200, queueLimit: 5, visibleLimit: 4 })
+    )
+    expect(notice("first")).toBeDefined()
+    expect(notice("fourth")).toBeDefined()
+    act(root, () => jest.advanceTimersByTime(80))
+    expect(notice("first")).toBeUndefined()
+    expect(notice("second")).toBeDefined()
+    act(root, () => toast("new", { id: "new" }))
+    act(root, () => jest.advanceTimersByTime(100))
+    expect(notice("new")).toBeDefined()
+    act(root, () => jest.advanceTimersByTime(100))
+    expect(notice("new")).toBeUndefined()
+    act(root, () =>
+      owner.setPreference("notifications", {
+        ...owner.getPreference("notifications"),
+        queueLimit: 2,
+        visibleLimit: 2,
+      })
+    )
+    expect(notice("second")).toBeUndefined()
+    expect(notice("third")).toBeDefined()
+    expect(notice("fourth")).toBeDefined()
+    act(root, () =>
+      owner.setPreference("notifications", {
+        ...owner.getPreference("notifications"),
+        queueLimit: 4,
+        visibleLimit: 4,
+      })
+    )
+    expect(notice("second")).toBeUndefined()
+    expect(notice("third")).toBeDefined()
+  } finally {
+    dismissToast()
+    jest.useRealTimers()
+  }
+})

@@ -459,6 +459,7 @@ it("refreshes a cached mounted Clip title when density changes without changing 
             scene={scene.get()}
             automationMode={false}
             readPeaks={readPeaks}
+            creationNames={TEST_CREATION_NAMES}
           />
         </div>
       </ThemeProvider>

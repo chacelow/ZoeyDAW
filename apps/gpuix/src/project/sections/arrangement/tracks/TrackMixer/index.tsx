@@ -25,6 +25,7 @@ function MixerLevel({
 }) {
   const gesture = useProjectEditGesture(onChange)
   const theme = useTheme()
+  const { formats } = useTrackLabels()
   return (
     <DragPadBar
       hideIcon={!icon}
@@ -38,8 +39,8 @@ function MixerLevel({
       disabled={disabled}
       icon={icon}
       testId={testId}
-      format={db => (db <= -60 ? "−∞" : db.toFixed(1))}
-      widthSamples={["−59.9", "6.0", "−∞"]}
+      format={formats.db}
+      widthSamples={formats.widthSamples.db}
       style={{ width: "100%", minWidth: 0 }}
       {...gesture}
     />
@@ -47,7 +48,7 @@ function MixerLevel({
 }
 
 export function TrackMixer({ track }: { readonly track: Track }) {
-  const { t } = useTrackLabels()
+  const { t, formats } = useTrackLabels()
   const theme = useTheme()
   const panGesture = useProjectEditGesture((pan: number) =>
     projectActions.updateTrack(track.id, { pan })
@@ -190,6 +191,9 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 label={`${t("pan")} ${track.name}`}
                 testId={`track-pan-${track.id}`}
                 value={track.pan}
+                format={value => formats.pan(value, "control")}
+                parse={formats.parsePan}
+                widthSamples={formats.widthSamples.pan}
                 color={theme.colors.arrangementVolume}
                 style={{ ...column, width: isMain ? "100%" : "auto" }}
                 {...panGesture}

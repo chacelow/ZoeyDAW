@@ -113,7 +113,11 @@ export function NumericPad({
     {
       width,
       borderColor: pad.mode === "preEdit" ? theme.colors.ring : theme.colors.border,
-      cursor: disabled ? "not-allowed" : pad.mode === "idle" ? "ns-resize" : "text",
+      cursor: disabled
+        ? theme.design.cursors.disabled
+        : pad.mode === "idle"
+          ? theme.design.cursors.verticalResize
+          : theme.design.cursors.text,
       overflow: "hidden",
       pointerEvents: "auto",
     },
@@ -131,7 +135,7 @@ export function NumericPad({
       top: 0,
       bottom: 0,
       backgroundColor: color ?? theme.colors.primary,
-      opacity: 0.3,
+      opacity: theme.design.dragPad.fillOpacity,
       pointerEvents: "none",
     },
     variants: {
@@ -161,10 +165,10 @@ export function NumericPad({
           testId={testId ? `${testId}-center` : undefined}
           style={{
             position: "absolute",
-            left: (innerWidth - 1) / 2,
-            top: 2,
-            bottom: 2,
-            width: 1,
+            left: (innerWidth - theme.design.dragPad.centerMarker.width) / 2,
+            top: theme.design.dragPad.centerMarker.inset,
+            bottom: theme.design.dragPad.centerMarker.inset,
+            width: theme.design.dragPad.centerMarker.width,
             backgroundColor: theme.colors.border,
             pointerEvents: "none",
           }}
@@ -180,7 +184,7 @@ export function NumericPad({
               left: 0,
               top: trackPad,
               bottom: trackPad,
-              width: 1,
+              width: theme.design.dragPad.caretWidth,
               backgroundColor: theme.colors.foreground,
               pointerEvents: "none",
             }}
@@ -215,7 +219,7 @@ export function NumericPad({
             fontFamily: theme.design.typography.numberFontFamily,
             color: theme.colors.foreground,
             textAlign: "center",
-            cursor: "text",
+            cursor: theme.design.cursors.text,
           }}
         />
       ) : (

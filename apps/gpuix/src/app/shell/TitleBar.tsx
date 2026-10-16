@@ -53,7 +53,7 @@ export function TitleBar({ title, settingsLabel, onOpenSettings, surface }: Titl
           whiteSpace: "nowrap",
           color: theme.colors.mutedForeground,
           fontSize: theme.transportControl["--text-control-track"],
-          fontWeight: 600,
+          fontWeight: theme.design.typography.weights.semibold,
         }}
       >
         {title ?? ""}

@@ -157,3 +157,26 @@ test("pan parsing retains directly entered normalized numbers", () => {
   expect(formats.parsePan("0.25")).toBe(0.25)
   expect(formats.parsePan("-0.5")).toBe(-0.5)
 })
+
+test("db unit selection follows the same localized gain parser", () => {
+  const config = structuredClone(displayConfigByLocale["en-US"])
+  config.units.db = "dB(A)"
+  const formats = createDisplayFormats("en-US", config)
+  expect(formats.db(-12.5)).toBe("-12.5")
+  expect(formats.db(-12.5, { unit: true })).toBe("-12.5 dB(A)")
+  expect(formats.db(-60, { unit: true })).toBe("−∞ dB(A)")
+  expect(formats.parseDb(formats.db(-12.5, { unit: true }))).toBe(-12.5)
+  expect(formats.parseDb(formats.db(-60, { unit: true }))).toBe(config.dbFloor)
+})
+
+test.each(["en-US", "zh-CN"] as const)(
+  "%s pan parsing accepts percentage aliases without changing normalized input",
+  locale => {
+    const formats = createDisplayFormats(locale)
+    expect(formats.parsePan("L25%")).toBe(-0.25)
+    expect(formats.parsePan("R 50 %")).toBe(0.5)
+    expect(formats.parsePan("0.25")).toBe(0.25)
+    expect(Number.isNaN(formats.parsePan("L25%%"))).toBe(true)
+    expect(Number.isNaN(formats.parsePan("Lbad%"))).toBe(true)
+  }
+)

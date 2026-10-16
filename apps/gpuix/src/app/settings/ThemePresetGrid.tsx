@@ -20,8 +20,8 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
   const theme = useTheme()
   const { renderer } = useGpuix()
   const gap = theme.design.settings.itemGap
-  const swatchHeight = theme.control["--spacing-control-track"] * 2
-  const columnWidth = theme.project.identityWidth * 2
+  const swatchHeight = theme.design.settings.presetGrid.swatchHeight
+  const columnWidth = theme.design.settings.presetGrid.columnWidth
   return (
     <ToggleGroup
       type="single"
@@ -36,7 +36,7 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
       <ScrollArea
         testId="theme-preset-scroll"
         aria-label={label}
-        height={theme.project.defaultTrackHeight * 4}
+        height={theme.design.settings.presetGrid.scrollHeight}
         style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap, flexShrink: 0 }}
       >
         {THEME_PRESETS.map(preset => {
@@ -74,7 +74,7 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
                   display: "flex",
                   flexDirection: "row",
                   height: swatchHeight,
-                  borderWidth: 1,
+                  borderWidth: theme.design.shape.controlBorderWidth,
                   borderRadius: theme.design.shape.controlRadius,
                   borderColor: theme.colors.border,
                   overflow: "hidden",
@@ -119,7 +119,7 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
                 style={{
                   pointerEvents: "none",
                   color: selected ? theme.colors.foreground : theme.colors.mutedForeground,
-                  fontWeight: selected ? 500 : undefined,
+                  fontWeight: selected ? theme.design.typography.weights.medium : undefined,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",

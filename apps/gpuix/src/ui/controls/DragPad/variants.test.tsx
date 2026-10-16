@@ -129,6 +129,8 @@ test("toggle activates by click and keyboard without entering numeric edit", () 
         <DragPadToggle
           testId="toggle"
           label="Mute"
+          labelOn="已静音"
+          labelOff="播放中"
           value={value}
           onChange={next => {
             latest = next
@@ -140,12 +142,41 @@ test("toggle activates by click and keyboard without entering numeric edit", () 
   }
   root.render(<Harness />)
   root.renderer.flush()
+  expect(root.renderer.findByText("播放中")).toBeDefined()
   const node = root.renderer.findByTestId("toggle")!
   const b = root.renderer.getElementBounds(node.id)!
   root.renderer.nativeSimulateClick(b.x + b.width / 2, b.y + b.height / 2)
   expect(latest).toBe(true)
+  root.renderer.flush()
+  expect(root.renderer.findByText("已静音")).toBeDefined()
+  expect(root.renderer.findByText("播放中")).toBeUndefined()
   root.renderer.nativeSimulateKeystrokes(node.id, "enter")
   expect(latest).toBe(false)
+  root.renderer.flush()
+  expect(root.renderer.findByText("播放中")).toBeDefined()
   expect(root.renderer.findByType("input")).toHaveLength(0)
+  root.unmount()
+})
+
+test("toggle uses explicit children or icon without state labels", () => {
+  const root = createTestRoot({ width: 320, height: 120 })
+  for (const value of [false, true]) {
+    root.render(
+      <ThemeProvider>
+        <div>
+          <DragPadToggle label="循环" value={value} onChange={() => {}}>
+            循环内容
+          </DragPadToggle>
+          <DragPadToggle label="录音" value={value} onChange={() => {}} icon={<text>●</text>} />
+        </div>
+      </ThemeProvider>
+    )
+    root.renderer.flush()
+    expect(root.renderer.findByText("循环内容")).toBeDefined()
+    expect(root.renderer.findByText("●")).toBeDefined()
+    const nodes = Object.values(root.renderer.getA11yTree().nodes ?? {})
+    expect(nodes.some(node => node.aria?.label === "循环")).toBe(true)
+    expect(nodes.some(node => node.aria?.label === "录音")).toBe(true)
+  }
   root.unmount()
 })

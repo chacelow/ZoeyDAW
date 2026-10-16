@@ -69,7 +69,7 @@ export function ControlledScrollbar({
           width: horizontal ? length : thickness,
           height: horizontal ? thickness : length,
           backgroundColor: theme.colors.scrollbarTrack,
-          opacity: unavailable ? 0.5 : 1,
+          opacity: unavailable ? theme.design.states.disabledOpacity : 1,
           borderWidth,
           focusVisible: {
             outlineWidth: theme.design.shape.focusRingWidth,
