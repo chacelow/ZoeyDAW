@@ -103,3 +103,17 @@ test("shell default expansions are rejected without flagging relative path segme
     assertClean(scan("--absolute-paths"))
   })
 })
+
+test("bare machine roots in shell fallback values are rejected", () => {
+  withAbsolutePathFixture(({ write, commit, scan }) => {
+    const bareRoots = ["Volumes", "Users", "tmp", "private", "var/folders"].map(root => `/${root}`)
+    write(
+      "scripts/bare-defaults.sh",
+      bareRoots.map(root => `cache="\${CACHE:-${root}}"`).join("\n")
+    )
+    commit("scripts/bare-defaults.sh")
+    const result = scan("--absolute-paths")
+    assertHard(result, "scripts/bare-defaults.sh")
+    assert.match(result.stdout, /5 hard, 0 warn/)
+  })
+})

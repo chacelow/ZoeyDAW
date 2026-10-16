@@ -29,7 +29,7 @@ const absoluteFiles = (absoluteOnly ? run("git", ["ls-files", "-z"]).split("\0")
   .filter(file => /\.(?:mjs|js|ts|tsx|sh|rs|json)$/u.test(file))
   .filter(file => !file.split("/").includes("evidence"))
 const absolutePath =
-  /(?:(?<![\w.\/:\-])|(?<=:-))\/(?:Volumes|Users|tmp|private|var\/folders)(?=\/|[\s"'`),;]|$)/u
+  /(?:(?<![\w.\/:\-])|(?<=:-))\/(?:Volumes|Users|tmp|private|var\/folders)(?=\/|[\s"'`),;}]|$)/u
 for (const file of absoluteFiles) {
   for (const [index, line] of readFileSync(file, "utf8").split("\n").entries()) {
     const withoutFileUrls = line.replace(/file:\/\/[^\s"'`<>]+/gu, "")
