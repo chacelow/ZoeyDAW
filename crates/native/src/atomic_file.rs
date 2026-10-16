@@ -100,8 +100,9 @@ pub fn write_atomically(target: &Path, bytes: &[u8]) -> io::Result<()> {
         )
     })?;
     fs::create_dir_all(parent)?;
-    cleanup_stale_temporary_files(parent)?;
     let (temp_path, mut temp_file) = create_temporary_file(target)?;
+    #[cfg(test)]
+    tests::temporary_file_created(target);
     let result = (|| {
         temp_file.write_all(bytes)?;
         temp_file.sync_all()?;
@@ -119,33 +120,6 @@ pub fn write_atomically(target: &Path, bytes: &[u8]) -> io::Result<()> {
         let _ = fs::remove_file(&temp_path);
     }
     result
-}
-
-fn cleanup_stale_temporary_files(directory: &Path) -> io::Result<usize> {
-    if !directory.exists() {
-        return Ok(0);
-    }
-    let current_process_marker = format!("{TEMP_MARKER}{}-", std::process::id());
-    let mut removed = 0;
-    for entry in fs::read_dir(directory)? {
-        let entry = entry?;
-        if !entry.file_type()?.is_file() {
-            continue;
-        }
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
-        if name.contains(TEMP_MARKER)
-            && !name.contains(&current_process_marker)
-            && name.ends_with(".tmp")
-        {
-            if let Err(error) = fs::remove_file(entry.path()) {
-                log::warn!("failed to remove stale tmp {:?}: {error}", entry.path());
-                continue;
-            }
-            removed += 1;
-        }
-    }
-    Ok(removed)
 }
 
 #[napi]
@@ -172,6 +146,71 @@ mod tests {
             .expect("clock must be after epoch")
             .as_nanos();
         std::env::temp_dir().join(format!("zoeymind-{name}-{}-{suffix}", std::process::id()))
+    }
+
+    const CHILD_TARGET: &str = "ZOEYDAW_ATOMIC_CHILD_TARGET";
+    const CHILD_PAYLOAD: &[u8] = b"complete concurrent project snapshot";
+
+    pub(super) fn temporary_file_created(target: &Path) {
+        if std::env::var_os(CHILD_TARGET).as_deref() == Some(target.as_os_str()) {
+            println!("ATOMIC_WRITER_READY");
+            io::stdout().flush().unwrap();
+            let mut resume = String::new();
+            assert!(io::stdin().read_line(&mut resume).unwrap() > 0);
+        }
+    }
+
+    #[test]
+    fn concurrent_process_saves_keep_active_temporary_files() {
+        use std::{
+            io::BufRead,
+            process::{Command, Stdio},
+        };
+        if let Some(target) = std::env::var_os(CHILD_TARGET) {
+            write_atomically(Path::new(&target), CHILD_PAYLOAD).expect("child save completes");
+            return;
+        }
+        let directory = test_directory("atomic-concurrent-processes");
+        fs::create_dir_all(&directory).unwrap();
+        let first = directory.join("first.json");
+        let second = directory.join("second.json");
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "atomic_file::tests::concurrent_process_saves_keep_active_temporary_files",
+                "--nocapture",
+            ])
+            .env(CHILD_TARGET, &first)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut reader = io::BufReader::new(child.stdout.take().unwrap());
+        let mut line = String::new();
+        loop {
+            assert!(
+                reader.read_line(&mut line).unwrap() > 0,
+                "child exited before writer barrier"
+            );
+            if line.trim() == "ATOMIC_WRITER_READY" {
+                break;
+            }
+            line.clear();
+        }
+        let second_result = write_atomically(&second, b"complete second save");
+        child.stdin.take().unwrap().write_all(b"resume\n").unwrap();
+        let output = child.wait_with_output().unwrap();
+        second_result.expect("second save completes");
+        assert!(
+            output.status.success(),
+            "child save failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(fs::read(&first).unwrap(), CHILD_PAYLOAD);
+        assert_eq!(fs::read(&second).unwrap(), b"complete second save");
+        assert_eq!(fs::read_dir(&directory).unwrap().count(), 2);
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
@@ -201,24 +240,6 @@ mod tests {
         assert!(target_directory.is_dir());
         assert_eq!(fs::read(&sentinel).expect("read sentinel"), b"keep");
         assert_eq!(fs::read_dir(&directory).expect("read directory").count(), 2);
-        fs::remove_dir_all(directory).expect("remove test directory");
-    }
-
-    #[test]
-    fn cleanup_only_removes_zoeymind_temporary_files() {
-        let directory = test_directory("atomic-cleanup");
-        fs::create_dir_all(&directory).expect("create test directory");
-        fs::write(
-            directory.join(".project.zmind.zoeymind-write-1-1.tmp"),
-            b"stale",
-        )
-        .expect("write stale temp");
-        fs::write(directory.join("user.tmp"), b"keep").expect("write user temp");
-        assert_eq!(
-            cleanup_stale_temporary_files(&directory).expect("cleanup"),
-            1
-        );
-        assert!(directory.join("user.tmp").exists());
         fs::remove_dir_all(directory).expect("remove test directory");
     }
 }
