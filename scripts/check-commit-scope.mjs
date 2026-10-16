@@ -85,9 +85,11 @@ function main() {
     }
   }
 
-  // 多个 CC 类型出现在 subject 里
-  const typePattern = new RegExp(`\\b(${CC_TYPES.join("|")})\\b`, "gi")
-  const typeHits = subject.match(typePattern) ?? []
+  const typePattern = new RegExp(
+    `(?:^|[ \\t;,])(${CC_TYPES.join("|")})(?:\\([^)]*\\))?!?:[ \\t]+`,
+    "gi"
+  )
+  const typeHits = [...subject.matchAll(typePattern)].map(match => match[1])
   if (typeHits.length >= 2) {
     violations.push(
       `subject 出现 ${typeHits.length} 个 Conventional Commit 类型 (${typeHits.join(", ")}): ` +
