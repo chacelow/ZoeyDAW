@@ -24,6 +24,9 @@ const oneDarkPro = `{
     "sideBar.background": "#21252b",
     "sideBar.foreground": "#abb2bf",
     "tab.inactiveBackground": "#21252b",
+    "editorError.foreground": "#ff4444",
+    "editor.selectionBackground": "#3a3f52",
+    "list.activeSelectionBackground": "#2c313a",
   },
   /* Supported JSONC block comment and trailing array comma. */
   "tokenColors": [{ "scope": "comment", "settings": { "foreground": "#ff0000" } },],
@@ -49,6 +52,10 @@ test("real community JSONC maps workbench colors and preserves the opposite sche
     card: "#21252b",
     cardForeground: "#abb2bf",
     muted: "#21252b",
+    destructive: "#ff4444",
+    arrangementClipSelected: "#2c313a",
+    arrangementClipPaper: "#282c34",
+    arrangementMeterClip: "#ff4444",
   })
   const library = { selection: result.theme.id, themes: [result.theme] }
   expect(resolveThemeOverrides(library, "dark").colors.input).toBe(
@@ -59,26 +66,53 @@ test("real community JSONC maps workbench colors and preserves the opposite sche
   )
 })
 
-test.each(["dark", "light", "hc", "hcDark", "hcLight"])("imports %s into only its appearance", type => {
-  const result = importVSCodeTheme(JSON.stringify({ type, colors: { "editor.background": "#123456" } }), identity)
-  if (!result.ok) throw new Error("Theme failed to import")
-  const scheme = type === "light" || type === "hcLight" ? "light" : "dark"
-  expect(result.theme.colors[scheme].background).toBe("#123456")
-  expect(result.theme.colors[scheme === "light" ? "dark" : "light"]).toEqual({})
-})
+test.each(["dark", "light", "hc", "hcDark", "hcLight"])(
+  "imports %s into only its appearance",
+  type => {
+    const result = importVSCodeTheme(
+      JSON.stringify({ type, colors: { "editor.background": "#123456" } }),
+      identity
+    )
+    if (!result.ok) throw new Error("Theme failed to import")
+    const scheme = type === "light" || type === "hcLight" ? "light" : "dark"
+    expect(result.theme.colors[scheme].background).toBe("#123456")
+    expect(result.theme.colors[scheme === "light" ? "dark" : "light"]).toEqual({})
+  }
+)
 
 test("infers omitted type, keeps strings intact and chooses first valid mapped token", () => {
-  const result = importVSCodeTheme(`{
+  const result = importVSCodeTheme(
+    `{
     "name": "https://example.test/*not a comment*/,]",
     "colors": { "editor.background": "#fff", "editor.foreground": "invalid", "foreground": "#222" },
-  }`, identity)
+  }`,
+    identity
+  )
   if (!result.ok) throw new Error("Theme failed to import")
   expect(result.theme.name).toBe("https://example.test/*not a comment*/,]")
-  expect(result.theme.colors.light).toEqual({ background: "#fff", foreground: "#222", cardForeground: "#222", popoverForeground: "#222", secondaryForeground: "#222" })
+  expect(result.theme.colors.light).toEqual({
+    background: "#fff",
+    foreground: "#222",
+    cardForeground: "#222",
+    popoverForeground: "#222",
+    secondaryForeground: "#222",
+    arrangementClipPaper: "#fff",
+  })
   expect(result.unresolvedInclude).toBe(false)
 })
 
-test.each(["{bad", "{ /* unclosed", "[]", "null", "{}", '{"colors": []}', '{"type":"unknown","colors":{}}', '{"colors":{,}}', '{"colors":{},"tokenColors":[,]}', '{"colors":{},"include":42}'])("rejects malformed input: %s", json => {
+test.each([
+  "{bad",
+  "{ /* unclosed",
+  "[]",
+  "null",
+  "{}",
+  '{"colors": []}',
+  '{"type":"unknown","colors":{}}',
+  '{"colors":{,}}',
+  '{"colors":{},"tokenColors":[,]}',
+  '{"colors":{},"include":42}',
+])("rejects malformed input: %s", json => {
   expect(importVSCodeTheme(json, identity)).toEqual({ ok: false })
 })
 

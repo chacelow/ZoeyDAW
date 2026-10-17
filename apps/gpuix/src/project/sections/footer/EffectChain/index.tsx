@@ -7,8 +7,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   ScrollArea,
-  TruncatedText,
 } from "@/ui/controls"
+import { PanelHeader } from "@/ui/panels"
 import { Icon } from "@/ui/controls/Icon"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useProjectEditGesture } from "@/project/adapters"
@@ -157,41 +157,37 @@ function TrackDeviceChain({
         flexDirection: "column",
         height: "100%",
         minHeight: 0,
-        gap,
-        padding: gap,
+        gap: 0,
+        padding: 0,
       }}
     >
-      <div
-        style={{ display: "flex", flexDirection: "row", alignItems: "center", gap, flexShrink: 0 }}
-      >
-        <TruncatedText
-          style={{
-            color: theme.colors.mutedForeground,
-            fontSize: theme.control["--text-control-track"],
-            flexGrow: 0,
-            minWidth: 0,
-          }}
-        >{`${track.name} › ${labels.title}`}</TruncatedText>
-        <div style={{ flexGrow: 1 }} />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              label={labels.add}
-              testId="device-add"
-              icon={<Icon name="Plus" color={theme.colors.foreground} />}
-            >
-              {labels.add}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="end" aria-label={labels.add}>
-            {DEVICE_KINDS.map(kind => (
-              <DropdownMenuItem key={kind} testId={`device-add-${kind}`} onSelect={() => add(kind)}>
-                {labels.kindNames[kind]}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <PanelHeader
+        title={`${track.name} › ${labels.title}`}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                label={labels.add}
+                testId="device-add"
+                icon={<Icon name="Plus" color={theme.colors.foreground} />}
+              >
+                {labels.add}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" aria-label={labels.add}>
+              {DEVICE_KINDS.map(kind => (
+                <DropdownMenuItem
+                  key={kind}
+                  testId={`device-add-${kind}`}
+                  onSelect={() => add(kind)}
+                >
+                  {labels.kindNames[kind]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
       <ScrollArea orientation="horizontal" fill style={{ flexGrow: 1, height: 0 }}>
         {devices.length === 0 ? (
           <div

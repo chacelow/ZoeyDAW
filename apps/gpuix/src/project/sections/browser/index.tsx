@@ -309,8 +309,8 @@ export function BrowserPanel({
                   role="group"
                   aria-label={labels.content}
                   style={{
-                    display: "flex",
-                    flexWrap: "wrap",
+                    display: "grid",
+                    gridTemplateColumns: 3,
                     gap,
                     padding: theme.control["--spacing-control-track-pad"],
                     flexShrink: 0,
@@ -330,6 +330,7 @@ export function BrowserPanel({
                         />
                       }
                       onSelectedChange={() => browser.setKind(kind)}
+                      style={{ width: "100%" }}
                     >
                       {labels.kinds[kind]}
                     </Chip>

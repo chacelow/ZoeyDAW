@@ -53,7 +53,7 @@
 
 应用通过 `createThemeLibraryStore(createSettingStorage("themeLibrary"), basePreset)` 保存完整 JSON 字符串，沿用原生 settings 原子写机制；Rust 的可选字段兼容旧设置文件。`themePreset` 保留当前基础预设作为旧偏好回退，不保存第二份自定义内容。导出后 JSON 留在可复制 Input；自有主题导入直接粘贴。保存失败保留内存编辑并显示未持久化状态。
 
-VS Code 主题导入复用这个 Input，并在 renderer 支持 `promptForPaths` 时提供系统文件选择；UTF-8 内容经 `platform/storage.readTextFile()` 读取。`app/theme-editor/vscode-import.ts` 是纯 JSONC 解析入口，支持注释、尾逗号与 dark/light/hc/hcDark/hcLight；省略 type 时按 editor.background 明度推断，否则 dark。只写对应外观的 partial colors，缺失项回退 `vscode-modern`，另一外观不覆盖；忽略语法 tokenColors。无法解析 include 时显示警告而不阻止导入，也不跟随 include 路径读文件。非法 JSON/外层结构拒绝；无效/未知颜色项不覆盖基础值。每次导入创建新的自定义主题并激活。
+VS Code 主题导入复用这个 Input，并在 renderer 支持 `promptForPaths` 时提供系统文件选择；UTF-8 内容经 `platform/storage.readTextFile()` 读取。`app/theme-editor/vscode-import.ts` 是纯 JSONC 解析入口，支持注释、尾逗号与 dark/light/hc/hcDark/hcLight；省略 type 时按 editor.background 明度推断，否则 dark。只写对应外观的 partial colors，缺失项回退 `vscode-modern`，另一外观不覆盖；忽略语法 tokenColors。无法解析 include 时显示警告而不阻止导入，也不跟随 include 路径读文件。非法 JSON/外层结构拒绝；无效/未知颜色项不覆盖基础值。每次导入创建新的自定义主题并激活。VS Code 将 `arrangementClipSelected` 映射到 `list.activeSelectionBackground` 或 `editor.selectionBackground`，将 `arrangementClipPaper` 映射到 `editor.background`，将 `arrangementMeterClip` 映射到 `editorError.foreground` 或 `errorForeground`。这些是片段选中、片段纸面和电平过载最接近的 workbench 语义；未映射的角色保留 `vscode-modern` 预设值。
 
 ## 字段对照
 
@@ -91,7 +91,7 @@ VS Code 主题导入复用这个 Input，并在 renderer 支持 `promptForPaths`
 | `--editor-shell` | `editorShell` | `color-mix(muted 30%, background)` |
 | `--canvas-scrollbar(-hover/-active)` | `canvasScrollbar(Hover/Active)` | `foreground` 10%/18%/26% 透明 |
 | `--scrollbar-track` | `scrollbarTrack` | `color-mix(foreground 4%, background)` |
-| `--arrangement-surface-selected` | `arrangementSurfaceSelected` | `color-mix(card 78%, foreground)` |
+| `--arrangement-surface-selected` | `arrangementSurfaceSelected` | `color-mix(card 78%, arrangementClipSelected)` |
 | `--arrangement-surface` | `arrangementSurface` | `color-mix(card 86%, foreground)` |
 | `--arrangement-surface-alt` | `arrangementSurfaceAlt` | `color-mix(card 84%, foreground)` |
 | `--arrangement-line` | `arrangementLine` | `light-dark(border, muted)` |

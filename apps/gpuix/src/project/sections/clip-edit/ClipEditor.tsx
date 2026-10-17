@@ -5,6 +5,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { Button } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
+import { PanelHeader } from "@/ui/panels"
 import { ClipNameInput } from "./NameInput"
 import { ClipEditorEnvironmentProvider } from "./environment"
 import { AudioParameters } from "./audio/AudioParameters"
@@ -41,8 +42,6 @@ export function ClipEditor({
   const clip = track?.clips.find(item => item.id === clipId)
   if (!clip || !track) return null
   const color = resolveContentColor(clip.color ?? track.color, theme.colors)
-  const gap = theme.control["--spacing-control-gap"]
-  const trackGap = theme.control["--spacing-control-track-gap"]
   return (
     <ClipEditorEnvironmentProvider value={environment}>
       <div
@@ -74,50 +73,43 @@ export function ClipEditor({
           environment.onRegionKey(event.keystrokeId)
         }}
       >
-        <div
-          style={sx({
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            gap,
-            flexShrink: 0,
-            paddingLeft: trackGap,
-            paddingRight: trackGap,
-            paddingTop: gap,
-            paddingBottom: gap,
-          })}
-        >
-          <div
-            style={sx({
-              width: theme.layout.clipEditor.colorSwatchSize,
-              height: theme.layout.clipEditor.colorSwatchSize,
-              flexShrink: 0,
-              backgroundColor: color,
-            })}
-          />
-          <ClipNameInput
-            key={clip.id}
-            clipId={clip.id}
-            value={clip.label ?? clipLabel(clip, labels.creationNames)}
-            label={labels.rename}
-          />
-          <text
-            style={{
-              color: theme.colors.mutedForeground,
-              fontSize: theme.control["--text-control-track"],
-            }}
-          >
-            {labels.kind[clip.kind]}
-          </text>
-          <div style={{ flexGrow: 1 }} />
-          <Button
-            iconOnly
-            variant="ghost"
-            label={labels.close}
-            onClick={close}
-            icon={<Icon name="X" />}
-          />
-        </div>
+        <PanelHeader
+          title={labels.clipEditor}
+          testId="clip-editor-header"
+          actions={
+            <>
+              <div
+                style={{
+                  width: theme.layout.clipEditor.colorSwatchSize,
+                  height: theme.layout.clipEditor.colorSwatchSize,
+                  flexShrink: 0,
+                  backgroundColor: color,
+                }}
+              />
+              <ClipNameInput
+                key={clip.id}
+                clipId={clip.id}
+                value={clip.label ?? clipLabel(clip, labels.creationNames)}
+                label={labels.rename}
+              />
+              <text
+                style={{
+                  color: theme.colors.mutedForeground,
+                  fontSize: theme.control["--text-control-track"],
+                }}
+              >
+                {labels.kind[clip.kind]}
+              </text>
+              <Button
+                iconOnly
+                variant="ghost"
+                label={labels.close}
+                onClick={close}
+                icon={<Icon name="X" />}
+              />
+            </>
+          }
+        />
         {clip.kind === "audio" ? (
           <div
             key={clip.id}
@@ -139,7 +131,11 @@ export function ClipEditor({
           <div
             key={clip.id}
             testId="pattern-editor"
-            style={sx({ display: "flex", padding: trackGap, minHeight: 0 })}
+            style={sx({
+              display: "flex",
+              padding: theme.control["--spacing-control-track-gap"],
+              minHeight: 0,
+            })}
           >
             <PatternSteps clip={clip} label={labels.step} color={color} />
           </div>

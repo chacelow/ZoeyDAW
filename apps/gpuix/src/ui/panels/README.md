@@ -9,6 +9,7 @@
 - `panelRef` 提供 `isCollapsed()`、`expand()`、`collapse()`、`resize(px)` 与 `getSize()`。`onResize` 与 `getSize()` 都返回 `{ inPixels, asPercentage }`，百分比的分母扣除了分隔条。
 - 数值 defaultSize 的面板在容器重排时保留当前像素尺寸；百分比面板按剩余空间重新分配。已折叠的面板不会因窗口放大自动展开。
 - `PanelShell` 与 Dock group 不绘制边框或圆角，面板内容直接贴边。active 只改变语义描述，不添加外沿或改变尺寸。调用方必须注入 `aria-label` 与 `activeDescription`；机器 `id` 只用于激活和 testId，不作为用户名称。原生 mouseDown 向调用方分发激活，子控件的 mouseDown 不会屏蔽它。
+- `PanelHeader` 使用 Dock 标题条的高度、表面、排版、内边距，并支持尾随操作。
 - `Separator` 在布局树里只绘制 `design.shape.separatorWidth` 的 `colors.border` 细线；Group 的可用空间只扣除这条线，不扣除命中宽度。`PanelDivider` 与 Dock sash 复用同一实现。命中区取 `project.panelGap`（当前 7px），以细线为中心，两侧覆盖面板内容但不制造 gutter。
 - `DividerLayer` 的嵌套实例将命中层 portal 到最外层末尾层，并按本地 bounds 转换坐标，保证 Dock 的稳定内容层无法覆盖 sash。hover/focus 只改 1px 线的颜色，不改命中几何。拖动每次 move 计算真实尺寸，在下一帧实时提交最新快照；不会只移动 outline。方向键立即提交，松手同步 flush 最终快照，取消清除待提交帧并恢复按下值。
 - `CollapseDivider` 管理 Group 外固定高度区域的显隐，包含它与相邻内容的容器必须使用 `DividerLayer`，以复用同一末尾命中层。`expandedSize` 的一半是切换阈值，拖回阈值以内恢复按下时的状态。上下方向键分别展开与折叠。调用方必须提供 `aria-label` 与 `formatAccessiblePixels`，朗读当前展开尺寸或折叠后的零值，共享组件不拼接英文单位。

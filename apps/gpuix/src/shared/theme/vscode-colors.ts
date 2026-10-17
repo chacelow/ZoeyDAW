@@ -12,8 +12,17 @@ export const VSCODE_COLOR_MAPPING = {
   primaryForeground: ["button.foreground", "activityBarBadge.foreground"],
   secondary: ["button.secondaryBackground", "list.hoverBackground"],
   secondaryForeground: ["button.secondaryForeground", "foreground"],
-  muted: ["tab.inactiveBackground", "editorGroupHeader.tabsBackground", "titleBar.activeBackground"],
-  mutedForeground: ["tab.inactiveForeground", "descriptionForeground"],
+  muted: [
+    "tab.inactiveBackground",
+    "editorGroupHeader.tabsBackground",
+    "titleBar.activeBackground",
+  ],
+  mutedForeground: [
+    "tab.inactiveForeground",
+    "descriptionForeground",
+    "editorLineNumber.foreground",
+    "disabledForeground",
+  ],
   accent: ["list.activeSelectionBackground", "editor.selectionBackground"],
   accentForeground: ["list.activeSelectionForeground", "editor.selectionForeground"],
   destructive: ["errorForeground", "editorError.foreground"],
@@ -26,6 +35,9 @@ export const VSCODE_COLOR_MAPPING = {
   chart3: ["charts.yellow", "editorWarning.foreground"],
   chart4: ["charts.purple"],
   chart5: ["charts.orange"],
+  arrangementClipSelected: ["list.activeSelectionBackground", "editor.selectionBackground"],
+  arrangementClipPaper: ["editor.background"],
+  arrangementMeterClip: ["editorError.foreground", "errorForeground"],
 } satisfies Partial<Record<keyof ThemeColors, readonly string[]>>
 
 export function mapVSCodeColors(colors: Record<string, unknown>): Partial<ThemeColors> {
@@ -37,7 +49,8 @@ export function mapVSCodeColors(colors: Record<string, unknown>): Partial<ThemeC
           typeof value === "string" &&
           /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.test(value) &&
           (parse(value)?.alpha ?? 1) > 0
-        ) return [[key, value]]
+        )
+          return [[key, value]]
       }
       return []
     })

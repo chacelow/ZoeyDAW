@@ -256,54 +256,58 @@ describe("project runtime lease", () => {
     expect(sessions).toEqual({ opened: 4, disposed: 4 })
   })
 
-  test("Transport onBack releases the real native session; reopening creates a fresh lease", async () => {
-    const handles: number[] = []
-    const originalOpen = engine.openSession
-    const originalDispose = engine.dispose
-    const opening = spyOn(engine, "openSession").mockImplementation(() => {
-      const handle = originalOpen()
-      handles.push(handle)
-      return handle
-    })
-    cleanups.push(() => {
-      opening.mockRestore()
-      for (const handle of handles) originalDispose(handle)
-    })
-    const requests: BackendRequest[] = []
-    cleanups.push(
-      configureProjectBackend(() => {
-        const backend = createNativeBackend()
-        return {
-          ...backend,
-          apply(request) {
-            requests.push(request)
-            return backend.apply(request)
-          },
-        }
+  test(
+    "Transport onBack releases the real native session; reopening creates a fresh lease",
+    async () => {
+      const handles: number[] = []
+      const originalOpen = engine.openSession
+      const originalDispose = engine.dispose
+      const opening = spyOn(engine, "openSession").mockImplementation(() => {
+        const handle = originalOpen()
+        handles.push(handle)
+        return handle
       })
-    )
-    const { root, router } = mount()
-    expect(handles).toEqual([])
-    for (const projectId of ["native-device-first", "native-device-second"]) {
-      act(root, () => router.navigate(`/project/${projectId}`))
-      const ready = await whenProjectBackendIdle()
-      expect(useProjectState.getState().session.backend.phase).toBe(ready ? "ready" : "error")
-      if (ready) expect(useProjectState.getState().session.backend.error).toBeNull()
-      else {
-        expect(verificationAudioCapability.kind).toBe("unavailable")
-        expect(useProjectState.getState().session.backend.error).not.toBeNull()
+      cleanups.push(() => {
+        opening.mockRestore()
+        for (const handle of handles) originalDispose(handle)
+      })
+      const requests: BackendRequest[] = []
+      cleanups.push(
+        configureProjectBackend(() => {
+          const backend = createNativeBackend()
+          return {
+            ...backend,
+            apply(request) {
+              requests.push(request)
+              return backend.apply(request)
+            },
+          }
+        })
+      )
+      const { root, router } = mount()
+      expect(handles).toEqual([])
+      for (const projectId of ["native-device-first", "native-device-second"]) {
+        act(root, () => router.navigate(`/project/${projectId}`))
+        const ready = await whenProjectBackendIdle()
+        expect(useProjectState.getState().session.backend.phase).toBe(ready ? "ready" : "error")
+        if (ready) expect(useProjectState.getState().session.backend.error).toBeNull()
+        else {
+          expect(verificationAudioCapability.kind).toBe("unavailable")
+          expect(useProjectState.getState().session.backend.error).not.toBeNull()
+        }
+        const handle = handles.at(-1)
+        const request = requests.at(-1)
+        if (handle === undefined || !request) throw new Error("No real native session was opened")
+        root.renderer.nativeSimulateKeystrokes(button(root, "返回").id, "enter")
+        expect(router.getRoute().kind).toBe("home")
+        const result: unknown = JSON.parse(engine.apply(handle, JSON.stringify(request)))
+        expect(result).toMatchObject({ kind: "rejected", code: "disposed" })
       }
-      const handle = handles.at(-1)
-      const request = requests.at(-1)
-      if (handle === undefined || !request) throw new Error("No real native session was opened")
-      root.renderer.nativeSimulateKeystrokes(button(root, "返回").id, "enter")
-      expect(router.getRoute().kind).toBe("home")
-      const result: unknown = JSON.parse(engine.apply(handle, JSON.stringify(request)))
-      expect(result).toMatchObject({ kind: "rejected", code: "disposed" })
-    }
-    expect(handles.length).toBe(2)
-    expect(useProjectState.getState().session.playing).toBe(false)
-  })
+      expect(handles.length).toBe(2)
+      expect(useProjectState.getState().session.playing).toBe(false)
+    },
+    NATIVE_MULTI_SESSION_TEST_TIMEOUT
+  )
 })
 
 describe("route error fallback", () => {

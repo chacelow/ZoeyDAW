@@ -7,13 +7,62 @@ export { Separator } from "./Separator"
 export type { SeparatorProps } from "./Separator"
 export { PanelShell } from "./PanelShell"
 export type { PanelShellProps } from "./PanelShell"
+export { PanelHeader } from "./PanelHeader"
+export type { PanelHeaderProps } from "./PanelHeader"
 export { PanelDivider } from "./PanelDivider"
 export type { PanelDividerProps } from "./PanelDivider"
 export { CollapseDivider } from "./CollapseDivider"
 export type { CollapseDividerProps } from "./CollapseDivider"
 export { PanelEnvironmentProvider } from "./PanelEnvironment"
 export type { PanelEnvironment } from "./PanelEnvironment"
-export { DockLayout, DockLayoutToggles, DockViewMenu, toggleBorderVisible, setBorderHoverReveal, activateTab, addPanel, closeTab, closeOtherTabs, hideTab, moveTab, moveGroupOrPanel, moveToBorder, selectBorderTab, resizeBorder, setBorderType, getBorderTabs, findBorder, splitGroup, reorderTab, resizeSplit, toggleMaximize, toJSON, fromJSON, getGroups, findGroup, resolveDropPosition } from "./Dock"
-export type { DockLayoutProps, DockLayoutHandle, DockLabels, DockPanelRegistration, DockPanelRegistry, DockCommand, DockLayoutJSON, DockNode, DockGroup, DockSplit, DockBounds, DockDragSource, DockOrientation, DockPosition, DockBorder, DockBorders, DockBorderSide, DockBorderType } from "./Dock"
+export {
+  DockLayout,
+  DockLayoutToggles,
+  DockViewMenu,
+  toggleBorderVisible,
+  setBorderHoverReveal,
+  activateTab,
+  addPanel,
+  closeTab,
+  closeOtherTabs,
+  hideTab,
+  moveTab,
+  moveGroupOrPanel,
+  moveToBorder,
+  selectBorderTab,
+  resizeBorder,
+  setBorderType,
+  getBorderTabs,
+  findBorder,
+  splitGroup,
+  reorderTab,
+  resizeSplit,
+  toggleMaximize,
+  toJSON,
+  fromJSON,
+  getGroups,
+  findGroup,
+  resolveDropPosition,
+} from "./Dock"
+export type {
+  DockLayoutProps,
+  DockLayoutHandle,
+  DockLabels,
+  DockPanelRegistration,
+  DockPanelRegistry,
+  DockCommand,
+  DockLayoutJSON,
+  DockNode,
+  DockGroup,
+  DockSplit,
+  DockBounds,
+  DockDragSource,
+  DockOrientation,
+  DockPosition,
+  DockBorder,
+  DockBorders,
+  DockBorderSide,
+  DockBorderType,
+} from "./Dock"
 export { TitleBar, TitleBarMenuButton } from "./TitleBar"
 export type { TitleBarProps, TitleBarWindow, TitleBarMenuButtonProps } from "./TitleBar"
