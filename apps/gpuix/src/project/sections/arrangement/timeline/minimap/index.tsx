@@ -135,13 +135,15 @@ export function MiniMap({
           width: (viewportBars / geometry.bars) * width,
           height,
           borderWidth: theme.design.shape.controlBorderWidth,
-          borderColor: theme.colors.mutedForeground,
+          borderColor: theme.colors.border,
           backgroundColor:
-            phase !== "idle"
-              ? theme.colors.canvasScrollbarActive
-              : hovered
-                ? theme.colors.canvasScrollbarHover
-                : theme.colors.canvasScrollbar,
+            viewportBars >= geometry.bars
+              ? "transparent"
+              : phase !== "idle"
+                ? theme.colors.canvasScrollbarActive
+                : hovered
+                  ? theme.colors.canvasScrollbarHover
+                  : theme.colors.canvasScrollbar,
           pointerEvents: "none",
         })}
       />
