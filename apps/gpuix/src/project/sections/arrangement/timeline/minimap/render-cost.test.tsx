@@ -69,7 +69,7 @@ function fixture(clipCount: number) {
     scrollX: number
   }) {
     const theme = useTheme()
-    foreground = theme.colors.foreground
+    foreground = theme.colors.primary
     mutedForeground = theme.colors.mutedForeground
     const track = useProjectState.getState().document.tracks[0]
     if (!track) throw new Error("Missing fixture track")

@@ -92,9 +92,9 @@ export function TrackIdentity({
           minWidth: 0,
           height: theme.layout.track.titleHeight,
           flexShrink: 0,
-          gap: theme.control["--spacing-control-track-gap"],
-          paddingLeft: theme.control["--spacing-control-track-gap"],
-          paddingRight: theme.control["--spacing-control-track-gap"],
+          gap: theme.control["--spacing-control-gap"],
+          paddingLeft: theme.control["--spacing-control-track-pad"],
+          paddingRight: theme.control["--spacing-control-track-pad"],
           backgroundColor: selected
             ? theme.colors.arrangementClipSelected
             : contentFill(track.color, theme.colors, theme.design.colorRecipes.contentPaperTint),

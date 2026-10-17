@@ -9,6 +9,7 @@ export interface TrackGeometry {
   readonly resizeStep: number
   readonly revealThreshold: number
   readonly controlsWidth: number
+  readonly dropZoneHeight: number
 }
 
 export function trackHeight(track: Track, geometry: TrackGeometry): number {

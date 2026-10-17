@@ -1,7 +1,8 @@
 import { memo, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { projectActions, useProjectState } from "@/project/adapters"
+import { sx } from "@/shared/theme/style"
 import { visibleTracks } from "@/project/model/types"
+import { projectActions, useProjectState } from "@/project/adapters"
 import { useTrackLabels } from "../labels"
 import { TrackIdentity } from "../TrackIdentity"
 import { TrackRouting } from "../TrackRouting"
@@ -66,6 +67,39 @@ const TrackHeader = memo(
     a.railCount === b.railCount &&
     a.dragging === b.dragging
 )
+
+/**
+ * Column dividers between lane | identity | routing | mixer. Absolutely positioned 1px lines
+ * so they never take layout width from the columns they separate.
+ */
+function ColumnSeparators() {
+  const theme = useTheme()
+  const width = theme.design.shape.separatorWidth
+  const line = (right: number) => (
+    <div
+      key={right}
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: 0,
+        bottom: 0,
+        right: right - width / 2,
+        width,
+        backgroundColor: theme.colors.arrangementLine,
+        pointerEvents: "none",
+      }}
+    />
+  )
+  const mixer =
+    theme.layout.track.controlsWidth - theme.project.identityWidth - theme.project.routingWidth
+  return (
+    <>
+      {line(theme.layout.track.controlsWidth)}
+      {line(mixer + theme.project.routingWidth)}
+      {line(mixer)}
+    </>
+  )
+}
 
 export function TrackRow({
   row,
@@ -151,7 +185,7 @@ export function TrackRow({
           role="group"
           aria-label={`${t("trackLane")} ${track.name}`}
           testId={`track-lane-${track.id}`}
-          style={{
+          style={sx({
             position: "relative",
             flexGrow: 1,
             minWidth: 0,
@@ -162,7 +196,7 @@ export function TrackRow({
                 ? theme.colors.arrangementSurfaceSelected
                 : theme.colors.arrangementSurface,
             focusVisible: focusRing,
-          }}
+          })}
         >
           {showLane ? lane : null}
         </div>
@@ -177,6 +211,7 @@ export function TrackRow({
           dragHandlers={dragHandlers}
           dragging={dragging}
         />
+        <ColumnSeparators />
         {dropTarget ? (
           <div
             aria-hidden="true"

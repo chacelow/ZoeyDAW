@@ -82,8 +82,8 @@ export function TrackRouting({ track }: { readonly track: Track }) {
         width: theme.project.routingWidth,
         minWidth: 0,
         height: "100%",
-        padding: theme.control["--spacing-control-track-gap"],
-        gap: theme.control["--spacing-control-track-gap"],
+        padding: theme.control["--spacing-control-track-pad"],
+        gap: theme.control["--spacing-control-gap"],
         overflow: "hidden",
         backgroundColor: theme.colors.arrangementSurfaceAlt,
       }}
@@ -139,9 +139,9 @@ export function TrackRouting({ track }: { readonly track: Track }) {
                         }))
                 }
                 icon={
-                  track.kind === "audio" && track.input !== "none"
-                    ? <InputChannelMeter id={track.inputChannel ?? "1"} height={inlineHeight} />
-                    : undefined
+                  track.kind === "audio" && track.input !== "none" ? (
+                    <InputChannelMeter id={track.inputChannel ?? "1"} height={inlineHeight} />
+                  ) : undefined
                 }
               />
             </>

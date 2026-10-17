@@ -18,9 +18,9 @@ Authored track/group/clip colors remain token strings. Menus consume the shared 
 
 `TrackTelemetryProvider` owns one accepted-level subscription and one shared meter driver for the track surface. It drives decay through `useAnimationFrame`, subscribing only while peaks remain above the floor. Reader callbacks stay in a committed ref, so callback identity changes do not reset held peaks; track, backend or driver lifetime changes do. The driver consumes frame timestamps directly and never advances a separate clock.
 
-Meter 的声道间距、peak 线高、zero 线高和警告渐变位置读取 `design.editor.meter`。显示范围、hold 和 decay 仍来自注入的行为策略；样式覆盖不修改遥测或电平计算。
+The MIDI mixer activity display replaces the audio meter for MIDI tracks because the current `Device` union contains only effects and utility devices, none of which produces audio. Its dot matrix follows `session.activeMidiNotes`, which is driven by computer-keyboard and PianoKeys note events; clip playback MIDI is not exposed as per-track note telemetry and does not drive this indicator.
 
-轨道边框几何以解析后的 `layout.track.border` 为准：Row 使用其 `trackGeometry.border`，resize 使用 scene geometry，Mixer 的 meter 可用高度读取同一 layout 来源。显式 layout 覆盖优先于由 project 初值派生的默认 layout；消费者不再回读 `project.trackBorder`。
+`TrackRows` appends the fixed `layout.track.dropZoneHeight` to core's scroll extent, so the final drop-zone area scrolls with ordinary tracks. The label is localized and pointer-transparent because existing track reorder and lane interactions do not expose file/device drops. The sticky Return/Main boundary and row columns use `design.shape.separatorWidth` and `colors.arrangementLine`.
 
 `TrackLabels` 注入文案与 `DisplayFormats` 纯端口。唯一文本数据在 `app/locales/sections/tracks.ts`，组合根通过 `createTrackLabels(locale)` 构造标签并在自身生命周期内复用。project 组件不导入 app、不持有第二份语言状态。Mixer 的 dB/Pan 显示和解析、Meter 声道朗读、monitor mode 文案都消费这份输入。
 

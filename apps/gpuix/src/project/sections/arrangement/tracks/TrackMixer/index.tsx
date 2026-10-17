@@ -4,6 +4,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
 import { trackControlRows, trackHeight } from "@/project/layout"
 import { TrackMeter } from "../meter/TrackMeter"
+import { MidiActivityIndicator } from "../meter/MidiActivityIndicator"
 import { Icon } from "@/ui/controls/Icon"
 import type { ReactNode } from "react"
 import type { Track } from "@/project/model/types"
@@ -231,13 +232,22 @@ export function TrackMixer({ track }: { readonly track: Track }) {
           </>
         ) : null}
       </div>
-      <TrackMeter
-        trackId={track.id}
-        trackName={track.name}
-        height={height}
-        variant={track.collapsed ? "collapsed" : "track"}
-        main={track.kind === "main"}
-      />
+      {track.kind === "midi" ? (
+        <MidiActivityIndicator
+          trackId={track.id}
+          trackName={track.name}
+          height={height}
+          collapsed={Boolean(track.collapsed)}
+        />
+      ) : (
+        <TrackMeter
+          trackId={track.id}
+          trackName={track.name}
+          height={height}
+          variant={track.collapsed ? "collapsed" : "track"}
+          main={track.kind === "main"}
+        />
+      )}
     </div>
   )
 }

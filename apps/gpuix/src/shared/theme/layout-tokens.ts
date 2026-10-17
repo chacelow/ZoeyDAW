@@ -13,6 +13,7 @@ export interface TrackGeometry {
   readonly resizeStep: number
   readonly revealThreshold: number
   readonly controlsWidth: number
+  readonly dropZoneHeight: number
 }
 
 export interface LayoutTokens {
@@ -93,6 +94,7 @@ export function createLayoutTokens(control: ControlMetrics, project: ProjectMetr
       resizeStep,
       revealThreshold: resizeStep / 2,
       controlsWidth: 304,
+      dropZoneHeight: controlHeight * 6,
     },
     arrangement: {
       markerRulerHeight,

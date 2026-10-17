@@ -30,7 +30,6 @@ export interface UseDragPadOptions {
 interface DragAnchor {
   startX: number
   startY: number
-  lastY: number
   startValue: number
   rawValue: number
   dragging: boolean
@@ -125,7 +124,6 @@ export function useDragPad(options: UseDragPadOptions) {
       anchorRef.current = {
         startX: event.x ?? 0,
         startY: event.y ?? 0,
-        lastY: event.y ?? 0,
         startValue: valueRef.current,
         rawValue: valueRef.current,
         dragging: false,
@@ -141,20 +139,20 @@ export function useDragPad(options: UseDragPadOptions) {
       const anchor = anchorRef.current
       if (!anchor) return
       renderer?.clearSelection?.()
-      const y = event.y ?? anchor.lastY
+      const deltaX = anchor.dragging
+        ? (event.movementX ?? 0)
+        : (event.x ?? anchor.startX) - anchor.startX
+      const deltaY = anchor.dragging
+        ? (event.movementY ?? 0)
+        : (event.y ?? anchor.startY) - anchor.startY
       if (!anchor.dragging) {
-        if (
-          Math.hypot((event.x ?? anchor.startX) - anchor.startX, y - anchor.startY) <
-          anchor.inputPolicy.dragThresholdPixels
-        )
-          return
+        if (Math.hypot(deltaX, deltaY) < anchor.inputPolicy.dragThresholdPixels) return
         anchor.dragging = true
         anchor.cursorLock?.begin()
         callbacks.current.onGestureStart?.()
         setDragging(true)
         setMode("idle")
       }
-      const deltaY = y - anchor.lastY
       const next = valueAfterDrag({
         rawValue: anchor.rawValue,
         deltaY,
@@ -164,7 +162,6 @@ export function useDragPad(options: UseDragPadOptions) {
         dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep,
       })
       anchor.rawValue = next.raw
-      anchor.lastY = y
       commitNumber(next.value)
     },
     [dragStep, min, max, commitNumber, renderer]

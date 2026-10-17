@@ -48,7 +48,7 @@ export function pinnedTrackHeight(tracks: readonly Track[], geometry: TrackGeome
 export function scrollableTrackHeight(tracks: readonly Track[], geometry: TrackGeometry): number {
   return tracks.reduce(
     (height, track) => height + (isPinnedTrack(track) ? 0 : trackHeight(track, geometry)),
-    0
+    geometry.dropZoneHeight
   )
 }
 

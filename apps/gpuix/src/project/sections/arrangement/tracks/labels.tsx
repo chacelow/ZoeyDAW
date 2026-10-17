@@ -41,6 +41,8 @@ export interface TrackTextLabels {
   readonly automationParameter: string
   readonly levelMeter: string
   readonly trackLane: string
+  readonly midiActivity: string
+  readonly dropFilesAndDevices: string
   readonly solo: string
   readonly soloShort: string
   readonly post: string

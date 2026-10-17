@@ -43,8 +43,12 @@ describe("arrangement track geometry", () => {
         arrangementBodyTop(DEFAULT_LAYOUT_TOKENS.arrangement) -
         pinnedTrackHeight(tracks, DEFAULT_LAYOUT_TOKENS.track)
     )
-    expect(maxTrackScrollY(tracks, height, DEFAULT_LAYOUT_TOKENS)).toBeGreaterThan(0)
-    expect(maxTrackScrollY(tracks, 5000, DEFAULT_LAYOUT_TOKENS)).toBe(0)
+    expect(maxTrackScrollY(tracks, height, DEFAULT_LAYOUT_TOKENS)).toBe(
+      maxTrackScrollY(tracks, height, {
+        ...DEFAULT_LAYOUT_TOKENS,
+        track: { ...DEFAULT_LAYOUT_TOKENS.track, dropZoneHeight: 0 },
+      }) + DEFAULT_LAYOUT_TOKENS.track.dropZoneHeight
+    )
   })
 })
 

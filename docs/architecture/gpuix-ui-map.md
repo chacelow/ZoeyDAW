@@ -73,7 +73,7 @@
 
 ### `project/sections/arrangement/tracks`
 
-`track-actions-…`、`track-arm-…`、`track-arm-space-…`、`track-automation-…`、`track-color-…`、`track-cue-output-…`、`track-cue-volume-…`、`track-delete-…`、`track-drop-target-…`、`track-enabled-…`、`track-fold-…`、`track-group-frame-…`、`track-identity-…`、`track-input-…`、`track-input-channel-…`、`track-label-…`、`track-lane-…`、`track-menu-…`、`track-mixer-…`、`track-monitor-…`、`track-name-…`、`track-output-…`、`track-output-channel-…`、`track-pan-…`、`track-pinned-viewport`、`track-position-…`、`track-post-…`、`track-rail-…`、`track-rails-…`、`track-rename-…`、`track-resize-…`、`track-routing-…`、`track-row-…`、`track-rows`、`track-scrollable-viewport`、`track-send-…`、`track-sends-…`、`track-solo-…`、`track-title-…`、`track-volume-…`
+`track-actions-…`、`track-arm-…`、`track-arm-space-…`、`track-automation-…`、`track-color-…`、`track-cue-output-…`、`track-cue-volume-…`、`track-delete-…`、`track-drop-target-…`、`track-drop-zone`、`track-enabled-…`、`track-fold-…`、`track-group-frame-…`、`track-identity-…`、`track-input-…`、`track-input-channel-…`、`track-label-…`、`track-lane-…`、`track-menu-…`、`track-midi-activity-…`、`track-mixer-…`、`track-monitor-…`、`track-name-…`、`track-output-…`、`track-output-channel-…`、`track-pan-…`、`track-pinned-viewport`、`track-position-…`、`track-post-…`、`track-rail-…`、`track-rails-…`、`track-rename-…`、`track-resize-…`、`track-routing-…`、`track-row-…`、`track-rows`、`track-scrollable-viewport`、`track-send-…`、`track-sends-…`、`track-solo-…`、`track-sticky-separator`、`track-title-…`、`track-volume-…`
 
 ### `project/sections/browser`
 

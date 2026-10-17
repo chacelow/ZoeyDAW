@@ -17,6 +17,8 @@ interface Press {
   epoch: SessionState["editEpoch"]
   grab: number
   viewport: MinimapViewport
+  movedX: number
+  movedY: number
 }
 
 export interface MinimapGestureOptions {
@@ -35,7 +37,7 @@ export interface MinimapGestureOptions {
 export interface MinimapGesture {
   readonly phase: "idle" | "pressed" | "dragging"
   down: (point: Point, button?: number) => void
-  move: (point: Point) => void
+  move: (point: Point, delta?: Point) => void
   up: () => void
   cancel: () => void
   dispose: () => void
@@ -71,7 +73,9 @@ export function createMinimapGesture({
       geometry
     )
     const end = minimapSelection(viewport, width, geometry)
-    return end.left + (end.right - end.left) * grab - (start.left + (start.right - start.left) * grab)
+    return (
+      end.left + (end.right - end.left) * grab - (start.left + (start.right - start.left) * grab)
+    )
   }
 
   return {
@@ -105,6 +109,8 @@ export function createMinimapGesture({
         epoch,
         grab,
         viewport: initial,
+        movedX: 0,
+        movedY: 0,
       }
       onPhaseChange?.("pressed")
       navigate()
@@ -112,14 +118,12 @@ export function createMinimapGesture({
         publish({ pxPerBar: geometry.pxPerBar, scrollX: anchor.initialScrollX })
       }
     },
-    move(point: Point) {
+    move(point: Point, delta?: Point) {
       if (!press) return
       if (press.epoch !== read().epoch) {
         finish()
         return
       }
-      const deltaX = point.x - press.origin.x
-      const deltaY = point.y - press.origin.y
       if (press.phase === "pressed") {
         if (!dragStarted(press.origin, point, press.geometry.policy.pointer)) return
         press.phase = "dragging"
@@ -128,7 +132,17 @@ export function createMinimapGesture({
           cursor.begin()
           press.hidden = true
         }
+        press.movedX = point.x - press.origin.x
+        press.movedY = point.y - press.origin.y
+      } else if (press.hidden && delta) {
+        press.movedX += delta.x
+        press.movedY += delta.y
+      } else {
+        press.movedX = point.x - press.origin.x
+        press.movedY = point.y - press.origin.y
       }
+      const deltaX = press.movedX
+      const deltaY = press.movedY
       navigate()
       const { geometry, width, anchor } = press
       const input = {

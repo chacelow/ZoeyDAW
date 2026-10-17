@@ -252,7 +252,8 @@ describe("viewport clamping and navigation", () => {
     expect(minimum.pxPerBar).toBe(5)
     expect(minimum.timelineWidth).toBe(640)
     expect(minimum.scrollX).toBe(0)
-    expect(minimum.scrollY).toBe(352)
+    // The scroll range ends with the fixed-height drop zone below the last track.
+    expect(minimum.scrollY).toBe(352 + DEFAULT_LAYOUT_TOKENS.track.dropZoneHeight)
     const maximum = clampTimelineViewport(
       {
         ...base,
@@ -313,7 +314,7 @@ describe("viewport clamping and navigation", () => {
     expect(panViewport({ ...pan, shiftKey: true })).toEqual({ scrollX: 380, scrollY: 100 })
     expect(panViewport({ ...pan, deltaX: 1e9, deltaY: 1e9 })).toEqual({
       scrollX: 3456,
-      scrollY: 352,
+      scrollY: 352 + DEFAULT_LAYOUT_TOKENS.track.dropZoneHeight,
     })
     expect(panViewport({ ...pan, deltaX: -1e9, deltaY: -1e9 })).toEqual({ scrollX: 0, scrollY: 0 })
   })

@@ -1,6 +1,7 @@
 import { ControlEnvironmentProvider, Button } from "@/ui/controls"
 import { TEST_INPUT_POLICY } from "@/ui/controls/DragPad/input-policy.test-fixture"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
+import { CONTROL_METRICS } from "@/shared/theme/metrics/config"
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { flushSync, useWindowSize } from "@gpuix/react"
@@ -147,8 +148,12 @@ test("composite rows fill the viewport and give the lane remaining width", () =>
   expect(lane.width + identity.width + routing.width + mixer.width).toBe(row.width)
   expect(identity.x).toBe(lane.x + lane.width)
   expect(mixer.x + mixer.width).toBe(row.x + row.width)
-  const routingInnerWidth = routing.width - DEFAULT_LAYOUT_TOKENS.track.spacing * 2
-  expect(bounds(root, "track-output-3-audio").width).toBe(routingInnerWidth)
+  // Half-pixel paddings snap to device pixels, so the inner width may differ by one.
+  const routingInnerWidth =
+    routing.width - CONTROL_METRICS.default["--spacing-control-track-pad"] * 2
+  expect(
+    Math.abs(bounds(root, "track-output-3-audio").width - routingInnerWidth)
+  ).toBeLessThanOrEqual(1)
 })
 
 test("resize separators span the lane and header exactly once per visible boundary", () => {

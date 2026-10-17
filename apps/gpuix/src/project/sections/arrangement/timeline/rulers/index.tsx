@@ -272,7 +272,7 @@ export function TimeRuler({
             height: theme.layout.arrangement.timeRulerHeight,
             display: "flex",
             alignItems: "center",
-            paddingLeft: theme.design.spacing.stackGap,
+            paddingLeft: theme.control["--spacing-control-track-pad"],
             pointerEvents: "none",
           })}
         >

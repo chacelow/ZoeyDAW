@@ -15,7 +15,6 @@ import type { TrackLabels } from "../labels"
 import type { TelemetryReader } from "../meter/telemetry"
 import type { ArrangementScene, ArrangementViewport } from "../../core/scene"
 import type { TrackRow as TrackRowGeometry } from "../../core/layout"
-
 export interface TrackRowsProps {
   readonly scene: ArrangementScene
   readonly viewport: ArrangementViewport
@@ -64,6 +63,7 @@ export function TrackRows({
   const reorder = useTrackReorder(visibility.rows, container)
   const normal = rows.filter(row => !isPinnedTrack(row.track))
   const pinned = rows.filter(row => isPinnedTrack(row.track))
+  const dropZoneTop = normal.reduce((height, row) => height + row.height, 0) - viewport.scrollY
   // Rails sit at the start of the header column. Anchor them to the right edge so they follow
   // the native layout in the same frame as the header instead of the JS-measured lane width.
   const railsRight = scene.geometry.track.controlsWidth - theme.project.identityWidth
@@ -180,6 +180,28 @@ export function TrackRows({
             }}
           >
             {drawRows(normal, bodyTop, bodyTop, pinnedTop)}
+            <div
+              testId="track-drop-zone"
+              role="group"
+              aria-label={labels.dropFilesAndDevices}
+              style={{
+                position: "absolute",
+                top: dropZoneTop,
+                left: 0,
+                right: 0,
+                height: scene.geometry.track.dropZoneHeight,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderTopWidth: theme.design.shape.separatorWidth,
+                borderColor: theme.colors.arrangementLine,
+                color: theme.colors.mutedForeground,
+                backgroundColor: theme.colors.arrangementSurface,
+                pointerEvents: "none",
+              }}
+            >
+              {labels.dropFilesAndDevices}
+            </div>
           </div>
           <div
             testId="track-pinned-viewport"
@@ -194,6 +216,18 @@ export function TrackRows({
           >
             {drawRows(pinned, pinnedViewportTop, pinnedViewportTop, bodyBottom)}
           </div>
+          <div
+            aria-hidden="true"
+            testId="track-sticky-separator"
+            style={{
+              position: "absolute",
+              top: pinnedViewportTop - theme.design.shape.separatorWidth,
+              left: 0,
+              right: 0,
+              height: theme.design.shape.separatorWidth,
+              backgroundColor: theme.colors.arrangementLine,
+            }}
+          />
         </div>
       </TrackTelemetryProvider>
     </TrackLabelsProvider>

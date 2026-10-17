@@ -26,7 +26,7 @@ export const Playhead = memo(function Playhead({
         left: ((position - 1) / bars) * width,
         width: theme.design.editor.playheadLineWidth,
         height,
-        backgroundColor: theme.colors.foreground,
+        backgroundColor: theme.colors.primary,
         pointerEvents: "none",
       })}
     />

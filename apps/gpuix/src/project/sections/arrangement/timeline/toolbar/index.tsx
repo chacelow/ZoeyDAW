@@ -60,14 +60,17 @@ export const Toolbar = memo(function Toolbar({
       style={sx({
         display: "flex",
         alignItems: "center",
-        gap: theme.control["--spacing-control-track-gap"],
+        gap: theme.design.spacing.stackGap,
         width: "100%",
         flexShrink: 0,
         overflowX: "scroll",
         overflowY: "hidden",
         backgroundColor: theme.colors.arrangementSurfaceAlt,
         color: theme.colors.mutedForeground,
-        padding: theme.control["--spacing-control-track-pad"],
+        paddingLeft: theme.control["--spacing-control-track-gap"],
+        paddingRight: theme.control["--spacing-control-track-gap"],
+        paddingTop: theme.control["--spacing-control-track-pad"],
+        paddingBottom: theme.control["--spacing-control-track-pad"],
       })}
     >
       <ControlGroup variant="toolbar">

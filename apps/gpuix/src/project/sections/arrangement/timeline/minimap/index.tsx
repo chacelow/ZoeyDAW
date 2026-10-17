@@ -102,7 +102,10 @@ export function MiniMap({
         }
       }}
       onMouseMove={event => {
-        gesture.move({ x: event.x ?? 0, y: event.y ?? 0 })
+        gesture.move(
+          { x: event.x ?? 0, y: event.y ?? 0 },
+          { x: event.movementX ?? 0, y: event.movementY ?? 0 }
+        )
         if (gesture.phase !== "idle" || !element.current) return
         const bounds = renderer?.getElementBounds?.(element.current.id)
         if (!bounds) return

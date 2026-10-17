@@ -20,13 +20,7 @@
 
 UI 层只声明 `CursorLockPort { begin(), end(release?) }`，通过 `ControlEnvironmentProvider value.cursorLock` 注入。UI 不 import 原生包或 platform；未注入时不隐藏光标，数值拖动仍工作。组合根注入 `@/platform/cursor` 的 `createNativeCursorLock(renderer)`，它包装 renderer 的 `beginRelativeDrag` / `endRelativeDrag`。
 
-超过点击阈值时调用 `begin()`：renderer 隐藏并固定光标，之后的 mouseMove/mouseUp 报告由相对位移累加出的窗口坐标，所以拖到屏幕边缘也不会停。松手或取消调用 `end()`；原地调值控件不传 `release`，光标留在按下点。会位移的控件（Minimap）传松手时的窗口坐标，光标出现在实际移动后的位置。手势保存开始拖动时的端口，Provider 更新不能把结束责任转移给另一个实例。按下事件缺坐标时不固定光标。
-
-## 与 Live 对照
-
-2026-10-17 在 Windows 上用 Frida 挂 Live 12 记录光标调用：拖 BPM、旋钮时按下即 `SetCapture` + `ShowCursor(false)`，之后每次移动都 `SetCursorPos` 回按下点（一次 1 秒的拖动 161 次），松手 `ShowCursor(true)` + `ReleaseCapture`，光标留在原处。macOS 版 Live 导入 `CGAssociateMouseAndMouseCursorPosition` 与 `CGWarpMouseCursorPosition`。补丁 `zed-relative-pointer.patch` 照此实现：macOS 断开关联、按 `NSEvent.deltaX/deltaY` 累加；Windows 每次 `WM_MOUSEMOVE` 取相对锚点的偏移后 `SetCursorPos` 回锚点；窗口失活时结束相对模式。
-
-实际窗口回归：按下 BPM 往上拖，越过屏幕上边缘后数值继续增加；松手后光标在按下点。
+超过点击阈值时调用 `begin()`：renderer 隐藏并固定光标，鼠标位置保持在按下点，`mouseMove` 另行提供本次相对位移。控件只按位移调整数值，因此拖过屏幕边缘仍持续生效，且拖动不会改变其他组件的悬停状态。松手或取消调用 `end()`；原地调值控件不传 `release`，光标留在按下点。会位移的控件（Minimap）传松手时的窗口坐标，光标出现在实际移动后的位置。按下事件缺坐标时不固定光标。
 
 ## 运行
 
