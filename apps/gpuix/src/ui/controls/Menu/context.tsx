@@ -1,11 +1,19 @@
 import { floatingRootStyle } from "@gpuix/react/floating"
-import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from "react"
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import type { KeyEvent, PublicInstance } from "@gpuix/react"
 import { sx } from "@/shared/theme/style"
 import type { EntryEdge, MenuEntry, MenuProps, MenuState, Point } from "./model"
 
 const MenuContext = createContext<MenuState | null>(null)
-export const MenuActivityContext = createContext<(() => (() => void)) | null>(null)
+export const MenuActivityContext = createContext<(() => () => void) | null>(null)
 export function useMenu(): MenuState {
   const menu = useContext(MenuContext)
   if (!menu) throw new Error("Menu components require a menu root")
@@ -40,30 +48,37 @@ function MenuRoot({
   useLayoutEffect(() => {
     if (open) return reportActivity?.()
   }, [open, reportActivity])
-  const setOpen = useCallback(
-    (next: boolean) => {
-      if (disabled && next) return
-      if (controlledOpen === undefined) setInternalOpen(next)
-      if (next !== open) onOpenChange?.(next)
-    },
-    [controlledOpen, disabled, onOpenChange, open]
+  const latest = useRef({ controlledOpen, disabled, onOpenChange, open })
+  useLayoutEffect(() => {
+    latest.current = { controlledOpen, disabled, onOpenChange, open }
+  })
+  const setOpen = useCallback((next: boolean) => {
+    const current = latest.current
+    if (current.disabled && next) return
+    if (current.controlledOpen === undefined) setInternalOpen(next)
+    if (next !== current.open) current.onOpenChange?.(next)
+  }, [])
+  const surfaces = parent?.surfaces ?? ownSurfaces
+  const closeAll = useMemo(() => parent?.closeAll ?? (() => setOpen(false)), [parent, setOpen])
+  const state = useMemo<MenuState>(
+    () => ({
+      open,
+      disabled,
+      contextMenu,
+      parent,
+      pointer,
+      setPointer,
+      setOpen,
+      trigger,
+      triggerKeyDown,
+      entries,
+      surfaces,
+      initialEdge,
+      activeChild,
+      closeAll,
+    }),
+    [open, disabled, contextMenu, parent, pointer, setOpen, entries, surfaces, closeAll]
   )
-  const state: MenuState = {
-    open,
-    disabled,
-    contextMenu,
-    parent,
-    pointer,
-    setPointer,
-    setOpen,
-    trigger,
-    triggerKeyDown,
-    entries,
-    surfaces: parent?.surfaces ?? ownSurfaces,
-    initialEdge,
-    activeChild,
-    closeAll: parent?.closeAll ?? (() => setOpen(false)),
-  }
   return (
     <MenuContext.Provider value={state}>
       <div

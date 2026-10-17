@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { memo, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { visibleTracks } from "@/project/model/types"
@@ -11,6 +11,61 @@ import type { ReactNode } from "react"
 import type { Props } from "@gpuix/react"
 import type { GroupRail } from "@/project/model/track-groups"
 import type { TrackRow as TrackRowGeometry } from "../../core/layout"
+
+/**
+ * Track header columns depend only on the track model and selection, not on the lane width,
+ * so a panel resize re-renders the lane but reuses this subtree.
+ */
+const TrackHeader = memo(
+  function TrackHeader({
+    track,
+    selected,
+    renaming,
+    setRenaming,
+    onFocusTrack,
+    choose,
+    railCount,
+    dragHandlers,
+    dragging,
+  }: {
+    readonly track: TrackRowGeometry["track"]
+    readonly selected: boolean
+    readonly renaming: boolean
+    readonly setRenaming: (renaming: boolean) => void
+    readonly onFocusTrack: (id: string) => void
+    readonly choose: (target: "arrangement" | "header", range: boolean, additive: boolean) => void
+    readonly railCount: number
+    readonly dragHandlers?: Pick<Props, "onMouseDown" | "onMouseMove" | "onMouseUp" | "onKeyDown">
+    readonly dragging: boolean
+  }) {
+    return (
+      <>
+        <TrackIdentity
+          track={track}
+          selected={selected}
+          renaming={renaming}
+          onRename={() => {
+            onFocusTrack(track.id)
+            setRenaming(true)
+          }}
+          onRenameEnd={() => setRenaming(false)}
+          onChoose={(range, additive) => choose("header", range, additive)}
+          railCount={railCount}
+          dragHandlers={dragHandlers}
+          dragging={dragging}
+        />
+        <TrackRouting track={track} />
+        <TrackMixer track={track} />
+      </>
+    )
+  },
+  (a, b) =>
+    a.track === b.track &&
+    a.selected === b.selected &&
+    a.renaming === b.renaming &&
+    a.railCount === b.railCount &&
+    a.dragging === b.dragging
+)
 
 export function TrackRow({
   row,
@@ -111,22 +166,17 @@ export function TrackRow({
         >
           {showLane ? lane : null}
         </div>
-        <TrackIdentity
+        <TrackHeader
           track={track}
           selected={selected && surface === "header"}
           renaming={renaming}
-          onRename={() => {
-            onFocusTrack(track.id)
-            setRenaming(true)
-          }}
-          onRenameEnd={() => setRenaming(false)}
-          onChoose={(range, additive) => choose("header", range, additive)}
+          setRenaming={setRenaming}
+          onFocusTrack={onFocusTrack}
+          choose={choose}
           railCount={rails.length}
           dragHandlers={dragHandlers}
           dragging={dragging}
         />
-        <TrackRouting track={track} />
-        <TrackMixer track={track} />
         {dropTarget ? (
           <div
             aria-hidden="true"

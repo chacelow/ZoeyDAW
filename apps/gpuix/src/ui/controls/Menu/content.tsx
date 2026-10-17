@@ -73,14 +73,27 @@ export function MenuContent({
   const maxWidth = Math.max(0, viewport.width - collisionPadding * 2)
   const maxHeight = Math.max(0, viewport.height - collisionPadding * 2)
   const requestedSide = side ?? (menu.parent ? "right" : "bottom")
-  const anchor = menu.trigger.current && renderer?.getElementBounds?.(menu.trigger.current.id)
-  const size = measuredSize ?? { width: typeof style?.width === "number" ? style.width : theme.design.menu.width, height: typeof style?.height === "number" ? style.height : 0 }
+  const anchor =
+    menu.open && menu.trigger.current ? renderer?.getElementBounds?.(menu.trigger.current.id) : null
+  const size = measuredSize ?? {
+    width: typeof style?.width === "number" ? style.width : theme.design.menu.width,
+    height: typeof style?.height === "number" ? style.height : 0,
+  }
   let resolvedSide = requestedSide
   if (anchor) {
-    const spaces = { top: anchor.y - collisionPadding, bottom: viewport.height - anchor.y - anchor.height - collisionPadding, left: anchor.x - collisionPadding, right: viewport.width - anchor.x - anchor.width - collisionPadding }
+    const spaces = {
+      top: anchor.y - collisionPadding,
+      bottom: viewport.height - anchor.y - anchor.height - collisionPadding,
+      left: anchor.x - collisionPadding,
+      right: viewport.width - anchor.x - anchor.width - collisionPadding,
+    }
     const opposite = { top: "bottom", bottom: "top", left: "right", right: "left" } as const
     const extent = requestedSide === "top" || requestedSide === "bottom" ? size.height : size.width
-    if (extent + sideOffset > spaces[requestedSide] && extent + sideOffset <= spaces[opposite[requestedSide]]) resolvedSide = opposite[requestedSide]
+    if (
+      extent + sideOffset > spaces[requestedSide] &&
+      extent + sideOffset <= spaces[opposite[requestedSide]]
+    )
+      resolvedSide = opposite[requestedSide]
   }
   const surfaceStyle = sx(
     {
@@ -118,7 +131,9 @@ export function MenuContent({
       onLayout={event => {
         if (event.width === undefined || event.height === undefined) return
         const next = { width: event.width, height: event.height }
-        setMeasuredSize(previous => previous?.width === next.width && previous.height === next.height ? previous : next)
+        setMeasuredSize(previous =>
+          previous?.width === next.width && previous.height === next.height ? previous : next
+        )
         props.onLayout?.(event)
       }}
       side={resolvedSide}

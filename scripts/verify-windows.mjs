@@ -47,6 +47,7 @@ run("Windows User32 lifecycle driver", "rustc", [
 ])
 
 run("renderer build", process.execPath, ["scripts/check-gpuix.mjs"])
+run("native bridge build", "bun", ["run", "build"], path.join(root, "crates/native"))
 console.log("\n== Audio output capability")
 const audioCapability = probeAudioCapability(root, env, output)
 env.ZOEYDAW_VERIFY_AUDIO_CAPABILITY = JSON.stringify(audioCapability)

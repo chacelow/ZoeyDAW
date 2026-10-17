@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { DEFAULT_KEYMAP } from "@/platform/keyboard"
 import { Button, ControlGroup, DragPadNumber, DragPadToggle, DropdownButton } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
@@ -9,7 +10,7 @@ import { effectiveDrawMode } from "@/project/model/interaction-mode"
 import type { KeyboardOwner } from "../keyboard/controller"
 import type { TimelineLabels } from "../labels"
 
-export function Toolbar({
+export const Toolbar = memo(function Toolbar({
   pxPerBar,
   zoom,
   keyboard,
@@ -196,4 +197,4 @@ export function Toolbar({
       </ControlGroup>
     </div>
   )
-}
+})
