@@ -231,9 +231,10 @@ test("native meter channels, peak, zero line and warning gradient consume design
   }
   const left = bounds("track-meter-left-audio")
   const right = bounds("track-meter-right-audio")
-  expect(left.width).toBe(5)
+  const meter = bounds("track-meter-audio")
   expect(right.x - left.x - left.width).toBe(3)
-  expect(right.width).toBe(5)
+  expect(left.width + 3 + right.width).toBe(meter.width)
+  expect(Math.abs(left.width - right.width)).toBeLessThanOrEqual(1)
   expect(bounds("track-meter-peak-left-audio").height).toBe(4)
   expect(bounds("track-meter-zero-audio").height).toBe(2)
   expect(node("track-meter-gradient-left-audio").style.background).toMatchObject({

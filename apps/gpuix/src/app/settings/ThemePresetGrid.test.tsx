@@ -9,14 +9,14 @@ import { ThemePresetGrid } from "./ThemePresetGrid"
 import type { TestRoot } from "@gpuix/react/testing"
 import type { ThemePresetId } from "@/shared/theme/presets"
 
-function Grid() {
+function Grid({ width = 420 }: { readonly width?: number }) {
   const [value, setValue] = useState<ThemePresetId>(DEFAULT_THEME_PRESET)
   return (
     <AppInteractionProvider>
       <ThemeProvider>
         <div style={{ width: "100%", height: "100%" }}>
           <ModalDialog open onOpenChange={() => {}} label="Presets">
-            <div style={{ width: 420 }}>
+            <div style={{ width }}>
               <ThemePresetGrid value={value} onValueChange={setValue} label="Presets" />
             </div>
           </ModalDialog>
@@ -38,14 +38,7 @@ function bounds(root: TestRoot, id: string) {
   return box
 }
 
-function expectVisible(root: TestRoot, id: string) {
-  const viewport = bounds(root, "theme-preset-scroll")
-  const item = bounds(root, id)
-  expect(item.y).toBeGreaterThanOrEqual(viewport.y)
-  expect(item.y + item.height).toBeLessThanOrEqual(viewport.y + viewport.height)
-}
-
-test("End/Home and Tab/Shift-Tab keep the focused preset inside the scroll viewport", () => {
+test("End/Home and Tab/Shift-Tab navigate presets without an inner scroll viewport", () => {
   const root = createTestRoot({ width: 800, height: 600 })
   try {
     root.render(<Grid />)
@@ -55,8 +48,9 @@ test("End/Home and Tab/Shift-Tab keep the focused preset inside the scroll viewp
     const firstId = "theme-preset-default"
     const lastId = `theme-preset-${last.id}`
     const previousId = `theme-preset-${previous.id}`
-    const viewport = bounds(root, "theme-preset-scroll")
-    expect(bounds(root, lastId).y).toBeGreaterThan(viewport.y + viewport.height)
+    const grid = bounds(root, "theme-preset-grid")
+    expect(grid.width).toBe(420)
+    expect(bounds(root, lastId).y).toBeGreaterThan(bounds(root, firstId).y)
     const selected = node(root, firstId)
     const swatch = selected.children
       .map(id => root.renderer.getElement(id))
@@ -72,49 +66,47 @@ test("End/Home and Tab/Shift-Tab keep the focused preset inside the scroll viewp
     root.renderer.nativeSimulateKeystrokes(node(root, firstId).id, "end")
     root.renderer.flush()
     expect(root.renderer.getFocusedElementId()).toBe(node(root, lastId).id)
-    expectVisible(root, lastId)
+    expect(bounds(root, lastId).y).toBeGreaterThanOrEqual(grid.y)
 
     root.renderer.nativeSimulateKeystrokes(node(root, lastId).id, "shift-tab")
     root.renderer.flush()
     expect(root.renderer.getFocusedElementId()).toBe(node(root, previousId).id)
-    expectVisible(root, previousId)
+    expect(bounds(root, previousId).y).toBeGreaterThanOrEqual(grid.y)
 
     root.renderer.nativeSimulateKeystrokes(node(root, previousId).id, "tab")
     root.renderer.flush()
     expect(root.renderer.getFocusedElementId()).toBe(node(root, lastId).id)
-    expectVisible(root, lastId)
+    expect(bounds(root, lastId).y).toBeGreaterThanOrEqual(grid.y)
 
     root.renderer.nativeSimulateKeystrokes(node(root, lastId).id, "home")
     root.renderer.flush()
     expect(root.renderer.getFocusedElementId()).toBe(node(root, firstId).id)
-    expectVisible(root, firstId)
+    expect(bounds(root, firstId).y).toBeGreaterThanOrEqual(grid.y)
 
     root.renderer.nativeSimulateKeystrokes(node(root, previousId).id, "tab")
     root.renderer.flush()
     expect(root.renderer.getFocusedElementId()).toBe(node(root, lastId).id)
-    expectVisible(root, lastId)
+    expect(bounds(root, lastId).y).toBeGreaterThanOrEqual(grid.y)
   } finally {
     root.unmount()
   }
 })
 
-test("native wheel scrolling reveals later preset rows", () => {
-  const root = createTestRoot({ width: 800, height: 600 })
+test("preset swatches wrap to available native panel width without an inner scroll", () => {
+  const root = createTestRoot({ width: 1200, height: 900 })
   try {
-    root.render(<Grid />)
-    const scroll = node(root, "theme-preset-scroll")
-    const viewport = bounds(root, "theme-preset-scroll")
-    root.renderer.nativeSimulateScrollWheel(
-      viewport.x + viewport.width / 2,
-      viewport.y + viewport.height / 2,
-      0,
-      -500
-    )
-    root.renderer.flush()
-    const offset = root.renderer.getScrollOffset(scroll.id)
-    expect(offset?.[1]).toBeLessThan(0)
-    expect(bounds(root, "theme-preset-default").y).toBeLessThan(viewport.y)
+    root.render(<Grid width={800} />)
+    const firstWide = bounds(root, `theme-preset-${THEME_PRESETS[0]?.id}`)
+    const secondWide = bounds(root, `theme-preset-${THEME_PRESETS[1]?.id}`)
+    expect(secondWide.y).toBe(firstWide.y)
+    expect(secondWide.x).toBeGreaterThan(firstWide.x)
+    root.render(<Grid width={200} />)
+    const firstNarrow = bounds(root, `theme-preset-${THEME_PRESETS[0]?.id}`)
+    const secondNarrow = bounds(root, `theme-preset-${THEME_PRESETS[1]?.id}`)
+    expect(secondNarrow.y).toBeGreaterThan(firstNarrow.y)
+    expect(root.renderer.findByTestId("theme-preset-scroll")).toBeUndefined()
   } finally {
     root.unmount()
   }
 })
+

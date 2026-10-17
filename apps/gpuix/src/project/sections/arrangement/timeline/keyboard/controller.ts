@@ -10,6 +10,7 @@ import {
   normalizeKey,
 } from "@/platform/keyboard"
 import type { CommandHandler, CommandInput, KeyboardFocus } from "@/platform/keyboard"
+import type { DockCommand } from "@/ui/panels"
 
 export type { KeyboardFocus } from "@/platform/keyboard"
 export type TimelineKeyboardInput = CommandInput
@@ -29,6 +30,7 @@ export interface TimelineKeyboardDeps {
   blurControl: () => void
   claim?: (event: TimelineKeyboardInput) => boolean
   browserSearch?: { available: () => boolean; focus: () => void }
+  executeDockCommand?: (command: DockCommand) => boolean
 }
 
 export function createTimelineKeyboard({
@@ -37,6 +39,7 @@ export function createTimelineKeyboard({
   blurControl,
   claim = () => false,
   browserSearch,
+  executeDockCommand,
 }: TimelineKeyboardDeps): KeyboardOwner {
   const notes = new Map<string, number>()
   let draw: { key: string; original: boolean; used: boolean } | null = null
@@ -83,7 +86,19 @@ export function createTimelineKeyboard({
       )
       return "handled"
     }
+  const dock = (command: DockCommand): CommandHandler => event => {
+    if (!executeDockCommand) return "pass"
+    if (event.isHeld) return "handled"
+    return executeDockCommand(command) ? "handled" : "pass"
+  }
   const commands = createCommandRegistry({
+    "dock.moveLeft": dock("moveLeft"),
+    "dock.moveRight": dock("moveRight"),
+    "dock.moveUp": dock("moveUp"),
+    "dock.moveDown": dock("moveDown"),
+    "dock.toggleMaximize": dock("toggleMaximize"),
+    "dock.close": dock("close"),
+    "dock.hide": dock("hide"),
     "project.save": once(projectActions.save),
     "project.saveAs": once(projectActions.requestSaveAs),
     "project.open": once(projectActions.requestOpen),

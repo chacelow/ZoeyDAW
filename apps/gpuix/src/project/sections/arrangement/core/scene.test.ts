@@ -178,11 +178,12 @@ it("runtime geometry changes move rendering and hit ownership together without r
   store.setViewport(vp())
   store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks: [first, second] })
   store.setTrackSelection(new Set(["second"]))
+  const collapsed = DEFAULT_LAYOUT_TOKENS.track.collapsedHeight
   expect(layoutTrackRows(store.get()).map(row => [row.top, row.height])).toEqual([
-    [34, 23],
-    [57, 23],
+    [34, collapsed],
+    [34 + collapsed, collapsed],
   ])
-  expect(hitTest(store.get(), 100, 64)?.track.id).toBe("second")
+  expect(hitTest(store.get(), 100, 34 + collapsed + 1)?.track.id).toBe("second")
   store.setGeometry(
     createLayoutTokens(
       {

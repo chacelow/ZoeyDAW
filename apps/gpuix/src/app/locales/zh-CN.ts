@@ -1,6 +1,8 @@
 import { creationNamesByLocale } from "./creation-names"
+import { themeEditorTranslations } from "./theme-editor"
 
 export default {
+  themeEditor: themeEditorTranslations.zh,
   creationNames: creationNamesByLocale["zh-CN"],
   fileErrors: {
     read: "无法读取工程文件。",

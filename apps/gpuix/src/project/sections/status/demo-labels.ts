@@ -3,13 +3,13 @@ import type { StatusStripLabels } from "."
 export const englishStatusLabels: StatusStripLabels = {
   toggleFooter: "Toggle footer",
   views: "Detail views",
-  clip: "Clip Edit",
-  devices: "Affect Chain",
   info: {
     number: { title: "Number", description: "Drag or wheel to adjust; double-click to reset" },
     bar: { title: "Level", description: "Drag or wheel to adjust the value" },
     bipolar: { title: "Bipolar", description: "Adjust around the center" },
     toggle: { title: "Toggle", description: "Change the control state" },
+    switch: { title: "Switch", description: "Click, Enter or Space to turn on or off" },
+    knob: { title: "Knob", description: "Drag vertically or wheel; double-click to reset" },
     dropdown: { title: "Dropdown", description: "Choose from the list" },
     popup: { title: "Popup", description: "Adjust controls without closing the popup" },
     button: { title: "Button", description: "Click or press Enter" },
@@ -25,13 +25,13 @@ export const englishStatusLabels: StatusStripLabels = {
 export const chineseStatusLabels: StatusStripLabels = {
   toggleFooter: "切换底部面板",
   views: "细节视图",
-  clip: "片段编辑",
-  devices: "效果链",
   info: {
     number: { title: "数值", description: "拖动或滚轮调整，双击重置" },
     bar: { title: "电平", description: "拖动或滚轮调整数值" },
     bipolar: { title: "双极数值", description: "围绕中心调整" },
     toggle: { title: "开关", description: "切换控件状态" },
+    switch: { title: "开关", description: "点击、Enter 或空格切换" },
+    knob: { title: "旋钮", description: "上下拖动或滚轮调整，双击重置" },
     dropdown: { title: "下拉列表", description: "从列表选择" },
     popup: { title: "弹层", description: "内部调整时保持打开" },
     button: { title: "按钮", description: "点击或按 Enter 激活" },

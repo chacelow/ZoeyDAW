@@ -103,6 +103,10 @@ export default [
     },
   },
   {
+    files: ["apps/gpuix/src/gallery/performance.tsx"],
+    rules: { "no-await-in-loop": "off" },
+  },
+  {
     files: ["**/*.config.{js,ts,mjs}"],
     rules: { "unicorn/no-top-level-side-effects": "off" },
   },

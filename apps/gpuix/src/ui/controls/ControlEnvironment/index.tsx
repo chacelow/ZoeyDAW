@@ -15,6 +15,8 @@ export type ControlInfo =
   | "bar"
   | "bipolar"
   | "toggle"
+  | "switch"
+  | "knob"
   | "dropdown"
   | "popup"
   | "button"

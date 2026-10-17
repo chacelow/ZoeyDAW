@@ -87,6 +87,17 @@ export interface DesignDetails {
     readonly centerMarker: { readonly inset: number; readonly width: number }
     readonly caretWidth: number
   }
+  readonly grid: { readonly buttonWidthUnits: number; readonly numericWidthUnits: number; readonly labelWidthUnits: number; readonly knobTextUnits: number; readonly segmentWidthUnits: number; readonly mixerWidthUnits: number; readonly deviceWidthUnits: number; readonly headerHeightUnits: number; readonly previewUnits: readonly number[] }
+  readonly fader: { readonly lengthUnits: number; readonly scaleWidthUnits: number; readonly meterWidthUnits: number; readonly handleWidthUnits: number; readonly handleGapUnits: number; readonly triangleWidthRatio: number; readonly triangleHeightRatio: number }
+  readonly treeRow: { readonly indent: number }
+  readonly chip: { readonly radius: number }
+  readonly switch: { readonly widthRatio: number; readonly thumbInset: number }
+  readonly knob: {
+    readonly diameterRatio: number
+    readonly sweepDegrees: number
+    readonly strokeWidth: number
+    readonly indicatorWidth: number
+  }
   readonly progress: { readonly indeterminateOpacity: number; readonly widthFraction: number }
   readonly motion: { readonly tabs: { readonly duration: number; readonly easing: MotionEasing } }
   readonly cursors: {
@@ -153,7 +164,13 @@ export const DEFAULT_DESIGN_DETAILS: DesignDetails = {
     noteInset: 1,
     meter: { channelGap: 1, peakWidth: 1, zeroWidth: 1, warningStop: 0.3 },
   },
-  dragPad: { fillOpacity: 0.3, centerMarker: { inset: 2, width: 1 }, caretWidth: 1 },
+  dragPad: { fillOpacity: 0.55, centerMarker: { inset: 2, width: 1 }, caretWidth: 1 },
+  grid: { buttonWidthUnits: 4, numericWidthUnits: 3, labelWidthUnits: 8, knobTextUnits: 2, segmentWidthUnits: 2, mixerWidthUnits: 8, deviceWidthUnits: 20, headerHeightUnits: 2, previewUnits: [1, 2, 3] },
+  fader: { lengthUnits: 8, scaleWidthUnits: 2, meterWidthUnits: 1, handleWidthUnits: 1, handleGapUnits: 0, triangleWidthRatio: 0.6, triangleHeightRatio: 0.6 },
+  treeRow: { indent: 12 },
+  chip: { radius: 8 },
+  switch: { widthRatio: 2, thumbInset: 2 },
+  knob: { diameterRatio: 2, sweepDegrees: 300, strokeWidth: 2, indicatorWidth: 1.5 },
   progress: { indeterminateOpacity: 0.5, widthFraction: 0.3 },
   motion: { tabs: { duration: 0.16, easing: "easeOut" } },
   cursors: {

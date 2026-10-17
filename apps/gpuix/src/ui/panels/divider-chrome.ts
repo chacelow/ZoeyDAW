@@ -1,14 +1,17 @@
 import type { StyleDesc } from "@gpuix/react"
 import type { Theme } from "@/shared/theme/ThemeProvider"
 
-export function dividerChrome(theme: Theme): StyleDesc {
+export function dividerChrome(theme: Theme, dragging = false): StyleDesc {
+  const highlight = theme.colors.ring
   return {
-    backgroundColor: theme.colors.card,
+    backgroundColor: dragging ? highlight : theme.colors.card,
+    hover: { backgroundColor: highlight },
+    active: { backgroundColor: highlight },
     userSelect: "none",
     flexShrink: 0,
     focusVisible: {
       outlineWidth: theme.design.shape.focusRingWidth,
-      outlineColor: theme.colors.ring,
+      outlineColor: highlight,
       outlineOffset: -theme.design.shape.focusRingWidth,
     },
   }

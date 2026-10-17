@@ -8,7 +8,7 @@
 
 | 来源 | 放什么 | 数据位置 | 读取入口 | 谁能改 |
 | --- | --- | --- | --- | --- |
-| **主题 Theme** | 颜色与混色配方、透明度状态、边框与线宽、圆角、间距、字体族/字重/字号、图标尺寸、动效时长与缓动、阴影 | `shared/theme`：预设数据、`design-tokens.ts`、`metrics/control-metrics.json` | `useTheme()` | 主题预设；以后用户导入主题 |
+| **主题 Theme** | 颜色与混色配方、透明度状态、边框与线宽、圆角、间距、字体族/字重/字号、图标尺寸、动效时长与缓动、阴影 | `shared/theme`：预设数据、`design-tokens.ts`、`metrics/control-metrics.json`；`app/theme-editor`：用户主题模型与字段 schema | `useTheme()`；组合根统一调用 `resolveThemeOverrides()` | 内置预设只读；用户可复制、新建、编辑、重置与导入/导出自己的主题，通过原生 settings 的 `themeLibrary` 持久化 |
 | **布局 Layout** | 面板默认/最小/最大尺寸、轨道与标尺高度、浏览器列宽、编辑器几何、首页内容宽、浮层偏移 | `shared/theme` 下的 `layout` 分组（与 design 同级，可由 provider 覆盖） | `useTheme().layout` | 主题/密度预设；用户调整的面板尺寸另存工作区 |
 | **文案 Text** | 所有用户可见文字、aria 名称、错误与状态消息、默认名称、单位与数值/时间格式 | `app/locales/**`（中英双语） | 组合根注入 `labels`；共享组件不带英文默认值 | 语言设置 |
 | **行为默认 Defaults** | 新工程/轨道/片段初值、网格与缩放上下限、手势阈值、滚轮灵敏度、电平显示范围与衰减、MIDI 默认、历史容量、窗口默认尺寸、目录根 | `project/defaults`（工程模板与编辑策略）、`platform/settings`（用户偏好） | 工程模板函数；`usePreference(key)` | 工程模板；用户偏好设置 |

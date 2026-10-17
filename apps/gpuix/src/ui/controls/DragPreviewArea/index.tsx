@@ -3,6 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
+import { Icon } from "../Icon"
+import { IconSlot } from "../IconSlot"
 import type { EventPayload, KeyEvent, Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 
@@ -244,12 +246,10 @@ export function DragPreviewArea<T>(props: DragPreviewAreaProps<T>) {
           }}
         >
           {preview.content}
-          <div
-            role="status"
-            aria-label={disabledDropLabel}
-            style={{ color: theme.colors.destructive }}
-          >
-            ⊘
+          <div role="status" aria-label={disabledDropLabel}>
+            <IconSlot>
+              <Icon name="Ban" color={theme.colors.destructive} />
+            </IconSlot>
           </div>
         </anchored>
       ) : null}

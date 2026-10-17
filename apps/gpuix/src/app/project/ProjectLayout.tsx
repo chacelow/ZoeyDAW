@@ -1,97 +1,69 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { Group, Panel, PanelDivider, PanelShell } from "@/ui/panels"
+import { DockLayout } from "@/ui/panels"
+import type { DockPanelRegistry } from "@/ui/panels"
 import type { ReactNode, Ref } from "react"
-import type { PublicInstance } from "@gpuix/react"
+import type { KeyEvent, PublicInstance } from "@gpuix/react"
+import { useAppTranslation } from "../i18n"
+import { chineseFooterLabels, englishFooterLabels } from "../locales/sections/footer"
+import { chineseDockLabels, englishDockLabels } from "../locales/sections/dock"
 import type { ProjectShellApi } from "./useProjectShell"
 
 export interface ProjectLayoutSlots {
   readonly transport: ReactNode
   readonly browser: ReactNode
   readonly arrangement: ReactNode
-  readonly footer: ReactNode
+  readonly clipEditor: ReactNode
+  readonly devices: ReactNode
   readonly status: ReactNode
 }
-
 export interface ProjectLayoutProps extends ProjectLayoutSlots {
   readonly projectId: string
   readonly shell: ProjectShellApi
   readonly focusRef: Ref<PublicInstance>
+  readonly onDockKeyDown?: (event: KeyEvent) => void
   readonly labels: {
-    readonly resizeClipEdit: string
-    readonly resizeBrowser: string
     readonly browserPanel: string
     readonly arrangementPanel: string
-    readonly footerPanel: string
-    readonly activeDescription: string
   }
 }
-
 export function ProjectLayout({
-  projectId,
-  shell,
-  focusRef,
-  labels,
-  transport,
-  browser,
-  arrangement,
-  footer,
-  status,
+  projectId, shell, focusRef, labels, transport, browser, arrangement, clipEditor, devices,
+  status, onDockKeyDown,
 }: ProjectLayoutProps) {
   const theme = useTheme()
-  const panels = theme.layout.project.panels
-  const gap = theme.project.panelGap
-  const clipView = shell.footerView === "clip"
-  const footerShell =
-    footer === null ? null : (
-      <PanelShell
-        id="footer"
-        aria-label={labels.footerPanel}
-        activeDescription={labels.activeDescription}
-        active={shell.activeSection}
-        onActivate={shell.setActiveSection}
-      >
-        {footer}
-      </PanelShell>
-    )
-  const workspace = (
-    <Group orientation="horizontal" testId="project-workspace">
-      <Panel
-        panelRef={shell.browserHandleRef}
-        defaultSize={panels.browserDefaultSize}
-        minSize={theme.project.browserNavigationWidth + theme.project.browserResultsWidth + gap}
-        maxSize={panels.browserMaxSize}
-        collapsible
-        collapsedSize={0}
-        testId="browser-panel"
-      >
-        <PanelShell
-          id="browser"
-          aria-label={labels.browserPanel}
-          activeDescription={labels.activeDescription}
-          active={shell.activeSection}
-          onActivate={shell.setActiveSection}
-        >
-          {browser}
-        </PanelShell>
-      </Panel>
-      <PanelDivider
-        orientation="vertical"
-        aria-label={labels.resizeBrowser}
-        testId="browser-divider"
-      />
-      <Panel minSize={panels.arrangementMinWidth} testId="arrangement-panel">
-        <PanelShell
-          id="arrangement"
-          aria-label={labels.arrangementPanel}
-          activeDescription={labels.activeDescription}
-          active={shell.activeSection}
-          onActivate={shell.setActiveSection}
-        >
-          {arrangement}
-        </PanelShell>
-      </Panel>
-    </Group>
-  )
+  const { locale } = useAppTranslation()
+  const zh = locale === "zh-CN"
+  const footerLabels = zh ? chineseFooterLabels : englishFooterLabels
+  const registry: DockPanelRegistry = {
+    browser: {
+      title: labels.browserPanel,
+      icon: "Folder",
+      minimumSize: theme.project.browserNavigationWidth + theme.project.browserResultsWidth + theme.project.panelGap,
+      closable: true,
+      render: () => browser,
+    },
+    arrangement: {
+      title: labels.arrangementPanel,
+      icon: "LayoutList",
+      minimumSize: theme.project.timelineMinHeight,
+      closable: false,
+      render: () => arrangement,
+    },
+    clipEditor: {
+      title: footerLabels.clipTab,
+      icon: "Music",
+      minimumSize: theme.design.dock.minimumSize,
+      closable: true,
+      render: () => clipEditor,
+    },
+    devices: {
+      title: footerLabels.devicesTab,
+      icon: "SlidersHorizontal",
+      minimumSize: theme.design.dock.minimumSize,
+      closable: true,
+      render: () => devices,
+    },
+  }
   return (
     <div
       ref={focusRef}
@@ -100,57 +72,24 @@ export function ProjectLayout({
       role="group"
       aria-label={projectId}
       style={{
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        height: "100%",
-        minHeight: 0,
-        backgroundColor: theme.colors.muted,
-        color: theme.colors.foreground,
+        display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0,
+        backgroundColor: theme.colors.muted, color: theme.colors.foreground,
       }}
     >
       {transport}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flexGrow: 1,
-          minHeight: 0,
-          gap,
-          padding: gap,
-        }}
-      >
-        <Group orientation="vertical" style={{ flexGrow: 1, minHeight: 0 }} testId="project-main">
-          <Panel minSize={theme.project.timelineMinHeight} testId="workspace-panel">
-            {workspace}
-          </Panel>
-          {clipView ? (
-            <PanelDivider
-              orientation="horizontal"
-              aria-label={labels.resizeClipEdit}
-              hidden={shell.footerCollapsed}
-            />
-          ) : null}
-          {clipView ? (
-            <Panel
-              panelRef={shell.clipHandleRef}
-              defaultSize={panels.clipDefaultSize}
-              minSize={panels.clipMinSize}
-              maxSize={panels.clipMaxSize}
-              collapsible
-              collapsedSize={0}
-              onResize={size => shell.reportClipCollapsed(size.inPixels === 0)}
-              testId="clip-panel"
-            >
-              {footerShell}
-            </Panel>
-          ) : null}
-        </Group>
-        {clipView ? null : (
-          <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
-            {footerShell}
-          </div>
-        )}
+      <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0, padding: theme.project.panelGap, gap: theme.project.panelGap }}>
+        <div style={{ flexGrow: 1, minHeight: 0, minWidth: 0 }}>
+          <DockLayout
+            ref={shell.dockRef}
+            layout={shell.layout}
+            registry={registry}
+            onLayoutChange={shell.setLayout}
+            testId="project-workspace"
+            onFocusChange={focused => { shell.dockFocused.current = focused }}
+            onKeyDown={onDockKeyDown}
+            labels={zh ? chineseDockLabels : englishDockLabels}
+          />
+        </div>
         {status}
       </div>
     </div>

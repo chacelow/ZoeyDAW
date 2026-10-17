@@ -13,8 +13,10 @@ import { sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
 import { useInfoBinding } from "../ControlEnvironment"
 import { useMeasuredTextWidth } from "../useMeasuredTextWidth"
+import { snapControlWidth } from "../grid"
 import { IconSlot } from "../IconSlot"
-import { listRowChrome } from "../ListRow"
+import { Icon } from "../Icon"
+import { MenuRowContent, menuLabelChrome, menuRowChrome, menuSeparatorChrome } from "../Menu/row"
 import type { Props, StyleDesc } from "@gpuix/react"
 import type { FloatingAlign, FloatingSide } from "@gpuix/react/floating"
 import type { ReactNode } from "react"
@@ -70,6 +72,7 @@ export function DropdownButton<T extends string = string>({
 }: DropdownButtonProps<T>) {
   const theme = useTheme()
   const [open, setOpen] = useState(false)
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
   const spaceToggle = useRef(false)
   const metrics = size === "transport" ? theme.transportControl : theme.control
   const gap = metrics["--spacing-control-gap"]
@@ -82,13 +85,15 @@ export function DropdownButton<T extends string = string>({
     ),
     { fontSize: metrics["--text-control-track"] }
   )
-  const width =
+  const width = snapControlWidth(
     measured.width +
-    metrics["--spacing-control-track-pad"] * 2 +
-    metrics["--spacing-control-icon"] +
-    (gap + (icon ? gap : 0)) +
-    (icon ? metrics["--spacing-control-icon-slot"] : 0) +
-    theme.design.shape.controlBorderWidth * 2
+      metrics["--spacing-control-track-pad"] * 2 +
+      metrics["--spacing-control-icon-slot"] +
+      (gap + (icon ? gap : 0)) +
+      (icon ? metrics["--spacing-control-icon-slot"] : 0) +
+      theme.design.shape.controlBorderWidth * 2,
+    theme.control["--spacing-control-track"]
+  )
   const display = renderValue ? renderValue(selected) : (selected?.label ?? value)
   const contentStyle: StyleDesc = {
     minWidth: matchTriggerWidth ? width : theme.project.dropdownMinWidth,
@@ -155,12 +160,9 @@ export function DropdownButton<T extends string = string>({
             display
           )}
         </div>
-        <text
-          aria-hidden="true"
-          style={{ flexShrink: 0, width: metrics["--spacing-control-icon"], textAlign: "right" }}
-        >
-          ⌄
-        </text>
+        <IconSlot size={size}>
+          <Icon name="ChevronDown" size={metrics["--spacing-control-icon"]} />
+        </IconSlot>
       </SelectTrigger>
       <SelectContent
         testId={testId ? `${testId}-content` : undefined}
@@ -179,25 +181,9 @@ export function DropdownButton<T extends string = string>({
         {items.map(item =>
           "type" in item ? (
             item.type === "separator" ? (
-              <SelectSeparator
-                key={item.id}
-                style={{
-                  height: theme.design.shape.separatorWidth,
-                  backgroundColor: theme.colors.border,
-                  marginTop: theme.design.menu.dropdownSeparatorInset,
-                  marginBottom: theme.design.menu.dropdownSeparatorInset,
-                }}
-              />
+              <SelectSeparator key={item.id} style={menuSeparatorChrome(theme)} />
             ) : (
-              <SelectLabel
-                key={item.id}
-                style={{
-                  fontSize: theme.control["--text-control-track"],
-                  color: theme.colors.mutedForeground,
-                  paddingLeft: theme.control["--spacing-control-track-pad"],
-                  paddingRight: theme.control["--spacing-control-track-pad"],
-                }}
-              >
+              <SelectLabel key={item.id} style={menuLabelChrome(theme)}>
                 <text>{item.label}</text>
               </SelectLabel>
             )
@@ -212,27 +198,25 @@ export function DropdownButton<T extends string = string>({
               tabIndex={0}
               aria-disabled={item.disabled ?? false}
               aria-selected={item.id === value}
+              onMouseEnter={() => setHoveredId(item.id)}
+              onMouseLeave={() => setHoveredId(null)}
               style={state => ({
-                ...listRowChrome(theme),
-                justifyContent: "space-between",
-                whiteSpace: "normal",
-                backgroundColor: state.selected
-                  ? theme.colors.primary
-                  : state.highlighted
-                    ? theme.colors.accent
-                    : "transparent",
-                color: state.selected
-                  ? theme.colors.primaryForeground
+                ...menuRowChrome(theme),
+                backgroundColor:
+                  !state.disabled && state.highlighted ? theme.colors.accent : "transparent",
+                color: state.disabled
+                  ? theme.colors.mutedForeground
                   : theme.colors.popoverForeground,
-                opacity: state.disabled ? theme.design.states.disabledOpacity : 1,
+                cursor: state.disabled ? theme.design.cursors.default : theme.design.cursors.action,
               })}
             >
-              <text style={{ flexGrow: 1, whiteSpace: "normal" }}>{item.label}</text>
-              {item.shortcut ? (
-                <text style={{ flexShrink: 0, color: theme.colors.mutedForeground }}>
-                  {item.shortcut}
-                </text>
-              ) : null}
+              <MenuRowContent
+                hovered={hoveredId === item.id}
+                checked={item.id === value}
+                shortcut={item.shortcut}
+              >
+                {item.label}
+              </MenuRowContent>
             </SelectItem>
           )
         )}

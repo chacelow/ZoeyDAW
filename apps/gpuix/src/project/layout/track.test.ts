@@ -59,7 +59,11 @@ describe("track row resize", () => {
         DEFAULT_LAYOUT_TOKENS.track
       ).heightPx
     ).toBe(70 + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2)
-    expect(resizeTrackHeight(track, 10_000, DEFAULT_LAYOUT_TOKENS.track).heightPx).toBe(274)
+    const { maxHeight, resizeStep } = DEFAULT_LAYOUT_TOKENS.track
+    const capped = resizeTrackHeight(track, 10_000, DEFAULT_LAYOUT_TOKENS.track).heightPx
+    expect(capped).toBeLessThanOrEqual(maxHeight)
+    expect(capped).toBeGreaterThan(maxHeight - resizeStep)
+    expect((capped - 70) % resizeStep).toBe(0)
   })
 
   it("reveals a folded track after a small drag and steps up to a fourfold cap", () => {

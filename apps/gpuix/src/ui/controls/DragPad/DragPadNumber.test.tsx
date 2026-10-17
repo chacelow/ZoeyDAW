@@ -174,22 +174,6 @@ describe("DragPadNumber native interactions", () => {
     expect(a.renderer.findByType("input")).toHaveLength(0)
     a.unmount()
   })
-
-  test("icon and control width persist across default, pre-edit and editing", () => {
-    const a = mount()
-    const pad = a.renderer.findByTestId("pad")
-    if (!pad) throw new Error("Missing pad")
-    const original = a.renderer.getElementBounds(pad.id)
-    expect(a.renderer.findByType("svg")).toHaveLength(1)
-    a.renderer.nativeSimulateClick(a.x, a.y)
-    expect(a.renderer.findByType("svg")).toHaveLength(1)
-    a.renderer.simulateKeystrokes("1")
-    expect(a.renderer.findByType("svg")).toHaveLength(1)
-    const editing = a.renderer.findByTestId("pad")
-    if (!editing) throw new Error("Missing editing shell")
-    expect(a.renderer.getElementBounds(editing.id)?.width).toBe(original?.width)
-    a.unmount()
-  })
 })
 
 test("keyboard adjusts a focused value and Escape rolls back an active drag", () => {
@@ -207,14 +191,18 @@ test("keyboard adjusts a focused value and Escape rolls back an active drag", ()
   a.unmount()
 })
 
-test("hidden icons remove their slot and editing keeps the same shell bounds", () => {
+test("icon-less numbers reserve no slot and editing keeps the same shell bounds", () => {
   const root = createTestRoot({ width: 400, height: 180 })
   let padding = 0
+  let unit = 0
+  let minimumWidth = 0
   let foreground = ""
   function Fixture() {
     const theme = useTheme()
     const [value, setValue] = useState(120)
     padding = theme.control["--spacing-control-track-pad"]
+    unit = theme.control["--spacing-control-track"]
+    minimumWidth = theme.design.grid.numericWidthUnits * unit
     foreground = theme.colors.foreground
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "start" }}>
@@ -227,7 +215,6 @@ test("hidden icons remove their slot and editing keeps the same shell bounds", (
           max={300}
           step={1}
           defaultValue={120}
-          hideIcon
         />
         <text
           testId="widest"
@@ -252,7 +239,9 @@ test("hidden icons remove their slot and editing keeps the same shell bounds", (
   const shell = root.renderer.findByTestId("hidden")!
   const original = root.renderer.getElementBounds(shell!.id)!
   const text = root.renderer.getElementBounds(root.renderer.findByTestId("widest")!.id)!
-  expect(original.width).toBe(Math.ceil(text.width + padding * 2 + 2))
+  expect(original.width).toBe(
+    Math.max(minimumWidth, Math.ceil((text.width + padding * 2 + 2) / unit) * unit)
+  )
   expect(root.renderer.findByTestId("hidden-edit-indicator")).toBeUndefined()
   const assertIndicatorFits = () => {
     const element = root.renderer.findByTestId("hidden-edit-indicator")!

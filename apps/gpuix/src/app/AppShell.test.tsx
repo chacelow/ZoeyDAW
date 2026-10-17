@@ -1,3 +1,4 @@
+import { verificationAudioCapability } from "@/platform/verification/audio-capability"
 import { afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -28,6 +29,7 @@ import { AppShell } from "./AppShell"
 import { changeLocale, initAppI18n } from "./i18n"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { AppNativeEnvironmentProvider } from "./native-environment"
+import { createThemeLibraryStore } from "./theme-editor"
 import { createMemoryFileEnvironment } from "./project-file/memory.test-helper"
 import { createRouter } from "./router/router"
 import { createPreferenceStore } from "./settings/preference-store"
@@ -107,6 +109,7 @@ function mount(overrides: Partial<AppShellProps> = {}, wrap = (node: ReactNode) 
     preset: null,
   }
   const appearance = overrides.appearance ?? {
+    themeLibrary: createThemeLibraryStore({ get: () => null, set: () => {} }),
     themeMode: createPreferenceStore<ThemeMode>(
       {
         get: () => saved.mode,
@@ -265,8 +268,13 @@ describe("project runtime lease", () => {
     expect(handles).toEqual([])
     for (const projectId of ["native-device-first", "native-device-second"]) {
       act(root, () => router.navigate(`/project/${projectId}`))
-      expect(await whenProjectBackendIdle()).toBe(true)
-      expect(useProjectState.getState().session.backend.error).toBeNull()
+      const ready = await whenProjectBackendIdle()
+      expect(useProjectState.getState().session.backend.phase).toBe(ready ? "ready" : "error")
+      if (ready) expect(useProjectState.getState().session.backend.error).toBeNull()
+      else {
+        expect(verificationAudioCapability.kind).toBe("unavailable")
+        expect(useProjectState.getState().session.backend.error).not.toBeNull()
+      }
       const handle = handles.at(-1)
       const request = requests.at(-1)
       if (handle === undefined || !request) throw new Error("No real native session was opened")
@@ -574,16 +582,22 @@ describe("project layout state", () => {
     countSessions()
     const { root } = mount({ router: createRouter("/project/layout") })
     const browserWidth = () =>
-      root.renderer.getElementBounds(element(root, "browser-panel").id)?.width ?? 0
+      root.renderer.getElementBounds(element(root, "project-workspace-content-browser").id)
+        ?.width ?? 0
     await layout(root)
     const initial = browserWidth()
-    root.renderer.nativeSimulateKeystrokes(element(root, "browser-divider").id, "shift-right")
+    root.renderer.nativeSimulateKeystrokes(
+      element(root, "project-workspace-divider-workspace-1").id,
+      "shift-right"
+    )
     await layout(root)
     const resized = browserWidth()
     expect(resized).toBeGreaterThan(initial)
     act(root, () => projectActions.setEditingClip(clipId()))
     await layout(root)
-    expect(root.renderer.findByTestId("clip-panel")).toBeDefined()
+    expect(
+      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-selected"]
+    ).toBe(true)
     expect(root.renderer.findByTestId("clip-editor")).toBeDefined()
     expect(browserWidth()).toBe(resized)
     act(root, () => projectActions.setEditingClip(null))
@@ -595,10 +609,14 @@ describe("project layout state", () => {
     countSessions()
     const { root, router } = mount({ router: createRouter("/project/first") })
     act(root, () => projectActions.setEditingClip(clipId()))
-    expect(root.renderer.findByTestId("clip-panel")).toBeDefined()
+    expect(
+      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-selected"]
+    ).toBe(true)
     act(root, () => router.navigate("/project/second"))
     expect(root.renderer.findByTestId("project-layout")).toBeDefined()
-    expect(root.renderer.findByTestId("clip-panel")).toBeUndefined()
+    expect(
+      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-selected"]
+    ).toBe(false)
   })
 })
 

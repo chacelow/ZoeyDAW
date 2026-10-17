@@ -17,7 +17,7 @@ import {
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
-import { createNativeBackend } from "@/project/adapters/backend/native"
+import { createVerificationProjectBackend } from "@/project/adapters/verification/environment-backend"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
@@ -39,7 +39,7 @@ test("new projects sample controlled appearance without renaming or restarting a
   await i18next.changeLanguage("en-US")
   const directory = mkdtempSync(path.join(tmpdir(), "zoeydaw-creation-source-"))
   const restorePreferences = configurePreferences(createPreferenceOwner({ configDir: directory }))
-  const restoreBackend = configureProjectBackend(createNativeBackend)
+  const restoreBackend = configureProjectBackend(createVerificationProjectBackend)
   setProjectFiles(createMemoryProjectFiles())
   const keyboard = createWindowKeyboard()
   const firstId = `creation-source-${crypto.randomUUID()}`
@@ -122,6 +122,8 @@ test("new projects sample controlled appearance without renaming or restarting a
     expect(newest?.heightPx).toBe(nextLayout.track.defaultHeight)
     const expectedName = getCreationNames("zh-CN").track("audio", 2)
     expect(newest?.name).toBe(expectedName)
+    flushSync(() => projectActions.setViewport({ scrollY: useProjectState.getState().document.tracks.reduce((height, track) => height + track.heightPx, 0) }))
+    await settle()
     expect(root.renderer.getAllText()).toContain(expectedName)
     render(`creation-next-${crypto.randomUUID()}`, nextLayout, nextDesign)
     await settle()

@@ -24,6 +24,7 @@ import { AppNativeEnvironmentProvider } from "../native-environment"
 import { createRouter } from "../router/router"
 import { createPreferenceStore } from "../settings/preference-store"
 import { isThemeMode } from "../settings/theme-mode"
+import { createThemeLibraryStore } from "../theme-editor"
 import type { AnimationFrameCallback } from "@/platform/frame"
 
 const directory = process.env.B2_EVIDENCE_DIR
@@ -38,6 +39,7 @@ const files = {
 }
 const savedPath = path.join(directory, "Resume Project", "Resume.zdaw")
 const appearance = {
+  themeLibrary: createThemeLibraryStore(createSettingStorage("themeLibrary", options)),
   themeMode: createPreferenceStore(createSettingStorage("themeMode", options), isThemeMode, "dark"),
   themePreset: createPreferenceStore(
     createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET, options),

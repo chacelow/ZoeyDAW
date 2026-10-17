@@ -199,19 +199,53 @@ test("wide Header centres its transport group between balanced outer columns", (
   }
 })
 
-test("vertical wheel in a Header gap accesses horizontal overflow", () => {
-  const root = mount(620)
+function readHeaderElement(root: TestRoot, testId: string) {
+  const element = root.renderer.findByTestId(testId)
+  const bounds = element && root.renderer.getElementBounds(element.id)
+  if (!element || !bounds) throw new Error(`Missing ${testId}`)
+  return { element, bounds }
+}
+function measureHeaderColumns(
+  numberFontFamily = DEFAULT_DESIGN_TOKENS.typography.numberFontFamily
+) {
+  const probe = mount(1800, numberFontFamily)
   try {
-    const left = root.renderer.findByTestId("transport-left")
-    const scroll = root.renderer.findByTestId("transport-scroll")
-    const bounds = left ? root.renderer.getElementBounds(left.id) : null
-    if (!bounds || !scroll) throw new Error("Missing Header geometry")
-    root.renderer.nativeSimulateScrollWheel(
-      bounds.x + bounds.width + PROJECT_METRICS.transportColumnGap / 2,
-      bounds.y + bounds.height / 2,
-      0,
-      -80
+    return {
+      left: readHeaderElement(probe, "transport-left").bounds.width,
+      center: readHeaderElement(probe, "transport-center").bounds.width,
+      right: readHeaderElement(probe, "transport-right").bounds.width,
+    }
+  } finally {
+    probe.unmount()
+  }
+}
+
+function scrollVisibleHeaderGap(root: TestRoot) {
+  const left = root.renderer.findByTestId("transport-left")
+  const scroll = root.renderer.findByTestId("transport-scroll")
+  const firstId = left?.children[0]
+  const secondId = left?.children[1]
+  const first = firstId === undefined ? null : root.renderer.getElementBounds(firstId)
+  const second = secondId === undefined ? null : root.renderer.getElementBounds(secondId)
+  const viewport = scroll && root.renderer.getElementBounds(scroll.id)
+  if (!first || !second || !viewport) throw new Error("Missing visible Header gap geometry")
+  const x = (first.x + first.width + second.x) / 2
+  expect(x).toBeGreaterThanOrEqual(viewport.x)
+  expect(x).toBeLessThan(viewport.x + viewport.width)
+  root.renderer.nativeSimulateScrollWheel(x, viewport.y + viewport.height / 2, 0, -80)
+}
+
+test("vertical wheel in a Header gap accesses horizontal overflow", () => {
+  const columns = measureHeaderColumns()
+  const root = mount(
+    Math.floor(
+      columns.left + columns.center + columns.right + PROJECT_METRICS.transportColumnGap * 2 - 80
     )
+  )
+  try {
+    const scroll = root.renderer.findByTestId("transport-scroll")
+    if (!scroll) throw new Error("Missing Header scroll owner")
+    scrollVisibleHeaderGap(root)
     expect(root.renderer.getScrollOffset(scroll.id)?.[0]).toBeLessThan(0)
   } finally {
     root.unmount()
@@ -280,44 +314,48 @@ const firstMountFonts: Record<"Helvetica" | "missing", string> = {
   missing: "__zoeydaw_header_missing_font__",
 }
 for (const [family, numberFontFamily] of Object.entries(firstMountFonts)) {
-  for (const width of [1800, 1070, 900, 620]) {
-    test(`first mount Header ${family} at ${width} preserves native columns and overflow`, () => {
+  for (const mode of ["balanced", "fit", "overflow", "compact"]) {
+    test(`first mount Header ${family} preserves measured columns in a ${mode} viewport`, () => {
+      const columns = measureHeaderColumns(numberFontFamily)
+      const gap = PROJECT_METRICS.transportColumnGap
+      const contentWidth = columns.left + columns.center + columns.right + gap * 2
+      const balancedWidth = Math.max(columns.left, columns.right) * 2 + columns.center + gap * 2
+      const width =
+        mode === "balanced"
+          ? Math.ceil(balancedWidth + 80)
+          : mode === "fit"
+            ? Math.ceil(contentWidth)
+            : mode === "overflow"
+              ? Math.floor(contentWidth - 80)
+              : Math.floor(contentWidth / 2)
       const root = mount(width, numberFontFamily)
       try {
-        const read = (testId: string) => {
-          const element = root.renderer.findByTestId(testId)
-          const bounds = element && root.renderer.getElementBounds(element.id)
-          if (!element || !bounds) throw new Error(`Missing ${testId}`)
-          return { element, bounds }
-        }
-        const { element: scroll, bounds: viewport } = read("transport-scroll")
-        const { bounds: left } = read("transport-left")
-        const { bounds: center } = read("transport-center")
-        const { bounds: right } = read("transport-right")
-        const gap = PROJECT_METRICS.transportColumnGap
+        const { element: scroll, bounds: viewport } = readHeaderElement(root, "transport-scroll")
+        const { bounds: left } = readHeaderElement(root, "transport-left")
+        const { bounds: center } = readHeaderElement(root, "transport-center")
+        const { bounds: right } = readHeaderElement(root, "transport-right")
         expect(viewport.width).toBe(width)
+        expect(Math.abs(left.width - columns.left)).toBeLessThanOrEqual(0.5)
+        expect(Math.abs(center.width - columns.center)).toBeLessThanOrEqual(0.5)
+        expect(Math.abs(right.width - columns.right)).toBeLessThanOrEqual(0.5)
         expect(center.x).toBeGreaterThanOrEqual(left.x + left.width + gap)
         expect(right.x).toBeGreaterThanOrEqual(center.x + center.width + gap)
-        if (width === 1800) {
+        if (mode === "balanced") {
           expect(Math.abs(center.x + center.width / 2 - width / 2)).toBeLessThanOrEqual(0.5)
         } else {
           expect(Math.abs(center.x - left.x - left.width - gap)).toBeLessThanOrEqual(0.5)
         }
-        if (width >= 1070) {
+        if (mode === "balanced" || mode === "fit") {
           expect(Math.abs(right.x + right.width - width)).toBeLessThanOrEqual(0.5)
           expect(root.renderer.getScrollOffset(scroll.id)).toEqual([0, 0])
         } else {
-          root.renderer.nativeSimulateScrollWheel(
-            left.x + left.width + gap / 2,
-            center.y + center.height / 2,
-            0,
-            -80
-          )
+          expect(contentWidth).toBeGreaterThan(width)
+          scrollVisibleHeaderGap(root)
           const offset = root.renderer.getScrollOffset(scroll.id)?.[0]
           if (offset === undefined) throw new Error("Missing Header scroll offset")
           expect(offset).toBeLessThan(0)
-          expect(center.width).toBe(read("transport-center").bounds.width)
-          expect(read("transport-right").bounds.x).toBeLessThan(right.x)
+          expect(center.width).toBe(readHeaderElement(root, "transport-center").bounds.width)
+          expect(readHeaderElement(root, "transport-right").bounds.x).toBeLessThan(right.x)
         }
       } finally {
         root.unmount()

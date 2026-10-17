@@ -24,8 +24,8 @@
 
 ## 设置
 
-- 外观页保留明、暗、跟随系统的分段控件，以及 Web 顺序的 43 项预设网格。
-- 预设经 `createThemePresetSetting` 存储，启动时先 `repair()`，再读取。切换只改变受控 ThemeProvider 的 context，不重挂载工程。
+- 外观页保留明、暗、跟随系统的分段控件，并与 Gallery 共用 `theme-editor/ThemeEditor`：43 项只读内置预设、用户主题的新建/复制、改名、删除、分组字段编辑和重置、JSON 导入/导出。
+- 内置基础预设经 `createThemePresetSetting` 存储，启动时先 `repair()`；完整用户主题库及当前选择经 `createThemeLibraryStore(createSettingStorage("themeLibrary"))` 保存。`AppPreferencesProvider` 统一解析覆盖后传给受控 ThemeProvider，切换与编辑不重挂载工程。
 - 语言经 `createSettingStorage("language")` 持久化。读取失败使用显式初始语言或默认语言并记诊断；写入失败记诊断，保留内存选择且不抛出 rejection。`app/i18n` 只消费 React-free `@/platform/i18n/core`，不加载 react-i18next 的第二份 React。
 - 模式经 `createSettingStorage("themeMode")` 持久化。`NativeRoot` 同步读取系统外观并订阅变化，跟随系统会更新同一工程，不重开后端。
 - 失效预设修复的读写失败落入 preference store 的失败边界。记录日志，保留内存选择，不阻断启动。
@@ -35,17 +35,18 @@
 
 ## 工程组合
 
-`ProjectSections` 用 `ProjectLayoutSlots` 装配 sections。`ProjectLayout` 只管理面板几何与激活外观，不持有第二份工程或视口；默认/最小/最大比例来自 `theme.layout.project.panels`，Browser 像素最小宽度来自 `theme.project.browserNavigationWidth` 与 `browserResultsWidth`。`labels` 显式提供 Browser、Arrangement、Footer 的可读名称和活动描述，内部 section id 不作为用户文案。
+`ProjectSections` 用 `ProjectLayoutSlots` 装配 sections。`ProjectLayout` 将 Browser、Arrangement、Clip Edit 和 Affect Chain 注册到共享 DockLayout；Transport 顶部与 StatusStrip 底部固定。默认 Browser 左侧、Arrangement 右上、两个编辑器 Tab 右下，默认比例来自 `theme.layout.project.panels`。
 
-| 槽 | 内容 | 所需 shell 接口 |
-| --- | --- | --- |
-| `transport` | `TransportBar` | `toggleBrowser`，组合根路由返回命令 |
-| `browser` | `BrowserPanel` | `browserHandleRef` 由外层 Panel 持有 |
-| `arrangement` | `ArrangementPanel` | 单一 timeline controller 与键盘 owner，见组合契约 |
-| `footer` | `FooterPanel` | `footerView`、`footerCollapsed`、`selectFooterView`、`setFooterCollapsed` |
-| `status` | `StatusStrip` | 同一份 Footer 状态，ControlEnvironment 的 info |
+布局唯一可写来源是 project workspace 的 `dockLayout` JSON，`useProjectShell` 只解析布局并派生激活/可见状态。`dockRef.executeCommand` 接入现有 timeline keyboard controller，头部 Dock 焦点使用 K1 的 dock context，编辑区仍保留自己的键盘 owner。显式 Clip 编辑请求激活 Clip Edit；状态栏不再重复拥有两个 view switches。
 
-Footer 二选一显示 Affect Chain 或 Clip Edit。Clip Edit 用垂直 Group 连续调整高度。Affect Chain 在 Group 外按 Footer 自身固定高度显示。切换时 Browser 与 Arrangement 的树位置不变。
+| 槽 | 内容 |
+| --- | --- |
+| `transport` | `TransportBar`，路由与 Browser 显隐命令 |
+| `browser` | `BrowserPanel` |
+| `arrangement` | 单一 Arrangement timeline controller 与键盘 owner |
+| `clipEditor` | Clip 类型的 `FooterPanel`，通过 slot 注入 ClipEditor |
+| `devices` | Devices 类型的 `FooterPanel` / EffectChain |
+| `status` | `StatusStrip`，编辑区整体显隐、ControlEnvironment info 与 warnings |
 
 Clip slot 的唯一类型由 `clip-edit` 定义，只含 `clipId`、`trackId`、`close`。app 显式消费这三项，编辑器自行订阅权威 store；不传完整 clip/track 或 notes 数组，不留旧对象 props 兼容。
 

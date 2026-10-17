@@ -4,6 +4,7 @@ import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
 import { Button } from "../Button"
+import { Icon } from "../Icon"
 import { isActivationKey, navigateSelection } from "../RadioGroup/keyboard"
 import type { Props, PublicInstance, StyleDesc } from "@gpuix/react"
 import type { ReactNode } from "react"
@@ -219,7 +220,7 @@ export function SettingsShell({
         <Button
           iconOnly
           label={closeLabel}
-          icon={<text style={{ fontSize: theme.control["--spacing-control-icon"] }}>×</text>}
+          icon={<Icon name="X" size={theme.control["--spacing-control-icon"]} />}
           onClick={() => onOpenChange(false)}
         />
       </div>

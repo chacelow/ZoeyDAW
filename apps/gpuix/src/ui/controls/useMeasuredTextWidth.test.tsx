@@ -61,3 +61,53 @@ test("sample layout is measured once, cached by font and strings, and never foll
   expect(finalWidth).toBe(stableWidth)
   cached.unmount()
 })
+
+test("simultaneously mounted duplicate samples all adopt the native cached width", () => {
+  const root = createTestRoot({ width: 640, height: 180 })
+  const labels = ["Duplicated live native measurements"]
+  const measured: Record<string, boolean> = {}
+  function Consumer({ id }: { readonly id: string }) {
+    const measurement = useMeasuredTextWidth(labels, { fontSize: 13, fontFamily: "Helvetica" })
+    measured[id] = measurement.measured
+    return (
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "start",
+        }}
+      >
+        {measurement.sampleNodes}
+        <div testId={id} style={{ width: measurement.width, height: 20 }} />
+      </div>
+    )
+  }
+  try {
+    root.render(
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "start" }}>
+        <Consumer id="first" />
+        <Consumer id="second" />
+        <text
+          testId="reference"
+          style={{ fontSize: 13, fontFamily: "Helvetica", whiteSpace: "nowrap" }}
+        >
+          {labels[0]}
+        </text>
+      </div>
+    )
+    for (let frame = 0; frame < 4; frame++) {
+      root.renderer.flush()
+      root.renderer.dispatchNativeEvents()
+    }
+    const reference = root.renderer.getElementBounds(root.renderer.findByTestId("reference")!.id)!
+    for (const id of ["first", "second"]) {
+      expect(measured[id]).toBe(true)
+      expect(root.renderer.getElementBounds(root.renderer.findByTestId(id)!.id)!.width).toBe(
+        Math.ceil(reference.width)
+      )
+    }
+  } finally {
+    root.unmount()
+  }
+})

@@ -67,6 +67,8 @@ pub struct Settings {
     pub preferences: Preferences,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub theme_preset: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub theme_library: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[napi(ts_type = "`${ThemeMode}`")]
     pub theme_mode: Option<ThemeMode>,
@@ -89,6 +91,7 @@ impl Default for Settings {
             schema_version: SETTINGS_SCHEMA_VERSION,
             preferences: preferences_defaults(),
             theme_preset: None,
+            theme_library: None,
             theme_mode: None,
             language: None,
             close_behavior: None,
@@ -168,6 +171,16 @@ pub fn settings_set(config_dir: String, json: String) -> napi::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn theme_library_is_optional_and_round_trips() {
+        let legacy = parse_settings(br#"{"themePreset":"amber","language":"en-US"}"#).unwrap();
+        assert_eq!(legacy.theme_library, None);
+        let mut settings = legacy;
+        settings.theme_library = Some(r#"{"selection":"custom:one","themes":[]}"#.into());
+        let encoded = serde_json::to_vec(&settings).unwrap();
+        assert_eq!(parse_settings(&encoded).unwrap(), settings);
+    }
 
     #[test]
     fn persists_settings_in_temporary_directory() {

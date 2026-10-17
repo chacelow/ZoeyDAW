@@ -474,7 +474,7 @@ it("refreshes a cached mounted Clip title when density changes without changing 
   }
   const original = show(CONTROL_METRICS.default)
   const before = titleBounds()
-  expect(before.height).toBe(21)
+  expect(before.height).toBe(DEFAULT_LAYOUT_TOKENS.track.titleHeight)
   expect(hitTest(scene.get(), 32, original.top + 25)?.kind).toBe("clip-body")
   const control = {
     ...CONTROL_METRICS.default,

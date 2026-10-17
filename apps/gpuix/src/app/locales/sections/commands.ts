@@ -1,4 +1,13 @@
 export const englishCommandTitles = {
+  dock: {
+    moveLeft: "Move panel to left group",
+    moveRight: "Move panel to right group",
+    moveUp: "Move panel to group above",
+    moveDown: "Move panel to group below",
+    toggleMaximize: "Maximize / restore group",
+    close: "Close panel",
+    hide: "Hide panel",
+  },
   project: {
     save: "Save project",
     saveAs: "Save project as",
@@ -39,6 +48,15 @@ export const englishCommandTitles = {
 }
 
 export const chineseCommandTitles: typeof englishCommandTitles = {
+  dock: {
+    moveLeft: "移动面板至左侧组",
+    moveRight: "移动面板至右侧组",
+    moveUp: "移动面板至上方组",
+    moveDown: "移动面板至下方组",
+    toggleMaximize: "最大化 / 还原面板组",
+    close: "关闭面板",
+    hide: "隐藏面板",
+  },
   project: {
     save: "保存工程",
     saveAs: "工程另存为",

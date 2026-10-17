@@ -36,6 +36,7 @@ apps/mcp/LICENSING.md
 
 /target
 crates/native/*.node
+crates/native/*.retired.tmp.*
 crates/native/index.js
 crates/native/index.d.ts
 crates/native/browser.js

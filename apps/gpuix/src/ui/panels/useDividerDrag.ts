@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef } from "react"
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload } from "@gpuix/react"
 import { PanelEnvironmentContext } from "./PanelEnvironment"
@@ -26,6 +26,7 @@ export function useDividerDrag<Snapshot>({
     onRestore.current = restore
     onFinish.current = finish
   }, [restore, finish])
+  const [dragging, setDragging] = useState(false)
   const drag = useRef<{
     origin: number
     snapshot: Snapshot
@@ -34,15 +35,18 @@ export function useDividerDrag<Snapshot>({
   const position = (event: EventPayload) => (orientation === "vertical" ? event.x : event.y)
   const cancel = useCallback(() => {
     const active = drag.current
-    drag.current = null
     if (!active) return false
+    drag.current = null
+    setDragging(false)
     onRestore.current(active.snapshot)
     return true
   }, [])
   const complete = useCallback(() => {
     const active = drag.current
+    if (!active) return
     drag.current = null
-    if (active) onFinish.current?.()
+    setDragging(false)
+    onFinish.current?.()
   }, [])
   useLayoutEffect(() => {
     if (disabled) complete()
@@ -71,6 +75,7 @@ export function useDividerDrag<Snapshot>({
   )
   useEffect(() => complete, [complete])
   return {
+    dragging,
     cancel,
     onMouseDown: (event: EventPayload) => {
       if (disabled || (event.button !== undefined && event.button !== 0)) return
@@ -80,6 +85,7 @@ export function useDividerDrag<Snapshot>({
         snapshot: start(),
         elementId: event.elementId,
       }
+      setDragging(true)
     },
     onMouseMove: update,
     onMouseUp: (event: EventPayload) => {

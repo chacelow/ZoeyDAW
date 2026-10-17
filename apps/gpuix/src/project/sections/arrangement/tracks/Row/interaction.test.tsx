@@ -207,7 +207,7 @@ for (const id of ["a-apply", "main"]) {
   test(`bottom-anchored ${id} shrinks downward and expands upward`, () => {
     const root = mount()
     root.renderer.nativeSimulateKeystrokes(element(root, `track-resize-${id}`).id, "down")
-    expect(current(id).heightPx).toBe(53)
+    expect(current(id).heightPx).toBe(70 - DEFAULT_LAYOUT_TOKENS.track.resizeStep)
     root.renderer.simulateKeystrokes("down down")
     expect(current(id).collapsed).toBe(true)
     root.renderer.simulateKeystrokes("up")
@@ -218,7 +218,7 @@ for (const id of ["a-apply", "main"]) {
 test("ordinary tracks resize in control-row steps and keep undo atomic", () => {
   const root = mount()
   root.renderer.nativeSimulateKeystrokes(element(root, "track-resize-trager").id, "up")
-  expect(current("trager").heightPx).toBe(53)
+  expect(current("trager").heightPx).toBe(70 - DEFAULT_LAYOUT_TOKENS.track.resizeStep)
   root.renderer.simulateKeystrokes("down")
   expect(current("trager").heightPx).toBe(70)
   const rect = bounds(root, "track-resize-trager")
@@ -228,7 +228,7 @@ test("ordinary tracks resize in control-row steps and keep undo atomic", () => {
     rect.y + rect.height / 2 + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2,
     0
   )
-  expect(current("trager").heightPx).toBe(104)
+  expect(current("trager").heightPx).toBe(70 + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2)
   root.renderer.nativeSimulateMouseUp(
     rect.x + rect.width / 2,
     rect.y + rect.height / 2 + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2
@@ -244,7 +244,7 @@ test("Escape rolls back a height preview instead of consuming the previous undo 
   const y = rect.y + rect.height / 2
   root.renderer.nativeSimulateMouseDown(x, y)
   root.renderer.nativeSimulateMouseMove(x, y + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2, 0)
-  expect(current("trager").heightPx).toBe(104)
+  expect(current("trager").heightPx).toBe(70 + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2)
   root.renderer.nativeSimulateKeystrokes(element(root, "track-resize-trager").id, "escape")
   expect(current("trager").heightPx).toBe(70)
   root.renderer.nativeSimulateMouseUp(x, y + DEFAULT_LAYOUT_TOKENS.track.resizeStep * 2)

@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { render, useGpuix } from "@gpuix/react"
 import { createNativeCursorLock } from "@/platform/cursor"
+import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
 import { LAUNCH_FOCUS } from "@/platform/window"
 import { GalleryDemo } from "./GalleryDemo"
 
@@ -9,8 +10,11 @@ const locale = process.env.GALLERY_LOCALE === "zh" ? "zh" : "en"
 function NativeGallery() {
   const { renderer } = useGpuix()
   const cursorLock = useMemo(() => createNativeCursorLock(renderer), [renderer])
+  const frames = useMemo(() => createAnimationFrameSource(renderer ?? {}), [renderer])
   return (
-    <GalleryDemo cursorLock={cursorLock} initialAppearance={appearance} initialLocale={locale} />
+    <AnimationFrameProvider source={frames}>
+      <GalleryDemo cursorLock={cursorLock} initialAppearance={appearance} initialLocale={locale} />
+    </AnimationFrameProvider>
   )
 }
 

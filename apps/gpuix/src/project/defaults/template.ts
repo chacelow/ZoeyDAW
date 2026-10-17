@@ -103,7 +103,7 @@ export function createWorkspaceTemplate(preferences: PreferenceValues): Workspac
     gridMode === "fixed"
       ? { mode: gridMode, bars: fixedGridBars }
       : { mode: gridMode, density: gridDensity }
-  return { ...workspace, scrollX: 0, scrollY: 0, grid }
+  return { ...workspace, scrollX: 0, scrollY: 0, grid, dockLayout: null }
 }
 
 export function createProjectTemplate({

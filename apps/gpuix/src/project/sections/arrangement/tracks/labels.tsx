@@ -42,6 +42,7 @@ export interface TrackTextLabels {
   readonly levelMeter: string
   readonly trackLane: string
   readonly solo: string
+  readonly soloShort: string
   readonly post: string
   readonly postShort: string
   readonly preShort: string

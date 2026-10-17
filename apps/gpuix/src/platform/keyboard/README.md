@@ -10,10 +10,11 @@ section 通过 `useWindowKeyboard()` 取得同一实例，在 effect 中订阅�
 - `createCommandRegistry(handlers)`：为每个 id 注册 `commands.${id}` 的双语标题 key 与返回 `handled | pass` 的 handler。handler 的业务状态和资源仍归原 owner。
 - `DEFAULT_BINDINGS` / `DEFAULT_KEYMAP`：唯一默认数据与已检测冲突的 map；`COMPUTER_NOTE_KEYS` 给持续 MIDI 音符命令提供半音参数。
 - `createKeymap(bindings)`：每行 `{ keys, command, context }`。`Mod` 匹配 Ctrl 或 Cmd（包含同时按下），`Shift?` 允许有或无 Shift，其它修饰键必须完全匹配。
-- `KeyboardContext`：互斥 `focus`（text/menu/control/timeline/clip-editor），加 `computerKeyboard`、`browserSearch` 两个当前谓词。context 条目未声明的谓词不限制；同键修饰键与上下文有交集即构造失败，不依赖绑定行顺序。
+- `KeyboardContext`：互斥 `focus`（text/menu/control/timeline/clip-editor/dock），加 `computerKeyboard`、`browserSearch` 两个当前谓词。context 条目未声明的谓词不限制；同键修饰键与上下文有交集即构造失败，不依赖绑定行顺序。
 - `keymap.resolve(event, context)`：返回 `CommandId | undefined`，已 defaultPrevented 的按键不解析。
 - `keymap.formatKeys(command)`：从同一份绑定格式化既有提示或菜单快捷键；没有绑定时返回空文字，不造虚假快捷键。
 - `consumeKey(event, result)` / `CommandResult`：来自无依赖 `shared/keyboard` 叶子，platform 重导出，ui 直接 import shared。handled 同时阻止默认和传播，pass 不改变事件。文本 shortcut isolation 不属于命令，仍保留原生默认输入。
+- `dock.*` 默认仅在 dock focus 下生效：Alt+Mod+方向键移动活动面板到相邻组，Shift+Mod+Enter 最大化/还原组，Mod+W 关闭，Shift+Mod+H 隐藏。组合根把命令映射到 `DockLayoutHandle.executeCommand`；未装配 Dock 的 timeline owner 返回 pass。`gallery/catalog/layout.tsx` 的 LayoutSection 是接线示例，命令在 Tab 本地 Enter/方向键处理之前解析，避免修饰键命令被普通激活吞掉。
 
 不包含用户文件读取、命令面板或 renderer 级焦点身份。未来分别以 `createKeymap`、注册表的命令定义、composition 的上下文输入为入口。
 

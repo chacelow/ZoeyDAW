@@ -4,6 +4,8 @@ import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
 import { navigateSelection } from "../RadioGroup/keyboard"
+import { useMeasuredTextWidth } from "../useMeasuredTextWidth"
+import { snapControlWidth } from "../grid"
 import type { Props } from "@gpuix/react"
 import type { SelectionEntry } from "../RadioGroup/keyboard"
 
@@ -14,13 +16,13 @@ export type ToggleGroupProps = Props &
   ToggleSelection & {
     disabled?: boolean
     orientation?: "horizontal" | "vertical"
-    variant?: "default" | "outline"
+    variant?: "default" | "outline" | "segmented"
   }
 interface ToggleContextValue {
   selection: ToggleSelection
   disabled: boolean
   orientation: "horizontal" | "vertical"
-  variant: "default" | "outline"
+  variant: "default" | "outline" | "segmented"
   entries: Map<string, SelectionEntry>
 }
 const ToggleContext = createContext<ToggleContextValue | null>(null)
@@ -49,13 +51,35 @@ export function ToggleGroup(props: ToggleGroupProps) {
         style={sx(
           {
             display: "flex",
+            position: "relative",
             flexDirection: orientation === "horizontal" ? "row" : "column",
-            gap: theme.control["--spacing-control-gap"],
+            gap:
+              variant === "segmented"
+                ? theme.design.spacing.joinedGroupGap
+                : theme.control["--spacing-control-track"],
+            borderRadius: theme.design.shape.toggleRadius,
+            overflow: "hidden",
           },
           style
         )}
       >
         {children}
+        {variant === "segmented" ? (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              pointerEvents: "none",
+              borderWidth: theme.design.shape.controlBorderWidth,
+              borderColor: theme.colors.border,
+              borderRadius: theme.design.shape.toggleRadius,
+            }}
+          />
+        ) : null}
       </div>
     </ToggleContext.Provider>
   )
@@ -78,6 +102,23 @@ export function ToggleGroupItem({
   if (!group) throw new Error("ToggleGroupItem requires ToggleGroup")
   const theme = useTheme()
   const { renderer } = useGpuix()
+  const text =
+    typeof children === "string" || typeof children === "number" ? String(children) : undefined
+  const textStyle = {
+    fontSize: style?.fontSize ?? theme.control["--text-control-track"],
+    fontFamily: style?.fontFamily,
+    fontWeight: style?.fontWeight,
+    lineHeight: style?.lineHeight,
+  }
+  const measurement = useMeasuredTextWidth(text === undefined ? [] : [text], textStyle)
+  const padding =
+    (style?.paddingLeft ?? style?.padding ?? theme.control["--spacing-control-track-pad"]) +
+    (style?.paddingRight ?? style?.padding ?? theme.control["--spacing-control-track-pad"])
+  const border = group.variant === "segmented" ? 0 : theme.design.shape.controlBorderWidth
+  const intrinsicWidth = snapControlWidth(
+    measurement.width + padding + border * 2,
+    theme.control["--spacing-control-track"]
+  )
   const unavailable = disabled || group.disabled
   const selected =
     group.selection.type === "single"
@@ -99,7 +140,14 @@ export function ToggleGroupItem({
       justifyContent: "center",
       gap: theme.control["--spacing-control-gap"],
       height: theme.control["--spacing-control-track"],
+      width:
+        text === undefined
+          ? theme.design.grid.segmentWidthUnits * theme.control["--spacing-control-track"]
+          : intrinsicWidth,
       fontSize: theme.control["--text-control-track"],
+      minWidth: 0,
+      flexShrink: 1,
+      overflow: "hidden",
       color: theme.colors.foreground,
       borderWidth: theme.design.shape.controlBorderWidth,
       borderRadius: theme.design.shape.toggleRadius,
@@ -118,6 +166,7 @@ export function ToggleGroupItem({
       variant: {
         default: { borderColor: theme.colors.background },
         outline: { borderColor: theme.colors.border },
+        segmented: { borderWidth: 0, borderRadius: 0, backgroundColor: theme.colors.secondary },
       },
       selected: {
         true: {
@@ -184,7 +233,26 @@ export function ToggleGroupItem({
         onKeyDown?.(event)
       }}
     >
-      {children}
+      {measurement.sampleNodes}
+      {text === undefined ? (
+        children
+      ) : (
+        <text
+          style={{
+            ...textStyle,
+            minWidth: 0,
+            flexShrink: 1,
+            flexGrow: 1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            textAlign: "center",
+            pointerEvents: "none",
+          }}
+        >
+          {text}
+        </text>
+      )}
     </div>
   )
 }

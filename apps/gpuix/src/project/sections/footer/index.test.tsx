@@ -1,8 +1,6 @@
 import { beforeEach, expect, test } from "bun:test"
-import { useState } from "react"
 import { flushSync } from "@gpuix/react"
 import { createTestRoot } from "@gpuix/react/testing"
-import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { Group, Panel, PanelDivider, PanelEnvironmentProvider } from "@/ui/panels"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { hydrateProject, projectActions, readProjectPeaks, useProjectState } from "../../adapters"
@@ -25,14 +23,12 @@ beforeEach(() =>
   )
 )
 function FooterHarness({ view = "devices" }: { view?: FooterView }) {
-  const [collapsed, setCollapsed] = useState(false)
   return (
     <ThemeProvider>
       <FooterPanel
         labels={englishFooterLabels}
         view={view}
-        collapsed={collapsed}
-        onCollapsedChange={setCollapsed}
+        onClose={() => { throw new Error("Unexpected close") }}
         subscribeWindowActive={activity.subscribe}
         renderClipEditor={() => {
           throw new Error("Clip selection must not open its editor")
@@ -60,24 +56,14 @@ test("selecting a clip keeps Affect Chain visible and does not construct a clip 
   }
 })
 
-test("footer divider only collapses and expands the fixed-height chain, preserving the chosen view", () => {
+test("device and clip contents both fill the dock host without an inner collapse divider", () => {
   const root = createTestRoot({ width: 800, height: 400 })
   try {
     root.render(<FooterHarness />)
     const content = root.renderer.findByTestId("footer-content")
-    const divider = root.renderer.findByTestId("footer-divider")
-    if (!content || !divider) throw new Error("Missing footer geometry")
-    expect(root.renderer.getElementBounds(content.id)?.height).toBe(
-      PROJECT_METRICS.footerDeviceHeight
-    )
-    root.renderer.nativeSimulateKeystrokes(divider.id, "down")
-    expect(root.renderer.findByTestId("footer-content")).toBeUndefined()
-    root.renderer.nativeSimulateKeystrokes(divider.id, "up")
-    const expanded = root.renderer.findByTestId("footer-content")
-    if (!expanded) throw new Error("Footer did not expand")
-    expect(root.renderer.getElementBounds(expanded.id)?.height).toBe(
-      PROJECT_METRICS.footerDeviceHeight
-    )
+    if (!content) throw new Error("Missing device content")
+    expect(root.renderer.getElementBounds(content.id)?.height).toBe(400)
+    expect(root.renderer.findByTestId("footer-divider")).toBeUndefined()
     root.render(<FooterHarness view="clip" />)
     expect(root.renderer.getPaintedText().join(" ")).toContain(englishFooterLabels.noClip)
     expect(root.renderer.getPaintedText().join(" ")).not.toContain(englishFooterLabels.noTrack)
@@ -95,8 +81,7 @@ test("Clip Edit follows its host height and does not expose the fixed-device div
           <FooterPanel
             labels={englishFooterLabels}
             view="clip"
-            collapsed={false}
-            onCollapsedChange={() => {
+            onClose={() => {
               throw new Error("Unexpected collapse")
             }}
             renderClipEditor={() => {
@@ -187,9 +172,8 @@ test("native Clip host divider drag changes the Footer height continuously", () 
               <FooterPanel
                 labels={englishFooterLabels}
                 view="clip"
-                collapsed={false}
                 subscribeWindowActive={activity.subscribe}
-                onCollapsedChange={() => {
+                onClose={() => {
                   throw new Error("Unexpected collapse")
                 }}
                 renderClipEditor={() => {
@@ -262,9 +246,8 @@ test("the ID slot keeps one real MIDI editor live through a velocity edit and Un
         <FooterPanel
           labels={englishFooterLabels}
           view="clip"
-          collapsed={false}
           subscribeWindowActive={activity.subscribe}
-          onCollapsedChange={unexpected}
+          onClose={unexpected}
           renderClipEditor={slot => (
             <ClipEditor
               {...slot}

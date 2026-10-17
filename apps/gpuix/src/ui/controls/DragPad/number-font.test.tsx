@@ -16,8 +16,10 @@ export type NumericPadHasNoVariantAlias = AssertFalse<
 test("numeric font token controls measured width, display and editing", async () => {
   const root = createTestRoot({ width: 640, height: 180 })
   let padding = 0
+  let unit = 0
   function Harness() {
     const theme = useTheme()
+    unit = theme.control["--spacing-control-track"]
     padding =
       theme.control["--spacing-control-track-pad"] * 2 + theme.design.shape.controlBorderWidth * 2
     return (
@@ -39,7 +41,6 @@ test("numeric font token controls measured width, display and editing", async ()
           min={0}
           max={2}
           step={1}
-          hideIcon
           format={() => "WWWWWWWWWW"}
           onChange={() => {}}
         />
@@ -71,7 +72,7 @@ test("numeric font token controls measured width, display and editing", async ()
     )!
     expect(root.renderer.findByTestId("font-pad-value")!.style.fontFamily).toBe("Helvetica")
     const width = root.renderer.getElementBounds(pad.id)!.width
-    expect(width).toBe(Math.ceil(Math.ceil(reference.width) + padding))
+    expect(width).toBe(Math.ceil((Math.ceil(reference.width) + padding) / unit) * unit)
     const bounds = root.renderer.getElementBounds(pad.id)!
     root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
     root.renderer.simulateKeystrokes("1")

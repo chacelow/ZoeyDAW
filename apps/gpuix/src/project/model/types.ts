@@ -140,6 +140,7 @@ export interface WorkspaceState {
   computerKeyboard: boolean
   link: boolean
   metronome: boolean
+  dockLayout: string | null
 }
 export interface TimeSelection {
   startBar: number

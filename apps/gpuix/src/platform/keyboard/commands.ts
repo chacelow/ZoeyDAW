@@ -2,6 +2,13 @@ import type { CommandResult } from "@/shared/keyboard"
 import type { WindowKeyEvent } from "./index"
 
 export const COMMAND_IDS = [
+  "dock.moveLeft",
+  "dock.moveRight",
+  "dock.moveUp",
+  "dock.moveDown",
+  "dock.toggleMaximize",
+  "dock.close",
+  "dock.hide",
   "project.save",
   "project.saveAs",
   "project.open",

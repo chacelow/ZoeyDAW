@@ -28,12 +28,12 @@
 - `controlBorderWidth=0` 时，数值与下拉宽度按真实 `borderWidth * 2` 推导；滚动条的内长和 thumb 横截面同样扣真实边框。Focus ring 与单选指示器描边是功能标记，独立于外壳边框。
 - `typography.numberFontFamily` 是数值字体的唯一入口（默认 Menlo）。DragPadNumber 的测量样本、显示文字和真实 input 共用该值；覆盖字体时缓存按字体键重新测量，编辑态保留同一外壳宽度。
 - `cards` 保存 `default`、`sm`、`controls`、`project` 的独立 radius/inset/gap。改变 inset 不会改变 radius。`insetOwner` 明确内边距由外壳还是 Header/Content 持有，避免嵌套双重 padding。
-- Menu 与 Popover 是不同 family，默认 surface radius 都为4，但 inset 分别为4与8；弹层列表行使用 ListRow 的共享行 chrome，不再拥有独立的项 padding、gap 或圆角。Popover 内容 gap6 仍由自身 token 持有。
+- Menu 与 Popover 是不同 family，默认 surface radius 都为4，但 inset 分别为4与8。Menu 与 DropdownButton 弹层复用 ListRow 基础 chrome，再统一使用 `menu.rowHeight/rowInset/rowGap`：行高由默认 control track 与上下 inset 推导，checkbox/radio/grid 共享同一尺寸；`separatorInset` 统一分隔线两侧的垂直留白，水平抵消 surface inset；`swatchRingWidth` 控制色格选中环。Popover 内容 gap6 仍由自身 token 持有。
 - `design.colorRecipes` 控制混色、透明洗色与语义关联；默认配方复用预设缓存，覆盖配方按 scheme 重新派生。`contentFill(color, colors, paperTint)` 显式接收 `design.colorRecipes.contentPaperTint`，没有内部固定 tint。
 - `layout.track` 一次解析控件行高、间距、边框、折叠高、标题高、resize 步长/阈值与上限。行与 Clip 投影携带同一 `trackGeometry`，命中与绘制不各读默认值。
 - `layout.clipEditor.colorSwatchSize/nameWidth` 与 `layout.scrollArea.defaultHeight` 分别拥有 Clip 色块、名称输入宽度和滚动区域缺省高度。省略 layout 时在 `createLayoutTokens()` 中按原关系解析（默认8/200/260）；完整 layout 显式值优先。ScrollArea 的 `size`、`height`、`style.height` 和 `fill` 仍优先于缺省高度。
 
-组合 Gallery 的默认、flat、加大间距是只读演示配置，不是用户主题编辑器。后台启动使用 `GPUIX_BACKGROUND=1 bun --hot apps/gpuix/src/gallery/controls.tsx`，只验证不依赖帧推进的启动与 AX；真实可见组合在前台验收。离屏整页取证入口见 [setup](../../../../../docs/agents/setup.md)。
+组合 Gallery 左侧与设置 Appearance 共用 `app/theme-editor/ThemeEditor`，不再保留 flat/spacious 只读演示或独立 controlScale 偏移。Gallery 的主题库属于页面会话，设置页主题库属于应用偏好。两处都使用同一 `resolveThemeOverrides(library, appearance)`，修改立即作用于周围的 ThemeProvider，工程与控件编辑状态不重挂载。Gallery 侧栏使用 ScrollArea，仍位于控件环境 Provider 内。
 
 ## 预设来源
 
@@ -44,6 +44,12 @@
 ## 持久化
 
 `platform/settings/theme-preset.ts` 的 `createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET)`：`get()` 校验，未知、已删除或旧格式的 id 返回 `null`（调用方回退 Default），读取不写文件。其他设置的写入会把旧值原样带过去，所以组合根启动时调用一次 `repair()`：存的是无效 id 时写入 `default` 并返回 `true`。`platform` 不能 import `shared/theme`，预设校验与 Default id 由组合根注入。
+
+用户主题由 `CustomTheme` 保存 `custom:` id、名称、基础预设、light/dark 两套 partial palette、partial design、default/transport 控件度量和 project 几何。`ThemeLibrary` 同时保存主题列表与当前 `ThemeSelection`（内置 id 或自定义 id）。颜色在基础预设上合并后调用唯一的 `derive()`；design 深合并默认值，度量合并集中默认值，再把完整分组传给 Provider，layout 仍从解析后的 control/project 派生。
+
+`app/theme-editor/schema.ts` 的 `THEME_FIELDS` 是数值和颜色编辑、范围校验、分组及文案 key 的唯一列表：包含两套基础 palette、全部形状/间距/尺寸数值（不开放混色配方、指针枚举及动效）、default/transport 度量与 project 几何；数字字体族另以文本输入编辑。颜色复用现有 culori 解析器；JSON 边界丢弃非法字段并 `logger.warn`，非法元数据不导入。新建复制当前覆盖；内置预设只读；导入使用新的 id，不覆盖同名主题。删除正在使用的自定义主题回到其基础预设。
+
+应用通过 `createThemeLibraryStore(createSettingStorage("themeLibrary"), basePreset)` 保存完整 JSON 字符串，沿用原生 settings 原子写机制；Rust 的可选字段兼容旧设置文件。`themePreset` 保留当前基础预设作为旧偏好回退，不保存第二份自定义内容。导出后 JSON 留在可复制 Input；导入可直接粘贴，不启动文件对话框。保存失败保留内存编辑并显示未持久化状态。
 
 ## 字段对照
 

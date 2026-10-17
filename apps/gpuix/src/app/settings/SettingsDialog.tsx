@@ -15,7 +15,7 @@ import { openExternalUrl } from "@/platform/external"
 import { ModalDialog } from "../dialog/ModalDialog"
 import { changeLocale, SUPPORTED_LOCALES, useAppTranslation } from "../i18n"
 import { useAppPreferences } from "../preferences"
-import { ThemePresetGrid } from "./ThemePresetGrid"
+import { ThemeEditor } from "../theme-editor"
 import { isThemeMode, THEME_MODES } from "./theme-mode"
 import type { IconName } from "@/ui/controls/Icon"
 import type { SettingsNavItem } from "@/ui/controls"
@@ -104,8 +104,9 @@ function AppearanceSection() {
     themeMode,
     setThemeMode,
     themeModePersisted,
-    themePreset,
-    setThemePreset,
+    themeLibrary,
+    setThemeLibrary,
+    themeLibraryPersisted,
     systemAppearance,
   } = useAppPreferences()
   const styles = useSectionStyle()
@@ -149,19 +150,12 @@ function AppearanceSection() {
         {systemAppearance === null ? (
           <text style={styles.muted}>{t("settings.systemUnavailable")}</text>
         ) : null}
-        {themeModePersisted ? null : (
+        {themeModePersisted && themeLibraryPersisted ? null : (
           <text style={styles.muted}>{t("settings.themeNotPersisted")}</text>
         )}
       </div>
       <Separator />
-      <div style={styles.field}>
-        <Label>{t("settings.themePreset")}</Label>
-        <ThemePresetGrid
-          value={themePreset}
-          onValueChange={setThemePreset}
-          label={t("settings.themePreset")}
-        />
-      </div>
+      <ThemeEditor value={themeLibrary} onChange={setThemeLibrary} t={t} />
     </div>
   )
 }

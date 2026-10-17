@@ -22,7 +22,7 @@ import {
   openNewProject,
 } from "@/project/adapters"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
-import { createNativeBackend } from "@/project/adapters/backend/native"
+import { createVerificationProjectBackend } from "@/project/adapters/verification/environment-backend"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { ClipEditor } from "@/project/sections/clip-edit"
 import { clipEditorLabels as demoLabels } from "@/app/locales/sections/clip-edit"
@@ -146,7 +146,7 @@ test.each(["cmd-s", "ctrl-s"])(
   "real ClipEditor %s saves the accepted project through the window owner",
   async key => {
     const { root } = await mount()
-    cleanups.push(configureProjectBackend(createNativeBackend))
+    cleanups.push(configureProjectBackend(createVerificationProjectBackend))
     cleanups.push(startProjectRuntime())
     expect(await whenProjectBackendIdle()).toBe(true)
     const files = createMemoryProjectFiles()

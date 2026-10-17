@@ -62,12 +62,8 @@ export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPagePro
   }, [projectId, openMode])
   const { composition, browserRef, focusRef } = useProjectComposition(shell)
   const labels = {
-    resizeBrowser: t("project.resizeBrowser"),
-    resizeClipEdit: t("project.resizeClipEdit"),
     browserPanel: t("panel.browser"),
     arrangementPanel: t("panel.arrangement"),
-    footerPanel: t("panel.footer"),
-    activeDescription: t("panel.activeDescription"),
   }
   if (!renderSlots)
     return composition ? (

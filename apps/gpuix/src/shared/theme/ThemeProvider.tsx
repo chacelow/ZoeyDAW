@@ -7,7 +7,7 @@ import { DEFAULT_THEME_PRESET, getThemePreset } from "./presets"
 import type { ReactNode } from "react"
 import type { ColorScheme, DerivedThemeColors } from "./colors"
 import type { ThemePresetId } from "./presets"
-import { DEFAULT_DESIGN_TOKENS } from "./design-tokens"
+import { createDockTokens, DEFAULT_DESIGN_TOKENS } from "./design-tokens"
 import type { DesignTokens } from "./design-tokens"
 
 export type Appearance = ColorScheme
@@ -55,13 +55,19 @@ export function ThemeProvider({
     () => layout ?? createLayoutTokens(control, project),
     [layout, control, project]
   )
+  const resolvedDesign = useMemo(
+    () => design === DEFAULT_DESIGN_TOKENS && control !== CONTROL_METRICS.default
+      ? { ...design, dock: createDockTokens(control) }
+      : design,
+    [design, control]
+  )
   const colors = useMemo(() => {
     if (colorsOverride !== undefined) return colorsOverride
     const selected = getThemePreset(preset)
-    return design.colorRecipes === DEFAULT_DESIGN_TOKENS.colorRecipes
+    return resolvedDesign.colorRecipes === DEFAULT_DESIGN_TOKENS.colorRecipes
       ? selected.colors[scheme]
-      : derive(selected.baseColors[scheme], scheme, design.colorRecipes)
-  }, [preset, scheme, design.colorRecipes, colorsOverride])
+      : derive(selected.baseColors[scheme], scheme, resolvedDesign.colorRecipes)
+  }, [preset, scheme, resolvedDesign.colorRecipes, colorsOverride])
   const theme = useMemo<Theme>(
     () => ({
       appearance: scheme,
@@ -71,9 +77,9 @@ export function ThemeProvider({
       transportControl,
       project,
       layout: resolvedLayout,
-      design,
+      design: resolvedDesign,
     }),
-    [scheme, preset, design, control, transportControl, project, resolvedLayout, colors]
+    [scheme, preset, resolvedDesign, control, transportControl, project, resolvedLayout, colors]
   )
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
 }

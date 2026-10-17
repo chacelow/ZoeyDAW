@@ -153,7 +153,6 @@ export function MidiEditor({
           max={Math.max(clip.lengthBars, 1024)}
           step={midi.loopStepBars}
           defaultValue={clip.lengthBars}
-          hideIcon
           format={value => labels.formats.number(value, "midi")}
           widthSamples={labels.formats.widthSamples.midi}
           onGestureStart={() => {
@@ -251,7 +250,6 @@ export function MidiEditor({
             min={1}
             max={127}
             step={1}
-            hideIcon
             defaultValue={midi.velocity}
             format={value => labels.formats.number(value, "integer")}
             widthSamples={labels.formats.widthSamples.integer}

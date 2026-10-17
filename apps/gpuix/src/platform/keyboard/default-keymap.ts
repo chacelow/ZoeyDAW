@@ -25,6 +25,13 @@ const arrangement: ContextPredicate = { focus: ["control", "timeline"] }
 const computer: ContextPredicate = { ...arrangement, computerKeyboard: true }
 
 export const DEFAULT_BINDINGS: readonly KeyBinding[] = [
+  { keys: "Alt+Mod+Left", command: "dock.moveLeft", context: { focus: ["dock"] } },
+  { keys: "Alt+Mod+Right", command: "dock.moveRight", context: { focus: ["dock"] } },
+  { keys: "Alt+Mod+Up", command: "dock.moveUp", context: { focus: ["dock"] } },
+  { keys: "Alt+Mod+Down", command: "dock.moveDown", context: { focus: ["dock"] } },
+  { keys: "Shift+Mod+Enter", command: "dock.toggleMaximize", context: { focus: ["dock"] } },
+  { keys: "Mod+W", command: "dock.close", context: { focus: ["dock"] } },
+  { keys: "Shift+Mod+H", command: "dock.hide", context: { focus: ["dock"] } },
   { keys: "Mod+S", command: "project.save", context: project },
   { keys: "Shift+Mod+S", command: "project.saveAs", context: project },
   { keys: "Shift?+Mod+O", command: "project.open", context: project },

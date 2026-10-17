@@ -1,41 +1,57 @@
-import { useCallback, useLayoutEffect, useReducer, useRef } from "react"
-import { flushSync } from "@gpuix/react"
-import { useProjectState } from "@/project/adapters"
-import { INITIAL_PROJECT_SHELL, reduceProjectShell } from "./project-shell"
-import type { PanelImperativeHandle } from "@/ui/panels"
-import type { FooterView, ProjectShellAction, ProjectShellState, SectionId } from "./project-shell"
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
+import { projectActions, useProjectState } from "@/project/adapters"
+import { useTheme } from "@/shared/theme/ThemeProvider"
+import { activateTab, addPanel, getGroups, hideTab, splitGroup } from "@/ui/panels"
+import type { DockLayoutHandle, DockLayoutJSON } from "@/ui/panels"
+import type { FooterView } from "@/project/sections/footer"
+import { restoreProjectWorkspace } from "./project-workspace"
 
-export interface ProjectShellApi extends ProjectShellState {
-  readonly browserHandleRef: React.RefObject<PanelImperativeHandle | null>
-  readonly clipHandleRef: React.RefObject<PanelImperativeHandle | null>
-  readonly setActiveSection: (section: SectionId) => void
+export interface ProjectShellApi {
+  readonly layout: DockLayoutJSON
+  readonly dockRef: React.RefObject<DockLayoutHandle | null>
+  readonly dockFocused: React.RefObject<boolean>
+  readonly browserCollapsed: boolean
+  readonly footerCollapsed: boolean
+  readonly setLayout: (layout: DockLayoutJSON) => void
   readonly toggleBrowser: () => void
   readonly toggleFooter: () => void
   readonly setFooterCollapsed: (collapsed: boolean) => void
   readonly selectFooterView: (view: FooterView) => void
-  readonly reportClipCollapsed: (collapsed: boolean) => void
 }
 
 export function useProjectShell(): ProjectShellApi {
-  const [state, dispatch] = useReducer(reduceProjectShell, INITIAL_PROJECT_SHELL)
-  const currentState = useRef(state)
-  currentState.current = state
-  const browserHandleRef = useRef<PanelImperativeHandle | null>(null)
-  const clipHandleRef = useRef<PanelImperativeHandle | null>(null)
-  const command = useCallback((action: ProjectShellAction) => {
-    flushSync(() => {
-      const next = reduceProjectShell(currentState.current, action)
-      const handle = clipHandleRef.current
-      if (next.footerView === "clip" && handle) {
-        if (next.footerCollapsed) handle.collapse()
-        else handle.expand()
-      }
-      dispatch(action)
-    })
-  }, [])
-  const editorRequest = useProjectState(current => current.session.clipEditorRequest)
-  const editingClipId = useProjectState(current => current.session.editingClipId)
-
+  const { layout: geometry } = useTheme()
+  const json = useProjectState(state => state.workspace.dockLayout)
+  const editEpoch = useProjectState(state => state.session.editEpoch)
+  const layout = useMemo(() => restoreProjectWorkspace(json, geometry.project.panels), [json, geometry.project.panels])
+  const current = useRef(layout)
+  current.current = layout
+  const dockRef = useRef<DockLayoutHandle | null>(null)
+  const dockFocused = useRef(false)
+  const setLayout = useCallback((next: DockLayoutJSON) => {
+    if (useProjectState.getState().session.editEpoch !== editEpoch) return
+    current.current = next
+    projectActions.setDockLayout(JSON.stringify(next))
+  }, [editEpoch])
+  const groups = getGroups(layout.root)
+  const editorGroup = groups.find(group => group.tabs.includes("clipEditor") || group.tabs.includes("devices"))
+  const footerCollapsed = !editorGroup
+  const selectFooterView = useCallback((view: FooterView) => {
+    const id = view === "clip" ? "clipEditor" : "devices"
+    const target = getGroups(current.current.root).find(group => group.tabs.includes("clipEditor") || group.tabs.includes("devices"))
+    if (target) setLayout({ ...activateTab(addPanel(current.current, id, target.id), id), maximizedGroup: null })
+    else {
+      const arrangement = getGroups(current.current.root).find(group => group.tabs.includes("arrangement"))
+      const next = { ...addPanel(current.current, id, arrangement?.id), maximizedGroup: null }
+      setLayout(arrangement ? splitGroup(next, id, arrangement.id, "bottom") : next)
+    }
+  }, [setLayout])
+  const setFooterCollapsed = useCallback((collapsed: boolean) => {
+    if (collapsed) setLayout(hideTab(hideTab(current.current, "clipEditor"), "devices"))
+    else selectFooterView("devices")
+  }, [setLayout, selectFooterView])
+  const editorRequest = useProjectState(state => state.session.clipEditorRequest)
+  const editingClipId = useProjectState(state => state.session.editingClipId)
   const editing = useRef(editingClipId)
   editing.current = editingClipId
   const handledRequest = useRef(editorRequest)
@@ -43,34 +59,26 @@ export function useProjectShell(): ProjectShellApi {
     if (editorRequest === handledRequest.current) return
     handledRequest.current = editorRequest
     if (editorRequest === 0) return
-    const open = editing.current !== null
-    const handle = clipHandleRef.current
-    if (handle) {
-      if (open) handle.expand()
-      else handle.collapse()
-    }
-    dispatch({ type: "clip-editor-request", editing: open })
-  }, [editorRequest])
-
+    if (editing.current !== null) selectFooterView("clip")
+    else setLayout(hideTab(current.current, "clipEditor"))
+  }, [editorRequest, selectFooterView, setLayout])
   return {
-    ...state,
-    browserHandleRef,
-    clipHandleRef,
-    setActiveSection: useCallback(section => dispatch({ type: "activate", section }), []),
+    layout, dockRef, dockFocused, footerCollapsed,
+    browserCollapsed: !groups.some(group => group.tabs.includes("browser")),
+    setLayout,
     toggleBrowser: useCallback(() => {
-      const handle = browserHandleRef.current
-      if (handle?.isCollapsed()) handle.expand()
-      else handle?.collapse()
-    }, []),
-    toggleFooter: useCallback(() => command({ type: "toggle-footer" }), [command]),
-    setFooterCollapsed: useCallback(
-      collapsed => command({ type: "set-footer-collapsed", collapsed }),
-      [command]
-    ),
-    selectFooterView: useCallback(view => command({ type: "select-footer-view", view }), [command]),
-    reportClipCollapsed: useCallback(
-      collapsed => dispatch({ type: "set-footer-collapsed", collapsed }),
-      []
-    ),
+      const shown = getGroups(current.current.root).some(group => group.tabs.includes("browser"))
+      if (shown) setLayout(hideTab(current.current, "browser"))
+      else {
+        const arrangement = getGroups(current.current.root).find(group => group.tabs.includes("arrangement"))
+        const next = { ...addPanel(current.current, "browser", arrangement?.id), maximizedGroup: null }
+        setLayout(arrangement ? splitGroup(next, "browser", arrangement.id, "left") : next)
+      }
+    }, [setLayout]),
+    toggleFooter: useCallback(() => {
+      const shown = getGroups(current.current.root).some(group => group.tabs.includes("clipEditor") || group.tabs.includes("devices"))
+      setFooterCollapsed(shown)
+    }, [setFooterCollapsed]),
+    setFooterCollapsed, selectFooterView,
   }
 }

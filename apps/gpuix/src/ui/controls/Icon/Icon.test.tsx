@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import { icons } from "lucide"
 import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
+import { CONTROL_METRICS } from "../../../shared/theme/metrics/config"
 
 import { Icon, iconMarkup } from "./index"
 
@@ -60,7 +61,7 @@ describe("Icon", () => {
     const bounds = root.renderer.getElementBounds(node.id)
     expect(bounds).not.toBeNull()
     expect(bounds?.width).toBe(bounds?.height)
-    expect(bounds?.width).toBe(10)
+    expect(bounds?.width).toBe(CONTROL_METRICS.default["--spacing-control-icon"])
     root.unmount()
   })
 })

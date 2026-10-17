@@ -1,10 +1,10 @@
 # Footer
 
-`FooterPanel` 接收 `FooterLabels`、受控 `view` 和 `collapsed`。组合根持有视图与折叠状态，视图切换只在底部 StatusStrip，Footer 不再渲染第二组标签。展开内容用本地化名称的 `group` 表达当前视图。
+`FooterPanel` 接收 `FooterLabels`、内容类型 `view`、`onClose` 和窗口激活订阅。它只渲染内容并填满宿主，不再拥有折叠分隔条、固定高度或视图切换控件。
 
-Affect Chain 与 Clip Edit 互斥，放在同一个底部面板。Affect Chain 高度取 `theme.project.footerDeviceHeight`，分隔条只折叠或展开，不自由改变高度。Clip Edit 由 `renderClipEditor({ clipId, trackId, close })` 注入；只传身份，编辑器通过 adapter 读取唯一工程 owner，不把包含 notes 的 Clip/Track 大对象穿过 React props。普通 Clip 选择不会切换标签或构造隐藏编辑器。关闭面板会卸载内容并取消未完成编辑。
+应用分别注册 `clipEditor` 与 `devices` 两个 Dock panel，默认在 Arrangement 下方同一 Tab 组中。激活、隐藏、关闭、自由调高与移组都由 DockLayout 管理；StatusStrip 只保留整体编辑区显隐按钮，不重复渲染 Clip Edit/Affect Chain 切换。Clip Edit 由 `renderClipEditor({ clipId, trackId, close })` 注入；只传身份，编辑器通过 adapter 读取唯一工程 owner，不把包含 notes 的 Clip/Track 大对象穿过 React props。普通 Clip 选择不会切换 Dock Tab；显式编辑请求激活 Clip Edit，关闭请求隐藏 Clip Edit。
 
-Clip Edit 填满宿主 Panel。可调高度由组合根的垂直 Group、Panel 与 PanelDivider 持有，Footer 不给 Clip Edit 添加固定高度的二值分隔条。`demo.tsx` 按这一接口组合宿主，切换到 Clip Edit 后可连续调整高度。
+移动、切换 Tab、最大化和隐藏保留面板内容的 React 身份；Dock 的关闭操作移除内容。Clip Edit 与 Affect Chain 都填满当前 Dock host 的可用高度。
 
 轨道设备从 `useProjectState` 读取。添加、旁通、折叠、重排、删除和参数编辑走 `projectActions.updateTrack` 与 `useProjectEditGesture`，保留撤销、快照和过期编辑 token 检查。参数格式与解析遵循注入的 locale。
 

@@ -1,6 +1,8 @@
+import { useState } from "react"
 import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx, sv } from "@/shared/theme/style"
+import { TruncatedText } from "../TruncatedText"
 import type { Props, StyleDesc } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { Theme } from "@/shared/theme/ThemeProvider"
@@ -13,6 +15,8 @@ export function listRowChrome(theme: Theme) {
     flexShrink: 0,
     minWidth: 0,
     minHeight: theme.control["--spacing-control-track"],
+    width: theme.design.grid.labelWidthUnits * theme.control["--spacing-control-track"],
+    height: theme.control["--spacing-control-track"],
     gap: theme.control["--spacing-control-track-gap"],
     paddingLeft: theme.control["--spacing-control-track-pad"],
     paddingRight: theme.control["--spacing-control-track-pad"],
@@ -44,6 +48,7 @@ export function ListRow({
   ...props
 }: ListRowProps) {
   const theme = useTheme()
+  const [hovered, setHovered] = useState(false)
   const appearance = sv({
     base: {
       ...listRowChrome(theme),
@@ -91,6 +96,14 @@ export function ListRow({
         appearance({ selected: selected ? "yes" : "no", disabled: disabled ? "yes" : "no" }),
         style
       )}
+      onMouseEnter={event => {
+        setHovered(!disabled)
+        props.onMouseEnter?.(event)
+      }}
+      onMouseLeave={event => {
+        setHovered(false)
+        props.onMouseLeave?.(event)
+      }}
       onClick={event => {
         if (!disabled) onClick?.(event)
       }}
@@ -104,7 +117,11 @@ export function ListRow({
       }}
     >
       {leading ? <div style={{ flexShrink: 0 }}>{leading}</div> : null}
-      <div style={{ flexGrow: 1, minWidth: 0 }}>{children ?? <text>{label}</text>}</div>
+      {children == null || typeof children === "string" ? (
+        <TruncatedText hovered={hovered}>{children ?? label}</TruncatedText>
+      ) : (
+        <div style={{ flexGrow: 1, minWidth: 0 }}>{children}</div>
+      )}
       {trailing ? <div style={{ flexShrink: 0 }}>{trailing}</div> : null}
     </div>
   )

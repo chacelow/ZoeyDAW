@@ -51,6 +51,9 @@ export interface DerivedThemeColors extends ThemeColors {
   arrangementMeterPeak: string
   arrangementClipInk: string
   arrangementFadeMask: string
+  soloActive: string
+  armActive: string
+  activatorActive: string
   destructiveActive: string
   destructiveHighlight: string
   destructiveFocusBorder: string
@@ -97,6 +100,9 @@ export function derive(
     arrangementMeterPeak: base[aliases.arrangementMeterPeak],
     arrangementClipInk,
     arrangementFadeMask: colorMix(arrangementClipInk, recipes.arrangementFadeMask, "transparent"),
+    soloActive: base.chart1,
+    armActive: base.destructive,
+    activatorActive: base[aliases.arrangementMeterWarn[scheme]],
     destructiveActive: colorMix(base.destructive, destructive.active[scheme], "transparent"),
     destructiveHighlight: colorMix(base.destructive, destructive.highlight[scheme], "transparent"),
     destructiveFocusBorder: colorMix(base.destructive, destructive.focusBorder, "transparent"),

@@ -48,7 +48,15 @@ export function useMeasuredTextWidth(
         <text
           key={`${key}:${index}`}
           onLayout={event => {
-            if (widths.has(key)) return
+            const sharedWidth = widths.get(key)
+            if (sharedWidth !== undefined) {
+              setResult(current =>
+                current?.key === key && current.width === sharedWidth
+                  ? current
+                  : { key, width: sharedWidth }
+              )
+              return
+            }
             const sampleWidth = event.width
             if (sampleWidth === undefined || event.height === undefined || event.height <= 0) return
             let batch = pending.current

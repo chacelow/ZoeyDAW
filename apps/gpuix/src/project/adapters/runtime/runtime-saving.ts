@@ -43,6 +43,7 @@ export function createRuntimeSaving(owner: RuntimeOwner) {
           pxPerBar: current.pxPerBar,
           scrollX: current.scrollX,
           scrollY: current.scrollY,
+          dockLayout: current.dockLayout,
         }
       : current
   }

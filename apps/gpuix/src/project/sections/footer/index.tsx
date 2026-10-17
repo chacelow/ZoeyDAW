@@ -1,4 +1,3 @@
-import { CollapseDivider } from "@/ui/panels"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { useProjectState } from "../../adapters"
 import type { ClipEditorSlot } from "@/project/sections/clip-edit"
@@ -11,8 +10,7 @@ export type FooterView = "devices" | "clip"
 export interface FooterPanelProps {
   readonly labels: FooterLabels
   readonly view: FooterView
-  readonly collapsed: boolean
-  readonly onCollapsedChange: (collapsed: boolean) => void
+  readonly onClose: () => void
   readonly renderClipEditor: (slot: ClipEditorSlot) => ReactNode
   readonly subscribeWindowActive: (listener: (active: boolean) => void) => () => void
 }
@@ -20,8 +18,7 @@ export interface FooterPanelProps {
 export function FooterPanel({
   labels,
   view,
-  collapsed,
-  onCollapsedChange,
+  onClose,
   renderClipEditor,
   subscribeWindowActive,
 }: FooterPanelProps) {
@@ -39,7 +36,6 @@ export function FooterPanel({
   const owner = tracks.find(track => track.clips.some(clip => clip.id === clipId))
   const clip = owner?.clips.find(item => item.id === clipId)
   const track = tracks.find(item => item.id === selectedTrackIds.at(-1)) ?? owner ?? null
-  const height = view === "devices" ? theme.project.footerDeviceHeight : "100%"
   const emptyClip = (
     <div
       style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -54,31 +50,19 @@ export function FooterPanel({
       style={{
         display: "flex",
         flexDirection: "column",
-        flexShrink: 0,
+        flexGrow: 1,
         width: "100%",
         minWidth: 0,
         minHeight: 0,
-        height: view === "clip" ? (collapsed ? 0 : height) : undefined,
+        height: "100%",
         backgroundColor: theme.colors.muted,
       }}
     >
-      {view === "devices" ? (
-        <CollapseDivider
-          expanded={!collapsed}
-          expandedSize={theme.project.footerDeviceHeight}
-          onExpandedChange={expanded => onCollapsedChange(!expanded)}
-          aria-label={labels.toggle}
-          formatAccessiblePixels={labels.formats.accessiblePixels}
-          testId="footer-divider"
-          style={{ backgroundColor: theme.colors.muted }}
-        />
-      ) : null}
-      {!collapsed ? (
         <div
           testId="footer-content"
           role="group"
           aria-label={view === "devices" ? labels.devicesTab : labels.clipTab}
-          style={{ height, minHeight: 0, overflow: "hidden" }}
+          style={{ height: "100%", minHeight: 0, overflow: "hidden", flexGrow: 1 }}
         >
           {view === "devices" ? (
             <EffectChain
@@ -91,14 +75,13 @@ export function FooterPanel({
               {renderClipEditor({
                 clipId: clip.id,
                 trackId: owner.id,
-                close: () => onCollapsedChange(true),
+                close: onClose,
               })}
             </Fragment>
           ) : (
             emptyClip
           )}
         </div>
-      ) : null}
     </div>
   )
 }

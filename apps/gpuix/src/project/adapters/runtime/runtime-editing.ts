@@ -178,6 +178,7 @@ export function createRuntimeEditing(runtime: RuntimeOwner, backend: RuntimeSubm
         pxPerBar: state.workspace.pxPerBar,
         scrollX: state.workspace.scrollX,
         scrollY: state.workspace.scrollY,
+        dockLayout: state.workspace.dockLayout,
       },
       session: runtime.flags(state, runtime.isEditDirty),
     }))
@@ -196,6 +197,7 @@ export function createRuntimeEditing(runtime: RuntimeOwner, backend: RuntimeSubm
           pxPerBar: state.workspace.pxPerBar,
           scrollX: state.workspace.scrollX,
           scrollY: state.workspace.scrollY,
+          dockLayout: state.workspace.dockLayout,
         },
         session: {
           ...runtime.flags(state, true),

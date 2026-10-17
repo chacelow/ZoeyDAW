@@ -18,12 +18,8 @@ export interface TrackGeometry {
 export interface LayoutTokens {
   readonly project: {
     readonly panels: {
-      readonly browserDefaultSize: number | `${number}%`
-      readonly browserMaxSize: number | `${number}%`
-      readonly arrangementMinWidth: number | `${number}%`
-      readonly clipDefaultSize: number | `${number}%`
-      readonly clipMinSize: number | `${number}%`
-      readonly clipMaxSize: number | `${number}%`
+      readonly browserDefaultSize: `${number}%`
+      readonly clipDefaultSize: `${number}%`
     }
   }
   readonly home: { readonly maxWidth: number; readonly recentCardWidth: number }
@@ -78,11 +74,7 @@ export function createLayoutTokens(control: ControlMetrics, project: ProjectMetr
     project: {
       panels: {
         browserDefaultSize: "25%",
-        browserMaxSize: "50%",
-        arrangementMinWidth: "30%",
         clipDefaultSize: "40%",
-        clipMinSize: "20%",
-        clipMaxSize: "70%",
       },
     },
     home: { maxWidth: 912, recentCardWidth: 304 },

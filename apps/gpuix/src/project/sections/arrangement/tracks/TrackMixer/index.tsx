@@ -1,5 +1,5 @@
 import { useTrackLabels } from "../labels"
-import { DragPadBar, DragPadToggle, PanControl } from "@/ui/controls"
+import { Button, DragPadBar, DragPadToggle, PanControl } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/project/adapters"
 import { trackControlRows, trackHeight } from "@/project/layout"
@@ -28,7 +28,6 @@ function MixerLevel({
   const theme = useTheme()
   return (
     <DragPadBar
-      hideIcon={!icon}
       label={label}
       value={value}
       color={theme.colors.arrangementVolume}
@@ -117,45 +116,36 @@ export function TrackMixer({ track }: { readonly track: Track }) {
           </div>
         ) : (
           <div testId={`track-actions-${track.id}`} style={row}>
-            <DragPadToggle
+            <Button
+              tone="activator"
               label={`${t("trackEnabled")} ${track.name}`}
-              value={!track.mute}
-              onChange={enabled => projectActions.updateTrack(track.id, { mute: !enabled })}
-              labelOn={label}
-              labelOff={label}
+              active={!track.mute}
+              onActiveChange={enabled => projectActions.updateTrack(track.id, { mute: !enabled })}
               testId={`track-enabled-${track.id}`}
               style={{ ...column, flexGrow: 2 }}
-            />
-            <DragPadToggle
+            >
+              {label}
+            </Button>
+            <Button
+              tone="solo"
               label={`${t("solo")} ${track.name}`}
-              value={track.solo}
-              onChange={solo => projectActions.updateTrack(track.id, { solo })}
-              labelOn="S"
-              labelOff="S"
+              active={track.solo}
+              onActiveChange={solo => projectActions.updateTrack(track.id, { solo })}
               testId={`track-solo-${track.id}`}
               style={column}
-            />
+            >
+              {t("soloShort")}
+            </Button>
             {track.kind === "audio" || track.kind === "midi" ? (
-              <DragPadToggle
+              <Button
+                tone="arm"
+                iconOnly
                 label={`${t("recordArm")} ${track.name}`}
-                value={track.armed}
-                onChange={armed => projectActions.updateTrack(track.id, { armed })}
+                active={track.armed}
+                onActiveChange={armed => projectActions.updateTrack(track.id, { armed })}
                 testId={`track-arm-${track.id}`}
-                icon={
-                  <Icon
-                    name="Circle"
-                    filled
-                    size={theme.control["--spacing-control-icon"]}
-                    color={
-                      track.armed ? theme.colors.primaryForeground : theme.colors.mutedForeground
-                    }
-                  />
-                }
-                style={{
-                  ...column,
-                  width: "auto",
-                  ...(track.armed ? { backgroundColor: theme.colors.destructive } : {}),
-                }}
+                icon={<Icon name="Circle" filled color={track.armed ? theme.colors.primaryForeground : theme.colors.mutedForeground} />}
+                style={{ ...column, width: "auto" }}
               />
             ) : null}
             {track.kind === "group" ? (
@@ -188,7 +178,6 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 </div>
               ) : null}
               <PanControl
-                hideIcon
                 label={`${t("pan")} ${track.name}`}
                 testId={`track-pan-${track.id}`}
                 value={track.pan}

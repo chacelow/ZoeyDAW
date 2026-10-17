@@ -3,10 +3,10 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sv, sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
 import { useInfoBinding, useTextFocusBinding } from "../ControlEnvironment"
-import { DragPadIcon } from "./icon"
 import { formatNumericValue } from "./numberModel"
 import { useDragPad } from "./useDragPad"
 import { useMeasuredTextWidth } from "../useMeasuredTextWidth"
+import { snapControlWidth } from "../grid"
 import type { Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { UseDragPadOptions } from "./useDragPad"
@@ -18,7 +18,6 @@ export interface DragPadNumberProps extends Omit<UseDragPadOptions, "format"> {
   readonly format?: (value: number) => string
   readonly size?: ControlSize
   readonly icon?: ReactNode
-  readonly hideIcon?: boolean
   readonly testId?: string
   readonly widthSamples?: readonly string[]
   readonly color?: string
@@ -42,7 +41,6 @@ export function NumericPad({
   editable = true,
   size = "default",
   icon,
-  hideIcon = false,
   testId,
   widthSamples = [],
   color,
@@ -91,11 +89,15 @@ export function NumericPad({
     fontSize,
     fontFamily: theme.design.typography.numberFontFamily,
   })
-  const width = Math.ceil(
-    measurement.width +
-      (hideIcon ? 0 : iconSize + iconGap) +
-      trackPad * 2 +
-      theme.design.shape.controlBorderWidth * 2
+  const width = Math.max(
+    theme.design.grid.numericWidthUnits * theme.control["--spacing-control-track"],
+    snapControlWidth(
+      measurement.width +
+        (icon ? iconSize + iconGap : 0) +
+        trackPad * 2 +
+        theme.design.shape.controlBorderWidth * 2,
+      theme.control["--spacing-control-track"]
+    )
   )
   const [layoutWidth, setLayoutWidth] = useState<number>()
   const handleLayout = useCallback<NonNullable<Props["onLayout"]>>(event => {
@@ -127,6 +129,12 @@ export function NumericPad({
   const borderRight = shell.borderRightWidth ?? shell.borderWidth ?? 0
   const innerWidth = Math.max(0, (layoutWidth ?? width) - borderLeft - borderRight)
   const normalized = max === min ? 0 : Math.max(0, Math.min(1, (value - min) / (max - min)))
+  const valueColor =
+    displayVariant === "bar" &&
+    color === undefined &&
+    normalized * innerWidth >= (innerWidth + measurement.width) / 2
+      ? theme.colors.primaryForeground
+      : theme.colors.foreground
   const bipolar =
     max === min ? 0 : Math.max(-1, Math.min(1, value / Math.max(Math.abs(min), Math.abs(max))))
   const fill = sv({
@@ -150,7 +158,6 @@ export function NumericPad({
       },
     },
   })
-  const iconNode = icon ?? <DragPadIcon size={iconSize} color={theme.colors.mutedForeground} />
   const contents = (
     <>
       {measurement.sampleNodes}
@@ -174,7 +181,7 @@ export function NumericPad({
           }}
         />
       ) : null}
-      {hideIcon ? (
+      {!icon ? (
         pad.mode !== "idle" ? (
           <div
             aria-hidden="true"
@@ -191,7 +198,7 @@ export function NumericPad({
           />
         ) : null
       ) : (
-        iconNode
+        icon
       )}
       {pad.mode === "editing" ? (
         <input
@@ -217,7 +224,7 @@ export function NumericPad({
             minWidth: 0,
             fontSize,
             fontFamily: theme.design.typography.numberFontFamily,
-            color: theme.colors.foreground,
+            color: valueColor,
             textAlign: "center",
             cursor: theme.design.cursors.text,
           }}
@@ -228,7 +235,7 @@ export function NumericPad({
           style={{
             fontSize,
             fontFamily: theme.design.typography.numberFontFamily,
-            color: theme.colors.foreground,
+            color: valueColor,
           }}
         >
           {pad.display}

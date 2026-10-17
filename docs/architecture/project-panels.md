@@ -4,21 +4,21 @@
 
 ## 结构与职责
 
-`apps/gpuix/src/app/project/ProjectLayout.tsx` 组合 Transport、Browser、Arrangement、Footer 与 Status 插槽；同目录 `useProjectShell.ts` 和 `project-shell.ts` 拥有面板激活、折叠与底部视图选择。公共外壳、Group、Panel 与分隔条位于 `apps/gpuix/src/ui/panels`。
+`apps/gpuix/src/app/project/ProjectLayout.tsx` 固定 Transport/Status，注册 Browser、Arrangement、Clip Edit 和 Affect Chain 到共享 DockLayout。`useProjectShell.ts` 从 project workspace 的版本化 dockLayout JSON 派生激活/可见状态并提供命令，不另存固定面板几何或 Footer view 状态。公共 Dock、Group、Panel 与分隔条位于 `apps/gpuix/src/ui/panels`。
 
 新增 section 在 `apps/gpuix/src/project/sections` 按业务职责组织，由应用组合根接入插槽。页面整体的 Panel 结构归布局层，section 不各自建立竞争的顶层布局。Browser 内部 navigation/results 的双栏布局归 Browser；两栏继承同一底色，不重复包 PanelShell，分类文字连续裁切，图标位置不变，资源栏保留最小宽度。
 
 Arrangement 的外观调整限于对应 section，Transport 排列限于 Transport。除当次明确要求，不改侧栏、全局主题、标题栏与 Status。
 
-底部是一个共享面板，Affect Chain 与 Clip Edit 互斥切换。Affect Chain 高度固定，垂直拖动只折叠或展开；Clip Edit 根据 Clip 内容选择音频或 MIDI 编辑器。Clip Edit 位于可连续调整的垂直 Group 内，固定高度 Affect Chain 在该 Group 外，不因 Clip 展开而被挤压。布局约束归 `app/project/layout-constraints.ts`，视图内部布局归 `project/sections/footer` 与 `project/sections/clip-edit`。
+Clip Edit 与 Affect Chain 是独立 Dock panel，默认处于 Arrangement 下方同一 Tab 组，可拆分、移组、连续调整尺寸、最大化、隐藏和关闭。Clip Edit 根据 Clip 内容选择音频或 MIDI 编辑器。业务视图内部布局归 `project/sections/footer` 与 `project/sections/clip-edit`。
 
-固定视图使用 `CollapseDivider` 的二值切换，拖动跨过半高阈值才改变显隐，支持反向拖回、Esc、失焦取消和方向键。关闭的内容卸载以取消未完成编辑；切换底部视图不重挂载 Browser/Arrangement 子树。显式 Clip 编辑请求才打开编辑器，选择 Clip 本身不自动打开。
+显式 Clip 编辑请求激活 Clip Edit，选择 Clip 本身不自动切换 Tab。Dock 移动、Tab 切换、隐藏和最大化保留内容身份，关闭才卸载；共享 `CollapseDivider` 仍服务其他二值折叠区域，但不再拥有工程工作区编辑器布局。
 
-底部保留组件类型帮助和视图开关。采样率、缓冲与 CPU 的展示必须区分设置元数据、原型预览和真实测量，不把静态值称为实时硬件性能。
+底部状态栏保留组件类型帮助、warning 和编辑面板整体显隐，不重复渲染视图切换 Tab。采样率、缓冲与 CPU 的展示必须区分设置元数据、原型预览和真实测量，不把静态值称为实时硬件性能。
 
 ## PanelShell 与分隔条
 
-每张 panel 卡片包 `PanelShell`。它统一背景、固定宽度边框与圆角，并分发原生 mouseDown 激活。active 只换边框颜色，不改变尺寸或增加外沿高亮；子控件不会屏蔽面板激活。
+普通 panel 卡片包 `PanelShell`；Dock group 由 DockFrame 统一拥有组头部、背景与外框，内容不再嵌套另一层 PanelShell，避免双边框。两者都在共享 ui/panels 中提供激活外观；active 只改变颜色，不改变尺寸或增加外沿高亮，子控件不会屏蔽组激活。
 
 边框与分隔命中区取 `useTheme().project`，圆角取 `Theme.design.shape.panelRadius`。修改配置时同步验证布局，不在消费者复制数字。Panel active 不用外沿 ring、box-shadow 或 outline；section 不重复添加卡片外壳、圆角或相邻边框，避免裁切与双线。
 

@@ -17,7 +17,8 @@ import {
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
-import { createNativeBackend } from "@/project/adapters/backend/native"
+import { createVerificationProjectBackend } from "@/project/adapters/verification/environment-backend"
+import { createThemeLibraryStore } from "./theme-editor"
 import { NATIVE_MULTI_SESSION_TEST_TIMEOUT } from "@/app/verification/native-session-budget"
 import {
   configurePreferences,
@@ -51,7 +52,7 @@ function mount(
   storage = createMemoryProjectFiles(),
   files = createMemoryFileEnvironment()
 ) {
-  cleanups.push(configureProjectBackend(createNativeBackend))
+  cleanups.push(configureProjectBackend(createVerificationProjectBackend))
   const router = createRouter(initial)
   setProjectFiles(storage)
   const keyboard = createWindowKeyboard()
@@ -67,6 +68,7 @@ function mount(
             windowRenderer={null}
             systemAppearance="dark"
             appearance={{
+              themeLibrary: createThemeLibraryStore({ get: () => null, set: () => {} }),
               themeMode: createPreferenceStore(
                 { get: () => null, set: () => {} },
                 isThemeMode,

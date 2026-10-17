@@ -10,6 +10,7 @@ import {
   previewLoop,
   commitPreview,
   cancelPreview,
+  get,
 } from "./context"
 import { transportActions } from "./transport"
 import { gridActions } from "./grid"
@@ -20,6 +21,8 @@ import { automationActions } from "./automation"
 import { markerActions } from "./markers"
 import { projectFileActions } from "./project-file"
 import { midiActions } from "./midi"
+import { reduceWorkspace } from "../model/reducers"
+import { useProjectState } from "../stores/useProjectState"
 
 export const projectActions = {
   beginEdit,
@@ -27,6 +30,10 @@ export const projectActions = {
   cancelEdit,
   undo,
   redo,
+  setDockLayout(dockLayout: string) {
+    if (get().workspace.dockLayout === dockLayout) return
+    useProjectState.setState({ workspace: reduceWorkspace(get().workspace, { dockLayout }) })
+  },
   ...transportActions,
   beginPreview,
   previewTracks,

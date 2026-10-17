@@ -28,6 +28,15 @@ crates/
 
 原生帧：动画与电平衰减只用 `platform/frame` 的 `useAnimationFrame`，不写 `setInterval`/`setTimeout` 定时链。它要求祖先有 `AnimationFrameProvider`。整个应用只在组合根挂一个 Provider，`source` 是同一个 renderer 上的 `createAnimationFrameSource(renderer)`；独立验证入口自己挂一个，代替组合根。
 
+### 工程工作区
+
+`app/project/ProjectLayout` 装配 `ui/panels/Dock`：Transport 与 StatusStrip 固定，Browser、Arrangement、Clip Edit、Affect Chain 按 id 注册；默认 Browser 在左，右侧 Arrangement 上方、两个编辑器 Tab 在下方。Gallery 使用同一 DockLayout，类别、预览和主题编辑器是独立面板。
+
+布局唯一持久化 owner 是 `ProjectState.workspace.dockLayout`（版本化 DockLayoutJSON 的 JSON 字符串，未布局的新/旧工程为 null）。`projectActions.setDockLayout` 使用与 viewport 相同的非事务视图几何路径：不制造文档 dirty/离开确认或撤销步骤，但保存时保留最新布局，取消编辑和 undo/redo 也不回退布局。`serializeProject`/`hydrateProject` 保留其完整快照；应用打开时经 Dock `fromJSON` 校验布局及面板 id，损坏布局记录 `logger.warn` 并采用主题默认布局，不丢弃工程内容。关闭/隐藏/拖动/缩放/最大化与选中 Tab 都写回同一字段。
+
+`useProjectShell` 派生面板激活与可见状态，不再持有固定 Group 的 imperative handles 或第二份 Footer view 状态。Dock 头部焦点接入现有 timeline keyboard controller 的 `dock.*` handlers；编辑内容仍由原 timeline/Clip editor keyboard owner 接管。浮动与原生弹出窗口不属于当前实现。
+
+
 ## 硬规则
 
 1. **没有 DOM、没有 CSS、没有 Tailwind class**。样式是 `sx()` / `sv()` 产出的 style 对象；颜色与度量只经 `useTheme()`，不 import `colors.ts` 或 `shared/theme/metrics`（纯 `project/layout` 与窗口入口的既有直接度量读取除外）。

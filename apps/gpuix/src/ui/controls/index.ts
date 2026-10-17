@@ -2,6 +2,9 @@ export { Button } from "./Button"
 export { IconSlot } from "./IconSlot"
 export { DragPadNumber, DragPadBar, DragPadBipolar, DragPadToggle } from "./DragPad"
 export { PanControl } from "./PanControl"
+export { Switch } from "./Switch"
+export { Knob } from "./Knob"
+export { LevelMeter } from "./LevelMeter"
 export { DropdownButton } from "./DropdownButton"
 export { PopupButton } from "./PopupButton"
 export {
@@ -9,6 +12,9 @@ export {
   ContextMenuTrigger,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuCheckboxItem,
+  ContextMenuOptionGrid,
+  ContextMenuOptionGridItem,
   ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuRadioGroup,
@@ -21,6 +27,8 @@ export {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuCheckboxItem,
+  DropdownMenuOptionGrid,
+  DropdownMenuOptionGridItem,
   DropdownMenuPortal,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
@@ -57,6 +65,9 @@ export type {
   DragPadToggleProps,
 } from "./DragPad"
 export type { PanControlProps } from "./PanControl"
+export type { SwitchProps } from "./Switch"
+export type { KnobProps } from "./Knob"
+export type { LevelMeterProps, LevelMeterChannel, LevelMeterPart } from "./LevelMeter"
 export type {
   DropdownButtonProps,
   DropdownButtonItem,
@@ -68,6 +79,10 @@ export type {
   ContextMenuTriggerProps,
   ContextMenuContentProps,
   ContextMenuItemProps,
+  ContextMenuCheckboxItemProps,
+  ContextMenuOptionGridProps,
+  ContextMenuOptionGridItemProps,
+  MenuOption,
   ContextMenuLabelProps,
   ContextMenuSeparatorProps,
   ContextMenuRadioGroupProps,
@@ -80,6 +95,8 @@ export type {
   DropdownMenuContentProps,
   DropdownMenuItemProps,
   DropdownMenuCheckboxItemProps,
+  DropdownMenuOptionGridProps,
+  DropdownMenuOptionGridItemProps,
   DropdownMenuPortalProps,
   DropdownMenuSubProps,
   DropdownMenuSubTriggerProps,
@@ -121,3 +138,17 @@ export type { ControlGroupProps } from "./ControlGroup"
 export type { DragPreviewAreaProps, DragPreviewItem } from "./DragPreviewArea"
 export { ListRow } from "./ListRow"
 export type { ListRowProps } from "./ListRow"
+export { Checkbox } from "./Checkbox"
+export type { CheckboxProps } from "./Checkbox"
+export { Fader } from "./Fader"
+export type { FaderProps } from "./Fader"
+export { Chip } from "./Chip"
+export type { ChipProps } from "./Chip"
+export { TreeRow } from "./TreeRow"
+export type { TreeRowProps } from "./TreeRow"
+export { Breadcrumb } from "./Breadcrumb"
+export type { BreadcrumbProps } from "./Breadcrumb"
+export { DeviceHeader } from "./DeviceHeader"
+export type { DeviceHeaderProps } from "./DeviceHeader"
+export { TruncatedText } from "./TruncatedText"
+export type { TruncatedTextProps } from "./TruncatedText"

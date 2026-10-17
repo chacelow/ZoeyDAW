@@ -13,6 +13,7 @@ import type { NativeClipboard } from "@/platform/clipboard"
 import type { WindowKeyboard } from "@/platform/keyboard"
 import type { AppInteraction } from "../interaction"
 import type { ArrangementGeometry } from "@/project/sections/arrangement/core/scene"
+import type { DockCommand } from "@/ui/panels"
 
 export interface ProjectComposition {
   readonly timeline: TimelineController
@@ -35,6 +36,7 @@ export interface ProjectCompositionDependencies {
   readonly blurControl: () => void
   readonly browserCollapsed: () => boolean
   readonly focusBrowserSearch: () => void
+  readonly dock?: { focused: () => boolean; execute: (command: DockCommand) => boolean }
 }
 
 export function createProjectComposition(deps: ProjectCompositionDependencies): ProjectComposition {
@@ -57,9 +59,11 @@ export function createProjectComposition(deps: ProjectCompositionDependencies): 
         if (deps.interaction.isModalOpen()) return "menu"
         if (deps.interaction.isTextFocused()) return "text"
         if (clipKey !== undefined && clipKey === windowKey) return "clip-editor"
+        if (deps.dock?.focused()) return "dock"
         return "timeline"
       },
       blurControl: deps.blurControl,
+      executeDockCommand: deps.dock?.execute,
       browserSearch: { available: () => !deps.browserCollapsed(), focus: deps.focusBrowserSearch },
       claim: event =>
         lane.keyDown({

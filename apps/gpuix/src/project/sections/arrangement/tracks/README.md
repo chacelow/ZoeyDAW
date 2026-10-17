@@ -34,7 +34,7 @@ Header geometry uses the shared 304px control column: identity 100px, routing 74
 
 The composite row uses explicit full-size column/stretch layout on the `ContextMenu` root so the host does not shrink the row to content width. Dark-track title ink uses the theme's dark surface color so it stays readable on lightened authored track colors.
 
-Routing and automation selectors use shared `fill`; plain level/send/pan controls use shared `hideIcon`, while Main cue keeps its Headphones icon. Shift+F10 opens the track menu. Owned resize keys consume their events.
+Routing and automation selectors use shared `fill`; plain level/send/pan controls pass no icon, while Main cue keeps its Headphones icon. Shift+F10 opens the track menu. Owned resize keys consume their events.
 
 ## Track gestures
 

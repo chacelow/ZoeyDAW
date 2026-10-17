@@ -145,8 +145,9 @@ test("automation drawing radius changes value projection without borrowing the p
   const { store } = fixture({ ...defaults, automationPointRadius: 8 })
   const [row] = activeAutomationRows(store.get())
   if (!row) throw new Error("Missing automation row")
-  expect(row.valueTop).toBe(64)
-  expect(row.valueHeight).toBe(122)
+  const { titleHeight } = DEFAULT_LAYOUT_TOKENS.track
+  expect(row.valueTop).toBe(43 + titleHeight)
+  expect(row.valueHeight).toBe(143 - titleHeight)
 })
 
 test("automation point hits use independent horizontal and vertical source radii", () => {

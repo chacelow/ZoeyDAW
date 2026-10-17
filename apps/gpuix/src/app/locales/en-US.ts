@@ -1,6 +1,8 @@
 import { creationNamesByLocale } from "./creation-names"
+import { themeEditorTranslations } from "./theme-editor"
 
 export default {
+  themeEditor: themeEditorTranslations.en,
   creationNames: creationNamesByLocale["en-US"],
   fileErrors: {
     read: "Could not read the project file.",

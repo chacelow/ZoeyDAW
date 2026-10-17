@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useTrackLabels } from "../labels"
-import { useTheme } from "@/shared/theme/ThemeProvider"
+import { LevelMeter } from "@/ui/controls/LevelMeter"
 import { useProjectState } from "@/project/adapters"
 import { advanceMeterPeak, createMeterPeak, meterDb } from "../../core/meters/meter-peak"
 import { useMeterEnvironment } from "./telemetry"
@@ -22,7 +22,6 @@ export function TrackMeter({
   readonly height: number
 }) {
   const { t, formats } = useTrackLabels()
-  const theme = useTheme()
   const { telemetry: readTelemetry, driver, policy } = useMeterEnvironment()
   const { minDb, maxDb } = policy
   const reader = useRef(readTelemetry)
@@ -74,120 +73,20 @@ export function TrackMeter({
       },
     })
   }, [trackId, epoch, driver, policy, minDb, silentDisplay])
-  const width = theme.control["--spacing-control-track"]
-  const { channelGap, peakWidth, zeroWidth, warningStop } = theme.design.editor.meter
-  const channelWidth = Math.floor((width - channelGap) / 2)
-  const zeroY = Math.min(height - zeroWidth, Math.round((height * maxDb) / (maxDb - minDb)))
   return (
-    <div
-      role="meter"
+    <LevelMeter
+      testId={part =>
+        part === "root" ? `track-meter-${trackId}` : `track-meter-${part}-${trackId}`
+      }
       aria-label={`${t("levelMeter")} ${trackName}`}
-      aria-valuemin={minDb}
-      aria-valuemax={maxDb}
-      aria-valuenow={Math.max(display.left, display.right)}
       aria-valuetext={formats.meter(display.left, display.right)}
-      testId={`track-meter-${trackId}`}
-      style={{
-        position: "relative",
-        width,
-        height,
-        flexShrink: 0,
-        backgroundColor: theme.colors.arrangementSurfaceAlt,
-      }}
-    >
-      {(["left", "right"] as const).map((channel, index) => {
-        const level = display[channel]
-        const peak = channel === "left" ? display.leftPeak : display.rightPeak
-        const top = Math.round(height * (1 - (level - minDb) / (maxDb - minDb)))
-        const peakY = Math.min(
-          height - peakWidth,
-          Math.round(height * (1 - (peak - minDb) / (maxDb - minDb)))
-        )
-        return (
-          <div
-            key={channel}
-            testId={`track-meter-${channel}-${trackId}`}
-            style={{
-              position: "absolute",
-              left: index === 0 ? 0 : channelWidth + channelGap,
-              top: 0,
-              width: index === 0 ? channelWidth : width - channelWidth - channelGap,
-              height,
-              overflow: "hidden",
-              backgroundColor: theme.colors.arrangementMeterGood,
-            }}
-          >
-            <div
-              aria-hidden="true"
-              testId={`track-meter-gradient-${channel}-${trackId}`}
-              style={{
-                position: "absolute",
-                top: zeroY,
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: {
-                  type: "linear-gradient",
-                  angle: 180,
-                  stops: [
-                    { position: 0, color: theme.colors.arrangementMeterWarn },
-                    { position: warningStop, color: theme.colors.arrangementMeterGood },
-                  ],
-                },
-              }}
-            />
-            <div
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                top: 0,
-                height: zeroY,
-                left: 0,
-                right: 0,
-                backgroundColor: theme.colors.arrangementMeterDanger,
-              }}
-            />
-            <div
-              aria-hidden="true"
-              testId={`track-meter-floor-${channel}-${trackId}`}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: top,
-                backgroundColor: theme.colors.muted,
-              }}
-            />
-            {peak > minDb ? (
-              <div
-                aria-hidden="true"
-                testId={`track-meter-peak-${channel}-${trackId}`}
-                style={{
-                  position: "absolute",
-                  top: peakY,
-                  left: 0,
-                  right: 0,
-                  height: peakWidth,
-                  backgroundColor: theme.colors.arrangementMeterPeak,
-                }}
-              />
-            ) : null}
-          </div>
-        )
-      })}
-      <div
-        aria-hidden="true"
-        testId={`track-meter-zero-${trackId}`}
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: zeroY,
-          height: zeroWidth,
-          backgroundColor: theme.colors.arrangementSurfaceAlt,
-        }}
-      />
-    </div>
+      minDb={minDb}
+      maxDb={maxDb}
+      height={height}
+      channels={[
+        { db: display.left, peakDb: display.leftPeak },
+        { db: display.right, peakDb: display.rightPeak },
+      ]}
+    />
   )
 }

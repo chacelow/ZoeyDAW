@@ -2,7 +2,6 @@ import { Button } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import type { ControlInfo } from "@/ui/controls"
-import type { FooterView } from "../footer"
 
 export interface StatusWarning {
   readonly message: string
@@ -11,8 +10,6 @@ export interface StatusWarning {
 export interface StatusStripLabels {
   readonly toggleFooter: string
   readonly views: string
-  readonly clip: string
-  readonly devices: string
   readonly info: Readonly<
     Record<ControlInfo, { readonly title: string; readonly description: string }>
   >
@@ -20,9 +17,7 @@ export interface StatusStripLabels {
 export interface StatusStripProps {
   readonly labels: StatusStripLabels
   readonly footerCollapsed: boolean
-  readonly view: FooterView
   readonly onToggleFooter: () => void
-  readonly onViewChange: (view: FooterView) => void
   readonly info: ControlInfo | null
   readonly warnings: readonly StatusWarning[]
 }
@@ -30,9 +25,7 @@ export interface StatusStripProps {
 export function StatusStrip({
   labels,
   footerCollapsed,
-  view,
   onToggleFooter,
-  onViewChange,
   info,
   warnings,
 }: StatusStripProps) {
@@ -132,38 +125,6 @@ export function StatusStrip({
             </text>
           </>
         ) : null}
-      </div>
-      <div
-        role="group"
-        aria-label={labels.views}
-        style={{
-          display: "flex",
-          gap: theme.control["--spacing-control-track-gap"],
-          flexShrink: 0,
-        }}
-      >
-        <Button
-          label={labels.clip}
-          active={!footerCollapsed && view === "clip"}
-          testId="status-clip"
-          onActiveChange={active => {
-            if (active) onViewChange("clip")
-            else onToggleFooter()
-          }}
-        >
-          {labels.clip}
-        </Button>
-        <Button
-          label={labels.devices}
-          active={!footerCollapsed && view === "devices"}
-          testId="status-devices"
-          onActiveChange={active => {
-            if (active) onViewChange("devices")
-            else onToggleFooter()
-          }}
-        >
-          {labels.devices}
-        </Button>
       </div>
     </div>
   )

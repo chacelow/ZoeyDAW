@@ -68,7 +68,6 @@ for (const Component of [DragPadBar, DragPadBipolar]) {
                     min={-1}
                     max={1}
                     step={0.01}
-                    hideIcon
                     style={{ width: "100%" }}
                   />
                 </div>

@@ -73,7 +73,7 @@ export function Separator({
       onMouseUp={drag.onMouseUp}
       onBlur={drag.onBlur}
       onKeyDown={onKeyDown}
-      style={sx(dividerChrome(theme), style, {
+      style={sx(dividerChrome(theme, drag.dragging), style, {
         cursor: disabled
           ? theme.design.cursors.default
           : vertical

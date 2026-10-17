@@ -45,6 +45,35 @@ it("asks for a location the first time, then saves to the same file", () => {
   expect(JSON.parse(files.entries.get(path) ?? "{}").document.transport.bpm).toBe(160)
 })
 
+it("saves and reopens dock workspace JSON through the project-file adapter", () => {
+  const dockLayout = JSON.stringify({
+    version: 1,
+    root: { kind: "group", id: "editors", tabs: ["arrangement", "clipEditor"], active: "clipEditor" },
+    hidden: ["browser", "devices"], activeGroup: "editors", maximizedGroup: "editors",
+  })
+  projectActions.setDockLayout(dockLayout)
+  expect(useProjectState.getState().session.dirty).toBe(false)
+  projectActions.saveAs(path)
+  expect(useProjectState.getState().session.dirty).toBe(false)
+  openNewProject("other-workspace")
+  expect(useProjectState.getState().workspace.dockLayout).toBeNull()
+  expect(openProjectFile(path)).toBe(true)
+  expect(useProjectState.getState().workspace.dockLayout).toBe(dockLayout)
+})
+
+it("keeps current dock geometry when saving, cancelling and undoing authored edits", () => {
+  const edit = projectActions.beginEdit("dock-workspace-save")
+  projectActions.setBpm(145)
+  projectActions.setDockLayout("workspace-during-edit")
+  expect(JSON.parse(serializeProject()).workspace.dockLayout).toBe("workspace-during-edit")
+  projectActions.cancelEdit(edit)
+  expect(useProjectState.getState().workspace.dockLayout).toBe("workspace-during-edit")
+  projectActions.setBpm(150)
+  projectActions.setDockLayout("workspace-after-edit")
+  projectActions.undo()
+  expect(useProjectState.getState().workspace.dockLayout).toBe("workspace-after-edit")
+})
+
 it("reopens a saved file and keeps edits when the write fails", () => {
   projectActions.setBpm(155)
   projectActions.saveAs(path)

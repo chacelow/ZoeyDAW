@@ -19,18 +19,21 @@ import { NativeRoot } from "./app/NativeRoot"
 import { createRouter } from "./app/router/router"
 import { createPreferenceStore } from "./app/settings/preference-store"
 import { isThemeMode } from "./app/settings/theme-mode"
+import { createThemeLibraryStore } from "./app/theme-editor"
 
 createLogPlatform().initialize()
 configureLogger({ sinks: [createNativeLogSink()] })
 initAppI18n({ storage: createSettingStorage("language") })
 const presetSetting = createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET)
+const themePreset = createPreferenceStore(presetSetting, isThemePresetId, DEFAULT_THEME_PRESET)
 const appearance = {
   themeMode: createPreferenceStore(
     createSettingStorage("themeMode"),
     isThemeMode,
     DEFAULT_THEME_MODE
   ),
-  themePreset: createPreferenceStore(presetSetting, isThemePresetId, DEFAULT_THEME_PRESET),
+  themePreset,
+  themeLibrary: createThemeLibraryStore(createSettingStorage("themeLibrary"), themePreset.get()),
 }
 setProjectFiles(createProjectFileStorage())
 const files = { recents: createRecentProjectStorage(), locations: createProjectLocations() }

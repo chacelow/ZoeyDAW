@@ -1,6 +1,6 @@
 import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { FloatingContentProps } from "@gpuix/react/floating"
-import type { RefObject } from "react"
+import type { ReactNode, RefObject } from "react"
 
 export interface MenuProps extends Props {
   open?: boolean
@@ -18,7 +18,7 @@ export type MenuContentProps = FloatingContentProps
 
 export interface MenuItemProps extends Props {
   disabled?: boolean
-  inset?: boolean
+  shortcut?: string
   onSelect?: (event: EventPayload) => void
 }
 
@@ -40,8 +40,38 @@ export interface MenuSubTriggerProps extends MenuItemProps {
   asChild?: boolean
 }
 
+export interface MenuOption {
+  id: string
+  label: string
+  disabled?: boolean
+  color?: string
+}
+
+export type MenuOptionGridProps = Omit<Props, "children"> & {
+  columns: number
+  value: string
+  onValueChange?: (value: string) => void
+} & (
+  | { options: readonly MenuOption[]; children?: never }
+  | { options?: never; children: ReactNode }
+)
+
+export interface MenuOptionGridItemProps extends MenuRadioItemProps {
+  color?: string
+}
+
+export interface MenuGridPosition {
+  group: object
+  index: number
+  columns: number
+}
+
 export type Point = { x: number; y: number }
-export type MenuEntry = { instance: PublicInstance; disabled: boolean }
+export type MenuEntry = {
+  instance: PublicInstance
+  disabled: boolean
+  grid?: MenuGridPosition
+}
 export type EntryEdge = "first" | "last"
 
 export interface MenuState {

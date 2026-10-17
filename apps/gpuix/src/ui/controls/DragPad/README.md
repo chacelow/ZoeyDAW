@@ -12,8 +12,8 @@
 - `step` 决定键入量化、格式化与方向键精度，`dragStep` 只决定拖动和滚轮。运动沿用零起点的量化网格，例如 `.25` 起始、`dragStep=1` 上拖 4px 得到 `1`，Escape 仍恢复 `.25`。
 - `onGestureStart`/`onGestureEnd`/`onGestureCancel` 供消费者绑定编辑事务；共享库不认识工程或 Undo Store。
 - `useMeasuredTextWidth` 用原生 `onLayout` 测量已挂载的不可见样本文本，包括 min/max/default/widthSamples，按字体与样本集缓存。首次布局使用估算，测量后修正一次，live value/draft 不参与宽度。自定义格式中间值更宽时须提供 `widthSamples`。
-- 紧凑/Transport 度量来自 `useTheme()`，预编辑和编辑保留同样字号、宽度与图标。
-- `hideIcon` 默认关闭；开启后，宽度只含实测文本、两侧 track padding 和边框，不预留图标位。该变体的预编辑/编辑指示为叠加在内边距内的 1px 插入符形，不占布局、不遮数值；22px 紧凑壳无法再容纳 10px 图标。普通变体保持原图标。与 Live 对照：Live 窄数值控件无独立图标；未实测 Live 编辑态指示。
+- 紧凑/Transport 度量来自 `useTheme()`，预编辑和编辑保留同样字号与宽度。
+- 默认不画图标，与 Live 窄数值控件一致：宽度只含实测文本、两侧 track padding 和边框。预编辑/编辑指示为叠加在内边距内的 1px 插入符，不占布局、不遮数值。传入 `icon` 时才预留图标位并替代插入符。
 - 默认宽度只由内容测量决定。铺满父容器时，fill 和 bipolar 中线使用根节点 `onLayout` 的实际内宽，并扣除实际边框。数值根节点通过原生 `pointerEvents: "auto"` 独占滚轮命中，fill 与指示器不拦截指针；控件外仍可滚动祖先。
 
 ## 光标能力注入

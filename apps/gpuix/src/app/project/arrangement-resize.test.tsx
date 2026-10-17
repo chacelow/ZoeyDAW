@@ -16,7 +16,7 @@ import {
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
-import { createNativeBackend } from "@/project/adapters/backend/native"
+import { createVerificationProjectBackend } from "@/project/adapters/verification/environment-backend"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { useProjectState as projectStore } from "@/project/stores/useProjectState"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
@@ -25,7 +25,6 @@ import { AppInteractionProvider } from "../interaction"
 import { AppNativeEnvironmentProvider } from "../native-environment"
 import { initAppI18n, useAppTranslation } from "../i18n"
 import { RouterProvider, createRouter } from "../router/router"
-import { clipEditorLabels } from "../locales/sections/clip-edit"
 import { ProjectSections } from "./ProjectSections"
 import { useProjectComposition } from "./useProjectComposition"
 import { useProjectShell } from "./useProjectShell"
@@ -64,7 +63,7 @@ function mount() {
       projectStore.setState(saved, true)
     }
   })
-  cleanups.push(configureProjectBackend(createNativeBackend))
+  cleanups.push(configureProjectBackend(createVerificationProjectBackend))
   hydrateProject(snapshot)
   cleanups.push(startProjectRuntime())
   const keyboard = createWindowKeyboard()
@@ -87,12 +86,8 @@ function mount() {
         focusRef={focusRef}
         projectId="r3-native-project"
         labels={{
-          resizeBrowser: t("project.resizeBrowser"),
-          resizeClipEdit: t("project.resizeClipEdit"),
           browserPanel: t("panel.browser"),
           arrangementPanel: t("panel.arrangement"),
-          footerPanel: t("panel.footer"),
-          activeDescription: t("panel.activeDescription"),
         }}
       />
     ) : null
@@ -126,17 +121,10 @@ function mount() {
       return { ...box, id: node.id }
     }
     return {
-      panel: required("arrangement-panel"),
+      panel: required("project-workspace-content-arrangement"),
       layout: required("timeline-layout"),
       grid: required("timeline-grid"),
     }
-  }
-  function closeControl() {
-    const node = root.renderer
-      .findByType("div")
-      .find(item => item.customProps?.["aria-label"] === clipEditorLabels.en.close)
-    if (!node) throw new Error("Missing actual Clip Edit close button")
-    return node
   }
   function settle() {
     for (let round = 0; round < 8; round++) {
@@ -148,7 +136,6 @@ function mount() {
     root,
     owner,
     frameGeometry,
-    closeControl,
     settle,
     close() {
       const errors: unknown[] = []
@@ -164,17 +151,15 @@ function mount() {
   }
 }
 
-test("Clip Edit toggles resize the arrangement panel and timeline box in the same draw", async () => {
+test("dock editor visibility resizes arrangement without replacing timeline ownership or viewport", async () => {
   const fixture = mount()
   try {
     expect(await whenProjectBackendIdle()).toBe(true)
     fixture.settle()
     flushSync(() => projectActions.setEditingClip("r3-clip"))
     fixture.settle()
-    if (!fixture.owner().shell.footerCollapsed) {
-      fixture.root.renderer.nativeSimulateKeystrokes(fixture.closeControl().id, "enter")
-      fixture.settle()
-    }
+    flushSync(() => fixture.owner().shell.setFooterCollapsed(true))
+    fixture.settle()
     expect(fixture.owner().shell.footerCollapsed).toBe(true)
     flushSync(() => projectActions.setViewport({ scrollY: 100 }))
     fixture.settle()
@@ -189,7 +174,7 @@ test("Clip Edit toggles resize the arrangement panel and timeline box in the sam
     }
     const fixedChrome = before.panel.height - before.layout.height
     const assertFrame = () => {
-      fixture.root.renderer.flush()
+      fixture.settle()
       const { panel, layout, grid } = fixture.frameGeometry()
       expect({ panel: panel.id, layout: layout.id, grid: grid.id }).toEqual(ids)
       expect(fixture.owner().composition).toBe(initial)
@@ -200,13 +185,13 @@ test("Clip Edit toggles resize the arrangement panel and timeline box in the sam
       expect(viewport.height).toBe(fixture.frameGeometry().layout.height)
       expect(viewport.scrollY).toBe(scrollY)
     }
-    const button = fixture.root.renderer.findByTestId("status-clip")
-    if (!button) throw new Error("Missing actual status-clip button")
-    fixture.root.renderer.nativeSimulateKeystrokes(button.id, "enter")
+    flushSync(() => fixture.owner().shell.selectFooterView("clip"))
+    fixture.settle()
     expect(fixture.owner().shell.footerCollapsed).toBe(false)
     assertFrame()
     fixture.root.renderer.dispatchNativeEvents()
-    fixture.root.renderer.nativeSimulateKeystrokes(fixture.closeControl().id, "enter")
+    flushSync(() => fixture.owner().shell.setFooterCollapsed(true))
+    fixture.settle()
     expect(fixture.owner().shell.footerCollapsed).toBe(true)
     assertFrame()
   } finally {

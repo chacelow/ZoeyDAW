@@ -89,6 +89,9 @@ Peak output is channel-major, then pixel-major `[min, max]`: `[leftMin0, leftMax
 
 `serializeProject()` returns version-2 JSON containing committed `document` and `workspace` preferences only; the current non-transactional pan/zoom/scroll viewport is retained. Temporary numeric edits and Arrangement previews do not leak into serialization or saves. `hydrateProject(json)` validates and clones the complete payload before replacing state and resetting session/history. Invalid JSON, version or schema leaves the current project intact.
 
+`workspace.dockLayout` 保存 DockLayoutJSON 的 JSON 字符串，通过 `projectActions.setDockLayout(json)` 写入，并随同 `.zdaw` workspace 序列化/恢复。缺失字段的旧工程默认 null，由应用按主题布局初始化；Dock schema 与内置 panel id 在应用边界校验，非法布局 `logger.warn` 后回到默认停靠，不影响 document。
+Dock 布局与 viewport 同属非事务视图几何：不会让仅切换 Tab/拖动布局的工程变脏或弹出离开确认，不进入 authored undo。保存总是包含当前 dockLayout；进行中的编辑取消或 undo/redo 保留当前布局，避免工作区随内容历史跳动。
+
 Saved bar positions (loop endpoints, clip starts, markers and automation points) are finite and at least 1. Durations remain strictly positive and may be less than one bar; source offsets retain their signed coordinate semantics.
 
 Parsing assigns collision-free IDs to MIDI notes missing them, preserving every existing ID. Generated IDs are deterministic within each clip and survive serialization and reparse.

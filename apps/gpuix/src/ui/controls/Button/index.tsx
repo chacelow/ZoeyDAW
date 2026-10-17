@@ -1,9 +1,13 @@
 import { consumeKey } from "@/shared/keyboard"
+import { useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sv, sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
 import { IconSlot } from "../IconSlot"
 import { useInfoBinding } from "../ControlEnvironment"
+import { TruncatedText } from "../TruncatedText"
+import { useMeasuredTextWidth } from "../useMeasuredTextWidth"
+import { snapControlWidth } from "../grid"
 import type { Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { ControlSize } from "../chrome"
@@ -16,6 +20,7 @@ export interface ButtonProps extends Omit<Props, "onChange" | "highlight"> {
   readonly iconOnly?: boolean
   readonly variant?: "default" | "outline" | "secondary" | "ghost" | "destructive" | "link"
   readonly size?: ControlSize
+  readonly tone?: "neutral" | "solo" | "arm" | "activator"
   readonly onActiveChange?: (active: boolean) => void
   readonly icon?: ReactNode
 }
@@ -27,6 +32,7 @@ export function Button({
   highlight = true,
   iconOnly = false,
   variant = "default",
+  tone = "neutral",
   size = "default",
   role = "button",
   tabIndex = 0,
@@ -43,7 +49,33 @@ export function Button({
   ref,
   ...props
 }: ButtonProps) {
+  const [hovered, setHovered] = useState(false)
   const theme = useTheme()
+  const metrics = size === "transport" ? theme.transportControl : theme.control
+  const text =
+    typeof children === "string" || typeof children === "number"
+      ? String(children).replace(/\r?\n/g, " ")
+      : undefined
+  const textStyle = {
+    fontSize: style?.fontSize ?? metrics["--text-control-track"],
+    fontFamily: style?.fontFamily,
+    fontWeight: style?.fontWeight,
+    lineHeight: style?.lineHeight,
+  }
+  const measurement = useMeasuredTextWidth(!iconOnly && text !== undefined ? [text] : [], textStyle)
+  const padding =
+    (style?.paddingLeft ?? style?.padding ?? metrics["--spacing-control-track-pad"]) +
+    (style?.paddingRight ?? style?.padding ?? metrics["--spacing-control-track-pad"])
+  const border =
+    (style?.borderLeftWidth ?? style?.borderWidth ?? theme.design.shape.controlBorderWidth) +
+    (style?.borderRightWidth ?? style?.borderWidth ?? theme.design.shape.controlBorderWidth)
+  const iconWidth = icon
+    ? metrics["--spacing-control-icon-slot"] + (style?.gap ?? metrics["--spacing-control-gap"])
+    : 0
+  const intrinsicWidth = snapControlWidth(
+    measurement.width + iconWidth + padding + border,
+    theme.control["--spacing-control-track"]
+  )
   const info = useInfoBinding({ type: "button" })
   const name = label ?? props["aria-label"] ?? (typeof children === "string" ? children : undefined)
   const activeDestructive = active && variant === "destructive"
@@ -52,6 +84,14 @@ export function Button({
     activeDestructive && highlight && !disabled
       ? theme.colors.destructiveHighlight
       : destructiveBackground
+  const toneFill =
+    tone === "solo"
+      ? theme.colors.soloActive
+      : tone === "arm"
+        ? theme.colors.armActive
+        : tone === "activator"
+          ? theme.colors.activatorActive
+          : undefined
   const appearances = sv({
     variants: {
       variant: {
@@ -84,6 +124,7 @@ export function Button({
       disabled: disabled ? "on" : "off",
       iconOnly: iconOnly ? "on" : "off",
     }),
+    !iconOnly && text !== undefined && { width: intrinsicWidth, minWidth: 0, flexShrink: 1 },
     !active && appearances({ variant }),
     activeDestructive && {
       backgroundColor: destructiveBackground,
@@ -96,7 +137,14 @@ export function Button({
         outlineColor: theme.colors.destructiveFocusOutline,
         outlineOffset: -theme.design.shape.focusRingWidth,
       },
-    }
+    },
+    active &&
+      toneFill !== undefined && {
+        backgroundColor: toneFill,
+        color: theme.colors.primaryForeground,
+        hover: { backgroundColor: toneFill, color: theme.colors.primaryForeground },
+        active: { backgroundColor: toneFill, color: theme.colors.primaryForeground },
+      }
   )
   const disabledPaint = disabled
     ? {
@@ -114,7 +162,12 @@ export function Button({
       aria-disabled={disabled}
       aria-pressed={onActiveChange ? active : undefined}
       aria-label={name}
-      style={sx(baseStyle, disabled && { hover: disabledPaint, active: disabledPaint }, style)}
+      style={sx(
+        baseStyle,
+        disabled && { hover: disabledPaint, active: disabledPaint },
+        style,
+        !iconOnly && text !== undefined && style?.width === "auto" && { width: intrinsicWidth }
+      )}
       onClick={activate}
       onKeyDown={event => {
         onKeyDown?.(event)
@@ -124,10 +177,12 @@ export function Button({
         }
       }}
       onMouseEnter={event => {
+        setHovered(!disabled)
         info.onMouseEnter()
         onMouseEnter?.(event)
       }}
       onMouseLeave={event => {
+        setHovered(false)
         info.onMouseLeave()
         onMouseLeave?.(event)
       }}
@@ -140,9 +195,12 @@ export function Button({
         onBlur?.(event)
       }}
     >
+      {measurement.sampleNodes}
       {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
-      {typeof children === "string" || typeof children === "number" ? (
-        <text>{children}</text>
+      {text !== undefined ? (
+        <TruncatedText hovered={hovered} style={{ ...textStyle, flexGrow: 0, textAlign: "center" }}>
+          {text}
+        </TruncatedText>
       ) : (
         children
       )}

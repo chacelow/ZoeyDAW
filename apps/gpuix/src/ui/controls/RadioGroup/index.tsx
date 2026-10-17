@@ -140,6 +140,8 @@ export function RadioGroupItem({
     >
       <div
         style={{
+          display: "flex",
+          flexShrink: 0,
           width: theme.control["--spacing-control-icon"],
           height: theme.control["--spacing-control-icon"],
           borderWidth: theme.design.shape.indicatorStrokeWidth,

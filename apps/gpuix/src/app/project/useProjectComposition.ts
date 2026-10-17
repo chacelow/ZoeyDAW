@@ -55,8 +55,12 @@ export function useProjectComposition(shell: ProjectShellApi) {
       blurControl: () => {
         if (focusRef.current) renderer?.focusElement?.(focusRef.current.id)
       },
-      browserCollapsed: () => shellRef.current.browserHandleRef.current?.isCollapsed() ?? true,
+      browserCollapsed: () => shellRef.current.browserCollapsed,
       focusBrowserSearch: () => browserRef.current?.focusSearch(),
+      dock: {
+        focused: () => shellRef.current.dockFocused.current,
+        execute: command => shellRef.current.dockRef.current?.executeCommand(command) ?? false,
+      },
     })
     setComposition(owner)
     return owner.dispose

@@ -66,7 +66,7 @@ export function CollapseDivider({
       onMouseUp={drag.onMouseUp}
       onBlur={drag.onBlur}
       onKeyDown={onKeyDown}
-      style={sx(dividerChrome(theme), style, {
+      style={sx(dividerChrome(theme, drag.dragging), style, {
         height: theme.project.panelGap,
         width: "100%",
         cursor: theme.design.cursors.rowResize,

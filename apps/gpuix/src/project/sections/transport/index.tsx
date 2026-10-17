@@ -138,7 +138,6 @@ export function TransportBar({
               {labels.tap}
             </Button>
             <TransportNumber
-              hideIcon
               testId="transport-bpm"
               value={meter.bpm}
               onChange={projectActions.setBpm}

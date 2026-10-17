@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react"
 import { getReducedMotion, subscribeReducedMotion } from "@/platform/window"
-import { readProjectPeaks, useProjectState } from "@/project/adapters"
+import { projectActions, readProjectPeaks, useProjectState } from "@/project/adapters"
+import { consumeKey } from "@/platform/keyboard"
 import { BrowserPanel } from "@/project/sections/browser"
 import { FooterPanel } from "@/project/sections/footer"
 import { ClipEditor } from "@/project/sections/clip-edit"
@@ -71,12 +72,12 @@ export function ProjectSections({
         />
       }
       arrangement={<ArrangementPanel composition={composition} />}
-      footer={
+      onDockKeyDown={event => consumeKey(event, composition.timeline.keyboard.down(event) ? "handled" : "pass")}
+      clipEditor={
         <FooterPanel
           labels={zh ? chineseFooterLabels : englishFooterLabels}
-          view={shell.footerView}
-          collapsed={shell.footerCollapsed}
-          onCollapsedChange={shell.setFooterCollapsed}
+          view="clip"
+          onClose={() => projectActions.setEditingClip(null)}
           subscribeWindowActive={subscribeWindowActive}
           renderClipEditor={({ clipId, trackId, close }) => (
             <ClipEditor
@@ -98,13 +99,20 @@ export function ProjectSections({
           )}
         />
       }
+      devices={
+        <FooterPanel
+          labels={zh ? chineseFooterLabels : englishFooterLabels}
+          view="devices"
+          onClose={() => shell.setFooterCollapsed(true)}
+          subscribeWindowActive={subscribeWindowActive}
+          renderClipEditor={() => null}
+        />
+      }
       status={
         <StatusStrip
           labels={zh ? chineseStatusLabels : englishStatusLabels}
           footerCollapsed={shell.footerCollapsed}
-          view={shell.footerView}
           onToggleFooter={shell.toggleFooter}
-          onViewChange={shell.selectFooterView}
           info={info}
           warnings={warning ? [{ message: warning, severity: "error" }] : []}
         />

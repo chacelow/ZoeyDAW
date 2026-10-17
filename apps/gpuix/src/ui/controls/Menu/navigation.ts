@@ -30,6 +30,31 @@ export function navigate(
   event: KeyEvent
 ): boolean {
   const key = event.key?.toLowerCase()
+  const current = menu.entries.get(event.elementId)
+  if (
+    current?.grid &&
+    (key === "left" || key === "arrowleft" || key === "right" || key === "arrowright")
+  ) {
+    consumeKey(event, "handled")
+    const { group, index, columns } = current.grid
+    const row = Math.floor(index / columns)
+    const direction = key === "left" || key === "arrowleft" ? -1 : 1
+    const candidates = [...menu.entries.values()].filter(entry => {
+      const grid = entry.grid
+      return (
+        !entry.disabled &&
+        grid?.group === group &&
+        Math.floor(grid.index / columns) === row &&
+        (grid.index - index) * direction > 0
+      )
+    })
+    const next = direction > 0 ? candidates[0] : candidates.at(-1)
+    if (next) {
+      renderer?.focusElement?.(next.instance.id)
+      next.instance.scrollIntoView?.()
+    }
+    return true
+  }
   const activeChild = menu.activeChild.current
   if (
     activeChild?.open &&

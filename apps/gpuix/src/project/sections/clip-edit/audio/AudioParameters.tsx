@@ -106,7 +106,6 @@ function MusicalNumber({
         min={min}
         max={max}
         step={denominator / (numerator * 16)}
-        hideIcon
         defaultValue={
           field === "loopLengthBars"
             ? clip.lengthBars
@@ -186,7 +185,6 @@ function SettingNumber({
         max={spec.max}
         step={spec.step}
         defaultValue={field === "sourceBpm" ? bpm : audio[field]}
-        hideIcon
         format={format}
         {...gesture}
       />
@@ -229,7 +227,6 @@ function ClipNumber({
         max={gain ? 24 : fadeRoom}
         step={gain ? 0.1 : 1 / 64}
         defaultValue={gain ? PROJECT_TEMPLATE.clip.gainDb : PROJECT_TEMPLATE.clip.fade.durationBars}
-        hideIcon
         format={value =>
           gain ? labels.formats.audioGain(value) : labels.formats.number(value, "fade")
         }

@@ -18,7 +18,7 @@ import {
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
-import { createNativeBackend } from "@/project/adapters/backend/native"
+import { createVerificationProjectBackend } from "@/project/adapters/verification/environment-backend"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { useProjectState as projectStore } from "@/project/stores/useProjectState"
 import { createManualFrames } from "@/project/sections/arrangement/lane/testing/frames.test-helper"
@@ -104,7 +104,7 @@ function mount(): LivePolicyFixture {
       projectStore.setState(savedState, true)
     }
   })
-  cleanups.push(configureProjectBackend(createNativeBackend))
+  cleanups.push(configureProjectBackend(createVerificationProjectBackend))
   hydrateProject(fixtureSnapshot)
   cleanups.push(startProjectRuntime())
 

@@ -18,7 +18,6 @@
 | --- | --- | --- |
 | `src/gallery/controls.tsx` | 是 | `GALLERY_APPEARANCE`、`GALLERY_LOCALE` |
 | `src/main.tsx` | 是 | `NODE_ENV`、`ZOEYDAW_ROUTE` |
-| `src/ui/panels/gallery.tsx` | 是 | — |
 
 ## 稳定 testId（按所属区域）
 
@@ -34,7 +33,7 @@
 
 ### `app/project`
 
-`arrangement-panel`、`browser-divider`、`browser-panel`、`clip-panel`、`project-layout`、`project-main`、`project-workspace`、`workspace-panel`
+`project-layout`、`project-workspace`
 
 ### `app/project-file`
 
@@ -46,31 +45,35 @@
 
 ### `app/settings`
 
-`language-…`、`settings-dialog`、`theme-mode-…`、`theme-preset-…`、`theme-preset-scroll`
+`language-…`、`settings-dialog`、`theme-mode-…`、`theme-preset-…`、`theme-preset-grid`
 
 ### `app/shell`
 
 `titlebar`、`titlebar-settings`、`titlebar-title`
 
+### `app/theme-editor`
+
+`theme-editor`、`theme-editor-delete`、`theme-editor-export`、`theme-editor-font`、`theme-editor-group-…`、`theme-editor-import`、`theme-editor-json`、`theme-editor-name`、`theme-editor-new`、`theme-editor-reset-…`、`theme-editor-select-…`、`theme-field-…`、`theme-reset-…`
+
 ### `app/window`
 
 `unsaved-cancel`、`unsaved-close`、`unsaved-close-content`、`unsaved-discard`、`unsaved-save`
 
+### `gallery/catalog`
+
+`gallery-adaptive-grid`、`gallery-body-scroll`、`gallery-catalog`、`gallery-categories`、`gallery-category-…`、`gallery-color-grid`、`gallery-context-row`、`gallery-dock`、`gallery-dock-counter-…`、`gallery-dock-reset`、`gallery-drag-preview`、`gallery-dropdown`、`gallery-fixed-grid`、`gallery-focus-cell`、`gallery-grid-…`、`gallery-icon`、`gallery-input`、`gallery-layouts-dock`、`gallery-layouts-mixer-panel`、`gallery-layouts-splits`、`gallery-layouts-splits-host`、`gallery-live-meter-switch`、`gallery-menu`、`gallery-open-settings`、`gallery-pan`、`gallery-popover`、`gallery-popover-align-…`、`gallery-popover-content`、`gallery-popover-side-…`、`gallery-popup`、`gallery-popup-number`、`gallery-project-card`、`gallery-project-section`、`gallery-section-…`、`gallery-settings-preview`、`gallery-transport-icon`
+
 ### `gallery/GalleryDemo.tsx`
 
-`gallery-design-…`、`gallery-design-toolbar`、`gallery-toggle-appearance`、`gallery-toggle-locale`
+`gallery-language-en`、`gallery-language-zh`
 
-### `gallery/GalleryExamples.tsx`
+### `gallery/GalleryThemePanel.tsx`
 
-`gallery-…`、`gallery-drag-preview`、`gallery-list-row-…`、`gallery-open-settings`、`gallery-project-card`、`gallery-project-section`、`gallery-scroll`
-
-### `gallery/GalleryMenus.tsx`
-
-`gallery-context-row`、`gallery-dropdown`、`gallery-menu`、`gallery-popover`、`gallery-popup`、`gallery-popup-number`
+`gallery-theme-dark`、`gallery-theme-light`、`gallery-theme-panel`
 
 ### `gallery/states.tsx`
 
-`gallery-bar`、`gallery-bipolar`、`gallery-body-scroll`、`gallery-button`、`gallery-default-toolbar`、`gallery-feedback-card`、`gallery-forms-card`、`gallery-icon`、`gallery-icon-free`、`gallery-input`、`gallery-input-shell`、`gallery-list-card`、`gallery-menu-card`、`gallery-number`、`gallery-numeric-card`、`gallery-pan`、`gallery-panel-card`、`gallery-root`、`gallery-settings-preview`、`gallery-transport-icon`、`gallery-transport-number`、`gallery-transport-toolbar`
+`gallery-root`、`gallery-workspace`
 
 ### `project/sections/arrangement/lane`
 
@@ -82,7 +85,7 @@
 
 ### `project/sections/arrangement/tracks`
 
-`track-actions-…`、`track-arm-…`、`track-arm-space-…`、`track-automation-…`、`track-color-…`、`track-cue-output-…`、`track-cue-volume-…`、`track-delete-…`、`track-drop-target-…`、`track-enabled-…`、`track-fold-…`、`track-group-frame-…`、`track-identity-…`、`track-input-…`、`track-input-channel-…`、`track-label-…`、`track-lane-…`、`track-menu-…`、`track-meter-…`、`track-meter-floor-…`、`track-meter-gradient-…`、`track-meter-peak-…`、`track-meter-zero-…`、`track-mixer-…`、`track-monitor-…`、`track-name-…`、`track-output-…`、`track-output-channel-…`、`track-pan-…`、`track-pinned-viewport`、`track-position-…`、`track-post-…`、`track-rail-…`、`track-rails-…`、`track-rename-…`、`track-resize-…`、`track-routing-…`、`track-row-…`、`track-rows`、`track-scrollable-viewport`、`track-send-…`、`track-sends-…`、`track-solo-…`、`track-title-…`、`track-volume-…`
+`track-actions-…`、`track-arm-…`、`track-arm-space-…`、`track-automation-…`、`track-color-…`、`track-cue-output-…`、`track-cue-volume-…`、`track-delete-…`、`track-drop-target-…`、`track-enabled-…`、`track-fold-…`、`track-group-frame-…`、`track-identity-…`、`track-input-…`、`track-input-channel-…`、`track-label-…`、`track-lane-…`、`track-menu-…`、`track-mixer-…`、`track-monitor-…`、`track-name-…`、`track-output-…`、`track-output-channel-…`、`track-pan-…`、`track-pinned-viewport`、`track-position-…`、`track-post-…`、`track-rail-…`、`track-rails-…`、`track-rename-…`、`track-resize-…`、`track-routing-…`、`track-row-…`、`track-rows`、`track-scrollable-viewport`、`track-send-…`、`track-sends-…`、`track-solo-…`、`track-title-…`、`track-volume-…`
 
 ### `project/sections/browser`
 
@@ -94,11 +97,11 @@
 
 ### `project/sections/footer`
 
-`device-…`、`device-add`、`device-add-…`、`device-handle-…`、`footer-content`、`footer-divider`
+`device-…`、`device-add`、`device-add-…`、`footer-content`
 
 ### `project/sections/status`
 
-`status-clip`、`status-devices`、`status-info`、`status-toggle-footer`
+`status-info`、`status-toggle-footer`
 
 ### `project/sections/transport`
 
@@ -107,10 +110,6 @@
 ### `ui/controls`
 
 `drag-preview`、`drag-source-…`、`motion-tab-…`、`motion-tabs-indicator`、`settings-nav-…`
-
-### `ui/panels`
-
-`arrangement-panel`、`arrangement-shell`、`browser-columns`、`browser-divider`、`browser-panel`、`browser-shell`、`clip-divider`、`clip-panel`、`device-divider`、`device-panel`、`fixed-results`、`main-group`、`main-panel`、`navigation-panel`、`results-panel`、`top-group`
 
 ## 已知限制
 

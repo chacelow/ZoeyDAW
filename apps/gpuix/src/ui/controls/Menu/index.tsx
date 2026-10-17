@@ -1,12 +1,15 @@
 import { useGpuix } from "@gpuix/react"
 import { renderSlot, setRefs } from "@gpuix/react/floating"
 import {
+  Children,
+  cloneElement,
   createContext,
   isValidElement,
   useCallback,
   useContext,
   useLayoutEffect,
   useRef,
+  useState,
 } from "react"
 import type { EventPayload, KeyEvent, Props, PublicInstance } from "@gpuix/react"
 import type { ReactNode } from "react"
@@ -17,10 +20,15 @@ import { MenuSub, useMenu } from "./context"
 import { MenuContent } from "./content"
 import { finishSelection, focusEntry, isActivation, navigate } from "./navigation"
 import { MenuTrigger } from "./trigger"
-import { listRowChrome } from "../ListRow"
+import { Icon } from "../Icon"
+import { IconSlot } from "../IconSlot"
+import { MenuRowContent, menuLabelChrome, menuRowChrome, menuSeparatorChrome } from "./row"
 import type {
   MenuCheckboxItemProps,
   MenuContentProps,
+  MenuGridPosition,
+  MenuOptionGridProps,
+  MenuOptionGridItemProps,
   MenuItemProps,
   MenuProps,
   MenuRadioGroupProps,
@@ -35,6 +43,9 @@ export type {
   MenuCheckboxItemProps,
   MenuContentProps,
   MenuItemProps,
+  MenuOption,
+  MenuOptionGridProps,
+  MenuOptionGridItemProps,
   MenuProps,
   MenuRadioGroupProps,
   MenuRadioItemProps,
@@ -58,7 +69,6 @@ export const DropdownMenuSub = MenuSub
 
 function MenuItem({
   disabled = false,
-  inset = false,
   asChild = false,
   children,
   onSelect,
@@ -71,18 +81,28 @@ function MenuItem({
   activate,
   role = "menuitem",
   checked,
+  shortcut,
+  trailing,
+  grid,
+  swatch = false,
   ...props
 }: MenuItemProps & {
   menuOverride?: MenuState
   activate?: (event: EventPayload) => void
   checked?: boolean
   asChild?: boolean
+  trailing?: ReactNode
+  grid?: MenuGridPosition
+  swatch?: boolean
 }) {
   const current = useMenu()
   const menu = menuOverride ?? current
   const theme = useTheme()
+  const [hovered, setHovered] = useState(false)
   const { renderer } = useGpuix()
   const instance = useRef<PublicInstance | null>(null)
+  const child = asChild && isValidElement<Props>(children) ? children : null
+  const label = child ? child.props.children : children
   const childDisabled =
     asChild && isValidElement<{ disabled?: unknown }>(children) && children.props.disabled === true
   const unavailable = disabled || menu.disabled || childDisabled
@@ -103,8 +123,8 @@ function MenuItem({
   }, [menu.entries])
   useLayoutEffect(() => {
     const item = instance.current
-    if (item) menu.entries.set(item.id, { instance: item, disabled: unavailable })
-  }, [menu.entries, unavailable])
+    if (item) menu.entries.set(item.id, { instance: item, disabled: unavailable, grid })
+  }, [menu.entries, unavailable, grid])
   const select = (event: EventPayload) => {
     if (unavailable || lastActivation.current === event) return
     lastActivation.current = event
@@ -117,19 +137,13 @@ function MenuItem({
     ...props,
     role,
     tabIndex: 0,
-    "aria-label": props["aria-label"] ?? (typeof children === "string" ? children : undefined),
+    "aria-label": props["aria-label"] ?? (typeof label === "string" ? label : undefined),
     disabled: unavailable,
     "aria-disabled": unavailable,
     "aria-checked": checked,
     style: sx(
       {
-        ...listRowChrome(theme),
-        paddingLeft: inset
-          ? theme.control["--spacing-control-icon"] +
-            theme.control["--spacing-control-track-pad"] +
-            theme.control["--spacing-control-track-gap"]
-          : theme.control["--spacing-control-track-pad"],
-        whiteSpace: "normal",
+        ...menuRowChrome(theme),
         color: unavailable ? theme.colors.mutedForeground : theme.colors.popoverForeground,
         cursor: unavailable ? theme.design.cursors.default : theme.design.cursors.action,
         hover: unavailable ? undefined : { backgroundColor: theme.colors.accent },
@@ -146,9 +160,14 @@ function MenuItem({
     ),
     onClick: select,
     onMouseEnter: (event: EventPayload) => {
+      setHovered(true)
       if (unavailable) return
       onMouseEnter?.(event)
       if (instance.current) renderer?.focusElement?.(instance.current.id)
+    },
+    onMouseLeave: (event: EventPayload) => {
+      setHovered(false)
+      props.onMouseLeave?.(event)
     },
     onKeyDown: (event: KeyEvent) => {
       if (event.elementId !== instance.current?.id) return
@@ -164,7 +183,23 @@ function MenuItem({
     "aria-disabled": boolean
     "aria-checked": boolean | undefined
   }
-  return renderSlot({ asChild, children, props: slotProps, ref: bindRef })
+  const content = (
+    <MenuRowContent
+      hovered={hovered}
+      checked={checked}
+      shortcut={shortcut}
+      trailing={trailing}
+      swatch={swatch}
+    >
+      {label}
+    </MenuRowContent>
+  )
+  return renderSlot({
+    asChild,
+    children: child ? cloneElement(child, { children: content }) : content,
+    props: slotProps,
+    ref: bindRef,
+  })
 }
 
 export function ContextMenuItem(props: MenuItemProps) {
@@ -180,7 +215,6 @@ export function DropdownMenuCheckboxItem({
   onSelect,
   ...props
 }: MenuCheckboxItemProps) {
-  const theme = useTheme()
   return (
     <MenuItem
       {...props}
@@ -192,13 +226,12 @@ export function DropdownMenuCheckboxItem({
         onSelect?.(event)
       }}
     >
-      <div aria-hidden style={{ width: theme.control["--spacing-control-icon"], flexShrink: 0 }}>
-        {checked ? "✓" : ""}
-      </div>
       {children}
     </MenuItem>
   )
 }
+
+export const ContextMenuCheckboxItem = DropdownMenuCheckboxItem
 
 export function ContextMenuRadioGroup({
   value,
@@ -221,7 +254,6 @@ export function ContextMenuRadioGroup({
 
 export function ContextMenuRadioItem({ value, children, onSelect, ...props }: MenuRadioItemProps) {
   const radio = useContext(RadioContext)
-  const theme = useTheme()
   if (!radio) throw new Error("ContextMenuRadioItem requires ContextMenuRadioGroup")
   const checked = radio.value === value
   return (
@@ -235,13 +267,111 @@ export function ContextMenuRadioItem({ value, children, onSelect, ...props }: Me
         onSelect?.(event)
       }}
     >
-      <div aria-hidden style={{ width: theme.control["--spacing-control-icon"], flexShrink: 0 }}>
-        {checked ? "●" : ""}
-      </div>
       {children}
     </MenuItem>
   )
 }
+
+const OptionGridContext = createContext<{
+  position: MenuGridPosition
+  value: string
+  onValueChange?: (value: string) => void
+} | null>(null)
+
+export function ContextMenuOptionGrid({
+  columns,
+  value,
+  onValueChange,
+  options,
+  children,
+  style,
+  ...props
+}: MenuOptionGridProps) {
+  const group = useRef({})
+  if (!Number.isInteger(columns) || columns < 1) {
+    throw new RangeError("Menu option grid columns must be a positive integer")
+  }
+  const items = options
+    ? options.map(option => (
+        <ContextMenuOptionGridItem
+          key={option.id}
+          value={option.id}
+          disabled={option.disabled}
+          color={option.color}
+        >
+          {option.label}
+        </ContextMenuOptionGridItem>
+      ))
+    : Children.toArray(children)
+  const rows = []
+  for (let start = 0; start < items.length; start += columns) {
+    rows.push(
+      <div key={start} style={{ display: "flex", flexDirection: "row", minWidth: 0 }}>
+        {Array.from({ length: columns }, (_, offset) => {
+          const index = start + offset
+          return index < items.length ? (
+            <OptionGridContext.Provider
+              key={index}
+              value={{ position: { group: group.current, index, columns }, value, onValueChange }}
+            >
+              {items[index]}
+            </OptionGridContext.Provider>
+          ) : (
+            <div key={index} style={{ flexGrow: 1, flexBasis: 0, minWidth: 0 }} />
+          )
+        })}
+      </div>
+    )
+  }
+  return (
+    <div {...props} role="group" style={sx({ display: "flex", flexDirection: "column" }, style)}>
+      {rows}
+    </div>
+  )
+}
+
+export function ContextMenuOptionGridItem({
+  value,
+  color,
+  children,
+  style,
+  onSelect,
+  ...props
+}: MenuOptionGridItemProps) {
+  const grid = useContext(OptionGridContext)
+  const theme = useTheme()
+  if (!grid) throw new Error("ContextMenuOptionGridItem requires ContextMenuOptionGrid")
+  const checked = grid.value === value
+  return (
+    <MenuItem
+      {...props}
+      role="menuitemradio"
+      checked={checked}
+      grid={grid.position}
+      swatch={color !== undefined}
+      style={sx(
+        { flexGrow: 1, flexBasis: 0, minWidth: 0 },
+        color !== undefined && {
+          backgroundColor: color,
+          outlineWidth: checked ? theme.design.menu.swatchRingWidth : 0,
+          outlineColor: theme.colors.ring,
+          outlineOffset: -theme.design.menu.swatchRingWidth,
+          hover: { backgroundColor: color },
+        },
+        style
+      )}
+      onSelect={event => {
+        if (!checked) grid.onValueChange?.(value)
+        onSelect?.(event)
+      }}
+    >
+      {children}
+    </MenuItem>
+  )
+}
+
+export const DropdownMenuOptionGrid = ContextMenuOptionGrid
+export const DropdownMenuOptionGridItem = ContextMenuOptionGridItem
 
 function SubTrigger({
   children,
@@ -271,15 +401,6 @@ function SubTrigger({
     },
     [childMenu.trigger, ref]
   )
-  const content = asChild ? (
-    children
-  ) : (
-    <>
-      {children}
-      <div aria-hidden="true" style={{ flexGrow: 1 }} />
-      <text aria-hidden="true">›</text>
-    </>
-  )
   return (
     <MenuItem
       {...props}
@@ -290,6 +411,11 @@ function SubTrigger({
       disabled={disabled || childMenu.disabled}
       menuOverride={parent}
       activate={open}
+      trailing={
+        <IconSlot>
+          <Icon name="ChevronRight" />
+        </IconSlot>
+      }
       aria-haspopup="menu"
       aria-expanded={childMenu.open}
       onMouseEnter={event => {
@@ -304,7 +430,7 @@ function SubTrigger({
         }
       }}
     >
-      {content}
+      {children}
     </MenuItem>
   )
 }
@@ -319,10 +445,7 @@ export function ContextMenuLabel({ style, ...props }: Props) {
       {...props}
       style={sx(
         {
-          padding: theme.design.menu.labelInset,
-          color: theme.colors.mutedForeground,
-          fontSize: theme.control["--text-control-track"],
-          whiteSpace: "normal",
+          ...menuLabelChrome(theme),
         },
         style
       )}
@@ -338,11 +461,7 @@ export function ContextMenuSeparator({ style, ...props }: Props) {
       role="separator"
       style={sx(
         {
-          height: theme.design.shape.separatorWidth,
-          flexShrink: 0,
-          marginTop: theme.design.menu.contextSeparatorInset,
-          marginBottom: theme.design.menu.contextSeparatorInset,
-          backgroundColor: theme.colors.border,
+          ...menuSeparatorChrome(theme),
         },
         style
       )}
@@ -379,3 +498,8 @@ export type ContextMenuSeparatorProps = Props
 export type DropdownMenuLabelProps = Props
 export type DropdownMenuSeparatorProps = Props
 export type DropdownMenuPortalProps = { children?: ReactNode }
+export type ContextMenuOptionGridProps = MenuOptionGridProps
+export type DropdownMenuOptionGridProps = MenuOptionGridProps
+export type ContextMenuOptionGridItemProps = MenuOptionGridItemProps
+export type DropdownMenuOptionGridItemProps = MenuOptionGridItemProps
+export type ContextMenuCheckboxItemProps = MenuCheckboxItemProps

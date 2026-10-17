@@ -300,7 +300,8 @@ function isWorkspace(v: unknown): v is WorkspaceState {
     bool(v.drawMode) &&
     bool(v.computerKeyboard) &&
     bool(v.link) &&
-    bool(v.metronome)
+    bool(v.metronome) &&
+    (v.dockLayout === null || typeof v.dockLayout === "string")
   )
 }
 
@@ -392,6 +393,9 @@ export function parseProject(json: string): { document: DocumentState; workspace
   }
   if (record(workspacePayload) && !("metronome" in workspacePayload)) {
     workspacePayload = { ...workspacePayload, metronome: PREFERENCE_DEFAULTS.workspace.metronome }
+  }
+  if (record(workspacePayload) && !("dockLayout" in workspacePayload)) {
+    workspacePayload = { ...workspacePayload, dockLayout: null }
   }
   if (!isWorkspace(workspacePayload)) {
     throw new Error("Invalid or unsupported project snapshot")
@@ -501,6 +505,7 @@ export function parseProject(json: string): { document: DocumentState; workspace
       computerKeyboard: view.computerKeyboard,
       link: view.link,
       metronome: view.metronome,
+      dockLayout: view.dockLayout,
     },
   }
 }

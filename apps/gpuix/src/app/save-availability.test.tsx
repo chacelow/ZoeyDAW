@@ -14,7 +14,7 @@ import {
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
-import { createNativeBackend } from "@/project/adapters/backend/native"
+import { createVerificationProjectBackend } from "@/project/adapters/verification/environment-backend"
 import { NATIVE_MULTI_SESSION_TEST_TIMEOUT } from "@/app/verification/native-session-budget"
 
 function SaveAvailability() {
@@ -25,7 +25,7 @@ function SaveAvailability() {
 test(
   "save availability follows a damaged open, Save As recovery and project switching",
   async () => {
-    const unregister = configureProjectBackend(createNativeBackend)
+    const unregister = configureProjectBackend(createVerificationProjectBackend)
     const files = createMemoryProjectFiles()
     setProjectFiles(files)
     openNewProject("availability-seed")

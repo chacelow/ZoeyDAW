@@ -1,11 +1,14 @@
 import { sv } from "../../shared/theme/style"
 import { colorMix } from "../../shared/theme/color-mix"
+import { snapControlWidth } from "./grid"
 import type { Theme } from "../../shared/theme/ThemeProvider"
 
 export type ControlSize = "default" | "transport"
 
 export function controlChrome(theme: Theme, size: ControlSize = "default") {
   const metrics = size === "transport" ? theme.transportControl : theme.control
+  const unit = theme.control["--spacing-control-track"]
+  const height = snapControlWidth(metrics["--spacing-control-track"], unit)
   return sv({
     base: {
       display: "flex",
@@ -14,7 +17,8 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
       justifyContent: "center",
       position: "relative",
       flexShrink: 0,
-      height: metrics["--spacing-control-track"],
+      height,
+      width: theme.design.grid.buttonWidthUnits * unit,
       gap: metrics["--spacing-control-gap"],
       paddingLeft: metrics["--spacing-control-track-pad"],
       paddingRight: metrics["--spacing-control-track-pad"],
@@ -64,7 +68,7 @@ export function controlChrome(theme: Theme, size: ControlSize = "default") {
         off: {},
       },
       iconOnly: {
-        on: { width: metrics["--spacing-control-track"], paddingLeft: 0, paddingRight: 0 },
+        on: { width: height, paddingLeft: 0, paddingRight: 0 },
         off: {},
       },
     },

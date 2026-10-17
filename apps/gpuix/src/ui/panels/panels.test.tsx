@@ -1,18 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { mkdtempSync, readFileSync, rmSync } from "node:fs"
-import { tmpdir } from "node:os"
-import path from "node:path"
-import { createRef, useState } from "react"
+import { createRef, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "../../shared/theme/ThemeProvider"
+import { Button } from "@/ui/controls/Button"
 import { Group } from "./Group"
 import { Panel } from "./Panel"
 import type { PanelImperativeHandle } from "./Panel"
 import { PanelDivider } from "./PanelDivider"
 import { PanelShell } from "./PanelShell"
-import { PanelGallery, GALLERY_DEVICE_HEIGHT } from "./PanelGallery"
 import { PanelEnvironmentProvider } from "./PanelEnvironment"
 import { CollapseDivider } from "./CollapseDivider"
 
@@ -64,6 +61,58 @@ function pair(ref = createRef<PanelImperativeHandle>()) {
   )
 }
 
+const DEVICE_HEIGHT = 160
+
+function EditorSplitRegression() {
+  const clip = useRef<PanelImperativeHandle>(null)
+  const [clipHeight, setClipHeight] = useState(0)
+  const [devices, setDevices] = useState(true)
+  return (
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+      <Button
+        style={{ height: 24, flexShrink: 0 }}
+        onClick={() => {
+          if (clip.current?.isCollapsed()) clip.current.resize(160)
+          else clip.current?.collapse()
+        }}
+      >
+        Toggle Clip
+      </Button>
+      <Group orientation="vertical" style={{ height: 0, flexGrow: 1 }}>
+        <Panel minSize={180}>
+          <text>Arrangement</text>
+        </Panel>
+        <PanelDivider
+          orientation="horizontal"
+          testId="clip-divider"
+          disabled={clipHeight === 0}
+          hidden={clipHeight === 0}
+        />
+        <Panel
+          defaultSize={0}
+          minSize={120}
+          maxSize="70%"
+          collapsible
+          panelRef={clip}
+          onResize={size => setClipHeight(size.inPixels)}
+          testId="clip-panel"
+        >
+          <text>Clip</text>
+        </Panel>
+      </Group>
+      <CollapseDivider
+        expanded={devices}
+        expandedSize={DEVICE_HEIGHT}
+        onExpandedChange={setDevices}
+        aria-label="Toggle Device"
+        formatAccessiblePixels={pixels => `${pixels} pixels`}
+        testId="device-divider"
+      />
+      <div testId="device-panel" style={{ height: devices ? DEVICE_HEIGHT : 0, flexShrink: 0 }} />
+    </div>
+  )
+}
+
 describe("native resizable panel interactions", () => {
   test("a 7px divider captures beyond its hitbox and keeps a continuous pixel delta", async () => {
     const root = await mount(pair())
@@ -89,30 +138,23 @@ describe("native resizable panel interactions", () => {
     expect(bounds(root, "left").width).toBeCloseTo(before)
   })
 
-  test("divider paints nothing on hover or press; only the resize cursor marks the hit area", async () => {
-    const directory = mkdtempSync(path.join(tmpdir(), "divider-states-"))
-    const image = path.join(directory, "frame.png")
-    try {
-      const root = await mount(pair())
-      const point = divider(root, "divider")
-      const capture = () => {
-        root.renderer.flush()
-        root.renderer.captureScreenshot(image)
-        return readFileSync(image)
-      }
-      root.renderer.clockPause()
-      root.renderer.nativeSimulateMouseMove(point.x + 300, point.y)
-      const idle = capture()
-      root.renderer.nativeSimulateMouseMove(point.x, point.y)
-      expect(capture().equals(idle)).toBe(true)
-      root.renderer.nativeSimulateMouseDown(point.x, point.y)
-      expect(capture().equals(idle)).toBe(true)
-      root.renderer.nativeSimulateMouseUp(point.x, point.y)
-      const handle = root.renderer.findByTestId("divider")
-      expect(handle?.style?.cursor).toBe("col-resize")
-    } finally {
-      rmSync(directory, { recursive: true, force: true })
+  test("divider highlights on hover and drag while retaining its 7px hit area", async () => {
+    const root = await mount(pair())
+    const point = divider(root, "divider")
+    const handle = root.renderer.findByTestId("divider")
+    expect(handle?.style?.cursor).toBe("col-resize")
+    expect(bounds(root, "divider").width).toBe(7)
+    const hover = handle?.style?.hover
+    if (!hover || typeof hover !== "object" || !("backgroundColor" in hover)) {
+      throw new Error("Missing divider hover background")
     }
+    expect(hover.backgroundColor).toBeDefined()
+    root.renderer.nativeSimulateMouseDown(point.x, point.y)
+    root.renderer.flush()
+    expect(root.renderer.findByTestId("divider")?.style?.backgroundColor).toBe(
+      hover.backgroundColor
+    )
+    root.renderer.nativeSimulateMouseUp(point.x, point.y)
   })
 
   test("focus loss cancels and directional keys adjust the focused divider", async () => {
@@ -289,8 +331,8 @@ describe("native resizable panel interactions", () => {
     expect(valueText()).toBe("0,0 points")
   })
 
-  test("gallery Clip expansion leaves Device fixed and Device threshold reverses before release", async () => {
-    const root = await mount(<PanelGallery />)
+  test("Clip expansion leaves Device fixed and Device threshold reverses before release", async () => {
+    const root = await mount(<EditorSplitRegression />)
     const deviceBefore = bounds(root, "device-panel").height
     const toggle = root.renderer.findByText("Toggle Clip")
     if (!toggle) throw new Error("Missing clip toggle")
@@ -299,21 +341,21 @@ describe("native resizable panel interactions", () => {
     root.renderer.nativeSimulateClick(toggleBox.x + 10, toggleBox.y + 5)
     await settle(root)
     expect(bounds(root, "clip-panel").height).toBeCloseTo(160)
-    expect(bounds(root, "device-panel").height).toBe(GALLERY_DEVICE_HEIGHT)
-    expect(deviceBefore).toBe(GALLERY_DEVICE_HEIGHT)
+    expect(bounds(root, "device-panel").height).toBe(DEVICE_HEIGHT)
+    expect(deviceBefore).toBe(DEVICE_HEIGHT)
     const point = divider(root, "device-divider")
     root.renderer.nativeSimulateMouseDown(point.x, point.y)
     root.renderer.nativeSimulateMouseMove(point.x, point.y + 79, 0)
-    expect(bounds(root, "device-panel").height).toBe(GALLERY_DEVICE_HEIGHT)
+    expect(bounds(root, "device-panel").height).toBe(DEVICE_HEIGHT)
     root.renderer.nativeSimulateMouseMove(point.x, point.y + 81, 0)
     expect(bounds(root, "device-panel").height).toBe(0)
     root.renderer.nativeSimulateMouseMove(point.x, point.y + 30, 0)
-    expect(bounds(root, "device-panel").height).toBe(GALLERY_DEVICE_HEIGHT)
+    expect(bounds(root, "device-panel").height).toBe(DEVICE_HEIGHT)
     root.renderer.nativeSimulateMouseUp(point.x, point.y + 30)
   })
 
   test("a divider hidden by collapse finishes capture without reopening its panel", async () => {
-    const root = await mount(<PanelGallery />)
+    const root = await mount(<EditorSplitRegression />)
     const toggle = root.renderer.findByText("Toggle Clip")
     const box = toggle && root.renderer.getElementBounds(toggle.id)
     if (!box) throw new Error("Missing clip toggle")
@@ -328,7 +370,7 @@ describe("native resizable panel interactions", () => {
     root.renderer.nativeSimulateClick(box.x + 5, box.y + 5)
     await settle(root)
     expect(bounds(root, "clip-panel").height).toBe(160)
-    expect(bounds(root, "device-panel").height).toBe(GALLERY_DEVICE_HEIGHT)
+    expect(bounds(root, "device-panel").height).toBe(DEVICE_HEIGHT)
   })
 
   test("injected window inactivity rolls back once and ignores later captured moves", async () => {

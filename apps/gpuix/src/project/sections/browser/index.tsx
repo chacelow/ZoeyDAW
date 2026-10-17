@@ -2,6 +2,7 @@ import { useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import {
   Button,
+  Chip,
   DragPreviewArea,
   Input,
   IconSlot,
@@ -311,22 +312,15 @@ export function BrowserPanel({
                   }}
                 >
                   {CONTENT_KINDS.map(kind => (
-                    <Button
+                    <Chip
                       key={kind}
-                      active={browser.kind === kind}
+                      selected={browser.kind === kind}
                       label={labels.kinds[kind]}
-                      icon={
-                        <Icon
-                          name="Check"
-                          color={
-                            browser.kind === kind ? theme.colors.primaryForeground : "transparent"
-                          }
-                        />
-                      }
-                      onActiveChange={() => browser.setKind(kind)}
+                      icon={<Icon name="Check" color={browser.kind === kind ? theme.colors.primaryForeground : "transparent"} />}
+                      onSelectedChange={() => browser.setKind(kind)}
                     >
                       {labels.kinds[kind]}
-                    </Button>
+                    </Chip>
                   ))}
                 </div>
               ) : null}

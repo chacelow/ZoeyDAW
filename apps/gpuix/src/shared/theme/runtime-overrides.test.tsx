@@ -29,6 +29,8 @@ function bounds(root: TestRoot, id: string) {
 
 test("runtime group overrides resize real controls and track identity without static geometry", () => {
   const root = createTestRoot({ width: 500, height: 200 })
+  const defaultUnit = CONTROL_METRICS.default["--spacing-control-track"]
+  const defaultTransportSize = Math.ceil(CONTROL_METRICS.transport["--spacing-control-track"] / defaultUnit) * defaultUnit
   const track = createMockDocument().tracks[0]
   if (!track) throw new Error("Missing track fixture")
   const render = (props: Omit<ThemeProviderProps, "children">) =>
@@ -54,10 +56,16 @@ test("runtime group overrides resize real controls and track identity without st
     )
   try {
     render({})
-    expect(bounds(root, "default-control").height).toBe(13)
-    expect(bounds(root, "transport-control").height).toBe(20)
+    expect(bounds(root, "default-control").height).toBe(
+      CONTROL_METRICS.default["--spacing-control-track"]
+    )
+    expect(bounds(root, "transport-control").height).toBe(defaultTransportSize)
+    expect(bounds(root, "transport-control").width).toBe(defaultTransportSize)
+    expect(root.renderer.findByTestId("transport-control")?.style.fontSize).toBe(CONTROL_METRICS.transport["--text-control-track"])
     expect(bounds(root, `track-identity-${track.id}`).width).toBe(100)
-    expect(bounds(root, `track-title-${track.id}`).height).toBe(21)
+    expect(bounds(root, `track-title-${track.id}`).height).toBe(
+      DEFAULT_LAYOUT_TOKENS.track.titleHeight
+    )
 
     const control = {
       ...CONTROL_METRICS.default,
@@ -65,6 +73,7 @@ test("runtime group overrides resize real controls and track identity without st
       "--spacing-control-track-gap": 5,
     }
     const transportControl = { ...CONTROL_METRICS.transport, "--spacing-control-track": 40 }
+    const customTransportSize = Math.ceil(transportControl["--spacing-control-track"] / control["--spacing-control-track"]) * control["--spacing-control-track"]
     const project = { ...PROJECT_METRICS, identityWidth: 140, trackBorder: 3, maxTrackHeight: 400 }
     const design = {
       ...DEFAULT_DESIGN_TOKENS,
@@ -74,7 +83,9 @@ test("runtime group overrides resize real controls and track identity without st
     render({ control, transportControl, project, design })
     expect(bounds(root, "default-control").height).toBe(29)
     expect(bounds(root, "default-control").width).toBe(29)
-    expect(bounds(root, "transport-control").height).toBe(40)
+    expect(bounds(root, "transport-control").height).toBe(customTransportSize)
+    expect(bounds(root, "transport-control").width).toBe(customTransportSize)
+    expect(root.renderer.findByTestId("transport-control")?.style.fontSize).toBe(transportControl["--text-control-track"])
     expect(bounds(root, `track-identity-${track.id}`).width).toBe(140)
     expect(bounds(root, `track-title-${track.id}`).height).toBe(39)
     expect(root.renderer.findByTestId("default-control")?.style.borderRadius).toBe(9)
@@ -93,9 +104,14 @@ test("runtime group overrides resize real controls and track identity without st
     })
     expect(bounds(root, `track-title-${track.id}`).height).toBe(47)
     render({})
-    expect(bounds(root, "default-control").height).toBe(13)
-    expect(bounds(root, "transport-control").height).toBe(20)
-    expect(bounds(root, `track-title-${track.id}`).height).toBe(21)
+    expect(bounds(root, "default-control").height).toBe(
+      CONTROL_METRICS.default["--spacing-control-track"]
+    )
+    expect(bounds(root, "transport-control").height).toBe(defaultTransportSize)
+    expect(bounds(root, "transport-control").width).toBe(defaultTransportSize)
+    expect(bounds(root, `track-title-${track.id}`).height).toBe(
+      DEFAULT_LAYOUT_TOKENS.track.titleHeight
+    )
   } finally {
     root.unmount()
   }

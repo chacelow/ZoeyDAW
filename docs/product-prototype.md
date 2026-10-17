@@ -30,6 +30,7 @@ zoeydaw 是 gpuix 原生 DAW。React 写交互逻辑，gpuix 原生元素渲染�
   2. 面板注册表：每个面板按 id 注册（标题、图标、工厂、最小尺寸、能否关闭）。这一层就是以后扩展插入自己面板的接口，先只给内置面板用。
   3. 拖拽停靠：拖 Tab 或面板组到边缘/中心/Tab 条，显示落点预览；键盘可操作（移动到相邻组、最大化、关闭），走命令注册表与 keymap；面板移动后组件状态保留。
   4. 浮动与弹出窗口：需要原生多窗口支持，最后做，单独评估。首选参考 [dockview](https://github.com/dockview/dockview)（MIT，零依赖；`dockview-core` 是纯 TypeScript 的布局与停靠模型，分组、网格、分割视图、浮动组、弹出窗口、序列化、键盘停靠都有完整 e2e 测试；用户 2026-10-16 推荐），其次是 FlexLayout。两者渲染层都依赖 DOM/CSS，不能直接在 gpuix 里用。开工时先评估 `dockview-core` 的模型层（gridview/splitview 尺寸求解、分组与停靠目标计算、序列化）能否脱离 DOM 单独引用：能，就复用模型、只写 gpuix 的渲染与输入层（引入新依赖按规则需用户确认）；不能，就借鉴它的 API 与测试用例自己实现。扩展 API（第三方面板）放在“插件”阶段，和 CLAP/VST3 一起设计。
+  - 2026-10-17 实现状态：步骤 1–3 已接入 gpuix 应用及 Gallery；`DockLayout` 复用 Group/Panel 的尺寸求解，工程 workspace 保存版本化布局，Browser/Arrangement/Clip Edit/Affect Chain 完成注册、Tab/边缘停靠、命令键盘、隐藏和最大化。Mixer 尚未作为独立业务面板实现，不以注册表能力冒充 Mixer 功能。步骤 4（浮动/原生弹窗）仍未实现。
 
 **声音核心**
 

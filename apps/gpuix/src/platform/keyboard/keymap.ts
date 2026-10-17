@@ -1,6 +1,6 @@
 import type { CommandId, CommandInput } from "./commands"
 
-export type KeyboardFocus = "text" | "menu" | "control" | "timeline" | "clip-editor"
+export type KeyboardFocus = "text" | "menu" | "control" | "timeline" | "clip-editor" | "dock"
 export interface KeyboardContext {
   readonly focus: KeyboardFocus
   readonly computerKeyboard: boolean
@@ -23,7 +23,7 @@ export interface Keymap {
   formatKeys(command: CommandId): string
 }
 
-const FOCUS: readonly KeyboardFocus[] = ["text", "menu", "control", "timeline", "clip-editor"]
+const FOCUS: readonly KeyboardFocus[] = ["text", "menu", "control", "timeline", "clip-editor", "dock"]
 const KEY_NAMES: Readonly<Record<string, string>> = {
   " ": "space",
 }
