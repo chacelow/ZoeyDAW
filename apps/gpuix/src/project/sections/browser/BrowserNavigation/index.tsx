@@ -1,6 +1,6 @@
 import { useRef } from "react"
 import { useGpuix } from "@gpuix/react"
-import { ListRow, ScrollArea, useInfoBinding } from "@/ui/controls"
+import { List, ListRow, ScrollArea, TruncatedText, useInfoBinding } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { Icon } from "@/ui/controls/Icon"
 import type { IconName } from "@/ui/controls/Icon"
@@ -73,84 +73,79 @@ export function BrowserNavigation({
   return (
     <ScrollArea
       fill
-      role="listbox"
       tabIndex={-1}
-      aria-label={labels.title}
       {...info}
       style={{ padding: theme.control["--spacing-control-track-pad"] }}
     >
       {SOURCE_GROUPS.map(group => (
         <div key={group.id}>
-          <text
+          <TruncatedText
             style={{
               color: theme.colors.mutedForeground,
               fontSize: theme.control["--text-control-track"],
+              flexGrow: 0,
               marginTop: theme.control["--spacing-control-track-gap"],
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
             }}
           >
             {labels.groups[group.id]}
-          </text>
-          {group.sources.map(id => (
-            <ListRow
-              key={id}
-              role="option"
-              tabIndex={source === id ? 0 : -1}
-              label={labels.sources[id]}
-              testId={`browser-source-${id}`}
-              selected={source === id}
-              leading={
-                <Icon
-                  name={SOURCE_ICONS[id]}
-                  filled={id === "favorites" || id === "purple"}
-                  color={
-                    id === "favorites"
-                      ? theme.colors.chart5
-                      : id === "purple"
-                        ? theme.colors.chart4
-                        : source === id
-                          ? theme.colors.primaryForeground
-                          : theme.colors.mutedForeground
-                  }
-                />
-              }
-              onFocus={info.onFocus}
-              onBlur={info.onBlur}
-              ref={node => {
-                if (node) nodes.current.set(id, node)
-                else nodes.current.delete(id)
-              }}
-              onClick={() => onNavigate(id)}
-              onKeyDown={event => {
-                if (!["up", "down", "home", "end"].includes(event.key ?? "")) return
-                const index = SOURCES.indexOf(id)
-                const nextIndex =
-                  event.key === "home"
-                    ? 0
-                    : event.key === "end"
-                      ? SOURCES.length - 1
-                      : Math.max(
-                          0,
-                          Math.min(SOURCES.length - 1, index + (event.key === "down" ? 1 : -1))
-                        )
-                const next = SOURCES[nextIndex]
-                if (!next) return
-                event.preventDefault()
-                event.stopPropagation()
-                onNavigate(next)
-                const node = nodes.current.get(next)
-                if (node) {
-                  renderer?.focusElement?.(node.id)
-                  renderer?.scrollIntoView?.(node.id)
+          </TruncatedText>
+          <List aria-label={labels.groups[group.id]}>
+            {group.sources.map(id => (
+              <ListRow
+                key={id}
+                role="option"
+                tabIndex={source === id ? 0 : -1}
+                label={labels.sources[id]}
+                testId={`browser-source-${id}`}
+                selected={source === id}
+                leading={
+                  <Icon
+                    name={SOURCE_ICONS[id]}
+                    filled={id === "favorites" || id === "purple"}
+                    color={
+                      id === "favorites"
+                        ? theme.colors.chart5
+                        : id === "purple"
+                          ? theme.colors.chart4
+                          : source === id
+                            ? theme.colors.primaryForeground
+                            : theme.colors.mutedForeground
+                    }
+                  />
                 }
-              }}
-            >
-              <text style={{ whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-                {labels.sources[id]}
-              </text>
-            </ListRow>
-          ))}
+                onFocus={info.onFocus}
+                onBlur={info.onBlur}
+                ref={node => {
+                  if (node) nodes.current.set(id, node)
+                  else nodes.current.delete(id)
+                }}
+                onClick={() => onNavigate(id)}
+                onKeyDown={event => {
+                  if (!["up", "down", "home", "end"].includes(event.key ?? "")) return
+                  const index = SOURCES.indexOf(id)
+                  const nextIndex =
+                    event.key === "home"
+                      ? 0
+                      : event.key === "end"
+                        ? SOURCES.length - 1
+                        : Math.max(
+                            0,
+                            Math.min(SOURCES.length - 1, index + (event.key === "down" ? 1 : -1))
+                          )
+                  const next = SOURCES[nextIndex]
+                  if (!next) return
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onNavigate(next)
+                  const node = nodes.current.get(next)
+                  if (node) {
+                    renderer?.focusElement?.(node.id)
+                    renderer?.scrollIntoView?.(node.id)
+                  }
+                }}
+              />
+            ))}
+          </List>
         </div>
       ))}
     </ScrollArea>

@@ -103,6 +103,8 @@ export default {
   },
   titlebar: {
     settings: "设置",
+    gallery: "组件画廊",
+    home: "主页",
     appTitle: "ZoeyDAW",
     file: "文件",
     edit: "编辑",

@@ -34,7 +34,14 @@ import {
   resizeSplit,
   toggleMaximize,
 } from "./model"
-import type { DockBorderSide, DockBounds, DockGroup, DockLayoutJSON, DockNode, DockOrientation } from "./model"
+import type {
+  DockBorderSide,
+  DockBounds,
+  DockGroup,
+  DockLayoutJSON,
+  DockNode,
+  DockOrientation,
+} from "./model"
 import type { DockLabels, DockPanelRegistry } from "./index"
 import type { DockDragController, DockDropTarget } from "./useDockDrag"
 export interface FrameProps {
@@ -43,6 +50,7 @@ export interface FrameProps {
   labels: DockLabels
   commit: (layout: DockLayoutJSON) => void
   drag: DockDragController
+  preview: (layout: DockLayoutJSON | null) => void
   groups: RefObject<Map<string, DockBounds>>
   tabs: RefObject<Map<string, DockBounds>>
   tabRefs: RefObject<Map<string, PublicInstance>>
@@ -69,7 +77,6 @@ export function DockTree(props: FrameProps & { node: DockNode }) {
   const theme = useTheme()
   const { node } = props
   if (node.kind === "group") return <DockFrame {...props} group={node} />
-  const total = node.sizes.reduce((sum, size) => sum + size, 0)
   const boxes = splitBounds(node, props.bounds, theme.design.shape.separatorWidth)
   return (
     <Group
@@ -79,10 +86,15 @@ export function DockTree(props: FrameProps & { node: DockNode }) {
       weights={node.sizes}
       extent={node.orientation === "horizontal" ? props.bounds.width : props.bounds.height}
       bounds={props.bounds}
-      onLayoutChange={sizes => {
+      onLayoutCancel={() => props.preview(null)}
+      onLayoutPreview={sizes => {
+        const pixels = sizes.reduce((sum, size) => sum + size, 0)
+        if (pixels > 0 && sizes.every(size => size > 0))
+          props.preview(resizeSplit(props.layout, node.id, sizes))
+      }}
+      onLayoutCommit={sizes => {
         const pixels = sizes.reduce((sum, size) => sum + size, 0)
         if (pixels <= 0 || sizes.some(size => size <= 0)) return
-        if (node.sizes.every((weight, index) => Math.abs(weight / total - sizes[index] / pixels) < 0.0001)) return
         props.commit(resizeSplit(props.layout, node.id, sizes))
       }}
     >
@@ -90,7 +102,12 @@ export function DockTree(props: FrameProps & { node: DockNode }) {
         const panel = (
           <Panel
             key={child.id}
-            minSize={minimumSize(child, node.orientation, props.registry, theme.design.shape.separatorWidth)}
+            minSize={minimumSize(
+              child,
+              node.orientation,
+              props.registry,
+              theme.design.shape.separatorWidth
+            )}
           >
             <DockTree {...props} bounds={boxes[index]} node={child} />
           </Panel>
@@ -109,19 +126,38 @@ export function DockTree(props: FrameProps & { node: DockNode }) {
     </Group>
   )
 }
-export function DockFrame({ group, borderSide, ...props }: FrameProps & { group: DockGroup; borderSide?: DockBorderSide }) {
+export function DockFrame({
+  group,
+  borderSide,
+  ...props
+}: FrameProps & { group: DockGroup; borderSide?: DockBorderSide }) {
   const theme = useTheme()
   const { renderer } = useGpuix()
   const refs = props.tabRefs
   const [hovered, setHovered] = useState(false)
   const { subscribePointer } = useContext(PanelEnvironmentContext)
-  useLayoutEffect(() => subscribePointer?.(point => {
-    const box = props.bounds
-    setHovered(point.x >= box.x && point.x < box.x + box.width && point.y >= box.y && point.y < box.y + theme.design.dock.stripHeight)
-  }), [subscribePointer, props.bounds, theme.design.dock.stripHeight])
+  useLayoutEffect(
+    () =>
+      subscribePointer?.(point => {
+        const box = props.bounds
+        setHovered(
+          point.x >= box.x &&
+            point.x < box.x + box.width &&
+            point.y >= box.y &&
+            point.y < box.y + theme.design.dock.stripHeight
+        )
+      }),
+    [subscribePointer, props.bounds, theme.design.dock.stripHeight]
+  )
   const compactMode = useRef(false)
-  const compactActions = !borderSide && props.bounds.width < theme.design.dock.compactActionsBelow + (compactMode.current ? theme.control["--spacing-control-track"] : 0)
-  useLayoutEffect(() => { compactMode.current = compactActions }, [compactActions])
+  const compactActions =
+    !borderSide &&
+    props.bounds.width <
+      theme.design.dock.compactActionsBelow +
+        (compactMode.current ? theme.control["--spacing-control-track"] : 0)
+  useLayoutEffect(() => {
+    compactMode.current = compactActions
+  }, [compactActions])
   const actionsVisible = hovered
   const focus = (tabId: string) => {
     props.onFocusChange?.(true)
@@ -135,22 +171,17 @@ export function DockFrame({ group, borderSide, ...props }: FrameProps & { group:
     props.drag.keyDown(event)
     if (!event.defaultPrevented) props.onKeyDown?.(event)
   }
-  const visiblePanels = new Set([...getGroups(props.layout.root).flatMap(item => item.tabs), ...getBorderTabs(props.layout)])
+  const visiblePanels = new Set([
+    ...getGroups(props.layout.root).flatMap(item => item.tabs),
+    ...getBorderTabs(props.layout),
+  ])
   const availablePanels = Object.entries(props.registry).filter(([id]) => !visiblePanels.has(id))
   const menuItems = (tabId: string): ReactNode => (
     <>
-      <ContextMenuItem
-        onSelect={() => props.commit(closeTab(props.layout, tabId))}
-      >
+      <ContextMenuItem onSelect={() => props.commit(closeTab(props.layout, tabId))}>
         {props.labels.close}
       </ContextMenuItem>
-      <ContextMenuItem
-        onSelect={() =>
-          props.commit(
-            closeOtherTabs(props.layout, tabId)
-          )
-        }
-      >
+      <ContextMenuItem onSelect={() => props.commit(closeOtherTabs(props.layout, tabId))}>
         {props.labels.closeOthers}
       </ContextMenuItem>
       <ContextMenuItem
@@ -197,7 +228,15 @@ export function DockFrame({ group, borderSide, ...props }: FrameProps & { group:
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={event => {
           const box = props.bounds
-          if (event.x !== undefined && event.y !== undefined && event.x >= box.x && event.x < box.x + box.width && event.y >= box.y && event.y < box.y + theme.design.dock.stripHeight) return
+          if (
+            event.x !== undefined &&
+            event.y !== undefined &&
+            event.x >= box.x &&
+            event.x < box.x + box.width &&
+            event.y >= box.y &&
+            event.y < box.y + theme.design.dock.stripHeight
+          )
+            return
           setHovered(false)
         }}
         style={{
@@ -228,121 +267,135 @@ export function DockFrame({ group, borderSide, ...props }: FrameProps & { group:
             {props.registry[group.active]?.title.toLocaleUpperCase()}
           </text>
         ) : (
-        <div
-          role="tablist"
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            flexGrow: 1,
-            minWidth: 0,
-            overflowX: "auto",
-            overflowY: "hidden",
-            alignItems: "center",
-          }}
-        >
-          {group.tabs.map((tabId, index) => {
-            const registration = props.registry[tabId]
-            if (!registration) throw new RangeError(`Unregistered dock panel: ${tabId}`)
-            const active = group.active === tabId
-            return (
-              <div
-                key={tabId}
-                testId={`${props.testId}-tab-frame-${tabId}`}
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  flexShrink: 0,
-                  alignItems: "center",
-                  borderLeftWidth: index > 0 ? theme.design.shape.separatorWidth : 0,
-                  borderColor: theme.colors.border,
-                  backgroundColor: active ? theme.colors.background : "transparent",
-                }}
-              >
-                <ContextMenu>
-                  <ContextMenuTrigger asChild>
-                    <DockTab
-                      ref={instance => {
-                        if (instance) refs.current.set(tabId, instance)
-                        else refs.current.delete(tabId)
-                      }}
-                      testId={`${props.testId}-tab-${tabId}`}
-                      selected={active}
-                      title={registration.title}
-                      icon={registration.icon}
-                      closeLabel={`${props.labels.close} ${registration.title}`}
-                      closeTestId={`${props.testId}-close-${tabId}`}
-                      onClose={() => props.commit(closeTab(props.layout, tabId))}
-                      onFocus={claimFocus}
-                      onBlur={() => {
-                        props.drag.cancel()
-                        props.onFocusChange?.(false)
-                      }}
-                      onMouseDown={event => props.drag.start({ groupId: group.id, tabId }, event)}
-                      onMouseMove={props.drag.move}
-                      onMouseUp={props.drag.release}
-                      onClick={() => props.drag.click(() => focus(tabId))}
-                      onKeyDown={event => {
-                        keyDown(event)
-                        if (
-                          event.defaultPrevented ||
-                          (event.key !== "left" && event.key !== "right")
-                        )
-                          return
-                        if (
-                          event.modifiers?.ctrl ||
-                          event.modifiers?.cmd ||
-                          event.modifiers?.alt ||
-                          event.modifiers?.shift
-                        )
-                          return
-                        const next =
-                          group.tabs[
-                            (index + (event.key === "right" ? 1 : group.tabs.length - 1)) %
-                              group.tabs.length
-                          ]
-                        const instance = next && refs.current.get(next)
-                        if (instance) renderer?.focusElement?.(instance.id)
-                        consumeKey(event, "handled")
-                      }}
-                    />
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>{menuItems(tabId)}</ContextMenuContent>
-                </ContextMenu>
-              </div>
-            )
-          })}
-        </div>
+          <div
+            role="tablist"
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              flexGrow: 1,
+              minWidth: 0,
+              overflowX: "auto",
+              overflowY: "hidden",
+              alignItems: "center",
+            }}
+          >
+            {group.tabs.map((tabId, index) => {
+              const registration = props.registry[tabId]
+              if (!registration) throw new RangeError(`Unregistered dock panel: ${tabId}`)
+              const active = group.active === tabId
+              return (
+                <div
+                  key={tabId}
+                  testId={`${props.testId}-tab-frame-${tabId}`}
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    flexShrink: 0,
+                    alignItems: "center",
+                    borderLeftWidth: index > 0 ? theme.design.shape.separatorWidth : 0,
+                    borderColor: theme.colors.border,
+                    backgroundColor: active ? theme.colors.background : "transparent",
+                  }}
+                >
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <DockTab
+                        ref={instance => {
+                          if (instance) refs.current.set(tabId, instance)
+                          else refs.current.delete(tabId)
+                        }}
+                        testId={`${props.testId}-tab-${tabId}`}
+                        selected={active}
+                        title={registration.title}
+                        icon={registration.icon}
+                        closeLabel={`${props.labels.close} ${registration.title}`}
+                        closeTestId={`${props.testId}-close-${tabId}`}
+                        onClose={() => props.commit(closeTab(props.layout, tabId))}
+                        onFocus={claimFocus}
+                        onBlur={() => {
+                          props.drag.cancel()
+                          props.onFocusChange?.(false)
+                        }}
+                        onMouseDown={event => props.drag.start({ groupId: group.id, tabId }, event)}
+                        onMouseMove={props.drag.move}
+                        onMouseUp={props.drag.release}
+                        onClick={() => props.drag.click(() => focus(tabId))}
+                        onKeyDown={event => {
+                          keyDown(event)
+                          if (
+                            event.defaultPrevented ||
+                            (event.key !== "left" && event.key !== "right")
+                          )
+                            return
+                          if (
+                            event.modifiers?.ctrl ||
+                            event.modifiers?.cmd ||
+                            event.modifiers?.alt ||
+                            event.modifiers?.shift
+                          )
+                            return
+                          const next =
+                            group.tabs[
+                              (index + (event.key === "right" ? 1 : group.tabs.length - 1)) %
+                                group.tabs.length
+                            ]
+                          const instance = next && refs.current.get(next)
+                          if (instance) renderer?.focusElement?.(instance.id)
+                          consumeKey(event, "handled")
+                        }}
+                      />
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>{menuItems(tabId)}</ContextMenuContent>
+                  </ContextMenu>
+                </div>
+              )
+            })}
+          </div>
         )}
-        <DockGroupActions groupId={group.id} visible={actionsVisible} compact={compactActions}
-          draggable={!borderSide} maximized={props.layout.maximizedGroup === group.id}
-          labels={props.labels} drag={props.drag}
+        <DockGroupActions
+          groupId={group.id}
+          visible={actionsVisible}
+          compact={compactActions}
+          draggable={!borderSide}
+          maximized={props.layout.maximizedGroup === group.id}
+          labels={props.labels}
+          drag={props.drag}
           onMaximize={() => props.commit(toggleMaximize(props.layout, group.id))}
-          onFocus={claimFocus} onKeyDown={keyDown} testId={props.testId}>
-              {menuItems(group.active)}
-              {availablePanels.length ? (
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger testId={`${props.testId}-show-panels-${group.id}`}>
-                    {props.labels.showPanels}
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {availablePanels.map(([id, registration]) => (
-                      <DropdownMenuItem
-                        key={id}
-                        testId={`${props.testId}-show-${id}`}
-                        onSelect={() => props.commit(addPanel(props.layout, id, group.id))}
-                      >
-                        {registration.title}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              ) : null}
+          onFocus={claimFocus}
+          onKeyDown={keyDown}
+          testId={props.testId}
+        >
+          {menuItems(group.active)}
+          {availablePanels.length ? (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger testId={`${props.testId}-show-panels-${group.id}`}>
+                {props.labels.showPanels}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {availablePanels.map(([id, registration]) => (
+                  <DropdownMenuItem
+                    key={id}
+                    testId={`${props.testId}-show-${id}`}
+                    onSelect={() => props.commit(addPanel(props.layout, id, group.id))}
+                  >
+                    {registration.title}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          ) : null}
         </DockGroupActions>
       </div>
-      {!borderSide ? <div style={{ height: theme.design.shape.separatorWidth, flexShrink: 0, backgroundColor: theme.colors.border }} /> : null}
-      <div
-        style={{ flexGrow: 1, minHeight: 0, minWidth: 0 }}
-      />
+      {!borderSide ? (
+        <div
+          style={{
+            height: theme.design.shape.separatorWidth,
+            flexShrink: 0,
+            backgroundColor: theme.colors.border,
+          }}
+        />
+      ) : null}
+      <div style={{ flexGrow: 1, minHeight: 0, minWidth: 0 }} />
     </div>
   )
 }
@@ -372,9 +425,7 @@ export function DropOverlay({
   const previous = target.index !== undefined ? group?.tabs[target.index - 1] : undefined
   const previousBox = previous ? tabs.get(previous) : undefined
   const firstBox = first ? tabs.get(first) : undefined
-  const insertionX = previousBox
-    ? previousBox.x + previousBox.width
-    : (firstBox?.x ?? box.x)
+  const insertionX = previousBox ? previousBox.x + previousBox.width : (firstBox?.x ?? box.x)
   return (
     <div
       testId={`${testId}-drop-preview`}

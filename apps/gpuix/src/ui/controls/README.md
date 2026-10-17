@@ -1,6 +1,6 @@
 # gpuix 共享控件
 
-当前实现消费固定 gpuix 主干 `6a5c7c142ac32f9eb0caefe0121be995cfc18631` 及仓库受控补丁。实现位于 `ui/controls`，原生能力由 [`src/gallery/controls.tsx`](../../gallery/controls.tsx) 等组合入口经 platform 端口注入。
+当前实现消费固定 gpuix 主干 `6a5c7c142ac32f9eb0caefe0121be995cfc18631` 及仓库受控补丁。实现位于 `ui/controls`，原生能力由 app 组合根和 `main.tsx` 注入。
 
 ## 范围与接口
 
@@ -13,7 +13,7 @@
 | Popover | `Popover`、`PopoverTrigger`、`PopoverContent`、`PopoverHeader`、`PopoverTitle` |
 | 容器和反馈 | `Card`、`CardHeader`、`CardTitle`、`CardDescription`、`CardContent`、`Empty`、`EmptyHeader`、`EmptyTitle`、`EmptyDescription`、`Separator`、`Progress`、`Loading`、`LoadErrorScreen`、`ScrollArea`、`ControlledScrollbar`、`Toaster`、`toast`、`toastLoading`、`Badge`、`Kbd`、`Tooltip` |
 | 表单和导航 | `Label`、`Input`、`InlineEdit`、`RadioGroup`、`RadioGroupItem`、`ToggleGroup`、`ToggleGroupItem`、`SettingsShell`、`SettingsNavItem`、`MotionTabs` |
-| 列表 | `ListRow`（Browser、下拉与菜单的共享行容器；Enter 激活，Space 留给 Transport） |
+| 列表 | `List`（无滚动的共享列表布局，行间距统一取 `design.list.rowGap`，必需 `aria-label`，默认 `role="listbox"`，可选 `role="tree"`，调用方自行包裹 `ScrollArea`）；`ListRow`、`TreeRow`（共享行容器；Enter 激活，Space 留给 Transport） |
 | 环境和拖拽 | `ControlEnvironment`、`ControlEnvironmentProvider`、`ControlGroup`、`ControlInfo`、`useInfoBinding`、`DragPreviewArea` |
 
 组件和专用 Props 位于 family 入口，根入口显式列出被消费的控件与类型。主题、预设和共享度量继续由 `shared/theme` 持有。

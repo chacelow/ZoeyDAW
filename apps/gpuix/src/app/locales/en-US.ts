@@ -106,6 +106,8 @@ export default {
   },
   titlebar: {
     settings: "Settings",
+    gallery: "Component Gallery",
+    home: "Home",
     appTitle: "ZoeyDAW",
     file: "File",
     edit: "Edit",

@@ -1,7 +1,7 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTrackLabels } from "../labels"
-import { Button } from "@/ui/controls"
+import { Button, TruncatedText } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { contentFill } from "@/shared/theme/content-color"
@@ -36,6 +36,7 @@ export function TrackIdentity({
   const theme = useTheme()
   const { renderer } = useGpuix()
   const identity = useRef<PublicInstance | null>(null)
+  const [labelHovered, setLabelHovered] = useState(false)
   const ink = theme.colors.arrangementClipInk
   const automation = useProjectState(state => state.workspace.automationMode)
   const gutter = (railCount + (track.kind === "group" ? 1 : 0)) * theme.project.groupRailWidth
@@ -145,20 +146,22 @@ export function TrackIdentity({
             onMouseMove={dragHandlers?.onMouseMove}
             onMouseUp={dragHandlers?.onMouseUp}
             onKeyDown={handleKeyDown}
+            onMouseEnter={() => setLabelHovered(true)}
+            onMouseLeave={() => setLabelHovered(false)}
           >
-            <text
+            <TruncatedText
               testId={`track-name-${track.id}`}
+              hovered={labelHovered}
               style={{
                 fontSize: theme.control["--text-control-track"],
                 color: ink,
                 fontWeight: theme.design.typography.weights.medium,
-                whiteSpace: "nowrap",
-                textOverflow: "ellipsis",
+                flexGrow: 0,
                 userSelect: "none",
               }}
             >
               {track.name}
-            </text>
+            </TruncatedText>
           </Button>
         )}
       </div>

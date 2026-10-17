@@ -110,6 +110,7 @@ export interface DesignTokens {
   readonly grid: DesignDetails["grid"]
   readonly fader: DesignDetails["fader"]
   readonly treeRow: DesignDetails["treeRow"]
+  readonly list: DesignDetails["list"]
   readonly switch: DesignDetails["switch"]
   readonly knob: DesignDetails["knob"]
   readonly progress: DesignDetails["progress"]
@@ -137,7 +138,6 @@ export function createDockTokens(control: ControlMetrics): DesignTokens["dock"] 
     demoHeight: unit * 24,
   }
 }
-
 
 export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
   dock: createDockTokens(CONTROL_METRICS.default),
@@ -250,6 +250,7 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
 export function createDesignTokens(control: ControlMetrics): DesignTokens {
   return {
     ...DEFAULT_DESIGN_TOKENS,
+    list: { rowGap: control["--spacing-control-track-gap"] },
     dock: createDockTokens(control),
     cards: {
       ...DEFAULT_DESIGN_TOKENS.cards,

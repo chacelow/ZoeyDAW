@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import {
+  List,
   ListRow,
   TreeRow,
   Breadcrumb,
@@ -114,13 +115,7 @@ export function ListsSection({ t }: GallerySectionProps) {
             width: theme.project.browserResultsWidth,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: theme.control["--spacing-control-track-gap"],
-            }}
-          >
+          <List aria-label={t("Scrollable library", "可滚动曲库")}>
             {Array.from({ length: 16 }, (_, index) => (
               <ListRow
                 key={index}
@@ -129,7 +124,7 @@ export function ListsSection({ t }: GallerySectionProps) {
                 onClick={() => setSelected(String(index))}
               />
             ))}
-          </div>
+          </List>
         </ScrollArea>
       </GalleryVariant>
     </GallerySection>

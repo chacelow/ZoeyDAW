@@ -4,10 +4,16 @@ import {
   Button,
   Chip,
   DragPreviewArea,
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
   Input,
   IconSlot,
+  List,
   ListRow,
   ScrollArea,
+  TruncatedText,
   useInfoBinding,
 } from "@/ui/controls"
 import { Group, Panel, PanelDivider } from "@/ui/panels"
@@ -270,16 +276,15 @@ export function BrowserPanel({
           />
         </Button>
       </div>
-      <text
+      <TruncatedText
         style={{
           color: theme.colors.mutedForeground,
           paddingLeft: theme.control["--spacing-control-track-pad"],
-          whiteSpace: "nowrap",
-          textOverflow: "ellipsis",
+          flexGrow: 0,
         }}
       >
         {labels.demonstration}
-      </text>
+      </TruncatedText>
       <div style={{ minHeight: 0, flexGrow: 1 }}>
         {renderBody({
           navigation: (
@@ -316,7 +321,14 @@ export function BrowserPanel({
                       key={kind}
                       selected={browser.kind === kind}
                       label={labels.kinds[kind]}
-                      icon={<Icon name="Check" color={browser.kind === kind ? theme.colors.primaryForeground : "transparent"} />}
+                      icon={
+                        <Icon
+                          name="Check"
+                          color={
+                            browser.kind === kind ? theme.colors.primaryForeground : "transparent"
+                          }
+                        />
+                      }
                       onSelectedChange={() => browser.setKind(kind)}
                     >
                       {labels.kinds[kind]}
@@ -338,7 +350,6 @@ export function BrowserPanel({
               <ScrollArea
                 testId="browser-results"
                 fill
-                role="tree"
                 tabIndex={browser.rows.length === 0 ? 0 : -1}
                 aria-label={labels.results}
                 ref={node => {
@@ -350,9 +361,31 @@ export function BrowserPanel({
                 onMouseLeave={resourceInfo.onMouseLeave}
               >
                 {browser.rows.length === 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap }}>
-                    <text style={{ color: theme.colors.mutedForeground }}>{labels.empty}</text>
-                    <text style={{ color: theme.colors.mutedForeground }}>{labels.emptyHint}</text>
+                  <Empty
+                    style={{
+                      flexGrow: 0,
+                      alignItems: "stretch",
+                      justifyContent: "flex-start",
+                      textAlign: "left",
+                      padding: 0,
+                      borderRadius: 0,
+                      gap,
+                    }}
+                  >
+                    <EmptyHeader style={{ alignItems: "stretch", maxWidth: "100%", gap }}>
+                      <EmptyTitle
+                        style={{
+                          color: theme.colors.mutedForeground,
+                          fontWeight: undefined,
+                          textAlign: "left",
+                        }}
+                      >
+                        {labels.empty}
+                      </EmptyTitle>
+                      <EmptyDescription style={{ textAlign: "left" }}>
+                        {labels.emptyHint}
+                      </EmptyDescription>
+                    </EmptyHeader>
                     {browser.filtering ? (
                       <Button
                         testId="browser-reset-filters"
@@ -365,140 +398,142 @@ export function BrowserPanel({
                         {labels.resetFilters}
                       </Button>
                     ) : null}
-                  </div>
+                  </Empty>
                 ) : (
-                  browser.rows.map(row => (
-                    <DragPreviewArea
-                      key={row.entry.id}
-                      role="presentation"
-                      tabIndex={-1}
-                      disabledDropLabel={labels.previewDisabled}
-                      renderPreview={entry => (
-                        <text>{`${entry.name} · ${labels.kinds[entry.kind]} · ${labels.previewDisabled}`}</text>
-                      )}
-                      onClick={() => select(row.entry.id)}
-                      items={[
-                        {
-                          key: row.entry.id,
-                          data: row.entry,
-                          label: row.entry.name,
-                          children: drag => (
-                            <ListRow
-                              {...drag}
-                              role="treeitem"
-                              tabIndex={focusedId === row.entry.id ? 0 : -1}
-                              label={row.entry.name}
-                              testId={`browser-entry-${row.entry.id}`}
-                              selected={selectedId === row.entry.id}
-                              ref={node => {
-                                if (node) nodes.current.set(row.entry.id, node)
-                                else nodes.current.delete(row.entry.id)
-                              }}
-                              aria-level={row.depth + 1}
-                              aria-expanded={row.expandable ? row.expanded : undefined}
-                              style={{
-                                paddingLeft:
-                                  theme.control["--spacing-control-track-pad"] +
-                                  row.depth * theme.control["--spacing-control-icon-slot"],
-                              }}
-                              leading={
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap,
-                                  }}
-                                >
-                                  {row.expandable ? (
-                                    <Button
-                                      iconOnly
-                                      tabIndex={-1}
-                                      label={`${row.expanded ? labels.collapse : labels.expand} ${row.entry.name}`}
-                                      onClick={() => {
-                                        select(row.entry.id)
-                                        browser.toggleExpanded(row.entry.id)
-                                      }}
-                                    >
-                                      <Icon
-                                        name={row.expanded ? "ChevronDown" : "ChevronRight"}
-                                        color={theme.colors.foreground}
+                  <List role="tree" aria-label={labels.results}>
+                    {browser.rows.map(row => (
+                      <DragPreviewArea
+                        key={row.entry.id}
+                        role="presentation"
+                        tabIndex={-1}
+                        disabledDropLabel={labels.previewDisabled}
+                        renderPreview={entry => (
+                          <text>{`${entry.name} · ${labels.kinds[entry.kind]} · ${labels.previewDisabled}`}</text>
+                        )}
+                        onClick={() => select(row.entry.id)}
+                        items={[
+                          {
+                            key: row.entry.id,
+                            data: row.entry,
+                            label: row.entry.name,
+                            children: drag => (
+                              <ListRow
+                                {...drag}
+                                role="treeitem"
+                                tabIndex={focusedId === row.entry.id ? 0 : -1}
+                                label={row.entry.name}
+                                testId={`browser-entry-${row.entry.id}`}
+                                selected={selectedId === row.entry.id}
+                                ref={node => {
+                                  if (node) nodes.current.set(row.entry.id, node)
+                                  else nodes.current.delete(row.entry.id)
+                                }}
+                                aria-level={row.depth + 1}
+                                aria-expanded={row.expandable ? row.expanded : undefined}
+                                style={{
+                                  paddingLeft:
+                                    theme.control["--spacing-control-track-pad"] +
+                                    row.depth * theme.control["--spacing-control-icon-slot"],
+                                }}
+                                leading={
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "row",
+                                      alignItems: "center",
+                                      gap,
+                                    }}
+                                  >
+                                    {row.expandable ? (
+                                      <Button
+                                        iconOnly
+                                        tabIndex={-1}
+                                        label={`${row.expanded ? labels.collapse : labels.expand} ${row.entry.name}`}
+                                        onClick={() => {
+                                          select(row.entry.id)
+                                          browser.toggleExpanded(row.entry.id)
+                                        }}
+                                      >
+                                        <Icon
+                                          name={row.expanded ? "ChevronDown" : "ChevronRight"}
+                                          color={theme.colors.foreground}
+                                        />
+                                      </Button>
+                                    ) : (
+                                      <div
+                                        aria-hidden="true"
+                                        style={{
+                                          width: theme.control["--spacing-control-track"],
+                                          flexShrink: 0,
+                                        }}
                                       />
-                                    </Button>
-                                  ) : (
-                                    <div
-                                      aria-hidden="true"
-                                      style={{
-                                        width: theme.control["--spacing-control-track"],
-                                        flexShrink: 0,
-                                      }}
-                                    />
-                                  )}
-                                  <IconSlot>
+                                    )}
+                                    <IconSlot>
+                                      <Icon
+                                        name={KIND_ICONS[row.entry.kind]}
+                                        color={
+                                          selectedId === row.entry.id
+                                            ? theme.colors.primaryForeground
+                                            : theme.colors.mutedForeground
+                                        }
+                                      />
+                                    </IconSlot>
+                                  </div>
+                                }
+                                trailing={
+                                  <Button
+                                    iconOnly
+                                    tabIndex={-1}
+                                    testId={`browser-favorite-${row.entry.id}`}
+                                    style={{
+                                      opacity:
+                                        browser.favorites.has(row.entry.id) ||
+                                        selectedId === row.entry.id ||
+                                        hoveredResource === row.entry.id
+                                          ? 1
+                                          : 0,
+                                    }}
+                                    label={`${browser.favorites.has(row.entry.id) ? labels.unfavorite : labels.favorite} ${row.entry.name}`}
+                                    active={browser.favorites.has(row.entry.id)}
+                                    onActiveChange={() => browser.toggleFavorite(row.entry.id)}
+                                  >
                                     <Icon
-                                      name={KIND_ICONS[row.entry.kind]}
+                                      name="Star"
+                                      filled={browser.favorites.has(row.entry.id)}
                                       color={
-                                        selectedId === row.entry.id
+                                        browser.favorites.has(row.entry.id)
                                           ? theme.colors.primaryForeground
-                                          : theme.colors.mutedForeground
+                                          : theme.colors.foreground
                                       }
                                     />
-                                  </IconSlot>
-                                </div>
-                              }
-                              trailing={
-                                <Button
-                                  iconOnly
-                                  tabIndex={-1}
-                                  testId={`browser-favorite-${row.entry.id}`}
-                                  style={{
-                                    opacity:
-                                      browser.favorites.has(row.entry.id) ||
-                                      selectedId === row.entry.id ||
-                                      hoveredResource === row.entry.id
-                                        ? 1
-                                        : 0,
-                                  }}
-                                  label={`${browser.favorites.has(row.entry.id) ? labels.unfavorite : labels.favorite} ${row.entry.name}`}
-                                  active={browser.favorites.has(row.entry.id)}
-                                  onActiveChange={() => browser.toggleFavorite(row.entry.id)}
-                                >
-                                  <Icon
-                                    name="Star"
-                                    filled={browser.favorites.has(row.entry.id)}
-                                    color={
-                                      browser.favorites.has(row.entry.id)
-                                        ? theme.colors.primaryForeground
-                                        : theme.colors.foreground
-                                    }
-                                  />
-                                </Button>
-                              }
-                              onClick={event => {
-                                select(row.entry.id)
-                                if (event.clickCount === 2 && row.expandable)
-                                  browser.toggleExpanded(row.entry.id)
-                              }}
-                              onMouseEnter={() => setHoveredResource(row.entry.id)}
-                              onMouseLeave={() => setHoveredResource(null)}
-                              onFocus={() => {
-                                setFocusBySource(previous => ({
-                                  ...previous,
-                                  [browser.source]: row.entry.id,
-                                }))
-                                resourceInfo.onFocus()
-                              }}
-                              onBlur={event => {
-                                drag.onBlur(event)
-                                resourceInfo.onBlur()
-                              }}
-                              onKeyDown={event => keyboard(event, row.entry.id)}
-                            />
-                          ),
-                        },
-                      ]}
-                    />
-                  ))
+                                  </Button>
+                                }
+                                onClick={event => {
+                                  select(row.entry.id)
+                                  if (event.clickCount === 2 && row.expandable)
+                                    browser.toggleExpanded(row.entry.id)
+                                }}
+                                onMouseEnter={() => setHoveredResource(row.entry.id)}
+                                onMouseLeave={() => setHoveredResource(null)}
+                                onFocus={() => {
+                                  setFocusBySource(previous => ({
+                                    ...previous,
+                                    [browser.source]: row.entry.id,
+                                  }))
+                                  resourceInfo.onFocus()
+                                }}
+                                onBlur={event => {
+                                  drag.onBlur(event)
+                                  resourceInfo.onBlur()
+                                }}
+                                onKeyDown={event => keyboard(event, row.entry.id)}
+                              />
+                            ),
+                          },
+                        ]}
+                      />
+                    ))}
+                  </List>
                 )}
               </ScrollArea>
             </div>

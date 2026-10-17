@@ -7,6 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   ScrollArea,
+  TruncatedText,
 } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -163,15 +164,14 @@ function TrackDeviceChain({
       <div
         style={{ display: "flex", flexDirection: "row", alignItems: "center", gap, flexShrink: 0 }}
       >
-        <text
+        <TruncatedText
           style={{
             color: theme.colors.mutedForeground,
             fontSize: theme.control["--text-control-track"],
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
+            flexGrow: 0,
             minWidth: 0,
           }}
-        >{`${track.name} › ${labels.title}`}</text>
+        >{`${track.name} › ${labels.title}`}</TruncatedText>
         <div style={{ flexGrow: 1 }} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

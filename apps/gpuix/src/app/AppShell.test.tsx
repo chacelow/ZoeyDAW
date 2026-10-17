@@ -221,6 +221,21 @@ describe("routes", () => {
     expect(root.renderer.findByTestId("not-found-page")).toBeDefined()
     expect(text(root)).toContain("404")
   })
+
+  test("Gallery route shows shared categories and preview, then returns home", () => {
+    const { root, router } = mount()
+    act(root, () => router.navigate("/gallery"))
+    expect(root.renderer.findByTestId("app-frame")).toBeDefined()
+    expect(root.renderer.findByTestId("titlebar")).toBeDefined()
+    expect(root.renderer.findByTestId("gallery-category-buttons")).toBeDefined()
+    expect(root.renderer.findByTestId("gallery-section-buttons")).toBeDefined()
+    click(root, "gallery-category-toggles")
+    expect(root.renderer.findByTestId("gallery-section-toggles")).toBeDefined()
+    click(root, "gallery-category-lists")
+    expect(root.renderer.findByTestId("gallery-section-lists")).toBeDefined()
+    act(root, () => router.navigate("/"))
+    expect(root.renderer.findByTestId("home-page")).toBeDefined()
+  })
 })
 
 describe("project runtime lease", () => {
@@ -350,27 +365,31 @@ describe("settings dialog", () => {
     expect(root.renderer.findByTestId("home-page")).toBeDefined()
   })
 
-  test("system appearance updates the same project without reopening its backend", () => {
-    const sessions = countSessions()
-    const props: { router: Router; systemAppearance: AppShellProps["systemAppearance"] } = {
-      router: createRouter("/project/system-appearance"),
-      systemAppearance: "dark",
-    }
-    const { root, rerender } = mount(props)
-    const background = () =>
-      root.renderer.getElement(element(root, "app-frame").id)?.style.backgroundColor
-    const dark = background()
-    props.systemAppearance = "light"
-    rerender()
-    expect(background()).not.toBe(dark)
-    expect(sessions).toEqual({ opened: 1, disposed: 0 })
-    click(root, "titlebar-settings")
-    click(root, "theme-mode-dark")
-    props.systemAppearance = "dark"
-    rerender()
-    expect(background()).toBe(dark)
-    expect(sessions).toEqual({ opened: 1, disposed: 0 })
-  }, NATIVE_MULTI_SESSION_TEST_TIMEOUT)
+  test(
+    "system appearance updates the same project without reopening its backend",
+    () => {
+      const sessions = countSessions()
+      const props: { router: Router; systemAppearance: AppShellProps["systemAppearance"] } = {
+        router: createRouter("/project/system-appearance"),
+        systemAppearance: "dark",
+      }
+      const { root, rerender } = mount(props)
+      const background = () =>
+        root.renderer.getElement(element(root, "app-frame").id)?.style.backgroundColor
+      const dark = background()
+      props.systemAppearance = "light"
+      rerender()
+      expect(background()).not.toBe(dark)
+      expect(sessions).toEqual({ opened: 1, disposed: 0 })
+      click(root, "titlebar-settings")
+      click(root, "theme-mode-dark")
+      props.systemAppearance = "dark"
+      rerender()
+      expect(background()).toBe(dark)
+      expect(sessions).toEqual({ opened: 1, disposed: 0 })
+    },
+    NATIVE_MULTI_SESSION_TEST_TIMEOUT
+  )
 
   test("choosing a preset by click or arrow keys recolors the app and persists", () => {
     const { root, saved } = mount()
@@ -487,48 +506,59 @@ describe("unsaved close guard", () => {
     expect(native.closed).toBe(1)
   })
 
-  test("save closes programmatically once the snapshot is accepted", async () => {
-    countSessions()
-    const native = nativeClose()
-    const { root } = mount({ windowRenderer: native.renderer, router: createRouter("/project/r") })
-    projectActions.setBpm(137)
-    expect(native.request()).toBe(false)
-    await settle(root)
-    click(root, "unsaved-save")
-    await settle(root)
-    click(root, "save-as-confirm")
-    await whenProjectBackendIdle()
-    await settle(root)
-    const name = useProjectState.getState().document.name
-    expect(useProjectState.getState().session).toMatchObject({
-      dirty: false,
-      filePath: `/projects/${name} Project/${name}.zdaw`,
-    })
-    expect(native.closed).toBe(1)
-  }, NATIVE_MULTI_SESSION_TEST_TIMEOUT)
+  test(
+    "save closes programmatically once the snapshot is accepted",
+    async () => {
+      countSessions()
+      const native = nativeClose()
+      const { root } = mount({
+        windowRenderer: native.renderer,
+        router: createRouter("/project/r"),
+      })
+      projectActions.setBpm(137)
+      expect(native.request()).toBe(false)
+      await settle(root)
+      click(root, "unsaved-save")
+      await settle(root)
+      click(root, "save-as-confirm")
+      await whenProjectBackendIdle()
+      await settle(root)
+      const name = useProjectState.getState().document.name
+      expect(useProjectState.getState().session).toMatchObject({
+        dirty: false,
+        filePath: `/projects/${name} Project/${name}.zdaw`,
+      })
+      expect(native.closed).toBe(1)
+    },
+    NATIVE_MULTI_SESSION_TEST_TIMEOUT
+  )
 })
 
 describe("keyboard", () => {
-  test("Space on the project route toggles playback and leaves the settings button untouched", () => {
-    countSessions()
-    const { root, saved } = mount({ router: createRouter("/project/k") })
-    const playing = () => useProjectState.getState().session.playing
-    const before = playing()
-    root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "space")
-    expect(playing()).toBe(!before)
-    expect(root.renderer.findByTestId("project-layout")).toBeDefined()
-    expect(root.renderer.findByTestId("route-error")).toBeUndefined()
-    expect(root.renderer.findByTestId("settings-dialog")).toBeUndefined()
-    root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "enter")
-    expect(root.renderer.findByTestId("settings-dialog")).toBeDefined()
-    root.renderer.nativeSimulateKeystrokes(element(root, "theme-mode-light").id, "space")
-    expect(saved.mode).toBe("light")
-    expect(playing()).toBe(!before)
-    click(root, "settings-nav-language")
-    root.renderer.nativeSimulateKeystrokes(element(root, "language-en-US").id, "space")
-    expect(playing()).toBe(!before)
-    projectActions.stop()
-  }, NATIVE_MULTI_SESSION_TEST_TIMEOUT)
+  test(
+    "Space on the project route toggles playback and leaves the settings button untouched",
+    () => {
+      countSessions()
+      const { root, saved } = mount({ router: createRouter("/project/k") })
+      const playing = () => useProjectState.getState().session.playing
+      const before = playing()
+      root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "space")
+      expect(playing()).toBe(!before)
+      expect(root.renderer.findByTestId("project-layout")).toBeDefined()
+      expect(root.renderer.findByTestId("route-error")).toBeUndefined()
+      expect(root.renderer.findByTestId("settings-dialog")).toBeUndefined()
+      root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "enter")
+      expect(root.renderer.findByTestId("settings-dialog")).toBeDefined()
+      root.renderer.nativeSimulateKeystrokes(element(root, "theme-mode-light").id, "space")
+      expect(saved.mode).toBe("light")
+      expect(playing()).toBe(!before)
+      click(root, "settings-nav-language")
+      root.renderer.nativeSimulateKeystrokes(element(root, "language-en-US").id, "space")
+      expect(playing()).toBe(!before)
+      projectActions.stop()
+    },
+    NATIVE_MULTI_SESSION_TEST_TIMEOUT
+  )
 
   test(
     "global Cmd+F focuses Browser only when unconsumed, nonmodal and expanded",
@@ -587,38 +617,44 @@ describe("project layout state", () => {
     return clip.id
   }
 
-  test("a resized Browser keeps its width when the footer switches to Clip Edit and back", async () => {
-    countSessions()
-    const { root } = mount({ router: createRouter("/project/layout") })
-    const browserWidth = () =>
-      root.renderer.getElementBounds(element(root, "project-workspace-content-browser").id)
-        ?.width ?? 0
-    await layout(root)
-    const initial = browserWidth()
-    const divider = root.renderer.getElementBounds(
-      element(root, "project-workspace-border-divider-left").id
-    )
-    if (!divider) throw new Error("Browser divider has no bounds")
-    const x = divider.x + divider.width / 2
-    const y = divider.y + divider.height / 2
-    root.renderer.nativeSimulateMouseMove(x, y)
-    root.renderer.nativeSimulateMouseDown(x, y)
-    root.renderer.nativeSimulateMouseMove(x + initial / 4, y, 0)
-    root.renderer.nativeSimulateMouseUp(x + initial / 4, y)
-    await layout(root)
-    const resized = browserWidth()
-    expect(resized).toBeGreaterThan(initial)
-    act(root, () => projectActions.setEditingClip(clipId()))
-    await layout(root)
-    expect(
-      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-pressed"]
-    ).toBe(true)
-    expect(root.renderer.findByTestId("clip-editor")).toBeDefined()
-    expect(browserWidth()).toBe(resized)
-    act(root, () => projectActions.setEditingClip(null))
-    await layout(root)
-    expect(browserWidth()).toBe(resized)
-  }, NATIVE_MULTI_SESSION_TEST_TIMEOUT)
+  test(
+    "a resized Browser keeps its width when the footer switches to Clip Edit and back",
+    async () => {
+      countSessions()
+      const { root } = mount({ router: createRouter("/project/layout") })
+      const browserWidth = () =>
+        root.renderer.getElementBounds(element(root, "project-workspace-content-browser").id)
+          ?.width ?? 0
+      await layout(root)
+      const initial = browserWidth()
+      const divider = root.renderer.getElementBounds(
+        element(root, "project-workspace-border-divider-left").id
+      )
+      if (!divider) throw new Error("Browser divider has no bounds")
+      const x = divider.x + divider.width / 2
+      const y = divider.y + divider.height / 2
+      root.renderer.nativeSimulateMouseMove(x, y)
+      root.renderer.nativeSimulateMouseDown(x, y)
+      root.renderer.nativeSimulateMouseMove(x + initial / 4, y, 0)
+      root.renderer.nativeSimulateMouseUp(x + initial / 4, y)
+      await layout(root)
+      const resized = browserWidth()
+      expect(resized).toBeGreaterThan(initial)
+      act(root, () => projectActions.setEditingClip(clipId()))
+      await layout(root)
+      expect(
+        root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.[
+          "aria-pressed"
+        ]
+      ).toBe(true)
+      expect(root.renderer.findByTestId("clip-editor")).toBeDefined()
+      expect(browserWidth()).toBe(resized)
+      act(root, () => projectActions.setEditingClip(null))
+      await layout(root)
+      expect(browserWidth()).toBe(resized)
+    },
+    NATIVE_MULTI_SESSION_TEST_TIMEOUT
+  )
 
   test("a Clip View request from the previous project does not reopen Clip Edit in the next", () => {
     countSessions()
@@ -626,17 +662,20 @@ describe("project layout state", () => {
     const nextLayout = createProjectWorkspace(DEFAULT_DESIGN_TOKENS.dock.borderSize)
     const bottom = nextLayout.borders.bottom
     if (!bottom) throw new Error("Default workspace has no bottom rail")
-    files.entries.set("second.zdaw", JSON.stringify({
-      version: 2,
-      document: createMockDocument(),
-      workspace: {
-        ...createMockWorkspace(),
-        dockLayout: JSON.stringify({
-          ...nextLayout,
-          borders: { ...nextLayout.borders, bottom: { ...bottom, selected: null } },
-        }),
-      },
-    }))
+    files.entries.set(
+      "second.zdaw",
+      JSON.stringify({
+        version: 2,
+        document: createMockDocument(),
+        workspace: {
+          ...createMockWorkspace(),
+          dockLayout: JSON.stringify({
+            ...nextLayout,
+            borders: { ...nextLayout.borders, bottom: { ...bottom, selected: null } },
+          }),
+        },
+      })
+    )
     setProjectFiles(files)
     const { root, router } = mount({ router: createRouter("/project/first") })
     act(root, () => projectActions.setEditingClip(clipId()))

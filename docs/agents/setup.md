@@ -8,10 +8,10 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 - 新 checkout 初始化渲染器：`git submodule update --init --recursive`，再依次运行 `node scripts/gpuix-main/build.mjs runtime`、`pnpm install --frozen-lockfile`、`pnpm native:build`。macOS 可将 `runtime` 改为 `precompiled`。
 - 编辑渲染器时直接在 `vendor/gpuix` 或 `vendor/gpuix/zed` 提交；推送到 chacelow 对应 fork 的 `zoeydaw` 分支后，在主仓库更新 `vendor/gpuix` gitlink。参见[渲染器 fork 指南](../research/gpuix-main-build.md)。
-- 开发窗口：`apps/gpuix` 下 `bun --hot <入口>`（应用入口 `src/main.tsx`，画廊另有入口）。改 TS/TSX 保存即热更新。
+- 开发窗口：`apps/gpuix` 下 `bun --hot src/main.tsx`；Gallery 使用 `ZOEYDAW_ROUTE=/gallery` 进入主应用路由。改 TS/TSX 保存即热更新。
 - Rust 改动：根目录 `pnpm native:build` 重建 `.node`，再重启自己的窗口。
 - Agent 自己启动验证窗口，启动时用带 `name` 的 bash service，拿到截图/AX 证据后立刻 kill；收尾前确认零残留。
-- 后台启动：任何入口（`src/main.tsx`、Gallery、各 demo）加 `GPUIX_BACKGROUND=1`，窗口打开时不抢键盘焦点，用户的前台应用保持不变，统一由 `platform/window` 的 `LAUNCH_FOCUS` 控制。AX 只读量值、离屏截图（`createTestRoot`）和例行回归都用这种方式。后台窗口不能替代真实桌面验收：它通常被前台应用遮挡，macOS 会停发遮挡窗口的 animation frame（F3 实测），所以窗口截图可能全黑，等待原生帧的测量（性能、首帧）会一直卡住；`el.press()` 等输入还可能报 `BackgroundUnavailable`。遇到这些情况，把对应项标为未验证，不要用 headless 数据冒充窗口数据；需要真实帧的验收在真实桌面上串行完成。
+- 后台启动：应用入口加 `GPUIX_BACKGROUND=1`，窗口打开时不抢键盘焦点，用户的前台应用保持不变，统一由 `platform/window` 的 `LAUNCH_FOCUS` 控制。AX 只读量值、离屏截图（`createTestRoot`）和例行回归都用这种方式。后台窗口不能替代真实桌面验收：它通常被前台应用遮挡，macOS 会停发遮挡窗口的 animation frame（F3 实测），所以窗口截图可能全黑，等待原生帧的测量（性能、首帧）会一直卡住；`el.press()` 等输入还可能报 `BackgroundUnavailable`。遇到这些情况，把对应项标为未验证，不要用 headless 数据冒充窗口数据；需要真实帧的验收在真实桌面上串行完成。
 - 不停止用户自己启动的应用或服务。
 
 ## 验证命令（gpuix）

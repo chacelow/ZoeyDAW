@@ -1,7 +1,8 @@
+import { useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { THEME_PRESETS, isThemePresetId } from "@/shared/theme/presets"
-import { ToggleGroup, ToggleGroupItem } from "@/ui/controls"
+import { ToggleGroup, ToggleGroupItem, TruncatedText } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import type { ThemePresetId } from "@/shared/theme/presets"
 
@@ -14,6 +15,7 @@ export interface ThemePresetGridProps {
 export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGridProps) {
   const theme = useTheme()
   const { renderer } = useGpuix()
+  const [hoveredPreset, setHoveredPreset] = useState<ThemePresetId | null>(null)
   const gap = theme.design.settings.itemGap
   const swatchHeight = theme.design.settings.presetGrid.swatchHeight
   const columnWidth = theme.design.settings.presetGrid.columnWidth
@@ -40,6 +42,8 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
               value={preset.id}
               testId={`theme-preset-${preset.id}`}
               aria-label={preset.label}
+              onMouseEnter={() => setHoveredPreset(preset.id)}
+              onMouseLeave={() => setHoveredPreset(null)}
               onKeyDown={event => {
                 if (event.key === "space" || event.key === " ") {
                   event.preventDefault()
@@ -108,18 +112,17 @@ export function ThemePresetGrid({ value, onValueChange, label }: ThemePresetGrid
                   </div>
                 ) : null}
               </div>
-              <text
+              <TruncatedText
+                hovered={hoveredPreset === preset.id}
                 style={{
                   pointerEvents: "none",
                   color: selected ? theme.colors.foreground : theme.colors.mutedForeground,
                   fontWeight: selected ? theme.design.typography.weights.medium : undefined,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  flexGrow: 0,
                 }}
               >
                 {preset.label}
-              </text>
+              </TruncatedText>
             </ToggleGroupItem>
           )
         })}

@@ -6,7 +6,6 @@ import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { GallerySection } from "@/gallery/catalog/GallerySection"
 import { ProjectComposites } from "@/gallery/catalog/ProjectComposites"
-import { GalleryWorkspace } from "@/gallery/states"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
@@ -135,42 +134,6 @@ test("catalog sections fill their parent while project content follows its own g
     expect(bounds(root, "gallery-section-width").width).toBe(700)
     expect(bounds(root, "gallery-project-section").width).toBe(233)
     expect(bounds(root, "gallery-project-card").width).toBe(233)
-  } finally {
-    root.unmount()
-  }
-})
-
-test("Gallery settings preview width follows its own layout after native activation", async () => {
-  const root = createTestRoot({ width: 1400, height: 1200 })
-  async function settle() {
-    for (let pass = 0; pass < 4; pass++) {
-      await Bun.sleep(35)
-      paint(root)
-    }
-  }
-  try {
-    root.render(
-      <ThemeProvider
-        layout={{
-          ...DEFAULT_LAYOUT_TOKENS,
-          gallery: { ...DEFAULT_LAYOUT_TOKENS.gallery, settingsPreviewWidth: 487 },
-        }}
-      >
-        <GalleryWorkspace locale="en" formats={createDisplayFormats("en-US")} />
-      </ThemeProvider>
-    )
-    await settle()
-    const category = bounds(root, "gallery-category-surfaces")
-    root.renderer.nativeSimulateClick(
-      category.x + category.width / 2,
-      category.y + category.height / 2
-    )
-    await settle()
-    const trigger = root.renderer.findByTestId("gallery-open-settings")
-    if (!trigger) throw new Error("Missing Gallery settings trigger")
-    root.renderer.nativeSimulateKeystrokes(trigger.id, "enter")
-    await settle()
-    expect(bounds(root, "gallery-settings-preview").width).toBe(487)
   } finally {
     root.unmount()
   }

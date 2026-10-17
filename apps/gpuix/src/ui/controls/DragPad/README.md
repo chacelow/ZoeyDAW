@@ -33,7 +33,7 @@ UI 层只声明 `CursorLockPort { begin(), end(release?) }`，通过 `ControlEnv
 根目录先 `pnpm native:build`，然后在 `apps/gpuix` 执行：
 
 ```sh
-bun --hot src/gallery/controls.tsx
+bun --hot src/main.tsx
 bun test src/ui/controls
 bunx tsc --noEmit
 ```

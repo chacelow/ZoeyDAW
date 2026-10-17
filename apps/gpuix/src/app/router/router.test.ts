@@ -4,7 +4,9 @@ import { createRouter } from "./router"
 import type { Route } from "./route"
 
 describe("route parsing", () => {
-  test("maps the web paths onto the three routes", () => {
+  test("maps web paths onto home, project, and gallery routes", () => {
+    expect(parseRoute("/gallery")).toEqual({ kind: "gallery" })
+    expect(parseRoute("/gallery/")).toEqual({ kind: "gallery" })
     expect(parseRoute("/")).toEqual({ kind: "home" })
     expect(parseRoute("/project/abc")).toEqual({ kind: "project", projectId: "abc" })
     expect(parseRoute("/project/abc/")).toEqual({ kind: "project", projectId: "abc" })

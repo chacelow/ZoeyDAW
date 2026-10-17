@@ -1,3 +1,4 @@
+import { CONTROL_METRICS } from "@/shared/theme/metrics/config"
 import type { motion, StyleDesc } from "@gpuix/react"
 import type { ComponentProps } from "react"
 
@@ -133,6 +134,7 @@ export interface DesignDetails {
     readonly triangleHeightRatio: number
   }
   readonly treeRow: { readonly indent: number }
+  readonly list: { readonly rowGap: number }
   readonly switch: { readonly widthRatio: number; readonly thumbInset: number }
   readonly knob: {
     readonly diameterRatio: number
@@ -272,6 +274,7 @@ export const DEFAULT_DESIGN_DETAILS: DesignDetails = {
     triangleHeightRatio: 0.6,
   },
   treeRow: { indent: 12 },
+  list: { rowGap: CONTROL_METRICS.default["--spacing-control-track-gap"] },
   switch: { widthRatio: 2, thumbInset: 2 },
   knob: { diameterRatio: 2, sweepDegrees: 300, strokeWidth: 2, indicatorWidth: 1.5 },
   progress: { indeterminateOpacity: 0.5, widthFraction: 0.3 },

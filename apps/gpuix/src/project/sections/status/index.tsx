@@ -1,4 +1,4 @@
-import { Button } from "@/ui/controls"
+import { Button, TruncatedText } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import type { ControlInfo } from "@/ui/controls"
@@ -88,17 +88,15 @@ export function StatusStrip({
             <text style={{ color: theme.colors.foreground, whiteSpace: "nowrap", flexShrink: 0 }}>
               {help.title}
             </text>
-            <text
+            <TruncatedText
               style={{
                 color: theme.colors.mutedForeground,
-                whiteSpace: "nowrap",
-                textOverflow: "ellipsis",
                 minWidth: 0,
                 flexGrow: 1,
               }}
             >
               {help.description}
-            </text>
+            </TruncatedText>
           </>
         ) : warning ? (
           <>
@@ -112,17 +110,15 @@ export function StatusStrip({
               }
               color={color}
             />
-            <text
+            <TruncatedText
               style={{
                 color,
-                whiteSpace: "nowrap",
-                textOverflow: "ellipsis",
                 minWidth: 0,
                 flexGrow: 1,
               }}
             >
               {warning.message}
-            </text>
+            </TruncatedText>
           </>
         ) : null}
       </div>

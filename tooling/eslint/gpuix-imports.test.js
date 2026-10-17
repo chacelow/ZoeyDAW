@@ -80,7 +80,7 @@ tester.run("architecture/gpuix-imports", gpuixImports, {
       errors: [{ messageId: "handWrittenSvg" }],
     },
     {
-      filename: `${src}/gallery/controls.tsx`,
+      filename: `${src}/gallery/states.tsx`,
       code: 'const markup = `<svg xmlns="http://www.w3.org/2000/svg"><circle r="3"/></svg>`; void markup',
       errors: [{ messageId: "handWrittenSvg" }],
     },

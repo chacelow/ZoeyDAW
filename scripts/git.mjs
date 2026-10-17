@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs"
 import path from "node:path"
 
 export function gitExecutable() {
@@ -7,9 +8,9 @@ export function gitExecutable() {
     return override
   }
   if (process.platform !== "win32") return "/usr/bin/git"
-  if (!process.env.ProgramFiles)
-    throw new Error("ProgramFiles is required to locate Git for Windows")
-  return path.join(process.env.ProgramFiles, "Git", "cmd", "git.exe")
+  const installed =
+    process.env.ProgramFiles && path.join(process.env.ProgramFiles, "Git", "cmd", "git.exe")
+  return installed && existsSync(installed) ? installed : "git"
 }
 
 export function isWithinBuildPath(value, root) {

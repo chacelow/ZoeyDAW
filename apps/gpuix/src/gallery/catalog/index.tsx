@@ -1,5 +1,5 @@
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { ListRow, ScrollArea } from "@/ui/controls"
+import { List, ListRow, ScrollArea } from "@/ui/controls"
 import { ButtonsSection } from "./buttons"
 import { TogglesSection } from "./toggles"
 import { NumericSection } from "./numeric"
@@ -48,13 +48,15 @@ export function GalleryCategories({
       testId="gallery-categories"
       aria-label={t("Component categories", "组件类别")}
       fill
-      style={{ display: "flex", flexDirection: "column", padding: theme.design.cards.controls.inset }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        height: "100%",
+        padding: theme.design.cards.controls.inset,
+      }}
     >
-      <div
-        role="listbox"
-        aria-label={t("Component categories", "组件类别")}
-        style={{ display: "flex", flexDirection: "column", width: "100%", flexShrink: 0 }}
-      >
+      <List aria-label={t("Component categories", "组件类别")}>
         {GALLERY_CATALOG.map(entry => (
           <ListRow
             key={entry.id}
@@ -66,7 +68,7 @@ export function GalleryCategories({
             style={{ width: "100%" }}
           />
         ))}
-      </div>
+      </List>
     </ScrollArea>
   )
 }

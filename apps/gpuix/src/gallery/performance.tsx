@@ -1,11 +1,24 @@
 import { createTestRoot } from "@gpuix/react/testing"
-import { GalleryDemo } from "./GalleryDemo"
+import { ThemeProvider } from "@/shared/theme/ThemeProvider"
+import { createDisplayFormats, initAppI18n } from "@/app/i18n"
+import { AppInteractionProvider } from "@/app/interaction"
+import { createRouter, RouterProvider } from "@/app/router/router"
+import { GalleryWorkspace } from "./states"
 import { GALLERY_CATALOG } from "./catalog"
 
+initAppI18n({ initialLanguage: "en-US" })
 const viewport = { width: 1045, height: 780 }
 const root = createTestRoot(viewport)
 try {
-  root.render(<GalleryDemo />)
+  root.render(
+    <ThemeProvider>
+      <AppInteractionProvider>
+        <RouterProvider value={createRouter("/gallery")}>
+          <GalleryWorkspace locale="en" formats={createDisplayFormats("en-US")} />
+        </RouterProvider>
+      </AppInteractionProvider>
+    </ThemeProvider>
+  )
   for (const entry of GALLERY_CATALOG) {
     for (let frame = 0; frame < 4; frame++) {
       await Bun.sleep(35)
@@ -24,9 +37,8 @@ try {
       root.renderer.flush()
       root.renderer.dispatchNativeEvents()
     }
-    if (!root.renderer.findByTestId(`gallery-section-${entry.id}`)) {
+    if (!root.renderer.findByTestId(`gallery-section-${entry.id}`))
       throw new Error(`Gallery category did not activate: ${entry.id}`)
-    }
     const samples: number[] = []
     for (let frame = 0; frame < 9; frame++) {
       const start = performance.now()

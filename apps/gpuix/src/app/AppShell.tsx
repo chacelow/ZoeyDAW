@@ -8,8 +8,9 @@ import { TitleBar } from "@/ui/panels/TitleBar"
 import { usePreference } from "@/platform/settings"
 import { useProjectState } from "@/project/adapters"
 import { projectFileName } from "@/project/model/project-file"
+import { GalleryWorkspace } from "@/gallery/states"
 import { HomePage } from "./home/HomePage"
-import { useAppTranslation } from "./i18n"
+import { createDisplayFormats, useAppTranslation } from "./i18n"
 import { AppPreferencesProvider } from "./preferences"
 import type { AppearanceStores } from "./preferences"
 import { ProjectPage } from "./project/ProjectPage"
@@ -21,8 +22,8 @@ import { SettingsDialog } from "./settings/SettingsDialog"
 import { WorkstationMenus } from "./shell/WorkstationMenus"
 import { UnsavedCloseDialog } from "./window/UnsavedCloseDialog"
 import { useUnsavedCloseGuard } from "./window/useUnsavedCloseGuard"
-import { AppInteractionProvider } from "./interaction"
 import { ProjectFileProvider, useProjectFiles } from "./project-file/ProjectFileProvider"
+import { AppInteractionProvider } from "./interaction"
 import type { ProjectFileEnvironment } from "./project-file/ProjectFileProvider"
 import type { ReactNode } from "react"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
@@ -42,7 +43,6 @@ export interface AppShellProps {
   readonly renderProjectSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
   readonly showErrorDetails: boolean
 }
-
 export function AppShell({
   router,
   appearance,
@@ -67,7 +67,14 @@ export function AppShell({
               showErrorDetails={showErrorDetails}
               onOpenSettings={openSettings}
             >
-              <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+              <SettingsDialog
+                open={settingsOpen}
+                onOpenChange={setSettingsOpen}
+                onOpenGallery={() => {
+                  setSettingsOpen(false)
+                  router.navigate({ kind: "gallery" })
+                }}
+              />
             </AppFrame>
           </ProjectFileProvider>
         </AppPreferencesProvider>
@@ -98,7 +105,7 @@ function AppFrame({
   useLayoutEffect(() => () => dismissToast(), [])
   const route = useRoute()
   const router = useRouter()
-  const { t } = useAppTranslation()
+  const { t, locale } = useAppTranslation()
   const projectName = useProjectState(state =>
     state.session.filePath ? projectFileName(state.session.filePath) : state.document.name
   )
@@ -108,7 +115,12 @@ function AppFrame({
   const [layoutTogglesTarget, setLayoutTogglesTarget] = useState<PublicInstance | null>(null)
   const isProject = route.kind === "project"
   const surface = isProject ? theme.colors.muted : theme.colors.background
-  const viewMenuSlot = isProject ? <div ref={setViewMenuTarget} style={{ display: "flex", flexDirection: "row", alignItems: "center" }} /> : undefined
+  const viewMenuSlot = isProject ? (
+    <div
+      ref={setViewMenuTarget}
+      style={{ display: "flex", flexDirection: "row", alignItems: "center" }}
+    />
+  ) : undefined
   return (
     <div
       testId="app-frame"
@@ -126,9 +138,44 @@ function AppFrame({
       <TitleBar
         title={isProject ? projectName : t("titlebar.appTitle")}
         window={titlebarWindow}
-        labels={{ minimize: t("titlebar.minimize"), maximizeRestore: t("titlebar.maximizeRestore"), close: t("titlebar.close") }}
-        left={titlebarWindow && titlebarWindow.platform !== "macos" ? <WorkstationMenus view={viewMenuSlot} isProject={isProject} onOpenSettings={onOpenSettings} onClose={titlebarWindow.close} /> : undefined}
-        actions={<>{isProject ? <div ref={setLayoutTogglesTarget} style={{ display: "flex", height: "100%", alignItems: "stretch" }} /> : null}<Button iconOnly variant="ghost" testId="titlebar-settings" label={t("titlebar.settings")} onClick={onOpenSettings}><IconSlot><Icon name="Settings" /></IconSlot></Button></>}
+        labels={{
+          minimize: t("titlebar.minimize"),
+          maximizeRestore: t("titlebar.maximizeRestore"),
+          close: t("titlebar.close"),
+        }}
+        left={
+          titlebarWindow && titlebarWindow.platform !== "macos" ? (
+            <WorkstationMenus
+              view={viewMenuSlot}
+              isProject={isProject}
+              onOpenSettings={onOpenSettings}
+              onOpenGallery={() => router.navigate({ kind: "gallery" })}
+              onOpenHome={() => router.navigate({ kind: "home" })}
+              onClose={titlebarWindow.close}
+            />
+          ) : undefined
+        }
+        actions={
+          <>
+            {isProject ? (
+              <div
+                ref={setLayoutTogglesTarget}
+                style={{ display: "flex", height: "100%", alignItems: "stretch" }}
+              />
+            ) : null}
+            <Button
+              iconOnly
+              variant="ghost"
+              testId="titlebar-settings"
+              label={t("titlebar.settings")}
+              onClick={onOpenSettings}
+            >
+              <IconSlot>
+                <Icon name="Settings" />
+              </IconSlot>
+            </Button>
+          </>
+        }
       />
       <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0 }}>
         <RouteErrorBoundary
@@ -138,19 +185,30 @@ function AppFrame({
         >
           {route.kind === "home" ? (
             <HomePage />
+          ) : route.kind === "gallery" ? (
+            <GalleryWorkspace
+              locale={locale === "zh-CN" ? "zh" : "en"}
+              formats={createDisplayFormats(locale)}
+            />
           ) : route.kind === "project" ? (
             <ProjectPage
               key={route.projectId}
               projectId={route.projectId}
               openMode={route.openMode}
               renderSlots={renderProjectSlots}
-              renderViewMenu={(view, toggles) => <>{viewMenuTarget ? createPortal(view, viewMenuTarget) : null}{layoutTogglesTarget ? createPortal(toggles, layoutTogglesTarget) : null}</>}
+              renderViewMenu={(view, toggles) => (
+                <>
+                  {viewMenuTarget ? createPortal(view, viewMenuTarget) : null}
+                  {layoutTogglesTarget ? createPortal(toggles, layoutTogglesTarget) : null}
+                </>
+              )}
             />
           ) : (
             <NotFoundPage />
           )}
         </RouteErrorBoundary>
       </div>
+
       <UnsavedCloseDialog open={close.asking} onChoose={choice => void close.choose(choice)} />
       {files.dialog}
       <Toaster

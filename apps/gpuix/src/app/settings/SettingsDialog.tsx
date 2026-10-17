@@ -36,9 +36,10 @@ const GITHUB_URL = "https://github.com"
 export interface SettingsDialogProps {
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
+  readonly onOpenGallery: () => void
 }
 
-export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, onOpenGallery }: SettingsDialogProps) {
   const theme = useTheme()
   const { t } = useAppTranslation()
   const [section, setSection] = useState<SettingsSection>("appearance")
@@ -64,13 +65,21 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         items={items}
         activeId={section}
         onActiveChange={id => setSection(id as SettingsSection)}
-        renderPane={id => <SettingsPane section={id as SettingsSection} />}
+        renderPane={id => (
+          <SettingsPane section={id as SettingsSection} onOpenGallery={onOpenGallery} />
+        )}
       />
     </ModalDialog>
   )
 }
 
-function SettingsPane({ section }: { readonly section: SettingsSection }) {
+function SettingsPane({
+  section,
+  onOpenGallery,
+}: {
+  readonly section: SettingsSection
+  readonly onOpenGallery: () => void
+}) {
   switch (section) {
     case "appearance":
       return <AppearanceSection />
@@ -79,7 +88,7 @@ function SettingsPane({ section }: { readonly section: SettingsSection }) {
     case "logs":
       return <LogsSection />
     case "about":
-      return <AboutSection />
+      return <AboutSection onOpenGallery={onOpenGallery} />
   }
 }
 
@@ -196,7 +205,7 @@ function LogsSection() {
   )
 }
 
-function AboutSection() {
+function AboutSection({ onOpenGallery }: { readonly onOpenGallery: () => void }) {
   const theme = useTheme()
   const { t } = useAppTranslation()
   const styles = useSectionStyle()
@@ -208,6 +217,9 @@ function AboutSection() {
       <text style={styles.muted}>{t("about.sourceHint")}</text>
       <Separator />
       <div style={{ display: "flex", flexDirection: "row" }}>
+        <Button variant="outline" label={t("titlebar.gallery")} onClick={onOpenGallery}>
+          {t("titlebar.gallery")}
+        </Button>
         <Button variant="outline" label={githubLabel} onClick={() => openExternalUrl(GITHUB_URL)}>
           {githubLabel}
         </Button>

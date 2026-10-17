@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { Button, Input } from "@/ui/controls"
+import { Button, Input, TruncatedText } from "@/ui/controls"
 import { ModalDialog } from "../dialog/ModalDialog"
 import { useAppTranslation } from "../i18n"
 import type { ProjectLocations } from "@/platform/storage"
@@ -78,18 +78,15 @@ export function SaveAsDialog({
         />
         <text style={{ color: theme.colors.mutedForeground }}>{t("projectFile.location")}</text>
         <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap }}>
-          <text
+          <TruncatedText
             testId="save-as-directory"
             style={{
               flexGrow: 1,
               minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
             }}
           >
             {directory}
-          </text>
+          </TruncatedText>
           {chooseDirectory ? (
             <Button
               variant="outline"

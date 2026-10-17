@@ -153,6 +153,8 @@ export type {
 } from "./ControlEnvironment"
 export type { ControlGroupProps } from "./ControlGroup"
 export type { DragPreviewAreaProps, DragPreviewItem } from "./DragPreviewArea"
+export { List } from "./List"
+export type { ListProps } from "./List"
 export { ListRow } from "./ListRow"
 export type { ListRowProps } from "./ListRow"
 export { Checkbox } from "./Checkbox"

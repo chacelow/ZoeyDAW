@@ -13,11 +13,11 @@
 - `DividerLayer` 的嵌套实例将命中层 portal 到最外层末尾层，并按本地 bounds 转换坐标，保证 Dock 的稳定内容层无法覆盖 sash。hover/focus 只改 1px 线的颜色，不改命中几何。拖动每次 move 计算真实尺寸，在下一帧实时提交最新快照；不会只移动 outline。方向键立即提交，松手同步 flush 最终快照，取消清除待提交帧并恢复按下值。
 - `CollapseDivider` 管理 Group 外固定高度区域的显隐，包含它与相邻内容的容器必须使用 `DividerLayer`，以复用同一末尾命中层。`expandedSize` 的一半是切换阈值，拖回阈值以内恢复按下时的状态。上下方向键分别展开与折叠。调用方必须提供 `aria-label` 与 `formatAccessiblePixels`，朗读当前展开尺寸或折叠后的零值，共享组件不拼接英文单位。
 - `CollapseDivider` 的 Home/Up 展开、End/Down 折叠与活动拖动的 Escape 取消只由控件消费（`preventDefault`、`stopPropagation`），不能同时触发窗口 rewind 或关闭 Clip Edit；idle Escape 与 Space 继续冒泡给窗口。`useDividerDrag.cancel` 从唯一 anchor 判断并返回是否实际取消；视觉拖动状态不作为手势真值。原生组合回归见 `ui/verification/r2-controls.test.tsx`。
-- `TitleBar` 是 App 与 Gallery 共用的固定窗口 chrome：`title`、`left`、`actions`、本地化 `labels` 与可选 `window: TitleBarWindow`。UI 不读取 platform；组合根注入 `platform`、`minimize/zoom/close/doubleClick` 与可清理的 `subscribeActive`。未注入 window 的离屏组合不绘制窗口按钮。标题经 `TruncatedText` 在中间弹性区域截断，左右槽与窗口按钮不收缩；空白表面是原生 drag hitbox，交互按钮单独阻挡命中。
+- `TitleBar` 是 App 固定窗口 chrome：`title`、`left`、`actions`、本地化 `labels` 与可选 `window: TitleBarWindow`。UI 不读取 platform；组合根注入 `platform`、`minimize/zoom/close/doubleClick` 与可清理的 `subscribeActive`。未注入 window 的离屏组合不绘制窗口按钮。标题经 `TruncatedText` 在中间弹性区域截断，左右槽与窗口按钮不收缩；空白表面是原生 drag hitbox，交互按钮单独阻挡命中。
 - macOS 预留 `project.trafficLightInset`，保留系统 traffic lights，不重复绘制菜单栏；双击调用系统偏好动作。Windows/Linux 在右侧绘制 `project.windowControlWidth × project.titlebarHeight` 的窗口按钮；关闭悬停使用主题 destructive 色。标题栏高 `project.titlebarHeight` 默认 30（2u），菜单与设置按钮沿用默认控件尺度。Windows 的双击交给 HTCAPTION，不同时注册 JS zoom。窗口失活仅将标题颜色改为 mutedForeground。
-- App 的 TitleBar 由 `AppFrame` 持有，位于路由错误边界之外；工程加载失败不移除窗口按钮或设置入口。`ProjectLayout.renderViewMenu` 只将既有 DockViewMenu portal 到标题栏的 View slot，不把窗口 chrome 放进工程内容，也不创建第二份 Dock 状态。Gallery 直接把其受控 DockViewMenu 传入 left slot。
+- App 的 TitleBar 由 `AppFrame` 持有，位于路由错误边界之外；工程加载失败不移除窗口按钮或设置入口。`ProjectLayout.renderViewMenu` 只将既有 DockViewMenu portal 到标题栏的 View slot，不把窗口 chrome 放进工程内容，也不创建第二份 Dock 状态。Windows/Linux 通过 Help 菜单进入 Gallery；macOS 保留原生菜单栏而不重复绘制应用菜单，Gallery 从 Settings > About 打开。
 
-固定高度 Device 应放在可调 Group 外。画廊用 160px Device 验证 Clip 展开与连续调整不会压缩它。折叠 Browser 时，内部 Group 保留最近的非零布局，固定宽度列表只由外部 Panel 裁剪。
+固定高度 Device 应放在可调 Group 外。项目布局用 160px Device 验证 Clip 展开与连续调整不会压缩它。折叠 Browser 时，内部 Group 保留最近的非零布局，固定宽度列表只由外部 Panel 裁剪。
 
 ## 布局与手势
 
@@ -41,9 +41,9 @@
 
 `DockLayoutJSON` 的 `version: 2` 包含 `root`、`hidden`、`activeGroup`、`maximizedGroup` 与 `borders`。`borders` 按 left/right/bottom 保存 `{tabs, selected, size, type}`，type 为 `split | overlay`；旧 v2 未提供 type 时默认为 split，不升版本。多个 split border 可以同时选中，只允许一个 overlay 展开。`fromJSON` 校验唯一 ownership、selected 成员、正有限 size 与合法 type，非法数据抛 TypeError。
 
-Dock split 用 Group 的受控 `weights`、派生 `extent/bounds` 与 `onLayoutChange(sizes)` 接收完整快照。拖动的唯一尺寸 owner 是 live ref；没有逐 Panel onResize 聚合、imperative resize 循环或子 onLayout→setContentBounds 写回。组矩形与稳定内容层位置由同一布局权重纯投影，Tab bounds 只在开始拖 Tab 时采样；内容通过 memo + 稳定注册表保留，不随尺寸更新重渲染。
+Dock split uses Group's controlled `weights`, derived `extent/bounds`, and size snapshots. During split or border sash drags Dock keeps a local preview layout and projects group and rail geometry from it; controlled `onLayoutChange` runs once on release. Escape, blur, and injected window deactivation discard the preview without parent commits. GroupContext and resize callbacks are stable across moves, and the fixed `DockContent` layer prevents content subtree commits while geometry previews update.
 
-Tab/组握柄用原生 capture，超过 `ControlEnvironment.inputPolicy.dragThresholdPixels` 才显示落点预览，释放时才提交；中心合并、边缘拆分、Tab 条按指针中点插入。Escape/失焦/注入的窗口失活取消。没有 inputPolicy 时不启动拖动。几何只接收原生 `onLayout`，不轮询 bounds。内容层由固定根节点按 panel id 挂载，移动、换 Tab、最大化、隐藏不重新挂载；关闭移除该内容，显示隐藏项用 `addPanel`。
+Tab/group handles use native capture and show drop previews only after `ControlEnvironment.inputPolicy.dragThresholdPixels`; they commit on release. Escape, blur, and injected window deactivation cancel. Without inputPolicy, drag does not start. Geometry receives only native `onLayout` events; bounds are not polled. The fixed root content layer mounts each panel by id and preserves it across move, tab switch, maximize, and hide; closing removes it, and hidden panels return through `addPanel`.
 
 Tab 使用 roving tabindex，Left/Right 只移动焦点，Enter 激活；点击可见内容区会把该组设为 `activeGroup`，不强制把焦点移到 Tab。`ref: DockLayoutHandle` 的 `executeCommand` 接收 `moveLeft/Right/Up/Down`（移动活动 panel 至相邻组）、`toggleMaximize`、`close`、`hide`，返回是否处理；`onFocusChange` 由组合层提供 keymap focus。`platform/keyboard` 的 `dock.*` 命令与 K1 默认表拥有快捷键，ui 不 import platform。`gallery/catalog/layout.tsx` 的 LayoutSection 给出完整注册表、K1 接线、隐藏恢复、重置、普通嵌套 Group、PanelShell 与 CollapseDivider 示例，所有布局类组件在同一个目录区块。浮动/弹出窗口不在此模块范围。
 
@@ -70,17 +70,15 @@ Tab 的原生 bounds 来自包含标题按钮与关闭按钮的完整 wrapper。
 | calculateQuadrantAsPercentage，默认 20% 边缘 | resolveDropPosition + design.dock.edgeFraction；角落取最近归一化边缘，而非固定左右优先 |
 | maximize/restore、panel visibility | toggleMaximize、hideTab/addPanel；固定根内容层保持 React 状态 |
 
-回归覆盖空组折叠、同组拆分、整个组迁移、中心合并、四边缘拆分、Tab 重排、最小尺寸 sash 调整、版本/唯一性边界、固定种子操作序列，以及原生拖动/取消/组件状态保留与 Gallery 命令路径。默认 Dock token 由当前 control 派生，主题编辑器先解析 control 再解析设计覆盖；显式 design 覆盖不被改写。Tab 图文 gap 取 control-gap，Tab 分隔、插入标记与 sash 视觉宽度取 separatorWidth，sash 命中区取 panelGap。
-
-`PanelEnvironment.scheduleFrame(callback): cancel` 由 NativeRoot 与 Gallery 组合根注入，复用已有 AnimationFrameSource，一帧后立即解除订阅。`useResizeCommit` 合并同帧多个 move，只提交最后快照；测试未注入时同步提交，确保 createTestRoot 确定性。性能回归 `bun test src/ui/panels/Dock/resize-performance.test.tsx` 用 dispatchMouseMove + 一次 flush/dispatch 测实际单帧，轻量 Dock 要求 p50 ≤ 8ms 且每 move 一次 commit。完整 Gallery 只报告原生成本，不把重内容布局计作 Dock 门禁；每 move 之后都验证真实面板宽度已经更新。
+回归覆盖空组折叠、同组拆分、整个组迁移、中心合并、四边缘拆分、Tab 重排、最小尺寸 sash 调整、版本/唯一性边界、固定种子操作序列，以及原生拖动/取消/组件状态保留。 `PanelEnvironment.scheduleFrame(callback): cancel` is injected by NativeRoot and reuses the existing AnimationFrameSource, unsubscribing immediately after one frame. `useResizeCommit` coalesces moves within a frame and flushes the final snapshot on release; without an injected scheduler it submits synchronously for deterministic `createTestRoot` behavior. The performance regression `bun test src/ui/panels/Dock/resize-performance.test.tsx` measures each native move with one flush/dispatch: lightweight Dock p50 ≤ 8ms, heavy Dock scenarios use a higher CI-aware budget, and mounted content Profiler commits remain zero per move.
 
 ## 运行
 
-工作区根目录先运行 `bash scripts/gpuix-main/build.sh`、`pnpm install --frozen-lockfile` 与 `pnpm native:build`。在 `apps/gpuix` 运行：
+工作区根目录先运行 `git submodule update --init --recursive`、`node scripts/gpuix-main/build.mjs runtime`、`pnpm install --frozen-lockfile` 与 `pnpm native:build`。在 `apps/gpuix` 运行：
 
 ```sh
 pnpm exec tsc --noEmit
 bun test src/ui/panels
 bun test
-bun --hot src/gallery/controls.tsx
+bun --hot src/main.tsx
 ```
