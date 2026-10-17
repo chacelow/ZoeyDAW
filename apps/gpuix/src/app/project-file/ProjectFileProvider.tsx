@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -106,9 +107,14 @@ export function ProjectFileProvider({
     if (openRequest > previous.open) open()
   }, [saveAsRequest, openRequest, open, chooseSavePath])
 
-  useLayoutEffect(() => {
-    if (filePath !== null) rememberRecentProject(recents, filePath)
-  }, [filePath, recents])
+  useEffect(
+    () =>
+      useProjectState.subscribe((state, previous) => {
+        const path = state.session.filePath
+        if (path !== null && path !== previous.session.filePath) rememberRecentProject(recents, path)
+      }),
+    [recents]
+  )
 
   const finish = useCallback(
     (path: string | null) => {
