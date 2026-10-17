@@ -18,7 +18,7 @@ import { initAppI18n } from "./app/i18n"
 import { i18next } from "./platform/i18n/core"
 import { NativeRoot } from "./app/NativeRoot"
 import { createRouter } from "./app/router/router"
-import { routePath } from "./app/router/route"
+import type { Route } from "./app/router/route"
 import { loadRecentProjects } from "./app/home/recent-projects"
 import { createPreferenceStore } from "./app/settings/preference-store"
 import { isThemeMode } from "./app/settings/theme-mode"
@@ -41,9 +41,11 @@ const appearance = {
 setProjectFiles(createProjectFileStorage())
 const files = { recents: createRecentProjectStorage(), locations: createProjectLocations() }
 const lastProject = loadRecentProjects(files.recents)[0]?.path
-const startRoute =
+const startRoute: string | Route =
   process.env.ZOEYDAW_ROUTE ??
-  (lastProject ? routePath({ kind: "project", projectId: lastProject }) : "/")
+  (lastProject
+    ? { kind: "project", projectId: lastProject }
+    : { kind: "project", projectId: crypto.randomUUID(), openMode: "new" })
 
 const keyboard = createWindowKeyboard()
 const pointer = createWindowPointerObserver()
