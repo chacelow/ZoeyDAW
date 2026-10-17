@@ -36,6 +36,10 @@
 
 `arrangement-panel`、`browser-divider`、`browser-panel`、`clip-panel`、`project-layout`、`project-main`、`project-workspace`、`workspace-panel`
 
+### `app/project-file`
+
+`save-as`、`save-as-cancel`、`save-as-choose`、`save-as-confirm`、`save-as-directory`、`save-as-name`、`save-as-status`
+
 ### `app/router`
 
 `not-found-page`、`route-error`、`route-error-details`
@@ -74,7 +78,7 @@
 
 ### `project/sections/arrangement/timeline`
 
-`arrangement-timeline`、`marker-name-editor`、`minimap-clip-…`、`minimap-frame`、`minimap-marker-…`、`minimap-playhead`、`minimap-track-…`、`ruler-loop`、`ruler-marker-…`、`ruler-position-…`、`time-ruler-label-…`、`time-ruler-tick-…`、`timeline-grid`、`timeline-grid-choice`、`timeline-horizontal-scroll`、`timeline-layout`、`timeline-minimap`、`timeline-rulers`、`timeline-save`、`timeline-time-ruler`、`timeline-toolbar`、`timeline-viewport`
+`arrangement-timeline`、`marker-name-editor`、`minimap-clip-…`、`minimap-frame`、`minimap-marker-…`、`minimap-playhead`、`minimap-track-…`、`ruler-loop`、`ruler-marker-…`、`ruler-position-…`、`time-ruler-label-…`、`time-ruler-tick-…`、`timeline-grid`、`timeline-grid-choice`、`timeline-horizontal-scroll`、`timeline-layout`、`timeline-minimap`、`timeline-open`、`timeline-rulers`、`timeline-save`、`timeline-time-ruler`、`timeline-toolbar`、`timeline-viewport`
 
 ### `project/sections/arrangement/tracks`
 

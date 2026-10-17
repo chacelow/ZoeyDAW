@@ -4,10 +4,15 @@ import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/f
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { createSettingStorage } from "@/platform/settings"
 import { createThemePresetSetting } from "@/platform/settings/theme-preset"
-import { createSnapshotStorage } from "@/platform/storage"
+import path from "node:path"
+import {
+  createProjectFileStorage,
+  createProjectLocations,
+  createRecentProjectStorage,
+} from "@/platform/storage"
 import {
   projectActions,
-  setSnapshotStorage,
+  setProjectFiles,
   useProjectState,
   whenProjectBackendIdle,
   readProjectTelemetry,
@@ -26,8 +31,12 @@ if (!directory)
   throw new Error("B2_EVIDENCE_DIR must point to the isolated native fixture directory")
 const options = { configDir: directory }
 initAppI18n({ initialLanguage: "en-US", storage: createSettingStorage("language", options) })
-const storage = createSnapshotStorage({ dataDir: directory })
-setSnapshotStorage(storage)
+setProjectFiles(createProjectFileStorage())
+const files = {
+  recents: createRecentProjectStorage({ configDir: directory }),
+  locations: { ...createProjectLocations(), defaultDirectory: directory },
+}
+const savedPath = path.join(directory, "Resume Project", "Resume.zdaw")
 const appearance = {
   themeMode: createPreferenceStore(createSettingStorage("themeMode", options), isThemeMode, "dark"),
   themePreset: createPreferenceStore(
@@ -79,8 +88,8 @@ try {
             router={router}
             appearance={appearance}
             systemAppearance="dark"
-            storage={storage}
-            closeRenderer={null}
+            files={files}
+            windowRenderer={null}
             showErrorDetails
           />
         </WindowKeyboardProvider>
@@ -93,11 +102,17 @@ try {
   const createdRoute = router.getRoute()
   if (createdRoute.kind !== "project") throw new Error("Home did not open a project")
   if (!(await whenProjectBackendIdle())) throw new Error("First native project lease was rejected")
+  flushSync(() => projectActions.saveAs(savedPath))
+  if (
+    !(await whenProjectBackendIdle()) ||
+    useProjectState.getState().session.filePath !== savedPath
+  )
+    throw new Error("Save As did not write the native project file")
   flushSync(() => router.navigate("/"))
   if (useProjectState.getState().session.backend.phase !== "idle")
     throw new Error("Leaving project did not release its native lease")
   await layoutPass()
-  const card = root.renderer.findByTestId(`recent-${createdRoute.projectId}`)
+  const card = root.renderer.findByTestId("recent-0")
   if (!card) throw new Error("No real recent-project Card")
   const bounds = root.renderer.getElementBounds(card.id)
   console.log(
@@ -112,8 +127,8 @@ try {
   )
   root.renderer.nativeSimulateKeystrokes(card.id, "enter")
   const reopened = router.getRoute()
-  if (reopened.kind !== "project" || reopened.projectId !== createdRoute.projectId)
-    throw new Error("Project Card keyboard activation changed the route identity")
+  if (reopened.kind !== "project" || reopened.projectId !== savedPath)
+    throw new Error("Project Card keyboard activation did not open the saved file")
   if (!(await whenProjectBackendIdle()))
     throw new Error("Native fixture backend did not accept the project")
   await layoutPass()
@@ -158,6 +173,6 @@ try {
   await whenProjectBackendIdle()
 } finally {
   root.unmount()
-  setSnapshotStorage(null)
+  setProjectFiles(null)
   console.log("released", useProjectState.getState().session.backend.phase)
 }

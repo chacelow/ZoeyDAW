@@ -11,7 +11,7 @@ apps/gpuix/src/
 ├─ project/              工程领域，唯一的工程状态 owner
 │  ├─ model/             纯函数与类型，无 React、无原生
 │  ├─ stores/            Zustand 工程 Store
-│  ├─ adapters/          project runtime、引擎端口、快照；通过 platform 接口使用外部能力
+│  ├─ adapters/          project runtime、引擎端口、工程文件；通过 platform 接口使用外部能力
 │  ├─ layout/            轨道展示几何（由 ui/theme 度量派生）
 │  └─ sections/          Arrangement / Footer / Browser / TransportBar / StatusStrip
 ├─ ui/                   共享 UI 内核，不认识工程

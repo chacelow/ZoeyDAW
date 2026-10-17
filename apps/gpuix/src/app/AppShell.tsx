@@ -3,6 +3,7 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import { configureToastPolicy, dismissToast, Toaster } from "@/ui/controls"
 import { usePreference } from "@/platform/settings"
 import { useProjectState } from "@/project/adapters"
+import { projectFileName } from "@/project/model/project-file"
 import { HomePage } from "./home/HomePage"
 import { useAppTranslation } from "./i18n"
 import { AppPreferencesProvider } from "./preferences"
@@ -17,8 +18,9 @@ import { TitleBar } from "./shell/TitleBar"
 import { UnsavedCloseDialog } from "./window/UnsavedCloseDialog"
 import { useUnsavedCloseGuard } from "./window/useUnsavedCloseGuard"
 import { AppInteractionProvider } from "./interaction"
+import { ProjectFileProvider, useProjectFiles } from "./project-file/ProjectFileProvider"
+import type { ProjectFileEnvironment } from "./project-file/ProjectFileProvider"
 import type { ReactNode } from "react"
-import type { SnapshotStorage } from "@/platform/storage"
 import type { Appearance } from "@/shared/theme/ThemeProvider"
 import type { ProjectLayoutSlots } from "./project/ProjectLayout"
 import type { Router } from "./router/router"
@@ -29,8 +31,8 @@ export interface AppShellProps {
   readonly router: Router
   readonly appearance: AppearanceStores
   readonly systemAppearance: Appearance | null
-  readonly storage: SnapshotStorage
-  readonly closeRenderer: WindowRenderer | null
+  readonly files: ProjectFileEnvironment
+  readonly windowRenderer: WindowRenderer | null
   readonly onTitlebarDoubleClick?: () => void
   readonly renderProjectSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
   readonly showErrorDetails: boolean
@@ -40,8 +42,8 @@ export function AppShell({
   router,
   appearance,
   systemAppearance,
-  storage,
-  closeRenderer,
+  files,
+  windowRenderer,
   onTitlebarDoubleClick,
   renderProjectSlots,
   showErrorDetails,
@@ -52,16 +54,17 @@ export function AppShell({
     <AppInteractionProvider>
       <RouterProvider value={router}>
         <AppPreferencesProvider stores={appearance} systemAppearance={systemAppearance}>
-          <AppFrame
-            storage={storage}
-            closeRenderer={closeRenderer}
-            onTitlebarDoubleClick={onTitlebarDoubleClick}
-            renderProjectSlots={renderProjectSlots}
-            showErrorDetails={showErrorDetails}
-            onOpenSettings={openSettings}
-          >
-            <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-          </AppFrame>
+          <ProjectFileProvider environment={files} renderer={windowRenderer}>
+            <AppFrame
+              windowRenderer={windowRenderer}
+              onTitlebarDoubleClick={onTitlebarDoubleClick}
+              renderProjectSlots={renderProjectSlots}
+              showErrorDetails={showErrorDetails}
+              onOpenSettings={openSettings}
+            >
+              <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+            </AppFrame>
+          </ProjectFileProvider>
         </AppPreferencesProvider>
       </RouterProvider>
     </AppInteractionProvider>
@@ -69,8 +72,7 @@ export function AppShell({
 }
 
 function AppFrame({
-  storage,
-  closeRenderer,
+  windowRenderer,
   onTitlebarDoubleClick,
   renderProjectSlots,
   showErrorDetails,
@@ -78,7 +80,7 @@ function AppFrame({
   children,
 }: Pick<
   AppShellProps,
-  "storage" | "closeRenderer" | "onTitlebarDoubleClick" | "renderProjectSlots" | "showErrorDetails"
+  "windowRenderer" | "onTitlebarDoubleClick" | "renderProjectSlots" | "showErrorDetails"
 > & {
   readonly onOpenSettings: () => void
   readonly children: ReactNode
@@ -92,8 +94,11 @@ function AppFrame({
   const route = useRoute()
   const router = useRouter()
   const { t } = useAppTranslation()
-  const projectName = useProjectState(state => state.document.name)
-  const close = useUnsavedCloseGuard(closeRenderer, router)
+  const projectName = useProjectState(state =>
+    state.session.filePath ? projectFileName(state.session.filePath) : state.document.name
+  )
+  const close = useUnsavedCloseGuard(windowRenderer, router)
+  const files = useProjectFiles()
   const isProject = route.kind === "project"
   const surface = isProject ? theme.colors.muted : theme.colors.background
   return (
@@ -124,7 +129,7 @@ function AppFrame({
           showDetails={showErrorDetails}
         >
           {route.kind === "home" ? (
-            <HomePage storage={storage} />
+            <HomePage />
           ) : route.kind === "project" ? (
             <ProjectPage
               key={route.projectId}
@@ -138,6 +143,7 @@ function AppFrame({
         </RouteErrorBoundary>
       </div>
       <UnsavedCloseDialog open={close.asking} onChoose={choice => void close.choose(choice)} />
+      {files.dialog}
       <Toaster
         policy={policy}
         position="bottom-left"

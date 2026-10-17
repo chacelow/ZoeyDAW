@@ -3,6 +3,8 @@ import type { WindowKeyEvent } from "./index"
 
 export const COMMAND_IDS = [
   "project.save",
+  "project.saveAs",
+  "project.open",
   "transport.togglePlay",
   "edit.undo",
   "edit.redo",

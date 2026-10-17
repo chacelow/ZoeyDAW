@@ -16,7 +16,8 @@ import { getThemePreset } from "./presets"
 import { resolveContentColor } from "./content-color"
 import { HomePage } from "@/app/home/HomePage"
 import { createRouter, RouterProvider } from "@/app/router/router"
-import { createMemorySnapshotStorage } from "@/project/adapters"
+import { ProjectFileProvider } from "@/app/project-file/ProjectFileProvider"
+import { createMemoryFileEnvironment } from "@/app/project-file/memory.test-helper"
 import { initAppI18n } from "@/app/i18n"
 
 function bounds(root: TestRoot, id: string) {
@@ -103,7 +104,6 @@ test("runtime group overrides resize real controls and track identity without st
 test("Home uses its layout maximum width independently of the track control column", () => {
   initAppI18n()
   const root = createTestRoot({ width: 1200, height: 300 })
-  const storage = createMemorySnapshotStorage()
   const router = createRouter()
   const show = (maxWidth: number) =>
     root.render(
@@ -111,7 +111,9 @@ test("Home uses its layout maximum width independently of the track control colu
         layout={{ ...DEFAULT_LAYOUT_TOKENS, home: { ...DEFAULT_LAYOUT_TOKENS.home, maxWidth } }}
       >
         <RouterProvider value={router}>
-          <HomePage storage={storage} />
+          <ProjectFileProvider environment={createMemoryFileEnvironment()} renderer={null}>
+            <HomePage />
+          </ProjectFileProvider>
         </RouterProvider>
       </ThemeProvider>
     )

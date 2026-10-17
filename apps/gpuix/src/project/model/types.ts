@@ -2,7 +2,7 @@ import type { ProjectRuntimeStatus } from "./backend"
 import type { GridSettings } from "./grid"
 import type { AudioClipSettings } from "./audio-editor"
 import type { Device } from "./devices"
-import type { SnapshotErrorCode } from "./snapshot-error"
+import type { ProjectFileErrorCode } from "./project-file"
 
 export const PATTERN_STEPS_PER_BAR = 16
 
@@ -172,8 +172,11 @@ export interface SessionState {
   dirty: boolean
   canUndo: boolean
   canRedo: boolean
-  snapshotError: SnapshotErrorCode | null
-  snapshotSaveBlocked: boolean
+  filePath: string | null
+  fileError: ProjectFileErrorCode | null
+  saveBlocked: boolean
+  saveAsRequest: number
+  openRequest: number
   preview: ProjectPreview | null
   backend: ProjectRuntimeStatus
   activeMidiNotes: number[]

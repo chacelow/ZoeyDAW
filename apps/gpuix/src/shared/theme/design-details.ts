@@ -47,7 +47,7 @@ export interface DesignDetails {
     readonly inset: number
     readonly actionGap: number
   }
-  readonly dialog: { readonly confirmationWidth: number }
+  readonly dialog: { readonly confirmationWidth: number; readonly formWidth: number }
   readonly editor: {
     readonly dividerStrokeWidth: number
     readonly loopStrokeWidth: number
@@ -123,7 +123,7 @@ export const DEFAULT_DESIGN_DETAILS: DesignDetails = {
   loading: { gap: 12, brandWidth: 60, brandHeight: 39, progressWidth: 304 },
   states: { disabledOpacity: 0.5, dragSourceOpacity: 0.4, deviceDragSourceOpacity: 0.5 },
   feedback: { maxWidth: 304, gap: 12, inset: 24, actionGap: 8 },
-  dialog: { confirmationWidth: 304 },
+  dialog: { confirmationWidth: 304, formWidth: 440 },
   editor: {
     dividerStrokeWidth: 1,
     loopStrokeWidth: 1,

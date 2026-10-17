@@ -81,7 +81,7 @@ bun scripts/release/package.mjs "$(node -p 'require("./apps/gpuix/package.json")
 
 安装包目标为 macOS arm64 和 Windows x64。Windows 构建、NSIS 安装与真实桌面尚需 Actions 和实机证据，不能仅凭 workflow 声称已支持。macOS 无 Developer ID 签名、无公证，首次打开方法见 [Release 安装说明](../../scripts/release/NOTES.md)。Bun ad-hoc 签名不等于 Developer ID 签名。macOS 最低系统声明为 13，旧系统未实机验收；Intel、Linux、自动更新不在本次范围。
 
-macOS 的设置与工程快照写入 `~/Library/Application Support/com.zoeydaw.desktop`，默认日志写入 `~/Library/Logs/com.zoeydaw.desktop`。Windows 目录由原生 `userDirectories()` 选择，日志位于 data_dir/logs。字体使用系统字体；图标、语言资源、主题预设与度量随 Bun 可执行文件编译，不依赖可写安装目录或仓库的 `node_modules`。用户导入的音频仍保留外部文件路径，打包不搬入工程媒体。
+macOS 的设置与最近工程列表写入 `~/Library/Application Support/com.zoeydaw.desktop`，工程默认保存到 文稿/ZoeyDAW/`<名称> Project`，默认日志写入 `~/Library/Logs/com.zoeydaw.desktop`。Windows 目录由原生 `userDirectories()` 选择，日志位于 data_dir/logs。字体使用系统字体；图标、语言资源、主题预设与度量随 Bun 可执行文件编译，不依赖可写安装目录或仓库的 `node_modules`。用户导入的音频仍保留外部文件路径，打包不搬入工程媒体。
 
 ## 修改前确认
 

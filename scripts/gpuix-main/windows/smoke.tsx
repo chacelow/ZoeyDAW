@@ -16,12 +16,16 @@ import type { AnimationFrameCallback } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { createSettingStorage } from "@/platform/settings"
 import { createThemePresetSetting } from "@/platform/settings/theme-preset"
-import { createSnapshotStorage } from "@/platform/storage"
+import {
+  createProjectFileStorage,
+  createProjectLocations,
+  createRecentProjectStorage,
+} from "@/platform/storage"
 import { getReducedMotion } from "@/platform/window"
 import {
   projectActions,
   readProjectTelemetry,
-  setSnapshotStorage,
+  setProjectFiles,
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
@@ -36,8 +40,11 @@ mkdirSync(output, { recursive: true })
 
 const options = { configDir: output }
 initAppI18n({ initialLanguage: "en-US", storage: createSettingStorage("language", options) })
-const storage = createSnapshotStorage({ dataDir: output })
-setSnapshotStorage(storage)
+setProjectFiles(createProjectFileStorage())
+const files = {
+  recents: createRecentProjectStorage({ configDir: output }),
+  locations: createProjectLocations(),
+}
 const appearance = {
   themeMode: createPreferenceStore(createSettingStorage("themeMode", options), isThemeMode, "dark"),
   themePreset: createPreferenceStore(
@@ -104,8 +111,8 @@ try {
             router={router}
             appearance={appearance}
             systemAppearance="dark"
-            storage={storage}
-            closeRenderer={null}
+            files={files}
+            windowRenderer={null}
             showErrorDetails
           />
         </WindowKeyboardProvider>
@@ -153,7 +160,7 @@ try {
   throw error
 } finally {
   root.unmount()
-  setSnapshotStorage(null)
+  setProjectFiles(null)
   result.released = useProjectState.getState().session.backend.phase === "idle"
   writeFileSync(path.join(output, "smoke.json"), JSON.stringify(result, null, 2))
   console.log(JSON.stringify(result))

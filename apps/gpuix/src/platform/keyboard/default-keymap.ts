@@ -25,7 +25,9 @@ const arrangement: ContextPredicate = { focus: ["control", "timeline"] }
 const computer: ContextPredicate = { ...arrangement, computerKeyboard: true }
 
 export const DEFAULT_BINDINGS: readonly KeyBinding[] = [
-  { keys: "Shift?+Mod+S", command: "project.save", context: project },
+  { keys: "Mod+S", command: "project.save", context: project },
+  { keys: "Shift+Mod+S", command: "project.saveAs", context: project },
+  { keys: "Shift?+Mod+O", command: "project.open", context: project },
   { keys: "Shift?+Space", command: "transport.togglePlay", context: project },
   {
     keys: "Shift?+B",

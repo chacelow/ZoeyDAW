@@ -10,15 +10,16 @@ import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import {
   hydrateProject,
+  serializeProject,
   projectActions,
   useProjectState,
-  setSnapshotStorage,
+  setProjectFiles,
   startProjectRuntime,
   whenProjectBackendIdle,
   configureProjectBackend,
-  createMemorySnapshotStorage,
-  openProjectSnapshot,
-  setProjectStorageId,
+  createMemoryProjectFiles,
+  openProjectFile,
+  openNewProject,
 } from "@/project/adapters"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { createNativeBackend } from "@/project/adapters/backend/native"
@@ -33,7 +34,7 @@ import { layoutTrackRows } from "../core/layout"
 const cleanups: (() => void)[] = []
 afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup()
-  setSnapshotStorage(null)
+  setProjectFiles(null)
 })
 
 function element(root: TestRoot, id: string) {
@@ -148,13 +149,10 @@ test.each(["cmd-s", "ctrl-s"])(
     cleanups.push(configureProjectBackend(createNativeBackend))
     cleanups.push(startProjectRuntime())
     expect(await whenProjectBackendIdle()).toBe(true)
-    const writes = new Map<string, string>()
-    setSnapshotStorage({
-      get: key => writes.get(key) ?? null,
-      set: (key, value) => {
-        writes.set(key, value)
-      },
-    })
+    const files = createMemoryProjectFiles()
+    setProjectFiles(files)
+    flushSync(() => projectActions.saveAs("/projects/R2 Project/R2.zdaw"))
+    expect(await whenProjectBackendIdle()).toBe(true)
     flushSync(() => projectActions.updateClip("r2-midi", { label: "Saved from editor" }))
     expect(await whenProjectBackendIdle()).toBe(true)
     expect(useProjectState.getState().session.dirty).toBe(true)
@@ -163,7 +161,7 @@ test.each(["cmd-s", "ctrl-s"])(
     await Bun.sleep(0)
     expect(useProjectState.getState().session.dirty).toBe(false)
     expect(
-      [...writes.values()].map(text => JSON.parse(text).document.tracks[0].clips[0].label)
+      [...files.entries.values()].map(text => JSON.parse(text).document.tracks[0].clips[0].label)
     ).toEqual(["Saved from editor"])
   }
 )
@@ -369,19 +367,20 @@ for (const trackId of ["source", "main"]) {
   )
 }
 
-test("the Save control disables for a damaged opened snapshot and re-enables for a clean project", async () => {
+test("the Save control disables for a damaged opened file and re-enables after opening a clean one", async () => {
   const { root } = await mount()
   const save = element(root, "timeline-save")
   const enabledOpacity = typeof save.style.opacity === "number" ? save.style.opacity : 1
-  const storage = createMemorySnapshotStorage()
-  const key = "zoeydaw:project:snapshot:v1:r2-damaged-toolbar"
-  const raw = "damaged snapshot must not be overwritten"
-  storage.set(key, raw)
-  setSnapshotStorage(storage)
-  cleanups.push(() => setProjectStorageId("default"))
+  const files = createMemoryProjectFiles()
+  const damagedPath = "/projects/Damaged Project/Damaged.zdaw"
+  const raw = "damaged project must not be overwritten"
+  files.entries.set(damagedPath, raw)
+  files.entries.set("/projects/Clean Project/Clean.zdaw", serializeProject())
+  setProjectFiles(files)
+  cleanups.push(() => openNewProject("default"))
   let opened = true
   flushSync(() => {
-    opened = openProjectSnapshot("r2-damaged-toolbar")
+    opened = openProjectFile(damagedPath)
   })
   expect(opened).toBe(false)
   expect(root.renderer.getElement(save.id)?.style.opacity ?? 1).toBeLessThan(enabledOpacity)
@@ -389,9 +388,9 @@ test("the Save control disables for a damaged opened snapshot and re-enables for
   if (!bounds) throw new Error("Missing Save bounds")
   root.renderer.nativeSimulateClick(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
   root.renderer.nativeSimulateKeystrokes(element(root, "timeline-viewport").id, "cmd-s")
-  expect(storage.get(key)).toBe(raw)
+  expect(files.entries.get(damagedPath)).toBe(raw)
   flushSync(() => {
-    opened = openProjectSnapshot("r2-clean-toolbar")
+    opened = openProjectFile("/projects/Clean Project/Clean.zdaw")
   })
   expect(opened).toBe(true)
   expect(root.renderer.getElement(save.id)?.style.opacity ?? 1).toBe(enabledOpacity)

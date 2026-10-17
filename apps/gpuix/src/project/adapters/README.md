@@ -2,7 +2,7 @@
 
 `index.ts` is the UI's project data interface. `useProjectState(selector)` reads the composed Zustand root; `projectActions` issues synchronous, optimistic domain commands. `document` contains authored project data, `workspace` contains view geometry and editor preferences, and `session` contains playback, selection, meters, backend status and undo availability.
 
-The model remains DOM-free. The project adapter reaches Rust through `platform/engine.ts`; it does not decode media or move PCM through JavaScript. The application must install a snapshot-storage port separately before saving.
+The model remains DOM-free. The project adapter reaches Rust through `platform/engine.ts`; it does not decode media or move PCM through JavaScript. The application must install a project-file port separately before saving.
 
 ## Backend registration and lifecycle
 
@@ -14,7 +14,7 @@ The model remains DOM-free. The project adapter reaches Rust through `platform/e
 
 `options.createProject(projectId)` remains an explicit synchronous `ProjectSeed` fixture override. A backend registration without that callback uses the configured project template. Tests register `TEST_PROJECT_CREATION` and demo seed factories through `test-setup.ts`; production composition does not import those fixtures. Existing project names, track appearance, and authored clip settings do not change when providers change. Hydration samples only session preferences, preserving saved document and workspace values.
 
-`setProjectStorageId(projectId)` isolates editing ownership and snapshot keys on route changes; it does not auto-load a snapshot. The project view explicitly acquires `startProjectRuntime()` after route initialization. First acquisition opens/subscribes; the last release cancels unfinished edits, retains independent authored recording, stops playback and disposes the backend. Release and same-project backend replacement drain recording journals exactly once before resetting connection state, including after preview and recovery both reject; hydration or project switching discards the previous project's journal. Idle authored edits and undo do not acquire an engine; recording and acknowledged snapshot saving require an active, accepted runtime.
+`openNewProject(projectId)` isolates editing ownership on route changes without reading a file. The project view explicitly acquires `startProjectRuntime()` after route initialization. First acquisition opens/subscribes; the last release cancels unfinished edits, retains independent authored recording, stops playback and disposes the backend. Release and same-project backend replacement drain recording journals exactly once before resetting connection state, including after preview and recovery both reject; hydration or project switching discards the previous project's journal. Idle authored edits and undo do not acquire an engine; recording and acknowledged saving require an active, accepted runtime.
 
 `session.editEpoch` is a subscribable editing identity independent of engine `sessionId`. Tokens, controls and Canvas use it while live or idle; hydration/open/release invalidate old ownership. Engine acknowledgements and telemetry retain their protocol/session fences. `runtime/` owns the coordinator; `backend/connection/` exposes the connection interface and keeps protocol validation and interpolation in separate pure files.
 
@@ -85,23 +85,25 @@ Peak output is channel-major, then pixel-major `[min, max]`: `[leftMin0, leftMax
 
 `outputLatencyFrames` comes from Firewheel's CPAL `process_to_playback_delay`, rounded to device frames. macOS measured 284 frames at 48kHz on the verification host. Platforms or callbacks without a playback timestamp report `null`; no buffer-size guess substitutes for unavailable latency. A device fault or changed sample rate is terminal for that session and rejects subsequent applies; reopening requires a new session.
 
-## Snapshots and source data
+## Project files and source data
 
 `serializeProject()` returns version-2 JSON containing committed `document` and `workspace` preferences only; the current non-transactional pan/zoom/scroll viewport is retained. Temporary numeric edits and Arrangement previews do not leak into serialization or saves. `hydrateProject(json)` validates and clones the complete payload before replacing state and resetting session/history. Invalid JSON, version or schema leaves the current project intact.
 
-Snapshot bar positions (loop endpoints, clip starts, markers and automation points) are finite and at least 1. Durations remain strictly positive and may be less than one bar; source offsets retain their signed coordinate semantics. Invalid restore leaves the current document and undo history intact.
+Saved bar positions (loop endpoints, clip starts, markers and automation points) are finite and at least 1. Durations remain strictly positive and may be less than one bar; source offsets retain their signed coordinate semantics.
 
-Parsing assigns collision-free IDs to MIDI notes missing them, preserving every existing ID. Generated IDs are deterministic within each clip and survive snapshot serialization and reparse, so legacy snapshots enter the editor with stable note identity.
+Parsing assigns collision-free IDs to MIDI notes missing them, preserving every existing ID. Generated IDs are deterministic within each clip and survive serialization and reparse.
 
-`setSnapshotStorage(storage)` installs the synchronous `SnapshotStorage` port (`get(key): string | null`, `set(key, value): void`); passing `null` disconnects it. The platform/application composition root supplies the durable implementation. There is no default storage or filesystem access in this layer. `createMemorySnapshotStorage()` creates an isolated test implementation.
+A project is one `.zdaw` file (the version-2 JSON) inside its own `<Name> Project/` folder, following Live's `<Name> Project/<Name>.als` layout. `setProjectFiles(files)` installs the synchronous `ProjectFiles` port (`read(path): string | null`, `write(path, json): void`); `null` disconnects it. The composition root supplies the native implementation, which writes atomically and first copies the previous file to `Backup/<Name> [YYYY-MM-DD HHMMSS].zdaw`, keeping the newest `preferences.projectBackupCount`. `createMemoryProjectFiles()` creates an isolated test implementation.
 
-Save captures the committed revision, its storage instance and route key, then waits for backend acceptance before writing. A newer edit is not marked clean by that older save. Project switching cancels the pending save. Restore returns false and sets `session.snapshotError` for missing, invalid or unavailable storage; failed reads or writes preserve authored data and dirty state. These are prototype snapshots, not `.zdaw` files or background autosave.
+`openProjectFile(id)` treats an id ending in `.zdaw` as the file path; other ids are new projects, or the path a project saved earlier in this session. `session.filePath` is the saved location. `save()` writes to it, or bumps `session.saveAsRequest` when the project has never been saved; `saveAs(path)` writes elsewhere and moves `filePath`. `requestOpen()` bumps `session.openRequest`. The application owns the Save As dialog and the system file picker and reacts only to increases of those counters.
 
-`session.snapshotError` stores `read`, `invalid`, `write`, or `missing`, not a sentence. Application composition maps the code to the current locale without changing the saved project.
+Save captures the committed revision and file port, then waits for backend acceptance before writing. A newer edit is not marked clean by that older save. Project switching cancels the pending save. Failed reads or writes preserve authored data and dirty state. A file that fails to read or validate sets `saveBlocked`, so Save cannot overwrite its original bytes; Save As to a new location clears it.
 
-Restore requires exactly one Main output with ID `main`. Audio tracks own audio clips; MIDI tracks own MIDI or Pattern clips. Group, Return and Main cannot own clips. Commands and snapshot validation share `acceptsClip`.
+`session.fileError` stores `read`, `invalid`, `write`, or `missing`, not a sentence. Application composition maps the code to the current locale without changing the saved project.
 
-Waveforms come exclusively from the native session peak reader; clips, history and snapshots contain no generated waveform cache. Clip trim/split retains authored source data and changes `sourceOffsetBars`; MIDI notes, Pattern phase and preview share that window. Fade duration, offset, curve and midpoint fields remain saved metadata with the existing interval constraints.
+Loading requires exactly one Main output with ID `main`. Audio tracks own audio clips; MIDI tracks own MIDI or Pattern clips. Group, Return and Main cannot own clips. Commands and file validation share `acceptsClip`.
+
+Waveforms come exclusively from the native session peak reader; clips, history and project files contain no generated waveform cache. Clip trim/split retains authored source data and changes `sourceOffsetBars`; MIDI notes, Pattern phase and preview share that window. Fade duration, offset, curve and midpoint fields remain saved metadata with the existing interval constraints.
 
 `session.drawModeOverride` represents a held B key independently of the latched `workspace.drawMode`. `model/interaction-mode.ts` resolves the effective mode for Header, Toolbar, automation and MIDI editing. Holding B during a gesture creates no preference undo entry. Undo and redo preserve an open clip editor if its clip survives the restored document; removing that clip closes the editor.
 

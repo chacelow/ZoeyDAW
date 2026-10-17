@@ -9,7 +9,7 @@ import {
   configureProjectBackend,
   projectActions,
   readProjectPeaks,
-  setProjectStorageId,
+  openNewProject,
   startProjectRuntime,
   useProjectState,
   whenProjectBackendIdle,
@@ -83,7 +83,7 @@ function visibleHeight(pixel: number): number {
 test("stable peak reader follows native session opening, tempo, meter, and reopening", async () => {
   media = createVerificationMedia()
   restoreBackend = configureProjectBackend(createNativeBackend)
-  setProjectStorageId("source-waveform-runtime")
+  openNewProject("source-waveform-runtime")
   const { audio } = seedClipEditProject(media.uri, "normal")
   const clip = useProjectState
     .getState()

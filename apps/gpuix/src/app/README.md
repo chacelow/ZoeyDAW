@@ -16,11 +16,11 @@
 | Arrangement scene、timeline 与 lane controller | `project/createProjectComposition` | 工程视图卸载时 dispose，取消手势并退订窗口与工程 |
 | 文本焦点 lease、ModalDialog 打开状态 | `AppInteractionProvider` | Input 与实际数值编辑框的原生 focus/blur/unmount，ModalDialog 的 open/unmount |
 
-`project/adapters/context.ts` 已注册真实 native backend 工厂。入口不再注册第二个，也不在模块初始化时打开会话。入口只安装 `createSnapshotStorage()`，供快照和最近工程列表使用。
+`project/adapters/context.ts` 已注册真实 native backend 工厂。入口不再注册第二个，也不在模块初始化时打开会话。入口安装 `createProjectFileStorage()`，并把最近工程（settings 中的 `recentProjects`）与工程位置端口交给 `ProjectFileProvider`。
 
-已有工程（recent、启动路径、历史返回）在取得 runtime lease 前调用 `openProjectSnapshot(projectId)`：先隔离工程 identity，再读取并经现有 snapshot parser hydrate。缺失快照打开空工程且不报错；读取/校验失败显示 `session.snapshotError`，保留 runtime。保存保护由 `SessionState.snapshotSaveBlocked` 唯一持有，纯 `canSaveSnapshot(state)` selector 用于 `useProjectState(canSaveSnapshot)`；保存命令读取同一字段，不能用默认数据覆盖原始字节。成功 hydrate/reset、显式 Restore 或切换 identity 后恢复保存。
+工程按 Live 的方式落盘：`<名称> Project/<名称>.zdaw`，默认目录为 文稿/ZoeyDAW，覆盖保存前先把旧文件复制到同目录 `Backup/`。路由 `projectId` 即 `.zdaw` 路径；首页“打开…”与工具栏“打开”走系统文件选择器，最近工程按路径列出。`ProjectFileProvider` 是 Save As 对话框与选择器的唯一 owner：未保存工程的 Save/Cmd+S、Cmd+Shift+S、未保存离开时的“保存”都会弹出 Save As，取消则留在原工程。工程首次写入成功后才进入最近列表，标题栏显示文件名。
 
-新建路由带 `openMode: "new"`，不读取快照；离开该条历史记录后其标记被消费，再次返回按已有工程打开。
+打开 `.zdaw` 时在取得 runtime lease 前调用 `openProjectFile(path)`。读取/校验失败显示 `session.fileError`、保留 runtime，并以 `saveBlocked` 禁止覆盖原字节，Save As 到新位置后恢复。新建路由带 `openMode: "new"`，不读取文件；离开该条历史记录后其标记被消费，再次返回时打开它本次会话中保存到的文件。
 
 ## 设置
 

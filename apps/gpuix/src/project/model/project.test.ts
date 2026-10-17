@@ -4,9 +4,8 @@ import {
   hydrateProject,
   projectActions,
   serializeProject,
-  setProjectStorageId,
-  setSnapshotStorage,
-  createMemorySnapshotStorage,
+  setProjectFiles,
+  createMemoryProjectFiles,
   startProjectRuntime,
   useProjectState,
 } from "../adapters"
@@ -17,11 +16,11 @@ let releaseRuntime: (() => void) | undefined
 afterEach(() => {
   releaseRuntime?.()
   releaseRuntime = undefined
-  setSnapshotStorage(null)
+  setProjectFiles(null)
 })
 
 beforeEach(() => {
-  setSnapshotStorage(createMemorySnapshotStorage())
+  setProjectFiles(createMemoryProjectFiles())
   hydrateProject(
     JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
   )
@@ -329,22 +328,6 @@ describe("versioned persistence", () => {
     expect(() => hydrateProject(JSON.stringify(malformed))).toThrow()
     expect(serializeProject()).toBe(before)
     projectActions.undo()
-    expect(useProjectState.getState().document.transport.bpm).toBe(120)
-  })
-
-  it("scopes browser snapshots by project and leaves state untouched on missing restore", () => {
-    setProjectStorageId("snapshot-test-a")
-    releaseRuntime = startProjectRuntime()
-    projectActions.setBpm(155)
-    projectActions.saveSnapshot()
-    expect(useProjectState.getState().session.dirty).toBe(false)
-    projectActions.setBpm(175)
-    expect(projectActions.restoreSnapshot()).toBe(true)
-    expect(useProjectState.getState().document.transport.bpm).toBe(155)
-    setProjectStorageId("snapshot-test-b")
-    expect(useProjectState.getState().document.transport.bpm).toBe(120)
-    expect(projectActions.restoreSnapshot()).toBe(false)
-    expect(useProjectState.getState().session.snapshotError).toBe("missing")
     expect(useProjectState.getState().document.transport.bpm).toBe(120)
   })
 })

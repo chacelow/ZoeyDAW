@@ -9,30 +9,21 @@ import {
   EmptyTitle,
   ScrollArea,
 } from "@/ui/controls"
+import { projectFileName } from "@/project/model/project-file"
 import { createDisplayFormats, useAppTranslation } from "../i18n"
 import { useRouter } from "../router/router"
-import { bumpRecentProject, loadRecentProjects, saveRecentProjects } from "./recent-projects"
-import type { SnapshotStorage } from "@/platform/storage"
-import type { RecentProject } from "./recent-projects"
+import { useProjectFiles } from "../project-file/ProjectFileProvider"
+import { loadRecentProjects } from "./recent-projects"
 
-export interface HomePageProps {
-  readonly storage: SnapshotStorage
-}
-
-export function HomePage({ storage }: HomePageProps) {
+export function HomePage() {
   const theme = useTheme()
   const router = useRouter()
+  const files = useProjectFiles()
   const { t, locale } = useAppTranslation()
-  const [recent, setRecent] = useState(() => loadRecentProjects(storage))
+  const [recent] = useState(() => loadRecentProjects(files.recents))
   const gap = theme.design.spacing.stackGap
-  const open = (project: RecentProject, openMode?: "new") => {
-    const next = bumpRecentProject(recent, { ...project, openedAt: Date.now() })
-    saveRecentProjects(storage, next)
-    setRecent(next)
-    router.navigate({ kind: "project", projectId: project.id, ...(openMode && { openMode }) })
-  }
   const create = () =>
-    open({ id: crypto.randomUUID(), name: t("project.untitled"), openedAt: Date.now() }, "new")
+    router.navigate({ kind: "project", projectId: crypto.randomUUID(), openMode: "new" })
   const formats = createDisplayFormats(locale)
   return (
     <div
@@ -65,7 +56,12 @@ export function HomePage({ storage }: HomePageProps) {
           </div>
           <text style={{ color: theme.colors.mutedForeground }}>{t("app.tagline")}</text>
         </div>
-        <Button variant="outline" testId="home-open" label={t("home.openAction")} onClick={create}>
+        <Button
+          variant="outline"
+          testId="home-open"
+          label={t("home.openAction")}
+          onClick={files.open}
+        >
           {t("home.openAction")}
         </Button>
         <Button testId="home-create" label={t("home.createAction")} onClick={create}>
@@ -86,19 +82,20 @@ export function HomePage({ storage }: HomePageProps) {
         ) : (
           <ScrollArea style={{ flexGrow: 1, minHeight: 0 }}>
             <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap }}>
-              {recent.map(project => (
+              {recent.map((project, index) => (
                 <Card
-                  key={project.id}
+                  key={project.path}
                   size="project"
-                  testId={`recent-${project.id}`}
-                  aria-label={project.name}
-                  onClick={() => open(project)}
+                  testId={`recent-${index}`}
+                  aria-label={projectFileName(project.path)}
+                  aria-description={project.path}
+                  onClick={() => files.openPath(project.path)}
                   style={{
                     width: theme.layout.home.recentCardWidth,
                   }}
                 >
                   <text style={{ fontWeight: theme.design.typography.weights.medium }}>
-                    {project.name}
+                    {projectFileName(project.path)}
                   </text>
                   <text style={{ color: theme.colors.mutedForeground }}>
                     {formats.dateTime(project.openedAt)}

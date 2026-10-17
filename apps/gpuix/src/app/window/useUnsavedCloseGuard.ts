@@ -1,28 +1,25 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { flushSync } from "@gpuix/react"
 import { toast } from "@/ui/controls"
-import { projectActions, useProjectState, whenProjectBackendIdle } from "@/project/adapters"
+import { useProjectState } from "@/project/adapters"
 import { useAppTranslation } from "../i18n"
+import { useProjectFiles } from "../project-file/ProjectFileProvider"
 import { createWindowCloseGuard } from "@/platform/window"
 import { chooseClose, IDLE_CLOSE, requestClose } from "./unsaved-close"
 import type { WindowRenderer } from "@/platform/window"
 import type { Router } from "../router/router"
 import type { UnsavedCloseChoice, UnsavedCloseState } from "./unsaved-close"
 
-async function saveProject(): Promise<boolean> {
-  projectActions.saveSnapshot()
-  if (!(await whenProjectBackendIdle())) return false
-  const { dirty, snapshotError } = useProjectState.getState().session
-  return !dirty && snapshotError === null
-}
-
 export function useUnsavedCloseGuard(renderer: WindowRenderer | null, router: Router) {
   const { t } = useAppTranslation()
+  const files = useProjectFiles()
   const [asking, setAsking] = useState(false)
   const state = useRef<UnsavedCloseState>(IDLE_CLOSE)
   const pending = useRef<(() => void) | null>(null)
   const labels = useRef(t)
   labels.current = t
+  const save = useRef(files.save)
+  save.current = files.save
 
   useLayoutEffect(() => {
     let isRetired = false
@@ -66,9 +63,10 @@ export function useUnsavedCloseGuard(renderer: WindowRenderer | null, router: Ro
     setAsking(false)
     const current = pending.current
     if (!current) return
-    const saved = choice === "save" && (await saveProject())
+    const saved = choice === "save" && (await save.current())
     if (current !== pending.current) return
-    if (choice === "save" && !saved) toast.error(labels.current("windowClose.saveFailed"))
+    const failed = choice === "save" && !saved && useProjectState.getState().session.fileError
+    if (failed) toast.error(labels.current("windowClose.saveFailed"))
     state.current = chooseClose(state.current, choice, saved)
     pending.current = null
     if (state.current.phase !== "armed") return

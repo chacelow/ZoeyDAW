@@ -2,11 +2,11 @@ import { creationNamesByLocale } from "./creation-names"
 
 export default {
   creationNames: creationNamesByLocale["en-US"],
-  snapshotErrors: {
-    read: "Could not read snapshot storage.",
-    invalid: "The local snapshot is invalid or unsupported. Current project was kept.",
-    write: "Could not save the local snapshot. Check storage availability.",
-    missing: "No local snapshot exists for this project.",
+  fileErrors: {
+    read: "Could not read the project file.",
+    invalid: "The project file is invalid or unsupported. Current project was kept.",
+    write: "Could not save the project file. Check the folder is writable.",
+    missing: "The project file was not found. It may have been moved or deleted.",
   },
   panel: {
     footer: "Footer",
@@ -33,7 +33,8 @@ export default {
     emptyTitle: "No projects yet",
     emptyHint: "Click “New project” to start a DAW session.",
     createAction: "New project",
-    openAction: "Open",
+    openAction: "Open…",
+    openPrompt: "Open project",
     recent: "Recent",
   },
   project: {
@@ -88,6 +89,18 @@ export default {
     title: "Notifications",
     dismiss: "Dismiss",
     loading: "Loading",
+  },
+  projectFile: {
+    saveAsTitle: "Save project as",
+    name: "Project name",
+    location: "Location",
+    chooseLocation: "Choose…",
+    choosePrompt: "Choose folder",
+    destination: "Saves {{path}}",
+    invalidName: 'Use a name without / \\ : * ? " < > |',
+    exists: "A project with this name already exists in this folder.",
+    save: "Save",
+    notProject: "Choose a .zdaw project file.",
   },
   titlebar: {
     settings: "Settings",

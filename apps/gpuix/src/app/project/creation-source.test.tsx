@@ -10,10 +10,10 @@ import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboar
 import { configurePreferences, createPreferenceOwner } from "@/platform/settings"
 import {
   configureProjectBackend,
-  createMemorySnapshotStorage,
+  createMemoryProjectFiles,
   projectActions,
   serializeProject,
-  setSnapshotStorage,
+  setProjectFiles,
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
@@ -40,7 +40,7 @@ test("new projects sample controlled appearance without renaming or restarting a
   const directory = mkdtempSync(path.join(tmpdir(), "zoeydaw-creation-source-"))
   const restorePreferences = configurePreferences(createPreferenceOwner({ configDir: directory }))
   const restoreBackend = configureProjectBackend(createNativeBackend)
-  setSnapshotStorage(createMemorySnapshotStorage())
+  setProjectFiles(createMemoryProjectFiles())
   const keyboard = createWindowKeyboard()
   const firstId = `creation-source-${crypto.randomUUID()}`
   const router = createRouter(`/project/${firstId}`)
@@ -133,7 +133,7 @@ test("new projects sample controlled appearance without renaming or restarting a
     root.unmount()
     restoreBackend()
     restorePreferences()
-    setSnapshotStorage(null)
+    setProjectFiles(null)
     await i18next.changeLanguage("en-US")
     rmSync(directory, { recursive: true, force: true })
   }

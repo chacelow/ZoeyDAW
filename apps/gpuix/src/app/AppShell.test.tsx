@@ -14,10 +14,10 @@ import {
 import { createSettingStorage, DEFAULT_THEME_MODE } from "@/platform/settings"
 import {
   configureProjectBackend,
-  createMemorySnapshotStorage,
+  createMemoryProjectFiles,
   projectActions,
   useProjectState,
-  setSnapshotStorage,
+  setProjectFiles,
   whenProjectBackendIdle,
 } from "@/project/adapters"
 import { createMockProjectBackend } from "@/project/adapters/backend/mock"
@@ -28,6 +28,7 @@ import { AppShell } from "./AppShell"
 import { changeLocale, initAppI18n } from "./i18n"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { AppNativeEnvironmentProvider } from "./native-environment"
+import { createMemoryFileEnvironment } from "./project-file/memory.test-helper"
 import { createRouter } from "./router/router"
 import { createPreferenceStore } from "./settings/preference-store"
 import { isThemeMode } from "./settings/theme-mode"
@@ -55,7 +56,7 @@ beforeAll(async () => {
   await i18next.changeLanguage("zh-CN")
 })
 beforeEach(() => {
-  setSnapshotStorage(createMemorySnapshotStorage())
+  setProjectFiles(createMemoryProjectFiles())
 })
 
 const roots: TestRoot[] = []
@@ -64,7 +65,7 @@ afterEach(async () => {
   for (const root of roots.splice(0)) root.unmount()
   initAppI18n({ storage: languageStorage })
   for (const cleanup of cleanups.splice(0)) cleanup()
-  setSnapshotStorage(null)
+  setProjectFiles(null)
   await i18next.changeLanguage("zh-CN")
 })
 
@@ -141,8 +142,8 @@ function mount(overrides: Partial<AppShellProps> = {}, wrap = (node: ReactNode) 
               router={router}
               appearance={appearance}
               systemAppearance={null}
-              storage={createMemorySnapshotStorage()}
-              closeRenderer={null}
+              files={createMemoryFileEnvironment()}
+              windowRenderer={null}
               showErrorDetails
               {...overrides}
             />
@@ -209,9 +210,7 @@ describe("routes", () => {
     expect(text(root)).toContain(useProjectState.getState().document.name)
     act(root, () => router.back())
     expect(root.renderer.findByTestId("home-page")).toBeDefined()
-    expect(
-      root.renderer.findByTestId(`recent-${route.kind === "project" ? route.projectId : ""}`)
-    ).toBeDefined()
+    expect(root.renderer.findByTestId("recent-0")).toBeUndefined()
     act(root, () => router.navigate("/library"))
     expect(root.renderer.findByTestId("not-found-page")).toBeDefined()
     expect(text(root)).toContain("404")
@@ -452,7 +451,7 @@ describe("unsaved close guard", () => {
   test("clean project closes; dirty project vetoes, asks, and cancel keeps it open", async () => {
     countSessions()
     const native = nativeClose()
-    const { root } = mount({ closeRenderer: native.renderer, router: createRouter("/project/p") })
+    const { root } = mount({ windowRenderer: native.renderer, router: createRouter("/project/p") })
     expect(native.request()).toBe(true)
     projectActions.setBpm(131)
     expect(useProjectState.getState().session.dirty).toBe(true)
@@ -468,7 +467,7 @@ describe("unsaved close guard", () => {
   test("discard closes the window directly after the choice", async () => {
     countSessions()
     const native = nativeClose()
-    const { root } = mount({ closeRenderer: native.renderer, router: createRouter("/project/q") })
+    const { root } = mount({ windowRenderer: native.renderer, router: createRouter("/project/q") })
     projectActions.setBpm(133)
     expect(native.request()).toBe(false)
     await settle(root)
@@ -480,14 +479,20 @@ describe("unsaved close guard", () => {
   test("save closes programmatically once the snapshot is accepted", async () => {
     countSessions()
     const native = nativeClose()
-    const { root } = mount({ closeRenderer: native.renderer, router: createRouter("/project/r") })
+    const { root } = mount({ windowRenderer: native.renderer, router: createRouter("/project/r") })
     projectActions.setBpm(137)
     expect(native.request()).toBe(false)
     await settle(root)
     click(root, "unsaved-save")
+    await settle(root)
+    click(root, "save-as-confirm")
     await whenProjectBackendIdle()
     await settle(root)
-    expect(useProjectState.getState().session.dirty).toBe(false)
+    const name = useProjectState.getState().document.name
+    expect(useProjectState.getState().session).toMatchObject({
+      dirty: false,
+      filePath: `/projects/${name} Project/${name}.zdaw`,
+    })
     expect(native.closed).toBe(1)
   })
 })
@@ -603,7 +608,7 @@ describe("close guard lifecycle", () => {
     const native: { request?: () => boolean } = {}
     const { root } = mount({
       router: createRouter("/project/gone"),
-      closeRenderer: {
+      windowRenderer: {
         setWindowShouldClose: next => {
           native.request = next
         },

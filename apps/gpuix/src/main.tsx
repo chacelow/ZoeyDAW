@@ -6,9 +6,13 @@ import { createWindowKeyboard, WindowKeyboardProvider } from "./platform/keyboar
 import { createSettingStorage, DEFAULT_THEME_MODE, getPreference } from "./platform/settings"
 import { createThemePresetSetting } from "./platform/settings/theme-preset"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "./shared/theme/presets"
-import { createSnapshotStorage } from "./platform/storage"
+import {
+  createProjectFileStorage,
+  createProjectLocations,
+  createRecentProjectStorage,
+} from "./platform/storage"
 import { LAUNCH_FOCUS } from "./platform/window"
-import { setSnapshotStorage } from "./project/adapters"
+import { setProjectFiles } from "./project/adapters"
 import { initAppI18n } from "./app/i18n"
 import { i18next } from "./platform/i18n/core"
 import { NativeRoot } from "./app/NativeRoot"
@@ -28,8 +32,8 @@ const appearance = {
   ),
   themePreset: createPreferenceStore(presetSetting, isThemePresetId, DEFAULT_THEME_PRESET),
 }
-const storage = createSnapshotStorage()
-setSnapshotStorage(storage)
+setProjectFiles(createProjectFileStorage())
+const files = { recents: createRecentProjectStorage(), locations: createProjectLocations() }
 
 const keyboard = createWindowKeyboard()
 const startupWindow = getPreference("window")
@@ -39,7 +43,7 @@ render(
     <NativeRoot
       router={createRouter(process.env.ZOEYDAW_ROUTE ?? "/")}
       appearance={appearance}
-      storage={storage}
+      files={files}
       showErrorDetails={process.env.NODE_ENV !== "production"}
     />
   </WindowKeyboardProvider>,

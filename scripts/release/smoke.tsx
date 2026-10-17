@@ -7,11 +7,15 @@ import type { AnimationFrameCallback } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { createSettingStorage } from "@/platform/settings"
 import { createThemePresetSetting } from "@/platform/settings/theme-preset"
-import { createSnapshotStorage } from "@/platform/storage"
+import {
+  createProjectFileStorage,
+  createProjectLocations,
+  createRecentProjectStorage,
+} from "@/platform/storage"
 import { createLogPlatform } from "@/platform/log"
 import {
   projectActions,
-  setSnapshotStorage,
+  setProjectFiles,
   useProjectState,
   whenProjectBackendIdle,
   readProjectTelemetry,
@@ -31,8 +35,11 @@ if (!directory) throw new Error("Pass an evidence directory")
 mkdirSync(directory, { recursive: true })
 const options = { configDir: directory }
 initAppI18n({ initialLanguage: "en-US", storage: createSettingStorage("language", options) })
-const storage = createSnapshotStorage({ dataDir: directory })
-setSnapshotStorage(storage)
+setProjectFiles(createProjectFileStorage())
+const files = {
+  recents: createRecentProjectStorage({ configDir: directory }),
+  locations: createProjectLocations(),
+}
 const appearance = {
   themeMode: createPreferenceStore(createSettingStorage("themeMode", options), isThemeMode, "dark"),
   themePreset: createPreferenceStore(
@@ -92,8 +99,8 @@ try {
             router={router}
             appearance={appearance}
             systemAppearance="dark"
-            storage={storage}
-            closeRenderer={null}
+            files={files}
+            windowRenderer={null}
             showErrorDetails
           />
         </WindowKeyboardProvider>
@@ -127,7 +134,7 @@ try {
   console.log(JSON.stringify(result))
 } finally {
   root.unmount()
-  setSnapshotStorage(null)
+  setProjectFiles(null)
 }
 if (useProjectState.getState().session.backend.phase !== "idle")
   throw new Error("Native session leaked")

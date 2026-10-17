@@ -192,6 +192,8 @@ pub struct Preferences {
     pub transport: TransportPreferences,
     pub history_capacity: u32,
     pub recent_project_capacity: u32,
+    #[serde(default = "default_project_backup_count")]
+    pub project_backup_count: u32,
     pub window: WindowPreferences,
     pub numeric_input: NumericInputPreferences,
     pub pointer: PointerPreferences,
@@ -200,6 +202,10 @@ pub struct Preferences {
     pub audio_device: AudioDevicePreferences,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arrangement: Option<ArrangementPreferences>,
+}
+
+fn default_project_backup_count() -> u32 {
+    PREFERENCE_DEFAULTS.project_backup_count
 }
 
 static PREFERENCE_DEFAULTS: LazyLock<Preferences> = LazyLock::new(|| {

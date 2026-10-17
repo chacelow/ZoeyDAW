@@ -19,13 +19,13 @@ export type {
 } from "./runtime"
 export type { CreationNames, TrackCreationAppearance } from "../defaults/template"
 export {
-  setProjectStorageId,
-  openProjectSnapshot,
-  canSaveSnapshot,
+  openNewProject,
+  openProjectFile,
+  canSaveProjectFile,
   serializeProject,
   hydrateProject,
-  setSnapshotStorage,
-  createMemorySnapshotStorage,
-} from "./snapshots"
-export type { SnapshotStorage } from "./snapshots"
+  setProjectFiles,
+  createMemoryProjectFiles,
+} from "./project-file"
+export type { ProjectFiles } from "./project-file"
 export { useProjectEditGesture } from "./useProjectEditGesture"

@@ -3,7 +3,7 @@ import { Button, DragPadNumber, DragPadToggle, DropdownButton } from "@/ui/contr
 import { Icon } from "@/ui/controls/Icon"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { canSaveSnapshot, projectActions, useProjectState } from "@/project/adapters"
+import { canSaveProjectFile, projectActions, useProjectState } from "@/project/adapters"
 import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "@/project/model/grid"
 import { effectiveDrawMode } from "@/project/model/interaction-mode"
 import type { KeyboardOwner } from "../keyboard/controller"
@@ -22,7 +22,7 @@ export function Toolbar({
 }) {
   const theme = useTheme()
   const workspace = useProjectState(state => state.workspace)
-  const saveAvailable = useProjectState(canSaveSnapshot)
+  const saveAvailable = useProjectState(canSaveProjectFile)
   const { numerator, denominator } = useProjectState(state => state.document.transport)
   const draw = useProjectState(effectiveDrawMode)
   const octave = useProjectState(state => state.session.midiOctave)
@@ -122,17 +122,18 @@ export function Toolbar({
         variant="ghost"
         label={labels.save}
         disabled={!saveAvailable}
-        onClick={projectActions.saveSnapshot}
+        onClick={projectActions.save}
       >
         {labels.save}
       </Button>
       <Button
+        testId="timeline-open"
         icon={<Icon name="FolderOpen" />}
         variant="ghost"
-        label={labels.restore}
-        onClick={projectActions.restoreSnapshot}
+        label={labels.open}
+        onClick={projectActions.requestOpen}
       >
-        {labels.restore}
+        {labels.open}
       </Button>
       <DragPadToggle
         value={workspace.computerKeyboard}

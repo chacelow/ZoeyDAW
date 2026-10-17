@@ -1,6 +1,8 @@
 export const englishCommandTitles = {
   project: {
     save: "Save project",
+    saveAs: "Save project as",
+    open: "Open project",
   },
   transport: {
     togglePlay: "Play / pause",
@@ -39,6 +41,8 @@ export const englishCommandTitles = {
 export const chineseCommandTitles: typeof englishCommandTitles = {
   project: {
     save: "保存工程",
+    saveAs: "工程另存为",
+    open: "打开工程",
   },
   transport: {
     togglePlay: "播放 / 暂停",

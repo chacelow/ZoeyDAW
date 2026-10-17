@@ -274,10 +274,10 @@ export function ArrangementTimeline({
 
 function TimelineStatus({ labels }: { labels: TimelineLabels }) {
   const theme = useTheme()
-  const snapshot = useProjectState(state => state.session.snapshotError)
+  const snapshot = useProjectState(state => state.session.fileError)
   const backend = useProjectState(state => state.session.backend)
   const error = snapshot
-    ? labels.snapshotErrors[snapshot]
+    ? labels.fileErrors[snapshot]
     : backend.error
       ? labels.backendErrors[backend.error]
       : null

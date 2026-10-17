@@ -1,6 +1,6 @@
 import type { GridDensity } from "@/project/model/grid"
 import type { BackendFailureCode } from "@/project/model/backend"
-import type { SnapshotErrorCode } from "@/project/model/snapshot-error"
+import type { ProjectFileErrorCode } from "@/project/model/project-file"
 import type { DisplayFormats } from "@/project/model/display-formats"
 
 export interface TimelineLabels {
@@ -8,7 +8,7 @@ export interface TimelineLabels {
   readonly backendOpening: string
   readonly backendPending: string
   readonly backendErrors: Readonly<Record<BackendFailureCode, string>>
-  readonly snapshotErrors: Readonly<Record<SnapshotErrorCode, string>>
+  readonly fileErrors: Readonly<Record<ProjectFileErrorCode, string>>
   readonly formats: DisplayFormats
   readonly minimap: string
   readonly musicRuler: string
@@ -28,7 +28,7 @@ export interface TimelineLabels {
   readonly zoomIn: string
   readonly pixelsPerBar: string
   readonly save: string
-  readonly restore: string
+  readonly open: string
   readonly midiKeyboard: string
   readonly octave: string
   readonly velocity: string

@@ -52,6 +52,7 @@
   },
   "historyCapacity": 100,
   "recentProjectCapacity": 20,
+  "projectBackupCount": 10,
   "window": { "width": 1280, "height": 800 },
   "numericInput": {
     "dragPixelsPerStep": 4,

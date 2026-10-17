@@ -4,7 +4,11 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { readBytes, resolveExternalHttpUrl, writeBytesAtomically } from "@zoeydaw/native"
 import { createSettingStorage, createSettings } from "../settings"
-import { createSnapshotStorage } from "./index"
+import {
+  createProjectFileStorage,
+  createProjectLocations,
+  createRecentProjectStorage,
+} from "./index"
 
 const paths: string[] = []
 function temporaryDirectory() {
@@ -28,34 +32,43 @@ describe("real napi storage", () => {
     expect(readdirSync(dir)).toEqual(["atomic.bin"])
   })
 
-  test("settings persist valid preferences and snapshots isolate routes", () => {
+  test("settings persist valid preferences and recent project paths", () => {
     const dir = temporaryDirectory()
     const settings = createSettings({ configDir: dir })
     settings.set({ language: "en-US", themePreset: "dark", closeBehavior: "tray" })
-    expect(createSettings({ configDir: dir }).get()).toMatchObject({
-      language: "en-US",
-      themePreset: "dark",
-      closeBehavior: "tray",
-    })
     const localeStorage: { get(): string | null; set(locale: string): void } = createSettingStorage(
       "language",
       { configDir: dir }
     )
     localeStorage.set("zh-CN")
-    expect(localeStorage.get()).toBe("zh-CN")
+    createRecentProjectStorage({ configDir: dir }).set([
+      { path: "/a/A Project/A.zdaw", openedAt: 1 },
+    ])
     expect(createSettings({ configDir: dir }).get()).toMatchObject({
       language: "zh-CN",
       themePreset: "dark",
       closeBehavior: "tray",
+      recentProjects: [{ path: "/a/A Project/A.zdaw", openedAt: 1 }],
     })
-    const snapshots = createSnapshotStorage({ dataDir: dir })
-    expect(snapshots.get("project_2")).toBeNull()
-    snapshots.set("project_1", '{"clips":[]}')
-    snapshots.set("project_2", '{"clips":[1]}')
-    expect(createSnapshotStorage({ dataDir: dir }).get("project_1")).toBe('{"clips":[]}')
-    expect(snapshots.get("project_2")).toBe('{"clips":[1]}')
-    snapshots.set("../escape", "{}")
-    expect(snapshots.get("../escape")).toBe("{}")
+  })
+
+  test("project files save into their folder with rotating backups", () => {
+    const dir = temporaryDirectory()
+    const locations = createProjectLocations()
+    const file = locations.filePath(dir, "Song")
+    if (file === null) throw new Error("valid name rejected")
+    expect(file).toBe(path.join(dir, "Song Project", "Song.zdaw"))
+    expect(locations.filePath(dir, "a/b")).toBeNull()
+    expect(locations.exists(file)).toBe(false)
+    const files = createProjectFileStorage()
+    expect(files.read(file)).toBeNull()
+    files.write(file, '{"v":1}')
+    files.write(file, '{"v":2}')
+    expect(locations.exists(file)).toBe(true)
+    expect(files.read(file)).toBe('{"v":2}')
+    const backups = readdirSync(path.join(dir, "Song Project", "Backup"))
+    expect(backups).toHaveLength(1)
+    expect(backups[0]).toMatch(/^Song \[\d{4}-\d{2}-\d{2} \d{6}\]\.zdaw$/u)
   })
 
   test("only external HTTP URLs cross the opener boundary", () => {

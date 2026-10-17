@@ -7,13 +7,13 @@ import type { TestRoot } from "@gpuix/react/testing"
 import { GalleryCard } from "@/gallery/GalleryCard"
 import { GalleryProjectCards } from "@/gallery/GalleryExamples"
 import { StateGallery } from "@/gallery/states"
-import { createMemorySnapshotStorage } from "@/project/adapters"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
 import { LoadErrorScreen } from "@/ui/controls/LoadErrorScreen"
 import { HomePage } from "./home/HomePage"
-import { saveRecentProjects } from "./home/recent-projects"
+import { ProjectFileProvider } from "./project-file/ProjectFileProvider"
+import { createMemoryFileEnvironment } from "./project-file/memory.test-helper"
 import { initAppI18n } from "./i18n"
 import { createDisplayFormats } from "./i18n/display-formats"
 import { AppInteractionProvider } from "./interaction"
@@ -88,8 +88,8 @@ test("confirmation width changes native content without losing horizontal center
 
 test("recent project card width follows home layout rather than track controls", () => {
   const root = createTestRoot({ width: 1100, height: 500 })
-  const storage = createMemorySnapshotStorage()
-  saveRecentProjects(storage, [{ id: "width", name: "Project width fixture", openedAt: 0 }])
+  const files = createMemoryFileEnvironment()
+  files.recents.set([{ path: "/projects/Width Project/Width.zdaw", openedAt: 0 }])
   try {
     root.render(
       <ThemeProvider
@@ -100,13 +100,15 @@ test("recent project card width follows home layout rather than track controls",
       >
         <RouterProvider value={createRouter("/")}>
           <div style={{ display: "flex", flexDirection: "column", width: 1100, height: 500 }}>
-            <HomePage storage={storage} />
+            <ProjectFileProvider environment={files} renderer={null}>
+              <HomePage />
+            </ProjectFileProvider>
           </div>
         </RouterProvider>
       </ThemeProvider>
     )
     paint(root)
-    expect(bounds(root, "recent-width").width).toBe(237)
+    expect(bounds(root, "recent-0").width).toBe(237)
   } finally {
     root.unmount()
   }

@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef } from "react"
 import {
   configureProjectCreation,
-  openProjectSnapshot,
-  setProjectStorageId,
+  openProjectFile,
+  openNewProject,
   startProjectRuntime,
 } from "@/project/adapters"
 import { getPreferences } from "@/platform/settings"
@@ -45,8 +45,8 @@ export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPagePro
     })
     let releaseRuntime: () => void
     try {
-      if (openMode === "new") setProjectStorageId(projectId)
-      else openProjectSnapshot(projectId)
+      if (openMode === "new") openNewProject(projectId)
+      else openProjectFile(projectId)
       releaseRuntime = startProjectRuntime()
     } catch (error) {
       releaseCreation()

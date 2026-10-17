@@ -21,9 +21,9 @@ import {
   useProjectState,
   whenProjectBackendIdle,
   startProjectRuntime,
-  setProjectStorageId,
-  setSnapshotStorage,
-  createMemorySnapshotStorage,
+  openNewProject,
+  setProjectFiles,
+  createMemoryProjectFiles,
 } from ".."
 import type {
   BackendRequest,
@@ -94,6 +94,9 @@ function deferredBackend() {
   }
   return { backend, requests, pending, settle, publish }
 }
+const SAVED = "/projects/Runtime Project/Runtime.zdaw"
+let files = createMemoryProjectFiles()
+const savedBpm = () => JSON.parse(files.entries.get(SAVED) ?? "null")?.document.transport.bpm
 const fresh = () =>
   hydrateProject(
     JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
@@ -101,7 +104,8 @@ const fresh = () =>
 let restore: (() => void) | null = null
 let releaseRuntime: (() => void) | null = null
 beforeEach(() => {
-  setSnapshotStorage(createMemorySnapshotStorage())
+  files = createMemoryProjectFiles()
+  setProjectFiles(files)
   fresh()
   releaseRuntime = startProjectRuntime()
 })
@@ -110,7 +114,7 @@ afterEach(() => {
   releaseRuntime = null
   restore?.()
   restore = null
-  setSnapshotStorage(null)
+  setProjectFiles(null)
 })
 
 it("does not create backend resources on import, factory construction, or hydration, and isolates runtime instances", () => {
@@ -268,7 +272,7 @@ it("does not clear dirty until accepted, and fences delayed save and old project
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setBpm(155)
-  projectActions.saveSnapshot()
+  projectActions.saveAs(SAVED)
   expect(useProjectState.getState().session.dirty).toBe(true)
   const old = remote.pending[0]
   fresh()
@@ -392,42 +396,39 @@ it("persists the requested accepted revision despite later edits, without cleari
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setBpm(145)
-  projectActions.saveSnapshot()
+  projectActions.saveAs(SAVED)
   projectActions.setBpm(165)
   remote.settle("accepted")
   await Promise.resolve()
   expect(useProjectState.getState().session.dirty).toBe(true)
   remote.settle("accepted")
   await Promise.resolve()
-  expect(projectActions.restoreSnapshot()).toBe(true)
-  expect(useProjectState.getState().document.transport.bpm).toBe(145)
+  expect(savedBpm()).toBe(145)
 })
 
 it("does not cancel a pending save just because the unhistoried viewport changed", async () => {
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setBpm(147)
-  projectActions.saveSnapshot()
+  projectActions.saveAs(SAVED)
   projectActions.setViewport({ scrollX: 192 })
   remote.settle("accepted")
   await Promise.resolve()
   expect(useProjectState.getState().session.dirty).toBe(false)
   expect(useProjectState.getState().workspace.scrollX).toBe(192)
   projectActions.setBpm(167)
-  expect(projectActions.restoreSnapshot()).toBe(true)
-  expect(useProjectState.getState().document.transport.bpm).toBe(147)
+  expect(savedBpm()).toBe(147)
 })
 
 it("saves committed values rather than a numeric gesture's temporary values", () => {
   projectActions.beginEdit()
   projectActions.setBpm(170)
   expect(parseProject(serializeProject()).document.transport.bpm).toBe(120)
-  projectActions.saveSnapshot()
+  projectActions.saveAs(SAVED)
   projectActions.cancelEdit()
   expect(useProjectState.getState().session.dirty).toBe(false)
   projectActions.setBpm(175)
-  expect(projectActions.restoreSnapshot()).toBe(true)
-  expect(useProjectState.getState().document.transport.bpm).toBe(120)
+  expect(savedBpm()).toBe(120)
 })
 
 it("does not resurrect a released MIDI key when its backend command is rejected", async () => {
@@ -564,17 +565,16 @@ it("writes a pending save only after its revision is accepted", async () => {
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setBpm(151)
-  projectActions.saveSnapshot()
-  expect(projectActions.restoreSnapshot()).toBe(false)
+  projectActions.saveAs(SAVED)
+  expect(savedBpm()).toBeUndefined()
   expect(useProjectState.getState().document.transport.bpm).toBe(151)
   expect(useProjectState.getState().session.dirty).toBe(true)
   remote.settle("accepted")
   await Promise.resolve()
   expect(useProjectState.getState().session.dirty).toBe(false)
-  expect(useProjectState.getState().session.snapshotError).toBeNull()
+  expect(useProjectState.getState().session.fileError).toBeNull()
   projectActions.setBpm(161)
-  expect(projectActions.restoreSnapshot()).toBe(true)
-  expect(useProjectState.getState().document.transport.bpm).toBe(151)
+  expect(savedBpm()).toBe(151)
 })
 
 it("does not promote a temporary control edit when replacing the backend", () => {
@@ -624,7 +624,7 @@ it("rejects edits visibly when the backend could not initialize instead of silen
 
 it("opens external-backend projects without demo media and leaves empty audio clips silent", () => {
   restore = configureProjectBackend(createMockProjectBackend)
-  setProjectStorageId("external-empty")
+  openNewProject("external-empty")
   expect(useProjectState.getState().document.tracks.map(track => track.id)).toEqual(["main"])
   projectActions.addTrack("audio", DEFAULT_LAYOUT_TOKENS.track.defaultHeight)
   const track = useProjectState.getState().document.tracks.find(track => track.kind === "audio")
@@ -660,10 +660,10 @@ it("initializes each project from its backend registration and restores the prev
     removeSecond()
     removeFirst()
   }
-  setProjectStorageId("external-second")
+  openNewProject("external-second")
   expect(useProjectState.getState().document.name).toBe(createTestDocument().name)
   removeSecond()
-  setProjectStorageId("external-first")
+  openNewProject("external-first")
   expect(useProjectState.getState().document.name).toBe("external-first")
   expect(useProjectState.getState().session.canUndo).toBe(false)
 })
@@ -690,7 +690,7 @@ it("keeps saved workspace preferences clean after a rejected document edit", asy
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setFollow(false)
-  projectActions.saveSnapshot()
+  projectActions.saveAs(SAVED)
   expect(useProjectState.getState().session.dirty).toBe(false)
   projectActions.setBpm(183)
   remote.settle("rejected")

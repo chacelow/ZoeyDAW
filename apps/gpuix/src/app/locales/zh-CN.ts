@@ -2,11 +2,11 @@ import { creationNamesByLocale } from "./creation-names"
 
 export default {
   creationNames: creationNamesByLocale["zh-CN"],
-  snapshotErrors: {
-    read: "无法读取快照存储。",
-    invalid: "本地快照无效或不受支持，当前工程已保留。",
-    write: "无法保存本地快照，请检查存储是否可用。",
-    missing: "此工程尚无本地快照。",
+  fileErrors: {
+    read: "无法读取工程文件。",
+    invalid: "工程文件无效或不受支持，当前工程已保留。",
+    write: "无法保存工程文件，请检查文件夹是否可写。",
+    missing: "找不到工程文件，可能已被移动或删除。",
   },
   panel: {
     footer: "底部面板",
@@ -33,7 +33,8 @@ export default {
     emptyTitle: "暂无项目",
     emptyHint: "点击“新建项目”开始一个 DAW 工程。",
     createAction: "新建项目",
-    openAction: "打开",
+    openAction: "打开…",
+    openPrompt: "打开工程",
     recent: "最近打开",
   },
   project: {
@@ -85,6 +86,18 @@ export default {
     title: "通知",
     dismiss: "关闭通知",
     loading: "加载中",
+  },
+  projectFile: {
+    saveAsTitle: "工程另存为",
+    name: "工程名称",
+    location: "位置",
+    chooseLocation: "选择…",
+    choosePrompt: "选择文件夹",
+    destination: "保存为 {{path}}",
+    invalidName: '名称不能包含 / \\ : * ? " < > |',
+    exists: "此文件夹中已有同名工程。",
+    save: "保存",
+    notProject: "请选择 .zdaw 工程文件。",
   },
   titlebar: {
     settings: "设置",

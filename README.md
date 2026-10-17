@@ -2,7 +2,7 @@
 
 原生 DAW。`apps/gpuix` 使用 React 逻辑与 gpuix 原生渲染，`crates/native` 提供 Rust napi 平台能力，`crates/engine` 拥有音频播放引擎。gpuix 是唯一产品入口，旧 Web、Tauri 与共享包工作区已删除。
 
-已有首页、单项目面板、Browser、Arrangement 与 Audio/MIDI/Pattern 编辑界面；工程状态通过 adapter 接入真实原生后端，设置、日志和快照使用原生存储。已实现与未实现的产品范围见 [产品范围](docs/product-prototype.md)，不把插件 host 或 `.als` 导入视为已完成。
+已有首页、单项目面板、Browser、Arrangement 与 Audio/MIDI/Pattern 编辑界面；工程状态通过 adapter 接入真实原生后端，工程保存为 `<名称> Project/<名称>.zdaw` 并自动备份，设置与日志使用原生存储。已实现与未实现的产品范围见 [产品范围](docs/product-prototype.md)，不把插件 host 或 `.als` 导入视为已完成。
 
 ## 安装
 

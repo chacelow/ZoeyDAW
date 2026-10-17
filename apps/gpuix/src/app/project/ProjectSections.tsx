@@ -44,10 +44,10 @@ export function ProjectSections({
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotion)
   const info = useControlInfo()
   const backendError = useProjectState(state => state.session.backend.error)
-  const snapshotError = useProjectState(state => state.session.snapshotError)
+  const fileError = useProjectState(state => state.session.fileError)
   const timelineLabels = zh ? chineseLabels : englishLabels
-  const warning = snapshotError
-    ? timelineLabels.snapshotErrors[snapshotError]
+  const warning = fileError
+    ? timelineLabels.fileErrors[fileError]
     : backendError
       ? timelineLabels.backendErrors[backendError]
       : null

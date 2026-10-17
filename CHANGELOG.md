@@ -2,6 +2,13 @@
 
 ## 0.1.0 - unreleased
 
+### Project files (2026-10-17)
+
+- Save projects the way Live saves sets: `<Name> Project/<Name>.zdaw` (version-2 JSON) in a folder chosen in a Save As dialog, defaulting to Documents/ZoeyDAW. Each overwrite first copies the previous file to `Backup/<Name> [YYYY-MM-DD HHMMSS].zdaw`, keeping the newest `projectBackupCount` (default 10).
+- Save (Cmd/Ctrl+S) writes the opened file, or opens Save As for a never-saved project; Save As (Cmd/Ctrl+Shift+S) and Open (Cmd/Ctrl+O) are new commands. Home "Open…" and the toolbar Open button use the system file picker; the toolbar Restore snapshot button is removed.
+- Recent projects are file paths stored in settings and appear after the first successful save; the title bar shows the file name. Leaving an unsaved project with Save asks for a location and stays put on cancel.
+- A file that fails to read or validate blocks Save so its bytes are never overwritten; Save As to a new location recovers. Remove the per-route `dataDir/snapshots` store and its `snapshotGet`/`snapshotSet` napi exports.
+
 ### Windows and repository cleanup (2026-10-17)
 
 - Add Windows x64: renderer UI bridge and cleanup patches, DirectComposition offscreen lifecycle, native clipboard, cursor, window geometry and reduced motion on Windows, a Windows build driver, `verify-windows.mjs`, a Windows CI job and an NSIS release matrix entry.

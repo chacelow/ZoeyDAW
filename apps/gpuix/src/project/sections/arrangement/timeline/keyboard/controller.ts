@@ -84,7 +84,9 @@ export function createTimelineKeyboard({
       return "handled"
     }
   const commands = createCommandRegistry({
-    "project.save": once(projectActions.saveSnapshot),
+    "project.save": once(projectActions.save),
+    "project.saveAs": once(projectActions.requestSaveAs),
+    "project.open": once(projectActions.requestOpen),
     "transport.togglePlay": event => {
       blurControl()
       if (!event.isHeld) projectActions.togglePlay()

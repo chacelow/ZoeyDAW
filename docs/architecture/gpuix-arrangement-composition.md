@@ -111,7 +111,7 @@ export function TrackResizeOverlay(props: {
 
 | 命令 / 键 | owner |
 | --- | --- |
-| `project.save`、`transport.togglePlay`、`arrangement.draw`（Cmd/Ctrl+S、Space、B） | timeline 的项目级命令；非文本 Clip Editor 同样生效 |
+| `project.save/saveAs/open`、`transport.togglePlay`、`arrangement.draw`（Cmd/Ctrl+S、Cmd/Ctrl+Shift+S、Cmd/Ctrl+O、Space、B） | timeline 的项目级命令；非文本 Clip Editor 同样生效 |
 | `edit.undo/redo`、`grid.narrow/widen/toggleSnap`、`edit.cancel`、`transport.rewind/seekLeft/seekRight`、电脑 MIDI、Automation | timeline 的 Arrangement 命令；只在 timeline/control 上下文解析 |
 | `browser.focusSearch`（Cmd/Ctrl+F） | 同一 timeline 命令注册表；组合根注入 Browser 可用性与实际 `focusSearch`，文本上下文允许查找，菜单不允许 |
 | Clip/Automation 选择、split、duplicate、rename、delete、复制剪切粘贴、拖动取消；定位点与 Loop 命令 | 仍由 lane / rulers 的既有 owner 执行；timeline 上下文的局部命令先让这些 owner 认领，未认领才执行对应全局后备；项目级保存、播放和 B 不进入认领链 |

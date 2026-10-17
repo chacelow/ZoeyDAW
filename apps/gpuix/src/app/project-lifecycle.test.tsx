@@ -9,11 +9,11 @@ import { AnimationFrameProvider } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
 import { i18next } from "@/platform/i18n/core"
 import {
-  createMemorySnapshotStorage,
+  createMemoryProjectFiles,
   configureProjectBackend,
   projectActions,
   serializeProject,
-  setSnapshotStorage,
+  setProjectFiles,
   useProjectState,
   whenProjectBackendIdle,
 } from "@/project/adapters"
@@ -32,6 +32,7 @@ import { createRouter } from "./router/router"
 import { createPreferenceStore } from "./settings/preference-store"
 import { isThemeMode } from "./settings/theme-mode"
 import { englishLabels, chineseLabels } from "./locales/sections/timeline"
+import { createMemoryFileEnvironment } from "./project-file/memory.test-helper"
 
 const roots: TestRoot[] = []
 const cleanups: (() => void)[] = []
@@ -42,13 +43,17 @@ beforeEach(async () => {
 afterEach(() => {
   for (const root of roots.splice(0)) root.unmount()
   for (const cleanup of cleanups.splice(0)) cleanup()
-  setSnapshotStorage(null)
+  setProjectFiles(null)
 })
 
-function mount(initial = "/", storage = createMemorySnapshotStorage()) {
+function mount(
+  initial = "/",
+  storage = createMemoryProjectFiles(),
+  files = createMemoryFileEnvironment()
+) {
   cleanups.push(configureProjectBackend(createNativeBackend))
   const router = createRouter(initial)
-  setSnapshotStorage(storage)
+  setProjectFiles(storage)
   const keyboard = createWindowKeyboard()
   const root = createTestRoot({ width: 1280, height: 800, ...keyboard.rootHandlers })
   roots.push(root)
@@ -58,8 +63,8 @@ function mount(initial = "/", storage = createMemorySnapshotStorage()) {
         <WindowKeyboardProvider value={keyboard}>
           <AppShell
             router={router}
-            storage={storage}
-            closeRenderer={null}
+            files={files}
+            windowRenderer={null}
             systemAppearance="dark"
             appearance={{
               themeMode: createPreferenceStore(
@@ -79,7 +84,7 @@ function mount(initial = "/", storage = createMemorySnapshotStorage()) {
       </AppNativeEnvironmentProvider>
     </AnimationFrameProvider>
   )
-  return { root, router, storage }
+  return { root, router, storage, files }
 }
 
 function act(root: TestRoot, action: () => void) {
@@ -97,62 +102,83 @@ async function settle(root: TestRoot) {
   for (let i = 0; i < 5; i++) await Promise.resolve()
   act(root, () => {})
 }
-const key = (id: string) => `zoeydaw:project:snapshot:v1:${encodeURIComponent(id)}`
+function type(root: TestRoot, id: string, value: string) {
+  const node = root.renderer.findByTestId(id)
+  if (!node) throw new Error(`Missing ${id}`)
+  const keys = [...value].map(char =>
+    char === char.toLowerCase() ? char : `shift-${char.toLowerCase()}`
+  )
+  root.renderer.nativeSimulateKeystrokes(node.id, ["cmd-a", "backspace", ...keys].join(" "))
+  root.renderer.flush()
+}
+const SONG = "/projects/Song Project/Song.zdaw"
 
 test(
-  "saved project reopens from recent with identical authored content",
+  "Save As writes the project folder file, lists it in recents and reopens identically",
   async () => {
-    const { root, router, storage } = mount()
+    const { root, router, storage, files } = mount()
     click(root, "home-create")
-    const route = router.getRoute()
-    if (route.kind !== "project") throw new Error("Create did not open a project")
     await settle(root)
     act(root, () => projectActions.setBpm(151))
-    projectActions.saveSnapshot()
     await settle(root)
-    const saved = storage.get(key(route.projectId))
-    if (saved === null) throw new Error("Snapshot was not saved")
+    act(root, () => projectActions.save())
+    expect(root.renderer.findByTestId("save-as")).toBeDefined()
+    type(root, "save-as-name", "Song")
+    click(root, "save-as-confirm")
+    await settle(root)
+    const saved = storage.entries.get(SONG)
+    if (saved === undefined) throw new Error("Project file was not written")
+    expect(useProjectState.getState().session).toMatchObject({ filePath: SONG, dirty: false })
+    expect(files.recentPaths()).toEqual([SONG])
     act(root, () => router.navigate("/"))
     act(root, () => router.navigate("/project/other"))
     await settle(root)
     act(root, () => router.navigate("/"))
-    click(root, `recent-${route.projectId}`)
+    click(root, "recent-0")
     await settle(root)
     expect(serializeProject()).toBe(saved)
-    expect(useProjectState.getState().document.transport.bpm).toBe(151)
     root.unmount()
     roots.splice(roots.indexOf(root), 1)
-    const restarted = mount(`/project/${route.projectId}`, storage)
+    const restarted = mount(`/project/${encodeURIComponent(SONG)}`, storage, files)
     await settle(restarted.root)
     expect(serializeProject()).toBe(saved)
   },
   NATIVE_MULTI_SESSION_TEST_TIMEOUT
 )
 
-test("corrupt saved project reports an error and save preserves the original bytes", async () => {
-  const { root, router, storage } = mount()
-  const damaged = '{"version":2,"document":"damaged"}'
-  storage.set(key("corrupt"), damaged)
-  act(root, () => router.navigate("/project/corrupt"))
+test("Save As refuses a name that already exists in the folder", async () => {
+  const { root } = mount(
+    "/",
+    createMemoryProjectFiles(),
+    createMemoryFileEnvironment(path => path === SONG)
+  )
+  click(root, "home-create")
   await settle(root)
-  expect(useProjectState.getState().session.snapshotError).toBe("invalid")
-  expect(root.renderer.getAllText()).toContain(englishLabels.snapshotErrors.invalid)
-  const unchanged = serializeProject()
-  await i18next.changeLanguage("zh-CN")
-  await settle(root)
-  expect(root.renderer.getAllText()).toContain(chineseLabels.snapshotErrors.invalid)
-  expect(useProjectState.getState().session.snapshotError).toBe("invalid")
-  expect(serializeProject()).toBe(unchanged)
-  projectActions.saveSnapshot()
-  await settle(root)
-  expect(storage.get(key("corrupt"))).toBe(damaged)
+  act(root, () => projectActions.requestSaveAs())
+  type(root, "save-as-name", "Song")
+  expect(root.renderer.getAllText()).toContain(
+    "A project with this name already exists in this folder."
+  )
+  click(root, "save-as-confirm")
+  expect(root.renderer.findByTestId("save-as")).toBeDefined()
+  click(root, "save-as-cancel")
+  expect(root.renderer.findByTestId("save-as")).toBeUndefined()
 })
 
-test("missing saved project opens empty without a snapshot error", async () => {
-  const { root } = mount("/project/no-snapshot")
+test("corrupt project file reports an error and save preserves the original bytes", async () => {
+  const { root, router, storage } = mount()
+  const damaged = '{"version":2,"document":"damaged"}'
+  storage.entries.set(SONG, damaged)
+  act(root, () => router.navigate({ kind: "project", projectId: SONG }))
   await settle(root)
-  expect(useProjectState.getState().session.snapshotError).toBeNull()
-  expect(useProjectState.getState().document.tracks.map(track => track.kind)).toEqual(["main"])
+  expect(useProjectState.getState().session.fileError).toBe("invalid")
+  expect(root.renderer.getAllText()).toContain(englishLabels.fileErrors.invalid)
+  await i18next.changeLanguage("zh-CN")
+  await settle(root)
+  expect(root.renderer.getAllText()).toContain(chineseLabels.fileErrors.invalid)
+  projectActions.save()
+  await settle(root)
+  expect(storage.entries.get(SONG)).toBe(damaged)
 })
 
 test("dirty Back can cancel without releasing project content or undo", async () => {
@@ -174,43 +200,43 @@ test("dirty Back can cancel without releasing project content or undo", async ()
 })
 
 test(
-  "dirty replace saves before opening another project",
+  "dirty replace saves the opened file before opening another project",
   async () => {
-    const { root, router, storage } = mount("/project/save-before-replace")
+    const { root, router, storage } = mount()
+    storage.entries.set(
+      SONG,
+      JSON.stringify({
+        version: 2,
+        document: useProjectState.getState().document,
+        workspace: useProjectState.getState().workspace,
+      })
+    )
+    act(root, () => router.navigate({ kind: "project", projectId: SONG }))
     await settle(root)
     act(root, () => projectActions.setBpm(143))
     await settle(root)
     act(root, () => router.navigate("/project/replaced", { replace: true }))
-    expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-before-replace" })
     click(root, "unsaved-save")
     await settle(root)
     expect(router.getRoute()).toEqual({ kind: "project", projectId: "replaced" })
-    const saved = storage.get(key("save-before-replace"))
-    if (saved === null) throw new Error("Snapshot was not saved before leaving")
-    expect(JSON.parse(saved).document.transport.bpm).toBe(143)
+    expect(JSON.parse(storage.entries.get(SONG) ?? "{}").document.transport.bpm).toBe(143)
   },
   NATIVE_MULTI_SESSION_TEST_TIMEOUT
 )
 
 test(
-  "dirty navigation save failure stays in the original project; discard may leave",
+  "leaving an untitled project with Save asks for a location; cancelling stays",
   async () => {
-    const { root, router } = mount("/project/save-failure")
+    const { root, router } = mount("/project/untitled")
     await settle(root)
     act(root, () => projectActions.setBpm(144))
     await settle(root)
-    setSnapshotStorage({
-      get: () => null,
-      set: () => {
-        throw new Error("storage unavailable")
-      },
-    })
     act(root, () => router.navigate("/project/next"))
-    expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-failure" })
     click(root, "unsaved-save")
     await settle(root)
-    expect(router.getRoute()).toEqual({ kind: "project", projectId: "save-failure" })
-    expect(useProjectState.getState().document.transport.bpm).toBe(144)
+    click(root, "save-as-cancel")
+    await settle(root)
+    expect(router.getRoute()).toEqual({ kind: "project", projectId: "untitled" })
     expect(useProjectState.getState().session.dirty).toBe(true)
     act(root, () => router.navigate("/project/next"))
     click(root, "unsaved-discard")
@@ -220,56 +246,36 @@ test(
   NATIVE_MULTI_SESSION_TEST_TIMEOUT
 )
 
-test("new project never reads snapshot storage", async () => {
-  const { root } = mount()
-  setSnapshotStorage({
-    get: () => {
-      throw new Error("new projects must not read storage")
-    },
-    set: () => {},
-  })
-  click(root, "home-create")
-  await settle(root)
-  expect(useProjectState.getState().session.snapshotError).toBeNull()
-  expect(useProjectState.getState().document.transport.bpm).toBe(120)
-})
-
-test("discard then reopening the same unsaved id starts empty", async () => {
-  const { root, router } = mount("/project/discard-same-id")
-  await settle(root)
-  act(root, () => projectActions.setBpm(177))
-  await settle(root)
-  act(root, () => router.navigate("/"))
-  click(root, "unsaved-discard")
-  await settle(root)
-  act(root, () => router.navigate("/project/discard-same-id"))
-  await settle(root)
-  expect(useProjectState.getState().document.transport.bpm).toBe(120)
-  expect(useProjectState.getState().session.dirty).toBe(false)
-})
-
-test("successful Restore after a failed open permits saving the repaired project", async () => {
-  const { root, router, storage } = mount("/project/restore-seed")
-  await settle(root)
-  const valid = serializeProject()
-  storage.set(key("repair-and-restore"), "corrupt")
-  act(root, () => router.navigate("/project/repair-and-restore"))
-  await settle(root)
-  expect(useProjectState.getState().session.snapshotError).toBe("invalid")
-  storage.set(key("repair-and-restore"), valid)
-  act(root, () => {
-    expect(projectActions.restoreSnapshot()).toBe(true)
-  })
-  await settle(root)
-  act(root, () => projectActions.setBpm(163))
-  await settle(root)
-  projectActions.saveSnapshot()
-  await settle(root)
-  const saved = storage.get(key("repair-and-restore"))
-  if (saved === null) throw new Error("Repaired snapshot was not saved")
-  expect(JSON.parse(saved).document.transport.bpm).toBe(163)
-  expect(useProjectState.getState().session.dirty).toBe(false)
-}, 30000)
+test(
+  "dirty navigation save failure stays in the original project",
+  async () => {
+    const { root, router, storage } = mount()
+    storage.entries.set(
+      SONG,
+      JSON.stringify({
+        version: 2,
+        document: useProjectState.getState().document,
+        workspace: useProjectState.getState().workspace,
+      })
+    )
+    act(root, () => router.navigate({ kind: "project", projectId: SONG }))
+    await settle(root)
+    act(root, () => projectActions.setBpm(144))
+    await settle(root)
+    setProjectFiles({
+      read: () => null,
+      write: () => {
+        throw new Error("storage unavailable")
+      },
+    })
+    act(root, () => router.navigate("/project/next"))
+    click(root, "unsaved-save")
+    await settle(root)
+    expect(router.getRoute()).toEqual({ kind: "project", projectId: SONG })
+    expect(useProjectState.getState().session.dirty).toBe(true)
+  },
+  NATIVE_MULTI_SESSION_TEST_TIMEOUT
+)
 
 test("notification preferences update limits without clearing retained notices or restarting expiry", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "zoeydaw-notification-preferences-"))

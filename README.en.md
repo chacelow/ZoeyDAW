@@ -2,7 +2,7 @@
 
 A native DAW. `apps/gpuix` combines React logic with gpuix native rendering; `crates/native` provides Rust napi platform capabilities, and `crates/engine` owns audio playback. gpuix is the only product entry point. The legacy Web, Tauri, and shared-package workspaces have been removed.
 
-The app includes Home, project panels, Browser, Arrangement, and Audio/MIDI/Pattern editors. Project adapters connect to the real native backend; settings, logging, and snapshots use native storage. See [product scope](docs/product-prototype.md) for implemented and outstanding capabilities; plug-in hosting and Ableton `.als` import are not claimed as complete.
+The app includes Home, project panels, Browser, Arrangement, and Audio/MIDI/Pattern editors. Project adapters connect to the real native backend; projects save as `<Name> Project/<Name>.zdaw` with automatic backups, and settings and logs use native storage. See [product scope](docs/product-prototype.md) for implemented and outstanding capabilities; plug-in hosting and Ableton `.als` import are not claimed as complete.
 
 ## Develop
 

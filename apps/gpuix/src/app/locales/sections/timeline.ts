@@ -5,7 +5,7 @@ import zhCN from "../zh-CN"
 
 export const englishLabels: TimelineLabels = {
   formats: createDisplayFormats("en-US"),
-  snapshotErrors: enUS.snapshotErrors,
+  fileErrors: enUS.fileErrors,
   timeline: "Arrangement timeline",
   backendOpening: "Opening engine",
   backendPending: "Applying edit",
@@ -38,8 +38,8 @@ export const englishLabels: TimelineLabels = {
   zoomOut: "Zoom out",
   zoomIn: "Zoom in",
   pixelsPerBar: "px/bar",
-  save: "Save snapshot",
-  restore: "Restore snapshot",
+  save: "Save",
+  open: "Open",
   midiKeyboard: "Computer MIDI keyboard",
   octave: "Octave",
   velocity: "Velocity",
@@ -58,7 +58,7 @@ export const englishLabels: TimelineLabels = {
 
 export const chineseLabels: TimelineLabels = {
   formats: createDisplayFormats("zh-CN"),
-  snapshotErrors: zhCN.snapshotErrors,
+  fileErrors: zhCN.fileErrors,
   timeline: "编排时间线",
   backendOpening: "正在打开引擎",
   backendPending: "正在应用编辑",
@@ -85,8 +85,8 @@ export const chineseLabels: TimelineLabels = {
   zoomOut: "缩小",
   zoomIn: "放大",
   pixelsPerBar: "像素/小节",
-  save: "保存快照",
-  restore: "恢复快照",
+  save: "保存",
+  open: "打开",
   midiKeyboard: "电脑 MIDI 键盘",
   octave: "八度",
   velocity: "力度",

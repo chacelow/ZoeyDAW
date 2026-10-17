@@ -11,7 +11,7 @@ import type { AppShellProps } from "./AppShell"
 
 export type NativeRootProps = Omit<
   AppShellProps,
-  "closeRenderer" | "systemAppearance" | "onTitlebarDoubleClick"
+  "windowRenderer" | "systemAppearance" | "onTitlebarDoubleClick"
 >
 
 export function NativeRoot(props: NativeRootProps) {
@@ -40,7 +40,7 @@ export function NativeRoot(props: NativeRootProps) {
           <AppNativeEnvironmentProvider value={native.panels}>
             <AppShell
               {...props}
-              closeRenderer={renderer}
+              windowRenderer={renderer}
               systemAppearance={systemAppearance}
               onTitlebarDoubleClick={
                 process.platform === "win32" ? undefined : native.window.titlebarDoubleClick
