@@ -25,12 +25,10 @@ function MixerLevel({
 }) {
   const { formats } = useTrackLabels()
   const gesture = useProjectEditGesture(onChange)
-  const theme = useTheme()
   return (
     <DragPadBar
       label={label}
       value={value}
-      color={theme.colors.arrangementVolume}
       min={-60}
       max={6}
       step={0.1}
@@ -192,7 +190,6 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 format={value => formats.pan(value, "control")}
                 parse={formats.parsePan}
                 widthSamples={formats.widthSamples.pan}
-                color={theme.colors.arrangementVolume}
                 style={{ ...column, width: isMain ? "100%" : "auto" }}
                 {...panGesture}
               />
