@@ -52,3 +52,16 @@ python scripts/perf/vs-live/run.py --compare scripts/perf/vs-live/out/*.json
 | hover 场景 CPU %             | 101    | 19     |
 
 走带控件之间横移仍逐次重绘：每个控件进出都会切换 hover 样式与状态栏说明，这是有效重绘，降低它要靠子树缓存而不是删重绘。
+
+## 子树缓存方案（下一项优化）
+
+现状：`GpuixView` 是唯一的 GPUI view，`render()` 每帧从 retained tree 重建全部元素（renderer.rs `impl gpui::Render for GpuixView`），任何 `cx.notify` 或 hover 切换都让 1661 个节点重新 request_layout、prepaint、paint，单帧约 16–17ms。
+
+GPUI 已有现成机制：`AnyView::cached(style)`（zed `crates/gpui/src/view.rs:39`）。缓存 view 在 bounds、content_mask、text_style 不变且实体不在 `dirty_views` 时，直接 `reuse_prepaint` / `reuse_paint` 上一帧的命中框和绘制图元，跳过子树的 render 与布局。hover 样式的 `cx.notify(current_view)` 只会弄脏所在的缓存 view。
+
+做法：
+
+1. 渲染器新增缓存边界：retained tree 中带 `cacheBoundary` 的元素由独立的 GPUI view 实体渲染，外层以 `.cached(style)` 嵌入，style 取该元素自己的尺寸与定位样式。
+2. 脏标记按边界归并：`apply_batch_to_tree` 记录被改动的元素，向上找最近的边界，只 `cx.notify` 这些边界实体；没有边界的改动仍弄脏根 view。
+3. 应用侧在大块、低频变化的区域加边界：Browser 列表、轨道头（每轨一个）、走带、Clip 编辑器、每条 lane 行。播放头、电平表这类每帧变化的元素保持在边界外或自成小边界。
+4. 验收：vs-live 的 drag、zoom、hscroll、play 四个场景 draw p90 与输入延迟 p50 低于 Live 基线；默认工程 hover 跨走带控件时单帧 draw 只覆盖被悬停的边界。
