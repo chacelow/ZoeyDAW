@@ -39,3 +39,16 @@ python scripts/perf/vs-live/run.py --compare scripts/perf/vs-live/out/*.json
 - ZoeyDAW 帧率上限来自 draw 时长：每帧 draw ≈ 16–17ms，显示器与 DWM 是 144Hz。一次临时插桩测得 hover 帧中位数 request_layout 5.7ms、prepaint 5.0ms、paint 3.8ms；1661 个节点每帧整树重建，没有子树缓存。
 - scroll 场景在默认工程无可滚动内容（轨道总高小于视口），不是可比结果。两边工程内容不同，帧率与 CPU 只能看量级；draw 时长与输入延迟是 ZoeyDAW 自身的上限。
 - Live 空闲时也以约 43Hz 持续 Present；ZoeyDAW 空闲不出帧。
+
+## 2026-10-18 第一项优化：悬停不再整窗重绘
+
+原因：编排区、轨道、标尺的 `onMouseMove` 每次都调 `getElementBounds` 换算局部坐标，Windows 端的 bounds 查询会先 `cx.notify()` + `window.refresh()` 再等下一帧，于是每次无按键移动都整窗重建 1661 个节点。修复后窗口干净时直接返回上一帧 paint 记录的 bounds，只有已有待绘制时才等下一帧，旧行为里"立即读到旧值"的情况不变。
+
+| 测量                         | 修复前 | 修复后 |
+| ---------------------------- | ------ | ------ |
+| 编排区 40 次移动的 draw 次数 | 40     | 1      |
+| 轨道区 40 次移动的 draw 次数 | 40     | 0      |
+| hover 场景 Present/s         | 59.0   | 0.2    |
+| hover 场景 CPU %             | 101    | 19     |
+
+走带控件之间横移仍逐次重绘：每个控件进出都会切换 hover 样式与状态栏说明，这是有效重绘，降低它要靠子树缓存而不是删重绘。
