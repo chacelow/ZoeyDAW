@@ -3,6 +3,8 @@ import { useTheme } from "@/shared/theme/ThemeProvider"
 import {
   Button,
   Card,
+  CardTitle,
+  CardDescription,
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -44,17 +46,10 @@ export function HomePage() {
     >
       <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-end", gap }}>
         <div style={{ display: "flex", flexDirection: "column", gap, flexGrow: 1, minWidth: 0 }}>
-          <div
-            role="heading"
-            aria-level={1}
-            style={{
-              fontSize: theme.transportControl["--text-control-track"],
-              fontWeight: theme.design.typography.weights.semibold,
-            }}
-          >
+          <CardTitle role="heading" aria-level={1}>
             {t("home.title")}
-          </div>
-          <text style={{ color: theme.colors.mutedForeground }}>{t("app.tagline")}</text>
+          </CardTitle>
+          <CardDescription>{t("app.tagline")}</CardDescription>
         </div>
         <Button
           variant="outline"

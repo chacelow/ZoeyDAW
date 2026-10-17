@@ -77,9 +77,7 @@ export function TrackIdentity({
         paddingLeft: gutter,
         overflow: "hidden",
         userSelect: "none",
-        backgroundColor: selected
-          ? theme.colors.arrangementClipSelected
-          : contentFill(track.color, theme.colors, theme.design.colorRecipes.contentPaperTint),
+        backgroundColor: theme.colors.arrangementSurfaceAlt,
         focusVisible: focusRing,
       }}
       onKeyDown={event => {
@@ -97,6 +95,9 @@ export function TrackIdentity({
           gap: theme.control["--spacing-control-track-gap"],
           paddingLeft: theme.control["--spacing-control-track-gap"],
           paddingRight: theme.control["--spacing-control-track-gap"],
+          backgroundColor: selected
+            ? theme.colors.arrangementClipSelected
+            : contentFill(track.color, theme.colors, theme.design.colorRecipes.contentPaperTint),
         }}
       >
         <Button

@@ -2,8 +2,10 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore: ["**/*.md", "docs/**", "LICENSE", "THIRD_PARTY_NOTICES"]
   push:
     branches: [main]
+    paths-ignore: ["**/*.md", "docs/**", "LICENSE", "THIRD_PARTY_NOTICES"]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -52,6 +54,13 @@ jobs:
         with:
           path: vendor/gpuix/packages/native/build
           key: gpuix-${{ runner.os }}-${{ steps.renderer.outputs.commit }}
+
+      - name: Cache app Cargo target
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: app-target-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/**/Cargo.toml', 'crates/**/*.rs') }}
+          restore-keys: app-target-${{ runner.os }}-
 
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -133,8 +142,15 @@ jobs:
       - name: Cache gpuix renderer build
         uses: actions/cache@v4
         with:
-          path: vendor/gpuix/build
+          path: vendor/gpuix/packages/native/build
           key: gpuix-${{ runner.os }}-${{ steps.renderer.outputs.commit }}
+
+      - name: Cache app Cargo target
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: app-target-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/**/Cargo.toml', 'crates/**/*.rs') }}
+          restore-keys: app-target-${{ runner.os }}-
 
       - name: Cache Cargo registry
         uses: actions/cache@v4

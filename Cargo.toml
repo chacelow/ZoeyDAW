@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/native", "crates/engine"]
+exclude = ["vendor"]
 
 [workspace.package]
 edition = "2021"

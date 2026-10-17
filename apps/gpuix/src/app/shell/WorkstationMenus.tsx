@@ -1,11 +1,11 @@
 import type { ReactNode } from "react"
 import {
-  Button,
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/ui/controls"
+import { TitleBarMenuButton } from "@/ui/panels/TitleBar"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { useAppTranslation } from "../i18n"
 import { useProjectFiles } from "../project-file/ProjectFileProvider"
@@ -33,7 +33,7 @@ export function WorkstationMenus({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost">{t("titlebar.file")}</Button>
+          <TitleBarMenuButton label={t("titlebar.file")} />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem onSelect={files.open}>{t("titlebar.open")}</DropdownMenuItem>
@@ -45,7 +45,7 @@ export function WorkstationMenus({
       </DropdownMenu>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost">{t("titlebar.edit")}</Button>
+          <TitleBarMenuButton label={t("titlebar.edit")} />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem disabled={!isProject || !canUndo} onSelect={projectActions.undo}>
@@ -59,7 +59,7 @@ export function WorkstationMenus({
       {view ?? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost">{t("titlebar.view")}</Button>
+            <TitleBarMenuButton label={t("titlebar.view")} />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onSelect={onOpenSettings}>{t("titlebar.settings")}</DropdownMenuItem>
@@ -68,7 +68,7 @@ export function WorkstationMenus({
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost">{t("titlebar.help")}</Button>
+          <TitleBarMenuButton label={t("titlebar.help")} />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem onSelect={onOpenGallery}>{t("titlebar.gallery")}</DropdownMenuItem>

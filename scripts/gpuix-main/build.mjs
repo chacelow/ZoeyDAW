@@ -1,6 +1,7 @@
-import { existsSync, mkdirSync, statSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
+import { gitExecutable } from "../git.mjs"
 import { repairDependencyJunctions } from "./windows-dependency-links.mjs"
 
 const root = path.resolve(import.meta.dirname, "../..")
@@ -47,8 +48,31 @@ function run(command, args, cwd) {
 }
 
 const react = path.join(renderer, "packages/react")
+const binary = path.join(
+  native,
+  `gpuix-native.${process.platform}-${process.arch}${process.platform === "win32" ? "-msvc" : ""}.node`
+)
+const git = (cwd, ...args) => {
+  const result = spawnSync(gitExecutable(), ["-C", cwd, ...args], { encoding: "utf8" })
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed in ${cwd}`)
+  return result.stdout.trim()
+}
+const clean =
+  git(renderer, "status", "--porcelain", "--untracked-files=no", "--ignore-submodules=none") === ""
+const identity = `${git(renderer, "rev-parse", "HEAD")} ${git(zed, "rev-parse", "HEAD")} ${process.platform}-${process.arch} ${mode}`
+const stamp = path.join(native, "build/stamp")
 run("bun", ["install", "--frozen-lockfile"], renderer)
 if (process.platform === "win32") repairDependencyJunctions(renderer)
+const built = [binary, path.join(native, "dist/host.js"), path.join(react, "dist/index.js")]
+if (
+  clean &&
+  existsSync(stamp) &&
+  readFileSync(stamp, "utf8") === identity &&
+  built.every(file => existsSync(file) && statSync(file).size > 0)
+) {
+  console.log(`gpuix ${identity} is already built; skipping native and React builds`)
+  process.exit(0)
+}
 run("rustc", ["-vV"], native)
 run(
   "bun",
@@ -67,11 +91,8 @@ run(
   native
 )
 run("bun", ["run", "build:js"], native)
-const binary = path.join(
-  native,
-  `gpuix-native.${process.platform}-${process.arch}${process.platform === "win32" ? "-msvc" : ""}.node`
-)
 if (!existsSync(binary) || statSync(binary).size === 0)
   throw new Error(`Native renderer build output missing: ${binary}`)
 run("bun", ["run", "build"], react)
+writeFileSync(stamp, identity)
 console.log(`Built gpuix ${process.platform}/${process.arch} (${mode}) at ${renderer}`)

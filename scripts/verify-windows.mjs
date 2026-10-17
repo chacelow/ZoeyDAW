@@ -18,14 +18,19 @@ const env = {
   ...process.env,
   B2_EVIDENCE_DIR: output,
   GPUIX_WINDOWS_SMOKE_DRIVER: path.join(output, "window-driver.exe"),
-  CARGO_TARGET_DIR: path.join(vendor, "packages/native/target"),
+  CARGO_TARGET_DIR: path.join(root, "target"),
 }
 const vendorNative = path.join(vendor, "packages/native")
 const zed = path.join(vendor, "zed")
 
 function run(name, command, args, cwd = root) {
   console.log(`\n== ${name}`)
-  const result = spawnSync(command, args, { cwd, env, stdio: "inherit" })
+  const renderer = cwd.startsWith(vendor)
+  const result = spawnSync(command, args, {
+    cwd,
+    env: renderer ? { ...env, CARGO_TARGET_DIR: path.join(vendorNative, "build/cargo") } : env,
+    stdio: "inherit",
+  })
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error(`${name} exited ${result.status ?? result.signal}`)
 }

@@ -15,9 +15,9 @@
 
 在 `apps/gpuix` 下运行 `bun --hot <入口>`。「后台启动」为「是」的入口支持 `GPUIX_BACKGROUND=1`（不抢焦点，见 `docs/agents/setup.md`）。
 
-| 入口           | 后台启动 | 环境开关                    |
-| -------------- | -------- | --------------------------- |
-| `src/main.tsx` | 是       | `NODE_ENV`、`ZOEYDAW_ROUTE` |
+| 入口 | 后台启动 | 环境开关 |
+| --- | --- | --- |
+| `src/main.tsx` | 是 | `NODE_ENV`、`ZOEYDAW_ROUTE` |
 
 ## 稳定 testId（按所属区域）
 

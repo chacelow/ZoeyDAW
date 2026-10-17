@@ -18,6 +18,8 @@ import { initAppI18n } from "./app/i18n"
 import { i18next } from "./platform/i18n/core"
 import { NativeRoot } from "./app/NativeRoot"
 import { createRouter } from "./app/router/router"
+import { routePath } from "./app/router/route"
+import { loadRecentProjects } from "./app/home/recent-projects"
 import { createPreferenceStore } from "./app/settings/preference-store"
 import { isThemeMode } from "./app/settings/theme-mode"
 import { createThemeLibraryStore } from "./app/theme-editor"
@@ -38,6 +40,10 @@ const appearance = {
 }
 setProjectFiles(createProjectFileStorage())
 const files = { recents: createRecentProjectStorage(), locations: createProjectLocations() }
+const lastProject = loadRecentProjects(files.recents)[0]?.path
+const startRoute =
+  process.env.ZOEYDAW_ROUTE ??
+  (lastProject ? routePath({ kind: "project", projectId: lastProject }) : "/")
 
 const keyboard = createWindowKeyboard()
 const pointer = createWindowPointerObserver()
@@ -47,7 +53,7 @@ render(
   <WindowKeyboardProvider value={keyboard}>
     <NativeRoot
       subscribePointer={pointer.subscribePointer}
-      router={createRouter(process.env.ZOEYDAW_ROUTE ?? "/")}
+      router={createRouter(startRoute)}
       appearance={appearance}
       files={files}
       showErrorDetails={process.env.NODE_ENV !== "production"}
