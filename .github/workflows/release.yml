@@ -44,8 +44,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
-          fetch-depth: 0
-
+          submodules: recursive
+          fetch-depth: 1
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
@@ -73,38 +73,32 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@1.97.1
 
-      - name: Set build cache paths
-        if: matrix.platform == 'macos-arm64'
-        run: |
-          echo "GPUIX_VENDOR_ROOT=$RUNNER_WORKSPACE/gpuix-vendor" >> "$GITHUB_ENV"
-          echo "CARGO_TARGET_DIR=$RUNNER_WORKSPACE/gpuix-target" >> "$GITHUB_ENV"
-
-      - name: Set Windows build cache paths
+      - name: Read renderer commit
+        id: renderer
+        run: echo "commit=$(git rev-parse HEAD:vendor/gpuix)" >> "$GITHUB_OUTPUT"
+      - name: Set Windows evidence path
         if: matrix.platform == 'windows-x64'
         shell: pwsh
         run: |
-          "GPUIX_VENDOR_ROOT=$env:RUNNER_WORKSPACE/gpuix-vendor" >> $env:GITHUB_ENV
-          "CARGO_TARGET_DIR=$env:RUNNER_WORKSPACE/gpuix-target" >> $env:GITHUB_ENV
           "B2_EVIDENCE_DIR=$env:RUNNER_TEMP/windows-release-evidence" >> $env:GITHUB_ENV
           New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/windows-release-evidence" | Out-Null
-      - name: Cache patched gpuix renderer
+      - name: Cache gpuix renderer build
         uses: actions/cache@v4
         with:
-          path: ${{ env.GPUIX_VENDOR_ROOT }}
-          key: gpuix-vendor-${{ runner.os }}-${{ hashFiles('scripts/gpuix-main/config.json', 'scripts/gpuix-main/patches/**', 'scripts/gpuix-main/build.sh', 'scripts/gpuix-main/build-windows.mjs', 'scripts/gpuix-main/check.mjs', 'scripts/gpuix-main/paths.mjs') }}
+          path: vendor/gpuix/packages/native/build
+          key: gpuix-${{ runner.os }}-${{ steps.renderer.outputs.commit }}
 
-      - name: Cache Cargo target
+      - name: Cache Cargo registry
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.CARGO_TARGET_DIR }}
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/**/*.rs', 'crates/**/Cargo.toml', 'scripts/gpuix-main/patches/**') }}
-          restore-keys: cargo-${{ runner.os }}-
+          key: cargo-registry-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'vendor/gpuix/packages/native/Cargo.lock') }}
+          restore-keys: cargo-registry-${{ runner.os }}-
 
-      - name: Build patched gpuix renderer
-        run: bash scripts/gpuix-main/build.sh
+      - name: Build gpuix renderer
+        run: node scripts/gpuix-main/build.mjs runtime
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

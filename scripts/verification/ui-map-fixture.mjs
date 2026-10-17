@@ -4,7 +4,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { gitExecutable } from "../gpuix-main/paths.mjs"
+import { gitExecutable } from "../git.mjs"
 
 const source = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../gpuix-ui-map.mjs")
 const sourcePath = process.env.GPUIX_UI_MAP_SCRIPT ?? source
@@ -31,8 +31,8 @@ export function uiMapFixture() {
     writeFileSync(path.join(root, "scripts/gpuix-ui-map.mjs"), readFileSync(sourcePath))
     mkdirSync(path.join(root, "scripts/gpuix-main"))
     copyFileSync(
-      path.resolve(import.meta.dirname, "../gpuix-main/paths.mjs"),
-      path.join(root, "scripts/gpuix-main/paths.mjs")
+      path.resolve(import.meta.dirname, "../git.mjs"),
+      path.join(root, "scripts/git.mjs")
     )
     const put = (file, text) => {
       mkdirSync(path.dirname(path.join(root, file)), { recursive: true })

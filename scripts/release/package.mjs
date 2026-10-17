@@ -18,10 +18,10 @@ mkdirSync(destination, { recursive: true })
 const work = path.join(destination, "build")
 mkdirSync(work, { recursive: true })
 if (platform.id === "windows-x64") {
-  run("node", ["scripts/gpuix-main/build-windows.mjs"])
+  run("node", ["scripts/gpuix-main/build.mjs", "runtime"])
   run("bun", ["run", "build"], path.join(repository, "crates/native"))
 } else {
-  run("bash", ["scripts/gpuix-main/build.sh"])
+  run("node", ["scripts/gpuix-main/build.mjs", "runtime"])
   run("pnpm", ["native:build"])
 }
 await compileApplication({
@@ -86,7 +86,7 @@ writeFileSync(
           target: `licenses/${name}`,
         })),
         ...["LICENSE", "THIRD_PARTY_NOTICES.md"].map(name => ({
-          src: path.join(repository, ".gpuix-main", name),
+          src: path.join(repository, "vendor/gpuix", name),
           target: `licenses/gpuix/${name}`,
         })),
       ],

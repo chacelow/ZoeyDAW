@@ -1,60 +1,33 @@
-# 渲染器：固定 gpuix 主干自建
+# gpuix renderer fork
 
-## 决策
+ZoeyDAW consumes the renderer from the recursive Git submodule `vendor/gpuix`, pinned by the parent repository's gitlink. The fork is `chacelow/gpuix` on branch `zoeydaw`; its `zed` dependency is the matching `chacelow/zed` fork. This keeps renderer changes reviewable and versioned as ordinary upstream commits rather than replayed patches.
 
-固定 `remorses/gpuix` `6a5c7c142ac32f9eb0caefe0121be995cfc18631` 与其 zed 子模块 `c2e9f882030ca95cee55d206512a0a3ee6cd72b0`，在仓库外构建，应用通过 `.gpuix-main` 链接消费 `@gpuix/native` 与 `@gpuix/react`。不使用 npm 0.10.0：它缺 `onLayout` 等主干已有能力，上游发布时间不可预测。版本唯一来源是 `scripts/gpuix-main/config.json`。
+## Checkout and build
 
-## 构建与解析
+Initialize the renderer and its nested Zed submodule with:
 
-- macOS：`bash scripts/gpuix-main/build.sh`；Windows x64：`node scripts/gpuix-main/build-windows.mjs`。两者按 `config.json` 的顺序应用 `scripts/gpuix-main/patches/` 下的补丁，构建 native、JS host 与 React，并写入产物 manifest。
-- 产物位于 `GPUIX_VENDOR_ROOT/<revision>`，默认是主仓库同盘的 `_vendor/zoeydaw-gpuix`；Cargo target 默认在同一基目录。已验证的产物只链接、不重建。外置 `.build-lock` 保证同一 vendor 只有一个构建 owner。
-- 根 `pnpm-workspace.yaml` 用 `link:.gpuix-main/packages/...` 覆盖两个包，`apps/gpuix` 直接链接 vendor React，使应用、renderer、react-reconciler 与 Zustand 共用一个 React。`node scripts/gpuix-main/check.mjs --resolution` 校验实际解析路径。
-- 干净 checkout：先构建渲染器，再 `pnpm install --frozen-lockfile`、`pnpm native:build`、`check.mjs --resolution`。缺少 `.gpuix-main` 时 `pnpm:devPreinstall` 直接失败，不回落到 npm renderer。
+```sh
+git submodule update --init --recursive
+node scripts/gpuix-main/build.mjs runtime
+pnpm install --frozen-lockfile
+pnpm native:build
+```
 
-## 补丁序列
+On macOS, use `precompiled` instead of `runtime` when building Metal shaders ahead of time. Both modes include `test-support`; runtime mode enables `gpui_platform/runtime_shaders`. Windows x64 uses the same Node build command. Native, host and React outputs, including Cargo's target directory, remain under the submodule's gitignored `build/` directories. Windows repairs pnpm's relative dependency links as junctions after install.
 
-| 补丁 | 作用 |
-| --- | --- |
-| `close-guard` | 同步关闭否决，未保存工程先确认 |
-| `frame-callback` | 原生帧回调，驱动播放头与电平 |
-| `input-select-all-on-focus` | 数值输入获焦全选 |
-| `anchored-center` | 弹层居中定位修正 |
-| `window-active-change` | 窗口激活事件 |
-| `window-appearance-close` | 系统外观观察与程序化关闭 |
-| `context-menu` | 原生 `onContextMenu` |
-| `quad-batch` | 批量矩形绘制，设备像素吸附与描边 |
-| `autofocus-focus-event` | autoFocus 发出 focus 事件 |
-| `resume-frame` | 恢复后首帧同步提交最新场景 |
-| `aria-toggled` | `aria-pressed` / `aria-checked` |
-| `test-window-scale-factor` | 离屏测试窗口 scale |
-| `windows-ui-bridge` | Windows 帧、恢复、关闭、光标与 scale 桥 |
-| `windows-renderer-cleanup` | 每 Env 一个 registry，幂等注销 |
-| `test-window-teardown` | 离屏窗口 owner-checked 释放 |
-| `hover-pointer-position` | 普通与 custom 元素的 mouseEnter/mouseLeave 携带窗口指针 x/y，供祖先 bounds 与 rail/抽屉合并悬停区判断；保留 hovered 字段 |
-| `test-root-events` | createTestRoot 转发 RootEventHandlers.onEvent，与生产 render 共用应用级指针观察入口 |
-| `svg-scale-motion` | style 与 motion 的 paint-only `scale`：svg 按布局尺寸光栅化一次、用 GPUI `with_transformation` 绕中心缩放，布局与命中不变；React 增加 `motion.svg` |
-| `input-disabled` | input 原生 disabled 排除焦点与 Tab、拒绝选择和编辑、使用 not-allowed；readOnly 保留焦点/选择/复制，但隐藏 caret 并使用 Arrow |
-| `zed-production-no-sync-draw` | 生产构建不走测试同步重绘 |
-| `zed-offscreen-window-bounds` | 离屏窗口不受屏幕边界夹取 |
-| `zed-test-window-scale-factor` | 离屏 scale 在 GPUI 侧的参数链 |
-| `zed-windows-resume-offscreen` | Windows 恢复门控与离屏渲染 |
-| `zed-windows-successful-presents` | 只统计成功的 DXGI Present |
-| `zed-windows-offscreen-teardown` | 离屏 HWND 同步释放 |
+`pnpm:devPreinstall` checks that both submodules and renderer build outputs exist. If absent, initialize the submodules and run the build command above. There is no npm renderer fallback.
 
-修改序列中间的补丁时，共享 vendor 要从该补丁起逆序回退再重放，见 LESSONS。
+## Changing the renderer
 
-## 升级到新 SHA
+1. Make renderer changes in `vendor/gpuix` (and `vendor/gpuix/zed` for Zed changes), then commit them in that submodule. Keep ZoeyDAW-specific changes in the renderer fork rather than carrying a patch series in this repository.
+2. Push gpuix commits to `chacelow/gpuix`, branch `zoeydaw`; push nested Zed commits to `chacelow/zed`, branch `zoeydaw`. Update the gpuix fork's zed gitlink when the nested fork changes.
+3. Update the parent repository's `vendor/gpuix` gitlink to the desired pushed commit and commit that change here. The root checkout and CI use the pinned gitlink, not the branch tip.
+4. Rebuild and run relevant renderer, app, and native checks before landing.
 
-1. 核对上游 native、JS host、React、zed、Cargo.lock、bun.lock 与 Rust 工具链变化。
-2. 更新 `config.json` 的两个 SHA，在新的外置目录构建，不覆盖旧目录。
-3. 逐个核对补丁是否已被上游替代；仍需要的在新基线重做。
-4. 运行构建、frozen install、`pnpm native:build`、`check.mjs --resolution`、`tsc --noEmit`、`bun test`、ESLint 与受影响的 Rust 测试。
-5. 真实窗口检查布局事件、Space、关闭否决与允许。
-6. 只提交 SHA、补丁与构建配置，不提交第三方源码或二进制；保留上游许可证与 `THIRD_PARTY_NOTICES`。
+Fresh clones use `shallow = true` for the renderer submodule. Initialize both repository levels with `git submodule update --init --recursive --depth 1 --filter=blob:none`; Git fetches missing objects on demand.
 
-## 已知约束
+## Rebasing and upstreaming
 
-- napi、native JS 与 React 必须一起构建，不能只替换 `.node`。
-- macOS 无完整 Xcode 时使用 `gpui_platform/runtime_shaders`。
-- 文本 `onLayout` 报告的是 border box，不是 glyph 宽度；未挂载文本不能等待该事件。
-- 上游主要由单人维护，固定 SHA 与 lockfile 是唯一的稳定性来源。
+To rebase the fork, fetch `remorses/gpuix` into the fork clone, rebase `zoeydaw` onto the selected upstream commit, and resolve changes in the fork itself. For changes to Zed, rebase `chacelow/zed`'s `zoeydaw` branch onto `zed-industries/zed` (or its current canonical upstream), then update gpuix's `zed` gitlink to that rebased commit. Verify both forks and the app before pushing, then bump the parent gitlink if its renderer commit changed.
+
+A change suitable for upstream should be isolated into a commit against the relevant upstream project, pushed to a personal branch, and submitted as a PR to `remorses/gpuix` or Zed upstream. Once upstream accepts it, rebase/drop the corresponding fork commit and advance the fork baseline; do not keep duplicate local patches.

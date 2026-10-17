@@ -3,7 +3,7 @@ import { cpSync, mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } fr
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { gitExecutable } from "../gpuix-main/paths.mjs"
+import { gitExecutable } from "../git.mjs"
 
 export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
@@ -21,10 +21,7 @@ export function withScanFixture(scenario) {
       path.join(root, "scripts/gpuix-review-scan.mjs")
     )
     mkdirSync(path.join(root, "scripts/gpuix-main"))
-    cpSync(
-      path.join(projectRoot, "scripts/gpuix-main/paths.mjs"),
-      path.join(root, "scripts/gpuix-main/paths.mjs")
-    )
+    cpSync(path.join(projectRoot, "scripts/git.mjs"), path.join(root, "scripts/git.mjs"))
     symlinkSync(
       path.join(projectRoot, "node_modules"),
       path.join(root, "node_modules"),

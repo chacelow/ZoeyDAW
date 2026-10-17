@@ -5,8 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@gpuix/native': link:.gpuix-main/packages/native
-  '@gpuix/react': link:.gpuix-main/packages/react
+  '@gpuix/native': link:vendor/gpuix/packages/native
+  '@gpuix/react': link:vendor/gpuix/packages/react
   '@typescript-eslint/eslint-plugin': 8.71.2
   '@typescript-eslint/parser': 8.71.2
   '@typescript-eslint/utils': 8.71.2
@@ -100,11 +100,11 @@ importers:
   apps/gpuix:
     dependencies:
       '@gpuix/native':
-        specifier: link:../../.gpuix-main/packages/native
-        version: link:../../.gpuix-main/packages/native
+        specifier: link:../../vendor/gpuix/packages/native
+        version: link:../../vendor/gpuix/packages/native
       '@gpuix/react':
-        specifier: link:../../.gpuix-main/packages/react
-        version: link:../../.gpuix-main/packages/react
+        specifier: link:../../vendor/gpuix/packages/react
+        version: link:../../vendor/gpuix/packages/react
       '@phosphor-icons/core':
         specifier: 2.1.1
         version: 2.1.1
@@ -127,11 +127,11 @@ importers:
         specifier: 0.555.0
         version: 0.555.0
       react:
-        specifier: link:../../.gpuix-main/node_modules/react
-        version: link:../../.gpuix-main/node_modules/react
+        specifier: link:../../vendor/gpuix/node_modules/react
+        version: link:../../vendor/gpuix/node_modules/react
       zustand:
         specifier: ^5.0.9
-        version: 5.0.15(@types/react@19.2.18)(immer@11.1.17)(react@gpuix-main+node_modules+react)(use-sync-external-store@1.6.0(react@gpuix-main+node_modules+react))
+        version: 5.0.15(@types/react@19.2.18)(immer@11.1.17)(react@vendor+gpuix+node_modules+react)(use-sync-external-store@1.6.0(react@vendor+gpuix+node_modules+react))
     devDependencies:
       '@types/bun':
         specifier: ^1.2.0
@@ -8108,9 +8108,9 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  use-sync-external-store@1.6.0(react@gpuix-main+node_modules+react):
+  use-sync-external-store@1.6.0(react@vendor+gpuix+node_modules+react):
     dependencies:
-      react: link:.gpuix-main/node_modules/react
+      react: link:vendor/gpuix/node_modules/react
     optional: true
 
   util-deprecate@1.0.2:
@@ -8287,9 +8287,9 @@ snapshots:
 
   zod@4.6.7: {}
 
-  zustand@5.0.15(@types/react@19.2.18)(immer@11.1.17)(react@gpuix-main+node_modules+react)(use-sync-external-store@1.6.0(react@gpuix-main+node_modules+react)):
+  zustand@5.0.15(@types/react@19.2.18)(immer@11.1.17)(react@vendor+gpuix+node_modules+react)(use-sync-external-store@1.6.0(react@vendor+gpuix+node_modules+react)):
     optionalDependencies:
       '@types/react': 19.2.18
       immer: 11.1.17
-      react: link:.gpuix-main/node_modules/react
-      use-sync-external-store: 1.6.0(react@gpuix-main+node_modules+react)
+      react: link:vendor/gpuix/node_modules/react
+      use-sync-external-store: 1.6.0(react@vendor+gpuix+node_modules+react)

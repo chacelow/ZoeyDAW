@@ -4,7 +4,7 @@
   "version": "0.1.0-alpha.1",
   "type": "module",
   "scripts": {
-    "pnpm:devPreinstall": "node scripts/gpuix-main/check.mjs",
+    "pnpm:devPreinstall": "node scripts/check-gpuix.mjs",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "doctor": "ultracite doctor",

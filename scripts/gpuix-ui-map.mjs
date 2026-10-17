@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process"
 import { readdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
-import { gitExecutable } from "./gpuix-main/paths.mjs"
+import { gitExecutable } from "./git.mjs"
 
 const root = path.resolve(import.meta.dirname, "..")
 const src = path.join(root, "apps/gpuix/src")

@@ -1,0 +1,5 @@
+[submodule "vendor/gpuix"]
+	path = vendor/gpuix
+	url = https://github.com/chacelow/gpuix.git
+	shallow = true
+	update = checkout

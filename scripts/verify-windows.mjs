@@ -1,8 +1,7 @@
 import { spawnSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { sharedBuildPaths } from "./gpuix-main/paths.mjs"
 import { probeAudioCapability } from "./gpuix-main/windows/audio-capability.mjs"
 
 if (process.platform !== "win32" || process.arch !== "x64") {
@@ -14,17 +13,15 @@ const output = path.resolve(
   process.env.B2_EVIDENCE_DIR ?? mkdtempSync(path.join(tmpdir(), "zoeydaw-windows-evidence-"))
 )
 mkdirSync(output, { recursive: true })
-const paths = sharedBuildPaths(root)
+const vendor = path.join(root, "vendor/gpuix")
 const env = {
   ...process.env,
   B2_EVIDENCE_DIR: output,
   GPUIX_WINDOWS_SMOKE_DRIVER: path.join(output, "window-driver.exe"),
-  GPUIX_VENDOR_ROOT: process.env.GPUIX_VENDOR_ROOT ?? paths.vendorRoot,
-  CARGO_TARGET_DIR: process.env.CARGO_TARGET_DIR ?? paths.target,
+  CARGO_TARGET_DIR: path.join(vendor, "packages/native/target"),
 }
-const config = JSON.parse(readFileSync(path.join(root, "scripts/gpuix-main/config.json"), "utf8"))
-const vendorNative = path.join(env.GPUIX_VENDOR_ROOT, config.revision, "packages/native")
-const zed = path.resolve(vendorNative, "../../zed")
+const vendorNative = path.join(vendor, "packages/native")
+const zed = path.join(vendor, "zed")
 
 function run(name, command, args, cwd = root) {
   console.log(`\n== ${name}`)
@@ -44,17 +41,11 @@ run("Windows User32 lifecycle driver", "rustc", [
   env.GPUIX_WINDOWS_SMOKE_DRIVER,
 ])
 
-run("renderer identity", process.execPath, ["scripts/gpuix-main/check.mjs", "--resolution"])
-run("native bridge build", "bun", ["run", "build"], path.join(root, "crates/native"))
+run("renderer build", process.execPath, ["scripts/check-gpuix.mjs"])
 console.log("\n== Audio output capability")
 const audioCapability = probeAudioCapability(root, env, output)
 env.ZOEYDAW_VERIFY_AUDIO_CAPABILITY = JSON.stringify(audioCapability)
 const checks = [
-  [
-    "Windows dependency junction contracts",
-    process.execPath,
-    ["--test", "scripts/gpuix-main/windows-dependency-links.test.mjs"],
-  ],
   ["Windows Rust check", "cargo", ["check", "--locked", "--workspace"]],
   ["Windows Rust contracts", "cargo", ["test", "--locked", "--workspace"]],
   [

@@ -23,7 +23,7 @@ Windows x64 的 NSIS 安装器使用同一条 release matrix。Windows 构建、
 新 checkout 在根目录依次执行：
 
 ```bash
-bash scripts/gpuix-main/build.sh
+bash scripts/gpuix-main/build.mjs runtime
 pnpm install --frozen-lockfile
 pnpm native:build
 ```

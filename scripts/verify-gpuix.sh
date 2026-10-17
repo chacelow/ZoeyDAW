@@ -11,8 +11,8 @@ step() { printf '\n== %s\n' "$1"; }
 step "absolute paths (all Git-tracked executable sources)"
 node scripts/gpuix-review-scan.mjs --absolute-paths
 
-step "renderer identity (configured patch series, single native/React resolution)"
-node scripts/gpuix-main/check.mjs --resolution | tail -1
+step "renderer submodule build"
+node scripts/check-gpuix.mjs
 
 step "@zoeydaw/native build"
 pnpm native:build >"$logs/native.log" 2>&1 || { cat "$logs/native.log"; exit 1; }

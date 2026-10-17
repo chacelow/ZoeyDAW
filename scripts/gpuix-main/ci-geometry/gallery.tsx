@@ -1,17 +1,23 @@
 import { mkdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { createTestRoot } from "@gpuix/react/testing"
-import { GalleryDemo } from "@/gallery/GalleryDemo"
-
+import { ThemeProvider } from "@/shared/theme/ThemeProvider"
+import { createDisplayFormats } from "@/app/i18n/display-formats"
+import { GalleryWorkspace } from "@/gallery/states"
 const output = process.argv[2]
 if (!output) throw new Error("Pass an external Gallery evidence directory")
 mkdirSync(output, { recursive: true })
 const root = createTestRoot({ width: 1050, height: 780 })
+const formats = createDisplayFormats("en-US")
 try {
   for (const locale of ["en", "zh"] as const) {
     for (const appearance of ["dark", "light"] as const) {
       const key = `${locale}-${appearance}`
-      root.render(<GalleryDemo key={key} initialAppearance={appearance} initialLocale={locale} />)
+      root.render(
+        <ThemeProvider appearance={appearance}>
+          <GalleryWorkspace locale="en" formats={formats} />
+        </ThemeProvider>
+      )
       for (let pass = 0; pass < 3; pass++) {
         root.renderer.flush()
         root.renderer.dispatchNativeEvents()

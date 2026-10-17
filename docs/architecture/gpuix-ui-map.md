@@ -6,6 +6,7 @@
 
 - `home`
 - `project`
+- `gallery`
 - `not-found`
 
 主应用入口用 `ZOEYDAW_ROUTE`（例如 `/project/<id>`）指定初始路由。
@@ -14,10 +15,9 @@
 
 在 `apps/gpuix` 下运行 `bun --hot <入口>`。「后台启动」为「是」的入口支持 `GPUIX_BACKGROUND=1`（不抢焦点，见 `docs/agents/setup.md`）。
 
-| 入口 | 后台启动 | 环境开关 |
-| --- | --- | --- |
-| `src/gallery/controls.tsx` | 是 | `GALLERY_APPEARANCE`、`GALLERY_LOCALE` |
-| `src/main.tsx` | 是 | `NODE_ENV`、`ZOEYDAW_ROUTE` |
+| 入口           | 后台启动 | 环境开关                    |
+| -------------- | -------- | --------------------------- |
+| `src/main.tsx` | 是       | `NODE_ENV`、`ZOEYDAW_ROUTE` |
 
 ## 稳定 testId（按所属区域）
 
@@ -25,7 +25,7 @@
 
 ### `app/AppShell.tsx`
 
-`app-frame`
+`app-frame`、`titlebar-settings`
 
 ### `app/home`
 
@@ -33,7 +33,7 @@
 
 ### `app/project`
 
-`project-layout`、`project-workspace`
+`project-layout`、`project-layout-toggle`、`project-view-menu`、`project-workspace`
 
 ### `app/project-file`
 
@@ -47,13 +47,9 @@
 
 `language-…`、`settings-dialog`、`theme-mode-…`、`theme-preset-…`、`theme-preset-grid`
 
-### `app/shell`
-
-`titlebar`、`titlebar-settings`、`titlebar-title`
-
 ### `app/theme-editor`
 
-`theme-editor`、`theme-editor-delete`、`theme-editor-export`、`theme-editor-font`、`theme-editor-group-…`、`theme-editor-import`、`theme-editor-json`、`theme-editor-name`、`theme-editor-new`、`theme-editor-reset-…`、`theme-editor-select-…`、`theme-field-…`、`theme-reset-…`
+`theme-editor`、`theme-editor-delete`、`theme-editor-export`、`theme-editor-font`、`theme-editor-group-…`、`theme-editor-import`、`theme-editor-import-vscode`、`theme-editor-import-vscode-file`、`theme-editor-json`、`theme-editor-name`、`theme-editor-new`、`theme-editor-reset-…`、`theme-editor-select-…`、`theme-field-…`、`theme-reset-…`
 
 ### `app/window`
 
@@ -61,19 +57,11 @@
 
 ### `gallery/catalog`
 
-`gallery-adaptive-grid`、`gallery-body-scroll`、`gallery-catalog`、`gallery-categories`、`gallery-category-…`、`gallery-color-grid`、`gallery-context-row`、`gallery-dock`、`gallery-dock-counter-…`、`gallery-dock-reset`、`gallery-drag-preview`、`gallery-dropdown`、`gallery-fixed-grid`、`gallery-focus-cell`、`gallery-grid-…`、`gallery-icon`、`gallery-input`、`gallery-layouts-dock`、`gallery-layouts-mixer-panel`、`gallery-layouts-splits`、`gallery-layouts-splits-host`、`gallery-live-meter-switch`、`gallery-menu`、`gallery-open-settings`、`gallery-pan`、`gallery-popover`、`gallery-popover-align-…`、`gallery-popover-content`、`gallery-popover-side-…`、`gallery-popup`、`gallery-popup-number`、`gallery-project-card`、`gallery-project-section`、`gallery-section-…`、`gallery-settings-preview`、`gallery-transport-icon`
-
-### `gallery/GalleryDemo.tsx`
-
-`gallery-language-en`、`gallery-language-zh`
-
-### `gallery/GalleryThemePanel.tsx`
-
-`gallery-theme-dark`、`gallery-theme-light`、`gallery-theme-panel`
+`gallery-adaptive-grid`、`gallery-body-scroll`、`gallery-catalog`、`gallery-categories`、`gallery-category-…`、`gallery-color-grid`、`gallery-context-row`、`gallery-dock`、`gallery-dock-counter-…`、`gallery-dock-reset`、`gallery-drag-preview`、`gallery-dropdown`、`gallery-fixed-grid`、`gallery-focus-cell`、`gallery-grid-…`、`gallery-icon`、`gallery-inline-edit`、`gallery-input-…`、`gallery-input-size-…`、`gallery-layouts-dock`、`gallery-layouts-mixer-panel`、`gallery-layouts-splits`、`gallery-layouts-splits-host`、`gallery-live-meter-…`、`gallery-live-meter-switch`、`gallery-menu`、`gallery-meter-…`、`gallery-meter-input-channel-dropdown`、`gallery-meter-resizable`、`gallery-open-settings`、`gallery-pan`、`gallery-popover`、`gallery-popover-align-…`、`gallery-popover-content`、`gallery-popover-side-…`、`gallery-popup`、`gallery-popup-number`、`gallery-project-card`、`gallery-project-section`、`gallery-resizable-meter-…`、`gallery-search-…`、`gallery-section-…`、`gallery-settings-preview`、`gallery-transport-icon`
 
 ### `gallery/states.tsx`
 
-`gallery-root`、`gallery-workspace`
+`gallery-root`
 
 ### `project/sections/arrangement/lane`
 

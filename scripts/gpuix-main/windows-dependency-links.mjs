@@ -10,7 +10,7 @@ import {
   unlinkSync,
 } from "node:fs"
 import path from "node:path"
-import { isWithinBuildPath } from "./paths.mjs"
+import { isWithinBuildPath } from "../git.mjs"
 
 const backupSuffix = ".gpuix-relative-link"
 

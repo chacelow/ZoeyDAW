@@ -13,7 +13,7 @@ export async function compileApplication({
   const addons = {
     "@gpuix/native": path.join(
       repository,
-      `.gpuix-main/packages/native/gpuix-native.${platform.bindingSuffix}.node`
+      `vendor/gpuix/packages/native/gpuix-native.${platform.bindingSuffix}.node`
     ),
     "@zoeydaw/native": path.join(
       repository,

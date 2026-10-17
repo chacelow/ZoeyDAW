@@ -9,7 +9,7 @@ The app includes Home, project panels, Browser, Arrangement, and Audio/MIDI/Patt
 Initialize a new checkout from the repository root:
 
 ```bash
-bash scripts/gpuix-main/build.sh
+node scripts/gpuix-main/build.mjs runtime
 pnpm install --frozen-lockfile
 pnpm native:build
 pnpm verify:gpuix

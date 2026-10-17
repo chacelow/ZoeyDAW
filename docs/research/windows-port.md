@@ -32,9 +32,9 @@ napi 3.12.7 的 `remove_env_cleanup_hook` 不回收 `Box::leak` 包装，因此�
 
 ## 构建、CI 与发布
 
-- `node scripts/gpuix-main/build-windows.mjs` 复用 `config.json`、完整补丁身份与 manifest，使用 junction、MSVC ABI 文件名与显式 `GPUIX_GIT_EXECUTABLE`。安装后把相对依赖链接修复为 vendor 内绝对 junction，React 只解析到一个实例。
+- `node scripts/gpuix-main/build.mjs runtime` 从递归初始化的 `vendor/gpuix` 子模块直接构建 native、JS host 和 React；产物留在 submodule 的 gitignored build 目录。Windows 安装后将相对依赖链接修复为 vendor 内绝对 junction，React 只解析到一个实例。
 - 本机构建需要 MSVC 环境（`INCLUDE`、`LIB`、`VCToolsInstallDir`），并确保 PATH 中 MSVC 的 `link.exe` 先于 Git 的 `link`。
-- 经 Git Bash 调用 `build.sh` 时，shell 可把 Git 的工具目录重新放到 PATH 前面；本地应显式设置 `CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER` 指向 MSVC `link.exe`，并注入完整的 Windows SDK `INCLUDE`/`LIB`，不只检查编译器位置。
+- 本机应显式设置 `CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER` 指向 MSVC `link.exe`，并注入完整的 Windows SDK `INCLUDE`/`LIB`。
 - `node scripts/verify-windows.mjs` 只在 Windows Actions 运行：native 构建、Rust check/test、URI 变异、GPUI 首帧门控、TypeScript、ESLint、Bun、离屏 scale、DComp 生命周期、弹层几何、生产 UI 帧 smoke、真实后端 smoke 与 Gallery 截图。独立检查失败后继续执行，最后汇总失败。
 - `ci.yml` 的 Windows job 只在 `main` push 运行。`release.yml` 的 Windows matrix 用 Bun 编译单文件 exe，再由 cargo-packager 0.11.8 生成 NSIS 安装器，只分发安装器与 `SHA256SUMS-windows-x64`。
 - 多 session WASAPI 用例的真实 open 约 1 秒、dispose 0.7–1.5 秒；四个多 session 用例在 Windows 统一使用 `app/verification/native-session-budget.ts` 的 15 秒预算，断言不变。
@@ -52,4 +52,3 @@ WASAPI smoke 在创建测试 root 或打开 session 前检查能力。设备不�
 `ZOEYDAW_VERIFY_NO_AUDIO=1` 只影响测试和验证入口，可在本机模拟不可用能力，不依赖 `GITHUB_ACTIONS`，不禁用系统设备，也不伪造可用设备。probe 证据仍保留真实设备查询。没有注入能力时为 `unprobed`，测试保持真实 backend 与原有断言，不默认跳过或降级。
 
 Header 回归先测实际列宽，再构造平衡、恰好容纳、少 80px 和半宽视口；滚轮落点取视口内实际控件间隙，不假定某个字体在 900px 必然溢出。Empty 的 600px/601px 双视口覆盖奇偶像素间距，中心误差允许恰好半像素的原生舍入，不放宽到一像素。
-

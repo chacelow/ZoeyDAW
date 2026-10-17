@@ -11,12 +11,10 @@
 - React 19 DEV 的 Performance Track 会对变化的 `Float32Array` props 逐下标枚举，几千个峰值一帧就是数毫秒；性能门槛以 production p90 为准，大数组走命令式上传。
 - 面板是否固定看作者声明的同单位 min/max，不看空间不足时夹出来的 `min === max`。
 
-## 构建与补丁
+## Renderer forks and build
 
-- 合入改动补丁序列的提交后，先跑 `node scripts/gpuix-main/check.mjs`；报 “Vendor must contain exactly the checked-in ordered patch series” 时 tsc 与测试结果都是假失败，先重建渲染器。
-- 修改序列中间的补丁，共享 vendor 要用旧补丁从尾部逆序 `git apply --reverse` 回退到被改补丁，再 `git rm --cached` 清掉残留 intent-to-add 条目，然后重放；`build.sh` 只能追加尾部。
-- Apple Git 2.50.1 的 `git apply --intent-to-add` 会删掉补丁未涉及的 index 条目；先普通 apply，再对 `ls-files --others` 的新文件 `add --intent-to-add`。
-- `pnpm add` 会重算 lockfile 并把 React 链接改回 npm 版本，造成多 React 实例；加依赖只编辑 `package.json`，再 `pnpm install --no-frozen-lockfile`，核对 lockfile 只有新增行并跑 `check.mjs --resolution`。
+- 改动 gpuix/zed 时在 `vendor/gpuix` 或其 `zed` 子模块中提交，推送对应 fork 的 `zoeydaw` 分支并更新主仓库 gitlink；构建前执行 `git submodule update --init --recursive` 和 `node scripts/gpuix-main/build.mjs`。
+- 本机 pnpm 安装应使用 frozen lockfile；确认 React 解析到 `vendor/gpuix/node_modules/react`，应用和 renderer 共用同一 React 实例。
 - Windows 本机构建 native 时，PATH 中 Git 的 `link` 会抢在 MSVC `link.exe` 之前；用用户级 MSVC 环境与 User+Machine PATH 运行。
 - 引入 crate 或 npm 包前先查 registry 的真实版本与活跃度。外链校验用 `url` crate，Windows 打开外链用 `ShellExecuteW`，拒绝以 `-` 开头的 href。
 

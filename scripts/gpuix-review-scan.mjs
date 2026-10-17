@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parse } from "@typescript-eslint/parser"
-import { gitExecutable } from "./gpuix-main/paths.mjs"
+import { gitExecutable } from "./git.mjs"
 
 const absoluteOnly = process.argv[2] === "--absolute-paths"
 const base = process.argv[2] ?? "gpuix-migration"

@@ -81,7 +81,7 @@ test("root, scoped, workspace and nested store dependencies resolve through the 
     "file"
   )
   const originalFileLink = readlinkSync(fileLink)
-  const alias = path.join(f.root, ".gpuix-main")
+  const alias = path.join(f.root, "vendor/gpuix")
   symlinkSync(f.vendor, alias, "junction")
   assert.equal(findDependencyJunctionRepairs(f.vendor).length, links.length)
   assert.equal(repairDependencyJunctions(f.vendor), links.length)

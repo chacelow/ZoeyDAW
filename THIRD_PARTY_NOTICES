@@ -5,10 +5,9 @@ Revision: 6a5c7c142ac32f9eb0caefe0121be995cfc18631
 Copyright 2026 remorses
 License: Apache-2.0
 
-zoeydaw modifies packages/native/src/renderer.rs and the generated declaration
-packages/native/index.d.ts with the macOS embedded-loop close-guard PoC in
-scripts/gpuix-main/patches/close-guard.patch. This modification is not an
-upstream release or a cross-platform window lifecycle implementation.
+ZoeyDAW-specific changes are maintained in the `chacelow/gpuix` fork and are
+included in the pinned `vendor/gpuix` submodule revision. This is not an
+upstream gpuix release.
 
 Upstream LICENSE (verbatim)
 

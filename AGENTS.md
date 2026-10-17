@@ -12,7 +12,7 @@ DAW，使用 gpuix 原生应用：`apps/gpuix`（React 逻辑 + gpuix 原生元�
 | 可见界面：控件、面板、间距、居中、尺寸、紧凑感、颜色、状态、拖动、弹层、键盘焦点 | [gpuix UI 规范](docs/architecture/gpuix-ui-standards.md)，交付按其第 13 节逐条给证据 |
 | 自动化或验收要找入口、路由、环境开关、`testId` | [gpuix UI 地图](docs/architecture/gpuix-ui-map.md)（脚本生成，不要手改） |
 | Arrangement 的 `tracks`、`lane`、`timeline`、`core` 之间的接口与键盘 owner | [Arrangement 组合契约](docs/architecture/gpuix-arrangement-composition.md) |
-| 渲染器版本、构建、补丁序列、`@gpuix/*` 依赖 | [渲染器自建](docs/research/gpuix-main-build.md)；Windows 见 [Windows 支持](docs/research/windows-port.md) |
+| 渲染器版本、构建、`@gpuix/*` 依赖 | [gpuix 渲染器 fork 指南](docs/research/gpuix-main-build.md)；Windows 见 [Windows 支持](docs/research/windows-port.md) |
 | 引擎、音频播放、遥测、峰值、`ProjectBackend` | [播放图](docs/research/engine-playback-graph.md) 与 `apps/gpuix/src/project/adapters/README.md` |
 | 命令、工具链、HMR、原生重启或提交 | [setup](docs/agents/setup.md) |
 | 新模块、多文件修改、状态/目录/依赖调整 | [modules](docs/architecture/modules.md) |
