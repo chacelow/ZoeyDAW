@@ -33,7 +33,9 @@ export function formatNumericValue(min: number, max: number, step = 0): (value: 
 }
 
 export interface ValueAfterDragInput {
-  startValue: number
+  /** Unquantized value accumulated so far in this drag, already inside [min, max]. */
+  rawValue: number
+  /** Vertical movement since the previous event. */
   deltaY: number
   step: number
   min: number
@@ -41,16 +43,20 @@ export interface ValueAfterDragInput {
   dragPixelsPerStep: number
 }
 
+/**
+ * Advances a drag by one movement. The raw value is clamped on every step, so
+ * travel beyond a boundary is discarded and reversing changes the value at once.
+ */
 export function valueAfterDrag({
-  startValue,
+  rawValue,
   deltaY,
   step,
   min,
   max,
   dragPixelsPerStep,
-}: ValueAfterDragInput): number {
-  const stepsTravelled = -deltaY / dragPixelsPerStep
-  return quantize(startValue + stepsTravelled * step, step, min, max)
+}: ValueAfterDragInput): { raw: number; value: number } {
+  const raw = clamp(rawValue - (deltaY / dragPixelsPerStep) * step, min, max)
+  return { raw, value: quantize(raw, step, min, max) }
 }
 
 export interface ValueAfterWheelInput {

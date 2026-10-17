@@ -5,14 +5,12 @@ use napi_derive::napi;
 mod app_state;
 mod atomic_file;
 mod clipboard;
-mod cursor;
 mod engine;
 mod external;
 mod log;
 mod project_file;
 mod reduced_motion;
 mod settings;
-mod window_geometry;
 mod window_diagnostics;
 
 #[napi]

@@ -23,15 +23,12 @@ function mount() {
     },
     navigate: () => {},
     cursor: {
-      capture: point => ({ x: 1000 + point.x, y: 500 + point.y }),
-      hide: () => {
+      begin: () => {
         hidden = true
-        return true
       },
-      restore: point => {
+      end: point => {
         hidden = false
-        restored = point
-        return true
+        restored = point ?? null
       },
     },
   })
@@ -74,7 +71,8 @@ describe("Minimap navigation ownership", () => {
     a.gesture.up()
     expect(a.gesture.phase).toBe("idle")
     expect(a.hidden()).toBe(false)
-    expect(a.restored()).toEqual({ x: 1452, y: 521 })
+    expect(a.restored()?.x).toBeCloseTo(452)
+    expect(a.restored()?.y).toBe(21)
   })
 
   test("horizontal panning has fixed gain and no event-count or velocity dependency", () => {
@@ -88,7 +86,7 @@ describe("Minimap navigation ownership", () => {
     expect(b.state()).toEqual(a.state())
     a.gesture.up()
     b.gesture.up()
-    expect(a.restored()).toEqual({ x: 1465, y: 521 })
+    expect(a.restored()).toEqual({ x: 465, y: 21 })
     expect(b.restored()).toEqual(a.restored())
   })
 
@@ -108,7 +106,7 @@ describe("Minimap navigation ownership", () => {
         side === "left"
           ? (state.scrollX / state.pxPerBar / 128) * 1280
           : ((state.scrollX + 800) / state.pxPerBar / 128) * 1280
-      expect(a.restored()?.x).toBeCloseTo(1000 + x + (moved - edge))
+      expect(a.restored()?.x).toBeCloseTo(x + (moved - edge))
     }
   })
 

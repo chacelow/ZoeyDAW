@@ -72,17 +72,12 @@ describe("Native timeline layout and hit testing", () => {
       const owner = timelineOwner()
       const root = createTestRoot({ width: 1280, height: 100 })
       disposals.push(root.unmount)
-      let captures = 0
       let hidden = false
       const cursor: CursorLockPort = {
-        capture: point => {
-          captures++
-          return point
-        },
-        hide: () => {
+        begin: () => {
           hidden = true
         },
-        restore: () => {
+        end: () => {
           hidden = false
         },
       }
@@ -111,7 +106,6 @@ describe("Native timeline layout and hit testing", () => {
         })
       ).toBe(true)
       root.renderer.nativeSimulateMouseMove(450, 30, 0)
-      expect(captures).toBe(0)
       expect(hidden).toBe(false)
       expect(useProjectState.getState().workspace).toMatchObject({ pxPerBar: 100, scrollX: 4000 })
     })
@@ -124,16 +118,13 @@ describe("Native timeline layout and hit testing", () => {
     disposals.push(root.unmount)
     let hidden = false
     let restored = false
-    const cursor = {
-      capture: () => ({ x: 440, y: 20 }),
-      hide: () => {
+    const cursor: CursorLockPort = {
+      begin: () => {
         hidden = true
-        return true
       },
-      restore: () => {
+      end: () => {
         hidden = false
         restored = true
-        return true
       },
     }
     function Harness() {
@@ -202,7 +193,7 @@ describe("Native timeline layout and hit testing", () => {
           width={1280}
           height={40}
           label="Arrangement overview"
-          cursor={{ capture: () => null, hide: () => {}, restore: () => {} }}
+          cursor={undefined}
           onNavigate={() => {}}
           onViewport={projectActions.setViewport}
           onFit={owner.fitToProject}

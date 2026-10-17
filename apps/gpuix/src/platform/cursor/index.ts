@@ -1,47 +1,29 @@
-import type { ScreenPoint } from "@zoeydaw/native"
-import { cursorHide, cursorPosition, cursorRestore, windowPointToScreen } from "@zoeydaw/native"
-
-interface CursorRenderer {
-  hideCursorForDrag(): void
-  restoreCursorAfterDrag(x: number, y: number): void
+export interface RelativeDragPort {
+  readonly begin: () => void
+  readonly end: (release?: { readonly x: number; readonly y: number }) => void
 }
 
-function isCursorRenderer(value: unknown): value is CursorRenderer {
+interface RelativeDragRenderer {
+  beginRelativeDrag(): void
+  endRelativeDrag(x?: number, y?: number): void
+}
+
+function isRelativeDragRenderer(value: unknown): value is RelativeDragRenderer {
   return (
     typeof value === "object" &&
     value !== null &&
-    "hideCursorForDrag" in value &&
-    typeof value.hideCursorForDrag === "function" &&
-    "restoreCursorAfterDrag" in value &&
-    typeof value.restoreCursorAfterDrag === "function"
+    "beginRelativeDrag" in value &&
+    typeof value.beginRelativeDrag === "function" &&
+    "endRelativeDrag" in value &&
+    typeof value.endRelativeDrag === "function"
   )
 }
 
-export function createNativeCursorLock(renderer: unknown) {
-  if (process.platform === "win32") {
-    return {
-      capture: windowPointToScreen,
-      hide: (): void => {
-        if (!isCursorRenderer(renderer))
-          throw new Error("Renderer does not support Windows cursor dragging")
-        renderer.hideCursorForDrag()
-      },
-      restore: (point: ScreenPoint): void => {
-        if (!isCursorRenderer(renderer))
-          throw new Error("Renderer does not support Windows cursor dragging")
-        renderer.restoreCursorAfterDrag(point.x, point.y)
-      },
-    }
-  }
+export function createNativeCursorLock(renderer: unknown): RelativeDragPort | undefined {
+  if (!isRelativeDragRenderer(renderer)) return undefined
   return {
-    capture: windowPointToScreen,
-    hide: (): void => {
-      cursorHide()
-    },
-    restore: (point: ScreenPoint): void => {
-      cursorRestore(point)
-    },
+    begin: () => renderer.beginRelativeDrag(),
+    end: release =>
+      release ? renderer.endRelativeDrag(release.x, release.y) : renderer.endRelativeDrag(),
   }
 }
-
-export const currentCursorPosition: () => ScreenPoint | null = cursorPosition

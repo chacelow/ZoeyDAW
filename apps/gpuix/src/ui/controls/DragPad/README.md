@@ -18,21 +18,15 @@
 
 ## 光标能力注入
 
-UI 层只声明 `CursorLockPort { capture(pressPoint), hide, restore }`，通过 `ControlEnvironmentProvider value.cursorLock` 注入。UI 不 import 原生包或 platform；未注入时不隐藏或还原光标，数值拖动仍工作。画廊等组合根注入 `@/platform/cursor` 的 `nativeCursorLock`，读回验证使用同一端口模块的 `currentCursorPosition`。
+UI 层只声明 `CursorLockPort { begin(), end(release?) }`，通过 `ControlEnvironmentProvider value.cursorLock` 注入。UI 不 import 原生包或 platform；未注入时不隐藏光标，数值拖动仍工作。组合根注入 `@/platform/cursor` 的 `createNativeCursorLock(renderer)`，它包装 renderer 的 `beginRelativeDrag` / `endRelativeDrag`。
 
-按下时把 mouseDown 事件自身的 `x/y`（窗口内容区左上原点，pt）交给 `capture`，端口换算成屏幕锚点；事件缺坐标时不锁光标。超过点击阈值后隐藏；释放/取消先还原再显示。手势保存取得锚点时的端口，Provider 更新不能把恢复责任转移给另一个实例。不使用 `CGAssociateMouseAndMouseCursorPosition`：gpuix move 来自绝对窗口位置，断开关联会冻结事件。真实光标依旧不可见地移动，因此不是无限屏幕边界拖动。
+超过点击阈值时调用 `begin()`：renderer 隐藏并固定光标，之后的 mouseMove/mouseUp 报告由相对位移累加出的窗口坐标，所以拖到屏幕边缘也不会停。松手或取消调用 `end()`；原地调值控件不传 `release`，光标留在按下点。会位移的控件（Minimap）传松手时的窗口坐标，光标出现在实际移动后的位置。手势保存开始拖动时的端口，Provider 更新不能把结束责任转移给另一个实例。按下事件缺坐标时不固定光标。
 
-## 锚点为什么取事件坐标
+## 与 Live 对照
 
-gpuix 事件经 ThreadsafeFunction 异步投递，JS 处理 `mouseDown` 时 OS 可能已处理后续 move。原实现在此刻读 OS 当前光标，合成“按下即移动”实测按下 `(805,364)`、还原 `(805,354)`。GPUI 在事件时刻由 `NSEvent.locationInWindow` 算出 `x/y`，所以按下事件坐标不受处理延迟影响。原生 `windowPointToScreen`（`crates/native/src/window_geometry.rs`）取 key 窗口（无则 main 窗口）的 frame 与内容区高度，按 `screenX = frame.x + x`、`screenY = 主屏高 − (frame.y + 内容区高 − y)` 换算成 CG 全局坐标；全程用点，不乘 Retina 缩放。没有可用窗口时返回 null，不锁光标。`cursorPosition` 只经 `platform/cursor` 的 `currentCursorPosition` 供画廊读回验证，不再是锚点来源。
+2026-10-17 在 Windows 上用 Frida 挂 Live 12 记录光标调用：拖 BPM、旋钮时按下即 `SetCapture` + `ShowCursor(false)`，之后每次移动都 `SetCursorPos` 回按下点（一次 1 秒的拖动 161 次），松手 `ShowCursor(true)` + `ReleaseCapture`，光标留在原处。macOS 版 Live 导入 `CGAssociateMouseAndMouseCursorPosition` 与 `CGWarpMouseCursorPosition`。补丁 `zed-relative-pointer.patch` 照此实现：macOS 断开关联、按 `NSEvent.deltaX/deltaY` 累加；Windows 每次 `WM_MOUSEMOVE` 取相对锚点的偏移后 `SetCursorPos` 回锚点；窗口失活时结束相对模式。
 
-实际窗口回归步骤：
-
-1. 双击 BPM 还原 120。
-2. 按下 BPM 中心，无停留路径每步 10pt 上移到 40pt；另跑先在按下点重复 4 次再上移的停留路径。
-3. 两条路径都确认 AX 为 130，并在 gallery 的 `onGestureEnd` 中读取真实 `currentCursorPosition()`；读回须与按下点一致。
-
-`computer.drag` 完成后会恢复用户原光标，因此工具返回后的 OS 坐标不是组件的还原证据；画廊在组件恢复后、工具恢复前采样，并显示真实读回值。未验证：人手真实硬件速度、多显示器与全屏实机。
+实际窗口回归：按下 BPM 往上拖，越过屏幕上边缘后数值继续增加；松手后光标在按下点。
 
 ## 运行
 

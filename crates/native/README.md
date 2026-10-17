@@ -10,11 +10,9 @@ Call synchronously from Bun's main thread after renderer initialization; napi wo
 
 ## Windows native capabilities
 
-Windows source implements Unicode clipboard text, physical cursor position/warp, foreground-window DIP conversion, and reduced-motion observation. Desktop behavior is not yet verified on physical Windows hardware; compilation or offscreen tests do not establish mixed-DPI, clipboard contention, accessibility broadcasts, or hidden dragging behavior.
+Windows source implements Unicode clipboard text and reduced-motion observation. Drag cursor pinning lives in the renderer (`beginRelativeDrag`/`endRelativeDrag`), not in this crate. Desktop behavior is not yet verified on physical Windows hardware; compilation or offscreen tests do not establish mixed-DPI, clipboard contention, accessibility broadcasts, or hidden dragging behavior.
 
 - Clipboard uses a temporary hidden owner HWND and scoped Open/Close, GlobalLock/Unlock, and HGLOBAL ownership. Embedded U+0000 is rejected before allocation/open/empty; empty strings are valid. A failed SetClipboardData leaves the allocation owned locally; success transfers it to Windows. Busy reads return null and busy writes throw without retrying. Reads reject missing terminators and malformed UTF-16 within GlobalSize bounds.
-- `cursorPosition`/`cursorRestore` use virtual-desktop physical pixels, including negative coordinates. `cursorRestore` only warps on Windows. Standalone `cursorHide` returns false: renderer's UI thread owns balanced hide/show counts via the platform cursor factory.
-- `windowPointToScreen` selects the foreground HWND only if it belongs to this process, temporarily matches its DPI context, converts event DIPs to physical pixels and calls ClientToScreen, then restores the caller's DPI context. Moving the window or switching monitors between native input and JS processing remains a race; it is not event-time HWND/DPI capture.
 - Reduced motion is the inverse of `SPI_GETCLIENTAREAANIMATION`. One dedicated message thread owns a hidden **top-level** HWND, receives `WM_SETTINGCHANGE`, and reports a baseline and value transitions through a nonblocking TSFN. Replacement/removal joins the old thread; the registering Env's cleanup removes its observer without removing a newer Env's replacement. Shutdown destroys the window and unregisters its class. No JS timer or UI-thread wait for JS is used.
 - Window diagnostics deliberately remain unsupported on Windows; AppKit's six fields have no reliable equivalent mapping.
 

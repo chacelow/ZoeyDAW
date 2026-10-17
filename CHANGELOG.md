@@ -2,6 +2,12 @@
 
 ## 0.1.0 - unreleased
 
+### Drag cursor (2026-10-17)
+
+- Value drags (BPM, numeric pads) and the Minimap hide and pin the cursor the way Live does, so a drag keeps working past the screen edge. The renderer gains `beginRelativeDrag`/`endRelativeDrag`: macOS disassociates the cursor and accumulates `NSEvent` deltas; Windows warps the cursor back to its anchor after every move, matching a Frida trace of Live 12. Numeric pads release the cursor where the press started; the Minimap releases it where the selection actually moved.
+- Dragging past a value limit discards the extra travel, so reversing changes the value immediately.
+- Remove the native `cursorPosition`/`cursorHide`/`cursorRestore`/`windowPointToScreen` exports and the renderer's Windows-only `hideCursorForDrag`/`restoreCursorAfterDrag`.
+
 ### Project files (2026-10-17)
 
 - Save projects the way Live saves sets: `<Name> Project/<Name>.zdaw` (version-2 JSON) in a folder chosen in a Save As dialog, defaulting to Documents/ZoeyDAW. Each overwrite first copies the previous file to `Backup/<Name> [YYYY-MM-DD HHMMSS].zdaw`, keeping the newest `projectBackupCount` (default 10).

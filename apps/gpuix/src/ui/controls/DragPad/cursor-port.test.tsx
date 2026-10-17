@@ -7,19 +7,16 @@ import { ThemeProvider } from "../../../shared/theme/ThemeProvider"
 import { ControlEnvironmentProvider } from "../ControlEnvironment"
 
 import { DragPadNumber } from "./DragPadNumber"
-import type { CursorLockPort, ScreenPoint } from "./cursor-port"
+import type { CursorLockPort, WindowPoint } from "./cursor-port"
 
-function cursorHost(origin: ScreenPoint) {
-  const state = { position: origin, visible: true, hides: 0 }
+function cursorHost() {
+  const state = { begins: 0, ends: [] as (WindowPoint | undefined)[] }
   const port: CursorLockPort = {
-    capture: point => ({ x: origin.x + point.x, y: origin.y + point.y }),
-    hide: () => {
-      state.visible = false
-      state.hides += 1
+    begin: () => {
+      state.begins += 1
     },
-    restore: point => {
-      state.position = point
-      state.visible = true
+    end: release => {
+      state.ends.push(release)
     },
   }
   return { state, port }
@@ -65,44 +62,35 @@ function mount(initialPort: CursorLockPort) {
   }
 }
 
-test("the press event position is the anchor; moves before release do not shift it", () => {
-  const host = cursorHost({ x: 500, y: 300 })
+test("a value drag pins the cursor once and releases it where the drag began", () => {
+  const host = cursorHost()
   const pad = mount(host.port)
   pad.renderer.nativeSimulateMouseDown(pad.x, pad.y)
   pad.renderer.nativeSimulateMouseMove(pad.x, pad.y - 10, 0)
   pad.renderer.nativeSimulateMouseMove(pad.x, pad.y - 40, 0)
   expect(pad.values.latest).toBe(130)
-  expect(host.state.visible).toBe(false)
+  expect(host.state).toEqual({ begins: 1, ends: [] })
   pad.renderer.nativeSimulateMouseUp(pad.x, pad.y - 40)
-  expect(host.state).toEqual({
-    position: { x: 500 + pad.x, y: 300 + pad.y },
-    visible: true,
-    hides: 1,
-  })
+  expect(host.state).toEqual({ begins: 1, ends: [undefined] })
   pad.unmount()
 })
 
-test("the port that acquired a drag restores its resource even when the environment changes", () => {
-  const first = cursorHost({ x: 100, y: 200 })
-  const second = cursorHost({ x: 300, y: 400 })
+test("the port that began a drag ends it even when the environment changes", () => {
+  const first = cursorHost()
+  const second = cursorHost()
   const pad = mount(first.port)
   pad.renderer.nativeSimulateMouseDown(pad.x, pad.y)
   pad.renderer.nativeSimulateMouseMove(pad.x, pad.y - 40, 0)
   expect(pad.values.latest).toBe(130)
-  expect(first.state.visible).toBe(false)
   pad.rerender(second.port)
   pad.renderer.nativeSimulateMouseUp(pad.x, pad.y - 40)
-  expect(first.state).toEqual({
-    position: { x: 100 + pad.x, y: 200 + pad.y },
-    visible: true,
-    hides: 1,
-  })
-  expect(second.state).toEqual({ position: { x: 300, y: 400 }, visible: true, hides: 0 })
+  expect(first.state).toEqual({ begins: 1, ends: [undefined] })
+  expect(second.state).toEqual({ begins: 0, ends: [] })
   pad.unmount()
 })
 
-test("a press without a window position drags without locking the cursor", () => {
-  const host = cursorHost({ x: 100, y: 200 })
+test("a press without a window position drags without pinning the cursor", () => {
+  const host = cursorHost()
   const pad = mount(host.port)
   const dispatch = (eventType: string, y?: number) =>
     handleGpuixEvent(
@@ -120,6 +108,6 @@ test("a press without a window position drags without locking the cursor", () =>
   dispatch("mouseMove", -40)
   expect(pad.values.latest).toBe(130)
   dispatch("mouseUp", -40)
-  expect(host.state).toEqual({ position: { x: 100, y: 200 }, visible: true, hides: 0 })
+  expect(host.state).toEqual({ begins: 0, ends: [] })
   pad.unmount()
 })

@@ -9,9 +9,7 @@
 | app_state | foreground HWND/PID | 运行时行为 |
 | atomic_file | `MoveFileExW` replace + write-through | 目录 fsync 等价耐久性 |
 | clipboard | `CF_UNICODETEXT`、隐藏 owner、HGLOBAL RAII；含 NUL 的文本在修改前拒绝 | 跨进程 |
-| 光标位置与恢复 | `Get/SetPhysicalCursorPos`，虚拟桌面物理像素，可为负 | — |
-| 隐藏光标 | UI 线程 `ShowCursor` 自有计数平衡，失活与退出清理 | 物理隐藏与归位 |
-| window_geometry | HWND DPI、`ClientToScreen`、临时 DPI context | 事件到达 JS 期间窗口移动 |
+| 拖动光标 | renderer 相对模式：`WM_MOUSEMOVE` 取相对锚点偏移后 `SetCursorPos` 回锚点，`WM_SETCURSOR` 期间隐藏，失活结束 | 物理拖动越过屏幕边缘 |
 | window_diagnostics | 明确 unsupported | — |
 | reduced motion | `SPI_GETCLIENTAREAANIMATION` 取反，`WM_SETTINGCHANGE` 线程 | 系统实际切换 |
 | engine | Firewheel/CPAL WASAPI 会话、峰值与走带 | 听感、设备切换 |

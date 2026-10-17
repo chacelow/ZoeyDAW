@@ -18,7 +18,8 @@
     "windows-renderer-cleanup.patch",
     "test-window-teardown.patch",
     "titlebar-double-click.patch",
-    "window-control-area.patch"
+    "window-control-area.patch",
+    "relative-drag.patch"
   ],
   "zedPatches": [
     "zed-production-no-sync-draw.patch",
@@ -26,6 +27,7 @@
     "zed-test-window-scale-factor.patch",
     "zed-windows-resume-offscreen.patch",
     "zed-windows-successful-presents.patch",
-    "zed-windows-offscreen-teardown.patch"
+    "zed-windows-offscreen-teardown.patch",
+    "zed-relative-pointer.patch"
   ]
 }

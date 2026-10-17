@@ -4,7 +4,7 @@ import { consumeKey } from "@/shared/keyboard"
 import type { ControlInputPolicy } from "../ControlEnvironment"
 import { useControlEnvironment } from "../ControlEnvironment"
 import { stopTextShortcutPropagation } from "../keyboard"
-import type { CursorLockPort, ScreenPoint } from "./cursor-port"
+import type { CursorLockPort } from "./cursor-port"
 import { quantize, valueAfterDrag, valueAfterWheel } from "./numberModel"
 
 export type DragPadMode = "idle" | "preEdit" | "editing"
@@ -29,9 +29,10 @@ export interface UseDragPadOptions {
 interface DragAnchor {
   startX: number
   startY: number
+  lastY: number
   startValue: number
+  rawValue: number
   dragging: boolean
-  cursorAnchor: ScreenPoint | null
   cursorLock: CursorLockPort | undefined
   inputPolicy: ControlInputPolicy
 }
@@ -68,7 +69,7 @@ export function useDragPad(options: UseDragPadOptions) {
   useEffect(
     () => () => {
       const anchor = anchorRef.current
-      if (anchor?.dragging && anchor.cursorAnchor) anchor.cursorLock?.restore(anchor.cursorAnchor)
+      if (anchor?.dragging) anchor.cursorLock?.end()
       if (anchor?.dragging || editingRef.current) callbacks.current.onGestureCancel?.()
     },
     []
@@ -89,7 +90,7 @@ export function useDragPad(options: UseDragPadOptions) {
     const anchor = anchorRef.current
     anchorRef.current = null
     if (anchor?.dragging) {
-      if (anchor.cursorAnchor) anchor.cursorLock?.restore(anchor.cursorAnchor)
+      anchor.cursorLock?.end()
       commitNumber(anchor.startValue)
       setDragging(false)
       callbacks.current.onGestureCancel?.()
@@ -118,15 +119,14 @@ export function useDragPad(options: UseDragPadOptions) {
         return
       }
       if (!inputPolicy) throw new Error("DragPad pointer interaction requires ControlInputPolicy")
-      const pressPoint =
-        event.x === undefined || event.y === undefined ? null : { x: event.x, y: event.y }
       anchorRef.current = {
         startX: event.x ?? 0,
         startY: event.y ?? 0,
+        lastY: event.y ?? 0,
         startValue: valueRef.current,
+        rawValue: valueRef.current,
         dragging: false,
-        cursorAnchor: pressPoint && cursorLock ? cursorLock.capture(pressPoint) : null,
-        cursorLock,
+        cursorLock: event.x === undefined || event.y === undefined ? undefined : cursorLock,
         inputPolicy,
       }
     },
@@ -137,29 +137,30 @@ export function useDragPad(options: UseDragPadOptions) {
     (event: EventPayload) => {
       const anchor = anchorRef.current
       if (!anchor) return
-      const deltaY = (event.y ?? anchor.startY) - anchor.startY
+      const y = event.y ?? anchor.lastY
       if (!anchor.dragging) {
         if (
-          Math.hypot((event.x ?? anchor.startX) - anchor.startX, deltaY) <
+          Math.hypot((event.x ?? anchor.startX) - anchor.startX, y - anchor.startY) <
           anchor.inputPolicy.dragThresholdPixels
         )
           return
         anchor.dragging = true
-        if (anchor.cursorAnchor) anchor.cursorLock?.hide()
+        anchor.cursorLock?.begin()
         callbacks.current.onGestureStart?.()
         setDragging(true)
         setMode("idle")
       }
-      commitNumber(
-        valueAfterDrag({
-          startValue: anchor.startValue,
-          deltaY,
-          step: dragStep,
-          min,
-          max,
-          dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep,
-        })
-      )
+      const next = valueAfterDrag({
+        rawValue: anchor.rawValue,
+        deltaY: y - anchor.lastY,
+        step: dragStep,
+        min,
+        max,
+        dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep,
+      })
+      anchor.rawValue = next.raw
+      anchor.lastY = y
+      commitNumber(next.value)
     },
     [dragStep, min, max, commitNumber]
   )
@@ -169,7 +170,7 @@ export function useDragPad(options: UseDragPadOptions) {
     anchorRef.current = null
     if (!anchor) return
     if (anchor.dragging) {
-      if (anchor.cursorAnchor) anchor.cursorLock?.restore(anchor.cursorAnchor)
+      anchor.cursorLock?.end()
       setDragging(false)
       callbacks.current.onGestureEnd?.()
     } else if (!disabled && editable) {

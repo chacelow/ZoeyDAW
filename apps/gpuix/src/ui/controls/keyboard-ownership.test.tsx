@@ -198,7 +198,7 @@ test("UPA-06 idle divider Escape reaches the window but an active drag Escape on
 
 function padHost() {
   const listeners = new Set<(active: boolean) => void>()
-  const cursor = { visible: true, x: 0, y: 0 }
+  const cursor: { visible: boolean; release?: { x: number; y: number } } = { visible: true }
   const values = { current: 120, gesture: "idle" }
   const environment = {
     inputPolicy: TEST_INPUT_POLICY,
@@ -209,12 +209,11 @@ function padHost() {
       }
     },
     cursorLock: {
-      capture: (point: { x: number; y: number }) => point,
-      hide: () => {
+      begin: () => {
         cursor.visible = false
       },
-      restore: (point: { x: number; y: number }) => {
-        Object.assign(cursor, point, { visible: true })
+      end: (release?: { x: number; y: number }) => {
+        Object.assign(cursor, { visible: true, release })
       },
     },
   }
@@ -272,7 +271,7 @@ test("UPA-04 window deactivation rolls back the value and releases the cursor be
   root.deactivate()
   expect(root.values.current).toBe(120)
   expect(root.values.gesture).toBe("cancelled")
-  expect(root.cursor).toEqual({ x: root.x, y: root.y, visible: true })
+  expect(root.cursor).toEqual({ visible: true, release: undefined })
   root.renderer.nativeSimulateMouseMove(root.x, root.y - 80, 0)
   root.renderer.nativeSimulateMouseUp(root.x, root.y - 80)
   expect(root.values.current).toBe(120)

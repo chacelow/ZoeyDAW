@@ -88,7 +88,7 @@ function fixture(clipCount: number) {
           minPxPerBar: 1,
           maxPxPerBar: 100,
         }}
-        cursor={{ capture: point => point, hide() {}, restore() {} }}
+        cursor={{ begin() {}, end() {} }}
         onNavigate={() => {}}
         onViewport={() => {}}
         onFit={() => {}}

@@ -43,101 +43,34 @@ describe("formatNumericValue", () => {
 })
 
 describe("valueAfterDrag", () => {
-  test("maps distance × step, not absolute position", () => {
-    const a = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: 10,
-      deltaY: -40,
-      step: 1,
-      min: 0,
-      max: 1000,
-    })
-    const b = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: 500,
-      deltaY: -40,
-      step: 1,
-      min: 0,
-      max: 1000,
-    })
-    expect(a - 10).toBe(b - 500)
+  const drag = (rawValue: number, deltaY: number, step = 1, min = 0, max = 1000) =>
+    valueAfterDrag({ ...TEST_INPUT_POLICY, rawValue, deltaY, step, min, max })
+
+  test("maps distance × step, independent of the current value", () => {
+    expect(drag(10, -40).value - 10).toBe(drag(500, -40).value - 500)
   })
 
-  test("dragging up (negative deltaY) increases the value", () => {
-    const next = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: 10,
-      deltaY: -TEST_INPUT_POLICY.dragPixelsPerStep * 3,
-      step: 1,
-      min: 0,
-      max: 1000,
-    })
-    expect(next).toBe(13)
+  test("dragging up increases and dragging down decreases", () => {
+    expect(drag(10, -TEST_INPUT_POLICY.dragPixelsPerStep * 3).value).toBe(13)
+    expect(drag(10, TEST_INPUT_POLICY.dragPixelsPerStep * 3).value).toBe(7)
   })
 
-  test("dragging down decreases the value", () => {
-    const next = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: 10,
-      deltaY: TEST_INPUT_POLICY.dragPixelsPerStep * 3,
-      step: 1,
-      min: 0,
-      max: 1000,
-    })
-    expect(next).toBe(7)
-  })
-
-  test("is linear: doubling the distance exactly doubles the delta (no velocity damping)", () => {
-    const start = 0
-    const short = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: start,
-      deltaY: -40,
-      step: 1,
-      min: -10_000,
-      max: 10_000,
-    })
-    const long = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: start,
-      deltaY: -80,
-      step: 1,
-      min: -10_000,
-      max: 10_000,
-    })
-    expect(long - start).toBe((short - start) * 2)
+  test("splitting a movement into steps lands on the same value (no velocity dependency)", () => {
+    const whole = drag(0, -80, 1, -10_000, 10_000)
+    let raw = 0
+    for (let i = 0; i < 8; i++) raw = drag(raw, -10, 1, -10_000, 10_000).raw
+    expect(drag(raw, 0, 1, -10_000, 10_000).value).toBe(whole.value)
   })
 
   test("uses the same pixel scale for a small-range control as a large-range one", () => {
-    const smallRange = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: 0,
-      deltaY: -40,
-      step: 0.01,
-      min: -1,
-      max: 1,
-    })
-    const largeRange = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: 0,
-      deltaY: -40,
-      step: 0.01,
-      min: -1000,
-      max: 1000,
-    })
-    expect(smallRange).toBe(largeRange)
+    expect(drag(0, -40, 0.01, -1, 1).value).toBe(drag(0, -40, 0.01, -1000, 1000).value)
   })
 
-  test("clamps at the range boundary", () => {
-    const next = valueAfterDrag({
-      ...TEST_INPUT_POLICY,
-      startValue: 99,
-      deltaY: -1000,
-      step: 1,
-      min: 0,
-      max: 100,
-    })
-    expect(next).toBe(100)
+  test("travel past a boundary is discarded, so reversing moves the value immediately", () => {
+    const pinned = drag(99, -1000, 1, 0, 100)
+    expect(pinned.value).toBe(100)
+    const reversed = drag(pinned.raw, TEST_INPUT_POLICY.dragPixelsPerStep * 2, 1, 0, 100)
+    expect(reversed.value).toBe(98)
   })
 })
 

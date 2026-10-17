@@ -25,11 +25,10 @@ test("overview pressed color survives leaving its bounds and cancellation restor
   let pressed = ""
   let hidden = false
   const cursor: CursorLockPort = {
-    capture: point => point,
-    hide: () => {
+    begin: () => {
       hidden = true
     },
-    restore: () => {
+    end: () => {
       hidden = false
     },
   }

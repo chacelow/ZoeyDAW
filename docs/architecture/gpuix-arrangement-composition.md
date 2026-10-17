@@ -53,7 +53,7 @@ export function ArrangementTimeline(props: {
   tracks: ReactNode // 由组合根传入 <TrackRows renderLane={row => <LaneRow .../>} />
   overlay: ReactNode // 由组合根传入 <LaneOverlay .../>，timeline 把它叠在 tracks 上方单次挂载
   labels: TimelineLabels // 双语标签由组合根注入，timeline 不依赖 i18n 包
-  cursor: CursorLockPort // 光标锁（Minimap 拖动），组合根传 @/platform/cursor 的 nativeCursorLock
+  cursor: CursorLockPort | undefined // 相对拖动（Minimap），组合根传 @/platform/cursor 的 createNativeCursorLock(renderer)
   editSurface?: TimelineEditSurface // renderer-neutral input/ref/wrap port; lane hook supplies it, no timeline → lane import
   interactionOverlay?: ReactNode // tracks injects its only resize strips above the lane input; no timeline → tracks import
 }): ReactNode

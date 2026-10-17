@@ -29,7 +29,7 @@ export interface ArrangementTimelineProps {
   tracks: ReactNode
   overlay: ReactNode
   labels: TimelineLabels
-  cursor: CursorLockPort
+  cursor: CursorLockPort | undefined
   editSurface?: TimelineEditSurface
   interactionOverlay?: ReactNode
 }

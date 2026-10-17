@@ -3,7 +3,7 @@ import { minimapDragLeftEdge, minimapDragRightEdge } from "../../core/viewport/z
 import { dragStarted } from "../../core/interactions/layers"
 import type { MinimapAnchor, MinimapGeometry } from "../../core/viewport/minimap"
 import type { MinimapViewport } from "../../core/viewport/zoom"
-import type { CursorLockPort, ScreenPoint } from "@/ui/controls"
+import type { CursorLockPort } from "@/ui/controls"
 import type { Point } from "../../core/interactions/types"
 import type { SessionState } from "@/project/model/types"
 
@@ -13,7 +13,6 @@ interface Press {
   geometry: MinimapGeometry
   width: number
   origin: Point
-  cursor: ScreenPoint | null
   hidden: boolean
   epoch: SessionState["editEpoch"]
   grab: number
@@ -29,7 +28,7 @@ export interface MinimapGestureOptions {
   }
   publish: (viewport: MinimapViewport) => void
   navigate: () => void
-  cursor: CursorLockPort
+  cursor: CursorLockPort | undefined
   onPhaseChange?: (phase: MinimapGesture["phase"]) => void
 }
 
@@ -59,9 +58,9 @@ export function createMinimapGesture({
     if (cancelled && previous.epoch === read().epoch) {
       publish({ pxPerBar: previous.geometry.pxPerBar, scrollX: previous.geometry.scrollX })
     }
-    if (previous.hidden && previous.cursor) {
+    if (previous.hidden) {
       const moved = cancelled ? 0 : releaseOffset(previous)
-      cursor.restore({ x: previous.cursor.x + moved, y: previous.cursor.y })
+      cursor?.end({ x: previous.origin.x + moved, y: previous.origin.y })
     }
   }
 
@@ -102,7 +101,6 @@ export function createMinimapGesture({
         geometry,
         width,
         origin: point,
-        cursor: cursor.capture(point),
         hidden: false,
         epoch,
         grab,
@@ -126,8 +124,8 @@ export function createMinimapGesture({
         if (!dragStarted(press.origin, point, press.geometry.policy.pointer)) return
         press.phase = "dragging"
         onPhaseChange?.("dragging")
-        if (press.cursor) {
-          cursor.hide()
+        if (cursor) {
+          cursor.begin()
           press.hidden = true
         }
       }

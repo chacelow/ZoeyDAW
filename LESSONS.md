@@ -5,7 +5,7 @@
 ## 渲染器与事件
 
 - 窗口键盘事件在所有元素 keyDown 之后触发，同一次按键共享 `keystrokeId`；元素 `stopPropagation()` 会让窗口收不到，窗口 handler 不能阻止元素。工具栏、Transport、表头按钮自己不响应 Space、也不 stopPropagation，Space 才会冒到窗口触发播放；输入框聚焦时只对可打印键 stopPropagation。
-- 拖动锚点取按下事件自身的 `x/y`，经原生 `windowPointToScreen` 换算；JS 处理 `mouseDown` 时读 OS 光标会落后一个 move 步长。不要用 `CGAssociateMouseAndMouseCursorPosition`：GPUI 的 `mouseMove` 来自绝对位置，断开关联会停发事件。
+- 拖动隐藏光标走 renderer 的相对模式（`beginRelativeDrag`/`endRelativeDrag`），不在 JS 里换算屏幕坐标：JS 处理事件时 OS 光标已经又动过，任何“读当前光标再还原”都会差一个 move 步长。相对模式由平台层在事件时刻累加位移（macOS `CGAssociate` 断开后读 `NSEvent.deltaX/Y`；Windows 每次 move 后 `SetCursorPos` 回锚点，与 Live 实测一致）。
 - 「跟随系统」外观读的是窗口 `effectiveAppearance`，它继承 `NSApp.appearance`；一旦设置应用级外观覆盖，系统切换就不再触发。`architecture/gpuix-lessons` 拦截 `setWindowAppearance`。
 - 批量矩形与原生 div 的像素等价必须覆盖小数位置、尺寸、host origin 与 scale 1/1.25/1.5/2：layout 舍入与 paint 边缘舍入是两步，整数用例测不出。
 - React 19 DEV 的 Performance Track 会对变化的 `Float32Array` props 逐下标枚举，几千个峰值一帧就是数毫秒；性能门槛以 production p90 为准，大数组走命令式上传。

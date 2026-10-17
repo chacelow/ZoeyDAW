@@ -18,7 +18,7 @@ export interface MiniMapProps {
   width: number
   height: number
   label: string
-  cursor: CursorLockPort
+  cursor: CursorLockPort | undefined
   onNavigate: () => void
   onViewport: (viewport: MinimapViewport) => void
   onFit: () => void
