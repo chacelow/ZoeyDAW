@@ -17,6 +17,7 @@ export { PanelEnvironmentProvider } from "./PanelEnvironment"
 export type { PanelEnvironment } from "./PanelEnvironment"
 export {
   DockLayout,
+  DockPanelSizeContext,
   DockLayoutToggles,
   DockViewMenu,
   toggleBorderVisible,

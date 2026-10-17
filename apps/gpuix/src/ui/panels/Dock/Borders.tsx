@@ -1,4 +1,4 @@
-import { Fragment, useContext, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { Fragment, memo, useContext, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { RefObject } from "react"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload, Props, PublicInstance } from "@gpuix/react"
@@ -36,10 +36,16 @@ import {
 } from "./model"
 import type { DockBorderSide, DockBounds, DockLayoutJSON } from "./model"
 import type { DockLayoutProps } from "./index"
+import type { DockDragController, DockDropTarget } from "./useDockDrag"
 import { borderRailBounds } from "./border-rails"
-import type { DockDragController } from "./useDockDrag"
 
-type BorderProps = Pick<DockLayoutProps, "layout" | "registry" | "labels"> & {
+type BorderProps = Pick<DockLayoutProps, "registry" | "labels"> & {
+  /** Snapshot for render-time reads; memo comparators use `borderKey` instead. */
+  layout: DockLayoutJSON
+  /** Latest layout for event handlers that may run after skipped size-only renders. */
+  getLayout: () => DockLayoutJSON
+  borderKey: string
+  target: DockDropTarget | null
   preview: (layout: DockLayoutJSON | null) => void
   commit: DockLayoutProps["onLayoutChange"]
   drag: DockDragController
@@ -139,7 +145,7 @@ function BorderOptions({
         testId={`${prefix}-mode-${side}`}
         checked={border.type === "overlay"}
         onCheckedChange={checked =>
-          props.commit(setBorderType(props.layout, side, checked ? "overlay" : "split"))
+          props.commit(setBorderType(props.getLayout(), side, checked ? "overlay" : "split"))
         }
       >
         {props.labels.overlayMode}
@@ -148,7 +154,9 @@ function BorderOptions({
         testId={`${prefix}-hover-${side}`}
         checked={border.hoverReveal === true}
         disabled={border.type !== "overlay"}
-        onCheckedChange={checked => props.commit(setBorderHoverReveal(props.layout, side, checked))}
+        onCheckedChange={checked =>
+          props.commit(setBorderHoverReveal(props.getLayout(), side, checked))
+        }
       >
         {props.labels.hoverReveal}
       </DropdownMenuCheckboxItem>
@@ -156,223 +164,246 @@ function BorderOptions({
   )
 }
 
-export function DockBorderBars(props: BorderProps & { root: DockBounds }) {
-  const theme = useTheme()
-  const { renderer } = useGpuix()
-  const [hovered, setHovered] = useState<DockBorderSide | null>(null)
-  const [menuOpen, setMenuOpen] = useState<DockBorderSide | null>(null)
-  const [focusedOptions, setFocusedOptions] = useState<DockBorderSide | null>(null)
-  const { subscribePointer } = useContext(PanelEnvironmentContext)
-  const rails = useMemo(
-    () => borderRailBounds(props.layout, props.root, theme.design.dock.stripHeight),
-    [props.layout, props.root, theme.design.dock.stripHeight]
-  )
-  useLayoutEffect(
-    () =>
-      subscribePointer?.(point => {
-        const side = dockBorderSides.find(candidate => {
-          const box = rails.get(candidate)
-          return (
-            box &&
-            point.x >= box.x &&
-            point.x < box.x + box.width &&
-            point.y >= box.y &&
-            point.y < box.y + box.height
-          )
-        })
-        setHovered(side ?? null)
-      }),
-    [subscribePointer, rails]
-  )
-  return dockBorderSides.map(side => {
-    const border = props.layout.borders[side]
-    if (!border) return null
-    const rail = rails.get(side)
-    if (!rail) return null
-    const bottom = side === "bottom"
-    return (
-      <div
-        key={side}
-        testId={`${props.testId}-border-${side}`}
-        role="toolbar"
-        onMouseEnter={() => {
-          setHovered(side)
-          props.hoverBorder(side)
-        }}
-        onMouseLeave={event => {
-          const inside =
-            event.x !== undefined &&
-            event.y !== undefined &&
-            event.x >= rail.x &&
-            event.x < rail.x + rail.width &&
-            event.y >= rail.y &&
-            event.y < rail.y + rail.height
-          if (!inside) setHovered(current => (current === side ? null : current))
-          props.leaveBorder(side, event)
-        }}
-        style={{
-          display: "flex",
-          position: "absolute",
-          flexDirection: bottom ? "row" : "column",
-          left: rail.x - props.root.x,
-          top: rail.y - props.root.y,
-          width: rail.width,
-          height: rail.height,
-          backgroundColor:
-            props.drag.target?.border === side ? theme.colors.muted : theme.colors.card,
-          borderColor: theme.colors.border,
-          borderLeftWidth: side === "right" ? theme.design.shape.separatorWidth : 0,
-          borderRightWidth: side === "left" ? theme.design.shape.separatorWidth : 0,
-          borderTopWidth: bottom ? theme.design.shape.separatorWidth : 0,
-          overflow: "hidden",
-          userSelect: "none",
-        }}
-      >
+export const DockBorderBars = memo(
+  function DockBorderBars(props: BorderProps & { root: DockBounds }) {
+    const theme = useTheme()
+    const { renderer } = useGpuix()
+    const [hovered, setHovered] = useState<DockBorderSide | null>(null)
+    const [menuOpen, setMenuOpen] = useState<DockBorderSide | null>(null)
+    const [focusedOptions, setFocusedOptions] = useState<DockBorderSide | null>(null)
+    const { subscribePointer } = useContext(PanelEnvironmentContext)
+    const { layout, root } = props
+    const rails = useMemo(
+      () => borderRailBounds(layout, root, theme.design.dock.stripHeight),
+      [layout, root, theme.design.dock.stripHeight]
+    )
+    useLayoutEffect(
+      () =>
+        subscribePointer?.(point => {
+          const side = dockBorderSides.find(candidate => {
+            const box = rails.get(candidate)
+            return (
+              box &&
+              point.x >= box.x &&
+              point.x < box.x + box.width &&
+              point.y >= box.y &&
+              point.y < box.y + box.height
+            )
+          })
+          setHovered(side ?? null)
+        }),
+      [subscribePointer, rails]
+    )
+    return dockBorderSides.map(side => {
+      const border = props.layout.borders[side]
+      if (!border) return null
+      const rail = rails.get(side)
+      if (!rail) return null
+      const bottom = side === "bottom"
+      return (
         <div
+          key={side}
+          testId={`${props.testId}-border-${side}`}
+          role="toolbar"
+          onMouseEnter={() => {
+            setHovered(side)
+            props.hoverBorder(side)
+          }}
+          onMouseLeave={event => {
+            const inside =
+              event.x !== undefined &&
+              event.y !== undefined &&
+              event.x >= rail.x &&
+              event.x < rail.x + rail.width &&
+              event.y >= rail.y &&
+              event.y < rail.y + rail.height
+            if (!inside) setHovered(current => (current === side ? null : current))
+            props.leaveBorder(side, event)
+          }}
           style={{
             display: "flex",
+            position: "absolute",
             flexDirection: bottom ? "row" : "column",
-            flexGrow: 1,
-            minWidth: 0,
-            minHeight: 0,
-            overflow: "auto",
+            left: rail.x - props.root.x,
+            top: rail.y - props.root.y,
+            width: rail.width,
+            height: rail.height,
+            backgroundColor: props.target?.border === side ? theme.colors.muted : theme.colors.card,
+            borderColor: theme.colors.border,
+            borderLeftWidth: side === "right" ? theme.design.shape.separatorWidth : 0,
+            borderRightWidth: side === "left" ? theme.design.shape.separatorWidth : 0,
+            borderTopWidth: bottom ? theme.design.shape.separatorWidth : 0,
+            overflow: "hidden",
+            userSelect: "none",
           }}
         >
-          {borderTabs(border).map((tabId, index) => {
-            const panel = props.registry[tabId]
-            if (!panel) return null
-            return (
-              <Fragment key={tabId}>
-                {index === border.tabs.length ? <div style={{ flexGrow: 1 }} /> : null}
-                <ContextMenu>
-                  <ContextMenuTrigger asChild>
-                    <DockRailButton
-                      ref={instance => {
-                        if (instance) props.tabRefs.current.set(tabId, instance)
-                        else props.tabRefs.current.delete(tabId)
-                      }}
-                      testId={`${props.testId}-tab-${tabId}`}
-                      label={panel.title}
-                      selected={border.selected === tabId}
-                      icon={panel.icon ?? "PanelRight"}
-                      onMouseEnter={() => props.hoverBorder(side, tabId)}
-                      bottom={bottom}
-                      onFocus={() => {
-                        props.frame.onGroupFocus(borderGroupId(side))
-                        props.frame.onFocusChange?.(true)
-                      }}
-                      onBlur={() => {
-                        const focused = renderer?.getFocusedElementId?.()
-                        props.frame.onFocusChange?.(
-                          [...props.tabRefs.current.values()].some(
-                            instance => instance.id === focused
-                          )
-                        )
-                      }}
-                      onKeyDown={event => {
-                        props.drag.keyDown(event)
-                        if (!event.defaultPrevented) props.frame.onKeyDown?.(event)
-                      }}
-                      onMouseDown={event =>
-                        props.drag.start({ groupId: borderGroupId(side), tabId }, event)
-                      }
-                      onMouseMove={props.drag.move}
-                      onMouseUp={props.drag.release}
-                      onClick={() =>
-                        props.drag.click(() =>
-                          props.commit(
-                            selectBorderTab(
-                              props.layout,
-                              side,
-                              border.selected === tabId &&
-                                !(border.type === "overlay" && border.hoverReveal)
-                                ? null
-                                : tabId
+          <div
+            style={{
+              display: "flex",
+              flexDirection: bottom ? "row" : "column",
+              flexGrow: 1,
+              minWidth: 0,
+              minHeight: 0,
+              overflow: "auto",
+            }}
+          >
+            {borderTabs(border).map((tabId, index) => {
+              const panel = props.registry[tabId]
+              if (!panel) return null
+              return (
+                <Fragment key={tabId}>
+                  {index === border.tabs.length ? <div style={{ flexGrow: 1 }} /> : null}
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <DockRailButton
+                        ref={instance => {
+                          if (instance) props.tabRefs.current.set(tabId, instance)
+                          else props.tabRefs.current.delete(tabId)
+                        }}
+                        testId={`${props.testId}-tab-${tabId}`}
+                        label={panel.title}
+                        selected={border.selected === tabId}
+                        icon={panel.icon ?? "PanelRight"}
+                        onMouseEnter={() => props.hoverBorder(side, tabId)}
+                        bottom={bottom}
+                        onFocus={() => {
+                          props.frame.onGroupFocus(borderGroupId(side))
+                          props.frame.onFocusChange?.(true)
+                        }}
+                        onBlur={() => {
+                          const focused = renderer?.getFocusedElementId?.()
+                          props.frame.onFocusChange?.(
+                            [...props.tabRefs.current.values()].some(
+                              instance => instance.id === focused
                             )
                           )
-                        )
-                      }
-                    />
-                  </ContextMenuTrigger>
-                  <ContextMenuContent
-                    side={side === "left" ? "right" : side === "right" ? "left" : "top"}
-                  >
-                    <BorderOptions
-                      {...props}
-                      side={side}
-                      prefix={`${props.testId}-border-context`}
-                    />
-                    <ContextMenuItem onSelect={() => props.commit(closeTab(props.layout, tabId))}>
-                      {props.labels.close}
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              </Fragment>
-            )
-          })}
-          {(border.end?.length ?? 0) === 0 ? <div style={{ flexGrow: 1 }} /> : null}
-        </div>
-        <div
-          testId={`${props.testId}-border-options-slot-${side}`}
-          style={{
-            width: theme.design.dock.stripHeight,
-            height: theme.design.dock.stripHeight,
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <DropdownMenu onOpenChange={open => setMenuOpen(open ? side : null)}>
-            <DropdownMenuTrigger asChild>
-              <ToolbarIconButton
-                testId={`${props.testId}-border-options-${side}`}
-                label={props.labels.railOptions}
-                onFocus={() => setFocusedOptions(side)}
-                onBlur={() => setFocusedOptions(null)}
-                style={{
-                  opacity: hovered === side || menuOpen === side || focusedOptions === side ? 1 : 0,
-                }}
-              >
-                <IconSlot>
-                  <Icon name={bottom ? "Ellipsis" : "EllipsisVertical"} />
-                </IconSlot>
-              </ToolbarIconButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side={side === "left" ? "right" : side === "right" ? "left" : "top"}
-            >
-              <BorderOptions {...props} side={side} prefix={`${props.testId}-border-options`} />
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        {props.drag.target?.border === side ? (
+                        }}
+                        onKeyDown={event => {
+                          props.drag.keyDown(event)
+                          if (!event.defaultPrevented) props.frame.onKeyDown?.(event)
+                        }}
+                        onMouseDown={event =>
+                          props.drag.start({ groupId: borderGroupId(side), tabId }, event)
+                        }
+                        onMouseMove={props.drag.move}
+                        onMouseUp={props.drag.release}
+                        onClick={() =>
+                          props.drag.click(() =>
+                            props.commit(
+                              selectBorderTab(
+                                props.getLayout(),
+                                side,
+                                border.selected === tabId &&
+                                  !(border.type === "overlay" && border.hoverReveal)
+                                  ? null
+                                  : tabId
+                              )
+                            )
+                          )
+                        }
+                      />
+                    </ContextMenuTrigger>
+                    <ContextMenuContent
+                      side={side === "left" ? "right" : side === "right" ? "left" : "top"}
+                    >
+                      <BorderOptions
+                        {...props}
+                        side={side}
+                        prefix={`${props.testId}-border-context`}
+                      />
+                      <ContextMenuItem
+                        onSelect={() => props.commit(closeTab(props.getLayout(), tabId))}
+                      >
+                        {props.labels.close}
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                </Fragment>
+              )
+            })}
+            {(border.end?.length ?? 0) === 0 ? <div style={{ flexGrow: 1 }} /> : null}
+          </div>
           <div
-            testId={`${props.testId}-rail-insert-${side}`}
+            testId={`${props.testId}-border-options-slot-${side}`}
             style={{
-              position: "absolute",
-              pointerEvents: "none",
-              backgroundColor: theme.colors.ring,
-              ...(bottom
-                ? {
-                    left: props.drag.target.railOffset,
-                    top: 0,
-                    width: theme.design.shape.separatorWidth,
-                    height: "100%",
-                  }
-                : {
-                    top: props.drag.target.railOffset,
-                    left: 0,
-                    height: theme.design.shape.separatorWidth,
-                    width: "100%",
-                  }),
+              width: theme.design.dock.stripHeight,
+              height: theme.design.dock.stripHeight,
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
-          />
-        ) : null}
-      </div>
-    )
-  })
-}
+          >
+            <DropdownMenu onOpenChange={open => setMenuOpen(open ? side : null)}>
+              <DropdownMenuTrigger asChild>
+                <ToolbarIconButton
+                  testId={`${props.testId}-border-options-${side}`}
+                  label={props.labels.railOptions}
+                  onFocus={() => setFocusedOptions(side)}
+                  onBlur={() => setFocusedOptions(null)}
+                  style={{
+                    opacity:
+                      hovered === side || menuOpen === side || focusedOptions === side ? 1 : 0,
+                  }}
+                >
+                  <IconSlot>
+                    <Icon name={bottom ? "Ellipsis" : "EllipsisVertical"} />
+                  </IconSlot>
+                </ToolbarIconButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side={side === "left" ? "right" : side === "right" ? "left" : "top"}
+              >
+                <BorderOptions {...props} side={side} prefix={`${props.testId}-border-options`} />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {props.target?.border === side ? (
+            <div
+              testId={`${props.testId}-rail-insert-${side}`}
+              style={{
+                position: "absolute",
+                pointerEvents: "none",
+                backgroundColor: theme.colors.ring,
+                ...(bottom
+                  ? {
+                      left: props.target.railOffset,
+                      top: 0,
+                      width: theme.design.shape.separatorWidth,
+                      height: "100%",
+                    }
+                  : {
+                      top: props.target.railOffset,
+                      left: 0,
+                      height: theme.design.shape.separatorWidth,
+                      width: "100%",
+                    }),
+              }}
+            />
+          ) : null}
+        </div>
+      )
+    })
+  },
+  (previous, next) =>
+    previous.root === next.root &&
+    previous.target === next.target &&
+    previous.borderKey === next.borderKey &&
+    previous.registry === next.registry &&
+    previous.labels === next.labels &&
+    previous.getLayout === next.getLayout &&
+    previous.drag === next.drag &&
+    previous.preview === next.preview &&
+    previous.commit === next.commit &&
+    previous.borders === next.borders &&
+    previous.tabRefs === next.tabRefs &&
+    previous.testId === next.testId &&
+    previous.hoverBorder === next.hoverBorder &&
+    previous.openMenus === next.openMenus &&
+    previous.frame.onGroupFocus === next.frame.onGroupFocus &&
+    previous.frame.onFocusChange === next.frame.onFocusChange &&
+    previous.frame.onKeyDown === next.frame.onKeyDown
+)
 
 export function DockBorderPanel({
   side,
@@ -386,7 +417,7 @@ export function DockBorderPanel({
   const vertical = side !== "bottom"
   const tabRefs = useRef(new Map<string, PublicInstance>())
   const updates = useResizeCommit((size: number) =>
-    props.preview(resizeBorder(props.layout, side, size))
+    props.preview(resizeBorder(props.getLayout(), side, size))
   )
   const finalSize = useRef(border?.size ?? theme.design.dock.borderSize)
   const offset =
@@ -416,17 +447,27 @@ export function DockBorderPanel({
     },
     finish: () => {
       updates.flush()
-      props.commit(resizeBorder(props.layout, side, finalSize.current))
+      props.commit(resizeBorder(props.getLayout(), side, finalSize.current))
     },
     restore: () => {
       updates.cancel()
       props.preview(null)
     },
   })
-  if (!border?.selected) return null
-  const selected = border.selected
+  const selected = border?.selected
+  const tabsKey = border ? borderTabs(border).join("\u0000") : ""
+  const group = useMemo(
+    () => ({
+      kind: "group" as const,
+      id: borderGroupId(side),
+      tabs: tabsKey ? tabsKey.split("\u0000") : [],
+      active: selected ?? "",
+    }),
+    [side, tabsKey, selected]
+  )
+  if (!selected) return null
   const close = () => {
-    props.commit(selectBorderTab(props.layout, side, null))
+    props.commit(selectBorderTab(props.getLayout(), side, null))
     const tab = props.tabRefs.current.get(selected)
     if (tab) renderer?.focusElement?.(tab.id)
   }
@@ -486,12 +527,7 @@ export function DockBorderPanel({
         bounds={box}
         borderSide={side}
         tabRefs={tabRefs}
-        group={{
-          kind: "group",
-          id: borderGroupId(side),
-          tabs: borderTabs(border),
-          active: selected,
-        }}
+        group={group}
         testId={`${props.testId}-border-panel-${side}`}
       />
       <DividerHitArea

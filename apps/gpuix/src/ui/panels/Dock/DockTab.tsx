@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useRef, useState } from "react"
+import { memo, useContext, useLayoutEffect, useRef, useState } from "react"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload, Props, PublicInstance } from "@gpuix/react"
 import { consumeKey } from "@/shared/keyboard"
@@ -21,7 +21,7 @@ export interface DockTabProps extends Props {
   onClose?: () => void
 }
 
-export function DockTab({
+export const DockTab = memo(function DockTab({
   title,
   selected,
   icon,
@@ -43,10 +43,22 @@ export function DockTab({
   const [hovered, setHovered] = useState(false)
   const bounds = useRef<{ x: number; y: number; width: number; height: number } | null>(null)
   const { subscribePointer } = useContext(PanelEnvironmentContext)
-  useLayoutEffect(() => subscribePointer?.(point => {
-    const box = bounds.current
-    setHovered(Boolean(box && point.x >= box.x && point.x < box.x + box.width && point.y >= box.y && point.y < box.y + box.height))
-  }), [subscribePointer])
+  useLayoutEffect(
+    () =>
+      subscribePointer?.(point => {
+        const box = bounds.current
+        setHovered(
+          Boolean(
+            box &&
+            point.x >= box.x &&
+            point.x < box.x + box.width &&
+            point.y >= box.y &&
+            point.y < box.y + box.height
+          )
+        )
+      }),
+    [subscribePointer]
+  )
   const overClose = (event: EventPayload) => {
     const box = close.current && renderer?.getElementBounds?.(close.current.id)
     return (
@@ -67,7 +79,13 @@ export function DockTab({
       aria-selected={selected}
       tabIndex={props.tabIndex ?? (selected ? 0 : -1)}
       onLayout={event => {
-        if (event.x !== undefined && event.y !== undefined && event.width !== undefined && event.height !== undefined) bounds.current = { x: event.x, y: event.y, width: event.width, height: event.height }
+        if (
+          event.x !== undefined &&
+          event.y !== undefined &&
+          event.width !== undefined &&
+          event.height !== undefined
+        )
+          bounds.current = { x: event.x, y: event.y, width: event.width, height: event.height }
         props.onLayout?.(event)
       }}
       onMouseEnter={event => {
@@ -76,7 +94,16 @@ export function DockTab({
       }}
       onMouseLeave={event => {
         const box = bounds.current
-        if (box && event.x !== undefined && event.y !== undefined && event.x >= box.x && event.x < box.x + box.width && event.y >= box.y && event.y < box.y + box.height) return
+        if (
+          box &&
+          event.x !== undefined &&
+          event.y !== undefined &&
+          event.x >= box.x &&
+          event.x < box.x + box.width &&
+          event.y >= box.y &&
+          event.y < box.y + box.height
+        )
+          return
         setHovered(false)
         props.onMouseLeave?.(event)
       }}
@@ -189,4 +216,4 @@ export function DockTab({
       ) : null}
     </div>
   )
-}
+})

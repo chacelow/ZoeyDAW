@@ -1,4 +1,5 @@
 import {
+  createContext,
   memo,
   useCallback,
   useContext,
@@ -98,9 +99,31 @@ const EMPTY_DOCK_LAYOUT: DockLayoutJSON = {
   maximizedGroup: null,
   borders: {},
 }
-const DockContent = memo(function DockContent({ render }: { render: () => ReactNode }) {
+/**
+ * Size of the Dock panel box a content subtree is mounted in. The Dock computes it in the same
+ * commit that resizes the box, so content can lay out against it before the native frame
+ * instead of waiting for an `onLayout` round trip and painting one or more stale frames.
+ */
+export const DockPanelSizeContext = createContext<{ width: number; height: number } | null>(null)
+const DockContentBody = memo(function DockContentBody({ render }: { render: () => ReactNode }) {
   return <>{render()}</>
 })
+function DockContent({
+  render,
+  width,
+  height,
+}: {
+  render: () => ReactNode
+  width: number
+  height: number
+}) {
+  const size = useMemo(() => ({ width, height }), [width, height])
+  return (
+    <DockPanelSizeContext.Provider value={size}>
+      <DockContentBody render={render} />
+    </DockPanelSizeContext.Provider>
+  )
+}
 export function DockLayout({
   layout = EMPTY_DOCK_LAYOUT,
   registry,
@@ -166,47 +189,55 @@ export function DockLayout({
   const [root, setRootBounds] = useState<DockBounds>(rootBounds.current)
   const [previewLayout, setPreviewLayout] = useState<DockLayoutJSON | null>(null)
   const currentLayout = previewLayout ?? layout
+  const layoutRef = useRef(layout)
+  const onLayoutChangeRef = useRef(onLayoutChange)
+  const currentLayoutRef = useRef(currentLayout)
+  useLayoutEffect(() => {
+    layoutRef.current = layout
+    onLayoutChangeRef.current = onLayoutChange
+    currentLayoutRef.current = currentLayout
+  }, [layout, onLayoutChange, currentLayout])
+  const getLayout = useCallback(() => currentLayoutRef.current, [])
   const visitedPanels = useRef(new Set<string>())
-  const commit = useCallback(
-    (next: DockLayoutJSON, restoreTabFocus = true) => {
-      const currentGroup =
-        currentLayout.activeGroup && findGroup(currentLayout, currentLayout.activeGroup)
-      const nextGroup = next.activeGroup && findGroup(next, next.activeGroup)
-      if (
-        restoreTabFocus &&
-        (currentLayout.activeGroup !== next.activeGroup ||
-          currentLayout.maximizedGroup !== next.maximizedGroup ||
-          (currentGroup && nextGroup && currentGroup.active !== nextGroup.active))
-      )
+  const commit = useCallback((next: DockLayoutJSON, restoreTabFocus = true) => {
+    const currentGroup =
+      currentLayoutRef.current.activeGroup &&
+      findGroup(currentLayoutRef.current, currentLayoutRef.current.activeGroup)
+    const nextGroup = next.activeGroup && findGroup(next, next.activeGroup)
+    if (
+      restoreTabFocus &&
+      (currentLayoutRef.current.activeGroup !== next.activeGroup ||
+        currentLayoutRef.current.maximizedGroup !== next.maximizedGroup ||
+        (currentGroup && nextGroup && currentGroup.active !== nextGroup.active))
+    )
+      restoreFocus.current = true
+    for (const side of dockBorderSides) {
+      if (currentLayoutRef.current.borders[side]?.selected !== next.borders[side]?.selected) {
         restoreFocus.current = true
-      for (const side of dockBorderSides) {
-        if (currentLayout.borders[side]?.selected !== next.borders[side]?.selected) {
-          restoreFocus.current = true
-          if (next.borders[side]?.selected)
-            preferredFocus.current = next.borders[side]?.selected ?? null
-        }
+        if (next.borders[side]?.selected)
+          preferredFocus.current = next.borders[side]?.selected ?? null
       }
-      for (const side of dockBorderSides) {
-        const previous = currentLayout.borders[side]?.selected
-        if (
-          previous &&
-          !dockBorderSides.some(candidate => next.borders[candidate]?.selected) &&
-          borderTabs(currentLayout.borders[side]).includes(previous)
-        )
-          preferredFocus.current = previous
-      }
-      const maximizedSide = dockBorderSides.find(
-        side => borderGroupId(side) === (next.maximizedGroup ?? currentLayout.maximizedGroup)
+    }
+    for (const side of dockBorderSides) {
+      const previous = currentLayoutRef.current.borders[side]?.selected
+      if (
+        previous &&
+        !dockBorderSides.some(candidate => next.borders[candidate]?.selected) &&
+        borderTabs(currentLayoutRef.current.borders[side]).includes(previous)
       )
-      if (maximizedSide && next.borders[maximizedSide]?.selected)
-        preferredFocus.current = next.borders[maximizedSide]?.selected ?? null
-      setPreviewLayout(null)
-      if (next !== layout) onLayoutChange(next)
-    },
-    [currentLayout, layout, onLayoutChange]
-  )
+        preferredFocus.current = previous
+    }
+    const maximizedSide = dockBorderSides.find(
+      side =>
+        borderGroupId(side) === (next.maximizedGroup ?? currentLayoutRef.current.maximizedGroup)
+    )
+    if (maximizedSide && next.borders[maximizedSide]?.selected)
+      preferredFocus.current = next.borders[maximizedSide]?.selected ?? null
+    setPreviewLayout(null)
+    if (next !== layoutRef.current) onLayoutChangeRef.current(next)
+  }, [])
   const preview = useCallback((next: DockLayoutJSON | null) => setPreviewLayout(next), [])
-  const drag = useDockDrag({
+  const { controller: drag, target: dragTarget } = useDockDrag({
     layout: currentLayout,
     onLayoutChange: next => commit(next),
     tabRefs,
@@ -329,8 +360,19 @@ export function DockLayout({
       if (selected) visitedPanels.current.add(selected)
     }
   }, [layout])
+  const onGroupFocus = useCallback((groupId: string) => {
+    focusedGroup.current = groupId
+  }, [])
   const shared: FrameProps = {
     layout: currentLayout,
+    getLayout,
+    panelKey: [
+      ...getGroups(currentLayout.root).flatMap(group => group.tabs),
+      ...getBorderTabs(currentLayout),
+    ].join("\u0000"),
+    maximizedGroup: currentLayout.maximizedGroup,
+    compactBelow: theme.design.dock.compactActionsBelow,
+    compactBand: theme.control["--spacing-control-track"],
     registry,
     labels,
     commit,
@@ -339,9 +381,7 @@ export function DockLayout({
     groups,
     tabs,
     tabRefs,
-    onGroupFocus: groupId => {
-      focusedGroup.current = groupId
-    },
+    onGroupFocus,
     onFocusChange,
     onKeyDown,
     testId,
@@ -352,11 +392,12 @@ export function DockLayout({
       clearTimeout(hoverCloseTimer.current)
       hoverCloseTimer.current = undefined
       pendingHoverLeave.current = undefined
-      const border = currentLayout.borders[side]
+      const latest = currentLayoutRef.current
+      const border = latest.borders[side]
       if (tabId && border?.type === "overlay" && border.hoverReveal && border.selected !== tabId)
-        commit(selectBorderTab(currentLayout, side, tabId), false)
+        commit(selectBorderTab(latest, side, tabId), false)
     },
-    [currentLayout, commit]
+    [commit]
   )
   const leaveBorder = useCallback(
     (side: DockBorderSide, event: EventPayload) => {
@@ -436,6 +477,24 @@ export function DockLayout({
   )
   const borderProps = {
     layout: currentLayout,
+    getLayout,
+    target: dragTarget,
+    borderKey: dockBorderSides
+      .map(side => {
+        const border = currentLayout.borders[side]
+        return border
+          ? [
+              side,
+              border.tabs.join(","),
+              border.end?.join(","),
+              border.selected,
+              border.visible,
+              border.type,
+              border.hoverReveal,
+            ].join(":")
+          : ""
+      })
+      .join("|"),
     registry,
     labels,
     commit,
@@ -579,18 +638,22 @@ export function DockLayout({
                 color: theme.colors.foreground,
               }}
             >
-              <DockContent render={registration.render} />
+              <DockContent
+                render={registration.render}
+                width={box?.width ?? 0}
+                height={box?.height ?? 0}
+              />
             </div>
           )
         })}
-        {drag.target ? (
+        {dragTarget ? (
           <DropOverlay
-            target={drag.target}
+            target={dragTarget}
             box={
-              drag.target.border
-                ? projectedBorders.get(drag.target.border)
+              dragTarget.border
+                ? projectedBorders.get(dragTarget.border)
                 : currentLayout.root
-                  ? projectedGroups.get(drag.target.groupId)
+                  ? projectedGroups.get(dragTarget.groupId)
                   : rootBounds.current
             }
             root={rootBounds.current}

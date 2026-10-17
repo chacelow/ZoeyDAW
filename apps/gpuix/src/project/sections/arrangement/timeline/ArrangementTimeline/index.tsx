@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useSyncExternalStore } from "react"
+import { useCallback, useContext, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { consumeKey, useWindowKeyboard } from "@/platform/keyboard"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { ControlledScrollbar } from "@/ui/controls"
-import { Group, Panel, PanelDivider } from "@/ui/panels"
+import { DockPanelSizeContext, Group, Panel, PanelDivider } from "@/ui/panels"
 import { Grid } from "../grid"
 import { MiniMap } from "../minimap"
 import { Rulers, TimeRuler } from "../rulers"
@@ -102,16 +102,28 @@ export function ArrangementTimeline({
     [view, scrollbarHeight]
   )
 
+  // The Dock publishes this panel's width in the same commit that resizes it. Measuring from it
+  // during that commit lets the rulers, grid and clips stretch in the very frame the panel
+  // resizes; waiting for `onLayout` paints the old zoom at the new width first, and the timeline
+  // visibly snaps back and forth while a divider is dragged.
+  const dockSize = useContext(DockPanelSizeContext)
+  const dockWidth = dockSize?.width
+  useLayoutEffect(() => {
+    if (!dockWidth) return
+    const size = view.getSnapshot().size
+    if (size.bodyHeight > 0) view.measure({ ...size, containerWidth: dockWidth })
+  }, [dockWidth, view])
+
   const onLayout = useCallback(
     (event: EventPayload) => {
       if (event.width === undefined || event.height === undefined) return
       view.measure({
-        containerWidth: event.width,
+        containerWidth: dockWidth || event.width,
         bodyHeight: event.height,
         timelineLeft: event.x ?? view.getSnapshot().size.timelineLeft,
       })
     },
-    [view]
+    [view, dockWidth]
   )
 
   return (

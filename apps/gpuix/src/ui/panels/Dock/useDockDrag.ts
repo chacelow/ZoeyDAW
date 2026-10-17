@@ -1,11 +1,18 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { RefObject } from "react"
 import { useGpuix } from "@gpuix/react"
 import type { EventPayload, KeyEvent, PublicInstance } from "@gpuix/react"
 import { consumeKey } from "@/shared/keyboard"
 import { useControlEnvironment } from "@/ui/controls/ControlEnvironment"
 import { moveGroupOrPanel, moveToBorder, resolveDropPosition } from "./model"
-import type { DockBorderSide, DockBounds, DockDragSource, DockLayoutJSON, DockNode, DockPosition } from "./model"
+import type {
+  DockBorderSide,
+  DockBounds,
+  DockDragSource,
+  DockLayoutJSON,
+  DockNode,
+  DockPosition,
+} from "./model"
 export interface DockDropTarget {
   groupId: string
   position: DockPosition
@@ -15,7 +22,6 @@ export interface DockDropTarget {
   railOffset?: number
 }
 export interface DockDragController {
-  readonly target: DockDropTarget | null
   start(source: DockDragSource, event: EventPayload): void
   move(event: EventPayload): DockDropTarget | null
   release(event: EventPayload): void
@@ -45,7 +51,7 @@ export function useDockDrag({
   borders: RefObject<Map<DockBorderSide, DockBounds>>
   borderSize: number
   rootBounds: RefObject<DockBounds>
-}): DockDragController {
+}): { controller: DockDragController; target: DockDropTarget | null } {
   const { renderer } = useGpuix()
   const environment = useControlEnvironment()
   const press = useRef<{
@@ -57,120 +63,184 @@ export function useDockDrag({
   } | null>(null)
   const suppressClick = useRef(false)
   const [target, setTarget] = useState<DockDropTarget | null>(null)
-  const cancel = () => {
-    press.current = null
-    setTarget(null)
+  const latest = useRef({
+    layout,
+    onLayoutChange,
+    edgeFraction,
+    stripHeight,
+    groups,
+    tabs,
+    tabRefs,
+    borders,
+    borderSize,
+    rootBounds,
+    renderer,
+    environment,
+  })
+  latest.current = {
+    layout,
+    onLayoutChange,
+    edgeFraction,
+    stripHeight,
+    groups,
+    tabs,
+    tabRefs,
+    borders,
+    borderSize,
+    rootBounds,
+    renderer,
+    environment,
   }
+  const cancel = useMemo(
+    () => () => {
+      press.current = null
+      setTarget(null)
+    },
+    []
+  )
   useEffect(
     () =>
       environment.subscribeWindowActive?.(active => {
-        if (!active) {
-          press.current = null
-          setTarget(null)
-        }
+        if (!active) cancel()
       }),
-    [environment]
+    [environment, cancel]
   )
-  const locate = (x: number, y: number): DockDropTarget | null => {
-    for (const [side, box] of borders.current) {
-      if (!resolveDropPosition(box, x, y, edgeFraction)) continue
-      const border = layout.borders[side]
-      if (!border) continue
-      const horizontal = side === "bottom"
-      const pointer = horizontal ? x : y
-      const start = horizontal ? box.x : box.y
-      const length = horizontal ? box.width : box.height
-      const railGroup = pointer < start + (length - stripHeight) / 2 ? "start" : "end"
-      const items = railGroup === "start" ? border.tabs : border.end ?? []
-      const origin = railGroup === "start" ? start : start + length - stripHeight * (items.length + 1)
-      const index = Math.max(0, Math.min(items.length, Math.floor((pointer - origin + stripHeight / 2) / stripHeight)))
-      return { groupId: `border:${side}`, position: "center", border: side, railGroup, index, railOffset: origin - start + index * stripHeight }
-    }
-    if (!layout.root && resolveDropPosition(rootBounds.current, x, y, edgeFraction))
-      return { groupId: "dock-empty", position: "center" }
-    for (const [groupId, box] of groups.current) {
-      if (layout.maximizedGroup && layout.maximizedGroup !== groupId) continue
-      const position = resolveDropPosition(box, x, y, edgeFraction)
-      if (!position) continue
-      const group = layout.root && findTabs(layout.root, groupId)
-      if (!group) continue
-      if (group && y < box.y + stripHeight) {
-        const index = group.findIndex(tab => {
-          const rect = tabs.current.get(tab)
-          return rect && x < rect.x + rect.width / 2
-        })
-        return { groupId, position: "center", index: index === -1 ? group.length : index }
+  const controller = useMemo<DockDragController>(() => {
+    const locate = (x: number, y: number): DockDropTarget | null => {
+      const current = latest.current
+      for (const [side, box] of current.borders.current) {
+        if (!resolveDropPosition(box, x, y, current.edgeFraction)) continue
+        const border = current.layout.borders[side]
+        if (!border) continue
+        const horizontal = side === "bottom"
+        const pointer = horizontal ? x : y
+        const start = horizontal ? box.x : box.y
+        const length = horizontal ? box.width : box.height
+        const railGroup = pointer < start + (length - current.stripHeight) / 2 ? "start" : "end"
+        const items = railGroup === "start" ? border.tabs : (border.end ?? [])
+        const origin =
+          railGroup === "start" ? start : start + length - current.stripHeight * (items.length + 1)
+        const index = Math.max(
+          0,
+          Math.min(
+            items.length,
+            Math.floor((pointer - origin + current.stripHeight / 2) / current.stripHeight)
+          )
+        )
+        return {
+          groupId: `border:${side}`,
+          position: "center",
+          border: side,
+          railGroup,
+          index,
+          railOffset: origin - start + index * current.stripHeight,
+        }
       }
-      return { groupId, position }
-    }
-    return null
-  }
-  const move = (event: EventPayload) => {
-    const current = press.current
-    if (!current || event.x === undefined || event.y === undefined) return null
-    if (renderer?.getFocusedElementId && renderer.getFocusedElementId() !== current.elementId) {
-      cancel()
+      if (
+        !current.layout.root &&
+        resolveDropPosition(current.rootBounds.current, x, y, current.edgeFraction)
+      )
+        return { groupId: "dock-empty", position: "center" }
+      for (const [groupId, box] of current.groups.current) {
+        if (current.layout.maximizedGroup && current.layout.maximizedGroup !== groupId) continue
+        const position = resolveDropPosition(box, x, y, current.edgeFraction)
+        if (!position) continue
+        const group = current.layout.root && findTabs(current.layout.root, groupId)
+        if (!group) continue
+        if (y < box.y + current.stripHeight) {
+          const index = group.findIndex(tab => {
+            const rect = current.tabs.current.get(tab)
+            return rect && x < rect.x + rect.width / 2
+          })
+          return { groupId, position: "center", index: index === -1 ? group.length : index }
+        }
+        return { groupId, position }
+      }
       return null
     }
-    if (!current.dragging) {
-      const threshold = environment.inputPolicy?.dragThresholdPixels
-      if (
-        threshold === undefined ||
-        Math.hypot(event.x - current.x, event.y - current.y) < threshold
-      )
-        return null
-      current.dragging = true
-      suppressClick.current = true
-    }
-    renderer?.clearSelection?.()
-    const next = locate(event.x, event.y)
-    setTarget(next)
-    return next
-  }
-  return {
-    target,
-    start: (source: DockDragSource, event: EventPayload) => {
-      if (event.button !== 0 || event.x === undefined || event.y === undefined) return
-      renderer?.clearSelection?.()
-      tabs.current.clear()
-      for (const [id, tab] of tabRefs.current) {
-        const box = renderer?.getElementBounds?.(tab.id)
-        if (box) tabs.current.set(id, box)
-      }
-      press.current = {
-        source,
-        x: event.x,
-        y: event.y,
-        elementId: event.elementId,
-        dragging: false,
-      }
-      suppressClick.current = false
-      renderer?.focusElement?.(event.elementId)
-    },
-    move,
-    release: (event: EventPayload) => {
-      const next = move(event)
+    const move = (event: EventPayload) => {
       const current = press.current
-      cancel()
-      if (current?.dragging && next)
-        onLayoutChange(
-          next.border
-            ? moveToBorder(layout, current.source, next.border, borderSize, { group: next.railGroup ?? "start", index: next.index ?? 0 })
-            : moveGroupOrPanel(layout, current.source, next.groupId, next.position, next.index)
-        )
-    },
-    click: (activate: () => void) => {
-      if (!suppressClick.current) activate()
-      suppressClick.current = false
-    },
-    cancel,
-    keyDown: (event: KeyEvent) => {
-      if (event.key === "escape" && press.current) {
+      if (!current || event.x === undefined || event.y === undefined) return null
+      const { renderer: currentRenderer, environment: currentEnvironment } = latest.current
+      if (
+        currentRenderer?.getFocusedElementId &&
+        currentRenderer.getFocusedElementId() !== current.elementId
+      ) {
         cancel()
-        consumeKey(event, "handled")
+        return null
       }
-    },
-  }
+      if (!current.dragging) {
+        const threshold = currentEnvironment.inputPolicy?.dragThresholdPixels
+        if (
+          threshold === undefined ||
+          Math.hypot(event.x - current.x, event.y - current.y) < threshold
+        )
+          return null
+        current.dragging = true
+        suppressClick.current = true
+      }
+      currentRenderer?.clearSelection?.()
+      const next = locate(event.x, event.y)
+      setTarget(next)
+      return next
+    }
+    return {
+      start: (source, event) => {
+        const current = latest.current
+        if (event.button !== 0 || event.x === undefined || event.y === undefined) return
+        current.renderer?.clearSelection?.()
+        current.tabs.current.clear()
+        for (const [id, tab] of current.tabRefs.current) {
+          const box = current.renderer?.getElementBounds?.(tab.id)
+          if (box) current.tabs.current.set(id, box)
+        }
+        press.current = {
+          source,
+          x: event.x,
+          y: event.y,
+          elementId: event.elementId,
+          dragging: false,
+        }
+        suppressClick.current = false
+        current.renderer?.focusElement?.(event.elementId)
+      },
+      move,
+      release: event => {
+        const next = move(event)
+        const currentPress = press.current
+        cancel()
+        if (currentPress?.dragging && next) {
+          const current = latest.current
+          current.onLayoutChange(
+            next.border
+              ? moveToBorder(current.layout, currentPress.source, next.border, current.borderSize, {
+                  group: next.railGroup ?? "start",
+                  index: next.index ?? 0,
+                })
+              : moveGroupOrPanel(
+                  current.layout,
+                  currentPress.source,
+                  next.groupId,
+                  next.position,
+                  next.index
+                )
+          )
+        }
+      },
+      click: activate => {
+        if (!suppressClick.current) activate()
+        suppressClick.current = false
+      },
+      cancel,
+      keyDown: event => {
+        if (event.key === "escape" && press.current) {
+          cancel()
+          consumeKey(event, "handled")
+        }
+      },
+    }
+  }, [cancel])
+  return { controller, target }
 }
 function findTabs(node: DockNode, id: string): readonly string[] | null {
   if (node.kind === "group") return node.id === id ? node.tabs : null
