@@ -21,7 +21,8 @@ user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
 INPUT_MOUSE, MOUSEEVENTF_MOVE, MOUSEEVENTF_ABSOLUTE = 0, 0x0001, 0x8000
-MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_WHEEL = 0x0002, 0x0004, 0x0800
+MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_WHEEL, MOUSEEVENTF_HWHEEL = 0x0002, 0x0004, 0x0800, 0x1000
+VK_SPACE = 0x20
 INPUT_KEYBOARD, KEYEVENTF_KEYUP, VK_CONTROL = 1, 0x0002, 0x11
 
 
@@ -210,6 +211,26 @@ def hover(a):
         phase = (i % 500) / 500
         move_abs(a.x0 + a.span * phase, a.y0 + 40 * ((i // 500) % 2))
         precise_sleep(0.002)
+
+
+@scenario
+def hscroll(a):
+    """Horizontal wheel notches over (x0,y0): right then left (timeline scroll)."""
+    move_abs(a.x0, a.y0); time.sleep(0.05)
+    n = int(a.seconds * 30)
+    for i in range(n):
+        send(mouse(MOUSEEVENTF_HWHEEL, data=120 if (i // 15) % 2 == 0 else -120))
+        time.sleep(1 / 30)
+
+
+@scenario
+def play(a):
+    """Click (x0,y0) to focus the arrangement, Space starts the transport, Space stops it."""
+    move_abs(a.x0, a.y0); time.sleep(0.05)
+    send(mouse(MOUSEEVENTF_LEFTDOWN)); send(mouse(MOUSEEVENTF_LEFTUP)); time.sleep(0.2)
+    send(key(VK_SPACE), key(VK_SPACE, up=True))
+    time.sleep(a.seconds)
+    send(key(VK_SPACE), key(VK_SPACE, up=True))
 
 
 def run(a):

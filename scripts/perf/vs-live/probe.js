@@ -1,5 +1,5 @@
 // Injected into both Ableton Live and ZoeyDAW. Records, on the target's own clock (QPC):
-// - every dispatched pointer/wheel/key message (WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_LBUTTON*, WM_KEYDOWN)
+// - every dispatched pointer/wheel/key message (WM_MOUSEMOVE, WM_MOUSE[H]WHEEL, WM_LBUTTON*, WM_KEYDOWN)
 // - every IDXGISwapChain Present / Present1 call with its sync interval, flags and dirty area
 // rpc.exports.drain() returns everything recorded since the last call.
 /* global Process, NativeFunction, Memory, Interceptor, NULL, rpc -- Frida GumJS runtime */
@@ -31,6 +31,7 @@ function hookDispatch(name) {
       if (
         message === 0x0200 ||
         message === 0x020a ||
+        message === 0x020e ||
         message === 0x0201 ||
         message === 0x0202 ||
         message === 0x0100
