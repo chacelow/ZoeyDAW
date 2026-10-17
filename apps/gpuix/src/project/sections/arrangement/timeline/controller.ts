@@ -210,7 +210,18 @@ export function createTimelineController({
           size.timelineLeft === presentation.size.timelineLeft)
       )
         return
+      const before = viewport.read()
       presentation = { ...presentation, size }
+      // Like Live, a width change keeps the visible bar range and rescales it to the new width
+      // rather than revealing or hiding bars at the right edge.
+      const width = viewport.read().timeViewportWidth
+      if (before.timeViewportWidth > 0 && width > 0 && width !== before.timeViewportWidth) {
+        const ratio = width / before.timeViewportWidth
+        projectActions.setViewport({
+          pxPerBar: before.pxPerBar * ratio,
+          scrollX: before.scrollX * ratio,
+        })
+      }
       synchronize()
       for (const listener of listeners) listener()
     },

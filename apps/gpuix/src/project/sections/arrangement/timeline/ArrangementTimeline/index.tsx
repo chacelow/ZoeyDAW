@@ -131,12 +131,7 @@ export function ArrangementTimeline({
         backgroundColor: theme.colors.arrangementSurfaceAlt,
       })}
     >
-      <Toolbar
-        pxPerBar={viewport.pxPerBar}
-        zoom={view.stepZoom}
-        keyboard={controller.keyboard}
-        labels={labels}
-      />
+      <Toolbar zoom={view.stepZoom} keyboard={controller.keyboard} labels={labels} />
       <Group
         orientation="vertical"
         style={sx({

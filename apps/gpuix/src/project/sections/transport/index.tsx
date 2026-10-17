@@ -45,7 +45,12 @@ export function TransportBar({
   const theme = useTheme()
   const policy = usePreference("transport")
   const document_ = useProjectState(state => state.document)
-  const workspace = useProjectState(state => state.workspace)
+  // Field selectors: the workspace also holds the arrangement viewport, which changes every frame
+  // while a panel is resized or the timeline scrolls.
+  const metronome = useProjectState(state => state.workspace.metronome)
+  const link = useProjectState(state => state.workspace.link)
+  const follow = useProjectState(state => state.workspace.follow)
+  const computerKeyboard = useProjectState(state => state.workspace.computerKeyboard)
   const playing = useProjectState(state => state.session.playing)
   const position = useProjectState(state => state.session.position)
   const recording = useProjectState(state => state.session.recording)
@@ -60,12 +65,7 @@ export function TransportBar({
   const taps = useRef<number[]>([])
   const lastStop = useRef<number | null>(null)
   const meter = document_.transport
-  const phase = metronomePhase(
-    session.position,
-    meter.numerator,
-    session.playing,
-    workspace.metronome
-  )
+  const phase = metronomePhase(session.position, meter.numerator, session.playing, metronome)
   const gap = theme.transportControl["--spacing-control-track-gap"]
   const iconSize = theme.transportControl["--spacing-control-icon"]
   const [viewportWidth, setViewportWidth] = useState(0)
@@ -124,7 +124,7 @@ export function TransportBar({
             </Button>
             <DragPadToggle
               size="transport"
-              value={workspace.link}
+              value={link}
               onChange={projectActions.setLink}
               label={labels.link}
               labelOn={labels.link}
@@ -180,14 +180,10 @@ export function TransportBar({
               size="transport"
               iconOnly
               label={`${labels.metronome} — ${labels.metronomeSilent}`}
-              active={workspace.metronome}
+              active={metronome}
               onActiveChange={projectActions.setMetronome}
             >
-              <MetronomeIndicator
-                phase={phase}
-                enabled={workspace.metronome}
-                reducedMotion={reducedMotion}
-              />
+              <MetronomeIndicator phase={phase} enabled={metronome} reducedMotion={reducedMotion} />
             </Button>
             <ControlGroup label={labels.scale} separator="line">
               <DropdownButton
@@ -241,14 +237,14 @@ export function TransportBar({
         <div testId="transport-center" style={groupStyle}>
           <DragPadToggle
             size="transport"
-            value={workspace.follow}
+            value={follow}
             onChange={projectActions.setFollow}
             label={labels.follow}
             icon={
               <Icon
                 name="Locate"
                 size={iconSize}
-                color={workspace.follow ? theme.colors.primaryForeground : theme.colors.foreground}
+                color={follow ? theme.colors.primaryForeground : theme.colors.foreground}
               />
             }
           />
@@ -380,7 +376,7 @@ export function TransportBar({
             />
             <DragPadToggle
               size="transport"
-              value={workspace.computerKeyboard}
+              value={computerKeyboard}
               onChange={enabled => projectActions.setMode("computerKeyboard", enabled)}
               label={labels.computerKeyboard}
               icon={
@@ -388,9 +384,7 @@ export function TransportBar({
                   name="Keyboard"
                   size={iconSize}
                   color={
-                    workspace.computerKeyboard
-                      ? theme.colors.primaryForeground
-                      : theme.colors.foreground
+                    computerKeyboard ? theme.colors.primaryForeground : theme.colors.foreground
                   }
                 />
               }

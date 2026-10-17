@@ -23,7 +23,6 @@ const { values } = parseArgs({
 const steps = Number(values.steps)
 const stepPx = Number(values.step)
 const settleMs = Number(values.settle)
-
 const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url)))
 const app = await launch({
   command: "bun",
@@ -129,10 +128,25 @@ try {
   const offsets: number[] = []
   for (let i = 1; i <= steps; i++) offsets.push(i * stepPx)
   for (let i = steps - 1; i >= 0; i--) offsets.push(i * stepPx)
+  const settleTimes: number[] = []
   for (const dx of offsets) {
+    const sent = performance.now()
     await app.call("mouseMove", { x: start.x + dx, y: start.y, pressedButton: 0 })
     if (settleMs) await sleep(settleMs)
-    record(dx, await snapshot())
+    let p = await snapshot()
+    record(dx, p)
+    // Time until the painted layout and lane content both reach this step.
+    const target = base.layoutLeft + dx
+    while (performance.now() - sent < 2000) {
+      const layout = need(p, "timeline-layout")
+      const trackId = mixerId.slice("track-mixer-".length)
+      const lane = need(p, `track-lane-${trackId}`)
+      const content = need(p, `lane-row-${trackId}`)
+      if (layout.x === target && lane.x + lane.width === content.x + content.width) break
+      await sleep(1)
+      p = await snapshot()
+    }
+    settleTimes.push(performance.now() - sent)
   }
   await app.call("mouseUp", { x: start.x, y: start.y, button: 0 })
   await sleep(500)
@@ -152,6 +166,11 @@ try {
           laneUnderfill: maxAbs("laneUnderfill"),
         },
         pxPerBar: { min: Math.min(...zooms), max: Math.max(...zooms) },
+        stepSettleMs: (() => {
+          const s = [...settleTimes].sort((a, b) => a - b)
+          const q = (f: number) => +(s[Math.floor(f * (s.length - 1))] ?? 0).toFixed(1)
+          return { p50: q(0.5), p90: q(0.9), max: q(1) }
+        })(),
         trace: samples.filter((_, i) => i % 4 === 0),
       },
       null,

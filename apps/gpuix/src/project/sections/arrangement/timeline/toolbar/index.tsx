@@ -10,26 +10,44 @@ import { effectiveDrawMode } from "@/project/model/interaction-mode"
 import type { KeyboardOwner } from "../keyboard/controller"
 import type { TimelineLabels } from "../labels"
 
+function ZoomReadout({ labels }: { labels: TimelineLabels }) {
+  const theme = useTheme()
+  const pxPerBar = useProjectState(state => state.workspace.pxPerBar)
+  return (
+    <div
+      style={sx({
+        display: "flex",
+        alignItems: "center",
+        fontSize: theme.control["--text-control-track"],
+        flexShrink: 0,
+      })}
+    >{`${labels.formats.number(pxPerBar, "integer")} ${labels.pixelsPerBar}`}</div>
+  )
+}
+
+// Only the zoom readout subscribes to the viewport, so a resize or scroll does not re-render the
+// toolbar's controls.
 export const Toolbar = memo(function Toolbar({
-  pxPerBar,
   zoom,
   keyboard,
   labels,
 }: {
-  pxPerBar: number
   zoom: (direction: -1 | 1) => void
   keyboard: KeyboardOwner
   labels: TimelineLabels
 }) {
   const theme = useTheme()
-  const workspace = useProjectState(state => state.workspace)
+  const snap = useProjectState(state => state.workspace.snap)
+  const automationMode = useProjectState(state => state.workspace.automationMode)
+  const computerKeyboard = useProjectState(state => state.workspace.computerKeyboard)
+  const grid = useProjectState(state => state.workspace.grid)
   const saveAvailable = useProjectState(canSaveProjectFile)
-  const { numerator, denominator } = useProjectState(state => state.document.transport)
+  const numerator = useProjectState(state => state.document.transport.numerator)
+  const denominator = useProjectState(state => state.document.transport.denominator)
   const draw = useProjectState(effectiveDrawMode)
   const octave = useProjectState(state => state.session.midiOctave)
   const velocity = useProjectState(state => state.session.midiVelocity)
   const fixed = fixedGridSteps(numerator, denominator)
-  const grid = workspace.grid
   const choices = [
     ...fixed,
     ...(grid.mode === "fixed" && fixed.every(step => step.bars !== grid.bars)
@@ -56,7 +74,7 @@ export const Toolbar = memo(function Toolbar({
         <DragPadToggle
           size="default"
           variant="outline"
-          value={workspace.snap}
+          value={snap}
           onChange={projectActions.setSnap}
           label={labels.snap}
           labelOn={labels.snap}
@@ -95,7 +113,7 @@ export const Toolbar = memo(function Toolbar({
         <DragPadToggle
           size="default"
           variant="outline"
-          value={workspace.automationMode}
+          value={automationMode}
           onChange={enabled => projectActions.setMode("automationMode", enabled)}
           label={labels.automation}
           labelOn={DEFAULT_KEYMAP.formatKeys("arrangement.toggleAutomation")}
@@ -129,14 +147,7 @@ export const Toolbar = memo(function Toolbar({
           onClick={() => zoom(1)}
         />
       </ControlGroup>
-      <div
-        style={sx({
-          display: "flex",
-          alignItems: "center",
-          fontSize: theme.control["--text-control-track"],
-          flexShrink: 0,
-        })}
-      >{`${labels.formats.number(pxPerBar, "integer")} ${labels.pixelsPerBar}`}</div>
+      <ZoomReadout labels={labels} />
       <ControlGroup variant="toolbar">
         <Button
           size="default"
@@ -164,7 +175,7 @@ export const Toolbar = memo(function Toolbar({
         <DragPadToggle
           size="default"
           variant="outline"
-          value={workspace.computerKeyboard}
+          value={computerKeyboard}
           onChange={enabled => projectActions.setMode("computerKeyboard", enabled)}
           label={labels.midiKeyboard}
           labelOn="MIDI"
