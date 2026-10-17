@@ -32,6 +32,9 @@
 - Bun 会把 `received` 里的数组替换成 `ExpectArrayContaining`，污染活的 Zustand state；会被继续读取的状态先 `structuredClone` 再断言。
 - 纯函数用固定种子的性质测试守不变量；断言报违规时先分类，确认是断言前提错还是实现错。变异不红先比对输出，确认变异是否真的改变了行为。
 - 判断 DOM 耦合用 ESLint 作用域分析，不用字面 grep：领域字段就叫 `document`。
+- 尺寸断言从 token 推导（`CONTROL_METRICS`、`DEFAULT_LAYOUT_TOKENS.track.*`），不写 13、21、53 这类数字；改一次 metrics 曾打红 11 个测试。
+- 原生点击测试先 `nativeSimulateMouseMove` 再点击；目标可能在滚动区外时先 `scrollIntoView` 并 flush。连续点击不同按钮时，没有 move 的第一次点击会被吞掉。
+- 依赖真实音频设备的用例经 `platform/verification/audio-test.ts` 按探测结果跳过；生命周期类用例在无设备时改用已有 mock，断言照跑，不整体跳过。
 
 ## 验收
 
@@ -41,3 +44,6 @@
 - 对照 Live 量尺寸要量完整组件，写明 AX 单位、显示器分辨率与窗口尺寸，比较比例。
 - 在用户的 Live 里只做观察与视图类操作；AX `find({title})` 是子串匹配，改状态前按完整标签与 ref 定位，优先语义动作，不在标尺手势区拖动。快捷键以 Live 菜单实测为准。
 - 把视觉「不对」报成缺陷前，先核对素材的预期数据与参考实现。
+- 卡顿先量：`createTestRoot` 连续 flush 取 p50，再按区块和节点数拆分。原生 flush 随节点数线性增长（约 2000 节点 64ms），React 不 commit 也会慢；Gallery 只挂载当前类别。
+- Windows 上 `computer.window().screenshot()` 会裁掉窗口右侧约 7px；判断右边缘是否被裁，用桌面截图按 DWM bounds 裁出来对照，不要据此给 viewport 加补偿。
+- 热重载几十次后窗口可能停在空白状态；视觉验收前重启窗口，不要把这种空白当成缺陷。

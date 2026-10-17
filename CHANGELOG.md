@@ -2,6 +2,17 @@
 
 ## 0.1.0 - unreleased
 
+### Dock workspace, component catalog and theme editor (2026-10-17)
+
+- The project workspace is a dock layout (dockview-style model, FlexLayout look): Browser, Arrangement, Clip Edit and Affect Chain are registered panels with tabs, edge/center/tab-strip drops, maximize and a menu to show hidden panels. Transport and the status bar stay fixed. The layout is saved per project as versioned JSON and never marks the document dirty. Groups carry no highlight border; header actions show only for the active or hovered group.
+- The Gallery is a dock workspace with categories, a scrollable preview and the theme editor. Each component appears in exactly one category, one variant per row with its states side by side; only the selected category is mounted, so a full window flush stays at or under 8 ms per category (was ~66 ms).
+- New shared controls: Switch, Knob, LevelMeter (TrackMeter now renders through it), a Live-style Fader with a triangle beside the meter, Checkbox with a mixed state, Chip, TreeRow, Breadcrumb, DeviceHeader and TruncatedText (ellipsis plus a tooltip only when truncated). Buttons gain `tone` (solo, arm, activator); ToggleGroup gains a segmented variant.
+- Controls size to whole multiples of the control row height. Labels never stretch a layout: a control takes the smallest multiple that fits its text and truncates only when space runs out.
+- Menus and dropdown lists follow Live: full-width separators, one row height, a check column, right-aligned shortcuts, group headings and option grids for rhythm values and colours.
+- A theme editor shared by the Gallery and Settings creates custom themes over every colour, radius, spacing and size field, with import/export; themes persist in native settings (`themeLibrary`).
+- Control text, row height and icons are 2 px larger, changed once in `control-metrics.json`. Radio dots and dropdown chevrons are centred through IconSlot; numeric pads no longer draw a default icon.
+- Windows CI: the GPUI first-present gate test runs on the production frame path, and runners without an audio output skip only real-audio cases while reporting the WASAPI smoke as unverified.
+
 ### Drag cursor (2026-10-17)
 
 - Value drags (BPM, numeric pads) and the Minimap hide and pin the cursor the way Live does, so a drag keeps working past the screen edge. The renderer gains `beginRelativeDrag`/`endRelativeDrag`: macOS disassociates the cursor and accumulates `NSEvent` deltas; Windows warps the cursor back to its anchor after every move, matching a Frida trace of Live 12. Numeric pads release the cursor where the press started; the Minimap releases it where the selection actually moved.
