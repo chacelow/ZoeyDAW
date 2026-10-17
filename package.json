@@ -14,7 +14,8 @@
     "test:architecture": "vitest run tooling/eslint",
     "prepare": "husky",
     "native:build": "pnpm --filter @zoeydaw/native build",
-    "verify:gpuix": "bash scripts/verify-gpuix.sh"
+    "verify:gpuix": "bash scripts/verify-gpuix.sh",
+    "perf:scenario": "bun scripts/perf/scenario.ts"
   },
   "engines": {
     "node": ">=22.18.0"

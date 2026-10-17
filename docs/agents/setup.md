@@ -22,4 +22,10 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 `node scripts/gpuix-review-scan.mjs --absolute-paths` 检查全仓 Git 跟踪的 `.mjs`、`.js`、`.ts`、`.tsx`、`.sh`、`.rs`、`.json` 文件，包括注释和 usage 示例。机器目录根的路径属于 HARD，包括 shell 默认值；相对路径不算。`evidence/` 运行记录、Markdown 和 `file://` URL 测试数据不在此门禁范围内。验证日志和 smoke 证据使用 `mktemp`，退出时清理，不依赖固定临时目录。
 
+## 性能测量（gpuix）
+
+- `pnpm perf:scenario [场景…] [--dev]`：启动真实窗口（默认生产模式），用 automation 输入跑 idle、hover、dividerDrag、zoom、hscroll、play，逐场景输出 GPUI draw 次数与 p90、React 提交与渲染组件数、JS 事件循环延迟。automation 输入不要求前台。
+- `scripts/perf/vs-live/`：与 Ableton Live 同口径的系统输入到上屏延迟、帧间隔、CPU、内存对比，需要前台窗口；用法和基线见其 README。
+- Windows 上 Rust 构建用 `powershell -File scripts/perf/rust-env.ps1 <命令>`：把 MSVC `link.exe`、SDK `rc.exe` 放到 Git 自带 `link` 之前，再执行命令（例如 `cargo install samply --locked`）。
+
 ## 根工具与度量
