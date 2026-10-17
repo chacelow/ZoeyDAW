@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test"
+import { describeWithAudioOutput } from "./verification/audio-test"
+import { afterAll, beforeAll, expect, test } from "bun:test"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import nodePath from "node:path"
@@ -103,7 +104,7 @@ function request(sourceUri: string): BackendRequest {
   }
 }
 
-describe("native readPeaksAtBars", () => {
+describeWithAudioOutput("native readPeaksAtBars", () => {
   let session: number
   let directory: string
   let read: PeakReader

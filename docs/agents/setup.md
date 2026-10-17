@@ -26,7 +26,7 @@ gpuix 原生应用在 `apps/gpuix`（bun 运行），Rust 原生能力在 `crate
 
 预提交的 UI 地图从 Git index 读取源码，不包含完全未暂存或部分暂存文件的未暂存内容。生成器直接更新地图的 index 条目，只有工作树地图未被编辑时才同步刷新文件。日常生成与 `--check` 仍读取工作树；ClipCard 的条件前缀会生成 `clip-source-…`、`clip-ghost-…` 两个稳定 selector。
 
-Header 只测 viewport，左右列由原生 flex 和 intrinsic minima 分配，不缓存子组 L/C/R 后再反馈列宽。首挂载回归覆盖 Helvetica、缺失字体和 1800/1070/900/620 四档宽度，保持原 mount 时序。
+Header 只测 viewport，左右列由原生 flex 和 intrinsic minima 分配，不缓存子组 L/C/R 后再反馈列宽。首挂载回归覆盖 Helvetica 与缺失字体，先读取实际列宽，再构造平衡、恰好容纳、少 80px 和半宽视口，保持原 mount 时序；字体 fallback 不改变溢出断言的前提。
 
 CI 的 Bun 测试失败时输出完整日志，保留早期 Expected/Received；随后失败诊断步骤分别用 `PROBE_PASSES=1` 和 `PROBE_PASSES=4` 运行 `bun scripts/gpuix-main/ci-geometry/probe.tsx`。入口输出启用字体 family 列表、Header/Send 逐次布局 bounds 与 resize 状态。`PROBE_NUMBER`、`PROBE_SANS` 只替换请求的字体 family，不安装或隐藏系统字体。
 

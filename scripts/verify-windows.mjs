@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { sharedBuildPaths } from "./gpuix-main/paths.mjs"
+import { probeAudioCapability } from "./gpuix-main/windows/audio-capability.mjs"
 
 if (process.platform !== "win32" || process.arch !== "x64") {
   throw new Error("Windows verification requires a Windows x64 host")
@@ -45,6 +46,9 @@ run("Windows User32 lifecycle driver", "rustc", [
 
 run("renderer identity", process.execPath, ["scripts/gpuix-main/check.mjs", "--resolution"])
 run("native bridge build", "bun", ["run", "build"], path.join(root, "crates/native"))
+console.log("\n== Audio output capability")
+const audioCapability = probeAudioCapability(root, env, output)
+env.ZOEYDAW_VERIFY_AUDIO_CAPABILITY = JSON.stringify(audioCapability)
 const checks = [
   [
     "Windows dependency junction contracts",
@@ -144,4 +148,8 @@ for (const [name, command, args, cwd] of checks) {
 }
 console.log(`Windows evidence: ${output}`)
 if (failures.length) throw new AggregateError(failures, "Windows verification failed")
-console.log("verify:windows passed")
+console.log(
+  audioCapability.kind === "unavailable"
+    ? `verify:windows passed with real-audio coverage UNVERIFIED: ${audioCapability.reason}`
+    : "verify:windows passed"
+)

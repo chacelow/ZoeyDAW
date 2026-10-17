@@ -11,6 +11,7 @@ import { AppNativeEnvironmentProvider } from "@/app/native-environment"
 import { createRouter } from "@/app/router/router"
 import { createPreferenceStore } from "@/app/settings/preference-store"
 import { isThemeMode } from "@/app/settings/theme-mode"
+import { createThemeLibraryStore } from "@/app/theme-editor"
 import { AnimationFrameProvider } from "@/platform/frame"
 import type { AnimationFrameCallback } from "@/platform/frame"
 import { createWindowKeyboard, WindowKeyboardProvider } from "@/platform/keyboard"
@@ -22,6 +23,7 @@ import {
   createRecentProjectStorage,
 } from "@/platform/storage"
 import { getReducedMotion } from "@/platform/window"
+import { readVerificationAudioCapability } from "@/platform/verification/audio-capability"
 import {
   projectActions,
   readProjectTelemetry,
@@ -37,6 +39,19 @@ if (!requested)
   throw new Error("B2_EVIDENCE_DIR must point to an external smoke evidence directory")
 const output = path.resolve(requested)
 mkdirSync(output, { recursive: true })
+const audioCapability = readVerificationAudioCapability(process.env)
+if (audioCapability.kind === "unavailable") {
+  const result = {
+    platform: process.platform,
+    status: "unverified",
+    reason: audioCapability.reason,
+    sessionOpened: false,
+  }
+  writeFileSync(path.join(output, "smoke.json"), JSON.stringify(result, null, 2))
+  console.log(`[UNVERIFIED] Real backend offscreen smoke: ${audioCapability.reason}`)
+  console.log(JSON.stringify(result))
+  process.exit(0)
+}
 
 const options = { configDir: output }
 initAppI18n({ initialLanguage: "en-US", storage: createSettingStorage("language", options) })
@@ -45,12 +60,17 @@ const files = {
   recents: createRecentProjectStorage({ configDir: output }),
   locations: createProjectLocations(),
 }
+const themePreset = createPreferenceStore(
+  createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET, options),
+  isThemePresetId,
+  DEFAULT_THEME_PRESET
+)
 const appearance = {
   themeMode: createPreferenceStore(createSettingStorage("themeMode", options), isThemeMode, "dark"),
-  themePreset: createPreferenceStore(
-    createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET, options),
-    isThemePresetId,
-    DEFAULT_THEME_PRESET
+  themePreset,
+  themeLibrary: createThemeLibraryStore(
+    createSettingStorage("themeLibrary", options),
+    themePreset.get()
   ),
 }
 const frames = new Set<AnimationFrameCallback>()
@@ -88,12 +108,14 @@ async function present(name: string) {
 
 const result: {
   platform: string
+  status: "verified" | "failed"
   reducedMotion?: boolean
   playingBar?: number
   released?: boolean
   error?: string
 } = {
   platform: process.platform,
+  status: "failed",
 }
 try {
   if (process.platform === "win32") {
@@ -154,6 +176,7 @@ try {
     await Bun.sleep(20)
   assert.equal(readProjectTelemetry()?.playing, false, "The real backend did not stop playback")
   await present("arrangement-stopped")
+  result.status = "verified"
 } catch (error) {
   result.error = error instanceof Error ? error.message : String(error)
   await present("failure")
@@ -162,6 +185,7 @@ try {
   root.unmount()
   setProjectFiles(null)
   result.released = useProjectState.getState().session.backend.phase === "idle"
+  if (!result.released) result.status = "failed"
   writeFileSync(path.join(output, "smoke.json"), JSON.stringify(result, null, 2))
   console.log(JSON.stringify(result))
   assert.equal(result.released, true, "Unmount did not release the native project lease")

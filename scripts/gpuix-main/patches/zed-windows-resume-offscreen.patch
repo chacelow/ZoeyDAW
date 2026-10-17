@@ -96,12 +96,13 @@ index 160cdf5..b09d43a 100644
          #[cfg(feature = "profiler")]
          let _foreground_turn = profiler::journal::foreground_turn();
          #[cfg(feature = "profiler")]
-@@ -7349,6 +7396,40 @@ mod tests {
+@@ -7349,6 +7396,42 @@ mod tests {
          );
      }
  
 +    #[gpui::test]
 +    fn async_pre_present_gate_draws_latest_commit_and_removal_releases(cx: &mut TestAppContext) {
++        cx.update(|app| app.mode = crate::GpuiMode::Production);
 +        struct VersionView { value: u32, rendered: Rc<Cell<u32>> }
 +        impl Render for VersionView {
 +            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
@@ -115,21 +116,22 @@ index 160cdf5..b09d43a 100644
 +            move |_, _| VersionView { value: 1, rendered }
 +        });
 +        let platform = cx.test_window(window.into());
-+        platform.simulate_frame_request(RequestFrameOptions { force_render: true, ..Default::default() });
++        platform.simulate_frame_request(RequestFrameOptions::default());
 +        assert_eq!(rendered.get(), 1);
 +        window.update(cx, |_, window, _| {
 +            window.on_before_present(Some(Box::new(|_, _| false)));
 +        }).unwrap();
-+        platform.simulate_frame_request(RequestFrameOptions { force_render: true, ..Default::default() });
++        platform.simulate_frame_request(RequestFrameOptions::default());
 +        window.update(cx, |view, window, cx| {
 +            assert!(window.presentation_deferred);
 +            view.value = 2;
 +            cx.notify();
 +        }).unwrap();
-+        platform.simulate_frame_request(RequestFrameOptions { force_render: true, ..Default::default() });
++        assert_eq!(rendered.get(), 1, "retained commit must not draw before the gate releases");
++        platform.simulate_frame_request(RequestFrameOptions::default());
 +        assert_eq!(rendered.get(), 1, "no stale draw while the JS commit is outstanding");
 +        window.update(cx, |_, window, _| window.on_before_present(None)).unwrap();
-+        platform.simulate_frame_request(RequestFrameOptions { force_render: true, ..Default::default() });
++        platform.simulate_frame_request(RequestFrameOptions::default());
 +        assert_eq!(rendered.get(), 2, "first released frame uses the latest retained commit");
 +        window.update(cx, |_, window, _| assert!(!window.presentation_deferred)).unwrap();
 +    }
@@ -398,7 +400,7 @@ index 1a942ec..4e454ee 100644
  
 +#[cfg(test)]
 +mod windows_resume_tests {
-+    use super::*;
++    use super::ResumeState;
 +
 +    #[test]
 +    fn native_resume_generation_coalesces_duplicate_show_and_restore() {

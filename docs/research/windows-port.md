@@ -34,6 +34,22 @@ napi 3.12.7 的 `remove_env_cleanup_hook` 不回收 `Box::leak` 包装，因此�
 
 - `node scripts/gpuix-main/build-windows.mjs` 复用 `config.json`、完整补丁身份与 manifest，使用 junction、MSVC ABI 文件名与显式 `GPUIX_GIT_EXECUTABLE`。安装后把相对依赖链接修复为 vendor 内绝对 junction，React 只解析到一个实例。
 - 本机构建需要 MSVC 环境（`INCLUDE`、`LIB`、`VCToolsInstallDir`），并确保 PATH 中 MSVC 的 `link.exe` 先于 Git 的 `link`。
+- 经 Git Bash 调用 `build.sh` 时，shell 可把 Git 的工具目录重新放到 PATH 前面；本地应显式设置 `CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER` 指向 MSVC `link.exe`，并注入完整的 Windows SDK `INCLUDE`/`LIB`，不只检查编译器位置。
 - `node scripts/verify-windows.mjs` 只在 Windows Actions 运行：native 构建、Rust check/test、URI 变异、GPUI 首帧门控、TypeScript、ESLint、Bun、离屏 scale、DComp 生命周期、弹层几何、生产 UI 帧 smoke、真实后端 smoke 与 Gallery 截图。独立检查失败后继续执行，最后汇总失败。
 - `ci.yml` 的 Windows job 只在 `main` push 运行。`release.yml` 的 Windows matrix 用 Bun 编译单文件 exe，再由 cargo-packager 0.11.8 生成 NSIS 安装器，只分发安装器与 `SHA256SUMS-windows-x64`。
 - 多 session WASAPI 用例的真实 open 约 1 秒、dispose 0.7–1.5 秒；四个多 session 用例在 Windows 统一使用 `app/verification/native-session-budget.ts` 的 15 秒预算，断言不变。
+
+首帧门控回归使用 `GpuiMode::Production` 与默认平台帧请求，走 dirty 驱动的生产路径：连续 `force_render` 请求在 inactive 的测试窗口会先被帧率限制挡住，而默认 Test mode 的 effect flush 又会同步 draw，二者都不能证明异步提交门控。回归保留 deferred、提交期间不渲染旧/新场景、移除 gate 后首帧使用最新提交的断言。Windows 恢复状态测试只导入 `ResumeState`，避免 `gpui::*` 的过程宏 `test` 经通配导入遮蔽标准 `#[test]` 而递归展开。
+
+## 无音频设备的验证
+
+`cargo run --locked --release -p zoeydaw-engine --bin audio-capability` 只枚举 CPAL 的默认输出设备，不打开音频流。Windows 验证入口保存 `audio-capability.json`，包含真实查询 `observed` 与验证使用的 `effective`，并通过 `ZOEYDAW_VERIFY_AUDIO_CAPABILITY` 向 Bun 传递结构化结果。查询失败或无效结果会让验证失败，不能冒充“没有设备”。
+
+没有输出设备时，保存、dirty 确认、路由、布局和偏好测试继续运行，由测试 fixture 选择已有 `createMockProjectBackend`，不跳过生命周期断言。原生 session lease 测试仍检查实际 handle 的释放，也覆盖打开失败的状态。解码与设备时钟、原生 peaks、原生波形组合等真实音频用例显式 skip，并在日志中说明未验证原因。产品默认 backend、设备打开和错误显示路径不变。
+
+WASAPI smoke 在创建测试 root 或打开 session 前检查能力。设备不可用时写入 `smoke.json` 的 `status: "unverified"`、原因与 `sessionOpened: false`；最终验证摘要明确标记真实音频未验证，不宣称播放成功。
+
+`ZOEYDAW_VERIFY_NO_AUDIO=1` 只影响测试和验证入口，可在本机模拟不可用能力，不依赖 `GITHUB_ACTIONS`，不禁用系统设备，也不伪造可用设备。probe 证据仍保留真实设备查询。没有注入能力时为 `unprobed`，测试保持真实 backend 与原有断言，不默认跳过或降级。
+
+Header 回归先测实际列宽，再构造平衡、恰好容纳、少 80px 和半宽视口；滚轮落点取视口内实际控件间隙，不假定某个字体在 900px 必然溢出。Empty 的 600px/601px 双视口覆盖奇偶像素间距，中心误差允许恰好半像素的原生舍入，不放宽到一像素。
+

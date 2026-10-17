@@ -1,3 +1,4 @@
+import { testWithAudioOutput } from "@/platform/verification/audio-test"
 import { expect, jest, test } from "bun:test"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -110,185 +111,189 @@ function receive(
   })
 }
 
-test("real decoder, device clock, seeks, finite meters and visible peaks", async () => {
-  const directory = mkdtempSync(nodePath.join(tmpdir(), "zoeydaw-engine-"))
-  const path = nodePath.join(directory, "sine test.wav")
-  writeFileSync(path, wav(44100, 3))
-  const backend = createNativeBackend()
-  const frames: BackendTelemetry[] = []
-  const unsubscribe = backend.subscribe(frame => {
-    frames.push(frame)
-  })
-  const main: BackendTrack = {
-    id: "main",
-    kind: "main",
-    output: "external",
-    input: "none",
-    inputChannel: null,
-    outputChannel: null,
-    monitor: "off",
-    volumeDb: -30,
-    pan: 0,
-    mute: false,
-    solo: false,
-    armed: false,
-    sends: {},
-    returnPost: true,
-    cueOutput: null,
-    cueVolumeDb: 0,
-    clips: [],
-    automation: [],
-  }
-  let request: BackendRequest = {
-    protocolVersion: 1,
-    sessionId: "native-integration",
-    sequence: 0,
-    baseRevision: 0,
-    revision: 0,
-    stage: "open",
-    editId: null,
-    state: {
-      project: {
-        bpm: 120,
-        numerator: 4,
-        denominator: 4,
-        loop: { enabled: false, startBar: 1, endBar: 3 },
-        sources: [{ id: "sine", uri: pathToFileURL(path).href }],
-        tracks: [
-          {
-            ...main,
-            id: "audio",
-            kind: "audio",
-            output: "main",
-            volumeDb: 0,
-            clips: [
-              {
-                id: "clip",
-                kind: "audio",
-                startBar: 1,
-                lengthBars: 2,
-                sourceOffsetBars: 0,
-                sourceId: "sine",
-                gainDb: 0,
-                fadeInBars: 0,
-                fadeOutBars: 0,
-                fadeInOffsetBars: 0,
-                fadeOutOffsetBars: 0,
-                fadeInCurve: 0,
-                fadeOutCurve: 0,
-                fadeInCurvePosition: 0.5,
-                fadeOutCurvePosition: 0.5,
-              },
-            ],
-          },
-          main,
-        ],
-      },
-      control: {
-        playing: false,
-        recording: false,
-        seekBar: 1,
-        seekGeneration: 0,
-        heldNotes: [],
-        midiVelocity: 0.8,
-      },
-    },
-  }
-  try {
-    expect(backend.apply(request)).toEqual({
-      kind: "accepted",
-      sessionId: request.sessionId,
+testWithAudioOutput(
+  "real decoder, device clock, seeks, finite meters and visible peaks",
+  async () => {
+    const directory = mkdtempSync(nodePath.join(tmpdir(), "zoeydaw-engine-"))
+    const path = nodePath.join(directory, "sine test.wav")
+    writeFileSync(path, wav(44100, 3))
+    const backend = createNativeBackend()
+    const frames: BackendTelemetry[] = []
+    const unsubscribe = backend.subscribe(frame => {
+      frames.push(frame)
+    })
+    const main: BackendTrack = {
+      id: "main",
+      kind: "main",
+      output: "external",
+      input: "none",
+      inputChannel: null,
+      outputChannel: null,
+      monitor: "off",
+      volumeDb: -30,
+      pan: 0,
+      mute: false,
+      solo: false,
+      armed: false,
+      sends: {},
+      returnPost: true,
+      cueOutput: null,
+      cueVolumeDb: 0,
+      clips: [],
+      automation: [],
+    }
+    let request: BackendRequest = {
+      protocolVersion: 1,
+      sessionId: "native-integration",
       sequence: 0,
+      baseRevision: 0,
       revision: 0,
-    })
-    const stopped = await receive(backend, frames, frame => frame.appliedSequence === 0)
-    expect(stopped.clock.kind).toBe("sample")
-    expect(stopped.levels.main).toEqual([-120, -120])
-    const peaks = backend.readPeaks("sine", 1, 1.05, 64, 0)
-    expect(peaks).toBeInstanceOf(Float32Array)
-    expect(peaks.length).toBe(256)
-    for (let index = 0; index < peaks.length; index += 2) {
-      expect(peaks[index]).toBeCloseTo(-0.2, 2)
-      expect(peaks[index + 1]).toBeCloseTo(0.2, 2)
-    }
-    request = {
-      ...request,
-      sequence: 1,
-      stage: "transport",
-      state: { ...request.state, control: { ...request.state.control, playing: true } },
-    }
-    expect((await backend.apply(request)).kind).toBe("accepted")
-    const playing = await receive(
-      backend,
-      frames,
-      frame => frame.appliedSequence === 1 && frame.clock.bar >= 2 && frame.levels.main[0] > -90
-    )
-    expect(playing.playing).toBe(true)
-    expect(playing.clock.bar).toBeGreaterThan(1.7)
-    expect(playing.levels.main[0]).toBeLessThan(-30)
-    if (playing.clock.kind !== "sample") {
-      throw new Error("Expected actual device sample clock")
-    }
-    expect(playing.clock.frame).toBeGreaterThan(playing.clock.sampleRate * 1.5)
-    expect(playing.outputLatencyFrames === null || playing.outputLatencyFrames >= 0).toBe(true)
-    request = {
-      ...request,
-      sequence: 2,
+      stage: "open",
+      editId: null,
       state: {
-        ...request.state,
-        control: { ...request.state.control, playing: false, seekBar: 1.25, seekGeneration: 2 },
+        project: {
+          bpm: 120,
+          numerator: 4,
+          denominator: 4,
+          loop: { enabled: false, startBar: 1, endBar: 3 },
+          sources: [{ id: "sine", uri: pathToFileURL(path).href }],
+          tracks: [
+            {
+              ...main,
+              id: "audio",
+              kind: "audio",
+              output: "main",
+              volumeDb: 0,
+              clips: [
+                {
+                  id: "clip",
+                  kind: "audio",
+                  startBar: 1,
+                  lengthBars: 2,
+                  sourceOffsetBars: 0,
+                  sourceId: "sine",
+                  gainDb: 0,
+                  fadeInBars: 0,
+                  fadeOutBars: 0,
+                  fadeInOffsetBars: 0,
+                  fadeOutOffsetBars: 0,
+                  fadeInCurve: 0,
+                  fadeOutCurve: 0,
+                  fadeInCurvePosition: 0.5,
+                  fadeOutCurvePosition: 0.5,
+                },
+              ],
+            },
+            main,
+          ],
+        },
+        control: {
+          playing: false,
+          recording: false,
+          seekBar: 1,
+          seekGeneration: 0,
+          heldNotes: [],
+          midiVelocity: 0.8,
+        },
       },
     }
-    expect((await backend.apply(request)).kind).toBe("accepted")
-    const seek = await receive(backend, frames, frame => frame.appliedSequence === 2)
-    expect(seek.clock.kind).toBe("sample")
-    if (seek.clock.kind === "sample") {
-      expect(seek.clock.frame).toBe(Math.round(seek.clock.sampleRate * 0.5))
-    }
-    expect(seek.levels.main).toEqual([-120, -120])
-    expect(
-      backend.apply({
-        ...request,
-        sequence: 3,
-        state: {
-          ...request.state,
-          control: { ...request.state.control, seekBar: 2, seekGeneration: 1 },
-        },
+    try {
+      expect(backend.apply(request)).toEqual({
+        kind: "accepted",
+        sessionId: request.sessionId,
+        sequence: 0,
+        revision: 0,
       })
-    ).toMatchObject({ kind: "rejected", code: "protocol" })
-    expect(
-      backend.apply({
+      const stopped = await receive(backend, frames, frame => frame.appliedSequence === 0)
+      expect(stopped.clock.kind).toBe("sample")
+      expect(stopped.levels.main).toEqual([-120, -120])
+      const peaks = backend.readPeaks("sine", 1, 1.05, 64, 0)
+      expect(peaks).toBeInstanceOf(Float32Array)
+      expect(peaks.length).toBe(256)
+      for (let index = 0; index < peaks.length; index += 2) {
+        expect(peaks[index]).toBeCloseTo(-0.2, 2)
+        expect(peaks[index + 1]).toBeCloseTo(0.2, 2)
+      }
+      request = {
         ...request,
-        sequence: 4,
+        sequence: 1,
+        stage: "transport",
+        state: { ...request.state, control: { ...request.state.control, playing: true } },
+      }
+      expect((await backend.apply(request)).kind).toBe("accepted")
+      const playing = await receive(
+        backend,
+        frames,
+        frame => frame.appliedSequence === 1 && frame.clock.bar >= 2 && frame.levels.main[0] > -90
+      )
+      expect(playing.playing).toBe(true)
+      expect(playing.clock.bar).toBeGreaterThan(1.7)
+      expect(playing.levels.main[0]).toBeLessThan(-30)
+      if (playing.clock.kind !== "sample") {
+        throw new Error("Expected actual device sample clock")
+      }
+      expect(playing.clock.frame).toBeGreaterThan(playing.clock.sampleRate * 1.5)
+      expect(playing.outputLatencyFrames === null || playing.outputLatencyFrames >= 0).toBe(true)
+      request = {
+        ...request,
+        sequence: 2,
         state: {
           ...request.state,
-          project: {
-            ...request.state.project,
-            sources: [{ id: "sine", uri: nodePath.join(directory, "missing.wav") }],
+          control: { ...request.state.control, playing: false, seekBar: 1.25, seekGeneration: 2 },
+        },
+      }
+      expect((await backend.apply(request)).kind).toBe("accepted")
+      const seek = await receive(backend, frames, frame => frame.appliedSequence === 2)
+      expect(seek.clock.kind).toBe("sample")
+      if (seek.clock.kind === "sample") {
+        expect(seek.clock.frame).toBe(Math.round(seek.clock.sampleRate * 0.5))
+      }
+      expect(seek.levels.main).toEqual([-120, -120])
+      expect(
+        backend.apply({
+          ...request,
+          sequence: 3,
+          state: {
+            ...request.state,
+            control: { ...request.state.control, seekBar: 2, seekGeneration: 1 },
           },
-        },
+        })
+      ).toMatchObject({ kind: "rejected", code: "protocol" })
+      expect(
+        backend.apply({
+          ...request,
+          sequence: 4,
+          state: {
+            ...request.state,
+            project: {
+              ...request.state.project,
+              sources: [{ id: "sine", uri: nodePath.join(directory, "missing.wav") }],
+            },
+          },
+        })
+      ).toMatchObject({ kind: "rejected", code: "rejected" })
+      const afterRejection = await receive(
+        backend,
+        frames,
+        frame => frame.sequence > seek.sequence + 2
+      )
+      expect(afterRejection.appliedSequence).toBe(2)
+      console.info(
+        `native device ${JSON.stringify({ sampleRate: playing.clock.sampleRate, outputLatencyFrames: playing.outputLatencyFrames, playingFrames: playing.clock.frame, mainDbFS: playing.levels.main, stoppedDbFS: seek.levels.main, telemetryCount: frames.length })}`
+      )
+      unsubscribe()
+      backend.dispose()
+      backend.dispose()
+      expect(backend.apply({ ...request, sequence: 5 })).toMatchObject({
+        kind: "rejected",
+        code: "disposed",
       })
-    ).toMatchObject({ kind: "rejected", code: "rejected" })
-    const afterRejection = await receive(
-      backend,
-      frames,
-      frame => frame.sequence > seek.sequence + 2
-    )
-    expect(afterRejection.appliedSequence).toBe(2)
-    console.info(
-      `native device ${JSON.stringify({ sampleRate: playing.clock.sampleRate, outputLatencyFrames: playing.outputLatencyFrames, playingFrames: playing.clock.frame, mainDbFS: playing.levels.main, stoppedDbFS: seek.levels.main, telemetryCount: frames.length })}`
-    )
-    unsubscribe()
-    backend.dispose()
-    backend.dispose()
-    expect(backend.apply({ ...request, sequence: 5 })).toMatchObject({
-      kind: "rejected",
-      code: "disposed",
-    })
-    expect(backend.readPeaks("sine", 1, 1.05, 64, 0)).toHaveLength(0)
-  } finally {
-    unsubscribe()
-    backend.dispose()
-    rmSync(directory, { recursive: true, force: true })
-  }
-}, 60_000)
+      expect(backend.readPeaks("sine", 1, 1.05, 64, 0)).toHaveLength(0)
+    } finally {
+      unsubscribe()
+      backend.dispose()
+      rmSync(directory, { recursive: true, force: true })
+    }
+  },
+  60_000
+)

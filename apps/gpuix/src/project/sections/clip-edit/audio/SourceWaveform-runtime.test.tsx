@@ -1,8 +1,9 @@
+import { testWithAudioOutput } from "@/platform/verification/audio-test"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { decodeNativePng, type NativePng } from "@/shared/waveform/testing/native-png"
-import { afterEach, expect, test } from "bun:test"
+import { afterEach, expect } from "bun:test"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import {
@@ -80,64 +81,67 @@ function visibleHeight(pixel: number): number {
   return height
 }
 
-test("stable peak reader follows native session opening, tempo, meter, and reopening", async () => {
-  media = createVerificationMedia()
-  restoreBackend = configureProjectBackend(createNativeBackend)
-  openNewProject("source-waveform-runtime")
-  const { audio } = seedClipEditProject(media.uri, "normal")
-  const clip = useProjectState
-    .getState()
-    .document.tracks.flatMap(track => track.clips)
-    .find(candidate => candidate.id === audio)
-  if (clip?.kind !== "audio" || !clip.samplePath) throw new Error("Missing seeded audio source")
+testWithAudioOutput(
+  "stable peak reader follows native session opening, tempo, meter, and reopening",
+  async () => {
+    media = createVerificationMedia()
+    restoreBackend = configureProjectBackend(createNativeBackend)
+    openNewProject("source-waveform-runtime")
+    const { audio } = seedClipEditProject(media.uri, "normal")
+    const clip = useProjectState
+      .getState()
+      .document.tracks.flatMap(track => track.clips)
+      .find(candidate => candidate.id === audio)
+    if (clip?.kind !== "audio" || !clip.samplePath) throw new Error("Missing seeded audio source")
 
-  root = createTestRoot({ width: 80, height: 80 })
-  redraw = () =>
-    root?.render(
-      <div style={{ width: 80, height: 80, backgroundColor: "#000" }}>
-        <SourceWaveform
-          sourceId={clip.samplePath}
-          view={{ start: 0, span: 1 }}
-          window={{ start: 0, end: 1 }}
-          width={64}
-          height={80}
-          gain={1}
-          reverse={false}
-          color="#fff"
-          readPeaks={readProjectPeaks}
-          testId="source-peaks"
-        />
-      </div>
-    )
-  redraw()
-  expect(columnHeight(16)).toBeNull()
+    root = createTestRoot({ width: 80, height: 80 })
+    redraw = () =>
+      root?.render(
+        <div style={{ width: 80, height: 80, backgroundColor: "#000" }}>
+          <SourceWaveform
+            sourceId={clip.samplePath}
+            view={{ start: 0, span: 1 }}
+            window={{ start: 0, end: 1 }}
+            width={64}
+            height={80}
+            gain={1}
+            reverse={false}
+            color="#fff"
+            readPeaks={readProjectPeaks}
+            testId="source-peaks"
+          />
+        </div>
+      )
+    redraw()
+    expect(columnHeight(16)).toBeNull()
 
-  release = startProjectRuntime()
-  expect(await whenProjectBackendIdle()).toBe(true)
-  expect(useProjectState.getState().session.backend.phase).toBe("ready")
-  const opened = visibleHeight(16)
-  expect(opened).toBeGreaterThan(1)
+    release = startProjectRuntime()
+    expect(await whenProjectBackendIdle()).toBe(true)
+    expect(useProjectState.getState().session.backend.phase).toBe("ready")
+    const opened = visibleHeight(16)
+    expect(opened).toBeGreaterThan(1)
 
-  projectActions.setBpm(240)
-  expect(await whenProjectBackendIdle()).toBe(true)
-  const faster = visibleHeight(16)
-  expect(faster).toBeLessThan(opened)
+    projectActions.setBpm(240)
+    expect(await whenProjectBackendIdle()).toBe(true)
+    const faster = visibleHeight(16)
+    expect(faster).toBeLessThan(opened)
 
-  projectActions.setNumerator(2)
-  expect(await whenProjectBackendIdle()).toBe(true)
-  const shorterMeter = visibleHeight(16)
-  expect(shorterMeter).toBeLessThan(faster)
+    projectActions.setNumerator(2)
+    expect(await whenProjectBackendIdle()).toBe(true)
+    const shorterMeter = visibleHeight(16)
+    expect(shorterMeter).toBeLessThan(faster)
 
-  projectActions.setDenominator(8)
-  expect(await whenProjectBackendIdle()).toBe(true)
-  const finerMeter = visibleHeight(16)
-  expect(finerMeter).toBeLessThan(shorterMeter)
+    projectActions.setDenominator(8)
+    expect(await whenProjectBackendIdle()).toBe(true)
+    const finerMeter = visibleHeight(16)
+    expect(finerMeter).toBeLessThan(shorterMeter)
 
-  release()
-  release = undefined
-  expect(columnHeight(16)).toBeNull()
-  release = startProjectRuntime()
-  expect(await whenProjectBackendIdle()).toBe(true)
-  expect(useProjectState.getState().session.backend.phase).toBe("ready")
-  expect(visibleHeight(16)).toBeCloseTo(finerMeter, 0)
-})
+    release()
+    release = undefined
+    expect(columnHeight(16)).toBeNull()
+    release = startProjectRuntime()
+    expect(await whenProjectBackendIdle()).toBe(true)
+    expect(useProjectState.getState().session.backend.phase).toBe("ready")
+    expect(visibleHeight(16)).toBeCloseTo(finerMeter, 0)
+  }
+)
