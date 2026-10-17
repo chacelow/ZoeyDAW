@@ -1,3 +1,6 @@
+import { createContext, useContext } from "react"
+import { motion } from "@gpuix/react"
+import type { MotionTransition } from "@gpuix/react"
 import { icons } from "lucide"
 import metronome from "@phosphor-icons/core/assets/regular/metronome.svg" with { type: "text" }
 import metronomeFill from "@phosphor-icons/core/assets/fill/metronome-fill.svg" with { type: "text" }
@@ -45,6 +48,14 @@ export function iconMarkup(name: IconName, strokeWidth: number, filled = false):
   return markup
 }
 
+/** Set by an interactive IconSlot: glyph base size plus its animated GPU scale. */
+export const IconInteractionContext = createContext<{
+  readonly filled: boolean
+  readonly size: number
+  readonly scale: number
+  readonly transition: MotionTransition
+} | null>(null)
+
 export interface IconProps {
   readonly name: IconName
   readonly size?: number
@@ -55,17 +66,24 @@ export interface IconProps {
 
 export function Icon({ name, size, color, strokeWidth, filled }: IconProps) {
   const theme = useTheme()
-  const dimension = size ?? theme.control["--spacing-control-icon"]
-  return (
-    <svg
-      source={iconMarkup(name, strokeWidth ?? theme.design.icon.strokeWidth, filled)}
-      aria-hidden="true"
-      style={{
-        width: dimension,
-        height: dimension,
-        color: color ?? theme.colors.mutedForeground,
-        flexShrink: 0,
-      }}
+  const interaction = useContext(IconInteractionContext)
+  const source = iconMarkup(name, strokeWidth ?? theme.design.icon.strokeWidth, interaction?.filled || filled)
+  const dimension = interaction?.size ?? size ?? theme.control["--spacing-control-icon"]
+  const style = {
+    width: dimension,
+    height: dimension,
+    color: color ?? theme.colors.mutedForeground,
+    flexShrink: 0,
+  }
+  return interaction ? (
+    <motion.svg
+      source={source}
+      initial={false}
+      animate={{ scale: interaction.scale }}
+      transition={interaction.transition}
+      style={style}
     />
+  ) : (
+    <svg source={source} aria-hidden="true" style={style} />
   )
 }

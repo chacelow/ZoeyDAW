@@ -80,6 +80,7 @@ export function useDividerDrag<Snapshot>({
     onMouseDown: (event: EventPayload) => {
       if (disabled || (event.button !== undefined && event.button !== 0)) return
       cancel()
+      renderer?.clearSelection?.()
       drag.current = {
         origin: position(event) ?? 0,
         snapshot: start(),

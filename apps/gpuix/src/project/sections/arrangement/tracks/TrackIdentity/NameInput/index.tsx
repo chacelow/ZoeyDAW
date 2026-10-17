@@ -25,6 +25,7 @@ export function TrackNameInput({
   }
   return (
     <Input
+      variant="ghost"
       autoFocus
       selectAllOnFocus
       testId={`track-name-${track.id}`}
@@ -42,8 +43,6 @@ export function TrackNameInput({
       }}
       style={{
         flexGrow: 1,
-        backgroundColor: "transparent",
-        fontSize: theme.control["--text-control-track"],
         color: theme.colors.arrangementClipInk,
       }}
     />

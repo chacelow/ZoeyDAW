@@ -50,6 +50,7 @@ export function resolveArrangementPolicy(
           maxDb: meter.maxDb ?? source.meter.maxDb,
           holdMs: meter.holdMs ?? source.meter.holdMs,
           fallDbPerSecond: meter.fallDbPerSecond ?? source.meter.fallDbPerSecond,
+          rmsIntegrationMs: source.meter.rmsIntegrationMs,
         }
       : source.meter,
     keyboard: keyboard

@@ -133,14 +133,14 @@ export function CompositesSection(props: GallerySectionProps) {
             label={t("Volume", "音量")}
             value={volume}
             onChange={setVolume}
-            ticks={[-60, -30, -12, 0, 6].map(value => ({ value, label: String(value) }))}
             meter={{
+              variant: "mixer",
               "aria-label": t("Output level", "输出电平"),
-              minDb: -60,
+              minDb: -120,
               maxDb: 6,
               channels: [
-                { db: -18, peakDb: -6 },
-                { db: -15, peakDb: -3 },
+                { rmsDb: -18, peakDb: -9, holdDb: -6 },
+                { rmsDb: -15, peakDb: -6, holdDb: -3 },
               ],
             }}
           />

@@ -3,6 +3,7 @@ import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { configureLogger } from "@/platform/log/logger"
 import { createLogPlatform, createNativeLogSink } from "./platform/log"
 import { createWindowKeyboard, WindowKeyboardProvider } from "./platform/keyboard"
+import { createWindowPointerObserver } from "./platform/window/pointer-observer"
 import { createSettingStorage, DEFAULT_THEME_MODE, getPreference } from "./platform/settings"
 import { createThemePresetSetting } from "./platform/settings/theme-preset"
 import { DEFAULT_THEME_PRESET, isThemePresetId } from "./shared/theme/presets"
@@ -39,11 +40,13 @@ setProjectFiles(createProjectFileStorage())
 const files = { recents: createRecentProjectStorage(), locations: createProjectLocations() }
 
 const keyboard = createWindowKeyboard()
+const pointer = createWindowPointerObserver()
 const startupWindow = getPreference("window")
 
 render(
   <WindowKeyboardProvider value={keyboard}>
     <NativeRoot
+      subscribePointer={pointer.subscribePointer}
       router={createRouter(process.env.ZOEYDAW_ROUTE ?? "/")}
       appearance={appearance}
       files={files}
@@ -58,6 +61,7 @@ render(
     trafficLightX: PROJECT_METRICS.trafficLightMargin,
     trafficLightY: (PROJECT_METRICS.titlebarHeight - PROJECT_METRICS.trafficLightFrameHeight) / 2,
     ...keyboard.rootHandlers,
+    ...pointer.rootHandlers,
     ...LAUNCH_FOCUS,
   }
 )

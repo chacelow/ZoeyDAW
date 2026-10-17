@@ -33,7 +33,6 @@ import {
 import { themeEditorTranslation } from "@/app/locales/theme-editor"
 import { TEST_INPUT_POLICY } from "@/ui/controls/DragPad/input-policy.test-fixture"
 import { GalleryDemo } from "./GalleryDemo"
-import { createGalleryWorkspaceLayout } from "./states"
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -52,13 +51,6 @@ function click(root: TestRoot, testId: string) {
   root.renderer.nativeSimulateKeystrokes(painted(root, testId).node.id, "enter")
 }
 
-test("gallery workspace opens categories, preview, and theme in left-to-right dock groups", () => {
-  const layout = createGalleryWorkspaceLayout()
-  expect(layout.root?.kind).toBe("split")
-  if (layout.root?.kind !== "split") throw new Error("Expected gallery split")
-  expect(layout.root.children.map(child => child.id)).toEqual(["categories", "preview", "theme"])
-  expect(layout.root.sizes[1]).toBeGreaterThan(layout.root.sizes[0] ?? 0)
-})
 
 test("gallery category selection changes the real preview and theme controls update appearance", async () => {
   const root = createTestRoot({ width: 1400, height: 900 })
@@ -72,6 +64,8 @@ test("gallery category selection changes the real preview and theme controls upd
   }
   root.render(<GalleryDemo />)
   await settle()
+  click(root, "gallery-workspace-tab-theme")
+  await settle()
   const categories = painted(root, "gallery-categories").box
   const preview = painted(root, "gallery-body-scroll").box
   const panel = painted(root, "gallery-theme-panel").box
@@ -84,9 +78,9 @@ test("gallery category selection changes the real preview and theme controls upd
   expect(secondPreset.y).toBe(firstPreset.y)
   expect(secondPreset.x).toBeGreaterThan(firstPreset.x)
   const presetGrid = painted(root, "theme-preset-grid").box
-  expect(presetGrid.x - panel.x).toBeCloseTo(DEFAULT_DESIGN_TOKENS.dock.contentInset)
+  expect(presetGrid.x - panel.x).toBeCloseTo(DEFAULT_DESIGN_TOKENS.cards.controls.inset)
   expect(panel.x + panel.width - presetGrid.x - presetGrid.width).toBeCloseTo(
-    DEFAULT_DESIGN_TOKENS.dock.contentInset
+    DEFAULT_DESIGN_TOKENS.cards.controls.inset
   )
   const lastColumn = painted(root, "gallery-section-buttons-column-3").box
   expect(lastColumn.width).toBe(painted(root, "gallery-button").box.width)
@@ -100,7 +94,7 @@ test("gallery category selection changes the real preview and theme controls upd
   const categoryRow = painted(root, "gallery-category-buttons").box
   expect(categoryRow.x).toBeGreaterThan(categories.x)
   expect(categoryRow.width).toBeCloseTo(
-    categories.width - DEFAULT_DESIGN_TOKENS.dock.contentInset * 2
+    categories.width - DEFAULT_DESIGN_TOKENS.cards.controls.inset * 2
   )
   expect(root.renderer.findByTestId("gallery-design-toolbar")).toBeUndefined()
   const section = painted(root, "gallery-section-buttons").node
@@ -115,6 +109,8 @@ test("gallery category selection changes the real preview and theme controls upd
   await settle()
   expect(root.renderer.findByTestId("gallery-section-inputs")).toBeDefined()
   expect(root.renderer.findByTestId("gallery-section-buttons")).toBeUndefined()
+  click(root, "gallery-workspace-tab-theme")
+  await settle()
   expect(painted(root, "gallery-theme-dark").node.customProps?.["aria-pressed"]).toBe(true)
   click(root, "gallery-theme-light")
   await settle()
@@ -148,14 +144,14 @@ test("Gallery Preview scrolls the lower nested layout demo fully into view", asy
   const mixer = painted(root, "gallery-layouts-mixer-panel")
   const viewport = painted(root, "gallery-body-scroll").box
   root.renderer.nativeSimulateScrollWheel(
-    viewport.x + DEFAULT_DESIGN_TOKENS.dock.contentInset * 2,
+    viewport.x + DEFAULT_DESIGN_TOKENS.cards.controls.inset * 2,
     viewport.y + viewport.height / 2,
     0,
     viewport.y +
       viewport.height -
       mixer.box.y -
       mixer.box.height -
-      DEFAULT_DESIGN_TOKENS.dock.contentInset
+      DEFAULT_DESIGN_TOKENS.cards.controls.inset
   )
   await settle()
   const visibleMixer = painted(root, "gallery-layouts-mixer-panel").box

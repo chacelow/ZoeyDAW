@@ -134,6 +134,8 @@ export function Knob({
           color: theme.colors.foreground,
           opacity: disabled ? theme.design.states.disabledOpacity : 1,
           cursor: disabled ? theme.design.cursors.disabled : theme.design.cursors.verticalResize,
+          pointerEvents: "auto",
+          userSelect: "none",
           keyboardFocusDim: false,
           focusVisible: disabled
             ? undefined
@@ -160,22 +162,24 @@ export function Knob({
     >
       {labelMeasurement.sampleNodes}
       {valueMeasurement.sampleNodes}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width, height: unit, flexShrink: 0, pointerEvents: "none" }}>
       <text
         testId={testId ? `${testId}-label` : undefined}
         style={{
+          pointerEvents: "none",
           color: theme.colors.mutedForeground,
           whiteSpace: "nowrap",
           width,
-          height: unit,
           textAlign: "center",
           textOverflow: "ellipsis",
         }}
       >
         {label}
       </text>
+      </div>
       <div
         aria-hidden="true"
-        style={{ position: "relative", width: diameter, height: diameter, flexShrink: 0 }}
+        style={{ position: "relative", width: diameter, height: diameter, flexShrink: 0, pointerEvents: "none" }}
       >
         {track ? (
           <Shape
@@ -197,19 +201,21 @@ export function Knob({
           style={{ position: "absolute", left: 0, top: 0 }}
         />
       </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width, height: unit, flexShrink: 0, pointerEvents: "none" }}>
       <text
         testId={testId ? `${testId}-value` : undefined}
         style={{
+          pointerEvents: "none",
           fontFamily: theme.design.typography.numberFontFamily,
           whiteSpace: "nowrap",
           width,
-          height: unit,
           textAlign: "center",
           textOverflow: "ellipsis",
         }}
       >
         {pad.display}
       </text>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
-import { getThemePreset } from "./presets"
+import { DEFAULT_THEME_PRESET, getThemePreset } from "./presets"
 import { ThemeProvider, useTheme } from "./ThemeProvider"
 import type { TestRoot } from "@gpuix/react/testing"
 import type { Appearance } from "./ThemeProvider"
@@ -65,27 +65,27 @@ test("controlled preset and appearance recolor the same child without remounting
   root.unmount()
 })
 
-test("without controlled props, defaultAppearance picks the scheme and Default the colors", () => {
+test("without controlled props, defaultAppearance picks the scheme and default preset the colors", () => {
   const root = createTestRoot({ width: 300, height: 100 })
-  const { light, dark } = getThemePreset("default").colors
+  const { light, dark } = getThemePreset(DEFAULT_THEME_PRESET).colors
   root.render(
     <ThemeProvider>
       <Probe />
     </ThemeProvider>
   )
-  expect(read(root)).toBe(`default|dark|${dark.primary}|0`)
+  expect(read(root)).toBe(`${DEFAULT_THEME_PRESET}|dark|${dark.primary}|0`)
   root.render(
     <ThemeProvider defaultAppearance="light">
       <Probe />
     </ThemeProvider>
   )
-  expect(read(root)).toBe(`default|light|${light.primary}|0`)
+  expect(read(root)).toBe(`${DEFAULT_THEME_PRESET}|light|${light.primary}|0`)
   root.render(
     <ThemeProvider defaultAppearance="light" appearance="dark">
       <Probe />
     </ThemeProvider>
   )
-  expect(read(root)).toBe(`default|dark|${dark.primary}|0`)
+  expect(read(root)).toBe(`${DEFAULT_THEME_PRESET}|dark|${dark.primary}|0`)
   root.unmount()
 })
 
@@ -98,7 +98,7 @@ test("controlled color recipes recolor the mounted surface without resetting chi
       </ThemeProvider>
     )
     click(root)
-    const base = getThemePreset("default").baseColors.dark
+    const base = getThemePreset(DEFAULT_THEME_PRESET).baseColors.dark
     root.render(
       <ThemeProvider
         design={{
@@ -112,7 +112,7 @@ test("controlled color recipes recolor the mounted surface without resetting chi
     expect(root.renderer.findByTestId("probe")?.style.backgroundColor).toBe(
       colorMix(base.card, 61, base.foreground)
     )
-    expect(read(root)).toBe(`default|dark|${base.primary}|1`)
+    expect(read(root)).toBe(`${DEFAULT_THEME_PRESET}|dark|${base.primary}|1`)
   } finally {
     root.unmount()
   }

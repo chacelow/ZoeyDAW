@@ -1,5 +1,11 @@
 export { Button } from "./Button"
 export { IconSlot } from "./IconSlot"
+export { ToolbarIconButton } from "./ToolbarIconButton"
+export { Badge } from "./Badge"
+export type { BadgeProps } from "./Badge"
+export { Kbd } from "./Kbd"
+export { Tooltip } from "./Tooltip"
+export type { TooltipProps } from "./Tooltip"
 export { DragPadNumber, DragPadBar, DragPadBipolar, DragPadToggle } from "./DragPad"
 export { PanControl } from "./PanControl"
 export { Switch } from "./Switch"
@@ -45,7 +51,7 @@ export { ScrollArea, ControlledScrollbar } from "./ScrollArea"
 export { configureToastPolicy, dismissToast, Toaster, toast, toastLoading } from "./Toaster"
 export type { ToastPolicy } from "./Toaster"
 export { Label } from "./Label"
-export { Input } from "./Input"
+export { Input, InlineEdit } from "./Input"
 export { RadioGroup, RadioGroupItem } from "./RadioGroup"
 export { ToggleGroup, ToggleGroupItem } from "./ToggleGroup"
 export { SettingsShell, SettingsNavItem } from "./SettingsShell"
@@ -67,7 +73,12 @@ export type {
 export type { PanControlProps } from "./PanControl"
 export type { SwitchProps } from "./Switch"
 export type { KnobProps } from "./Knob"
-export type { LevelMeterProps, LevelMeterChannel, LevelMeterPart } from "./LevelMeter"
+export type {
+  LevelMeterProps,
+  LevelMeterChannel,
+  LevelMeterPart,
+  LevelMeterVariant,
+} from "./LevelMeter"
 export type {
   DropdownButtonProps,
   DropdownButtonItem,
@@ -123,7 +134,7 @@ export type {
   ToastPosition,
 } from "./Toaster"
 export type { LabelProps } from "./Label"
-export type { InputProps } from "./Input"
+export type { InputProps, InputVariant, InputSize, InlineEditProps } from "./Input"
 export type { RadioGroupProps, RadioGroupItemProps } from "./RadioGroup"
 export type { ToggleGroupProps, ToggleGroupItemProps } from "./ToggleGroup"
 export type { SettingsShellProps, SettingsNavItemProps } from "./SettingsShell"

@@ -24,6 +24,7 @@ import {
 } from "../controls/Menu"
 import { Popover, PopoverContent, PopoverTrigger } from "../controls/Popover"
 import { CollapseDivider } from "../panels/CollapseDivider"
+import { DividerLayer } from "../panels/DividerLayer"
 
 const cleanups: (() => void)[] = []
 afterEach(() => {
@@ -146,7 +147,7 @@ for (const key of ["home", "end", "up", "down"]) {
         />
       )
     }
-    const root = mount(<Divider />)
+    const root = mount(<DividerLayer><Divider /></DividerLayer>)
     const before = useProjectState.getState().session.position
     root.renderer.nativeSimulateKeystrokes(element(root, "divider").id, key)
     expect(expanded).toBe(key === "home" || key === "up")
@@ -177,7 +178,7 @@ test("UPA-06 idle divider Escape reaches the window but an active drag Escape on
       />
     )
   }
-  const root = mount(<Divider />)
+  const root = mount(<DividerLayer><Divider /></DividerLayer>)
   const divider = element(root, "divider")
   const bounds = root.renderer.getElementBounds(divider.id)
   if (!bounds) throw new Error("Missing divider bounds")

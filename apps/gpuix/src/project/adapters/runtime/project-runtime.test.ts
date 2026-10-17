@@ -638,11 +638,10 @@ it("opens external-backend projects without demo media and leaves empty audio cl
   const stop = startProjectRuntime()
   try {
     projectActions.togglePlay()
-    expect(
-      useProjectState
-        .getState()
-        .session.levels[track.id].every(level => Number.isFinite(level) && level <= -60)
-    ).toBe(true)
+    expect(useProjectState.getState().session.levels[track.id]).toEqual({
+      peak: [-120, -120],
+      rms: [-120, -120],
+    })
   } finally {
     stop()
   }

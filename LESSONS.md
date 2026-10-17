@@ -47,3 +47,4 @@
 - 卡顿先量：`createTestRoot` 连续 flush 取 p50，再按区块和节点数拆分。原生 flush 随节点数线性增长（约 2000 节点 64ms），React 不 commit 也会慢；Gallery 只挂载当前类别。
 - Windows 上 `computer.window().screenshot()` 会裁掉窗口右侧约 7px；判断右边缘是否被裁，用桌面截图按 DWM bounds 裁出来对照，不要据此给 viewport 加补偿。
 - 热重载几十次后窗口可能停在空白状态；视觉验收前重启窗口，不要把这种空白当成缺陷。
+- 用户正在审视的 Gallery/应用窗口不关。TS 改动靠 `bun --hot` 热更新。Rust/napi 重建遇到 `.node` 被占用（EPERM）时，先查清是谁持有：2026-10-17 那次真正的原因是 napi 遗留的事务目录，和窗口无关。必须重启窗口才能加载新 binary 时，重建完立即用同一入口重开，并在汇报里说明。

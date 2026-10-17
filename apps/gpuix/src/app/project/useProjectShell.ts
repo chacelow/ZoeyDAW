@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { activateTab, addPanel, getGroups, hideTab, splitGroup } from "@/ui/panels"
+import { activateTab, addPanel, findBorder, getBorderTabs, getGroups, hideTab, selectBorderTab, splitGroup, toggleBorderVisible } from "@/ui/panels"
 import type { DockLayoutHandle, DockLayoutJSON } from "@/ui/panels"
 import type { FooterView } from "@/project/sections/footer"
 import { restoreProjectWorkspace } from "./project-workspace"
@@ -20,10 +20,10 @@ export interface ProjectShellApi {
 }
 
 export function useProjectShell(): ProjectShellApi {
-  const { layout: geometry } = useTheme()
+  const { design } = useTheme()
   const json = useProjectState(state => state.workspace.dockLayout)
   const editEpoch = useProjectState(state => state.session.editEpoch)
-  const layout = useMemo(() => restoreProjectWorkspace(json, geometry.project.panels), [json, geometry.project.panels])
+  const layout = useMemo(() => restoreProjectWorkspace(json, design.dock.borderSize), [json, design.dock.borderSize])
   const current = useRef(layout)
   current.current = layout
   const dockRef = useRef<DockLayoutHandle | null>(null)
@@ -35,9 +35,18 @@ export function useProjectShell(): ProjectShellApi {
   }, [editEpoch])
   const groups = getGroups(layout.root)
   const editorGroup = groups.find(group => group.tabs.includes("clipEditor") || group.tabs.includes("devices"))
-  const footerCollapsed = !editorGroup
+  const borderTabs = getBorderTabs(layout)
+  const browserBorder = findBorder(layout, "browser")
+  const footerBorder = findBorder(layout, "clipEditor") ?? findBorder(layout, "devices")
+  const footerCollapsed = footerBorder ? !layout.borders[footerBorder]?.selected || layout.borders[footerBorder]?.visible === false : !editorGroup && !borderTabs.some(id => id === "clipEditor" || id === "devices")
   const selectFooterView = useCallback((view: FooterView) => {
     const id = view === "clip" ? "clipEditor" : "devices"
+    const side = findBorder(current.current, id)
+    if (side) {
+      const next = selectBorderTab(current.current, side, id)
+      setLayout(next.borders[side]?.visible === false ? toggleBorderVisible(next, side) : next)
+      return
+    }
     const target = getGroups(current.current.root).find(group => group.tabs.includes("clipEditor") || group.tabs.includes("devices"))
     if (target) setLayout({ ...activateTab(addPanel(current.current, id, target.id), id), maximizedGroup: null })
     else {
@@ -47,8 +56,10 @@ export function useProjectShell(): ProjectShellApi {
     }
   }, [setLayout])
   const setFooterCollapsed = useCallback((collapsed: boolean) => {
-    if (collapsed) setLayout(hideTab(hideTab(current.current, "clipEditor"), "devices"))
-    else selectFooterView("devices")
+    const side = findBorder(current.current, "clipEditor") ?? findBorder(current.current, "devices")
+    if (collapsed && side) setLayout(selectBorderTab(current.current, side, null))
+    else if (collapsed) setLayout(hideTab(hideTab(current.current, "clipEditor"), "devices"))
+    else selectFooterView("clip")
   }, [setLayout, selectFooterView])
   const editorRequest = useProjectState(state => state.session.clipEditorRequest)
   const editingClipId = useProjectState(state => state.session.editingClipId)
@@ -64,10 +75,12 @@ export function useProjectShell(): ProjectShellApi {
   }, [editorRequest, selectFooterView, setLayout])
   return {
     layout, dockRef, dockFocused, footerCollapsed,
-    browserCollapsed: !groups.some(group => group.tabs.includes("browser")),
+    browserCollapsed: browserBorder ? layout.borders[browserBorder]?.visible === false || !layout.borders[browserBorder]?.selected : !groups.some(group => group.tabs.includes("browser")) && !borderTabs.includes("browser"),
     setLayout,
     toggleBrowser: useCallback(() => {
-      const shown = getGroups(current.current.root).some(group => group.tabs.includes("browser"))
+      const side = findBorder(current.current, "browser")
+      if (side) { setLayout(toggleBorderVisible(current.current, side)); return }
+      const shown = getGroups(current.current.root).some(group => group.tabs.includes("browser")) || getBorderTabs(current.current).includes("browser")
       if (shown) setLayout(hideTab(current.current, "browser"))
       else {
         const arrangement = getGroups(current.current.root).find(group => group.tabs.includes("arrangement"))
@@ -76,7 +89,8 @@ export function useProjectShell(): ProjectShellApi {
       }
     }, [setLayout]),
     toggleFooter: useCallback(() => {
-      const shown = getGroups(current.current.root).some(group => group.tabs.includes("clipEditor") || group.tabs.includes("devices"))
+      const side = findBorder(current.current, "clipEditor") ?? findBorder(current.current, "devices")
+      const shown = side ? Boolean(current.current.borders[side]?.selected && current.current.borders[side]?.visible !== false) : getGroups(current.current.root).some(group => group.tabs.includes("clipEditor") || group.tabs.includes("devices"))
       setFooterCollapsed(shown)
     }, [setFooterCollapsed]),
     setFooterCollapsed, selectFooterView,

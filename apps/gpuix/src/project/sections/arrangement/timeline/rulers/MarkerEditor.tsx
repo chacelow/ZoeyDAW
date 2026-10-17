@@ -62,6 +62,7 @@ function MarkerNameInput({
   }
   return (
     <Input
+      variant="ghost"
       autoFocus
       selectAllOnFocus
       testId="marker-name-editor"

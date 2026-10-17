@@ -1,5 +1,6 @@
+import { useMemo } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { DockLayout } from "@/ui/panels"
+import { DockLayout, DockLayoutToggles, DockViewMenu } from "@/ui/panels"
 import type { DockPanelRegistry } from "@/ui/panels"
 import type { ReactNode, Ref } from "react"
 import type { KeyEvent, PublicInstance } from "@gpuix/react"
@@ -21,6 +22,7 @@ export interface ProjectLayoutProps extends ProjectLayoutSlots {
   readonly shell: ProjectShellApi
   readonly focusRef: Ref<PublicInstance>
   readonly onDockKeyDown?: (event: KeyEvent) => void
+  readonly renderViewMenu?: (view: ReactNode, toggles: ReactNode) => ReactNode
   readonly labels: {
     readonly browserPanel: string
     readonly arrangementPanel: string
@@ -28,42 +30,45 @@ export interface ProjectLayoutProps extends ProjectLayoutSlots {
 }
 export function ProjectLayout({
   projectId, shell, focusRef, labels, transport, browser, arrangement, clipEditor, devices,
-  status, onDockKeyDown,
+  status, onDockKeyDown, renderViewMenu,
 }: ProjectLayoutProps) {
   const theme = useTheme()
   const { locale } = useAppTranslation()
   const zh = locale === "zh-CN"
   const footerLabels = zh ? chineseFooterLabels : englishFooterLabels
-  const registry: DockPanelRegistry = {
+  const registry = useMemo<DockPanelRegistry>(() => ({
     browser: {
       title: labels.browserPanel,
       icon: "Folder",
-      minimumSize: theme.project.browserNavigationWidth + theme.project.browserResultsWidth + theme.project.panelGap,
-      closable: true,
+      minimumSize: theme.project.browserNavigationWidth + theme.project.browserResultsWidth + theme.design.shape.separatorWidth,
       render: () => browser,
     },
     arrangement: {
       title: labels.arrangementPanel,
       icon: "LayoutList",
       minimumSize: theme.project.timelineMinHeight,
-      closable: false,
       render: () => arrangement,
     },
     clipEditor: {
       title: footerLabels.clipTab,
       icon: "Music",
       minimumSize: theme.design.dock.minimumSize,
-      closable: true,
       render: () => clipEditor,
     },
     devices: {
       title: footerLabels.devicesTab,
       icon: "SlidersHorizontal",
       minimumSize: theme.design.dock.minimumSize,
-      closable: true,
       render: () => devices,
     },
-  }
+  }), [browser, arrangement, clipEditor, devices, labels.browserPanel, labels.arrangementPanel, footerLabels, theme])
+  const viewMenu = <DockViewMenu
+    layout={shell.layout}
+    registry={registry}
+    onLayoutChange={shell.setLayout}
+    labels={zh ? chineseDockLabels : englishDockLabels}
+    testId="project-view-menu"
+  />
   return (
     <div
       ref={focusRef}
@@ -76,8 +81,12 @@ export function ProjectLayout({
         backgroundColor: theme.colors.muted, color: theme.colors.foreground,
       }}
     >
-      {transport}
-      <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0, padding: theme.project.panelGap, gap: theme.project.panelGap }}>
+      {renderViewMenu?.(viewMenu, <DockLayoutToggles layout={shell.layout} onLayoutChange={shell.setLayout} labels={zh ? chineseDockLabels : englishDockLabels} testId="project-layout-toggle" />)}
+      <div style={{ display: "flex", flexDirection: "row", alignItems: "center", flexShrink: 0 }}>
+        <div style={{ flexGrow: 1, minWidth: 0 }}>{transport}</div>
+        {!renderViewMenu ? viewMenu : null}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0, borderTopWidth: theme.design.shape.separatorWidth, borderColor: theme.colors.border }}>
         <div style={{ flexGrow: 1, minHeight: 0, minWidth: 0 }}>
           <DockLayout
             ref={shell.dockRef}
@@ -90,7 +99,7 @@ export function ProjectLayout({
             labels={zh ? chineseDockLabels : englishDockLabels}
           />
         </div>
-        {status}
+        <div style={{ flexShrink: 0, borderTopWidth: theme.design.shape.separatorWidth, borderColor: theme.colors.border }}>{status}</div>
       </div>
     </div>
   )

@@ -1,6 +1,122 @@
 import type { ThemeColors } from "./colors"
 
+type SemanticColor =
+  "success" | "arrangementClipSelected" | "arrangementClipPaper" | "arrangementMeterClip"
+type PresetPalette = Omit<ThemeColors, SemanticColor> & Partial<Pick<ThemeColors, SemanticColor>>
+
 const RAW_PRESET_DATA = [
+  {
+    id: "vscode-modern",
+    label: "VS Code Modern (Dark / Light)",
+    light: {
+      background: "#FFFFFF",
+      foreground: "#3B3B3B",
+      card: "#F8F8F8",
+      cardForeground: "#3B3B3B",
+      popover: "#FFFFFF",
+      popoverForeground: "#3B3B3B",
+      primary: "#005FB8",
+      primaryForeground: "#FFFFFF",
+      secondary: "#E5E5E5",
+      secondaryForeground: "#3B3B3B",
+      muted: "#F8F8F8",
+      mutedForeground: "#616161",
+      accent: "#E8E8E8",
+      accentForeground: "#000000",
+      destructive: "#F85149",
+      success: "#2EA043",
+      border: "#E5E5E5",
+      input: "#CECECE",
+      ring: "#005FB8",
+      chart1: "#0063D3",
+      chart2: "#388A34",
+      chart3: "#BF8803",
+      chart4: "#652D90",
+      chart5: "#D18616",
+    },
+    dark: {
+      background: "#1F1F1F",
+      foreground: "#CCCCCC",
+      card: "#181818",
+      cardForeground: "#CCCCCC",
+      popover: "#1F1F1F",
+      popoverForeground: "#CCCCCC",
+      primary: "#0078D4",
+      primaryForeground: "#FFFFFF",
+      secondary: "#2A2D2E",
+      secondaryForeground: "#CCCCCC",
+      muted: "#181818",
+      mutedForeground: "#9D9D9D",
+      accent: "#04395E",
+      accentForeground: "#FFFFFF",
+      destructive: "#F85149",
+      success: "#2EA043",
+      border: "#2B2B2B",
+      input: "#3C3C3C",
+      ring: "#0078D4",
+      chart1: "#59A4F9",
+      chart2: "#89D185",
+      chart3: "#CCA700",
+      chart4: "#B180D7",
+      chart5: "#D18616",
+    },
+  },
+  {
+    id: "vscode-plus",
+    label: "VS Code Dark+ / Light+",
+    light: {
+      background: "#FFFFFF",
+      foreground: "#000000",
+      card: "#F3F3F3",
+      cardForeground: "#616161",
+      popover: "#FFFFFF",
+      popoverForeground: "#616161",
+      primary: "#007ACC",
+      primaryForeground: "#FFFFFF",
+      secondary: "#E8E8E8",
+      secondaryForeground: "#616161",
+      muted: "#ECECEC",
+      mutedForeground: "#717171",
+      accent: "#0060C0",
+      accentForeground: "#FFFFFF",
+      destructive: "#A1260D",
+      success: "#388A34",
+      border: "#80808059",
+      input: "#CECECE",
+      ring: "#0090F1",
+      chart1: "#0063D3",
+      chart2: "#388A34",
+      chart3: "#BF8803",
+      chart4: "#652D90",
+      chart5: "#D18616",
+    },
+    dark: {
+      background: "#1E1E1E",
+      foreground: "#D4D4D4",
+      card: "#252526",
+      cardForeground: "#CCCCCC",
+      popover: "#252526",
+      popoverForeground: "#CCCCCC",
+      primary: "#0E639C",
+      primaryForeground: "#FFFFFF",
+      secondary: "#2A2D2E",
+      secondaryForeground: "#CCCCCC",
+      muted: "#2D2D2D",
+      mutedForeground: "#CCCCCCB3",
+      accent: "#04395E",
+      accentForeground: "#FFFFFF",
+      destructive: "#F48771",
+      success: "#89D185",
+      border: "#80808059",
+      input: "#3C3C3C",
+      ring: "#007FD4",
+      chart1: "#59A4F9",
+      chart2: "#89D185",
+      chart3: "#CCA700",
+      chart4: "#B180D7",
+      chart5: "#D18616",
+    },
+  },
   {
     id: "default",
     label: "Default",
@@ -2326,21 +2442,17 @@ const RAW_PRESET_DATA = [
 ] as const satisfies readonly {
   id: string
   label: string
-  light: Omit<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper"> &
-    Partial<Pick<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper">>
-  dark: Omit<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper"> &
-    Partial<Pick<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper">>
+  light: PresetPalette
+  dark: PresetPalette
 }[]
 
 const DEFAULT_SEMANTIC_COLORS = {
   arrangementClipSelected: "oklch(87% 0.05 220deg)",
   arrangementClipPaper: "oklch(97% 0.005 90deg)",
+  arrangementMeterClip: "#ff0000",
 }
 
-function withSemanticColors(
-  base: Omit<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper"> &
-    Partial<Pick<ThemeColors, "success" | "arrangementClipSelected" | "arrangementClipPaper">>
-): ThemeColors {
+function withSemanticColors(base: PresetPalette): ThemeColors {
   return { ...DEFAULT_SEMANTIC_COLORS, success: base.chart2, ...base }
 }
 

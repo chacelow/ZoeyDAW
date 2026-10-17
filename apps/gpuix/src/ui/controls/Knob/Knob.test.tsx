@@ -76,6 +76,23 @@ test("vertical drag turns the knob up and keyboard steps it back down", () => {
   expect(knob.text()).toBe("0.09")
 })
 
+for (const part of ["label", "value"])
+  test(`dragging the knob ${part} changes its value without selecting text`, () => {
+    const knob = mountKnob(0)
+    const node = knob.root.renderer.findByTestId(`knob-${part}`)
+    const bounds = node && knob.root.renderer.getElementBounds(node.id)
+    if (!bounds) throw new Error(`Knob ${part} not painted`)
+    const x = bounds.x + bounds.width / 2
+    const y = bounds.y + bounds.height / 2
+    const end = y - TEST_INPUT_POLICY.dragPixelsPerStep * 10
+    knob.root.renderer.nativeSimulateMouseMove(x, y)
+    knob.root.renderer.nativeSimulateMouseDown(x, y)
+    knob.root.renderer.nativeSimulateMouseMove(x, end, 0)
+    expect(knob.value()).toBeCloseTo(0.1)
+    expect(knob.root.renderer.getSelectedText()).toBeNull()
+    knob.root.renderer.nativeSimulateMouseUp(x, end)
+  })
+
 test("double-click resets to the default value", () => {
   const knob = mountKnob(0.5)
   handleGpuixEvent(

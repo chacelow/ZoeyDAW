@@ -1,6 +1,10 @@
 import { useCallback, useLayoutEffect, useState } from "react"
+import { createPortal } from "@gpuix/react"
+import type { PublicInstance } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
-import { configureToastPolicy, dismissToast, Toaster } from "@/ui/controls"
+import { Button, configureToastPolicy, dismissToast, IconSlot, Toaster } from "@/ui/controls"
+import { Icon } from "@/ui/controls/Icon"
+import { TitleBar } from "@/ui/panels/TitleBar"
 import { usePreference } from "@/platform/settings"
 import { useProjectState } from "@/project/adapters"
 import { projectFileName } from "@/project/model/project-file"
@@ -14,7 +18,7 @@ import { routePath } from "./router/route"
 import { RouteErrorBoundary } from "./router/RouteErrorBoundary"
 import { RouterProvider, useRoute, useRouter } from "./router/router"
 import { SettingsDialog } from "./settings/SettingsDialog"
-import { TitleBar } from "./shell/TitleBar"
+import { WorkstationMenus } from "./shell/WorkstationMenus"
 import { UnsavedCloseDialog } from "./window/UnsavedCloseDialog"
 import { useUnsavedCloseGuard } from "./window/useUnsavedCloseGuard"
 import { AppInteractionProvider } from "./interaction"
@@ -26,6 +30,7 @@ import type { ProjectLayoutSlots } from "./project/ProjectLayout"
 import type { Router } from "./router/router"
 import type { WindowRenderer } from "@/platform/window"
 import type { ProjectShellApi } from "./project/useProjectShell"
+import type { TitleBarWindow } from "@/ui/panels/TitleBar"
 
 export interface AppShellProps {
   readonly router: Router
@@ -33,7 +38,7 @@ export interface AppShellProps {
   readonly systemAppearance: Appearance | null
   readonly files: ProjectFileEnvironment
   readonly windowRenderer: WindowRenderer | null
-  readonly onTitlebarDoubleClick?: () => void
+  readonly titlebarWindow?: TitleBarWindow
   readonly renderProjectSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
   readonly showErrorDetails: boolean
 }
@@ -44,7 +49,7 @@ export function AppShell({
   systemAppearance,
   files,
   windowRenderer,
-  onTitlebarDoubleClick,
+  titlebarWindow,
   renderProjectSlots,
   showErrorDetails,
 }: AppShellProps) {
@@ -57,7 +62,7 @@ export function AppShell({
           <ProjectFileProvider environment={files} renderer={windowRenderer}>
             <AppFrame
               windowRenderer={windowRenderer}
-              onTitlebarDoubleClick={onTitlebarDoubleClick}
+              titlebarWindow={titlebarWindow}
               renderProjectSlots={renderProjectSlots}
               showErrorDetails={showErrorDetails}
               onOpenSettings={openSettings}
@@ -73,14 +78,14 @@ export function AppShell({
 
 function AppFrame({
   windowRenderer,
-  onTitlebarDoubleClick,
+  titlebarWindow,
   renderProjectSlots,
   showErrorDetails,
   onOpenSettings,
   children,
 }: Pick<
   AppShellProps,
-  "windowRenderer" | "onTitlebarDoubleClick" | "renderProjectSlots" | "showErrorDetails"
+  "windowRenderer" | "titlebarWindow" | "renderProjectSlots" | "showErrorDetails"
 > & {
   readonly onOpenSettings: () => void
   readonly children: ReactNode
@@ -99,8 +104,11 @@ function AppFrame({
   )
   const close = useUnsavedCloseGuard(windowRenderer, router)
   const files = useProjectFiles()
+  const [viewMenuTarget, setViewMenuTarget] = useState<PublicInstance | null>(null)
+  const [layoutTogglesTarget, setLayoutTogglesTarget] = useState<PublicInstance | null>(null)
   const isProject = route.kind === "project"
   const surface = isProject ? theme.colors.muted : theme.colors.background
+  const viewMenuSlot = isProject ? <div ref={setViewMenuTarget} style={{ display: "flex", flexDirection: "row", alignItems: "center" }} /> : undefined
   return (
     <div
       testId="app-frame"
@@ -116,11 +124,11 @@ function AppFrame({
       }}
     >
       <TitleBar
-        title={isProject ? projectName : undefined}
-        settingsLabel={t("titlebar.settings")}
-        onOpenSettings={onOpenSettings}
-        onTitlebarDoubleClick={onTitlebarDoubleClick}
-        surface={surface}
+        title={isProject ? projectName : t("titlebar.appTitle")}
+        window={titlebarWindow}
+        labels={{ minimize: t("titlebar.minimize"), maximizeRestore: t("titlebar.maximizeRestore"), close: t("titlebar.close") }}
+        left={titlebarWindow && titlebarWindow.platform !== "macos" ? <WorkstationMenus view={viewMenuSlot} isProject={isProject} onOpenSettings={onOpenSettings} onClose={titlebarWindow.close} /> : undefined}
+        actions={<>{isProject ? <div ref={setLayoutTogglesTarget} style={{ display: "flex", height: "100%", alignItems: "stretch" }} /> : null}<Button iconOnly variant="ghost" testId="titlebar-settings" label={t("titlebar.settings")} onClick={onOpenSettings}><IconSlot><Icon name="Settings" /></IconSlot></Button></>}
       />
       <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0 }}>
         <RouteErrorBoundary
@@ -136,6 +144,7 @@ function AppFrame({
               projectId={route.projectId}
               openMode={route.openMode}
               renderSlots={renderProjectSlots}
+              renderViewMenu={(view, toggles) => <>{viewMenuTarget ? createPortal(view, viewMenuTarget) : null}{layoutTogglesTarget ? createPortal(toggles, layoutTogglesTarget) : null}</>}
             />
           ) : (
             <NotFoundPage />

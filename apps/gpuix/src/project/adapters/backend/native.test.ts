@@ -206,7 +206,7 @@ testWithAudioOutput(
       })
       const stopped = await receive(backend, frames, frame => frame.appliedSequence === 0)
       expect(stopped.clock.kind).toBe("sample")
-      expect(stopped.levels.main).toEqual([-120, -120])
+      expect(stopped.levels.main).toEqual({ peak: [-120, -120], rms: [-120, -120] })
       const peaks = backend.readPeaks("sine", 1, 1.05, 64, 0)
       expect(peaks).toBeInstanceOf(Float32Array)
       expect(peaks.length).toBe(256)
@@ -224,11 +224,13 @@ testWithAudioOutput(
       const playing = await receive(
         backend,
         frames,
-        frame => frame.appliedSequence === 1 && frame.clock.bar >= 2 && frame.levels.main[0] > -90
+        frame => frame.appliedSequence === 1 && frame.clock.bar >= 2 && frame.levels.main.peak[0] > -90
       )
       expect(playing.playing).toBe(true)
       expect(playing.clock.bar).toBeGreaterThan(1.7)
-      expect(playing.levels.main[0]).toBeLessThan(-30)
+      expect(playing.levels.main.peak[0]).toBeLessThan(-30)
+      expect(playing.levels.main.rms[0]).toBeGreaterThan(-90)
+      expect(playing.levels.main.rms[0]).toBeLessThanOrEqual(playing.levels.main.peak[0])
       if (playing.clock.kind !== "sample") {
         throw new Error("Expected actual device sample clock")
       }
@@ -248,7 +250,7 @@ testWithAudioOutput(
       if (seek.clock.kind === "sample") {
         expect(seek.clock.frame).toBe(Math.round(seek.clock.sampleRate * 0.5))
       }
-      expect(seek.levels.main).toEqual([-120, -120])
+      expect(seek.levels.main).toEqual({ peak: [-120, -120], rms: [-120, -120] })
       expect(
         backend.apply({
           ...request,

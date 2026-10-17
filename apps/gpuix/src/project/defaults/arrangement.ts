@@ -29,10 +29,11 @@ export const ARRANGEMENT_DEFAULTS = {
     freehandSamplePixels: 3,
   },
   meter: {
-    minDb: -60,
+    minDb: -120,
     maxDb: 6,
     holdMs: 600,
     fallDbPerSecond: 24,
+    rmsIntegrationMs: 300,
   },
   keyboard: {
     markerNudgeBars: 1 / 16,

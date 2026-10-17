@@ -3,6 +3,7 @@ import path from "node:path"
 const TIMER_CALLS = new Set(["setInterval", "setTimeout"])
 const TIMER_ALLOWED = [
   "/apps/gpuix/src/ui/controls/Toaster/index.tsx",
+  "/apps/gpuix/src/ui/panels/Dock/index.tsx", // Wall-clock grace period for leaving a hover-revealed drawer, not animation or focus.
   "/apps/gpuix/src/project/adapters/backend/mock.ts",
 ]
 const APPEARANCE_OVERRIDES = new Set(["setWindowAppearance", "set_window_appearance"])

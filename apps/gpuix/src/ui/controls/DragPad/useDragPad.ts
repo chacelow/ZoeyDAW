@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
+import { useGpuix } from "@gpuix/react"
 import type { EventPayload, KeyEvent } from "@gpuix/react"
 import { consumeKey } from "@/shared/keyboard"
 import type { ControlInputPolicy } from "../ControlEnvironment"
@@ -17,6 +18,7 @@ export interface UseDragPadOptions {
   step: number
   dragStep?: number
   defaultValue?: number
+  dragValue?: (rawValue: number, deltaY: number) => number
   disabled?: boolean
   editable?: boolean
   format: (value: number) => string
@@ -46,6 +48,7 @@ export function useDragPad(options: UseDragPadOptions) {
     step,
     dragStep = step,
     defaultValue,
+    dragValue,
     disabled = false,
     editable = true,
     format,
@@ -55,6 +58,7 @@ export function useDragPad(options: UseDragPadOptions) {
     onGestureCancel,
   } = options
   const { cursorLock, subscribeWindowActive, inputPolicy } = useControlEnvironment()
+  const { renderer } = useGpuix()
   const [mode, setMode] = useState<DragPadMode>("idle")
   const [dragging, setDragging] = useState(false)
   const [draft, setDraft] = useState("")
@@ -110,6 +114,7 @@ export function useDragPad(options: UseDragPadOptions) {
     (event: EventPayload) => {
       if (disabled || mode === "editing" || (event.button !== undefined && event.button !== 0))
         return
+      renderer?.clearSelection?.()
       if (event.clickCount !== undefined && event.clickCount >= 2 && defaultValue !== undefined) {
         anchorRef.current = null
         callbacks.current.onGestureStart?.()
@@ -130,13 +135,14 @@ export function useDragPad(options: UseDragPadOptions) {
         inputPolicy,
       }
     },
-    [disabled, mode, defaultValue, commitNumber, cursorLock, inputPolicy]
+    [disabled, mode, defaultValue, commitNumber, cursorLock, inputPolicy, renderer]
   )
 
   const handleMouseMove = useCallback(
     (event: EventPayload) => {
       const anchor = anchorRef.current
       if (!anchor) return
+      renderer?.clearSelection?.()
       const y = event.y ?? anchor.lastY
       if (!anchor.dragging) {
         if (
@@ -150,19 +156,24 @@ export function useDragPad(options: UseDragPadOptions) {
         setDragging(true)
         setMode("idle")
       }
-      const next = valueAfterDrag({
-        rawValue: anchor.rawValue,
-        deltaY: y - anchor.lastY,
-        step: dragStep,
-        min,
-        max,
-        dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep,
-      })
+      const deltaY = y - anchor.lastY
+      const mapped = dragValue?.(anchor.rawValue, deltaY)
+      const next =
+        mapped !== undefined
+          ? { raw: mapped, value: mapped }
+          : valueAfterDrag({
+              rawValue: anchor.rawValue,
+              deltaY,
+              step: dragStep,
+              min,
+              max,
+              dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep,
+            })
       anchor.rawValue = next.raw
       anchor.lastY = y
       commitNumber(next.value)
     },
-    [dragStep, min, max, commitNumber]
+    [dragValue, dragStep, min, max, commitNumber, renderer]
   )
 
   const handleMouseUp = useCallback(() => {

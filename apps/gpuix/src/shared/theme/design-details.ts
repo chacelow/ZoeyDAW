@@ -79,7 +79,32 @@ export interface DesignDetails {
       readonly channelGap: number
       readonly peakWidth: number
       readonly zeroWidth: number
-      readonly warningStop: number
+      readonly peakOpacity: number
+      /** Live body gradient: clip colour at 0 dB → warn at `warnDb` → good at `goodDb`. */
+      readonly warnDb: number
+      readonly goodDb: number
+      readonly trackWidthUnits: number
+      readonly collapsedWidthUnits: number
+      readonly inlineWidthUnits: number
+      readonly inlineHeightUnits: number
+      readonly mixerWidthUnits: number
+      readonly mixerHeightUnits: number
+      readonly shortMixerHeightUnits: number
+      readonly tickWidth: number
+      readonly tickGap: number
+      /** Bar height (units) at which left ticks appear. */
+      readonly ticksMinHeightUnits: number
+      /** Bar height (units) at which right dB numbers appear (mixer only). */
+      readonly numbersMinHeightUnits: number
+      readonly numberWidthUnits: number
+      readonly readoutHeightUnits: number
+      readonly readoutGap: number
+      readonly readoutRadius: number
+      readonly readoutDecimals: number
+      readonly clipDb: number
+      /** Clip band stays at least this tall (px) so short meters still show red. */
+      readonly clipMinHeight: number
+      readonly scale: readonly { readonly db: number; readonly position: number }[]
     }
   }
   readonly dragPad: {
@@ -87,10 +112,27 @@ export interface DesignDetails {
     readonly centerMarker: { readonly inset: number; readonly width: number }
     readonly caretWidth: number
   }
-  readonly grid: { readonly buttonWidthUnits: number; readonly numericWidthUnits: number; readonly labelWidthUnits: number; readonly knobTextUnits: number; readonly segmentWidthUnits: number; readonly mixerWidthUnits: number; readonly deviceWidthUnits: number; readonly headerHeightUnits: number; readonly previewUnits: readonly number[] }
-  readonly fader: { readonly lengthUnits: number; readonly scaleWidthUnits: number; readonly meterWidthUnits: number; readonly handleWidthUnits: number; readonly handleGapUnits: number; readonly triangleWidthRatio: number; readonly triangleHeightRatio: number }
+  readonly grid: {
+    readonly buttonWidthUnits: number
+    readonly numericWidthUnits: number
+    readonly labelWidthUnits: number
+    readonly knobTextUnits: number
+    readonly segmentWidthUnits: number
+    readonly mixerWidthUnits: number
+    readonly deviceWidthUnits: number
+    readonly headerHeightUnits: number
+    readonly previewUnits: readonly number[]
+  }
+  readonly fader: {
+    readonly lengthUnits: number
+    readonly scaleWidthUnits: number
+    readonly meterWidthUnits: number
+    readonly handleWidthUnits: number
+    readonly handleGapUnits: number
+    readonly triangleWidthRatio: number
+    readonly triangleHeightRatio: number
+  }
   readonly treeRow: { readonly indent: number }
-  readonly chip: { readonly radius: number }
   readonly switch: { readonly widthRatio: number; readonly thumbInset: number }
   readonly knob: {
     readonly diameterRatio: number
@@ -99,7 +141,12 @@ export interface DesignDetails {
     readonly indicatorWidth: number
   }
   readonly progress: { readonly indeterminateOpacity: number; readonly widthFraction: number }
-  readonly motion: { readonly tabs: { readonly duration: number; readonly easing: MotionEasing } }
+  readonly motion: {
+    readonly dockHoverCloseDelayMs: number
+    readonly tabs: { readonly duration: number; readonly easing: MotionEasing }
+    readonly switch: { readonly duration: number; readonly easing: MotionEasing }
+    readonly icon: { readonly duration: number; readonly easing: MotionEasing }
+  }
   readonly cursors: {
     readonly default: StyleDesc["cursor"]
     readonly action: StyleDesc["cursor"]
@@ -114,7 +161,7 @@ export interface DesignDetails {
     readonly automationDraw: StyleDesc["cursor"]
     readonly fadeCurve: StyleDesc["cursor"]
   }
-  readonly icon: { readonly strokeWidth: number }
+  readonly icon: { readonly strokeWidth: number; readonly hoverGrowth: number }
 }
 
 const DEFAULT_TRACK_COLOR = "oklch(0.65 0.18 230)"
@@ -162,17 +209,79 @@ export const DEFAULT_DESIGN_DETAILS: DesignDetails = {
     clipAutomationPreviewOpacity: 0.4,
     inlineRadius: 0,
     noteInset: 1,
-    meter: { channelGap: 1, peakWidth: 1, zeroWidth: 1, warningStop: 0.3 },
+    meter: {
+      channelGap: 1,
+      peakWidth: 1,
+      zeroWidth: 1,
+      peakOpacity: 0.35,
+      warnDb: -9,
+      goodDb: -17.5,
+      trackWidthUnits: 1,
+      collapsedWidthUnits: 0.5,
+      inlineWidthUnits: 0.5,
+      inlineHeightUnits: 1,
+      mixerWidthUnits: 1,
+      mixerHeightUnits: 21,
+      shortMixerHeightUnits: 5,
+      tickWidth: 3,
+      tickGap: 2,
+      ticksMinHeightUnits: 4,
+      numbersMinHeightUnits: 8,
+      numberWidthUnits: 1.2,
+      readoutHeightUnits: 1.5,
+      readoutGap: 3,
+      readoutRadius: 3,
+      readoutDecimals: 1,
+      clipDb: 0,
+      clipMinHeight: 3,
+      scale: [
+        { db: 6, position: 0 },
+        { db: 0, position: 0.1 },
+        { db: -6, position: 0.199 },
+        { db: -12, position: 0.299 },
+        { db: -18, position: 0.398 },
+        { db: -24, position: 0.498 },
+        { db: -30, position: 0.598 },
+        { db: -36, position: 0.685 },
+        { db: -42, position: 0.761 },
+        { db: -48, position: 0.829 },
+        { db: -54, position: 0.888 },
+        { db: -60, position: 0.944 },
+        { db: -120, position: 1 },
+      ],
+    },
   },
   dragPad: { fillOpacity: 0.55, centerMarker: { inset: 2, width: 1 }, caretWidth: 1 },
-  grid: { buttonWidthUnits: 4, numericWidthUnits: 3, labelWidthUnits: 8, knobTextUnits: 2, segmentWidthUnits: 2, mixerWidthUnits: 8, deviceWidthUnits: 20, headerHeightUnits: 2, previewUnits: [1, 2, 3] },
-  fader: { lengthUnits: 8, scaleWidthUnits: 2, meterWidthUnits: 1, handleWidthUnits: 1, handleGapUnits: 0, triangleWidthRatio: 0.6, triangleHeightRatio: 0.6 },
+  grid: {
+    buttonWidthUnits: 4,
+    numericWidthUnits: 3,
+    labelWidthUnits: 8,
+    knobTextUnits: 2,
+    segmentWidthUnits: 2,
+    mixerWidthUnits: 8,
+    deviceWidthUnits: 20,
+    headerHeightUnits: 2,
+    previewUnits: [1, 2, 3],
+  },
+  fader: {
+    lengthUnits: 8,
+    scaleWidthUnits: 2,
+    meterWidthUnits: 0.5,
+    handleWidthUnits: 1,
+    handleGapUnits: 0,
+    triangleWidthRatio: 0.6,
+    triangleHeightRatio: 0.6,
+  },
   treeRow: { indent: 12 },
-  chip: { radius: 8 },
   switch: { widthRatio: 2, thumbInset: 2 },
   knob: { diameterRatio: 2, sweepDegrees: 300, strokeWidth: 2, indicatorWidth: 1.5 },
   progress: { indeterminateOpacity: 0.5, widthFraction: 0.3 },
-  motion: { tabs: { duration: 0.16, easing: "easeOut" } },
+  motion: {
+    dockHoverCloseDelayMs: 300,
+    tabs: { duration: 0.16, easing: "easeOut" },
+    switch: { duration: 0.16, easing: "easeOut" },
+    icon: { duration: 0.15, easing: [0.25, 0.1, 0.25, 1] },
+  },
   cursors: {
     default: "default",
     action: "pointer",
@@ -187,5 +296,5 @@ export const DEFAULT_DESIGN_DETAILS: DesignDetails = {
     automationDraw: "crosshair",
     fadeCurve: "move",
   },
-  icon: { strokeWidth: 2 },
+  icon: { strokeWidth: 2, hoverGrowth: 2 },
 }

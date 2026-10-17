@@ -144,7 +144,15 @@ export function TrackMixer({ track }: { readonly track: Track }) {
                 active={track.armed}
                 onActiveChange={armed => projectActions.updateTrack(track.id, { armed })}
                 testId={`track-arm-${track.id}`}
-                icon={<Icon name="Circle" filled color={track.armed ? theme.colors.primaryForeground : theme.colors.mutedForeground} />}
+                icon={
+                  <Icon
+                    name="Circle"
+                    filled
+                    color={
+                      track.armed ? theme.colors.primaryForeground : theme.colors.mutedForeground
+                    }
+                  />
+                }
                 style={{ ...column, width: "auto" }}
               />
             ) : null}
@@ -226,7 +234,13 @@ export function TrackMixer({ track }: { readonly track: Track }) {
           </>
         ) : null}
       </div>
-      <TrackMeter trackId={track.id} trackName={track.name} height={height} />
+      <TrackMeter
+        trackId={track.id}
+        trackName={track.name}
+        height={height}
+        variant={track.collapsed ? "collapsed" : "track"}
+        main={track.kind === "main"}
+      />
     </div>
   )
 }

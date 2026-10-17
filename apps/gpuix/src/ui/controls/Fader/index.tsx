@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { Fragment, useMemo } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { consumeKey } from "@/shared/keyboard"
@@ -7,7 +7,9 @@ import { polygonPath } from "@/shared/svg/paths"
 import { useDragPad } from "../DragPad/useDragPad"
 import { formatNumericValue } from "../DragPad/numberModel"
 import { useInfoBinding } from "../ControlEnvironment"
-import { LevelMeter } from "../LevelMeter"
+import { LevelMeter, meterPosition, meterDbAtPosition } from "../LevelMeter"
+import { PeakReadout } from "../LevelMeter/PeakReadout"
+import { snapControlWidth } from "../grid"
 import { visibleFaderTicks } from "./ticks"
 import type { FaderTick } from "./ticks"
 import type { Props } from "@gpuix/react"
@@ -27,7 +29,7 @@ export interface FaderProps extends Omit<UseDragPadOptions, "format" | "parse" |
 export function Fader({
   label,
   format,
-  ticks = [],
+  ticks: providedTicks,
   meter,
   invalid = false,
   testId,
@@ -41,8 +43,27 @@ export function Fader({
   const handleWidth = geometry.handleWidthUnits * unit
   const handleGap = geometry.handleGapUnits * unit
   const meterWidth = geometry.meterWidthUnits * unit
-  const scaleWidth = ticks.length ? geometry.scaleWidthUnits * unit : 0
-  const travel = length - unit
+  const meterGeometry = theme.design.editor.meter
+  const { scale } = meterGeometry
+  const floorDb = scale[scale.length - 1]?.db ?? options.min
+  const ticks = useMemo(
+    () =>
+      providedTicks ??
+      scale
+        .filter(point => point.db >= options.min && point.position < 1)
+        .map(point => ({ value: point.db, label: String(Math.abs(point.db)) })),
+    [providedTicks, scale, options.min]
+  )
+  const readoutHeight = meter?.variant === "mixer" ? meterGeometry.readoutHeightUnits * unit : 0
+  const barsTop = readoutHeight ? readoutHeight + meterGeometry.readoutGap : 0
+  const travel = length - unit - barsTop
+  const showTicks = travel >= meterGeometry.ticksMinHeightUnits * unit && ticks.length > 0
+  const scaleWidth = showTicks ? geometry.scaleWidthUnits * unit : 0
+  const tickSpace = showTicks ? meterGeometry.tickWidth + meterGeometry.tickGap : 0
+  const width = snapControlWidth(
+    handleWidth + handleGap + tickSpace + meterWidth + scaleWidth,
+    unit
+  )
   const triangleWidth = unit * geometry.triangleWidthRatio
   const triangleHeight = unit * geometry.triangleHeightRatio
   const triangle = useMemo(
@@ -58,17 +79,33 @@ export function Fader({
     () => format ?? formatNumericValue(options.min, options.max, options.step),
     [format, options.min, options.max, options.step]
   )
-  const pad = useDragPad({ ...options, format: toText, editable: false })
+  const pad = useDragPad({
+    ...options,
+    format: toText,
+    editable: false,
+    dragValue: (rawValue, deltaY) =>
+      Math.max(
+        options.min,
+        Math.min(
+          options.max,
+          meterDbAtPosition(meterPosition(rawValue, scale) + deltaY / travel, scale)
+        )
+      ),
+  })
   const info = useInfoBinding({ type: "bar", dragging: pad.dragging })
-  const normalized = (value: number) =>
-    options.max === options.min
-      ? 0
-      : Math.max(0, Math.min(1, (value - options.min) / (options.max - options.min)))
-  const position = (1 - normalized(options.value)) * travel
+  const position = barsTop + meterPosition(options.value, scale) * travel
   const visibleTicks = useMemo(
     () =>
-      visibleFaderTicks(ticks, { min: options.min, max: options.max, travel, lineHeight: unit }),
-    [ticks, options.min, options.max, travel, unit]
+      showTicks
+        ? visibleFaderTicks(ticks, {
+            min: options.min,
+            max: options.max,
+            scale,
+            travel,
+            lineHeight: unit,
+          })
+        : [],
+    [showTicks, ticks, options.min, options.max, scale, travel, unit]
   )
   return (
     <div
@@ -86,10 +123,11 @@ export function Fader({
       style={sx(
         {
           position: "relative",
-          width: handleWidth + handleGap + meterWidth + scaleWidth,
+          width,
           height: length,
           flexShrink: 0,
           pointerEvents: "auto",
+          userSelect: "none",
           opacity: options.disabled ? theme.design.states.disabledOpacity : 1,
           cursor: options.disabled
             ? theme.design.cursors.disabled
@@ -124,6 +162,15 @@ export function Fader({
         pad.handleBlur()
       }}
     >
+      {meter?.variant === "mixer" ? (
+        <PeakReadout
+          channels={meter.channels}
+          minDb={meter.minDb}
+          label={meter["aria-label"] ?? label}
+          testId={testId ? `${testId}-readout` : undefined}
+          style={{ position: "absolute", top: 0, left: 0, width, height: readoutHeight }}
+        />
+      ) : null}
       <div
         testId={testId ? `${testId}-thumb` : undefined}
         aria-hidden="true"
@@ -152,8 +199,8 @@ export function Fader({
         aria-hidden="true"
         style={{
           position: "absolute",
-          top: unit / 2,
-          left: handleWidth + handleGap,
+          top: barsTop + unit / 2,
+          left: handleWidth + handleGap + tickSpace,
           width: meterWidth,
           height: travel,
           pointerEvents: "none",
@@ -161,12 +208,13 @@ export function Fader({
       >
         <LevelMeter
           {...meter}
-          minDb={meter?.minDb ?? options.min}
+          variant="inline"
+          minDb={meter?.minDb ?? floorDb}
           maxDb={meter?.maxDb ?? options.max}
           channels={
             meter?.channels ?? [
-              { db: options.min, peakDb: options.min },
-              { db: options.min, peakDb: options.min },
+              { rmsDb: floorDb, peakDb: floorDb, holdDb: floorDb },
+              { rmsDb: floorDb, peakDb: floorDb, holdDb: floorDb },
             ]
           }
           width={meterWidth}
@@ -174,24 +222,40 @@ export function Fader({
         />
       </div>
       {visibleTicks.map(tick => (
-        <text
-          key={tick.value}
-          testId={testId ? `${testId}-tick-${tick.value}` : undefined}
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: (1 - normalized(tick.value)) * travel,
-            left: handleWidth + handleGap + meterWidth,
-            width: scaleWidth,
-            height: unit,
-            pointerEvents: "none",
-            color: theme.colors.mutedForeground,
-            fontSize: theme.control["--text-control-track"],
-            fontFamily: theme.design.typography.numberFontFamily,
-          }}
-        >
-          {tick.label}
-        </text>
+        <Fragment key={tick.value}>
+          <div
+            testId={testId ? `${testId}-tick-${tick.value}` : undefined}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: barsTop + meterPosition(tick.value, scale) * travel,
+              left: handleWidth + handleGap + tickSpace + meterWidth,
+              width: scaleWidth,
+              height: unit,
+              pointerEvents: "none",
+              display: "flex",
+              alignItems: "center",
+              color: theme.colors.mutedForeground,
+              fontSize: theme.control["--text-control-track"],
+              fontFamily: theme.design.typography.numberFontFamily,
+            }}
+          >
+            <text style={{ pointerEvents: "none" }}>{tick.label.replace(/^[-−]/, "")}</text>
+          </div>
+          <div
+            testId={testId ? `${testId}-dash-${tick.value}` : undefined}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              pointerEvents: "none",
+              top: barsTop + unit / 2 + meterPosition(tick.value, scale) * travel,
+              left: handleWidth + handleGap,
+              width: meterGeometry.tickWidth,
+              height: meterGeometry.zeroWidth,
+              backgroundColor: theme.colors.mutedForeground,
+            }}
+          />
+        </Fragment>
       ))}
     </div>
   )

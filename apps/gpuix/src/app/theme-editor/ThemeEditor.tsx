@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { useGpuix } from "@gpuix/react"
+import { readTextFile } from "@/platform/storage"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { ThemePresetGrid } from "../settings/ThemePresetGrid"
 import { Button, Input, DragPadNumber, Label, Separator } from "@/ui/controls"
@@ -18,6 +20,7 @@ import {
 import type { CustomTheme, ThemeLibrary } from "./model"
 import { THEME_FIELDS, THEME_GROUPS } from "./schema"
 import type { ThemeField } from "./schema"
+import { importVSCodeTheme } from "./vscode-import"
 
 export interface ThemeEditorProps {
   readonly value: ThemeLibrary
@@ -26,11 +29,23 @@ export interface ThemeEditorProps {
 }
 export function ThemeEditor({ value, onChange, t }: ThemeEditorProps) {
   const theme = useTheme()
+  const { renderer } = useGpuix()
   const custom = activeCustomTheme(value)
   const [open, setOpen] = useState<Partial<Record<string, boolean>>>({ colors: true })
   const [resetRevision, setResetRevision] = useState<Partial<Record<string, number>>>({})
   const [json, setJson] = useState("")
   const [importInvalid, setImportInvalid] = useState(false)
+  const [includeWarning, setIncludeWarning] = useState(false)
+  const importVSCode = (text: string) => {
+    const imported = importVSCodeTheme(text, {
+      id: `custom:${crypto.randomUUID()}`,
+      fallbackName: t("themeEditor.vscodeName"),
+    })
+    setImportInvalid(!imported.ok)
+    setIncludeWarning(imported.ok && imported.unresolvedInclude)
+    if (imported.ok)
+      onChange({ selection: imported.theme.id, themes: [...value.themes, imported.theme] })
+  }
   const gap = theme.design.settings.itemGap
   const column = { display: "flex", flexDirection: "column", gap, flexShrink: 0 } as const
   const row = {
@@ -177,6 +192,7 @@ export function ThemeEditor({ value, onChange, t }: ThemeEditorProps) {
         onValueChange={next => {
           setJson(next)
           setImportInvalid(false)
+          setIncludeWarning(false)
         }}
       />
       <Button
@@ -184,6 +200,7 @@ export function ThemeEditor({ value, onChange, t }: ThemeEditorProps) {
         onClick={() => {
           const imported = importCustomTheme(json)
           setImportInvalid(imported === null)
+          setIncludeWarning(false)
           if (imported) {
             const id: CustomTheme["id"] = `custom:${crypto.randomUUID()}`
             onChange({ selection: id, themes: [...value.themes, { ...imported, id }] })
@@ -192,6 +209,36 @@ export function ThemeEditor({ value, onChange, t }: ThemeEditorProps) {
       >
         {t("themeEditor.import")}
       </Button>
+      <Button testId="theme-editor-import-vscode" onClick={() => importVSCode(json)}>
+        {t("themeEditor.importVSCode")}
+      </Button>
+      {renderer?.promptForPaths ? (
+        <Button
+          testId="theme-editor-import-vscode-file"
+          onClick={() => {
+            const prompt = renderer.promptForPaths
+            if (!prompt) return
+            void prompt.call(renderer, { files: true, prompt: t("themeEditor.importVSCodeFile") })
+              .then(paths => {
+                if (!paths?.[0]) return
+                const text = readTextFile(paths[0])
+                setJson(text)
+                importVSCode(text)
+              })
+              .catch(() => {
+                setImportInvalid(true)
+                setIncludeWarning(false)
+              })
+          }}
+        >
+          {t("themeEditor.importVSCodeFile")}
+        </Button>
+      ) : null}
+      {includeWarning ? (
+        <text style={{ color: theme.colors.mutedForeground, whiteSpace: "normal" }}>
+          {t("themeEditor.includeWarning")}
+        </text>
+      ) : null}
       {importInvalid ? (
         <text style={{ color: theme.colors.destructive }}>{t("themeEditor.invalidJson")}</text>
       ) : null}

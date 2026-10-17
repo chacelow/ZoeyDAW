@@ -1,4 +1,4 @@
-import type { ProjectRuntimeStatus } from "./backend"
+import type { BackendTelemetry, ProjectRuntimeStatus } from "./backend"
 import type { GridSettings } from "./grid"
 import type { AudioClipSettings } from "./audio-editor"
 import type { Device } from "./devices"
@@ -169,7 +169,7 @@ export interface SessionState {
   timeSelection: TimeSelection | null
   editingClipId: string | null
   clipEditorRequest: number
-  levels: Record<string, [number, number]>
+  levels: BackendTelemetry["levels"]
   dirty: boolean
   canUndo: boolean
   canRedo: boolean

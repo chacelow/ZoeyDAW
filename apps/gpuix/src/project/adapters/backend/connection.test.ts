@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, jest, setSystemTime } from "bun:test"
 import { createMockDocument } from "../fixtures"
 import { createBackendConnection } from "./connection"
 import { projectBackendDocument } from "./projection"
+import { validFrame } from "./connection/protocol"
 import type {
   BackendFailureCode,
   BackendRequest,
@@ -59,10 +60,33 @@ function frame(request: BackendRequest, bar = 1): BackendTelemetry {
     clock: { kind: "musical", bar, barsPerSecond: 0.5 },
     playing: request.state.control.playing,
     recording: false,
-    levels: { main: [-12, -12] },
+    levels: { main: { peak: [-12, -12], rms: [-18, -18] } },
     outputLatencyFrames: null,
   }
 }
+
+it("validates both stereo meter signals and rejects the old peak-only shape", () => {
+  const telemetry: BackendTelemetry = {
+    sessionId: "meter",
+    sequence: 0,
+    appliedSequence: 0,
+    clock: { kind: "musical", bar: 1, barsPerSecond: 0.5 },
+    playing: false,
+    recording: false,
+    levels: { main: { peak: [-12, -12], rms: [-18, -18] } },
+    outputLatencyFrames: null,
+  }
+  expect(validFrame(telemetry, "meter")).toBe(true)
+  for (const levels of [
+    { main: [-12, -12] },
+    { main: { peak: [-12, -12] } },
+    { main: { peak: [-12, -12], rms: [-18] } },
+    { main: { peak: [-12, -12], rms: [-18, Number.NaN] } },
+    { main: { peak: [Number.POSITIVE_INFINITY, -12], rms: [-18, -18] } },
+  ]) {
+    expect(validFrame({ ...telemetry, levels }, "meter")).toBe(false)
+  }
+})
 
 interface ControlledBackend extends ProjectBackend {
   requests: BackendRequest[]

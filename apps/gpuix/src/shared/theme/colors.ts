@@ -29,6 +29,7 @@ export interface ThemeColors {
   readonly chart5: string
   readonly arrangementClipSelected: string
   readonly arrangementClipPaper: string
+  readonly arrangementMeterClip: string
 }
 
 export type ColorScheme = "light" | "dark"
@@ -47,7 +48,6 @@ export interface DerivedThemeColors extends ThemeColors {
   arrangementVolume: string
   arrangementMeterGood: string
   arrangementMeterWarn: string
-  arrangementMeterDanger: string
   arrangementMeterPeak: string
   arrangementClipInk: string
   arrangementFadeMask: string
@@ -96,7 +96,7 @@ export function derive(
     arrangementVolume: base[aliases.arrangementVolume],
     arrangementMeterGood: base[aliases.arrangementMeterGood],
     arrangementMeterWarn: base[aliases.arrangementMeterWarn[scheme]],
-    arrangementMeterDanger: base[aliases.arrangementMeterDanger],
+    arrangementMeterClip: base[aliases.arrangementMeterClip],
     arrangementMeterPeak: base[aliases.arrangementMeterPeak],
     arrangementClipInk,
     arrangementFadeMask: colorMix(arrangementClipInk, recipes.arrangementFadeMask, "transparent"),

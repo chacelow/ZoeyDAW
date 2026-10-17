@@ -1,0 +1,59 @@
+diff --git a/packages/native/src/renderer.rs b/packages/native/src/renderer.rs
+--- a/packages/native/src/renderer.rs
++++ b/packages/native/src/renderer.rs
+@@ -7021,10 +7021,15 @@
+-                    el = el.on_hover(move |&is_hovered, _window, _cx| {
++                    el = el.on_hover(move |&is_hovered, window, _cx| {
++                        let (x, y) = point_to_xy(window.mouse_position());
+                         if is_hovered {
+                             emit_event_full(&callback_enter, id, "mouseEnter", |p| {
++                                p.x = Some(x);
++                                p.y = Some(y);
+                                 p.hovered = Some(true);
+                             });
+                         } else {
+                             emit_event_full(&callback_leave, id, "mouseLeave", |p| {
++                                p.x = Some(x);
++                                p.y = Some(y);
+                                 p.hovered = Some(false);
+                             });
+                         }
+diff --git a/packages/native/src/custom_elements/mod.rs b/packages/native/src/custom_elements/mod.rs
+--- a/packages/native/src/custom_elements/mod.rs
++++ b/packages/native/src/custom_elements/mod.rs
+@@ -173,6 +173,9 @@
+-                    el = el.on_hover(move |&hovered, _window, _cx| {
++                    el = el.on_hover(move |&hovered, window, _cx| {
+                         let kind = if hovered { "mouseEnter" } else { "mouseLeave" };
+                         if (hovered && enter) || (!hovered && leave) {
+                             crate::renderer::emit_event_full(&callback, id, kind, |p| {
++                                let position = window.mouse_position();
++                                p.x = Some(f64::from(position.x));
++                                p.y = Some(f64::from(position.y));
+                                 p.hovered = Some(hovered);
+                             });
+diff --git a/packages/native/src/test_renderer.rs b/packages/native/src/test_renderer.rs
+--- a/packages/native/src/test_renderer.rs
++++ b/packages/native/src/test_renderer.rs
+@@ -1332,3 +1332,21 @@
+     use super::*;
+ 
++    #[test]
++    fn hover_events_include_the_window_pointer_position() {
++        let renderer = TestGpuixRenderer::new(Some(400.0), Some(300.0), None).unwrap();
++        renderer.apply_batch(
++            r#"[["createElement",1,"div"],["setStyle",1,{"width":100,"height":100}],["setEventListener",1,"mouseEnter",true],["setEventListener",1,"mouseLeave",true],["setRoot",1]]"#.to_string(),
++        ).unwrap();
++        renderer.flush().unwrap();
++        renderer.simulate_mouse_move(25.0, 35.0, None, None).unwrap();
++        renderer.flush().unwrap();
++        let enter = renderer.drain_events().into_iter().find(|event| event.event_type == "mouseEnter").unwrap();
++        assert_eq!((enter.x, enter.y, enter.hovered), (Some(25.0), Some(35.0), Some(true)));
++        renderer.simulate_mouse_move(150.0, 160.0, None, None).unwrap();
++        renderer.flush().unwrap();
++        let leave = renderer.drain_events().into_iter().find(|event| event.event_type == "mouseLeave").unwrap();
++        assert_eq!((leave.x, leave.y, leave.hovered), (Some(150.0), Some(160.0), Some(false)));
++        renderer.dispose();
++    }
++
+     #[test]

@@ -7,6 +7,7 @@ import { Button, ControlEnvironmentProvider } from "@/ui/controls"
 import {
   DockLayout,
   Group,
+  DividerLayer,
   Panel,
   PanelDivider,
   PanelShell,
@@ -25,7 +26,8 @@ import type { GallerySectionProps } from "./GallerySection"
 
 export function createGalleryDockLayout(): DockLayoutJSON {
   return {
-    version: 1,
+    version: 2,
+    borders: {},
     hidden: [],
     activeGroup: "main",
     maximizedGroup: null,
@@ -94,35 +96,30 @@ export function LayoutSection({ t }: GallerySectionProps) {
         title: t("Browser", "浏览器"),
         icon: "Folder",
         minimumSize: theme.design.dock.minimumSize,
-        closable: true,
         render: () => <DemoContent title={t("Browser", "浏览器")} />,
       },
       Arrangement: {
         title: t("Arrangement", "编排"),
         icon: "LayoutList",
         minimumSize: theme.design.dock.minimumSize,
-        closable: false,
         render: () => <DemoContent title={t("Arrangement", "编排")} />,
       },
       Clip: {
         title: t("Clip", "片段"),
         icon: "Music",
         minimumSize: theme.design.dock.minimumSize,
-        closable: true,
         render: () => <DemoContent title={t("Clip", "片段")} />,
       },
       Devices: {
         title: t("Devices", "设备"),
         icon: "SlidersHorizontal",
         minimumSize: theme.design.dock.minimumSize,
-        closable: true,
         render: () => <DemoContent title={t("Devices", "设备")} />,
       },
       Mixer: {
         title: t("Mixer", "混音台"),
         icon: "AudioLines",
         minimumSize: theme.design.dock.minimumSize,
-        closable: true,
         render: () => <DemoContent title={t("Mixer", "混音台")} />,
       },
     }),
@@ -138,6 +135,7 @@ export function LayoutSection({ t }: GallerySectionProps) {
         <GalleryVariant
           label={t("Dockable workspace", "可停靠工作区")}
           testId="gallery-layouts-dock"
+          block
         >
           <div
             style={{
@@ -178,6 +176,7 @@ export function LayoutSection({ t }: GallerySectionProps) {
                 testId="gallery-dock"
                 labels={{
                   close: t("Close", "关闭"),
+                  view: t("View", "视图"),
                   closeOthers: t("Close others", "关闭其他"),
                   splitRight: t("Split right", "向右拆分"),
                   splitDown: t("Split down", "向下拆分"),
@@ -186,7 +185,11 @@ export function LayoutSection({ t }: GallerySectionProps) {
                   hide: t("Hide", "隐藏"),
                   more: t("Group actions", "面板组操作"),
                   showPanels: t("Show panels", "显示面板"),
+                  pin: t("Pin border panel", "固定边栏面板"),
+                  unpin: t("Auto-hide border panel", "自动隐藏边栏面板"),
                   dragGroup: t("Drag group", "拖动面板组"),
+                  left: t("Toggle primary sidebar", "切换主侧栏"), right: t("Toggle secondary sidebar", "切换副侧栏"), bottom: t("Toggle panel", "切换面板"),
+                  railOptions: t("Sidebar options", "侧栏选项"), overlayMode: t("Drawer mode", "抽屉模式"), hoverReveal: t("Hover reveal", "悬停展开"),
                 }}
               />
             </div>
@@ -201,6 +204,7 @@ export function LayoutSection({ t }: GallerySectionProps) {
         <GalleryVariant
           label={t("Nested resizable panels", "嵌套可调面板")}
           testId="gallery-layouts-splits"
+          block
         >
           <div
             testId="gallery-layouts-splits-host"
@@ -232,7 +236,7 @@ export function LayoutSection({ t }: GallerySectionProps) {
             </Group>
           </div>
         </GalleryVariant>
-        <GalleryVariant label={t("Panel shells and collapse", "面板外框与折叠")}>
+        <GalleryVariant label={t("Panel shells and collapse", "面板外框与折叠")} block>
           <CollapseExample t={t} />
         </GalleryVariant>
       </GallerySection>
@@ -248,7 +252,7 @@ function DemoContent({ title }: { title: string }) {
         display: "flex",
         flexDirection: "column",
         gap: theme.design.spacing.stackGap,
-        padding: theme.design.dock.tabPadding,
+        padding: theme.design.cards.controls.inset,
         flexGrow: 1,
         backgroundColor: theme.colors.background,
         color: theme.colors.foreground,
@@ -269,7 +273,7 @@ function CollapseExample({ t }: Pick<GallerySectionProps, "t">) {
   const [active, setActive] = useState("arrangement")
   const browser = useRef<PanelImperativeHandle>(null)
   return (
-    <div
+    <DividerLayer
       style={{
         height: theme.design.dock.demoHeight + theme.design.dock.minimumSize * 2,
         flexGrow: 1,
@@ -339,6 +343,6 @@ function CollapseExample({ t }: Pick<GallerySectionProps, "t">) {
           </PanelShell>
         </div>
       ) : null}
-    </div>
+    </DividerLayer>
   )
 }

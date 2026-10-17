@@ -48,7 +48,7 @@ export function GalleryCategories({
       testId="gallery-categories"
       aria-label={t("Component categories", "组件类别")}
       fill
-      style={{ display: "flex", flexDirection: "column", padding: theme.design.dock.contentInset }}
+      style={{ display: "flex", flexDirection: "column", padding: theme.design.cards.controls.inset }}
     >
       <div
         role="listbox"
@@ -94,7 +94,7 @@ export function GalleryCatalog({
           flexGrow: 1,
           minHeight: 0,
           minWidth: 0,
-          padding: theme.design.dock.contentInset,
+          padding: theme.design.cards.controls.inset,
         }}
       >
         {ActiveSection ? <ActiveSection {...props} /> : null}

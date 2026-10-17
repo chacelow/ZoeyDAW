@@ -518,6 +518,15 @@ describe("native command menus", () => {
     expect(changes).toEqual(["second"])
   })
 
+  test("a bottom menu flips above an edge trigger rather than covering it", () => {
+    const root = mount(<DropdownMenu defaultOpen style={{ marginLeft: 100, marginTop: 210 }}>
+      <DropdownMenuTrigger testId="flip-trigger" style={{ width: 40, height: 24 }}>Menu</DropdownMenuTrigger>
+      <DropdownMenuContent testId="flip-content" side="bottom" style={{ width: 100, height: 60 }}><DropdownMenuItem>Command</DropdownMenuItem></DropdownMenuContent>
+    </DropdownMenu>, 320, 240)
+    const trigger = bounds(root, "flip-trigger")
+    const content = bounds(root, "flip-content")
+    expect(content.y + content.height).toBeLessThanOrEqual(trigger.y)
+  })
   test("floating surfaces fit small viewports even with oversized requested dimensions", () => {
     const root = mount(
       <DropdownMenu defaultOpen style={{ marginLeft: 240, marginTop: 170 }}>

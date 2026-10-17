@@ -38,13 +38,19 @@ test("custom popover inset changes the real dialog shell without resizing its ac
       </ThemeProvider>
     )
     root.renderer.flush()
-    return { shell: shellBounds(root), button: buttonBounds(root) }
+    const description = root.renderer
+      .findByType("text")
+      .find(node => node.style?.whiteSpace === "normal")
+    const text = description && root.renderer.getElementBounds(description.id)
+    if (!text) throw new Error("Dialog description was not painted")
+    return { shell: shellBounds(root), button: buttonBounds(root), text }
   }
   try {
     const before = draw(baseline)
     const after = draw(custom)
     const insetDelta = custom.popover.inset - baseline.popover.inset
-    expect(after.shell.height - before.shell.height).toBe(insetDelta * 2)
+    const wrapDelta = after.text.height - before.text.height
+    expect(after.shell.height - before.shell.height - wrapDelta).toBe(insetDelta * 2)
     expect(after.shell.width).toBe(before.shell.width)
     expect(after.button.width).toBe(before.button.width)
     expect(after.button.height).toBe(before.button.height)

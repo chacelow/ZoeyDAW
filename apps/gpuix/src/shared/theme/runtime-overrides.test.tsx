@@ -12,7 +12,7 @@ import { ThemeProvider } from "./ThemeProvider"
 import type { ThemeProviderProps } from "./ThemeProvider"
 import type { TestRoot } from "@gpuix/react/testing"
 import { colorMix } from "./color-mix"
-import { getThemePreset } from "./presets"
+import { DEFAULT_THEME_PRESET, getThemePreset } from "./presets"
 import { resolveContentColor } from "./content-color"
 import { HomePage } from "@/app/home/HomePage"
 import { createRouter, RouterProvider } from "@/app/router/router"
@@ -90,7 +90,7 @@ test("runtime group overrides resize real controls and track identity without st
     expect(bounds(root, `track-title-${track.id}`).height).toBe(39)
     expect(root.renderer.findByTestId("default-control")?.style.borderRadius).toBe(9)
 
-    const colors = getThemePreset("default").colors.dark
+    const colors = getThemePreset(DEFAULT_THEME_PRESET).colors.dark
     expect(root.renderer.findByTestId(`track-identity-${track.id}`)?.style.backgroundColor).toBe(
       colorMix(resolveContentColor(track.color, colors), 39, colors.arrangementClipPaper)
     )

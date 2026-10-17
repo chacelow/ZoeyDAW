@@ -1,6 +1,7 @@
 import {
   projectFileExists,
   projectFilePath as nativeProjectFilePath,
+  readBytes,
   readProjectFile,
   userDirectories,
   writeProjectFile,
@@ -9,6 +10,10 @@ import type { RecentProject } from "@zoeydaw/native"
 import { createSettingStorage, getPreference } from "../settings"
 
 export type { RecentProject }
+export function readTextFile(path: string): string {
+  return new TextDecoder("utf-8", { fatal: true }).decode(readBytes(path))
+}
+
 
 export interface ProjectFileStorage {
   read(path: string): string | null

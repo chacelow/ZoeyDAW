@@ -275,6 +275,12 @@ pub enum BackendClock {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct BackendMeterLevels {
+    pub peak: [f64; 2],
+    pub rms: [f64; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BackendTelemetry {
     pub session_id: String,
@@ -283,7 +289,7 @@ pub struct BackendTelemetry {
     pub clock: BackendClock,
     pub playing: bool,
     pub recording: bool,
-    pub levels: BTreeMap<String, [f64; 2]>,
+    pub levels: BTreeMap<String, BackendMeterLevels>,
     pub output_latency_frames: Option<u64>,
 }
 

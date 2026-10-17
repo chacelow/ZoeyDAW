@@ -45,7 +45,7 @@ test("End/Home and Tab/Shift-Tab navigate presets without an inner scroll viewpo
     const last = THEME_PRESETS.at(-1)
     const previous = THEME_PRESETS.at(-2)
     if (!last || !previous) throw new Error("The preset list needs multiple rows")
-    const firstId = "theme-preset-default"
+    const firstId = `theme-preset-${DEFAULT_THEME_PRESET}`
     const lastId = `theme-preset-${last.id}`
     const previousId = `theme-preset-${previous.id}`
     const grid = bounds(root, "theme-preset-grid")

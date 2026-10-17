@@ -49,6 +49,10 @@ export function createWindowPlatform(renderer: WindowRenderer) {
     setTitle: (title: string) => renderer.setWindowTitle?.(title),
     minimize: () => renderer.minimizeWindow?.(),
     zoom: () => renderer.zoomWindow?.(),
+    close() {
+      if (!renderer.closeWindow) throw new Error("Renderer does not support closeWindow")
+      renderer.closeWindow()
+    },
     titlebarDoubleClick() {
       if (!renderer.titlebarDoubleClick) {
         throw new Error("Renderer does not support the native titlebar double-click action")

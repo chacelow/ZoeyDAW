@@ -203,7 +203,10 @@ export function NumericPad({
       {pad.mode === "editing" ? (
         <input
           testId={testId ? `${testId}-value` : undefined}
-          autoFocus
+          autoFocus={!disabled && editable}
+          tabIndex={disabled ? -1 : 0}
+          readOnly={disabled || !editable}
+          theme={{ appearance: theme.appearance, text: valueColor, caret: disabled || !editable ? "transparent" : valueColor }}
           aria-label={label}
           aria-disabled={disabled}
           value={pad.draft}
@@ -226,13 +229,15 @@ export function NumericPad({
             fontFamily: theme.design.typography.numberFontFamily,
             color: valueColor,
             textAlign: "center",
-            cursor: theme.design.cursors.text,
+            cursor: disabled ? theme.design.cursors.disabled : editable ? theme.design.cursors.text : theme.design.cursors.default,
+            pointerEvents: disabled ? "none" : undefined,
           }}
         />
       ) : (
         <text
           testId={testId ? `${testId}-value` : undefined}
           style={{
+            pointerEvents: "none",
             fontSize,
             fontFamily: theme.design.typography.numberFontFamily,
             color: valueColor,

@@ -1,3 +1,4 @@
+import { motion } from "@gpuix/react"
 import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
@@ -14,6 +15,7 @@ export interface SwitchProps extends Omit<Props, "children"> {
   readonly description?: string
   readonly disabled?: boolean
   readonly size?: ControlSize
+  readonly reducedMotion?: boolean
 }
 
 export function Switch({
@@ -23,6 +25,7 @@ export function Switch({
   description,
   disabled = false,
   size = "default",
+  reducedMotion = false,
   style,
   ...props
 }: SwitchProps) {
@@ -38,6 +41,10 @@ export function Switch({
   const inset = theme.design.switch.thumbInset
   const thumb = height - border * 2 - inset * 2
   const travel = width - border * 2 - inset * 2 - thumb
+  const transition = {
+    duration: reducedMotion ? 0 : theme.design.motion.switch.duration,
+    ease: theme.design.motion.switch.easing,
+  }
   const toggle = () => {
     if (!disabled) onCheckedChange(!checked)
   }
@@ -57,10 +64,11 @@ export function Switch({
           height,
           borderWidth: border,
           borderRadius: height,
-          borderColor: checked ? theme.colors.primary : theme.colors.border,
-          backgroundColor: checked ? theme.colors.primary : theme.colors.muted,
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.muted,
           opacity: disabled ? theme.design.states.disabledOpacity : 1,
           cursor: disabled ? theme.design.cursors.disabled : theme.design.cursors.action,
+          userSelect: "none",
           keyboardFocusDim: false,
           focusVisible: disabled
             ? undefined
@@ -83,19 +91,52 @@ export function Switch({
       onFocus={info.onFocus}
       onBlur={info.onBlur}
     >
-      <div
+      <motion.div
         aria-hidden="true"
+        initial={false}
+        animate={{ opacity: checked ? 1 : 0 }}
+        transition={transition}
         style={{
           position: "absolute",
-          top: inset,
-          left: inset + (checked ? travel : 0),
-          width: thumb,
-          height: thumb,
-          borderRadius: thumb,
-          backgroundColor: checked ? theme.colors.primaryForeground : theme.colors.mutedForeground,
+          top: -border,
+          left: -border,
+          width,
+          height,
+          borderWidth: border,
+          borderColor: theme.colors.primary,
+          borderRadius: height,
+          backgroundColor: theme.colors.primary,
           pointerEvents: "none",
         }}
       />
+      <motion.div
+        aria-hidden="true"
+        initial={false}
+        animate={{ left: inset + (checked ? travel : 0) }}
+        transition={transition}
+        style={{
+          position: "absolute",
+          top: inset,
+          width: thumb,
+          height: thumb,
+          borderRadius: thumb,
+          backgroundColor: theme.colors.mutedForeground,
+          pointerEvents: "none",
+        }}
+      >
+        <motion.div
+          initial={false}
+          animate={{ opacity: checked ? 1 : 0 }}
+          transition={transition}
+          style={{
+            width: thumb,
+            height: thumb,
+            borderRadius: thumb,
+            backgroundColor: theme.colors.primaryForeground,
+            pointerEvents: "none",
+          }}
+        />
+      </motion.div>
     </div>
   )
 }

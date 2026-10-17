@@ -26,7 +26,7 @@ export function GalleryThemePanel({
   const t = (en: string, zh: string) => (locale === "zh" ? zh : en)
   const gap = theme.design.settings.itemGap
   const [panelWidth, setPanelWidth] = useState(0)
-  const inset = theme.design.dock.contentInset
+  const inset = theme.design.cards.controls.inset
   return (
     <ScrollArea
       testId="gallery-theme-panel"

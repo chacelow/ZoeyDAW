@@ -2,7 +2,7 @@ import { parse as parseColor } from "culori"
 import { logger } from "@/platform/log/logger"
 import { derive } from "@/shared/theme/colors"
 import type { ThemeColors, ColorScheme } from "@/shared/theme/colors"
-import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import { createDesignTokens } from "@/shared/theme/design-tokens"
 import type { DesignTokens } from "@/shared/theme/design-tokens"
 import { CONTROL_METRICS, PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import type { ControlMetrics, ProjectMetrics } from "@/shared/theme/metrics/config"
@@ -41,7 +41,8 @@ export function resolveThemeOverrides(library: ThemeLibrary, appearance: ColorSc
   const preset =
     custom?.basePreset ??
     (isThemePresetId(library.selection) ? library.selection : DEFAULT_THEME_PRESET)
-  const design = mergeTheme<DesignTokens>(DEFAULT_DESIGN_TOKENS, custom?.design ?? {})
+  const control = { ...CONTROL_METRICS.default, ...custom?.control.default }
+  const design = mergeTheme<DesignTokens>(createDesignTokens(control), custom?.design ?? {})
   return {
     appearance,
     preset,
@@ -51,7 +52,7 @@ export function resolveThemeOverrides(library: ThemeLibrary, appearance: ColorSc
       appearance,
       design.colorRecipes
     ),
-    control: { ...CONTROL_METRICS.default, ...custom?.control.default },
+    control,
     transportControl: { ...CONTROL_METRICS.transport, ...custom?.control.transport },
     project: { ...PROJECT_METRICS, ...custom?.project },
   }

@@ -634,7 +634,6 @@ it("double click on the retained surface creates a Clip that can be renamed inli
   renderer.nativeSimulateKeystrokes(host, "cmd-r")
   const editor = renderer.findByTestId("clip-name-editor")
   if (!editor) throw new Error("Missing inline name editor")
-  expect(editor.style.borderRadius).toBe(7)
   const row = layoutTrackRows(scene.get()).find(item => item.track.id === sourceRow.track.id)
   if (!row) throw new Error("Missing inline editor row")
   const rect = clipRect(wide, row, scene.get().viewport.pxPerBar, scene.get().viewport.scrollX)

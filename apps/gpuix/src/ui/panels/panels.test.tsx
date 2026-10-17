@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { createRef, useRef, useState } from "react"
+import { createRef, Profiler, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
+import { flushSync } from "@gpuix/react"
 import { ThemeProvider } from "../../shared/theme/ThemeProvider"
+import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
 import { Button } from "@/ui/controls/Button"
 import { Group } from "./Group"
 import { Panel } from "./Panel"
@@ -12,6 +15,7 @@ import { PanelDivider } from "./PanelDivider"
 import { PanelShell } from "./PanelShell"
 import { PanelEnvironmentProvider } from "./PanelEnvironment"
 import { CollapseDivider } from "./CollapseDivider"
+import { DividerLayer } from "./DividerLayer"
 
 const roots: TestRoot[] = []
 afterEach(() => {
@@ -21,7 +25,7 @@ afterEach(() => {
 async function mount(node: ReactNode) {
   const root = createTestRoot({ width: 1200, height: 760 })
   roots.push(root)
-  root.render(<ThemeProvider>{node}</ThemeProvider>)
+  root.render(<ThemeProvider><DividerLayer style={{ width: "100%", height: "100%" }}>{node}</DividerLayer></ThemeProvider>)
   root.renderer.flush()
   await settle(root)
   return root
@@ -114,16 +118,19 @@ function EditorSplitRegression() {
 }
 
 describe("native resizable panel interactions", () => {
-  test("a 7px divider captures beyond its hitbox and keeps a continuous pixel delta", async () => {
+  test("a hairline divider captures beyond its overlay and keeps a continuous pixel delta", async () => {
     const root = await mount(pair())
     const before = bounds(root, "left").width
     const point = divider(root, "divider")
-    expect(bounds(root, "divider").width).toBe(7)
+    expect(bounds(root, "divider").width).toBe(PROJECT_METRICS.panelGap)
+    expect(bounds(root, "divider-line").width).toBe(DEFAULT_DESIGN_TOKENS.shape.separatorWidth)
     root.renderer.nativeSimulateMouseDown(point.x, point.y)
     root.renderer.nativeSimulateMouseMove(point.x + 60, point.y + 120, 0)
+    expect(bounds(root, "left").width).toBeCloseTo(before + 60)
+    expect(bounds(root, "divider-highlight").x).toBeCloseTo(before + 60)
     root.renderer.nativeSimulateMouseUp(point.x + 60, point.y + 120)
     expect(bounds(root, "left").width - before).toBeCloseTo(60)
-    expect(bounds(root, "left").width + bounds(root, "right").width + 7).toBeCloseTo(800)
+    expect(bounds(root, "left").width + bounds(root, "right").width + DEFAULT_DESIGN_TOKENS.shape.separatorWidth).toBeCloseTo(800)
   })
 
   test("Escape restores a drag snapshot and release cannot reapply the cancelled preview", async () => {
@@ -133,28 +140,59 @@ describe("native resizable panel interactions", () => {
     root.renderer.nativeSimulateMouseDown(point.x, point.y)
     root.renderer.nativeSimulateMouseMove(point.x + 80, point.y, 0)
     expect(bounds(root, "left").width).toBeCloseTo(before + 80)
+    expect(bounds(root, "divider-highlight").x).toBeCloseTo(before + 80)
     root.renderer.simulateKeystrokes("escape")
     root.renderer.nativeSimulateMouseUp(point.x + 80, point.y)
     expect(bounds(root, "left").width).toBeCloseTo(before)
   })
 
-  test("divider highlights on hover and drag while retaining its 7px hit area", async () => {
+  test("divider highlights only its hairline on hover and drag", async () => {
     const root = await mount(pair())
     const point = divider(root, "divider")
     const handle = root.renderer.findByTestId("divider")
     expect(handle?.style?.cursor).toBe("col-resize")
-    expect(bounds(root, "divider").width).toBe(7)
-    const hover = handle?.style?.hover
-    if (!hover || typeof hover !== "object" || !("backgroundColor" in hover)) {
-      throw new Error("Missing divider hover background")
-    }
-    expect(hover.backgroundColor).toBeDefined()
+    expect(bounds(root, "divider").width).toBe(PROJECT_METRICS.panelGap)
+    expect(bounds(root, "divider-highlight").width).toBe(DEFAULT_DESIGN_TOKENS.shape.separatorWidth)
+    root.renderer.nativeSimulateMouseMove(point.x, point.y)
+    root.renderer.flush()
+    const hovered = root.renderer.findByTestId("divider-highlight")?.style?.backgroundColor
+    expect(hovered).not.toBe(root.renderer.findByTestId("divider-line")?.style?.backgroundColor)
     root.renderer.nativeSimulateMouseDown(point.x, point.y)
     root.renderer.flush()
-    expect(root.renderer.findByTestId("divider")?.style?.backgroundColor).toBe(
-      hover.backgroundColor
-    )
+    expect(root.renderer.findByTestId("divider-highlight")?.style?.backgroundColor).toBe(hovered)
     root.renderer.nativeSimulateMouseUp(point.x, point.y)
+  })
+
+  test("both sides of the hairline resize while panel content outside the sash receives clicks", async () => {
+    let clicks = 0
+    const root = await mount(
+      <Group orientation="horizontal" style={{ width: 800, height: 400 }}>
+        <Panel testId="left"><Button label="Left content" onClick={() => clicks++} style={{ width: "100%", height: "100%" }} /></Panel>
+        <PanelDivider orientation="vertical" testId="divider" />
+        <Panel testId="right"><Button label="Right content" onClick={() => clicks++} style={{ width: "100%", height: "100%" }} /></Panel>
+      </Group>
+    )
+    const left = bounds(root, "left")
+    const right = bounds(root, "right")
+    expect(right.x - left.x - left.width).toBeCloseTo(DEFAULT_DESIGN_TOKENS.shape.separatorWidth)
+    for (const side of [-1, 1]) {
+      const before = bounds(root, "left").width
+      const point = divider(root, "divider")
+      const x = point.x + side * 3
+      root.renderer.nativeSimulateMouseMove(x, point.y)
+      root.renderer.nativeSimulateMouseDown(x, point.y)
+      root.renderer.nativeSimulateMouseMove(x + 20, point.y, 0)
+      root.renderer.nativeSimulateMouseUp(x + 20, point.y)
+      expect(bounds(root, "left").width).toBeCloseTo(before + 20)
+    }
+    expect(clicks).toBe(0)
+    const point = divider(root, "divider")
+    for (const side of [-1, 1]) {
+      const x = point.x + side * (PROJECT_METRICS.panelGap + 1)
+      root.renderer.nativeSimulateMouseMove(x, point.y)
+      root.renderer.nativeSimulateClick(x, point.y)
+    }
+    expect(clicks).toBe(2)
   })
 
   test("focus loss cancels and directional keys adjust the focused divider", async () => {
@@ -205,7 +243,7 @@ describe("native resizable panel interactions", () => {
       </Group>
     )
     const before = ref.current?.getSize().inPixels ?? 0
-    expect(before).toBeCloseTo(793 / 4)
+    expect(before).toBeCloseTo((800 - DEFAULT_DESIGN_TOKENS.shape.separatorWidth) / 4)
     expect(reported.asPercentage).toBeCloseTo(25)
     ref.current?.resize(300)
     await settle(root)
@@ -239,14 +277,14 @@ describe("native resizable panel interactions", () => {
       await settle(root)
       const left = bounds(root, "left").width
       const right = bounds(root, "right").width
-      expect(left + right + 7).toBeCloseTo(width)
+      expect(left + right + DEFAULT_DESIGN_TOKENS.shape.separatorWidth).toBeCloseTo(width)
       expect(left).toBeGreaterThanOrEqual(100)
-      expect(left).toBeLessThanOrEqual((width - 7) / 2)
+      expect(left).toBeLessThanOrEqual((width - DEFAULT_DESIGN_TOKENS.shape.separatorWidth) / 2)
       expect(right).toBeGreaterThanOrEqual(100)
     }
   })
 
-  test("active shell borders retain identical bounds and activation reaches child presses", async () => {
+  test("borderless active shells retain identical bounds and activation reaches child presses", async () => {
     let active = "arrangement"
     let childPresses = 0
     function Harness() {
@@ -392,6 +430,7 @@ describe("native resizable panel interactions", () => {
     root.renderer.nativeSimulateMouseDown(point.x, point.y)
     root.renderer.nativeSimulateMouseMove(point.x + 60, point.y, 0)
     expect(bounds(root, "left").width).toBeCloseTo(before + 60)
+    expect(bounds(root, "divider-highlight").x).toBeCloseTo(before + 60)
     notify?.(false)
     await settle(root)
     expect(bounds(root, "left").width).toBeCloseTo(before)
@@ -428,8 +467,42 @@ describe("native resizable panel interactions", () => {
     expect(bounds(root, "left").width).toBeCloseTo(before + 60)
     root.renderer.nativeSimulateMouseMove(point.x + 80, point.y, 0)
     expect(bounds(root, "left").width).toBeCloseTo(before + 80)
+    expect(bounds(root, "divider-highlight").x).toBeCloseTo(before + 80)
     root.renderer.nativeSimulateMouseUp(point.x + 80, point.y)
     await settle(root)
-    expect(bounds(root, "left").width + bounds(root, "right").width + 7).toBeCloseTo(600)
+    expect(bounds(root, "left").width + bounds(root, "right").width + DEFAULT_DESIGN_TOKENS.shape.separatorWidth).toBeCloseTo(600)
   })
+})
+
+test("resize moves coalesce to one latest snapshot per injected frame and release flushes the final size", async () => {
+  let frame: (() => void) | undefined
+  let scheduled = 0
+  let commits = 0
+  const root = await mount(
+    <PanelEnvironmentProvider environment={{ scheduleFrame: callback => {
+      scheduled++
+      frame = callback
+      return () => { if (frame === callback) frame = undefined }
+    } }}>
+      <Profiler id="frame-resize" onRender={() => commits++}>{pair()}</Profiler>
+    </PanelEnvironmentProvider>
+  )
+  const before = bounds(root, "left").width
+  const point = divider(root, "divider")
+  root.renderer.nativeSimulateMouseDown(point.x, point.y)
+  root.renderer.nativeSimulateMouseMove(point.x + 20, point.y, 0)
+  root.renderer.nativeSimulateMouseMove(point.x + 40, point.y, 0)
+  expect(scheduled).toBe(1)
+  expect(bounds(root, "left").width).toBe(before)
+  const pending = frame
+  if (!pending) throw new Error("Missing scheduled resize frame")
+  commits = 0
+  flushSync(pending)
+  root.renderer.flush()
+  expect(commits).toBe(1)
+  expect(bounds(root, "left").width).toBeCloseTo(before + 40)
+  root.renderer.nativeSimulateMouseMove(point.x + 60, point.y, 0)
+  root.renderer.nativeSimulateMouseUp(point.x + 60, point.y)
+  expect(frame).toBeUndefined()
+  expect(bounds(root, "left").width).toBeCloseTo(before + 60)
 })

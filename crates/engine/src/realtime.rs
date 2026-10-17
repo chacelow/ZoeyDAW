@@ -1,7 +1,7 @@
 use crate::{
     defaults::TELEMETRY_FLOOR_DB,
     mix::Mixer,
-    protocol::BackendTelemetry,
+    protocol::{BackendMeterLevels, BackendTelemetry},
     transport::{bar_to_frame, frame_to_bar, Transport},
 };
 use firewheel::{
@@ -67,10 +67,14 @@ impl Snapshot {
         for (id, meter) in ids.iter().zip(&self.meters) {
             result.levels.insert(
                 id.clone(),
-                meter
-                    .peak
-                    .each_ref()
-                    .map(|p| amplitude_db(f32::from_bits(p.load(Ordering::Relaxed)))),
+                BackendMeterLevels {
+                    peak: meter.peak.each_ref().map(|p| {
+                        amplitude_db(f32::from_bits(p.load(Ordering::Relaxed)))
+                    }),
+                    rms: meter.rms.each_ref().map(|r| {
+                        amplitude_db(f32::from_bits(r.load(Ordering::Relaxed)))
+                    }),
+                },
             );
         }
         std::sync::atomic::fence(Ordering::Acquire);
@@ -221,6 +225,39 @@ mod tests {
         transport::{LoopRegion, TransportClock},
     };
     use std::collections::BTreeMap;
+
+    #[test]
+    fn snapshot_publishes_completed_peak_and_rms_in_dbfs() {
+        let snapshot = Snapshot::new(1);
+        let transport = Transport {
+            clock: TransportClock::new(48_000, 1.0).unwrap(),
+            position_frame: 0,
+            playing: false,
+            loop_region: None,
+        };
+        let template = BackendTelemetry {
+            session_id: "meter".into(),
+            sequence: 0,
+            applied_sequence: 0,
+            clock: transport.to_backend_clock(),
+            playing: false,
+            recording: false,
+            levels: BTreeMap::new(),
+            output_latency_frames: None,
+        };
+        let ids = ["main".to_owned()];
+        assert!(snapshot.telemetry(template.clone(), &transport, &ids).is_none());
+        snapshot.version.store(1, Ordering::Release);
+        snapshot.meters[0].peak[0].store(0.5_f32.to_bits(), Ordering::Relaxed);
+        snapshot.meters[0].rms[0].store(0.25_f32.to_bits(), Ordering::Relaxed);
+        assert!(snapshot.telemetry(template.clone(), &transport, &ids).is_none());
+        snapshot.version.store(2, Ordering::Release);
+        let frame = snapshot.telemetry(template, &transport, &ids).unwrap();
+        assert_eq!(frame.levels["main"].peak, [amplitude_db(0.5), TELEMETRY_FLOOR_DB]);
+        assert_eq!(frame.levels["main"].rms, [amplitude_db(0.25), TELEMETRY_FLOOR_DB]);
+        let json = serde_json::to_value(&frame).unwrap();
+        assert_eq!(json["levels"]["main"]["rms"][1], TELEMETRY_FLOOR_DB);
+    }
 
     #[test]
     fn control_updates_preserve_position_until_a_new_seek_generation() {

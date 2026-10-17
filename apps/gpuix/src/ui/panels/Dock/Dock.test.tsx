@@ -5,6 +5,7 @@ import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { CONTROL_METRICS } from "@/shared/theme/metrics/config"
+import { createDockTokens, DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { ControlEnvironmentProvider, Button } from "@/ui/controls"
 import { DockLayout, getGroups, hideTab, resizeSplit } from "./index"
 import type { DockLayoutJSON, DockLayoutHandle, DockPanelRegistry } from "./index"
@@ -35,6 +36,7 @@ function Counter() {
   )
 }
 const labels = {
+  view: "View",
   close: "Close",
   closeOthers: "Close others",
   splitRight: "Split right",
@@ -43,11 +45,16 @@ const labels = {
   restore: "Restore",
   hide: "Hide",
   dragGroup: "Drag group",
+  left: "Toggle primary sidebar", right: "Toggle secondary sidebar", bottom: "Toggle panel",
+  railOptions: "Sidebar options", overlayMode: "Drawer mode", hoverReveal: "Hover reveal",
   more: "More group actions",
   showPanels: "Show panels",
+  pin: "Pin border panel",
+  unpin: "Auto-hide border panel",
 }
 const initial: DockLayoutJSON = {
-  version: 1,
+  version: 2,
+  borders: {},
   hidden: [],
   activeGroup: "a",
   maximizedGroup: null,
@@ -68,10 +75,10 @@ async function mount(control = CONTROL_METRICS.default, width = 900) {
   const ref = createRef<DockLayoutHandle>()
   const replace = createRef<Dispatch<SetStateAction<DockLayoutJSON>>>()
   const registry: DockPanelRegistry = {
-    one: { title: "One", minimumSize: 50, closable: true, render: () => <Counter /> },
-    two: { title: "Two", minimumSize: 50, closable: true, render: () => <text>Two</text> },
-    three: { title: "Three", minimumSize: 50, closable: true, render: () => <text>Three</text> },
-    four: { title: "Four", minimumSize: 50, closable: false, render: () => <text>Four</text> },
+    one: { title: "One", minimumSize: 50, render: () => <Counter /> },
+    two: { title: "Two", minimumSize: 50, render: () => <text>Two</text> },
+    three: { title: "Three", minimumSize: 50, render: () => <text>Three</text> },
+    four: { title: "Four", minimumSize: 50, render: () => <text>Four</text> },
   }
   function Harness() {
     const [layout, setLayout] = useState(initial)
@@ -139,7 +146,7 @@ async function drag(
         : to.x + to.width / 2
   const y =
     position === "top"
-      ? to.y + from.height + 5
+      ? to.y + box(root, `dock-header-${target}`).height + 5
       : position === "bottom"
         ? to.y + to.height - 5
         : to.y + to.height / 2
@@ -175,7 +182,7 @@ test("Escape discards a native drag preview and later release cannot commit it",
   await settle(root)
   expect(read().root).toEqual(initial.root)
 })
-test("closing the last tab via the shared close button collapses the split", async () => {
+test("closing the last tab via its internal close slot collapses the split", async () => {
   const { root, read } = await mount()
   const close = box(root, "dock-close-three")
   root.renderer.nativeSimulateMouseDown(close.x + close.width / 2, close.y + close.height / 2)
@@ -339,7 +346,7 @@ test("group menu restores a hidden panel into that group", async () => {
   expect(read().hidden).not.toContain("three")
 })
 
-test("group menu can add a registered nonclosable panel absent from the layout", async () => {
+test("group menu can restore a registered panel absent from the layout", async () => {
   const { root, read } = await mount()
   const trigger = root.renderer.findByTestId("dock-more-b")
   if (!trigger) throw new Error("Missing group actions trigger")
@@ -354,7 +361,7 @@ test("group menu can add a registered nonclosable panel absent from the layout",
   expect(getGroups(read().root).find(group => group.id === "b")?.tabs).toEqual(["three", "four"])
 })
 
-test("Dock strip and tabs follow a ThemeProvider control override", async () => {
+test("Dock header and buttons follow a ThemeProvider control override on the same unit grid", async () => {
   const control = {
     ...CONTROL_METRICS.default,
     "--spacing-control-track": 20,
@@ -362,13 +369,57 @@ test("Dock strip and tabs follow a ThemeProvider control override", async () => 
     "--spacing-control-track-gap": 6,
   }
   const { root } = await mount(control)
-  const tab = root.renderer.findByTestId("dock-tab-one")
-  expect(tab?.style?.height).toBe(40)
-  expect(tab?.style?.paddingLeft).toBe(6)
-  expect(tab?.style?.maxWidth).toBe(240)
-  const group = box(root, "dock-group-a")
-  const content = box(root, "dock-content-one")
-  expect(content.y - group.y).toBeGreaterThanOrEqual(40)
+  const unit = control["--spacing-control-track"]
+  const header = box(root, "dock-header-a")
+  const tab = box(root, "dock-tab-one")
+  const close = box(root, "dock-close-one")
+  expect(header.height).toBe(unit * 2)
+  expect(tab.height).toBe(unit * 2)
+  expect(close.height).toBe(unit)
+  expect(close.width).toBe(unit)
+  for (const id of ["dock-drag-group-a", "dock-maximize-a", "dock-more-a"]) {
+    const action = box(root, id)
+    expect(action.height).toBe(unit)
+    expect(action.width).toBe(unit)
+    expect(header.height / action.height).toBe(2)
+  }
+  const more = box(root, "dock-more-a")
+  expect(header.x + header.width - more.x - more.width).toBeCloseTo(control["--spacing-control-track-pad"])
+  expect(box(root, "dock-tab-frame-one").x - header.x).toBeCloseTo(control["--spacing-control-track-pad"])
+  expect(root.renderer.findByTestId("dock-tab-one")?.style?.paddingLeft).toBe(control["--spacing-control-track-gap"])
+})
+
+test("header hover remains stable around the compact threshold without changing action bounds", async () => {
+  const threshold = createDockTokens(CONTROL_METRICS.default).compactActionsBelow
+  const { root } = await mount(CONTROL_METRICS.default, threshold * 2 + 1)
+  const header = box(root, "dock-header-b")
+  const before = box(root, "dock-actions-b")
+  const compact = root.renderer.findByTestId("dock-maximize-b") === undefined
+  root.renderer.nativeSimulateMouseMove(header.x + header.width - 2, header.y + header.height / 2)
+  for (let frame = 0; frame < 12; frame++) {
+    root.renderer.flush()
+    root.renderer.dispatchNativeEvents()
+    expect(root.renderer.findByTestId("dock-actions-b")?.style?.opacity).toBe(1)
+    expect(box(root, "dock-actions-b")).toEqual(before)
+    expect(root.renderer.findByTestId("dock-maximize-b") === undefined).toBe(compact)
+    await Bun.sleep(10)
+  }
+})
+
+test("dragging past a full tab midpoint previews its right edge and inserts after it", async () => {
+  const { root, read } = await mount()
+  const from = box(root, "dock-tab-three")
+  const second = box(root, "dock-tab-frame-two")
+  const x = second.x + second.width * 0.75
+  const y = second.y + second.height / 2
+  root.renderer.nativeSimulateMouseMove(from.x + 4, from.y + 4)
+  root.renderer.nativeSimulateMouseDown(from.x + 4, from.y + 4)
+  root.renderer.nativeSimulateMouseMove(x, y, 0)
+  root.renderer.flush()
+  expect(box(root, "dock-drop-preview").x).toBeCloseTo(second.x + second.width)
+  root.renderer.nativeSimulateMouseUp(x, y)
+  await settle(root)
+  expect(getGroups(read().root).find(group => group.id === "a")?.tabs).toEqual(["one", "two", "three"])
 })
 
 test("active tab stays distinct and inactive close appears on hover", async () => {
@@ -383,13 +434,20 @@ test("active tab stays distinct and inactive close appears on hover", async () =
   root.renderer.nativeSimulateMouseMove(target.x + 5, target.y + 5, 0)
   root.renderer.flush()
   expect(root.renderer.findByTestId("dock-close-two")?.style?.opacity).toBe(1)
+  const close = box(root, "dock-close-two")
+  root.renderer.nativeSimulateMouseMove(close.x + close.width / 2, close.y + close.height / 2, 0)
+  for (let frame = 0; frame < 12; frame++) {
+    root.renderer.flush()
+    root.renderer.dispatchNativeEvents()
+    expect(root.renderer.findByTestId("dock-close-two")?.style?.opacity).toBe(1)
+  }
 })
 
-test("group actions show only for the active or hovered group, without a highlight border", async () => {
+test("group actions show only while hovering the full tab bar, without an active-group highlight", async () => {
   const { root } = await mount()
   const actions = (id: string) => root.renderer.findByTestId(`dock-actions-${id}`)?.style?.opacity
   const border = (id: string) => root.renderer.findByTestId(`dock-group-${id}`)?.style?.borderColor
-  expect(actions("a")).toBe(1)
+  expect(actions("a")).toBe(0)
   expect(actions("b")).toBe(0)
   expect(border("a")).toBe(border("b"))
   const header = box(root, "dock-header-b")
@@ -400,6 +458,7 @@ test("group actions show only for the active or hovered group, without a highlig
   )
   root.renderer.flush()
   expect(actions("b")).toBe(1)
+  expect(actions("a")).toBe(0)
   expect(border("a")).toBe(border("b"))
 })
 
@@ -431,4 +490,34 @@ test("narrow headers retain only more actions while maximize stays reachable fro
   expect(read().maximizedGroup).toBe("a")
   expect(root.renderer.findByTestId("dock-maximize-a")).toBeDefined()
   expect(root.renderer.findByTestId("dock-drag-group-a")).toBeDefined()
+})
+
+test("the top edge of a full height DockTab starts a drag outside the former button area", async () => {
+  const { root, read } = await mount()
+  const from = box(root, "dock-tab-two")
+  const target = box(root, "dock-group-b")
+  root.renderer.nativeSimulateMouseMove(from.x + 2, from.y + 1)
+  root.renderer.nativeSimulateMouseDown(from.x + 2, from.y + 1)
+  root.renderer.nativeSimulateMouseMove(target.x + target.width / 2, target.y + target.height / 2, 0)
+  root.renderer.nativeSimulateMouseUp(target.x + target.width / 2, target.y + target.height / 2)
+  await settle(root)
+  expect(getGroups(read().root).find(group => group.id === "b")?.tabs).toContain("two")
+})
+
+test("ordinary main groups do not expose border pin actions in their header or menu", async () => {
+  const { root } = await mount()
+  expect(root.renderer.findByTestId("dock-pin-a")).toBeUndefined()
+  const more = root.renderer.findByTestId("dock-more-a")
+  if (!more) throw new Error("Missing group menu")
+  root.renderer.nativeSimulateKeystrokes(more.id, "enter")
+  await settle(root)
+  expect(root.renderer.findByTestId("dock-pin-menu-a")).toBeUndefined()
+})
+
+test("adjacent full height tabs share only one separator line", async () => {
+  const { root } = await mount()
+  const first = box(root, "dock-tab-one")
+  const second = box(root, "dock-tab-two")
+  expect(second.x - first.x - first.width).toBe(DEFAULT_DESIGN_TOKENS.shape.separatorWidth)
+  expect(first.height).toBe(second.height)
 })

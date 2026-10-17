@@ -14,14 +14,73 @@ export interface DockSplit {
   readonly sizes: readonly number[]
 }
 export type DockNode = DockGroup | DockSplit
+export type DockBorderSide = "left" | "right" | "bottom"
+export const dockBorderSides: readonly DockBorderSide[] = ["left", "right", "bottom"]
+export type DockBorderType = "split" | "overlay"
+export interface DockBorder {
+  readonly type: DockBorderType
+  readonly visible?: boolean
+  readonly hoverReveal?: boolean
+  readonly tabs: readonly string[]
+  readonly end?: readonly string[]
+  readonly selected: string | null
+  readonly size: number
+}
+export type DockBorders = Readonly<Partial<Record<DockBorderSide, DockBorder>>>
 export interface DockLayoutJSON {
-  readonly version: 1
+  readonly version: 2
   readonly root: DockNode | null
   readonly hidden: readonly string[]
   readonly activeGroup: string | null
   readonly maximizedGroup: string | null
+  readonly borders: DockBorders
 }
 export type DockDragSource = { readonly groupId: string; readonly tabId?: string }
+export function getBorderTabs(layout: DockLayoutJSON): string[] {
+  return dockBorderSides.flatMap(side => borderTabs(layout.borders[side]))
+}
+export function findBorder(layout: DockLayoutJSON, tabId: string): DockBorderSide | undefined {
+  return dockBorderSides.find(side => borderTabs(layout.borders[side]).includes(tabId))
+}
+export function borderGroupId(side: DockBorderSide): string {
+  return `border:${side}`
+}
+export function borderTabs(border: DockBorder | undefined): readonly string[] {
+  return border ? [...border.tabs, ...(border.end ?? [])] : []
+}
+export function toggleBorderVisible(layout: DockLayoutJSON, side: DockBorderSide): DockLayoutJSON {
+  const border = layout.borders[side]
+  if (!border) return layout
+  return { ...layout, maximizedGroup: border.visible !== false && layout.maximizedGroup === borderGroupId(side) ? null : layout.maximizedGroup, borders: { ...layout.borders, [side]: { ...border, visible: border.visible === false } } }
+}
+export function setBorderHoverReveal(layout: DockLayoutJSON, side: DockBorderSide, hoverReveal: boolean): DockLayoutJSON {
+  const border = layout.borders[side]
+  if (!border || border.hoverReveal === hoverReveal) return layout
+  return { ...layout, borders: { ...layout.borders, [side]: { ...border, hoverReveal } } }
+}
+export function selectBorderTab(layout: DockLayoutJSON, side: DockBorderSide, tabId: string | null): DockLayoutJSON {
+  const border = layout.borders[side]
+  if (!border || (tabId !== null && !borderTabs(border).includes(tabId))) return layout
+  const borders = { ...layout.borders }
+  for (const candidate of dockBorderSides) {
+    const item = borders[candidate]
+    if (item && (candidate === side || item.type === "overlay")) borders[candidate] = { ...item, selected: candidate === side ? tabId : null }
+  }
+  const maximizedBorder = dockBorderSides.find(candidate => borderGroupId(candidate) === layout.maximizedGroup)
+  return { ...layout, borders, maximizedGroup: maximizedBorder && !borders[maximizedBorder]?.selected ? null : layout.maximizedGroup }
+}
+export function resizeBorder(layout: DockLayoutJSON, side: DockBorderSide, size: number): DockLayoutJSON {
+  const border = layout.borders[side]
+  return border && Number.isFinite(size) && size > 0
+    ? { ...layout, borders: { ...layout.borders, [side]: { ...border, size } } }
+    : layout
+}
+export function setBorderType(layout: DockLayoutJSON, side: DockBorderSide, type: DockBorderType): DockLayoutJSON {
+  const border = layout.borders[side]
+  if (!border || border.type === type) return layout
+  const next = { ...layout, borders: { ...layout.borders, [side]: { ...border, type } } }
+  return type === "overlay" && border.selected ? selectBorderTab(next, side, border.selected) : next
+}
 
 export function getGroups(node: DockNode | null): DockGroup[] {
   if (!node) return []
@@ -53,7 +112,7 @@ function withRoot(layout: DockLayoutJSON, root: DockNode | null): DockLayoutJSON
     activeGroup: groups.some(group => group.id === layout.activeGroup)
       ? layout.activeGroup
       : (groups[0]?.id ?? null),
-    maximizedGroup: groups.some(group => group.id === layout.maximizedGroup)
+    maximizedGroup: groups.some(group => group.id === layout.maximizedGroup) || dockBorderSides.some(side => borderGroupId(side) === layout.maximizedGroup && layout.borders[side]?.selected)
       ? layout.maximizedGroup
       : null,
   }
@@ -62,6 +121,8 @@ function updateRoot(layout: DockLayoutJSON, update: (node: DockNode) => DockNode
   return withRoot(layout, layout.root ? mapNode(layout.root, update) : null)
 }
 export function activateTab(layout: DockLayoutJSON, tabId: string): DockLayoutJSON {
+  const border = findBorder(layout, tabId)
+  if (border) return selectBorderTab(layout, border, tabId)
   const group = getGroups(layout.root).find(candidate => candidate.tabs.includes(tabId))
   if (!group) return layout
   return {
@@ -70,7 +131,17 @@ export function activateTab(layout: DockLayoutJSON, tabId: string): DockLayoutJS
   }
 }
 function removeTabs(layout: DockLayoutJSON, ids: readonly string[]): DockLayoutJSON {
-  return updateRoot(layout, node => {
+  const borders = { ...layout.borders }
+  for (const side of dockBorderSides) {
+    const border = borders[side]
+    if (border) borders[side] = {
+      ...border,
+      tabs: border.tabs.filter(tab => !ids.includes(tab)),
+      end: (border.end ?? []).filter(tab => !ids.includes(tab)),
+      selected: border.selected && ids.includes(border.selected) ? null : border.selected,
+    }
+  }
+  return updateRoot({ ...layout, borders }, node => {
     if (node.kind !== "group") return node
     const tabs = node.tabs.filter(tab => !ids.includes(tab))
     if (tabs.length === node.tabs.length) return node
@@ -89,21 +160,13 @@ export function closeTab(layout: DockLayoutJSON, tabId: string): DockLayoutJSON 
   return { ...removeTabs(layout, [tabId]), hidden: layout.hidden.filter(tab => tab !== tabId) }
 }
 export function hideTab(layout: DockLayoutJSON, tabId: string): DockLayoutJSON {
-  if (!getGroups(layout.root).some(group => group.tabs.includes(tabId))) return layout
+  if (!getGroups(layout.root).some(group => group.tabs.includes(tabId)) && !findBorder(layout, tabId)) return layout
   return { ...removeTabs(layout, [tabId]), hidden: [...layout.hidden, tabId] }
 }
-export function closeOtherTabs(
-  layout: DockLayoutJSON,
-  tabId: string,
-  canClose: (tabId: string) => boolean
-): DockLayoutJSON {
-  const group = getGroups(layout.root).find(candidate => candidate.tabs.includes(tabId))
-  return group
-    ? removeTabs(
-        layout,
-        group.tabs.filter(tab => tab !== tabId && canClose(tab))
-      )
-    : layout
+export function closeOtherTabs(layout: DockLayoutJSON, tabId: string): DockLayoutJSON {
+  const side = findBorder(layout, tabId)
+  const tabs = side ? borderTabs(layout.borders[side]) : getGroups(layout.root).find(candidate => candidate.tabs.includes(tabId))?.tabs
+  return tabs ? removeTabs(layout, tabs.filter(tab => tab !== tabId)) : layout
 }
 export function reorderTab(
   layout: DockLayoutJSON,
@@ -136,9 +199,19 @@ export function moveGroupOrPanel(
   position: DockPosition,
   index?: number
 ): DockLayoutJSON {
-  const from = findGroup(layout, source.groupId)
+  const side = dockBorderSides.find(candidate => borderGroupId(candidate) === source.groupId)
+  const border = side && layout.borders[side]
+  const allTabs = borderTabs(border || undefined)
+  const from: DockGroup | undefined = border && allTabs.length && (!source.tabId || allTabs.includes(source.tabId))
+    ? { kind: "group", id: source.groupId, tabs: allTabs, active: source.tabId ?? border.selected ?? allTabs[0] ?? "" }
+    : findGroup(layout, source.groupId)
   const target = findGroup(layout, targetId)
-  if (!from || !target || (source.tabId && !from.tabs.includes(source.tabId))) return layout
+  if (!from || (source.tabId && !from.tabs.includes(source.tabId))) return layout
+  if (!target) {
+    if (layout.root || !border) return layout
+    const moving = source.tabId ? [source.tabId] : from.tabs
+    return withRoot(removeTabs(layout, moving), { kind: "group", id: uniqueId(layout, "dock-group"), tabs: moving, active: source.tabId ?? from.active })
+  }
   const tabs = source.tabId ? [source.tabId] : from.tabs
   if (from.id === target.id) {
     if (position === "center")
@@ -217,19 +290,42 @@ export function resizeSplit(
   )
 }
 export function toggleMaximize(layout: DockLayoutJSON, groupId: string): DockLayoutJSON {
-  return findGroup(layout, groupId)
-    ? {
-        ...layout,
-        activeGroup: groupId,
-        maximizedGroup: layout.maximizedGroup === groupId ? null : groupId,
-      }
+  const group = findGroup(layout, groupId)
+  const side = dockBorderSides.find(candidate => borderGroupId(candidate) === groupId && layout.borders[candidate]?.selected)
+  return group || side
+    ? { ...layout, activeGroup: group ? groupId : layout.activeGroup, maximizedGroup: layout.maximizedGroup === groupId ? null : groupId }
     : layout
 }
+export function moveToBorder(layout: DockLayoutJSON, source: DockDragSource, side: DockBorderSide, size: number, placement?: { group: "start" | "end"; index: number }): DockLayoutJSON {
+  const group = findGroup(layout, source.groupId)
+  const sourceSide = dockBorderSides.find(candidate => borderGroupId(candidate) === source.groupId)
+  const sourceTabs = group?.tabs ?? (sourceSide ? borderTabs(layout.borders[sourceSide]) : undefined)
+  if (!sourceTabs || (source.tabId && !sourceTabs.includes(source.tabId))) return layout
+  const tabs = source.tabId ? [source.tabId] : sourceTabs
+  const removed = removeTabs(layout, tabs)
+  const border: DockBorder = removed.borders[side] ?? { tabs: [], end: [], visible: true, hoverReveal: false, selected: null, size, type: "split" }
+  if (!Number.isFinite(border.size) || border.size <= 0) return layout
+  const key = placement?.group === "end" ? "end" : "tabs"
+  const items = [...(border[key] ?? [])]
+  const original = layout.borders[side]?.[key] ?? []
+  const index = placement ? placement.index - original.slice(0, placement.index).filter(tab => tabs.includes(tab)).length : items.length
+  items.splice(Math.max(0, Math.min(index, items.length)), 0, ...tabs)
+  return {
+    ...removed,
+    hidden: removed.hidden.filter(tab => !tabs.includes(tab)),
+    borders: { ...removed.borders, [side]: { ...border, [key]: items, selected: null } },
+  }
+}
 export function addPanel(layout: DockLayoutJSON, tabId: string, targetId?: string): DockLayoutJSON {
+  const border = findBorder(layout, tabId)
+  if (border) return selectBorderTab(layout, border, tabId)
   if (getGroups(layout.root).some(group => group.tabs.includes(tabId)))
     return activateTab(layout, tabId)
   const target = targetId ? findGroup(layout, targetId) : getGroups(layout.root)[0]
   const hidden = layout.hidden.filter(tab => tab !== tabId)
+  const targetSide = dockBorderSides.find(side => borderGroupId(side) === targetId && layout.borders[side])
+  const targetBorder = targetSide ? layout.borders[targetSide] : undefined
+  if (targetSide && targetBorder) return selectBorderTab({ ...layout, hidden, borders: { ...layout.borders, [targetSide]: { ...targetBorder, tabs: [...targetBorder.tabs, tabId] } } }, targetSide, tabId)
   if (target)
     return {
       ...updateRoot(layout, node =>
@@ -295,8 +391,36 @@ export function fromJSON(value: unknown): DockLayoutJSON {
     }
   }
   const data = record(value)
-  if (data.version !== 1 || !Array.isArray(data.hidden)) return fail()
+  if ((data.version !== 1 && data.version !== 2) || !Array.isArray(data.hidden)) return fail()
   const root = data.root === null ? null : parse(data.root)
+  const borders: Partial<Record<DockBorderSide, DockBorder>> = {}
+  if (data.version === 2) {
+    const source = record(data.borders)
+    if (Object.keys(source).some(side => !dockBorderSides.some(candidate => candidate === side))) return fail()
+    for (const side of dockBorderSides) {
+      if (source[side] === undefined) continue
+      const border = record(source[side])
+      if (!Array.isArray(border.tabs) || typeof border.size !== "number" || !Number.isFinite(border.size) || border.size <= 0) return fail()
+      const tabs = border.tabs.map((tab: unknown) => {
+        if (typeof tab !== "string" || !tab || tabIds.has(tab)) return fail()
+        tabIds.add(tab)
+        return tab
+      })
+      if (border.end !== undefined && !Array.isArray(border.end)) return fail()
+      const end = (Array.isArray(border.end) ? border.end : []).map((tab: unknown) => {
+        if (typeof tab !== "string" || !tab || tabIds.has(tab)) return fail()
+        tabIds.add(tab)
+        return tab
+      })
+      if (border.selected !== null && (typeof border.selected !== "string" || ![...tabs, ...end].includes(border.selected))) return fail()
+      const type = border.type ?? "split"
+      if (type !== "split" && type !== "overlay") return fail()
+      if (border.visible !== undefined && typeof border.visible !== "boolean") return fail()
+      if (border.hoverReveal !== undefined && typeof border.hoverReveal !== "boolean") return fail()
+      borders[side] = { tabs, end, visible: border.visible !== false, hoverReveal: border.hoverReveal === true, size: border.size, selected: border.selected, type }
+    }
+    if (dockBorderSides.filter(side => borders[side]?.type === "overlay" && borders[side]?.selected !== null).length > 1) return fail()
+  }
   const hidden = data.hidden.map((tab: unknown) => {
     if (typeof tab !== "string" || !tab || tabIds.has(tab)) return fail()
     tabIds.add(tab)
@@ -310,11 +434,13 @@ export function fromJSON(value: unknown): DockLayoutJSON {
         ? id
         : fail()
   return {
-    version: 1,
+    version: 2,
+    borders,
     root,
     hidden,
     activeGroup: groupId(data.activeGroup),
-    maximizedGroup: groupId(data.maximizedGroup),
+    maximizedGroup: typeof data.maximizedGroup === "string" && dockBorderSides.some(side => borderGroupId(side) === data.maximizedGroup && borders[side]?.selected)
+      ? data.maximizedGroup : groupId(data.maximizedGroup),
   }
 }
 

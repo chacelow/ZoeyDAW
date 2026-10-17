@@ -106,5 +106,17 @@ export default {
   },
   titlebar: {
     settings: "Settings",
+    appTitle: "ZoeyDAW",
+    file: "File",
+    edit: "Edit",
+    view: "View",
+    help: "Help",
+    open: "Open project…",
+    save: "Save project",
+    undo: "Undo",
+    redo: "Redo",
+    minimize: "Minimize window",
+    maximizeRestore: "Maximize / restore window",
+    close: "Close window",
   },
 }

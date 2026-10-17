@@ -11,6 +11,8 @@ import {
   Separator,
   DeviceHeader,
   SettingsShell,
+  Kbd,
+  Tooltip,
 } from "@/ui/controls"
 import { Icon } from "@/ui/controls/Icon"
 import { GallerySection, GalleryVariant, GalleryState } from "./GallerySection"
@@ -126,6 +128,14 @@ export function SurfacesSection({ t }: GallerySectionProps) {
             },
           ]}
         />
+      </GalleryVariant>
+      <GalleryVariant label={t("Shortcut keycaps", "快捷键键帽")}>
+        <Kbd>⌘</Kbd><Kbd>⇧</Kbd><Kbd>K</Kbd>
+      </GalleryVariant>
+      <GalleryVariant label={t("Tooltip", "提示")}>
+        <Tooltip content={t("Shared native tooltip", "统一原生提示")}>
+          <Button>{t("Hover or focus", "悬停或聚焦")}</Button>
+        </Tooltip>
       </GalleryVariant>
     </GallerySection>
   )

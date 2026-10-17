@@ -7,6 +7,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
   Chip,
+  Badge,
   DragPadToggle,
 } from "@/ui/controls"
 import { GallerySection, GalleryVariant, GalleryState } from "./GallerySection"
@@ -49,9 +50,6 @@ export function TogglesSection({ t }: GallerySectionProps) {
             onCheckedChange={setChecked}
           />
         </GalleryState>
-        <GalleryState label={t("Unchecked", "未选中")}>
-          <Checkbox label={t("Unchecked", "未选中")} checked={false} onCheckedChange={setChecked} />
-        </GalleryState>
         <GalleryState label={t("Checked", "选中")}>
           <Checkbox label={t("Checked", "选中")} checked={true} onCheckedChange={setChecked} />
         </GalleryState>
@@ -62,6 +60,9 @@ export function TogglesSection({ t }: GallerySectionProps) {
             onCheckedChange={setChecked}
             disabled
           />
+        </GalleryState>
+        <GalleryState label={t("Unchecked", "未选中")}>
+          <Checkbox label={t("Unchecked", "未选中")} checked={false} onCheckedChange={setChecked} />
         </GalleryState>
         <GalleryState label={t("Invalid", "无效")}>
           <Checkbox
@@ -150,6 +151,12 @@ export function TogglesSection({ t }: GallerySectionProps) {
         </ToggleGroup>
       </GalleryVariant>
       <GalleryVariant label={t("Chip", "标签")}>
+        <GalleryState label={t("Default · one control unit", "默认 · 一个控件单位")}>
+          <Chip>{t("Drums", "鼓组")}</Chip>
+        </GalleryState>
+        <GalleryState label={t("Selected", "已选择")}>
+          <Chip selected>{t("Racks", "机架")}</Chip>
+        </GalleryState>
         {tags.map(tag => (
           <GalleryState key={tag} label={t("Selectable / removable", "可选择 / 移除")}>
             <Chip
@@ -172,6 +179,7 @@ export function TogglesSection({ t }: GallerySectionProps) {
         </GalleryState>
       </GalleryVariant>
       <GalleryVariant label={t("DragPadToggle", "数值切换")}>
+        <GalleryState label={t("Default", "默认")}>
         <DragPadToggle
           value={on}
           onChange={setOn}
@@ -179,6 +187,8 @@ export function TogglesSection({ t }: GallerySectionProps) {
           labelOn={t("On", "开启")}
           labelOff={t("Off", "关闭")}
         />
+        </GalleryState>
+        <GalleryState label={t("Disabled", "禁用")}>
         <DragPadToggle
           disabled
           value={!on}
@@ -187,6 +197,12 @@ export function TogglesSection({ t }: GallerySectionProps) {
           labelOn={t("On", "开启")}
           labelOff={t("Off", "关闭")}
         />
+        </GalleryState>
+      </GalleryVariant>
+      <GalleryVariant label={t("Badge / count", "徽标 / 计数")}>
+        <Badge>{t("New", "新增")}</Badge>
+        <Badge tone="accent">12</Badge>
+        <Badge tone="destructive">99</Badge>
       </GalleryVariant>
     </GallerySection>
   )

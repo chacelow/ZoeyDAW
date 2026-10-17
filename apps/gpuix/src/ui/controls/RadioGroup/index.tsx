@@ -43,9 +43,7 @@ export function RadioGroup({
           {
             display: "flex",
             flexDirection: orientation === "vertical" ? "column" : "row",
-            gap: theme.control[
-              orientation === "vertical" ? "--spacing-control-track-gap" : "--spacing-control-gap"
-            ],
+            gap: theme.control["--spacing-control-track-gap"],
           },
           style
         )}
@@ -78,6 +76,8 @@ export function RadioGroupItem({
   const variants = sv({
     base: {
       display: "flex",
+      flexDirection: "row",
+      flexShrink: 0,
       alignItems: "center",
       gap: theme.control["--spacing-control-gap"],
       height: theme.control["--spacing-control-track"],
@@ -141,6 +141,7 @@ export function RadioGroupItem({
       <div
         style={{
           display: "flex",
+          pointerEvents: "none",
           flexShrink: 0,
           width: theme.control["--spacing-control-icon"],
           height: theme.control["--spacing-control-icon"],
@@ -162,7 +163,9 @@ export function RadioGroupItem({
           />
         ) : null}
       </div>
-      {children}
+      {typeof children === "string" || typeof children === "number" ? (
+        <text style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>{children}</text>
+      ) : children}
     </div>
   )
 }

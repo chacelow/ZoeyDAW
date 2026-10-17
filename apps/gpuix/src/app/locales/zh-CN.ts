@@ -103,5 +103,17 @@ export default {
   },
   titlebar: {
     settings: "设置",
+    appTitle: "ZoeyDAW",
+    file: "文件",
+    edit: "编辑",
+    view: "视图",
+    help: "帮助",
+    open: "打开工程…",
+    save: "保存工程",
+    undo: "撤销",
+    redo: "重做",
+    minimize: "最小化窗口",
+    maximizeRestore: "最大化 / 还原窗口",
+    close: "关闭窗口",
   },
 }

@@ -6,7 +6,7 @@ import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { Button } from "@/ui/controls"
 import { createSettingStorage } from "@/platform/settings"
-import { getThemePreset } from "@/shared/theme/presets"
+import { DEFAULT_THEME_PRESET, getThemePreset } from "@/shared/theme/presets"
 import { createThemeLibraryStore } from "./store"
 import {
   activeCustomTheme,
@@ -34,6 +34,8 @@ test("preset color, shape and control overrides reach real rendered button geome
   const resolved = resolveThemeOverrides(library, "dark")
   expect(resolved.colors.primary).toBe("rgb(200, 40, 80)")
   expect(resolved.colors.background).toBe(getThemePreset("catppuccin").baseColors.dark.background)
+  expect(resolved.design.dock.stripHeight).toBe(resolved.control["--spacing-control-track"] * 2)
+  expect(resolved.design.cards.controls.inset).toBe(resolved.control["--spacing-control-track-gap"])
   const root = createTestRoot({ width: 240, height: 100 })
   try {
     root.render(
@@ -82,7 +84,7 @@ test("JSON boundary drops invalid color, nonfinite and out-of-range fields and r
   expect(
     parseThemeLibrary(JSON.stringify({ selection: "custom:missing", themes: [null, custom] }))
       .selection
-  ).toBe("default")
+  ).toBe(DEFAULT_THEME_PRESET)
 })
 test("real settings save and reloaded theme store resolve identically; deleting active falls back to base", () => {
   const configDir = mkdtempSync(path.join(tmpdir(), "custom-themes-"))

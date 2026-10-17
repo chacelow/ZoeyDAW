@@ -1,3 +1,5 @@
+import { useState } from "react"
+import { useGpuix } from "@gpuix/react"
 import type { KeyEvent, StyleDesc } from "@gpuix/react"
 import { consumeKey } from "@/shared/keyboard"
 import { useTheme } from "@/shared/theme/ThemeProvider"
@@ -5,6 +7,8 @@ import { sx } from "@/shared/theme/style"
 import { computeLayout } from "../layout/computeLayout"
 import { useDividerDrag } from "../useDividerDrag"
 import { dividerChrome } from "../divider-chrome"
+import { useDividerLayer } from "../DividerLayer"
+import { DividerHitArea } from "../Separator/DividerHitArea"
 
 export interface CollapseDividerProps {
   expanded: boolean
@@ -26,6 +30,9 @@ export function CollapseDivider({
   formatAccessiblePixels,
 }: CollapseDividerProps) {
   const theme = useTheme()
+  const { renderer } = useGpuix()
+  const layer = useDividerLayer()
+  const [offset, setOffset] = useState(0)
   const drag = useDividerDrag({
     orientation: "horizontal",
     start: () => expanded,
@@ -55,22 +62,32 @@ export function CollapseDivider({
     consumeKey(event, "handled")
   }
   return (
-    <div
-      role="separator"
-      aria-label={label}
-      aria-valuetext={formatAccessiblePixels(expanded ? expandedSize : 0)}
-      testId={testId}
-      tabIndex={0}
-      onMouseDown={drag.onMouseDown}
-      onMouseMove={drag.onMouseMove}
-      onMouseUp={drag.onMouseUp}
-      onBlur={drag.onBlur}
-      onKeyDown={onKeyDown}
-      style={sx(dividerChrome(theme, drag.dragging), style, {
-        height: theme.project.panelGap,
-        width: "100%",
-        cursor: theme.design.cursors.rowResize,
-      })}
-    />
+    <>
+      <div
+        testId={testId ? `${testId}-line` : undefined}
+        onLayout={event => {
+          const origin = layer && renderer?.getElementBounds?.(layer.id)
+          if (origin && event.y !== undefined) setOffset(event.y - origin.y)
+        }}
+        style={sx(dividerChrome(theme), {
+          height: theme.design.shape.separatorWidth,
+          width: "100%",
+        })}
+      />
+      <DividerHitArea
+        orientation="horizontal"
+        offset={offset}
+        dragging={drag.dragging}
+        aria-label={label}
+        aria-valuetext={formatAccessiblePixels(expanded ? expandedSize : 0)}
+        testId={testId}
+        onMouseDown={drag.onMouseDown}
+        onMouseMove={drag.onMouseMove}
+        onMouseUp={drag.onMouseUp}
+        onBlur={drag.onBlur}
+        onKeyDown={onKeyDown}
+        style={style}
+      />
+    </>
   )
 }

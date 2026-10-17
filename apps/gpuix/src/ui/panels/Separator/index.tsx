@@ -2,10 +2,11 @@ import { useContext } from "react"
 import type { KeyEvent, StyleDesc } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
-import { SlotContext, usePanelGroup } from "../context"
+import { DividerOffsetContext, SlotContext, usePanelGroup } from "../context"
 import { keyboardDelta } from "../layout/keyboardDelta"
 import { useDividerDrag } from "../useDividerDrag"
 import { dividerChrome } from "../divider-chrome"
+import { DividerHitArea } from "./DividerHitArea"
 
 export interface SeparatorProps {
   disabled?: boolean
@@ -24,13 +25,16 @@ export function Separator({
 }: SeparatorProps) {
   const group = usePanelGroup()
   const index = useContext(SlotContext)
+  const offset = useContext(DividerOffsetContext)
   const theme = useTheme()
   const vertical = group.orientation === "horizontal"
   const drag = useDividerDrag({
     orientation: vertical ? "vertical" : "horizontal",
     disabled: disabled || hidden,
     start: group.beginDrag,
-    move: (snapshot, delta) => group.preview(snapshot, index, delta),
+    move: (snapshot, delta) => {
+      group.preview(snapshot, index, delta)
+    },
     finish: () => group.endDrag(),
     restore: snapshot => group.endDrag(snapshot),
   })
@@ -62,27 +66,33 @@ export function Separator({
   }
   if (hidden) return null
   return (
-    <div
-      role="separator"
-      aria-label={label}
-      aria-valuetext={String(Math.round(group.sizes[index] ?? 0))}
-      testId={testId}
-      tabIndex={disabled ? -1 : 0}
-      onMouseDown={drag.onMouseDown}
-      onMouseMove={drag.onMouseMove}
-      onMouseUp={drag.onMouseUp}
-      onBlur={drag.onBlur}
-      onKeyDown={onKeyDown}
-      style={sx(dividerChrome(theme, drag.dragging), style, {
-        cursor: disabled
-          ? theme.design.cursors.default
-          : vertical
-            ? theme.design.cursors.columnResize
-            : theme.design.cursors.rowResize,
-        ...(vertical
-          ? { width: theme.project.panelGap, height: "100%" }
-          : { height: theme.project.panelGap, width: "100%" }),
-      })}
-    />
+    <>
+      <div
+        testId={testId ? `${testId}-line` : undefined}
+        aria-hidden="true"
+        tabIndex={disabled ? -1 : 0}
+        onKeyDown={onKeyDown}
+        style={sx(dividerChrome(theme), {
+          ...(vertical
+            ? { width: theme.design.shape.separatorWidth, height: "100%" }
+            : { height: theme.design.shape.separatorWidth, width: "100%" }),
+        })}
+      />
+      <DividerHitArea
+        orientation={vertical ? "vertical" : "horizontal"}
+        offset={offset}
+        dragging={drag.dragging}
+        disabled={disabled}
+        testId={testId}
+        aria-label={label}
+        aria-valuetext={String(Math.round(group.sizes[index] ?? 0))}
+        onMouseDown={drag.onMouseDown}
+        onMouseMove={drag.onMouseMove}
+        onMouseUp={drag.onMouseUp}
+        onBlur={drag.onBlur}
+        onKeyDown={onKeyDown}
+        style={style}
+      />
+    </>
   )
 }

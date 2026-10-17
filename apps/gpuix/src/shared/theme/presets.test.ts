@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { converter, parse } from "culori"
+import { converter, parse, wcagContrast } from "culori"
 import { DEFAULT_THEME_PRESET, THEME_PRESETS, getThemePreset, isThemePresetId } from "./presets"
 import { PRESET_DATA } from "./presets.data"
 import type { DerivedThemeColors } from "./colors"
@@ -48,7 +48,7 @@ const DERIVED_ROLES: Record<keyof DerivedThemeColors, true> = {
   arrangementVolume: true,
   arrangementMeterGood: true,
   arrangementMeterWarn: true,
-  arrangementMeterDanger: true,
+  arrangementMeterClip: true,
   arrangementMeterPeak: true,
   arrangementClipInk: true,
   arrangementFadeMask: true,
@@ -81,8 +81,8 @@ const cases = THEME_PRESETS.flatMap(preset =>
   SCHEMES.map(scheme => ({ id: preset.id, scheme, colors: preset.colors[scheme] }))
 )
 
-test("the Web preset list is migrated whole: Default plus 42 tweakcn presets, unique ids", () => {
-  expect(THEME_PRESETS).toHaveLength(43)
+test("retains the 43 migrated presets and adds both VS Code theme pairs", () => {
+  expect(THEME_PRESETS).toHaveLength(45)
   expect(THEME_PRESETS[0].id).toBe(DEFAULT_THEME_PRESET)
   expect(new Set(THEME_PRESETS.map(preset => preset.id)).size).toBe(THEME_PRESETS.length)
 })
@@ -133,15 +133,29 @@ describe("scheme orientation matches Default in every preset", () => {
   })
 })
 
-test("Default derives the same roles as the Web root theme", () => {
-  const { light, dark } = getThemePreset(DEFAULT_THEME_PRESET).colors
-  expect(light.background).toBe("oklch(100% 0 0deg)")
-  expect(dark.border).toBe("oklch(100% 0 0deg / 10%)")
+test("default derives its roles from the selected preset palette", () => {
+  const preset = getThemePreset(DEFAULT_THEME_PRESET)
+  const { light, dark } = preset.colors
+  expect(light.background).toBe(preset.baseColors.light.background)
+  expect(dark.border).toBe(preset.baseColors.dark.border)
   expect(light.arrangementLine).toBe(light.border)
   expect(dark.arrangementLine).toBe(dark.muted)
   expect(light.arrangementMeterWarn).toBe(light.chart4)
   expect(dark.arrangementMeterWarn).toBe(dark.chart3)
 })
+
+test.each(["vscode-modern", "vscode-plus"] as const)(
+  "%s resolves both schemes with readable text",
+  id => {
+    const preset = getThemePreset(id)
+    for (const scheme of SCHEMES) {
+      const colors = preset.colors[scheme]
+      expect(wcagContrast(colors.background, colors.foreground)).toBeGreaterThan(7)
+      expect(colors.editorShell).toBeTruthy()
+      expect(colors.arrangementMeterGood).toBeTruthy()
+    }
+  }
+)
 
 test("isThemePresetId accepts listed ids only", () => {
   expect(isThemePresetId("catppuccin")).toBe(true)

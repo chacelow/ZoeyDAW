@@ -32,14 +32,16 @@ it("refreshes sustained peaks, catches new higher peaks, and clears after silenc
   expect(right.db).toBeCloseTo(-29.6)
   advanceMeterPeak(left, 3, 1200, ARRANGEMENT_DEFAULTS.meter)
   expect(left.db).toBe(3)
-  advanceMeterPeak(left, -Infinity, 5000, ARRANGEMENT_DEFAULTS.meter)
-  expect(left.db).toBe(-60)
+  advanceMeterPeak(left, -Infinity, 8000, ARRANGEMENT_DEFAULTS.meter)
+  expect(left.db).toBe(ARRANGEMENT_DEFAULTS.meter.minDb)
 })
 
 it("retains positive dB headroom and treats non-finite telemetry as overload or silence", () => {
   expect(meterDatabase(0, ARRANGEMENT_DEFAULTS.meter)).toBe(0)
   expect(meterDatabase(3, ARRANGEMENT_DEFAULTS.meter)).toBe(3)
   expect(meterDatabase(Infinity, ARRANGEMENT_DEFAULTS.meter)).toBe(6)
-  expect(meterDatabase(-Infinity, ARRANGEMENT_DEFAULTS.meter)).toBe(-60)
-  expect(meterDatabase(NaN, ARRANGEMENT_DEFAULTS.meter)).toBe(-60)
+  expect(meterDatabase(-Infinity, ARRANGEMENT_DEFAULTS.meter)).toBe(
+    ARRANGEMENT_DEFAULTS.meter.minDb
+  )
+  expect(meterDatabase(NaN, ARRANGEMENT_DEFAULTS.meter)).toBe(ARRANGEMENT_DEFAULTS.meter.minDb)
 })

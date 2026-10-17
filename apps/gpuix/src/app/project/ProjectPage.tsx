@@ -16,13 +16,15 @@ import { useProjectShell } from "./useProjectShell"
 import type { ProjectLayoutSlots } from "./ProjectLayout"
 import type { ProjectShellApi } from "./useProjectShell"
 
+import type { ReactNode } from "react"
 export interface ProjectPageProps {
   readonly projectId: string
   readonly openMode?: "new"
   readonly renderSlots?: (shell: ProjectShellApi) => ProjectLayoutSlots
+  readonly renderViewMenu?: (view: ReactNode, toggles: ReactNode) => ReactNode
 }
 
-export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPageProps) {
+export function ProjectPage({ projectId, openMode, renderSlots, renderViewMenu }: ProjectPageProps) {
   const shell = useProjectShell()
   const { t, locale } = useAppTranslation()
   const theme = useTheme()
@@ -74,6 +76,7 @@ export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPagePro
         projectId={projectId}
         shell={shell}
         labels={labels}
+        renderViewMenu={renderViewMenu}
       />
     ) : null
   return (
@@ -83,6 +86,7 @@ export function ProjectPage({ projectId, openMode, renderSlots }: ProjectPagePro
       shell={shell}
       focusRef={focusRef}
       labels={labels}
+      renderViewMenu={renderViewMenu}
     />
   )
 }

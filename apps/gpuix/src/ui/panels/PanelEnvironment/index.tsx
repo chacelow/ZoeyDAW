@@ -1,8 +1,11 @@
 import { createContext } from "react"
 import type { ReactNode } from "react"
+import type { PointerPosition } from "@/shared/pointer"
 
 export interface PanelEnvironment {
   subscribeWindowActive?: (listener: (active: boolean) => void) => () => void
+  scheduleFrame?: (callback: () => void) => () => void
+  subscribePointer?: (listener: (position: PointerPosition) => void) => () => void
 }
 
 export const PanelEnvironmentContext = createContext<PanelEnvironment>({})

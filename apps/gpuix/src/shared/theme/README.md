@@ -11,6 +11,7 @@
 | `presets.data.ts` | gpuix 主题预设数据源；迁移后直接维护，颜色字面量保持原精度。 |
 | `metrics/control-metrics.json` | 控件与工程几何的单一数据源，由 `metrics/config.ts` 直接导入；无 CSS 生成路径。 |
 | `colors.ts` | `ThemeColors`、`DerivedThemeColors` 与唯一的 `derive(base, scheme, recipes)`。 |
+| `vscode-colors.ts` | VS Code workbench `colors` 到基础 palette 的有损语义映射；候选顺序唯一，导入与来源说明共用。 |
 | `color-mix.ts` | 把 `color-mix(in oklab, …)` 解析成 hex8。 |
 | `content-color.ts` | 轨道、Clip 的 `var(--chart-N)` 内容色按当前主题解析。 |
 | `design-tokens.ts` | 原生 `DesignTokens`、Card 语义变体与默认值；几何默认值从本地 metrics 派生。 |
@@ -23,7 +24,7 @@
 `Theme.design` 始终是完整的 `DesignTokens`。`Theme.control`、`transportControl`、`project` 继续拥有原有高度、字体、图标与工程度量；`Theme.layout` 拥有面板与纯几何。这些组支持运行时受控替换。`colors` 可提供包含全部语义角色的 `Theme["colors"]`，用于运行时颜色覆盖和原生测试输入；传入时整体采用并跳过派生，省略时保留 preset/scheme 与配方的原缓存路径。纯轨道布局显式接收 `theme.layout.track`，不读取 JSON；应用把 layout 注入 `ArrangementScene.geometry`，更新只读几何不改写持久轨高。
 
 - `shape.controlRadius` 统一 Button、数值壳、Input、ControlGroup、MotionTabs 与设置导航的同类圆角。Toggle 与 ListRow 有各自的形状语义，默认值分别为2与0，不再借 gap 作为 radius。
-- `shape.panelRadius` 默认7，独立于 `project.panelGap`。PanelShell 只消费形状与边框，不改变 Group/Panel 的求解、resize 或拖动 owner。
+- PanelShell 与 Dock group 无边框或圆角，面板之间只消费 `shape.separatorWidth` 细线；`project.panelGap` 仅用于透明 sash 命中区。已删除 `shape.panelRadius` / `shape.panelBorderWidth` 和重复的 `dock.tabPadding` / `dock.contentInset`。Dock 标题与操作按钮直接使用 control 度量，内容 inset 复用 `cards.controls.inset`；`createDesignTokens(control)` 同时为 ThemeProvider 和主题编辑器推导这些默认值。
 - `shape.indicatorRadius` 保持等宽高选中徽标的圆形语义，默认值是 control-track 高度的一半；不借用 control gap 或整段控件高度作为圆角。
 - `controlBorderWidth=0` 时，数值与下拉宽度按真实 `borderWidth * 2` 推导；滚动条的内长和 thumb 横截面同样扣真实边框。Focus ring 与单选指示器描边是功能标记，独立于外壳边框。
 - `typography.numberFontFamily` 是数值字体的唯一入口（默认 Menlo）。DragPadNumber 的测量样本、显示文字和真实 input 共用该值；覆盖字体时缓存按字体键重新测量，编辑态保留同一外壳宽度。
@@ -38,18 +39,21 @@
 ## 预设来源
 
 - 2026-10 迁移时完整保留 Default 与 42 个 tweakcn 预设；原 Web/CSS 输入已删除，当前权威来源是 `presets.data.ts`。
+- 2026-10-17 添加 VS Code Modern（Dark Modern / Light Modern）和 VS Code Dark+ / Light+ 成对预设；来自 [VS Code theme-defaults](https://github.com/microsoft/vscode/tree/065609095f6f68bc91bfc00c8f8f200fa29539a4/extensions/theme-defaults/themes) 与缺失颜色的 registry 默认值。`vscode-modern` 为未设置用户的默认值；旧 `default` 仍可选，已经保存的合法预设不迁移。
 - 颜色原样复制：hex 与 `oklch()` 字面量保持源精度，不经 HSL 转换。gpuix 的 csscolorparser 直接接受两者。
-- id：Web 的 Default 是空字符串 `""`，gpuix 用 `"default"`。持久化的旧值 `""` 读成 `null`，回退 Default。
+- id：Web 的 Default 是空字符串 `""`，gpuix 用 `"default"`。持久化的旧值 `""` 读成 `null`，回退 `DEFAULT_THEME_PRESET`。
 
 ## 持久化
 
-`platform/settings/theme-preset.ts` 的 `createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET)`：`get()` 校验，未知、已删除或旧格式的 id 返回 `null`（调用方回退 Default），读取不写文件。其他设置的写入会把旧值原样带过去，所以组合根启动时调用一次 `repair()`：存的是无效 id 时写入 `default` 并返回 `true`。`platform` 不能 import `shared/theme`，预设校验与 Default id 由组合根注入。
+`platform/settings/theme-preset.ts` 的 `createThemePresetSetting(isThemePresetId, DEFAULT_THEME_PRESET)`：`get()` 校验，未知、已删除或旧格式的 id 返回 `null`（调用方回退默认预设），读取不写文件。其他设置的写入会把旧值原样带过去，所以组合根启动时调用一次 `repair()`：存的是无效 id 时写入 `DEFAULT_THEME_PRESET` 并返回 `true`；缺失值和已存合法 id 不改写。`platform` 不能 import `shared/theme`，校验与默认 id 由组合根注入。
 
 用户主题由 `CustomTheme` 保存 `custom:` id、名称、基础预设、light/dark 两套 partial palette、partial design、default/transport 控件度量和 project 几何。`ThemeLibrary` 同时保存主题列表与当前 `ThemeSelection`（内置 id 或自定义 id）。颜色在基础预设上合并后调用唯一的 `derive()`；design 深合并默认值，度量合并集中默认值，再把完整分组传给 Provider，layout 仍从解析后的 control/project 派生。
 
 `app/theme-editor/schema.ts` 的 `THEME_FIELDS` 是数值和颜色编辑、范围校验、分组及文案 key 的唯一列表：包含两套基础 palette、全部形状/间距/尺寸数值（不开放混色配方、指针枚举及动效）、default/transport 度量与 project 几何；数字字体族另以文本输入编辑。颜色复用现有 culori 解析器；JSON 边界丢弃非法字段并 `logger.warn`，非法元数据不导入。新建复制当前覆盖；内置预设只读；导入使用新的 id，不覆盖同名主题。删除正在使用的自定义主题回到其基础预设。
 
-应用通过 `createThemeLibraryStore(createSettingStorage("themeLibrary"), basePreset)` 保存完整 JSON 字符串，沿用原生 settings 原子写机制；Rust 的可选字段兼容旧设置文件。`themePreset` 保留当前基础预设作为旧偏好回退，不保存第二份自定义内容。导出后 JSON 留在可复制 Input；导入可直接粘贴，不启动文件对话框。保存失败保留内存编辑并显示未持久化状态。
+应用通过 `createThemeLibraryStore(createSettingStorage("themeLibrary"), basePreset)` 保存完整 JSON 字符串，沿用原生 settings 原子写机制；Rust 的可选字段兼容旧设置文件。`themePreset` 保留当前基础预设作为旧偏好回退，不保存第二份自定义内容。导出后 JSON 留在可复制 Input；自有主题导入直接粘贴。保存失败保留内存编辑并显示未持久化状态。
+
+VS Code 主题导入复用这个 Input，并在 renderer 支持 `promptForPaths` 时提供系统文件选择；UTF-8 内容经 `platform/storage.readTextFile()` 读取。`app/theme-editor/vscode-import.ts` 是纯 JSONC 解析入口，支持注释、尾逗号与 dark/light/hc/hcDark/hcLight；省略 type 时按 editor.background 明度推断，否则 dark。只写对应外观的 partial colors，缺失项回退 `vscode-modern`，另一外观不覆盖；忽略语法 tokenColors。无法解析 include 时显示警告而不阻止导入，也不跟随 include 路径读文件。非法 JSON/外层结构拒绝；无效/未知颜色项不覆盖基础值。每次导入创建新的自定义主题并激活。
 
 ## 字段对照
 
@@ -91,7 +95,8 @@
 | `--arrangement-surface` | `arrangementSurface` | `color-mix(card 86%, foreground)` |
 | `--arrangement-surface-alt` | `arrangementSurfaceAlt` | `color-mix(card 84%, foreground)` |
 | `--arrangement-line` | `arrangementLine` | `light-dark(border, muted)` |
-| `--arrangement-automation`、`--arrangement-meter-danger` | `arrangementAutomation`、`arrangementMeterDanger` | `destructive` |
+| `--arrangement-automation` | `arrangementAutomation` | `destructive` |
+| `--arrangement-meter-clip` | `arrangementMeterClip` | 独立基础 palette 角色，默认饱和纯红；浅色、深色和自定义预设可分别覆盖，`design.colorRecipes.aliases.arrangementMeterClip` 可重定向 |
 | `--arrangement-volume`、`--arrangement-meter-good` | `arrangementVolume`、`arrangementMeterGood` | `chart-2` |
 | `--arrangement-meter-warn` | `arrangementMeterWarn` | `light-dark(chart-4, chart-3)` |
 | `--arrangement-meter-peak` | `arrangementMeterPeak` | `muted-foreground` |

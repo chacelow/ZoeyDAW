@@ -17,8 +17,9 @@ export interface CardDesignTokens {
 export interface DesignTokens {
   readonly dock: {
     readonly stripHeight: number
-    readonly tabPadding: number
-    readonly contentInset: number
+    readonly tabHeight: Readonly<Record<"small" | "default" | "large", number>>
+    readonly borderSize: number
+    readonly activeIndicatorWidth: number
     readonly tabMaxWidth: number
     readonly compactActionsBelow: number
     readonly edgeFraction: number
@@ -39,14 +40,12 @@ export interface DesignTokens {
     readonly toggleRadius: number
     readonly listRowRadius: number
     readonly cardBorderWidth: number
-    readonly panelRadius: number
-    readonly panelBorderWidth: number
     readonly indicatorRadius: number
     readonly indicatorStrokeWidth: number
     readonly separatorWidth: number
     readonly focusRingWidth: number
   }
-  readonly input: { readonly paddingInline: number }
+  readonly input: { readonly paddingInline: number; readonly hoverMutedPercent: number }
   readonly cards: Readonly<Record<CardSize, CardDesignTokens>>
   readonly spacing: {
     readonly rootInset: number
@@ -111,7 +110,6 @@ export interface DesignTokens {
   readonly grid: DesignDetails["grid"]
   readonly fader: DesignDetails["fader"]
   readonly treeRow: DesignDetails["treeRow"]
-  readonly chip: DesignDetails["chip"]
   readonly switch: DesignDetails["switch"]
   readonly knob: DesignDetails["knob"]
   readonly progress: DesignDetails["progress"]
@@ -123,10 +121,12 @@ export interface DesignTokens {
 }
 export function createDockTokens(control: ControlMetrics): DesignTokens["dock"] {
   const unit = control["--spacing-control-track"]
+  const tabHeight = { small: unit, default: unit * 2, large: unit * 3 }
   return {
-    stripHeight: unit * 2,
-    tabPadding: control["--spacing-control-track-gap"],
-    contentInset: control["--spacing-control-track-gap"],
+    stripHeight: tabHeight.default,
+    tabHeight,
+    borderSize: unit * 20,
+    activeIndicatorWidth: 2,
     tabMaxWidth: unit * 12,
     compactActionsBelow: unit * 18,
     edgeFraction: 0.2,
@@ -149,14 +149,12 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
     toggleRadius: 0,
     listRowRadius: 0,
     cardBorderWidth: 1,
-    panelRadius: 7,
     separatorWidth: 1,
-    panelBorderWidth: PROJECT_METRICS.panelBorder,
     focusRingWidth: 1,
     indicatorStrokeWidth: 1,
     indicatorRadius: CONTROL_METRICS.default["--spacing-control-track"] / 2,
   },
-  input: { paddingInline: 6 },
+  input: { paddingInline: 6, hoverMutedPercent: 90 },
   cards: {
     default: {
       radius: 8,
@@ -178,10 +176,10 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
     },
     controls: {
       radius: 1,
-      inset: 4,
-      gap: 4,
-      headerGap: 2,
-      contentGap: 4,
+      inset: CONTROL_METRICS.default["--spacing-control-track-gap"],
+      gap: CONTROL_METRICS.default["--spacing-control-track-gap"],
+      headerGap: CONTROL_METRICS.default["--spacing-control-gap"],
+      contentGap: CONTROL_METRICS.default["--spacing-control-track-gap"],
       insetOwner: "parts",
       hover: "none",
     },
@@ -247,4 +245,21 @@ export const DEFAULT_DESIGN_TOKENS: DesignTokens = {
   },
   tabs: { width: 120, itemGap: 4, contentGap: 8, footerJoinedGroupGap: 0 },
   ...DEFAULT_DESIGN_DETAILS,
+}
+
+export function createDesignTokens(control: ControlMetrics): DesignTokens {
+  return {
+    ...DEFAULT_DESIGN_TOKENS,
+    dock: createDockTokens(control),
+    cards: {
+      ...DEFAULT_DESIGN_TOKENS.cards,
+      controls: {
+        ...DEFAULT_DESIGN_TOKENS.cards.controls,
+        inset: control["--spacing-control-track-gap"],
+        gap: control["--spacing-control-track-gap"],
+        headerGap: control["--spacing-control-gap"],
+        contentGap: control["--spacing-control-track-gap"],
+      },
+    },
+  }
 }

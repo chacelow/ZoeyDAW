@@ -47,7 +47,7 @@ for (const scheme of ["light", "dark"] as const) {
     expect(colors.arrangementVolume).toBe(colors.chart2)
     expect(colors.arrangementMeterGood).toBe(colors.chart2)
     expect(colors.arrangementMeterWarn).toBe(scheme === "dark" ? colors.chart3 : colors.chart4)
-    expect(colors.arrangementMeterDanger).toBe(colors.destructive)
+    expect(colors.arrangementMeterClip).toBe("#ff0000")
     expect(colors.arrangementMeterPeak).toBe(colors.mutedForeground)
     expect(colors.arrangementClipInk).toBe(scheme === "dark" ? colors.card : colors.foreground)
   })
@@ -91,7 +91,7 @@ test("complete recipe override controls every mix and semantic alias", () => {
       arrangementVolume: "chart5",
       arrangementMeterGood: "success",
       arrangementMeterWarn: { light: "chart1", dark: "chart4" },
-      arrangementMeterDanger: "accent",
+      arrangementMeterClip: "accent",
       arrangementMeterPeak: "secondaryForeground",
       arrangementClipInk: { light: "primaryForeground", dark: "popoverForeground" },
     },
@@ -123,7 +123,7 @@ test("complete recipe override controls every mix and semantic alias", () => {
   expect(colors.arrangementVolume).toBe(source.chart5)
   expect(colors.arrangementMeterGood).toBe(source.success)
   expect(colors.arrangementMeterWarn).toBe(source.chart4)
-  expect(colors.arrangementMeterDanger).toBe(source.accent)
+  expect(colors.arrangementMeterClip).toBe(source.accent)
   expect(colors.arrangementMeterPeak).toBe(source.secondaryForeground)
   expect(colors.arrangementClipInk).toBe(source.popoverForeground)
   expect(velocityNoteBorder(source.primary, source.background, recipes.editor)).toBe(
@@ -195,3 +195,9 @@ test("light scheme honors its own destructive and piano recipes", () => {
   expect(colors.arrangementMeterWarn).toBe(base.light.chart1)
   expect(colors.arrangementClipInk).toBe(base.light.cardForeground)
 })
+
+for (const scheme of ["light", "dark"] as const)
+  test(`custom ${scheme} palettes override saturated meter clipping independently of destructive`, () => {
+    const source = { ...base[scheme], arrangementMeterClip: "#ff2200", destructive: "#660000" }
+    expect(derive(source, scheme).arrangementMeterClip).toBe("#ff2200")
+  })

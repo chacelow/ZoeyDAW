@@ -8,7 +8,7 @@ Candidate projection builds one ID index and descendant set per source, then sha
 
 ## Shared Arrangement colors
 
-The shared `DerivedThemeColors` owns Arrangement colors. Headers use `arrangementSurfaceAlt`, lanes use `arrangementSurface`, borders use `arrangementLine`, authored content ink uses `arrangementClipInk`, and Mixer fill uses `arrangementVolume`. Meter signal/peak colors consume `arrangementMeterGood/Warn/Danger/Peak`; zero-dB and stereo cutouts use the same `arrangementSurfaceAlt` as the header. The unlit meter well uses `muted`.
+The shared `DerivedThemeColors` owns Arrangement colors. Headers use `arrangementSurfaceAlt`, lanes use `arrangementSurface`, borders use `arrangementLine`, authored content ink uses `arrangementClipInk`, and Mixer fill uses `arrangementVolume`. Meter RMS and translucent instantaneous peak use `arrangementMeterGood`; hold lines use `arrangementMeterPeak`. An overloaded channel lights its entire above-zero region with saturated `arrangementMeterClip`. The unlit well uses `muted`. TrackMeter integrates RMS in the power domain using `meter.rmsIntegrationMs` on the existing telemetry frame driver, and resets RMS and hold on session changes. Main Out embeds main-track telemetry in the dropdown leading slot. Cue Out stays silent because the engine has no cue bus.
 
 Authored track/group/clip colors remain token strings. Menus consume the shared `CONTENT_PALETTE`; drawing consumes `resolveContentColor` / `contentFill`, so the stored token survives a theme switch and the rendered identity follows the new theme.
 

@@ -6,9 +6,14 @@ import {
   createMeterPeak,
   meterDb,
 } from "@/project/sections/arrangement/core/meters/meter-peak"
+import {
+  advanceMeterRms,
+  createMeterRms,
+} from "@/project/sections/arrangement/core/meters/meter-rms"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import {
   Button,
+  DropdownButton,
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -21,42 +26,157 @@ import {
   toast,
   toastLoading,
 } from "@/ui/controls"
-import type { LevelMeterChannel } from "@/ui/controls"
+import type { LevelMeterChannel, LevelMeterProps } from "@/ui/controls"
+import { snapControlWidth } from "@/ui/controls/grid"
+import { useMeasuredTextWidth } from "@/ui/controls/useMeasuredTextWidth"
 import { GallerySection, GalleryState, GalleryVariant } from "./GallerySection"
 import type { GallerySectionProps } from "./GallerySection"
+import { Group, Panel, PanelDivider } from "@/ui/panels"
+import { useElementSize } from "@/ui/panels/useElementSize"
 
 const METER = ARRANGEMENT_DEFAULTS.meter
 
 function steady(left: number, right: number): readonly [LevelMeterChannel, LevelMeterChannel] {
   return [
-    { db: left, peakDb: left },
-    { db: right, peakDb: right },
+    { rmsDb: left, peakDb: left, holdDb: left },
+    { rmsDb: right, peakDb: right, holdDb: right },
   ]
 }
 
-function LiveMeter({ height, label }: { readonly height: number; readonly label: string }) {
+interface MeterSize {
+  readonly width: number
+  readonly height: number
+  readonly variant: NonNullable<LevelMeterProps["variant"]>
+  readonly main?: boolean
+}
+
+function GalleryMeter({
+  dropdownLabel,
+  ...props
+}: LevelMeterProps & { readonly dropdownLabel: string }) {
+  const [output, setOutput] = useState("main")
+  const meter = <LevelMeter {...props} />
+  return props.variant === "inline" ? (
+    <DropdownButton
+      label={props["aria-label"] ?? dropdownLabel}
+      value={output}
+      onChange={setOutput}
+      items={[{ id: "main", label: dropdownLabel }]}
+      icon={meter}
+    />
+  ) : (
+    meter
+  )
+}
+
+function LiveMeter({
+  size,
+  label,
+  testId,
+  dropdownLabel,
+}: {
+  readonly size: MeterSize
+  readonly label: string
+  readonly testId: string
+  readonly dropdownLabel: string
+}) {
   const peaks = useRef([createMeterPeak(METER), createMeterPeak(METER)] as const)
+  const rms = useRef([createMeterRms(METER), createMeterRms(METER)] as const)
   const [channels, setChannels] = useState(steady(METER.minDb, METER.minDb))
   useAnimationFrame(now => {
     const seconds = now / 1000
     const [left, right] = peaks.current
-    const advance = (peak: typeof left, index: number): LevelMeterChannel => {
+    const advance = (peak: typeof left, index: 0 | 1): LevelMeterChannel => {
       const swing = Math.sin(seconds * (2.1 + index * 0.7)) * 0.5 + 0.5
-      const db = meterDb(-36 + swing * 40 + Math.sin(seconds * 17 + index) * 3, METER)
+      const db = meterDb(-30 + swing * 36 + Math.sin(seconds * 17 + index) * 3, METER)
       advanceMeterPeak(peak, db, now, METER)
-      return { db, peakDb: peak.db }
+      advanceMeterRms(rms.current[index], db - 6, now, METER)
+      return { rmsDb: rms.current[index].db, peakDb: db, holdDb: peak.db }
     }
     setChannels([advance(left, 0), advance(right, 1)])
   }, true)
   return (
-    <LevelMeter
-      testId={part => `gallery-live-meter-${part}`}
+    <GalleryMeter
+      dropdownLabel={dropdownLabel}
+      variant={size.variant}
+      main={size.main}
+      testId={part => `${testId}-${part}`}
       aria-label={label}
       minDb={METER.minDb}
       maxDb={METER.maxDb}
-      height={height}
+      width={size.width}
+      height={size.height}
       channels={channels}
     />
+  )
+}
+
+/** Drag the divider to watch ticks, numbers and the readout follow the meter height. */
+function ResizableMeters({ t, live }: Pick<GallerySectionProps, "t"> & { readonly live: boolean }) {
+  const theme = useTheme()
+  const unit = theme.control["--spacing-control-track"]
+  const meter = theme.design.editor.meter
+  const size = useElementSize()
+  const gap = theme.control["--spacing-control-track"]
+  const height = Math.max(0, size.height - theme.design.cards.controls.inset * 2)
+  const clipping: readonly [LevelMeterChannel, LevelMeterChannel] = [
+    { rmsDb: -6, peakDb: METER.maxDb, holdDb: METER.maxDb },
+    { rmsDb: -9, peakDb: -3, holdDb: -2 },
+  ]
+  const variants = [
+    { id: "track", variant: "track", width: meter.trackWidthUnits * unit },
+    { id: "collapsed", variant: "collapsed", width: meter.collapsedWidthUnits * unit },
+    { id: "mixer", variant: "mixer", width: meter.mixerWidthUnits * unit },
+  ] as const
+  return (
+    <div
+      style={{
+        height: theme.design.dock.demoHeight + theme.design.dock.minimumSize * 2,
+        width: theme.layout.gallery.cardWidth,
+        flexShrink: 0,
+      }}
+    >
+      <Group orientation="vertical">
+        <Panel defaultSize="70%" minSize={unit}>
+          <div
+            onLayout={size.onLayout}
+            style={{
+              display: "flex",
+              gap,
+              width: "100%",
+              height: "100%",
+              padding: theme.design.cards.controls.inset,
+              overflow: "hidden",
+            }}
+          >
+            {variants.map(entry =>
+              live ? (
+                <LiveMeter
+                  key={entry.id}
+                  size={{ variant: entry.variant, width: entry.width, height }}
+                  dropdownLabel={t("Main Out", "主输出")}
+                  label={entry.id}
+                  testId={`gallery-resizable-meter-${entry.id}`}
+                />
+              ) : (
+                <LevelMeter
+                  key={entry.id}
+                  variant={entry.variant}
+                  aria-label={entry.id}
+                  minDb={METER.minDb}
+                  maxDb={METER.maxDb}
+                  width={entry.width}
+                  height={height}
+                  channels={clipping}
+                />
+              )
+            )}
+          </div>
+        </Panel>
+        <PanelDivider orientation="horizontal" />
+        <Panel minSize={unit} />
+      </Group>
+    </div>
   )
 }
 
@@ -64,46 +184,154 @@ export function MetersSection({ t }: GallerySectionProps) {
   const theme = useTheme()
   const [live, setLive] = useState(false)
   const [progress, setProgress] = useState(40)
-  const height = theme.layout.track.controlHeight * 6
-  const meter = (channels: readonly [LevelMeterChannel, LevelMeterChannel], label: string) => (
-    <LevelMeter
-      aria-label={label}
-      minDb={METER.minDb}
-      maxDb={METER.maxDb}
-      height={height}
-      channels={channels}
-    />
-  )
+  const unit = theme.control["--spacing-control-track"]
+  const trackInset = theme.layout.track.border + theme.design.cards.controls.inset * 2
+  const variants: readonly {
+    readonly id: string
+    readonly label: string
+    readonly size: MeterSize
+  }[] = [
+    {
+      id: "track",
+      label: t("Track", "轨道"),
+      size: {
+        variant: "track",
+        width: theme.design.editor.meter.trackWidthUnits * unit,
+        height: theme.layout.track.defaultHeight - trackInset,
+      },
+    },
+    {
+      id: "collapsed",
+      label: t("Track · collapsed", "轨道 · 收起"),
+      size: {
+        variant: "collapsed",
+        width: theme.design.editor.meter.collapsedWidthUnits * unit,
+        height: theme.layout.track.collapsedHeight - trackInset,
+      },
+    },
+    {
+      id: "mixer-tall",
+      label: t("Mixer · tall", "调音台 · 高"),
+      size: {
+        variant: "mixer",
+        width: theme.design.editor.meter.mixerWidthUnits * unit,
+        height: theme.design.editor.meter.mixerHeightUnits * unit,
+      },
+    },
+    {
+      id: "mixer-short",
+      label: t("Mixer · short", "调音台 · 矮"),
+      size: {
+        variant: "mixer",
+        width: theme.design.editor.meter.mixerWidthUnits * unit,
+        height: theme.design.editor.meter.shortMixerHeightUnits * unit,
+      },
+    },
+    {
+      id: "inline",
+      label: t("Inline · dropdown", "内联 · 下拉框"),
+      size: {
+        variant: "inline",
+        width: theme.design.editor.meter.inlineWidthUnits * unit,
+        height: theme.design.editor.meter.inlineHeightUnits * unit,
+      },
+    },
+    {
+      id: "main",
+      label: t("Main · overload turns all red", "Main · 过载整条红"),
+      size: {
+        variant: "track",
+        main: true,
+        width: theme.design.editor.meter.trackWidthUnits * unit,
+        height: theme.layout.track.defaultHeight - trackInset,
+      },
+    },
+  ]
+  const states: readonly {
+    readonly label: string
+    readonly channels: readonly [LevelMeterChannel, LevelMeterChannel]
+  }[] = [
+    { label: t("Silent", "静音"), channels: steady(METER.minDb, METER.minDb) },
+    { label: t("Nominal", "正常"), channels: steady(-18, -12) },
+    {
+      label: t("Peak hold", "峰值保持"),
+      channels: [
+        { rmsDb: -30, peakDb: -24, holdDb: -4 },
+        { rmsDb: -26, peakDb: -20, holdDb: -8 },
+      ],
+    },
+    { label: t("Clipping", "削波"), channels: steady(METER.maxDb, -3) },
+  ]
+  const liveLabel = t("Live", "实时")
+  const columnLabels = [...states.map(state => state.label), liveLabel]
+  const measurement = useMeasuredTextWidth(columnLabels, {
+    fontSize: theme.control["--text-control-track"],
+  })
+  const columnWidth = snapControlWidth(measurement.width, unit)
   return (
-    <GallerySection id="meters" title={t("Meters and feedback", "电平与反馈")}>
-      <GalleryVariant label="LevelMeter">
-        <GalleryState label={t("Silent", "静音")}>
-          {meter(steady(METER.minDb, METER.minDb), t("Silent meter", "静音电平"))}
-        </GalleryState>
-        <GalleryState label={t("Nominal", "正常")}>
-          {meter(steady(-18, -12), t("Nominal level", "正常电平"))}
-        </GalleryState>
-        <GalleryState label={t("Peak hold", "峰值保持")}>
-          {meter(
-            [
-              { db: -24, peakDb: -4 },
-              { db: -20, peakDb: -8 },
-            ],
-            t("Peak hold level", "峰值保持电平")
-          )}
-        </GalleryState>
-        <GalleryState label={t("Clipping", "削波")}>
-          {meter(steady(METER.maxDb, -3), t("Clipping level", "削波电平"))}
-        </GalleryState>
-        <GalleryState label={t("Live · native frames", "实时 · 原生帧")}>
-          {live ? (
-            <LiveMeter height={height} label={t("Live level meter", "实时电平表")} />
-          ) : (
-            meter(steady(METER.minDb, METER.minDb), t("Live level meter", "实时电平表"))
-          )}
+    <GallerySection
+      id="meters"
+      title={t("Meters and feedback", "电平与反馈")}
+      columns={{ label: t("LevelMeter", "电平表"), states: columnLabels, width: columnWidth }}
+    >
+      {measurement.sampleNodes}
+      {variants.map(variant => (
+        <GalleryVariant
+          key={variant.id}
+          label={variant.label}
+          testId={`gallery-meter-${variant.id}`}
+        >
+          {states.map(state => (
+            <GalleryState key={state.label} label={state.label} width={columnWidth}>
+              <GalleryMeter
+                dropdownLabel={t("Main Out", "主输出")}
+                variant={variant.size.variant}
+                main={variant.size.main}
+                aria-label={`${variant.label} · ${state.label}`}
+                minDb={METER.minDb}
+                maxDb={METER.maxDb}
+                width={variant.size.width}
+                height={variant.size.height}
+                channels={state.channels}
+              />
+            </GalleryState>
+          ))}
+          <GalleryState label={liveLabel} width={columnWidth}>
+            {live ? (
+              <LiveMeter
+                size={variant.size}
+                dropdownLabel={t("Main Out", "主输出")}
+                label={`${variant.label} · ${liveLabel}`}
+                testId={`gallery-live-meter-${variant.id}`}
+              />
+            ) : (
+              <GalleryMeter
+                dropdownLabel={t("Main Out", "主输出")}
+                variant={variant.size.variant}
+                main={variant.size.main}
+                aria-label={`${variant.label} · ${liveLabel}`}
+                minDb={METER.minDb}
+                maxDb={METER.maxDb}
+                width={variant.size.width}
+                height={variant.size.height}
+                channels={steady(METER.minDb, METER.minDb)}
+              />
+            )}
+          </GalleryState>
+        </GalleryVariant>
+      ))}
+      <GalleryVariant
+        label={t("Resize · drag the divider", "调整高度 · 拖动分隔条")}
+        testId="gallery-meter-resizable"
+        block
+      >
+        <ResizableMeters t={t} live={live} />
+      </GalleryVariant>
+      <GalleryVariant label={t("Live signal", "实时信号")}>
+        <GalleryState label={t("Live signal", "实时信号")}>
           <Switch
             testId="gallery-live-meter-switch"
-            label={t("Live signal", "实时信号")}
+            label={t("Animate the Live column", "驱动实时列")}
             checked={live}
             onCheckedChange={setLive}
           />
@@ -132,6 +360,9 @@ export function MetersSection({ t }: GallerySectionProps) {
               height: theme.transportControl["--spacing-control-track"],
             }}
           />
+        </GalleryState>
+        <GalleryState label={t("Compact inline", "紧凑内联")}>
+          <Loading inline label={t("Loading…", "加载中…")} />
         </GalleryState>
       </GalleryVariant>
       <GalleryVariant label="Toast">

@@ -121,6 +121,8 @@ export default [
     files: gpuixSource,
     plugins: { architecture: localRules },
     rules: {
+      // Native MotionStyle exposes layout tweens, not browser transforms or CSS reflow.
+      "react-doctor/no-layout-property-animation": "off",
       "architecture/gpuix-layers": "error",
       "architecture/gpuix-imports": "error",
       "architecture/gpuix-lessons": "error",

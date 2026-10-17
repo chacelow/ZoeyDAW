@@ -92,6 +92,10 @@ export type BackendResult =
 export type BackendClock =
   | { kind: "musical"; bar: number; barsPerSecond: number }
   | { kind: "sample"; bar: number; barsPerSecond: number; frame: number; sampleRate: number }
+export interface BackendMeterLevels {
+  peak: readonly [number, number]
+  rms: readonly [number, number]
+}
 export interface BackendTelemetry {
   sessionId: string
   sequence: number
@@ -99,7 +103,7 @@ export interface BackendTelemetry {
   clock: BackendClock
   playing: boolean
   recording: boolean
-  levels: Readonly<Record<string, readonly [number, number]>>
+  levels: Readonly<Record<string, BackendMeterLevels>>
   outputLatencyFrames: number | null
 }
 

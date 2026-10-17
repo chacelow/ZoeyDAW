@@ -1,10 +1,11 @@
 import { floatingRootStyle } from "@gpuix/react/floating"
-import { createContext, useCallback, useContext, useRef, useState } from "react"
+import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from "react"
 import type { KeyEvent, PublicInstance } from "@gpuix/react"
 import { sx } from "@/shared/theme/style"
 import type { EntryEdge, MenuEntry, MenuProps, MenuState, Point } from "./model"
 
 const MenuContext = createContext<MenuState | null>(null)
+export const MenuActivityContext = createContext<(() => (() => void)) | null>(null)
 export function useMenu(): MenuState {
   const menu = useContext(MenuContext)
   if (!menu) throw new Error("Menu components require a menu root")
@@ -35,6 +36,10 @@ function MenuRoot({
   const initialEdge = useRef<EntryEdge>("first")
   const activeChild = useRef<MenuState | null>(null)
   const open = !disabled && (controlledOpen ?? internalOpen) && (!parent || parent.open)
+  const reportActivity = useContext(MenuActivityContext)
+  useLayoutEffect(() => {
+    if (open) return reportActivity?.()
+  }, [open, reportActivity])
   const setOpen = useCallback(
     (next: boolean) => {
       if (disabled && next) return

@@ -8,10 +8,14 @@
 - `Panel` 的 `defaultSize`、`minSize`、`maxSize`、`collapsedSize` 中，数值是像素，字符串是百分比。`"25"` 与 `"25%"` 等价，`0` 是零像素。
 - `panelRef` 提供 `isCollapsed()`、`expand()`、`collapse()`、`resize(px)` 与 `getSize()`。`onResize` 与 `getSize()` 都返回 `{ inPixels, asPercentage }`，百分比的分母扣除了分隔条。
 - 数值 defaultSize 的面板在容器重排时保留当前像素尺寸；百分比面板按剩余空间重新分配。已折叠的面板不会因窗口放大自动展开。
-- `PanelShell` 用 `useTheme().project` 的边框与 gap 度量。active 只改变边框颜色，不添加外沿或改变尺寸。调用方必须注入 `aria-label` 与 `activeDescription`；机器 `id` 只用于激活和 testId，不作为用户名称。原生 mouseDown 向调用方分发激活，子控件的 mouseDown 不会屏蔽它。
-- `PanelDivider` 与 Dock sash 共用 `Separator`、`useDividerDrag` 和 `dividerChrome`。命中区始终取 `project.panelGap`（当前 7px），hover 与拖动以 ring 高亮，不扩大命中区；方向键每次移动 10px，Shift 为 50px。在折叠边界，方向键一次跨越折叠区间。
-- `CollapseDivider` 管理 Group 外固定高度区域的显隐。`expandedSize` 的一半是切换阈值，拖回阈值以内恢复按下时的状态。上下方向键分别展开与折叠。调用方必须提供 `aria-label` 与 `formatAccessiblePixels`，朗读当前展开尺寸或折叠后的零值，共享组件不拼接英文单位。
+- `PanelShell` 与 Dock group 不绘制边框或圆角，面板内容直接贴边。active 只改变语义描述，不添加外沿或改变尺寸。调用方必须注入 `aria-label` 与 `activeDescription`；机器 `id` 只用于激活和 testId，不作为用户名称。原生 mouseDown 向调用方分发激活，子控件的 mouseDown 不会屏蔽它。
+- `Separator` 在布局树里只绘制 `design.shape.separatorWidth` 的 `colors.border` 细线；Group 的可用空间只扣除这条线，不扣除命中宽度。`PanelDivider` 与 Dock sash 复用同一实现。命中区取 `project.panelGap`（当前 7px），以细线为中心，两侧覆盖面板内容但不制造 gutter。
+- `DividerLayer` 的嵌套实例将命中层 portal 到最外层末尾层，并按本地 bounds 转换坐标，保证 Dock 的稳定内容层无法覆盖 sash。hover/focus 只改 1px 线的颜色，不改命中几何。拖动每次 move 计算真实尺寸，在下一帧实时提交最新快照；不会只移动 outline。方向键立即提交，松手同步 flush 最终快照，取消清除待提交帧并恢复按下值。
+- `CollapseDivider` 管理 Group 外固定高度区域的显隐，包含它与相邻内容的容器必须使用 `DividerLayer`，以复用同一末尾命中层。`expandedSize` 的一半是切换阈值，拖回阈值以内恢复按下时的状态。上下方向键分别展开与折叠。调用方必须提供 `aria-label` 与 `formatAccessiblePixels`，朗读当前展开尺寸或折叠后的零值，共享组件不拼接英文单位。
 - `CollapseDivider` 的 Home/Up 展开、End/Down 折叠与活动拖动的 Escape 取消只由控件消费（`preventDefault`、`stopPropagation`），不能同时触发窗口 rewind 或关闭 Clip Edit；idle Escape 与 Space 继续冒泡给窗口。`useDividerDrag.cancel` 从唯一 anchor 判断并返回是否实际取消；视觉拖动状态不作为手势真值。原生组合回归见 `ui/verification/r2-controls.test.tsx`。
+- `TitleBar` 是 App 与 Gallery 共用的固定窗口 chrome：`title`、`left`、`actions`、本地化 `labels` 与可选 `window: TitleBarWindow`。UI 不读取 platform；组合根注入 `platform`、`minimize/zoom/close/doubleClick` 与可清理的 `subscribeActive`。未注入 window 的离屏组合不绘制窗口按钮。标题经 `TruncatedText` 在中间弹性区域截断，左右槽与窗口按钮不收缩；空白表面是原生 drag hitbox，交互按钮单独阻挡命中。
+- macOS 预留 `project.trafficLightInset`，保留系统 traffic lights，不重复绘制菜单栏；双击调用系统偏好动作。Windows/Linux 在右侧绘制 `project.windowControlWidth × project.titlebarHeight` 的窗口按钮；关闭悬停使用主题 destructive 色。标题栏高 `project.titlebarHeight` 默认 30（2u），菜单与设置按钮沿用默认控件尺度。Windows 的双击交给 HTCAPTION，不同时注册 JS zoom。窗口失活仅将标题颜色改为 mutedForeground。
+- App 的 TitleBar 由 `AppFrame` 持有，位于路由错误边界之外；工程加载失败不移除窗口按钮或设置入口。`ProjectLayout.renderViewMenu` 只将既有 DockViewMenu portal 到标题栏的 View slot，不把窗口 chrome 放进工程内容，也不创建第二份 Dock 状态。Gallery 直接把其受控 DockViewMenu 传入 left slot。
 
 固定高度 Device 应放在可调 Group 外。画廊用 160px Device 验证 Clip 展开与连续调整不会压缩它。折叠 Browser 时，内部 Group 保留最近的非零布局，固定宽度列表只由外部 Panel 裁剪。
 
@@ -33,19 +37,25 @@
 
 ## Dock 工作区
 
-`DockLayout` 是受控原生停靠组件：`layout: DockLayoutJSON`、`registry: DockPanelRegistry`、`onLayoutChange`、调用方注入的 `labels`；不认识工程或固定的 Transport/状态栏。注册表按 panel id 提供 `title`、`icon`、`render()`、`minimumSize`、`closable`。同一个布局里的每个 panel 只出现一次。注册表必须覆盖布局内和隐藏的 panel。
+`DockLayout` 是受控原生停靠组件：`layout: DockLayoutJSON`、`registry: DockPanelRegistry`、`onLayoutChange`、调用方注入的 `labels`；不认识工程或固定的 Transport/状态栏。注册表按 panel id 提供 `title`、`icon`、`render()`、`minimumSize`。所有注册面板都可以关闭并从 View 菜单恢复。同一个布局里的每个 panel 只出现一次，注册表必须覆盖布局内和隐藏的 panel。
 
-`DockLayoutJSON` 有 `version: 1`、`root`、`hidden`、`activeGroup`、`maximizedGroup`。root 是 `split {id, orientation, children, sizes}` 或 `group {id, tabs, active}`；全关闭时为 null。`toJSON` 返回可保存的独立 JSON 对象，`fromJSON(unknown)` 校验版本、唯一 id、非空组、至少两个 split 子节点、正尺寸权重和有效活动面板后返回可信模型；非法数据抛 TypeError，不改变当前布局。工作区持久化由调用方拥有。
+`DockLayoutJSON` 的 `version: 2` 包含 `root`、`hidden`、`activeGroup`、`maximizedGroup` 与 `borders`。`borders` 按 left/right/bottom 保存 `{tabs, selected, size, type}`，type 为 `split | overlay`；旧 v2 未提供 type 时默认为 split，不升版本。多个 split border 可以同时选中，只允许一个 overlay 展开。`fromJSON` 校验唯一 ownership、selected 成员、正有限 size 与合法 type，非法数据抛 TypeError。
 
-纯操作：`activateTab`、`closeTab`、`closeOtherTabs`、`hideTab`、`addPanel`（包含显示隐藏面板）、`moveTab`、`splitGroup`、`moveGroupOrPanel`、`reorderTab`、`resizeSplit`、`toggleMaximize`。移动/关闭会删除空组并折叠单子 split；整体组移动保留组 id。尺寸分配全部交给现有 Group/Panel，Panel 的 `onResize` 收集完整百分比快照回写 split 权重，不另写尺寸求解器。
+Dock split 用 Group 的受控 `weights`、派生 `extent/bounds` 与 `onLayoutChange(sizes)` 接收完整快照。拖动的唯一尺寸 owner 是 live ref；没有逐 Panel onResize 聚合、imperative resize 循环或子 onLayout→setContentBounds 写回。组矩形与稳定内容层位置由同一布局权重纯投影，Tab bounds 只在开始拖 Tab 时采样；内容通过 memo + 稳定注册表保留，不随尺寸更新重渲染。
 
 Tab/组握柄用原生 capture，超过 `ControlEnvironment.inputPolicy.dragThresholdPixels` 才显示落点预览，释放时才提交；中心合并、边缘拆分、Tab 条按指针中点插入。Escape/失焦/注入的窗口失活取消。没有 inputPolicy 时不启动拖动。几何只接收原生 `onLayout`，不轮询 bounds。内容层由固定根节点按 panel id 挂载，移动、换 Tab、最大化、隐藏不重新挂载；关闭移除该内容，显示隐藏项用 `addPanel`。
 
 Tab 使用 roving tabindex，Left/Right 只移动焦点，Enter 激活；点击可见内容区会把该组设为 `activeGroup`，不强制把焦点移到 Tab。`ref: DockLayoutHandle` 的 `executeCommand` 接收 `moveLeft/Right/Up/Down`（移动活动 panel 至相邻组）、`toggleMaximize`、`close`、`hide`，返回是否处理；`onFocusChange` 由组合层提供 keymap focus。`platform/keyboard` 的 `dock.*` 命令与 K1 默认表拥有快捷键，ui 不 import platform。`gallery/catalog/layout.tsx` 的 LayoutSection 给出完整注册表、K1 接线、隐藏恢复、重置、普通嵌套 Group、PanelShell 与 CollapseDivider 示例，所有布局类组件在同一个目录区块。浮动/弹出窗口不在此模块范围。
 
-Tab 标题区区分活动/非活动 tab，获得焦点的组以 ring 描边；可关闭 tab 的关闭按钮在活动或悬停时可见。Tab 列表横向滚动，组握柄、最大化/恢复和「更多」固定在右侧，不随溢出滚动。右键 tab 和组「更多」复用同一组 ContextMenu 操作，后者用 DropdownMenu 触发；其「显示面板」子菜单从注册表列出所有未出现在布局中的 panel（隐藏项及已关闭项），在当前组用 `addPanel` 恢复，包括不可关闭但可隐藏的 panel。`labels.more` 与 `labels.showPanels` 由调用方提供本地化文案。Dock sash 和普通 PanelDivider 共用 7px 命中区与 hover/拖动高亮。拖放预览对边缘、中心、Tab 插入分别使用 `edgeOverlayOpacity`、`centerOverlayOpacity`、`insertionOpacity`；几何与交互不因视觉状态改变。
+所有 Tab 都提供关闭按钮：active tab 常显，其他 tab 在 hover 时显示；按钮占位始终保留。组本身无边框与圆角，Tab 条只绘制一条 `separatorWidth` 底线。Tab 列表横向滚动，组握柄、最大化/恢复和「更多」固定在右侧，不随溢出滚动。右键 Tab 和组「更多」复用同一组 ContextMenu 操作；其「显示面板」子菜单列出不在主布局或 border 中的已注册 panel，使用 `addPanel` 恢复。顶部 `DockViewMenu` 复用同一注册表与布局操作。
 
-组头部根据原生 `onLayout` 的宽度与 `design.dock.compactActionsBelow` 比较：窄组只保留「更多」，最大化/还原仍在其菜单中；宽组显示拖动握柄和最大化按钮。Tab 文本交给共享 Button 的实测文字宽度规则，不用固定按钮宽度截掉标题。`design.dock.contentInset` 是内容消费者的统一 inset；Dock 不强制给 Arrangement 等自行管理精确几何的内容再套一层 padding。
+Tab 的原生 bounds 来自包含标题按钮与关闭按钮的完整 wrapper。插入位置以 wrapper 的中点为界，插入线画在前一个 Tab 的真实右边缘（第一槽画在第一个 Tab 左边缘），不能用标题按钮宽度或下一个 Tab 左边缘代替。
+
+组头 compact 模式只读取父布局投影的 group 宽度，与 `design.dock.compactActionsBelow` 比较；进入 compact 后，超过阈值加一个 control unit 才退出。动作按钮始终占位，仅 opacity 随 active/hover 改变，不切换命中节点。窄主布局组保留「更多」，最大化仍可从菜单访问；pin 命令只属于边缘 rail。
+
+`DockTab` 是独立原生组件，不复用 Button。small/default/large 高度分别为 `u/2u/3u`，横向 Tab 与 Tab 条同高 `2u`，整个外壳可选择、聚焦和拖动。相邻横向 Tab 只有一条 separatorWidth 竖线。标题内侧 padding 取 track-gap，图文 gap 取 control-gap；关闭区域 1u 见方、始终占位，active 常显、其余 hover 显示。边缘 rail 使用独立的 `DockRailButton`（button 语义），所有方向均为 stripHeight 见方的纯图标，无关闭槽、无项目间分隔线。组头动作继续使用 1u Button，左右 inset 取 track-pad；内容 inset 复用 cards.controls.inset。
+
+仅窗口 left/right/bottom 可配置 border。配置的 rail 始终占位，即使 tabs 为空也保留 drop target 和末端 pin/unpin 图标按钮；右键 rail 图标提供相同模式命令。pin/unpin 不出现在 `DockGroupActions`、文档 Tab 或展开面板的 header。展开的 border 只显示当前选中 panel，header 为小号大写标题及 hover-only 最大化/更多，不重复绘制 tablist、Tab 或关闭按钮。主布局保留原有 active/hover 动作规则。`setBorderType` 在 split/overlay 间切换：split 预留 size + separatorWidth，不因外部点击/Escape 收起；overlay 不挤占布局并自动收起。两者均实时 resize。Drawer 与 rail 使用 card 表面，主内容使用 background；rail 关闭时与主区有单条 border 细线，打开时与自身面板贴合无分隔线，只在面板与主区间画细线。rail 图标有 hover 高亮，选中图标使用 dock.activeIndicatorWidth 强调条。overlay 的 dock.drawerShadow 通过末尾 portal 绘制，避免阴影被主内容覆盖。Gallery Theme 默认 overlay 且未打开时不挂载编辑器，首次打开后收起保留状态。
 
 ### dockview 参考对应
 
@@ -54,13 +64,15 @@ Tab 标题区区分活动/非活动 tab，获得焦点的组以 ring 描边；�
 | dockview-core | gpuix Dock |
 | --- | --- |
 | Gridview branch/leaf + Splitview | DockSplit/DockGroup + 已有 Group/Panel/PanelDivider |
-| addPanel / component registry | addPanel + DockPanelRegistry（render、minimumSize、closable） |
+| addPanel / component registry | addPanel + DockPanelRegistry（render、minimumSize） |
 | moveGroupOrPanel from.groupId/panelId, to.position/index | moveGroupOrPanel source.groupId/tabId, targetId, position, index |
 | toJSON/fromJSON，activeGroup | 版本化 DockLayoutJSON，toJSON/fromJSON |
 | calculateQuadrantAsPercentage，默认 20% 边缘 | resolveDropPosition + design.dock.edgeFraction；角落取最近归一化边缘，而非固定左右优先 |
 | maximize/restore、panel visibility | toggleMaximize、hideTab/addPanel；固定根内容层保持 React 状态 |
 
-回归覆盖空组折叠、同组拆分、整个组迁移、中心合并、四边缘拆分、Tab 重排、最小尺寸 sash 调整、版本/唯一性边界、固定种子操作序列，以及原生拖动/取消/组件状态保留与 Gallery 命令路径。Dock 外观与拖动命中高度同用 `useTheme().design.dock`；默认 Dock token 在 ThemeProvider 中由当前 `control` 派生（显式 `design` 覆盖不被改写），tab 间距与插入标记宽度直接取 `project.panelBorder`，sash 命中区取 `project.panelGap`。
+回归覆盖空组折叠、同组拆分、整个组迁移、中心合并、四边缘拆分、Tab 重排、最小尺寸 sash 调整、版本/唯一性边界、固定种子操作序列，以及原生拖动/取消/组件状态保留与 Gallery 命令路径。默认 Dock token 由当前 control 派生，主题编辑器先解析 control 再解析设计覆盖；显式 design 覆盖不被改写。Tab 图文 gap 取 control-gap，Tab 分隔、插入标记与 sash 视觉宽度取 separatorWidth，sash 命中区取 panelGap。
+
+`PanelEnvironment.scheduleFrame(callback): cancel` 由 NativeRoot 与 Gallery 组合根注入，复用已有 AnimationFrameSource，一帧后立即解除订阅。`useResizeCommit` 合并同帧多个 move，只提交最后快照；测试未注入时同步提交，确保 createTestRoot 确定性。性能回归 `bun test src/ui/panels/Dock/resize-performance.test.tsx` 用 dispatchMouseMove + 一次 flush/dispatch 测实际单帧，轻量 Dock 要求 p50 ≤ 8ms 且每 move 一次 commit。完整 Gallery 只报告原生成本，不把重内容布局计作 Dock 门禁；每 move 之后都验证真实面板宽度已经更新。
 
 ## 运行
 

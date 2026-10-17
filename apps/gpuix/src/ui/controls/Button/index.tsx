@@ -1,5 +1,5 @@
 import { consumeKey } from "@/shared/keyboard"
-import { useState } from "react"
+import { cloneElement, isValidElement, useState } from "react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sv, sx } from "@/shared/theme/style"
 import { controlChrome } from "../chrome"
@@ -11,6 +11,7 @@ import { snapControlWidth } from "../grid"
 import type { Props } from "@gpuix/react"
 import type { ReactNode } from "react"
 import type { ControlSize } from "../chrome"
+import type { IconSlotProps } from "../IconSlot"
 
 export interface ButtonProps extends Omit<Props, "onChange" | "highlight"> {
   readonly label?: string
@@ -18,6 +19,8 @@ export interface ButtonProps extends Omit<Props, "onChange" | "highlight"> {
   readonly active?: boolean
   readonly highlight?: boolean
   readonly iconOnly?: boolean
+  readonly activeFilled?: boolean
+  readonly reducedMotion?: boolean
   readonly variant?: "default" | "outline" | "secondary" | "ghost" | "destructive" | "link"
   readonly size?: ControlSize
   readonly tone?: "neutral" | "solo" | "arm" | "activator"
@@ -31,6 +34,8 @@ export function Button({
   active = false,
   highlight = true,
   iconOnly = false,
+  activeFilled = false,
+  reducedMotion = false,
   variant = "default",
   tone = "neutral",
   size = "default",
@@ -44,12 +49,15 @@ export function Button({
   onKeyDown,
   onMouseEnter,
   onMouseLeave,
+  onMouseDown,
+  onMouseUp,
   onFocus,
   onBlur,
   ref,
   ...props
 }: ButtonProps) {
   const [hovered, setHovered] = useState(false)
+  const [pressed, setPressed] = useState(false)
   const theme = useTheme()
   const metrics = size === "transport" ? theme.transportControl : theme.control
   const text =
@@ -126,6 +134,7 @@ export function Button({
     }),
     !iconOnly && text !== undefined && { width: intrinsicWidth, minWidth: 0, flexShrink: 1 },
     !active && appearances({ variant }),
+    iconOnly && variant !== "outline" && { borderWidth: 0 },
     activeDestructive && {
       backgroundColor: destructiveBackground,
       color: theme.colors.destructive,
@@ -153,12 +162,17 @@ export function Button({
         borderColor: baseStyle.borderColor,
       }
     : undefined
+  const iconSlotProps = { size, interactive: true, hovered: hovered && !disabled, filled: activeFilled && (active || pressed), reducedMotion }
+  const iconContent = icon ?? (iconOnly ? children : null)
+  const iconSlot = iconContent == null ? null : isValidElement<IconSlotProps>(iconContent) && iconContent.type === IconSlot
+    ? cloneElement(iconContent, iconSlotProps)
+    : <IconSlot {...iconSlotProps}>{iconContent}</IconSlot>
   return (
     <div
       {...props}
       ref={ref}
       role={role}
-      tabIndex={tabIndex}
+      tabIndex={disabled ? -1 : tabIndex}
       aria-disabled={disabled}
       aria-pressed={onActiveChange ? active : undefined}
       aria-label={name}
@@ -176,6 +190,14 @@ export function Button({
           consumeKey(event, "handled")
         }
       }}
+      onMouseDown={event => {
+        if (!disabled) setPressed(true)
+        onMouseDown?.(event)
+      }}
+      onMouseUp={event => {
+        setPressed(false)
+        onMouseUp?.(event)
+      }}
       onMouseEnter={event => {
         setHovered(!disabled)
         info.onMouseEnter()
@@ -183,6 +205,7 @@ export function Button({
       }}
       onMouseLeave={event => {
         setHovered(false)
+        setPressed(false)
         info.onMouseLeave()
         onMouseLeave?.(event)
       }}
@@ -192,12 +215,13 @@ export function Button({
       }}
       onBlur={event => {
         info.onBlur()
+        setPressed(false)
         onBlur?.(event)
       }}
     >
       {measurement.sampleNodes}
-      {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
-      {text !== undefined ? (
+      {iconSlot}
+      {iconOnly ? null : text !== undefined ? (
         <TruncatedText hovered={hovered} style={{ ...textStyle, flexGrow: 0, textAlign: "center" }}>
           {text}
         </TruncatedText>

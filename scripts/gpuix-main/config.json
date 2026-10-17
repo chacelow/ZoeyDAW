@@ -19,7 +19,10 @@
     "test-window-teardown.patch",
     "titlebar-double-click.patch",
     "window-control-area.patch",
-    "relative-drag.patch"
+    "relative-drag.patch",
+    "hover-pointer-position.patch",
+    "test-root-events.patch",
+    "svg-scale-motion.patch"
   ],
   "zedPatches": [
     "zed-production-no-sync-draw.patch",

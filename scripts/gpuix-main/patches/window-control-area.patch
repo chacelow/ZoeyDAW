@@ -6,8 +6,8 @@ index f8eb341..1c7019f 100644
     *  blocks. Unset blocks clicks when the element paints a fill or is
     *  positioned, but lets the wheel reach the ancestor scroller, like HTML. */
    pointerEvents?: "auto" | "none"
-+  /** Native caption drag hitbox; interactive descendants should occlude it. */
-+  windowControlArea?: "drag"
++  /** Native caption hitbox; interactive descendants should occlude drag regions. */
++  windowControlArea?: "drag" | "close" | "max" | "min"
  
    /** "none" opts this element and its subtree out of text selection.
     *  Inherited like the CSS property, so a toolbar can disable it once. */
@@ -24,12 +24,17 @@ index 5939183..821af6b 100644
  use crate::text::{selectable_text, selection_frame_reset, SharedSelection};
  use crate::theme::Theme;
  
-@@ -7482,6 +7482,9 @@ where
+@@ -7482,6 +7482,14 @@ where
      E: gpui::Styled + gpui::StatefulInteractiveElement,
  {
      el = apply_styles(el, style);
-+    if let Some(WindowControlAreaStyle::Drag) = style.window_control_area {
-+        el = el.window_control_area(gpui::WindowControlArea::Drag);
++    if let Some(area) = style.window_control_area {
++        el = el.window_control_area(match area {
++            WindowControlAreaStyle::Drag => gpui::WindowControlArea::Drag,
++            WindowControlAreaStyle::Close => gpui::WindowControlArea::Close,
++            WindowControlAreaStyle::Max => gpui::WindowControlArea::Max,
++            WindowControlAreaStyle::Min => gpui::WindowControlArea::Min,
++        });
 +    }
      if let Some(hover_style) = style.hover.as_deref() {
          el = el.hover(|refinement| apply_styles(refinement, hover_style));
@@ -38,7 +43,7 @@ diff --git a/packages/native/src/style.rs b/packages/native/src/style.rs
 index 5c2aba8..84d33eb 100644
 --- a/packages/native/src/style.rs
 +++ b/packages/native/src/style.rs
-@@ -143,6 +143,12 @@ impl<'de> Deserialize<'de> for DimensionValue {
+@@ -143,6 +143,15 @@ impl<'de> Deserialize<'de> for DimensionValue {
      }
  }
  
@@ -46,30 +51,40 @@ index 5c2aba8..84d33eb 100644
 +#[serde(rename_all = "kebab-case")]
 +pub enum WindowControlAreaStyle {
 +    Drag,
++    Close,
++    Max,
++    Min,
 +}
 +
  /// Style description that can be serialized from JS
  /// Note: This is only used for JSON deserialization, not direct napi binding
  #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
-@@ -254,6 +260,9 @@ pub struct StyleDesc {
+@@ -254,6 +263,9 @@ pub struct StyleDesc {
      /// `"auto"` blocks mouse hits behind this element. `"none"` never does.
      /// Unset: block when this element paints a fill or is absolutely positioned.
      pub pointer_events: Option<String>,
-+    /// Native caption drag hitbox, resolved after interactive descendants occlude it.
++    /// Native caption hitbox, resolved after interactive descendants occlude it.
 +    pub window_control_area: Option<WindowControlAreaStyle>,
 +
  
      // Text selection. "none" opts an element and its subtree out of the
      // selection registry, so buttons and toolbars never start a drag.
-@@ -407,6 +416,14 @@ mod tests {
+@@ -407,6 +419,21 @@ mod tests {
          }
      }
  
 +    #[test]
-+    fn window_control_area_accepts_only_drag() {
-+        let style: StyleDesc = serde_json::from_str(r#"{"windowControlArea":"drag"}"#).unwrap();
-+        assert_eq!(style.window_control_area, Some(WindowControlAreaStyle::Drag));
-+        assert!(serde_json::from_str::<StyleDesc>(r#"{"windowControlArea":"close"}"#).is_err());
++    fn window_control_area_accepts_native_caption_actions() {
++        for (name, expected) in [
++            ("drag", WindowControlAreaStyle::Drag),
++            ("close", WindowControlAreaStyle::Close),
++            ("max", WindowControlAreaStyle::Max),
++            ("min", WindowControlAreaStyle::Min),
++        ] {
++            let style: StyleDesc = serde_json::from_str(&format!(r#"{{"windowControlArea":"{name}"}}"#)).unwrap();
++            assert_eq!(style.window_control_area, Some(expected));
++        }
++        assert!(serde_json::from_str::<StyleDesc>(r#"{"windowControlArea":"unknown"}"#).is_err());
 +    }
 +
 +

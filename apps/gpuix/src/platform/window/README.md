@@ -17,13 +17,17 @@
 
 ## 标题栏双击
 
-`titlebarDoubleClick()` 调用同一 renderer 的原生系统动作，缺少对应能力时抛错，不退回 `zoom()` 或 JS 偏好读取。macOS/Linux/FreeBSD 的 `NativeRoot` 将该命令经 `AppShell` 注入 `TitleBar`。Windows 不注入该回调，由原生 caption 处理双击，避免 JS 与系统各切换一次；不拥有原生窗口的离屏 shell 也可以省略回调。
+`titlebarDoubleClick()` 调用同一 renderer 的原生系统动作，缺少对应能力时抛错，不退回 `zoom()` 或 JS 偏好读取。组合根将窗口命令与共享订阅经 `AppShell.titlebarWindow` 注入 `TitleBar`。Windows 的 `TitleBar` 不注册该回调，由原生 caption 处理双击，避免 JS 与系统各切换一次；不拥有原生窗口的离屏 shell 可以省略窗口端口。
 
 macOS 由 GPUI 读取 `NSGlobalDomain/AppleActionOnDoubleClick`，尊重窗口的 resizable/minimizable 能力。`None` 不执行，`Minimize` 最小化，`Maximize` 或缺省缩放。固定版本 GPUI 因缺少公开 Fill API，将 `Fill` 降级为缩放，不声称实现完整的原生填充；双击标题栏不是进入全屏。Linux/FreeBSD 的自绘标题栏经既有 UI command 执行 zoom。Windows 的显式 `titlebarDoubleClick()` 命令仍可执行 maximize，但不是标题栏手势的入口。
 
-`window-control-area.patch` 将 `Style.windowControlArea: "drag"` 接到 GPUI `WindowControlArea::Drag`。`TitleBar` 标记这个原生拖动区；居中标题用 `pointerEvents: "none"`，设置按钮用 `pointerEvents: "auto"`。GPUI 命中遍历遇到按钮的 BlockMouse 就停止，父拖动 hitbox 不在命中集合内，因此 Windows 在按钮上返回 HTCLIENT，在空白区返回 HTCAPTION。原生 resize border 保持 GPUI 的既有处理。
+`window-control-area.patch` 将 `Style.windowControlArea: "drag" | "close" | "max" | "min"` 映射为 GPUI 同名 caption hitbox。共享 `ui/panels/TitleBar` 使用原生 drag 区，交互按钮以独立 BlockMouse 阻挡父拖动 hitbox，因此空白区返回 HTCAPTION、普通按钮返回 HTCLIENT；原生 resize border 保持 GPUI 的既有处理。App 与 Gallery 均设置 `titlebarTransparent: true`，Windows 的 `appears_transparent` 会隐藏系统 caption，macOS 保留 traffic lights。当前 UI 窗口按钮先经注入的 `minimize/zoom/close` 命令执行；共享 renderer 完成补丁重建后，按钮才可使用 `min/max/close` 命中区以接入原生 Snap Layouts，不能把仅有补丁文件当作已启用。
+
+启用 caption 按钮命中区时还必须明确点击 owner：GPUI Windows 会对未消费的 non-client mouseUp 自行执行窗口动作，而 gpuix 当前 click 监听只发出 JS 事件。不可简单给已有 JS `zoom()` 按钮加 `max` 后让两边同时执行；原生消费链或仅 OS 点击/JS 键盘的接线需同时处理，再实窗验证最大化、还原与关闭守卫。
 
 只有注入双击动作时，`TitleBar` 才注册 mouse-down handler，并只接受左键且 `clickCount === 2`。它不自行计时、捕获鼠标或模拟拖窗。鼠标 payload 没有键盘事件的 `stopPropagation()` 包装，不能拿后者控制鼠标传播。
+
+`createWindowPlatform(renderer)` 的 `minimize()`、`zoom()` 与 `close()` 分别调用同一 renderer 的窗口命令。`close()` 走既有 `setWindowShouldClose` 关闭守卫，不绕过未保存工程确认；缺少关闭能力时抛错。
 
 ## 关闭守卫
 

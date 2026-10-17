@@ -1,9 +1,10 @@
-import { useState } from "react"
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { Tooltip, TooltipContent } from "@gpuix/react"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { sx } from "@/shared/theme/style"
 import { useMeasuredTextWidth } from "../useMeasuredTextWidth"
 import { snapControlWidth } from "../grid"
+import { tooltipChrome } from "../Tooltip"
 import type { Props } from "@gpuix/react"
 
 export interface TruncatedTextProps extends Omit<Props, "children" | "onChange"> {
@@ -25,7 +26,8 @@ export function TruncatedText({
 }: TruncatedTextProps) {
   const theme = useTheme()
   const unit = theme.control["--spacing-control-track"]
-  const [layoutWidth, setLayoutWidth] = useState<number>()
+  const layoutWidth = useRef<number | undefined>(undefined)
+  const [truncated, setTruncated] = useState(false)
   const [hovered, setHovered] = useState(false)
   const textStyle = {
     fontSize: style?.fontSize ?? theme.control["--text-control-track"],
@@ -36,8 +38,17 @@ export function TruncatedText({
   const measurement = useMeasuredTextWidth([children], textStyle)
   const resolvedWidth = width === undefined ? undefined : snapControlWidth(width, unit)
   const resolvedMaxWidth = maxWidth === undefined ? undefined : snapControlWidth(maxWidth, unit)
-  const available = layoutWidth ?? resolvedWidth ?? resolvedMaxWidth
-  const truncated = measurement.measured && available !== undefined && measurement.width > available
+  useLayoutEffect(() => {
+    const available = layoutWidth.current ?? resolvedWidth ?? resolvedMaxWidth
+    setTruncated(measurement.measured && available !== undefined && measurement.width > available)
+  }, [measurement.measured, measurement.width, resolvedWidth, resolvedMaxWidth])
+  const handleLayout = useCallback<NonNullable<Props["onLayout"]>>(event => {
+    if (event.width !== undefined) {
+      layoutWidth.current = event.width
+      setTruncated(measurement.measured && measurement.width > event.width)
+    }
+    onLayout?.(event)
+  }, [measurement.measured, measurement.width, onLayout])
   const contentStyle = sx(
     {
       minWidth: 0,
@@ -58,10 +69,7 @@ export function TruncatedText({
     <text
       {...props}
       testId={testId}
-      onLayout={event => {
-        if (event.width !== undefined) setLayoutWidth(event.width)
-        onLayout?.(event)
-      }}
+      onLayout={handleLayout}
       style={contentStyle}
     >
       {children}
@@ -90,7 +98,7 @@ export function TruncatedText({
             {...props}
             testId={testId}
             tabIndex={-1}
-            style={sx(contentStyle, { display: "flex", width: "100%" })}
+            style={sx(contentStyle, { display: "flex", alignItems: "center", width: "100%" })}
             onMouseEnter={
               ownerHovered === undefined
                 ? event => {
@@ -107,15 +115,13 @@ export function TruncatedText({
                   }
                 : undefined
             }
-            onLayout={event => {
-              if (event.width !== undefined) setLayoutWidth(event.width)
-              onLayout?.(event)
-            }}
+            onLayout={handleLayout}
           >
             <text
               style={{
                 ...textStyle,
                 minWidth: 0,
+                textAlign: style?.textAlign,
                 width: "100%",
                 whiteSpace: "nowrap",
                 textOverflow: "ellipsis",
@@ -130,16 +136,7 @@ export function TruncatedText({
             side="bottom"
             sideOffset={theme.design.overlay.sideOffset}
             testId={testId ? `${testId}-tooltip` : undefined}
-            style={{
-              padding: theme.design.menu.inset,
-              maxWidth: theme.design.menu.maxWidth,
-              borderWidth: theme.design.menu.borderWidth,
-              borderColor: theme.colors.border,
-              borderRadius: theme.design.menu.radius,
-              backgroundColor: theme.colors.popover,
-              color: theme.colors.popoverForeground,
-              fontSize: theme.control["--text-control-track"],
-            }}
+            style={tooltipChrome(theme)}
           >
             {children}
           </TooltipContent>

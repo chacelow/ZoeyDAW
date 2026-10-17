@@ -3,7 +3,9 @@ import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { handleGpuixEvent } from "@gpuix/react"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
-import { getThemePreset } from "@/shared/theme/presets"
+import { DEFAULT_THEME_PRESET, getThemePreset } from "@/shared/theme/presets"
+import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import { meterPosition, meterDbAtPosition } from "./LevelMeter"
 import { Checkbox } from "./Checkbox"
 import { TreeRow } from "./TreeRow"
 import { Chip } from "./Chip"
@@ -115,6 +117,15 @@ test("Chip removal does not select the chip", () => {
     const remove = root.renderer
       .findByType("div")
       .find(node => node.customProps?.["aria-label"] === "Remove drums")!
+    const chip = root.renderer.findByTestId("chip")!
+    const chipBounds = root.renderer.getElementBounds(chip.id)!
+    const removeBounds = root.renderer.getElementBounds(remove.id)!
+    expect(removeBounds.x).toBeGreaterThan(chipBounds.x)
+    expect(removeBounds.x + removeBounds.width).toBeLessThanOrEqual(chipBounds.x + chipBounds.width)
+    expect(removeBounds.y).toBeGreaterThanOrEqual(chipBounds.y)
+    expect(removeBounds.y + removeBounds.height).toBeLessThanOrEqual(
+      chipBounds.y + chipBounds.height
+    )
     root.renderer.nativeSimulateKeystrokes(remove.id, "enter")
     expect(root.renderer.findByTestId("chip")).toBeUndefined()
     expect(selected).toBe(0)
@@ -126,7 +137,7 @@ test("Chip removal does not select the chip", () => {
 for (const appearance of ["light", "dark"] as const)
   test(`Button active tones resolve theme roles in ${appearance}`, () => {
     const root = createTestRoot({ width: 300, height: 100 })
-    const colors = getThemePreset("default").colors[appearance]
+    const colors = getThemePreset(DEFAULT_THEME_PRESET).colors[appearance]
     try {
       root.render(
         <ThemeProvider appearance={appearance}>
@@ -152,9 +163,9 @@ for (const appearance of ["light", "dark"] as const)
 for (const surface of ["thumb", "meter-area"] as const)
   test(`Fader ${surface} drag/wheel/keyboard/reset and triangle position track the value`, () => {
     const root = createTestRoot({ width: 400, height: 240 })
-    let latest = 50
+    let latest = -8
     function Harness() {
-      const [value, setValue] = useState(50)
+      const [value, setValue] = useState(-8)
       return (
         <ThemeProvider>
           <ControlEnvironmentProvider value={{ inputPolicy: TEST_INPUT_POLICY }}>
@@ -166,10 +177,10 @@ for (const surface of ["thumb", "meter-area"] as const)
                 latest = next
                 setValue(next)
               }}
-              min={0}
-              max={100}
+              min={-60}
+              max={6}
               step={1}
-              defaultValue={50}
+              defaultValue={-8}
             />
           </ControlEnvironmentProvider>
         </ThemeProvider>
@@ -185,36 +196,35 @@ for (const surface of ["thumb", "meter-area"] as const)
       const x = surfaceBounds.x + surfaceBounds.width / 2
       const y = bounds.y + bounds.height / 2
       const before = root.renderer.findByTestId("fader-thumb")!.style
+      root.renderer.nativeSimulateMouseMove(x, y)
       root.renderer.nativeSimulateMouseDown(x, y)
       root.renderer.nativeSimulateMouseMove(x, y - 8, 0)
       root.renderer.nativeSimulateMouseUp(x, y - 8)
-      expect(latest).toBe(52)
+      const travel = bounds.height - Number(before.height)
+      const scale = DEFAULT_DESIGN_TOKENS.editor.meter.scale
+      const dragged = Math.round(meterDbAtPosition(meterPosition(-8, scale) - 8 / travel, scale))
+      expect(latest).toBe(dragged)
       const moved = root.renderer.findByTestId("fader-thumb")!.style
       expect(Number(moved.top)).toBeLessThan(Number(before.top))
-      const thumbBounds = root.renderer.getElementBounds(
-        root.renderer.findByTestId("fader-thumb")!.id
-      )!
-      expect(Number(moved.top)).toBeCloseTo(
-        (1 - latest / 100) * (bounds.height - thumbBounds.height)
-      )
+      expect(Number(moved.top)).toBeCloseTo(meterPosition(latest, scale) * travel)
       root.renderer.nativeSimulateScrollWheel(x, y, 0, 16)
-      expect(latest).toBe(53)
+      expect(latest).toBe(dragged + 1)
       root.renderer.nativeSimulateKeystrokes(node.id, "up")
-      expect(latest).toBe(54)
+      expect(latest).toBe(dragged + 2)
       root.renderer.nativeSimulateKeystrokes(node.id, "home")
-      expect(latest).toBe(0)
+      expect(latest).toBe(-60)
       root.renderer.nativeSimulateKeystrokes(node.id, "end")
-      expect(latest).toBe(100)
+      expect(latest).toBe(6)
       const endpoint = root.renderer.findByTestId("fader-thumb")!.style
       expect(endpoint.top).toBe(0)
       handleGpuixEvent(
         { elementId: node.id, eventType: "mouseDown", x, y, button: 0, clickCount: 2 },
         root.renderer
       )
-      expect(latest).toBe(50)
+      expect(latest).toBe(-8)
       root.render(<Harness />)
       expect(Number(root.renderer.findByTestId("fader-thumb")!.style.top)).toBeCloseTo(
-        (bounds.height - thumbBounds.height) / 2
+        meterPosition(-8, scale) * travel
       )
     } finally {
       root.unmount()

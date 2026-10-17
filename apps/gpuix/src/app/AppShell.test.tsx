@@ -26,6 +26,7 @@ import { createNativeBackend } from "@/project/adapters/backend/native"
 import { createMockDocument, createMockWorkspace } from "@/project/adapters/fixtures"
 import { dismissToast, toastLoading } from "@/ui/controls/Toaster"
 import { AppShell } from "./AppShell"
+import { NATIVE_MULTI_SESSION_TEST_TIMEOUT } from "./verification/native-session-budget"
 import { changeLocale, initAppI18n } from "./i18n"
 import { AnimationFrameProvider } from "@/platform/frame"
 import { AppNativeEnvironmentProvider } from "./native-environment"
@@ -43,6 +44,8 @@ import type { ThemeMode } from "@/platform/settings"
 import type { ThemePresetId } from "@/shared/theme/presets"
 import type { WindowRenderer } from "@/platform/window"
 import type { BackendRequest } from "@/project/model/backend"
+import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
+import { createProjectWorkspace } from "./project/project-workspace"
 
 const languageStorage = {
   value: "zh-CN",
@@ -513,6 +516,8 @@ describe("keyboard", () => {
     const before = playing()
     root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "space")
     expect(playing()).toBe(!before)
+    expect(root.renderer.findByTestId("project-layout")).toBeDefined()
+    expect(root.renderer.findByTestId("route-error")).toBeUndefined()
     expect(root.renderer.findByTestId("settings-dialog")).toBeUndefined()
     root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "enter")
     expect(root.renderer.findByTestId("settings-dialog")).toBeDefined()
@@ -523,52 +528,56 @@ describe("keyboard", () => {
     root.renderer.nativeSimulateKeystrokes(element(root, "language-en-US").id, "space")
     expect(playing()).toBe(!before)
     projectActions.stop()
-  })
+  }, NATIVE_MULTI_SESSION_TEST_TIMEOUT)
 
-  test("global Cmd+F focuses Browser only when unconsumed, nonmodal and expanded", async () => {
-    countSessions()
-    const { root, keyboard } = mount({ router: createRouter("/project/search") })
-    await layout(root)
-    const timeline = element(root, "timeline-viewport")
-    const search = element(root, "browser-search")
-    root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
-    expect(root.renderer.getFocusedElementId()).toBe(search.id)
-    root.renderer.simulateKeystrokes("D r i f t")
-    root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
-    root.renderer.simulateKeystrokes("a")
-    expect(root.renderer.getElement(search.id)?.customProps?.value).toBe("a")
-    root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "enter")
-    const dialogFocus = root.renderer.getFocusedElementId()
-    root.renderer.simulateKeystrokes("cmd-f")
-    expect(root.renderer.getFocusedElementId()).toBe(dialogFocus)
-    keyboard.rootHandlers.onKeyDown({
-      key: "f",
-      modifiers: { cmd: true, ctrl: false, alt: false, shift: false },
-      defaultPrevented: false,
-      preventDefault() {},
-      stopPropagation() {},
-    })
-    expect(root.renderer.getFocusedElementId()).toBe(dialogFocus)
-    root.renderer.simulateKeystrokes("escape")
-    expect(root.renderer.findByTestId("settings-dialog")).toBeUndefined()
-    root.renderer.nativeSimulateKeystrokes(button(root, "切换浏览器").id, "enter")
-    await layout(root)
-    root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
-    expect(root.renderer.getFocusedElementId()).not.toBe(search.id)
-    root.renderer.nativeSimulateKeystrokes(button(root, "切换浏览器").id, "enter")
-    await layout(root)
-    root.renderer.focusElement(timeline.id)
-    keyboard.rootHandlers.onKeyDown({
-      key: "f",
-      modifiers: { cmd: true, ctrl: false, alt: false, shift: false },
-      defaultPrevented: true,
-      preventDefault() {
-        throw new Error("Already consumed")
-      },
-      stopPropagation() {},
-    })
-    expect(root.renderer.getFocusedElementId()).toBe(timeline.id)
-  })
+  test(
+    "global Cmd+F focuses Browser only when unconsumed, nonmodal and expanded",
+    async () => {
+      countSessions()
+      const { root, keyboard } = mount({ router: createRouter("/project/search") })
+      await layout(root)
+      const timeline = element(root, "timeline-viewport")
+      const search = element(root, "browser-search")
+      root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
+      expect(root.renderer.getFocusedElementId()).toBe(search.id)
+      root.renderer.simulateKeystrokes("D r i f t")
+      root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
+      root.renderer.simulateKeystrokes("a")
+      expect(root.renderer.getElement(search.id)?.customProps?.value).toBe("a")
+      root.renderer.nativeSimulateKeystrokes(element(root, "titlebar-settings").id, "enter")
+      const dialogFocus = root.renderer.getFocusedElementId()
+      root.renderer.simulateKeystrokes("cmd-f")
+      expect(root.renderer.getFocusedElementId()).toBe(dialogFocus)
+      keyboard.rootHandlers.onKeyDown({
+        key: "f",
+        modifiers: { cmd: true, ctrl: false, alt: false, shift: false },
+        defaultPrevented: false,
+        preventDefault() {},
+        stopPropagation() {},
+      })
+      expect(root.renderer.getFocusedElementId()).toBe(dialogFocus)
+      root.renderer.simulateKeystrokes("escape")
+      expect(root.renderer.findByTestId("settings-dialog")).toBeUndefined()
+      root.renderer.nativeSimulateKeystrokes(button(root, "切换浏览器").id, "enter")
+      await layout(root)
+      root.renderer.nativeSimulateKeystrokes(timeline.id, "cmd-f")
+      expect(root.renderer.getFocusedElementId()).not.toBe(search.id)
+      root.renderer.nativeSimulateKeystrokes(button(root, "切换浏览器").id, "enter")
+      await layout(root)
+      root.renderer.focusElement(timeline.id)
+      keyboard.rootHandlers.onKeyDown({
+        key: "f",
+        modifiers: { cmd: true, ctrl: false, alt: false, shift: false },
+        defaultPrevented: true,
+        preventDefault() {
+          throw new Error("Already consumed")
+        },
+        stopPropagation() {},
+      })
+      expect(root.renderer.getFocusedElementId()).toBe(timeline.id)
+    },
+    NATIVE_MULTI_SESSION_TEST_TIMEOUT
+  )
 })
 
 describe("project layout state", () => {
@@ -586,17 +595,23 @@ describe("project layout state", () => {
         ?.width ?? 0
     await layout(root)
     const initial = browserWidth()
-    root.renderer.nativeSimulateKeystrokes(
-      element(root, "project-workspace-divider-workspace-1").id,
-      "shift-right"
+    const divider = root.renderer.getElementBounds(
+      element(root, "project-workspace-border-divider-left").id
     )
+    if (!divider) throw new Error("Browser divider has no bounds")
+    const x = divider.x + divider.width / 2
+    const y = divider.y + divider.height / 2
+    root.renderer.nativeSimulateMouseMove(x, y)
+    root.renderer.nativeSimulateMouseDown(x, y)
+    root.renderer.nativeSimulateMouseMove(x + initial / 4, y, 0)
+    root.renderer.nativeSimulateMouseUp(x + initial / 4, y)
     await layout(root)
     const resized = browserWidth()
     expect(resized).toBeGreaterThan(initial)
     act(root, () => projectActions.setEditingClip(clipId()))
     await layout(root)
     expect(
-      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-selected"]
+      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-pressed"]
     ).toBe(true)
     expect(root.renderer.findByTestId("clip-editor")).toBeDefined()
     expect(browserWidth()).toBe(resized)
@@ -605,18 +620,36 @@ describe("project layout state", () => {
     expect(browserWidth()).toBe(resized)
   })
 
-  test("a Clip View request from the previous project does not open Clip Edit in the next", () => {
+  test("a Clip View request from the previous project does not reopen Clip Edit in the next", () => {
     countSessions()
+    const files = createMemoryProjectFiles()
+    const nextLayout = createProjectWorkspace(DEFAULT_DESIGN_TOKENS.dock.borderSize)
+    const bottom = nextLayout.borders.bottom
+    if (!bottom) throw new Error("Default workspace has no bottom rail")
+    files.entries.set("second.zdaw", JSON.stringify({
+      version: 2,
+      document: createMockDocument(),
+      workspace: {
+        ...createMockWorkspace(),
+        dockLayout: JSON.stringify({
+          ...nextLayout,
+          borders: { ...nextLayout.borders, bottom: { ...bottom, selected: null } },
+        }),
+      },
+    }))
+    setProjectFiles(files)
     const { root, router } = mount({ router: createRouter("/project/first") })
     act(root, () => projectActions.setEditingClip(clipId()))
     expect(
-      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-selected"]
+      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-pressed"]
     ).toBe(true)
-    act(root, () => router.navigate("/project/second"))
+    act(root, () => router.navigate("/project/second.zdaw"))
     expect(root.renderer.findByTestId("project-layout")).toBeDefined()
     expect(
-      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-selected"]
+      root.renderer.findByTestId("project-workspace-tab-clipEditor")?.customProps?.["aria-pressed"]
     ).toBe(false)
+    expect(useProjectState.getState().session.editingClipId).toBeNull()
+    expect(root.renderer.findByTestId("project-workspace-content-clipEditor")).toBeUndefined()
   })
 })
 

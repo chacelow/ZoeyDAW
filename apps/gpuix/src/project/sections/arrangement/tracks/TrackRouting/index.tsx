@@ -1,10 +1,12 @@
 import { useMemo } from "react"
 import { useTrackLabels } from "../labels"
-import { DropdownButton, DragPadToggle } from "@/ui/controls"
+import { DropdownButton, DragPadToggle, LevelMeter } from "@/ui/controls"
 import { useTheme } from "@/shared/theme/ThemeProvider"
 import { projectActions, useProjectState } from "@/project/adapters"
 import { trackControlRows } from "@/project/layout"
 import { routingDestinations } from "@/project/model/track-routing"
+import { TrackMeter } from "../meter/TrackMeter"
+import { useMeterEnvironment } from "../meter/telemetry"
 import type { Track } from "@/project/model/types"
 
 const HARDWARE_CHANNELS = [
@@ -22,6 +24,18 @@ const EMPTY_CHANNEL = [{ id: "", label: "" }]
 export function TrackRouting({ track }: { readonly track: Track }) {
   const { t, monitorModes, monitorShortNames } = useTrackLabels()
   const theme = useTheme()
+  const { policy: meterPolicy } = useMeterEnvironment()
+  const inlineHeight =
+    theme.design.editor.meter.inlineHeightUnits * theme.control["--spacing-control-track"]
+  const mainMeter = (
+    <TrackMeter
+      trackId={track.id}
+      trackName={track.name}
+      variant="inline"
+      height={inlineHeight}
+      main={track.kind === "main"}
+    />
+  )
   const tracks = useProjectState(state => state.document.tracks)
   const destinations = useMemo(() => routingDestinations(track, tracks), [track, tracks])
   const outputs = [
@@ -65,6 +79,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
             testId={`track-output-${track.id}`}
             value={track.outputChannel ?? "1-2"}
             items={HARDWARE_CHANNELS}
+            icon={mainMeter}
             onChange={outputChannel => projectActions.updateTrack(track.id, { outputChannel })}
           />
         ) : null
@@ -142,6 +157,27 @@ export function TrackRouting({ track }: { readonly track: Track }) {
               testId={`track-cue-output-${track.id}`}
               value={track.cueOutput ?? "1-2"}
               items={HARDWARE_CHANNELS}
+              icon={
+                <LevelMeter
+                  variant="inline"
+                  minDb={meterPolicy.minDb}
+                  maxDb={meterPolicy.maxDb}
+                  height={inlineHeight}
+                  aria-label={`${t("cueOutput")} ${track.name}`}
+                  channels={[
+                    {
+                      rmsDb: meterPolicy.minDb,
+                      peakDb: meterPolicy.minDb,
+                      holdDb: meterPolicy.minDb,
+                    },
+                    {
+                      rmsDb: meterPolicy.minDb,
+                      peakDb: meterPolicy.minDb,
+                      holdDb: meterPolicy.minDb,
+                    },
+                  ]}
+                />
+              }
               onChange={cueOutput => projectActions.updateTrack(track.id, { cueOutput })}
             />
           ) : null}
@@ -151,6 +187,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
             testId={`track-output-${track.id}`}
             value={isMain ? (track.outputChannel ?? "1-2") : track.output}
             items={isMain ? HARDWARE_CHANNELS : outputs}
+            icon={isMain ? mainMeter : undefined}
             onChange={value =>
               projectActions.updateTrack(
                 track.id,

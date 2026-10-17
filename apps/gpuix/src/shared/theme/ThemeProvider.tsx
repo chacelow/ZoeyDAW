@@ -7,7 +7,7 @@ import { DEFAULT_THEME_PRESET, getThemePreset } from "./presets"
 import type { ReactNode } from "react"
 import type { ColorScheme, DerivedThemeColors } from "./colors"
 import type { ThemePresetId } from "./presets"
-import { createDockTokens, DEFAULT_DESIGN_TOKENS } from "./design-tokens"
+import { createDesignTokens, DEFAULT_DESIGN_TOKENS } from "./design-tokens"
 import type { DesignTokens } from "./design-tokens"
 
 export type Appearance = ColorScheme
@@ -57,7 +57,7 @@ export function ThemeProvider({
   )
   const resolvedDesign = useMemo(
     () => design === DEFAULT_DESIGN_TOKENS && control !== CONTROL_METRICS.default
-      ? { ...design, dock: createDockTokens(control) }
+      ? createDesignTokens(control)
       : design,
     [design, control]
   )

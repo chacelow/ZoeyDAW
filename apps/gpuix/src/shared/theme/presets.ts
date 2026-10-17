@@ -11,7 +11,7 @@ export interface ThemePreset {
   colors: Readonly<Record<ColorScheme, DerivedThemeColors>>
 }
 
-export const DEFAULT_THEME_PRESET: ThemePresetId = "default"
+export const DEFAULT_THEME_PRESET: ThemePresetId = "vscode-modern"
 
 export const THEME_PRESETS: readonly ThemePreset[] = PRESET_DATA.map(preset => ({
   id: preset.id,

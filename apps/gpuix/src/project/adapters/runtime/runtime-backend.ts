@@ -170,14 +170,10 @@ export function createRuntimeBackend(owner: RuntimeOwner, editing: RuntimeEditin
   function telemetry(frame: BackendTelemetry): void {
     owner.observedBar = frame.clock.bar
     const current = owner.get()
-    const levels: Record<string, [number, number]> = {}
-    for (const [id, value] of Object.entries(frame.levels)) {
-      levels[id] = [value[0], value[1]]
-    }
     owner.store.setState({
       session: {
         ...current.session,
-        levels,
+        levels: frame.levels,
         ...(frame.playing && { position: positionAtBar(frame.clock.bar) }),
       },
     })

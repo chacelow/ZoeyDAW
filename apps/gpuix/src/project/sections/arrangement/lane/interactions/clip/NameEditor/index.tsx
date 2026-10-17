@@ -97,6 +97,7 @@ function NameInput({
   }
   return (
     <Input
+      variant="ghost"
       autoFocus
       selectAllOnFocus
       testId="clip-name-editor"
@@ -109,9 +110,6 @@ function NameInput({
         top,
         width,
         height,
-        borderRadius: theme.design.editor.inlineRadius,
-        borderColor: theme.colors.primary,
-        backgroundColor: theme.colors.arrangementClipSelected,
         color: theme.colors.arrangementClipInk,
         paddingLeft: theme.control["--spacing-control-gap"],
         paddingRight: theme.control["--spacing-control-gap"],

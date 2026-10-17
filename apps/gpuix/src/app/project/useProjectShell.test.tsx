@@ -3,7 +3,7 @@ import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
 import { flushSync } from "@gpuix/react"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
-import { DEFAULT_LAYOUT_TOKENS } from "@/shared/theme/layout-tokens"
+import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { getGroups } from "@/ui/panels"
 import { ControlEnvironmentProvider } from "@/ui/controls"
 import { hydrateProject, serializeProject, projectActions, useProjectState } from "@/project/adapters"
@@ -43,9 +43,11 @@ function box(testId: string) {
 test("workspace dock tabs switch footer contents and persist their active layout through project serialization", async () => {
   await mount()
   for (const id of ["browser", "arrangement", "clipEditor", "devices"]) expect(root.renderer.findByTestId(`project-workspace-tab-${id}`)).toBeDefined()
-  expect(box("project-workspace-content-devices").height).toBeGreaterThan(0)
+  expect(box("project-workspace-content-clipEditor").height).toBeGreaterThan(0)
   const clipContent = root.renderer.findByTestId("project-workspace-content-clipEditor")
-  expect(clipContent?.style?.display).toBe("none")
+  expect(root.renderer.findByTestId("project-workspace-content-devices")).toBeUndefined()
+  flushSync(() => observed.shell?.selectFooterView("devices"))
+  await settle()
   const tab = root.renderer.findByTestId("project-workspace-tab-clipEditor")
   if (!tab) throw new Error("Missing clip tab")
   root.renderer.nativeSimulateKeystrokes(tab.id, "enter")
@@ -55,11 +57,11 @@ test("workspace dock tabs switch footer contents and persist their active layout
   expect(root.renderer.findByTestId("project-workspace-content-devices")?.style?.display).toBe("none")
   const saved = serializeProject()
   const persisted = useProjectState.getState().workspace.dockLayout
-  flushSync(() => projectActions.setDockLayout(JSON.stringify(createProjectWorkspace(DEFAULT_LAYOUT_TOKENS.project.panels))))
+  flushSync(() => projectActions.setDockLayout(JSON.stringify(createProjectWorkspace(DEFAULT_DESIGN_TOKENS.dock.borderSize))))
   flushSync(() => hydrateProject(saved))
   await settle()
   expect(useProjectState.getState().workspace.dockLayout).toBe(persisted)
-  expect(getGroups(observed.shell?.layout.root ?? null).find(group => group.id === "editors-group")?.active).toBe("clipEditor")
+  expect(observed.shell?.layout.borders.bottom?.selected).toBe("clipEditor")
 })
 test("native application tab edge drag splits the workspace and saves its geometry", async () => {
   await mount()
@@ -70,17 +72,22 @@ test("native application tab edge drag splits the workspace and saves its geomet
   root.renderer.nativeSimulateMouseUp(to.x + to.width - 5, to.y + to.height / 2)
   await settle()
   const layout = observed.shell?.layout
-  expect(getGroups(layout?.root ?? null)).toHaveLength(4)
+  expect(getGroups(layout?.root ?? null)).toHaveLength(2)
   expect(JSON.parse(useProjectState.getState().workspace.dockLayout ?? "null")).toEqual(layout)
 })
 test("invalid persisted workspace JSON restores the default and warns instead of losing the project", () => {
   const warn = spyOn(logger, "warn").mockImplementation(() => {})
   try {
-    for (const json of ["{", JSON.stringify({ version: 99 }), JSON.stringify({ ...createProjectWorkspace(DEFAULT_LAYOUT_TOKENS.project.panels), hidden: ["unknown"] })]) {
-      expect(restoreProjectWorkspace(json, DEFAULT_LAYOUT_TOKENS.project.panels)).toEqual(createProjectWorkspace(DEFAULT_LAYOUT_TOKENS.project.panels))
+    for (const json of ["{", JSON.stringify({ version: 99 }), JSON.stringify({ ...createProjectWorkspace(DEFAULT_DESIGN_TOKENS.dock.borderSize), hidden: ["unknown"] })]) {
+      expect(restoreProjectWorkspace(json, DEFAULT_DESIGN_TOKENS.dock.borderSize)).toEqual(createProjectWorkspace(DEFAULT_DESIGN_TOKENS.dock.borderSize))
     }
     expect(warn).toHaveBeenCalledTimes(3)
   } finally { warn.mockRestore() }
+})
+test("legacy workspace without the three edge rails falls back to the new default", () => {
+  const size = DEFAULT_DESIGN_TOKENS.dock.borderSize
+  const legacy = { ...createProjectWorkspace(size), borders: {}, root: { kind: "group", id: "arrangement-group", tabs: ["arrangement", "browser", "clipEditor", "devices"], active: "arrangement" } }
+  expect(restoreProjectWorkspace(JSON.stringify(legacy), size)).toEqual(createProjectWorkspace(size))
 })
 test("application dock keyboard context maximizes and restores the focused group without repeat toggles", async () => {
   await mount()
@@ -97,10 +104,10 @@ test("application dock keyboard context maximizes and restores the focused group
     const event = { key: "enter", modifiers: { ctrl: true, cmd: false, alt: false, shift: true }, defaultPrevented: false }
     expect(keyboard.down(event)).toBe(true)
     await settle()
-    expect(observed.shell?.layout.maximizedGroup).toBe("editors-group")
+    expect(observed.shell?.layout.maximizedGroup).toBe("border:bottom")
     expect(keyboard.down({ ...event, isHeld: true })).toBe(true)
     await settle()
-    expect(observed.shell?.layout.maximizedGroup).toBe("editors-group")
+    expect(observed.shell?.layout.maximizedGroup).toBe("border:bottom")
     expect(keyboard.down(event)).toBe(true)
     await settle()
     expect(observed.shell?.layout.maximizedGroup).toBeNull()

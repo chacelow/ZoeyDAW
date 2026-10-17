@@ -27,6 +27,7 @@ export function Checkbox({
   return (
     <Button
       {...props}
+      variant={props.variant ?? "outline"}
       iconOnly={props.children === undefined}
       role="checkbox"
       disabled={disabled}

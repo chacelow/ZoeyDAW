@@ -8,15 +8,18 @@ import { EMPTY_THEME_LIBRARY, resolveThemeOverrides } from "@/app/theme-editor"
 import { GalleryWorkspace } from "./states"
 import { GalleryThemePanel } from "./GalleryThemePanel"
 import type { GalleryThemeState } from "./GalleryThemePanel"
+import type { TitleBarWindow } from "@/ui/panels/TitleBar"
 
 export function GalleryDemo({
   cursorLock,
   initialAppearance = "dark",
   initialLocale = "en",
+  window,
 }: {
   readonly cursorLock?: CursorLockPort
   readonly initialAppearance?: Appearance
   readonly initialLocale?: "en" | "zh"
+  readonly window?: TitleBarWindow
 }) {
   const [themeState, setThemeState] = useState<GalleryThemeState>({
     appearance: initialAppearance,
@@ -33,6 +36,8 @@ export function GalleryDemo({
         cursorLock={cursorLock}
         locale={locale}
         formats={formats}
+        window={window}
+        onLocaleChange={setLocale}
         themePanel={
           <GalleryThemePanel
             locale={locale}

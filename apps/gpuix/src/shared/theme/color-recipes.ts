@@ -43,7 +43,7 @@ export interface ColorRecipes {
       readonly light: keyof ThemeColors
       readonly dark: keyof ThemeColors
     }
-    readonly arrangementMeterDanger: keyof ThemeColors
+    readonly arrangementMeterClip: keyof ThemeColors
     readonly arrangementMeterPeak: keyof ThemeColors
     readonly arrangementClipInk: {
       readonly light: keyof ThemeColors
@@ -88,7 +88,7 @@ export const DEFAULT_COLOR_RECIPES: ColorRecipes = {
     arrangementVolume: "chart2",
     arrangementMeterGood: "chart2",
     arrangementMeterWarn: { light: "chart4", dark: "chart3" },
-    arrangementMeterDanger: "destructive",
+    arrangementMeterClip: "arrangementMeterClip",
     arrangementMeterPeak: "mutedForeground",
     arrangementClipInk: { light: "foreground", dark: "card" },
   },

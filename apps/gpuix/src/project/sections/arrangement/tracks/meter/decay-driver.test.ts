@@ -32,7 +32,10 @@ test("one activity request serves meters and ends on silence or last unmount", (
   expect(peak.db).toBe(0)
   driver.advance(1000)
   expect(peak.db).toBeCloseTo(-9.6)
-  driver.advance(4000)
+  driver.advance(
+    ARRANGEMENT_DEFAULTS.meter.holdMs +
+      (-METER_MIN_DB / ARRANGEMENT_DEFAULTS.meter.fallDbPerSecond) * 1000
+  )
   expect(peak.db).toBe(METER_MIN_DB)
   expect(activity).toEqual([true, false])
   level = 3

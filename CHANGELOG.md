@@ -2,6 +2,13 @@
 
 ## 0.1.0 - unreleased
 
+### Live-style level meters and smooth icon hover (2026-10-17)
+
+- Level meters follow Ableton Live 12: a measured non-linear dB scale shared by meters and the Fader, a position-based red → yellow → green body gradient (0, −9, −17.5 dB), RMS fill with a translucent peak extension and a hold line, and an overload cap that stays visible on collapsed tracks. The Main track turns its whole meter red on overload. Tick marks and dB numbers appear as a meter grows taller; bar widths stay compact. Mixer meters add a latching, click-to-reset peak readout. Main Out shows an inline meter in its dropdown; Cue Out stays at the floor because the engine has no cue bus yet.
+- Telemetry carries per-track `{ peak, rms }` in dBFS. The engine's RMS is one render block (≈5.3 ms), so the meter integrates it in the power domain over `rmsIntegrationMs` (300 ms).
+- Icon hover growth is a paint-only GPU scale: the renderer patch `svg-scale-motion` adds `scale` to style and motion and `motion.svg`, so the glyph rasterises once and animates without re-layout or re-rasterisation.
+- Gallery: the Meters page has a variant × state matrix with a Main row and a resizable demo; large Layout demos put their label above full-width content.
+
 ### Dock workspace, component catalog and theme editor (2026-10-17)
 
 - The project workspace is a dock layout (dockview-style model, FlexLayout look): Browser, Arrangement, Clip Edit and Affect Chain are registered panels with tabs, edge/center/tab-strip drops, maximize and a menu to show hidden panels. Transport and the status bar stay fixed. The layout is saved per project as versioned JSON and never marks the document dirty. Groups carry no highlight border; header actions show only for the active or hovered group.

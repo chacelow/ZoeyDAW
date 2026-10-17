@@ -51,7 +51,12 @@ export function createMockProjectBackend(): ProjectBackend {
       clock: { kind: "musical", bar: position, barsPerSecond },
       playing: state.control.playing,
       recording: state.control.recording,
-      levels: Object.fromEntries(state.project.tracks.map(track => [track.id, [-120, -120]])),
+      levels: Object.fromEntries(
+        state.project.tracks.map(track => [
+          track.id,
+          { peak: [-120, -120], rms: [-120, -120] },
+        ])
+      ),
       outputLatencyFrames: null,
     }
   }

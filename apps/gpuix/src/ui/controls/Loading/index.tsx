@@ -6,6 +6,7 @@ import type { Props } from "@gpuix/react"
 export type LoadingProps = Props & {
   readonly label: string
   readonly show?: boolean
+  readonly inline?: boolean
 } & (
     | { readonly progress: number; readonly progressValueText: string }
     | { readonly progress?: never; readonly progressValueText?: never }
@@ -18,6 +19,7 @@ export type LoadingProps = Props & {
 export function Loading({
   label,
   show = true,
+  inline = false,
   progress,
   progressValueText,
   logoSrc,
@@ -38,17 +40,18 @@ export function Loading({
       aria-busy={true}
       style={sx(
         {
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: 0,
-          right: 0,
+          position: inline ? "relative" : "absolute",
+          top: inline ? undefined : 0,
+          bottom: inline ? undefined : 0,
+          left: inline ? undefined : 0,
+          right: inline ? undefined : 0,
           display: "flex",
-          flexDirection: "column",
+          flexDirection: inline ? "row" : "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: theme.design.loading.gap,
-          backgroundColor: theme.colors.background,
+          gap: inline ? theme.control["--spacing-control-gap"] : theme.design.loading.gap,
+          minHeight: inline ? theme.control["--spacing-control-track"] : undefined,
+          backgroundColor: inline ? "transparent" : theme.colors.background,
           color: theme.colors.mutedForeground,
           fontSize: theme.control["--text-control-track"],
         },

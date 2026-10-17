@@ -34,6 +34,14 @@ function nonnegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
 }
 
+function stereoLevels(value: unknown): value is readonly [number, number] {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    value.every(level => typeof level === "number" && Number.isFinite(level))
+  )
+}
+
 export function validFrame(value: unknown, sessionId: string): value is BackendTelemetry {
   if (
     !record(value) ||
@@ -71,10 +79,7 @@ export function validFrame(value: unknown, sessionId: string): value is BackendT
   return (
     record(value.levels) &&
     Object.values(value.levels).every(
-      pair =>
-        Array.isArray(pair) &&
-        pair.length === 2 &&
-        pair.every(level => typeof level === "number" && Number.isFinite(level))
+      levels => record(levels) && stereoLevels(levels.peak) && stereoLevels(levels.rms)
     )
   )
 }

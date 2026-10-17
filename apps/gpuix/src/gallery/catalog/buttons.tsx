@@ -109,6 +109,7 @@ export function ButtonsSection({ t }: GallerySectionProps) {
           t={t}
           testId="gallery-icon"
           iconOnly
+          activeFilled
           label={t("Play", "播放")}
           icon={<Icon name="Play" />}
         />
@@ -120,10 +121,16 @@ export function ButtonsSection({ t }: GallerySectionProps) {
           testId="gallery-transport-icon"
           size="transport"
           iconOnly
+          activeFilled
           label={t("Play", "播放")}
           icon={<Icon name="Play" />}
         />
       </GalleryVariant>
+      {(["ghost", "outline"] as const).map(variant => (
+        <GalleryVariant key={`icon-${variant}`} label={t("Icon only", "纯图标") + " · " + variant}>
+          <ButtonStates t={t} columnWidth={columnWidth} iconOnly activeFilled variant={variant} label={t("Favorite", "收藏")} icon={<Icon name="Star" />} />
+        </GalleryVariant>
+      ))}
       <GalleryVariant label={t("Native focus", "原生焦点")}>
         <GalleryState label={t("Focused on mount", "挂载时聚焦")}>
           <Button ref={focus} testId="gallery-focus-cell">

@@ -24,7 +24,7 @@ import type { ProjectComposition } from "./composition"
 import type { ProjectShellApi } from "./useProjectShell"
 import type { ProjectLayoutProps } from "./ProjectLayout"
 import type { BrowserPanelHandle } from "@/project/sections/browser"
-import type { Ref } from "react"
+import type { ReactNode, Ref } from "react"
 
 export function ProjectSections({
   composition,
@@ -37,6 +37,7 @@ export function ProjectSections({
   readonly shell: ProjectShellApi
   readonly focusRef: ProjectLayoutProps["focusRef"]
   readonly labels: ProjectLayoutProps["labels"]
+  readonly renderViewMenu?: (view: ReactNode, toggles: ReactNode) => ReactNode
 }) {
   const { locale } = useAppTranslation()
   const zh = locale === "zh-CN"

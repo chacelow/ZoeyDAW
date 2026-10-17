@@ -42,9 +42,9 @@ export function Label({
   }
   if (!controlRef && !onClick && !onKeyDown)
     return (
-      <text {...props} style={sx(variants({ disabled: disabled ? "true" : "false" }), style)}>
+      <div {...props} style={sx(variants({ disabled: disabled ? "true" : "false" }), style)}>
         {children}
-      </text>
+      </div>
     )
   return (
     <div
