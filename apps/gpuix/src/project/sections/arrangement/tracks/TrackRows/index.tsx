@@ -64,7 +64,9 @@ export function TrackRows({
   const reorder = useTrackReorder(visibility.rows, container)
   const normal = rows.filter(row => !isPinnedTrack(row.track))
   const pinned = rows.filter(row => isPinnedTrack(row.track))
-  const laneWidth = viewport.width
+  // Rails sit at the start of the header column. Anchor them to the right edge so they follow
+  // the native layout in the same frame as the header instead of the JS-measured lane width.
+  const railsRight = scene.geometry.track.controlsWidth - theme.project.identityWidth
   const drawRows = (
     input: readonly TrackRowGeometry[],
     offset: number,
@@ -138,7 +140,7 @@ export function TrackRows({
             style={{
               position: "absolute",
               top: row.top - offset,
-              left: laneWidth,
+              right: railsRight,
               width: theme.project.identityWidth,
               height: row.height,
               pointerEvents: "none",
@@ -160,7 +162,7 @@ export function TrackRows({
           testId="track-rows"
           style={{
             position: "relative",
-            width: viewport.width + scene.geometry.track.controlsWidth,
+            width: "100%",
             height: viewport.height,
             backgroundColor: theme.colors.arrangementSurfaceAlt,
             overflow: "hidden",

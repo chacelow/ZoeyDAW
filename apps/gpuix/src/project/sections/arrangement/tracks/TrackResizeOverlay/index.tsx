@@ -17,14 +17,12 @@ function TrackResizeHandle({
   row,
   top,
   height,
-  width,
   label,
   onCapture,
 }: {
   readonly row: TrackRow
   readonly top: number
   readonly height: number
-  readonly width: number
   readonly label: string
   readonly onCapture: (trackId: string, captured: boolean) => void
 }) {
@@ -58,7 +56,7 @@ function TrackResizeHandle({
         position: "absolute",
         left: 0,
         top: bounds.top,
-        width,
+        right: 0,
         height: bounds.height,
         cursor: theme.design.cursors.verticalResize,
         focusVisible: {
@@ -84,7 +82,6 @@ export function TrackResizeOverlay({ scene, viewport, labels }: TrackResizeOverl
   )
   const gap = theme.control["--spacing-control-track-gap"]
   const borderInset = scene.geometry.track.border / 2
-  const width = viewport.width + scene.geometry.track.controlsWidth
   return (
     <>
       {rows
@@ -102,7 +99,6 @@ export function TrackResizeOverlay({ scene, viewport, labels }: TrackResizeOverl
               row={row}
               top={top}
               height={bottom > top ? bottom - top : 0}
-              width={width}
               label={labels.trackHeight}
               onCapture={capture}
             />

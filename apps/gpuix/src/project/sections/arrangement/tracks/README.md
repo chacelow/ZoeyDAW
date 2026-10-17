@@ -68,7 +68,7 @@ TrackResizeOverlay({ scene, viewport, labels })
 - `focusedTrackId`: preserves one offscreen header while its lane content remains unmounted. `onFocusTrack(id)` reports inline-name editing focus; ordinary lane/header selection remains owned by `projectActions.selectTracks` and its explicit surface.
 - `telemetry`: accepted backend telemetry reader; `labels`: immutable translated strings supplied by the composition root.
 - Mount `TrackRows` inside `AnimationFrameProvider` using `createAnimationFrameSource(renderer)` at the composition root. The demo also injects native activation through `createWindowPlatform(renderer).subscribeApplicationActive`; no sampled activation singleton remains.
-- `TrackResizeOverlay` 与 `TrackRows` 在同一个 Scene 坐标父节点中显式组合，Y 原点包含标尺，宽度为 `viewport.width + controlsWidth`。组合根把它放在稳定 lane 输入层之后，只有分隔条矩形接收命中，没有覆盖整面的 wrapper。
+- `TrackResizeOverlay` 与 `TrackRows` 在同一个 Scene 坐标父节点中显式组合，Y 原点包含标尺，横向用 `width: 100%`/`right: 0` 跟随父节点原生布局，不用 JS 测得的 `viewport.width` 推算总宽，否则面板拖动时轨道头会比时间线晚一帧对齐。组合根把它放在稳定 lane 输入层之后，只有分隔条矩形接收命中，没有覆盖整面的 wrapper。
 - `TrackRows` 与 overlay 共用 `useTrackRowLayout`。空闲条只挂载边界的可见交集。活动 resize 保留按下时的透明 hitbox 和唯一 hook，直到释放或取消；即使边界或行随拖动离屏，也不销毁捕获。普通轨道从底部、Return/Main 从顶部调整，Escape、blur、失活和 epoch 仍取消。
 
 `useTrackRowLayout` 向 core 传入完整 `scene.geometry`，上下边界使用其中的 arrangement ruler 几何；固定轨道高度仍只依赖 track 几何。Group frame 使用 `design.shape.controlBorderWidth`，Group rails 使用 `design.editor.dividerStrokeWidth`，插入线使用 `design.editor.insertionLineWidth`，名称字重使用 `design.typography.weights.medium`。拖动与 resize 的 cursor 经 `design.cursors` 解析，其中 resize 保留原来的 `ns-resize`，读取 `verticalResize`。
