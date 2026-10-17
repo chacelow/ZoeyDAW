@@ -34,11 +34,11 @@ export function TrackRow({
   const { track } = row
   const theme = useTheme()
   const { t } = useTrackLabels()
-  const selection = useProjectState(state => state.session.selectedTrackIds)
+  const selected = useProjectState(state => state.session.selectedTrackIds.includes(track.id))
   const surface = useProjectState(state => state.session.trackSelectionSurface)
-  const selected = selection.includes(track.id)
   const [renaming, setRenaming] = useState(false)
   const choose = (target: "arrangement" | "header", range: boolean, additive: boolean) => {
+    const selection = useProjectState.getState().session.selectedTrackIds
     if (range && selection.length) {
       const ids = visibleTracks(useProjectState.getState().document.tracks).map(item => item.id)
       const start = ids.indexOf(selection[0] ?? "")

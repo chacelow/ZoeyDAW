@@ -8,6 +8,7 @@ import { ProjectBackendNotConfiguredError } from "./runtime-state"
 import type { RuntimeOwner, ProjectBackendOptions } from "./runtime-state"
 import type {
   BackendControl,
+  BackendMeterLevels,
   BackendRequest,
   BackendState,
   BackendTelemetry,
@@ -21,6 +22,26 @@ interface RuntimeEditingCallbacks {
   cancelEdit(token?: ProjectEditToken): void
   cancelPreview(token: ProjectEditToken): void
   flushRecording(): void
+}
+
+type MeterLevelMap = Readonly<Record<string, BackendMeterLevels>>
+
+/** Telemetry arrives at ~30Hz even when silent; equal readings keep their identity so subscribers stay idle. */
+function sameLevels(previous: MeterLevelMap, next: MeterLevelMap): boolean {
+  const keys = Object.keys(next)
+  if (keys.length !== Object.keys(previous).length) return false
+  return keys.every(key => {
+    const a = previous[key]
+    const b = next[key]
+    return (
+      a !== undefined &&
+      b !== undefined &&
+      a.peak[0] === b.peak[0] &&
+      a.peak[1] === b.peak[1] &&
+      a.rms[0] === b.rms[0] &&
+      a.rms[1] === b.rms[1]
+    )
+  })
 }
 
 export function createRuntimeBackend(owner: RuntimeOwner, editing: RuntimeEditingCallbacks) {
@@ -169,14 +190,13 @@ export function createRuntimeBackend(owner: RuntimeOwner, editing: RuntimeEditin
 
   function telemetry(frame: BackendTelemetry): void {
     owner.observedBar = frame.clock.bar
-    const current = owner.get()
-    owner.store.setState({
-      session: {
-        ...current.session,
-        levels: frame.levels,
-        inputLevels: frame.inputLevels,
-      },
-    })
+    const current = owner.get().session
+    const levels = sameLevels(current.levels, frame.levels) ? current.levels : frame.levels
+    const inputLevels = sameLevels(current.inputLevels, frame.inputLevels)
+      ? current.inputLevels
+      : frame.inputLevels
+    if (levels === current.levels && inputLevels === current.inputLevels) return
+    owner.store.setState({ session: { ...current, levels, inputLevels } })
   }
 
   function positionAtBar(bar: number): ProjectState["session"]["position"] {

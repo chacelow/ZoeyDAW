@@ -46,7 +46,11 @@ export function TransportBar({
   const policy = usePreference("transport")
   const document_ = useProjectState(state => state.document)
   const workspace = useProjectState(state => state.workspace)
-  const session = useProjectState(state => state.session)
+  const playing = useProjectState(state => state.session.playing)
+  const position = useProjectState(state => state.session.position)
+  const recording = useProjectState(state => state.session.recording)
+  const timeSelection = useProjectState(state => state.session.timeSelection)
+  const session = { playing, position, recording, timeSelection }
   const drawMode = useProjectState(effectiveDrawMode)
   const bars = useMemo(() => timelineBars(document_), [document_])
   const barMax = Math.max(

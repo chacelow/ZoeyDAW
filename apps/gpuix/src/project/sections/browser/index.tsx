@@ -110,7 +110,6 @@ export function BrowserPanel({
   const search = useRef<PublicInstance | null>(null)
   const tree = useRef<PublicInstance | null>(null)
   const nodes = useRef(new Map<string, PublicInstance>())
-  const [hoveredResource, setHoveredResource] = useState<string | null>(null)
   const [restoreResultsFocus, setRestoreResultsFocus] = useState(false)
   const [focusBySource, setFocusBySource] = useState<
     Partial<Record<typeof browser.source, string>>
@@ -481,7 +480,7 @@ export function BrowserPanel({
                                     </IconSlot>
                                   </div>
                                 }
-                                trailing={
+                                trailing={hovered => (
                                   <Button
                                     iconOnly
                                     tabIndex={-1}
@@ -490,7 +489,7 @@ export function BrowserPanel({
                                       opacity:
                                         browser.favorites.has(row.entry.id) ||
                                         selectedId === row.entry.id ||
-                                        hoveredResource === row.entry.id
+                                        hovered
                                           ? 1
                                           : 0,
                                     }}
@@ -508,14 +507,12 @@ export function BrowserPanel({
                                       }
                                     />
                                   </Button>
-                                }
+                                )}
                                 onClick={event => {
                                   select(row.entry.id)
                                   if (event.clickCount === 2 && row.expandable)
                                     browser.toggleExpanded(row.entry.id)
                                 }}
-                                onMouseEnter={() => setHoveredResource(row.entry.id)}
-                                onMouseLeave={() => setHoveredResource(null)}
                                 onFocus={() => {
                                   setFocusBySource(previous => ({
                                     ...previous,

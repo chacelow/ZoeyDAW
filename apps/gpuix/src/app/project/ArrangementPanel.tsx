@@ -27,8 +27,11 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
   const trackLabels = useMemo(() => createTrackLabels(locale), [locale])
   const laneLabels = labelsByLocale[locale === "zh-CN" ? "zh" : "en"]
   const editSurface = useLaneSurface(lane, laneLabels)
-  const selectedTrackIds = useProjectState(state => state.session.selectedTrackIds)
-  const selectionSurface = useProjectState(state => state.session.trackSelectionSurface)
+  const focusedTrackId = useProjectState(state =>
+    state.session.trackSelectionSurface === "header"
+      ? (state.session.selectedTrackIds.at(-1) ?? null)
+      : null
+  )
   return (
     <ArrangementTimeline
       controller={timeline}
@@ -39,7 +42,7 @@ export function ArrangementPanel({ composition }: { readonly composition: Projec
         <TrackRows
           scene={scene}
           viewport={viewport}
-          focusedTrackId={selectionSurface === "header" ? (selectedTrackIds.at(-1) ?? null) : null}
+          focusedTrackId={focusedTrackId}
           onFocusTrack={id => projectActions.selectTracks([id], "header")}
           telemetry={readProjectTelemetry}
           labels={trackLabels}

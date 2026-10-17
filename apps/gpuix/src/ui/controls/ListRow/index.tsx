@@ -32,7 +32,8 @@ export interface ListRowProps extends Props {
   readonly selected?: boolean
   readonly disabled?: boolean
   readonly leading?: ReactNode
-  readonly trailing?: ReactNode
+  /** A render function receives the row's hover state, so hover-revealed actions don't need a parent state. */
+  readonly trailing?: ReactNode | ((hovered: boolean) => ReactNode)
 }
 
 export function ListRow({
@@ -122,7 +123,11 @@ export function ListRow({
       ) : (
         <div style={{ flexGrow: 1, minWidth: 0 }}>{children}</div>
       )}
-      {trailing ? <div style={{ flexShrink: 0 }}>{trailing}</div> : null}
+      {trailing ? (
+        <div style={{ flexShrink: 0 }}>
+          {typeof trailing === "function" ? trailing(hovered) : trailing}
+        </div>
+      ) : null}
     </div>
   )
 }

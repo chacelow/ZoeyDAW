@@ -25,8 +25,10 @@ export function TrackMenu({
 }) {
   const { t } = useTrackLabels()
   const theme = useTheme()
-  const selectedIds = useProjectState(state => state.session.selectedTrackIds)
-  const targets = selectedIds.includes(track.id) ? selectedIds : [track.id]
+  const targets = () => {
+    const selectedIds = useProjectState.getState().session.selectedTrackIds
+    return selectedIds.includes(track.id) ? selectedIds : [track.id]
+  }
   const editable = track.kind !== "main"
   return (
     <ContextMenu
@@ -47,13 +49,13 @@ export function TrackMenu({
         </ContextMenuItem>
         <ContextMenuItem
           disabled={!editable}
-          onSelect={() => projectActions.duplicateTracks(targets)}
+          onSelect={() => projectActions.duplicateTracks(targets())}
         >
           {t("duplicate")}
         </ContextMenuItem>
         <ContextMenuItem
           disabled={!editable}
-          onSelect={() => projectActions.groupTracks(targets, theme.layout.track.defaultHeight)}
+          onSelect={() => projectActions.groupTracks(targets(), theme.layout.track.defaultHeight)}
         >
           {t("group")}
         </ContextMenuItem>
@@ -91,7 +93,7 @@ export function TrackMenu({
               }}
               onClick={() => {
                 const edit = projectActions.beginEdit("track-color")
-                for (const id of targets) projectActions.updateTrack(id, { color })
+                for (const id of targets()) projectActions.updateTrack(id, { color })
                 projectActions.endEdit(edit)
               }}
             />
@@ -117,7 +119,7 @@ export function TrackMenu({
           disabled={!editable}
           testId={`track-delete-${track.id}`}
           style={{ color: theme.colors.destructive }}
-          onSelect={() => projectActions.deleteTracks(targets)}
+          onSelect={() => projectActions.deleteTracks(targets())}
         >
           {t("deleteTrack")}
         </ContextMenuItem>
