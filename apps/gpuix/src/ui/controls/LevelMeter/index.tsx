@@ -154,7 +154,9 @@ export function LevelMeter({
           )
           const overloaded = holdDb > clipDb
           // Live colours the fill by position (red above 0 dB → yellow → green), and the
-          // fill reaches only the real level. A Main overload turns the whole bar red.
+          // fill reaches only the real level. Main and the compact inline/collapsed bars
+          // are too short for a visible red zone, so an overload turns the whole fill red.
+          const allRed = overloaded && (main || variant === "inline" || variant === "collapsed")
           const fill = (top: number, opacity: number, part: LevelMeterPart) => (
             <div
               testId={id(part)}
@@ -168,12 +170,12 @@ export function LevelMeter({
                 overflow: "hidden",
                 opacity,
                 backgroundColor:
-                  main && overloaded
+                  allRed
                     ? theme.colors.arrangementMeterClip
                     : theme.colors.arrangementMeterGood,
               }}
             >
-              {main && overloaded
+              {allRed
                 ? null
                 : gradient.map(segment => (
                     <div

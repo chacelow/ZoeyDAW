@@ -9,6 +9,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   ControlEnvironmentProvider,
+  createControlInfoStore,
+  useControlInfoStore,
   Toaster,
   configureToastPolicy,
   dismissToast,
@@ -18,7 +20,7 @@ import type { TitleBarWindow } from "@/ui/panels/TitleBar"
 import { PREFERENCE_DEFAULTS } from "@/project/defaults/preferences"
 import type { DisplayFormats } from "@/project/model/display-formats"
 import { VERIFICATION_CONTROL_INPUT_POLICY } from "@/app/control-input"
-import type { ControlInfo, CursorLockPort } from "@/ui/controls"
+import type { ControlInfoStore, CursorLockPort } from "@/ui/controls"
 import { GalleryCatalog, GalleryCategories } from "./catalog"
 import { DockLayout, DockLayoutToggles, DockViewMenu } from "@/ui/panels/Dock"
 import type { DockLayoutJSON, DockPanelRegistry } from "@/ui/panels/Dock"
@@ -65,7 +67,7 @@ export function GalleryWorkspace({
   }, [])
   const theme = useTheme()
   const t = useCallback((en: string, zh: string) => (locale === "zh" ? zh : en), [locale])
-  const [info, setInfo] = useState<ControlInfo | null>(null)
+  const info = useMemo(createControlInfoStore, [])
   const [category, setCategory] = useState("buttons")
   const [layout, setLayout] = useState(createGalleryWorkspaceLayout)
   const registry = useMemo<DockPanelRegistry>(
@@ -97,7 +99,7 @@ export function GalleryWorkspace({
   )
   return (
     <ControlEnvironmentProvider
-      value={{ cursorLock, setInfo, inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}
+      value={{ cursorLock, setInfo: info.set, inputPolicy: VERIFICATION_CONTROL_INPUT_POLICY }}
     >
       <div
         testId="gallery-root"
@@ -186,16 +188,7 @@ export function GalleryWorkspace({
             labels={locale === "zh" ? chineseDockLabels : englishDockLabels}
           />
         </div>
-        <text
-          role="status"
-          aria-label={t("Gallery status", "画廊状态")}
-          style={{
-            borderTopWidth: theme.design.shape.separatorWidth,
-            borderColor: theme.colors.border,
-          }}
-        >
-          {`${t("Info", "提示")}: ${info ?? "—"} · ${t("Ready · UI examples only", "就绪 · 仅 UI 示例")}`}
-        </text>
+        <GalleryStatus info={info} t={t} />
         <Toaster
           policy={PREFERENCE_DEFAULTS.notifications}
           aria-label={t("Notifications", "通知")}
@@ -204,5 +197,29 @@ export function GalleryWorkspace({
         />
       </div>
     </ControlEnvironmentProvider>
+  )
+}
+
+/** The only subscriber to hover info, so a hover re-renders the status text, not the Gallery. */
+function GalleryStatus({
+  info,
+  t,
+}: {
+  readonly info: ControlInfoStore
+  readonly t: (en: string, zh: string) => string
+}) {
+  const theme = useTheme()
+  const current = useControlInfoStore(info)
+  return (
+    <text
+      role="status"
+      aria-label={t("Gallery status", "画廊状态")}
+      style={{
+        borderTopWidth: theme.design.shape.separatorWidth,
+        borderColor: theme.colors.border,
+      }}
+    >
+      {`${t("Info", "提示")}: ${current ?? "—"} · ${t("Ready · UI examples only", "就绪 · 仅 UI 示例")}`}
+    </text>
   )
 }

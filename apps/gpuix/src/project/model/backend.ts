@@ -104,6 +104,7 @@ export interface BackendTelemetry {
   playing: boolean
   recording: boolean
   levels: Readonly<Record<string, BackendMeterLevels>>
+  inputLevels: Readonly<Record<string, BackendMeterLevels>>
   outputLatencyFrames: number | null
 }
 

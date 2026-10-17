@@ -42,6 +42,15 @@ function stereoLevels(value: unknown): value is readonly [number, number] {
   )
 }
 
+function validLevels(value: unknown): boolean {
+  return (
+    record(value) &&
+    Object.values(value).every(
+      levels => record(levels) && stereoLevels(levels.peak) && stereoLevels(levels.rms)
+    )
+  )
+}
+
 export function validFrame(value: unknown, sessionId: string): value is BackendTelemetry {
   if (
     !record(value) ||
@@ -76,10 +85,5 @@ export function validFrame(value: unknown, sessionId: string): value is BackendT
   ) {
     return false
   }
-  return (
-    record(value.levels) &&
-    Object.values(value.levels).every(
-      levels => record(levels) && stereoLevels(levels.peak) && stereoLevels(levels.rms)
-    )
-  )
+  return validLevels(value.levels) && validLevels(value.inputLevels)
 }

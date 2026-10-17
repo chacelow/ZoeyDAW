@@ -18,7 +18,6 @@ export interface UseDragPadOptions {
   step: number
   dragStep?: number
   defaultValue?: number
-  dragValue?: (rawValue: number, deltaY: number) => number
   disabled?: boolean
   editable?: boolean
   format: (value: number) => string
@@ -48,7 +47,6 @@ export function useDragPad(options: UseDragPadOptions) {
     step,
     dragStep = step,
     defaultValue,
-    dragValue,
     disabled = false,
     editable = true,
     format,
@@ -157,23 +155,19 @@ export function useDragPad(options: UseDragPadOptions) {
         setMode("idle")
       }
       const deltaY = y - anchor.lastY
-      const mapped = dragValue?.(anchor.rawValue, deltaY)
-      const next =
-        mapped !== undefined
-          ? { raw: mapped, value: mapped }
-          : valueAfterDrag({
-              rawValue: anchor.rawValue,
-              deltaY,
-              step: dragStep,
-              min,
-              max,
-              dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep,
-            })
+      const next = valueAfterDrag({
+        rawValue: anchor.rawValue,
+        deltaY,
+        step: dragStep,
+        min,
+        max,
+        dragPixelsPerStep: anchor.inputPolicy.dragPixelsPerStep,
+      })
       anchor.rawValue = next.raw
       anchor.lastY = y
       commitNumber(next.value)
     },
-    [dragValue, dragStep, min, max, commitNumber, renderer]
+    [dragStep, min, max, commitNumber, renderer]
   )
 
   const handleMouseUp = useCallback(() => {

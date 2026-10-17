@@ -243,6 +243,7 @@ mod tests {
             playing: false,
             recording: false,
             levels: BTreeMap::new(),
+            input_levels: BTreeMap::new(),
             output_latency_frames: None,
         };
         let ids = ["main".to_owned()];

@@ -20,7 +20,6 @@ export interface ButtonProps extends Omit<Props, "onChange" | "highlight"> {
   readonly highlight?: boolean
   readonly iconOnly?: boolean
   readonly activeFilled?: boolean
-  readonly reducedMotion?: boolean
   readonly variant?: "default" | "outline" | "secondary" | "ghost" | "destructive" | "link"
   readonly size?: ControlSize
   readonly tone?: "neutral" | "solo" | "arm" | "activator"
@@ -35,7 +34,6 @@ export function Button({
   highlight = true,
   iconOnly = false,
   activeFilled = false,
-  reducedMotion = false,
   variant = "default",
   tone = "neutral",
   size = "default",
@@ -127,13 +125,14 @@ export function Button({
       theme,
       size
     )({
-      active: active ? "on" : "off",
-      highlight: highlight ? "on" : "off",
+      // Icon-only buttons show state on the glyph (highlight, fill), never as a background.
+      active: active && !iconOnly ? "on" : "off",
+      highlight: highlight && !iconOnly ? "on" : "off",
       disabled: disabled ? "on" : "off",
       iconOnly: iconOnly ? "on" : "off",
     }),
     !iconOnly && text !== undefined && { width: intrinsicWidth, minWidth: 0, flexShrink: 1 },
-    !active && appearances({ variant }),
+    (!active || iconOnly) && appearances({ variant }),
     iconOnly && variant !== "outline" && { borderWidth: 0 },
     activeDestructive && {
       backgroundColor: destructiveBackground,
@@ -148,6 +147,7 @@ export function Button({
       },
     },
     active &&
+      !iconOnly &&
       toneFill !== undefined && {
         backgroundColor: toneFill,
         color: theme.colors.primaryForeground,
@@ -162,7 +162,7 @@ export function Button({
         borderColor: baseStyle.borderColor,
       }
     : undefined
-  const iconSlotProps = { size, interactive: true, hovered: hovered && !disabled, filled: activeFilled && (active || pressed), reducedMotion }
+  const iconSlotProps = { size, interactive: true, hovered: hovered && !disabled, filled: activeFilled && (active || pressed) }
   const iconContent = icon ?? (iconOnly ? children : null)
   const iconSlot = iconContent == null ? null : isValidElement<IconSlotProps>(iconContent) && iconContent.type === IconSlot
     ? cloneElement(iconContent, iconSlotProps)

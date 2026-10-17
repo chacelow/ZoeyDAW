@@ -7,7 +7,7 @@ import { polygonPath } from "@/shared/svg/paths"
 import { useDragPad } from "../DragPad/useDragPad"
 import { formatNumericValue } from "../DragPad/numberModel"
 import { useInfoBinding } from "../ControlEnvironment"
-import { LevelMeter, meterPosition, meterDbAtPosition } from "../LevelMeter"
+import { LevelMeter, meterPosition } from "../LevelMeter"
 import { PeakReadout } from "../LevelMeter/PeakReadout"
 import { snapControlWidth } from "../grid"
 import { visibleFaderTicks } from "./ticks"
@@ -79,19 +79,7 @@ export function Fader({
     () => format ?? formatNumericValue(options.min, options.max, options.step),
     [format, options.min, options.max, options.step]
   )
-  const pad = useDragPad({
-    ...options,
-    format: toText,
-    editable: false,
-    dragValue: (rawValue, deltaY) =>
-      Math.max(
-        options.min,
-        Math.min(
-          options.max,
-          meterDbAtPosition(meterPosition(rawValue, scale) + deltaY / travel, scale)
-        )
-      ),
-  })
+  const pad = useDragPad({ ...options, format: toText, editable: false })
   const info = useInfoBinding({ type: "bar", dragging: pad.dragging })
   const position = barsTop + meterPosition(options.value, scale) * travel
   const visibleTicks = useMemo(

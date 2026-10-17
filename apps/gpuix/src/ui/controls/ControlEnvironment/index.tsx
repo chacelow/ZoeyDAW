@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useSyncExternalStore,
 } from "react"
 import type { ReactNode } from "react"
 import type { CursorLockPort } from "../DragPad/cursor-port"
@@ -41,6 +42,40 @@ export interface ControlEnvironment {
   readonly subscribeWindowActive?: (listener: (active: boolean) => void) => () => void
 }
 const EnvironmentContext = createContext<ControlEnvironment>({})
+
+/**
+ * Holds the hovered/focused control's info outside React state. Hover fires on every
+ * pointer crossing; keeping it in a root `useState` re-rendered the whole window, so only
+ * the status text subscribes via `useControlInfoStore`.
+ */
+export interface ControlInfoStore {
+  readonly set: (info: ControlInfo | null) => void
+  readonly get: () => ControlInfo | null
+  readonly subscribe: (listener: () => void) => () => void
+}
+
+export function createControlInfoStore(): ControlInfoStore {
+  let current: ControlInfo | null = null
+  const listeners = new Set<() => void>()
+  return {
+    set(info) {
+      if (info === current) return
+      current = info
+      for (const listener of listeners) listener()
+    },
+    get: () => current,
+    subscribe(listener) {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+  }
+}
+
+export function useControlInfoStore(store: ControlInfoStore): ControlInfo | null {
+  return useSyncExternalStore(store.subscribe, store.get, store.get)
+}
 
 export function ControlEnvironmentProvider({
   value,

@@ -14,6 +14,46 @@ import { TrackRouting } from "./TrackRouting"
 import { createControlledFrames } from "./verification/frame-source"
 import { TrackTelemetryProvider } from "./meter/telemetry"
 
+test("audio input channel menu renders one inline meter for every hardware option", () => {
+  const saved = projectStore.getState()
+  const audio = createMockDocument().tracks.find(track => track.kind === "audio")
+  if (!audio) throw new Error("Missing audio test track")
+  audio.collapsed = false
+  audio.heightPx = 160
+  audio.input = "external"
+  projectStore.setState(state => ({
+    ...state,
+    document: { ...state.document, tracks: [audio] },
+  }))
+  const root = createTestRoot({ width: 304, height: 200 })
+  root.render(
+    <AnimationFrameProvider source={createControlledFrames().source}>
+      <ThemeProvider>
+        <TrackLabelsProvider labels={createTrackLabels("en-US")}>
+          <TrackTelemetryProvider telemetry={() => null}>
+            <TrackRouting track={audio} />
+          </TrackTelemetryProvider>
+        </TrackLabelsProvider>
+      </ThemeProvider>
+    </AnimationFrameProvider>
+    )
+  try {
+    const trigger = root.renderer.findByTestId(`track-input-channel-${audio.id}`)
+    if (!trigger) throw new Error("Missing input-channel dropdown")
+    root.renderer.nativeSimulateKeystrokes(trigger.id, "enter")
+    expect(root.renderer.findByTestId(`track-input-channel-${audio.id}-content`)).toBeDefined()
+    const channelIds = ["1-2", "3-4", "1", "2"]
+    for (const id of channelIds) {
+      expect(root.renderer.findByTestId(`track-input-channel-${audio.id}-option-${id}`)).toBeDefined()
+      expect(root.renderer.findByTestId(`input-channel-meter-${id}-root`)).toBeDefined()
+    }
+    expect(root.renderer.findByTestId(`track-input-channel-${audio.id}-option-all`)).toBeUndefined()
+  } finally {
+    root.unmount()
+    projectStore.setState(saved, true)
+  }
+})
+
 test("native mixer display, parsing and monitor labels follow their injected sources", () => {
   const saved = useProjectState.getState()
   const document = createMockDocument()

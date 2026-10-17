@@ -4,6 +4,7 @@ pub mod assets;
 pub mod defaults;
 pub mod mix;
 pub mod session;
+mod input_meter;
 mod realtime;
 pub mod peaks;
 pub mod protocol;

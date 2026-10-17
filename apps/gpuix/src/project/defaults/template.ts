@@ -157,6 +157,7 @@ export function createSessionTemplate(
     editingClipId: null,
     clipEditorRequest: 0,
     levels: {},
+    inputLevels: {},
     dirty: false,
     canUndo: false,
     canRedo: false,

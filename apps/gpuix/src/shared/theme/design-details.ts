@@ -145,7 +145,6 @@ export interface DesignDetails {
     readonly dockHoverCloseDelayMs: number
     readonly tabs: { readonly duration: number; readonly easing: MotionEasing }
     readonly switch: { readonly duration: number; readonly easing: MotionEasing }
-    readonly icon: { readonly duration: number; readonly easing: MotionEasing }
   }
   readonly cursors: {
     readonly default: StyleDesc["cursor"]
@@ -280,7 +279,6 @@ export const DEFAULT_DESIGN_DETAILS: DesignDetails = {
     dockHoverCloseDelayMs: 300,
     tabs: { duration: 0.16, easing: "easeOut" },
     switch: { duration: 0.16, easing: "easeOut" },
-    icon: { duration: 0.15, easing: [0.25, 0.1, 0.25, 1] },
   },
   cursors: {
     default: "default",

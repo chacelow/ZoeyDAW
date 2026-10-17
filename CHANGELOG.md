@@ -6,8 +6,15 @@
 
 - Level meters follow Ableton Live 12: a measured non-linear dB scale shared by meters and the Fader, a position-based red → yellow → green body gradient (0, −9, −17.5 dB), RMS fill with a translucent peak extension and a hold line, and an overload cap that stays visible on collapsed tracks. The Main track turns its whole meter red on overload. Tick marks and dB numbers appear as a meter grows taller; bar widths stay compact. Mixer meters add a latching, click-to-reset peak readout. Main Out shows an inline meter in its dropdown; Cue Out stays at the floor because the engine has no cue bus yet.
 - Telemetry carries per-track `{ peak, rms }` in dBFS. The engine's RMS is one render block (≈5.3 ms), so the meter integrates it in the power domain over `rmsIntegrationMs` (300 ms).
+- Audio input-channel options show per-channel peak and RMS meters, including the selected hardware channel in the closed control. The optional CPAL input stream falls back to output-only playback when no input device is available or input startup fails; macOS may request microphone permission on first open, and denial leaves input meters unavailable without stopping playback.
 - Icon hover growth is a paint-only GPU scale: the renderer patch `svg-scale-motion` adds `scale` to style and motion and `motion.svg`, so the glyph rasterises once and animates without re-layout or re-rasterisation.
 - Gallery: the Meters page has a variant × state matrix with a Main row and a resizable demo; large Layout demos put their label above full-width content.
+- Hardware input-channel meters: the engine opens the default input device on its own cpal stream (best effort, never blocks playback) and publishes `inputLevels` for the routing ids `1-2`, `3-4`, `1`, `2`. Input-channel dropdown options show a live inline meter. Compact meters (inline, collapsed) turn fully red on overload.
+- Icon-only buttons show state on the glyph only: hover brightens and enlarges the icon instantly, active fills it; no background highlight or animation.
+- Hovering a control no longer re-renders the window: the status info lives in a small external store read only by the status text (hover dropped from ~80 ms to ~19 ms in the full Gallery).
+- Native `input` supports `disabled` (not focusable, not-allowed cursor) and `readOnly` (no caret, arrow cursor) via the renderer patch `input-disabled`; the Input hit shield is gone.
+- Fader drags use the shared DragPad step sensitivity again.
+- Tests that mount full native sessions share a 15 s budget for slower CI runners.
 
 ### Dock workspace, component catalog and theme editor (2026-10-17)
 

@@ -1,10 +1,10 @@
-import { createContext, useContext, useMemo, useState } from "react"
-import { ControlEnvironmentProvider } from "@/ui/controls"
+import { createContext, useContext, useMemo } from "react"
+import { ControlEnvironmentProvider, createControlInfoStore } from "@/ui/controls"
 import { useControlEnvironment } from "@/ui/controls/ControlEnvironment"
 import { usePreference } from "@/platform/settings"
 import { createControlInputPolicy } from "./control-input"
 import type { ReactNode } from "react"
-import type { ControlInfo } from "@/ui/controls"
+import type { ControlInfoStore } from "@/ui/controls"
 
 export interface AppInteraction {
   readonly textFocus: { enter(): () => void }
@@ -32,7 +32,7 @@ export function createAppInteraction(): AppInteraction {
 }
 
 const InteractionContext = createContext<AppInteraction | null>(null)
-const InfoContext = createContext<ControlInfo | null>(null)
+const InfoContext = createContext<ControlInfoStore | null>(null)
 
 export function AppInteractionProvider({ children }: { readonly children: ReactNode }) {
   const inherited = useControlEnvironment()
@@ -43,10 +43,10 @@ export function AppInteractionProvider({ children }: { readonly children: ReactN
     [numericInput, pointer]
   )
   const interaction = useMemo(createAppInteraction, [])
-  const [info, setInfo] = useState<ControlInfo | null>(null)
+  const info = useMemo(createControlInfoStore, [])
   const controls = useMemo(
-    () => ({ ...inherited, textFocus: interaction.textFocus, setInfo, inputPolicy }),
-    [inherited, interaction, inputPolicy]
+    () => ({ ...inherited, textFocus: interaction.textFocus, setInfo: info.set, inputPolicy }),
+    [inherited, interaction, info, inputPolicy]
   )
   return (
     <InteractionContext.Provider value={interaction}>
@@ -63,6 +63,8 @@ export function useAppInteraction() {
   return interaction
 }
 
-export function useControlInfo() {
-  return useContext(InfoContext)
+export function useControlInfoSource() {
+  const store = useContext(InfoContext)
+  if (!store) throw new Error("AppInteractionProvider is missing")
+  return store
 }

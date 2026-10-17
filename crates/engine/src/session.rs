@@ -3,6 +3,7 @@ use crate::{
     defaults::MAX_PEAK_PIXELS,
     mix::Mixer,
     protocol::{BackendFailureCode, BackendRequest, BackendResult, BackendTelemetry, SessionFence},
+    input_meter::InputMeter,
     realtime::{Plan, Snapshot, TimelineNode},
     transport::{bar_to_frame, source_offset_frame, Transport, TransportClock},
 };
@@ -43,6 +44,9 @@ fn output_config(device: DeviceSessionConfig) -> CpalConfig {
 pub struct DeviceSession {
     context: FirewheelContext,
     stream: CpalStream,
+    /// Separate best-effort input stream for channel meters; `None` keeps playback working
+    /// when there is no input device or the OS denies microphone access.
+    input_meter: Option<InputMeter>,
     sender: Input<Option<Plan>>,
     fault: Arc<AtomicBool>,
     fence: SessionFence,
@@ -53,17 +57,17 @@ pub struct DeviceSession {
     telemetry_sequence: u64,
 }
 
+fn is_transient(error: &IoStreamError) -> bool {
+    let (IoStreamError::Input(error) | IoStreamError::Output(error)) = error;
+    error.kind() == ErrorKind::Xrun
+}
+
 pub fn rejected(request: &BackendRequest, code: BackendFailureCode) -> BackendResult {
     BackendResult::Rejected {
         session_id: request.session_id.clone(),
         sequence: request.sequence,
         code,
     }
-}
-
-fn is_transient(error: &IoStreamError) -> bool {
-    let (IoStreamError::Input(error) | IoStreamError::Output(error)) = error;
-    error.kind() == ErrorKind::Xrun
 }
 
 impl DeviceSession {
@@ -91,9 +95,13 @@ impl DeviceSession {
             .map_err(|e| e.to_string())?;
         let stream = CpalStream::new(&mut context, output_config(device))
             .map_err(|e| e.to_string())?;
+        let input_meter = InputMeter::open()
+            .inspect_err(|reason| eprintln!("zoeydaw input meters unavailable: {reason}"))
+            .ok();
         context.update().map_err(|e| e.to_string())?;
         Ok(Self {
             context,
+            input_meter,
             stream,
             sender,
             fault,
@@ -113,7 +121,8 @@ impl DeviceSession {
     fn healthy(&mut self) -> bool {
         let mut failed = self.context.update().is_err() || !self.stream.output_stream_ok();
         for error in self.stream.poll_status() {
-            failed |= !is_transient(&error);
+            // Input feeds meters only; its errors never fault playback.
+            failed |= matches!(error, IoStreamError::Output(_)) && !is_transient(&error);
         }
         if failed {
             self.fault.store(true, Ordering::Release);
@@ -222,12 +231,16 @@ impl DeviceSession {
             playing: state.control.playing,
             recording: state.control.recording,
             levels: BTreeMap::new(),
+            input_levels: BTreeMap::new(),
             output_latency_frames: None,
         };
-        let frame = self
+        let mut frame = self
             .snapshot
             .as_ref()?
             .telemetry(template, transport, &self.track_ids)?;
+        if let Some(meter) = &self.input_meter {
+            frame.input_levels = meter.levels();
+        }
         self.telemetry_sequence += 1;
         Some(frame)
     }

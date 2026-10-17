@@ -290,6 +290,7 @@ pub struct BackendTelemetry {
     pub playing: bool,
     pub recording: bool,
     pub levels: BTreeMap<String, BackendMeterLevels>,
+    pub input_levels: BTreeMap<String, BackendMeterLevels>,
     pub output_latency_frames: Option<u64>,
 }
 

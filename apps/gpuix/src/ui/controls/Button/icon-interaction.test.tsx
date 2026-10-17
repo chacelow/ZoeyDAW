@@ -17,7 +17,7 @@ test("icon buttons stay frameless, scale centred glyphs on the GPU and fill only
     growth = theme.design.icon.hoverGrowth
     borderWidth = theme.design.shape.controlBorderWidth
     return <div style={{ display: "flex" }}>
-      <Button testId="default" iconOnly activeFilled reducedMotion label="Play" icon={<Icon name="Play" />} />
+      <Button testId="default" iconOnly activeFilled label="Play" icon={<Icon name="Play" />} />
       <Button testId="ghost" iconOnly variant="ghost" label="Play"><IconSlot><Icon name="Play" /></IconSlot></Button>
       <Button testId="outline" iconOnly variant="outline" label="Play" icon={<Icon name="Play" />} />
       <ToolbarIconButton testId="toolbar" active activeFilled label="Play" icon={<Icon name="Play" />} />
@@ -32,17 +32,12 @@ test("icon buttons stay frameless, scale centred glyphs on the GPU and fill only
     const svg = root.renderer.findByType("svg")[0]!
     const box = root.renderer.getElementBounds(button.id)!
     const glyph = () => root.renderer.getElementBounds(svg.id)!
-    const scaleTarget = () => {
-      const motion = root.renderer.getElement(svg.id)?.customProps?.motion
-      if (!motion || typeof motion !== "object" || !("animate" in motion)) return undefined
-      const animate = motion.animate
-      return animate && typeof animate === "object" && "scale" in animate ? animate.scale : undefined
-    }
+    const scale = () => root.renderer.getElement(svg.id)?.style?.scale
     expect(glyph().width).toBe(glyphSize)
-    expect(scaleTarget()).toBe(1)
+    expect(scale()).toBeUndefined()
     root.renderer.nativeSimulateMouseMove(box.x + box.width / 2, box.y + box.height / 2)
     root.renderer.flush()
-    expect(scaleTarget()).toBe((glyphSize + growth) / glyphSize)
+    expect(scale()).toBe((glyphSize + growth) / glyphSize)
     expect(glyph().width).toBe(glyphSize)
     expect(glyph().height).toBe(glyphSize)
     expect(Math.abs(glyph().x + glyph().width / 2 - box.x - box.width / 2)).toBeLessThanOrEqual(0.5)

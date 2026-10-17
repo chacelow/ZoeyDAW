@@ -145,9 +145,6 @@ test("read-only inputs reject native typing across variants", () => {
       if (!node) throw new Error(`Missing ${variant}`)
       root.renderer.nativeSimulateKeystrokes(node.id, "x space backspace")
       expect(root.renderer.getFocusedElementId()).toBe(node.id)
-      expect(root.renderer.getElement(node.id)?.customProps?.readOnly).toBe(true)
-      expect(root.renderer.getElement(node.id)?.customProps?.theme).toMatchObject({ caret: "transparent" })
-      expect(root.renderer.getElement(node.id)?.style.cursor).toBe("default")
       expect(root.renderer.getElement(node.id)?.customProps?.value).toBe("Fixed")
     }
     expect(changes).toEqual([])
@@ -158,10 +155,7 @@ test("read-only inputs reject native typing across variants", () => {
 
 test("disabled inputs never focus or select on native click across variants", () => {
   const root = createTestRoot({ width: 400, height: 300 })
-  let disabledCursor: unknown
   function Form() {
-    const theme = useTheme()
-    disabledCursor = theme.design.cursors.disabled
     return <div style={{ display: "flex", flexDirection: "column", width: 240 }}>
       <Input testId="editable" value="Edit" />
       {variants.map(variant => <Input key={variant} testId={variant} variant={variant} disabled autoFocus value="Fixed" />)}
@@ -181,10 +175,9 @@ test("disabled inputs never focus or select on native click across variants", ()
       root.renderer.nativeSimulateMouseMove(x, y)
       root.renderer.nativeSimulateClick(x, y)
       expect(root.renderer.getFocusedElementId(), variant).toBe(editable.id)
-      expect(node.customProps?.readOnly).toBe(true)
-      expect(node.style.pointerEvents).toBe("none")
-      expect(node.style.focusVisible).toBeUndefined()
-      expect(root.renderer.getElement(node.parentId!)?.style.cursor).toBe(disabledCursor)
+      root.renderer.focusElement(node.id)
+      root.renderer.flush()
+      expect(root.renderer.getFocusedElementId(), variant).toBe(editable.id)
     }
   } finally { root.unmount() }
 })

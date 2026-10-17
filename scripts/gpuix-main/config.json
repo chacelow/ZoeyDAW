@@ -22,7 +22,8 @@
     "relative-drag.patch",
     "hover-pointer-position.patch",
     "test-root-events.patch",
-    "svg-scale-motion.patch"
+    "svg-scale-motion.patch",
+    "input-disabled.patch"
   ],
   "zedPatches": [
     "zed-production-no-sync-draw.patch",

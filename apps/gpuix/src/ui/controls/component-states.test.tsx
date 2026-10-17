@@ -5,7 +5,7 @@ import { handleGpuixEvent } from "@gpuix/react"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_THEME_PRESET, getThemePreset } from "@/shared/theme/presets"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
-import { meterPosition, meterDbAtPosition } from "./LevelMeter"
+import { meterPosition } from "./LevelMeter"
 import { Checkbox } from "./Checkbox"
 import { TreeRow } from "./TreeRow"
 import { Chip } from "./Chip"
@@ -202,7 +202,7 @@ for (const surface of ["thumb", "meter-area"] as const)
       root.renderer.nativeSimulateMouseUp(x, y - 8)
       const travel = bounds.height - Number(before.height)
       const scale = DEFAULT_DESIGN_TOKENS.editor.meter.scale
-      const dragged = Math.round(meterDbAtPosition(meterPosition(-8, scale) - 8 / travel, scale))
+      const dragged = -8 + 8 / TEST_INPUT_POLICY.dragPixelsPerStep
       expect(latest).toBe(dragged)
       const moved = root.renderer.findByTestId("fader-thumb")!.style
       expect(Number(moved.top)).toBeLessThan(Number(before.top))

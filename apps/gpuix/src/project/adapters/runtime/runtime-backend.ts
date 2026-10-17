@@ -174,7 +174,7 @@ export function createRuntimeBackend(owner: RuntimeOwner, editing: RuntimeEditin
       session: {
         ...current.session,
         levels: frame.levels,
-        ...(frame.playing && { position: positionAtBar(frame.clock.bar) }),
+        inputLevels: frame.inputLevels,
       },
     })
   }
@@ -363,6 +363,7 @@ export function createRuntimeBackend(owner: RuntimeOwner, editing: RuntimeEditin
         playing: false,
         recording: false,
         levels: {},
+        inputLevels: {},
         activeMidiNotes: [],
         preview: null,
         backend: { phase: "idle", sessionId: "", pending: 0, acceptedRevision: 0, error: null },

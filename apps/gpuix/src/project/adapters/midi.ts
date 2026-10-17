@@ -87,7 +87,7 @@ export const midiActions = {
     const remaining = get().session.activeMidiNotes.filter(note => note !== pitch)
     session({
       activeMidiNotes: remaining,
-      ...(!remaining.length && !get().session.playing && { levels: {} }),
+      ...(!remaining.length && !get().session.playing && { levels: {}, inputLevels: {} }),
     })
   },
   setMidiOctave(octave: number) {

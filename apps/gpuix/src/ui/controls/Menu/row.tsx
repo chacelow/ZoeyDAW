@@ -43,6 +43,7 @@ export function MenuRowContent({
   children,
   checked,
   shortcut,
+  leading,
   trailing,
   swatch = false,
   hovered,
@@ -50,6 +51,8 @@ export function MenuRowContent({
   children?: ReactNode
   checked?: boolean
   shortcut?: string
+  /** Rendered between the check column and the label, e.g. an inline level meter. */
+  leading?: ReactNode
   trailing?: ReactNode
   swatch?: boolean
   hovered?: boolean
@@ -58,6 +61,7 @@ export function MenuRowContent({
   return (
     <>
       <IconSlot>{checked ? <Icon name="Check" /> : null}</IconSlot>
+      {leading ? <IconSlot>{leading}</IconSlot> : null}
       {typeof children === "string" ? (
         <TruncatedText
           hovered={hovered}

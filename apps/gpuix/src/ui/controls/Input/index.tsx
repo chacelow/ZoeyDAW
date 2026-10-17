@@ -15,7 +15,6 @@ export type InputVariant = "outline" | "filled" | "ghost" | "borderless" | "unde
 export type InputSize = "default" | "transport" | "small"
 
 interface InputBaseProps extends NativeInputProps {
-  disabled?: boolean
   invalid?: boolean
   variant?: InputVariant
   size?: InputSize
@@ -95,7 +94,6 @@ export function Input({
       },
       opacity: disabled ? theme.design.states.disabledOpacity : 1,
       cursor: disabled ? theme.design.cursors.disabled : readOnly ? theme.design.cursors.default : theme.design.cursors.text,
-      pointerEvents: disabled ? "none" : undefined,
     },
     style,
     adorned && { width: "100%" }
@@ -109,12 +107,11 @@ export function Input({
         else if (ref) ref.current = node
       }}
       value={value ?? (clearable ? uncontrolledValue : undefined)}
-      tabIndex={disabled ? -1 : (props.tabIndex ?? 0)}
-      autoFocus={disabled ? false : props.autoFocus}
+      disabled={disabled}
       aria-disabled={disabled}
       aria-invalid={invalid}
-      readOnly={disabled || readOnly}
-      theme={{ appearance: theme.appearance, bg: backgroundColor, text: theme.colors.foreground, caret: disabled || readOnly ? "transparent" : theme.colors.foreground }}
+      readOnly={readOnly}
+      theme={{ appearance: theme.appearance, bg: backgroundColor, text: theme.colors.foreground, caret: theme.colors.foreground }}
       style={inputStyle}
       onFocus={event => {
         textFocus.onFocus()
@@ -138,9 +135,9 @@ export function Input({
       }}
     />
   )
-  if (!adorned && !disabled) return input
+  if (!adorned) return input
   return (
-    <div style={{ position: "relative", width: style?.width, flexGrow: style?.flexGrow, minWidth: 0, cursor: disabled ? theme.design.cursors.disabled : readOnly ? theme.design.cursors.default : theme.design.cursors.text }}>
+    <div style={{ position: "relative", width: style?.width, flexGrow: style?.flexGrow, minWidth: 0 }}>
       {input}
       {leading ? (
         <IconSlot size={slotSize} style={{ position: "absolute", left: padding, top: 0, height: inputStyle.height }}>
@@ -173,7 +170,6 @@ export function Input({
           ) : null}
         </div>
       ) : null}
-      {disabled ? <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "auto", cursor: theme.design.cursors.disabled, userSelect: "none" }} /> : null}
     </div>
   )
 }

@@ -61,6 +61,7 @@ function frame(request: BackendRequest, bar = 1): BackendTelemetry {
     playing: request.state.control.playing,
     recording: false,
     levels: { main: { peak: [-12, -12], rms: [-18, -18] } },
+    inputLevels: {},
     outputLatencyFrames: null,
   }
 }
@@ -74,6 +75,7 @@ it("validates both stereo meter signals and rejects the old peak-only shape", ()
     playing: false,
     recording: false,
     levels: { main: { peak: [-12, -12], rms: [-18, -18] } },
+    inputLevels: {},
     outputLatencyFrames: null,
   }
   expect(validFrame(telemetry, "meter")).toBe(true)
@@ -86,6 +88,8 @@ it("validates both stereo meter signals and rejects the old peak-only shape", ()
   ]) {
     expect(validFrame({ ...telemetry, levels }, "meter")).toBe(false)
   }
+  expect(validFrame({ ...telemetry, inputLevels: { "1-2": { peak: [-12], rms: [-18, -18] } } }, "meter")).toBe(false)
+  expect(validFrame({ ...telemetry, inputLevels: null }, "meter")).toBe(false)
 })
 
 interface ControlledBackend extends ProjectBackend {

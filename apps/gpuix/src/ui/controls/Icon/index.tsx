@@ -1,6 +1,4 @@
 import { createContext, useContext } from "react"
-import { motion } from "@gpuix/react"
-import type { MotionTransition } from "@gpuix/react"
 import { icons } from "lucide"
 import metronome from "@phosphor-icons/core/assets/regular/metronome.svg" with { type: "text" }
 import metronomeFill from "@phosphor-icons/core/assets/fill/metronome-fill.svg" with { type: "text" }
@@ -48,12 +46,12 @@ export function iconMarkup(name: IconName, strokeWidth: number, filled = false):
   return markup
 }
 
-/** Set by an interactive IconSlot: glyph base size plus its animated GPU scale. */
+/** Set by an interactive IconSlot: glyph base size, hover state and hover scale. */
 export const IconInteractionContext = createContext<{
   readonly filled: boolean
+  readonly hovered: boolean
   readonly size: number
   readonly scale: number
-  readonly transition: MotionTransition
 } | null>(null)
 
 export interface IconProps {
@@ -72,18 +70,10 @@ export function Icon({ name, size, color, strokeWidth, filled }: IconProps) {
   const style = {
     width: dimension,
     height: dimension,
-    color: color ?? theme.colors.mutedForeground,
+    color: interaction?.hovered ? theme.colors.foreground : (color ?? theme.colors.mutedForeground),
+    // Hover enlarges the glyph instantly as a paint-only GPU scale; no animation either way.
+    scale: interaction?.hovered ? interaction.scale : undefined,
     flexShrink: 0,
   }
-  return interaction ? (
-    <motion.svg
-      source={source}
-      initial={false}
-      animate={{ scale: interaction.scale }}
-      transition={interaction.transition}
-      style={style}
-    />
-  ) : (
-    <svg source={source} aria-hidden="true" style={style} />
-  )
+  return <svg source={source} aria-hidden="true" style={style} />
 }

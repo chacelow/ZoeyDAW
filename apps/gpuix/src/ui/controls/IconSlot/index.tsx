@@ -9,20 +9,17 @@ export interface IconSlotProps extends Props {
   readonly interactive?: boolean
   readonly hovered?: boolean
   readonly filled?: boolean
-  readonly reducedMotion?: boolean
 }
 
 /**
- * Centres an icon in a fixed slot. Interactive slots hand hover growth to the
- * glyph as a paint-only GPU scale: the SVG rasterises once at its base size,
- * so hover never re-lays out or re-rasterises.
+ * Centres an icon in a fixed slot. Interactive slots enlarge the glyph on hover as a
+ * paint-only GPU scale, instantly and without animation; layout never changes.
  */
-export function IconSlot({ size = "default", interactive = false, hovered = false, filled = false, reducedMotion = false, children, style, ...props }: IconSlotProps) {
+export function IconSlot({ size = "default", interactive = false, hovered = false, filled = false, children, style, ...props }: IconSlotProps) {
   const theme = useTheme()
   const metrics = size === "transport" ? theme.transportControl : theme.control
   const dimension = metrics["--spacing-control-icon-slot"]
   const glyph = metrics["--spacing-control-icon"]
-  const motion = theme.design.motion.icon
   return (
     <div
       {...props}
@@ -44,9 +41,9 @@ export function IconSlot({ size = "default", interactive = false, hovered = fals
         <IconInteractionContext
           value={{
             filled,
+            hovered,
             size: glyph,
-            scale: hovered ? (glyph + theme.design.icon.hoverGrowth) / glyph : 1,
-            transition: { duration: reducedMotion ? 0 : motion.duration, ease: motion.easing },
+            scale: (glyph + theme.design.icon.hoverGrowth) / glyph,
           }}
         >
           {children}

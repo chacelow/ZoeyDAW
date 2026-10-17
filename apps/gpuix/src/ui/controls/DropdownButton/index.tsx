@@ -28,6 +28,8 @@ export interface DropdownButtonValueItem<T extends string = string> {
   readonly disabled?: boolean
   readonly onSelect?: () => void
   readonly shortcut?: string
+  /** Shown before the label in the list, e.g. an inline input-channel meter. */
+  readonly leading?: ReactNode
 }
 export type DropdownButtonItem<T extends string = string> =
   | DropdownButtonValueItem<T>
@@ -214,6 +216,7 @@ export function DropdownButton<T extends string = string>({
                 hovered={hoveredId === item.id}
                 checked={item.id === value}
                 shortcut={item.shortcut}
+                leading={item.leading}
               >
                 {item.label}
               </MenuRowContent>

@@ -370,7 +370,7 @@ describe("settings dialog", () => {
     rerender()
     expect(background()).toBe(dark)
     expect(sessions).toEqual({ opened: 1, disposed: 0 })
-  })
+  }, NATIVE_MULTI_SESSION_TEST_TIMEOUT)
 
   test("choosing a preset by click or arrow keys recolors the app and persists", () => {
     const { root, saved } = mount()
@@ -505,7 +505,7 @@ describe("unsaved close guard", () => {
       filePath: `/projects/${name} Project/${name}.zdaw`,
     })
     expect(native.closed).toBe(1)
-  })
+  }, NATIVE_MULTI_SESSION_TEST_TIMEOUT)
 })
 
 describe("keyboard", () => {
@@ -618,7 +618,7 @@ describe("project layout state", () => {
     act(root, () => projectActions.setEditingClip(null))
     await layout(root)
     expect(browserWidth()).toBe(resized)
-  })
+  }, NATIVE_MULTI_SESSION_TEST_TIMEOUT)
 
   test("a Clip View request from the previous project does not reopen Clip Edit in the next", () => {
     countSessions()

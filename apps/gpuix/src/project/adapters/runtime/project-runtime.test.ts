@@ -770,6 +770,7 @@ it("stops recording on accepted record-off even before the next telemetry frame"
       playing: true,
       recording: true,
       levels: {},
+      inputLevels: {},
       outputLatencyFrames: null,
     })
     projectActions.noteOn(80)

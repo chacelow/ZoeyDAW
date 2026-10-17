@@ -121,6 +121,7 @@ export const transportActions = {
       playing: false,
       recording: false,
       levels: {},
+      inputLevels: {},
       ...(point && { position: positionAtBar(point.bar) }),
     })
   },

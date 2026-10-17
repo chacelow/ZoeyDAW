@@ -33,6 +33,7 @@
 | `hover-pointer-position` | 普通与 custom 元素的 mouseEnter/mouseLeave 携带窗口指针 x/y，供祖先 bounds 与 rail/抽屉合并悬停区判断；保留 hovered 字段 |
 | `test-root-events` | createTestRoot 转发 RootEventHandlers.onEvent，与生产 render 共用应用级指针观察入口 |
 | `svg-scale-motion` | style 与 motion 的 paint-only `scale`：svg 按布局尺寸光栅化一次、用 GPUI `with_transformation` 绕中心缩放，布局与命中不变；React 增加 `motion.svg` |
+| `input-disabled` | input 原生 disabled 排除焦点与 Tab、拒绝选择和编辑、使用 not-allowed；readOnly 保留焦点/选择/复制，但隐藏 caret 并使用 Arrow |
 | `zed-production-no-sync-draw` | 生产构建不走测试同步重绘 |
 | `zed-offscreen-window-bounds` | 离屏窗口不受屏幕边界夹取 |
 | `zed-test-window-scale-factor` | 离屏 scale 在 GPUI 侧的参数链 |

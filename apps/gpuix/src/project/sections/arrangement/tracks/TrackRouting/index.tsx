@@ -6,7 +6,7 @@ import { projectActions, useProjectState } from "@/project/adapters"
 import { trackControlRows } from "@/project/layout"
 import { routingDestinations } from "@/project/model/track-routing"
 import { TrackMeter } from "../meter/TrackMeter"
-import { useMeterEnvironment } from "../meter/telemetry"
+import { useInputChannelMeter, useMeterEnvironment } from "../meter/telemetry"
 import type { Track } from "@/project/model/types"
 
 const HARDWARE_CHANNELS = [
@@ -20,6 +20,23 @@ const MIDI_CHANNELS = Array.from({ length: 16 }, (_, index) => ({
   label: String(index + 1),
 }))
 const EMPTY_CHANNEL = [{ id: "", label: "" }]
+
+function InputChannelMeter({ id, height }: { readonly id: string; readonly height: number }) {
+  const channels = useInputChannelMeter(id)
+  const { policy } = useMeterEnvironment()
+  const { t } = useTrackLabels()
+  return (
+    <LevelMeter
+      variant="inline"
+      height={height}
+      minDb={policy.minDb}
+      maxDb={policy.maxDb}
+      channels={channels}
+      testId={part => `input-channel-meter-${id}-${part}`}
+      aria-label={`${t("inputChannel")} ${id} ${t("levelMeter")}`}
+    />
+  )
+}
 
 export function TrackRouting({ track }: { readonly track: Track }) {
   const { t, monitorModes, monitorShortNames } = useTrackLabels()
@@ -116,7 +133,15 @@ export function TrackRouting({ track }: { readonly track: Track }) {
                     ? EMPTY_CHANNEL
                     : track.kind === "midi"
                       ? [{ id: "all", label: t("allChannels") }, ...MIDI_CHANNELS]
-                      : HARDWARE_CHANNELS
+                      : HARDWARE_CHANNELS.map(channel => ({
+                          ...channel,
+                          leading: <InputChannelMeter id={channel.id} height={inlineHeight} />,
+                        }))
+                }
+                icon={
+                  track.kind === "audio" && track.input !== "none"
+                    ? <InputChannelMeter id={track.inputChannel ?? "1"} height={inlineHeight} />
+                    : undefined
                 }
               />
             </>

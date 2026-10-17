@@ -3,7 +3,7 @@ import { useState } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import { ThemeProvider, useTheme } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
-import { meterPosition, meterDbAtPosition } from "../LevelMeter"
+import { meterPosition } from "../LevelMeter"
 import { Fader } from "."
 import { ControlEnvironmentProvider } from "../ControlEnvironment"
 import { TEST_INPUT_POLICY } from "../DragPad/input-policy.test-fixture"
@@ -128,7 +128,7 @@ test("wheel over a fader scale label adjusts its controlled value", () => {
   }
 })
 
-test("fader drag follows the scale inverse while its −8 dB thumb shares meter positioning", () => {
+test("fader −8 dB thumb shares meter positioning", () => {
   const root = createTestRoot({ width: 300, height: 240 })
   let latest = -8
   let travel = 0
@@ -163,18 +163,6 @@ test("fader drag follows the scale inverse while its −8 dB thumb shares meter 
     expect(root.renderer.findByTestId("fader-thumb")?.style.top).toBeCloseTo(
       meterPosition(-8, scale) * travel
     )
-    const node = root.renderer.findByTestId("fader")!
-    const box = root.renderer.getElementBounds(node.id)!
-    const x = box.x + box.width / 2
-    const y = box.y + box.height / 2
-    const delta = travel * 0.1
-    root.renderer.nativeSimulateMouseMove(x, y)
-    root.renderer.nativeSimulateMouseDown(x, y)
-    root.renderer.nativeSimulateMouseMove(x, y + delta, 0)
-    root.renderer.nativeSimulateMouseUp(x, y + delta)
-    const expected =
-      Math.round(meterDbAtPosition(meterPosition(-8, scale) + delta / travel, scale) * 10) / 10
-    expect(latest).toBeCloseTo(expected)
   } finally {
     root.unmount()
   }

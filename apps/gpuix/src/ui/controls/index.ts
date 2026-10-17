@@ -56,7 +56,12 @@ export { RadioGroup, RadioGroupItem } from "./RadioGroup"
 export { ToggleGroup, ToggleGroupItem } from "./ToggleGroup"
 export { SettingsShell, SettingsNavItem } from "./SettingsShell"
 export { MotionTabs } from "./MotionTabs"
-export { ControlEnvironmentProvider, useInfoBinding } from "./ControlEnvironment"
+export {
+  ControlEnvironmentProvider,
+  createControlInfoStore,
+  useControlInfoStore,
+  useInfoBinding,
+} from "./ControlEnvironment"
 export { ControlGroup } from "./ControlGroup"
 export { DragPreviewArea } from "./DragPreviewArea"
 
@@ -143,6 +148,7 @@ export type {
   ControlEnvironment,
   ControlInputPolicy,
   ControlInfo,
+  ControlInfoStore,
   UseInfoBindingOptions,
 } from "./ControlEnvironment"
 export type { ControlGroupProps } from "./ControlGroup"

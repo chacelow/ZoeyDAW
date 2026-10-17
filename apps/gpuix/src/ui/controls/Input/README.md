@@ -10,9 +10,9 @@
 
 ## 只读与禁用
 
-所有 Input 变体及 InlineEdit/DragPad 编辑框都用原生 `readOnly` 拒绝输入，不用 JS 按键拦截。只读保留原生选择/复制，`theme.caret="transparent"` 隐藏插入符；请求的 cursor 为 `design.cursors.default`。disabled 同时禁用 autoFocus、移出 Tab 顺序、移除 focusVisible 环，内部 input 设 `pointerEvents="none"`，wrapper 保留 disabled cursor；一个无事件处理器的透明 hit-opaque 层阻挡原生编辑器点击与选择。禁用控件不触发文字 hover tooltip。
+所有 Input 变体及 InlineEdit/DragPad 编辑框都用原生 `readOnly` 拒绝输入，不用 JS 按键拦截。只读保留焦点、文本焦点 lease、选择与复制，原生编辑器不绘制插入符并使用 Arrow 指针。
 
-当前固定 renderer 的 `input.rs` 仅支持 `readOnly`，不支持 disabled/editable；原生 TextEditorState 内部强制 IBeam，caret 绘制也不检查 read_only。因此只读的箭头 cursor 目前只能声明在样式中，实际内部指针仍受原生 IBeam 限制；caret 通过原生 theme 透明色隐藏。后续 renderer 补丁应让 read_only 不画 caret 且使用 Arrow，并新增 disabled（禁止聚焦、选择，使用 not-allowed）属性，从而删除禁用 hit 层。本轮不改 vendor。
+`input-disabled.patch` 让原生 `disabled` Input 不注册宿主焦点 handle、不进入 Tab 顺序，不响应点击选择或文字输入，不绘制插入符并使用 not-allowed 指针。共享 Input 直接传递 `disabled`，不使用透明 hit shield、禁用专用 pointerEvents 或禁用专用 wrapper。禁用透明度和 focusVisible 外观仍由主题 token 控制，禁用控件不触发文字 hover tooltip。
 
 `InlineEdit` 接受 `value/onCommit`，只在编辑期间保存草稿；静止时通过 TruncatedText 显示文字，点击、Enter 或 F2 挂载 ghost Input 并全选。Enter 提交、Escape 丢弃草稿且归还显示字段焦点；失焦提交但不抢走目标控件焦点。disabled/readOnly 不能开始编辑。已有 TrackNameInput、ClipNameEditor 与 MarkerNameInput 只迁移到 ghost 外观，保留各自工程事务、空名称过滤与 epoch 校验。
 

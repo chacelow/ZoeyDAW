@@ -57,6 +57,7 @@ export function createMockProjectBackend(): ProjectBackend {
           { peak: [-120, -120], rms: [-120, -120] },
         ])
       ),
+      inputLevels: {},
       outputLatencyFrames: null,
     }
   }

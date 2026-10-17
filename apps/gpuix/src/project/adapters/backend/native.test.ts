@@ -280,8 +280,10 @@ testWithAudioOutput(
         frame => frame.sequence > seek.sequence + 2
       )
       expect(afterRejection.appliedSequence).toBe(2)
+      const inputLevels = playing.inputLevels
+      expect(Object.keys(inputLevels).every(id => ["1-2", "3-4", "1", "2"].includes(id))).toBe(true)
       console.info(
-        `native device ${JSON.stringify({ sampleRate: playing.clock.sampleRate, outputLatencyFrames: playing.outputLatencyFrames, playingFrames: playing.clock.frame, mainDbFS: playing.levels.main, stoppedDbFS: seek.levels.main, telemetryCount: frames.length })}`
+        `native device ${JSON.stringify({ sampleRate: playing.clock.sampleRate, outputLatencyFrames: playing.outputLatencyFrames, playingFrames: playing.clock.frame, mainDbFS: playing.levels.main, stoppedDbFS: seek.levels.main, inputLevels, telemetryCount: frames.length })}`
       )
       unsubscribe()
       backend.dispose()

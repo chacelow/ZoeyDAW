@@ -170,6 +170,7 @@ export interface SessionState {
   editingClipId: string | null
   clipEditorRequest: number
   levels: BackendTelemetry["levels"]
+  inputLevels: BackendTelemetry["inputLevels"]
   dirty: boolean
   canUndo: boolean
   canRedo: boolean

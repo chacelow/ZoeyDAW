@@ -9,7 +9,9 @@ import { TransportBar } from "@/project/sections/transport"
 import { StatusStrip } from "@/project/sections/status"
 import { createNativeClipboard } from "@/platform/clipboard"
 import { useAppTranslation } from "../i18n"
-import { useControlInfo } from "../interaction"
+import { useControlInfoSource } from "../interaction"
+import { useControlInfoStore } from "@/ui/controls"
+import type { ControlInfoStore } from "@/ui/controls"
 import { useAppNativeEnvironment } from "../native-environment"
 import { useRouter } from "../router/router"
 import { englishFooterLabels, chineseFooterLabels } from "../locales/sections/footer"
@@ -24,7 +26,7 @@ import type { ProjectComposition } from "./composition"
 import type { ProjectShellApi } from "./useProjectShell"
 import type { ProjectLayoutProps } from "./ProjectLayout"
 import type { BrowserPanelHandle } from "@/project/sections/browser"
-import type { ReactNode, Ref } from "react"
+import type { ComponentProps, ReactNode, Ref } from "react"
 
 export function ProjectSections({
   composition,
@@ -44,7 +46,7 @@ export function ProjectSections({
   const router = useRouter()
   const { subscribeWindowActive } = useAppNativeEnvironment()
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotion)
-  const info = useControlInfo()
+  const infoSource = useControlInfoSource()
   const backendError = useProjectState(state => state.session.backend.error)
   const fileError = useProjectState(state => state.session.fileError)
   const timelineLabels = zh ? chineseLabels : englishLabels
@@ -110,14 +112,22 @@ export function ProjectSections({
         />
       }
       status={
-        <StatusStrip
+        <ProjectStatus
+          infoSource={infoSource}
           labels={zh ? chineseStatusLabels : englishStatusLabels}
           footerCollapsed={shell.footerCollapsed}
           onToggleFooter={shell.toggleFooter}
-          info={info}
           warnings={warning ? [{ message: warning, severity: "error" }] : []}
         />
       }
     />
   )
+}
+
+/** The only subscriber to hover info, so a hover re-renders the status text, not the page. */
+function ProjectStatus({
+  infoSource,
+  ...props
+}: Omit<ComponentProps<typeof StatusStrip>, "info"> & { readonly infoSource: ControlInfoStore }) {
+  return <StatusStrip {...props} info={useControlInfoStore(infoSource)} />
 }

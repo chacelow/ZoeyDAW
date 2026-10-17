@@ -34,6 +34,7 @@ import type { GallerySectionProps } from "./GallerySection"
 import { Group, Panel, PanelDivider } from "@/ui/panels"
 import { useElementSize } from "@/ui/panels/useElementSize"
 
+
 const METER = ARRANGEMENT_DEFAULTS.meter
 
 function steady(left: number, right: number): readonly [LevelMeterChannel, LevelMeterChannel] {
@@ -66,6 +67,41 @@ function GalleryMeter({
     />
   ) : (
     meter
+  )
+}
+
+function MeterDropdownOptions({ t, height }: Pick<GallerySectionProps, "t"> & { readonly height: number }) {
+  const [selected, setSelected] = useState("1-2")
+  const channels = steady(-18, -24)
+  const items = [
+    { id: "1-2", label: "1 / 2" },
+    { id: "3-4", label: "3 / 4" },
+    { id: "1", label: "1" },
+    { id: "2", label: "2" },
+  ]
+  return (
+    <DropdownButton
+      label={t("Input Channel", "输入通道")}
+      value={selected}
+      onChange={setSelected}
+      items={items.map(item => ({
+        ...item,
+        leading: <LevelMeter
+          variant="inline"
+          minDb={METER.minDb}
+          maxDb={METER.maxDb}
+          height={height}
+          channels={channels}
+        />,
+      }))}
+      icon={<LevelMeter
+        variant="inline"
+        minDb={METER.minDb}
+        maxDb={METER.maxDb}
+        height={height}
+        channels={channels}
+      />}
+    />
   )
 }
 
@@ -326,6 +362,11 @@ export function MetersSection({ t }: GallerySectionProps) {
         block
       >
         <ResizableMeters t={t} live={live} />
+      </GalleryVariant>
+      <GalleryVariant label={t("Input channel dropdown", "输入通道下拉菜单")} testId="gallery-meter-input-channel-dropdown">
+        <GalleryState label={t("Input channels", "输入通道")}>
+          <MeterDropdownOptions t={t} height={theme.design.editor.meter.inlineHeightUnits * unit} />
+        </GalleryState>
       </GalleryVariant>
       <GalleryVariant label={t("Live signal", "实时信号")}>
         <GalleryState label={t("Live signal", "实时信号")}>

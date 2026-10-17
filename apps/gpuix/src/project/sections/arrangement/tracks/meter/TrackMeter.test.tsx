@@ -6,11 +6,11 @@ import { useProjectState } from "@/project/stores/useProjectState"
 import { ThemeProvider } from "@/shared/theme/ThemeProvider"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { ARRANGEMENT_DEFAULTS } from "@/project/defaults/arrangement"
-import { meterPosition } from "@/ui/controls/LevelMeter"
+import { LevelMeter, meterPosition } from "@/ui/controls/LevelMeter"
 import { TrackLabelsProvider } from "../labels"
 import { createTrackLabels } from "@/app/locales/sections/tracks"
 import { createControlledFrames } from "../verification/frame-source"
-import { TrackTelemetryProvider } from "./telemetry"
+import { TrackTelemetryProvider, useInputChannelMeter } from "./telemetry"
 import { TrackMeter } from "./TrackMeter"
 import type { BackendTelemetry } from "@/project/model/backend"
 import type { TestRoot } from "@gpuix/react/testing"
@@ -32,6 +32,7 @@ function frame(levels: BackendTelemetry["levels"]): BackendTelemetry {
     recording: false,
     clock: { kind: "musical", bar: 1, barsPerSecond: 0.5 },
     levels,
+    inputLevels: {},
     outputLatencyFrames: null,
   }
 }
@@ -129,4 +130,38 @@ test("resume reads the newest telemetry from idle and stopped holds catch up", (
   } finally {
     useProjectState.setState({ session: previousSession })
   }
+})
+
+test("input channel hook reads input telemetry and advances the shared meter driver", () => {
+  const frames = createControlledFrames()
+  const root = createTestRoot({ width: 120, height: 160 })
+  roots.push(root)
+  let telemetry = frame({})
+  function InputMeterHarness() {
+    const channels = useInputChannelMeter("1")
+    return (
+      <LevelMeter
+        variant="inline"
+        height={height}
+        minDb={policy.minDb}
+        maxDb={policy.maxDb}
+        channels={channels}
+        testId={part => `input-test-${part}`}
+      />
+    )
+  }
+  root.render(
+    <AnimationFrameProvider source={frames.source}>
+      <ThemeProvider>
+        <TrackTelemetryProvider telemetry={() => telemetry}>
+          <InputMeterHarness />
+        </TrackTelemetryProvider>
+      </ThemeProvider>
+    </AnimationFrameProvider>
+  )
+  telemetry = { ...telemetry, inputLevels: { "1": { peak: [-6, -6], rms: [-12, -12] } } }
+  flushSync(() => frames.advance(16))
+  root.renderer.flush()
+  expect(root.renderer.findByTestId("input-test-peak-left")).toBeDefined()
+  expect(root.renderer.findByTestId("input-test-rms-left")).toBeDefined()
 })

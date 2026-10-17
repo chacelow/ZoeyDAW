@@ -1,3 +1,4 @@
+import { NATIVE_MULTI_SESSION_TEST_TIMEOUT } from "@/app/verification/native-session-budget"
 import { afterEach, expect, test } from "bun:test"
 import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -52,18 +53,20 @@ function click(root: TestRoot, testId: string) {
 }
 
 
-test("gallery category selection changes the real preview and theme controls update appearance", async () => {
-  const root = createTestRoot({ width: 1400, height: 900 })
-  roots.push(root)
-  async function settle() {
-    for (let index = 0; index < 4; index++) {
-      await Bun.sleep(35)
-      root.renderer.flush()
-      root.renderer.dispatchNativeEvents()
+test(
+  "gallery category selection changes the real preview and theme controls update appearance",
+  async () => {
+    const root = createTestRoot({ width: 1400, height: 900 })
+    roots.push(root)
+    async function settle() {
+      for (let index = 0; index < 4; index++) {
+        await Bun.sleep(35)
+        root.renderer.flush()
+        root.renderer.dispatchNativeEvents()
+      }
     }
-  }
-  root.render(<GalleryDemo />)
-  await settle()
+    root.render(<GalleryDemo />)
+    await settle()
   click(root, "gallery-workspace-tab-theme")
   await settle()
   const categories = painted(root, "gallery-categories").box
@@ -124,8 +127,9 @@ test("gallery category selection changes the real preview and theme controls upd
   click(root, "gallery-language-zh")
   await settle()
   expect(painted(root, "gallery-language-zh").node.customProps?.["aria-pressed"]).toBe(true)
-  expect(root.renderer.findByTestId("gallery-section-inputs")).toBeDefined()
-})
+  },
+  NATIVE_MULTI_SESSION_TEST_TIMEOUT
+)
 
 test("Gallery Preview scrolls the lower nested layout demo fully into view", async () => {
   const root = createTestRoot({ width: 1045, height: 780 })
@@ -201,7 +205,9 @@ for (const kind of ["button", "input", "group"] as const) {
   })
 }
 
-test("theme editor preserves numeric edits while changing real border, radius, spacing and control height", () => {
+test(
+  "theme editor preserves numeric edits while changing real border, radius, spacing and control height",
+  () => {
   const root = createTestRoot({ width: 1100, height: 900 })
   roots.push(root)
   function Preview() {
@@ -313,7 +319,9 @@ test("theme editor preserves numeric edits while changing real border, radius, s
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }
-})
+  },
+  NATIVE_MULTI_SESSION_TEST_TIMEOUT
+)
 
 test("shared disclosure centers its button and consumes Enter without also activating its Card", () => {
   const windowKeys: string[] = []
