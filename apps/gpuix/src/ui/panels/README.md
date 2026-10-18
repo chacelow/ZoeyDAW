@@ -81,5 +81,5 @@ Tab 的原生 bounds 来自包含标题按钮与关闭按钮的完整 wrapper。
 pnpm exec tsc --noEmit
 bun test src/ui/panels
 bun test
-bun --hot src/main.tsx
+pnpm dev
 ```

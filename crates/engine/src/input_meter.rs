@@ -118,7 +118,13 @@ impl InputMeter {
         let channels = usize::from(config.channels);
         let snapshot = Arc::new(InputSnapshot::new());
         let sink = snapshot.clone();
-        let error = |error: cpal::Error| eprintln!("zoeydaw input meter stream error: {error}");
+        // A capture discontinuity drops one packet; the next callback's peak and RMS are still
+        // correct, so only errors that stop metering are reported.
+        let error = |error: cpal::Error| {
+            if error.kind() != cpal::ErrorKind::Xrun {
+                eprintln!("zoeydaw input meter stream error: {error}");
+            }
+        };
         let stream = match format {
             cpal::SampleFormat::F32 => device.build_input_stream(
                 config,
