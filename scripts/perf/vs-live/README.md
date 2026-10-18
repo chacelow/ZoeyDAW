@@ -53,6 +53,22 @@ python scripts/perf/vs-live/run.py --compare scripts/perf/vs-live/out/*.json
 
 走带控件之间横移仍逐次重绘：每个控件进出都会切换 hover 样式与状态栏说明，这是有效重绘，降低它要靠子树缓存而不是删重绘。
 
+## 2026-10-18 分割线拖动的上屏延迟
+
+`photon.py --pid <pid> --x <屏幕x> --y <屏幕y> [--steps 40]` 按住分割线，每步移动 4px，用 DXGI Desktop Duplication 轮询屏幕，直到分割线出现在新列。计时从 `SendInput` 到第一次合成出新位置的画面，包含输入处理、布局、绘制、Present 与 DWM 合成。上表的 `latency` 只算到下一次 Present，不管这一帧里有没有这次移动，不能拿来和本节比。坐标取 ZoeyDAW 的 Browser|Arrangement 分割线；Live 的坐标从新截图重新定位，必须按在分割线上（空白处只会产生十几个样本）。
+
+| 上屏延迟（同一 144Hz 显示器，各 3×40 步） | p50    | p90    | max    |
+| ----------------------------------------- | ------ | ------ | ------ |
+| ZoeyDAW 修复前                            | 32.1ms | 33.3ms | 39ms   |
+| ZoeyDAW 移动直接提交（`15165d9`）         | 18.6ms | 25.6ms | 32ms   |
+| ZoeyDAW 加 Windows frame waker            | 18.3ms | 19.0ms | 25.8ms |
+| Live                                      | 11.3ms | 11.9ms | 17ms   |
+
+1. 移动直接提交：`useResizeCommit` 以前把每次移动排到下一个动画帧，那个回调在本帧 draw 之后才运行，于是移动晚一帧提交、再晚一帧上屏。原生指针移动本来每帧最多一次，现在在事件处理里直接提交。
+2. Windows frame waker：Windows 平台没有实现 `frame_waker`，窗口变脏后要等 VSyncProvider 线程下一次 `RedrawWindow` 才画，平均半个刷新周期。现在变脏立即 invalidate；绘制中的唤醒仍交给 vsync 线程，持续动画每个刷新最多画一次。临时分阶段计时里 batch→draw 开始从 5.6ms 降到 0.15ms；上屏 p90 从 25.6ms 降到 19.0ms，p50 只降 0.3ms，因为 draw 本身比一个 144Hz 周期长，合成器仍要等下一次 vblank。
+
+剩余差距在 draw 本身（临时计时，p50）：JS 处理到 batch 2.7ms，元素树构建 1.6ms，request_layout 1.2ms，taffy 布局与 prepaint 4.1ms，paint 2.2ms，收尾 0.8ms。拖动时每帧重建、布局、绘制全部 1049 个节点（708 div、203 text、128 svg）。挂起式栈采样里 draw 约 30% 是堆分配与内存拷贝，但换 mimalloc 后上屏延迟和各阶段时间都没有变化，瓶颈不在分配器。下一步是上面的子树缓存方案：Browser（475 节点）和轨道区在拖动时宽度不变或只需重排，缓存后每帧只处理变化的边界。
+
 ## 子树缓存方案（下一项优化）
 
 现状：`GpuixView` 是唯一的 GPUI view，`render()` 每帧从 retained tree 重建全部元素（renderer.rs `impl gpui::Render for GpuixView`），任何 `cx.notify` 或 hover 切换都让 1661 个节点重新 request_layout、prepaint、paint，单帧约 16–17ms。
