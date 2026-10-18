@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "pnpm:devPreinstall": "node scripts/check-gpuix.mjs",
+    "dev": "pnpm --filter @zoeydaw/gpuix-prototype dev",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "doctor": "ultracite doctor",
