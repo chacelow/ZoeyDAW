@@ -217,7 +217,11 @@ test("Space on a focused browser source controls playback without selecting that
     if (!source) throw new Error("Missing source")
     root.renderer.nativeSimulateKeystrokes(source.id, "space")
     expect(useProjectState.getState().session.playing).toBe(true)
-    expect(root.renderer.findByTestId("browser-entry-samples-Piano C3.wav")).toBeDefined()
+    // The "All" source stays active: the focused Instruments source was not selected by Space.
+    const all = root.renderer.findByTestId("browser-source-all")
+    if (!all) throw new Error("Missing All source")
+    expect(root.renderer.getElement(all.id)?.customProps?.["aria-selected"]).toBe(true)
+    expect(root.renderer.getElement(source.id)?.customProps?.["aria-selected"]).not.toBe(true)
   } finally {
     root.unmount()
     projectActions.stop()
@@ -256,31 +260,34 @@ test("empty search results expose reset and restore the unfiltered catalog", () 
   }
 })
 
-test("scrolling moves resources through a fixed viewport without expanding or remounting it", () => {
+test("scrolling reveals later resources inside a fixed viewport", () => {
   const root = mount()
   try {
     root.renderer.flush()
     const results = root.renderer.findByTestId("browser-results")
-    if (!results) throw new Error("Missing resource viewport")
+    const list = root.renderer.findByType("virtual-list")[0]
+    if (!results || !list) throw new Error("Missing resource viewport")
     const before = root.renderer.getElementBounds(results.id)
-    const retained = root.renderer.getRetainedElementCount()
     const first = root.renderer.findByTestId("browser-entry-tunings-12-TET")
-    const last = root.renderer.findByTestId("browser-entry-instruments-wavetable")
     const firstBefore = first ? root.renderer.getElementBounds(first.id) : null
-    const lastBefore = last ? root.renderer.getElementBounds(last.id) : null
-    if (!before || !first || !last || !firstBefore || !lastBefore)
-      throw new Error("Missing row geometry")
+    if (!before || !first || !firstBefore) throw new Error("Missing row geometry")
     expect(firstBefore.y).toBeGreaterThanOrEqual(before.y)
-    expect(lastBefore.y).toBeGreaterThan(before.y + before.height)
-    root.renderer.scrollTo(results.id, 0, -10000)
+    const visible = (testId: string) => {
+      const node = root.renderer.findByTestId(testId)
+      const box = node && root.renderer.getElementBounds(node.id)
+      return !!box && box.y >= before.y && box.y + box.height <= before.y + before.height
+    }
+    expect(visible("browser-entry-instruments-wavetable")).toBe(false)
+    // Keyboard End moves focus to the last resource: it is mounted, focused and scrolled into view.
+    root.renderer.nativeSimulateKeystrokes(first.id, "end")
     root.renderer.flush()
-    const firstAfter = root.renderer.getElementBounds(first.id)
-    const lastAfter = root.renderer.getElementBounds(last.id)
-    if (!firstAfter || !lastAfter) throw new Error("Missing scrolled rows")
-    expect(lastAfter.y + lastAfter.height).toBeLessThanOrEqual(before.y + before.height)
-    expect(firstAfter.y + firstAfter.height).toBeLessThan(before.y)
+    root.renderer.flush()
+    const last = root.renderer.findByTestId("browser-entry-instruments-wavetable")
+    if (!last) throw new Error("End did not mount the last resource")
+    expect(root.renderer.getFocusedElementId()).toBe(last.id)
+    expect(visible("browser-entry-instruments-wavetable")).toBe(true)
     expect(root.renderer.getElementBounds(results.id)).toEqual(before)
-    expect(root.renderer.getRetainedElementCount()).toBe(retained)
+    expect(list.children.length).toBeLessThan(57)
   } finally {
     root.unmount()
     projectActions.stop()
