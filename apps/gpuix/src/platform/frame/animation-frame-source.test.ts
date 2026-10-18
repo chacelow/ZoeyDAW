@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { createAnimationFrameSource, createFrameScheduler } from "./animation-frame-source"
+import { createAnimationFrameSource } from "./animation-frame-source"
 import type { AnimationFrameCallback, FrameRenderer } from "./animation-frame-source"
 
 function frameRenderer() {
@@ -403,22 +403,4 @@ describe("resume frame source", () => {
     nativeCallback(10)
     expect(delivered).toEqual([9])
   })
-})
-
-test("the shared frame scheduler unsubscribes after one frame and cancelled jobs never run", async () => {
-  const host = frameRenderer()
-  const schedule = createFrameScheduler(createAnimationFrameSource(host.renderer))
-  let calls = 0
-  const cancel = schedule(() => calls++)
-  host.frame(1)
-  await drainFrame()
-  expect(calls).toBe(1)
-  expect(host.active).toBe(false)
-  cancel()
-  const cancelled = schedule(() => calls++)
-  host.frame(2)
-  cancelled()
-  await drainFrame()
-  expect(calls).toBe(1)
-  expect(host.active).toBe(false)
 })

@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { createRef, Profiler, useRef, useState } from "react"
+import { createRef, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { createTestRoot } from "@gpuix/react/testing"
 import type { TestRoot } from "@gpuix/react/testing"
-import { flushSync } from "@gpuix/react"
 import { ThemeProvider } from "../../shared/theme/ThemeProvider"
 import { DEFAULT_DESIGN_TOKENS } from "@/shared/theme/design-tokens"
 import { PROJECT_METRICS } from "@/shared/theme/metrics/config"
@@ -25,7 +24,11 @@ afterEach(() => {
 async function mount(node: ReactNode) {
   const root = createTestRoot({ width: 1200, height: 760 })
   roots.push(root)
-  root.render(<ThemeProvider><DividerLayer style={{ width: "100%", height: "100%" }}>{node}</DividerLayer></ThemeProvider>)
+  root.render(
+    <ThemeProvider>
+      <DividerLayer style={{ width: "100%", height: "100%" }}>{node}</DividerLayer>
+    </ThemeProvider>
+  )
   root.renderer.flush()
   await settle(root)
   return root
@@ -130,7 +133,11 @@ describe("native resizable panel interactions", () => {
     expect(bounds(root, "divider-highlight").x).toBeCloseTo(before + 60)
     root.renderer.nativeSimulateMouseUp(point.x + 60, point.y + 120)
     expect(bounds(root, "left").width - before).toBeCloseTo(60)
-    expect(bounds(root, "left").width + bounds(root, "right").width + DEFAULT_DESIGN_TOKENS.shape.separatorWidth).toBeCloseTo(800)
+    expect(
+      bounds(root, "left").width +
+        bounds(root, "right").width +
+        DEFAULT_DESIGN_TOKENS.shape.separatorWidth
+    ).toBeCloseTo(800)
   })
 
   test("Escape restores a drag snapshot and release cannot reapply the cancelled preview", async () => {
@@ -167,9 +174,21 @@ describe("native resizable panel interactions", () => {
     let clicks = 0
     const root = await mount(
       <Group orientation="horizontal" style={{ width: 800, height: 400 }}>
-        <Panel testId="left"><Button label="Left content" onClick={() => clicks++} style={{ width: "100%", height: "100%" }} /></Panel>
+        <Panel testId="left">
+          <Button
+            label="Left content"
+            onClick={() => clicks++}
+            style={{ width: "100%", height: "100%" }}
+          />
+        </Panel>
         <PanelDivider orientation="vertical" testId="divider" />
-        <Panel testId="right"><Button label="Right content" onClick={() => clicks++} style={{ width: "100%", height: "100%" }} /></Panel>
+        <Panel testId="right">
+          <Button
+            label="Right content"
+            onClick={() => clicks++}
+            style={{ width: "100%", height: "100%" }}
+          />
+        </Panel>
       </Group>
     )
     const left = bounds(root, "left")
@@ -470,39 +489,25 @@ describe("native resizable panel interactions", () => {
     expect(bounds(root, "divider-highlight").x).toBeCloseTo(before + 80)
     root.renderer.nativeSimulateMouseUp(point.x + 80, point.y)
     await settle(root)
-    expect(bounds(root, "left").width + bounds(root, "right").width + DEFAULT_DESIGN_TOKENS.shape.separatorWidth).toBeCloseTo(600)
+    expect(
+      bounds(root, "left").width +
+        bounds(root, "right").width +
+        DEFAULT_DESIGN_TOKENS.shape.separatorWidth
+    ).toBeCloseTo(600)
   })
 })
 
-test("resize moves coalesce to one latest snapshot per injected frame and release flushes the final size", async () => {
-  let frame: (() => void) | undefined
-  let scheduled = 0
-  let commits = 0
-  const root = await mount(
-    <PanelEnvironmentProvider environment={{ scheduleFrame: callback => {
-      scheduled++
-      frame = callback
-      return () => { if (frame === callback) frame = undefined }
-    } }}>
-      <Profiler id="frame-resize" onRender={() => commits++}>{pair()}</Profiler>
-    </PanelEnvironmentProvider>
-  )
+test("each resize move lands in the same commit, so the next draw already shows it", async () => {
+  const root = await mount(pair())
   const before = bounds(root, "left").width
   const point = divider(root, "divider")
   root.renderer.nativeSimulateMouseDown(point.x, point.y)
-  root.renderer.nativeSimulateMouseMove(point.x + 20, point.y, 0)
-  root.renderer.nativeSimulateMouseMove(point.x + 40, point.y, 0)
-  expect(scheduled).toBe(1)
-  expect(bounds(root, "left").width).toBe(before)
-  const pending = frame
-  if (!pending) throw new Error("Missing scheduled resize frame")
-  commits = 0
-  flushSync(pending)
-  root.renderer.flush()
-  expect(commits).toBe(1)
-  expect(bounds(root, "left").width).toBeCloseTo(before + 40)
-  root.renderer.nativeSimulateMouseMove(point.x + 60, point.y, 0)
+  for (const dx of [20, 40, 60]) {
+    root.renderer.nativeSimulateMouseMove(point.x + dx, point.y, 0)
+    // No frame callback runs between the move and this read: the layout is already current.
+    root.renderer.flush()
+    expect(bounds(root, "left").width).toBeCloseTo(before + dx)
+  }
   root.renderer.nativeSimulateMouseUp(point.x + 60, point.y)
-  expect(frame).toBeUndefined()
   expect(bounds(root, "left").width).toBeCloseTo(before + 60)
 })

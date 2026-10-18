@@ -11,13 +11,6 @@ export interface AnimationFrameSource {
   subscribeResume(callback: AnimationFrameCallback): () => void
 }
 
-export function createFrameScheduler(source: AnimationFrameSource) {
-  return (callback: () => void) => {
-    const cancel = source.subscribe(() => { cancel(); callback() })
-    return cancel
-  }
-}
-
 interface Subscriber {
   readonly callback: AnimationFrameCallback
 }

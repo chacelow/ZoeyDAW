@@ -1,40 +1,20 @@
-import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef } from "react"
-import { PanelEnvironmentContext } from "./PanelEnvironment"
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
 
+/**
+ * Applies a divider drag's latest size from inside the pointer handler.
+ *
+ * It used to wait for the next animation frame, coalescing moves within it. That frame callback
+ * runs after the draw it belongs to, so each move was committed one frame late and drawn one
+ * frame after that: about two frames between the hand and the screen. Native pointer moves already
+ * arrive at most once per frame, so committing each one directly loses nothing and lands the new
+ * size in the very next draw. Release and restore therefore have nothing pending.
+ */
 export function useResizeCommit<T>(commit: (value: T) => void) {
-  const { scheduleFrame } = useContext(PanelEnvironmentContext)
   const latest = useRef(commit)
-  const pending = useRef<{ value: T } | null>(null)
-  const cancelFrame = useRef<(() => void) | null>(null)
   useLayoutEffect(() => {
     latest.current = commit
   }, [commit])
-  useEffect(
-    () => () => {
-      cancelFrame.current?.()
-    },
-    []
-  )
-  const cancel = useCallback(() => {
-    cancelFrame.current?.()
-    cancelFrame.current = null
-    pending.current = null
-  }, [])
-  const flush = useCallback(() => {
-    const next = pending.current
-    cancel()
-    if (next) latest.current(next.value)
-  }, [cancel])
-  const schedule = useCallback(
-    (value: T) => {
-      pending.current = { value }
-      if (!scheduleFrame) {
-        flush()
-        return
-      }
-      if (!cancelFrame.current) cancelFrame.current = scheduleFrame(flush)
-    },
-    [scheduleFrame, flush]
-  )
-  return useMemo(() => ({ schedule, flush, cancel }), [schedule, flush, cancel])
+  const schedule = useCallback((value: T) => latest.current(value), [])
+  const settle = useCallback(() => {}, [])
+  return useMemo(() => ({ schedule, flush: settle, cancel: settle }), [schedule, settle])
 }

@@ -71,7 +71,7 @@ Tab 的原生 bounds 来自包含标题按钮与关闭按钮的完整 wrapper。
 | calculateQuadrantAsPercentage，默认 20% 边缘 | resolveDropPosition + design.dock.edgeFraction；角落取最近归一化边缘，而非固定左右优先 |
 | maximize/restore、panel visibility | toggleMaximize、hideTab/addPanel；固定根内容层保持 React 状态 |
 
-回归覆盖空组折叠、同组拆分、整个组迁移、中心合并、四边缘拆分、Tab 重排、最小尺寸 sash 调整、版本/唯一性边界、固定种子操作序列，以及原生拖动/取消/组件状态保留。 `PanelEnvironment.scheduleFrame(callback): cancel` is injected by NativeRoot and reuses the existing AnimationFrameSource, unsubscribing immediately after one frame. `useResizeCommit` coalesces moves within a frame and flushes the final snapshot on release; without an injected scheduler it submits synchronously for deterministic `createTestRoot` behavior. The performance regression `bun test src/ui/panels/Dock/resize-performance.test.tsx` measures each native move with one flush/dispatch: lightweight Dock p50 ≤ 8ms, heavy Dock scenarios use a higher CI-aware budget, and mounted content Profiler commits remain zero per move.
+回归覆盖空组折叠、同组拆分、整个组迁移、中心合并、四边缘拆分、Tab 重排、最小尺寸 sash 调整、版本/唯一性边界、固定种子操作序列，以及原生拖动/取消/组件状态保留。分割线拖动时 `useResizeCommit` 在指针事件里直接提交每次移动，不等下一帧：等帧回调会让每次移动晚一帧提交、再晚一帧绘制，画面落后手约两帧；原生指针移动本就每帧最多一次，无需合并。The performance regression `bun test src/ui/panels/Dock/resize-performance.test.tsx` measures each native move with one flush/dispatch: lightweight Dock p50 ≤ 8ms, heavy Dock scenarios use a higher CI-aware budget, and mounted content Profiler commits remain zero per move.
 
 ## 运行
 

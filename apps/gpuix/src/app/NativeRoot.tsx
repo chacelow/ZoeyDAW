@@ -2,7 +2,6 @@ import { useMemo, useSyncExternalStore } from "react"
 import { useGpuix } from "@gpuix/react"
 import { createNativeCursorLock } from "@/platform/cursor"
 import { AnimationFrameProvider, createAnimationFrameSource } from "@/platform/frame"
-import { createFrameScheduler } from "@/platform/frame/animation-frame-source"
 import { createWindowPlatform } from "@/platform/window"
 import { ControlEnvironmentProvider } from "@/ui/controls"
 import { PanelEnvironmentProvider } from "@/ui/panels"
@@ -25,14 +24,19 @@ export function NativeRoot({ subscribePointer, ...props }: NativeRootProps) {
     const frames = createAnimationFrameSource(renderer)
     return {
       frames,
-      panels: { subscribeWindowActive: window.subscribeApplicationActive, scheduleFrame: createFrameScheduler(frames), subscribePointer },
+      panels: { subscribeWindowActive: window.subscribeApplicationActive, subscribePointer },
       controls: {
         cursorLock: createNativeCursorLock(renderer),
         subscribeWindowActive: window.subscribeApplicationActive,
       },
       window,
       titlebar: {
-        platform: process.platform === "darwin" ? "macos" : process.platform === "win32" ? "windows" : "linux",
+        platform:
+          process.platform === "darwin"
+            ? "macos"
+            : process.platform === "win32"
+              ? "windows"
+              : "linux",
         minimize: window.minimize,
         zoom: window.zoom,
         close: window.close,
