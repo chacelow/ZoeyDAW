@@ -1,15 +1,16 @@
+import { DEFAULT_TRACK_HEIGHT, arrangementViewProjection } from "@/pages/project/layout"
 import { describe, expect, it } from "vitest"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
-import { positionToBar } from "@/pages/project/model/types"
-import { deriveGridPlan } from "@/pages/project/model/grid"
-import { timelineBars } from "@/pages/project/model/selectors"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
+import { positionToBar } from "@zoeydaw/project-core/types"
+import { deriveGridPlan } from "@zoeydaw/project-core/grid"
+import { timelineBars } from "@zoeydaw/project-core/selectors"
 import { hitTest } from "./hit-test"
 import { arrangementBodyTop, clipRect, layoutTrackRows } from "./layout"
 import { clipVisualGeometry } from "./clip-geometry"
 import type { ArrangementScene, ArrangementViewport } from "./scene"
 
 function fixtureScene(partial?: Partial<ArrangementScene>): ArrangementScene {
-  const document_ = createMockDocument()
+  const document_ = createMockDocument(DEFAULT_TRACK_HEIGHT)
   const workspace = createMockWorkspace()
   const bars = timelineBars(document_)
   const viewport: ArrangementViewport = {
@@ -40,13 +41,17 @@ function fixtureScene(partial?: Partial<ArrangementScene>): ArrangementScene {
     markers: document_.markers,
     loop: document_.transport.loop,
     tracks: document_.tracks,
+    media: document_.media,
+    patterns: document_.patterns,
     previewTracks: null,
     clipDrag: null,
     clipResize: null,
     previewMarkers: null,
     previewLoop: null,
     targetSelection: { kind: "none" },
-    automationParameters: {},
+    automationTargets: {},
+    automationLanes: {},
+    automationMode: false,
     selectedClipIds: new Set(),
     selectedTrackIds: new Set(),
     hoverClip: null,
@@ -60,6 +65,30 @@ describe("arrangement hit-test", () => {
   it("returns null above the body ruler band", () => {
     const scene = fixtureScene()
     expect(hitTest(scene, 100, arrangementBodyTop() - 1)).toBeNull()
+  })
+
+  it("does not hit hidden Return or its automation row and keeps Main at bottom", () => {
+    const original = fixtureScene()
+    const projected = arrangementViewProjection([...original.tracks], {
+      routing: true,
+      returns: false,
+      overview: true,
+    })
+    const scene = {
+      ...original,
+      tracks: projected.tracks,
+      automationMode: true,
+      automationLanes: { "a-apply": [{ kind: "mixer", parameter: "volume" } as const] },
+    }
+    const rows = layoutTrackRows(scene)
+    expect(rows.some(row => row.track.kind === "return")).toBe(false)
+    expect(rows.some(row => row.track.id === "main")).toBe(true)
+    const main = rows.find(row => row.track.id === "main")!
+    expect(hitTest(scene, 4, main.top + main.contentHeight / 2)).toMatchObject({
+      kind: "track-lane",
+      track: { id: "main" },
+    })
+    expect(hitTest(scene, 4, main.top - 2)?.track.id).not.toBe("a-apply")
   })
 
   it("returns a clip body for a point inside a clip rectangle", () => {
@@ -223,8 +252,8 @@ describe("arrangement hit-test", () => {
     const geometry = clipVisualGeometry(rect, audio, row.track, true)
     expect(geometry.bodyHeight).toBe(0)
     expect(geometry.top).toBe(row.top + 1)
-    expect(geometry.top + geometry.height).toBe(row.top + row.height - 1)
-    expect(hitTest(folded, rect.left + 30, row.top + row.height - 1.5)?.kind).toBe("clip-title")
+    expect(geometry.top + geometry.height).toBe(row.top + row.height - 2)
+    expect(hitTest(folded, rect.left + 30, row.top + row.height - 2.5)?.kind).toBe("clip-title")
     expect(geometry.fades.find(fade => fade.edge === "in")).toMatchObject({
       handlesVisible: false,
       start: { y: geometry.top + geometry.height },

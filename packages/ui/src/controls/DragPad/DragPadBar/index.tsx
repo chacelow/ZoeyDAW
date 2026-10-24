@@ -60,7 +60,7 @@ export function DragPadBar({
     format: toString_,
     parse,
     editable,
-    disabled: dragOptions.disabled,
+    disabled: dragOptions.disabled || dragOptions.readOnly,
     onGestureStart: dragOptions.onGestureStart,
     onGestureEnd: dragOptions.onGestureEnd,
     onGestureCancel: dragOptions.onGestureCancel,

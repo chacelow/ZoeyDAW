@@ -1,9 +1,9 @@
-import { clampAutomationCurve, clampAutomationValue } from "@/pages/project/model/automation-curve"
+import { clampAutomationCurve, clampAutomationValue } from "@zoeydaw/project-core/automation-curve"
 import { snapBar } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
 import { beginProjectPreview, finishProjectPreview } from "../project-preview"
 import { automationBar, automationSegmentValue } from "./geometry"
 import { previewAutomation } from "./preview"
-import type { AutomationPoint } from "@/pages/project/model/types"
+import type { AutomationPoint } from "@zoeydaw/project-core/types"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
 import type { AutomationRow } from "./geometry"
 

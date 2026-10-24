@@ -1,13 +1,14 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { expect, it } from "vitest"
-import { createMockDocument } from "@/pages/project/adapters/fixtures"
+import { createMockDocument } from "@zoeydaw/project-runtime/testing"
 import { createSceneStore } from "../scene"
 import { layoutTrackRows } from "../layout"
 import { readTokens } from "../tokens"
 import { paintGroupOverview } from "./group"
 
 it("hides child previews when expanded and clips their compact summary when folded", () => {
-  const document = createMockDocument()
+  const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
   const group = document.tracks.find(track => track.id === "drums-group")
   if (!group) {
     throw new Error("Missing Group")
@@ -17,6 +18,8 @@ it("hides child previews when expanded and clips their compact summary when fold
     bars: 128,
     grid: { mode: "fixed", bars: 1 },
     transport: document.transport,
+    media: document.media,
+    patterns: document.patterns,
     markers: [],
     loop: document.transport.loop,
     tracks: document.tracks,

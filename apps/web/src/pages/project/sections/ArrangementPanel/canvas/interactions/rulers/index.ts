@@ -1,9 +1,9 @@
-import { positionToBar } from "@/pages/project/model/types"
-import { MARKER_RULER_HEIGHT } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
+import { positionToBar } from "@zoeydaw/project-core/types"
 import { finishProjectPreview } from "../project-preview"
 import { rulerHit, rulerBar } from "./geometry"
 import { markerGesture } from "./markers"
 import { loopFromSelection, loopGesture } from "./loop"
+import { patternRulerGesture } from "./pattern"
 import type { CanvasInteraction, CanvasPointer, InteractionContext } from "../types"
 
 export function createRulerInteractions(context: InteractionContext): CanvasInteraction {
@@ -30,18 +30,50 @@ export function createRulerInteractions(context: InteractionContext): CanvasInte
       if (!hit) {
         return null
       }
+      if (hit.kind === "pattern") {
+        return patternRulerGesture(context, pointer)
+      }
       if (hit.kind === "marker") {
         return markerGesture(context, hit.marker, pointer)
       }
       if (hit.kind === "loop") {
         return loopGesture(context, hit.edge, pointer)
       }
+      if (hit.kind === "marker-band") {
+        // An empty locator slot still seeks and starts playback, matching the
+        // shared ruler behaviour; a locator is added from its context menu.
+        const initial = context.getState()
+        const origin = positionToBar(initial.session.position, initial.document.transport.numerator)
+        const originalInsertion = initial.session.insertionPoint
+        actions.seekBar(rulerBar(scene.get(), pointer.x, initial.workspace.snap, pointer.shiftKey))
+        if (!initial.session.playing) {
+          actions.togglePlay()
+        }
+        return {
+          cursor: "pointer",
+          autoScroll: "horizontal",
+          move(current) {
+            actions.seekBar(
+              rulerBar(scene.get(), current.x, context.getState().workspace.snap, current.shiftKey)
+            )
+          },
+          finish(cancelled) {
+            if (cancelled) {
+              actions.restoreSeek(origin, originalInsertion)
+            }
+          },
+        }
+      }
+      // Outside the loop brace the band starts playback at the pressed position.
       const initial = context.getState()
       const origin = positionToBar(initial.session.position, initial.document.transport.numerator)
       const originalInsertion = initial.session.insertionPoint
       actions.seekBar(rulerBar(scene.get(), pointer.x, initial.workspace.snap, pointer.shiftKey))
+      if (!initial.session.playing) {
+        actions.togglePlay()
+      }
       return {
-        cursor: "default",
+        cursor: "pointer",
         autoScroll: "horizontal",
         move(current) {
           actions.seekBar(
@@ -57,13 +89,19 @@ export function createRulerInteractions(context: InteractionContext): CanvasInte
     },
     hover(pointer) {
       const hit = rulerHit(scene.get(), pointer)
-      return hit?.kind === "marker" || (hit?.kind === "loop" && hit.edge === "body")
-        ? "grab"
-        : hit?.kind === "loop"
-          ? "ew-resize"
-          : hit
-            ? "default"
-            : undefined
+      if (hit?.kind === "pattern") {
+        return "ns-resize"
+      }
+      if (hit?.kind === "marker" || (hit?.kind === "loop" && hit.edge === "body")) {
+        return "grab"
+      }
+      if (hit?.kind === "loop") {
+        return hit.edge === "start" ? "brace-left" : "brace-right"
+      }
+      if (hit?.kind === "loop-outside") {
+        return "pointer"
+      }
+      return hit ? "default" : undefined
     },
     doubleClick(pointer) {
       const hit = rulerHit(scene.get(), pointer)
@@ -77,9 +115,8 @@ export function createRulerInteractions(context: InteractionContext): CanvasInte
         }
         scene.setTargetSelection({ kind: "marker", id: hit.marker.id, phase: "selected" })
       } else if (hit.kind === "loop") {
-        actions.setLoop({ enabled: !scene.get().loop.enabled })
         scene.setTargetSelection({ kind: "loop" })
-      } else if (pointer.y < MARKER_RULER_HEIGHT) {
+      } else if (hit.kind === "marker-band") {
         const id = actions.addMarker(
           rulerBar(scene.get(), pointer.x, context.getState().workspace.snap, pointer.shiftKey)
         )
@@ -180,6 +217,7 @@ export function createRulerInteractions(context: InteractionContext): CanvasInte
         scene.setTargetSelection({ kind: "loop" })
         return { kind: "loop" }
       }
+      // Right-click anywhere outside the brace still offers locator and loop commands.
       return {
         kind: "ruler",
         bar: rulerBar(scene.get(), pointer.x, context.getState().workspace.snap, pointer.shiftKey),

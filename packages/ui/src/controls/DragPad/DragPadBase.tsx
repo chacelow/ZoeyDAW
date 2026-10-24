@@ -13,6 +13,13 @@ export interface DragPadBaseProps {
   readonly dragging?: boolean
   readonly active?: boolean
   readonly disabled?: boolean
+  readonly highlight?: boolean
+  readonly readOnly?: boolean
+  readonly role?: "slider"
+  readonly "aria-valuemin"?: number
+  readonly "aria-valuemax"?: number
+  readonly "aria-valuenow"?: number
+  readonly "aria-valuetext"?: string
   readonly size?: "default" | "compact"
   readonly iconOnly?: boolean
   readonly color?: string
@@ -41,6 +48,13 @@ export const DragPadBase = forwardRef<HTMLButtonElement, DragPadBaseProps>(
       dragging = false,
       active = false,
       disabled = false,
+      highlight = true,
+      readOnly = false,
+      role,
+      "aria-valuemin": ariaValueMin,
+      "aria-valuemax": ariaValueMax,
+      "aria-valuenow": ariaValueNow,
+      "aria-valuetext": ariaValueText,
       size = "default",
       iconOnly = false,
       color,
@@ -79,12 +93,18 @@ export const DragPadBase = forwardRef<HTMLButtonElement, DragPadBaseProps>(
         onBlur={onBlur}
         style={style}
         disabled={disabled}
+        role={role}
+        aria-readonly={readOnly || undefined}
+        aria-valuemin={ariaValueMin}
+        aria-valuemax={ariaValueMax}
+        aria-valuenow={ariaValueNow}
+        aria-valuetext={ariaValueText}
         aria-label={ariaLabel}
         aria-description={ariaDescription}
         aria-pressed={ariaPressed}
         data-mappable={mappable || undefined}
         className={controlInteractiveClasses(
-          { dragging, active, disabled, size, iconOnly },
+          { dragging, active, disabled, highlight, size, iconOnly },
           className
         )}
       >

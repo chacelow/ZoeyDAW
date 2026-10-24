@@ -1,0 +1,14 @@
+{
+  "tracktion": {
+    "repository": "https://github.com/Tracktion/tracktion_engine.git",
+    "commit": "877e39c0fe9f1c3e4a9d836f5f338688250875d7",
+    "source": "src-tauri/native/tracktion-source/modules",
+    "license": "src-tauri/native/tracktion-source/LICENSE.md"
+  },
+  "juce": {
+    "repository": "https://github.com/juce-framework/JUCE.git",
+    "commit": "7ff644f65d7daa1428c34b9738ebb5c449dc9172",
+    "source": "src-tauri/native/tracktion-source/modules/juce",
+    "license": "src-tauri/native/tracktion-source/modules/juce/LICENSE.md"
+  }
+}

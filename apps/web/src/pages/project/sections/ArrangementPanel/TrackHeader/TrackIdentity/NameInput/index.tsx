@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions } from "@/pages/project/adapters"
-import type { Track } from "@/pages/project/model/types"
+import type { Track } from "@zoeydaw/project-core/types"
 
 export function TrackNameInput({
   track,
@@ -39,6 +39,7 @@ export function TrackNameInput({
       onBlur={() => finish(true)}
       onKeyDown={event => {
         event.stopPropagation()
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
         if (event.key === "Enter") {
           event.preventDefault()
           finish(true)

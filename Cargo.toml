@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["src-tauri", "crates/media", "crates/project", "crates/browser", "crates/engine", "crates/plugin-helper", "crates/plugin-host", "crates/plugin-abi"]
+default-members = ["src-tauri"]
+exclude = ["scripts/audio/probes/rust", "third_party/plughost"]
+
+[patch.crates-io]
+plughost = { path = "third_party/plughost/crates/plughost" }
+plughost-core = { path = "third_party/plughost/crates/plughost-core" }
+plughost-formats = { path = "third_party/plughost/crates/plughost-formats" }
+plughost-helper = { path = "third_party/plughost/crates/plughost-helper" }

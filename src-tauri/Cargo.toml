@@ -30,6 +30,10 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 urlencoding = "2"
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_Storage_FileSystem"] }
+uuid = { version = "1", features = ["v4"] }
+zoeydaw-media = { path = "../crates/media" }
+zoeydaw-project = { path = "../crates/project" }
+zoeydaw-browser = { path = "../crates/browser" }
+zoeydaw-engine = { path = "../crates/engine" }
+zoeydaw-plugin-host = { path = "../crates/plugin-host" }
+zoeydaw-plugin-abi = { path = "../crates/plugin-abi" }

@@ -1,0 +1,133 @@
+use crate::render::Tail;
+use serde::{Deserialize, Serialize};
+
+/// Maximum retained timing changes before consumers must resynchronize.
+pub const CHANGE_CAPACITY: usize = 128;
+
+/// A plugin's timing as its owning thread last read it. The latency is the one the plugin was
+/// activated with: it changes only when the plugin is prepared again or reset, so processing and
+/// rendering keep one alignment in between. The tail follows the plugin's reports.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct PluginTiming {
+    /// Applied processing latency in frames.
+    pub latency: u32,
+    /// Most recently observed native tail duration.
+    pub tail: Tail,
+    /// The plugin asked to be prepared again; processing is refused until it is.
+    pub restart_required: bool,
+    /// The plugin reported a new latency, which takes effect when it is prepared again or reset.
+    /// The chain keeps aligning to `latency` until then, and a render does not start.
+    pub latency_changed: bool,
+}
+
+impl PluginTiming {
+    /// The timing of a plugin with no restart or latency change pending.
+    pub fn new(latency: u32, tail: Tail) -> PluginTiming {
+        PluginTiming {
+            latency,
+            tail,
+            restart_required: false,
+            latency_changed: false,
+        }
+    }
+}
+
+/// Latest timing observation for one plugin in a chain.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SlotChange {
+    /// Zero-based plugin slot.
+    pub slot: usize,
+    /// Last observed timing and pending restart flags.
+    pub timing: PluginTiming,
+}
+
+/// Timing notifications coalesce by slot, retaining last-observed order. Intermediate values
+/// are not an audit trail. On overflow use `snapshot` to replace the entire consumer view.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChangeBatch {
+    /// Coalesced slot changes in last-observed order.
+    pub changes: Vec<SlotChange>,
+    /// Whether overflow requires replacing the consumer view with `snapshot`.
+    pub resync_required: bool,
+    /// Last known timing per slot; `None` for a slot never observed.
+    pub snapshot: Vec<Option<PluginTiming>>,
+}
+
+/// No callbacks or I/O under the producer. The owning helper serializes access to this buffer.
+pub struct ChangeBuffer {
+    pending: Vec<SlotChange>,
+    snapshot: Vec<Option<PluginTiming>>,
+    overflow: bool,
+}
+
+impl Default for ChangeBuffer {
+    fn default() -> Self {
+        Self {
+            pending: Vec::with_capacity(CHANGE_CAPACITY),
+            snapshot: Vec::new(),
+            overflow: false,
+        }
+    }
+}
+
+impl ChangeBuffer {
+    /// Records a changed timing value, coalescing that slot and tracking overflow.
+    pub fn observe(&mut self, slot: usize, timing: PluginTiming) {
+        if self.snapshot.len() <= slot {
+            self.snapshot.resize(slot + 1, None);
+        }
+        if self.snapshot[slot] == Some(timing) {
+            return;
+        }
+        self.snapshot[slot] = Some(timing);
+        self.pending.retain(|event| event.slot != slot);
+        if self.pending.len() == CHANGE_CAPACITY {
+            self.pending.remove(0);
+            self.overflow = true;
+        }
+        self.pending.push(SlotChange { slot, timing });
+    }
+
+    /// Drains pending changes and overflow, retaining and returning the latest complete snapshot.
+    pub fn take(&mut self) -> ChangeBatch {
+        // Preserve the producer's reserved storage while returning an owned batch.
+        let changes = self.pending.clone();
+        self.pending.clear();
+        ChangeBatch {
+            changes,
+            resync_required: std::mem::take(&mut self.overflow),
+            snapshot: self.snapshot.clone(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn change_notifications_coalesce_and_resynchronize_without_a_consumer() {
+        let mut events = ChangeBuffer::default();
+        let timing = |latency| PluginTiming {
+            latency,
+            tail: Tail::Samples(latency),
+            restart_required: false,
+            latency_changed: false,
+        };
+        for slot in 0..CHANGE_CAPACITY + 10 {
+            events.observe(slot, timing(slot as u32));
+        }
+        events.observe(0, timing(999));
+        let batch = events.take();
+        assert!(batch.resync_required);
+        assert_eq!(batch.changes.len(), CHANGE_CAPACITY);
+        assert_eq!(batch.changes.last().unwrap().slot, 0);
+        assert_eq!(batch.snapshot[0], Some(timing(999)));
+        assert_eq!(batch.snapshot.len(), CHANGE_CAPACITY + 10);
+        let empty = events.take();
+        assert!(!empty.resync_required);
+        assert!(empty.changes.is_empty());
+        assert_eq!(empty.snapshot, batch.snapshot);
+    }
+}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions, useProjectEditGesture } from "@/pages/project/adapters"
-import type { Clip } from "@/pages/project/model/types"
+import type { Clip } from "@zoeydaw/project-core/types"
 
 export function ClipNameInput({ clip, title }: { readonly clip: Clip; readonly title: string }) {
   const { t } = useTranslation()
@@ -30,7 +30,7 @@ export function ClipNameInput({ clip, title }: { readonly clip: Clip; readonly t
       ref={input}
       data-clip-name
       aria-label={t("arrangement.rename")}
-      className="focus:border-border focus:bg-muted max-w-[220px] min-w-0 rounded-sm border border-transparent bg-transparent px-1 font-semibold"
+      className="max-w-[220px] min-w-0 rounded-sm border border-transparent bg-transparent px-1 font-semibold focus:border-current focus:bg-[var(--arrangement-clip-paper)]"
       value={clip.label ?? title}
       onFocus={() => {
         if (editing.current) {
@@ -42,6 +42,10 @@ export function ClipNameInput({ clip, title }: { readonly clip: Clip; readonly t
       onChange={event => editGesture.onChange(event.target.value)}
       onBlur={() => finish(false)}
       onKeyDown={event => {
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) {
+          event.stopPropagation()
+          return
+        }
         if (event.key === "Escape") {
           event.stopPropagation()
           finish(true)

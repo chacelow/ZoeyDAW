@@ -25,6 +25,56 @@ export default {
     libraryAction: "Library",
   },
   project: {
+    files: {
+      menu: "File",
+      save: "Save",
+      saveAs: "Save As…",
+      open: "Open Project…",
+      collect: "Collect Media",
+      import: "Import Audio…",
+      resolveMissing: "Resolve missing media",
+      relink: "Locate matching file…",
+      cancel: "Cancel",
+      dismiss: "Dismiss",
+      failed: "File operation failed",
+      nativeUnavailable: "Project files require the desktop app.",
+      unsavedTitle: "Save changes to this project?",
+      unsavedDescription:
+        "Save before leaving, discard the changes, or keep editing. A failed or cancelled save keeps this project open.",
+      previewUnsavedTitle: "Discard unsaved preview changes?",
+      previewUnsavedDescription:
+        "This isolated Gallery preview cannot be saved as a real project. Discard its changes to quit, or cancel to keep it open.",
+      keepEditing: "Cancel",
+      discard: "Discard changes",
+      external: "{{count}} external audio dependencies · use Collect Media for a portable project",
+      noAudioEngine: "Audio authoring only · no playback engine connected",
+      action: {
+        open: "Opening project",
+        save: "Saving project",
+        saveAs: "Saving a collected copy",
+        collect: "Collecting media",
+        import: "Importing audio",
+        relink: "Relinking media",
+      },
+      stage: {
+        picker: "Choose a file",
+        waiting: "Waiting for project acceptance",
+        reading: "Reading and validating",
+        writing: "Writing files",
+        cancelling: "Cancelling before publication",
+      },
+      issue: { missing: "Missing", changed: "Fingerprint changed", unreadable: "Unreadable" },
+      notice: {
+        saved: "Project saved",
+        collected: "Media collected into the project",
+        imported: "Audio imported as a read-only external dependency",
+        tempoUnknown:
+          "Source tempo could not be determined. Imported at original speed; set Source BPM in Clip Edit to synchronize.",
+        cancelled: "Cancelled; project kept",
+        syncUncertain:
+          "Project published, but disk sync is uncertain. Keep this project open and save again.",
+      },
+    },
     sidebarTitle: "Browser",
     browser: {
       back: "Browser back",
@@ -153,12 +203,8 @@ export default {
       barLength: "Bar length",
       follow: "Follow playhead",
       loop: "Loop",
-    },
-    status: {
-      sampleRate: "48.0 kHz",
-      buffer: "256",
-      cpu: "CPU 2%",
-      noProject: "no project",
+      metronome: "Metronome",
+      metronomeHint: "Click track during playback and recording",
     },
   },
   about: {
@@ -190,6 +236,18 @@ export default {
     mcp: "MCP",
     language: "Language",
     languageDescription: "Choose the language used by the application interface.",
+    import: {
+      title: "Import / Warp",
+      autoWarp: "Auto-Warp imported audio",
+      description:
+        "New imports follow project BPM when the source tempo is known; otherwise they play at original speed. Existing clips and Browser preview stay unchanged.",
+      preferenceUnavailable:
+        "Could not save the import preference. The previous setting is unchanged.",
+      newTrack: "New Audio Track",
+      durationUnknown: "Duration unavailable",
+      sourceDuration: "{{duration}} s · original",
+      importing: "Importing audio…",
+    },
     sections: {
       appearance: "Appearance",
       language: "Language",
@@ -287,12 +345,17 @@ export default {
     saveAll: "Save all",
     discardAll: "Discard all",
     saveFailed: "Some files could not be saved. The window remains open.",
-    askTitle: "Close ZoeyMind?",
+    askTitle: "Close ZoeyDAW?",
     askDescription:
       "Minimize to the system tray to keep running in the background, or quit the app entirely.",
     rememberChoice: "Remember my choice",
     minimizeToTray: "Minimize to tray",
     quitApp: "Quit app",
+    blockedTitle: "The application remains open",
+    fileOperationBusy:
+      "A project file operation is still running. Finish or cancel it before quitting. Your project has been kept.",
+    preferenceUnavailable:
+      "The close preference could not be saved. Browser storage is unavailable.",
   },
   fileConflict: {
     title: "The file changed on disk",

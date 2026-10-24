@@ -1,0 +1,26 @@
+export default {
+  folders: "Folders",
+  addFolder: "Add folder…",
+  addFolderHint: "Add a local folder. Original files stay in place.",
+  refresh: "Refresh index",
+  cancelScan: "Cancel scan",
+  size: "Size",
+  empty: "No audio files or folders",
+  favorite: "Favorite",
+  autoPreview: "Automatically preview selected audio",
+  stop: "Stop preview",
+  noSelection: "No audio selected",
+  waveform: "Original audio waveform; click to play from this position",
+  status: {
+    scanning: "Scanning",
+    ready: "Ready",
+    offline: "Offline",
+    cancelled: "Cancelled",
+    error: "Error",
+  },
+  errors: {
+    nativeUnavailable: "Local audio browsing requires the desktop app.",
+    auditionUnavailable: "The native preview engine is unavailable.",
+    operationFailed: "The audio operation failed.",
+  },
+}

@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
-export type SettingsSectionId = "preferences" | "editor" | "ai" | "agent" | "mcp" | "about"
+export type SettingsSectionId =
+  "preferences" | "editor" | "ai" | "agent" | "mcp" | "about" | "import" | "plugins"
 
 interface SettingsDialogState {
   open: boolean

@@ -5,18 +5,47 @@
  */
 import { useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { setProjectStorageId, startProjectRuntime } from "./adapters"
+import {
+  projectFiles,
+  setProjectStorageId,
+  startProjectRuntime,
+  useProjectFilesState,
+} from "./adapters"
 import { ProjectLayout } from "./ProjectLayout"
 import { useProjectShell } from "./useProjectShell"
+import { ProjectFileFeedback } from "./files"
 
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const shell = useProjectShell()
   useEffect(() => {
-    setProjectStorageId(id ?? "default")
+    const projectId = id ?? "default"
+    setProjectStorageId(projectId)
+    if (useProjectFilesState.getState().binding?.projectId !== projectId)
+      projectFiles.resetBinding(projectId)
     return startProjectRuntime()
   }, [id])
 
-  return <ProjectLayout projectId={id ?? ""} shell={shell} onBack={() => navigate("/")} />
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <ProjectFileFeedback showDependencies />
+      <div className="min-h-0 flex-1">
+        <ProjectLayout
+          projectId={id ?? ""}
+          shell={shell}
+          onBack={() => {
+            if (useProjectFilesState.getState().operation.kind === "busy") return
+            void projectFiles.confirmDiscard().then(leave => {
+              if (!leave) return
+              const emptyId = crypto.randomUUID()
+              setProjectStorageId(emptyId)
+              projectFiles.resetBinding(emptyId)
+              navigate("/")
+            })
+          }}
+        />
+      </div>
+    </div>
+  )
 }

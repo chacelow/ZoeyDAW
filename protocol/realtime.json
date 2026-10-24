@@ -1,0 +1,308 @@
+{
+  "version": 1,
+  "magic": 1296319578,
+  "byteOrder": "little-endian",
+  "frameTypes": { "levels": 1, "spectrum": 2, "loudness": 3 },
+  "headerFlags": { "playing": 1, "recording": 2, "subscriptionChanged": 4 },
+  "recordFlags": {
+    "valid": 1,
+    "stale": 2,
+    "clipped": 4,
+    "unavailable": 8,
+    "rmsInitializing": 16,
+    "rmsStale": 32
+  },
+  "sourceFlags": { "valid": 1, "stale": 2, "unavailable": 8 },
+  "jsonPolicy": {
+    "u64": "canonical-decimal-string",
+    "maximumU64": "18446744073709551615",
+    "overflow": "reject-and-close-stream",
+    "existingCommandRevisionAndSequence": "safe-integer"
+  },
+  "layouts": {
+    "header": {
+      "bytes": 128,
+      "fields": [
+        ["magic", "u32", 0],
+        ["version", "u16", 4],
+        ["headerBytes", "u16", 6],
+        ["generation", "u32", 8],
+        ["registryRevision", "u32", 12],
+        ["streamId", "u32", 16],
+        ["slotCount", "u32", 20],
+        ["seq", "u64", 24],
+        ["timeSamples", "u64", 32],
+        ["sampleRate", "f64", 40],
+        ["producedMonotonicNs", "u64", 48],
+        ["controlGeneration", "u64", 56],
+        ["acceptedRevision", "u64", 64],
+        ["audioRevision", "u64", 72],
+        ["subscriptionRevision", "u32", 80],
+        ["flags", "u32", 84],
+        ["timelineSample", "i64", 88],
+        ["timelineBeat", "f64", 96],
+        ["tempoBpm", "f64", 104],
+        ["deviceEpoch", "u32", 112],
+        ["sourceCount", "u32", 116],
+        ["resetEpoch", "u32", 120],
+        ["frameType", "u32", 124]
+      ]
+    },
+    "record": {
+      "bytes": 48,
+      "fields": [
+        ["slotId", "u32", 0],
+        ["flags", "u32", 4],
+        ["blockEndSample", "u64", 8],
+        ["peak", "f32", 16],
+        ["rms", "f32", 20],
+        ["hold", "f32", 24],
+        ["sessionPeak", "f32", 28],
+        ["clipCount", "u64", 32],
+        ["validFrames", "u32", 40],
+        ["slotResetEpoch", "u32", 44]
+      ]
+    },
+    "source": {
+      "bytes": 48,
+      "fields": [
+        ["clipHandle", "u32", 0],
+        ["sourceHandle", "u32", 4],
+        ["sourceFrame", "f64", 8],
+        ["sourceRate", "f64", 16],
+        ["observedDeviceSample", "u64", 24],
+        ["sourceGeneration", "u32", 32],
+        ["flags", "u32", 36],
+        ["positionAgeSamples", "u32", 40],
+        ["reserved", "u32", 44]
+      ]
+    }
+  },
+  "metadata": {
+    "enums": {
+      "MeterEndpointKind": [
+        "input",
+        "track-out",
+        "device-in",
+        "device-out",
+        "bus",
+        "master",
+        "cue"
+      ],
+      "MeterCapability": ["peak", "rms", "hold", "clip"],
+      "SourceOwner": ["arrangement", "preview"],
+      "MeterResetKind": ["hold", "clip", "all"],
+      "RecordingPhase": [
+        "preparing",
+        "recording",
+        "finalizing",
+        "publishing",
+        "committed",
+        "failed"
+      ],
+      "SessionSlotStatus": ["queued", "playing", "stopped"],
+      "DeviceConnectionState": ["connected", "disconnected", "permission-required", "stopped"],
+      "PluginFaultKind": ["crash", "hang", "missing", "load-failed", "format-change"],
+      "FaultKind": [
+        "plugin-fault",
+        "xrun",
+        "recording-overrun",
+        "note-overrun",
+        "automation-overrun",
+        "device-disconnected",
+        "protocol-fault"
+      ],
+      "LinkMode": ["local-tempo-map", "link"]
+    },
+    "structs": {
+      "MeterRegistryEntry": {
+        "slotId": "u32",
+        "endpointId": "string",
+        "kind": "MeterEndpointKind",
+        "ownerId": "string",
+        "channelIndex": "u16",
+        "channelCount": "u16",
+        "capabilities": "MeterCapability[]"
+      },
+      "SourceRegistryEntry": {
+        "clipHandle": "u32",
+        "clipId": "string",
+        "sourceHandle": "u32",
+        "sourceId": "string",
+        "sourceGeneration": "u32",
+        "sourceRate": "positive-f64",
+        "owner": "SourceOwner"
+      },
+      "EndpointResetBaseline": {
+        "endpointId": "string",
+        "slotIds": "u32[]",
+        "slotResetEpoch": "u32"
+      },
+      "MeterResetBaseline": { "resetEpoch": "u32", "affected": "EndpointResetBaseline[]" },
+      "RealtimeRegistry": {
+        "sessionId": "string",
+        "sessionEpoch": "u32",
+        "deviceEpoch": "u32",
+        "generation": "u32",
+        "registryRevision": "u32",
+        "resetEpoch": "u32",
+        "entries": "MeterRegistryEntry[]",
+        "sources": "SourceRegistryEntry[]",
+        "endpointResets": "EndpointResetBaseline[]"
+      },
+      "RealtimeEventContext": {
+        "sessionId": "string",
+        "sessionEpoch": "u32",
+        "streamId": "u32",
+        "deviceEpoch": "u32",
+        "generation": "u32",
+        "registryRevision": "u32",
+        "seq": "json-u64"
+      },
+      "RealtimeCounters": {
+        "xruns": "json-u64",
+        "recordingOverruns": "json-u64",
+        "noteOverruns": "json-u64",
+        "automationOverruns": "json-u64",
+        "pluginFaults": "json-u64",
+        "droppedEvents": "json-u64"
+      },
+      "LatchedFault": {
+        "faultId": "string",
+        "kind": "FaultKind",
+        "ownerId": "string?",
+        "code": "string",
+        "message": "string",
+        "firstSeq": "json-u64",
+        "count": "json-u64"
+      },
+      "RecordingReceipt": {
+        "recordingId": "string",
+        "sourceIds": "string[]",
+        "clipIds": "string[]",
+        "acceptedRevision": "json-u64",
+        "capturedStartSample": "json-u64",
+        "capturedEndSample": "json-u64"
+      },
+      "RecordingError": {
+        "code": "string",
+        "message": "string",
+        "recoverable": "bool",
+        "partialSourceIds": "string[]"
+      },
+      "ClockProbe": {
+        "monotonicNs": "json-u64",
+        "deviceEpoch": "u32",
+        "timeSamples": "json-u64",
+        "sampleRate": "positive-f64"
+      },
+      "RealtimeStreamOpenResult": { "streamId": "u32", "registry": "RealtimeRegistry" },
+      "MeterInterest": {
+        "streamId": "u32",
+        "revision": "u32",
+        "endpointIds": "string[]",
+        "rateHz": "MeterRateHz",
+        "visible": "bool"
+      }
+    },
+    "unions": {
+      "RecordingState": {
+        "tag": "state",
+        "variants": {
+          "preparing": {},
+          "recording": {},
+          "finalizing": {},
+          "publishing": {},
+          "committed": { "receipt": "RecordingReceipt" },
+          "failed": { "error": "RecordingError" }
+        }
+      },
+      "RealtimeEventPayload": {
+        "tag": "kind",
+        "variants": {
+          "registry": { "registry": "RealtimeRegistry" },
+          "graph-published": {
+            "acceptedRevision": "json-u64",
+            "publishedGraphGeneration": "u32",
+            "referenceSample": "json-u64",
+            "deviceSample": "json-u64"
+          },
+          "graph-adopted": {
+            "audioRevision": "json-u64",
+            "controlGeneration": "json-u64",
+            "referenceSample": "json-u64",
+            "deviceSample": "json-u64"
+          },
+          "device-changed": {
+            "deviceId": "string?",
+            "state": "DeviceConnectionState",
+            "sampleRate": "positive-f64?",
+            "blockSize": "u32",
+            "inputChannels": "u16",
+            "outputChannels": "u16"
+          },
+          "plugin-fault": {
+            "faultId": "string",
+            "trackId": "string",
+            "deviceId": "string",
+            "segmentId": "string?",
+            "fault": "PluginFaultKind",
+            "code": "string",
+            "message": "string",
+            "recoverable": "bool"
+          },
+          "xrun": { "count": "json-u64", "deviceSample": "json-u64" },
+          "recording-overrun": {
+            "recordingId": "string",
+            "inputId": "string",
+            "count": "json-u64",
+            "deviceSample": "json-u64"
+          },
+          "recording-state": { "recordingId": "string", "recording": "RecordingState" },
+          "session-slot-state": {
+            "slotId": "string",
+            "trackId": "string",
+            "queuedSample": "json-u64?",
+            "status": "SessionSlotStatus"
+          },
+          "link-state": {
+            "enabled": "bool",
+            "peers": "u32",
+            "tempo": "positive-f64",
+            "startStopSync": "bool",
+            "mode": "LinkMode"
+          },
+          "transport-state": {
+            "playing": "bool",
+            "recording": "bool",
+            "timelineBeat": "f64",
+            "tempoBpm": "positive-f64",
+            "timeSamples": "json-u64",
+            "controlGeneration": "json-u64",
+            "acceptedRevision": "json-u64",
+            "audioRevision": "json-u64"
+          },
+          "source-state": { "sources": "SourceRegistryEntry[]", "removedClipHandles": "u32[]" },
+          "event-gap": {
+            "fromSeq": "json-u64",
+            "toSeq": "json-u64",
+            "counters": "RealtimeCounters",
+            "latchedFaults": "LatchedFault[]"
+          },
+          "meter-reset": { "reset": "MeterResetKind", "baseline": "MeterResetBaseline" },
+          "note-overrun": { "count": "json-u64", "allNotesOff": "bool" },
+          "automation-overrun": {
+            "trackId": "string",
+            "deviceId": "string?",
+            "parameterId": "string",
+            "count": "json-u64"
+          }
+        }
+      }
+    },
+    "numericEnums": { "MeterRateHz": [30, 60] },
+    "envelopes": {
+      "RealtimeEvent": { "context": "RealtimeEventContext", "payload": "RealtimeEventPayload" }
+    }
+  }
+}

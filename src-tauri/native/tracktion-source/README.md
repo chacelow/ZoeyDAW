@@ -1,0 +1,7 @@
+# Maintained native audio source
+
+`modules/` is the repository-maintained Tracktion Engine source tree based on upstream commit `877e39c0fe9f1c3e4a9d836f5f338688250875d7`. It includes local fixes for non-zero loop starts, device-list refresh and graph build/post observation. Further Tracktion changes are made directly to tracked files, not replayed during setup. The exact upstream identity and JUCE commit are recorded in `scripts/audio/native-source.lock.json` at the repository root.
+
+`modules/juce/` is deliberately not tracked. Run `node scripts/audio/setup-native-engine.mjs` at the repository root to fetch the fixed JUCE commit if missing. The script rejects an existing checkout with a different commit or any local changes; it never resets or replaces it. Offline builds require a clean checkout at that exact commit already present. Build outputs and the former `src-tauri/native/vendor/tracktion/` development checkout are not inputs to the native build.
+
+Tracktion terms are in `LICENSE.md`, with the upstream third-party inventory preserved in `UPSTREAM-README.md` (its links to omitted tutorials/examples are historical). Licenses and notices bundled within `modules/` must remain alongside their sources. JUCE's `LICENSE.md` and `JUCE.spdx.json` are supplied by the pinned checkout. These different licenses require independent compliance review before distribution; no commercial rights are inferred.

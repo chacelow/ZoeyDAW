@@ -6,7 +6,7 @@ import {
   automationY,
 } from "./geometry"
 import type { AutomationRow } from "./geometry"
-import type { AutomationPoint } from "@/pages/project/model/types"
+import type { AutomationPoint } from "@zoeydaw/project-core/types"
 import type { CanvasPointer, InteractionContext } from "../types"
 
 export type AutomationHit =

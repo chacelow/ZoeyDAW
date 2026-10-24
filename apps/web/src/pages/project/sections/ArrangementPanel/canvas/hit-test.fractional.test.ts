@@ -1,17 +1,20 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import { describe, expect, it } from "vitest"
-import { createMockDocument } from "@/pages/project/adapters/fixtures"
+import { createMockDocument } from "@zoeydaw/project-runtime/testing"
 import { createSceneStore } from "./scene"
 import { clipRect, layoutTrackRows } from "./layout"
 import { hitTest } from "./hit-test"
 
 describe("clip hit geometry at fractional zoom", () => {
   it("respects painted rounded bounds and aligned fade handle", () => {
-    const document = createMockDocument()
+    const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
     const scene = createSceneStore()
     scene.setMusic({
       bars: 128,
       grid: { mode: "fixed", bars: 0.25 },
       transport: document.transport,
+      media: document.media,
+      patterns: document.patterns,
       tracks: document.tracks,
       markers: document.markers,
       loop: document.transport.loop,

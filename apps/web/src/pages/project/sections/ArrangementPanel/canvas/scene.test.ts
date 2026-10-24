@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 import { createSceneStore } from "./scene"
 import type { ArrangementViewport } from "./scene"
-import type { LoopRegion, Marker, Track } from "@/pages/project/model/types"
+import type {
+  LoopRegion,
+  Marker,
+  MediaSource,
+  MidiPattern,
+  Track,
+} from "@zoeydaw/project-core/types"
 
 const vp = (patch: Partial<ArrangementViewport> = {}): ArrangementViewport => ({
   pxPerBar: 24,
@@ -16,6 +22,8 @@ const vp = (patch: Partial<ArrangementViewport> = {}): ArrangementViewport => ({
 const loop: LoopRegion = { enabled: false, startBar: 1, endBar: 5 }
 const markers: readonly Marker[] = []
 const tracks: readonly Track[] = []
+const media: readonly MediaSource[] = []
+const patterns: readonly MidiPattern[] = []
 const transport = { bpm: 120, numerator: 4, denominator: 4 }
 const fixedOne = { mode: "fixed", bars: 1 } as const
 
@@ -41,6 +49,8 @@ describe("arrangement scene store", () => {
       markers,
       loop,
       tracks,
+      media,
+      patterns,
     })
     const previous = store.get().grid
     store.setViewport(vp({ pxPerBar: 128 }))
@@ -71,7 +81,7 @@ describe("arrangement scene store", () => {
     const listener = vi.fn()
     const detach = store.subscribe(listener)
     store.setViewport(vp({ scrollX: 32 }))
-    store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks })
+    store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks, media, patterns })
     detach()
     store.setViewport(vp({ scrollX: 64 }))
     expect(listener).toHaveBeenCalledTimes(2)
@@ -80,9 +90,9 @@ describe("arrangement scene store", () => {
   it("treats identical track and marker references as unchanged music", () => {
     const store = createSceneStore()
     const r0 = store.get().revision
-    store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks })
+    store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks, media, patterns })
     const r1 = store.get().revision
-    store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks })
+    store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks, media, patterns })
     expect(store.get().revision).toBe(r1)
     store.setMusic({
       bars: 128,
@@ -91,6 +101,8 @@ describe("arrangement scene store", () => {
       markers,
       loop,
       tracks,
+      media,
+      patterns,
     })
     expect(store.get().revision).toBe(r1 + 1)
     expect(store.get().revision).toBeGreaterThan(r0)
@@ -98,7 +110,7 @@ describe("arrangement scene store", () => {
 
   it("keeps transient gesture tracks out of the durable music update", () => {
     const store = createSceneStore()
-    store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks })
+    store.setMusic({ bars: 128, grid: fixedOne, transport, markers, loop, tracks, media, patterns })
     const preview: Track[] = [
       {
         id: "preview",
@@ -124,10 +136,33 @@ describe("arrangement scene store", () => {
       tracks: preview,
     })
     expect(store.get().tracks).toBe(preview)
-    store.setMusic({ bars: 144, grid: fixedOne, transport, markers, loop, tracks })
+    store.setMusic({ bars: 144, grid: fixedOne, transport, markers, loop, tracks, media, patterns })
     expect(store.get().tracks).toBe(preview)
     store.setProjectPreview(null)
     expect(store.get().tracks).toBe(tracks)
     expect(store.get().previewTracks).toBeNull()
+  })
+  it("invalidates previews for shared-note edits without replacing tracks", () => {
+    const store = createSceneStore()
+    const original: MidiPattern[] = [{ id: "shared", notes: [], loopBars: 1 }]
+    store.setMusic({ ...store.get(), patterns: original })
+    const musicTracks = store.get().tracks
+    const listener = vi.fn()
+    store.subscribe(listener)
+    const edited: MidiPattern[] = [
+      {
+        ...original[0],
+        notes: [{ pitch: 67, startBeat: 1, lengthBeats: 0.5, velocity: 100 }],
+      },
+    ]
+    store.setMusic({ ...store.get(), patterns: edited })
+    expect(store.get().patterns).toBe(edited)
+    expect(store.get().tracks).toBe(musicTracks)
+    expect(listener).toHaveBeenCalledTimes(1)
+    store.setMusic({ ...store.get(), patterns: edited })
+    expect(listener).toHaveBeenCalledTimes(1)
+    store.setMusic({ ...store.get(), patterns: original })
+    expect(store.get().patterns).toBe(original)
+    expect(listener).toHaveBeenCalledTimes(2)
   })
 })

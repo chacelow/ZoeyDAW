@@ -1,11 +1,11 @@
-import { clampAutomationValue } from "@/pages/project/model/automation-curve"
+import { clampAutomationValue } from "@zoeydaw/project-core/automation-curve"
 import { snapBar } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
 import { beginProjectPreview, finishProjectPreview } from "../project-preview"
 import { automationBar } from "./geometry"
 import { previewAutomation, sortedPoints } from "./preview"
 import type { AutomationRow } from "./geometry"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
-import type { AutomationPoint } from "@/pages/project/model/types"
+import type { AutomationPoint } from "@zoeydaw/project-core/types"
 
 export function pointGesture(
   context: InteractionContext,
@@ -19,7 +19,8 @@ export function pointGesture(
   const existing =
     selection.kind === "automation" &&
     selection.trackId === row.track.id &&
-    selection.laneId === row.laneId
+    selection.laneId === row.laneId &&
+    selection.placement === row.placement
       ? selection.pointIds
       : []
   const ids = pointer.shiftKey
@@ -31,7 +32,13 @@ export function pointGesture(
       : [point.id]
   context.scene.setTargetSelection(
     ids.length
-      ? { kind: "automation", trackId: row.track.id, laneId: row.laneId, pointIds: ids }
+      ? {
+          kind: "automation",
+          trackId: row.track.id,
+          laneId: row.laneId,
+          placement: row.placement,
+          pointIds: ids,
+        }
       : { kind: "none" }
   )
   const originBar = automationBar(context.scene.get(), pointer.x)

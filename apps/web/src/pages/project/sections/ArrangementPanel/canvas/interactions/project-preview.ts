@@ -1,4 +1,5 @@
-import type { LoopRegion, Marker, ProjectEditToken, Track } from "@/pages/project/model/types"
+import { arrangementViewProjection } from "@/pages/project/layout"
+import type { LoopRegion, Marker, ProjectEditToken, Track } from "@zoeydaw/project-core/types"
 import type { InteractionContext } from "./types"
 
 const edits = new WeakMap<InteractionContext, ProjectEditToken>()
@@ -16,15 +17,32 @@ function tokenFor(context: InteractionContext): ProjectEditToken {
 export function synchronizeProjectScene(context: InteractionContext): void {
   const state = context.getState()
   const scene = context.scene.get()
+  const projected = arrangementViewProjection(
+    state.document.tracks,
+    state.workspace.arrangementView
+  )
   context.scene.setMusic({
     bars: scene.bars,
     grid: scene.grid,
     transport: state.document.transport,
-    tracks: state.document.tracks,
+    tracks: projected.tracks,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
+    rulerFormat: state.workspace.rulerFormat,
   })
-  context.scene.setProjectPreview(state.session.preview)
+  context.scene.setProjectPreview(
+    state.session.preview?.kind === "tracks"
+      ? {
+          ...state.session.preview,
+          tracks: arrangementViewProjection(
+            state.session.preview.tracks,
+            state.workspace.arrangementView
+          ).tracks,
+        }
+      : state.session.preview
+  )
   if (state.session.preview?.kind === "tracks") {
     return
   }

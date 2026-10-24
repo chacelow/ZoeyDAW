@@ -11,3 +11,6 @@ apps/web/src/assets
 packages/ui/src/theme/theme-presets.ts
 packages/ui/src/controls/metrics/generated.css
 pnpm-lock.yaml
+packages/project-core/src/realtime/protocol.generated.ts
+crates/engine/native/vendor/
+third_party/

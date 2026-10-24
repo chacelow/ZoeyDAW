@@ -1,16 +1,19 @@
-import { uniqueId } from "@/pages/project/model/reducers"
-import { projectClipMove } from "@/pages/project/model/clip-edits"
+import { createTrack, uniqueId } from "@zoeydaw/project-core/reducers"
+import { visibleTracks } from "@zoeydaw/project-core/types"
+import { DEFAULT_TRACK_HEIGHT, arrangementViewProjection } from "@/pages/project/layout"
+import { projectClipMove } from "@zoeydaw/project-core/clip-edits"
 import {
-  layoutTrackRows,
+  layoutTrackRowsForViewport,
+  dropZoneTop,
   arrangementBodyTop,
   arrangementBodyBottom,
   pinnedTrackHeight,
 } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { barAtX, snappedBar } from "../coordinates"
 import { beginProjectPreview, finishProjectPreview, setTracksPreview } from "../project-preview"
-import type { ClipMoveIdentity, ClipMovePlan } from "@/pages/project/model/clip-edits"
+import type { ClipMoveIdentity, ClipMovePlan } from "@zoeydaw/project-core/clip-edits"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
-import type { Track } from "@/pages/project/model/types"
+import type { Track } from "@zoeydaw/project-core/types"
 
 export function createMoveGesture(
   context: InteractionContext,
@@ -47,6 +50,22 @@ export function createMoveGesture(
       return copy
     },
   }
+  const lanes = source.filter(item => item.kind === "audio" || item.kind === "midi")
+  const chosen = new Set(ids)
+  const selectedLanes = lanes.flatMap((lane, index) =>
+    lane.clips.some(clip => chosen.has(clip.id)) ? [index] : []
+  )
+  const firstLane = Math.min(...selectedLanes)
+  const lastLane = Math.max(...selectedLanes)
+  const newTracks = lanes
+    .slice(firstLane, lastLane + 1)
+    .map(lane =>
+      createTrack(lane.kind === "audio" ? "audio" : "midi", source, undefined, DEFAULT_TRACK_HEIGHT)
+    )
+  const newAnchor = newTracks[lanes.findIndex(lane => lane.id === track.id) - firstLane]
+  const extended = [...source]
+  const pinnedIndex = extended.findIndex(item => item.kind === "return" || item.kind === "main")
+  extended.splice(pinnedIndex === -1 ? extended.length : pinnedIndex, 0, ...newTracks)
   let lastPlan: ClipMovePlan | null = null
   let lastCopy = pointer.altKey
   let isValid = true
@@ -58,25 +77,44 @@ export function createMoveGesture(
     commitOnInterrupt: true,
     move(next) {
       const scene = context.scene.get()
+      const state = context.getState()
+      const display = { mode: scene.automationMode, lanes: scene.automationLanes }
+      const tracks = visibleTracks(
+        arrangementViewProjection(source, state.workspace.arrangementView).tracks
+      )
       const pinnedTop =
-        arrangementBodyBottom(scene.viewport.height) - pinnedTrackHeight(scene.tracks)
-      const row = layoutTrackRows(scene).find(row => {
+        arrangementBodyBottom(scene.viewport.height) - pinnedTrackHeight(tracks, display)
+      const row = layoutTrackRowsForViewport(
+        tracks,
+        scene.viewport.scrollY,
+        scene.viewport.height,
+        display
+      ).find(row => {
         return (
           next.y >= row.top &&
-          next.y < row.top + row.height &&
+          next.y < row.top + row.contentHeight &&
           next.y >= arrangementBodyTop() &&
           (row.track.kind === "return" || row.track.kind === "main"
             ? next.y >= pinnedTop
             : next.y < pinnedTop)
         )
       })
-      if (!row || (row.track.kind !== "audio" && row.track.kind !== "midi")) {
+      const emptyTop = Math.max(
+        arrangementBodyTop(),
+        dropZoneTop(tracks, scene.viewport.scrollY, display)
+      )
+      const newTrackTarget = !row && next.y >= emptyTop && next.y < pinnedTop
+      const targetTrackId = newTrackTarget ? newAnchor?.id : row?.track.id
+      if (
+        !targetTrackId ||
+        (!newTrackTarget && row?.track.kind !== "audio" && row?.track.kind !== "midi")
+      ) {
         isValid = false
         return
       }
       const delta = snappedBar(context, barAtX(context, next.x) - offset) - anchor.startBar
       if (
-        lastPlan?.targetTrackId === row.track.id &&
+        lastPlan?.targetTrackId === targetTrackId &&
         lastPlan.deltaBars === delta &&
         lastCopy === next.altKey
       ) {
@@ -84,13 +122,14 @@ export function createMoveGesture(
         return
       }
       const plan = projectClipMove(
-        source,
+        newTrackTarget ? extended : source,
         ids,
-        row.track.id,
+        targetTrackId,
         delta,
         next.altKey,
         context.getState().workspace.automationMode,
-        identity
+        identity,
+        state.document.transport.bpm
       )
       if (!plan) {
         isValid = false
@@ -105,7 +144,10 @@ export function createMoveGesture(
         return
       }
       lastPlan = plan
-      context.scene.setClipDrag({ source, ids: new Set(plan.selectedIds) })
+      context.scene.setClipDrag({
+        source: newTrackTarget ? extended : source,
+        ids: new Set(plan.selectedIds),
+      })
       setTracksPreview(context, plan.tracks)
     },
     finish(cancelled) {

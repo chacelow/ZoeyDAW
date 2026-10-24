@@ -4,6 +4,7 @@ import {
 } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import type { ArrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import type { GridTokens } from "../grid"
+import { formatRulerTime } from "./format"
 
 export function paintTimeRuler(
   context: CanvasRenderingContext2D,
@@ -15,10 +16,12 @@ export function paintTimeRuler(
   context.fillStyle = tokens.ruler
   context.fillRect(0, top, width, TIME_RULER_HEIGHT)
   context.strokeStyle = tokens.line
+  context.lineWidth = 2
   context.beginPath()
-  context.moveTo(0, top + 0.5)
-  context.lineTo(width, top + 0.5)
+  context.moveTo(0, top + 1)
+  context.lineTo(width, top + 1)
   context.stroke()
+  context.lineWidth = 1
   const { bpm, numerator, denominator } = scene.transport
   const secondsPerBar = (60 / bpm) * numerator * (4 / denominator)
   if (!(secondsPerBar > 0) || !Number.isFinite(secondsPerBar)) {
@@ -34,19 +37,30 @@ export function paintTimeRuler(
   context.fillStyle = tokens.mutedForeground
   context.font = "10px ui-sans-serif, system-ui, sans-serif"
   context.textBaseline = "middle"
+  // Minor quarter ticks between labelled positions, then the labelled ticks.
+  context.beginPath()
+  context.strokeStyle = tokens.rulerLine
+  for (let seconds = first; seconds <= last; seconds += timeStep) {
+    for (let quarter = 1; quarter < 4; quarter++) {
+      const minor = seconds + (timeStep * quarter) / 4
+      if (minor > last) {
+        continue
+      }
+      const x = Math.round((minor / secondsPerBar) * pxPerBar - scrollX)
+      context.moveTo(x + 0.5, top + 1)
+      context.lineTo(x + 0.5, top + 3)
+    }
+  }
+  context.stroke()
   for (let seconds = first; seconds <= last; seconds += timeStep) {
     const x = Math.round((seconds / secondsPerBar) * pxPerBar - scrollX)
     context.beginPath()
     context.moveTo(x + 0.5, top + 1)
-    context.lineTo(x + 0.5, top + 5)
-    context.strokeStyle = tokens.line
+    context.lineTo(x + 0.5, top + 7)
+    context.strokeStyle = tokens.rulerLine
     context.stroke()
-    const millis = Math.max(0, Math.round(seconds * 1000))
-    const minutes = Math.floor(millis / 60_000)
-    const rest = Math.floor((millis % 60_000) / 1000)
-    const fractional = millis % 1000
     context.fillText(
-      `${minutes}:${String(rest).padStart(2, "0")}${timeStep < 1 ? `.${String(fractional).padStart(3, "0")}` : ""}`,
+      formatRulerTime(seconds, scene.rulerFormat ?? "time", timeStep < 1),
       x + 3,
       top + TIME_RULER_HEIGHT / 2 + 1
     )

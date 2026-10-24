@@ -1,4 +1,5 @@
-import { uniqueId } from "@/pages/project/model/reducers"
+import { sameAutomationTarget } from "@zoeydaw/project-core/automation-target"
+import { uniqueId } from "@zoeydaw/project-core/reducers"
 import { clipboardMemory } from "@/pages/project/adapters/clipboard-memory"
 import { sortedPoints } from "./preview"
 import { AUTOMATION_MIME, parseAutomationClipboard } from "./clipboard"
@@ -82,8 +83,8 @@ export function automationClipboardActions(context: InteractionContext) {
     }
     const data = JSON.stringify({
       kind: "automation",
-      version: 1,
-      parameter: lane.parameter,
+      version: 2,
+      target: lane.target,
       points,
     })
     clipboardMemory.write(data)
@@ -125,7 +126,7 @@ export function automationClipboardActions(context: InteractionContext) {
         .getState()
         .document.tracks.find(track => track.id === selection.trackId)
         ?.automation.find(item => item.id === selection.laneId)
-      if (!lane || lane.parameter !== payload.parameter) {
+      if (!lane || !sameAutomationTarget(lane.target, payload.target)) {
         return true
       }
       const anchor = lane.points.find(point => selection.pointIds.includes(point.id))?.bar ?? 1
@@ -149,6 +150,7 @@ export function automationClipboardActions(context: InteractionContext) {
         kind: "automation",
         trackId: selection.trackId,
         laneId: selection.laneId,
+        placement: selection.placement,
         pointIds: points.map(point => point.id),
       })
       return true

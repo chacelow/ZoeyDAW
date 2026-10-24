@@ -1,4 +1,4 @@
-import { visibleTracks } from "@/pages/project/model/types"
+import { arrangementViewProjection } from "@/pages/project/layout"
 import {
   arrangementBodyBottom,
   arrangementBodyTop,
@@ -32,8 +32,17 @@ export function createAutoScroll(
         : x > scene.viewport.width - edge
           ? Math.min(1, (x - scene.viewport.width + edge) / edge)
           : 0
-    const tracks = visibleTracks(context.getState().document.tracks)
-    const bottom = arrangementBodyBottom(scene.viewport.height) - pinnedTrackHeight(tracks)
+    const state = context.getState()
+    const tracks = arrangementViewProjection(
+      state.document.tracks,
+      state.workspace.arrangementView
+    ).visible
+    const bottom =
+      arrangementBodyBottom(scene.viewport.height) -
+      pinnedTrackHeight(tracks, {
+        mode: scene.automationMode,
+        lanes: scene.automationLanes,
+      })
     const top = arrangementBodyTop()
     const ySpeed =
       axis === "horizontal" || bottom <= top || y >= bottom
@@ -48,7 +57,10 @@ export function createAutoScroll(
     const xMax = Math.max(0, scene.bars * scene.viewport.pxPerBar - scene.viewport.width)
     const nextX = Math.min(xMax, Math.max(0, scene.viewport.scrollX + xSpeed * elapsed * 0.75))
     const nextY = Math.min(
-      maxTrackScrollY(tracks, scene.viewport.height),
+      maxTrackScrollY(tracks, scene.viewport.height, {
+        mode: scene.automationMode,
+        lanes: scene.automationLanes,
+      }),
       Math.max(0, scene.viewport.scrollY + ySpeed * elapsed * 0.6)
     )
     if (nextX !== scene.viewport.scrollX || nextY !== scene.viewport.scrollY) {

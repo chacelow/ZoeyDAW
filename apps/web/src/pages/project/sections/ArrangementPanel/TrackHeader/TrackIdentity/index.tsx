@@ -3,8 +3,8 @@ import { useTranslation } from "@zoeymind/i18n"
 import { IconSlot } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
 import { TrackNameInput } from "./NameInput"
-import { AutomationSelector } from "./AutomationSelector"
-import type { Track } from "@/pages/project/model/types"
+import { AddAutomationLane, AutomationSelector } from "./AutomationSelector"
+import type { Track } from "@zoeydaw/project-core/types"
 
 export function TrackIdentity({
   track,
@@ -22,6 +22,7 @@ export function TrackIdentity({
   return (
     <section
       className="arrangement-track-identity-body arrangement-track-controls flex h-full min-w-0 flex-1 flex-col"
+      data-automation={automation || undefined}
       style={{
         backgroundColor: selected
           ? "var(--arrangement-clip-selected)"
@@ -47,8 +48,13 @@ export function TrackIdentity({
         ) : (
           <span className="min-w-0 truncate text-xs font-medium">{track.name}</span>
         )}
+        {!track.collapsed && automation ? <AddAutomationLane track={track} /> : null}
       </div>
-      {!track.collapsed && automation ? <AutomationSelector track={track} /> : null}
+      {!track.collapsed && automation ? (
+        <div className="arrangement-track-identity-lower min-h-0 flex-1">
+          <AutomationSelector track={track} />
+        </div>
+      ) : null}
     </section>
   )
 }

@@ -1,13 +1,25 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render } from "@testing-library/react"
-import { afterEach, beforeEach, expect, it } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { Button } from "@zoeymind/ui"
-import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import {
+  hydrateProject,
+  projectActions,
+  projectFiles,
+  useProjectState,
+} from "@/pages/project/adapters"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { useArrangementKeyboard } from "./useArrangementKeyboard"
 
-function Keys({ role = "button" }: { readonly role?: "button" | "menuitem" }) {
-  useArrangementKeyboard()
+function Keys({
+  role = "button",
+  snapshots = true,
+}: {
+  readonly role?: "button" | "menuitem"
+  readonly snapshots?: boolean
+}) {
+  useArrangementKeyboard({ snapshots })
   const automation = useProjectState(state => state.workspace.automationMode)
   return (
     <>
@@ -37,8 +49,8 @@ function Keys({ role = "button" }: { readonly role?: "button" | "menuitem" }) {
 beforeEach(() => {
   hydrateProject(
     JSON.stringify({
-      version: 2,
-      document: createMockDocument(),
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
       workspace: {
         ...createMockWorkspace(),
         automationMode: false,
@@ -95,4 +107,114 @@ it("leaves Enter and modified Space to their existing owners", () => {
   expect(fireEvent.keyDown(button, { key: " ", code: "Space", ctrlKey: true })).toBe(true)
   expect(document.activeElement).toBe(button)
   expect(useProjectState.getState().session.playing).toBe(false)
+})
+
+it("keeps transport active while hidden Arrangement ignores editing shortcuts", () => {
+  render(
+    <div data-workspace-panel="arrangement" data-workspace-visible="false">
+      <Keys />
+    </div>
+  )
+  fireEvent.keyDown(window, { key: "a", code: "KeyA" })
+  expect(useProjectState.getState().workspace.automationMode).toBe(false)
+  fireEvent.keyDown(window, { key: " ", code: "Space" })
+  expect(useProjectState.getState().session.playing).toBe(true)
+  fireEvent.keyDown(window, { key: " ", code: "Space" })
+  expect(useProjectState.getState().session.playing).toBe(false)
+})
+
+it("does not seek the project when navigating workspace tabs", () => {
+  const view = render(
+    <>
+      <Keys />
+      <div role="tablist" aria-label="Workspace">
+        <button type="button" role="tab" aria-selected="true">
+          Browser
+        </button>
+      </div>
+    </>
+  )
+  const tab = view.getByRole("tab")
+  const position = useProjectState.getState().session.position
+  tab.focus()
+  fireEvent.keyDown(tab, { key: "ArrowRight", code: "ArrowRight" })
+  expect(useProjectState.getState().session.position).toEqual(position)
+  const bpm = useProjectState.getState().document.transport.bpm
+  projectActions.setBpm(bpm + 10)
+  fireEvent.keyDown(tab, { key: "z", code: "KeyZ", metaKey: true })
+  expect(useProjectState.getState().document.transport.bpm).toBe(bpm)
+  fireEvent.keyDown(tab, { key: "z", code: "KeyZ", metaKey: true, shiftKey: true })
+  expect(useProjectState.getState().document.transport.bpm).toBe(bpm + 10)
+  fireEvent.keyDown(tab, { key: " ", code: "Space" })
+  expect(useProjectState.getState().session.playing).toBe(true)
+})
+
+it("routes grid shortcuts only from Arrangement surfaces or unedited background", () => {
+  const view = render(
+    <>
+      <Keys />
+      <div data-workspace-panel="arrangement">
+        <div data-arrangement-panel>
+          <div role="application" data-arrangement-canvas-host tabIndex={0} aria-label="Canvas" />
+          <div className="project-arrangement-toolbar">
+            <button type="button">Grid</button>
+          </div>
+        </div>
+      </div>
+      <div data-transport-header>
+        <button type="button">Transport</button>
+      </div>
+      <div data-clip-editor>
+        <button type="button">Clip</button>
+      </div>
+      <div role="menu">
+        <button type="button">Menu</button>
+      </div>
+      <div role="tablist">
+        <button type="button" role="tab">
+          Browser
+        </button>
+      </div>
+    </>
+  )
+  const before = useProjectState.getState().document
+  for (const element of [
+    view.getByLabelText("Search"),
+    view.getByText("Clip"),
+    view.getByText("Menu"),
+    view.getByRole("tab"),
+  ]) {
+    expect(fireEvent.keyDown(element, { code: "Digit3", key: "3", metaKey: true })).toBe(true)
+  }
+  expect(useProjectState.getState().workspace.grid.triplet).toBeUndefined()
+  fireEvent.keyDown(view.getByLabelText("Canvas"), { code: "Digit3", key: "3", metaKey: true })
+  expect(useProjectState.getState().workspace.grid.triplet).toBe(true)
+  fireEvent.keyDown(view.getByText("Grid"), { code: "Digit4", key: "4", ctrlKey: true })
+  expect(useProjectState.getState().workspace.snap).toBe(false)
+  fireEvent.keyDown(view.getByText("Transport"), { code: "Digit5", key: "5", metaKey: true })
+  expect(useProjectState.getState().workspace.grid.mode).toBe("fixed")
+  expect(useProjectState.getState().document).toBe(before)
+})
+it("consumes save shortcuts without native file operations in isolated previews", () => {
+  const save = vi.spyOn(projectFiles, "save")
+  const saveAs = vi.spyOn(projectFiles, "saveAs")
+  render(<Keys snapshots={false} />)
+  expect(fireEvent.keyDown(window, { key: "s", ctrlKey: true })).toBe(false)
+  expect(fireEvent.keyDown(window, { key: "s", metaKey: true, shiftKey: true })).toBe(false)
+  expect(save).not.toHaveBeenCalled()
+  expect(saveAs).not.toHaveBeenCalled()
+  save.mockRestore()
+  saveAs.mockRestore()
+})
+
+it("routes Cmd/Ctrl+S and Shift+S to disk actions, including text inputs", () => {
+  const save = vi.spyOn(projectFiles, "save").mockResolvedValue(null)
+  const saveAs = vi.spyOn(projectFiles, "saveAs").mockResolvedValue(null)
+  const view = render(<Keys />)
+  fireEvent.keyDown(view.getByLabelText("Search"), { key: "s", ctrlKey: true })
+  fireEvent.keyDown(window, { key: "S", metaKey: true, shiftKey: true })
+  expect(save).toHaveBeenCalledOnce()
+  expect(saveAs).toHaveBeenCalledOnce()
+  save.mockRestore()
+  saveAs.mockRestore()
 })

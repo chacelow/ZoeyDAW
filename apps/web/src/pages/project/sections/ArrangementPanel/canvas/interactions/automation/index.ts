@@ -1,4 +1,4 @@
-import { effectiveDrawMode } from "@/pages/project/model/interaction-mode"
+import { effectiveDrawMode } from "@zoeydaw/project-core/interaction-mode"
 import { snapBar } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
 import { finishProjectPreview, synchronizeProjectScene } from "../project-preview"
 import { automationBar, automationValue } from "./geometry"
@@ -89,6 +89,7 @@ export function createAutomationInteractions(context: InteractionContext): Canva
         return {
           kind: "automation-point",
           trackId: hit.row.track.id,
+          placement: hit.row.placement,
           laneId: hit.row.laneId,
           pointId: hit.point.id,
         }

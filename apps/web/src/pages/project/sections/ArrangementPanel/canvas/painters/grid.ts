@@ -3,10 +3,11 @@ Grid background, subdivisions, and track-local time selection. Rulers paint sepa
 */
 import {
   BAR_RULER_HEIGHT,
+  PATTERN_RULER_HEIGHT,
   TIME_RULER_HEIGHT,
   layoutTrackRows,
   isPinnedTrack,
-  pinnedTrackHeight,
+  pinnedTopFor,
 } from "../layout"
 import { paintRulers } from "./rulers"
 import { numberedRulerPlan } from "./rulers/loop"
@@ -19,9 +20,11 @@ export interface GridTokens {
   surfaceAlt: string
   ruler: string
   line: string
+  rulerLine: string
   gridBar: string
   gridMinor: string
   gridMajor: string
+  guide: string
   primary: string
 }
 
@@ -38,9 +41,15 @@ export function paintGrid(
 
   const gridTop = BAR_RULER_HEIGHT
   const gridBottom = Math.max(gridTop, height - TIME_RULER_HEIGHT)
-  const gridHeight = gridBottom - gridTop
+  // The striped background and vertical grid also run behind the loop and
+  // locator bands, so the whole ruler area shares one grid backdrop.
+  const backdropTop = PATTERN_RULER_HEIGHT
+  const backdropHeight = gridBottom - backdropTop
   const rows = layoutTrackRows(scene)
-  const pinnedTop = gridBottom - pinnedTrackHeight(scene.tracks)
+  const pinnedTop = pinnedTopFor(scene.tracks, height, {
+    mode: scene.automationMode,
+    lanes: scene.automationLanes,
+  })
 
   context.setTransform(dpr, 0, 0, dpr, 0, 0)
   context.clearRect(0, 0, width, height)
@@ -50,7 +59,7 @@ export function paintGrid(
 
   // 1. Alternating per-bar background (bar 1 light, bar 2 alt, bar 3 light, ...).
   context.fillStyle = tokens.surface
-  context.fillRect(0, gridTop, width, gridHeight)
+  context.fillRect(0, backdropTop, width, backdropHeight)
   context.fillStyle = tokens.surfaceAlt
   const firstBar = Math.floor(visibleStartBar)
   const lastBar = Math.ceil(visibleEndBar)
@@ -65,11 +74,20 @@ export function paintGrid(
       if (w <= 0) {
         continue
       }
-      context.fillRect(left, gridTop, w, gridHeight)
+      context.fillRect(left, backdropTop, w, backdropHeight)
     }
   }
 
-  paintTimeGrid(context, scene, tokens.gridMinor, tokens.gridMajor, gridTop, gridBottom, 0, width)
+  paintTimeGrid(
+    context,
+    scene,
+    tokens.gridMinor,
+    tokens.gridMajor,
+    backdropTop,
+    gridBottom,
+    0,
+    width
+  )
 
   paintRulers(context, scene, tokens)
   context.fillStyle = tokens.primary
@@ -87,13 +105,15 @@ export function paintGrid(
   context.globalAlpha = 1
 
   // Time selection belongs to its originating tracks, not the whole canvas.
+  // A single clicked position is a degenerate selection: it has no fill but
+  // still marks that position with triangles above and below the grid.
   const sel = scene.timeSelection
-  if (sel && sel.endBar > sel.startBar && sel.trackIds.length) {
+  if (sel && sel.trackIds.length) {
     const x0 = (sel.startBar - 1) * pxPerBar - scrollX
     const x1 = (sel.endBar - 1) * pxPerBar - scrollX
     const clampedX0 = Math.max(0, x0)
     const clampedX1 = Math.min(width, x1)
-    if (clampedX1 > clampedX0) {
+    if (sel.endBar > sel.startBar && clampedX1 > clampedX0) {
       const selectedIds = new Set(sel.trackIds)
       for (const row of rows) {
         if (!selectedIds.has(row.track.id)) {
@@ -108,10 +128,10 @@ export function paintGrid(
           continue
         }
         context.fillStyle = tokens.primary
-        context.globalAlpha = 0.14
+        context.globalAlpha = sel.emphasis === "subtle" ? 0.07 : 0.14
         context.fillRect(clampedX0, top, clampedX1 - clampedX0, bottom - top)
         context.strokeStyle = tokens.primary
-        context.globalAlpha = 0.6
+        context.globalAlpha = sel.emphasis === "subtle" ? 0.3 : 0.6
         context.beginPath()
         context.moveTo(x0 + 0.5, top)
         context.lineTo(x0 + 0.5, bottom)
@@ -121,6 +141,35 @@ export function paintGrid(
       }
       context.globalAlpha = 1
     }
+    // Small half-triangles sit outside the grid: the top one above the first
+    // row (apex pointing down) and the bottom one below the last row (apex
+    // pointing up). A single clicked position therefore shows both halves at
+    // the same bar, while a range joins them into a full triangle per edge.
+    context.fillStyle = tokens.primary
+    context.globalAlpha = 0.85
+    const size = 5
+    for (const [x, direction] of [
+      [x0, -1],
+      [x1, 1],
+    ] as const) {
+      if (x < -size || x > width + size) {
+        continue
+      }
+      const half = (size / 2) * direction
+      context.beginPath()
+      context.moveTo(x, gridTop)
+      context.lineTo(x + half, gridTop - size)
+      context.lineTo(x, gridTop - size)
+      context.closePath()
+      context.fill()
+      context.beginPath()
+      context.moveTo(x, gridBottom)
+      context.lineTo(x + half, gridBottom + size)
+      context.lineTo(x, gridBottom + size)
+      context.closePath()
+      context.fill()
+    }
+    context.globalAlpha = 1
   }
 }
 
@@ -141,7 +190,6 @@ export function paintTimeGrid(
   const cellPx = cellBars * pxPerBar
   const majorPx = majorBars * pxPerBar
   context.save()
-  context.lineWidth = 1
   if (cellPx >= 2) {
     const firstCell = Math.max(0, Math.ceil((scrollX + left) / cellPx))
     const lastCell = Math.min(
@@ -149,6 +197,7 @@ export function paintTimeGrid(
       Math.floor((scrollX + right) / cellPx)
     )
     context.beginPath()
+    context.lineWidth = 1
     context.strokeStyle = minor
     context.globalAlpha = 0.55 * opacity
     for (let cell = firstCell; cell <= lastCell; cell++) {
@@ -168,6 +217,7 @@ export function paintTimeGrid(
     Math.floor((scrollX + right) / majorPx)
   )
   context.beginPath()
+  context.lineWidth = 2
   context.strokeStyle = major
   context.globalAlpha = opacity
   for (let tick = firstMajor; tick <= lastMajor; tick++) {

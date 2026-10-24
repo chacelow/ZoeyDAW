@@ -1,0 +1,161 @@
+{
+  "contractSha256": "3052ba066013def3a5a76e032bf671c4fedfdd4d3454d3dba0a50c31f60950c0",
+  "formattedContractSha256": "a8c41d1b4ca2814ef3dd8be48a87a66d7e901d4e5808bca704886c4834e9e413",
+  "contractFormatting": "Prettier whitespace only; parsed values asserted identical to the pre-format frozen contract",
+  "userApprovedExecutionRevision": {
+    "decidedAt": "2026-10-22",
+    "decision": "Mac first; Windows implementation retained, runtime tests and verification deferred",
+    "contractSha256BeforeFormatting": "ab6d7f33d91ee35443448227da3a1092ec6119469d6da6605c6102e4b3f539a7",
+    "numericThresholdsAssertedUnchanged": true
+  },
+  "syntheticManifestSha256": "1f955bf26c5178fc60a814ac663c18524e214e57b217caa8895af34f8e927725",
+  "formatManifestSha256": "e742ed5d9593bbd48e797c069033f235884c84df1e98f8d7b4f0940ff2906032",
+  "hardware": {
+    "cpu": "Apple M4",
+    "memoryGiB": 16,
+    "os": "macOS 26.1 build 25B78",
+    "devicesDiscoveredOnly": [
+      "Topping E2x2 6in/6out USB 48000Hz",
+      "Mac mini Speakers 2out 48000Hz"
+    ],
+    "windowsVerified": false
+  },
+  "tools": {
+    "rubberband": "4.0.0",
+    "ffmpeg": "9.0.2",
+    "compiler": "AppleClang 17.0.0.17000603",
+    "rustc": "1.97.1"
+  },
+  "firstComparison": {
+    "path": "/tmp/zoeydaw-audio-validation-20261022/comparison-round2/results.json",
+    "scope": "offline CLI, synthetic WAV only, 10 timed repetitions after warmup",
+    "cases": 24,
+    "rubberbandR3SyntheticPasses": 12,
+    "signalsmithDefaultSyntheticPasses": 4,
+    "signalsmithDefaultStereoResidualFailures": 8,
+    "signalsmithFloatProbeStereoDifferencePeak": 0.0008043944835662842,
+    "signalsmithFloatProbeVerdict": "NOT_VERIFIED",
+    "freezeSelection": false
+  },
+  "floatProbe": {
+    "path": "docs/research/audio-stretch-float-results-2026-10-22.json",
+    "scope": "Signalsmith exact float32 WAV, single run per case, not a performance comparison",
+    "cases": 12,
+    "syntheticPasses": 6,
+    "stereoResidualFailures": 6,
+    "freezeSelection": false
+  },
+  "engineProbes": {
+    "path": "docs/research/audio-engine-probe-results-2026-10-22.json",
+    "signalPath": "docs/research/audio-engine-signal-results-2026-10-22.json",
+    "tracktionOriginalRatePasses": 9,
+    "rustOriginalRatePasses": 9,
+    "tracktionSoundTouchTempo12SyntheticPasses": 9,
+    "scope": "Offline synthetic rendering; different responsibilities and timing boundaries; not an engine speed ranking",
+    "freezeSelection": false
+  },
+  "decoderCorpus": {
+    "path": "docs/research/audio-decoder-corpus-results-2026-10-22.json",
+    "formatsDecoded": 7,
+    "truncatedInputRejected": true
+  },
+  "storageAndLifecycle": {
+    "nativeTestsPassed": 26,
+    "webTestsPassed": 621,
+    "desktopImportSaveCollectReopenMissingRelinkSave": true,
+    "desktopCloseDirtyCancelPreservesProcessAndEdit": true,
+    "sourceFingerprintUnchanged": true,
+    "windowsRuntimeVerified": false
+  },
+  "macNativeIntegration": {
+    "status": "NATIVE_DEVICE_SMOKE_PASSED_DESKTOP_UI_PENDING",
+    "engine": "Tracktion 877e39c0fe9f1c3e4a9d836f5f338688250875d7 / JUCE 7ff644f65d7daa1428c34b9738ebb5c449dc9172 / SoundTouch Better",
+    "cargoTestsPassed": 35,
+    "webTestsPassed": 649,
+    "webTypecheckPassed": true,
+    "webQualityCheckPassed": true,
+    "webBuildPassed": true,
+    "nativeProtocolAndNonzeroLoopRenderPassed": true,
+    "device": "E2x2 / CoreAudio",
+    "actualSampleRate": 48000,
+    "actualBufferFrames": 512,
+    "captureScope": "Engine output before physical device; not loopback",
+    "sourceBpm": 120,
+    "projectBpm": 144,
+    "measuredPositiveCrossingsHz": 440,
+    "measuredSignalRmsDb": -33.05304143593134,
+    "desktopUiVerified": false,
+    "realDeviceSmokePassed": [
+      "playback",
+      "seek",
+      "loop",
+      "MIDI device list refresh",
+      "raw audition concurrent with arrangement",
+      "sync quantized audition concurrent with arrangement",
+      "preview generation fencing",
+      "preview seek",
+      "lease replacement and old owner release",
+      "urgent stop"
+    ],
+    "capture": {
+      "path": "/tmp/zoeydaw-audio-validation-20261022/native-device/capture-round5.wav",
+      "frames": 348160,
+      "tailPeak": 0,
+      "rawPreviewFrames": 18944,
+      "rawPreviewTailPeak": 0,
+      "syncPreviewFrames": 99328
+    },
+    "callbackObservation": {
+      "callbackCount": 686,
+      "lateCallbackIntervals": 0,
+      "maxCallbackIntervalSeconds": 0.011210875,
+      "engineMeanSeconds": 0.000143108309038,
+      "engineMaxSeconds": 0.000630125,
+      "scope": "Short smoke only; not percentile timing or long-run performance acceptance"
+    },
+    "browser100kRealFiles": {
+      "scanSeconds": 2.599930208,
+      "firstPageMs": 53.08925,
+      "lastPageMs": 51.943792
+    },
+    "unresolved": [
+      "Desktop app not running; user must start or restart tauri:dev before actual UI acceptance"
+    ]
+  },
+  "browserCorrection": {
+    "contract": "Hierarchical inline file tree, no page controls; raw independent preview; tempo matching only at import",
+    "nativeTreeTestsPassed": 14,
+    "nativeTotalTestsPassed": 40,
+    "webTestsPassed": 649,
+    "tree100kRealFiles": {
+      "scanSeconds": 2.412304334,
+      "firstWindowMs": 50.896541,
+      "lastWindowMs": 53.55525
+    },
+    "realDeviceSmokePassed": [
+      "original-speed source-time progress",
+      "waveform seek starts after stop and end",
+      "preview remains audible with project Main muted at -160 dB",
+      "stale status and seek fencing"
+    ],
+    "tempoFixturesPassed": [
+      "rhythmic 120 BPM",
+      "440 Hz tone unknown",
+      "single transient unknown",
+      "authored 123 BPM ACID metadata"
+    ],
+    "desktopUiVerified": false,
+    "capturePath": "/tmp/zoeydaw-audio-validation-20261022/native-device/browser-raw-master-bypass.wav",
+    "captureScope": "Engine final output before physical device, not loopback"
+  },
+  "unverified": [
+    "musical corpus",
+    "blind listening",
+    "Live output comparison",
+    "realtime callback percentile and loaded timing",
+    "Windows runtime",
+    "device loopback latency",
+    "desktop Browser-to-playback UI integration",
+    "30 minute loaded playback"
+  ]
+}

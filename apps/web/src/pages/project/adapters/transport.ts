@@ -1,5 +1,5 @@
 import { useProjectState } from "../stores/useProjectState"
-import { reduceDocument, reduceWorkspace } from "../model/reducers"
+import { reduceDocument, reduceWorkspace } from "@zoeydaw/project-core/reducers"
 import { reconcileGridForMeterChange } from "./grid"
 import { document, get, session, workspace, setPreciseTransportBar } from "./context"
 import type {
@@ -9,7 +9,7 @@ import type {
   SessionState,
   TimeSelection,
   WorkspaceState,
-} from "../model/types"
+} from "@zoeydaw/project-core/types"
 
 export const transportActions = {
   setBpm(bpm: number) {
@@ -108,6 +108,7 @@ export const transportActions = {
     }
     session({
       playing: !current.playing,
+      ...(current.playing && { recording: false }),
       ...(current.insertionPoint && { position: positionAtBar(current.insertionPoint.bar) }),
     })
   },
@@ -124,7 +125,8 @@ export const transportActions = {
     })
   },
   toggleRecording() {
-    session({ recording: !get().session.recording })
+    const recording = !get().session.recording
+    session({ recording, ...(recording && { playing: true }) })
   },
   rewindToStart() {
     session({ insertionPoint: null, position: { bar: 1, beat: 1, sixteenth: 1 } })
@@ -135,6 +137,9 @@ export const transportActions = {
   setLink(link: boolean) {
     workspace(reduceWorkspace(get().workspace, { link }))
   },
+  setMetronome(metronome: boolean) {
+    workspace(reduceWorkspace(get().workspace, { metronome }))
+  },
   setProject(patch: Partial<Pick<DocumentState, "name" | "scaleRoot" | "scaleMode" | "groove">>) {
     document(reduceDocument(get().document, { type: "project", patch: structuredClone(patch) }))
   },
@@ -143,6 +148,20 @@ export const transportActions = {
       return
     }
     workspace(reduceWorkspace(get().workspace, { [mode]: enabled }))
+  },
+  setArrangementView(mode: keyof WorkspaceState["arrangementView"], enabled: boolean) {
+    const current = get().workspace
+    if (current.arrangementView[mode] === enabled) return
+    workspace(
+      reduceWorkspace(current, {
+        arrangementView: { ...current.arrangementView, [mode]: enabled },
+      })
+    )
+  },
+  setRulerFormat(format: WorkspaceState["rulerFormat"]) {
+    const current = get().workspace
+    if (current.rulerFormat === format) return
+    workspace(reduceWorkspace(current, { rulerFormat: format }))
   },
   setDrawModeOverride(value: boolean | null) {
     if (get().session.drawModeOverride === value) {
@@ -173,10 +192,12 @@ export const transportActions = {
     })
   },
   selectClips(ids: string[]) {
+    const selectedClipIds = [...new Set(ids)].filter(id =>
+      get().document.tracks.some(track => track.clips.some(clip => clip.id === id))
+    )
     session({
-      selectedClipIds: [...new Set(ids)].filter(id =>
-        get().document.tracks.some(track => track.clips.some(clip => clip.id === id))
-      ),
+      selectedClipIds,
+      editingClipId: selectedClipIds.length === 1 ? selectedClipIds[0] : null,
     })
   },
   setTimeSelection(selection: TimeSelection | null) {
@@ -185,7 +206,7 @@ export const transportActions = {
 }
 
 // Position doubles as the transport's high-precision bar, including fractional sixteenths.
-function positionAtBar(bar: number): Position {
+export function positionAtBar(bar: number): Position {
   const { numerator } = get().document.transport
   const beats = (Math.max(1, bar) - 1) * numerator
   const wholeBeats = Math.floor(beats)

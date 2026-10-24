@@ -1,53 +1,30 @@
 import { useEffect, useLayoutEffect, useRef } from "react"
-import { hasNativeCursor, moveWindowCursor } from "@/shared/native/cursor"
 import { projectActions } from "@/pages/project/adapters"
-import { minimapDragLeftEdge, minimapDragRightEdge, minimapDragZoom } from "./zoom"
+import {
+  minimapAnchor,
+  minimapEdgeZoom,
+  minimapFrame,
+  minimapHit,
+  minimapPan,
+  minimapZoom,
+} from "./zoom"
+import type { MinimapGeometry, MinimapMode } from "./zoom"
 import type { PointerEvent, RefObject } from "react"
 
-const PAN_DRAG_SCALE = 0.25
+export type { MinimapGeometry } from "./zoom"
+export { minimapFrame, minimapHit } from "./zoom"
 
-export interface MinimapGeometry {
-  bars: number
-  viewportWidth: number
-  pxPerBar: number
-  scrollX: number
-  minPxPerBar: number
-  maxPxPerBar: number
-  onNavigate: () => void
-}
-
-type Mode = "left" | "right" | "body" | "jump"
-interface Anchor {
-  mode: Exclude<Mode, "jump">
+type Anchor = {
   pointerId: number
-  originX: number
-  originY: number
   lastX: number
   lastY: number
-  dx: number
-  dy: number
-  width: number
-  geometry: MinimapGeometry
-  initialScrollX: number
-  zoomAnchorRatio: number
-  phase: "pressed" | "dragging"
-  lockPending: boolean
-  recentering: boolean
-  recenter: Promise<void> | null
-}
-
-export function minimapHit(x: number, width: number, geometry: MinimapGeometry): Mode {
-  const span = Math.min(geometry.bars, geometry.viewportWidth / geometry.pxPerBar)
-  const left = (geometry.scrollX / geometry.pxPerBar / geometry.bars) * width
-  const right = left + (span / geometry.bars) * width
-  if (x < left - 6 || x > right + 6) {
-    return "jump"
-  }
-  if (Math.min(Math.abs(x - left), Math.abs(x - right)) <= 6) {
-    return Math.abs(x - left) <= Math.abs(x - right) ? "left" : "right"
-  }
-  return "body"
-}
+  pressedFrame: { left: number; right: number }
+  offset: number
+} & (
+  | { mode: "body" | "jump"; anchorBar: number }
+  | { mode: "left" | "right"; anchorBar: number }
+  | { mode: "pan" }
+)
 
 export function useMinimapGesture(
   element: RefObject<HTMLDivElement | null>,
@@ -55,314 +32,181 @@ export function useMinimapGesture(
 ) {
   const latest = useRef(geometry)
   const anchor = useRef<Anchor | null>(null)
-  const frame = useRef(0)
-  const reveal = useRef<(() => void) | null>(null)
-  const pendingRelease = useRef<Promise<void> | null>(null)
-  const finish = useRef<(cancel: boolean) => void>(() => {})
   useLayoutEffect(() => {
     latest.current = geometry
   }, [geometry])
 
   useEffect(() => {
-    const mounted = element.current
-    if (!mounted) {
-      return
-    }
-    const element_ = mounted
-    let isDisposed = false
-    function publish(a: Anchor) {
-      const p = a.geometry
-      const deltaBars = (a.dx * p.bars) / a.width
-      const input = {
-        bars: p.bars,
-        viewportWidth: p.viewportWidth,
-        minPxPerBar: p.minPxPerBar,
-        maxPxPerBar: p.maxPxPerBar,
-        startingPxPerBar: p.pxPerBar,
-        startingScrollX: a.initialScrollX,
-        deltaBars,
-      }
-      if (a.mode === "left") {
-        projectActions.setViewport(minimapDragLeftEdge(input))
-      } else if (a.mode === "right") {
-        projectActions.setViewport(minimapDragRightEdge(input))
-      } else {
-        const zoom = minimapDragZoom(p.pxPerBar, 0, a.dy, p.minPxPerBar, p.maxPxPerBar)
-        const anchorBar =
-          (a.initialScrollX + p.viewportWidth * a.zoomAnchorRatio) / p.pxPerBar +
-          deltaBars * PAN_DRAG_SCALE
-        projectActions.setViewport({
-          pxPerBar: zoom,
-          scrollX: Math.max(
-            0,
-            Math.min(
-              p.bars * zoom - p.viewportWidth,
-              anchorBar * zoom - p.viewportWidth * a.zoomAnchorRatio
-            )
-          ),
-        })
-      }
-    }
-    function restore(a: Anchor) {
-      if (document.pointerLockElement === element_) {
-        document.exitPointerLock()
-      }
-      if (!hasNativeCursor()) {
-        document.documentElement.classList.remove("dragpad-dragging")
-        return
-      }
-      let first = 0
-      let second = 0
-      const show = () => {
-        if (reveal.current !== show) {
-          return
-        }
-        cancelAnimationFrame(first)
-        cancelAnimationFrame(second)
-        reveal.current = null
-        document.documentElement.classList.remove("dragpad-dragging")
-      }
-      // IPC warps cannot be cancelled; finish the last recenter before restoring.
-      const restored = (a.recenter ?? Promise.resolve()).then(() =>
-        moveWindowCursor(a.originX, a.originY)
-      )
-      pendingRelease.current = restored
-        .catch(() => {
-          pendingRelease.current = null
-          reveal.current = show
-          show()
-        })
-        .then(() => {
-          pendingRelease.current = null
-          reveal.current = show
-          if (isDisposed) {
-            show()
-          } else {
-            first = requestAnimationFrame(() => {
-              second = requestAnimationFrame(show)
-            })
-          }
-        })
-    }
-    function end(cancel: boolean) {
-      const a = anchor.current
-      if (!a) {
-        return
-      }
-      cancelAnimationFrame(frame.current)
-      frame.current = 0
-      if (cancel) {
-        projectActions.setViewport({ pxPerBar: a.geometry.pxPerBar, scrollX: a.geometry.scrollX })
-      } else if (a.phase === "dragging") {
-        publish(a)
-      }
+    const node = element.current
+    if (!node) return
+    let wheelResidual = 0
+    function end() {
+      const current = anchor.current
       anchor.current = null
-      if (element_.hasPointerCapture?.(a.pointerId)) {
-        element_.releasePointerCapture(a.pointerId)
-      }
-      if (a.phase === "dragging") {
-        restore(a)
-      }
+      if (current && node?.hasPointerCapture?.(current.pointerId))
+        node.releasePointerCapture(current.pointerId)
     }
-    finish.current = end
     function move(event: globalThis.PointerEvent) {
-      const a = anchor.current
-      if (!a || event.pointerId !== a.pointerId || a.recentering) {
-        return
+      const current = anchor.current
+      if (!current || current.pointerId !== event.pointerId || !node) return
+      const rect = node.getBoundingClientRect()
+      if (rect.width <= 0) return
+      const p = latest.current
+      const dx = event.clientX - current.lastX
+      const dy = event.clientY - current.lastY
+      current.lastX = event.clientX
+      current.lastY = event.clientY
+      p.onNavigate()
+      let next
+      if (current.mode === "pan") {
+        const frame = minimapFrame(rect.width, p)
+        const x = event.clientX - rect.left - current.offset
+        next = minimapPan(p, -Math.trunc(Math.fround(-frame.panRatio * x) + 0.5))
+      } else if (current.mode === "left" || current.mode === "right") {
+        const x = event.clientX - rect.left - (current.mode === "left" ? current.offset : 0)
+        next = minimapZoom(
+          p,
+          minimapEdgeZoom(rect.width, x, current.mode, current.pressedFrame, p),
+          current.anchorBar
+        )
+      } else if (Math.abs(dx) > Math.abs(dy)) {
+        next = minimapPan(p, p.scrollX + dx)
+        current.anchorBar = Math.max(
+          next.scrollX / p.pxPerBar,
+          Math.min((next.scrollX + p.viewportWidth) / p.pxPerBar, current.anchorBar)
+        )
+      } else {
+        next = minimapZoom(
+          p,
+          (Math.trunc(p.bars * p.pxPerBar + 1.5) * (1 + dy * 0.01)) / p.bars,
+          current.anchorBar
+        )
       }
-      a.geometry.onNavigate()
-      const isLocked = document.pointerLockElement === element_
-      a.dx += isLocked ? event.movementX : event.clientX - a.lastX
-      a.dy += isLocked ? event.movementY : event.clientY - a.lastY
-      a.lastX = event.clientX
-      a.lastY = event.clientY
-      if (a.phase === "pressed") {
-        if (Math.hypot(a.dx, a.dy) < 3) {
-          return
-        }
-        a.phase = "dragging"
-        document.documentElement.classList.add("dragpad-dragging")
-        if (!hasNativeCursor() && typeof element_.requestPointerLock === "function") {
-          a.lockPending = true
-          try {
-            void Promise.resolve(element_.requestPointerLock())
-              .catch(() => {
-                a.lockPending = false
-              })
-              .then(() => {
-                a.lockPending = false
-                if (
-                  (isDisposed || anchor.current !== a) &&
-                  document.pointerLockElement === element_
-                ) {
-                  document.exitPointerLock()
-                }
-              })
-          } catch {
-            a.lockPending = false
-          }
-        }
-      }
-      if (!frame.current) {
-        frame.current = requestAnimationFrame(() => {
-          frame.current = 0
-          if (anchor.current !== a) {
-            return
-          }
-          publish(a)
-          if (!hasNativeCursor()) {
-            return
-          }
-
-          a.recentering = true
-          a.recenter = Promise.resolve(moveWindowCursor(a.originX, a.originY))
-            .catch(() => {
-              a.recentering = false
-            })
-            .then(() => {
-              if (anchor.current === a) {
-                a.lastX = a.originX
-                a.lastY = a.originY
-              }
-              a.recentering = false
-            })
-        })
-      }
+      latest.current = { ...p, ...next }
+      projectActions.setViewport(next)
     }
     function up(event: globalThis.PointerEvent) {
-      if (event.pointerId === anchor.current?.pointerId) {
-        end(false)
-      }
+      if (event.pointerId !== anchor.current?.pointerId) return
+      end()
     }
-    function cancel(event: globalThis.PointerEvent) {
-      if (event.pointerId === anchor.current?.pointerId) {
-        end(true)
-      }
-    }
-    function lost(event: globalThis.PointerEvent) {
-      if (
-        event.target !== element_ ||
-        event.pointerId !== anchor.current?.pointerId ||
-        anchor.current.lockPending ||
-        document.pointerLockElement === element_
-      ) {
-        return
-      }
-      end(true)
-    }
-    function lockChanged() {
-      if (document.pointerLockElement === element_) {
-        if (anchor.current) {
-          anchor.current.lockPending = false
-        } else {
-          document.exitPointerLock()
-        }
-      } else if (
-        anchor.current?.phase === "dragging" &&
-        !hasNativeCursor() &&
-        !anchor.current.lockPending
-      ) {
-        end(true)
-      }
-    }
-    const blur = () => end(true)
     const key = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        end(true)
-      }
+      if (event.key === "Escape") end()
+    }
+    function wheel(event: WheelEvent) {
+      const zoomModifier = /Mac/.test(navigator.platform) ? event.metaKey : event.ctrlKey
+      if (!zoomModifier || anchor.current || !node) return
+      event.preventDefault()
+      event.stopPropagation()
+      const p = latest.current
+      const rect = node.getBoundingClientRect()
+      if (rect.width <= 0) return
+      const unit = event.deltaMode === 1 ? 10 : event.deltaMode === 2 ? rect.height : 1
+      wheelResidual -= event.deltaY * unit
+      const delta = Math.trunc(wheelResidual)
+      wheelResidual -= delta
+      if (!delta) return
+      const anchorBar = minimapAnchor(rect.width, event.clientX - rect.left, p)
+      const next = minimapZoom(
+        p,
+        (Math.trunc(p.bars * p.pxPerBar + 1.5) * Math.pow(1.05, delta * 0.1)) / p.bars,
+        anchorBar
+      )
+      p.onNavigate()
+      latest.current = { ...p, ...next }
+      projectActions.setViewport(next)
     }
     window.addEventListener("pointermove", move)
     window.addEventListener("pointerup", up)
-    window.addEventListener("pointercancel", cancel)
-    window.addEventListener("blur", blur)
+    window.addEventListener("pointercancel", up)
+    window.addEventListener("blur", end)
     window.addEventListener("keydown", key)
-    element_.addEventListener("lostpointercapture", lost)
-    document.addEventListener("pointerlockchange", lockChanged)
+    node.addEventListener("lostpointercapture", end)
+    node.addEventListener("wheel", wheel, { passive: false })
     return () => {
-      isDisposed = true
-      end(true)
-      if (!pendingRelease.current) {
-        reveal.current?.()
-      }
+      end()
       window.removeEventListener("pointermove", move)
       window.removeEventListener("pointerup", up)
-      window.removeEventListener("pointercancel", cancel)
-      window.removeEventListener("blur", blur)
+      window.removeEventListener("pointercancel", up)
+      window.removeEventListener("blur", end)
       window.removeEventListener("keydown", key)
-      element_.removeEventListener("lostpointercapture", lost)
-      document.removeEventListener("pointerlockchange", lockChanged)
+      node.removeEventListener("lostpointercapture", end)
+      node.removeEventListener("wheel", wheel)
     }
   }, [element])
 
+  const modeAt = (event: PointerEvent<HTMLDivElement>): MinimapMode => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    return minimapHit(
+      event.clientX - rect.left,
+      rect.width,
+      latest.current,
+      event.shiftKey || event.ctrlKey || event.altKey || event.metaKey
+    )
+  }
   return {
     pointerDown(event: PointerEvent<HTMLDivElement>) {
-      if (event.button !== 0 || anchor.current || pendingRelease.current || !element.current) {
-        return
-      }
-      reveal.current?.()
-      const p = latest.current
-      if (p.viewportWidth <= 0) {
-        return
-      }
+      if (event.button !== 0 || anchor.current || !element.current) return
       const rect = element.current.getBoundingClientRect()
-      if (rect.width <= 0) {
-        return
-      }
+      const p = latest.current
+      if (rect.width <= 0 || p.viewportWidth <= 0) return
       event.preventDefault()
       p.onNavigate()
       const x = event.clientX - rect.left
-      const mode = minimapHit(x, rect.width, p)
-      const initialScrollX =
-        mode === "jump"
-          ? Math.max(
-              0,
-              Math.min(
-                p.bars * p.pxPerBar - p.viewportWidth,
-                (x / rect.width) * p.bars * p.pxPerBar - p.viewportWidth / 2
-              )
-            )
-          : p.scrollX
-      anchor.current = {
-        mode: mode === "jump" ? "body" : mode,
+      const mode = modeAt(event)
+      let frame = minimapFrame(rect.width, p)
+      if (mode === "page") {
+        const next = minimapPan(p, p.scrollX + (x < frame.left ? -1 : 1) * p.viewportWidth)
+        latest.current = { ...p, ...next }
+        projectActions.setViewport(next)
+        return
+      }
+      if (mode === "jump") {
+        const position = Math.trunc(x + (4 - (frame.right - frame.left)) * 0.5 - 2)
+        const next = minimapPan(p, -Math.trunc(Math.fround(-frame.panRatio * position) + 0.5))
+        latest.current = { ...p, ...next }
+        projectActions.setViewport(next)
+        frame = minimapFrame(rect.width, latest.current)
+      }
+      const current = latest.current
+      const common = {
         pointerId: event.pointerId,
-        originX: event.clientX,
-        originY: event.clientY,
         lastX: event.clientX,
         lastY: event.clientY,
-        dx: 0,
-        dy: 0,
-        width: rect.width,
-        geometry: p,
-        initialScrollX,
-        zoomAnchorRatio:
-          ((x / rect.width) * p.bars * p.pxPerBar - initialScrollX) / p.viewportWidth,
-        phase: "pressed",
-        lockPending: false,
-        recentering: false,
-        recenter: null,
+        pressedFrame: frame,
+        offset: x - frame.left,
       }
+      anchor.current =
+        mode === "pan"
+          ? { ...common, mode }
+          : {
+              ...common,
+              mode,
+              anchorBar:
+                mode === "left"
+                  ? (current.scrollX + current.viewportWidth) / current.pxPerBar
+                  : mode === "right"
+                    ? current.scrollX / current.pxPerBar
+                    : minimapAnchor(rect.width, x, current),
+            }
       element.current.setPointerCapture?.(event.pointerId)
-      if (mode === "jump") {
-        projectActions.setViewport({ scrollX: initialScrollX })
-      }
     },
     pointerMove(event: PointerEvent<HTMLDivElement>) {
-      if (anchor.current) {
-        return
-      }
-      const element_ = element.current
-      if (!element_) {
-        return
-      }
-      const rect = element_.getBoundingClientRect()
-      const mode = minimapHit(event.clientX - rect.left, rect.width, latest.current)
-      return mode === "left" || mode === "right" ? "ew-resize" : "grab"
+      if (anchor.current) return
+      const mode = modeAt(event)
+      return mode === "left"
+        ? "brace-left"
+        : mode === "right"
+          ? "brace-right"
+          : mode === "page" || mode === "pan"
+            ? "default"
+            : "zoom-in"
     },
     fit() {
-      finish.current(true)
       const p = latest.current
       p.onNavigate()
-      projectActions.setViewport({ pxPerBar: p.minPxPerBar, scrollX: 0 })
+      const next = minimapZoom(p, p.viewportWidth / p.bars, 0)
+      latest.current = { ...p, ...next }
+      projectActions.setViewport(next)
     },
   }
 }

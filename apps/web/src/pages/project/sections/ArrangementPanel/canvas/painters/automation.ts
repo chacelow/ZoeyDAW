@@ -111,11 +111,14 @@ export function paintAutomation(
         scene.targetSelection.kind === "automation" &&
         scene.targetSelection.trackId === row.track.id &&
         scene.targetSelection.laneId === row.laneId &&
+        scene.targetSelection.placement === row.placement &&
         scene.targetSelection.pointIds.includes(point.id)
       const isEditing =
         scene.targetSelection.kind === "automation-value" &&
         scene.targetSelection.pointId === point.id &&
-        scene.targetSelection.trackId === row.track.id
+        scene.targetSelection.trackId === row.track.id &&
+        scene.targetSelection.laneId === row.laneId &&
+        scene.targetSelection.placement === row.placement
       context.beginPath()
       context.arc(
         x,

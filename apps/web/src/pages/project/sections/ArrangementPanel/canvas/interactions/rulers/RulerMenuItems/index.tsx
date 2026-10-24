@@ -1,8 +1,8 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { ContextMenuItem, ContextMenuSeparator } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
-import { positionToBar } from "@/pages/project/model/types"
-import { MIN_CLIP_LENGTH_BARS } from "@/pages/project/model/grid"
+import { positionToBar } from "@zoeydaw/project-core/types"
+import { MIN_CLIP_LENGTH_BARS } from "@zoeydaw/project-core/grid"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
 

@@ -9,7 +9,7 @@ import {
 } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
 import type { ReactNode } from "react"
-import type { Track } from "@/pages/project/model/types"
+import type { Track } from "@zoeydaw/project-core/types"
 
 const COLORS = [
   "var(--chart-1)",

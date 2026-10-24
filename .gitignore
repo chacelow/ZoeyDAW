@@ -38,3 +38,35 @@ apps/mcp/LICENSING.md
 .github/assets/canvas-overview.jpeg
 .github/assets/agent-mode.jpeg
 .github/assets/agent-in-action.jpeg
+/target/
+/third_party/plughost/target/
+
+# Local reference exports
+/ableton-cursors/
+
+# Private environment overrides
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local tool caches and reports
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+.cache/
+.vite/
+.turbo/
+playwright-report/
+test-results/
+storybook-static/
+
+# Visual Studio generated databases
+*.VC.db
+*.VC.db-shm
+*.VC.db-wal
+*.VC.opendb
+*.sdf
+*.opensdf
+*.ipch
+.vs/

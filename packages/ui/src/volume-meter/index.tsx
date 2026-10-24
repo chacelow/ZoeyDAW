@@ -25,8 +25,10 @@ export interface VolumeMeterProps {
   */
   readonly clipDb?: number
   readonly orientation?: "vertical" | "horizontal"
+  readonly appearance?: "compact" | "track"
   readonly className?: string
   readonly "aria-label"?: string
+  readonly "aria-valuetext"?: string
 }
 
 const DEFAULT_MIN = -60
@@ -34,7 +36,7 @@ const DEFAULT_MAX = 6
 const DEFAULT_CLIP = 0
 
 function dbToRatio(db: number, min: number, max: number): number {
-  return Number.isFinite(db) ? Math.max(0, Math.min(1, (db - min) / (max - min))) : 0
+  return Number.isNaN(db) ? 0 : Math.max(0, Math.min(1, (db - min) / (max - min)))
 }
 
 /**
@@ -45,17 +47,20 @@ function Bar({
   peakRatio,
   clipRatio,
   orientation,
+  appearance,
 }: {
   readonly ratio: number
   readonly peakRatio: number | undefined
   readonly clipRatio: number
   readonly orientation: "vertical" | "horizontal"
+  readonly appearance: "compact" | "track"
 }) {
   const isVertical = orientation === "vertical"
-  // 填充色:低段 → 高段渐变,超 clip 阈值切 error
+  const warningColor =
+    appearance === "track" ? "light-dark(var(--chart-4), var(--chart-3))" : "var(--chart-4)"
   const fillGradient = isVertical
-    ? `linear-gradient(to top, var(--chart-2) 0%, var(--chart-2) ${clipRatio * 75}%, var(--chart-4) ${clipRatio * 100}%, var(--destructive) ${clipRatio * 100}%)`
-    : `linear-gradient(to right, var(--chart-2) 0%, var(--chart-2) ${clipRatio * 75}%, var(--chart-4) ${clipRatio * 100}%, var(--destructive) ${clipRatio * 100}%)`
+    ? `linear-gradient(to top, var(--chart-2) 0%, var(--chart-2) ${clipRatio * 75}%, ${warningColor} ${clipRatio * 100}%, var(--destructive) ${clipRatio * 100}%)`
+    : `linear-gradient(to right, var(--chart-2) 0%, var(--chart-2) ${clipRatio * 75}%, ${warningColor} ${clipRatio * 100}%, var(--destructive) ${clipRatio * 100}%)`
   const peakStyle =
     peakRatio !== undefined && peakRatio > 0
       ? isVertical
@@ -77,8 +82,15 @@ function Bar({
     <div
       className={cn(
         "bg-muted relative overflow-hidden",
-        isVertical ? "h-full w-1" : "h-1 w-full",
-        isClipped && "ring-destructive/60 ring-1"
+        appearance === "track"
+          ? isVertical
+            ? "h-full min-w-1 flex-1"
+            : "min-h-1 w-full flex-1"
+          : isVertical
+            ? "h-full w-1"
+            : "h-1 w-full",
+        appearance === "track" && "bg-card",
+        appearance === "compact" && isClipped && "ring-destructive/60 ring-1"
       )}
     >
       <div
@@ -92,6 +104,17 @@ function Bar({
         }}
       />
       {peakStyle ? <div aria-hidden className="bg-foreground absolute" style={peakStyle} /> : null}
+      {appearance === "track" ? (
+        <div
+          aria-hidden
+          className="bg-card absolute"
+          style={
+            isVertical
+              ? { bottom: `calc(${clipRatio * 100}% - 1px)`, left: 0, right: 0, height: 1 }
+              : { left: `calc(${clipRatio * 100}% - 1px)`, top: 0, bottom: 0, width: 1 }
+          }
+        />
+      ) : null}
     </div>
   )
 }
@@ -103,14 +126,18 @@ export function VolumeMeter({
   maxDb = DEFAULT_MAX,
   clipDb = DEFAULT_CLIP,
   orientation = "vertical",
+  appearance = "compact",
   className,
   "aria-label": ariaLabel = "Volume level",
+  "aria-valuetext": ariaValueText,
 }: VolumeMeterProps) {
   const isStereo = Array.isArray(levelDb)
   const [l, r] = isStereo ? levelDb : [levelDb, levelDb]
   const [pl, pr] = Array.isArray(peakDb) ? peakDb : [peakDb, peakDb]
   const clipRatio = dbToRatio(clipDb, minDb, maxDb)
   const isVertical = orientation === "vertical"
+  const leftText = Number.isFinite(l) ? String(l) : l === Infinity ? "+∞" : "−∞"
+  const rightText = Number.isFinite(r) ? String(r) : r === Infinity ? "+∞" : "−∞"
 
   return (
     <div
@@ -118,9 +145,13 @@ export function VolumeMeter({
       aria-label={ariaLabel}
       aria-valuemin={minDb}
       aria-valuemax={maxDb}
-      aria-valuenow={Number.isFinite(Math.max(l, r)) ? Math.max(l, r) : minDb}
+      aria-valuenow={minDb + dbToRatio(Math.max(l, r), minDb, maxDb) * (maxDb - minDb)}
+      aria-valuetext={
+        ariaValueText ?? (isStereo ? `${leftText} / ${rightText} dB` : `${leftText} dB`)
+      }
       className={cn(
         "inline-flex gap-px",
+        appearance === "track" && "bg-card",
         isVertical ? "h-full flex-row" : "w-full flex-col",
         className
       )}
@@ -130,6 +161,7 @@ export function VolumeMeter({
         peakRatio={pl === undefined ? undefined : dbToRatio(pl, minDb, maxDb)}
         clipRatio={clipRatio}
         orientation={orientation}
+        appearance={appearance}
       />
       {isStereo ? (
         <Bar
@@ -137,6 +169,7 @@ export function VolumeMeter({
           peakRatio={pr === undefined ? undefined : dbToRatio(pr, minDb, maxDb)}
           clipRatio={clipRatio}
           orientation={orientation}
+          appearance={appearance}
         />
       ) : null}
     </div>

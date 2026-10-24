@@ -1,6 +1,6 @@
-import { reduceDocument, uniqueId } from "../model/reducers"
+import { reduceDocument, uniqueId } from "@zoeydaw/project-core/reducers"
 import { document, get } from "./context"
-import type { DocumentState } from "../model/types"
+import type { DocumentState } from "@zoeydaw/project-core/types"
 
 export const markerActions = {
   addMarker(bar: number): string | undefined {

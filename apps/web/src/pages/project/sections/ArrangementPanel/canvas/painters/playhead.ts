@@ -2,11 +2,13 @@
 The moving playhead and stationary row-local insertion share a dedicated overlay.
 */
 import {
+  LOOP_RULER_HEIGHT,
+  PATTERN_RULER_HEIGHT,
   arrangementBodyBottom,
   arrangementBodyTop,
   isPinnedTrack,
   layoutTrackRows,
-  pinnedTrackHeight,
+  pinnedTopFor,
 } from "../layout"
 import type { AudioRingBuffer } from "../audio/ring-buffer"
 import type { ArrangementScene } from "../scene"
@@ -45,44 +47,56 @@ export function paintPlayhead(
     return
   }
   const { insertionPoint } = scene.playback
-  const playing = scene.playback.playing && ring.readPlayhead().playing
+  // The UI knows about Play before the first telemetry frame arrives. Requiring both made the
+  // playhead stall on the very frame playback started.
+  const sample = ring.readPlayhead()
+  const playing = scene.playback.playing
   const top = arrangementBodyTop()
   const bottom = arrangementBodyBottom(height)
-  const frame = playing ? ring.readPlayhead() : null
-  const bar = frame?.bar ?? insertionPoint?.bar
-  if (bar === undefined) {
-    return
-  }
-  const x = Math.round((bar - 1) * pxPerBar - scrollX) + 0.5
-  if (x < -1 || x > width + 1) {
-    return
-  }
-  context.strokeStyle = frame?.recording ? tokens.recording : tokens.primary
-  context.lineWidth = 1
-  if (playing) {
+  // Two independent marks share this overlay: a playback line that sweeps with the transport,
+  // and a stationary insertion marker where playback will start. They never replace each other.
+  const drawLine = (bar: number, color: string) => {
+    const x = Math.round((bar - 1) * pxPerBar - scrollX) + 0.5
+    if (x < -1 || x > width + 1) return
+    context.strokeStyle = color
+    context.lineWidth = 1
     context.beginPath()
     context.moveTo(x, top)
     context.lineTo(x, bottom)
     context.stroke()
+  }
+  if (playing) {
+    drawLine(sample.bar, sample.recording ? tokens.recording : tokens.primary)
     return
   }
-  if (!insertionPoint?.trackId) {
+  if (insertionPoint?.trackId === undefined || insertionPoint.trackId === null) {
+    return
+  }
+  const x = Math.round((insertionPoint.bar - 1) * pxPerBar - scrollX) + 0.5
+  if (x < -1 || x > width + 1) {
     return
   }
   const row = layoutTrackRows(scene).find(row => row.track.id === insertionPoint.trackId)
   if (!row) {
     return
   }
-  const pinnedTop = bottom - pinnedTrackHeight(scene.tracks)
+  const pinnedTop = pinnedTopFor(scene.tracks, height, {
+    mode: scene.automationMode,
+    lanes: scene.automationLanes,
+  })
   const rowTop = Math.max(isPinnedTrack(row.track) ? pinnedTop : top, row.top)
-  const rowBottom = Math.min(isPinnedTrack(row.track) ? bottom : pinnedTop, row.top + row.height)
-  if (rowBottom <= rowTop) {
-    return
+  const rowBottom = Math.min(
+    isPinnedTrack(row.track) ? bottom : pinnedTop,
+    row.top + row.contentHeight
+  )
+  if (rowBottom > rowTop) {
+    context.strokeStyle = tokens.primary
+    context.lineWidth = 1
+    context.beginPath()
+    context.moveTo(x, rowTop)
+    context.lineTo(x, rowBottom)
+    context.stroke()
   }
-  context.beginPath()
-  context.moveTo(x, rowTop)
-  context.lineTo(x, rowBottom)
-  context.stroke()
   context.fillStyle = tokens.primary
   context.beginPath()
   context.moveTo(x - 4, top - 7)
@@ -123,5 +137,51 @@ export function paintClipAlignment(
     context.lineTo(x, arrangementBodyBottom(height))
     context.stroke()
     return
+  }
+}
+
+/**
+Loop edges and locators draw their guide lines on the playhead overlay so clip
+bodies and automation never cover them. Each line starts at the top of its own
+ruler band, so it reads as one continuous stroke from the brace down through the
+grid instead of starting again at the grid edge.
+*/
+export function paintGuides(
+  context: PlayheadContext,
+  scene: ArrangementScene,
+  tokens: { line: string }
+): void {
+  const { width, height, pxPerBar, scrollX, dpr } = scene.viewport
+  if (width <= 0 || height <= 0 || pxPerBar <= 0) {
+    return
+  }
+  context.setTransform(dpr, 0, 0, dpr, 0, 0)
+  context.strokeStyle = tokens.line
+  context.lineWidth = 1
+  const gridBottom = arrangementBodyBottom(height)
+  for (const marker of scene.markers) {
+    const x = Math.round((marker.bar - 1) * pxPerBar - scrollX) + 0.5
+    if (x < -1 || x > width + 1) {
+      continue
+    }
+    context.beginPath()
+    context.moveTo(x, PATTERN_RULER_HEIGHT + LOOP_RULER_HEIGHT)
+    context.lineTo(x, gridBottom)
+    context.stroke()
+  }
+  const { loop } = scene
+  // The brace frame sits 2px inside the loop band, so the guide starts on that
+  // frame edge: the vertical stroke reads as the brace's own side continuing
+  // down through the locator band and the grid, not as a separate line.
+  const loopGuideTop = PATTERN_RULER_HEIGHT + LOOP_RULER_HEIGHT - 2
+  for (const bar of [loop.startBar, loop.endBar]) {
+    const x = Math.round((bar - 1) * pxPerBar - scrollX) + 0.5
+    if (x < -1 || x > width + 1) {
+      continue
+    }
+    context.beginPath()
+    context.moveTo(x, loopGuideTop)
+    context.lineTo(x, height)
+    context.stroke()
   }
 }

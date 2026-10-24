@@ -1,0 +1,905 @@
+{
+  "scope": "Offline probes only",
+  "tracktion": {
+    "engine": "Tracktion Engine Edit/AudioTrack/WaveAudioClip/Renderer::RenderTask",
+    "upstream": "877e39c0fe9f1c3e4a9d836f5f338688250875d7",
+    "compiler": "AppleClang-17.0.0.17000603",
+    "cmake": "4.2.3",
+    "juce": "9.0.5",
+    "sample_rate": 48000,
+    "block_frames": 256,
+    "timing_scope": "RenderTask construction + graph prepare/render + float WAV write + task destruction; excludes Edit creation, hash, verification; one warmup then ten measured runs; warm filesystem cache",
+    "io": "Engine file-backed WaveAudioClip readers and engine graph; probe never predecodes whole files; engine may memory-map/cache files internally; not a bounded-memory streaming certification",
+    "device_initialisation": false,
+    "results": [
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "aed55754f03994674e1c09819cdd5ec4d06afa8d682f8647fbb8e24fb4cd1c68",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/tone-440-mono-n1-r1.0.wav",
+        "frames": 384000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.497821208,
+        "wall_seconds": [
+          0.496827667, 0.495684709, 0.496449167, 0.495838875, 0.496263416, 0.495545291, 0.496518417,
+          0.495771166, 0.49638525, 0.496169208
+        ]
+      },
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "6348fac1fe324d789d0a8531fce678983be0f5b9662583ae2a32baef99cc4b3a",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/tone-440-mono-n8-r1.0.wav",
+        "frames": 384000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.249999985098839,
+        "float32": true,
+        "channel_rms": [0.176771004357023],
+        "max_absolute_error": 1.490116119384766e-8,
+        "channel_max_absolute_error": [1.490116119384766e-8],
+        "rms_error": 1.259351407928636e-8,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.534736209,
+        "wall_seconds": [
+          0.535408375, 0.536831666, 0.536181458, 0.534981458, 0.536034708, 0.5341205, 0.5344615,
+          0.534538, 0.535343917, 0.534758833
+        ]
+      },
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "50d197b7cb540c37293d3134da0de4c9f2eaac982c3de8f2196deaf8c457f921",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/tone-440-mono-n32-r1.0.wav",
+        "frames": 384000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.616788667,
+        "wall_seconds": [
+          0.622335041, 0.619582209, 0.624218625, 0.621677792, 0.621267459, 0.619334417, 0.620364292,
+          0.621796458, 0.621466, 0.619980875
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "60cfdd10b820be48e5236094cea44abde7b7c378b10875ecefd7ded010a2d925",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-identical-n1-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297, 0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0, 0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.499790667,
+        "wall_seconds": [
+          0.497705875, 0.498401042, 0.497726083, 0.497751583, 0.497809625, 0.497706084, 0.498024875,
+          0.497268041, 0.498085667, 0.498491375
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "1c87808fe3a744357ff22d1c1d9fa1827bc4c02031ddc15b08d68cacd4140768",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-identical-n8-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249999985098839,
+        "float32": true,
+        "channel_rms": [0.176771004357023, 0.176771004357023],
+        "max_absolute_error": 1.490116119384766e-8,
+        "channel_max_absolute_error": [1.490116119384766e-8, 1.490116119384766e-8],
+        "rms_error": 1.259351407928636e-8,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.541009791,
+        "wall_seconds": [
+          0.538082042, 0.538501792, 0.538119458, 0.538707375, 0.535851875, 0.537925917, 0.53970625,
+          0.538849209, 0.53586525, 0.538300666
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "6ee05f68445bccbe958746a91bc14dd2eb109de7d17b785a7f56101195f57efb",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-identical-n32-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297, 0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0, 0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.620521459,
+        "wall_seconds": [
+          0.624108042, 0.629396708, 0.633349625, 0.630919916, 0.627365375, 0.662416625, 0.645021417,
+          0.635168958, 0.629757708, 0.624240166
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "8718efefd35340a40849dab81fece9cd402740f062f99f86f69bac3255b1d85c",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-antiphase-n1-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297, 0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0, 0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.499595792,
+        "wall_seconds": [
+          0.49791825, 0.497958125, 0.498152334, 0.498076625, 0.497587625, 0.497725, 0.497711375,
+          0.497379584, 0.497211875, 0.497468292
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "5707e19021792c0341f775e0c8f67c17548db74028a2df6c0e5564fec7553908",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-antiphase-n8-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249999985098839,
+        "float32": true,
+        "channel_rms": [0.176771004357023, 0.176771004357023],
+        "max_absolute_error": 1.490116119384766e-8,
+        "channel_max_absolute_error": [1.490116119384766e-8, 1.490116119384766e-8],
+        "rms_error": 1.259351407928636e-8,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.5360485,
+        "wall_seconds": [
+          0.53599025, 0.533210458, 0.536379292, 0.528271042, 0.528530042, 0.527626333, 0.536831792,
+          0.536637375, 0.536300166, 0.536470209
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "0354d6f159a05ea5ab5b689797a64a4e1fe3473c0f2a1113ada76cdc68b4c55f",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-antiphase-n32-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297, 0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0, 0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.62051925,
+        "wall_seconds": [
+          0.622889042, 0.623971167, 0.623329, 0.623547583, 0.62336725, 0.626974959, 0.62017975,
+          0.628631, 0.61998625, 0.621312833
+        ]
+      }
+    ],
+    "process_peak_rss_bytes_macos": 29622272
+  },
+  "rust": {
+    "block_frames": 256,
+    "buffers": {
+      "fixed_interleaved_pcm_samples_per_cursor": 65536,
+      "library_internal_allocations": "Symphonia demuxer packet and decoder buffers: codec/packet-sized, not whole-file PCM; hostile-file allocation not globally capped",
+      "media_source_bytes_per_cursor": 65536,
+      "mix_and_scratch_samples": 1024,
+      "whole_file_pcm_predecode": false
+    },
+    "cases": [
+      {
+        "accuracy": {
+          "compared_samples": 384000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 1,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "max_decoded_packet_samples": 1152,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/tone-440-mono-1.wav",
+        "output_sha256": "36e5eb79893c402a53713e5a0d96cf4314cc7b2ddb596b37188a071c4c4aeebd",
+        "readers": 1,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.002011, 0.001915709, 0.001871292, 0.001852334, 0.002203, 0.002042792, 0.001887417,
+          0.001890334, 0.001854834, 0.001884709
+        ],
+        "warmup_seconds": 0.001986792
+      },
+      {
+        "accuracy": {
+          "compared_samples": 384000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 0.125,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "max_decoded_packet_samples": 1152,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/tone-440-mono-8.wav",
+        "output_sha256": "36e5eb79893c402a53713e5a0d96cf4314cc7b2ddb596b37188a071c4c4aeebd",
+        "readers": 8,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.006573667, 0.005906083, 0.006359375, 0.005955334, 0.006354042, 0.006280958, 0.005796292,
+          0.005920208, 0.006317708, 0.005888917
+        ],
+        "warmup_seconds": 0.006063333
+      },
+      {
+        "accuracy": {
+          "compared_samples": 384000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 0.03125,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "max_decoded_packet_samples": 1152,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/tone-440-mono-32.wav",
+        "output_sha256": "36e5eb79893c402a53713e5a0d96cf4314cc7b2ddb596b37188a071c4c4aeebd",
+        "readers": 32,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.022294333, 0.022086417, 0.021798791, 0.021365416, 0.022188375, 0.021787625, 0.021603458,
+          0.021622542, 0.022211125, 0.021728625
+        ],
+        "warmup_seconds": 0.022339458
+      },
+      {
+        "accuracy": {
+          "compared_samples": 768000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 1,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "max_decoded_packet_samples": 2304,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-identical-1.wav",
+        "output_sha256": "31de5e8164ad1c46a60c15702f6f5f1853c57b083b850a966142bf27e7396366",
+        "readers": 1,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.003734083, 0.00376175, 0.004127166, 0.003888459, 0.003734791, 0.0038615, 0.004273875,
+          0.003738959, 0.003881958, 0.003984125
+        ],
+        "warmup_seconds": 0.003578167
+      },
+      {
+        "accuracy": {
+          "compared_samples": 768000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 0.125,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "max_decoded_packet_samples": 2304,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-identical-8.wav",
+        "output_sha256": "31de5e8164ad1c46a60c15702f6f5f1853c57b083b850a966142bf27e7396366",
+        "readers": 8,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.012446917, 0.013145209, 0.012656791, 0.016642625, 0.012796625, 0.01301675, 0.013380875,
+          0.013013916, 0.016006209, 0.0129775
+        ],
+        "warmup_seconds": 0.012040084
+      },
+      {
+        "accuracy": {
+          "compared_samples": 768000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 0.03125,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "max_decoded_packet_samples": 2304,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-identical-32.wav",
+        "output_sha256": "31de5e8164ad1c46a60c15702f6f5f1853c57b083b850a966142bf27e7396366",
+        "readers": 32,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.045477458, 0.044783333, 0.046468584, 0.045194417, 0.045553375, 0.046058958, 0.04475175,
+          0.04574525, 0.044869958, 0.0456745
+        ],
+        "warmup_seconds": 0.047235916
+      },
+      {
+        "accuracy": {
+          "compared_samples": 768000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 1,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "max_decoded_packet_samples": 2304,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-antiphase-1.wav",
+        "output_sha256": "cf673901c6a25f0c9d83741cd70a21e337620dcf937969d452316f5e6dcfe903",
+        "readers": 1,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.00373175, 0.00420325, 0.003633209, 0.004897708, 0.004624459, 0.003988541, 0.004266209,
+          0.004032083, 0.003789041, 0.003694375
+        ],
+        "warmup_seconds": 0.004340042
+      },
+      {
+        "accuracy": {
+          "compared_samples": 768000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 0.125,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "max_decoded_packet_samples": 2304,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-antiphase-8.wav",
+        "output_sha256": "cf673901c6a25f0c9d83741cd70a21e337620dcf937969d452316f5e6dcfe903",
+        "readers": 8,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.012594458, 0.013248833, 0.01283225, 0.012049625, 0.012923458, 0.01274225, 0.013018375,
+          0.014048167, 0.0125305, 0.012609292
+        ],
+        "warmup_seconds": 0.012302417
+      },
+      {
+        "accuracy": {
+          "compared_samples": 768000,
+          "max_absolute_error": 0,
+          "output_peak": 0.25,
+          "passed": true,
+          "rms_error": 0,
+          "tolerance": 0.000001
+        },
+        "frames": 384000,
+        "gain_per_reader": 0.03125,
+        "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "max_decoded_packet_samples": 2304,
+        "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-antiphase-32.wav",
+        "output_sha256": "cf673901c6a25f0c9d83741cd70a21e337620dcf937969d452316f5e6dcfe903",
+        "readers": 32,
+        "timed_runs": 10,
+        "wall_seconds": [
+          0.044459042, 0.045490583, 0.046200541, 0.046132709, 0.045607916, 0.045367042, 0.044475625,
+          0.045145792, 0.045192375, 0.045640167
+        ],
+        "warmup_seconds": 0.044451625
+      }
+    ],
+    "duration_seconds": 8,
+    "implementation": "Symphonia 0.6.1 packet decode + independent file cursors + block mixer + hound float WAV writer",
+    "not_verified": [
+      "Complete DAW engine, device callback deadlines, device latency, real-time scheduling",
+      "Tempo/pitch preservation: NOT IMPLEMENTED (no speed substitution)",
+      "One-hour real-I/O workload, random access, seek, page-cache-cold throughput",
+      "Adversarial file memory limits: decoder/demuxer internal allocation is library-controlled",
+      "OS peak RSS, downstream commercial licensing suitability"
+    ],
+    "sample_rate": 48000,
+    "scope": "offline decode/stream/mix composition only; not a complete audio engine",
+    "status": "original_speed_accuracy_passed",
+    "tempo_pitch_preserving": "NOT IMPLEMENTED",
+    "tempo_ratio": 1,
+    "timing_scope": "Each wall time includes independent file opens/probe, decode, gain/mix, buffered output write and WAV finalize; excludes hashing/comparison. No fsync, no callback or cold-disk claim. Warmup once then 10 runs per configuration.",
+    "versions": {
+      "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+      "release_profile": "opt-level=3,lto=thin,codegen-units=1",
+      "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+      "symphonia": "0.6.1",
+      "upstream_commit": "ee35874b571a35a9a6e15d3bc9a3aaf8f11fbeee"
+    }
+  },
+  "tracktionTempo": {
+    "engine": "Tracktion Engine Edit/AudioTrack/WaveAudioClip/Renderer::RenderTask",
+    "upstream": "877e39c0fe9f1c3e4a9d836f5f338688250875d7",
+    "compiler": "AppleClang-17.0.0.17000603",
+    "cmake": "4.2.3",
+    "juce": "9.0.5",
+    "sample_rate": 48000,
+    "block_frames": 256,
+    "timing_scope": "RenderTask construction + graph prepare/render + float WAV write + task destruction; excludes Edit creation, hash, verification; one warmup then ten measured runs; warm filesystem cache",
+    "io": "Engine file-backed WaveAudioClip readers and engine graph; probe never predecodes whole files; engine may memory-map/cache files internally; not a bounded-memory streaming certification",
+    "device_initialisation": false,
+    "results": [
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "15a1d47cb97fc406115f37c291a2c5e243242e7c8c224d4c32920377a9684ece",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n1-r1.0.wav",
+        "frames": 384000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.495052708,
+        "wall_seconds": [
+          0.494676166, 0.494652416, 0.49474325, 0.495061125, 0.494801792, 0.495409125, 0.494911084,
+          0.495119417, 0.494973083, 0.495151291
+        ]
+      },
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "0ceda73335a4f032eec7a3db17788acc93d81414d98da54a2a39af2a71f4a08f",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n8-r1.0.wav",
+        "frames": 384000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.249999985098839,
+        "float32": true,
+        "channel_rms": [0.176771004357023],
+        "max_absolute_error": 1.490116119384766e-8,
+        "channel_max_absolute_error": [1.490116119384766e-8],
+        "rms_error": 1.259351407928636e-8,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.512093584,
+        "wall_seconds": [
+          0.5123885, 0.514785708, 0.513542458, 0.534123042, 0.534314208, 0.534179458, 0.53332225,
+          0.533993291, 0.537192791, 0.530672792
+        ]
+      },
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "f05c10142aebb85c69cb3b97a45c36f6a0251f465077a07b821992515699ba39",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n32-r1.0.wav",
+        "frames": 384000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.61503075,
+        "wall_seconds": [
+          0.619589958, 0.620424416, 0.619561541, 0.618994125, 0.618097416, 0.618170167, 0.619689916,
+          0.619323542, 0.625624209, 0.620316416
+        ]
+      },
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "be948d16ade1bd1e51bc6eed37d3e4a4eabedd0623e58f86a1bea75187a7c5ac",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n1-r1.2.wav",
+        "frames": 320000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.249966636300087,
+        "float32": true,
+        "channel_rms": [0.17661971079853],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.507054417,
+        "wall_seconds": [
+          0.507662417, 0.507519166, 0.507215292, 0.50713525, 0.506860625, 0.507125667, 0.50709925,
+          0.507232, 0.507151375, 0.507033
+        ]
+      },
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "bcc34770e13544ada5716b8f9bd178e35bf60edc6902ee7f0b5f04e350a6c167",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n8-r1.2.wav",
+        "frames": 320000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.249966606497765,
+        "float32": true,
+        "channel_rms": [0.176619698230271],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.594172291,
+        "wall_seconds": [
+          0.593971625, 0.596655792, 0.594498125, 0.593813709, 0.593388833, 0.594060833, 0.593859834,
+          0.593606917, 0.5946365, 0.594329334
+        ]
+      },
+      {
+        "input_sha256": "83a3301eb324381daad454d2ab9abab3d3e566f213e16ab7447e58f68b537203",
+        "output_sha256": "7c209ea9dfbc5cf7098e6e4531eb16d95fc4dfcc9d815dda1b44031c99f3604e",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n32-r1.2.wav",
+        "frames": 320000,
+        "channels": 1,
+        "sample_rate": 48000,
+        "peak": 0.249966636300087,
+        "float32": true,
+        "channel_rms": [0.176619709982885],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.821297834,
+        "wall_seconds": [
+          0.8210865, 0.819401625, 0.822957125, 0.822392125, 0.816307166, 0.822238667, 0.818647,
+          0.821863583, 0.823030667, 0.82031025
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "dbce4a2a04a1db7f4255cca35595a6efb10908202b04c859b795010bb4f1fac4",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n1-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297, 0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0, 0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.497077,
+        "wall_seconds": [
+          0.496997541, 0.496440667, 0.496642834, 0.496590708, 0.496922042, 0.496688792, 0.496614,
+          0.496777458, 0.496905041, 0.4967995
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "ad8e545f2443174e591e5911fca287b492e5da614bc9fdc2e8338d04315c9c21",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n8-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249999985098839,
+        "float32": true,
+        "channel_rms": [0.176771004357023, 0.176771004357023],
+        "max_absolute_error": 1.490116119384766e-8,
+        "channel_max_absolute_error": [1.490116119384766e-8, 1.490116119384766e-8],
+        "rms_error": 1.259351407928636e-8,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.534833208,
+        "wall_seconds": [
+          0.535611291, 0.536297125, 0.540378291, 0.537974125, 0.537135875, 0.537304667, 0.536730709,
+          0.535877083, 0.537436667, 0.537348291
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "c3c44237b9654509029d0fecb141f5b91ced2f0cd49fbc2b50974546c3a762bb",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n32-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297, 0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0, 0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.621910625,
+        "wall_seconds": [
+          0.62541725, 0.642839709, 0.622157833, 0.621413083, 0.620261541, 0.621459125, 0.618911042,
+          0.620401125, 0.620788792, 0.619763125
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "38f9b86607323447e053ed844dd46d8a72fe46e2bd23b00e53d3231ed1be7d39",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n1-r1.2.wav",
+        "frames": 320000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249966636300087,
+        "float32": true,
+        "channel_rms": [0.176619655563314, 0.176619655563314],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.522433625,
+        "wall_seconds": [
+          0.522134583, 0.522233083, 0.522313917, 0.522088958, 0.522325417, 0.522434042, 0.522287167,
+          0.522419583, 0.522535458, 0.522285667
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "8025cbbb819d19086c3129dd1407a0e33db95608e0c93b21881da88929d41fde",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n8-r1.2.wav",
+        "frames": 320000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249966606497765,
+        "float32": true,
+        "channel_rms": [0.176619643017423, 0.176619643017423],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.631895542,
+        "wall_seconds": [
+          0.632254667, 0.631038833, 0.6294975, 0.634513208, 0.631815958, 0.6300445, 0.630021916,
+          0.62997625, 0.630005208, 0.631352208
+        ]
+      },
+      {
+        "input_sha256": "c315a7edb0e0eac682ce18c39dc1a7ee464e933c5d1a7246a27683f80d70fd74",
+        "output_sha256": "3ac5fdb646e860fe38e7b13e60855c9f151a28415caa1990468d24a5ed49298f",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n32-r1.2.wav",
+        "frames": 320000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249966636300087,
+        "float32": true,
+        "channel_rms": [0.176619654799032, 0.176619654799032],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.930929833,
+        "wall_seconds": [
+          0.934474792, 0.938518167, 0.924360834, 0.939556292, 0.928578, 0.9300485, 0.932157542,
+          0.928024292, 0.9310095, 0.929533625
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "92736627cb2233cdff4a48a79375807d979d4923ca2f09c32d0bfea98fca43ba",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n1-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297, 0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0, 0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.496750292,
+        "wall_seconds": [
+          0.496908666, 0.496782708, 0.496868125, 0.496706791, 0.496706375, 0.496666042, 0.496716917,
+          0.497634083, 0.496701791, 0.496894875
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "c8ca20c06de2d31c24335b0bbfdef8a1f655e6cbf7ff6c040ec5a08e9ff2dafa",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n8-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249999985098839,
+        "float32": true,
+        "channel_rms": [0.176771004357023, 0.176771004357023],
+        "max_absolute_error": 1.490116119384766e-8,
+        "channel_max_absolute_error": [1.490116119384766e-8, 1.490116119384766e-8],
+        "rms_error": 1.259351407928636e-8,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.540307209,
+        "wall_seconds": [
+          0.537082125, 0.538461666, 0.536482833, 0.537665625, 0.539188792, 0.536821833, 0.53675775,
+          0.537433666, 0.539452416, 0.535574125
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "6e72e4b921c464af56f28d4712c5150ca3a62a074d15538d0d10843d3a379783",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n32-r1.0.wav",
+        "frames": 384000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.25,
+        "float32": true,
+        "channel_rms": [0.17677101674297, 0.17677101674297],
+        "max_absolute_error": 0,
+        "channel_max_absolute_error": [0, 0],
+        "rms_error": 0,
+        "sample_accuracy_pass_1e-5": true,
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.62055,
+        "wall_seconds": [
+          0.621515666, 0.620703625, 0.622410125, 0.623015791, 0.619043667, 0.622520833, 0.619773833,
+          0.621500291, 0.625512792, 0.622958834
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "91b4820b97b30dad7c4664d658c4d8c6e6aa5906bb99b97119e3fbb0faf312f7",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n1-r1.2.wav",
+        "frames": 320000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249966636300087,
+        "float32": true,
+        "channel_rms": [0.176619655563314, 0.176619655563314],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 1,
+        "gain_per_instance": 1,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.522594708,
+        "wall_seconds": [
+          0.522384333, 0.522500375, 0.522348292, 0.522293042, 0.522460792, 0.5225915, 0.52254325,
+          0.522425541, 0.522309208, 0.522214833
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "44587cdbba20e7412ff6a0e3cf001e5a0fdb34da8344fcdf14f8c4c7c10e45a0",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n8-r1.2.wav",
+        "frames": 320000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249966606497765,
+        "float32": true,
+        "channel_rms": [0.176619643017423, 0.176619643017423],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 8,
+        "gain_per_instance": 0.125,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.632200458,
+        "wall_seconds": [
+          0.633020167, 0.6322445, 0.638219542, 0.630062, 0.631383625, 0.630030083, 0.628629666,
+          0.6320425, 0.63207275, 0.632775875
+        ]
+      },
+      {
+        "input_sha256": "ec6e1e9bab2eb47e5d1e4d489233ed79484cbb8b9e53f0e3bea6d11005bc8ccb",
+        "output_sha256": "47de084fbdfd02d34226eada3e31bed7595f219f3f2a798521e4d24c57b92bd7",
+        "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n32-r1.2.wav",
+        "frames": 320000,
+        "channels": 2,
+        "sample_rate": 48000,
+        "peak": 0.249966636300087,
+        "float32": true,
+        "channel_rms": [0.176619654799032, 0.176619654799032],
+        "pitch_validation": "Not claimed: parent must measure pitch on rendered waveform",
+        "instances": 32,
+        "gain_per_instance": 0.03125,
+        "tempo_ratio": 1.2,
+        "pitch_semitones": 0,
+        "warmup_wall_seconds": 0.932569208,
+        "wall_seconds": [
+          0.930419875, 0.930105625, 0.931730083, 0.931631291, 0.934155375, 0.929613542, 0.928421792,
+          0.930985, 0.927239125, 0.921221042
+        ]
+      }
+    ],
+    "process_peak_rss_bytes_macos": 52215808
+  },
+  "finalSelectionAllowed": false
+}

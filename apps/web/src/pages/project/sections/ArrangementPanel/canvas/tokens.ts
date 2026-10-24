@@ -17,6 +17,7 @@ const TOKEN_NAMES = [
   "--arrangement-surface-alt",
   "--arrangement-ruler",
   "--arrangement-line",
+  "--arrangement-ruler-line",
   "--arrangement-grid-bar",
   "--arrangement-grid-minor",
   "--arrangement-grid-major",
@@ -26,6 +27,8 @@ const TOKEN_NAMES = [
   "--arrangement-meter-danger",
   "--arrangement-clip-ink",
   "--arrangement-fade-mask",
+  "--arrangement-muted-clip",
+  "--arrangement-muted-clip-title",
   "--arrangement-clip-selected",
   "--arrangement-clip-paper",
   "--arrangement-clip-tint",
@@ -79,7 +82,7 @@ export function resolveColor(
   return name ? tokens[name] : fallback
 }
 
-export function gridTokens(tokens: TokenSet): GridTokens {
+export function gridTokens(tokens: TokenSet, loopEnabled: boolean): GridTokens {
   return {
     foreground: tokens["--foreground"],
     mutedForeground: tokens["--muted-foreground"],
@@ -87,9 +90,11 @@ export function gridTokens(tokens: TokenSet): GridTokens {
     surfaceAlt: tokens["--arrangement-surface-alt"],
     ruler: tokens["--arrangement-ruler"],
     line: tokens["--arrangement-line"],
+    rulerLine: tokens["--arrangement-ruler-line"],
     gridBar: tokens["--arrangement-grid-bar"],
     gridMinor: tokens["--arrangement-grid-minor"],
     gridMajor: tokens["--arrangement-grid-major"],
+    guide: loopEnabled ? tokens["--primary"] : tokens["--muted-foreground"],
     primary: tokens["--primary"],
   }
 }

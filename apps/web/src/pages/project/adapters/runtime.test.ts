@@ -1,14 +1,17 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it } from "vitest"
 import { create } from "zustand"
 import { createStore } from "zustand/vanilla"
-import { parseProject } from "@/pages/project/model/persistence"
-import { initialSession } from "../stores/useProjectState"
-import { initialDocument } from "../stores/slices/document"
-import { initialWorkspace } from "../stores/slices/workspace"
-import { createProjectRuntime } from "./runtime"
-import { createMockProjectBackend } from "./backend/mock"
-import { createMockDocument, createMockWorkspace } from "./fixtures"
+import { parseProject } from "@zoeydaw/project-core/persistence"
+import { initialSession, initialDocument, initialWorkspace } from "@zoeydaw/project-runtime/state"
+import { createProjectRuntime } from "@zoeydaw/project-runtime"
+import {
+  createMockProjectBackend,
+  createMockDocument,
+  createMockWorkspace,
+} from "@zoeydaw/project-runtime/testing"
+import { captureProjectSave, waitForProjectSave, completeProjectSave } from "./context"
 import {
   configureProjectBackend,
   hydrateProject,
@@ -20,33 +23,74 @@ import {
   setProjectStorageId,
 } from "."
 import type {
-  BackendRequest,
+  BackendControlRequest,
+  BackendDocumentRequest,
+  BackendNoteRequest,
+  BackendNoteResult,
   BackendResult,
   BackendTelemetry,
   ProjectBackend,
-} from "../model/backend"
-import type { ProjectState } from "../model/types"
+} from "@zoeydaw/project-core/backend"
+import type { ProjectState } from "@zoeydaw/project-core/types"
 
 const backendPhaseOnImport = useProjectState.getState().session.backend.phase
 
-function deferredBackend() {
-  const pending: { request: BackendRequest; resolve: (result: BackendResult) => void }[] = []
-  const requests: BackendRequest[] = []
+function deferredBackend({ deferNotes = false } = {}) {
+  type Pending =
+    | {
+        kind: "document"
+        request: BackendDocumentRequest
+        resolve: (result: BackendResult) => void
+      }
+    | { kind: "control"; request: BackendControlRequest; resolve: (result: BackendResult) => void }
+  const pending: Pending[] = []
+  const requests: BackendDocumentRequest[] = []
+  const controls: BackendControlRequest[] = []
+  const notes: BackendNoteRequest[] = []
+  const pendingNotes: {
+    request: BackendNoteRequest
+    resolve: (result: BackendNoteResult) => void
+  }[] = []
   const listeners = new Set<(frame: BackendTelemetry) => void>()
+  let acceptedRevision = 0
+  const panics = { allNotesOff: 0, urgentStop: 0 }
   const backend: ProjectBackend = {
     apply(request) {
       requests.push(request)
       if (request.stage === "open") {
+        acceptedRevision = request.revision
         return {
           kind: "accepted",
           sessionId: request.sessionId,
           sequence: request.sequence,
-          revision: 0,
+          revision: acceptedRevision,
+          controlGeneration: request.controlGeneration,
         }
       }
       return new Promise<BackendResult>(resolve => {
-        pending.push({ request, resolve })
+        pending.push({ kind: "document", request, resolve })
       })
+    },
+    control(request) {
+      controls.push(request)
+      return new Promise<BackendResult>(resolve => {
+        pending.push({ kind: "control", request, resolve })
+      })
+    },
+    note(request) {
+      notes.push(request)
+      if (!deferNotes) {
+        return { kind: "accepted", sessionId: request.sessionId, sequence: request.sequence }
+      }
+      return new Promise<BackendNoteResult>(resolve => {
+        pendingNotes.push({ request, resolve })
+      })
+    },
+    allNotesOff() {
+      panics.allNotesOff++
+    },
+    async urgentStop() {
+      panics.urgentStop++
     },
     subscribe(listener) {
       listeners.add(listener)
@@ -64,12 +108,30 @@ function deferredBackend() {
       throw new Error("No backend request is awaiting a response")
     }
     if (kind === "accepted") {
+      if (next.kind === "document") acceptedRevision = next.request.revision
       next.resolve({
         kind,
         sessionId: next.request.sessionId,
         sequence: next.request.sequence,
-        revision: next.request.revision,
+        revision: acceptedRevision,
+        controlGeneration: next.request.controlGeneration,
       })
+    } else {
+      next.resolve({
+        kind,
+        sessionId: next.request.sessionId,
+        sequence: next.request.sequence,
+        code: "rejected",
+        controlGeneration: next.request.controlGeneration,
+      })
+    }
+    return next.request
+  }
+  function settleNote(kind: "accepted" | "rejected") {
+    const next = pendingNotes.shift()
+    if (!next) throw new Error("No note edge is awaiting a response")
+    if (kind === "accepted") {
+      next.resolve({ kind, sessionId: next.request.sessionId, sequence: next.request.sequence })
     } else {
       next.resolve({
         kind,
@@ -85,15 +147,31 @@ function deferredBackend() {
       listener(frame)
     }
   }
-  return { backend, requests, pending, settle, publish }
+  return {
+    backend,
+    requests,
+    controls,
+    notes,
+    pending,
+    pendingNotes,
+    settle,
+    settleNote,
+    publish,
+    panics,
+  }
 }
 const fresh = () =>
   hydrateProject(
-    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+    JSON.stringify({
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
   )
 let restore: (() => void) | null = null
 let releaseRuntime: (() => void) | null = null
 beforeEach(() => {
+  configureProjectBackend(createMockProjectBackend)
   localStorage.clear()
   fresh()
   releaseRuntime = startProjectRuntime()
@@ -114,20 +192,17 @@ it("does not create backend resources on import, factory construction, or hydrat
   const openedBpms: number[] = []
   const backendFactory = () => {
     opened++
+    const backend = createMockProjectBackend()
     return {
-      apply(request: BackendRequest): BackendResult {
+      ...backend,
+      apply(request: BackendDocumentRequest) {
         if (request.stage === "open") {
           openedBpms.push(request.state.project.bpm)
         }
-        return {
-          kind: "accepted",
-          sessionId: request.sessionId,
-          sequence: request.sequence,
-          revision: request.revision,
-        }
+        return backend.apply(request)
       },
-      subscribe: () => () => {},
       dispose() {
+        backend.dispose()
         disposed++
       },
     }
@@ -138,15 +213,29 @@ it("does not create backend resources on import, factory construction, or hydrat
   removeDefault()
   const makeStore = () =>
     create<ProjectState>(() => ({
-      document: initialDocument(),
+      document: initialDocument(DEFAULT_TRACK_HEIGHT),
       workspace: initialWorkspace(),
       session: initialSession(),
     }))
-  const first = createProjectRuntime({ store: makeStore(), backendFactory })
-  const second = createProjectRuntime({ store: makeStore(), backendFactory })
+  const first = createProjectRuntime({
+    store: makeStore(),
+    backendFactory,
+    defaultTrackHeight: DEFAULT_TRACK_HEIGHT,
+  })
+  const second = createProjectRuntime({
+    store: makeStore(),
+    backendFactory,
+    defaultTrackHeight: DEFAULT_TRACK_HEIGHT,
+  })
   expect(opened).toBe(0)
-  first.hydrateState({ document: createMockDocument(), workspace: createMockWorkspace() })
-  second.hydrateState({ document: createMockDocument(), workspace: createMockWorkspace() })
+  first.hydrateState({
+    document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+    workspace: createMockWorkspace(),
+  })
+  second.hydrateState({
+    document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+    workspace: createMockWorkspace(),
+  })
   first.document({ ...first.get().document, name: "First" })
   first.document({
     ...first.get().document,
@@ -211,9 +300,6 @@ it("keeps canonical previews out of snapshots and journals recorded notes across
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.toggleRecording()
-  projectActions.togglePlay()
-  remote.settle("accepted")
-  await Promise.resolve()
   remote.settle("accepted")
   await Promise.resolve()
   const source = useProjectState.getState().document.tracks
@@ -249,7 +335,8 @@ it("does not clear dirty until accepted, and fences delayed save and old project
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setBpm(155)
-  projectActions.saveSnapshot()
+  const saving = waitForProjectSave(captureProjectSave(), new AbortController().signal)
+  const rejected = expect(saving).rejects.toThrow(/changed/)
   expect(useProjectState.getState().session.dirty).toBe(true)
   const old = remote.pending[0]
   fresh()
@@ -257,9 +344,11 @@ it("does not clear dirty until accepted, and fences delayed save and old project
     kind: "rejected",
     sessionId: old.request.sessionId,
     sequence: old.request.sequence,
+    controlGeneration: old.request.controlGeneration,
     code: "rejected",
   })
   await Promise.resolve()
+  await rejected
   expect(useProjectState.getState().document.transport.bpm).toBe(120)
   expect(useProjectState.getState().session.backend.error).toBeNull()
   expect(useProjectState.getState().session.dirty).toBe(false)
@@ -267,7 +356,6 @@ it("does not clear dirty until accepted, and fences delayed save and old project
 
 it("cancels a legacy edit without swallowing independent recording, preserving the viewport", () => {
   projectActions.toggleRecording()
-  projectActions.togglePlay()
   projectActions.beginEdit()
   projectActions.setBpm(145)
   projectActions.setViewport({ scrollX: 75 })
@@ -325,25 +413,22 @@ it("invalidates preview tokens when replacing backend sessions", () => {
 it("disposes backend resources on the last page lease and reopens a fresh epoch", async () => {
   releaseRuntime?.()
   releaseRuntime = null
-  const instances: { disposed: boolean; requests: BackendRequest[] }[] = []
+  const instances: { disposed: boolean; requests: BackendDocumentRequest[] }[] = []
   restore = configureProjectBackend(() => {
-    const instance: { disposed: boolean; requests: BackendRequest[] } = {
+    const instance: { disposed: boolean; requests: BackendDocumentRequest[] } = {
       disposed: false,
       requests: [],
     }
     instances.push(instance)
+    const backend = createMockProjectBackend()
     return {
+      ...backend,
       apply(request) {
         instance.requests.push(request)
-        return {
-          kind: "accepted",
-          sessionId: request.sessionId,
-          sequence: request.sequence,
-          revision: request.revision,
-        }
+        return backend.apply(request)
       },
-      subscribe: () => () => {},
       dispose() {
+        backend.dispose()
         instance.disposed = true
       },
     }
@@ -366,84 +451,203 @@ it("disposes backend resources on the last page lease and reopens a fresh epoch"
   expect(await whenProjectBackendIdle()).toBe(false)
 })
 
-it("persists the requested accepted revision despite later edits, without clearing newer dirty state", async () => {
+it("accepts a captured revision after later acknowledgements without clearing newer edits", async () => {
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setBpm(145)
-  projectActions.saveSnapshot()
+  const capture = captureProjectSave()
   projectActions.setBpm(165)
   remote.settle("accepted")
   await Promise.resolve()
-  expect(useProjectState.getState().session.dirty).toBe(true)
   remote.settle("accepted")
   await Promise.resolve()
-  expect(projectActions.restoreSnapshot()).toBe(true)
-  expect(useProjectState.getState().document.transport.bpm).toBe(145)
+  await waitForProjectSave(capture, new AbortController().signal)
+  completeProjectSave(capture)
+  expect(capture.document.transport.bpm).toBe(145)
+  expect(useProjectState.getState().document.transport.bpm).toBe(165)
+  expect(useProjectState.getState().session.dirty).toBe(true)
 })
 
 it("does not cancel a pending save just because the unhistoried viewport changed", async () => {
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setBpm(147)
-  projectActions.saveSnapshot()
+  const capture = captureProjectSave()
+  const saved = waitForProjectSave(capture, new AbortController().signal)
   projectActions.setViewport({ scrollX: 192 })
   remote.settle("accepted")
-  await Promise.resolve()
+  await saved
+  completeProjectSave(capture)
   expect(useProjectState.getState().session.dirty).toBe(false)
   expect(useProjectState.getState().workspace.scrollX).toBe(192)
-  projectActions.setBpm(167)
-  expect(projectActions.restoreSnapshot()).toBe(true)
-  expect(useProjectState.getState().document.transport.bpm).toBe(147)
 })
 
-it("saves committed values rather than a numeric gesture's temporary values", () => {
+it("captures committed values rather than temporary numeric and workspace edits", async () => {
   projectActions.beginEdit()
   projectActions.setBpm(170)
+  projectActions.setFollow(false)
+  const capture = captureProjectSave()
   expect(parseProject(serializeProject()).document.transport.bpm).toBe(120)
-  projectActions.saveSnapshot()
+  expect(capture.document.transport.bpm).toBe(120)
+  expect(capture.workspace.follow).toBe(true)
+  await waitForProjectSave(capture, new AbortController().signal)
+  completeProjectSave(capture)
   projectActions.cancelEdit()
   expect(useProjectState.getState().session.dirty).toBe(false)
-  projectActions.setBpm(175)
-  expect(projectActions.restoreSnapshot()).toBe(true)
-  expect(useProjectState.getState().document.transport.bpm).toBe(120)
 })
 
-it("does not resurrect a released MIDI key when its backend command is rejected", async () => {
-  const remote = deferredBackend()
+it("preserves short MIDI note edges and does not resurrect a released key after rejection", async () => {
+  const remote = deferredBackend({ deferNotes: true })
   restore = configureProjectBackend(() => remote.backend)
+  const before = useProjectState.getState().document
   projectActions.noteOn(80)
-  remote.settle("accepted")
-  await Promise.resolve()
   projectActions.noteOff(80)
-  remote.settle("rejected")
+  expect(useProjectState.getState().session.activeMidiNotes).toEqual([])
+  expect(remote.notes).toHaveLength(1)
+  const down = remote.notes[0]
+  expect(down.note).toMatchObject({ trackId: "trager", pitch: 80, on: true })
+  expect(down.note.noteId).not.toBe("")
+  remote.settleNote("accepted")
+  await Promise.resolve()
+  expect(remote.notes).toHaveLength(2)
+  expect(remote.notes[1]).toMatchObject({
+    sessionId: down.sessionId,
+    sequence: down.sequence + 1,
+    note: { ...down.note, on: false, velocity: 0 },
+  })
+  remote.settleNote("rejected")
   await Promise.resolve()
   expect(useProjectState.getState().session.activeMidiNotes).toEqual([])
-  expect(remote.requests.at(-1)).toMatchObject({
-    stage: "recover",
-    state: { control: { heldNotes: [] } },
+  expect(useProjectState.getState().session.backend.error).toBe("rejected")
+  expect(useProjectState.getState().document).toBe(before)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+  expect(remote.requests.map(request => request.stage)).toEqual(["open"])
+  expect(remote.controls).toEqual([])
+  expect(remote.pendingNotes).toHaveLength(0)
+  expect(remote.panics).toEqual({ allNotesOff: 1, urgentStop: 0 })
+})
+
+it("panics rejected notes without stopping arrangement playback or changing history", async () => {
+  const remote = deferredBackend({ deferNotes: true })
+  restore = configureProjectBackend(() => remote.backend)
+  projectActions.togglePlay()
+  remote.settle("accepted")
+  await Promise.resolve()
+  const before = useProjectState.getState()
+  expect(before.session.playing).toBe(true)
+  projectActions.noteOn(84)
+  projectActions.noteOff(84)
+  remote.settleNote("accepted")
+  await Promise.resolve()
+  remote.settleNote("rejected")
+  await Promise.resolve()
+  const after = useProjectState.getState()
+  expect(after.session.playing).toBe(true)
+  expect(after.session.activeMidiNotes).toEqual([])
+  expect(after.session.backend.error).toBe("rejected")
+  expect(after.session.backend.acceptedRevision).toBe(before.session.backend.acceptedRevision)
+  expect(after.session.canUndo).toBe(before.session.canUndo)
+  expect(after.document).toBe(before.document)
+  expect(remote.panics).toEqual({ allNotesOff: 1, urgentStop: 0 })
+  expect(remote.requests.map(request => request.stage)).toEqual(["open"])
+  expect(remote.controls).toHaveLength(1)
+})
+
+it("releases the original MIDI track and note id after arm and selection change", async () => {
+  const remote = deferredBackend()
+  restore = configureProjectBackend(() => remote.backend)
+  projectActions.noteOn(81)
+  expect(remote.notes).toHaveLength(1)
+  const down = remote.notes[0]
+  expect(down.note).toMatchObject({ trackId: "trager", pitch: 81, on: true })
+  projectActions.updateTrack("trager", { armed: false, monitor: "off" })
+  projectActions.selectTracks(["sidechain"], "header")
+  while (remote.pending.length) {
+    remote.settle("accepted")
+    await Promise.resolve()
+  }
+  const documentRequests = remote.requests.length
+  const controlRequests = remote.controls.length
+  projectActions.noteOff(81)
+  expect(remote.notes).toHaveLength(2)
+  expect(remote.notes[1].note).toEqual({ ...down.note, on: false, velocity: 0 })
+  expect(remote.requests).toHaveLength(documentRequests)
+  expect(remote.controls).toHaveLength(controlRequests)
+  expect(useProjectState.getState().session.activeMidiNotes).toEqual([])
+})
+
+it("routes monitored MIDI notes without requiring arm and excludes monitor-off tracks", async () => {
+  const remote = deferredBackend()
+  restore = configureProjectBackend(() => remote.backend)
+  projectActions.updateTrack("trager", { armed: true, monitor: "off" })
+  projectActions.updateTrack("sidechain", { armed: false, monitor: "in" })
+  while (remote.pending.length) {
+    remote.settle("accepted")
+    await Promise.resolve()
+  }
+  const documentRequests = remote.requests.length
+  projectActions.noteOn(82)
+  expect(remote.notes).toHaveLength(1)
+  expect(remote.notes[0].note).toMatchObject({
+    trackId: "sidechain",
+    pitch: 82,
+    velocity: useProjectState.getState().session.midiVelocity,
+    on: true,
+  })
+  projectActions.noteOff(82)
+  expect(remote.notes).toHaveLength(2)
+  expect(remote.notes[1].note).toEqual({ ...remote.notes[0].note, on: false, velocity: 0 })
+  expect(remote.requests).toHaveLength(documentRequests)
+  expect(remote.controls).toEqual([])
+})
+
+it("sends transport through narrow controls without document, revision, or history changes", async () => {
+  const remote = deferredBackend()
+  restore = configureProjectBackend(() => remote.backend)
+  const before = useProjectState.getState()
+  projectActions.togglePlay()
+  expect(remote.requests.map(request => request.stage)).toEqual(["open"])
+  expect(remote.controls).toHaveLength(1)
+  expect(remote.controls[0]).toEqual({
+    protocolVersion: 2,
+    sessionId: before.session.backend.sessionId,
+    sequence: remote.requests[0].sequence + 1,
+    controlGeneration: (BigInt(remote.requests[0].controlGeneration) + 1n).toString(),
+    control: {
+      playing: true,
+      recording: false,
+      seekBar: 1,
+      seekGeneration: 0,
+      metronome: false,
+    },
   })
   remote.settle("accepted")
   await Promise.resolve()
-  expect(useProjectState.getState().session.activeMidiNotes).toEqual([])
+  const after = useProjectState.getState()
+  expect(after.document).toBe(before.document)
+  expect(after.session.backend.acceptedRevision).toBe(before.session.backend.acceptedRevision)
+  expect(after.session.canUndo).toBe(before.session.canUndo)
+  expect(after.session.dirty).toBe(before.session.dirty)
+  projectActions.setMetronome(true)
+  expect(remote.controls).toHaveLength(2)
+  expect(remote.controls[1].control.metronome).toBe(true)
+  remote.settle("accepted")
+  await Promise.resolve()
+  expect(useProjectState.getState().workspace.metronome).toBe(true)
 })
 
 it("keeps each edit owner's backend id stable and its undo history separate", () => {
-  const requests: BackendRequest[] = []
-  restore = configureProjectBackend(() => ({
-    apply(request) {
-      requests.push(request)
-      return {
-        kind: "accepted",
-        sessionId: request.sessionId,
-        sequence: request.sequence,
-        revision: request.revision,
-      }
-    },
-    subscribe() {
-      return () => {}
-    },
-    dispose() {},
-  }))
+  const requests: BackendDocumentRequest[] = []
+  restore = configureProjectBackend(() => {
+    const backend = createMockProjectBackend()
+    return {
+      ...backend,
+      apply(request) {
+        requests.push(request)
+        return backend.apply(request)
+      },
+    }
+  })
   const first = projectActions.beginEdit("bpm")
   projectActions.setBpm(141)
   projectActions.setBpm(142)
@@ -537,21 +741,20 @@ it("releases rejected inline ownership without letting its token cancel the next
   expect(useProjectState.getState().session.canUndo).toBe(true)
 })
 
-it("writes a pending save only after its revision is accepted", async () => {
+it("does not clear dirty before the captured revision is accepted or after cancellation", async () => {
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setBpm(151)
-  projectActions.saveSnapshot()
-  expect(projectActions.restoreSnapshot()).toBe(false)
-  expect(useProjectState.getState().document.transport.bpm).toBe(151)
+  const capture = captureProjectSave()
+  const abort = new AbortController()
+  const saved = waitForProjectSave(capture, abort.signal)
+  const cancelled = expect(saved).rejects.toMatchObject({ name: "AbortError" })
+  abort.abort()
+  await cancelled
   expect(useProjectState.getState().session.dirty).toBe(true)
   remote.settle("accepted")
   await Promise.resolve()
-  expect(useProjectState.getState().session.dirty).toBe(false)
-  expect(useProjectState.getState().session.snapshotError).toBeNull()
-  projectActions.setBpm(161)
-  expect(projectActions.restoreSnapshot()).toBe(true)
-  expect(useProjectState.getState().document.transport.bpm).toBe(151)
+  expect(useProjectState.getState().session.dirty).toBe(true)
 })
 
 it("does not promote a temporary control edit when replacing the backend", () => {
@@ -602,8 +805,10 @@ it("rejects edits visibly when the backend could not initialize instead of silen
 it("opens external-backend projects without demo media and leaves empty audio clips silent", () => {
   restore = configureProjectBackend(createMockProjectBackend)
   setProjectStorageId("external-empty")
-  expect(useProjectState.getState().document.tracks.map(track => track.id)).toEqual(["main"])
-  projectActions.addTrack("audio")
+  expect(useProjectState.getState().document.tracks.map(track => track.kind)).toEqual([
+    "audio",
+    "main",
+  ])
   const track = useProjectState.getState().document.tracks.find(track => track.kind === "audio")
   if (!track) {
     throw new Error("Missing audio track")
@@ -611,7 +816,7 @@ it("opens external-backend projects without demo media and leaves empty audio cl
   projectActions.createClip(track.id, "audio", 1, 4)
   const clip = useProjectState.getState().document.tracks.find(item => item.id === track.id)
     ?.clips[0]
-  expect(clip).toMatchObject({ kind: "audio", samplePath: "" })
+  expect(clip).toMatchObject({ kind: "audio", sourceId: null })
   const stop = startProjectRuntime()
   try {
     projectActions.togglePlay()
@@ -624,7 +829,7 @@ it("opens external-backend projects without demo media and leaves empty audio cl
 it("initializes each project from its backend registration and restores the previous initializer", () => {
   const removeFirst = configureProjectBackend(createMockProjectBackend, {
     createProject: projectId => ({
-      document: { ...initialDocument(), name: projectId },
+      document: { ...initialDocument(DEFAULT_TRACK_HEIGHT), name: projectId },
       workspace: initialWorkspace(),
     }),
   })
@@ -634,7 +839,7 @@ it("initializes each project from its backend registration and restores the prev
     removeFirst()
   }
   setProjectStorageId("external-second")
-  expect(useProjectState.getState().document.name).toBe(initialDocument().name)
+  expect(useProjectState.getState().document.name).toBe(initialDocument(DEFAULT_TRACK_HEIGHT).name)
   removeSecond()
   setProjectStorageId("external-first")
   expect(useProjectState.getState().document.name).toBe("external-first")
@@ -663,7 +868,9 @@ it("keeps saved workspace preferences clean after a rejected document edit", asy
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.setFollow(false)
-  projectActions.saveSnapshot()
+  const capture = captureProjectSave()
+  await waitForProjectSave(capture, new AbortController().signal)
+  completeProjectSave(capture)
   expect(useProjectState.getState().session.dirty).toBe(false)
   projectActions.setBpm(183)
   remote.settle("rejected")
@@ -684,9 +891,6 @@ it("does not record optimistic seek positions before backend acceptance", async 
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
   projectActions.toggleRecording()
-  projectActions.togglePlay()
-  remote.settle("accepted")
-  await Promise.resolve()
   remote.settle("accepted")
   await Promise.resolve()
   const before = useProjectState.getState().document
@@ -725,12 +929,11 @@ it("stops recording on accepted record-off even before the next telemetry frame"
   const stop = startProjectRuntime()
   try {
     projectActions.toggleRecording()
-    projectActions.togglePlay()
     while (remote.pending.length) {
       remote.settle("accepted")
       await Promise.resolve()
     }
-    const command = remote.requests.at(-1)
+    const command = remote.controls.at(-1)
     if (!command) {
       throw new Error("Missing accepted play request")
     }
@@ -738,6 +941,7 @@ it("stops recording on accepted record-off even before the next telemetry frame"
       sessionId: command.sessionId,
       sequence: 1,
       appliedSequence: command.sequence,
+      controlGeneration: command.controlGeneration,
       clock: { kind: "musical", bar: 1, barsPerSecond: 0.5 },
       playing: true,
       recording: true,
@@ -768,7 +972,6 @@ it("stops recording on accepted record-off even before the next telemetry frame"
 
 it("retains independent recorded notes when the last lease cancels a numeric edit", () => {
   projectActions.toggleRecording()
-  projectActions.togglePlay()
   projectActions.beginEdit("bpm")
   projectActions.setBpm(183)
   projectActions.noteOn(85)
@@ -791,13 +994,97 @@ it("retains independent recorded notes when the last lease cancels a numeric edi
 
 it("starts independently injected runtime projects without fabricated demo media", () => {
   const store = createStore<ProjectState>(() => ({
-    document: initialDocument(),
+    document: initialDocument(DEFAULT_TRACK_HEIGHT),
     workspace: initialWorkspace(),
     session: initialSession(),
   }))
-  const runtime = createProjectRuntime({ store, backendFactory: createMockProjectBackend })
+  const runtime = createProjectRuntime({
+    store,
+    backendFactory: createMockProjectBackend,
+    defaultTrackHeight: DEFAULT_TRACK_HEIGHT,
+  })
   runtime.resetProject("native-bootstrap")
-  expect(runtime.get().document.tracks.map(track => track.id)).toEqual(["main"])
+  expect(runtime.get().document.tracks.map(track => track.kind)).toEqual(["audio", "main"])
+  expect(runtime.get().document.tracks[0]).toMatchObject({
+    name: "1 Audio",
+    output: "main",
+    volumeDb: 0,
+    pan: 0,
+    armed: false,
+  })
+  expect(runtime.get().document.media).toEqual([])
   expect(runtime.get().document.tracks.flatMap(track => track.clips)).toEqual([])
   expect(runtime.get().session.backend.phase).toBe("idle")
+  const before = runtime.get()
+  const buses = before.document.tracks.filter(track => track.kind === "main")
+  runtime.tracks(buses)
+  runtime.document({ ...before.document, tracks: buses })
+  expect(runtime.get()).toBe(before)
+  const token = runtime.beginPreview()
+  expect(runtime.previewTracks(token, buses)).toBeNull()
+  expect(runtime.getEffectiveDocument()).toBe(before.document)
+  runtime.cancelPreview(token)
+  expect(runtime.get().session.canUndo).toBe(false)
+})
+
+it("normalizes custom reset and hydration seeds before backend opening, without mutating the seed", async () => {
+  const document = initialDocument(DEFAULT_TRACK_HEIGHT)
+  document.tracks = document.tracks.filter(track => track.kind === "main")
+  document.name = "Legacy project"
+  const seed = { document, workspace: initialWorkspace() }
+  const store = createStore<ProjectState>(() => ({ ...seed, session: initialSession() }))
+  const requests: BackendDocumentRequest[] = []
+  const runtime = createProjectRuntime({
+    store,
+    defaultTrackHeight: DEFAULT_TRACK_HEIGHT,
+    createProject: () => seed,
+    backendFactory: () => {
+      const backend = createMockProjectBackend()
+      return {
+        ...backend,
+        apply(request) {
+          requests.push(request)
+          return backend.apply(request)
+        },
+      }
+    },
+  })
+  runtime.resetProject("legacy-reset")
+  expect(runtime.get().document.tracks.map(track => track.kind)).toEqual(["audio", "main"])
+  runtime.hydrateState(seed)
+  expect(runtime.get().document.tracks.map(track => track.kind)).toEqual(["audio", "main"])
+  const release = runtime.startProjectRuntime()
+  try {
+    await runtime.whenProjectBackendIdle()
+    expect(requests[0].state.project.tracks.map(track => track.kind)).toEqual(["audio", "main"])
+    await runtime.replaceProject(seed, new AbortController().signal)
+    expect(requests.at(-1)?.state.project.tracks.map(track => track.kind)).toEqual([
+      "audio",
+      "main",
+    ])
+    expect(runtime.get().document.name).toBe("Legacy project")
+    expect(document.tracks.map(track => track.kind)).toEqual(["main"])
+    expect(runtime.get().document.tracks[0].clips).toEqual([])
+  } finally {
+    release()
+  }
+})
+
+it("nests a new group inside its parent and lists every child once", () => {
+  hydrateProject(
+    JSON.stringify({
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
+  )
+  projectActions.groupTracks(["trager", "sidechain"])
+  const tracks = useProjectState.getState().document.tracks
+  const outer = tracks.find(track => track.id === "drums-group")
+  const inner = tracks.find(track => track.kind === "group" && track.id !== "drums-group")
+  expect(inner?.output).toBe("drums-group")
+  expect(inner?.childTrackIds).toEqual(["trager", "sidechain"])
+  expect(outer?.childTrackIds).toEqual([inner?.id])
+  expect(tracks.filter(track => track.id === "sidechain")).toHaveLength(1)
+  expect(tracks.find(track => track.id === "sidechain")?.output).toBe(inner?.id)
 })

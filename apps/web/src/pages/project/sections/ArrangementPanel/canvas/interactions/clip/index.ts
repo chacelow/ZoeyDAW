@@ -1,5 +1,5 @@
-import { acceptsClip, positionToBar } from "@/pages/project/model/types"
-import { CLIP_CLIPBOARD_TYPE, parseClipClipboard } from "@/pages/project/model/clip-clipboard"
+import { acceptsClip, positionToBar } from "@zoeydaw/project-core/types"
+import { CLIP_CLIPBOARD_TYPE, parseClipClipboard } from "@zoeydaw/project-core/clip-clipboard"
 import { hitTest } from "@/pages/project/sections/ArrangementPanel/canvas/hit-test"
 import { arrangementBodyTop } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { barAtX, snappedBar } from "../coordinates"
@@ -154,7 +154,11 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         scene.setHover(null)
       }
       return hit?.kind === "clip-resize" || (hit?.kind === "clip-fade" && hit.handle !== "curve")
-        ? "ew-resize"
+        ? hit.kind === "clip-resize"
+          ? hit.edge === "left"
+            ? "brace-left"
+            : "brace-right"
+          : "ew-resize"
         : hit?.kind === "clip-fade"
           ? "move"
           : hit?.kind === "clip-title"
@@ -181,18 +185,15 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         return false
       }
       const { kind } = hit.track
-      actions.createClip(
+      const id = actions.createClip(
         hit.track.id,
         kind,
         snappedBar(context, hit.bar),
         scene.get().gridPlan.cellBars
       )
-      const clip = context
-        .getState()
-        .document.tracks.find(track => track.id === hit.track.id)
-        ?.clips.at(-1)
-      if (clip) {
-        select([clip.id])
+      if (id) {
+        select([id])
+        actions.setEditingClip(id)
       }
       return true
     },
@@ -222,6 +223,18 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
       }
       if (command && (key === "c" || key === "x" || key === "v")) {
         return false
+      }
+      // `0` toggles mute on the selected clips, matching the transport's
+      // deactivate convention.
+      if (!command && !event.altKey && key === "0" && !event.shiftKey && ids.length) {
+        const muted = !state.document.tracks
+          .flatMap(track => track.clips)
+          .filter(clip => ids.includes(clip.id))
+          .every(clip => clip.mute)
+        actions.beginEdit()
+        for (const id of ids) actions.updateClip(id, { mute: muted })
+        actions.endEdit()
+        return true
       }
       return false
     },

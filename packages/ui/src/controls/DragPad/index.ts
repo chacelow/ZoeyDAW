@@ -3,6 +3,7 @@ export { DragPadNumber, type DragPadNumberProps } from "./DragPadNumber"
 export { DragPadBar, type DragPadBarProps } from "./DragPadBar"
 export { DragPadBipolar, type DragPadBipolarProps } from "./DragPadBipolar"
 export { DragPadToggle, type DragPadToggleProps } from "./DragPadToggle"
+export { Knob, type KnobProps } from "./Knob"
 export { useDragValue, type UseDragValueOptions, type UseDragValueResult } from "./useDragValue"
 export {
   useInfoBinding,

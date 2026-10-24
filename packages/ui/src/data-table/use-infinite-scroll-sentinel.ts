@@ -39,46 +39,43 @@ export interface UseInfiniteScrollSentinelReturn {
 export function useInfiniteScrollSentinel({
   onReachEnd,
 }: UseInfiniteScrollSentinelProps): UseInfiniteScrollSentinelReturn {
-  // 回调放 ref：观察者只在 root 变化时重建，不因回调换引用而反复解绑重绑。
+  // 回调放 ref：观察者只随 root 和 sentinel 生命周期重建。
   const reachEndCallback = React.useRef(onReachEnd)
   React.useLayoutEffect(() => {
     reachEndCallback.current = onReachEnd
   }, [onReachEnd])
 
   const [root, setRoot] = React.useState<HTMLElement | null>(null)
-  const observerReference = React.useRef<IntersectionObserver | null>(null)
-  const sentinelElementReference = React.useRef<HTMLElement | null>(null)
+  const [sentinel, setSentinel] = React.useState<HTMLElement | null>(null)
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
+    if (!sentinel) {
+      return
+    }
+
+    let active = true
     const observer = new IntersectionObserver(
       entries => {
-        if (entries.some(e => e.isIntersecting)) {
+        if (active && entries.some(entry => entry.target === sentinel && entry.isIntersecting)) {
           reachEndCallback.current()
         }
       },
       { root, rootMargin: "0px 0px 200px 0px", threshold: 0 }
     )
-    observerReference.current = observer
-    // root 变化时哨兵可能早已挂载 —— 重建后要把它重新纳入观察, 否则换来的是
-    // 一个谁也没盯着的 observer。
-    if (sentinelElementReference.current) {
-      observer.observe(sentinelElementReference.current)
-    }
+    observer.observe(sentinel)
+
     return () => {
+      active = false
       observer.disconnect()
-      observerReference.current = null
     }
-  }, [root])
+  }, [root, sentinel])
 
   const rootReference = React.useCallback((element: HTMLElement | null) => {
     setRoot(element)
   }, [])
 
   const sentinelReference = React.useCallback((element: HTMLElement | null) => {
-    sentinelElementReference.current = element
-    if (element) {
-      observerReference.current?.observe(element)
-    }
+    setSentinel(element)
   }, [])
 
   return { rootRef: rootReference, sentinelRef: sentinelReference }

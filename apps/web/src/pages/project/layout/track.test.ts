@@ -1,6 +1,5 @@
-import { describe, expect, it } from "vitest"
-import { createMockDocument } from "../adapters/fixtures"
 import {
+  DEFAULT_TRACK_HEIGHT,
   COLLAPSED_TRACK_HEIGHT,
   MAX_TRACK_HEIGHT,
   resizeTrackHeight,
@@ -8,15 +7,20 @@ import {
   TRACK_REVEAL_THRESHOLD,
   trackControlRows,
   trackHeight,
-} from "."
+} from "@/pages/project/layout"
+import { describe, expect, it } from "vitest"
+import { createMockDocument } from "@zoeydaw/project-runtime/testing"
 
 describe("track row resize", () => {
-  const { tracks } = createMockDocument()
+  const { tracks } = createMockDocument(DEFAULT_TRACK_HEIGHT)
 
   it("uses the same compact height and reveal step for ordinary, group, return and main tracks", () => {
     for (const track of tracks) {
       const folded = { ...track, collapsed: true }
-      expect(trackHeight(folded)).toBe(COLLAPSED_TRACK_HEIGHT)
+      // A folded group keeps two compact rows so its child summary stays legible.
+      expect(trackHeight(folded)).toBe(
+        track.kind === "group" ? COLLAPSED_TRACK_HEIGHT * 2 : COLLAPSED_TRACK_HEIGHT
+      )
       expect(resizeTrackHeight(folded, TRACK_REVEAL_THRESHOLD)).toEqual({
         collapsed: false,
         heightPx: COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP,

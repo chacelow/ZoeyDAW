@@ -1,8 +1,9 @@
-import { projectClipResize } from "@/pages/project/model/clip-edits"
+import { projectClipResize, replaceClip } from "@zoeydaw/project-core/clip-edits"
+import { uniqueId } from "@zoeydaw/project-core/reducers"
 import { barAtX, snappedBar } from "../coordinates"
 import { beginProjectPreview, finishProjectPreview, setTracksPreview } from "../project-preview"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
-import type { Clip } from "@/pages/project/model/types"
+import type { Clip } from "@zoeydaw/project-core/types"
 
 export function createResizeGesture(
   context: InteractionContext,
@@ -22,27 +23,29 @@ export function createResizeGesture(
   const originalEnd = clip.startBar + clip.lengthBars
   const original = edge === "left" ? clip.startBar : originalEnd
   const grabOffset = barAtX(context, pointer.x) - original
+  const fragmentIds = new Map<string, string>()
+  const fragmentId = (key: string) => {
+    const existing = fragmentIds.get(key)
+    if (existing) return existing
+    const id = uniqueId("clip")
+    fragmentIds.set(key, id)
+    return id
+  }
   let bar = original
   return {
-    cursor: "ew-resize",
+    cursor: edge === "left" ? "brace-left" : "brace-right",
     autoScroll: "horizontal",
     move(next) {
       context.scene.setClipResize({ id: clip.id, edge })
       const raw = snappedBar(context, barAtX(context, next.x) - grabOffset)
-      const preview = projectClipResize(clip, edge, raw)
+      const bpm = context.getState().document.transport.bpm
+      const preview = projectClipResize(clip, edge, raw, bpm)
       bar = edge === "left" ? preview.startBar : preview.startBar + preview.lengthBars
       if (bar === original) {
         setTracksPreview(context, tracks)
         return
       }
-      setTracksPreview(
-        context,
-        tracks.map(track =>
-          track.clips.some(item => item.id === clip.id)
-            ? { ...track, clips: track.clips.map(item => (item.id === clip.id ? preview : item)) }
-            : track
-        )
-      )
+      setTracksPreview(context, replaceClip(tracks, preview, fragmentId, bpm))
     },
     finish(cancelled) {
       finishProjectPreview(context, cancelled)

@@ -2,7 +2,6 @@ import { memo, useEffect, useRef, useState } from "react"
 import { cn } from "@zoeymind/ui"
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
-import { visibleTracks } from "@/pages/project/model/types"
 import {
   COLLAPSED_TRACK_HEIGHT,
   MAX_TRACK_HEIGHT,
@@ -10,21 +9,24 @@ import {
   TRACK_RESIZE_STEP,
   TRACK_REVEAL_THRESHOLD,
   trackHeight,
+  arrangementViewProjection,
 } from "@/pages/project/layout"
 import { TrackIdentity } from "../TrackIdentity"
 import { GroupRails } from "../GroupRails"
 import { TrackRouting } from "../TrackRouting"
 import { TrackMixer } from "../TrackMixer"
 import { TrackMenu } from "../TrackMenu"
-import type { GroupRail } from "@/pages/project/model/track-groups"
-import type { Track } from "@/pages/project/model/types"
+import type { GroupRail } from "@zoeydaw/project-core/track-groups"
+import type { Track } from "@zoeydaw/project-core/types"
 
 export const TrackHeaderRow = memo(function TrackHeaderRow({
   track,
   rails,
+  routing,
 }: {
   readonly track: Track
   readonly rails: readonly GroupRail[]
+  readonly routing: boolean
 }) {
   const { t } = useTranslation()
   const resizeGesture = useProjectEditGesture((patch: Pick<Track, "collapsed" | "heightPx">) =>
@@ -35,12 +37,17 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
   const selected = selection.includes(track.id)
   const headerSelected = selected && selectionSurface === "header"
   const allTracks = useProjectState(s => s.document.tracks)
+  const arrangementView = useProjectState(s => s.workspace.arrangementView)
   const [renaming, setRenaming] = useState(false)
   const [dropTarget, setDropTarget] = useState(false)
+  const [resizeHover, setResizeHover] = useState(false)
   const resize = useRef<{
     y: number
     track: Track
     last: Pick<Track, "collapsed" | "heightPx">
+    pointerId: number
+    element: HTMLElement
+    pending: boolean
   } | null>(null)
   useEffect(
     () => () => {
@@ -52,9 +59,72 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
   )
   const height = trackHeight(track)
   const isPinned = track.kind === "return" || track.kind === "main"
+  /**
+  Blank header space resizes the track: the row-resize cursor appears where the
+  pointer is not over a control, pressing selects the track, and only vertical
+  travel past a small threshold turns the press into a height gesture.
+  */
+  const isResizeSurface = (target: EventTarget | null) =>
+    !(target instanceof Element) ||
+    !target.closest("button,input,[role=slider],[role=separator],[draggable=true]")
+  const beginResize = (
+    event: React.PointerEvent<HTMLDivElement>,
+    target: HTMLElement,
+    pending: boolean
+  ) => {
+    target.setPointerCapture(event.pointerId)
+    resize.current = {
+      y: event.clientY,
+      track,
+      last: { collapsed: track.collapsed, heightPx: track.heightPx },
+      pointerId: event.pointerId,
+      element: target,
+      pending,
+    }
+    if (!pending) {
+      resizeGesture.onGestureStart()
+    }
+  }
+  const moveResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const anchor = resize.current
+    if (!anchor || anchor.pointerId !== event.pointerId) {
+      return
+    }
+    if (anchor.pending) {
+      if (Math.abs(event.clientY - anchor.y) < 3) {
+        return
+      }
+      anchor.pending = false
+      resizeGesture.onGestureStart()
+    }
+    const next = resizeTrackHeight(anchor.track, (event.clientY - anchor.y) * (isPinned ? -1 : 1))
+    if (next.collapsed === anchor.last.collapsed && next.heightPx === anchor.last.heightPx) {
+      return
+    }
+    anchor.last = next
+    resizeGesture.onChange(next)
+  }
+  const endResize = (cancelled: boolean) => {
+    const anchor = resize.current
+    if (!anchor) {
+      return
+    }
+    resize.current = null
+    if (anchor.element.hasPointerCapture?.(anchor.pointerId)) {
+      anchor.element.releasePointerCapture(anchor.pointerId)
+    }
+    if (anchor.pending) {
+      return
+    }
+    if (cancelled) {
+      resizeGesture.onGestureCancel()
+    } else {
+      resizeGesture.onGestureEnd()
+    }
+  }
   const choose = (range: boolean, additive: boolean) => {
     if (range && selection.length) {
-      const ids = visibleTracks(allTracks).map(item => item.id)
+      const ids = arrangementViewProjection(allTracks, arrangementView).visible.map(item => item.id)
       const start = ids.indexOf(selection[0])
       const end = ids.indexOf(track.id)
       if (start !== -1 && end !== -1) {
@@ -84,8 +154,8 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
         data-collapsed={track.collapsed || undefined}
         data-selected={headerSelected || undefined}
         className={cn(
-          "arrangement-track-header relative grid grid-rows-[minmax(0,1fr)] border border-[var(--arrangement-line)]",
-          dropTarget && "border-t-primary border-t-2"
+          "arrangement-track-header relative grid grid-rows-[minmax(0,1fr)]",
+          resizeHover && "cursor-row-resize"
         )}
         onKeyDown={event => {
           if (event.target !== event.currentTarget || event.key !== "Enter") {
@@ -95,16 +165,32 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
           event.stopPropagation()
           choose(event.shiftKey, event.metaKey || event.ctrlKey)
         }}
-        style={{ height }}
-        onPointerDown={event => {
-          if (
-            event.button !== 0 ||
-            (event.target instanceof Element && event.target.closest("button,input,[role=slider]"))
-          ) {
+        style={{
+          height,
+          ...(!routing && { gridTemplateColumns: "var(--project-identity-width) minmax(0, 1fr)" }),
+        }}
+        onPointerMove={event => {
+          if (resize.current) {
+            moveResize(event)
             return
           }
-          choose(event.shiftKey, event.metaKey || event.ctrlKey)
+          setResizeHover(isResizeSurface(event.target))
         }}
+        onPointerLeave={() => setResizeHover(false)}
+        onPointerDown={event => {
+          if (event.button !== 0) {
+            return
+          }
+          if (!isResizeSurface(event.target)) {
+            choose(event.shiftKey, event.metaKey || event.ctrlKey)
+            return
+          }
+          event.preventDefault()
+          choose(event.shiftKey, event.metaKey || event.ctrlKey)
+          beginResize(event, event.currentTarget, true)
+        }}
+        onPointerUp={() => endResize(false)}
+        onPointerCancel={() => endResize(true)}
         onDoubleClick={event => {
           if (
             event.target instanceof Element &&
@@ -153,7 +239,7 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
             onRenameEnd={() => setRenaming(false)}
           />
         </div>
-        <TrackRouting track={track} />
+        {routing && <TrackRouting track={track} />}
         <TrackMixer track={track} />
         <div
           role="separator"
@@ -193,49 +279,29 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
             if (event.button !== 0) {
               return
             }
-            event.currentTarget.setPointerCapture(event.pointerId)
-            resize.current = {
-              y: event.clientY,
-              track,
-              last: { collapsed: track.collapsed, heightPx: track.heightPx },
-            }
-            resizeGesture.onGestureStart()
+            beginResize(event, event.currentTarget, false)
           }}
-          onPointerMove={event => {
-            const anchor = resize.current
-            if (!anchor) {
-              return
-            }
-            const next = resizeTrackHeight(
-              anchor.track,
-              (event.clientY - anchor.y) * (isPinned ? -1 : 1)
-            )
-            if (
-              next.collapsed === anchor.last.collapsed &&
-              next.heightPx === anchor.last.heightPx
-            ) {
-              return
-            }
-            anchor.last = next
-            resizeGesture.onChange(next)
-          }}
-          onPointerUp={() => {
-            if (!resize.current) {
-              return
-            }
-
-            resize.current = null
-            resizeGesture.onGestureEnd()
-          }}
-          onPointerCancel={() => {
-            if (!resize.current) {
-              return
-            }
-
-            resize.current = null
-            resizeGesture.onGestureCancel()
+          onPointerMove={event => moveResize(event)}
+          onPointerUp={() => endResize(false)}
+          onPointerCancel={() => endResize(true)}
+        />
+        {/* The divider starts after the rail columns actually rendered on this
+            row, so a group's enclosure stays continuous instead of being cut by
+            each child row's seam. A group row draws no rail of its own. */}
+        <div
+          aria-hidden
+          data-track-divider
+          className="pointer-events-none absolute right-0 bottom-0 z-20 h-[2px] bg-[var(--arrangement-line)]"
+          style={{
+            left: `calc(${rails.length} * var(--arrangement-group-rail-width))`,
           }}
         />
+        {dropTarget ? (
+          <div
+            aria-hidden
+            className="bg-primary pointer-events-none absolute inset-x-0 top-0 z-30 h-[2px]"
+          />
+        ) : null}
       </div>
     </TrackMenu>
   )

@@ -13,10 +13,17 @@ import { HomePage } from "@/pages/home"
 import { ProjectPage } from "@/pages/project"
 import { ComponentLibraryPage } from "@/pages/library"
 import { NotFoundPage } from "@/pages/not-found"
+import { GalleryProjectPreview } from "@/pages/project/gallery"
 import { RouteErrorFallback } from "./route-error-fallback"
 import { ShellTitleBar } from "./ShellTitleBar"
+import { RealtimeProbePage } from "@/pages/library/realtime-probe"
 
 export const router = createBrowserRouter([
+  {
+    path: "/library/preview/:kind",
+    element: <GalleryProjectPreview />,
+    errorElement: <RouteErrorFallback />,
+  },
   {
     path: "/",
     element: <MainLayout titleBar={<ShellTitleBar />} />,
@@ -25,6 +32,9 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "project/:id", element: <ProjectPage /> },
       { path: "library", element: <ComponentLibraryPage /> },
+      ...(import.meta.env.DEV
+        ? [{ path: "library/realtime-probe", element: <RealtimeProbePage /> }]
+        : []),
       { path: "*", element: <NotFoundPage /> },
     ],
   },

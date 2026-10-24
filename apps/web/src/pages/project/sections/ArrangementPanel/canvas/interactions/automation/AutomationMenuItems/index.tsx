@@ -23,6 +23,7 @@ export function AutomationMenuItems({
               selection.kind === "automation" &&
               selection.trackId === target.trackId &&
               selection.laneId === target.laneId &&
+              selection.placement === target.placement &&
               selection.pointIds.includes(target.pointId)
                 ? selection.pointIds
                 : [target.pointId]
@@ -30,6 +31,7 @@ export function AutomationMenuItems({
               kind: "automation-value",
               trackId: target.trackId,
               laneId: target.laneId,
+              placement: target.placement,
               pointId: target.pointId,
               pointIds,
             })

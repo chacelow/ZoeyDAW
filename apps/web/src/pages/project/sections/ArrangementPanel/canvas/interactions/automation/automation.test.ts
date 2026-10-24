@@ -1,19 +1,19 @@
+import { DEFAULT_TRACK_HEIGHT, TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
-import { TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
 import { layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
-import { activeAutomationRows, automationX, automationY } from "./geometry"
+import { activeAutomationRows, automationRowValue, automationX, automationY } from "./geometry"
 import { createAutomationInteractions } from "."
 import type { CanvasPointer, InteractionContext } from "../types"
 
 beforeEach(() => {
   hydrateProject(
     JSON.stringify({
-      version: 2,
-      document: createMockDocument(),
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
       workspace: { ...createMockWorkspace(), grid: { mode: "fixed", bars: 1 } },
     })
   )
@@ -31,6 +31,8 @@ it("keeps automation out of card titles and removes folded-lane curve interactio
     bars: 128,
     grid: state.workspace.grid,
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -50,9 +52,11 @@ function setup() {
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
+    media: state.document.media,
+    patterns: state.document.patterns,
   })
   scene.setViewport({ pxPerBar: 24, scrollX: 0, scrollY: 0, width: 1200, height: 700, dpr: 1 })
-  scene.setAutomationParameters({ "3-audio": "volume" })
+  scene.setAutomationDisplay({ "3-audio": { kind: "mixer", parameter: "volume" } }, {}, true)
   const context: InteractionContext = {
     element: document.createElement("div"),
     scene,
@@ -132,18 +136,72 @@ describe("automation canvas gestures", () => {
     interaction.start(pointer(20, 0.5))?.finish(false)
     expect(points().some(point => point.bar === 20 && point.value === 0.5)).toBe(true)
     projectActions.undo()
-    projectActions.setAutomationParameter("4-midi", "pan")
-    scene.setAutomationParameters({ "4-midi": "pan" })
-    const empty = activeAutomationRows(scene.get()).find(item => item.track.id === "4-midi")!
+    projectActions.setAutomationTarget("3-audio", { kind: "mixer", parameter: "pan" })
+    scene.setAutomationDisplay({ "3-audio": { kind: "mixer", parameter: "pan" } }, {}, true)
+    const empty = activeAutomationRows(scene.get()).find(item => item.track.id === "3-audio")!
     const x = automationX(scene.get(), 4)
-    const y = automationY(empty, 0.5)
+    const y = automationY(empty, automationRowValue(empty, 4))
     const gesture = interaction.start({ ...pointer(4, 0.5), x, y })!
     gesture.finish(false)
     const lane = useProjectState
       .getState()
-      .document.tracks.find(track => track.id === "4-midi")
-      ?.automation.find(item => item.parameter === "pan")
-    expect(lane?.points).toMatchObject([{ bar: 4, value: 0.5 }])
+      .document.tracks.find(track => track.id === "3-audio")
+      ?.automation.find(item => item.target.kind === "mixer" && item.target.parameter === "pan")
+    expect(lane?.points.some(point => point.bar === 4)).toBe(true)
+  })
+
+  it("keeps two extra lanes target-isolated and hides them without deleting points", () => {
+    const { scene, interaction, pointer } = setup()
+    const volume = { kind: "mixer", parameter: "volume" } as const
+    const pan = { kind: "mixer", parameter: "pan" } as const
+    projectActions.setAutomationTarget("3-audio", volume)
+    projectActions.addAutomationLane("3-audio")
+    projectActions.setAutomationTarget("3-audio", pan)
+    projectActions.addAutomationLane("3-audio")
+    scene.setAutomationDisplay({ "3-audio": pan }, { "3-audio": [volume, pan] }, true)
+    const rows = activeAutomationRows(scene.get()).filter(row => row.track.id === "3-audio")
+    expect(rows).toHaveLength(3)
+    expect(rows[1].top).toBe(rows[0].bottom)
+    expect(rows[2].top).toBe(rows[1].bottom)
+    const extraPoint = { ...pointer(9, 0.85), y: automationY(rows[1], 0.85) }
+    expect(interaction.contextMenu(extraPoint)).toMatchObject({
+      kind: "automation-point",
+      laneId: rows[1].laneId,
+      pointId: "peak",
+      placement: "extra",
+    })
+    const primaryPoint = { ...pointer(1, 0.25), y: automationY(rows[0], 0.25) }
+    expect(interaction.contextMenu(primaryPoint)).toMatchObject({ placement: "primary" })
+    const original = useProjectState
+      .getState()
+      .document.tracks.find(track => track.id === "3-audio")!.automation[1].points
+    expect(interaction.doubleClick({ ...pointer(5, 0.5), y: automationY(rows[1], 0.15) })).toBe(
+      true
+    )
+    expect(
+      useProjectState
+        .getState()
+        .document.tracks.find(track => track.id === "3-audio")!
+        .automation[0].points.some(point => point.bar === 5)
+    ).toBe(true)
+    expect(
+      useProjectState.getState().document.tracks.find(track => track.id === "3-audio")!
+        .automation[1].points
+    ).toEqual(original)
+    const hit = interaction.start({ ...pointer(9, 0.85), y: automationY(rows[1], 0.85) })
+    expect(hit).not.toBeNull()
+    hit?.finish(true)
+    projectActions.removeAutomationLane("3-audio", volume)
+    scene.setAutomationDisplay({ "3-audio": pan }, { "3-audio": [pan] }, true)
+    expect(
+      activeAutomationRows(scene.get()).filter(row => row.track.id === "3-audio")
+    ).toHaveLength(2)
+    expect(
+      useProjectState.getState().document.tracks.find(track => track.id === "3-audio")!
+        .automation[0].points
+    ).toHaveLength(4)
+    scene.setAutomationDisplay({ "3-audio": pan }, { "3-audio": [pan] }, false)
+    expect(activeAutomationRows(scene.get())).toEqual([])
   })
 
   it("deletes a stationary breakpoint and preserves the rest of the envelope", () => {
@@ -179,6 +237,8 @@ describe("automation canvas gestures", () => {
       bars: 128,
       grid: useProjectState.getState().workspace.grid,
       transport: useProjectState.getState().document.transport,
+      media: useProjectState.getState().document.media,
+      patterns: useProjectState.getState().document.patterns,
       markers: useProjectState.getState().document.markers,
       loop: useProjectState.getState().document.transport.loop,
       tracks: useProjectState.getState().document.tracks,

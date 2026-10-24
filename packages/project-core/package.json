@@ -1,0 +1,139 @@
+{
+  "name": "@zoeydaw/project-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./patterns": {
+      "import": "./src/patterns.ts",
+      "types": "./src/patterns.ts"
+    },
+    "./realtime": {
+      "import": "./src/realtime/index.ts",
+      "types": "./src/realtime/index.ts"
+    },
+    "./clip-automation": {
+      "import": "./src/clip-automation.ts",
+      "types": "./src/clip-automation.ts"
+    },
+    "./clip-edits": {
+      "import": "./src/clip-edits.ts",
+      "types": "./src/clip-edits.ts"
+    },
+    "./interaction-mode": {
+      "import": "./src/interaction-mode.ts",
+      "types": "./src/interaction-mode.ts"
+    },
+    "./clip-label": {
+      "import": "./src/clip-label.ts",
+      "types": "./src/clip-label.ts"
+    },
+    "./audio-editor": {
+      "import": "./src/audio-editor/index.ts",
+      "types": "./src/audio-editor/index.ts"
+    },
+    "./timeline-zoom": {
+      "import": "./src/timeline-zoom.ts",
+      "types": "./src/timeline-zoom.ts"
+    },
+    "./midi-editing": {
+      "import": "./src/midi-editing/index.ts",
+      "types": "./src/midi-editing/index.ts"
+    },
+    "./midi-notes": {
+      "import": "./src/midi-notes.ts",
+      "types": "./src/midi-notes.ts"
+    },
+    "./track-groups": {
+      "import": "./src/track-groups.ts",
+      "types": "./src/track-groups.ts"
+    },
+    "./timeline-ticks": {
+      "import": "./src/timeline-ticks.ts",
+      "types": "./src/timeline-ticks.ts"
+    },
+    "./types": {
+      "import": "./src/types.ts",
+      "types": "./src/types.ts"
+    },
+    "./selectors": {
+      "import": "./src/selectors.ts",
+      "types": "./src/selectors.ts"
+    },
+    "./audio-drop": {
+      "import": "./src/audio-drop.ts",
+      "types": "./src/audio-drop.ts"
+    },
+    "./fades": {
+      "import": "./src/fades.ts",
+      "types": "./src/fades.ts"
+    },
+    "./automation-curve": {
+      "import": "./src/automation-curve.ts",
+      "types": "./src/automation-curve.ts"
+    },
+    "./clip-window": {
+      "import": "./src/clip-window.ts",
+      "types": "./src/clip-window.ts"
+    },
+    "./automation-target": {
+      "import": "./src/automation-target.ts",
+      "types": "./src/automation-target.ts"
+    },
+    "./waveform-source": {
+      "import": "./src/waveform-source.ts",
+      "types": "./src/waveform-source.ts"
+    },
+    "./reducers": {
+      "import": "./src/reducers.ts",
+      "types": "./src/reducers.ts"
+    },
+    "./backend": {
+      "import": "./src/backend.ts",
+      "types": "./src/backend.ts"
+    },
+    "./persistence": {
+      "import": "./src/persistence.ts",
+      "types": "./src/persistence.ts"
+    },
+    "./media": {
+      "import": "./src/media.ts",
+      "types": "./src/media.ts"
+    },
+    "./clip-clipboard": {
+      "import": "./src/clip-clipboard.ts",
+      "types": "./src/clip-clipboard.ts"
+    },
+    "./grid": {
+      "import": "./src/grid.ts",
+      "types": "./src/grid.ts"
+    },
+    "./devices": {
+      "import": "./src/devices/index.ts",
+      "types": "./src/devices/index.ts"
+    },
+    "./waveform": {
+      "import": "./src/waveform.ts",
+      "types": "./src/waveform.ts"
+    },
+    "./signed-waveform": {
+      "import": "./src/signed-waveform.ts",
+      "types": "./src/signed-waveform.ts"
+    },
+    "./waveform-range": {
+      "import": "./src/waveform-range.ts",
+      "types": "./src/waveform-range.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitest": "4.1.10"
+  }
+}

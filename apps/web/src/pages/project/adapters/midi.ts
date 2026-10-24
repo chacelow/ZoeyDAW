@@ -1,10 +1,9 @@
-import { createClip, uniqueId } from "../model/reducers"
-import { get, recordDocument, session, readRecordingBar } from "./context"
-import type { MidiClip, MidiNote } from "../model/types"
+import { createClip, uniqueId } from "@zoeydaw/project-core/reducers"
+import { get, recordDocument, session, readRecordingBar, submitNote } from "./context"
+import type { MidiClip, MidiNote } from "@zoeydaw/project-core/types"
+import type { BackendNote } from "@zoeydaw/project-core/backend"
 
-/**
-Keyboard events are visual/mock input only. MIDI notes go into armed tracks while recording.
-*/
+const heldEdges = new Map<number, { epoch: string; notes: BackendNote[] }>()
 export const midiActions = {
   noteOn(pitch: number) {
     if (
@@ -16,7 +15,22 @@ export const midiActions = {
       return
     }
     const state = get()
+    const notes = state.document.tracks
+      .filter(
+        track =>
+          track.kind === "midi" &&
+          (track.monitor === "in" || (track.armed && track.monitor === "auto"))
+      )
+      .map(track => ({
+        trackId: track.id,
+        noteId: uniqueId("live-note"),
+        pitch,
+        velocity: state.session.midiVelocity,
+        on: true,
+      }))
+    heldEdges.set(pitch, { epoch: state.session.editEpoch, notes })
     session({ activeMidiNotes: [...state.session.activeMidiNotes, pitch] })
+    for (const note of notes) submitNote(note)
     const bar = readRecordingBar()
     if (bar === null) {
       return
@@ -71,6 +85,11 @@ export const midiActions = {
     }))
   },
   noteOff(pitch: number) {
+    const held = heldEdges.get(pitch)
+    heldEdges.delete(pitch)
+    if (held?.epoch === get().session.editEpoch) {
+      for (const note of held.notes) submitNote({ ...note, on: false, velocity: 0 })
+    }
     if (!get().session.activeMidiNotes.includes(pitch)) {
       return
     }

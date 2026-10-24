@@ -1,11 +1,4 @@
-//! zoeydaw desktop shell — Tauri 2 骨架。
-//!
-//! Prototype 阶段只装载通用插件和两个真正通用的命令模块：
-//!   - [`atomic_file`]：原子写文件 (前端工程/录音落盘共用)
-//!   - [`log_config`]：日志级别/目录运行时配置
-//!
-//! AI chat / HTTP stream / MCP / 文档门户 / `.zmind` 关联、多 Tab 守卫等
-//! ZoeyMind 产物已全部移除；DAW 的音频引擎、插件 host、Browser 等 crate 另开。
+//! zoeydaw desktop shell and IPC adapters for the independent core packages.
 
 use tauri::{
   Manager,
@@ -15,6 +8,11 @@ use tauri::{
 
 mod atomic_file;
 mod log_config;
+mod project_storage;
+mod application_lifecycle;
+mod browser_catalog;
+mod playback;
+mod plugin_catalog;
 
 /// 前端挂载完成通知；目前只用来晚显示主窗口 (避免启动闪白)。
 #[tauri::command]
@@ -24,7 +22,32 @@ fn frontend_ready(window: tauri::Window) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
+  let application = tauri::Builder::default()
+    .manage(application_lifecycle::ApplicationCloseGuard::default())
+    .manage(zoeydaw_engine::PlaybackService::default())
+    .manage(playback::RecordingInspections::default())
+    .manage(playback::realtime_probe::RealtimeProbeService::default())
+    .manage(plugin_catalog::PluginCatalogState::default())
+    .manage(playback::plugin_devices::PluginDevices::default())
+    .on_window_event(|window, event| {
+      if matches!(event, tauri::WindowEvent::Destroyed) {
+        if let Some(probes) = window.app_handle().try_state::<playback::realtime_probe::RealtimeProbeService>() {
+          probes.close_window(window.label());
+        }
+        if let Some(catalog) = window.app_handle().try_state::<plugin_catalog::PluginCatalogState>() {
+          catalog.close_window(window.label());
+        }
+        if let Some(plugins) = window.app_handle().try_state::<playback::plugin_devices::PluginDevices>() {
+          playback::plugin_devices::release_window(window.app_handle().clone(), plugins.close_window(window.label()));
+        }
+      }
+      if window.label() == "main" {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+          api.prevent_close();
+          application_lifecycle::request(window.app_handle(), application_lifecycle::CloseIntent::CloseButton);
+        }
+      }
+    })
     .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
       if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
@@ -39,7 +62,55 @@ pub fn run() {
     .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .invoke_handler(tauri::generate_handler![
+      plugin_catalog::plugin_catalog_entries,
+      plugin_catalog::plugin_catalog_reserve,
+      plugin_catalog::plugin_catalog_scan,
+      plugin_catalog::plugin_catalog_cancel,
+      playback::plugin_seed::plugin_device_seed,
+      playback::plugin_controls::plugin_device_parameters,
+      playback::realtime_probe::realtime_probe_open,
+      playback::realtime_probe::realtime_probe_pull,
+      playback::realtime_probe::realtime_probe_receipt,
+      playback::realtime_probe::realtime_probe_close,
+      playback::realtime_probe::realtime_probe_clock,
       atomic_file::write_file_atomically,
+      project_storage::inspect_project_media,
+      project_storage::open_project_file,
+      project_storage::save_project_file,
+      project_storage::cancel_project_file,
+      project_storage::relink_project_media,
+      browser_catalog::browser_roots,
+      browser_catalog::browser_add_root,
+      browser_catalog::browser_refresh_root,
+      browser_catalog::browser_cancel_scan,
+      browser_catalog::browser_remove_root,
+      browser_catalog::browser_tree,
+      playback::playback_acquire,
+      playback::playback_apply,
+      playback::playback_control,
+      playback::playback_note,
+      playback::playback_all_notes_off,
+      playback::playback_telemetry,
+      playback::recording_results,
+      playback::recording_ack,
+      playback::playback_release,
+      playback::playback_stop,
+      playback::playback_audition_reserve,
+      playback::playback_audition,
+      playback::playback_audition_stop,
+      playback::playback_audition_seek,
+      playback::playback_audition_status,
+      playback::playback_analyze_tempo,
+      playback::playback_devices,
+      playback::playback_configure_device,
+      playback::playback_device_capabilities,
+      playback::playback_device_control_panel,
+      playback::playback_waveform,
+      playback::playback_waveform_range,
+      playback::playback_waveform_range_cancel,
+      application_lifecycle::request_app_close,
+      application_lifecycle::get_pending_app_close,
+      application_lifecycle::resolve_app_close,
       frontend_ready,
       log_config::get_log_config,
       log_config::open_log_dir,
@@ -48,6 +119,7 @@ pub fn run() {
       log_config::clear_logs,
     ])
     .setup(|app| {
+      app.manage(zoeydaw_browser::BrowserCatalog::new(app.path().app_data_dir()?)?);
       if let Some(window) = app.get_webview_window("main") {
         #[cfg(target_os = "windows")]
         {
@@ -79,7 +151,7 @@ pub fn run() {
             }
           }
           "tray_quit" => {
-            app.exit(0);
+            application_lifecycle::request(app, application_lifecycle::CloseIntent::ExplicitExit);
           }
           _ => {}
         })
@@ -171,6 +243,14 @@ pub fn run() {
       });
       Ok(())
     })
-    .run(tauri::generate_context!())
+    .build(tauri::generate_context!())
     .expect("error while building tauri application");
+  application.run(|app, event| {
+    if let tauri::RunEvent::ExitRequested { api, .. } = event {
+      if !application_lifecycle::take_exit_authorization(app) {
+        api.prevent_exit();
+        application_lifecycle::request(app, application_lifecycle::CloseIntent::ExplicitExit);
+      }
+    }
+  });
 }

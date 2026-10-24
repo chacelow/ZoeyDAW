@@ -1,4 +1,4 @@
-import type { MidiNote } from "@/pages/project/model/types"
+import type { MidiNote } from "@zoeydaw/project-core/types"
 
 const TYPE = "application/x-zoeymind-midi-notes+json"
 

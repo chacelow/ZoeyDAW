@@ -1,6 +1,6 @@
 import { beginProjectPreview, finishProjectPreview, setMarkersPreview } from "../project-preview"
 import { rulerBar, barAt } from "./geometry"
-import type { Marker } from "@/pages/project/model/types"
+import type { Marker } from "@zoeydaw/project-core/types"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
 
 export function markerGesture(

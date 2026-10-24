@@ -16,7 +16,12 @@ const localRules = {
   },
 }
 
-const source = ["apps/web/src/**/*.{ts,tsx,js,jsx}", "packages/ui/src/**/*.{ts,tsx,js,jsx}"]
+const source = [
+  "apps/web/src/**/*.{ts,tsx,js,jsx}",
+  "packages/ui/src/**/*.{ts,tsx,js,jsx}",
+  "packages/project-core/src/**/*.{ts,tsx,js,jsx}",
+  "packages/project-runtime/src/**/*.{ts,tsx,js,jsx}",
+]
 const reactPlugins = Object.assign({}, ...react.map(preset => preset.plugins ?? {}))
 
 export default [
@@ -42,7 +47,7 @@ export default [
       "import-x/no-cycle": ["error", { ignoreExternal: true }],
     },
     settings: {
-      "import-x/internal-regex": "^@zoeymind/",
+      "import-x/internal-regex": "^@(?:zoeymind|zoeydaw)/",
       "import-x/resolver": {
         typescript: {
           project: [
@@ -51,6 +56,8 @@ export default [
             "packages/shared/tsconfig.json",
             "packages/logger/tsconfig.json",
             "packages/i18n/tsconfig.json",
+            "packages/project-core/tsconfig.json",
+            "packages/project-runtime/tsconfig.json",
           ],
           noWarnOnMultipleProjects: true,
         },
@@ -144,6 +151,14 @@ export default [
     rules: { "unicorn/no-top-level-assignment-in-function": "off" },
   },
   {
+    files: ["apps/web/src/pages/project/adapters/backend/waveform-ranges.ts"],
+    // One native cancellation fence requires serial reads and one app-owned queue.
+    rules: {
+      "unicorn/no-top-level-assignment-in-function": "off",
+      "no-await-in-loop": "off",
+    },
+  },
+  {
     files: source,
     plugins: { architecture: localRules },
     rules: {
@@ -199,7 +214,7 @@ export default [
     rules: { "unicorn/no-document-cookie": "off", "sonarjs/pseudo-random": "off" },
   },
   {
-    files: ["apps/web/src/pages/project/adapters/backend/connection/connection.ts"],
+    files: ["packages/project-runtime/src/backend/connection/connection.ts"],
     rules: { "unicorn/prefer-then-catch": "off" },
   },
   {
@@ -207,13 +222,17 @@ export default [
     rules: { "compat/compat": "off" },
   },
   {
-    files: ["packages/shared/src/__tests__/**"],
+    files: ["packages/shared/src/__tests__/**", "packages/ui/src/**/*.{test,spec}.{ts,tsx}"],
     rules: {
       "import-x/no-extraneous-dependencies": [
         "error",
         {
           devDependencies: true,
-          packageDir: [import.meta.dirname, `${import.meta.dirname}/packages/shared`],
+          packageDir: [
+            import.meta.dirname,
+            `${import.meta.dirname}/packages/shared`,
+            `${import.meta.dirname}/packages/ui`,
+          ],
         },
       ],
     },

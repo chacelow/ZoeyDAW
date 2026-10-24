@@ -1,6 +1,12 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
-import { createMockDocument, createMockWorkspace } from "./fixtures"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  createMockProjectBackend,
+} from "@zoeydaw/project-runtime/testing"
+import { configureProjectBackend } from "./context"
 import {
   hydrateProject,
   projectActions,
@@ -12,11 +18,16 @@ import {
 let stop: (() => void) | undefined
 
 beforeEach(() => {
+  configureProjectBackend(createMockProjectBackend)
   vi.useFakeTimers({
     toFake: ["Date", "performance", "setInterval", "clearInterval", "setTimeout", "clearTimeout"],
   })
   hydrateProject(
-    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+    JSON.stringify({
+      version: 2,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
   )
 })
 

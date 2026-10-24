@@ -1,3 +1,4 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import {
@@ -6,11 +7,16 @@ import {
   startProjectRuntime,
   useProjectState,
 } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  createMockProjectBackend,
+} from "@zoeydaw/project-runtime/testing"
 import { createScheduler } from "../scheduler"
 import { createAudioRingBuffer } from "./ring-buffer"
 import { attachProjectTelemetry } from "./project-telemetry"
 import type { Scheduler } from "../scheduler"
+import { configureProjectBackend } from "@/pages/project/adapters/context"
 
 let scheduler: Scheduler
 let stop: () => void
@@ -30,6 +36,7 @@ function settle(): void {
   }
 }
 beforeEach(() => {
+  configureProjectBackend(createMockProjectBackend)
   frames.clear()
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
     frames.set(++frameId, callback)
@@ -38,9 +45,9 @@ beforeEach(() => {
   vi.stubGlobal("cancelAnimationFrame", (id: number) => {
     frames.delete(id)
   })
-  const document = createMockDocument()
+  const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
   document.tracks = document.tracks.filter(track => track.id === "3-audio" || track.id === "main")
-  hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
+  hydrateProject(JSON.stringify({ version: 3, document, workspace: createMockWorkspace() }))
   scheduler = createScheduler()
   stop = startProjectRuntime()
   detach = () => {}
@@ -69,7 +76,8 @@ it("sleeps while stopped and wakes for playback without perpetual idle frame pol
 })
 
 it("reclaims deleted offscreen track slots without relying on mounted meter components", () => {
-  const ring = createAudioRingBuffer({ maxTracks: 2 })
+  projectActions.addTrack("midi")
+  const ring = createAudioRingBuffer({ maxTracks: 3 })
   detach = attachProjectTelemetry(ring, scheduler)
   settle()
   ring.writeMeter("3-audio", { left: -2, right: -3 })

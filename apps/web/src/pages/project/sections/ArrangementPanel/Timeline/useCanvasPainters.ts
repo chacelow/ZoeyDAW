@@ -7,7 +7,7 @@ import { attachProjectTelemetry } from "../canvas/audio/project-telemetry"
 import { paintGrid } from "../canvas/painters/grid"
 import { paintClips } from "../canvas/painters/clip"
 import { paintAutomation } from "../canvas/painters/automation"
-import { paintClipAlignment, paintPlayhead } from "../canvas/painters/playhead"
+import { paintClipAlignment, paintGuides, paintPlayhead } from "../canvas/painters/playhead"
 import { gridTokens, readThemeStamp, readTokens } from "../canvas/tokens"
 import type { RefObject } from "react"
 
@@ -53,7 +53,7 @@ export function useCanvasPainters(
     let themeStamp = readThemeStamp()
     const paintScene = () => {
       const scene = arrangementScene.get()
-      paintGrid(context, scene, gridTokens(tokens))
+      paintGrid(context, scene, gridTokens(tokens, scene.loop.enabled))
       paintClips(context, scene, tokens, {
         selectedClipIds: scene.selectedClipIds,
         hoverClip: scene.hoverClip,
@@ -68,10 +68,12 @@ export function useCanvasPainters(
     }
     const paintPlayheadLayer = () => {
       const scene = arrangementScene.get()
+      // paintPlayhead clears the overlay, so guides must come after it.
       paintPlayhead(playheadContext, scene, arrangementRingBuffer, {
         primary: tokens["--primary"],
         recording: tokens["--arrangement-automation"] || tokens["--primary"],
       })
+      paintGuides(playheadContext, scene, { line: gridTokens(tokens, scene.loop.enabled).guide })
       paintClipAlignment(playheadContext, scene, tokens["--muted-foreground"])
       if (scene.playback.playing) {
         arrangementScheduler.invalidate(PLAYHEAD_ID)

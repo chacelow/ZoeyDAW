@@ -14,6 +14,8 @@ const tester = new RuleTester({
 })
 const app = "/repo/apps/web/src"
 const ui = "/repo/packages/ui/src"
+const projectCore = "/repo/packages/project-core/src"
+const projectRuntime = "/repo/packages/project-runtime/src"
 
 function fixture(filename, code, errors) {
   return { filename, code, ...(errors && { errors }) }
@@ -40,6 +42,13 @@ tester.run("architecture/boundaries", architecture, {
     fixture(
       `${ui}/controls/DragPad/index.tsx`,
       'import type { Info } from "../ControlEnvironment/types"; void (0 as Info)'
+    ),
+    fixture(`${projectCore}/types.ts`, 'import { z } from "zod"'),
+    fixture(`${projectCore}/types.ts`, "const window = { value: 1 }; void window.value"),
+    fixture(`${projectCore}/types.test.ts`, 'import { value } from "./types"'),
+    fixture(
+      `${projectRuntime}/store.ts`,
+      'import { createStore } from "zustand/vanilla"; import type { Project } from "@zoeydaw/project-core/types"'
     ),
   ],
   invalid: [
@@ -81,6 +90,66 @@ tester.run("architecture/boundaries", architecture, {
       'export { projectActions } from "../../../../../apps/web/src/pages/project/adapters"',
       [{ messageId: "uiDependency" }]
     ),
+    ...[
+      "react",
+      "zustand",
+      "zustand/vanilla",
+      "@tauri-apps/api/core",
+      "@zoeymind/ui",
+      "@zoeydaw/project-runtime",
+      "../../project-runtime/src/store",
+      "../../../apps/web/src/shared/native/audio",
+    ].map(source =>
+      fixture(`${projectCore}/feature.ts`, `import { value } from "${source}"`, [
+        { messageId: "coreDependency" },
+      ])
+    ),
+    fixture(
+      `${projectCore}/feature.test.ts`,
+      'import type { Value } from "@/pages/project/stores/useProjectState"',
+      [{ messageId: "coreDependency" }]
+    ),
+    fixture(`${projectCore}/feature.ts`, 'export * from "@zoeydaw/project-runtime"', [
+      { messageId: "coreDependency" },
+    ]),
+    fixture(`${projectCore}/feature.ts`, 'export type { Value } from "@zoeymind/ui"', [
+      { messageId: "coreDependency" },
+    ]),
+    fixture(`${projectCore}/feature.ts`, 'const value = import("@/shared/native/audio")', [
+      { messageId: "coreDependency" },
+    ]),
+    fixture(`${projectCore}/feature.ts`, 'type Value = import("react").ReactNode', [
+      { messageId: "coreDependency" },
+    ]),
+    fixture(`${projectCore}/feature.ts`, 'window.alert("blocked")', [{ messageId: "modelGlobal" }]),
+    fixture(`${projectCore}/feature.ts`, "globalThis.document.title", [
+      { messageId: "modelGlobal" },
+    ]),
+    ...[
+      "react",
+      "react-dom/client",
+      "zustand",
+      "zustand/react",
+      "@tauri-apps/api/core",
+      "@zoeymind/ui",
+      "@/shared/native/audio",
+      "../../../apps/web/src/shared/native/audio",
+    ].map(source =>
+      fixture(`${projectRuntime}/feature.ts`, `import { value } from "${source}"`, [
+        { messageId: "runtimeDependency" },
+      ])
+    ),
+    fixture(
+      `${projectRuntime}/feature.test.ts`,
+      'import { value } from "@/pages/project/adapters"',
+      [{ messageId: "runtimeDependency" }]
+    ),
+    fixture(`${projectRuntime}/feature.ts`, 'export type { Value } from "react"', [
+      { messageId: "runtimeDependency" },
+    ]),
+    fixture(`${projectRuntime}/feature.ts`, 'const value = import("react")', [
+      { messageId: "runtimeDependency" },
+    ]),
   ],
 })
 
@@ -92,6 +161,11 @@ tester.run("architecture/public-index", publicIndex, {
     ),
     fixture(`${ui}/controls/metrics/index.ts`, 'export { CONTROL_METRICS } from "./config"'),
     fixture(`${app}/pages/project/model/index.ts`, "export const legacy = 1"),
+    fixture(`${projectCore}/midi-editing/index.ts`, 'export { edit } from "./edit"'),
+    fixture(
+      `${projectRuntime}/index.ts`,
+      'export { createProjectRuntime } from "./runtime/project-runtime"'
+    ),
   ],
   invalid: [
     fixture(`${app}/pages/project/model/midi-editing/index.ts`, "export const value = 13", [
@@ -103,6 +177,12 @@ tester.run("architecture/public-index", publicIndex, {
       [{ messageId: "exportsOnly" }, { messageId: "exportsOnly" }]
     ),
     fixture(`${ui}/controls/metrics/index.ts`, "export function calculate() { return 13 }", [
+      { messageId: "exportsOnly" },
+    ]),
+    fixture(`${projectCore}/audio-editor/index.ts`, "export const value = 1", [
+      { messageId: "exportsOnly" },
+    ]),
+    fixture(`${projectRuntime}/index.ts`, "export function create() {}", [
       { messageId: "exportsOnly" },
     ]),
   ],

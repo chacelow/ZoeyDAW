@@ -1,0 +1,373 @@
+{
+  "scope": "Signalsmith exact float probe, single run, not performance benchmark",
+  "results": [
+    {
+      "signal": "tone-440-mono",
+      "tempo": 0.75,
+      "elapsedMs": 43.69925000052899,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/tone-440-mono-0.75.wav",
+      "durationRatio": 1.3333333333333333,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.0003323686661114503,
+      "rmsDifferenceDb": 0.00017609530345298035,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "tone-440-mono",
+      "tempo": 1,
+      "elapsedMs": 33.798750000074506,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/tone-440-mono-1.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 7.223854903147721e-9,
+      "rmsDifferenceDb": 9.11205106712917e-7,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "tone-440-mono",
+      "tempo": 1.2,
+      "elapsedMs": 27.869208000600338,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/tone-440-mono-1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.0002812531343106319,
+      "rmsDifferenceDb": 0.00021128988588278898,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "tone-440-mono",
+      "tempo": 1.5,
+      "elapsedMs": 23.229790999554098,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/tone-440-mono-1.5.wav",
+      "durationRatio": 0.6666666666666666,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.000059371144113077826,
+      "rmsDifferenceDb": 0.00009011017584955694,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "stereo-identical",
+      "tempo": 0.75,
+      "elapsedMs": 66.5656670005992,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/stereo-identical-0.75.wav",
+      "durationRatio": 1.3333333333333333,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.0003323686661114503,
+      "rmsDifferenceDb": 0.00017609530345298035,
+      "channelDifferencePeak": 0.0005307691171765327,
+      "channelSumPeak": 0.5236901640892029,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": false
+      },
+      "verdict": "NOT_VERIFIED",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "stereo-identical",
+      "tempo": 1,
+      "elapsedMs": 48.37162500061095,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/stereo-identical-1.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 7.223854903147721e-9,
+      "rmsDifferenceDb": 9.11205106712917e-7,
+      "channelDifferencePeak": 5.960464477539063e-8,
+      "channelSumPeak": 0.5000000596046448,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "stereo-identical",
+      "tempo": 1.2,
+      "elapsedMs": 42.91674999985844,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/stereo-identical-1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.0002812531343106319,
+      "rmsDifferenceDb": 0.00021128988588278898,
+      "channelDifferencePeak": 0.0008043944835662842,
+      "channelSumPeak": 0.8384276926517487,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": false
+      },
+      "verdict": "NOT_VERIFIED",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "stereo-identical",
+      "tempo": 1.5,
+      "elapsedMs": 37.38545900024474,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/stereo-identical-1.5.wav",
+      "durationRatio": 0.6666666666666666,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.000059371144113077826,
+      "rmsDifferenceDb": 0.00009011017584955694,
+      "channelDifferencePeak": 0.000657394528388977,
+      "channelSumPeak": 0.9160789847373962,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": false
+      },
+      "verdict": "NOT_VERIFIED",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "stereo-antiphase",
+      "tempo": 0.75,
+      "elapsedMs": 63.674666999839246,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/stereo-antiphase-0.75.wav",
+      "durationRatio": 1.3333333333333333,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.0003323686661114503,
+      "rmsDifferenceDb": 0.00017609530345298035,
+      "channelDifferencePeak": 0.5236901640892029,
+      "channelSumPeak": 0.0005307691171765327,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": false
+      },
+      "verdict": "NOT_VERIFIED",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "stereo-antiphase",
+      "tempo": 1,
+      "elapsedMs": 48.97958400007337,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/stereo-antiphase-1.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 7.223854903147721e-9,
+      "rmsDifferenceDb": 9.11205106712917e-7,
+      "channelDifferencePeak": 0.5000000596046448,
+      "channelSumPeak": 5.960464477539063e-8,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "stereo-antiphase",
+      "tempo": 1.2,
+      "elapsedMs": 42.949874999932945,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/stereo-antiphase-1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.0002812531343106319,
+      "rmsDifferenceDb": 0.00021128988588278898,
+      "channelDifferencePeak": 0.8384276926517487,
+      "channelSumPeak": 0.0008043944835662842,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": false
+      },
+      "verdict": "NOT_VERIFIED",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "signal": "stereo-antiphase",
+      "tempo": 1.5,
+      "elapsedMs": 35.94825000036508,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-audio-validation-20261022/float-comparison/stereo-antiphase-1.5.wav",
+      "durationRatio": 0.6666666666666666,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.000059371144113077826,
+      "rmsDifferenceDb": 0.00009011017584955694,
+      "channelDifferencePeak": 0.9160789847373962,
+      "channelSumPeak": 0.000657394528388977,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": false
+      },
+      "verdict": "NOT_VERIFIED",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    }
+  ]
+}

@@ -1,9 +1,11 @@
 import { CONTROL_METRICS, PROJECT_METRICS } from "@zoeymind/ui/metrics"
-import type { Track } from "../model/types"
+import { visibleTracks } from "@zoeydaw/project-core/types"
+import type { ArrangementView, Track } from "@zoeydaw/project-core/types"
 
 export const TRACK_LAYOUT = {
   controlHeight: CONTROL_METRICS.default["--spacing-control-track"],
   spacing: CONTROL_METRICS.default["--spacing-control-track-gap"],
+  routingWidth: PROJECT_METRICS.routingWidth,
 } as const
 export const COLLAPSED_TRACK_HEIGHT =
   TRACK_LAYOUT.controlHeight + TRACK_LAYOUT.spacing * 2 + PROJECT_METRICS.trackBorder
@@ -14,13 +16,24 @@ export const TRACK_RESIZE_STEP = TRACK_LAYOUT.controlHeight + TRACK_LAYOUT.spaci
 export const TRACK_REVEAL_THRESHOLD = TRACK_RESIZE_STEP / 2
 export const CONTROLS_WIDTH = PROJECT_METRICS.controlsWidth
 
+export function arrangementViewProjection(tracks: Track[], view: ArrangementView) {
+  const projected = view.returns ? tracks : tracks.filter(track => track.kind !== "return")
+  return {
+    tracks: projected,
+    visible: visibleTracks(projected),
+    controlsWidth: CONTROLS_WIDTH - (view.routing ? 0 : TRACK_LAYOUT.routingWidth),
+  }
+}
+
 /**
-One layout measurement for header, lane and minimap alike.
+One layout measurement for header, lane and minimap alike. A collapsed group
+keeps two collapsed rows so its summary stays readable.
 */
 export function trackHeight(track: Track): number {
-  return track.collapsed
-    ? COLLAPSED_TRACK_HEIGHT
-    : Math.max(COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP, track.heightPx)
+  if (track.collapsed) {
+    return track.kind === "group" ? COLLAPSED_TRACK_HEIGHT * 2 : COLLAPSED_TRACK_HEIGHT
+  }
+  return Math.max(COLLAPSED_TRACK_HEIGHT + TRACK_RESIZE_STEP, track.heightPx)
 }
 
 export function trackControlRows(track: Track): number {

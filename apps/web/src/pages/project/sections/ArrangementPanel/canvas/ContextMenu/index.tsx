@@ -9,10 +9,11 @@ import {
   ContextMenuSubContent,
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
+  ContextMenuCheckboxItem,
   ContextMenuSeparator,
 } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
-import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "@/pages/project/model/grid"
+import { fixedGridSteps, GRID_DENSITIES, gridLabel } from "@zoeydaw/project-core/grid"
 import { arrangementScene } from "../scene"
 import { RulerMenuItems } from "../interactions/rulers/RulerMenuItems"
 import { AutomationMenuItems } from "../interactions/automation/AutomationMenuItems"
@@ -30,6 +31,7 @@ export function CanvasContextMenu({
   const { t } = useTranslation()
   const [target, setTarget] = useState<CanvasMenuTarget | null>(null)
   const grid = useProjectState(state => state.workspace.grid)
+  const snap = useProjectState(state => state.workspace.snap)
   const numerator = useProjectState(state => state.document.transport.numerator)
   const denominator = useProjectState(state => state.document.transport.denominator)
   return (
@@ -71,6 +73,22 @@ export function CanvasContextMenu({
           ) : (
             <AutomationMenuItems target={target} />
           )}
+          <ContextMenuSeparator />
+          <ContextMenuCheckboxItem checked={snap} onCheckedChange={projectActions.setSnap}>
+            {t("arrangement.snapGrid")}
+          </ContextMenuCheckboxItem>
+          <ContextMenuCheckboxItem
+            checked={grid.triplet === true}
+            onCheckedChange={projectActions.toggleTriplet}
+          >
+            {t("arrangement.tripletGrid")}
+          </ContextMenuCheckboxItem>
+          <ContextMenuCheckboxItem
+            checked={grid.mode === "fixed"}
+            onCheckedChange={projectActions.toggleFixedGrid}
+          >
+            {t("arrangement.fixedGrid")}
+          </ContextMenuCheckboxItem>
           <ContextMenuSeparator />
           <ContextMenuSub>
             <ContextMenuSubTrigger>{t("arrangement.adaptiveGrid")}</ContextMenuSubTrigger>

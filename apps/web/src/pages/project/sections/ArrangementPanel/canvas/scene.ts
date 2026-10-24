@@ -1,14 +1,17 @@
-import { DEFAULT_GRID, deriveGridPlan } from "@/pages/project/model/grid"
-import type { GridPlan, GridSettings } from "@/pages/project/model/grid"
+import { DEFAULT_GRID, deriveGridPlan } from "@zoeydaw/project-core/grid"
+import type { GridPlan, GridSettings } from "@zoeydaw/project-core/grid"
 import type {
-  AutomationLane,
+  AutomationTarget,
   LoopRegion,
   Marker,
+  MediaSource,
+  MidiPattern,
   ProjectPreview,
+  RulerFormat,
   SessionState,
   TimeSelection,
   Track,
-} from "@/pages/project/model/types"
+} from "@zoeydaw/project-core/types"
 
 export interface ArrangementViewport {
   pxPerBar: number
@@ -24,11 +27,18 @@ export type CanvasTargetSelection =
   | { kind: "loop" }
   | { kind: "clip"; id: string; phase: "selected" | "renaming" }
   | { kind: "marker"; id: string; phase: "selected" | "renaming" }
-  | { kind: "automation"; trackId: string; laneId: string; pointIds: readonly string[] }
+  | {
+      kind: "automation"
+      trackId: string
+      laneId: string
+      placement: "primary" | "extra"
+      pointIds: readonly string[]
+    }
   | {
       kind: "automation-value"
       trackId: string
       laneId: string
+      placement: "primary" | "extra"
       pointId: string
       pointIds: readonly string[]
     }
@@ -40,6 +50,10 @@ export interface SceneMusic {
   markers: readonly Marker[]
   loop: LoopRegion
   tracks: readonly Track[]
+  media: readonly MediaSource[]
+  patterns: readonly MidiPattern[]
+  /** Optional so existing scene fixtures keep their shape; defaults to `time`. */
+  rulerFormat?: RulerFormat
 }
 
 export interface ArrangementScene extends SceneMusic {
@@ -57,7 +71,9 @@ export interface ArrangementScene extends SceneMusic {
   hoverClip: { id: string; region: "title" | "body" } | null
   timeSelection: TimeSelection | null
   targetSelection: CanvasTargetSelection
-  automationParameters: Readonly<Record<string, AutomationLane["parameter"]>>
+  automationTargets: Readonly<Record<string, AutomationTarget | null>>
+  automationLanes: Readonly<Record<string, AutomationTarget[]>>
+  automationMode: boolean
 }
 
 export interface SceneStore {
@@ -72,7 +88,11 @@ export interface SceneStore {
   setClipDrag: (drag: ArrangementScene["clipDrag"]) => void
   setClipResize: (resize: ArrangementScene["clipResize"]) => void
   setTargetSelection: (selection: CanvasTargetSelection) => void
-  setAutomationParameters: (parameters: ArrangementScene["automationParameters"]) => void
+  setAutomationDisplay: (
+    targets: ArrangementScene["automationTargets"],
+    lanes: ArrangementScene["automationLanes"],
+    mode: boolean
+  ) => void
   setHover: (hover: ArrangementScene["hoverClip"]) => void
   setTimeSelection: (selection: TimeSelection | null) => void
 }
@@ -85,6 +105,8 @@ export function createSceneStore(): SceneStore {
     markers: [],
     loop: { enabled: false, startBar: 1, endBar: 5 },
     tracks: [],
+    media: [],
+    patterns: [],
   }
   let scene: ArrangementScene = {
     ...source,
@@ -102,7 +124,9 @@ export function createSceneStore(): SceneStore {
     hoverClip: null,
     timeSelection: null,
     targetSelection: { kind: "none" },
-    automationParameters: {},
+    automationTargets: {},
+    automationLanes: {},
+    automationMode: false,
   }
   const listeners = new Set<(scene: ArrangementScene) => void>()
   function bump(next: ArrangementScene) {
@@ -146,22 +170,23 @@ export function createSceneStore(): SceneStore {
       bump({ ...scene, playback })
     },
     setMusic(input) {
-      if (musicEquals(source, input)) {
+      const next: SceneMusic = { ...input, rulerFormat: input.rulerFormat ?? scene.rulerFormat }
+      if (musicEquals(source, next)) {
         return
       }
-      source = input
+      source = next
       bump({
         ...scene,
-        ...input,
+        ...next,
         gridPlan: deriveGridPlan(
-          input.grid,
+          next.grid,
           scene.viewport.pxPerBar,
-          input.transport.numerator,
-          input.transport.denominator
+          next.transport.numerator,
+          next.transport.denominator
         ),
-        tracks: scene.previewTracks ?? input.tracks,
-        markers: scene.previewMarkers ?? input.markers,
-        loop: scene.previewLoop ?? input.loop,
+        tracks: scene.previewTracks ?? next.tracks,
+        markers: scene.previewMarkers ?? next.markers,
+        loop: scene.previewLoop ?? next.loop,
       })
     },
     setProjectPreview(preview) {
@@ -203,11 +228,14 @@ export function createSceneStore(): SceneStore {
       }
       bump({ ...scene, targetSelection: selection })
     },
-    setAutomationParameters(parameters) {
-      if (scene.automationParameters === parameters) {
+    setAutomationDisplay(targets, lanes, mode) {
+      if (
+        scene.automationTargets === targets &&
+        scene.automationLanes === lanes &&
+        scene.automationMode === mode
+      )
         return
-      }
-      bump({ ...scene, automationParameters: parameters })
+      bump({ ...scene, automationTargets: targets, automationLanes: lanes, automationMode: mode })
     },
     setSelection(ids) {
       if (setEquals(scene.selectedClipIds, ids)) {
@@ -237,6 +265,7 @@ export function createSceneStore(): SceneStore {
         selection &&
         current.startBar === selection.startBar &&
         current.endBar === selection.endBar &&
+        current.emphasis === selection.emphasis &&
         current.trackIds.length === selection.trackIds.length &&
         current.trackIds.every((id, index) => id === selection.trackIds[index])
       ) {
@@ -259,6 +288,8 @@ function viewportEquals(a: ArrangementViewport, b: ArrangementViewport): boolean
 }
 
 function musicEquals(a: SceneMusic, b: SceneMusic): boolean {
+  const aFormat = a.rulerFormat ?? "time"
+  const bFormat = b.rulerFormat ?? "time"
   return (
     a.bars === b.bars &&
     a.grid === b.grid &&
@@ -267,7 +298,10 @@ function musicEquals(a: SceneMusic, b: SceneMusic): boolean {
     a.transport.denominator === b.transport.denominator &&
     a.markers === b.markers &&
     a.loop === b.loop &&
-    a.tracks === b.tracks
+    a.tracks === b.tracks &&
+    a.media === b.media &&
+    a.patterns === b.patterns &&
+    aFormat === bFormat
   )
 }
 
@@ -302,6 +336,7 @@ function targetEquals(a: CanvasTargetSelection, b: CanvasTargetSelection): boole
         b.kind === "automation" &&
         a.trackId === b.trackId &&
         a.laneId === b.laneId &&
+        a.placement === b.placement &&
         a.pointIds.length === b.pointIds.length &&
         a.pointIds.every((id, index) => id === b.pointIds[index])
       )
@@ -312,6 +347,7 @@ function targetEquals(a: CanvasTargetSelection, b: CanvasTargetSelection): boole
         a.trackId === b.trackId &&
         a.laneId === b.laneId &&
         a.pointId === b.pointId &&
+        a.placement === b.placement &&
         a.pointIds.length === b.pointIds.length &&
         a.pointIds.every((id, index) => id === b.pointIds[index])
       )

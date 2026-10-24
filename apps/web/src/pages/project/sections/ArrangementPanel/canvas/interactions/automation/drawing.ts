@@ -1,11 +1,11 @@
-import { clampAutomationValue } from "@/pages/project/model/automation-curve"
-import { uniqueId } from "@/pages/project/model/reducers"
+import { clampAutomationValue } from "@zoeydaw/project-core/automation-curve"
+import { uniqueId } from "@zoeydaw/project-core/reducers"
 import { beginProjectPreview, finishProjectPreview } from "../project-preview"
 import { automationBar, automationValue } from "./geometry"
 import { previewAutomation, sortedPoints } from "./preview"
 import type { AutomationRow } from "./geometry"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
-import type { AutomationPoint } from "@/pages/project/model/types"
+import type { AutomationPoint } from "@zoeydaw/project-core/types"
 
 export function drawGesture(
   context: InteractionContext,

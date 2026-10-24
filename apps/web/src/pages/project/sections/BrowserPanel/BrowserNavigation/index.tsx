@@ -7,6 +7,7 @@ import {
   Folder,
   FolderOpen,
   Gauge,
+  FolderPlus,
   KeyboardMusic,
   Library,
   Music2,
@@ -19,9 +20,18 @@ import {
   Waves,
 } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
-import { Button, Separator, cn, rowInteractiveClasses, useInfoBinding } from "@zoeymind/ui"
+import {
+  Button,
+  Separator,
+  cn,
+  rowInteractiveClasses,
+  useInfoBinding,
+  CONTROL_METRICS,
+} from "@zoeymind/ui"
 import type { LucideIcon } from "lucide-react"
 import type { BrowserSource } from "../browserData"
+import type { BrowserRoot } from "@/shared/native/browser"
+import { browserLibrary } from "@/pages/project/adapters/browser"
 
 const SOURCE_GROUPS: { id: string; sources: { id: BrowserSource; icon: LucideIcon }[] }[] = [
   {
@@ -61,11 +71,13 @@ const SOURCE_GROUPS: { id: string; sources: { id: BrowserSource; icon: LucideIco
 ]
 
 export interface BrowserNavigationProps {
-  readonly source: BrowserSource
-  readonly onNavigate: (source: BrowserSource) => void
+  readonly source: string
+  readonly onNavigate: (source: BrowserSource | `root:${string}`) => void
+  readonly roots: readonly BrowserRoot[]
+  readonly busy: boolean
 }
 
-export function BrowserNavigation({ source, onNavigate }: BrowserNavigationProps) {
+export function BrowserNavigation({ source, onNavigate, roots, busy }: BrowserNavigationProps) {
   const { t } = useTranslation()
   const infoHandlers = useInfoBinding({ type: "categories" })
   return (
@@ -95,14 +107,14 @@ export function BrowserNavigation({ source, onNavigate }: BrowserNavigationProps
         event.preventDefault()
         event.stopPropagation()
         buttons[nextIndex]?.focus()
-        buttons[nextIndex]?.click()
+        if (buttons[nextIndex]?.dataset.browserAddFolder !== "true") buttons[nextIndex]?.click()
       }}
     >
       {SOURCE_GROUPS.map((group, index) => (
         <div key={group.id}>
-          {index > 0 && <Separator className="my-2" />}
-          <div className="text-muted-foreground flex min-h-7 items-center gap-2 overflow-hidden px-3 pt-3 pb-1 text-xs">
-            <span className="w-5 shrink-0" aria-hidden />
+          {index > 0 && <Separator className="my-1" />}
+          <div className="text-muted-foreground flex items-center gap-1 overflow-hidden px-1 py-1 text-xs">
+            <span className="w-3 shrink-0" aria-hidden />
             <span className="min-w-0 overflow-hidden whitespace-nowrap">
               {t(`project.browser.groups.${group.id}`)}
             </span>
@@ -117,13 +129,14 @@ export function BrowserNavigation({ source, onNavigate }: BrowserNavigationProps
               aria-current={source === id ? "page" : undefined}
               className={rowInteractiveClasses(
                 { active: source === id },
-                "justify-start gap-2 overflow-hidden rounded-sm text-left font-normal"
+                "min-h-0 justify-start gap-1 overflow-hidden rounded-none px-1 py-0 text-left font-normal"
               )}
+              style={{ height: CONTROL_METRICS.transport["--spacing-control-track"] }}
               onClick={() => onNavigate(id)}
             >
               <Icon
                 className={cn(
-                  "size-5 shrink-0",
+                  "size-3 shrink-0",
                   id === "favorites" && "fill-chart-5 text-chart-5",
                   id === "purple" && "fill-chart-4 text-chart-4"
                 )}
@@ -135,6 +148,45 @@ export function BrowserNavigation({ source, onNavigate }: BrowserNavigationProps
           ))}
         </div>
       ))}
+      {roots.map(root => (
+        <Button
+          key={root.id}
+          variant="ghost"
+          size="sm"
+          aria-current={source === `root:${root.id}` ? "page" : undefined}
+          title={root.path}
+          className={rowInteractiveClasses(
+            { active: source === `root:${root.id}` },
+            "min-h-0 justify-start gap-1 overflow-hidden rounded-none px-1 py-0 text-left font-normal"
+          )}
+          style={{ height: CONTROL_METRICS.transport["--spacing-control-track"] }}
+          onClick={() => onNavigate(`root:${root.id}`)}
+        >
+          <Folder className="size-3 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{root.name}</span>
+          {root.status !== "ready" ? (
+            <span className="text-muted-foreground text-[10px]">
+              {t(`browser.status.${root.status}`)}
+            </span>
+          ) : null}
+        </Button>
+      ))}
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={busy}
+        data-browser-add-folder="true"
+        aria-label={t("browser.addFolder")}
+        className={rowInteractiveClasses(
+          {},
+          "min-h-0 justify-start gap-1 rounded-none px-1 py-0 text-left font-normal"
+        )}
+        style={{ height: CONTROL_METRICS.transport["--spacing-control-track"] }}
+        onClick={() => void browserLibrary.addFolder()}
+      >
+        <FolderPlus className="size-3 shrink-0" />
+        <span className="truncate">{t("browser.addFolder")}</span>
+      </Button>
     </nav>
   )
 }

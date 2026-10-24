@@ -1,8 +1,12 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it } from "vitest"
 import { act, cleanup, fireEvent, render } from "@testing-library/react"
-import { createMockDocument, createMockWorkspace } from "./fixtures"
-import { createMockProjectBackend } from "./backend/mock"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  createMockProjectBackend,
+} from "@zoeydaw/project-runtime/testing"
 import {
   configureProjectBackend,
   hydrateProject,
@@ -30,7 +34,11 @@ let restore: (() => void) | undefined
 let releaseRuntime: (() => void) | undefined
 beforeEach(() => {
   hydrateProject(
-    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+    JSON.stringify({
+      version: 2,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
   )
   releaseRuntime = startProjectRuntime()
 })
@@ -55,6 +63,7 @@ it("ignores the rest of a rejected drag instead of creating unowned commits", ()
             kind: "rejected",
             sessionId: request.sessionId,
             sequence: request.sequence,
+            controlGeneration: request.controlGeneration,
             code: "rejected",
           }
         }

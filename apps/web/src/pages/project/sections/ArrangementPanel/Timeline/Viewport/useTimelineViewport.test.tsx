@@ -1,9 +1,10 @@
+import { DEFAULT_TRACK_HEIGHT, arrangementViewProjection } from "@/pages/project/layout"
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react"
+import { act, cleanup, fireEvent, render } from "@testing-library/react"
 import { useRef } from "react"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { useTimelineViewport } from "./useTimelineViewport"
 
 const frames = new Map<number, FrameRequestCallback>()
@@ -21,10 +22,15 @@ function Viewport() {
   const container = useRef<HTMLDivElement>(null)
   const body = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLDivElement>(null)
-  useTimelineViewport(container, body, canvas)
+  const viewport = useTimelineViewport(container, body, canvas)
   return (
-    <div ref={container}>
-      <div ref={body}>
+    <div
+      ref={container}
+      data-viewport-width={viewport.timeViewportWidth}
+      data-controls-width={viewport.controlsWidth}
+      data-bars={viewport.bars}
+    >
+      <div ref={body} data-viewport-body>
         <div ref={canvas} />
       </div>
     </div>
@@ -51,8 +57,8 @@ beforeEach(() => {
   )
   hydrateProject(
     JSON.stringify({
-      version: 2,
-      document: createMockDocument(),
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
       workspace: {
         ...createMockWorkspace(),
         follow: true,
@@ -102,4 +108,45 @@ it("does not move the viewport when Follow is disabled or playback is stopped", 
   act(() => projectActions.seekBar(8))
   frame()
   expect(useProjectState.getState().workspace.scrollX).toBe(200)
+})
+
+it("widens the timeline, minimap viewport and zoom bounds when I/O is hidden", () => {
+  const view = render(<Viewport />)
+  const element = view.container.querySelector<HTMLElement>("[data-viewport-width]")!
+  const before = Number(element.dataset.viewportWidth)
+  const width = Number(element.dataset.controlsWidth)
+  act(() => projectActions.setArrangementView("routing", false))
+  const state = useProjectState.getState()
+  const projected = arrangementViewProjection(
+    state.document.tracks,
+    state.workspace.arrangementView
+  )
+  expect(Number(element.dataset.controlsWidth)).toBe(projected.controlsWidth)
+  expect(Number(element.dataset.viewportWidth)).toBe(before + width - projected.controlsWidth)
+  act(() => projectActions.setArrangementView("routing", true))
+  expect(Number(element.dataset.viewportWidth)).toBe(before)
+})
+
+it("extends the overview to the visible end without adding song tail twice", () => {
+  const view = render(<Viewport />)
+  const element = view.container.querySelector<HTMLElement>("[data-bars]")!
+  expect(Number(element.dataset.bars)).toBe(58)
+  act(() => projectActions.setViewport({ pxPerBar: 2, scrollX: 0 }))
+  expect(Number(element.dataset.bars)).toBe(199.5)
+  act(() => projectActions.setViewport({ pxPerBar: 100, scrollX: 0 }))
+  expect(Number(element.dataset.bars)).toBe(58)
+})
+
+it("keeps the zero-based playing position centered when zooming with Follow", () => {
+  const view = render(<Viewport />)
+  act(() => projectActions.togglePlay())
+  act(() => projectActions.seekBar(10))
+  frame()
+  fireEvent.wheel(view.container.querySelector("[data-viewport-body]")!, {
+    ctrlKey: true,
+    deltaY: -26,
+    clientX: 100,
+  })
+  const p = useProjectState.getState().workspace
+  expect((10 - 1) * p.pxPerBar - p.scrollX).toBeCloseTo(352)
 })

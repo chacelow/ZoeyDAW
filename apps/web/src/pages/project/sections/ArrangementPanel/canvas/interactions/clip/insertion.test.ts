@@ -1,16 +1,21 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { beforeEach, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import { layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
-import { gridZoomLimit } from "@/pages/project/model/grid"
+import { gridZoomLimit } from "@zoeydaw/project-core/grid"
 import { createClipInteractions } from "."
 import type { CanvasPointer } from "../types"
 
 beforeEach(() => {
   hydrateProject(
-    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+    JSON.stringify({
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
   )
 })
 
@@ -21,6 +26,8 @@ function setup() {
     bars: 256,
     grid: { mode: "adaptive", density: "narrowest" },
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -72,8 +79,12 @@ it("clicks a Clip body and blank track, retaining an exact row-local insertion",
     trackId: "3-audio",
     bar: 9 + 2 / 16_384,
   })
-  expect(useProjectState.getState().session.timeSelection).toBeNull()
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.timeSelection).toEqual({
+    startBar: 9 + 2 / 16_384,
+    endBar: 9 + 2 / 16_384,
+    trackIds: ["3-audio"],
+  })
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   const blank = pointer(32, row("4-midi").top + row("4-midi").height / 2)
   interaction.start(blank)?.finish(false)
   expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])

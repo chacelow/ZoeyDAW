@@ -20,12 +20,12 @@ export function ThemePresetProvider({ children }: ThemePresetProviderProperties)
   const { resolvedTheme } = useTheme()
   const [presetId, setPresetId] = useState<string>(() => {
     if (typeof window === "undefined") {
-      return ""
+      return "vscode-modern"
     }
     try {
-      return window.localStorage.getItem(THEME_PRESET_STORAGE_KEY) ?? ""
+      return window.localStorage.getItem(THEME_PRESET_STORAGE_KEY) ?? "vscode-modern"
     } catch {
-      return ""
+      return "vscode-modern"
     }
   })
 
@@ -35,7 +35,7 @@ export function ThemePresetProvider({ children }: ThemePresetProviderProperties)
   // Apply theme whenever presetId or resolved theme changes
   useEffect(() => {
     const root = document.documentElement
-    const mode = (resolvedTheme ?? "light") as "light" | "dark"
+    const mode = resolvedTheme === "dark" ? "dark" : "light"
     applyThemeOrClear(currentPreset, mode, root)
   }, [presetId, resolvedTheme, currentPreset])
 

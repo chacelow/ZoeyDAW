@@ -1,21 +1,28 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { StrictMode } from "react"
 import { act, cleanup, fireEvent, render } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import { ClipNameEditor } from "."
 
 beforeEach(() => {
   hydrateProject(
-    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+    JSON.stringify({
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
   )
   const state = useProjectState.getState()
   arrangementScene.setMusic({
     bars: 128,
     grid: state.workspace.grid,
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -74,3 +81,23 @@ it("Escape discards the typed label without changing history or opening detail",
     useProjectState.getState().document.tracks.find(track => track.id === "trager")!.clips[0].label
   ).toBeUndefined()
 })
+
+for (const composition of [{ isComposing: true }, { keyCode: 229 }]) {
+  it(`keeps the rename draft through IME Enter and Escape (${JSON.stringify(composition)})`, () => {
+    const view = render(<ClipNameEditor />)
+    const input = view.getByRole("textbox")
+    fireEvent.change(input, { target: { value: "主唱" } })
+    for (const key of ["Enter", "Escape"]) {
+      expect(fireEvent.keyDown(input, { key, ...composition })).toBe(true)
+      expect(document.activeElement).toBe(input)
+      expect(arrangementScene.get().targetSelection).toMatchObject({ phase: "renaming" })
+      expect(useProjectState.getState().session.canUndo).toBe(false)
+    }
+    fireEvent.keyDown(input, { key: "Enter" })
+    expect(
+      useProjectState.getState().document.tracks.find(track => track.id === "trager")!.clips[0]
+        .label
+    ).toBe("主唱")
+    expect(arrangementScene.get().targetSelection).toMatchObject({ phase: "selected" })
+  })
+}

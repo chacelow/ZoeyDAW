@@ -1,4 +1,4 @@
-import { colorToHsl } from "./color-converter"
+import { colorToHsl, colorToHslTuple } from "./color-converter"
 import { getShadowMap } from "./shadows"
 import type { ThemePreset, ThemeStyleProps as ThemeStyleProperties } from "./theme-presets"
 
@@ -24,6 +24,7 @@ export const MANAGED_KEYS = [
   "accent-foreground",
   "destructive",
   "destructive-foreground",
+  "success",
   "border",
   "input",
   "ring",
@@ -77,6 +78,7 @@ const COLOR_TOKENS: Record<string, true> = {
   accent: true,
   "accent-foreground": true,
   destructive: true,
+  success: true,
   "destructive-foreground": true,
   border: true,
   input: true,
@@ -116,7 +118,7 @@ export function applyThemePreset(
       continue
     }
 
-    const hslValue = colorToHsl(value)
+    const hslValue = key === "success" ? colorToHslTuple(value) : colorToHsl(value)
     root.style.setProperty(`--${key}`, hslValue)
   }
 

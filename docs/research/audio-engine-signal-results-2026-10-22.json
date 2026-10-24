@@ -1,0 +1,799 @@
+{
+  "originalRate": [
+    {
+      "implementation": "tracktion",
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/tone-440-mono-n1-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "tracktion",
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/tone-440-mono-n8-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 1.3262185725793811e-11,
+      "rmsDifferenceDb": 6.086162621563368e-7,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "tracktion",
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/tone-440-mono-n32-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "tracktion",
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-identical-n1-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.5,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "tracktion",
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-identical-n8-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 1.3262185725793811e-11,
+      "rmsDifferenceDb": 6.086162621563368e-7,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.4999999701976776,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "tracktion",
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-identical-n32-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.5,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "tracktion",
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-antiphase-n1-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0.5,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "tracktion",
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-antiphase-n8-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 1.3262185725793811e-11,
+      "rmsDifferenceDb": 6.086162621563368e-7,
+      "channelDifferencePeak": 0.4999999701976776,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "tracktion",
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out/stereo-antiphase-n32-r1.0.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0.5,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/tone-440-mono-1.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/tone-440-mono-8.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/tone-440-mono-32.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-identical-1.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.5,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-identical-8.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.5,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-identical-32.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.5,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-antiphase-1.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0.5,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-antiphase-8.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0.5,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "implementation": "rust-symphonia",
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/rust/results/stereo-antiphase-32.wav",
+      "durationRatio": 1,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0,
+      "rmsDifferenceDb": 0,
+      "channelDifferencePeak": 0.5,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    }
+  ],
+  "tracktionSoundTouchTempo12": [
+    {
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n1-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.2888518754109815,
+      "rmsDifferenceDb": 0.0010379273232676537,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n8-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.28885187493346315,
+      "rmsDifferenceDb": 0.0010385436071400763,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/tone-440-mono.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/tone-440-mono-n32-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.2888518763679406,
+      "rmsDifferenceDb": 0.0010379671350672483,
+      "channelDifferencePeak": null,
+      "channelSumPeak": null,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n1-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.2888518754109815,
+      "rmsDifferenceDb": 0.0010406468269447933,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.49993327260017395,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n8-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.28885187493346315,
+      "rmsDifferenceDb": 0.0010412619259854605,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.4999332129955292,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-identical.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-identical-n32-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.2888518763679406,
+      "rmsDifferenceDb": 0.0010406878892420905,
+      "channelDifferencePeak": 0,
+      "channelSumPeak": 0.49993327260017395,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "identicalChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "instances": 1,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n1-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.2888518754109815,
+      "rmsDifferenceDb": 0.0010406468269447933,
+      "channelDifferencePeak": 0.49993327260017395,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "instances": 8,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n8-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.28885187493346315,
+      "rmsDifferenceDb": 0.0010412619259854605,
+      "channelDifferencePeak": 0.4999332129955292,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    },
+    {
+      "instances": 32,
+      "input": "/tmp/zoeydaw-audio-validation-20261022/corpus/stereo-antiphase.wav",
+      "output": "/tmp/zoeydaw-engine-probes-20261022/tracktion/out-tempo/stereo-antiphase-n32-r1.2.wav",
+      "durationRatio": 0.8333333333333334,
+      "durationErrorFrames": 0,
+      "pitchErrorCents": 0.2888518763679406,
+      "rmsDifferenceDb": 0.0010406878892420905,
+      "channelDifferencePeak": 0.49993327260017395,
+      "channelSumPeak": 0,
+      "nonFinite": 0,
+      "checks": {
+        "duration": true,
+        "pitch": true,
+        "rms": true,
+        "finite": true,
+        "sampleRate": true,
+        "channels": true,
+        "antiPhaseChannels": true
+      },
+      "verdict": "VERIFIED_SYNTHETIC_ONLY",
+      "excludes": [
+        "musical quality",
+        "engine callback performance",
+        "device latency",
+        "Live comparison",
+        "platform compatibility"
+      ]
+    }
+  ],
+  "scope": "Synthetic signals only, no callback or musical-quality claim"
+}

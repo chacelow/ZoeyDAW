@@ -1,0 +1,12 @@
+[package]
+name = "zoeydaw-media"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+sha2 = "0.10.9"
+symphonia = { version = "0.6.1", default-features = false, features = ["aiff", "wav", "pcm", "flac", "mp3"] }
+uuid = { version = "1", features = ["v4"] }

@@ -6,7 +6,7 @@ import {
   pinnedTrackHeight,
 } from "./layout"
 import { clipVisualGeometry, fadeHandleX, FADE_HANDLE_PX, RESIZE_EDGE_PX } from "./clip-geometry"
-import type { Clip, Track } from "@/pages/project/model/types"
+import type { Clip, Track } from "@zoeydaw/project-core/types"
 import type { ArrangementScene } from "./scene"
 
 export type HitTarget =
@@ -43,7 +43,9 @@ export function hitTest(
   }
 
   const rows = layoutTrackRows(scene)
-  const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks)
+  const pinnedTop =
+    bodyBottom -
+    pinnedTrackHeight(scene.tracks, { mode: scene.automationMode, lanes: scene.automationLanes })
   const row = rows.find(
     r =>
       pointY >= Math.max(bodyTop, r.top) &&
@@ -57,6 +59,8 @@ export function hitTest(
       ? { kind: "track-lane", track: row.track, bar: barAt(pointX, pxPerBar, scrollX, bars) }
       : null
   }
+  if (pointY >= row.top + row.contentHeight)
+    return { kind: "track-lane", track: row.track, bar: barAt(pointX, pxPerBar, scrollX, bars) }
 
   for (let index = row.track.clips.length - 1; index >= 0; index--) {
     const clip = row.track.clips[index]

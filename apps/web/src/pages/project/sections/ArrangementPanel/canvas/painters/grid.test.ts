@@ -1,8 +1,10 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import { describe, expect, it } from "vitest"
-import { createMockDocument } from "@/pages/project/adapters/fixtures"
-import { deriveGridPlan } from "@/pages/project/model/grid"
-import { BAR_RULER_HEIGHT, paintGrid, TIME_RULER_HEIGHT } from "./grid"
-import type { LoopRegion, Marker, Track } from "@/pages/project/model/types"
+import { createMockDocument } from "@zoeydaw/project-runtime/testing"
+import { deriveGridPlan } from "@zoeydaw/project-core/grid"
+import { paintGrid, paintTimeGrid, TIME_RULER_HEIGHT } from "./grid"
+import { LOOP_RULER_HEIGHT, MARKER_RULER_HEIGHT, PATTERN_RULER_HEIGHT } from "../layout"
+import type { LoopRegion, Marker, Track } from "@zoeydaw/project-core/types"
 import type { ArrangementScene } from "../scene"
 
 const tokens = {
@@ -11,10 +13,12 @@ const tokens = {
   surface: "#1a1a1a",
   surfaceAlt: "#222",
   ruler: "#111",
+  rulerLine: "#111",
   line: "#333",
   gridBar: "#2a2a2a",
   gridMinor: "#2a2a2a",
   gridMajor: "#444",
+  guide: "#333",
   primary: "#f00",
 }
 
@@ -30,13 +34,17 @@ function makeScene(patch?: Partial<ArrangementScene>): ArrangementScene {
     markers: [] as readonly Marker[],
     loop: { enabled: false, startBar: 1, endBar: 5 } as LoopRegion,
     tracks: [] as readonly Track[],
+    media: [],
+    patterns: [],
     previewTracks: null,
     clipDrag: null,
     clipResize: null,
     previewMarkers: null,
     previewLoop: null,
     targetSelection: { kind: "none" },
-    automationParameters: {},
+    automationTargets: {},
+    automationLanes: {},
+    automationMode: false,
     selectedClipIds: new Set(),
     selectedTrackIds: new Set(),
     hoverClip: null,
@@ -87,6 +95,7 @@ function recordContext() {
     "setTransform",
     "clearRect",
     "fillRect",
+    "rect",
     "beginPath",
     "moveTo",
     "lineTo",
@@ -103,24 +112,47 @@ function recordContext() {
   return proxy as unknown as CanvasRenderingContext2D & { _calls: Call[] }
 }
 
+describe("triplet grid painter", () => {
+  it("places painted cells at the projected snap positions", () => {
+    const context = recordContext()
+    const grid = { mode: "fixed", bars: 1 / 8, triplet: true } as const
+    const scene = makeScene({
+      grid,
+      gridPlan: deriveGridPlan(grid, 192, 4, 4),
+      viewport: { pxPerBar: 192, scrollX: 0, scrollY: 0, width: 192, height: 200, dpr: 1 },
+    })
+    paintTimeGrid(context, scene, tokens.gridMinor, tokens.gridMajor, 34, 180, 0, 192)
+    const cellX = Math.round(scene.gridPlan.cellBars * scene.viewport.pxPerBar) + 0.5
+    expect(context._calls.some(([name, args]) => name === "moveTo" && args[0] === cellX)).toBe(true)
+  })
+})
+
 describe("grid painter", () => {
-  it("reserves distinct marker and loop/bar bands plus the bottom time band", () => {
+  it("reserves pattern, loop and locator bands plus the bottom time band", () => {
     const context = recordContext()
     paintGrid(context, makeScene(), tokens)
     const fillRects = context._calls.filter(c => c[0] === "fillRect").map(c => c[1] as number[])
-    expect(fillRects.some(r => r[1] === 0 && r[3] === 17)).toBe(true)
-    expect(fillRects.some(r => r[1] === 17 && r[3] === 17)).toBe(true)
+    expect(fillRects.some(r => r[1] === 0 && r[3] === PATTERN_RULER_HEIGHT)).toBe(true)
+    expect(fillRects.some(r => r[1] === PATTERN_RULER_HEIGHT && r[3] === LOOP_RULER_HEIGHT)).toBe(
+      true
+    )
+    expect(
+      fillRects.some(
+        r => r[1] === PATTERN_RULER_HEIGHT + LOOP_RULER_HEIGHT && r[3] === MARKER_RULER_HEIGHT
+      )
+    ).toBe(false)
     expect(
       fillRects.some(r => r[1] === 200 - TIME_RULER_HEIGHT && r[3] === TIME_RULER_HEIGHT)
     ).toBe(true)
     expect(
       fillRects.some(
-        r => r[1] === BAR_RULER_HEIGHT && r[3] === 200 - BAR_RULER_HEIGHT - TIME_RULER_HEIGHT
+        r =>
+          r[1] === PATTERN_RULER_HEIGHT && r[3] === 200 - PATTERN_RULER_HEIGHT - TIME_RULER_HEIGHT
       )
     ).toBe(true)
   })
 
-  it("draws marker ticks in the first lane and loop handles only in the second", () => {
+  it("draws locator labels in the locator band and the loop brace in the loop band", () => {
     const context = recordContext()
     paintGrid(
       context,
@@ -134,18 +166,23 @@ describe("grid painter", () => {
     expect(
       calls.filter(
         ([name, arguments_]) =>
-          name === "fillText" && arguments_[0] === "Section" && arguments_[2] === 17 / 2
+          name === "fillText" &&
+          arguments_[0] === "Section" &&
+          arguments_[2] === PATTERN_RULER_HEIGHT + LOOP_RULER_HEIGHT + MARKER_RULER_HEIGHT / 2
       )
     ).toHaveLength(1)
     expect(
       calls.filter(
-        ([name, arguments_]) => name === "fillRect" && arguments_[1] === 17 && arguments_[3] === 17
+        ([name, arguments_]) =>
+          name === "fillRect" &&
+          arguments_[1] === PATTERN_RULER_HEIGHT &&
+          arguments_[3] === LOOP_RULER_HEIGHT
       )
-    ).toHaveLength(2)
+    ).toHaveLength(1)
   })
 
   it("highlights only selected track rows when choosing a time span", () => {
-    const { tracks } = createMockDocument()
+    const { tracks } = createMockDocument(DEFAULT_TRACK_HEIGHT)
     const selected = tracks[0]
     if (!selected) {
       throw new Error("Fixture must contain a group track")
@@ -186,7 +223,7 @@ describe("grid painter", () => {
       tokens
     )
     const gridLines = context._calls.filter(
-      ([name, arguments_]) => name === "moveTo" && arguments_[1] === BAR_RULER_HEIGHT
+      ([name, arguments_]) => name === "moveTo" && arguments_[1] === PATTERN_RULER_HEIGHT
     )
     expect(gridLines.some(([, arguments_]) => arguments_[0] === 16.5)).toBe(true)
     expect(gridLines.length).toBeLessThan(100)
@@ -214,7 +251,7 @@ describe("grid painter", () => {
       tokens
     )
     const lines = context._calls.filter(
-      ([name, arguments_]) => name === "moveTo" && arguments_[1] === BAR_RULER_HEIGHT
+      ([name, arguments_]) => name === "moveTo" && arguments_[1] === PATTERN_RULER_HEIGHT
     )
     expect(lines.length).toBeLessThan(200)
     expect(lines.length).toBeGreaterThan(20)
@@ -270,7 +307,7 @@ describe("grid painter", () => {
         }
         if (
           name === "moveTo" &&
-          arguments_[1] === BAR_RULER_HEIGHT &&
+          arguments_[1] === PATTERN_RULER_HEIGHT &&
           typeof arguments_[0] === "number"
         ) {
           lines.get(strokeStyle)?.push(arguments_[0])
@@ -296,7 +333,7 @@ describe("grid painter", () => {
   it("keeps pinned-track highlights below the rulers in a short viewport", () => {
     const context = recordContext()
     const scene = makeScene({
-      tracks: createMockDocument().tracks,
+      tracks: createMockDocument(DEFAULT_TRACK_HEIGHT).tracks,
       selectedTrackIds: new Set(["main"]),
       timeSelection: { startBar: 1, endBar: 2, trackIds: ["main"] },
       viewport: { pxPerBar: 24, scrollX: 0, scrollY: 0, width: 100, height: 100, dpr: 1 },
@@ -307,8 +344,8 @@ describe("grid painter", () => {
         name === "fillRect" &&
         typeof y === "number" &&
         typeof height === "number" &&
-        y < BAR_RULER_HEIGHT &&
-        y + height > BAR_RULER_HEIGHT
+        y < PATTERN_RULER_HEIGHT &&
+        y + height > PATTERN_RULER_HEIGHT
     )
     expect(crossesRuler).toBe(false)
   })

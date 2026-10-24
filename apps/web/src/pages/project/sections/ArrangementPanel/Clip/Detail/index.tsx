@@ -1,44 +1,53 @@
 import { useTranslation } from "@zoeymind/i18n"
-import { clipLabel } from "@/pages/project/model/clip-label"
-import { useProjectState } from "@/pages/project/adapters"
+import { projectActions, useProjectState } from "@/pages/project/adapters"
 import { AudioEditor } from "./AudioEditor"
 import { MidiEditor } from "./MidiEditor"
-import { PatternEditor } from "./PatternEditor"
-import { ClipNameInput } from "./NameInput"
-import type { Clip } from "@/pages/project/model/types"
+import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
+import { isEditableTarget } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
+import type { Clip } from "@zoeydaw/project-core/types"
 
-export function ClipDetail({ clip, close }: { readonly clip: Clip; readonly close: () => void }) {
+export function ClipDetail({ clip: requestedClip }: { readonly clip: Clip }) {
   const { t } = useTranslation()
   const numerator = useProjectState(state => state.document.transport.numerator)
-  const title = clipLabel(clip)
+  const patterns = useProjectState(state => state.document.patterns)
+  const owner = useProjectState(state =>
+    state.document.tracks.find(track => track.clips.some(item => item.id === requestedClip.id))
+  )
+  const clip = owner?.clips.find(item => item.id === requestedClip.id) ?? requestedClip
+  const color = clip.color ?? owner?.color ?? "var(--primary)"
   return (
     <div
       data-clip-editor
       role="region"
       aria-label={t("arrangement.clipEditor")}
-      className="border-border bg-background absolute inset-x-0 bottom-0 z-40 flex h-[190px] flex-col border-t shadow-xl"
-      onPointerDown={event => event.stopPropagation()}
-      onKeyDown={event => event.stopPropagation()}
+      className="flex h-full min-h-0 flex-col overflow-hidden"
+      onKeyDown={event => {
+        if (
+          !event.defaultPrevented &&
+          (event.metaKey || event.ctrlKey) &&
+          !event.altKey &&
+          event.key.toLowerCase() === "z" &&
+          !isEditableTarget(event.target)
+        ) {
+          event.preventDefault()
+          if (event.shiftKey) projectActions.redo()
+          else projectActions.undo()
+        }
+        if (event.defaultPrevented) event.stopPropagation()
+      }}
     >
-      <div className="border-border flex h-8 shrink-0 items-center gap-2 border-b px-2 text-xs">
-        <ClipNameInput clip={clip} title={title} />
-        <span className="text-muted-foreground">
-          {clip.kind} · {clip.lengthBars.toFixed(2)} bars
-          {" · "}
-          {t("arrangement.temporaryEditor")}
-        </span>
-        <button
-          type="button"
-          className="hover:bg-muted ml-auto rounded px-2"
-          onClick={close}
-          aria-label={t("arrangement.closeClipEditor")}
-        >
-          ×
-        </button>
-      </div>
-      {clip.kind === "audio" && <AudioEditor clip={clip} />}
-      {clip.kind === "pattern" && <PatternEditor clip={clip} />}
-      {clip.kind === "midi" && <MidiEditor clip={clip} numerator={numerator} />}
+      {/* Each editor owns its header: the clip's color and name sit at the top
+          of that editor's card, not in a bar spanning the whole panel. */}
+      {clip.kind === "audio" && <AudioEditor key={clip.id} clip={clip} color={color} />}
+      {clip.kind !== "audio" && (
+        <MidiEditor
+          key={clip.id}
+          clip={resolveMidiClip(clip, patterns)}
+          sourceClip={clip}
+          numerator={numerator}
+          color={color}
+        />
+      )}
     </div>
   )
 }

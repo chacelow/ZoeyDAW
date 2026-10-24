@@ -1,0 +1,87 @@
+#pragma once
+#include "device_model.h"
+#include <juce_core/juce_core.h>
+#include <cmath>
+#include <map>
+#include <optional>
+#include <set>
+#include <stdexcept>
+#include <vector>
+namespace zp {
+using V = juce::var;
+V object();
+void put(V&, const char*, const V&);
+void require(bool, const juce::String&);
+V parse(const char*);
+void fields(const V&, std::initializer_list<const char*> required, std::initializer_list<const char*> optional = {});
+const V& field(const V&, const char*);
+juce::String text(const V&, const char*);
+double number(const V&, const char*, double min, double max);
+uint64_t integer(const V&, const char*);
+uint64_t decimalU64(const V&, const char*);
+juce::String decimalU64(uint64_t);
+bool boolean(const V&, const char*);
+const juce::Array<V>& array(const V&, const char*);
+juce::File localFile(const juce::String&);
+struct Settings {
+    bool warp, reverse, loop;
+    juce::String mode;
+    double sourceBpm, transpose, detune, loopStart, loopLength, markerStart, markerEnd;
+};
+struct Clip {
+    juce::String id, kind, source;
+    double start, length, offset, gain = 0;
+    bool mute;
+    Settings settings {};
+    double fadeIn = 0, fadeOut = 0, fadeInOffset = 0, fadeOutOffset = 0;
+    double fadeInCurve = 0, fadeOutCurve = 0, fadeInPosition = .5, fadeOutPosition = .5;
+    V data;
+};
+struct Source { juce::String id; juce::File file; juce::String sha; int64_t frames; double rate; int channels; };
+struct Track {
+    juce::String id, kind, output, input, inputChannel, outputChannel, monitor, cueOutput;
+    double volume, pan, cueVolume;
+    bool mute, solo, armed, returnPost;
+    bool effectiveSolo = false;
+    std::vector<juce::String> children;
+    std::map<juce::String, double> sends;
+    std::vector<Clip> clips;
+    std::vector<Device> devices;
+    V automation;
+};
+struct Control {
+    uint64_t seekGeneration = 0;
+    double seekBar = 1;
+    bool playing = false, recording = false, metronome = false;
+};
+struct ControlRequest : Control {
+    juce::String session;
+    uint64_t sequence = 0, controlGeneration = 0;
+};
+struct NoteRequest {
+    juce::String session, trackId, noteId;
+    uint64_t sequence = 0;
+    std::optional<uint64_t> requestedSample;
+    int pitch = 0, velocity = 0;
+    bool on = false;
+};
+struct Request : ControlRequest {
+    juce::String stage, editId;
+    uint64_t baseRevision = 0, revision = 0;
+    double bpm, quartersPerBar, loopStart, loopEnd;
+    int numerator, denominator;
+    bool loop;
+    std::map<juce::String, Source> sources;
+    std::vector<Track> tracks;
+    double secondsPerBar() const { return quartersPerBar * 60.0 / bpm; }
+    double barTime(double bar) const { return (bar - 1.0) * secondsPerBar(); }
+};
+Request decode(const V&);
+ControlRequest decodeControl(const V&);
+NoteRequest decodeNote(const V&);
+bool sameGraph(const Request&, const Request&, bool allowClipPlacement = false);
+V result(const Request&, bool accepted, const char* code = "rejected");
+V result(const ControlRequest&, uint64_t revision, bool accepted, const char* code = "rejected");
+V noteResult(const NoteRequest&, bool accepted, const char* code = "rejected");
+V issue(const char* code, const juce::String& message, const juce::String& source = {}, const juce::String& track = {}, const juce::String& clip = {});
+}

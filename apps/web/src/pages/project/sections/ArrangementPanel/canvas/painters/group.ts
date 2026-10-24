@@ -1,8 +1,8 @@
-import { projectTrackGroups } from "@/pages/project/model/track-groups"
+import { projectTrackGroups } from "@zoeydaw/project-core/track-groups"
 import { resolveColor } from "../tokens"
 import type { TokenSet } from "../tokens"
-import type { TrackGroupProjection } from "@/pages/project/model/track-groups"
-import type { Track } from "@/pages/project/model/types"
+import type { TrackGroupProjection } from "@zoeydaw/project-core/track-groups"
+import type { Track } from "@zoeydaw/project-core/types"
 import type { TrackRow } from "../layout"
 import type { ArrangementScene } from "../scene"
 
@@ -50,7 +50,9 @@ export function paintGroupOverview(
       if (right <= 0 || left >= width) {
         continue
       }
-      context.fillStyle = resolveColor(clip.color ?? track.color, tokens, tokens["--primary"])
+      context.fillStyle = clip.mute
+        ? tokens["--arrangement-muted-clip-title"]
+        : resolveColor(clip.color ?? track.color, tokens, tokens["--primary"])
       context.fillRect(Math.max(0, left), y, Math.min(width, right) - Math.max(0, left), bandHeight)
     }
   }

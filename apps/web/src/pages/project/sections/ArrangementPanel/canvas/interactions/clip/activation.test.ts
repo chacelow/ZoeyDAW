@@ -1,7 +1,8 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { beforeEach, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import { layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { createClipInteractions } from "."
@@ -10,20 +11,22 @@ import type { CanvasPointer } from "../types"
 beforeEach(() => {
   hydrateProject(
     JSON.stringify({
-      version: 2,
-      document: createMockDocument(),
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
       workspace: { ...createMockWorkspace(), grid: { mode: "fixed", bars: 1 } },
     })
   )
 })
 
-it("double-click selects a card and creates an empty-lane card without opening the temporary editor", () => {
+it("selects existing cards and opens Clip View only for a newly created card", () => {
   const scene = createSceneStore()
   const state = useProjectState.getState()
   scene.setMusic({
     bars: 128,
     grid: state.workspace.grid,
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -49,19 +52,19 @@ it("double-click selects a card and creates an empty-lane card without opening t
   })
   expect(interaction.hover(pointer("trager"))).toBe("grab")
   interaction.start(pointer("trager"))?.finish(false)
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   expect(interaction.doubleClick(pointer("trager"))).toBe(true)
   expect(useProjectState.getState().session.selectedClipIds).toEqual(["trager-1"])
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   expect(interaction.doubleClick(pointer("4-midi"))).toBe(true)
   const created = useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!
     .clips[0]
   expect(created).toMatchObject({ kind: "midi", startBar: 4 })
   expect(useProjectState.getState().session.selectedClipIds).toEqual([created.id])
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(1)
   expect(interaction.keyDown(new KeyboardEvent("keydown", { key: "r", ctrlKey: true }))).toBe(true)
   expect(scene.get().targetSelection).toEqual({ kind: "clip", id: created.id, phase: "renaming" })
-  expect(useProjectState.getState().session.editingClipId).toBeNull()
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(1)
 })
 
 it("retains the last compatible multi-clip preview across incompatible and absent destinations", () => {
@@ -71,6 +74,8 @@ it("retains the last compatible multi-clip preview across incompatible and absen
     bars: 128,
     grid: state.workspace.grid,
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -128,4 +133,49 @@ it("retains the last compatible multi-clip preview across incompatible and absen
   expect(
     useProjectState.getState().document.tracks.find(track => track.id === "3-audio")?.clips[0]
   ).toMatchObject({ startBar: 1 })
+})
+
+it("toggles clip mute from the 0 key and commits one undoable edit", () => {
+  const scene = createSceneStore()
+  const state = useProjectState.getState()
+  scene.setMusic({
+    bars: 128,
+    grid: state.workspace.grid,
+    transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
+    markers: state.document.markers,
+    loop: state.document.transport.loop,
+    tracks: state.document.tracks,
+  })
+  scene.setViewport({ pxPerBar: 24, scrollX: 0, scrollY: 0, width: 1000, height: 700, dpr: 1 })
+  const interaction = createClipInteractions({
+    element: document.createElement("div"),
+    scene,
+    actions: projectActions,
+    getState: useProjectState.getState,
+  })
+  const clip = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.kind === "audio")!
+  projectActions.selectClips([clip.id])
+  expect(interaction.keyDown(new KeyboardEvent("keydown", { key: "0" }))).toBe(true)
+  const muted = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.id === clip.id)
+  expect(muted?.mute).toBe(true)
+  interaction.keyDown(new KeyboardEvent("keydown", { key: "0" }))
+  const unmuted = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.id === clip.id)
+  expect(unmuted?.mute).toBe(false)
+  projectActions.undo()
+  const restored = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.id === clip.id)
+  expect(restored?.mute).toBe(true)
 })

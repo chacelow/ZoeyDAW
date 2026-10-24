@@ -6,6 +6,8 @@ const entrypoints = [
   /\/apps\/web\/src\/pages\/project\/model\/midi-editing\/index\.ts$/,
   /\/apps\/web\/src\/pages\/project\/(?:layout|sections\/ArrangementPanel\/layout)\/index\.ts$/,
   /\/packages\/ui\/src\/controls\/metrics\/index\.ts$/,
+  /\/packages\/project-core\/src\/(?:audio-editor|devices|midi-editing)\/index\.ts$/,
+  /\/packages\/project-runtime\/src\/(?:index|runtime\/index|backend\/connection\/index|state\/index|testing\/index)\.ts$/,
 ]
 
 export const publicIndex = {

@@ -214,6 +214,7 @@ export function useDataTable<TData>(properties: UseDataTableProps<TData>) {
   }, [filterValues, enableAdvancedFilter])
 
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(initialColumnFilters)
+  const pendingColumnFilters = React.useRef(columnFilters)
 
   const onColumnFiltersChange = React.useCallback(
     (updaterOrValue: Updater<ColumnFiltersState>) => {
@@ -221,29 +222,23 @@ export function useDataTable<TData>(properties: UseDataTableProps<TData>) {
         return
       }
 
-      setColumnFilters(previous => {
-        const next =
-          typeof updaterOrValue === "function" ? updaterOrValue(previous) : updaterOrValue
+      const previous = pendingColumnFilters.current
+      const next = typeof updaterOrValue === "function" ? updaterOrValue(previous) : updaterOrValue
 
-        const filterUpdates = next.reduce<Record<string, string | string[] | null>>(
-          (accumulator, filter) => {
-            if (filterableColumns.find(column => column.id === filter.id)) {
-              accumulator[filter.id] = filter.value as string | string[]
-            }
-            return accumulator
-          },
-          {}
-        )
-
-        for (const previousFilter of previous) {
-          if (next.every(filter => filter.id !== previousFilter.id)) {
-            filterUpdates[previousFilter.id] = null
+      const filterUpdates = filterableColumns.reduce<Record<string, string | string[] | null>>(
+        (accumulator, column) => {
+          if (column.id) {
+            const filter = next.find(candidate => candidate.id === column.id)
+            accumulator[column.id] = filter ? (filter.value as string | string[]) : null
           }
-        }
+          return accumulator
+        },
+        {}
+      )
 
-        debouncedSetFilterValues(filterUpdates)
-        return next
-      })
+      pendingColumnFilters.current = next
+      setColumnFilters(next)
+      debouncedSetFilterValues(filterUpdates)
     },
     [debouncedSetFilterValues, filterableColumns, enableAdvancedFilter]
   )

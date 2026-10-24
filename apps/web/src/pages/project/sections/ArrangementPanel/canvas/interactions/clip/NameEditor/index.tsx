@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions } from "@/pages/project/adapters"
-import { clipLabel } from "@/pages/project/model/clip-label"
+import { clipLabel } from "@zoeydaw/project-core/clip-label"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import {
   arrangementBodyTop,
@@ -33,7 +33,7 @@ export function ClipNameEditor() {
     <ClipRenameInput
       key={clip.id}
       id={clip.id}
-      initial={clipLabel(clip)}
+      initial={clipLabel(clip, scene.media)}
       left={left}
       top={Math.round(rect.top + 1)}
       width={width}
@@ -90,6 +90,7 @@ function ClipRenameInput({
       onChange={event => setValue(event.target.value)}
       onKeyDown={event => {
         event.stopPropagation()
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
         if (event.key === "Enter") {
           event.preventDefault()
           finish(true)

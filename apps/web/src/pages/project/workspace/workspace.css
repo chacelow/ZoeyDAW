@@ -1,0 +1,464 @@
+.project-workspace-dock,
+.project-workspace-dock * {
+  box-sizing: border-box;
+}
+
+.project-workspace {
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  background: var(--background);
+}
+
+.project-workspace-titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-control-gap);
+}
+
+.project-workspace-region-fill {
+  fill: currentcolor;
+  opacity: 0;
+  stroke: none;
+}
+
+.project-workspace-titlebar-actions [aria-pressed="true"] .project-workspace-region-fill {
+  opacity: 1;
+}
+
+.project-workspace-dock {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+
+  --dock-unit: var(--spacing-control-track);
+  --dock-strip: calc(2 * var(--dock-unit));
+  --dock-separator: 1px;
+}
+
+.project-workspace-content {
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.project-workspace-content[data-workspace-visible="false"] {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.project-workspace-menu {
+  width: max-content;
+  min-width: 160px;
+  border-radius: 0;
+  font-size: var(--text-control-track);
+}
+
+.project-workspace-menu [data-slot="dropdown-menu-item"] {
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.dock-main {
+  z-index: 10;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.dock-group {
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  background: transparent;
+}
+
+.dock-border-group {
+  background: transparent;
+}
+
+.dock-group-header {
+  display: flex;
+  min-width: 0;
+  height: var(--dock-strip);
+  flex: 0 0 var(--dock-strip);
+  align-items: center;
+  background: var(--card);
+  padding-inline: var(--spacing-control-track-pad);
+  pointer-events: auto;
+}
+
+.dock-header-separator {
+  flex: 0 0 var(--dock-separator);
+  background: var(--border);
+}
+
+.dock-group-tabs {
+  display: flex;
+  overflow: auto hidden;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  align-items: center;
+  scrollbar-width: thin;
+}
+
+.dock-tab-frame {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex: none;
+  align-items: center;
+}
+
+.dock-tab-frame + .dock-tab-frame {
+  border-left: var(--dock-separator) solid var(--border);
+}
+
+.dock-tab {
+  position: relative;
+  display: flex;
+  max-width: calc(12 * var(--dock-unit));
+  height: 100%;
+  flex: none;
+  align-items: center;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: var(--text-control-track);
+  gap: var(--spacing-control-gap);
+  padding-inline: var(--spacing-control-track-gap);
+  user-select: none;
+}
+
+.dock-tab:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.dock-tab[data-active="true"] {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.dock-tab:focus-visible,
+.dock-rail-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.dock-tab svg {
+  width: var(--spacing-control-icon);
+  height: var(--spacing-control-icon);
+  flex: none;
+}
+
+.dock-tab-title {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dock-tab-close {
+  display: flex;
+  width: var(--dock-unit);
+  height: var(--dock-unit);
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.dock-tab[data-active="true"] .dock-tab-close,
+.dock-tab:hover .dock-tab-close,
+.dock-tab:focus-within .dock-tab-close {
+  opacity: 1;
+}
+
+.dock-tab-close:hover {
+  background: var(--accent);
+}
+
+.dock-tab-close svg {
+  width: var(--spacing-control-icon);
+  height: var(--spacing-control-icon);
+}
+
+.dock-context-trigger {
+  position: absolute;
+  overflow: hidden;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+}
+
+.dock-group-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--spacing-control-gap);
+  opacity: 0;
+}
+
+.dock-group-header:hover .dock-group-actions,
+.dock-group-actions:focus-within,
+.dock-group-actions[data-menu-open="true"] {
+  opacity: 1;
+}
+
+.dock-group-actions [data-slot="button"] {
+  width: var(--dock-unit);
+  height: var(--dock-unit);
+  padding: 0;
+  border-radius: 0;
+}
+
+.dock-group-actions svg {
+  width: var(--spacing-control-icon);
+  height: var(--spacing-control-icon);
+}
+
+.dock-split-divider {
+  position: absolute;
+  z-index: 4;
+  background: var(--border);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.dock-split-divider.horizontal {
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  width: 8px;
+  background: linear-gradient(
+    to right,
+    transparent 3px,
+    var(--border) 3px,
+    var(--border) 4px,
+    transparent 4px
+  );
+  cursor: col-resize;
+}
+
+.dock-split-divider.vertical {
+  right: 0;
+  bottom: -4px;
+  left: 0;
+  height: 8px;
+  background: linear-gradient(
+    to bottom,
+    transparent 3px,
+    var(--border) 3px,
+    var(--border) 4px,
+    transparent 4px
+  );
+  cursor: row-resize;
+}
+
+.dock-split-divider:hover,
+.dock-border-divider:hover {
+  --border: var(--ring);
+}
+
+.dock-rail {
+  z-index: 7;
+  display: flex;
+  overflow: hidden;
+  background: var(--card);
+  user-select: none;
+}
+
+.dock-rail-left,
+.dock-rail-right {
+  flex-direction: column;
+}
+
+.dock-rail-left {
+  box-shadow: inset -1px 0 var(--border);
+}
+
+.dock-rail-right {
+  box-shadow: inset 1px 0 var(--border);
+}
+
+.dock-rail-bottom {
+  flex-direction: row;
+  box-shadow: inset 0 1px var(--border);
+}
+
+.dock-rail-tabs {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  scrollbar-width: none;
+}
+
+.dock-rail-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.dock-rail-left .dock-rail-tabs,
+.dock-rail-right .dock-rail-tabs {
+  overflow: hidden auto;
+  flex-direction: column;
+}
+
+.dock-rail-bottom .dock-rail-tabs {
+  overflow: auto hidden;
+}
+
+.dock-rail-spacer {
+  flex: 1;
+}
+
+.dock-rail-item {
+  position: relative;
+  flex: none;
+}
+
+.dock-rail-button,
+.dock-rail-options {
+  position: relative;
+  display: flex;
+  width: var(--dock-strip);
+  height: var(--dock-strip);
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.dock-rail-button:hover,
+.dock-rail-options:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.dock-rail-button[data-active="true"] {
+  color: var(--foreground);
+}
+
+.dock-rail-button[data-active="true"]::before {
+  position: absolute;
+  width: 2px;
+  background: var(--primary);
+  content: "";
+  inset: 0 auto 0 0;
+}
+
+.dock-rail-bottom .dock-rail-button[data-active="true"]::before {
+  width: auto;
+  height: 2px;
+  inset: 0 0 auto;
+}
+
+.dock-rail-button svg,
+.dock-rail-options svg {
+  width: var(--spacing-control-icon);
+  height: var(--spacing-control-icon);
+}
+
+.dock-rail-options {
+  opacity: 0;
+}
+
+.dock-rail-options[data-visible="true"],
+.dock-rail-options:focus-visible {
+  opacity: 1;
+}
+
+.dock-rail-insert {
+  position: absolute;
+  z-index: 9;
+  background: var(--ring);
+  pointer-events: none;
+}
+
+.dock-rail-insert.horizontal {
+  width: 1px;
+  height: 100%;
+}
+
+.dock-rail-insert.vertical {
+  width: 100%;
+  height: 1px;
+}
+
+.dock-flyout {
+  z-index: 10;
+  pointer-events: none;
+}
+
+.dock-flyout.dock-overlay {
+  z-index: 10;
+  box-shadow: 0 12px 28px #0005;
+}
+
+.dock-border-divider {
+  position: absolute;
+  z-index: 9;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.dock-border-divider-left {
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+}
+
+.dock-border-divider-right {
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 8px;
+  cursor: col-resize;
+}
+
+.dock-border-divider-bottom {
+  top: -4px;
+  right: 0;
+  left: 0;
+  height: 8px;
+  cursor: row-resize;
+}
+
+.dock-content-layer {
+  z-index: 5;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  color: var(--foreground);
+}
+
+.dock-drop-preview {
+  position: absolute;
+  z-index: 12;
+  background: var(--primary);
+  pointer-events: none;
+}

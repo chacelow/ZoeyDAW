@@ -13,6 +13,8 @@ export interface UseDragValueOptions {
   onClick?: () => void
   clickThresholdPx?: number
   disabled?: boolean
+  readOnly?: boolean
+  keyboardAdjust?: boolean
   onGestureStart?: () => void
   onGestureEnd?: () => void
   onGestureCancel?: () => void
@@ -257,7 +259,7 @@ export function useDragValue(options: UseDragValueOptions): UseDragValueResult {
     }
     const endWheel = endWheelBurst
     const wheel = (event: WheelEvent) => {
-      if (optionsReference.current.disabled) {
+      if (optionsReference.current.disabled || optionsReference.current.readOnly) {
         return
       }
       event.preventDefault()
@@ -289,6 +291,49 @@ export function useDragValue(options: UseDragValueOptions): UseDragValueResult {
       endWheel()
       wheelValueReference.current = valueReference.current
     }
+    const keydown = (event: KeyboardEvent) => {
+      const options = optionsReference.current
+      if (
+        !options.keyboardAdjust ||
+        options.disabled ||
+        options.readOnly ||
+        document.activeElement !== element ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey
+      )
+        return
+      const increment =
+        options.step && options.step > 0
+          ? options.step
+          : (options.max - options.min) * 0.005 * (event.shiftKey ? 0.1 : 1)
+      let next: number
+      switch (event.key) {
+        case "ArrowUp":
+        case "ArrowRight":
+          next = valueReference.current + increment
+          break
+        case "ArrowDown":
+        case "ArrowLeft":
+          next = valueReference.current - increment
+          break
+        case "Home":
+          next = options.min
+          break
+        case "End":
+          next = options.max
+          break
+        default:
+          return
+      }
+      event.preventDefault()
+      event.stopPropagation()
+      endWheel()
+      options.onGestureStart?.()
+      publish(next)
+      wheelValueReference.current = valueReference.current
+      options.onGestureEnd?.()
+    }
     document.addEventListener("pointermove", move)
     document.addEventListener("pointerup", release)
     document.addEventListener("pointercancel", release)
@@ -296,6 +341,7 @@ export function useDragValue(options: UseDragValueOptions): UseDragValueResult {
     element.addEventListener("lostpointercapture", release)
     element.addEventListener("wheel", wheel, { passive: false })
     element.addEventListener("pointerleave", resetWheel)
+    element.addEventListener("keydown", keydown)
     return () => {
       const active = anchorReference.current
       anchorReference.current = null
@@ -333,6 +379,7 @@ export function useDragValue(options: UseDragValueOptions): UseDragValueResult {
       element.removeEventListener("lostpointercapture", release)
       element.removeEventListener("wheel", wheel)
       element.removeEventListener("pointerleave", resetWheel)
+      element.removeEventListener("keydown", keydown)
     }
   }, [options.attached, endWheelBurst])
 
@@ -349,8 +396,8 @@ export function useDragValue(options: UseDragValueOptions): UseDragValueResult {
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
-      const { disabled } = optionsReference.current
-      if (disabled || event.button !== 0 || anchorReference.current) {
+      const { disabled, readOnly } = optionsReference.current
+      if (disabled || readOnly || event.button !== 0 || anchorReference.current) {
         return
       }
       pendingRevealReference.current?.()
@@ -378,8 +425,16 @@ export function useDragValue(options: UseDragValueOptions): UseDragValueResult {
   )
 
   const handleDoubleClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    const { defaultValue, disabled, min, max, step = 0, onChange } = optionsReference.current
-    if (disabled || defaultValue === undefined) {
+    const {
+      defaultValue,
+      disabled,
+      readOnly,
+      min,
+      max,
+      step = 0,
+      onChange,
+    } = optionsReference.current
+    if (disabled || readOnly || defaultValue === undefined) {
       return
     }
     event.preventDefault()

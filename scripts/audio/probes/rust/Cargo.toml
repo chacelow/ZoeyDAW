@@ -1,0 +1,15 @@
+[package]
+name = "zoeydaw-rust-stream-probe"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+symphonia = { version = "=0.6.1", default-features = false, features = ["wav", "aiff", "pcm", "flac", "mp3", "opt-simd"] }
+hound = "=3.5.1"
+serde_json = "=1.0.145"
+sha2 = "=0.10.9"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

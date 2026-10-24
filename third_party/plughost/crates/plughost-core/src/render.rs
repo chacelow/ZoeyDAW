@@ -1,0 +1,480 @@
+//! Offline render rules shared by every processing path: the output is aligned with the input by
+//! removing the reported latency, and the tail after the input is rendered as well.
+
+mod session;
+mod stream;
+mod timeline;
+pub use session::{RenderSession, SessionState};
+pub use timeline::{AutomationRamp, RenderSchedule, TransportChange};
+
+use serde::{Deserialize, Serialize};
+
+use crate::errors::RenderError;
+use crate::event::{Event, events_fit};
+use crate::sample::Sample;
+
+/// The tail length a processor reports.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Tail {
+    /// Finite tail duration in frames.
+    Samples(u32),
+    /// Unbounded tail, still limited by `RenderOptions::max_tail_seconds`.
+    Infinite,
+}
+
+/// Rule for determining how much post-input audio to deliver.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum TailPolicy {
+    /// Render the tail length the processor reports when the render starts. An infinite tail
+    /// renders up to the maximum. A tail the processor reports later does not change the plan.
+    Reported,
+    /// Render until the output has stayed at or below `threshold` (linear peak) for
+    /// `hold_seconds`, then cut after the last sample above it. Both values must be finite and
+    /// non-negative; zero is allowed, and a linear peak threshold may exceed one. Plugins often report a wrong
+    /// tail, so this is the default. Only audio output counts: output events do not, and a
+    /// processor without audio outputs is silent from the end of the input, so use
+    /// [`TailPolicy::Reported`] for one that produces only events.
+    UntilSilence {
+        /// Maximum absolute sample amplitude considered silent.
+        threshold: f64,
+        /// Continuous silence required before stopping, in seconds.
+        hold_seconds: f64,
+    },
+}
+
+/// Offline tail policy and duration limit.
+///
+/// The default detects one second of silence below a linear peak of `1.585e-5`
+/// (approximately −96 dBFS), with at most 30 seconds of tail.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct RenderOptions {
+    /// How to determine the delivered tail length.
+    pub tail: TailPolicy,
+    /// Upper bound on the rendered tail, whatever the policy. Must be finite and non-negative.
+    pub max_tail_seconds: f64,
+}
+
+impl Default for RenderOptions {
+    fn default() -> RenderOptions {
+        RenderOptions {
+            tail: TailPolicy::UntilSilence {
+                // -96 dBFS
+                threshold: 1.585e-5,
+                hold_seconds: 1.0,
+            },
+            max_tail_seconds: 30.0,
+        }
+    }
+}
+
+impl RenderOptions {
+    /// Constructs explicit tail options, validated when rendering starts.
+    pub const fn new(tail: TailPolicy, max_tail_seconds: f64) -> RenderOptions {
+        RenderOptions {
+            tail,
+            max_tail_seconds,
+        }
+    }
+
+    fn validate(&self) -> Result<(), RenderError> {
+        if !self.max_tail_seconds.is_finite() || self.max_tail_seconds < 0.0 {
+            return Err(RenderError::TailDuration);
+        }
+        if let TailPolicy::UntilSilence {
+            threshold,
+            hold_seconds,
+        } = self.tail
+        {
+            if !threshold.is_finite() || threshold < 0.0 {
+                return Err(RenderError::SilenceThreshold);
+            }
+            if !hold_seconds.is_finite() || hold_seconds < 0.0 {
+                return Err(RenderError::SilenceHold);
+            }
+        }
+        Ok(())
+    }
+}
+
+/// A prepared processor the render rules can drive.
+pub trait Process<S: Sample> {
+    /// Processor error that can also represent the render scheduler’s input and timing errors.
+    type Error: From<RenderError>;
+
+    /// Prepared sample rate in samples per second.
+    fn sample_rate(&self) -> f64;
+    /// Prepared maximum frames per processing call.
+    fn max_block_size(&self) -> usize;
+    /// Number of input channels required in planar buffer order.
+    fn input_channels(&self) -> usize;
+    /// Number of output channels produced in planar buffer order.
+    fn output_channels(&self) -> usize;
+    /// The latency the processor's output has. It must not change while a render runs, so that
+    /// one alignment holds; plughost's processors keep the latency they were prepared or last
+    /// reset with.
+    fn latency(&self) -> Result<u32, Self::Error>;
+    /// Current native tail duration at render start.
+    fn tail(&self) -> Result<Tail, Self::Error>;
+    /// Called once as a render starts, before validating input or reading the latency and tail.
+    /// Refuse here if the processor is not prepared. A processor whose
+    /// latency changed without the change being applied yet refuses here with
+    /// [`RenderError::LatencyNotApplied`], since the whole render would keep the old alignment.
+    fn begin_render(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    /// Validate all scheduled targets before the render advances DSP state. Implementors with
+    /// automation must check slot/parameter identity, write access and automatable metadata.
+    fn validate_automation(
+        &mut self,
+        automation: &[crate::AutomationEvent],
+    ) -> Result<(), Self::Error> {
+        if automation.is_empty() {
+            Ok(())
+        } else {
+            Err(RenderError::Input(crate::InputError::Automation).into())
+        }
+    }
+    /// Validate the event destinations for the entire render before DSP state advances.
+    /// Processors with configured input ports must override this to reject unavailable ports.
+    /// Offsets, ordering and event values are already checked by the renderer. The default
+    /// imposes no port restrictions, preserving processors that do not expose port metadata.
+    fn validate_events(&mut self, _events: &[Event]) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    /// Processes one block. Every input and output slice has the same length, at most
+    /// `max_block_size`; automation and MIDI are in offset order, inside the block. Points hold
+    /// their values from their offsets, including equal-offset input order. Native adapters own
+    /// any subdivision needed to avoid implicit interpolation between point edits. `produced` is
+    /// replaced with the block's output events in offset order, with block offsets.
+    fn process(
+        &mut self,
+        context: &crate::BlockContext,
+        input: &[&[S]],
+        output: &mut [&mut [S]],
+        automation: &[crate::AutomationEvent],
+        events: &[Event],
+        produced: &mut Vec<Event>,
+    ) -> Result<(), Self::Error>;
+}
+
+/// What a stream delivers at once: aligned output audio, and the output events processed since
+/// the previous delivery. Event offsets count from the start of the input, in the processing
+/// timeline; they are not shifted by the latency removed from the audio.
+#[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
+pub struct Delivery<'a, S> {
+    /// One slice per output channel, all of one length, which may be zero.
+    pub audio: &'a [&'a [S]],
+    /// Output events with offsets on the processing timeline, without audio latency alignment.
+    pub events: &'a [Event],
+}
+
+/// Owned output of a completed render, with audio aligned by removing native latency.
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub struct Rendered<S> {
+    /// Output channels aligned with the input: `frames + tail` samples each.
+    pub channels: Vec<Vec<S>>,
+    /// Output events in offset order, counted from the start of the input without latency
+    /// alignment, including events processed during the tail.
+    pub events: Vec<Event>,
+    /// The latency that was removed, in samples.
+    pub latency: u32,
+    /// Samples rendered after the end of the input.
+    pub tail: usize,
+}
+
+/// Renders `frames` samples of `input` (one slice per input channel, none for an instrument)
+/// through the processor, with `events` placed by offset from the start of the input, in offset
+/// order and before `frames`.
+///
+/// [`Process::begin_render`] runs first. The latency is read before rendering and after every
+/// block; a change is an error because the alignment would no longer hold. [`TailPolicy::Reported`] plans the tail length from the tail
+/// reported when the render starts; [`TailPolicy::UntilSilence`] ignores the reported tail.
+/// Options, processor timing, sample conversion and buffer lengths are validated before calling
+/// `process`. Durations round to the nearest sample. Invalid or unrepresentable values are errors,
+/// not clamped limits. Representable lengths do not guarantee enough memory is available.
+pub fn render<S: Sample, P: Process<S>>(
+    processor: &mut P,
+    input: &[&[S]],
+    frames: usize,
+    events: &[Event],
+    options: &RenderOptions,
+) -> Result<Rendered<S>, P::Error> {
+    render_with_schedule(
+        processor,
+        input,
+        frames,
+        events,
+        options,
+        &RenderSchedule::default(),
+    )
+}
+
+/// Renders a caller-defined timeline in bounded blocks, splitting at transport changes and the
+/// combined event budget. Ramps expand into exact sample points within each block. Native
+/// adapters preserve point semantics, subdividing internally when required by their format.
+/// Seeks change the transport only; call reset explicitly to discard DSP history.
+pub fn render_with_schedule<S: Sample, P: Process<S>>(
+    processor: &mut P,
+    input: &[&[S]],
+    frames: usize,
+    events: &[Event],
+    options: &RenderOptions,
+    schedule: &RenderSchedule<'_>,
+) -> Result<Rendered<S>, P::Error> {
+    let mut channels = vec![Vec::new(); processor.output_channels()];
+    let mut produced = Vec::new();
+    let result = render_stream(
+        processor,
+        RenderInput {
+            audio: input,
+            frames,
+            events,
+            schedule: *schedule,
+        },
+        options,
+        |delivery| {
+            for (channel, samples) in channels.iter_mut().zip(delivery.audio) {
+                channel.extend_from_slice(samples);
+            }
+            produced.extend_from_slice(delivery.events);
+        },
+        || false,
+    )?;
+    Ok(Rendered {
+        channels,
+        events: produced,
+        latency: result.latency,
+        tail: result.tail,
+    })
+}
+
+/// Borrowed planar audio, events, and automation for a render or session segment.
+#[derive(Clone, Copy, Debug)]
+pub struct RenderInput<'a, S> {
+    /// Planar input channels, each containing exactly `frames` samples.
+    pub audio: &'a [&'a [S]],
+    /// Input duration in frames; explicit even when the processor has no input channels.
+    pub frames: usize,
+    /// Input events in nondecreasing offset order, strictly before `frames`.
+    pub events: &'a [Event],
+    /// Transport and automation offsets relative to this input segment.
+    pub schedule: RenderSchedule<'a>,
+}
+
+/// Whether rendering completed or stopped at a caller cancellation boundary.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum RenderStatus {
+    /// All planned audio and tail have been processed.
+    Complete,
+    /// The caller cancelled before the next processing block.
+    Cancelled,
+}
+
+/// Output-only report of work completed and audio delivered by a streaming render.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct RenderProgress {
+    /// Completion or cancellation status.
+    pub status: RenderStatus,
+    /// Native frames processed, including latency and tail. Cancellation never interrupts a call.
+    pub processed_frames: usize,
+    /// Aligned audio frames delivered to the consumer.
+    pub output_frames: usize,
+    /// Native latency removed from audio, in frames.
+    pub latency: u32,
+    /// Delivered frames after the input, excluding trimmed silence.
+    pub tail: usize,
+}
+
+/// Delivers aligned output without retaining the whole result. Memory is bounded by the prepared
+/// block size plus the configured silence hold. Cancellation is checked before each submitted block;
+/// delivered samples remain valid. DSP state has advanced by `processed_frames`. Reset before a
+/// new independent render. This function does not reset the caller's processor implicitly.
+///
+/// The prepared `max_block_size` is also the submission limit. Larger offline blocks can reduce
+/// helper round trips, but increase scratch storage and the amount of processing before the next
+/// cancellation check. Transport changes and the event budget may shorten a block. No subsequent
+/// block is submitted ahead of that check. Silence detection trims delivered output sample by
+/// sample; DSP may already have advanced through the rest of the submitted block.
+pub fn render_stream<S: Sample, P: Process<S>>(
+    processor: &mut P,
+    request: RenderInput<'_, S>,
+    options: &RenderOptions,
+    mut consume: impl FnMut(Delivery<'_, S>),
+    mut cancelled: impl FnMut() -> bool,
+) -> Result<RenderProgress, P::Error> {
+    let RenderInput {
+        audio: input,
+        frames,
+        events,
+        schedule,
+    } = request;
+    processor.begin_render()?;
+    let expected = processor.input_channels();
+    if input.len() != expected {
+        return Err(RenderError::InputChannels {
+            expected,
+            actual: input.len(),
+        }
+        .into());
+    }
+    if input.iter().any(|channel| channel.len() != frames) {
+        return Err(RenderError::InputLength.into());
+    }
+    if !events_fit(events, frames) {
+        return Err(RenderError::Events.into());
+    }
+
+    processor.validate_events(events)?;
+    let latency = processor.latency()?;
+    let sample_rate = processor.sample_rate();
+    let block = processor.max_block_size();
+    crate::config::validate_processing(sample_rate, block).map_err(RenderError::Input)?;
+    options.validate()?;
+    let max_tail = seconds_to_samples(options.max_tail_seconds, sample_rate)?;
+    let body = frames
+        .checked_add(latency as usize)
+        .ok_or(RenderError::LengthOverflow)?;
+    let reported = matches!(options.tail, TailPolicy::Reported);
+    let reported_tail = |tail: Tail| match tail {
+        Tail::Samples(samples) => (samples as usize).min(max_tail),
+        Tail::Infinite => max_tail,
+    };
+    let tail = if reported {
+        reported_tail(processor.tail()?)
+    } else {
+        max_tail
+    };
+    let end = body.checked_add(tail).ok_or(RenderError::LengthOverflow)?;
+    std::alloc::Layout::array::<S>(end).map_err(|_| RenderError::LengthOverflow)?;
+    schedule
+        .validate(frames, end, sample_rate)
+        .map_err(RenderError::Input)?;
+    let mut timeline = timeline::Timeline::new(schedule);
+    timeline
+        .validate_capacity(events)
+        .map_err(RenderError::Input)?;
+    let targets: Vec<_> = schedule
+        .automation
+        .iter()
+        .copied()
+        .chain(schedule.ramps.iter().map(|ramp| crate::AutomationEvent {
+            slot: ramp.slot,
+            change: crate::ParameterChange {
+                id: ramp.id,
+                offset: ramp.start,
+                value: ramp.from,
+            },
+        }))
+        .collect();
+    processor.validate_automation(&targets)?;
+    let silence = match options.tail {
+        TailPolicy::UntilSilence {
+            threshold,
+            hold_seconds,
+        } => Some((threshold, seconds_to_samples(hold_seconds, sample_rate)?)),
+        TailPolicy::Reported => None,
+    };
+
+    let mut input_block = vec![vec![S::default(); block]; input.len()];
+    let mut output_block = vec![vec![S::default(); block]; processor.output_channels()];
+    let mut output = stream::Output::new(output_block.len(), silence);
+    let mut status = RenderStatus::Complete;
+    let mut position = 0;
+    let mut pending = events;
+    let mut block_events = Vec::with_capacity(crate::MAX_BLOCK_EVENTS);
+    let mut automation = Vec::with_capacity(crate::MAX_BLOCK_EVENTS);
+    let mut produced = Vec::with_capacity(crate::MAX_BLOCK_EVENTS);
+    let mut produced_since = Vec::new();
+
+    while position < end {
+        if cancelled() {
+            status = RenderStatus::Cancelled;
+            break;
+        }
+        let boundary = schedule.next_transport(position).unwrap_or(end).min(end);
+        let limit = position + block.min(boundary - position);
+        let block_end = timeline.fill_block(position, limit, pending, &mut automation);
+        let count = block_end - position;
+        let start = position.min(frames);
+        let available = count.min(frames - start);
+        for (buffer, source) in input_block.iter_mut().zip(input) {
+            buffer[..available].copy_from_slice(&source[start..start + available]);
+            buffer[available..count].fill(S::default());
+        }
+        for buffer in &mut output_block {
+            buffer[..count].fill(S::default());
+        }
+        let inputs: Vec<&[S]> = input_block.iter().map(|b| &b[..count]).collect();
+        let mut outputs: Vec<&mut [S]> = output_block.iter_mut().map(|b| &mut b[..count]).collect();
+        let due = pending
+            .iter()
+            .take_while(|event| event.offset < position + count)
+            .count();
+        block_events.clear();
+        block_events.extend(pending[..due].iter().map(|event| Event {
+            offset: event.offset - position,
+            ..event.clone()
+        }));
+        pending = &pending[due..];
+        let context = crate::BlockContext {
+            frames: count,
+            transport: schedule
+                .transport_at(position, sample_rate)
+                .map_err(RenderError::Input)?,
+            transport_changes: [None; crate::MAX_TRANSPORT_SEGMENTS],
+        };
+        processor.process(
+            &context,
+            &inputs,
+            &mut outputs,
+            &automation,
+            &block_events,
+            &mut produced,
+        )?;
+        produced_since.extend(produced.drain(..).map(|event| Event {
+            offset: event.offset + position,
+            ..event
+        }));
+        let now = processor.latency()?;
+        if now != latency {
+            return Err(RenderError::LatencyChanged {
+                before: latency,
+                after: now,
+            }
+            .into());
+        }
+        let done = output.accept(&output_block, count, position, latency as usize, body);
+        position += count;
+        output.deliver(&mut produced_since, &mut consume);
+        if done {
+            break;
+        }
+    }
+    output.deliver(&mut produced_since, &mut consume);
+    Ok(RenderProgress {
+        status,
+        processed_frames: position,
+        output_frames: output.emitted,
+        latency,
+        tail: output.emitted.saturating_sub(frames),
+    })
+}
+
+fn seconds_to_samples(seconds: f64, sample_rate: f64) -> Result<usize, RenderError> {
+    let samples = (seconds * sample_rate).round();
+    // The exclusive upper bound is exactly representable as f64, unlike usize::MAX on 64-bit.
+    let upper_bound = (usize::MAX as u128 + 1) as f64;
+    if !samples.is_finite() || samples >= upper_bound {
+        return Err(RenderError::LengthOverflow);
+    }
+    Ok(samples as usize)
+}
+
+#[cfg(test)]
+mod tests;

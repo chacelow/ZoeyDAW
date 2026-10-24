@@ -1,0 +1,357 @@
+//! Serial, explicitly routed audio. Preparation resolves native bus identities to channel ranges.
+//! Each block is validated here, at the helper's IPC boundary, before any slot or delay advances.
+use super::*;
+use plughost_core::Event;
+use plughost_core::ipc::AudioSamples;
+use plughost_core::ipc::shared::Caller;
+use plughost_core::messages::CHAIN_NOT_PREPARED;
+use plughost_core::{Failure, FailureKind, InputError, RoutedChainConfig, Sample, events_fit};
+use std::io;
+use std::ops::{Add, Mul};
+
+/// Where a block's result goes: the reply to the application's request, or a realtime lane.
+pub(super) trait Sink {
+    /// The block failed in `slot`, or in the chain, after DSP may have advanced.
+    fn fail(&mut self, slot: Option<usize>, failure: Failure) -> io::Result<()>;
+    /// The block's input was invalid; nothing advanced.
+    fn reject(&mut self, slot: Option<usize>, error: InputError) -> io::Result<()>;
+    fn complete_f32(
+        &mut self,
+        output: &[&[f32]],
+        events: &[Event],
+        latency: u32,
+        tail: plughost_core::render::Tail,
+    ) -> io::Result<()>;
+    fn complete_f64(
+        &mut self,
+        output: &[&[f64]],
+        events: &[Event],
+        latency: u32,
+        tail: plughost_core::render::Tail,
+    ) -> io::Result<()>;
+}
+
+trait WireSample: Sample + Add<Output = Self> + Mul<Output = Self> + From<f32> {
+    fn call(
+        processor: &dyn BlockProcessor,
+        context: &plughost_core::BlockContext,
+        input: &[&[Self]],
+        output: &mut [&mut [Self]],
+        changes: &[plughost_core::ParameterChange],
+        events: &[Event],
+        produced: &mut Vec<Event>,
+    ) -> Result<(), plughost_formats::Error>;
+    fn respond(
+        output: &[&[Self]],
+        events: &[Event],
+        latency: u32,
+        tail: plughost_core::render::Tail,
+        sink: &mut dyn Sink,
+    ) -> io::Result<()>;
+}
+macro_rules! wire_sample {
+    ($sample:ty, $method:ident, $finish:ident) => {
+        impl WireSample for $sample {
+            fn call(
+                p: &dyn BlockProcessor,
+                c: &plughost_core::BlockContext,
+                i: &[&[Self]],
+                o: &mut [&mut [Self]],
+                a: &[plughost_core::ParameterChange],
+                e: &[Event],
+                produced: &mut Vec<Event>,
+            ) -> Result<(), plughost_formats::Error> {
+                p.$method(c, i, o, a, e, produced)
+            }
+            fn respond(
+                output: &[&[Self]],
+                events: &[Event],
+                latency: u32,
+                tail: plughost_core::render::Tail,
+                sink: &mut dyn Sink,
+            ) -> io::Result<()> {
+                sink.$finish(output, events, latency, tail)
+            }
+        }
+    };
+}
+wire_sample!(f32, process_audio_f32, complete_f32);
+wire_sample!(f64, process_audio_f64, complete_f64);
+
+pub(super) fn process(
+    pipeline: &mut Pipeline,
+    input: &AudioSamples,
+    context: &plughost_core::BlockContext,
+    automation: &[plughost_core::AutomationEvent],
+    events: &[Event],
+    sink: &mut dyn Sink,
+) -> io::Result<()> {
+    let Some(config) = &pipeline.audio_config else {
+        return sink.fail(
+            None,
+            Failure::new(FailureKind::NotPrepared, CHAIN_NOT_PREPARED),
+        );
+    };
+    if pipeline.resync {
+        return sink.fail(
+            None,
+            Failure::new(FailureKind::Processing, crate::errors::EVENT_RESYNC),
+        );
+    }
+    let validation = match input {
+        AudioSamples::F32(input) => validate(config, input, context, automation, events),
+        AudioSamples::F64(input) => validate(config, input, context, automation, events),
+    };
+    if let Err(error) = validation {
+        return sink.reject(None, error);
+    }
+    for event in automation {
+        let result = pipeline.parameters[event.slot]
+            .get(event.change.id)
+            .and_then(|info| info.automation_value(event.change.value));
+        if let Err(error) = result {
+            return sink.reject(Some(event.slot), error);
+        }
+    }
+    let (Some(alignment), Some((events_plan, event_buffers))) =
+        (&mut pipeline.alignment, &mut pipeline.events)
+    else {
+        return sink.fail(
+            None,
+            Failure::new(FailureKind::NotPrepared, CHAIN_NOT_PREPARED),
+        );
+    };
+    match (input, &mut pipeline.prepared) {
+        (AudioSamples::F32(input), Some(prepared::Prepared::F32(storage))) => run(
+            AudioState {
+                plan: &alignment.timing,
+                processors: &pipeline.processors,
+                calls: &pipeline.calls,
+                changes: &mut pipeline.changes,
+                storage,
+                delays: alignment.delays32.as_mut().unwrap(),
+                events_plan,
+                event_buffers,
+                resync: &mut pipeline.resync,
+                restart_deferred: pipeline.restart_deferred,
+            },
+            input,
+            context,
+            automation,
+            events,
+            sink,
+        ),
+        (AudioSamples::F64(input), Some(prepared::Prepared::F64(storage))) => run(
+            AudioState {
+                plan: &alignment.timing,
+                processors: &pipeline.processors,
+                calls: &pipeline.calls,
+                changes: &mut pipeline.changes,
+                storage,
+                delays: alignment.delays64.as_mut().unwrap(),
+                events_plan,
+                event_buffers,
+                resync: &mut pipeline.resync,
+                restart_deferred: pipeline.restart_deferred,
+            },
+            input,
+            context,
+            automation,
+            events,
+            sink,
+        ),
+        _ => sink.fail(
+            None,
+            Failure::new(FailureKind::NotPrepared, CHAIN_NOT_PREPARED),
+        ),
+    }
+}
+fn validate<S: WireSample>(
+    config: &RoutedChainConfig,
+    input: &[Vec<S>],
+    context: &plughost_core::BlockContext,
+    automation: &[plughost_core::AutomationEvent],
+    events: &[Event],
+) -> Result<(), InputError> {
+    context.validate()?;
+    plughost_core::validate_event_budget(automation.len(), events)?;
+    if let Some(event) = events
+        .iter()
+        .find(|event| event.port >= config.event_inputs)
+    {
+        return Err(InputError::EventPort { port: event.port });
+    }
+    if let Some(transport) = context.transport {
+        transport.validate_at_rate(config.sample_rate)?;
+    }
+    for change in context.transport_changes.iter().flatten() {
+        if let Some(transport) = change.transport {
+            transport.validate_at_rate(config.sample_rate)?;
+        }
+    }
+    if S::FORMAT != config.sample_format {
+        return Err(InputError::AudioSampleFormat);
+    }
+    if !events_fit(events, context.frames) {
+        return Err(InputError::Events);
+    }
+    if context.frames > config.max_block_size
+        || input.len() != config.input_channels()
+        || input.iter().any(|channel| channel.len() != context.frames)
+    {
+        return Err(InputError::AudioBuffers);
+    }
+    if automation.iter().any(|event| {
+        event.slot >= config.slots.len()
+            || !plughost_core::changes_fit(&[event.change], context.frames)
+    }) || automation
+        .windows(2)
+        .any(|events| events[0].change.offset > events[1].change.offset)
+    {
+        return Err(InputError::Automation);
+    }
+    Ok(())
+}
+struct AudioState<'a, S: Sample> {
+    plan: &'a audio_timing::AudioTiming,
+    processors: &'a [Box<dyn BlockProcessor>],
+    calls: &'a Calls,
+    changes: &'a mut Changes,
+    storage: &'a mut prepared::Routed<S>,
+    delays: &'a mut audio_timing::DelayBank<S>,
+    events_plan: &'a events::EventPlan,
+    event_buffers: &'a mut events::EventBuffers,
+    resync: &'a mut bool,
+    restart_deferred: bool,
+}
+
+/// A plugin that asked to be prepared again is refused before any slot advances, unless the
+/// restart is deferred. Other timing changes surface when the timing is read once after the
+/// block, which also reports it.
+fn run<S: WireSample>(
+    state: AudioState<'_, S>,
+    input: &[Vec<S>],
+    context: &plughost_core::BlockContext,
+    automation: &[plughost_core::AutomationEvent],
+    events: &[Event],
+    sink: &mut dyn Sink,
+) -> io::Result<()> {
+    if let Some(slot) = state
+        .processors
+        .iter()
+        .position(|processor| processor.restart_required())
+        .filter(|_| !state.restart_deferred)
+    {
+        return sink.fail(Some(slot), audio_timing::restart_required());
+    }
+    let event_buffers = &mut *state.event_buffers;
+    for (slot, processor) in state.processors.iter().enumerate() {
+        let (done, pending) = event_buffers.produced.split_at_mut(slot);
+        let previous_events = done.last().map_or(&[][..], Vec::as_slice);
+        let slot_events = &mut event_buffers.inputs[slot];
+        let slot_automation = automation.iter().filter(|event| event.slot == slot).count();
+        if let Err(error) =
+            state
+                .events_plan
+                .gather(slot, events, previous_events, slot_automation, slot_events)
+        {
+            if slot == 0 {
+                return sink.reject(Some(slot), error);
+            }
+            // Earlier slots already advanced; the notes they forwarded may be held.
+            *state.resync = true;
+            return sink.fail(
+                Some(slot),
+                Failure::new(FailureKind::Processing, error.to_string()),
+            );
+        }
+        let produced = &mut pending[0];
+        let segments = &mut state.storage.segments;
+        let (past, next) = state.storage.slots.split_at_mut(slot);
+        let buffers = &mut next[0];
+        buffers.begin(slot, context.frames, automation);
+        let previous = if slot == 0 {
+            &[][..]
+        } else {
+            past[slot - 1].output.as_slice()
+        };
+        let result = {
+            let _call = state.calls.enter(Caller::Processing, slot);
+            buffers.process(
+                input,
+                previous,
+                context.frames,
+                state.delays,
+                slot,
+                |inputs, outputs, changes| {
+                    segments.process(context, inputs, outputs, changes, slot_events, produced,
+                        |context, inputs, outputs, changes, events, produced| {
+                            S::call(processor.as_ref(), context, inputs, outputs, changes, events, produced)
+                        })
+                },
+            )
+        };
+        if let Err(error) = result {
+            if segments.advanced() {
+                *state.resync = true;
+                let mut failure = error.failure();
+                failure.kind = FailureKind::Processing;
+                return sink.fail(Some(slot), failure);
+            }
+            if slot == 0
+                && let Some(error) = error.input_error()
+            {
+                return sink.reject(Some(slot), error);
+            }
+            // Events a plugin could not take after earlier slots advanced are lost like an
+            // overflow of its output; a later slot's native events can outgrow its block.
+            if error.is_output_event_overflow()
+                || (slot > 0 && error.input_error() == Some(InputError::EventCapacity))
+            {
+                *state.resync = true;
+            }
+            return sink.fail(Some(slot), error.failure());
+        }
+    }
+    let event_buffers = &mut *state.event_buffers;
+    state.events_plan.output(
+        event_buffers.produced.last().unwrap(),
+        &mut event_buffers.output,
+    );
+    for (slot, (processor, timing)) in state
+        .processors
+        .iter()
+        .zip(&mut state.storage.timings)
+        .enumerate()
+    {
+        let _call = state.calls.enter(Caller::Processing, slot);
+        *timing = match processor.timing() {
+            Ok(timing) => timing,
+            Err(error) => return sink.fail(Some(slot), error.failure()),
+        };
+        state.changes.observe(slot, *timing);
+    }
+    // A deferred restart keeps the activations, and so the alignment, the chain was planned for.
+    let tail = if state.restart_deferred {
+        state.plan.current_tail(&state.storage.timings)
+    } else {
+        match state.plan.tail(&state.storage.timings) {
+            Ok(tail) => tail,
+            Err((slot, failure)) => return sink.fail(Some(slot), failure),
+        }
+    };
+    state
+        .storage
+        .slots
+        .last_mut()
+        .unwrap()
+        .with_output(|output| {
+            S::respond(
+                output,
+                &state.event_buffers.output,
+                state.plan.latency(),
+                tail,
+                sink,
+            )
+        })
+}

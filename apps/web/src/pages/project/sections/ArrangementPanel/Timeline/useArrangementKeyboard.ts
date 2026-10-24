@@ -1,11 +1,13 @@
 import { useEffect } from "react"
-import { projectActions, useProjectState } from "@/pages/project/adapters"
+import { projectActions, projectFiles, useProjectState } from "@/pages/project/adapters"
 import { isEditableTarget } from "../Grid/geometry"
 import { arrangementScene } from "../canvas/scene"
 import { noteKeys } from "./useMidiKeyboard"
 import { drawModeKeyDown, useDrawModeKeyRelease } from "./drawModeKey"
 
-export function useArrangementKeyboard() {
+export function useArrangementKeyboard({
+  snapshots = true,
+}: { readonly snapshots?: boolean } = {}) {
   useDrawModeKeyRelease()
   useEffect(() => {
     function transportSpace(event: KeyboardEvent) {
@@ -34,6 +36,18 @@ export function useArrangementKeyboard() {
     }
     function keyDown(event: KeyboardEvent) {
       if (
+        !event.defaultPrevented &&
+        !event.isComposing &&
+        !event.altKey &&
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "s"
+      ) {
+        event.preventDefault()
+        if (snapshots && !event.repeat)
+          void (event.shiftKey ? projectFiles.saveAs() : projectFiles.save())
+        return
+      }
+      if (
         event.defaultPrevented ||
         isEditableTarget(event.target) ||
         (event.target instanceof Element &&
@@ -53,11 +67,6 @@ export function useArrangementKeyboard() {
         projectActions.cancelEdit()
         return
       }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault()
-        projectActions.saveSnapshot()
-        return
-      }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault()
         if (event.shiftKey) {
@@ -68,14 +77,67 @@ export function useArrangementKeyboard() {
         return
       }
       if (
+        event.target instanceof Element &&
+        event.target.closest('[role="tab"], [role="tablist"]')
+      ) {
+        return
+      }
+      if (
+        document.querySelector(
+          '[data-workspace-panel="arrangement"][data-workspace-visible="false"]'
+        )
+      ) {
+        return
+      }
+      if (
         (event.metaKey || event.ctrlKey) &&
         !event.altKey &&
         !event.shiftKey &&
-        (event.code === "Digit1" || event.code === "Digit2")
+        ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5"].includes(event.code)
       ) {
+        const target = event.target
+        const background =
+          target === window ||
+          target === document ||
+          target === document.body ||
+          target === document.documentElement
+        const surface =
+          (background &&
+            !isEditableTarget(document.activeElement) &&
+            !(
+              document.activeElement instanceof Element &&
+              document.activeElement.closest(
+                '[data-clip-editor], [role="menu"], [role="tab"], [role="tablist"], [data-workspace-panel="browser"], button, [role="slider"], input, textarea, select'
+              )
+            )) ||
+          (target instanceof Element &&
+            !!target.closest(
+              "[data-arrangement-panel], [data-transport-header], [data-workspace-panel='arrangement']"
+            ) &&
+            (!target.closest(
+              "button,[role='button'],[role='slider'],[role='tab'],[role='menuitem']"
+            ) ||
+              !!target.closest(".project-arrangement-toolbar, [data-transport-header]")))
+        if (!surface) {
+          return
+        }
         event.preventDefault()
         if (!event.repeat) {
-          projectActions.adjustGrid(event.code === "Digit2" ? 1 : -1)
+          switch (event.code) {
+            case "Digit1":
+            case "Digit2":
+              projectActions.adjustGrid(event.code === "Digit2" ? 1 : -1)
+              break
+            case "Digit3":
+              projectActions.toggleTriplet()
+              break
+            case "Digit4":
+              projectActions.toggleSnap()
+              break
+            case "Digit5":
+              projectActions.toggleFixedGrid()
+              break
+          }
         }
         return
       }
@@ -150,5 +212,5 @@ export function useArrangementKeyboard() {
       window.removeEventListener("keyup", transportSpace, true)
       window.removeEventListener("keydown", keyDown)
     }
-  }, [])
+  }, [snapshots])
 }

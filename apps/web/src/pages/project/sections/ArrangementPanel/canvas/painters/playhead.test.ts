@@ -1,18 +1,26 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { expect, it } from "vitest"
-import { createMockDocument } from "@/pages/project/adapters/fixtures"
+import { createMockDocument } from "@zoeydaw/project-runtime/testing"
 import { createAudioRingBuffer } from "../audio/ring-buffer"
-import { layoutTrackRows } from "../layout"
+import {
+  BAR_RULER_HEIGHT,
+  LOOP_RULER_HEIGHT,
+  PATTERN_RULER_HEIGHT,
+  layoutTrackRows,
+} from "../layout"
 import { createSceneStore } from "../scene"
-import { paintClipAlignment, paintPlayhead } from "./playhead"
+import { paintClipAlignment, paintGuides, paintPlayhead } from "./playhead"
 
 it("paints only the chosen visible row while stopped and a full recording line while playing", () => {
-  const document = createMockDocument()
+  const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
   const scene = createSceneStore()
   scene.setMusic({
     bars: 256,
     grid: { mode: "adaptive", density: "narrowest" },
     transport: document.transport,
+    media: document.media,
+    patterns: document.patterns,
     markers: document.markers,
     loop: document.transport.loop,
     tracks: document.tracks,
@@ -65,7 +73,7 @@ it("paints only the chosen visible row while stopped and a full recording line w
   lines.length = 0
   scene.setPlayback({ playing: true, insertionPoint: scene.get().playback.insertionPoint })
   paintPlayhead(context, scene.get(), ring, tokens)
-  expect(lines).toEqual([{ from: [64.5, 34], to: [64.5, 682], color: "red" }])
+  expect(lines).toEqual([{ from: [64.5, BAR_RULER_HEIGHT], to: [64.5, 682], color: "red" }])
   lines.length = 0
   scene.setPlayback({ playing: false, insertionPoint: scene.get().playback.insertionPoint })
   paintPlayhead(context, scene.get(), ring, tokens)
@@ -88,15 +96,15 @@ it("paints only the chosen visible row while stopped and a full recording line w
   paintClipAlignment(context, scene.get(), "gray")
   expect(lines).toEqual([
     { from: [16.5, audioRow.top], to: [16.5, audioRow.top + audioRow.height], color: "teal" },
-    { from: [160.5, 34], to: [160.5, 682], color: "gray" },
+    { from: [160.5, BAR_RULER_HEIGHT], to: [160.5, 682], color: "gray" },
   ])
   lines.length = 0
   scene.setPlayback({ playing: true, insertionPoint: scene.get().playback.insertionPoint })
   paintPlayhead(context, scene.get(), ring, tokens)
   paintClipAlignment(context, scene.get(), "gray")
   expect(lines).toEqual([
-    { from: [64.5, 34], to: [64.5, 682], color: "red" },
-    { from: [160.5, 34], to: [160.5, 682], color: "gray" },
+    { from: [64.5, BAR_RULER_HEIGHT], to: [64.5, 682], color: "red" },
+    { from: [160.5, BAR_RULER_HEIGHT], to: [160.5, 682], color: "gray" },
   ])
   lines.length = 0
   scene.setClipDrag(null)
@@ -118,11 +126,11 @@ it("paints only the chosen visible row while stopped and a full recording line w
     ),
   })
   paintClipAlignment(context, scene.get(), "gray")
-  expect(lines).toEqual([{ from: [160.5, 34], to: [160.5, 682], color: "gray" }])
+  expect(lines).toEqual([{ from: [160.5, BAR_RULER_HEIGHT], to: [160.5, 682], color: "gray" }])
   lines.length = 0
   scene.setClipResize({ id: "audio-1", edge: "right" })
   paintClipAlignment(context, scene.get(), "gray")
-  expect(lines).toEqual([{ from: [416.5, 34], to: [416.5, 682], color: "gray" }])
+  expect(lines).toEqual([{ from: [416.5, BAR_RULER_HEIGHT], to: [416.5, 682], color: "gray" }])
   scene.setClipResize(null)
   scene.setProjectPreview(null)
   lines.length = 0
@@ -144,4 +152,41 @@ it("paints only the chosen visible row while stopped and a full recording line w
   paintPlayhead(context, scene.get(), ring, tokens)
   expect(lines).toEqual([])
   ring.dispose()
+})
+
+it("draws each guide from its own ruler band so the stroke reads continuously", () => {
+  const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
+  const scene = createSceneStore()
+  scene.setMusic({
+    bars: 64,
+    grid: { mode: "adaptive", density: "narrowest" },
+    transport: document.transport,
+    media: document.media,
+    patterns: document.patterns,
+    markers: [{ ...document.markers[0], bar: 2 }],
+    loop: { enabled: true, startBar: 3, endBar: 6 },
+    tracks: document.tracks,
+  })
+  scene.setViewport({ pxPerBar: 32, scrollX: 0, scrollY: 0, width: 400, height: 400, dpr: 1 })
+  const lines: { from: [number, number]; to: [number, number] }[] = []
+  let from: [number, number] = [0, 0]
+  const context = {
+    strokeStyle: "",
+    lineWidth: 1,
+    setTransform() {},
+    beginPath() {},
+    moveTo(x: number, y: number) {
+      from = [x, y]
+    },
+    lineTo(x: number, y: number) {
+      lines.push({ from, to: [x, y] })
+    },
+    stroke() {},
+  }
+  paintGuides(context as unknown as CanvasRenderingContext2D, scene.get(), { line: "guide" })
+  expect(lines).toEqual([
+    { from: [32.5, PATTERN_RULER_HEIGHT + LOOP_RULER_HEIGHT], to: [32.5, 382] },
+    { from: [64.5, PATTERN_RULER_HEIGHT + LOOP_RULER_HEIGHT - 2], to: [64.5, 400] },
+    { from: [160.5, PATTERN_RULER_HEIGHT + LOOP_RULER_HEIGHT - 2], to: [160.5, 400] },
+  ])
 })

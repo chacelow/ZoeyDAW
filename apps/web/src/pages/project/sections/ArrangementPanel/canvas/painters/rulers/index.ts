@@ -1,9 +1,13 @@
 import { paintMarkers } from "./markers"
-import { paintLoopRuler } from "./loop"
+import { paintLoopRuler, paintPatternRuler } from "./loop"
 import { paintTimeRuler } from "./time"
 import type { GridTokens } from "../grid"
 import type { ArrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 
+/**
+Ruler stack, top to bottom: pattern positions, loop region, locators. The time
+ruler stays pinned to the canvas bottom.
+*/
 export function paintRulers(
   context: CanvasRenderingContext2D,
   scene: ArrangementScene,
@@ -14,7 +18,8 @@ export function paintRulers(
     return
   }
   context.setTransform(dpr, 0, 0, dpr, 0, 0)
-  paintMarkers(context, scene, tokens)
+  paintPatternRuler(context, scene, tokens)
   paintLoopRuler(context, scene, tokens)
+  paintMarkers(context, scene, tokens)
   paintTimeRuler(context, scene, tokens)
 }

@@ -1,0 +1,108 @@
+import { useEffect, useState } from "react"
+import { DragPadBar } from "@zoeymind/ui"
+import { useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
+import { nativePlugins } from "@/shared/native/plugins"
+import type { PluginParameter } from "@/shared/native/plugins"
+import type { ExternalDevice } from "@zoeydaw/project-core/devices"
+import { editDevices } from "../edit-devices"
+
+function ExternalParameterControl({
+  trackId,
+  device,
+  parameter,
+}: {
+  readonly trackId: string
+  readonly device: ExternalDevice
+  readonly parameter: PluginParameter
+}) {
+  const value =
+    device.parameters.find(item => item.id === parameter.id)?.normalized ?? parameter.normalized
+  const gesture = useProjectEditGesture((normalized: number) => {
+    editDevices(trackId, devices =>
+      devices.map(current => {
+        if (current.id !== device.id || current.kind !== "external") return current
+        const existing = current.parameters.find(item => item.id === parameter.id)
+        if (existing?.normalized === normalized) return current
+        return {
+          ...current,
+          parameters: existing
+            ? current.parameters.map(item =>
+                item.id === parameter.id ? { ...item, normalized } : item
+              )
+            : [...current.parameters, { id: parameter.id, normalized }],
+        }
+      })
+    )
+  })
+  return (
+    <div className="gap-control-gap flex min-w-0 items-center justify-between">
+      <span className="text-muted-foreground min-w-0 truncate" title={parameter.title}>
+        {parameter.title}
+      </span>
+      <DragPadBar
+        label={parameter.title}
+        size="compact"
+        value={value}
+        min={0}
+        max={1}
+        step={parameter.stepCount > 0 ? 1 / parameter.stepCount : 0.001}
+        defaultValue={parameter.defaultValue ?? parameter.normalized}
+        disabled={parameter.readOnly || !parameter.automatable}
+        format={normalized => `${(normalized * 100).toFixed(1)}%`}
+        parse={raw => Number(raw.replace("%", "").trim()) / 100}
+        className="shrink-0"
+        {...gesture}
+      />
+    </div>
+  )
+}
+
+export function ExternalParameters({
+  trackId,
+  device,
+}: {
+  readonly trackId: string
+  readonly device: ExternalDevice
+}) {
+  const sessionId = useProjectState(state => state.session.backend.sessionId)
+  const phase = useProjectState(state => state.session.backend.phase)
+  const [parameters, setParameters] = useState<PluginParameter[]>([])
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!nativePlugins.available() || phase !== "ready") return
+    let disposed = false
+    void nativePlugins
+      .parameters(sessionId, device.id)
+      .then(value => {
+        if (!disposed) {
+          setParameters(value)
+          setError(null)
+        }
+      })
+      .catch(reason => {
+        if (!disposed) setError(String(reason))
+      })
+    return () => {
+      disposed = true
+    }
+  }, [sessionId, phase, device.id, device.plugin.catalogId, device.stateRef?.sha256])
+  return (
+    <div className="gap-control-gap flex min-h-0 flex-col overflow-y-auto">
+      {error && (
+        <span role="alert" className="text-destructive">
+          {error}
+        </span>
+      )}
+      {parameters
+        .filter(parameter => !parameter.hidden)
+        .map(parameter => (
+          <ExternalParameterControl
+            key={parameter.id}
+            trackId={trackId}
+            device={device}
+            parameter={parameter}
+          />
+        ))}
+    </div>
+  )
+}

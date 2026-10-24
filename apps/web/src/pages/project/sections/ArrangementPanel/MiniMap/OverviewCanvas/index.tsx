@@ -1,16 +1,30 @@
 import { useEffect, useRef } from "react"
+import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
+import { paintMidiNotes } from "@/pages/project/sections/ArrangementPanel/canvas/painters/clip-previews"
 import {
   readThemeStamp,
   readTokens,
   resolveColor,
 } from "@/pages/project/sections/ArrangementPanel/canvas/tokens"
-import type { DocumentState } from "@/pages/project/model/types"
+import type { DocumentState } from "@zoeydaw/project-core/types"
 
 export function OverviewCanvas({
   tracks,
   markers,
+  patterns,
+  numerator,
   bars,
-}: Pick<DocumentState, "tracks" | "markers"> & { readonly bars: number }) {
+  dividers = true,
+}: Pick<DocumentState, "tracks" | "markers" | "patterns"> & {
+  readonly numerator: number
+  readonly bars: number
+  /**
+  Row separators belong to the expanded summary. At the collapsed strip they
+  would be the brightest thing left, so the summary drops them and keeps only
+  the clip blocks.
+  */
+  readonly dividers?: boolean
+}) {
   const canvas = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const element = canvas.current
@@ -43,13 +57,30 @@ export function OverviewCanvas({
       rows.forEach((track, index) => {
         const top = Math.round(index * height * dpr) / dpr
         const bottom = Math.round((index + 1) * height * dpr) / dpr
-        context.fillStyle = tokens["--arrangement-line"]
-        context.fillRect(0, bottom - 1 / dpr, rect.width, 1 / dpr)
+        if (dividers) {
+          context.fillStyle = tokens["--arrangement-line"]
+          context.fillRect(0, bottom - 1 / dpr, rect.width, 1 / dpr)
+        }
         for (const clip of track.clips) {
-          context.fillStyle = resolveColor(clip.color ?? track.color, tokens, tokens["--primary"])
+          context.fillStyle = clip.mute
+            ? tokens["--arrangement-muted-clip-title"]
+            : resolveColor(clip.color ?? track.color, tokens, tokens["--primary"])
           const left = ((clip.startBar - 1) / bars) * rect.width
           const width = Math.max(1 / dpr, (clip.lengthBars / bars) * rect.width)
           context.fillRect(left, top, width, Math.max(1 / dpr, bottom - top - 1 / dpr))
+          if (clip.kind !== "audio") {
+            paintMidiNotes(
+              context,
+              resolveMidiClip(clip, patterns),
+              left,
+              top,
+              width,
+              Math.max(0, bottom - top - 1 / dpr),
+              clip.mute ? tokens["--muted-foreground"] : tokens["--arrangement-clip-ink"],
+              numerator,
+              rect.width
+            )
+          }
         }
       })
       context.fillStyle = tokens["--muted-foreground"]
@@ -83,7 +114,7 @@ export function OverviewCanvas({
       media.removeEventListener("change", paint)
       window.removeEventListener("resize", paint)
     }
-  }, [tracks, markers, bars])
+  }, [tracks, markers, patterns, numerator, bars, dividers])
   return (
     <canvas
       ref={canvas}

@@ -1,7 +1,10 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions } from "@/pages/project/adapters"
-import { MARKER_RULER_HEIGHT } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
+import {
+  LOOP_RULER_HEIGHT,
+  PATTERN_RULER_HEIGHT,
+} from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 
 export function MarkerEditor() {
@@ -61,10 +64,14 @@ function MarkerNameInput({
       value={value}
       aria-label={t("arrangement.markerName")}
       className="border-primary bg-background text-foreground absolute z-30 h-5 min-w-24 rounded border px-1 text-xs outline-none"
-      style={{ left: Math.max(0, x + 7), top: Math.max(0, MARKER_RULER_HEIGHT - 2) }}
+      style={{
+        left: Math.max(0, x + 7),
+        top: Math.max(0, PATTERN_RULER_HEIGHT + LOOP_RULER_HEIGHT - 2),
+      }}
       onChange={event => setValue(event.target.value)}
       onKeyDown={event => {
         event.stopPropagation()
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
         if (event.key === "Enter") {
           event.preventDefault()
           close(true)

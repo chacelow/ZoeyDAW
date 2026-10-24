@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef } from "react"
 import { useProjectState } from "@/pages/project/stores/useProjectState"
 import { beginEdit, cancelEdit, endEdit, isCurrentEdit } from "./context"
-import type { ProjectEditToken } from "@/pages/project/model/types"
+import type { ProjectEditToken } from "@zoeydaw/project-core/types"
 
 export function useProjectEditGesture<T>(onChange: (value: T) => void): {
   onGestureStart: () => void

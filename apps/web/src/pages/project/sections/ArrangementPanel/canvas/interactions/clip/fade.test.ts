@@ -1,8 +1,9 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { beforeEach, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
-import { fadeControls } from "@/pages/project/model/fades"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
+import { fadeControls } from "@zoeydaw/project-core/fades"
 import { createSceneStore } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import { clipRect, layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { clipVisualGeometry } from "@/pages/project/sections/ArrangementPanel/canvas/clip-geometry"
@@ -10,11 +11,15 @@ import { createFadeGesture } from "./fade"
 import { createMoveGesture } from "./move"
 import { createResizeGesture } from "./resize"
 import type { CanvasPointer } from "../types"
-import type { AudioClip } from "@/pages/project/model/types"
+import type { AudioClip } from "@zoeydaw/project-core/types"
 
 beforeEach(() => {
   hydrateProject(
-    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+    JSON.stringify({
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
   )
 })
 
@@ -37,6 +42,8 @@ it("drags only fade peaks while keeping quiet offsets fixed; cancel restores the
     bars: 128,
     grid: state.workspace.grid,
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -140,6 +147,8 @@ it("keeps both quiet fade offsets fixed in the live edge-resize preview", () => 
     bars: 128,
     grid: state.workspace.grid,
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks,
@@ -239,6 +248,8 @@ it.each<{ edge: "in" | "out"; height: number }>([
       bars: 128,
       grid: state.workspace.grid,
       transport: state.document.transport,
+      media: state.document.media,
+      patterns: state.document.patterns,
       markers: state.document.markers,
       loop: state.document.transport.loop,
       tracks: state.document.tracks,

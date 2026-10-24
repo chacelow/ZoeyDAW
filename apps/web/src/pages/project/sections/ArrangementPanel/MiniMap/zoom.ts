@@ -1,94 +1,117 @@
-/**
-Downward travel shrinks the overview selection; upward travel expands it.
-*/
-export function minimapDragZoom(
-  startingPxPerBar: number,
-  startingClientY: number,
-  clientY: number,
-  minPxPerBar: number,
-  maxPxPerBar: number
-): number {
-  const downwardPixels = clientY - startingClientY
-  return Math.max(
-    minPxPerBar,
-    Math.min(maxPxPerBar, startingPxPerBar * Math.exp(downwardPixels / 100))
-  )
-}
-
 export interface MinimapViewport {
   pxPerBar: number
   scrollX: number
 }
 
-interface EdgeDragInput {
+export interface MinimapGeometry extends MinimapViewport {
   bars: number
   viewportWidth: number
   minPxPerBar: number
   maxPxPerBar: number
-  startingPxPerBar: number
-  startingScrollX: number
-  deltaBars: number
+  onNavigate: () => void
 }
 
-/**
- * Drag the left edge of the overview frame: the right edge stays pinned in bars.
- * Shrinking the frame zooms in; expanding it zooms out.
- */
-export function minimapDragLeftEdge({
-  bars,
-  viewportWidth,
-  minPxPerBar,
-  maxPxPerBar,
-  startingPxPerBar,
-  startingScrollX,
-  deltaBars,
-}: EdgeDragInput): MinimapViewport {
-  const originalLeftBar = startingScrollX / startingPxPerBar
-  const rightBar = originalLeftBar + viewportWidth / startingPxPerBar
-  const minViewportBars = viewportWidth / maxPxPerBar
-  const maxViewportBars = Math.min(bars, viewportWidth / minPxPerBar)
-  const requestedLeftBar = originalLeftBar + deltaBars
-  const clampedLeftBar = Math.max(
-    0,
-    rightBar - maxViewportBars,
-    Math.min(rightBar - minViewportBars, requestedLeftBar)
+const CAP_WIDTH = 2
+const MIN_INNER_WIDTH = 12
+
+export function minimapFrame(width: number, geometry: MinimapGeometry) {
+  const contentWidth = Math.trunc(geometry.bars * geometry.pxPerBar + 1.5)
+  const viewportWidth = Math.trunc(geometry.viewportWidth)
+  if (contentWidth <= viewportWidth || width <= 0) return { left: 0, right: width, panRatio: 1 }
+  const frameWidth = Math.min(
+    width,
+    Math.max(
+      MIN_INNER_WIDTH,
+      Math.trunc(((width - 2 * CAP_WIDTH) * viewportWidth) / contentWidth)
+    ) +
+      2 * CAP_WIDTH
   )
-  const newViewportBars = Math.max(minViewportBars, rightBar - clampedLeftBar)
-  const pxPerBar = clamp(viewportWidth / newViewportBars, minPxPerBar, maxPxPerBar)
-  const maxScrollX = Math.max(0, bars * pxPerBar - viewportWidth)
-  const scrollX = Math.max(0, Math.min(maxScrollX, clampedLeftBar * pxPerBar))
-  return { pxPerBar, scrollX }
+  const scale =
+    width === frameWidth ? 1 : Math.fround((width - frameWidth) / (contentWidth - viewportWidth))
+  const left = Math.trunc(Math.fround(Math.fround(geometry.scrollX) * scale) + 0.5)
+  return { left, right: left + frameWidth, panRatio: Math.fround(1 / scale) }
 }
 
-/**
- * Drag the right edge of the overview frame: the left edge stays pinned in bars.
- * Shrinking the frame zooms in; expanding it zooms out.
- */
-export function minimapDragRightEdge({
-  bars,
-  viewportWidth,
-  minPxPerBar,
-  maxPxPerBar,
-  startingPxPerBar,
-  startingScrollX,
-  deltaBars,
-}: EdgeDragInput): MinimapViewport {
-  const leftBar = startingScrollX / startingPxPerBar
-  const originalRightBar = leftBar + viewportWidth / startingPxPerBar
-  const minViewportBars = viewportWidth / maxPxPerBar
-  const maxViewportBars = Math.min(bars - leftBar, viewportWidth / minPxPerBar)
-  const requestedRightBar = originalRightBar + deltaBars
-  const clampedRightBar = Math.max(
-    leftBar + minViewportBars,
-    Math.min(leftBar + maxViewportBars, requestedRightBar)
+export function minimapZoom(
+  geometry: MinimapGeometry,
+  pxPerBar: number,
+  anchorBar: number
+): MinimapViewport {
+  const contentWidth = Math.min(
+    1073740823,
+    Math.max(geometry.viewportWidth, Math.trunc(geometry.bars * pxPerBar))
   )
-  const newViewportBars = Math.max(minViewportBars, clampedRightBar - leftBar)
-  const pxPerBar = clamp(viewportWidth / newViewportBars, minPxPerBar, maxPxPerBar)
-  const maxScrollX = Math.max(0, bars * pxPerBar - viewportWidth)
-  const scrollX = Math.max(0, Math.min(maxScrollX, leftBar * pxPerBar))
-  return { pxPerBar, scrollX }
+  const zoom = Math.max(
+    geometry.minPxPerBar,
+    Math.min(geometry.maxPxPerBar, (contentWidth - 1) / geometry.bars)
+  )
+  const before = Math.trunc(anchorBar * geometry.pxPerBar + 0.5)
+  const after = Math.trunc(anchorBar * zoom + 0.5)
+  return minimapPan(geometry, geometry.scrollX + after - before, zoom)
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
+export function minimapPan(
+  geometry: MinimapGeometry,
+  scrollX: number,
+  pxPerBar = geometry.pxPerBar
+): MinimapViewport {
+  return {
+    pxPerBar,
+    scrollX: Math.max(
+      0,
+      Math.min(
+        Math.max(0, Math.trunc(geometry.bars * pxPerBar + 1.5) - geometry.viewportWidth),
+        scrollX
+      )
+    ),
+  }
+}
+
+export function minimapAnchor(width: number, x: number, geometry: MinimapGeometry): number {
+  const pixel = Math.trunc(
+    Math.fround(
+      (Math.fround(Math.trunc(geometry.bars * geometry.pxPerBar + 1.5)) *
+        Math.fround(x - CAP_WIDTH)) /
+        Math.fround(Math.max(1, width - 2 * CAP_WIDTH))
+    ) + 0.5
+  )
+  return pixel / geometry.pxPerBar
+}
+
+export type MinimapMode = "left" | "right" | "body" | "jump" | "pan" | "page"
+
+export function minimapHit(
+  x: number,
+  width: number,
+  geometry: MinimapGeometry,
+  modified = false
+): MinimapMode {
+  const frame = minimapFrame(width, geometry)
+  if (x < frame.left || x > frame.right) return modified ? "page" : "jump"
+  if (modified) return "pan"
+  const handle = frame.right - frame.left < 12 ? Math.trunc((frame.right - frame.left) / 3) : 4
+  if (x < frame.left + handle) return "left"
+  if (x < frame.right && x >= frame.right - handle) return "right"
+  return "body"
+}
+
+export function minimapEdgeZoom(
+  width: number,
+  x: number,
+  mode: "left" | "right",
+  frame: { left: number; right: number },
+  geometry: MinimapGeometry
+): number {
+  const inner =
+    mode === "left"
+      ? frame.right - x - 2 * CAP_WIDTH
+      : Math.min(x, width) - frame.left - 2 * CAP_WIDTH
+  const factor = Math.max(
+    mode === "left"
+      ? Math.trunc(geometry.bars * geometry.pxPerBar + 1.5) /
+          (geometry.viewportWidth + geometry.scrollX)
+      : 1,
+    Math.fround((width - 2 * CAP_WIDTH) / Math.max(MIN_INNER_WIDTH, inner))
+  )
+  return (geometry.viewportWidth * factor) / geometry.bars
 }

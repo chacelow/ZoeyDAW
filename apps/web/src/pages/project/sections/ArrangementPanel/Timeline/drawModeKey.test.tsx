@@ -1,9 +1,10 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
-import { effectiveDrawMode } from "@/pages/project/model/interaction-mode"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
+import { effectiveDrawMode } from "@zoeydaw/project-core/interaction-mode"
 import { drawModeKeyDown, markDrawModeGesture, useDrawModeKeyRelease } from "./drawModeKey"
 
 function Keys() {
@@ -14,8 +15,8 @@ function Keys() {
 beforeEach(() => {
   hydrateProject(
     JSON.stringify({
-      version: 2,
-      document: createMockDocument(),
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
       workspace: { ...createMockWorkspace(), drawMode: false, computerKeyboard: false },
     })
   )

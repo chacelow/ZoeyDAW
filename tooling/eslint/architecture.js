@@ -5,6 +5,8 @@ const componentPath = "/src/components/"
 const libraryPath = "/src/pages/library/"
 const modelPath = "/src/pages/project/model/"
 const uiPath = "/packages/ui/src/"
+const corePath = "/packages/project-core/src/"
+const runtimePath = "/packages/project-runtime/src/"
 
 function inDirectory(target, directory) {
   return target.endsWith(directory.slice(0, -1)) || target.includes(directory)
@@ -75,6 +77,10 @@ export const architecture = {
         "Pure project model cannot read DOM/runtime global '{{name}}'. Pass required values from an adapter.",
       uiDependency:
         "Shared UI cannot depend on app source ({{source}}). Keep app integration in apps/web.",
+      coreDependency:
+        "Project core cannot depend on app, runtime, UI, React, Zustand or Tauri ({{source}}).",
+      runtimeDependency:
+        "Project runtime cannot depend on app, UI, React or Tauri, and must use zustand/vanilla ({{source}}).",
     },
     schema: [],
   },
@@ -82,10 +88,12 @@ export const architecture = {
     const file = normalized(context.filename)
     const test = isTest(file)
     const model = file.includes(modelPath)
+    const core = file.includes(corePath)
+    const runtime = file.includes(runtimePath)
     const ui = file.includes(uiPath)
     const shared =
       file.includes(sharedPath) || file.includes(componentPath) || file.includes(libraryPath)
-    if ((!model && !ui && !shared) || test) {
+    if ((!model && !core && !runtime && !ui && !shared) || (test && !core && !runtime)) {
       return {}
     }
 
@@ -94,6 +102,34 @@ export const architecture = {
         return
       }
       const target = targetPath(file, value)
+      const appDependency =
+        target.includes("/apps/") ||
+        value.startsWith("@/") ||
+        /^(?:@zoeydaw\/web|@zoeymind\/web)(?:\/|$)/.test(value)
+      const frameworkDependency =
+        /^(?:react(?:\/|$)|react-dom(?:\/|$)|@tauri-apps\/|@zoeymind\/ui(?:\/|$)|@zoeydaw\/ui(?:\/|$))/.test(
+          value
+        ) || inDirectory(target, uiPath)
+      if (
+        core &&
+        (appDependency ||
+          frameworkDependency ||
+          /^zustand(?:\/|$)/.test(value) ||
+          /^@zoeydaw\/project-runtime(?:\/|$)/.test(value) ||
+          inDirectory(target, runtimePath))
+      ) {
+        context.report({ node, messageId: "coreDependency", data: { source: value } })
+        return
+      }
+      if (
+        runtime &&
+        (appDependency ||
+          frameworkDependency ||
+          (/^zustand(?:\/|$)/.test(value) && value !== "zustand/vanilla"))
+      ) {
+        context.report({ node, messageId: "runtimeDependency", data: { source: value } })
+        return
+      }
       if (
         (shared && target.includes("/apps/web/src/pages/project/")) ||
         (shared && target.endsWith("/apps/web/src/pages/project"))
@@ -143,6 +179,10 @@ export const architecture = {
           inspect(node.source, node.source.value)
         }
       },
+      TSImportType(node) {
+        const source = node.source ?? node.argument
+        inspect(source, source?.value)
+      },
       CallExpression(node) {
         if (
           node.callee.type === "Identifier" &&
@@ -152,10 +192,23 @@ export const architecture = {
           inspect(node.arguments[0], node.arguments[0].value)
         }
       },
-      ...(model && {
+      ...((model || (core && !test)) && {
         Identifier(node) {
           if (runtimeGlobals.has(node.name) && isGlobalReference(context, node)) {
             context.report({ node, messageId: "modelGlobal", data: { name: node.name } })
+          }
+        },
+        MemberExpression(node) {
+          if (
+            core &&
+            node.object.type === "Identifier" &&
+            node.object.name === "globalThis" &&
+            isGlobalReference(context, node.object)
+          ) {
+            const name = node.computed ? node.property.value : node.property.name
+            if (runtimeGlobals.has(name)) {
+              context.report({ node, messageId: "modelGlobal", data: { name } })
+            }
           }
         },
       }),

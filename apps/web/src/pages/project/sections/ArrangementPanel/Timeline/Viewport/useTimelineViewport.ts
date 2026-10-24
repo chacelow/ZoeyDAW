@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { projectActions, readTransportBar, useProjectState } from "@/pages/project/adapters"
-import { growTimelineBars, timelineBars } from "@/pages/project/model/selectors"
-import { gridZoomLimit } from "@/pages/project/model/grid"
-import { positionToBar, visibleTracks } from "@/pages/project/model/types"
-import { CONTROLS_WIDTH } from "@/pages/project/layout"
+import { timelineBars } from "@zoeydaw/project-core/selectors"
+import { timelineZoomLimit } from "@zoeydaw/project-core/timeline-zoom"
+import { positionToBar } from "@zoeydaw/project-core/types"
+import { arrangementViewProjection } from "@/pages/project/layout"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
 import {
   maxTrackScrollY,
@@ -11,6 +11,7 @@ import {
 } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { useViewportSync } from "@/pages/project/sections/ArrangementPanel/canvas/useSceneSync"
 import { arrangementScheduler } from "@/pages/project/sections/ArrangementPanel/canvas/scheduler"
+import { useSongExtent } from "./useSongExtent"
 import type { RefObject } from "react"
 
 function useMeasuredSize(reference: RefObject<HTMLElement | null>) {
@@ -28,10 +29,17 @@ function useMeasuredSize(reference: RefObject<HTMLElement | null>) {
           : { width: rect.width, height: rect.height }
       })
     }
-    const observer = new ResizeObserver(measure)
+    let frame = 0
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measure)
+    })
     observer.observe(element)
     measure()
-    return () => observer.disconnect()
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [reference])
   return size
 }
@@ -47,39 +55,61 @@ export function useTimelineViewport(
   const { width: containerWidth } = useMeasuredSize(containerReference)
   const { height: bodyHeight } = useMeasuredSize(bodyReference)
   const document = useProjectState(state => state.document)
-  const visible = useMemo(() => visibleTracks(document.tracks), [document.tracks])
+  const arrangementView = useProjectState(state => state.workspace.arrangementView)
+  const projection = useMemo(
+    () => arrangementViewProjection(document.tracks, arrangementView),
+    [document.tracks, arrangementView]
+  )
+  const visible = projection.visible
   const positionBar = useProjectState(state =>
     positionToBar(state.session.position, state.document.transport.numerator)
   )
   const selectionEnd = useProjectState(state => state.session.timeSelection?.endBar ?? 1)
   const editingClipId = useProjectState(state => state.session.editingClipId)
+  const editEpoch = useProjectState(state => state.session.editEpoch)
   const follow = useProjectState(state => state.workspace.follow)
   const playing = useProjectState(state => state.session.playing)
   const storedPxPerBar = useProjectState(state => state.workspace.pxPerBar)
   const storedScrollX = useProjectState(state => state.workspace.scrollX)
   const storedScrollY = useProjectState(state => state.workspace.scrollY)
+  const automationMode = useProjectState(state => state.workspace.automationMode)
+  const automationLanes = useProjectState(state => state.workspace.automationLanes)
+  const automationDisplay = useMemo(
+    () => ({ mode: automationMode, lanes: automationLanes }),
+    [automationMode, automationLanes]
+  )
   const manualPanUntil = useRef(0)
   const suspendFollow = useCallback(() => {
     manualPanUntil.current = performance.now() + 2000
   }, [])
 
   const baseBars = useMemo(() => timelineBars(document), [document])
-  const bars = growTimelineBars(baseBars, Math.max(positionBar, selectionEnd))
-  const timeViewportWidth = Math.max(0, containerWidth - CONTROLS_WIDTH)
-  const minPxPerBar = timeViewportWidth > 0 ? timeViewportWidth / bars : 1
-  const maxPxPerBar = Math.max(
-    minPxPerBar,
-    gridZoomLimit(document.transport.numerator, document.transport.denominator)
+  const quarterNotesPerBar = (document.transport.numerator * 4) / document.transport.denominator
+  const songBars = useSongExtent(
+    editEpoch,
+    baseBars,
+    Math.max(positionBar, selectionEnd),
+    quarterNotesPerBar
   )
+  const timeViewportWidth = Math.max(0, containerWidth - projection.controlsWidth)
+  const bars = Math.max(
+    songBars,
+    storedPxPerBar > 0 ? (storedScrollX + Math.max(0, timeViewportWidth - 1)) / storedPxPerBar : 0
+  )
+  const minPxPerBar = timeViewportWidth > 1 ? (timeViewportWidth - 1) / bars : 1
+  const maxPxPerBar = Math.max(minPxPerBar, timelineZoomLimit(document.transport, document.media))
   const pxPerBar = Math.max(minPxPerBar, Math.min(maxPxPerBar, storedPxPerBar || minPxPerBar))
-  const timelineWidth = bars * pxPerBar
+  const timelineWidth = Math.trunc(bars * pxPerBar + 1.5)
   const scrollX = Math.max(
     0,
     Math.min(Math.max(0, timelineWidth - timeViewportWidth), storedScrollX || 0)
   )
   const scrollY =
     bodyHeight > 0
-      ? Math.max(0, Math.min(maxTrackScrollY(visible, bodyHeight), storedScrollY || 0))
+      ? Math.max(
+          0,
+          Math.min(maxTrackScrollY(visible, bodyHeight, automationDisplay), storedScrollY || 0)
+        )
       : Math.max(0, storedScrollY || 0)
 
   useViewportSync({ pxPerBar, scrollX, scrollY })
@@ -101,15 +131,16 @@ export function useTimelineViewport(
       return
     }
     const next = revealTrackScrollY(
-      visibleTracks(state.document.tracks),
+      arrangementViewProjection(state.document.tracks, state.workspace.arrangementView).visible,
       bodyHeight,
       state.workspace.scrollY,
-      track.id
+      track.id,
+      automationDisplay
     )
     if (next !== state.workspace.scrollY) {
       projectActions.setViewport({ scrollY: next })
     }
-  }, [editingClipId, bodyHeight])
+  }, [editingClipId, bodyHeight, automationDisplay])
 
   useEffect(() => {
     if (!follow || !playing || timeViewportWidth <= 0) {
@@ -149,17 +180,25 @@ export function useTimelineViewport(
       event.preventDefault()
       const current = arrangementScene.get().viewport
       if (event.ctrlKey || event.metaKey) {
-        suspendFollow()
         const rect = canvasReference.current?.getBoundingClientRect()
         if (!rect) {
           return
         }
-        const offset = Math.max(0, Math.min(rect.width, event.clientX - rect.left))
+        const state = useProjectState.getState()
+        // Two distinct cases: while playing with follow on, zoom keeps the playhead centred so
+        // the view stays locked to playback. Otherwise zoom anchors at the pointer, like Live.
+        const followingPlayback = state.workspace.follow && state.session.playing
+        if (!followingPlayback) suspendFollow()
+        const offset = followingPlayback
+          ? rect.width / 2
+          : Math.max(0, Math.min(rect.width, event.clientX - rect.left))
         const next = Math.max(
           minPxPerBar,
           Math.min(maxPxPerBar, current.pxPerBar * Math.exp(-event.deltaY / 260))
         )
-        const anchor = (current.scrollX + offset) / current.pxPerBar
+        const anchor = followingPlayback
+          ? readTransportBar() - 1
+          : (current.scrollX + offset) / current.pxPerBar
         projectActions.setViewport({
           pxPerBar: next,
           scrollX: Math.max(0, Math.min(bars * next - rect.width, anchor * next - offset)),
@@ -177,7 +216,7 @@ export function useTimelineViewport(
       )
       const nextY = Math.max(
         0,
-        Math.min(maxTrackScrollY(visible, current.height), current.scrollY + dy)
+        Math.min(maxTrackScrollY(visible, current.height, automationDisplay), current.scrollY + dy)
       )
       if (nextX !== current.scrollX || nextY !== current.scrollY) {
         projectActions.setViewport({ scrollX: nextX, scrollY: nextY })
@@ -185,7 +224,16 @@ export function useTimelineViewport(
     }
     element.addEventListener("wheel", onWheel, { passive: false })
     return () => element.removeEventListener("wheel", onWheel)
-  }, [bodyReference, canvasReference, bars, maxPxPerBar, minPxPerBar, visible, suspendFollow])
+  }, [
+    bodyReference,
+    canvasReference,
+    bars,
+    maxPxPerBar,
+    minPxPerBar,
+    visible,
+    suspendFollow,
+    automationDisplay,
+  ])
 
   const zoom = (direction: -1 | 1) => {
     suspendFollow()
@@ -209,6 +257,7 @@ export function useTimelineViewport(
   return {
     bars,
     bodyHeight,
+    controlsWidth: projection.controlsWidth,
     timeViewportWidth,
     minPxPerBar,
     maxPxPerBar,

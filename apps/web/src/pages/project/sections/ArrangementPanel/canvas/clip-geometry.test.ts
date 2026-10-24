@@ -1,5 +1,6 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import { expect, it } from "vitest"
-import { createMockDocument } from "@/pages/project/adapters/fixtures"
+import { createMockDocument } from "@zoeydaw/project-runtime/testing"
 import { clipVisualGeometry } from "./clip-geometry"
 import { clipRect, layoutTrackRows } from "./layout"
 import { createSceneStore } from "./scene"
@@ -7,7 +8,7 @@ import { createSceneStore } from "./scene"
 it.each([0.1, 0.5, 0.9])(
   "keeps flat ends and a continuous, directional tangent at position %s",
   position => {
-    const document = createMockDocument()
+    const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
     const track = document.tracks.find(track => track.id === "3-audio")!
     const clip = track.clips[0]
     if (clip.kind !== "audio") {
@@ -22,6 +23,8 @@ it.each([0.1, 0.5, 0.9])(
       bars: 128,
       grid: { mode: "fixed", bars: 1 },
       transport: document.transport,
+      media: document.media,
+      patterns: document.patterns,
       tracks: document.tracks,
       markers: document.markers,
       loop: document.transport.loop,

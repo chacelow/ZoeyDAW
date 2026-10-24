@@ -1,43 +1,86 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render } from "@testing-library/react"
+import { act, cleanup, fireEvent, render } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { ClipDetail } from "."
+import { AudioWaveform } from "./AudioEditor/Waveform"
+import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
+import type { MediaSource } from "@zoeydaw/project-core/media"
+import type { WaveformRange } from "@zoeydaw/project-core/waveform-range"
+import * as waveformRanges from "@/pages/project/adapters/backend/waveform-ranges"
+import type { RenderResult } from "@testing-library/react"
+import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
+import { cancelDrawModeKey } from "@/pages/project/sections/ArrangementPanel/Timeline/drawModeKey"
 
 function Editor() {
   const clip = useProjectState(s =>
     s.document.tracks.flatMap(track => track.clips).find(item => item.id === "pattern-test")
   )
-  return clip ? <ClipDetail clip={clip} close={() => {}} /> : null
+  return clip ? <ClipDetail clip={clip} /> : null
 }
 
-function patternSteps() {
+function AudioFixtureEditor() {
+  const clip = useProjectState(state =>
+    state.document.tracks.flatMap(track => track.clips).find(item => item.id === "audio-1")
+  )
+  return clip ? <ClipDetail clip={clip} /> : null
+}
+
+function patternClip(id = "pattern-test") {
   const clip = useProjectState
     .getState()
     .document.tracks.flatMap(track => track.clips)
-    .find(item => item.id === "pattern-test")
-  if (!clip || clip.kind !== "pattern") {
-    throw new Error("Missing pattern fixture")
-  }
-  return clip.steps ?? []
+    .find(item => item.id === id)
+  if (!clip || clip.kind !== "pattern") throw new Error("Missing pattern fixture")
+  return clip
+}
+
+function patternSource(id = "pattern-test") {
+  return resolveMidiClip(patternClip(id), useProjectState.getState().document.patterns)
+}
+
+function prepareDraw(view: RenderResult) {
+  const grid = view.getByRole("grid")
+  Object.defineProperty(grid, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({ left: 0, top: 0, width: 400, height: 128 * 18 }),
+  })
+  grid.focus()
+  fireEvent.keyDown(grid, { key: "b" })
+  return grid
+}
+
+function drawStart(grid: HTMLElement) {
+  fireEvent.pointerDown(grid, {
+    button: 0,
+    pointerId: 1,
+    clientX: 12.5,
+    clientY: (127 - 70 + 0.5) * 18,
+  })
 }
 
 beforeEach(() => {
-  const document = createMockDocument()
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  )
+  const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
   const track = document.tracks.find(item => item.id === "trager")
   if (!track) {
     throw new Error("Missing MIDI track")
   }
-  track.clips.push({
-    id: "pattern-test",
-    kind: "pattern",
-    patternId: "steps",
-    startBar: 1,
-    lengthBars: 1,
-    steps: Array.from({ length: 16 }, () => false),
-  })
-  hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
+  document.patterns.push({ id: "shared-test", notes: [], loopBars: 1 })
+  track.clips.push(
+    { id: "pattern-test", kind: "pattern", patternId: "shared-test", startBar: 1, lengthBars: 1 },
+    { id: "pattern-linked", kind: "pattern", patternId: "shared-test", startBar: 8, lengthBars: 2 }
+  )
+  hydrateProject(JSON.stringify({ version: 4, document, workspace: createMockWorkspace() }))
   HTMLElement.prototype.setPointerCapture = () => {}
   HTMLElement.prototype.hasPointerCapture = () => false
   HTMLElement.prototype.releasePointerCapture = () => {}
@@ -45,66 +88,382 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  cancelDrawModeKey()
+  waveformRanges.useWaveformRanges.setState({ entries: new Map() })
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   Reflect.deleteProperty(HTMLElement.prototype, "setPointerCapture")
   Reflect.deleteProperty(HTMLElement.prototype, "hasPointerCapture")
   Reflect.deleteProperty(HTMLElement.prototype, "releasePointerCapture")
 })
 
-for (const end of ["lostpointercapture", "blur", "unmount"] as const) {
-  it(`rolls back painting and keeps later undo working after ${end}`, () => {
+for (const composition of [{ isComposing: true }, { keyCode: 229 }]) {
+  it(`keeps the live name gesture open during composition (${JSON.stringify(composition)})`, () => {
     const view = render(<Editor />)
-    const step = view.container.querySelector<HTMLElement>('[data-step-index="0"]')
-    if (!step) {
-      throw new Error("Missing step")
+    const input = view.container.querySelector<HTMLInputElement>("[data-clip-name]")
+    if (!input) throw new Error("Missing Clip name field")
+    act(() => input.focus())
+    fireEvent.change(input, { target: { value: "主唱" } })
+    for (const key of ["Enter", "Escape"]) {
+      expect(fireEvent.keyDown(input, { key, ...composition })).toBe(true)
+      expect(document.activeElement).toBe(input)
+      expect(patternClip().label).toBe("主唱")
     }
-    fireEvent.pointerDown(step, { button: 0, pointerId: 1 })
-    expect(patternSteps()[0]).toBe(true)
-    if (end === "unmount") {
-      view.unmount()
-    } else if (end === "blur") {
-      fireEvent(window, new Event("blur"))
-    } else {
-      fireEvent.lostPointerCapture(step.parentElement ?? step, { pointerId: 1 })
-    }
-    expect(patternSteps()[0]).toBe(false)
+    fireEvent.keyDown(input, { key: "Enter" })
+    expect(document.activeElement).not.toBe(input)
+    expect(patternClip().label).toBe("主唱")
+    act(() => projectActions.undo())
+    expect(patternClip().label).toBeUndefined()
+  })
+}
+
+for (const end of ["lostpointercapture", "blur", "unmount", "escape"] as const) {
+  it(`rolls back shared notes and keeps later undo working after ${end}`, () => {
+    const view = render(<Editor />)
+    const grid = prepareDraw(view)
+    drawStart(grid)
+    expect(patternSource().notes).toHaveLength(1)
+    expect(patternSource("pattern-linked").notes).toBe(patternSource().notes)
+    if (end === "unmount") view.unmount()
+    else if (end === "blur") fireEvent(window, new Event("blur"))
+    else if (end === "escape") fireEvent.keyDown(window, { key: "Escape" })
+    else fireEvent.lostPointerCapture(grid, { pointerId: 1 })
+    expect(patternSource().notes).toEqual([])
+    expect(patternSource("pattern-linked").notes).toEqual([])
+    expect(useProjectState.getState().session.canUndo).toBe(false)
     projectActions.setBpm(140)
     projectActions.undo()
     expect(useProjectState.getState().document.transport.bpm).toBe(120)
   })
 }
 
-it("fills crossed steps on fast painting as one undoable edit", () => {
+it("draws genuine shared notes across multiple moves as one undoable gesture", () => {
   const view = render(<Editor />)
-  const first = view.container.querySelector<HTMLElement>('[data-step-index="0"]')
-  const last = view.container.querySelector<HTMLElement>('[data-step-index="5"]')
-  if (!first || !last) {
-    throw new Error("Missing steps")
+  const grid = prepareDraw(view)
+  drawStart(grid)
+  for (const clientX of [137.5, 225]) {
+    fireEvent.pointerMove(grid, { pointerId: 1, clientX, clientY: (127 - 70 + 0.5) * 18 })
   }
-  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => last })
-  fireEvent.pointerDown(first, { button: 0, pointerId: 1 })
-  fireEvent.pointerMove(first.parentElement ?? first, { pointerId: 1, clientX: 100, clientY: 100 })
-  fireEvent.pointerUp(first.parentElement ?? first, { pointerId: 1 })
-  expect(patternSteps().slice(0, 6)).toEqual([true, true, true, true, true, true])
-  expect(patternSteps()[6]).toBe(false)
-  projectActions.undo()
-  expect(patternSteps().every(step => !step)).toBe(true)
-  expect(useProjectState.getState().session.canUndo).toBe(false)
-  Reflect.deleteProperty(document, "elementFromPoint")
-})
-
-it("keeps the partially visible first source step after a free trim", () => {
-  const steps = patternSteps().map((_, index) => index === 1)
-  projectActions.updateClip("pattern-test", { steps, sourceOffsetBars: 0.1, lengthBars: 0.9 })
-  const view = render(<Editor />)
-  expect(view.container.querySelector('[data-step-index="0"]')?.getAttribute("aria-pressed")).toBe(
-    "true"
+  fireEvent.pointerUp(grid, { pointerId: 1 })
+  expect(patternSource().notes.map(note => note.startBeat)).toEqual(
+    Array.from({ length: 10 }, (_, index) => index / 4)
   )
-  expect(view.container.querySelectorAll("[data-step-index]")).toHaveLength(15)
+  expect(patternSource().notes.every(note => note.pitch === 70 && note.lengthBeats === 0.25)).toBe(
+    true
+  )
+  expect(patternSource("pattern-linked").notes).toBe(patternSource().notes)
+  expect(patternClip("pattern-linked")).toMatchObject({ startBar: 8, lengthBars: 2 })
+  expect(patternClip()).not.toHaveProperty("notes")
+  expect(view.container.querySelector("[data-step-index]")).toBeNull()
+  projectActions.undo()
+  expect(patternSource().notes).toEqual([])
+  expect(patternSource("pattern-linked").notes).toEqual([])
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+  projectActions.redo()
+  expect(patternSource("pattern-linked").notes).toHaveLength(10)
 })
 
-it("edits one source cycle rather than allocating repeat copies for a long Pattern clip", () => {
-  projectActions.updateClip("pattern-test", { lengthBars: 4 })
+it("keeps shared source notes while trimming only the edited placement", () => {
+  projectActions.updateClip("pattern-test", {
+    notes: [{ id: "partial", pitch: 60, startBeat: 0.25, lengthBeats: 0.25, velocity: 100 }],
+    sourceOffsetBars: 0.1,
+    lengthBars: 0.9,
+    mute: true,
+  })
   const view = render(<Editor />)
-  expect(view.container.querySelectorAll("[data-step-index]")).toHaveLength(16)
+  expect(view.container.querySelector('[data-note-index="0"]')).not.toBeNull()
+  expect(patternClip().mute).toBe(true)
+  expect(patternSource("pattern-linked").notes).toBe(patternSource().notes)
+  expect(patternClip("pattern-linked")).toMatchObject({ startBar: 8, lengthBars: 2 })
+  expect(patternClip("pattern-linked").sourceOffsetBars).toBeUndefined()
+  expect(patternClip("pattern-linked").mute).toBeUndefined()
+  projectActions.undo()
+  expect(patternSource("pattern-linked").notes).toEqual([])
+  expect(patternClip().lengthBars).toBe(1)
+  expect(patternClip().sourceOffsetBars).toBeUndefined()
+})
+
+it("edits the shared loop through existing MIDI controls without changing placement", () => {
+  const view = render(<Editor />)
+  fireEvent.change(view.getByRole("spinbutton", { name: "detailMidi.loopBars" }), {
+    target: { value: "2" },
+  })
+  expect(patternSource().loopBars).toBe(2)
+  expect(patternSource("pattern-linked").loopBars).toBe(2)
+  expect(patternClip().lengthBars).toBe(1)
+  expect(patternClip()).not.toHaveProperty("loopBars")
+  projectActions.undo()
+  expect(patternSource("pattern-linked").loopBars).toBe(1)
+})
+
+it("edits one shared source rather than allocating repeat notes for a long Pattern clip", () => {
+  projectActions.updateClip("pattern-test", {
+    lengthBars: 4,
+    notes: [{ id: "source", pitch: 60, startBeat: 0, lengthBeats: 0.25, velocity: 100 }],
+  })
+  const view = render(<Editor />)
+  expect(view.container.querySelectorAll("[data-note-index]")).toHaveLength(1)
+  expect(patternSource("pattern-linked").notes).toHaveLength(1)
+})
+
+it("routes shared-note undo and redo from detail without consuming text-field undo", () => {
+  const view = render(<Editor />)
+  const grid = prepareDraw(view)
+  drawStart(grid)
+  fireEvent.pointerUp(grid, { pointerId: 1 })
+  const editor = view.getByRole("region", { name: "arrangement.clipEditor" })
+  fireEvent.keyDown(editor, { key: "z", metaKey: true })
+  expect(patternSource("pattern-linked").notes).toEqual([])
+  fireEvent.keyDown(editor, { key: "z", metaKey: true, shiftKey: true })
+  expect(patternSource("pattern-linked").notes).toHaveLength(1)
+  const input = view.container.querySelector<HTMLInputElement>("[data-clip-name]")
+  if (!input) throw new Error("Missing Clip name field")
+  expect(fireEvent.keyDown(input, { key: "z", metaKey: true })).toBe(true)
+  expect(patternSource("pattern-linked").notes).toHaveLength(1)
+})
+
+it("allows shared pre-edit typing to author a musical Audio loop position", () => {
+  const view = render(<AudioFixtureEditor />)
+  const button = view.getByRole("button", { name: "detailAudio.loopPosition" })
+  button.focus()
+  fireEvent.click(button, { detail: 0 })
+  fireEvent.keyDown(button, { key: "3", code: "Digit3" })
+  const input = view.getByRole("textbox", { name: "detailAudio.loopPosition" })
+  fireEvent.change(input, { target: { value: "3.1.1" } })
+  fireEvent.keyDown(input, { key: "Enter" })
+  const clip = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.id === "audio-1")
+  if (clip?.kind !== "audio") throw new Error("Missing Audio fixture")
+  expect(clip.audioSettings?.loopStartBars).toBe(2)
+  expect(clip.sourceOffsetBars ?? 0).toBe(0)
+  fireEvent.keyDown(view.getByRole("button", { name: "detailAudio.loopPosition" }), {
+    key: "z",
+    metaKey: true,
+  })
+  const restored = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.id === "audio-1")
+  if (restored?.kind !== "audio") throw new Error("Missing restored Audio fixture")
+  expect(restored.audioSettings).toBeUndefined()
+})
+
+it("resolves a stale clip prop against its live owner for title and titlebar color", () => {
+  const owner = useProjectState.getState().document.tracks.find(track => track.id === "trager")
+  const original = owner?.clips.find(clip => clip.id === "pattern-test")
+  if (!original || !owner) throw new Error("Missing Pattern owner")
+  const view = render(<ClipDetail clip={original} />)
+  const titlebar = view.container.querySelector("[data-clip-editor-titlebar]")
+  expect(titlebar?.getAttribute("data-title-color")).toBe(owner.color)
+  act(() => projectActions.updateTrack(owner.id, { color: "var(--chart-4)" }))
+  expect(titlebar?.getAttribute("data-title-color")).toBe("var(--chart-4)")
+  act(() =>
+    projectActions.updateClip(original.id, { label: "Live Pattern", color: "var(--chart-2)" })
+  )
+  expect(titlebar?.getAttribute("data-title-color")).toBe("var(--chart-2)")
+  const input = view.container.querySelector<HTMLInputElement>("[data-clip-name]")
+  expect(input?.value).toBe("Live Pattern")
+  act(() => projectActions.updateTrack(owner.id, { color: "var(--chart-5)" }))
+  expect(titlebar?.getAttribute("data-title-color")).toBe("var(--chart-2)")
+  act(() => projectActions.updateClip(original.id, { color: undefined }))
+  expect(titlebar?.getAttribute("data-title-color")).toBe("var(--chart-5)")
+})
+
+it("switches the selected source to exactly one editor and drops old name input state", () => {
+  const clips = useProjectState.getState().document.tracks.flatMap(track => track.clips)
+  const pattern = clips.find(clip => clip.id === "pattern-test")
+  const midi = clips.find(clip => clip.kind === "midi")
+  const audio = clips.find(clip => clip.kind === "audio")
+  if (!pattern || !midi || !audio) throw new Error("Missing source fixtures")
+  const view = render(<ClipDetail clip={pattern} />)
+  expect(view.container.querySelectorAll("[data-midi-editor]")).toHaveLength(1)
+  expect(view.container.querySelector("[data-step-index]")).toBeNull()
+  view.rerender(<ClipDetail clip={midi} />)
+  expect(view.container.querySelectorAll("[data-midi-editor]")).toHaveLength(1)
+  expect(view.container.querySelector("[data-step-index]")).toBeNull()
+  view.rerender(<ClipDetail clip={audio} />)
+  expect(view.container.querySelector(".audio-detail-source-surface")).not.toBeNull()
+  expect(view.container.querySelector("[data-midi-editor]")).toBeNull()
+  expect(view.container.querySelector("[data-step-index]")).toBeNull()
+  expect(view.container.querySelector<HTMLInputElement>("[data-clip-name]")?.value).not.toBe("")
+})
+
+it("repaints both real-source projections with signed filled contours across zoom levels", () => {
+  const demand = vi.spyOn(waveformRanges, "setWaveformRangeDemand").mockImplementation(() => {})
+  const release = vi.spyOn(waveformRanges, "releaseWaveformRangeDemand")
+  const source = {
+    id: "editor-real-source",
+    name: "stereo.wav",
+    sha256: "a".repeat(64),
+    byteLength: 1_536_000,
+    frames: 384_000,
+    sampleRate: 48_000,
+    channels: 2,
+    location: { kind: "external", path: "/audio/stereo.wav" },
+  } satisfies MediaSource
+  const document = useProjectState.getState().document
+  const fixture = document.tracks.flatMap(track => track.clips).find(clip => clip.id === "audio-1")
+  if (fixture?.kind !== "audio") throw new Error("Missing Audio fixture")
+  const clip = {
+    ...fixture,
+    sourceId: source.id,
+    sourceOffsetBars: 0,
+    lengthBars: 4,
+    waveformPeaks: [1, 1, 1],
+    audioSettings: {
+      ...getAudioClipSettings(fixture, 120),
+      sourceBpm: 120,
+      startMarkerBars: 0,
+      endMarkerBars: 4,
+      loopStartBars: 0,
+      loopLengthBars: 4,
+    },
+  }
+  hydrateProject(
+    JSON.stringify({
+      version: 4,
+      document: { ...document, media: [...document.media, source] },
+      workspace: useProjectState.getState().workspace,
+    })
+  )
+  const view = render(<AudioWaveform clip={clip} transport={document.transport} />)
+  const mainPaths = () =>
+    Array.from(
+      view.container.querySelectorAll<SVGPathElement>(".audio-detail-wave-svg .audio-detail-peak")
+    )
+  expect(mainPaths()).toHaveLength(0)
+  expect(view.container.querySelectorAll(".audio-detail-overview .audio-detail-peak")).toHaveLength(
+    0
+  )
+  const initialDemand = demand.mock.calls.at(-1)
+  if (!initialDemand) throw new Error("Missing initial editor range demand")
+  const envelopes = initialDemand[1].map(({ request }) => {
+    const bins = Math.ceil(request.frameCount / request.framesPerBin)
+    return {
+      kind: "envelope",
+      sampleRate: source.sampleRate,
+      totalFrames: source.frames,
+      startFrame: request.startFrame,
+      frameCount: request.frameCount,
+      framesPerBin: request.framesPerBin,
+      channels: [
+        {
+          min: Array.from({ length: bins }, (_, index) => (index % 2 ? -0.6 : -0.9)),
+          max: Array.from({ length: bins }, () => -0.1),
+        },
+        {
+          min: Array.from({ length: bins }, () => 0.1),
+          max: Array.from({ length: bins }, (_, index) => (index % 2 ? 0.7 : 0.9)),
+        },
+      ],
+    } satisfies WaveformRange
+  })
+  act(() =>
+    waveformRanges.useWaveformRanges.setState({
+      entries: new Map([
+        [
+          "unrelated-envelope",
+          { kind: "ready", range: { sourceKey: "unrelated-source", data: envelopes[0] } },
+        ],
+      ]),
+    })
+  )
+  expect(mainPaths()).toHaveLength(0)
+  expect(view.container.querySelectorAll(".audio-detail-overview .audio-detail-peak")).toHaveLength(
+    0
+  )
+  const sourceKey = waveformRanges.sourceWaveformKey(source)
+  act(() => {
+    const entries = new Map(waveformRanges.useWaveformRanges.getState().entries)
+    envelopes.forEach((data, index) =>
+      entries.set(`editor-envelope/${index}`, {
+        kind: "ready",
+        range: { sourceKey, data },
+      })
+    )
+    waveformRanges.useWaveformRanges.setState({ entries })
+  })
+  const assertSignedContours = () => {
+    for (const selector of [".audio-detail-wave-svg", ".audio-detail-overview"]) {
+      const paths = Array.from(
+        view.container.querySelectorAll<SVGPathElement>(`${selector} .audio-detail-peak`)
+      )
+      expect(paths).toHaveLength(2)
+      expect(paths[0].getAttribute("d")).not.toBe(paths[1].getAttribute("d"))
+      for (const path of paths) {
+        expect(path.getAttribute("d")).toMatch(/^M.*Z$/i)
+        expect(path.style.fill).toBe("var(--foreground)")
+      }
+    }
+  }
+  assertSignedContours()
+  const previousPath = mainPaths()[0].getAttribute("d")
+  for (let index = 0; index < 20; index++) {
+    fireEvent.click(view.getByRole("button", { name: "detailAudio.zoomIn" }))
+  }
+  const latest = demand.mock.calls.at(-1)
+  if (!latest) throw new Error("Missing editor range demand")
+  const [visible, overview] = latest[1]
+  expect(visible.request.frameCount).toBeLessThan(overview.request.frameCount)
+  expect(overview.request.startFrame).toBe(0)
+  expect(overview.request.frameCount).toBe(source.frames)
+  const metadata = {
+    sampleRate: source.sampleRate,
+    totalFrames: source.frames,
+    startFrame: visible.request.startFrame,
+    frameCount: visible.request.frameCount,
+  }
+  const bins = Math.ceil(visible.request.frameCount / visible.request.framesPerBin)
+  const zoomedRange: WaveformRange =
+    visible.request.framesPerBin === 1
+      ? {
+          ...metadata,
+          kind: "samples",
+          channels: [
+            Array.from({ length: visible.request.frameCount }, (_, index) =>
+              index % 2 ? -0.2 : -0.9
+            ),
+            Array.from({ length: visible.request.frameCount }, (_, index) =>
+              index % 2 ? 0.8 : 0.1
+            ),
+          ],
+        }
+      : {
+          ...metadata,
+          kind: "envelope",
+          framesPerBin: visible.request.framesPerBin,
+          channels: [
+            {
+              min: Array.from({ length: bins }, () => -0.9),
+              max: Array.from({ length: bins }, (_, index) => (index % 2 ? -0.2 : -0.4)),
+            },
+            {
+              min: Array.from({ length: bins }, (_, index) => (index % 2 ? 0.1 : 0.3)),
+              max: Array.from({ length: bins }, () => 0.8),
+            },
+          ],
+        }
+  act(() =>
+    waveformRanges.useWaveformRanges.setState({
+      entries: new Map(waveformRanges.useWaveformRanges.getState().entries).set("editor-zoomed", {
+        kind: "ready",
+        range: { sourceKey, data: zoomedRange },
+      }),
+    })
+  )
+  expect(mainPaths()[0].getAttribute("d")).not.toBe(previousPath)
+  expect(mainPaths()[0].getAttribute("d")?.match(/M/g)).toHaveLength(1)
+  assertSignedContours()
+  const waveSvg = view.container.querySelector<SVGSVGElement>(".audio-detail-wave-svg")
+  if (!waveSvg) throw new Error("Missing waveform SVG")
+  const [x, y, width] = waveSvg.getAttribute("viewBox")!.split(" ").map(Number)
+  expect(x).toBe(0)
+  expect(y).toBe(0)
+  expect(width).toBeGreaterThan(100)
+  const projectedGroup = mainPaths()[0].parentElement
+  expect(projectedGroup?.getAttribute("transform")).toBeNull()
+  view.unmount()
+  expect(release).toHaveBeenLastCalledWith(`audio-editor/${clip.id}`)
 })

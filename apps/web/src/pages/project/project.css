@@ -4,6 +4,9 @@
   height: calc(var(--spacing) * 14);
   flex: none;
   background: var(--card);
+
+  /* The transport is its own band; a bottom line separates it from the dock. */
+  box-shadow: inset 0 -2px var(--border);
   color: var(--foreground);
   scrollbar-width: none;
 }
@@ -56,12 +59,16 @@
 
 .project-arrangement {
   --arrangement-group-rail-width: var(--project-group-rail-width);
-  --arrangement-surface: color-mix(in oklab, var(--card) 86%, var(--foreground));
-  --arrangement-surface-alt: color-mix(in oklab, var(--card) 84%, var(--foreground));
-  --arrangement-line: light-dark(var(--border), var(--muted));
-  --arrangement-grid-minor: var(--arrangement-line);
-  --arrangement-grid-bar: var(--arrangement-line);
-  --arrangement-grid-major: var(--arrangement-line);
+  --arrangement-surface: var(--background);
+  --arrangement-surface-alt: color-mix(in oklab, var(--background) 96%, var(--foreground));
+  --arrangement-line: var(--card);
+  --arrangement-ruler-line: var(--input);
+
+  /* Minor subdivisions read lighter than the 2px Pattern boundaries, which use
+     the full structural line color. */
+  --arrangement-grid-minor: color-mix(in oklab, var(--card) 55%, var(--background));
+  --arrangement-grid-bar: var(--card);
+  --arrangement-grid-major: var(--card);
   --arrangement-ruler: var(--arrangement-surface-alt);
   --arrangement-automation: var(--destructive);
   --arrangement-volume: var(--chart-2);
@@ -69,8 +76,13 @@
   --arrangement-meter-good: var(--chart-2);
   --arrangement-meter-warn: light-dark(var(--chart-4), var(--chart-3));
   --arrangement-meter-danger: var(--destructive);
-  --arrangement-clip-ink: light-dark(var(--foreground), var(--card));
   --arrangement-fade-mask: color-mix(in oklab, var(--arrangement-clip-ink) 50%, transparent);
+  --arrangement-muted-clip: color-mix(in oklab, var(--muted-foreground) 34%, var(--background));
+  --arrangement-muted-clip-title: color-mix(
+    in oklab,
+    var(--muted-foreground) 34%,
+    var(--background)
+  );
 }
 
 .project-arrangement-toolbar > button[data-size="control"],
@@ -90,6 +102,8 @@
 }
 
 .project-arrangement .arrangement-track-header {
+  position: relative;
+  z-index: 1;
   background: var(--arrangement-ruler);
   color: var(--foreground);
   font-size: var(--text-control-track);
@@ -106,7 +120,9 @@
 .arrangement-track-mixer {
   overflow: hidden;
   min-height: 0;
-  border-left: 1px solid var(--arrangement-line);
+
+  /* Section dividers are drawn inside the section so columns keep their width. */
+  box-shadow: inset 2px 0 var(--arrangement-line);
 }
 
 .arrangement-track-header
@@ -152,24 +168,28 @@
 
 .arrangement-group-rails {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
-  height: calc(100% + 3px);
+  overflow: hidden;
+  height: 100%;
   flex: none;
-  margin-top: -2px;
-  margin-bottom: -1px;
 }
 
+/* An ancestor band occupies only the identity column; the group header itself
+   starts at its parent depth rather than adding another indentation level. */
 .arrangement-group-rail {
   position: relative;
   width: var(--arrangement-group-rail-width);
   height: 100%;
   flex: none;
-  border-right: 1px solid var(--arrangement-line);
+  background: currentcolor;
+  box-shadow: inset -1px 0 var(--arrangement-line);
 }
 
 .arrangement-group-rail[data-closes] {
-  box-shadow: inset 0 -1px var(--arrangement-line);
+  box-shadow:
+    inset -1px 0 var(--arrangement-line),
+    inset 0 -2px var(--arrangement-line);
 }
 
 .arrangement-track-identity-body {
@@ -185,6 +205,15 @@
 .arrangement-track-identity-title > span {
   font-size: var(--text-control-track);
   font-weight: 500;
+}
+
+/* Automation editing keeps the title solid and fades everything below it. */
+.arrangement-track-identity-body[data-automation] {
+  background-clip: padding-box;
+}
+
+.arrangement-track-identity-body[data-automation] .arrangement-track-identity-lower {
+  opacity: 0.5;
 }
 
 .arrangement-track-header button[aria-haspopup] {
@@ -251,6 +280,16 @@ html[data-arrangement-cursor="ew-resize"] * {
   cursor: ew-resize !important;
 }
 
+html[data-arrangement-cursor="brace-left"],
+html[data-arrangement-cursor="brace-left"] * {
+  cursor: var(--arrangement-brace-left-cursor, w-resize), w-resize !important;
+}
+
+html[data-arrangement-cursor="brace-right"],
+html[data-arrangement-cursor="brace-right"] * {
+  cursor: var(--arrangement-brace-right-cursor, e-resize), e-resize !important;
+}
+
 html[data-arrangement-cursor="ns-resize"],
 html[data-arrangement-cursor="ns-resize"] * {
   cursor: ns-resize !important;
@@ -274,4 +313,14 @@ html[data-arrangement-cursor="text"] * {
 html[data-arrangement-cursor="not-allowed"],
 html[data-arrangement-cursor="not-allowed"] * {
   cursor: not-allowed !important;
+}
+
+/*
+Arrangement is pointer-first. Keyboard focus there should follow the row's own
+selection styling, so suppress the generic focus outline that otherwise paints a
+stray blue box around a card after a modifier click.
+*/
+.project-arrangement :focus-visible {
+  box-shadow: none;
+  outline: none;
 }

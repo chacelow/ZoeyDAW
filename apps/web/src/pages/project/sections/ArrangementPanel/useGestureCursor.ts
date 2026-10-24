@@ -1,7 +1,17 @@
 import { useLayoutEffect } from "react"
 
 export type GestureCursor =
-  "default" | "grabbing" | "move" | "ew-resize" | "ns-resize" | "crosshair" | "text" | "not-allowed"
+  | "default"
+  | "grabbing"
+  | "move"
+  | "ew-resize"
+  | "brace-left"
+  | "brace-right"
+  | "ns-resize"
+  | "crosshair"
+  | "text"
+  | "not-allowed"
+  | "pointer"
 
 const owners = new Map<symbol, GestureCursor>()
 let originalCursor: string | null = null

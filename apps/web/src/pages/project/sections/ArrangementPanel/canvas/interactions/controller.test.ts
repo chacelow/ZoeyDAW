@@ -1,7 +1,8 @@
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
+import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { createSceneStore } from "../scene"
 import { layoutTrackRows } from "../layout"
 import { createCanvasController } from "./controller"
@@ -9,7 +10,11 @@ import { createCanvasController } from "./controller"
 let dispose: (() => void) | undefined
 beforeEach(() => {
   hydrateProject(
-    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+    JSON.stringify({
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
   )
 })
 afterEach(() => {
@@ -24,6 +29,8 @@ it("does not duplicate a hidden clip selection after switching to automation mod
     bars: 128,
     grid: { mode: "fixed", bars: 1 },
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -70,6 +77,8 @@ function createClipController() {
     bars: 128,
     grid: { mode: "fixed", bars: 1 },
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -117,6 +126,7 @@ it("moves an audio clip by its title in automation mode and undoes in one step",
 it("keeps clip bodies and empty track lanes available for automation editing", () => {
   const { scene, element, pointer, clip } = createClipController()
   projectActions.setMode("automationMode", true)
+  scene.setAutomationDisplay({}, {}, true)
   const row = layoutTrackRows(scene.get()).find(item => item.track.id === "3-audio")!
   const bodyY = row.top + 60
   const lane = () =>

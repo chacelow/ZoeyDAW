@@ -1,0 +1,26 @@
+export default {
+  folders: "文件夹",
+  addFolder: "添加文件夹…",
+  addFolderHint: "添加本地目录，原文件保留在原位置。",
+  refresh: "刷新索引",
+  cancelScan: "取消扫描",
+  size: "大小",
+  empty: "没有音频或文件夹",
+  favorite: "收藏",
+  autoPreview: "选中音频时自动试听",
+  stop: "停止试听",
+  noSelection: "未选择音频",
+  waveform: "原始音频波形，点击从此处播放",
+  status: {
+    scanning: "扫描中",
+    ready: "就绪",
+    offline: "离线",
+    cancelled: "已取消",
+    error: "错误",
+  },
+  errors: {
+    nativeUnavailable: "本地音频浏览需要桌面应用。",
+    auditionUnavailable: "原生试听引擎不可用。",
+    operationFailed: "音频操作失败。",
+  },
+}

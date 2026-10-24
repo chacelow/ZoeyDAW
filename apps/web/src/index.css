@@ -71,37 +71,39 @@ html {
 
   --app-titlebar-height: calc(var(--spacing) * 16);
   --radius: 0.5rem;
-  --background: oklch(100% 0 0deg);
-  --foreground: oklch(14.5% 0 0deg);
-  --card: oklch(100% 0 0deg);
-  --card-foreground: oklch(14.5% 0 0deg);
-  --popover: oklch(100% 0 0deg);
-  --popover-foreground: oklch(14.5% 0 0deg);
-  --primary: oklch(20.5% 0 0deg);
-  --primary-foreground: oklch(98.5% 0 0deg);
-  --secondary: oklch(97% 0 0deg);
-  --secondary-foreground: oklch(20.5% 0 0deg);
-  --muted: oklch(97% 0 0deg);
-  --muted-foreground: oklch(55.6% 0 0deg);
-  --accent: oklch(97% 0 0deg);
-  --accent-foreground: oklch(20.5% 0 0deg);
-  --destructive: oklch(57.7% 0.245 27.325deg);
-  --border: oklch(92.2% 0 0deg);
-  --input: oklch(92.2% 0 0deg);
-  --ring: oklch(70.8% 0 0deg);
-  --chart-1: oklch(64.6% 0.222 41.116deg);
-  --chart-2: oklch(60% 0.118 184.704deg);
-  --chart-3: oklch(39.8% 0.07 227.392deg);
-  --chart-4: oklch(82.8% 0.189 84.429deg);
-  --chart-5: oklch(76.9% 0.188 70.08deg);
-  --sidebar: oklch(98.5% 0 0deg);
-  --sidebar-foreground: oklch(14.5% 0 0deg);
-  --sidebar-primary: oklch(20.5% 0 0deg);
-  --sidebar-primary-foreground: oklch(98.5% 0 0deg);
-  --sidebar-accent: oklch(97% 0 0deg);
-  --sidebar-accent-foreground: oklch(20.5% 0 0deg);
-  --sidebar-border: oklch(92.2% 0 0deg);
-  --sidebar-ring: oklch(70.8% 0 0deg);
+  --background: #fff;
+  --foreground: #3b3b3b;
+  --card: #f8f8f8;
+  --card-foreground: #3b3b3b;
+  --popover: #fff;
+  --popover-foreground: #3b3b3b;
+  --primary: #005fb8;
+  --primary-foreground: #fff;
+  --secondary: #e5e5e5;
+  --secondary-foreground: #3b3b3b;
+  --muted: #f8f8f8;
+  --muted-foreground: #616161;
+  --accent: #e8e8e8;
+  --accent-foreground: #000;
+  --destructive: #f85149;
+  --destructive-foreground: #fff;
+  --success: 131.0526 55.3398% 40.3922%;
+  --border: #e5e5e5;
+  --input: #cecece;
+  --ring: #005fb8;
+  --chart-1: #0063d3;
+  --chart-2: #388a34;
+  --chart-3: #bf8803;
+  --chart-4: #652d90;
+  --chart-5: #d18616;
+  --sidebar: #f8f8f8;
+  --sidebar-foreground: #3b3b3b;
+  --sidebar-primary: #005fb8;
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: #e8e8e8;
+  --sidebar-accent-foreground: #000;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #005fb8;
   --editor-shell: color-mix(in oklab, var(--muted) 30%, var(--background));
   --acc-expand: 250ms;
   --acc-collapse: 250ms;
@@ -118,43 +120,46 @@ html {
   --arrangement-surface-selected: color-mix(in oklab, var(--card) 78%, var(--foreground));
   --arrangement-clip-selected: oklch(87% 0.05 220deg);
   --arrangement-clip-paper: oklch(97% 0.005 90deg);
+  --arrangement-clip-ink: oklch(22% 0 0deg);
   --arrangement-clip-tint: 32%;
 }
 
 .dark {
   color-scheme: dark;
 
-  --background: oklch(14.5% 0 0deg);
-  --foreground: oklch(98.5% 0 0deg);
-  --card: oklch(20.5% 0 0deg);
-  --card-foreground: oklch(98.5% 0 0deg);
-  --popover: oklch(20.5% 0 0deg);
-  --popover-foreground: oklch(98.5% 0 0deg);
-  --primary: oklch(92.2% 0 0deg);
-  --primary-foreground: oklch(20.5% 0 0deg);
-  --secondary: oklch(26.9% 0 0deg);
-  --secondary-foreground: oklch(98.5% 0 0deg);
-  --muted: oklch(26.9% 0 0deg);
-  --muted-foreground: oklch(70.8% 0 0deg);
-  --accent: oklch(26.9% 0 0deg);
-  --accent-foreground: oklch(98.5% 0 0deg);
-  --destructive: oklch(70.4% 0.191 22.216deg);
-  --border: oklch(100% 0 0deg / 10%);
-  --input: oklch(100% 0 0deg / 15%);
-  --ring: oklch(55.6% 0 0deg);
-  --chart-1: oklch(48.8% 0.243 264.376deg);
-  --chart-2: oklch(69.6% 0.17 162.48deg);
-  --chart-3: oklch(76.9% 0.188 70.08deg);
-  --chart-4: oklch(62.7% 0.265 303.9deg);
-  --chart-5: oklch(64.5% 0.246 16.439deg);
-  --sidebar: oklch(20.5% 0 0deg);
-  --sidebar-foreground: oklch(98.5% 0 0deg);
-  --sidebar-primary: oklch(48.8% 0.243 264.376deg);
-  --sidebar-primary-foreground: oklch(98.5% 0 0deg);
-  --sidebar-accent: oklch(26.9% 0 0deg);
-  --sidebar-accent-foreground: oklch(98.5% 0 0deg);
-  --sidebar-border: oklch(100% 0 0deg / 10%);
-  --sidebar-ring: oklch(55.6% 0 0deg);
+  --background: #1f1f1f;
+  --foreground: #ccc;
+  --card: #181818;
+  --card-foreground: #ccc;
+  --popover: #1f1f1f;
+  --popover-foreground: #ccc;
+  --primary: #0078d4;
+  --primary-foreground: #fff;
+  --secondary: #2a2d2e;
+  --secondary-foreground: #ccc;
+  --muted: #181818;
+  --muted-foreground: #9d9d9d;
+  --accent: #04395e;
+  --accent-foreground: #fff;
+  --destructive: #f85149;
+  --destructive-foreground: #fff;
+  --success: 131.0526 55.3398% 40.3922%;
+  --border: #2b2b2b;
+  --input: #3c3c3c;
+  --ring: #0078d4;
+  --chart-1: #59a4f9;
+  --chart-2: #89d185;
+  --chart-3: #cca700;
+  --chart-4: #b180d7;
+  --chart-5: #d18616;
+  --sidebar: #181818;
+  --sidebar-foreground: #ccc;
+  --sidebar-primary: #0078d4;
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: #04395e;
+  --sidebar-accent-foreground: #fff;
+  --sidebar-border: #2b2b2b;
+  --sidebar-ring: #0078d4;
   --editor-shell: color-mix(in oklab, var(--muted) 30%, var(--background));
   --canvas-scrollbar: color-mix(in oklab, var(--foreground) 10%, transparent);
   --canvas-scrollbar-hover: color-mix(in oklab, var(--foreground) 18%, transparent);
@@ -162,6 +167,48 @@ html {
   --scrollbar-track: color-mix(in oklab, var(--foreground) 4%, var(--background));
   --scrollbar-thumb: var(--canvas-scrollbar);
   --scrollbar-thumb-hover: var(--canvas-scrollbar-hover);
+}
+
+.app-titlebar {
+  --titlebar-action-count: 5;
+  --titlebar-side-width: max(
+    80px,
+    calc(
+      var(--spacing-control-track) * var(--titlebar-action-count) + var(--spacing-control-gap) *
+        (var(--titlebar-action-count) - 1) + var(--spacing-control-track-gap)
+    )
+  );
+
+  height: var(--app-titlebar-height);
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, max(0px, calc(100% - var(--titlebar-side-width) * 2)))
+    minmax(0, 1fr);
+  user-select: none;
+}
+
+.app-titlebar[data-native-window-controls="true"] {
+  --titlebar-action-count: 8;
+}
+
+.app-titlebar-actions {
+  justify-content: safe flex-end;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.app-titlebar-actions button svg {
+  width: var(--spacing-control-icon);
+  height: var(--spacing-control-icon);
+  flex-shrink: 0;
+}
+
+.app-titlebar-actions button[aria-pressed="true"] {
+  color: var(--foreground);
+}
+
+.app-main-content {
+  padding-top: var(--app-titlebar-height);
 }
 
 [data-chat-markdown] :is(p, li, blockquote) {

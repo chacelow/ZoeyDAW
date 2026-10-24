@@ -3,12 +3,22 @@ import { isTauri } from "@tauri-apps/api/core"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { Copy, Minus, Settings, Square, X } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
-import { Button } from "@zoeymind/ui"
+import { Button, CONTROL_METRICS, controlMetricStyle } from "@zoeymind/ui"
 import { useSettingsDialog } from "@/shared/app-shared"
 import { getTitlebarMouseAction, isPhysicalTitlebarTarget } from "../titlebar-drag"
+import { nativeApplicationLifecycle } from "@/shared/native/application-lifecycle"
 import type { MouseEvent as ReactMouseEvent } from "react"
 
 const appWindow = isTauri() ? getCurrentWindow() : null
+const transportMetrics = CONTROL_METRICS.transport
+const titlebarMetrics = controlMetricStyle({
+  ...transportMetrics,
+  "--spacing-control-track":
+    transportMetrics["--spacing-control-track"] +
+    transportMetrics["--spacing-control-track-gap"] * 2,
+  "--spacing-control-icon":
+    transportMetrics["--spacing-control-icon"] + transportMetrics["--spacing-control-track-pad"],
+})
 
 async function detectPlatform(): Promise<"macos" | "windows" | "linux"> {
   const ua = navigator.userAgent.toLowerCase()
@@ -58,14 +68,14 @@ export function TitleBar({ title }: { readonly title?: string }) {
   const isMac = platform === "macos"
 
   const handleTitlebarMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (!isPhysicalTitlebarTarget(event.currentTarget, event.target as Node)) {
+    const target = event.target
+    if (!(target instanceof Element) || !isPhysicalTitlebarTarget(event.currentTarget, target)) {
       return
     }
-    const action = getTitlebarMouseAction(event.buttons, event.detail)
-    const target = event.target as HTMLElement
     if (target.closest("button, [role='menuitem'], [data-tab-interactive]")) {
       return
     }
+    const action = getTitlebarMouseAction(event.buttons, event.detail)
     if (action === "toggle-maximize") {
       void appWindow?.toggleMaximize()
     } else if (action === "start-dragging") {
@@ -77,62 +87,67 @@ export function TitleBar({ title }: { readonly title?: string }) {
     <div
       onMouseDown={handleTitlebarMouseDown}
       data-app-titlebar
-      className="bg-card fixed inset-x-0 top-0 z-[100] flex h-16 items-stretch"
+      data-native-window-controls={Boolean(appWindow && !isMac)}
+      style={{ display: "grid", ...titlebarMetrics }}
+      className="app-titlebar bg-card fixed inset-x-0 top-0 z-[100] items-center"
     >
-      <div className={appWindow && isMac ? "w-20 shrink-0" : "w-2 shrink-0"} aria-hidden />
-      <div className="text-muted-foreground flex min-w-0 flex-1 items-center justify-center text-base font-semibold">
+      <div aria-hidden />
+      <div className="text-muted-foreground px-control-gap flex min-w-0 items-center justify-center text-xs font-medium">
         {title ? <span className="truncate">{title}</span> : null}
       </div>
-      <div data-tab-interactive className="flex h-full items-center gap-1 pr-2">
+      <div
+        data-tab-interactive
+        className="app-titlebar-actions gap-control-gap pr-control-track-gap flex h-full min-w-0 items-center justify-end"
+      >
+        <div
+          id="app-titlebar-workspace-actions"
+          className="gap-control-gap flex shrink-0 items-center"
+        />
         <Button
           variant="ghost"
-          size="icon-lg"
-          className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground shrink-0 rounded-full active:scale-[0.96]"
+          size="control-icon"
+          className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
           onClick={() => openSettings()}
           aria-label={t("settings.title", "设置")}
           title={t("settings.title", "设置")}
         >
-          <Settings className="size-7" />
+          <Settings />
         </Button>
         {appWindow && !isMac ? (
           <div
             role="group"
-            className="flex h-full items-center gap-1"
+            className="gap-control-gap flex h-full shrink-0 items-center"
             aria-label={t("windowControls.groupLabel")}
           >
             <Button
               variant="ghost"
-              size="icon-lg"
-              className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground shrink-0 rounded-full active:scale-[0.96]"
+              size="control-icon"
+              className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
               onClick={() => void appWindow.minimize()}
               aria-label={t("windowControls.minimize")}
               title={t("windowControls.minimize")}
             >
-              <Minus className="size-7 stroke-[1.5]" />
+              <Minus className="stroke-[1.5]" />
             </Button>
             <Button
               variant="ghost"
-              size="icon-lg"
-              className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground shrink-0 rounded-full active:scale-[0.96]"
+              size="control-icon"
+              className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
               onClick={() => void appWindow.toggleMaximize()}
               aria-label={t(maximized ? "windowControls.restore" : "windowControls.maximize")}
               title={t(maximized ? "windowControls.restore" : "windowControls.maximize")}
             >
-              {maximized ? (
-                <Copy className="size-6 stroke-[1.5]" />
-              ) : (
-                <Square className="size-6 stroke-[1.5]" />
-              )}
+              {maximized ? <Copy className="stroke-[1.5]" /> : <Square className="stroke-[1.5]" />}
             </Button>
             <Button
               variant="ghost"
-              size="icon-lg"
-              className="text-muted-foreground hover:bg-destructive hover:text-destructive-foreground shrink-0 rounded-full active:scale-[0.96]"
-              onClick={() => void appWindow.close()}
+              size="control-icon"
+              className="text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+              onClick={() => void nativeApplicationLifecycle.requestClose()}
               aria-label={t("windowControls.close")}
               title={t("windowControls.close")}
             >
-              <X className="size-7 stroke-[1.5]" />
+              <X className="stroke-[1.5]" />
             </Button>
           </div>
         ) : null}

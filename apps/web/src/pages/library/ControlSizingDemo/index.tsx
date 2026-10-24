@@ -1,13 +1,14 @@
 import { useState } from "react"
-import { DragPadNumber, DragPadToggle } from "@zoeymind/ui"
+import { DragPadNumber } from "@zoeymind/ui"
+import { useTranslation } from "@zoeymind/i18n"
 
 export function ControlSizingDemo() {
+  const { t } = useTranslation()
   const [value, setValue] = useState(0.3)
-  const [active, setActive] = useState(false)
   return (
     <>
       <DragPadNumber
-        label="默认小数"
+        label={t("library.controls.decimal")}
         value={value}
         onChange={setValue}
         min={0}
@@ -15,7 +16,15 @@ export function ControlSizingDemo() {
         step={0.01}
         defaultValue={0.3}
       />
-      <DragPadToggle label="默认开关" value={active} onChange={setActive} />
+      <DragPadNumber
+        label={t("library.controls.position")}
+        value={value * 999}
+        onChange={next => setValue(next / 999)}
+        min={0}
+        max={999}
+        step={1}
+        defaultValue={0}
+      />
     </>
   )
 }

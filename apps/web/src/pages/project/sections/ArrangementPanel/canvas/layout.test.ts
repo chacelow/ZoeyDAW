@@ -1,6 +1,11 @@
+import {
+  DEFAULT_TRACK_HEIGHT,
+  arrangementViewProjection,
+  trackHeight,
+} from "@/pages/project/layout"
 import { describe, expect, it } from "vitest"
-import { createMockDocument } from "@/pages/project/adapters/fixtures"
-import { visibleTracks } from "@/pages/project/model/types"
+import { createMockDocument } from "@zoeydaw/project-runtime/testing"
+import { visibleTracks } from "@zoeydaw/project-core/types"
 import {
   arrangementBodyBottom,
   arrangementBodyTop,
@@ -8,11 +13,14 @@ import {
   maxTrackScrollY,
   pinnedTrackHeight,
   revealTrackScrollY,
+  scrollableTrackHeight,
   scrollableTrackViewportHeight,
+  TRACK_DROP_ZONE_HEIGHT,
 } from "./layout"
+import type { AutomationLayout } from "./layout"
 
 describe("arrangement track geometry", () => {
-  const tracks = visibleTracks(createMockDocument().tracks)
+  const tracks = visibleTracks(createMockDocument(DEFAULT_TRACK_HEIGHT).tracks)
   const height = 320
 
   it("moves ordinary headers and lanes together while return/main stay above the fixed time ruler", () => {
@@ -40,11 +48,89 @@ describe("arrangement track geometry", () => {
     )
     expect(maxTrackScrollY(tracks, height)).toBeGreaterThan(0)
     expect(maxTrackScrollY(tracks, 5000)).toBe(0)
+    // The drop zone is trailing content, so it extends the scrollable range.
+    expect(scrollableTrackHeight(tracks)).toBe(
+      tracks.reduce(
+        (total, track) =>
+          total + (track.kind === "return" || track.kind === "main" ? 0 : trackHeight(track)),
+        0
+      ) + TRACK_DROP_ZONE_HEIGHT
+    )
   })
 })
 
+it("keeps Main bottom-pinned and return automation stored when Return is hidden", () => {
+  const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
+  const returnTrack = document.tracks.find(track => track.kind === "return")!
+  returnTrack.collapsed = false
+  const audio = document.tracks.find(track => track.kind === "audio")!
+  audio.sends = { [returnTrack.id]: -12 }
+  const view = { routing: true, returns: false, overview: true }
+  const projected = arrangementViewProjection(document.tracks, view)
+  const display: AutomationLayout = {
+    mode: true,
+    lanes: { [returnTrack.id]: [{ kind: "mixer", parameter: "volume" }] },
+  }
+  const rows = layoutTrackRowsForViewport(projected.visible, 0, 320, display)
+  const restored = arrangementViewProjection(document.tracks, { ...view, returns: true })
+  const restoredRows = layoutTrackRowsForViewport(restored.visible, 0, 320, display)
+  expect(restoredRows.find(row => row.track.id === returnTrack.id)?.height).toBeGreaterThan(
+    rows.find(row => row.track.id === "main")!.height
+  )
+  expect(rows.some(row => row.track.id === returnTrack.id)).toBe(false)
+  const main = rows.find(row => row.track.kind === "main")!
+  expect(main.top + main.height).toBe(arrangementBodyBottom(320))
+  expect(projected.tracks.some(track => track.id === returnTrack.id)).toBe(false)
+  expect(document.tracks).toContain(returnTrack)
+  expect(document.tracks.find(track => track.id === audio.id)?.sends?.[returnTrack.id]).toBe(-12)
+  expect(display.lanes[returnTrack.id]).toHaveLength(1)
+  expect(arrangementViewProjection(document.tracks, { ...view, returns: true }).visible).toContain(
+    returnTrack
+  )
+})
+
+it("keeps clips in their own rows while extra automation lanes expand scroll and pinned geometry", () => {
+  const tracks = visibleTracks(createMockDocument(DEFAULT_TRACK_HEIGHT).tracks)
+  const display: AutomationLayout = {
+    mode: true,
+    lanes: {
+      "3-audio": [
+        { kind: "mixer", parameter: "volume" },
+        { kind: "mixer", parameter: "pan" },
+      ],
+      main: [{ kind: "mixer", parameter: "pan" }],
+    },
+  }
+  const before = layoutTrackRowsForViewport(tracks, 0, 700)
+  const after = layoutTrackRowsForViewport(tracks, 0, 700, display)
+  const original = before.find(row => row.track.id === "3-audio")!
+  const expanded = after.find(row => row.track.id === "3-audio")!
+  const following = after.find(row => row.track.id === "4-midi")!
+  expect(expanded.contentHeight).toBe(original.height)
+  expect(expanded.height).toBeGreaterThan(original.height)
+  expect(following.top).toBe(expanded.top + expanded.height)
+  expect(after.find(row => row.track.id === "main")!.top).toBe(
+    before.find(row => row.track.id === "main")!.top -
+      (after.find(row => row.track.id === "main")!.height -
+        before.find(row => row.track.id === "main")!.height)
+  )
+  expect(pinnedTrackHeight(tracks, display)).toBeGreaterThan(pinnedTrackHeight(tracks))
+  expect(maxTrackScrollY(tracks, 320, display)).toBeGreaterThan(maxTrackScrollY(tracks, 320))
+  const hidden = { mode: false, lanes: display.lanes }
+  expect(layoutTrackRowsForViewport(tracks, 0, 700, hidden).map(row => row.height)).toEqual(
+    before.map(row => row.height)
+  )
+  const folded = tracks.map(track =>
+    track.id === "3-audio" ? { ...track, collapsed: true } : track
+  )
+  expect(
+    layoutTrackRowsForViewport(folded, 0, 700, display).find(row => row.track.id === "3-audio")
+      ?.height
+  ).toBe(layoutTrackRowsForViewport(folded, 0, 700).find(row => row.track.id === "3-audio")?.height)
+})
+
 it("anchors each pinned track's bottom while it folds downward", () => {
-  const tracks = visibleTracks(createMockDocument().tracks)
+  const tracks = visibleTracks(createMockDocument(DEFAULT_TRACK_HEIGHT).tracks)
   const pinned = tracks.filter(track => track.kind === "return" || track.kind === "main")
   const expanded = layoutTrackRowsForViewport(tracks, 0, 320)
   for (const track of pinned) {
@@ -61,7 +147,7 @@ it("anchors each pinned track's bottom while it folds downward", () => {
 })
 
 it("keeps a folded group's compact summary lane while removing child rows", () => {
-  const { tracks } = createMockDocument()
+  const { tracks } = createMockDocument(DEFAULT_TRACK_HEIGHT)
   const group = tracks.find(track => track.id === "drums-group")!
   const child = tracks.find(track => track.id === "trager")!
   const expanded = layoutTrackRowsForViewport(visibleTracks(tracks), 0, 320)
@@ -82,7 +168,7 @@ it("keeps a folded group's compact summary lane while removing child rows", () =
 })
 
 it("folds nested groups independently into compact summary lanes", () => {
-  const { tracks } = createMockDocument()
+  const { tracks } = createMockDocument(DEFAULT_TRACK_HEIGHT)
   const outer = tracks.find(track => track.id === "drums-group")!
   const inner = tracks.find(track => track.id === "sidechain")!
   const leaf = tracks.find(track => track.id === "trager")!
@@ -110,7 +196,7 @@ it("folds nested groups independently into compact summary lanes", () => {
 })
 
 it("reveals the inspected track when an editor reduces the lane viewport", () => {
-  const tracks = visibleTracks(createMockDocument().tracks)
+  const tracks = visibleTracks(createMockDocument(DEFAULT_TRACK_HEIGHT).tracks)
   const next = revealTrackScrollY(tracks, 320, 0, "4-midi")
   const row = layoutTrackRowsForViewport(tracks, next, 320).find(row => row.track.id === "4-midi")
   if (!row) {

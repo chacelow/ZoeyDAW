@@ -33,6 +33,7 @@ export function marqueeGesture(
         kind: "automation",
         trackId: row.track.id,
         laneId: row.laneId,
+        placement: row.placement,
         pointIds,
       })
     },
@@ -44,6 +45,7 @@ export function marqueeGesture(
           kind: "automation",
           trackId: row.track.id,
           laneId: row.laneId,
+          placement: row.placement,
           pointIds: [],
         })
       }

@@ -7,6 +7,7 @@ export {
   TRACK_RESIZE_STEP,
   TRACK_REVEAL_THRESHOLD,
   CONTROLS_WIDTH,
+  arrangementViewProjection,
   trackHeight,
   trackControlRows,
   resizeTrackHeight,

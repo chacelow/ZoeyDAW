@@ -12,16 +12,25 @@ export type CloseBehavior = "ask" | "tray" | "quit"
 export const CLOSE_BEHAVIOR_KEY = "window-close-behavior"
 export const DEFAULT_CLOSE_BEHAVIOR: CloseBehavior = "ask"
 
-const VALUES: readonly CloseBehavior[] = ["ask", "tray", "quit"] as const
+const VALUES: readonly CloseBehavior[] = ["ask", "tray", "quit"]
 
 export function getCloseBehavior(): CloseBehavior {
-  if (typeof window === "undefined") {
+  try {
+    if (typeof window === "undefined") return DEFAULT_CLOSE_BEHAVIOR
+    const raw = window.localStorage.getItem(CLOSE_BEHAVIOR_KEY)
+    return VALUES.find(value => value === raw) ?? DEFAULT_CLOSE_BEHAVIOR
+  } catch {
     return DEFAULT_CLOSE_BEHAVIOR
   }
-  const raw = window.localStorage.getItem(CLOSE_BEHAVIOR_KEY)
-  return raw !== null && (VALUES as readonly string[]).includes(raw)
-    ? (raw as CloseBehavior)
-    : DEFAULT_CLOSE_BEHAVIOR
+}
+
+export function setCloseBehavior(behavior: CloseBehavior): boolean {
+  try {
+    window.localStorage.setItem(CLOSE_BEHAVIOR_KEY, behavior)
+    return true
+  } catch {
+    return false
+  }
 }
 
 export type CloseButtonAction = "allow-close" | "hide-to-tray" | "ask"

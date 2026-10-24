@@ -1,4 +1,4 @@
-import type { Track } from "@/pages/project/model/types"
+import type { Track } from "@zoeydaw/project-core/types"
 
 export function clampBar(bar: number, endBar: number): number {
   return Math.min(endBar, Math.max(1, bar))

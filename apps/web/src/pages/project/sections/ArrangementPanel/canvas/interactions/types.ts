@@ -1,4 +1,4 @@
-import type { ProjectState } from "@/pages/project/model/types"
+import type { ProjectState } from "@zoeydaw/project-core/types"
 import type { projectActions } from "@/pages/project/adapters"
 import type { GestureCursor } from "@/pages/project/sections/ArrangementPanel/useGestureCursor"
 import type { SceneStore } from "../scene"
@@ -22,7 +22,13 @@ export type CanvasMenuTarget =
   | { kind: "marker"; markerId: string }
   | { kind: "loop" }
   | { kind: "ruler"; bar: number }
-  | { kind: "automation-point"; trackId: string; laneId: string; pointId: string }
+  | {
+      kind: "automation-point"
+      trackId: string
+      laneId: string
+      pointId: string
+      placement: "primary" | "extra"
+    }
   | {
       kind: "automation-segment"
       trackId: string

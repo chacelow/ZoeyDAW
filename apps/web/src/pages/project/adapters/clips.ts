@@ -1,15 +1,21 @@
-import { acceptsClip } from "../model/types"
-import { projectClipMove, projectClipResize } from "../model/clip-edits"
-import { cloneClip, createClip, mapClips, uniqueId } from "../model/reducers"
+import { acceptsClip } from "@zoeydaw/project-core/types"
+import {
+  insertClips,
+  projectClipMove,
+  projectClipResize,
+  replaceClip,
+} from "@zoeydaw/project-core/clip-edits"
+import { clipWindow } from "@zoeydaw/project-core/clip-window"
+import { cloneClip, createClip, mapClips, uniqueId } from "@zoeydaw/project-core/reducers"
 import {
   clampFadeCurve,
   clampFadeCurvePosition,
   clampFadeIntervals,
-  fadeWindow,
-} from "../model/fades"
-import { editClip, get, session, tracks, updateTrack } from "./context"
-import { withWaveformPreview } from "./visuals"
-import type { AudioClip, Clip } from "../model/types"
+} from "@zoeydaw/project-core/fades"
+import { resolveMidiClip, withPatternNotes } from "@zoeydaw/project-core/patterns"
+import { document, editClip, get, session, tracks, updateTrack } from "./context"
+import { withWaveformPreview } from "@zoeydaw/project-runtime/visuals"
+import type { AudioClip, Clip } from "@zoeydaw/project-core/types"
 
 export const clipActions = {
   createClip(trackId: string, kind: Clip["kind"], startBar: number, lengthBars: number) {
@@ -24,14 +30,26 @@ export const clipActions = {
     }
     const clip = createClip(kind, startBar, lengthBars)
     updateTrack(trackId, {
-      clips: [...target.clips, clip.kind === "audio" ? withWaveformPreview(clip) : clip],
+      clips: insertClips(
+        target.clips,
+        [clip.kind === "audio" ? withWaveformPreview(clip, get().document.media) : clip],
+        () => uniqueId("clip"),
+        get().document.transport.bpm
+      ),
     })
+    return clip.id
   },
   updateClip(id: string, patch: Partial<Clip>) {
-    editClip(id, clip => {
+    if (
+      "sourceId" in patch &&
+      patch.sourceId !== null &&
+      !get().document.media.some(source => source.id === patch.sourceId)
+    ) {
+      return
+    }
+    const apply = (clip: Clip): Clip => {
       if (
-        ("notes" in patch && clip.kind !== "midi") ||
-        ("steps" in patch && clip.kind !== "pattern") ||
+        ("notes" in patch && clip.kind === "audio") ||
         (("gainDb" in patch ||
           "fadeInBars" in patch ||
           "fadeOutBars" in patch ||
@@ -39,7 +57,7 @@ export const clipActions = {
           "fadeOutOffsetBars" in patch ||
           "fadeInCurve" in patch ||
           "fadeOutCurve" in patch ||
-          "samplePath" in patch ||
+          "sourceId" in patch ||
           "waveformPeaks" in patch) &&
           clip.kind !== "audio")
       ) {
@@ -119,10 +137,33 @@ export const clipActions = {
       if (clip.kind === "midi" && patch.kind !== "audio" && patch.kind !== "pattern") {
         return { ...clip, ...structuredClone(patch), id: clip.id, kind: "midi" }
       }
-      return clip.kind === "pattern" && patch.kind !== "audio" && patch.kind !== "midi"
-        ? { ...clip, ...structuredClone(patch), id: clip.id, kind: "pattern" }
-        : clip
-    })
+      if (clip.kind === "pattern" && patch.kind !== "audio" && patch.kind !== "midi") {
+        const placement = structuredClone(patch)
+        if ("notes" in placement) delete placement.notes
+        if ("loopBars" in placement) delete placement.loopBars
+        return { ...clip, ...placement, id: clip.id, kind: "pattern" }
+      }
+      return clip
+    }
+    const state = get().document
+    const clip = state.tracks.flatMap(track => track.clips).find(item => item.id === id)
+    if (clip?.kind === "pattern" && ("notes" in patch || "loopBars" in patch)) {
+      const nextClip = apply(clip)
+      if (nextClip === clip) return
+      const source = resolveMidiClip(clip, state.patterns)
+      const next = withPatternNotes(
+        state,
+        clip.patternId,
+        "notes" in patch && patch.notes ? structuredClone(patch.notes) : source.notes,
+        "loopBars" in patch ? patch.loopBars : undefined
+      )
+      document({
+        ...next,
+        tracks: replaceClip(next.tracks, nextClip, () => uniqueId("clip"), state.transport.bpm),
+      })
+      return
+    }
+    editClip(id, apply)
   },
   moveClips(ids: string[], targetTrackId: string, deltaBars: number, copy = false) {
     const plan = projectClipMove(
@@ -135,7 +176,8 @@ export const clipActions = {
       {
         clip: () => uniqueId("clip"),
         automation: key => uniqueId(key.startsWith("lane:") ? "lane" : "point"),
-      }
+      },
+      get().document.transport.bpm
     )
     if (!plan) {
       return
@@ -147,8 +189,10 @@ export const clipActions = {
   },
   resizeClip(id: string, edge: "left" | "right", bar: number) {
     editClip(id, clip => {
-      const next = projectClipResize(clip, edge, bar)
-      return next !== clip && next.kind === "audio" ? withWaveformPreview(next) : next
+      const next = projectClipResize(clip, edge, bar, get().document.transport.bpm)
+      return next !== clip && next.kind === "audio"
+        ? withWaveformPreview(next, get().document.media)
+        : next
     })
   },
   deleteClips(ids: string[]) {
@@ -159,22 +203,14 @@ export const clipActions = {
     session({ selectedClipIds: [] })
   },
   duplicateClips(ids: string[]) {
+    const source = get().document.tracks
     const selected = new Set(ids)
-    const copied: string[] = []
-    tracks(
-      get().document.tracks.map(track => ({
-        ...track,
-        clips: track.clips.flatMap(clip => {
-          if (!selected.has(clip.id)) return [clip]
-          const duplicate = { ...cloneClip(clip), startBar: clip.startBar + clip.lengthBars }
-          copied.push(duplicate.id)
-          return [clip, duplicate]
-        }),
-      }))
-    )
-    if (copied.length) {
-      session({ selectedClipIds: copied })
-    }
+    const anchor = source.find(track => track.clips.some(clip => clip.id === ids[0]))
+    const clips = source.flatMap(track => track.clips.filter(clip => selected.has(clip.id)))
+    if (!anchor || !clips.length) return
+    const start = Math.min(...clips.map(clip => clip.startBar))
+    const end = Math.max(...clips.map(clip => clip.startBar + clip.lengthBars))
+    clipActions.moveClips(ids, anchor.id, end - start, true)
   },
   splitClips(ids: string[], bar: number) {
     if (!Number.isFinite(bar)) {
@@ -191,34 +227,25 @@ export const clipActions = {
             bar >= clip.startBar + clip.lengthBars
           )
             return [clip]
-          const leftLength = bar - clip.startBar
-          const right = {
-            ...cloneClip(clip),
-            startBar: bar,
-            lengthBars: clip.lengthBars - leftLength,
-          }
-          if (clip.kind === "audio" && right.kind === "audio") {
-            const rightOffset = (clip.sourceOffsetBars ?? 0) + leftLength
-            const leftFades = fadeWindow(clip, 0, leftLength)
-            const rightFades = fadeWindow(clip, leftLength, right.lengthBars)
-            return [
-              withWaveformPreview({ ...clip, lengthBars: leftLength, ...leftFades }),
-              withWaveformPreview({
-                ...right,
-                sourceOffsetBars: rightOffset,
-                ...rightFades,
-              }),
-            ]
-          }
-          return [
-            { ...clip, lengthBars: leftLength },
-            { ...right, sourceOffsetBars: (clip.sourceOffsetBars ?? 0) + leftLength },
-          ]
+          const bpm = get().document.transport.bpm
+          const left = clipWindow(clip, clip.startBar, bar, bpm)
+          const right = clipWindow(cloneClip(clip), bar, clip.startBar + clip.lengthBars, bpm)
+          return [left, right].flatMap(piece =>
+            piece
+              ? [piece.kind === "audio" ? withWaveformPreview(piece, get().document.media) : piece]
+              : []
+          )
         }),
       }))
     )
   },
   setEditingClip(id: string | null) {
-    session({ editingClipId: id })
+    const current = get().session
+    if (id && !get().document.tracks.some(track => track.clips.some(clip => clip.id === id))) return
+    session({
+      editingClipId: id,
+      ...(id && { selectedClipIds: [id] }),
+      clipEditorRequest: current.clipEditorRequest + 1,
+    })
   },
 }

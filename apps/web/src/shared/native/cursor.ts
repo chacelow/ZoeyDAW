@@ -9,5 +9,20 @@ export function moveWindowCursor(clientX: number, clientY: number): void | Promi
   if (!hasNativeCursor()) {
     return
   }
-  return getCurrentWindow().setCursorPosition(new LogicalPosition(clientX, clientY))
+  let owner: Window = window
+  let x = clientX
+  let y = clientY
+  while (owner !== owner.parent) {
+    const frame = owner.frameElement
+    if (!frame) break
+    const bounds = frame.getBoundingClientRect()
+    const width = frame.clientWidth + frame.clientLeft * 2
+    const height = frame.clientHeight + frame.clientTop * 2
+    const scaleX = width ? bounds.width / width : 1
+    const scaleY = height ? bounds.height / height : 1
+    x = bounds.left + (frame.clientLeft + x) * scaleX
+    y = bounds.top + (frame.clientTop + y) * scaleY
+    owner = owner.parent
+  }
+  return getCurrentWindow().setCursorPosition(new LogicalPosition(x, y))
 }

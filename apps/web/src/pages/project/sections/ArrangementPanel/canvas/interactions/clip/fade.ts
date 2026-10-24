@@ -3,7 +3,7 @@ import {
   DEFAULT_FADE_CURVE,
   FADE_CURVE_VERTICAL_SCALE,
   fadeControls,
-} from "@/pages/project/model/fades"
+} from "@zoeydaw/project-core/fades"
 import { clipRect, layoutTrackRows } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import {
   clipVisualGeometry,
@@ -11,7 +11,7 @@ import {
 } from "@/pages/project/sections/ArrangementPanel/canvas/clip-geometry"
 import { beginProjectPreview, finishProjectPreview, setTracksPreview } from "../project-preview"
 import type { CanvasGesture, CanvasPointer, InteractionContext } from "../types"
-import type { AudioClip } from "@/pages/project/model/types"
+import type { AudioClip } from "@zoeydaw/project-core/types"
 
 export function createFadeGesture(
   context: InteractionContext,

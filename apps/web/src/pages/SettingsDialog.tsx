@@ -1,19 +1,18 @@
-/**
- * SettingsDialog — prototype 阶段精简版。
- *
- * 保留以前的交互形态 (SettingsShell: 左侧导航 + 右侧内容)，
- * 但只装 4 段：外观 / 语言 / 日志 / 关于。
- * AI / MCP / 工程偏好等待 DAW 需求成形后再加。
- */
-import { Palette, Languages, FileText, Info } from "lucide-react"
+/** Application settings retain their shared shell and independent sections. */
+import { useState } from "react"
+import { Palette, Languages, FileText, Info, AudioLines, Import } from "lucide-react"
 import { useTranslation, SUPPORTED_LOCALES, useChangeLocale, useLocale } from "@zoeymind/i18n"
-import { Label, RadioGroup, RadioGroupItem, SettingsShell, Separator } from "@zoeymind/ui"
+import { Checkbox, Label, RadioGroup, RadioGroupItem, SettingsShell, Separator } from "@zoeymind/ui"
 import { useSettingsDialog } from "@/shared/app-shared"
 import { ThemeModeToggle, ThemePresetGrid } from "@/shared/app-shared/ThemeMenu"
+import { getCloseBehavior, setCloseBehavior } from "@/shared/native/close-behavior"
 import type { SettingsNavItem } from "@zoeymind/ui"
-import type { SettingsSectionId } from "@/shared/app-shared"
-
-const SECTION_ORDER = new Set<SettingsSectionId>(["preferences", "editor", "ai", "agent", "about"])
+import { AudioDeviceSettings } from "./AudioDeviceSettings"
+import { PluginSettings } from "./PluginSettings"
+import {
+  getAudioImportPreferences,
+  setAudioImportPreferences,
+} from "@/shared/app-shared/audio-import-preferences"
 
 export function SettingsDialog() {
   const { t } = useTranslation()
@@ -25,12 +24,14 @@ export function SettingsDialog() {
   const items: SettingsNavItem[] = [
     { id: "preferences", label: t("settings.sections.appearance", "外观"), icon: Palette },
     { id: "editor", label: t("settings.sections.language", "语言"), icon: Languages },
+    { id: "agent", label: t("audioSettings.title"), icon: AudioLines },
+    { id: "import", label: t("settings.import.title"), icon: Import },
+    { id: "plugins", label: t("pluginSettings.title") },
     { id: "ai", label: t("settings.sections.logs", "日志"), icon: FileText },
     { id: "about", label: t("settings.sections.about", "关于"), icon: Info },
   ]
 
-  // settings-dialog-store 的 SettingsSectionId 保留了老枚举，这里按位复用避免 store 改动。
-  const activeId = SECTION_ORDER.has(section) ? section : "preferences"
+  const activeId = section === "mcp" ? "preferences" : section
 
   return (
     <SettingsShell
@@ -39,13 +40,56 @@ export function SettingsDialog() {
       title={t("settings.title", "设置")}
       items={items}
       activeId={activeId}
-      onActiveChange={id => setSection(id as SettingsSectionId)}
+      onActiveChange={id => {
+        if (
+          id === "preferences" ||
+          id === "editor" ||
+          id === "ai" ||
+          id === "agent" ||
+          id === "about" ||
+          id === "import" ||
+          id === "plugins"
+        )
+          setSection(id)
+      }}
     >
       {activeId === "preferences" && <AppearanceSection />}
       {activeId === "editor" && <LanguageSection />}
       {activeId === "ai" && <LogsSection />}
+      {activeId === "agent" && <AudioDeviceSettings />}
+      {activeId === "import" && <AudioImportSettings />}
+      {activeId === "plugins" && <PluginSettings />}
       {activeId === "about" && <AboutSection />}
     </SettingsShell>
+  )
+}
+
+function AudioImportSettings() {
+  const { t } = useTranslation()
+  const [preferences, setPreferences] = useState(getAudioImportPreferences)
+  const [error, setError] = useState(false)
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="audio-import-auto-warp"
+          checked={preferences.autoWarp}
+          onCheckedChange={checked => {
+            const next = { autoWarp: checked === true }
+            const saved = setAudioImportPreferences(next)
+            setError(!saved)
+            if (saved) setPreferences(next)
+          }}
+        />
+        <Label htmlFor="audio-import-auto-warp">{t("settings.import.autoWarp")}</Label>
+      </div>
+      <p className="text-muted-foreground text-sm">{t("settings.import.description")}</p>
+      {error && (
+        <p role="alert" className="text-destructive text-sm">
+          {t("settings.import.preferenceUnavailable")}
+        </p>
+      )}
+    </section>
   )
 }
 
@@ -62,6 +106,49 @@ function AppearanceSection() {
         <Label>{t("ui.theme.preset", "主题预设")}</Label>
         <ThemePresetGrid />
       </div>
+      <Separator />
+      <WindowCloseSettings />
+    </section>
+  )
+}
+
+function WindowCloseSettings() {
+  const { t } = useTranslation()
+  const [behavior, setBehavior] = useState(getCloseBehavior)
+  const [error, setError] = useState(false)
+  return (
+    <section className="flex flex-col gap-2">
+      <Label>{t("settings.window.closeBehavior")}</Label>
+      <p className="text-muted-foreground text-sm">{t("settings.window.closeBehaviorDesc")}</p>
+      <RadioGroup
+        value={behavior}
+        onValueChange={value => {
+          if (value !== "ask" && value !== "tray" && value !== "quit") return
+          const saved = setCloseBehavior(value)
+          setError(!saved)
+          if (saved) setBehavior(value)
+        }}
+      >
+        {(["ask", "tray", "quit"] as const).map(value => (
+          <div key={value} className="flex items-center gap-2">
+            <RadioGroupItem value={value} id={`close-${value}`} />
+            <Label htmlFor={`close-${value}`}>
+              {t(
+                value === "ask"
+                  ? "settings.window.closeAsk"
+                  : value === "tray"
+                    ? "settings.window.closeTray"
+                    : "settings.window.closeQuit"
+              )}
+            </Label>
+          </div>
+        ))}
+      </RadioGroup>
+      {error && (
+        <p role="alert" className="text-destructive text-sm">
+          {t("windowClose.preferenceUnavailable")}
+        </p>
+      )}
     </section>
   )
 }

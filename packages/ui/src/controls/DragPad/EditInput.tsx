@@ -19,7 +19,11 @@ export interface EditInputProps {
   readonly className?: string
   readonly style?: CSSProperties
   readonly icon?: ReactNode
+  readonly leading?: ReactNode
   readonly size?: "default" | "compact"
+  readonly invalid?: boolean
+  readonly active?: boolean
+  readonly highlight?: boolean
   /**
   决定 chrome 宽度的 ghost 文本样本(通常传 `[format(min), format(max)]`)。
   */
@@ -37,25 +41,26 @@ export const EditInput = forwardRef<HTMLInputElement, EditInputProps>(
       className,
       style,
       icon,
+      leading,
       size = "default",
+      invalid = false,
+      active = false,
+      highlight = false,
       samples,
     },
     reference
   ) => {
     const infoHandlers = useInfoBinding({ type: "number" })
-    const mergedClass = [icon ? "gap-control-gap" : "", "cursor-text", className ?? ""]
+    const mergedClass = [icon || leading ? "gap-control-gap" : "", "cursor-text", className ?? ""]
       .filter(Boolean)
       .join(" ")
     return (
       <div
         style={style}
         {...infoHandlers}
-        className={controlInteractiveClasses(
-          { active: false, highlight: false, size },
-          mergedClass
-        )}
+        className={controlInteractiveClasses({ active, highlight, size }, mergedClass)}
       >
-        {icon ? <IconSlot size={size}>{icon}</IconSlot> : null}
+        {leading ?? (icon ? <IconSlot size={size}>{icon}</IconSlot> : null)}
         <span className="relative inline-grid items-center justify-center">
           {samples.map((s, index) => (
             <span
@@ -83,6 +88,7 @@ export const EditInput = forwardRef<HTMLInputElement, EditInputProps>(
               }
             }}
             aria-label={ariaLabel}
+            aria-invalid={invalid || undefined}
             className={
               size === "compact"
                 ? "text-control-compact absolute inset-0 w-full min-w-0 bg-transparent text-center leading-none text-current tabular-nums outline-hidden"

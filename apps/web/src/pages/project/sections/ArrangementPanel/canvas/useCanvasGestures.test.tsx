@@ -1,3 +1,4 @@
+import { DEFAULT_TRACK_HEIGHT, TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { act, cleanup, fireEvent, render } from "@testing-library/react"
@@ -8,12 +9,16 @@ import {
   startProjectRuntime,
   useProjectState,
 } from "@/pages/project/adapters"
-import { createMockDocument, createMockWorkspace } from "@/pages/project/adapters/fixtures"
-import { TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  createMockProjectBackend,
+} from "@zoeydaw/project-runtime/testing"
 import { useArrangementKeyboard } from "../Timeline/useArrangementKeyboard"
 import { arrangementScene } from "./scene"
 import { layoutTrackRows, clipRect } from "./layout"
 import { useCanvasGestures } from "./useCanvasGestures"
+import { configureProjectBackend } from "@/pages/project/adapters/context"
 
 let releaseRuntime: (() => void) | undefined
 
@@ -61,8 +66,13 @@ function clipById(id: string) {
 }
 
 beforeEach(() => {
+  configureProjectBackend(createMockProjectBackend)
   hydrateProject(
-    JSON.stringify({ version: 2, document: createMockDocument(), workspace: createMockWorkspace() })
+    JSON.stringify({
+      version: 3,
+      document: createMockDocument(DEFAULT_TRACK_HEIGHT),
+      workspace: createMockWorkspace(),
+    })
   )
   const state = useProjectState.getState()
   arrangementScene.setProjectPreview(null)
@@ -70,6 +80,8 @@ beforeEach(() => {
     bars: 128,
     grid: state.workspace.grid,
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -204,6 +216,8 @@ describe("canvas clip gestures", () => {
       bars: 128,
       grid: { mode: "fixed", bars: 1 },
       transport: useProjectState.getState().document.transport,
+      media: useProjectState.getState().document.media,
+      patterns: useProjectState.getState().document.patterns,
       markers: useProjectState.getState().document.markers,
       loop: useProjectState.getState().document.transport.loop,
       tracks: useProjectState.getState().document.tracks,
@@ -259,6 +273,8 @@ describe("canvas clip gestures", () => {
       bars: 128,
       grid: state.workspace.grid,
       transport: state.document.transport,
+      media: state.document.media,
+      patterns: state.document.patterns,
       markers: state.document.markers,
       loop: state.document.transport.loop,
       tracks: state.document.tracks,
@@ -290,9 +306,28 @@ describe("canvas clip gestures", () => {
       fireEvent.pointerUp(host, title)
     })
     expect(useProjectState.getState().session.selectedClipIds).toEqual(["audio-1"])
-    expect(useProjectState.getState().session.editingClipId).toBeNull()
+    expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
     act(() => fireEvent.doubleClick(host, { clientX: title.clientX, clientY: title.clientY }))
-    expect(useProjectState.getState().session.editingClipId).toBeNull()
+    expect(useProjectState.getState().session.selectedClipIds).toEqual(["audio-1"])
+    expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
+  })
+
+  it("selects and opens a newly created clip on an empty lane double click", () => {
+    const host = render(<Canvas />).getByTestId("host")
+    const scene = arrangementScene.get()
+    const row = layoutTrackRows(scene).find(item => item.track.id === "3-audio")
+    if (!row) {
+      throw new Error("Missing audio lane")
+    }
+    const before = useProjectState.getState().session.clipEditorRequest
+    act(() =>
+      fireEvent.doubleClick(host, { clientX: 640, clientY: row.top + TRACK_TITLE_HEIGHT + 12 })
+    )
+    const state = useProjectState.getState()
+    const created = state.document.tracks.find(track => track.id === "3-audio")?.clips.at(-1)
+    expect(created).toBeDefined()
+    expect(state.session.selectedClipIds).toEqual([created?.id])
+    expect(state.session.clipEditorRequest).toBe(before + 1)
   })
 
   it("toggles clip selection with modifiers without starting a document gesture", () => {
@@ -374,6 +409,8 @@ it("clamps a selected group at the project start without collapsing its relative
     bars: 128,
     grid: { mode: "fixed", bars: 1 },
     transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
     markers: state.document.markers,
     loop: state.document.transport.loop,
     tracks: state.document.tracks,
@@ -433,7 +470,6 @@ it("retains recorded notes when a clip drag returns to its origin and continues"
   const start = pointFor("audio-1", 24, 7)
   act(() => {
     projectActions.toggleRecording()
-    projectActions.togglePlay()
     fireEvent.pointerDown(host, start)
     fireEvent.pointerMove(host, { ...start, clientX: start.clientX + 128 })
     projectActions.noteOn(82)
@@ -456,10 +492,10 @@ it("cancels an active canvas drag when a new project reuses track IDs", () => {
     fireEvent.pointerMove(host, start)
   })
   act(() => {
-    const document = createMockDocument()
+    const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
     document.name = "New session"
     document.tracks = document.tracks.map(track => ({ ...track, clips: [] }))
-    hydrateProject(JSON.stringify({ version: 2, document, workspace: createMockWorkspace() }))
+    hydrateProject(JSON.stringify({ version: 3, document, workspace: createMockWorkspace() }))
   })
   act(() => {
     fireEvent.pointerMove(host, { ...start, clientX: start.clientX + 256 })
@@ -474,20 +510,21 @@ it("does not restore an old ruler seek into a newly hydrated project", () => {
   const host = render(<Canvas />).getByTestId("host")
   act(() => {
     projectActions.seekBar(20)
-    fireEvent.pointerDown(host, { clientX: 320, clientY: 1, pointerId: 7, button: 0 })
-    fireEvent.pointerMove(host, { clientX: 384, clientY: 1, pointerId: 7, button: 0 })
+    fireEvent.pointerDown(host, { clientX: 320, clientY: 25, pointerId: 7, button: 0 })
+    fireEvent.pointerMove(host, { clientX: 384, clientY: 25, pointerId: 7, button: 0 })
   })
   expect(useProjectState.getState().session.position.bar).not.toBe(20)
+  act(() => projectActions.stop())
   act(() =>
     hydrateProject(
       JSON.stringify({
-        version: 2,
-        document: createMockDocument(),
+        version: 3,
+        document: createMockDocument(DEFAULT_TRACK_HEIGHT),
         workspace: createMockWorkspace(),
       })
     )
   )
-  act(() => fireEvent.pointerCancel(host, { clientX: 384, clientY: 1, pointerId: 7, button: 0 }))
+  act(() => fireEvent.pointerCancel(host, { clientX: 384, clientY: 25, pointerId: 7, button: 0 }))
   expect(useProjectState.getState().session.position.bar).toBe(1)
   expect(useProjectState.getState().session.insertionPoint).toBeNull()
 })

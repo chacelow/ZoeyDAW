@@ -1,0 +1,24 @@
+{
+  "tracktion_engine": {
+    "repository": "https://github.com/Tracktion/tracktion_engine.git",
+    "commit": "877e39c0fe9f1c3e4a9d836f5f338688250875d7",
+    "path": "source",
+    "license": "GPL-3.0-or-later OR separately negotiated commercial license",
+    "license_file": "source/LICENSE.md"
+  },
+  "juce": {
+    "repository": "https://github.com/juce-framework/JUCE.git",
+    "commit": "7ff644f65d7daa1428c34b9738ebb5c449dc9172",
+    "path": "source/modules/juce",
+    "license": "AGPL-3.0 OR separate JUCE commercial license (pinned JUCE 9 source)",
+    "license_file": "source/modules/juce/LICENSE.md"
+  },
+  "soundtouch": {
+    "source": "Tracktion Engine vendored source at pinned engine commit",
+    "path": "source/modules/tracktion_engine/3rd_party/soundtouch",
+    "license": "LGPL-2.1-or-later",
+    "usage": "Compiled; optional --tempo selects soundtouchBetter through the Engine clip graph"
+  },
+  "other_vendored_dependencies": "Review source/README.md and source/modules/juce/JUCE.spdx.json; this is not a full license compliance opinion",
+  "build_status": "Parent built Release with AppleClang 17.0.0.17000603 and ran nine original-rate cases plus nine tempo1.2 cases; synthetic checks passed, no device or musical-quality claim."
+}

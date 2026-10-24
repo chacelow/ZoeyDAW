@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "frozenAt": "2026-10-22",
+  "status": "frozen-before-first-candidate-run",
+  "scope": "Browser, project media persistence, pitch-preserving tempo playback",
+  "executionPriority": {
+    "decidedAt": "2026-10-22",
+    "userDecision": "先跑通 Mac，Windows 可先实现，不测试和验证",
+    "currentTarget": "macos-end-to-end-audible-workflow",
+    "windowsImplementationRequired": true,
+    "deferredValidationGates": ["windows-wasapi", "windows-vendor-asio"],
+    "deferredIsNotPass": true,
+    "numericThresholdsUnchanged": true
+  },
+  "rules": [
+    "No threshold changes after candidate results without an explicit recorded user decision",
+    "Synthetic metrics do not replace music listening, Live comparison, or hardware runtime validation",
+    "Not measured, unavailable hardware, and inconclusive results are not passes",
+    "Benchmark candidate speed with release optimisation and identical input, rate, duration ratio, channel layout, and mode"
+  ],
+  "corpus": {
+    "generator": "scripts/audio/generate-corpus.mjs",
+    "sampleRate": 48000,
+    "seed": 1073741823,
+    "cases": [
+      "tone-440-mono",
+      "stereo-identical",
+      "stereo-antiphase",
+      "click-120bpm",
+      "one-shot",
+      "odd-seven-beat-loop",
+      "leading-silence",
+      "truncated-wav",
+      "long-file"
+    ],
+    "formats": [
+      "pcm_s16le-wav",
+      "pcm_s24le-wav",
+      "pcm_f32le-wav",
+      "pcm_s24be-aiff",
+      "flac",
+      "mp3-cbr",
+      "mp3-vbr"
+    ],
+    "musicalCorpus": "Human vocal, drums, polyphonic mix and free-tempo performance must have source, redistribution permission, checksum and independently annotated beat/downbeat positions before music-quality acceptance"
+  },
+  "thresholds": {
+    "pitchAbsCentsMax": 5,
+    "steadyToneRmsDifferenceDbMax": 1,
+    "outputDurationErrorFramesMax": 1,
+    "identicalChannelDifferencePeakMax": 0.000001,
+    "antiPhaseChannelSumPeakMax": 0.000001,
+    "nonFiniteSamplesMax": 0,
+    "syntheticTransientTimingErrorMsMax": 10,
+    "musicalBeatMedianErrorMsMax": 10,
+    "musicalBeatP95ErrorMsMax": 25,
+    "hotAuditionFirstSoundP95MsMax": 100,
+    "coldAuditionFirstSoundP95MsMax": 500,
+    "indexedSearchP95MsMax": 100,
+    "indexedSearchCorpusItemsMin": 100000,
+    "uiFrameP95MsMax": 16.67,
+    "uiMainThreadTaskMaxMs": 50,
+    "audioCallbackP99DeadlineFractionMax": 0.7,
+    "audioCallbackMaxDeadlineFractionMax": 1,
+    "xrunsDuring30MinutePlaybackMax": 0,
+    "longFilePcmWorkingSetPerReaderMiBMax": 64,
+    "selectionSupersessionErrorsMax": 0,
+    "persistenceLostOrWrongMediaMax": 0,
+    "unapprovedSourceFileModificationsMax": 0,
+    "pairedBlindMusicRatingMedianMinimum": 4,
+    "pairedBlindMusicRatingScaleMaximum": 5,
+    "livePrimaryImprovementRelativeMin": 0.2,
+    "liveOtherCriticalLatencyRegressionRelativeMax": 0.05
+  },
+  "workload": {
+    "sampleRates": [44100, 48000, 96000],
+    "requestedBuffersFrames": [64, 128, 256, 512],
+    "simultaneousStereoReaders": [1, 8, 32],
+    "tempoRatios": [0.75, 1, 1.2, 1.5],
+    "minimumPerformanceRepetitions": 10,
+    "minimumLatencyRepetitions": 100,
+    "minimumBlindListeners": 3,
+    "minimumBlindMusicExcerpts": 12,
+    "playbackMinutes": 30,
+    "backgroundWork": [
+      "indexing",
+      "waveform-analysis",
+      "search",
+      "zoom",
+      "clip-drag",
+      "save-and-collect"
+    ]
+  },
+  "requiredGates": [
+    "format-corpus",
+    "synthetic-signal",
+    "blind-musical-quality",
+    "live-baseline",
+    "macos-coreaudio",
+    "windows-wasapi",
+    "windows-vendor-asio",
+    "project-save-reopen",
+    "media-collect-relink",
+    "licenses"
+  ],
+  "freezeDecision": "No final engine/stretch selection until all required gates have current evidence or the user explicitly changes the objective"
+}

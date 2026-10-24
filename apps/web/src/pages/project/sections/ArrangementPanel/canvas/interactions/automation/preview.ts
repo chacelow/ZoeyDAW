@@ -1,5 +1,10 @@
+import {
+  resolveAutomationTarget,
+  sameAutomationTarget,
+  selectedAutomationTarget,
+} from "@zoeydaw/project-core/automation-target"
 import { setTracksPreview } from "../project-preview"
-import type { AutomationPoint } from "@/pages/project/model/types"
+import type { AutomationPoint } from "@zoeydaw/project-core/types"
 import type { InteractionContext } from "../types"
 
 export function previewAutomation(
@@ -14,10 +19,20 @@ export function previewAutomation(
       return track
     }
     const existing = track.automation.find(lane => lane.id === laneId)
-    const parameter = existing?.parameter ?? scene.automationParameters[trackId] ?? "volume"
+    const target = resolveAutomationTarget(
+      track,
+      laneId,
+      selectedAutomationTarget(track, scene.automationTargets[trackId]),
+      scene.automationLanes[trackId] ?? []
+    )
+    if (
+      !target ||
+      (!existing && track.automation.some(item => sameAutomationTarget(item.target, target)))
+    )
+      return track
     const automation = existing
       ? track.automation.map(lane => (lane.id === laneId ? { ...lane, points } : lane))
-      : [...track.automation, { id: laneId, parameter, points }]
+      : [...track.automation, { id: laneId, target, points }]
     return { ...track, automation }
   })
   setTracksPreview(context, tracks)

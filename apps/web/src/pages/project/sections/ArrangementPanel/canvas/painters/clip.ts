@@ -1,26 +1,22 @@
-import { clipLabel } from "@/pages/project/model/clip-label"
+import { clipLabel } from "@zoeydaw/project-core/clip-label"
+import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
 import { resolveColor } from "../tokens"
 import {
   arrangementBodyBottom,
   arrangementBodyTop,
   clipRect,
   layoutTrackRows,
-  pinnedTrackHeight,
+  pinnedTopFor,
 } from "../layout"
 import { clipVisualGeometry } from "../clip-geometry"
 import { paintGroupOverview } from "./group"
-import {
-  paintClipLoopTicks,
-  paintMidiNotes,
-  paintPatternNotes,
-  paintWaveform,
-} from "./clip-previews"
+import { paintClipLoopTicks, paintMidiNotes, paintWaveform } from "./clip-previews"
 import { paintFade } from "./clip-fades"
 import { paintTimeGrid } from "./grid"
 import type { ClipVisualGeometry } from "../clip-geometry"
 import type { TokenSet } from "../tokens"
 import type { ArrangementScene } from "../scene"
-import type { Clip } from "@/pages/project/model/types"
+import type { Clip } from "@zoeydaw/project-core/types"
 
 const NORMAL_PASSES = [false] as const
 const DRAG_PASSES = [false, true] as const
@@ -51,20 +47,33 @@ export function paintClips(
   context.font = "10px ui-sans-serif, system-ui, sans-serif"
   context.textBaseline = "middle"
   const rows = layoutTrackRows(scene)
-  const pinnedTop = bodyBottom - pinnedTrackHeight(scene.tracks)
+  const pinnedTop = pinnedTopFor(scene.tracks, height, {
+    mode: scene.automationMode,
+    lanes: scene.automationLanes,
+  })
   context.strokeStyle = tokens["--arrangement-line"]
-  context.lineWidth = 1
+  context.lineWidth = 2
   context.beginPath()
+  // The locator band already draws the stack's top border, so this pass only
+  // adds one divider at each row join; drawing a second top line doubled it.
   for (const row of rows) {
     const isPinned = row.track.kind === "main" || row.track.kind === "return"
     const top = Math.max(row.top, isPinned ? pinnedTop : bodyTop)
     const bottom = Math.min(row.top + row.height, isPinned ? bodyBottom : pinnedTop)
-    if (bottom <= top) {
+    if (bottom <= top || bottom >= bodyBottom || (!isPinned && bottom >= pinnedTop)) {
       continue
     }
-    context.rect(0.5, Math.round(top) + 0.5, width - 1, Math.round(bottom) - Math.round(top) - 1)
+    const y = Math.round(bottom) - 1
+    context.moveTo(0, y)
+    context.lineTo(width, y)
+  }
+  if (pinnedTop > bodyTop && pinnedTop < bodyBottom) {
+    const y = Math.round(pinnedTop) - 1
+    context.moveTo(0, y)
+    context.lineTo(width, y)
   }
   context.stroke()
+  context.lineWidth = 1
   for (const row of rows) {
     if (row.top + row.height < bodyTop || row.top > bodyBottom) {
       continue
@@ -80,7 +89,7 @@ export function paintClips(
     )
     context.clip()
     if (row.track.kind === "group") {
-      paintGroupOverview(context, row, scene, tokens)
+      paintGroupOverview(context, { ...row, height: row.contentHeight }, scene, tokens)
       context.restore()
       continue
     }
@@ -106,7 +115,9 @@ export function paintClips(
           row.track,
           !ghost && isHovered && options.hoverClip?.region === "body"
         )
-        const color = resolveColor(clip.color ?? row.track.color, tokens, tokens["--primary"])
+        const color = clip.mute
+          ? tokens["--muted-foreground"]
+          : resolveColor(clip.color ?? row.track.color, tokens, tokens["--primary"])
         context.save()
         context.beginPath()
         context.rect(
@@ -143,8 +154,10 @@ export function paintClips(
     if (end > start) {
       context.fillStyle = tokens["--primary"]
       context.globalAlpha = 0.2
+      // One Set per frame: this runs for every visible row on every paint.
+      const selectedTracks = new Set(selection.trackIds)
       for (const row of rows) {
-        if (!selection.trackIds.includes(row.track.id)) {
+        if (!selectedTracks.has(row.track.id)) {
           continue
         }
         const isPinned = row.track.kind === "return" || row.track.kind === "main"
@@ -173,14 +186,22 @@ function paintClip(
   const { left, top, width, height, bodyTop, bodyHeight, titleHeight } = g
   const { numerator } = scene.transport
   const opacity = state.ghost ? 0.5 : 1
+  const muted = clip.mute === true
+  const bodyColor = state.selected ? tokens["--arrangement-clip-selected"] : color
+  const titleColor = muted
+    ? tokens["--arrangement-muted-clip-title"]
+    : state.selected && bodyHeight === 0
+      ? tokens["--arrangement-clip-selected"]
+      : color
   context.globalAlpha = opacity
-  context.fillStyle =
-    state.selected && bodyHeight === 0 ? tokens["--arrangement-clip-selected"] : color
+  context.fillStyle = titleColor
   context.fillRect(left, top, width, titleHeight)
   if (bodyHeight > 0) {
-    context.fillStyle = state.selected ? tokens["--arrangement-clip-selected"] : color
-    context.globalAlpha = (state.selected ? 0.9 : state.automationMode ? 0.25 : 0.55) * opacity
-    context.fillRect(left, bodyTop, width, bodyHeight)
+    if (!muted) {
+      context.fillStyle = bodyColor
+      context.globalAlpha = (state.selected ? 0.9 : state.automationMode ? 0.25 : 0.55) * opacity
+      context.fillRect(left, bodyTop, width, bodyHeight)
+    }
     paintTimeGrid(
       context,
       scene,
@@ -195,14 +216,33 @@ function paintClip(
     context.fillStyle = tokens["--arrangement-line"]
     context.globalAlpha = (state.automationMode ? 0.14 : 0.3) * opacity
     context.fillRect(left, bodyTop, width, 1)
-    context.globalAlpha = (state.automationMode ? 0.4 : 1) * opacity
-    const ink = tokens["--arrangement-clip-ink"]
+    context.globalAlpha = (muted ? 0.25 : state.automationMode ? 0.4 : 1) * opacity
+    const ink = muted ? tokens["--muted-foreground"] : tokens["--arrangement-clip-ink"]
     if (clip.kind === "audio") {
-      paintWaveform(context, clip, left, bodyTop, width, bodyHeight, ink, viewportWidth)
-    } else if (clip.kind === "midi") {
-      paintMidiNotes(context, clip, left, bodyTop, width, bodyHeight, ink, numerator, viewportWidth)
+      paintWaveform(
+        context,
+        clip,
+        left,
+        bodyTop,
+        width,
+        bodyHeight,
+        ink,
+        viewportWidth,
+        scene.media,
+        scene.transport
+      )
     } else {
-      paintPatternNotes(context, clip, left, bodyTop, width, bodyHeight, ink, viewportWidth)
+      paintMidiNotes(
+        context,
+        resolveMidiClip(clip, scene.patterns),
+        left,
+        bodyTop,
+        width,
+        bodyHeight,
+        ink,
+        numerator,
+        viewportWidth
+      )
     }
     context.globalAlpha = (state.automationMode ? 0.4 : 1) * opacity
   }
@@ -219,14 +259,17 @@ function paintClip(
     top,
     width,
     viewportWidth,
-    tokens["--arrangement-clip-ink"]
+    muted ? tokens["--arrangement-muted-clip"] : tokens["--arrangement-clip-ink"],
+    scene.media,
+    scene.patterns
   )
   context.fillStyle = tokens["--arrangement-clip-ink"]
+  context.globalAlpha = (muted ? 0.65 : 1) * opacity
   context.save()
   context.beginPath()
   context.rect(left + 2, top, Math.max(0, width - 4), titleHeight)
   context.clip()
-  context.fillText(clipLabel(clip), left + 4, top + titleHeight / 2)
+  context.fillText(clipLabel(clip, scene.media), left + 4, top + titleHeight / 2)
   context.restore()
   if (state.hovered && !state.selected) {
     context.strokeStyle = tokens["--foreground"]

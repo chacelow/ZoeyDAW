@@ -3,7 +3,7 @@
  *
  *   QueryClientProvider → 本地 I/O 查询缓存 I18nProvider        → zh-CN / en-US ThemeProvider       → light / dark / system ThemePresetProvider → 品牌配色预设 LoadingProvider     → 全局 loading 遮罩状态 RouterProvider      → / 首页 · /project/:id 单项目视图 <Loading>           → 读 LoadingProvider 渲染遮罩 <Toaster>           → 跟随主题的通知
  */
-import { useEffect } from "react"
+import { useCallback, useEffect } from "react"
 import { RouterProvider } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Loading, ThemeProvider, Toaster, useTheme } from "@zoeymind/ui"
@@ -16,6 +16,7 @@ import { appLocales } from "@/locales"
 import logoLightUrl from "@/assets/logo.svg?url"
 import logoDarkUrl from "@/assets/logo-dark.svg?url"
 import { SharedControlBridgeProvider } from "@/components/SharedControlBridge"
+import { ApplicationLifecycle } from "@/pages/project/files/ApplicationLifecycle"
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: false } },
@@ -26,11 +27,16 @@ function InnerApp() {
   const { t } = useTranslation()
   const { resolvedTheme } = useTheme()
   const loadingLogoUrl = resolvedTheme === "dark" ? logoDarkUrl : logoLightUrl
+  const isIsolatedPreview = useCallback(
+    () => router.state.location.pathname.startsWith("/library/preview/"),
+    []
+  )
   useEffect(() => installExternalLinkBoundary(), [])
   return (
     <>
       <RouterProvider router={router} />
       <SettingsDialog />
+      <ApplicationLifecycle isIsolatedPreview={isIsolatedPreview} />
       <Loading
         show={loading}
         tip={tip ?? t("common.loading")}

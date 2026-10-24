@@ -4,10 +4,10 @@ import {
   fadeControls,
   fadeCurveProgress,
   fadeBezierSegments,
-} from "@/pages/project/model/fades"
+} from "@zoeydaw/project-core/fades"
 import { TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
-import type { FadeBezierSegment } from "@/pages/project/model/fades"
-import type { AudioClip, Clip, Track } from "@/pages/project/model/types"
+import type { FadeBezierSegment } from "@zoeydaw/project-core/fades"
+import type { AudioClip, Clip, Track } from "@zoeydaw/project-core/types"
 import type { ClipRect } from "./layout"
 
 export const RESIZE_EDGE_PX = 6
@@ -46,7 +46,9 @@ export function clipVisualGeometry(
   const left = Math.round(rect.left)
   const top = Math.round(rect.top + 1)
   const width = Math.max(2, Math.round(rect.width))
-  const height = Math.max(4, Math.round(rect.height - 2))
+  // The row divider is 2px, so the card keeps one more pixel of clearance at
+  // the bottom instead of sitting under the divider.
+  const height = Math.max(4, Math.round(rect.height - 3))
   const titleHeight =
     track.collapsed || height <= TRACK_TITLE_HEIGHT + 4 ? height : TRACK_TITLE_HEIGHT
   const bodyHeight = height - titleHeight

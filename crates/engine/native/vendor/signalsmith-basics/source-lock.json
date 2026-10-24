@@ -1,0 +1,16 @@
+{
+  "basics": {
+    "repository": "https://git.signalsmith-audio.co.uk/Signalsmith-Audio/basics.git",
+    "commit": "7a2ea21af90ed0573a0f8bdb2859420621bc35d0",
+    "files": ["reverb.h", "stfx/stfx-library.h", "LICENSE.txt"],
+    "license": "MIT",
+    "licenseNote": "Pinned repository LICENSE.txt grants MIT. Original reverb and STFX headers retain older Boost Software License notices unchanged.",
+    "localChanges": ["ReverbSTFX::reset also clears delay4; upstream omitted the final diffusion delay."]
+  },
+  "dsp": {
+    "repository": "https://github.com/Signalsmith-Audio/dsp.git",
+    "commit": "89d19acd59e9decfe2c86d2af2bd8586c33ff3d1",
+    "files": ["common.h", "delay.h", "mix.h", "filters.h", "fft.h", "windows.h", "perf.h", "LICENSE.txt"],
+    "license": "MIT"
+  }
+}

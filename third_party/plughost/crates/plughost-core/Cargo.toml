@@ -1,0 +1,43 @@
+[package]
+name = "plughost-core"
+description = "Shared types and offline render rules for plughost"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+readme = "README.md"
+repository.workspace = true
+documentation = "https://docs.rs/plughost-core"
+publish = true
+include = ["/src/**", "/examples/**", "/Cargo.toml", "/README.md", "/LICENSE-MIT", "/LICENSE-APACHE"]
+keywords = ["audio", "plugin", "vst3", "clap", "audio-unit"]
+categories = ["multimedia::audio"]
+
+[package.metadata.docs.rs]
+default-target = "aarch64-apple-darwin"
+targets = ["aarch64-apple-darwin", "x86_64-pc-windows-msvc"]
+
+[lints]
+workspace = true
+
+[features]
+# The helper's real-time audit build (see `audit`); not for shipping.
+realtime-audit = ["dep:rtsan-standalone"]
+
+[dependencies]
+postcard.workspace = true
+rtsan-standalone = { workspace = true, optional = true }
+serde.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+rustix = { workspace = true, features = ["mm", "shm"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Security", "Win32_System_Memory", "Win32_System_Performance", "Win32_System_Threading"] }
+
+[dev-dependencies]
+interprocess.workspace = true
+
+[[bench]]
+name = "timeline"
+harness = false

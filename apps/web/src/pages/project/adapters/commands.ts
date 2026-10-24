@@ -18,7 +18,6 @@ import { clipActions } from "./clips"
 import { clipboardActions } from "./clipboard"
 import { automationActions } from "./automation"
 import { markerActions } from "./markers"
-import { snapshotActions } from "./snapshots"
 import { midiActions } from "./midi"
 
 export const projectActions = {
@@ -41,5 +40,4 @@ export const projectActions = {
   ...automationActions,
   ...markerActions,
   ...midiActions,
-  ...snapshotActions,
 }

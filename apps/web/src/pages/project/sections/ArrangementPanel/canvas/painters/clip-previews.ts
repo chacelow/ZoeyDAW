@@ -1,18 +1,61 @@
-import { PATTERN_STEPS_PER_BAR } from "@/pages/project/model/types"
-import { patternHasActivity, patternWindow } from "@/pages/project/model/pattern-window"
-import type { AudioClip, Clip, MidiClip, PatternClip } from "@/pages/project/model/types"
+import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
+import type {
+  AudioClip,
+  Clip,
+  MidiClip,
+  MidiPattern,
+  DocumentState,
+} from "@zoeydaw/project-core/types"
+import { findMediaSource } from "@zoeydaw/project-core/media"
+import type { MediaSource } from "@zoeydaw/project-core/media"
+import { nativeClipWaveform } from "@/pages/project/adapters/backend/clip-waveform"
+import { samplePeakColumns } from "@zoeydaw/project-core/waveform"
+import { cachedWaveformRanges } from "@/pages/project/adapters/backend/waveform-ranges"
+import { signedWaveformPaths } from "@zoeydaw/project-core/signed-waveform"
 
-function clipLoopBars(clip: Clip): number | null {
-  if (clip.kind === "midi") {
-    return clip.loopBars ?? clip.lengthBars
+const waveformBitmaps = new Map<string, OffscreenCanvas | HTMLCanvasElement>()
+const waveformRangeIds = new WeakMap<object, number>()
+const waveformIdentity = { next: 0 }
+
+function rangeId(range: object): number {
+  let id = waveformRangeIds.get(range)
+  if (id === undefined) {
+    id = ++waveformIdentity.next
+    waveformRangeIds.set(range, id)
   }
-  if (clip.kind === "pattern") {
-    return (clip.steps?.length || PATTERN_STEPS_PER_BAR) / PATTERN_STEPS_PER_BAR
+  return id
+}
+
+function createBitmap(width: number, height: number): OffscreenCanvas | HTMLCanvasElement | null {
+  if (typeof OffscreenCanvas === "function") return new OffscreenCanvas(width, height)
+  if (typeof document === "undefined") return null
+  const canvas = document.createElement("canvas")
+  canvas.width = width
+  canvas.height = height
+  return canvas
+}
+
+function rememberBitmap(key: string, bitmap: OffscreenCanvas | HTMLCanvasElement): void {
+  if (waveformBitmaps.size >= 24) {
+    const oldest = waveformBitmaps.keys().next()
+    if (!oldest.done) waveformBitmaps.delete(oldest.value)
   }
-  if (clip.samplePath === "mock://kick.wav") {
-    return 16
+  waveformBitmaps.set(key, bitmap)
+}
+
+function clipLoopBars(
+  clip: Clip,
+  media: readonly MediaSource[],
+  patterns: readonly MidiPattern[]
+): number | null {
+  if (clip.kind !== "audio") {
+    const midi = resolveMidiClip(clip, patterns)
+    return midi.loopBars ?? midi.lengthBars
   }
-  return clip.samplePath === "mock://untitled.wav" ? 1 : null
+  const source = findMediaSource(media, clip.sourceId)
+  if (source?.location.kind !== "fixture") return null
+  if (source.location.uri === "mock://kick.wav") return 16
+  return source.location.uri === "mock://untitled.wav" ? 1 : null
 }
 
 /**
@@ -25,9 +68,11 @@ export function paintClipLoopTicks(
   top: number,
   width: number,
   viewportWidth: number,
-  ink: string
+  ink: string,
+  media: readonly MediaSource[],
+  patterns: readonly MidiPattern[]
 ): void {
-  const period = clipLoopBars(clip)
+  const period = clipLoopBars(clip, media, patterns)
   if (!period || width <= 0 || (period / clip.lengthBars) * width < 2) {
     return
   }
@@ -57,32 +102,105 @@ export function paintWaveform(
   width: number,
   height: number,
   ink: string,
-  viewportWidth: number
+  viewportWidth: number,
+  media: readonly MediaSource[],
+  transport: Pick<DocumentState["transport"], "bpm" | "numerator" | "denominator">
 ): void {
-  const peaks = clip.waveformPeaks
-  if (!peaks?.length || height <= 0) {
+  if (height <= 0 || width <= 0) return
+  const envelope = nativeClipWaveform(
+    clip,
+    media,
+    transport.bpm,
+    transport.numerator,
+    transport.denominator
+  )
+  if (!envelope) return
+  const source = findMediaSource(media, clip.sourceId)
+  if (source && source.location.kind !== "fixture") {
+    const visibleStart = Math.max(0, -left)
+    const visibleEnd = Math.min(width, viewportWidth - left)
+    if (visibleEnd <= visibleStart) return
+    const ranges = cachedWaveformRanges(source).map(range => range.data)
+    const sliceStart = Math.floor(visibleStart)
+    const sliceEnd = Math.ceil(visibleEnd)
+    const drawnWidth = Math.max(1, sliceEnd - sliceStart)
+    const drawnHeight = Math.max(1, Math.round(height))
+    const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1
+    const key = [
+      source.id,
+      source.sha256,
+      clip.id,
+      envelope.origin,
+      envelope.rate,
+      envelope.reverse,
+      envelope.gain,
+      JSON.stringify(envelope.fades),
+      JSON.stringify(envelope.loop),
+      JSON.stringify(envelope.window),
+      clip.lengthBars,
+      drawnHeight,
+      width,
+      sliceStart,
+      drawnWidth,
+      ink,
+      dpr,
+      ranges.map(rangeId).join(","),
+    ].join("/")
+    let bitmap = waveformBitmaps.get(key)
+    if (!bitmap) {
+      bitmap = createBitmap(Math.ceil(drawnWidth * dpr), Math.ceil(drawnHeight * dpr)) ?? undefined
+      const painter = bitmap?.getContext("2d")
+      if (bitmap && painter && "fill" in painter) {
+        painter.scale(dpr, dpr)
+        const paths = signedWaveformPaths(
+          envelope,
+          ranges,
+          source.frames,
+          envelope.origin + (sliceStart / width) * clip.lengthBars * envelope.rate,
+          envelope.origin + (sliceEnd / width) * clip.lengthBars * envelope.rate,
+          drawnWidth,
+          drawnHeight
+        )
+        painter.fillStyle = ink
+        const paintShape = (path: (typeof paths)[number]) => {
+          Reflect.apply(painter.fill, painter, [new Path2D(path.path)])
+          if (path.markers) Reflect.apply(painter.fill, painter, [new Path2D(path.markers)])
+        }
+        for (const path of paths) paintShape(path)
+        rememberBitmap(key, bitmap)
+      }
+    }
+    if (bitmap) {
+      context.drawImage(bitmap, left + sliceStart, top, drawnWidth, drawnHeight)
+    }
     return
   }
-  const start = Math.max(0, Math.ceil(-left))
-  const end = Math.min(Math.ceil(width), Math.ceil(viewportWidth - left))
-  if (end <= start) {
-    return
-  }
+  const { start, values } = samplePeakColumns(
+    envelope,
+    envelope.origin,
+    envelope.origin + clip.lengthBars * envelope.rate,
+    width,
+    Math.max(0, -left),
+    Math.min(width, viewportWidth - left)
+  )
+  if (!values.length) return
   const mid = top + height / 2
   const amplitude = Math.max(0, height / 2 - 1)
-  const opacity = context.globalAlpha
-  context.strokeStyle = ink
-  context.globalAlpha = opacity
+  context.fillStyle = ink
   context.beginPath()
-  for (let index_ = start; index_ < end; index_++) {
-    const index = Math.min(peaks.length - 1, Math.floor((index_ / width) * peaks.length))
-    const extent = Math.min(1, Math.abs(peaks[index])) * amplitude
-    const x = left + index_ + 0.5
-    context.moveTo(x, mid - extent)
-    context.lineTo(x, mid + extent)
+  context.moveTo(left + start, mid - values[0] * amplitude)
+  for (let index = 0; index < values.length; index++) {
+    const extent = values[index] * amplitude
+    context.lineTo(left + start + index, mid - extent)
+    context.lineTo(left + Math.min(start + index + 1, width), mid - extent)
   }
-  context.stroke()
-  context.globalAlpha = opacity
+  for (let index = values.length - 1; index >= 0; index--) {
+    const extent = values[index] * amplitude
+    context.lineTo(left + Math.min(start + index + 1, width), mid + extent)
+    context.lineTo(left + start + index, mid + extent)
+  }
+  context.closePath()
+  context.fill()
 }
 
 export function paintMidiNotes(
@@ -122,7 +240,10 @@ export function paintMidiNotes(
     const noteLength = Math.min(note.lengthBeats, cycle)
     const first = Math.floor((visibleStart - phase - noteLength) / cycle) + 1
     const last = Math.ceil((visibleEnd - phase) / cycle)
-    const y = top + 1 + ((maxPitch - note.pitch) / pitchSpan) * Math.max(0, height - 4)
+    const y =
+      top +
+      Math.min(1, Math.max(0, height - 3)) +
+      ((maxPitch - note.pitch) / pitchSpan) * Math.max(0, height - 4)
     for (let repeat = first; repeat < last; repeat++) {
       const start = Math.max(sourceStart, phase + repeat * cycle)
       const end = Math.min(sourceStart + sourceLength, phase + repeat * cycle + noteLength)
@@ -137,63 +258,6 @@ export function paintMidiNotes(
       )
       if (through > x) {
         context.fillRect(x, y, through - x, Math.min(3, height))
-      }
-    }
-  }
-  context.globalAlpha = opacity
-}
-
-export function paintPatternNotes(
-  context: CanvasRenderingContext2D,
-  clip: PatternClip,
-  left: number,
-  top: number,
-  width: number,
-  height: number,
-  ink: string,
-  viewportWidth: number
-): void {
-  const { steps } = clip
-  if (!steps?.length || height <= 0) {
-    return
-  }
-  const source = patternWindow(clip)
-  const cellWidth = width / (clip.lengthBars * PATTERN_STEPS_PER_BAR)
-  const opacity = context.globalAlpha
-  const noteY = Math.round(top + Math.max(0, (height - 3) / 2))
-  context.fillStyle = ink
-  context.globalAlpha = opacity
-  if (cellWidth < 1) {
-    for (let x = Math.ceil(Math.max(0, left)); x < Math.min(viewportWidth, left + width); x++) {
-      const from = source.origin + (x - left) / cellWidth
-      const end = source.origin + (Math.min(x + 1, left + width) - left) / cellWidth
-      if (patternHasActivity(steps, from, end)) {
-        context.fillRect(x, noteY, 1, Math.min(3, height))
-      }
-    }
-  } else {
-    const first = Math.max(source.first, Math.floor(source.origin + Math.max(0, -left) / cellWidth))
-    const end = Math.min(
-      source.end,
-      Math.ceil(source.origin + Math.min(width, viewportWidth - left) / cellWidth)
-    )
-    for (let index = first; index < end; index++) {
-      if (steps[((index % steps.length) + steps.length) % steps.length] !== true) {
-        continue
-      }
-      const x = Math.max(0, left, left + (index - source.origin) * cellWidth)
-      const through = Math.min(
-        viewportWidth,
-        left + width,
-        left + (index + 1 - source.origin) * cellWidth
-      )
-      if (through > x) {
-        context.fillRect(
-          x,
-          noteY,
-          Math.max(1, Math.min(cellWidth - 1, through - x)),
-          Math.min(3, height)
-        )
       }
     }
   }

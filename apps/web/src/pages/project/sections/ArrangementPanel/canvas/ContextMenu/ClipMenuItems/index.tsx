@@ -1,9 +1,9 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
-import { acceptsClip, positionToBar } from "@/pages/project/model/types"
+import { acceptsClip, positionToBar } from "@zoeydaw/project-core/types"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
-import type { Clip } from "@/pages/project/model/types"
+import type { Clip } from "@zoeydaw/project-core/types"
 import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
 
 const COLORS = [
@@ -35,22 +35,19 @@ export function ClipMenuItems({
         target.bar <= selected.endBar
           ? selected.endBar - target.bar
           : arrangementScene.get().gridPlan.cellBars
-      projectActions.createClip(
+      const id = projectActions.createClip(
         track.id,
         kind,
         target.bar,
         Math.max(arrangementScene.get().gridPlan.cellBars, length)
       )
-      const created = useProjectState
-        .getState()
-        .document.tracks.find(item => item.id === track.id)
-        ?.clips.at(-1)
-      if (!created) {
+      if (!id) {
         return
       }
 
-      projectActions.selectClips([created.id])
-      arrangementScene.setSelection(new Set([created.id]))
+      projectActions.selectClips([id])
+      arrangementScene.setSelection(new Set([id]))
+      projectActions.setEditingClip(id)
     }
     return (
       <>
@@ -108,7 +105,7 @@ export function ClipMenuItems({
     <>
       <ContextMenuLabel>{clip.label ?? clip.kind}</ContextMenuLabel>
       <ContextMenuItem onClick={() => projectActions.setEditingClip(clip.id)}>
-        {t("arrangement.openTemporaryEditor")}
+        {t("detail.openClip")}
       </ContextMenuItem>
       <ContextMenuItem onClick={rename}>{t("arrangement.rename")}</ContextMenuItem>
       <ContextMenuSeparator />

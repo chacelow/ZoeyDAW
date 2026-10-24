@@ -8,6 +8,7 @@ import {
   useContext,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -124,6 +125,29 @@ interface GanttCallbacks<TData = unknown> {
    */
   onResourceReorderReject?: (proposal: GanttResourceReorder) => void
 }
+
+const CALLBACK_KEYS = [
+  "onEventClick",
+  "onEventDoubleClick",
+  "onEventUpdate",
+  "canDropEvent",
+  "onSlotClick",
+  "onSelectSlot",
+  "canSelectSlot",
+  "onCreateTask",
+  "canCreateTask",
+  "onResourceClick",
+  "onResourceDoubleClick",
+  "onRangeChange",
+  "onScaleChange",
+  "onDateChange",
+  "onSelectionChange",
+  "onInteractionsChange",
+  "onEventsChange",
+  "onResourceReorder",
+  "onResourceReorderReject",
+  "canReorderResource",
+] as const satisfies ReadonlyArray<keyof GanttCallbacks>
 
 interface UseGanttStateOptions<TData = unknown> extends GanttCallbacks<TData> {
   events?: GanttEvent<TData>[]
@@ -313,7 +337,7 @@ interface GanttStore<TData> {
 
 function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttStore<TData> {
   let options = initial
-  let settings = resolveSettings(initial)
+  const settings = resolveSettings(initial)
   let settingsVersion = 0
 
   const listeners = new Set<() => void>()
@@ -769,7 +793,18 @@ function createGanttStore<TData>(initial: UseGanttStateOptions<TData>): GanttSto
           break
         }
       }
-      settings = resolveSettings(next)
+      // Availability controls affordances; replacing a live callback only
+      // updates the committed settings object used by existing handlers.
+      if (CALLBACK_KEYS.some(key => !!prev[key] !== !!next[key])) {
+        settingsChanged = true
+      }
+      const nextSettings = resolveSettings(next)
+      // Settings are a stable, committed owner: mounted event handlers read
+      // the latest callbacks without resubscribing the entire grid.
+      for (const key of Object.keys(settings)) {
+        if (!(key in nextSettings)) Reflect.deleteProperty(settings, key)
+      }
+      Object.assign(settings, nextSettings)
       if (settingsChanged) {
         settingsVersion++
         changed = true
@@ -791,14 +826,8 @@ function useGanttState<TData = unknown>(
   options: UseGanttStateOptions<TData> = {}
 ): GanttInstance<TData> {
   const [store] = useState(() => createGanttStore<TData>(options))
-  const changed = store.setOptions(options)
-  const changedRef = useRef(false)
-  if (changed) changedRef.current = true
   useLayoutEffect(() => {
-    if (changedRef.current) {
-      changedRef.current = false
-      store.notify()
-    }
+    if (store.setOptions(options)) store.notify()
   })
   useEffect(() => {
     store.emitRangeIfChanged()
@@ -838,19 +867,26 @@ function useGanttSelector<TData = unknown, TSelected = unknown>(
   }
   const isEqual = options?.isEqual ?? Object.is
   const lastRef = useRef<{ value: TSelected } | null>(null)
-  const selectorRef = useRef(selector)
-  selectorRef.current = selector
-
-  const getSnapshot = () => {
-    const next = selectorRef.current(instance.getState() as GanttState<TData>)
-    if (lastRef.current && isEqual(lastRef.current.value, next)) {
-      return lastRef.current.value
+  const getSnapshot = useMemo(() => {
+    // This cache belongs to this render's selector, not a shared ref that an
+    // abandoned render could overwrite for the mounted subscription.
+    let cached: { value: TSelected } | null = null
+    return () => {
+      const next = selector(instance.getState() as GanttState<TData>)
+      const previous = cached ?? lastRef.current
+      if (previous && isEqual(previous.value, next)) {
+        cached = previous
+      } else {
+        cached = { value: next }
+      }
+      return cached.value
     }
-    lastRef.current = { value: next }
-    return next
-  }
-
-  return useSyncExternalStore(instance.subscribe, getSnapshot, getSnapshot)
+  }, [instance, selector, isEqual])
+  const selected = useSyncExternalStore(instance.subscribe, getSnapshot, getSnapshot)
+  useLayoutEffect(() => {
+    lastRef.current = { value: selected }
+  }, [selected])
+  return selected
 }
 
 function useGanttScale(): {
@@ -1487,26 +1523,7 @@ const OPTION_KEYS: Array<keyof UseGanttStateOptions> = [
   "getEventPriority",
   "eventOrder",
   "getOccurrences",
-  "onEventClick",
-  "onEventDoubleClick",
-  "onEventUpdate",
-  "canDropEvent",
-  "onSlotClick",
-  "onSelectSlot",
-  "canSelectSlot",
-  "onCreateTask",
-  "canCreateTask",
-  "onResourceClick",
-  "onResourceDoubleClick",
-  "onRangeChange",
-  "onScaleChange",
-  "onDateChange",
-  "onSelectionChange",
-  "onInteractionsChange",
-  "onEventsChange",
-  "onResourceReorder",
-  "onResourceReorderReject",
-  "canReorderResource",
+  ...CALLBACK_KEYS,
 ]
 
 function shallowEqualRecord(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
@@ -1556,23 +1573,25 @@ function Gantt<TData = unknown>({
   // Stable context identity: splitOptions builds a fresh object per render,
   // and every row subscribes to this context - hand out the previous object
   // unless a config value actually changed.
-  const viewConfigRef = useRef(viewConfig)
+  const [stableViewConfig, setStableViewConfig] = useState(viewConfig)
   if (
     !shallowEqualRecord(
-      viewConfigRef.current as unknown as Record<string, unknown>,
+      stableViewConfig as unknown as Record<string, unknown>,
       viewConfig as unknown as Record<string, unknown>
     )
   ) {
-    viewConfigRef.current = viewConfig
+    setStableViewConfig(viewConfig)
   }
-  const stableViewConfig = viewConfigRef.current
 
-  if (calendar && Object.keys(options).length > 0) {
-    warnOnce(
-      "calendar-and-options",
-      "both `calendar` and option props were passed; option props are ignored when adopting an instance."
-    )
-  }
+  const conflictingOptions = !!calendar && Object.keys(options).length > 0
+  useEffect(() => {
+    if (conflictingOptions) {
+      warnOnce(
+        "calendar-and-options",
+        "both `calendar` and option props were passed; option props are ignored when adopting an instance."
+      )
+    }
+  }, [conflictingOptions])
 
   const own = useGanttState<TData>(calendar ? {} : options)
   const instance = calendar ?? own

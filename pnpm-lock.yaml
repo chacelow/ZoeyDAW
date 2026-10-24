@@ -159,6 +159,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.10.1
         version: 2.10.1
+      '@zoeydaw/project-core':
+        specifier: workspace:*
+        version: link:../../packages/project-core
+      '@zoeydaw/project-runtime':
+        specifier: workspace:*
+        version: link:../../packages/project-runtime
       '@zoeymind/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -297,6 +303,35 @@ importers:
       vitest:
         specifier: ^4.0.18
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(jsdom@30.0.1)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.1))
+
+  packages/project-core:
+    dependencies:
+      zod:
+        specifier: ^4.1.13
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(jsdom@30.0.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.1))
+
+  packages/project-runtime:
+    dependencies:
+      '@zoeydaw/project-core':
+        specifier: workspace:*
+        version: link:../project-core
+      zustand:
+        specifier: ^5.0.9
+        version: 5.0.15(@types/react@19.2.18)(immer@11.1.17)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
+    devDependencies:
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(jsdom@30.0.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.1))
 
   packages/shared:
     dependencies:

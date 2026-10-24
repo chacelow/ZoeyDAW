@@ -1,16 +1,17 @@
-import { create } from "zustand"
-import { initialDocument } from "./slices/document"
-import { initialWorkspace } from "./slices/workspace"
-import { initialSession } from "./slices/session"
-import type { ProjectState } from "../model/types"
+import { useStore } from "zustand"
+import { createProjectStore } from "@zoeydaw/project-runtime/store"
+import { initialDocument, initialWorkspace } from "@zoeydaw/project-runtime/state"
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
+import type { ProjectState } from "@zoeydaw/project-core/types"
 
-export { initialSession } from "./slices/session"
-
-/**
-The single project root; adapters alone issue commands and own simulation.
-*/
-export const useProjectState = create<ProjectState>(() => ({
-  document: initialDocument(),
+const store = createProjectStore({
+  document: initialDocument(DEFAULT_TRACK_HEIGHT),
   workspace: initialWorkspace(),
-  session: initialSession(),
-}))
+})
+
+export const useProjectState = Object.assign(
+  function useProjectState<T>(selector: (state: ProjectState) => T): T {
+    return useStore(store, selector)
+  },
+  { getState: store.getState, setState: store.setState, subscribe: store.subscribe }
+)

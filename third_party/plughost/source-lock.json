@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/emulette/plughost.git",
+  "tag": "v0.1.5",
+  "commit": "d1d378aeab57f93209600e87540bc82bd621dc40",
+  "version": "0.1.5",
+  "helperProtocol": 30,
+  "licenses": ["LICENSE-MIT", "LICENSE-APACHE"],
+  "extensionBuild": "5a44000100000001",
+  "localChanges": [
+    "Bounded per-quantum transport changes with helper-side sample segmentation",
+    "Realtime shared mapping format 2 and matching extension-build handshake"
+  ]
+}

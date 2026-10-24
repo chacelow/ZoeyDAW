@@ -122,7 +122,7 @@ Locator、Loop 和 Clip 使用区分类型的 `targetSelection`。点击由统�
 
 颜色读取在主题变化时使用一个临时 DOM 探针解析 CSS 颜色，随后移除。Canvas 不直接接收 `light-dark()`，因为它可能拒绝该值并保留先前的填充色；解析后的墨色与 DOM 标题保持一致。卡片、轨道身份区和祖先色带复用局部 paper/tint token，保留工程中的原始颜色数据，不修改全局主题或侧栏调色板。
 
-播放头、电平、Follow 与模拟录制读取同一 project runtime。`model/backend.ts` 定义后端 port，`adapters/runtime` 按实例拥有工程编辑、确认和生命周期，构造与导入不启动引擎。编辑 token 与 Canvas 使用独立的 `session.editEpoch`，不能用可能为空的 backend sessionId 代替；离线也可编辑与取消。`adapters/backend/connection/` 串行发送完整状态，将协议校验、显示插值与状态协调分开。默认 mock 只有视觉反馈；`audio/project-telemetry.ts` 把其流投影到本地 Float64 播放位置与 Float32 电平槽，不是原生共享内存协议。源与混音/自动化元数据进入后端 DTO，名称、颜色、视口和波形缓存不进入。接入契约见 [Project state adapter](../../apps/web/src/pages/project/adapters/README.md)。
+播放头、电平、Follow 与模拟录制读取同一 project runtime。`@zoeydaw/project-core/backend` 定义后端 port，`@zoeydaw/project-runtime` 按实例拥有工程编辑、确认和生命周期，构造与导入不启动引擎。编辑 token 与 Canvas 使用独立的 `session.editEpoch`，不能用可能为空的 backend sessionId 代替；离线也可编辑与取消。包内 `backend/connection/` 串行发送完整状态，将协议校验、显示插值与状态协调分开。app 注入 native backend，测试与 Gallery 显式注入 mock；`audio/project-telemetry.ts` 把遥测投影到本地 Float64 播放位置与 Float32 电平槽，不是原生共享内存协议。源与混音/自动化元数据进入后端 DTO，名称、颜色、视口和波形缓存不进入。接入契约见 [Project state adapter](../../apps/web/src/pages/project/adapters/README.md)。
 
 当前 `audio/ring-buffer.ts` 是模拟数据槽，不是已验证的 Rust 与 WebView 共享内存协议。Rust 原生进程不能直接把一个 JS `SharedArrayBuffer` 当作它的内存写入。未来音频线程需先通过实时安全队列把遥测送到非实时发布端，再使用实际验证的 WebView 数据通道传给 UI。当前没有实现这个原生链路。
 

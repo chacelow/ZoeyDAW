@@ -1,7 +1,13 @@
-import { clampAutomationCurve } from "../model/automation-curve"
-import { uniqueId } from "../model/reducers"
-import { get, session, updateTrack } from "./context"
-import type { AutomationLane, AutomationPoint } from "../model/types"
+import {
+  isAutomationTarget,
+  resolveAutomationTarget,
+  sameAutomationTarget,
+  selectedAutomationTarget,
+} from "@zoeydaw/project-core/automation-target"
+import { clampAutomationCurve } from "@zoeydaw/project-core/automation-curve"
+import { uniqueId } from "@zoeydaw/project-core/reducers"
+import { get, session, updateTrack, workspace } from "./context"
+import type { AutomationPoint, AutomationTarget } from "@zoeydaw/project-core/types"
 
 export const automationActions = {
   replaceAutomationPoints(trackId: string, laneId: string, points: readonly AutomationPoint[]) {
@@ -22,7 +28,17 @@ export const automationActions = {
       return
     }
     const lane = track.automation.find(item => item.id === laneId)
-    const parameter = lane?.parameter ?? get().session.automationParameters[trackId] ?? "volume"
+    const target = resolveAutomationTarget(
+      track,
+      laneId,
+      selectedAutomationTarget(track, get().session.automationTargets[trackId]),
+      get().workspace.automationLanes[trackId] ?? []
+    )
+    if (
+      !target ||
+      (!lane && track.automation.some(item => sameAutomationTarget(item.target, target)))
+    )
+      return
     const sorted = [...points].sort((a, b) => a.bar - b.bar)
     if (
       new Set(sorted.map(point => point.id)).size !== sorted.length ||
@@ -46,15 +62,61 @@ export const automationActions = {
     }
     const automation = lane
       ? track.automation.map(item => (item.id === laneId ? { ...item, points: sorted } : item))
-      : [...track.automation, { id: laneId, parameter, points: sorted }]
+      : [...track.automation, { id: laneId, target, points: sorted }]
     updateTrack(trackId, { automation })
   },
-  setAutomationParameter(trackId: string, parameter: AutomationLane["parameter"]) {
-    if (get().document.tracks.every(track => track.id !== trackId)) {
+  setAutomationTarget(trackId: string, target: AutomationTarget | null) {
+    const track = get().document.tracks.find(item => item.id === trackId)
+    if (!track || (target && !isAutomationTarget(target, track))) return
+    session({ automationTargets: { ...get().session.automationTargets, [trackId]: target } })
+  },
+  addAutomationLane(trackId: string) {
+    const state = get()
+    const track = state.document.tracks.find(item => item.id === trackId)
+    const target =
+      track && selectedAutomationTarget(track, state.session.automationTargets[trackId])
+    if (!track || !target || !isAutomationTarget(target, track)) return
+    const existing = state.workspace.automationLanes[trackId] ?? []
+    if (existing.some(item => sameAutomationTarget(item, target))) return
+    workspace({
+      ...state.workspace,
+      automationLanes: { ...state.workspace.automationLanes, [trackId]: [...existing, target] },
+    })
+  },
+  removeAutomationLane(trackId: string, target: AutomationTarget) {
+    const state = get()
+    const existing = state.workspace.automationLanes[trackId] ?? []
+    if (!existing.some(item => sameAutomationTarget(item, target))) return
+    workspace({
+      ...state.workspace,
+      automationLanes: {
+        ...state.workspace.automationLanes,
+        [trackId]: existing.filter(item => !sameAutomationTarget(item, target)),
+      },
+    })
+  },
+  replaceAutomationLane(
+    trackId: string,
+    previous: AutomationTarget,
+    next: AutomationTarget | null
+  ) {
+    const state = get()
+    const track = state.document.tracks.find(item => item.id === trackId)
+    if (!track || (next && !isAutomationTarget(next, track))) return
+    const existing = state.workspace.automationLanes[trackId] ?? []
+    const index = existing.findIndex(item => sameAutomationTarget(item, previous))
+    if (
+      index === -1 ||
+      (next &&
+        existing.some((item, position) => position !== index && sameAutomationTarget(item, next)))
+    )
       return
-    }
-    session({
-      automationParameters: { ...get().session.automationParameters, [trackId]: parameter },
+    const lanes = [...existing]
+    if (next) lanes[index] = next
+    else lanes.splice(index, 1)
+    workspace({
+      ...state.workspace,
+      automationLanes: { ...state.workspace.automationLanes, [trackId]: lanes },
     })
   },
   setAutomationPoint(
