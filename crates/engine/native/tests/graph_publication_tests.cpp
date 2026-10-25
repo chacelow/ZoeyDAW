@@ -13,11 +13,11 @@ namespace {
 namespace graph = tracktion::graph;
 thread_local bool processing = false;
 void require(bool value,const char* message) { if(!value)throw std::runtime_error(message); }
-struct Lifetime { bool destroyedInCallback = false; };
+struct Lifetime { bool destroyedInCallback = false; int destructions = 0; };
 class Signal final : public graph::Node {
 public:
     Signal(float value,Lifetime& lifetime):value(value),lifetime(lifetime) {}
-    ~Signal() override { lifetime.destroyedInCallback |= processing; }
+    ~Signal() override { lifetime.destroyedInCallback |= processing; ++lifetime.destructions; }
     graph::NodeProperties getNodeProperties() override { return {true,false,1,0,0}; }
     bool isReadyToProcess() override { return true; }
 private:
@@ -90,10 +90,44 @@ void failuresRetainPlayback(bool pooled,bool sharing,double rate,int block,Previ
     require(rejected>0,"Publication fault scan never exercised failure preservation");
     std::cout<<"Graph publication allocation faults: pool="<<pooled<<" sharing="<<sharing<<" queued="<<(previous==PreviousGraph::Queued)<<" format="<<rate<<'/'<<block<<" sites="<<allocations<<" rejected="<<rejected<<", old PCM and later recovery preserved\n";
 }
+void publicationTransfersPreparedOwnership() {
+    Lifetime first,second,third;
+    using Payload = Signal;
+    graph::LockFreeObject<Payload> publication;
+    const auto prepare=[](float value,Lifetime& lifetime) { return std::make_unique<Payload>(value,lifetime); };
+    const auto publish=[&](std::unique_ptr<Payload> prepared) {
+        beginAllocationGuard();
+        auto retired=publication.pushNonRealTime(std::move(prepared));
+        const auto allocations=endAllocationGuard();
+        require(allocations==0,"Prepared ownership publication allocated");
+        return retired;
+    };
+    const auto observe=[&](const Payload* identity) {
+        processing=true;
+        { const auto access=publication.getScopedAccess();require(access.get()==identity,"Prepared resource storage moved during audio adoption"); }
+        processing=false;
+    };
+    auto firstStorage=prepare(.25f,first);auto* firstIdentity=firstStorage.get();
+    require(!publish(std::move(firstStorage)),"Initial publication retired an unrelated resource");
+    observe(firstIdentity);
+    auto secondStorage=prepare(.5f,second);auto* secondIdentity=secondStorage.get();
+    require(!publish(std::move(secondStorage)),"Active resource was destroyed before audio handoff");
+    observe(secondIdentity);
+    require(first.destructions==0,"Audio adoption destroyed the retired processing resource");
+    auto thirdStorage=prepare(.75f,third);auto* thirdIdentity=thirdStorage.get();
+    auto retired=publish(std::move(thirdStorage));
+    require(retired.get()==firstIdentity && first.destructions==0,"Retired processing resource ownership was lost");
+    retired.reset();
+    require(first.destructions==1 && !first.destroyedInCallback,"Retired processing resource was not released once off the callback");
+    observe(thirdIdentity);publication.clear();
+    require(second.destructions==1 && third.destructions==1 && !second.destroyedInCallback && !third.destroyedInCallback,"Publication cleanup lost or destroyed resources on the callback");
+    std::cout<<"Prepared ownership publication: zero allocation, stable storage, retired resources released once off callback\n";
+}
 }
 int main() {
     try {
         juce::ScopedJuceInitialiser_GUI gui;
+        publicationTransfersPreparedOwnership();
         for(bool pooled:{false,true})for(bool sharing:{false,true})for(auto previous:{PreviousGraph::Active,PreviousGraph::Queued}) {
             failuresRetainPlayback(pooled,sharing,48000,256,previous);
             failuresRetainPlayback(pooled,sharing,96000,512,previous);

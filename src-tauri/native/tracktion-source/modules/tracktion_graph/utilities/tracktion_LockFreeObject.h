@@ -47,10 +47,7 @@ public:
     /** Constructs an initially empty object.
         Use the pushNonRealTime function to queue one for real-time access.
     */
-    LockFreeObject()
-    {
-        static_assert (std::is_move_constructible_v<ObjectType>);
-    }
+    LockFreeObject() = default;
 
     /** Clears the current and any pending object.
         N.B. This destroys the objects so only call it once no other threads can
@@ -69,7 +66,7 @@ public:
         pendingObject = nullptr;
     }
 
-    /** Pushes a new object to be picked up on the real time thread.
+    /** Publishes non-null, preallocated owned storage for the real-time thread.
         Returns the object this replaces which will either be a previously
         pushed object that was never swapped in on the real-time thread, or an
         object that has been retired by a retainRealTime call swapping in a
@@ -77,12 +74,8 @@ public:
         retired object if they obtained its pointer before the swap, so callers
         must wait for those readers to finish before destroying it.
     */
-    [[nodiscard]] std::unique_ptr<ObjectType> pushNonRealTime (ObjectType&& newObj)
+    [[nodiscard]] std::unique_ptr<ObjectType> pushNonRealTime (std::unique_ptr<ObjectType> newStorage) noexcept
     {
-        // Allocate the new storage before taking the lock as retainRealTime
-        // will spin on it from the real-time thread
-        auto newStorage = std::make_unique<ObjectType> (std::move (newObj));
-
         std::unique_ptr<ObjectType> replacedObject;
 
         {

@@ -263,25 +263,25 @@ void LockFreeMultiThreadedNodePlayer::postNewGraph (std::unique_ptr<NodeGraph> n
                           return n1->isReadyToProcess() && ! n2->isReadyToProcess();
                       });
 
-    PreparedNode newPreparedNode;
-    newPreparedNode.graph = std::move (newGraph);
-    newPreparedNode.nodesReadyToBeProcessed = std::make_unique<LockFreeFifo<Node*>> ((int) newPreparedNode.graph->orderedNodes.size());
-    buildNodesOutputLists (newPreparedNode);
+    auto newPreparedNode = std::make_unique<PreparedNode>();
+    newPreparedNode->graph = std::move (newGraph);
+    newPreparedNode->nodesReadyToBeProcessed = std::make_unique<LockFreeFifo<Node*>> ((int) newPreparedNode->graph->orderedNodes.size());
+    buildNodesOutputLists (*newPreparedNode);
 
     if (useMemoryPool)
     {
-        const size_t poolCapacity = newPreparedNode.graph->orderedNodes.size();
-        newPreparedNode.audioBufferPool = std::make_unique<AudioBufferPool> (poolCapacity);
+        const size_t poolCapacity = newPreparedNode->graph->orderedNodes.size();
+        newPreparedNode->audioBufferPool = std::make_unique<AudioBufferPool> (poolCapacity);
 
-        node_player_utils::reserveAudioBufferPool (newPreparedNode.graph->rootNode.get(),
-                                                   newPreparedNode.graph->orderedNodes,
-                                                   *newPreparedNode.audioBufferPool,
+        node_player_utils::reserveAudioBufferPool (newPreparedNode->graph->rootNode.get(),
+                                                   newPreparedNode->graph->orderedNodes,
+                                                   *newPreparedNode->audioBufferPool,
                                                    numThreadsToUse, blockSizeToUse);
     }
 
-    auto* newRootNode = newPreparedNode.graph->rootNode.get();
-    auto* newGraphPosted = newPreparedNode.graph.get();
-    auto* newAudioBufferPoolPosted = newPreparedNode.audioBufferPool.get();
+    auto* newRootNode = newPreparedNode->graph->rootNode.get();
+    auto* newGraphPosted = newPreparedNode->graph.get();
+    auto* newAudioBufferPoolPosted = newPreparedNode->audioBufferPool.get();
     auto retiredPreparedNode = preparedNodeObject.pushNonRealTime (std::move (newPreparedNode));
 
     rootNode = newRootNode;
