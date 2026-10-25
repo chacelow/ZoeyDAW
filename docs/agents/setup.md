@@ -23,13 +23,15 @@ pnpm fix
 pnpm test
 pnpm typecheck:core
 pnpm check:boundaries
+pnpm check:file-size
+pnpm check:file-size --report
 pnpm --filter @zoeydaw/web typecheck
 pnpm --filter @zoeymind/shared typecheck
 pnpm --filter @zoeymind/logger typecheck
 pnpm build
 ```
 
-`check` 执行 Ultracite、共享度量漂移和核心依赖边界检查；`fix` 先生成度量 CSS 再执行套件修复；`test` 运行 core/runtime 独立包、Web 行为、根工具模块规则及 shared/logger/UI 行为测试，并检查 Cargo/native 依赖方向。`test:shared` 包含共享 UI 的资源和 React 生命周期回归。`typecheck:core` 检查两个核心 Web 包。Web 的 lint/format 是这些根入口的别名，不维护另一套格式配置。类型检查和构建单独执行，不包含在 `check` 中。
+`check` 执行 Ultracite、共享度量漂移、核心依赖边界及文件规模检查；`check:file-size --report` 列出超过 500 行的自有源码，存量超限基线只准降低或删除。`fix` 先生成度量 CSS 再执行套件修复；`test` 运行 core/runtime 独立包、Web 行为、根工具模块规则及 shared/logger/UI 行为测试，并检查 Cargo/native 依赖方向。`test:shared` 包含共享 UI 的资源和 React 生命周期回归。`typecheck:core` 检查两个核心 Web 包。Web 的 lint/format 是这些根入口的别名，不维护另一套格式配置。类型检查和构建单独执行，不包含在 `check` 中。
 
 需要单独修改共享度量时使用包命令，不从 Web 跨目录执行脚本：
 
@@ -69,9 +71,15 @@ cargo test --workspace --locked
 
 根 `Cargo.lock` 与 `.cargo/config.toml` 供应用 workspace 共用。media、project、browser 的独立测试不编译 Tracktion；engine 与完整 workspace 检查需要维护的 Tracktion 源码及固定 JUCE checkout。研究探针 `scripts/audio/probes/rust` 保持独立 manifest 和 lock。
 
-实时协议布局由 `protocol/realtime.json` 唯一定义。运行 `node scripts/generate-realtime-protocol.mjs` 生成三语言产物，`--check` 检查漂移。`pnpm check:realtime-protocol` 编译临时 Rust/C++ 校验程序，对照 TS 写出的全部字段与独立 golden fixture，结束后删除临时文件。native CTest 覆盖三槽并发快照、实际 DC/正弦/短脉冲计量、输入设备换代，以及完整 Edit 的 fader/mute/solo/Stop fence 后采集。graph tap 已替换旧 LevelMeasurer 路径；MeterHub 和桌面 meter 拉取尚未接通。
+实时协议布局由 `protocol/realtime.json` 唯一定义。运行 `node scripts/generate-realtime-protocol.mjs` 生成三语言产物，`--check` 检查漂移。`pnpm check:realtime-protocol` 编译临时 Rust/C++ 校验程序，对照 TS 写出的全部字段与独立 golden fixture，结束后删除临时文件。native CTest 覆盖三槽并发快照、实际 DC/正弦/短脉冲计量、输入设备换代，以及完整 Edit 的 fader/mute/solo/Stop fence 后采集。
+
+生产轨头、路由和 Device 前后级电平通过 window-bound stream 的 raw binary snapshot 读取唯一 Rust MeterHub；Web `MeterSession` 管理单在途拉取、兴趣并集、事件回执、隐藏恢复和关闭。原生 telemetry 的 `meterReady` 显式控制准入，停播且尚无图时等待首次 Play，不因订阅启动音频。原有 backend poll 每 250ms 至多刷新一次 registry，原生刷新等待新图首个快照。Transport、设备状态和录音缩略图仍使用 `playback_telemetry`，完整唯一快照切换与 WKWebView 验收尚未完成。Hosted 录音回归覆盖三轨同源及不同输入、前后 seek 启录、播放中 punch-in、真实 writer PCM 和缩略图增长。这些验证不代替真实麦克风回调与桌面操作验收。
 
 `zoeydaw_playback_smoke REQUEST.json NEW_CAPTURE.wav SECONDS` 使用真实输出设备，会发声。输入为严格 protocol v2 `BackendDocumentRequest`，含十进制 `controlGeneration`，control 不含 heldNotes/midiVelocity；素材必须可解码。程序限制测试 Main 和试听为低增益，覆盖窄控制、可靠 MIDI、定位、循环、并行试听、owner 切换和停止。捕获文件来自设备前的引擎输出，不是物理 loopback，也不能替代桌面 Browser 拖入和播放按钮的 UI 验收。输出文件不能覆盖已有文件。
+
+`cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json` 使用真实输出设备，将 Main 限制到 −30 dB。输入是严格 protocol v2 工程请求。它验证 EngineSession、native meter reader、Rust Hub 的真实样本聚合、音频图 sample/beat 时钟、1.2秒慢消费者、选择性 reset、换图后的 BPM 与 lease 释放，不启动 Tauri、不请求输入权限。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 与 `ZOEYDAW_AUDIO_CACHE_PATH` 指向临时位置可隔离用户偏好；这项 smoke 不代替 WebView 吞吐和实际操作验收。
+
+`playback_clock_probe(streamId)` 返回同一 Hub 原点的十进制纳秒和设备采样锚点，仅所属窗口可读。Web 首帧后每五秒串行采样五次，按最小 RTT 中点估算偏移，保留半 RTT 不确定度；隐藏恢复重新校准。`MeterSession.readFrameAge()` 只表示 Hub 快照发布年龄，不等同音频块采集到绘制的全链路延迟。真实 WKWebView 的 p95/p99 尚未测量。
 
 `zoeydaw_audio_configuration_smoke [OUTPUT_DEVICE_ID]` 使用真实声卡，保持其当前物理采样率，只切换支持的 Buffer Size 后恢复。它验证 capabilities 探测不打开设备、配置失败与持久化失败回滚、输出通道掩码、编排和独立 Preview 状态、停止代际及重新创建 owner 后的偏好恢复。配置和 cache 使用临时位置，不覆盖用户偏好。它不请求输入权限，不验证录音或物理 loopback。示例设备 ID 为 `CoreAudio::E2x2`，以本机实际枚举为准。
 
@@ -90,14 +98,12 @@ cargo test --workspace --locked
 
 secrets、token 和 API key 不进入仓库。保留其他 Session、Agent 的未提交和暂存工作。
 
-## 每一次 commit 单独确认
+## 按 Feature 或阶段提交
 
-每次 commit 都要求用户在本次提交上下文明确说出 **“我确认”**。之前的授权不延续；“提交吧”“commit 一下”“push 吧”不能替代。
+每完成一个可独立验证的 Feature、Bug 修复或重构阶段，运行受影响检查、自审 diff 后做一次本地 commit。无需重复询问用户，不要求口令、确认环境变量或 staged-tree hash。
 
-`.husky/pre-commit` 执行确认门禁及已有格式/检查流程。非交互提交在获得该次确认后使用：
+只暂存本阶段归属的改动，保持提交可审查、可回退。保留其他 Session 的未提交和暂存工作；不要全仓 `git add .`、重置他人 index 或把未完成功能混入提交。若已有他人暂存内容，使用独立 index 隔离本阶段。
 
-```sh
-USER_CONFIRM_HASH=$(git write-tree) git commit -m "..."
-```
+`.husky/pre-commit` 运行已有 lint-staged，`commit-msg` 检查提交职责。检查失败先修复，不默认跳过 hook。用户后续桌面验证继续保留为待办；本地提交记录实际执行的检查及未验收边界，不宣称全部验收通过。
 
-确认 hash 绑定本次 staged tree；通过 hash 校验的非交互提交尝试记录在 `.git/commit-audit.log`，该文件不记录被拒绝的违规尝试。未经授权不 commit，不自动扩展为 push、发布或部署。
+本地 commit 不授权 push、发布、部署、合并或覆盖远端历史。提交历史中的旧确认日志保留为历史记录，不再作为当前门禁。

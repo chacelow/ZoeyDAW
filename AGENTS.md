@@ -1,6 +1,6 @@
 # zoeydaw
 
-Web-UI DAW。React 做交互，Tauri 承载桌面壳；当前是单项目 Web 原型，adapter 提供模拟数据、时钟和本地快照，没有真实音频引擎或工程文件系统。产品范围见 [原型策略](docs/product-prototype.md)。包名与版本以各 `package.json` 为准。
+Web-UI DAW。React 实现界面与交互，Tauri 承载桌面壳，唯一 Tracktion Engine 提供原生音频播放，Rust 核心提供工程存储、媒体分析和 Browser。Gallery 与行为测试显式注入 mock。当前能力及验收边界见 [产品范围](docs/product-prototype.md)；包名与版本以 manifest 为准。
 
 ## 开工与必读路由
 
@@ -14,13 +14,19 @@ Web-UI DAW。React 做交互，Tauri 承载桌面壳；当前是单项目 Web �
 | Panel、共享控件、token、Canvas 布局 | [project-panels](docs/architecture/project-panels.md) 与 `apps/web/src/pages/project/ProjectLayout.tsx` |
 | 原型范围、Rust/插件/文件格式方向 | [product-prototype](docs/product-prototype.md) |
 
+## 开发执行方式
+
+本仓库由当前主 Agent 独立完成调查、设计、实现、审查与验证。禁止启动或委派 subagent，包括 scout、并行候选、独立 reviewer 和外部模型 CLI；Skill 中的相关步骤改为主 Agent 顺序执行。只有用户在当前任务明确要求恢复时才启用。保留其他 Session 的工作与用户持有的服务。
+
+编写和修改源码先读全局 `project-structure-discipline` Skill，项目状态与依赖边界见 [modules](docs/architecture/modules.md)。`pnpm check:file-size --report` 显示当前超长文件；检查基线只用于存量追踪，不构成超过 800 行继续追加的授权。
+
 ## 不可破的边界
 
 - **Never**：提交 secrets/token/API key；Agent 启动、重启 `tauri:dev` 或停止用户已有应用。
 - **Always**：复用共享 UI 包及其 token；跨文件重命名用 LSP；保留其他 Session/Agent 的未提交与暂存工作。
 - **Ask first**：修改 `src-tauri/tauri.conf.json`、共享 UI 公共 API、新增 npm 依赖或 `.github/workflows/`。
 - 修改 Rust、原生配置、capabilities、Cargo 依赖或 plugin 注册后，明确告诉用户“需要重启 tauri:dev”，由用户操作。
-- 每次 commit 都须用户在本次提交上下文明确说 **“我确认”**，历史授权不延续；门禁细节见 setup。
+- 每个独立 Feature 或阶段通过受影响检查后自动做本地 commit，不再等待确认；范围与门禁见 [setup](docs/agents/setup.md#按-feature-或阶段提交)。push、发布、部署和不可逆操作另行确认。
 
 ## 设计与完成门槛
 

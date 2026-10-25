@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-zoeydaw 是 Web-UI DAW。React 实现界面与交互，Tauri 承载桌面壳。Mac 播放接入 Tracktion Engine、JUCE CoreAudio 和 SoundTouch；这次接入不代表最终音质与性能选型已冻结，Mixer 和插件功能也不具备完整 DAW 深度。
+zoeydaw 是 Web-UI DAW。React 实现界面与交互，Tauri 承载桌面壳。Mac 播放接入唯一 Tracktion Engine、JUCE CoreAudio 及 SoundTouch/Signalsmith。现有能力不代表完整 DAW 深度或最终音质与性能验收通过。
 
 当前有首页、单项目面板、Browser、编排时间线与组件画廊。生产项目使用原生播放后端，不在浏览器中回退到模拟发声。Browser 接入真实目录引用、可取消后台索引、可搜索文件树、虚拟滚动、独立试听和拖入编排。原生工程存储提供音频探测与 SHA-256、`.zdaw` manifest 保存和重开、媒体收集及同内容 Relink。Gallery 和模拟行为测试显式注入 mock provider。
 
@@ -12,7 +12,7 @@ zoeydaw 是 Web-UI DAW。React 实现界面与交互，Tauri 承载桌面壳。M
 
 按界面需求反推原生需求。先让交互可运行、状态和验收可观察，再落实 Rust 实现；不先铺音频引擎或假想长期架构。
 
-可替换后端接口集中前端命令、预览与确认。真实工程文件由独立异步 `projectFiles` 入口协调，localStorage 只保存最近工程位置。原生播放实现设备输出、音频调度、源窗口和 BPM 同步；录音、外部输入监听、插件 hosting 与音源尚未接通。无音源的 MIDI 保持静音，不能用模拟电平冒充发声。
+前端 runtime 集中命令、预览与确认，独立 `projectFiles` 协调真实工程文件，localStorage 只保存最近工程位置。原生播放已接入输出、外部输入监听、录音 writer、音频/MIDI Clip 和 Device chain；外部插件已有隔离 admission 与参数路径。当前运行状态保存、原生插件编辑器、故障恢复、完整 Session 与自动化录制仍有缺口，见 [模块契约](architecture/modules.md) 和 [adapter 契约](../apps/web/src/pages/project/adapters/README.md)。无音源 MIDI 保持静音，物理输入与真实桌面路径按实际验收分别报告。
 
 兼容 Ableton Live `.als`，以及支持 CLAP/VST3，是产品方向，不是 Agent 可以自动扩展本轮任务的实现清单。具体支持范围由当次需求和真实验证决定。
 

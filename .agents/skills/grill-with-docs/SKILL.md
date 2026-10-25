@@ -1,7 +1,7 @@
 ---
 name: grill-with-docs
-description: 一个用来打磨计划或设计的持续追问式访谈，并在过程中创建文档（ADRs 和词汇表）。
+description: 用户要求通过访谈打磨计划并保留领域决策时使用。
 disable-model-invocation: true
 ---
 
-运行一次 `/grilling` session，并使用 `/domain-modeling` skill。
+使用全局 [grill-with-docs](/Users/caishilong/.agents/skills/grill-with-docs/SKILL.md)。沿用项目已有文档位置，仅记录稳定契约；不自动创建重复 CONTEXT、任务地图或另一份 todo。

@@ -4,15 +4,9 @@
 
 ## 开发前设计门槛
 
-新增功能或修改模块前，先在当前 Session 完成以下设计。简单改动用简短清单，多文件改动列出 plan；不要求每次新建永久设计文档。
+结构设计执行全局 `project-structure-discipline` Skill 的五个问题和自检清单。本文件只补充 ZoeyDAW 的职责、依赖和生命周期契约。
 
-1. **Check 现有实现**：读目标模块及调用方，查已有公共接口、共享组件、hook 和 token。修改导出符号前用 LSP 查引用。
-2. **定数据与状态归属**：列出数据、不变量、状态 owner、生命周期和读写入口，区分持久数据、会话状态、局部交互和可派生数据。
-3. **定接口与依赖**：说明输入、输出、命令、错误和清理方式；确定哪些是纯逻辑、哪些适配 React、哪些调用外部能力。
-4. **先拆职责，再列文件**：列出具体路径、文件职责、公共导出和验证入口，再创建实现。不要先写大文件再补拆分，也不为凑层数预建空的 store、hook 或 controller。
-5. **定验收**：明确公共行为、边界测试与真实运行场景。共享外观验证代表性消费者；Canvas 同时验证绘制、布局和命中几何。
-
-编辑已有文件前核对变更是否属于它的职责。发现新的职责或依赖时，先更新 plan，再继续。单次设计留在 Session；稳定的契约变化更新所属文档。
+多文件修改在当前 Session 定义 owner、接口、文件职责及验收；单次计划不另建永久文档。UI 同时检查共享控件、Canvas 绘制和命中几何。稳定契约变化更新对应文档。
 
 ## 目录与公共入口
 
@@ -72,6 +66,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 `crates/engine/native` 将协议模型、无设备分析与 EngineSession 分为 `model`、`analysis`、`runtime` 三个 OBJECT targets。分析不依赖 runtime，runtime 不依赖分析；根 `playback_bridge` 保留 C ABI。Tracktion/JUCE 实现只进入最终 `zoeydaw_playback` 静态库，OBJECT targets 仅继承编译配置，不链接带实现源的 vendor INTERFACE targets。
 
+`runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。
+
 Web 领域计算、快照校验和波形范围 schema 归 `@zoeydaw/project-core`，不依赖 app、React、Zustand、Tauri 或 runtime。`@zoeydaw/project-runtime` 拥有 vanilla store 工厂、编辑历史、preview、后端队列和 lease 生命周期，只依赖 core 与 `zustand/vanilla`。包导入不创建运行实例；app 组合层注入 backend 和轨道高度，React 绑定留在 `stores/useProjectState.ts`。测试和 Gallery 从 runtime 的 `./testing` 入口显式取得模拟实现。
 
 ESLint 检查两包的普通、类型、转发与动态导入。`scripts/check-core-boundaries.mjs` 检查 Cargo 本地依赖和自有 native include 方向；根 `check` 与 `test:architecture` 均运行该检查。公共包入口使用精确 exports，不暴露内部 connection 或测试文件。
@@ -101,7 +97,13 @@ React render 只计算当前视图，不发布外部 store options、不写供�
 
 删除或替换功能时，变更集中于该功能、公共契约直接消费者和组合入口。卸载后释放其资源，旧回调不能写入新实例。移除共享基础模块本来就需要迁移消费者，不承诺零依赖或零改动。
 
-文件增长到几百行时检查变化原因、重复逻辑与验证难度，不以固定行数拆分。同一不变量的可变状态由一个协调器拥有，不制造多份相互同步的 manager。公共入口应让读者找到 owner、修改入口和清理路径。
+同一不变量的可变状态由一个协调器拥有，不制造多份相互同步的 manager。公共入口应让读者找到 owner、修改入口和清理路径。
+
+## 文件规模与拆分
+
+行数、命名、按变化原因拆分及例外，以全局 `project-structure-discipline` 为唯一通用规则，执行 400 行预警与 800 行必拆。数据与夹具例外必须位于明确标识的目录；业务逻辑不能靠文件名或登记基线豁免。
+
+`pnpm check:file-size --report` 是当前盘点入口。`tooling/file-size-baseline.json` 暂时追踪存量超限，检查只阻止新增超限和继续增长，尚未完整执行硬上限及例外分类。该工具边界不构成继续向超长文件追加的许可；收敛到 Skill 口径与拆分存量仍保留在 todo。
 
 ## 自动检查与相关契约
 

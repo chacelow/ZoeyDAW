@@ -112,4 +112,4 @@ description: 用于设计深模块的共享词汇。适用于用户想设计或�
 ## Going deeper
 
 - **Deepening a cluster given its dependencies** - 见 [DEEPENING.md](DEEPENING.md)：dependency categories、seam discipline 和 replace-don't-layer testing。
-- **Exploring alternative interfaces** - 见 [DESIGN-IT-TWICE.md](DESIGN-IT-TWICE.md)：启动并行 sub-agents，用几种截然不同的方式设计 interface，再按 depth、locality 和 seam placement 比较。
+- **比较接口方案**：见 [DESIGN-IT-TWICE.md](DESIGN-IT-TWICE.md)，由当前主 Agent 顺序比较真实设计分歧，按接口复杂度、修改集中程度和状态所有权选择。

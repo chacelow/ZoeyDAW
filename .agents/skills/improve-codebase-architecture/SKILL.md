@@ -63,4 +63,4 @@ Side effects 随 decisions 成形而内联发生；运行 `/domain-modeling` ski
 - **要用 `CONTEXT.md` 中不存在的概念命名 deepened module？** 把 term 加入 `CONTEXT.md`。若文件不存在，按需创建。
 - **对话中打磨了 fuzzy term？** 立即更新 `CONTEXT.md`。
 - **用户以 load-bearing reason 拒绝了 candidate？** 提议写 ADR，表述为：_"Want me to record this as an ADR so future architecture reviews don't re-suggest it?"_ 只有当该 reason 未来 explorer 也确实需要知道时才提议；跳过临时原因（"not worth it right now"）和显而易见原因。
-- **想探索 deepened module 的 alternative interfaces？** 运行 `/codebase-design` skill，并使用其中的 design-it-twice parallel sub-agent pattern。
+- **需要比较接口方案？** 读取 `codebase-design`，由当前主 Agent 顺序比较设计决策，不启动并行候选或 subagent。
