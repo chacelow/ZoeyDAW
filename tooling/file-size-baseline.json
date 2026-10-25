@@ -2,7 +2,6 @@
   "apps/web/src/locales/library.en-US.ts": 1090,
   "apps/web/src/locales/library.zh-CN.ts": 903,
   "apps/web/src/pages/project/adapters/backend/native.test.ts": 1141,
-  "apps/web/src/pages/project/adapters/runtime.test.ts": 1090,
   "packages/project-runtime/src/backend/connection.test.ts": 1027,
   "packages/project-runtime/src/runtime/project-runtime.ts": 1239,
   "packages/shared/src/schemas/test-project.ts": 1332,

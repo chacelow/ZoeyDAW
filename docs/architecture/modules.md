@@ -111,6 +111,8 @@ React render 只计算当前视图，不发布外部 store options、不写供�
 
 `pnpm check:file-size --report` 是当前盘点入口。`tooling/file-size-baseline.json` 暂时追踪存量超限，检查只阻止新增超限和继续增长，尚未完整执行硬上限及例外分类。该工具边界不构成继续向超长文件追加的许可；收敛到 Skill 口径与拆分存量仍保留在 todo。
 
+`adapters/runtime.test.ts` 保留 runtime 生命周期、backend 注册及工程初始化回归；编辑/撤销、transport/MIDI/录制、保存确认分别位于 `runtime-edits.test.ts`、`runtime-transport.test.ts` 和 `runtime-save.test.ts`。共享 `runtime-test-backend.ts` 仅导出延迟 backend 工厂，不安装 backend、不注册 hook；各测试文件持有自己的 lease 与清理状态，沿用 Vitest 的文件隔离。
+
 ## 自动检查与相关契约
 
 可机械检查的跨层导入、公共入口和 token 使用通过已有 lint、类型或行为测试落实。交付时区分自动检查和仍需人工判断的部分；文档中的硬规则不等于 CI 已覆盖全部设计判断。
