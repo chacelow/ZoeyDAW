@@ -8,7 +8,7 @@
 
 生产轨头和路由电平直接读取 `adapters/realtime.ts` 暴露的 MeterStore，兴趣按挂载消费者取并集。`MeterSession` 处理打开期间卸载、隐藏代际、事件 gap、registry 更新与关闭，`MeterPull` 只在现有 scheduler tick 采纳和绘制单在途 binary 响应。registry 通过原有 backend poll 至多每 250ms 刷新，命令先安装 native 当前图并等待首个快照；换图期间不会把尚未发布的快照当作错误基线。
 
-`BackendTelemetry` 是连接层保留的 transport 接口，其 native 输入来自同一 binary Hub snapshot。recording preview 和设备状态仍用原状态查询。`BackendTelemetry.levels`、`SessionState.levels`、native `inputLevels` JSON 和旧 JSON transport clock 均已删除。生产和显式 Gallery mock 都通过 MeterStore 分发电平，Gallery 不产生音频。Device 前后级和路由复用 `ProjectMeter`，source observation 与 transport 同帧发送；精确 source 块时戳和 source UI 切换仍保留在第 3 项。播放头只保留本地投影。
+`BackendTelemetry` 是连接层保留的 transport 接口，其 native 输入来自同一 binary Hub snapshot。recording preview 和设备状态仍用原状态查询。`BackendTelemetry.levels`、`SessionState.levels`、native `inputLevels` JSON 和旧 JSON transport clock 均已删除。生产和显式 Gallery mock 都通过 MeterStore 分发电平，Gallery 不产生音频。Device 前后级和路由复用 `ProjectMeter`，source observation 与 transport 同帧发送；source UI 切换仍保留在第 3 项。播放头只保留本地投影。
 
 四种内置 Device 已经由 `BackendTrack.devices` 和 `projectBackendDocument` 投影至原生稳定实例链，参数与 Device 自动化能够影响真实处理。Utility、Filter、Delay、Reverb 的 DSP 回归及 Utility 设备前采集通过；混响采用固定版本 Signalsmith，decay 是名义尾音时间，不保证完整脉冲精确 RT60。Device 前后级 tap 直接观察 PluginNode 与其输入样本，不复制轨道输出；显示通过二进制帧和实际 React/DOM 回归，真实 WKWebView 尚未验收。
 
@@ -78,7 +78,7 @@ Rust `realtime/rms.rs` 按累计 epoch 替换能量并维护有界窗口，`ball
 
 生产 `MeterSession` 已连接原生 stream。Store 在 admission 时绑定 stream/session，拒绝迟到 registry 和旧图帧，选择性 reset 立即屏蔽受影响 slot，保留其他 endpoint。Pull 由共享 rAF 调用 `tick`，最多一个请求和一个 pending buffer；隐藏、长帧、兴趣变化和 stalled 响应按代际丢弃，旧请求未完成时不并发补发。实际 DOM 和轨头 Canvas 绘制通过 `recordPaint` 累计每帧耗时，驱动 60/30Hz 降级和恢复；无兴趣时 scheduler 休眠，metadata 变化唤醒。相同 source 字段的 React 重渲染不重建 watcher。关闭先释放 Store 订阅再停止 Pull，绘制回调异常不能阻止原生关流。时钟校准绑定可见性及 graph/device 代际，换图后的旧响应不能覆盖新映射。每次 stream/session 重建销毁旧实例。真实 WKWebView 验收仍未完成。
 
-停播结构操作替换 Edit 后可能没有 playback graph。此时 `playback_stream_registry` 和 `playback_clock_probe` 返回 `null`，Web 废弃校准、标记 stale 并暂停 Pull，保留 stream，待既有低频检查发现图后恢复。BPM 更新已改为保留 Edit；早期停播 BPM 替换 smoke 只代表当时路径，不能作为当前替换行为的依据。空 registry、空时钟及迟到旧帧仍由 Web 回归覆盖。
+停播结构操作替换 Edit 后可能没有 playback graph。levels v2 仍返回明确的 registry，source 与 graph meter 映射为空；同一 stream 持续传送 Stopped 或 Unavailable，只有 sample clock probe 返回 null。Web 废弃旧图校准与在途响应，不暂停停止位置的拉取；图准备后在同一 stream 接收 Audio。BPM 保留 Edit，旧停播 BPM 替换 smoke 不作为当前路径的证据。对应 Web 回归覆盖空映射、停止位置、空 sample clock 和迟到旧帧。
 
 Arrangement、Mixer、Device rack、浮动窗口各自的可见集合合并后发送。重复显示同一endpoint不增加采集任务。面板移动、隐藏、卸载、engine release时引用计数清理。input meter即使transport停止仍可能活跃，因此调度条件必须是active interests/data而非`playing`。
 
@@ -90,7 +90,7 @@ Arrangement、Mixer、Device rack、浮动窗口各自的可见集合合并后�
 
 不能只测一个track。新增冻结前的同步负载阶梯为16/64/128 tracks、每轨0/4/8 devices、input endpoints和master/cue、多面板重复显示。平台无法承载的组合必须标出容量，不承诺无限扩展。
 
-带宽按实际布局计算。128 tracks × 8 plugins × 每 plugin input/output 两个 stereo tap = 4096 声道槽。无 source 记录时每帧 `128 + 48 * 4096 = 196736` bytes，60Hz 为 11804160 bytes/s，尚未计入 track/input、source 尾记录和 IPC 副本。这是算术预算，不是吞吐测量。默认只订阅可见面板兴趣，不自动订全部工程。
+带宽按 v2 布局计算。128 tracks × 8 plugins × 每 plugin input/output 两个 stereo tap = 4096 声道槽。无 source 记录时每帧 `192 + 48 * 4096 = 196800` bytes，60Hz 为 11808000 bytes/s，尚未计入 track/input、source 尾记录和 IPC 副本。这是算术预算，不是吞吐测量。默认只订阅可见面板兴趣，不自动订全部工程。
 
 验收必须同时覆盖：
 
