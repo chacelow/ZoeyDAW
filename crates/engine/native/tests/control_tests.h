@@ -19,7 +19,11 @@ void testNarrowControl() {
     require(session.call("control",envelope(command))["kind"].toString()=="rejected","Unsupported recording control was silently accepted");
     auto query=object();put(query,"leaseId","mixer-test");const auto telemetry=session.call("telemetry",query);
     require(telemetry["device"]["state"].toString()=="closed","Stopped/stale controls acquired audio hardware");
-    require((int)telemetry["telemetry"]["appliedSequence"]==4 && telemetry["telemetry"]["controlGeneration"].toString()=="9007199254740994","Control fence diverged from telemetry");
+    put(query,"sessionId","live-mixer-regression");const auto registry=session.meterRegistry(query);
+    const auto owner=std::stoull(registry["graph"]["ownerEpoch"].toString().toStdString());
+    auto state=session.acquireIdleMeter("mixer-test","live-mixer-regression",owner);require(state!=nullptr,"Missing stopped control reader");
+    zp_meter_read_handle reader(state,owner);zp_stopped_clock stopped{};
+    require(zp_meter_read_stopped_clock(&reader,&stopped)==1 && stopped.applied_sequence==4 && stopped.control_generation==9007199254740994ULL,"Control fence diverged from stopped observation");
     put(command,"sequence",6);put(command,"controlGeneration","9007199254740996");put(control,"recording",false);put(control,"seekGeneration",1);put(control,"seekBar",3);put(control,"metronome",true);
     accepted(session.call("control",envelope(command)),1);
     require(edit->clickTrackEnabled.get(),"Metronome control did not enable native click track");

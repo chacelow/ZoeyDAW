@@ -9,10 +9,14 @@ use std::{
 };
 use zoeydaw_engine::{MainThreadDispatcher, PlaybackService};
 
+#[path = "meter_hub_smoke/binary_codec.rs"]
+mod binary_codec;
 #[path = "meter_hub_smoke/source_observations.rs"]
 mod source_observations;
 #[path = "meter_hub_smoke/stopped_transport.rs"]
 mod stopped_transport;
+#[path = "meter_hub_smoke/transport_frames.rs"]
+mod transport_frames;
 
 #[derive(Default)]
 struct MainQueue(Mutex<VecDeque<Box<dyn FnOnce() + Send>>>);
@@ -79,10 +83,10 @@ fn main() -> Result<(), String> {
             return Err("Native smoke project was rejected".into());
         }
         let stopped = execute(&main, service.telemetry(&main, lease.clone()))?;
-        if stopped["meterReady"] != false || stopped["telemetry"]["playing"] != false {
+        if stopped["meterReady"] != false {
             return Err("Stopped project fabricated a ready playback graph".into());
         }
-        let initial_stopped =
+        let (initial_stopped, mut stream) =
             stopped_transport::verify_open(&service, &main, &lease, &session, &request)?;
         let control = serde_json::json!({
             "protocolVersion": 2, "sessionId": session, "sequence": 1,
@@ -106,7 +110,10 @@ fn main() -> Result<(), String> {
             .graph
             .sample_rate()
             .ok_or("Playing graph has no sample rate")?;
-        let stream = service.open_meter_stream("hub-smoke-main", &lease, &session)?;
+        stream.registry = execute(
+            &main,
+            service.refresh_meter_stream_registry(&main, "hub-smoke-main", stream.stream_id),
+        )?;
         let repeated = execute(
             &main,
             service.refresh_meter_hub(&main, lease.clone(), session.clone()),
@@ -215,8 +222,9 @@ fn main() -> Result<(), String> {
                 window,
                 zoeydaw_engine::realtime::metadata_generated::MeterInterest {
                     stream_id: id,
-                    revision: 1,
+                    revision: if id == stream.stream_id { 2 } else { 1 },
                     endpoint_ids: vec![endpoint.clone()],
+                    transport: true,
                     rate_hz: zoeydaw_engine::realtime::metadata_generated::MeterRateHz::Value60,
                     visible: true,
                 },
@@ -271,8 +279,9 @@ fn main() -> Result<(), String> {
                 "hub-smoke-main",
                 zoeydaw_engine::realtime::metadata_generated::MeterInterest {
                     stream_id: stream.stream_id,
-                    revision: 2,
+                    revision: 3,
                     endpoint_ids: vec![endpoint.clone()],
+                    transport: true,
                     rate_hz: zoeydaw_engine::realtime::metadata_generated::MeterRateHz::Value60,
                     visible: false,
                 },
@@ -287,8 +296,9 @@ fn main() -> Result<(), String> {
                 "hub-smoke-main",
                 zoeydaw_engine::realtime::metadata_generated::MeterInterest {
                     stream_id: stream.stream_id,
-                    revision: 3,
+                    revision: 4,
                     endpoint_ids: vec![endpoint.clone()],
+                    transport: true,
                     rate_hz: zoeydaw_engine::realtime::metadata_generated::MeterRateHz::Value60,
                     visible: true,
                 },
@@ -297,7 +307,7 @@ fn main() -> Result<(), String> {
                 service.meter_stream_snapshot("hub-smoke-main", stream.stream_id, u64::MAX)?;
             let refreshed = decode_levels(&refreshed)
                 .ok_or("Changed interest did not force a complete snapshot")?;
-            if refreshed.header.subscription_revision != 3
+            if refreshed.header.subscription_revision != 4
                 || !service
                     .meter_stream_snapshot("hub-smoke-main", stream.stream_id, u64::MAX)?
                     .is_empty()
@@ -306,6 +316,11 @@ fn main() -> Result<(), String> {
             }
             println!("Stream binary snapshot: {} bytes, {} interested slots, hidden/unchanged empty, foreign window rejected",bytes.len(),expected.len());
         }
+        transport_frames::capture(&service, stream.stream_id, "playing", |header| {
+            header.transport_kind == 2
+                && header.transport_flags & 1 != 0
+                && header.applied_sequence == 1
+        })?;
         service.meter_stream_registry("hub-smoke-main", stream.stream_id)?;
         let first = first_transport.ok_or("Audio graph did not publish transport")?;
         let latest = latest_transport.ok_or("Transport observation missing")?;
@@ -373,96 +388,31 @@ fn main() -> Result<(), String> {
             latest.audio.timeline_sample,
             latest.audio.tempo_bpm
         );
-        {
-            use zoeydaw_engine::realtime::{
-                levels::{decode_levels, encode_levels},
-                protocol_generated::*,
-            };
-            let snapshot = service
-                .meter_snapshot(&lease, &session)?
-                .ok_or("Missing binary smoke snapshot")?;
-            let observation = snapshot
-                .transport
-                .audio()
-                .ok_or("Missing binary smoke transport")?;
-            let metadata = snapshot.realtime_registry(1, 1)?;
-            let slots: Vec<_> = metadata
-                .entries
-                .iter()
-                .rev()
-                .map(|entry| entry.slot_id)
-                .collect();
-            let records = snapshot.select_records(&slots)?;
-            let header = WireHeader {
-                magic: MAGIC as u32,
-                version: VERSION as u16,
-                header_bytes: HEADER_BYTES as u16,
-                generation: metadata.generation,
-                registry_revision: metadata.registry_revision,
-                stream_id: 1,
-                slot_count: 0,
-                seq: snapshot.sequence,
-                time_samples: observation.audio.device_sample,
-                sample_rate: sample_rate.get(),
-                produced_monotonic_ns: snapshot.produced_monotonic_ns,
-                control_generation: 0,
-                accepted_revision: 0,
-                audio_revision: 0,
-                subscription_revision: 1,
-                flags: if observation.audio.playing == 1 {
-                    HEADER_FLAGS_PLAYING as u32
-                } else {
-                    0
-                },
-                timeline_sample: observation.audio.timeline_sample,
-                timeline_beat: observation.audio.timeline_beat,
-                tempo_bpm: observation.audio.tempo_bpm,
-                device_epoch: metadata.device_epoch,
-                source_count: 0,
-                reset_epoch: snapshot.reset_epoch,
-                frame_type: FRAME_TYPES_LEVELS as u32,
-            };
-            let bytes = encode_levels(header, &records, &snapshot.sources)
-                .ok_or("Live Hub record encoding failed")?;
-            let frame = decode_levels(&bytes).ok_or("Live Hub bytes failed decoder")?;
-            if frame.records != records
-                || frame.sources != snapshot.sources
-                || frame.header.timeline_sample != observation.audio.timeline_sample
-                || bytes.len()
-                    != HEADER_BYTES
-                        + RECORD_BYTES * slots.len()
-                        + SOURCE_BYTES * snapshot.sources.len()
-            {
-                return Err("Live binary frame changed slot identity or audio coordinates".into());
-            }
-            println!("Live Hub binary codec: {} bytes, {} reversed-interest slots, audio coordinates preserved; revision fields are fixture values",bytes.len(),slots.len());
-            for mapping in &metadata.sources {
-                let authored = request["state"]["project"]["sources"]
-                    .as_array()
-                    .ok_or("Missing authored sources")?
+        binary_codec::verify(&service, &lease, &session, &request)?;
+        for (window, id, batches) in [
+            ("hub-smoke-main", stream.stream_id, &main_events),
+            ("hub-smoke-mixer", other.stream_id, &mixer_events),
+        ] {
+            let mut acknowledged = 0;
+            loop {
+                let Some(batch) = batches.lock().unwrap().get(acknowledged).cloned() else {
+                    break;
+                };
+                let through = batch
                     .iter()
-                    .find(|source| source["id"].as_str() == Some(mapping.source_id.as_str()))
-                    .ok_or("Source registry lost its authored identity")?;
-                if authored["sampleRate"].as_f64() != Some(mapping.source_rate.get()) {
-                    return Err("Source registry changed the decoded sample rate".into());
-                }
-                let source = frame
-                    .sources
-                    .iter()
-                    .find(|source| source.clip_handle == mapping.clip_handle)
-                    .ok_or("Live source observation missing")?;
-                if source.flags & SOURCE_FLAGS_VALID as u32 == 0
-                    || source.source_frame <= 0.0
-                    || source.source_frame
-                        >= authored["frames"].as_f64().ok_or("Missing source frames")?
-                    || source.position_age_samples != (sample_rate.get() * 0.05).ceil() as u32
-                {
-                    return Err(
-                        "Source observation did not contain a recent actual reader position".into(),
-                    );
-                }
-                println!("Actual source observation: clip={} source={} frame={} ageBound={} device samples", mapping.clip_id, mapping.source_id, source.source_frame, source.position_age_samples);
+                    .map(|event| {
+                        serde_json::to_value(event).unwrap()["seq"]
+                            .as_str()
+                            .unwrap()
+                            .parse::<u64>()
+                            .unwrap()
+                    })
+                    .max()
+                    .ok_or("Empty initial registry batch")?;
+                service.meter_event_receipt(window, id, through)?;
+                acknowledged += 1;
             }
+            batches.lock().unwrap().clear();
         }
         let reset_endpoint = registry
             .entries
@@ -614,8 +564,7 @@ fn main() -> Result<(), String> {
         let replacement = execute(
             &main,
             service.refresh_meter_stream_registry(&main, "hub-smoke-main", stream.stream_id),
-        )?
-        .ok_or("Replacement graph not ready")?;
+        )?;
         if replacement.generation <= registry.generation {
             return Err("Owned stream refresh did not install the replacement graph".into());
         }
@@ -690,28 +639,36 @@ fn main() -> Result<(), String> {
             &main,
             service.refresh_meter_stream_registry(&main, "hub-smoke-main", stream.stream_id),
         )?;
-        if refreshed.is_some()
+        if !refreshed.entries.is_empty()
             || service
                 .meter_stream_clock_probe("hub-smoke-main", stream.stream_id)?
                 .is_some()
         {
-            return Err("Unprepared graph reported ready metadata".into());
+            return Err(
+                "Unprepared graph fabricated registered graph outputs or a sample clock".into(),
+            );
         }
-        stopped_transport::verify_seek(&service, &main, &lease, &session, initial_stopped)?;
+        stopped_transport::verify_seek(
+            &service,
+            &main,
+            &lease,
+            &session,
+            initial_stopped,
+            stream.stream_id,
+        )?;
         let resume = serde_json::json!({"protocolVersion":2,"sessionId":session,"sequence":6,"controlGeneration":"9007199254740995","control":{"playing":true,"recording":false,"seekBar":9,"seekGeneration":1}});
         if execute(&main, service.control(&main, resume, lease.clone(), 0))?["kind"] != "accepted" {
             return Err("Resume after stopped replacement rejected".into());
         }
-        stopped_transport::verify_playing(&service, &lease, &session, false)?;
+        stopped_transport::verify_playing(&service, &lease, &session, false, stream.stream_id)?;
         let resumed = execute(
             &main,
             service.refresh_meter_stream_registry(&main, "hub-smoke-main", stream.stream_id),
-        )?
-        .ok_or("Resumed registry missing")?;
+        )?;
         if resumed.generation <= replacement.generation {
             return Err("Resumed stream retained retired graph".into());
         }
-        stopped_transport::verify_playing(&service, &lease, &session, true)?;
+        stopped_transport::verify_playing(&service, &lease, &session, true, stream.stream_id)?;
         println!(
             "Stopped time-signature replacement -> unprepared metadata -> resumed same stream generation {}",
             resumed.generation

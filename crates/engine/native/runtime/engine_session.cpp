@@ -749,7 +749,11 @@ V EngineSession::call(const juce::String& operation,const V& v) {
     if(operation=="stop") {
         fields(v,{"leaseId","sessionId","stopToken","stopEpoch"});const auto token=integer(v,"stopToken"),epoch=integer(v,"stopEpoch");const auto lease=text(v,"leaseId");
         leaseStopTokens[lease]=std::max(token,leaseStopTokens[lease]);
-        if(accepted && leases.count(lease) && accepted->session==text(v,"sessionId") && epoch>=stopToken.load()) { finishRecording();allNotesOff();accepted->playing=false;accepted->recording=false;arrangementAudible.store(false,std::memory_order_release);monitoringAudible.store(false,std::memory_order_release);arrangement->edit->getTransport().stop(false,true); }
+        if(accepted && leases.count(lease) && accepted->session==text(v,"sessionId") && epoch>=stopToken.load()) {
+            TransportClockMutation mutation(*transportControls,false);
+            finishRecording();allNotesOff();accepted->playing=false;accepted->recording=false;arrangementAudible.store(false,std::memory_order_release);monitoringAudible.store(false,std::memory_order_release);arrangement->edit->getTransport().stop(false,true);
+            mutation.publish(*accepted,appliedSequence,stoppedTransportPosition());
+        }
         return {};
     }
     if(operation=="audition_stop") {

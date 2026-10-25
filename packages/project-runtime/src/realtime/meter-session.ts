@@ -21,7 +21,7 @@ export interface MeterSessionPort {
     events: (batch: readonly RealtimeEvent[]) => void,
     onError: (error: unknown) => void
   ): Promise<RealtimeStreamOpenResult>
-  registry(streamId: number): Promise<RealtimeRegistry | null>
+  registry(streamId: number): Promise<RealtimeRegistry>
   clock(streamId: number): Promise<ClockProbe | null>
   interest(interest: MeterInterest): Promise<void>
   snapshot(streamId: number, afterSeq: string): Promise<ArrayBuffer>
@@ -65,7 +65,6 @@ export function createMeterSession(options: {
   let sessionEpoch: number | null = null
   const cursor: { sequence: bigint | null } = { sequence: null }
   let visible = true
-  let graphReady = true
   let earlyBatch: readonly RealtimeEvent[] | null = null
   let interestRevision = 0
   let interestKey = ""
@@ -85,7 +84,6 @@ export function createMeterSession(options: {
       disposed ||
       failed ||
       !visible ||
-      !graphReady ||
       clockFlight ||
       at < nextClockProbe
     )
@@ -116,8 +114,7 @@ export function createMeterSession(options: {
     async snapshot(afterSeq) {
       if (streamId === null || disposed || failed) return new ArrayBuffer(0)
       if (sendingInterest) await sendingInterest
-      if (pendingInterest || disposed || failed || !visible || !graphReady)
-        return new ArrayBuffer(0)
+      if (pendingInterest || disposed || failed || !visible) return new ArrayBuffer(0)
       try {
         return await port.snapshot(streamId, afterSeq)
       } catch (error) {
@@ -161,7 +158,6 @@ export function createMeterSession(options: {
       throw new Error("Meter registry belongs to another session")
     const previous = store.readMetadata().registry
     store.acceptRegistry(registry, streamId)
-    graphReady = true
     pull.setVisible(visible)
     const accepted = store.readMetadata().registry
     if (
@@ -182,14 +178,7 @@ export function createMeterSession(options: {
       .registry(id)
       .then(registry => {
         if (disposed || failed || id !== streamId) return
-        if (registry) acceptRegistry(registry)
-        else {
-          graphReady = false
-          pull.setVisible(false)
-          clockGeneration += 1
-          clockMapping = null
-          store.markStale()
-        }
+        acceptRegistry(registry)
       })
       .finally(() => {
         refreshing = null
@@ -212,15 +201,22 @@ export function createMeterSession(options: {
   function updateInterest() {
     if (disposed || failed || streamId === null) return
     const rateHz = pull.readStatus().rateHz
-    const endpointIds = store.readMetadata().endpointIds
-    const key = JSON.stringify([visible, rateHz, endpointIds])
+    const { endpointIds, transport } = store.readMetadata()
+    const key = JSON.stringify([visible, rateHz, endpointIds, transport])
     if (key === interestKey) return
     if (interestRevision === 0xffff_ffff) {
       fail(new Error("Meter interest revision exhausted"))
       return
     }
     interestKey = key
-    pendingInterest = { streamId, revision: ++interestRevision, endpointIds, rateHz, visible }
+    pendingInterest = {
+      streamId,
+      revision: ++interestRevision,
+      endpointIds,
+      transport,
+      rateHz,
+      visible,
+    }
     drainInterest()
   }
   function receive(batch: readonly RealtimeEvent[]) {
@@ -326,7 +322,7 @@ export function createMeterSession(options: {
       clockGeneration += 1
       clockMapping = null
       nextClockProbe = 0
-      pull.setVisible(next && graphReady)
+      pull.setVisible(next)
       updateInterest()
     },
     async reset(endpointIds: readonly string[], reset: MeterResetKind) {

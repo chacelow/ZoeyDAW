@@ -63,7 +63,14 @@ if (schema.byteOrder !== "little-endian" || schema.magic !== 0x4d44445a) {
 }
 constant("MAGIC", schema.magic)
 constant("VERSION", schema.version)
-for (const group of ["frameTypes", "headerFlags", "recordFlags", "sourceFlags"]) {
+for (const group of [
+  "frameTypes",
+  "headerFlags",
+  "recordFlags",
+  "sourceFlags",
+  "transportKinds",
+  "transportFlags",
+]) {
   for (const [name, value] of Object.entries(schema[group])) {
     constant(`${upper(group)}_${upper(name)}`, value)
   }

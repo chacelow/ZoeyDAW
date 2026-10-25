@@ -1,5 +1,6 @@
 #include "playback_bridge.h"
 #include "device_test_support.h"
+#include "transport_observation.h"
 #include <juce_events/juce_events.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <cmath>
@@ -99,7 +100,7 @@ int main(int argc,char** argv) {
             auto command=obj({{"protocolVersion",2},{"sessionId",request["sessionId"]},{"sequence",sequence+sequenceOffset},{"controlGeneration",juce::String(sequence+sequenceOffset)},{"control",control}});
             auto result=invoke(session.get(),"control",obj({{"request",command},{"leaseId",lease},{"stopToken",0},{"stopEpoch",0}}));require(result["kind"].toString()=="accepted","Native narrow control rejected smoke stage");
         };
-        auto telemetry=[&] { auto sample=invoke(session.get(),"telemetry",obj({{"leaseId",lease}}));require(sample["telemetry"].isObject(),"Current playback owner lost telemetry");return sample["telemetry"]; };
+        auto telemetry=[&] { return observeNativeTransport(session.get(),lease.toRawUTF8(),request["sessionId"].toString().toRawUTF8()); };
         auto output=juce::File::getCurrentWorkingDirectory().getChildFile(argv[2]);
         apply(0,0,0,"open");invoke(session.get(),"capture_begin",obj({{"seconds",120}}));
         const auto beforePlay=diagnostics(session.get());set(control,"playing",true);sendControl(1);

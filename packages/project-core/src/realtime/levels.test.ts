@@ -38,6 +38,15 @@ function frame(channels: number, sourceCount = 1): ArrayBuffer {
     sourceCount,
     resetEpoch: 7,
     frameType: 1,
+    appliedSequence: 0n,
+    ownerEpoch: 1n,
+    bar: 1,
+    barsPerSecond: 0.5,
+    audibleBar: 0,
+    audibleBarsPerSecond: 0,
+    observedMonotonicNs: 0n,
+    transportKind: 2,
+    transportFlags: 1,
   })
   for (let slotId = 0; slotId < channels; slotId += 1) {
     writeRecord(
@@ -114,7 +123,7 @@ describe("levels wire boundary", () => {
     expect(decodeLevelsFrame(bytes)?.records[0]?.flags).toBe(17)
   })
   it.each([
-    [4, 2],
+    [4, 65535],
     [84, 16],
     [HEADER_BYTES + 4, 64],
   ])("rejects unknown version or flags at %i", (offset, value) => {

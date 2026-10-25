@@ -77,7 +77,6 @@ describe("native audio IPC boundary", () => {
     }
     const snapshot = {
       device,
-      telemetry: null,
       meterReady: false,
       issues: [],
       recordingPreview: preview,
@@ -195,32 +194,14 @@ describe("native audio IPC boundary", () => {
     expect(invoke).toHaveBeenCalledTimes(3)
   })
 
-  it("validates nested sample clocks and rejects legacy meter payloads", async () => {
-    const telemetry = {
-      sessionId: "s",
-      sequence: 1,
-      appliedSequence: 0,
-      controlGeneration: "0",
-      clock: { kind: "sample", bar: 1, barsPerSecond: 0.5, frame: 44, sampleRate: 44100 },
-      playing: true,
-      recording: false,
+  it("keeps status separate from binary transport and rejects legacy clock and meter payloads", async () => {
+    const status = { device, issues: [], meterReady: true }
+    vi.mocked(invoke).mockResolvedValueOnce(status)
+    expect(await nativeAudio.telemetry("lease")).toEqual(status)
+    for (const extra of [{ telemetry: { clock: { bar: 1 } } }, { levels: { main: [-30] } }]) {
+      vi.mocked(invoke).mockResolvedValueOnce({ ...status, ...extra })
+      await expect(nativeAudio.telemetry("lease")).rejects.toThrow()
     }
-    vi.mocked(invoke).mockResolvedValueOnce({ device, telemetry, issues: [], meterReady: true })
-    expect((await nativeAudio.telemetry("lease")).telemetry?.clock).toEqual(telemetry.clock)
-    vi.mocked(invoke).mockResolvedValueOnce({
-      device,
-      meterReady: true,
-      telemetry: { ...telemetry, levels: { main: [-30] } },
-      issues: [],
-    })
-    await expect(nativeAudio.telemetry("lease")).rejects.toThrow()
-    vi.mocked(invoke).mockResolvedValueOnce({
-      device,
-      meterReady: true,
-      telemetry: { ...telemetry, clock: { ...telemetry.clock, frame: -1 } },
-      issues: [],
-    })
-    await expect(nativeAudio.telemetry("lease")).rejects.toThrow()
   })
 
   it("sends stop epochs outside the immutable document and validates replies", async () => {

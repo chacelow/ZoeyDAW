@@ -1,6 +1,6 @@
 # 统一实时控制与遥测设计
 
-核查：2026-10-26。状态：统一 wire、唯一 Rust MeterHub、native 输入与 graph observer、窗口 stream、Web MeterSession、轨头/路由/Device 电平消费及真实 source observation 已接入。Windows 真实设备 smoke 覆盖 source 身份、独立 Preview、registry-before-data、停止活动失效、窗口隔离、reset、换图与释放。Transport 与完整唯一快照切换尚未完成，桌面 WebView 交互和吞吐未验收。
+核查：2026-10-26。状态：唯一 Rust MeterHub、native 输入与 graph observer、窗口 stream、Web MeterSession、电平与 source observation 已接入。levels v2 将 Audio、Stopped 与 Unavailable transport 一并传给 Web，native adapter 通过同一 MeterStore 向既有 BackendTelemetry 消费者提供位置。原 JSON transport clock 已删除。完整 document audioRevision、精确 source 块时戳及真实桌面 WebView 交互和吞吐仍未验收。
 
 入口：[cookbook](daw-cookbook.md)、[整体计划](daw-refactor-plan-2026-10-22.md)。统一的是身份、生命周期、订阅和调度，不是把所有流量塞进同一个FIFO。
 
@@ -8,7 +8,7 @@
 
 生产轨头和路由电平直接读取 `adapters/realtime.ts` 暴露的 MeterStore，兴趣按挂载消费者取并集。`MeterSession` 处理打开期间卸载、隐藏代际、事件 gap、registry 更新与关闭，`MeterPull` 只在现有 scheduler tick 采纳和绘制单在途 binary 响应。registry 通过原有 backend poll 至多每 250ms 刷新，命令先安装 native 当前图并等待首个快照；换图期间不会把尚未发布的快照当作错误基线。
 
-`BackendTelemetry` 仍承担 transport，recording preview 和设备状态保留原有低频快照。`BackendTelemetry.levels`、`SessionState.levels`、native `inputLevels` JSON 及 Canvas meter 槽副本已删除。原生 graph 提供 track/bus/master/cue 和 Device 前后级 endpoint，input bank 按 deviceEpoch 独立换代。生产与 Gallery 都读取 MeterStore，Gallery 仅把确定性模拟幅值编码成测试帧，不产生音频。Device 前后级与路由复用 `ProjectMeter`，MeterStore 自身通知帧变化，停播 MIDI 活动不依赖 transport 位置。source observation 已随同一 binary snapshot 发送；transport 和 source UI 消费者的完整切换仍保留在第 3 项。播放头只保留本地投影，不再分配 SharedArrayBuffer 电平槽。
+`BackendTelemetry` 是连接层保留的 transport 接口，其 native 输入来自同一 binary Hub snapshot。recording preview 和设备状态仍用原状态查询。`BackendTelemetry.levels`、`SessionState.levels`、native `inputLevels` JSON 和旧 JSON transport clock 均已删除。生产和显式 Gallery mock 都通过 MeterStore 分发电平，Gallery 不产生音频。Device 前后级和路由复用 `ProjectMeter`，source observation 与 transport 同帧发送；精确 source 块时戳和 source UI 切换仍保留在第 3 项。播放头只保留本地投影。
 
 四种内置 Device 已经由 `BackendTrack.devices` 和 `projectBackendDocument` 投影至原生稳定实例链，参数与 Device 自动化能够影响真实处理。Utility、Filter、Delay、Reverb 的 DSP 回归及 Utility 设备前采集通过；混响采用固定版本 Signalsmith，decay 是名义尾音时间，不保证完整脉冲精确 RT60。Device 前后级 tap 直接观察 PluginNode 与其输入样本，不复制轨道输出；显示通过二进制帧和实际 React/DOM 回归，真实 WKWebView 尚未验收。
 
@@ -33,7 +33,7 @@
 - channel layout及slot range，支持mono/stereo和多声道，不把所有plugin固定为左右两值。
 - 指标能力，host peak/RMS、true-peak、gain reduction、plugin自报meter分别声明。host不能从音频幅度猜测压缩器gain reduction；不支持时显示unavailable。
 
-levels v1 使用 128-byte header、每声道 48-byte record、每 source observation 48 bytes，全部 little-endian。header 区分 generation、deviceEpoch、registryRevision、streamId、seq、controlGeneration、acceptedRevision、audioRevision 与 resetEpoch。u64 JSON 字段为十进制字符串，二进制为 u64，JS 使用 BigInt。seq 递增时即更新值，不按 generation 跳过绘制。唯一 wire 定义 `protocol/realtime.json` 生成 TS、Rust 与 C++ 产物，低频 metadata 使用生成的 Zod/serde 契约。`pnpm check:realtime-protocol` 验证全部字段与独立 golden fixture，跨语言精确保留大于 2^53 的整数。
+levels v2 使用 192-byte header、每声道 48-byte record 和每 source observation 48 bytes，全部 little-endian。header 保留 registry、stream、设备、revision 和 reset 身份，并新增 appliedSequence、ownerEpoch、rendered bar/rate、audible bar/rate、observedMonotonicNs、transportKind 和 transportFlags。Audio 明确提供 sample clock；Stopped 只提供主线程停止位置和控制身份；Unavailable 不携带可用位置。无音频时钟字段填零并由 kind 判为 unavailable，不解释成设备出声时刻。controlValid 独立于 revision availability；生产 acceptedRevision/audioRevision 仍 unavailable。u64 在 JSON 中为十进制字符串，在二进制和 Web 中分别为 u64 与 BigInt。`protocol/realtime.json` 生成 TS、Rust、C++ 和 metadata schema，独立 `levels-v2.hex` 约束三语言布局及超过 2^53 的整数。
 
 图删除或重排时，先发布对应registry再采用该generation数据。旧generation不能写进已复用slot。前端未收到registry时丢弃/请求基线，不把未知slot映射到下一插件。
 
@@ -60,15 +60,15 @@ source metadata 变化可发生在同一 graph generation 内。Hub 仅替换不
 
 Device meter 使用 `device/<id>/in` 与 `device/<id>/out`，owner 为稳定 Device ID。相邻插件输出和输入可能是同一 Node，但各 endpoint 有独立 bank；同一 endpoint 被多个输出根发现时只创建一个 writer。双 worker、sharing/pooling 四种组合的样本回归覆盖两个串联 Utility 的独立输入输出能量。当前 collector 仍在原生进程内，未新增每插件 timer 或 IPC。
 
-Rust `realtime/rms.rs` 按累计 epoch 替换能量并维护有界窗口，`ballistics.rs` 维护 hold/release，`channel.rs` 编码声道记录。`NativeMeterReader` 是 graph mailbox 的唯一 Hub 消费入口；其私有 `native_reader/sources.rs` 校验和读取已有 playhead 的源记录。`PlaybackService` 持有单一 MeterHub，高频读取不调主线程。source 记录、window stream、可靠事件通道和生产 MeterSession 已接入；transport 的唯一快照切换、精确源时戳和真实桌面 WebView 吞吐仍未完成。
+Rust `realtime/rms.rs` 按累计 epoch 替换能量并维护有界窗口，`ballistics.rs` 维护 hold/release，`channel.rs` 编码声道记录。`NativeMeterReader` 是 graph mailbox 的唯一 Hub 消费入口；其私有 `native_reader/sources.rs` 校验已有 playhead 的源记录。`PlaybackService` 持有单一 MeterHub，窗口从同一 HubSnapshot 取得 transport、meter 和 source，`transport_frame.rs` 负责 wire 投影；高频读取不调主线程。精确 source 时戳和真实桌面 WebView 吞吐仍未完成。
 
 每张图的 `TransportClockObserverNode` 在最终 `PlayHeadPositionNode` 之后发布唯一 `MeterClockObservation`，复用现有三槽 SPSC mailbox；各输出链的 `MeterOutputObserverNode` 仅保留电平采样。时钟节点在 `prefetchBlock` 捕获本块 `ProcessState` 的已冻结 timeline sample、PPQ、BPM、bar 与 barsPerSecond，在输出完成后读取同块引擎 audible time 并单独写入 audibleBar/audibleBarsPerSecond。两种坐标不混用，不从上一个块的缓存推算当前位置。Hub 通过同一 native read handle 消费新观测，`received_monotonic_ns` 仍只表示 Hub 接收时间。
 
 `transport_clock.h` 拥有主线程控制目标的一致性发布及音频侧只读 witness。apply/control 在实际模型修改前标记版本为 mutating，成功后发布 controlGeneration、appliedSequence 与 mode；失败不发布新身份。payload 使用 lock-free u64 atomics，音频读取最多尝试一次，不循环等待。替换 Edit 轮换 ownerEpoch，旧图不能为新 owner 提供有效控制身份。SDK 的每图 `positionChangePending` 查询绑定准确的 NodePlaybackContext，复用已有非阻塞 pending-position getter。
 
-音频 witness 在预取与输出两端核对同一发布版本和 owner，并要求 pending seek 已由音频侧清除后才报告 controlValid。120-byte C ABI 时钟记录把控制身份、渲染坐标与引擎 audible 坐标一起交给 Rust Hub；读取旧 mailbox 不能用最新 accepted 代际重标旧块。Hosted 用例验证 1024-sample 图延迟、同块对齐、seek 与 BPM 转换，既有双 worker、多输出和 sharing/pooling 的能量/MIDI 守恒用例保留。audibleValid 只用于 active playback；停止后的缓存显式 unavailable。该补偿复用 Tracktion 的 PlayHeadPositionNode，不代表已测量物理设备出声或 loopback。levels v1 wire 的 revision/control 字段尚未切换，audioRevision 继续 unavailable；Web 唯一 transport 消费仍在原第 3/5 项保留，完整 DSP 批次和严格失败原子性未证明。
+音频 witness 在预取与输出两端核对同一发布版本和 owner，并要求 pending seek 已由音频侧清除后才报告 controlValid。120-byte C ABI 记录将控制身份、渲染与引擎 audible 坐标交给 Rust Hub；旧 mailbox 不能用新 accepted 代际重标。Hosted 用例覆盖 1024-sample 图延迟、同块对齐、seek 和 BPM 转换。audibleValid 仅用于 active playback，停止缓存显式 unavailable。levels v2 独立传递控制有效位和两个坐标域，audioRevision 保持 unavailable；这些位置不证明完整 DSP 批次、严格失败原子性或物理出声时间。
 
-无播放图时，native registry 返回 `graph.kind=unprepared` 和 ownerEpoch，不再返回 null 并清空 Hub。主线程把已停止的实际 bar、barsPerSecond 与 controlGeneration、appliedSequence 放在同一 TransportClockState 发布版本中。40-byte stopped reader 对照 ownerEpoch 和版本读取一次，Rust Hub 将它标为 Stopped；变更中、播放等待和旧 owner 均为 Unavailable。首次播放或无图 seek 不需要第二个线程、时钟或高频主线程调用。无图 metadata generation 与有图 generation 使用同一递增计数，防止旧 registry 重现。Stopped 没有音频帧、sampleRate 或 DSP 采用保证；levels v1 的 sample clock 探针与 binary pull 继续等待 Audio，Web 时钟切换仍未完成。
+无播放图时，native registry 返回 unprepared 与 ownerEpoch，保留同一个 Hub。主线程在同一 TransportClockState 发布版本中保存已停止的实际 bar、rate、controlGeneration 和 appliedSequence。40-byte stopped reader 对照 owner 与版本读取一次；变更中、播放等待和旧 owner 均为 Unavailable。Stopped 经同一 binary stream 发送，sample clock probe 仍返回 null。无图和有图 metadata 共用递增 generation；首次播放沿用原 stream，旧 registry、响应和控制代际不能重新生效。Stopped 不提供音频帧或 DSP 采用保证。
 
 输入 bank 的唯一 `InputMeterCollector` 按设备 epoch 保留，与图 collector 分开。Hub 通过 `zp_input_meter_acquire` 取得该 collector 的采集权；旧 JSON 遥测复用缓存，不另取 mailbox consumer。`HubSnapshot.input` 保存独立 input registry 和聚合记录，换图保留其 RMS 与 peak 状态，设备换代才替换。输入 metadata 从已打开设备的实际 active channel 掩码生成，不开启设备或权限。统一 registry 将输入本地 slot 偏移到图记录之后，reset 返回同一坐标；请求绑定图代际和输入 epoch，所有目标处理到 reset epoch 后才确认。hosted 回归覆盖停止播放、共享缓存、旧 epoch 引用和选择性 C ABI reset；临时生产 Hub 夹具验证 0.25/0.5 输入 RMS、混合 reset 块后确认及未选输入保留。真实硬件输入显示和窗口传输仍未验收。
 

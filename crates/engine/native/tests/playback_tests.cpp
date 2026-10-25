@@ -2,6 +2,7 @@
 #include "playback_model.h"
 #include "audio_configuration.h"
 #include "device_test_support.h"
+#include "transport_observation.h"
 #include <juce_events/juce_events.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <iostream>
@@ -281,7 +282,7 @@ int main() {
         auto accepted=invoke(handle.get(),"apply",payload(r));zp::require((bool)accepted["ok"] && accepted["value"]["kind"].toString()=="accepted","Open acceptance");
         auto bad=request();zp::put(bad,"stage","commit");zp::put(bad,"sequence",1);zp::put(bad,"revision",1);auto project=bad["state"]["project"];zp::put(project,"unknown",true);
         zp::require(!(bool)invoke(handle.get(),"apply",payload(bad))["ok"],"Unknown fields must reject before mutation");
-        auto query=zp::object();zp::put(query,"leaseId","native-test");auto snapshot=invoke(handle.get(),"telemetry",query)["value"];zp::require((int)snapshot["telemetry"]["appliedSequence"]==0,"Invalid request atomic rollback");zp::require(snapshot["device"]["state"].toString()=="closed","Stopped edits must not acquire audio hardware");
+        auto query=zp::object();zp::put(query,"leaseId","native-test");auto snapshot=invoke(handle.get(),"telemetry",query)["value"];zp::require((int)observeNativeTransport(handle.get(),"native-test","native-protocol-test")["appliedSequence"]==0,"Invalid request atomic rollback");zp::require(snapshot["device"]["state"].toString()=="closed","Stopped edits must not acquire audio hardware");
         auto stale=request();zp::put(stale,"stage","commit");zp::put(stale,"sequence",1);zp::require(zp_stop_fence_for(handle.get(),"native-test","native-protocol-test",1),"Current owner stop fence rejected");
         zp::require(invoke(handle.get(),"apply",payload(stale))["value"]["kind"].toString()=="rejected","Stop epoch must reject pending apply");
         zp::require(invoke(handle.get(),"apply",payload(stale,1))["value"]["kind"].toString()=="accepted","New stop epoch remains usable");
@@ -290,9 +291,9 @@ int main() {
         invoke(handle.get(),"release",query);invoke(handle.get(),"release",query);
         auto ownerA=request();zp::put(ownerA,"sessionId","owner-A");zp::require(invoke(handle.get(),"apply",payload(ownerA,1,"lease-A"))["value"]["kind"].toString()=="accepted","Initial owner lease");
         auto badReplacement=request();zp::put(badReplacement,"sessionId","owner-B");zp::put(badReplacement,"unknown",true);zp::require(!(bool)invoke(handle.get(),"apply",payload(badReplacement,1,"lease-B"))["ok"],"Invalid replacement rejects before cutover");
-        auto queryA=zp::object();zp::put(queryA,"leaseId","lease-A");zp::require(invoke(handle.get(),"telemetry",queryA)["value"]["telemetry"]["sessionId"].toString()=="owner-A","Failed replacement retains old owner");
+        auto queryA=zp::object();zp::put(queryA,"leaseId","lease-A");zp::require(observeNativeTransport(handle.get(),"lease-A","owner-A")["sessionId"].toString()=="owner-A","Failed replacement retains old owner");
         auto ownerB=request();zp::put(ownerB,"sessionId","owner-B");zp::require(invoke(handle.get(),"apply",payload(ownerB,1,"lease-B"))["value"]["kind"].toString()=="accepted","New backend opens while old lease remains alive");
-        invoke(handle.get(),"release",queryA);auto queryB=zp::object();zp::put(queryB,"leaseId","lease-B");zp::require(invoke(handle.get(),"telemetry",queryB)["value"]["telemetry"]["sessionId"].toString()=="owner-B","Old lease release preserves new owner");
+        invoke(handle.get(),"release",queryA);auto queryB=zp::object();zp::put(queryB,"leaseId","lease-B");zp::require(observeNativeTransport(handle.get(),"lease-B","owner-B")["sessionId"].toString()=="owner-B","Old lease release preserves new owner");
         zp::require(!zp_stop_fence_for(handle.get(),"lease-A","owner-A",2),"Retired owner fenced replacement");
         zp::put(ownerA,"stage","commit");zp::put(ownerA,"sequence",1);zp::require(invoke(handle.get(),"apply",payload(ownerA,1,"lease-A"))["value"]["kind"].toString()=="rejected","Retired owner cannot mutate replacement");invoke(handle.get(),"release",queryB);
         testActualSourceLoopRendering();

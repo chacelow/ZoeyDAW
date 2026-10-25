@@ -74,7 +74,7 @@ Rust `realtime/meter_hub.rs` 拥有 Hub 控制、图与输入 reader 的安装�
 
 `runtime/transport_clock.h` 是 EngineSession 控制目标的主线程发布和图内 witness，按 Edit owner、完整 u64 代际与请求 sequence 关联音频块。每个输出链的 `MeterOutputObserverNode` 只采电平；`transport_clock_node.cpp` 在最终 `PlayHeadPositionNode` 之后发布同块渲染坐标与引擎 audible 坐标。SDK 的每图查询和最终根包装器绑定精确 context 生命周期。Rust `native_reader/transport.rs` 拥有 120-byte C ABI 时钟结构及校验，从 NativeMeterReader 的同一公开面提供数据。它没有新增时钟、线程或 WebView 通道，也不提供完整 document audioRevision 或物理出声时间保证。
 
-`NativeMeterRegistry.graph` 区分 prepared 的真实 sampleRate 与 unprepared 的 Edit ownerEpoch。无图 registry 具有独立递增的 metadata generation，不创建音频图或伪造设备时钟。`TransportClockMutation` 在同一发布版本内保存实际主线程停止位置；40-byte stopped C ABI reader 只持有共享只读状态和 ownerEpoch，不持有 Edit。`refresh_meter_hub` 总是返回显式 registry，已移除旧 nullable registry 和无人调用的 raw registry service 方法。levels v1 仍只编码 Audio；unprepared 时 stream refresh 返回 null，等待有图后恢复。
+`NativeMeterRegistry.graph` 区分 prepared 的真实 sampleRate 与 unprepared 的 Edit ownerEpoch。无图 metadata generation 与有图 generation 共用递增计数。`TransportClockMutation` 在同一版本内保存主线程停止位置，40-byte stopped reader 只保留共享只读状态和 ownerEpoch。`refresh_meter_hub` 与 stream registry 始终返回显式 registry，`transport_frame.rs` 将同一 HubSnapshot 投影为 levels v2。`native-transport.ts` 拥有 Web MeterSession、transport 兴趣、帧订阅、可见性和清理，通过具名 `NativeTransport` 公开生命周期；它向既有 BackendTelemetry 接口转发有效音频或停止位置。状态查询只保留设备、issues 和录音缩略图。
 
 Web 领域计算、快照校验和波形范围 schema 归 `@zoeydaw/project-core`，不依赖 app、React、Zustand、Tauri 或 runtime。`@zoeydaw/project-runtime` 拥有 vanilla store 工厂、编辑历史、preview、后端队列和 lease 生命周期，只依赖 core 与 `zustand/vanilla`。包导入不创建运行实例；app 组合层注入 backend 和轨道高度，React 绑定留在 `stores/useProjectState.ts`。测试和 Gallery 从 runtime 的 `./testing` 入口显式取得模拟实现。
 

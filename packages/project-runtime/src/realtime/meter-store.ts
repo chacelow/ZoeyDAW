@@ -20,10 +20,11 @@ export function createMeterStore(): MeterStore {
   let entries = new Map<number, RealtimeRegistry["entries"][number]>()
   let resets = new Map<number, number>()
   let sourceMappings = new Map<number, RealtimeRegistry["sources"][number]>()
-  const interests = new Map<string, { token: object; ids: readonly string[] }>()
+  const interests = new Map<string, { token: object; ids: readonly string[]; transport: boolean }>()
   const listeners = new Set<() => void>()
   const frameListeners = new Set<() => void>()
   let endpointIds: readonly string[] = []
+  let transportInterest = false
   const notify = () => {
     for (const listener of listeners) listener()
   }
@@ -47,12 +48,18 @@ export function createMeterStore(): MeterStore {
     return false
   }
   const updateInterest = () => {
+    const transport = [...interests.values()].some(value => value.transport)
     const next = [...new Set([...interests.values()].flatMap(value => value.ids))].sort((a, b) =>
       a.localeCompare(b)
     )
-    if (next.length === endpointIds.length && next.every((id, index) => id === endpointIds[index]))
+    if (
+      transport === transportInterest &&
+      next.length === endpointIds.length &&
+      next.every((id, index) => id === endpointIds[index])
+    )
       return
     endpointIds = next
+    transportInterest = transport
     notify()
   }
   return {
@@ -189,11 +196,21 @@ export function createMeterStore(): MeterStore {
       }
     },
     readLatest: () => latest,
-    readMetadata: () => ({ registry, streamId, needsRegistry, endpointIds }),
-    setInterest(owner, ids) {
+    readMetadata: () => ({
+      registry,
+      streamId,
+      needsRegistry,
+      endpointIds,
+      transport: transportInterest,
+    }),
+    setInterest(owner, interest) {
       if (disposed) return () => {}
       const token = {}
-      interests.set(owner, { token, ids: [...new Set(ids)] })
+      interests.set(owner, {
+        token,
+        ids: [...new Set(interest.endpointIds)],
+        transport: interest.transport,
+      })
       updateInterest()
       return () => {
         if (interests.get(owner)?.token !== token) return
@@ -219,6 +236,7 @@ export function createMeterStore(): MeterStore {
       frameListeners.clear()
       interests.clear()
       endpointIds = []
+      transportInterest = false
       streamId = null
       sessionId = ""
       registry = null

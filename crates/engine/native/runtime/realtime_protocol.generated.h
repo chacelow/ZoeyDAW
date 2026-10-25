@@ -53,9 +53,18 @@ struct WireHeader {
     std::uint32_t sourceCount;
     std::uint32_t resetEpoch;
     std::uint32_t frameType;
+    std::uint64_t appliedSequence;
+    std::uint64_t ownerEpoch;
+    double bar;
+    double barsPerSecond;
+    double audibleBar;
+    double audibleBarsPerSecond;
+    std::uint64_t observedMonotonicNs;
+    std::uint32_t transportKind;
+    std::uint32_t transportFlags;
 };
 [[nodiscard]] inline bool readHeader(std::span<const std::uint8_t> bytes, WireHeader& value) noexcept {
-    if (bytes.size() < 128) return false;
+    if (bytes.size() < 192) return false;
     value.magic = detail::readLittle<std::uint32_t>(bytes.data() + 0);
     value.version = detail::readLittle<std::uint16_t>(bytes.data() + 4);
     value.headerBytes = detail::readLittle<std::uint16_t>(bytes.data() + 6);
@@ -79,10 +88,19 @@ struct WireHeader {
     value.sourceCount = detail::readLittle<std::uint32_t>(bytes.data() + 116);
     value.resetEpoch = detail::readLittle<std::uint32_t>(bytes.data() + 120);
     value.frameType = detail::readLittle<std::uint32_t>(bytes.data() + 124);
+    value.appliedSequence = detail::readLittle<std::uint64_t>(bytes.data() + 128);
+    value.ownerEpoch = detail::readLittle<std::uint64_t>(bytes.data() + 136);
+    value.bar = detail::readLittle<double>(bytes.data() + 144);
+    value.barsPerSecond = detail::readLittle<double>(bytes.data() + 152);
+    value.audibleBar = detail::readLittle<double>(bytes.data() + 160);
+    value.audibleBarsPerSecond = detail::readLittle<double>(bytes.data() + 168);
+    value.observedMonotonicNs = detail::readLittle<std::uint64_t>(bytes.data() + 176);
+    value.transportKind = detail::readLittle<std::uint32_t>(bytes.data() + 184);
+    value.transportFlags = detail::readLittle<std::uint32_t>(bytes.data() + 188);
     return true;
 }
 [[nodiscard]] inline bool writeHeader(std::span<std::uint8_t> bytes, const WireHeader& value) noexcept {
-    if (bytes.size() < 128) return false;
+    if (bytes.size() < 192) return false;
     detail::writeLittle(bytes.data() + 0, value.magic);
     detail::writeLittle(bytes.data() + 4, value.version);
     detail::writeLittle(bytes.data() + 6, value.headerBytes);
@@ -106,6 +124,15 @@ struct WireHeader {
     detail::writeLittle(bytes.data() + 116, value.sourceCount);
     detail::writeLittle(bytes.data() + 120, value.resetEpoch);
     detail::writeLittle(bytes.data() + 124, value.frameType);
+    detail::writeLittle(bytes.data() + 128, value.appliedSequence);
+    detail::writeLittle(bytes.data() + 136, value.ownerEpoch);
+    detail::writeLittle(bytes.data() + 144, value.bar);
+    detail::writeLittle(bytes.data() + 152, value.barsPerSecond);
+    detail::writeLittle(bytes.data() + 160, value.audibleBar);
+    detail::writeLittle(bytes.data() + 168, value.audibleBarsPerSecond);
+    detail::writeLittle(bytes.data() + 176, value.observedMonotonicNs);
+    detail::writeLittle(bytes.data() + 184, value.transportKind);
+    detail::writeLittle(bytes.data() + 188, value.transportFlags);
     return true;
 }
 struct WireRecord {
@@ -186,7 +213,7 @@ struct WireSource {
     return true;
 }
 inline constexpr std::size_t MAGIC = 1296319578;
-inline constexpr std::size_t VERSION = 1;
+inline constexpr std::size_t VERSION = 2;
 inline constexpr std::size_t FRAME_TYPES_LEVELS = 1;
 inline constexpr std::size_t FRAME_TYPES_SPECTRUM = 2;
 inline constexpr std::size_t FRAME_TYPES_LOUDNESS = 3;
@@ -203,7 +230,12 @@ inline constexpr std::size_t RECORD_FLAGS_RMS_STALE = 32;
 inline constexpr std::size_t SOURCE_FLAGS_VALID = 1;
 inline constexpr std::size_t SOURCE_FLAGS_STALE = 2;
 inline constexpr std::size_t SOURCE_FLAGS_UNAVAILABLE = 8;
-inline constexpr std::size_t HEADER_BYTES = 128;
+inline constexpr std::size_t TRANSPORT_KINDS_UNAVAILABLE = 0;
+inline constexpr std::size_t TRANSPORT_KINDS_STOPPED = 1;
+inline constexpr std::size_t TRANSPORT_KINDS_AUDIO = 2;
+inline constexpr std::size_t TRANSPORT_FLAGS_CONTROL_VALID = 1;
+inline constexpr std::size_t TRANSPORT_FLAGS_AUDIBLE_VALID = 2;
+inline constexpr std::size_t HEADER_BYTES = 192;
 inline constexpr std::size_t HEADER_MAGIC = 0;
 inline constexpr std::size_t HEADER_VERSION = 4;
 inline constexpr std::size_t HEADER_HEADER_BYTES = 6;
@@ -227,6 +259,15 @@ inline constexpr std::size_t HEADER_DEVICE_EPOCH = 112;
 inline constexpr std::size_t HEADER_SOURCE_COUNT = 116;
 inline constexpr std::size_t HEADER_RESET_EPOCH = 120;
 inline constexpr std::size_t HEADER_FRAME_TYPE = 124;
+inline constexpr std::size_t HEADER_APPLIED_SEQUENCE = 128;
+inline constexpr std::size_t HEADER_OWNER_EPOCH = 136;
+inline constexpr std::size_t HEADER_BAR = 144;
+inline constexpr std::size_t HEADER_BARS_PER_SECOND = 152;
+inline constexpr std::size_t HEADER_AUDIBLE_BAR = 160;
+inline constexpr std::size_t HEADER_AUDIBLE_BARS_PER_SECOND = 168;
+inline constexpr std::size_t HEADER_OBSERVED_MONOTONIC_NS = 176;
+inline constexpr std::size_t HEADER_TRANSPORT_KIND = 184;
+inline constexpr std::size_t HEADER_TRANSPORT_FLAGS = 188;
 inline constexpr std::size_t RECORD_BYTES = 48;
 inline constexpr std::size_t RECORD_SLOT_ID = 0;
 inline constexpr std::size_t RECORD_FLAGS = 4;

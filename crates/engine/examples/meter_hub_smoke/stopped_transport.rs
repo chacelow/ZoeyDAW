@@ -44,7 +44,13 @@ pub(super) fn verify_open(
     lease: &str,
     session: &str,
     request: &Value,
-) -> Result<NativeStoppedTransport, String> {
+) -> Result<
+    (
+        NativeStoppedTransport,
+        zoeydaw_engine::realtime::metadata_generated::RealtimeStreamOpenResult,
+    ),
+    String,
+> {
     let registry = execute(
         main,
         service.refresh_meter_hub(main, lease.into(), session.into()),
@@ -79,7 +85,24 @@ pub(super) fn verify_open(
         "Stopped open -> same Hub: owner={} bar={}, no graph/sample clock fabricated",
         position.owner_epoch, position.bar
     );
-    Ok(position)
+    let stream = service.open_meter_stream("hub-smoke-main", lease, session)?;
+    service.set_meter_interest(
+        "hub-smoke-main",
+        zoeydaw_engine::realtime::metadata_generated::MeterInterest {
+            stream_id: stream.stream_id,
+            revision: 1,
+            endpoint_ids: Vec::new(),
+            transport: true,
+            rate_hz: zoeydaw_engine::realtime::metadata_generated::MeterRateHz::Value60,
+            visible: true,
+        },
+    )?;
+    super::transport_frames::capture(service, stream.stream_id, "stopped-open", |header| {
+        header.transport_kind == 1
+            && header.owner_epoch == position.owner_epoch
+            && header.bar == position.bar
+    })?;
+    Ok((position, stream))
 }
 
 pub(super) fn verify_seek(
@@ -88,6 +111,7 @@ pub(super) fn verify_seek(
     lease: &str,
     session: &str,
     initial: NativeStoppedTransport,
+    stream: u32,
 ) -> Result<(), String> {
     let request = serde_json::json!({"protocolVersion":2,"sessionId":session,"sequence":5,"controlGeneration":"9007199254740994","control":{"playing":false,"recording":false,"seekBar":9,"seekGeneration":1}});
     if execute(main, service.control(main, request, lease.into(), 0))?["kind"] != "accepted" {
@@ -112,6 +136,14 @@ pub(super) fn verify_seek(
         "No-graph seek -> same Hub: owner={} generation={} sequence={} bar={}",
         position.owner_epoch, position.control_generation, position.applied_sequence, position.bar
     );
+    super::transport_frames::capture(service, stream, "stopped-seek", |header| {
+        header.transport_kind == 1
+            && header.control_generation == 9007199254740994
+            && header.applied_sequence == 5
+            && header.bar == 9.0
+            && header.sample_rate == 0.0
+            && header.slot_count == 0
+    })?;
     Ok(())
 }
 
@@ -120,6 +152,7 @@ pub(super) fn verify_playing(
     lease: &str,
     session: &str,
     prepared: bool,
+    stream: u32,
 ) -> Result<(), String> {
     let until = Instant::now() + Duration::from_secs(2);
     let mut last = None;
@@ -127,7 +160,14 @@ pub(super) fn verify_playing(
         if let Some(snapshot) = service.meter_snapshot(lease, session)? {
             last = Some(snapshot.transport);
             match snapshot.transport {
-                HubTransport::Unavailable if !prepared => return Ok(()),
+                HubTransport::Unavailable if !prepared => {
+                    super::transport_frames::capture(service, stream, "pending", |header| {
+                        header.transport_kind == 0
+                            && header.control_generation == 0
+                            && header.sample_rate == 0.0
+                    })?;
+                    return Ok(());
+                }
                 HubTransport::Audio(value)
                     if prepared
                         && value.audio.control_valid == 1
@@ -140,6 +180,12 @@ pub(super) fn verify_playing(
                     println!(
                         "Stopped -> pending -> audio: same Hub adopted the actual resumed block"
                     );
+                    super::transport_frames::capture(service, stream, "resumed", |header| {
+                        header.transport_kind == 2
+                            && header.transport_flags & 3 == 3
+                            && header.control_generation == 9007199254740995
+                            && header.applied_sequence == 6
+                    })?;
                     return Ok(());
                 }
                 _ => {}

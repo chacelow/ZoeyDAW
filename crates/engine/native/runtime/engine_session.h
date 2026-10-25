@@ -118,7 +118,7 @@ private:
     std::map<juce::String,uint64_t> noteSequences, noteCutoffs;
     std::map<juce::String,std::map<juce::String,NoteRequest>> heldNotes;
     juce::String deviceError, previewMode;
-    uint64_t appliedSequence=0, telemetrySequence=0, previewGeneration=0;
+    uint64_t appliedSequence=0, previewGeneration=0;
     uint64_t arrangementBuilds=0, transportSeeks=0, transportStarts=0;
     std::uint32_t meterGeneration = 0;
     std::uint32_t idleMeterGeneration=0;

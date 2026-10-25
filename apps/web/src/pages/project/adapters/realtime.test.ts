@@ -95,6 +95,15 @@ function frame(
     sourceCount: 0,
     resetEpoch: 1,
     frameType: 1,
+    appliedSequence: 0n,
+    ownerEpoch: 1n,
+    bar: 1,
+    barsPerSecond: 0.5,
+    audibleBar: 0,
+    audibleBarsPerSecond: 0,
+    observedMonotonicNs: 0n,
+    transportKind: 2,
+    transportFlags: 1,
   })
   records.forEach(({ slotId, peak, flags = RECORD_FLAGS_VALID }, index) => {
     writeRecord(

@@ -39,6 +39,7 @@ pub struct MeterReadPermit {
     pub reset_epoch: u32,
     pub subscription_revision: u32,
     pub slots: Vec<u32>,
+    pub transport: bool,
     pub subscription_changed: bool,
 }
 
@@ -388,6 +389,10 @@ impl MeterStreams {
                 .as_ref()
                 .map_or(0, |interest| interest.revision),
             slots: self.slots(window, id)?,
+            transport: stream
+                .interest
+                .as_ref()
+                .is_some_and(|interest| interest.visible && interest.transport),
             subscription_changed: stream.delivered
                 != Some((
                     stream.registry.registry_revision,
@@ -437,6 +442,15 @@ impl MeterStreams {
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect()
+    }
+    pub fn has_visible_interest(&self, session: &str) -> bool {
+        self.streams
+            .values()
+            .filter(|stream| stream.session == session)
+            .filter_map(|stream| stream.interest.as_ref())
+            .any(|interest| {
+                interest.visible && (interest.transport || !interest.endpoint_ids.is_empty())
+            })
     }
 
     pub fn close(&mut self, window: &str, id: u32) -> Result<(), String> {

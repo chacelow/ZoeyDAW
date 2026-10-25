@@ -176,7 +176,7 @@
 
 - 兴趣集合变化也会使在途快照失效；只改 registry、隐藏代际不足以阻止旧订阅帧重新显示。保持一个 invoke 在途，等待旧请求完成后再拉最新值。回归见 `meter-pull.test.ts`。
 - Store 的 stale 通知可能触发失败的绘制订阅者。先释放 Store 订阅再停止 Pull，保证卸载仍会关闭 native stream；错误采纳路径保留原始及通知异常，继续通知健康消费者。回归见 `meter-store.test.ts`、`meter-session.test.ts`。
-- 时钟探针属于 graph/device 和可见性代际，换图时废弃旧校准。停播结构替换可能尚无播放图；registry 和 clock 用 `null` 表达未就绪，Web 暂停 pull 并保留 stream，后续准备完成再恢复，不按错误字符串增加重试。BPM 已改为保留 Edit。相同 source 字段不重建兴趣，无兴趣让 scheduler 休眠，绘制预算取实际 DOM/Canvas 耗时。契约见 [实时同步设计](docs/research/realtime-sync-design.md)。
+- 2026-10-26 更新：sample clock 探针属于 graph/device 和可见性代际，换图废弃旧校准。levels v2 在无图时保留明确的 registry，经同一 stream 发送 Stopped 或 Unavailable；只有 sample clock probe 返回 null，不清空 Hub 或暂停停止位置。BPM 保留 Edit。endpoint 和 transport 兴趣独立，无两种兴趣时 scheduler 休眠；绘制预算取实际 DOM/Canvas 耗时。契约见 [实时同步设计](docs/research/realtime-sync-design.md)。
 
 ## 2026-10-25 BPM 更新不能复制旧秒数
 

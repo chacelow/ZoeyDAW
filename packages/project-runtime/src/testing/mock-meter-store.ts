@@ -81,7 +81,7 @@ export function createMockMeterStream() {
     now: number,
     bar: number,
     bpm: number,
-    numerator: number,
+    quartersPerBar: number,
     playing: boolean,
     recording: boolean,
     controlGeneration: string,
@@ -109,14 +109,23 @@ export function createMockMeterStream() {
       subscriptionRevision: 0,
       flags: (playing ? HEADER_FLAGS_PLAYING : 0) | (recording ? HEADER_FLAGS_RECORDING : 0),
       timelineSample: BigInt(
-        Math.max(0, Math.floor((((bar - 1) * numerator * 60) / bpm) * SAMPLE_RATE))
+        Math.max(0, Math.floor((((bar - 1) * quartersPerBar * 60) / bpm) * SAMPLE_RATE))
       ),
-      timelineBeat: (bar - 1) * numerator,
+      timelineBeat: (bar - 1) * quartersPerBar,
       tempoBpm: bpm,
       deviceEpoch: 1,
       sourceCount: 0,
       resetEpoch: 0,
       frameType: FRAME_TYPES_LEVELS,
+      appliedSequence: 0n,
+      ownerEpoch: 1n,
+      bar,
+      barsPerSecond: bpm / (60 * quartersPerBar),
+      audibleBar: playing ? bar : 0,
+      audibleBarsPerSecond: playing ? bpm / (60 * quartersPerBar) : 0,
+      observedMonotonicNs: BigInt(Math.max(0, Math.floor(now * 1_000_000))),
+      transportKind: 2,
+      transportFlags: 1 | (playing ? 2 : 0),
     })
     for (const entry of entries) {
       const db = levels[entry.endpointId]?.[entry.channelIndex] ?? -60

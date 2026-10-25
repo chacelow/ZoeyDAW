@@ -21,8 +21,12 @@ export interface MeterStore {
     readonly streamId: number | null
     readonly needsRegistry: boolean
     readonly endpointIds: readonly string[]
+    readonly transport: boolean
   }
-  setInterest(owner: string, endpointIds: readonly string[]): () => void
+  setInterest(
+    owner: string,
+    interest: { readonly endpointIds: readonly string[]; readonly transport: boolean }
+  ): () => void
   subscribeMetadata(listener: () => void): () => void
   subscribeFrames(listener: () => void): () => void
   dispose(): void

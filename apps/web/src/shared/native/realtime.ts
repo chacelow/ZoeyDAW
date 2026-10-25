@@ -98,9 +98,7 @@ export const nativeMeterPort = {
     }
   },
   async registry(streamId) {
-    return meterRegistrySchema
-      .nullable()
-      .parse(await command("playback_stream_registry", { streamId }))
+    return meterRegistrySchema.parse(await command("playback_stream_registry", { streamId }))
   },
   async clock(streamId) {
     return clockProbeSchema.nullable().parse(await command("playback_clock_probe", { streamId }))

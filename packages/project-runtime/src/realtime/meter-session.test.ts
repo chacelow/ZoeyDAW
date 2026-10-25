@@ -5,6 +5,7 @@ import {
   RECORD_BYTES,
   VERSION,
   writeHeader,
+  readHeader,
   writeRecord,
   jsonU64,
   type MeterInterest,
@@ -81,6 +82,15 @@ function frame(seq: bigint, generation = 1) {
     sourceCount: 0,
     resetEpoch: 0,
     frameType: 1,
+    appliedSequence: 0n,
+    ownerEpoch: 1n,
+    bar: 1,
+    barsPerSecond: 0.5,
+    audibleBar: 0,
+    audibleBarsPerSecond: 0,
+    observedMonotonicNs: 0n,
+    transportKind: 2,
+    transportFlags: 1,
   })
   writeRecord(
     view,
@@ -108,7 +118,7 @@ async function flush() {
 function harness() {
   const admission = deferred<RealtimeStreamOpenResult>()
   const snapshots: { afterSeq: string; response: Deferred<ArrayBuffer> }[] = []
-  const registries: Deferred<RealtimeRegistry | null>[] = []
+  const registries: Deferred<RealtimeRegistry>[] = []
   let receive: ((batch: readonly RealtimeEvent[]) => void) | undefined
   let reportError: ((error: unknown) => void) | undefined
   const open = vi.fn(
@@ -130,7 +140,7 @@ function harness() {
     return response.promise
   })
   const fetchRegistry = vi.fn((_streamId: number) => {
-    const response = deferred<RealtimeRegistry | null>()
+    const response = deferred<RealtimeRegistry>()
     registries.push(response)
     return response.promise
   })
@@ -282,8 +292,11 @@ it("discards the pre-hide response and sends the latest union of interests on re
   await flush()
   expect(h.snapshot).toHaveBeenCalledTimes(1)
   h.session.setVisible(false)
-  h.session.store.setInterest("mixer", ["track/b/out"])
-  h.session.store.setInterest("dock", ["track/a/out", "track/b/out"])
+  h.session.store.setInterest("mixer", { endpointIds: ["track/b/out"], transport: false })
+  h.session.store.setInterest("dock", {
+    endpointIds: ["track/a/out", "track/b/out"],
+    transport: false,
+  })
   h.session.setVisible(true)
   await flush()
   expect(h.interest.mock.lastCall?.[0]).toMatchObject({
@@ -542,8 +555,9 @@ it("keeps the stream open when an obsolete clock probe fails across a graph refr
   await h.session.dispose()
 })
 
-it("pauses an unprepared graph and resumes the same stream without replaying an old frame", async () => {
+it("keeps stopped transport flowing across an unprepared registry without replaying old graph frames", async () => {
   const h = harness()
+  h.session.store.setInterest("transport", { endpointIds: [], transport: true })
   await h.admit()
   h.tick(0)
   await flush()
@@ -551,28 +565,49 @@ it("pauses an unprepared graph and resumes the same stream without replaying an 
   await flush()
   h.tick(20)
   await flush()
-  const paused = h.session.refresh()
-  h.registries[0]?.resolve(null)
-  await paused
-  expect(h.session.store.readLatest()?.stale).toBe(true)
+  const stopped = h.session.refresh()
+  h.registries[0]?.resolve({ ...registry(2), entries: [], endpointResets: [] })
+  await stopped
+  expect(h.session.store.readLatest()).toBeNull()
   expect(h.session.readFrameAge()).toBeNull()
   h.snapshots[1]?.response.resolve(frame(2n))
   await flush()
   h.tick(40)
   await flush()
-  expect(h.snapshot).toHaveBeenCalledTimes(2)
-  expect(h.paint).toHaveBeenCalledOnce()
-  const resumed = h.session.refresh()
-  h.registries[1]?.resolve(registry(2))
-  await resumed
+  const bytes = new ArrayBuffer(HEADER_BYTES)
+  writeHeader(new DataView(bytes), {
+    ...readHeader(new DataView(frame(3n, 2))),
+    slotCount: 0,
+    timeSamples: 0n,
+    sampleRate: 0,
+    timelineSample: 0n,
+    timelineBeat: 0,
+    tempoBpm: 0,
+    flags: 0,
+    transportKind: 1,
+    bar: 9,
+  })
+  h.snapshots[2]?.response.resolve(bytes)
+  await flush()
   h.tick(60)
   await flush()
-  h.snapshots[2]?.response.resolve(frame(3n, 2))
+  expect(h.session.store.readLatest()?.frame.transport).toMatchObject({
+    kind: "stopped",
+    position: { bar: 9 },
+  })
+  const resumed = h.session.refresh()
+  h.registries[1]?.resolve(registry(3))
+  await resumed
+  h.snapshots[3]?.response.resolve(frame(4n, 2))
   await flush()
   h.tick(80)
   await flush()
-  expect(h.session.store.readLatest()?.frame.header.seq).toBe(3n)
-  expect(h.paint).toHaveBeenCalledTimes(2)
+  h.snapshots[4]?.response.resolve(frame(5n, 3))
+  await flush()
+  h.tick(100)
+  await flush()
+  expect(h.session.store.readLatest()?.frame.header.seq).toBe(5n)
+  expect(h.session.store.readLatest()?.frame.transport.kind).toBe("audio")
   expect(h.open).toHaveBeenCalledOnce()
   expect(h.close).not.toHaveBeenCalled()
   expect(h.onError).not.toHaveBeenCalled()

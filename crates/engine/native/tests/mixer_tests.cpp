@@ -45,6 +45,10 @@ struct MixerTestAccess {
         AudioConfiguration config;config.host="Hosted Device";config.inputDeviceId=audioDeviceId(config.host,device->getName());config.outputDeviceId=config.inputDeviceId;config.sampleRate=48000;config.bufferFrames=256;for(int channel=0;channel<inputChannels;++channel)config.inputMono.push_back(channel);config.outputStereo={0};
         session.configuration=config;session.preferencesLoaded=true;session.devicesInitialised=true;session.applyChannelLayout(config);session.clock.audioDeviceAboutToStart(manager.deviceManager.getCurrentAudioDevice());
     }
+    static void useUnavailableHostedInput(EngineSession& session) {
+        session.configuration->inputDeviceId=audioDeviceId("Hosted Device","missing-test-input");
+        session.configuration->outputDeviceId=session.configuration->inputDeviceId;
+    }
     static void enableHostedStereoInput(EngineSession& session) {
         auto config=*session.configuration;config.inputStereo={0};session.configuration=config;session.applyChannelLayout(config);
     }
@@ -402,6 +406,9 @@ int main(int argc,char** argv) {
     try {
         juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;
         if(argc>1) {
+            if(argc==2 && juce::String(argv[1])=="--stopped-input") {
+                testStoppedProjectInputActivation();std::cout<<"Focused stopped input activation passed\n";return 0;
+            }
             require(argc==2 && juce::String(argv[1])=="--transport-clock","Unknown native regression selector");
             testHostedTransportClock();testTransportClockAdoption();
             std::cout<<"Focused hosted transport clock tests passed\n";return 0;

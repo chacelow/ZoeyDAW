@@ -67,7 +67,7 @@ export function createMockProjectBackend(): ProjectBackend {
       now,
       position,
       state.project.bpm,
-      state.project.numerator,
+      (state.project.numerator * 4) / state.project.denominator,
       state.control.playing,
       state.control.recording,
       controlGeneration,

@@ -112,27 +112,14 @@ void EngineSession::retireMeterGraphs() {
     std::erase_if(retainedMeterGraphs,[](const auto& graph) { return graph->canRetire(); });
 }
 V EngineSession::telemetry(const V& v) {
-    fields(v,{"leaseId"});auto out=object();auto lease=text(v,"leaseId");V sample;
+    fields(v,{"leaseId"});auto out=object();auto lease=text(v,"leaseId");
     put(out,"meterReady",false);
     if(accepted && leases.count(lease)) {
         put(out,"meterReady",arrangement && arrangement->meterGraph!=nullptr);
-        auto& transport=arrangement->edit->getTransport();sample=object();put(sample,"sessionId",accepted->session);put(sample,"sequence",(juce::int64)++telemetrySequence);put(sample,"appliedSequence",(juce::int64)appliedSequence);
-        put(sample,"controlGeneration",decimalU64(accepted->controlGeneration));
-        auto position=transport.getPosition();
-        double barsPerSecond=1/accepted->secondsPerBar(),bar=1+position.inSeconds()*barsPerSecond;
-        if(transport.isPlaying())if(auto* context=transport.getCurrentPlaybackContext()) {
-            if(const auto pending=context->getPendingPositionChange())bar=1+pending->inSeconds()*barsPerSecond;
-            else if(const auto sync=context->getSyncPoint();sync && sync->time.inSeconds()>0 && sync->beat.inBeats()>0) {
-                barsPerSecond=sync->beat.inBeats()/sync->time.inSeconds()/accepted->quartersPerBar;
-                bar=1+sync->beat.inBeats()/accepted->quartersPerBar+(context->getAudibleTimelineTime()-sync->time).inSeconds()*barsPerSecond;
-            }
-        }
-        const double rate=clock.rate.load();auto pos=object();put(pos,"kind",rate>0?"sample":"musical");put(pos,"bar",bar);put(pos,"barsPerSecond",barsPerSecond);if(rate>0) { put(pos,"frame",(juce::int64)clock.frames.load());put(pos,"sampleRate",rate); }put(sample,"clock",pos);
-        put(sample,"playing",transport.isPlaying() && clock.active.load() && !clock.failed.load());put(sample,"recording",transport.isRecording());
         retireMeterGraphs();
         put(out,"recordingPreview",recordingPreview(lease));
     }
-    put(out,"telemetry",sample);put(out,"device",devices());juce::Array<V> issues;if(arrangement)issues=arrangement->issues;
+    put(out,"device",devices());juce::Array<V> issues;if(arrangement)issues=arrangement->issues;
     if(clock.failed.load())issues.add(issue("device-error","Audio output was interrupted; rendered output is silent"));put(out,"issues",issues);return out;
 }
 }

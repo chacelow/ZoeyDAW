@@ -5,7 +5,9 @@ export function attachProjectMeterScheduler() {
   const id = "project-meter-session"
   const tick = () => {
     const session = readProjectMeters()
-    if (!session || session.store.readMetadata().endpointIds.length === 0) return
+    if (!session) return
+    const interest = session.store.readMetadata()
+    if (!interest.transport && interest.endpointIds.length === 0) return
     session.tick(performance.now())
     const state = session.readStatus().state
     if (state !== "hidden" && state !== "error" && state !== "disposed")

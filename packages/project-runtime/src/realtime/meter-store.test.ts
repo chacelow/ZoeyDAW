@@ -65,6 +65,15 @@ function frame(seq: bigint, epochs = [1, 1], resetEpoch = 1, generation = 1, str
     sourceCount: 0,
     resetEpoch,
     frameType: 1,
+    appliedSequence: 0n,
+    ownerEpoch: 1n,
+    bar: 1,
+    barsPerSecond: 0.5,
+    audibleBar: 0,
+    audibleBarsPerSecond: 0,
+    observedMonotonicNs: 0n,
+    transportKind: 2,
+    transportFlags: 1,
   })
   for (let slotId = 0; slotId < 2; slotId += 1)
     writeRecord(
@@ -177,9 +186,12 @@ it("fences slot reuse, unknown topology, old streams and old sessions", () => {
 })
 it("unifies interests and prevents stale component cleanup from removing its replacement", () => {
   const store = createMeterStore()
-  const old = store.setInterest("dock", ["track/a/out"])
-  const replacement = store.setInterest("dock", ["track/b/out"])
-  const mixer = store.setInterest("mixer", ["track/b/out", "track/a/out"])
+  const old = store.setInterest("dock", { endpointIds: ["track/a/out"], transport: false })
+  const replacement = store.setInterest("dock", { endpointIds: ["track/b/out"], transport: false })
+  const mixer = store.setInterest("mixer", {
+    endpointIds: ["track/b/out", "track/a/out"],
+    transport: false,
+  })
   old()
   expect(store.readMetadata().endpointIds).toEqual(["track/a/out", "track/b/out"])
   mixer()

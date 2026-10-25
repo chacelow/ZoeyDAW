@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "magic": 1296319578,
   "byteOrder": "little-endian",
   "frameTypes": { "levels": 1, "spectrum": 2, "loudness": 3 },
@@ -18,6 +18,8 @@
     "rmsStale": 32
   },
   "sourceFlags": { "valid": 1, "stale": 2, "unavailable": 8 },
+  "transportKinds": { "unavailable": 0, "stopped": 1, "audio": 2 },
+  "transportFlags": { "controlValid": 1, "audibleValid": 2 },
   "jsonPolicy": {
     "u64": "canonical-decimal-string",
     "maximumU64": "18446744073709551615",
@@ -26,7 +28,7 @@
   },
   "layouts": {
     "header": {
-      "bytes": 128,
+      "bytes": 192,
       "fields": [
         ["magic", "u32", 0],
         ["version", "u16", 4],
@@ -50,7 +52,16 @@
         ["deviceEpoch", "u32", 112],
         ["sourceCount", "u32", 116],
         ["resetEpoch", "u32", 120],
-        ["frameType", "u32", 124]
+        ["frameType", "u32", 124],
+        ["appliedSequence", "u64", 128],
+        ["ownerEpoch", "u64", 136],
+        ["bar", "f64", 144],
+        ["barsPerSecond", "f64", 152],
+        ["audibleBar", "f64", 160],
+        ["audibleBarsPerSecond", "f64", 168],
+        ["observedMonotonicNs", "u64", 176],
+        ["transportKind", "u32", 184],
+        ["transportFlags", "u32", 188]
       ]
     },
     "record": {
@@ -206,6 +217,7 @@
         "streamId": "u32",
         "revision": "u32",
         "endpointIds": "string[]",
+        "transport": "bool",
         "rateHz": "MeterRateHz",
         "visible": "bool"
       }

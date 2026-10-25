@@ -5,8 +5,28 @@ void testHostedTransportClock() {
     edit.dispatchPendingUpdatesSynchronously();transport.ensureContextAllocated(true);
     auto command=parse(R"({"protocolVersion":2,"sessionId":"live-mixer-regression","sequence":1,"controlGeneration":"1","control":{"playing":true,"recording":false,"seekBar":3,"seekGeneration":1}})");
     accepted(session.call("control",envelope(command)),0);
-    auto query=object();put(query,"leaseId","mixer-test");
-    const auto bar=[&] { return (double)session.call("telemetry",query)["telemetry"]["clock"]["bar"]; };
+    auto query=object();put(query,"leaseId","mixer-test");put(query,"sessionId","live-mixer-regression");
+    std::uint32_t observedGeneration=0;std::unique_ptr<zp_meter_read_handle> reader;std::optional<zp_meter_clock> latest;
+    const auto bar=[&] {
+        const auto registry=session.meterRegistry(query);const auto generation=(std::uint32_t)(int)registry["generation"];
+        const bool prepared=registry["graph"]["kind"].toString()=="prepared";
+        if(generation!=observedGeneration) {
+            reader.reset();latest.reset();
+            if(prepared) {
+                auto collector=session.acquireMeterGraph("mixer-test","live-mixer-regression",(std::uint32_t)(int)registry["deviceEpoch"],generation,(std::uint32_t)(int)registry["registryRevision"]);
+                require(collector!=nullptr,"Missing hosted graph clock reader");
+                reader=std::make_unique<zp_meter_read_handle>(collector,session.sourceObservationState(),"live-mixer-regression");
+            } else {
+                const auto owner=std::stoull(registry["graph"]["ownerEpoch"].toString().toStdString());
+                auto state=session.acquireIdleMeter("mixer-test","live-mixer-regression",owner);require(state!=nullptr,"Missing hosted stopped reader");
+                reader=std::make_unique<zp_meter_read_handle>(state,owner);
+            }
+            observedGeneration=generation;
+        }
+        if(!prepared) { zp_stopped_clock value{};require(zp_meter_read_stopped_clock(reader.get(),&value)==1,"Stopped clock unavailable");return value.bar; }
+        zp_meter_clock value{};if(zp_meter_read_clock(reader.get(),&value)==1)latest=value;
+        require(latest.has_value(),"Hosted graph clock unavailable");return latest->audible_valid?latest->audible_bar:latest->bar;
+    };
     juce::AudioBuffer<float> audio(2,256);juce::MidiBuffer midi;
     const auto process=[&] { for(int block=0;block<16;++block) { audio.clear();midi.clear();MixerTestAccess::hosted(session).processBlock(audio,midi); } };
     process();auto* context=transport.getCurrentPlaybackContext();require(context!=nullptr,"Playback clock has no context");
@@ -14,12 +34,13 @@ void testHostedTransportClock() {
     const auto audible=context->getAudibleTimelineTime().inSeconds();
     require(audible>4.01,"Hosted audible clock did not advance beyond seek");
     require(std::abs(transport.getPosition().inSeconds()-4)<1e-8,"Clock regression unexpectedly pumped the UI timer");
-    require(std::abs(bar()-(1+audible/2))<1e-8,"Arrangement telemetry reads the stalled UI timer instead of audible playback");
+    require(std::abs(bar()-(1+audible/2))<1e-8,"Arrangement block observation reads the stalled UI timer instead of audible playback");
+    const auto beforeSeek=bar();
     auto control=command["control"];put(control,"seekBar",7);put(control,"seekGeneration",2);put(command,"sequence",2);put(command,"controlGeneration","2");accepted(session.call("control",envelope(command)),0);
-    require(std::abs(bar()-7)<1e-8,"Pending seek reported the previous audible position");
-    process();require(std::abs(bar()-(1+context->getAudibleTimelineTime().inSeconds()/2))<1e-8 && bar()>7,"Post-seek telemetry did not resume the audible clock");
+    require(std::abs(bar()-beforeSeek)<1e-8,"Pending seek relabelled the previously rendered audio block");
+    process();require(std::abs(bar()-(1+context->getAudibleTimelineTime().inSeconds()/2))<1e-8 && bar()>7,"Post-seek block observation did not resume the audible clock");
     put(control,"playing",false);put(control,"seekBar",5);put(control,"seekGeneration",3);put(command,"sequence",3);put(command,"controlGeneration","3");accepted(session.call("control",envelope(command)),0);
-    require(std::abs(bar()-5)<1e-8,"Stopped telemetry lost the exact seek position");
+    process();require(std::abs(bar()-5)<1e-8,"Stopped block observation lost the exact seek position");
     put(control,"playing",true);put(command,"sequence",4);put(command,"controlGeneration","4");accepted(session.call("control",envelope(command)),0);
     process();
     int sequence=5,revision=0;

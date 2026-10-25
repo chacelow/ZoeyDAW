@@ -69,8 +69,7 @@ pub(super) fn verify(
         let registry = execute(
             main,
             service.refresh_meter_stream_registry(main, "hub-smoke-main", stream),
-        )?
-        .ok_or("Source registry lost its active graph")?;
+        )?;
         let preview = registry
             .sources
             .iter()
@@ -123,8 +122,7 @@ pub(super) fn verify(
     let removed = execute(
         main,
         service.refresh_meter_stream_registry(main, "hub-smoke-main", stream),
-    )?
-    .ok_or("Preview stop lost the Arrangement graph")?;
+    )?;
     if removed.sources != original.sources || removed.generation != original.generation {
         return Err("Preview stop retained its source or changed authored identity".into());
     }

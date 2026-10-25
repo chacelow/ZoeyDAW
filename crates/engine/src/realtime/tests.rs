@@ -64,7 +64,7 @@ fn nullable_fields_are_required_on_the_wire() {
 
 #[test]
 fn binary_golden_preserves_identity_and_rejects_corruption() {
-    let hex = include_str!("../../../../protocol/fixtures/levels-v1.hex").trim();
+    let hex = include_str!("../../../../protocol/fixtures/levels-v2.hex").trim();
     let bytes: Vec<u8> = hex
         .as_bytes()
         .chunks_exact(2)
@@ -92,7 +92,8 @@ fn binary_golden_preserves_identity_and_rejects_corruption() {
     assert_eq!(decoded.sources[0].source_rate, 44100.0);
     assert!(super::levels::decode_levels(&bytes[..bytes.len() - 1]).is_none());
     let mut corrupt = bytes.clone();
-    corrupt[144..148].copy_from_slice(&f32::NAN.to_le_bytes());
+    let offset = super::protocol_generated::HEADER_BYTES + 16;
+    corrupt[offset..offset + 4].copy_from_slice(&f32::NAN.to_le_bytes());
     assert!(super::levels::decode_levels(&corrupt).is_none());
     let mut corrupt = bytes;
     corrupt[84..88].copy_from_slice(&16u32.to_le_bytes());
@@ -203,6 +204,7 @@ fn input_slots_keep_independent_reset_baselines_when_projected_with_graph() {
             stream_id: id,
             revision,
             endpoint_ids: vec![endpoint.into()],
+            transport: false,
             rate_hz: super::metadata_generated::MeterRateHz::Value60,
             visible,
         };

@@ -128,28 +128,6 @@ const deviceSchema = z
     error: z.string().nullable(),
   })
   .strict()
-const clockFields = { bar: finite.min(1), barsPerSecond: finite.nonnegative() }
-const telemetrySchema = z
-  .object({
-    sessionId: z.string(),
-    sequence: counter,
-    appliedSequence: counter,
-    controlGeneration: generation,
-    clock: z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("musical"), ...clockFields }).strict(),
-      z
-        .object({
-          kind: z.literal("sample"),
-          ...clockFields,
-          frame: counter,
-          sampleRate: finite.positive(),
-        })
-        .strict(),
-    ]),
-    playing: z.boolean(),
-    recording: z.boolean(),
-  })
-  .strict()
 const resultSchema = z.discriminatedUnion("kind", [
   z
     .object({
@@ -210,7 +188,6 @@ const recordingPreviewSchema = z
   .strict()
 const snapshotSchema = z
   .object({
-    telemetry: telemetrySchema.nullable(),
     device: deviceSchema,
     meterReady: z.boolean(),
     recordingPreview: recordingPreviewSchema.nullable().optional(),

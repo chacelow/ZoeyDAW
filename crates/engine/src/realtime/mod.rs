@@ -10,6 +10,7 @@ mod hub_service;
 pub mod events;
 pub mod streams;
 mod stream_service;
+mod transport_frame;
 mod event_service;
 
 #[cfg(test)]

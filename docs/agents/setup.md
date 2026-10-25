@@ -79,17 +79,17 @@ cmake --build target/windows-native-clock --config Release --target zoeydaw_mixe
 ctest --test-dir target/windows-native-clock -C Release -R native_transport_clock --output-on-failure --timeout 30
 ```
 
-用例覆盖已排队音频块在新 seek ACK 后仍保留旧代际、主线程与音频预取边界并发 seek、完整 u64、实际处理速率与拒绝请求。1024-sample 图延迟场景还核对同块渲染/audible 坐标、seek 与 BPM 转换。可听补偿复用引擎既有位置节点，不是物理 loopback 测量；Web 唯一 transport 快照切换仍待完成。
+用例覆盖已排队音频块在新 seek ACK 后仍保留旧代际、主线程与音频预取边界并发 seek、完整 u64、实际处理速率与拒绝请求。1024-sample 图延迟场景还核对同块渲染/audible 坐标、seek 与 BPM 转换。可听补偿复用引擎既有位置节点，不是物理 loopback 测量；实际桌面播放头与听感仍需验收。
 
-`cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json` 使用真实低增益输出，验证停止打开、无图 seek 的完整 u64 身份、Edit owner 换代、等待播放时停止位置失效，以及真实音频块接管。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 指定独立配置，`ZOEYDAW_AUDIO_CACHE_PATH` 指定临时缓存；不使用用户工程或桌面应用完成此探针。无图的 Hub snapshot 保留 Stopped，levels v1 stream 仍暂停，不能把该结果当作 Web 播放头或物理听感验收。
+`cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json [FRAME_DIRECTORY]` 使用真实低增益输出，覆盖停止打开、无图 seek、完整 u64、Edit owner 换代、等待播放和实际音频块接管。可选输出目录必须已存在；探针保存真实 stream 的 `.bin` 与配套 registry JSON，便于重放到 Web consumer。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 指定独立设备配置，`ZOEYDAW_AUDIO_CACHE_PATH` 指定临时缓存。停止、等待和播放使用同一个 levels v2 stream，不伪造 sample clock。该探针不启动桌面应用，也不代替物理听感验收。
 
 根 `Cargo.lock` 与 `.cargo/config.toml` 供应用 workspace 共用。media、project、browser 的独立测试不编译 Tracktion；engine 与完整 workspace 检查需要维护的 Tracktion 源码及固定 JUCE checkout。研究探针 `scripts/audio/probes/rust` 保持独立 manifest 和 lock。
 
 实时协议布局由 `protocol/realtime.json` 唯一定义。运行 `node scripts/generate-realtime-protocol.mjs` 生成三语言产物，`--check` 检查漂移。`pnpm check:realtime-protocol` 编译临时 Rust/C++ 校验程序，对照 TS 写出的全部字段与独立 golden fixture，结束后删除临时文件。native CTest 覆盖三槽并发快照、实际 DC/正弦/短脉冲计量、输入设备换代，以及完整 Edit 的 fader/mute/solo/Stop fence 后采集。
 
-Windows 在 Visual Studio 的 x64 Native Tools Command Prompt 中运行 `corepack pnpm check:realtime-protocol`，或先加载已安装的 `VsDevCmd.bat -arch=x64 -host_arch=x64`。该入口使用 MSVC `cl.exe` 和带 `.exe` 后缀的临时程序；其他平台保留 `clang++`。确保 `where link` 的首项来自 MSVC，避免 Rust 误用 Git 自带的同名工具。Windows 已实际通过 224 字节的三语言往返和 golden fixture 校验；这不代表 Tauri、音频设备或桌面行为已验收。
+Windows 在 Visual Studio 的 x64 Native Tools Command Prompt 中运行 `corepack pnpm check:realtime-protocol`，或先加载已安装的 `VsDevCmd.bat -arch=x64 -host_arch=x64`。该入口使用 MSVC `cl.exe` 和带 `.exe` 后缀的临时程序；其他平台保留 `clang++`。确保 `where link` 首项来自 MSVC，避免 Rust 误用 Git 同名工具。Windows 已通过 v2 的 288 字节三语言往返、字段偏移与独立 golden fixture；这不代表桌面行为或物理出声已验收。
 
-生产轨头、路由和 Device 前后级电平通过 window-bound stream 的 raw binary snapshot 读取唯一 Rust MeterHub；Web `MeterSession` 管理单在途拉取、兴趣并集、事件回执、隐藏恢复和关闭。原生 telemetry 的 `meterReady` 显式控制准入，停播且尚无图时等待首次 Play，不因订阅启动音频。原有 backend poll 每 250ms 至多刷新一次 registry，原生刷新等待新图首个快照。Transport、设备状态和录音缩略图仍使用 `playback_telemetry`，完整唯一快照切换与 WKWebView 验收尚未完成。Hosted 录音回归覆盖三轨同源及不同输入、前后 seek 启录、播放中 punch-in、真实 writer PCM 和缩略图增长。这些验证不代替真实麦克风回调与桌面操作验收。
+生产 transport、轨头、路由和 Device 电平从同一个 window-bound binary stream 读取 Rust MeterHub。Web MeterSession 管理单在途、endpoint 与 transport 兴趣并集、事件回执、可见性与关闭。项目接受后即可准入停止 stream，meterReady 不再门控 transport。registry 由原状态 poll 至多每 250ms 刷新，首次 Play 在缺少 audio observation 时立即刷新。playback_telemetry 只保留设备、issues 和录音缩略图。Hosted 回归与真实 native 帧重放不代替实际 Tauri 播放头、物理麦克风或 WebView 吞吐验收。
 
 `zoeydaw_playback_smoke REQUEST.json NEW_CAPTURE.wav SECONDS` 使用真实输出设备，会发声。输入为严格 protocol v2 `BackendDocumentRequest`，含十进制 `controlGeneration`，control 不含 heldNotes/midiVelocity；素材必须可解码。程序限制测试 Main 和试听为低增益，覆盖窄控制、可靠 MIDI、定位、循环、并行试听、owner 切换和停止。捕获文件来自设备前的引擎输出，不是物理 loopback，也不能替代桌面 Browser 拖入和播放按钮的 UI 验收。输出文件不能覆盖已有文件。
 

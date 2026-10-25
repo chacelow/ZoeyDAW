@@ -50,7 +50,7 @@ pub async fn playback_stream_registry(
     window: WebviewWindow,
     service: State<'_, PlaybackService>,
     stream_id: u32,
-) -> Result<Option<RealtimeRegistry>, String> {
+) -> Result<RealtimeRegistry, String> {
     service
         .refresh_meter_stream_registry(&TauriMainThread(&app), window.label(), stream_id)
         .await

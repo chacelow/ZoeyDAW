@@ -86,11 +86,13 @@ export function createMeterPull(options: {
   }
   let registry = options.store.readMetadata().registry
   let endpointIds = options.store.readMetadata().endpointIds
+  let transport = options.store.readMetadata().transport
   const unsubscribe = options.store.subscribeMetadata(() => {
     const metadata = options.store.readMetadata()
     const next = metadata.registry
-    const interestChanged = endpointIds !== metadata.endpointIds
+    const interestChanged = endpointIds !== metadata.endpointIds || transport !== metadata.transport
     endpointIds = metadata.endpointIds
+    transport = metadata.transport
     if (next === registry && !interestChanged) return
     const sameGraph =
       next !== null &&

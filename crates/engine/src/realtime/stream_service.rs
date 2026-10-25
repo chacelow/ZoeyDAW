@@ -53,7 +53,7 @@ impl PlaybackService {
         main: &D,
         window: &str,
         id: u32,
-    ) -> Result<Option<RealtimeRegistry>, String> {
+    ) -> Result<RealtimeRegistry, String> {
         let (lease, session) = {
             let streams = self
                 .owner
@@ -63,10 +63,7 @@ impl PlaybackService {
             let (lease, session) = streams.identity(window, id)?;
             (lease.to_owned(), session.to_owned())
         };
-        let registry = self.refresh_meter_hub(main, lease, session.clone()).await?;
-        if registry.graph.sample_rate().is_none() {
-            return Ok(None);
-        }
+        self.refresh_meter_hub(main, lease, session.clone()).await?;
         let hub = self
             .owner
             .meter_hub
@@ -76,7 +73,7 @@ impl PlaybackService {
             .cloned()
             .ok_or("Meter Hub has no installed graph")?;
         hub.wait_snapshot(&session, std::time::Duration::from_millis(500))?;
-        self.meter_stream_registry(window, id).map(Some)
+        self.meter_stream_registry(window, id)
     }
 
     pub fn meter_stream_registry(&self, window: &str, id: u32) -> Result<RealtimeRegistry, String> {
@@ -162,7 +159,7 @@ impl PlaybackService {
         id: u32,
         after_seq: u64,
     ) -> Result<Vec<u8>, String> {
-        use super::{levels::encode_levels, protocol_generated::*};
+        use super::levels::encode_levels;
         let permit = self
             .owner
             .meter_streams
@@ -186,54 +183,12 @@ impl PlaybackService {
             return Err("meter-registry-required".into());
         }
         if (snapshot.sequence <= after_seq && !permit.subscription_changed)
-            || permit.slots.is_empty()
+            || (permit.slots.is_empty() && !permit.transport)
         {
             return Ok(Vec::new());
         }
-        let Some(transport) = snapshot.transport.audio() else {
-            return Ok(Vec::new());
-        };
         let records = snapshot.select_records(&permit.slots)?;
-        let header = WireHeader {
-            magic: MAGIC as u32,
-            version: VERSION as u16,
-            header_bytes: HEADER_BYTES as u16,
-            generation: permit.generation,
-            registry_revision: permit.registry_revision,
-            stream_id: id,
-            slot_count: 0,
-            seq: snapshot.sequence,
-            time_samples: transport.audio.device_sample,
-            sample_rate: snapshot
-                .registry
-                .graph
-                .sample_rate()
-                .ok_or("Audio clock requires a prepared graph")?
-                .get(),
-            produced_monotonic_ns: snapshot.produced_monotonic_ns,
-            control_generation: 0,
-            accepted_revision: 0,
-            audio_revision: 0,
-            subscription_revision: permit.subscription_revision,
-            flags: HEADER_FLAGS_REVISIONS_UNAVAILABLE as u32
-                | if permit.subscription_changed {
-                    HEADER_FLAGS_SUBSCRIPTION_CHANGED as u32
-                } else {
-                    0
-                }
-                | if transport.audio.playing == 1 {
-                    HEADER_FLAGS_PLAYING as u32
-                } else {
-                    0
-                },
-            timeline_sample: transport.audio.timeline_sample,
-            timeline_beat: transport.audio.timeline_beat,
-            tempo_bpm: transport.audio.tempo_bpm,
-            device_epoch,
-            source_count: 0,
-            reset_epoch: snapshot.reset_epoch,
-            frame_type: FRAME_TYPES_LEVELS as u32,
-        };
+        let header = super::transport_frame::header(&snapshot, &permit, id)?;
         let bytes = encode_levels(header, &records, &snapshot.sources)
             .ok_or("Invalid Hub binary snapshot")?;
         let mut streams = self
@@ -317,7 +272,7 @@ impl PlaybackService {
             .map_err(|_| "Meter Hub owner lock poisoned")?;
         if let Some(hub) = owner.as_ref() {
             if let Some(session) = hub.session_id() {
-                hub.set_visible(&session, !streams.visible_interest(&session).is_empty())?;
+                hub.set_visible(&session, streams.has_visible_interest(&session))?;
             }
         }
         Ok(())

@@ -37,6 +37,15 @@ function frame(seq: bigint) {
     sourceCount: 0,
     resetEpoch: 0,
     frameType: 1,
+    appliedSequence: 0n,
+    ownerEpoch: 1n,
+    bar: 1,
+    barsPerSecond: 0.5,
+    audibleBar: 0,
+    audibleBarsPerSecond: 0,
+    observedMonotonicNs: 0n,
+    transportKind: 2,
+    transportFlags: 1,
   })
   writeRecord(
     view,
@@ -314,10 +323,10 @@ it("contains consumer errors raised by store frame notifications", async () => {
 
 it("discards an old subscription response without issuing a concurrent request", async () => {
   const h = harness()
-  h.store.setInterest("panel", ["master/main/out"])
+  h.store.setInterest("panel", { endpointIds: ["master/main/out"], transport: false })
   h.tick(0)
   await flush()
-  h.store.setInterest("panel", [])
+  h.store.setInterest("panel", { endpointIds: [], transport: false })
   h.tick(20)
   expect(h.snapshot).toHaveBeenCalledOnce()
   h.resolve(frame(1n))

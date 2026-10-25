@@ -20,12 +20,9 @@ import type {
 import type { BrowserAuditionPort } from "../browser/controller"
 import { resolveBackendSources, resolveBackendDevices } from "./source-locations"
 import { prepareNativeWaveforms } from "./waveforms"
-import {
-  createMeterSession,
-  type MeterSession,
-  type MeterSessionPort,
-} from "@zoeydaw/project-runtime/realtime"
-import { publishProjectMeters, readProjectMeters } from "../realtime"
+import type { MeterSessionPort } from "@zoeydaw/project-runtime/realtime"
+import { nativeMeterPort } from "@/shared/native/realtime"
+import { createNativeTransport, type NativeTransport } from "./native-transport"
 
 export interface NativeProjectBackend extends ProjectBackend {
   urgentStop(): Promise<void>
@@ -59,29 +56,24 @@ export function createNativeProjectBackend(
   let polling = false
   let recordingPoll: Promise<void> | null = null
   let pollGeneration = 0
-  let lastTelemetrySequence = -1
   const publishingRecordings = new Set<string>()
   const recordingReceipts = new Map<string, NativeRecordingReceipt>()
   const acknowledgedRecordings = new Set<string>()
   let requestError: string | null = null
-  let meters: MeterSession | null = null
+  let meters: NativeTransport | null = null
   let lastMeterRefresh = -Infinity
-  const meterVisibility = () => meters?.setVisible(!document.hidden)
   function startMeters() {
-    if (!options.meters || meters || disposed) return
-    meters = createMeterSession({
-      port: options.meters,
+    if (meters || disposed) return
+    meters = createNativeTransport({
+      port: options.meters ?? nativeMeterPort,
       leaseId,
       sessionId,
-      now: () => performance.now(),
-      onError: error => publishNativeAudioStatus({ error: audioErrorMessage(error) }),
-      onEvent: event => {
-        if (event.kind === "plugin-fault") publishNativeAudioStatus({ error: event.message })
+      active: listeners.size > 0,
+      onFrame: frame => {
+        for (const listener of listeners) listener(frame)
       },
+      onError: error => publishNativeAudioStatus({ error: audioErrorMessage(error) }),
     })
-    meterVisibility()
-    document.addEventListener("visibilitychange", meterVisibility)
-    publishProjectMeters(meters)
   }
 
   function reportRequestError(
@@ -172,10 +164,9 @@ export function createNativeProjectBackend(
       try {
         const snapshot = await port.telemetry(leaseId)
         if (disposed || listeners.size === 0 || generation !== pollGeneration) return
-        if (snapshot.meterReady) startMeters()
         if (meters && performance.now() - lastMeterRefresh >= 250) {
           lastMeterRefresh = performance.now()
-          void meters
+          void meters.session
             .refresh()
             .catch(error => publishNativeAudioStatus({ error: audioErrorMessage(error) }))
         }
@@ -186,15 +177,6 @@ export function createNativeProjectBackend(
           recordingPreview:
             snapshot.recordingPreview?.sessionId === sessionId ? snapshot.recordingPreview : null,
         })
-        const telemetry = snapshot.telemetry
-        if (
-          telemetry &&
-          telemetry.sessionId === sessionId &&
-          telemetry.sequence > lastTelemetrySequence
-        ) {
-          lastTelemetrySequence = telemetry.sequence
-          for (const listener of listeners) listener(telemetry)
-        }
       } catch (error) {
         if (!disposed && generation === pollGeneration)
           publishNativeAudioStatus({ error: audioErrorMessage(error) })
@@ -277,6 +259,16 @@ export function createNativeProjectBackend(
       if (result.kind === "rejected")
         reportRequestError("control", request, `Native audio request rejected: ${result.code}`)
       schedulePoll()
+      if (
+        result.kind === "accepted" &&
+        request.control.playing &&
+        meters &&
+        meters.session.store.readLatest()?.frame.transport.kind !== "audio"
+      ) {
+        void meters.session
+          .refresh()
+          .catch(error => publishNativeAudioStatus({ error: audioErrorMessage(error) }))
+      }
       return result
     } catch (error) {
       if (!disposed) reportRequestError("control", request, error)
@@ -344,7 +336,7 @@ export function createNativeProjectBackend(
   }
 
   return {
-    readMeters: () => meters?.store ?? null,
+    readMeters: () => meters?.session.store ?? null,
     urgentStop,
     control,
     note,
@@ -385,7 +377,6 @@ export function createNativeProjectBackend(
         sessionId = request.sessionId
         admission = null
         maxDispatchedNoteSequence = 0
-        lastTelemetrySequence = -1
         cancelPoll()
       }
       leased = true
@@ -457,6 +448,7 @@ export function createNativeProjectBackend(
           publishNativeAudioStatus({ error: null })
         }
         if (result.kind === "accepted" && sources) void prepareNativeWaveforms(sources)
+        if (result.kind === "accepted") startMeters()
         schedulePoll()
         return result
       } catch (error) {
@@ -475,19 +467,21 @@ export function createNativeProjectBackend(
     subscribe(listener) {
       if (disposed) return () => {}
       listeners.add(listener)
+      meters?.setActive(true)
       schedulePoll()
       return () => {
         listeners.delete(listener)
-        if (listeners.size === 0) cancelPoll()
+        if (listeners.size === 0) {
+          cancelPoll()
+          meters?.setActive(false)
+        }
       }
     },
     dispose() {
       if (disposed) return
       disposed = true
       cancelPoll()
-      document.removeEventListener("visibilitychange", meterVisibility)
       if (meters) {
-        if (readProjectMeters() === meters) publishProjectMeters(null)
         const closing = meters.dispose().catch(error => {
           publishNativeAudioStatus({ error: audioErrorMessage(error) })
         })

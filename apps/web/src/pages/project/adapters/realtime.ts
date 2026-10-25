@@ -163,14 +163,20 @@ export function publishProjectMeters(next: MeterSession | null) {
   current.session = next
   for (const [owner, interest] of interests) {
     interest.detach()
-    interest.detach = next?.store.setInterest(owner, interest.ids) ?? (() => {})
+    interest.detach =
+      next?.store.setInterest(owner, { endpointIds: interest.ids, transport: false }) ?? (() => {})
   }
   for (const listener of listeners) listener()
 }
 
 export function setProjectMeterInterest(owner: string, ids: readonly string[]) {
   interests.get(owner)?.detach()
-  const interest = { ids, detach: readProjectMeterStore()?.setInterest(owner, ids) ?? (() => {}) }
+  const interest = {
+    ids,
+    detach:
+      readProjectMeterStore()?.setInterest(owner, { endpointIds: ids, transport: false }) ??
+      (() => {}),
+  }
   interests.set(owner, interest)
   return () => {
     if (interests.get(owner) !== interest) return

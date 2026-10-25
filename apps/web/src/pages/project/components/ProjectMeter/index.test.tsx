@@ -94,6 +94,15 @@ it("paints distinct device stages from binary without an Arrangement view and re
     sourceCount: 0,
     resetEpoch: 0,
     frameType: 1,
+    appliedSequence: 0n,
+    ownerEpoch: 1n,
+    bar: 1,
+    barsPerSecond: 0.5,
+    audibleBar: 0,
+    audibleBarsPerSecond: 0,
+    observedMonotonicNs: 0n,
+    transportKind: 2,
+    transportFlags: 1,
   })
   for (const [slotId, peak] of [1, 0.25].entries())
     writeRecord(

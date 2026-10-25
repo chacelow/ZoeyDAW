@@ -297,6 +297,7 @@ pub struct MeterInterest {
     pub stream_id: u32,
     pub revision: u32,
     pub endpoint_ids: Vec<String>,
+    pub transport: bool,
     pub rate_hz: MeterRateHz,
     pub visible: bool,
 }

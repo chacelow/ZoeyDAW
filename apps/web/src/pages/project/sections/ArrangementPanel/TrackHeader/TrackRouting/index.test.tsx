@@ -94,6 +94,15 @@ function inputMeters() {
       sourceCount: 0,
       resetEpoch: 0,
       frameType: 1,
+      appliedSequence: 0n,
+      ownerEpoch: 1n,
+      bar: 1,
+      barsPerSecond: 0.5,
+      audibleBar: 0,
+      audibleBarsPerSecond: 0,
+      observedMonotonicNs: 0n,
+      transportKind: 2,
+      transportFlags: 1,
     })
     levels.forEach((db, slotId) => {
       const peak = db <= -120 ? 0 : 10 ** (db / 20)

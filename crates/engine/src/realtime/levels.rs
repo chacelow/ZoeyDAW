@@ -56,11 +56,57 @@ fn valid_header(header: &WireHeader) -> bool {
         && header.header_bytes == HEADER_BYTES as u16
         && header.frame_type == FRAME_TYPES_LEVELS as u32
         && header.flags & !(flags as u32) == 0
-        && header.sample_rate.is_finite()
-        && header.sample_rate > 0.0
-        && header.timeline_beat.is_finite()
-        && header.tempo_bpm.is_finite()
-        && (20.0..=999.0).contains(&header.tempo_bpm)
+        && valid_transport(header)
+}
+fn valid_transport(header: &WireHeader) -> bool {
+    let control = header.transport_flags & TRANSPORT_FLAGS_CONTROL_VALID as u32 != 0;
+    let audible = header.transport_flags & TRANSPORT_FLAGS_AUDIBLE_VALID as u32 != 0;
+    let valid_position = |bar: f64, rate: f64| bar.is_finite() && rate.is_finite() && rate > 0.0;
+    if header.transport_flags
+        & !((TRANSPORT_FLAGS_CONTROL_VALID | TRANSPORT_FLAGS_AUDIBLE_VALID) as u32)
+        != 0
+        || (if control {
+            header.owner_epoch == 0
+        } else {
+            header.owner_epoch != 0
+                || header.control_generation != 0
+                || header.applied_sequence != 0
+        })
+        || (if audible {
+            !valid_position(header.audible_bar, header.audible_bars_per_second)
+        } else {
+            header.audible_bar != 0.0 || header.audible_bars_per_second != 0.0
+        })
+        || header.observed_monotonic_ns > header.produced_monotonic_ns
+    {
+        return false;
+    }
+    if header.transport_kind == TRANSPORT_KINDS_AUDIO as u32 {
+        return valid_position(header.bar, header.bars_per_second)
+            && header.sample_rate.is_finite()
+            && header.sample_rate > 0.0
+            && header.timeline_beat.is_finite()
+            && header.tempo_bpm.is_finite()
+            && (20.0..=999.0).contains(&header.tempo_bpm);
+    }
+    if header.sample_rate != 0.0
+        || header.time_samples != 0
+        || header.timeline_sample != 0
+        || header.timeline_beat != 0.0
+        || header.tempo_bpm != 0.0
+        || audible
+        || header.flags & (HEADER_FLAGS_PLAYING | HEADER_FLAGS_RECORDING) as u32 != 0
+    {
+        return false;
+    }
+    if header.transport_kind == TRANSPORT_KINDS_STOPPED as u32 {
+        return control && valid_position(header.bar, header.bars_per_second);
+    }
+    header.transport_kind == TRANSPORT_KINDS_UNAVAILABLE as u32
+        && !control
+        && header.bar == 0.0
+        && header.bars_per_second == 0.0
+        && header.observed_monotonic_ns == 0
 }
 fn valid_record(record: &WireRecord) -> bool {
     let rms = RECORD_FLAGS_RMS_INITIALIZING | RECORD_FLAGS_RMS_STALE;

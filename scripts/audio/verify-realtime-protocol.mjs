@@ -27,25 +27,29 @@ const upper = name => rustName(name).toUpperCase()
 const title = name => name[0].toUpperCase() + name.slice(1)
 try {
   const frozen = Buffer.from(
-    (await readFile(resolve(root, "protocol/fixtures/levels-v1.hex"), "utf8")).trim(),
+    (await readFile(resolve(root, "protocol/fixtures/levels-v2.hex"), "utf8")).trim(),
     "hex"
   )
   const frozenView = new DataView(frozen.buffer, frozen.byteOffset, frozen.byteLength)
   assert.equal(readHeader(frozenView).seq, 9007199254740993n)
   assert.equal(readHeader(frozenView).timelineSample, -512n)
-  assert.equal(readRecord(frozenView, 128).slotResetEpoch, 7)
-  assert.equal(readRecord(frozenView, 128).clipCount, 9007199254740997n)
-  assert.equal(readSource(frozenView, 176).sourceFrame, 44100.5)
-  assert.equal(readSource(frozenView, 176).sourceRate, 44100)
+  assert.equal(readHeader(frozenView).appliedSequence, 9007199254740994n)
+  assert.equal(readHeader(frozenView).ownerEpoch, 9007199254740995n)
+  assert.equal(readHeader(frozenView).bar, 3.25)
+  assert.equal(readHeader(frozenView).audibleBar, 3.125)
+  assert.equal(readRecord(frozenView, 192).slotResetEpoch, 7)
+  assert.equal(readRecord(frozenView, 192).clipCount, 9007199254740997n)
+  assert.equal(readSource(frozenView, 240).sourceFrame, 44100.5)
+  assert.equal(readSource(frozenView, 240).sourceRate, 44100)
   execFileSync(
     process.execPath,
     [resolve(root, "scripts/generate-realtime-protocol.mjs"), "--check"],
     { stdio: "inherit" }
   )
   let rust = `#[path = ${JSON.stringify(resolve(root, "crates/engine/src/realtime/protocol_generated.rs"))}] mod wire;\nfn main() {\n`
-  rust += `let golden = std::fs::read(std::env::args().nth(2).unwrap()).unwrap(); let header = wire::WireHeader::read(&golden).unwrap(); assert_eq!(header.seq, 9007199254740993); assert_eq!(header.timeline_sample, -512); let record = wire::WireRecord::read(&golden[128..]).unwrap(); assert_eq!(record.clip_count, 9007199254740997); assert_eq!(record.slot_reset_epoch, 7); let source = wire::WireSource::read(&golden[176..]).unwrap(); assert_eq!(source.source_rate, 44100.0);\n`
+  rust += `let golden = std::fs::read(std::env::args().nth(2).unwrap()).unwrap(); let header = wire::WireHeader::read(&golden).unwrap(); assert_eq!(header.seq, 9007199254740993); assert_eq!(header.timeline_sample, -512); assert_eq!(header.applied_sequence, 9007199254740994); assert_eq!(header.owner_epoch, 9007199254740995); assert_eq!(header.bar, 3.25); assert_eq!(header.audible_bar, 3.125); let record = wire::WireRecord::read(&golden[192..]).unwrap(); assert_eq!(record.clip_count, 9007199254740997); assert_eq!(record.slot_reset_epoch, 7); let source = wire::WireSource::read(&golden[240..]).unwrap(); assert_eq!(source.source_rate, 44100.0);\n`
   let cpp =
-    '#include "realtime_protocol.generated.h"\n#include <bit>\n#include <fstream>\n#include <vector>\n#include <cassert>\nint main(int argc,char** argv) { assert(argc == 3); std::ifstream input(argv[1],std::ios::binary); std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(input)),{}); std::ifstream goldenInput(argv[2],std::ios::binary); std::vector<std::uint8_t> golden((std::istreambuf_iterator<char>(goldenInput)),{}); zp::realtime::wire::WireHeader goldenHeader; assert(zp::realtime::wire::readHeader(golden,goldenHeader)); assert(goldenHeader.seq == 9007199254740993ULL && goldenHeader.timelineSample == -512); zp::realtime::wire::WireRecord goldenRecord; assert(zp::realtime::wire::readRecord(std::span(golden).subspan(128),goldenRecord)); assert(goldenRecord.clipCount == 9007199254740997ULL && goldenRecord.slotResetEpoch == 7);\n'
+    '#include "realtime_protocol.generated.h"\n#include <bit>\n#include <fstream>\n#include <vector>\n#include <cassert>\nint main(int argc,char** argv) { assert(argc == 3); std::ifstream input(argv[1],std::ios::binary); std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(input)),{}); std::ifstream goldenInput(argv[2],std::ios::binary); std::vector<std::uint8_t> golden((std::istreambuf_iterator<char>(goldenInput)),{}); zp::realtime::wire::WireHeader goldenHeader; assert(zp::realtime::wire::readHeader(golden,goldenHeader)); assert(goldenHeader.seq == 9007199254740993ULL && goldenHeader.timelineSample == -512); assert(goldenHeader.appliedSequence == 9007199254740994ULL && goldenHeader.ownerEpoch == 9007199254740995ULL); assert(goldenHeader.bar == 3.25 && goldenHeader.audibleBar == 3.125); zp::realtime::wire::WireRecord goldenRecord; assert(zp::realtime::wire::readRecord(std::span(golden).subspan(192),goldenRecord)); assert(goldenRecord.clipCount == 9007199254740997ULL && goldenRecord.slotResetEpoch == 7);\n'
   const output = []
   let base = 0
   for (const [name, layout] of Object.entries(schema.layouts)) {

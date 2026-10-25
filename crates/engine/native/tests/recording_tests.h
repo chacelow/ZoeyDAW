@@ -48,9 +48,10 @@ void testStoppedProjectInputActivation() {
         if(instance->getTargets().contains(MixerTestAccess::track(session,"idle-input")->itemID))bound=true;
     require(bound,"Stopped project input channel was not assigned before transport playback");
     EngineSession deniedSession;MixerTestAccess::initialiseHostedInput(deniedSession);MixerTestAccess::audioManager(deniedSession).closeAudioDevice();
+    MixerTestAccess::useUnavailableHostedInput(deniedSession);
     accepted(apply(deniedSession,request),0);
     auto query=object();put(query,"leaseId","mixer-test");const auto report=deniedSession.call("telemetry",query);
-    require(report["device"]["state"].toString()=="error" && report["device"]["error"].toString().contains("Microphone access"),"Unavailable saved input was not reported while keeping project open");
+    require(report["device"]["state"].toString()=="error" && report["device"]["error"].toString()=="Unavailable audio input: Hosted Device::missing-test-input","Unavailable saved input was not reported while keeping project open; state="+report["device"]["state"].toString()+", error="+report["device"]["error"].toString());
 }
 
 void testRecordingInputSelection() {

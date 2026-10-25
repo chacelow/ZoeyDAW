@@ -78,12 +78,13 @@ describe("native meter IPC boundary", () => {
     await expect(nativeMeterPort.clock(7)).rejects.toThrow()
   })
 
-  it("preserves explicit unprepared graph results and rejects missing results", async () => {
+  it("accepts empty stopped registry metadata while the sample clock remains unavailable", async () => {
+    const stopped = { ...registry, entries: [], sources: [], endpointResets: [] }
     vi.mocked(invoke)
-      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(stopped)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(undefined)
-    await expect(nativeMeterPort.registry(7)).resolves.toBeNull()
+    await expect(nativeMeterPort.registry(7)).resolves.toEqual(stopped)
     await expect(nativeMeterPort.clock(7)).resolves.toBeNull()
     await expect(nativeMeterPort.registry(7)).rejects.toThrow()
   })

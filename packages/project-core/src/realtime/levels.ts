@@ -25,6 +25,7 @@ import {
   type WireRecord,
   type WireSource,
 } from "./protocol.generated"
+import { decodeTransport, type RealtimeTransport } from "./transport"
 const headerMask =
   HEADER_FLAGS_PLAYING |
   HEADER_FLAGS_RECORDING |
@@ -42,6 +43,7 @@ const sourceMask = SOURCE_FLAGS_VALID | SOURCE_FLAGS_STALE | SOURCE_FLAGS_UNAVAI
 export interface LevelsFrame {
   readonly header: WireHeader
   readonly records: readonly WireRecord[]
+  readonly transport: RealtimeTransport
   readonly sources: readonly WireSource[]
   readonly bytes: ArrayBuffer
 }
@@ -56,16 +58,12 @@ export function decodeLevelsFrame(bytes: ArrayBuffer): LevelsFrame | null {
     header.headerBytes !== HEADER_BYTES ||
     header.frameType !== FRAME_TYPES_LEVELS ||
     (header.flags & ~headerMask) !== 0 ||
-    !Number.isFinite(header.sampleRate) ||
-    header.sampleRate <= 0 ||
-    !Number.isFinite(header.timelineBeat) ||
-    !Number.isFinite(header.tempoBpm) ||
-    header.tempoBpm < 20 ||
-    header.tempoBpm > 999 ||
     bytes.byteLength !==
       HEADER_BYTES + RECORD_BYTES * header.slotCount + SOURCE_BYTES * header.sourceCount
   )
     return null
+  const transport = decodeTransport(header)
+  if (!transport) return null
   const records: WireRecord[] = []
   const slots = new Set<number>()
   let offset = HEADER_BYTES
@@ -98,5 +96,5 @@ export function decodeLevelsFrame(bytes: ArrayBuffer): LevelsFrame | null {
     sources.push(source)
     offset += SOURCE_BYTES
   }
-  return { header, records, sources, bytes }
+  return { header, transport, records, sources, bytes }
 }
