@@ -11,6 +11,8 @@ use zoeydaw_engine::{MainThreadDispatcher, PlaybackService};
 
 #[path = "meter_hub_smoke/source_observations.rs"]
 mod source_observations;
+#[path = "meter_hub_smoke/stopped_transport.rs"]
+mod stopped_transport;
 
 #[derive(Default)]
 struct MainQueue(Mutex<VecDeque<Box<dyn FnOnce() + Send>>>);
@@ -80,6 +82,8 @@ fn main() -> Result<(), String> {
         if stopped["meterReady"] != false || stopped["telemetry"]["playing"] != false {
             return Err("Stopped project fabricated a ready playback graph".into());
         }
+        let initial_stopped =
+            stopped_transport::verify_open(&service, &main, &lease, &session, &request)?;
         let control = serde_json::json!({
             "protocolVersion": 2, "sessionId": session, "sequence": 1,
             "controlGeneration": "1", "control": {
@@ -97,14 +101,16 @@ fn main() -> Result<(), String> {
         let registry = execute(
             &main,
             service.refresh_meter_hub(&main, lease.clone(), session.clone()),
-        )?
-        .ok_or("No prepared meter graph")?;
+        )?;
+        let sample_rate = registry
+            .graph
+            .sample_rate()
+            .ok_or("Playing graph has no sample rate")?;
         let stream = service.open_meter_stream("hub-smoke-main", &lease, &session)?;
         let repeated = execute(
             &main,
             service.refresh_meter_hub(&main, lease.clone(), session.clone()),
-        )?
-        .ok_or("Repeated refresh lost the graph")?;
+        )?;
         if repeated.identity() != registry.identity() {
             return Err("Same-graph refresh replaced meter identity".into());
         }
@@ -121,14 +127,13 @@ fn main() -> Result<(), String> {
                 if snapshot.sequence != previous {
                     previous = snapshot.sequence;
                     snapshots += 1;
-                    if let Some(transport) = snapshot.transport {
+                    if let Some(transport) = snapshot.transport.audio() {
                         first_transport.get_or_insert(transport);
                         latest_transport = Some(transport);
                     }
                     for record in &snapshot.records {
                         peak = peak.max(record.peak);
-                        valid_rms |= record.valid_frames
-                            >= (registry.sample_rate.get() * 0.3) as u32
+                        valid_rms |= record.valid_frames >= (sample_rate.get() * 0.3) as u32
                             && record.rms > 0.0;
                     }
                 }
@@ -188,7 +193,7 @@ fn main() -> Result<(), String> {
             .ok_or("Clock snapshot missing")?;
         if clock_probe.monotonic_ns.0 < latest.produced_monotonic_ns.saturating_sub(100_000_000)
             || clock_probe.device_epoch != registry.device_epoch
-            || clock_probe.sample_rate != registry.sample_rate
+            || clock_probe.sample_rate != sample_rate
         {
             return Err("Clock probe did not use the live Hub origin and device".into());
         }
@@ -313,7 +318,7 @@ fn main() -> Result<(), String> {
             .checked_sub(first.audio.reference_sample)
             .ok_or("Transport reference sample regressed")?;
         let sample_delta = latest.audio.timeline_sample - first.audio.timeline_sample;
-        let expected_beats = sample_delta as f64 / registry.sample_rate.get() * expected_bpm / 60.0;
+        let expected_beats = sample_delta as f64 / sample_rate.get() * expected_bpm / 60.0;
         if reference_delta == 0
             || latest.audio.device_sample <= first.audio.device_sample
             || sample_delta <= 0
@@ -376,7 +381,10 @@ fn main() -> Result<(), String> {
             let snapshot = service
                 .meter_snapshot(&lease, &session)?
                 .ok_or("Missing binary smoke snapshot")?;
-            let observation = snapshot.transport.ok_or("Missing binary smoke transport")?;
+            let observation = snapshot
+                .transport
+                .audio()
+                .ok_or("Missing binary smoke transport")?;
             let metadata = snapshot.realtime_registry(1, 1)?;
             let slots: Vec<_> = metadata
                 .entries
@@ -395,7 +403,7 @@ fn main() -> Result<(), String> {
                 slot_count: 0,
                 seq: snapshot.sequence,
                 time_samples: observation.audio.device_sample,
-                sample_rate: snapshot.registry.sample_rate.get(),
+                sample_rate: sample_rate.get(),
                 produced_monotonic_ns: snapshot.produced_monotonic_ns,
                 control_generation: 0,
                 accepted_revision: 0,
@@ -447,8 +455,7 @@ fn main() -> Result<(), String> {
                     || source.source_frame <= 0.0
                     || source.source_frame
                         >= authored["frames"].as_f64().ok_or("Missing source frames")?
-                    || source.position_age_samples
-                        != (snapshot.registry.sample_rate.get() * 0.05).ceil() as u32
+                    || source.position_age_samples != (sample_rate.get() * 0.05).ceil() as u32
                 {
                     return Err(
                         "Source observation did not contain a recent actual reader position".into(),
@@ -624,7 +631,7 @@ fn main() -> Result<(), String> {
                 }
                 if snapshot.sequence > previous
                     && snapshot.records.iter().any(|record| record.peak > 0.0)
-                    && snapshot.transport.is_some_and(|transport| {
+                    && snapshot.transport.audio().is_some_and(|transport| {
                         (transport.audio.tempo_bpm - 121.0).abs() < 1e-6
                             && transport.audio.control_valid == 1
                             && transport.audio.control_generation == 1
@@ -690,10 +697,12 @@ fn main() -> Result<(), String> {
         {
             return Err("Unprepared graph reported ready metadata".into());
         }
-        let resume = serde_json::json!({"protocolVersion":2,"sessionId":session,"sequence":5,"controlGeneration":"3","control":{"playing":true,"recording":false,"seekBar":1,"seekGeneration":0}});
+        stopped_transport::verify_seek(&service, &main, &lease, &session, initial_stopped)?;
+        let resume = serde_json::json!({"protocolVersion":2,"sessionId":session,"sequence":6,"controlGeneration":"9007199254740995","control":{"playing":true,"recording":false,"seekBar":9,"seekGeneration":1}});
         if execute(&main, service.control(&main, resume, lease.clone(), 0))?["kind"] != "accepted" {
             return Err("Resume after stopped replacement rejected".into());
         }
+        stopped_transport::verify_playing(&service, &lease, &session, false)?;
         let resumed = execute(
             &main,
             service.refresh_meter_stream_registry(&main, "hub-smoke-main", stream.stream_id),
@@ -702,6 +711,7 @@ fn main() -> Result<(), String> {
         if resumed.generation <= replacement.generation {
             return Err("Resumed stream retained retired graph".into());
         }
+        stopped_transport::verify_playing(&service, &lease, &session, true)?;
         println!(
             "Stopped time-signature replacement -> unprepared metadata -> resumed same stream generation {}",
             resumed.generation

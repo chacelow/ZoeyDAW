@@ -22,6 +22,7 @@ char* zp_apply_prepared(zp_session*, const char* json, zd_plugin_prepared*, uint
 /* Acquisition is message-thread-only and binds one immutable graph identity. */
 zp_meter_read_handle* zp_meter_acquire(zp_session*, const char* lease, const char* owner, uint32_t device_epoch, uint32_t generation, uint32_t registry);
 zp_meter_read_handle* zp_input_meter_acquire(zp_session*,const char* lease,const char* owner,uint32_t device_epoch);
+zp_meter_read_handle* zp_idle_meter_acquire(zp_session*,const char* lease,const char* owner,uint64_t owner_epoch);
 /* These fences do not access mutable Edit state and can be called off the main thread. */
 int zp_stop_fence_for(zp_session* session, const char* lease_id, const char* session_id, uint64_t token);
 /* The host registers a pending apply on the main thread before its final cancellation check. */

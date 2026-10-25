@@ -561,7 +561,7 @@ V EngineSession::apply(const V& v) {
     });
     pluginBindings.collect();
     confirmRecordingPublication(*accepted);
-    clockMutation->publish(*accepted,appliedSequence);
+    clockMutation->publish(*accepted,appliedSequence,stoppedTransportPosition());
     return response;
 }
 void EngineSession::updateTransport(const Control& next,uint64_t fence,bool seek) {
@@ -594,7 +594,7 @@ V EngineSession::control(const V& v) {
         updateTransport(r,fence,r.seekGeneration!=accepted->seekGeneration);
         static_cast<Control&>(*accepted)=static_cast<const Control&>(r);accepted->controlGeneration=r.controlGeneration;
     }
-    appliedSequence=r.sequence;clockMutation.publish(*accepted,appliedSequence);return result(r,revision,true);
+    appliedSequence=r.sequence;clockMutation.publish(*accepted,appliedSequence,stoppedTransportPosition());return result(r,revision,true);
 }
 void EngineSession::allNotesOff() {
     if(arrangement)for(auto& [id,input]:arrangement->midiInputs)input->allNotesOff();

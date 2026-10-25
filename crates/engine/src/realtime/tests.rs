@@ -144,7 +144,9 @@ fn input_slots_keep_independent_reset_baselines_when_projected_with_graph() {
             device_epoch: 6,
             generation: 4,
             registry_revision: 4,
-            sample_rate: input.sample_rate,
+            graph: super::native_reader::NativeMeterGraph::Prepared {
+                sample_rate: input.sample_rate,
+            },
             entries: vec![entry(
                 0,
                 "track/voice/out",
@@ -157,7 +159,7 @@ fn input_slots_keep_independent_reset_baselines_when_projected_with_graph() {
         sources: Vec::new(),
         reset_epoch: 5,
         endpoint_resets: Arc::new(Vec::new()),
-        transport: None,
+        transport: super::meter_hub::HubTransport::Unavailable,
         input: Some(Arc::new(HubInputSnapshot {
             registry: Arc::new(input),
             records: vec![record(0, 5)],
@@ -345,7 +347,9 @@ fn source_registry_shares_source_identity_without_aliasing_clips_or_contents() {
         device_epoch: 1,
         generation: 1,
         registry_revision: 1,
-        sample_rate: source.source_rate,
+        graph: super::native_reader::NativeMeterGraph::Prepared {
+            sample_rate: source.source_rate,
+        },
         entries: Vec::new(),
         sources: vec![source, second],
         input: None,

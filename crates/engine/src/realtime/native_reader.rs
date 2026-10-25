@@ -11,13 +11,33 @@ use std::{
 
 mod sources;
 mod transport;
-pub use transport::NativeTransportObservation;
+pub use transport::{NativeStoppedTransport, NativeTransportObservation};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MeterGraphIdentity {
     pub device_epoch: u32,
     pub generation: u32,
     pub registry_revision: u32,
+}
+#[derive(Clone, Copy, Debug, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
+pub enum NativeMeterGraph {
+    Unprepared {
+        #[serde(rename = "ownerEpoch")]
+        owner_epoch: super::metadata_generated::JsonU64,
+    },
+    Prepared {
+        #[serde(rename = "sampleRate")]
+        sample_rate: super::metadata_generated::PositiveF64,
+    },
+}
+impl NativeMeterGraph {
+    pub fn sample_rate(self) -> Option<super::metadata_generated::PositiveF64> {
+        match self {
+            Self::Prepared { sample_rate } => Some(sample_rate),
+            Self::Unprepared { .. } => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, serde::Deserialize)]
@@ -27,7 +47,7 @@ pub struct NativeMeterRegistry {
     pub device_epoch: u32,
     pub generation: u32,
     pub registry_revision: u32,
-    pub sample_rate: super::metadata_generated::PositiveF64,
+    pub graph: NativeMeterGraph,
     pub entries: Vec<super::metadata_generated::MeterRegistryEntry>,
     pub sources: Vec<super::metadata_generated::SourceRegistryEntry>,
     pub input: Option<NativeInputRegistry>,
@@ -68,6 +88,14 @@ impl NativeMeterRegistry {
         }
     }
     pub(crate) fn validate(&self, expected_session: &str) -> Result<(), String> {
+        if matches!(self.graph, NativeMeterGraph::Unprepared { owner_epoch } if owner_epoch.0 == 0)
+            || (self.graph.sample_rate().is_none()
+                && (!self.entries.is_empty() || !self.sources.is_empty()))
+            || self.generation == 0
+            || self.registry_revision == 0
+        {
+            return Err("Invalid native meter graph state".into());
+        }
         if self.session_id != expected_session {
             return Err("Native meter registry session changed".into());
         }
@@ -151,6 +179,12 @@ extern "C" {
         lease: *const c_char,
         owner: *const c_char,
         device_epoch: u32,
+    ) -> *mut c_void;
+    fn zp_idle_meter_acquire(
+        session: *mut c_void,
+        lease: *const c_char,
+        owner: *const c_char,
+        owner_epoch: u64,
     ) -> *mut c_void;
     fn zp_meter_read(
         handle: *mut c_void,
@@ -300,9 +334,10 @@ impl PlaybackService {
         &self,
         lease_id: &str,
         session_id: &str,
-        identity: MeterGraphIdentity,
-        slots: Vec<u32>,
+        registry: &NativeMeterRegistry,
     ) -> Result<NativeMeterReader, String> {
+        let identity = registry.identity();
+        let slots: Vec<_> = registry.entries.iter().map(|entry| entry.slot_id).collect();
         if slots.len() > u32::MAX as usize {
             return Err("Meter slot capacity exceeded".into());
         }
@@ -316,14 +351,19 @@ impl PlaybackService {
             return Err("Meter reader requires an open native project".into());
         }
         let handle = unsafe {
-            zp_meter_acquire(
-                owner,
-                lease.as_ptr(),
-                session.as_ptr(),
-                identity.device_epoch,
-                identity.generation,
-                identity.registry_revision,
-            )
+            match registry.graph {
+                NativeMeterGraph::Prepared { .. } => zp_meter_acquire(
+                    owner,
+                    lease.as_ptr(),
+                    session.as_ptr(),
+                    identity.device_epoch,
+                    identity.generation,
+                    identity.registry_revision,
+                ),
+                NativeMeterGraph::Unprepared { owner_epoch } => {
+                    zp_idle_meter_acquire(owner, lease.as_ptr(), session.as_ptr(), owner_epoch.0)
+                }
+            }
         };
         let handle =
             NonNull::new(handle).ok_or("Meter graph changed or already has a Hub reader")?;
@@ -345,6 +385,8 @@ mod tests {
     fn native_publication_layout_matches_c_abi() {
         assert_eq!(std::mem::size_of::<NativeEpoch>(), 64);
         assert_eq!(std::mem::size_of::<NativeTransportObservation>(), 120);
+        assert_eq!(std::mem::size_of::<NativeStoppedTransport>(), 40);
+        assert_eq!(std::mem::align_of::<NativeStoppedTransport>(), 8);
         assert_eq!(std::mem::size_of::<NativePublication>(), 160);
         assert_eq!(std::mem::align_of::<NativePublication>(), 8);
         let publication = NativePublication {

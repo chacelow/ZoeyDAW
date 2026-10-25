@@ -66,6 +66,13 @@ zp_meter_read_handle* zp_input_meter_acquire(zp_session* session,const char* lea
         catch(...) { reader->releaseHub();throw; }
     } catch(...) { return nullptr; }
 }
+zp_meter_read_handle* zp_idle_meter_acquire(zp_session* session,const char* lease,const char* owner,uint64_t epoch) {
+    if(!session)return nullptr;
+    try {
+        auto state=session->owner.acquireIdleMeter(lease,owner,epoch);
+        return state?new zp_meter_read_handle(std::move(state),epoch):nullptr;
+    } catch(...) { return nullptr; }
+}
 int zp_stop_fence_for(zp_session* session,const char* lease,const char* owner,uint64_t token) { return session && session->owner.stopFenceFor(lease,owner,token); }
 int zp_pending_call_begin(zp_session* session,const char* lease,const char* owner) { try { if(!session || !lease || !owner)return 0;session->owner.beginPendingCall(lease,owner);return 1; }catch(...) { return 0; } }
 void zp_pending_call_end(zp_session* session) { try { if(session)session->owner.endPendingCall(); }catch(...) {} }

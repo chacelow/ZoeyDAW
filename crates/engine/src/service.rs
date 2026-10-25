@@ -266,14 +266,6 @@ pub async fn telemetry<D: MainThreadDispatcher>(&self, main: &D, lease_id: Strin
     self.invoke(main, "telemetry", json!({"leaseId": lease_id})).await
 }
 
-pub async fn meter_registry<D: MainThreadDispatcher>(&self, main: &D, lease_id: String, session_id: String) -> Result<Option<crate::realtime::native_reader::NativeMeterRegistry>, String> {
-    self.check_plugin_owner(&lease_id,&session_id)?;
-    let value=self.invoke(main,"meter_registry",json!({"leaseId":lease_id,"sessionId":session_id})).await?;
-    if value.is_null() { return Ok(None); }
-    let registry: crate::realtime::native_reader::NativeMeterRegistry=serde_json::from_value(value).map_err(|error|error.to_string())?;
-    registry.validate(&session_id)?;
-    Ok(Some(registry))
-}
 
 pub async fn recording_results<D: MainThreadDispatcher>(&self, main: &D, lease_id: String, session_id: String) -> Result<Value, String> {
     self.invoke(main, "recording_results", json!({"leaseId":lease_id,"sessionId":session_id})).await

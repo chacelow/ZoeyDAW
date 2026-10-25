@@ -11,13 +11,24 @@ V EngineSession::meterRegistry(const V& request) {
     const auto lease=text(request,"leaseId"),session=text(request,"sessionId");
     require(accepted && leases.count(lease) && accepted->session==session,"Stale meter registry owner");
     auto result=object();put(result,"sessionId",session);
-    if(!arrangement || !arrangement->meterGraph)return {};
+    require(arrangement!=nullptr,"Meter registry requires an arrangement");
+    const auto* graph=arrangement->meterGraph.get();
+    auto graphState=object();
+    if(graph) {
+        put(graphState,"kind","prepared");put(graphState,"sampleRate",graph->sampleRate);
+    } else {
+        const auto owner=transportControls->ownerEpoch();
+        if(idleMeterOwner!=owner) {
+            require(meterGeneration<std::numeric_limits<std::uint32_t>::max(),"Meter registry generation exhausted");
+            idleMeterGeneration=++meterGeneration;idleMeterOwner=owner;
+        }
+        put(graphState,"kind","unprepared");put(graphState,"ownerEpoch",decimalU64(owner));
+    }
+    put(result,"graph",graphState);
+    put(result,"deviceEpoch",(juce::int64)(graph?graph->identity.deviceEpoch:clock.inputMeter.deviceEpoch()));
+    put(result,"generation",(juce::int64)(graph?graph->identity.generation:idleMeterGeneration));
+    put(result,"registryRevision",(juce::int64)(graph?graph->identity.registryRevision:idleMeterGeneration));
     juce::Array<V> entries;
-    const auto& graph=*arrangement->meterGraph;
-    put(result,"deviceEpoch",(juce::int64)graph.identity.deviceEpoch);
-    put(result,"generation",(juce::int64)graph.identity.generation);
-    put(result,"registryRevision",(juce::int64)graph.identity.registryRevision);
-    put(result,"sampleRate",graph.sampleRate);
     if(auto* device=engine.getDeviceManager().deviceManager.getCurrentAudioDevice()) {
         const auto epoch=clock.inputMeter.deviceEpoch();
         auto collector=clock.inputMeter.collector(epoch);
@@ -37,14 +48,28 @@ V EngineSession::meterRegistry(const V& request) {
             put(input,"entries",inputEntries);put(result,"input",input);
         }
     }
-    for(const auto& endpoint:graph.endpoints())for(std::uint16_t channel=0;channel<endpoint.channelCount;++channel) {
+    if(graph)for(const auto& endpoint:graph->endpoints())for(std::uint16_t channel=0;channel<endpoint.channelCount;++channel) {
         auto entry=object();put(entry,"slotId",(juce::int64)(endpoint.firstSlot+channel));
         put(entry,"endpointId",juce::String(endpoint.endpointId));put(entry,"ownerId",juce::String(endpoint.ownerId));put(entry,"kind",juce::String(endpoint.kind));
         put(entry,"channelIndex",channel);put(entry,"channelCount",endpoint.channelCount);
         put(entry,"capabilities",juce::Array<V>{"peak","rms","hold","clip"});
         entries.add(entry);
     }
-    put(result,"entries",entries);put(result,"sources",sourceMeterRegistry());return result;
+    put(result,"entries",entries);put(result,"sources",graph?sourceMeterRegistry():V(juce::Array<V>{}));return result;
+}
+std::optional<StoppedTransportPosition> EngineSession::stoppedTransportPosition() const {
+    if(!arrangement || !accepted)return {};
+    const auto& transport=arrangement->edit->getTransport();
+    if(transport.isPlaying() || transport.isRecording())return {};
+    const auto rate=1/accepted->secondsPerBar();
+    return StoppedTransportPosition{1+transport.getPosition().inSeconds()*rate,rate};
+}
+std::shared_ptr<const TransportClockState> EngineSession::acquireIdleMeter(const char* lease,const char* session,std::uint64_t owner) {
+    require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Idle meter acquisition requires message thread");
+    if(!lease || !session || !accepted || !leases.count(juce::String::fromUTF8(lease))
+       || accepted->session!=juce::String::fromUTF8(session) || !arrangement || arrangement->meterGraph
+       || transportControls->ownerEpoch()!=owner)return {};
+    return transportControls;
 }
 void EngineSession::configureMeterGraph(te::Edit& edit,te::CreateNodeParams& params) {
     configureIsolatedDeviceGraph(params);

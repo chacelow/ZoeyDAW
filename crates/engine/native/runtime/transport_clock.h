@@ -1,5 +1,6 @@
 #pragma once
 #include "playback_model.h"
+#include <bit>
 #include <atomic>
 #include <cstdint>
 #include <functional>
@@ -13,6 +14,11 @@ struct TransportClockTarget {
     std::uint64_t version, ownerEpoch, sequence, controlGeneration;
     TransportClockMode mode;
 };
+struct StoppedTransportPosition { double bar, barsPerSecond; };
+struct StoppedTransportObservation {
+    std::uint64_t ownerEpoch, controlGeneration, appliedSequence;
+    double bar, barsPerSecond;
+};
 class TransportClockMutation;
 class TransportClockState final {
 public:
@@ -24,11 +30,20 @@ public:
         if(version.load()!=before || target.ownerEpoch==0)return {};
         return target;
     }
+    std::optional<StoppedTransportObservation> readStopped(std::uint64_t expectedOwner) const noexcept {
+        const auto target=read();
+        if(!target || target->ownerEpoch!=expectedOwner || target->mode!=TransportClockMode::stopped || !stoppedValid.load())return {};
+        StoppedTransportObservation result{target->ownerEpoch,target->controlGeneration,target->sequence,
+            std::bit_cast<double>(stoppedBar.load()),std::bit_cast<double>(stoppedRate.load())};
+        if(version.load()!=target->version)return {};
+        return result;
+    }
 private:
     friend class TransportClockMutation;
     friend class TransportClockWitness;
     // Atomic payloads keep failed reads data-race-free; the audio reader never retries.
     std::atomic<std::uint64_t> version{0},owner{0},sequence{0},control{0},mode{0};
+    std::atomic<std::uint64_t> stoppedBar{0},stoppedRate{0},stoppedValid{0};
 };
 static_assert(std::atomic<std::uint64_t>::is_always_lock_free);
 class TransportClockMutation final {
@@ -45,11 +60,16 @@ public:
     TransportClockMutation(const TransportClockMutation&)=delete;
     TransportClockMutation& operator=(const TransportClockMutation&)=delete;
     // Without publication, the odd version keeps observations unavailable through failure recovery.
-    void publish(const Request& request,std::uint64_t sequence) noexcept {
+    void publish(const Request& request,std::uint64_t sequence,std::optional<StoppedTransportPosition> stopped) noexcept {
         state.sequence.store(sequence);
         state.control.store(request.controlGeneration);
         state.mode.store(static_cast<std::uint64_t>(request.recording?TransportClockMode::recording:
                                                    request.playing?TransportClockMode::playing:TransportClockMode::stopped));
+        state.stoppedValid.store(stopped.has_value());
+        if(stopped) {
+            state.stoppedBar.store(std::bit_cast<std::uint64_t>(stopped->bar));
+            state.stoppedRate.store(std::bit_cast<std::uint64_t>(stopped->barsPerSecond));
+        }
         state.version.store(version+1);
     }
 private:

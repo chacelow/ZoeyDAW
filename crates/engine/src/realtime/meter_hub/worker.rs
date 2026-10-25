@@ -1,6 +1,6 @@
 use super::{
-    prepare_reset, preserve_reset_records, HubInputSnapshot, HubSnapshot, HubTransportObservation,
-    InstalledGraph, InstalledInput, PendingReset, Shared,
+    prepare_reset, preserve_reset_records, HubInputSnapshot, HubSnapshot, HubTransport,
+    HubTransportObservation, InstalledInput, InstalledMeters, PendingReset, Shared,
 };
 use std::{
     sync::{atomic::Ordering, Arc},
@@ -8,7 +8,7 @@ use std::{
 };
 
 pub(super) fn run(shared: Arc<Shared>) {
-    let mut installed: Option<InstalledGraph> = None;
+    let mut installed: Option<InstalledMeters> = None;
     let mut input: Option<InstalledInput> = None;
     let mut sequence = 0_u64;
     let mut reset_epoch = 0_u32;
@@ -199,11 +199,18 @@ pub(super) fn run(shared: Arc<Shared>) {
                     .as_nanos()
                     .try_into()
                     .map_err(|_| "Meter clock exhausted")?;
-                if let Some(audio) = graph.reader.read_transport()? {
-                    graph.transport = Some(HubTransportObservation {
-                        audio,
-                        received_monotonic_ns: produced_monotonic_ns,
-                    });
+                if graph.registry.graph.sample_rate().is_some() {
+                    if let Some(audio) = graph.reader.read_transport()? {
+                        graph.transport = HubTransport::Audio(HubTransportObservation {
+                            audio,
+                            received_monotonic_ns: produced_monotonic_ns,
+                        });
+                    }
+                } else {
+                    graph.transport = graph
+                        .reader
+                        .read_stopped_transport()?
+                        .map_or(HubTransport::Unavailable, HubTransport::Stopped);
                 }
                 let input_snapshot = if let Some(input) = input.as_mut() {
                     Some(Arc::new(HubInputSnapshot {
@@ -253,11 +260,16 @@ pub(super) fn run(shared: Arc<Shared>) {
                     .chain(input_snapshot.iter().flat_map(|input| input.records.iter()))
                     .map(|record| record.slot_reset_epoch)
                     .fold(graph.confirmed_reset_epoch, u32::max);
-                let sources = if let Some(transport) = graph.transport {
+                let sources = if let Some(transport) = graph.transport.audio() {
                     graph.reader.read_sources(
                         &graph.registry.sources,
                         transport.audio.device_sample,
-                        graph.registry.sample_rate.get(),
+                        graph
+                            .registry
+                            .graph
+                            .sample_rate()
+                            .ok_or("Audio clock requires a prepared graph")?
+                            .get(),
                         transport.audio.playing == 1,
                     )?
                 } else {

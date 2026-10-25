@@ -16,7 +16,7 @@ impl PlaybackService {
         main: &D,
         lease_id: String,
         session_id: String,
-    ) -> Result<Option<NativeMeterRegistry>, String> {
+    ) -> Result<NativeMeterRegistry, String> {
         let service = self.clone();
         let (send, receive) = oneshot::channel();
         main.dispatch(move || {
@@ -42,12 +42,6 @@ impl PlaybackService {
                     .meter_hub
                     .lock()
                     .map_err(|_| "Meter Hub owner lock poisoned")?;
-                if value.is_null() {
-                    if let Some(hub) = owner.as_ref() {
-                        hub.clear()?;
-                    }
-                    return Ok(None);
-                }
                 let registry: NativeMeterRegistry =
                     serde_json::from_value(value).map_err(|error| error.to_string())?;
                 registry.validate(&session_id)?;
@@ -68,21 +62,16 @@ impl PlaybackService {
                     && hub.session_id().as_deref() == Some(session_id.as_str())
                 {
                     hub.refresh_source_registry(&registry)?;
-                    return Ok(Some(registry));
+                    return Ok(registry);
                 }
-                let slots = registry.entries.iter().map(|entry| entry.slot_id).collect();
-                let reader = service.acquire_meter_reader_on_main(
-                    &lease_id,
-                    &session_id,
-                    registry.identity(),
-                    slots,
-                )?;
+                let reader =
+                    service.acquire_meter_reader_on_main(&lease_id, &session_id, &registry)?;
                 hub.install(registry.clone(), reader)?;
                 if let Err(error) = service.check_plugin_owner(&lease_id, &session_id) {
                     hub.clear()?;
                     return Err(error);
                 }
-                Ok(Some(registry))
+                Ok(registry)
             })();
             let _ = send.send(result);
         })?;

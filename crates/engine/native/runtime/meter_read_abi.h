@@ -29,11 +29,16 @@ typedef struct zp_meter_clock {
     double audible_bar, audible_bars_per_second;
     uint32_t audible_valid, reserved;
 } zp_meter_clock;
+typedef struct zp_stopped_clock {
+    uint64_t owner_epoch, control_generation, applied_sequence;
+    double bar, bars_per_second;
+} zp_stopped_clock;
 /* One serialized non-audio Hub reader per handle. Release only off the audio thread. */
 uint32_t zp_meter_read(zp_meter_read_handle*, const uint32_t* slots, uint32_t count,
                        zp_meter_publication* output, uint32_t capacity);
 uint32_t zp_meter_reset(zp_meter_read_handle*,const uint32_t* slots,uint32_t count,uint32_t epoch,uint32_t kind);
 uint32_t zp_meter_read_clock(zp_meter_read_handle*,zp_meter_clock*);
+uint32_t zp_meter_read_stopped_clock(zp_meter_read_handle*,zp_stopped_clock*);
 uint32_t zp_meter_read_sources(zp_meter_read_handle*,uint64_t device_sample,double device_rate,uint32_t arrangement_playing,
                               void* output,uint32_t capacity);
 void zp_meter_release(zp_meter_read_handle*);

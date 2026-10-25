@@ -48,6 +48,7 @@ public:
     V applyPrepared(const V&,zd_plugin_prepared*,uint32_t count);
     std::shared_ptr<MeterGraphCollector> acquireMeterGraph(const char* lease,const char* session,std::uint32_t deviceEpoch,std::uint32_t generation,std::uint32_t registry);
     std::shared_ptr<InputMeterCollector> acquireInputMeter(const char* lease,const char* session,std::uint32_t deviceEpoch);
+    std::shared_ptr<const TransportClockState> acquireIdleMeter(const char* lease,const char* session,std::uint64_t ownerEpoch);
     V meterRegistry(const V&);
     const std::shared_ptr<SourceObservationState>& sourceObservationState() const noexcept { return sourceObservations; }
     std::atomic<uint64_t> stopToken {0}, auditionGeneration {0};
@@ -120,6 +121,8 @@ private:
     uint64_t appliedSequence=0, telemetrySequence=0, previewGeneration=0;
     uint64_t arrangementBuilds=0, transportSeeks=0, transportStarts=0;
     std::uint32_t meterGeneration = 0;
+    std::uint32_t idleMeterGeneration=0;
+    std::uint64_t idleMeterOwner=0;
     bool devicesInitialised=false, preferencesLoaded=false;
     std::optional<AudioConfiguration> configuration;
     V configurationCapabilities;
@@ -155,6 +158,7 @@ private:
     void allNotesOff();
     void updateTransport(const Control&, uint64_t fence, bool seek);
     V telemetry(const V&);
+    std::optional<StoppedTransportPosition> stoppedTransportPosition() const;
     V sourceMeterRegistry();
     V audition(const V&);
     V devices(bool refresh = false);

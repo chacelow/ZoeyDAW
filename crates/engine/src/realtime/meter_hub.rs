@@ -25,6 +25,20 @@ pub struct HubTransportObservation {
     pub audio: NativeTransportObservation,
     pub received_monotonic_ns: u64,
 }
+#[derive(Clone, Copy, Debug)]
+pub enum HubTransport {
+    Unavailable,
+    Stopped(super::native_reader::NativeStoppedTransport),
+    Audio(HubTransportObservation),
+}
+impl HubTransport {
+    pub fn audio(self) -> Option<HubTransportObservation> {
+        match self {
+            Self::Audio(value) => Some(value),
+            _ => None,
+        }
+    }
+}
 
 pub struct HubInputSnapshot {
     pub registry: Arc<NativeInputRegistry>,
@@ -45,7 +59,7 @@ pub struct HubSnapshot {
     pub sources: Vec<WireSource>,
     pub reset_epoch: u32,
     pub endpoint_resets: Arc<Vec<EndpointResetBaseline>>,
-    pub transport: Option<HubTransportObservation>,
+    pub transport: HubTransport,
     pub input: Option<Arc<HubInputSnapshot>>,
 }
 
@@ -136,14 +150,14 @@ impl HubSnapshot {
     }
 }
 
-struct InstalledGraph {
+struct InstalledMeters {
     registry: Arc<NativeMeterRegistry>,
     reader: NativeMeterReader,
     channels: Vec<MeterChannel>,
     reset: Option<PendingReset>,
     confirmed_reset_epoch: u32,
     endpoint_resets: Arc<Vec<EndpointResetBaseline>>,
-    transport: Option<HubTransportObservation>,
+    transport: HubTransport,
 }
 
 struct ResetRequest {
@@ -164,7 +178,7 @@ struct PendingReset {
 
 #[derive(Default)]
 struct Control {
-    pending: Option<InstalledGraph>,
+    pending: Option<InstalledMeters>,
     source_registry: Option<Arc<NativeMeterRegistry>>,
     clear: bool,
     stop: bool,
@@ -230,7 +244,16 @@ impl MeterHub {
         let channels = registry
             .entries
             .iter()
-            .map(|_| MeterChannel::new(registry.sample_rate.get()).ok_or("Invalid Hub sample rate"))
+            .map(|_| {
+                MeterChannel::new(
+                    registry
+                        .graph
+                        .sample_rate()
+                        .ok_or("Unprepared graph has meter channels")?
+                        .get(),
+                )
+                .ok_or("Invalid Hub sample rate")
+            })
             .collect::<Result<Vec<_>, _>>()?;
         let mut endpoint_resets: Vec<EndpointResetBaseline> = Vec::new();
         for entry in &registry.entries {
@@ -247,14 +270,14 @@ impl MeterHub {
                 });
             }
         }
-        let graph = InstalledGraph {
+        let graph = InstalledMeters {
             registry: Arc::new(registry),
             reader,
             channels,
             reset: None,
             confirmed_reset_epoch: 0,
             endpoint_resets: Arc::new(endpoint_resets),
-            transport: None,
+            transport: HubTransport::Unavailable,
         };
         let mut control = self
             .shared
@@ -692,7 +715,9 @@ mod reset_tests {
             device_epoch: 7,
             generation: 2,
             registry_revision: 2,
-            sample_rate: input.sample_rate,
+            graph: super::super::native_reader::NativeMeterGraph::Prepared {
+                sample_rate: input.sample_rate,
+            },
             entries: vec![entry(0, "track/voice/out", MeterEndpointKind::TrackOut)],
             sources: Vec::new(),
             input: None,

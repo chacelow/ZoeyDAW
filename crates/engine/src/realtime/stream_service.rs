@@ -63,11 +63,8 @@ impl PlaybackService {
             let (lease, session) = streams.identity(window, id)?;
             (lease.to_owned(), session.to_owned())
         };
-        if self
-            .refresh_meter_hub(main, lease, session.clone())
-            .await?
-            .is_none()
-        {
+        let registry = self.refresh_meter_hub(main, lease, session.clone()).await?;
+        if registry.graph.sample_rate().is_none() {
             return Ok(None);
         }
         let hub = self
@@ -139,7 +136,7 @@ impl PlaybackService {
             return Err("Meter clock owner changed".into());
         }
         self.check_plugin_owner(&lease, &session)?;
-        let Some(audio) = snapshot.transport else {
+        let Some(audio) = snapshot.transport.audio() else {
             return Ok(None);
         };
         Ok(Some(ClockProbe {
@@ -151,7 +148,11 @@ impl PlaybackService {
                     input.registry.device_epoch
                 }),
             time_samples: JsonU64(audio.audio.device_sample),
-            sample_rate: snapshot.registry.sample_rate,
+            sample_rate: snapshot
+                .registry
+                .graph
+                .sample_rate()
+                .ok_or("Audio clock requires a prepared graph")?,
         }))
     }
 
@@ -189,7 +190,7 @@ impl PlaybackService {
         {
             return Ok(Vec::new());
         }
-        let Some(transport) = snapshot.transport else {
+        let Some(transport) = snapshot.transport.audio() else {
             return Ok(Vec::new());
         };
         let records = snapshot.select_records(&permit.slots)?;
@@ -203,7 +204,12 @@ impl PlaybackService {
             slot_count: 0,
             seq: snapshot.sequence,
             time_samples: transport.audio.device_sample,
-            sample_rate: snapshot.registry.sample_rate.get(),
+            sample_rate: snapshot
+                .registry
+                .graph
+                .sample_rate()
+                .ok_or("Audio clock requires a prepared graph")?
+                .get(),
             produced_monotonic_ns: snapshot.produced_monotonic_ns,
             control_generation: 0,
             accepted_revision: 0,

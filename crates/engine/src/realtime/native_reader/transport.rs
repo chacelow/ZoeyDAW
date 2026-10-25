@@ -23,11 +23,36 @@ pub struct NativeTransportObservation {
     pub audible_valid: u32,
     pub reserved: u32,
 }
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NativeStoppedTransport {
+    pub owner_epoch: u64,
+    pub control_generation: u64,
+    pub applied_sequence: u64,
+    pub bar: f64,
+    pub bars_per_second: f64,
+}
 extern "C" {
     fn zp_meter_read_clock(handle: *mut c_void, output: *mut NativeTransportObservation) -> u32;
+    fn zp_meter_read_stopped_clock(handle: *mut c_void, output: *mut NativeStoppedTransport)
+        -> u32;
 }
 
 impl NativeMeterReader {
+    pub fn read_stopped_transport(&mut self) -> Result<Option<NativeStoppedTransport>, String> {
+        let mut value = NativeStoppedTransport::default();
+        if unsafe { zp_meter_read_stopped_clock(self.handle.as_ptr(), &mut value) } == 0 {
+            return Ok(None);
+        }
+        if value.owner_epoch == 0
+            || !value.bar.is_finite()
+            || !value.bars_per_second.is_finite()
+            || value.bars_per_second <= 0.0
+        {
+            return Err("Invalid native stopped transport observation".into());
+        }
+        Ok(Some(value))
+    }
     pub fn read_transport(&mut self) -> Result<Option<NativeTransportObservation>, String> {
         let mut value = NativeTransportObservation::default();
         if unsafe { zp_meter_read_clock(self.handle.as_ptr(), &mut value) } == 0 {
