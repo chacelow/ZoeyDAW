@@ -325,6 +325,30 @@ fn main() -> Result<(), String> {
         {
             return Err("Audio transport sample/beat clock did not advance coherently".into());
         }
+        let quarters_per_bar = request["state"]["project"]["numerator"]
+            .as_f64()
+            .ok_or("Missing numerator")?
+            * 4.0
+            / request["state"]["project"]["denominator"]
+                .as_f64()
+                .ok_or("Missing denominator")?;
+        if latest.audio.control_valid != 1
+            || latest.audio.control_generation != 1
+            || latest.audio.applied_sequence != 1
+            || latest.audio.owner_epoch == 0
+            || latest.audio.recording != 0
+            || (latest.audio.bar - (1.0 + latest.audio.timeline_beat / quarters_per_bar)).abs()
+                > 1e-8
+            || (latest.audio.bars_per_second - expected_bpm / (60.0 * quarters_per_bar)).abs()
+                > 1e-8
+        {
+            return Err(
+                "Rust Hub lost the audio block's control identity or rendered clock coordinates"
+                    .into(),
+            );
+        }
+        println!("Audio-side control witness: generation={} appliedSequence={} ownerEpoch={} renderedBar={}",
+                 latest.audio.control_generation,latest.audio.applied_sequence,latest.audio.owner_epoch,latest.audio.bar);
         println!(
             "Audio transport: reference {} -> {}, device {} -> {}, timeline {} -> {}, BPM {}",
             first.audio.reference_sample,
@@ -591,9 +615,13 @@ fn main() -> Result<(), String> {
                 }
                 if snapshot.sequence > previous
                     && snapshot.records.iter().any(|record| record.peak > 0.0)
-                    && snapshot
-                        .transport
-                        .is_some_and(|transport| (transport.audio.tempo_bpm - 121.0).abs() < 1e-6)
+                    && snapshot.transport.is_some_and(|transport| {
+                        (transport.audio.tempo_bpm - 121.0).abs() < 1e-6
+                            && transport.audio.control_valid == 1
+                            && transport.audio.control_generation == 1
+                            && transport.audio.applied_sequence == 2
+                            && transport.audio.owner_epoch > latest.audio.owner_epoch
+                    })
                 {
                     adopted = true;
                     break;

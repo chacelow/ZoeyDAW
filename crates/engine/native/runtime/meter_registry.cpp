@@ -58,7 +58,8 @@ void EngineSession::configureMeterGraph(te::Edit& edit,te::CreateNodeParams& par
     };
     require(meterGeneration<std::numeric_limits<std::uint32_t>::max(),"Meter graph generation exhausted");
     const auto generation=++meterGeneration;
-    auto graph=std::make_shared<MeterGraph>(MeterBankIdentity{clock.inputMeter.deviceEpoch(),generation,generation},params.sampleRate);
+    auto graph=std::make_shared<MeterGraph>(MeterBankIdentity{clock.inputMeter.deviceEpoch(),generation,generation},params.sampleRate,
+        MeterControlSource{transportControls,transportControls->ownerEpoch(),params.positionChangePending,&recordingActive});
     auto collector=std::make_shared<std::shared_ptr<MeterGraphCollector>>();
     std::map<te::Plugin*,std::string> deviceIdentities;
     for(const auto& [id,plugin]:arrangement->devices)deviceIdentities.emplace(plugin.get(),id.toStdString());

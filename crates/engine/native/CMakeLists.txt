@@ -112,6 +112,7 @@ if(ZOEYDAW_PLAYBACK_TESTS)
         $<TARGET_PROPERTY:zoeydaw_playback,INCLUDE_DIRECTORIES>)
     target_link_libraries(zoeydaw_mixer_tests PRIVATE zoeydaw_playback juce::juce_events juce::juce_core)
     add_test(NAME native_live_mixer COMMAND zoeydaw_mixer_tests)
+    add_test(NAME native_transport_clock COMMAND zoeydaw_mixer_tests --transport-clock)
     juce_add_console_app(zoeydaw_meter_graph_tests PRODUCT_NAME "Zoeydaw Meter Graph Tests")
     target_sources(zoeydaw_meter_graph_tests PRIVATE tests/meter_graph_tests.cpp)
     target_include_directories(zoeydaw_meter_graph_tests PRIVATE

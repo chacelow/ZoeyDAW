@@ -9,6 +9,9 @@
 #include <tracktion_engine/playback/graph/tracktion_TracktionEngineNode.h>
 #include <algorithm>
 #include <iostream>
+#include <chrono>
+#include <exception>
+#include <thread>
 void beginAllocationGuard() noexcept;
 std::size_t endAllocationGuard() noexcept;
 namespace zp {
@@ -29,6 +32,7 @@ struct MixerTestAccess {
     static te::Plugin* device(EngineSession& session,const char* id) { return session.arrangement->devices.at(id).get(); }
     static te::HostedAudioDeviceInterface& hosted(EngineSession& session) { return session.engine.getDeviceManager().getHostedAudioDeviceInterface(); }
     static juce::AudioDeviceManager& audioManager(EngineSession& session) { return session.engine.getDeviceManager().deviceManager; }
+    static DeviceClock& clock(EngineSession& session) { return session.clock; }
     // Hosted audio aliases input and output; feed the original PCM before Tracktion overwrites it.
     static void feedHostedInputMeter(EngineSession& session,const juce::AudioBuffer<float>& audio,std::uint64_t start=0) {
         session.clock.inputMeter.process(audio.getArrayOfReadPointers(),audio.getNumChannels(),audio.getNumSamples(),start);
@@ -388,12 +392,21 @@ void testDeviceChain() {
 #include "builtin_device_tests.h"
 #include "control_tests.h"
 #include "transport_clock_tests.h"
+#include "transport_adoption_tests.h"
 #include "clip_continuity_tests.h"
 #include "input_routing_tests.h"
 #include "recording_queue_tests.h"
 #include "recording_tests.h"
 }
-int main() {
-    try { juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;testHostedTempoWaveContinuity();testHostedClipEditContinuity();testHostedTransportClock();testPluginAdmissionOwnership();testLiveMixer();testGraphClassification();testLiveFades();testTrackLifecycle();testDeviceChain();{EngineSession session;auto request=fixture();accepted(apply(session,request),0);testBuiltinDeviceDsp(*MixerTestAccess::edit(session));}testNarrowControl();testLiveMidiGraph();testAuthoredMidiClip();testHostedInputRouting();testRecordingQueue();testHostedRecording();testStoppedProjectInputActivation();testRecordingInputSelection();testMultiTrackRecordingAndMonitor();testRecordingTransportTransitions();std::cout<<"In-place mixer/fades, track/device lifecycle and DSP, MIDI scheduling, hosted input monitoring and recording tests passed\n";return 0; }
+int main(int argc,char** argv) {
+    try {
+        juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;
+        if(argc>1) {
+            require(argc==2 && juce::String(argv[1])=="--transport-clock","Unknown native regression selector");
+            testHostedTransportClock();testTransportClockAdoption();
+            std::cout<<"Focused hosted transport clock tests passed\n";return 0;
+        }
+        testHostedTempoWaveContinuity();testHostedClipEditContinuity();testHostedTransportClock();testTransportClockAdoption();testPluginAdmissionOwnership();testLiveMixer();testGraphClassification();testLiveFades();testTrackLifecycle();testDeviceChain();{EngineSession session;auto request=fixture();accepted(apply(session,request),0);testBuiltinDeviceDsp(*MixerTestAccess::edit(session));}testNarrowControl();testLiveMidiGraph();testAuthoredMidiClip();testHostedInputRouting();testRecordingQueue();testHostedRecording();testStoppedProjectInputActivation();testRecordingInputSelection();testMultiTrackRecordingAndMonitor();testRecordingTransportTransitions();std::cout<<"In-place mixer/fades, track/device lifecycle and DSP, MIDI scheduling, hosted input monitoring and recording tests passed\n";return 0;
+    }
     catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

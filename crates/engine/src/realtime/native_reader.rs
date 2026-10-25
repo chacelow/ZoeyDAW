@@ -10,6 +10,8 @@ use std::{
 };
 
 mod sources;
+mod transport;
+pub use transport::NativeTransportObservation;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MeterGraphIdentity {
@@ -135,17 +137,6 @@ struct NativePublication {
     reserved: u32,
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NativeTransportObservation {
-    pub reference_sample: u64,
-    pub device_sample: u64,
-    pub timeline_sample: i64,
-    pub timeline_beat: f64,
-    pub tempo_bpm: f64,
-    pub frames: u32,
-    pub playing: u32,
-}
 extern "C" {
     fn zp_meter_acquire(
         session: *mut c_void,
@@ -169,7 +160,6 @@ extern "C" {
         capacity: u32,
     ) -> u32;
     fn zp_meter_release(handle: *mut c_void);
-    fn zp_meter_read_clock(handle: *mut c_void, output: *mut NativeTransportObservation) -> u32;
     fn zp_meter_reset(
         handle: *mut c_void,
         slots: *const u32,
@@ -245,21 +235,6 @@ impl NativeMeterReader {
             });
         }
         Ok(&self.values)
-    }
-    pub fn read_transport(&mut self) -> Result<Option<NativeTransportObservation>, String> {
-        let mut value = NativeTransportObservation::default();
-        if unsafe { zp_meter_read_clock(self.handle.as_ptr(), &mut value) } == 0 {
-            return Ok(None);
-        }
-        if !value.timeline_beat.is_finite()
-            || !value.tempo_bpm.is_finite()
-            || value.tempo_bpm <= 0.0
-            || value.frames == 0
-            || value.playing > 1
-        {
-            return Err("Invalid native transport observation".into());
-        }
-        Ok(Some(value))
     }
     pub fn request_reset(
         &mut self,
@@ -369,6 +344,7 @@ mod tests {
     #[test]
     fn native_publication_layout_matches_c_abi() {
         assert_eq!(std::mem::size_of::<NativeEpoch>(), 64);
+        assert_eq!(std::mem::size_of::<NativeTransportObservation>(), 96);
         assert_eq!(std::mem::size_of::<NativePublication>(), 160);
         assert_eq!(std::mem::align_of::<NativePublication>(), 8);
         let publication = NativePublication {

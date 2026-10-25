@@ -60,6 +60,9 @@ struct CreateNodeParams
 
     /** Non-realtime notification after NodePlayer accepts the graph, not audio adoption. */
     std::function<void()> graphPosted = {};
+
+    /** Non-blocking, non-throwing query for this ProcessState's pending seek, valid for its graph lifetime. */
+    std::function<bool()> positionChangePending = {};
 };
 
 //==============================================================================

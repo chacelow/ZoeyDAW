@@ -498,9 +498,11 @@ V EngineSession::apply(const V& v) {
     auto response=result(r,true);
     const auto& request=r;
     auto owner=std::make_pair(lease.toStdString(),r.session.toStdString());
+    std::optional<TransportClockMutation> clockMutation;
     {
         const std::lock_guard<std::mutex> lock(stopOwnerMutex);
         if(fence<stopToken.load(std::memory_order_acquire) || (opening && fence<pendingOwnerStopEpoch.load(std::memory_order_acquire)))return result(request,false,opening?"superseded-open":"rejected");
+        clockMutation.emplace(*transportControls,replace);
         stopOwner.swap(owner);
     }
     const bool seek=opening || !accepted || request.seekGeneration!=accepted->seekGeneration;
@@ -559,6 +561,7 @@ V EngineSession::apply(const V& v) {
     });
     pluginBindings.collect();
     confirmRecordingPublication(*accepted);
+    clockMutation->publish(*accepted,appliedSequence);
     return response;
 }
 void EngineSession::updateTransport(const Control& next,uint64_t fence,bool seek) {
@@ -578,16 +581,20 @@ V EngineSession::control(const V& v) {
     const auto revision=accepted?accepted->revision:0;
     if(fence<stopToken.load(std::memory_order_acquire) || token<leaseStopTokens[lease])return result(r,revision,false,"rejected");
     if(!accepted || !leases.count(lease) || r.session!=accepted->session || r.sequence<=appliedSequence)return result(r,revision,false,"protocol");
-    if(r.controlGeneration<=accepted->controlGeneration) {
-        static_cast<Control&>(r)=static_cast<const Control&>(*accepted);r.controlGeneration=accepted->controlGeneration;
-    } else {
+    const bool changeControl=r.controlGeneration>accepted->controlGeneration;
+    if(changeControl) {
         if(r.recording && (!r.playing || !configuration || configuration->inputDeviceId.isEmpty()))return result(r,revision,false,"rejected");
         if(r.playing)openDevice();
         if(fence<stopToken.load(std::memory_order_acquire))return result(r,revision,false,"rejected");
+    }
+    TransportClockMutation clockMutation(*transportControls,false);
+    if(!changeControl) {
+        static_cast<Control&>(r)=static_cast<const Control&>(*accepted);r.controlGeneration=accepted->controlGeneration;
+    } else {
         updateTransport(r,fence,r.seekGeneration!=accepted->seekGeneration);
         static_cast<Control&>(*accepted)=static_cast<const Control&>(r);accepted->controlGeneration=r.controlGeneration;
     }
-    appliedSequence=r.sequence;return result(r,revision,true);
+    appliedSequence=r.sequence;clockMutation.publish(*accepted,appliedSequence);return result(r,revision,true);
 }
 void EngineSession::allNotesOff() {
     if(arrangement)for(auto& [id,input]:arrangement->midiInputs)input->allNotesOff();

@@ -1,5 +1,6 @@
 #pragma once
 #include "meter_bank.h"
+#include "transport_clock.h"
 #include <tracktion_graph/tracktion_graph.h>
 #include <map>
 #include <memory>
@@ -26,6 +27,10 @@ struct MeterClockObservation {
     std::int64_t timelineSample = 0;
     double timelineBeat = 0, tempoBpm = 0;
     std::uint32_t frames = 0, playing = 0;
+    std::uint64_t controlGeneration = 0, appliedSequence = 0;
+    double bar = 0, barsPerSecond = 0;
+    std::uint64_t ownerEpoch = 0;
+    std::uint32_t controlValid = 0, recording = 0;
 };
 struct MeterClockBank {
     RealtimeSnapshot<MeterClockObservation> mailbox;
@@ -34,7 +39,7 @@ struct MeterClockBank {
 // Construction/sealing and reference retirement are confined to the message thread.
 class MeterGraph final {
 public:
-    MeterGraph(MeterBankIdentity identity, double sampleRate);
+    MeterGraph(MeterBankIdentity identity, double sampleRate, MeterControlSource controls = {});
     std::unique_ptr<tracktion::graph::Node> observeOutput(
         std::unique_ptr<tracktion::graph::Node>,
         const std::map<tracktion::engine::Track*, MeterOutputIdentity>&,
@@ -51,6 +56,7 @@ public:
     const double sampleRate;
 private:
     friend class MeterGraphCollector;
+    const MeterControlSource controls;
     bool sealed = false;
     std::uint32_t slots = 0;
     std::vector<GraphMeterEndpoint> entries;
@@ -59,7 +65,7 @@ private:
     bool clockWriterAssigned = false;
 };
 
-// Temporary JSON compatibility collector; replace its ownership with the Rust Hub in step 3.
+// One graph publication cache; the Rust Hub owns its serialized mailbox consumption.
 // All callers read the same cached publications, never acquire another mailbox consumer.
 class MeterGraphCollector final {
 public:

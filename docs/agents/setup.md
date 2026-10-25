@@ -71,6 +71,16 @@ cargo test -p zoeydaw-media -p zoeydaw-project -p zoeydaw-browser
 cargo test --workspace --locked
 ```
 
+`native_transport_clock` 定向运行 Hosted transport clock 与音频侧控制代际竞争用例。Windows 从已加载 MSVC x64 环境的终端运行；Hosted 路径使用 48 kHz / 256 frames，不打开物理音频设备。
+
+```sh
+cmake -S crates/engine/native -B target/windows-native-clock -DZOEYDAW_PLAYBACK_TESTS=ON -DZOEYDAW_PLAYBACK_SMOKE=OFF
+cmake --build target/windows-native-clock --config Release --target zoeydaw_mixer_tests --parallel 4
+ctest --test-dir target/windows-native-clock -C Release -R native_transport_clock --output-on-failure --timeout 30
+```
+
+用例覆盖已排队音频块在新 seek ACK 后仍保留旧代际、主线程与音频预取边界并发 seek、完整 u64、实际处理速率与拒绝请求。观测是渲染块坐标；可听延迟补偿、无图停止状态和 Web 唯一 transport 快照切换仍待完成。
+
 根 `Cargo.lock` 与 `.cargo/config.toml` 供应用 workspace 共用。media、project、browser 的独立测试不编译 Tracktion；engine 与完整 workspace 检查需要维护的 Tracktion 源码及固定 JUCE checkout。研究探针 `scripts/audio/probes/rust` 保持独立 manifest 和 lock。
 
 实时协议布局由 `protocol/realtime.json` 唯一定义。运行 `node scripts/generate-realtime-protocol.mjs` 生成三语言产物，`--check` 检查漂移。`pnpm check:realtime-protocol` 编译临时 Rust/C++ 校验程序，对照 TS 写出的全部字段与独立 golden fixture，结束后删除临时文件。native CTest 覆盖三槽并发快照、实际 DC/正弦/短脉冲计量、输入设备换代，以及完整 Edit 的 fader/mute/solo/Stop fence 后采集。

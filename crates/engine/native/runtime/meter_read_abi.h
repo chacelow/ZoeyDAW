@@ -22,6 +22,10 @@ typedef struct zp_meter_clock {
     int64_t timeline_sample;
     double timeline_beat, tempo_bpm;
     uint32_t frames, playing;
+    uint64_t control_generation, applied_sequence;
+    double bar, bars_per_second;
+    uint64_t owner_epoch;
+    uint32_t control_valid, recording;
 } zp_meter_clock;
 /* One serialized non-audio Hub reader per handle. Release only off the audio thread. */
 uint32_t zp_meter_read(zp_meter_read_handle*, const uint32_t* slots, uint32_t count,

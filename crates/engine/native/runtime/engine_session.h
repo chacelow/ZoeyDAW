@@ -5,6 +5,7 @@
 #include "meter_graph.h"
 #include "source_registry.h"
 #include "source_observations.h"
+#include "transport_clock.h"
 #include "live_midi_input.h"
 #include "isolated_plugin_binding.h"
 #include <tracktion_engine/tracktion_engine.h>
@@ -97,6 +98,7 @@ private:
     std::optional<std::tuple<juce::String,juce::String,uint64_t>> pluginApplyOwner;
     te::Engine engine;
     DeviceClock clock;
+    std::shared_ptr<TransportClockState> transportControls = std::make_shared<TransportClockState>();
     std::unique_ptr<Arrangement> arrangement;
     std::atomic<bool> recordingActive {false};
     std::unique_ptr<te::Edit> preview;

@@ -57,9 +57,9 @@ public:
     MeterOutputObserverNode(std::unique_ptr<Node> source, std::vector<ObservedMeterOutput> outputs,
                             std::shared_ptr<MeterClockBank> clock,
                             tracktion::engine::ProcessState* process,
-                            const std::atomic<std::uint64_t>* deviceSamples)
+                            const std::atomic<std::uint64_t>* deviceSamples,MeterControlSource controlSource)
         : root(std::move(source)), observed(std::move(outputs)), inputs{root.get()},
-          clock(std::move(clock)), timeline(process), deviceSamples(deviceSamples) {
+          clock(std::move(clock)), timeline(process), deviceSamples(deviceSamples),controls(std::move(controlSource)) {
         // These edges must exist before createNodeGraph counts consumers and enables in-place DSP.
         for (const auto& output : observed)
             if (std::find(inputs.begin(), inputs.end(), output.node) == inputs.end()) inputs.push_back(output.node);
@@ -85,6 +85,22 @@ private:
                               ? tracktion::graph::ShareOutputBuffer::yes
                               : tracktion::graph::ShareOutputBuffer::no});
     }
+    void prefetchBlock(juce::Range<int64_t> referenceRange) override {
+        controls.beginBlock();blockClock={};blockClockValid=false;
+        if(!clock || !timeline || !deviceSamples || referenceRange.getStart()<0)return;
+        const auto* sequence=timeline->getTempoSequence();if(!sequence)return;
+        blockClock.referenceSample=static_cast<std::uint64_t>(referenceRange.getStart());
+        blockClock.deviceSample=deviceSamples->load(std::memory_order_relaxed);
+        blockClock.timelineSample=timeline->timelineSampleRange.getStart();
+        blockClock.playing=timeline->playHeadState.playHead.isPlaying()?1u:0u;
+        blockClock.recording=blockClock.playing && controls.isRecording()?1u:0u;
+        tracktion::tempo::Sequence::Position position(*sequence);
+        position.set(tracktion::TimePosition::fromSamples(blockClock.timelineSample,timeline->sampleRate));
+        blockClock.timelineBeat=position.getPPQTime();blockClock.tempoBpm=position.getTempo();
+        const auto meter=position.getTimeSignature();const double quartersPerBar=meter.numerator*4.0/meter.denominator;
+        blockClock.bar=1+blockClock.timelineBeat/quartersPerBar;blockClock.barsPerSecond=blockClock.tempoBpm/(60*quartersPerBar);
+        blockClockValid=true;
+    }
     void process(ProcessContext& context) override {
         if (context.referenceSampleRange.getStart() >= 0) {
             const auto start = static_cast<std::uint64_t>(context.referenceSampleRange.getStart());
@@ -100,20 +116,13 @@ private:
         setAudioOutput(root.get(), source.audio);
         if (exclusiveRoot) context.buffers.midi.swapWith(source.midi);
         else context.buffers.midi.clear();
-        if(clock && timeline && deviceSamples) {
-            const auto reference=context.referenceSampleRange.getStart();
-            const auto* sequence=timeline->getTempoSequence();
-            if(reference<0 || !sequence)return;
-            MeterClockObservation observation;
-            observation.referenceSample=static_cast<std::uint64_t>(reference);
-            observation.deviceSample=deviceSamples->load(std::memory_order_relaxed);
-            observation.timelineSample=timeline->playHeadState.playHead.referenceSamplePositionToTimelinePosition(reference);
-            observation.playing=timeline->playHeadState.playHead.isPlaying()?1u:0u;
-            observation.frames=context.numSamples;
-            tracktion::tempo::Sequence::Position position(*sequence);
-            position.set(tracktion::TimePosition::fromSamples(observation.timelineSample,timeline->sampleRate));
-            observation.timelineBeat=position.getPPQTime();observation.tempoBpm=position.getTempo();
-            clock->mailbox.publish(observation);
+        if(blockClockValid) {
+            blockClock.frames=context.numSamples;
+            if(const auto target=controls.endBlock(blockClock.playing==1,blockClock.recording==1)) {
+                blockClock.controlGeneration=target->controlGeneration;blockClock.appliedSequence=target->sequence;
+                blockClock.ownerEpoch=target->ownerEpoch;blockClock.controlValid=1;
+            }
+            clock->mailbox.publish(blockClock);
         }
     }
     const std::unique_ptr<Node> root;
@@ -123,6 +132,9 @@ private:
     const std::shared_ptr<MeterClockBank> clock;
     tracktion::engine::ProcessState* const timeline;
     const std::atomic<std::uint64_t>* const deviceSamples;
+    TransportClockWitness controls;
+    MeterClockObservation blockClock;
+    bool blockClockValid=false;
 };
 
 void validateChannelSlots(int channels, std::uint32_t slots) {
@@ -132,7 +144,8 @@ void validateChannelSlots(int channels, std::uint32_t slots) {
 }
 }
 
-MeterGraph::MeterGraph(MeterBankIdentity stamp, double rate) : identity(stamp), sampleRate(rate) {
+MeterGraph::MeterGraph(MeterBankIdentity stamp, double rate,MeterControlSource controlSource)
+    : identity(stamp), sampleRate(rate),controls(std::move(controlSource)) {
     if (!std::isfinite(rate) || rate <= 0) throw std::invalid_argument("Invalid meter graph sample rate");
 }
 std::unique_ptr<tracktion::graph::Node> MeterGraph::observeOutput(
@@ -233,8 +246,9 @@ std::unique_ptr<tracktion::graph::Node> MeterGraph::observeOutput(
     slots = nextSlot;
     auto observedClock=processState && deviceSamples && !clockWriterAssigned?clock:nullptr;
     if(observedClock)clockWriterAssigned=true;
+    auto controlSource=observedClock?controls:MeterControlSource{};
     return std::make_unique<MeterOutputObserverNode>(std::move(root), std::move(observations),
-                                                    std::move(observedClock),processState,deviceSamples);
+                                                    std::move(observedClock),processState,deviceSamples,std::move(controlSource));
 }
 std::unique_ptr<tracktion::graph::Node> MeterGraph::wrapOutput(std::unique_ptr<tracktion::graph::Node> node,
                                                               std::string endpointId, std::string ownerId,

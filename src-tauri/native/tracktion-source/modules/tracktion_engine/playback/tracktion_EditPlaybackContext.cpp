@@ -682,6 +682,7 @@ void EditPlaybackContext::createNode()
     CreateNodeParams cnp { nodePlaybackContext->processState };
     cnp.sampleRate = dm.getSampleRate();
     cnp.blockSize = dm.getBlockSize();
+    cnp.positionChangePending = [context = nodePlaybackContext.get()] { return context->getPendingPositionChange().has_value(); };
 
     if (cnp.sampleRate <= 0.0 || cnp.blockSize <= 0)
     {

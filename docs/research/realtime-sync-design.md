@@ -62,7 +62,11 @@ Device meter 使用 `device/<id>/in` 与 `device/<id>/out`，owner 为稳定 Dev
 
 Rust `realtime/rms.rs` 按累计 epoch 替换能量并维护有界窗口，`ballistics.rs` 维护 hold/release，`channel.rs` 编码声道记录。`NativeMeterReader` 是 graph mailbox 的唯一 Hub 消费入口；其私有 `native_reader/sources.rs` 校验和读取已有 playhead 的源记录。`PlaybackService` 持有单一 MeterHub，高频读取不调主线程。source 记录、window stream、可靠事件通道和生产 MeterSession 已接入；transport 的唯一快照切换、精确源时戳和真实桌面 WebView 吞吐仍未完成。
 
-`MeterOutputObserverNode` 在每张图的一个输出根发布 `MeterClockObservation`，复用现有三槽 SPSC mailbox。快照包含 reference sample、独立 device counter、timeline sample、PPQ、BPM、块长和 playing；坐标取自该块的 Tracktion `ProcessState`。Hub 通过同一 native read handle 消费新观测，并保留 `received_monotonic_ns`，重复读取不会刷新该时间。此时间是 Hub 收到观测的时间，不是设备呈现或物理出声时间。device counter 和 reference sample 的原点不同，不能直接相减当作延迟。真实输出 smoke 验证 sample/beat 连续推进及换图后的 BPM；尚不提供 audioRevision、controlGeneration 或可听采用证据。
+`MeterOutputObserverNode` 在每张图的一个输出根发布 `MeterClockObservation`，复用现有三槽 SPSC mailbox。它在 `prefetchBlock` 捕获本块 `ProcessState` 的已冻结 timeline sample、PPQ、BPM、bar 与 barsPerSecond，在输出完成后发布，避免末端读取正在变化的 PlayHead 把新 seek 坐标附到旧处理块。快照仍保留独立 reference sample、device counter、块长与播放/录制模式。Hub 通过同一 native read handle 消费新观测，并保留 `received_monotonic_ns`，重复读取不会刷新该时间。该时间是 Hub 接收时间，bar 也是渲染块坐标；二者均不能冒充设备呈现或物理出声时间。
+
+`transport_clock.h` 拥有主线程控制目标的一致性发布及音频侧只读 witness。apply/control 在实际模型修改前标记版本为 mutating，成功后发布 controlGeneration、appliedSequence 与 mode；失败不发布新身份。payload 使用 lock-free u64 atomics，音频读取最多尝试一次，不循环等待。替换 Edit 轮换 ownerEpoch，旧图不能为新 owner 提供有效控制身份。SDK 的每图 `positionChangePending` 查询绑定准确的 NodePlaybackContext，复用已有非阻塞 pending-position getter。
+
+音频 witness 在预取与输出两端核对同一发布版本和 owner，并要求 pending seek 已由音频侧清除后才报告 controlValid。C ABI 的 96-byte 时钟记录把该控制身份与对应块一起交给 Rust Hub；读取旧 mailbox 不能用最新 accepted 代际重标旧块。Windows Hosted 竞争用例与真实输出 Hub smoke 已通过，包括大于 2^53 的代际、ACK 后读取旧块、主线程并发 seek、BPM 速率和拒绝请求。该证明只涉及 transport clock 因果关系，不证明所有控制字段的 DSP 效果、整份 document 的块边界采用或严格失败原子性。levels v1 wire 的 revision/control 字段尚未切换，audioRevision 继续 unavailable；可听延迟补偿、无图 stopped 状态与 Web 唯一 transport 消费仍在原第 3/5 项保留。
 
 输入 bank 的唯一 `InputMeterCollector` 按设备 epoch 保留，与图 collector 分开。Hub 通过 `zp_input_meter_acquire` 取得该 collector 的采集权；旧 JSON 遥测复用缓存，不另取 mailbox consumer。`HubSnapshot.input` 保存独立 input registry 和聚合记录，换图保留其 RMS 与 peak 状态，设备换代才替换。输入 metadata 从已打开设备的实际 active channel 掩码生成，不开启设备或权限。统一 registry 将输入本地 slot 偏移到图记录之后，reset 返回同一坐标；请求绑定图代际和输入 epoch，所有目标处理到 reset epoch 后才确认。hosted 回归覆盖停止播放、共享缓存、旧 epoch 引用和选择性 C ABI reset；临时生产 Hub 夹具验证 0.25/0.5 输入 RMS、混合 reset 块后确认及未选输入保留。真实硬件输入显示和窗口传输仍未验收。
 
