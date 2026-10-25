@@ -49,7 +49,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 UI 改动必须在已有应用或 Web 页面上验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制，不把模拟电平称为真实音频。
 
-原生播放使用仓库维护的 `src-tauri/native/tracktion-source/`，上游基线、JUCE 提交与许可路径见 `scripts/audio/native-source.lock.json`。先运行 `node scripts/audio/setup-native-engine.mjs`；脚本仅在 JUCE 缺失时取得固定提交，已有 checkout 不同版或含本地改动时拒绝继续，不重置文件。Tracktion 的循环起点、设备刷新、graph build/post 修复直接保存在源码中，不再重放 patch。graphPosted 仍不表示 audio 已采用新图。旧 ignored vendor checkout 保留，但不再参与构建。
+原生播放使用仓库维护的 `src-tauri/native/tracktion-source/`，上游基线、JUCE 提交与许可路径见 `scripts/audio/native-source.lock.json`。先运行 `node scripts/audio/setup-native-engine.mjs`；脚本仅在 JUCE 缺失时浅 fetch 固定提交，不下载完整历史。已有 checkout 不同版或含本地改动时拒绝继续，不重置文件。Tracktion 的循环起点、设备刷新、graph build/post 修复直接保存在源码中，不再重放 patch。graphPosted 仍不表示 audio 已采用新图。旧 ignored vendor checkout 保留，但不再参与构建。
 
 插件 helper 使用 `third_party/plughost/source-lock.json` 固定的 0.1.5 源码。`node scripts/audio/build-plugin-helper.mjs` 构建 `zoeydaw-plugin-helper`，在 macOS 生成并验证仅 helper 使用的 ad-hoc Hardened Runtime 签名，在 Windows 复制原生可执行文件。Tauri 的开发与构建前置命令运行该脚本，生成物位于 ignored `src-tauri/plugin-helper/`，作为资源打包。脚本不启动 DAW、不扫描插件、不执行发布签名或公证。
 

@@ -48,7 +48,9 @@ if (!pathExists(juce)) {
   const temporary = await mkdtemp(path.join(path.dirname(juce), ".juce-fetch-"))
   const checkout = path.join(temporary, "source")
   try {
-    git(["clone", "--no-checkout", lock.juce.repository, checkout])
+    git(["init", checkout])
+    git(["-C", checkout, "remote", "add", "origin", lock.juce.repository])
+    git(["-C", checkout, "fetch", "--depth", "1", "origin", lock.juce.commit])
     git(["-C", checkout, "checkout", "--detach", lock.juce.commit])
     if (git(["-C", checkout, "rev-parse", "HEAD"]) !== lock.juce.commit)
       throw new Error("Fetched JUCE does not match its pinned commit")
