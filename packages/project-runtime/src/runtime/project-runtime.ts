@@ -2,12 +2,10 @@ import { initialSession } from "../state/session"
 import { positionToBar } from "@zoeydaw/project-core/types"
 import {
   ensureOrdinaryTrack,
-  isOrdinaryTrack,
   mapClips,
   reduceDocument,
   uniqueId,
 } from "@zoeydaw/project-core/reducers"
-import { isAutomationTarget } from "@zoeydaw/project-core/automation-target"
 import { replaceClip } from "@zoeydaw/project-core/clip-edits"
 import { initialDocument } from "../state/document"
 import { initialWorkspace } from "../state/workspace"
@@ -17,6 +15,22 @@ import { withWaveformPreview } from "../visuals"
 import { routeTrack } from "./track-routing"
 import { sameWorkspacePreferences } from "./workspace-preferences"
 import { getEffectiveDocument as projectEffectiveDocument } from "./effective-document"
+import { createProjectEditing } from "./project-editing"
+import { createRecordingPublication } from "./recording-publication"
+import type { RecordingReceipt } from "./recording-publication"
+import type {
+  Checkpoint,
+  ProjectSeed,
+  ProjectSaveCapture,
+  ProjectBackendOptions,
+  ProjectRuntimeDependencies,
+} from "./runtime-contracts"
+export type {
+  ProjectSeed,
+  ProjectSaveCapture,
+  ProjectBackendOptions,
+  ProjectRuntimeDependencies,
+} from "./runtime-contracts"
 import type { BackendConnection } from "../backend/connection"
 import type {
   BackendControl,
@@ -31,54 +45,10 @@ import type {
 import type {
   Clip,
   DocumentState,
-  LoopRegion,
-  Marker,
-  ProjectEditToken,
-  ProjectPreview,
   ProjectState,
   Track,
   WorkspaceState,
 } from "@zoeydaw/project-core/types"
-import type { StoreApi } from "zustand/vanilla"
-
-export interface ProjectSeed {
-  document: DocumentState
-  workspace: WorkspaceState
-}
-export interface ProjectSaveCapture extends ProjectSeed {
-  epoch: string
-  revision: number
-  rejectionGeneration: number
-}
-export interface ProjectBackendOptions {
-  createProject?: (projectId: string) => ProjectSeed
-}
-interface Checkpoint {
-  document: DocumentState
-  workspace: WorkspaceState
-  past: ProjectSeed[]
-  future: ProjectSeed[]
-  dirty: boolean
-}
-type RecordingReceipt = Pick<BackendDocumentRequest, "sessionId" | "revision">
-interface RecordingEntry {
-  apply: (document: DocumentState) => DocumentState
-  epoch: string
-  revision: number | null
-  receipt: {
-    settled: boolean
-    resolve: (value: RecordingReceipt) => void
-    reject: (error: unknown) => void
-  } | null
-}
-export interface ProjectRuntimeDependencies {
-  store: Pick<StoreApi<ProjectState>, "getState" | "setState" | "subscribe">
-  backendFactory: ProjectBackendFactory
-  defaultTrackHeight: number
-  createProject?: (projectId: string) => ProjectSeed
-}
-
-const HISTORY_LIMIT = 100
 
 export function createProjectRuntime({
   store,
@@ -93,18 +63,6 @@ export function createProjectRuntime({
     document: initialDocument(defaultTrackHeight),
     workspace: initialWorkspace(),
   })
-  const past: ProjectSeed[] = []
-  const future: ProjectSeed[] = []
-  let editStart: ProjectSeed | null = null
-  let activeEdit: { owner: string; token: ProjectEditToken } | null = null
-  let editCounter = 0
-  let editDepth = 0
-  let isEditDirty = false
-  let isWorkspaceDirty = false
-  let recordingJournal: RecordingEntry[] = []
-  let recordingPending: RecordingEntry[] = []
-  let activePreview: ProjectEditToken | null = null
-  let previewCounter = 0
   let sessionCounter = 0
   let revision = 0
   let seekGeneration = 0
@@ -132,37 +90,65 @@ export function createProjectRuntime({
   let projectedProject: BackendState["project"] | null = null
 
   const get = () => store.getState()
+  const editing = createProjectEditing({
+    store,
+    submit,
+    flushRecording,
+    projectTrackWaveforms,
+    metronomeChanged: () => submitControl(control(get())),
+  })
+  const recordings = createRecordingPublication({
+    document: () => get().document,
+    epoch: projectEpoch,
+    blocked: editing.isBusy,
+    backend: () => {
+      const backend = get().session.backend
+      if (
+        isRuntimeDisposed ||
+        !connection ||
+        (!isBackendRecovered && backend.phase === "error" && backend.pending === 0)
+      )
+        return { kind: "unavailable" }
+      return isBackendRecovered
+        ? { kind: "ready", document: accepted.document, receipt: acceptedReceipt }
+        : { kind: "pending" }
+    },
+    publish: next => {
+      if (next === get().document) submit("commit")
+      else editing.document(next)
+    },
+  })
+  const {
+    snapshot,
+    checkpoint,
+    pushHistory,
+    flags,
+    document,
+    workspace,
+    beginEdit,
+    endEdit,
+    isCurrentEdit,
+    cancelEdit,
+    undo,
+    redo,
+    beginPreview,
+    previewTracks,
+    previewMarkers,
+    previewLoop,
+    commitPreview,
+    cancelPreview,
+    getCommittedDocument,
+    getCommittedWorkspace,
+  } = editing
+  const {
+    recordDocument,
+    recordDocumentConfirmed,
+    rejectReceipts: rejectRecordingReceipts,
+  } = recordings
+  function flushRecording(): void {
+    recordings.flush()
+  }
 
-  const snapshot = (state: ProjectState): ProjectSeed => {
-    return {
-      document: state.document,
-      workspace: state.workspace,
-    }
-  }
-  const checkpoint = (): Checkpoint => {
-    return {
-      workspace: get().workspace,
-      document: get().document,
-      past: [...past],
-      future: [...future],
-      dirty: get().session.dirty,
-    }
-  }
-  const pushHistory = (entry: ProjectSeed): void => {
-    past.push(entry)
-    if (past.length > HISTORY_LIMIT) {
-      past.shift()
-    }
-    future.length = 0
-  }
-  const flags = (state: ProjectState, dirty: boolean): ProjectState["session"] => {
-    return {
-      ...state.session,
-      dirty,
-      canUndo: past.length > 0,
-      canRedo: future.length > 0,
-    }
-  }
   const backendState = (state = get()): BackendState => {
     if (
       !projectedProject ||
@@ -193,9 +179,7 @@ export function createProjectRuntime({
     }
     if (stage === "commit" || stage === "recover") {
       revision++
-      for (const entry of recordingPending) {
-        if (entry.revision === null) entry.revision = revision
-      }
+      recordings.submitted(revision)
       checkpoints.set(revision, checkpoint())
     }
     connection.submit({
@@ -237,15 +221,7 @@ export function createProjectRuntime({
         checkpoints.delete(key)
       }
     }
-    recordingPending = recordingPending.filter(entry => {
-      if (entry.revision === null || entry.revision > request.revision) return true
-      if (entry.epoch !== projectEpoch()) {
-        rejectRecording(entry, new Error("Project changed before recording was accepted"))
-      } else {
-        resolveRecording(entry, { sessionId: request.sessionId, revision: request.revision })
-      }
-      return false
-    })
+    recordings.accepted({ sessionId: request.sessionId, revision: request.revision })
     if (request.stage === "recover") {
       flushRecording()
     }
@@ -254,17 +230,7 @@ export function createProjectRuntime({
     rejectionGeneration++
     isBackendRecovered = false
     checkpoints.clear()
-    past.splice(0, past.length, ...accepted.past)
-    future.splice(0, future.length, ...accepted.future)
-    const currentWorkspace = get().workspace
-    if (!sameWorkspacePreferences(currentWorkspace, accepted.workspace)) {
-      pushHistory({ document: accepted.document, workspace: accepted.workspace })
-      isWorkspaceDirty = true
-    }
-    editStart = null
-    activeEdit = null
-    editDepth = 0
-    activePreview = null
+    const isWorkspaceDirty = editing.restoreAccepted(accepted)
     revision = Math.max(
       revision,
       "revision" in request ? request.revision : 0,
@@ -274,8 +240,7 @@ export function createProjectRuntime({
     seekGeneration = acceptedControl.seekGeneration
     isExactSeekPending = false
     requestedBar = acceptedControl.seekBar
-    const unreconciledRecording = recordingPending
-    recordingPending = []
+    const recoverRecording = recordings.beginRecovery()
     store.setState(state => {
       return {
         document: accepted.document,
@@ -308,28 +273,9 @@ export function createProjectRuntime({
         },
       }
     })
-    if (unreconciledRecording.length) {
+    if (recoverRecording) {
       const before = snapshot(get())
-      let recovered = accepted.document
-
-      for (const entry of unreconciledRecording) {
-        if (entry.epoch !== projectEpoch()) {
-          rejectRecording(entry, new Error("Project changed before recording recovery"))
-          continue
-        }
-        try {
-          const next = entry.apply(recovered)
-          if (!next.tracks.some(isOrdinaryTrack)) {
-            throw new Error("Recorded document must retain an ordinary track")
-          }
-          recovered = next
-          entry.revision = null
-          recordingPending.push(entry)
-        } catch (error) {
-          if (!entry.receipt) throw error
-          rejectRecording(entry, error)
-        }
-      }
+      const recovered = recoverRecording(accepted.document)
       if (recovered !== accepted.document) {
         pushHistory(before)
         store.setState(state => ({ document: recovered, session: flags(state, true) }))
@@ -338,9 +284,7 @@ export function createProjectRuntime({
     if (!("stage" in request) || (request.stage !== "recover" && request.stage !== "open")) {
       submit("recover")
     } else {
-      rejectRecordingReceipts(new Error("Project backend rejected recording recovery"))
-      recordingPending = []
-      recordingJournal = recordingJournal.filter(entry => entry.receipt === null)
+      recordings.rejectRecovery(new Error("Project backend rejected recording recovery"))
     }
   }
   function telemetry(frame: BackendTelemetry): void {
@@ -376,12 +320,7 @@ export function createProjectRuntime({
     rejectRecordingReceipts(
       new Error("Project backend session changed before recording acceptance")
     )
-    if (activeEdit) {
-      cancelEdit(activeEdit.token)
-    }
-    if (activePreview) {
-      cancelPreview(activePreview)
-    }
+    editing.cancelActive()
     sessionCounter++
     stopConnection?.()
     isRuntimeDisposed = false
@@ -391,12 +330,8 @@ export function createProjectRuntime({
     checkpoints.clear()
     revision = 0
     seekGeneration = 0
-    activePreview = null
-    editStart = null
-    activeEdit = null
-    editDepth = 0
-    recordingJournal = []
-    recordingPending = []
+    editing.clearTransient()
+    recordings.clear()
     isBackendRecovered = false
     acceptedReceipt = null
     const epoch = sessionCounter
@@ -459,12 +394,7 @@ export function createProjectRuntime({
     options: ProjectBackendOptions = {}
   ): () => void {
     rejectRecordingReceipts(new Error("Project backend changed before recording acceptance"))
-    if (activeEdit) {
-      cancelEdit(activeEdit.token)
-    }
-    if (activePreview) {
-      cancelPreview(activePreview)
-    }
+    editing.cancelActive()
     const registration = {
       factory: next,
       createProject: options.createProject ?? createEmptyProject,
@@ -486,12 +416,7 @@ export function createProjectRuntime({
         return
       }
       rejectRecordingReceipts(new Error("Project backend changed before recording acceptance"))
-      if (activeEdit) {
-        cancelEdit(activeEdit.token)
-      }
-      if (activePreview) {
-        cancelPreview(activePreview)
-      }
+      editing.cancelActive()
       factory = backendFactories.at(-1)?.factory ?? backendFactory
       createProject = backendFactories.at(-1)?.createProject ?? projectFactory
       if (runtimeUsers) {
@@ -517,12 +442,7 @@ export function createProjectRuntime({
       }
 
       rejectRecordingReceipts(new Error("Project runtime disposed before recording acceptance"))
-      if (activeEdit) {
-        cancelEdit(activeEdit.token)
-      }
-      if (activePreview) {
-        cancelPreview(activePreview)
-      }
+      editing.cancelActive()
       sessionCounter++
       stopConnection?.()
       stopConnection = null
@@ -533,12 +453,8 @@ export function createProjectRuntime({
       acceptedReceipt = null
       acceptedControl = { ...acceptedControl, playing: false, recording: false }
       checkpoints.clear()
-      recordingPending = []
-      recordingJournal = []
-      editStart = null
-      activeEdit = null
-      editDepth = 0
-      activePreview = null
+      recordings.clear()
+      editing.clearTransient()
       store.setState(state => ({
         session: {
           ...state.session,
@@ -580,30 +496,16 @@ export function createProjectRuntime({
     if (accepted.document === document) {
       const current = get()
       const historyMatchesSave =
-        !editDepth &&
+        !editing.hasEdit() &&
         revision === current.session.backend.acceptedRevision &&
         current.document === document &&
         sameWorkspacePreferences(current.workspace, workspace)
       accepted = { ...(historyMatchesSave ? checkpoint() : accepted), workspace, dirty: false }
     }
-    if (sameWorkspacePreferences(get().workspace, workspace)) {
-      isWorkspaceDirty = false
-    }
-    if (
-      editStart?.document === document &&
-      sameWorkspacePreferences(editStart.workspace, workspace)
-    ) {
-      isEditDirty = false
-    }
+    editing.markSaved(document, workspace)
   }
   function canSaveProject(): boolean {
     return isBackendRecovered
-  }
-  function getCommittedDocument(): DocumentState {
-    return editStart?.document ?? get().document
-  }
-  function getCommittedWorkspace(): WorkspaceState {
-    return editStart?.workspace ?? get().workspace
   }
   function captureProjectSave(): ProjectSaveCapture {
     return {
@@ -615,35 +517,31 @@ export function createProjectRuntime({
     }
   }
   function waitForProjectSave(capture: ProjectSaveCapture, signal: AbortSignal): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      let unsubscribe = () => {}
-      function finish(error?: Error) {
-        unsubscribe()
-        signal.removeEventListener("abort", abort)
-        if (error) reject(error)
-        else resolve()
+    const { promise, resolve, reject } = Promise.withResolvers<undefined>()
+    let unsubscribe = () => {}
+    function finish(error?: Error) {
+      unsubscribe()
+      signal.removeEventListener("abort", abort)
+      if (error) reject(error)
+      else resolve(undefined)
+    }
+    function abort() {
+      finish(new DOMException("Cancelled", "AbortError"))
+    }
+    const check = () => {
+      const backend = get().session.backend
+      if (signal.aborted) return abort()
+      if (capture.epoch !== projectEpoch() || capture.rejectionGeneration !== rejectionGeneration) {
+        return finish(new Error("Project changed or its backend rejected the saved revision"))
       }
-      function abort() {
-        finish(new DOMException("Cancelled", "AbortError"))
-      }
-      const check = () => {
-        const backend = get().session.backend
-        if (signal.aborted) return abort()
-        if (
-          capture.epoch !== projectEpoch() ||
-          capture.rejectionGeneration !== rejectionGeneration
-        ) {
-          return finish(new Error("Project changed or its backend rejected the saved revision"))
-        }
-        if (canSaveProject() && backend.acceptedRevision >= capture.revision) return finish()
-        if (backend.phase === "error" && backend.pending === 0) {
-          finish(new Error(backend.error ?? "Project backend is unavailable"))
-        }
-      }
-      unsubscribe = store.subscribe(check)
-      signal.addEventListener("abort", abort, { once: true })
-      check()
-    })
+      if (canSaveProject() && backend.acceptedRevision >= capture.revision) return finish()
+      if (backend.phase === "error" && backend.pending === 0)
+        finish(new Error(backend.error ?? "Project backend is unavailable"))
+    }
+    unsubscribe = store.subscribe(check)
+    signal.addEventListener("abort", abort, { once: true })
+    check()
+    return promise
   }
   function completeProjectSave(capture: ProjectSaveCapture): void {
     if (capture.epoch !== projectEpoch()) return
@@ -651,7 +549,7 @@ export function createProjectRuntime({
       getCommittedDocument() === capture.document &&
       sameWorkspacePreferences(getCommittedWorkspace(), capture.workspace)
     markProjectSaved(capture.document, capture.workspace)
-    if (clean && !editDepth) session({ dirty: false })
+    if (clean && !editing.hasEdit()) session({ dirty: false })
   }
   function readRecordingBar(): number | null {
     const state = get()
@@ -691,49 +589,6 @@ export function createProjectRuntime({
       was.seekGeneration !== after.seekGeneration
     ) {
       submitControl(after)
-    }
-  }
-  function document(next: DocumentState): void {
-    const state = get()
-    if (next === state.document || !next.tracks.some(isOrdinaryTrack)) {
-      return
-    }
-    if (!editDepth) {
-      pushHistory(snapshot(state))
-    }
-    const automationLanes = Object.fromEntries(
-      Object.entries(state.workspace.automationLanes).flatMap(([id, targets]) => {
-        const track = next.tracks.find(item => item.id === id)
-        return track ? [[id, targets.filter(target => isAutomationTarget(target, track))]] : []
-      })
-    )
-    store.setState({
-      document: next,
-      workspace: { ...state.workspace, automationLanes },
-      session: {
-        ...flags(state, true),
-        automationTargets: Object.fromEntries(
-          Object.entries(state.session.automationTargets).flatMap(([id, target]) => {
-            const track = next.tracks.find(item => item.id === id)
-            return track ? [[id, target && isAutomationTarget(target, track) ? target : null]] : []
-          })
-        ),
-      },
-    })
-    submit(editDepth ? "preview" : "commit", editDepth ? (activeEdit?.token.id ?? null) : null)
-  }
-  function workspace(next: WorkspaceState): void {
-    const state = get()
-    if (next === state.workspace || JSON.stringify(next) === JSON.stringify(state.workspace)) {
-      return
-    }
-    if (!editDepth) {
-      pushHistory(snapshot(state))
-    }
-    store.setState({ workspace: next, session: flags(state, true) })
-    isWorkspaceDirty = true
-    if (state.workspace.metronome !== next.metronome) {
-      submitControl(control(get()))
     }
   }
   function projectTrackWaveforms(next: readonly Track[]): Track[] {
@@ -782,306 +637,6 @@ export function createProjectRuntime({
       )
     }
   }
-  function beginEdit(owner = "batch"): ProjectEditToken {
-    if (activePreview) {
-      cancelPreview(activePreview)
-    }
-    if (activeEdit && activeEdit.owner !== owner) {
-      finishEdit()
-    }
-    if (activeEdit) {
-      editDepth++
-      return activeEdit.token
-    }
-    const token = { sessionId: projectEpoch(), id: `edit-${++editCounter}` }
-    activeEdit = { owner, token }
-    editDepth = 1
-    editStart = snapshot(get())
-    isEditDirty = get().session.dirty
-    return token
-  }
-  function resolveRecording(entry: RecordingEntry, value: RecordingReceipt): void {
-    if (!entry.receipt || entry.receipt.settled) return
-    entry.receipt.settled = true
-    entry.receipt.resolve(value)
-  }
-  function rejectRecording(entry: RecordingEntry, error: unknown): void {
-    if (!entry.receipt || entry.receipt.settled) return
-    entry.receipt.settled = true
-    entry.receipt.reject(error)
-  }
-  function rejectRecordingReceipts(error: Error): void {
-    for (const entry of recordingJournal) rejectRecording(entry, error)
-    for (const entry of recordingPending) rejectRecording(entry, error)
-  }
-  function flushRecording(): void {
-    if (editDepth || activePreview) {
-      return
-    }
-    while (recordingJournal.length) {
-      const entry = recordingJournal.shift()
-      if (entry) applyRecording(entry)
-    }
-  }
-  function applyRecording(entry: RecordingEntry): void {
-    if (entry.epoch !== projectEpoch()) {
-      rejectRecording(entry, new Error("Project changed before recording publication"))
-      return
-    }
-    try {
-      const current = get().document
-      const next = entry.apply(current)
-      if (!next.tracks.some(isOrdinaryTrack)) {
-        if (!entry.receipt) return
-        throw new Error("Recorded document must retain an ordinary track")
-      }
-      if (next === current) {
-        if (!entry.receipt) return
-        if (acceptedReceipt && next === accepted.document && isBackendRecovered) {
-          resolveRecording(entry, acceptedReceipt)
-          return
-        }
-      }
-      recordingPending.push(entry)
-      if (next === current) submit("commit")
-      else document(next)
-    } catch (error) {
-      recordingPending = recordingPending.filter(pending => pending !== entry)
-      if (!entry.receipt) throw error
-      rejectRecording(entry, error)
-    }
-  }
-  function queueRecording(entry: RecordingEntry): void {
-    if (editDepth || activePreview) recordingJournal.push(entry)
-    else applyRecording(entry)
-  }
-  function recordDocument(apply: (document: DocumentState) => DocumentState): void {
-    queueRecording({ apply, epoch: projectEpoch(), revision: null, receipt: null })
-  }
-  function recordDocumentConfirmed(
-    apply: (document: DocumentState) => DocumentState,
-    expectedEpoch: string
-  ): Promise<RecordingReceipt> {
-    return new Promise((resolve, reject) => {
-      if (expectedEpoch !== projectEpoch()) {
-        reject(new Error("Project changed before recording publication"))
-        return
-      }
-      const backend = get().session.backend
-      if (
-        isRuntimeDisposed ||
-        !connection ||
-        (!isBackendRecovered && backend.phase === "error" && backend.pending === 0)
-      ) {
-        reject(new Error("Project backend is unavailable for recording publication"))
-        return
-      }
-      queueRecording({
-        apply,
-        epoch: expectedEpoch,
-        revision: null,
-        receipt: { settled: false, resolve, reject },
-      })
-    })
-  }
-  function endEdit(token?: ProjectEditToken): void {
-    if (token && !isCurrentEdit(token)) {
-      return
-    }
-    if (editDepth === 0 || --editDepth !== 0) {
-      return
-    }
-    finishEdit()
-  }
-
-  function isCurrentEdit(token: ProjectEditToken): boolean {
-    return (
-      activeEdit?.token.id === token.id &&
-      activeEdit.token.sessionId === token.sessionId &&
-      projectEpoch() === token.sessionId
-    )
-  }
-
-  function finishEdit(): void {
-    editDepth = 0
-    const editId = activeEdit?.token.id ?? null
-    activeEdit = null
-    const start = editStart
-    editStart = null
-    const isDocumentChanged =
-      start !== null && JSON.stringify(start.document) !== JSON.stringify(get().document)
-    const isWorkspaceChanged =
-      start !== null && !sameWorkspacePreferences(start.workspace, get().workspace)
-    const isChanged = isDocumentChanged || isWorkspaceChanged
-    if (isChanged && start) {
-      pushHistory(start)
-    }
-    store.setState(state => ({ session: flags(state, isEditDirty || isChanged) }))
-    if (isDocumentChanged) {
-      submit("commit", editId)
-    } else if (start && start.document !== get().document) {
-      store.setState({ document: start.document })
-      submit("cancel", editId)
-    }
-    flushRecording()
-  }
-  function cancelEdit(token?: ProjectEditToken): void {
-    if (token && !isCurrentEdit(token)) {
-      return
-    }
-    if (!editStart) {
-      return
-    }
-    const before = editStart
-    const editId = activeEdit?.token.id ?? null
-    activeEdit = null
-    editStart = null
-    editDepth = 0
-    const isChanged = get().document !== before.document
-    store.setState(state => ({
-      document: before.document,
-      workspace: {
-        ...before.workspace,
-        pxPerBar: state.workspace.pxPerBar,
-        scrollX: state.workspace.scrollX,
-        scrollY: state.workspace.scrollY,
-      },
-      session: flags(state, isEditDirty),
-    }))
-    if (isChanged) {
-      submit("cancel", editId)
-    }
-    flushRecording()
-  }
-  function restoreSnapshot(next: ProjectSeed): void {
-    store.setState(state => {
-      return {
-        document: next.document,
-        workspace: {
-          ...next.workspace,
-          pxPerBar: state.workspace.pxPerBar,
-          scrollX: state.workspace.scrollX,
-          scrollY: state.workspace.scrollY,
-        },
-        session: {
-          ...flags(state, true),
-          selectedClipIds: [],
-          editingClipId: next.document.tracks.some(track =>
-            track.clips.some(clip => clip.id === state.session.editingClipId)
-          )
-            ? state.session.editingClipId
-            : null,
-        },
-      }
-    })
-    submit("commit")
-  }
-  function undo(): void {
-    if (editDepth || activePreview) {
-      return
-    }
-    const previous = past.pop()
-    if (!previous) {
-      return
-    }
-    future.push(snapshot(get()))
-    restoreSnapshot(previous)
-  }
-  function redo(): void {
-    if (editDepth || activePreview) {
-      return
-    }
-    const next = future.pop()
-    if (!next) {
-      return
-    }
-    past.push(snapshot(get()))
-    restoreSnapshot(next)
-  }
-  function beginPreview(): ProjectEditToken {
-    if (editDepth) {
-      finishEdit()
-    }
-    if (activePreview) {
-      cancelPreview(activePreview)
-    }
-    const token = { sessionId: projectEpoch(), id: `preview-${++previewCounter}` }
-    activePreview = token
-    return token
-  }
-  function isActive(token: ProjectEditToken): boolean {
-    return (
-      activePreview?.id === token.id &&
-      activePreview.sessionId === token.sessionId &&
-      projectEpoch() === token.sessionId
-    )
-  }
-  function setPreview(token: ProjectEditToken, preview: ProjectPreview): void {
-    store.setState(state => ({ session: { ...state.session, preview } }))
-    submit("preview", token.id)
-  }
-  function previewTracks(token: ProjectEditToken, next: readonly Track[]): readonly Track[] | null {
-    if (!isActive(token) || !next.some(isOrdinaryTrack)) {
-      return null
-    }
-    const projected = projectTrackWaveforms(next)
-    setPreview(token, { kind: "tracks", token, tracks: projected })
-    return projected
-  }
-  function previewMarkers(
-    token: ProjectEditToken,
-    markers: readonly Marker[]
-  ): readonly Marker[] | null {
-    if (!isActive(token)) {
-      return null
-    }
-    const projected = [...markers]
-    setPreview(token, { kind: "markers", token, markers: projected })
-    return projected
-  }
-  function previewLoop(token: ProjectEditToken, loop: LoopRegion): LoopRegion | null {
-    if (!isActive(token)) {
-      return null
-    }
-    const projected = { ...loop }
-    setPreview(token, { kind: "loop", token, loop: projected })
-    return projected
-  }
-  function commitPreview(token: ProjectEditToken): void {
-    if (!isActive(token)) {
-      return
-    }
-    const { preview } = get().session
-    activePreview = null
-    if (preview?.token.id === token.id) {
-      const next = projectEffectiveDocument(get())
-      const isChanged =
-        preview.kind === "tracks"
-          ? JSON.stringify(preview.tracks) !== JSON.stringify(get().document.tracks)
-          : preview.kind === "markers"
-            ? JSON.stringify(preview.markers) !== JSON.stringify(get().document.markers)
-            : JSON.stringify(preview.loop) !== JSON.stringify(get().document.transport.loop)
-      store.setState(state => ({ session: { ...state.session, preview: null } }))
-      if (isChanged) {
-        document(next)
-      } else {
-        submit("cancel", token.id)
-      }
-    }
-    flushRecording()
-  }
-  function cancelPreview(token: ProjectEditToken): void {
-    if (!isActive(token)) {
-      return
-    }
-    activePreview = null
-    const isHadPreview = get().session.preview !== null
-    store.setState(state => ({ session: { ...state.session, preview: null } }))
-    if (isHadPreview) {
-      submit("cancel", token.id)
-    }
-    flushRecording()
-  }
   function hydrateState(next: ProjectSeed, reopen = true): void {
     next = { ...next, document: ensureOrdinaryTrack(next.document, defaultTrackHeight) }
     rejectRecordingReceipts(new Error("Project changed before recording acceptance"))
@@ -1093,17 +648,9 @@ export function createProjectRuntime({
     isRuntimeDisposed = true
     isBackendRecovered = false
     acceptedReceipt = null
-    past.length = 0
-    future.length = 0
-    editStart = null
-    activeEdit = null
-    editDepth = 0
-    isEditDirty = false
-    isWorkspaceDirty = false
+    editing.reset()
     isExactSeekPending = false
-    activePreview = null
-    recordingJournal = []
-    recordingPending = []
+    recordings.clear()
     store.setState({ ...next, session: initialSession() })
     accepted = checkpoint()
     requestedBar = positionToBar(get().session.position, get().document.transport.numerator)

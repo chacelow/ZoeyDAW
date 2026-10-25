@@ -84,6 +84,10 @@ Rust `realtime/meter_hub.rs` 拥有 Hub 控制、图与输入 reader 的安装�
 
 Web 领域计算、快照校验和波形范围 schema 归 `@zoeydaw/project-core`，不依赖 app、React、Zustand、Tauri 或 runtime。`@zoeydaw/project-runtime` 拥有 vanilla store 工厂、编辑历史、preview、后端队列和 lease 生命周期，只依赖 core 与 `zustand/vanilla`。包导入不创建运行实例；app 组合层注入 backend 和轨道高度，React 绑定留在 `stores/useProjectState.ts`。测试和 Gallery 从 runtime 的 `./testing` 入口显式取得模拟实现。
 
+`runtime/project-editing.ts` 独占撤销/重做历史、连续编辑 token、临时 preview 与编辑前快照；`runtime/recording-publication.ts` 独占录音 journal、待接受条目与 receipt。二者通过业务动作协作，读取同一个 Store，不保存另一份当前文档。编辑完成或取消后才排空 journal；后端拒绝先恢复 accepted 文档和历史，再重放独立录音。
+
+`runtime/project-runtime.ts` 保留 backend 注册、lease、revision、accepted checkpoint 和 transport 协调。该文件仍超过 400 行，因为这些入口共同维护同一连接与接受边界；编辑和录音状态不再寄存在协调器闭包。公开 exports 与消费者命令保持原样。
+
 ESLint 检查两包的普通、类型、转发与动态导入。`scripts/check-core-boundaries.mjs` 检查 Cargo 本地依赖和自有 native include 方向；根 `check` 与 `test:architecture` 均运行该检查。公共包入口使用精确 exports，不暴露内部 connection 或测试文件。
 
 ## 状态和复用逻辑放置

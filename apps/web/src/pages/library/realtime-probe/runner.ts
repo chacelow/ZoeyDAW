@@ -88,7 +88,6 @@ export async function runProbeCase(options: {
   const receiptRoundTripsMs: number[] = []
   const errors: string[] = []
   let settle: (() => void) | null = null
-  // ES2022 is this app's runtime/lib baseline; Promise.withResolvers is not required.
   const done = new Promise<void>(resolve => {
     settle = resolve
   })

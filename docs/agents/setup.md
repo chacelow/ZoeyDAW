@@ -35,6 +35,8 @@ pnpm build
 
 `check` 执行 Ultracite、共享度量漂移、核心依赖边界及文件规模检查；`check:file-size --report` 列出超过 400 行的自有源码，一般上限为 800 行。`tooling/file-size-baseline.json` 只追踪既有超限债务，其上界只准降低或删除，不构成继续追加或规范豁免的授权。测试和字典参与统计；机器输出须有生成标记且对应生成器存在，不能仅凭 `generated` 文件名或目录名豁免，第三方与构建目录按明确路径排除。`fix` 先生成度量 CSS 再执行套件修复；`test` 运行 core/runtime 独立包、Web 行为、根工具模块规则及 shared/logger/UI 行为测试，并检查 Cargo/native 依赖方向。`test:shared` 包含共享 UI 的资源和 React 生命周期回归。`typecheck:core` 检查两个核心 Web 包。Web 的 lint/format 是这些根入口的别名，不维护另一套格式配置。类型检查和构建单独执行，不包含在 `check` 中。
 
+Runtime 的录音回执与保存等待使用标准 `Promise.withResolvers()`。runtime 和 Web 显式包含 `ES2024.Promise` 类型库，编译 target 仍为 ES2022；运行环境必须提供该方法，不注入 polyfill。
+
 需要单独修改共享度量时使用包命令，不从 Web 跨目录执行脚本：
 
 ```sh
