@@ -44,9 +44,18 @@ void testV2WireBoundary() {
     zp::put(n,"sequence",0);reject([&] { zp::decodeNote(n); });
     zp::put(n,"sequence",static_cast<juce::int64>(9007199254740992LL));reject([&] { zp::decodeNote(n); });
 }
+void testSignedAudioSourceOffsets() {
+    for(double offset:{-.25,-2.0,0.0,.25}) {
+        auto r=request();auto audio=r["state"]["project"]["tracks"][0].clone();zp::put(audio,"id","audio");zp::put(audio,"kind","audio");zp::put(audio,"output","main");
+        auto clip=zp::parse(R"({"id":"signed-audio","kind":"audio","startBar":1,"lengthBars":1,"sourceOffsetBars":0,"mute":false,"sourceId":null,"gainDb":0,"audioSettings":{"warp":false,"warpMode":"soundtouch","sourceBpm":120,"transpose":0,"detune":0,"reverse":false,"loop":false,"loopStartBars":0,"loopLengthBars":1,"startMarkerBars":0,"endMarkerBars":1},"fadeInBars":0,"fadeOutBars":0,"fadeInOffsetBars":0,"fadeOutOffsetBars":0,"fadeInCurve":0.35,"fadeOutCurve":0.35,"fadeInCurvePosition":0.5,"fadeOutCurvePosition":0.5})");
+        zp::put(clip,"sourceOffsetBars",offset);zp::put(audio,"clips",juce::Array<V>{clip});r["state"]["project"]["tracks"].getArray()->add(audio);
+        const auto decoded=zp::decode(r);zp::require(decoded.tracks[1].clips[0].offset==offset,"Signed audio source offset was rejected or changed");
+    }
+}
 void testSourceTempoAnalysis() {
-    const int rate=48000,frames=rate*10;
-    for(int kind=0;kind<4;++kind) {
+    const int rate=48000;
+    for(int kind=0;kind<8;++kind) {
+        const int frames=rate*(kind==4?2:10);
         juce::TemporaryFile source(".wav");auto stream=source.getFile().createOutputStream();
         zp::require(stream!=nullptr,"Cannot create tempo fixture");
         juce::StringPairArray metadata;if(kind==3) { metadata.set(juce::WavAudioFormat::acidTempo,"123");metadata.set(juce::WavAudioFormat::acidOneShot,"0");metadata.set(juce::WavAudioFormat::acidBeats,"20");metadata.set(juce::WavAudioFormat::acidNumerator,"4");metadata.set(juce::WavAudioFormat::acidDenominator,"4"); }
@@ -57,8 +66,17 @@ void testSourceTempoAnalysis() {
             const int count=std::min(4096,frames-offset);
             for(int i=0;i<count;++i) {
                 const int frame=offset+i;const double t=(double)frame/rate;
-                const double pulseTime=(double)(frame%(rate/2))/rate;
-                const double envelope=kind==1?1.0:(kind==2?std::exp(-t*60):std::exp(-pulseTime*60));
+                double pulseTime=(double)(frame%(rate/2))/rate;
+                if(kind==5) {
+                    pulseTime=2;
+                    const double phase=std::fmod(t,2.0);
+                    for(double beat:{0.0,.375,.75,1.0,1.375,1.75})if(phase>=beat)pulseTime=std::min(pulseTime,phase-beat);
+                }
+                if(kind==7) {
+                    pulseTime=10;
+                    for(double onset:{0.0,.43,1.17,1.83,3.02,4.39,6.11,7.98,9.31})if(t>=onset)pulseTime=std::min(pulseTime,t-onset);
+                }
+                const double envelope=kind==1?1.0:(kind==2?std::exp(-t*60):kind==6?0.0:std::exp(-pulseTime*60));
                 block.setSample(0,i,(float)(.65*std::sin(juce::MathConstants<double>::twoPi*(kind==1?440:80)*t)*envelope));
             }
             zp::require(writer->writeFromAudioSampleBuffer(block,0,count),"Cannot write tempo fixture");
@@ -71,9 +89,13 @@ void testSourceTempoAnalysis() {
         auto* encoded=zp_analyze_tempo(source.getFile().getFullPathName().toRawUTF8());
         zp::require(encoded!=nullptr,"Missing tempo analysis response");auto result=zp::parse(encoded);zp_free(encoded);
         zp::require((bool)result["ok"],"Tempo fixture analysis failed: "+result["error"].toString());auto value=result["value"];
-        if(kind==0)zp::require(value["origin"].toString()=="analysis" && std::abs((double)value["bpm"]-120)<.5,"120 BPM rhythmic source was not detected");
+        if(kind==0 || kind==4)zp::require(value["origin"].toString()=="analysis" && std::abs((double)value["bpm"]-120)<.5,"120 BPM rhythmic source was not detected, fixture "+juce::String(kind));
         else if(kind==3)zp::require(value["origin"].toString()=="metadata" && (double)value["bpm"]==123,"Authored source tempo metadata was ignored");
-        else zp::require(value["origin"].toString()=="unknown" && value["bpm"].isVoid(),"Tone or one-shot fabricated a source tempo");
+        else if(kind==5) {
+            const double bpm=value["bpm"];
+            zp::require(value["origin"].toString()=="analysis" && (std::abs(bpm-60)<.5 || std::abs(bpm-120)<.5),"Syncopated pattern was rejected for non-integer adjacent intervals");
+        }
+        else zp::require(value["origin"].toString()=="unknown" && value["bpm"].isVoid(),"Nonrhythmic source fabricated a source tempo, fixture "+juce::String(kind));
     }
     juce::TemporaryFile missing(".wav");auto* encoded=zp_analyze_tempo(missing.getFile().getFullPathName().toRawUTF8());
     zp::require(encoded!=nullptr,"Missing offline analysis response");auto result=zp::parse(encoded);zp_free(encoded);
@@ -246,6 +268,7 @@ int main() {
         zp::ScopedAudioPreferences preferences;
         testMidiVelocityBoundary();
         testV2WireBoundary();
+        testSignedAudioSourceOffsets();
         testDeviceModel();
         testDeviceAutomationBoundary();
         testExternalDeviceBoundary();

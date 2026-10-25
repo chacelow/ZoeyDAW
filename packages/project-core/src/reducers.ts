@@ -15,6 +15,12 @@ export type DocumentCommand =
 export function reduceDocument(document: DocumentState, command: DocumentCommand): DocumentState {
   switch (command.type) {
     case "transport": {
+      const denominator = command.patch.denominator
+      if (
+        denominator !== undefined &&
+        (denominator < 1 || denominator > 32 || !Number.isInteger(Math.log2(denominator)))
+      )
+        return document
       return { ...document, transport: { ...document.transport, ...command.patch } }
     }
     case "project": {

@@ -50,6 +50,8 @@ public:
         elastiqueDirectMobile = 14,     /**< Elastique Direct lower quality and lower CPU usage, optimised for mobile. */
         signalsmithDefault = 15,        /**< Signalsmith Stretch default quality preset. */
         signalsmithCheaper = 16,        /**< Signalsmith Stretch cheaper/faster preset. */
+        signalsmithFormant = 17,         /**< Signalsmith default preset with independent-pitch formant compensation. */
+        soundtouchRepitch = 18,
 
        #if TRACKTION_ENABLE_TIMESTRETCH_ELASTIQUE
         defaultMode = elastiquePro      /**< Default mode. */

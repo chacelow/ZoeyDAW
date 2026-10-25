@@ -14,11 +14,13 @@ export function createTimeRangeGesture(
   const startBar = snappedBar(context, barAtX(context, pointer.x))
   let endBar = startBar
   let trackIds = [trackId]
-  // Pressing starts a new selection immediately; the previous span and cursor
-  // must not stay visible while the new gesture is still at its first pixel.
   context.actions.setTimeSelection(null)
-  context.actions.setInsertionPoint(null)
+  context.actions.setInsertionPoint({ trackId, bar: startBar })
   context.scene.setTimeSelection(null)
+  context.scene.setPlayback({
+    playing: context.getState().session.playing,
+    insertionPoint: { trackId, bar: startBar },
+  })
   return {
     cursor: "default",
     autoScroll: "both",
@@ -51,6 +53,10 @@ export function createTimeRangeGesture(
         context.actions.setTimeSelection(previous)
         context.actions.setInsertionPoint(previousInsertion)
         context.scene.setTimeSelection(previous)
+        context.scene.setPlayback({
+          playing: context.getState().session.playing,
+          insertionPoint: previousInsertion,
+        })
         return
       }
       const selection = {
@@ -61,6 +67,10 @@ export function createTimeRangeGesture(
       context.actions.setTimeSelection(selection)
       context.scene.setTimeSelection(selection)
       context.actions.setInsertionPoint({ trackId, bar: selection.startBar })
+      context.scene.setPlayback({
+        playing: context.getState().session.playing,
+        insertionPoint: { trackId, bar: selection.startBar },
+      })
     },
   }
 }

@@ -110,7 +110,7 @@ it.each(["audio", "midi", "pattern"] as const)(
       ],
     })
     store.setViewport({ pxPerBar: 24, scrollX: 0, scrollY: 0, width: 180, height: 320, dpr: 1 })
-    const fills: { height: number; color: string; alpha: number }[] = []
+    const fills: { width: number; height: number; color: string; alpha: number }[] = []
     const context = {
       fillStyle: "",
       strokeStyle: "",
@@ -128,8 +128,8 @@ it.each(["audio", "midi", "pattern"] as const)(
       fill() {},
       fillText() {},
       strokeRect() {},
-      fillRect(_x: number, _y: number, _width: number, height: number) {
-        fills.push({ height, color: this.fillStyle, alpha: this.globalAlpha })
+      fillRect(_x: number, _y: number, width: number, height: number) {
+        fills.push({ width, height, color: this.fillStyle, alpha: this.globalAlpha })
       },
     }
     const tokens = readTokens(document.documentElement)
@@ -143,7 +143,7 @@ it.each(["audio", "midi", "pattern"] as const)(
       automationMode: false,
     })
     expect(fills.some(fill => fill.color === "inactive-title" && fill.alpha === 1)).toBe(true)
-    expect(fills.filter(fill => fill.height > 30 && fill.alpha > 0)).toEqual([])
+    expect(fills.filter(fill => fill.width > 1 && fill.height > 30 && fill.alpha > 0)).toEqual([])
     expect(fills.some(fill => fill.color === "selected")).toBe(false)
   }
 )

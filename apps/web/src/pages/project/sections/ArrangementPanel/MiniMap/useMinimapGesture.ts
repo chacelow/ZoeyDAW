@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react"
 import { projectActions } from "@/pages/project/adapters"
+import { acquireCursorLock, hasNativeCursor } from "@/shared/native/cursor"
+import type { CursorLock } from "@/shared/native/cursor"
 import {
   minimapAnchor,
   minimapEdgeZoom,
@@ -16,10 +18,13 @@ export { minimapFrame, minimapHit } from "./zoom"
 
 type Anchor = {
   pointerId: number
+  lock: CursorLock
   lastX: number
   lastY: number
   pressedFrame: { left: number; right: number }
   offset: number
+  restoreFraction: number
+  restoreY: number
 } & (
   | { mode: "body" | "jump"; anchorBar: number }
   | { mode: "left" | "right"; anchorBar: number }
@@ -32,6 +37,7 @@ export function useMinimapGesture(
 ) {
   const latest = useRef(geometry)
   const anchor = useRef<Anchor | null>(null)
+  const endGesture = useRef(() => {})
   useLayoutEffect(() => {
     latest.current = geometry
   }, [geometry])
@@ -40,30 +46,37 @@ export function useMinimapGesture(
     const node = element.current
     if (!node) return
     let wheelResidual = 0
+    const native = hasNativeCursor()
     function end() {
       const current = anchor.current
+      current?.lock.release()
       anchor.current = null
       if (current && node?.hasPointerCapture?.(current.pointerId))
         node.releasePointerCapture(current.pointerId)
     }
-    function move(event: globalThis.PointerEvent) {
+    endGesture.current = end
+    function move(event: globalThis.MouseEvent) {
       const current = anchor.current
-      if (!current || current.pointerId !== event.pointerId || !node) return
+      if (!current || !node) return
+      const pointer = "pointerId" in event
+      if (pointer && current.pointerId !== event.pointerId) return
+      if (native ? !pointer : current.lock.relative === pointer) return
       const rect = node.getBoundingClientRect()
       if (rect.width <= 0) return
       const p = latest.current
-      const dx = event.clientX - current.lastX
-      const dy = event.clientY - current.lastY
-      current.lastX = event.clientX
-      current.lastY = event.clientY
+      const dx = current.lock.relative ? event.movementX : event.clientX - current.lastX
+      const dy = current.lock.relative ? event.movementY : event.clientY - current.lastY
+      if (!Number.isFinite(dx) || !Number.isFinite(dy) || (!dx && !dy)) return
+      current.lastX += dx
+      current.lastY += dy
       p.onNavigate()
       let next
       if (current.mode === "pan") {
         const frame = minimapFrame(rect.width, p)
-        const x = event.clientX - rect.left - current.offset
+        const x = current.lastX - rect.left - current.offset
         next = minimapPan(p, -Math.trunc(Math.fround(-frame.panRatio * x) + 0.5))
       } else if (current.mode === "left" || current.mode === "right") {
-        const x = event.clientX - rect.left - (current.mode === "left" ? current.offset : 0)
+        const x = current.lastX - rect.left - (current.mode === "left" ? current.offset : 0)
         next = minimapZoom(
           p,
           minimapEdgeZoom(rect.width, x, current.mode, current.pressedFrame, p),
@@ -87,6 +100,13 @@ export function useMinimapGesture(
     }
     function up(event: globalThis.PointerEvent) {
       if (event.pointerId !== anchor.current?.pointerId) return
+      end()
+    }
+    function mouseUp(event: MouseEvent) {
+      if (event.button === 0 && anchor.current?.lock.relative && !native) end()
+    }
+    function captureLost() {
+      if (!native && anchor.current?.lock.relative) return
       end()
     }
     const key = (event: KeyboardEvent) => {
@@ -116,20 +136,24 @@ export function useMinimapGesture(
       projectActions.setViewport(next)
     }
     window.addEventListener("pointermove", move)
+    window.addEventListener("mousemove", move)
+    window.addEventListener("mouseup", mouseUp)
     window.addEventListener("pointerup", up)
     window.addEventListener("pointercancel", up)
     window.addEventListener("blur", end)
     window.addEventListener("keydown", key)
-    node.addEventListener("lostpointercapture", end)
+    node.addEventListener("lostpointercapture", captureLost)
     node.addEventListener("wheel", wheel, { passive: false })
     return () => {
       end()
       window.removeEventListener("pointermove", move)
+      window.removeEventListener("mousemove", move)
+      window.removeEventListener("mouseup", mouseUp)
       window.removeEventListener("pointerup", up)
       window.removeEventListener("pointercancel", up)
       window.removeEventListener("blur", end)
       window.removeEventListener("keydown", key)
-      node.removeEventListener("lostpointercapture", end)
+      node.removeEventListener("lostpointercapture", captureLost)
       node.removeEventListener("wheel", wheel)
     }
   }, [element])
@@ -168,12 +192,42 @@ export function useMinimapGesture(
         frame = minimapFrame(rect.width, latest.current)
       }
       const current = latest.current
+      let lock: CursorLock | null = null
+      lock = acquireCursorLock(
+        element.current,
+        event.clientX,
+        event.clientY,
+        () => {
+          if (anchor.current?.lock === lock) endGesture.current()
+        },
+        () => {
+          const active = anchor.current
+          if (!active || !element.current) return { x: event.clientX, y: event.clientY }
+          const bounds = element.current.getBoundingClientRect()
+          if (bounds.width <= 0 || bounds.height <= 0) return { x: event.clientX, y: event.clientY }
+          const releasedFrame = minimapFrame(bounds.width, latest.current)
+          return {
+            x:
+              bounds.left +
+              releasedFrame.left +
+              active.restoreFraction * (releasedFrame.right - releasedFrame.left),
+            y: bounds.top + active.restoreY,
+          }
+        }
+      )
+      if (!lock || lock.phase === "released") return
       const common = {
         pointerId: event.pointerId,
+        lock,
         lastX: event.clientX,
         lastY: event.clientY,
         pressedFrame: frame,
         offset: x - frame.left,
+        restoreFraction: Math.max(
+          0,
+          Math.min(1, (x - frame.left) / Math.max(1, frame.right - frame.left))
+        ),
+        restoreY: event.clientY - rect.top,
       }
       anchor.current =
         mode === "pan"
@@ -188,7 +242,7 @@ export function useMinimapGesture(
                     ? current.scrollX / current.pxPerBar
                     : minimapAnchor(rect.width, x, current),
             }
-      element.current.setPointerCapture?.(event.pointerId)
+      if (hasNativeCursor()) element.current.setPointerCapture?.(event.pointerId)
     },
     pointerMove(event: PointerEvent<HTMLDivElement>) {
       if (anchor.current) return

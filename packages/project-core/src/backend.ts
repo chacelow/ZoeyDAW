@@ -1,6 +1,7 @@
 import type { AutomationLane, MidiNote, TrackKind } from "./types"
 import type { AudioClipSettings } from "./audio-editor"
 import type { Device } from "./devices"
+import type { MeterStore } from "./realtime/meter-store"
 
 export interface BackendClipBase {
   id: string
@@ -157,10 +158,6 @@ export interface BackendTelemetry {
   clock: BackendClock
   playing: boolean
   recording: boolean
-  /**
-  Finite dBFS levels; providers encode silence at a finite floor.
-  */
-  levels: Readonly<Record<string, readonly [number, number]>>
 }
 
 /**
@@ -173,6 +170,7 @@ export interface ProjectBackend {
   allNotesOff: () => void | Promise<void>
   urgentStop?: () => Promise<void>
   subscribe: (listener: (telemetry: BackendTelemetry) => void) => () => void
+  readMeters?: () => MeterStore | null
   dispose: () => void
 }
 export type ProjectBackendFactory = () => ProjectBackend

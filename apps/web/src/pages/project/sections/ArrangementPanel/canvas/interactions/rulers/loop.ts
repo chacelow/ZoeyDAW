@@ -49,6 +49,7 @@ export function loopGesture(
   return {
     cursor: edge === "body" ? "grabbing" : edge === "start" ? "brace-left" : "brace-right",
     autoScroll: "horizontal",
+    commitOnInterrupt: true,
     move(current) {
       const scene = context.scene.get()
       const delta = barAt(scene, current.x) - originBar

@@ -6,6 +6,18 @@ import { hydrateProject, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { gridZoomLimit } from "@zoeydaw/project-core/grid"
 import { MiniMap } from "."
+import { minimapFrame } from "./zoom"
+
+const cursor = vi.hoisted(() => ({
+  relative: false,
+  native: false,
+  release: vi.fn(),
+  acquire: vi.fn(),
+}))
+vi.mock("@/shared/native/cursor", () => ({
+  hasNativeCursor: () => cursor.native,
+  acquireCursorLock: cursor.acquire,
+}))
 
 const frames = new Map<number, FrameRequestCallback>()
 let nextFrame = 0
@@ -57,6 +69,16 @@ beforeEach(() => {
   frames.clear()
   nextFrame = 0
   capture = null
+  cursor.relative = false
+  cursor.native = false
+  cursor.release.mockClear()
+  cursor.acquire.mockImplementation(() => ({
+    phase: "locked",
+    get relative() {
+      return cursor.relative
+    },
+    release: cursor.release,
+  }))
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
   hydrateProject(
     JSON.stringify({
@@ -204,3 +226,131 @@ it("ignores another pointer release and stops on capture loss without rollback",
   pointer(window, "pointermove", 140)
   expect(useProjectState.getState().workspace.scrollX).toBe(104)
 })
+
+function relativeMove(type: "pointermove" | "mousemove", dx: number, dy = 0) {
+  const event = new MouseEvent(type, { bubbles: true, clientX: 80, clientY: 10 })
+  Object.defineProperties(event, {
+    ...(type === "pointermove" ? { pointerId: { value: 1 } } : {}),
+    movementX: { value: dx },
+    movementY: { value: dy },
+  })
+  fireEvent(window, event)
+}
+
+it("accumulates native relative motion while the physical pointer stays fixed", () => {
+  cursor.native = true
+  cursor.relative = true
+  const { el } = mount()
+  pointer(el, "pointerdown", 80)
+  relativeMove("pointermove", 20)
+  relativeMove("pointermove", 20)
+  expect(useProjectState.getState().workspace.scrollX).toBe(104)
+  relativeMove("pointermove", 0, 20)
+  expect(useProjectState.getState().workspace.pxPerBar).toBeCloseTo(38.3984375)
+  pointer(window, "pointerup", 80)
+  expect(cursor.release).toHaveBeenCalledTimes(1)
+})
+
+it("uses browser locked mouse events without counting compatibility pointer events twice", () => {
+  cursor.relative = true
+  const { el } = mount()
+  pointer(el, "pointerdown", 80)
+  relativeMove("pointermove", 20)
+  relativeMove("mousemove", 20)
+  pointer(el, "lostpointercapture", 80)
+  relativeMove("mousemove", 20)
+  expect(useProjectState.getState().workspace.scrollX).toBe(104)
+  fireEvent.mouseUp(window, { button: 0 })
+  relativeMove("mousemove", 20)
+  expect(useProjectState.getState().workspace.scrollX).toBe(104)
+  expect(cursor.release).toHaveBeenCalledTimes(1)
+})
+
+it.each(["pointercancel", "blur", "unmount", "escape"])(
+  "releases its native lease on %s without rolling back",
+  end => {
+    cursor.native = true
+    cursor.relative = true
+    const { el, unmount } = mount()
+    pointer(el, "pointerdown", 80)
+    relativeMove("pointermove", 20)
+    if (end === "unmount") unmount()
+    else if (end === "escape") fireEvent.keyDown(window, { key: "Escape" })
+    else if (end === "blur") fireEvent(window, new Event("blur"))
+    else pointer(window, "pointercancel", 80)
+    relativeMove("pointermove", 20)
+    expect(useProjectState.getState().workspace.scrollX).toBe(84)
+    expect(cursor.release).toHaveBeenCalledTimes(1)
+  }
+)
+
+it("retains the edge resize projection with relative movement and a fixed client point", () => {
+  cursor.native = true
+  cursor.relative = true
+  const { el } = mount()
+  pointer(el, "pointerdown", 173)
+  relativeMove("pointermove", -50)
+  const p = useProjectState.getState().workspace
+  expect(Math.abs(p.scrollX - 2 * p.pxPerBar)).toBeLessThanOrEqual(0.5)
+  expect(p.pxPerBar).toBeGreaterThan(32)
+})
+
+it("releases an acquisition still awaiting its native acknowledgement when unmounted", () => {
+  cursor.native = true
+  cursor.relative = true
+  cursor.acquire.mockImplementation(() => ({
+    phase: "acquiring",
+    relative: true,
+    release: cursor.release,
+  }))
+  const { el, unmount } = mount()
+  pointer(el, "pointerdown", 80)
+  unmount()
+  expect(cursor.release).toHaveBeenCalledOnce()
+})
+
+it("keeps the left-edge opposite boundary and minimum frame clamp under unlimited relative travel", () => {
+  cursor.native = true
+  cursor.relative = true
+  const { el } = mount()
+  pointer(el, "pointerdown", 16)
+  relativeMove("pointermove", 1000)
+  const clamped = useProjectState.getState().workspace
+  expect(Math.abs(clamped.scrollX + 640 - 22 * clamped.pxPerBar)).toBeLessThanOrEqual(0.5)
+  expect(clamped.pxPerBar).toBeGreaterThan(32)
+  relativeMove("pointermove", 1000)
+  const continued = useProjectState.getState().workspace
+  expect(continued.pxPerBar).toBe(clamped.pxPerBar)
+})
+
+it.each([0.25, 0.5, 0.75])(
+  "restores the pointer at fraction %s inside the resized viewport frame",
+  fraction => {
+    cursor.native = true
+    cursor.relative = true
+    const geometry = () => ({
+      ...useProjectState.getState().workspace,
+      bars: 128,
+      viewportWidth: 640,
+      minPxPerBar: 639 / 128,
+      maxPxPerBar: gridZoomLimit(4, 4),
+      onNavigate: () => {},
+    })
+    const { el } = mount()
+    const before = minimapFrame(1000, geometry())
+    const downX = before.left + (before.right - before.left) * fraction
+    pointer(el, "pointerdown", downX)
+    relativeMove("pointermove", 0, 40)
+    const after = minimapFrame(1000, geometry())
+    expect(after.right - after.left).toBeLessThan(before.right - before.left)
+    const restore = cursor.acquire.mock.calls.at(-1)?.[4]
+    let restored: { x: number; y: number } | undefined
+    cursor.release.mockImplementationOnce(() => {
+      restored = restore()
+    })
+    pointer(window, "pointerup", downX)
+    expect(restored?.x).toBeCloseTo(after.left + fraction * (after.right - after.left))
+    expect(restored?.y).toBe(10)
+    expect(restored?.x).not.toBeCloseTo(fraction * 1000)
+  }
+)

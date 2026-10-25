@@ -148,7 +148,6 @@ const telemetrySchema = z
     ]),
     playing: z.boolean(),
     recording: z.boolean(),
-    levels: z.record(z.string(), z.tuple([finite, finite])),
   })
   .strict()
 const resultSchema = z.discriminatedUnion("kind", [
@@ -184,10 +183,37 @@ const noteResultSchema = z.discriminatedUnion("kind", [
     })
     .strict(),
 ])
+const recordingPreviewSchema = z
+  .object({
+    sessionId: z.string().min(1),
+    recordingId: z.string().min(1),
+    tracks: z.array(
+      z
+        .object({
+          trackId: z.string().min(1),
+          clipId: z.string().min(1),
+          startBar: finite.min(1),
+          durationBars: finite.nonnegative(),
+          channels: z.array(
+            z
+              .object({
+                min: z.array(finite).max(512),
+                max: z.array(finite).max(512),
+              })
+              .strict()
+              .refine(channel => channel.min.length === channel.max.length)
+          ),
+        })
+        .strict()
+    ),
+  })
+  .strict()
 const snapshotSchema = z
   .object({
     telemetry: telemetrySchema.nullable(),
     device: deviceSchema,
+    meterReady: z.boolean(),
+    recordingPreview: recordingPreviewSchema.nullable().optional(),
     issues: z.array(
       z
         .object({
@@ -307,6 +333,7 @@ const recordingResultsSchema = z
   })
 export type NativeRecording = z.infer<typeof recordingSchema>
 export type NativeRecordingResults = z.infer<typeof recordingResultsSchema>
+export type NativeRecordingPreview = z.infer<typeof recordingPreviewSchema>
 export type AudioDeviceInfo = z.infer<typeof deviceInfoSchema>
 export type AudioHost = z.infer<typeof hostSchema>
 export type AudioDeviceConfiguration = z.infer<typeof deviceConfigurationSchema>
@@ -488,9 +515,10 @@ export interface NativeAudioStatus {
   device: AudioDeviceSnapshot | null
   issues: PlaybackSnapshot["issues"]
   error: string | null
+  recordingPreview: NativeRecordingPreview | null
 }
 const audioState: { status: NativeAudioStatus } = {
-  status: { device: null, issues: [], error: null },
+  status: { device: null, issues: [], error: null, recordingPreview: null },
 }
 const statusListeners = new Set<() => void>()
 export const readNativeAudioStatus = () => audioState.status

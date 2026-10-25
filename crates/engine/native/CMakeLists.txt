@@ -12,9 +12,12 @@ add_library(zoeydaw_playback_analysis OBJECT analysis/waveform.cpp analysis/temp
 add_library(zoeydaw_playback_runtime OBJECT runtime/engine_session.cpp runtime/audio_configuration.cpp runtime/device_configuration.cpp runtime/meter_tap.cpp runtime/meter_bank.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/input_meter.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/meter_graph.cpp)
+target_sources(zoeydaw_playback_runtime PRIVATE runtime/meter_read.cpp)
+target_sources(zoeydaw_playback_runtime PRIVATE runtime/meter_registry.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/source_registry.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/builtin_device.cpp runtime/device_chain.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/midi_clips.cpp)
+target_sources(zoeydaw_playback_runtime PRIVATE runtime/audio_clips.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/input_monitor.cpp runtime/input_routing.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/recording.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/isolated_plugin_node.cpp runtime/isolated_plugin_binding.cpp)
@@ -28,8 +31,8 @@ target_compile_definitions(zoeydaw_playback PUBLIC
     JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0
     JUCE_MODAL_LOOPS_PERMITTED=1 JUCE_PLUGINHOST_AU=0 JUCE_PLUGINHOST_VST3=0
     JUCE_PLUGINHOST_LADSPA=0 JUCE_ASIO=0 JUCE_WASAPI=1
-    TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH=1 TRACKTION_ENABLE_TIMESTRETCH_RUBBERBAND=0
-    TRACKTION_ENABLE_TIMESTRETCH_ELASTIQUE=0 TRACKTION_LOG_DEVICES=0)
+    TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH=1 TRACKTION_ENABLE_TIMESTRETCH_SIGNALSMITH=1
+    TRACKTION_ENABLE_TIMESTRETCH_RUBBERBAND=0 TRACKTION_ENABLE_TIMESTRETCH_ELASTIQUE=0 TRACKTION_LOG_DEVICES=0)
 # JUCE module targets are INTERFACE targets: their source files become members of this archive.
 target_link_libraries(zoeydaw_playback PRIVATE tracktion::tracktion_engine
     tracktion::tracktion_graph tracktion::tracktion_core juce::juce_cryptography juce::juce_dsp)

@@ -43,6 +43,12 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+it("aligns the folder scan action with its setting label", () => {
+  const view = render(<PluginSettings />)
+  const action = view.getByRole("button")
+  expect(action.closest(".settings-row")?.querySelector("span")?.textContent).toBeTruthy()
+})
+
 it("does not let a late initial catalog overwrite a completed scan", async () => {
   const initial = deferred<PluginCatalogEntry[]>()
   vi.mocked(nativePlugins.entries).mockReturnValue(initial.promise)

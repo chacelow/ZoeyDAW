@@ -146,4 +146,43 @@
 - 对：保留单一 owner，按独立职责拆出局部 hook 和视图；跨 render 保留的可变记忆只在 commit 更新。Suspense 回归中旧范围为 140，正确提交范围为 135。React Doctor 的 300 行提示是检查入口，不是运行故障证明；剩余间接 cleanup 误报必须追到真实释放路径。
 - 见 [模块契约](docs/architecture/modules.md#状态与生命周期验收)、`useSongExtent.test.tsx` 和共享 UI 的 `test:shared` 回归。
 
+## 2026-10-24 播放线不能混用新时钟与旧视口
+
+- 错：Arrangement 遥测读取 Tracktion UI 位置缓存，seek 后的 200ms 抑制被当成真实播放位置；Follow 在绘制后更新视口，缩放会放大这一帧错位。telemetry admission 缺帧时还曾写回第 1 小节。
+- 对：播放用 pending seek 或已补偿延迟的 audible timeline，停止用精确 transport position。共享 scheduler 按 clock、update、paint 排序，Follow 与 painter 使用同帧采样。原生 hosted graph 回归不 pump UI timer，验证音频推进时遥测也推进；8,000 px/bar 的生产 renderer 场景中 Follow 横向抖动从 80.4px 降为 0px，不把 Gallery mock 测量当作 WKWebView 帧率保证。
+- 见 `transport_clock_tests.h`、`scheduler.test.ts` 与 [渲染边界](docs/architecture/rendering.md#主题与高频数据边界)。
+
+## 2026-10-24 可见报错要追到实际 producer
+
+- ResizeObserver 的 selected element 不是通知源证据。实测 `useCanvasPainters` 写旧像素 CSS 宽高会移除滚动条，让自己的 host 在回调内增宽/增高 11px；改为容器 CSS 尺寸加独立 backing store，保留同步重绘，不隐藏错误。
+- “后端通信失败”曾来自负源偏移被原生拒绝，以及前端允许非二次幂拍号分母。保留原生异常上下文，拍号控件、setter、reducer、快照与 native 接受同一集合。2026-10-24 用户更正 Audio resize 交互：左扩到源起点即夹紧，不再由新拖动生成负偏移；原生兼容读取已有带符号窗口。标题命中、实时夹紧、释放保留和 Undo 由 `hit-test.test.ts`、`clip-edits.test.ts` 与 `overwrite.test.ts` 覆盖。
+- 原生 lock 的 ACK 不代表底层 OS 成功。按 owner/token 隔离 acquiring、locked、releasing 和 released，覆盖早释放、失焦与卸载；实际屏幕边缘拖动与松手恢复仍需运行验收。
+- 见 `useCanvasPainters.test.tsx`、`cursor.test.ts`、native protocol/PCM 回归及 [渲染契约](docs/architecture/rendering.md)。
+
+## 2026-10-24 录音启动必须使用当前时间原点
+
+- 错：停止状态从第 2 小节 seek 到第 1 小节后，直接在旧 playback context 上启动录音。Tracktion 首输入回调按旧 stream 起点计算补偿，三轨各插入约 96000 帧静音，耗尽有界 writer 队列。
+- 对：仅停止状态进入录音前释放旧 context，再绑定输入并从当前请求位置启动。已有播放中的 punch-in 保留当前 context。`recording_tests.h` 覆盖后退、前进启动、播放中启录，以及相同或不同输入的三轨逐帧 PCM。
+- Hosted 测试设备复用 input/output buffer，后执行的设备观察回调会读到已覆盖的输出。物理索引计量测试显式将原始 PCM 送入既有 InputMeter；这不等于真实 CoreAudio 麦克风链路已验收。
+- 录音结果按 UUID map 遍历，不保证时间顺序。回归按启录时获得的 `recordingId` 找 take，不能按数组末项推测最新录音；前向 seek 与 punch-in 的精确 PCM 场景连续十次验证身份匹配。
+
+## 2026-10-25 自定义设备描述必须读取实际声道配置
+
+- 错：启用 Tracktion 自定义 `describeWaveDevices` 后，仍以 XML 布局控制输入启用。该路径先采用自定义描述并返回，XML 的启用标志被忽略；硬编码关闭输入导致界面可选但录音报 `No armed audio track has an enabled input`。追加而未清空描述还会产生重复输入。
+- 对：自定义描述直接使用确认的 mono/stereo 配置，替换旧描述，失败回滚恢复旧布局。停止状态打开工程恢复已保存输入，不请求新权限、不启动播放。原生回归覆盖启用、禁用、上下文重建和真实 PCM；无权限仍可打开工程并显示设备原因。
+- 缺失 `inputChannel` 的旧轨道必须在显示与 backend projection 使用同一默认值，重新选源保存启用声道；不能让界面显示 `1` 却发送 `null`。
+
+## 2026-10-25 电平消费代际与资源释放
+
+- 兴趣集合变化也会使在途快照失效；只改 registry、隐藏代际不足以阻止旧订阅帧重新显示。保持一个 invoke 在途，等待旧请求完成后再拉最新值。回归见 `meter-pull.test.ts`。
+- Store 的 stale 通知可能触发失败的绘制订阅者。先释放 Store 订阅再停止 Pull，保证卸载仍会关闭 native stream；错误采纳路径保留原始及通知异常，继续通知健康消费者。回归见 `meter-store.test.ts`、`meter-session.test.ts`。
+- 时钟探针属于 graph/device 和可见性代际，换图时废弃旧校准。停播结构替换可能尚无播放图；registry 和 clock 用 `null` 表达未就绪，Web 暂停 pull 并保留 stream，后续准备完成再恢复，不按错误字符串增加重试。BPM 已改为保留 Edit。相同 source 字段不重建兴趣，无兴趣让 scheduler 休眠，绘制预算取实际 DOM/Canvas 耗时。契约见 [实时同步设计](docs/research/realtime-sync-design.md)。
+
+## 2026-10-25 BPM 更新不能复制旧秒数
+
+- 播放中 120→180 BPM 曾把第 5.04 小节变成第 7 小节。替换 Edit 时复制了旧秒数，还读取滞后的 Transport UI 缓存；新 BPM 再把该秒数解释成另一音乐位置。
+- BPM 直接更新保留的 Edit tempo，由音频块边界保留拍点并采用新速度；不为改速 stop/seek/play。遥测必须用已处理 sync point 的时间和拍点解释 audible clock，不能把新 BPM 与旧块秒数混用。`transport_clock_tests.h` 覆盖逐块不回退与实际拍点推进，`clip_continuity_tests.h` 覆盖连续 BPM preview 的实际 PCM。
+- 前端旧速度外推可能略领先下一帧真实位置，直接替换会单帧回缩。显示交接保留该微小差值，再随真实速度收敛；seek 和循环回绕立即执行，原始时钟不改写。回归见 `backend/connection.test.ts`。
+- 恒定 DC 输出只能发现静音，无法发现重采样相位跳变。连续正弦回归覆盖 BPM 上下拖过 1× 及连续升速。Warp 改用按拍点实时 reader 保留拉伸状态；`re-pitch` 固定 SoundTouch 和 RateTransposer 的处理顺序，避免跨 1× 时转移内部缓冲。已有源循环与移调音高回归同时保留。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

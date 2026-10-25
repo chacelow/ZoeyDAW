@@ -17,6 +17,8 @@ pub(crate) struct Owner {
     audition_generation: AtomicU64,
     pub(crate) waveform_generation: AtomicU64,
     pub(crate) waveform_range_generation: AtomicU64,
+    pub(crate) meter_hub: Mutex<Option<Arc<crate::realtime::meter_hub::MeterHub>>>,
+    pub(crate) meter_streams: Mutex<crate::realtime::streams::MeterStreams>,
 }
 
 pub(crate) const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
@@ -264,6 +266,15 @@ pub async fn telemetry<D: MainThreadDispatcher>(&self, main: &D, lease_id: Strin
     self.invoke(main, "telemetry", json!({"leaseId": lease_id})).await
 }
 
+pub async fn meter_registry<D: MainThreadDispatcher>(&self, main: &D, lease_id: String, session_id: String) -> Result<Option<crate::realtime::native_reader::NativeMeterRegistry>, String> {
+    self.check_plugin_owner(&lease_id,&session_id)?;
+    let value=self.invoke(main,"meter_registry",json!({"leaseId":lease_id,"sessionId":session_id})).await?;
+    if value.is_null() { return Ok(None); }
+    let registry: crate::realtime::native_reader::NativeMeterRegistry=serde_json::from_value(value).map_err(|error|error.to_string())?;
+    registry.validate(&session_id)?;
+    Ok(Some(registry))
+}
+
 pub async fn recording_results<D: MainThreadDispatcher>(&self, main: &D, lease_id: String, session_id: String) -> Result<Value, String> {
     self.invoke(main, "recording_results", json!({"leaseId":lease_id,"sessionId":session_id})).await
 }
@@ -276,6 +287,10 @@ pub async fn recording_ack<D: MainThreadDispatcher>(&self, main: &D, lease_id: S
 pub async fn release<D: MainThreadDispatcher>(&self, main: &D, lease_id: String) -> Result<(), String> {
     self.owner.released_leases.lock().map_err(|_| "Playback lease lock poisoned")?.insert(lease_id.clone());
     self.owner.lease_stop_tokens.lock().map_err(|_| "Playback stop lock poisoned")?.remove(&lease_id);
+    self.close_meter_lease(&lease_id)?;
+    if self.owner.lease_stop_tokens.lock().map_err(|_| "Playback stop lock poisoned")?.is_empty() {
+        if let Some(hub)=self.owner.meter_hub.lock().map_err(|_| "Meter Hub owner lock poisoned")?.as_ref() { hub.clear()?; }
+    }
     self.invoke(main, "release", json!({"leaseId": lease_id})).await.map(|_| ())
 }
 

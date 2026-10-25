@@ -1,12 +1,10 @@
 import type { AudioClip } from "../types"
 
 export const AUDIO_WARP_MODES = [
-  "beats",
-  "tones",
-  "texture",
-  "repitch",
-  "complex",
-  "complex-pro",
+  "soundtouch",
+  "signalsmith",
+  "signalsmith-formant",
+  "re-pitch",
 ] as const
 
 export interface AudioClipSettings {
@@ -43,7 +41,7 @@ export function defaultAudioClipSettings(
 ): AudioClipSettings {
   return {
     warp: true,
-    warpMode: "beats",
+    warpMode: "soundtouch",
     sourceBpm: Number.isFinite(bpm) && bpm > 0 ? Math.min(999, bpm) : 120,
     transpose: 0,
     detune: 0,

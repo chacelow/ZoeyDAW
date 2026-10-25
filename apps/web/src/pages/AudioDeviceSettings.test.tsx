@@ -83,6 +83,15 @@ const snapshot: AudioDeviceSnapshot = {
   outputLatencyFrames: 240,
   error: null,
 }
+function acknowledged(request: AudioDeviceConfiguration): AudioDeviceSnapshot {
+  return {
+    ...(readNativeAudioStatus().device ?? snapshot),
+    configuration: request,
+    capabilities: capabilities(request),
+    inputDeviceId: request.inputDeviceId,
+    inputDeviceName: request.inputDeviceId === microphone.id ? microphone.name : null,
+  }
+}
 
 beforeEach(async () => {
   await initI18n(appLocales).changeLanguage("en-US")
@@ -94,13 +103,20 @@ beforeEach(async () => {
       disconnect() {}
     }
   )
-  publishNativeAudioStatus({ device: null, issues: [], error: null })
+  publishNativeAudioStatus({
+    device: null,
+    issues: [],
+    error: null,
+    recordingPreview: null,
+  })
   vi.spyOn(nativeAudio, "available").mockReturnValue(true)
   vi.spyOn(nativeAudio, "devices").mockResolvedValue(snapshot)
   vi.spyOn(nativeAudio, "deviceCapabilities").mockImplementation(async request =>
     capabilities(request)
   )
-  vi.spyOn(nativeAudio, "configureDevice").mockResolvedValue(snapshot)
+  vi.spyOn(nativeAudio, "configureDevice").mockImplementation(async request =>
+    acknowledged(request)
+  )
   vi.spyOn(nativeAudio, "openDeviceControlPanel").mockResolvedValue(snapshot)
 })
 afterEach(() => {
@@ -121,29 +137,51 @@ async function choose(view: RenderResult, control: string, item: string) {
 }
 async function ready(view: RenderResult) {
   await waitFor(() =>
-    expect(view.getByRole("button", { name: "Apply" }).hasAttribute("disabled")).toBe(false)
+    expect(
+      view.getByRole("button", { name: "Requested buffer size" }).hasAttribute("disabled")
+    ).toBe(false)
+  )
+}
+async function configured(times: number) {
+  await waitFor(() => expect(nativeAudio.configureDevice).toHaveBeenCalledTimes(times))
+  await waitFor(() =>
+    expect(readNativeAudioStatus().device?.configuration).toEqual(
+      vi.mocked(nativeAudio.configureDevice).mock.calls[times - 1]?.[0]
+    )
+  )
+  await waitFor(() =>
+    expect(
+      document.querySelector('[aria-label="Requested buffer size"]')?.hasAttribute("disabled")
+    ).toBe(false)
   )
 }
 
-it("uses only native-supported choices and keeps the draft out of global actual state", async () => {
+it("discovers on mount and opening a device selector without an Apply or Refresh action", async () => {
   const view = mount()
   await ready(view)
+  expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
+  expect(view.queryByRole("button", { name: "Apply" })).toBeNull()
+  expect(view.queryByRole("button", { name: "Refresh devices" })).toBeNull()
+  fireEvent.click(view.getByRole("button", { name: "Output device" }))
+  await waitFor(() => expect(nativeAudio.devices).toHaveBeenCalledTimes(2))
+  await ready(view)
+  expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
+  fireEvent.click(view.getByRole("button", { name: "Output device" }))
   fireEvent.click(view.getByRole("button", { name: "Requested buffer size" }))
   expect(view.getAllByRole("menuitem").map(item => item.textContent)).toEqual([
     "192 frames",
     "512 frames",
   ])
   fireEvent.click(view.getByRole("menuitem", { name: "192 frames" }))
-  expect(readNativeAudioStatus().device).toBe(snapshot)
-  expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
-  expect(view.getByText("Draft only — not applied to the audio engine")).toBeTruthy()
-  const actual = within(view.getByLabelText("Actual native configuration"))
-  expect(actual.getAllByText("512 frames")).toHaveLength(2)
+  await configured(1)
+  expect(nativeAudio.configureDevice).toHaveBeenCalledWith({ ...configuration, bufferFrames: 192 })
+  const actual = within(view.getByLabelText("Device status and latency"))
+  expect(actual.getByText("512 frames")).toBeTruthy()
+  expect(actual.queryByText("192 frames")).toBeNull()
   expect(actual.getAllByText("5.00 ms")).toHaveLength(2)
-  expect(view.queryByRole("button", { name: "Driver settings…" })).toBeNull()
 })
 
-it("ignores a late capability response after a newer device selection", async () => {
+it("ignores a late capability response for a superseded device", async () => {
   let resolveLate: (value: AudioDeviceCapabilities) => void = (_value: AudioDeviceCapabilities) => {
     throw new Error("No pending capability request")
   }
@@ -174,145 +212,209 @@ it("ignores a late capability response after a newer device selection", async ()
       defaultBufferFrames: 64,
     })
   )
-  expect(view.getByRole("button", { name: "Output device" }).textContent).toContain("E2")
   fireEvent.click(view.getByRole("button", { name: "Requested buffer size" }))
   expect(view.getAllByRole("menuitem").map(item => item.textContent)).toEqual([
     "192 frames",
     "512 frames",
   ])
-  expect(readNativeAudioStatus().device).toBe(snapshot)
   expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
 })
 
-it("applies the complete independent-device configuration with mono and stereo masks", async () => {
-  vi.mocked(nativeAudio.configureDevice).mockImplementation(async request => ({
-    ...snapshot,
-    configuration: request,
-    capabilities: capabilities(request),
-    inputDeviceId: microphone.id,
-    inputDeviceName: microphone.name,
-    inputChannels: 3,
-    inputLatencyFrames: 480,
-    outputChannels: 3,
-    sampleRate: 48000,
-    bufferFrames: 256,
-  }))
+it("fits changed-device capabilities before writing and only sends supported values", async () => {
+  vi.mocked(nativeAudio.deviceCapabilities).mockImplementation(async request =>
+    request.outputDeviceId === output.id
+      ? {
+          ...capabilities(request),
+          sampleRates: [44100],
+          bufferSizes: [64],
+          defaultSampleRate: 44100,
+          defaultBufferFrames: 64,
+        }
+      : capabilities(request)
+  )
+  const view = mount()
+  await ready(view)
+  await choose(view, "Output device", "Alt")
+  await configured(1)
+  expect(nativeAudio.configureDevice).toHaveBeenCalledWith({
+    ...configuration,
+    outputDeviceId: output.id,
+    sampleRate: 44100,
+    bufferFrames: 64,
+  })
+})
+
+it("applies input device and channel selections immediately", async () => {
   const view = mount()
   await ready(view)
   await choose(view, "Input device", "USB Mic")
-  await ready(view)
+  await configured(1)
   fireEvent.click(view.getByRole("button", { name: "Input Config…" }))
   const inputConfig = within(view.getByRole("group", { name: "Input Config…" }))
   fireEvent.click(inputConfig.getByRole("checkbox", { name: "3 · Mic C" }))
+  await configured(2)
   fireEvent.click(inputConfig.getByRole("checkbox", { name: "3/4 · Mic C / Mic D" }))
+  await configured(3)
   fireEvent.click(inputConfig.getByRole("checkbox", { name: "1/2 · Mic A / Mic B" }))
+  await configured(4)
+  expect(nativeAudio.configureDevice).toHaveBeenLastCalledWith({
+    ...configuration,
+    inputDeviceId: microphone.id,
+    inputMono: [2],
+    inputStereo: [2],
+  })
+})
+
+it("applies output mono and stereo masks immediately", async () => {
+  const view = mount()
+  await ready(view)
   fireEvent.click(view.getByRole("button", { name: "Output Config…" }))
   const outputConfig = within(view.getByRole("group", { name: "Output Config…" }))
   fireEvent.click(outputConfig.getByRole("checkbox", { name: "1 · Out A" }))
+  await configured(1)
   fireEvent.click(outputConfig.getByRole("checkbox", { name: "3/4 · Out C / Out D" }))
+  await configured(2)
   fireEvent.click(outputConfig.getByRole("checkbox", { name: "1/2 · Out A / Out B" }))
-  await choose(view, "Requested sample rate", "96,000 Hz")
-  await choose(view, "Requested buffer size", "192 frames")
-  expect(view.getByRole("note").textContent).toContain("interrupt other apps")
-  expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
-  fireEvent.click(view.getByRole("button", { name: "Apply" }))
-  await waitFor(() =>
-    expect(nativeAudio.configureDevice).toHaveBeenCalledWith({
-      host: "CoreAudio",
-      inputDeviceId: microphone.id,
-      outputDeviceId: input.id,
-      sampleRate: 96000,
-      bufferFrames: 192,
-      inputMono: [2],
-      inputStereo: [2],
-      outputMono: [0],
-      outputStereo: [2],
-    })
-  )
-  await view.findByText("Configuration acknowledged by the audio engine")
-  const actual = within(view.getByLabelText("Actual native configuration"))
-  expect(actual.getByText("48,000 Hz")).toBeTruthy()
-  expect(actual.getByText("96,000 Hz")).toBeTruthy()
-  expect(actual.getByText("256 frames")).toBeTruthy()
-  expect(actual.getByText("192 frames")).toBeTruthy()
-  expect(actual.getByText("15.00 ms")).toBeTruthy()
-  expect(readNativeAudioStatus().device?.bufferFrames).toBe(256)
+  await configured(3)
+  expect(nativeAudio.configureDevice).toHaveBeenLastCalledWith({
+    ...configuration,
+    outputMono: [0],
+    outputStereo: [2],
+  })
 })
 
-it("keeps native actual values and the editable draft when Apply fails", async () => {
-  vi.mocked(nativeAudio.configureDevice).mockRejectedValue(
+it("applies rate and buffer changes independently with no Apply action", async () => {
+  const view = mount()
+  await ready(view)
+  await choose(view, "Requested sample rate", "96,000 Hz")
+  await configured(1)
+  expect(view.getByRole("note").textContent).toContain("interrupt other apps")
+  await choose(view, "Requested buffer size", "192 frames")
+  await configured(2)
+  expect(nativeAudio.configureDevice).toHaveBeenLastCalledWith({
+    ...configuration,
+    sampleRate: 96000,
+    bufferFrames: 192,
+  })
+})
+
+it("rolls back a rejected request, reports the native error and permits retry", async () => {
+  vi.mocked(nativeAudio.configureDevice).mockRejectedValueOnce(
     new Error("Microphone permission pending; grant permission and retry")
   )
   const view = mount()
   await ready(view)
   await choose(view, "Requested buffer size", "192 frames")
-  fireEvent.click(view.getByRole("button", { name: "Apply" }))
   expect((await view.findByRole("alert")).textContent).toContain("Microphone permission pending")
   expect(readNativeAudioStatus().device).toBe(snapshot)
   expect(view.getByRole("button", { name: "Requested buffer size" }).textContent).toContain(
-    "192 frames"
+    "512 frames"
   )
-  expect(
-    within(view.getByLabelText("Actual native configuration")).getAllByText("512 frames")
-  ).toHaveLength(2)
-  expect(view.getByText("Ready")).toBeTruthy()
   await ready(view)
-  fireEvent.click(view.getByRole("button", { name: "Refresh devices" }))
-  await ready(view)
-  expect(view.getByRole("button", { name: "Requested buffer size" }).textContent).toContain(
-    "192 frames"
-  )
+  await choose(view, "Requested buffer size", "192 frames")
+  await configured(2)
+  expect(view.queryByRole("alert")).toBeNull()
 })
 
-it("requires an enabled output channel and shows the real driver panel only when supported", async () => {
+it("serializes configuration writes from overlapping settings views", async () => {
+  let releaseFirst: (value: AudioDeviceSnapshot) => void = (_value: AudioDeviceSnapshot) => {
+    throw new Error("No pending configuration")
+  }
+  const first = new Promise<AudioDeviceSnapshot>(resolve => {
+    releaseFirst = resolve
+  })
+  vi.mocked(nativeAudio.configureDevice)
+    .mockReturnValueOnce(first)
+    .mockImplementationOnce(async request => acknowledged(request))
+  const view = render(
+    <I18nProvider resources={appLocales}>
+      <AudioDeviceSettings />
+      <AudioDeviceSettings />
+    </I18nProvider>
+  )
+  await waitFor(() =>
+    expect(
+      view
+        .getAllByRole("button", { name: "Requested buffer size" })
+        .every(button => !button.hasAttribute("disabled"))
+    ).toBe(true)
+  )
+  fireEvent.click(view.getAllByRole("button", { name: "Requested buffer size" })[0])
+  fireEvent.click(view.getByRole("menuitem", { name: "192 frames" }))
+  await waitFor(() => expect(nativeAudio.configureDevice).toHaveBeenCalledTimes(1))
+  fireEvent.click(view.getAllByRole("button", { name: "Requested sample rate" })[1])
+  fireEvent.click(view.getByRole("menuitem", { name: "96,000 Hz" }))
+  expect(nativeAudio.configureDevice).toHaveBeenCalledTimes(1)
+  await act(async () => releaseFirst(acknowledged({ ...configuration, bufferFrames: 192 })))
+  await waitFor(() => expect(nativeAudio.configureDevice).toHaveBeenCalledTimes(2))
+  expect(nativeAudio.configureDevice).toHaveBeenNthCalledWith(2, {
+    ...configuration,
+    sampleRate: 96000,
+  })
+})
+
+it("does not send an invalid output mask and exposes a real driver panel only when supported", async () => {
   vi.mocked(nativeAudio.devices).mockResolvedValue({
     ...snapshot,
     capabilities: { ...snapshot.capabilities, controlPanel: true },
   })
   const view = mount()
   await ready(view)
-  fireEvent.click(view.getByRole("button", { name: "Driver settings…" }))
+  fireEvent.click(view.getByRole("button", { name: "Open…" }))
   await waitFor(() => expect(nativeAudio.openDeviceControlPanel).toHaveBeenCalledTimes(1))
   await ready(view)
   fireEvent.click(view.getByRole("button", { name: "Output Config…" }))
   fireEvent.click(view.getByRole("checkbox", { name: "1/2 · Out A / Out B" }))
-  expect(view.getByRole("button", { name: "Apply" }).hasAttribute("disabled")).toBe(true)
-  expect(
-    view.getByText("Enable at least one mono output channel or stereo output pair before applying.")
-  ).toBeTruthy()
+  expect(view.getByText(/Enable at least one mono output channel/)).toBeTruthy()
   expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
+  fireEvent.click(view.getByRole("checkbox", { name: "1 · Out A" }))
+  await configured(1)
+  expect(nativeAudio.configureDevice).toHaveBeenCalledWith({
+    ...configuration,
+    outputMono: [0],
+    outputStereo: [],
+  })
 })
 
-it.each([
-  ["refresh", "Refresh devices"],
-  ["apply", "Apply"],
-  ["panel", "Driver settings…"],
-])("ignores the late %s snapshot after the settings page unmounts", async (_operation, button) => {
-  vi.mocked(nativeAudio.devices).mockResolvedValue({
-    ...snapshot,
-    capabilities: { ...snapshot.capabilities, controlPanel: true },
-  })
-  const view = mount()
-  await ready(view)
-  const actual = readNativeAudioStatus().device
-  let resolveLate = (_value: AudioDeviceSnapshot): void => {
-    throw new Error("No pending device operation")
+it.each(["discovery", "configuration", "panel"])(
+  "ignores an unmounted %s reply without publishing",
+  async operation => {
+    vi.mocked(nativeAudio.devices).mockResolvedValue({
+      ...snapshot,
+      capabilities: { ...snapshot.capabilities, controlPanel: true },
+    })
+    const view = mount()
+    await ready(view)
+    const actual = readNativeAudioStatus().device
+    let resolveLate = (_value: AudioDeviceSnapshot): void => {
+      throw new Error("No pending device operation")
+    }
+    const late = new Promise<AudioDeviceSnapshot>(resolve => {
+      resolveLate = resolve
+    })
+    vi.mocked(nativeAudio.devices).mockReturnValue(late)
+    vi.mocked(nativeAudio.configureDevice).mockReturnValue(late)
+    vi.mocked(nativeAudio.openDeviceControlPanel).mockReturnValue(late)
+    if (operation === "discovery")
+      fireEvent.click(view.getByRole("button", { name: "Output device" }))
+    else if (operation === "panel") fireEvent.click(view.getByRole("button", { name: "Open…" }))
+    else await choose(view, "Requested buffer size", "192 frames")
+    await waitFor(() =>
+      expect(
+        operation === "discovery"
+          ? nativeAudio.devices
+          : operation === "panel"
+            ? nativeAudio.openDeviceControlPanel
+            : nativeAudio.configureDevice
+      ).toHaveBeenCalledTimes(operation === "discovery" ? 2 : 1)
+    )
+    view.unmount()
+    await act(async () => resolveLate({ ...snapshot, deviceName: "Late device" }))
+    expect(readNativeAudioStatus().device).toBe(actual)
   }
-  const late = new Promise<AudioDeviceSnapshot>(resolve => {
-    resolveLate = resolve
-  })
-  vi.mocked(nativeAudio.devices).mockReturnValue(late)
-  vi.mocked(nativeAudio.configureDevice).mockReturnValue(late)
-  vi.mocked(nativeAudio.openDeviceControlPanel).mockReturnValue(late)
+)
 
-  fireEvent.click(view.getByRole("button", { name: button }))
-  expect(view.getByRole("button", { name: "Refresh devices" }).hasAttribute("disabled")).toBe(true)
-  view.unmount()
-  await act(async () => resolveLate({ ...snapshot, deviceName: "Late device" }))
-  expect(readNativeAudioStatus().device).toBe(actual)
-})
-
-it("rejects capabilities belonging to a different device without applying the draft", async () => {
+it("rejects a mismatched capability response without writing a configuration", async () => {
   vi.mocked(nativeAudio.deviceCapabilities).mockResolvedValue({
     ...capabilities(configuration),
     outputDeviceId: output.id,
@@ -321,12 +423,11 @@ it("rejects capabilities belonging to a different device without applying the dr
   expect((await view.findByRole("alert")).textContent).toContain(
     "The driver returned capabilities for a different device"
   )
-  expect(view.getByRole("button", { name: "Apply" }).hasAttribute("disabled")).toBe(true)
   expect(readNativeAudioStatus().device).toBe(snapshot)
   expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
 })
 
-it("keeps coupled input choices tied to the output and clears input when the output lacks it", async () => {
+it("keeps coupled input choices tied to the output and clears input on output change", async () => {
   vi.mocked(nativeAudio.devices).mockResolvedValue({
     ...snapshot,
     hosts: snapshot.hosts.map(host => ({ ...host, separateInputOutput: false })),
@@ -336,18 +437,14 @@ it("keeps coupled input choices tied to the output and clears input when the out
   fireEvent.click(view.getByRole("button", { name: "Input device" }))
   expect(view.getAllByRole("menuitem").map(item => item.textContent)).toEqual(["No input", "E2"])
   fireEvent.click(view.getByRole("menuitem", { name: "E2" }))
+  await configured(1)
   await ready(view)
   await choose(view, "Output device", "Alt")
-  await ready(view)
+  await configured(2)
   expect(view.getByRole("button", { name: "Input device" }).textContent).toContain("No input")
-  fireEvent.click(view.getByRole("button", { name: "Apply" }))
-  await waitFor(() =>
-    expect(nativeAudio.configureDevice).toHaveBeenCalledWith({
-      ...configuration,
-      outputDeviceId: output.id,
-      inputDeviceId: null,
-      inputMono: [],
-      inputStereo: [],
-    })
-  )
+  expect(nativeAudio.configureDevice).toHaveBeenLastCalledWith({
+    ...configuration,
+    outputDeviceId: output.id,
+    inputDeviceId: null,
+  })
 })

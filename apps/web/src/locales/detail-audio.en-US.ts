@@ -50,11 +50,9 @@ export default {
   markerHelp:
     "Drag to adjust; arrow keys move one musical sixteenth. Shift moves a quarter-sixteenth. Escape cancels a drag.",
   modes: {
-    beats: "Beats",
-    tones: "Tones",
-    texture: "Texture",
-    repitch: "Re-Pitch",
-    complex: "Complex",
-    "complex-pro": "Complex Pro",
+    soundtouch: "SoundTouch",
+    signalsmith: "Signalsmith",
+    "signalsmith-formant": "Signalsmith · Formant Preservation",
+    "re-pitch": "Re-Pitch",
   },
 }

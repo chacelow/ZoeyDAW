@@ -14,6 +14,21 @@ html {
   font-size: 14px;
 }
 
+html body * {
+  user-select: none !important;
+}
+
+html body input,
+html body textarea,
+html body [contenteditable="true"],
+html body [contenteditable=""],
+html body [contenteditable="plaintext-only"],
+html body [contenteditable="true"] *,
+html body [contenteditable=""] *,
+html body [contenteditable="plaintext-only"] * {
+  user-select: text !important;
+}
+
 /* 让 Tailwind v4 扫到 vendored 包和应用源码 */
 @source "../../../packages/ui/src";
 @source "../src";

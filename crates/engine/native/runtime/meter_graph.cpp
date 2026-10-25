@@ -54,8 +54,12 @@ struct ObservedMeterOutput {
 
 class MeterOutputObserverNode final : public tracktion::graph::Node {
 public:
-    MeterOutputObserverNode(std::unique_ptr<Node> source, std::vector<ObservedMeterOutput> outputs)
-        : root(std::move(source)), observed(std::move(outputs)), inputs{root.get()} {
+    MeterOutputObserverNode(std::unique_ptr<Node> source, std::vector<ObservedMeterOutput> outputs,
+                            std::shared_ptr<MeterClockBank> clock,
+                            tracktion::engine::ProcessState* process,
+                            const std::atomic<std::uint64_t>* deviceSamples)
+        : root(std::move(source)), observed(std::move(outputs)), inputs{root.get()},
+          clock(std::move(clock)), timeline(process), deviceSamples(deviceSamples) {
         // These edges must exist before createNodeGraph counts consumers and enables in-place DSP.
         for (const auto& output : observed)
             if (std::find(inputs.begin(), inputs.end(), output.node) == inputs.end()) inputs.push_back(output.node);
@@ -96,11 +100,29 @@ private:
         setAudioOutput(root.get(), source.audio);
         if (exclusiveRoot) context.buffers.midi.swapWith(source.midi);
         else context.buffers.midi.clear();
+        if(clock && timeline && deviceSamples) {
+            const auto reference=context.referenceSampleRange.getStart();
+            const auto* sequence=timeline->getTempoSequence();
+            if(reference<0 || !sequence)return;
+            MeterClockObservation observation;
+            observation.referenceSample=static_cast<std::uint64_t>(reference);
+            observation.deviceSample=deviceSamples->load(std::memory_order_relaxed);
+            observation.timelineSample=timeline->playHeadState.playHead.referenceSamplePositionToTimelinePosition(reference);
+            observation.playing=timeline->playHeadState.playHead.isPlaying()?1u:0u;
+            observation.frames=context.numSamples;
+            tracktion::tempo::Sequence::Position position(*sequence);
+            position.set(tracktion::TimePosition::fromSamples(observation.timelineSample,timeline->sampleRate));
+            observation.timelineBeat=position.getPPQTime();observation.tempoBpm=position.getTempo();
+            clock->mailbox.publish(observation);
+        }
     }
     const std::unique_ptr<Node> root;
     const std::vector<ObservedMeterOutput> observed;
     std::vector<Node*> inputs;
     bool exclusiveRoot = false;
+    const std::shared_ptr<MeterClockBank> clock;
+    tracktion::engine::ProcessState* const timeline;
+    const std::atomic<std::uint64_t>* const deviceSamples;
 };
 
 void validateChannelSlots(int channels, std::uint32_t slots) {
@@ -116,9 +138,11 @@ MeterGraph::MeterGraph(MeterBankIdentity stamp, double rate) : identity(stamp), 
 std::unique_ptr<tracktion::graph::Node> MeterGraph::observeOutput(
     std::unique_ptr<tracktion::graph::Node> root,
     const std::map<tracktion::engine::Track*, MeterOutputIdentity>& identities,
-    const std::map<tracktion::engine::Plugin*, std::string>& devices) {
+    const std::map<tracktion::engine::Plugin*, std::string>& devices,
+    tracktion::engine::ProcessState* processState,
+    const std::atomic<std::uint64_t>* deviceSamples) {
     if (sealed) throw std::logic_error("Meter graph registry is sealed");
-    if (!root || (identities.empty() && devices.empty())) return root;
+    if (!root || (identities.empty() && devices.empty() && (!processState || !deviceSamples))) return root;
     using Node = tracktion::graph::Node;
     std::map<Node*, std::vector<Node*>> consumers;
     std::map<tracktion::engine::Track*, Node*> fences;
@@ -200,14 +224,17 @@ std::unique_ptr<tracktion::graph::Node> MeterGraph::observeOutput(
                              static_cast<std::uint16_t>(channels), std::move(bank)});
         nextSlot += static_cast<std::uint32_t>(channels);
     }
-    if (observations.empty()) return root;
+    if(observations.empty() && (!processState || !deviceSamples || clockWriterAssigned))return root;
     entries.reserve(entries.size() + additions.size());
     for (std::size_t index = 0; index < additions.size(); ++index) {
         observedOutputs.emplace(additions[index].endpointId, observations[index].node);
         entries.push_back(std::move(additions[index]));
     }
     slots = nextSlot;
-    return std::make_unique<MeterOutputObserverNode>(std::move(root), std::move(observations));
+    auto observedClock=processState && deviceSamples && !clockWriterAssigned?clock:nullptr;
+    if(observedClock)clockWriterAssigned=true;
+    return std::make_unique<MeterOutputObserverNode>(std::move(root), std::move(observations),
+                                                    std::move(observedClock),processState,deviceSamples);
 }
 std::unique_ptr<tracktion::graph::Node> MeterGraph::wrapOutput(std::unique_ptr<tracktion::graph::Node> node,
                                                               std::string endpointId, std::string ownerId,
@@ -231,7 +258,7 @@ void MeterGraph::seal() {
     sealed = true;
 }
 bool MeterGraph::canRetire() const noexcept {
-    return std::all_of(entries.begin(), entries.end(), [](const auto& entry) { return entry.bank.use_count() == 1; });
+    return clock.use_count()==1 && std::all_of(entries.begin(), entries.end(), [](const auto& entry) { return entry.bank.use_count() == 1; });
 }
 MeterGraphCollector::MeterGraphCollector(std::shared_ptr<const MeterGraph> state) : graph(std::move(state)) {
     if (!graph || !graph->sealed) throw std::logic_error("Meter graph registry is not sealed");
@@ -244,8 +271,10 @@ MeterGraphCollector::MeterGraphCollector(std::shared_ptr<const MeterGraph> state
     }
     cache.resize(count);
     received.resize(count, false);
+    requestedResetEpochs.resize(count,0);
 }
 void MeterGraphCollector::collect() {
+    const std::lock_guard lock(cacheMutex);
     for (std::size_t endpoint = 0; endpoint < readers.size(); ++endpoint) {
         const auto& entry = graph->endpoints()[endpoint];
         for (std::uint16_t channel = 0; channel < entry.channelCount; ++channel) {
@@ -261,5 +290,35 @@ const MeterPublication* MeterGraphCollector::latest(const std::string& endpointI
         return received[slot] ? &cache[slot] : nullptr;
     }
     return nullptr;
+}
+bool MeterGraphCollector::copyLatest(std::uint32_t slot, MeterPublication& result) {
+    const std::lock_guard lock(cacheMutex);
+    if(slot>=cache.size() || !received[slot])return false;
+    result=cache[slot];return true;
+}
+bool MeterGraphCollector::copyLatest(const std::string& endpointId,std::uint16_t channel,MeterPublication& result) {
+    for(const auto& entry:graph->endpoints())
+        if(entry.endpointId==endpointId && channel<entry.channelCount)return copyLatest(entry.firstSlot+channel,result);
+    return false;
+}
+bool MeterGraphCollector::requestReset(std::span<const std::uint32_t> slots,std::uint32_t epoch,MeterReset kind) {
+    if(epoch==0 || (kind!=MeterReset::hold && kind!=MeterReset::clip && kind!=MeterReset::all))return false;
+    for(std::size_t index=0;index<slots.size();++index) {
+        const auto slot=slots[index];
+        if(slot>=cache.size() || epoch<=requestedResetEpochs[slot])return false;
+        for(std::size_t prior=0;prior<index;++prior)if(slots[prior]==slot)return false;
+    }
+    for(const auto slot:slots) {
+        for(const auto& endpoint:graph->endpoints())if(slot>=endpoint.firstSlot && slot<endpoint.firstSlot+endpoint.channelCount) {
+            if(!endpoint.bank->tap(slot-endpoint.firstSlot)->requestReset(epoch,kind))return false;
+            requestedResetEpochs[slot]=epoch;
+            break;
+        }
+    }
+    return true;
+}
+bool MeterGraphCollector::readClock(MeterClockObservation& result) {
+    const std::lock_guard lock(cacheMutex);
+    return graph->clock->mailbox.readLatest(result);
 }
 }

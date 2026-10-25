@@ -10,12 +10,13 @@ import {
   layoutTrackRows,
   pinnedTopFor,
 } from "../layout"
-import type { AudioRingBuffer } from "../audio/ring-buffer"
+import type { PlayheadProjection } from "../audio/playhead-projection"
 import type { ArrangementScene } from "../scene"
 
 export interface PlayheadTokens {
   primary: string
   recording: string
+  insertion?: string
 }
 
 type PlayheadContext = Pick<
@@ -36,7 +37,7 @@ type PlayheadContext = Pick<
 export function paintPlayhead(
   context: PlayheadContext,
   scene: ArrangementScene,
-  ring: AudioRingBuffer,
+  ring: PlayheadProjection,
   tokens: PlayheadTokens
 ): void {
   const { viewport } = scene
@@ -65,10 +66,7 @@ export function paintPlayhead(
     context.lineTo(x, bottom)
     context.stroke()
   }
-  if (playing) {
-    drawLine(sample.bar, sample.recording ? tokens.recording : tokens.primary)
-    return
-  }
+  if (playing) drawLine(sample.bar, sample.recording ? tokens.recording : tokens.primary)
   if (insertionPoint?.trackId === undefined || insertionPoint.trackId === null) {
     return
   }
@@ -90,14 +88,14 @@ export function paintPlayhead(
     row.top + row.contentHeight
   )
   if (rowBottom > rowTop) {
-    context.strokeStyle = tokens.primary
+    context.strokeStyle = tokens.insertion ?? tokens.primary
     context.lineWidth = 1
     context.beginPath()
     context.moveTo(x, rowTop)
     context.lineTo(x, rowBottom)
     context.stroke()
   }
-  context.fillStyle = tokens.primary
+  context.fillStyle = tokens.insertion ?? tokens.primary
   context.beginPath()
   context.moveTo(x - 4, top - 7)
   context.lineTo(x + 4, top - 7)

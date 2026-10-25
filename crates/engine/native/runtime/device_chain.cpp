@@ -53,7 +53,7 @@ void EngineSession::updateDevices(Arrangement& arrangement,const Request& next,c
         }
         if(!old || old->enabled!=device.enabled || old->settings!=device.settings)
             static_cast<BuiltinDevice&>(*arrangement.devices.at(device.id)).configure(device);
-        if(!old || old->settings.index()!=device.settings.index() || !oldOwner || oldOwner->id!=track.id || oldOwner->automation!=track.automation) {
+        if(!old || old->settings.index()!=device.settings.index() || !oldOwner || oldOwner->id!=track.id || oldOwner->automation!=track.automation || (previous && next.bpm!=previous->bpm)) {
             auto& plugin=static_cast<BuiltinDevice&>(*arrangement.devices.at(device.id));
             for(auto* parameter:plugin.getAutomatableParameters())parameter->getCurve().clear(nullptr);
             std::uint32_t mask=0;

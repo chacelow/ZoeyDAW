@@ -19,6 +19,39 @@ const patternClip: PatternClip = {
 }
 
 describe("clip clipboard boundary", () => {
+  it("anchors range contents to selected empty lanes and leading silence without selected clip IDs", () => {
+    const audio = document.tracks.find(track => track.id === "3-audio")!.clips[0]
+    const midi = document.tracks.find(track => track.id === "trager")!.clips[0]
+    const tracks = document.tracks.map(track => ({
+      ...track,
+      clips:
+        track.id === "3-audio"
+          ? [{ ...audio, startBar: 5, lengthBars: 4, sourceOffsetBars: 2 }]
+          : track.id === "4-midi"
+            ? [{ ...midi, startBar: 7, lengthBars: 1 }]
+            : [],
+    }))
+    const range = {
+      startBar: 3,
+      endBar: 11,
+      trackIds: ["4-midi", "3-audio", "trager", "sidechain", "drums-group"],
+    }
+    const encoded = collectClips(tracks, [], range)
+    const parsed = parseClipClipboard(JSON.stringify(encoded))
+    expect(parsed?.items.map(item => [item.trackOffset, item.barOffset])).toEqual([
+      [2, 2],
+      [3, 4],
+    ])
+    expect(parsed?.items[0].clip).toMatchObject({ startBar: 5, lengthBars: 4, sourceOffsetBars: 2 })
+    expect(parsed?.range).toEqual({ lengthBars: 8, trackCount: 4 })
+    expect(
+      parseClipClipboard(JSON.stringify({ ...encoded, range: { lengthBars: 3, trackCount: 4 } }))
+    ).toBeNull()
+    expect(
+      parseClipClipboard(JSON.stringify({ ...encoded, range: { lengthBars: 8, trackCount: 3 } }))
+    ).toBeNull()
+    expect(collectClips(tracks, [audio.id], { ...range, endBar: range.startBar })).toBeNull()
+  })
   it("retains multi-lane spacing and trimmed source data through serialization", () => {
     const audio = document.tracks.find(track => track.id === "3-audio")
     const midi = document.tracks.find(track => track.id === "4-midi")

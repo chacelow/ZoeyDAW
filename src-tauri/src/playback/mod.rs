@@ -1,4 +1,5 @@
 pub mod realtime_probe;
+pub mod realtime_stream;
 pub mod plugin_devices;
 pub mod plugin_seed;
 pub mod plugin_controls;

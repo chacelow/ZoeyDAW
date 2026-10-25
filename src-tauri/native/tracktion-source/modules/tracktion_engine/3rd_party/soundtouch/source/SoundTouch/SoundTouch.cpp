@@ -86,11 +86,11 @@ extern "C" void soundtouch_ac_test()
 }
 
 
-SoundTouch::SoundTouch()
+SoundTouch::SoundTouch(bool fixedOrder) : fixedProcessingOrder(fixedOrder)
 {
     // Initialize rate transposer and tempo changer instances
 
-    pRateTransposer = new RateTransposer();
+    pRateTransposer = new RateTransposer(fixedOrder);
     pTDStretch = TDStretch::newInstance();
 
     setOutPipe(pTDStretch);
@@ -227,7 +227,7 @@ void SoundTouch::calcEffectiveRateAndTempo()
     if (!TEST_FLOAT_EQUAL(tempo, oldTempo)) pTDStretch->setTempo(tempo);
 
 #ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
-    if (rate <= 1.0f)
+    if (!fixedProcessingOrder && rate <= 1.0f)
     {
         if (output != pTDStretch)
         {
@@ -290,7 +290,7 @@ void SoundTouch::putSamples(const SAMPLETYPE *samples, uint nSamples)
     samplesExpectedOut += (double)nSamples / ((double)rate * (double)tempo);
 
 #ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
-    if (rate <= 1.0f)
+    if (!fixedProcessingOrder && rate <= 1.0f)
     {
         // transpose the rate down, output the transposed sound to tempo changer buffer
         assert(output == pTDStretch);
@@ -429,7 +429,7 @@ int SoundTouch::getSetting(int settingId) const
             int size = pTDStretch->getInputSampleReq();
 
 #ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
-            if (rate <= 1.0)
+            if (!fixedProcessingOrder && rate <= 1.0)
             {
                 // transposing done before timestretch, which impacts latency
                 return (int)(size * rate + 0.5);
@@ -442,7 +442,7 @@ int SoundTouch::getSetting(int settingId) const
         {
             int size = pTDStretch->getOutputBatchSize();
 
-            if (rate > 1.0)
+            if (fixedProcessingOrder || rate > 1.0)
             {
                 // transposing done after timestretch, which impacts latency
                 return (int)(size / rate + 0.5);
@@ -456,7 +456,7 @@ int SoundTouch::getSetting(int settingId) const
             int latency_tr = pRateTransposer->getLatency();
 
 #ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
-            if (rate <= 1.0)
+            if (!fixedProcessingOrder && rate <= 1.0)
             {
                 // transposing done before timestretch, which impacts latency
                 latency = (latency + latency_tr) * rate;

@@ -249,7 +249,7 @@ function isDocument(v: unknown): v is DocumentState {
     v.transport.numerator < 1 ||
     v.transport.numerator > 32 ||
     !number(v.transport.denominator) ||
-    !Number.isInteger(v.transport.denominator) ||
+    !Number.isInteger(Math.log2(v.transport.denominator)) ||
     v.transport.denominator < 1 ||
     v.transport.denominator > 32 ||
     !text(v.transport.barLength) ||
@@ -527,6 +527,39 @@ function migrateLegacyPatterns(value: unknown): unknown {
   return { ...value, tracks, patterns }
 }
 
+function migrateLegacyWarpModes(value: unknown): unknown {
+  if (!record(value) || !Array.isArray(value.tracks)) return value
+  return {
+    ...value,
+    tracks: value.tracks.map(track => {
+      if (!record(track) || !Array.isArray(track.clips)) return track
+      return {
+        ...track,
+        clips: track.clips.map(clip => {
+          if (!record(clip) || clip.kind !== "audio" || !record(clip.audioSettings)) return clip
+          const mode = clip.audioSettings.warpMode
+          if (
+            mode !== "beats" &&
+            mode !== "tones" &&
+            mode !== "texture" &&
+            mode !== "complex" &&
+            mode !== "complex-pro" &&
+            mode !== "repitch"
+          )
+            return clip
+          return {
+            ...clip,
+            audioSettings: {
+              ...clip.audioSettings,
+              warpMode: mode === "repitch" ? "re-pitch" : "soundtouch",
+            },
+          }
+        }),
+      }
+    }),
+  }
+}
+
 function migrateLegacyDocument(value: unknown): unknown {
   if (!record(value) || !Array.isArray(value.tracks)) return value
   const media: MediaSource[] = []
@@ -567,7 +600,8 @@ export function parseProject(json: string): { document: DocumentState; workspace
     payload.version === 1 || payload.version === 2
       ? migrateLegacyDocument(payload.document)
       : payload.document
-  const document_ = payload.version === 4 ? legacyDocument : migrateLegacyPatterns(legacyDocument)
+  const migrated = payload.version === 4 ? legacyDocument : migrateLegacyPatterns(legacyDocument)
+  const document_ = migrateLegacyWarpModes(migrated)
   if (!isDocument(document_)) throw new Error("Invalid or unsupported project snapshot")
   const rawWorkspace = payload.workspace
   let workspacePayload: unknown = rawWorkspace

@@ -1,5 +1,5 @@
 import { useTranslation } from "@zoeymind/i18n"
-import { Button, Separator } from "@zoeymind/ui"
+import { Button } from "@zoeymind/ui"
 import { ActualDeviceConfiguration } from "./AudioDeviceSettings/ActualDeviceConfiguration"
 import { DeviceChannels } from "./AudioDeviceSettings/ChannelConfiguration"
 import { DeviceSelectors } from "./AudioDeviceSettings/DeviceSelectors"
@@ -15,17 +15,14 @@ export function AudioDeviceSettings() {
     busy,
     operation,
     draft,
-    setDraft,
+    changeConfiguration,
     preview,
     capabilities,
     choices,
-    canApply,
     configurationChanged,
     message,
-    refresh,
-    changeDevices,
+    discover,
     openControlPanel,
-    apply,
   } = useAudioDeviceSettings()
 
   if (!available)
@@ -37,66 +34,70 @@ export function AudioDeviceSettings() {
 
   return (
     <section className="flex min-w-0 flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">{t("audioSettings.requested")}</h3>
-        <Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>
-          {t("audioSettings.refresh")}
-        </Button>
-      </div>
-      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+      <h3 className="settings-section-title">{t("audioSettings.deviceSection")}</h3>
+      <div className="flex min-w-0 flex-col gap-3">
         <DeviceSelectors
           draft={draft}
           device={device}
           choices={choices}
           busy={busy}
-          onChange={changeDevices}
+          onChange={changeConfiguration}
+          onDiscover={() => void discover()}
         />
+        <DeviceChannels
+          draft={draft}
+          capabilities={capabilities}
+          busy={busy}
+          onChange={changeConfiguration}
+        />
+      </div>
+      <h3 className="settings-section-title">{t("audioSettings.sampleSection")}</h3>
+      <div className="flex min-w-0 flex-col gap-3">
         <SampleBufferSelectors
           draft={draft}
           capabilities={capabilities}
           busy={busy}
-          onChange={setDraft}
+          onChange={changeConfiguration}
         />
       </div>
-      {!choices.separateInputOutput && (
-        <p className="text-muted-foreground text-xs">{t("audioSettings.coupledDevices")}</p>
-      )}
       {preview.kind === "loading" && (
         <p role="status" className="text-muted-foreground text-xs">
           {t("audioSettings.loadingCapabilities")}
         </p>
       )}
-      <DeviceChannels draft={draft} capabilities={capabilities} busy={busy} onChange={setDraft} />
       {draft && device && device.sampleRate > 0 && draft.sampleRate !== device.sampleRate && (
         <p role="note" className="text-muted-foreground text-xs">
           {t("audioSettings.sampleRateWarning")}
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button size="sm" disabled={!canApply} onClick={() => void apply()}>
-          {t(operation === "applying" ? "audioSettings.applying" : "audioSettings.apply")}
-        </Button>
+      {(!draft || operation === "applying" || (configurationChanged && !message)) && (
         <span role="status" className="text-muted-foreground text-xs">
           {t(
             !draft
               ? "audioSettings.noConfiguration"
-              : configurationChanged
-                ? "audioSettings.unsaved"
-                : "audioSettings.applied"
+              : operation === "applying"
+                ? "audioSettings.applying"
+                : "audioSettings.awaitingConfiguration"
           )}
         </span>
-      </div>
-      <Separator />
-      <ActualDeviceConfiguration device={device} />
-      {device?.state === "ready" && device.capabilities.controlPanel && (
-        <Button variant="outline" size="sm" disabled={busy} onClick={() => void openControlPanel()}>
-          {t("audioSettings.driverPanel")}
-        </Button>
       )}
-      <p className="text-muted-foreground text-xs">{t("audioSettings.latencyScope")}</p>
-      <p className="text-muted-foreground text-xs">{t("audioSettings.deviceScope")}</p>
-      <p className="text-muted-foreground text-xs">{t("audioSettings.inputScope")}</p>
-      <p className="text-muted-foreground text-xs">{t("audioSettings.processing")}</p>
+      <h3 className="settings-section-title">{t("audioSettings.latencySection")}</h3>
+      <ActualDeviceConfiguration device={device} draft={draft} />
+      {device?.state === "ready" && device.capabilities.controlPanel && (
+        <div className="settings-row">
+          <span>{t("audioSettings.driverPanel")}</span>
+          <div className="min-w-0">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => void openControlPanel()}
+            >
+              {t("audioSettings.openDriverPanel")}
+            </Button>
+          </div>
+        </div>
+      )}
       {message && (
         <p role="alert" className="text-destructive text-sm break-words">
           {message}

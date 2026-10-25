@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { projectActions, projectFiles, useProjectState } from "@/pages/project/adapters"
+import { browserLibrary } from "@/pages/project/adapters/browser"
 import { isEditableTarget } from "../Grid/geometry"
 import { arrangementScene } from "../canvas/scene"
 import { noteKeys } from "./useMidiKeyboard"
@@ -31,7 +32,7 @@ export function useArrangementKeyboard({
         ) {
           focused.blur()
         }
-        projectActions.togglePlay()
+        if (!browserLibrary.interruptAudition()) projectActions.togglePlay()
       }
     }
     function keyDown(event: KeyboardEvent) {

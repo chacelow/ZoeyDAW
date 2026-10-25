@@ -2,6 +2,7 @@ import { useTranslation } from "@zoeymind/i18n"
 import { DropdownButton } from "@zoeymind/ui"
 import { projectActions } from "@/pages/project/adapters"
 import { withRouteMeters } from "./RouteMeter"
+import { ProjectMeter } from "@/pages/project/components/ProjectMeter"
 import { midiChannelOptions, outputChannelValue } from "./options"
 import type { RouteOption } from "./options"
 import type { Track } from "@zoeydaw/project-core/types"
@@ -40,7 +41,9 @@ export function TrackOutputRow({
       label={`${t("arrangement.output")} ${track.name}`}
       value={track.output}
       onChange={output => projectActions.updateTrack(track.id, { output })}
-      items={withRouteMeters(outputs, track.id)}
+      items={withRouteMeters(outputs, id =>
+        id === "none" || id === "external" ? { kind: "silent" } : { kind: "track", trackId: id }
+      )}
       className="w-full min-w-0"
     />
   )
@@ -60,7 +63,14 @@ export function MainOutputRow({
       label={`${t("arrangement.output")} ${track.name}`}
       value={track.outputChannel ?? "1-2"}
       onChange={outputChannel => projectActions.updateTrack(track.id, { outputChannel })}
-      items={track.collapsed ? hardwareChannels : withRouteMeters(hardwareChannels, track.id)}
+      items={
+        track.collapsed
+          ? hardwareChannels
+          : withRouteMeters(hardwareChannels, () => ({ kind: "track", trackId: track.id }))
+      }
+      icon={
+        track.collapsed ? <ProjectMeter source={{ kind: "track", trackId: track.id }} /> : undefined
+      }
       className="w-full min-w-0"
     />
   )

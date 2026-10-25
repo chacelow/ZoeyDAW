@@ -1,12 +1,11 @@
 #include "engine_session.h"
-#include "realtime_snapshot.h"
+#include "audio_clips.h"
 #include "builtin_device.h"
 #include "isolated_device_plugin.h"
-#include "input_monitor.h"
 #include <tracktion_graph/tracktion_graph.h>
-#include <tracktion_engine/playback/graph/tracktion_EditNodeBuilder.h>
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <chrono>
 #include <cstring>
 #include <limits>
@@ -34,6 +33,7 @@ private:
 class Behaviour final : public te::EngineBehaviour {
 public:
     std::function<void(te::Edit&,te::CreateNodeParams&)> configureGraph;
+    bool muteTrackContentsWhilstRecording() override { return true; }
     std::function<juce::File(te::Track&,const juce::String&)> recordingPath;
     juce::File getFileForNewAudioRecording(te::Track& track,const juce::String& extension) override {
         require(static_cast<bool>(recordingPath),"Recording path owner missing");return recordingPath(track,extension);
@@ -44,63 +44,15 @@ public:
     bool autoInitialiseDeviceManager() override { return false; }
     bool shouldOpenAudioInputByDefault() override { return false; }
     bool isDescriptionOfWaveDevicesSupported() override { return true; }
+    std::optional<AudioConfiguration> waveLayout;
     void describeWaveDevices(std::vector<te::WaveDeviceDescription>& descriptions,juce::AudioIODevice& device,bool input) override {
         const int count=(input?device.getInputChannelNames():device.getOutputChannelNames()).size();
-        for(int channel=0;channel<count;++channel)descriptions.emplace_back(juce::String(channel+1),te::ChannelConfiguration::mono(channel),false);
-        for(int channel=0;channel+1<count;channel+=2)descriptions.emplace_back(juce::String(channel+1)+"-"+juce::String(channel+2),te::ChannelConfiguration::stereo(channel),!input && channel==0);
+        descriptions.clear();
+        const auto* mono=waveLayout?(input?&waveLayout->inputMono:&waveLayout->outputMono):nullptr;
+        const auto* stereo=waveLayout?(input?&waveLayout->inputStereo:&waveLayout->outputStereo):nullptr;
+        for(int channel=0;channel<count;++channel)descriptions.emplace_back(juce::String(channel+1),te::ChannelConfiguration::mono(channel),mono && std::find(mono->begin(),mono->end(),channel)!=mono->end());
+        for(int channel=0;channel+1<count;channel+=2)descriptions.emplace_back(juce::String(channel+1)+"-"+juce::String(channel+2),te::ChannelConfiguration::stereo(channel),stereo?std::find(stereo->begin(),stereo->end(),channel)!=stereo->end():!input && channel==0);
     }
-};
-class Envelope final : public te::Plugin {
-public:
-    explicit Envelope(te::PluginCreationInfo info):Plugin(info) {}
-    void configure(const Clip& c,const Request& r) {
-        Parameters next;
-        next.window={r.barTime(c.start),c.length,c.offset,c.settings.markerStart,c.settings.markerEnd,r.secondsPerBar(),r.quartersPerBar*60/c.settings.sourceBpm,c.settings.warp?r.bpm/c.settings.sourceBpm:1,c.settings.loop};
-        next.fade={c.fadeIn,c.fadeOut,c.fadeInOffset,c.fadeOutOffset,c.fadeInCurve,c.fadeOutCurve,c.fadeInPosition,c.fadeOutPosition};
-        parameters.publish(next);
-    }
-    juce::String getName() const override { return "Source window and fades"; }
-    juce::String getSelectableDescription() override { return getName(); }
-    juce::String getPluginType() override { return "zoeydaw-source-envelope"; }
-    BusLayout getBusses() const override { return BusLayout::singlePassThrough(); }
-    int getNumOutputChannelsGivenInputs(int n) override { return n; }
-    void initialise(const te::PluginInitialisationInfo& i) override { rate=i.sampleRate; }
-    void deinitialise() override {}
-    void applyToBuffer(const te::PluginRenderContext& rc) override {
-        if(!rc.destBuffer)return;
-        parameters.readLatest(current);
-        const auto& window=current.window;
-        const auto& fade=current.fade;
-        double t=rc.editTime.getStart().inSeconds()-window.start;
-        for(int i=0;i<rc.bufferNumSamples;++i,t+=1/rate) {
-            const double bar=t/window.barSeconds;
-            double gain=1;
-            if(fade.fadeIn>0)gain*=shape((bar-fade.fadeInOffset)/fade.fadeIn,fade.fadeInPosition,fade.fadeInCurve);
-            if(fade.fadeOut>0)gain*=1-shape((bar-(window.length-fade.fadeOutOffset-fade.fadeOut))/fade.fadeOut,fade.fadeOutPosition,fade.fadeOutCurve);
-            if(!window.loop) {
-                double source=std::max(window.offset,window.markerStart)*window.sourceBarSeconds+t*window.ratio;
-                if(source<window.markerStart*window.sourceBarSeconds || source>=window.markerEnd*window.sourceBarSeconds)gain=0;
-            }
-            for(int ch=0;ch<rc.destBuffer->getNumChannels();++ch)rc.destBuffer->getWritePointer(ch)[rc.bufferStartSample+i]*=(float)gain;
-        }
-    }
-private:
-    static double shape(double x,double position,double bend) noexcept {
-        x=std::clamp(x,0.0,1.0); const double y=.5+std::clamp(bend,-1.0,1.0)*.4;
-        const double p=std::clamp(position,.1,.9), ratio=p/(1-p), w=ratio*ratio*(1-y)/y;
-        return x*x/(x*x+w*(1-x)*(1-x));
-    }
-    struct SourceWindow {
-        double start=0,length=0,offset=0,markerStart=0,markerEnd=0,barSeconds=1,sourceBarSeconds=1,ratio=1;
-        bool loop=false;
-    };
-    struct Fades {
-        double fadeIn=0,fadeOut=0,fadeInOffset=0,fadeOutOffset=0,fadeInCurve=0,fadeOutCurve=0,fadeInPosition=.5,fadeOutPosition=.5;
-    };
-    struct Parameters { SourceWindow window; Fades fade; };
-    RealtimeSnapshot<Parameters> parameters;
-    Parameters current;
-    double rate=48000;
 };
 class CapturePlugin final : public te::Plugin {
 public:
@@ -223,40 +175,19 @@ void DeviceClock::audioDeviceIOCallbackWithContext(const float* const* inputs,in
     }
     lastTick=now;frames.fetch_add((uint64_t)count,std::memory_order_relaxed);callbacks.fetch_add(1,std::memory_order_relaxed);
 }
-void EngineSession::Arrangement::observeSourceRender(te::AudioClipBase& clip) {
-    auto job=edit->engine.getRenderManager().getRenderJobWithoutCreating(clip.getPlaybackFile());
-    if(job && std::none_of(sourceRenders.begin(),sourceRenders.end(),[&](const auto& existing){return existing.get()==job.get();})) {
-        if(!sourceRenderInhibitor)sourceRenderInhibitor=std::make_unique<te::TransportControl::ReallocationInhibitor>(edit->getTransport());
-        sourceRenders.push_back(job);job->addListener(this);
-    }
-}
-void EngineSession::Arrangement::releaseUnusedSourceRenders() {
-    std::erase_if(sourceRenders,[&](const auto& job) {
-        if(std::any_of(audioClips.begin(),audioClips.end(),[&](const auto& entry){return entry.second->getPlaybackFile()==job->proxy;}))return false;
-        job->removeListener(this);
-        return true;
-    });
-    if(sourceRenders.empty())sourceRenderInhibitor.reset();
-}
-void EngineSession::Arrangement::jobFinished(te::RenderManager::Job& job,bool completed) {
-    const bool used=std::any_of(audioClips.begin(),audioClips.end(),[&](const auto& entry){return entry.second->getPlaybackFile()==job.proxy;});
-    job.removeListener(this);
-    std::erase_if(sourceRenders,[&](const auto& existing){return existing.get()==&job;});
-    if(sourceRenders.empty())sourceRenderInhibitor.reset();
-    if(!used)return;
-    if(completed)edit->restartPlayback();
-    else issues.add(issue("source-render-failed","Native source rendering failed; affected clips are silent"));
-}
 EngineSession::Arrangement::~Arrangement() {
     for(auto& job:sourceRenders)job->removeListener(this);
     if(edit)edit->getTransport().stop(false,true);
+}
+void EngineSession::setWaveDeviceLayout(const std::optional<AudioConfiguration>& config) {
+    static_cast<Behaviour&>(engine.getEngineBehaviour()).waveLayout=config;
 }
 EngineSession::EngineSession():engine(std::make_unique<Storage>(),std::make_unique<te::UIBehaviour>(),std::make_unique<Behaviour>()) {
     require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Playback owner must be created on the main thread");
     static_cast<Behaviour&>(engine.getEngineBehaviour()).configureGraph=[this](te::Edit& edit,te::CreateNodeParams& params) { configureMeterGraph(edit,params); };
     static_cast<Behaviour&>(engine.getEngineBehaviour()).recordingPath=[this](te::Track& track,const juce::String& extension) { return recordingFile(track,extension); };
     auto& plugins=engine.getPluginManager();
-    plugins.registerBuiltInType(std::make_unique<PluginFactory>("zoeydaw-source-envelope",[](te::PluginCreationInfo info) { return te::Plugin::Ptr(new Envelope(info)); }));
+    plugins.registerBuiltInType(std::make_unique<PluginFactory>("zoeydaw-source-envelope",createSourceEnvelope));
     plugins.registerBuiltInType(std::make_unique<PluginFactory>("zoeydaw-playback-fence",[this](te::PluginCreationInfo info) {
         const bool audition=(bool)info.state["audition"];
         return te::Plugin::Ptr(new SafetyGate(info,audition?auditionGeneration:stopToken,audition?nullptr:&arrangementEpoch,(uint64_t)(juce::int64)info.state["generation"],audition?nullptr:&arrangementAudible,audition?nullptr:&monitoringAudible,gateProcessedFrames,gateClearedFrames));
@@ -366,70 +297,6 @@ double EngineSession::previewPositionSeconds() const {
         return context->getPosition().inSeconds();
     }
     return transport.getPosition().inSeconds();
-}
-void EngineSession::configureMeterGraph(te::Edit& edit,te::CreateNodeParams& params) {
-    configureIsolatedDeviceGraph(params);
-    if(!arrangement || arrangement->edit.get()!=&edit)return;
-    params.includeLegacyLevelMeters=false;
-    params.wrapLiveInput=[state=arrangement->inputState,tracks=arrangement->tracks](te::AudioTrack& track,te::InputDeviceInstance& input,const te::CreateNodeParams& build,std::unique_ptr<te::graph::Node> node)->std::unique_ptr<te::graph::Node> {
-        if(input.owner.isMidi() || input.owner.isTrackDevice())return {};
-        const auto found=std::find_if(state.tracks.begin(),state.tracks.end(),[&](const Track& item){const auto native=tracks.find(item.id);return native!=tracks.end() && native->second==&track;});
-        if(found==state.tracks.end())return {};
-        return createInputMonitorNode(std::move(node),*found,state,build.processState);
-    };
-    require(meterGeneration<std::numeric_limits<std::uint32_t>::max(),"Meter graph generation exhausted");
-    const auto generation=++meterGeneration;
-    auto graph=std::make_shared<MeterGraph>(MeterBankIdentity{clock.inputMeter.deviceEpoch(),generation,generation},params.sampleRate);
-    auto collector=std::make_shared<std::unique_ptr<MeterGraphCollector>>();
-    std::map<te::Plugin*,std::string> deviceIdentities;
-    for(const auto& [id,plugin]:arrangement->devices)deviceIdentities.emplace(plugin.get(),id.toStdString());
-    params.insertOptionalLastStageNodeForDevice=[graph,outputs=arrangement->meterOutputs,deviceIdentities=std::move(deviceIdentities),previous=std::move(params.insertOptionalLastStageNodeForDevice)](te::OutputDevice& device,const te::CreateNodeParams& build,std::unique_ptr<te::graph::Node> node) {
-        if(previous)node=previous(device,build,std::move(node));
-        return graph->observeOutput(std::move(node),outputs,deviceIdentities);
-    };
-    params.graphBuilt=[this,graph,collector] {
-        graph->seal();
-        *collector=std::make_unique<MeterGraphCollector>(graph);
-        retainedMeterGraphs.push_back(graph);
-    };
-    params.graphPosted=[this,graph,collector,owner=arrangement.get()] {
-        owner->meterGraph=graph;
-        owner->meterCollector=std::move(*collector);
-        retireMeterGraphs();
-    };
-}
-void EngineSession::retireMeterGraphs() {
-    std::erase_if(retainedMeterGraphs,[](const auto& graph) { return graph->canRetire(); });
-}
-void EngineSession::insertAudioClip(Arrangement& a,te::AudioTrack& track,const Track& t,const Clip& c,const Request& r) {
-    auto source=r.sources.find(c.source);
-    if(source==r.sources.end() || !source->second.file.existsAsFile()) { a.issues.add(issue("source-offline","Audio source is unavailable; clip is silent",c.source,t.id,c.id));return; }
-    const auto& src=source->second;
-    std::unique_ptr<juce::AudioFormatReader> reader(engine.getAudioFileFormatManager().readFormatManager.createReaderFor(src.file));
-    if(!reader) { a.issues.add(issue("source-decode","Audio source cannot be decoded; clip is silent",src.id,t.id,c.id));return; }
-    if(reader->lengthInSamples!=src.frames || reader->sampleRate!=src.rate || (int)reader->numChannels!=src.channels) { a.issues.add(issue("source-changed","Audio source metadata changed; clip is silent",src.id,t.id,c.id));return; }
-    const double ratio=c.settings.warp?r.bpm/c.settings.sourceBpm:1.0;
-    const bool repitch=c.settings.warp && c.settings.mode=="repitch";
-    const double authoredPitch=c.settings.transpose+c.settings.detune/100;
-    const bool resampleOnly=repitch && authoredPitch==0;
-    const double pitch=authoredPitch+(repitch && !resampleOnly?12*std::log2(ratio):0);
-    require(ratio>=te::ClipConstants::speedRatioMin && ratio<=te::ClipConstants::speedRatioMax,"Tempo ratio exceeds the native time-stretcher range");
-    auto envelope=a.edit->getPluginCache().createNewPlugin(pluginState("zoeydaw-source-envelope"));require(envelope!=nullptr,"Cannot create source envelope");
-    dynamic_cast<Envelope&>(*envelope).configure(c,r);
-    auto clip=te::insertWaveClip(track,c.id,src.file,{.time={te::TimePosition::fromSeconds(r.barTime(c.start)),te::TimeDuration::fromSeconds(c.length*r.secondsPerBar())}},te::DeleteExistingClips::no);
-    require(clip!=nullptr,"Cannot schedule audio clip");
-    clip->setUsesProxy(false);clip->setAutoTempo(false);clip->setAutoPitch(false);clip->setAutoCrossfade(false);clip->setFadeIn({});clip->setFadeOut({});clip->setGainDB((float)c.gain);clip->setMuted(c.mute);clip->setPan(0);
-    const bool disableStretch=(!c.settings.warp && authoredPitch==0) || resampleOnly || (c.settings.warp && std::abs(ratio-1.0)<1e-6 && authoredPitch==0);
-    clip->setTimeStretchMode(disableStretch?te::TimeStretcher::disabled:te::TimeStretcher::soundtouchBetter);
-    clip->setSpeedRatio(c.settings.warp?ratio:1.0);clip->state.setProperty(te::IDs::pitchChange,disableStretch?0.0:pitch,nullptr);clip->setIsReversed(c.settings.reverse);
-    const double sourceBar=r.quartersPerBar*60/c.settings.sourceBpm;
-    if(c.settings.loop)clip->setLoopRange({te::TimePosition::fromSeconds(c.settings.loopStart*sourceBar/ratio),te::TimeDuration::fromSeconds(c.settings.loopLength*sourceBar/ratio)});else clip->setLoopRange({});
-    double sourceStart=std::max(c.offset,c.settings.markerStart);
-    if(c.settings.loop)sourceStart=std::fmod(std::fmod(sourceStart-c.settings.loopStart,c.settings.loopLength)+c.settings.loopLength,c.settings.loopLength);
-    clip->setOffset(te::TimeDuration::fromSeconds(sourceStart*sourceBar/ratio));
-    clip->getPluginList()->insertPlugin(envelope,0,nullptr);a.envelopes.emplace(c.id,envelope.get());a.audioClips.emplace(c.id,clip.get());
-    a.observeSourceRender(*clip);
-    if(c.settings.warp && !repitch)a.issues.add(issue("effective-warp-mode","Effective pitch-preserving algorithm: SoundTouch Better (not Ableton "+c.settings.mode+")",src.id,t.id,c.id));
 }
 void EngineSession::updateCue(Arrangement& a,te::AudioTrack& track,const Track& t) {
     const bool enabled=cueEnabled(t);
@@ -588,74 +455,8 @@ void EngineSession::updateMixer(Arrangement& a,const Request& next,const Request
         }
         for(const auto& [id,db]:t.sends)if(!old.sends.contains(id) || db!=old.sends.at(id))sends.at(id)->setGainDb((float)db);
         if(t.cueOutput!=old.cueOutput || t.cueVolume!=old.cueVolume)updateCue(a,*track,t);
-        if(t.automation!=old.automation)applyMixerAutomation(*track,t,next);
+        if(t.automation!=old.automation || next.bpm!=previous.bpm)applyMixerAutomation(*track,t,next);
     }
-}
-void EngineSession::updateEnvelopes(Arrangement& a,const Request& next,const Request& previous) {
-    te::TransportControl::ReallocationInhibitor inhibit(a.edit->getTransport());
-    for(size_t track=0;track<next.tracks.size();++track)for(size_t index=0;index<next.tracks[track].clips.size();++index) {
-        const auto& clip=next.tracks[track].clips[index];
-        if(clip.kind!="audio")continue;
-        const Clip* oldClip=nullptr;
-        for(const auto& oldTrack:previous.tracks) {
-            const auto found=std::find_if(oldTrack.clips.begin(),oldTrack.clips.end(),[&](const Clip& candidate){return candidate.id==clip.id;});
-            if(found!=oldTrack.clips.end()) { oldClip=&*found;break; }
-        }
-        if(!oldClip) { insertAudioClip(a,*a.tracks.at(next.tracks[track].id),next.tracks[track],clip,next);continue; }
-        const auto& old=*oldClip;
-        const bool loopChanged=clip.settings.loop!=old.settings.loop || clip.settings.loopStart!=old.settings.loopStart || clip.settings.loopLength!=old.settings.loopLength;
-        const bool speedChanged=clip.settings.warp!=old.settings.warp || clip.settings.mode!=old.settings.mode || clip.settings.sourceBpm!=old.settings.sourceBpm;
-        const bool reverseChanged=clip.settings.reverse!=old.settings.reverse;
-        if(auto native=a.audioClips.find(clip.id);native!=a.audioClips.end()) {
-            auto* destination=a.tracks.at(next.tracks[track].id);
-            if(native->second->getTrack()!=destination)require(native->second->moveTo(*destination),"Cannot move audio clip to destination track");
-            if(clip.gain!=old.gain)native->second->setGainDB((float)clip.gain);
-            if(clip.mute!=old.mute)native->second->setMuted(clip.mute);
-            if(reverseChanged) { native->second->setIsReversed(clip.settings.reverse);a.observeSourceRender(*native->second); }
-            if(speedChanged || clip.settings.transpose!=old.settings.transpose || clip.settings.detune!=old.settings.detune) {
-                const double ratio=clip.settings.warp?next.bpm/clip.settings.sourceBpm:1.0;
-                const bool repitch=clip.settings.warp && clip.settings.mode=="repitch";
-                const double authoredPitch=clip.settings.transpose+clip.settings.detune/100;
-                const bool resampleOnly=repitch && authoredPitch==0;
-                const bool disableStretch=(!clip.settings.warp && authoredPitch==0) || resampleOnly || (clip.settings.warp && std::abs(ratio-1.0)<1e-6 && authoredPitch==0);
-                native->second->setTimeStretchMode(disableStretch?te::TimeStretcher::disabled:te::TimeStretcher::soundtouchBetter);
-                if(speedChanged)native->second->setSpeedRatio(clip.settings.warp?ratio:1.0);
-                native->second->state.setProperty(te::IDs::pitchChange,disableStretch?0.0:authoredPitch+(repitch && !resampleOnly?12*std::log2(ratio):0),nullptr);
-            }
-            if(reverseChanged || loopChanged || speedChanged) {
-                const double ratio=clip.settings.warp?next.bpm/clip.settings.sourceBpm:1.0;
-                const double sourceBar=next.quartersPerBar*60/clip.settings.sourceBpm;
-                if(clip.settings.loop)native->second->setLoopRange({te::TimePosition::fromSeconds(clip.settings.loopStart*sourceBar/ratio),te::TimeDuration::fromSeconds(clip.settings.loopLength*sourceBar/ratio)});
-                else native->second->setLoopRange({});
-            }
-            if(reverseChanged || speedChanged || loopChanged || clip.start!=old.start || clip.length!=old.length || clip.offset!=old.offset || clip.settings.markerStart!=old.settings.markerStart) {
-                const double ratio=clip.settings.warp?next.bpm/clip.settings.sourceBpm:1.0;
-                const double sourceBar=next.quartersPerBar*60/clip.settings.sourceBpm;
-                double offset=std::max(clip.offset,clip.settings.markerStart);
-                if(clip.settings.loop)offset=std::fmod(std::fmod(offset-clip.settings.loopStart,clip.settings.loopLength)+clip.settings.loopLength,clip.settings.loopLength);
-                native->second->setPosition({.time={te::TimePosition::fromSeconds(next.barTime(clip.start)),te::TimeDuration::fromSeconds(clip.length*next.secondsPerBar())},.offset=te::TimeDuration::fromSeconds(offset*sourceBar/ratio)});
-            }
-        }
-        if(speedChanged) {
-            for(int i=a.issues.size();--i>=0;)if(a.issues[i]["clipId"]==V(clip.id) && a.issues[i]["code"]==V("effective-warp-mode"))a.issues.remove(i);
-            if(a.audioClips.contains(clip.id) && clip.settings.warp && clip.settings.mode!="repitch")a.issues.add(issue("effective-warp-mode","Effective pitch-preserving algorithm: SoundTouch Better (not Ableton "+clip.settings.mode+")",clip.source,next.tracks[track].id,clip.id));
-        }
-        if(!speedChanged && !loopChanged && clip.start==old.start && clip.length==old.length && clip.offset==old.offset && clip.settings.markerStart==old.settings.markerStart && clip.settings.markerEnd==old.settings.markerEnd && clip.fadeIn==old.fadeIn && clip.fadeOut==old.fadeOut && clip.fadeInOffset==old.fadeInOffset && clip.fadeOutOffset==old.fadeOutOffset && clip.fadeInCurve==old.fadeInCurve && clip.fadeOutCurve==old.fadeOutCurve && clip.fadeInPosition==old.fadeInPosition && clip.fadeOutPosition==old.fadeOutPosition)continue;
-        auto envelope=a.envelopes.find(clip.id);
-        if(envelope!=a.envelopes.end())static_cast<Envelope*>(envelope->second)->configure(clip,next);
-    }
-    const auto retained=[&](const juce::String& id) {
-        for(const auto& track:next.tracks)for(const auto& clip:track.clips)if(clip.id==id)return true;
-        return false;
-    };
-    for(auto it=a.audioClips.begin();it!=a.audioClips.end();) {
-        if(retained(it->first)) { ++it;continue; }
-        te::Clip::Ptr removed(it->second);
-        a.envelopes.erase(it->first);it=a.audioClips.erase(it);
-        removed->removeFromParent();
-    }
-    for(int i=a.issues.size();--i>=0;)if(a.issues[i].hasProperty("clipId") && !retained(a.issues[i]["clipId"].toString()))a.issues.remove(i);
-    a.releaseUnusedSourceRenders();
 }
 V EngineSession::apply(const V& v) {
     fields(v,{"request","leaseId","stopToken","stopEpoch"});auto r=decode(field(v,"request"));auto lease=text(v,"leaseId");require(lease.isNotEmpty(),"Empty playback lease");const auto token=integer(v,"stopToken"),fence=integer(v,"stopEpoch");
@@ -689,6 +490,11 @@ V EngineSession::apply(const V& v) {
     auto candidate=replace?prepare(r):nullptr;
     if(fence<stopToken.load() || (opening && fence<pendingOwnerStopEpoch.load(std::memory_order_acquire)))return result(r,false,opening?"superseded-open":"rejected");
     if(r.playing)openDevice();
+    else if(opening) {
+        loadConfiguration();
+        if(configuration && configuration->inputDeviceId.isNotEmpty())try { openDevice(); }
+        catch(const std::exception&) { /* Device error and input-monitor-unavailable are reported by telemetry. */ }
+    }
     auto response=result(r,true);
     const auto& request=r;
     auto owner=std::make_pair(lease.toStdString(),r.session.toStdString());
@@ -698,10 +504,24 @@ V EngineSession::apply(const V& v) {
         stopOwner.swap(owner);
     }
     const bool seek=opening || !accepted || request.seekGeneration!=accepted->seekGeneration;
-    const double position=arrangement?arrangement->edit->getTransport().getPosition().inSeconds():request.barTime(request.seekBar);
+    const bool tempoChanged=accepted && request.bpm!=accepted->bpm;
+    double position=request.barTime(request.seekBar);
+    if(arrangement && accepted) {
+        auto& previousTransport=arrangement->edit->getTransport();
+        auto current=previousTransport.getPosition();
+        if(previousTransport.isPlaying())if(auto* context=previousTransport.getCurrentPlaybackContext())
+            current=context->getPendingPositionChange().value_or(context->getAudibleTimelineTime());
+        position=request.barTime(1+current.inSeconds()/accepted->secondsPerBar());
+    }
     if(candidate) { allNotesOff();if(arrangement)arrangement->edit->getTransport().stop(false,true);arrangement=std::move(candidate);routeOutputs(*arrangement,request); }
     else {
         te::TransportControl::ReallocationInhibitor inhibit(arrangement->edit->getTransport());
+        if(tempoChanged) {
+            auto& sequence=arrangement->edit->tempoSequence;
+            auto* setting=sequence.getTempo(0);
+            setting->set(setting->getStartBeat(),request.bpm,setting->getCurve(),false);
+            sequence.updateTempoData();
+        }
         for(const auto& track:request.tracks)if(!arrangement->tracks.contains(track.id)) {
             auto native=arrangement->edit->insertNewAudioTrack(te::TrackInsertPoint::getEndOfTracks(*arrangement->edit),nullptr);require(native!=nullptr,"Cannot create arrangement track");
             initialiseTrack(*arrangement,*native,track,request);
@@ -724,9 +544,10 @@ V EngineSession::apply(const V& v) {
     bindInputs(*arrangement,request);
     auto& transport=arrangement->edit->getTransport();arrangement->edit->clickTrackEnabled=request.metronome;
     if(seek || replace || request.playing!=transport.isPlaying())for(const auto& [id,device]:arrangement->devices)device->reset();
-    if(replace || request.loopStart!=accepted->loopStart || request.loopEnd!=accepted->loopEnd)transport.setLoopRange({te::TimePosition::fromSeconds(request.barTime(request.loopStart)),te::TimePosition::fromSeconds(request.barTime(request.loopEnd))});
+    if(replace || tempoChanged || request.loopStart!=accepted->loopStart || request.loopEnd!=accepted->loopEnd)transport.setLoopRange({te::TimePosition::fromSeconds(request.barTime(request.loopStart)),te::TimePosition::fromSeconds(request.barTime(request.loopEnd))});
     if(replace || request.loop!=accepted->loop)transport.looping=request.loop;
     if(seek || replace) { ++transportSeeks;transport.setPosition(te::TimePosition::fromSeconds(seek?request.barTime(request.seekBar):position)); }
+    else if(tempoChanged && !transport.isPlaying())transport.setPosition(te::TimePosition::fromSeconds(position));
     auto previousFence=stopToken.load(std::memory_order_acquire);while(previousFence<fence && !stopToken.compare_exchange_weak(previousFence,fence,std::memory_order_acq_rel)) {}
     arrangementEpoch.store(fence,std::memory_order_release);arrangementAudible.store(request.playing,std::memory_order_release);
     if(recording && !request.recording)finishRecording();
@@ -793,35 +614,20 @@ V EngineSession::note(const V& v,bool overrun) {
     if(r.on)held.emplace(r.noteId,r);else held.erase(r.noteId);
     return noteResult(r,true);
 }
-V EngineSession::telemetry(const V& v) {
-    fields(v,{"leaseId"});auto out=object();auto lease=text(v,"leaseId");V sample;
-    if(accepted && leases.count(lease)) {
-        auto& transport=arrangement->edit->getTransport();sample=object();put(sample,"sessionId",accepted->session);put(sample,"sequence",(juce::int64)++telemetrySequence);put(sample,"appliedSequence",(juce::int64)appliedSequence);
-        put(sample,"controlGeneration",decimalU64(accepted->controlGeneration));
-        const double rate=clock.rate.load();auto pos=object();put(pos,"kind",rate>0?"sample":"musical");put(pos,"bar",1+transport.getPosition().inSeconds()/accepted->secondsPerBar());put(pos,"barsPerSecond",1/accepted->secondsPerBar());if(rate>0) { put(pos,"frame",(juce::int64)clock.frames.load());put(pos,"sampleRate",rate); }put(sample,"clock",pos);
-        put(sample,"playing",transport.isPlaying() && clock.active.load() && !clock.failed.load());put(sample,"recording",transport.isRecording());auto levels=object();
-        if(arrangement->meterCollector)arrangement->meterCollector->collect();
-        for(auto& t:accepted->tracks) {
-            juce::Array<V> pair;const auto endpoint=arrangement->meterEndpointIds.at(t.id);
-            for(std::uint16_t ch=0;ch<2;++ch) {
-                float peak=0;
-                if(arrangement->meterCollector && (transport.isPlaying() || monitoringAudible.load(std::memory_order_acquire)) && clock.active.load() && !clock.failed.load()) {
-                    const auto* value=arrangement->meterCollector->latest(endpoint,ch);
-                    if(!value && ch==1)value=arrangement->meterCollector->latest(endpoint,0);
-                    if(value) {
-                        if(value->available && value->current.valid)peak=value->current.displayPeak;
-                        if(value->completedValid && value->completed.valid)peak=std::max(peak,value->completed.displayPeak);
-                    }
-                }
-                pair.add(peak>0?std::max(-100.f,20*std::log10(peak)):-100.f);
-            }
-            put(levels,t.id.toRawUTF8(),pair);
-        }
-        retireMeterGraphs();
-        put(sample,"levels",levels);
-    }
-    put(out,"telemetry",sample);put(out,"device",devices());juce::Array<V> issues;if(arrangement)issues=arrangement->issues;
-    if(clock.failed.load())issues.add(issue("device-error","Audio output was interrupted; rendered output is silent"));put(out,"issues",issues);return out;
+std::shared_ptr<MeterGraphCollector> EngineSession::acquireMeterGraph(const char* lease,const char* session,std::uint32_t epoch,std::uint32_t generation,std::uint32_t registry) {
+    require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Meter graph acquisition requires message thread");
+    if(!lease || !session || !accepted || !leases.count(juce::String::fromUTF8(lease)) || accepted->session!=juce::String::fromUTF8(session) || !arrangement || !arrangement->meterCollector)return {};
+    auto collector=arrangement->meterCollector;
+    if(collector->description()->identity!=MeterBankIdentity{epoch,generation,registry})return {};
+    if(!collector->acquireHub())return {};
+    return collector;
+}
+std::shared_ptr<InputMeterCollector> EngineSession::acquireInputMeter(const char* lease,const char* session,std::uint32_t epoch) {
+    require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Input meter acquisition requires message thread");
+    if(!lease || !session || !accepted || !leases.count(juce::String::fromUTF8(lease)) || accepted->session!=juce::String::fromUTF8(session))return {};
+    auto collector=clock.inputMeter.collector(epoch);
+    if(!collector || !collector->acquireHub())return {};
+    return collector;
 }
 V EngineSession::audition(const V& v) {
     fields(v,{"generation","path","mode","gainDb"},{"sourceBpm","projectBpm","numerator","denominator"});auto generation=integer(v,"generation");
@@ -894,6 +700,7 @@ V EngineSession::call(const juce::String& operation,const V& v) {
         noteCutoffs[lease]=std::max(noteCutoffs[lease],through);allNotesOff();return {};
     }
     if(operation=="telemetry")return telemetry(v);
+    if(operation=="meter_registry")return meterRegistry(v);
     if(operation=="devices")return devices(true);
     if(operation=="configure")return configure(v);
     if(operation=="device_capabilities")return capabilities(v);

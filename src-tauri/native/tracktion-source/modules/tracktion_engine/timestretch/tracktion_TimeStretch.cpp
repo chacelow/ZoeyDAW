@@ -200,6 +200,7 @@ private:
             case TimeStretcher::rubberbandPercussive:       [[ fallthrough ]];
             case TimeStretcher::signalsmithDefault:         [[ fallthrough ]];
             case TimeStretcher::signalsmithCheaper:         [[ fallthrough ]];
+            case TimeStretcher::signalsmithFormant:         [[ fallthrough ]];
             default:
                 jassertfalse;
                 return CElastiqueProV3If::kV3Pro;
@@ -397,6 +398,7 @@ private:
             case TimeStretcher::rubberbandPercussive:       [[ fallthrough ]];
             case TimeStretcher::signalsmithDefault:         [[ fallthrough ]];
             case TimeStretcher::signalsmithCheaper:         [[ fallthrough ]];
+            case TimeStretcher::signalsmithFormant:         [[ fallthrough ]];
             default:
                 jassertfalse;
                 return CElastiqueProV3DirectIf::kV3Pro;
@@ -484,8 +486,8 @@ struct SoundTouchStretcher  : public TimeStretcher::Stretcher,
                               private soundtouch::SoundTouch
 {
     SoundTouchStretcher (double sourceSampleRate, int samplesPerBlock,
-                         int chans, bool betterQuality)
-        : numChannels (chans), samplesPerOutputBuffer (samplesPerBlock)
+                         int chans, bool betterQuality, bool followRate = false)
+        : soundtouch::SoundTouch (followRate), numChannels (chans), samplesPerOutputBuffer (samplesPerBlock), pitchFollowsRate (followRate)
     {
         CRASH_TRACER
         setChannels (static_cast<unsigned int> (numChannels));
@@ -520,7 +522,12 @@ struct SoundTouchStretcher  : public TimeStretcher::Stretcher,
 
     bool setSpeedAndPitch (float speedRatio, float semitonesUp) override
     {
-        setTempo (1.0f / speedRatio);
+        if (pitchFollowsRate) {
+            setTempo (1.0f);
+            setRate (1.0f / speedRatio);
+        } else {
+            setTempo (1.0f / speedRatio);
+        }
         setPitchSemiTones (semitonesUp);
         inputOutputSampleRatio = getInputOutputSampleRatio();
         initialLatency = getSetting (SETTING_INITIAL_LATENCY);
@@ -644,6 +651,7 @@ private:
         }
     }
 
+    const bool pitchFollowsRate;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SoundTouchStretcher)
 };
 #endif
@@ -917,6 +925,8 @@ struct SignalsmithStretcher  : public TimeStretcher::Stretcher
             stretch.presetCheaper (numChannels, static_cast<float> (sourceSampleRate), splitComputation);
         else
             stretch.presetDefault (numChannels, static_cast<float> (sourceSampleRate), splitComputation);
+        if (mode == TimeStretcher::signalsmithFormant)
+            stretch.setFormantFactor (1.0f, true);
     }
 
     bool isOk() const override      { return true; }
@@ -936,12 +946,13 @@ struct SignalsmithStretcher  : public TimeStretcher::Stretcher
 
     int getFramesNeeded() const override
     {
-        return juce::roundToInt (samplesPerOutputBuffer / speedRatio);
+        return std::max (1, juce::roundToInt (samplesPerOutputBuffer / speedRatio));
     }
 
     int getMaxFramesNeeded() const override
     {
-        return stretch.inputLatency() + stretch.outputLatency();
+        return std::max (stretch.inputLatency() + stretch.outputLatency(),
+                         juce::roundToInt (samplesPerOutputBuffer / 0.01f) + 1);
     }
 
     int processData (const float* const* inChannels, int numSamples, float* const* outChannels) override
@@ -1023,6 +1034,7 @@ static juce::String getElastiqueMobile()            { return "Elastique (" + TRA
 static juce::String getElastiqueMono()              { return "Elastique (" + TRANS("Monophonic") + ")"; }
 static juce::String getSoundTouchNormal()           { return "SoundTouch (" + TRANS("Normal") + ")"; }
 static juce::String getSoundTouchBetter()           { return "SoundTouch (" + TRANS("Better") + ")"; }
+static juce::String getSoundTouchRepitch()          { return "SoundTouch (Re-pitch)"; }
 static juce::String getRubberBandMelodic()          { return "RubberBand (" + TRANS("Melodic") + ")"; }
 static juce::String getRubberBandPercussive()       { return "RubberBand (" + TRANS("Percussive") + ")"; }
 static juce::String getElastiqueDirectPro()         { return "Elastique Direct (" + TRANS("Pro") + ")"; }
@@ -1030,6 +1042,7 @@ static juce::String getElastiqueDirectEfficeint()   { return "Elastique Direct (
 static juce::String getElastiqueDirectMobile()      { return "Elastique Direct (" + TRANS("Mobile") + ")"; }
 static juce::String getSignalsmithDefault()          { return "Signalsmith (" + TRANS("Default") + ")"; }
 static juce::String getSignalsmithCheaper()          { return "Signalsmith (" + TRANS("Cheaper") + ")"; }
+static juce::String getSignalsmithFormant()          { return "Signalsmith (" + TRANS("Formant Preservation") + ")"; }
 
 TimeStretcher::Mode TimeStretcher::checkModeIsAvailable (Mode m)
 {
@@ -1040,6 +1053,7 @@ TimeStretcher::Mode TimeStretcher::checkModeIsAvailable (Mode m)
        #if ! TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH
         case soundtouchNormal:
         case soundtouchBetter:
+        case soundtouchRepitch:
        #endif
        #if ! TRACKTION_ENABLE_TIMESTRETCH_ELASTIQUE
         case elastiquePro:
@@ -1057,16 +1071,19 @@ TimeStretcher::Mode TimeStretcher::checkModeIsAvailable (Mode m)
        #if ! TRACKTION_ENABLE_TIMESTRETCH_SIGNALSMITH
         case signalsmithDefault:
         case signalsmithCheaper:
+        case signalsmithFormant:
        #endif
             return defaultMode;
        #if TRACKTION_ENABLE_TIMESTRETCH_SIGNALSMITH
         case signalsmithDefault:
         case signalsmithCheaper:
+        case signalsmithFormant:
             return m;
        #endif
        #if TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH
         case soundtouchNormal:
         case soundtouchBetter:
+        case soundtouchRepitch:
             return m;
        #endif
        #if TRACKTION_ENABLE_TIMESTRETCH_ELASTIQUE
@@ -1108,6 +1125,7 @@ juce::StringArray TimeStretcher::getPossibleModes (Engine& e, bool excludeARA)
    #if TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH
     s.add (getSoundTouchNormal());
     s.add (getSoundTouchBetter());
+    s.add (getSoundTouchRepitch());
    #endif
 
    #if TRACKTION_ENABLE_TIMESTRETCH_RUBBERBAND
@@ -1118,6 +1136,7 @@ juce::StringArray TimeStretcher::getPossibleModes (Engine& e, bool excludeARA)
    #if TRACKTION_ENABLE_TIMESTRETCH_SIGNALSMITH
     s.add (getSignalsmithDefault());
     s.add (getSignalsmithCheaper());
+    s.add (getSignalsmithFormant());
    #endif
 
    #if TRACKTION_ENABLE_ARA
@@ -1154,11 +1173,13 @@ TimeStretcher::Mode TimeStretcher::getModeFromName (Engine& e, const juce::Strin
    #if TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH
     if (name == getSoundTouchNormal())      return soundtouchNormal;
     if (name == getSoundTouchBetter())      return soundtouchBetter;
+    if (name == getSoundTouchRepitch())     return soundtouchRepitch;
    #endif
 
    #if TRACKTION_ENABLE_TIMESTRETCH_SIGNALSMITH
     if (name == getSignalsmithDefault())    return signalsmithDefault;
     if (name == getSignalsmithCheaper())    return signalsmithCheaper;
+    if (name == getSignalsmithFormant())    return signalsmithFormant;
    #endif
 
    #if TRACKTION_ENABLE_ARA
@@ -1185,10 +1206,12 @@ juce::String TimeStretcher::getNameOfMode (const Mode mode)
         case elastiqueDirectMobile:     return getElastiqueDirectMobile();
         case soundtouchNormal:          return getSoundTouchNormal();
         case soundtouchBetter:          return getSoundTouchBetter();
+        case soundtouchRepitch:         return getSoundTouchRepitch();
         case rubberbandMelodic:         return getRubberBandMelodic();
         case rubberbandPercussive:      return getRubberBandPercussive();
         case signalsmithDefault:        return getSignalsmithDefault();
         case signalsmithCheaper:        return getSignalsmithCheaper();
+        case signalsmithFormant:       return getSignalsmithFormant();
         case ara:                       return getARADefault();
         case disabled:
         case elastiqueTransient:
@@ -1256,13 +1279,15 @@ void TimeStretcher::initialise (double sourceSampleRate, int samplesPerBlock,
        #if TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH
         case soundtouchNormal:
         case soundtouchBetter:
+        case soundtouchRepitch:
             juce::ignoreUnused (options, realtime);
             stretcher = std::make_unique<SoundTouchStretcher> (sourceSampleRate, samplesPerBlock, numChannels,
-                                                               mode == soundtouchBetter);
+                                                               mode != soundtouchNormal, mode == soundtouchRepitch);
             break;
        #else
         case soundtouchNormal:      [[fallthrough]];
         case soundtouchBetter:
+        case soundtouchRepitch:
             break;
        #endif
 
@@ -1282,6 +1307,7 @@ void TimeStretcher::initialise (double sourceSampleRate, int samplesPerBlock,
        #if TRACKTION_ENABLE_TIMESTRETCH_SIGNALSMITH
         case signalsmithDefault:
         case signalsmithCheaper:
+        case signalsmithFormant:
             juce::ignoreUnused (options);
             stretcher = std::make_unique<SignalsmithStretcher> (sourceSampleRate, samplesPerBlock, numChannels,
                                                                 mode, realtime);
@@ -1289,6 +1315,7 @@ void TimeStretcher::initialise (double sourceSampleRate, int samplesPerBlock,
        #else
         case signalsmithDefault:    [[fallthrough]];
         case signalsmithCheaper:
+        case signalsmithFormant:
             break;
        #endif
 

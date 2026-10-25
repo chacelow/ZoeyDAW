@@ -46,6 +46,17 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
     if (pasteTarget) {
       return pasteTarget
     }
+    const range = state.session.timeSelection
+    const rangeTrack =
+      range &&
+      state.document.tracks.find(
+        lane => range.trackIds.includes(lane.id) && (lane.kind === "audio" || lane.kind === "midi")
+      )
+    if (rangeTrack && range) return { trackId: rangeTrack.id, bar: range.startBar }
+    const insertion = state.session.insertionPoint
+    if (insertion && insertion.trackId !== null) {
+      return { trackId: insertion.trackId, bar: insertion.bar }
+    }
     const selected = new Set(selection())
     const track =
       state.document.tracks.find(lane => lane.clips.some(clip => selected.has(clip.id))) ??
@@ -56,6 +67,7 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
           trackId: track.id,
           bar:
             state.session.timeSelection?.startBar ??
+            insertion?.bar ??
             positionToBar(state.session.position, state.document.transport.numerator),
         }
       : null
@@ -71,6 +83,7 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
     actions.endEdit()
     if (done) {
       scene.setSelection(new Set(context.getState().session.selectedClipIds))
+      scene.setTimeSelection(context.getState().session.timeSelection)
       scene.setTargetSelection({ kind: "none" })
     }
     return done
@@ -93,7 +106,7 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         return null
       }
       actions.selectTracks([hit.track.id], "arrangement")
-      pasteTarget = { trackId: hit.track.id, bar: snappedBar(context, barAtX(context, pointer.x)) }
+      pasteTarget = null
       if ("clip" in hit) {
         const additive = pointer.shiftKey || pointer.metaKey || pointer.ctrlKey
         const current = selection()
@@ -202,7 +215,38 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
       const ids = selection()
       const command = (event.metaKey || event.ctrlKey) && !event.altKey
       const key = event.key.toLowerCase()
+      if (
+        !command &&
+        !event.altKey &&
+        (key === "delete" || key === "backspace") &&
+        state.session.timeSelection
+      ) {
+        actions.beginEdit()
+        actions.deleteTimeSelection(state.session.timeSelection)
+        actions.endEdit()
+        scene.setSelection(new Set(context.getState().session.selectedClipIds))
+        scene.setTargetSelection({ kind: "none" })
+        return true
+      }
+      if (
+        command &&
+        event.ctrlKey &&
+        !event.metaKey &&
+        /Mac|iPhone|iPad/.test(navigator.platform)
+      ) {
+        if (key === "c") return !!actions.copyClips(ids, state.session.timeSelection ?? undefined)
+        if (key === "x") {
+          actions.beginEdit()
+          const copied = actions.cutClips(ids, state.session.timeSelection ?? undefined)
+          actions.endEdit()
+          if (copied) scene.setSelection(new Set())
+          return !!copied
+        }
+        if (key === "v") return paste()
+      }
       if (command && key === "a") {
+        actions.setTimeSelection(null)
+        scene.setTimeSelection(null)
         select(state.document.tracks.flatMap(track => track.clips.map(clip => clip.id)))
         return true
       }

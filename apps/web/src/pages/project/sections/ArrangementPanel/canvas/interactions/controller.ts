@@ -143,7 +143,12 @@ export function createCanvasController(
           break
         }
       }
-      element.style.cursor = cursor ?? ""
+      element.style.cursor =
+        cursor === "brace-left"
+          ? "var(--arrangement-brace-left-cursor, w-resize), w-resize"
+          : cursor === "brace-right"
+            ? "var(--arrangement-brace-right-cursor, e-resize), e-resize"
+            : (cursor ?? "")
       return
     }
     if (active.pointerId !== pointer.pointerId) {

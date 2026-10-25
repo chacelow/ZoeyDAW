@@ -65,6 +65,143 @@ function copySharedPatterns() {
 }
 
 describe("clip clipboard edits", () => {
+  it.each(["delete", "cut"])(
+    "%s removes only selected interval fragments across tracks in one undo",
+    operation => {
+      const original = createMockDocument(DEFAULT_TRACK_HEIGHT)
+      const audio = original.tracks.find(track => track.id === "3-audio")!.clips[0]
+      const midi = original.tracks.find(track => track.id === "trager")!.clips[0]
+      hydrateProject(
+        JSON.stringify({
+          version: 4,
+          document: {
+            ...original,
+            tracks: original.tracks.map(track => ({
+              ...track,
+              clips:
+                track.id === "3-audio"
+                  ? [{ ...audio, sourceOffsetBars: 2 }]
+                  : track.id === "trager"
+                    ? [{ ...midi, startBar: 3, lengthBars: 12, sourceOffsetBars: 1 }]
+                    : track.clips,
+            })),
+          },
+          workspace: createMockWorkspace(),
+        })
+      )
+      const before = useProjectState.getState().document
+      const range = { startBar: 5, endBar: 9, trackIds: ["trager", "3-audio"] }
+      projectActions.beginEdit()
+      if (operation === "cut") expect(projectActions.cutClips([], range)).not.toBeNull()
+      else expect(projectActions.deleteTimeSelection(range)).toBe(true)
+      projectActions.endEdit()
+      expect(clips("3-audio")).toHaveLength(2)
+      expect(clips("3-audio")[0]).toMatchObject({
+        id: audio.id,
+        startBar: 1,
+        lengthBars: 4,
+        sourceOffsetBars: 2,
+      })
+      expect(clips("3-audio")[1]).toMatchObject({
+        startBar: 9,
+        lengthBars: 8,
+        sourceOffsetBars: 10,
+      })
+      expect(clips("3-audio")[1].id).not.toBe(audio.id)
+      expect(clips("trager")[0]).toMatchObject({
+        id: midi.id,
+        startBar: 3,
+        lengthBars: 2,
+        sourceOffsetBars: 1,
+      })
+      expect(clips("trager")[1]).toMatchObject({ startBar: 9, lengthBars: 6, sourceOffsetBars: 7 })
+      expect(
+        new Set(
+          useProjectState
+            .getState()
+            .document.tracks.flatMap(track => track.clips.map(clip => clip.id))
+        ).size
+      ).toBe(useProjectState.getState().document.tracks.flatMap(track => track.clips).length)
+      if (operation === "cut") {
+        expect(projectActions.getClipClipboard()?.items.map(item => item.clip)).toEqual([
+          expect.objectContaining({ startBar: 5, lengthBars: 4, sourceOffsetBars: 3 }),
+          expect.objectContaining({ startBar: 5, lengthBars: 4, sourceOffsetBars: 6 }),
+        ])
+      }
+      projectActions.undo()
+      expect(useProjectState.getState().document).toEqual(before)
+      expect(useProjectState.getState().session.canUndo).toBe(false)
+    }
+  )
+  it("pastes a range with empty leading lane and time gaps at its insertion origin", () => {
+    const original = createMockDocument(DEFAULT_TRACK_HEIGHT)
+    const audio = original.tracks.find(track => track.id === "3-audio")!.clips[0]
+    const midi = original.tracks.find(track => track.id === "trager")!.clips[0]
+    hydrateProject(
+      JSON.stringify({
+        version: 4,
+        document: {
+          ...original,
+          tracks: original.tracks.map(track => ({
+            ...track,
+            clips:
+              track.id === "3-audio"
+                ? [
+                    { ...audio, startBar: 5, lengthBars: 4, sourceOffsetBars: 2 },
+                    { ...audio, id: "occupied-audio", startBar: 21, lengthBars: 8 },
+                  ]
+                : track.id === "4-midi"
+                  ? [{ ...midi, startBar: 7, lengthBars: 1 }]
+                  : track.id === "trager"
+                    ? [{ ...midi, id: "occupied-leading-lane", startBar: 21, lengthBars: 8 }]
+                    : [],
+          })),
+        },
+        workspace: createMockWorkspace(),
+      })
+    )
+    const before = useProjectState.getState().document
+    const copied = projectActions.copyClips([], {
+      startBar: 3,
+      endBar: 11,
+      trackIds: ["drums-group", "trager", "sidechain", "3-audio", "4-midi"],
+    })
+    expect(copied?.items.map(item => [item.trackOffset, item.barOffset])).toEqual([
+      [2, 2],
+      [3, 4],
+    ])
+    projectActions.beginEdit()
+    expect(projectActions.pasteClips("trager", 21, copied)).toBe(true)
+    projectActions.endEdit()
+    expect(clips("trager")).toEqual([])
+    expect(clips("sidechain")).toEqual([])
+    expect(clips("3-audio").at(-1)).toMatchObject({
+      startBar: 23,
+      lengthBars: 4,
+      sourceOffsetBars: 2,
+    })
+    expect(clips("4-midi").at(-1)).toMatchObject({ startBar: 25, lengthBars: 1 })
+    expect(clips("3-audio")).toHaveLength(2)
+    expect(useProjectState.getState().session.timeSelection).toEqual({
+      startBar: 21,
+      endBar: 29,
+      trackIds: ["trager", "sidechain", "3-audio", "4-midi"],
+    })
+    projectActions.undo()
+    expect(useProjectState.getState().document).toEqual(before)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
+  })
+  it("keeps empty interval removal and cutting silent without an undo entry", () => {
+    const before = useProjectState.getState().document
+    const range = { startBar: 5, endBar: 5, trackIds: ["3-audio"] }
+    projectActions.beginEdit()
+    expect(projectActions.deleteTimeSelection(range)).toBe(false)
+    expect(projectActions.cutClips(["audio-1"], range)).toBeNull()
+    expect(projectActions.deleteTimeSelection({ ...range, startBar: 40, endBar: 42 })).toBe(false)
+    projectActions.endEdit()
+    expect(useProjectState.getState().document).toBe(before)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
+  })
   it("pastes trimmed audio and MIDI with cloned IDs, lane offsets and one undo entry", () => {
     const audio = clips("3-audio")[0]
     const midi = clips("trager")[0]

@@ -22,6 +22,36 @@ describe("TransportBar", () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
+  it("starts all armed tracks from Header Record and preserves playback when recording is toggled off", async () => {
+    await initI18n(appLocales).changeLanguage("en-US")
+    const tracks = useProjectState
+      .getState()
+      .document.tracks.filter(track => track.kind === "audio" || track.kind === "midi")
+      .slice(0, 2)
+    act(() => {
+      for (const track of tracks) projectActions.updateTrack(track.id, { armed: true })
+    })
+    const view = render(
+      <I18nProvider>
+        <TransportBar onBack={vi.fn()} onToggleBrowser={vi.fn()} />
+      </I18nProvider>
+    )
+    fireEvent.click(view.getByRole("button", { name: "Record" }))
+    expect(useProjectState.getState().session).toMatchObject({ playing: true, recording: true })
+    expect(
+      tracks.every(
+        track =>
+          useProjectState.getState().document.tracks.find(item => item.id === track.id)?.armed
+      )
+    ).toBe(true)
+    fireEvent.click(view.getByRole("button", { name: "Record" }))
+    expect(useProjectState.getState().session).toMatchObject({ playing: true, recording: false })
+    fireEvent.click(view.getByRole("button", { name: "Record" }))
+    fireEvent.click(view.getAllByRole("button", { name: "Stop" })[1])
+    expect(useProjectState.getState().session).toMatchObject({ playing: false, recording: false })
   })
 
   it("renders metronome button and toggles metronome state on click", () => {
@@ -113,5 +143,52 @@ describe("TransportBar", () => {
     fireEvent.click(linkButton)
     expect(useProjectState.getState().workspace.link).toBe(true)
     expect(linkButton.getAttribute("aria-pressed")).toBe("true")
+  })
+  it.each([3, 3.9, 0, 64, NaN])(
+    "rejects denominator action %s without changing grid or history",
+    value => {
+      const previous = useProjectState.getState()
+      act(() => projectActions.setDenominator(value))
+      expect(useProjectState.getState()).toBe(previous)
+    }
+  )
+
+  it("steps the denominator through supported note values instead of producing 3 or 5", () => {
+    vi.useFakeTimers()
+    const view = render(
+      <I18nProvider>
+        <TransportBar onBack={vi.fn()} onToggleBrowser={vi.fn()} />
+      </I18nProvider>
+    )
+    const control = view.getByLabelText("DEN")
+    for (const expected of [8, 16, 32, 32]) {
+      fireEvent.wheel(control, { deltaY: -40 })
+      expect(useProjectState.getState().document.transport.denominator).toBe(expected)
+      act(() => vi.advanceTimersByTime(200))
+    }
+    for (const expected of [16, 8, 4, 2, 1, 1]) {
+      fireEvent.wheel(control, { deltaY: 40 })
+      expect(useProjectState.getState().document.transport.denominator).toBe(expected)
+      act(() => vi.advanceTimersByTime(200))
+    }
+  })
+
+  it("parses typed note values and rejects unsupported denominators without normalizing them", () => {
+    const view = render(
+      <I18nProvider>
+        <TransportBar onBack={vi.fn()} onToggleBrowser={vi.fn()} />
+      </I18nProvider>
+    )
+    fireEvent.click(view.getByLabelText("DEN"))
+    fireEvent.keyDown(document, { key: "3" })
+    const invalid = view.getByRole("textbox", { name: "DEN" })
+    fireEvent.keyDown(invalid, { key: "Enter" })
+    expect(useProjectState.getState().document.transport.denominator).toBe(4)
+    fireEvent.click(view.getByLabelText("DEN"))
+    fireEvent.keyDown(document, { key: "1" })
+    const valid = view.getByRole("textbox", { name: "DEN" })
+    fireEvent.change(valid, { target: { value: "16" } })
+    fireEvent.keyDown(valid, { key: "Enter" })
+    expect(useProjectState.getState().document.transport.denominator).toBe(16)
   })
 })

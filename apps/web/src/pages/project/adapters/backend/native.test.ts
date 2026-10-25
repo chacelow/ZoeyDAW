@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
+import logger from "@zoeymind/logger"
+import { readNativeAudioStatus } from "@/shared/native/audio"
 import { createStore } from "zustand/vanilla"
 import { createProjectRuntime } from "@zoeydaw/project-runtime"
 import { initialDocument, initialSession, initialWorkspace } from "@zoeydaw/project-runtime/state"
@@ -15,6 +17,9 @@ import type {
 } from "@zoeydaw/project-core/backend"
 import * as sourceLocations from "./source-locations"
 import * as waveforms from "./waveforms"
+import type { MeterSessionPort } from "@zoeydaw/project-runtime/realtime"
+import type { RealtimeStreamOpenResult } from "@zoeydaw/project-core/realtime"
+import { readProjectMeters } from "../realtime"
 import type {
   AudioDeviceSnapshot,
   NativeAudioPort,
@@ -78,9 +83,8 @@ const telemetry: PlaybackSnapshot["telemetry"] = {
   clock: { kind: "sample", bar: 2, barsPerSecond: 0.5, frame: 88200, sampleRate: 44100 },
   playing: true,
   recording: false,
-  levels: { main: [-20, -21] },
 }
-const snapshot: PlaybackSnapshot = { device, telemetry, issues: [] }
+const snapshot: PlaybackSnapshot = { device, telemetry, issues: [], meterReady: true }
 const recording: NativeRecording = {
   recordingId: "recording-1",
   sessionId: "s",
@@ -252,6 +256,59 @@ describe("native project backend", () => {
     expect(port.release.mock.calls).toEqual([[firstLease], [secondLease]])
   })
 
+  it("waits for a late meter admission to close before releasing the audio lease", async () => {
+    vi.useFakeTimers()
+    const port = audioPort()
+    const opening = deferred<RealtimeStreamOpenResult>()
+    const closing = deferred<undefined>()
+    const meterPort: MeterSessionPort = {
+      open: vi.fn(() => opening.promise),
+      registry: vi.fn(),
+      clock: vi.fn(),
+      interest: vi.fn(async () => {}),
+      snapshot: vi.fn(),
+      receipt: vi.fn(),
+      reset: vi.fn(),
+      close: vi.fn(() => closing.promise),
+    }
+    const backend = createNativeProjectBackend(port, { meters: meterPort })
+    port.telemetry.mockResolvedValueOnce({ ...snapshot, meterReady: false })
+    await backend.apply(request())
+    expect(readProjectMeters()).toBeNull()
+    const unsubscribe = backend.subscribe(vi.fn())
+    await vi.advanceTimersByTimeAsync(40)
+    expect(readProjectMeters()).toBeNull()
+    expect(meterPort.open).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(40)
+    expect(readProjectMeters()).not.toBeNull()
+    backend.dispose()
+    expect(readProjectMeters()).toBeNull()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(port.release).not.toHaveBeenCalled()
+    opening.resolve({
+      streamId: 7,
+      registry: {
+        sessionId: "s",
+        sessionEpoch: 1,
+        deviceEpoch: 1,
+        generation: 1,
+        registryRevision: 1,
+        resetEpoch: 0,
+        entries: [],
+        sources: [],
+        endpointResets: [],
+      },
+    })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(meterPort.close).toHaveBeenCalledWith(7)
+    expect(port.release).not.toHaveBeenCalled()
+    closing.resolve(undefined)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(port.release).toHaveBeenCalledOnce()
+    expect(meterPort.interest).not.toHaveBeenCalled()
+    unsubscribe()
+  })
+
   it("waits for a pending apply before releasing, fences urgent stops, and discards late acceptance", async () => {
     vi.useFakeTimers()
     const port = audioPort()
@@ -298,6 +355,52 @@ describe("native project backend", () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(port.release).toHaveBeenCalledTimes(1)
   })
+
+  it.each([new Error("Number out of range: sourceOffsetBars"), "Invalid time signature"])(
+    "retains the original native exception through recovery and healthy telemetry: %s",
+    async error => {
+      vi.useFakeTimers()
+      const logged = vi.spyOn(logger, "error").mockImplementation(() => {})
+      const port = audioPort()
+      port.apply.mockImplementation(async raw => {
+        const metadata = z
+          .object({
+            sessionId: z.string(),
+            sequence: z.number().int().nonnegative(),
+            revision: z.number().int().nonnegative(),
+            controlGeneration: z.string(),
+          })
+          .parse(raw)
+        return { kind: "accepted", ...metadata }
+      })
+      const backend = createNativeProjectBackend(port)
+      const unsubscribe = backend.subscribe(vi.fn())
+      await backend.apply(request())
+      port.apply.mockRejectedValueOnce(error)
+      expect(await backend.apply({ ...request(1), stage: "commit" })).toMatchObject({
+        kind: "rejected",
+        code: "connection",
+      })
+      const message = error instanceof Error ? error.message : error
+      expect(readNativeAudioStatus().error).toBe(message)
+      expect(logged).toHaveBeenCalledWith("[NativeProjectBackend] Request failed", {
+        operation: "apply",
+        sessionId: "s",
+        sequence: 1,
+        error: message,
+      })
+      await backend.apply({ ...request(2), stage: "recover" })
+      await vi.advanceTimersByTimeAsync(100)
+      expect(port.telemetry).toHaveBeenCalled()
+      expect(readNativeAudioStatus()).toMatchObject({ device, error: message })
+      expect(port.apply).toHaveBeenCalledTimes(3)
+      await backend.apply({ ...request(3), stage: "commit" })
+      expect(readNativeAudioStatus().error).toBeNull()
+      unsubscribe()
+      backend.dispose()
+      await vi.advanceTimersByTimeAsync(0)
+    }
+  )
 
   it("polls only an active subscribed lease and drops telemetry arriving after unsubscription", async () => {
     vi.useFakeTimers()
@@ -707,6 +810,42 @@ describe("native project backend", () => {
 })
 
 describe("native recording publication", () => {
+  it("publishes recording previews only for the current session and clears them on release", async () => {
+    vi.useFakeTimers()
+    const port = audioPort()
+    const preview = {
+      sessionId: "s",
+      recordingId: "take",
+      tracks: [
+        {
+          trackId: "track",
+          clipId: "clip",
+          startBar: 2,
+          durationBars: 0.5,
+          channels: [{ min: [-0.5], max: [0.25] }],
+        },
+      ],
+    }
+    port.telemetry.mockResolvedValue({
+      ...snapshot,
+      recordingPreview: preview,
+    })
+    const backend = createNativeProjectBackend(port)
+    backend.subscribe(vi.fn())
+    await backend.apply(request())
+    await vi.advanceTimersByTimeAsync(40)
+    expect(readNativeAudioStatus()).toMatchObject({
+      recordingPreview: preview,
+    })
+    port.telemetry.mockResolvedValue({
+      ...snapshot,
+      recordingPreview: { ...preview, sessionId: "other" },
+    })
+    await vi.advanceTimersByTimeAsync(40)
+    expect(readNativeAudioStatus().recordingPreview).toBeNull()
+    backend.dispose()
+    expect(readNativeAudioStatus()).toMatchObject({ recordingPreview: null })
+  })
   it("keeps telemetry and stop live during commit and retries ACK without recommitting", async () => {
     vi.useFakeTimers()
     const port = audioPort()
@@ -794,7 +933,7 @@ describe("native recording publication", () => {
     expect(port.recordingAck).not.toHaveBeenCalled()
   })
 
-  it("uses the telemetry scheduler for a single in-flight recording fetch", async () => {
+  it("keeps transport observations flowing while one recording fetch is outstanding", async () => {
     vi.useFakeTimers()
     const port = audioPort()
     const fetched = deferred<NativeRecordingResults>()
@@ -806,6 +945,7 @@ describe("native recording publication", () => {
     await backend.apply(request())
     await vi.advanceTimersByTimeAsync(150)
     expect(port.recordingResults).toHaveBeenCalledTimes(1)
+    expect(port.telemetry.mock.calls.length).toBeGreaterThan(2)
     fetched.resolve({ sessionId: "s", recordings: [] })
     await vi.advanceTimersByTimeAsync(40)
     expect(port.recordingResults).toHaveBeenCalledTimes(2)

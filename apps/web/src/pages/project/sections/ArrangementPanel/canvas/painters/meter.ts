@@ -6,8 +6,6 @@ import {
   METER_MIN_DB,
 } from "./meter-peak"
 import type { MeterPeak } from "./meter-peak"
-import type { AudioRingBuffer } from "../audio/ring-buffer"
-
 export interface MeterTokens {
   background: string
   good: string
@@ -26,7 +24,14 @@ export interface MeterGeometry {
 export interface MeterPaintState {
   left: MeterPeak
   right: MeterPeak
-  gradient: { height: number; dpr: number; good: string; warn: string; fill: CanvasGradient } | null
+  gradient: {
+    height: number
+    dpr: number
+    good: string
+    warn: string
+    danger: string
+    fill: CanvasGradient
+  } | null
 }
 
 export function createMeterPaintState(): MeterPaintState {
@@ -35,20 +40,19 @@ export function createMeterPaintState(): MeterPaintState {
 
 export function paintMeter(
   context: CanvasRenderingContext2D,
-  trackId: string,
-  ring: AudioRingBuffer,
   tokens: MeterTokens,
   geometry: MeterGeometry,
   state: MeterPaintState,
-  now: number
+  now: number,
+  levels: readonly [number, number]
 ): boolean {
   const { width, height, dpr } = geometry
   if (width <= 0 || height <= 0) {
     return false
   }
-  const meter = ring.readMeter(trackId)
-  advanceMeterPeak(state.left, meter.left, now)
-  advanceMeterPeak(state.right, meter.right, now)
+  const [left, right] = levels
+  advanceMeterPeak(state.left, left, now)
+  advanceMeterPeak(state.right, right, now)
   context.setTransform(dpr, 0, 0, dpr, 0, 0)
   const zeroY = Math.min(height - 1, Math.round(decibelY(0, height)))
   if (
@@ -56,36 +60,35 @@ export function paintMeter(
     state.gradient.height !== height ||
     state.gradient.dpr !== dpr ||
     state.gradient.good !== tokens.good ||
-    state.gradient.warn !== tokens.warn
+    state.gradient.warn !== tokens.warn ||
+    state.gradient.danger !== tokens.danger
   ) {
     const fill = context.createLinearGradient(0, height, 0, zeroY)
     fill.addColorStop(0, tokens.good)
-    fill.addColorStop(0.7, tokens.good)
-    fill.addColorStop(1, tokens.warn)
-    state.gradient = { height, dpr, good: tokens.good, warn: tokens.warn, fill }
+    fill.addColorStop(0.45, tokens.good)
+    fill.addColorStop(0.75, tokens.warn)
+    fill.addColorStop(1, `color-mix(in srgb, ${tokens.danger} 75%, ${tokens.warn})`)
+    state.gradient = {
+      height,
+      dpr,
+      good: tokens.good,
+      warn: tokens.warn,
+      danger: tokens.danger,
+      fill,
+    }
   }
   context.fillStyle = tokens.background
   context.fillRect(0, 0, width, height)
 
   const columnW = Math.floor((width - 1) / 2)
-  drawColumn(
-    context,
-    0,
-    columnW,
-    height,
-    zeroY,
-    meter.left,
-    state.left.db,
-    tokens,
-    state.gradient.fill
-  )
+  drawColumn(context, 0, columnW, height, zeroY, left, state.left.db, tokens, state.gradient.fill)
   drawColumn(
     context,
     columnW + 1,
     width - columnW - 1,
     height,
     zeroY,
-    meter.right,
+    right,
     state.right.db,
     tokens,
     state.gradient.fill

@@ -15,6 +15,7 @@ import type {
   ProjectBackendFactory,
   ProjectRuntimeStatus,
 } from "@zoeydaw/project-core/backend"
+import type { MeterStore } from "@zoeydaw/project-core/realtime"
 
 export interface BackendSubmission {
   stage: Exclude<BackendStage, "open">
@@ -39,6 +40,7 @@ export interface BackendConnection {
   submitNote: (note: BackendNoteRequest["note"]) => void
   start: () => () => void
   readTelemetry: () => BackendTelemetry | null
+  readMeters: () => MeterStore | null
   whenIdle: () => Promise<boolean>
   dispose: () => void
 }
@@ -49,6 +51,7 @@ type Dispatch =
 interface TimedFrame {
   frame: BackendTelemetry
   receivedAt: number
+  correction?: number
 }
 const NOTE_CAPACITY = 4096
 const MAX_GENERATION = (1n << 64n) - 1n
@@ -132,6 +135,22 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
           candidate.frame.appliedSequence < frame.frame.appliedSequence))
     )
       return
+    if (
+      frame &&
+      frame.frame.playing &&
+      candidate.frame.playing &&
+      frame.frame.controlGeneration === candidate.frame.controlGeneration &&
+      candidate.frame.clock.bar >= frame.frame.clock.bar
+    ) {
+      const previous = interpolate(
+        frame.frame,
+        frame.receivedAt,
+        acceptedState,
+        candidate.receivedAt,
+        frame.correction
+      )
+      candidate.correction = Math.max(0, previous.clock.bar - candidate.frame.clock.bar)
+    }
     frame = candidate
     options.onTelemetry(candidate.frame)
   }
@@ -668,7 +687,14 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
       frame.frame.appliedSequence < controlSequence ||
       BigInt(frame.frame.controlGeneration) < generation
         ? null
-        : interpolate(frame.frame, frame.receivedAt, acceptedState, performance.now()),
+        : interpolate(
+            frame.frame,
+            frame.receivedAt,
+            acceptedState,
+            performance.now(),
+            frame.correction
+          ),
+    readMeters: () => backend?.readMeters?.() ?? null,
     whenIdle() {
       if (isDisposed || !backend) return Promise.resolve(false)
       if (!pending()) return Promise.resolve(!isFailed)

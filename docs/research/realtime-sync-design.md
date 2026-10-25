@@ -1,16 +1,16 @@
 # 统一实时控制与遥测设计
 
-核查：2026-10-23。状态：统一 wire、低频 metadata 校验、native 输入采集与 graph observer 已实现并通过独立样本验证；MeterHub、WebView 拉取、source observation 与 UI 接线尚未完成。对应用户要求：输入电平、Track、每个Device/Plugin及多个Dock/Mixer视图同时实时更新，不能未来再各建一套timer和队列。
+核查：2026-10-25。状态：统一 wire、唯一 Rust MeterHub、native 输入与 graph observer、窗口 stream、Web MeterSession 及轨头、路由和 Device 前后级电平消费已实现。真实设备 smoke 覆盖窗口隔离、独立回执、reset、换图与释放；保留的真实 C++→Rust 帧通过 Web session 和生产 selector。Transport、source observation 与完整唯一快照切换尚未完成，WKWebView 交互和吞吐未验收。
 
 入口：[cookbook](daw-cookbook.md)、[整体计划](daw-refactor-plan-2026-10-22.md)。统一的是身份、生命周期、订阅和调度，不是把所有流量塞进同一个FIFO。
 
 ## 当前缺口
 
-`packages/project-core/src/backend.ts::BackendTelemetry.levels` 仍是按字符串 Track ID 索引的左右声道数值。native `EngineSession::telemetry` 暂从 graph observer 的唯一 collector 缓存取值，并附带 device snapshot；旧 LevelMeasurer client 采集已删除。app `native.ts::schedulePoll` 仍每轮完成后等待约 33ms。该 JSON 消费链尚待步骤 3 整体切换，不能称为统一 binary Hub 已接通。
+生产轨头和路由电平直接读取 `adapters/realtime.ts` 暴露的 MeterStore，兴趣按挂载消费者取并集。`MeterSession` 处理打开期间卸载、隐藏代际、事件 gap、registry 更新与关闭，`MeterPull` 只在现有 scheduler tick 采纳和绘制单在途 binary 响应。registry 通过原有 backend poll 至多每 250ms 刷新，命令先安装 native 当前图并等待首个快照；换图期间不会把尚未发布的快照当作错误基线。
 
-原生 graph 已具有 track/bus/master/cue 输出和 Device 前后级 endpoint，input bank 独立按 deviceEpoch 换代；这些身份尚未经统一 Hub 接入 WebView。每 endpoint 数据年龄、高负载流背压和多窗口共享快照仍待完成。instrument/third-party plugin 自报遥测不等同 host 音频 meter。现有 SharedArrayBuffer 是前端局部槽，不是 Rust 到 WebView 零复制通道。
+`BackendTelemetry` 仍承担 transport，recording preview 和设备状态保留原有低频快照。`BackendTelemetry.levels`、`SessionState.levels`、native `inputLevels` JSON 及 Canvas meter 槽副本已删除。原生 graph 提供 track/bus/master/cue 和 Device 前后级 endpoint，input bank 按 deviceEpoch 独立换代。生产与 Gallery 都读取 MeterStore，Gallery 仅把确定性模拟幅值编码成测试帧，不产生音频。Device 前后级与路由复用 `ProjectMeter`，MeterStore 自身通知帧变化，停播 MIDI 活动不依赖 transport 位置。source observation 与 transport 的统一快照仍待接线。播放头只保留本地投影，不再分配 SharedArrayBuffer 电平槽。
 
-四种内置 Device 已经由 `BackendTrack.devices` 和 `projectBackendDocument` 投影至原生稳定实例链，参数与 Device 自动化能够影响真实处理。Utility、Filter、Delay、Reverb 的 DSP 回归及 Utility 设备前采集通过；混响采用固定版本 Signalsmith，decay 是名义尾音时间，不保证完整脉冲精确 RT60。Device 前后级 tap 直接观察 PluginNode 与其输入样本，不复制轨道输出。第三方插件宿主与 meter UI 尚未接通。
+四种内置 Device 已经由 `BackendTrack.devices` 和 `projectBackendDocument` 投影至原生稳定实例链，参数与 Device 自动化能够影响真实处理。Utility、Filter、Delay、Reverb 的 DSP 回归及 Utility 设备前采集通过；混响采用固定版本 Signalsmith，decay 是名义尾音时间，不保证完整脉冲精确 RT60。Device 前后级 tap 直接观察 PluginNode 与其输入样本，不复制轨道输出；显示通过二进制帧和实际 React/DOM 回归，真实 WKWebView 尚未验收。
 
 ## 一套入口，三类语义
 
@@ -56,11 +56,19 @@ levels v1 使用 128-byte header、每声道 48-byte record、每 source observa
 
 Device meter 使用 `device/<id>/in` 与 `device/<id>/out`，owner 为稳定 Device ID。相邻插件输出和输入可能是同一 Node，但各 endpoint 有独立 bank；同一 endpoint 被多个输出根发现时只创建一个 writer。双 worker、sharing/pooling 四种组合的样本回归覆盖两个串联 Utility 的独立输入输出能量。当前 collector 仍在原生进程内，未新增每插件 timer 或 IPC。
 
-Rust `realtime/rms.rs` 按累计 epoch 替换能量，保留至少 300ms 的完整窗口，超过 350ms 或输入间断时重新积窗。`ballistics.rs` 按单调时间计算 600ms hold 与 24dB/s release；`channel.rs` 将结果编码为单声道 WireRecord，重复 publication 不刷新 freshness，失效旧 epoch 不清除正在恢复的新窗口。原生 MeterTap 到 Rust 的样本 smoke 验证短峰能量和 completed 重放去重。以上聚合模块尚未接入生产 Hub、IPC 或 WebView，不能视为整条同步路径已完成。
+Rust `realtime/rms.rs` 按累计 epoch 替换能量并维护有界窗口，`ballistics.rs` 维护 hold/release，`channel.rs` 编码声道记录。`NativeMeterReader` 是 graph mailbox 的唯一 Hub 消费入口；`PlaybackService` 持有单一 MeterHub，高频读取不调主线程。window stream、可靠事件通道和生产 MeterSession 已接入；source observation、transport 的唯一快照切换及真实 WKWebView 吞吐仍未完成。详细当前接线见本文开头与 Web 消费章节，避免把早期阶段状态当成现状。
+
+`MeterOutputObserverNode` 在每张图的一个输出根发布 `MeterClockObservation`，复用现有三槽 SPSC mailbox。快照包含 reference sample、独立 device counter、timeline sample、PPQ、BPM、块长和 playing；坐标取自该块的 Tracktion `ProcessState`。Hub 通过同一 native read handle 消费新观测，并保留 `received_monotonic_ns`，重复读取不会刷新该时间。此时间是 Hub 收到观测的时间，不是设备呈现或物理出声时间。device counter 和 reference sample 的原点不同，不能直接相减当作延迟。真实输出 smoke 验证 sample/beat 连续推进及换图后的 BPM；尚不提供 audioRevision、controlGeneration 或可听采用证据。
+
+输入 bank 的唯一 `InputMeterCollector` 按设备 epoch 保留，与图 collector 分开。Hub 通过 `zp_input_meter_acquire` 取得该 collector 的采集权；旧 JSON 遥测复用缓存，不另取 mailbox consumer。`HubSnapshot.input` 保存独立 input registry 和聚合记录，换图保留其 RMS 与 peak 状态，设备换代才替换。输入 metadata 从已打开设备的实际 active channel 掩码生成，不开启设备或权限。统一 registry 将输入本地 slot 偏移到图记录之后，reset 返回同一坐标；请求绑定图代际和输入 epoch，所有目标处理到 reset epoch 后才确认。hosted 回归覆盖停止播放、共享缓存、旧 epoch 引用和选择性 C ABI reset；临时生产 Hub 夹具验证 0.25/0.5 输入 RMS、混合 reset 块后确认及未选输入保留。真实硬件输入显示和窗口传输仍未验收。
 
 ## Web消费与Canvas绘制
 
-每 WebView 一个 MeterStore 拥有 registry、最新完整 snapshot 和兴趣并集，独立窗口不共享 JS 对象。全应用 native 唯一 MeterHub。接口固定为 `acceptRegistry`、`acceptFrame`、`readLatest`、`setInterest`、`subscribeMetadata`、`dispose`。兴趣按稳定 endpointId 保存，新 registry 重新解析 slot；owner token 防止旧清理删除新兴趣。
+每 WebView 一个 MeterStore 拥有 registry、最新完整 snapshot 和兴趣并集，独立窗口不共享 JS 对象。全应用 native 唯一 MeterHub。core 定义 Store 契约，runtime 实现 `acceptRegistry`、`acceptFrame`、`readLatest`、`setInterest`、`subscribeMetadata`、`subscribeFrames` 和 `dispose`。兴趣按稳定 endpointId 保存，新 registry 重新解析 slot；owner token 防止旧清理删除新兴趣。高频帧通知只唤醒绘制，不更新 React 或工程状态。
+
+生产 `MeterSession` 已连接原生 stream。Store 在 admission 时绑定 stream/session，拒绝迟到 registry 和旧图帧，选择性 reset 立即屏蔽受影响 slot，保留其他 endpoint。Pull 由共享 rAF 调用 `tick`，最多一个请求和一个 pending buffer；隐藏、长帧、兴趣变化和 stalled 响应按代际丢弃，旧请求未完成时不并发补发。实际 DOM 和轨头 Canvas 绘制通过 `recordPaint` 累计每帧耗时，驱动 60/30Hz 降级和恢复；无兴趣时 scheduler 休眠，metadata 变化唤醒。相同 source 字段的 React 重渲染不重建 watcher。关闭先释放 Store 订阅再停止 Pull，绘制回调异常不能阻止原生关流。时钟校准绑定可见性及 graph/device 代际，换图后的旧响应不能覆盖新映射。每次 stream/session 重建销毁旧实例。真实 WKWebView 验收仍未完成。
+
+停播结构操作替换 Edit 后可能没有 playback graph。此时 `playback_stream_registry` 和 `playback_clock_probe` 返回 `null`，Web 废弃校准、标记 stale 并暂停 Pull，保留 stream，待既有低频检查发现图后恢复。BPM 更新已改为保留 Edit；早期停播 BPM 替换 smoke 只代表当时路径，不能作为当前替换行为的依据。空 registry、空时钟及迟到旧帧仍由 Web 回归覆盖。
 
 Arrangement、Mixer、Device rack、浮动窗口各自的可见集合合并后发送。重复显示同一endpoint不增加采集任务。面板移动、隐藏、卸载、engine release时引用计数清理。input meter即使transport停止仍可能活跃，因此调度条件必须是active interests/data而非`playing`。
 

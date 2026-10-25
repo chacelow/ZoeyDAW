@@ -8,9 +8,11 @@
  * The scheduler owns the rAF handle. Painters never call requestAnimationFrame themselves, so playhead, meters, grid, and clips share one scheduler tick.
  */
 export type PaintFn = (deltaMs: number) => void
+type FramePhase = "clock" | "update" | "paint"
+const FRAME_PHASES: readonly FramePhase[] = ["clock", "update", "paint"]
 
 export interface Scheduler {
-  register: (id: string, paint: PaintFn) => () => void
+  register: (id: string, paint: PaintFn, phase?: FramePhase) => () => void
   invalidate: (id: string) => void
   invalidateAll: () => void
   dispose: () => void
@@ -19,6 +21,7 @@ export interface Scheduler {
 interface Entry {
   paint: PaintFn
   dirty: boolean
+  phase: FramePhase
 }
 
 export function createScheduler(): Scheduler {
@@ -39,14 +42,12 @@ export function createScheduler(): Scheduler {
     const delta = lastTick === 0 ? 16 : now - lastTick
     lastTick = now
     let isRepaintNext = false
-    for (const entry of entries.values()) {
-      if (!entry.dirty) {
-        continue
-      }
-      entry.dirty = false
-      entry.paint(delta)
-      if (entry.dirty) {
-        isRepaintNext = true
+    for (const phase of FRAME_PHASES) {
+      for (const entry of entries.values()) {
+        if (!entry.dirty || entry.phase !== phase) continue
+        entry.dirty = false
+        entry.paint(delta)
+        if (entry.dirty) isRepaintNext = true
       }
     }
     if (isRepaintNext) {
@@ -55,8 +56,8 @@ export function createScheduler(): Scheduler {
   }
 
   return {
-    register(id, paint) {
-      entries.set(id, { paint, dirty: true })
+    register(id, paint, phase = "paint") {
+      entries.set(id, { paint, dirty: true, phase })
       schedule()
       return () => {
         entries.delete(id)

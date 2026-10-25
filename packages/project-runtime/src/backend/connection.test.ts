@@ -61,7 +61,6 @@ function frame(request: BackendDocumentRequest | BackendControlRequest, bar = 1)
     clock: { kind: "musical", bar, barsPerSecond: 0.5 },
     playing: "state" in request ? request.state.control.playing : request.control.playing,
     recording: false,
-    levels: { main: [-12, -12] },
   }
 }
 
@@ -447,6 +446,32 @@ describe("backend connection", () => {
     h.connection.dispose()
   })
 
+  it("does not retract the displayed playhead when a slower audio clock replaces extrapolation", () => {
+    vi.useFakeTimers()
+    const backend = controlled(accepted)
+    const h = harness(backend)
+    h.connection.open("one", state(1, 0, true))
+    const stop = h.connection.start()
+    backend.send({ ...frame(backend.requests[0], 3), sequence: 1 })
+    vi.advanceTimersByTime(32)
+    const before = h.connection.readTelemetry()!.clock.bar
+    backend.send({
+      ...frame(backend.requests[0], 3.008),
+      sequence: 2,
+      clock: { kind: "musical", bar: 3.008, barsPerSecond: 0.25 },
+    })
+    expect(h.connection.readTelemetry()!.clock.bar).toBeGreaterThanOrEqual(before)
+    vi.advanceTimersByTime(16)
+    expect(h.connection.readTelemetry()!.clock.bar).toBeGreaterThan(before)
+    vi.advanceTimersByTime(100)
+    expect(h.connection.readTelemetry()!.clock.bar).toBeCloseTo(3.008 + 0.116 * 0.25)
+    h.connection.submitControl(state(2, 1, true).control)
+    backend.send({ ...frame(backend.controls[0], 2), sequence: 3 })
+    expect(h.connection.readTelemetry()!.clock.bar).toBe(2)
+    stop()
+    h.connection.dispose()
+  })
+
   it("rejects stale and future telemetry, wraps the loop, and advances a sample clock consistently", () => {
     vi.useFakeTimers()
     vi.setSystemTime(0)
@@ -473,6 +498,23 @@ describe("backend connection", () => {
     vi.advanceTimersByTime(250)
     expect(h.connection.readTelemetry()?.clock.bar).toBeCloseTo(1.025)
     expect(h.connection.readTelemetry()?.clock).toMatchObject({ kind: "sample", frame: 60_000 })
+    stop()
+    h.connection.dispose()
+  })
+
+  it("applies a real loop wrap immediately after interpolated playback", () => {
+    vi.useFakeTimers()
+    const backend = controlled(accepted)
+    const h = harness(backend)
+    const playing = state(1, 0, true)
+    playing.project.loop = { enabled: true, startBar: 1, endBar: 2 }
+    h.connection.open("one", playing)
+    const stop = h.connection.start()
+    backend.send({ ...frame(backend.requests[0], 1.99), sequence: 1 })
+    vi.advanceTimersByTime(16)
+    expect(h.connection.readTelemetry()!.clock.bar).toBeCloseTo(1.998)
+    backend.send({ ...frame(backend.requests[0], 1.002), sequence: 2 })
+    expect(h.connection.readTelemetry()!.clock.bar).toBeCloseTo(1.002)
     stop()
     h.connection.dispose()
   })

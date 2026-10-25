@@ -223,7 +223,6 @@ export interface SessionState {
   timeSelection: TimeSelection | null
   editingClipId: string | null
   clipEditorRequest: number
-  levels: Record<string, [number, number]>
   dirty: boolean
   canUndo: boolean
   canRedo: boolean

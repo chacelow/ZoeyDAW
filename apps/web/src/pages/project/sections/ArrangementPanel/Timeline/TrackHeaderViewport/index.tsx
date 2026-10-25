@@ -17,7 +17,7 @@ import { AutomationLaneHeader } from "@/pages/project/sections/ArrangementPanel/
 import type { Track } from "@zoeydaw/project-core/types"
 
 /**
-Keeps keyboard-focused offscreen headers mounted while virtualizing rows and pinning returns/main.
+Keeps one viewport of nearby headers and keyboard-focused rows mounted, with returns/main pinned.
 */
 export function TrackHeaderViewport({
   tracks,
@@ -45,6 +45,7 @@ export function TrackHeaderViewport({
   )
   const groupProjection = useMemo(() => projectTrackGroups(tracks), [tracks])
   const scrollableBottom = pinnedTopFor(tracks, height, display)
+  const overscanHeight = Math.max(0, scrollableBottom - arrangementBodyTop())
   useEffect(() => {
     if (focusedHeader && !tracks.some(track => track.id === focusedHeader)) {
       if (
@@ -114,7 +115,8 @@ export function TrackHeaderViewport({
             row =>
               !isPinnedTrack(row.track) &&
               (row.track.id === focusedHeader ||
-                (row.top + row.height > arrangementBodyTop() && row.top < scrollableBottom))
+                (row.top + row.height > arrangementBodyTop() - overscanHeight &&
+                  row.top < scrollableBottom + overscanHeight))
           )
           .map(row => (
             <div

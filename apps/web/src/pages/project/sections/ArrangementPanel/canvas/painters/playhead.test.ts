@@ -2,7 +2,7 @@ import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { expect, it } from "vitest"
 import { createMockDocument } from "@zoeydaw/project-runtime/testing"
-import { createAudioRingBuffer } from "../audio/ring-buffer"
+import { createPlayheadProjection } from "../audio/playhead-projection"
 import {
   BAR_RULER_HEIGHT,
   LOOP_RULER_HEIGHT,
@@ -51,7 +51,7 @@ it("paints only the chosen visible row while stopped and a full recording line w
       fills.push(this.fillStyle)
     },
   }
-  const ring = createAudioRingBuffer()
+  const ring = createPlayheadProjection()
   const tokens = { primary: "teal", recording: "red" }
   paintPlayhead(context, scene.get(), ring, tokens)
   expect(lines).toEqual([])
@@ -73,7 +73,10 @@ it("paints only the chosen visible row while stopped and a full recording line w
   lines.length = 0
   scene.setPlayback({ playing: true, insertionPoint: scene.get().playback.insertionPoint })
   paintPlayhead(context, scene.get(), ring, tokens)
-  expect(lines).toEqual([{ from: [64.5, BAR_RULER_HEIGHT], to: [64.5, 682], color: "red" }])
+  expect(lines).toEqual([
+    { from: [64.5, BAR_RULER_HEIGHT], to: [64.5, 682], color: "red" },
+    { from: [16.5, audioRow.top], to: [16.5, audioRow.top + audioRow.height], color: "teal" },
+  ])
   lines.length = 0
   scene.setPlayback({ playing: false, insertionPoint: scene.get().playback.insertionPoint })
   paintPlayhead(context, scene.get(), ring, tokens)
@@ -104,6 +107,7 @@ it("paints only the chosen visible row while stopped and a full recording line w
   paintClipAlignment(context, scene.get(), "gray")
   expect(lines).toEqual([
     { from: [64.5, BAR_RULER_HEIGHT], to: [64.5, 682], color: "red" },
+    { from: [16.5, audioRow.top], to: [16.5, audioRow.top + audioRow.height], color: "teal" },
     { from: [160.5, BAR_RULER_HEIGHT], to: [160.5, 682], color: "gray" },
   ])
   lines.length = 0

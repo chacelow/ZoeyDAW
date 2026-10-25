@@ -13,12 +13,13 @@ import {
 } from "./adapters"
 import { ProjectLayout } from "./ProjectLayout"
 import { useProjectShell } from "./useProjectShell"
-import { ProjectFileFeedback } from "./files"
+import { attachProjectMeterScheduler } from "./components/ProjectMeter/scheduler"
 
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const shell = useProjectShell()
+  useEffect(attachProjectMeterScheduler, [])
   useEffect(() => {
     const projectId = id ?? "default"
     setProjectStorageId(projectId)
@@ -29,7 +30,6 @@ export function ProjectPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ProjectFileFeedback showDependencies />
       <div className="min-h-0 flex-1">
         <ProjectLayout
           projectId={id ?? ""}

@@ -21,6 +21,8 @@ import { ProjectFileControls, ProjectFileFeedback } from "."
 import type { MediaSource } from "@zoeydaw/project-core/media"
 import { configureProjectBackend } from "../adapters/context"
 import { createMockProjectBackend } from "@zoeydaw/project-runtime/testing"
+import { StatusStrip } from "../sections/StatusStrip"
+import { ControlInteractionsProvider } from "@/shared/control-interactions"
 
 vi.mock("@/shared/native/project-storage", () => ({
   nativeProjectStorage: {
@@ -175,4 +177,35 @@ it("restores the visible missing-media action when a successful relink is undone
   act(() => projectActions.redo())
   expect(screen.queryByRole("list", { name: "Resolve missing media" })).toBeNull()
   expect(nativeProjectStorage.relinkMedia).toHaveBeenCalledOnce()
+})
+
+it("shows external media guidance inside the existing Footer without adding a Header row", () => {
+  const current = useProjectState.getState().document
+  const source: MediaSource = {
+    id: "footer-source",
+    name: "Voice.wav",
+    sha256: "a".repeat(64),
+    byteLength: 960044,
+    sampleRate: 48000,
+    frames: 240000,
+    channels: 2,
+    location: { kind: "external", path: "/external/Voice.wav" },
+  }
+  hydrateProject(
+    JSON.stringify({
+      version: 4,
+      document: { ...current, media: [source] },
+      workspace: initialWorkspace(),
+    })
+  )
+  const view = render(
+    <I18nProvider>
+      <ControlInteractionsProvider>
+        <StatusStrip />
+      </ControlInteractionsProvider>
+    </I18nProvider>
+  )
+  const notice = view.getByText(/1 external audio dependencies/)
+  expect(notice.closest(".project-status-strip")).not.toBeNull()
+  expect(view.container.querySelectorAll(".project-status-strip")).toHaveLength(1)
 })

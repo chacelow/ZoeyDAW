@@ -11,7 +11,8 @@ import type { MediaSource } from "@zoeydaw/project-core/media"
 import { nativeClipWaveform } from "@/pages/project/adapters/backend/clip-waveform"
 import { samplePeakColumns } from "@zoeydaw/project-core/waveform"
 import { cachedWaveformRanges } from "@/pages/project/adapters/backend/waveform-ranges"
-import { signedWaveformPaths } from "@zoeydaw/project-core/signed-waveform"
+import { signedWaveformPreviewPaths } from "@zoeydaw/project-core/signed-waveform"
+import type { WaveformRange } from "@zoeydaw/project-core/waveform-range"
 
 const waveformBitmaps = new Map<string, OffscreenCanvas | HTMLCanvasElement>()
 const waveformRangeIds = new WeakMap<object, number>()
@@ -104,7 +105,8 @@ export function paintWaveform(
   ink: string,
   viewportWidth: number,
   media: readonly MediaSource[],
-  transport: Pick<DocumentState["transport"], "bpm" | "numerator" | "denominator">
+  transport: Pick<DocumentState["transport"], "bpm" | "numerator" | "denominator">,
+  suppliedRanges?: readonly WaveformRange[]
 ): void {
   if (height <= 0 || width <= 0) return
   const envelope = nativeClipWaveform(
@@ -120,7 +122,7 @@ export function paintWaveform(
     const visibleStart = Math.max(0, -left)
     const visibleEnd = Math.min(width, viewportWidth - left)
     if (visibleEnd <= visibleStart) return
-    const ranges = cachedWaveformRanges(source).map(range => range.data)
+    const ranges = suppliedRanges ?? cachedWaveformRanges(source).map(range => range.data)
     const sliceStart = Math.floor(visibleStart)
     const sliceEnd = Math.ceil(visibleEnd)
     const drawnWidth = Math.max(1, sliceEnd - sliceStart)
@@ -152,7 +154,7 @@ export function paintWaveform(
       const painter = bitmap?.getContext("2d")
       if (bitmap && painter && "fill" in painter) {
         painter.scale(dpr, dpr)
-        const paths = signedWaveformPaths(
+        const slices = signedWaveformPreviewPaths(
           envelope,
           ranges,
           source.frames,
@@ -162,11 +164,16 @@ export function paintWaveform(
           drawnHeight
         )
         painter.fillStyle = ink
-        const paintShape = (path: (typeof paths)[number]) => {
-          Reflect.apply(painter.fill, painter, [new Path2D(path.path)])
-          if (path.markers) Reflect.apply(painter.fill, painter, [new Path2D(path.markers)])
+        for (const slice of slices) {
+          painter.save()
+          painter.translate(slice.left, 0)
+          painter.scale(slice.scaleX, 1)
+          for (const path of slice.paths) {
+            Reflect.apply(painter.fill, painter, [new Path2D(path.path)])
+            if (path.markers) Reflect.apply(painter.fill, painter, [new Path2D(path.markers)])
+          }
+          painter.restore()
         }
-        for (const path of paths) paintShape(path)
         rememberBitmap(key, bitmap)
       }
     }

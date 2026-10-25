@@ -9,12 +9,14 @@ export function DeviceSelectors({
   choices,
   busy,
   onChange,
+  onDiscover,
 }: {
   draft: AudioDeviceConfiguration | null
   device: AudioDeviceSnapshot | null
   choices: DeviceChoices
   busy: boolean
   onChange: (next: AudioDeviceConfiguration) => void
+  onDiscover: () => void
 }) {
   const { t } = useTranslation()
   const { hosts, inputs, outputs } = choices
@@ -24,52 +26,76 @@ export function DeviceSelectors({
 
   return (
     <>
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="settings-row">
         <Label>{t("audioSettings.host")}</Label>
-        <DropdownButton
-          label={t("audioSettings.host")}
-          value={host ?? ""}
-          items={hosts.map(item => ({ id: item.id, label: item.name }))}
-          renderValue={item => item?.label ?? host ?? t("audioSettings.noHost")}
-          disabled={busy || !draft || hosts.length === 0}
-          mappable={false}
-          size="compact"
-          onChange={host => {
-            if (draft) onChange(selectHost(draft, host, device))
+        <div
+          className="min-w-0"
+          onClickCapture={onDiscover}
+          onKeyDownCapture={event => {
+            if (["Enter", " ", "ArrowDown"].includes(event.key)) onDiscover()
           }}
-        />
+        >
+          <DropdownButton
+            label={t("audioSettings.host")}
+            value={host ?? ""}
+            items={hosts.map(item => ({ id: item.id, label: item.name }))}
+            renderValue={item => item?.label ?? host ?? t("audioSettings.noHost")}
+            disabled={busy || !draft || hosts.length === 0}
+            mappable={false}
+            size="compact"
+            onChange={host => {
+              if (draft) onChange(selectHost(draft, host, device))
+            }}
+          />
+        </div>
       </div>
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="settings-row">
         <Label>{t("audioSettings.inputDevice")}</Label>
-        <DropdownButton
-          label={t("audioSettings.inputDevice")}
-          value={inputDeviceId ?? ""}
-          items={[
-            { id: "", label: t("audioSettings.noInput") },
-            ...inputs.map(item => ({ id: item.id, label: item.name })),
-          ]}
-          disabled={busy || !draft}
-          mappable={false}
-          size="compact"
-          onChange={value => {
-            if (draft) onChange(selectInput(draft, value, choices))
+        <div
+          className="min-w-0"
+          onClickCapture={onDiscover}
+          onKeyDownCapture={event => {
+            if (["Enter", " ", "ArrowDown"].includes(event.key)) onDiscover()
           }}
-        />
+        >
+          <DropdownButton
+            label={t("audioSettings.inputDevice")}
+            value={inputDeviceId ?? ""}
+            items={[
+              { id: "", label: t("audioSettings.noInput") },
+              ...inputs.map(item => ({ id: item.id, label: item.name })),
+            ]}
+            disabled={busy || !draft}
+            mappable={false}
+            size="compact"
+            onChange={value => {
+              if (draft) onChange(selectInput(draft, value, choices))
+            }}
+          />
+        </div>
       </div>
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="settings-row">
         <Label>{t("audioSettings.outputDevice")}</Label>
-        <DropdownButton
-          label={t("audioSettings.outputDevice")}
-          value={outputDeviceId ?? ""}
-          items={outputs.map(item => ({ id: item.id, label: item.name }))}
-          renderValue={item => item?.label ?? outputDeviceId ?? t("audioSettings.noDevice")}
-          disabled={busy || !draft || outputs.length === 0}
-          mappable={false}
-          size="compact"
-          onChange={value => {
-            if (draft) onChange(selectOutput(draft, value, device, choices))
+        <div
+          className="min-w-0"
+          onClickCapture={onDiscover}
+          onKeyDownCapture={event => {
+            if (["Enter", " ", "ArrowDown"].includes(event.key)) onDiscover()
           }}
-        />
+        >
+          <DropdownButton
+            label={t("audioSettings.outputDevice")}
+            value={outputDeviceId ?? ""}
+            items={outputs.map(item => ({ id: item.id, label: item.name }))}
+            renderValue={item => item?.label ?? outputDeviceId ?? t("audioSettings.noDevice")}
+            disabled={busy || !draft || outputs.length === 0}
+            mappable={false}
+            size="compact"
+            onChange={value => {
+              if (draft) onChange(selectOutput(draft, value, device, choices))
+            }}
+          />
+        </div>
       </div>
     </>
   )

@@ -2,6 +2,8 @@ import { useTranslation } from "@zoeymind/i18n"
 import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { timeTickLabel } from "@zoeydaw/project-core/timeline-ticks"
 import type { AudioClip, DocumentState } from "@zoeydaw/project-core/types"
+import { findMediaSource } from "@zoeydaw/project-core/media"
+import { useProjectState } from "@/pages/project/adapters"
 import { useSourceViewport } from "../useSourceViewport"
 import { SourceOverview } from "./SourceOverview"
 import { WaveformSurface } from "./WaveformSurface"
@@ -19,7 +21,15 @@ export function AudioWaveform({
 }) {
   const { t } = useTranslation()
   const settings = getAudioClipSettings(clip, transport.bpm)
-  const viewport = useSourceViewport(clip, settings)
+  const source = useProjectState(state => findMediaSource(state.document.media, clip.sourceId))
+  const viewport = useSourceViewport(
+    clip,
+    settings,
+    transport.bpm,
+    transport.numerator,
+    transport.denominator,
+    source
+  )
   const dimensions = useWaveformDimensions()
   const waveform = useWaveformData({ clip, transport, settings, viewport, dimensions })
   const { selection, surfaceHandlers, overviewHandlers } = useWaveformInteraction(
@@ -48,13 +58,13 @@ export function AudioWaveform({
       />
       <div className="audio-detail-preview-status">
         <span>
-          {t("detailAudio.zoom")} {(clip.lengthBars / viewport.view.span).toFixed(1)}×
+          {t("detailAudio.zoom")} {(viewport.rangeSpan / viewport.view.span).toFixed(1)}×
         </span>
         <span>
           {t("detailAudio.selection")}:{" "}
           {selection === null ? "—" : timeTickLabel(selection * waveform.secondsPerBar)}
         </span>
-        <span>{t("detailAudio.prototype")}</span>
+        {!waveform.realSource && <span>{t("detailAudio.prototype")}</span>}
       </div>
     </section>
   )

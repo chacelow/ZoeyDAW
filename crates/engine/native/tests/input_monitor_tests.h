@@ -54,6 +54,7 @@ public:
     zp::Request request{};
     zp::Track track{};
     int processCalls = 0;
+    std::atomic<bool> recording {false};
     graph::NodePlayer player;
     juce::AudioBuffer<float> audio;
     te::MidiMessageArray midi;
@@ -67,7 +68,7 @@ public:
     void build(bool withMidi = false) {
         player.setNode(zp::createInputMonitorNode(
             std::make_unique<ConstantInputNode>(audio.getNumChannels(), processCalls, withMidi),
-            track, request, state), rate, frames);
+            track, request, state, recording), rate, frames);
     }
     void render(bool playing, int64_t timelineStart = 0, int64_t referenceStart = 1000,
                 int stateOffset = 0) {
@@ -135,6 +136,15 @@ inline void testInputMonitorGate() {
     boundaries.expectSamples([](int) { return true; });
     require(boundaries.processCalls == 2, "Stopped monitoring failed to drain the actual input node");
 
+    Fixture recording;
+    recording.track.clips = {clip(1, 1)};
+    recording.build();
+    recording.recording.store(true);
+    recording.render(true);
+    recording.expectSamples([](int) { return true; });
+    recording.recording.store(false);
+    recording.render(true, 0, 2000);
+    recording.expectSamples([](int) { return false; });
     Fixture seek;
     seek.track.clips = {clip(1.25, .5, false, -12)};
     seek.build();

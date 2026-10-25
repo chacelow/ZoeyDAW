@@ -170,7 +170,7 @@ describe("canvas clip gestures", () => {
   it("keeps a trimmed left edge anchored at pointer-down offset, with source intact on cancel", () => {
     const { getByTestId } = render(<Canvas />)
     const host = getByTestId("host")
-    const edge = pointFor("audio-1", 3, 50)
+    const edge = pointFor("audio-1", 3, 6)
     const original = clipById("audio-1")
     if (!original) {
       throw new Error("Missing audio fixture")
@@ -190,9 +190,31 @@ describe("canvas clip gestures", () => {
     expect(clipById("audio-1")).toEqual(original)
     act(() => fireEvent.pointerCancel(host, { ...edge, pointerId: 99 }))
     expect(arrangementScene.get().previewTracks).not.toBeNull()
-    act(() => fireEvent.pointerCancel(host, edge))
+    act(() => fireEvent.keyDown(window, { key: "Escape" }))
     expect(arrangementScene.get().previewTracks).toBeNull()
     expect(clipById("audio-1")).toEqual(original)
+  })
+
+  it("extends trimmed audio only to source zero and retains the clamped preview on release", () => {
+    projectActions.updateClip("audio-1", { startBar: 5, lengthBars: 4, sourceOffsetBars: 1 })
+    arrangementScene.setMusic({
+      ...arrangementScene.get(),
+      tracks: useProjectState.getState().document.tracks,
+    })
+    const { getByTestId } = render(<Canvas />)
+    const host = getByTestId("host")
+    const edge = pointFor("audio-1", 3, 6)
+    act(() => fireEvent.pointerDown(host, edge))
+    act(() => fireEvent.pointerMove(host, { ...edge, clientX: edge.clientX - 64 }))
+    const preview = arrangementScene
+      .get()
+      .tracks.flatMap(track => track.clips)
+      .find(clip => clip.id === "audio-1")!
+    expect(preview).toMatchObject({ startBar: 4, lengthBars: 5, sourceOffsetBars: 0 })
+    act(() => fireEvent.pointerUp(host, { ...edge, clientX: edge.clientX - 64 }))
+    expect(clipById("audio-1")).toEqual(preview)
+    projectActions.undo()
+    expect(clipById("audio-1")).toMatchObject({ startBar: 5, lengthBars: 4, sourceOffsetBars: 1 })
   })
 
   it("preserves selected multi-clip relative placement and ignores another pointer's release", () => {

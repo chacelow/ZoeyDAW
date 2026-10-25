@@ -32,6 +32,46 @@ it("roundtrips independent audio loop settings and an ordered per-track device c
     audioSettings: clip.audioSettings,
   })
 })
+it.each(["beats", "tones", "texture", "complex", "complex-pro", "repitch"])(
+  "restores legacy %s using its original processor rather than retaining an obsolete runtime mode",
+  legacyMode => {
+    const { document, clip } = detailDocument()
+    const payload = JSON.parse(stringifyProject(document, createTestWorkspace()))
+    const track = payload.document.tracks.find((item: { clips: { id: string }[] }) =>
+      item.clips.some((item: { id: string }) => item.id === clip.id)
+    )
+    const savedClip = track.clips.find((item: { id: string }) => item.id === clip.id)
+    savedClip.audioSettings.warpMode = legacyMode
+    const restored = parseProject(JSON.stringify(payload))
+    const restoredClip = restored.document.tracks
+      .flatMap(item => item.clips)
+      .find(item => item.id === clip.id)
+    if (restoredClip?.kind !== "audio") throw new Error("Audio clip was not restored")
+    expect(restoredClip.audioSettings?.warpMode).toBe(
+      legacyMode === "repitch" ? "re-pitch" : "soundtouch"
+    )
+    expect(
+      JSON.parse(stringifyProject(restored.document, restored.workspace)).document.tracks.flatMap(
+        (item: { clips: unknown[] }) => item.clips
+      )
+    ).toContainEqual(
+      expect.objectContaining({
+        id: clip.id,
+        audioSettings: expect.objectContaining({ warpMode: restoredClip.audioSettings?.warpMode }),
+      })
+    )
+  }
+)
+
+it("rejects unknown saved warp modes after explicit legacy conversion", () => {
+  const { document, clip } = detailDocument()
+  const payload = JSON.parse(stringifyProject(document, createTestWorkspace()))
+  const savedClip = payload.document.tracks
+    .flatMap((item: { clips: unknown[] }) => item.clips)
+    .find((item: { id: string }) => item.id === clip.id)
+  savedClip.audioSettings.warpMode = "unsupported"
+  expect(() => parseProject(JSON.stringify(payload))).toThrow()
+})
 
 it("rejects duplicate device identity within a track before restoring a snapshot", () => {
   const { document, track } = detailDocument()

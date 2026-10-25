@@ -10,6 +10,10 @@ void EngineSession::bindInputs(Arrangement& a,const Request& request) {
         return false;
     });
     if(changed)a.inputState=request;
+    for(const auto& track:request.tracks)for(const auto& clip:track.clips)if(clip.kind=="audio")
+        if(const auto found=a.audioClips.find(clip.id);found!=a.audioClips.end())
+            if(const bool muted=clip.mute || (track.kind=="audio" && track.input=="external" && track.monitor=="in");found->second->isMuted()!=muted)
+                found->second->setMuted(muted);
     auto& transport=a.edit->getTransport();
     auto& manager=engine.getDeviceManager();
     auto* device=manager.deviceManager.getCurrentAudioDevice();

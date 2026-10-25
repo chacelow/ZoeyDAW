@@ -11,6 +11,7 @@ import {
 } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { useViewportSync } from "@/pages/project/sections/ArrangementPanel/canvas/useSceneSync"
 import { arrangementScheduler } from "@/pages/project/sections/ArrangementPanel/canvas/scheduler"
+import { arrangementPlayhead } from "@/pages/project/sections/ArrangementPanel/canvas/audio/playhead-projection"
 import { useSongExtent } from "./useSongExtent"
 import type { RefObject } from "react"
 
@@ -153,19 +154,25 @@ export function useTimelineViewport(
         return
       }
       if (performance.now() >= manualPanUntil.current) {
-        const pixel = (readTransportBar() - 1) * pxPerBar
+        const sampled = arrangementPlayhead.readPlayhead()
+        const pixel = ((sampled.playing ? sampled.bar : readTransportBar()) - 1) * pxPerBar
         const current = state.workspace.scrollX
         const next = Math.max(
           0,
           Math.min(timelineWidth - timeViewportWidth, pixel - timeViewportWidth / 2)
         )
         if (next !== current && (pixel < current || pixel >= current + timeViewportWidth / 2)) {
+          arrangementScene.setViewport({
+            ...arrangementScene.get().viewport,
+            pxPerBar,
+            scrollX: next,
+          })
           projectActions.setViewport({ scrollX: next })
         }
       }
       arrangementScheduler.invalidate(id)
     }
-    return arrangementScheduler.register(id, paint)
+    return arrangementScheduler.register(id, paint, "update")
   }, [follow, playing, pxPerBar, timeViewportWidth, timelineWidth])
 
   useEffect(() => {

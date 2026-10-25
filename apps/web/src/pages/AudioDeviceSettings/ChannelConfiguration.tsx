@@ -1,4 +1,4 @@
-import { useId, useState, type Dispatch, type SetStateAction } from "react"
+import { useId, useState } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { Button, Checkbox, Label } from "@zoeymind/ui"
 import type { AudioDeviceCapabilities, AudioDeviceConfiguration } from "@/shared/native/audio"
@@ -12,7 +12,7 @@ export function DeviceChannels({
   draft: AudioDeviceConfiguration | null
   capabilities: AudioDeviceCapabilities | null
   busy: boolean
-  onChange: Dispatch<SetStateAction<AudioDeviceConfiguration | null>>
+  onChange: (next: AudioDeviceConfiguration) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -24,9 +24,9 @@ export function DeviceChannels({
           mono={draft?.inputMono ?? []}
           stereo={draft?.inputStereo ?? []}
           disabled={busy || !capabilities || draft?.inputDeviceId == null}
-          onChange={(inputMono, inputStereo) =>
-            onChange(previous => previous && { ...previous, inputMono, inputStereo })
-          }
+          onChange={(inputMono, inputStereo) => {
+            if (draft) onChange({ ...draft, inputMono, inputStereo })
+          }}
         />
         <ChannelConfiguration
           title={t("audioSettings.outputConfig")}
@@ -34,9 +34,9 @@ export function DeviceChannels({
           mono={draft?.outputMono ?? []}
           stereo={draft?.outputStereo ?? []}
           disabled={busy || !capabilities}
-          onChange={(outputMono, outputStereo) =>
-            onChange(previous => previous && { ...previous, outputMono, outputStereo })
-          }
+          onChange={(outputMono, outputStereo) => {
+            if (draft) onChange({ ...draft, outputMono, outputStereo })
+          }}
         />
       </div>
       {capabilities && draft && draft.outputMono.length + draft.outputStereo.length === 0 && (
@@ -70,16 +70,22 @@ function ChannelConfiguration({
       : channels.filter(channel => channel !== index)
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <Button
-        variant="outline"
-        size="sm"
-        aria-expanded={expanded}
-        aria-controls={id}
-        disabled={disabled}
-        onClick={() => setExpanded(value => !value)}
-      >
-        {title}
-      </Button>
+      <div className="settings-row">
+        <Label>{title}</Label>
+        <div className="min-w-0">
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={title}
+            aria-expanded={expanded}
+            aria-controls={id}
+            disabled={disabled}
+            onClick={() => setExpanded(value => !value)}
+          >
+            {expanded ? t("audioSettings.hideChannels") : t("audioSettings.editChannels")}
+          </Button>
+        </div>
+      </div>
       {expanded && (
         <div
           id={id}

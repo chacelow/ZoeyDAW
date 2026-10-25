@@ -106,7 +106,13 @@ export function deviceChoices(
 }
 
 function validChannels(mono: number[], stereo: number[], count: number) {
-  return mono.every(channel => channel < count) && stereo.every(channel => channel + 1 < count)
+  return (
+    mono.every(channel => Number.isInteger(channel) && channel >= 0 && channel < count) &&
+    stereo.every(
+      channel =>
+        Number.isInteger(channel) && channel >= 0 && channel % 2 === 0 && channel + 1 < count
+    )
+  )
 }
 
 export function canApplyDraft(

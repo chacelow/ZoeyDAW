@@ -6,6 +6,8 @@ export default {
   scanPlugins: "Scan plugins in Settings first.",
   chain: "Device chain",
   trackDevices: "Devices on {{track}}",
+  inputLevel: "{{device}} input level",
+  outputLevel: "{{device}} output level",
   noTrack: "Select a track to view its devices.",
   emptyMidi: "Add an audio effect to this MIDI track",
   emptyAudio: "Add an audio effect to this track",

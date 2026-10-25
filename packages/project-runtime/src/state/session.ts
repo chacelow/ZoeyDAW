@@ -13,7 +13,6 @@ export function initialSession(): SessionState {
     timeSelection: null,
     editingClipId: null,
     clipEditorRequest: 0,
-    levels: {},
     dirty: false,
     canUndo: false,
     canRedo: false,

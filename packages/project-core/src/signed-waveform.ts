@@ -263,3 +263,93 @@ export function signedWaveformPaths(
   }
   return result
 }
+
+export function signedWaveformPreviewPaths(
+  envelope: PeakEnvelope,
+  ranges: readonly WaveformRange[],
+  totalFrames: number,
+  from: number,
+  through: number,
+  width: number,
+  height: number
+): { left: number; scaleX: number; paths: WaveformChannelPath[] }[] {
+  if (through <= from || width <= 0 || envelope.span <= 0) return []
+  const samplesPerPixel = ((through - from) * totalFrames) / (envelope.span * width)
+  const detailStep = samplesPerPixel <= 1 ? 1 : 2 ** Math.floor(Math.log2(samplesPerPixel))
+  const slices: { from: number; through: number; step: number }[] = []
+  let complete = true
+  const coverage: { start: number; end: number; step: number }[] = []
+  for (const range of ranges
+    .map(range => ({
+      start: range.startFrame,
+      end: range.startFrame + range.frameCount,
+      step: range.kind === "samples" ? 1 : range.framesPerBin,
+    }))
+    .sort((a, b) => a.step - b.step || a.start - b.start)) {
+    const previous = coverage.at(-1)
+    if (previous && previous.step === range.step && previous.end >= range.start)
+      previous.end = Math.max(previous.end, range.end)
+    else coverage.push(range)
+  }
+  for (const range of coverage) {
+    const padding = Math.max(range.step === 1 ? 32 : 0, Math.max(range.step, detailStep) * 4)
+    if (range.start > 0) range.start += padding
+    if (range.end < totalFrames) range.end -= padding
+  }
+  for (const run of visibleRuns(envelope, from, through)) {
+    const first = Math.min(run.sourceFrom, run.sourceThrough) * totalFrames
+    const end = Math.max(run.sourceFrom, run.sourceThrough) * totalFrames
+    const edges = Array.from(
+      new Set([
+        first,
+        end,
+        ...coverage
+          .flatMap(range => [range.start, range.end])
+          .filter(frame => frame > first && frame < end),
+      ])
+    ).sort((a, b) => a - b)
+    for (let index = 1; index < edges.length; index++) {
+      const start = edges[index - 1]
+      const stop = edges[index]
+      const available = coverage.filter(range => range.start <= start && range.end >= stop)
+      const step = Math.min(...available.map(range => range.step))
+      if (step > detailStep) complete = false
+      if (!Number.isFinite(step)) continue
+      const position = (frame: number) =>
+        run.from +
+        ((frame / totalFrames - run.sourceFrom) / (run.sourceThrough - run.sourceFrom)) *
+          (run.through - run.from)
+      const a = position(start)
+      const b = position(stop)
+      slices.push({ from: Math.min(a, b), through: Math.max(a, b), step })
+    }
+  }
+  if (complete)
+    return [
+      {
+        left: 0,
+        scaleX: 1,
+        paths: signedWaveformPaths(envelope, ranges, totalFrames, from, through, width, height),
+      },
+    ]
+  return slices.map(slice => {
+    const drawnWidth = ((slice.through - slice.from) * width) / (through - from)
+    const columns =
+      slice.step <= detailStep
+        ? drawnWidth
+        : ((slice.through - slice.from) * totalFrames) / (envelope.span * slice.step)
+    return {
+      left: ((slice.from - from) * width) / (through - from),
+      scaleX: drawnWidth / columns,
+      paths: signedWaveformPaths(
+        envelope,
+        ranges,
+        totalFrames,
+        slice.from,
+        slice.through,
+        columns,
+        height
+      ),
+    }
+  })
+}

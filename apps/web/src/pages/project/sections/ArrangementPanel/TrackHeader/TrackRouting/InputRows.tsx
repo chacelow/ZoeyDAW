@@ -6,14 +6,30 @@ import { inputChannelOptions, inputChannelValue } from "./options"
 import type { RouteOption } from "./options"
 import type { Track } from "@zoeydaw/project-core/types"
 
-export function InputTypeRow({ track }: { readonly track: Track }) {
+export function InputTypeRow({
+  track,
+  hardwareInputs,
+}: {
+  readonly track: Track
+  readonly hardwareInputs: RouteOption[]
+}) {
   const { t } = useTranslation()
   return (
     <DropdownButton
       size="compact"
       label={`${t("arrangement.input")} ${track.name}`}
       value={track.input}
-      onChange={input => projectActions.updateTrack(track.id, { input })}
+      onChange={input =>
+        projectActions.updateTrack(track.id, {
+          input,
+          ...(track.kind === "audio" &&
+          input === "external" &&
+          !track.inputChannel &&
+          hardwareInputs[0]
+            ? { inputChannel: hardwareInputs[0].id }
+            : {}),
+        })
+      }
       items={[
         { type: "heading", id: "input-type", label: t("arrangement.inputType") },
         ...withRouteMeters(
@@ -23,7 +39,10 @@ export function InputTypeRow({ track }: { readonly track: Track }) {
               ? { id: "all", label: t("arrangement.allInputs") }
               : { id: "external", label: t("arrangement.externalInput") },
           ],
-          track.id
+          id =>
+            track.kind === "audio" && id === "external"
+              ? { kind: "input", channel: track.inputChannel ?? "1" }
+              : { kind: "silent" }
         ),
       ]}
       className="w-full min-w-0"
@@ -47,7 +66,10 @@ export function InputChannelRow({
       onChange={inputChannel => projectActions.updateTrack(track.id, { inputChannel })}
       items={withRouteMeters(
         inputChannelOptions(track, hardwareInputs, t("arrangement.allChannels")),
-        track.id
+        id =>
+          track.kind === "audio" && track.input === "external"
+            ? { kind: "input", channel: id }
+            : { kind: "silent" }
       )}
       disabled={track.input === "none"}
       className="w-full min-w-0"

@@ -3,6 +3,7 @@ import { formatAudioMusicalValue, type AudioClipSettings } from "@zoeydaw/projec
 import { DEFAULT_FADE_CURVE, fadeControls, fadePath } from "@zoeydaw/project-core/fades"
 import { timeTickLabel } from "@zoeydaw/project-core/timeline-ticks"
 import type { AudioClip, DocumentState } from "@zoeydaw/project-core/types"
+import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
 import { SourceMarker } from "../SourceMarker"
 import type { SourceViewport } from "../useSourceViewport"
 import { SignedWaveform } from "./SignedWaveform"
@@ -33,7 +34,7 @@ export function WaveformSurface({
   handlers: WaveformPointerHandlers
 }) {
   const { t } = useTranslation()
-  const start = clip.sourceOffsetBars ?? 0
+  const { origin, rate } = clipSourceProjection(clip, transport.bpm)
   const inFade = fadeControls(clip, "in")
   const outFade = fadeControls(clip, "out")
   const tickStep =
@@ -143,7 +144,7 @@ export function WaveformSurface({
             preserveAspectRatio="none"
             aria-hidden
           >
-            <g transform={`translate(${start} 0)`} className="audio-detail-fade">
+            <g transform={`translate(${origin} 0) scale(${rate} 1)`} className="audio-detail-fade">
               {(clip.fadeInBars ?? 0) > 0 && (
                 <path
                   d={fadePath(
@@ -202,14 +203,14 @@ export function WaveformSurface({
           {...markerProps}
           kind="fadeIn"
           lower
-          position={start + inFade.end}
+          position={origin + inFade.end * rate}
           label={t("detailAudio.fadeInMarker")}
         />
         <SourceMarker
           {...markerProps}
           kind="fadeOut"
           lower
-          position={start + outFade.start}
+          position={origin + outFade.start * rate}
           label={t("detailAudio.fadeOutMarker")}
         />
       </div>

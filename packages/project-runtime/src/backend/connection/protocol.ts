@@ -87,12 +87,5 @@ export function validFrame(value: BackendTelemetry, sessionId: string): boolean 
       clock.sampleRate <= 0)
   )
     return false
-  return (
-    typeof value.levels === "object" &&
-    value.levels !== null &&
-    Object.values(value.levels).every(
-      pair =>
-        Array.isArray(pair) && pair.length === 2 && pair.every(level => Number.isFinite(level))
-    )
-  )
+  return true
 }

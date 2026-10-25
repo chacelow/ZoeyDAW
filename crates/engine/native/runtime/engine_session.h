@@ -44,6 +44,9 @@ public:
                          uint64_t revision,zd_plugin_owned_processor,IsolatedPluginFormat);
     void cancelPlugin(const juce::String& lease,const juce::String& session,uint64_t token);
     V applyPrepared(const V&,zd_plugin_prepared*,uint32_t count);
+    std::shared_ptr<MeterGraphCollector> acquireMeterGraph(const char* lease,const char* session,std::uint32_t deviceEpoch,std::uint32_t generation,std::uint32_t registry);
+    std::shared_ptr<InputMeterCollector> acquireInputMeter(const char* lease,const char* session,std::uint32_t deviceEpoch);
+    V meterRegistry(const V&);
     std::atomic<uint64_t> stopToken {0}, auditionGeneration {0};
     std::atomic<bool> arrangementAudible {false};
     std::atomic<bool> monitoringAudible {false};
@@ -68,7 +71,7 @@ private:
         std::map<te::Track*, MeterOutputIdentity> meterOutputs;
         std::map<juce::String, std::string> meterEndpointIds;
         std::shared_ptr<const MeterGraph> meterGraph;
-        std::unique_ptr<MeterGraphCollector> meterCollector;
+        std::shared_ptr<MeterGraphCollector> meterCollector;
         juce::Array<V> issues;
         Request inputState {};
         void observeSourceRender(te::AudioClipBase&);
@@ -93,6 +96,7 @@ private:
     te::Engine engine;
     DeviceClock clock;
     std::unique_ptr<Arrangement> arrangement;
+    std::atomic<bool> recordingActive {false};
     std::unique_ptr<te::Edit> preview;
     std::shared_ptr<Capture> capture;
     std::shared_ptr<Capture> previewCapture;
@@ -118,10 +122,16 @@ private:
     double previewDuration=0, previewSourceDuration=0;
     struct Recording {
         juce::String id, session, lease;
-        double sourceBpm=120, secondsPerBar=2;
+        double sourceBpm=120, secondsPerBar=2, sampleRate=0;
         V result;
         juce::String error;
         std::optional<uint64_t> publishedRevision;
+        struct LiveTrack {
+            juce::String trackId, clipId;
+            juce::File file;
+            te::RecordingThumbnailManager::Thumbnail::Ptr thumbnail;
+        };
+        std::map<juce::String, LiveTrack> liveTracks;
     };
     std::optional<Recording> recording;
     std::map<juce::String,Recording> closedRecordings;
@@ -131,6 +141,7 @@ private:
     void recordingFinished(te::InputDeviceInstance&,te::EditItemID,const juce::ReferenceCountedArray<te::Clip>&) override;
     void recordingStopped(te::SyncPoint,bool) override;
     V recordingResults(const V&);
+    V recordingPreview(const juce::String& lease) const;
     V acknowledgeRecording(const V&);
     void confirmRecordingPublication(const Request&);
     V apply(const V&);
@@ -149,6 +160,7 @@ private:
     AudioConfiguration defaultConfiguration();
     void applyConfiguration(const AudioConfiguration&, bool persist, bool requestPermission);
     void activateConfiguration(const AudioConfiguration&);
+    void setWaveDeviceLayout(const std::optional<AudioConfiguration>&);
     void applyChannelLayout(const AudioConfiguration&);
     void routePreview();
     void openDevice();

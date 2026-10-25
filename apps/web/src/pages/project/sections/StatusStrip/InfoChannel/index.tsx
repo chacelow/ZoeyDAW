@@ -7,6 +7,7 @@ import { AlertTriangle, CircleAlert, Info } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
 import { useControlInteractions } from "@/shared/control-interactions/index"
 import type { WarningSeverity } from "@/shared/control-interactions/index"
+import { ProjectFileFeedback } from "@/pages/project/files"
 
 const SEVERITY_ICON: Record<WarningSeverity, typeof Info> = {
   info: Info,
@@ -54,5 +55,5 @@ export function InfoChannel() {
     )
   }
 
-  return <div className="flex-1" />
+  return <ProjectFileFeedback showDependencies />
 }

@@ -23,7 +23,13 @@ it.each([false, true])(
       sourceId: null,
       gainDb: 0,
     }
-    const resized: AudioClip = { ...neighbour, id: "resized", startBar: 5, lengthBars: 3 }
+    const resized: AudioClip = {
+      ...neighbour,
+      id: "resized",
+      startBar: 5,
+      lengthBars: 3,
+      sourceOffsetBars: 4,
+    }
     track.clips = [neighbour, resized]
     hydrateProject(
       JSON.stringify({
@@ -91,3 +97,70 @@ it.each([false, true])(
     }
   }
 )
+
+it("holds the live source boundary during excess travel and commits that same audio window", () => {
+  const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
+  const track = document.tracks.find(track => track.kind === "audio")!
+  const clip: AudioClip = {
+    id: "boundary",
+    kind: "audio",
+    startBar: 9,
+    lengthBars: 4,
+    sourceOffsetBars: 2,
+    sourceId: null,
+    gainDb: 0,
+  }
+  track.clips = [clip]
+  hydrateProject(
+    JSON.stringify({
+      version: 4,
+      document,
+      workspace: { ...createMockWorkspace(), grid: { mode: "fixed", bars: 1 } },
+    })
+  )
+  const state = useProjectState.getState()
+  const before = state.document
+  const scene = createSceneStore()
+  scene.setMusic({
+    bars: 128,
+    grid: state.workspace.grid,
+    transport: state.document.transport,
+    media: state.document.media,
+    patterns: state.document.patterns,
+    tracks: state.document.tracks,
+    markers: state.document.markers,
+    loop: state.document.transport.loop,
+  })
+  scene.setViewport({ pxPerBar: 24, scrollX: 0, scrollY: 0, width: 1000, height: 900, dpr: 1 })
+  const pointer: CanvasPointer = {
+    x: 192,
+    y: arrangementBodyTop() + 4,
+    clientX: 192,
+    clientY: 0,
+    pointerId: 1,
+    button: 0,
+    shiftKey: false,
+    altKey: false,
+    metaKey: false,
+    ctrlKey: false,
+  }
+  const context = {
+    element: window.document.createElement("div"),
+    scene,
+    actions: projectActions,
+    getState: useProjectState.getState,
+  }
+  const gesture = createResizeGesture(context, pointer, clip, "left")!
+  gesture.move({ ...pointer, x: 144 })
+  const boundary = scene.get().previewTracks?.find(item => item.id === track.id)?.clips[0]
+  expect(boundary).toMatchObject({ startBar: 7, lengthBars: 6, sourceOffsetBars: 0 })
+  gesture.move({ ...pointer, x: -240 })
+  expect(scene.get().previewTracks?.find(item => item.id === track.id)?.clips[0]).toEqual(boundary)
+  gesture.finish(false)
+  expect(
+    useProjectState.getState().document.tracks.find(item => item.id === track.id)?.clips[0]
+  ).toEqual(boundary)
+  expect(scene.get().tracks.find(item => item.id === track.id)?.clips[0]).toEqual(boundary)
+  projectActions.undo()
+  expect(useProjectState.getState().document).toBe(before)
+})

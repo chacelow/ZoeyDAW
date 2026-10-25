@@ -48,7 +48,7 @@ TransposerBase::ALGORITHM TransposerBase::algorithm = TransposerBase::CUBIC;
 
 
 // Constructor
-RateTransposer::RateTransposer() : FIFOProcessor(&outputBuffer)
+RateTransposer::RateTransposer(bool fixedOrder) : FIFOProcessor(&outputBuffer), fixedProcessingOrder(fixedOrder)
 {
     bUseAAFilter =
 #ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
@@ -147,7 +147,7 @@ void RateTransposer::processSamples(const SAMPLETYPE *src, uint nSamples)
     assert(pAAFilter);
 
     // Transpose with anti-alias filter
-    if (pTransposer->rate < 1.0f)
+    if (!fixedProcessingOrder && pTransposer->rate < 1.0f)
     {
         // If the parameter 'Rate' value is smaller than 1, first transpose
         // the samples and then apply the anti-alias filter to remove aliasing.

@@ -8,7 +8,16 @@ import type {
   BackendNoteRequest,
   BackendState,
   BackendTelemetry,
+  ProjectBackend,
 } from "@zoeydaw/project-core/backend"
+
+function peaks(backend: ProjectBackend, endpointId: string): number[] {
+  const snapshot = backend.readMeters?.()?.readLatest()
+  if (!snapshot) throw new Error("Expected mock meter frame")
+  return snapshot.registry.entries
+    .filter(entry => entry.endpointId === endpointId)
+    .map(entry => snapshot.records.get(entry.slotId)?.peak ?? -1)
+}
 
 function state(): BackendState {
   return {
@@ -77,8 +86,22 @@ describe("mock project backend", () => {
       frames.push(frame)
     })
     expect(vi.getTimerCount()).toBe(1)
-    expect(frames[0].levels["3-audio"][0]).toBeGreaterThan(-60)
+    expect(peaks(backend, "3-audio")[0]).toBeGreaterThan(0)
+    const meter = backend.readMeters?.()
+    expect(
+      meter?.readLatest()?.registry.entries.find(entry => entry.endpointId === "3-audio")?.kind
+    ).toBe("track-out")
+    expect(
+      meter?.readLatest()?.registry.entries.find(entry => entry.endpointId === "main")?.kind
+    ).toBe("master")
+    expect(
+      meter?.readLatest()?.registry.entries.find(entry => entry.endpointId === "a-apply")?.kind
+    ).toBe("bus")
+    const registryRevision = meter?.readLatest()?.registry.registryRevision
+    backend.control(control(value, 1))
+    expect(meter?.readLatest()?.registry.registryRevision).toBe(registryRevision)
     vi.advanceTimersByTime(1500)
+    expect(meter?.readLatest()?.frame.header.seq).toBeGreaterThan(1n)
     expect(frames.at(-1)?.clock.bar).toBeCloseTo(1.75)
     stop()
     expect(vi.getTimerCount()).toBe(0)
@@ -106,7 +129,7 @@ describe("mock project backend", () => {
       sequence: 1,
     })
     expect(vi.getTimerCount()).toBe(1)
-    expect(frames.at(-1)?.levels[midi.id][0]).toBeGreaterThan(-60)
+    expect(peaks(backend, midi.id)[0]).toBeGreaterThan(0)
     backend.control(control(stopped, 1))
     expect(vi.getTimerCount()).toBe(1)
     expect(backend.note(note(midi.id, "different-key", 2, false))).toMatchObject({
@@ -115,7 +138,7 @@ describe("mock project backend", () => {
     expect(vi.getTimerCount()).toBe(1)
     backend.note(note(midi.id, "key-60", 3, false))
     expect(vi.getTimerCount()).toBe(0)
-    expect(frames.at(-1)?.levels[midi.id]).toEqual([-60, -60])
+    expect(peaks(backend, midi.id)).toEqual([0, 0])
     stop()
     backend.dispose()
   })
@@ -193,7 +216,7 @@ describe("mock project backend", () => {
     })
     await backend.urgentStop?.()
     expect(vi.getTimerCount()).toBe(0)
-    expect(frames.at(-1)?.levels[midi.id]).toEqual([-60, -60])
+    expect(peaks(backend, midi.id)).toEqual([0, 0])
     stop()
     backend.dispose()
   })

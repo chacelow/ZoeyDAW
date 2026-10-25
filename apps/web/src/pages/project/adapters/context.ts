@@ -10,6 +10,8 @@ import { applyRecording } from "./backend/recording"
 import { browserLibrary } from "./browser"
 import { nativeAudio } from "@/shared/native/audio"
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
+import { nativeMeterPort } from "@/shared/native/realtime"
+import { configureBackendMeterReader, synchronizeBackendMeters } from "./realtime"
 
 export type {
   ProjectSeed,
@@ -22,9 +24,33 @@ const runtime = createProjectRuntime({
   defaultTrackHeight: DEFAULT_TRACK_HEIGHT,
   backendFactory: createProjectBackend,
 })
+const meterBinding = { users: 0, detach: () => {} }
+
+export function startProjectRuntime() {
+  if (meterBinding.users === 0) {
+    configureBackendMeterReader(runtime.readBackendMeters)
+    meterBinding.detach = useProjectState.subscribe(synchronizeBackendMeters)
+  }
+  meterBinding.users += 1
+  const release = runtime.startProjectRuntime()
+  synchronizeBackendMeters()
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    release()
+    meterBinding.users -= 1
+    if (meterBinding.users === 0) {
+      meterBinding.detach()
+      configureBackendMeterReader(() => null)
+      synchronizeBackendMeters()
+    }
+  }
+}
 function createProjectBackend(): NativeProjectBackend {
   let owner: { sessionId: string; epoch: string } | undefined
   return createNativeProjectBackend(nativeAudio, {
+    meters: nativeMeterPort,
     async commitRecording(recording): Promise<NativeRecordingReceipt> {
       const epoch = runtime.projectEpoch()
       if (
@@ -47,8 +73,8 @@ export const {
   sameWorkspacePreferences,
   setPreciseTransportBar,
   configureProjectBackend,
-  startProjectRuntime,
   readProjectTelemetry,
+  readBackendMeters,
   readTransportBar,
   whenProjectBackendIdle,
   projectEpoch,

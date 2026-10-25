@@ -112,6 +112,7 @@ protected:
     FIFOSampleBuffer outputBuffer;
 
     bool bUseAAFilter;
+    const bool fixedProcessingOrder;
 
 
     /// Transposes sample rate by applying anti-alias filter to prevent folding.
@@ -122,7 +123,7 @@ protected:
                         uint numSamples);
 
 public:
-    RateTransposer();
+    explicit RateTransposer(bool fixedOrder = false);
     virtual ~RateTransposer();
 
     /// Returns the output buffer object

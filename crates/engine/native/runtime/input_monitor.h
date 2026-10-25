@@ -1,6 +1,7 @@
 #pragma once
 #include <tracktion_graph/tracktion_graph.h>
 #include <memory>
+#include <atomic>
 
 namespace tracktion::inline engine { struct ProcessState; }
 namespace zp {
@@ -10,5 +11,5 @@ struct Request;
 // MIDI-producing sources are rejected before the graph starts processing.
 std::unique_ptr<tracktion::graph::Node> createInputMonitorNode(
     std::unique_ptr<tracktion::graph::Node>, const Track&, const Request&,
-    tracktion::engine::ProcessState&);
+    tracktion::engine::ProcessState&, const std::atomic<bool>& recordingActive);
 }

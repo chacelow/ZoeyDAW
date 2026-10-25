@@ -1,4 +1,5 @@
 import { mockMeterLevels } from "./mock-meters"
+import { createMockMeterStream } from "./mock-meter-store"
 import { controlGenerationValue } from "../backend/connection/protocol"
 import type {
   BackendControl,
@@ -22,7 +23,7 @@ function wrapBar(bar: number, state: BackendState): number {
     : loop.startBar + ((bar - loop.startBar) % (loop.endBar - loop.startBar))
 }
 
-/** Deterministic visual backend: no PCM, store, or browser audio ownership. */
+/** Deterministic visual backend: no PCM or browser audio ownership. */
 export function createMockProjectBackend(): ProjectBackend {
   let state: BackendState | null = null
   let sessionId = ""
@@ -36,6 +37,7 @@ export function createMockProjectBackend(): ProjectBackend {
   let isDisposed = false
   const listeners = new Set<(frame: BackendTelemetry) => void>()
   const notes = new Map<string, Map<string, BackendNote>>()
+  const meters = createMockMeterStream()
   let timer: ReturnType<typeof setInterval> | undefined
 
   function currentBar(now: number): number {
@@ -49,15 +51,8 @@ export function createMockProjectBackend(): ProjectBackend {
     const position = currentBar(now)
     const barsPerSecond =
       (state.project.bpm * state.project.denominator) / (240 * state.project.numerator)
-    return {
-      sessionId,
-      sequence: ++sampleSequence,
-      appliedSequence: sequence,
-      controlGeneration,
-      clock: { kind: "musical", bar: position, barsPerSecond },
-      playing: state.control.playing,
-      recording: state.control.recording,
-      levels: mockMeterLevels(
+    meters.publish(
+      mockMeterLevels(
         {
           document: {
             tracks: state.project.tracks,
@@ -69,10 +64,27 @@ export function createMockProjectBackend(): ProjectBackend {
         now,
         new Map([...notes].map(([trackId, held]) => [trackId, held.size]))
       ),
+      now,
+      position,
+      state.project.bpm,
+      state.project.numerator,
+      state.control.playing,
+      state.control.recording,
+      controlGeneration,
+      revision
+    )
+    return {
+      sessionId,
+      sequence: ++sampleSequence,
+      appliedSequence: sequence,
+      controlGeneration,
+      clock: { kind: "musical", bar: position, barsPerSecond },
+      playing: state.control.playing,
+      recording: state.control.recording,
     }
   }
   function emit(): void {
-    if (!listeners.size) return
+    if (!listeners.size && !state) return
     const current = frame(performance.now())
     if (current) for (const listener of listeners) listener(current)
   }
@@ -123,6 +135,7 @@ export function createMockProjectBackend(): ProjectBackend {
   }
 
   return {
+    readMeters: () => (isDisposed ? null : meters.store),
     apply(request): BackendResult {
       if (isDisposed) return rejected(request, "disposed")
       if (!validControlRequest(request)) return rejected(request, "protocol")
@@ -148,6 +161,7 @@ export function createMockProjectBackend(): ProjectBackend {
       sequence = request.sequence
       if (request.stage === "open" || request.stage === "commit" || request.stage === "recover")
         revision = request.revision
+      meters.updateSession(sessionId, state.project.tracks)
       for (const id of notes.keys())
         if (!state.project.tracks.some(track => track.id === id)) notes.delete(id)
       emit()
@@ -247,6 +261,7 @@ export function createMockProjectBackend(): ProjectBackend {
       clearInterval(timer)
       timer = undefined
       state = null
+      meters.store.dispose()
     },
   }
 }

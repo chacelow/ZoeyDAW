@@ -99,20 +99,22 @@ export function PluginSettings() {
 
   return (
     <section className="flex min-w-0 flex-col gap-3" aria-label={t("pluginSettings.title")}>
-      <p className="text-muted-foreground text-sm">{t("pluginSettings.description")}</p>
-      <div className="flex gap-2">
-        <Button disabled={!available || state.kind !== "idle"} onClick={() => void scanFolder()}>
-          {t("pluginSettings.scanFolder")}
-        </Button>
-        {(state.kind === "scanning" || state.kind === "cancelling") && (
-          <Button
-            variant="outline"
-            disabled={state.kind === "cancelling"}
-            onClick={() => void cancel()}
-          >
-            {t("common.cancel")}
+      <div className="settings-row">
+        <span className="text-sm font-medium">{t("pluginSettings.scanLocation")}</span>
+        <div className="flex min-w-0 flex-wrap gap-2">
+          <Button disabled={!available || state.kind !== "idle"} onClick={() => void scanFolder()}>
+            {t("pluginSettings.scanFolder")}
           </Button>
-        )}
+          {(state.kind === "scanning" || state.kind === "cancelling") && (
+            <Button
+              variant="outline"
+              disabled={state.kind === "cancelling"}
+              onClick={() => void cancel()}
+            >
+              {t("common.cancel")}
+            </Button>
+          )}
+        </div>
       </div>
       {!available && (
         <p className="text-muted-foreground text-sm">{t("pluginSettings.desktopOnly")}</p>

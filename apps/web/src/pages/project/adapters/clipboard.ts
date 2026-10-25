@@ -17,6 +17,48 @@ function copyClips(ids: string[], range?: TimeSelection): ClipClipboard | null {
   return copied
 }
 
+function outsideRange(
+  clip: Clip,
+  range: Pick<TimeSelection, "startBar" | "endBar">,
+  bpm: number
+): Clip[] {
+  if (clip.startBar >= range.endBar || clip.startBar + clip.lengthBars <= range.startBar)
+    return [clip]
+  const left = clipWindow(clip, clip.startBar, range.startBar, bpm)
+  const right = clipWindow(clip, range.endBar, clip.startBar + clip.lengthBars, bpm)
+  return [left, right].flatMap(piece =>
+    piece ? [{ ...piece, id: !left || piece === left ? clip.id : uniqueId("clip") }] : []
+  )
+}
+
+function removeClips(ids: readonly string[], range?: TimeSelection): boolean {
+  if (range && range.endBar <= range.startBar) return false
+  const current = get().document
+  const chosen = new Set(ids)
+  let changed = false
+  const next = current.tracks.map(track => {
+    if (range && !range.trackIds.includes(track.id)) return track
+    const clips = track.clips.flatMap(clip => {
+      if (!range) {
+        if (!chosen.has(clip.id)) return [clip]
+        changed = true
+        return []
+      }
+      const pieces = outsideRange(clip, range, current.transport.bpm)
+      if (pieces.length !== 1 || pieces[0] !== clip) changed = true
+      return pieces
+    })
+    return clips.every((clip, index) => clip === track.clips[index]) &&
+      clips.length === track.clips.length
+      ? track
+      : { ...track, clips }
+  })
+  if (!changed) return false
+  tracks(next)
+  session({ selectedClipIds: [] })
+  return true
+}
+
 function samePatternContent(left: MidiPattern, right: MidiPattern): boolean {
   return (
     left.loopBars === right.loopBars &&
@@ -36,35 +78,15 @@ function samePatternContent(left: MidiPattern, right: MidiPattern): boolean {
 
 export const clipboardActions = {
   copyClips,
+  deleteTimeSelection(range: TimeSelection) {
+    return removeClips([], range)
+  },
   cutClips(ids: string[], range?: TimeSelection) {
     const copied = copyClips(ids, range)
     if (!copied) {
       return null
     }
-    const chosen = new Set(ids)
-    tracks(
-      get().document.tracks.map(track => ({
-        ...track,
-        clips: track.clips.flatMap(clip => {
-          if (!chosen.has(clip.id) || (range && !range.trackIds.includes(track.id))) return [clip]
-          if (!range) return []
-          const bpm = get().document.transport.bpm
-          const intersection = clipWindow(clip, range.startBar, range.endBar, bpm)
-          if (!intersection) return [clip]
-          const left = clipWindow(clip, clip.startBar, intersection.startBar, bpm)
-          const right = clipWindow(
-            clip,
-            intersection.startBar + intersection.lengthBars,
-            clip.startBar + clip.lengthBars,
-            bpm
-          )
-          return [left, right].flatMap(piece =>
-            piece ? [{ ...piece, id: !left || piece === left ? clip.id : cloneClip(piece).id }] : []
-          )
-        }),
-      }))
-    )
-    session({ selectedClipIds: [] })
+    removeClips(ids, range)
     return copied
   },
   pasteClips(
@@ -79,7 +101,13 @@ export const clipboardActions = {
     const current = currentDocument.tracks
     const lanes = current.filter(track => track.kind === "audio" || track.kind === "midi")
     const first = lanes.findIndex(track => track.id === targetTrackId)
-    if (first === -1 || !source.items.length) {
+    if (
+      first === -1 ||
+      !source.items.length ||
+      (source.range &&
+        (first + source.range.trackCount > lanes.length ||
+          !Number.isFinite(startBar + source.range.lengthBars)))
+    ) {
       return false
     }
     const placements: {
@@ -138,16 +166,28 @@ export const clipboardActions = {
     if (!copied.length) {
       return false
     }
+    const pastedRange = source.range
+      ? {
+          startBar,
+          endBar: startBar + source.range.lengthBars,
+          trackIds: lanes.slice(first, first + source.range.trackCount).map(track => track.id),
+        }
+      : null
     replaceDocument({
       ...currentDocument,
       patterns,
       tracks: current.map(track => {
-        const added = additions.get(track.id)
-        return added
+        const added = additions.get(track.id) ?? []
+        const clips = pastedRange?.trackIds.includes(track.id)
+          ? track.clips.flatMap(clip =>
+              outsideRange(clip, pastedRange, currentDocument.transport.bpm)
+            )
+          : track.clips
+        return added.length || clips !== track.clips
           ? {
               ...track,
               clips: insertClips(
-                track.clips,
+                clips,
                 added,
                 () => uniqueId("clip"),
                 currentDocument.transport.bpm
@@ -156,7 +196,13 @@ export const clipboardActions = {
           : track
       }),
     })
-    session({ selectedClipIds: copied })
+    session({
+      selectedClipIds: copied,
+      ...(pastedRange && {
+        timeSelection: pastedRange,
+        insertionPoint: { trackId: targetTrackId, bar: startBar },
+      }),
+    })
     return true
   },
   getClipClipboard: () => parseClipClipboard(clipboardMemory.read()),

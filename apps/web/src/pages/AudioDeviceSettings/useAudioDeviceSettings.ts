@@ -23,7 +23,23 @@ type CapabilityPreview =
   | { kind: "ready"; value: AudioDeviceCapabilities }
   | { kind: "error"; message: string }
 
-type DeviceOperation = "refreshing" | "applying" | "panel"
+type DeviceOperation = "applying" | "panel"
+
+const discovery: { pending: Promise<AudioDeviceSnapshot> | null } = { pending: null }
+function discoverDevices() {
+  if (!discovery.pending) {
+    const pending = nativeAudio.devices()
+    discovery.pending = pending
+    void pending
+      .finally(() => {
+        if (discovery.pending === pending) discovery.pending = null
+      })
+      .catch(() => {})
+  }
+  return discovery.pending
+}
+
+const operationQueue = { pending: Promise.resolve() }
 
 export function useAudioDeviceSettings() {
   const { t } = useTranslation()
@@ -33,6 +49,10 @@ export function useAudioDeviceSettings() {
   const [draft, setDraft] = useState<AudioDeviceConfiguration | null>(null)
   const [preview, setPreview] = useState<CapabilityPreview>({ kind: "idle" })
   const [capabilityRevision, setCapabilityRevision] = useState(0)
+  const [editRevision, setEditRevision] = useState(0)
+  const lastAttempt = useRef(0)
+  const draftRevision = useRef(0)
+  const mounted = useRef(true)
   const generation = useRef({ value: 0 })
   const capabilityGeneration = useRef({ value: 0 })
   const available = nativeAudio.available()
@@ -43,50 +63,85 @@ export function useAudioDeviceSettings() {
   const outputDeviceId = draft?.outputDeviceId ?? null
 
   const runDeviceOperation = useCallback(
-    async (
+    (
       operation: DeviceOperation,
       request: () => Promise<AudioDeviceSnapshot>,
-      accept: (next: AudioDeviceSnapshot) => void
+      accept: (next: AudioDeviceSnapshot) => void,
+      reject?: () => void
     ) => {
       const token = ++generation.current.value
       setOperation(operation)
       setError(null)
-      try {
-        const next = await request()
+      const pending = operationQueue.pending.then(async () => {
         if (token !== generation.current.value) return
-        publishNativeAudioStatus({ device: next, error: next.error })
-        accept(next)
-      } catch (error) {
-        if (token === generation.current.value) setError(audioErrorMessage(error))
-      } finally {
-        if (token === generation.current.value) setOperation("idle")
-      }
+        try {
+          const next = await request()
+          if (token !== generation.current.value) return
+          publishNativeAudioStatus({ device: next, error: next.error })
+          accept(next)
+        } catch (error) {
+          if (token === generation.current.value) {
+            setError(audioErrorMessage(error))
+            reject?.()
+          }
+        } finally {
+          if (token === generation.current.value) setOperation("idle")
+        }
+      })
+      operationQueue.pending = pending
+      return pending
     },
     []
   )
 
-  const refresh = useCallback(
-    () =>
-      runDeviceOperation(
-        "refreshing",
-        () => nativeAudio.devices(),
-        next => {
-          setDraft(previous => previous ?? initialDraft(next))
-          setCapabilityRevision(value => value + 1)
-        }
-      ),
-    [runDeviceOperation]
-  )
+  const discover = useCallback(async () => {
+    const operationToken = generation.current.value
+    const edit = draftRevision.current
+    const previousDevice = readNativeAudioStatus().device
+    try {
+      const next = await discoverDevices()
+      if (!mounted.current) return
+      const currentDevice = readNativeAudioStatus().device
+      const inventory = {
+        devices: next.devices,
+        hosts: next.hosts,
+        inputDevices: next.inputDevices,
+        outputDevices: next.outputDevices,
+      }
+      const current = operationToken === generation.current.value && edit === draftRevision.current
+      const updated =
+        current && currentDevice === previousDevice
+          ? next
+          : currentDevice
+            ? { ...currentDevice, ...inventory }
+            : next
+      publishNativeAudioStatus({ device: updated, error: updated.error })
+      setDraft(previous => previous ?? initialDraft(updated))
+      if (current) {
+        setCapabilityRevision(value => value + 1)
+        setError(null)
+      }
+    } catch (error) {
+      if (
+        mounted.current &&
+        operationToken === generation.current.value &&
+        edit === draftRevision.current
+      )
+        setError(audioErrorMessage(error))
+    }
+  }, [])
 
   useEffect(() => {
     const lifecycle = generation.current
     const capabilities = capabilityGeneration.current
-    if (available) void refresh()
+    mounted.current = true
+    if (available) void discover()
     return () => {
+      mounted.current = false
       ++lifecycle.value
       ++capabilities.value
     }
-  }, [available, refresh])
+  }, [available, discover])
 
   useEffect(() => {
     if (!available || !host) return
@@ -116,11 +171,15 @@ export function useAudioDeviceSettings() {
     }
   }, [available, host, inputDeviceId, outputDeviceId, capabilityRevision, t])
 
-  function changeDevices(next: AudioDeviceConfiguration) {
-    ++capabilityGeneration.current.value
+  function changeConfiguration(next: AudioDeviceConfiguration) {
+    if (draft && !sameDevices(draft, next)) {
+      ++capabilityGeneration.current.value
+      setPreview({ kind: "loading" })
+    }
+    ++draftRevision.current
     setError(null)
-    setPreview({ kind: "loading" })
     setDraft(next)
+    setEditRevision(value => value + 1)
   }
 
   async function openControlPanel() {
@@ -135,25 +194,49 @@ export function useAudioDeviceSettings() {
   const capabilities =
     preview.kind === "ready" && draft && sameDevices(preview.value, draft) ? preview.value : null
   const choices = deviceChoices(device, draft)
-  const canApply = !busy && canApplyDraft(draft, capabilities, choices)
+  const valid = canApplyDraft(draft, capabilities, choices)
+  const configurationChanged =
+    draft !== null && JSON.stringify(draft) !== JSON.stringify(device?.configuration)
 
-  async function apply() {
-    if (!draft || !canApply) return
+  useEffect(() => {
+    if (
+      !available ||
+      !draft ||
+      !valid ||
+      !configurationChanged ||
+      operation !== "idle" ||
+      editRevision === 0 ||
+      lastAttempt.current === editRevision
+    )
+      return
+    lastAttempt.current = editRevision
     const request = draft
-    return runDeviceOperation(
+    void runDeviceOperation(
       "applying",
       () => nativeAudio.configureDevice(request),
       next => {
         if (next.state === "ready" && next.configuration) {
           setDraft(next.configuration)
           setPreview({ kind: "ready", value: next.capabilities })
-        } else setError(next.error ?? t("audioSettings.notApplied"))
-      }
+        } else {
+          setDraft(initialDraft(next))
+          setError(next.error ?? t("audioSettings.notApplied"))
+        }
+      },
+      () => setDraft(device ? initialDraft(device) : null)
     )
-  }
+  }, [
+    available,
+    draft,
+    valid,
+    configurationChanged,
+    operation,
+    editRevision,
+    runDeviceOperation,
+    t,
+    device,
+  ])
 
-  const configurationChanged =
-    draft && JSON.stringify(draft) !== JSON.stringify(device?.configuration)
   const message =
     error ?? (preview.kind === "error" ? preview.message : null) ?? device?.error ?? status.error
 
@@ -164,16 +247,13 @@ export function useAudioDeviceSettings() {
     busy,
     operation,
     draft,
-    setDraft,
+    changeConfiguration,
     preview,
     capabilities,
     choices,
-    canApply,
     configurationChanged,
     message,
-    refresh,
-    changeDevices,
+    discover,
     openControlPanel,
-    apply,
   }
 }

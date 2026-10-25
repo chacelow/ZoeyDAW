@@ -17,6 +17,7 @@ export function markerGesture(
   return {
     cursor: "grabbing",
     autoScroll: "horizontal",
+    commitOnInterrupt: true,
     move(current) {
       nextBar = rulerBar(
         context.scene.get(),

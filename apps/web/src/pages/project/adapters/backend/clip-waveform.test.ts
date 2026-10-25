@@ -96,3 +96,48 @@ it("maps clip-local fades through the original-speed source rate", () => {
   expect(envelope.rate).toBe(2)
   expect(envelopeFadeGain(envelope, 0.25 * envelope.rate)).toBeCloseTo(0.5)
 })
+
+it("retains signed audio phase for left loop extension and source-outside silence", () => {
+  const clip = createMockDocument(DEFAULT_TRACK_HEIGHT)
+    .tracks.flatMap(track => track.clips)
+    .find(item => item.kind === "audio")
+  if (!clip || clip.kind !== "audio") throw new Error("Missing audio fixture")
+  const source: MediaSource = {
+    id: "signed-source",
+    name: "take.wav",
+    sha256: "a".repeat(64),
+    byteLength: 16,
+    frames: 96000,
+    sampleRate: 48000,
+    channels: 1,
+    location: { kind: "external", path: "/take.wav" },
+  }
+  const audio = {
+    ...clip,
+    sourceId: source.id,
+    sourceOffsetBars: -0.25,
+    lengthBars: 2,
+    audioSettings: {
+      ...getAudioClipSettings(clip, 120),
+      sourceBpm: 120,
+      loopStartBars: 0,
+      loopLengthBars: 1,
+      startMarkerBars: 0,
+      endMarkerBars: 1,
+      loop: true,
+    },
+  }
+  const looped = nativeClipWaveform(audio, [source], 120, 4, 4)!
+  expect(looped.origin).toBe(-0.25)
+  expect(
+    samplePeakEnvelope(
+      { ...looped, peaks: [0.1, 0.2, 0.3, 0.4] },
+      looped.origin,
+      looped.origin + 0.1
+    )
+  ).toBe(0.4)
+  audio.audioSettings.loop = false
+  const once = nativeClipWaveform(audio, [source], 120, 4, 4)!
+  expect(once.origin).toBe(-0.25)
+  expect(samplePeakEnvelope({ ...once, peaks: [0.1, 0.2, 0.3, 0.4] }, -0.25, -0.1)).toBe(0)
+})

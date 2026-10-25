@@ -44,7 +44,7 @@ static bool oneOf(const juce::String& s, std::initializer_list<const char*> valu
 static Settings settings(const V& v) {
     fields(v, {"warp","warpMode","sourceBpm","transpose","detune","reverse","loop","loopStartBars","loopLengthBars","startMarkerBars","endMarkerBars"});
     Settings s;
-    s.warp=boolean(v,"warp"); s.mode=text(v,"warpMode"); require(oneOf(s.mode,{"beats","tones","texture","repitch","complex","complex-pro"}),"Invalid warp mode");
+    s.warp=boolean(v,"warp"); s.mode=text(v,"warpMode"); require(oneOf(s.mode,{"soundtouch","signalsmith","signalsmith-formant","re-pitch"}),"Invalid warp mode");
     s.sourceBpm=number(v,"sourceBpm",.000001,999); s.transpose=number(v,"transpose",-48,48); s.detune=number(v,"detune",-50,50);
     require(std::floor(s.transpose)==s.transpose && std::floor(s.detune)==s.detune,"Pitch values must be integers");
     s.reverse=boolean(v,"reverse"); s.loop=boolean(v,"loop"); s.loopStart=number(v,"loopStartBars",0,1e12); s.loopLength=number(v,"loopLengthBars",1e-12,1e12);
@@ -92,7 +92,7 @@ Request decode(const V& v) {
         auto& sends=field(t,"sends"); require(sends.isObject(),"Invalid sends"); for(auto& send:sends.getDynamicObject()->getProperties()) { double db=number(sends,send.name.toString().toRawUTF8(),-160,24); tr.sends.emplace(send.name.toString(),db); }
         for(auto& x:array(t,"clips")) {
             Clip cl; cl.id=text(x,"id"); require(cl.id.isNotEmpty() && clipIds.insert(cl.id).second,"Duplicate clip ID"); cl.kind=text(x,"kind");
-            cl.start=number(x,"startBar",1,1e12); cl.length=number(x,"lengthBars",1e-12,1e12); cl.offset=number(x,"sourceOffsetBars",cl.kind=="midi"?-1e12:0,1e12); cl.mute=boolean(x,"mute"); cl.data=x;
+            cl.start=number(x,"startBar",1,1e12); cl.length=number(x,"lengthBars",1e-12,1e12); cl.offset=number(x,"sourceOffsetBars",-1e12,1e12); cl.mute=boolean(x,"mute"); cl.data=x;
             if(cl.kind=="audio") {
                 require(tr.kind=="audio","Audio clip belongs to a non-audio track");
                 fields(x,{"id","kind","startBar","lengthBars","sourceOffsetBars","mute","sourceId","gainDb","audioSettings","fadeInBars","fadeOutBars","fadeInOffsetBars","fadeOutOffsetBars","fadeInCurve","fadeOutCurve","fadeInCurvePosition","fadeOutCurvePosition"});
@@ -181,7 +181,7 @@ static bool equivalent(const V& a,const V& b,bool ignoreLiveClipFields=false,boo
     return a==b;
 }
 bool sameGraph(const Request& a,const Request& b,bool allowClipPlacement) {
-    if(a.bpm!=b.bpm || a.numerator!=b.numerator || a.denominator!=b.denominator || (!allowClipPlacement && (a.sources.size()!=b.sources.size() || a.tracks.size()!=b.tracks.size())))return false;
+    if((!allowClipPlacement && a.bpm!=b.bpm) || a.numerator!=b.numerator || a.denominator!=b.denominator || (!allowClipPlacement && (a.sources.size()!=b.sources.size() || a.tracks.size()!=b.tracks.size())))return false;
     for(const auto& [id,lhs]:a.sources) {
         const auto found=b.sources.find(id);
         if(found==b.sources.end()) { if(allowClipPlacement)continue;return false; }

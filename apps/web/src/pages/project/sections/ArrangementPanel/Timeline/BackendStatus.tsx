@@ -1,4 +1,6 @@
 import { useTranslation } from "@zoeymind/i18n"
+import { useSyncExternalStore } from "react"
+import { readNativeAudioStatus, subscribeNativeAudioStatus } from "@/shared/native/audio"
 import { useProjectState } from "@/pages/project/adapters"
 
 export function BackendStatus() {
@@ -6,6 +8,7 @@ export function BackendStatus() {
   const snapshotError = useProjectState(state => state.session.snapshotError)
   const backendError = useProjectState(state => state.session.backend.error)
   const backendPhase = useProjectState(state => state.session.backend.phase)
+  const nativeStatus = useSyncExternalStore(subscribeNativeAudioStatus, readNativeAudioStatus)
   return (
     <>
       {snapshotError || backendError ? (
@@ -14,6 +17,9 @@ export function BackendStatus() {
           className="border-destructive bg-background text-destructive absolute top-14 right-2 z-50 max-w-xs rounded border px-2 py-1 text-xs shadow-lg"
         >
           {snapshotError ?? (backendError ? t(`arrangement.backendError.${backendError}`) : "")}
+          {!snapshotError && nativeStatus.error ? (
+            <div className="mt-1 break-words">{nativeStatus.error}</div>
+          ) : null}
         </div>
       ) : null}
       {!snapshotError &&

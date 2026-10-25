@@ -11,6 +11,38 @@ import {
 } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { useArrangementKeyboard } from "./useArrangementKeyboard"
+import { browserLibrary, useBrowserLibraryState } from "@/pages/project/adapters/browser"
+import type { BrowserAuditionPort } from "@/pages/project/adapters/browser/controller"
+import type { BrowserTreeRow } from "@/shared/native/browser"
+
+const auditionItem: BrowserTreeRow = {
+  id: "keyboard-audition",
+  rootId: "root",
+  name: "Voice.wav",
+  path: "/audio/Voice.wav",
+  relativePath: "Voice.wav",
+  byteLength: 1000,
+  modifiedMillis: 0,
+  kind: "audio",
+  depth: 0,
+  hasChildren: false,
+}
+const auditionDisposers: (() => void)[] = []
+function startAudition(preparing: boolean) {
+  const audio = {
+    select: vi.fn(() =>
+      preparing
+        ? new Promise<{ durationSeconds: number }>(() => {})
+        : Promise.resolve({ durationSeconds: 4 })
+    ),
+    stop: vi.fn(async () => {}),
+    seek: vi.fn(async () => {}),
+    read: vi.fn(async () => ({ positionSeconds: 1, durationSeconds: 4, playing: true })),
+  } satisfies BrowserAuditionPort
+  auditionDisposers.push(browserLibrary.configureAudition(audio))
+  browserLibrary.select(auditionItem)
+  return audio
+}
 
 function Keys({
   role = "button",
@@ -58,7 +90,10 @@ beforeEach(() => {
     })
   )
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  for (const dispose of auditionDisposers.splice(0)) dispose()
+})
 
 it.each(["button", "menuitem"] as const)(
   "owns Space over a focused %s without activating it or repeating playback",
@@ -218,3 +253,58 @@ it("routes Cmd/Ctrl+S and Shift+S to disk actions, including text inputs", () =>
   save.mockRestore()
   saveAs.mockRestore()
 })
+
+it.each([true, false])(
+  "Space interrupts audition without toggling Arrangement (preparing=%s), then returns to transport",
+  async preparing => {
+    const button = render(<Keys />).getByLabelText("Automation")
+    const audio = startAudition(preparing)
+    await Promise.resolve()
+    expect(useBrowserLibraryState.getState().audition.kind).toBe(preparing ? "preparing" : "ready")
+    const stops = audio.stop.mock.calls.length
+    button.focus()
+    expect(fireEvent.keyDown(button, { key: " ", code: "Space" })).toBe(false)
+    expect(document.activeElement).not.toBe(button)
+    expect(useBrowserLibraryState.getState().audition).toEqual({ kind: "idle" })
+    expect(audio.stop).toHaveBeenCalledTimes(stops + 1)
+    expect(useProjectState.getState().session.playing).toBe(false)
+    fireEvent.keyDown(button, { key: " ", code: "Space", repeat: true })
+    fireEvent.keyUp(button, { key: " ", code: "Space" })
+    expect(useProjectState.getState().session.playing).toBe(false)
+    expect(useProjectState.getState().workspace.automationMode).toBe(false)
+    fireEvent.keyDown(window, { key: " ", code: "Space" })
+    expect(useProjectState.getState().session.playing).toBe(true)
+  }
+)
+
+it("interrupting audition does not stop an already-playing Arrangement", async () => {
+  render(<Keys />)
+  projectActions.togglePlay()
+  startAudition(false)
+  await Promise.resolve()
+  fireEvent.keyDown(window, { key: " ", code: "Space" })
+  expect(useBrowserLibraryState.getState().audition).toEqual({ kind: "idle" })
+  expect(useProjectState.getState().session.playing).toBe(true)
+  fireEvent.keyUp(window, { key: " ", code: "Space" })
+  fireEvent.keyDown(window, { key: " ", code: "Space" })
+  expect(useProjectState.getState().session.playing).toBe(false)
+})
+
+it.each(["Search", "Notes", "Rename"])(
+  "does not interrupt audition while entering Space in the %s editor",
+  async label => {
+    const editor = render(<Keys />).getByLabelText(label)
+    const audio = startAudition(false)
+    await Promise.resolve()
+    const stops = audio.stop.mock.calls.length
+    editor.focus()
+    expect(fireEvent.keyDown(editor, { key: " ", code: "Space" })).toBe(true)
+    expect(fireEvent.keyUp(editor, { key: " ", code: "Space" })).toBe(true)
+    expect(audio.stop).toHaveBeenCalledTimes(stops)
+    expect(useBrowserLibraryState.getState().audition).toMatchObject({
+      kind: "ready",
+      playing: true,
+    })
+    expect(useProjectState.getState().session.playing).toBe(false)
+  }
+)

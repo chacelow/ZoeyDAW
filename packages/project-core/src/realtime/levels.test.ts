@@ -115,7 +115,7 @@ describe("levels wire boundary", () => {
   })
   it.each([
     [4, 2],
-    [84, 8],
+    [84, 16],
     [HEADER_BYTES + 4, 64],
   ])("rejects unknown version or flags at %i", (offset, value) => {
     const bytes = frame(1)

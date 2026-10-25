@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest"
-import { waveformRangeRequests } from "./waveform-ranges"
+import { afterEach, describe, expect, it } from "vitest"
+import {
+  browserWaveformMetadataRequest,
+  cachedWaveformRanges,
+  primeBrowserWaveformSource,
+  sourceWaveformKey,
+  useWaveformRanges,
+  waveformRangeRequestKey,
+  waveformRangeRequests,
+} from "./waveform-ranges"
 import type { SourceWaveformRangeRequest } from "./waveform-ranges"
 import type { MediaSource } from "@zoeydaw/project-core/media"
 import type { PeakEnvelope } from "@zoeydaw/project-core/waveform"
+import type { WaveformRange } from "@zoeydaw/project-core/waveform-range"
 
 const source: MediaSource = {
   id: "take",
@@ -94,5 +103,78 @@ describe("visible source waveform requests", () => {
     expect(cycles[0].request.startFrame).toBeLessThanOrEqual(24000)
     const cycleEnd = cycles.at(-1)!.request
     expect(cycleEnd.startFrame + cycleEnd.frameCount).toBeGreaterThanOrEqual(72000)
+  })
+})
+
+describe("Browser waveform source handoff", () => {
+  afterEach(() => useWaveformRanges.setState({ entries: new Map() }))
+
+  const data: WaveformRange = {
+    kind: "samples",
+    sampleRate: 48000,
+    totalFrames: 96000,
+    startFrame: 12000,
+    frameCount: 4,
+    channels: [
+      [-0.5, 0.25, -0.1, 0.8],
+      [-0.2, 0.4, -0.7, 0.1],
+    ],
+  }
+
+  function seedBrowserRange() {
+    const metadataRequest = browserWaveformMetadataRequest("/audio/take.wav")
+    const request = {
+      sourceKey: metadataRequest.sourceKey,
+      request: { ...metadataRequest.request, startFrame: 12000, frameCount: 4, columns: 2 },
+    }
+    useWaveformRanges.setState({
+      entries: new Map([
+        [
+          waveformRangeRequestKey(request),
+          {
+            kind: "ready",
+            range: { sourceKey: request.sourceKey, data },
+          },
+        ],
+      ]),
+    })
+  }
+
+  it("serves real signed Browser data on the first formal read without mutating state", () => {
+    seedBrowserRange()
+    const entries = useWaveformRanges.getState().entries
+    const cached = cachedWaveformRanges(source)
+    expect(cached).toHaveLength(1)
+    expect(cached[0].sourceKey).toBe(sourceWaveformKey(source))
+    expect(cached[0].data).toBe(data)
+    expect(useWaveformRanges.getState().entries).toBe(entries)
+  })
+
+  it("promotes data by reference before releasing Browser demand", () => {
+    seedBrowserRange()
+    expect(primeBrowserWaveformSource(source)).toBe(true)
+    const promoted = Array.from(useWaveformRanges.getState().entries).filter(
+      ([, entry]) => entry.kind === "ready" && entry.range.sourceKey === sourceWaveformKey(source)
+    )
+    expect(promoted).toHaveLength(1)
+    const entry = promoted[0][1]
+    expect(entry.kind === "ready" && entry.range.data).toBe(data)
+    const entries = useWaveformRanges.getState().entries
+    expect(primeBrowserWaveformSource(source)).toBe(true)
+    expect(useWaveformRanges.getState().entries).toBe(entries)
+  })
+
+  it("rejects other paths, unverified preview identities, and mismatched decode metadata", () => {
+    seedBrowserRange()
+    for (const other of [
+      { ...source, sha256: "" },
+      { ...source, frames: 96001 },
+      { ...source, sampleRate: 44100 },
+      { ...source, channels: 1 },
+      { ...source, location: { kind: "external", path: "/audio/other.wav" } } satisfies MediaSource,
+    ]) {
+      expect(primeBrowserWaveformSource(other)).toBe(false)
+      expect(cachedWaveformRanges(other)).toEqual([])
+    }
   })
 })

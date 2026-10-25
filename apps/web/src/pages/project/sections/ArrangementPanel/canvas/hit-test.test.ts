@@ -116,7 +116,7 @@ describe("arrangement hit-test", () => {
     }
   })
 
-  it("prefers the resize edge over the body within six pixels of a clip side", () => {
+  it("resizes both sides only in the title and leaves body edges for selection and fades", () => {
     const scene = fixtureScene()
     const audioTrack = scene.tracks.find(t => t.kind === "audio" && t.clips.length > 0)
     if (!audioTrack) {
@@ -128,11 +128,23 @@ describe("arrangement hit-test", () => {
     if (!row) {
       throw new Error("Missing audio row")
     }
-    const y = row.top + 28
-    const result = hitTest(scene, leftEdgeX, y)
-    expect(result?.kind).toBe("clip-resize")
-    if (result?.kind === "clip-resize") {
-      expect(result.edge).toBe("left")
+    const visual = clipVisualGeometry(
+      clipRect(clip, row, scene.viewport.pxPerBar, 0),
+      clip,
+      audioTrack,
+      false
+    )
+    const rightEdgeX = visual.left + visual.width - 2
+    for (const [x, edge] of [
+      [leftEdgeX, "left"],
+      [rightEdgeX, "right"],
+    ] as const) {
+      expect(hitTest(scene, x, visual.top + visual.titleHeight / 2)).toMatchObject({
+        kind: "clip-resize",
+        edge,
+        region: "title",
+      })
+      expect(hitTest(scene, x, visual.bodyTop + visual.bodyHeight / 2)?.kind).toBe("clip-body")
     }
   })
 

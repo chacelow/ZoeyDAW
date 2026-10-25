@@ -1,5 +1,6 @@
 export default {
   title: "Plugins",
+  scanLocation: "Scan folder",
   description:
     "Select a folder to scan VST3 and CLAP plugins in isolated processes. Scanning does not add plugins to the project.",
   scanFolder: "Choose folder and scan",

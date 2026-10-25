@@ -1,8 +1,11 @@
 #include "engine_session.h"
 #include "device_test_support.h"
+#include "meter_read.h"
+#include <thread>
 #include <tracktion_engine/playback/graph/tracktion_EditNodeBuilder.h>
 #include <tracktion_engine/playback/graph/tracktion_TracktionEngineNode.h>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <numbers>
@@ -16,6 +19,9 @@ struct MixerTestAccess {
     static MeterGraphCollector& collector(EngineSession& session) { return *session.arrangement->meterCollector; }
     static const MeterGraph& graph(EngineSession& session) { return *session.arrangement->meterGraph; }
     static const auto& identities(EngineSession& session) { return session.arrangement->meterOutputs; }
+    static void install(EngineSession& session,std::shared_ptr<const MeterGraph> graph,std::shared_ptr<MeterGraphCollector> collector) {
+        session.arrangement->meterGraph=std::move(graph);session.arrangement->meterCollector=std::move(collector);
+    }
 };
 }
 namespace {
@@ -85,6 +91,70 @@ void testSamplesAndIdentity() {
     const auto* value=collector.latest("track/sine/out",0);
     expect(value && std::abs(std::sqrt(value->current.sumSquares/value->current.count)-.25/std::sqrt(2.0))<1e-7,
            "Graph sine energy differs from real input samples");
+}
+void testHubReadHandle() {
+    auto bank=std::make_shared<MeterGraph>(MeterBankIdentity{4,5,6},48000);
+    auto node=bank->wrapOutput(std::make_unique<Samples>(2,false),"track/hub/out","hub","track-out");bank->seal();
+    auto collector=std::make_shared<MeterGraphCollector>(bank);
+    expect(collector->acquireHub() && !collector->acquireHub(),"Hub ownership admitted duplicate reader");
+    auto* handle=new zp_meter_read_handle(collector);
+    graph::NodePlayer player;player.setNode(std::move(node),48000,256);
+    juce::AudioBuffer<float> output(2,256);process(player,output,1000,256);
+    const uint32_t slots[]={0,1};zp_meter_publication values[2]{};uint32_t read=0;
+    std::thread hub([&]{read=zp_meter_read(handle,slots,2,values,2);});hub.join();
+    expect(read==2 && values[0].available && values[0].current.frames==256 && values[0].current.start_sample==1000,
+           "Hub C ABI lost actual frame range");
+    expect(values[0].current.peak==.25f && values[1].current.peak==.5f && values[0].current.sum_squares==16,
+           "Hub C ABI changed stereo PCM statistics");
+    MeterPublication cached;expect(collector->copyLatest("track/hub/out",0,cached) && cached.current.count==256,
+                                  "Legacy telemetry could not read the Hub cache");
+    const uint32_t invalid=2;expect(zp_meter_read(handle,&invalid,1,values,2)==0,"Invalid Hub slot was accepted");
+    handle->reading.test_and_set();expect(zp_meter_read(handle,slots,2,values,2)==0,"Concurrent Hub read was admitted");handle->reading.clear();
+    const uint32_t badReset[]={0,2};
+    expect(zp_meter_reset(handle,badReset,2,1,3)==0,"Partial invalid reset was accepted");
+    const uint32_t duplicates[]={0,0};expect(zp_meter_reset(handle,duplicates,2,1,3)==0,"Duplicate reset slots were accepted");
+    process(player,output,1256,256);expect(zp_meter_read(handle,slots,2,values,2)==2 && values[0].slot_reset_epoch==0,
+                                        "Invalid reset partially cleared a valid slot");
+    const uint32_t first=0;expect(zp_meter_reset(handle,&first,1,1,3)==1,"Valid selective reset was rejected");
+    expect(zp_meter_read(handle,slots,2,values,2)==2 && values[0].slot_reset_epoch==0,"Reset acknowledged before audio processed");
+    process(player,output,1512,256);expect(zp_meter_read(handle,slots,2,values,2)==2 && values[0].slot_reset_epoch==1 && values[1].slot_reset_epoch==0,
+                                        "Selective reset changed the unaffected channel epoch");
+    expect(values[1].session_peak==.5f && values[1].hold_reset_epoch==0,"Selective reset cleared the other channel latch");
+    expect(zp_meter_reset(handle,&first,1,1,3)==0,"Old reset epoch was accepted twice");
+    player.setNode({});collector.reset();
+    expect(!bank->canRetire(),"Read handle failed to retain retired meter banks");
+    expect(zp_meter_read(handle,slots,2,values,2)==2 && values[0].current.frames==256,
+           "Retired read handle followed a replacement graph");
+    zp_meter_release(handle);expect(bank->canRetire(),"Released Hub handle retained old meter bank");
+}
+void testInputHubReadHandle() {
+    InputMeter input;expect(input.prepare(2),"Input bank preparation failed");
+    auto collector=input.collector(input.deviceEpoch());
+    expect(collector->acquireHub(),"Input Hub admission failed");
+    auto* handle=new zp_meter_read_handle(collector);
+    std::array<float,256> left,right;left.fill(.25f);right.fill(.5f);
+    const float* channels[]={left.data(),right.data()};
+    input.process(channels,2,256,1000);
+    const std::uint32_t slots[]={0,1};zp_meter_publication values[2]{};
+    expect(zp_meter_read(handle,slots,2,values,2)==2 && values[0].current.peak==.25f
+           && values[1].current.peak==.5f && values[0].current.sum_squares==16,
+           "Input C ABI did not preserve physical channel statistics");
+    MeterPublication cached;
+    expect(collector->copyLatest(0,cached) && cached.current.endSample==1256,
+           "Input legacy consumer did not see the shared cache");
+    const std::uint32_t invalid[]={0,2};
+    expect(zp_meter_reset(handle,invalid,2,1,3)==0,"Input reset accepted partial invalid request");
+    expect(zp_meter_reset(handle,slots,1,1,3)==1,"Input selective reset rejected");
+    input.process(channels,2,256,1256);
+    expect(zp_meter_read(handle,slots,2,values,2)==2 && values[0].slot_reset_epoch==1
+           && values[1].slot_reset_epoch==0 && values[1].session_peak==.5f,
+           "Input reset cleared an unrelated physical channel");
+    input.stop();expect(input.prepare(1),"Input replacement preparation failed");
+    input.process(channels,1,256,1512);
+    expect(zp_meter_read(handle,slots,2,values,2)==2 && values[0].current.end_sample==1512,
+           "Retired input handle followed replacement device epoch");
+    zp_meter_release(handle);
+    expect(!collector->hasHub(),"Released input handle retained Hub ownership");
 }
 void testGraphIsolationAndRetirement() {
     auto old=std::make_shared<MeterGraph>(MeterBankIdentity{2,1,1},48000);
@@ -184,21 +254,35 @@ void testRealTrackChain(bool muted, bool otherSolo, bool stopped, bool fenced, b
     if(custom)expect(customCalls==1,"Custom plugin factory did not replace exactly one chain member");
     auto observerGraph=std::make_shared<MeterGraph>(MeterBankIdentity{1,99,99},48000);
     node=observerGraph->observeOutput(std::move(node),MixerTestAccess::identities(session),{});
-    observerGraph->seal();MeterGraphCollector observerCollector(observerGraph);
+    observerGraph->seal();auto observerCollector=std::make_shared<MeterGraphCollector>(observerGraph);
     graph::NodePlayer player;player.setNode(std::move(node),48000,256);
+    MixerTestAccess::install(session,observerGraph,observerCollector);
+    const auto identity=MixerTestAccess::graph(session).identity;
+    expect(!session.acquireMeterGraph("foreign","graph-meter-test",identity.deviceEpoch,identity.generation,identity.registryRevision),"Foreign lease acquired project meters");
+    expect(!session.acquireMeterGraph("meter-test","foreign",identity.deviceEpoch,identity.generation,identity.registryRevision),"Foreign session acquired project meters");
+    expect(!session.acquireMeterGraph("meter-test","graph-meter-test",identity.deviceEpoch,identity.generation+1,identity.registryRevision),"Stale graph acquired project meters");
+    auto hub=session.acquireMeterGraph("meter-test","graph-meter-test",identity.deviceEpoch,identity.generation,identity.registryRevision);
+    expect(hub!=nullptr,"Current project failed meter admission");
+    expect(!session.acquireMeterGraph("meter-test","graph-meter-test",identity.deviceEpoch,identity.generation,identity.registryRevision),"Second project Hub acquired meters");
+    zp_meter_read_handle handle(hub);
+    auto query=object();put(query,"leaseId","meter-test");put(query,"sessionId","graph-meter-test");
+    const auto registry=session.call("meter_registry",query);
+    expect((int)registry["generation"]==(int)identity.generation && registry["entries"].isArray(),"Registry did not describe admitted graph");
     expect(observerGraph->endpoints().size()==3,"Existing API observer did not register actual lanes");
     juce::AudioBuffer<float> audio(2,256);playhead.play();
     for(int block=0;block<16;++block) {
         const std::int64_t start=block*256;playhead.setReferenceSampleRange({start,start+256});
         processState.update(48000,{start,start+256},te::ProcessState::UpdateContinuityFlags::yes);
-        process(player,audio,start,256);observerCollector.collect();
+        process(player,audio,start,256);
+        const uint32_t slot=0;zp_meter_publication sampled{};
+        expect(zp_meter_read(&handle,&slot,1,&sampled,1)==1 && sampled.current.frames>0,"Project graph did not deliver native Hub samples");
     }
     const auto legacyDb=legacyClient.getAndClearAudioLevel(0).dB;
     legacyMeter->measurer.removeClient(legacyClient);
     expect(legacyDb < -90,"Disabled legacy meter still processed audio samples");
     const bool silent=muted || otherSolo || stopped || fenced;
     const auto expected=silent?0.f:.125f;
-    const auto* publication=observerCollector.latest("track/voice/out",0);
+    const auto* publication=observerCollector->latest("track/voice/out",0);
     expect(publication && publication->available,"Actual track output meter did not publish");
     expect(std::abs(audio.getSample(0,255)-expected)<1e-5,"Track fader/mute/solo/fence output differs from expected samples");
     if(custom)expect(std::abs(audio.getSample(1,255)-(silent?0.f:.25f))<1e-5,"Custom plugin node did not retain the track fader and output chain");
@@ -209,7 +293,7 @@ void testRealTrackChain(bool muted, bool otherSolo, bool stopped, bool fenced, b
 int main() {
     try {
         juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;
-        testSamplesAndIdentity();testGraphIsolationAndRetirement();
+        testSamplesAndIdentity();testGraphIsolationAndRetirement();testHubReadHandle();testInputHubReadHandle();
         testRealTrackChain(false,false,false,false);testRealTrackChain(true,false,false,false);
         testRealTrackChain(false,true,false,false);testRealTrackChain(false,false,true,false);testRealTrackChain(false,false,false,true);
         testRealTrackChain(false,false,false,false,true);testRealTrackChain(true,false,false,false,true);

@@ -8,6 +8,7 @@ pub const FRAME_TYPES_LOUDNESS: usize = 3;
 pub const HEADER_FLAGS_PLAYING: usize = 1;
 pub const HEADER_FLAGS_RECORDING: usize = 2;
 pub const HEADER_FLAGS_SUBSCRIPTION_CHANGED: usize = 4;
+pub const HEADER_FLAGS_REVISIONS_UNAVAILABLE: usize = 8;
 pub const RECORD_FLAGS_VALID: usize = 1;
 pub const RECORD_FLAGS_STALE: usize = 2;
 pub const RECORD_FLAGS_CLIPPED: usize = 4;

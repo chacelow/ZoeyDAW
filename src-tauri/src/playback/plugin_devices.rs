@@ -56,6 +56,13 @@ impl PluginDevices {
         }
         leases
     }
+    pub(crate) fn require_owner(&self, window: &str, lease: &str) -> Result<(),String> {
+        let registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
+        if registry.closed.contains(lease) || registry.owners.get(lease).is_none_or(|owner|owner!=window) {
+            return Err("Playback lease window owner mismatch".into());
+        }
+        Ok(())
+    }
     fn claim(&self, window: &str, lease: &str) -> Result<(),String> {
         let mut registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
         if registry.closed.contains(lease) { return Err("Plugin device lease closed".into()); }

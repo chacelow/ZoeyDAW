@@ -1,4 +1,5 @@
 import { ZodError } from "zod"
+import logger from "@zoeymind/logger"
 import {
   audioErrorMessage,
   nativeAudio,
@@ -19,6 +20,12 @@ import type {
 import type { BrowserAuditionPort } from "../browser/controller"
 import { resolveBackendSources, resolveBackendDevices } from "./source-locations"
 import { prepareNativeWaveforms } from "./waveforms"
+import {
+  createMeterSession,
+  type MeterSession,
+  type MeterSessionPort,
+} from "@zoeydaw/project-runtime/realtime"
+import { publishProjectMeters, readProjectMeters } from "../realtime"
 
 export interface NativeProjectBackend extends ProjectBackend {
   urgentStop(): Promise<void>
@@ -31,6 +38,7 @@ export interface NativeRecordingReceipt {
 
 export interface NativeProjectBackendOptions {
   commitRecording?(recording: NativeRecording): Promise<NativeRecordingReceipt>
+  meters?: MeterSessionPort
 }
 
 export function createNativeProjectBackend(
@@ -49,11 +57,47 @@ export function createNativeProjectBackend(
   let stopBarrier: Promise<void> | null = null
   let timer: number | undefined
   let polling = false
+  let recordingPoll: Promise<void> | null = null
   let pollGeneration = 0
   let lastTelemetrySequence = -1
   const publishingRecordings = new Set<string>()
   const recordingReceipts = new Map<string, NativeRecordingReceipt>()
   const acknowledgedRecordings = new Set<string>()
+  let requestError: string | null = null
+  let meters: MeterSession | null = null
+  let lastMeterRefresh = -Infinity
+  const meterVisibility = () => meters?.setVisible(!document.hidden)
+  function startMeters() {
+    if (!options.meters || meters || disposed) return
+    meters = createMeterSession({
+      port: options.meters,
+      leaseId,
+      sessionId,
+      now: () => performance.now(),
+      onError: error => publishNativeAudioStatus({ error: audioErrorMessage(error) }),
+      onEvent: event => {
+        if (event.kind === "plugin-fault") publishNativeAudioStatus({ error: event.message })
+      },
+    })
+    meterVisibility()
+    document.addEventListener("visibilitychange", meterVisibility)
+    publishProjectMeters(meters)
+  }
+
+  function reportRequestError(
+    operation: "apply" | "control" | "note",
+    request: Pick<BackendDocumentRequest, "sessionId" | "sequence">,
+    error: unknown
+  ) {
+    requestError = audioErrorMessage(error)
+    publishNativeAudioStatus({ error: requestError })
+    logger.error("[NativeProjectBackend] Request failed", {
+      operation,
+      sessionId: request.sessionId,
+      sequence: request.sequence,
+      error: requestError,
+    })
+  }
 
   function ownsRecording(recordingSession: string): boolean {
     return !disposed && leased && sessionId === recordingSession
@@ -93,23 +137,28 @@ export function createNativeProjectBackend(
     }
   }
 
-  async function pollRecordings(generation: number): Promise<void> {
-    if (!options.commitRecording) return
+  function pollRecordings(generation: number): void {
+    if (!options.commitRecording || recordingPoll) return
     const recordingSession = sessionId
-    try {
-      const result = await port.recordingResults(leaseId, recordingSession)
-      if (!ownsRecording(recordingSession) || generation !== pollGeneration) return
-      if (
-        result.sessionId !== recordingSession ||
-        result.recordings.some(recording => recording.sessionId !== recordingSession)
-      ) {
-        throw new Error("Native recording result belongs to a different session")
-      }
-      for (const recording of result.recordings) void publishRecording(recording)
-    } catch (error) {
-      if (ownsRecording(recordingSession) && generation === pollGeneration)
-        publishNativeAudioStatus({ error: audioErrorMessage(error) })
-    }
+    recordingPoll = Promise.resolve()
+      .then(() => port.recordingResults(leaseId, recordingSession))
+      .then(result => {
+        if (!ownsRecording(recordingSession) || generation !== pollGeneration) return
+        if (
+          result.sessionId !== recordingSession ||
+          result.recordings.some(recording => recording.sessionId !== recordingSession)
+        ) {
+          throw new Error("Native recording result belongs to a different session")
+        }
+        for (const recording of result.recordings) void publishRecording(recording)
+      })
+      .catch(error => {
+        if (ownsRecording(recordingSession) && generation === pollGeneration)
+          publishNativeAudioStatus({ error: audioErrorMessage(error) })
+      })
+      .finally(() => {
+        recordingPoll = null
+      })
   }
 
   function schedulePoll() {
@@ -119,11 +168,24 @@ export function createNativeProjectBackend(
       timer = undefined
       if (disposed || listeners.size === 0 || generation !== pollGeneration) return
       polling = true
-      const recordings = pollRecordings(generation)
+      pollRecordings(generation)
       try {
         const snapshot = await port.telemetry(leaseId)
         if (disposed || listeners.size === 0 || generation !== pollGeneration) return
-        publishNativeAudioStatus({ device: snapshot.device, issues: snapshot.issues, error: null })
+        if (snapshot.meterReady) startMeters()
+        if (meters && performance.now() - lastMeterRefresh >= 250) {
+          lastMeterRefresh = performance.now()
+          void meters
+            .refresh()
+            .catch(error => publishNativeAudioStatus({ error: audioErrorMessage(error) }))
+        }
+        publishNativeAudioStatus({
+          device: snapshot.device,
+          issues: snapshot.issues,
+          error: requestError,
+          recordingPreview:
+            snapshot.recordingPreview?.sessionId === sessionId ? snapshot.recordingPreview : null,
+        })
         const telemetry = snapshot.telemetry
         if (
           telemetry &&
@@ -137,7 +199,6 @@ export function createNativeProjectBackend(
         if (!disposed && generation === pollGeneration)
           publishNativeAudioStatus({ error: audioErrorMessage(error) })
       } finally {
-        await recordings
         polling = false
         schedulePoll()
       }
@@ -214,11 +275,11 @@ export function createNativeProjectBackend(
       )
         return reject("protocol")
       if (result.kind === "rejected")
-        publishNativeAudioStatus({ error: `Native audio request rejected: ${result.code}` })
+        reportRequestError("control", request, `Native audio request rejected: ${result.code}`)
       schedulePoll()
       return result
     } catch (error) {
-      if (!disposed) publishNativeAudioStatus({ error: audioErrorMessage(error) })
+      if (!disposed) reportRequestError("control", request, error)
       return reject(disposed ? "disposed" : error instanceof ZodError ? "protocol" : "connection")
     } finally {
       pending.delete(operation)
@@ -254,10 +315,10 @@ export function createNativeProjectBackend(
       if (result.sessionId !== request.sessionId || result.sequence !== request.sequence)
         return reject("protocol")
       if (result.kind === "rejected")
-        publishNativeAudioStatus({ error: `Native audio note rejected: ${result.code}` })
+        reportRequestError("note", request, `Native audio note rejected: ${result.code}`)
       return result
     } catch (error) {
-      if (!disposed) publishNativeAudioStatus({ error: audioErrorMessage(error) })
+      if (!disposed) reportRequestError("note", request, error)
       return reject(disposed ? "disposed" : error instanceof ZodError ? "protocol" : "connection")
     } finally {
       pending.delete(operation)
@@ -283,6 +344,7 @@ export function createNativeProjectBackend(
   }
 
   return {
+    readMeters: () => meters?.store ?? null,
     urgentStop,
     control,
     note,
@@ -386,12 +448,19 @@ export function createNativeProjectBackend(
           }
         if (result.kind === "rejected" && result.code === "superseded-open") return result
         if (result.kind === "rejected")
-          publishNativeAudioStatus({ error: `Native audio request rejected: ${result.code}` })
+          reportRequestError("apply", request, `Native audio request rejected: ${result.code}`)
+        if (
+          result.kind === "accepted" &&
+          (request.stage === "open" || request.stage === "commit")
+        ) {
+          requestError = null
+          publishNativeAudioStatus({ error: null })
+        }
         if (result.kind === "accepted" && sources) void prepareNativeWaveforms(sources)
         schedulePoll()
         return result
       } catch (error) {
-        if (!disposed) publishNativeAudioStatus({ error: audioErrorMessage(error) })
+        if (!disposed) reportRequestError("apply", request, error)
         return {
           kind: "rejected",
           sessionId: request.sessionId,
@@ -416,6 +485,15 @@ export function createNativeProjectBackend(
       if (disposed) return
       disposed = true
       cancelPoll()
+      document.removeEventListener("visibilitychange", meterVisibility)
+      if (meters) {
+        if (readProjectMeters() === meters) publishProjectMeters(null)
+        const closing = meters.dispose().catch(error => {
+          publishNativeAudioStatus({ error: audioErrorMessage(error) })
+        })
+        pending.add(closing)
+      }
+      publishNativeAudioStatus({ recordingPreview: null })
       listeners.clear()
       if (!leased) return
       void urgentStop().catch(error =>

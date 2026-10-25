@@ -44,8 +44,8 @@ TimeStretchingWaveNode::TimeStretchingWaveNode (AudioClipBase& clip, tracktion::
             pitchSemitones = c.getPitchChange();
     }
 
-    jassert (speedRatio >= 0.1f);
-    speedRatio = std::max (speedRatio, 0.1f);
+    jassert (speedRatio >= ClipConstants::speedRatioMin);
+    speedRatio = std::max (speedRatio, (float) ClipConstants::speedRatioMin);
 }
 
 //==============================================================================
@@ -77,7 +77,7 @@ void TimeStretchingWaveNode::prepareToPlay (const tracktion::graph::PlaybackInit
         fileSpeedRatio = float (fileInfo.sampleRate / sampleRate);
         const float resamplingPitchRatio = fileSpeedRatio > 0.0f ? (float) std::log2 (fileSpeedRatio) : 1.0f;
         timestretcher.initialise (info.sampleRate, stretchBlockSize, fileInfo.numChannels, m, c.elastiqueProOptions.get(), false);
-        timestetchSpeedRatio = std::max (0.1f, float (speedRatio / fileSpeedRatio));
+        timestetchSpeedRatio = std::max ((float) ClipConstants::speedRatioMin, float (speedRatio / fileSpeedRatio));
         timestetchSemitonesUp = float ((pitchSemitones + (resamplingPitchRatio * 12.0f)));
         timestretcher.setSpeedAndPitch (timestetchSpeedRatio, timestetchSemitonesUp);
     }

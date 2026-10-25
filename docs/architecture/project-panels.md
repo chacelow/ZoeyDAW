@@ -64,9 +64,11 @@ Arrangement 使用 `--background` 作为编辑区，交替区域混入 4% foregr
 
 激活通过 aria-selected、aria-pressed、aria-current 或 data-active 表达，共享 hover 规则不覆盖激活态。列表激活色优先于菜单 focus 色。
 
-Footer Info 只接收 ControlEnvironment 定义的组件类型，由语言包提供固定说明，不发布资源名、输入值或即时参数。控件环境由应用作用域提供；组件画廊使用独立作用域。
+Footer Info 的 hover 通道只接收 ControlEnvironment 定义的组件类型，由语言包提供固定说明，不发布资源名、输入值或即时参数。没有 hover/warning 时在现有 Footer 内展示文件操作状态、错误与外部媒体依赖提示；工程 Header 不另建文件反馈行。控件环境由应用作用域提供；组件画廊使用独立作用域。
 
-拖拽 Ghost 复用 DragPreviewArea 与现有 Motion，保留 Esc、失焦、取消和 reduced-motion；资源放置仍按原型范围禁用。
+设置各页使用应用级 `.settings-row`，左侧标题、右侧控件共用列宽，保留原主题、语言和即时应用行为。设备清单在进入页面和打开设备选择器时发现，不提供独立刷新按钮；异步发现不得覆盖新选择或新错误。去掉重复的已选设备、请求值和说明，仅保留设备状态、实际值差异、延迟与可操作错误。
+
+编排内 Ghost 与 Browser 音频预览调用同一 `paintClip` variant：轨道色 Header 半透明，正文仅绘制半透明真实波形/音符，不填背景或绘制选中高亮。Browser drop 后保留 source/placement，直到正式 Clip 进入 scene、可用波形完成交接且主画布已绘制，再移除预览。拖动取消、导入失败和卸载各自清理本轮 owner；未知时长不伪造音乐宽度。
 
 `/library` 按 `pages/library/catalog.ts` 注册表提供左侧组件 Tab，每页展示同一组件族的真实变体和状态操作。默认只显示组件与短标签，完整适用状态和 N/A 原因收在折叠清单。基础组件切页保留挂载、测量宽度与本地值；电平计时、加载和 DAW 预览等 transient 页离开即卸载。
 
@@ -83,6 +85,8 @@ ClipDetail 按当前 clip ID 重新读取所属 track 和 clip，标题栏颜色
 工程、预览、撤销、模拟时钟与快照契约见 [stores](../../apps/web/src/pages/project/stores/README.md)、[adapters](../../apps/web/src/pages/project/adapters/README.md)。Timeline controller 统一时间范围、缩放与滚动，标尺和轨道共用视口。
 
 MiniMap 依据 Live Arrangement 的 `AScrollerView → LScrollBarXView → AXBackgroundView → LArrangerScrollable` 事件链实现，不能复用 Clip Detail 的 `AZoomScrollBar`。`MiniMap/zoom.ts` 统一绘制与命中几何：内部最小宽度 12px，左右各 2px，整个框最小 16px；位置按剩余平移距离映射。框内横拖按时间线像素移动，竖拖逐事件按主轴缩放，下拖放大、上拖缩小；修饰键切换为框直接平移或框外翻页。两端缩放锚定对侧时间边界。结束、失焦和捕获丢失保留实时视口；Escape 结束当前手势，不回滚视口。双击适配，Command 滚轮缩放（其他平台为 Ctrl），滚轮小数累计后再按原生整数增量处理。中心与框外使用普通放大镜光标，边缘复用共享 bracket 光标。
+
+MiniMap 按下后立即隐藏鼠标并取得单 owner 的鼠标锁。Tauri 通过原生 cursor grab/hide，浏览器使用 Pointer Lock；位移采用相对 movement 累积虚拟坐标，屏幕边缘不截断手势。owner 明确经过 acquiring、locked、releasing、released，早于 ACK 的释放也等待并撤销同一 token。按下时保存点击点在视口方框内部的左右比例，释放按当前方框的 left/width 重算恢复位置，不使用整条 MiniMap 的比例；纵向保留在总览行中的按下高度。释放先解锁、恢复计算位置再显示；Escape、失焦、窗口销毁和卸载都释放资源。窗口销毁或没有可用几何时回退原按下位置。当前 viewport 数学和实时值不回滚；锁定与位置恢复失败不得被称为已完成原生交互验证。
 
 总览与 Canvas 共用 `useTimelineViewport` 的时间范围。song length 以 quarter-note beats 保存会话滞回：候选为事件末端、播放位置、循环和选择范围的最大末端加 32，夹到 232–15768000；候选在旧值减 32 与加 16 的开区间内时保留旧值。总览末端取 song length 与当前可见末端的较大值，不再增加一次尾部余量，不固定为 128 小节。重建工程会话时重置，拍号改变只转换显示单位。单位定义见 [Live API](https://docs.cycling74.com/userguide/m4l/live_api_overview/)。
 

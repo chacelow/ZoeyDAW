@@ -140,7 +140,7 @@ describe("incoming clip overwrite", () => {
       [1, 3],
       [3, 15],
     ])
-    const resized = projectClipResize(winner, "left", 3)
+    const resized = projectClipResize({ ...winner, sourceOffsetBars: 4 }, "left", 3)
     const replaced = replaceClip([audioTrack([original, winner])], resized, identity.clip)
     expect(intervals(replaced[0].clips)).toEqual([
       [1, 3],
@@ -149,7 +149,7 @@ describe("incoming clip overwrite", () => {
     ])
     const repeat = replaceClip(
       [audioTrack([original, winner])],
-      projectClipResize(winner, "left", 2),
+      projectClipResize({ ...winner, sourceOffsetBars: 4 }, "left", 2),
       identity.clip
     )
     expect(repeat[0].clips.map(clip => clip.id)).toEqual(replaced[0].clips.map(clip => clip.id))

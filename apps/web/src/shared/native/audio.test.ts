@@ -61,6 +61,41 @@ beforeEach(() => {
 })
 
 describe("native audio IPC boundary", () => {
+  it("validates real input readings and bounded signed recording extrema", async () => {
+    const preview = {
+      sessionId: "s",
+      recordingId: "take",
+      tracks: [
+        {
+          trackId: "track",
+          clipId: "clip",
+          startBar: 2,
+          durationBars: 0.5,
+          channels: [{ min: [-0.5, -0.1], max: [0.2, 0.7] }],
+        },
+      ],
+    }
+    const snapshot = {
+      device,
+      telemetry: null,
+      meterReady: false,
+      issues: [],
+      recordingPreview: preview,
+    }
+    vi.mocked(invoke).mockResolvedValueOnce(snapshot)
+    expect(await nativeAudio.telemetry("lease")).toEqual(snapshot)
+    for (const channels of [
+      [{ min: [-0.5], max: [] }],
+      [{ min: Array(513).fill(0), max: Array(513).fill(0) }],
+      [{ min: [NaN], max: [1] }],
+    ]) {
+      vi.mocked(invoke).mockResolvedValueOnce({
+        ...snapshot,
+        recordingPreview: { ...preview, tracks: [{ ...preview.tracks[0], channels }] },
+      })
+      await expect(nativeAudio.telemetry("lease")).rejects.toThrow()
+    }
+  })
   it("admits a playback lease through the explicit command and validates its response", async () => {
     vi.mocked(invoke).mockResolvedValueOnce(null)
     await nativeAudio.acquire("lease", "s")
@@ -160,7 +195,7 @@ describe("native audio IPC boundary", () => {
     expect(invoke).toHaveBeenCalledTimes(3)
   })
 
-  it("validates nested sample clocks and levels rather than coercing native telemetry", async () => {
+  it("validates nested sample clocks and rejects legacy meter payloads", async () => {
     const telemetry = {
       sessionId: "s",
       sequence: 1,
@@ -169,18 +204,19 @@ describe("native audio IPC boundary", () => {
       clock: { kind: "sample", bar: 1, barsPerSecond: 0.5, frame: 44, sampleRate: 44100 },
       playing: true,
       recording: false,
-      levels: { main: [-30, -31] },
     }
-    vi.mocked(invoke).mockResolvedValueOnce({ device, telemetry, issues: [] })
+    vi.mocked(invoke).mockResolvedValueOnce({ device, telemetry, issues: [], meterReady: true })
     expect((await nativeAudio.telemetry("lease")).telemetry?.clock).toEqual(telemetry.clock)
     vi.mocked(invoke).mockResolvedValueOnce({
       device,
+      meterReady: true,
       telemetry: { ...telemetry, levels: { main: [-30] } },
       issues: [],
     })
     await expect(nativeAudio.telemetry("lease")).rejects.toThrow()
     vi.mocked(invoke).mockResolvedValueOnce({
       device,
+      meterReady: true,
       telemetry: { ...telemetry, clock: { ...telemetry.clock, frame: -1 } },
       issues: [],
     })

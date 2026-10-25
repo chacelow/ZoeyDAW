@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "../../plugin-abi/include/processor.h"
+#include "runtime/meter_read_abi.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,7 +19,10 @@ char* zp_plugin_admit(zp_session*, const char* lease, const char* owner, const c
 char* zp_plugin_cancel(zp_session*, const char* lease, const char* owner, uint64_t token);
 /* Consumes every supplied processor, including rejected apply and invalid payloads. */
 char* zp_apply_prepared(zp_session*, const char* json, zd_plugin_prepared*, uint32_t count);
-/* These fences are the only session functions callable off the main thread. */
+/* Acquisition is message-thread-only and binds one immutable graph identity. */
+zp_meter_read_handle* zp_meter_acquire(zp_session*, const char* lease, const char* owner, uint32_t device_epoch, uint32_t generation, uint32_t registry);
+zp_meter_read_handle* zp_input_meter_acquire(zp_session*,const char* lease,const char* owner,uint32_t device_epoch);
+/* These fences do not access mutable Edit state and can be called off the main thread. */
 int zp_stop_fence_for(zp_session* session, const char* lease_id, const char* session_id, uint64_t token);
 /* The host registers a pending apply on the main thread before its final cancellation check. */
 int zp_pending_call_begin(zp_session* session, const char* lease_id, const char* session_id);

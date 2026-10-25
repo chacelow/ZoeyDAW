@@ -20,6 +20,10 @@
       "types": "./src/testing/index.ts",
       "import": "./src/testing/index.ts"
     },
+    "./realtime": {
+      "types": "./src/realtime/index.ts",
+      "import": "./src/realtime/index.ts"
+    },
     "./backend-projection": {
       "types": "./src/backend/projection.ts",
       "import": "./src/backend/projection.ts"

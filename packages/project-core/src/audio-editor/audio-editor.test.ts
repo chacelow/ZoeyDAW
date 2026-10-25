@@ -28,7 +28,7 @@ describe("audio clip settings", () => {
   it("derives omitted source tempo without authoring or mutating the clip", () => {
     expect(getAudioClipSettings(clip, 87.11)).toEqual({
       warp: true,
-      warpMode: "beats",
+      warpMode: "soundtouch",
       sourceBpm: 87.11,
       transpose: 0,
       detune: 0,
@@ -46,12 +46,18 @@ describe("audio clip settings", () => {
     const settings = defaultAudioClipSettings(120, clip)
     expect(isAudioClipSettings(settings)).toBe(true)
     expect(
-      isAudioClipSettings({ ...settings, warpMode: "complex-pro", transpose: -48, detune: 50 })
+      isAudioClipSettings({
+        ...settings,
+        warpMode: "signalsmith-formant",
+        transpose: -48,
+        detune: 50,
+      })
     ).toBe(true)
     for (const invalid of [
       null,
       {},
       { ...settings, warpMode: "unknown" },
+      { ...settings, warpMode: "beats" },
       { ...settings, sourceBpm: Number.NaN },
       { ...settings, sourceBpm: Infinity },
       { ...settings, sourceBpm: 0 },

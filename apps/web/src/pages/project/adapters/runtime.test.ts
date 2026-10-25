@@ -32,6 +32,7 @@ import type {
   ProjectBackend,
 } from "@zoeydaw/project-core/backend"
 import type { ProjectState } from "@zoeydaw/project-core/types"
+import { readProjectMeterLevels } from "./realtime"
 
 const backendPhaseOnImport = useProjectState.getState().session.backend.phase
 
@@ -820,7 +821,10 @@ it("opens external-backend projects without demo media and leaves empty audio cl
   const stop = startProjectRuntime()
   try {
     projectActions.togglePlay()
-    expect(useProjectState.getState().session.levels[track.id]).toEqual([-60, -60])
+    expect(readProjectMeterLevels({ kind: "track", trackId: track.id })).toEqual([
+      -Infinity,
+      -Infinity,
+    ])
   } finally {
     stop()
   }
@@ -945,7 +949,6 @@ it("stops recording on accepted record-off even before the next telemetry frame"
       clock: { kind: "musical", bar: 1, barsPerSecond: 0.5 },
       playing: true,
       recording: true,
-      levels: {},
     })
     projectActions.noteOn(80)
     expect(

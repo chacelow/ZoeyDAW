@@ -17,6 +17,7 @@ import type { ClipVisualGeometry } from "../clip-geometry"
 import type { TokenSet } from "../tokens"
 import type { ArrangementScene } from "../scene"
 import type { Clip } from "@zoeydaw/project-core/types"
+import type { WaveformRange } from "@zoeydaw/project-core/waveform-range"
 
 const NORMAL_PASSES = [false] as const
 const DRAG_PASSES = [false, true] as const
@@ -138,12 +139,22 @@ export function paintClips(
             hovered: isHovered && !ghost,
             automationMode: options.automationMode,
             ghost,
+            inactive: row.track.monitor === "in" && row.track.input !== "none",
           },
           width,
           scene
         )
         context.restore()
       }
+    }
+    context.fillStyle = tokens["--arrangement-surface"]
+    context.globalAlpha = 1
+    for (const clip of row.track.clips) {
+      const edge = Math.round((clip.startBar - 1 + clip.lengthBars) * pxPerBar - scrollX)
+      if (edge < 0 || edge > width) continue
+      const rect = clipRect(clip, row, pxPerBar, scrollX)
+      const visual = clipVisualGeometry(rect, clip, row.track, false)
+      context.fillRect(edge - 1, visual.top, 1, visual.height)
     }
     context.restore()
   }
@@ -173,49 +184,59 @@ export function paintClips(
   context.restore()
 }
 
-function paintClip(
+export function paintClip(
   context: CanvasRenderingContext2D,
   clip: Clip,
   g: ClipVisualGeometry,
   color: string,
   tokens: TokenSet,
-  state: { selected: boolean; hovered: boolean; automationMode: boolean; ghost: boolean },
+  state: {
+    selected: boolean
+    hovered: boolean
+    automationMode: boolean
+    ghost: boolean
+    inactive?: boolean
+  },
   viewportWidth: number,
-  scene: ArrangementScene
+  scene: ArrangementScene,
+  waveformRanges?: readonly WaveformRange[]
 ): void {
-  const { left, top, width, height, bodyTop, bodyHeight, titleHeight } = g
+  const { left, top, width, bodyTop, bodyHeight, titleHeight } = g
   const { numerator } = scene.transport
   const opacity = state.ghost ? 0.5 : 1
-  const muted = clip.mute === true
-  const bodyColor = state.selected ? tokens["--arrangement-clip-selected"] : color
+  const muted = clip.mute === true || state.inactive === true
+  const bodyColor = state.selected && !state.ghost ? tokens["--arrangement-clip-selected"] : color
   const titleColor = muted
     ? tokens["--arrangement-muted-clip-title"]
-    : state.selected && bodyHeight === 0
+    : state.selected && !state.ghost && bodyHeight === 0
       ? tokens["--arrangement-clip-selected"]
       : color
   context.globalAlpha = opacity
   context.fillStyle = titleColor
   context.fillRect(left, top, width, titleHeight)
   if (bodyHeight > 0) {
-    if (!muted) {
+    if (!muted && !state.ghost) {
       context.fillStyle = bodyColor
       context.globalAlpha = (state.selected ? 0.9 : state.automationMode ? 0.25 : 0.55) * opacity
       context.fillRect(left, bodyTop, width, bodyHeight)
     }
-    paintTimeGrid(
-      context,
-      scene,
-      tokens["--arrangement-grid-minor"],
-      tokens["--arrangement-grid-major"],
-      bodyTop,
-      bodyTop + bodyHeight,
-      Math.max(0, left),
-      Math.min(viewportWidth, left + width),
-      0.4 * opacity
-    )
-    context.fillStyle = tokens["--arrangement-line"]
-    context.globalAlpha = (state.automationMode ? 0.14 : 0.3) * opacity
-    context.fillRect(left, bodyTop, width, 1)
+    if (!state.ghost)
+      paintTimeGrid(
+        context,
+        scene,
+        tokens["--arrangement-grid-minor"],
+        tokens["--arrangement-grid-major"],
+        bodyTop,
+        bodyTop + bodyHeight,
+        Math.max(0, left),
+        Math.min(viewportWidth, left + width),
+        0.4 * opacity
+      )
+    if (!state.ghost) {
+      context.fillStyle = tokens["--arrangement-line"]
+      context.globalAlpha = (state.automationMode ? 0.14 : 0.3) * opacity
+      context.fillRect(left, bodyTop, width, 1)
+    }
     context.globalAlpha = (muted ? 0.25 : state.automationMode ? 0.4 : 1) * opacity
     const ink = muted ? tokens["--muted-foreground"] : tokens["--arrangement-clip-ink"]
     if (clip.kind === "audio") {
@@ -229,7 +250,8 @@ function paintClip(
         ink,
         viewportWidth,
         scene.media,
-        scene.transport
+        scene.transport,
+        waveformRanges
       )
     } else {
       paintMidiNotes(
@@ -274,7 +296,7 @@ function paintClip(
   if (state.hovered && !state.selected) {
     context.strokeStyle = tokens["--foreground"]
     context.globalAlpha = 0.45
-    context.strokeRect(left + 0.5, top + 0.5, width - 1, height - 1)
+    context.strokeRect(left + 0.5, top + 0.5, width - 1, titleHeight - 1)
     context.globalAlpha = 1
   }
   context.globalAlpha = 1

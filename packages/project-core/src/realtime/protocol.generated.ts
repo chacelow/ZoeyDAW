@@ -8,6 +8,7 @@ export const FRAME_TYPES_LOUDNESS = 3;
 export const HEADER_FLAGS_PLAYING = 1;
 export const HEADER_FLAGS_RECORDING = 2;
 export const HEADER_FLAGS_SUBSCRIPTION_CHANGED = 4;
+export const HEADER_FLAGS_REVISIONS_UNAVAILABLE = 8;
 export const RECORD_FLAGS_VALID = 1;
 export const RECORD_FLAGS_STALE = 2;
 export const RECORD_FLAGS_CLIPPED = 4;

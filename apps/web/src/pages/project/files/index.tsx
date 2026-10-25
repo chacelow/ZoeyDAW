@@ -70,7 +70,7 @@ export function ProjectFileFeedback({
   return (
     <>
       <div
-        className="text-muted-foreground flex shrink-0 flex-wrap items-center gap-2 px-2 text-xs"
+        className="text-muted-foreground flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-xs [&>span]:truncate"
         aria-live="polite"
       >
         {state.binding && <span title={state.binding.path}>{state.binding.path}</span>}
@@ -109,7 +109,7 @@ export function ProjectFileFeedback({
       </div>
       {issues.length > 0 && (
         <ul
-          className="flex shrink-0 flex-col gap-1 px-2 text-xs"
+          className="flex min-w-0 shrink items-center gap-2 overflow-auto text-xs"
           aria-label={t("project.files.resolveMissing")}
         >
           {issues.map(issue => (

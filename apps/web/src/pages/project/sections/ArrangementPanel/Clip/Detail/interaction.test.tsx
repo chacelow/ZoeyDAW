@@ -467,3 +467,99 @@ it("repaints both real-source projections with signed filled contours across zoo
   view.unmount()
   expect(release).toHaveBeenLastCalledWith(`audio-editor/${clip.id}`)
 })
+
+it("projects non-warped fades and Fit into source bars with a shifted start marker", () => {
+  const document = useProjectState.getState().document
+  const fixture = document.tracks.flatMap(track => track.clips).find(clip => clip.id === "audio-1")
+  if (fixture?.kind !== "audio") throw new Error("Missing Audio fixture")
+  const source = {
+    id: "source-projection-test",
+    name: "long.wav",
+    sha256: "b".repeat(64),
+    byteLength: 1_920_000,
+    frames: 480_000,
+    sampleRate: 48_000,
+    channels: 2,
+    location: { kind: "external", path: "/audio/long.wav" },
+  } satisfies MediaSource
+  const clip = {
+    ...fixture,
+    sourceId: source.id,
+    sourceOffsetBars: 1,
+    lengthBars: 2,
+    fadeInBars: 0.5,
+    fadeOutBars: 0.5,
+    audioSettings: {
+      ...getAudioClipSettings(fixture, document.transport.bpm),
+      warp: false,
+      sourceBpm: document.transport.bpm * 2,
+      startMarkerBars: 2,
+      endMarkerBars: 5,
+      loopStartBars: 2,
+      loopLengthBars: 3,
+    },
+  }
+  hydrateProject(
+    JSON.stringify({
+      version: 4,
+      document: {
+        ...document,
+        media: [...document.media, source],
+        tracks: document.tracks.map(track => ({
+          ...track,
+          clips: track.clips.map(item => (item.id === clip.id ? clip : item)),
+        })),
+      },
+      workspace: useProjectState.getState().workspace,
+    })
+  )
+  const liveClip = () =>
+    useProjectState
+      .getState()
+      .document.tracks.flatMap(track => track.clips)
+      .find(item => item.id === clip.id)
+  function LiveWaveform() {
+    const current = useProjectState(state =>
+      state.document.tracks.flatMap(track => track.clips).find(item => item.id === clip.id)
+    )
+    if (current?.kind !== "audio") return null
+    return <AudioWaveform clip={current} transport={document.transport} />
+  }
+  const view = render(<LiveWaveform />)
+  const surface = view.container.querySelector(".audio-detail-wave-svg")
+  const fade = surface?.querySelector(".audio-detail-fade")
+  expect(fade?.getAttribute("transform")).toBe("translate(2 0) scale(2 1)")
+  const fadeIn = view.container.querySelector<HTMLButtonElement>('[data-kind="fadeIn"]')
+  expect(fadeIn?.style.left).toBe("30%")
+  const fadeOut = view.container.querySelector<HTMLButtonElement>('[data-kind="fadeOut"]')
+  expect(fadeOut?.style.left).toBe("50%")
+  if (!fadeIn || !fadeOut) throw new Error("Missing fade markers")
+  Object.defineProperty(fadeIn.parentElement, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({ width: 100 }),
+  })
+  fireEvent.pointerDown(fadeIn, { button: 0, pointerId: 1, clientX: 30 })
+  fireEvent.pointerMove(fadeIn, { pointerId: 1, clientX: 40 })
+  expect(liveClip()).toMatchObject({ fadeInBars: 1 })
+  fireEvent.pointerUp(fadeIn, { pointerId: 1, clientX: 40 })
+  act(() => projectActions.undo())
+  expect(liveClip()).toMatchObject({ fadeInBars: 0.5 })
+  act(() =>
+    projectActions.updateClip(clip.id, {
+      audioSettings: { ...clip.audioSettings, startMarkerBars: 3 },
+    })
+  )
+  expect(view.container.querySelector(".audio-detail-fade")?.getAttribute("transform")).toBe(
+    "translate(3 0) scale(2 1)"
+  )
+  expect(view.container.querySelector<HTMLButtonElement>('[data-kind="fadeIn"]')?.style.left).toBe(
+    "40%"
+  )
+  fireEvent.click(view.getByRole("button", { name: "detailAudio.zoomIn" }))
+  fireEvent.click(view.getByRole("button", { name: "detailAudio.fit" }))
+  const sourceSvg = view.container.querySelectorAll(".audio-detail-wave-svg svg[viewBox]")[0]
+  expect(sourceSvg?.getAttribute("viewBox")).toBe("0 0 10 100")
+  expect(view.container.querySelector("[data-kind='start']")?.getAttribute("style")).toContain(
+    "30%"
+  )
+})

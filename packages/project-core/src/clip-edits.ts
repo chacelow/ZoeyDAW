@@ -103,6 +103,7 @@ export function projectClipResize(
   }
   const startBar = Math.max(
     1,
+    clip.kind === "audio" ? clip.startBar - Math.max(0, clip.sourceOffsetBars ?? 0) : 1,
     Math.min(bar, clip.startBar + clip.lengthBars - MIN_CLIP_LENGTH_BARS)
   )
   if (startBar === clip.startBar) {

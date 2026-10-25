@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react"
+import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
 import { projectActions, useProjectEditGesture } from "@/pages/project/adapters"
 import {
   audioLoopWindow,
@@ -42,7 +43,7 @@ export function SourceMarker({
   )
   const gesture = useProjectEditGesture((value: number) => {
     const baseline = active.current?.clip ?? clip
-    const start = baseline.sourceOffsetBars ?? 0
+    const { origin, rate } = clipSourceProjection(baseline, bpm)
     if (kind === "loopStart" || kind === "loopEnd") {
       const settings = getAudioClipSettings(baseline, bpm)
       const loopEnd = settings.loopStartBars + settings.loopLengthBars
@@ -75,8 +76,13 @@ export function SourceMarker({
     const outFade = fadeControls(baseline, "out")
     const patch =
       kind === "fadeIn"
-        ? { fadeInBars: Math.max(0, Math.min(outFade.start, value - start) - inFade.start) }
-        : { fadeOutBars: Math.max(0, outFade.end - Math.max(inFade.end, value - start)) }
+        ? {
+            fadeInBars: Math.max(
+              0,
+              Math.min(outFade.start, (value - origin) / rate) - inFade.start
+            ),
+          }
+        : { fadeOutBars: Math.max(0, outFade.end - Math.max(inFade.end, (value - origin) / rate)) }
     projectActions.updateClip(clip.id, patch)
   })
   useEffect(() => {

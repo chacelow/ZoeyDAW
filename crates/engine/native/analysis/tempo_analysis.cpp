@@ -24,7 +24,7 @@ V analyzeTempo(const juce::String& path) {
         if(sensible(bpm))return tempoResult(bpm,"metadata");
     }
     const auto frames=std::min(reader->lengthInSamples,(juce::int64)(reader->sampleRate*60));
-    if(frames<reader->sampleRate*3)return tempoResult(0,"unknown");
+    if(frames<reader->sampleRate*.75)return tempoResult(0,"unknown");
     const int window=std::max(1,(int)std::round(reader->sampleRate*.01));
     juce::AudioBuffer<float> block(std::min(2,(int)reader->numChannels),4096);
     std::array<float,4096> mono{};
@@ -57,26 +57,34 @@ V analyzeTempo(const juce::String& path) {
             if(onsets.empty() || seconds-onsets.back()>=.15)onsets.push_back(seconds);
         }
     }
-    if(onsets.size()<6)return tempoResult(0,"unknown");
+    if(onsets.size()<3)return tempoResult(0,"unknown");
     std::vector<double> intervals;intervals.reserve(onsets.size()-1);
     for(size_t i=1;i<onsets.size();++i)intervals.push_back(onsets[i]-onsets[i-1]);
     auto sorted=intervals;std::sort(sorted.begin(),sorted.end());
     const double median=sorted[sorted.size()/2];
     double detected=detector.finishAndDetect();
     const double pulseBpm=60/median;
-    if(!sensible(detected))detected=pulseBpm;
-    else for(double factor:{.5,1.0,2.0})if(std::abs(detected*factor-pulseBpm)<pulseBpm*.08) { detected*=factor;break; }
-    if(!sensible(detected))return tempoResult(0,"unknown");
-    const double period=60/detected;
-    size_t supported=0;
-    for(double interval:intervals) {
-        const double beats=std::round(interval/period);
-        if(beats>=1 && beats<=4 && std::abs(interval-beats*period)<=std::max(.025,period*.08))++supported;
-    }
-    if(supported*10<intervals.size()*8)return tempoResult(0,"unknown");
-    // Use the observed pulse interval to avoid detector interpolation drift on stable loops.
     const bool steady=std::all_of(intervals.begin(),intervals.end(),[median](double value){return std::abs(value-median)<=median*.08;});
     if(steady && sensible(pulseBpm))detected=pulseBpm;
+    if(!sensible(detected))return tempoResult(0,"unknown");
+    std::vector<double> attacks;attacks.reserve(energy.size());
+    for(size_t i=0;i<energy.size();++i) {
+        const size_t begin=i>20?i-20:0;
+        const double baseline=i?std::accumulate(energy.begin()+begin,energy.begin()+i,0.0)/(i-begin):0;
+        attacks.push_back(std::max(0.0,energy[i]-baseline));
+    }
+    const int period=(int)std::round(60/detected*reader->sampleRate/window);
+    double support=0;
+    for(int lag=std::max(1,period-2);lag<=period+2;++lag) {
+        if((size_t)lag>=attacks.size()/2)continue;
+        double product=0,left=0,right=0;
+        for(size_t i=(size_t)lag;i<attacks.size();++i) {
+            const double a=attacks[i],b=attacks[i-(size_t)lag];
+            product+=a*b;left+=a*a;right+=b*b;
+        }
+        if(left>0 && right>0)support=std::max(support,product/std::sqrt(left*right));
+    }
+    if(support<.45)return tempoResult(0,"unknown");
     return tempoResult(std::round(detected*100)/100,"analysis");
 }
 }

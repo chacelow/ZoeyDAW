@@ -35,13 +35,17 @@ export const transportActions = {
     }
   },
   setDenominator(denominator: number) {
-    if (!Number.isFinite(denominator)) {
+    if (denominator < 1 || denominator > 32 || !Number.isInteger(Math.log2(denominator))) {
       return
     }
-    const next = Math.max(1, Math.min(32, Math.round(denominator)))
     const previous = get().document.transport
-    document(reduceDocument(get().document, { type: "transport", patch: { denominator: next } }))
-    reconcileGridForMeterChange(previous.numerator, previous.denominator, previous.numerator, next)
+    document(reduceDocument(get().document, { type: "transport", patch: { denominator } }))
+    reconcileGridForMeterChange(
+      previous.numerator,
+      previous.denominator,
+      previous.numerator,
+      denominator
+    )
   },
   setBarLength(barLength: string) {
     document(reduceDocument(get().document, { type: "transport", patch: { barLength } }))
@@ -120,7 +124,6 @@ export const transportActions = {
     session({
       playing: false,
       recording: false,
-      levels: {},
       ...(point && { position: positionAtBar(point.bar) }),
     })
   },

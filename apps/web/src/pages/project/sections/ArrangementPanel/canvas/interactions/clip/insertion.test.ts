@@ -95,6 +95,22 @@ it("clicks a Clip body and blank track, retaining an exact row-local insertion",
   })
 })
 
+it("shows the new insertion at pointer-down before either a click release or drag move", () => {
+  const { scene, interaction, pointer, row } = setup()
+  const audio = row("3-audio")
+  const previous = { trackId: "3-audio", bar: 2 }
+  projectActions.setInsertionPoint(previous)
+  scene.setPlayback({ playing: false, insertionPoint: previous })
+  const gesture = interaction.start(pointer(24, audio.top + audio.height - 5))!
+  const pressed = { trackId: "3-audio", bar: 9 + 3 / 16_384 }
+  expect(useProjectState.getState().session.insertionPoint).toEqual(pressed)
+  expect(scene.get().playback.insertionPoint).toEqual(pressed)
+  gesture.move(pointer(104, audio.top + audio.height - 5))
+  expect(scene.get().playback.insertionPoint).toEqual(pressed)
+  gesture.finish(false)
+  expect(scene.get().playback.insertionPoint).toEqual(pressed)
+})
+
 it("uses a clicked title's start and follows the final moved card rather than its pointer offset", () => {
   const { scene, interaction, pointer, row } = setup()
   const audio = row("3-audio")

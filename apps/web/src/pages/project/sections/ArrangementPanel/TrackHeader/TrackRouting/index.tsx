@@ -18,7 +18,9 @@ function ordinaryRoutingRows(
   const hasInput = track.kind === "audio" || track.kind === "midi"
   const hasOutputChannel = track.kind === "midi" || (hasInput && track.output === "external")
   return [
-    hasInput ? <InputTypeRow key="input-type" track={track} /> : null,
+    hasInput ? (
+      <InputTypeRow key="input-type" track={track} hardwareInputs={hardwareInputs} />
+    ) : null,
     hasInput && track.input !== "none" ? (
       <InputChannelRow key="input-channel" track={track} hardwareInputs={hardwareInputs} />
     ) : null,
@@ -61,7 +63,7 @@ export function TrackRouting({ track }: { readonly track: Track }) {
   return (
     <section
       aria-label={`${t("arrangement.routing")} ${track.name}`}
-      className="arrangement-track-routing arrangement-track-controls flex min-w-0 flex-col"
+      className="arrangement-track-routing arrangement-track-controls flex min-w-0 flex-col [&_button>span>span>span:last-child]:justify-start [&_button>span>span>span:last-child]:text-left [&_button>span>span>span:last-child>span]:text-left"
     >
       {track.collapsed ? (
         isMain ? (

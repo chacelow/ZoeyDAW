@@ -35,11 +35,11 @@ std::vector<juce::Range<double>> activeClipRanges(const Track& track, const Requ
 class InputMonitorNode final : public tracktion::graph::Node {
 public:
     InputMonitorNode(std::unique_ptr<Node> source, const Track& track, const Request& request,
-                     tracktion::engine::ProcessState& state)
+                     tracktion::engine::ProcessState& state, const std::atomic<bool>& recording)
         : input(std::move(source)),
           mode(track.monitor == "in" ? MonitorMode::in
                                     : track.monitor == "auto" ? MonitorMode::automatic : MonitorMode::off),
-          armed(track.armed), ranges(activeClipRanges(track, request)), processState(state) {
+          armed(track.armed), ranges(activeClipRanges(track, request)), processState(state), recordingActive(recording) {
         setOptimisations({tracktion::graph::ClearBuffers::no, tracktion::graph::AllocateAudioBuffer::yes});
     }
     tracktion::graph::NodeProperties getNodeProperties() override {
@@ -59,8 +59,8 @@ private:
             return;
         }
         copy(output, source.audio);
-        if (mode == MonitorMode::in || !processState.playHeadState.playHead.isPlaying()
-            || ranges.empty() || output.getNumFrames() == 0)
+        if (mode == MonitorMode::in || recordingActive.load(std::memory_order_acquire)
+            || !processState.playHeadState.playHead.isPlaying() || ranges.empty() || output.getNumFrames() == 0)
             return;
 
         const auto frameCount = output.getNumFrames();
@@ -88,14 +88,16 @@ private:
     const bool armed;
     const std::vector<juce::Range<double>> ranges;
     tracktion::engine::ProcessState& processState;
+    const std::atomic<bool>& recordingActive;
 };
 }
 
 std::unique_ptr<tracktion::graph::Node> createInputMonitorNode(
     std::unique_ptr<tracktion::graph::Node> source, const Track& track, const Request& request,
-    tracktion::engine::ProcessState& state) {
+    tracktion::engine::ProcessState& state, const std::atomic<bool>& recordingActive) {
     if (!source || source->getNodeProperties().hasMidi)
         throw std::invalid_argument("Input monitoring requires a native audio-only input node");
-    return std::make_unique<InputMonitorNode>(std::move(source), track, request, state);
+    return std::make_unique<InputMonitorNode>(std::move(source), track, request, state, recordingActive);
+
 }
 }

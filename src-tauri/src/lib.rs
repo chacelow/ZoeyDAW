@@ -7,6 +7,7 @@ use tauri::{
 };
 
 mod atomic_file;
+mod cursor_lock;
 mod log_config;
 mod project_storage;
 mod application_lifecycle;
@@ -24,13 +25,24 @@ fn frontend_ready(window: tauri::Window) -> Result<(), String> {
 pub fn run() {
   let application = tauri::Builder::default()
     .manage(application_lifecycle::ApplicationCloseGuard::default())
+    .manage(cursor_lock::CursorLock::default())
     .manage(zoeydaw_engine::PlaybackService::default())
     .manage(playback::RecordingInspections::default())
     .manage(playback::realtime_probe::RealtimeProbeService::default())
     .manage(plugin_catalog::PluginCatalogState::default())
     .manage(playback::plugin_devices::PluginDevices::default())
     .on_window_event(|window, event| {
+      if matches!(event, tauri::WindowEvent::Focused(false) | tauri::WindowEvent::Destroyed) {
+        if let Some(cursor) = window.app_handle().try_state::<cursor_lock::CursorLock>() {
+          cursor_lock::release_window(window, &cursor);
+        }
+      }
       if matches!(event, tauri::WindowEvent::Destroyed) {
+        if let Some(service) = window.app_handle().try_state::<zoeydaw_engine::PlaybackService>() {
+          if let Err(error) = service.close_meter_window(window.label()) {
+            log::error!("Meter window cleanup failed: {error}");
+          }
+        }
         if let Some(probes) = window.app_handle().try_state::<playback::realtime_probe::RealtimeProbeService>() {
           probes.close_window(window.label());
         }
@@ -62,6 +74,8 @@ pub fn run() {
     .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .invoke_handler(tauri::generate_handler![
+      cursor_lock::cursor_lock_acquire,
+      cursor_lock::cursor_lock_release,
       plugin_catalog::plugin_catalog_entries,
       plugin_catalog::plugin_catalog_reserve,
       plugin_catalog::plugin_catalog_scan,
@@ -91,6 +105,14 @@ pub fn run() {
       playback::playback_note,
       playback::playback_all_notes_off,
       playback::playback_telemetry,
+      playback::realtime_stream::playback_stream_open,
+      playback::realtime_stream::playback_stream_registry,
+      playback::realtime_stream::playback_clock_probe,
+      playback::realtime_stream::playback_meter_interest,
+      playback::realtime_stream::playback_stream_close,
+      playback::realtime_stream::playback_meter_snapshot,
+      playback::realtime_stream::playback_event_receipt,
+      playback::realtime_stream::playback_meter_reset,
       playback::recording_results,
       playback::recording_ack,
       playback::playback_release,

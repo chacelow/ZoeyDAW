@@ -219,15 +219,17 @@ describe("pure clip edit projections", () => {
     })
   })
 
-  it("retains signed source offsets and clamps fade intervals without generating waveform samples", () => {
+  it("clamps audio extension at its source start and keeps fade intervals within the visible clip", () => {
     const original = audioClip(createTestDocument().tracks)
     if (original.kind !== "audio") {
       throw new Error("Fixture clip must be audio")
     }
-    const moved = { ...original, startBar: 10, fadeInBars: 9, fadeOutBars: 9 }
-    const extended = projectClipResize(moved, "left", 8)
-    expect(extended).toMatchObject({ startBar: 8, lengthBars: 18, sourceOffsetBars: -2 })
+    const moved = { ...original, startBar: 10, sourceOffsetBars: 2, fadeInBars: 9, fadeOutBars: 9 }
+    const extended = projectClipResize(moved, "left", -100)
+    expect(extended).toMatchObject({ startBar: 8, lengthBars: 18, sourceOffsetBars: 0 })
     expect(extended).toHaveProperty("waveformPeaks", moved.waveformPeaks)
+    expect(projectClipResize(moved, "left", 7)).toEqual(extended)
+    expect(projectClipResize({ ...moved, sourceOffsetBars: 0 }, "left", 1).startBar).toBe(10)
     expect(projectClipResize(extended, "right", 9)).toMatchObject({
       lengthBars: 1,
       fadeInBars: 1,

@@ -6,6 +6,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { useTimelineViewport } from "./useTimelineViewport"
+import { arrangementScheduler } from "@/pages/project/sections/ArrangementPanel/canvas/scheduler"
+import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
+import { arrangementPlayhead } from "@/pages/project/sections/ArrangementPanel/canvas/audio/playhead-projection"
 
 const frames = new Map<number, FrameRequestCallback>()
 let frameId = 0
@@ -149,4 +152,26 @@ it("keeps the zero-based playing position centered when zooming with Follow", ()
   })
   const p = useProjectState.getState().workspace
   expect((10 - 1) * p.pxPerBar - p.scrollX).toBeCloseTo(352)
+})
+
+it("publishes Follow geometry before the same frame paints at high zoom", () => {
+  const pixels: number[] = []
+  const detach = arrangementScheduler.register("follow-frame-regression", () => {
+    const scene = arrangementScene.get()
+    pixels.push(
+      (arrangementPlayhead.readPlayhead().bar - 1) * scene.viewport.pxPerBar -
+        scene.viewport.scrollX
+    )
+  })
+  render(<Viewport />)
+  act(() => {
+    projectActions.setViewport({ pxPerBar: 8000 })
+    projectActions.seekBar(3.75)
+    projectActions.togglePlay()
+    arrangementPlayhead.writePlayhead({ bar: 3.75, playing: true, recording: false })
+  })
+  frame()
+  expect(pixels).toEqual([200])
+  detach()
+  arrangementPlayhead.dispose()
 })

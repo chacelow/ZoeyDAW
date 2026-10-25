@@ -4,7 +4,7 @@ import { projectActions, useProjectState } from "@/pages/project/adapters"
 import { visibleTracks } from "@zoeydaw/project-core/types"
 import { snapBar } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
 import { arrangementScene } from "../canvas/scene"
-import { TRACK_DROP_ZONE_HEIGHT, isPinnedTrack } from "../canvas/layout"
+import { isPinnedTrack } from "../canvas/layout"
 
 /**
 Empty area after the last track inside the scrolling lane stack. It is part of
@@ -29,12 +29,15 @@ export function TrackDropZone({
       className="pointer-events-none absolute inset-x-0 overflow-hidden"
       style={{ top: clipTop, height: Math.max(0, clipBottom - clipTop) }}
     >
-      <div className="pointer-events-auto absolute inset-x-0" style={{ top: top - clipTop }}>
+      <div
+        className="pointer-events-auto absolute inset-x-0"
+        style={{ top: Math.max(top, clipTop) - clipTop }}
+      >
         <InsertTrackMenu>
           <div
             data-arrangement-drop-zone
             className="text-muted-foreground flex items-center justify-center text-[10px] select-none"
-            style={{ height: TRACK_DROP_ZONE_HEIGHT }}
+            style={{ height: Math.max(0, clipBottom - Math.max(top, clipTop)) }}
             onPointerDown={event => {
               if (event.button !== 0) {
                 return
@@ -64,6 +67,10 @@ export function TrackDropZone({
               projectActions.setTimeSelection(null)
               projectActions.setInsertionPoint({ trackId: trailing.id, bar })
               arrangementScene.setTimeSelection(null)
+              arrangementScene.setPlayback({
+                playing: state.session.playing,
+                insertionPoint: { trackId: trailing.id, bar },
+              })
               arrangementScene.setSelection(new Set())
             }}
           >

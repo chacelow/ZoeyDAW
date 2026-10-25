@@ -56,11 +56,10 @@ function Bar({
   readonly appearance: "compact" | "track"
 }) {
   const isVertical = orientation === "vertical"
-  const warningColor =
-    appearance === "track" ? "light-dark(var(--chart-4), var(--chart-3))" : "var(--chart-4)"
-  const fillGradient = isVertical
-    ? `linear-gradient(to top, var(--chart-2) 0%, var(--chart-2) ${clipRatio * 75}%, ${warningColor} ${clipRatio * 100}%, var(--destructive) ${clipRatio * 100}%)`
-    : `linear-gradient(to right, var(--chart-2) 0%, var(--chart-2) ${clipRatio * 75}%, ${warningColor} ${clipRatio * 100}%, var(--destructive) ${clipRatio * 100}%)`
+  const warningColor = "light-dark(var(--chart-4), var(--chart-3))"
+  const hotColor = `color-mix(in srgb, var(--destructive) 75%, ${warningColor})`
+  const stops = `var(--chart-2) 0%, var(--chart-2) ${clipRatio * 45}%, ${warningColor} ${clipRatio * 75}%, ${hotColor} ${clipRatio * 100}%, var(--destructive) ${clipRatio * 100}%`
+  const fillGradient = `linear-gradient(${isVertical ? "to top" : "to right"}, ${stops})`
   const peakStyle =
     peakRatio !== undefined && peakRatio > 0
       ? isVertical

@@ -6,6 +6,8 @@ export default {
   scanPlugins: "请先在设置中扫描插件。",
   chain: "设备链",
   trackDevices: "{{track}} 的设备",
+  inputLevel: "{{device}} 输入电平",
+  outputLevel: "{{device}} 输出电平",
   noTrack: "选择轨道以查看设备。",
   emptyMidi: "为此 MIDI 轨道添加音频效果器",
   emptyAudio: "为此轨道添加音频效果器",

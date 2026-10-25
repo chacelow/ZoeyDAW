@@ -1,6 +1,6 @@
 # 编排渲染与交互
 
-2026-10-13。适用范围为当前 Web 交互原型，不表示已接入 Rust 音频引擎。
+适用范围为 Web 编排交互和原生音频数据的显示投影。Gallery 明确注入模拟后端，桌面工程从原生运行时读取真实输入、播放与录音数据。
 
 ## 当前职责
 
@@ -9,7 +9,9 @@
 - `canvas/scene.ts` 保存只读工程引用、视口、选择和手势预览。工程源数据仍由 project adapter 持有。手势预览不是第二份工程，也不进入快照。
 - `canvas/scheduler.ts` 合并一帧内的绘制请求。缩放和滚动改变视口，不重建每个 Clip 的 DOM 节点。
 - MiniMap 用独立画布绘制缩略内容，用一个 DOM 选框显示可见区。手势控制器在组件生命周期内只安装一次监听器。
-- 轨道电平绘制使用独立小画布。当前电平与播放均为模拟值，没有声音输出。
+- 轨道电平使用独立小画布，读取已确认的原生轨道输出或所选物理输入通道。Off 待命输入用灰色 Ghost 电平，实际音频仍由原生监听规则决定。录制卡片通过已有主画布绘制 writer-fed 缩略图，最多每声道 512 个真实 min/max bins，不用电平生成假波形。
+- 路由和 Device 前后级复用 `components/ProjectMeter`，直接从当前 MeterStore 读取真实 endpoint；设备电平不复用轨道输出。`ProjectPage` 在工程生命周期内把单一 MeterSession tick 注册到共享 scheduler 的 clock 阶段，Arrangement 关闭不终止 Device 电平。隐藏、stalled 和错误状态通知消费者清除旧值，隐藏时停止连续调度，恢复时唤醒。原生 WebView 实际显示与吞吐尚未验收。
+- 通用 meter、轨道 Canvas 与路由菜单共享低电平绿、中高电平黄、接近 0 dB 红橙的警示层次，0 dB 以上保留红色过载区。渐变按完整量程固定，当前值只裁剪可见填充，不随柱高重新缩放。Off Ghost 继续使用灰色。
 - `Timeline/Toolbar`、`Timeline/Viewport`、`Timeline/TrackHeaderViewport` 和 `Timeline/useCanvasPainters.ts` 分别负责工具栏、视口、轨道标题和绘制生命周期。入口不处理每种手势的业务逻辑。
 - `canvas/interactions/controller.ts` 统一拥有事件监听、指针身份、捕获、点击阈值、取消与边缘滚动。Clip、标尺和 Automation 模块只返回手势与命令，不各自安装全局指针监听器。
 
@@ -23,11 +25,15 @@
 
 `model/grid.ts` 保存自适应密度或固定网格偏好，并按缩放与拍号纯计算有效网格。自适应有最大宽度、宽、中、窄、最小宽度五档，最细可达 `1/16384`；Ctrl/Cmd+1、+2 只调整档次，不移动视口。细分线、四格、十六格、拍与小节线使用不同权重，Clip 内外共用同一原点与有效格宽。明暗底色仍按编号小节交替，不等于网格密度。快照版本 2 保存模式与偏好，不保存随缩放派生的格值；旧版本的显式格值在读取边界迁移为固定模式。
 
-轨道标题只挂载可见行和当前有焦点的行，离屏轨道仍保留完整工程数据。隐藏光标不被当作主题变化，不因此重新解析全页颜色。普通卡片操作不打开底部编辑器；显式打开临时编辑器时才预留空间，不覆盖底部固定轨道。
+轨道标题在可见行前后各保留一个垂直视口的挂载缓冲，并保留当前焦点行；远处轨道仍保留完整工程数据。窗口横向导航不卸载轨道标题。波形请求在水平和垂直各方向预取一个视口，按源零点对齐的固定块复用；同源导航保留在途请求与已完成缓存。每个源另保留不超过 4096 bins 的真实概览，在缺少细节的区间绘制粗包络，细节到达后按原算法绘制，不伪造 PCM 或采样点。隐藏光标不被当作主题变化，不因此重新解析全页颜色。普通卡片操作不打开底部编辑器；显式打开临时编辑器时才预留空间，不覆盖底部固定轨道。
 
-Canvas 尺寸变化在 `ResizeObserver` 内完成尺寸更新与同步重绘。正文、播放头和电平表不把已清空的 backing store 留给下一次 RAF；像素尺寸未改变时不重新写入 `width`、`height`。正常状态更新仍由共享 scheduler 合并。
+Canvas 尺寸变化在 `ResizeObserver` 内完成 backing-store 更新与同步重绘；CSS 宽高由容器的 `size-full` 拥有，不写旧像素 CSS 尺寸，避免溢出滚动条反过来改变被观察容器。正文、播放头和电平表不把已清空的 backing store 留给下一次 RAF；像素尺寸未改变时不重新写入 `width`、`height`。正常状态更新仍由共享 scheduler 合并。
 
-时间线正文、空白轨道和时间范围选择使用默认箭头；Clip 标题悬停显示抓手，调整边缘、淡变和实际拖动保留专用指针。点击正文或空白轨道建立独立的 `session.insertionPoint`，停止时只在对应可见轨道内绘制高亮短线和标尺标记。空格从该位置播放，再次空格停止并恢复插入点。贯穿轨道的长播放线只在播放时绘制；停止状态不持续自刷新播放头画布，也不依赖可能滞后的遥测 playing 标志。
+时间线正文、空白轨道和时间范围选择使用默认箭头；Clip 标题悬停显示抓手，调整边缘、淡变和实际拖动保留专用指针。点击正文或空白轨道建立独立的 `session.insertionPoint`，在对应可见轨道内绘制短线和标尺标记，播放中也保留。插入标记按 1200ms 三角波在主题 primary 与较亮颜色之间往返混色，不闪灭；仅可见时持续刷新 overlay。空格从该位置播放，再次空格停止，插入点不随长播放线推进。贯穿轨道的长播放线只在播放时绘制，不依赖可能滞后的遥测 playing 标志。
+
+轨道正文和空白处在 pointer-down 即同步设置 `session.insertionPoint` 与 scene playback 投影，先清除旧时间选区并显示新位置，不等待点击阈值、拖动或 pointer-up。React playback 投影在 layout effect 同步，避免首帧仍画旧位置；Esc 恢复手势前插入点。
+
+“文件和装置”提示占据最后普通轨道与固定 Return/Main 之间的可见空白区，按该区间上下居中，不按最小 drop-zone 高度定位。正文仍是创建轨道的放置区域，点击按下即同步插入点。
 
 `session.selectedTrackIds` 表达活动轨道，`trackSelectionSurface` 区分音轨区域与右侧表头的焦点。点击音轨、Clip 或自动化 lane 只高亮行并清除右侧身份区高亮，不改变路由和混音区域的样式。点击右侧表头时，只有名称身份区使用选中色，操作控件保持原样；不绘制选中边框、阴影或整卡遮罩。两种反馈不能只靠轨道 ID 同时开启。行色在网格之后绘制并裁剪到可见边界，表头选择不移动插入点。展开、收起和 Group 摘要保留同一活动身份及焦点来源。
 
@@ -76,7 +82,7 @@ Follow 通过已有共享 rAF scheduler 读取 `readTransportBar()`，不新建�
 
 ## Clip 与 Pattern
 
-标题区负责移动和修饰键复制，正文负责时间范围选择。左右边缘负责修剪与重新延长源窗口；音频淡变长度和弯曲度使用独立命中区域。预览与命中共用几何，轨道种类兼容策略复用 `acceptsClip`。
+标题区负责移动和修饰键复制，正文负责时间范围选择。只有标题栏左右边缘负责修剪与重新延长源窗口，并显示左右边缘光标；正文两侧不命中 resize，保留音频淡变长度与曲线锚点。悬停外框也限于标题高度。预览与命中共用几何，轨道种类兼容策略复用 `acceptsClip`。
 
 `canvas/clip-geometry.ts` 统一给出标题、正文、淡变曲线和端点位置。Clip 标题是不透明实色，下半部正文透明混合轨道颜色并透出网格层级。MIDI 显示实际音高与长度，音高范围按 Clip 源窗口计算，不因横向滚动重排。Pattern 将布尔步进显示为无音高短标记，不生成虚构音高。普通轨道折叠后只保留实色标题，填满轨道边框内侧，不绘制正文或隐藏的曲线命中区域。
 
@@ -92,7 +98,7 @@ Audio、MIDI 和 Pattern 共用卡片选中态。展开时，正文使用 `--arr
 
 Group 不能拥有 Clip。`model/track-groups.ts` 投影祖先色带和完整叶子轨道摘要。折叠 Group 同时收起自身行并隐藏后代，保留紧凑摘要和首行开关、独奏、电平表，不保留展开的音量、声像或详细路由。嵌套色带、身份区颜色和外层轨道分割线保持连接。
 
-移动时原卡片保留但不激活，`scene.clipDrag` 保存源轨道与选中 IDs，`preview-*` 卡片以 50% 不透明度绘制激活态 Ghost。松开后落点卡片恢复正常激活态。无效目标保留最后兼容候选，不清空预览；松开、失焦或捕获中断提交最后有效位置，Esc 及组件销毁取消。Fade 手势使用同样的中断提交策略，修剪和其他手势保留原取消规则。鼠标松开时纳入最后指针坐标，文档通过 layout effect 同步到 Canvas，避免提交时闪回。
+移动时原卡片保留但不激活，`scene.clipDrag` 保存源轨道与选中 IDs。Ghost 标题保留轨道或 Clip 色并用 50% 不透明度绘制，正文不填背景、不重绘网格，仅显示半透明波形或音符；不套选中态正文填色。松开后落点卡片恢复正常激活态。无效目标保留最后兼容候选，不清空预览。移动、resize、Fade、Loop 和 Locator 的拖动持续发布有效预览，松开、失焦或捕获中断保留最后有效位置，Esc 及组件销毁取消。鼠标松开时纳入最后指针坐标，文档通过 layout effect 同步到 Canvas，避免提交时闪回。相邻卡片的右边界在所有内容绘制后覆盖 1 CSS px 分隔线，宽度不随音乐缩放变化，不缩短卡片几何或改变波形比例。
 
 Automation 模式保留标题拖动，正文继续编辑自动化。`model/clip-automation.ts` 为预览和提交移动每个选中 Clip 的 `[startBar, startBar + lengthBars)` 内全部自动化点，重叠选区只移动一次。跨轨道按 parameter 匹配 lane，移动保留点 ID、value 和 curve，复制生成新 ID，同位置冲突由移入的点覆盖。卡片和点共享左边界限制及一个撤销事务。
 
@@ -102,7 +108,13 @@ Automation 模式保留标题拖动，正文继续编辑自动化。`model/clip-
 
 `sourceOffsetBars` 保留修剪后的源相位。MIDI 预览按工程拍号和源偏移裁切音符；Pattern 的卡片和编辑器共用 `model/pattern-window.ts`，保留自由修剪留下的部分步进，不把源偏移四舍五入。编辑器修改一个源循环，而不是为 Clip 的每次重复复制一组按钮。缩小时按可见像素聚合 Pattern 活动，绘制工作量不随隐藏的重复步数增长。
 
+Audio 左扩实时夹紧在源起点 `sourceOffsetBars = 0`，继续向左拖动仍保留边界值，松开提交相同窗口。MIDI 和 Pattern 保留可循环的负源相位。原生兼容读取已有带符号音频窗口，但新 Audio resize 不生成负源偏移。时间选区按所选轨道与半开区间操作；Delete/剪切只移除相交片段，粘贴保留选区前后静音、跨轨空白与完整时长，并在一次事务中覆盖目的区间。
+
 Clip 剪贴板保留源窗口和相对轨道、小节偏移，粘贴生成独立 ID。外部数据先经过版本与形状校验；普通文本不会回退到旧的 Clip 缓存。MIDI 编辑器独立处理音符绘制、擦除、选择、剪贴板与键盘命令。撤销音符编辑不关闭仍然存在的 Clip 编辑器。
+
+全局普通文案不响应浏览器原生文字选中。`input`、`textarea` 和可编辑 `contenteditable` 区域保留选字与编辑；Canvas 自有 Clip、时间范围和音符选区不受此 CSS 策略影响。
+
+录制预览由原生 take、track 和稳定 Clip ID 识别，独立于 authored document。停止后保留未发布录音的缩略图；正式 Clip 进入 scene 后，缺少波形缓存时继续绘制原录制预览，缓存到达才由正式绘制接管。关闭或替换工程清除旧会话预览。多轨原生回归覆盖真实 writer PCM、缩略图和停止前后身份，物理麦克风与桌面交互需要单独实测。
 
 ## 标尺与自动化输入
 
@@ -124,7 +136,17 @@ Locator、Loop 和 Clip 使用区分类型的 `targetSelection`。点击由统�
 
 播放头、电平、Follow 与模拟录制读取同一 project runtime。`@zoeydaw/project-core/backend` 定义后端 port，`@zoeydaw/project-runtime` 按实例拥有工程编辑、确认和生命周期，构造与导入不启动引擎。编辑 token 与 Canvas 使用独立的 `session.editEpoch`，不能用可能为空的 backend sessionId 代替；离线也可编辑与取消。包内 `backend/connection/` 串行发送完整状态，将协议校验、显示插值与状态协调分开。app 注入 native backend，测试与 Gallery 显式注入 mock；`audio/project-telemetry.ts` 把遥测投影到本地 Float64 播放位置与 Float32 电平槽，不是原生共享内存协议。源与混音/自动化元数据进入后端 DTO，名称、颜色、视口和波形缓存不进入。接入契约见 [Project state adapter](../../apps/web/src/pages/project/adapters/README.md)。
 
-当前 `audio/ring-buffer.ts` 是模拟数据槽，不是已验证的 Rust 与 WebView 共享内存协议。Rust 原生进程不能直接把一个 JS `SharedArrayBuffer` 当作它的内存写入。未来音频线程需先通过实时安全队列把遥测送到非实时发布端，再使用实际验证的 WebView 数据通道传给 UI。当前没有实现这个原生链路。
+共享 scheduler 每帧按 `clock → update → paint` 执行，注册先后不决定数据依赖。telemetry 先更新本地播放槽，Follow 用该帧同一位置同步 scene viewport，再向现有 workspace 发布 scrollX，最后正文与播放线一起绘制。不能让 Follow 等下一次 React commit 后才更新 Canvas 坐标，否则高缩放会放大一帧错位。
+
+Arrangement 原生遥测在播放时读取 playback context 的 pending seek 或 `getAudibleTimelineTime()`，保留图延迟补偿；停止时读取 transport 的精确位置。不能用 `TransportControl::getPosition()` 的 UI timer 缓存作为播放时钟，该缓存在 seek 后有 200ms 更新抑制。前端等待当前 control generation 的首帧时保留 runtime 请求位置，不写回第 1 小节，也不伪造引擎已播放。
+
+BPM 修改保留 Edit、播放上下文与处理器，由 Tracktion 在音频块边界按上一块拍点采用新 tempo，不执行 stop/seek/play。依赖 BPM 的 Clip 时间、Warp、淡变和自动化同步更新。遥测使用已处理的 sync point 推导当时速度，并结合 audible timeline 保留图延迟补偿，不能用尚未采用的新 BPM 解释旧秒数。停止时按新 tempo 换算精确音乐位置。
+
+Warp Clip 启用 Tracktion auto-tempo，并用源 BPM 配置源拍点映射。BPM 更新不写固定 `speedRatio`，也不在 1× 处切换拉伸器类型，实时读取器保留源相位与处理状态。`re-pitch` 使用原生 SoundTouch rate 加独立 authored pitch；该实例固定处理顺序并保留抗混叠滤波，避免速度跨过 1× 时交换缓冲造成 click。
+
+显示插值接到较慢的新时钟时，从此前显示位置连续交接，以新速度的一半收敛已超前的距离；真实帧保持原值，误差归零后恢复实际速度。控制代际变化、停止和真实循环回绕立即采用新位置，不保留连续性偏移。插值仍限于最后真实观测后的 250ms。
+
+`audio/playhead-projection.ts` 只保存同帧播放头位置、播放状态和 revision，不包含 meter 或 SharedArrayBuffer。原生 meter 经 graph-owned mailbox、唯一 Rust Hub、window-bound binary pull 到 MeterStore，轨头、路由和 Device 直接消费同一快照。该链路已通过真实设备与二进制消费者 smoke；WKWebView 的实际交互、吞吐和全链路延迟尚未验收。
 
 Canvas 2D 是当前渲染实现，不保证任意工程规模的帧率。性能验收必须说明轨道数、Clip 数、视口、拖拽场景和实测帧间隔；小型空场景的结果不能代表几百轨工程。是否需要 WebGL 或 Worker，应由真实场景测量决定，而不是仅凭技术名称承诺。
 

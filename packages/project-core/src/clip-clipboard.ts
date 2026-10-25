@@ -13,6 +13,7 @@ export interface ClipClipboard {
   version: 1
   items: ClipClipboardItem[]
   patterns: MidiPattern[]
+  range?: { lengthBars: number; trackCount: number }
 }
 
 export function collectClips(
@@ -22,11 +23,12 @@ export function collectClips(
   bpm = 120,
   patterns: readonly MidiPattern[] = []
 ): ClipClipboard | null {
+  if (range && range.endBar <= range.startBar) return null
   const selected = new Set(ids)
   const lanes = tracks.filter(track => track.kind === "audio" || track.kind === "midi")
   const items = lanes.flatMap((track, trackIndex) =>
     track.clips
-      .filter(clip => selected.has(clip.id) && (!range || range.trackIds.includes(track.id)))
+      .filter(clip => (range ? range.trackIds.includes(track.id) : selected.has(clip.id)))
       .flatMap(clip => {
         const visible = range ? clipWindow(clip, range.startBar, range.endBar, bpm) : clip
         return visible
@@ -44,12 +46,24 @@ export function collectClips(
   if (copiedPatterns.length !== patternIds.size) {
     return null
   }
-  const minTrack = Math.min(...items.map(item => item.trackOffset))
-  const minBar = Math.min(...items.map(item => item.barOffset))
+  const minTrack = range
+    ? lanes.findIndex(track => range.trackIds.includes(track.id))
+    : Math.min(...items.map(item => item.trackOffset))
+  const minBar = range?.startBar ?? Math.min(...items.map(item => item.barOffset))
   return {
     kind: "clips",
     version: 1,
     patterns: structuredClone(copiedPatterns),
+    ...(range && {
+      range: {
+        lengthBars: range.endBar - range.startBar,
+        trackCount:
+          lanes.reduce(
+            (end, track, index) => (range.trackIds.includes(track.id) ? index + 1 : end),
+            0
+          ) - minTrack,
+      },
+    }),
     items: items.map(item => ({
       ...item,
       trackOffset: item.trackOffset - minTrack,
@@ -150,7 +164,30 @@ export function parseClipClipboard(raw: string): ClipClipboard | null {
       clip: serializeClip(item.clip),
     })
   }
-  return items.every(item => item.trackOffset !== 0) || items.every(item => item.barOffset !== 0)
-    ? null
-    : { kind: "clips", version: 1, items, patterns }
+  if ("range" in value) {
+    const range = value.range
+    if (
+      !range ||
+      typeof range !== "object" ||
+      !("lengthBars" in range) ||
+      typeof range.lengthBars !== "number" ||
+      !Number.isFinite(range.lengthBars) ||
+      range.lengthBars <= 0 ||
+      !("trackCount" in range) ||
+      typeof range.trackCount !== "number" ||
+      !Number.isSafeInteger(range.trackCount) ||
+      range.trackCount <= 0
+    ) {
+      return null
+    }
+    const { lengthBars, trackCount } = range
+    if (
+      items.some(
+        item => item.trackOffset >= trackCount || item.barOffset + item.clip.lengthBars > lengthBars
+      )
+    )
+      return null
+    return { kind: "clips", version: 1, items, patterns, range: { lengthBars, trackCount } }
+  }
+  return { kind: "clips", version: 1, items, patterns }
 }

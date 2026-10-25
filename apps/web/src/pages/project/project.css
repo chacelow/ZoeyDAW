@@ -324,3 +324,8 @@ stray blue box around a card after a modifier click.
   box-shadow: none;
   outline: none;
 }
+
+html[data-minimap-cursor-lock],
+html[data-minimap-cursor-lock] * {
+  cursor: none !important;
+}

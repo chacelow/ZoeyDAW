@@ -3,7 +3,12 @@
   "magic": 1296319578,
   "byteOrder": "little-endian",
   "frameTypes": { "levels": 1, "spectrum": 2, "loudness": 3 },
-  "headerFlags": { "playing": 1, "recording": 2, "subscriptionChanged": 4 },
+  "headerFlags": {
+    "playing": 1,
+    "recording": 2,
+    "subscriptionChanged": 4,
+    "revisionsUnavailable": 8
+  },
   "recordFlags": {
     "valid": 1,
     "stale": 2,

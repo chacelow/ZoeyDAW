@@ -192,6 +192,7 @@ private:
 
     /// Accumulator for how many samples in total have been read out from the processing so far
     long   samplesOutput;
+    const bool fixedProcessingOrder;
 
     /// Calculates effective rate & tempo valuescfrom 'virtualRate', 'virtualTempo' and
     /// 'virtualPitch' parameters.
@@ -208,7 +209,7 @@ protected :
     double tempo;
 
 public:
-    SoundTouch();
+    explicit SoundTouch(bool fixedOrder = false);
     virtual ~SoundTouch();
 
     /// Get SoundTouch library version string

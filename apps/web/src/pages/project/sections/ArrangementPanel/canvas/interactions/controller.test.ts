@@ -1,6 +1,6 @@
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
-import { afterEach, beforeEach, expect, it } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { createSceneStore } from "../scene"
@@ -19,6 +19,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   dispose?.()
+  vi.restoreAllMocks()
   document.body.replaceChildren()
 })
 
@@ -228,4 +229,196 @@ it("does not commit a clip gesture interrupted before drag threshold", () => {
   pointer("pointerdown", 60)
   pointer("lostpointercapture", 60)
   expect(clip()).toMatchObject({ startBar: 1 })
+})
+
+it.each(["pointercancel", "lostpointercapture", "blur"])(
+  "retains a live title resize on %s",
+  interruption => {
+    const { element, scene, clip } = createClipController()
+    const row = layoutTrackRows(scene.get()).find(item => item.track.id === "3-audio")!
+    const y = row.top + 6
+    element.dispatchEvent(
+      new MouseEvent("pointerdown", { bubbles: true, clientX: 1, clientY: y, button: 0 })
+    )
+    element.dispatchEvent(
+      new MouseEvent("pointermove", { bubbles: true, clientX: 25, clientY: y, button: 0 })
+    )
+    const live = scene.get().previewTracks?.find(item => item.id === row.track.id)?.clips[0]
+    expect(live).toMatchObject({ startBar: 2, sourceOffsetBars: 1 })
+    if (interruption === "blur") window.dispatchEvent(new Event("blur"))
+    else
+      element.dispatchEvent(
+        new MouseEvent(interruption, { bubbles: true, clientX: 25, clientY: y })
+      )
+    expect(clip()).toEqual(live)
+    projectActions.undo()
+    expect(clip()).toMatchObject({ startBar: 1 })
+  }
+)
+
+it.each(["Delete", "Backspace"])(
+  "%s removes a time range, not its selected whole clip, with one undo",
+  key => {
+    const { element, scene } = createClipController()
+    const before = useProjectState.getState().document
+    element.focus()
+    projectActions.selectClips(["audio-1"])
+    projectActions.setTimeSelection({ startBar: 5, endBar: 9, trackIds: ["3-audio"] })
+    const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+    element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    const clips = useProjectState
+      .getState()
+      .document.tracks.find(track => track.id === "3-audio")!.clips
+    expect(clips).toHaveLength(2)
+    expect(clips[0]).toMatchObject({ id: "audio-1", startBar: 1, lengthBars: 4 })
+    expect(clips[1]).toMatchObject({ startBar: 9, lengthBars: 8, sourceOffsetBars: 8 })
+    expect(scene.get().selectedClipIds.size).toBe(0)
+    projectActions.undo()
+    expect(useProjectState.getState().document).toEqual(before)
+    expect(useProjectState.getState().session.canUndo).toBe(false)
+  }
+)
+
+it("uses mac Ctrl-X/V for partial regions and pastes at the live insertion instead of the last pointer", () => {
+  vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel")
+  const { element, pointer, scene } = createClipController()
+  pointer("pointerdown", 60)
+  pointer("pointerup", 60)
+  const before = useProjectState.getState().document
+  projectActions.selectClips([])
+  projectActions.setTimeSelection({ startBar: 5, endBar: 9, trackIds: ["3-audio"] })
+  const key = (value: string) => {
+    const event = new KeyboardEvent("keydown", {
+      key: value,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+  }
+  key("x")
+  const cut = useProjectState.getState().document
+  expect(cut.tracks.find(track => track.id === "3-audio")!.clips).toHaveLength(2)
+  projectActions.setTimeSelection(null)
+  projectActions.setInsertionPoint({ trackId: "3-audio", bar: 25 })
+  key("v")
+  const pasted = useProjectState
+    .getState()
+    .document.tracks.find(track => track.id === "3-audio")!.clips
+  expect(pasted.at(-1)).toMatchObject({ startBar: 25, lengthBars: 4, sourceOffsetBars: 4 })
+  expect(scene.get().timeSelection).toEqual({ startBar: 25, endBar: 29, trackIds: ["3-audio"] })
+  projectActions.undo()
+  expect(useProjectState.getState().document).toEqual(cut)
+  projectActions.undo()
+  expect(useProjectState.getState().document).toEqual(before)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("leaves text input Delete and Ctrl clipboard shortcuts native even with a time selection", () => {
+  vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel")
+  const { element } = createClipController()
+  const input = document.createElement("input")
+  element.append(input)
+  input.focus()
+  projectActions.selectClips(["audio-1"])
+  projectActions.setTimeSelection({ startBar: 5, endBar: 9, trackIds: ["3-audio"] })
+  const before = useProjectState.getState().document
+  for (const key of ["Delete", "Backspace", "x", "v"]) {
+    const event = new KeyboardEvent("keydown", {
+      key,
+      ctrlKey: key.length === 1,
+      bubbles: true,
+      cancelable: true,
+    })
+    input.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+  }
+  for (const type of ["copy", "cut", "paste"]) {
+    const event = new Event(type, { bubbles: true, cancelable: true })
+    input.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+  }
+  expect(useProjectState.getState().document).toBe(before)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("cuts and pastes range content through native clipboard events without requiring selected IDs", () => {
+  const { element } = createClipController()
+  element.focus()
+  projectActions.setTimeSelection({ startBar: 5, endBar: 9, trackIds: ["3-audio"] })
+  const before = useProjectState.getState().document
+  const data = new Map<string, string>()
+  const clipboard = (type: "cut" | "paste") => {
+    const event = new Event(type, { bubbles: true, cancelable: true })
+    Object.defineProperty(event, "clipboardData", {
+      value: {
+        setData: (format: string, value: string) => data.set(format, value),
+        getData: (format: string) => data.get(format) ?? "",
+        get types() {
+          return [...data.keys()]
+        },
+      },
+    })
+    element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+  }
+  clipboard("cut")
+  const cut = useProjectState.getState().document
+  expect(cut.tracks.find(track => track.id === "3-audio")!.clips).toHaveLength(2)
+  projectActions.setTimeSelection({ startBar: 25, endBar: 25, trackIds: ["3-audio"] })
+  clipboard("paste")
+  expect(
+    useProjectState
+      .getState()
+      .document.tracks.find(track => track.id === "3-audio")!
+      .clips.at(-1)
+  ).toMatchObject({ startBar: 25, lengthBars: 4, sourceOffsetBars: 4 })
+  projectActions.undo()
+  expect(useProjectState.getState().document).toEqual(cut)
+  projectActions.undo()
+  expect(useProjectState.getState().document).toEqual(before)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("does not delete selected whole clips for an empty time range", () => {
+  const { element } = createClipController()
+  element.focus()
+  projectActions.selectClips(["audio-1"])
+  projectActions.setTimeSelection({ startBar: 5, endBar: 5, trackIds: ["3-audio"] })
+  const before = useProjectState.getState().document
+  const event = new KeyboardEvent("keydown", { key: "Delete", bubbles: true, cancelable: true })
+  element.dispatchEvent(event)
+  expect(event.defaultPrevented).toBe(true)
+  expect(useProjectState.getState().document).toBe(before)
+  expect(useProjectState.getState().session.canUndo).toBe(false)
+})
+
+it("uses actual edge cursor artwork on hover instead of invalid CSS cursor names", () => {
+  const { element, scene } = createClipController()
+  const snapshot = scene.get()
+  const row = layoutTrackRows(snapshot).find(item => item.track.id === "3-audio")!
+  const clip = row.track.clips[0]
+  const left = (clip.startBar - 1) * snapshot.viewport.pxPerBar - snapshot.viewport.scrollX
+  element.dispatchEvent(
+    new MouseEvent("pointermove", { bubbles: true, clientX: left + 1, clientY: row.top + 6 })
+  )
+  expect(element.style.cursor).toContain("--arrangement-brace-left-cursor")
+  element.dispatchEvent(
+    new MouseEvent("pointermove", {
+      bubbles: true,
+      clientX: left + clip.lengthBars * snapshot.viewport.pxPerBar - 1,
+      clientY: row.top + 6,
+    })
+  )
+  expect(element.style.cursor).toContain("--arrangement-brace-right-cursor")
+  element.dispatchEvent(
+    new MouseEvent("pointermove", {
+      bubbles: true,
+      clientX: left + 1,
+      clientY: row.top + row.contentHeight / 2,
+    })
+  )
+  expect(element.style.cursor).not.toContain("brace")
 })

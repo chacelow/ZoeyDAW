@@ -87,6 +87,7 @@ AudioConfiguration EngineSession::defaultConfiguration() {
 }
 void EngineSession::applyChannelLayout(const AudioConfiguration& config) {
     auto& dm=engine.getDeviceManager();auto* device=dm.deviceManager.getCurrentAudioDevice();require(device!=nullptr,"Missing configured audio device");
+    setWaveDeviceLayout(config);
     te::WaveDeviceDescriptionList layout;layout.deviceName=device->getName();
     for(bool input:{false,true}) {
         const int count=(input?device->getInputChannelNames():device->getOutputChannelNames()).size();auto& descriptions=input?layout.inputs:layout.outputs;
@@ -105,7 +106,7 @@ void EngineSession::activateConfiguration(const AudioConfiguration& config) {
         juce::XmlElement closed("DEVICESETUP");closed.setAttribute("deviceType",config.host);closed.setAttribute("audioDeviceInChans","0");closed.setAttribute("audioDeviceOutChans","0");
         engine.getPropertyStorage().setXmlProperty(te::SettingID::audio_device_setup,closed);dm.initialise(0,0);devicesInitialised=true;manager.addAudioCallback(&clock);
     }
-    const auto xml=setupXml(config,type);const auto error=manager.initialise(0,0,&xml,false);require(error.isEmpty(),error);verifyActual(manager,config);dm.rescanWaveDeviceList();dm.dispatchPendingUpdates();applyChannelLayout(config);
+    const auto xml=setupXml(config,type);const auto error=manager.initialise(0,0,&xml,false);require(error.isEmpty(),error);verifyActual(manager,config);applyChannelLayout(config);
 }
 void EngineSession::applyConfiguration(const AudioConfiguration& candidate,bool persist,bool requestPermission) {
     const auto caps=capabilities(queryFor(candidate));
@@ -129,6 +130,7 @@ void EngineSession::applyConfiguration(const AudioConfiguration& candidate,bool 
         preferencesLoaded=true;deviceError.clear();
     }catch(const std::exception& failure) {
         const juce::String message=failure.what();configuration=previous;configurationCapabilities=previousCaps;
+        setWaveDeviceLayout(previous);
         if(arrangement)arrangement->edit->getTransport().stop(false,true);if(preview)preview->getTransport().stop(false,true);
         try {
             if(wasOpen && previous) { activateConfiguration(*previous);restoreTransports(); }

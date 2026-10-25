@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react"
 import {
+  browserWaveformMetadataRequest,
   releaseWaveformRangeDemand,
   setWaveformRangeDemand,
   useWaveformRanges,
@@ -22,13 +23,7 @@ export function useBrowserPreviewWaveform(path: string | undefined) {
   const surface = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const metadataRequest = useMemo<SourceWaveformRangeRequest | null>(
-    () =>
-      path
-        ? {
-            sourceKey: `browser/${path}`,
-            request: { path, startFrame: 0, frameCount: 1, columns: 1, framesPerBin: 1 },
-          }
-        : null,
+    () => (path ? browserWaveformMetadataRequest(path) : null),
     [path]
   )
   const metadataEntry = metadataRequest

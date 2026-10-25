@@ -24,6 +24,26 @@
 
 Tracktion 文档入口为 [TransportControl 源码](https://github.com/Tracktion/tracktion_engine/blob/develop/modules/tracktion_engine/playback/tracktion_TransportControl.cpp)。以上已由当前 vendor 调用链与 Context7 官方文档交叉核查。Meter observer 的实际隔离验证、farbot 候选和上游最小缺口见 [meter 专项复核](cookbook-meter-references.md#2026-10-23-现有-api-复核)。
 
+### 2026-10-25 原版 Hosted 播放回调验证
+
+从固定提交 `877e39c0fe9f1c3e4a9d836f5f338688250875d7` 的 Git archive 提取未修改 Tracktion 模块，使用固定 JUCE `7ff644f65d7daa1428c34b9738ebb5c449dc9172`。独立探针经 `HostedAudioDeviceInterface` 驱动真实播放图，没有加载应用的 EngineSession、Web IPC 或新增事务/参数绑定扩展。探针保存在本机 `/tmp/zoeydaw-upstream-hosted-20261025/`，运行入口为 `build/upstream_hosted_probe_artefacts/Release/upstream_hosted_probe`；它是临时验证产物，不是生产实现。
+
+48 kHz、256 帧、0.2 DC 源下，12 次调用 `Clip::setStart/setLength`，经 `ReallocationInhibitor` 合并并用 `dispatchPendingUpdatesSynchronously()` 处理重建。编辑后96块输出没有静音，RMS 为0.2，最大逐样本误差 `7.15256e-08`。Edit、Clip、itemID、fader 和 playback context 保持不变；每次8块后的播放推进与 `8*256/48000` 相差小于1 sample。探针只在开始调用一次 Play 和 Seek。
+
+随后把 Clip 末端裁到当前播放头之前，输出 RMS 为0；恢复长度后 RMS 回到0.2，同一 context 仍在播放。这验证了新边界进入播放图，不能只用对象字段变化作为证据。
+
+探针按回调间隔处理消息循环。最初无等待地连续运行实时文件读取时，编辑前基线也全静音；该运行不能用于判断编辑中断。修正驱动方式后的结果不代表冷启动首声延迟、实际声卡 deadline、Web 操作延迟、并发建图或任意失败回滚已经通过。
+
+此证据支持普通移动和裁剪先使用 Tracktion 原有 API。Web 命令排序、稳定业务 ID 映射和原生 setter 接线归应用适配层；严格失败原子性须单独证明，不能作为普通编辑需要重写播放引擎的依据。
+
+### 2026-10-25 项目 document 入口验证
+
+`crates/engine/native/tests/clip_continuity_tests.h` 经现有 `EngineSession::apply` 提交12次带递增 revision 的移动/裁剪 commit，使用项目自己的 Envelope、fence、meter observer 和 Hosted 播放设备。检查 Edit/Clip/fader/context 身份、每8块精确播放推进、96块连续 PCM，以及裁短后静音、恢复后出声。另覆盖 preview、cancel 和边界校验拒绝；拒绝不推进 accepted revision，取消和拒绝后再检查16块原输出。
+
+跨轨移动检查同一个 Clip 进入目标 Audio track，目标 fader 为 −6.020599913 dB 时实际 RMS 从0.25变为0.125，移回后恢复0.25。删除 preview 后输出静音，cancel 会新建 Clip；本次在恢复后的第2块达到0.25，并在后续8块保持正确样本。Edit、context、显式 start/seek 次数均未改变。保留对象的编辑及恢复后的受测区间共136块，最大样本误差为0。重新创建的起音区间单独报告，不能算成连续无过渡。
+
+`native_live_mixer` 已通过这一回归及原有 mixer、device、MIDI、输入和录音测试。测试没有增加生产 Tracktion 接口。它未经过 Tauri IPC 或真实 Web 手势，也不覆盖任意 setter/建图异常下的完整回滚；accepted revision 仍不代表音频采用确认。
+
 ## 结论与证据口径
 
 保留现有 Tracktion Engine 和 DeviceManager 的唯一 owner。清单中的 transport、mixer、stretch、plugin host 和 CPAL 不能各自形成第二套播放链路。当前优先级是核实现有引擎的接线和行为，不是把每个原子模块换成独立第三方库。

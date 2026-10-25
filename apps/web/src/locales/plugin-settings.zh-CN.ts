@@ -1,5 +1,6 @@
 export default {
   title: "插件",
+  scanLocation: "扫描目录",
   description: "选择目录后扫描 VST3 与 CLAP。扫描在独立进程执行，不会将插件加入当前工程。",
   scanFolder: "选择目录并扫描",
   desktopOnly: "插件扫描需要桌面应用。",

@@ -13,7 +13,8 @@ export function projectBackendDocument(document: DocumentState): BackendProject 
     childTrackIds: [...(track.childTrackIds ?? [])],
     input: track.input,
     output: track.output,
-    inputChannel: track.inputChannel ?? null,
+    inputChannel:
+      track.inputChannel ?? (track.kind === "audio" && track.input === "external" ? "1" : null),
     outputChannel: track.outputChannel ?? null,
     monitor: track.monitor,
     volumeDb: track.volumeDb,

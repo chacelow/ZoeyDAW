@@ -93,11 +93,10 @@ export function TrackPreviews({
           style={{
             top: browserDrop.target.top,
             height: browserDrop.target.height,
-            background: `color-mix(in srgb, ${newTrackPreview.color} 8%, transparent)`,
           }}
         >
           <div
-            className="absolute inset-y-0 right-0 overflow-hidden bg-[var(--arrangement-ruler)]"
+            className="absolute inset-y-0 right-0 overflow-hidden bg-[var(--arrangement-ruler)] opacity-50"
             style={{ width: viewport.controlsWidth }}
           >
             <TrackHeaderRow track={newTrackPreview} rails={[]} routing={arrangementView.routing} />

@@ -6,6 +6,7 @@ import { ParameterControl } from "../ParameterControl"
 import { DeviceDisplay } from "../DeviceDisplay"
 import { ExternalParameters } from "../ExternalParameters"
 import type { DeviceCardProps } from "./types"
+import { ProjectMeter } from "@/pages/project/components/ProjectMeter"
 
 type DeviceCardContentProps = Pick<
   DeviceCardProps,
@@ -48,8 +49,20 @@ export function DeviceCardContent({
     <div
       className={`gap-control-gap p-control-pad-x flex min-h-0 flex-1 flex-col ${device.enabled ? "" : "opacity-50"}`}
     >
-      <div className="min-h-8 flex-1 overflow-hidden rounded-sm">
-        <DeviceDisplay device={device} />
+      <div className="gap-control-gap flex min-h-8 flex-1 overflow-hidden rounded-sm">
+        <ProjectMeter
+          source={{ kind: "device", deviceId: device.id, side: "in" }}
+          className="h-full w-3"
+          label={t("detailDevices.inputLevel", { device: name })}
+        />
+        <div className="min-w-0 flex-1">
+          <DeviceDisplay device={device} />
+        </div>
+        <ProjectMeter
+          source={{ kind: "device", deviceId: device.id, side: "out" }}
+          className="h-full w-3"
+          label={t("detailDevices.outputLevel", { device: name })}
+        />
       </div>
       {device.kind === "external" && <ExternalParameters trackId={trackId} device={device} />}
       {deviceParameterKeys(device).map(field => (

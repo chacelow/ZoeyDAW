@@ -1,18 +1,17 @@
 export default {
   title: "Audio",
+  deviceSection: "Audio device",
+  sampleSection: "Sample rate and buffer",
+  latencySection: "Latency",
   unavailable:
     "Audio playback requires the desktop app. The web browser does not provide the native audio engine.",
-  requested: "Requested configuration",
-  actual: "Actual native configuration",
+  actual: "Device status and latency",
   host: "Audio system / driver",
   noHost: "No audio system available",
   inputDevice: "Input device",
   outputDevice: "Output device",
   noInput: "No input",
   noDevice: "No output device selected",
-  coupledDevices:
-    "This driver uses the same device for input and output. Input can also be disabled.",
-  refresh: "Refresh devices",
   requestedRate: "Requested sample rate",
   bufferSize: "Requested buffer size",
   frames: "{{count}} frames",
@@ -20,23 +19,23 @@ export default {
   noCapabilities: "No supported values available",
   loadingCapabilities: "Reading device capabilities without opening audio…",
   capabilityMismatch:
-    "The driver returned capabilities for a different device. Refresh devices and retry.",
+    "The driver returned capabilities for a different device. Reopen the device selector and retry.",
   inputConfig: "Input Config…",
   outputConfig: "Output Config…",
+  editChannels: "Configure…",
+  hideChannels: "Done",
   mono: "Mono channels",
   stereo: "Stereo pairs",
   monoChannel: "{{channel}} · {{name}}",
   stereoChannel: "{{first}}/{{second}} · {{left}} / {{right}}",
-  outputRequired: "Enable at least one mono output channel or stereo output pair before applying.",
+  outputRequired:
+    "Enable at least one mono output channel or stereo output pair to configure the device.",
   sampleRateWarning:
-    "Changing the sample rate may change the shared physical device’s rate and interrupt other apps using it. Apply only when you intend to change the device rate.",
-  apply: "Apply",
+    "Changing the sample rate may change the shared physical device’s rate and interrupt other apps using it.",
   applying: "Applying…",
-  unsaved: "Draft only — not applied to the audio engine",
-  applied: "Configuration acknowledged by the audio engine",
+  awaitingConfiguration: "Select a supported configuration to update the audio engine",
   noConfiguration: "No configuration acknowledged yet",
-  notApplied:
-    "The audio engine did not activate the requested configuration. Actual values remain as reported below.",
+  notApplied: "The audio engine did not activate the requested configuration.",
   state: "Device state",
   loading: "Updating…",
   closed: "Not opened",
@@ -45,21 +44,10 @@ export default {
   notRunning: "Not running",
   sampleRate: "Actual sample rate",
   actualBuffer: "Actual buffer size",
-  confirmedRate: "Last acknowledged requested rate",
-  confirmedBuffer: "Last acknowledged requested buffer",
-  inputChannels: "Actual input channels",
-  channels: "Actual output channels",
   inputLatency: "Input latency (driver-reported)",
   outputLatency: "Output latency (driver-reported)",
   overallLatency: "Overall latency (driver-reported)",
   milliseconds: "{{value}} ms",
   driverPanel: "Driver settings…",
-  latencyScope:
-    "Latency is reported by the driver, not measured by a loopback test. Overall latency is input plus output; closed devices have no active latency reading.",
-  deviceScope:
-    "Changes take effect only after Apply succeeds. Actual values and the last acknowledged request come from the native audio engine, which saves successful configurations. Driver settings are shown only when a real driver control panel is available.",
-  inputScope:
-    "Applying an input device enables its selected capture channels and may request microphone permission. It does not turn on track monitoring or recording. If permission is pending, grant it in macOS, then refresh and Apply again.",
-  processing:
-    "Synchronized audio uses Tracktion SoundTouch (pitch preserving). MIDI tracks without a sound-source instrument are silent.",
+  openDriverPanel: "Open…",
 }

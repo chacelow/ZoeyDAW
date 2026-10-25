@@ -326,6 +326,13 @@ export function createBrowserLibrary(catalog: typeof nativeBrowserCatalog) {
     },
     playSelected,
     stopAudition,
+    interruptAudition(): boolean {
+      const { audition } = useState.getState()
+      if (audition.kind !== "preparing" && !(audition.kind === "ready" && audition.playing))
+        return false
+      void stopAudition()
+      return true
+    },
     async seek(normalized: number) {
       const value = Math.max(0, Math.min(1, normalized))
       const state = useState.getState(),

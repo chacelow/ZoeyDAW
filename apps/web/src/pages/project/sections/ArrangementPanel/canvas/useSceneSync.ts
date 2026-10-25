@@ -80,7 +80,7 @@ export function useSceneSync(bars: number) {
     waveforms,
     ranges,
   ])
-  useEffect(() => {
+  useLayoutEffect(() => {
     arrangementScene.setPlayback({ playing, insertionPoint })
   }, [playing, insertionPoint])
   useEffect(() => {

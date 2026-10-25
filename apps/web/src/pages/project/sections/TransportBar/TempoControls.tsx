@@ -22,7 +22,7 @@ export function TempoControls() {
   const { setDenominator } = projectActions
   const bpmGesture = useProjectEditGesture(setBpm)
   const numeratorGesture = useProjectEditGesture(setNumerator)
-  const denominatorGesture = useProjectEditGesture(setDenominator)
+  const denominatorGesture = useProjectEditGesture((index: number) => setDenominator(2 ** index))
   return (
     <>
       <DragPadToggle
@@ -78,15 +78,21 @@ export function TempoControls() {
           format={v => String(Math.round(v))}
         />
         <DragPadNumber
-          value={denominator}
+          value={Math.log2(denominator)}
           {...denominatorGesture}
-          min={1}
-          max={32}
+          min={0}
+          max={5}
           step={1}
-          defaultValue={4}
+          defaultValue={2}
           label={t("project.transport.sigDen", "拍号 - 分母")}
           description={t("project.transport.sigDenHint", "一拍的音符时值")}
-          format={v => String(Math.round(v))}
+          format={index => String(2 ** Math.round(index))}
+          parse={raw => {
+            const value = Number(raw)
+            const index = Math.log2(value)
+            return value >= 1 && value <= 32 && Number.isInteger(index) ? index : NaN
+          }}
+          widthSamples={["1", "2", "4", "8", "16", "32"]}
         />
       </ControlGroup>
 

@@ -35,6 +35,7 @@ export function createResizeGesture(
   return {
     cursor: edge === "left" ? "brace-left" : "brace-right",
     autoScroll: "horizontal",
+    commitOnInterrupt: true,
     move(next) {
       context.scene.setClipResize({ id: clip.id, edge })
       const raw = snappedBar(context, barAtX(context, next.x) - grabOffset)

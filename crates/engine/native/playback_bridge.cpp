@@ -1,6 +1,7 @@
 #include "playback_bridge.h"
 #include "runtime/engine_session.h"
 #include "analysis/analysis.h"
+#include "runtime/meter_read.h"
 #include <cstdlib>
 #include <cstring>
 struct zp_session { zp::EngineSession owner; };
@@ -46,6 +47,24 @@ char* zp_apply_prepared(zp_session* session,const char* json,zd_plugin_prepared*
         zp::require(session && (count==0 || processors),"Invalid prepared apply");
         return session->owner.applyPrepared(zp::parse(json),processors,count);
     });
+}
+zp_meter_read_handle* zp_meter_acquire(zp_session* session,const char* lease,const char* owner,uint32_t epoch,uint32_t generation,uint32_t registry) {
+    if(!session)return nullptr;
+    try {
+        auto reader=session->owner.acquireMeterGraph(lease,owner,epoch,generation,registry);
+        if(!reader)return nullptr;
+        try { return new zp_meter_read_handle(reader); }
+        catch(...) { reader->releaseHub();throw; }
+    } catch(...) { return nullptr; }
+}
+zp_meter_read_handle* zp_input_meter_acquire(zp_session* session,const char* lease,const char* owner,uint32_t epoch) {
+    if(!session)return nullptr;
+    try {
+        auto reader=session->owner.acquireInputMeter(lease,owner,epoch);
+        if(!reader)return nullptr;
+        try { return new zp_meter_read_handle(reader); }
+        catch(...) { reader->releaseHub();throw; }
+    } catch(...) { return nullptr; }
 }
 int zp_stop_fence_for(zp_session* session,const char* lease,const char* owner,uint64_t token) { return session && session->owner.stopFenceFor(lease,owner,token); }
 int zp_pending_call_begin(zp_session* session,const char* lease,const char* owner) { try { if(!session || !lease || !owner)return 0;session->owner.beginPendingCall(lease,owner);return 1; }catch(...) { return 0; } }

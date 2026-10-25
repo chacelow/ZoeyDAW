@@ -252,19 +252,18 @@ describe("clip source boundaries", () => {
     }
   )
 
-  it("loops audio when extended left past its source and preserves signed offsets in snapshots", () => {
+  it("keeps source-zero audio at its boundary through resize and snapshot roundtrip", () => {
     projectActions.moveClips(["audio-1"], "3-audio", 9)
     projectActions.resizeClip("audio-1", "left", 8)
     expect(findClip("audio-1")).toMatchObject({
-      startBar: 8,
-      lengthBars: 18,
-      sourceOffsetBars: -2,
+      startBar: 10,
+      lengthBars: 16,
     })
     const saved = serializeProject()
     hydrateProject(saved)
-    expect(findClip("audio-1")).toMatchObject({ startBar: 8, sourceOffsetBars: -2 })
+    expect(findClip("audio-1").startBar).toBe(10)
     projectActions.resizeClip("audio-1", "right", 80)
-    expect(findClip("audio-1").lengthBars).toBe(72)
+    expect(findClip("audio-1").lengthBars).toBe(70)
   })
   it.each<[string, number]>([
     ["mock://kick.wav", 16],
@@ -441,7 +440,7 @@ describe("clip source boundaries", () => {
         .clips.map((clip: { startBar: number }) => clip.startBar)
     ).toEqual([1, bar])
   })
-  it("preserves fade offsets while extending both edges beyond the authored source", () => {
+  it("preserves fade offsets while the left edge clamps and the right edge extends", () => {
     projectActions.updateClip("audio-1", {
       fadeInOffsetBars: 1,
       fadeInBars: 2,
@@ -452,8 +451,8 @@ describe("clip source boundaries", () => {
     projectActions.resizeClip("audio-1", "left", 8)
     projectActions.resizeClip("audio-1", "right", 50)
     expect(findClip("audio-1")).toMatchObject({
-      startBar: 8,
-      lengthBars: 42,
+      startBar: 10,
+      lengthBars: 40,
       fadeInOffsetBars: 1,
       fadeInBars: 2,
       fadeOutOffsetBars: 2,

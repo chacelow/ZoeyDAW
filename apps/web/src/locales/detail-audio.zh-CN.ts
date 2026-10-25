@@ -50,11 +50,9 @@ export default {
   markerHelp:
     "拖动调整；方向键移动一个音乐十六分音符，Shift 移动四分之一个十六分音符；Escape 取消拖动。",
   modes: {
-    beats: "节拍",
-    tones: "音调",
-    texture: "纹理",
-    repitch: "重调音高",
-    complex: "复杂",
-    "complex-pro": "复杂 Pro",
+    soundtouch: "SoundTouch",
+    signalsmith: "Signalsmith",
+    "signalsmith-formant": "Signalsmith · 保持共振峰",
+    "re-pitch": "Re-Pitch（变速变调）",
   },
 }

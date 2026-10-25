@@ -1,19 +1,15 @@
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
-import {
-  hydrateProject,
-  projectActions,
-  startProjectRuntime,
-  useProjectState,
-} from "@/pages/project/adapters"
+import type { ProjectBackend, BackendControlRequest } from "@zoeydaw/project-core/backend"
+import { hydrateProject, projectActions, startProjectRuntime } from "@/pages/project/adapters"
 import {
   createMockDocument,
   createMockWorkspace,
   createMockProjectBackend,
 } from "@zoeydaw/project-runtime/testing"
 import { createScheduler } from "../scheduler"
-import { createAudioRingBuffer } from "./ring-buffer"
+import { createPlayheadProjection } from "./playhead-projection"
 import { attachProjectTelemetry } from "./project-telemetry"
 import type { Scheduler } from "../scheduler"
 import { configureProjectBackend } from "@/pages/project/adapters/context"
@@ -60,7 +56,7 @@ afterEach(() => {
 })
 
 it("sleeps while stopped and wakes for playback without perpetual idle frame polling", () => {
-  const ring = createAudioRingBuffer()
+  const ring = createPlayheadProjection()
   detach = attachProjectTelemetry(ring, scheduler)
   settle()
   expect(frames.size).toBe(0)
@@ -75,19 +71,32 @@ it("sleeps while stopped and wakes for playback without perpetual idle frame pol
   expect(frames.size).toBe(0)
 })
 
-it("reclaims deleted offscreen track slots without relying on mounted meter components", () => {
-  projectActions.addTrack("midi")
-  const ring = createAudioRingBuffer({ maxTracks: 3 })
+it("keeps the requested position through the first telemetry gap and clears stopped playback immediately", () => {
+  stop()
+  const pendingControl = new Promise<never>(() => {})
+  const controls: BackendControlRequest[] = []
+  configureProjectBackend(() => {
+    const backend = createMockProjectBackend()
+    return {
+      ...backend,
+      control(request) {
+        controls.push(request)
+        return pendingControl
+      },
+    } satisfies ProjectBackend
+  })
+  stop = startProjectRuntime()
+  const ring = createPlayheadProjection()
   detach = attachProjectTelemetry(ring, scheduler)
+  projectActions.seekBar(9.25)
+  frame()
+  expect(ring.readPlayhead().bar).toBe(9.25)
+  projectActions.togglePlay()
+  frame()
+  expect(controls.length).toBeGreaterThan(0)
+  expect(ring.readPlayhead()).toMatchObject({ bar: 9.25, playing: false })
+  projectActions.stop()
   settle()
-  ring.writeMeter("3-audio", { left: -2, right: -3 })
-  projectActions.deleteTracks(["3-audio"])
-  settle()
-  projectActions.addTrack("audio")
-  settle()
-  const created = useProjectState.getState().document.tracks.find(track => track.kind === "audio")!
-  ring.writeMeter(created.id, { left: -4, right: -9 })
-  expect(ring.readMeter(created.id)).toEqual({ left: -4, right: -9 })
-  expect(ring.readMeter("3-audio")).toEqual({ left: -Infinity, right: -Infinity })
-  expect(frames.size).toBe(0)
+  expect(ring.readPlayhead().bar).toBe(9.25)
+  expect(ring.readPlayhead().playing).toBe(false)
 })

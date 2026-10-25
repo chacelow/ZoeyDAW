@@ -246,7 +246,7 @@ int main(int argc,char** argv) {
         set(liveSettings,"endMarkerBars",originalSettings["endMarkerBars"]);apply(5,1,1,"cancel");sequenceOffset+=2;waitFrames(session.get(),4096);
         const auto markerRestoreBegin=(juce::int64)diagnostics(session.get())["capturedFrames"];
         waitFrames(session.get(),4096);const auto markerRestoreEnd=(juce::int64)diagnostics(session.get())["capturedFrames"];
-        set(liveSettings,"warp",true);set(liveSettings,"warpMode","repitch");set(liveSettings,"sourceBpm",bpm/2);
+        set(liveSettings,"warp",true);set(liveSettings,"warpMode","re-pitch");set(liveSettings,"sourceBpm",bpm/2);
         apply(4,1,1,"preview");waitFrames(session.get(),(juce::int64)(rate*.3));
         const auto repitchBegin=(juce::int64)diagnostics(session.get())["capturedFrames"];
         waitFrames(session.get(),(juce::int64)(rate*.3));const auto repitchEnd=(juce::int64)diagnostics(session.get())["capturedFrames"];

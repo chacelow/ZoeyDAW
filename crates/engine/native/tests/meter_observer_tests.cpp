@@ -131,17 +131,18 @@ void exerciseRealOutput(bool muted, bool otherSolo, bool stopped, bool fenced,
     expect(root != nullptr, "Real Edit graph could not be constructed");
     auto meters = std::make_shared<MeterGraph>(MeterBankIdentity{1, 2, 3}, sampleRate);
     auto mapping = identities(session);
+    std::atomic<std::uint64_t> deviceSamples {0};
     if (sharedOutputs) {
         std::shared_ptr<graph::Node> shared(std::move(root));
         std::vector<std::unique_ptr<graph::Node>> outputs;
-        outputs.push_back(meters->observeOutput(std::make_unique<graph::ForwardingNode>(shared, 4001), mapping, {}));
+        outputs.push_back(meters->observeOutput(std::make_unique<graph::ForwardingNode>(shared, 4001), mapping, {}, &processState, &deviceSamples));
         const auto firstCount = meters->endpoints().size();
-        outputs.push_back(meters->observeOutput(std::make_unique<graph::ForwardingNode>(shared, 4002), mapping, {}));
+        outputs.push_back(meters->observeOutput(std::make_unique<graph::ForwardingNode>(shared, 4002), mapping, {}, &processState, &deviceSamples));
         expect(firstCount == 3 && meters->endpoints().size() == firstCount,
                "The same actual nodes in two output subtrees acquired duplicate lanes");
         root = std::make_unique<graph::BasicSummingNode>(std::move(outputs));
     } else {
-        root = meters->observeOutput(std::move(root), mapping, {});
+        root = meters->observeOutput(std::move(root), mapping, {}, &processState, &deviceSamples);
     }
     meters->seal();
     expect(meters->endpoints().size() == 3, "Observer failed to discover all actual track outputs");
@@ -172,12 +173,24 @@ void exerciseRealOutput(bool muted, bool otherSolo, bool stopped, bool fenced,
     std::array<MeterEpoch, 2> previous{};
     for (int block = 0; block < 16; ++block) {
         const std::int64_t start = block * blockSize;
+        deviceSamples.store(100000 + start, std::memory_order_relaxed);
         playhead.setReferenceSampleRange({start, start + blockSize});
         processState.update(sampleRate, {start, start + blockSize}, te::ProcessState::UpdateContinuityFlags::yes);
         audio.clear();
         te::MidiMessageArray midi;
         graph::Node::ProcessContext context{blockSize, {start, start + blockSize}, {graph::toBufferView(audio), midi}};
         player.process(context);
+        MeterClockObservation clock;
+        expect(collector.readClock(clock), "Processed graph did not publish transport");
+        const auto timelineSample=playhead.referenceSamplePositionToTimelinePosition(start);
+        tracktion::tempo::Sequence::Position position(*processState.getTempoSequence());
+        position.set(tracktion::TimePosition::fromSamples(timelineSample,sampleRate));
+        expect(clock.referenceSample==std::uint64_t(start) && clock.deviceSample==100000+std::uint64_t(start)
+               && clock.timelineSample==timelineSample && clock.frames==blockSize && clock.playing==1
+               && std::abs(clock.timelineBeat-position.getPPQTime())<1e-9
+               && std::abs(clock.tempoBpm-position.getTempo())<1e-9,
+               "Audio transport observation mixed sample coordinates or tempo");
+        expect(!collector.readClock(clock), "Transport mailbox replayed an old observation as fresh");
         if(!muted && !otherSolo && !stopped && !fenced) {
             int ons=0,offs=0;
             for(const auto& message:midi) {
@@ -224,6 +237,24 @@ void exerciseRealOutput(bool muted, bool otherSolo, bool stopped, bool fenced,
                "Observer failed whole-render sample/energy conservation");
     if (stopped || fenced)
         expect(session.gateClearedFrames.load() > 0, "Fixture did not exercise the actual playback fence");
+    for(int transition=0;transition<3;++transition) {
+        const std::int64_t start=(16+transition)*blockSize;
+        playhead.setReferenceSampleRange({start,start+blockSize});
+        if(transition==0)playhead.setPosition(96000);
+        else if(transition==1) { playhead.setLoopRange(true,{48000,48256});playhead.setPosition(48128); }
+        else playhead.stop();
+        deviceSamples.store(100000+start,std::memory_order_relaxed);
+        processState.update(sampleRate,{start,start+blockSize},te::ProcessState::UpdateContinuityFlags::yes);
+        audio.clear();te::MidiMessageArray midi;
+        graph::Node::ProcessContext context{blockSize,{start,start+blockSize},{graph::toBufferView(audio),midi}};
+        player.process(context);
+        MeterClockObservation clock;
+        expect(collector.readClock(clock),"Transport transition did not publish observation");
+        const auto expectedTimeline=transition==0?96000:48128;
+        expect(clock.referenceSample==std::uint64_t(start) && clock.timelineSample==expectedTimeline
+               && clock.playing==(transition==2?0u:1u),
+               "Seek, loop or stop was confused with monotonic reference time");
+    }
 }
 
 void testAmbiguousIdentity() {

@@ -346,14 +346,9 @@ export function createProjectRuntime({
   function telemetry(frame: BackendTelemetry): void {
     observedBar = frame.clock.bar
     const current = get()
-    const levels: Record<string, [number, number]> = {}
-    for (const [id, value] of Object.entries(frame.levels)) {
-      levels[id] = [value[0], value[1]]
-    }
     store.setState({
       session: {
         ...current.session,
-        levels,
         ...(frame.playing && { position: positionAtBar(frame.clock.bar) }),
       },
     })
@@ -550,7 +545,6 @@ export function createProjectRuntime({
           editEpoch: crypto.randomUUID(),
           playing: false,
           recording: false,
-          levels: {},
           activeMidiNotes: [],
           preview: null,
           backend: { phase: "idle", sessionId: "", pending: 0, acceptedRevision: 0, error: null },
@@ -560,6 +554,9 @@ export function createProjectRuntime({
   }
   function readProjectTelemetry(): BackendTelemetry | null {
     return connection?.readTelemetry() ?? null
+  }
+  function readBackendMeters() {
+    return connection?.readMeters() ?? null
   }
   function readTransportBar(): number {
     return (
@@ -1197,6 +1194,7 @@ export function createProjectRuntime({
     configureProjectBackend,
     startProjectRuntime,
     readProjectTelemetry,
+    readBackendMeters,
     readTransportBar,
     whenProjectBackendIdle,
     projectEpoch,

@@ -26,7 +26,7 @@ void EngineSession::updateMidiClips(Arrangement& a,const Request& next,const Req
         const bool loopChanged=!old || old->kind!="midi" || old->data["loopBars"]!=clip.data["loopBars"];
         if(loopChanged)
             native.setLoopRangeBeats({te::BeatPosition(),te::BeatDuration::fromBeats(loopBars*next.numerator)});
-        if(loopChanged || old->start!=clip.start || old->length!=clip.length || old->offset!=clip.offset) {
+        if(loopChanged || (previous && next.bpm!=previous->bpm) || old->start!=clip.start || old->length!=clip.length || old->offset!=clip.offset) {
             const double offset=std::fmod(std::fmod(clip.offset,loopBars)+loopBars,loopBars);
             native.setPosition({.time={te::TimePosition::fromSeconds(next.barTime(clip.start)),te::TimeDuration::fromSeconds(clip.length*next.secondsPerBar())},.offset=te::TimeDuration::fromSeconds(offset*next.numerator/a.edit->tempoSequence.getBeatsPerSecondAt(te::TimePosition::fromSeconds(next.barTime(clip.start))))});
         }

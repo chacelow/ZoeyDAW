@@ -105,4 +105,31 @@ describe("rAF scheduler", () => {
     expect(a).toHaveBeenCalledTimes(1)
     expect(b).toHaveBeenCalledTimes(2)
   })
+
+  it("applies clock and viewport updates before rendering regardless of registration order", () => {
+    const scheduler = createScheduler()
+    let bar = 1
+    let scroll = 0
+    const pixels: number[] = []
+    scheduler.register("overlay", () => {
+      pixels.push(bar * 8000 - scroll)
+    })
+    scheduler.register(
+      "follow",
+      () => {
+        scroll = bar * 8000 - 400
+      },
+      "update"
+    )
+    scheduler.register(
+      "telemetry",
+      () => {
+        bar = 3
+      },
+      "clock"
+    )
+    flush()
+    expect(pixels).toEqual([400])
+    scheduler.dispose()
+  })
 })

@@ -1,6 +1,8 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
-import type { AudioClip } from "@zoeydaw/project-core/types"
+import type { AudioClip, MediaSource } from "@zoeydaw/project-core/types"
+
+import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
 
 export interface SourceView {
   readonly start: number
@@ -18,21 +20,37 @@ export interface SourceViewport {
   readonly rangeSpan: number
 }
 
-export function useSourceViewport(clip: AudioClip, settings: AudioClipSettings) {
-  const sourceStart = clip.sourceOffsetBars ?? 0
-  const sourceEnd = sourceStart + clip.lengthBars
-  const rangeStart = Math.min(sourceStart, settings.loopStartBars, settings.startMarkerBars)
+export function useSourceViewport(
+  clip: AudioClip,
+  settings: AudioClipSettings,
+  bpm: number,
+  numerator: number,
+  denominator: number,
+  source?: MediaSource
+) {
+  const { origin, rate } = clipSourceProjection(clip, bpm)
+  const sourceEnd = origin + clip.lengthBars * rate
+  const secondsPerSourceBar = ((60 / settings.sourceBpm) * numerator * 4) / denominator
+  const mediaEnd =
+    source && source.location.kind !== "fixture" && source.sampleRate > 0
+      ? source.frames / source.sampleRate / secondsPerSourceBar
+      : 0
+  const rangeStart = Math.min(0, origin, settings.loopStartBars, settings.startMarkerBars)
   const rangeSpan =
-    Math.max(sourceEnd, settings.loopStartBars + settings.loopLengthBars, settings.endMarkerBars) -
-    rangeStart
+    Math.max(
+      sourceEnd,
+      mediaEnd,
+      settings.loopStartBars + settings.loopLengthBars,
+      settings.endMarkerBars
+    ) - rangeStart
   const [view, setView] = useState<SourceView>({ start: rangeStart, span: rangeSpan })
   const minimum = Math.min(0, rangeStart)
   const extent = Math.max(
     sourceEnd,
+    mediaEnd,
     settings.loopStartBars + settings.loopLengthBars,
     settings.endMarkerBars,
-    view.start + view.span,
-    clip.lengthBars
+    view.start + view.span
   )
   const zoom = useCallback(
     (factor: number, anchor = 0.5) => {

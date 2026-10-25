@@ -44,6 +44,28 @@ function consumer(defaultTrackHeight: number, document = initialDocument(default
   return { store, runtime, requests, controls, notes }
 }
 
+it("sends the displayed mono input default for legacy audio tracks without overriding an explicit channel", () => {
+  const document = initialDocument(108)
+  const audio = document.tracks.find(track => track.kind === "audio")
+  if (!audio) throw new Error("Missing audio track")
+  delete audio.inputChannel
+  expect(
+    projection.projectBackendDocument(document).tracks.find(track => track.id === audio.id)
+      ?.inputChannel
+  ).toBe("1")
+  audio.inputChannel = "5-6"
+  expect(
+    projection.projectBackendDocument(document).tracks.find(track => track.id === audio.id)
+      ?.inputChannel
+  ).toBe("5-6")
+  delete audio.inputChannel
+  audio.input = "none"
+  expect(
+    projection.projectBackendDocument(document).tracks.find(track => track.id === audio.id)
+      ?.inputChannel
+  ).toBeNull()
+})
+
 it("isolates preview, history, backend sequences and lease disposal between consumers", async () => {
   const a = consumer(72)
   const b = consumer(144)

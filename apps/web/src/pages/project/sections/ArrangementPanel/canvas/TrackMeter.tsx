@@ -1,10 +1,15 @@
 import { useEffect, useRef } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { useProjectState } from "@/pages/project/adapters"
-import { arrangementRingBuffer } from "./audio/ring-buffer"
+import { usesGhostInputMeter, usesLiveInputMeter } from "../TrackHeader/TrackRouting/input-levels"
 import { readThemeStamp, readTokens } from "./tokens"
 import { createMeterPaintState, paintMeter } from "./painters/meter"
 import { arrangementScheduler } from "./scheduler"
+import {
+  readProjectMeters,
+  readProjectMeterLevels,
+  watchProjectMeter,
+} from "@/pages/project/adapters/realtime"
 
 export function TrackMeter({
   trackId,
@@ -32,9 +37,12 @@ export function TrackMeter({
     }
 
     const PAINTER_ID = `track-meter:${trackId}`
-    let lastRevision = -1
+    let dirty = true
     const meterState = createMeterPaintState()
     let isPeaksActive = false
+    let lastGhost: boolean | null = null
+    let lastLiveInput: boolean | null = null
+    let lastChannel: string | undefined
     let geometry = { width: 0, height: 0, dpr: 1 }
     let tokens = readTokens(containerElement)
     let themeStamp = readThemeStamp()
@@ -63,7 +71,7 @@ export function TrackMeter({
         canvasElement.height = height
       }
       geometry = { width: rect.width, height: rect.height, dpr }
-      lastRevision = -1
+      dirty = true
       paint()
     }
 
@@ -71,33 +79,87 @@ export function TrackMeter({
       if (!context) {
         return
       }
-      const revision = arrangementRingBuffer.readRevision()
-      if (revision === lastRevision && !isPeaksActive) {
+      const project = useProjectState.getState()
+      const track = project.document.tracks.find(item => item.id === trackId)
+      const ghost = track ? usesGhostInputMeter(track) : false
+      const liveInput = track ? usesLiveInputMeter(track, project.session.playing) : false
+      const channel = track?.inputChannel
+      if (
+        !dirty &&
+        !isPeaksActive &&
+        lastGhost === ghost &&
+        lastLiveInput === liveInput &&
+        lastChannel === channel
+      )
         return
+      if (
+        ghost !== lastGhost ||
+        liveInput !== lastLiveInput ||
+        ((ghost || liveInput) && channel !== lastChannel)
+      ) {
+        meterState.left.db = -60
+        meterState.right.db = -60
+        meterState.left.holdUntil = 0
+        meterState.right.holdUntil = 0
       }
-      lastRevision = revision
+      lastGhost = ghost
+      lastLiveInput = liveInput
+      lastChannel = channel
+      dirty = false
+      const started = performance.now()
       isPeaksActive = paintMeter(
         context,
-        trackId,
-        arrangementRingBuffer,
         {
           background: tokens["--muted"],
-          good: tokens["--arrangement-meter-good"],
-          warn: tokens["--arrangement-meter-warn"],
-          danger: tokens["--arrangement-meter-danger"],
+          good: ghost ? tokens["--muted-foreground"] : tokens["--arrangement-meter-good"],
+          warn: ghost ? tokens["--muted-foreground"] : tokens["--arrangement-meter-warn"],
+          danger: ghost ? tokens["--muted-foreground"] : tokens["--arrangement-meter-danger"],
           line: tokens["--arrangement-ruler"],
           peak: tokens["--muted-foreground"],
         },
         geometry,
         meterState,
-        performance.now()
+        performance.now(),
+        ghost || liveInput
+          ? readProjectMeterLevels({ kind: "input", channel: track?.inputChannel ?? "1" })
+          : readProjectMeterLevels({ kind: "track", trackId })
       )
+      readProjectMeters()?.recordPaint(performance.now() - started)
       if (isPeaksActive) {
         arrangementScheduler.invalidate(PAINTER_ID)
       }
     }
 
     const detach = arrangementScheduler.register(PAINTER_ID, paint)
+    const detachMeters = watchProjectMeter(PAINTER_ID, { kind: "track", trackId }, () => {
+      dirty = true
+      arrangementScheduler.invalidate(PAINTER_ID)
+    })
+    let detachInputs = () => {}
+    let inputKey = ""
+    const updateInputs = () => {
+      const track = useProjectState.getState().document.tracks.find(item => item.id === trackId)
+      const channel =
+        track?.kind === "audio" && track.input === "external" ? (track.inputChannel ?? "1") : ""
+      if (channel === inputKey) return
+      inputKey = channel
+      detachInputs()
+      detachInputs = channel
+        ? watchProjectMeter(`${PAINTER_ID}:input`, { kind: "input", channel }, () => {
+            dirty = true
+            arrangementScheduler.invalidate(PAINTER_ID)
+          })
+        : () => {}
+    }
+    updateInputs()
+    const detachTrack = useProjectState.subscribe((state, previous) => {
+      updateInputs()
+      if (
+        state.document.tracks !== previous.document.tracks ||
+        state.session.playing !== previous.session.playing
+      )
+        arrangementScheduler.invalidate(PAINTER_ID)
+    })
     const observer = new ResizeObserver(resize)
     observer.observe(containerElement)
     resize()
@@ -108,7 +170,7 @@ export function TrackMeter({
       }
       themeStamp = next
       tokens = readTokens(containerElement)
-      lastRevision = -1
+      dirty = true
       arrangementScheduler.invalidate(PAINTER_ID)
     })
     theme.observe(document.documentElement, {
@@ -118,6 +180,9 @@ export function TrackMeter({
 
     return () => {
       detach()
+      detachTrack()
+      detachMeters()
+      detachInputs()
       observer.disconnect()
       theme.disconnect()
     }

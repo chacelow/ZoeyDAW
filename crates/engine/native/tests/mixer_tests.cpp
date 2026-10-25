@@ -1,6 +1,7 @@
 #include "engine_session.h"
 #include "device_test_support.h"
 #include "builtin_device.h"
+#include "meter_read.h"
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_cryptography/juce_cryptography.h>
 #include <tracktion_graph/tracktion_graph.h>
@@ -27,13 +28,27 @@ struct MixerTestAccess {
     static const std::vector<SourceMapping>& sources(EngineSession& session) { return session.sourceRegistry.mappings(); }
     static te::Plugin* device(EngineSession& session,const char* id) { return session.arrangement->devices.at(id).get(); }
     static te::HostedAudioDeviceInterface& hosted(EngineSession& session) { return session.engine.getDeviceManager().getHostedAudioDeviceInterface(); }
-    static void initialiseHostedInput(EngineSession& session) {
+    static juce::AudioDeviceManager& audioManager(EngineSession& session) { return session.engine.getDeviceManager().deviceManager; }
+    // Hosted audio aliases input and output; feed the original PCM before Tracktion overwrites it.
+    static void feedHostedInputMeter(EngineSession& session,const juce::AudioBuffer<float>& audio,std::uint64_t start=0) {
+        session.clock.inputMeter.process(audio.getArrayOfReadPointers(),audio.getNumChannels(),audio.getNumSamples(),start);
+    }
+    static void initialiseHostedInput(EngineSession& session,int inputChannels=1) {
         auto& manager=session.engine.getDeviceManager();manager.setCpuLimitBeforeMuting(1000.0);
-        te::HostedAudioDeviceInterface::Parameters parameters;parameters.sampleRate=48000;parameters.blockSize=256;parameters.inputChannels=1;parameters.outputChannels=2;
+        te::HostedAudioDeviceInterface::Parameters parameters;parameters.sampleRate=48000;parameters.blockSize=256;parameters.inputChannels=inputChannels;parameters.outputChannels=2;
         hosted(session).initialise(parameters);hosted(session).prepareToPlay(48000,256);manager.dispatchPendingUpdates();
         auto* device=manager.deviceManager.getCurrentAudioDevice();require(device && device->isOpen(),"Hosted input unavailable");
-        AudioConfiguration config;config.host="Hosted Device";config.inputDeviceId=audioDeviceId(config.host,device->getName());config.outputDeviceId=config.inputDeviceId;config.sampleRate=48000;config.bufferFrames=256;config.inputMono={0};config.outputStereo={0};
+        AudioConfiguration config;config.host="Hosted Device";config.inputDeviceId=audioDeviceId(config.host,device->getName());config.outputDeviceId=config.inputDeviceId;config.sampleRate=48000;config.bufferFrames=256;for(int channel=0;channel<inputChannels;++channel)config.inputMono.push_back(channel);config.outputStereo={0};
         session.configuration=config;session.preferencesLoaded=true;session.devicesInitialised=true;session.applyChannelLayout(config);session.clock.audioDeviceAboutToStart(manager.deviceManager.getCurrentAudioDevice());
+    }
+    static void enableHostedStereoInput(EngineSession& session) {
+        auto config=*session.configuration;config.inputStereo={0};session.configuration=config;session.applyChannelLayout(config);
+    }
+    static void disableHostedSecondInput(EngineSession& session) {
+        auto config=*session.configuration;config.inputMono={0};session.configuration=config;session.applyChannelLayout(config);
+        const auto inputs=session.engine.getDeviceManager().getWaveInputDevices();
+        const auto second=std::find_if(inputs.begin(),inputs.end(),[](auto* device) { return device->getChannels()[0].indexInDevice==1 && device->getChannels().getNumChannels()==1; });
+        require(second!=inputs.end() && !(*second)->isEnabled(),"Disabled hosted input remained enabled after layout application");
     }
 };
 }
@@ -106,7 +121,7 @@ void testLiveMixer() {
     require(MixerTestAccess::edit(session)==original && std::abs(volume->getVolumeDb())<.01,"Undo-style commit rebuilt mixer");
     auto bad=copy(baseline);next(bad,66,2,3,"commit");auto badTrack=bad["state"]["project"]["tracks"][1];put(badTrack,"pan",2);bool threw=false;try { apply(session,bad); }catch(const std::exception&) { threw=true; }require(threw && MixerTestAccess::edit(session)==original && std::abs(volume->getPan())<.001,"Invalid mixer request mutated native state");
     session.stopToken.store(1);next(request,66,2,3,"commit");require(apply(session,request)["kind"].toString()=="rejected" && std::abs(volume->getVolumeDb())<.01,"Stop fence accepted a stale mixer update");
-    next(baseline,66,2,3,"commit");auto changedProject=baseline["state"]["project"];put(changedProject,"bpm",121);accepted(apply(session,baseline,1),3);require(MixerTestAccess::edit(session)!=original,"Structural tempo change bypassed safe rebuild");
+    next(baseline,66,2,3,"commit");auto changedProject=baseline["state"]["project"];put(changedProject,"bpm",121);accepted(apply(session,baseline,1),3);
     auto telemetry=object();put(telemetry,"leaseId","mixer-test");require(session.call("telemetry",telemetry)["device"]["state"].toString()=="closed","Stopped mixer updates acquired audio device");
 }
 void testGraphClassification() {
@@ -133,7 +148,7 @@ void testGraphClassification() {
 V fadeFixture(const juce::File& source) {
     auto request=fixture();auto project=request["state"]["project"];auto tracks=project["tracks"];
     auto audio=tracks[1];put(audio,"cueOutput",V());put(audio,"sends",object());
-    auto clip=parse(R"({"id":"fade-clip","kind":"audio","startBar":1,"lengthBars":2,"sourceOffsetBars":0,"mute":false,"sourceId":"fade-source","gainDb":0,"audioSettings":{"warp":false,"warpMode":"complex","sourceBpm":120,"transpose":0,"detune":0,"reverse":false,"loop":false,"loopStartBars":0,"loopLengthBars":2,"startMarkerBars":0,"endMarkerBars":2},"fadeInBars":0.4,"fadeOutBars":0.4,"fadeInOffsetBars":0.1,"fadeOutOffsetBars":0.1,"fadeInCurve":0.2,"fadeOutCurve":0.2,"fadeInCurvePosition":0.4,"fadeOutCurvePosition":0.6})");
+    auto clip=parse(R"({"id":"fade-clip","kind":"audio","startBar":1,"lengthBars":2,"sourceOffsetBars":0,"mute":false,"sourceId":"fade-source","gainDb":0,"audioSettings":{"warp":false,"warpMode":"soundtouch","sourceBpm":120,"transpose":0,"detune":0,"reverse":false,"loop":false,"loopStartBars":0,"loopLengthBars":2,"startMarkerBars":0,"endMarkerBars":2},"fadeInBars":0.4,"fadeOutBars":0.4,"fadeInOffsetBars":0.1,"fadeOutOffsetBars":0.1,"fadeInCurve":0.2,"fadeOutCurve":0.2,"fadeInCurvePosition":0.4,"fadeOutCurvePosition":0.6})");
     put(audio,"clips",juce::Array<V>{clip});
     auto metadata=object();put(metadata,"id","fade-source");put(metadata,"uri",source.getFullPathName());put(metadata,"sha256",juce::String::repeatedString("0",64));put(metadata,"frames",192000);put(metadata,"sampleRate",48000);put(metadata,"channels",1);put(project,"sources",juce::Array<V>{metadata});
     return request;
@@ -372,11 +387,13 @@ void testDeviceChain() {
 }
 #include "builtin_device_tests.h"
 #include "control_tests.h"
+#include "transport_clock_tests.h"
+#include "clip_continuity_tests.h"
 #include "input_routing_tests.h"
 #include "recording_queue_tests.h"
 #include "recording_tests.h"
 }
 int main() {
-    try { juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;testPluginAdmissionOwnership();testLiveMixer();testGraphClassification();testLiveFades();testTrackLifecycle();testDeviceChain();{EngineSession session;auto request=fixture();accepted(apply(session,request),0);testBuiltinDeviceDsp(*MixerTestAccess::edit(session));}testNarrowControl();testLiveMidiGraph();testAuthoredMidiClip();testHostedInputRouting();testRecordingQueue();testHostedRecording();std::cout<<"In-place mixer/fades, track/device lifecycle and DSP, MIDI scheduling, hosted input monitoring and recording tests passed\n";return 0; }
+    try { juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;testHostedTempoWaveContinuity();testHostedClipEditContinuity();testHostedTransportClock();testPluginAdmissionOwnership();testLiveMixer();testGraphClassification();testLiveFades();testTrackLifecycle();testDeviceChain();{EngineSession session;auto request=fixture();accepted(apply(session,request),0);testBuiltinDeviceDsp(*MixerTestAccess::edit(session));}testNarrowControl();testLiveMidiGraph();testAuthoredMidiClip();testHostedInputRouting();testRecordingQueue();testHostedRecording();testStoppedProjectInputActivation();testRecordingInputSelection();testMultiTrackRecordingAndMonitor();testRecordingTransportTransitions();std::cout<<"In-place mixer/fades, track/device lifecycle and DSP, MIDI scheduling, hosted input monitoring and recording tests passed\n";return 0; }
     catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

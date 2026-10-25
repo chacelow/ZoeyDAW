@@ -16,7 +16,7 @@ export type HitTarget =
       clip: Clip
       track: Track
       edge: "left" | "right"
-      region: "title" | "body"
+      region: "title"
     }
   | {
       kind: "clip-fade"
@@ -100,10 +100,10 @@ export function hitTest(
       }
     }
     const region = pointY < bodyTopY || bodyHeight === 0 ? "title" : "body"
-    if (fromLeft <= RESIZE_EDGE_PX) {
+    if (region === "title" && fromLeft <= RESIZE_EDGE_PX) {
       return { kind: "clip-resize", clip, track: row.track, edge: "left", region }
     }
-    if (fromRight <= RESIZE_EDGE_PX) {
+    if (region === "title" && fromRight <= RESIZE_EDGE_PX) {
       return { kind: "clip-resize", clip, track: row.track, edge: "right", region }
     }
     return {

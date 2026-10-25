@@ -1,8 +1,10 @@
 // @refresh reset
-import { useRef } from "react"
+import { useLayoutEffect, useRef } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { useProjectState } from "@/pages/project/adapters"
+import { browserLibrary } from "@/pages/project/adapters/browser"
 import { deriveGridPlan } from "@zoeydaw/project-core/grid"
+import { installBraceCursors } from "../braceCursor"
 import { CanvasContextMenu } from "../canvas/ContextMenu"
 import { MarkerEditor } from "../canvas/interactions/rulers/MarkerEditor"
 import { AutomationValueEditor } from "../canvas/interactions/automation/ValueEditor"
@@ -29,6 +31,9 @@ Fixed overview/rulers share the scene viewport with virtualized, pinned track he
 */
 export function TimelineCanvas({ snapshots = true }: { readonly snapshots?: boolean }) {
   const { t } = useTranslation()
+  useLayoutEffect(() => {
+    installBraceCursors()
+  }, [])
   const containerReference = useRef<HTMLDivElement>(null)
   const bodyReference = useRef<HTMLDivElement>(null)
   const canvasBodyReference = useRef<HTMLDivElement>(null)
@@ -55,6 +60,7 @@ export function TimelineCanvas({ snapshots = true }: { readonly snapshots?: bool
       data-arrangement-panel
       role="region"
       aria-label={t("arrangement.timeline")}
+      onPointerDownCapture={() => browserLibrary.interruptAudition()}
       className="project-arrangement text-foreground relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--arrangement-surface)]"
     >
       <Toolbar pxPerBar={viewport.pxPerBar} zoom={viewport.zoom} snapshots={snapshots} />
@@ -77,14 +83,14 @@ export function TimelineCanvas({ snapshots = true }: { readonly snapshots?: bool
               <CanvasContextMenu getTarget={interactions.contextTarget}>
                 <canvas
                   ref={canvasReference}
-                  className="absolute inset-0"
+                  className="absolute inset-0 size-full"
                   aria-label={t("arrangement.timelineCanvas")}
                   data-arrangement-canvas
                 />
                 <canvas
                   ref={playheadReference}
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0"
+                  className="pointer-events-none absolute inset-0 size-full"
                   data-arrangement-playhead
                 />
               </CanvasContextMenu>

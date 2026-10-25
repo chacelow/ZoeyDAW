@@ -193,6 +193,7 @@ inline constexpr std::size_t FRAME_TYPES_LOUDNESS = 3;
 inline constexpr std::size_t HEADER_FLAGS_PLAYING = 1;
 inline constexpr std::size_t HEADER_FLAGS_RECORDING = 2;
 inline constexpr std::size_t HEADER_FLAGS_SUBSCRIPTION_CHANGED = 4;
+inline constexpr std::size_t HEADER_FLAGS_REVISIONS_UNAVAILABLE = 8;
 inline constexpr std::size_t RECORD_FLAGS_VALID = 1;
 inline constexpr std::size_t RECORD_FLAGS_STALE = 2;
 inline constexpr std::size_t RECORD_FLAGS_CLIPPED = 4;
