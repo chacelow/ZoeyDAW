@@ -68,6 +68,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 `runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。
 
+`runtime/document_apply.cpp` 保留 `EngineSession::apply` 的协议准入、候选准备、增量应用与 accepted 发布；状态仍由同一个 EngineSession/Arrangement 持有。`engine_session.cpp` 负责 owner、生命周期与现有控制入口，事务文件不创建第二个 session、时钟或文档 Store。
+
 Rust `realtime/meter_hub.rs` 拥有 Hub 控制、图与输入 reader 的安装、reset 和快照查询。私有 `meter_hub/worker.rs` 执行聚合、reset 确认与发布循环，借用同一 `Shared`，不创建第二个 Hub 或可变状态 owner。worker 随 `MeterHub::start` 启动，Drop 发出 stop、唤醒并 join。`HubSnapshot.transport` 用 `HubTransport` 区分 Audio、Stopped 和 Unavailable；无图停止也保留同一个 Hub。
 
 `runtime/source_observations.cpp` 拥有 SourceRegistry 到图专属 AudioClipPlayhead 的不可变投影。EngineSession 的 sourcePlayheadGraphs 只在主线程按 Edit 身份保存 graphPosted 结果；Arrangement 和候选 Preview 的启播/接受顺序不创建另一套采集 owner。节点在既有处理点发布源时间、reference sample 和处理 sampleRate。Arrangement 使用 transport 锚点；Preview 图根通过 `source_clock.cpp` 将自己的 processing reference 与既有设备计数配对，在编排无图时仍可观测。Rust 私有 native_reader/sources.rs 校验身份与对应锚点的采样关系，再进入原 48-byte WireSource；没有新增线程或 wire layout。Web `realtime/source-position.ts` 按 owner、Clip 和 source 身份选择有效观测，app realtime adapter 管订阅与兴趣释放，SourcePlayhead 组件只投影显示。时间域边界见 [实时同步设计](../research/realtime-sync-design.md)。

@@ -14,9 +14,12 @@
 #include <thread>
 void beginAllocationGuard() noexcept;
 std::size_t endAllocationGuard() noexcept;
+void beginAllocationFailure(std::size_t) noexcept;
+bool endAllocationFailure() noexcept;
 namespace zp {
 struct MixerTestAccess {
     static te::Edit* edit(EngineSession& session) { return session.arrangement->edit.get(); }
+    static std::unique_ptr<EngineSession::Arrangement> candidate(EngineSession& session,const Request& request) { return session.prepare(request); }
     static te::AudioTrack* track(EngineSession& session,const char* id) { return session.arrangement->tracks.at(id); }
     static te::AudioTrack* cue(EngineSession& session,const char* id) { return session.arrangement->cueTracks.at(id); }
     static bool hasCue(EngineSession& session,const char* id) { return session.arrangement->cueTracks.count(id)!=0; }
@@ -401,11 +404,13 @@ void testDeviceChain() {
 #include "input_routing_tests.h"
 #include "recording_queue_tests.h"
 #include "recording_tests.h"
+#include "edit_transaction_probe.h"
 }
 int main(int argc,char** argv) {
     try {
         juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;
         if(argc>1) {
+            if(argc==2 && juce::String(argv[1])=="--transaction-model") { transaction_probe::run();return 0; }
             if(argc==2 && juce::String(argv[1])=="--stopped-input") {
                 testStoppedProjectInputActivation();std::cout<<"Focused stopped input activation passed\n";return 0;
             }

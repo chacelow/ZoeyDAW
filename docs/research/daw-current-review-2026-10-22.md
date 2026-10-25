@@ -59,6 +59,8 @@
 
 `ReallocationInhibitor` 只批量抑制重建，不提供回滚；Undo transaction 不是失败原子性；`ensureContextAllocated` 是同步准备而非后台任务。双 Edit 的 syncToContext/postPlay/postPosition 能同步启动，但没有自动提供 sample-atomic replacement、crossfade和回滚协议。[官方源码](https://github.com/tracktion/tracktion_engine/tree/877e39c0fe9f1c3e4a9d836f5f338688250875d7/modules)
 
+2026-10-26 实际运行 `zoeydaw_mixer_tests --transaction-model`：原位 Edit 的 fader 修改在替换图发布前就把旧图 PCM 从 0.25 改为 0.125。独立候选 Edit 在准备及注入失败后保持旧 PCM 0.25，同一 renderer clock 采用后输出 0.125，但未修改的 Utility 实例被重新创建。因此前者缺少候选参数隔离，后者单独使用不能保留 DSP 实例与历史。后续事务必须同时隔离候选数据并显式保留兼容处理器生命周期；这些探针不是完整事务或 document audioRevision 的验收。
+
 ## 本轮实际验证与未完成项
 
 - 模块迁移阶段 `pnpm test` 947项通过，core/runtime/Web类型检查通过，生产构建通过。
