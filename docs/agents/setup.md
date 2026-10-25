@@ -87,6 +87,8 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 `zoeydaw_mixer_tests --transaction-model` 使用真实 WAV 和同一 renderer clock 比较原位 Edit、独立候选和保留兼容处理资源的候选。它输出发布前、准备中、拒绝后及采用后的 PCM，记录 wrapper 重建，并验证 Utility 平滑、Delay 尾音、SDK 初始化及 reset 换代。此入口揭示事务边界，不将原位 setter、直接复制 Edit 或局部资源保留当作已完成的严格事务。
 
+`zoeydaw_mixer_tests --source-publication` 定向检查 source graph 首次发布与替换均零分配、准备首个分配失败和候选取消保留旧观测，以及退役观测释放。该用例也包含在 `native_live_mixer` 中，不将主线程 graphPosted 当成音频采用确认。
+
 `cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json [FRAME_DIRECTORY]` 使用真实低增益输出，覆盖停止打开、无图 seek、完整 u64、Edit owner 换代、等待播放和实际音频块接管。可选输出目录必须已存在；探针保存真实 stream 的 `.bin` 与配套 registry JSON，便于重放到 Web consumer。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 指定独立设备配置，`ZOEYDAW_AUDIO_CACHE_PATH` 指定临时缓存。停止、等待和播放使用同一个 levels v2 stream，不伪造 sample clock。该探针不启动桌面应用，也不代替物理听感验收。
 
 同一入口还打开并关闭独立的 all-endpoint 验证 stream。指定 `FRAME_DIRECTORY` 时额外保存 `meter-consumers.bin` 与配套 registry，内容来自实际 native endpoint records，可重放到轨道、路由及 Device 的 Web meter 消费者。Device 输入与输出差异使用请求中显式配置的 Utility 增益验证；没有 Device 的请求不声称覆盖 Device 阶段。DOM 重放不代替实际 WebView、物理输入或听感验收。

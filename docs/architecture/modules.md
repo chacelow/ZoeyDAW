@@ -78,6 +78,8 @@ Rust `realtime/meter_hub.rs` 拥有 Hub 控制、图与输入 reader 的安装�
 
 `runtime/source_observations.cpp` 拥有 SourceRegistry 到图专属 AudioClipPlayhead 的不可变投影。EngineSession 的 sourcePlayheadGraphs 只在主线程按 Edit 身份保存 graphPosted 结果；Arrangement 和候选 Preview 的启播/接受顺序不创建另一套采集 owner。节点在既有处理点发布源时间、reference sample 和处理 sampleRate。Arrangement 使用 transport 锚点；Preview 图根通过 `source_clock.cpp` 将自己的 processing reference 与既有设备计数配对，在编排无图时仍可观测。Rust 私有 native_reader/sources.rs 校验身份与对应锚点的采样关系，再进入原 48-byte WireSource；没有新增线程或 wire layout。Web `realtime/source-position.ts` 按 owner、Clip 和 source 身份选择有效观测，app realtime adapter 管订阅与兴趣释放，SourcePlayhead 组件只投影显示。时间域边界见 [实时同步设计](../research/realtime-sync-design.md)。
 
+sourcePlayheadGraphs 的槽位在建图前预留，首次槽位为空时仍表示无已发布观测。graphPosted 只替换该槽位的共享指针，准备失败或候选取消保留旧指针。槽位迭代器只存活于主线程同一次同步 `EditPlaybackContext::createNode` 调用；回调不跨调用保留。此发布边界不表示音频采用。
+
 `runtime/transport_clock.h` 是 EngineSession 控制目标的主线程发布和图内 witness，按 Edit owner、完整 u64 代际与请求 sequence 关联音频块。每个输出链的 `MeterOutputObserverNode` 只采电平；`transport_clock_node.cpp` 在最终 `PlayHeadPositionNode` 之后发布同块渲染坐标与引擎 audible 坐标。SDK 的每图查询和最终根包装器绑定精确 context 生命周期。Rust `native_reader/transport.rs` 拥有 120-byte C ABI 时钟结构及校验，从 NativeMeterReader 的同一公开面提供数据。它没有新增时钟、线程或 WebView 通道，也不提供完整 document audioRevision 或物理出声时间保证。
 
 `NativeMeterRegistry.graph` 区分 prepared 的真实 sampleRate 与 unprepared 的 Edit ownerEpoch。无图 metadata generation 与有图 generation 共用递增计数。`TransportClockMutation` 在同一版本内保存主线程停止位置，40-byte stopped reader 只保留共享只读状态和 ownerEpoch。`refresh_meter_hub` 与 stream registry 始终返回显式 registry，`transport_frame.rs` 将同一 HubSnapshot 投影为 levels v2。`native-transport.ts` 拥有 Web MeterSession、transport 兴趣、帧订阅、可见性和清理，通过具名 `NativeTransport` 公开生命周期；它向既有 BackendTelemetry 接口转发有效音频或停止位置。状态查询只保留设备、issues 和录音缩略图。

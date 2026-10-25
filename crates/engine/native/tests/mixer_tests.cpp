@@ -32,6 +32,8 @@ struct MixerTestAccess {
     static void hold(EngineSession& session,const NoteRequest& note) { session.heldNotes["mixer-test"][note.noteId]=note; }
     static size_t heldCount(EngineSession& session) { return session.heldNotes["mixer-test"].size(); }
     static const std::vector<SourceMapping>& sources(EngineSession& session) { return session.sourceRegistry.mappings(); }
+    static void configureSourceGraph(EngineSession& session,te::Edit& edit,te::CreateNodeParams& params) { session.configureSourcePlayheads(edit,params); }
+    static std::shared_ptr<const SourcePlayheadGraph> sourceGraph(EngineSession& session,te::Edit& edit) { const auto found=session.sourcePlayheadGraphs.find(&edit);return found==session.sourcePlayheadGraphs.end()?nullptr:found->second; }
     static te::Plugin* device(EngineSession& session,const char* id) { return session.arrangement->devices.at(id).get(); }
     static te::HostedAudioDeviceInterface& hosted(EngineSession& session) { return session.engine.getDeviceManager().getHostedAudioDeviceInterface(); }
     static juce::AudioDeviceManager& audioManager(EngineSession& session) { return session.engine.getDeviceManager().deviceManager; }
@@ -405,11 +407,13 @@ void testDeviceChain() {
 #include "recording_queue_tests.h"
 #include "recording_tests.h"
 #include "edit_transaction_probe.h"
+#include "source_publication_tests.h"
 }
 int main(int argc,char** argv) {
     try {
         juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;
         if(argc>1) {
+            if(argc==2 && juce::String(argv[1])=="--source-publication") { testSourceGraphPublication();return 0; }
             if(argc==2 && juce::String(argv[1])=="--transaction-model") { transaction_probe::run();return 0; }
             if(argc==2 && juce::String(argv[1])=="--stopped-input") {
                 testStoppedProjectInputActivation();std::cout<<"Focused stopped input activation passed\n";return 0;
@@ -418,6 +422,7 @@ int main(int argc,char** argv) {
             testHostedTransportClock();testTransportClockAdoption();
             std::cout<<"Focused hosted transport clock tests passed\n";return 0;
         }
+        testSourceGraphPublication();
         testHostedTempoWaveContinuity();testHostedClipEditContinuity();testHostedTransportClock();testTransportClockAdoption();testPluginAdmissionOwnership();testLiveMixer();testGraphClassification();testLiveFades();testTrackLifecycle();testDeviceChain();{EngineSession session;auto request=fixture();accepted(apply(session,request),0);testBuiltinDeviceDsp(*MixerTestAccess::edit(session));}testNarrowControl();testLiveMidiGraph();testAuthoredMidiClip();testHostedInputRouting();testRecordingQueue();testHostedRecording();testStoppedProjectInputActivation();testRecordingInputSelection();testMultiTrackRecordingAndMonitor();testRecordingTransportTransitions();std::cout<<"In-place mixer/fades, track/device lifecycle and DSP, MIDI scheduling, hosted input monitoring and recording tests passed\n";return 0;
     }
     catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }

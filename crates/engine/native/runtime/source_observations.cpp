@@ -13,6 +13,7 @@ void EngineSession::configureSourcePlayheads(te::Edit& edit,te::CreateNodeParams
         return item.first!=&edit && (!arrangement || item.first!=arrangement->edit.get()) && item.first!=preview.get();
     });
     auto graph=std::make_shared<SourcePlayheadGraph>();
+    const auto slot=sourcePlayheadGraphs.try_emplace(&edit).first;
     if(!arrangement || arrangement->edit.get()!=&edit) {
         graph->previewClock=std::make_shared<SourceBlockClock>();
         params.wrapPlaybackGraph=[anchor=graph->previewClock,samples=&clock.frames,rate=params.sampleRate,
@@ -26,9 +27,9 @@ void EngineSession::configureSourcePlayheads(te::Edit& edit,te::CreateNodeParams
         graph->playheads[clip.itemID]=playhead;
         return playhead;
     };
-    params.graphPosted=[this,graph,edit=&edit,previous=std::move(params.graphPosted)] {
+    params.graphPosted=[graph,slot,previous=std::move(params.graphPosted)] {
         if(previous)previous();
-        sourcePlayheadGraphs[edit]=graph;
+        slot->second=graph;
     };
 }
 V EngineSession::sourceMeterRegistry(std::uint32_t generation) {

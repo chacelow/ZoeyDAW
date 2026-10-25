@@ -2,6 +2,7 @@
 
 ## 0.1.0 - unreleased
 
+- Reserve source graph registry slots during graph preparation so graphPosted only replaces an existing shared pointer. Verify allocation-free initial publication/replacement, failed preparation and cancelled candidates preserving the prior observations, and retired graph release. Keep the main-thread synchronous callback lifetime explicit; complete document transaction isolation remains pending.
 - Give project editing/history and recording publication separate state owners within the existing runtime. Keep one document Store and backend lifecycle, preserve public commands and receipt/recovery ordering, and remove the retired 1239-line runtime debt entry. Use standard Promise.withResolvers for recording receipts and save waits, with explicit ES2024.Promise library declarations.
 - Publish graph mailbox storage by transferring a preallocated owning pointer through a non-throwing entry. Remove payload movability requirements and keep resource addresses stable; verify zero publication allocation, deferred exactly-once retirement and non-movable Node storage alongside all 192 graph-allocation failure cases. Graph construction and complete application transaction isolation remain separate.
 - Split backend connection regressions by ordered documents, lifecycle/admission, telemetry and MIDI edges, with shared factory fixtures and an internal protocol case. Preserve all 31 case bodies and assertions, including the parameterized failures, and all 34 executed tests. Remove the resolved connection-test size debt entry.
