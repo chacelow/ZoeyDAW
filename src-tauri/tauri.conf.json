@@ -5,7 +5,7 @@
   "identifier": "com.zoeydaw.desktop",
   "build": {
     "frontendDist": "../apps/web/dist",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://localhost:7173",
     "beforeDevCommand": "node scripts/audio/build-plugin-helper.mjs && pnpm --filter @zoeydaw/web dev",
     "beforeBuildCommand": "node scripts/audio/build-plugin-helper.mjs && pnpm --filter @zoeydaw/web build"
   },

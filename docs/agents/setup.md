@@ -12,6 +12,8 @@ React Web 前端由 Tauri 2 承载，Rust 提供桌面原生能力。工作区�
 - 修改 Rust、`src-tauri/tauri.conf.json`、capabilities、Cargo 依赖或原生 plugin 注册后，明确告诉用户“需要重启 tauri:dev”。由用户操作。
 - 若已有应用不可访问，先检查现有服务和连接，不用另开一个应用绕过问题。
 
+开发地址固定为 `http://localhost:7173`，Vite 保留 `strictPort`，与 Tauri `build.devUrl` 同步。Windows 若报 `listen EACCES`，先用 `netsh interface ipv4 show excludedportrange protocol=tcp` 与 IPv6 对应命令核对排除范围；本机原端口 5173 落在 5147–5246 的排除范围。修改端口需同时修改两端配置，并遵守 `tauri.conf.json` 的修改授权。
+
 ## 验证命令
 
 开发套件统一使用 Ultracite v8，Node 要求以根 `package.json` 为准，当前至少 22.18。常规入口在工作区根目录运行：

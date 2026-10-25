@@ -185,4 +185,9 @@
 - 前端旧速度外推可能略领先下一帧真实位置，直接替换会单帧回缩。显示交接保留该微小差值，再随真实速度收敛；seek 和循环回绕立即执行，原始时钟不改写。回归见 `backend/connection.test.ts`。
 - 恒定 DC 输出只能发现静音，无法发现重采样相位跳变。连续正弦回归覆盖 BPM 上下拖过 1× 及连续升速。Warp 改用按拍点实时 reader 保留拉伸状态；`re-pitch` 固定 SoundTouch 和 RateTransposer 的处理顺序，避免跨 1× 时转移内部缓冲。已有源循环与移调音高回归同时保留。
 
+## 2026-10-25 Windows 排除端口导致开发服务无法绑定
+
+- 用户启动报 `listen EACCES: permission denied ::1:5173`，本机没有进程监听该端口，但 IPv4 与 IPv6 的排除范围均包含 5147–5246。不能把 EACCES 当作普通占用，也不能只改 IPv4 地址。
+- 按用户指定的 7xxx 范围将 Vite 与 Tauri 开发地址同步为 7173，保留 strictPort。实际 Vite 配置解析后，localhost 绑定到 `::1:7173` 成功，IPv4 与 IPv6 单独绑定也通过。桌面启动仍由用户执行。见 [setup](docs/agents/setup.md)。
+
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。
