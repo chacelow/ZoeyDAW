@@ -81,6 +81,8 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 用例覆盖已排队音频块在新 seek ACK 后仍保留旧代际、主线程与音频预取边界并发 seek、完整 u64、实际处理速率与拒绝请求。1024-sample 图延迟场景还核对同块渲染/audible 坐标、seek 与 BPM 转换。可听补偿复用引擎既有位置节点，不是物理 loopback 测量；实际桌面播放头与听感仍需验收。
 
+`native_graph_publication` 使用同一 build 目录的 `zoeydaw_graph_publication_tests` target。用例在图替换的各次分配注入失败，核对原 root、采样率、缓冲尺寸与连续 PCM，并继续提交有效图验证恢复；覆盖 pooling/sharing 组合及候选格式变化。它不打开物理音频设备，也不替代活跃 Edit 的严格原子事务或完整 document audioRevision。
+
 `cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json [FRAME_DIRECTORY]` 使用真实低增益输出，覆盖停止打开、无图 seek、完整 u64、Edit owner 换代、等待播放和实际音频块接管。可选输出目录必须已存在；探针保存真实 stream 的 `.bin` 与配套 registry JSON，便于重放到 Web consumer。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 指定独立设备配置，`ZOEYDAW_AUDIO_CACHE_PATH` 指定临时缓存。停止、等待和播放使用同一个 levels v2 stream，不伪造 sample clock。该探针不启动桌面应用，也不代替物理听感验收。
 
 同一入口还打开并关闭独立的 all-endpoint 验证 stream。指定 `FRAME_DIRECTORY` 时额外保存 `meter-consumers.bin` 与配套 registry，内容来自实际 native endpoint records，可重放到轨道、路由及 Device 的 Web meter 消费者。Device 输入与输出差异使用请求中显式配置的 Utility 增益验证；没有 Device 的请求不声称覆盖 Device 阶段。DOM 重放不代替实际 WebView、物理输入或听感验收。

@@ -320,7 +320,7 @@ private:
     void pause();
 
     //==============================================================================
-    void postNewGraph (std::unique_ptr<NodeGraph>);
+    void postNewGraph (std::unique_ptr<NodeGraph>, double sampleRateToUse, int blockSizeToUse);
 
     //==============================================================================
     static void buildNodesOutputLists (PreparedNode&);

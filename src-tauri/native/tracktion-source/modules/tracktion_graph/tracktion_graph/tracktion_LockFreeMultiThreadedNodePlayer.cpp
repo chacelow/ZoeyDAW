@@ -55,7 +55,7 @@ void LockFreeMultiThreadedNodePlayer::setNode (std::unique_ptr<Node> newNode, do
     postNewGraph (prepareToPlay (std::move (newNode), lastGraphPosted,
                                  sampleRateToUse, blockSizeToUse,
                                  useMemoryPool,
-                                 disableLatencyComp));
+                                 disableLatencyComp), sampleRateToUse, blockSizeToUse);
 }
 
 void LockFreeMultiThreadedNodePlayer::prepareToPlay (double sampleRateToUse, int blockSizeToUse)
@@ -79,7 +79,7 @@ void LockFreeMultiThreadedNodePlayer::prepareToPlay (double sampleRateToUse, int
     postNewGraph (prepareToPlay (currentGraph != nullptr ? std::move (currentGraph->rootNode) : std::unique_ptr<Node>(), nullptr,
                                  sampleRateToUse, blockSizeToUse,
                                  useMemoryPool,
-                                 disableLatencyComp));
+                                 disableLatencyComp), sampleRateToUse, blockSizeToUse);
 }
 
 int LockFreeMultiThreadedNodePlayer::process (const Node::ProcessContext& pc)
@@ -205,9 +205,6 @@ std::unique_ptr<NodeGraph> LockFreeMultiThreadedNodePlayer::prepareToPlay (std::
 {
     createThreads();
 
-    sampleRate.store (sampleRateToUse, std::memory_order_release);
-    blockSize.store (blockSizeToUse, std::memory_order_release);;
-
     if (! useCurrentAudioBufferPool)
         return node_player_utils::prepareToPlay (std::move (node), oldGraph,
                                                  sampleRateToUse, blockSizeToUse,
@@ -250,11 +247,13 @@ inline void LockFreeMultiThreadedNodePlayer::pause()
 }
 
 //==============================================================================
-void LockFreeMultiThreadedNodePlayer::postNewGraph (std::unique_ptr<NodeGraph> newGraph)
+void LockFreeMultiThreadedNodePlayer::postNewGraph (std::unique_ptr<NodeGraph> newGraph, double sampleRateToUse, int blockSizeToUse)
 {
     if (! newGraph)
     {
         clearNode();
+        sampleRate.store (sampleRateToUse, std::memory_order_release);
+        blockSize.store (blockSizeToUse, std::memory_order_release);
         return;
     }
 
@@ -263,8 +262,6 @@ void LockFreeMultiThreadedNodePlayer::postNewGraph (std::unique_ptr<NodeGraph> n
                       {
                           return n1->isReadyToProcess() && ! n2->isReadyToProcess();
                       });
-
-    rootNode = newGraph->rootNode.get();
 
     PreparedNode newPreparedNode;
     newPreparedNode.graph = std::move (newGraph);
@@ -279,13 +276,21 @@ void LockFreeMultiThreadedNodePlayer::postNewGraph (std::unique_ptr<NodeGraph> n
         node_player_utils::reserveAudioBufferPool (newPreparedNode.graph->rootNode.get(),
                                                    newPreparedNode.graph->orderedNodes,
                                                    *newPreparedNode.audioBufferPool,
-                                                   numThreadsToUse, blockSize);
+                                                   numThreadsToUse, blockSizeToUse);
     }
 
-    lastGraphPosted = newPreparedNode.graph.get();
-    lastAudioBufferPoolPosted = newPreparedNode.audioBufferPool.get();
+    auto* newRootNode = newPreparedNode.graph->rootNode.get();
+    auto* newGraphPosted = newPreparedNode.graph.get();
+    auto* newAudioBufferPoolPosted = newPreparedNode.audioBufferPool.get();
+    auto retiredPreparedNode = preparedNodeObject.pushNonRealTime (std::move (newPreparedNode));
 
-    if (auto retiredPreparedNode = preparedNodeObject.pushNonRealTime (std::move (newPreparedNode)))
+    rootNode = newRootNode;
+    lastGraphPosted = newGraphPosted;
+    lastAudioBufferPoolPosted = newAudioBufferPoolPosted;
+    sampleRate.store (sampleRateToUse, std::memory_order_release);
+    blockSize.store (blockSizeToUse, std::memory_order_release);
+
+    if (retiredPreparedNode)
     {
         // If an old PreparedNode was returned, it was either never swapped in
         // on the audio thread (so no pool thread can have seen it), or it was
