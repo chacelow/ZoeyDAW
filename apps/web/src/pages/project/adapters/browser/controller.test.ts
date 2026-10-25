@@ -67,12 +67,19 @@ function setup() {
   })
   return { ...result, port }
 }
+const previewSource: NonNullable<PreparedAudition["source"]> = {
+  kind: "preview",
+  clipId: "preview/1",
+}
 function audioPort() {
   return {
-    select: vi.fn(async () => ({ durationSeconds: 4 })),
+    select: vi.fn(async (): Promise<PreparedAudition> => ({
+      durationSeconds: 4,
+      source: previewSource,
+    })),
     stop: vi.fn(async () => {}),
     seek: vi.fn(async () => {}),
-    read: vi.fn(async () => ({ positionSeconds: 1, durationSeconds: 4, playing: true })),
+    readStatus: vi.fn(async () => ({ durationSeconds: 4, playing: true })),
   } satisfies BrowserAuditionPort
 }
 it("expands folders without audition and preserves selection while scrolling another window", async () => {
@@ -127,7 +134,7 @@ it("auto-previews raw without BPM and waveform click starts with autoplay disabl
   expect(audio.seek).toHaveBeenCalledWith(0.5)
   expect(useState.getState().audition).toMatchObject({
     kind: "ready",
-    positionSeconds: 2,
+    source: previewSource,
     playing: true,
   })
 })
@@ -135,36 +142,36 @@ it("keeps latest preview and drops a status response after stop", async () => {
   vi.useFakeTimers()
   const { library, useState } = setup()
   const old = deferred<PreparedAudition>(),
-    lateStatus = deferred<{ positionSeconds: number; durationSeconds: number; playing: boolean }>()
+    lateStatus = deferred<{ durationSeconds: number; playing: boolean }>()
   const audio = audioPort()
   audio.select.mockImplementationOnce(() => old.promise)
-  audio.read.mockImplementationOnce(() => lateStatus.promise)
+  audio.readStatus.mockImplementationOnce(() => lateStatus.promise)
   library.configureAudition(audio)
   library.select(first)
   library.select(second)
   await Promise.resolve()
   await Promise.resolve()
-  old.resolve({ durationSeconds: 1 })
+  old.resolve({ durationSeconds: 1, source: { kind: "preview", clipId: "preview/old" } })
   await Promise.resolve()
   expect(useState.getState().audition).toMatchObject({ itemId: second.id, durationSeconds: 4 })
-  await vi.advanceTimersByTimeAsync(33)
+  await vi.advanceTimersByTimeAsync(250)
   await library.stopAudition()
-  lateStatus.resolve({ positionSeconds: 3, durationSeconds: 4, playing: true })
+  lateStatus.resolve({ durationSeconds: 4, playing: true })
   await Promise.resolve()
   expect(useState.getState().audition).toEqual({ kind: "idle" })
 })
-it("reports real playback progress and stops polling at the end", async () => {
+it("reports native playback completion and stops status polling at the end", async () => {
   vi.useFakeTimers()
   const { library, useState } = setup()
   const audio = audioPort()
-  audio.read.mockResolvedValueOnce({ positionSeconds: 4, durationSeconds: 4, playing: false })
+  audio.readStatus.mockResolvedValueOnce({ durationSeconds: 4, playing: false })
   library.configureAudition(audio)
   library.select(first)
   await Promise.resolve()
-  await vi.advanceTimersByTimeAsync(33)
-  expect(useState.getState().audition).toMatchObject({ positionSeconds: 4, playing: false })
-  await vi.advanceTimersByTimeAsync(200)
-  expect(audio.read).toHaveBeenCalledOnce()
+  await vi.advanceTimersByTimeAsync(250)
+  expect(useState.getState().audition).toMatchObject({ source: previewSource, playing: false })
+  await vi.advanceTimersByTimeAsync(1000)
+  expect(audio.readStatus).toHaveBeenCalledOnce()
 })
 
 it("interrupts preparation synchronously and fences late selection before reselecting from zero", async () => {
@@ -184,11 +191,11 @@ it("interrupts preparation synchronously and fences late selection before resele
   expect(useState.getState().audition).toEqual({ kind: "idle" })
   expect(useState.getState().selection.all).toEqual(first)
   expect(library.interruptAudition()).toBe(false)
-  prepared.resolve({ durationSeconds: 99 })
+  prepared.resolve({ durationSeconds: 99, source: previewSource })
   await Promise.resolve()
   expect(useState.getState().audition).toEqual({ kind: "idle" })
   await vi.advanceTimersByTimeAsync(100)
-  expect(audio.read).not.toHaveBeenCalled()
+  expect(audio.readStatus).not.toHaveBeenCalled()
 
   library.select(first)
   await Promise.resolve()
@@ -199,27 +206,27 @@ it("interrupts preparation synchronously and fences late selection before resele
     kind: "ready",
     itemId: first.id,
     durationSeconds: 4,
-    positionSeconds: 0,
+    source: previewSource,
     playing: true,
   })
   stopped.resolve(undefined)
   await Promise.resolve()
-  expect(useState.getState().audition).toMatchObject({ kind: "ready", positionSeconds: 0 })
+  expect(useState.getState().audition).toMatchObject({ kind: "ready", source: previewSource })
 })
 
 it("interrupts playing audition and ignores an in-flight poll after restarting the same row", async () => {
   vi.useFakeTimers()
   const { library, useState } = setup()
-  const late = deferred<{ positionSeconds: number; durationSeconds: number; playing: boolean }>()
+  const late = deferred<{ durationSeconds: number; playing: boolean }>()
   const audio = audioPort()
-  audio.read.mockResolvedValueOnce({ positionSeconds: 2, durationSeconds: 4, playing: true })
-  audio.read.mockImplementationOnce(() => late.promise)
+  audio.readStatus.mockResolvedValueOnce({ durationSeconds: 4, playing: true })
+  audio.readStatus.mockImplementationOnce(() => late.promise)
   library.configureAudition(audio)
   library.select(first)
   await Promise.resolve()
-  await vi.advanceTimersByTimeAsync(33)
-  expect(useState.getState().audition).toMatchObject({ positionSeconds: 2, playing: true })
-  await vi.advanceTimersByTimeAsync(33)
+  await vi.advanceTimersByTimeAsync(250)
+  expect(useState.getState().audition).toMatchObject({ source: previewSource, playing: true })
+  await vi.advanceTimersByTimeAsync(250)
   const stops = audio.stop.mock.calls.length
   expect(library.interruptAudition()).toBe(true)
   expect(audio.stop).toHaveBeenCalledTimes(stops + 1)
@@ -227,14 +234,14 @@ it("interrupts playing audition and ignores an in-flight poll after restarting t
 
   library.select(first)
   await Promise.resolve()
-  late.resolve({ positionSeconds: 3, durationSeconds: 4, playing: true })
+  late.resolve({ durationSeconds: 4, playing: true })
   await Promise.resolve()
   expect(audio.select).toHaveBeenCalledTimes(2)
   expect(audio.seek).not.toHaveBeenCalled()
   expect(useState.getState().audition).toMatchObject({
     kind: "ready",
     itemId: first.id,
-    positionSeconds: 0,
+    source: previewSource,
     playing: true,
   })
 })
@@ -243,14 +250,14 @@ it("does not consume interruption for an audition that has already ended", async
   vi.useFakeTimers()
   const { library, useState } = setup()
   const audio = audioPort()
-  audio.read.mockResolvedValue({ positionSeconds: 4, durationSeconds: 4, playing: false })
+  audio.readStatus.mockResolvedValue({ durationSeconds: 4, playing: false })
   library.configureAudition(audio)
   expect(library.interruptAudition()).toBe(false)
   library.select(first)
   await Promise.resolve()
-  await vi.advanceTimersByTimeAsync(33)
+  await vi.advanceTimersByTimeAsync(250)
   const stops = audio.stop.mock.calls.length
   expect(library.interruptAudition()).toBe(false)
   expect(audio.stop).toHaveBeenCalledTimes(stops)
-  expect(useState.getState().audition).toMatchObject({ positionSeconds: 4, playing: false })
+  expect(useState.getState().audition).toMatchObject({ source: previewSource, playing: false })
 })

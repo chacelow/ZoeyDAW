@@ -10,6 +10,9 @@ struct zp_meter_read_handle {
     explicit zp_meter_read_handle(std::shared_ptr<zp::InputMeterCollector> reader) : input(std::move(reader)) {}
     zp_meter_read_handle(std::shared_ptr<const zp::TransportClockState> state,std::uint64_t owner)
         : stoppedState(std::move(state)),stoppedOwner(owner) {}
+    zp_meter_read_handle(std::shared_ptr<const zp::TransportClockState> state,std::uint64_t owner,
+        std::shared_ptr<zp::SourceObservationState> sources,juce::String session,std::uint32_t generation)
+        : sources(std::move(sources)),stoppedState(std::move(state)),stoppedOwner(owner),session(std::move(session)),sourceGeneration(generation) {}
     ~zp_meter_read_handle() { if(collector)collector->releaseHub();if(input)input->releaseHub(); }
     std::shared_ptr<zp::MeterGraphCollector> collector;
     std::shared_ptr<zp::InputMeterCollector> input;
@@ -17,5 +20,6 @@ struct zp_meter_read_handle {
     std::shared_ptr<const zp::TransportClockState> stoppedState;
     std::uint64_t stoppedOwner=0;
     juce::String session;
+    std::uint32_t sourceGeneration=0;
     std::atomic_flag reading = ATOMIC_FLAG_INIT;
 };

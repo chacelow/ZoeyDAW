@@ -554,7 +554,10 @@ export function createNativeBrowserAuditionPort(
         if (!isCurrent(owner, token, currentOperation) || result.generation !== generation)
           throw auditionSuperseded()
         owner.ready = true
-        return { durationSeconds: result.durationSeconds }
+        return {
+          durationSeconds: result.durationSeconds,
+          source: { kind: "preview", clipId: `preview/${generation}` },
+        }
       } catch (error) {
         if (isCurrent(owner, token, currentOperation)) {
           owner.selection = null
@@ -603,10 +606,10 @@ export function createNativeBrowserAuditionPort(
       ++owner.operation
       await port.seekAudition(generation, Math.max(0, Math.min(1, normalized)))
     },
-    async read() {
+    async readStatus() {
       const selected = owner.selection
       if (!owner.ready || !selected || selected.generation === null)
-        return { positionSeconds: 0, durationSeconds: 0, playing: false }
+        return { durationSeconds: 0, playing: false }
       const generation = selected.generation
       if (selected.token !== auditionState.selection) throw auditionSuperseded()
       const currentOperation = owner.operation
@@ -614,7 +617,6 @@ export function createNativeBrowserAuditionPort(
       if (!isCurrent(owner, selected.token, currentOperation) || result.generation !== generation)
         throw auditionSuperseded()
       return {
-        positionSeconds: result.positionSeconds,
         durationSeconds: result.durationSeconds,
         playing: result.playing,
       }

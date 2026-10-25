@@ -160,7 +160,7 @@ private:
     void updateTransport(const Control&, uint64_t fence, bool seek);
     V telemetry(const V&);
     std::optional<StoppedTransportPosition> stoppedTransportPosition() const;
-    V sourceMeterRegistry();
+    V sourceMeterRegistry(std::uint32_t generation);
     V audition(const V&);
     V devices(bool refresh = false);
     V configure(const V&);

@@ -11,6 +11,8 @@ use zoeydaw_engine::{MainThreadDispatcher, PlaybackService};
 
 #[path = "meter_hub_smoke/binary_codec.rs"]
 mod binary_codec;
+#[path = "meter_hub_smoke/cold_preview.rs"]
+mod cold_preview;
 #[path = "meter_hub_smoke/source_observations.rs"]
 mod source_observations;
 #[path = "meter_hub_smoke/stopped_transport.rs"]
@@ -88,6 +90,7 @@ fn main() -> Result<(), String> {
         }
         let (initial_stopped, mut stream) =
             stopped_transport::verify_open(&service, &main, &lease, &session, &request)?;
+        cold_preview::verify(&service,&main,&request,&lease,&session,stream.stream_id)?;
         let control = serde_json::json!({
             "protocolVersion": 2, "sessionId": session, "sequence": 1,
             "controlGeneration": "1", "control": {

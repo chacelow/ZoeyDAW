@@ -1,6 +1,7 @@
 #pragma once
 #include "source_registry.h"
 #include "realtime_protocol.generated.h"
+#include "source_clock.h"
 #include <tracktion_engine/tracktion_engine.h>
 #include <atomic>
 #include <memory>
@@ -9,6 +10,7 @@
 namespace zp {
 struct SourcePlayheadGraph {
     std::map<tracktion::EditItemID,std::shared_ptr<tracktion::AudioClipPlayhead>> playheads;
+    std::shared_ptr<SourceBlockClock> previewClock;
 };
 struct SourceObservationBinding {
     SourceMapping mapping;

@@ -13,6 +13,14 @@ void EngineSession::configureSourcePlayheads(te::Edit& edit,te::CreateNodeParams
         return item.first!=&edit && (!arrangement || item.first!=arrangement->edit.get()) && item.first!=preview.get();
     });
     auto graph=std::make_shared<SourcePlayheadGraph>();
+    if(!arrangement || arrangement->edit.get()!=&edit) {
+        graph->previewClock=std::make_shared<SourceBlockClock>();
+        params.wrapPlaybackGraph=[anchor=graph->previewClock,samples=&clock.frames,rate=params.sampleRate,
+            previous=std::move(params.wrapPlaybackGraph)](std::unique_ptr<te::graph::Node> node) {
+            if(previous)node=previous(std::move(node));
+            return createSourceClockObserver(std::move(node),anchor,*samples,rate);
+        };
+    }
     params.audioClipPlayhead=[graph](te::AudioClipBase& clip) {
         auto playhead=std::make_shared<te::AudioClipPlayhead>();
         graph->playheads[clip.itemID]=playhead;
@@ -23,12 +31,11 @@ void EngineSession::configureSourcePlayheads(te::Edit& edit,te::CreateNodeParams
         sourcePlayheadGraphs[edit]=graph;
     };
 }
-V EngineSession::sourceMeterRegistry() {
+V EngineSession::sourceMeterRegistry(std::uint32_t generation) {
     std::erase_if(sourcePlayheadGraphs,[&](const auto& item) {
         return item.first!=arrangement->edit.get() && item.first!=preview.get();
     });
     const auto& mappings = sourceRegistry.mappings();
-    const auto generation = arrangement->meterGraph->identity.generation;
     const auto graphFor=[&](te::Edit* edit)->std::shared_ptr<const SourcePlayheadGraph> {
         const auto found=sourcePlayheadGraphs.find(edit);
         return found==sourcePlayheadGraphs.end()?nullptr:found->second;
@@ -81,26 +88,27 @@ std::uint32_t SourceObservationState::read(const juce::String& session, std::uin
     using namespace realtime::wire;
     const auto registry = current.load();
     if (!registry || registry->session != session || registry->graphGeneration != generation
-        || !std::isfinite(deviceRate) || deviceRate <= 0
         || registry->bindings.size() > std::numeric_limits<std::uint32_t>::max()
         || output.size() != registry->bindings.size()) return 0;
     constexpr std::uint32_t maxAgeMs = 50;
-    const double maxAgeSamples = std::ceil(deviceRate * maxAgeMs / 1000.0);
-    if (maxAgeSamples > std::numeric_limits<std::uint32_t>::max()) return 0;
+    const auto previewTime=registry->previewGraph && registry->previewGraph->previewClock
+        ?registry->previewGraph->previewClock->read(maxAgeMs):std::nullopt;
     size_t offset = 0;
     for (const auto& binding : registry->bindings) {
         const auto& mapping = binding.mapping;
+        const auto anchor=mapping.preview?previewTime:
+            (std::isfinite(deviceRate) && deviceRate>0?std::optional<SourceBlockTime>({referenceSample,deviceSample,deviceRate}):std::nullopt);
         WireSource record{mapping.clipHandle, mapping.sourceHandle, 0, mapping.sourceRate,
                           deviceSample, mapping.sourceGeneration, (std::uint32_t)SOURCE_FLAGS_UNAVAILABLE,
                           0, 0};
-        if ((mapping.preview || arrangementPlaying) && binding.playhead) if (const auto observation = binding.playhead->getObservation(maxAgeMs)) {
+        if (anchor && (mapping.preview || arrangementPlaying) && binding.playhead) if (const auto observation = binding.playhead->getObservation(maxAgeMs)) {
             const double frame = observation->position.inSeconds() * mapping.sourceRate;
-            if (std::isfinite(frame) && frame >= 0 && observation->referenceSample >= 0 && observation->sampleRate == deviceRate
-                && static_cast<std::uint64_t>(observation->referenceSample) <= referenceSample) {
-                const auto age = referenceSample - static_cast<std::uint64_t>(observation->referenceSample);
-                if (age <= deviceSample && age <= maxAgeSamples) {
+            if (std::isfinite(frame) && frame >= 0 && observation->referenceSample >= 0 && observation->sampleRate == anchor->sampleRate
+                && static_cast<std::uint64_t>(observation->referenceSample) <= anchor->referenceSample) {
+                const auto age = anchor->referenceSample - static_cast<std::uint64_t>(observation->referenceSample);
+                if (age <= anchor->deviceSample && age <= std::ceil(anchor->sampleRate * maxAgeMs / 1000.0)) {
                     record.sourceFrame = frame;
-                    record.observedDeviceSample = deviceSample-age;
+                    record.observedDeviceSample = anchor->deviceSample-age;
                     record.positionAgeSamples = static_cast<std::uint32_t>(age);
                     record.flags = (std::uint32_t)SOURCE_FLAGS_VALID;
                 }

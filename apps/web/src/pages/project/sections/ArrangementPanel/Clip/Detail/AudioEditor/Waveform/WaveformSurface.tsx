@@ -4,6 +4,7 @@ import { DEFAULT_FADE_CURVE, fadeControls, fadePath } from "@zoeydaw/project-cor
 import { timeTickLabel } from "@zoeydaw/project-core/timeline-ticks"
 import type { AudioClip, DocumentState } from "@zoeydaw/project-core/types"
 import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
+import { SourcePlayhead } from "@/pages/project/components/SourcePlayhead"
 import { SourceMarker } from "../SourceMarker"
 import type { SourceViewport } from "../useSourceViewport"
 import { SignedWaveform } from "./SignedWaveform"
@@ -182,6 +183,15 @@ export function WaveformSurface({
             )}
           </svg>
         </svg>
+        <SourcePlayhead
+          source={
+            clip.sourceId === null
+              ? null
+              : { kind: "arrangement", clipId: clip.id, sourceId: clip.sourceId }
+          }
+          startSeconds={view.start * secondsPerBar}
+          spanSeconds={view.span * secondsPerBar}
+        />
         {(realSource ? !signedPaths.some(channel => channel.path.length > 0) : !hasPeaks) && (
           <div className="audio-detail-empty">
             {t(clip.sourceId !== null ? "detailAudio.unknownWaveform" : "detailAudio.emptySource")}

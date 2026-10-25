@@ -1,14 +1,16 @@
 import { create } from "zustand"
+import type { SourceReference } from "@zoeydaw/project-core/realtime"
 import type { BrowserTreeRow, BrowserRoots, nativeBrowserCatalog } from "@/shared/native/browser"
 
 export interface PreparedAudition {
   durationSeconds: number
+  source: SourceReference | null
 }
 export interface BrowserAuditionPort {
   select(path: string): Promise<PreparedAudition>
   stop(): void | Promise<void>
   seek(normalized: number): void | Promise<void>
-  read(): Promise<{ positionSeconds: number; durationSeconds: number; playing: boolean }>
+  readStatus(): Promise<{ durationSeconds: number; playing: boolean }>
 }
 export type AuditionState =
   | { kind: "idle" }
@@ -16,7 +18,7 @@ export type AuditionState =
   | {
       kind: "ready"
       itemId: string
-      positionSeconds: number
+      source: SourceReference | null
       durationSeconds: number
       playing: boolean
     }
@@ -90,19 +92,24 @@ export function createBrowserLibrary(catalog: typeof nativeBrowserCatalog) {
       useState.setState({ error: message(error) })
     }
   }
-  function pollPreview(generation: number, port: BrowserAuditionPort, itemId: string) {
+  function pollPreview(
+    generation: number,
+    port: BrowserAuditionPort,
+    itemId: string,
+    source: SourceReference | null
+  ) {
     clearTimeout(previewPoll)
     previewPoll = setTimeout(async () => {
       try {
-        const status = await port.read()
+        const status = await port.readStatus()
         if (generation !== auditionGeneration || port !== auditionPort) return
-        useState.setState({ audition: { kind: "ready", itemId, ...status } })
-        if (status.playing) pollPreview(generation, port, itemId)
+        useState.setState({ audition: { kind: "ready", itemId, source, ...status } })
+        if (status.playing) pollPreview(generation, port, itemId, source)
       } catch (error) {
         if (generation === auditionGeneration)
           useState.setState({ audition: { kind: "error", itemId, error: message(error) } })
       }
-    }, 33)
+    }, 250)
   }
   async function playSelected(normalized = 0) {
     const state = useState.getState()
@@ -128,11 +135,11 @@ export function createBrowserLibrary(catalog: typeof nativeBrowserCatalog) {
           kind: "ready",
           itemId: item.id,
           durationSeconds: data.durationSeconds,
-          positionSeconds: normalized * data.durationSeconds,
+          source: data.source,
           playing: true,
         },
       })
-      pollPreview(generation, port, item.id)
+      pollPreview(generation, port, item.id, data.source)
     } catch (error) {
       if (generation === auditionGeneration)
         useState.setState({ audition: { kind: "error", itemId: item.id, error: message(error) } })
@@ -352,7 +359,8 @@ export function createBrowserLibrary(catalog: typeof nativeBrowserCatalog) {
       clearTimeout(previewPoll)
       try {
         await port.seek(value)
-        if (generation === auditionGeneration) pollPreview(generation, port, item.id)
+        if (generation === auditionGeneration)
+          pollPreview(generation, port, item.id, state.audition.source)
       } catch (error) {
         if (generation === auditionGeneration) useState.setState({ error: message(error) })
       }

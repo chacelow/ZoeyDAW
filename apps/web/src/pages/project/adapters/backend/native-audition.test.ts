@@ -38,7 +38,7 @@ describe("native Browser audition", () => {
       mode: "raw",
       gainDb: -18,
     })
-    expect(await audition.read()).toMatchObject({ playing: true })
+    expect(await audition.readStatus()).toMatchObject({ playing: true })
   })
 
   it("cancels selection before reservation resolves and reserves a native stop fence", async () => {
@@ -55,7 +55,7 @@ describe("native Browser audition", () => {
     expect(port.reserveAudition).toHaveBeenCalledTimes(2)
     expect(port.stopAudition).toHaveBeenCalledWith(2)
     expect(port.audition).not.toHaveBeenCalled()
-    expect(await audition.read()).toMatchObject({ playing: false })
+    expect(await audition.readStatus()).toMatchObject({ playing: false })
   })
 
   it("orders a replacement selection after an already pending stop reservation", async () => {
@@ -87,7 +87,7 @@ describe("native Browser audition", () => {
     expect(port.audition.mock.calls.map(([request]) => request.generation)).toEqual([1, 3])
     await old.stop()
     expect(port.stopAudition).not.toHaveBeenCalled()
-    expect(await current.read()).toMatchObject({ playing: true })
+    expect(await current.readStatus()).toMatchObject({ playing: true })
   })
 
   it("does not let a pending old port stop reserve over its replacement", async () => {
@@ -108,16 +108,17 @@ describe("native Browser audition", () => {
     expect(port.audition.mock.calls.map(([request]) => request.generation)).toEqual([2])
   })
 
-  it("always selects original-speed audio and reads native source time; newest selection wins", async () => {
+  it("selects original-speed audio with the newest native source identity", async () => {
     const port = audioPort()
     const first = deferred<NativeAuditionResult>()
     port.audition.mockReturnValueOnce(first.promise)
     const audition = createNativeBrowserAuditionPort(port)
     const stale = audition.select("/first.wav").catch(error => error)
     await Promise.resolve()
-    await audition.select("/second.wav")
+    const selected = await audition.select("/second.wav")
     const oldGeneration = port.audition.mock.calls[0][0].generation
     const currentGeneration = port.audition.mock.calls[1][0].generation
+    expect(selected.source).toEqual({ kind: "preview", clipId: `preview/${currentGeneration}` })
     expect(currentGeneration).toBeGreaterThan(oldGeneration)
     expect(port.audition.mock.calls[1][0]).toEqual({
       generation: currentGeneration,
@@ -128,8 +129,7 @@ describe("native Browser audition", () => {
     expect(port.analyzeTempo).not.toHaveBeenCalled()
     first.resolve({ generation: oldGeneration, durationSeconds: 2, state: "playing" })
     expect(await stale).toMatchObject({ name: "AbortError" })
-    expect(await audition.read()).toEqual({
-      positionSeconds: 1.25,
+    expect(await audition.readStatus()).toEqual({
       durationSeconds: 3,
       playing: true,
     })
@@ -152,8 +152,7 @@ describe("native Browser audition", () => {
     expect(port.stopAudition.mock.calls[0][0]).toBeGreaterThan(generation)
     pending.resolve({ generation, durationSeconds: 2, state: "playing" })
     expect(await selecting).toMatchObject({ name: "AbortError" })
-    expect(await audition.read()).toEqual({
-      positionSeconds: 0,
+    expect(await audition.readStatus()).toEqual({
       durationSeconds: 0,
       playing: false,
     })
@@ -171,14 +170,14 @@ describe("native Browser audition", () => {
     ]) {
       const pending = deferred<NativeAuditionStatus>()
       port.auditionStatus.mockReturnValueOnce(pending.promise)
-      const reading = audition.read().catch(error => error)
+      const reading = audition.readStatus().catch(error => error)
       const generation = port.auditionStatus.mock.lastCall![0]
       await action()
       pending.resolve({ generation, positionSeconds: 2, durationSeconds: 3, playing: true })
       expect(await reading).toMatchObject({ name: "AbortError" })
     }
     port.auditionStatus.mockRejectedValueOnce(new Error("Device disconnected"))
-    await expect(audition.read()).rejects.toThrow("Device disconnected")
+    await expect(audition.readStatus()).rejects.toThrow("Device disconnected")
     port.audition.mockRejectedValueOnce(new Error("Audition file is offline"))
     await expect(audition.select("/missing.wav")).rejects.toThrow("offline")
   })
@@ -191,6 +190,6 @@ describe("native Browser audition", () => {
     await current.select("/current.wav")
     await old.stop()
     expect(port.stopAudition).not.toHaveBeenCalled()
-    expect(await current.read()).toMatchObject({ playing: true, positionSeconds: 1.25 })
+    expect(await current.readStatus()).toMatchObject({ playing: true })
   })
 })

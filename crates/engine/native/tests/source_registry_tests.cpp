@@ -225,8 +225,11 @@ void sourceBlockObservations() {
     expect(!read(1000,100),"Source timestamp underflowed the device counter");
     expect(!read(1000,2000,false),"Stopped Arrangement retained active source position");
     registry=std::make_shared<zp::SourceObservationRegistry>(*registry);registry->bindings[0].mapping.preview=true;
+    auto previewGraph=std::make_shared<zp::SourcePlayheadGraph>();previewGraph->previewClock=std::make_shared<zp::SourceBlockClock>();
+    previewGraph->previewClock->publish({1000,2000,48000});registry->previewGraph=previewGraph;
     state.current.store(registry);
     expect(read(1000,2000,false),"Independent Preview followed Arrangement stop");
+    expect(read(0,0,false) && value.observedDeviceSample==1750,"Preview required an Arrangement sample clock");
     playhead->setPosition(tracktion::TimePosition::fromSeconds(1),750,44100);
     expect(!read(),"Device format change relabelled a source sample");
     auto replacement=std::make_shared<zp::SourceObservationRegistry>(*registry);

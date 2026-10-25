@@ -75,10 +75,16 @@ impl NativeMeterReader {
     pub fn read_sources(
         &mut self,
         sources: &[SourceRegistryEntry],
-        audio: &super::NativeTransportObservation,
+        audio: Option<&super::NativeTransportObservation>,
         rate: f64,
     ) -> Result<Vec<WireSource>, String> {
-        let sample = audio.device_sample;
+        let (reference, sample, playing) = audio.map_or((0, 0, 0), |audio| {
+            (
+                audio.reference_sample,
+                audio.device_sample,
+                u32::from(audio.playing == 1),
+            )
+        });
         if sources.is_empty() {
             return Ok(Vec::new());
         }
@@ -89,10 +95,10 @@ impl NativeMeterReader {
         let received = unsafe {
             zp_meter_read_sources(
                 self.handle.as_ptr(),
-                audio.reference_sample,
+                reference,
                 sample,
                 rate,
-                u32::from(audio.playing == 1),
+                playing,
                 self.source_records.as_mut_ptr(),
                 capacity,
             )
@@ -120,12 +126,15 @@ impl NativeMeterReader {
                 if !source.source_frame.is_finite()
                     || source.source_frame < 0.0
                     || source.reserved != 0
-                    || source.observed_device_sample > sample
-                    || (source.flags
-                        & crate::realtime::protocol_generated::SOURCE_FLAGS_VALID as u32
-                        != 0
-                        && sample - source.observed_device_sample
-                            != u64::from(source.position_age_samples))
+                    || (mapping.owner
+                        == crate::realtime::metadata_generated::SourceOwner::Arrangement
+                        && (source.observed_device_sample > sample
+                            || (source.flags
+                                & crate::realtime::protocol_generated::SOURCE_FLAGS_VALID as u32
+                                != 0
+                                && (audio.is_none()
+                                    || sample - source.observed_device_sample
+                                        != u64::from(source.position_age_samples)))))
                 {
                     return Err("Invalid native source observation".into());
                 }

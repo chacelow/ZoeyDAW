@@ -12,7 +12,7 @@ import {
 import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { useArrangementKeyboard } from "./useArrangementKeyboard"
 import { browserLibrary, useBrowserLibraryState } from "@/pages/project/adapters/browser"
-import type { BrowserAuditionPort } from "@/pages/project/adapters/browser/controller"
+import type { BrowserAuditionPort, PreparedAudition } from "@/pages/project/adapters/browser"
 import type { BrowserTreeRow } from "@/shared/native/browser"
 
 const auditionItem: BrowserTreeRow = {
@@ -32,12 +32,12 @@ function startAudition(preparing: boolean) {
   const audio = {
     select: vi.fn(() =>
       preparing
-        ? new Promise<{ durationSeconds: number }>(() => {})
-        : Promise.resolve({ durationSeconds: 4 })
+        ? new Promise<PreparedAudition>(() => {})
+        : Promise.resolve({ durationSeconds: 4, source: null })
     ),
     stop: vi.fn(async () => {}),
     seek: vi.fn(async () => {}),
-    read: vi.fn(async () => ({ positionSeconds: 1, durationSeconds: 4, playing: true })),
+    readStatus: vi.fn(async () => ({ durationSeconds: 4, playing: true })),
   } satisfies BrowserAuditionPort
   auditionDisposers.push(browserLibrary.configureAudition(audio))
   browserLibrary.select(auditionItem)

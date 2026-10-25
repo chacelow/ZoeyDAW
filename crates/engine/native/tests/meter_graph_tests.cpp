@@ -97,7 +97,7 @@ void testHubReadHandle() {
     auto node=bank->wrapOutput(std::make_unique<Samples>(2,false),"track/hub/out","hub","track-out");bank->seal();
     auto collector=std::make_shared<MeterGraphCollector>(bank);
     expect(collector->acquireHub() && !collector->acquireHub(),"Hub ownership admitted duplicate reader");
-    auto* handle=new zp_meter_read_handle(collector);
+    auto* handle=new zp_meter_read_handle(collector,std::make_shared<SourceObservationState>(),"hub-test");
     graph::NodePlayer player;player.setNode(std::move(node),48000,256);
     juce::AudioBuffer<float> output(2,256);process(player,output,1000,256);
     const uint32_t slots[]={0,1};zp_meter_publication values[2]{};uint32_t read=0;
@@ -264,7 +264,7 @@ void testRealTrackChain(bool muted, bool otherSolo, bool stopped, bool fenced, b
     auto hub=session.acquireMeterGraph("meter-test","graph-meter-test",identity.deviceEpoch,identity.generation,identity.registryRevision);
     expect(hub!=nullptr,"Current project failed meter admission");
     expect(!session.acquireMeterGraph("meter-test","graph-meter-test",identity.deviceEpoch,identity.generation,identity.registryRevision),"Second project Hub acquired meters");
-    zp_meter_read_handle handle(hub);
+    zp_meter_read_handle handle(hub,session.sourceObservationState(),"graph-meter-test");
     auto query=object();put(query,"leaseId","meter-test");put(query,"sessionId","graph-meter-test");
     const auto registry=session.call("meter_registry",query);
     expect((int)registry["generation"]==(int)identity.generation && registry["entries"].isArray(),"Registry did not describe admitted graph");

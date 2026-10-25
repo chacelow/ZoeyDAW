@@ -3,6 +3,9 @@ import {
   RECORD_FLAGS_VALID,
   RECORD_FLAGS_STALE,
   RECORD_FLAGS_UNAVAILABLE,
+  readSourcePosition,
+  type SourceReference,
+  type SourcePosition,
   type MeterRegistryEntry,
   type RealtimeRegistry,
   type MeterStore,
@@ -182,5 +185,33 @@ export function setProjectMeterInterest(owner: string, ids: readonly string[]) {
     if (interests.get(owner) !== interest) return
     interest.detach()
     interests.delete(owner)
+  }
+}
+
+export function readProjectSource(reference: SourceReference): SourcePosition | null {
+  return readSourcePosition(readProjectMeterStore()?.readLatest() ?? null, reference)
+}
+
+export function watchProjectSources(owner: string, listener: () => void): () => void {
+  let detachMetadata = () => {}
+  let detachFrames = () => {}
+  let detachInterest = () => {}
+  const bind = () => {
+    detachFrames()
+    detachMetadata()
+    detachInterest()
+    const store = readProjectMeterStore()
+    detachMetadata = store?.subscribeMetadata(listener) ?? (() => {})
+    detachFrames = store?.subscribeFrames(listener) ?? (() => {})
+    detachInterest = store?.setInterest(owner, { endpointIds: [], transport: true }) ?? (() => {})
+    listener()
+  }
+  const detachSession = subscribeProjectMeters(bind)
+  bind()
+  return () => {
+    detachSession()
+    detachFrames()
+    detachMetadata()
+    detachInterest()
   }
 }

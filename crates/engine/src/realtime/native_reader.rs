@@ -89,8 +89,7 @@ impl NativeMeterRegistry {
     }
     pub(crate) fn validate(&self, expected_session: &str) -> Result<(), String> {
         if matches!(self.graph, NativeMeterGraph::Unprepared { owner_epoch } if owner_epoch.0 == 0)
-            || (self.graph.sample_rate().is_none()
-                && (!self.entries.is_empty() || !self.sources.is_empty()))
+            || (self.graph.sample_rate().is_none() && !self.entries.is_empty())
             || self.generation == 0
             || self.registry_revision == 0
         {

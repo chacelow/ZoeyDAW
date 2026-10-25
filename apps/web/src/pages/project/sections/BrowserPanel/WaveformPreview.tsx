@@ -2,6 +2,9 @@ import { Fragment, useMemo } from "react"
 import type { RefObject } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { signedWaveformPaths } from "@zoeydaw/project-core/signed-waveform"
+import type { SourceReference } from "@zoeydaw/project-core/realtime"
+import { readProjectSource } from "@/pages/project/adapters/realtime"
+import { SourcePlayhead } from "@/pages/project/components/SourcePlayhead"
 import { browserLibrary } from "@/pages/project/adapters/browser"
 import type { BrowserPreviewWaveformData } from "./useBrowserPreviewWaveform"
 
@@ -10,18 +13,17 @@ export function WaveformPreview({
   width,
   path,
   data,
-  position,
+  source,
   duration,
 }: {
   readonly surface: RefObject<HTMLDivElement | null>
   readonly width: number
   readonly path: string | undefined
   readonly data: BrowserPreviewWaveformData | null
-  readonly position: number
+  readonly source: SourceReference | null
   readonly duration: number
 }) {
   const { t } = useTranslation()
-  const progress = duration > 0 ? Math.min(1, position / duration) : 0
   const channelPaths = useMemo(
     () =>
       data
@@ -45,7 +47,7 @@ export function WaveformPreview({
       aria-label={t("browser.waveform")}
       aria-valuemin={0}
       aria-valuemax={duration}
-      aria-valuenow={position}
+      aria-valuenow={0}
       aria-disabled={!path || !data}
       className="bg-muted/20 relative h-12 min-w-0 flex-1 cursor-pointer overflow-hidden"
       onClick={event => {
@@ -55,6 +57,8 @@ export function WaveformPreview({
       }}
       onKeyDown={event => {
         if (!data) return
+        const position = source ? readProjectSource(source)?.seconds : undefined
+        const progress = position !== undefined && duration > 0 ? position / duration : 0
         let next: number
         if (event.key === "ArrowLeft") next = progress - 0.05
         else if (event.key === "ArrowRight") next = progress + 0.05
@@ -83,11 +87,7 @@ export function WaveformPreview({
         </svg>
       ) : null}
       {data ? (
-        <span
-          aria-hidden
-          className="bg-foreground pointer-events-none absolute top-0 bottom-0 w-px"
-          style={{ left: `${progress * 100}%` }}
-        />
+        <SourcePlayhead source={source} startSeconds={0} spanSeconds={duration} slider={surface} />
       ) : null}
     </div>
   )

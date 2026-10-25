@@ -17,7 +17,7 @@ fn wait_stopped(
         if let Some(snapshot) = service.meter_snapshot(lease, session)? {
             if snapshot.registry.graph.sample_rate().is_some()
                 || !snapshot.records.is_empty()
-                || !snapshot.sources.is_empty()
+                || snapshot.sources.iter().any(|source| source.flags & zoeydaw_engine::realtime::protocol_generated::SOURCE_FLAGS_VALID as u32 != 0)
             {
                 return Err("No-graph stopped state fabricated audio observations".into());
             }

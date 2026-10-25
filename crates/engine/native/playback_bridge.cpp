@@ -70,7 +70,10 @@ zp_meter_read_handle* zp_idle_meter_acquire(zp_session* session,const char* leas
     if(!session)return nullptr;
     try {
         auto state=session->owner.acquireIdleMeter(lease,owner,epoch);
-        return state?new zp_meter_read_handle(std::move(state),epoch):nullptr;
+        if(!state)return nullptr;
+        auto sources=session->owner.sourceObservationState();const auto registry=sources->current.load();
+        if(!registry || registry->session!=juce::String::fromUTF8(owner))return nullptr;
+        return new zp_meter_read_handle(std::move(state),epoch,std::move(sources),owner,registry->graphGeneration);
     } catch(...) { return nullptr; }
 }
 int zp_stop_fence_for(zp_session* session,const char* lease,const char* owner,uint64_t token) { return session && session->owner.stopFenceFor(lease,owner,token); }

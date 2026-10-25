@@ -64,9 +64,9 @@ extern "C" uint32_t zp_meter_read_stopped_clock(zp_meter_read_handle* handle,zp_
 }
 extern "C" uint32_t zp_meter_read_sources(zp_meter_read_handle* handle,uint64_t reference,uint64_t sample,double rate,uint32_t playing,
                                           void* output,uint32_t capacity) {
-    if(!handle || !handle->collector || !handle->sources || (capacity && !output)
+    if(!handle || !handle->sources || (capacity && !output)
        || handle->reading.test_and_set(std::memory_order_acquire))return 0;
     struct Release { std::atomic_flag& flag;~Release(){flag.clear(std::memory_order_release);} } release{handle->reading};
-    return handle->sources->read(handle->session,handle->collector->description()->identity.generation,
+    return handle->sources->read(handle->session,handle->collector?handle->collector->description()->identity.generation:handle->sourceGeneration,
                                  reference,sample,rate,playing==1,{static_cast<zp::realtime::wire::WireSource*>(output),capacity});
 }

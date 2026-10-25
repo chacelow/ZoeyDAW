@@ -260,20 +260,11 @@ pub(super) fn run(shared: Arc<Shared>) {
                     .chain(input_snapshot.iter().flat_map(|input| input.records.iter()))
                     .map(|record| record.slot_reset_epoch)
                     .fold(graph.confirmed_reset_epoch, u32::max);
-                let sources = if let Some(transport) = graph.transport.audio() {
-                    graph.reader.read_sources(
-                        &graph.registry.sources,
-                        &transport.audio,
-                        graph
-                            .registry
-                            .graph
-                            .sample_rate()
-                            .ok_or("Audio clock requires a prepared graph")?
-                            .get(),
-                    )?
-                } else {
-                    Vec::new()
-                };
+                let audio=graph.transport.audio();
+                let sources=graph.reader.read_sources(
+                    &graph.registry.sources,audio.as_ref().map(|observation| &observation.audio),
+                    graph.registry.graph.sample_rate().map_or(0.0,|rate| rate.get()),
+                )?;
                 Ok::<_, String>((
                     Arc::new(HubSnapshot {
                         sequence,

@@ -99,17 +99,8 @@ pub(super) fn verify(
                     value.clip_handle == preview.clip_handle
                         && value.flags & SOURCE_FLAGS_VALID as u32 != 0
                 }) {
-                    let audio = snapshot
-                        .transport
-                        .audio()
-                        .ok_or("Preview source lost its shared clock anchor")?;
-                    if value.observed_device_sample + u64::from(value.position_age_samples)
-                        != audio.audio.device_sample
-                    {
-                        return Err(
-                            "Preview source position was paired with a different processing sample"
-                                .into(),
-                        );
+                    if value.observed_device_sample == 0 || value.position_age_samples > 2400 {
+                        return Err("Preview source lost its independent processing anchor".into());
                     }
                     if let Some(frame) = first {
                         if value.source_frame > frame {

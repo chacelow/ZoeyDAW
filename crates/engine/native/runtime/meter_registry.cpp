@@ -55,7 +55,7 @@ V EngineSession::meterRegistry(const V& request) {
         put(entry,"capabilities",juce::Array<V>{"peak","rms","hold","clip"});
         entries.add(entry);
     }
-    put(result,"entries",entries);put(result,"sources",graph?sourceMeterRegistry():V(juce::Array<V>{}));return result;
+    put(result,"entries",entries);put(result,"sources",sourceMeterRegistry(graph?graph->identity.generation:idleMeterGeneration));return result;
 }
 std::optional<StoppedTransportPosition> EngineSession::stoppedTransportPosition() const {
     if(!arrangement || !accepted)return {};
