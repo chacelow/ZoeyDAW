@@ -123,7 +123,9 @@ if(ZOEYDAW_PLAYBACK_TESTS)
     add_test(NAME native_meter_graph COMMAND zoeydaw_meter_graph_tests)
     juce_add_console_app(zoeydaw_source_registry_tests PRODUCT_NAME "Zoeydaw Source Registry Tests")
     target_sources(zoeydaw_source_registry_tests PRIVATE tests/source_registry_tests.cpp)
-    target_include_directories(zoeydaw_source_registry_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/model" "${CMAKE_CURRENT_SOURCE_DIR}/runtime")
+    target_include_directories(zoeydaw_source_registry_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/model" "${CMAKE_CURRENT_SOURCE_DIR}/runtime"
+        $<TARGET_PROPERTY:zoeydaw_playback,INCLUDE_DIRECTORIES>)
     target_link_libraries(zoeydaw_source_registry_tests PRIVATE zoeydaw_playback juce::juce_events juce::juce_core)
     add_test(NAME native_source_registry COMMAND zoeydaw_source_registry_tests)
     juce_add_console_app(zoeydaw_meter_observer_tests PRODUCT_NAME "Zoeydaw Meter Observer Tests")

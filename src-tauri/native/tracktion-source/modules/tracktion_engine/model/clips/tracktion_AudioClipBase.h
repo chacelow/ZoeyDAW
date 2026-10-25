@@ -19,40 +19,55 @@ namespace tracktion::inline engine {
 */
 struct AudioClipPlayhead
 {
-    /** Returns the last played position relative to the clip's source if it has been
-        updated within the staleness window (default 100ms).
-        If no position has been written recently, returns std::nullopt so the UI can hide
-        the playhead when the clip stops playing.
-    */
-    std::optional<TimePosition> getPosition (uint32_t maxAgeMs = 50) const
+    struct Observation
     {
-        const auto s = state.load();
+        TimePosition position;
+        int64_t referenceSample = 0;
+        double sampleRate = 0;
+    };
 
-        if (! s.position.has_value())
-            return std::nullopt;
-
-        if (juce::Time::getMillisecondCounter() - s.lastUpdateMs > maxAgeMs)
-            return std::nullopt;
-
-        return s.position;
+    std::optional<Observation> getObservation (uint32_t maxAgeMs = 50) const noexcept
+    {
+        const auto before = version.load();
+        if (before == 0 || (before & 1))
+            return {};
+        const auto present = valid.load();
+        const Observation result { TimePosition::fromSeconds (positionSeconds.load()), referenceSample.load(), sampleRate.load() };
+        const auto updated = lastUpdateMs.load();
+        if (version.load() != before || ! present || juce::Time::getMillisecondCounter() - updated > maxAgeMs)
+            return {};
+        return result;
     }
 
-    /** Sets the current played position and stamps it with the current time.
-        This is called from the playback graph and shouldn't be called by user code.
-    */
-    void setPosition (std::optional<TimePosition> p)
+    std::optional<TimePosition> getPosition (uint32_t maxAgeMs = 50) const noexcept
     {
-        state.store ({ p, juce::Time::getMillisecondCounter() });
+        if (const auto observation = getObservation (maxAgeMs))
+            return observation->position;
+        return {};
+    }
+
+    void setPosition (std::optional<TimePosition> position, int64_t reference, double rate) noexcept
+    {
+        if (writing.test_and_set (std::memory_order_acquire))
+            return;
+        version.fetch_add (1);
+        positionSeconds.store (position ? position->inSeconds() : 0);
+        referenceSample.store (reference);
+        sampleRate.store (rate);
+        valid.store (position.has_value());
+        lastUpdateMs.store (juce::Time::getMillisecondCounter());
+        version.fetch_add (1);
+        writing.clear (std::memory_order_release);
     }
 
 private:
-    struct State
-    {
-        std::optional<TimePosition> position;
-        uint32_t lastUpdateMs = 0;
-    };
-
-    std::atomic<State> state;
+    static_assert (std::atomic<double>::is_always_lock_free && std::atomic<uint64_t>::is_always_lock_free);
+    std::atomic_flag writing = ATOMIC_FLAG_INIT;
+    std::atomic<uint64_t> version { 0 };
+    std::atomic<int64_t> referenceSample { 0 };
+    std::atomic<double> positionSeconds { 0 }, sampleRate { 0 };
+    std::atomic<uint32_t> lastUpdateMs { 0 };
+    std::atomic<bool> valid { false };
 };
 
 //==============================================================================

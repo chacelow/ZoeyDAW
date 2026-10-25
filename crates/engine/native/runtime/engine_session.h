@@ -108,6 +108,7 @@ private:
     std::optional<Request> accepted;
     SourceRegistry sourceRegistry;
     std::shared_ptr<SourceObservationState> sourceObservations = std::make_shared<SourceObservationState>();
+    std::map<te::Edit*,std::shared_ptr<const SourcePlayheadGraph>> sourcePlayheadGraphs;
     std::set<juce::String> leases;
     std::map<juce::String,uint64_t> leaseStopTokens;
     std::mutex stopOwnerMutex;
@@ -189,6 +190,7 @@ private:
     void updateDevices(Arrangement&, const Request&, const Request*);
     void updateMidiClips(Arrangement&, const Request&, const Request*);
     void bindInputs(Arrangement&, const Request&);
+    void configureSourcePlayheads(te::Edit&,te::CreateNodeParams&);
     void configureMeterGraph(te::Edit&, te::CreateNodeParams&);
     void retireMeterGraphs();
     void timerCallback() override;

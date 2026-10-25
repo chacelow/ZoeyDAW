@@ -126,14 +126,16 @@ pub(super) fn verify(
         if source.flags & SOURCE_FLAGS_VALID as u32 == 0
             || source.source_frame <= 0.0
             || source.source_frame >= authored["frames"].as_f64().ok_or("Missing source frames")?
-            || source.position_age_samples != (sample_rate.get() * 0.05).ceil() as u32
+            || source.position_age_samples > (sample_rate.get() * 0.05).ceil() as u32
+            || source.observed_device_sample + u64::from(source.position_age_samples)
+                != observation.audio.device_sample
         {
             return Err(
                 "Source observation did not contain a recent actual reader position".into(),
             );
         }
         println!(
-            "Actual source observation: clip={} source={} frame={} ageBound={} device samples",
+            "Actual source observation: clip={} source={} frame={} age={} device samples",
             mapping.clip_id, mapping.source_id, source.source_frame, source.position_age_samples
         );
     }

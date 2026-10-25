@@ -99,6 +99,18 @@ pub(super) fn verify(
                     value.clip_handle == preview.clip_handle
                         && value.flags & SOURCE_FLAGS_VALID as u32 != 0
                 }) {
+                    let audio = snapshot
+                        .transport
+                        .audio()
+                        .ok_or("Preview source lost its shared clock anchor")?;
+                    if value.observed_device_sample + u64::from(value.position_age_samples)
+                        != audio.audio.device_sample
+                    {
+                        return Err(
+                            "Preview source position was paired with a different processing sample"
+                                .into(),
+                        );
+                    }
                     if let Some(frame) = first {
                         if value.source_frame > frame {
                             println!("Preview source reader: {} -> {} frames, independent identity, registry-before-data enforced", frame, value.source_frame);

@@ -1,4 +1,5 @@
 #include "source_registry.h"
+#include "source_observations.h"
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -203,10 +204,45 @@ void exhaustion() {
     expect(!hasPreview(previews), "Exhaustion revived stopped preview");
     expect(previewMapping(previews.resumePreview(2)).clipHandle == 2, "Exhaustion destroyed accepted resumable identity");
 }
+void sourceBlockObservations() {
+    auto authored=zp::SourceRegistry().prepare(requestWithClips());
+    auto registry=std::make_shared<zp::SourceObservationRegistry>();
+    registry->session="session";registry->graphGeneration=3;
+    auto playhead=std::make_shared<tracktion::AudioClipPlayhead>();
+    registry->bindings.push_back({authored.mappings()[0],playhead});
+    zp::SourceObservationState state;state.current.store(registry);
+    zp::realtime::wire::WireSource value{};
+    const auto read=[&](std::uint64_t reference=1000,std::uint64_t sample=2000,bool playing=true) {
+        expect(state.read("session",3,reference,sample,48000,playing,{&value,1})==1,"Source read lost its registered identity");
+        return value.flags & zp::realtime::wire::SOURCE_FLAGS_VALID;
+    };
+    expect(!read(),"Unprocessed source exposed a position");
+    playhead->setPosition(tracktion::TimePosition::fromSeconds(1),750,48000);
+    expect(read() && value.sourceFrame==48000 && value.observedDeviceSample==1750 && value.positionAgeSamples==250,
+           "Source position was paired with the Hub receive block instead of its own processing sample");
+    expect(!read(749),"Future source block was attached to an older output clock");
+    expect(!read(4000,5000),"Expired source block remained valid at a newer output clock");
+    expect(!read(1000,100),"Source timestamp underflowed the device counter");
+    expect(!read(1000,2000,false),"Stopped Arrangement retained active source position");
+    registry=std::make_shared<zp::SourceObservationRegistry>(*registry);registry->bindings[0].mapping.preview=true;
+    state.current.store(registry);
+    expect(read(1000,2000,false),"Independent Preview followed Arrangement stop");
+    playhead->setPosition(tracktion::TimePosition::fromSeconds(1),750,44100);
+    expect(!read(),"Device format change relabelled a source sample");
+    auto replacement=std::make_shared<zp::SourceObservationRegistry>(*registry);
+    replacement->bindings[0].playhead=std::make_shared<tracktion::AudioClipPlayhead>();
+    state.current.store(replacement);
+    playhead->setPosition(tracktion::TimePosition::fromSeconds(2),1000,48000);
+    expect(!read(),"Retired graph wrote the replacement graph's source observation");
+    replacement->bindings[0].playhead->setPosition(tracktion::TimePosition::fromSeconds(3),1000,48000);
+    expect(read() && value.sourceFrame==144000 && value.positionAgeSamples==0,"New source graph did not publish its own sample");
+    replacement->bindings[0].playhead->setPosition({},1000,48000);
+    expect(!read(),"Explicit source invalidation retained the last valid position");
+}
 }
 int main() {
     try {
-        arrangementTransitions(); previewTransitions(); malformedSources(); exhaustion();
+        arrangementTransitions(); previewTransitions(); malformedSources(); exhaustion(); sourceBlockObservations();
         std::cout << "Source identity, temporary preview lifecycle, validation and exhaustion passed\n";
         return 0;
     } catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }

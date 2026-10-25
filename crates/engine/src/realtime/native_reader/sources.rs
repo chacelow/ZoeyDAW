@@ -11,6 +11,7 @@ use std::{
 extern "C" {
     fn zp_meter_read_sources(
         handle: *mut c_void,
+        reference_sample: u64,
         device_sample: u64,
         device_rate: f64,
         arrangement_playing: u32,
@@ -74,10 +75,10 @@ impl NativeMeterReader {
     pub fn read_sources(
         &mut self,
         sources: &[SourceRegistryEntry],
-        sample: u64,
+        audio: &super::NativeTransportObservation,
         rate: f64,
-        playing: bool,
     ) -> Result<Vec<WireSource>, String> {
+        let sample = audio.device_sample;
         if sources.is_empty() {
             return Ok(Vec::new());
         }
@@ -88,9 +89,10 @@ impl NativeMeterReader {
         let received = unsafe {
             zp_meter_read_sources(
                 self.handle.as_ptr(),
+                audio.reference_sample,
                 sample,
                 rate,
-                u32::from(playing),
+                u32::from(audio.playing == 1),
                 self.source_records.as_mut_ptr(),
                 capacity,
             )
@@ -118,7 +120,12 @@ impl NativeMeterReader {
                 if !source.source_frame.is_finite()
                     || source.source_frame < 0.0
                     || source.reserved != 0
-                    || source.observed_device_sample != sample
+                    || source.observed_device_sample > sample
+                    || (source.flags
+                        & crate::realtime::protocol_generated::SOURCE_FLAGS_VALID as u32
+                        != 0
+                        && sample - source.observed_device_sample
+                            != u64::from(source.position_age_samples))
                 {
                     return Err("Invalid native source observation".into());
                 }

@@ -70,7 +70,7 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 Rust `realtime/meter_hub.rs` 拥有 Hub 控制、图与输入 reader 的安装、reset 和快照查询。私有 `meter_hub/worker.rs` 执行聚合、reset 确认与发布循环，借用同一 `Shared`，不创建第二个 Hub 或可变状态 owner。worker 随 `MeterHub::start` 启动，Drop 发出 stop、唤醒并 join。`HubSnapshot.transport` 用 `HubTransport` 区分 Audio、Stopped 和 Unavailable；无图停止也保留同一个 Hub。
 
-`runtime/source_observations.cpp` 从既有 `SourceRegistry` 与 `AudioClipPlayhead` 建立不可变身份/引用投影，按当前 session 与 graph generation 发布给同一 native reader。Rust 私有 `native_reader/sources.rs` 校验生成的 `WireSource` C ABI 记录，再进入 Hub 的同一 binary frame；没有第二个 source 时钟或采集线程。相同图内 source metadata 更新保留 meter 状态，read permit 共享 Arc registry 以阻止旧 metadata 下交付新 source 数据。时间精度边界见 [实时同步设计](../research/realtime-sync-design.md)。
+`runtime/source_observations.cpp` 拥有 SourceRegistry 到图专属 AudioClipPlayhead 的不可变投影。EngineSession 的 sourcePlayheadGraphs 只在主线程按 Edit 身份保存 graphPosted 结果；Arrangement 和候选 Preview 的启播/接受顺序不创建另一套采集 owner。节点在既有处理点发布源时间、reference sample 和处理 sampleRate，Hub 通过同一 reader 的 reference/device 锚点换算精确处理采样时刻。Rust 私有 native_reader/sources.rs 校验身份、时间先后与采样差，再进入原 48-byte WireSource；没有新增线程、时钟或 wire layout。相同图内 metadata 更新保留电平状态，read permit 继续阻止新身份先于 registry 交付。时间域边界见 [实时同步设计](../research/realtime-sync-design.md)。
 
 `runtime/transport_clock.h` 是 EngineSession 控制目标的主线程发布和图内 witness，按 Edit owner、完整 u64 代际与请求 sequence 关联音频块。每个输出链的 `MeterOutputObserverNode` 只采电平；`transport_clock_node.cpp` 在最终 `PlayHeadPositionNode` 之后发布同块渲染坐标与引擎 audible 坐标。SDK 的每图查询和最终根包装器绑定精确 context 生命周期。Rust `native_reader/transport.rs` 拥有 120-byte C ABI 时钟结构及校验，从 NativeMeterReader 的同一公开面提供数据。它没有新增时钟、线程或 WebView 通道，也不提供完整 document audioRevision 或物理出声时间保证。
 

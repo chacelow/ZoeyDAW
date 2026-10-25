@@ -288,7 +288,7 @@ void EngineSession::releaseDeviceIfIdle() {
     if(!leases.empty() || preview)return;
     engine.getDeviceManager().deviceManager.removeAudioCallback(&clock);engine.getDeviceManager().closeDevices();devicesInitialised=false;clock.rate.store(0);
 }
-void EngineSession::stopPreview() { stopTimer();if(preview)preview->getTransport().stop(false,true);preview.reset();previewDuration=0;previewSourceDuration=0;sourceRegistry.clearPreview(); }
+void EngineSession::stopPreview() { stopTimer();if(preview)preview->getTransport().stop(false,true);sourcePlayheadGraphs.erase(preview.get());preview.reset();previewDuration=0;previewSourceDuration=0;sourceRegistry.clearPreview(); }
 double EngineSession::previewPositionSeconds() const {
     if(!preview)return 0;
     auto& transport=preview->getTransport();
@@ -745,7 +745,7 @@ V EngineSession::call(const juce::String& operation,const V& v) {
     }
     if(operation=="recording_results")return recordingResults(v);
     if(operation=="recording_ack")return acknowledgeRecording(v);
-    if(operation=="release") { fields(v,{"leaseId"});const auto lease=text(v,"leaseId");if(leases.count(lease)) { finishRecording();allNotesOff(); }leases.erase(lease);noteSequences.erase(lease);noteCutoffs.erase(lease);heldNotes.erase(lease);std::erase_if(pluginAdmissions,[&](const auto& entry){return entry.second.lease==lease;});if(leases.empty()) { publishStopOwner({});if(arrangement)arrangement->edit->getTransport().removeListener(this);arrangement.reset();accepted.reset();appliedSequence=0; }pluginBindings.collect();releaseDeviceIfIdle();return {}; }
+    if(operation=="release") { fields(v,{"leaseId"});const auto lease=text(v,"leaseId");if(leases.count(lease)) { finishRecording();allNotesOff(); }leases.erase(lease);noteSequences.erase(lease);noteCutoffs.erase(lease);heldNotes.erase(lease);std::erase_if(pluginAdmissions,[&](const auto& entry){return entry.second.lease==lease;});if(leases.empty()) { publishStopOwner({});if(arrangement)arrangement->edit->getTransport().removeListener(this);sourceObservations->current.store(nullptr);arrangement.reset();std::erase_if(sourcePlayheadGraphs,[&](const auto& item){return item.first!=preview.get();});accepted.reset();appliedSequence=0; }pluginBindings.collect();releaseDeviceIfIdle();return {}; }
     if(operation=="stop") {
         fields(v,{"leaseId","sessionId","stopToken","stopEpoch"});const auto token=integer(v,"stopToken"),epoch=integer(v,"stopEpoch");const auto lease=text(v,"leaseId");
         leaseStopTokens[lease]=std::max(token,leaseStopTokens[lease]);

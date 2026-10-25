@@ -1784,7 +1784,7 @@ void WaveNode::processSection (ProcessContext& pc, juce::Range<int64_t> timeline
             fileTime = loopSection.getStart() + TimeDuration::fromSeconds (std::fmod (pastStart, loopLen));
         }
 
-        playhead->setPosition (fileTime);
+        playhead->setPosition (fileTime, pc.referenceSampleRange.getStart(), getSampleRate());
     }
 
     reader->setReadPosition (fileStart);
@@ -2398,7 +2398,7 @@ void WaveNodeRealTime::processSection (ProcessContext& pc)
                 fileTime = loopSectionTime.getStart() + TimeDuration::fromSeconds (std::fmod (pastStart, loopLen));
             }
 
-            playhead->setPosition (fileTime);
+            playhead->setPosition (fileTime, pc.referenceSampleRange.getStart(), getSampleRate());
         }
         else if (fileTempoSequence != nullptr)
         {
@@ -2412,7 +2412,7 @@ void WaveNodeRealTime::processSection (ProcessContext& pc)
                 sourceBeats = loopSectionBeats.getStart() + BeatDuration::fromBeats (std::fmod (pastStart, loopLen));
             }
 
-            playhead->setPosition (fileTempoSequence->toTime (sourceBeats));
+            playhead->setPosition (fileTempoSequence->toTime (sourceBeats), pc.referenceSampleRange.getStart(), getSampleRate());
         }
     }
 

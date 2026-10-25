@@ -263,14 +263,13 @@ pub(super) fn run(shared: Arc<Shared>) {
                 let sources = if let Some(transport) = graph.transport.audio() {
                     graph.reader.read_sources(
                         &graph.registry.sources,
-                        transport.audio.device_sample,
+                        &transport.audio,
                         graph
                             .registry
                             .graph
                             .sample_rate()
                             .ok_or("Audio clock requires a prepared graph")?
                             .get(),
-                        transport.audio.playing == 1,
                     )?
                 } else {
                     Vec::new()

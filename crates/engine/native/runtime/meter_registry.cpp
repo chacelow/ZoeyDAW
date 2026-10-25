@@ -73,6 +73,7 @@ std::shared_ptr<const TransportClockState> EngineSession::acquireIdleMeter(const
 }
 void EngineSession::configureMeterGraph(te::Edit& edit,te::CreateNodeParams& params) {
     configureIsolatedDeviceGraph(params);
+    configureSourcePlayheads(edit,params);
     if(!arrangement || arrangement->edit.get()!=&edit)return;
     params.includeLegacyLevelMeters=false;
     params.wrapLiveInput=[state=arrangement->inputState,tracks=arrangement->tracks,recording=&recordingActive](te::AudioTrack& track,te::InputDeviceInstance& input,const te::CreateNodeParams& build,std::unique_ptr<te::graph::Node> node)->std::unique_ptr<te::graph::Node> {
@@ -102,7 +103,8 @@ void EngineSession::configureMeterGraph(te::Edit& edit,te::CreateNodeParams& par
         *collector=std::make_shared<MeterGraphCollector>(graph);
         retainedMeterGraphs.push_back(graph);
     };
-    params.graphPosted=[this,graph,collector,owner=arrangement.get()] {
+    params.graphPosted=[this,graph,collector,owner=arrangement.get(),previous=std::move(params.graphPosted)] {
+        if(previous)previous();
         owner->meterGraph=graph;
         owner->meterCollector=std::move(*collector);
         retireMeterGraphs();

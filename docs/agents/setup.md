@@ -83,6 +83,8 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 `cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json [FRAME_DIRECTORY]` 使用真实低增益输出，覆盖停止打开、无图 seek、完整 u64、Edit owner 换代、等待播放和实际音频块接管。可选输出目录必须已存在；探针保存真实 stream 的 `.bin` 与配套 registry JSON，便于重放到 Web consumer。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 指定独立设备配置，`ZOEYDAW_AUDIO_CACHE_PATH` 指定临时缓存。停止、等待和播放使用同一个 levels v2 stream，不伪造 sample clock。该探针不启动桌面应用，也不代替物理听感验收。
 
+`native_source_registry` 还验证 source 块时戳换算、未来块、50ms 过期、格式变化、设备计数下溢、停止与独立 Preview，以及退役 playhead 不可写入替换图。源时间、reference sample 和处理 sampleRate 在节点同一次发布中读取；native reader 使用同一 transport 锚点换算，48-byte source wire 布局不变。四种 Warp 的真实输出探针已覆盖非 1× 速度的 source 记录；这不表示算法物理延迟或音乐听感已验收。
+
 根 `Cargo.lock` 与 `.cargo/config.toml` 供应用 workspace 共用。media、project、browser 的独立测试不编译 Tracktion；engine 与完整 workspace 检查需要维护的 Tracktion 源码及固定 JUCE checkout。研究探针 `scripts/audio/probes/rust` 保持独立 manifest 和 lock。
 
 实时协议布局由 `protocol/realtime.json` 唯一定义。运行 `node scripts/generate-realtime-protocol.mjs` 生成三语言产物，`--check` 检查漂移。`pnpm check:realtime-protocol` 编译临时 Rust/C++ 校验程序，对照 TS 写出的全部字段与独立 golden fixture，结束后删除临时文件。native CTest 覆盖三槽并发快照、实际 DC/正弦/短脉冲计量、输入设备换代，以及完整 Edit 的 fader/mute/solo/Stop fence 后采集。

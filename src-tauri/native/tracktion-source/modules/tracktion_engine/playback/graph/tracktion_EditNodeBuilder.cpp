@@ -438,6 +438,8 @@ std::unique_ptr<tracktion::graph::Node> createNodeForAudioClip (AudioClipBase& c
         return {};
 
     std::unique_ptr<Node> node;
+    const auto playhead = [&] { return params.forRendering ? nullptr
+        : params.audioClipPlayhead ? params.audioClipPlayhead (clip) : clip.getPlayhead(); };
 
     if (clip.canUseProxy())
     {
@@ -508,7 +510,7 @@ std::unique_ptr<tracktion::graph::Node> createNodeForAudioClip (AudioClipBase& c
                                                          params.processState,
                                                          idToUse,
                                                          params.forRendering,
-                                                         params.forRendering ? nullptr : clip.getPlayhead());
+                                                         playhead());
         }
     }
     else
@@ -584,7 +586,7 @@ std::unique_ptr<tracktion::graph::Node> createNodeForAudioClip (AudioClipBase& c
                     .chordPitchSequence = getChordTrackSequenceIfRequired (clip),
                     .pitchChangeSemitones = clip.getPitchChange(),
                     .readAhead = readAhead,
-                    .playhead = params.forRendering ? nullptr : clip.getPlayhead()
+                    .playhead = playhead()
                 };
                 node = makeNode<WaveNodeRealTime> (std::move (config));
             }
@@ -608,7 +610,7 @@ std::unique_ptr<tracktion::graph::Node> createNodeForAudioClip (AudioClipBase& c
                                                    getChordTrackSequenceIfRequired (clip),
                                                    clip.getPitchChange(),
                                                    readAhead,
-                                                   params.forRendering ? nullptr : clip.getPlayhead());
+                                                   playhead());
             }
         }
         else
@@ -631,7 +633,7 @@ std::unique_ptr<tracktion::graph::Node> createNodeForAudioClip (AudioClipBase& c
                                                timeStretcherMode, timeStretcherOpts,
                                                clip.getPitchChange(),
                                                readAhead,
-                                               params.forRendering ? nullptr : clip.getPlayhead());
+                                               playhead());
         }
     }
 

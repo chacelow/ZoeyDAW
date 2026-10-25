@@ -39,7 +39,7 @@ uint32_t zp_meter_read(zp_meter_read_handle*, const uint32_t* slots, uint32_t co
 uint32_t zp_meter_reset(zp_meter_read_handle*,const uint32_t* slots,uint32_t count,uint32_t epoch,uint32_t kind);
 uint32_t zp_meter_read_clock(zp_meter_read_handle*,zp_meter_clock*);
 uint32_t zp_meter_read_stopped_clock(zp_meter_read_handle*,zp_stopped_clock*);
-uint32_t zp_meter_read_sources(zp_meter_read_handle*,uint64_t device_sample,double device_rate,uint32_t arrangement_playing,
+uint32_t zp_meter_read_sources(zp_meter_read_handle*,uint64_t reference_sample,uint64_t device_sample,double device_rate,uint32_t arrangement_playing,
                               void* output,uint32_t capacity);
 void zp_meter_release(zp_meter_read_handle*);
 #ifdef __cplusplus
