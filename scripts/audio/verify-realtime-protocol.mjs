@@ -92,28 +92,41 @@ try {
   await writeFile(resolve(temporary, "check.rs"), rust)
   await writeFile(resolve(temporary, "check.cpp"), cpp)
   // Compilers come from the developer's toolchain, never protocol or project input.
+  const windows = process.platform === "win32"
+  const rustExecutable = resolve(temporary, windows ? "rust-check.exe" : "rust-check")
+  const cppExecutable = resolve(temporary, windows ? "cpp-check.exe" : "cpp-check")
 
   /* eslint-disable sonarjs/no-os-command-from-path -- Developer-selected compilers, never project payloads. */
   execFileSync(
     "rustc",
-    ["--edition", "2021", resolve(temporary, "check.rs"), "-o", resolve(temporary, "rust-check")],
+    ["--edition", "2021", resolve(temporary, "check.rs"), "-o", rustExecutable],
     { stdio: "inherit" }
   )
-  execFileSync(resolve(temporary, "rust-check"), [fixture, frozenPath], { stdio: "inherit" })
+  execFileSync(rustExecutable, [fixture, frozenPath], { stdio: "inherit" })
 
   execFileSync(
-    "clang++",
-    [
-      "-std=c++20",
-      `-I${resolve(root, "crates/engine/native/runtime")}`,
-      resolve(temporary, "check.cpp"),
-      "-o",
-      resolve(temporary, "cpp-check"),
-    ],
+    windows ? "cl.exe" : "clang++",
+    windows
+      ? [
+          "/nologo",
+          "/std:c++20",
+          "/EHsc",
+          `/I${resolve(root, "crates/engine/native/runtime")}`,
+          resolve(temporary, "check.cpp"),
+          `/Fo${resolve(temporary, "check.obj")}`,
+          `/Fe${cppExecutable}`,
+        ]
+      : [
+          "-std=c++20",
+          `-I${resolve(root, "crates/engine/native/runtime")}`,
+          resolve(temporary, "check.cpp"),
+          "-o",
+          cppExecutable,
+        ],
     { stdio: "inherit" }
   )
   /* eslint-enable sonarjs/no-os-command-from-path */
-  execFileSync(resolve(temporary, "cpp-check"), [fixture, frozenPath], { stdio: "inherit" })
+  execFileSync(cppExecutable, [fixture, frozenPath], { stdio: "inherit" })
   console.log(
     `Verified ${base} wire bytes across TypeScript, Rust and C++, including exact u64/i64 beyond 2^53`
   )

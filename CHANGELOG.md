@@ -2,6 +2,7 @@
 
 ## 0.1.0 - unreleased
 
+- Fix realtime wire verification on Windows by using MSVC and explicit `.exe` outputs. Preserve the existing TypeScript, Rust and C++ roundtrip and golden assertions; run from the Visual Studio x64 developer environment so Rust uses the MSVC linker.
 - Replace local commit confirmation prompts with automatic commits after verified Feature stages. Keep lint-staged and commit-scope checks, preserve unrelated work and pending desktop verification, and consolidate stale project Skill workflows into current solo execution rules.
 - Require development by the current main agent and replace subagent skill steps with sequential local work. Add an 800-line source-file gate with a fixed existing-debt baseline and a size report. Extract audio Clip processing and meter graph/telemetry from EngineSession while retaining its state ownership.
 - Update BPM in the retained Edit and playback context, letting Tracktion adopt tempo at the audio block boundary without stop/seek/play. Update dependent Clip timing, warp speed, fades and automation. Preserve playhead display continuity when a slower observation replaces extrapolation, while allowing explicit seeks and loop wraps. Keep recording-result fetches independent of transport polling. Hosted PCM and focused connection checks pass; native changes require restarting `tauri:dev`.

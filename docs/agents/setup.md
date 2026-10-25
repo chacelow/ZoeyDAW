@@ -73,6 +73,8 @@ cargo test --workspace --locked
 
 实时协议布局由 `protocol/realtime.json` 唯一定义。运行 `node scripts/generate-realtime-protocol.mjs` 生成三语言产物，`--check` 检查漂移。`pnpm check:realtime-protocol` 编译临时 Rust/C++ 校验程序，对照 TS 写出的全部字段与独立 golden fixture，结束后删除临时文件。native CTest 覆盖三槽并发快照、实际 DC/正弦/短脉冲计量、输入设备换代，以及完整 Edit 的 fader/mute/solo/Stop fence 后采集。
 
+Windows 在 Visual Studio 的 x64 Native Tools Command Prompt 中运行 `corepack pnpm check:realtime-protocol`，或先加载已安装的 `VsDevCmd.bat -arch=x64 -host_arch=x64`。该入口使用 MSVC `cl.exe` 和带 `.exe` 后缀的临时程序；其他平台保留 `clang++`。确保 `where link` 的首项来自 MSVC，避免 Rust 误用 Git 自带的同名工具。Windows 已实际通过 224 字节的三语言往返和 golden fixture 校验；这不代表 Tauri、音频设备或桌面行为已验收。
+
 生产轨头、路由和 Device 前后级电平通过 window-bound stream 的 raw binary snapshot 读取唯一 Rust MeterHub；Web `MeterSession` 管理单在途拉取、兴趣并集、事件回执、隐藏恢复和关闭。原生 telemetry 的 `meterReady` 显式控制准入，停播且尚无图时等待首次 Play，不因订阅启动音频。原有 backend poll 每 250ms 至多刷新一次 registry，原生刷新等待新图首个快照。Transport、设备状态和录音缩略图仍使用 `playback_telemetry`，完整唯一快照切换与 WKWebView 验收尚未完成。Hosted 录音回归覆盖三轨同源及不同输入、前后 seek 启录、播放中 punch-in、真实 writer PCM 和缩略图增长。这些验证不代替真实麦克风回调与桌面操作验收。
 
 `zoeydaw_playback_smoke REQUEST.json NEW_CAPTURE.wav SECONDS` 使用真实输出设备，会发声。输入为严格 protocol v2 `BackendDocumentRequest`，含十进制 `controlGeneration`，control 不含 heldNotes/midiVelocity；素材必须可解码。程序限制测试 Main 和试听为低增益，覆盖窄控制、可靠 MIDI、定位、循环、并行试听、owner 切换和停止。捕获文件来自设备前的引擎输出，不是物理 loopback，也不能替代桌面 Browser 拖入和播放按钮的 UI 验收。输出文件不能覆盖已有文件。
