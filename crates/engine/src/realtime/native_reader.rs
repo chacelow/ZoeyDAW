@@ -344,7 +344,7 @@ mod tests {
     #[test]
     fn native_publication_layout_matches_c_abi() {
         assert_eq!(std::mem::size_of::<NativeEpoch>(), 64);
-        assert_eq!(std::mem::size_of::<NativeTransportObservation>(), 96);
+        assert_eq!(std::mem::size_of::<NativeTransportObservation>(), 120);
         assert_eq!(std::mem::size_of::<NativePublication>(), 160);
         assert_eq!(std::mem::align_of::<NativePublication>(), 8);
         let publication = NativePublication {

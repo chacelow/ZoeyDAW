@@ -1,11 +1,11 @@
 class TransportBoundaryProbeNode final : public tracktion::graph::Node {
 public:
-    TransportBoundaryProbeNode(std::unique_ptr<Node> source,std::function<void()>& action)
-        : input(std::move(source)), action(action) {
+    TransportBoundaryProbeNode(std::unique_ptr<Node> source,std::function<void()>& action,int latencySamples=0)
+        : input(std::move(source)), action(action),latencySamples(latencySamples) {
         setOptimisations({tracktion::graph::ClearBuffers::no,tracktion::graph::AllocateAudioBuffer::no});
     }
     tracktion::graph::NodeProperties getNodeProperties() override {
-        auto properties=input->getNodeProperties();properties.nodeID=0;return properties;
+        auto properties=input->getNodeProperties();properties.nodeID=0;properties.latencyNumSamples+=latencySamples;return properties;
     }
     std::vector<Node*> getDirectInputNodes() override { return {input.get()}; }
     bool isReadyToProcess() override { return input->hasProcessed(); }
@@ -19,6 +19,7 @@ private:
     }
     std::unique_ptr<Node> input;
     std::function<void()>& action;
+    int latencySamples=0;
 };
 
 void testTransportClockAdoption() {
@@ -30,7 +31,7 @@ void testTransportClockAdoption() {
     auto* context=transport.getCurrentPlaybackContext();require(context!=nullptr,"Missing hosted clock context");
     std::function<void()> atBoundary;
     context->setInsertOptionalLastStageNodeForDeviceCallback([&](te::OutputDevice&,const te::CreateNodeParams&,std::unique_ptr<tracktion::graph::Node> node) {
-        return std::make_unique<TransportBoundaryProbeNode>(std::move(node),atBoundary);
+        return std::make_unique<TransportBoundaryProbeNode>(std::move(node),atBoundary,1024);
     });
     context->reallocate();
     auto command=parse(R"({"protocolVersion":2,"sessionId":"live-mixer-regression","sequence":1,"controlGeneration":"9007199254740993","control":{"playing":true,"recording":false,"seekBar":3,"seekGeneration":1}})");
@@ -48,6 +49,12 @@ void testTransportClockAdoption() {
     require(first.control_valid==1 && first.owner_epoch!=0 && first.control_generation==9007199254740993ULL
             && first.applied_sequence==1,"Processed transport clock has no adopted control identity");
     require(first.bar>3 && first.bar<3.1 && std::abs(first.bars_per_second-.5)<1e-9,"Adopted clock lost actual musical coordinates");
+    require(context->getLatencySamples()>=1024,"Latency probe was not included in the actual graph");
+    const double audible=1+context->getAudibleTimelineTime().inSeconds()/2;
+    require(first.audible_valid==1 && std::abs(first.audible_bar-audible)<1e-8
+            && std::abs(first.audible_bars_per_second-.5)<1e-9,"Clock did not observe this block's latency-compensated position");
+    require(std::abs(first.bar-first.audible_bar-context->getLatencySamples()/48000.0*.5)<1e-8,
+            "Clock paired a prior block's audible position with current rendered coordinates");
     process();
     auto control=command["control"];put(control,"seekBar",9);put(control,"seekGeneration",2);
     put(command,"sequence",2);put(command,"controlGeneration","9007199254740994");
@@ -58,6 +65,8 @@ void testTransportClockAdoption() {
     process();const auto adopted=clock();
     require(adopted.control_valid==1 && adopted.control_generation==9007199254740994ULL && adopted.applied_sequence==2
             && adopted.bar>=9 && adopted.bar<9.01,"Seek identity did not follow the block which actually processed it");
+    require(adopted.audible_valid==1 && adopted.audible_bar>=9 && adopted.audible_bar<9.01,
+            "Audible clock did not follow the processed seek boundary");
     std::atomic<bool> entered{false},controlDone{false};
     atBoundary=[&] {
         entered.store(true,std::memory_order_release);
@@ -86,6 +95,8 @@ void testTransportClockAdoption() {
     require(tempoClock.control_valid==1 && tempoClock.control_generation==concurrent.control_generation
             && tempoClock.applied_sequence==4 && tempoClock.bar>=concurrent.bar
             && std::abs(tempoClock.bars_per_second-.75)<1e-9,"BPM update broke adopted transport identity or its processed rate");
+    require(tempoClock.audible_valid==1 && std::abs(tempoClock.audible_bar-(1+context->getAudibleTimelineTime().inSeconds()*.75))<1e-8
+            && std::abs(tempoClock.audible_bars_per_second-.75)<1e-9,"Audible clock used a prior frame or tempo after BPM adoption");
     auto invalid=command.clone();put(invalid,"sequence",5);put(invalid,"controlGeneration","9007199254740996");
     auto invalidControl=invalid["control"];put(invalidControl,"seekBar",-1);bool rejected=false;
     try { session.call("control",envelope(invalid)); }catch(const std::exception&) { rejected=true; }

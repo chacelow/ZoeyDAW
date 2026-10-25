@@ -3,7 +3,7 @@
 static_assert(sizeof(zp_meter_epoch)==64 && alignof(zp_meter_epoch)==8);
 static_assert(sizeof(zp_meter_publication)==160 && alignof(zp_meter_publication)==8);
 static_assert(offsetof(zp_meter_publication,current)==64 && offsetof(zp_meter_publication,clip_count)==136);
-static_assert(sizeof(zp_meter_clock)==96 && alignof(zp_meter_clock)==8);
+static_assert(sizeof(zp_meter_clock)==120 && alignof(zp_meter_clock)==8);
 namespace {
 zp_meter_epoch epoch(const zp::MeterEpoch& value) noexcept {
     return {value.id,value.startSample,value.endSample,value.count,value.clipCount,value.sumSquares,
@@ -48,7 +48,8 @@ extern "C" uint32_t zp_meter_read_clock(zp_meter_read_handle* handle,zp_meter_cl
         zp::MeterClockObservation value;
         if(!handle->collector->readClock(value))return 0;
         *output={value.referenceSample,value.deviceSample,value.timelineSample,value.timelineBeat,value.tempoBpm,value.frames,value.playing,
-                 value.controlGeneration,value.appliedSequence,value.bar,value.barsPerSecond,value.ownerEpoch,value.controlValid,value.recording};
+                 value.controlGeneration,value.appliedSequence,value.bar,value.barsPerSecond,value.ownerEpoch,value.controlValid,value.recording,
+                 value.audibleBar,value.audibleBarsPerSecond,value.audibleValid,value.reserved};
         return 1;
     } catch(...) { return 0; }
 }

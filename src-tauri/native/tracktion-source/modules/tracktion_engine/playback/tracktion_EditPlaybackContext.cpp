@@ -683,6 +683,7 @@ void EditPlaybackContext::createNode()
     cnp.sampleRate = dm.getSampleRate();
     cnp.blockSize = dm.getBlockSize();
     cnp.positionChangePending = [context = nodePlaybackContext.get()] { return context->getPendingPositionChange().has_value(); };
+    cnp.audibleTimeSeconds = [this] { return audiblePlaybackTime.load(std::memory_order_acquire); };
 
     if (cnp.sampleRate <= 0.0 || cnp.blockSize <= 0)
     {

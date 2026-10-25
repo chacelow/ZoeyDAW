@@ -157,6 +157,9 @@ pub(super) fn verify_stopped(
                     .sources
                     .iter()
                     .all(|source| source.flags & SOURCE_FLAGS_VALID as u32 == 0)
+                && snapshot.transport.is_some_and(|transport| {
+                    transport.audio.playing == 0 && transport.audio.audible_valid == 0
+                })
             {
                 println!("Stopped Arrangement source activity follows actual audio transport");
                 return Ok(());

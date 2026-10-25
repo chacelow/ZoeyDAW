@@ -12,6 +12,7 @@ add_library(zoeydaw_playback_analysis OBJECT analysis/waveform.cpp analysis/temp
 add_library(zoeydaw_playback_runtime OBJECT runtime/engine_session.cpp runtime/audio_configuration.cpp runtime/device_configuration.cpp runtime/meter_tap.cpp runtime/meter_bank.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/input_meter.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/meter_graph.cpp)
+target_sources(zoeydaw_playback_runtime PRIVATE runtime/transport_clock_node.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/meter_read.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/meter_registry.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/source_registry.cpp)

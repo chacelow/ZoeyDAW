@@ -72,7 +72,7 @@ Rust `realtime/meter_hub.rs` 拥有 Hub 控制、图与输入 reader 的安装�
 
 `runtime/source_observations.cpp` 从既有 `SourceRegistry` 与 `AudioClipPlayhead` 建立不可变身份/引用投影，按当前 session 与 graph generation 发布给同一 native reader。Rust 私有 `native_reader/sources.rs` 校验生成的 `WireSource` C ABI 记录，再进入 Hub 的同一 binary frame；没有第二个 source 时钟或采集线程。相同图内 source metadata 更新保留 meter 状态，read permit 共享 Arc registry 以阻止旧 metadata 下交付新 source 数据。时间精度边界见 [实时同步设计](../research/realtime-sync-design.md)。
 
-`runtime/transport_clock.h` 是 EngineSession 控制目标的主线程发布和图内 witness，按 Edit owner、完整 u64 代际与请求 sequence 关联音频块。`MeterOutputObserverNode` 在预取与输出边界读取该只读投影，SDK 只补充精确 context 的 pending-position 查询。Rust `native_reader/transport.rs` 拥有 96-byte C ABI 时钟结构及校验，从 NativeMeterReader 的同一公开面提供数据。它没有新增时钟、线程或 WebView 通道，也不提供完整 document audioRevision 保证。
+`runtime/transport_clock.h` 是 EngineSession 控制目标的主线程发布和图内 witness，按 Edit owner、完整 u64 代际与请求 sequence 关联音频块。每个输出链的 `MeterOutputObserverNode` 只采电平；`transport_clock_node.cpp` 在最终 `PlayHeadPositionNode` 之后发布同块渲染坐标与引擎 audible 坐标。SDK 的每图查询和最终根包装器绑定精确 context 生命周期。Rust `native_reader/transport.rs` 拥有 120-byte C ABI 时钟结构及校验，从 NativeMeterReader 的同一公开面提供数据。它没有新增时钟、线程或 WebView 通道，也不提供完整 document audioRevision 或物理出声时间保证。
 
 Web 领域计算、快照校验和波形范围 schema 归 `@zoeydaw/project-core`，不依赖 app、React、Zustand、Tauri 或 runtime。`@zoeydaw/project-runtime` 拥有 vanilla store 工厂、编辑历史、preview、后端队列和 lease 生命周期，只依赖 core 与 `zustand/vanilla`。包导入不创建运行实例；app 组合层注入 backend 和轨道高度，React 绑定留在 `stores/useProjectState.ts`。测试和 Gallery 从 runtime 的 `./testing` 入口显式取得模拟实现。
 

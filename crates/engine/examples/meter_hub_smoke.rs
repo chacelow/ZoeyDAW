@@ -341,6 +341,11 @@ fn main() -> Result<(), String> {
                 > 1e-8
             || (latest.audio.bars_per_second - expected_bpm / (60.0 * quarters_per_bar)).abs()
                 > 1e-8
+            || latest.audio.audible_valid != 1
+            || !latest.audio.audible_bar.is_finite()
+            || (latest.audio.audible_bars_per_second - expected_bpm / (60.0 * quarters_per_bar))
+                .abs()
+                > 1e-8
         {
             return Err(
                 "Rust Hub lost the audio block's control identity or rendered clock coordinates"
@@ -349,6 +354,10 @@ fn main() -> Result<(), String> {
         }
         println!("Audio-side control witness: generation={} appliedSequence={} ownerEpoch={} renderedBar={}",
                  latest.audio.control_generation,latest.audio.applied_sequence,latest.audio.owner_epoch,latest.audio.bar);
+        println!(
+            "Same-block engine audible position: bar={} barsPerSecond={}",
+            latest.audio.audible_bar, latest.audio.audible_bars_per_second
+        );
         println!(
             "Audio transport: reference {} -> {}, device {} -> {}, timeline {} -> {}, BPM {}",
             first.audio.reference_sample,

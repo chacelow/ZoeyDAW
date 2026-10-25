@@ -2213,6 +2213,8 @@ std::unique_ptr<tracktion::graph::Node> createNodeForEdit (EditPlaybackContext& 
     std::unique_ptr<Node> finalNode (std::move (outputNode));
     finalNode = createRackNode (std::move (finalNode), edit.getRackList(), params);
     finalNode = makeNode<PlayHeadPositionNode> (params.processState, std::move (finalNode), audibleTimeToUpdate);
+    if (params.wrapPlaybackGraph)
+        finalNode = params.wrapPlaybackGraph (std::move (finalNode));
 
     return finalNode;
 }

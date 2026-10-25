@@ -1,5 +1,6 @@
 #include "meter_graph.h"
 #include "isolated_plugin_node.h"
+#include "transport_clock_node.h"
 #include <tracktion_engine/tracktion_engine.h>
 #include <tracktion_engine/playback/graph/tracktion_TracktionEngineNode.h>
 #include <tracktion_engine/playback/graph/tracktion_PluginNode.h>
@@ -54,12 +55,8 @@ struct ObservedMeterOutput {
 
 class MeterOutputObserverNode final : public tracktion::graph::Node {
 public:
-    MeterOutputObserverNode(std::unique_ptr<Node> source, std::vector<ObservedMeterOutput> outputs,
-                            std::shared_ptr<MeterClockBank> clock,
-                            tracktion::engine::ProcessState* process,
-                            const std::atomic<std::uint64_t>* deviceSamples,MeterControlSource controlSource)
-        : root(std::move(source)), observed(std::move(outputs)), inputs{root.get()},
-          clock(std::move(clock)), timeline(process), deviceSamples(deviceSamples),controls(std::move(controlSource)) {
+    MeterOutputObserverNode(std::unique_ptr<Node> source, std::vector<ObservedMeterOutput> outputs)
+        : root(std::move(source)), observed(std::move(outputs)), inputs{root.get()} {
         // These edges must exist before createNodeGraph counts consumers and enables in-place DSP.
         for (const auto& output : observed)
             if (std::find(inputs.begin(), inputs.end(), output.node) == inputs.end()) inputs.push_back(output.node);
@@ -85,22 +82,6 @@ private:
                               ? tracktion::graph::ShareOutputBuffer::yes
                               : tracktion::graph::ShareOutputBuffer::no});
     }
-    void prefetchBlock(juce::Range<int64_t> referenceRange) override {
-        controls.beginBlock();blockClock={};blockClockValid=false;
-        if(!clock || !timeline || !deviceSamples || referenceRange.getStart()<0)return;
-        const auto* sequence=timeline->getTempoSequence();if(!sequence)return;
-        blockClock.referenceSample=static_cast<std::uint64_t>(referenceRange.getStart());
-        blockClock.deviceSample=deviceSamples->load(std::memory_order_relaxed);
-        blockClock.timelineSample=timeline->timelineSampleRange.getStart();
-        blockClock.playing=timeline->playHeadState.playHead.isPlaying()?1u:0u;
-        blockClock.recording=blockClock.playing && controls.isRecording()?1u:0u;
-        tracktion::tempo::Sequence::Position position(*sequence);
-        position.set(tracktion::TimePosition::fromSamples(blockClock.timelineSample,timeline->sampleRate));
-        blockClock.timelineBeat=position.getPPQTime();blockClock.tempoBpm=position.getTempo();
-        const auto meter=position.getTimeSignature();const double quartersPerBar=meter.numerator*4.0/meter.denominator;
-        blockClock.bar=1+blockClock.timelineBeat/quartersPerBar;blockClock.barsPerSecond=blockClock.tempoBpm/(60*quartersPerBar);
-        blockClockValid=true;
-    }
     void process(ProcessContext& context) override {
         if (context.referenceSampleRange.getStart() >= 0) {
             const auto start = static_cast<std::uint64_t>(context.referenceSampleRange.getStart());
@@ -116,25 +97,11 @@ private:
         setAudioOutput(root.get(), source.audio);
         if (exclusiveRoot) context.buffers.midi.swapWith(source.midi);
         else context.buffers.midi.clear();
-        if(blockClockValid) {
-            blockClock.frames=context.numSamples;
-            if(const auto target=controls.endBlock(blockClock.playing==1,blockClock.recording==1)) {
-                blockClock.controlGeneration=target->controlGeneration;blockClock.appliedSequence=target->sequence;
-                blockClock.ownerEpoch=target->ownerEpoch;blockClock.controlValid=1;
-            }
-            clock->mailbox.publish(blockClock);
-        }
     }
     const std::unique_ptr<Node> root;
     const std::vector<ObservedMeterOutput> observed;
     std::vector<Node*> inputs;
     bool exclusiveRoot = false;
-    const std::shared_ptr<MeterClockBank> clock;
-    tracktion::engine::ProcessState* const timeline;
-    const std::atomic<std::uint64_t>* const deviceSamples;
-    TransportClockWitness controls;
-    MeterClockObservation blockClock;
-    bool blockClockValid=false;
 };
 
 void validateChannelSlots(int channels, std::uint32_t slots) {
@@ -151,11 +118,9 @@ MeterGraph::MeterGraph(MeterBankIdentity stamp, double rate,MeterControlSource c
 std::unique_ptr<tracktion::graph::Node> MeterGraph::observeOutput(
     std::unique_ptr<tracktion::graph::Node> root,
     const std::map<tracktion::engine::Track*, MeterOutputIdentity>& identities,
-    const std::map<tracktion::engine::Plugin*, std::string>& devices,
-    tracktion::engine::ProcessState* processState,
-    const std::atomic<std::uint64_t>* deviceSamples) {
+    const std::map<tracktion::engine::Plugin*, std::string>& devices) {
     if (sealed) throw std::logic_error("Meter graph registry is sealed");
-    if (!root || (identities.empty() && devices.empty() && (!processState || !deviceSamples))) return root;
+    if (!root || (identities.empty() && devices.empty())) return root;
     using Node = tracktion::graph::Node;
     std::map<Node*, std::vector<Node*>> consumers;
     std::map<tracktion::engine::Track*, Node*> fences;
@@ -237,18 +202,23 @@ std::unique_ptr<tracktion::graph::Node> MeterGraph::observeOutput(
                              static_cast<std::uint16_t>(channels), std::move(bank)});
         nextSlot += static_cast<std::uint32_t>(channels);
     }
-    if(observations.empty() && (!processState || !deviceSamples || clockWriterAssigned))return root;
+    if(observations.empty())return root;
     entries.reserve(entries.size() + additions.size());
     for (std::size_t index = 0; index < additions.size(); ++index) {
         observedOutputs.emplace(additions[index].endpointId, observations[index].node);
         entries.push_back(std::move(additions[index]));
     }
     slots = nextSlot;
-    auto observedClock=processState && deviceSamples && !clockWriterAssigned?clock:nullptr;
-    if(observedClock)clockWriterAssigned=true;
-    auto controlSource=observedClock?controls:MeterControlSource{};
-    return std::make_unique<MeterOutputObserverNode>(std::move(root), std::move(observations),
-                                                    std::move(observedClock),processState,deviceSamples,std::move(controlSource));
+    return std::make_unique<MeterOutputObserverNode>(std::move(root), std::move(observations));
+}
+std::unique_ptr<tracktion::graph::Node> MeterGraph::observeTransport(std::unique_ptr<tracktion::graph::Node> node,
+    tracktion::engine::ProcessState& process,const std::atomic<std::uint64_t>& samples,
+    std::function<double()> audiblePosition) {
+    if(sealed || clockWriterAssigned)throw std::logic_error("Clock observer must have one writer before graph sealing");
+    if(!node)return {};
+    auto result=createTransportClockObserver(std::move(node),clock,process,samples,controls,std::move(audiblePosition));
+    clockWriterAssigned=true;
+    return result;
 }
 std::unique_ptr<tracktion::graph::Node> MeterGraph::wrapOutput(std::unique_ptr<tracktion::graph::Node> node,
                                                               std::string endpointId, std::string ownerId,

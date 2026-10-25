@@ -79,7 +79,7 @@ cmake --build target/windows-native-clock --config Release --target zoeydaw_mixe
 ctest --test-dir target/windows-native-clock -C Release -R native_transport_clock --output-on-failure --timeout 30
 ```
 
-用例覆盖已排队音频块在新 seek ACK 后仍保留旧代际、主线程与音频预取边界并发 seek、完整 u64、实际处理速率与拒绝请求。观测是渲染块坐标；可听延迟补偿、无图停止状态和 Web 唯一 transport 快照切换仍待完成。
+用例覆盖已排队音频块在新 seek ACK 后仍保留旧代际、主线程与音频预取边界并发 seek、完整 u64、实际处理速率与拒绝请求。1024-sample 图延迟场景还核对同块渲染/audible 坐标、seek 与 BPM 转换。可听补偿复用引擎既有位置节点，不是物理 loopback 测量；无图停止状态和 Web 唯一 transport 快照切换仍待完成。
 
 根 `Cargo.lock` 与 `.cargo/config.toml` 供应用 workspace 共用。media、project、browser 的独立测试不编译 Tracktion；engine 与完整 workspace 检查需要维护的 Tracktion 源码及固定 JUCE checkout。研究探针 `scripts/audio/probes/rust` 保持独立 manifest 和 lock。
 

@@ -31,6 +31,8 @@ struct MeterClockObservation {
     double bar = 0, barsPerSecond = 0;
     std::uint64_t ownerEpoch = 0;
     std::uint32_t controlValid = 0, recording = 0;
+    double audibleBar = 0, audibleBarsPerSecond = 0;
+    std::uint32_t audibleValid = 0, reserved = 0;
 };
 struct MeterClockBank {
     RealtimeSnapshot<MeterClockObservation> mailbox;
@@ -43,9 +45,10 @@ public:
     std::unique_ptr<tracktion::graph::Node> observeOutput(
         std::unique_ptr<tracktion::graph::Node>,
         const std::map<tracktion::engine::Track*, MeterOutputIdentity>&,
-        const std::map<tracktion::engine::Plugin*, std::string>& devices,
-        tracktion::engine::ProcessState* processState = nullptr,
-        const std::atomic<std::uint64_t>* deviceSamples = nullptr);
+        const std::map<tracktion::engine::Plugin*, std::string>& devices);
+    std::unique_ptr<tracktion::graph::Node> observeTransport(std::unique_ptr<tracktion::graph::Node>,
+        tracktion::engine::ProcessState&,const std::atomic<std::uint64_t>&,
+        std::function<double()> audiblePosition = {});
     std::unique_ptr<tracktion::graph::Node> wrapOutput(std::unique_ptr<tracktion::graph::Node>,
                                                       std::string endpointId, std::string ownerId,
                                                       std::string kind);

@@ -63,6 +63,11 @@ struct CreateNodeParams
 
     /** Non-blocking, non-throwing query for this ProcessState's pending seek, valid for its graph lifetime. */
     std::function<bool()> positionChangePending = {};
+
+    /** Non-blocking read of this context's audible timeline time, in seconds. */
+    std::function<double()> audibleTimeSeconds = {};
+    /** Optional per-graph wrapper after PlayHeadPositionNode, before preparation. */
+    std::function<std::unique_ptr<graph::Node>(std::unique_ptr<graph::Node>)> wrapPlaybackGraph = {};
 };
 
 //==============================================================================

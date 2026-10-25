@@ -135,15 +135,16 @@ void exerciseRealOutput(bool muted, bool otherSolo, bool stopped, bool fenced,
     if (sharedOutputs) {
         std::shared_ptr<graph::Node> shared(std::move(root));
         std::vector<std::unique_ptr<graph::Node>> outputs;
-        outputs.push_back(meters->observeOutput(std::make_unique<graph::ForwardingNode>(shared, 4001), mapping, {}, &processState, &deviceSamples));
+        outputs.push_back(meters->observeOutput(std::make_unique<graph::ForwardingNode>(shared, 4001), mapping, {}));
         const auto firstCount = meters->endpoints().size();
-        outputs.push_back(meters->observeOutput(std::make_unique<graph::ForwardingNode>(shared, 4002), mapping, {}, &processState, &deviceSamples));
+        outputs.push_back(meters->observeOutput(std::make_unique<graph::ForwardingNode>(shared, 4002), mapping, {}));
         expect(firstCount == 3 && meters->endpoints().size() == firstCount,
                "The same actual nodes in two output subtrees acquired duplicate lanes");
         root = std::make_unique<graph::BasicSummingNode>(std::move(outputs));
     } else {
-        root = meters->observeOutput(std::move(root), mapping, {}, &processState, &deviceSamples);
+        root = meters->observeOutput(std::move(root), mapping, {});
     }
+    root = meters->observeTransport(std::move(root), processState, deviceSamples);
     meters->seal();
     expect(meters->endpoints().size() == 3, "Observer failed to discover all actual track outputs");
     std::map<std::string, const GraphMeterEndpoint*> endpoints;

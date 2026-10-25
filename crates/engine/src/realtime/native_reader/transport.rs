@@ -18,6 +18,10 @@ pub struct NativeTransportObservation {
     pub owner_epoch: u64,
     pub control_valid: u32,
     pub recording: u32,
+    pub audible_bar: f64,
+    pub audible_bars_per_second: f64,
+    pub audible_valid: u32,
+    pub reserved: u32,
 }
 extern "C" {
     fn zp_meter_read_clock(handle: *mut c_void, output: *mut NativeTransportObservation) -> u32;
@@ -40,6 +44,12 @@ impl NativeMeterReader {
             || !value.bars_per_second.is_finite()
             || value.bars_per_second <= 0.0
             || (value.control_valid == 1 && value.owner_epoch == 0)
+            || value.audible_valid > 1
+            || value.reserved != 0
+            || (value.audible_valid == 1
+                && (!value.audible_bar.is_finite()
+                    || !value.audible_bars_per_second.is_finite()
+                    || value.audible_bars_per_second <= 0.0))
         {
             return Err("Invalid native transport observation".into());
         }

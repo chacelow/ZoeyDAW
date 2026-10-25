@@ -63,9 +63,14 @@ void EngineSession::configureMeterGraph(te::Edit& edit,te::CreateNodeParams& par
     auto collector=std::make_shared<std::shared_ptr<MeterGraphCollector>>();
     std::map<te::Plugin*,std::string> deviceIdentities;
     for(const auto& [id,plugin]:arrangement->devices)deviceIdentities.emplace(plugin.get(),id.toStdString());
-    params.insertOptionalLastStageNodeForDevice=[graph,deviceSamples=&clock.frames,outputs=arrangement->meterOutputs,deviceIdentities=std::move(deviceIdentities),previous=std::move(params.insertOptionalLastStageNodeForDevice)](te::OutputDevice& device,const te::CreateNodeParams& build,std::unique_ptr<te::graph::Node> node) {
+    params.insertOptionalLastStageNodeForDevice=[graph,outputs=arrangement->meterOutputs,deviceIdentities=std::move(deviceIdentities),previous=std::move(params.insertOptionalLastStageNodeForDevice)](te::OutputDevice& device,const te::CreateNodeParams& build,std::unique_ptr<te::graph::Node> node) {
         if(previous)node=previous(device,build,std::move(node));
-        return graph->observeOutput(std::move(node),outputs,deviceIdentities,&build.processState,deviceSamples);
+        return graph->observeOutput(std::move(node),outputs,deviceIdentities);
+    };
+    params.wrapPlaybackGraph=[graph,process=&params.processState,deviceSamples=&clock.frames,audible=params.audibleTimeSeconds,
+        previous=std::move(params.wrapPlaybackGraph)](std::unique_ptr<te::graph::Node> node) {
+        if(previous)node=previous(std::move(node));
+        return graph->observeTransport(std::move(node),*process,*deviceSamples,audible);
     };
     params.graphBuilt=[this,graph,collector] {
         graph->seal();
