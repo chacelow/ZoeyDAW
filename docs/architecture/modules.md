@@ -70,6 +70,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 Rust `realtime/meter_hub.rs` 拥有 Hub 控制、图与输入 reader 的安装、reset 和快照查询。私有 `meter_hub/worker.rs` 执行聚合、reset 确认与发布循环，借用同一 `Shared`，不创建第二个 Hub 或可变状态 owner。worker 随 `MeterHub::start` 启动，Drop 发出 stop、唤醒并 join；公开 API 保持不变。
 
+`runtime/source_observations.cpp` 从既有 `SourceRegistry` 与 `AudioClipPlayhead` 建立不可变身份/引用投影，按当前 session 与 graph generation 发布给同一 native reader。Rust 私有 `native_reader/sources.rs` 校验生成的 `WireSource` C ABI 记录，再进入 Hub 的同一 binary frame；没有第二个 source 时钟或采集线程。相同图内 source metadata 更新保留 meter 状态，read permit 共享 Arc registry 以阻止旧 metadata 下交付新 source 数据。时间精度边界见 [实时同步设计](../research/realtime-sync-design.md)。
+
 Web 领域计算、快照校验和波形范围 schema 归 `@zoeydaw/project-core`，不依赖 app、React、Zustand、Tauri 或 runtime。`@zoeydaw/project-runtime` 拥有 vanilla store 工厂、编辑历史、preview、后端队列和 lease 生命周期，只依赖 core 与 `zustand/vanilla`。包导入不创建运行实例；app 组合层注入 backend 和轨道高度，React 绑定留在 `stores/useProjectState.ts`。测试和 Gallery 从 runtime 的 `./testing` 入口显式取得模拟实现。
 
 ESLint 检查两包的普通、类型、转发与动态导入。`scripts/check-core-boundaries.mjs` 检查 Cargo 本地依赖和自有 native include 方向；根 `check` 与 `test:architecture` 均运行该检查。公共包入口使用精确 exports，不暴露内部 connection 或测试文件。

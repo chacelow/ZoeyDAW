@@ -9,6 +9,9 @@ use std::{
 };
 use zoeydaw_engine::{MainThreadDispatcher, PlaybackService};
 
+#[path = "meter_hub_smoke/source_observations.rs"]
+mod source_observations;
+
 #[derive(Default)]
 struct MainQueue(Mutex<VecDeque<Box<dyn FnOnce() + Send>>>);
 impl MainThreadDispatcher for MainQueue {
@@ -236,6 +239,17 @@ fn main() -> Result<(), String> {
                     .collect::<Vec<_>>()
                     != expected
                 || frame.header.flags & HEADER_FLAGS_REVISIONS_UNAVAILABLE as u32 == 0
+                || frame.sources.len() != stream.registry.sources.len()
+                || frame
+                    .sources
+                    .iter()
+                    .zip(&stream.registry.sources)
+                    .any(|(source, mapping)| {
+                        source.clip_handle != mapping.clip_handle
+                            || source.source_handle != mapping.source_handle
+                            || source.source_generation != mapping.source_generation
+                            || source.source_rate != mapping.source_rate.get()
+                    })
             {
                 return Err("Stream frame lost interest identity or revision availability".into());
             }
@@ -367,16 +381,48 @@ fn main() -> Result<(), String> {
                 reset_epoch: snapshot.reset_epoch,
                 frame_type: FRAME_TYPES_LEVELS as u32,
             };
-            let bytes =
-                encode_levels(header, &records, &[]).ok_or("Live Hub record encoding failed")?;
+            let bytes = encode_levels(header, &records, &snapshot.sources)
+                .ok_or("Live Hub record encoding failed")?;
             let frame = decode_levels(&bytes).ok_or("Live Hub bytes failed decoder")?;
             if frame.records != records
+                || frame.sources != snapshot.sources
                 || frame.header.timeline_sample != observation.audio.timeline_sample
-                || bytes.len() != HEADER_BYTES + RECORD_BYTES * slots.len()
+                || bytes.len()
+                    != HEADER_BYTES
+                        + RECORD_BYTES * slots.len()
+                        + SOURCE_BYTES * snapshot.sources.len()
             {
                 return Err("Live binary frame changed slot identity or audio coordinates".into());
             }
             println!("Live Hub binary codec: {} bytes, {} reversed-interest slots, audio coordinates preserved; revision fields are fixture values",bytes.len(),slots.len());
+            for mapping in &metadata.sources {
+                let authored = request["state"]["project"]["sources"]
+                    .as_array()
+                    .ok_or("Missing authored sources")?
+                    .iter()
+                    .find(|source| source["id"].as_str() == Some(mapping.source_id.as_str()))
+                    .ok_or("Source registry lost its authored identity")?;
+                if authored["sampleRate"].as_f64() != Some(mapping.source_rate.get()) {
+                    return Err("Source registry changed the decoded sample rate".into());
+                }
+                let source = frame
+                    .sources
+                    .iter()
+                    .find(|source| source.clip_handle == mapping.clip_handle)
+                    .ok_or("Live source observation missing")?;
+                if source.flags & SOURCE_FLAGS_VALID as u32 == 0
+                    || source.source_frame <= 0.0
+                    || source.source_frame
+                        >= authored["frames"].as_f64().ok_or("Missing source frames")?
+                    || source.position_age_samples
+                        != (snapshot.registry.sample_rate.get() * 0.05).ceil() as u32
+                {
+                    return Err(
+                        "Source observation did not contain a recent actual reader position".into(),
+                    );
+                }
+                println!("Actual source observation: clip={} source={} frame={} ageBound={} device samples", mapping.clip_id, mapping.source_id, source.source_frame, source.position_age_samples);
+            }
         }
         let reset_endpoint = registry
             .entries
@@ -505,6 +551,14 @@ fn main() -> Result<(), String> {
             "No-consumer 1.2s pause: Hub sequence {} -> {}, peak retained",
             before_pause.sequence, after_pause.sequence
         );
+        source_observations::verify(
+            &service,
+            &main,
+            &request,
+            &lease,
+            &session,
+            stream.stream_id,
+        )?;
         request["state"]["project"]["bpm"] = 121.into();
         request["state"]["project"]["numerator"] = 3.into();
         request["stage"] = "commit".into();
@@ -575,6 +629,7 @@ fn main() -> Result<(), String> {
         {
             return Err("Stopped graph probe control was rejected".into());
         }
+        source_observations::verify_stopped(&service, &lease, &session, registry.sources.len())?;
         request["state"]["project"]["bpm"] = 122.into();
         request["state"]["project"]["numerator"] = 4.into();
         request["sequence"] = 4.into();

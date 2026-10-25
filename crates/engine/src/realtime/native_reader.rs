@@ -9,6 +9,8 @@ use std::{
     sync::atomic::Ordering,
 };
 
+mod sources;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MeterGraphIdentity {
     pub device_epoch: u32,
@@ -25,6 +27,7 @@ pub struct NativeMeterRegistry {
     pub registry_revision: u32,
     pub sample_rate: super::metadata_generated::PositiveF64,
     pub entries: Vec<super::metadata_generated::MeterRegistryEntry>,
+    pub sources: Vec<super::metadata_generated::SourceRegistryEntry>,
     pub input: Option<NativeInputRegistry>,
 }
 
@@ -69,6 +72,7 @@ impl NativeMeterRegistry {
         if let Some(input) = self.input.as_ref() {
             input.validate()?;
         }
+        self.validate_sources()?;
         let mut endpoints = std::collections::HashMap::new();
         for (slot, entry) in self.entries.iter().enumerate() {
             if entry.slot_id as usize != slot
@@ -191,13 +195,14 @@ fn epoch(value: NativeEpoch) -> EpochPublication {
 }
 
 /// Owned by the non-audio Hub. A mutable borrow serializes every read.
-/// It retains only immutable graph metadata, meter banks and the non-realtime cache.
+/// Shared source playheads are written by the graph; this reader retains no Edit or Plugin.
 pub struct NativeMeterReader {
     handle: NonNull<c_void>,
     identity: MeterGraphIdentity,
     slots: Vec<u32>,
     native: Vec<NativePublication>,
     values: Vec<Option<ChannelPublication>>,
+    source_records: Vec<super::protocol_generated::WireSource>,
 }
 // The C++ handle owns its bank references; all mutable reads require &mut self.
 // Destruction releases no Edit/Plugin and must remain outside the audio callback.
@@ -313,6 +318,7 @@ impl PlaybackService {
             native: vec![NativePublication::default(); slots.len()],
             values: vec![None; slots.len()],
             slots,
+            source_records: Vec::new(),
         })
     }
     pub(crate) fn acquire_meter_reader_on_main(
@@ -352,6 +358,7 @@ impl PlaybackService {
             slots,
             native,
             values,
+            source_records: Vec::new(),
         })
     }
 }

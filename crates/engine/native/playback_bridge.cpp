@@ -53,7 +53,7 @@ zp_meter_read_handle* zp_meter_acquire(zp_session* session,const char* lease,con
     try {
         auto reader=session->owner.acquireMeterGraph(lease,owner,epoch,generation,registry);
         if(!reader)return nullptr;
-        try { return new zp_meter_read_handle(reader); }
+        try { return new zp_meter_read_handle(reader,session->owner.sourceObservationState(),owner); }
         catch(...) { reader->releaseHub();throw; }
     } catch(...) { return nullptr; }
 }

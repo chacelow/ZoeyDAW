@@ -63,6 +63,7 @@ pub const SOURCE_SOURCE_GENERATION: usize = 32;
 pub const SOURCE_FLAGS: usize = 36;
 pub const SOURCE_POSITION_AGE_SAMPLES: usize = 40;
 pub const SOURCE_RESERVED: usize = 44;
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WireHeader {
     pub magic: u32,
@@ -145,6 +146,7 @@ impl WireHeader {
         Some(())
     }
 }
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WireRecord {
     pub slot_id: u32,
@@ -188,6 +190,7 @@ impl WireRecord {
         Some(())
     }
 }
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WireSource {
     pub clip_handle: u32,

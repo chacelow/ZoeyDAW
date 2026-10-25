@@ -4,6 +4,7 @@
 #include "input_meter.h"
 #include "meter_graph.h"
 #include "source_registry.h"
+#include "source_observations.h"
 #include "live_midi_input.h"
 #include "isolated_plugin_binding.h"
 #include <tracktion_engine/tracktion_engine.h>
@@ -47,6 +48,7 @@ public:
     std::shared_ptr<MeterGraphCollector> acquireMeterGraph(const char* lease,const char* session,std::uint32_t deviceEpoch,std::uint32_t generation,std::uint32_t registry);
     std::shared_ptr<InputMeterCollector> acquireInputMeter(const char* lease,const char* session,std::uint32_t deviceEpoch);
     V meterRegistry(const V&);
+    const std::shared_ptr<SourceObservationState>& sourceObservationState() const noexcept { return sourceObservations; }
     std::atomic<uint64_t> stopToken {0}, auditionGeneration {0};
     std::atomic<bool> arrangementAudible {false};
     std::atomic<bool> monitoringAudible {false};
@@ -102,6 +104,7 @@ private:
     std::shared_ptr<Capture> previewCapture;
     std::optional<Request> accepted;
     SourceRegistry sourceRegistry;
+    std::shared_ptr<SourceObservationState> sourceObservations = std::make_shared<SourceObservationState>();
     std::set<juce::String> leases;
     std::map<juce::String,uint64_t> leaseStopTokens;
     std::mutex stopOwnerMutex;
@@ -150,6 +153,7 @@ private:
     void allNotesOff();
     void updateTransport(const Control&, uint64_t fence, bool seek);
     V telemetry(const V&);
+    V sourceMeterRegistry();
     V audition(const V&);
     V devices(bool refresh = false);
     V configure(const V&);

@@ -67,6 +67,7 @@ impl PlaybackService {
                 if hub.identity() == Some(registry.identity())
                     && hub.session_id().as_deref() == Some(session_id.as_str())
                 {
+                    hub.refresh_source_registry(&registry)?;
                     return Ok(Some(registry));
                 }
                 let slots = registry.entries.iter().map(|entry| entry.slot_id).collect();

@@ -180,6 +180,7 @@ impl PlaybackService {
         if snapshot.registry.generation != permit.generation
             || device_epoch != permit.device_epoch
             || snapshot.reset_epoch != permit.reset_epoch
+            || snapshot.registry.sources != permit.registry.sources
         {
             return Err("meter-registry-required".into());
         }
@@ -227,7 +228,8 @@ impl PlaybackService {
             reset_epoch: snapshot.reset_epoch,
             frame_type: FRAME_TYPES_LEVELS as u32,
         };
-        let bytes = encode_levels(header, &records, &[]).ok_or("Invalid Hub binary snapshot")?;
+        let bytes = encode_levels(header, &records, &snapshot.sources)
+            .ok_or("Invalid Hub binary snapshot")?;
         let mut streams = self
             .owner
             .meter_streams
@@ -240,6 +242,7 @@ impl PlaybackService {
         let current = self.meter_snapshot(&permit.lease, &permit.session)?;
         if current.as_ref().is_none_or(|current| {
             current.registry.identity() != snapshot.registry.identity()
+                || current.registry.sources != snapshot.registry.sources
                 || current.reset_epoch != snapshot.reset_epoch
                 || current
                     .input

@@ -43,6 +43,15 @@ pub(super) fn run(shared: Arc<Shared>) {
                 }
             }
         }
+        if let Some(registry) = control.source_registry.take() {
+            if let Some(graph) = installed.as_mut() {
+                if graph.registry.identity() == registry.identity()
+                    && graph.registry.session_id == registry.session_id
+                {
+                    graph.registry = registry;
+                }
+            }
+        }
         if installed.is_none() {
             while !control.stop && !control.clear {
                 control = match shared.wake.wait(control) {
@@ -244,12 +253,23 @@ pub(super) fn run(shared: Arc<Shared>) {
                     .chain(input_snapshot.iter().flat_map(|input| input.records.iter()))
                     .map(|record| record.slot_reset_epoch)
                     .fold(graph.confirmed_reset_epoch, u32::max);
+                let sources = if let Some(transport) = graph.transport {
+                    graph.reader.read_sources(
+                        &graph.registry.sources,
+                        transport.audio.device_sample,
+                        graph.registry.sample_rate.get(),
+                        transport.audio.playing == 1,
+                    )?
+                } else {
+                    Vec::new()
+                };
                 Ok::<_, String>((
                     Arc::new(HubSnapshot {
                         sequence,
                         produced_monotonic_ns,
                         registry: graph.registry.clone(),
                         records,
+                        sources,
                         reset_epoch: graph.confirmed_reset_epoch,
                         endpoint_resets: graph.endpoint_resets.clone(),
                         transport: graph.transport,
@@ -267,7 +287,7 @@ pub(super) fn run(shared: Arc<Shared>) {
                     };
                     if !control.clear && !control.stop {
                         confirmed_reset_epoch = snapshot.reset_epoch;
-                        if control.input_change.is_none() {
+                        if control.input_change.is_none() && control.source_registry.is_none() {
                             shared.latest.store(Some(snapshot));
                             shared.snapshot_ready.notify_all();
                             if let Some(reset) = confirmation {

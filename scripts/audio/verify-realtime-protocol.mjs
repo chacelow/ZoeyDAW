@@ -68,10 +68,14 @@ try {
     output.push(Buffer.from(bytes))
     rust += `let bytes = std::fs::read(std::env::args().nth(1).unwrap()).unwrap(); let value = wire::Wire${title(name)}::read(&bytes[${base}..]).unwrap();\n`
     cpp += `zp::realtime::wire::Wire${title(name)} value${title(name)}; assert(zp::realtime::wire::read${title(name)}(std::span(bytes).subspan(${base}), value${title(name)})); std::vector<std::uint8_t> encoded${title(name)}(${layout.bytes}); assert(zp::realtime::wire::write${title(name)}(encoded${title(name)}, value${title(name)})); assert(std::equal(encoded${title(name)}.begin(), encoded${title(name)}.end(), bytes.begin()+${base}));\n`
-    for (const [field, type] of layout.fields) {
+    rust += `assert_eq!(std::mem::size_of::<wire::Wire${title(name)}>(), ${layout.bytes});\n`
+    cpp += `static_assert(sizeof(zp::realtime::wire::Wire${title(name)}) == ${layout.bytes});\n`
+    for (const [field, type, offset] of layout.fields) {
       const value = expected[field]
       rust += `assert_eq!(value.${rustName(field)}, ${value}${type});\n`
       cpp += `assert(value${title(name)}.${field} == ${value}${type === "u64" ? "ULL" : type === "i64" ? "LL" : type === "f32" ? "f" : ""});\n`
+      rust += `assert_eq!(std::mem::offset_of!(wire::Wire${title(name)}, ${rustName(field)}), ${offset});\n`
+      cpp += `static_assert(offsetof(zp::realtime::wire::Wire${title(name)}, ${field}) == ${offset});\n`
       const size = { u16: 2, u32: 4, u64: 8, i64: 8, f32: 4, f64: 8 }[type]
       cpp += `{ std::uint64_t bits=0; for(unsigned i=0;i<${size};++i) bits |= std::uint64_t(bytes[${base}+zp::realtime::wire::${upper(name)}_${upper(field)}+i]) << (8*i); `
       if (type === "f32") cpp += `assert(std::bit_cast<float>(std::uint32_t(bits)) == ${value}f);`

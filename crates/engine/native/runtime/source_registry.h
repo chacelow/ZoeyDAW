@@ -13,6 +13,7 @@ struct SourceMapping {
     std::string clipId, sourceId;
     double sourceRate;
     bool preview = false;
+    bool operator==(const SourceMapping&) const = default;
 };
 class SourceRegistry final {
 public:

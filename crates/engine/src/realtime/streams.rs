@@ -18,7 +18,7 @@ struct Stream {
     window: String,
     lease: String,
     session: String,
-    registry: RealtimeRegistry,
+    registry: Arc<RealtimeRegistry>,
     interest: Option<MeterInterest>,
     reading: Arc<AtomicBool>,
     delivered: Option<(u32, u32, u32)>,
@@ -33,6 +33,7 @@ pub struct MeterReadPermit {
     pub lease: String,
     pub session: String,
     pub registry_revision: u32,
+    pub registry: Arc<RealtimeRegistry>,
     pub generation: u32,
     pub device_epoch: u32,
     pub reset_epoch: u32,
@@ -60,7 +61,7 @@ pub struct MeterStreams {
     session: Option<(String, u32)>,
     streams: HashMap<u32, Stream>,
     pending: HashMap<u32, PendingAdmission>,
-    registry: Option<RealtimeRegistry>,
+    registry: Option<Arc<RealtimeRegistry>>,
     events: super::events::EventLog,
 }
 
@@ -170,7 +171,7 @@ impl MeterStreams {
         );
         Ok(RealtimeStreamOpenResult {
             stream_id: id,
-            registry,
+            registry: registry.as_ref().clone(),
         })
     }
 
@@ -200,7 +201,8 @@ impl MeterStreams {
         let epoch = stream.registry.session_epoch;
         self.refresh_registry(snapshot, epoch)?;
         self.registry
-            .clone()
+            .as_ref()
+            .map(|registry| registry.as_ref().clone())
             .ok_or_else(|| "Meter registry missing".into())
     }
 
@@ -228,7 +230,7 @@ impl MeterStreams {
                     .checked_add(1)
                     .ok_or("Meter registry revision exhausted")?;
             }
-            if prior == &next {
+            if prior.as_ref() == &next {
                 return Ok(());
             }
         }
@@ -238,6 +240,7 @@ impl MeterStreams {
                 registry: next.clone(),
             },
         )?;
+        let next = Arc::new(next);
         for stream in self.streams.values_mut() {
             stream.registry = next.clone();
         }
@@ -376,6 +379,7 @@ impl MeterStreams {
             lease: stream.lease.clone(),
             session: stream.session.clone(),
             registry_revision: stream.registry.registry_revision,
+            registry: stream.registry.clone(),
             generation: stream.registry.generation,
             device_epoch: stream.registry.device_epoch,
             reset_epoch: stream.registry.reset_epoch,

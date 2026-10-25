@@ -94,7 +94,7 @@ for (const [name, layout] of Object.entries(schema.layouts)) {
     ts += `  view.set${types[type][1]}(offset + ${offset}, value.${field}, true);\n`
   }
   ts += "}\n"
-  rust += `#[derive(Clone, Copy, Debug, PartialEq)]\npub struct Wire${title(name)} {\n`
+  rust += `#[repr(C)]\n#[derive(Clone, Copy, Debug, PartialEq)]\npub struct Wire${title(name)} {\n`
   for (const [field, type] of layout.fields) rust += `    pub ${snake(field)}: ${types[type][3]},\n`
   rust += "}\n"
   rust += `impl Wire${title(name)} {\n    pub fn read(bytes: &[u8]) -> Option<Self> {\n        Some(Self {\n`

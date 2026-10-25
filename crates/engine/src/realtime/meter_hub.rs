@@ -4,7 +4,7 @@ use super::{
     native_reader::{
         NativeInputRegistry, NativeMeterReader, NativeMeterRegistry, NativeTransportObservation,
     },
-    protocol_generated::WireRecord,
+    protocol_generated::{WireRecord, WireSource},
 };
 use arc_swap::ArcSwapOption;
 use futures_channel::oneshot;
@@ -42,6 +42,7 @@ pub struct HubSnapshot {
     pub produced_monotonic_ns: u64,
     pub registry: Arc<NativeMeterRegistry>,
     pub records: Vec<WireRecord>,
+    pub sources: Vec<WireSource>,
     pub reset_epoch: u32,
     pub endpoint_resets: Arc<Vec<EndpointResetBaseline>>,
     pub transport: Option<HubTransportObservation>,
@@ -105,7 +106,7 @@ impl HubSnapshot {
             registry_revision,
             reset_epoch: self.reset_epoch,
             entries,
-            sources: Vec::new(),
+            sources: self.registry.sources.clone(),
             endpoint_resets,
         })
     }
@@ -164,6 +165,7 @@ struct PendingReset {
 #[derive(Default)]
 struct Control {
     pending: Option<InstalledGraph>,
+    source_registry: Option<Arc<NativeMeterRegistry>>,
     clear: bool,
     stop: bool,
     identity: Option<super::native_reader::MeterGraphIdentity>,
@@ -333,6 +335,7 @@ impl MeterHub {
             .lock()
             .map_err(|_| "Meter Hub control lock poisoned")?;
         control.pending = None;
+        control.source_registry = None;
         control.identity = None;
         control.session_id = None;
         control.input_identity = None;
@@ -344,6 +347,34 @@ impl MeterHub {
         }
         self.shared.wake.notify_one();
         self.shared.snapshot_ready.notify_all();
+        Ok(())
+    }
+    pub(crate) fn refresh_source_registry(
+        &self,
+        registry: &NativeMeterRegistry,
+    ) -> Result<(), String> {
+        let mut control = self
+            .shared
+            .control
+            .lock()
+            .map_err(|_| "Meter Hub control lock poisoned")?;
+        if control.identity != Some(registry.identity())
+            || control.session_id.as_deref() != Some(registry.session_id.as_str())
+        {
+            return Err("Source registry belongs to another meter graph".into());
+        }
+        if self
+            .shared
+            .latest
+            .load()
+            .as_ref()
+            .is_some_and(|snapshot| snapshot.registry.sources == registry.sources)
+        {
+            return Ok(());
+        }
+        control.source_registry = Some(Arc::new(registry.clone()));
+        self.shared.latest.store(None);
+        self.shared.wake.notify_one();
         Ok(())
     }
     pub fn set_visible(&self, session_id: &str, visible: bool) -> Result<(), String> {
@@ -663,6 +694,7 @@ mod reset_tests {
             registry_revision: 2,
             sample_rate: input.sample_rate,
             entries: vec![entry(0, "track/voice/out", MeterEndpointKind::TrackOut)],
+            sources: Vec::new(),
             input: None,
         };
         let (reply, _receive) = oneshot::channel();

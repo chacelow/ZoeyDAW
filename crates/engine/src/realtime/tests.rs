@@ -150,9 +150,11 @@ fn input_slots_keep_independent_reset_baselines_when_projected_with_graph() {
                 "track/voice/out",
                 super::metadata_generated::MeterEndpointKind::TrackOut,
             )],
+            sources: Vec::new(),
             input: None,
         }),
         records: vec![record(0, 2)],
+        sources: Vec::new(),
         reset_epoch: 5,
         endpoint_resets: Arc::new(Vec::new()),
         transport: None,
@@ -318,4 +320,46 @@ fn input_slots_keep_independent_reset_baselines_when_projected_with_graph() {
     assert!(reopened.registry.session_epoch > retained.registry.session_epoch);
     assert!(streams.identity("closing", retained.stream_id).is_err());
     assert!(streams.finish(stale_admission, &next).is_err());
+}
+
+#[test]
+fn source_registry_shares_source_identity_without_aliasing_clips_or_contents() {
+    use super::{
+        metadata_generated::{PositiveF64, SourceOwner, SourceRegistryEntry},
+        native_reader::NativeMeterRegistry,
+    };
+    let source = SourceRegistryEntry {
+        clip_handle: 1,
+        clip_id: "first".into(),
+        source_handle: 7,
+        source_id: "audio".into(),
+        source_generation: 2,
+        source_rate: PositiveF64::new(48000.0).unwrap(),
+        owner: SourceOwner::Arrangement,
+    };
+    let mut second = source.clone();
+    second.clip_handle = 2;
+    second.clip_id = "second".into();
+    let registry = NativeMeterRegistry {
+        session_id: "session".into(),
+        device_epoch: 1,
+        generation: 1,
+        registry_revision: 1,
+        sample_rate: source.source_rate,
+        entries: Vec::new(),
+        sources: vec![source, second],
+        input: None,
+    };
+    assert!(registry.validate("session").is_ok());
+    for variant in 0..4 {
+        let mut invalid = registry.clone();
+        match variant {
+            0 => invalid.sources[1].clip_handle = invalid.sources[0].clip_handle,
+            1 => invalid.sources[1].source_id = "other-content".into(),
+            2 => invalid.sources[1].source_generation += 1,
+            3 => invalid.sources[1].source_handle += 1,
+            _ => unreachable!(),
+        }
+        assert!(invalid.validate("session").is_err());
+    }
 }

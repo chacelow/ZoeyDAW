@@ -44,7 +44,7 @@ V EngineSession::meterRegistry(const V& request) {
         put(entry,"capabilities",juce::Array<V>{"peak","rms","hold","clip"});
         entries.add(entry);
     }
-    put(result,"entries",entries);return result;
+    put(result,"entries",entries);put(result,"sources",sourceMeterRegistry());return result;
 }
 void EngineSession::configureMeterGraph(te::Edit& edit,te::CreateNodeParams& params) {
     configureIsolatedDeviceGraph(params);
