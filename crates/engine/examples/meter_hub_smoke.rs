@@ -13,6 +13,8 @@ use zoeydaw_engine::{MainThreadDispatcher, PlaybackService};
 mod binary_codec;
 #[path = "meter_hub_smoke/cold_preview.rs"]
 mod cold_preview;
+#[path = "meter_hub_smoke/meter_consumers.rs"]
+mod meter_consumers;
 #[path = "meter_hub_smoke/source_observations.rs"]
 mod source_observations;
 #[path = "meter_hub_smoke/stopped_transport.rs"]
@@ -392,6 +394,7 @@ fn main() -> Result<(), String> {
             latest.audio.tempo_bpm
         );
         binary_codec::verify(&service, &lease, &session, &request)?;
+        meter_consumers::capture(&service, &lease, &session)?;
         for (window, id, batches) in [
             ("hub-smoke-main", stream.stream_id, &main_events),
             ("hub-smoke-mixer", other.stream_id, &mixer_events),

@@ -83,6 +83,8 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 `cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json [FRAME_DIRECTORY]` 使用真实低增益输出，覆盖停止打开、无图 seek、完整 u64、Edit owner 换代、等待播放和实际音频块接管。可选输出目录必须已存在；探针保存真实 stream 的 `.bin` 与配套 registry JSON，便于重放到 Web consumer。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 指定独立设备配置，`ZOEYDAW_AUDIO_CACHE_PATH` 指定临时缓存。停止、等待和播放使用同一个 levels v2 stream，不伪造 sample clock。该探针不启动桌面应用，也不代替物理听感验收。
 
+同一入口还打开并关闭独立的 all-endpoint 验证 stream。指定 `FRAME_DIRECTORY` 时额外保存 `meter-consumers.bin` 与配套 registry，内容来自实际 native endpoint records，可重放到轨道、路由及 Device 的 Web meter 消费者。Device 输入与输出差异使用请求中显式配置的 Utility 增益验证；没有 Device 的请求不声称覆盖 Device 阶段。DOM 重放不代替实际 WebView、物理输入或听感验收。
+
 `native_source_registry` 还验证 source 块时戳换算、未来块、50ms 过期、格式变化、设备计数下溢、停止与独立 Preview，以及退役 playhead 不可写入替换图。源时间、reference sample 和处理 sampleRate 在节点同一次发布中读取；native reader 使用同一 transport 锚点换算，48-byte source wire 布局不变。四种 Warp 的真实输出探针已覆盖非 1× 速度的 source 记录；这不表示算法物理延迟或音乐听感已验收。
 
 根 `Cargo.lock` 与 `.cargo/config.toml` 供应用 workspace 共用。media、project、browser 的独立测试不编译 Tracktion；engine 与完整 workspace 检查需要维护的 Tracktion 源码及固定 JUCE checkout。研究探针 `scripts/audio/probes/rust` 保持独立 manifest 和 lock。
