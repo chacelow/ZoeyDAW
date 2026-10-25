@@ -83,7 +83,7 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 `native_graph_publication` 使用同一 build 目录的 `zoeydaw_graph_publication_tests` target。用例在图替换的各次分配注入失败，核对原 root、采样率、缓冲尺寸与连续 PCM，并继续提交有效图验证恢复；覆盖 pooling/sharing 组合及候选格式变化。它不打开物理音频设备，也不替代活跃 Edit 的严格原子事务或完整 document audioRevision。
 
-`zoeydaw_mixer_tests --transaction-model` 使用真实 WAV 和同一 renderer clock 比较原位 Edit 与隔离候选。它输出发布前、准备中、拒绝后及采用后的 PCM，并记录未修改 Device 是否重建。此入口揭示事务边界，不将原位 setter 或直接复制 Edit 当作已完成的严格事务。
+`zoeydaw_mixer_tests --transaction-model` 使用真实 WAV 和同一 renderer clock 比较原位 Edit、独立候选和保留兼容处理资源的候选。它输出发布前、准备中、拒绝后及采用后的 PCM，记录 wrapper 重建，并验证 Utility 平滑、Delay 尾音、SDK 初始化及 reset 换代。此入口揭示事务边界，不将原位 setter、直接复制 Edit 或局部资源保留当作已完成的严格事务。
 
 `cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json [FRAME_DIRECTORY]` 使用真实低增益输出，覆盖停止打开、无图 seek、完整 u64、Edit owner 换代、等待播放和实际音频块接管。可选输出目录必须已存在；探针保存真实 stream 的 `.bin` 与配套 registry JSON，便于重放到 Web consumer。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 指定独立设备配置，`ZOEYDAW_AUDIO_CACHE_PATH` 指定临时缓存。停止、等待和播放使用同一个 levels v2 stream，不伪造 sample clock。该探针不启动桌面应用，也不代替物理听感验收。
 

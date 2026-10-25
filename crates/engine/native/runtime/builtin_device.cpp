@@ -167,15 +167,22 @@ struct ReverbDsp {
 }
 
 struct BuiltinDevice::DspState {
-    std::variant<UtilityDsp, FilterDsp, DelayDsp, ReverbDsp> processor;
-    DspState(size_t kind, double rate, int blockSize) : processor(std::in_place_type<UtilityDsp>, rate) {
+    using Processor = std::variant<UtilityDsp, FilterDsp, DelayDsp, ReverbDsp>;
+    Processor processor;
+    const double sampleRate;
+    const int blockSize;
+    BuiltinSettings effectiveSettings;
+    bool haveEffectiveSettings = false, enabled = true;
+    std::atomic<bool> resetRequested {false};
+    static Processor createProcessor(size_t kind, double rate, int blockSize) {
         switch (kind) {
-            case 1: processor.emplace<FilterDsp>(rate, blockSize); break;
-            case 2: processor.emplace<DelayDsp>(rate, blockSize); break;
-            case 3: processor.emplace<ReverbDsp>(rate, blockSize); break;
-            default: break;
+            case 0: return Processor(std::in_place_type<UtilityDsp>, rate);
+            case 1: return Processor(std::in_place_type<FilterDsp>, rate, blockSize);
+            case 2: return Processor(std::in_place_type<DelayDsp>, rate, blockSize);
+            default: return Processor(std::in_place_type<ReverbDsp>, rate, blockSize);
         }
     }
+    DspState(size_t kind, double rate, int blockSize) : processor(createProcessor(kind, rate, blockSize)), sampleRate(rate), blockSize(blockSize), effectiveSettings(defaults(kind)) {}
 };
 
 BuiltinDevice::BuiltinDevice(tracktion::PluginCreationInfo info) : Plugin(info), kind(readKind(info.state)) {
@@ -184,7 +191,7 @@ BuiltinDevice::BuiltinDevice(tracktion::PluginCreationInfo info) : Plugin(info),
     static_assert(std::atomic<double>::is_always_lock_free);
     static_assert(std::atomic<float>::is_always_lock_free);
     static_assert(std::atomic<uint32_t>::is_always_lock_free);
-    current.settings = controlSettings = effectiveSettings = defaults(kind);
+    current.settings = controlSettings = defaults(kind);
     const auto values = parameterValues(controlSettings);
     const auto definitions=deviceParameters(controlSettings);
     for (size_t i = 0; i < definitions.size(); ++i) {
@@ -231,47 +238,69 @@ void BuiltinDevice::configure(const Device& value) {
     tailSeconds.store(value.enabled ? tail : 0, std::memory_order_relaxed);
     parameters.publish({value.enabled, settings});
 }
+bool BuiltinDevice::reuseProcessingStateFrom(const BuiltinDevice& previous) {
+    if (!std::holds_alternative<std::monostate>(processing) || kind != previous.kind || &edit.engine != &previous.edit.engine) return false;
+    const auto* active = std::get_if<ActiveDsp>(&previous.processing);
+    if (!active) return false;
+    processing = RetainedDsp {active->value};
+    return true;
+}
 void BuiltinDevice::initialise(const tracktion::PluginInitialisationInfo& info) {
     if (!std::isfinite(info.sampleRate) || info.sampleRate <= 0 || info.blockSizeSamples <= 0)
         throw std::invalid_argument("Invalid builtin device sample rate or block size");
-    dsp = std::make_unique<DspState>(kind, info.sampleRate, info.blockSizeSamples);
-    adoptParameters(true);
-    clearHistory();
-    appliedResetGeneration = resetGeneration.load(std::memory_order_acquire);
+    if (auto* retained = std::get_if<RetainedDsp>(&processing); retained && retained->value->sampleRate == info.sampleRate && retained->value->blockSize == info.blockSizeSamples) {
+        auto state = std::move(retained->value);
+        const bool reset = pendingReset.exchange(false, std::memory_order_acq_rel);
+        processing = ActiveDsp {std::move(state), reset};
+        return;
+    }
+    auto prepared = std::make_shared<DspState>(kind, info.sampleRate, info.blockSizeSamples);
+    processing = ActiveDsp {std::move(prepared)};
+    auto& dsp = *std::get<ActiveDsp>(processing).value;
+    adoptParameters(dsp, true);
+    clearHistory(dsp);
+    pendingReset.store(false, std::memory_order_release);
 }
-void BuiltinDevice::deinitialise() { dsp.reset(); }
-void BuiltinDevice::reset() { resetGeneration.fetch_add(1, std::memory_order_release); }
-void BuiltinDevice::clearHistory() noexcept {
-    std::visit([](auto& processor) { processor.reset(); }, dsp->processor);
+bool BuiltinDevice::needsResetAfterInitialisation() const noexcept { return false; }
+void BuiltinDevice::deinitialise() { processing = std::monostate {}; }
+void BuiltinDevice::reset() {
+    if (const auto* active = std::get_if<ActiveDsp>(&processing)) active->value->resetRequested.store(true, std::memory_order_release);
+    else pendingReset.store(true, std::memory_order_release);
+}
+void BuiltinDevice::clearHistory(DspState& dsp) noexcept {
+    std::visit([](auto& processor) { processor.reset(); }, dsp.processor);
 }
 bool BuiltinDevice::noTail() { return kind == 0; }
-void BuiltinDevice::adoptParameters(bool immediate) {
-    const bool previousEnabled = current.enabled;
+bool BuiltinDevice::adoptParameters(DspState& dsp, bool immediate) {
+    const bool previousEnabled = dsp.enabled;
     parameters.readLatest(current);
     auto values = parameterValues(current.settings);
     const auto mask = automationMask.load(std::memory_order_acquire);
     for (size_t i = 0; i < parameterCount(kind); ++i)
         if ((mask & (1u << i)) != 0) values[i] = settingParameters[i]->getCurrentValue();
     const auto next = settingsFromValues(kind, values);
-    if (immediate || !haveEffectiveSettings || next != effectiveSettings) {
+    if (immediate || !dsp.haveEffectiveSettings || next != dsp.effectiveSettings) {
         switch (kind) {
-            case 0: std::get<UtilityDsp>(dsp->processor).set(std::get<UtilitySettings>(next), immediate); break;
-            case 1: std::get<FilterDsp>(dsp->processor).set(std::get<FilterSettings>(next), immediate); break;
-            case 2: std::get<DelayDsp>(dsp->processor).set(std::get<DelaySettings>(next), immediate); break;
-            case 3: std::get<ReverbDsp>(dsp->processor).set(std::get<ReverbSettings>(next), immediate); break;
+            case 0: std::get<UtilityDsp>(dsp.processor).set(std::get<UtilitySettings>(next), immediate); break;
+            case 1: std::get<FilterDsp>(dsp.processor).set(std::get<FilterSettings>(next), immediate); break;
+            case 2: std::get<DelayDsp>(dsp.processor).set(std::get<DelaySettings>(next), immediate); break;
+            case 3: std::get<ReverbDsp>(dsp.processor).set(std::get<ReverbSettings>(next), immediate); break;
         }
-        effectiveSettings = next;
-        haveEffectiveSettings = true;
+        dsp.effectiveSettings = next;
+        dsp.haveEffectiveSettings = true;
     }
-    if (previousEnabled != current.enabled) clearHistory();
+    dsp.enabled = current.enabled;
+    return !immediate && previousEnabled != current.enabled;
 }
 void BuiltinDevice::applyToBuffer(const tracktion::PluginRenderContext& context) {
-    if (!dsp) return;
+    auto* active = std::get_if<ActiveDsp>(&processing);
+    if (!active) return;
+    auto& dsp = *active->value;
     juce::ScopedNoDenormals noDenormals;
-    adoptParameters(false);
-    const auto generation = resetGeneration.load(std::memory_order_acquire);
-    if (generation != appliedResetGeneration) clearHistory();
-    appliedResetGeneration = generation;
+    bool clear = adoptParameters(dsp, false);
+    if (active->resetOnFirstProcess) { clear = true; active->resetOnFirstProcess = false; }
+    if (dsp.resetRequested.load(std::memory_order_acquire) && dsp.resetRequested.exchange(false, std::memory_order_acq_rel)) clear = true;
+    if (clear) clearHistory(dsp);
     if (!current.enabled || !context.destBuffer || context.bufferNumSamples <= 0) return;
     auto& buffer = *context.destBuffer;
     const int startSample = context.bufferStartSample;
@@ -280,6 +309,6 @@ void BuiltinDevice::applyToBuffer(const tracktion::PluginRenderContext& context)
     if (count <= 0) return;
     auto* left = buffer.getWritePointer(0, startSample);
     auto* right = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1, startSample) : nullptr;
-    std::visit([&](auto& processor) { processor.process(left, right, count); }, dsp->processor);
+    std::visit([&](auto& processor) { processor.process(left, right, count); }, dsp.processor);
 }
 }

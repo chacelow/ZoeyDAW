@@ -50,7 +50,7 @@ void run() {
     }
     fader->setVolumeDb(0);
     auto previous=MixerTestAccess::candidate(session,decode(request));
-    decltype(previous) candidate;
+    decltype(previous) candidate,retained;
     SignalRenderer active(*previous->edit);const auto baseline=active.render(64);
     auto changed=copy(request);auto changedTrack=changed["state"]["project"]["tracks"][1];put(changedTrack,"volumeDb",-6.020599913);
     candidate=MixerTestAccess::candidate(session,decode(changed));
@@ -64,5 +64,16 @@ void run() {
     active.replace(*candidate->edit);const auto adopted=active.render(64);
     require(std::abs(adopted-.125)<1e-5 && MixerTestAccess::edit(session)==canonical,"Candidate did not adopt on the original renderer clock");
     std::cout<<"Isolated Edit model: old PCM "<<baseline<<" -> prepared "<<whilePrepared<<" -> rejected "<<afterRejection<<" -> adopted "<<adopted<<"; unchanged Device recreated="<<recreated<<'\n';
+    auto retainedRequest=copy(changed);auto retainedDevice=retainedRequest["state"]["project"]["tracks"][1]["devices"][0];put(retainedDevice,"gainDb",-6.020599913);
+    retained=MixerTestAccess::candidate(session,decode(retainedRequest));
+    auto* oldProcessor=dynamic_cast<BuiltinDevice*>(candidate->devices.at("transaction-utility").get());
+    auto* newProcessor=dynamic_cast<BuiltinDevice*>(retained->devices.at("transaction-utility").get());
+    require(oldProcessor && newProcessor && newProcessor->reuseProcessingStateFrom(*oldProcessor),"Candidate did not retain the compatible processor");
+    auto retainedGraph=active.build(*retained->edit);
+    const auto retainedPreparation=active.render(32);require(std::abs(retainedPreparation-.125)<1e-5,"Retained processor preparation leaked candidate parameters");
+    active.player.setNode(std::move(retainedGraph),48000,256);const auto retainedAdoption=active.render(64);
+    require(std::abs(retainedAdoption-.0625)<1e-5,"Retained processor candidate did not adopt its isolated gain");
+    std::cout<<"Retained processing model: old PCM "<<retainedPreparation<<" -> adopted "<<retainedAdoption<<", one renderer clock and separate wrapper parameters\n";
+    testBuiltinProcessingStateReuse(*canonical);
 }
 }

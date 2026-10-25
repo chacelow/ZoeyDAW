@@ -551,7 +551,7 @@ void Plugin::baseClassInitialise (const PluginInitialisationInfo& info)
         setAutomatableParamPosition (info.startTime);
     }
 
-    if (sampleRateOrBlockSizeChanged)
+    if (sampleRateOrBlockSizeChanged && needsResetAfterInitialisation())
     {
         CRASH_TRACER
         reset();

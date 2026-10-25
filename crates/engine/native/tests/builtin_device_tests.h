@@ -9,6 +9,7 @@ struct BuiltinDspHarness {
     zp::Device device;
     double rate;
     int64_t position = 0;
+    bool baseInitialised = false;
     BuiltinDspHarness(tracktion::Edit& edit, const char* kind, zp::DeviceSettings settings,
                       double sampleRate = 48000, int preparedBlock = 256)
         : plugin(tracktion::PluginCreationInfo(edit, state(kind), true)),
@@ -16,7 +17,16 @@ struct BuiltinDspHarness {
         plugin.configure(device);
         plugin.initialise({tracktion::TimePosition(), rate, preparedBlock});
     }
-    ~BuiltinDspHarness() { plugin.deinitialise(); }
+    BuiltinDspHarness(tracktion::Edit& edit, const char* kind, zp::DeviceSettings settings,
+                      const zp::BuiltinDevice& previous, double sampleRate = 48000, int preparedBlock = 256)
+        : plugin(tracktion::PluginCreationInfo(edit, state(kind), true)),
+          device {"builtin-dsp-regression", true, settings}, rate(sampleRate) {
+        plugin.configure(device);
+        require(plugin.reuseProcessingStateFrom(previous), "Compatible candidate did not retain prepared processing state");
+        plugin.baseClassInitialise({tracktion::TimePosition(), rate, preparedBlock});
+        baseInitialised = true;
+    }
+    ~BuiltinDspHarness() { if(baseInitialised)plugin.baseClassDeinitialise();else plugin.deinitialise(); }
     void update() { plugin.configure(device); }
     void process(juce::AudioBuffer<float>& buffer, int offset, int count, bool playing = true) {
         const auto begin = tracktion::TimePosition::fromSeconds(position / rate);
@@ -303,6 +313,7 @@ void testBuiltinAutomatedDsp(tracktion::Edit& edit) {
                 "Clearing automation mask failed to restore authored manual settings");
     }
 }
+#include "builtin_processing_state_tests.h"
 void testBuiltinDeviceDsp(tracktion::Edit& edit) {
     testBuiltinUtilityDsp(edit);
     testBuiltinFilterDsp(edit);
@@ -311,4 +322,5 @@ void testBuiltinDeviceDsp(tracktion::Edit& edit) {
     testBuiltinHistoryDsp(edit);
     testBuiltinMidiDsp(edit);
     testBuiltinAutomatedDsp(edit);
+    testBuiltinProcessingStateReuse(edit);
 }

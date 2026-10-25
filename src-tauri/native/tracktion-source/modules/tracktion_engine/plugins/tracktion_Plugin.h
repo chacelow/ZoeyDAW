@@ -244,6 +244,9 @@ public:
     /** Should reset synth voices, tails, clear delay buffers, etc. */
     virtual void reset();
 
+    /** Returns false when initialise owns reset or retains compatible processing state. */
+    virtual bool needsResetAfterInitialisation() const noexcept { return true; }
+
     /** Track name or colour has changed. */
     virtual void trackPropertiesChanged();
 
