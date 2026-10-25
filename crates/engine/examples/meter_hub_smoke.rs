@@ -506,6 +506,7 @@ fn main() -> Result<(), String> {
             before_pause.sequence, after_pause.sequence
         );
         request["state"]["project"]["bpm"] = 121.into();
+        request["state"]["project"]["numerator"] = 3.into();
         request["stage"] = "commit".into();
         request["sequence"] = 2.into();
         request["revision"] = 1.into();
@@ -575,6 +576,7 @@ fn main() -> Result<(), String> {
             return Err("Stopped graph probe control was rejected".into());
         }
         request["state"]["project"]["bpm"] = 122.into();
+        request["state"]["project"]["numerator"] = 4.into();
         request["sequence"] = 4.into();
         request["baseRevision"] = 1.into();
         request["revision"] = 2.into();
@@ -609,7 +611,7 @@ fn main() -> Result<(), String> {
             return Err("Resumed stream retained retired graph".into());
         }
         println!(
-            "Stopped tempo replacement -> unprepared metadata -> resumed same stream generation {}",
+            "Stopped time-signature replacement -> unprepared metadata -> resumed same stream generation {}",
             resumed.generation
         );
         Ok::<(), String>(())

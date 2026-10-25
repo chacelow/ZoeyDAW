@@ -83,6 +83,8 @@ Windows 在 Visual Studio 的 x64 Native Tools Command Prompt 中运行 `corepac
 
 `cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json` 使用真实输出设备，将 Main 限制到 −30 dB。输入是严格 protocol v2 工程请求。它验证 EngineSession、native meter reader、Rust Hub 的真实样本聚合、音频图 sample/beat 时钟、1.2秒慢消费者、选择性 reset、换图后的 BPM 与 lease 释放，不启动 Tauri、不请求输入权限。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 与 `ZOEYDAW_AUDIO_CACHE_PATH` 指向临时位置可隔离用户偏好；这项 smoke 不代替 WebView 吞吐和实际操作验收。
 
+Windows WASAPI 的冷启动默认格式由 `audio_hardware_windows.cpp` 读取系统 mix format 与设备周期，不使用未打开 JUCE probe 的 current rate，不猜测采样率，也不在查询时调用音频流 Initialize/Start。普通 shared 模式已通过上述真实 Hub smoke，覆盖采样、RMS、时钟、窗口隔离、reset、慢消费者、拍号引起的换图和释放。Low Latency 与 Exclusive 模式仍未实测。探针通过拍号变更触发结构替换；单独改 BPM 保留 Edit，不能再作为换图测试输入。需要重启 `tauri:dev`，桌面播放及真实音乐听验仍由用户完成。
+
 `playback_clock_probe(streamId)` 返回同一 Hub 原点的十进制纳秒和设备采样锚点，仅所属窗口可读。Web 首帧后每五秒串行采样五次，按最小 RTT 中点估算偏移，保留半 RTT 不确定度；隐藏恢复重新校准。`MeterSession.readFrameAge()` 只表示 Hub 快照发布年龄，不等同音频块采集到绘制的全链路延迟。真实 WKWebView 的 p95/p99 尚未测量。
 
 `zoeydaw_audio_configuration_smoke [OUTPUT_DEVICE_ID]` 使用真实声卡，保持其当前物理采样率，只切换支持的 Buffer Size 后恢复。它验证 capabilities 探测不打开设备、配置失败与持久化失败回滚、输出通道掩码、编排和独立 Preview 状态、停止代际及重新创建 owner 后的偏好恢复。配置和 cache 使用临时位置，不覆盖用户偏好。它不请求输入权限，不验证录音或物理 loopback。示例设备 ID 为 `CoreAudio::E2x2`，以本机实际枚举为准。

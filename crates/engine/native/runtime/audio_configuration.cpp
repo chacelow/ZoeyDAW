@@ -56,6 +56,8 @@ bool AudioConfiguration::outputEnabled(int first,int count) const {
 void requireAudioInputPermission(bool requestIfUndetermined) {
     juce::ignoreUnused(requestIfUndetermined);
 }
+#if !JUCE_WINDOWS
 std::optional<AudioHardwareDefaults> audioHardwareDefaults(const juce::String&,const juce::String&) { return {}; }
+#endif
 #endif
 }
