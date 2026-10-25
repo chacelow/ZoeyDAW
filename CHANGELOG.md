@@ -2,6 +2,7 @@
 
 ## 0.1.0 - unreleased
 
+- Extract the MeterHub aggregation and publication loop into a private worker module, retaining the same Shared state, native readers, thread lifecycle and public API. Reduce the Hub file below 800 lines and remove its size-debt exemption; focused realtime checks and the real Windows Hub smoke pass.
 - Read Windows WASAPI startup defaults from the selected endpoint's system mix format and device period, fixing first Play rejection caused by an unopened JUCE probe reporting zero sample rate. Verify the real EngineSession-to-Hub output path; use time-signature edits for graph replacement in the smoke now that BPM edits retain the Edit. Low Latency, Exclusive and desktop listening remain unverified.
 - Enable MSVC C++ exception unwinding on the native playback target and its existing compile-config consumers. Fix Cargo's Windows JUCE build failure without changing third-party sources; 21 focused Rust realtime checks pass.
 - Move the paired Vite and Tauri development URL to localhost:7173 after Windows excluded port 5173. Keep strict port binding and verify the replacement port on both IPv4 and IPv6 loopback.
