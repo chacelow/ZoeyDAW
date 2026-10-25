@@ -2,6 +2,7 @@
 
 ## 0.1.0 - unreleased
 
+- Enable MSVC C++ exception unwinding on the native playback target and its existing compile-config consumers. Fix Cargo's Windows JUCE build failure without changing third-party sources; 21 focused Rust realtime checks pass.
 - Move the paired Vite and Tauri development URL to localhost:7173 after Windows excluded port 5173. Keep strict port binding and verify the replacement port on both IPv4 and IPv6 loopback.
 - Fetch only the locked JUCE commit when preparing a missing native dependency, instead of cloning its full history. Retain existing-checkout validation, license checks and private temporary-directory publication; repeated setup preserves the installed checkout.
 - Fix realtime wire verification on Windows by using MSVC and explicit `.exe` outputs. Preserve the existing TypeScript, Rust and C++ roundtrip and golden assertions; run from the Visual Studio x64 developer environment so Rust uses the MSVC linker.

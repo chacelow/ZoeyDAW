@@ -36,6 +36,9 @@ target_compile_definitions(zoeydaw_playback PUBLIC
 # JUCE module targets are INTERFACE targets: their source files become members of this archive.
 target_link_libraries(zoeydaw_playback PRIVATE tracktion::tracktion_engine
     tracktion::tracktion_graph tracktion::tracktion_core juce::juce_cryptography juce::juce_dsp)
+if(MSVC)
+    target_compile_options(zoeydaw_playback PRIVATE /EHsc)
+endif()
 add_library(zoeydaw_native_compile_config INTERFACE)
 target_include_directories(zoeydaw_native_compile_config INTERFACE
     $<TARGET_PROPERTY:zoeydaw_playback,INCLUDE_DIRECTORIES>)
