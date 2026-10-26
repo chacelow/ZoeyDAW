@@ -58,7 +58,7 @@ UI 改动必须在已有应用或 Web 页面上验证主路径，观察新截图
 
 插件 helper 使用 `third_party/plughost/source-lock.json` 固定的 0.1.5 源码。`node scripts/audio/build-plugin-helper.mjs` 构建 `zoeydaw-plugin-helper`，在 macOS 生成并验证仅 helper 使用的 ad-hoc Hardened Runtime 签名，在 Windows 复制原生可执行文件。Tauri 的开发与构建前置命令运行该脚本，生成物位于 ignored `src-tauri/plugin-helper/`，作为资源打包。脚本不启动 DAW、不扫描插件、不执行发布签名或公证。
 
-`node scripts/audio/verify-plugin-host.mjs [NATIVE_BUILD_DIRECTORY]` 从维护源码构建本地测试插件，打包到临时目录，运行后清理。它不扫描已安装插件。验收覆盖 catalog 身份约束、扫描取消、音频/MIDI/自动化跨 quantum 偏移、宿主回调分配计数、CLAP/VST3 quantum 内时间跳转、崩溃/挂起隔离及显式恢复的真实输出。指定 native build 目录时还构建并执行 Tracktion Node→C ABI→Rust→helper 的脉冲、PDC 和乐器测试。`transport_smoke` 可额外接收不兼容 helper 路径，验证拒绝旧构建。macOS 已实测，Windows 尚未实测；这些探针不代替工程 Device 和真实 UI 验收。
+`node scripts/audio/verify-plugin-host.mjs [NATIVE_BUILD_DIRECTORY]` 从维护源码构建本地测试插件，打包到临时目录，运行后清理。它不扫描已安装插件。验收覆盖 catalog 身份约束、扫描取消、音频/MIDI/自动化跨 quantum 偏移、宿主回调分配计数、CLAP/VST3 quantum 内时间跳转、崩溃/挂起隔离及显式恢复的真实输出。指定 native build 目录时还构建并执行 Tracktion Node→C ABI→Rust→helper 的脉冲、PDC 和乐器测试。`transport_smoke` 可额外接收不兼容 helper 路径，验证拒绝旧构建。macOS 已实测；2026-10-26 在 Windows x64 运行带 native build 参数的完整入口通过，包括参数/状态恢复、两种格式的隔离与实时端点恢复、admission 释放及 1504-frame 原生图补偿断言。这些探针不代替插件编辑器、物理输入和真实 UI 验收。
 
 `cargo run -p zoeydaw-engine --example plugin_admission_smoke --locked` 通过真实 EngineSession 验证异步 admission 回执未领取时取消，以及显式取消的恰好一次释放；不启动 Tauri 或声卡。带 native build 参数的插件验证脚本包含此入口。
 
