@@ -8,6 +8,7 @@
   "extensionBuild": "5a44000100000001",
   "localChanges": [
     "Bounded per-quantum transport changes with helper-side sample segmentation",
-    "Realtime shared mapping format 2 and matching extension-build handshake"
+    "Realtime shared mapping format 2 and matching extension-build handshake",
+    "Host-only recovery candidate configuration from persisted project states before realtime handover"
   ]
 }

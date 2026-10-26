@@ -138,12 +138,12 @@ void testEditorAuthority() {
         return 1;
     }},{48000,512,2,2,0},nullptr);
     const auto context=reinterpret_cast<std::uintptr_t>(&state);
-    require(!binding->setEditorAuthority(context+1,true),"Stale editor claimed another processor");
+    require(!binding->setEditorAuthority(context+1,1,true),"Stale editor claimed another processor");
     zd_plugin_block block {};
     binding->setParameters({{7,.2}});
     binding->process(block);
     require(state.count==1 && state.value==.2,"Authored parameter did not reach processor");
-    require(binding->setEditorAuthority(context,true),"Editor failed to claim its processor");
+    require(binding->setEditorAuthority(context,1,true),"Editor failed to claim its processor");
     binding->setParameters({{7,.3}});
     beginAllocationGuard();binding->process(block);const auto allocations=endAllocationGuard();
     require(allocations==0 && state.count==0,"Editor received stale manual feedback or allocated");
@@ -151,7 +151,11 @@ void testEditorAuthority() {
     binding->process(block);
     require(state.count==1 && state.value==.8,"Editor ownership suppressed authored automation");
     block.automation=nullptr;block.automation_count=0;
-    require(binding->setEditorAuthority(context,false),"Editor failed to release its processor");
+    require(binding->setEditorAuthority(context,2,true),"New editor failed to claim its processor");
+    require(!binding->setEditorAuthority(context,1,false),"Stale cleanup released the newer editor");
+    binding->setParameters({{7,.4}});binding->process(block);
+    require(state.count==0,"Stale cleanup replayed manual feedback into a newer editor");
+    require(binding->setEditorAuthority(context,2,false),"Editor failed to release its processor");
     binding->process(block);
     require(state.count==0,"Discarded editor feedback replayed after close");
     binding->setParameters({{7,.6}});binding->process(block);

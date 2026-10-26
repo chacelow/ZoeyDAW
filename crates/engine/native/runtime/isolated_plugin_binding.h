@@ -23,13 +23,15 @@ public:
     int32_t process(zd_plugin_block&) noexcept;
     int32_t latchFault(int32_t) noexcept;
     void setParameters(const std::vector<ExternalParameter>&);
-    bool setEditorAuthority(std::uintptr_t context, bool active) noexcept;
+    bool setEditorAuthority(std::uintptr_t context, uint64_t instance, bool active) noexcept;
+    bool matchesContext(std::uintptr_t context) const noexcept { return context==reinterpret_cast<std::uintptr_t>(callback.context); }
     const IsolatedPluginFormat format;
     std::atomic<int32_t> status {0};
     std::atomic<bool> enabled {true};
     std::atomic<bool> editorActive {false};
 private:
     const zd_plugin_callback callback;
+    uint64_t editorInstance=0;
     std::atomic_flag processing = ATOMIC_FLAG_INIT;
     void (*release)(void*);
     struct ManualParameters { uint32_t count=0;std::array<zd_plugin_automation,4096> values {}; };

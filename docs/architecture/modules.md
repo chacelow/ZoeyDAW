@@ -60,11 +60,13 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 `IsolatedPluginNode` 通过 `plugin-abi/include/processor.h` 调用 Rust 处理器，复用 ProcessState 的 sample、PPQ、BPM、拍号与循环坐标。`zoeydaw-plugin-abi` 无外部依赖，统一 engine 与 plugin-host 的 Rust C 布局类型及待移交资源守卫，engine 不依赖宿主实现。EngineSession 持有 `IsolatedPluginBindings`，控制线程保留最后一份引用，图引用全部释放后才销毁处理器；owned admission 失败也释放资源。admission 绑定 lease、session、Device ID 与当前 revision，取消、lease 释放或 revision 切换清理未消费的资源。binding 的非等待原子进入检查拒绝并发可变访问，不承诺多图同时驱动同一处理器。
 
-`device_session::PreparedDevice` 从不可伪造的 `PluginSelection` 在独立控制线程创建单插件 Chain，使用 `ProcessMode::Realtime`，暴露有界串行参数、状态与编辑器请求。请求调用方会等待回执，只能在非实时 worker 使用。`DeviceAudio` 随 typed owned descriptor 移交 native，持有控制线程的存活引用；控制句柄全部释放后，仍要等 native 最后音频引用释放才销毁 Chain。真实 CLAP 探针已验证参数输出、状态恢复、无回调分配，以及两侧先后释放的 helper 生命周期；EngineSession 的生产 admission 尚未接入。
+`device_session::PreparedDevice` 从不可伪造的 `PluginSelection` 在独立控制线程创建单插件 Chain，使用 `ProcessMode::Realtime`，暴露有界串行参数、状态、编辑器与恢复请求。请求调用方会等待回执，只能在非实时 worker 使用。`DeviceAudio` 随 typed owned descriptor 移交 native，持有控制线程的存活引用；控制句柄全部释放后，仍要等 native 最后音频引用释放才销毁 Chain。真实 CLAP 探针已验证参数输出、状态恢复、无回调分配，以及两侧先后释放的 helper 生命周期；应用复用既有 EngineSession admission，不新增播放后端。
 
 `IsolatedDevicePlugin` 通过 Tracktion `PluginCache` 创建并进入 `PluginList`，由 per-build `createCustomPluginNode` 替换普通 PluginNode；EngineSession 对当前和候选 Edit 均安装该入口。隔离节点按 Device ID 注册电平，零音频输入的乐器只产生输出电平。用户 bypass 读取与湿信号等延迟的 dry 音频和 MIDI，乐器 bypass 清除音频；故障 latch 与 bypass 分离。真实 CLAP retained Edit 探针验证 session admission、起音、停音、输出电平及补偿 bypass，native 回归验证 owner 拒绝、取消与 revision 退役、dry MIDI 偏移及零回调分配。这些验证尚不包含 Web Device 插入、Tauri admission 调用方、保存屏障或完整自动化。
 
 `PluginDevices` 将 prepared control 绑定到 window、lease、session 和 Device ID。打开编辑器还核对已接受的 catalog ID 与 state hash。control worker 使用递增 instance ID；C ABI context 地址保留到 native 与 control 两侧引用全部释放。编辑器命令和参数事件复用已有有界 worker 队列。helper 拥有原生窗口和取消 checkpoint；Web `adapters/plugin-editor/` 只拥有轮询和编辑生命周期，不新增 document Store。保存工程先提交打开的插件编辑器，再捕获 revision。桌面终验与 helper、浏览器探针分开记录。
+
+`device_session/health.rs` 只观察 SDK 与回调故障，并在同一 actor 内执行显式恢复。恢复从 native accepted 模型取得状态引用和参数；宿主候选在端点发布前完成参数恢复与延迟检查，成功后才推进 instance ID。故障观察复用现有低频 telemetry 与 MeterStreams EventLog，不创建第二个 Hub 或轮询线程。Web `adapters/plugin-recovery/` 拥有单在途请求与项目代际，`plugin-recovery/` 只呈现同一故障动作，工程文档仍由 runtime 独占。
 
 `crates/engine/native` 将协议模型、无设备分析与 EngineSession 分为 `model`、`analysis`、`runtime` 三个 OBJECT targets。分析不依赖 runtime，runtime 不依赖分析；根 `playback_bridge` 保留 C ABI。Tracktion/JUCE 实现只进入最终 `zoeydaw_playback` 静态库，OBJECT targets 仅继承编译配置，不链接带实现源的 vendor INTERFACE targets。
 

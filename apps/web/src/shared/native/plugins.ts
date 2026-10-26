@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog"
 import { z } from "zod"
 import { isDevice, isNativeParameterId, isPluginStateRef } from "@zoeydaw/project-core/devices"
 import type { ExternalDevice, PluginStateRef } from "@zoeydaw/project-core/devices"
+import { pluginFaultKindSchema } from "@zoeydaw/project-core/realtime"
 
 const plugin = z
   .object({
@@ -44,6 +45,32 @@ const parameter = z
 export type PluginParameter = z.infer<typeof parameter>
 
 const nativeId = z.string().refine(isNativeParameterId)
+const pluginFaultSchema = z
+  .object({
+    kind: pluginFaultKindSchema,
+    code: z.string().min(1),
+    message: z.string().min(1),
+    recoverable: z.boolean(),
+  })
+  .strict()
+const pluginHealthSchema = z
+  .object({
+    instanceId: nativeId,
+    helperProcessId: z.number().int().positive(),
+    fault: pluginFaultSchema.nullable(),
+  })
+  .strict()
+export const pluginFaultStatusSchema = pluginFaultSchema
+  .extend({
+    sessionId: z.string().min(1),
+    trackId: z.string().min(1),
+    deviceId: z.string().min(1),
+    instanceId: nativeId,
+    helperProcessId: z.number().int().positive(),
+  })
+  .strict()
+export type PluginFaultStatus = z.infer<typeof pluginFaultStatusSchema>
+export type PluginHealth = z.infer<typeof pluginHealthSchema>
 const editorEvent = z.discriminatedUnion("kind", [
   z
     .object({
@@ -128,6 +155,10 @@ export const nativePlugins = {
     if (!isPluginStateRef(value)) throw new Error("Invalid live plugin state reference")
     return value
   },
+  recover: async (sessionId: string, deviceId: string, instanceId: string): Promise<PluginHealth> =>
+    pluginHealthSchema.parse(
+      await invoke("plugin_device_recover", { sessionId, deviceId, instanceId })
+    ),
   pickFolder: () => open({ directory: true, multiple: false }),
   entries: async (): Promise<PluginCatalogEntry[]> =>
     z.array(entry).parse(await invoke("plugin_catalog_entries")),

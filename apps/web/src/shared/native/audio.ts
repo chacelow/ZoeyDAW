@@ -7,6 +7,7 @@ import {
   waveformRangeSchema,
 } from "@zoeydaw/project-core/waveform-range"
 import type { WaveformRange, WaveformRangeRequest } from "@zoeydaw/project-core/waveform-range"
+import { pluginFaultStatusSchema } from "./plugins"
 
 const counter = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
 const finite = z.number().finite()
@@ -190,6 +191,7 @@ const snapshotSchema = z
   .object({
     device: deviceSchema,
     meterReady: z.boolean(),
+    pluginFaults: z.array(pluginFaultStatusSchema).max(256),
     recordingPreview: recordingPreviewSchema.nullable().optional(),
     issues: z.array(
       z
@@ -199,6 +201,8 @@ const snapshotSchema = z
           sourceId: z.string().optional(),
           trackId: z.string().optional(),
           clipId: z.string().optional(),
+          deviceId: z.string().optional(),
+          instanceId: z.string().optional(),
         })
         .strict()
     ),
@@ -491,14 +495,16 @@ export function cancelNativeWaveformRanges(): Promise<void> {
 export interface NativeAudioStatus {
   device: AudioDeviceSnapshot | null
   issues: PlaybackSnapshot["issues"]
+  pluginFaults: PlaybackSnapshot["pluginFaults"]
   error: string | null
   recordingPreview: NativeRecordingPreview | null
 }
 const audioState: { status: NativeAudioStatus } = {
-  status: { device: null, issues: [], error: null, recordingPreview: null },
+  status: { device: null, issues: [], pluginFaults: [], error: null, recordingPreview: null },
 }
 const statusListeners = new Set<() => void>()
 export const readNativeAudioStatus = () => audioState.status
+export const readNativePluginFaults = () => audioState.status.pluginFaults
 export function subscribeNativeAudioStatus(listener: () => void) {
   statusListeners.add(listener)
   return () => {
@@ -506,7 +512,26 @@ export function subscribeNativeAudioStatus(listener: () => void) {
   }
 }
 export function publishNativeAudioStatus(next: Partial<NativeAudioStatus>) {
-  audioState.status = { ...audioState.status, ...next }
+  const previous = audioState.status.pluginFaults
+  const faults = next.pluginFaults ?? previous
+  const same =
+    faults.length === previous.length &&
+    faults.every((fault, index) => {
+      const before = previous[index]
+      return (
+        before &&
+        fault.sessionId === before.sessionId &&
+        fault.trackId === before.trackId &&
+        fault.deviceId === before.deviceId &&
+        fault.instanceId === before.instanceId &&
+        fault.helperProcessId === before.helperProcessId &&
+        fault.kind === before.kind &&
+        fault.code === before.code &&
+        fault.message === before.message &&
+        fault.recoverable === before.recoverable
+      )
+    })
+  audioState.status = { ...audioState.status, ...next, pluginFaults: same ? previous : faults }
   for (const listener of statusListeners) listener()
 }
 export function audioErrorMessage(error: unknown): string {

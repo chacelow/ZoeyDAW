@@ -34,7 +34,7 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
         EditorRequest::Open { catalog_id,state_hash,.. } => devices.editor_control(window.label(),&session_id,&device_id,catalog_id,state_hash.as_deref())?,
         _ => devices.control(window.label(),&session_id,&device_id)?,
     };
-    let instance = control.instance_id().to_string();
+    let generation = control.instance_id();let instance = generation.to_string();
     match &request {
         EditorRequest::Open { parameters,.. } if parameters.len()<=4096 => {},
         EditorRequest::Open { .. } => return Err("Plugin parameter capacity exceeded".into()),
@@ -45,7 +45,7 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
     let opening = matches!(&request,EditorRequest::Open { .. });
     let ending = matches!(&request,EditorRequest::Commit { .. } | EditorRequest::Cancel { .. });
     if opening {
-        service.plugin_editor_authority(&TauriMainThread(&app),session_id.clone(),device_id.clone(),control.native_context(),true).await?;
+        service.plugin_editor_authority(&TauriMainThread(&app),session_id.clone(),device_id.clone(),control.native_context(),generation,true).await?;
     }
     let worker = control.clone();
     let result = tauri::async_runtime::spawn_blocking(move || -> Result<Value,String> {
@@ -53,11 +53,11 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
             EditorRequest::Open { parameters,.. } => {
                 let parameters = parameters.into_iter().map(|value|Ok((value.id.parse::<u64>().map_err(|error|error.to_string())?,value.normalized)))
                     .collect::<Result<Vec<_>,String>>()?;
-                worker.begin_editor(parameters)?;
+                worker.begin_editor(generation,parameters)?;
                 Ok(json!({"kind":"opened","parameters":parameter_json(worker.parameters()?)}))
             }
             EditorRequest::Poll { .. } => {
-                let (open,batch) = worker.editor_events()?;
+                let (open,batch) = worker.editor_events(generation)?;
                 let resync = batch.resync_required || batch.events.iter().any(|event|!matches!(event,ParameterEvent::Value { .. } | ParameterEvent::BeginEdit { .. } | ParameterEvent::EndEdit { .. } | ParameterEvent::Dirty { .. }));
                 let parameters = if resync { parameter_json(worker.parameters()?) } else { Value::Null };
                 let events: Vec<_> = batch.events.into_iter().map(|event| match event {
@@ -72,29 +72,29 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
                 Ok(json!({"kind":"events","open":open,"events":events,"parameters":parameters,"resyncRequired":batch.resync_required}))
             }
             EditorRequest::Commit { .. } => {
-                let state = worker.end_editor(true)?;
+                let state = worker.end_editor(generation,true)?;
                 let directory = app.path().app_data_dir().map_err(|error|error.to_string())?.join("plugins/state");
                 let store = PluginStateStore::new(directory)?;
                 let reference = store.save(&state)?;
                 Ok(json!({"kind":"committed","stateRef":{"sha256":reference.sha256,"path":store.root().join(reference.path)},"parameters":parameter_json(worker.parameters()?)}))
             }
             EditorRequest::Cancel { .. } => {
-                worker.end_editor(false)?;
+                worker.end_editor(generation,false)?;
                 Ok(json!({"kind":"cancelled"}))
             }
             EditorRequest::Release { .. } => {
-                worker.set_editor(false)?;
+                worker.release_editor(generation)?;
                 Ok(json!({"kind":"released"}))
             }
         }
     }).await.map_err(|error|error.to_string())?;
-    let current = devices.control(window.label(),&session_id,&device_id).is_ok_and(|value|value.instance_id()==control.instance_id());
+    let current = devices.control(window.label(),&session_id,&device_id).is_ok_and(|value|value.instance_id().to_string()==instance);
     if !current || (opening && result.is_err()) {
         let old = control.clone();
-        let _ = tauri::async_runtime::spawn_blocking(move || old.end_editor(false)).await;
+        let _ = tauri::async_runtime::spawn_blocking(move || old.end_editor(generation,false)).await;
     }
     if ending || !current || (opening && result.is_err()) {
-        let released = service.plugin_editor_authority(&TauriMainThread(window.app_handle()),session_id,device_id,control.native_context(),false).await;
+        let released = service.plugin_editor_authority(&TauriMainThread(window.app_handle()),session_id,device_id,control.native_context(),generation,false).await;
         if current { released?; }
     }
     if !current { return Err("Stale plugin editor instance".into()); }

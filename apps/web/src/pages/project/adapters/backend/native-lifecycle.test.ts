@@ -214,14 +214,31 @@ describe("native project backend", () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(listener).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
+    const fault: PlaybackSnapshot["pluginFaults"][number] = {
+      sessionId: request().sessionId,
+      trackId: "track",
+      deviceId: "device",
+      instanceId: "1",
+      helperProcessId: 100,
+      kind: "hang",
+      code: "plugin-hang",
+      message: "Blocked helper",
+      recoverable: true,
+    }
+    port.telemetry.mockResolvedValueOnce({
+      ...snapshot,
+      pluginFaults: [fault, { ...fault, sessionId: "foreign" }],
+    })
     const cleanup = backend.subscribe(listener)
     await vi.advanceTimersByTimeAsync(34)
     expect(listener).not.toHaveBeenCalled()
     expect(readNativeAudioStatus().device).toEqual(device)
+    expect(readNativeAudioStatus().pluginFaults).toEqual([fault])
     cleanup()
     backend.dispose()
     await vi.advanceTimersByTimeAsync(0)
     expect(vi.getTimerCount()).toBe(0)
+    expect(readNativeAudioStatus().pluginFaults).toEqual([])
   })
 
   it("explicitly rejects browser playback instead of silently using a mock engine", async () => {

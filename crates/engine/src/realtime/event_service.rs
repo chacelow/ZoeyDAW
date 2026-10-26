@@ -1,8 +1,25 @@
-use super::metadata_generated::{MeterResetBaseline, MeterResetKind, RealtimeEvent};
+use super::metadata_generated::{MeterResetBaseline, MeterResetKind, PluginFaultKind, RealtimeEvent};
 use crate::PlaybackService;
 use std::sync::Arc;
 
+pub struct PluginFaultReport {
+    pub session_id: String,
+    pub track_id: String,
+    pub device_id: String,
+    pub fault_id: String,
+    pub fault: PluginFaultKind,
+    pub code: String,
+    pub message: String,
+    pub recoverable: bool,
+}
+
 impl PlaybackService {
+    pub fn publish_plugin_faults(&self, window: &str, lease: &str, reports: Vec<PluginFaultReport>) -> Result<(),String> {
+        for report in &reports { self.check_plugin_owner(lease,&report.session_id)?; }
+        self.owner.meter_streams.lock().map_err(|_|"Meter stream owner lock poisoned")?
+            .update_plugin_faults(window,lease,reports)?;
+        self.dispatch_meter_events()
+    }
     pub fn bind_meter_events(
         &self,
         window: &str,

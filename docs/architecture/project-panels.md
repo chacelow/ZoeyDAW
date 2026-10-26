@@ -64,7 +64,7 @@ Arrangement 使用 `--background` 作为编辑区，交替区域混入 4% foregr
 
 激活通过 aria-selected、aria-pressed、aria-current 或 data-active 表达，共享 hover 规则不覆盖激活态。列表激活色优先于菜单 focus 色。
 
-Footer Info 的 hover 通道只接收 ControlEnvironment 定义的组件类型，由语言包提供固定说明，不发布资源名、输入值或即时参数。没有 hover/warning 时在现有 Footer 内展示文件操作状态、错误与外部媒体依赖提示；工程 Header 不另建文件反馈行。控件环境由应用作用域提供；组件画廊使用独立作用域。
+Footer Info 的 hover 通道只接收 ControlEnvironment 定义的组件类型，由语言包提供固定说明，不发布资源名、输入值或即时参数。没有 hover 时，可操作的插件故障先于普通 warning 和文件反馈显示，并复用 Device 面板的恢复动作；没有故障时保留原 warning、文件操作状态、错误与外部媒体依赖提示。工程 Header 不另建反馈行。控件环境由应用作用域提供；组件画廊使用独立作用域。
 
 设置各页使用应用级 `.settings-row`，左侧标题、右侧控件共用列宽，保留原主题、语言和即时应用行为。设备清单在进入页面和打开设备选择器时发现，不提供独立刷新按钮；异步发现不得覆盖新选择或新错误。去掉重复的已选设备、请求值和说明，仅保留设备状态、实际值差异、延迟与可操作错误。
 

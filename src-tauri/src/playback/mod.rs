@@ -4,6 +4,7 @@ pub mod plugin_devices;
 pub mod plugin_seed;
 pub mod plugin_controls;
 pub mod plugin_editor;
+pub mod plugin_recovery;
 use std::{collections::HashMap, path::Path, sync::{Arc, Mutex}};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -84,8 +85,16 @@ pub async fn playback_all_notes_off(app: AppHandle, service: State<'_, PlaybackS
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub async fn playback_telemetry(app: AppHandle, service: State<'_, PlaybackService>, lease_id: String) -> Result<Value, String> {
-    service.telemetry(&TauriMainThread(&app), lease_id).await
+pub async fn playback_telemetry(app: AppHandle, window: tauri::WebviewWindow, service: State<'_, PlaybackService>, plugins: State<'_,plugin_devices::PluginDevices>, lease_id: String) -> Result<Value, String> {
+    plugins.require_owner(window.label(),&lease_id)?;
+    let mut snapshot=service.telemetry(&TauriMainThread(&app),lease_id.clone()).await?;
+    let observer=plugins.inner().clone();let owner=window.label().to_owned();let worker_lease=lease_id.clone();
+    let faults=tauri::async_runtime::spawn_blocking(move || observer.faults(&owner,&worker_lease)).await.map_err(|error|error.to_string())??;
+    service.publish_plugin_faults(window.label(),&lease_id,faults.iter().map(|fault|fault.report()).collect())?;
+    snapshot["pluginFaults"]=serde_json::to_value(&faults).map_err(|error|error.to_string())?;
+    let issues=snapshot.get_mut("issues").and_then(Value::as_array_mut).ok_or("Invalid native issue snapshot")?;
+    for fault in faults { issues.push(serde_json::json!({"code":fault.fault.code,"message":fault.fault.message,"trackId":fault.track_id,"deviceId":fault.device_id,"instanceId":fault.instance_id})); }
+    Ok(snapshot)
 }
 
 #[tauri::command(rename_all = "camelCase")]

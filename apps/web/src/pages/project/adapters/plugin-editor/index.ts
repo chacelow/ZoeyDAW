@@ -1,2 +1,2 @@
 export { usePluginEditor } from "./usePluginEditor"
-export { commitPluginEditors } from "./controller"
+export { commitPluginEditors, cancelPluginEditor } from "./controller"

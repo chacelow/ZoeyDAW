@@ -1,13 +1,12 @@
-/**
- * InfoChannel — StatusStrip 内嵌的信息展示通道。
- *
- * 优先级：hover info（有则显示）→ 最新 warning → 空占位 全部走 token 色；severity 控制图标和强调色。
- */
 import { AlertTriangle, CircleAlert, Info } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
 import { useControlInteractions } from "@/shared/control-interactions/index"
 import type { WarningSeverity } from "@/shared/control-interactions/index"
 import { ProjectFileFeedback } from "@/pages/project/files"
+import { useSyncExternalStore } from "react"
+import { PluginFaultFeedback } from "@/pages/project/plugin-recovery"
+import { readNativePluginFaults, subscribeNativeAudioStatus } from "@/shared/native/audio"
+import { useProjectState } from "@/pages/project/adapters"
 
 const SEVERITY_ICON: Record<WarningSeverity, typeof Info> = {
   info: Info,
@@ -26,6 +25,16 @@ export function InfoChannel() {
   const info = useControlInteractions(state => state.info)
   const warnings = useControlInteractions(state => state.warnings)
   const topWarning = warnings.at(-1)
+  const faults = useSyncExternalStore(subscribeNativeAudioStatus, readNativePluginFaults)
+  const fault = useProjectState(state =>
+    faults.find(
+      fault =>
+        fault.sessionId === state.session.backend.sessionId &&
+        state.document.tracks.some(track =>
+          track.devices?.some(device => device.id === fault.deviceId && device.kind === "external")
+        )
+    )
+  )
 
   if (info) {
     return (
@@ -42,6 +51,7 @@ export function InfoChannel() {
       </div>
     )
   }
+  if (fault) return <PluginFaultFeedback fault={fault} className="flex-1" />
 
   if (topWarning) {
     const severity = topWarning.severity ?? "info"
@@ -54,6 +64,5 @@ export function InfoChannel() {
       </div>
     )
   }
-
   return <ProjectFileFeedback showDependencies />
 }

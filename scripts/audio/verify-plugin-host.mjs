@@ -10,8 +10,8 @@ const windows = process.platform === "win32" && process.arch === "x64"
 if (!mac && !windows)
   throw new Error("Plugin verification requires Apple Silicon macOS or Windows x64")
 const nativeBuild = process.argv[2]
-function run(command, args) {
-  const result = spawnSync(command, args, { cwd: root, stdio: "inherit" })
+function run(command, args, environment = process.env) {
+  const result = spawnSync(command, args, { cwd: root, stdio: "inherit", env: environment })
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error(`${command} failed with status ${result.status}`)
 }
@@ -106,6 +106,26 @@ try {
     plugins,
     path.join(temporary, "editor-catalog.json"),
   ])
+  run(
+    "cargo",
+    [
+      "test",
+      "--release",
+      "--locked",
+      "-p",
+      "zoeydaw-plugin-host",
+      "--lib",
+      "device_session::tests::",
+      "--",
+      "--ignored",
+      "--nocapture",
+    ],
+    {
+      ...process.env,
+      ZOEYDAW_TEST_PLUGIN_HELPER: helper,
+      ZOEYDAW_TEST_PLUGIN_FIXTURES: plugins,
+    }
+  )
   run("cargo", [
     "run",
     "--release",

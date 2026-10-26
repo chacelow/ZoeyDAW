@@ -1,4 +1,5 @@
 use super::TauriMainThread;
+use super::plugin_recovery::PluginFaultStatus;
 use crate::plugin_catalog::PluginCatalogState;
 use serde::Deserialize;
 use serde_json::Value;
@@ -14,6 +15,7 @@ struct ActiveDevice {
     parameters: HashMap<u64, u32>,
     catalog_id: String,
     state_hash: Option<String>,
+    track_id: String,
 }
 #[derive(Default)]
 struct Registry {
@@ -33,6 +35,26 @@ struct Plan {
 }
 
 impl PluginDevices {
+    pub(crate) fn faults(&self, window: &str, lease: &str) -> Result<Vec<PluginFaultStatus>,String> {
+        self.require_owner(window,lease)?;
+        let handles:Vec<_>={
+            let registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
+            registry.controls.iter().filter(|((owner,_,_),_)|owner==lease)
+                .map(|(key,active)|(key.clone(),active.control.clone())).collect()
+        };
+        let mut observed=Vec::new();
+        for (key,control) in handles {
+            let health=control.health()?;
+            if let Some(fault)=health.fault { observed.push((key,health.instance_id,health.helper_process_id,fault)); }
+        }
+        let registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
+        if registry.closed.contains(lease) || registry.owners.get(lease).is_none_or(|owner|owner!=window) { return Err("Plugin fault owner changed".into()); }
+        Ok(observed.into_iter().filter_map(|(key,instance,pid,fault)| {
+            let active=registry.controls.get(&key)?;
+            if active.control.instance_id()!=instance { return None; }
+            Some(PluginFaultStatus { session_id:key.1,device_id:key.2,track_id:active.track_id.clone(),instance_id:instance.to_string(),helper_process_id:pid,fault })
+        }).collect())
+    }
     pub(crate) fn control(&self, window: &str, session: &str, device: &str) -> Result<DeviceControl,String> {
         let registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
         Ok(active_device(&registry,window,session,device)?.control.clone())
@@ -92,7 +114,7 @@ impl PluginDevices {
                 let mut result=Vec::new();
                 for id in plan.device_ids {
                     devices.claim(&worker_window,&worker_lease)?;
-                    let authored=find_device(&request_worker,&id)?;
+                    let authored=find_device(&request_worker,&id)?.device;
                     let plugin=authored.get("plugin").ok_or("Missing plugin identity")?;
                     let catalog_id=plugin.get("catalogId").and_then(Value::as_str).ok_or("Missing catalog identity")?;
                     let selection=catalog.select(&app_worker,catalog_id)?;
@@ -128,10 +150,10 @@ impl PluginDevices {
                 let format=PreparedFormat{sample_rate:device.sample_rate,quantum:device.quantum,input_channels:device.input_channels,
                     output_channels:device.output_channels,latency_frames:device.latency_frames};
                 let parameters=device.parameters.iter().filter(|info|info.flags.automatable && !info.flags.read_only).map(|info|(info.id,info.step_count)).collect();
-                let authored=find_device(&request,&id)?;
+                let origin=find_device(&request,&id)?;let authored=origin.device;
                 let catalog_id=authored.pointer("/plugin/catalogId").and_then(Value::as_str).ok_or("Missing catalog identity")?.to_owned();
                 let state_hash=authored.pointer("/stateRef/sha256").and_then(Value::as_str).map(str::to_owned);
-                controls.push((id.clone(),ActiveDevice { control:device.control,parameters,catalog_id,state_hash }));
+                controls.push((id.clone(),ActiveDevice { control:device.control,parameters,catalog_id,state_hash,track_id:origin.track_id.to_owned() }));
                 prepared.push(PreparedPlugin{device_id:id,format,processor:device.audio.into_pending()});
             }
         }
@@ -160,7 +182,13 @@ impl PluginDevices {
         if result.get("kind").and_then(Value::as_str)==Some("accepted") {
             let mut registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
             if registry.closed.contains(&lease) { return Err("Plugin device lease closed".into()); }
-            registry.controls.retain(|(owner,existing_session,id),_|owner!=&lease || (existing_session==&session && find_device(&request,id).is_ok()));
+            registry.controls.retain(|(owner,existing_session,id),active| {
+                if owner!=&lease { return true; }
+                if existing_session!=&session { return false; }
+                let Ok(origin)=find_device(&request,id) else { return false };
+                if active.track_id!=origin.track_id { active.track_id.clear();active.track_id.push_str(origin.track_id); }
+                true
+            });
             for (id,control) in controls { registry.controls.insert((lease.clone(),session.clone(),id),control); }
         }
         Ok(result)
@@ -176,11 +204,15 @@ fn active_device<'a>(registry: &'a Registry, window: &str, session: &str, device
     Ok(active)
 }
 
-fn find_device<'a>(request: &'a Value, id: &str) -> Result<&'a Value,String> {
-    request.pointer("/state/project/tracks").and_then(Value::as_array).into_iter().flatten()
-        .flat_map(|track|track.get("devices").and_then(Value::as_array).into_iter().flatten())
-        .find(|device|device.get("id").and_then(Value::as_str)==Some(id) && device.get("kind").and_then(Value::as_str)==Some("external"))
-        .ok_or_else(||"External device disappeared from request".into())
+struct AuthoredDevice<'a> { track_id: &'a str, device: &'a Value }
+fn find_device<'a>(request: &'a Value, id: &str) -> Result<AuthoredDevice<'a>,String> {
+    for track in request.pointer("/state/project/tracks").and_then(Value::as_array).into_iter().flatten() {
+        if let Some(device)=track.get("devices").and_then(Value::as_array).into_iter().flatten()
+            .find(|device|device.get("id").and_then(Value::as_str)==Some(id) && device.get("kind").and_then(Value::as_str)==Some("external")) {
+            return Ok(AuthoredDevice { track_id:track.get("id").and_then(Value::as_str).ok_or("Missing track ID")?,device });
+        }
+    }
+    Err("External device disappeared from request".into())
 }
 
 pub fn release_window(app: AppHandle, leases: Vec<String>) {

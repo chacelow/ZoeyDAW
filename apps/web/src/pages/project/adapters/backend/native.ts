@@ -173,6 +173,7 @@ export function createNativeProjectBackend(
         publishNativeAudioStatus({
           device: snapshot.device,
           issues: snapshot.issues,
+          pluginFaults: snapshot.pluginFaults.filter(fault => fault.sessionId === sessionId),
           error: requestError,
           recordingPreview:
             snapshot.recordingPreview?.sessionId === sessionId ? snapshot.recordingPreview : null,
@@ -487,7 +488,7 @@ export function createNativeProjectBackend(
         })
         pending.add(closing)
       }
-      publishNativeAudioStatus({ recordingPreview: null })
+      publishNativeAudioStatus({ recordingPreview: null, pluginFaults: [] })
       listeners.clear()
       if (!leased) return
       void urgentStop().catch(error =>

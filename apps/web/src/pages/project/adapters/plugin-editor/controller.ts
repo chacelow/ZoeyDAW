@@ -19,9 +19,13 @@ type EditorView = {
   error: string | null
 }
 
-const openEditors = new Set<() => Promise<void>>()
+type EditorCommands = { commit: () => Promise<void>; cancel: () => Promise<void> }
+const openEditors = new Map<string, EditorCommands>()
 export async function commitPluginEditors(): Promise<void> {
-  await Promise.all(Array.from(openEditors, commit => commit()))
+  await Promise.all(Array.from(openEditors.values(), editor => editor.commit()))
+}
+export async function cancelPluginEditor(deviceId: string): Promise<void> {
+  await openEditors.get(deviceId)?.cancel()
 }
 
 export function createPluginEditor(trackId: string, deviceId: string, epoch: string) {
@@ -36,6 +40,16 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
     await opening
     await finish(true)
     if (view.error) throw new Error(view.error)
+  }
+  const registration: EditorCommands = {
+    commit: commitForSave,
+    cancel: async () => {
+      await opening
+      await finish(false)
+    },
+  }
+  function unregister() {
+    if (openEditors.get(deviceId) === registration) openEditors.delete(deviceId)
   }
   let active: {
     sessionId: string
@@ -95,8 +109,8 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
     closing = (async () => {
       let committedParameters: PluginParameter[] | null = null
       await inFlight
+      const accept = commit && current()
       try {
-        const accept = commit && current()
         const response = await nativePlugins.editor(owner.sessionId, deviceId, {
           kind: accept ? "commit" : "cancel",
           instance: owner.instance,
@@ -134,20 +148,22 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
           cancelEdit(owner.token)
         }
       } catch (error) {
-        try {
-          await nativePlugins.editor(owner.sessionId, deviceId, {
-            kind: "cancel",
-            instance: owner.instance,
-          })
-        } catch (cancelError) {
-          publish({ error: `${String(error)}; ${String(cancelError)}` })
+        if (accept) {
+          try {
+            await nativePlugins.editor(owner.sessionId, deviceId, {
+              kind: "cancel",
+              instance: owner.instance,
+            })
+          } catch (cancelError) {
+            publish({ error: `${String(error)}; ${String(cancelError)}` })
+          }
         }
         cancelEdit(owner.token)
         if (!view.error) publish({ error: String(error) })
       } finally {
         active = null
         closing = null
-        openEditors.delete(commitForSave)
+        unregister()
         publish({ phase: "closed", parameters: committedParameters })
       }
     })()
@@ -194,9 +210,11 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
   async function open() {
     if (disposed) return
     publish({ phase: "opening", error: null })
-    openEditors.add(commitForSave)
+    const preceding = openEditors.get(deviceId)
+    openEditors.set(deviceId, registration)
     let token: ProjectEditToken | null = null
     try {
+      if (preceding && preceding !== registration) await preceding.commit()
       await whenProjectBackendIdle()
       const value = device()
       const backend = useProjectState.getState().session.backend
@@ -228,7 +246,7 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
       if (token) cancelEdit(token)
       publish({ phase: "closed", error: String(error) })
     } finally {
-      if (!active) openEditors.delete(commitForSave)
+      if (!active) unregister()
     }
   }
   return {

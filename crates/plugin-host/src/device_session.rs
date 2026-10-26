@@ -1,3 +1,8 @@
+mod health;
+pub use health::{DeviceHealth, DeviceFault, DeviceFaultKind};
+use health::DeviceRecovery;
+#[cfg(test)]
+mod tests;
 use crate::{
     PluginSelection,
     native::NativeProcessor,
@@ -9,7 +14,7 @@ use plughost::{
 };
 use std::{
     ffi::c_void,
-    sync::{Arc, atomic::{AtomicU64, AtomicUsize, Ordering}, mpsc::{self, Receiver, SyncSender}},
+    sync::{Arc, atomic::{AtomicI32, AtomicU64, AtomicUsize, Ordering}, mpsc::{self, Receiver, SyncSender}},
     thread,
 };
 use zoeydaw_plugin_abi::{NativeBlock, OwnedNativeProcessor, PendingProcessor};
@@ -17,23 +22,27 @@ pub use plughost::{ParameterEvent, ParameterInfo};
 
 type Reply<T> = SyncSender<Result<T, String>>;
 static NEXT_INSTANCE: AtomicU64 = AtomicU64::new(1);
+#[derive(Default)]
+struct NativeContext { address: AtomicUsize, status: AtomicI32 }
 enum Command {
     Parameters(Reply<Vec<(ParameterInfo, f64)>>),
     SetParameter(u64, f64, Reply<()>),
     Snapshot(Reply<PluginState>),
-    Editor(bool, Reply<()>),
+    ReleaseEditor(u64, Reply<()>),
     EditorOpen(Reply<bool>),
     Status(Reply<Option<RealtimeStatus>>),
-    BeginEditor(Vec<(u64, f64)>, Reply<()>),
-    EndEditor(bool, Reply<PluginState>),
-    EditorEvents(Reply<(bool, ParameterEventBatch)>),
+    BeginEditor(u64, Vec<(u64, f64)>, Reply<()>),
+    EndEditor(u64, bool, Reply<PluginState>),
+    EditorEvents(u64, Reply<(bool, ParameterEventBatch)>),
+    Health(Reply<DeviceHealth>),
+    Recover(u64, Option<PluginState>, Vec<(u64,f64)>, Reply<DeviceHealth>),
 }
 
 #[derive(Clone)]
 pub struct DeviceControl {
     commands: SyncSender<Command>,
-    instance: u64,
-    native_context: Arc<AtomicUsize>,
+    instance: Arc<AtomicU64>,
+    native_context: Arc<NativeContext>,
 }
 
 pub struct PreparedDevice {
@@ -52,7 +61,7 @@ pub struct PreparedDevice {
 pub struct DeviceAudio {
     processor: NativeProcessor,
     _lifetime: SyncSender<Command>,
-    native_context: Arc<AtomicUsize>,
+    native_context: Arc<NativeContext>,
 }
 
 impl DeviceAudio {
@@ -64,7 +73,7 @@ impl DeviceAudio {
     pub unsafe fn into_owned(self) -> OwnedNativeProcessor {
         let native_context = self.native_context.clone();
         let audio = Box::into_raw(Box::new(self));
-        native_context.store(audio as usize, Ordering::Release);
+        native_context.address.store(audio as usize, Ordering::Release);
         OwnedNativeProcessor { context: Arc::into_raw(native_context).cast_mut().cast(), process, release }
     }
 }
@@ -74,31 +83,38 @@ unsafe extern "C" fn process(context: *mut c_void, block: *mut NativeBlock) -> i
     if context.is_null() || block.is_null() {
         return -1;
     }
-    let address = unsafe { &*context.cast::<AtomicUsize>() }.load(Ordering::Acquire);
+    let native = unsafe { &*context.cast::<NativeContext>() };
+    let address = native.address.load(Ordering::Acquire);
     if address == 0 { return -1; }
     let audio = unsafe { &mut *(address as *mut DeviceAudio) };
     let callback = audio.processor.callback();
-    unsafe { (callback.process)(callback.context, block) }
+    let result = unsafe { (callback.process)(callback.context, block) };
+    native.status.store(result,Ordering::Release);
+    result
 }
 
 // SAFETY: called once by the control-thread owner after processing and graph references retire.
 unsafe extern "C" fn release(context: *mut c_void) {
-    let context = unsafe { Arc::from_raw(context.cast::<AtomicUsize>()) };
-    let address = context.swap(0, Ordering::AcqRel);
+    let context = unsafe { Arc::from_raw(context.cast::<NativeContext>()) };
+    let address = context.address.swap(0, Ordering::AcqRel);
     unsafe { drop(Box::from_raw(address as *mut DeviceAudio)) };
 }
 
 impl DeviceControl {
-    pub fn instance_id(&self) -> u64 { self.instance }
+    pub fn instance_id(&self) -> u64 { self.instance.load(Ordering::Acquire) }
     pub fn native_context(&self) -> usize { Arc::as_ptr(&self.native_context) as usize }
-    pub fn begin_editor(&self, parameters: Vec<(u64, f64)>) -> Result<(), String> {
-        self.request(|reply| Command::BeginEditor(parameters, reply))
+    pub fn health(&self) -> Result<DeviceHealth,String> { self.request(Command::Health) }
+    pub fn recover(&self, expected: u64, state: Option<PluginState>, parameters: Vec<(u64,f64)>) -> Result<DeviceHealth,String> {
+        self.request(|reply|Command::Recover(expected,state,parameters,reply))
     }
-    pub fn end_editor(&self, commit: bool) -> Result<PluginState, String> {
-        self.request(|reply| Command::EndEditor(commit, reply))
+    pub fn begin_editor(&self, instance: u64, parameters: Vec<(u64, f64)>) -> Result<(), String> {
+        self.request(|reply| Command::BeginEditor(instance, parameters, reply))
     }
-    pub fn editor_events(&self) -> Result<(bool, ParameterEventBatch), String> {
-        self.request(Command::EditorEvents)
+    pub fn end_editor(&self, instance: u64, commit: bool) -> Result<PluginState, String> {
+        self.request(|reply| Command::EndEditor(instance, commit, reply))
+    }
+    pub fn editor_events(&self, instance: u64) -> Result<(bool, ParameterEventBatch), String> {
+        self.request(|reply| Command::EditorEvents(instance, reply))
     }
     fn request<T>(&self, command: impl FnOnce(Reply<T>) -> Command) -> Result<T, String> {
         let (reply, receive) = mpsc::sync_channel(1);
@@ -121,8 +137,8 @@ impl DeviceControl {
     pub fn snapshot(&self) -> Result<PluginState, String> {
         self.request(Command::Snapshot)
     }
-    pub fn set_editor(&self, open: bool) -> Result<(), String> {
-        self.request(|reply| Command::Editor(open, reply))
+    pub fn release_editor(&self, instance: u64) -> Result<(), String> {
+        self.request(|reply| Command::ReleaseEditor(instance, reply))
     }
     pub fn editor_open(&self) -> Result<bool, String> {
         self.request(Command::EditorOpen)
@@ -148,14 +164,17 @@ impl PreparedDevice {
         let (commands, receive) = mpsc::sync_channel(32);
         let (ready, prepared) = mpsc::sync_channel(1);
         let audio_lifetime = commands.clone();
+        let instance = Arc::new(AtomicU64::new(NEXT_INSTANCE.fetch_add(1,Ordering::Relaxed)));
+        let worker_instance = instance.clone();
         thread::Builder::new()
             .name("zoeydaw-plugin-control".into())
             .spawn(move || {
                 let result = prepare(selection, sample_rate, quantum, state, audio_lifetime);
                 match result {
                     Ok((chain, device)) => {
+                        let recovery = DeviceRecovery { instance:worker_instance,context:device.4.native_context.clone(),latency:chain.latency() };
                         if ready.send(Ok(device)).is_ok() {
-                            run(chain, receive);
+                            run(chain, receive, recovery);
                         }
                     }
                     Err(error) => {
@@ -175,7 +194,7 @@ impl PreparedDevice {
             input_channels,
             output_channels: 2,
             latency_frames,
-            control: DeviceControl { commands, instance: NEXT_INSTANCE.fetch_add(1, Ordering::Relaxed), native_context: audio.native_context.clone() },
+            control: DeviceControl { commands, instance, native_context: audio.native_context.clone() },
             monitor,
             audio,
         })
@@ -247,19 +266,26 @@ fn prepare(
             DeviceAudio {
                 processor,
                 _lifetime: lifetime,
-                native_context: Arc::new(AtomicUsize::new(0)),
+                native_context: Arc::new(NativeContext::default()),
             },
             parameters,
         ),
     ))
 }
 
-fn run(mut chain: Chain, receive: Receiver<Command>) {
+fn run(mut chain: Chain, receive: Receiver<Command>, recovery: DeviceRecovery) {
     let mut editor_baseline = None;
     while let Ok(command) = receive.recv() {
         match command {
-            Command::BeginEditor(parameters, reply) => {
+            Command::Health(reply) => { let _ = reply.send(Ok(recovery.health(&chain))); }
+            Command::Recover(expected,state,parameters,reply) => {
+                let result=recovery.recover(&mut chain,expected,state,parameters);
+                if result.is_ok() { editor_baseline=None; }
+                let _ = reply.send(result);
+            }
+            Command::BeginEditor(instance, parameters, reply) => {
                 let result = (|| {
+                    recovery.require_instance(instance)?;
                     if editor_baseline.is_some() && chain.editor_open(0).map_err(|error|error.to_string())? { return Ok(()); }
                     editor_baseline = None;
                     let metadata = chain.parameters(0).map_err(|error|error.to_string())?;
@@ -280,8 +306,9 @@ fn run(mut chain: Chain, receive: Receiver<Command>) {
                 })();
                 let _ = reply.send(result);
             }
-            Command::EndEditor(commit, reply) => {
+            Command::EndEditor(instance, commit, reply) => {
                 let result = (|| {
+                    recovery.require_instance(instance)?;
                     let baseline = editor_baseline.as_ref().ok_or("Plugin editor is not owned")?;
                     chain.close_editor(0).map_err(|error|error.to_string())?;
                     let state = if commit {
@@ -295,8 +322,9 @@ fn run(mut chain: Chain, receive: Receiver<Command>) {
                 })();
                 let _ = reply.send(result);
             }
-            Command::EditorEvents(reply) => {
+            Command::EditorEvents(instance, reply) => {
                 let result = (|| {
+                    recovery.require_instance(instance)?;
                     if editor_baseline.is_none() { return Err("Plugin editor is not owned".into()); }
                     let open = chain.editor_open(0).map_err(|error|error.to_string())?;
                     let events = chain.take_parameter_events(0).map_err(|error|error.to_string())?;
@@ -321,14 +349,14 @@ fn run(mut chain: Chain, receive: Receiver<Command>) {
                         .map_err(|error| error.to_string()),
                 );
             }
-            Command::Editor(open, reply) => {
-                let result = if open {
-                    chain.open_editor(0)
-                } else {
-                    chain.close_editor(0)
-                };
-                if !open && result.is_ok() { editor_baseline = None; }
-                let _ = reply.send(result.map_err(|error| error.to_string()));
+            Command::ReleaseEditor(instance, reply) => {
+                let result=(|| {
+                    recovery.require_instance(instance)?;
+                    chain.close_editor(0).map_err(|error|error.to_string())?;
+                    editor_baseline=None;
+                    Ok(())
+                })();
+                let _ = reply.send(result);
             }
             Command::EditorOpen(reply) => {
                 let _ = reply.send(chain.editor_open(0).map_err(|error| error.to_string()));

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { Button, DragPadBar } from "@zoeymind/ui"
 import { useTranslation } from "@zoeymind/i18n"
 import {
@@ -6,11 +6,14 @@ import {
   useProjectEditGesture,
   useProjectFilesState,
   useProjectState,
+  usePluginRecoveryPending,
 } from "@/pages/project/adapters"
 import { nativePlugins } from "@/shared/native/plugins"
 import type { PluginParameter } from "@/shared/native/plugins"
 import type { ExternalDevice } from "@zoeydaw/project-core/devices"
 import { editDevices } from "../edit-devices"
+import { readNativePluginFaults, subscribeNativeAudioStatus } from "@/shared/native/audio"
+import { PluginFaultFeedback } from "@/pages/project/plugin-recovery"
 
 function ExternalParameterControl({
   trackId,
@@ -75,13 +78,16 @@ export function ExternalParameters({
   const sessionId = useProjectState(state => state.session.backend.sessionId)
   const phase = useProjectState(state => state.session.backend.phase)
   const fileBusy = useProjectFilesState(state => state.operation.kind !== "idle")
+  const recovering = usePluginRecoveryPending(sessionId, device.id)
+  const faults = useSyncExternalStore(subscribeNativeAudioStatus, readNativePluginFaults)
+  const fault = faults.find(fault => fault.sessionId === sessionId && fault.deviceId === device.id)
   const [parameters, setParameters] = useState<PluginParameter[]>([])
   const [error, setError] = useState<string | null>(null)
   const { t } = useTranslation()
   const editor = usePluginEditor(trackId, device.id)
   const editing = editor.phase !== "closed"
   useEffect(() => {
-    if (!nativePlugins.available() || phase !== "ready") return
+    if (!nativePlugins.available() || phase !== "ready" || fault || editing || recovering) return
     let disposed = false
     void nativePlugins
       .parameters(sessionId, device.id)
@@ -97,15 +103,27 @@ export function ExternalParameters({
     return () => {
       disposed = true
     }
-  }, [sessionId, phase, device.id, device.plugin.catalogId, device.stateRef?.sha256])
+  }, [
+    sessionId,
+    phase,
+    device.id,
+    device.plugin.catalogId,
+    device.stateRef?.sha256,
+    fault,
+    editing,
+    recovering,
+  ])
   return (
     <div className="gap-control-gap flex min-h-0 flex-col overflow-y-auto">
+      {fault && <PluginFaultFeedback fault={fault} className="shrink-0" />}
       {nativePlugins.available() && (
         <Button
           size="control"
           variant="outline"
           disabled={
             fileBusy ||
+            recovering ||
+            (Boolean(fault) && !editing) ||
             phase !== "ready" ||
             editor.phase === "opening" ||
             editor.phase === "closing"
@@ -135,7 +153,7 @@ export function ExternalParameters({
             trackId={trackId}
             device={device}
             parameter={parameter}
-            disabled={editing}
+            disabled={editing || recovering}
           />
         ))}
     </div>

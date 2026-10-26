@@ -26,8 +26,9 @@ void IsolatedPluginBinding::setParameters(const std::vector<ExternalParameter>& 
     for(size_t index=0;index<values.size();++index)next.values[index]={0,0,values[index].id,values[index].normalized};
     manual.publish(next);
 }
-bool IsolatedPluginBinding::setEditorAuthority(std::uintptr_t context, bool active) noexcept {
-    if(context!=reinterpret_cast<std::uintptr_t>(callback.context))return false;
+bool IsolatedPluginBinding::setEditorAuthority(std::uintptr_t context, uint64_t instance, bool active) noexcept {
+    if(!matchesContext(context) || instance==0 || instance<editorInstance)return false;
+    editorInstance=instance;
     editorActive.store(active,std::memory_order_release);
     return true;
 }

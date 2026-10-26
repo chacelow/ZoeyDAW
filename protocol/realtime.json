@@ -118,7 +118,15 @@
       ],
       "SessionSlotStatus": ["queued", "playing", "stopped"],
       "DeviceConnectionState": ["connected", "disconnected", "permission-required", "stopped"],
-      "PluginFaultKind": ["crash", "hang", "missing", "load-failed", "format-change"],
+      "PluginFaultKind": [
+        "crash",
+        "hang",
+        "missing",
+        "load-failed",
+        "format-change",
+        "resync-required",
+        "processing-failed"
+      ],
       "FaultKind": [
         "plugin-fault",
         "xrun",

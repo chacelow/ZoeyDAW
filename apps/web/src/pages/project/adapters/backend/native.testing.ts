@@ -61,7 +61,7 @@ export const device: AudioDeviceSnapshot = {
   outputLatencyFrames: 512,
   error: null,
 }
-export const snapshot: PlaybackSnapshot = { device, issues: [], meterReady: true }
+export const snapshot: PlaybackSnapshot = { device, issues: [], pluginFaults: [], meterReady: true }
 export const recording: NativeRecording = {
   recordingId: "recording-1",
   sessionId: "s",

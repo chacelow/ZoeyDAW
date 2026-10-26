@@ -79,6 +79,7 @@ describe("native audio IPC boundary", () => {
       device,
       meterReady: false,
       issues: [],
+      pluginFaults: [],
       recordingPreview: preview,
     }
     vi.mocked(invoke).mockResolvedValueOnce(snapshot)
@@ -195,7 +196,7 @@ describe("native audio IPC boundary", () => {
   })
 
   it("keeps status separate from binary transport and rejects legacy clock and meter payloads", async () => {
-    const status = { device, issues: [], meterReady: true }
+    const status = { device, issues: [], pluginFaults: [], meterReady: true }
     vi.mocked(invoke).mockResolvedValueOnce(status)
     expect(await nativeAudio.telemetry("lease")).toEqual(status)
     for (const extra of [{ telemetry: { clock: { bar: 1 } } }, { levels: { main: [-30] } }]) {

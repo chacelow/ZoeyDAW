@@ -12,6 +12,7 @@ pub mod streams;
 mod stream_service;
 mod transport_frame;
 mod event_service;
+pub use event_service::PluginFaultReport;
 
 #[cfg(test)]
 mod tests;

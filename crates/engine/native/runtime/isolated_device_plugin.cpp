@@ -31,10 +31,13 @@ bool IsolatedDevicePlugin::matches(const ExternalSettings& settings) const {
         && state["classId"].toString()==settings.classId
         && state["stateHash"].toString()==settings.stateHash;
 }
-bool IsolatedDevicePlugin::setEditorAuthority(std::uintptr_t context, bool active) {
-    if(!binding->setEditorAuthority(context,active))return false;
+bool IsolatedDevicePlugin::setEditorAuthority(std::uintptr_t context, uint64_t instance, bool active) {
+    if(!binding->setEditorAuthority(context,instance,active))return false;
     if(!active)binding->setParameters(manualParameters);
     return true;
+}
+bool IsolatedDevicePlugin::canRecover(std::uintptr_t context) const noexcept {
+    return binding->matchesContext(context) && binding->status.load(std::memory_order_acquire)>=0;
 }
 void IsolatedDevicePlugin::configure(const Device& device) {
     const auto& settings=std::get<ExternalSettings>(device.settings);

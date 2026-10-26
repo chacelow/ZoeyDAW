@@ -84,6 +84,7 @@ pub fn run() {
       playback::plugin_controls::plugin_device_parameters,
       playback::plugin_controls::plugin_device_snapshot,
       playback::plugin_editor::plugin_device_editor,
+      playback::plugin_recovery::plugin_device_recover,
       playback::realtime_probe::realtime_probe_open,
       playback::realtime_probe::realtime_probe_pull,
       playback::realtime_probe::realtime_probe_receipt,

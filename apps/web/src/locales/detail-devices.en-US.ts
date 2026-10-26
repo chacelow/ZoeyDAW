@@ -6,6 +6,10 @@ export default {
   scanPlugins: "Scan plugins in Settings first.",
   openPluginEditor: "Open Plugin Editor",
   closePluginEditor: "Close and Apply",
+  recoverPlugin: "Recover Plugin",
+  recoveringPlugin: "Recovering…",
+  recoverPluginHint:
+    "Restore the project checkpoint. Unsaved internal editor changes and DSP history cannot be recovered.",
   chain: "Device chain",
   trackDevices: "Devices on {{track}}",
   inputLevel: "{{device}} input level",

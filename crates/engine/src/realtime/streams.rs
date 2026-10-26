@@ -1,11 +1,11 @@
 use super::{
     metadata_generated::{
         JsonU64, MeterInterest, RealtimeCounters, RealtimeEvent, RealtimeEventContext,
-        RealtimeEventPayload, RealtimeRegistry, RealtimeStreamOpenResult,
+        RealtimeEventPayload, RealtimeRegistry, RealtimeStreamOpenResult, LatchedFault, FaultKind,
     },
     meter_hub::HubSnapshot,
 };
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -64,6 +64,8 @@ pub struct MeterStreams {
     pending: HashMap<u32, PendingAdmission>,
     registry: Option<Arc<RealtimeRegistry>>,
     events: super::events::EventLog,
+    plugin_faults: BTreeMap<String,LatchedFault>,
+    plugin_fault_count: u64,
 }
 
 impl MeterStreams {
@@ -145,6 +147,8 @@ impl MeterStreams {
             self.streams.clear();
             self.events = super::events::EventLog::default();
             self.registry = None;
+            self.plugin_faults.clear();
+            self.plugin_fault_count=0;
             self.pending
                 .retain(|_, pending| &pending.session == session);
             self.next_session = session_epoch;
@@ -289,6 +293,28 @@ impl MeterStreams {
         Ok(())
     }
 
+    pub fn update_plugin_faults(&mut self, window: &str, lease: &str, mut reports: Vec<super::PluginFaultReport>) -> Result<bool,String> {
+        let Some(stream)=self.streams.values().find(|stream|stream.window==window && stream.lease==lease) else { return Ok(false) };
+        let registry=self.registry.as_ref().filter(|registry|registry.session_id==stream.session).ok_or("Plugin fault registry changed")?;
+        if reports.len()>256 || reports.iter().any(|report|report.session_id!=stream.session) { return Err("Plugin fault owner or capacity mismatch".into()); }
+        reports.sort_unstable_by(|left,right|left.device_id.cmp(&right.device_id));
+        self.plugin_faults.retain(|id,_|reports.binary_search_by(|report|report.device_id.cmp(id)).is_ok());
+        for report in reports {
+            if self.plugin_faults.get(&report.device_id).is_some_and(|fault|fault.fault_id==report.fault_id) { continue; }
+            let count=self.plugin_fault_count.checked_add(1).ok_or("Plugin fault counter exhausted")?;
+            let seq=self.events.append(event_context(registry),RealtimeEventPayload::PluginFault {
+                fault_id:report.fault_id.clone(),track_id:report.track_id,device_id:report.device_id.clone(),segment_id:None,
+                fault:report.fault,code:report.code.clone(),message:report.message.clone(),recoverable:report.recoverable,
+            })?;
+            self.plugin_fault_count=count;
+            self.plugin_faults.insert(report.device_id.clone(),LatchedFault {
+                fault_id:report.fault_id,kind:FaultKind::PluginFault,owner_id:Some(report.device_id),code:report.code,
+                message:report.message,first_seq:JsonU64(seq),count:JsonU64(1),
+            });
+        }
+        Ok(true)
+    }
+
     pub fn event_deliveries(
         &mut self,
     ) -> Result<
@@ -305,15 +331,16 @@ impl MeterStreams {
             recording_overruns: JsonU64(0),
             note_overruns: JsonU64(0),
             automation_overruns: JsonU64(0),
-            plugin_faults: JsonU64(0),
+            plugin_faults: JsonU64(self.plugin_fault_count),
             dropped_events: JsonU64(0),
         };
+        let faults:Vec<_>=self.plugin_faults.values().cloned().collect();
         let mut deliveries = Vec::new();
         for (id, stream) in &self.streams {
             if let Some(send) = stream.events.as_ref() {
                 let batch =
                     self.events
-                        .batch(*id, &event_context(&stream.registry), &counters, &[])?;
+                        .batch(*id, &event_context(&stream.registry), &counters, &faults)?;
                 if !batch.is_empty() {
                     deliveries.push((stream.window.clone(), *id, send.clone(), batch));
                 }
@@ -490,3 +517,6 @@ fn event_context(registry: &RealtimeRegistry) -> RealtimeEventContext {
         seq: JsonU64(0),
     }
 }
+
+#[cfg(test)]
+mod fault_tests;

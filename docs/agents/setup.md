@@ -62,6 +62,8 @@ UI 改动必须在已有应用或 Web 页面上验证主路径，观察新截图
 
 同一验证脚本还运行 `editor_smoke`。CLAP 夹具打开 helper 所有的原生窗口，驱动真实音频 quantum，接收有序参数事件，重新加载编辑后的状态文件，并验证取消恢复打开前的完整状态。它不注入桌面输入，不代替 Tauri 编辑器终验。
 
+验证入口还通过显式环境路径运行 `device_session::tests` 的真实恢复用例。受控 helper 挂起后，非法候选保留原实例；有效候选在同一个回调端点恢复 checkpoint 并预先应用当前参数，输出精确 PCM，同时保持独立插件的输出。该测试只等待受控的两秒挂起阈值，不是长期或规模压力测试。
+
 `cargo run -p zoeydaw-engine --example plugin_admission_smoke --locked` 通过真实 EngineSession 验证异步 admission 回执未领取时取消，以及显式取消的恰好一次释放；不启动 Tauri 或声卡。带 native build 参数的插件验证脚本包含此入口。
 
 main 窗口关闭 Tauri 原生 `dragDropEnabled` 拦截，Browser 内部拖放使用 WebView HTML 事件。锁定的 tauri-runtime-wry 2.9.2 会无条件接收原生拖放，阻止 WKWebView 收到 `dragover` 和 `drop`。源同时提供内部 token 与标准文本文件名；只有内部会话 token 可用于导入。修改该原生配置需要重启应用，HMR 不生效。

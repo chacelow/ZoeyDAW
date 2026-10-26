@@ -24,7 +24,7 @@ fn main() -> Result<(),String> {
     struct Release(zoeydaw_plugin_abi::OwnedNativeProcessor);
     impl Drop for Release { fn drop(&mut self) { unsafe { (self.0.release)(self.0.context) }; } }
     let _release = Release(audio);
-    control.begin_editor(vec![(0,0.25)])?;
+    control.begin_editor(control.instance_id(),vec![(0,0.25)])?;
     if !control.editor_open()? || (gain(&control)?-0.25).abs()>1e-9 { return Err("Editor did not open with authored gain".into()); }
     control.set_parameter(0,0.6)?;
     let input=[0.5_f32;512];let mut left=[0_f32;512];let mut right=[0_f32;512];
@@ -39,7 +39,7 @@ fn main() -> Result<(),String> {
         };
         let status=unsafe { (_release.0.process)(_release.0.context,&mut block) };
         if status<0 { return Err(format!("Editor audio quantum failed: {status}")); }
-        let (open,batch) = control.editor_events()?;
+        let (open,batch) = control.editor_events(control.instance_id())?;
         if !open { return Err("Editor closed during parameter feedback".into()); }
         if batch.events.windows(3).any(|events|matches!(&events[0],ParameterEvent::BeginEdit { id:0 })
             && matches!(&events[1],ParameterEvent::Value { id:0,normalized } if (*normalized-0.6).abs()<1e-9)
@@ -47,7 +47,7 @@ fn main() -> Result<(),String> {
         if Instant::now()>=deadline { return Err(format!("Native parameter events did not reach the control worker: {:?}",batch)); }
         std::thread::sleep(Duration::from_millis(20));
     }
-    let committed = control.end_editor(true)?;
+    let committed = control.end_editor(control.instance_id(),true)?;
     if control.editor_open()? { return Err("Editor remained open after commit".into()); }
     let store = PluginStateStore::new(cache.with_extension("states"))?;
     let reference = store.save(&committed)?;
@@ -56,12 +56,22 @@ fn main() -> Result<(),String> {
     if (gain(&restored_device.control)?-0.6).abs()>1e-9 { return Err("Edited chunk did not restore the actual gain".into()); }
     if control.instance_id()==restored_device.control.instance_id() { return Err("Replacement reused plugin instance identity".into()); }
     if PluginStateStore::new(cache.clone()).is_ok() { return Err("State store accepted a catalog file as its directory".into()); }
-    control.end_editor(false)?;
+    control.end_editor(control.instance_id(),false)?;
     if (gain(&control)?-0.25).abs()>1e-9 { return Err("Failed state persistence lost the opening checkpoint".into()); }
-    control.begin_editor(vec![(0,0.6)])?;
+    control.begin_editor(control.instance_id(),vec![(0,0.6)])?;
     control.set_parameter(0,0.9)?;
-    control.end_editor(false)?;
+    control.end_editor(control.instance_id(),false)?;
     if (gain(&control)?-0.6).abs()>1e-9 || control.editor_open()? { return Err("Cancel failed to restore the full editor checkpoint".into()); }
+    let previous=control.instance_id();
+    let state=store.load(&reference,committed.format,&committed.class_id)?;
+    let recovered=control.recover(previous,Some(state),vec![(0,0.6)])?;
+    control.begin_editor(recovered.instance_id,vec![(0,0.6)])?;
+    control.set_parameter(0,0.9)?;
+    if control.end_editor(previous,false).is_ok() || control.release_editor(previous).is_ok() {
+        return Err("Stale editor cleanup reached the recovered helper".into());
+    }
+    if !control.editor_open()? || (gain(&control)?-0.9).abs()>1e-9 { return Err("Stale cleanup closed or rolled back the newer editor".into()); }
+    control.end_editor(recovered.instance_id,false)?;
     println!("Native editor open, ordered gesture/value feedback, edited state reload, instance replacement and cancel rollback passed");
     Ok(())
 }

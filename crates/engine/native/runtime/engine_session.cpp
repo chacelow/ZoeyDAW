@@ -575,13 +575,29 @@ V EngineSession::call(const juce::String& operation,const V& v) {
     require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Playback mutation outside main thread");
     if(operation=="apply")return apply(v);
     if(operation=="plugin_editor_authority") {
-        fields(v,{"sessionId","deviceId","context","active"});
+        fields(v,{"sessionId","deviceId","context","instanceId","active"});
         require(accepted && arrangement && accepted->session==text(v,"sessionId"),"Stale plugin editor session");
         const auto found=arrangement->devices.find(text(v,"deviceId"));
         require(found!=arrangement->devices.end(),"Plugin editor device disappeared");
         auto* plugin=dynamic_cast<IsolatedDevicePlugin*>(found->second.get());
-        require(plugin && plugin->setEditorAuthority(decimalU64(v,"context"),boolean(v,"active")),"Stale plugin editor instance");
+        require(plugin && plugin->setEditorAuthority(decimalU64(v,"context"),decimalU64(v,"instanceId"),boolean(v,"active")),"Stale plugin editor instance");
         return {};
+    }
+    if(operation=="plugin_recovery_plan") {
+        fields(v,{"sessionId","deviceId","context"});
+        require(accepted && arrangement && accepted->session==text(v,"sessionId"),"Stale plugin recovery session");
+        const auto id=text(v,"deviceId");const auto found=arrangement->devices.find(id);
+        require(found!=arrangement->devices.end(),"Plugin recovery device disappeared");
+        auto* plugin=dynamic_cast<IsolatedDevicePlugin*>(found->second.get());
+        require(plugin && plugin->canRecover(decimalU64(v,"context")),"Plugin processor changed or requires reprepare");
+        for(const auto& track:accepted->tracks)for(const auto& device:track.devices)if(device.id==id) {
+            const auto* settings=std::get_if<ExternalSettings>(&device.settings);require(settings!=nullptr,"Device is not external");
+            auto out=object();put(out,"catalogId",settings->catalogId);put(out,"format",settings->format);put(out,"classId",settings->classId);
+            auto state=V();if(settings->stateHash.isNotEmpty()) { state=object();put(state,"sha256",settings->stateHash);put(state,"path",settings->statePath); }put(out,"stateRef",state);
+            juce::Array<V> parameters;for(const auto& value:settings->parameters) { auto item=object();put(item,"id",decimalU64(value.id));put(item,"normalized",value.normalized);parameters.add(item); }
+            put(out,"parameters",parameters);return out;
+        }
+        require(false,"Authored plugin recovery device disappeared");
     }
     if(operation=="plugin_prepare_plan") {
         fields(v,{"request","leaseId"});const auto request=decode(field(v,"request"));const auto lease=text(v,"leaseId");

@@ -142,6 +142,10 @@ pub enum PluginFaultKind {
     LoadFailed,
     #[serde(rename = "format-change")]
     FormatChange,
+    #[serde(rename = "resync-required")]
+    ResyncRequired,
+    #[serde(rename = "processing-failed")]
+    ProcessingFailed,
 }
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum FaultKind {

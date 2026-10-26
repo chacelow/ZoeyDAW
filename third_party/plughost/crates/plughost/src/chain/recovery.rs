@@ -53,15 +53,36 @@ impl Chain {
     /// application recovers again, or stops the endpoint, resets this chain and starts it again
     /// when its helper is well.
     pub fn recover_realtime(&mut self, snapshot: &ChainSnapshot) -> Result<Chain, Error> {
+        self.recover_realtime_inner(&snapshot.states, &snapshot.bypass, |_| Ok(()))
+    }
+
+    /// Recovers from persisted project states and configures the fresh candidate before its
+    /// realtime endpoint is published. A rejected candidate leaves the old endpoint in fallback.
+    /// Native bypass is restored only when encoded in the supplied states.
+    pub fn recover_realtime_configured(
+        &mut self,
+        states: &[PluginState],
+        configure: impl FnOnce(&mut Chain) -> Result<(), Error>,
+    ) -> Result<Chain, Error> {
+        self.recover_realtime_inner(states, &[], configure)
+    }
+
+    fn recover_realtime_inner(
+        &mut self,
+        states: &[PluginState],
+        bypass: &[Option<bool>],
+        configure: impl FnOnce(&mut Chain) -> Result<(), Error>,
+    ) -> Result<Chain, Error> {
         let realtime = self.realtime.as_ref().ok_or(Error::NotPrepared)?;
         realtime.state.suspend();
         let config = realtime.config;
-        let mut chain = self.recover(&snapshot.states)?;
-        for (slot, enabled) in snapshot.bypass.iter().enumerate() {
+        let mut chain = self.recover(states)?;
+        for (slot, enabled) in bypass.iter().enumerate() {
             if let Some(enabled) = *enabled {
                 chain.set_bypass(slot, enabled)?;
             }
         }
+        configure(&mut chain)?;
         let ring = chain.install_ring(&config)?;
         let mut realtime = self.realtime.take().ok_or(Error::NotPrepared)?;
         let control = std::mem::replace(&mut realtime.control, ring.control());
