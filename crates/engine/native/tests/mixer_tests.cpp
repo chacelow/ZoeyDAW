@@ -7,6 +7,8 @@
 #include <tracktion_graph/tracktion_graph.h>
 #include <tracktion_engine/playback/graph/tracktion_EditNodeBuilder.h>
 #include <tracktion_engine/playback/graph/tracktion_TracktionEngineNode.h>
+#include <tracktion_engine/playback/graph/tracktion_MidiNode.h>
+#include <tracktion_engine/playback/graph/tracktion_LoopingMidiNode.h>
 #include <algorithm>
 #include <iostream>
 #include <chrono>
@@ -413,6 +415,7 @@ int main(int argc,char** argv) {
     try {
         juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;
         if(argc>1) {
+            if(argc==2 && juce::String(argv[1])=="--midi-mute") { testRepeatedMidiMuteTransitions();return 0; }
             if(argc==2 && juce::String(argv[1])=="--source-publication") { testSourceGraphPublication();return 0; }
             if(argc==2 && juce::String(argv[1])=="--transaction-model") { transaction_probe::run();return 0; }
             if(argc==2 && juce::String(argv[1])=="--stopped-input") {
@@ -423,6 +426,7 @@ int main(int argc,char** argv) {
             std::cout<<"Focused hosted transport clock tests passed\n";return 0;
         }
         testSourceGraphPublication();
+        testRepeatedMidiMuteTransitions();
         testHostedTempoWaveContinuity();testHostedClipEditContinuity();testHostedTransportClock();testTransportClockAdoption();testPluginAdmissionOwnership();testLiveMixer();testGraphClassification();testLiveFades();testTrackLifecycle();testDeviceChain();{EngineSession session;auto request=fixture();accepted(apply(session,request),0);testBuiltinDeviceDsp(*MixerTestAccess::edit(session));}testNarrowControl();testLiveMidiGraph();testAuthoredMidiClip();testHostedInputRouting();testRecordingQueue();testHostedRecording();testStoppedProjectInputActivation();testRecordingInputSelection();testMultiTrackRecordingAndMonitor();testRecordingTransportTransitions();std::cout<<"In-place mixer/fades, track/device lifecycle and DSP, MIDI scheduling, hosted input monitoring and recording tests passed\n";return 0;
     }
     catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }

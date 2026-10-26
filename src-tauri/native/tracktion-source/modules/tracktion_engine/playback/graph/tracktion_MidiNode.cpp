@@ -134,6 +134,7 @@ void MidiNode::processSection (Node::ProcessContext& pc,
 
         return;
     }
+    wasMute = false;
 
     if (! getPlayHeadState().isContiguousWithPreviousBlock() || localTime.getStart() <= 0.00001 || shouldCreateMessagesForTime)
     {

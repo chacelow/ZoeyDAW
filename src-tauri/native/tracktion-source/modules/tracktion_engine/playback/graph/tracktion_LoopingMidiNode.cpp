@@ -1549,6 +1549,7 @@ void LoopingMidiNode::process (ProcessContext& pc)
 
         return;
     }
+    wasMute = false;
 
     generatorAndNoteList->processSection (pc.buffers.midi, pc.numSamples,
                                           getEditBeatRange(),

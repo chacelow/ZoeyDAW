@@ -2,6 +2,7 @@
 
 ## 0.1.0 - unreleased
 
+- Fix held MIDI notes surviving a second Clip mute. Reset the classic and looping nodes' mute-transition state after unmuting, and verify actual note-on/off events through both mute cycles in the existing native control regressions. Reuse the current playback implementation without adding a parameter-frame module.
 - Fix Windows project saves reporting uncertain durability after successful writes. Open directory flush handles with the write access required by FlushFileBuffers. Remove the obsolete Windows fallback that swallowed prepublication sync errors, preserve the prior project on those failures, and retain uncertain-durability warnings for failures after publication.
 - Reserve source graph registry slots during graph preparation so graphPosted only replaces an existing shared pointer. Verify allocation-free initial publication/replacement, failed preparation and cancelled candidates preserving the prior observations, and retired graph release. Keep the main-thread synchronous callback lifetime explicit; complete document transaction isolation remains pending.
 - Give project editing/history and recording publication separate state owners within the existing runtime. Keep one document Store and backend lifecycle, preserve public commands and receipt/recovery ordering, and remove the retired 1239-line runtime debt entry. Use standard Promise.withResolvers for recording receipts and save waits, with explicit ES2024.Promise library declarations.

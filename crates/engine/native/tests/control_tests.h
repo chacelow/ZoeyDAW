@@ -191,3 +191,34 @@ void testAuthoredMidiClip() {
     }
     require(onBlocks.size()==1 && offBlocks.size()==1 && std::abs(onBlocks[0]-3000)<256 && std::abs(offBlocks[0]-9000)<256,"Negative source offset did not preserve repeating MIDI phase");
 }
+void testRepeatedMidiMuteTransitions() {
+    namespace graph=tracktion::graph;
+    for(bool looping:{true,false}) {
+        graph::PlayHead playHead;graph::PlayHeadState head(playHead);playHead.play();
+        te::tempo::Sequence tempo({{{},120,1}},{{{},4,4,false}},te::tempo::LengthOfOneBeat::isAlwaysACrotchet);
+        te::ProcessState process(head,tempo);auto levels=std::make_shared<te::ClipLevel>();juce::ValueTree properties("CLIP");
+        levels->dbGain.referTo(properties,te::IDs::volDb,nullptr,0.0f);levels->mute.referTo(properties,te::IDs::mute,nullptr,false);
+        juce::MidiMessageSequence sequence;const double unit=looping?1.0:.5;
+        sequence.addEvent(juce::MidiMessage::noteOn(1,60,juce::uint8(100)).withTimeStamp(0));
+        sequence.addEvent(juce::MidiMessage::noteOff(1,60).withTimeStamp(8*unit));
+        sequence.addEvent(juce::MidiMessage::noteOn(1,62,juce::uint8(90)).withTimeStamp(unit));
+        sequence.addEvent(juce::MidiMessage::noteOff(1,62).withTimeStamp(9*unit));sequence.updateMatchedPairs();
+        std::unique_ptr<graph::Node> node;
+        if(looping)node.reset(new te::LoopingMidiNode({sequence},{1,2},false,{te::BeatPosition(),te::BeatPosition::fromBeats(16)},
+            {te::BeatPosition(),te::BeatPosition::fromBeats(16)},te::BeatDuration(),te::LiveClipLevel(levels),process,te::EditItemID(),te::QuantisationType(),nullptr,0));
+        else node=std::make_unique<tracktion::engine::MidiNode>(std::vector<juce::MidiMessageSequence>{sequence},te::MidiList::TimeBase::seconds,
+            juce::Range<int>{1,2},false,juce::Range<double>{0,8},te::LiveClipLevel(levels),process,te::EditItemID());
+        graph::LockFreeMultiThreadedNodePlayer player;player.setNumThreads(0);player.setNode(std::move(node),48000,6000);
+        juce::AudioBuffer<float> output(1,6000);te::MidiMessageArray midi;
+        const auto render=[&](int block) {
+            const juce::Range<int64_t> reference{block*6000,(block+1)*6000};process.update(48000,reference,te::ProcessState::UpdateContinuityFlags::yes);
+            output.clear();midi.clear();player.process({6000,reference,{graph::toBufferView(output),midi}});
+        };
+        const auto hasEvent=[&](int pitch,bool on) { return std::any_of(midi.begin(),midi.end(),[&](const auto& message) { return message.getNoteNumber()==pitch && (on?message.isNoteOn():message.isNoteOff()); }); };
+        render(0);require(hasEvent(60,true),"MIDI mute fixture did not start the first held note");
+        levels->mute=true;render(1);require(hasEvent(60,false),"First MIDI mute did not release its held note");
+        levels->mute=false;render(2);render(3);render(4);require(hasEvent(62,true),"Unmuted MIDI fixture did not start the second held note");
+        levels->mute=true;render(5);require(hasEvent(62,false),looping?"Second looping MIDI mute left a held note active":"Second classic MIDI mute left a held note active");
+    }
+    std::cout<<"Repeated MIDI mute: classic and looping nodes release held notes on both mute transitions\n";
+}
