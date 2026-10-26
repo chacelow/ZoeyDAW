@@ -188,6 +188,11 @@
 ## 2026-10-25 Windows 排除端口导致开发服务无法绑定
 
 - 用户启动报 `listen EACCES: permission denied ::1:5173`，本机没有进程监听该端口，但 IPv4 与 IPv6 的排除范围均包含 5147–5246。不能把 EACCES 当作普通占用，也不能只改 IPv4 地址。
-- 按用户指定的 7xxx 范围将 Vite 与 Tauri 开发地址同步为 7173，保留 strictPort。实际 Vite 配置解析后，localhost 绑定到 `::1:7173` 成功，IPv4 与 IPv6 单独绑定也通过。桌面启动仍由用户执行。见 [setup](docs/agents/setup.md)。
+- 按用户指定的 7xxx 范围将 Vite 与 Tauri 开发地址同步为 7173，保留 strictPort。实际 Vite 配置解析后，localhost 绑定到 `::1:7173` 成功，IPv4 与 IPv6 单独绑定也通过。见 [setup](docs/agents/setup.md)。
+
+## 2026-10-26 开发错误后保持服务与恢复验证
+
+- 用户纠正：开发期间由 Agent 检查并启动 `tauri:dev`，负责必要的重启；不能在报错后主动断开，也不能把等待用户启动作为后续验证的前提。
+- 执行流程以 [setup](docs/agents/setup.md#开发应用由-agent-维护) 为准；错误修复后观察 HMR 或原生重编译恢复，并验证实际应用。
 
 重复出现的机械问题优先升级为 lint、类型或行为测试；升级后让本文链接权威规则，不复制第二套实现参数。当前具体门禁和运行命令见 [setup](docs/agents/setup.md)。

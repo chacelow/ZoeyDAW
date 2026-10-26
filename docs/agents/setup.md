@@ -4,13 +4,14 @@
 
 React Web 前端由 Tauri 2 承载，Rust 提供桌面原生能力。工作区使用 pnpm。版本、包名和脚本以对应 `package.json`、`Cargo.toml` 为准；共享包目前仍有 `@zoeymind/*` 名称，本任务不顺带改名。
 
-## 应用由用户持有
+## 开发应用由 Agent 维护
 
-用户手动运行 `pnpm tauri:dev` 并保持观察。Agent 不启动、不重启应用，也不停止用户已有服务。
+Agent 先检查本项目进程、开发端口和应用窗口，复用已运行的实例；尚未启动时主动运行 `pnpm tauri:dev`。开发期间保持服务与日志连接，任务结束后继续保留运行。
 
-- 修改 Web TS、TSX 或 CSS 后通过 Vite HMR 生效，继续验证。
-- 修改 Rust、`src-tauri/tauri.conf.json`、capabilities、Cargo 依赖或原生 plugin 注册后，明确告诉用户“需要重启 tauri:dev”。由用户操作。
-- 若已有应用不可访问，先检查现有服务和连接，不用另开一个应用绕过问题。
+- Web TS、TSX 或 CSS 报错时保持 Vite 与 Tauri 运行，修复后等待 HMR 恢复并重新验证页面。错误覆盖层或暂时白屏不作为主动断开或结束验收的理由。
+- 修改 Rust、原生配置、capabilities、Cargo 依赖或 plugin 注册后，等待 Tauri watcher 重编译并恢复应用；需要重启时由 Agent 执行。构建失败后继续修复并等待下一次成功构建，不要求用户重新启动。
+- 进程意外退出后先读取退出原因，修复后重新启动；已有应用不可访问时先检查服务和连接，保持单个开发实例，不另开副本绕过错误。
+- 使用持久开发进程并保留日志；就绪须同时检查开发地址可达与原生应用实际出现。重启前处理未保存工程，不强制丢弃用户编辑，不停止其他项目或无关服务。
 
 开发地址固定为 `http://localhost:7173`，Vite 保留 `strictPort`，与 Tauri `build.devUrl` 同步。Windows 若报 `listen EACCES`，先用 `netsh interface ipv4 show excludedportrange protocol=tcp` 与 IPv6 对应命令核对排除范围；本机原端口 5173 落在 5147–5246 的排除范围。修改端口需同时修改两端配置，并遵守 `tauri.conf.json` 的修改授权。
 
@@ -49,7 +50,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 不要未经审查重跑 `ultracite init` 覆盖项目配置。升级时检查预设、peer 绑定和本地架构规则，重新执行 doctor、check、类型、测试与页面验证；不使用自动启动其他 agent 的修复参数替代本轮受控编辑。
 
-`pnpm tauri:dev` 和 `pnpm tauri:build` 只给用户参考，Agent 不主动执行。当前按纯本地开发验收：保留 workflow 文件，但不上传 GitHub、不触发远程流程、不把配置存在称为 CI 已运行。
+`pnpm tauri:dev` 由 Agent 主动维护；`pnpm tauri:build` 按任务需要执行本地构建。启动授权不包括 push、发布或部署：保留 workflow 文件，不上传 GitHub、不触发远程流程、不把配置存在称为 CI 已运行。
 
 UI 改动必须在已有应用或 Web 页面上验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制，不把模拟电平称为真实音频。
 
@@ -107,7 +108,7 @@ Windows 在 Visual Studio 的 x64 Native Tools Command Prompt 中运行 `corepac
 
 `cargo run -p zoeydaw-engine --example meter_hub_smoke --locked -- REQUEST.json` 使用真实输出设备，将 Main 限制到 −30 dB。输入是严格 protocol v2 工程请求。它验证 EngineSession、native meter reader、Rust Hub 的真实样本聚合、音频图 sample/beat 时钟、1.2秒慢消费者、选择性 reset、换图后的 BPM 与 lease 释放，不启动 Tauri、不请求输入权限。用 `ZOEYDAW_AUDIO_CONFIG_PATH` 与 `ZOEYDAW_AUDIO_CACHE_PATH` 指向临时位置可隔离用户偏好；这项 smoke 不代替 WebView 吞吐和实际操作验收。
 
-Windows WASAPI 的冷启动默认格式由 `audio_hardware_windows.cpp` 读取系统 mix format 与设备周期，不使用未打开 JUCE probe 的 current rate，不猜测采样率，也不在查询时调用音频流 Initialize/Start。普通 shared 模式已通过上述真实 Hub smoke，覆盖采样、RMS、时钟、窗口隔离、reset、慢消费者、拍号引起的换图和释放。Low Latency 与 Exclusive 模式仍未实测。探针通过拍号变更触发结构替换；单独改 BPM 保留 Edit，不能再作为换图测试输入。需要重启 `tauri:dev`，桌面播放及真实音乐听验仍由用户完成。
+Windows WASAPI 的冷启动默认格式由 `audio_hardware_windows.cpp` 读取系统 mix format 与设备周期，不使用未打开 JUCE probe 的 current rate，不猜测采样率，也不在查询时调用音频流 Initialize/Start。普通 shared 模式已通过上述真实 Hub smoke，覆盖采样、RMS、时钟、窗口隔离、reset、慢消费者、拍号引起的换图和释放。Low Latency 与 Exclusive 模式仍未实测。探针通过拍号变更触发结构替换；单独改 BPM 保留 Edit，不能再作为换图测试输入。原生修改后由 Agent 等待重编译或重启 `tauri:dev` 并继续桌面验收；真实音乐听感仍需实际听验结论。
 
 `playback_clock_probe(streamId)` 返回同一 Hub 原点的十进制纳秒和设备采样锚点，仅所属窗口可读。Web 首帧后每五秒串行采样五次，按最小 RTT 中点估算偏移，保留半 RTT 不确定度；隐藏恢复重新校准。`MeterSession.readFrameAge()` 只表示 Hub 快照发布年龄，不等同音频块采集到绘制的全链路延迟。真实 WKWebView 的 p95/p99 尚未测量。
 
@@ -115,7 +116,7 @@ Windows WASAPI 的冷启动默认格式由 `audio_hardware_windows.cpp` 读取�
 
 `cargo test -p zoeydaw-browser tree_100k_disk_catalog_reports_bounded_window_latency -- --ignored --nocapture` 在临时目录创建 10 万真实文件，测量目录扫描及可见树窗口，结束后清理。它不代表音乐解码或实时播放压力测试。
 
-开发首页的“实时 IPC 传输探针”打开 `/library/realtime-probe`，不取得工程/audio lease。Rust 新命令需要用户重启 `tauri:dev`。页面显式运行 single-flight pull、有限 raw Channel 和单 credit 对照，每组4–20秒、最多1200帧；阻塞场景会故意让该 WebView 停顿1.2秒。所有原生命令在 release 构建拒绝，窗口身份由 Tauri 注入。报告是 synthetic IPC，不是音频延迟；显示器刷新、双窗口和其他平台未实测时保留 NOT VERIFIED。原始样本由页面下载，不把 native retainedBytes 当作 Tauri/WebView 总内存。`cargo test -p zoeydaw realtime_probe::tests` 验证队列/所有权，不能代替真实 WKWebView 运行。
+开发首页的“实时 IPC 传输探针”打开 `/library/realtime-probe`，不取得工程/audio lease。Rust 新命令须等待原生重编译或重启完成再验收，由 Agent 维护 `tauri:dev`。页面显式运行 single-flight pull、有限 raw Channel 和单 credit 对照，每组4–20秒、最多1200帧；阻塞场景会故意让该 WebView 停顿1.2秒。所有原生命令在 release 构建拒绝，窗口身份由 Tauri 注入。报告是 synthetic IPC，不是音频延迟；显示器刷新、双窗口和其他平台未实测时保留 NOT VERIFIED。原始样本由页面下载，不把 native retainedBytes 当作 Tauri/WebView 总内存。`cargo test -p zoeydaw realtime_probe::tests` 验证队列/所有权，不能代替真实 WKWebView 运行。
 
 ## 修改前确认
 

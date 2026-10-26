@@ -22,10 +22,10 @@ Web-UI DAW。React 实现界面与交互，Tauri 承载桌面壳，唯一 Trackt
 
 ## 不可破的边界
 
-- **Never**：提交 secrets/token/API key；Agent 启动、重启 `tauri:dev` 或停止用户已有应用。
-- **Always**：复用共享 UI 包及其 token；跨文件重命名用 LSP；保留其他 Session/Agent 的未提交与暂存工作。
+- **Never**：提交 secrets/token/API key；误停其他项目或无关的用户服务。
+- **Always**：复用共享 UI 包及其 token；跨文件重命名用 LSP；保留其他 Session/Agent 的未提交与暂存工作。Agent 负责检查、启动并保持本项目 `tauri:dev`，错误修复后等待热更新或恢复进程；流程见 [setup](docs/agents/setup.md#开发应用由-agent-维护)。
 - **Ask first**：修改 `src-tauri/tauri.conf.json`、共享 UI 公共 API、新增 npm 依赖或 `.github/workflows/`。
-- 修改 Rust、原生配置、capabilities、Cargo 依赖或 plugin 注册后，明确告诉用户“需要重启 tauri:dev”，由用户操作。
+- 修改 Rust、原生配置、capabilities、Cargo 依赖或 plugin 注册后，由 Agent 等待原生重编译与应用恢复；需要重启时自行执行并验证就绪，不再等待用户启动。
 - 每个独立 Feature 或阶段通过受影响检查后自动做本地 commit，不再等待确认；范围与门禁见 [setup](docs/agents/setup.md#按-feature-或阶段提交)。push、发布、部署和不可逆操作另行确认。
 
 ## 设计与完成门槛
