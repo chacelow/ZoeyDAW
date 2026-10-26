@@ -12,3 +12,4 @@ export { setProjectStorageId, serializeProject, hydrateProject } from "./snapsho
 export { useProjectEditGesture } from "./useProjectEditGesture"
 export { projectFiles, useProjectFilesState } from "./project-files"
 export { browserLibrary, useBrowserLibraryState } from "./browser"
+export { usePluginEditor } from "./plugin-editor"

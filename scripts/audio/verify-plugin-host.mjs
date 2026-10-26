@@ -43,6 +43,7 @@ try {
     ["delay", "crash-in-process"],
     ["delay", "hang-in-process"],
     ["delay", "stall-in-process"],
+    ["delay", "editor"],
   ]) {
     const name = `plughost-test-${variant}`
     for (const format of ["clap", "vst3"]) {
@@ -91,6 +92,19 @@ try {
     helper,
     plugins,
     path.join(temporary, "catalog.json"),
+  ])
+  run("cargo", [
+    "run",
+    "--release",
+    "--locked",
+    "-p",
+    "zoeydaw-plugin-host",
+    "--example",
+    "editor_smoke",
+    "--",
+    helper,
+    plugins,
+    path.join(temporary, "editor-catalog.json"),
   ])
   run("cargo", [
     "run",

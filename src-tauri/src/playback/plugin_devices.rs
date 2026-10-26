@@ -12,6 +12,8 @@ type Key = (String, String, String);
 struct ActiveDevice {
     control: DeviceControl,
     parameters: HashMap<u64, u32>,
+    catalog_id: String,
+    state_hash: Option<String>,
 }
 #[derive(Default)]
 struct Registry {
@@ -33,12 +35,13 @@ struct Plan {
 impl PluginDevices {
     pub(crate) fn control(&self, window: &str, session: &str, device: &str) -> Result<DeviceControl,String> {
         let registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
-        let mut matches=registry.controls.iter().filter(|((lease,owner,id),_)| {
-            owner==session && id==device && registry.owners.get(lease).is_some_and(|value|value==window)
-        });
-        let control=matches.next().ok_or("Plugin device is not ready")?.1.control.clone();
-        if matches.next().is_some() { return Err("Ambiguous plugin device owner".into()); }
-        Ok(control)
+        Ok(active_device(&registry,window,session,device)?.control.clone())
+    }
+    pub(crate) fn editor_control(&self, window: &str, session: &str, device: &str, catalog: &str, hash: Option<&str>) -> Result<DeviceControl,String> {
+        let registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
+        let active=active_device(&registry,window,session,device)?;
+        if active.catalog_id!=catalog || active.state_hash.as_deref()!=hash { return Err("Stale plugin editor identity".into()); }
+        Ok(active.control.clone())
     }
     pub fn close_lease(&self, lease: &str) {
         if let Ok(mut registry)=self.0.lock() {
@@ -125,7 +128,10 @@ impl PluginDevices {
                 let format=PreparedFormat{sample_rate:device.sample_rate,quantum:device.quantum,input_channels:device.input_channels,
                     output_channels:device.output_channels,latency_frames:device.latency_frames};
                 let parameters=device.parameters.iter().filter(|info|info.flags.automatable && !info.flags.read_only).map(|info|(info.id,info.step_count)).collect();
-                controls.push((id.clone(),ActiveDevice { control:device.control,parameters }));
+                let authored=find_device(&request,&id)?;
+                let catalog_id=authored.pointer("/plugin/catalogId").and_then(Value::as_str).ok_or("Missing catalog identity")?.to_owned();
+                let state_hash=authored.pointer("/stateRef/sha256").and_then(Value::as_str).map(str::to_owned);
+                controls.push((id.clone(),ActiveDevice { control:device.control,parameters,catalog_id,state_hash }));
                 prepared.push(PreparedPlugin{device_id:id,format,processor:device.audio.into_pending()});
             }
         }
@@ -159,6 +165,15 @@ impl PluginDevices {
         }
         Ok(result)
     }
+}
+
+fn active_device<'a>(registry: &'a Registry, window: &str, session: &str, device: &str) -> Result<&'a ActiveDevice,String> {
+    let mut matches=registry.controls.iter().filter(|((lease,owner,id),_)| {
+        owner==session && id==device && registry.owners.get(lease).is_some_and(|value|value==window)
+    });
+    let active=matches.next().ok_or("Plugin device is not ready")?.1;
+    if matches.next().is_some() { return Err("Ambiguous plugin device owner".into()); }
+    Ok(active)
 }
 
 fn find_device<'a>(request: &'a Value, id: &str) -> Result<&'a Value,String> {

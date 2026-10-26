@@ -78,16 +78,18 @@ function setup(getImportPreferences: () => AudioImportPreferences = () => ({ aut
     if (device?.kind !== "external" || !device.stateRef) throw new Error("Plugin state unavailable")
     return structuredClone(device.stateRef)
   })
+  const closeEditors = vi.fn(async () => {})
   const controller = createProjectFileController(
     runtime,
     port,
     route,
     analyzeTempo,
     getImportPreferences,
-    snapshotPluginState
+    snapshotPluginState,
+    closeEditors
   )
   controller.files.resetBinding("new-project")
-  return { runtime, store, port, route, analyzeTempo, snapshotPluginState, ...controller }
+  return { runtime, port, route, analyzeTempo, snapshotPluginState, closeEditors, ...controller }
 }
 beforeEach(() => localStorage.clear())
 afterEach(() => {
@@ -95,7 +97,9 @@ afterEach(() => {
 })
 
 it("captures an accepted committed revision and never replaces edits made while disk writing", async () => {
-  const { runtime, port, files, useState } = setup()
+  const { runtime, port, files, useState, closeEditors } = setup()
+  const edit = runtime.beginEdit("plugin-editor")
+  closeEditors.mockImplementationOnce(async () => runtime.endEdit(edit))
   runtime.document({ ...runtime.get().document, name: "First" })
   const disk = deferred<unknown>()
   const started = deferred<SaveRequest>()

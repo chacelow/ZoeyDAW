@@ -3,6 +3,7 @@
 #include "realtime_snapshot.h"
 #include "device_model.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -22,9 +23,11 @@ public:
     int32_t process(zd_plugin_block&) noexcept;
     int32_t latchFault(int32_t) noexcept;
     void setParameters(const std::vector<ExternalParameter>&);
+    bool setEditorAuthority(std::uintptr_t context, bool active) noexcept;
     const IsolatedPluginFormat format;
     std::atomic<int32_t> status {0};
     std::atomic<bool> enabled {true};
+    std::atomic<bool> editorActive {false};
 private:
     const zd_plugin_callback callback;
     std::atomic_flag processing = ATOMIC_FLAG_INIT;

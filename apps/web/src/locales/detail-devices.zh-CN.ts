@@ -4,6 +4,8 @@ export default {
   addPlugin: "添加插件",
   loadingPlugin: "正在准备插件…",
   scanPlugins: "请先在设置中扫描插件。",
+  openPluginEditor: "打开插件编辑器",
+  closePluginEditor: "关闭并应用",
   chain: "设备链",
   trackDevices: "{{track}} 的设备",
   inputLevel: "{{device}} 输入电平",

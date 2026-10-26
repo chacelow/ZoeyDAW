@@ -60,6 +60,8 @@ UI 改动必须在已有应用或 Web 页面上验证主路径，观察新截图
 
 `node scripts/audio/verify-plugin-host.mjs [NATIVE_BUILD_DIRECTORY]` 从维护源码构建本地测试插件，打包到临时目录，运行后清理。它不扫描已安装插件。验收覆盖 catalog 身份约束、扫描取消、音频/MIDI/自动化跨 quantum 偏移、宿主回调分配计数、CLAP/VST3 quantum 内时间跳转、崩溃/挂起隔离及显式恢复的真实输出。指定 native build 目录时还构建并执行 Tracktion Node→C ABI→Rust→helper 的脉冲、PDC 和乐器测试。`transport_smoke` 可额外接收不兼容 helper 路径，验证拒绝旧构建。macOS 已实测；2026-10-26 在 Windows x64 运行带 native build 参数的完整入口通过，包括参数/状态恢复、两种格式的隔离与实时端点恢复、admission 释放及 1504-frame 原生图补偿断言。这些探针不代替插件编辑器、物理输入和真实 UI 验收。
 
+同一验证脚本还运行 `editor_smoke`。CLAP 夹具打开 helper 所有的原生窗口，驱动真实音频 quantum，接收有序参数事件，重新加载编辑后的状态文件，并验证取消恢复打开前的完整状态。它不注入桌面输入，不代替 Tauri 编辑器终验。
+
 `cargo run -p zoeydaw-engine --example plugin_admission_smoke --locked` 通过真实 EngineSession 验证异步 admission 回执未领取时取消，以及显式取消的恰好一次释放；不启动 Tauri 或声卡。带 native build 参数的插件验证脚本包含此入口。
 
 main 窗口关闭 Tauri 原生 `dragDropEnabled` 拦截，Browser 内部拖放使用 WebView HTML 事件。锁定的 tauri-runtime-wry 2.9.2 会无条件接收原生拖放，阻止 WKWebView 收到 `dragover` 和 `drop`。源同时提供内部 token 与标准文本文件名；只有内部会话 token 可用于导入。修改该原生配置需要重启应用，HMR 不生效。

@@ -64,6 +64,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 `IsolatedDevicePlugin` 通过 Tracktion `PluginCache` 创建并进入 `PluginList`，由 per-build `createCustomPluginNode` 替换普通 PluginNode；EngineSession 对当前和候选 Edit 均安装该入口。隔离节点按 Device ID 注册电平，零音频输入的乐器只产生输出电平。用户 bypass 读取与湿信号等延迟的 dry 音频和 MIDI，乐器 bypass 清除音频；故障 latch 与 bypass 分离。真实 CLAP retained Edit 探针验证 session admission、起音、停音、输出电平及补偿 bypass，native 回归验证 owner 拒绝、取消与 revision 退役、dry MIDI 偏移及零回调分配。这些验证尚不包含 Web Device 插入、Tauri admission 调用方、保存屏障或完整自动化。
 
+`PluginDevices` 将 prepared control 绑定到 window、lease、session 和 Device ID。打开编辑器还核对已接受的 catalog ID 与 state hash。control worker 使用递增 instance ID；C ABI context 地址保留到 native 与 control 两侧引用全部释放。编辑器命令和参数事件复用已有有界 worker 队列。helper 拥有原生窗口和取消 checkpoint；Web `adapters/plugin-editor/` 只拥有轮询和编辑生命周期，不新增 document Store。保存工程先提交打开的插件编辑器，再捕获 revision。桌面终验与 helper、浏览器探针分开记录。
+
 `crates/engine/native` 将协议模型、无设备分析与 EngineSession 分为 `model`、`analysis`、`runtime` 三个 OBJECT targets。分析不依赖 runtime，runtime 不依赖分析；根 `playback_bridge` 保留 C ABI。Tracktion/JUCE 实现只进入最终 `zoeydaw_playback` 静态库，OBJECT targets 仅继承编译配置，不链接带实现源的 vendor INTERFACE targets。
 
 `runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。

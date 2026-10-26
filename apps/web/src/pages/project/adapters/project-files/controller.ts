@@ -72,7 +72,8 @@ export function createProjectFileController(
   adoptRoute: (id: string) => void,
   analyzeTempo: (path: string) => Promise<{ bpm: number | null }>,
   getImportPreferences: () => Readonly<AudioImportPreferences>,
-  snapshotPluginState: (sessionId: string, deviceId: string) => Promise<PluginStateRef>
+  snapshotPluginState: (sessionId: string, deviceId: string) => Promise<PluginStateRef>,
+  closePluginEditors: () => Promise<void>
 ) {
   const useState = create<ProjectFileState>(() => ({
     binding: null,
@@ -259,6 +260,8 @@ export function createProjectFileController(
     cancelled(signal)
     const release = runtime.startProjectRuntime()
     try {
+      await closePluginEditors()
+      cancelled(signal)
       const capture = runtime.captureProjectSave()
       const projectId = binding?.projectId ?? untitledId
       const manifest = createManifest(

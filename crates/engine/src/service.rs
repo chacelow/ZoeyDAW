@@ -266,6 +266,10 @@ pub async fn telemetry<D: MainThreadDispatcher>(&self, main: &D, lease_id: Strin
     self.invoke(main, "telemetry", json!({"leaseId": lease_id})).await
 }
 
+pub async fn plugin_editor_authority<D: MainThreadDispatcher>(&self, main: &D, session_id: String, device_id: String, context: usize, active: bool) -> Result<(), String> {
+    self.invoke(main, "plugin_editor_authority", json!({"sessionId":session_id,"deviceId":device_id,"context":context.to_string(),"active":active})).await.map(|_| ())
+}
+
 
 pub async fn recording_results<D: MainThreadDispatcher>(&self, main: &D, lease_id: String, session_id: String) -> Result<Value, String> {
     self.invoke(main, "recording_results", json!({"leaseId":lease_id,"sessionId":session_id})).await

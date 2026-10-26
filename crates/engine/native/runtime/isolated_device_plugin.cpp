@@ -31,6 +31,11 @@ bool IsolatedDevicePlugin::matches(const ExternalSettings& settings) const {
         && state["classId"].toString()==settings.classId
         && state["stateHash"].toString()==settings.stateHash;
 }
+bool IsolatedDevicePlugin::setEditorAuthority(std::uintptr_t context, bool active) {
+    if(!binding->setEditorAuthority(context,active))return false;
+    if(!active)binding->setParameters(manualParameters);
+    return true;
+}
 void IsolatedDevicePlugin::configure(const Device& device) {
     const auto& settings=std::get<ExternalSettings>(device.settings);
     if(manualParameters!=settings.parameters) {

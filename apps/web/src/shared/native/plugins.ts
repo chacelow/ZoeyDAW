@@ -43,10 +43,86 @@ const parameter = z
   .strict()
 export type PluginParameter = z.infer<typeof parameter>
 
+const nativeId = z.string().refine(isNativeParameterId)
+const editorEvent = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("value"),
+      id: nativeId,
+      normalized: z.number().finite().min(0).max(1),
+    })
+    .strict(),
+  z.object({ kind: z.literal("begin"), id: nativeId }).strict(),
+  z.object({ kind: z.literal("end"), id: nativeId }).strict(),
+  z.object({ kind: z.literal("metadata") }).strict(),
+  z.object({ kind: z.literal("values") }).strict(),
+  z.object({ kind: z.literal("dirty"), dirty: z.boolean() }).strict(),
+])
+const editorResponse = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("opened"),
+      instance: nativeId,
+      parameters: z.array(parameter).max(4096),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("events"),
+      instance: nativeId,
+      open: z.boolean(),
+      events: z.array(editorEvent).max(4096),
+      parameters: z.array(parameter).max(4096).nullable(),
+      resyncRequired: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("committed"),
+      instance: nativeId,
+      stateRef: z.custom<PluginStateRef>(isPluginStateRef),
+      parameters: z.array(parameter).max(4096),
+    })
+    .strict(),
+  z.object({ kind: z.literal("cancelled"), instance: nativeId }).strict(),
+  z.object({ kind: z.literal("released"), instance: nativeId }).strict(),
+])
+export type PluginEditorRequest =
+  | {
+      kind: "open"
+      parameters: ExternalDevice["parameters"]
+      catalogId: string
+      stateHash: string | null
+    }
+  | { kind: "poll" | "commit" | "cancel" | "release"; instance: string }
+export type PluginEditorResponse = z.infer<typeof editorResponse>
+const editorReplyKinds = {
+  open: "opened",
+  poll: "events",
+  commit: "committed",
+  cancel: "cancelled",
+  release: "released",
+} satisfies Record<PluginEditorRequest["kind"], PluginEditorResponse["kind"]>
+
 export const nativePlugins = {
   available: isTauri,
   parameters: async (sessionId: string, deviceId: string): Promise<PluginParameter[]> =>
     z.array(parameter).parse(await invoke("plugin_device_parameters", { sessionId, deviceId })),
+  editor: async (
+    sessionId: string,
+    deviceId: string,
+    request: PluginEditorRequest
+  ): Promise<PluginEditorResponse> => {
+    const response = editorResponse.parse(
+      await invoke("plugin_device_editor", { sessionId, deviceId, request })
+    )
+    if (
+      response.kind !== editorReplyKinds[request.kind] ||
+      ("instance" in request && response.instance !== request.instance)
+    )
+      throw new Error("Invalid plugin editor response owner or operation")
+    return response
+  },
   snapshot: async (sessionId: string, deviceId: string): Promise<PluginStateRef> => {
     const value: unknown = await invoke("plugin_device_snapshot", { sessionId, deviceId })
     if (!isPluginStateRef(value)) throw new Error("Invalid live plugin state reference")

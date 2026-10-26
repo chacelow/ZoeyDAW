@@ -20,6 +20,7 @@ public:
     void setEnabled(bool) override;
     void configure(const Device&);
     bool matches(const ExternalSettings&) const;
+    bool setEditorAuthority(std::uintptr_t context, bool active);
     void initialise(const tracktion::PluginInitialisationInfo&) override;
     void deinitialise() override;
     void applyToBuffer(const tracktion::PluginRenderContext&) override;

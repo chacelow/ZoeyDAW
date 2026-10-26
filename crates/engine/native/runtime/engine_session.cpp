@@ -574,6 +574,15 @@ void EngineSession::timerCallback() {
 V EngineSession::call(const juce::String& operation,const V& v) {
     require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Playback mutation outside main thread");
     if(operation=="apply")return apply(v);
+    if(operation=="plugin_editor_authority") {
+        fields(v,{"sessionId","deviceId","context","active"});
+        require(accepted && arrangement && accepted->session==text(v,"sessionId"),"Stale plugin editor session");
+        const auto found=arrangement->devices.find(text(v,"deviceId"));
+        require(found!=arrangement->devices.end(),"Plugin editor device disappeared");
+        auto* plugin=dynamic_cast<IsolatedDevicePlugin*>(found->second.get());
+        require(plugin && plugin->setEditorAuthority(decimalU64(v,"context"),boolean(v,"active")),"Stale plugin editor instance");
+        return {};
+    }
     if(operation=="plugin_prepare_plan") {
         fields(v,{"request","leaseId"});const auto request=decode(field(v,"request"));const auto lease=text(v,"leaseId");
         const bool opening=request.stage=="open";

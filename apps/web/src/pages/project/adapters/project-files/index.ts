@@ -5,6 +5,7 @@ import { getAudioImportPreferences } from "@/shared/app-shared/audio-import-pref
 import * as runtime from "../context"
 import { adoptProjectStorageId } from "../snapshots"
 import { createProjectFileController } from "./controller"
+import { commitPluginEditors } from "../plugin-editor"
 import {
   configureBackendSourceLocations,
   configureBackendPluginLocations,
@@ -17,7 +18,8 @@ function createBoundController() {
     adoptProjectStorageId,
     nativeAudio.analyzeTempo,
     getAudioImportPreferences,
-    nativePlugins.snapshot
+    nativePlugins.snapshot,
+    commitPluginEditors
   )
   configureBackendSourceLocations(result.files.resolveSourceLocation)
   configureBackendPluginLocations(result.files.resolvePluginState)

@@ -3,6 +3,7 @@ pub mod realtime_stream;
 pub mod plugin_devices;
 pub mod plugin_seed;
 pub mod plugin_controls;
+pub mod plugin_editor;
 use std::{collections::HashMap, path::Path, sync::{Arc, Mutex}};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

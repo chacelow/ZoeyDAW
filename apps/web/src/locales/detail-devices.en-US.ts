@@ -4,6 +4,8 @@ export default {
   addPlugin: "Add Plugin",
   loadingPlugin: "Preparing plugin…",
   scanPlugins: "Scan plugins in Settings first.",
+  openPluginEditor: "Open Plugin Editor",
+  closePluginEditor: "Close and Apply",
   chain: "Device chain",
   trackDevices: "Devices on {{track}}",
   inputLevel: "{{device}} input level",

@@ -128,6 +128,35 @@ void testConcurrentEntry() {
         "Concurrent entry fault was overwritten by the in-flight success");
     require(allocations==0,"Contended processor entry allocated");
 }
+void testEditorAuthority() {
+    struct State { uint32_t count=0;double value=0; } state;
+    zp::IsolatedPluginBindings bindings;
+    auto binding=bindings.retain({&state,[](void* pointer,zd_plugin_block* block)->int32_t {
+        auto& state=*static_cast<State*>(pointer);
+        state.count=block->automation_count;
+        if(state.count)state.value=block->automation[0].value;
+        return 1;
+    }},{48000,512,2,2,0},nullptr);
+    const auto context=reinterpret_cast<std::uintptr_t>(&state);
+    require(!binding->setEditorAuthority(context+1,true),"Stale editor claimed another processor");
+    zd_plugin_block block {};
+    binding->setParameters({{7,.2}});
+    binding->process(block);
+    require(state.count==1 && state.value==.2,"Authored parameter did not reach processor");
+    require(binding->setEditorAuthority(context,true),"Editor failed to claim its processor");
+    binding->setParameters({{7,.3}});
+    beginAllocationGuard();binding->process(block);const auto allocations=endAllocationGuard();
+    require(allocations==0 && state.count==0,"Editor received stale manual feedback or allocated");
+    zd_plugin_automation automation {0,17,7,.8};block.automation=&automation;block.automation_count=1;
+    binding->process(block);
+    require(state.count==1 && state.value==.8,"Editor ownership suppressed authored automation");
+    block.automation=nullptr;block.automation_count=0;
+    require(binding->setEditorAuthority(context,false),"Editor failed to release its processor");
+    binding->process(block);
+    require(state.count==0,"Discarded editor feedback replayed after close");
+    binding->setParameters({{7,.6}});binding->process(block);
+    require(state.count==1 && state.value==.6,"Authored parameters failed to resume after editor close");
+}
 }
 int main() {
     try {
@@ -135,6 +164,7 @@ int main() {
         testBindingRetirement();
         testExclusiveEntry();
         testConcurrentEntry();
+        testEditorAuthority();
         graph::PlayHead playhead;graph::PlayHeadState head(playhead);
         tracktion::tempo::Sequence tempo({{tracktion::BeatPosition::fromBeats(0),120,0}},
             {{tracktion::BeatPosition::fromBeats(0),3,8,false}},tracktion::tempo::LengthOfOneBeat::dependsOnTimeSignature);

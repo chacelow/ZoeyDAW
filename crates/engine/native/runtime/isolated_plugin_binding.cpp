@@ -26,6 +26,11 @@ void IsolatedPluginBinding::setParameters(const std::vector<ExternalParameter>& 
     for(size_t index=0;index<values.size();++index)next.values[index]={0,0,values[index].id,values[index].normalized};
     manual.publish(next);
 }
+bool IsolatedPluginBinding::setEditorAuthority(std::uintptr_t context, bool active) noexcept {
+    if(context!=reinterpret_cast<std::uintptr_t>(callback.context))return false;
+    editorActive.store(active,std::memory_order_release);
+    return true;
+}
 int32_t IsolatedPluginBinding::process(zd_plugin_block& block) noexcept {
     block.produced_count=0;
     if(const auto fault=status.load(std::memory_order_acquire);fault<0)return fault;
@@ -40,6 +45,7 @@ int32_t IsolatedPluginBinding::process(zd_plugin_block& block) noexcept {
     if(block.midi_count>4096 || block.automation_count>4096-block.midi_count)return latchFault(-2);
     manualPending=manual.readLatest(pendingManual) || manualPending;
     const auto* originalAutomation=block.automation;
+    if(editorActive.load(std::memory_order_acquire))manualPending=false;
     const auto originalCount=block.automation_count;
     if(manualPending && originalCount==0 && pendingManual.count<=4096-block.midi_count) {
         block.automation=pendingManual.values.data();block.automation_count=pendingManual.count;manualPending=false;

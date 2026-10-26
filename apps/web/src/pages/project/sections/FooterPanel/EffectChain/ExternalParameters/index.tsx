@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react"
-import { DragPadBar } from "@zoeymind/ui"
-import { useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
+import { Button, DragPadBar } from "@zoeymind/ui"
+import { useTranslation } from "@zoeymind/i18n"
+import {
+  usePluginEditor,
+  useProjectEditGesture,
+  useProjectFilesState,
+  useProjectState,
+} from "@/pages/project/adapters"
 import { nativePlugins } from "@/shared/native/plugins"
 import type { PluginParameter } from "@/shared/native/plugins"
 import type { ExternalDevice } from "@zoeydaw/project-core/devices"
@@ -10,10 +16,12 @@ function ExternalParameterControl({
   trackId,
   device,
   parameter,
+  disabled,
 }: {
   readonly trackId: string
   readonly device: ExternalDevice
   readonly parameter: PluginParameter
+  readonly disabled: boolean
 }) {
   const value =
     device.parameters.find(item => item.id === parameter.id)?.normalized ?? parameter.normalized
@@ -47,7 +55,7 @@ function ExternalParameterControl({
         max={1}
         step={parameter.stepCount > 0 ? 1 / parameter.stepCount : 0.001}
         defaultValue={parameter.defaultValue ?? parameter.normalized}
-        disabled={parameter.readOnly || !parameter.automatable}
+        disabled={disabled || parameter.readOnly || !parameter.automatable}
         format={normalized => `${(normalized * 100).toFixed(1)}%`}
         parse={raw => Number(raw.replace("%", "").trim()) / 100}
         className="shrink-0"
@@ -66,8 +74,12 @@ export function ExternalParameters({
 }) {
   const sessionId = useProjectState(state => state.session.backend.sessionId)
   const phase = useProjectState(state => state.session.backend.phase)
+  const fileBusy = useProjectFilesState(state => state.operation.kind !== "idle")
   const [parameters, setParameters] = useState<PluginParameter[]>([])
   const [error, setError] = useState<string | null>(null)
+  const { t } = useTranslation()
+  const editor = usePluginEditor(trackId, device.id)
+  const editing = editor.phase !== "closed"
   useEffect(() => {
     if (!nativePlugins.available() || phase !== "ready") return
     let disposed = false
@@ -88,12 +100,34 @@ export function ExternalParameters({
   }, [sessionId, phase, device.id, device.plugin.catalogId, device.stateRef?.sha256])
   return (
     <div className="gap-control-gap flex min-h-0 flex-col overflow-y-auto">
+      {nativePlugins.available() && (
+        <Button
+          size="control"
+          variant="outline"
+          disabled={
+            fileBusy ||
+            phase !== "ready" ||
+            editor.phase === "opening" ||
+            editor.phase === "closing"
+          }
+          onClick={() => {
+            void (editing ? editor.close() : editor.open())
+          }}
+        >
+          {t(editing ? "detailDevices.closePluginEditor" : "detailDevices.openPluginEditor")}
+        </Button>
+      )}
+      {editor.error && (
+        <span role="alert" className="text-destructive">
+          {editor.error}
+        </span>
+      )}
       {error && (
         <span role="alert" className="text-destructive">
           {error}
         </span>
       )}
-      {parameters
+      {(editor.parameters ?? parameters)
         .filter(parameter => !parameter.hidden)
         .map(parameter => (
           <ExternalParameterControl
@@ -101,6 +135,7 @@ export function ExternalParameters({
             trackId={trackId}
             device={device}
             parameter={parameter}
+            disabled={editing}
           />
         ))}
     </div>
