@@ -166,7 +166,7 @@ fn sync_directory(path: &Path) -> io::Result<()> {
   {
     use std::os::windows::fs::OpenOptionsExt;
     use windows_sys::Win32::Storage::FileSystem::FILE_FLAG_BACKUP_SEMANTICS;
-    OpenOptions::new().read(true).custom_flags(FILE_FLAG_BACKUP_SEMANTICS).open(path)?.sync_all()
+    OpenOptions::new().read(true).write(true).custom_flags(FILE_FLAG_BACKUP_SEMANTICS).open(path)?.sync_all()
   }
   #[cfg(not(target_os = "windows"))]
   {
@@ -223,15 +223,6 @@ fn managed_binding(project: &ProjectPath, location: &MediaLocation) -> StorageRe
   Ok(Some(relative))
 }
 
-fn prepublication_sync(result: io::Result<()>, path: &Path) -> StorageResult<bool> {
-  match result {
-    Ok(()) => Ok(true),
-    #[cfg(target_os = "windows")]
-    Err(_) => { let _ = path; Ok(false) }
-    #[cfg(not(target_os = "windows"))]
-    Err(error) => Err(StorageError::io(error, path)),
-  }
-}
 
 
 pub(super) fn save_with_sync(
@@ -258,7 +249,6 @@ pub(super) fn save_with_sync(
   let cancel = &operation.cancellation;
   cancel.check()?;
   let mut collected = Vec::new();
-  let mut directories_synced = true;
   if collect && !records.is_empty() {
     let directory = ensure_media_directory(&project)?;
     for (record, source) in records.iter_mut().zip(paths) {
@@ -280,7 +270,7 @@ pub(super) fn save_with_sync(
       collected.push(owned);
       record.location = MediaLocation::Project { path: relative };
     }
-    directories_synced &= prepublication_sync(sync(&directory), &directory)?;
+    sync(&directory).map_err(|error| StorageError::io(error, &directory))?;
   }
   let states = super::plugin_states::references(&project, &manifest)?;
   if !states.is_empty() {
@@ -310,7 +300,7 @@ pub(super) fn save_with_sync(
       *manifest.pointer_mut(&state.pointer).ok_or_else(|| StorageError::new("invalid-plugin-state", "Plugin state reference disappeared", None))? =
         Value::String(format!("plugin-state/{}.zdps", state.hash));
     }
-    directories_synced &= prepublication_sync(sync(&directory), &directory)?;
+    sync(&directory).map_err(|error| StorageError::io(error, &directory))?;
   }
   replace_media(&mut manifest, &records)?;
   let temporary = project.root.join(format!(".zdaw-{}.tmp", Uuid::new_v4()));
@@ -319,7 +309,7 @@ pub(super) fn save_with_sync(
   file.write_all(b"\n").map_err(|error| StorageError::io(error, &owned_manifest.path))?;
   file.sync_all().map_err(|error| StorageError::io(error, &owned_manifest.path))?;
   drop(file);
-  directories_synced &= prepublication_sync(sync(&project.root), &project.root)?;
+  sync(&project.root).map_err(|error| StorageError::io(error, &project.root))?;
   check_conflict(&project, expected_commit_id)?;
   cancel.start_publication()?;
   publish_manifest(&owned_manifest.path, &project.manifest, expected_commit_id.is_some()).map_err(|error| {
@@ -336,7 +326,7 @@ pub(super) fn save_with_sync(
     Err(error) if error.kind() == io::ErrorKind::NotFound => true,
     Err(_) => false,
   };
-  let durability = if sync(&project.root).is_ok() && directories_synced && temporary_removed {
+  let durability = if sync(&project.root).is_ok() && temporary_removed {
     Durability::Synced
   } else {
     Durability::PublishedSyncUncertain

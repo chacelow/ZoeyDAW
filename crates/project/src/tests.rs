@@ -97,6 +97,7 @@ fn empty_project_roundtrip_without_starting_the_app() {
   let path = sandbox.root.join("empty.zdaw");
   let value = manifest("first", &[]);
   let saved = save(&path, value.clone(), false, None).unwrap();
+  assert_eq!(saved.durability, Durability::Synced);
   assert_eq!(saved.manifest, value);
   assert_eq!(saved.path, path_string(&path).unwrap());
   assert_eq!(read_manifest(&path).unwrap(), value);
