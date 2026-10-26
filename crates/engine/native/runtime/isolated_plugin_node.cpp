@@ -1,7 +1,9 @@
 #include "isolated_plugin_node.h"
+#include "isolated_device_plugin.h"
 #include <tracktion_engine/tracktion_engine.h>
 #include <tracktion_engine/playback/graph/tracktion_TracktionEngineNode.h>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
@@ -11,15 +13,20 @@ namespace {
 class IsolatedPluginNode final : public tracktion::graph::Node {
 public:
     IsolatedPluginNode(std::unique_ptr<Node> source, std::shared_ptr<IsolatedPluginBinding> processor,
-                       tracktion::engine::ProcessState& timeline, std::string deviceId)
+                       tracktion::engine::ProcessState& timeline, std::string deviceId, IsolatedDevicePlugin* owner)
         : input(std::move(source)), binding(std::move(processor)),
-          format(binding->format), timeline(timeline), status(binding->status), deviceId(std::move(deviceId)) {
+          format(binding->format), timeline(timeline), status(binding->status), deviceId(std::move(deviceId)), automationOwner(owner) {
         if(!input)throw std::invalid_argument("Missing isolated plugin input node");
         const auto properties=input->getNodeProperties();
         if(format.inputChannels!=0 && properties.numberOfChannels!=int(format.inputChannels))
             throw std::invalid_argument("Isolated plugin input channels differ from prepared layout");
         if(format.latencyFrames>uint32_t(std::numeric_limits<int>::max()-properties.latencyNumSamples))
             throw std::invalid_argument("Isolated plugin latency overflow");
+        if(automationOwner) {
+            parameters.reserve(size_t(automationOwner->getNumAutomatableParameters()));
+            for(auto* parameter:automationOwner->getAutomatableParameters())
+                parameters.push_back({std::stoull(parameter->paramID.toStdString()),parameter});
+        }
         setOptimisations({tracktion::graph::ClearBuffers::no,tracktion::graph::AllocateAudioBuffer::yes,tracktion::graph::ShareOutputBuffer::no});
     }
     tracktion::graph::NodeProperties getNodeProperties() override {
@@ -41,6 +48,8 @@ private:
             dryAudio.setSize(int(format.inputChannels),info.blockSize);
         }
         reserveOutput=true;
+        automationStep=uint32_t(std::max(128,128*juce::roundToInt(info.sampleRate/44100.0)));
+        automationLatency=getNodeProperties().latencyNumSamples;
     }
     void process(ProcessContext& context) override {
         auto source=input->getProcessedOutput();
@@ -89,8 +98,28 @@ private:
                 transport.flags|=32;
             }
         }
-        zd_plugin_block block {inputs.data(),outputs.data(),midiInput.data(),nullptr,midiResult.data(),&transport,
-            frames,format.inputChannels,format.outputChannels,midiCount,0,uint32_t(midiResult.size()),0};
+        uint32_t automationCount=0;
+        std::array<uint64_t,64> masks;
+        const auto words=(parameters.size()+63)/64;
+        bool hasAutomation=false;
+        for(size_t word=0;word<words;++word) { masks[word]=automationOwner->automatedParameters(word);hasAutomation|=masks[word]!=0; }
+        if(hasAutomation) {
+            const bool reading=automationOwner->edit.getAutomationRecordManager().isReadingAutomation();
+            for(uint32_t offset=0;offset<frames;offset+=automationStep) {
+                const auto time=tracktion::TimePosition::fromSamples(transport.sample_position+offset-automationLatency,format.sampleRate);
+                if(reading)automationOwner->updateParameterStreams(time);
+                for(size_t word=0;word<words;++word)for(auto bits=masks[word];bits;bits&=bits-1) {
+                    auto& parameter=parameters[word*64+std::countr_zero(bits)];
+                    const auto value=reading?parameter.value->getCurrentValue():parameter.value->getCurrentExplicitValue();
+                    if(offset>0 && value==parameter.lastValue)continue;
+                    parameter.lastValue=value;
+                    if(automationCount==automation.size()-midiCount) { fail(context,-2);return; }
+                    automation[automationCount++]={.slot=0,.offset=offset,.parameter=parameter.id,.value=std::clamp(double(value),0.0,1.0)};
+                }
+            }
+        }
+        zd_plugin_block block {inputs.data(),outputs.data(),midiInput.data(),automation.data(),midiResult.data(),&transport,
+            frames,format.inputChannels,format.outputChannels,midiCount,automationCount,uint32_t(midiResult.size()),0};
         const auto result=binding->process(block);
         if(result<0 || block.produced_count>midiResult.size()) { fail(context,result<0?result:-2);applyBypass(context,enabled);return; }
         for(uint32_t index=0;index<block.produced_count;++index) {
@@ -154,6 +183,12 @@ private:
     std::array<float*,64> outputs {};
     std::array<zd_plugin_midi,4096> midiInput {};
     std::array<zd_plugin_midi,8192> midiResult {};
+    juce::ReferenceCountedObjectPtr<IsolatedDevicePlugin> automationOwner;
+    struct Parameter { uint64_t id;tracktion::AutomatableParameter::Ptr value;float lastValue=0; };
+    std::vector<Parameter> parameters;
+    std::array<zd_plugin_automation,4096> automation {};
+    uint32_t automationStep=128;
+    int automationLatency=0;
     tracktion::engine::MidiMessageArray midiOutput,midiSeed;
     struct DelayedMidi { uint64_t frame;std::array<uint8_t,3> bytes;uint8_t size; };
     std::array<DelayedMidi,8192> delayed {};
@@ -168,9 +203,9 @@ private:
 }
 std::unique_ptr<tracktion::graph::Node> createIsolatedPluginNode(
     std::unique_ptr<tracktion::graph::Node> source,std::shared_ptr<IsolatedPluginBinding> binding,
-    tracktion::engine::ProcessState& timeline,std::string deviceId) {
+    tracktion::engine::ProcessState& timeline,std::string deviceId,IsolatedDevicePlugin* automationOwner) {
     if(!binding)throw std::invalid_argument("Missing isolated processor binding");
-    return std::make_unique<IsolatedPluginNode>(std::move(source),std::move(binding),timeline,std::move(deviceId));
+    return std::make_unique<IsolatedPluginNode>(std::move(source),std::move(binding),timeline,std::move(deviceId),automationOwner);
 }
 const std::string* isolatedDeviceId(tracktion::graph::Node& node) noexcept {
     auto* isolated=dynamic_cast<IsolatedPluginNode*>(&node);

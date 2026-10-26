@@ -115,10 +115,16 @@ Request decode(const V& v) {
                 const auto id=text(target,"deviceId"),parameter=text(target,"parameter");
                 const auto device=std::find_if(tr.devices.begin(),tr.devices.end(),[&](const Device& item){return item.id==id;});
                 require(device!=tr.devices.end(),"Unknown device automation target");
-                const auto parameters=deviceParameters(device->settings);
-                const auto spec=std::find_if(parameters.begin(),parameters.end(),[&](const DeviceParameterSpec& item){return parameter==item.id;});
-                require(spec!=parameters.end(),"Unknown device automation parameter");
-                for(const auto& point:array(lane,"points"))number(point,"value",spec->minimum,spec->maximum);
+                if(const auto* external=std::get_if<ExternalSettings>(&device->settings)) {
+                    const auto nativeId=decimalU64(target,"parameter");
+                    require(std::any_of(external->parameters.begin(),external->parameters.end(),[&](const auto& item){return item.id==nativeId;}),"Unknown external automation parameter");
+                    for(const auto& point:array(lane,"points"))number(point,"value",0,1);
+                } else {
+                    const auto parameters=deviceParameters(device->settings);
+                    const auto spec=std::find_if(parameters.begin(),parameters.end(),[&](const DeviceParameterSpec& item){return parameter==item.id;});
+                    require(spec!=parameters.end(),"Unknown device automation parameter");
+                    for(const auto& point:array(lane,"points"))number(point,"value",spec->minimum,spec->maximum);
+                }
             }
             double previous=-1; for(auto& point:array(lane,"points")) { fields(point,{"id","bar","value"},{"curve"}); text(point,"id"); double bar=number(point,"bar",1,1e12); require(bar>=previous,"Unsorted automation points"); previous=bar; number(point,"value",-1e12,1e12); if(point.hasProperty("curve")) number(point,"curve",-1,1); }
         }

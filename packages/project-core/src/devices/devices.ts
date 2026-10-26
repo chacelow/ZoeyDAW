@@ -37,8 +37,13 @@ export const DEVICE_PARAMETERS = {
 >
 
 export type DeviceParameter = keyof typeof DEVICE_PARAMETERS
+export function isBuiltinDeviceParameter(value: string): value is DeviceParameter {
+  return Object.prototype.hasOwnProperty.call(DEVICE_PARAMETERS, value)
+}
 
-export function deviceParameterKeys(device: Device): readonly DeviceParameter[] {
+export function deviceParameterKeys(device: BuiltinDevice): readonly DeviceParameter[]
+export function deviceParameterKeys(device: Device): readonly string[]
+export function deviceParameterKeys(device: Device): readonly string[] {
   switch (device.kind) {
     case "utility":
       return ["gainDb", "pan", "width"]
@@ -49,11 +54,13 @@ export function deviceParameterKeys(device: Device): readonly DeviceParameter[] 
     case "reverb":
       return ["decay", "size", "mix"]
     case "external":
-      return []
+      return device.parameters.map(parameter => parameter.id)
   }
 }
 
-export function deviceParameterValue(device: Device, field: DeviceParameter): number | undefined {
+export function deviceParameterValue(device: Device, field: string): number | undefined {
+  if (device.kind === "external")
+    return device.parameters.find(parameter => parameter.id === field)?.normalized
   switch (field) {
     case "gainDb":
       return device.kind === "utility" ? device.gainDb : undefined

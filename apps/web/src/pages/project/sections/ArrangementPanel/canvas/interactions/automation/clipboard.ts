@@ -1,5 +1,4 @@
-import { DEVICE_PARAMETERS } from "@zoeydaw/project-core/devices"
-import type { DeviceParameter } from "@zoeydaw/project-core/devices"
+import { isBuiltinDeviceParameter, isNativeParameterId } from "@zoeydaw/project-core/devices"
 import type { AutomationPoint, AutomationTarget } from "@zoeydaw/project-core/types"
 
 export const AUTOMATION_MIME = "application/x-zoeymind-automation+json"
@@ -7,10 +6,6 @@ export const AUTOMATION_MIME = "application/x-zoeymind-automation+json"
 export interface AutomationClipboard {
   target: AutomationTarget
   points: AutomationPoint[]
-}
-
-function isDeviceParameter(value: string): value is DeviceParameter {
-  return Object.prototype.hasOwnProperty.call(DEVICE_PARAMETERS, value)
 }
 
 function clipboardTarget(value: unknown): AutomationTarget | null {
@@ -27,7 +22,7 @@ function clipboardTarget(value: unknown): AutomationTarget | null {
     !("deviceId" in value) ||
     typeof value.deviceId !== "string" ||
     typeof value.parameter !== "string" ||
-    !isDeviceParameter(value.parameter) ||
+    (!isBuiltinDeviceParameter(value.parameter) && !isNativeParameterId(value.parameter)) ||
     Object.keys(value).length !== 3
   )
     return null

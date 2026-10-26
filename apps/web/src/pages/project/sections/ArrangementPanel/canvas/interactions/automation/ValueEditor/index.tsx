@@ -1,4 +1,4 @@
-import { DEVICE_PARAMETERS } from "@zoeydaw/project-core/devices"
+import { automationTargetUnit } from "@zoeydaw/project-core/automation-target"
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions } from "@/pages/project/adapters"
@@ -46,7 +46,7 @@ export function AutomationValueEditor() {
 function formatValue(target: AutomationTarget, value: number): string {
   const source = automationSourceValue(target, value)
   if (target.kind === "device") {
-    const unit = DEVICE_PARAMETERS[target.parameter].unit
+    const unit = automationTargetUnit(target)
     const suffix =
       unit === "hz"
         ? " Hz"
@@ -118,7 +118,7 @@ function ValueInput({
             : Number(trimmed.replace(/\s*(?:dB|Hz|ms|s|%)\s*$/i, ""))
       if (trimmed && Number.isFinite(parsed)) {
         const source =
-          target.kind === "device" && DEVICE_PARAMETERS[target.parameter].unit === "ratioPercent"
+          target.kind === "device" && automationTargetUnit(target) === "ratioPercent"
             ? parsed / 100
             : parsed
         const normalized = normalizedAutomationValue(target, source)

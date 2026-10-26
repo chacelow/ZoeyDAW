@@ -7,6 +7,8 @@ import {
   normalizedAutomationValue,
 } from "./automation-curve"
 import { parseProject, stringifyProject } from "./persistence"
+import { automationTargetSource, isAutomationTarget } from "./automation-target"
+import type { AutomationTarget } from "./types"
 
 describe("automation interpolation", () => {
   it("holds endpoints and bends bounded monotone segments while retaining their exact breakpoints", () => {
@@ -34,6 +36,47 @@ describe("automation interpolation", () => {
     expect(
       automationSourceValue(frequency, normalizedAutomationValue(frequency, 1234))
     ).toBeCloseTo(1234)
+  })
+
+  it("round-trips exact native parameter identities and validates declared targets", () => {
+    const document = createTestDocument()
+    const track = document.tracks.find(track => track.id === "3-audio")
+    if (!track) throw new Error("Missing audio fixture")
+    const id = "18446744073709551615"
+    track.devices = [
+      {
+        id: "external",
+        kind: "external",
+        enabled: true,
+        collapsed: false,
+        plugin: {
+          catalogId: "a".repeat(64),
+          format: "clap",
+          classId: "fixture",
+          name: "Fixture",
+          vendor: "",
+          version: "1",
+          role: "effect",
+        },
+        stateRef: null,
+        parameters: [{ id, normalized: 0.35 }],
+      },
+    ]
+    const target: AutomationTarget = { kind: "device", deviceId: "external", parameter: id }
+    track.automation = [
+      { id: "native-envelope", target, points: [{ id: "point", bar: 1, value: 0.75 }] },
+    ]
+    expect(isAutomationTarget(target, track)).toBe(true)
+    for (const parameter of ["9007199254740993", "gainDb", "018446744073709551615"])
+      expect(isAutomationTarget({ ...target, parameter }, track)).toBe(false)
+    expect(automationTargetSource(track, target)).toBe(0.35)
+    expect(automationSourceValue(target, normalizedAutomationValue(target, 0.625))).toBe(0.625)
+    const snapshot = stringifyProject(document, createTestWorkspace())
+    expect(
+      parseProject(snapshot).document.tracks.find(track => track.id === "3-audio")?.automation
+    ).toEqual(track.automation)
+    track.automation[0].points[0].value = 1.01
+    expect(() => parseProject(stringifyProject(document, createTestWorkspace()))).toThrow()
   })
 
   it("round-trips bounded curves and rejects non-finite and out-of-range snapshot curves", () => {

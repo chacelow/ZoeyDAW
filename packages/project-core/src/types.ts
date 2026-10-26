@@ -1,7 +1,7 @@
 import type { ProjectRuntimeStatus } from "./backend"
 import type { GridSettings } from "./grid"
 import type { AudioClipSettings } from "./audio-editor"
-import type { Device, DeviceParameter } from "./devices"
+import type { Device } from "./devices"
 import type { MediaSource } from "./media"
 export type { MediaSource, MediaLocation } from "./media"
 
@@ -23,7 +23,7 @@ export interface AutomationPoint {
 }
 export type AutomationTarget =
   | { kind: "mixer"; parameter: "volume" | "pan" }
-  | { kind: "device"; deviceId: string; parameter: DeviceParameter }
+  | { kind: "device"; deviceId: string; parameter: string }
 export interface AutomationLane {
   id: string
   target: AutomationTarget

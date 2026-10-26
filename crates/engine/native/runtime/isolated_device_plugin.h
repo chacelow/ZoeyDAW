@@ -22,6 +22,8 @@ public:
     bool matches(const ExternalSettings&) const;
     bool setEditorAuthority(std::uintptr_t context, uint64_t instance, bool active);
     bool canRecover(std::uintptr_t context) const noexcept;
+    void updateAutomation();
+    uint64_t automatedParameters(size_t word) const noexcept { return automationMasks[word].load(std::memory_order_acquire); }
     void initialise(const tracktion::PluginInitialisationInfo&) override;
     void deinitialise() override;
     void applyToBuffer(const tracktion::PluginRenderContext&) override;
@@ -30,6 +32,8 @@ private:
     const std::shared_ptr<IsolatedPluginBinding> binding;
     const juce::String name;
     std::vector<ExternalParameter> manualParameters;
+    std::array<std::atomic<uint64_t>,64> automationMasks {};
+    void publishManualParameters();
 };
 void configureIsolatedDeviceGraph(tracktion::CreateNodeParams&);
 }

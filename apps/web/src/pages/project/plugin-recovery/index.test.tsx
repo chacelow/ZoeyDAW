@@ -16,6 +16,7 @@ import {
   startProjectRuntime,
   useProjectState,
   whenProjectBackendIdle,
+  projectActions,
 } from "@/pages/project/adapters"
 import {
   createMockDocument,
@@ -61,8 +62,9 @@ let trackId = ""
 let stopRuntime: () => void
 let stopBackend: () => void
 function currentDevice() {
-  return useProjectState.getState().document.tracks.find(track => track.id === trackId)
+  const value = useProjectState.getState().document.tracks.find(track => track.id === trackId)
     ?.devices?.[0]
+  return value?.kind === "external" ? value : undefined
 }
 function fault(instanceId = "1"): PluginFaultStatus {
   return {
@@ -237,4 +239,63 @@ it("does not clear another project's fault when a previous recovery finishes lat
   expect(readNativePluginFaults()).toEqual([current])
   expect(currentDevice()).toEqual(device)
   expect(view.getByRole("alert").textContent).toContain(current.message)
+})
+
+it("preserves the manual baseline through automated editor feedback, commit and undo", async () => {
+  const track = useProjectState.getState().document.tracks.find(track => track.id === trackId)
+  if (!track) throw new Error("Missing audio track")
+  const automation = [
+    {
+      id: "native-envelope",
+      target: { kind: "device", deviceId: device.id, parameter: "0" },
+      points: [{ id: "point", bar: 1, value: 0.9 }],
+    },
+  ] satisfies typeof track.automation
+  act(() => {
+    const token = projectActions.beginEdit()
+    projectActions.updateTrack(trackId, { automation })
+    projectActions.endEdit(token)
+  })
+  await whenProjectBackendIdle()
+  const reported = parameters.map(parameter => ({ ...parameter, normalized: 0.9 }))
+  const stateRef = { sha256: "c".repeat(64), path: "C:/fixture/automated.zdps" }
+  const editor = vi
+    .spyOn(nativePlugins, "editor")
+    .mockImplementation(async (_session, _device, request) => {
+      if (request.kind === "open") return { kind: "opened", instance: "1", parameters }
+      if (request.kind === "poll")
+        return {
+          kind: "events",
+          instance: "1",
+          open: true,
+          parameters: reported,
+          resyncRequired: false,
+          events: [{ kind: "value", id: "0", normalized: 0.9 }],
+        }
+      if (request.kind === "commit")
+        return { kind: "committed", instance: "1", parameters: reported, stateRef }
+      return { kind: "cancelled", instance: "1" }
+    })
+  const view = render(<View parameters />)
+  fireEvent.click(await view.findByRole("button", { name: "detailDevices.openPluginEditor" }))
+  await waitFor(() =>
+    expect(editor).toHaveBeenCalledWith(
+      useProjectState.getState().session.backend.sessionId,
+      device.id,
+      { kind: "poll", instance: "1" }
+    )
+  )
+  expect(currentDevice()?.parameters).toEqual(device.parameters)
+  fireEvent.click(view.getByRole("button", { name: "detailDevices.closePluginEditor" }))
+  await waitFor(() => expect(currentDevice()?.stateRef).toEqual(stateRef))
+  await whenProjectBackendIdle()
+  expect(currentDevice()?.parameters).toEqual(device.parameters)
+  act(() => projectActions.undo())
+  expect(currentDevice()?.stateRef).toEqual(device.stateRef)
+  expect(currentDevice()?.parameters).toEqual(device.parameters)
+  act(() => projectActions.redo())
+  expect(currentDevice()?.stateRef).toEqual(stateRef)
+  expect(
+    useProjectState.getState().document.tracks.find(track => track.id === trackId)?.automation
+  ).toEqual(automation)
 })

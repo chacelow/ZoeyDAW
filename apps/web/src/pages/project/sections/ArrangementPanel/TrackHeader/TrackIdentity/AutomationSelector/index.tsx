@@ -1,6 +1,7 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { Button, DropdownButton } from "@zoeymind/ui"
-import { projectActions, useProjectState } from "@/pages/project/adapters"
+import type { DropdownButtonItem } from "@zoeymind/ui"
+import { projectActions, useProjectState, usePluginParameters } from "@/pages/project/adapters"
 import { deviceParameterKeys } from "@zoeydaw/project-core/devices"
 import {
   automationTargetKey,
@@ -40,18 +41,31 @@ function TargetSelectors({
         : "none"
   const device =
     target?.kind === "device" ? track.devices?.find(item => item.id === target.deviceId) : undefined
-  const parameterItems =
+  const metadata = usePluginParameters(device?.kind === "external" ? device : undefined)
+  const parameterItems: DropdownButtonItem<string>[] =
     deviceId === "mixer"
       ? [
           { id: "volume", label: t("arrangement.volume") },
           { id: "pan", label: t("arrangement.pan") },
         ]
       : device
-        ? deviceParameterKeys(device).map(key => ({
-            id: key,
-            label: t(`detailDevices.parameters.${key}`),
-          }))
+        ? deviceParameterKeys(device).flatMap(key => {
+            if (device.kind !== "external")
+              return [{ id: key, label: t(`detailDevices.parameters.${key}`) }]
+            const parameter = metadata.parameters.find(parameter => parameter.id === key)
+            if (parameter?.hidden && target?.parameter !== key) return []
+            return [
+              {
+                id: key,
+                label: parameter?.title || key,
+                disabled:
+                  parameter?.readOnly || (parameter !== undefined && !parameter.automatable),
+              },
+            ]
+          })
         : []
+  if (metadata.error)
+    parameterItems.push({ type: "heading", id: "metadata-error", label: metadata.error })
   return (
     <div className="flex min-w-0 gap-1" data-automation-target-selectors={track.id}>
       <DropdownButton<string>
@@ -75,7 +89,7 @@ function TargetSelectors({
             : []),
           ...(track.devices ?? []).map((item, index) => ({
             id: `device:${item.id}`,
-            label: `${t(`detailDevices.kinds.${item.kind}`)} ${index + 1}`,
+            label: `${item.kind === "external" ? item.plugin.name : t(`detailDevices.kinds.${item.kind}`)} ${index + 1}`,
           })),
         ]}
         className="min-w-0 flex-1"

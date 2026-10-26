@@ -1,4 +1,11 @@
-import { DEVICE_PARAMETERS, deviceParameterKeys, deviceParameterValue, isDevice } from "./devices"
+import {
+  DEVICE_PARAMETERS,
+  deviceParameterKeys,
+  deviceParameterValue,
+  isDevice,
+  isBuiltinDeviceParameter,
+  isNativeParameterId,
+} from "./devices"
 import type { AutomationTarget, Track } from "./types"
 
 export function sameAutomationTarget(a: AutomationTarget, b: AutomationTarget): boolean {
@@ -75,14 +82,24 @@ export function resolveAutomationTarget(
 export function automationTargetSource(track: Track, target: AutomationTarget): number {
   if (target.kind === "mixer") return target.parameter === "volume" ? track.volumeDb : track.pan
   const device = track.devices?.find(item => item.id === target.deviceId)
-  return (
-    (device && deviceParameterValue(device, target.parameter)) ??
-    DEVICE_PARAMETERS[target.parameter].defaultValue
-  )
+  const value = device && deviceParameterValue(device, target.parameter)
+  if (value !== undefined) return value
+  if (isBuiltinDeviceParameter(target.parameter))
+    return DEVICE_PARAMETERS[target.parameter].defaultValue
+  throw new Error("Native automation parameter has no declared manual value")
 }
 
 export function automationTargetBounds(target: AutomationTarget): { min: number; max: number } {
   if (target.kind === "mixer")
     return target.parameter === "volume" ? { min: -60, max: 6 } : { min: -1, max: 1 }
-  return DEVICE_PARAMETERS[target.parameter]
+  if (isBuiltinDeviceParameter(target.parameter)) return DEVICE_PARAMETERS[target.parameter]
+  if (isNativeParameterId(target.parameter)) return { min: 0, max: 1 }
+  throw new Error("Unknown automation parameter")
+}
+
+export function automationTargetUnit(target: AutomationTarget): string {
+  if (target.kind === "mixer") return target.parameter === "volume" ? "db" : "pan"
+  if (isBuiltinDeviceParameter(target.parameter)) return DEVICE_PARAMETERS[target.parameter].unit
+  if (isNativeParameterId(target.parameter)) return "ratioPercent"
+  throw new Error("Unknown automation parameter")
 }

@@ -6,6 +6,7 @@ export {
   deviceParameterKeys,
   deviceParameterValue,
   withDeviceParameter,
+  isBuiltinDeviceParameter,
 } from "./devices"
 export type { Device, BuiltinDevice, ExternalDevice, DeviceKind, DeviceParameter } from "./devices"
 export type { ExternalPluginIdentity, PluginStateRef, ExternalParameterValue } from "./external"

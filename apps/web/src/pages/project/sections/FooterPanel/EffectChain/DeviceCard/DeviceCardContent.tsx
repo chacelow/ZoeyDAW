@@ -65,9 +65,10 @@ export function DeviceCardContent({
         />
       </div>
       {device.kind === "external" && <ExternalParameters trackId={trackId} device={device} />}
-      {deviceParameterKeys(device).map(field => (
-        <ParameterControl key={field} trackId={trackId} device={device} field={field} />
-      ))}
+      {device.kind !== "external" &&
+        deviceParameterKeys(device).map(field => (
+          <ParameterControl key={field} trackId={trackId} device={device} field={field} />
+        ))}
     </div>
   )
 }

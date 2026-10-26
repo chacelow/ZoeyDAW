@@ -2,6 +2,11 @@
 
 开工先扫本文；只记录可核实的故障、原因与对应实现，不把一次性偏好写成永久规则。2026-10-14 从既有项目规范整理，日期不是原故障发生时间。
 
+## 2026-10-27 外部参数自动化不能只验单点曲线
+
+- Tracktion 单点曲线已有当前值，但会被优化为无 active stream。按 `isAutomationActive()` 决定是否送出参数会漏掉整条常量包络；外部 wrapper 复用 authored-curve 位图，真实 PCM 覆盖保持与删除恢复。
+- `zd_plugin_automation` 的字段顺序是 slot、offset、parameter、value。两个零掩盖了位置初始化错误，直到块内 offset 128 被当成 slot 128。使用具名初始化，并保留跨 quantum 的真实 CLAP/VST3 斜坡探针。见 `isolated_plugin_probe.cpp` 与 `native_graph_smoke.rs`。
+
 ## Panel active 外沿被裁切
 
 - 错：用外沿 ring、box-shadow 或 outline 做 active。

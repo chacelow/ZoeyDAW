@@ -68,6 +68,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 `device_session/health.rs` 只观察 SDK 与回调故障，并在同一 actor 内执行显式恢复。恢复从 native accepted 模型取得状态引用和参数；宿主候选在端点发布前完成参数恢复与延迟检查，成功后才推进 instance ID。故障观察复用现有低频 telemetry 与 MeterStreams EventLog，不创建第二个 Hub 或轮询线程。Web `adapters/plugin-recovery/` 拥有单在途请求与项目代际，`plugin-recovery/` 只呈现同一故障动作，工程文档仍由 runtime 独占。
 
+外部 Device 的工程自动化复用 Tracktion 参数与曲线。`IsolatedDevicePlugin` 在控制线程注册精确原生 ID、更新曲线及 authored-curve 位图；`IsolatedPluginNode` 保留同一 wrapper，在补偿图延迟后生成采样偏移事件。单点曲线不依赖 SDK active-stream 标记，音频线程不读可变曲线容器。`IsolatedPluginBinding` 合并当前手动参数与曲线事件，不新增控制线程或队列。真实 CLAP/VST3 retained-Edit 探针覆盖曲线、BPM、斜坡、删除及手动值恢复；Tauri 操作与物理听感单独验收。
+
 `crates/engine/native` 将协议模型、无设备分析与 EngineSession 分为 `model`、`analysis`、`runtime` 三个 OBJECT targets。分析不依赖 runtime，runtime 不依赖分析；根 `playback_bridge` 保留 C ABI。Tracktion/JUCE 实现只进入最终 `zoeydaw_playback` 静态库，OBJECT targets 仅继承编译配置，不链接带实现源的 vendor INTERFACE targets。
 
 `runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。

@@ -50,6 +50,16 @@ private:
     tracktion::engine::MidiMessageArray seed;
     bool first=true;
 };
+class ConstantSignal final : public graph::Node {
+public:
+    graph::NodeProperties getNodeProperties() override { return {true,false,2,0,0}; }
+    bool isReadyToProcess() override { return true; }
+private:
+    void process(ProcessContext& context) override {
+        for(unsigned channel=0;channel<2;++channel)
+            for(unsigned sample=0;sample<context.numSamples;++sample)context.buffers.audio.getSample(channel,sample)=.5f;
+    }
+};
 }
 #if defined(_WIN32)
 #define ZD_PROBE_EXPORT __declspec(dllexport)
@@ -178,4 +188,71 @@ extern "C" ZD_PROBE_EXPORT int32_t zd_verify_isolated_edit(zd_plugin_owned_proce
         }
         return energy>.001 && meterPeak>.001?0:-24;
     }catch(const std::exception& error) { std::fprintf(stderr,"Isolated Edit: %s\n",error.what());return -25; }
+}
+extern "C" ZD_PROBE_EXPORT int32_t zd_verify_isolated_automation(zd_plugin_owned_processor processor,uint32_t latency,uint32_t vst3) {
+    try {
+        juce::ScopedJuceInitialiser_GUI gui;
+        zp::EngineSession session;
+        auto request=zp::parse(R"JSON({"protocolVersion":2,"sessionId":"isolated-automation","sequence":0,"baseRevision":0,"revision":0,"stage":"open","editId":null,"controlGeneration":"0","state":{"project":{"bpm":120,"numerator":4,"denominator":4,"loop":{"enabled":false,"startBar":1,"endBar":5},"sources":[],"tracks":[{"id":"main","kind":"main","output":"external","input":"none","inputChannel":null,"outputChannel":"1-2","monitor":"off","volumeDb":0,"pan":0,"mute":false,"solo":false,"armed":false,"sends":{},"returnPost":false,"cueOutput":null,"cueVolumeDb":-18,"devices":[],"clips":[],"automation":[],"childTrackIds":[]}]},"control":{"playing":false,"recording":false,"seekBar":1,"seekGeneration":0}}})JSON");
+        auto payload=zp::object();zp::put(payload,"request",request);zp::put(payload,"leaseId","isolated-automation");zp::put(payload,"stopToken",0);zp::put(payload,"stopEpoch",0);
+        auto external=zp::parse(R"({"id":"probe-delay","kind":"external","enabled":true,"plugin":{"catalogId":"0000000000000000000000000000000000000000000000000000000000000000","format":"clap","classId":"com.studio.plughost.test-delay.79000001","name":"Real isolated delay","vendor":"fixture","version":"1","role":"effect"},"stateRef":null,"parameters":[{"id":"0","normalized":0.6},{"id":"9","normalized":0.5}]})");
+        if(vst3) { auto identity=external["plugin"];zp::put(identity,"format","vst3");zp::put(identity,"classId","706C7567686F737444656C6179000001"); }
+        auto track=request["state"]["project"]["tracks"][0];zp::put(track,"devices",juce::Array<zp::V>{external});
+        auto lane=zp::parse(R"({"id":"gain-envelope","target":{"kind":"device","deviceId":"probe-delay","parameter":"0"},"points":[{"id":"first","bar":1,"value":0.25}]})");
+        zp::put(track,"automation",juce::Array<zp::V>{lane});
+        auto project=request["state"]["project"];auto gainPoint=lane["points"][0];auto manualValue=external["parameters"][0];
+        zd_plugin_prepared prepared {"probe-delay",processor,48000,512,2,2,latency};
+        const auto opened=session.applyPrepared(payload.clone(),&prepared,1);
+        if(opened["kind"].toString()!="accepted")throw std::runtime_error(juce::JSON::toString(opened).toStdString());
+        auto& edit=zp::MixerTestAccess::edit(session);auto plugin=zp::MixerTestAccess::device(session,"probe-delay");
+        edit.getAutomationRecordManager().setReadingAutomation(true);
+        graph::PlayHead playhead;graph::PlayHeadState head(playhead);tracktion::ProcessState state(head,edit.tempoSequence);
+        tracktion::CreateNodeParams params{state};params.sampleRate=48000;params.blockSize=512;
+        zp::MixerTestAccess::configure(session,params);auto factory=params.createCustomPluginNode;
+        params.createCustomPluginNode=[factory,expected=plugin.get()](tracktion::Plugin& item,const tracktion::TrackMuteState* mute,
+            const tracktion::CreateNodeParams& build,std::unique_ptr<graph::Node>& source) {
+            if(&item==expected)source=std::make_unique<ConstantSignal>();
+            return factory(item,mute,build,source);
+        };
+        graph::NodePlayer player;player.setNode(tracktion::createNodeForEdit(edit,params),48000,512);
+        juce::AudioBuffer<float> output(2,256);tracktion::MidiMessageArray midi;midi.reserve(8192);
+        session.arrangementAudible.store(true);playhead.play();int revision=0;
+        for(int block=0;block<256;++block) {
+            if(block>0 && block%32==0) {
+                if(block==32)zp::put(gainPoint,"value",0.75);
+                if(block==64)zp::put(manualValue,"normalized",0.8);
+                if(block==96)zp::put(project,"bpm",180);
+                if(block==128)zp::put(track,"automation",juce::Array<zp::V>{});
+                if(block==160)zp::put(manualValue,"normalized",0.4);
+                if(block==192) {
+                    lane=zp::parse(R"({"id":"gain-envelope","target":{"kind":"device","deviceId":"probe-delay","parameter":"0"},"points":[{"id":"first","bar":1,"value":0.25},{"id":"last","bar":2,"value":0.75}]})");
+                    zp::put(track,"automation",juce::Array<zp::V>{lane});
+                }
+                if(block==224)zp::put(track,"automation",juce::Array<zp::V>{});
+                zp::put(request,"sequence",revision+1);zp::put(request,"baseRevision",revision);zp::put(request,"revision",revision+1);
+                zp::put(request,"stage","preview");zp::put(request,"editId","automation-probe");
+                const auto response=session.applyPrepared(payload.clone(),nullptr,0);
+                if(response["kind"].toString()!="accepted")throw std::runtime_error(juce::JSON::toString(response).toStdString());
+                session.arrangementAudible.store(true);
+                ++revision;
+                if(&zp::MixerTestAccess::edit(session)!=&edit || zp::MixerTestAccess::device(session,"probe-delay")!=plugin)return -32;
+            }
+            if(block%2==0)std::this_thread::sleep_for(std::chrono::milliseconds(15));
+            const int64_t start=block*256;playhead.setReferenceSampleRange({start,start+256});
+            state.update(48000,{start,start+256},tracktion::ProcessState::UpdateContinuityFlags::yes);
+            output.clear();midi.clear();graph::Node::ProcessContext context{256,{start,start+256},{graph::toBufferView(output),midi}};
+            player.process(context);
+            if(block%32>=20) {
+                for(int channel=0;channel<2;++channel)for(int sample=0;sample<256;++sample) {
+                    const auto eventSample=(start+sample-(int64_t(latency)-480))/128*128-int64_t(latency);
+                    const float ramp=float(.125+.25*std::clamp(double(eventSample)/64000.0,0.0,1.0));
+                    const float expected=block<32?.125f:block<128?.375f:block<160?.4f:block<192?.2f:block<224?ramp:.2f;
+                    if(std::abs(output.getSample(channel,sample)-expected)>1e-5) {
+                        std::fprintf(stderr,"Automation PCM block %d sample %d: %.8f expected %.8f\n",block,sample,output.getSample(channel,sample),expected);return -33;
+                    }
+                }
+            }
+        }
+        return 0;
+    }catch(const std::exception& error) { std::fprintf(stderr,"Isolated automation: %s\n",error.what());return -34; }
 }

@@ -37,7 +37,8 @@ private:
     struct ManualParameters { uint32_t count=0;std::array<zd_plugin_automation,4096> values {}; };
     RealtimeSnapshot<ManualParameters> manual;
     ManualParameters pendingManual;
-    bool manualPending=false;
+    std::array<zd_plugin_automation,4096> combinedAutomation {};
+    uint32_t pendingManualOffset=0;
 };
 
 // The control thread keeps the last reference until every graph has released its binding.

@@ -13,11 +13,28 @@ const char* deviceKind(const DeviceSettings& settings) {
 }
 }
 void EngineSession::updateDevices(Arrangement& arrangement,const Request& next,const Request* previous) {
+    const auto applyCurves=[&next](te::Plugin& plugin,const Track& track,const Device& device) {
+        for(auto* parameter:plugin.getAutomatableParameters())parameter->getCurve().clear(nullptr);
+        for(const auto& lane:*track.automation.getArray()) {
+            const auto& target=field(lane,"target");
+            if(text(target,"kind")!="device" || text(target,"deviceId")!=device.id)continue;
+            auto parameter=plugin.getAutomatableParameterByID(text(target,"parameter"));
+            require(parameter!=nullptr,"Missing native device automation parameter");
+            for(const auto& point:array(lane,"points"))parameter->getCurve().addPoint(te::TimePosition::fromSeconds(next.barTime(number(point,"bar",1,1e12))),(float)number(point,"value",-1e12,1e12),point.hasProperty("curve")?(float)number(point,"curve",-1,1):0,nullptr);
+        }
+    };
     for(const auto& track:next.tracks)for(const auto& device:track.devices) {
+        const Device* old=nullptr;
+        const Track* oldOwner=nullptr;
+        if(previous)for(const auto& candidate:previous->tracks) {
+            auto found=std::find_if(candidate.devices.begin(),candidate.devices.end(),[&](const Device& item){return item.id==device.id;});
+            if(found!=candidate.devices.end()) { old=&*found;oldOwner=&candidate;break; }
+        }
         if(const auto* external=std::get_if<ExternalSettings>(&device.settings)) {
             auto existing=arrangement.devices.find(device.id);
             auto* retained=existing==arrangement.devices.end()?nullptr:dynamic_cast<IsolatedDevicePlugin*>(existing->second.get());
-            if(!retained || !retained->matches(*external)) {
+            const bool replaced=!retained || !retained->matches(*external);
+            if(replaced) {
                 const auto admission=std::find_if(pluginAdmissions.begin(),pluginAdmissions.end(),[&](const auto& entry) {
                     return entry.second.session==next.session && entry.second.device==device.id && entry.second.revision==next.baseRevision;
                 });
@@ -32,7 +49,12 @@ void EngineSession::updateDevices(Arrangement& arrangement,const Request& next,c
                 if(existing!=arrangement.devices.end())existing->second->deleteFromParent();
                 arrangement.devices[device.id]=plugin;
             }
-            static_cast<IsolatedDevicePlugin&>(*arrangement.devices.at(device.id)).configure(device);
+            auto& plugin=static_cast<IsolatedDevicePlugin&>(*arrangement.devices.at(device.id));
+            plugin.configure(device);
+            if(replaced || !old || old->settings!=device.settings || !oldOwner || oldOwner->id!=track.id || oldOwner->automation!=track.automation || (previous && next.bpm!=previous->bpm)) {
+                applyCurves(plugin,track,device);
+                plugin.updateAutomation();
+            }
             continue;
         }
         auto existing=arrangement.devices.find(device.id);
@@ -45,25 +67,12 @@ void EngineSession::updateDevices(Arrangement& arrangement,const Request& next,c
             auto plugin=arrangement.edit->getPluginCache().createNewPlugin(state);require(plugin!=nullptr,"Cannot create builtin device");
             arrangement.devices.emplace(device.id,plugin);
         }
-        const Device* old=nullptr;
-        const Track* oldOwner=nullptr;
-        if(previous)for(const auto& candidate:previous->tracks) {
-            auto found=std::find_if(candidate.devices.begin(),candidate.devices.end(),[&](const Device& item){return item.id==device.id;});
-            if(found!=candidate.devices.end()) { old=&*found;oldOwner=&candidate;break; }
-        }
         if(!old || old->enabled!=device.enabled || old->settings!=device.settings)
             static_cast<BuiltinDevice&>(*arrangement.devices.at(device.id)).configure(device);
         if(!old || old->settings.index()!=device.settings.index() || !oldOwner || oldOwner->id!=track.id || oldOwner->automation!=track.automation || (previous && next.bpm!=previous->bpm)) {
             auto& plugin=static_cast<BuiltinDevice&>(*arrangement.devices.at(device.id));
-            for(auto* parameter:plugin.getAutomatableParameters())parameter->getCurve().clear(nullptr);
+            applyCurves(plugin,track,device);
             std::uint32_t mask=0;
-            for(const auto& lane:*track.automation.getArray()) {
-                const auto& target=field(lane,"target");
-                if(text(target,"kind")!="device" || text(target,"deviceId")!=device.id)continue;
-                auto parameter=plugin.getAutomatableParameterByID(text(target,"parameter"));
-                require(parameter!=nullptr,"Missing native device automation parameter");
-                for(const auto& point:array(lane,"points"))parameter->getCurve().addPoint(te::TimePosition::fromSeconds(next.barTime(number(point,"bar",1,1e12))),(float)number(point,"value",-1e12,1e12),point.hasProperty("curve")?(float)number(point,"curve",-1,1):0,nullptr);
-            }
             const auto parameters=deviceParameters(device.settings);
             for(size_t index=0;index<parameters.size();++index) {
                 auto parameter=plugin.getAutomatableParameterByID(parameters[index].id);parameter->updateStream();

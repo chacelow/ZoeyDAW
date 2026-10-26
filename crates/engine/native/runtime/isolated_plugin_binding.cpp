@@ -43,13 +43,18 @@ int32_t IsolatedPluginBinding::process(zd_plugin_block& block) noexcept {
         ~Exit() { flag.clear(std::memory_order_release); }
     } exit {processing};
     if(const auto fault=status.load(std::memory_order_acquire);fault<0)return fault;
-    if(block.midi_count>4096 || block.automation_count>4096-block.midi_count)return latchFault(-2);
-    manualPending=manual.readLatest(pendingManual) || manualPending;
+    if(block.midi_count>4096 || block.automation_count>4096-block.midi_count
+        || (block.automation_count>0 && block.automation==nullptr))return latchFault(-2);
+    if(manual.readLatest(pendingManual))pendingManualOffset=0;
     const auto* originalAutomation=block.automation;
-    if(editorActive.load(std::memory_order_acquire))manualPending=false;
+    if(editorActive.load(std::memory_order_acquire))pendingManualOffset=pendingManual.count;
     const auto originalCount=block.automation_count;
-    if(manualPending && originalCount==0 && pendingManual.count<=4096-block.midi_count) {
-        block.automation=pendingManual.values.data();block.automation_count=pendingManual.count;manualPending=false;
+    if(pendingManualOffset<pendingManual.count) {
+        const auto count=std::min(pendingManual.count-pendingManualOffset,4096-block.midi_count-originalCount);
+        std::copy_n(pendingManual.values.data()+pendingManualOffset,count,combinedAutomation.data());
+        if(originalCount>0)std::copy_n(originalAutomation,originalCount,combinedAutomation.data()+count);
+        block.automation=combinedAutomation.data();block.automation_count=count+originalCount;
+        pendingManualOffset+=count;
     }
     const auto result=callback.process(callback.context,&block);
     block.automation=originalAutomation;block.automation_count=originalCount;

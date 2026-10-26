@@ -89,16 +89,29 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
   }
   function values(parameters: PluginParameter[]) {
     const editable = parameters.filter(parameter => parameter.automatable && !parameter.readOnly)
-    const next = editable.map(({ id, normalized }) => ({ id, normalized }))
-    write(value =>
-      value.parameters.length === next.length &&
-      value.parameters.every(
-        (parameter, index) =>
-          parameter.id === next[index]?.id && parameter.normalized === next[index]?.normalized
+    const track = useProjectState.getState().document.tracks.find(track => track.id === trackId)
+    const automated = new Set(
+      track?.automation.flatMap(lane =>
+        lane.points.length > 0 && lane.target.kind === "device" && lane.target.deviceId === deviceId
+          ? [lane.target.parameter]
+          : []
       )
+    )
+    write(value => {
+      const next = editable.map(({ id, normalized }) => ({
+        id,
+        normalized: automated.has(id)
+          ? (value.parameters.find(parameter => parameter.id === id)?.normalized ?? normalized)
+          : normalized,
+      }))
+      return value.parameters.length === next.length &&
+        value.parameters.every(
+          (parameter, index) =>
+            parameter.id === next[index]?.id && parameter.normalized === next[index]?.normalized
+        )
         ? value
         : { ...value, parameters: next }
-    )
+    })
   }
   async function finish(commit: boolean) {
     if (closing) return closing

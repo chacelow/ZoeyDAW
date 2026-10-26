@@ -7,8 +7,9 @@
 
 namespace tracktion::inline engine { struct ProcessState; }
 namespace zp {
+class IsolatedDevicePlugin;
 std::unique_ptr<tracktion::graph::Node> createIsolatedPluginNode(
     std::unique_ptr<tracktion::graph::Node>, std::shared_ptr<IsolatedPluginBinding>,
-    tracktion::engine::ProcessState&, std::string deviceId = {});
+    tracktion::engine::ProcessState&, std::string deviceId = {}, IsolatedDevicePlugin* automationOwner = nullptr);
 const std::string* isolatedDeviceId(tracktion::graph::Node&) noexcept;
 }

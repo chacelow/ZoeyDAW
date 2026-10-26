@@ -112,6 +112,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Err(format!("Retained Edit isolated instrument failed: {status}").into());
         }
     }
+    for (format, extension, class_id, vst3) in [
+        (
+            PluginFormat::Clap,
+            "clap",
+            "com.studio.plughost.test-delay.79000001",
+            0,
+        ),
+        (
+            PluginFormat::Vst3,
+            "vst3",
+            "706C7567686F737444656C6179000001",
+            1,
+        ),
+    ] {
+        let mut automated = Chain::spawn(
+            &PathBuf::from(&args[0]),
+            &[PluginRef {
+                format,
+                bundle: Some(PathBuf::from(&args[1]).join(format!("plughost-test-delay.{extension}"))),
+                class_id: class_id.into(),
+            }],
+            &HostIdentity::default(),
+            Timeouts::default(),
+        )?;
+        let config = automated.main_bus_config(48_000.0, 512, Layout::Stereo, &[Layout::Stereo])?;
+        automated.prepare_audio(&config)?;
+        let endpoint = automated.realtime_endpoint(&RealtimeConfig::new(512))?;
+        let latency = automated.start_realtime()? + 512;
+        let processor = NativeProcessor::new(QuantumAudio::new(endpoint, 512, 2, 2, 48_000.0)?);
+        unsafe {
+            let library = libloading::Library::new(&args[2])?;
+            let run: libloading::Symbol<
+                unsafe extern "C" fn(OwnedNativeProcessor, u32, u32) -> i32,
+            > = library.get(b"zd_verify_isolated_automation")?;
+            let status = run(processor.into_owned(), latency, vst3);
+            if status != 0 {
+                return Err(format!("Retained Edit {extension} automation PCM failed: {status}").into());
+            }
+        }
+        automated.stop_realtime()?;
+        let parameters = automated.parameters(0)?;
+        if !parameters.iter().any(|(info, value)| info.id == 0 && (*value - 0.4).abs() < 1e-6)
+            || !parameters.iter().any(|(info, value)| info.id == 9 && (*value - 0.5).abs() < 1e-6)
+        {
+            return Err(format!("{extension} curve processing starved manual parameters or failed to restore them").into());
+        }
+        println!("Retained Edit {extension} automation, envelope edits, BPM, removal and manual restore passed");
+    }
     chain.stop_realtime()?;
     dry_chain.stop_realtime()?;
     instrument.stop_realtime()?;

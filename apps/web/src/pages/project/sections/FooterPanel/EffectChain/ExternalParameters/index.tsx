@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react"
+import { useSyncExternalStore } from "react"
 import { Button, DragPadBar } from "@zoeymind/ui"
 import { useTranslation } from "@zoeymind/i18n"
 import {
@@ -7,6 +7,7 @@ import {
   useProjectFilesState,
   useProjectState,
   usePluginRecoveryPending,
+  usePluginParameters,
 } from "@/pages/project/adapters"
 import { nativePlugins } from "@/shared/native/plugins"
 import type { PluginParameter } from "@/shared/native/plugins"
@@ -81,38 +82,10 @@ export function ExternalParameters({
   const recovering = usePluginRecoveryPending(sessionId, device.id)
   const faults = useSyncExternalStore(subscribeNativeAudioStatus, readNativePluginFaults)
   const fault = faults.find(fault => fault.sessionId === sessionId && fault.deviceId === device.id)
-  const [parameters, setParameters] = useState<PluginParameter[]>([])
-  const [error, setError] = useState<string | null>(null)
   const { t } = useTranslation()
   const editor = usePluginEditor(trackId, device.id)
   const editing = editor.phase !== "closed"
-  useEffect(() => {
-    if (!nativePlugins.available() || phase !== "ready" || fault || editing || recovering) return
-    let disposed = false
-    void nativePlugins
-      .parameters(sessionId, device.id)
-      .then(value => {
-        if (!disposed) {
-          setParameters(value)
-          setError(null)
-        }
-      })
-      .catch(reason => {
-        if (!disposed) setError(String(reason))
-      })
-    return () => {
-      disposed = true
-    }
-  }, [
-    sessionId,
-    phase,
-    device.id,
-    device.plugin.catalogId,
-    device.stateRef?.sha256,
-    fault,
-    editing,
-    recovering,
-  ])
+  const { parameters, error } = usePluginParameters(device, !editing)
   return (
     <div className="gap-control-gap flex min-h-0 flex-col overflow-y-auto">
       {fault && <PluginFaultFeedback fault={fault} className="shrink-0" />}
