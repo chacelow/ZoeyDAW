@@ -1,5 +1,6 @@
 import { nativeProjectStorage } from "@/shared/native/project-storage"
 import { nativeAudio } from "@/shared/native/audio"
+import { nativePlugins } from "@/shared/native/plugins"
 import { getAudioImportPreferences } from "@/shared/app-shared/audio-import-preferences"
 import * as runtime from "../context"
 import { adoptProjectStorageId } from "../snapshots"
@@ -15,7 +16,8 @@ function createBoundController() {
     nativeProjectStorage,
     adoptProjectStorageId,
     nativeAudio.analyzeTempo,
-    getAudioImportPreferences
+    getAudioImportPreferences,
+    nativePlugins.snapshot
   )
   configureBackendSourceLocations(result.files.resolveSourceLocation)
   configureBackendPluginLocations(result.files.resolvePluginState)

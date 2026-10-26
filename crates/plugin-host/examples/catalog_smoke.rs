@@ -421,6 +421,12 @@ fn verify_device_worker(catalog: &PluginCatalog, id: &str) -> Result<(), String>
     let device = PreparedDevice::prepare(catalog.select(id)?, 48_000.0, 512, None)?;
     device.control.set_parameter(0, 0.25)?;
     let state = device.control.snapshot()?;
+    let directory = tempfile::tempdir().map_err(|error| error.to_string())?;
+    let store = zoeydaw_plugin_host::state_store::PluginStateStore::new(directory.path().to_owned())?;
+    let reference = store.save(&state)?;
+    if store.load(&reference, state.format, &state.class_id)? != state {
+        return Err("Live plugin snapshot changed when persisted and reloaded".into());
+    }
     let monitor = device.monitor.clone();
     let latency = device.latency_frames;
     let audio = unsafe { device.audio.into_owned() };

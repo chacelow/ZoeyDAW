@@ -71,7 +71,8 @@ export function createProjectFileController(
   storage: typeof nativeProjectStorage,
   adoptRoute: (id: string) => void,
   analyzeTempo: (path: string) => Promise<{ bpm: number | null }>,
-  getImportPreferences: () => Readonly<AudioImportPreferences>
+  getImportPreferences: () => Readonly<AudioImportPreferences>,
+  snapshotPluginState: (sessionId: string, deviceId: string) => Promise<PluginStateRef>
 ) {
   const useState = create<ProjectFileState>(() => ({
     binding: null,
@@ -275,6 +276,25 @@ export function createProjectFileController(
       stage("waiting")
       await runtime.waitForProjectSave(capture, signal)
       cancelled(signal)
+      const externalDevices = manifest.project.document.tracks
+        .flatMap(track => track.devices ?? [])
+        .filter(device => device.kind === "external")
+      const sessionId = runtime.get().session.backend.sessionId
+      const liveStates = await Promise.all(
+        externalDevices.map(async device => ({
+          device,
+          stateRef: await snapshotPluginState(sessionId, device.id),
+        }))
+      )
+      cancelled(signal)
+      for (const { device, stateRef } of liveStates)
+        device.stateRef = pluginStateBindings.get(stateRef.sha256) ?? stateRef
+      if (
+        externalDevices.length &&
+        (runtime.projectEpoch() !== capture.epoch ||
+          runtime.captureProjectSave().revision !== capture.revision)
+      )
+        throw new Error("Project changed while capturing live plugin state")
       stage("writing")
       const saved = parseSavedProject(
         await storage.saveProject({
@@ -296,7 +316,7 @@ export function createProjectFileController(
         }
         return { captured: source, stored, path: saved.path }
       })
-      for (const track of capture.document.tracks)
+      for (const track of manifest.project.document.tracks)
         for (const device of track.devices ?? []) {
           if (device.kind !== "external" || !device.stateRef) continue
           const stored = saved.manifest.project.document.tracks

@@ -70,15 +70,24 @@ function setup(getImportPreferences: () => AudioImportPreferences = () => ({ aut
   const analyzeTempo = vi.fn(async (_path: string): Promise<{ bpm: number | null }> => ({
     bpm: 120,
   }))
+  const snapshotPluginState = vi.fn(async (_sessionId: string, deviceId: string) => {
+    const device = runtime
+      .get()
+      .document.tracks.flatMap(track => track.devices ?? [])
+      .find(item => item.id === deviceId)
+    if (device?.kind !== "external" || !device.stateRef) throw new Error("Plugin state unavailable")
+    return structuredClone(device.stateRef)
+  })
   const controller = createProjectFileController(
     runtime,
     port,
     route,
     analyzeTempo,
-    getImportPreferences
+    getImportPreferences,
+    snapshotPluginState
   )
   controller.files.resetBinding("new-project")
-  return { runtime, store, port, route, analyzeTempo, ...controller }
+  return { runtime, store, port, route, analyzeTempo, snapshotPluginState, ...controller }
 }
 beforeEach(() => localStorage.clear())
 afterEach(() => {
@@ -703,7 +712,7 @@ it("keeps collected bindings over relink and undo without overwriting the docume
 })
 
 it("uses collected plugin state on Save As without replacing newer authored edits", async () => {
-  const { runtime, port, files } = setup()
+  const { runtime, port, files, snapshotPluginState } = setup()
   const device = {
     id: "external",
     kind: "external",
@@ -758,4 +767,26 @@ it("uses collected plugin state on Save As without replacing newer authored edit
     ...device,
     parameters: [{ id: "18446744073709551615", normalized: 0.75 }],
   })
+  const liveState = { sha256: "d".repeat(64), path: "/cache/live.zdps" }
+  snapshotPluginState.mockResolvedValueOnce(liveState)
+  expect(await files.save()).toBe("new-project")
+  const latest = parseManifest(port.saveProject.mock.calls.at(-1)![0].manifest).project.document
+    .tracks[0].devices?.[0]
+  if (latest?.kind !== "external") throw new Error("Missing live plugin state")
+  expect(latest.stateRef?.sha256).toBe(liveState.sha256)
+  expect(runtime.get().document.tracks[0].devices?.[0]).toEqual({
+    ...device,
+    parameters: [{ id: "18446744073709551615", normalized: 0.75 }],
+  })
+  const publications = port.saveProject.mock.calls.length
+  snapshotPluginState.mockRejectedValueOnce(new Error("Plugin worker stopped"))
+  expect(await files.save()).toBeNull()
+  expect(port.saveProject.mock.calls).toHaveLength(publications)
+  snapshotPluginState.mockImplementationOnce(async () => {
+    runtime.updateTrack(track.id, { name: "Edited during plugin capture" })
+    return liveState
+  })
+  expect(await files.save()).toBeNull()
+  expect(port.saveProject.mock.calls).toHaveLength(publications)
+  expect(runtime.get().document.tracks[0].name).toBe("Edited during plugin capture")
 })

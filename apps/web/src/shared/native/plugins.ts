@@ -1,8 +1,8 @@
 import { invoke, isTauri } from "@tauri-apps/api/core"
 import { open } from "@tauri-apps/plugin-dialog"
 import { z } from "zod"
-import { isDevice, isNativeParameterId } from "@zoeydaw/project-core/devices"
-import type { ExternalDevice } from "@zoeydaw/project-core/devices"
+import { isDevice, isNativeParameterId, isPluginStateRef } from "@zoeydaw/project-core/devices"
+import type { ExternalDevice, PluginStateRef } from "@zoeydaw/project-core/devices"
 
 const plugin = z
   .object({
@@ -47,6 +47,11 @@ export const nativePlugins = {
   available: isTauri,
   parameters: async (sessionId: string, deviceId: string): Promise<PluginParameter[]> =>
     z.array(parameter).parse(await invoke("plugin_device_parameters", { sessionId, deviceId })),
+  snapshot: async (sessionId: string, deviceId: string): Promise<PluginStateRef> => {
+    const value: unknown = await invoke("plugin_device_snapshot", { sessionId, deviceId })
+    if (!isPluginStateRef(value)) throw new Error("Invalid live plugin state reference")
+    return value
+  },
   pickFolder: () => open({ directory: true, multiple: false }),
   entries: async (): Promise<PluginCatalogEntry[]> =>
     z.array(entry).parse(await invoke("plugin_catalog_entries")),

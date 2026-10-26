@@ -2,6 +2,7 @@
 
 ## 0.1.0 - unreleased
 
+- Capture each running external plugin's complete state before project Save, Save As and Collect rather than persisting only its insertion-time chunk. Reuse the existing worker and state store, validate references at IPC, retain collected files for unchanged hashes, and reject failed, cancelled or superseded captures before disk publication. Verify real edited helper state through file reload and preserve authored document/undo ownership.
 - Bound unused waveform range data by a 32 MiB numeric-payload target as well as the existing entry limit. Count shared Browser/Clip payloads once, preserve demanded ranges and initial import handoff, and trim on final consumer release. Keep the current store, request scheduler and array identities; verify raw samples, signed extrema and aliased data under cache pressure.
 - Fix held MIDI notes surviving a second Clip mute. Reset the classic and looping nodes' mute-transition state after unmuting, and verify actual note-on/off events through both mute cycles in the existing native control regressions. Reuse the current playback implementation without adding a parameter-frame module.
 - Fix Windows project saves reporting uncertain durability after successful writes. Open directory flush handles with the write access required by FlushFileBuffers. Remove the obsolete Windows fallback that swallowed prepublication sync errors, preserve the prior project on those failures, and retain uncertain-durability warnings for failures after publication.
