@@ -1,9 +1,12 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { nativeAudio } from "@/shared/native/audio"
 import {
   browserWaveformMetadataRequest,
   cachedWaveformRanges,
   primeBrowserWaveformSource,
   sourceWaveformKey,
+  releaseWaveformRangeDemand,
+  setWaveformRangeDemand,
   useWaveformRanges,
   waveformRangeRequestKey,
   waveformRangeRequests,
@@ -176,5 +179,97 @@ describe("Browser waveform source handoff", () => {
       expect(primeBrowserWaveformSource(other)).toBe(false)
       expect(cachedWaveformRanges(other)).toEqual([])
     }
+  })
+})
+
+describe("waveform cache payload budget", () => {
+  afterEach(async () => {
+    releaseWaveformRangeDemand("budget-visible")
+    await Promise.resolve()
+    useWaveformRanges.setState({ entries: new Map() })
+    vi.restoreAllMocks()
+  })
+
+  function largeRanges(kind: WaveformRange["kind"] = "samples") {
+    const entries = new Map(useWaveformRanges.getState().entries)
+    const requests: SourceWaveformRangeRequest[] = []
+    const wideSource = { ...source, channels: 64 }
+    for (let index = 0; index < 9; index++) {
+      const item = {
+        sourceKey: sourceWaveformKey(wideSource),
+        request: {
+          path: "/audio/take.wav",
+          startFrame: index * 8192,
+          frameCount: 8192,
+          framesPerBin: kind === "samples" ? 1 : 2,
+          columns: 4096,
+        },
+      }
+      const coordinates = {
+        sampleRate: 48000,
+        totalFrames: 96000,
+        startFrame: item.request.startFrame,
+        frameCount: 8192,
+      }
+      const data: WaveformRange =
+        kind === "samples"
+          ? {
+              ...coordinates,
+              kind,
+              channels: Array.from({ length: 64 }, () => Array<number>(8192).fill(0.25)),
+            }
+          : {
+              ...coordinates,
+              kind,
+              framesPerBin: 2,
+              channels: Array.from({ length: 64 }, () => ({
+                min: Array<number>(4096).fill(-0.25),
+                max: Array<number>(4096).fill(0.25),
+              })),
+            }
+      entries.set(waveformRangeRequestKey(item), {
+        kind: "ready",
+        range: { sourceKey: item.sourceKey, data },
+      })
+      requests.push(item)
+    }
+    return { entries, requests }
+  }
+
+  it("evicts old unused payload below the entry limit while retaining visible and aliased data", async () => {
+    vi.spyOn(nativeAudio, "available").mockReturnValue(true)
+    const { entries, requests } = largeRanges("envelope")
+    const visibleKey = waveformRangeRequestKey(requests[0])
+    const visible = entries.get(visibleKey)!
+    entries.set("browser-alias", { ...visible })
+    useWaveformRanges.setState({ entries })
+    setWaveformRangeDemand("budget-visible", [requests[0]])
+    await Promise.resolve()
+    const cached = useWaveformRanges.getState().entries
+    expect(cached.get(visibleKey)).toBe(visible)
+    expect(cached.get("browser-alias")).toBe(entries.get("browser-alias"))
+    expect(cached.has(waveformRangeRequestKey(requests[1]))).toBe(false)
+    expect(cached.get(waveformRangeRequestKey(requests[2]))).toBe(
+      entries.get(waveformRangeRequestKey(requests[2]))
+    )
+    expect(cached.get(waveformRangeRequestKey(requests[8]))).toBe(
+      entries.get(waveformRangeRequestKey(requests[8]))
+    )
+  })
+
+  it("keeps demanded ranges over budget and trims after their final consumer releases them", async () => {
+    vi.spyOn(nativeAudio, "available").mockReturnValue(true)
+    const { entries, requests } = largeRanges()
+    useWaveformRanges.setState({ entries })
+    setWaveformRangeDemand("budget-visible", requests)
+    await Promise.resolve()
+    expect(useWaveformRanges.getState().entries).toBe(entries)
+    releaseWaveformRangeDemand("budget-visible")
+    await Promise.resolve()
+    const cached = useWaveformRanges.getState().entries
+    expect(cached.has(waveformRangeRequestKey(requests[0]))).toBe(false)
+    expect(cached.get(waveformRangeRequestKey(requests[8]))).toBe(
+      entries.get(waveformRangeRequestKey(requests[8]))
+    )
   })
 })

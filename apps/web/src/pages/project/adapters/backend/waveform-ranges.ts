@@ -31,9 +31,52 @@ let activeKey: string | null = null
 let activeSourceKey: string | null = null
 let cancellation = Promise.resolve()
 let cancellingKey: string | null = null
+const MAX_CACHED_WAVEFORM_BYTES = 32 * 1024 * 1024
+
+function trimWaveformCache(
+  entries: ReadonlyMap<string, RangeEntry>,
+  protectedSource?: string
+): ReadonlyMap<string, RangeEntry> {
+  const payloads = new Map<WaveformRange, { bytes: number; references: number }>()
+  let bytes = 0
+  for (const entry of entries.values()) {
+    if (entry.kind !== "ready") continue
+    const data = entry.range.data
+    const retained = payloads.get(data)
+    if (retained) {
+      retained.references++
+      continue
+    }
+    const values =
+      data.kind === "samples"
+        ? data.channels.reduce((total, channel) => total + channel.length, 0)
+        : data.channels.reduce(
+            (total, channel) => total + channel.min.length + channel.max.length,
+            0
+          )
+    const size = values * Float64Array.BYTES_PER_ELEMENT
+    payloads.set(data, { bytes: size, references: 1 })
+    bytes += size
+  }
+  const wanted = new Set(Array.from(demands.values()).flatMap(items => Array.from(items.keys())))
+  let next: Map<string, RangeEntry> | null = null
+  for (const [key, entry] of entries) {
+    if ((next?.size ?? entries.size) <= 64 && bytes <= MAX_CACHED_WAVEFORM_BYTES) break
+    if (wanted.has(key) || (entry.kind === "ready" && entry.range.sourceKey === protectedSource))
+      continue
+    next ??= new Map(entries)
+    next.delete(key)
+    const payload = entry.kind === "ready" ? payloads.get(entry.range.data) : undefined
+    if (payload && --payload.references === 0) bytes -= payload.bytes
+  }
+  return next ?? entries
+}
 
 function cancelUnusedRange(): void {
   queueMicrotask(() => {
+    const entries = useWaveformRanges.getState().entries
+    const trimmed = trimWaveformCache(entries)
+    if (trimmed !== entries) useWaveformRanges.setState({ entries: trimmed })
     const key = activeKey
     if (
       !key ||
@@ -91,15 +134,7 @@ export function primeBrowserWaveformSource(source: MediaSource): boolean {
     next ??= new Map(entries)
     next.set(key, { kind: "ready", range: { sourceKey, data } })
   }
-  if (next) {
-    const wanted = new Set(Array.from(demands.values()).flatMap(items => Array.from(items.keys())))
-    for (const [key, entry] of next) {
-      if (next.size <= 64) break
-      if (!wanted.has(key) && !(entry.kind === "ready" && entry.range.sourceKey === sourceKey))
-        next.delete(key)
-    }
-    useWaveformRanges.setState({ entries: next })
-  }
+  if (next) useWaveformRanges.setState({ entries: trimWaveformCache(next, sourceKey) })
   return ready
 }
 
@@ -237,11 +272,7 @@ async function drainRanges(): Promise<void> {
         Array.from(demands.values()).flatMap(items => Array.from(items.keys()))
       )
       if (canceled || (!wanted.has(key) && entry.kind !== "ready")) next.delete(key)
-      for (const oldKey of next.keys()) {
-        if (next.size <= 64) break
-        if (!wanted.has(oldKey)) next.delete(oldKey)
-      }
-      useWaveformRanges.setState({ entries: next })
+      useWaveformRanges.setState({ entries: trimWaveformCache(next) })
     }
   } finally {
     running = false
