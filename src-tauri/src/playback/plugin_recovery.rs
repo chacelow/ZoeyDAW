@@ -47,6 +47,7 @@ struct RecoveryPlan {
 #[tauri::command(rename_all="camelCase")]
 pub async fn plugin_device_recover(app:AppHandle,window:WebviewWindow,devices:State<'_,PluginDevices>,
     service:State<'_,PlaybackService>,catalog:State<'_,PluginCatalogState>,session_id:String,device_id:String,instance_id:String) -> Result<Value,String> {
+    let _update=devices.begin_audio_update().await;
     let control=devices.control(window.label(),&session_id,&device_id)?;
     let expected=instance_id.parse::<u64>().map_err(|_|"Invalid plugin recovery instance")?;
     if expected.to_string()!=instance_id || control.instance_id()!=expected { return Err("Stale plugin recovery instance".into()); }

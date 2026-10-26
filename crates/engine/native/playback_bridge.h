@@ -19,6 +19,7 @@ char* zp_plugin_admit(zp_session*, const char* lease, const char* owner, const c
 char* zp_plugin_cancel(zp_session*, const char* lease, const char* owner, uint64_t token);
 /* Consumes every supplied processor, including rejected apply and invalid payloads. */
 char* zp_apply_prepared(zp_session*, const char* json, zd_plugin_prepared*, uint32_t count);
+char* zp_configure_prepared(zp_session*, const char* json, zd_plugin_prepared*, uint32_t count);
 /* Acquisition is message-thread-only and binds one immutable graph identity. */
 zp_meter_read_handle* zp_meter_acquire(zp_session*, const char* lease, const char* owner, uint32_t device_epoch, uint32_t generation, uint32_t registry);
 zp_meter_read_handle* zp_input_meter_acquire(zp_session*,const char* lease,const char* owner,uint32_t device_epoch);

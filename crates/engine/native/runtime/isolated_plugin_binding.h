@@ -25,6 +25,7 @@ public:
     void setParameters(const std::vector<ExternalParameter>&);
     bool setEditorAuthority(std::uintptr_t context, uint64_t instance, bool active) noexcept;
     bool matchesContext(std::uintptr_t context) const noexcept { return context==reinterpret_cast<std::uintptr_t>(callback.context); }
+    std::uintptr_t context() const noexcept { return reinterpret_cast<std::uintptr_t>(callback.context); }
     const IsolatedPluginFormat format;
     std::atomic<int32_t> status {0};
     std::atomic<bool> enabled {true};

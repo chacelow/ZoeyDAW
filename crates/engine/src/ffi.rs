@@ -5,6 +5,7 @@ extern "C" {
     pub(crate) fn zp_create(error: *mut *mut c_char) -> *mut c_void;
     pub(crate) fn zp_call(session: *mut c_void, operation: *const c_char, json: *const c_char) -> *mut c_char;
     pub(crate) fn zp_apply_prepared(session: *mut c_void, json: *const c_char, processors: *mut zoeydaw_plugin_abi::NativePreparedPlugin, count: u32) -> *mut c_char;
+    pub(crate) fn zp_configure_prepared(session: *mut c_void, json: *const c_char, processors: *mut zoeydaw_plugin_abi::NativePreparedPlugin, count: u32) -> *mut c_char;
     pub(crate) fn zp_free(buffer: *mut c_char);
     pub(crate) fn zp_stop_fence_for(session: *mut c_void, lease: *const c_char, session_id: *const c_char, token: u64) -> i32;
     pub(crate) fn zp_pending_call_begin(session: *mut c_void, lease: *const c_char, session_id: *const c_char) -> i32;

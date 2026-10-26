@@ -12,6 +12,7 @@ struct AudioConfiguration {
     juce::BigInteger inputMask() const;
     juce::BigInteger outputMask() const;
     bool outputEnabled(int first, int count) const;
+    bool operator==(const AudioConfiguration&) const = default;
 };
 juce::String audioDeviceId(const juce::String& host, const juce::String& name);
 juce::File audioConfigurationFile();

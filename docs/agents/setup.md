@@ -66,6 +66,8 @@ UI 改动必须在已有应用或 Web 页面上验证主路径，观察新截图
 
 `cargo run -p zoeydaw-engine --example plugin_admission_smoke --locked` 通过真实 EngineSession 验证异步 admission 回执未领取时取消，以及显式取消的恰好一次释放；不启动 Tauri 或声卡。带 native build 参数的插件验证脚本包含此入口。
 
+同一 native probe 还用显式 Hosted IO 验证外部插件的配置重准备。真实 CLAP/VST3 状态在 48/96 kHz、512/256/128 frames 之间恢复，检查精确 PCM、新图延迟、驱动失败与持久化失败回滚、过期计划及编辑器排除。Hosted IO 不打开物理声卡。2026-10-27 的 Windows 实际输出仅报告一个可用 buffer，配置 smoke 因此未执行物理 buffer 切换；不能把该限制写成真实设备切换通过。
+
 main 窗口关闭 Tauri 原生 `dragDropEnabled` 拦截，Browser 内部拖放使用 WebView HTML 事件。锁定的 tauri-runtime-wry 2.9.2 会无条件接收原生拖放，阻止 WKWebView 收到 `dragover` 和 `drop`。源同时提供内部 token 与标准文本文件名；只有内部会话 token 可用于导入。修改该原生配置需要重启应用，HMR 不生效。
 
 不启动桌面应用的原生验证入口：

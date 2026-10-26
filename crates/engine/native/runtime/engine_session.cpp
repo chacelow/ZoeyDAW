@@ -574,6 +574,7 @@ void EngineSession::timerCallback() {
 V EngineSession::call(const juce::String& operation,const V& v) {
     require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Playback mutation outside main thread");
     if(operation=="apply")return apply(v);
+    if(operation=="configuration_plan")return configurationPlan(AudioConfiguration::decode(v));
     if(operation=="plugin_editor_authority") {
         fields(v,{"sessionId","deviceId","context","instanceId","active"});
         require(accepted && arrangement && accepted->session==text(v,"sessionId"),"Stale plugin editor session");

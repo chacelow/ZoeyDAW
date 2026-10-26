@@ -12,7 +12,7 @@ zoeydaw 是 Web-UI DAW。React 实现界面与交互，Tauri 承载桌面壳。M
 
 按界面需求反推原生需求。先让交互可运行、状态和验收可观察，再落实 Rust 实现；不先铺音频引擎或假想长期架构。
 
-前端 runtime 集中命令、预览与确认，独立 `projectFiles` 协调真实工程文件，localStorage 只保存最近工程位置。原生播放已接入输出、外部输入监听、录音 writer、音频/MIDI Clip 和 Device chain；外部插件已有隔离 admission、参数、完整状态保存、原生编辑器、显式恢复及工程自动化接线。设备格式重准备、完整 Session 与自动化录制仍有缺口，见 [模块契约](architecture/modules.md) 和 [adapter 契约](../apps/web/src/pages/project/adapters/README.md)。无音源 MIDI 保持静音，真实 helper PCM 与显式 mock 浏览器证据不代替 Tauri、物理输入或真实音频终验。
+前端 runtime 集中命令、预览与确认，独立 `projectFiles` 协调真实工程文件，localStorage 只保存最近工程位置。原生播放已接入输出、外部输入监听、录音 writer、音频/MIDI Clip 和 Device chain；外部插件已有隔离 admission、参数、完整状态保存、原生编辑器、显式恢复、工程自动化及显式设备配置的格式重准备接线。系统主动更换设备或格式后的恢复、完整 Session 与自动化录制仍有缺口，见 [模块契约](architecture/modules.md) 和 [adapter 契约](../apps/web/src/pages/project/adapters/README.md)。无音源 MIDI 保持静音，真实 helper PCM 与显式 mock 浏览器证据不代替 Tauri、物理输入或真实音频终验。
 
 兼容 Ableton Live `.als`，以及支持 CLAP/VST3，是产品方向，不是 Agent 可以自动扩展本轮任务的实现清单。具体支持范围由当次需求和真实验证决定。
 

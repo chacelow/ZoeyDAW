@@ -18,6 +18,13 @@ template<class F> char* answer(F&& fn) noexcept {
     catch(...) { return failure("Unknown native playback exception"); }
 }
 void fence(std::atomic<uint64_t>& atomic,uint64_t token) noexcept { auto old=atomic.load();while(old<token && !atomic.compare_exchange_weak(old,token)){} }
+template<class F> char* answerPrepared(zd_plugin_prepared* processors,uint32_t count,F&& fn) noexcept {
+    struct Cleanup {
+        zd_plugin_prepared* values;uint32_t count;
+        ~Cleanup() { if(values)for(uint32_t i=0;i<count;++i)if(values[i].processor.context && values[i].processor.release)values[i].processor.release(values[i].processor.context); }
+    } cleanup {processors,count};
+    return answer([&] { zp::require(count==0 || processors,"Missing prepared processors");return fn(); });
+}
 }
 extern "C" {
 zp_session* zp_create(char** error) { try { if(error)*error=nullptr;return new zp_session(); }catch(const std::exception& e) { if(error)*error=copy(e.what());return nullptr; }catch(...) { if(error)*error=copy("Cannot create native playback engine");return nullptr; } }
@@ -39,13 +46,15 @@ char* zp_plugin_cancel(zp_session* session,const char* lease,const char* owner,u
     return answer([&] { zp::require(session && lease && owner,"Invalid plugin cancellation identity");session->owner.cancelPlugin(lease,owner,token);return zp::V(); });
 }
 char* zp_apply_prepared(zp_session* session,const char* json,zd_plugin_prepared* processors,uint32_t count) {
-    struct Cleanup {
-        zd_plugin_prepared* values;uint32_t count;
-        ~Cleanup() { if(values)for(uint32_t i=0;i<count;++i)if(values[i].processor.context && values[i].processor.release)values[i].processor.release(values[i].processor.context); }
-    } cleanup {processors,count};
-    return answer([&] {
-        zp::require(session && (count==0 || processors),"Invalid prepared apply");
+    return answerPrepared(processors,count,[&] {
+        zp::require(session,"Invalid prepared apply");
         return session->owner.applyPrepared(zp::parse(json),processors,count);
+    });
+}
+char* zp_configure_prepared(zp_session* session,const char* json,zd_plugin_prepared* processors,uint32_t count) {
+    return answerPrepared(processors,count,[&] {
+        zp::require(session,"Invalid prepared configuration");
+        return session->owner.configurePrepared(zp::parse(json),processors,count);
     });
 }
 zp_meter_read_handle* zp_meter_acquire(zp_session* session,const char* lease,const char* owner,uint32_t epoch,uint32_t generation,uint32_t registry) {

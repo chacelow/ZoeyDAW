@@ -35,8 +35,9 @@ void EngineSession::updateDevices(Arrangement& arrangement,const Request& next,c
             auto* retained=existing==arrangement.devices.end()?nullptr:dynamic_cast<IsolatedDevicePlugin*>(existing->second.get());
             const bool replaced=!retained || !retained->matches(*external);
             if(replaced) {
+                const auto admissionRevision=pluginApplyOwner?std::get<2>(*pluginApplyOwner):next.baseRevision;
                 const auto admission=std::find_if(pluginAdmissions.begin(),pluginAdmissions.end(),[&](const auto& entry) {
-                    return entry.second.session==next.session && entry.second.device==device.id && entry.second.revision==next.baseRevision;
+                    return entry.second.session==next.session && entry.second.device==device.id && entry.second.revision==admissionRevision;
                 });
                 require(admission!=pluginAdmissions.end(),"External device has no prepared admission");
                 juce::ValueTree state(te::IDs::PLUGIN);state.setProperty(te::IDs::type,IsolatedDevicePlugin::xmlTypeName,nullptr);

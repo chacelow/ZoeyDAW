@@ -10,6 +10,7 @@ import type {
   PluginEditorResponse,
 } from "@/shared/native/plugins"
 import { publishNativeAudioStatus, readNativePluginFaults } from "@/shared/native/audio"
+import type { AudioDeviceSnapshot } from "@/shared/native/audio"
 import {
   configureProjectBackend,
   hydrateProject,
@@ -104,7 +105,7 @@ beforeEach(async () => {
   hydrateProject(JSON.stringify({ version: 4, document, workspace: createMockWorkspace() }))
   stopRuntime = startProjectRuntime()
   await whenProjectBackendIdle()
-  publishNativeAudioStatus({ pluginFaults: [], issues: [], error: null })
+  publishNativeAudioStatus({ device: null, pluginFaults: [], issues: [], error: null })
   vi.spyOn(nativePlugins, "available").mockReturnValue(true)
   vi.spyOn(nativePlugins, "parameters").mockResolvedValue(parameters)
 })
@@ -112,7 +113,7 @@ afterEach(() => {
   cleanup()
   stopRuntime()
   stopBackend()
-  publishNativeAudioStatus({ pluginFaults: [], issues: [], error: null })
+  publishNativeAudioStatus({ device: null, pluginFaults: [], issues: [], error: null })
   vi.restoreAllMocks()
 })
 
@@ -298,4 +299,79 @@ it("preserves the manual baseline through automated editor feedback, commit and 
   expect(
     useProjectState.getState().document.tracks.find(track => track.id === trackId)?.automation
   ).toEqual(automation)
+})
+
+function formatSnapshot(sampleRate: number, bufferFrames: number): AudioDeviceSnapshot {
+  const output = {
+    id: "Hosted::Stereo",
+    name: "Stereo",
+    host: "Hosted",
+    inputChannels: 0,
+    outputChannels: 2,
+  }
+  return {
+    state: "ready",
+    host: "Hosted",
+    deviceId: output.id,
+    deviceName: output.name,
+    sampleRate,
+    bufferFrames,
+    outputChannels: 2,
+    inputDeviceId: null,
+    inputDeviceName: null,
+    inputChannels: 0,
+    inputLatencyFrames: 0,
+    outputLatencyFrames: 0,
+    error: null,
+    devices: [output],
+    inputDevices: [],
+    outputDevices: [output],
+    hosts: [{ id: "Hosted", name: "Hosted", separateInputOutput: true, controlPanel: false }],
+    configuration: {
+      host: "Hosted",
+      inputDeviceId: null,
+      outputDeviceId: output.id,
+      sampleRate,
+      bufferFrames,
+      inputMono: [],
+      inputStereo: [],
+      outputMono: [],
+      outputStereo: [0],
+    },
+    capabilities: {
+      host: "Hosted",
+      inputDeviceId: null,
+      outputDeviceId: output.id,
+      inputChannelNames: [],
+      outputChannelNames: ["Left", "Right"],
+      sampleRates: [48000, 96000],
+      bufferSizes: [128, 512],
+      defaultSampleRate: 48000,
+      defaultBufferFrames: 512,
+      separateInputOutput: true,
+      controlPanel: false,
+    },
+  }
+}
+
+it("reloads metadata after audio format changes and rejects the old format's late response", async () => {
+  const previous = Promise.withResolvers<PluginParameter[]>()
+  const current = Promise.withResolvers<PluginParameter[]>()
+  vi.mocked(nativePlugins.parameters)
+    .mockReturnValueOnce(previous.promise)
+    .mockReturnValueOnce(current.promise)
+  act(() => publishNativeAudioStatus({ device: formatSnapshot(48000, 512) }))
+  const view = render(<View parameters />)
+  await waitFor(() => expect(nativePlugins.parameters).toHaveBeenCalledTimes(1))
+  act(() => publishNativeAudioStatus({ device: formatSnapshot(96000, 128) }))
+  await waitFor(() => expect(nativePlugins.parameters).toHaveBeenCalledTimes(2))
+  await act(async () =>
+    current.resolve(parameters.map(parameter => ({ ...parameter, title: "96k Gain" })))
+  )
+  expect(await view.findByText("96k Gain")).toBeTruthy()
+  await act(async () =>
+    previous.resolve(parameters.map(parameter => ({ ...parameter, title: "48k Gain" })))
+  )
+  expect(view.queryByText("48k Gain")).toBeNull()
+  expect(view.getByText("96k Gain")).toBeTruthy()
 })

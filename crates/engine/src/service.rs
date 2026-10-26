@@ -152,6 +152,9 @@ impl PlaybackService {
         main.dispatch(move || {
             let _permit = permit;
             let result = (|| {
+                if operation=="configure_prepared" {
+                    owner.check_plugin_owner(execution_lease.as_deref().ok_or("Invalid lease")?,execution_session.as_deref().ok_or("Invalid session")?)?;
+                }
                 if matches!(operation, "apply" | "control" | "note" | "note_overrun" | "all_notes_off") {
                     let lease = execution_lease.as_deref().ok_or("Invalid lease")?;
                     if owner.owner.released_leases.lock().map_err(|_| "Playback lease lock poisoned")?.contains(lease) {
@@ -181,7 +184,7 @@ impl PlaybackService {
                     }
                 }
                 let handle = match &pending_call { Some(pending) => pending.handle as *mut c_void, None => owner.handle_on_main()? };
-                if operation == "apply" && !prepared.is_empty() {
+                if (operation == "apply" && !prepared.is_empty()) || operation=="configure_prepared" {
                     let identities = prepared.iter().map(|item| CString::new(item.device_id.as_str()).map_err(|error| error.to_string())).collect::<Result<Vec<_>, _>>()?;
                     let mut processors = Vec::with_capacity(prepared.len());
                     for (item, id) in prepared.into_iter().zip(&identities) {
@@ -191,7 +194,11 @@ impl PlaybackService {
                             output_channels: item.format.output_channels, latency_frames: item.format.latency_frames,
                         });
                     }
-                    take_buffer(unsafe { zp_apply_prepared(handle, payload_json.as_ptr(), processors.as_mut_ptr(), processors.len() as u32) }).map(Some)
+                    let response=unsafe {
+                        if operation=="configure_prepared" { crate::ffi::zp_configure_prepared(handle,payload_json.as_ptr(),processors.as_mut_ptr(),processors.len() as u32) }
+                        else { zp_apply_prepared(handle,payload_json.as_ptr(),processors.as_mut_ptr(),processors.len() as u32) }
+                    };
+                    take_buffer(response).map(Some)
                 } else {
                     take_buffer(unsafe { zp_call(handle, operation_c.as_ptr(), payload_json.as_ptr()) }).map(Some)
                 }
@@ -344,6 +351,18 @@ pub async fn devices<D: MainThreadDispatcher>(&self, main: &D) -> Result<Value, 
 
 pub async fn configure_device<D: MainThreadDispatcher>(&self, main: &D, request: Value) -> Result<Value, String> {
     self.invoke(main, "configure", request).await
+}
+
+pub async fn configuration_plan<D: MainThreadDispatcher>(&self, main: &D, request: Value) -> Result<Value,String> {
+    self.invoke(main,"configuration_plan",request).await
+}
+
+pub async fn configure_device_prepared<D: MainThreadDispatcher>(&self, main: &D, payload: Value, prepared: Vec<zoeydaw_plugin_abi::PreparedPlugin>) -> Result<Value,String> {
+    if prepared.len()>256 { return Err("Prepared plugin capacity exceeded".into()); }
+    let lease=payload.get("leaseId").and_then(Value::as_str).ok_or("Missing configuration lease")?;
+    let session=payload.get("sessionId").and_then(Value::as_str).ok_or("Missing configuration session")?;
+    self.check_plugin_owner(lease,session)?;
+    self.invoke_prepared(main,"configure_prepared",payload,prepared).await
 }
 
 pub async fn device_capabilities<D: MainThreadDispatcher>(&self, main: &D, request: Value) -> Result<Value, String> {

@@ -188,8 +188,8 @@ pub async fn playback_devices(app: AppHandle, service: State<'_, PlaybackService
 }
 
 #[tauri::command]
-pub async fn playback_configure_device(app: AppHandle, service: State<'_, PlaybackService>, request: Value) -> Result<Value, String> {
-    service.configure_device(&TauriMainThread(&app), request).await
+pub async fn playback_configure_device(app: AppHandle, window: tauri::WebviewWindow, service: State<'_, PlaybackService>, plugins: State<'_,plugin_devices::PluginDevices>, catalog: State<'_,crate::plugin_catalog::PluginCatalogState>, request: Value) -> Result<Value, String> {
+    plugins.configure(app,window.label().to_owned(),service.inner().clone(),catalog.inner().clone(),request).await
 }
 
 #[tauri::command]

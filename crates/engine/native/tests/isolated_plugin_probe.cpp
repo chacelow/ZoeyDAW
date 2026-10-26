@@ -1,6 +1,5 @@
 #include "isolated_plugin_node.h"
-#include "isolated_device_plugin.h"
-#include "engine_session.h"
+#include "isolated_plugin_probe.h"
 #include <tracktion_engine/tracktion_engine.h>
 #include <tracktion_engine/playback/graph/tracktion_TracktionEngineNode.h>
 #include <thread>
@@ -8,18 +7,9 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace zp {
-struct MixerTestAccess {
-    static tracktion::Edit& edit(EngineSession& session) { return *session.arrangement->edit; }
-    static tracktion::AudioTrack& track(EngineSession& session) { return *session.arrangement->tracks.at("main"); }
-    static void configure(EngineSession& session,tracktion::CreateNodeParams& params) { session.configureMeterGraph(edit(session),params); }
-    static std::shared_ptr<IsolatedPluginBinding> admitted(EngineSession& session,uint64_t token) { return session.pluginAdmissions.at(token).binding; }
-    static tracktion::Plugin::Ptr device(EngineSession& session,const char* id) { return session.arrangement->devices.at(id); }
-};
-}
-
 namespace {
 namespace graph=tracktion::graph;
+using zp::probe::ConstantSignal;
 class Impulse final : public graph::Node {
 public:
     graph::NodeProperties getNodeProperties() override { return {true,false,2,0,0}; }
@@ -50,22 +40,7 @@ private:
     tracktion::engine::MidiMessageArray seed;
     bool first=true;
 };
-class ConstantSignal final : public graph::Node {
-public:
-    graph::NodeProperties getNodeProperties() override { return {true,false,2,0,0}; }
-    bool isReadyToProcess() override { return true; }
-private:
-    void process(ProcessContext& context) override {
-        for(unsigned channel=0;channel<2;++channel)
-            for(unsigned sample=0;sample<context.numSamples;++sample)context.buffers.audio.getSample(channel,sample)=.5f;
-    }
-};
 }
-#if defined(_WIN32)
-#define ZD_PROBE_EXPORT __declspec(dllexport)
-#else
-#define ZD_PROBE_EXPORT __attribute__((visibility("default")))
-#endif
 extern "C" ZD_PROBE_EXPORT int32_t zd_verify_isolated_graph(zd_plugin_owned_processor processor,uint32_t latency,uint32_t sumDry) {
     try {
         zp::IsolatedPluginBindings bindings;

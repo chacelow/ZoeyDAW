@@ -1,3 +1,4 @@
+mod configuration;
 use super::TauriMainThread;
 use super::plugin_recovery::PluginFaultStatus;
 use crate::plugin_catalog::PluginCatalogState;
@@ -24,7 +25,7 @@ struct Registry {
     closed: std::collections::HashSet<String>,
 }
 #[derive(Clone, Default)]
-pub struct PluginDevices(Arc<Mutex<Registry>>);
+pub struct PluginDevices(Arc<Mutex<Registry>>,Arc<tauri::async_runtime::Mutex<()>>);
 
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase", deny_unknown_fields)]
@@ -35,6 +36,7 @@ struct Plan {
 }
 
 impl PluginDevices {
+    pub(super) async fn begin_audio_update(&self) -> impl Send + '_ { self.1.lock().await }
     pub(crate) fn faults(&self, window: &str, lease: &str) -> Result<Vec<PluginFaultStatus>,String> {
         self.require_owner(window,lease)?;
         let handles:Vec<_>={
@@ -98,6 +100,7 @@ impl PluginDevices {
     }
     pub async fn apply(&self, app: AppHandle, window: String, service: PlaybackService, catalog: PluginCatalogState,
         request: Value, lease: String, stop_token: u64) -> Result<Value,String> {
+        let _update=self.begin_audio_update().await;
         self.claim(&window,&lease)?;
         let session=request.get("sessionId").and_then(Value::as_str).ok_or("Invalid plugin session")?.to_owned();
         let plan: Plan=serde_json::from_value(service.plugin_prepare_plan(&TauriMainThread(&app),request.clone(),lease.clone()).await?)

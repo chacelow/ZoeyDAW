@@ -70,6 +70,17 @@ fn main() -> Result<(), String> {
         assert!(result.is_err());
     }
     assert_eq!(released.load(Ordering::SeqCst), 4);
+    for malformed in [true,false] {
+        let source=request(&released);
+        let prepared=PreparedPlugin { device_id:source.device_id,format:source.format,processor:source.processor };
+        let mut payload=json!({"request":{},"plan":{},"leaseId":"admission-smoke","sessionId":"admission-smoke"});
+        if malformed { payload.as_object_mut().unwrap().remove("request"); }
+        let mut configuration=Box::pin(service.configure_device_prepared(&queue,payload,vec![prepared]));
+        assert!(poll(configuration.as_mut()).is_pending());queue.run();
+        let Poll::Ready(result)=poll(configuration.as_mut()) else { return Err("Rejected configuration did not finish".into()); };
+        assert!(result.is_err());
+    }
+    assert_eq!(released.load(Ordering::SeqCst),6);
     let mut stopped = Box::pin(service.stop(&queue, "admission-smoke".into(), "admission-smoke".into(), 1));
     assert!(poll(stopped.as_mut()).is_pending()); queue.run();
     assert_eq!(poll(stopped.as_mut()), Poll::Ready(Ok(())));
@@ -80,11 +91,19 @@ fn main() -> Result<(), String> {
     assert!(poll(stale.as_mut()).is_pending()); queue.run();
     let Poll::Ready(result) = poll(stale.as_mut()) else { return Err("Stopped apply did not finish".into()); };
     assert_eq!(result?["kind"], "rejected");
-    assert_eq!(released.load(Ordering::SeqCst), 5);
+    assert_eq!(released.load(Ordering::SeqCst), 7);
+    let source=request(&released);
+    let prepared=PreparedPlugin { device_id:source.device_id,format:source.format,processor:source.processor };
+    let payload=json!({"request":{},"plan":{},"leaseId":"admission-smoke","sessionId":"admission-smoke"});
+    let mut configuration=Box::pin(service.configure_device_prepared(&queue,payload,vec![prepared]));
+    assert!(poll(configuration.as_mut()).is_pending());
     let mut close = Box::pin(service.release(&queue, "admission-smoke".into()));
-    assert!(poll(close.as_mut()).is_pending()); queue.run();
-    assert_eq!(poll(close.as_mut()), Poll::Ready(Ok(())));
+    assert!(poll(close.as_mut()).is_pending());queue.run();
+    let Poll::Ready(result)=poll(configuration.as_mut()) else { return Err("Released configuration did not finish".into()); };
+    assert!(result.is_err_and(|error|error.contains("lease was released")));
+    assert_eq!(released.load(Ordering::SeqCst),8);
+    queue.run();assert_eq!(poll(close.as_mut()), Poll::Ready(Ok(())));
     assert!(queue.0.lock().unwrap().is_empty());
-    println!("Real EngineSession: cancelled admission receipts, invalid prepared batches and Stop rejection release processors exactly once");
+    println!("Real EngineSession: cancelled admission receipts, invalid prepared apply/configuration batches, Stop and released owners release processors exactly once");
     Ok(())
 }

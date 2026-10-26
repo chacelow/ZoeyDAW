@@ -22,6 +22,9 @@ public:
     bool matches(const ExternalSettings&) const;
     bool setEditorAuthority(std::uintptr_t context, uint64_t instance, bool active);
     bool canRecover(std::uintptr_t context) const noexcept;
+    bool retainsFormat(double rate,uint32_t quantum) const noexcept { return binding->format.sampleRate==rate && binding->format.quantum==quantum; }
+    std::uintptr_t processorContext() const noexcept { return binding->context(); }
+    bool editorOwnsParameters() const noexcept { return binding->editorActive.load(std::memory_order_acquire); }
     void updateAutomation();
     uint64_t automatedParameters(size_t word) const noexcept { return automationMasks[word].load(std::memory_order_acquire); }
     void initialise(const tracktion::PluginInitialisationInfo&) override;

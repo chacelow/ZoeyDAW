@@ -1,10 +1,10 @@
-use plughost::{Chain, HostIdentity, Layout, PluginFormat, PluginRef, RealtimeConfig, Timeouts};
+use plughost::{Chain, HostIdentity, Layout, PluginFormat, PluginRef, ProcessMode, RealtimeConfig, StatePurpose, Timeouts};
 use std::path::PathBuf;
 use zoeydaw_plugin_host::{
     native::NativeProcessor,
     quantum::QuantumAudio,
 };
-use zoeydaw_plugin_abi::OwnedNativeProcessor;
+use zoeydaw_plugin_abi::{OwnedNativeProcessor, PendingProcessor};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
@@ -159,6 +159,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Err(format!("{extension} curve processing starved manual parameters or failed to restore them").into());
         }
         println!("Retained Edit {extension} automation, envelope edits, BPM, removal and manual restore passed");
+        automated.set_parameter(0, 0, 0.37)?;
+        let state = automated.save_state(0, StatePurpose::Project)?;
+        let mut configured = Vec::with_capacity(6);
+        let mut processors = Vec::with_capacity(6);
+        let mut latencies = Vec::with_capacity(6);
+        for (rate, quantum) in [(48_000.0, 512usize), (96_000.0, 256), (96_000.0, 256), (96_000.0, 128), (48_000.0, 512), (48_000.0, 512)] {
+            let mut candidate = Chain::spawn(
+                &PathBuf::from(&args[0]),
+                &[PluginRef { format, bundle: Some(PathBuf::from(&args[1]).join(format!("plughost-test-delay.{extension}"))), class_id: class_id.into() }],
+                &HostIdentity::default(), Timeouts::default(),
+            )?;
+            let mut config = candidate.main_bus_config(rate, quantum, Layout::Stereo, &[Layout::Stereo])?;
+            config.mode = ProcessMode::Realtime;
+            candidate.prepare_audio(&config)?;
+            candidate.restore_state(0, &state, StatePurpose::Project)?;
+            let endpoint = candidate.realtime_endpoint(&RealtimeConfig::new(quantum))?;
+            latencies.push(candidate.start_realtime()? + quantum as u32);
+            let processor=NativeProcessor::new(QuantumAudio::new(endpoint, quantum, 2, 2, rate)?);
+            processors.push(unsafe { PendingProcessor::new(processor.into_owned()) });
+            configured.push(candidate);
+        }
+        unsafe {
+            let library = libloading::Library::new(&args[2])?;
+            let run: libloading::Symbol<unsafe extern "C" fn(*mut OwnedNativeProcessor, *const u32, u32, u32) -> i32> = library.get(b"zd_verify_isolated_configuration")?;
+            let mut processors=processors.into_iter().map(PendingProcessor::into_raw).collect::<Vec<_>>();
+            let status = run(processors.as_mut_ptr(), latencies.as_ptr(), processors.len() as u32, vst3);
+            if status != 0 { return Err(format!("{extension} prepared audio configuration failed: {status}").into()); }
+        }
+        for candidate in &mut configured { candidate.stop_realtime()?; }
+        for index in [0,2,3] {
+            if !configured[index].parameters(0)?.iter().any(|(info,value)|info.id==9 && (*value-0.75).abs()<1e-6) {
+                return Err(format!("{extension} format replacement lost authored automation").into());
+            }
+        }
+        println!("{extension}: hosted 48/96kHz and 512/256/128-frame configuration retained full-state PCM, refreshed latency, rejected stale/editor plans and rolled back driver/persistence failures");
     }
     chain.stop_realtime()?;
     dry_chain.stop_realtime()?;

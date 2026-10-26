@@ -77,7 +77,7 @@ if(ZOEYDAW_PLAYBACK_SMOKE)
     target_sources(zoeydaw_audio_configuration_smoke PRIVATE tests/configuration_smoke.cpp)
     target_include_directories(zoeydaw_audio_configuration_smoke PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/model" "${CMAKE_CURRENT_SOURCE_DIR}/runtime")
     target_link_libraries(zoeydaw_audio_configuration_smoke PRIVATE zoeydaw_playback juce::juce_events juce::juce_core)
-    add_library(zoeydaw_isolated_plugin_probe SHARED tests/isolated_plugin_probe.cpp)
+    add_library(zoeydaw_isolated_plugin_probe SHARED tests/isolated_plugin_probe.cpp tests/isolated_plugin_configuration.cpp)
     target_include_directories(zoeydaw_isolated_plugin_probe PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/runtime" "${CMAKE_CURRENT_SOURCE_DIR}/model" $<TARGET_PROPERTY:zoeydaw_playback,INCLUDE_DIRECTORIES>)
     target_link_libraries(zoeydaw_isolated_plugin_probe PRIVATE zoeydaw_playback)

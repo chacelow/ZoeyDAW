@@ -70,6 +70,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 外部 Device 的工程自动化复用 Tracktion 参数与曲线。`IsolatedDevicePlugin` 在控制线程注册精确原生 ID、更新曲线及 authored-curve 位图；`IsolatedPluginNode` 保留同一 wrapper，在补偿图延迟后生成采样偏移事件。单点曲线不依赖 SDK active-stream 标记，音频线程不读可变曲线容器。`IsolatedPluginBinding` 合并当前手动参数与曲线事件，不新增控制线程或队列。真实 CLAP/VST3 retained-Edit 探针覆盖曲线、BPM、斜坡、删除及手动值恢复；Tauri 操作与物理听感单独验收。
 
+显式设备格式变更由同一 `PluginDevices` 的 `configuration.rs` 协调。它复用 `PreparedDevice` 的完整状态与参数接口，在非实时 worker 准备候选；`EngineSession::configurePrepared` 在配置期间保留旧 wrapper，并在驱动或持久化失败时恢复。Native plan 绑定当前文档 sequence、revision、配置和 callback context。apply、配置与显式恢复共用一个 async 更新许可，控制 registry 在 native 成功后更新。编辑器占用时拒绝不兼容格式，旧数据和配置保留。它不提供任意工程事务的失败原子保证。
+
 `crates/engine/native` 将协议模型、无设备分析与 EngineSession 分为 `model`、`analysis`、`runtime` 三个 OBJECT targets。分析不依赖 runtime，runtime 不依赖分析；根 `playback_bridge` 保留 C ABI。Tracktion/JUCE 实现只进入最终 `zoeydaw_playback` 静态库，OBJECT targets 仅继承编译配置，不链接带实现源的 vendor INTERFACE targets。
 
 `runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。

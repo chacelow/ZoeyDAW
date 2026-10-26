@@ -46,6 +46,7 @@ public:
                          uint64_t revision,zd_plugin_owned_processor,IsolatedPluginFormat);
     void cancelPlugin(const juce::String& lease,const juce::String& session,uint64_t token);
     V applyPrepared(const V&,zd_plugin_prepared*,uint32_t count);
+    V configurePrepared(const V&,zd_plugin_prepared*,uint32_t count);
     std::shared_ptr<MeterGraphCollector> acquireMeterGraph(const char* lease,const char* session,std::uint32_t deviceEpoch,std::uint32_t generation,std::uint32_t registry);
     std::shared_ptr<InputMeterCollector> acquireInputMeter(const char* lease,const char* session,std::uint32_t deviceEpoch);
     std::shared_ptr<const TransportClockState> acquireIdleMeter(const char* lease,const char* session,std::uint64_t ownerEpoch);
@@ -165,11 +166,14 @@ private:
     V devices(bool refresh = false);
     V configure(const V&);
     V capabilities(const V&);
+    V configurationPlan(const AudioConfiguration&);
+    V validateConfiguration(const AudioConfiguration&);
+    struct PluginConfiguration;
     V controlPanel();
     void refreshDevices();
     void loadConfiguration();
     AudioConfiguration defaultConfiguration();
-    void applyConfiguration(const AudioConfiguration&, bool persist, bool requestPermission);
+    void applyConfiguration(const AudioConfiguration&, bool persist, bool requestPermission,PluginConfiguration* = nullptr);
     void activateConfiguration(const AudioConfiguration&);
     void setWaveDeviceLayout(const std::optional<AudioConfiguration>&);
     void applyChannelLayout(const AudioConfiguration&);
