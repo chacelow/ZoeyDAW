@@ -1,10 +1,12 @@
 # Warp 伸缩、独立变调的库选型
 
-调研日期：2026-10-25。范围为现有 Tracktion Engine 原生播放图中可用的第三方伸缩与变调，以及 Rust 后台分析候选。先阅读了 [`audio-libraries-2026-10-22.md`](audio-libraries-2026-10-22.md)。本轮只核对源码、发布元数据和官方文档，没有安装依赖、构建、测试或试听。下列版本是核实到的固定版本，不保证不存在随后发布的版本。库作者给出的质量和延迟数字不等于本项目的实测结果。
+选型调研日期为 2026-10-25；2026-10-26 核对当前构建和实际输出。范围为现有 Tracktion Engine 原生播放图中可用的第三方伸缩与变调，以及 Rust 后台分析候选。前次资料见 [`audio-libraries-2026-10-22.md`](audio-libraries-2026-10-22.md)。下列版本是当时核实到的固定版本。库作者给出的质量和延迟数字不等于本项目的实测结果。
 
 ## 结论
 
-当前工程只有 SoundTouch Better 真正在播放路径中：[`CMakeLists.txt`](../../crates/engine/native/CMakeLists.txt) 启用 `TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH=1`、关闭 Rubber Band 与 Elastique；[`engine_session.cpp`](../../crates/engine/native/runtime/engine_session.cpp) 把非 Repitch 模式路由到 `soundtouchBetter`，包括实时更新及同步试听。Signalsmith 头文件虽然已经放在 Tracktion 源码树内，构建并未启用对应宏；Tracktion 有 Rubber Band 的适配代码，不等于当前二进制内含 Rubber Band。不能将五个显示名称当作五个声音处理算法。
+当前选用现有 Tracktion 原生适配器，已接通 SoundTouch、Signalsmith、Signalsmith Formant 和 Re-pitch 四种实际模式。[`CMakeLists.txt`](../../crates/engine/native/CMakeLists.txt) 同时启用 SoundTouch 与 Signalsmith，关闭 Rubber Band 与 Elastique；[`audio_clips.cpp`](../../crates/engine/native/runtime/audio_clips.cpp) 将四个模式分别映射到对应原生实现。Signalsmith 普通与 Formant 模式共享算法，后者采用共振峰补偿，不能称为四套不同算法。当前无需增加 Rust DSP wrapper 或替换播放引擎。
+
+2026-10-26 的 `native_playback_protocol` 已验证四种模式的真实 PCM、变调与循环输出；`native_live_mixer` 已验证四种模式在 Hosted 回调中的 BPM 连续修改。实际输出断言见 [`render_tests.cpp`](../../crates/engine/native/tests/render_tests.cpp) 和 [`clip_continuity_tests.h`](../../crates/engine/native/tests/clip_continuity_tests.h)。现有导入偏好、已知/未知源 BPM、保存与撤销的 52 项 Web 定向回归通过。原生真实鼓循环的非 1× 伸缩也已测量；这些证据不代表所有素材的节拍检测准确率或音乐听感通过。
 
 优先在**同一个 Tracktion 图**中验证已经提供的 Signalsmith `signalsmithDefault` 与 `signalsmithCheaper` 原生适配器。它们是一个算法的不同成本/窗口预设，不是 Live 的五种 Warp 算法。SoundTouch Normal/Better 同样是一个算法不同参数。若产品必须提供与 Live Beats、Tones、Texture、Complex、Complex Pro 类似的**不同声音行为**，至少要设计真正的瞬态/切片、单音、人声或颗粒等专用路径，并以描述实际行为的新名称呈现；Rubber Band 的 R2/R3、窗口及保共振峰选项可作为不同算法和质量档位的候选，但不能仅重命名为 Ableton 等价物。Rubber Band 的专有产品分发须先落实商业许可。Auto-Warp 的 beat/downbeat、源到目标节拍映射与人工修正是分析/编辑层，任何 stretch API 都不会自动解决它。[Tracktion 的实际 mode 列表](../../src-tauri/native/tracktion-source/modules/tracktion_engine/timestretch/tracktion_TimeStretch.h)、[适配实现](../../src-tauri/native/tracktion-source/modules/tracktion_engine/timestretch/tracktion_TimeStretch.cpp)、[Rubber Band 官方选项建议](https://breakfastquay.com/rubberband/integration.html)。
 
@@ -40,8 +42,8 @@
 
 ## 推荐的最小选型顺序
 
-1. 保留 Tracktion 为唯一播放引擎，维护一份源 clip 时间到项目拍位的映射，分析与渲染分工。先在已有 C++ Tracktion 适配器内打开 Signalsmith 作一个**如实标注算法名**的候选，与 SoundTouch Better 同语料测精确长度、首帧/seek、瞬态、人声/立体声和多轨 callback p99.9。随仓 1.3.2 与更上游固定提交的具体 Linear/FFT 依赖和 notice 一并锁定。[Tracktion 实现](../../src-tauri/native/tracktion-source/modules/tracktion_engine/timestretch/tracktion_TimeStretch.cpp)、[Signalsmith README](https://github.com/Signalsmith-Audio/signalsmith-stretch/blob/a670068d9aeb64913331d5cc29337b19a457a7df/README.md)
+1. 维持当前同一 Tracktion 图内的 SoundTouch/Signalsmith 接线。遇到具体音质或性能问题时，再用同一语料比较瞬态、人声/立体声、seek 和多轨回调耗时。随仓 Signalsmith 及其 Linear/FFT 依赖继续遵守固定源码与 notice 约束。[Tracktion 实现](../../src-tauri/native/tracktion-source/modules/tracktion_engine/timestretch/tracktion_TimeStretch.cpp)、[Signalsmith README](https://github.com/Signalsmith-Audio/signalsmith-stretch/blob/a670068d9aeb64913331d5cc29337b19a457a7df/README.md)
 2. 若需要另一种算法和人声保共振峰质量，先明确 Rubber Band 商业许可，然后在 Tracktion 原生适配器内比较 R2/R3、短窗和 `OptionFormantPreserved`；不要为了它加入第二个音频引擎，也不要因 Rust binding 存在而改走 Rust 混音。[许可](https://breakfastquay.com/rubberband/)、[选项](https://breakfastquay.com/rubberband/integration.html)
 3. `timestretch` 0.15.0 的分析、tempo map 与 Rust 纯实现值得后台小样对照，但播放 DSP 尚未接图。独立 pitch_shift 是离线 API；若将它用作声音路径，须明确离线渲染及刷新/缓存策略或自行接好 realtime pitch 算法。把作者质量/性能/延迟声明视为待测主张，不拿作者对 Rubber Band 的测试宣称比它更好。[README](https://docs.rs/crate/timestretch/0.15.0/source/README.md)、[pitch API](https://docs.rs/timestretch/0.15.0/timestretch/fn.pitch_shift.html)
 
-本轮没有音质盲听、CPU、实际延迟、真机兼容或许可证法律审查。结论仅表示能否用当前 API 与当前图正确命名、集成；不代表任何候选等同或优于 Ableton Live。
+选型比较与上述原生模式接通已完成。音乐盲听、CPU p99.9、物理设备延迟与分发许可法律审查没有本轮结论；不声称任一候选等同或优于 Ableton Live。Auto-Warp 检测准确率仍需独立处理，不能用伸缩器接通代替。
