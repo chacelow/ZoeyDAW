@@ -1,5 +1,9 @@
 import { acceptsClip, positionToBar } from "@zoeydaw/project-core/types"
-import { CLIP_CLIPBOARD_TYPE, parseClipClipboard } from "@zoeydaw/project-core/clip-clipboard"
+import {
+  CLIP_CLIPBOARD_TYPE,
+  collectClips,
+  parseClipClipboard,
+} from "@zoeydaw/project-core/clip-clipboard"
 import { hitTest } from "@/pages/project/sections/ArrangementPanel/canvas/hit-test"
 import { arrangementBodyTop } from "@/pages/project/sections/ArrangementPanel/canvas/layout"
 import { barAtX, snappedBar } from "../coordinates"
@@ -194,15 +198,17 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         isOwnedTarget = true
         return true
       }
-      if (hit.track.kind !== "audio" && hit.track.kind !== "midi") {
-        return false
-      }
-      const { kind } = hit.track
+      if (hit.track.kind !== "midi") return false
+      const range = context.getState().session.timeSelection
+      const withinSelection =
+        range?.trackIds.includes(hit.track.id) &&
+        hit.bar >= range.startBar &&
+        hit.bar < range.endBar
       const id = actions.createClip(
         hit.track.id,
-        kind,
-        snappedBar(context, hit.bar),
-        scene.get().gridPlan.cellBars
+        "midi",
+        range && withinSelection ? range.startBar : snappedBar(context, hit.bar),
+        range && withinSelection ? range.endBar - range.startBar : scene.get().gridPlan.cellBars
       )
       if (id) {
         select([id])
@@ -250,7 +256,31 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
         select(state.document.tracks.flatMap(track => track.clips.map(clip => clip.id)))
         return true
       }
-      if (command && key === "d" && ids.length) {
+      if (command && key === "d" && (ids.length || state.session.timeSelection)) {
+        const range = state.session.timeSelection
+        if (range && range.endBar > range.startBar) {
+          const track = state.document.tracks.find(
+            lane =>
+              range.trackIds.includes(lane.id) && (lane.kind === "audio" || lane.kind === "midi")
+          )
+          const copied = collectClips(
+            state.document.tracks,
+            ids,
+            range,
+            state.document.transport.bpm,
+            state.document.patterns
+          )
+          if (!track || !copied) return false
+          actions.beginEdit()
+          const done = actions.pasteClips(track.id, range.endBar, copied)
+          actions.endEdit()
+          if (done) {
+            scene.setSelection(new Set(selection()))
+            scene.setTimeSelection(context.getState().session.timeSelection)
+          }
+          return done
+        }
+        if (!ids.length) return false
         actions.beginEdit()
         actions.duplicateClips(ids)
         actions.endEdit()

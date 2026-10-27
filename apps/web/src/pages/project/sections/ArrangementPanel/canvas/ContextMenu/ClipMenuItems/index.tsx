@@ -1,9 +1,8 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from "@zoeymind/ui"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
-import { acceptsClip, positionToBar } from "@zoeydaw/project-core/types"
+import { positionToBar } from "@zoeydaw/project-core/types"
 import { arrangementScene } from "@/pages/project/sections/ArrangementPanel/canvas/scene"
-import type { Clip } from "@zoeydaw/project-core/types"
 import type { CanvasMenuTarget } from "@/pages/project/sections/ArrangementPanel/canvas/interactions/types"
 
 const COLORS = [
@@ -27,20 +26,18 @@ export function ClipMenuItems({
     if (!track) {
       return null
     }
-    const create = (kind: Clip["kind"]) => {
+    const create = () => {
       const selected = useProjectState.getState().session.timeSelection
-      const length =
+      const withinSelection =
         selected?.trackIds.includes(track.id) &&
         target.bar >= selected.startBar &&
-        target.bar <= selected.endBar
-          ? selected.endBar - target.bar
+        target.bar < selected.endBar
+      const start = selected && withinSelection ? selected.startBar : target.bar
+      const length =
+        selected && withinSelection
+          ? selected.endBar - selected.startBar
           : arrangementScene.get().gridPlan.cellBars
-      const id = projectActions.createClip(
-        track.id,
-        kind,
-        target.bar,
-        Math.max(arrangementScene.get().gridPlan.cellBars, length)
-      )
+      const id = projectActions.createClip(track.id, "midi", start, length)
       if (!id) {
         return
       }
@@ -52,19 +49,9 @@ export function ClipMenuItems({
     return (
       <>
         <ContextMenuLabel>{track.name}</ContextMenuLabel>
-        {(["audio", "midi", "pattern"] satisfies Clip["kind"][])
-          .filter(kind => acceptsClip(track.kind, kind))
-          .map(kind => (
-            <ContextMenuItem key={kind} onClick={() => create(kind)}>
-              {t(
-                kind === "audio"
-                  ? "arrangement.createAudioClip"
-                  : kind === "midi"
-                    ? "arrangement.createMidiClip"
-                    : "arrangement.createPatternClip"
-              )}
-            </ContextMenuItem>
-          ))}
+        {track.kind === "midi" && (
+          <ContextMenuItem onClick={create}>{t("arrangement.createMidiClip")}</ContextMenuItem>
+        )}
         <ContextMenuSeparator />
         <ContextMenuItem
           onClick={() => {

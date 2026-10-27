@@ -56,10 +56,19 @@ it("selects existing cards and opens Clip View only for a newly created card", (
   expect(interaction.doubleClick(pointer("trager"))).toBe(true)
   expect(useProjectState.getState().session.selectedClipIds).toEqual(["trager-1"])
   expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
+  expect(interaction.doubleClick({ ...pointer("3-audio"), x: 500, clientX: 500 })).toBe(false)
+  expect(
+    useProjectState.getState().document.tracks.find(track => track.id === "3-audio")!.clips
+  ).toHaveLength(1)
+  projectActions.setTimeSelection({ startBar: 3, endBar: 7, trackIds: ["4-midi"] })
   expect(interaction.doubleClick(pointer("4-midi"))).toBe(true)
   const created = useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!
     .clips[0]
-  expect(created).toMatchObject({ kind: "midi", startBar: 4 })
+  expect(created).toMatchObject({ kind: "midi", startBar: 3, lengthBars: 4, loopBars: 4 })
+  projectActions.resizeClip(created.id, "right", 11)
+  expect(
+    useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!.clips[0]
+  ).toMatchObject({ lengthBars: 8, loopBars: 4 })
   expect(useProjectState.getState().session.selectedClipIds).toEqual([created.id])
   expect(useProjectState.getState().session.clipEditorRequest).toBe(1)
   expect(interaction.keyDown(new KeyboardEvent("keydown", { key: "r", ctrlKey: true }))).toBe(true)

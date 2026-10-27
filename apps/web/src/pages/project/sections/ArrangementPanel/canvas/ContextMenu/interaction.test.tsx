@@ -3,7 +3,7 @@ import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import { StrictMode } from "react"
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it } from "vitest"
-import { hydrateProject, useProjectState } from "@/pages/project/adapters"
+import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
 import { arrangementScene } from "../scene"
 import { AutomationValueEditor } from "../interactions/automation/ValueEditor"
@@ -84,7 +84,7 @@ it("activates Edit value from the real menu and keeps input focus after the popu
   ).toBeCloseTo(40 / 66)
 })
 
-it("creates and renames a Pattern through menus, opening Clip View only on creation", async () => {
+it("creates and renames a selected-range MIDI clip through menus", async () => {
   const view = render(
     <StrictMode>
       <SceneSync />
@@ -102,11 +102,12 @@ it("creates and renames a Pattern through menus, opening Clip View only on creat
     </StrictMode>
   )
   const canvas = view.container.querySelector("canvas")!
+  projectActions.setTimeSelection({ startBar: 3, endBar: 7, trackIds: ["4-midi"] })
   fireEvent.contextMenu(canvas, { clientX: 96, clientY: 280 })
-  fireEvent.click(await screen.findByRole("menuitem", { name: "arrangement.createPatternClip" }))
+  fireEvent.click(await screen.findByRole("menuitem", { name: "arrangement.createMidiClip" }))
   const created = useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!
     .clips[0]
-  expect(created).toMatchObject({ kind: "pattern", startBar: 5 })
+  expect(created).toMatchObject({ kind: "midi", startBar: 3, lengthBars: 4, loopBars: 4 })
   expect(useProjectState.getState().session.selectedClipIds).toEqual([created.id])
   expect(useProjectState.getState().session.clipEditorRequest).toBe(1)
   fireEvent.contextMenu(canvas, { clientX: 96, clientY: 280 })

@@ -256,6 +256,24 @@ it.each(["pointercancel", "lostpointercapture", "blur"])(
   }
 )
 
+it("prevents extending audio clip edges while allowing a trim", () => {
+  projectActions.moveClips(["audio-1"], "3-audio", 4)
+  const { pointer, clip } = createClipController()
+  const before = clip()
+  pointer("pointerdown", 97)
+  pointer("pointermove", 49)
+  pointer("pointerup", 49)
+  expect(clip()).toEqual(before)
+  pointer("pointerdown", 479)
+  pointer("pointermove", 527)
+  pointer("pointerup", 527)
+  expect(clip()).toEqual(before)
+  pointer("pointerdown", 97)
+  pointer("pointermove", 121)
+  pointer("pointerup", 121)
+  expect(clip()).toMatchObject({ startBar: 6, lengthBars: 15, sourceOffsetBars: 1 })
+})
+
 it.each(["Delete", "Backspace"])(
   "%s removes a time range, not its selected whole clip, with one undo",
   key => {
@@ -279,6 +297,44 @@ it.each(["Delete", "Backspace"])(
     expect(useProjectState.getState().session.canUndo).toBe(false)
   }
 )
+
+it("duplicates the selected audio range immediately after it and supports undo", () => {
+  const { element, scene } = createClipController()
+  const before = useProjectState.getState().document
+  projectActions.selectClips([])
+  projectActions.setTimeSelection({ startBar: 5, endBar: 9, trackIds: ["3-audio"] })
+  element.focus()
+  const event = new KeyboardEvent("keydown", {
+    key: "d",
+    ctrlKey: true,
+    bubbles: true,
+    cancelable: true,
+  })
+  element.dispatchEvent(event)
+  expect(event.defaultPrevented).toBe(true)
+  const clips = useProjectState
+    .getState()
+    .document.tracks.find(track => track.id === "3-audio")!.clips
+  expect(clips.find(clip => clip.startBar === 9)).toMatchObject({
+    lengthBars: 4,
+    sourceOffsetBars: 4,
+  })
+  expect(scene.get().timeSelection).toEqual({ startBar: 9, endBar: 13, trackIds: ["3-audio"] })
+  projectActions.undo()
+  expect(useProjectState.getState().document).toEqual(before)
+})
+
+it("duplicates a selected whole clip when its time selection is collapsed", () => {
+  const { element } = createClipController()
+  projectActions.selectClips(["audio-1"])
+  projectActions.setTimeSelection({ startBar: 5, endBar: 5, trackIds: ["3-audio"] })
+  element.focus()
+  element.dispatchEvent(new KeyboardEvent("keydown", { key: "d", ctrlKey: true, bubbles: true }))
+  const clips = useProjectState
+    .getState()
+    .document.tracks.find(track => track.id === "3-audio")!.clips
+  expect(clips.find(clip => clip.startBar === 17)).toMatchObject({ lengthBars: 16 })
+})
 
 it("uses mac Ctrl-X/V for partial regions and pastes at the live insertion instead of the last pointer", () => {
   vi.spyOn(navigator, "platform", "get").mockReturnValue("MacIntel")

@@ -38,7 +38,13 @@ export function createResizeGesture(
     commitOnInterrupt: true,
     move(next) {
       context.scene.setClipResize({ id: clip.id, edge })
-      const raw = snappedBar(context, barAtX(context, next.x) - grabOffset)
+      const requested = snappedBar(context, barAtX(context, next.x) - grabOffset)
+      const raw =
+        clip.kind === "audio"
+          ? edge === "left"
+            ? Math.max(original, requested)
+            : Math.min(original, requested)
+          : requested
       const bpm = context.getState().document.transport.bpm
       const preview = projectClipResize(clip, edge, raw, bpm)
       bar = edge === "left" ? preview.startBar : preview.startBar + preview.lengthBars
