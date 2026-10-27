@@ -90,6 +90,7 @@ export const {
   readRecordingBar,
   session,
   submitNote,
+  launch,
   document,
   workspace,
   tracks,

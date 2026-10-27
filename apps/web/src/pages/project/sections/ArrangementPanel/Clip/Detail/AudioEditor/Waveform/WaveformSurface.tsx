@@ -2,7 +2,7 @@ import { useTranslation } from "@zoeymind/i18n"
 import { formatAudioMusicalValue, type AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { DEFAULT_FADE_CURVE, fadeControls, fadePath } from "@zoeydaw/project-core/fades"
 import { timeTickLabel } from "@zoeydaw/project-core/timeline-ticks"
-import type { AudioClip, DocumentState } from "@zoeydaw/project-core/types"
+import type { AudioClipContent, DocumentState } from "@zoeydaw/project-core/types"
 import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
 import { SourcePlayhead } from "@/pages/project/components/SourcePlayhead"
 import { SourceMarker } from "../SourceMarker"
@@ -22,7 +22,7 @@ export function WaveformSurface({
   selection,
   handlers,
 }: {
-  clip: AudioClip
+  clip: AudioClipContent
   transport: DocumentState["transport"]
   settings: AudioClipSettings
   view: SourceViewport["view"]

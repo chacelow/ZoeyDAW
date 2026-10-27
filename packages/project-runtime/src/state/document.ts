@@ -43,6 +43,7 @@ export function initialDocument(defaultTrackHeight: number): DocumentState {
     markers: [],
     media: [],
     patterns: [],
+    launcher: { scenes: [], quantization: "bar" },
   }
   return ensureOrdinaryTrack(document, defaultTrackHeight)
 }

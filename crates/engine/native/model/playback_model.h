@@ -29,7 +29,7 @@ struct Settings {
     double sourceBpm, transpose, detune, loopStart, loopLength, markerStart, markerEnd;
 };
 struct Clip {
-    juce::String id, kind, source;
+    juce::String id, kind, source, scene;
     double start, length, offset, gain = 0;
     bool mute;
     Settings settings {};
@@ -54,9 +54,15 @@ struct Control {
     double seekBar = 1;
     bool playing = false, recording = false, metronome = false;
 };
+struct LaunchCommand {
+    enum class Kind { clip, scene, stopTrack, stopAll, arrangement } kind;
+    juce::String track, scene;
+    bool quantize = true;
+};
 struct ControlRequest : Control {
     juce::String session;
     uint64_t sequence = 0, controlGeneration = 0;
+    std::optional<LaunchCommand> launch;
 };
 struct NoteRequest {
     juce::String session, trackId, noteId;
@@ -73,6 +79,8 @@ struct Request : ControlRequest {
     bool loop;
     std::map<juce::String, Source> sources;
     std::vector<Track> tracks;
+    std::vector<juce::String> scenes;
+    juce::String launchQuantization = "bar";
     double secondsPerBar() const { return quartersPerBar * 60.0 / bpm; }
     double barTime(double bar) const { return (bar - 1.0) * secondsPerBar(); }
 };

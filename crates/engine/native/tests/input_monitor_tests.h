@@ -68,7 +68,7 @@ public:
     void build(bool withMidi = false) {
         player.setNode(zp::createInputMonitorNode(
             std::make_unique<ConstantInputNode>(audio.getNumChannels(), processCalls, withMidi),
-            track, request, state, recording), rate, frames);
+            track, request, state, recording, nullptr), rate, frames);
     }
     void render(bool playing, int64_t timelineStart = 0, int64_t referenceStart = 1000,
                 int stateOffset = 0) {
@@ -120,6 +120,11 @@ inline void testInputMonitorGate() {
         empty.render(playing);
         empty.expectSamples([](int) { return true; });
     }
+    Fixture slotOnly;
+    slotOnly.track.clips={clip(1,8)};
+    slotOnly.track.clips[0].scene="unlaunched-scene";
+    slotOnly.build();slotOnly.render(true);
+    slotOnly.expectSamples([](int){return true;});
     Fixture boundaries;
     boundaries.track.clips = {
         clip(1.625, .125), clip(1.375, .25, false, 99), clip(1.25, .25),

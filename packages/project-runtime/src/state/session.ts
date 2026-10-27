@@ -19,6 +19,7 @@ export function initialSession(): SessionState {
     snapshotError: null,
     preview: null,
     backend: { phase: "idle", sessionId: "", pending: 0, acceptedRevision: 0, error: null },
+    launcher: null,
     activeMidiNotes: [],
     midiOctave: 4,
     midiVelocity: 100,

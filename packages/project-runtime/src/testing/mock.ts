@@ -1,9 +1,11 @@
 import { mockMeterLevels } from "./mock-meters"
 import { createMockMeterStream } from "./mock-meter-store"
 import { controlGenerationValue } from "../backend/connection/protocol"
+import { createMockLauncher } from "./mock-launcher"
 import type {
   BackendControl,
   BackendControlRequest,
+  BackendLauncherSnapshot,
   BackendDocumentRequest,
   BackendNote,
   BackendNoteRequest,
@@ -36,6 +38,8 @@ export function createMockProjectBackend(): ProjectBackend {
   let timestamp = performance.now()
   let isDisposed = false
   const listeners = new Set<(frame: BackendTelemetry) => void>()
+  const launcherListeners = new Set<(frame: BackendLauncherSnapshot) => void>()
+  const launcher = createMockLauncher()
   const notes = new Map<string, Map<string, BackendNote>>()
   const meters = createMockMeterStream()
   let timer: ReturnType<typeof setInterval> | undefined
@@ -87,6 +91,10 @@ export function createMockProjectBackend(): ProjectBackend {
     if (!listeners.size && !state) return
     const current = frame(performance.now())
     if (current) for (const listener of listeners) listener(current)
+    if (state) {
+      const snapshot = launcher.read(state, sessionId, sequence)
+      for (const listener of launcherListeners) listener(snapshot)
+    }
   }
   function reconcileTimer(): void {
     const active = listeners.size > 0 && (state?.control.playing || notes.size > 0)
@@ -134,6 +142,21 @@ export function createMockProjectBackend(): ProjectBackend {
     return { kind: "accepted", sessionId, sequence, revision, controlGeneration }
   }
 
+  function performControl(request: BackendControlRequest): BackendResult {
+    if (isDisposed) return rejected(request, "disposed")
+    if (
+      !validControlRequest(request) ||
+      !state ||
+      request.sessionId !== sessionId ||
+      request.sequence <= sequence
+    )
+      return rejected(request, "protocol")
+    applyControl(request.control, request.controlGeneration, performance.now())
+    sequence = request.sequence
+    emit()
+    reconcileTimer()
+    return result()
+  }
   return {
     readMeters: () => (isDisposed ? null : meters.store),
     apply(request): BackendResult {
@@ -168,21 +191,22 @@ export function createMockProjectBackend(): ProjectBackend {
       reconcileTimer()
       return result()
     },
-    control(request): BackendResult {
-      if (isDisposed) return rejected(request, "disposed")
-      if (
-        !validControlRequest(request) ||
-        !state ||
-        request.sessionId !== sessionId ||
-        request.sequence <= sequence
-      ) {
-        return rejected(request, "protocol")
+    control: performControl,
+    launch(request) {
+      if (!state || !launcher.valid(request, state)) return rejected(request, "protocol")
+      const result = performControl(request)
+      if (result.kind === "accepted" && state) {
+        launcher.apply(request, state, currentBar(performance.now()))
+        emit()
       }
-      applyControl(request.control, request.controlGeneration, performance.now())
-      sequence = request.sequence
-      emit()
-      reconcileTimer()
-      return result()
+      return result
+    },
+    subscribeLauncher(listener) {
+      launcherListeners.add(listener)
+      if (state) listener(launcher.read(state, sessionId, sequence))
+      return () => {
+        launcherListeners.delete(listener)
+      }
     },
     note(request: BackendNoteRequest): BackendNoteResult {
       const code = isDisposed
@@ -257,6 +281,8 @@ export function createMockProjectBackend(): ProjectBackend {
     dispose() {
       isDisposed = true
       listeners.clear()
+      launcherListeners.clear()
+      launcher.clear()
       notes.clear()
       clearInterval(timer)
       timer = undefined

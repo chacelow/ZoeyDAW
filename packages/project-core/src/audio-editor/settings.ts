@@ -1,4 +1,4 @@
-import type { AudioClip } from "../types"
+import type { AudioClipContent } from "../types"
 
 export const AUDIO_WARP_MODES = [
   "soundtouch",
@@ -37,7 +37,7 @@ const AUDIO_SETTINGS_FIELDS = [
 
 export function defaultAudioClipSettings(
   bpm: number,
-  clip: Pick<AudioClip, "sourceOffsetBars" | "lengthBars">
+  clip: Pick<AudioClipContent, "sourceOffsetBars" | "lengthBars">
 ): AudioClipSettings {
   return {
     warp: true,
@@ -55,7 +55,7 @@ export function defaultAudioClipSettings(
 }
 
 export function getAudioClipSettings(
-  clip: Pick<AudioClip, "audioSettings" | "sourceOffsetBars" | "lengthBars">,
+  clip: Pick<AudioClipContent, "audioSettings" | "sourceOffsetBars" | "lengthBars">,
   bpm: number
 ): AudioClipSettings {
   return clip.audioSettings ?? defaultAudioClipSettings(bpm, clip)
@@ -114,7 +114,7 @@ export function isAudioClipSettings(value: unknown): value is AudioClipSettings 
 }
 
 /** Playback markers are independent of arrangement placement, retained preview and fades. */
-export function audioSourceWindow(clip: AudioClip, start: number, end: number, bpm: number) {
+export function audioSourceWindow(clip: AudioClipContent, start: number, end: number, bpm: number) {
   const settings = getAudioClipSettings(clip, bpm)
   if (!Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end <= start) {
     return null

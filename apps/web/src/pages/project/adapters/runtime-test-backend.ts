@@ -1,5 +1,7 @@
 import type {
   BackendControlRequest,
+  BackendLaunchRequest,
+  BackendLauncherSnapshot,
   BackendDocumentRequest,
   BackendNoteRequest,
   BackendNoteResult,
@@ -16,6 +18,7 @@ export function deferredBackend({ deferNotes = false } = {}) {
         resolve: (result: BackendResult) => void
       }
     | { kind: "control"; request: BackendControlRequest; resolve: (result: BackendResult) => void }
+    | { kind: "launch"; request: BackendLaunchRequest; resolve: (result: BackendResult) => void }
   const pending: Pending[] = []
   const requests: BackendDocumentRequest[] = []
   const controls: BackendControlRequest[] = []
@@ -25,9 +28,21 @@ export function deferredBackend({ deferNotes = false } = {}) {
     resolve: (result: BackendNoteResult) => void
   }[] = []
   const listeners = new Set<(frame: BackendTelemetry) => void>()
+  const launcherListeners = new Set<(frame: BackendLauncherSnapshot) => void>()
   let acceptedRevision = 0
   const panics = { allNotesOff: 0, urgentStop: 0 }
   const backend: ProjectBackend = {
+    launch(request) {
+      return new Promise<BackendResult>(resolve => {
+        pending.push({ kind: "launch", request, resolve })
+      })
+    },
+    subscribeLauncher(listener) {
+      launcherListeners.add(listener)
+      return () => {
+        launcherListeners.delete(listener)
+      }
+    },
     apply(request) {
       requests.push(request)
       if (request.stage === "open") {
@@ -73,6 +88,7 @@ export function deferredBackend({ deferNotes = false } = {}) {
     },
     dispose() {
       listeners.clear()
+      launcherListeners.clear()
     },
   }
   function settle(kind: "accepted" | "rejected") {
@@ -122,6 +138,9 @@ export function deferredBackend({ deferNotes = false } = {}) {
   }
   return {
     backend,
+    publishLauncher: (frame: BackendLauncherSnapshot) => {
+      for (const listener of launcherListeners) listener(frame)
+    },
     requests,
     controls,
     notes,

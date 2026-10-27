@@ -18,6 +18,8 @@ import { getEffectiveDocument as projectEffectiveDocument } from "./effective-do
 import { createProjectEditing } from "./project-editing"
 import { createRecordingPublication } from "./recording-publication"
 import type { RecordingReceipt } from "./recording-publication"
+import { waitForSave } from "./project-save-wait"
+import { locateClip } from "@zoeydaw/project-core/clip-content"
 import type {
   Checkpoint,
   ProjectSeed,
@@ -33,6 +35,7 @@ export type {
 } from "./runtime-contracts"
 import type { BackendConnection } from "../backend/connection"
 import type {
+  LauncherCommand,
   BackendControl,
   BackendControlRequest,
   BackendNote,
@@ -251,8 +254,8 @@ export function createProjectRuntime({
           position: positionAtBar(bar),
           activeMidiNotes: [],
           preview: null,
-          selectedClipIds: state.session.selectedClipIds.filter(id =>
-            accepted.document.tracks.some(track => track.clips.some(clip => clip.id === id))
+          selectedClipIds: state.session.selectedClipIds.filter(
+            id => locateClip(accepted.document.tracks, id) !== null
           ),
           selectedTrackIds: state.session.selectedTrackIds.filter(id =>
             accepted.document.tracks.some(track => track.id === id)
@@ -265,9 +268,7 @@ export function createProjectRuntime({
               ))
               ? { ...state.session.insertionPoint, bar: acceptedControl.seekBar }
               : null,
-          editingClipId: accepted.document.tracks.some(track =>
-            track.clips.some(clip => clip.id === state.session.editingClipId)
-          )
+          editingClipId: locateClip(accepted.document.tracks, state.session.editingClipId)
             ? state.session.editingClipId
             : null,
         },
@@ -338,6 +339,8 @@ export function createProjectRuntime({
     const sessionId = `project-${crypto.randomUUID()}`
     const next = createBackendConnection({
       factory: () => factory(),
+      onLauncher: launcher =>
+        store.setState(state => ({ session: { ...state.session, launcher } })),
       onAccepted: request => {
         if (epoch === sessionCounter) {
           acceptedRequest(request)
@@ -375,6 +378,7 @@ export function createProjectRuntime({
         editEpoch: crypto.randomUUID(),
         ...(isReopening ? { playing: false, recording: false, activeMidiNotes: [] } : {}),
         preview: null,
+        launcher: null,
       },
     }))
     accepted = checkpoint()
@@ -517,31 +521,12 @@ export function createProjectRuntime({
     }
   }
   function waitForProjectSave(capture: ProjectSaveCapture, signal: AbortSignal): Promise<void> {
-    const { promise, resolve, reject } = Promise.withResolvers<undefined>()
-    let unsubscribe = () => {}
-    function finish(error?: Error) {
-      unsubscribe()
-      signal.removeEventListener("abort", abort)
-      if (error) reject(error)
-      else resolve(undefined)
-    }
-    function abort() {
-      finish(new DOMException("Cancelled", "AbortError"))
-    }
-    const check = () => {
-      const backend = get().session.backend
-      if (signal.aborted) return abort()
-      if (capture.epoch !== projectEpoch() || capture.rejectionGeneration !== rejectionGeneration) {
-        return finish(new Error("Project changed or its backend rejected the saved revision"))
-      }
-      if (canSaveProject() && backend.acceptedRevision >= capture.revision) return finish()
-      if (backend.phase === "error" && backend.pending === 0)
-        finish(new Error(backend.error ?? "Project backend is unavailable"))
-    }
-    unsubscribe = store.subscribe(check)
-    signal.addEventListener("abort", abort, { once: true })
-    check()
-    return promise
+    return waitForSave({
+      store,
+      capture,
+      signal,
+      current: () => ({ epoch: projectEpoch(), rejectionGeneration, recovered: canSaveProject() }),
+    })
   }
   function completeProjectSave(capture: ProjectSaveCapture): void {
     if (capture.epoch !== projectEpoch()) return
@@ -590,6 +575,14 @@ export function createProjectRuntime({
     ) {
       submitControl(after)
     }
+  }
+  function launch(command: LauncherCommand): void {
+    if (!connection || isRuntimeDisposed) return
+    const state = get()
+    const starts = command.kind === "clip" || command.kind === "scene"
+    const playing = state.session.playing || starts
+    store.setState({ session: { ...state.session, playing } })
+    connection.submitLaunch({ command, control: control(get()), quantize: state.session.playing })
   }
   function projectTrackWaveforms(next: readonly Track[]): Track[] {
     const source = get().document.tracks
@@ -675,6 +668,8 @@ export function createProjectRuntime({
     let status: ProjectRuntimeStatus = openingSession.backend
     const candidate = createBackendConnection({
       factory: () => factory(),
+      onLauncher: launcher =>
+        store.setState(state => ({ session: { ...state.session, launcher } })),
       onAccepted: request => {
         if (connection === candidate) acceptedRequest(request)
         else if (request.stage === "open") ready = true
@@ -758,6 +753,7 @@ export function createProjectRuntime({
     session,
     submitControl,
     submitNote,
+    launch,
     document,
     workspace,
     tracks,

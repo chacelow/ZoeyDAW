@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
-import type { AudioClip, DocumentState } from "@zoeydaw/project-core/types"
+import type { AudioClipContent, DocumentState } from "@zoeydaw/project-core/types"
 import { findMediaSource } from "@zoeydaw/project-core/media"
 import { peakEnvelopePath } from "@zoeydaw/project-core/waveform"
 import {
@@ -37,7 +37,7 @@ export function useWaveformData({
   viewport: { view, minimum, extent },
   dimensions: { width, waveHeight, overviewHeight },
 }: {
-  clip: AudioClip
+  clip: AudioClipContent
   transport: DocumentState["transport"]
   settings: AudioClipSettings
   viewport: Pick<SourceViewport, "view" | "minimum" | "extent">

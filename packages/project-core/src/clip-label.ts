@@ -1,8 +1,8 @@
 import { findMediaSource } from "./media"
 import type { MediaSource } from "./media"
-import type { Clip } from "./types"
+import type { ClipContent } from "./types"
 
-export function clipLabel(clip: Clip, media: readonly MediaSource[]): string {
+export function clipLabel(clip: ClipContent, media: readonly MediaSource[]): string {
   if (clip.label) {
     return clip.label
   }

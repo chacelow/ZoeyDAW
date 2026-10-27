@@ -1,9 +1,9 @@
 import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { findMediaSource } from "@zoeydaw/project-core/media"
 import type { PeakEnvelope, PeakEnvelopeFade } from "@zoeydaw/project-core/waveform"
-import type { AudioClip, MediaSource } from "@zoeydaw/project-core/types"
+import type { AudioClipContent, MediaSource } from "@zoeydaw/project-core/types"
 
-export function clipSourceProjection(clip: AudioClip, bpm: number) {
+export function clipSourceProjection(clip: AudioClipContent, bpm: number) {
   const settings = getAudioClipSettings(clip, bpm)
   const offset = clip.sourceOffsetBars ?? 0
   return {
@@ -13,7 +13,7 @@ export function clipSourceProjection(clip: AudioClip, bpm: number) {
 }
 
 /** Clip fades in the source-bar coordinates the drawn envelope uses. */
-function clipFades(clip: AudioClip, origin: number, rate: number) {
+function clipFades(clip: AudioClipContent, origin: number, rate: number) {
   const fades: PeakEnvelopeFade[] = []
   const offset = origin
   const fadeIn = clip.fadeInBars ?? 0
@@ -43,7 +43,7 @@ function clipFades(clip: AudioClip, origin: number, rate: number) {
 const EMPTY_PEAKS: readonly number[] = []
 
 export function nativeClipWaveform(
-  clip: AudioClip,
+  clip: AudioClipContent,
   media: readonly MediaSource[],
   bpm: number,
   numerator: number,

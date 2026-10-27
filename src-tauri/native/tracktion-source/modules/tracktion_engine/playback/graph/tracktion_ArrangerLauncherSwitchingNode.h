@@ -152,7 +152,7 @@ private:
     ScopedListener playSlotsUpdaterListener { track->edit.engine.getBackToArrangerUpdateTimer(),  *this };
 
     //==============================================================================
-    void processLauncher (ProcessContext&, const SlotClipStatus&);
+    bool processLauncher (ProcessContext&, const SlotClipStatus&);
     void processArranger (ProcessContext&, const SlotClipStatus&);
 
     void sortPlayingOrQueuedClipsFirst();

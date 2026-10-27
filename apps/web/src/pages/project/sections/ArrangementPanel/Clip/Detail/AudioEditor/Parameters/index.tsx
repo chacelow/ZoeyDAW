@@ -7,7 +7,7 @@ import { LoopNumber } from "./LoopNumber"
 import { SampleSettingNumber } from "./SampleSettingNumber"
 import { ClipCardHeader } from "@/pages/project/sections/ArrangementPanel/Clip/Detail/ClipCardHeader"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
-import type { AudioClip } from "@zoeydaw/project-core/types"
+import type { AudioClipContent } from "@zoeydaw/project-core/types"
 
 type ClipField = "gainDb" | "fadeInBars" | "fadeOutBars"
 
@@ -16,7 +16,7 @@ function ClipNumber({
   field,
   label,
 }: {
-  readonly clip: AudioClip
+  readonly clip: AudioClipContent
   readonly field: ClipField
   readonly label: string
 }) {
@@ -56,7 +56,7 @@ export function AudioParameters({
   color,
   bpm,
 }: {
-  readonly clip: AudioClip
+  readonly clip: AudioClipContent
   readonly color: string
   readonly bpm: number
 }) {

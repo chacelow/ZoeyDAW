@@ -1,10 +1,16 @@
 import { useProjectState } from "@/pages/project/adapters"
 import { AudioParameters } from "./Parameters"
 import { AudioWaveform } from "./Waveform"
-import type { AudioClip } from "@zoeydaw/project-core/types"
+import type { AudioClipContent } from "@zoeydaw/project-core/types"
 import "./audio-editor.css"
 
-export function AudioEditor({ clip, color }: { readonly clip: AudioClip; readonly color: string }) {
+export function AudioEditor({
+  clip,
+  color,
+}: {
+  readonly clip: AudioClipContent
+  readonly color: string
+}) {
   const transport = useProjectState(state => state.document.transport)
   return (
     <div className="audio-detail" key={clip.id}>

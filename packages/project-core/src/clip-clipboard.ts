@@ -1,4 +1,4 @@
-import { isClip, serializeClip } from "./persistence"
+import { isClip, serializeClip } from "./clip-content"
 import { clipWindow } from "./clip-window"
 import type { Clip, MidiPattern, Track } from "./types"
 

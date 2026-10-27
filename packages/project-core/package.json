@@ -4,6 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./clip-content": {
+      "import": "./src/clip-content.ts",
+      "types": "./src/clip-content.ts"
+    },
+    "./launcher": {
+      "import": "./src/launcher.ts",
+      "types": "./src/launcher.ts"
+    },
     "./patterns": {
       "import": "./src/patterns.ts",
       "types": "./src/patterns.ts"

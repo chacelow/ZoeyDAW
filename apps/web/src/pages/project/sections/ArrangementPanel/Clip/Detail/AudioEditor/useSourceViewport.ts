@@ -1,6 +1,6 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
-import type { AudioClip, MediaSource } from "@zoeydaw/project-core/types"
+import type { AudioClipContent, MediaSource } from "@zoeydaw/project-core/types"
 
 import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
 
@@ -21,7 +21,7 @@ export interface SourceViewport {
 }
 
 export function useSourceViewport(
-  clip: AudioClip,
+  clip: AudioClipContent,
   settings: AudioClipSettings,
   bpm: number,
   numerator: number,

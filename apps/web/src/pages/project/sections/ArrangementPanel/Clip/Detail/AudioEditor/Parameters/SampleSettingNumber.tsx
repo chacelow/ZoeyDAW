@@ -3,7 +3,7 @@ import { projectActions, useProjectEditGesture } from "@/pages/project/adapters"
 import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { sampleSettingFields } from "./fieldConfiguration"
 import type { SampleSettingField } from "./fieldConfiguration"
-import type { AudioClip } from "@zoeydaw/project-core/types"
+import type { AudioClipContent } from "@zoeydaw/project-core/types"
 
 export function SampleSettingNumber({
   clip,
@@ -12,7 +12,7 @@ export function SampleSettingNumber({
   label,
   unit,
 }: {
-  readonly clip: AudioClip
+  readonly clip: AudioClipContent
   readonly bpm: number
   readonly field: SampleSettingField
   readonly label: string

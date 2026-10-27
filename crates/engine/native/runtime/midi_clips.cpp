@@ -12,12 +12,12 @@ void EngineSession::updateMidiClips(Arrangement& a,const Request& next,const Req
         }
         auto found=a.midiClips.find(clip.id);
         if(found==a.midiClips.end()) {
-            auto native=a.tracks.at(track.id)->insertMIDIClip(clip.id,{te::TimePosition::fromSeconds(next.barTime(clip.start)),te::TimeDuration::fromSeconds(clip.length*next.secondsPerBar())},nullptr);
+            auto native=te::insertMIDIClip(clipOwner(a,track,clip,next),clip.id,{te::TimePosition::fromSeconds(next.barTime(clip.start)),te::TimeDuration::fromSeconds(clip.length*next.secondsPerBar())});
             require(native!=nullptr,"Cannot insert MIDI clip");native->setUsesProxy(false);
             found=a.midiClips.emplace(clip.id,native.get()).first;
         }
         auto& native=*found->second;
-        if(native.getTrack()!=a.tracks.at(track.id))require(native.moveTo(*a.tracks.at(track.id)),"Cannot move MIDI clip");
+        auto& owner=clipOwner(a,track,clip,next);if(native.getParent()!=&owner)require(native.moveTo(owner),"Cannot move MIDI clip");
         if(!old || old->kind!="midi" || old->data["notes"]!=clip.data["notes"]) {
             auto& sequence=native.getSequence();sequence.removeAllNotes(nullptr);
             for(const auto& note:array(clip.data,"notes"))sequence.addNote((int)number(note,"pitch",0,127),te::BeatPosition::fromBeats(number(note,"startBeat",0,1e12)),te::BeatDuration::fromBeats(number(note,"lengthBeats",1e-12,1e12)),(int)number(note,"velocity",0,127),0,nullptr);

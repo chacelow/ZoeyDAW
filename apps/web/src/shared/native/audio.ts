@@ -32,6 +32,45 @@ const controlRequestSchema = z
       .strict(),
   })
   .strict()
+const launchCommandSchema = z.discriminatedUnion("kind", [
+  z
+    .object({ kind: z.literal("clip"), trackId: z.string().min(1), sceneId: z.string().min(1) })
+    .strict(),
+  z.object({ kind: z.literal("scene"), sceneId: z.string().min(1) }).strict(),
+  z.object({ kind: z.literal("stopTrack"), trackId: z.string().min(1) }).strict(),
+  z.object({ kind: z.literal("stopAll") }).strict(),
+  z.object({ kind: z.literal("arrangement") }).strict(),
+])
+const performanceRequestSchema = z.union([
+  controlRequestSchema.extend({ command: launchCommandSchema, quantize: z.boolean() }),
+  controlRequestSchema,
+])
+const launcherSnapshotSchema = z
+  .object({
+    sessionId: z.string().min(1),
+    sequence: counter,
+    tracks: z.array(
+      z
+        .object({
+          trackId: z.string().min(1),
+          source: z.enum(["arrangement", "launcher"]),
+          slots: z
+            .array(
+              z
+                .object({
+                  sceneId: z.string().min(1),
+                  clipId: z.string().min(1),
+                  playing: z.boolean(),
+                  queued: z.enum(["play", "stop"]).nullable(),
+                })
+                .strict()
+            )
+            .max(256),
+        })
+        .strict()
+    ),
+  })
+  .strict()
 const noteRequestSchema = z
   .object({
     ...requestFields,
@@ -193,6 +232,7 @@ const snapshotSchema = z
     meterReady: z.boolean(),
     pluginFaults: z.array(pluginFaultStatusSchema).max(256),
     recordingPreview: recordingPreviewSchema.nullable().optional(),
+    launcher: launcherSnapshotSchema.nullable().optional(),
     issues: z.array(
       z
         .object({
@@ -377,7 +417,7 @@ export const nativeAudio: NativeAudioPort = {
   control: async (request, leaseId, stopToken) =>
     resultSchema.parse(
       await command("playback_control", {
-        request: controlRequestSchema.parse(request),
+        request: performanceRequestSchema.parse(request),
         leaseId,
         stopToken: counter.parse(stopToken),
       })

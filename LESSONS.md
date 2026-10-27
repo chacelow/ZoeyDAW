@@ -2,6 +2,12 @@
 
 开工先扫本文；只记录可核实的故障、原因与对应实现，不把一次性偏好写成永久规则。2026-10-14 从既有项目规范整理，日期不是原故障发生时间。
 
+## 2026-10-27 Session 不能沿用编排时刻或主线程 mode 镜像
+
+- `AudioClipBase::getActualTimeStretchMode()` 会将 auto-tempo Clip 的 disabled 提升为 SDK default。Slot 的 beat reader 需要明确的处理器；原速原调使用 rate-only 模式与匹配的速度元数据，不新增预读缓存或等待计时器。真实 PCM 对比后已删除没有必要的缓存试验。
+- Clip fade 与 End marker 使用 LaunchHandle 的本地播放范围和实际处理样本，不能减去编排 `startBar`。回归在晚于片段自身长度的位置重新启动 Slot，覆盖 mono 4/4 和 stereo 3/8。
+- SDK source switcher 曾在 Slot 已播放而主线程 mode 尚未更新时继续叠加编排。真实输出为编排 0.25 加 Slot 淡入约 0.0466。现在按处理后的 handle 选择输入；Stop 还须锁定已采用的 launcher 模式，不能等待 GUI timer。见 `launcher_tests.h` 与 `native_session_launcher`。
+
 ## 2026-10-27 外部参数自动化不能只验单点曲线
 
 - Tracktion 单点曲线已有当前值，但会被优化为无 active stream。按 `isAutomationActive()` 决定是否送出参数会漏掉整条常量包络；外部 wrapper 复用 authored-curve 位图，真实 PCM 覆盖保持与删除恢复。

@@ -80,7 +80,7 @@ void EngineSession::configureMeterGraph(te::Edit& edit,te::CreateNodeParams& par
         if(input.owner.isMidi() || input.owner.isTrackDevice())return {};
         const auto found=std::find_if(state.tracks.begin(),state.tracks.end(),[&](const Track& item){const auto native=tracks.find(item.id);return native!=tracks.end() && native->second==&track;});
         if(found==state.tracks.end())return {};
-        return createInputMonitorNode(std::move(node),*found,state,build.processState,*recording);
+        return createInputMonitorNode(std::move(node),*found,state,build.processState,*recording,&track);
     };
     require(meterGeneration<std::numeric_limits<std::uint32_t>::max(),"Meter graph generation exhausted");
     const auto generation=++meterGeneration;
@@ -120,6 +120,7 @@ V EngineSession::telemetry(const V& v) {
         put(out,"meterReady",arrangement && arrangement->meterGraph!=nullptr);
         retireMeterGraphs();
         put(out,"recordingPreview",recordingPreview(lease));
+        put(out,"launcher",launcherSnapshot());
     }
     put(out,"device",devices());juce::Array<V> issues;if(arrangement)issues=arrangement->issues;
     if(clock.failed.load())issues.add(issue("device-error","Audio output was interrupted; rendered output is silent"));put(out,"issues",issues);return out;

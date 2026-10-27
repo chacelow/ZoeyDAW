@@ -8,7 +8,7 @@ import {
 } from "@zoeydaw/project-core/audio-editor"
 import { fadeControls } from "@zoeydaw/project-core/fades"
 import { MIN_CLIP_LENGTH_BARS } from "@zoeydaw/project-core/grid"
-import type { AudioClip } from "@zoeydaw/project-core/types"
+import type { AudioClipContent } from "@zoeydaw/project-core/types"
 import type { KeyboardEvent, PointerEvent } from "react"
 
 type MarkerKind = "start" | "end" | "loopStart" | "loopEnd" | "fadeIn" | "fadeOut"
@@ -26,7 +26,7 @@ export function SourceMarker({
   viewSpan,
   lower = false,
 }: {
-  readonly clip: AudioClip
+  readonly clip: AudioClipContent
   readonly bpm: number
   readonly numerator: number
   readonly denominator: number
@@ -38,9 +38,12 @@ export function SourceMarker({
   readonly viewSpan: number
   readonly lower?: boolean
 }) {
-  const active = useRef<{ clip: AudioClip; x: number; value: number; barsPerPixel: number } | null>(
-    null
-  )
+  const active = useRef<{
+    clip: AudioClipContent
+    x: number
+    value: number
+    barsPerPixel: number
+  } | null>(null)
   const gesture = useProjectEditGesture((value: number) => {
     const baseline = active.current?.clip ?? clip
     const { origin, rate } = clipSourceProjection(baseline, bpm)

@@ -3,6 +3,7 @@ import { useProjectState } from "@/pages/project/adapters"
 import { ClipDetail } from "../ArrangementPanel/Clip/Detail"
 import { EffectChain } from "./EffectChain"
 import type { DetailSection } from "@/pages/project/detail-view"
+import { locateClip } from "@zoeydaw/project-core/clip-content"
 
 export function FooterPanel({ view }: { readonly view: DetailSection }) {
   const { t } = useTranslation()
@@ -16,8 +17,9 @@ export function FooterPanel({ view }: { readonly view: DetailSection }) {
       : selectedClipIds.length
         ? null
         : editingClipId
-  const owner = tracks.find(track => track.clips.some(clip => clip.id === clipId))
-  const clip = owner?.clips.find(item => item.id === clipId)
+  const location = locateClip(tracks, clipId)
+  const owner = location?.track
+  const clip = location?.clip
   const track =
     tracks.find(item => item.id === selectedTrackIds[selectedTrackIds.length - 1]) ?? owner ?? null
 

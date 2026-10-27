@@ -199,7 +199,7 @@ fn parse_manifest(manifest: &Value) -> StorageResult<Vec<MediaRecord>> {
   let invalid = || StorageError::new("invalid-manifest", "Invalid zoeydaw project manifest", None);
   if manifest.get("format").and_then(Value::as_str) != Some("zoeydaw-project")
     || manifest.get("version").and_then(Value::as_u64) != Some(1)
-    || !matches!(manifest.pointer("/project/version").and_then(Value::as_u64), Some(3 | 4))
+    || !matches!(manifest.pointer("/project/version").and_then(Value::as_u64), Some(3 | 4 | 5))
     || !["projectId", "commitId"].iter().all(|key| manifest.get(*key).and_then(Value::as_str).is_some_and(|value| !value.is_empty()))
     || !manifest.pointer("/project/workspace").is_some_and(Value::is_object)
   {
@@ -222,7 +222,11 @@ fn parse_manifest(manifest: &Value) -> StorageResult<Vec<MediaRecord>> {
   let tracks = manifest.pointer("/project/document/tracks").and_then(Value::as_array).ok_or_else(invalid)?;
   for track in tracks {
     let clips = track.get("clips").and_then(Value::as_array).ok_or_else(invalid)?;
-    for clip in clips {
+    let slots = match track.get("clipSlots") {
+      Some(value) => value.as_array().ok_or_else(invalid)?.as_slice(),
+      None => &[],
+    };
+    for clip in clips.iter().chain(slots.iter().map(|slot| &slot["clip"])) {
       match clip.get("kind").and_then(Value::as_str) {
         Some("audio") => match clip.get("sourceId") {
           Some(Value::Null) => {},

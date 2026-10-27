@@ -108,6 +108,28 @@ fn empty_project_roundtrip_without_starting_the_app() {
 }
 
 #[test]
+fn session_only_media_collects_and_reopens_without_the_external_source() {
+  let sandbox = Sandbox::new();
+  let (source, record) = audio(&sandbox.root, 23);
+  let project_dir = sandbox.directory("session");
+  let path = project_dir.join("session.zdaw");
+  let mut value = manifest("session", std::slice::from_ref(&record));
+  value["project"]["version"] = json!(5);
+  value["project"]["document"]["launcher"] = json!({"scenes": [{"id": "verse", "name": "Verse"}], "quantization": "bar"});
+  value["project"]["document"]["tracks"] = json!([{"clips": [], "clipSlots": [{"sceneId": "verse", "clip": {"id": "session-audio", "kind": "audio", "sourceId": record.id}}]}]);
+  let saved = save(&path, value.clone(), true, None).unwrap();
+  let records = stored_records(&saved.manifest);
+  assert_eq!(fs::read(managed_path(&project_dir, &records[0])).unwrap(), wav(23));
+  fs::remove_file(source).unwrap();
+  let reopened = open(&path).unwrap();
+  assert!(reopened.issues.is_empty());
+  assert_eq!(reopened.manifest["project"]["document"]["tracks"], value["project"]["document"]["tracks"]);
+  let mut dangling = value;
+  dangling["project"]["document"]["tracks"][0]["clipSlots"][0]["clip"]["sourceId"] = json!("missing");
+  assert_eq!(parse_manifest(&dangling).unwrap_err().code, "invalid-manifest");
+}
+
+#[test]
 fn inspect_uses_complete_sha_and_actual_audio_dimensions() {
   let sandbox = Sandbox::new();
   let (path, record) = audio(&sandbox.root, 17);

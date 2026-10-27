@@ -1,4 +1,4 @@
-import type { AudioClip } from "./types"
+import type { AudioClipContent } from "./types"
 
 export const DEFAULT_FADE_CURVE = 0.35
 export const FADE_CURVE_VERTICAL_SCALE = 0.4
@@ -104,7 +104,10 @@ export function fadePath(
 /**
 Quiet boundary and full-level peak in visible clip bars.
 */
-export function fadeControls(clip: AudioClip, edge: "in" | "out"): { start: number; end: number } {
+export function fadeControls(
+  clip: AudioClipContent,
+  edge: "in" | "out"
+): { start: number; end: number } {
   if (edge === "in") {
     const start = clip.fadeInOffsetBars ?? 0
     return { start, end: start + (clip.fadeInBars ?? 0) }
@@ -116,7 +119,7 @@ export function fadeControls(clip: AudioClip, edge: "in" | "out"): { start: numb
 /**
 Keep both attenuation intervals inside the visible window without overlap.
 */
-export function clampFadeIntervals(clip: AudioClip): AudioClip {
+export function clampFadeIntervals<T extends AudioClipContent>(clip: T): T {
   const fadeInOffsetBars = Math.max(0, Math.min(clip.lengthBars, clip.fadeInOffsetBars ?? 0))
   const fadeOutOffsetBars = Math.max(
     0,
@@ -140,10 +143,10 @@ export function clampFadeIntervals(clip: AudioClip): AudioClip {
 Reproject retained-source anchors into a new visible window; negative delta extends left.
 */
 export function fadeWindow(
-  clip: AudioClip,
+  clip: AudioClipContent,
   deltaLeft: number,
   length: number
-): Pick<AudioClip, "fadeInBars" | "fadeOutBars" | "fadeInOffsetBars" | "fadeOutOffsetBars"> {
+): Pick<AudioClipContent, "fadeInBars" | "fadeOutBars" | "fadeInOffsetBars" | "fadeOutOffsetBars"> {
   const inFade = fadeControls(clip, "in")
   const outFade = fadeControls(clip, "out")
   const left = deltaLeft

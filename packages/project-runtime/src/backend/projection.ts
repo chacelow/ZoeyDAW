@@ -1,9 +1,65 @@
-import type { BackendClip, BackendProject, BackendTrack } from "@zoeydaw/project-core/backend"
+import type {
+  BackendClip,
+  BackendClipContent,
+  BackendProject,
+  BackendTrack,
+} from "@zoeydaw/project-core/backend"
 import { DEFAULT_FADE_CURVE } from "@zoeydaw/project-core/fades"
 import { resolveMediaUri } from "@zoeydaw/project-core/media"
 import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
-import type { DocumentState } from "@zoeydaw/project-core/types"
+import type { Clip, ClipContent, DocumentState } from "@zoeydaw/project-core/types"
+
+function projectClip(authored: Clip, document: DocumentState, sourceIds: Set<string>): BackendClip
+function projectClip(
+  authored: ClipContent,
+  document: DocumentState,
+  sourceIds: Set<string>
+): BackendClipContent
+function projectClip(
+  authored: ClipContent,
+  document: DocumentState,
+  sourceIds: Set<string>
+): BackendClipContent {
+  const clip = authored.kind === "pattern" ? resolveMidiClip(authored, document.patterns) : authored
+  const base = {
+    id: clip.id,
+    ...("startBar" in clip && typeof clip.startBar === "number" ? { startBar: clip.startBar } : {}),
+    lengthBars: clip.lengthBars,
+    sourceOffsetBars: clip.sourceOffsetBars ?? 0,
+    mute: clip.mute === true,
+  }
+  if (clip.kind === "audio") {
+    if (clip.sourceId !== null) sourceIds.add(clip.sourceId)
+    return {
+      ...base,
+      kind: "audio",
+      sourceId: clip.sourceId,
+      gainDb: clip.gainDb,
+      audioSettings: { ...getAudioClipSettings(clip, document.transport.bpm) },
+      fadeInBars: clip.fadeInBars ?? 0,
+      fadeOutBars: clip.fadeOutBars ?? 0,
+      fadeInOffsetBars: clip.fadeInOffsetBars ?? 0,
+      fadeOutOffsetBars: clip.fadeOutOffsetBars ?? 0,
+      fadeInCurve: clip.fadeInCurve ?? DEFAULT_FADE_CURVE,
+      fadeOutCurve: clip.fadeOutCurve ?? DEFAULT_FADE_CURVE,
+      fadeInCurvePosition: clip.fadeInCurvePosition ?? 0.5,
+      fadeOutCurvePosition: clip.fadeOutCurvePosition ?? 0.5,
+    }
+  }
+  return {
+    ...base,
+    kind: "midi",
+    loopBars: clip.loopBars ?? clip.lengthBars,
+    notes: clip.notes.map(note => ({
+      id: note.id,
+      pitch: note.pitch,
+      startBeat: note.startBeat,
+      lengthBeats: note.lengthBeats,
+      velocity: note.velocity,
+    })),
+  }
+}
 
 export function projectBackendDocument(document: DocumentState): BackendProject {
   const sourceIds = new Set<string>()
@@ -37,55 +93,15 @@ export function projectBackendDocument(document: DocumentState): BackendProject 
         ...(point.curve === undefined ? {} : { curve: point.curve }),
       })),
     })),
-    clips: track.clips.map((authored): BackendClip => {
-      const clip =
-        authored.kind === "pattern" ? resolveMidiClip(authored, document.patterns) : authored
-      const base = {
-        id: clip.id,
-        startBar: clip.startBar,
-        lengthBars: clip.lengthBars,
-        sourceOffsetBars: clip.sourceOffsetBars ?? 0,
-        mute: clip.mute === true,
-      }
-      switch (clip.kind) {
-        case "audio": {
-          const sourceId = clip.sourceId
-          if (sourceId !== null) sourceIds.add(sourceId)
-          return {
-            ...base,
-            kind: "audio",
-            sourceId,
-            gainDb: clip.gainDb,
-            audioSettings: { ...getAudioClipSettings(clip, document.transport.bpm) },
-            fadeInBars: clip.fadeInBars ?? 0,
-            fadeOutBars: clip.fadeOutBars ?? 0,
-            fadeInOffsetBars: clip.fadeInOffsetBars ?? 0,
-            fadeOutOffsetBars: clip.fadeOutOffsetBars ?? 0,
-            fadeInCurve: clip.fadeInCurve ?? DEFAULT_FADE_CURVE,
-            fadeOutCurve: clip.fadeOutCurve ?? DEFAULT_FADE_CURVE,
-            fadeInCurvePosition: clip.fadeInCurvePosition ?? 0.5,
-            fadeOutCurvePosition: clip.fadeOutCurvePosition ?? 0.5,
-          }
-        }
-        case "midi":
-          return {
-            ...base,
-            kind: "midi",
-            notes: clip.notes.map(note => ({
-              id: note.id,
-              pitch: note.pitch,
-              startBeat: note.startBeat,
-              lengthBeats: note.lengthBeats,
-              velocity: note.velocity,
-            })),
-            loopBars: clip.loopBars ?? clip.lengthBars,
-          }
-        default: {
-          const impossible: never = clip
-          throw new Error(`Unsupported clip kind: ${String(impossible)}`)
-        }
-      }
-    }),
+    clips: track.clips.map(clip => projectClip(clip, document, sourceIds)),
+    ...(track.clipSlots === undefined
+      ? {}
+      : {
+          clipSlots: track.clipSlots.map(slot => ({
+            sceneId: slot.sceneId,
+            clip: projectClip(slot.clip, document, sourceIds),
+          })),
+        }),
   }))
   const { bpm, numerator, denominator, loop } = document.transport
   return {
@@ -94,6 +110,14 @@ export function projectBackendDocument(document: DocumentState): BackendProject 
     denominator,
     loop: { ...loop },
     tracks,
+    ...(document.launcher.scenes.length
+      ? {
+          launcher: {
+            scenes: document.launcher.scenes.map(scene => ({ id: scene.id })),
+            quantization: document.launcher.quantization,
+          },
+        }
+      : {}),
     sources: document.media
       .filter(source => sourceIds.has(source.id))
       .map(source => ({

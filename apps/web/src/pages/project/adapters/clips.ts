@@ -15,7 +15,9 @@ import {
 import { resolveMidiClip, withPatternNotes } from "@zoeydaw/project-core/patterns"
 import { document, editClip, get, session, tracks, updateTrack } from "./context"
 import { withWaveformPreview } from "@zoeydaw/project-runtime/visuals"
-import type { AudioClip, Clip } from "@zoeydaw/project-core/types"
+import { locateClip } from "@zoeydaw/project-core/clip-content"
+import { putClipSlot } from "@zoeydaw/project-core/launcher"
+import type { AudioClipContent, Clip, ClipContent } from "@zoeydaw/project-core/types"
 
 export const clipActions = {
   createClip(trackId: string, kind: Clip["kind"], startBar: number, lengthBars: number) {
@@ -47,7 +49,9 @@ export const clipActions = {
     ) {
       return
     }
-    const apply = (clip: Clip): Clip => {
+    function apply(clip: Clip): Clip
+    function apply(clip: ClipContent): ClipContent
+    function apply(clip: ClipContent): ClipContent {
       if (
         ("notes" in patch && clip.kind === "audio") ||
         (("gainDb" in patch ||
@@ -64,7 +68,12 @@ export const clipActions = {
         return clip
       }
       if (clip.kind === "audio" && patch.kind !== "midi" && patch.kind !== "pattern") {
-        const next: AudioClip = { ...clip, ...structuredClone(patch), id: clip.id, kind: "audio" }
+        const next: AudioClipContent = {
+          ...clip,
+          ...structuredClone(patch),
+          id: clip.id,
+          kind: "audio",
+        }
         if (
           ("fadeInBars" in patch && patch.fadeInBars === undefined) ||
           ("fadeOutBars" in patch && patch.fadeOutBars === undefined) ||
@@ -146,8 +155,9 @@ export const clipActions = {
       return clip
     }
     const state = get().document
-    const clip = state.tracks.flatMap(track => track.clips).find(item => item.id === id)
-    if (clip?.kind === "pattern" && ("notes" in patch || "loopBars" in patch)) {
+    const location = locateClip(state.tracks, id)
+    const clip = location?.clip
+    if (location && clip?.kind === "pattern" && ("notes" in patch || "loopBars" in patch)) {
       const nextClip = apply(clip)
       if (nextClip === clip) return
       const source = resolveMidiClip(clip, state.patterns)
@@ -157,10 +167,23 @@ export const clipActions = {
         "notes" in patch && patch.notes ? structuredClone(patch.notes) : source.notes,
         "loopBars" in patch ? patch.loopBars : undefined
       )
-      document({
-        ...next,
-        tracks: replaceClip(next.tracks, nextClip, () => uniqueId("clip"), state.transport.bpm),
-      })
+      if (location.kind === "launcher")
+        document(putClipSlot(next, location.track.id, location.sceneId, nextClip))
+      else
+        document({
+          ...next,
+          tracks: replaceClip(
+            next.tracks,
+            apply(location.clip),
+            () => uniqueId("clip"),
+            state.transport.bpm
+          ),
+        })
+      return
+    }
+    if (location?.kind === "launcher") {
+      if ("startBar" in patch) return
+      document(putClipSlot(state, location.track.id, location.sceneId, apply(location.clip)))
       return
     }
     editClip(id, apply)
@@ -197,8 +220,21 @@ export const clipActions = {
   },
   deleteClips(ids: string[]) {
     const source = get().document.tracks
-    if (source.some(track => track.clips.some(clip => ids.includes(clip.id)))) {
-      tracks(mapClips(source, ids, () => null))
+    const selected = new Set(ids)
+    if (
+      source.some(
+        track =>
+          track.clips.some(clip => selected.has(clip.id)) ||
+          track.clipSlots?.some(slot => selected.has(slot.clip.id))
+      )
+    ) {
+      tracks(
+        mapClips(source, ids, () => null).map(track =>
+          track.clipSlots?.some(slot => selected.has(slot.clip.id))
+            ? { ...track, clipSlots: track.clipSlots.filter(slot => !selected.has(slot.clip.id)) }
+            : track
+        )
+      )
     }
     session({ selectedClipIds: [] })
   },
@@ -241,7 +277,7 @@ export const clipActions = {
   },
   setEditingClip(id: string | null) {
     const current = get().session
-    if (id && !get().document.tracks.some(track => track.clips.some(clip => clip.id === id))) return
+    if (id && !locateClip(get().document.tracks, id)) return
     session({
       editingClipId: id,
       ...(id && { selectedClipIds: [id] }),

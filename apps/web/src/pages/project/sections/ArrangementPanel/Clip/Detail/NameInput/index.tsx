@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions, useProjectEditGesture } from "@/pages/project/adapters"
-import type { Clip } from "@zoeydaw/project-core/types"
+import type { ClipContent } from "@zoeydaw/project-core/types"
 
-export function ClipNameInput({ clip, title }: { readonly clip: Clip; readonly title: string }) {
+export function ClipNameInput({
+  clip,
+  title,
+}: {
+  readonly clip: ClipContent
+  readonly title: string
+}) {
   const { t } = useTranslation()
   const editGesture = useProjectEditGesture((label: string) =>
     projectActions.updateClip(clip.id, { label })

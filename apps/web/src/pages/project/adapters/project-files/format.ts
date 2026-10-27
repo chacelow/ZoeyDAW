@@ -9,7 +9,7 @@ export interface ProjectManifest {
   version: 1
   projectId: string
   commitId: string
-  project: { version: 4; document: DocumentState; workspace: WorkspaceState }
+  project: { version: 5; document: DocumentState; workspace: WorkspaceState }
 }
 export interface MediaIssue {
   sourceId: string
@@ -32,7 +32,7 @@ const manifestSchema = z.object({
   projectId: z.string().min(1),
   commitId: z.string().min(1),
   project: z.object({
-    version: z.union([z.literal(3), z.literal(4)]),
+    version: z.union([z.literal(3), z.literal(4), z.literal(5)]),
     document: z.unknown(),
     workspace: z.unknown(),
   }),
@@ -60,7 +60,7 @@ export function parseManifest(value: unknown): ProjectManifest {
   if (project.document.media.some(source => source.location.kind === "fixture")) {
     throw new Error("Gallery media cannot be stored in a real project")
   }
-  return { ...manifest, project: { version: 4, ...project } }
+  return { ...manifest, project: { version: 5, ...project } }
 }
 
 export function createManifest(

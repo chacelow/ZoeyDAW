@@ -11,6 +11,7 @@ import type {
   BackendDocumentRequest,
   BackendSource,
   BackendControlRequest,
+  BackendLauncherSnapshot,
   BackendNoteRequest,
   BackendNoteResult,
   BackendResult,
@@ -44,6 +45,7 @@ export function createNativeProjectBackend(
 ): NativeProjectBackend {
   const leaseId = crypto.randomUUID()
   const listeners = new Set<(telemetry: BackendTelemetry) => void>()
+  const launcherListeners = new Set<(snapshot: BackendLauncherSnapshot) => void>()
   const pending = new Set<Promise<unknown>>()
   let disposed = false
   let leased = false
@@ -164,6 +166,9 @@ export function createNativeProjectBackend(
       try {
         const snapshot = await port.telemetry(leaseId)
         if (disposed || listeners.size === 0 || generation !== pollGeneration) return
+        if (snapshot.launcher?.sessionId === sessionId) {
+          for (const listener of launcherListeners) listener(snapshot.launcher)
+        }
         if (meters && performance.now() - lastMeterRefresh >= 250) {
           lastMeterRefresh = performance.now()
           void meters.session
@@ -340,6 +345,13 @@ export function createNativeProjectBackend(
     readMeters: () => meters?.session.store ?? null,
     urgentStop,
     control,
+    launch: control,
+    subscribeLauncher(listener) {
+      launcherListeners.add(listener)
+      return () => {
+        launcherListeners.delete(listener)
+      }
+    },
     note,
     allNotesOff,
     async apply(request: BackendDocumentRequest) {
@@ -490,6 +502,7 @@ export function createNativeProjectBackend(
       }
       publishNativeAudioStatus({ recordingPreview: null, pluginFaults: [] })
       listeners.clear()
+      launcherListeners.clear()
       if (!leased) return
       void urgentStop().catch(error =>
         publishNativeAudioStatus({ error: audioErrorMessage(error) })

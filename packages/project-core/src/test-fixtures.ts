@@ -167,6 +167,7 @@ export function createTestDocument(): DocumentState {
     ],
     media: [fixtureMediaSource("mock://kick.wav")],
     patterns: [],
+    launcher: { scenes: [], quantization: "bar" },
   }
 }
 

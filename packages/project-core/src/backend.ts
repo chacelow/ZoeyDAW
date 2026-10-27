@@ -1,4 +1,4 @@
-import type { AutomationLane, MidiNote, TrackKind } from "./types"
+import type { AutomationLane, MidiNote, TrackKind, LauncherDocument } from "./types"
 import type { AudioClipSettings } from "./audio-editor"
 import type { Device } from "./devices"
 import type { MeterStore } from "./realtime/meter-store"
@@ -31,6 +31,12 @@ export interface BackendMidiClip extends BackendClipBase {
   loopBars: number
 }
 export type BackendClip = BackendAudioClip | BackendMidiClip
+export type BackendClipContent =
+  Omit<BackendAudioClip, "startBar"> | Omit<BackendMidiClip, "startBar">
+export interface BackendClipSlot {
+  sceneId: string
+  clip: BackendClipContent
+}
 export interface BackendSource {
   id: string
   uri: string
@@ -61,6 +67,7 @@ export interface BackendTrack {
   cueOutput: string | null
   cueVolumeDb: number
   clips: readonly BackendClip[]
+  clipSlots?: readonly BackendClipSlot[]
   automation: readonly AutomationLane[]
   devices: readonly BackendDevice[]
 }
@@ -75,6 +82,7 @@ export interface BackendProject {
   loop: { enabled: boolean; startBar: number; endBar: number }
   sources: readonly BackendSource[]
   tracks: readonly BackendTrack[]
+  launcher?: { scenes: readonly { id: string }[]; quantization: LauncherDocument["quantization"] }
 }
 export interface BackendControl {
   playing: boolean
@@ -105,6 +113,30 @@ export interface BackendControlRequest {
   sequence: number
   controlGeneration: string
   control: BackendControl
+}
+export type LauncherCommand =
+  | { kind: "clip"; trackId: string; sceneId: string }
+  | { kind: "scene"; sceneId: string }
+  | { kind: "stopTrack"; trackId: string }
+  | { kind: "stopAll" }
+  | { kind: "arrangement" }
+export interface BackendLaunchRequest extends BackendControlRequest {
+  command: LauncherCommand
+  quantize: boolean
+}
+export interface BackendLauncherSnapshot {
+  sessionId: string
+  sequence: number
+  tracks: readonly {
+    trackId: string
+    source: "arrangement" | "launcher"
+    slots: readonly {
+      sceneId: string
+      clipId: string
+      playing: boolean
+      queued: "play" | "stop" | null
+    }[]
+  }[]
 }
 export interface BackendNote {
   trackId: string
@@ -167,6 +199,8 @@ export interface ProjectBackend {
   apply: (request: BackendDocumentRequest) => BackendResult | Promise<BackendResult>
   control: (request: BackendControlRequest) => BackendResult | Promise<BackendResult>
   note: (request: BackendNoteRequest) => BackendNoteResult | Promise<BackendNoteResult>
+  launch: (request: BackendLaunchRequest) => BackendResult | Promise<BackendResult>
+  subscribeLauncher: (listener: (snapshot: BackendLauncherSnapshot) => void) => () => void
   allNotesOff: () => void | Promise<void>
   urgentStop?: () => Promise<void>
   subscribe: (listener: (telemetry: BackendTelemetry) => void) => () => void

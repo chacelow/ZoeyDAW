@@ -1,4 +1,4 @@
-import type { ProjectRuntimeStatus } from "./backend"
+import type { ProjectRuntimeStatus, BackendLauncherSnapshot } from "./backend"
 import type { GridSettings } from "./grid"
 import type { AudioClipSettings } from "./audio-editor"
 import type { Device } from "./devices"
@@ -96,6 +96,33 @@ export interface PatternClip extends ClipBase {
   patternId: string
 }
 export type Clip = AudioClip | MidiClip | PatternClip
+export type AudioClipContent = Omit<AudioClip, "startBar">
+export type MidiClipContent = Omit<MidiClip, "startBar">
+export type PatternClipContent = Omit<PatternClip, "startBar">
+export type ClipContent = AudioClipContent | MidiClipContent | PatternClipContent
+export type LaunchQuantization =
+  | "none"
+  | "eightBars"
+  | "fourBars"
+  | "twoBars"
+  | "bar"
+  | "half"
+  | "quarter"
+  | "eighth"
+  | "sixteenth"
+export interface LauncherScene {
+  id: string
+  name: string
+  color?: string
+}
+export interface ClipSlot {
+  sceneId: string
+  clip: ClipContent
+}
+export interface LauncherDocument {
+  scenes: LauncherScene[]
+  quantization: LaunchQuantization
+}
 export type TrackKind = "audio" | "midi" | "group" | "return" | "main"
 
 const CLIP_KINDS_BY_TRACK: Record<TrackKind, readonly Clip["kind"][]> = {
@@ -123,6 +150,7 @@ export interface Track {
   input: string
   output: string
   clips: Clip[]
+  clipSlots?: ClipSlot[]
   /**
   Secondary hardware/input channel, independent of the routing destination.
   */
@@ -164,6 +192,7 @@ export interface DocumentState {
   media: MediaSource[]
   patterns: MidiPattern[]
   markers: Marker[]
+  launcher: LauncherDocument
 }
 export interface ArrangementView {
   routing: boolean
@@ -218,7 +247,7 @@ export interface SessionState {
   position: Position
   insertionPoint: { trackId: string | null; bar: number } | null
   selectedTrackIds: string[]
-  trackSelectionSurface: "arrangement" | "header"
+  trackSelectionSurface: "arrangement" | "header" | "launcher"
   selectedClipIds: string[]
   timeSelection: TimeSelection | null
   editingClipId: string | null
@@ -229,6 +258,7 @@ export interface SessionState {
   snapshotError: string | null
   preview: ProjectPreview | null
   backend: ProjectRuntimeStatus
+  launcher: BackendLauncherSnapshot | null
   activeMidiNotes: number[]
   midiOctave: number
   midiVelocity: number

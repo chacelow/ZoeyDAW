@@ -2,13 +2,14 @@ import { isAutomationTarget, sameAutomationTarget } from "./automation-target"
 import { acceptsClip } from "./types"
 import { isGridSettings, isLegacyGridBars } from "./grid"
 import { MAX_AUTOMATION_CURVE, MIN_AUTOMATION_CURVE } from "./automation-curve"
-import { isAudioClipSettings } from "./audio-editor"
 import { isDevice } from "./devices"
 import { fixtureMediaSource, isMediaSource, serializeMediaSource } from "./media"
 import type { MediaSource } from "./media"
+import { isMidiNotes } from "./patterns"
+import { isClip, isClipContent, serializeClip, clipContents } from "./clip-content"
+import { initialLauncherDocument, isLauncherDocument } from "./launcher"
 import type {
   AutomationTarget,
-  Clip,
   DocumentState,
   MidiNote,
   MidiPattern,
@@ -57,107 +58,16 @@ function uniqueIds(values: readonly { id?: string }[]): boolean {
   return true
 }
 
-function isMidiNote(note: unknown): note is MidiNote {
-  return (
-    record(note) &&
-    (note.id === undefined || text(note.id)) &&
-    number(note.pitch) &&
-    Number.isInteger(note.pitch) &&
-    note.pitch >= 0 &&
-    note.pitch <= 127 &&
-    number(note.startBeat) &&
-    note.startBeat >= 0 &&
-    positive(note.lengthBeats) &&
-    number(note.velocity) &&
-    Number.isInteger(note.velocity) &&
-    note.velocity >= 0 &&
-    note.velocity <= 127
-  )
-}
-
 function isPattern(value: unknown): value is MidiPattern {
   return (
     record(value) &&
     text(value.id) &&
     value.id.length > 0 &&
     positive(value.loopBars) &&
-    Array.isArray(value.notes) &&
-    value.notes.every(isMidiNote) &&
-    uniqueIds(value.notes)
+    isMidiNotes(value.notes)
   )
 }
 
-export function isClip(v: unknown): v is Clip {
-  if (
-    !record(v) ||
-    !text(v.id) ||
-    !positive(v.startBar) ||
-    !positive(v.lengthBars) ||
-    (v.sourceOffsetBars !== undefined && !number(v.sourceOffsetBars)) ||
-    (v.label !== undefined && !text(v.label)) ||
-    (v.color !== undefined && !text(v.color)) ||
-    (v.mute !== undefined && typeof v.mute !== "boolean")
-  ) {
-    return false
-  }
-  const sourceOffset = v.sourceOffsetBars ?? 0
-  if (
-    !number(sourceOffset) ||
-    !number(v.startBar + v.lengthBars) ||
-    !number(sourceOffset + v.lengthBars)
-  ) {
-    return false
-  }
-  if (v.kind === "audio") {
-    const fadeIn = v.fadeInBars ?? 0
-    const fadeOut = v.fadeOutBars ?? 0
-    const inOffset = v.fadeInOffsetBars ?? 0
-    const outOffset = v.fadeOutOffsetBars ?? 0
-    return (
-      (v.sourceId === null || (text(v.sourceId) && v.sourceId.length > 0)) &&
-      number(v.gainDb) &&
-      (v.audioSettings === undefined || isAudioClipSettings(v.audioSettings)) &&
-      number(fadeIn) &&
-      (v.fadeInBars === undefined || number(v.fadeInBars)) &&
-      fadeIn >= 0 &&
-      number(fadeOut) &&
-      (v.fadeOutBars === undefined || number(v.fadeOutBars)) &&
-      fadeOut >= 0 &&
-      number(inOffset) &&
-      (v.fadeInOffsetBars === undefined || number(v.fadeInOffsetBars)) &&
-      inOffset >= 0 &&
-      number(outOffset) &&
-      (v.fadeOutOffsetBars === undefined || number(v.fadeOutOffsetBars)) &&
-      outOffset >= 0 &&
-      (v.fadeInCurve === undefined ||
-        (number(v.fadeInCurve) && v.fadeInCurve >= -1 && v.fadeInCurve <= 1)) &&
-      (v.fadeOutCurve === undefined ||
-        (number(v.fadeOutCurve) && v.fadeOutCurve >= -1 && v.fadeOutCurve <= 1)) &&
-      (v.fadeInCurvePosition === undefined ||
-        (number(v.fadeInCurvePosition) &&
-          v.fadeInCurvePosition >= 0.1 &&
-          v.fadeInCurvePosition <= 0.9)) &&
-      (v.fadeOutCurvePosition === undefined ||
-        (number(v.fadeOutCurvePosition) &&
-          v.fadeOutCurvePosition >= 0.1 &&
-          v.fadeOutCurvePosition <= 0.9)) &&
-      inOffset + fadeIn <= v.lengthBars &&
-      outOffset + fadeOut <= v.lengthBars &&
-      inOffset + fadeIn + outOffset + fadeOut <=
-        v.lengthBars + Number.EPSILON * Math.max(1, v.lengthBars) &&
-      (v.waveformPeaks === undefined ||
-        (Array.isArray(v.waveformPeaks) &&
-          v.waveformPeaks.every(peak => number(peak) && peak >= 0 && peak <= 1)))
-    )
-  }
-  return v.kind === "pattern"
-    ? text(v.patternId) && v.patternId.length > 0 && !("steps" in v)
-    : v.kind === "midi" &&
-        (v.loopBars === undefined || positive(v.loopBars)) &&
-        Array.isArray(v.notes) &&
-        v.notes.every(isMidiNote) &&
-        uniqueIds(v.notes)
-}
 function isTrack(v: unknown): v is Track {
   return (
     record(v) &&
@@ -190,6 +100,15 @@ function isTrack(v: unknown): v is Track {
     ["in", "auto", "off"].includes(v.monitor) &&
     Array.isArray(v.clips) &&
     v.clips.every(isClip) &&
+    (v.clipSlots === undefined ||
+      (Array.isArray(v.clipSlots) &&
+        v.clipSlots.every(
+          slot =>
+            record(slot) &&
+            text(slot.sceneId) &&
+            slot.sceneId.length > 0 &&
+            isClipContent(slot.clip)
+        ))) &&
     Array.isArray(v.automation) &&
     v.automation.every(
       lane =>
@@ -264,6 +183,7 @@ function isDocument(v: unknown): v is DocumentState {
     !Array.isArray(v.patterns) ||
     !v.patterns.every(isPattern) ||
     !uniqueIds(v.patterns) ||
+    !isLauncherDocument(v.launcher) ||
     !Array.isArray(v.markers) ||
     v.markers.some(
       marker =>
@@ -281,20 +201,25 @@ function isDocument(v: unknown): v is DocumentState {
   }
   const mediaIds = new Set(v.media.map(source => source.id))
   const patternIds = new Set(v.patterns.map(pattern => pattern.id))
-  if (
-    v.tracks.some(track =>
-      track.clips.some(clip => clip.kind === "pattern" && !patternIds.has(clip.patternId))
-    )
-  )
-    return false
-  if (
-    v.tracks.some(track =>
-      track.clips.some(
-        clip => clip.kind === "audio" && clip.sourceId !== null && !mediaIds.has(clip.sourceId)
+  const sceneIds = new Set(v.launcher.scenes.map(scene => scene.id))
+  const clipIds = new Set<string>()
+  for (const track of v.tracks) {
+    const occupied = new Set<string>()
+    for (const slot of track.clipSlots ?? []) {
+      if (!sceneIds.has(slot.sceneId) || occupied.has(slot.sceneId)) return false
+      occupied.add(slot.sceneId)
+    }
+    for (const clip of clipContents(track)) {
+      if (
+        !acceptsClip(track.kind, clip.kind) ||
+        clipIds.has(clip.id) ||
+        (clip.kind === "pattern" && !patternIds.has(clip.patternId)) ||
+        (clip.kind === "audio" && clip.sourceId !== null && !mediaIds.has(clip.sourceId))
       )
-    )
-  )
-    return false
+        return false
+      clipIds.add(clip.id)
+    }
+  }
   const byId = new Map(v.tracks.map(track => [track.id, track]))
   if (
     byId.size !== v.tracks.length ||
@@ -303,14 +228,9 @@ function isDocument(v: unknown): v is DocumentState {
   ) {
     return false
   }
-  const clipIds = v.tracks.flatMap(track => track.clips.map(clip => clip.id))
-  if (new Set(clipIds).size !== clipIds.length) {
-    return false
-  }
   const parentOf = new Map<string, string>()
   for (const track of v.tracks) {
     if (
-      track.clips.some(clip => !acceptsClip(track.kind, clip.kind)) ||
       Object.keys(track.sends ?? {}).some(id => id === track.id || byId.get(id)?.kind !== "return")
     ) {
       return false
@@ -399,67 +319,6 @@ function isWorkspace(v: unknown): v is Omit<WorkspaceState, "arrangementView" | 
             items.every(item => record(item) && (item.kind === "mixer" || item.kind === "device"))
         )))
   )
-}
-
-export function serializeClip(clip: Clip): Clip {
-  const base = {
-    id: clip.id,
-    kind: clip.kind,
-    startBar: clip.startBar,
-    lengthBars: clip.lengthBars,
-    ...(clip.sourceOffsetBars !== undefined && { sourceOffsetBars: clip.sourceOffsetBars }),
-    ...(clip.label !== undefined && { label: clip.label }),
-    ...(clip.color !== undefined && { color: clip.color }),
-    ...(clip.mute === true && { mute: true }),
-  }
-  switch (clip.kind) {
-    case "audio": {
-      return {
-        ...base,
-        kind: "audio",
-        sourceId: clip.sourceId,
-        gainDb: clip.gainDb,
-        ...(clip.audioSettings === undefined
-          ? {}
-          : { audioSettings: structuredClone(clip.audioSettings) }),
-        ...(clip.fadeInBars !== undefined && { fadeInBars: clip.fadeInBars }),
-        ...(clip.fadeOutBars !== undefined && { fadeOutBars: clip.fadeOutBars }),
-        ...(clip.fadeInOffsetBars !== undefined && { fadeInOffsetBars: clip.fadeInOffsetBars }),
-        ...(clip.fadeOutOffsetBars !== undefined && { fadeOutOffsetBars: clip.fadeOutOffsetBars }),
-        ...(clip.fadeInCurve !== undefined && { fadeInCurve: clip.fadeInCurve }),
-        ...(clip.fadeOutCurve !== undefined && { fadeOutCurve: clip.fadeOutCurve }),
-        ...(clip.fadeInCurvePosition !== undefined && {
-          fadeInCurvePosition: clip.fadeInCurvePosition,
-        }),
-        ...(clip.fadeOutCurvePosition !== undefined && {
-          fadeOutCurvePosition: clip.fadeOutCurvePosition,
-        }),
-      }
-    }
-    case "midi": {
-      return {
-        ...base,
-        kind: "midi",
-        ...(clip.loopBars !== undefined && { loopBars: clip.loopBars }),
-        notes: clip.notes.map(note => {
-          return {
-            pitch: note.pitch,
-            startBeat: note.startBeat,
-            lengthBeats: note.lengthBeats,
-            velocity: note.velocity,
-            ...(note.id === undefined ? {} : { id: note.id }),
-          }
-        }),
-      }
-    }
-    case "pattern": {
-      return {
-        ...base,
-        kind: "pattern",
-        patternId: clip.patternId,
-      }
-    }
-  }
 }
 
 function migrateLegacyPatterns(value: unknown): unknown {
@@ -592,7 +451,8 @@ export function parseProject(json: string): { document: DocumentState; workspace
     (payload.version !== 1 &&
       payload.version !== 2 &&
       payload.version !== 3 &&
-      payload.version !== 4)
+      payload.version !== 4 &&
+      payload.version !== 5)
   ) {
     throw new Error("Invalid or unsupported project snapshot")
   }
@@ -600,8 +460,15 @@ export function parseProject(json: string): { document: DocumentState; workspace
     payload.version === 1 || payload.version === 2
       ? migrateLegacyDocument(payload.document)
       : payload.document
-  const migrated = payload.version === 4 ? legacyDocument : migrateLegacyPatterns(legacyDocument)
-  const document_ = migrateLegacyWarpModes(migrated)
+  const migrated =
+    payload.version === 4 || payload.version === 5
+      ? legacyDocument
+      : migrateLegacyPatterns(legacyDocument)
+  const warped = migrateLegacyWarpModes(migrated)
+  const document_ =
+    payload.version === 5 || !record(warped) || warped.launcher !== undefined
+      ? warped
+      : { ...warped, launcher: initialLauncherDocument() }
   if (!isDocument(document_)) throw new Error("Invalid or unsupported project snapshot")
   const rawWorkspace = payload.workspace
   let workspacePayload: unknown = rawWorkspace
@@ -649,6 +516,14 @@ export function parseProject(json: string): { document: DocumentState; workspace
         loopBars: pattern.loopBars,
         notes: pattern.notes.map(note => ({ ...note })),
       })),
+      launcher: {
+        quantization: document_.launcher.quantization,
+        scenes: document_.launcher.scenes.map(scene => ({
+          id: scene.id,
+          name: scene.name,
+          ...(scene.color === undefined ? {} : { color: scene.color }),
+        })),
+      },
       transport: {
         bpm: document_.transport.bpm,
         numerator: document_.transport.numerator,
@@ -688,7 +563,15 @@ export function parseProject(json: string): { document: DocumentState; workspace
           ...(track.returnPost === undefined ? {} : { returnPost: track.returnPost }),
           ...(track.sends === undefined ? {} : { sends: { ...track.sends } }),
           ...(track.devices === undefined ? {} : { devices: structuredClone(track.devices) }),
-          clips: track.clips.map(serializeClip),
+          clips: track.clips.map(clip => serializeClip(clip)),
+          ...(track.clipSlots === undefined
+            ? {}
+            : {
+                clipSlots: track.clipSlots.map(slot => ({
+                  sceneId: slot.sceneId,
+                  clip: serializeClip(slot.clip),
+                })),
+              }),
           heightPx: track.heightPx,
           ...(track.childTrackIds === undefined ? {} : { childTrackIds: [...track.childTrackIds] }),
           ...(track.collapsed === undefined ? {} : { collapsed: track.collapsed }),
@@ -743,7 +626,7 @@ export function parseProject(json: string): { document: DocumentState; workspace
 }
 export function stringifyProject(document: DocumentState, workspace: WorkspaceState): string {
   return JSON.stringify({
-    version: 4,
-    ...parseProject(JSON.stringify({ version: 4, document, workspace })),
+    version: 5,
+    ...parseProject(JSON.stringify({ version: 5, document, workspace })),
   })
 }

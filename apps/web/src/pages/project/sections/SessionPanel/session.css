@@ -1,0 +1,43 @@
+.project-session-matrix {
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.project-session-matrix th,
+.project-session-matrix td {
+  min-width: 180px;
+  padding: 2px;
+  border-bottom: 1px solid var(--border);
+  border-inline-end: 1px solid var(--border);
+  text-align: start;
+}
+
+.project-session-matrix th:first-child {
+  min-width: 300px;
+}
+
+.project-session-matrix thead {
+  position: sticky;
+  top: 0;
+  background: var(--background);
+}
+
+.project-session-slot {
+  display: flex;
+  min-width: 180px;
+  align-items: center;
+  border-inline-start: 3px solid transparent;
+}
+
+.project-session-slot-selected {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.project-session-matrix td[data-playing="true"] {
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+}
+
+.project-session-matrix td[data-queued="play"] {
+  border-bottom-color: var(--primary);
+}

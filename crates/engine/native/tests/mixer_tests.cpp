@@ -410,11 +410,13 @@ void testDeviceChain() {
 #include "recording_tests.h"
 #include "edit_transaction_probe.h"
 #include "source_publication_tests.h"
+#include "launcher_tests.h"
 }
 int main(int argc,char** argv) {
     try {
         juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;
         if(argc>1) {
+            if(argc==2 && juce::String(argv[1])=="--launcher") { testSessionLauncher(1,4,4);testSessionLauncher(2,3,8);testSessionInputMonitor();return 0; }
             if(argc==2 && juce::String(argv[1])=="--midi-mute") { testRepeatedMidiMuteTransitions();return 0; }
             if(argc==2 && juce::String(argv[1])=="--source-publication") { testSourceGraphPublication();return 0; }
             if(argc==2 && juce::String(argv[1])=="--transaction-model") { transaction_probe::run();return 0; }

@@ -55,8 +55,20 @@ static Control control(const V& v) {
     Control c;c.playing=boolean(v,"playing");c.recording=boolean(v,"recording");c.seekBar=number(v,"seekBar",1,1e12);c.seekGeneration=integer(v,"seekGeneration");if(v.hasProperty("metronome"))c.metronome=boolean(v,"metronome");return c;
 }
 ControlRequest decodeControl(const V& v) {
-    fields(v,{"protocolVersion","sessionId","sequence","controlGeneration","control"});require(integer(v,"protocolVersion")==2,"Unsupported protocol");
-    ControlRequest r;static_cast<Control&>(r)=control(field(v,"control"));r.session=text(v,"sessionId");require(r.session.isNotEmpty(),"Empty session");r.sequence=integer(v,"sequence");r.controlGeneration=decimalU64(v,"controlGeneration");return r;
+    fields(v,{"protocolVersion","sessionId","sequence","controlGeneration","control"},{"command","quantize"});require(integer(v,"protocolVersion")==2,"Unsupported protocol");
+    ControlRequest r;static_cast<Control&>(r)=control(field(v,"control"));r.session=text(v,"sessionId");require(r.session.isNotEmpty(),"Empty session");r.sequence=integer(v,"sequence");r.controlGeneration=decimalU64(v,"controlGeneration");
+    if(v.hasProperty("command")) {
+        const auto& command=field(v,"command");const auto kind=text(command,"kind");LaunchCommand launch;
+        if(kind=="clip") { fields(command,{"kind","trackId","sceneId"});launch.kind=LaunchCommand::Kind::clip;launch.track=text(command,"trackId");launch.scene=text(command,"sceneId"); }
+        else if(kind=="scene") { fields(command,{"kind","sceneId"});launch.kind=LaunchCommand::Kind::scene;launch.scene=text(command,"sceneId"); }
+        else if(kind=="stopTrack") { fields(command,{"kind","trackId"});launch.kind=LaunchCommand::Kind::stopTrack;launch.track=text(command,"trackId"); }
+        else if(kind=="stopAll" || kind=="arrangement") { fields(command,{"kind"});launch.kind=kind=="stopAll"?LaunchCommand::Kind::stopAll:LaunchCommand::Kind::arrangement; }
+        else require(false,"Invalid launch command");
+        if(kind=="clip" || kind=="scene")require(launch.scene.isNotEmpty(),"Empty launch scene identity");
+        if(kind=="clip" || kind=="stopTrack")require(launch.track.isNotEmpty(),"Empty launch track identity");
+        launch.quantize=boolean(v,"quantize");r.launch=std::move(launch);
+    } else require(!v.hasProperty("quantize"),"Quantize requires a launch command");
+    return r;
 }
 NoteRequest decodeNote(const V& v) {
     fields(v,{"protocolVersion","sessionId","sequence","note"});require(integer(v,"protocolVersion")==2,"Unsupported protocol");
@@ -69,7 +81,13 @@ Request decode(const V& v) {
     require(integer(v,"protocolVersion")==2,"Unsupported protocol"); Request r;
     r.session=text(v,"sessionId"); require(r.session.isNotEmpty(),"Empty session"); r.sequence=integer(v,"sequence"); r.baseRevision=integer(v,"baseRevision"); r.revision=integer(v,"revision");r.controlGeneration=decimalU64(v,"controlGeneration");
     r.stage=text(v,"stage"); require(oneOf(r.stage,{"open","commit","preview","cancel","recover"}),"Invalid stage"); r.editId=nullable(v,"editId");
-    auto& state=field(v,"state"); fields(state,{"project","control"}); auto& p=field(state,"project"); fields(p,{"bpm","numerator","denominator","loop","sources","tracks"});
+    auto& state=field(v,"state"); fields(state,{"project","control"}); auto& p=field(state,"project"); fields(p,{"bpm","numerator","denominator","loop","sources","tracks"},{"launcher"});
+    if(p.hasProperty("launcher")) {
+        const auto& launcher=field(p,"launcher");fields(launcher,{"scenes","quantization"});
+        r.launchQuantization=text(launcher,"quantization");require(oneOf(r.launchQuantization,{"none","eightBars","fourBars","twoBars","bar","half","quarter","eighth","sixteenth"}),"Invalid launch quantization");
+        const auto& scenes=array(launcher,"scenes");require(scenes.size()<=256,"Too many scenes");std::set<juce::String> sceneIds;
+        for(const auto& scene:scenes) { fields(scene,{"id"});const auto id=text(scene,"id");require(id.isNotEmpty() && sceneIds.insert(id).second,"Invalid scene identity");r.scenes.push_back(id); }
+    }
     r.bpm=number(p,"bpm",.000001,999); r.numerator=(int)integer(p,"numerator"); r.denominator=(int)integer(p,"denominator");
     require(r.numerator>=1 && r.numerator<=32 && oneOf(juce::String(r.denominator),{"1","2","4","8","16","32"}),"Invalid time signature"); r.quartersPerBar=r.numerator*4.0/r.denominator;
     auto& loop=field(p,"loop"); fields(loop,{"enabled","startBar","endBar"}); r.loop=boolean(loop,"enabled"); r.loopStart=number(loop,"startBar",1,1e12); r.loopEnd=number(loop,"endBar",1,1e12); require(r.loopEnd>r.loopStart,"Invalid project loop");
@@ -81,7 +99,7 @@ Request decode(const V& v) {
     }
     std::set<juce::String> ids, clipIds, deviceIds;
     for (auto& t:array(p,"tracks")) {
-        fields(t,{"id","kind","output","input","inputChannel","outputChannel","monitor","volumeDb","pan","mute","solo","armed","sends","returnPost","cueOutput","cueVolumeDb","clips","automation","childTrackIds","devices"}); Track tr;
+        fields(t,{"id","kind","output","input","inputChannel","outputChannel","monitor","volumeDb","pan","mute","solo","armed","sends","returnPost","cueOutput","cueVolumeDb","clips","automation","childTrackIds","devices"},{"clipSlots"}); Track tr;
         tr.id=text(t,"id"); require(tr.id.isNotEmpty() && ids.insert(tr.id).second,"Duplicate track ID"); tr.kind=text(t,"kind"); require(oneOf(tr.kind,{"audio","midi","group","return","main"}),"Invalid track kind");
         tr.output=text(t,"output"); tr.input=text(t,"input"); tr.inputChannel=nullable(t,"inputChannel"); tr.outputChannel=nullable(t,"outputChannel"); tr.cueOutput=nullable(t,"cueOutput");
         tr.monitor=text(t,"monitor"); require(oneOf(tr.monitor,{"in","auto","off"}),"Invalid monitoring mode");
@@ -90,21 +108,31 @@ Request decode(const V& v) {
         for(const auto& device:tr.devices)require(deviceIds.insert(device.id).second,"Duplicate device ID across tracks");
         for(auto& child:array(t,"childTrackIds")) { require(child.isString(),"Invalid child track ID"); tr.children.push_back(child.toString()); }
         auto& sends=field(t,"sends"); require(sends.isObject(),"Invalid sends"); for(auto& send:sends.getDynamicObject()->getProperties()) { double db=number(sends,send.name.toString().toRawUTF8(),-160,24); tr.sends.emplace(send.name.toString(),db); }
-        for(auto& x:array(t,"clips")) {
-            Clip cl; cl.id=text(x,"id"); require(cl.id.isNotEmpty() && clipIds.insert(cl.id).second,"Duplicate clip ID"); cl.kind=text(x,"kind");
-            cl.start=number(x,"startBar",1,1e12); cl.length=number(x,"lengthBars",1e-12,1e12); cl.offset=number(x,"sourceOffsetBars",-1e12,1e12); cl.mute=boolean(x,"mute"); cl.data=x;
+        const auto appendClip=[&](const V& x,const juce::String& scene) {
+            Clip cl; cl.id=text(x,"id"); require(cl.id.isNotEmpty() && clipIds.insert(cl.id).second,"Duplicate clip ID"); cl.kind=text(x,"kind");cl.scene=scene;
+            require(scene.isEmpty() || !x.hasProperty("startBar"),"Slot content cannot contain arrangement placement");
+            cl.start=scene.isEmpty()?number(x,"startBar",1,1e12):1; cl.length=number(x,"lengthBars",1e-12,1e12); cl.offset=number(x,"sourceOffsetBars",-1e12,1e12); cl.mute=boolean(x,"mute"); cl.data=x;
             if(cl.kind=="audio") {
                 require(tr.kind=="audio","Audio clip belongs to a non-audio track");
-                fields(x,{"id","kind","startBar","lengthBars","sourceOffsetBars","mute","sourceId","gainDb","audioSettings","fadeInBars","fadeOutBars","fadeInOffsetBars","fadeOutOffsetBars","fadeInCurve","fadeOutCurve","fadeInCurvePosition","fadeOutCurvePosition"});
+                fields(x,{"id","kind","lengthBars","sourceOffsetBars","mute","sourceId","gainDb","audioSettings","fadeInBars","fadeOutBars","fadeInOffsetBars","fadeOutOffsetBars","fadeInCurve","fadeOutCurve","fadeInCurvePosition","fadeOutCurvePosition"},{"startBar"});
                 cl.source=nullable(x,"sourceId"); cl.gain=number(x,"gainDb",-160,24); cl.settings=settings(field(x,"audioSettings"));
                 cl.fadeIn=number(x,"fadeInBars",0,cl.length); cl.fadeOut=number(x,"fadeOutBars",0,cl.length); cl.fadeInOffset=number(x,"fadeInOffsetBars",0,cl.length); cl.fadeOutOffset=number(x,"fadeOutOffsetBars",0,cl.length);
                 cl.fadeInCurve=number(x,"fadeInCurve",-1,1); cl.fadeOutCurve=number(x,"fadeOutCurve",-1,1); cl.fadeInPosition=number(x,"fadeInCurvePosition",.1,.9); cl.fadeOutPosition=number(x,"fadeOutCurvePosition",.1,.9);
                 require(cl.fadeInOffset+cl.fadeIn+cl.fadeOutOffset+cl.fadeOut<=cl.length+1e-9,"Overlapping fade bounds");
             } else if(cl.kind=="midi") {
-                require(tr.kind=="midi","MIDI clip belongs to a non-MIDI track"); fields(x,{"id","kind","startBar","lengthBars","sourceOffsetBars","mute","notes","loopBars"}); number(x,"loopBars",1e-12,1e12);
+                require(tr.kind=="midi","MIDI clip belongs to a non-MIDI track"); fields(x,{"id","kind","lengthBars","sourceOffsetBars","mute","notes","loopBars"},{"startBar"}); number(x,"loopBars",1e-12,1e12);
                 for(auto& n:array(x,"notes")) { fields(n,{"pitch","startBeat","lengthBeats","velocity"},{"id"}); auto pitch=number(n,"pitch",0,127); require(std::floor(pitch)==pitch,"Invalid MIDI pitch"); number(n,"startBeat",0,1e12); number(n,"lengthBeats",1e-12,1e12); number(n,"velocity",0,127); }
             } else require(false,"Invalid clip kind");
             tr.clips.push_back(std::move(cl));
+        };
+        for(const auto& clip:array(t,"clips"))appendClip(clip,{});
+        if(t.hasProperty("clipSlots")) {
+            std::set<juce::String> slots;
+            for(const auto& slot:array(t,"clipSlots")) {
+                fields(slot,{"sceneId","clip"});const auto scene=text(slot,"sceneId");
+                require(std::find(r.scenes.begin(),r.scenes.end(),scene)!=r.scenes.end() && slots.insert(scene).second,"Invalid slot scene");
+                appendClip(field(slot,"clip"),scene);
+            }
         }
         tr.automation=field(t,"automation");
         for(auto& lane:array(t,"automation")) {
@@ -225,7 +253,9 @@ bool sameGraph(const Request& a,const Request& b,bool allowClipPlacement) {
                 if(!rightClip)continue;
             }
             const auto& right=*rightClip;
+            if(left.scene.isEmpty()!=right.scene.isEmpty())return false;
             if(allowClipPlacement && left.kind=="midi" && right.kind=="midi")continue;
+            if(!allowClipPlacement && left.scene!=right.scene)return false;
             if(left.kind=="audio" && a.sources.contains(left.source)!=b.sources.contains(left.source))return false;
             if(!equivalent(left.data,right.data,left.kind=="audio" && right.kind=="audio",allowClipPlacement))return false;
         }

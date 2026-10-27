@@ -77,6 +77,7 @@ V EngineSession::apply(const V& v) {
             const auto old=std::find_if(accepted->tracks.begin(),accepted->tracks.end(),[&](const Track& item){return item.id==track.id;});
             if(old!=accepted->tracks.end() && old->kind!=track.kind)updateTrackKind(*arrangement,*arrangement->tracks.at(track.id),track);
         }
+        updateLauncherLayout(*arrangement,request);
         updateMixer(*arrangement,request,*accepted);updateEnvelopes(*arrangement,request,*accepted);
         updateDevices(*arrangement,request,&*accepted);
         updateMidiClips(*arrangement,request,&*accepted);

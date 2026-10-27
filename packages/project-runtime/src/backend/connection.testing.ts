@@ -5,6 +5,8 @@ import type {
   BackendFailureCode,
   BackendDocumentRequest,
   BackendControlRequest,
+  BackendLauncherSnapshot,
+  BackendLaunchRequest,
   BackendNoteRequest,
   BackendResult,
   BackendState,
@@ -72,6 +74,8 @@ export interface ControlledBackend extends ProjectBackend {
   controls: BackendControlRequest[]
   calls: (BackendDocumentRequest | BackendControlRequest)[]
   notes: BackendNoteRequest[]
+  launches: BackendLaunchRequest[]
+  sendLauncher: (frame: BackendLauncherSnapshot) => void
   listeners: Set<(frame: BackendTelemetry) => void>
   disposed: boolean
   send: (frame: BackendTelemetry) => void
@@ -88,6 +92,8 @@ export function controlled(
   const controls: BackendControlRequest[] = []
   const calls: (BackendDocumentRequest | BackendControlRequest)[] = []
   const notes: BackendNoteRequest[] = []
+  const launches: BackendLaunchRequest[] = []
+  const launcherListeners = new Set<(frame: BackendLauncherSnapshot) => void>()
   let revision = 0
   const listeners = new Set<(frame: BackendTelemetry) => void>()
   const backend: ControlledBackend = {
@@ -96,6 +102,21 @@ export function controlled(
     calls,
     notes,
     listeners,
+    launches,
+    launch(request) {
+      launches.push(request)
+      calls.push(request)
+      return control?.(request, revision) ?? accepted(request, revision)
+    },
+    subscribeLauncher(listener) {
+      launcherListeners.add(listener)
+      return () => {
+        launcherListeners.delete(listener)
+      }
+    },
+    sendLauncher(value) {
+      for (const listener of launcherListeners) listener(value)
+    },
     disposed: false,
     apply(request) {
       requests.push(request)
@@ -127,6 +148,7 @@ export function controlled(
     dispose() {
       backend.disposed = true
       listeners.clear()
+      launcherListeners.clear()
     },
   }
   return backend

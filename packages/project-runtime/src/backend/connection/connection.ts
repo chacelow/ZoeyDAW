@@ -4,6 +4,9 @@ import type {
   BackendControl,
   BackendControlRequest,
   BackendDocumentRequest,
+  BackendLaunchRequest,
+  BackendLauncherSnapshot,
+  LauncherCommand,
   BackendFailureCode,
   BackendNoteRequest,
   BackendNoteResult,
@@ -23,6 +26,13 @@ export interface BackendSubmission {
   editId: string | null
   state: BackendState
 }
+interface LaunchSubmission {
+  stage: "launch"
+  command: LauncherCommand
+  control: BackendControl
+  quantize: boolean
+}
+type QueuedSubmission = BackendSubmission | LaunchSubmission
 export interface BackendConnectionOptions {
   factory: ProjectBackendFactory
   onAccepted: (request: BackendDocumentRequest) => void
@@ -32,12 +42,14 @@ export interface BackendConnectionOptions {
   onNoteRejected?: (code: BackendFailureCode | "note-overrun") => void
   onStatus: (status: ProjectRuntimeStatus) => void
   onTelemetry: (frame: BackendTelemetry) => void
+  onLauncher?: (snapshot: BackendLauncherSnapshot) => void
 }
 export interface BackendConnection {
   open: (sessionId: string, state: BackendState) => void
   submit: (input: BackendSubmission) => number
   submitControl: (control: BackendControl) => void
   submitNote: (note: BackendNoteRequest["note"]) => void
+  submitLaunch: (input: Omit<LaunchSubmission, "stage">) => void
   start: () => () => void
   readTelemetry: () => BackendTelemetry | null
   readMeters: () => MeterStore | null
@@ -48,6 +60,7 @@ export interface BackendConnection {
 type Dispatch =
   | { kind: "document"; request: BackendDocumentRequest }
   | { kind: "control"; request: BackendControlRequest }
+  | { kind: "launch"; request: BackendLaunchRequest }
 interface TimedFrame {
   frame: BackendTelemetry
   receivedAt: number
@@ -86,7 +99,7 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
   let controlMayJump = true
   let acceptedState: BackendState | null = null
   let inFlight: Dispatch | null = null
-  let queue: BackendSubmission[] = []
+  let queue: QueuedSubmission[] = []
   let pendingOpen: BackendState | null = null
   let isDraining = false
   let frame: TimedFrame | null = null
@@ -178,7 +191,20 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
     const currentEpoch = epoch
     try {
       unsubscribe = backend.subscribe(candidate => receiveTelemetry(candidate, currentEpoch))
+      if (options.onLauncher) {
+        const stopTransport = unsubscribe
+        const stopLauncher = backend.subscribeLauncher(snapshot => {
+          if (!isDisposed && epoch === currentEpoch && snapshot.sessionId === sessionId)
+            options.onLauncher?.(snapshot)
+        })
+        unsubscribe = () => {
+          stopLauncher()
+          stopTransport()
+        }
+      }
     } catch {
+      unsubscribe?.()
+      unsubscribe = null
       error = "connection"
       status()
     }
@@ -369,7 +395,11 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
     status()
     try {
       const result =
-        value.kind === "document" ? backend?.apply(value.request) : backend?.control(value.request)
+        value.kind === "document"
+          ? backend?.apply(value.request)
+          : value.kind === "launch"
+            ? backend?.launch(value.request)
+            : backend?.control(value.request)
       if (
         result &&
         typeof result === "object" &&
@@ -401,6 +431,17 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
       editId: input.editId,
       controlGeneration: generation.toString(),
       state: { project: input.state.project, control: latestControl ?? input.state.control },
+    }
+  }
+  function launchRequest(input: LaunchSubmission): BackendLaunchRequest {
+    return {
+      protocolVersion: 2,
+      sessionId,
+      sequence: nextSequence(),
+      controlGeneration: generation.toString(),
+      control: latestControl ?? input.control,
+      command: input.command,
+      quantize: input.quantize,
     }
   }
   function drain(): void {
@@ -460,7 +501,8 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
           // Every document carries the latest control, so a waiting slot is already satisfied.
           pendingControl = false
           controlMayJump = true
-          dispatch({ kind: "document", request: documentRequest(input) })
+          if (input.stage === "launch") dispatch({ kind: "launch", request: launchRequest(input) })
+          else dispatch({ kind: "document", request: documentRequest(input) })
         }
       }
     } finally {
@@ -640,7 +682,10 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
       if (input.stage === "preview" || input.stage === "cancel") {
         let start = queue.length
         while (start > 0 && queue[start - 1]?.stage === "preview") start--
-        queue = queue.filter((pending, index) => index < start || pending.editId !== input.editId)
+        queue = queue.filter(
+          (pending, index) =>
+            index < start || pending.stage === "launch" || pending.editId !== input.editId
+        )
       }
       queue.push(input)
       status()
@@ -650,7 +695,21 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
     submitControl(control) {
       if (isDisposed) return
       updateControl(control)
+      if (!control.playing) queue = queue.filter(input => input.stage !== "launch")
       pendingControl = true
+      status()
+      drain()
+    },
+    submitLaunch(input) {
+      if (isDisposed) return
+      updateControl(input.control)
+      const queued: LaunchSubmission = { ...input, command: { ...input.command }, stage: "launch" }
+      if (!backend || queue.length >= 4096) {
+        reject(
+          { kind: "launch", request: launchRequest(queued) },
+          backend ? "rejected" : "connection"
+        )
+      } else queue.push(queued)
       status()
       drain()
     },

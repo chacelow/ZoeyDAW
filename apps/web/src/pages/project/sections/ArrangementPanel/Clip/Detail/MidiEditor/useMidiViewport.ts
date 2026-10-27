@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import { ALL_PITCHES, KEY_WIDTH, RULER_HEIGHT } from "./geometry"
-import type { MidiClip } from "@zoeydaw/project-core/types"
+import type { MidiClipContent } from "@zoeydaw/project-core/types"
 
-export function useMidiViewport(clip: MidiClip, totalBeats: number) {
+export function useMidiViewport(clip: MidiClipContent, totalBeats: number) {
   const viewport = useRef<HTMLDivElement>(null)
   const [fold, setFold] = useState(false)
   const [horizontalZoom, setHorizontalZoom] = useState(1)

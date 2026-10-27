@@ -1,3 +1,4 @@
+import { locateClip } from "@zoeydaw/project-core/clip-content"
 import { isAutomationTarget } from "@zoeydaw/project-core/automation-target"
 import { isOrdinaryTrack } from "@zoeydaw/project-core/reducers"
 import type {
@@ -175,9 +176,7 @@ export function createProjectEditing({
       session: {
         ...flags(state, true),
         selectedClipIds: [],
-        editingClipId: next.document.tracks.some(track =>
-          track.clips.some(clip => clip.id === state.session.editingClipId)
-        )
+        editingClipId: locateClip(next.document.tracks, state.session.editingClipId)
           ? state.session.editingClipId
           : null,
       },

@@ -26,7 +26,8 @@ import {
 import { parseNotes, serializeNotes } from "./clipboard"
 import { pitchAt } from "./geometry"
 import type { ClipboardEvent, KeyboardEvent, MouseEvent, PointerEvent } from "react"
-import type { MidiClip, MidiNote } from "@zoeydaw/project-core/types"
+import type { MidiClipContent, MidiNote } from "@zoeydaw/project-core/types"
+import { locateClip } from "@zoeydaw/project-core/clip-content"
 
 interface Gesture {
   clipId: string
@@ -49,11 +50,15 @@ interface Gesture {
 
 function currentNotes(id: string): MidiNote[] {
   const document = useProjectState.getState().document
-  const clip = document.tracks.flatMap(track => track.clips).find(item => item.id === id)
+  const clip = locateClip(document.tracks, id)?.clip
   return clip && clip.kind !== "audio" ? resolveMidiClip(clip, document.patterns).notes : []
 }
 
-export function useMidiEditor(clip: MidiClip, numerator: number, pitches: readonly number[]) {
+export function useMidiEditor(
+  clip: MidiClipContent,
+  numerator: number,
+  pitches: readonly number[]
+) {
   const liveId = useRef(clip.id)
   const owner = useRef(clip.id)
   const transaction = useProjectEditGesture((notes: MidiNote[]) => {

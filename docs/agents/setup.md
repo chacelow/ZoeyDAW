@@ -90,6 +90,10 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 用例覆盖已排队音频块在新 seek ACK 后仍保留旧代际、主线程与音频预取边界并发 seek、完整 u64、实际处理速率与拒绝请求。1024-sample 图延迟场景还核对同块渲染/audible 坐标、seek 与 BPM 转换。可听补偿复用引擎既有位置节点，不是物理 loopback 测量；实际桌面播放头与听感仍需验收。
 
+`native_session_launcher` 使用同一 `zoeydaw_mixer_tests` target，也可直接运行 `zoeydaw_mixer_tests --launcher`。Hosted IO 验收 mono 4/4 与 stereo 3/8 的真实 PCM 和 MIDI，覆盖量化前编排连续输出、块级启动、同轨替换、Stop/返回编排、场景删除、Slot 迁移及本地淡入/End 标记。它不打开物理声卡，不代替 Tauri 场景交互或实际听感验收。
+
+同一 Session 入口还验证真实 Hosted Auto 输入：未启动的槽位不抑制监听，启动后只听片段，停止后恢复输入，返回编排时重新使用编排区间，并逐样本检查量化切换处没有输入泄漏。`native_meter_observer` 保留原 In/Auto/Off、recording、seek 和 sub-block 边界检查。
+
 `native_graph_publication` 使用同一 build 目录的 `zoeydaw_graph_publication_tests` target。用例在图替换的各次分配注入失败，核对原 root、采样率、缓冲尺寸与连续 PCM，并继续提交有效图验证恢复；覆盖 pooling/sharing 组合及候选格式变化。它不打开物理音频设备，也不替代活跃 Edit 的严格原子事务或完整 document audioRevision。
 
 `zoeydaw_mixer_tests --transaction-model` 使用真实 WAV 和同一 renderer clock 比较原位 Edit、独立候选和保留兼容处理资源的候选。它输出发布前、准备中、拒绝后及采用后的 PCM，记录 wrapper 重建，并验证 Utility 平滑、Delay 尾音、SDK 初始化及 reset 换代。此入口揭示事务边界，不将原位 setter、直接复制 Edit 或局部资源保留当作已完成的严格事务。

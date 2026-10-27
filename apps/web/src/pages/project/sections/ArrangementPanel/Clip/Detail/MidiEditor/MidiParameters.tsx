@@ -2,7 +2,7 @@ import { useTranslation } from "@zoeymind/i18n"
 import { DragPadNumber } from "@zoeymind/ui"
 import { projectActions, useProjectEditGesture } from "@/pages/project/adapters"
 import { ClipCardHeader } from "../ClipCardHeader"
-import type { MidiClip, PatternClip } from "@zoeydaw/project-core/types"
+import type { MidiClipContent, PatternClipContent } from "@zoeydaw/project-core/types"
 
 function MidiNumber({
   field,
@@ -14,7 +14,7 @@ function MidiNumber({
   step,
 }: {
   readonly field: "startBar" | "lengthBars" | "sourceOffsetBars" | "loopBars"
-  readonly clip: MidiClip
+  readonly clip: MidiClipContent
   readonly label: string
   readonly value: number
   readonly min: number
@@ -53,8 +53,8 @@ export function MidiParameters({
   gridStep,
   selectedCount,
 }: {
-  readonly clip: MidiClip
-  readonly sourceClip?: MidiClip | PatternClip
+  readonly clip: MidiClipContent
+  readonly sourceClip?: MidiClipContent | PatternClipContent
   readonly color: string
   readonly gridStep: string
   readonly selectedCount: number
@@ -66,15 +66,17 @@ export function MidiParameters({
       <div className="audio-detail-parameter-scroll">
         <section className="audio-detail-parameter-column">
           <h3>{t("detailMidi.placement")}</h3>
-          <MidiNumber
-            field="startBar"
-            clip={clip}
-            label={t("detailMidi.start")}
-            value={clip.startBar}
-            min={1}
-            max={512}
-            step={1 / 64}
-          />
+          {"startBar" in sourceClip && typeof sourceClip.startBar === "number" && (
+            <MidiNumber
+              field="startBar"
+              clip={clip}
+              label={t("detailMidi.start")}
+              value={sourceClip.startBar}
+              min={1}
+              max={512}
+              step={1 / 64}
+            />
+          )}
           <MidiNumber
             field="lengthBars"
             clip={clip}

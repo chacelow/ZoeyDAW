@@ -4,7 +4,7 @@ import { DragPadToggle } from "@zoeymind/ui"
 import { clipLabel } from "@zoeydaw/project-core/clip-label"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
 import { ClipNameInput } from "./NameInput"
-import type { Clip } from "@zoeydaw/project-core/types"
+import type { ClipContent } from "@zoeydaw/project-core/types"
 
 /**
 Clip identity heads the card it belongs to: a track-colored band with the
@@ -16,7 +16,7 @@ export function ClipCardHeader({
   color,
   trailing,
 }: {
-  readonly clip: Clip
+  readonly clip: ClipContent
   readonly color: string
   readonly trailing?: React.ReactNode
 }) {

@@ -156,6 +156,11 @@ private:
     void confirmRecordingPublication(const Request&);
     V apply(const V&);
     V control(const V&);
+    bool validLaunch(const LaunchCommand&) const;
+    void launch(const LaunchCommand&);
+    V launcherSnapshot() const;
+    void updateLauncherLayout(Arrangement&, const Request&);
+    te::ClipOwner& clipOwner(Arrangement&, const Track&, const Clip&, const Request&);
     V note(const V&, bool overrun = false);
     void allNotesOff();
     void updateTransport(const Control&, uint64_t fence, bool seek);
@@ -186,7 +191,7 @@ private:
     void updateMixer(Arrangement&, const Request&, const Request&);
     void updateEnvelopes(Arrangement&, const Request&, const Request&);
     std::unique_ptr<Arrangement> prepare(const Request&);
-    void insertAudioClip(Arrangement&, te::AudioTrack&, const Track&, const Clip&, const Request&);
+    void insertAudioClip(Arrangement&, te::ClipOwner&, const Track&, const Clip&, const Request&);
     void initialiseTrack(Arrangement&, te::AudioTrack&, const Track&, const Request&);
     void updateCue(Arrangement&, te::AudioTrack&, const Track&);
     void updateTrackKind(Arrangement&, te::AudioTrack&, const Track&);

@@ -371,13 +371,14 @@ std::unique_ptr<EngineSession::Arrangement> EngineSession::prepare(const Request
     a->edit->ensureNumberOfAudioTracks((int)r.tracks.size());tempo(*a->edit,r.bpm,r.numerator,r.denominator);a->edit->clickTrackEnabled=r.metronome;
     auto tracks=te::getAudioTracks(*a->edit);
     for(size_t i=0;i<r.tracks.size();++i)initialiseTrack(*a,*tracks[(int)i],r.tracks[i],r);
+    updateLauncherLayout(*a,r);
     for(const auto& t:r.tracks) {
         auto* track=a->tracks.at(t.id);
         for(const auto& [id,db]:t.sends) { const auto target=std::find_if(r.tracks.begin(),r.tracks.end(),[&](const Track& other){return other.id==id;});a->sends[t.id][id]=addSend(*a->edit,*track,a->buses.at(id),db,target->returnPost?-1:track->pluginList.indexOf(track->getVolumePlugin())); }
         if(a->tracks.count(t.input)) { const auto source=std::find_if(r.tracks.begin(),r.tracks.end(),[&](const Track& src){return src.id==t.input;});if(source->output!=t.id)a->inputSends.emplace(t.id,addSend(*a->edit,*a->tracks.at(t.input),a->buses.at(t.id),0,-1)); }
         for(const auto& c:t.clips) {
             if(c.kind!="audio")continue;
-            insertAudioClip(*a,*track,t,c,r);
+            insertAudioClip(*a,clipOwner(*a,t,c,r),t,c,r);
         }
     }
     updateDevices(*a,r,nullptr);
@@ -475,12 +476,14 @@ V EngineSession::control(const V& v) {
     const auto revision=accepted?accepted->revision:0;
     if(fence<stopToken.load(std::memory_order_acquire) || token<leaseStopTokens[lease])return result(r,revision,false,"rejected");
     if(!accepted || !leases.count(lease) || r.session!=accepted->session || r.sequence<=appliedSequence)return result(r,revision,false,"protocol");
+    if(r.launch && !validLaunch(*r.launch))return result(r,revision,false,"rejected");
     const bool changeControl=r.controlGeneration>accepted->controlGeneration;
     if(changeControl) {
         if(r.recording && (!r.playing || !configuration || configuration->inputDeviceId.isEmpty()))return result(r,revision,false,"rejected");
         if(r.playing)openDevice();
         if(fence<stopToken.load(std::memory_order_acquire))return result(r,revision,false,"rejected");
     }
+    if(r.launch)launch(*r.launch);
     TransportClockMutation clockMutation(*transportControls,false);
     if(!changeControl) {
         static_cast<Control&>(r)=static_cast<const Control&>(*accepted);r.controlGeneration=accepted->controlGeneration;

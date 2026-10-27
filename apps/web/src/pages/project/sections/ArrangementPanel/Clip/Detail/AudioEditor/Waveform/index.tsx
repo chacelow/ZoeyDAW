@@ -1,7 +1,7 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { timeTickLabel } from "@zoeydaw/project-core/timeline-ticks"
-import type { AudioClip, DocumentState } from "@zoeydaw/project-core/types"
+import type { AudioClipContent, DocumentState } from "@zoeydaw/project-core/types"
 import { findMediaSource } from "@zoeydaw/project-core/media"
 import { useProjectState } from "@/pages/project/adapters"
 import { useSourceViewport } from "../useSourceViewport"
@@ -16,7 +16,7 @@ export function AudioWaveform({
   clip,
   transport,
 }: {
-  readonly clip: AudioClip
+  readonly clip: AudioClipContent
   readonly transport: DocumentState["transport"]
 }) {
   const { t } = useTranslation()

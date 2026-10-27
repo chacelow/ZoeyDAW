@@ -4,16 +4,17 @@ import { AudioEditor } from "./AudioEditor"
 import { MidiEditor } from "./MidiEditor"
 import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
 import { isEditableTarget } from "@/pages/project/sections/ArrangementPanel/Grid/geometry"
-import type { Clip } from "@zoeydaw/project-core/types"
+import type { ClipContent } from "@zoeydaw/project-core/types"
+import { locateClip } from "@zoeydaw/project-core/clip-content"
 
-export function ClipDetail({ clip: requestedClip }: { readonly clip: Clip }) {
+export function ClipDetail({ clip: requestedClip }: { readonly clip: ClipContent }) {
   const { t } = useTranslation()
   const numerator = useProjectState(state => state.document.transport.numerator)
   const patterns = useProjectState(state => state.document.patterns)
-  const owner = useProjectState(state =>
-    state.document.tracks.find(track => track.clips.some(item => item.id === requestedClip.id))
-  )
-  const clip = owner?.clips.find(item => item.id === requestedClip.id) ?? requestedClip
+  const tracks = useProjectState(state => state.document.tracks)
+  const location = locateClip(tracks, requestedClip.id)
+  const owner = location?.track
+  const clip = location?.clip ?? requestedClip
   const color = clip.color ?? owner?.color ?? "var(--primary)"
   return (
     <div

@@ -3,7 +3,7 @@ import { audioSourceWindow, getAudioClipSettings } from "@zoeydaw/project-core/a
 import { MusicalNumber } from "./MusicalNumber"
 import { sourceMarkerFields } from "./fieldConfiguration"
 import type { SourceMarkerField } from "./fieldConfiguration"
-import type { AudioClip } from "@zoeydaw/project-core/types"
+import type { AudioClipContent } from "@zoeydaw/project-core/types"
 
 export function SourceMarkerNumber({
   clip,
@@ -11,7 +11,7 @@ export function SourceMarkerNumber({
   field,
   label,
 }: {
-  readonly clip: AudioClip
+  readonly clip: AudioClipContent
   readonly bpm: number
   readonly field: SourceMarkerField
   readonly label: string

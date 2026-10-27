@@ -157,16 +157,17 @@ void ArrangerLauncherSwitchingNode::process (ProcessContext& pc)
     launcherSampleFader->apply (destAudioView, SampleFader::FadeType::fadeOut);
     arrangerSampleFader->apply (destAudioView, SampleFader::FadeType::fadeOut);
 
-    processLauncher (pc, slotStatus);
+    const auto launcherIsPlaying = processLauncher (pc, slotStatus);
 
-     if (playArranger)
+    if (playArranger && (! launcherIsPlaying || slotStatus.beatsUntilQueuedStartTrimmedToBlock))
         processArranger (pc, slotStatus);
 }
 
 //==============================================================================
-void ArrangerLauncherSwitchingNode::processLauncher (ProcessContext& pc, const SlotClipStatus& slotStatus)
+bool ArrangerLauncherSwitchingNode::processLauncher (ProcessContext& pc, const SlotClipStatus& slotStatus)
 {
     auto destAudioView = pc.buffers.audio;
+    bool anyPlaying = false;
 
     if (! launcherNodes.empty())
     {
@@ -186,6 +187,7 @@ void ArrangerLauncherSwitchingNode::processLauncher (ProcessContext& pc, const S
                     continue;
 
                 launcherNode->Node::process (pc.numSamples, pc.referenceSampleRange);
+                anyPlaying = anyPlaying || lh.getPlayingStatus() == playing;
 
                 auto sourceBuffers = launcherNode->getProcessedOutput();
                 const auto numSourceChannels = sourceBuffers.audio.getNumChannels();
@@ -199,6 +201,7 @@ void ArrangerLauncherSwitchingNode::processLauncher (ProcessContext& pc, const S
     }
 
     launcherSampleFader->push (destAudioView);
+    return anyPlaying;
 }
 
 void ArrangerLauncherSwitchingNode::processArranger (ProcessContext& pc, const SlotClipStatus& slotStatus)

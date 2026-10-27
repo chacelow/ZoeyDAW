@@ -3,7 +3,7 @@ import { audioLoopWindow, getAudioClipSettings } from "@zoeydaw/project-core/aud
 import { MusicalNumber } from "./MusicalNumber"
 import { loopFields } from "./fieldConfiguration"
 import type { LoopField } from "./fieldConfiguration"
-import type { AudioClip } from "@zoeydaw/project-core/types"
+import type { AudioClipContent } from "@zoeydaw/project-core/types"
 
 export function LoopNumber({
   clip,
@@ -11,7 +11,7 @@ export function LoopNumber({
   field,
   label,
 }: {
-  readonly clip: AudioClip
+  readonly clip: AudioClipContent
   readonly bpm: number
   readonly field: LoopField
   readonly label: string

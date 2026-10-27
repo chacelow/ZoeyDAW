@@ -19,6 +19,7 @@ import { clipboardActions } from "./clipboard"
 import { automationActions } from "./automation"
 import { markerActions } from "./markers"
 import { midiActions } from "./midi"
+import { launcherActions } from "./launcher"
 
 export const projectActions = {
   beginEdit,
@@ -40,4 +41,5 @@ export const projectActions = {
   ...automationActions,
   ...markerActions,
   ...midiActions,
+  ...launcherActions,
 }
