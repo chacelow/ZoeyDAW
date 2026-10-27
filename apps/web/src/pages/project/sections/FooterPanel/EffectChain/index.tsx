@@ -2,14 +2,19 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { DropdownButton } from "@zoeymind/ui"
 import { Plus } from "lucide-react"
-import { useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
+import {
+  acceptsPlugin,
+  insertBrowserPlugin,
+  useProjectEditGesture,
+  useProjectState,
+} from "@/pages/project/adapters"
+import { BROWSER_PLUGIN_MIME, browserPluginDrag } from "@/pages/project/adapters/browser"
 import { createDevice, DEVICE_KINDS } from "@zoeydaw/project-core/devices"
 import type { Device, DeviceKind } from "@zoeydaw/project-core/devices"
 import type { Track } from "@zoeydaw/project-core/types"
 import type { DragEvent, KeyboardEvent } from "react"
 import { DeviceCard } from "./DeviceCard"
 import { editDevices, reorderDevice } from "./edit-devices"
-import { PluginInsert } from "./PluginInsert"
 
 interface ReorderRequest {
   id: string
@@ -22,6 +27,8 @@ function TrackDeviceChain({ track }: { readonly track: Track }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [pluginLoading, setPluginLoading] = useState(false)
+  const [pluginError, setPluginError] = useState<string | null>(null)
   const drag = useRef<string | null>(null)
   const devices = track.devices ?? EMPTY_DEVICES
   const reorder = useProjectEditGesture(({ id, beforeId }: ReorderRequest) => {
@@ -136,7 +143,12 @@ function TrackDeviceChain({ track }: { readonly track: Track }) {
           {t("detailDevices.title")}
         </span>
         <span className="min-w-0 flex-1" />
-        <PluginInsert trackId={track.id} />
+        {pluginLoading && <span role="status">{t("detailDevices.loadingPlugin")}</span>}
+        {pluginError && (
+          <span role="alert" className="text-destructive">
+            {pluginError}
+          </span>
+        )}
         <DropdownButton<DeviceKind | "add">
           value="add"
           onChange={kind => {
@@ -156,12 +168,32 @@ function TrackDeviceChain({ track }: { readonly track: Track }) {
       <div
         className="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
         onDragOver={event => {
+          if (event.dataTransfer.types.includes(BROWSER_PLUGIN_MIME)) {
+            const entry = browserPluginDrag.peek()
+            event.preventDefault()
+            event.dataTransfer.dropEffect =
+              !pluginLoading && entry && acceptsPlugin(track, entry) ? "copy" : "none"
+            return
+          }
           if (drag.current === null) return
           event.preventDefault()
           event.dataTransfer.dropEffect = "move"
           setDropTarget(null)
         }}
-        onDrop={event => finishDrop(event, null)}
+        onDrop={event => {
+          if (!event.dataTransfer.types.includes(BROWSER_PLUGIN_MIME))
+            return finishDrop(event, null)
+          event.preventDefault()
+          event.stopPropagation()
+          const entry = browserPluginDrag.read(event.dataTransfer.getData(BROWSER_PLUGIN_MIME))
+          browserPluginDrag.clear()
+          if (!entry || pluginLoading) return
+          setPluginError(null)
+          setPluginLoading(true)
+          void insertBrowserPlugin(track.id, entry)
+            .catch(error => setPluginError(String(error)))
+            .finally(() => setPluginLoading(false))
+        }}
       >
         {devices.length === 0 ? (
           <div className="border-border text-muted-foreground gap-control-gap p-control-pad-x flex min-h-0 min-w-full flex-1 flex-col items-center justify-center rounded-sm border border-dashed text-center">

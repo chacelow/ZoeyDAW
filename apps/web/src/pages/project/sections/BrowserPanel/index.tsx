@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight, RefreshCw, Search, X } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
 import { Button, Input, Separator } from "@zoeymind/ui"
@@ -7,6 +7,7 @@ import { useBrowser } from "./useBrowser"
 import { BrowserNavigation } from "./BrowserNavigation"
 import { BrowserTree } from "./BrowserTree"
 import { BrowserPreview } from "./BrowserPreview"
+import { BrowserPlugins } from "./BrowserPlugins"
 import type { ReactNode } from "react"
 
 export interface BrowserPanelProps {
@@ -15,6 +16,7 @@ export interface BrowserPanelProps {
 export function BrowserPanel({ renderBody }: BrowserPanelProps) {
   const { t } = useTranslation()
   const browser = useBrowser()
+  const [pluginRefresh, setPluginRefresh] = useState(0)
   const search = useRef<HTMLInputElement>(null)
   useEffect(() => {
     function focusSearch(event: KeyboardEvent) {
@@ -105,7 +107,9 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                   variant="ghost"
                   aria-label={t("browser.refresh")}
                   onClick={() => {
-                    if (browser.rootId) void browserLibrary.refreshRoot(browser.rootId)
+                    if (["plugins", "instruments", "audioEffects"].includes(browser.scope))
+                      setPluginRefresh(value => value + 1)
+                    else if (browser.rootId) void browserLibrary.refreshRoot(browser.rootId)
                     else {
                       void browserLibrary.refreshRoots()
                       void browserLibrary.loadWindow(browser.offset)
@@ -141,8 +145,20 @@ export function BrowserPanel({ renderBody }: BrowserPanelProps) {
                     : browser.error}
                 </p>
               ) : null}
-              <BrowserTree state={browser} />
-              <BrowserPreview state={browser} />
+              {browser.scope === "plugins" ||
+              browser.scope === "instruments" ||
+              browser.scope === "audioEffects" ? (
+                <BrowserPlugins
+                  scope={browser.scope}
+                  query={browser.query}
+                  refresh={pluginRefresh}
+                />
+              ) : (
+                <>
+                  <BrowserTree state={browser} />
+                  <BrowserPreview state={browser} />
+                </>
+              )}
             </div>
           ),
         })}

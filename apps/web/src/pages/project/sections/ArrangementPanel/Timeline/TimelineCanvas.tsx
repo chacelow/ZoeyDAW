@@ -1,8 +1,17 @@
 // @refresh reset
-import { useLayoutEffect, useRef } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "@zoeymind/i18n"
-import { useProjectState } from "@/pages/project/adapters"
-import { browserLibrary } from "@/pages/project/adapters/browser"
+import {
+  acceptsPlugin,
+  insertBrowserPlugin,
+  projectActions,
+  useProjectState,
+} from "@/pages/project/adapters"
+import {
+  BROWSER_PLUGIN_MIME,
+  browserLibrary,
+  browserPluginDrag,
+} from "@/pages/project/adapters/browser"
 import { deriveGridPlan } from "@zoeydaw/project-core/grid"
 import { installBraceCursors } from "../braceCursor"
 import { CanvasContextMenu } from "../canvas/ContextMenu"
@@ -15,6 +24,9 @@ import { useArrangementKeyboard } from "./useArrangementKeyboard"
 import { useMidiKeyboard } from "./useMidiKeyboard"
 import { useCanvasPainters } from "./useCanvasPainters"
 import { BAR_RULER_HEIGHT, dropZoneTop, pinnedTopFor } from "../canvas/layout"
+import { hitTest } from "../canvas/hit-test"
+import { arrangementScene } from "../canvas/scene"
+import type { DragEvent } from "react"
 import { Toolbar } from "./Toolbar"
 import { useTimelineViewport } from "./Viewport/useTimelineViewport"
 import { TrackHeaderViewport } from "./TrackHeaderViewport"
@@ -48,6 +60,13 @@ export function TimelineCanvas({ snapshots = true }: { readonly snapshots?: bool
   const automationMode = useProjectState(state => state.workspace.automationMode)
   const automationLanes = useProjectState(state => state.workspace.automationLanes)
   const browserDrop = useBrowserAudioDrop()
+  const [pluginError, setPluginError] = useState<string | null>(null)
+  const [pluginLoading, setPluginLoading] = useState(false)
+  const pluginTrack = (event: DragEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    return hitTest(arrangementScene.get(), event.clientX - rect.left, event.clientY - rect.top)
+      ?.track
+  }
 
   useMidiKeyboard()
   useSceneSync(viewport.bars)
@@ -65,6 +84,12 @@ export function TimelineCanvas({ snapshots = true }: { readonly snapshots?: bool
     >
       <Toolbar pxPerBar={viewport.pxPerBar} zoom={viewport.zoom} snapshots={snapshots} />
       <BackendStatus />
+      {pluginLoading && <span role="status">{t("detailDevices.loadingPlugin")}</span>}
+      {pluginError && (
+        <span role="alert" className="text-destructive">
+          {pluginError}
+        </span>
+      )}
       <TimelinePanels viewport={viewport}>
         <div className="flex h-full min-h-0 flex-col">
           <div ref={bodyReference} className="relative min-h-0 flex-1">
@@ -76,9 +101,34 @@ export function TimelineCanvas({ snapshots = true }: { readonly snapshots?: bool
               tabIndex={0}
               className="absolute inset-y-0 left-0"
               style={{ right: viewport.controlsWidth, touchAction: "none" }}
-              onDragOver={browserDrop.onDragOver}
+              onDragOver={event => {
+                if (!event.dataTransfer.types.includes(BROWSER_PLUGIN_MIME))
+                  return browserDrop.onDragOver(event)
+                event.preventDefault()
+                const entry = browserPluginDrag.peek()
+                const track = pluginTrack(event)
+                event.dataTransfer.dropEffect =
+                  !pluginLoading && entry && track && acceptsPlugin(track, entry) ? "copy" : "none"
+              }}
               onDragLeave={browserDrop.onDragLeave}
-              onDrop={browserDrop.onDrop}
+              onDrop={event => {
+                if (!event.dataTransfer.types.includes(BROWSER_PLUGIN_MIME))
+                  return browserDrop.onDrop(event)
+                event.preventDefault()
+                event.stopPropagation()
+                const entry = browserPluginDrag.read(
+                  event.dataTransfer.getData(BROWSER_PLUGIN_MIME)
+                )
+                const track = pluginTrack(event)
+                browserPluginDrag.clear()
+                if (!entry || !track || pluginLoading) return
+                setPluginError(null)
+                setPluginLoading(true)
+                void insertBrowserPlugin(track.id, entry)
+                  .then(() => projectActions.selectTracks([track.id], "header"))
+                  .catch(error => setPluginError(String(error)))
+                  .finally(() => setPluginLoading(false))
+              }}
             >
               <CanvasContextMenu getTarget={interactions.contextTarget}>
                 <canvas
