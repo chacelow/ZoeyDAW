@@ -250,6 +250,63 @@ it("allows shared pre-edit typing to author a musical Audio loop position", () =
   expect(restored.audioSettings).toBeUndefined()
 })
 
+it("requires an authored source BPM before warping an unresolved import and restores unknown on undo", () => {
+  const original = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(clip => clip.id === "audio-1")
+  if (original?.kind !== "audio") throw new Error("Missing Audio fixture")
+  act(() =>
+    projectActions.updateClip(original.id, {
+      sourceTempo: "unknown",
+      audioSettings: { ...getAudioClipSettings(original, 120), warp: false },
+    })
+  )
+  const view = render(<AudioFixtureEditor />)
+  const warp = view.getByRole("button", { name: "detailAudio.warp" })
+  expect(warp.hasAttribute("disabled")).toBe(true)
+  const source = view.getByRole("button", { name: "detailAudio.sourceBpm" })
+  expect(source.textContent).toContain("detailAudio.unknownTempo")
+  act(() =>
+    projectActions.updateClip(original.id, {
+      audioSettings: { ...getAudioClipSettings(original, 120), warp: true },
+    })
+  )
+  const read = () =>
+    useProjectState
+      .getState()
+      .document.tracks.flatMap(track => track.clips)
+      .find(clip => clip.id === original.id)
+  expect(read()).toMatchObject({ sourceTempo: "unknown", audioSettings: { warp: false } })
+  source.focus()
+  fireEvent.click(source, { detail: 0 })
+  fireEvent.keyDown(source, { key: "9", code: "Digit9" })
+  const input = view.getByRole("textbox", { name: "detailAudio.sourceBpm" })
+  fireEvent.change(input, { target: { value: "95" } })
+  fireEvent.keyDown(input, { key: "Enter" })
+  expect(read()).toMatchObject({
+    sourceTempo: undefined,
+    audioSettings: { sourceBpm: 95, warp: false },
+  })
+  expect(view.getByRole("button", { name: "detailAudio.warp" }).hasAttribute("disabled")).toBe(
+    false
+  )
+  act(() => projectActions.undo())
+  expect(read()).toMatchObject({
+    sourceTempo: "unknown",
+    audioSettings: { sourceBpm: 120, warp: false },
+  })
+  expect(view.getByRole("button", { name: "detailAudio.sourceBpm" }).textContent).toContain(
+    "detailAudio.unknownTempo"
+  )
+  act(() => projectActions.redo())
+  fireEvent.click(view.getByRole("button", { name: "detailAudio.warp" }))
+  expect(read()).toMatchObject({
+    sourceTempo: undefined,
+    audioSettings: { sourceBpm: 95, warp: true },
+  })
+})
+
 it("resolves a stale clip prop against its live owner for title and titlebar color", () => {
   const owner = useProjectState.getState().document.tracks.find(track => track.id === "trager")
   const original = owner?.clips.find(clip => clip.id === "pattern-test")

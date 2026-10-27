@@ -32,6 +32,19 @@ it("roundtrips independent audio loop settings and an ordered per-track device c
     audioSettings: clip.audioSettings,
   })
 })
+
+it("roundtrips an unresolved source grid without treating its numeric coordinate basis as tempo", () => {
+  const { document, clip } = detailDocument()
+  clip.sourceTempo = "unknown"
+  if (!clip.audioSettings) throw new Error("Missing audio settings")
+  clip.audioSettings.warp = false
+  const restored = parseProject(stringifyProject(document, createTestWorkspace()))
+  expect(
+    restored.document.tracks.flatMap(track => track.clips).find(item => item.id === clip.id)
+  ).toMatchObject({ sourceTempo: "unknown", audioSettings: { warp: false, sourceBpm: 120 } })
+  clip.audioSettings.warp = true
+  expect(() => parseProject(stringifyProject(document, createTestWorkspace()))).toThrow()
+})
 it.each(["beats", "tones", "texture", "complex", "complex-pro", "repitch"])(
   "restores legacy %s using its original processor rather than retaining an obsolete runtime mode",
   legacyMode => {

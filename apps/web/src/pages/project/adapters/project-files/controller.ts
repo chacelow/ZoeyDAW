@@ -5,7 +5,7 @@ import { insertClips } from "@zoeydaw/project-core/clip-edits"
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import { defaultAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { canAcceptAudioDrop } from "@zoeydaw/project-core/audio-drop"
-import type { Track } from "@zoeydaw/project-core/types"
+import type { AudioClipContent, Track } from "@zoeydaw/project-core/types"
 import { withWaveformPreview } from "@zoeydaw/project-runtime/visuals"
 import { createManifest, parseExternalMedia, parseOpenedProject, parseSavedProject } from "./format"
 import { readRecentProjects, rememberProject } from "./recent"
@@ -412,13 +412,14 @@ export function createProjectFileController(
         ...created,
         sourceId: source.id,
         label: source.name,
+        ...(!warp && { sourceTempo: "unknown" }),
         audioSettings: {
           ...defaultAudioClipSettings(sourceBpm, created),
           sourceBpm,
           warp,
           loop: false,
         },
-      }
+      } satisfies AudioClipContent
       const targetId = placement ? placement.trackId : state.session.selectedTrackIds[0]
       const target = state.document.tracks.find(
         track =>

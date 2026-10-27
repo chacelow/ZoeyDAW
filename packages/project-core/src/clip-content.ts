@@ -33,6 +33,10 @@ function isClipData(v: unknown): v is ClipContent {
       (v.sourceId === null || (text(v.sourceId) && v.sourceId.length > 0)) &&
       number(v.gainDb) &&
       (v.audioSettings === undefined || isAudioClipSettings(v.audioSettings)) &&
+      (v.sourceTempo === undefined ||
+        (v.sourceTempo === "unknown" &&
+          record(v.audioSettings) &&
+          v.audioSettings.warp === false)) &&
       number(fadeIn) &&
       (v.fadeInBars === undefined || number(v.fadeInBars)) &&
       fadeIn >= 0 &&
@@ -106,6 +110,7 @@ export function serializeClip(clip: ClipContent): ClipContent {
         kind: "audio",
         sourceId: clip.sourceId,
         gainDb: clip.gainDb,
+        sourceTempo: clip.sourceTempo,
         ...(clip.audioSettings === undefined
           ? {}
           : { audioSettings: structuredClone(clip.audioSettings) }),

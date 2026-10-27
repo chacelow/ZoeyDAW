@@ -1,4 +1,5 @@
 import { DragPadNumber } from "@zoeymind/ui"
+import { useTranslation } from "@zoeymind/i18n"
 import { projectActions, useProjectEditGesture } from "@/pages/project/adapters"
 import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { sampleSettingFields } from "./fieldConfiguration"
@@ -18,10 +19,15 @@ export function SampleSettingNumber({
   readonly label: string
   readonly unit: string
 }) {
+  const { t } = useTranslation()
+  const unknownTempo = field === "sourceBpm" && clip.sourceTempo === "unknown"
   const settings = getAudioClipSettings(clip, bpm)
   const configuration = sampleSettingFields[field]
   const gesture = useProjectEditGesture((value: number) => {
-    projectActions.updateClip(clip.id, { audioSettings: { ...settings, [field]: value } })
+    projectActions.updateClip(clip.id, {
+      ...(field === "sourceBpm" && { sourceTempo: undefined }),
+      audioSettings: { ...settings, [field]: value },
+    })
   })
   return (
     <label className="audio-detail-field">
@@ -34,7 +40,11 @@ export function SampleSettingNumber({
         max={configuration.max}
         step={configuration.step}
         defaultValue={configuration.defaultValue(bpm)}
-        format={value => `${value.toFixed(configuration.decimalPlaces)}${unit ? ` ${unit}` : ""}`}
+        format={value =>
+          unknownTempo
+            ? t("detailAudio.unknownTempo")
+            : `${value.toFixed(configuration.decimalPlaces)}${unit ? ` ${unit}` : ""}`
+        }
         {...gesture}
       />
     </label>

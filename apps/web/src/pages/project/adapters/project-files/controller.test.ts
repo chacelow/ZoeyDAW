@@ -312,7 +312,7 @@ it.each(["picker", "drop"])(
         .get()
         .document.tracks.flatMap(track => track.clips)
         .find(item => item.kind === "audio")
-    ).toMatchObject({ audioSettings: { warp: false } })
+    ).toMatchObject({ sourceTempo: "unknown", audioSettings: { warp: false } })
     expect(useState.getState().notice).toBe("tempoUnknown")
   }
 )

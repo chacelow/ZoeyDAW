@@ -18,6 +18,7 @@ export default {
   warp: "变速",
   warpMode: "变速模式",
   sourceBpm: "源 BPM",
+  unknownTempo: "未知",
   transpose: "移调",
   detune: "微调",
   semitones: "半音",

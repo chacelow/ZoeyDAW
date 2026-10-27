@@ -47,6 +47,7 @@ export interface ClipBase {
 export interface AudioClip extends ClipBase {
   kind: "audio"
   sourceId: string | null
+  sourceTempo?: "unknown"
   waveformPeaks?: number[]
   gainDb: number
   audioSettings?: AudioClipSettings

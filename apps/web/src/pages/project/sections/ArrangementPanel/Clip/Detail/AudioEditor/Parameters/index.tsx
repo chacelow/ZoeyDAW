@@ -112,6 +112,7 @@ export function AudioParameters({
             size="compact"
             label={t("detailAudio.warp")}
             value={settings.warp}
+            disabled={clip.sourceTempo === "unknown"}
             labelOn={t("detailAudio.warp")}
             labelOff={t("detailAudio.warp")}
             onChange={warp => changeSettings({ warp })}

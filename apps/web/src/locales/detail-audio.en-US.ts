@@ -18,6 +18,7 @@ export default {
   warp: "Warp",
   warpMode: "Warp mode",
   sourceBpm: "Source BPM",
+  unknownTempo: "Unknown",
   transpose: "Transpose",
   detune: "Detune",
   semitones: "st",

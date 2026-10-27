@@ -74,6 +74,7 @@ export const clipActions = {
           id: clip.id,
           kind: "audio",
         }
+        if (next.sourceTempo === "unknown" && next.audioSettings?.warp !== false) return clip
         if (
           ("fadeInBars" in patch && patch.fadeInBars === undefined) ||
           ("fadeOutBars" in patch && patch.fadeOutBars === undefined) ||
