@@ -1,4 +1,5 @@
 #include "analysis.h"
+#include "waveform_cache.h"
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <limits>
 namespace zp {
@@ -36,7 +37,8 @@ V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedF
     require(startFrame%framesPerBin==0,"Waveform range start must align to frames per bin");
     require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
     juce::AudioFormatManager formats;formats.registerBasicFormats();
-    std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(localFile(path)));
+    const auto file=localFile(path);const auto identity=WaveformFileIdentity::read(file);
+    std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(file));
     require(reader!=nullptr,"Cannot decode waveform source");validateSource(*reader);
     const auto totalFrames=(uint64_t)reader->lengthInSamples;
     require(startFrame<totalFrames,"Waveform range starts outside source");
@@ -47,32 +49,51 @@ V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedF
     else require(binCount<=columns,"Waveform bin count exceeds columns");
     const auto channels=(size_t)reader->numChannels;
     const size_t valuesPerChannel=samples?(size_t)frameCount:(size_t)binCount;
-    std::vector<std::vector<float>> minima,maxima;
-    minima.reserve(channels);if(!samples)maxima.reserve(channels);
-    for(size_t channel=0;channel<channels;++channel) {
-        minima.emplace_back(valuesPerChannel,samples?0:std::numeric_limits<float>::infinity());
-        if(!samples)maxima.emplace_back(valuesPerChannel,-std::numeric_limits<float>::infinity());
-    }
-    juce::AudioBuffer<float> block((int)channels,(int)std::min<uint64_t>(8192,frameCount));
-    for(uint64_t offset=0;offset<frameCount;offset+=(uint64_t)block.getNumSamples()) {
-        require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
-        const int count=(int)std::min<uint64_t>((uint64_t)block.getNumSamples(),frameCount-offset);
-        require(reader->read(block.getArrayOfWritePointers(),(int)channels,(juce::int64)(startFrame+offset),count),"Audio waveform decode failed");
-        for(int i=0;i<count;++i) {
-            const uint64_t frame=offset+(uint64_t)i;
-            const size_t index=samples?(size_t)frame:(size_t)(frame/framesPerBin);
-            for(size_t channel=0;channel<channels;++channel) {
-                const float sample=block.getSample((int)channel,i);
-                if(!std::isfinite(sample))require(false,"Audio waveform source contains non-finite samples");
-                if(samples)minima[channel][index]=sample;
+    auto data=cachedWaveformData(identity,startFrame,frameCount,framesPerBin);
+    if(data)require(data->minima.size()==channels && (data->bin==1 || data->maxima.size()==channels),"Waveform source changed during decoding");
+    if(!data || data->start!=startFrame || data->frames!=frameCount || data->bin!=framesPerBin) {
+        auto next=std::make_shared<WaveformData>();next->start=startFrame;next->frames=frameCount;next->bin=framesPerBin;
+        auto& minima=next->minima;auto& maxima=next->maxima;
+        minima.reserve(channels);if(!samples)maxima.reserve(channels);
+        for(size_t channel=0;channel<channels;++channel) {
+            minima.emplace_back(valuesPerChannel,samples?0:std::numeric_limits<float>::infinity());
+            if(!samples)maxima.emplace_back(valuesPerChannel,-std::numeric_limits<float>::infinity());
+        }
+        if(data) {
+            const auto first=(startFrame-data->start)/data->bin;
+            const auto count=frameCount/data->bin+(frameCount%data->bin!=0);
+            const auto scale=framesPerBin/data->bin;
+            for(size_t channel=0;channel<channels;++channel)for(uint64_t offset=0;offset<count;++offset) {
+                if(offset%8192==0)require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
+                const auto low=data->minima[channel][size_t(first+offset)];
+                if(samples)minima[channel][size_t(offset)]=low;
                 else {
-                    minima[channel][index]=std::min(minima[channel][index],sample);
-                    maxima[channel][index]=std::max(maxima[channel][index],sample);
+                    const auto high=data->bin==1?low:data->maxima[channel][size_t(first+offset)];const auto bin=size_t(offset/scale);
+                    minima[channel][bin]=std::min(minima[channel][bin],low);maxima[channel][bin]=std::max(maxima[channel][bin],high);
+                }
+            }
+        }else {
+            juce::AudioBuffer<float> block((int)channels,(int)std::min<uint64_t>(8192,frameCount));
+            for(uint64_t offset=0;offset<frameCount;offset+=(uint64_t)block.getNumSamples()) {
+                require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
+                const int count=(int)std::min<uint64_t>((uint64_t)block.getNumSamples(),frameCount-offset);
+                require(reader->read(block.getArrayOfWritePointers(),(int)channels,(juce::int64)(startFrame+offset),count),"Audio waveform decode failed");
+                for(int i=0;i<count;++i) {
+                    const auto bin=size_t((offset+uint64_t(i))/framesPerBin);
+                    for(size_t channel=0;channel<channels;++channel) {
+                        const float sample=block.getSample((int)channel,i);require(std::isfinite(sample),"Audio waveform source contains non-finite samples");
+                        if(samples)minima[channel][bin]=sample;
+                        else { minima[channel][bin]=std::min(minima[channel][bin],sample);maxima[channel][bin]=std::max(maxima[channel][bin],sample); }
+                    }
                 }
             }
         }
+        require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
+        require(WaveformFileIdentity::read(file)==identity,"Waveform source changed during decoding");
+        retainWaveformData(identity,next);data=std::move(next);
     }
     require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
+    const auto& minima=data->minima;const auto& maxima=data->maxima;
     juce::Array<V> resultChannels;
     for(size_t channel=0;channel<channels;++channel) {
         juce::Array<V> low,high;
@@ -90,6 +111,8 @@ V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedF
     put(result,"totalFrames",(juce::int64)totalFrames);put(result,"startFrame",(juce::int64)startFrame);put(result,"frameCount",(juce::int64)frameCount);
     if(!samples)put(result,"framesPerBin",(juce::int64)framesPerBin);
     put(result,"channels",resultChannels);
+    require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
+    require(WaveformFileIdentity::read(file)==identity,"Waveform source changed during decoding");
     return result;
 }
 }

@@ -3,6 +3,7 @@
 #include "audio_configuration.h"
 #include "device_test_support.h"
 #include "transport_observation.h"
+#include "../analysis/waveform_cache.h"
 #include <juce_events/juce_events.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <iostream>
@@ -123,6 +124,7 @@ V waveformRangeResponse(const juce::File& file,uint64_t start,uint64_t count,uin
 }
 void writeWideFloatWaveform(const juce::File& file,int channels,bool invalid=false) {
     auto stream=file.createOutputStream();zp::require(stream!=nullptr,"Cannot create multichannel waveform fixture");
+    zp::require(stream->setPosition(0) && stream->truncate().wasOk(),"Cannot replace multichannel waveform fixture");
     const int dataBytes=channels*8*4;
     stream->write("RIFF",4);stream->writeInt(36+dataBytes);stream->write("WAVEfmt ",8);stream->writeInt(16);
     stream->writeShort(3);stream->writeShort((short)channels);stream->writeInt(48000);stream->writeInt(48000*channels*4);
@@ -181,6 +183,14 @@ void testSignedWaveformRanges() {
             }
         }
     };
+    const auto beforeHierarchy=zp::waveformCacheStats();
+    verifyEnvelope(0,8192,2048,4);
+    const auto afterHierarchy=zp::waveformCacheStats();
+    zp::require(afterHierarchy.hits>beforeHierarchy.hits,"Coarser exact extrema did not reuse decoded samples");
+    verifyEnvelope(0,8192,1024,8);
+    zp::require(zp::waveformCacheStats().hits>afterHierarchy.hits,"Coarser level did not reuse finer exact extrema");
+    verifySamples(0,13,7);
+    verifyEnvelope(0,13,4,4);
     verifyEnvelope(4096,17003,7);
     verifyEnvelope(0,8193,4096);
     verifyEnvelope(12,9,5,2);
@@ -225,6 +235,33 @@ void testSignedWaveformRanges() {
     zp::require(!(bool)waveformRangeResponse(invalid.getFile(),0,8,4,2)["ok"],"Non-finite envelope samples must reject rather than inventing extrema");
     const auto oversized=waveformRangeResponse(invalid.getFile(),0,8,1,2);
     zp::require(!(bool)oversized["ok"] && oversized["error"].toString().contains("bin count"),"Oversized bin plans must reject before decoding non-finite PCM");
+    {
+        juce::TemporaryFile replacement(".wav");writeWideFloatWaveform(replacement.getFile(),2);
+        const auto first=waveformRangeResponse(replacement.getFile(),0,8,4);
+        zp::require(bool(first["ok"]),"Replacement fixture could not be decoded");
+        writeWideFloatWaveform(replacement.getFile(),3);
+        const auto changed=waveformRangeResponse(replacement.getFile(),0,8,4);
+        zp::require(bool(changed["ok"]) && changed["value"]["channels"].size()==3,"Changed file retained stale waveform channels");
+        const auto modified=replacement.getFile().getLastModificationTime();
+        writeWideFloatWaveform(replacement.getFile(),3,true);
+        zp::require(replacement.getFile().setLastModificationTime(modified+juce::RelativeTime::seconds(1)),"Cannot advance replacement fixture identity");
+        const auto invalidated=waveformRangeResponse(replacement.getFile(),0,8,4);
+        zp::require(!bool(invalidated["ok"]) && invalidated["error"].toString().contains("non-finite"),"Same-size changed file reused old waveform samples");
+    }
+    {
+        zp::WaveformFileIdentity first{"budget/0",1,1,1};
+        for(int index=0;index<18;++index) {
+            auto data=std::make_shared<zp::WaveformData>();data->start=0;data->frames=8192;data->bin=1;
+            data->minima.resize(64);for(auto& channel:data->minima)channel.assign(8192,.25f);
+            auto identity=first;identity.path="budget/"+juce::String(index);zp::retainWaveformData(identity,std::move(data));
+        }
+        zp::require(!zp::cachedWaveformData(first,0,8192,1),"Unused waveform payload survived byte-budget eviction");
+        auto newest=first;newest.path="budget/17";const auto retained=zp::cachedWaveformData(newest,0,8192,1);
+        zp::require(retained && retained->minima[63][8191]==.25f,"Budget eviction corrupted newest waveform samples");
+    }
+    const auto cache=zp::waveformCacheStats();
+    zp::require(cache.entries<=64 && cache.bytes<=32*1024*1024,"Native waveform cache exceeded retained budget");
+    std::cout<<"Native waveform cache retained "<<cache.entries<<" ranges, "<<cache.bytes<<" bytes, "<<cache.hits<<" exact hierarchy hits\n";
 }
 void testAudioConfigurationBoundary(zp_session* session) {
     auto value=zp::parse(R"JSON({"host":"unavailable-test-host","inputDeviceId":null,"outputDeviceId":"unavailable-test-host::output","sampleRate":48000,"bufferFrames":512,"inputMono":[],"inputStereo":[],"outputMono":[2],"outputStereo":[0]})JSON");
@@ -276,10 +313,11 @@ void testExternalDeviceBoundary() {
 }
 #include "device_model_tests.h"
 }
-int main() {
+int main(int argc,char** argv) {
     try {
         juce::ScopedJuceInitialiser_GUI gui;
         zp::ScopedAudioPreferences preferences;
+        if(argc==2 && juce::String(argv[1])=="--waveform") { testSignedWaveformRanges();return 0; }
         testMidiVelocityBoundary();
         testV2WireBoundary();
         testSignedAudioSourceOffsets();

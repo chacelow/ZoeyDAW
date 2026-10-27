@@ -98,6 +98,8 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 `zoeydaw_mixer_tests --recording` 定向验证 Hosted 输入的 16,384 帧精确 PCM、混合成功/失败 take、发布前拒绝 ACK 与重复 ACK。它还从真实 take journal 启动独立 `--recording-reclaim` 子进程，验证跨进程文件身份和 PCM，再覆盖缺少 finalized placement、不同工程 BPM、重复认领及目录越界拒绝。测试使用临时录音根并清理，不访问用户录音或物理声卡。Journal 使用同步 flush 后的临时文件替换；不声称断电恢复或损坏容器修复。
 
+`zoeydaw_playback_tests --waveform` 定向运行真实浮点 WAV 的 signed samples、精确 extrema、部分 bin、取消、层级复用、同路径替换及缓存预算检查，并输出 retained bytes/entries 与命中数。缓存只从同级或更细数据合并，不用 AudioThumbnail 的近似极值。身份检查覆盖正常文件替换及修改时间变化；不声称保留元数据的原位写入或每次源内容 SHA-256 都已验证。
+
 `native_graph_publication` 使用同一 build 目录的 `zoeydaw_graph_publication_tests` target。用例在图替换的各次分配注入失败，核对原 root、采样率、缓冲尺寸与连续 PCM，并继续提交有效图验证恢复；覆盖 pooling/sharing 组合及候选格式变化。它不打开物理音频设备，也不替代活跃 Edit 的严格原子事务或完整 document audioRevision。
 
 `zoeydaw_mixer_tests --transaction-model` 使用真实 WAV 和同一 renderer clock 比较原位 Edit、独立候选和保留兼容处理资源的候选。它输出发布前、准备中、拒绝后及采用后的 PCM，记录 wrapper 重建，并验证 Utility 平滑、Delay 尾音、SDK 初始化及 reset 换代。此入口揭示事务边界，不将原位 setter、直接复制 Edit 或局部资源保留当作已完成的严格事务。
