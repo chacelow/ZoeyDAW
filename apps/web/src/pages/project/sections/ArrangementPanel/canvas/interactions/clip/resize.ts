@@ -39,10 +39,11 @@ export function createResizeGesture(
     move(next) {
       context.scene.setClipResize({ id: clip.id, edge })
       const requested = snappedBar(context, barAtX(context, next.x) - grabOffset)
+      const minLeft = original - Math.max(0, clip.sourceOffsetBars ?? 0)
       const raw =
         clip.kind === "audio"
           ? edge === "left"
-            ? Math.max(original, requested)
+            ? Math.max(minLeft, requested)
             : Math.min(original, requested)
           : requested
       const bpm = context.getState().document.transport.bpm

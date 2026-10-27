@@ -337,16 +337,16 @@ describe("canvas clip gestures", () => {
   it("selects and opens a newly created clip on an empty lane double click", () => {
     const host = render(<Canvas />).getByTestId("host")
     const scene = arrangementScene.get()
-    const row = layoutTrackRows(scene).find(item => item.track.id === "3-audio")
+    const row = layoutTrackRows(scene).find(item => item.track.id === "4-midi")
     if (!row) {
-      throw new Error("Missing audio lane")
+      throw new Error("Missing midi lane")
     }
     const before = useProjectState.getState().session.clipEditorRequest
     act(() =>
       fireEvent.doubleClick(host, { clientX: 640, clientY: row.top + TRACK_TITLE_HEIGHT + 12 })
     )
     const state = useProjectState.getState()
-    const created = state.document.tracks.find(track => track.id === "3-audio")?.clips.at(-1)
+    const created = state.document.tracks.find(track => track.id === "4-midi")?.clips.at(-1)
     expect(created).toBeDefined()
     expect(state.session.selectedClipIds).toEqual([created?.id])
     expect(state.session.clipEditorRequest).toBe(before + 1)
