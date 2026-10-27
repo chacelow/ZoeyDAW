@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest"
 import { nativePlugins } from "@/shared/native/plugins"
 import { BROWSER_PLUGIN_MIME, browserPluginDrag } from "@/pages/project/adapters/browser"
+import * as pluginAdapters from "@/pages/project/adapters"
 import { BrowserPlugins } from "./BrowserPlugins"
 import type { PluginCatalogEntry } from "@/shared/native/plugins"
 
@@ -45,4 +46,14 @@ it("lists matching instruments and starts an authenticated plugin drag", async (
   expect(browserPluginDrag.read(values.get(BROWSER_PLUGIN_MIME) ?? "")).toEqual(instrument)
   fireEvent.dragEnd(view.getByText("Synth"))
   expect(browserPluginDrag.peek()).toBeNull()
+})
+
+it("inserts plugin into track or creates a new track on double click", async () => {
+  vi.spyOn(nativePlugins, "available").mockReturnValue(true)
+  vi.spyOn(nativePlugins, "entries").mockResolvedValue([instrument])
+  const insertSpy = vi.spyOn(pluginAdapters, "insertPluginNewTrack").mockResolvedValue("new-track")
+  const view = render(<BrowserPlugins scope="instruments" query="" />)
+  await waitFor(() => expect(view.getByText("Synth")).toBeTruthy())
+  fireEvent.doubleClick(view.getByText("Synth"))
+  expect(insertSpy).toHaveBeenCalledWith(instrument)
 })

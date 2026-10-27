@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, type PointerEvent } from "react"
 import {
   resizeBorder,
   resizeSplit,
+  selectBorderTab,
   type DockBorderSide,
   type DockBounds,
   type DockLayoutJSON,
@@ -67,10 +68,20 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
     const horizontal = state.kind === "split" ? state.axis === "x" : state.side !== "bottom"
     const delta = (horizontal ? event.clientX : event.clientY) - state.start
     if (state.kind === "border") {
+      if (state.side === "bottom") {
+        if (delta > 30) {
+          setPreview(selectBorderTab(layout, "bottom", null))
+        } else {
+          setPreview(
+            layout.borders.bottom?.selected ? layout : selectBorderTab(layout, "bottom", "devices")
+          )
+        }
+        return
+      }
       const next = Math.max(
         state.minimum,
         Math.min(
-          (state.side === "bottom" ? root.height : root.width) - strip - minimumSize,
+          root.width - strip - minimumSize,
           state.size + (state.side === "left" ? delta : -delta)
         )
       )
@@ -88,8 +99,25 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
   }
   const release = (event: PointerEvent<HTMLElement>) => {
     if (!resize.current || resize.current.pointer !== event.pointerId) return
+    const state = resize.current
     resize.current = null
+    if (state.kind === "border" && state.side === "bottom") {
+      const delta = event.clientY - state.start
+      if (delta > 30) {
+        commit(selectBorderTab(layout, "bottom", null))
+        return
+      }
+      commit(
+        layout.borders.bottom?.selected ? layout : selectBorderTab(layout, "bottom", "devices")
+      )
+      return
+    }
     if (preview) commit(preview)
+  }
+  const toggle = (side: DockBorderSide) => {
+    if (side === "bottom") {
+      commit(selectBorderTab(layout, "bottom", layout.borders.bottom?.selected ? null : "devices"))
+    }
   }
   const start = (state: DockResizeState, event: PointerEvent<HTMLElement>) => {
     if (event.button !== 0) return
@@ -97,11 +125,12 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
     event.currentTarget.setPointerCapture(event.pointerId)
     event.preventDefault()
   }
-  return { start, move, release, cancel }
+  return { start, move, release, cancel, toggle }
 }
 export interface DockResize {
   start: (state: DockResizeState, event: PointerEvent<HTMLElement>) => void
   move: (event: PointerEvent<HTMLElement>) => void
   release: (event: PointerEvent<HTMLElement>) => void
   cancel: () => boolean
+  toggle?: (side: DockBorderSide) => void
 }

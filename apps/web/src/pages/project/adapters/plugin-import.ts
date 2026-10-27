@@ -7,12 +7,7 @@ import type { Track } from "@zoeydaw/project-core/types"
 
 export function acceptsPlugin(track: Track, entry: PluginCatalogEntry): boolean {
   if (entry.plugin.kind !== "Instrument") return true
-  return (
-    track.kind === "midi" &&
-    !(track.devices ?? []).some(
-      device => device.kind === "external" && device.plugin.role === "instrument"
-    )
-  )
+  return track.kind === "midi"
 }
 
 export async function insertBrowserPlugin(
@@ -39,11 +34,30 @@ export async function insertBrowserPlugin(
       throw new Error("Project changed while preparing the plugin")
     if (!acceptsPlugin(target, entry)) throw new Error("Plugin cannot be inserted on this track")
     const devices = target.devices ?? []
+    const nextDevices =
+      device.plugin.role === "instrument"
+        ? [
+            device,
+            ...devices.filter(d => !(d.kind === "external" && d.plugin.role === "instrument")),
+          ]
+        : [...devices, device]
     projectActions.updateTrack(trackId, {
-      devices: device.plugin.role === "instrument" ? [device, ...devices] : [...devices, device],
+      ...(device.plugin.role === "instrument" && { armed: true }),
+      devices: nextDevices,
     })
     if (!(await whenProjectBackendIdle())) throw new Error("Plugin insertion failed")
   } finally {
     await nativePlugins.discardSeed(session, device.id)
   }
+}
+
+export async function insertPluginNewTrack(entry: PluginCatalogEntry): Promise<string> {
+  const trackId = projectActions.addTrack("midi")
+  projectActions.updateTrack(trackId, {
+    name: entry.plugin.name,
+    armed: true,
+  })
+  projectActions.selectTracks([trackId], "header")
+  await insertBrowserPlugin(trackId, entry)
+  return trackId
 }

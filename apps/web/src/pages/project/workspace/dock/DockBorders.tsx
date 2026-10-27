@@ -283,6 +283,7 @@ export function DockBorderPanel({
         onPointerMove={resize.move}
         onPointerUp={resize.release}
         onPointerCancel={resize.cancel}
+        onDoubleClick={() => resize.toggle?.(side)}
       />
     </div>
   )

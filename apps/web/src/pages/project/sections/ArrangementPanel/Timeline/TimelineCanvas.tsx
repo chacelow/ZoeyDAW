@@ -4,6 +4,7 @@ import { useTranslation } from "@zoeymind/i18n"
 import {
   acceptsPlugin,
   insertBrowserPlugin,
+  insertPluginNewTrack,
   projectActions,
   useProjectState,
 } from "@/pages/project/adapters"
@@ -108,7 +109,9 @@ export function TimelineCanvas({ snapshots = true }: { readonly snapshots?: bool
                 const entry = browserPluginDrag.peek()
                 const track = pluginTrack(event)
                 event.dataTransfer.dropEffect =
-                  !pluginLoading && entry && track && acceptsPlugin(track, entry) ? "copy" : "none"
+                  !pluginLoading && entry && (!track || acceptsPlugin(track, entry))
+                    ? "copy"
+                    : "none"
               }}
               onDragLeave={browserDrop.onDragLeave}
               onDrop={event => {
@@ -121,11 +124,15 @@ export function TimelineCanvas({ snapshots = true }: { readonly snapshots?: bool
                 )
                 const track = pluginTrack(event)
                 browserPluginDrag.clear()
-                if (!entry || !track || pluginLoading) return
+                if (!entry || pluginLoading) return
                 setPluginError(null)
                 setPluginLoading(true)
-                void insertBrowserPlugin(track.id, entry)
-                  .then(() => projectActions.selectTracks([track.id], "header"))
+                const promise = track
+                  ? insertBrowserPlugin(track.id, entry).then(() =>
+                      projectActions.selectTracks([track.id], "header")
+                    )
+                  : insertPluginNewTrack(entry)
+                void promise
                   .catch(error => setPluginError(String(error)))
                   .finally(() => setPluginLoading(false))
               }}

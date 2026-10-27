@@ -4,7 +4,7 @@ import { get, session, tracks, updateTrack } from "./context"
 
 export const trackActions = {
   updateTrack,
-  addTrack(kind: "audio" | "midi" | "group" | "return", parentId?: string) {
+  addTrack(kind: "audio" | "midi" | "group" | "return", parentId?: string): string {
     const source = get().document.tracks
     const parent = source.find(track => track.id === parentId && track.kind === "group")
     const created = createTrack(kind, source, parent?.id, DEFAULT_TRACK_HEIGHT)
@@ -18,6 +18,7 @@ export const trackActions = {
     )
     result.splice(index < 0 ? result.length : index, 0, created)
     tracks(result)
+    return created.id
   },
   deleteTracks(ids: string[]) {
     const doomed = new Set(ids)

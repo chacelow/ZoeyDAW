@@ -1,9 +1,14 @@
 import { useTranslation } from "@zoeymind/i18n"
-import { useProjectState } from "@/pages/project/adapters"
+import {
+  useProjectState,
+  insertBrowserPlugin,
+  insertPluginNewTrack,
+} from "@/pages/project/adapters"
 import { ClipDetail } from "../ArrangementPanel/Clip/Detail"
 import { EffectChain } from "./EffectChain"
 import type { DetailSection } from "@/pages/project/detail-view"
 import { locateClip } from "@zoeydaw/project-core/clip-content"
+import { BROWSER_PLUGIN_MIME, browserPluginDrag } from "@/pages/project/adapters/browser"
 
 export function FooterPanel({ view }: { readonly view: DetailSection }) {
   const { t } = useTranslation()
@@ -33,7 +38,28 @@ export function FooterPanel({ view }: { readonly view: DetailSection }) {
       ) : clip ? (
         <ClipDetail key={clip.id} clip={clip} />
       ) : (
-        <div className="text-muted-foreground flex flex-1 items-center justify-center text-xs">
+        <div
+          className="text-muted-foreground flex flex-1 items-center justify-center text-xs"
+          onDragOver={event => {
+            if (event.dataTransfer.types.includes(BROWSER_PLUGIN_MIME)) {
+              event.preventDefault()
+              event.dataTransfer.dropEffect = "copy"
+            }
+          }}
+          onDrop={event => {
+            if (!event.dataTransfer.types.includes(BROWSER_PLUGIN_MIME)) return
+            event.preventDefault()
+            event.stopPropagation()
+            const entry = browserPluginDrag.read(event.dataTransfer.getData(BROWSER_PLUGIN_MIME))
+            browserPluginDrag.clear()
+            if (!entry) return
+            if (track && track.kind === "midi") {
+              void insertBrowserPlugin(track.id, entry)
+            } else {
+              void insertPluginNewTrack(entry)
+            }
+          }}
+        >
           {t(selectedClipIds.length > 1 ? "detail.multipleClips" : "detail.noClip", {
             count: selectedClipIds.length,
           })}

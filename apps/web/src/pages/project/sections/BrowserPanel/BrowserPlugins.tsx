@@ -3,6 +3,11 @@ import { useTranslation } from "@zoeymind/i18n"
 import { Button, rowInteractiveClasses } from "@zoeymind/ui"
 import { nativePlugins } from "@/shared/native/plugins"
 import { BROWSER_PLUGIN_MIME, browserPluginDrag } from "@/pages/project/adapters/browser"
+import {
+  insertBrowserPlugin,
+  insertPluginNewTrack,
+  useProjectState,
+} from "@/pages/project/adapters"
 import type { PluginCatalogEntry } from "@/shared/native/plugins"
 
 export function BrowserPlugins({
@@ -46,6 +51,23 @@ export function BrowserPlugins({
           : entry.plugin.kind === "Effect")) &&
       `${entry.plugin.name} ${entry.plugin.vendor}`.toLocaleLowerCase().includes(needle)
   )
+  const handleDoubleClick = (entry: PluginCatalogEntry) => {
+    const state = useProjectState.getState()
+    const selectedTrackId =
+      state.session.selectedTrackIds[state.session.selectedTrackIds.length - 1]
+    const selectedTrack = state.document.tracks.find(t => t.id === selectedTrackId)
+    if (entry.plugin.kind === "Instrument") {
+      if (selectedTrack && selectedTrack.kind === "midi") {
+        void insertBrowserPlugin(selectedTrack.id, entry)
+      } else {
+        void insertPluginNewTrack(entry)
+      }
+    } else if (selectedTrack) {
+      void insertBrowserPlugin(selectedTrack.id, entry)
+    } else {
+      void insertPluginNewTrack(entry)
+    }
+  }
   return (
     <div
       role="list"
@@ -78,6 +100,7 @@ export function BrowserPlugins({
             event.dataTransfer.setData("text/plain", entry.plugin.name)
           }}
           onDragEnd={() => browserPluginDrag.clear()}
+          onDoubleClick={() => handleDoubleClick(entry)}
         >
           {entry.plugin.name}
         </Button>
