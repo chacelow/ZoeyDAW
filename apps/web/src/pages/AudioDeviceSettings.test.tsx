@@ -180,6 +180,20 @@ it("shows the confirmed device immediately while discovery is pending", async ()
   })
 })
 
+it("uses a confirmed status arriving while discovery is pending", async () => {
+  let finish: (value: AudioDeviceSnapshot) => void = () => {}
+  vi.mocked(nativeAudio.devices).mockReturnValue(
+    new Promise(resolve => {
+      finish = resolve
+    })
+  )
+  const view = mount()
+  act(() => publishNativeAudioStatus({ device: snapshot }))
+  expect(view.getByRole("button", { name: "Output device" }).textContent).toContain("E2")
+  expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
+  await act(async () => finish(snapshot))
+})
+
 it("discovers on mount and opening a device selector without an Apply or Refresh action", async () => {
   const view = mount()
   await ready(view)

@@ -146,6 +146,10 @@ export function useAudioDeviceSettings() {
   }, [available, discover])
 
   useEffect(() => {
+    if (device) setDraft(previous => previous ?? initialDraft(device))
+  }, [device])
+
+  useEffect(() => {
     if (!available || !host) return
     const lifecycle = capabilityGeneration.current
     const token = ++lifecycle.value
