@@ -23,8 +23,19 @@ void testHostedRecording() {
     require(reader && reader->lengthInSamples==frames && reader->numChannels==1 && reader->sampleRate==48000,"Closed recording file dimensions mismatch");
     juce::AudioBuffer<float> captured(1,frames);require(reader->read(&captured,0,frames,0,true,false),"Closed recording unreadable");
     for(int i=0;i<frames;++i)require(std::abs(captured.getSample(0,i)-(i%2?.125f:-.125f))<1e-5,"Recording PCM differed from hosted input");
+    MixerTestAccess::retainFailedRecording(session,result,"mixer-test","failed-take");
+    MixerTestAccess::retainFailedRecording(session,result,"other-lease","other-failed-take");
     require(session.call("recording_results",query)["recordings"][0]["recordingId"]==result["recordingId"],"Reading recording results consumed uncommitted data");
     auto ack=query.clone();put(ack,"recordingId",result["recordingId"]);put(ack,"acceptedRevision",0);bool rejected=false;try { session.call("recording_ack",ack); }catch(const std::exception&) { rejected=true; }require(rejected,"Recording ACK accepted before document publication");
+    auto failedAck=ack.clone();put(failedAck,"recordingId","failed-take");
+    rejected=false;try { session.call("recording_ack",failedAck); }catch(const std::exception&) { rejected=true; }
+    require(rejected && MixerTestAccess::hasRecording(session,"failed-take"),"Failed take was acknowledged or lost");
+    auto telemetryQuery=object();put(telemetryQuery,"leaseId","mixer-test");
+    const auto warnings=session.call("telemetry",telemetryQuery)["issues"];
+    int recordingErrors=0;for(const auto& warning:*warnings.getArray())if(warning["code"].toString()=="recording-failed") {
+        ++recordingErrors;require(warning["message"].toString().contains("failed-take") && warning["message"].toString().contains("Injected recording writer failure"),"Recording warning lost take identity or error");
+    }
+    require(recordingErrors==1,"Recording errors were hidden or leaked across lease ownership");
     require(MixerTestAccess::track(session,"record-track")->getClips().isEmpty(),"Unpublished recording leaked into native authored clips");
     const auto fileId=result["files"][0]["fileId"];auto source=object();put(source,"id",fileId);put(source,"uri",file.getFullPathName());put(source,"sha256",juce::SHA256(file).toHexString());put(source,"frames",frames);put(source,"sampleRate",48000);put(source,"channels",1);put(project,"sources",juce::Array<V>{source});
     auto clip=parse(R"({"id":"recorded","kind":"audio","startBar":1,"lengthBars":1,"sourceOffsetBars":0,"mute":false,"sourceId":null,"gainDb":0,"audioSettings":{"warp":false,"warpMode":"soundtouch","sourceBpm":120,"transpose":0,"detune":0,"reverse":false,"loop":false,"loopStartBars":0,"loopLengthBars":1,"startMarkerBars":0,"endMarkerBars":1},"fadeInBars":0,"fadeOutBars":0,"fadeInOffsetBars":0,"fadeOutOffsetBars":0,"fadeInCurve":0,"fadeOutCurve":0,"fadeInCurvePosition":0.5,"fadeOutCurvePosition":0.5})");
@@ -33,6 +44,7 @@ void testHostedRecording() {
     put(target,"clips",juce::Array<V>{});put(project,"sources",juce::Array<V>{});next(request,4,1,2,"commit");accepted(apply(session,request),2);
     put(ack,"acceptedRevision",1);session.call("recording_ack",ack);session.call("recording_ack",ack);
     require(session.call("recording_results",query)["recordings"].getArray()->isEmpty() && file.existsAsFile(),"Recording acknowledgement did not retire metadata without deleting audio");
+    require(MixerTestAccess::hasRecording(session,"failed-take") && file.existsAsFile(),"Successful ACK retired failed recovery data");
     std::cout<<"Hosted recording finalized "<<frames<<" exact PCM frames and retained unpublished result"<<std::endl;
 }
 

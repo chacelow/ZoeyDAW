@@ -123,9 +123,8 @@ V EngineSession::recordingResults(const V& query) {
     fields(query,{"leaseId","sessionId"});const auto lease=text(query,"leaseId"),session=text(query,"sessionId");
     require(leases.contains(lease) && accepted && accepted->session==session,"Recording results owner mismatch");
     juce::Array<V> values;
-    for(const auto& [id,result]:closedRecordings)if(result.lease==lease && result.session==session) {
-        require(result.error.isEmpty(),result.error);values.add(result.result);
-    }
+    for(const auto& [id,result]:closedRecordings)
+        if(result.lease==lease && result.session==session && result.error.isEmpty())values.add(result.result);
     auto out=object();put(out,"sessionId",session);put(out,"recordings",values);return out;
 }
 void EngineSession::confirmRecordingPublication(const Request& request) {

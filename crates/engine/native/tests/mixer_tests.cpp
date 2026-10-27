@@ -40,6 +40,12 @@ struct MixerTestAccess {
     static te::HostedAudioDeviceInterface& hosted(EngineSession& session) { return session.engine.getDeviceManager().getHostedAudioDeviceInterface(); }
     static juce::AudioDeviceManager& audioManager(EngineSession& session) { return session.engine.getDeviceManager().deviceManager; }
     static DeviceClock& clock(EngineSession& session) { return session.clock; }
+    static void retainFailedRecording(EngineSession& session,const V& result,const juce::String& lease,const juce::String& id) {
+        EngineSession::Recording failed;failed.id=id;failed.lease=lease;failed.session=result["sessionId"].toString();failed.result=result.clone();
+        put(failed.result,"recordingId",id);failed.error="Injected recording writer failure; recovery files retained";
+        session.closedRecordings.emplace(id,std::move(failed));
+    }
+    static bool hasRecording(EngineSession& session,const juce::String& id) { return session.closedRecordings.contains(id); }
     // Hosted audio aliases input and output; feed the original PCM before Tracktion overwrites it.
     static void feedHostedInputMeter(EngineSession& session,const juce::AudioBuffer<float>& audio,std::uint64_t start=0) {
         session.clock.inputMeter.process(audio.getArrayOfReadPointers(),audio.getNumChannels(),audio.getNumSamples(),start);
@@ -418,6 +424,7 @@ int main(int argc,char** argv) {
         if(argc>1) {
             if(argc==2 && juce::String(argv[1])=="--launcher") { testSessionLauncher(1,4,4);testSessionLauncher(2,3,8);testSessionInputMonitor();return 0; }
             if(argc==2 && juce::String(argv[1])=="--midi-mute") { testRepeatedMidiMuteTransitions();return 0; }
+            if(argc==2 && juce::String(argv[1])=="--recording") { testHostedRecording();return 0; }
             if(argc==2 && juce::String(argv[1])=="--source-publication") { testSourceGraphPublication();return 0; }
             if(argc==2 && juce::String(argv[1])=="--transaction-model") { transaction_probe::run();return 0; }
             if(argc==2 && juce::String(argv[1])=="--stopped-input") {

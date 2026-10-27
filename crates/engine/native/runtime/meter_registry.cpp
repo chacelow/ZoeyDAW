@@ -123,6 +123,9 @@ V EngineSession::telemetry(const V& v) {
         put(out,"launcher",launcherSnapshot());
     }
     put(out,"device",devices());juce::Array<V> issues;if(arrangement)issues=arrangement->issues;
+    if(accepted && leases.count(lease))for(const auto& [id,closed]:closedRecordings)
+        if(closed.lease==lease && closed.session==accepted->session && closed.error.isNotEmpty())
+            issues.add(issue("recording-failed","Recording "+id+": "+closed.error));
     if(clock.failed.load())issues.add(issue("device-error","Audio output was interrupted; rendered output is silent"));put(out,"issues",issues);return out;
 }
 }
