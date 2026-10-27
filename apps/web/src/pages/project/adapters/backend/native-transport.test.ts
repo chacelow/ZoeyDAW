@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from "vitest"
 import { readProjectMeters } from "../realtime"
 import { audioPort, createBackend, deferred, request } from "./native.testing"
+import { attachProjectMeterScheduler } from "@/pages/project/components/ProjectMeter/scheduler"
 import {
   audioFrame,
   stoppedFrame,
@@ -12,6 +13,7 @@ import {
 afterEach(() => {
   vi.useRealTimers()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 it("uses the same-block audible coordinate and preserves full u64 identities with no meter endpoints", async () => {
@@ -117,4 +119,24 @@ it("drops a binary response arriving after disposal and closes the admitted stre
   expect(receive).not.toHaveBeenCalled()
   expect(readProjectMeters()).toBeNull()
   expect(source.port.close).toHaveBeenCalledExactlyOnceWith(7)
+})
+
+it("continues delivering transport frames when animation frames stop", async () => {
+  vi.useFakeTimers()
+  vi.stubGlobal("requestAnimationFrame", () => 1)
+  vi.stubGlobal("cancelAnimationFrame", () => {})
+  const source = transportFixture()
+  const backend = createBackend(audioPort(), { meters: source.port })
+  const receive = vi.fn()
+  backend.subscribe(receive)
+  await backend.apply(request())
+  source.queue.push(audioFrame(1n, 3))
+  const detach = attachProjectMeterScheduler()
+  await vi.advanceTimersByTimeAsync(500)
+  expect(receive).toHaveBeenCalledWith(expect.objectContaining({ playing: true }))
+  detach()
+  const pulls = vi.mocked(source.port.snapshot).mock.calls.length
+  backend.dispose()
+  await vi.advanceTimersByTimeAsync(500)
+  expect(source.port.snapshot).toHaveBeenCalledTimes(pulls)
 })
