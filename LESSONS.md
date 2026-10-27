@@ -18,6 +18,7 @@
 
 - Tracktion 单点曲线已有当前值，但会被优化为无 active stream。按 `isAutomationActive()` 决定是否送出参数会漏掉整条常量包络；外部 wrapper 复用 authored-curve 位图，真实 PCM 覆盖保持与删除恢复。
 - `zd_plugin_automation` 的字段顺序是 slot、offset、parameter、value。两个零掩盖了位置初始化错误，直到块内 offset 128 被当成 slot 128。使用具名初始化，并保留跨 quantum 的真实 CLAP/VST3 斜坡探针。见 `isolated_plugin_probe.cpp` 与 `native_graph_smoke.rs`。
+- Web 自动化点原为 0–1，native mixer/内置 Device 曲线读取实际参数单位。直接发送曾把音量中点 0.5 当成 +0.5 dB、最左 pan 0 当居中、滤波中点 0.5 当 Hz。转换归 native adapter 发送边界，复用 `automationSourceValue`；持久化与 mock 不变，外部插件保持归一化。`native-dispatch.test.ts` 保留失败前的三项数值与修复后输入隔离回归。
 
 ## Panel active 外沿被裁切
 

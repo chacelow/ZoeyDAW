@@ -4,6 +4,7 @@ import { z } from "zod"
 import { createStore } from "zustand/vanilla"
 import { createProjectRuntime } from "@zoeydaw/project-runtime"
 import { initialDocument, initialSession, initialWorkspace } from "@zoeydaw/project-runtime/state"
+import { projectBackendDocument } from "@zoeydaw/project-runtime/backend-projection"
 import type { ProjectState } from "@zoeydaw/project-core/types"
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import type { BackendDocumentRequest } from "@zoeydaw/project-core/backend"
@@ -259,4 +260,90 @@ it("waits for in-flight control and note before release and drops disposed repli
   expect(await noting).toMatchObject({ kind: "rejected", code: "disposed" })
   await vi.advanceTimersByTimeAsync(0)
   expect(port.release).toHaveBeenCalledTimes(1)
+})
+
+it("converts authored normalized automation to native units without changing the document", async () => {
+  const port = audioPort()
+  const backend = createBackend(port)
+  const document = initialDocument(DEFAULT_TRACK_HEIGHT)
+  const track = document.tracks.find(item => item.kind === "audio")
+  if (!track) throw new Error("Missing audio fixture")
+  track.devices = [
+    {
+      id: "filter",
+      kind: "filter",
+      enabled: true,
+      collapsed: false,
+      frequency: 1000,
+      resonance: 0.2,
+    },
+    {
+      id: "external",
+      kind: "external",
+      enabled: true,
+      collapsed: false,
+      plugin: {
+        catalogId: "a".repeat(64),
+        format: "clap",
+        classId: "fixture",
+        name: "Fixture",
+        vendor: "Fixture",
+        version: "1",
+        role: "effect",
+      },
+      stateRef: null,
+      parameters: [{ id: "9", normalized: 0.5 }],
+    },
+  ]
+  track.automation = [
+    {
+      id: "gain",
+      target: { kind: "mixer", parameter: "volume" },
+      points: [{ id: "g", bar: 1, value: 0.5 }],
+    },
+    {
+      id: "pan",
+      target: { kind: "mixer", parameter: "pan" },
+      points: [{ id: "p", bar: 1, value: 0 }],
+    },
+    {
+      id: "cutoff",
+      target: { kind: "device", deviceId: "filter", parameter: "frequency" },
+      points: [{ id: "f", bar: 1, value: 0.5, curve: 0.25 }],
+    },
+    {
+      id: "plugin",
+      target: { kind: "device", deviceId: "external", parameter: "9" },
+      points: [{ id: "e", bar: 1, value: 0.625 }],
+    },
+  ]
+  const project = projectBackendDocument(document)
+  const original = structuredClone(project)
+  await backend.apply({ ...request(), state: { ...request().state, project } })
+  const native = port.apply.mock.calls[0]?.[0]
+  const parsed = z
+    .object({
+      state: z.object({
+        project: z.object({
+          tracks: z.array(
+            z.object({
+              id: z.string(),
+              automation: z.array(
+                z.object({
+                  points: z.array(z.object({ value: z.number(), curve: z.number().optional() })),
+                })
+              ),
+            })
+          ),
+        }),
+      }),
+    })
+    .parse(native)
+  expect(
+    parsed.state.project.tracks
+      .find(item => item.id === track.id)
+      ?.automation.map(lane => lane.points[0])
+  ).toEqual([{ value: -27 }, { value: -1 }, { value: 10010, curve: 0.25 }, { value: 0.625 }])
+  expect(project).toEqual(original)
+  backend.dispose()
 })

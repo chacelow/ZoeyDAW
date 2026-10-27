@@ -21,6 +21,7 @@ import type {
 } from "@zoeydaw/project-core/backend"
 import type { BrowserAuditionPort } from "../browser/controller"
 import { resolveBackendSources, resolveBackendDevices } from "./source-locations"
+import { automationSourceValue } from "@zoeydaw/project-core/automation-curve"
 import { prepareNativeWaveforms } from "./waveforms"
 import type { MeterSessionPort } from "@zoeydaw/project-runtime/realtime"
 import { nativeMeterPort } from "@/shared/native/realtime"
@@ -452,6 +453,13 @@ export function createNativeProjectBackend(
                 tracks: request.state.project.tracks.map(track => ({
                   ...track,
                   devices: resolveBackendDevices(track.devices),
+                  automation: track.automation.map(lane => ({
+                    ...lane,
+                    points: lane.points.map(point => ({
+                      ...point,
+                      value: automationSourceValue(lane.target, point.value),
+                    })),
+                  })),
                 })),
               },
             },
