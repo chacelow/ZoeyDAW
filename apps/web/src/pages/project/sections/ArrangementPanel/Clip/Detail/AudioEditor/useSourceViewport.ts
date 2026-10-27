@@ -1,6 +1,7 @@
 import { clipSourceCoordinate, projectTempoSections } from "@zoeydaw/project-core/tempo-map"
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
+import { warpTargetBar } from "@zoeydaw/project-core/audio-editor"
 import type { AudioClipContent, MediaSource } from "@zoeydaw/project-core/types"
 
 import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
@@ -43,10 +44,13 @@ export function useSourceViewport(
     clip.lengthBars
   )
   const secondsPerSourceBar = ((60 / settings.sourceBpm) * numerator * 4) / denominator
-  const mediaEnd =
+  const sourceMediaEnd =
     source && source.location.kind !== "fixture" && source.sampleRate > 0
       ? source.frames / source.sampleRate / secondsPerSourceBar
       : 0
+  const mediaEnd = settings.warp
+    ? warpTargetBar(settings.warpMarkers ?? [], sourceMediaEnd)
+    : sourceMediaEnd
   const rangeStart = Math.min(0, origin, settings.loopStartBars, settings.startMarkerBars)
   const rangeSpan =
     Math.max(

@@ -177,6 +177,7 @@ export function paintWaveform(
       JSON.stringify(envelope.fades),
       JSON.stringify(envelope.loop),
       JSON.stringify(envelope.window),
+      JSON.stringify(envelope.warpMarkers),
       clip.lengthBars,
       drawnHeight,
       width,

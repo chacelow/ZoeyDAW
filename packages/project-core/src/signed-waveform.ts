@@ -1,3 +1,4 @@
+import { warpSourceBar, warpTargetBar } from "./audio-editor/warp-map"
 import type { WaveformRange } from "./waveform-range"
 import { envelopeFadeGain, type PeakEnvelope } from "./waveform"
 import { interpolateWaveform } from "./waveform-interpolation"
@@ -42,6 +43,7 @@ function clipPoints(
 function visibleRuns(envelope: PeakEnvelope, from: number, through: number): Run[] {
   const result: Run[] = []
   const loop = envelope.loop
+  const map = envelope.warpMarkers ?? []
   let position = from
   while (position < through) {
     let sourceFrom: number
@@ -55,19 +57,24 @@ function visibleRuns(envelope: PeakEnvelope, from: number, through: number): Run
       position = sourceFrom
       end = Math.min(through, envelope.window?.end ?? Infinity)
     }
-    const sourceEnd = Math.min(sourceFrom + end - position, envelope.start + envelope.span)
-    const clippedStart = Math.max(envelope.start, sourceFrom)
+    const boundary = map.find(marker => marker.targetBar > sourceFrom)?.targetBar
+    if (boundary !== undefined) end = Math.min(end, position + boundary - sourceFrom)
+    const sourceEnd = Math.min(
+      warpSourceBar(map, sourceFrom + end - position),
+      envelope.start + envelope.span
+    )
+    const clippedStart = Math.max(envelope.start, warpSourceBar(map, sourceFrom))
     if (sourceEnd > clippedStart) {
       const a = (clippedStart - envelope.start) / envelope.span
       const b = (sourceEnd - envelope.start) / envelope.span
       result.push({
-        from: position + clippedStart - sourceFrom,
-        through: position + sourceEnd - sourceFrom,
+        from: position + warpTargetBar(map, clippedStart) - sourceFrom,
+        through: position + warpTargetBar(map, sourceEnd) - sourceFrom,
         sourceFrom: envelope.reverse ? 1 - a : a,
         sourceThrough: envelope.reverse ? 1 - b : b,
       })
     }
-    if (end <= position || !loop) break
+    if (end <= position) break
     position = end
   }
   return result
@@ -209,9 +216,11 @@ export function signedWaveformPaths(
     for (const run of sourceRuns) {
       const a = Math.min(run.sourceFrom, run.sourceThrough) * totalFrames
       const b = Math.max(run.sourceFrom, run.sourceThrough) * totalFrames
+      const runSamplesPerPixel = (b - a) / (((run.through - run.from) * width) / (through - from))
       let pointRuns: Point[][]
-      if (kind === "samples") {
-        const interpolated = interpolateWaveform(a, b, samplesPerPixel, frame =>
+      const runKind = runSamplesPerPixel <= 1 ? "samples" : "envelope"
+      if (runKind === "samples") {
+        const interpolated = interpolateWaveform(a, b, runSamplesPerPixel, frame =>
           rawSample(ranges, channel, frame, totalFrames)
         )
         pointRuns = interpolated
@@ -223,7 +232,7 @@ export function signedWaveformPaths(
               })),
             ]
           : []
-      } else pointRuns = envelopePoints(ranges, channel, a, b, totalFrames, samplesPerPixel)
+      } else pointRuns = envelopePoints(ranges, channel, a, b, totalFrames, runSamplesPerPixel)
       const project = (point: Point) => {
         const fraction =
           (point.frame / totalFrames - run.sourceFrom) / (run.sourceThrough - run.sourceFrom)
@@ -249,7 +258,7 @@ export function signedWaveformPaths(
           projected.map(point => ({ x: point.x, y: point.low }))
         )
       }
-      if (samplesPerPixel <= 1 / 8) {
+      if (runSamplesPerPixel <= 1 / 8) {
         for (let frame = Math.ceil(a); frame <= Math.floor(b); frame++) {
           const value = rawSample(ranges, channel, frame, totalFrames)
           if (value === null || frame >= totalFrames) continue

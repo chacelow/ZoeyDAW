@@ -70,6 +70,22 @@ describe("visible source waveform requests", () => {
     expect(waveformRangeRequests(source, envelope, 3, 4, 500)).toEqual([])
   })
 
+  it("keeps sample detail and source bounds for a stretched Warp interval", () => {
+    const ranges = waveformRangeRequests(
+      source,
+      { ...envelope, warpMarkers: [{ id: "a", sourceBar: 0.1, targetBar: 1 }] },
+      0.25,
+      0.26,
+      100
+    )
+    assertBounded(ranges)
+    expect(ranges.every(({ request }) => request.framesPerBin === 1)).toBe(true)
+    expect(ranges[0].request.startFrame).toBeLessThanOrEqual(1200)
+    const last = ranges.at(-1)
+    if (!last) throw new Error("Missing stretched source window")
+    expect(last.request.startFrame + last.request.frameCount).toBeGreaterThanOrEqual(1248)
+  })
+
   it("maps reverse windows to the original file and splits nonzero loop seams", () => {
     const reversed = waveformRangeRequests(source, { ...envelope, reverse: true }, 0.5, 1, 300)
     assertBounded(reversed)

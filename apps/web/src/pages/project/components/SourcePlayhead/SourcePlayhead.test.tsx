@@ -238,3 +238,26 @@ it("rebinds mounted source consumers when the session store changes", () => {
   view.unmount()
   expect(second.readMetadata().transport).toBe(false)
 })
+
+it("projects observed source time into warped target coordinates without changing the readout", () => {
+  const store = setup()
+  const view = render(
+    <>
+      <SourcePlayhead
+        source={{ kind: "arrangement", clipId: "clip", sourceId: "audio" }}
+        startSeconds={0}
+        spanSeconds={4}
+        mapSeconds={seconds => seconds / 2}
+      />
+      <SourceTimeReadout source={{ kind: "arrangement", clipId: "clip", sourceId: "audio" }} />
+    </>
+  )
+  act(() => {
+    store.acceptFrame(frame())
+  })
+  paint()
+  const marker = view.container.querySelector<HTMLElement>("[data-source-playhead]")
+  expect(marker?.hidden).toBe(false)
+  expect(marker?.style.left).toBe("25%")
+  expect(view.container.textContent).toBe("2.0")
+})

@@ -1,4 +1,5 @@
 import { acceptsClip } from "@zoeydaw/project-core/types"
+import { isAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import {
   insertClips,
   projectClipMove,
@@ -75,6 +76,7 @@ export const clipActions = {
           kind: "audio",
         }
         if (next.sourceTempo === "unknown" && next.audioSettings?.warp !== false) return clip
+        if (next.audioSettings && !isAudioClipSettings(next.audioSettings)) return clip
         if (
           ("fadeInBars" in patch && patch.fadeInBars === undefined) ||
           ("fadeOutBars" in patch && patch.fadeOutBars === undefined) ||

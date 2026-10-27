@@ -1004,7 +1004,7 @@ class WarpReader final  : public SingleInputAudioReader
 {
 public:
     WarpReader (std::unique_ptr<AudioReader> input,
-                WarpMap warpMap,
+                std::shared_ptr<const WarpMap> warpMap,
                 TimeStretcher::Mode mode,
                 TimeStretcher::ElastiqueProOptions options)
         : SingleInputAudioReader (std::make_unique<TimeStretchReader> (std::move (input), mode, options)),
@@ -1034,7 +1034,7 @@ public:
     bool readSamples (choc::buffer::ChannelArrayView<float>& destBuffer) override
     {
         const auto unwarpedStartTime = TimePosition::fromSamples (readPosition, getSampleRate());
-        const auto ratio = warpTime (map, unwarpedStartTime).stretchRatio;
+        const auto ratio = warpTime (*map, unwarpedStartTime).stretchRatio;
 
         reader->setSpeed (ratio);
         readPosition += (SampleCount) destBuffer.getNumFrames();
@@ -1044,14 +1044,14 @@ public:
 
 private:
     TimeStretchReader* reader = nullptr;
-    WarpMap map;
+    std::shared_ptr<const WarpMap> map;
     SampleCount readPosition = 0;
 
     void setSourcePosition (SampleCount pos)
     {
         const auto sampleRate = getSampleRate();
         const auto sourceTime = TimePosition::fromSamples (pos, sampleRate);
-        const auto warpedTime = warpTime (map, sourceTime).position;
+        const auto warpedTime = warpTime (*map, sourceTime).position;
         const auto warpedSamplePos = toSamples (warpedTime, sampleRate);
         source->setPosition (warpedSamplePos);
     }
@@ -1997,7 +1997,7 @@ WaveNodeRealTime::WaveNodeRealTime (BeatConfig c)
       audioFile (c.audioFile),
       speedFadeDescription (std::move (c.speedFadeDescription)),
       editTempoSequence (std::move (c.editTempoSequence)),
-      warpMap (std::move (c.warpMap)),
+      warpMap (c.warpMap ? std::make_shared<const WarpMap> (std::move (*c.warpMap)) : nullptr),
       timeStretcherMode (utils::replaceElastiqueWithDirectModeIfNotRendering (c.timeStretchMode, isOfflineRender)),
       elastiqueProOptions (c.elastiqueProOptions),
       clipLevel (c.liveClipLevel),
@@ -2083,7 +2083,7 @@ WaveNodeRealTime::WaveNodeRealTime (const AudioFile& af,
       audioFile (af),
       speedFadeDescription (std::move (speedDesc)),
       editTempoSequence (std::move (editTempoSeq)),
-      warpMap (std::move (warp)),
+      warpMap (warp ? std::make_shared<const WarpMap> (std::move (*warp)) : nullptr),
       timeStretcherMode (utils::replaceElastiqueWithDirectModeIfNotRendering (mode, isRendering)),
       elastiqueProOptions (options),
       clipLevel (level),
@@ -2224,7 +2224,7 @@ bool WaveNodeRealTime::buildAudioReaderGraph()
     {
         // If we're using a warp map, the looping as to be applied above the warp so the loop times don't get warped
         // This can have performance hits though
-        loopReader = std::make_unique<WarpReader> (std::move (audioFileCacheReader), std::move (*warpMap), timeStretcherMode, elastiqueProOptions);
+        loopReader = std::make_unique<WarpReader> (std::move (audioFileCacheReader), warpMap, timeStretcherMode, elastiqueProOptions);
 
         if (! loopSectionTime.isEmpty())
             loopReader = std::make_unique<LoopReader> (std::move (loopReader), loopSectionTime);
@@ -2398,7 +2398,7 @@ void WaveNodeRealTime::processSection (ProcessContext& pc)
                 fileTime = loopSectionTime.getStart() + TimeDuration::fromSeconds (std::fmod (pastStart, loopLen));
             }
 
-            playhead->setPosition (fileTime, pc.referenceSampleRange.getStart(), getSampleRate());
+            playhead->setPosition (warpMap ? warpTime (*warpMap, fileTime).position : fileTime, pc.referenceSampleRange.getStart(), getSampleRate());
         }
         else if (fileTempoSequence != nullptr)
         {
@@ -2412,7 +2412,8 @@ void WaveNodeRealTime::processSection (ProcessContext& pc)
                 sourceBeats = loopSectionBeats.getStart() + BeatDuration::fromBeats (std::fmod (pastStart, loopLen));
             }
 
-            playhead->setPosition (fileTempoSequence->toTime (sourceBeats), pc.referenceSampleRange.getStart(), getSampleRate());
+            const auto fileTime = fileTempoSequence->toTime (sourceBeats);
+            playhead->setPosition (warpMap ? warpTime (*warpMap, fileTime).position : fileTime, pc.referenceSampleRange.getStart(), getSampleRate());
         }
     }
 

@@ -1,6 +1,11 @@
 import { clipSourceCoordinate, projectTempoSections } from "@zoeydaw/project-core/tempo-map"
 import { useTranslation } from "@zoeymind/i18n"
-import { formatAudioMusicalValue, type AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
+import {
+  formatAudioMusicalValue,
+  warpSourceBar,
+  warpTargetBar,
+  type AudioClipSettings,
+} from "@zoeydaw/project-core/audio-editor"
 import { DEFAULT_FADE_CURVE, fadeControls, fadePath } from "@zoeydaw/project-core/fades"
 import { timeTickLabel } from "@zoeydaw/project-core/timeline-ticks"
 import type { AudioClipContent, DocumentState } from "@zoeydaw/project-core/types"
@@ -93,6 +98,23 @@ export function WaveformSurface({
           label={t("detailAudio.loopEnd")}
         />
       </div>
+      {settings.warp && settings.warpMarkers?.length ? (
+        <div
+          role="group"
+          className="h-control-compact border-border relative border-b"
+          aria-label={t("detailAudio.warpMarkers")}
+        >
+          {settings.warpMarkers.map((marker, index) => (
+            <span
+              key={marker.id}
+              className="border-foreground absolute h-full border-l"
+              style={{ left: `${((marker.targetBar - view.start) / view.span) * 100}%` }}
+              title={`${t("detailAudio.warpMarker")} ${index + 1}`}
+              aria-hidden
+            />
+          ))}
+        </div>
+      ) : null}
       <div ref={waveArea} className="audio-detail-wave-area">
         <svg
           className="audio-detail-wave-svg"
@@ -195,6 +217,12 @@ export function WaveformSurface({
           }
           startSeconds={view.start * secondsPerBar}
           spanSeconds={view.span * secondsPerBar}
+          mapSeconds={
+            settings.warp && settings.warpMarkers?.length
+              ? seconds =>
+                  warpTargetBar(settings.warpMarkers ?? [], seconds / secondsPerBar) * secondsPerBar
+              : undefined
+          }
         />
         {(realSource ? !signedPaths.some(channel => channel.path.length > 0) : !hasPeaks) && (
           <div className="audio-detail-empty">
@@ -235,7 +263,10 @@ export function WaveformSurface({
       >
         {ticks.map(value => (
           <span key={value} style={{ left: `${((value - view.start) / view.span) * 100}%` }}>
-            {timeTickLabel(value * secondsPerBar)}
+            {timeTickLabel(
+              (settings.warp ? warpSourceBar(settings.warpMarkers ?? [], value) : value) *
+                secondsPerBar
+            )}
           </span>
         ))}
       </div>

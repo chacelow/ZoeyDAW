@@ -8,6 +8,7 @@ import { SampleSettingNumber } from "./SampleSettingNumber"
 import { ClipCardHeader } from "@/pages/project/sections/ArrangementPanel/Clip/Detail/ClipCardHeader"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import type { AudioClipContent } from "@zoeydaw/project-core/types"
+import { WarpMarkers } from "../WarpMarkers"
 
 type ClipField = "gainDb" | "fadeInBars" | "fadeOutBars"
 
@@ -161,6 +162,7 @@ export function AudioParameters({
             onChange={reverse => changeSettings({ reverse })}
           />
         </section>
+        <WarpMarkers clip={clip} bpm={bpm} />
       </div>
     </aside>
   )

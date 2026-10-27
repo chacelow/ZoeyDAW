@@ -4,6 +4,7 @@ import { interpolateWaveform } from "./waveform-interpolation"
 import { waveformPeakValue } from "./waveform-half"
 import { waveformRangePlan } from "./waveform-range"
 import type { WaveformRange } from "./waveform-range"
+import { sourceWaveformIntervals, sourceWaveformPosition } from "./waveform-source"
 
 const source = { peaks: [], start: 0, span: 1 }
 function samples(values: number[][]): WaveformRange {
@@ -117,4 +118,29 @@ describe("actual binary waveform envelope", () => {
     expect(near.frameCount).toBe(68)
     expect(near.framesPerBin).toBe(1)
   })
+})
+
+it("projects stretched source windows and loops through marker segments", () => {
+  const envelope = {
+    ...source,
+    span: 2,
+    warpMarkers: [
+      { id: "a", sourceBar: 1, targetBar: 0.5 },
+      { id: "b", sourceBar: 2, targetBar: 2 },
+    ],
+  }
+  expect(sourceWaveformIntervals(envelope, 0.25, 0.5)).toEqual([[0.25, 0.5]])
+  expect(sourceWaveformPosition(envelope, 0.25)).toBe(0.25)
+  expect(
+    sourceWaveformIntervals({ ...envelope, loop: { start: 0, end: 0.5 } }, 0.375, 0.625)
+  ).toEqual([
+    [0.375, 0.5],
+    [0, 0.125],
+  ])
+  const data = samples([Array(128).fill(0.5)])
+  const paths = signedWaveformPaths(envelope, [data], 128, 0, 2, 256, 100)
+  const vertices = points(paths[0].path)
+  expect(Math.min(...vertices.map(point => point[0]))).toBeLessThanOrEqual(0)
+  expect(Math.max(...vertices.map(point => point[0]))).toBeGreaterThanOrEqual(255)
+  expect(Math.min(...vertices.map(point => point[1]))).toBeLessThan(30)
 })

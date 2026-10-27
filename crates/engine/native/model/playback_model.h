@@ -23,10 +23,15 @@ juce::String decimalU64(uint64_t);
 bool boolean(const V&, const char*);
 const juce::Array<V>& array(const V&, const char*);
 juce::File localFile(const juce::String&);
+struct WarpMarker {
+    double sourceBar=0,targetBar=0;
+    bool operator==(const WarpMarker&) const = default;
+};
 struct Settings {
     bool warp, reverse, loop;
     juce::String mode;
     double sourceBpm, transpose, detune, loopStart, loopLength, markerStart, markerEnd;
+    std::vector<WarpMarker> warpMarkers;
 };
 struct Clip {
     juce::String id, kind, source, scene;

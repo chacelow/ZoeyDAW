@@ -1,3 +1,4 @@
+import { warpSourceBar } from "./audio-editor/warp-map"
 import type { PeakEnvelope } from "./waveform"
 
 export function sourceWaveformIntervals(
@@ -24,9 +25,16 @@ export function sourceWaveformIntervals(
     ])
   }
   const result: [number, number][] = []
+  const map = envelope.warpMarkers ?? []
   for (const [from, through] of intervals) {
-    const start = Math.max(0, Math.min(1, (from - envelope.start) / envelope.span))
-    const end = Math.max(0, Math.min(1, (through - envelope.start) / envelope.span))
+    const start = Math.max(
+      0,
+      Math.min(1, (warpSourceBar(map, from) - envelope.start) / envelope.span)
+    )
+    const end = Math.max(
+      0,
+      Math.min(1, (warpSourceBar(map, through) - envelope.start) / envelope.span)
+    )
     if (end > start) result.push(envelope.reverse ? [1 - end, 1 - start] : [start, end])
   }
   return result
@@ -43,6 +51,7 @@ export function sourceWaveformPosition(envelope: PeakEnvelope, position: number)
   ) {
     return null
   }
+  position = warpSourceBar(envelope.warpMarkers ?? [], position)
   const fraction = (position - envelope.start) / envelope.span
   if (fraction < 0 || fraction >= 1) return null
   return envelope.reverse ? 1 - fraction : fraction

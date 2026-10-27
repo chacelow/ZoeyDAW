@@ -21,6 +21,17 @@ te::TimeStretcher::Mode audioProcessor(const Clip& clip,double pitch) {
 double audioSourceStart(double offset,double markerStart) {
     return offset<0?offset:std::max(offset,markerStart);
 }
+void configureWarp(te::AudioClipBase& native,const Clip& clip,const Request& request) {
+    const auto& settings=clip.settings;
+    native.setWarpTime(settings.warp && !settings.warpMarkers.empty());
+    if(!settings.warp || settings.warpMarkers.empty())return;
+    auto& manager=native.getWarpTimeManager();
+    manager.state.getChildWithName(te::IDs::WARPMARKERS).removeAllChildren(nullptr);
+    manager.insertMarker({});
+    const auto seconds=request.quartersPerBar*60/settings.sourceBpm;
+    for(const auto& marker:settings.warpMarkers)
+        manager.insertMarker({te::TimePosition::fromSeconds(marker.sourceBar*seconds),te::TimePosition::fromSeconds(marker.targetBar*seconds)});
+}
 te::ClipPosition audioPosition(const Clip& clip,const Request& request) {
     const double ratio=clip.settings.warp?request.tempoAt(clip.start)/clip.settings.sourceBpm:1.0;
     const double sourceBar=request.quartersPerBar*60/clip.settings.sourceBpm;
@@ -136,6 +147,7 @@ void EngineSession::insertAudioClip(Arrangement& a,te::ClipOwner& track,const Tr
     }
     clip->setTimeStretchMode(audioProcessor(c,authoredPitch));
     clip->setSpeedRatio(1.0);clip->state.setProperty(te::IDs::pitchChange,authoredPitch,nullptr);clip->setIsReversed(c.settings.reverse);
+    configureWarp(*clip,c,r);
     const double sourceBar=r.quartersPerBar*60/c.settings.sourceBpm;
     if(c.settings.loop)clip->setLoopRange({te::TimePosition::fromSeconds(c.settings.loopStart*sourceBar/ratio),te::TimeDuration::fromSeconds(c.settings.loopLength*sourceBar/ratio)});else clip->setLoopRange({});
     if(c.settings.warp && c.settings.loop)clip->setLoopRangeBeats({te::BeatPosition::fromBeats(c.settings.loopStart*r.numerator),te::BeatDuration::fromBeats(c.settings.loopLength*r.numerator)});
@@ -184,6 +196,7 @@ void EngineSession::updateEnvelopes(Arrangement& a,const Request& next,const Req
         const bool loopChanged=clip.settings.loop!=old.settings.loop || clip.settings.loopStart!=old.settings.loopStart || clip.settings.loopLength!=old.settings.loopLength;
         const bool speedChanged=clip.settings.warp!=old.settings.warp || clip.settings.mode!=old.settings.mode || clip.settings.sourceBpm!=old.settings.sourceBpm;
         const bool reverseChanged=clip.settings.reverse!=old.settings.reverse;
+        const bool warpMapChanged=clip.settings.warpMarkers!=old.settings.warpMarkers;
         if(auto native=a.audioClips.find(clip.id);native!=a.audioClips.end()) {
             auto* destination=&clipOwner(a,next.tracks[track],clip,next);
             if(native->second->getParent()!=destination)require(native->second->moveTo(*destination),"Cannot move audio clip to destination owner");
@@ -204,6 +217,7 @@ void EngineSession::updateEnvelopes(Arrangement& a,const Request& next,const Req
                 if(speedChanged)native->second->setSpeedRatio(1.0);
                 native->second->state.setProperty(te::IDs::pitchChange,authoredPitch,nullptr);
             }
+            if(warpMapChanged || speedChanged)configureWarp(*native->second,clip,next);
             if(reverseChanged || loopChanged || speedChanged) {
                 const double ratio=clip.settings.warp?next.tempoAt(clip.start)/clip.settings.sourceBpm:1.0;
                 const double sourceBar=next.quartersPerBar*60/clip.settings.sourceBpm;

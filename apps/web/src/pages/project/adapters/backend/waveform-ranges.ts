@@ -124,7 +124,19 @@ export function waveformRangeRequests(
 ): SourceWaveformRangeRequest[] {
   if (source.location.kind === "fixture" || columns <= 0) return []
   const path = source.location.path
-  const samplesPerPixel = (((through - from) / envelope.span) * source.frames) / columns
+  let minimumRate = 1
+  let previousSource = 0
+  let previousTarget = 0
+  for (const marker of envelope.warpMarkers ?? []) {
+    minimumRate = Math.min(
+      minimumRate,
+      (marker.sourceBar - previousSource) / (marker.targetBar - previousTarget)
+    )
+    previousSource = marker.sourceBar
+    previousTarget = marker.targetBar
+  }
+  const samplesPerPixel =
+    (minimumRate * (((through - from) / envelope.span) * source.frames)) / columns
   const requests = new Map<string, SourceWaveformRangeRequest>()
   for (const [start, end] of sourceWaveformIntervals(envelope, from, through)) {
     for (const planned of waveformRangePlan(

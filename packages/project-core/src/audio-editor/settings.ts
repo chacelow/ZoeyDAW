@@ -1,4 +1,6 @@
 import type { AudioClipContent } from "../types"
+import { isAudioWarpMarkers } from "./warp-map"
+import type { AudioWarpMarker } from "./warp-map"
 
 export const AUDIO_WARP_MODES = [
   "soundtouch",
@@ -19,6 +21,7 @@ export interface AudioClipSettings {
   loopLengthBars: number
   startMarkerBars: number
   endMarkerBars: number
+  warpMarkers?: readonly AudioWarpMarker[]
 }
 
 const AUDIO_SETTINGS_FIELDS = [
@@ -65,8 +68,11 @@ export function isAudioClipSettings(value: unknown): value is AudioClipSettings 
   if (typeof value !== "object" || value === null || Array.isArray(value)) return false
   const fields = Object.keys(value)
   if (
-    fields.length !== AUDIO_SETTINGS_FIELDS.length ||
-    fields.some(field => !AUDIO_SETTINGS_FIELDS.some(known => known === field))
+    fields.some(
+      field => field !== "warpMarkers" && !AUDIO_SETTINGS_FIELDS.some(known => known === field)
+    ) ||
+    ("warpMarkers" in value && !isAudioWarpMarkers(value.warpMarkers)) ||
+    AUDIO_SETTINGS_FIELDS.some(field => !Object.hasOwn(value, field))
   )
     return false
   return (

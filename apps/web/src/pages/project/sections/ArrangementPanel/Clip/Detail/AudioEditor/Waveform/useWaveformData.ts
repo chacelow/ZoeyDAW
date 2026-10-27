@@ -62,8 +62,19 @@ export function useWaveformData({
       span: waveformSpan,
       reverse: settings.reverse,
       gain,
+      ...(settings.warp && settings.warpMarkers?.length
+        ? { warpMarkers: settings.warpMarkers }
+        : {}),
     }),
-    [peaks, waveformStart, waveformSpan, settings.reverse, gain]
+    [
+      peaks,
+      waveformStart,
+      waveformSpan,
+      settings.reverse,
+      settings.warp,
+      settings.warpMarkers,
+      gain,
+    ]
   )
   const [wavePath, overviewPath] = useMemo<[string, string]>(() => {
     if (!peaks?.length) return ["", ""]

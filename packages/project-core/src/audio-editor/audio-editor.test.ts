@@ -8,6 +8,9 @@ import {
   isAudioClipSettings,
   parseAudioMusicalValue,
 } from "./index"
+import { isAudioWarpMarkers, warpSourceBar, warpTargetBar } from "./warp-map"
+import { createTestDocument, createTestWorkspace } from "../test-fixtures"
+import { stringifyProject, parseProject } from "../persistence"
 import type { AudioClip } from "../types"
 
 const clip: AudioClip = {
@@ -174,5 +177,48 @@ describe("independent playback and loop markers", () => {
     expect(isAudioClipSettings(audioLoopWindow(settings, Number.MAX_VALUE, Number.MAX_VALUE))).toBe(
       true
     )
+  })
+})
+
+describe("segmented Warp map", () => {
+  const markers = [
+    { id: "a", sourceBar: 1, targetBar: 0.5 },
+    { id: "b", sourceBar: 2, targetBar: 2 },
+  ]
+  it("maps both directions, preserves the origin and resumes unit slope after the last marker", () => {
+    expect(isAudioWarpMarkers(markers)).toBe(true)
+    expect(warpSourceBar(markers, 0.25)).toBe(0.5)
+    expect(warpSourceBar(markers, 1.25)).toBe(1.5)
+    expect(warpSourceBar(markers, 3)).toBe(3)
+    expect(warpSourceBar(markers, -0.25)).toBe(-0.25)
+    for (const value of [-1, 0, 0.1, 0.5, 1.25, 2, 5])
+      expect(warpTargetBar(markers, warpSourceBar(markers, value))).toBeCloseTo(value, 12)
+  })
+  it("rejects crossing, duplicate, nonfinite and out-of-range segments", () => {
+    for (const invalid of [
+      [markers[0], { ...markers[1], id: "a" }],
+      [markers[1], markers[0]],
+      [{ ...markers[0], targetBar: 0 }],
+      [{ ...markers[0], sourceBar: Infinity }],
+      [{ ...markers[0], targetBar: 0.01 }],
+    ])
+      expect(isAudioWarpMarkers(invalid)).toBe(false)
+  })
+  it("persists authored markers with Audio content", () => {
+    const document = createTestDocument()
+    const track = document.tracks.find(item => item.kind === "audio")
+    if (!track) throw new Error("Missing Audio track")
+    track.clips = [
+      {
+        ...clip,
+        id: "warp",
+        sourceId: null,
+        audioSettings: { ...defaultAudioClipSettings(120, clip), warpMarkers: markers },
+      },
+    ]
+    const restored = parseProject(
+      stringifyProject(document, createTestWorkspace())
+    ).document.tracks.find(item => item.id === track.id)?.clips[0]
+    expect(restored?.kind === "audio" && restored.audioSettings?.warpMarkers).toEqual(markers)
   })
 })

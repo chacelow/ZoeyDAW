@@ -418,6 +418,7 @@ void testDeviceChain() {
 #include "source_publication_tests.h"
 #include "launcher_tests.h"
 #include "tempo_map_hosted_tests.h"
+#include "segmented_warp_tests.h"
 }
 int main(int argc,char** argv) {
     try {
@@ -426,6 +427,7 @@ int main(int argc,char** argv) {
             if(argc==3 && juce::String(argv[1])=="--recording-reclaim") { testRecordingReclaimProcess(juce::String::fromUTF8(argv[2]));return 0; }
             if(argc==2 && juce::String(argv[1])=="--launcher") { testSessionLauncher(1,4,4);testSessionLauncher(2,3,8);testSessionInputMonitor();return 0; }
             if(argc==2 && juce::String(argv[1])=="--tempo-map") { testHostedTempoMap();testTempoMapRecording();return 0; }
+            if(argc==2 && juce::String(argv[1])=="--segmented-warp") { testSegmentedWarpSdk();return 0; }
             if(argc==2 && juce::String(argv[1])=="--midi-mute") { testRepeatedMidiMuteTransitions();return 0; }
             if(argc==2 && juce::String(argv[1])=="--recording") { testHostedRecording();return 0; }
             if(argc==2 && juce::String(argv[1])=="--source-publication") { testSourceGraphPublication();return 0; }

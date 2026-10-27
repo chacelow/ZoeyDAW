@@ -42,12 +42,21 @@ juce::File localFile(const juce::String& path) {
 static juce::String nullable(const V& v, const char* key) { return field(v,key).isVoid() ? juce::String() : text(v,key); }
 static bool oneOf(const juce::String& s, std::initializer_list<const char*> values) { for (auto* value : values) if (s == value) return true; return false; }
 static Settings settings(const V& v) {
-    fields(v, {"warp","warpMode","sourceBpm","transpose","detune","reverse","loop","loopStartBars","loopLengthBars","startMarkerBars","endMarkerBars"});
+    fields(v, {"warp","warpMode","sourceBpm","transpose","detune","reverse","loop","loopStartBars","loopLengthBars","startMarkerBars","endMarkerBars"},{"warpMarkers"});
     Settings s;
     s.warp=boolean(v,"warp"); s.mode=text(v,"warpMode"); require(oneOf(s.mode,{"soundtouch","signalsmith","signalsmith-formant","re-pitch"}),"Invalid warp mode");
     s.sourceBpm=number(v,"sourceBpm",.000001,999); s.transpose=number(v,"transpose",-48,48); s.detune=number(v,"detune",-50,50);
     require(std::floor(s.transpose)==s.transpose && std::floor(s.detune)==s.detune,"Pitch values must be integers");
     s.reverse=boolean(v,"reverse"); s.loop=boolean(v,"loop"); s.loopStart=number(v,"loopStartBars",0,1e12); s.loopLength=number(v,"loopLengthBars",1e-12,1e12);
+    if(v.hasProperty("warpMarkers")) {
+        const auto& markers=array(v,"warpMarkers");require(markers.size()<=256,"Too many Warp markers");double source=0,target=0;std::set<juce::String> ids;
+        for(const auto& marker:markers) {
+            fields(marker,{"id","sourceBar","targetBar"});require(ids.insert(text(marker,"id")).second && text(marker,"id").isNotEmpty(),"Invalid Warp marker identity");const auto a=number(marker,"sourceBar",0,1e12),b=number(marker,"targetBar",0,1e12);
+            require(a>source && b>target,"Warp markers must increase in both coordinates");
+            const auto ratio=(a-source)/(b-target);require(ratio>=.1 && ratio<=10,"Warp marker ratio exceeds supported range");
+            s.warpMarkers.push_back({a,b});source=a;target=b;
+        }
+    }
     s.markerStart=number(v,"startMarkerBars",0,1e12); s.markerEnd=number(v,"endMarkerBars",0,1e12); require(s.markerEnd>s.markerStart,"Invalid source markers"); return s;
 }
 static Control control(const V& v) {
@@ -203,9 +212,9 @@ static bool equivalent(const V& a,const V& b,bool ignoreLiveClipFields=false,boo
             if(ignoreLiveClipFields && allowClipPlacement && (property.name.toString()=="startBar" || property.name.toString()=="lengthBars" || property.name.toString()=="sourceOffsetBars"))continue;
             if(ignoreLiveClipFields && allowClipPlacement && property.name.toString()=="audioSettings") {
                 const auto* left=property.value.getDynamicObject();const auto* right=rhs->getProperty(property.name).getDynamicObject();
-                if(!left || !right || left->getProperties().size()!=right->getProperties().size())return false;
+                if(!left || !right)return false;
                 for(const auto& setting:left->getProperties()) {
-                    if(setting.name.toString()=="transpose" || setting.name.toString()=="detune" || setting.name.toString()=="startMarkerBars" || setting.name.toString()=="endMarkerBars" || setting.name.toString()=="loop" || setting.name.toString()=="loopStartBars" || setting.name.toString()=="loopLengthBars" || setting.name.toString()=="warp" || setting.name.toString()=="warpMode" || setting.name.toString()=="sourceBpm" || setting.name.toString()=="reverse")continue;
+                    if(setting.name.toString()=="transpose" || setting.name.toString()=="detune" || setting.name.toString()=="startMarkerBars" || setting.name.toString()=="endMarkerBars" || setting.name.toString()=="loop" || setting.name.toString()=="loopStartBars" || setting.name.toString()=="loopLengthBars" || setting.name.toString()=="warp" || setting.name.toString()=="warpMode" || setting.name.toString()=="sourceBpm" || setting.name.toString()=="reverse" || setting.name.toString()=="warpMarkers")continue;
                     if(!right->hasProperty(setting.name) || !equivalent(setting.value,right->getProperty(setting.name)))return false;
                 }
                 continue;

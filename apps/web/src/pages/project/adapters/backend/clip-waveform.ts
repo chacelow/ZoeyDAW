@@ -79,6 +79,7 @@ export function nativeClipWaveform(
     reverse: settings.reverse,
     gain,
     fades: clipFades(clip, origin, rate),
+    ...(settings.warp && settings.warpMarkers?.length ? { warpMarkers: settings.warpMarkers } : {}),
     ...(settings.loop
       ? {
           loop: {

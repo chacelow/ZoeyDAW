@@ -614,3 +614,32 @@ it("projects non-warped fades and Fit into source bars with a shifted start mark
     "30%"
   )
 })
+
+it("edits stable Warp markers through the Audio editor with undo and redo", () => {
+  const view = render(<AudioFixtureEditor />)
+  fireEvent.click(view.getByRole("button", { name: "detailAudio.addWarpMarker" }))
+  const points = () => {
+    const clip = useProjectState
+      .getState()
+      .document.tracks.flatMap(track => track.clips)
+      .find(item => item.id === "audio-1")
+    return clip?.kind === "audio" ? clip.audioSettings?.warpMarkers : undefined
+  }
+  const added = points()
+  expect(added?.[0]).toMatchObject({ sourceBar: 1, targetBar: 1 })
+  const field = view.getByLabelText("detailAudio.warpTarget 1")
+  fireEvent.click(field)
+  fireEvent.keyDown(document, { key: "0" })
+  const input = view.getByRole("textbox", { name: "detailAudio.warpTarget 1" })
+  fireEvent.change(input, { target: { value: "0.5" } })
+  fireEvent.keyDown(input, { key: "Enter" })
+  expect(points()?.[0]).toEqual({ ...added?.[0], targetBar: 0.5 })
+  act(() => projectActions.undo())
+  expect(points()).toEqual(added)
+  act(() => projectActions.redo())
+  expect(points()?.[0].targetBar).toBe(0.5)
+  fireEvent.click(view.getByRole("button", { name: "detailAudio.removeWarpMarker 1" }))
+  expect(points()).toEqual([])
+  act(() => projectActions.undo())
+  expect(points()?.[0].targetBar).toBe(0.5)
+})

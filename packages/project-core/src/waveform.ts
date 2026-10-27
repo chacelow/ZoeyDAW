@@ -1,5 +1,6 @@
 import { fadeGainAt } from "./fades"
 import { sourceWaveformIntervals } from "./waveform-source"
+import type { AudioWarpMarker } from "./audio-editor/warp-map"
 
 export interface PeakEnvelopeFade {
   readonly start: number
@@ -19,6 +20,7 @@ export interface PeakEnvelope {
   readonly loop?: { readonly start: number; readonly end: number }
   /** Clip fades in source-bar coordinates, applied so the drawing matches rendered gain. */
   readonly fades?: readonly PeakEnvelopeFade[]
+  readonly warpMarkers?: readonly AudioWarpMarker[]
 }
 
 /**

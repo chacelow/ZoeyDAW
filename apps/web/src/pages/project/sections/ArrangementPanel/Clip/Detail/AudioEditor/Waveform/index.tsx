@@ -1,5 +1,5 @@
 import { useTranslation } from "@zoeymind/i18n"
-import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
+import { getAudioClipSettings, warpSourceBar } from "@zoeydaw/project-core/audio-editor"
 import { timeTickLabel } from "@zoeydaw/project-core/timeline-ticks"
 import type { AudioClipContent, DocumentState } from "@zoeydaw/project-core/types"
 import { findMediaSource } from "@zoeydaw/project-core/media"
@@ -62,7 +62,12 @@ export function AudioWaveform({
         </span>
         <span>
           {t("detailAudio.selection")}:{" "}
-          {selection === null ? "—" : timeTickLabel(selection * waveform.secondsPerBar)}
+          {selection === null
+            ? "—"
+            : timeTickLabel(
+                (settings.warp ? warpSourceBar(settings.warpMarkers ?? [], selection) : selection) *
+                  waveform.secondsPerBar
+              )}
         </span>
         {!waveform.realSource && <span>{t("detailAudio.prototype")}</span>}
       </div>

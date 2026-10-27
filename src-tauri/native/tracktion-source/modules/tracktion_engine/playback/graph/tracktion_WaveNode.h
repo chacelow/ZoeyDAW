@@ -228,7 +228,7 @@ private:
     const AudioFile audioFile;
     const SpeedFadeDescription speedFadeDescription;
     const std::optional<tempo::Sequence::Position> editTempoSequence;
-    std::optional<WarpMap> warpMap;
+    std::shared_ptr<const WarpMap> warpMap;
     TimeStretcher::Mode timeStretcherMode;
     TimeStretcher::ElastiqueProOptions elastiqueProOptions;
     LiveClipLevel clipLevel;
