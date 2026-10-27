@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { createTestDocument } from "./test-fixtures"
 import { projectClipMove, projectClipResize } from "./clip-edits"
+import { clipWindow } from "./clip-window"
 import type { ClipMoveIdentity } from "./clip-edits"
 import type { Clip, Track } from "./types"
 
@@ -240,5 +241,14 @@ describe("pure clip edit projections", () => {
     expect(projectClipResize({ ...trimmed, startBar: 2 }, "left", 1.8).sourceOffsetBars).toBe(0)
     expect(projectClipResize(original, "left", -100)).toBe(original)
     expect(projectClipResize(original, "right", NaN)).toBe(original)
+  })
+
+  it("keeps split audio warp-capable by clearing unknown tempo marker", () => {
+    const original = audioClip(createTestDocument().tracks)
+    if (original.kind !== "audio") throw new Error("Fixture clip must be audio")
+    const unknownClip = { ...original, sourceTempo: "unknown" as const }
+    const left = clipWindow(unknownClip, original.startBar, original.startBar + 2, 120)
+    expect(left?.sourceTempo).toBeUndefined()
+    expect(left?.kind === "audio" && left.audioSettings?.warp).toBe(true)
   })
 })

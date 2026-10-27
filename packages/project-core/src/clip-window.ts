@@ -27,6 +27,7 @@ export function clipWindow(clip: Clip, startBar: number, endBar: number, bpm = 1
   return {
     ...clip,
     waveformPeaks: undefined,
+    sourceTempo: undefined,
     audioSettings: getAudioClipSettings(clip, bpm),
     startBar: start,
     lengthBars: length,

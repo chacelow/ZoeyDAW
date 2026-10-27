@@ -18,6 +18,7 @@ import { withWaveformPreview } from "@zoeydaw/project-runtime/visuals"
 import { clipLabel } from "@zoeydaw/project-core/clip-label"
 import { parseProject, stringifyProject } from "@zoeydaw/project-core/persistence"
 import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
+import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import type { MediaSource } from "@zoeydaw/project-core/media"
 import type { ClipClipboard } from "@zoeydaw/project-core/clip-clipboard"
 import { configureProjectBackend } from "../adapters/context"
@@ -186,6 +187,30 @@ describe("clip source boundaries", () => {
       new Set(["mock://kick.wav"])
     )
     expect(document.media).toEqual(media)
+  })
+
+  it("keeps split audio warp-capable even when original import had unknown tempo", () => {
+    const original = findClip("audio-1")
+    if (original.kind !== "audio") throw new Error("Expected audio fixture")
+    projectActions.updateClip("audio-1", {
+      sourceTempo: "unknown",
+      audioSettings: { ...getAudioClipSettings(original, 120), warp: false, sourceBpm: 120 },
+    })
+    projectActions.splitClips(["audio-1"], 5)
+    const pieces = useProjectState
+      .getState()
+      .document.tracks.find(track => track.id === "3-audio")!.clips
+    expect(pieces.length).toBeGreaterThanOrEqual(2)
+    for (const piece of pieces) {
+      if (piece.kind !== "audio") continue
+      expect(piece.sourceTempo).toBeUndefined()
+      // Functional Warp action can be enabled on the split piece
+      projectActions.updateClip(piece.id, {
+        audioSettings: { ...getAudioClipSettings(piece, 120), warp: true },
+      })
+      const updated = findClip(piece.id)
+      expect(updated.kind === "audio" && updated.audioSettings?.warp).toBe(true)
+    }
   })
 
   it("rejects clipboard sources absent from the destination without partial edits", () => {
