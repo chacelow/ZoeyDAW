@@ -72,6 +72,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 显式设备格式变更由同一 `PluginDevices` 的 `configuration.rs` 协调。它复用 `PreparedDevice` 的完整状态与参数接口，在非实时 worker 准备候选；`EngineSession::configurePrepared` 在配置期间保留旧 wrapper，并在驱动或持久化失败时恢复。Native plan 绑定当前文档 sequence、revision、配置和 callback context。apply、配置与显式恢复共用一个 async 更新许可，控制 registry 在 native 成功后更新。编辑器占用时拒绝不兼容格式，旧数据和配置保留。它不提供任意工程事务的失败原子保证。
 
+驱动面板和系统主动格式变化复用同一配置 owner。`device_recovery_plan` 从当前设备构建 observed 配置；计划携带设备启动/停止代际，拒绝变化后又恢复的旧候选。状态查询中的 `PluginDevices::reconcile_configuration` 不与其他音频更新抢占，也不为同一个失败计划反复创建 helper。采用只刷新运行配置、路由和图，不重新打开驱动或覆盖偏好。格式不匹配的隔离节点在替换前输出静音与 all-notes-off，失败信息由既有 device/issues 状态呈现。关闭 lease/window 清理失败记录。
+
 `crates/engine/native` 将协议模型、无设备分析与 EngineSession 分为 `model`、`analysis`、`runtime` 三个 OBJECT targets。分析不依赖 runtime，runtime 不依赖分析；根 `playback_bridge` 保留 C ABI。Tracktion/JUCE 实现只进入最终 `zoeydaw_playback` 静态库，OBJECT targets 仅继承编译配置，不链接带实现源的 vendor INTERFACE targets。
 
 `runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。

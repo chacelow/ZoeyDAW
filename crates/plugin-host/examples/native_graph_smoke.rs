@@ -161,10 +161,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Retained Edit {extension} automation, envelope edits, BPM, removal and manual restore passed");
         automated.set_parameter(0, 0, 0.37)?;
         let state = automated.save_state(0, StatePurpose::Project)?;
-        let mut configured = Vec::with_capacity(6);
-        let mut processors = Vec::with_capacity(6);
-        let mut latencies = Vec::with_capacity(6);
-        for (rate, quantum) in [(48_000.0, 512usize), (96_000.0, 256), (96_000.0, 256), (96_000.0, 128), (48_000.0, 512), (48_000.0, 512)] {
+        let mut configured = Vec::with_capacity(8);
+        let mut processors = Vec::with_capacity(8);
+        let mut latencies = Vec::with_capacity(8);
+        for (rate, quantum) in [(48_000.0, 512usize), (96_000.0, 256), (96_000.0, 256), (96_000.0, 128), (48_000.0, 512), (48_000.0, 512), (48_000.0, 512), (48_000.0, 512)] {
             let mut candidate = Chain::spawn(
                 &PathBuf::from(&args[0]),
                 &[PluginRef { format, bundle: Some(PathBuf::from(&args[1]).join(format!("plughost-test-delay.{extension}"))), class_id: class_id.into() }],
@@ -188,12 +188,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if status != 0 { return Err(format!("{extension} prepared audio configuration failed: {status}").into()); }
         }
         for candidate in &mut configured { candidate.stop_realtime()?; }
-        for index in [0,2,3] {
+        for index in [0,2,3,7] {
             if !configured[index].parameters(0)?.iter().any(|(info,value)|info.id==9 && (*value-0.75).abs()<1e-6) {
                 return Err(format!("{extension} format replacement lost authored automation").into());
             }
         }
-        println!("{extension}: hosted 48/96kHz and 512/256/128-frame configuration retained full-state PCM, refreshed latency, rejected stale/editor plans and rolled back driver/persistence failures");
+        println!("{extension}: explicit and driver-originated 48/96kHz and 512/256/128-frame changes retained full-state PCM, refreshed latency, rejected stale device/document/editor plans and rolled back failures without reopening an externally changed device");
     }
     chain.stop_realtime()?;
     dry_chain.stop_realtime()?;

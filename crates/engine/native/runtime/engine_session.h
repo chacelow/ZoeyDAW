@@ -26,6 +26,7 @@ public:
     InputMeter inputMeter;
     std::atomic<uint64_t> frames {0}, callbacks {0}, lateCallbacks {0};
     std::atomic<double> rate {0}, maxIntervalSeconds {0};
+    std::atomic<uint64_t> generation {0};
     std::atomic<bool> active {false}, failed {false};
     void audioDeviceIOCallbackWithContext(const float* const*, int, float* const*, int, int, const juce::AudioIODeviceCallbackContext&) override;
     void audioDeviceAboutToStart(juce::AudioIODevice*) override;
@@ -172,13 +173,15 @@ private:
     V configure(const V&);
     V capabilities(const V&);
     V configurationPlan(const AudioConfiguration&);
+    V deviceRecoveryPlan(const V&);
+    std::optional<AudioConfiguration> observedConfiguration();
     V validateConfiguration(const AudioConfiguration&);
     struct PluginConfiguration;
     V controlPanel();
     void refreshDevices();
     void loadConfiguration();
     AudioConfiguration defaultConfiguration();
-    void applyConfiguration(const AudioConfiguration&, bool persist, bool requestPermission,PluginConfiguration* = nullptr);
+    void applyConfiguration(const AudioConfiguration&, bool persist, bool requestPermission,PluginConfiguration* = nullptr,bool observed = false);
     void activateConfiguration(const AudioConfiguration&);
     void setWaveDeviceLayout(const std::optional<AudioConfiguration>&);
     void applyChannelLayout(const AudioConfiguration&);

@@ -23,6 +23,7 @@ struct Registry {
     controls: HashMap<Key, ActiveDevice>,
     owners: HashMap<String, String>,
     closed: std::collections::HashSet<String>,
+    configuration_failures: HashMap<String, (Value, String)>,
 }
 #[derive(Clone, Default)]
 pub struct PluginDevices(Arc<Mutex<Registry>>,Arc<tauri::async_runtime::Mutex<()>>);
@@ -72,6 +73,7 @@ impl PluginDevices {
             registry.closed.insert(lease.to_owned());
             registry.controls.retain(|(owner,_,_),_|owner!=lease);
             registry.owners.remove(lease);
+            registry.configuration_failures.remove(lease);
         }
     }
     pub fn close_window(&self, window: &str) -> Vec<String> {
@@ -80,6 +82,7 @@ impl PluginDevices {
         for lease in &leases {
             registry.closed.insert(lease.clone());registry.owners.remove(lease);
             registry.controls.retain(|(owner,_,_),_|owner!=lease);
+            registry.configuration_failures.remove(lease);
         }
         leases
     }

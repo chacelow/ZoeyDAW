@@ -15,10 +15,10 @@ V configuration(double rate,int quantum) {
     zp::put(value,"outputDeviceId",zp::audioDeviceId(zp::probe::configurationHost,zp::probe::configurationDevice));
     zp::put(value,"sampleRate",rate);zp::put(value,"bufferFrames",quantum);return value;
 }
-void render(zp::EngineSession& session,double rate,uint32_t quantum,uint32_t latency) {
+void render(zp::EngineSession& session,double rate,uint32_t quantum,uint32_t latency,float expected=.185f) {
     auto plugin=zp::MixerTestAccess::device(session,"format-delay");
     auto* isolated=dynamic_cast<zp::IsolatedDevicePlugin*>(plugin.get());zp::require(isolated,"Prepared wrapper disappeared");
-    zp::require(std::abs(isolated->getLatencySeconds()-double(latency)/rate)<1e-12,"Wrapper retained old latency seconds");
+    if(expected!=0)zp::require(std::abs(isolated->getLatencySeconds()-double(latency)/rate)<1e-12,"Wrapper retained old latency seconds");
     auto& edit=zp::MixerTestAccess::edit(session);
     graph::PlayHead playhead;graph::PlayHeadState head(playhead);tracktion::ProcessState state(head,edit.tempoSequence);
     tracktion::CreateNodeParams params{state};params.sampleRate=rate;params.blockSize=int(quantum);
@@ -32,7 +32,7 @@ void render(zp::EngineSession& session,double rate,uint32_t quantum,uint32_t lat
         playhead.setReferenceSampleRange({start,start+quantum});state.update(rate,{start,start+quantum},tracktion::ProcessState::UpdateContinuityFlags::yes);
         output.clear();midi.clear();graph::Node::ProcessContext context{quantum,{start,start+quantum},{graph::toBufferView(output),midi}};player.process(context);
         if(block>=warmup)for(int channel=0;channel<2;++channel)for(uint32_t sample=0;sample<quantum;++sample)
-            zp::require(std::abs(output.getSample(channel,int(sample))-.185f)<1e-5,"Format transition lost full plugin state or PCM");
+            zp::require(std::abs(output.getSample(channel,int(sample))-expected)<1e-5,"Format transition lost full plugin state or PCM");
     }
 }
 V request() {
@@ -45,7 +45,7 @@ extern "C" ZD_PROBE_EXPORT int32_t zd_verify_isolated_configuration(zd_plugin_ow
         ~Cleanup() { if(processors)for(uint32_t index=0;index<count;++index)if(processors[index].context && processors[index].release)processors[index].release(processors[index].context); }
     } cleanup {processors,count};
     try {
-        zp::require(processors && latencies && count==6,"Missing format-transition processors");
+        zp::require(processors && latencies && count==8,"Missing format-transition processors");
         juce::ScopedJuceInitialiser_GUI gui;zp::ScopedAudioPreferences preferences;zp::EngineSession session;
         auto driver=std::make_shared<zp::probe::ConfigurationDriverState>();
         zp::MixerTestAccess::addDeviceType(session,std::make_unique<zp::probe::ConfigurationDeviceType>(driver));
@@ -94,6 +94,32 @@ extern "C" ZD_PROBE_EXPORT int32_t zd_verify_isolated_configuration(zd_plugin_ow
         zp::ScopedAudioPreferences::set("ZOEYDAW_AUDIO_CONFIG_PATH",preferences.file().getFullPathName());
         const auto actual=session.call("devices",zp::object());
         zp::require(rejected && zp::MixerTestAccess::device(session,"format-delay")==retained && double(actual["sampleRate"])==96000 && int(actual["bufferFrames"])==128,"Persistence failure did not restore processor and driver together");
-        render(session,96000,128,latencies[3]);return 0;
+        render(session,96000,128,latencies[3]);
+        render(session,48000,128,latencies[3],0);
+        retained->setEnabled(false);render(session,96000,512,latencies[3],0);retained->setEnabled(true);
+        render(session,96000,128,latencies[3]);
+        auto* hardware=dynamic_cast<zp::probe::ConfigurationDevice*>(zp::MixerTestAccess::audioDevice(session));
+        zp::require(hardware,"Missing hosted configuration driver");
+        const auto opens=driver->opens;
+        const auto recovery=[&] {
+            auto query=zp::object();zp::put(query,"leaseId","isolated-format");
+            return session.call("device_recovery_plan",query);
+        };
+        zp::require(recovery().isVoid(),"Stable format requested recovery");
+        hardware->changeFormat(48000,512);zp::MixerTestAccess::dispatchDevices(session);
+        auto changed=recovery();zp::require(changed.isObject() && bool(changed["plan"]["observed"]),"External format change did not produce recovery plan");
+        zp::put(changed,"leaseId","isolated-format");zp::put(changed,"sessionId","isolated-format");
+        hardware->changeFormat(96000,256);hardware->changeFormat(48000,512);zp::MixerTestAccess::dispatchDevices(session);
+        rejected=false;try { submit(6,changed); }catch(const std::exception& error) { rejected=juce::String(error.what()).contains("Audio device changed during preparation"); }
+        zp::require(rejected && zp::MixerTestAccess::device(session,"format-delay")==retained,"Device ABA change adopted a stale processor");
+        render(session,48000,512,latencies[3],0);
+        auto current=recovery();zp::put(current,"leaseId","isolated-format");zp::put(current,"sessionId","isolated-format");
+        submit(7,current);
+        zp::require(driver->opens==opens,"Observed recovery reopened or reverted the externally changed driver");
+        zp::require(&zp::MixerTestAccess::edit(session)==edit && zp::MixerTestAccess::device(session,"format-delay")!=retained,"Observed recovery lost Edit or retained incompatible processor");
+        const auto adopted=session.call("devices",zp::object());
+        zp::require(double(adopted["configuration"]["sampleRate"])==48000 && int(adopted["configuration"]["bufferFrames"])==512,"Observed recovery retained old configuration metadata");
+        render(session,48000,512,latencies[7]);zp::require(recovery().isVoid(),"Recovered format kept requesting replacements");
+        return 0;
     }catch(const std::exception& error) { std::fprintf(stderr,"Isolated configuration: %s\n",error.what());return -40; }
 }

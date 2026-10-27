@@ -85,9 +85,19 @@ pub async fn playback_all_notes_off(app: AppHandle, service: State<'_, PlaybackS
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub async fn playback_telemetry(app: AppHandle, window: tauri::WebviewWindow, service: State<'_, PlaybackService>, plugins: State<'_,plugin_devices::PluginDevices>, lease_id: String) -> Result<Value, String> {
+pub async fn playback_telemetry(app: AppHandle, window: tauri::WebviewWindow, service: State<'_, PlaybackService>, plugins: State<'_,plugin_devices::PluginDevices>, catalog: State<'_,crate::plugin_catalog::PluginCatalogState>, lease_id: String) -> Result<Value, String> {
     plugins.require_owner(window.label(),&lease_id)?;
     let mut snapshot=service.telemetry(&TauriMainThread(&app),lease_id.clone()).await?;
+    match plugins.reconcile_configuration(app.clone(),window.label().to_owned(),&lease_id,service.inner().clone(),catalog.inner().clone()).await {
+        Ok(Some(device)) => snapshot["device"]=device,
+        Ok(None) => (),
+        Err(error) => {
+            snapshot["device"]["state"]=serde_json::json!("error");snapshot["device"]["error"]=serde_json::json!(error);
+            if let Some(issues)=snapshot.get_mut("issues").and_then(Value::as_array_mut) {
+                issues.push(serde_json::json!({"code":"device-format-recovery","message":error}));
+            }
+        }
+    }
     let observer=plugins.inner().clone();let owner=window.label().to_owned();let worker_lease=lease_id.clone();
     let faults=tauri::async_runtime::spawn_blocking(move || observer.faults(&owner,&worker_lease)).await.map_err(|error|error.to_string())??;
     service.publish_plugin_faults(window.label(),&lease_id,faults.iter().map(|fault|fault.report()).collect())?;

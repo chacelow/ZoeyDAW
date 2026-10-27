@@ -88,9 +88,7 @@ void IsolatedDevicePlugin::applyToBuffer(const tracktion::PluginRenderContext&) 
 }
 std::unique_ptr<tracktion::graph::Node> IsolatedDevicePlugin::createNode(
     std::unique_ptr<tracktion::graph::Node> source,const tracktion::CreateNodeParams& build) {
-    if(!source || build.sampleRate!=binding->format.sampleRate || build.blockSize<=0
-        || uint32_t(build.blockSize)>binding->format.quantum)
-        throw std::invalid_argument("Isolated device graph format differs from prepared processor");
+    if(!source || build.blockSize<=0)throw std::invalid_argument("Invalid isolated plugin graph input");
     const auto channels=source->getNodeProperties().numberOfChannels;
     const auto expected=int(binding->format.inputChannels);
     if(expected>0 && channels!=expected) {

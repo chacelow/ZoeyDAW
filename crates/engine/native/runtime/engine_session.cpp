@@ -156,14 +156,15 @@ void applyMixerAutomation(te::AudioTrack& track,const Track& source,const Reques
 }
 }
 void DeviceClock::audioDeviceAboutToStart(juce::AudioIODevice* device) {
+    generation.fetch_add(1,std::memory_order_release);
     rate.store(device->getCurrentSampleRate());lastTick=0;
     bool prepared=false;
     try { prepared=inputMeter.prepare(static_cast<std::uint32_t>(device->getActiveInputChannels().countNumberOfSetBits())); }
     catch(...) { inputMeter.stop(); }
     failed.store(!prepared);active.store(prepared);
 }
-void DeviceClock::audioDeviceStopped() { inputMeter.stop();active.store(false); }
-void DeviceClock::audioDeviceError(const juce::String&) { inputMeter.stop();failed.store(true);active.store(false); }
+void DeviceClock::audioDeviceStopped() { inputMeter.stop();active.store(false);generation.fetch_add(1,std::memory_order_release); }
+void DeviceClock::audioDeviceError(const juce::String&) { inputMeter.stop();failed.store(true);active.store(false);generation.fetch_add(1,std::memory_order_release); }
 void DeviceClock::audioDeviceIOCallbackWithContext(const float* const* inputs,int inputChannels,float* const* outputs,int channels,int count,const juce::AudioIODeviceCallbackContext&) {
     inputMeter.process(inputs,inputChannels,count,frames.load(std::memory_order_relaxed));
     for(int ch=0;ch<channels;++ch)if(outputs[ch])std::fill_n(outputs[ch],count,0.0f);
@@ -578,6 +579,7 @@ V EngineSession::call(const juce::String& operation,const V& v) {
     require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Playback mutation outside main thread");
     if(operation=="apply")return apply(v);
     if(operation=="configuration_plan")return configurationPlan(AudioConfiguration::decode(v));
+    if(operation=="device_recovery_plan")return deviceRecoveryPlan(v);
     if(operation=="plugin_editor_authority") {
         fields(v,{"sessionId","deviceId","context","instanceId","active"});
         require(accepted && arrangement && accepted->session==text(v,"sessionId"),"Stale plugin editor session");

@@ -5,7 +5,7 @@
 namespace zp::probe {
 inline constexpr auto configurationHost="Zoeydaw Hosted Configuration";
 inline constexpr auto configurationDevice="Hosted Stereo";
-struct ConfigurationDriverState { bool reject96k=false; };
+struct ConfigurationDriverState { bool reject96k=false;uint32_t opens=0; };
 class ConfigurationDevice final : public juce::AudioIODevice {
 public:
     explicit ConfigurationDevice(std::shared_ptr<ConfigurationDriverState> state)
@@ -18,6 +18,7 @@ public:
     int getDefaultBufferSize() override { return 512; }
     juce::String open(const juce::BigInteger& inputs,const juce::BigInteger& outputs,double rate,int frames) override {
         close();
+        ++state->opens;
         if(state->reject96k && rate==96000)return "Injected hosted driver format failure";
         if(!inputs.isZero() || !getAvailableSampleRates().contains(rate) || !getAvailableBufferSizes().contains(frames))return "Unsupported hosted format";
         input=inputs;output=outputs;sampleRate=rate;bufferFrames=frames;opened=true;return {};
@@ -39,6 +40,9 @@ public:
     juce::BigInteger getActiveInputChannels() const override { return input; }
     int getOutputLatencyInSamples() override { return 0; }
     int getInputLatencyInSamples() override { return 0; }
+    void changeFormat(double rate,int frames) {
+        auto* previous=callback;stop();sampleRate=rate;bufferFrames=frames;start(previous);
+    }
 private:
     const std::shared_ptr<ConfigurationDriverState> state;
     juce::AudioIODeviceCallback* callback=nullptr;

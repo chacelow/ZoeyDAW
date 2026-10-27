@@ -17,6 +17,8 @@ struct MixerTestAccess {
         auto& manager=session.engine.getDeviceManager().deviceManager;
         manager.getAvailableDeviceTypes();manager.addAudioDeviceType(std::move(type));
     }
+    static juce::AudioIODevice* audioDevice(EngineSession& session) { return session.engine.getDeviceManager().deviceManager.getCurrentAudioDevice(); }
+    static void dispatchDevices(EngineSession& session) { session.engine.getDeviceManager().dispatchPendingUpdates(); }
 };
 namespace probe {
 class ConstantSignal final : public tracktion::graph::Node {

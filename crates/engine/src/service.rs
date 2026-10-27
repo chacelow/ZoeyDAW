@@ -357,6 +357,10 @@ pub async fn configuration_plan<D: MainThreadDispatcher>(&self, main: &D, reques
     self.invoke(main,"configuration_plan",request).await
 }
 
+pub async fn device_recovery_plan<D: MainThreadDispatcher>(&self, main: &D, lease: String) -> Result<Value,String> {
+    self.invoke(main,"device_recovery_plan",json!({"leaseId":lease})).await
+}
+
 pub async fn configure_device_prepared<D: MainThreadDispatcher>(&self, main: &D, payload: Value, prepared: Vec<zoeydaw_plugin_abi::PreparedPlugin>) -> Result<Value,String> {
     if prepared.len()>256 { return Err("Prepared plugin capacity exceeded".into()); }
     let lease=payload.get("leaseId").and_then(Value::as_str).ok_or("Missing configuration lease")?;

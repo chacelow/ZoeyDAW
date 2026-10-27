@@ -21,6 +21,8 @@ struct PluginConfigurationPlan {
     revision: u64,
     sequence: u64,
     previous_configuration: Value,
+    device_generation: String,
+    observed: bool,
     sample_rate: f64,
     quantum: u32,
     devices: Vec<DevicePlan>,
@@ -47,7 +49,73 @@ struct Candidate {
     prepared: PreparedPlugin,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ObservedConfigurationPlan {
+    request: Value,
+    plan: ConfigurationPlan,
+}
+
 impl PluginDevices {
+    pub(crate) async fn reconcile_configuration(
+        &self,
+        app: AppHandle,
+        window: String,
+        lease: &str,
+        service: PlaybackService,
+        catalog: PluginCatalogState,
+    ) -> Result<Option<Value>, String> {
+        let Ok(_update) = self.1.try_lock() else {
+            return Ok(None);
+        };
+        self.require_owner(&window, lease)?;
+        {
+            let registry = self.0.lock().map_err(|_| "Plugin device owner unavailable")?;
+            if !registry.controls.keys().any(|(owner, _, _)| owner == lease) {
+                return Ok(None);
+            }
+        }
+        let observed = service
+            .device_recovery_plan(&TauriMainThread(&app), lease.to_owned())
+            .await?;
+        if observed.is_null() {
+            self.0.lock().map_err(|_| "Plugin device owner unavailable")?
+                .configuration_failures.remove(lease);
+            return Ok(None);
+        }
+        {
+            let registry = self.0.lock().map_err(|_| "Plugin device owner unavailable")?;
+            if let Some((previous, message)) = registry.configuration_failures.get(lease) {
+                if previous == &observed {
+                    return Err(message.clone());
+                }
+            }
+        }
+        let request: ObservedConfigurationPlan = serde_json::from_value(observed.clone())
+            .map_err(|error| error.to_string())?;
+        let ConfigurationPlan::Plugins(plan) = request.plan else {
+            return Err("Invalid observed configuration plan".into());
+        };
+        if !plan.observed {
+            return Err("Expected externally changed audio configuration".into());
+        }
+        let result = self
+            .configure_plugins(app, window.clone(), service, catalog, request.request, plan)
+            .await;
+        self.require_owner(&window, lease)?;
+        let mut registry = self.0.lock().map_err(|_| "Plugin device owner unavailable")?;
+        match result {
+            Ok(device) => {
+                registry.configuration_failures.remove(lease);
+                Ok(Some(device))
+            }
+            Err(error) => {
+                registry.configuration_failures.insert(lease.to_owned(), (observed, error.clone()));
+                Err(error)
+            }
+        }
+    }
+
     pub async fn configure(
         &self,
         app: AppHandle,
@@ -63,11 +131,28 @@ impl PluginDevices {
                 .await?,
         )
         .map_err(|error| error.to_string())?;
-        let ConfigurationPlan::Plugins(plan) = plan else {
-            return service
-                .configure_device(&TauriMainThread(&app), request)
-                .await;
+        let result = match plan {
+            ConfigurationPlan::Direct => service.configure_device(&TauriMainThread(&app), request).await,
+            ConfigurationPlan::Plugins(plan) => {
+                self.configure_plugins(app, window, service, catalog, request, plan).await
+            }
         };
+        if result.is_ok() {
+            self.0.lock().map_err(|_| "Plugin device owner unavailable")?
+                .configuration_failures.clear();
+        }
+        result
+    }
+
+    async fn configure_plugins(
+        &self,
+        app: AppHandle,
+        window: String,
+        service: PlaybackService,
+        catalog: PluginCatalogState,
+        request: Value,
+        plan: PluginConfigurationPlan,
+    ) -> Result<Value, String> {
         if plan.devices.is_empty() || plan.devices.len() > 256 {
             return Err("Invalid plugin configuration capacity".into());
         }

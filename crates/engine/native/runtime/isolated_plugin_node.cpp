@@ -39,8 +39,8 @@ public:
     const std::string deviceId;
 private:
     void prepareToPlay(const tracktion::graph::PlaybackInitialisationInfo& info) override {
-        if(info.sampleRate!=format.sampleRate || info.blockSize>int(format.quantum))
-            throw std::invalid_argument("Isolated plugin graph requires format reprepare");
+        formatCompatible=info.sampleRate==format.sampleRate && info.blockSize<=int(format.quantum);
+        if(!formatCompatible)return;
         midiOutput.reserve(8192);midiSeed.reserve(8192);dryMidi.reserve(8192);
         if(format.inputChannels>0) {
             dry.setLatencyNumSamples(int(format.latencyFrames));
@@ -54,6 +54,9 @@ private:
     void process(ProcessContext& context) override {
         auto source=input->getProcessedOutput();
         context.buffers.midi.clear();
+        if(!formatCompatible) {
+            context.buffers.audio.clear();context.buffers.midi.isAllNotesOff=true;return;
+        }
         if(reserveOutput) { midiSeed.swapWith(context.buffers.midi);reserveOutput=false; }
         midiOutput.clear();
         const auto frames=context.numSamples;
@@ -198,7 +201,7 @@ private:
     juce::AudioBuffer<float> dryAudio;
     tracktion::engine::MidiMessageArray dryMidi;
     bool wasEnabled=true;
-    bool reserveOutput=false,failed=false;
+    bool reserveOutput=false,failed=false,formatCompatible=false;
 };
 }
 std::unique_ptr<tracktion::graph::Node> createIsolatedPluginNode(

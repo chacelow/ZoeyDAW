@@ -133,7 +133,7 @@ V EngineSession::validateConfiguration(const AudioConfiguration& candidate) {
     validateChannels(candidate.inputMono,candidate.inputStereo,caps["inputChannelNames"].getArray()->size());validateChannels(candidate.outputMono,candidate.outputStereo,caps["outputChannelNames"].getArray()->size());
     return caps;
 }
-void EngineSession::applyConfiguration(const AudioConfiguration& candidate,bool persist,bool requestPermission,PluginConfiguration* plugins) {
+void EngineSession::applyConfiguration(const AudioConfiguration& candidate,bool persist,bool requestPermission,PluginConfiguration* plugins,bool observed) {
     const auto caps=validateConfiguration(candidate);
     if(candidate.inputDeviceId.isNotEmpty())requireAudioInputPermission(requestPermission);
     if(recording)finishRecording();
@@ -150,7 +150,9 @@ void EngineSession::applyConfiguration(const AudioConfiguration& candidate,bool 
     };
     try {
         if(plugins)plugins->install(*this);
-        activateConfiguration(candidate);configuration=candidate;configurationCapabilities=caps;restoreTransports();
+        if(observed) { verifyActual(manager,candidate);applyChannelLayout(candidate); }
+        else activateConfiguration(candidate);
+        configuration=candidate;configurationCapabilities=caps;restoreTransports();
         if(persist) { const auto target=audioConfigurationFile();require(target.getParentDirectory().createDirectory().wasOk(),"Cannot create audio preferences directory");juce::TemporaryFile temporary(target);require(temporary.getFile().replaceWithText(juce::JSON::toString(candidate.value())),"Cannot write audio preferences");require(temporary.overwriteTargetFileWithTemporary(),"Cannot atomically save audio preferences"); }
         preferencesLoaded=true;deviceError.clear();
     }catch(const std::exception& failure) {
@@ -160,11 +162,13 @@ void EngineSession::applyConfiguration(const AudioConfiguration& candidate,bool 
         if(plugins && arrangement)arrangement->edit->getTransport().freePlaybackContext();
         try {
             if(plugins)plugins->restore(*this);
-            if(wasOpen && previous) { activateConfiguration(*previous);restoreTransports(); }
+            if(observed)restoreTransports();
+            else if(wasOpen && previous) { activateConfiguration(*previous);restoreTransports(); }
             else { manager.closeAudioDevice();clock.rate.store(0);if(!wasOpen)releaseDeviceIfIdle(); }
         }catch(const std::exception& rollback) {
             manager.closeAudioDevice();clock.rate.store(0);deviceError="Audio configuration failed: "+message+"; rollback also failed: "+juce::String(rollback.what());throw std::runtime_error(deviceError.toStdString());
         }
+        if(observed) { deviceError="Plugin recovery after external audio change failed: "+message;throw std::runtime_error(deviceError.toStdString()); }
         deviceError.clear();throw std::runtime_error(("Audio configuration rejected; previous configuration restored: "+message).toStdString());
     }
 }
@@ -200,18 +204,55 @@ V EngineSession::configurationPlan(const AudioConfiguration& candidate) {
     if(devices.isEmpty())return out;
     validateConfiguration(candidate);
     put(out,"kind","plugins");put(out,"sessionId",accepted->session);put(out,"revision",juce::int64(accepted->revision));put(out,"sequence",juce::int64(accepted->sequence));
+    put(out,"deviceGeneration",decimalU64(clock.generation.load(std::memory_order_acquire)));put(out,"observed",false);
     put(out,"previousConfiguration",configuration?configuration->value():V());put(out,"sampleRate",candidate.sampleRate);put(out,"quantum",candidate.bufferFrames);put(out,"devices",devices);return out;
+}
+std::optional<AudioConfiguration> EngineSession::observedConfiguration() {
+    auto& manager=engine.getDeviceManager().deviceManager;auto* device=manager.getCurrentAudioDevice();
+    if(!device || !device->isOpen() || !clock.active.load(std::memory_order_acquire))return {};
+    AudioConfiguration actual;const auto setup=manager.getAudioDeviceSetup();actual.host=device->getTypeName();
+    if(setup.inputDeviceName.isNotEmpty())actual.inputDeviceId=audioDeviceId(actual.host,setup.inputDeviceName);
+    if(setup.outputDeviceName.isNotEmpty())actual.outputDeviceId=audioDeviceId(actual.host,setup.outputDeviceName);
+    actual.sampleRate=device->getCurrentSampleRate();actual.bufferFrames=device->getCurrentBufferSizeSamples();
+    for(bool input:{false,true}) {
+        const auto mask=input?device->getActiveInputChannels():device->getActiveOutputChannels();
+        auto& mono=input?actual.inputMono:actual.outputMono;auto& stereo=input?actual.inputStereo:actual.outputStereo;
+        for(int channel=0;channel<=mask.getHighestBit();++channel)if(mask[channel]) {
+            const auto* saved=configuration?&(input?configuration->inputStereo:configuration->outputStereo):nullptr;
+            if(channel%2==0 && mask[channel+1] && saved && std::find(saved->begin(),saved->end(),channel)!=saved->end()) { stereo.push_back(channel);++channel; }
+            else mono.push_back(channel);
+        }
+    }
+    return actual;
+}
+V EngineSession::deviceRecoveryPlan(const V& value) {
+    fields(value,{"leaseId"});const auto lease=text(value,"leaseId");
+    require(leases.count(lease),"Stale device recovery lease");
+    if(!accepted || !arrangement)return {};
+    auto* hardware=engine.getDeviceManager().deviceManager.getCurrentAudioDevice();
+    if(!hardware || !hardware->isOpen() || !clock.active.load(std::memory_order_acquire))return {};
+    const double rate=hardware->getCurrentSampleRate();const auto quantum=uint32_t(hardware->getCurrentBufferSizeSamples());
+    const bool mismatch=std::any_of(arrangement->devices.begin(),arrangement->devices.end(),[&](const auto& entry) {
+        auto* isolated=dynamic_cast<IsolatedDevicePlugin*>(entry.second.get());return isolated && !isolated->retainsFormat(rate,quantum);
+    });
+    if(!mismatch)return {};
+    const auto actual=observedConfiguration();if(!actual)return {};
+    auto plan=configurationPlan(*actual);if(plan["kind"].toString()=="direct")return {};
+    put(plan,"observed",true);auto out=object();put(out,"request",actual->value());put(out,"plan",plan);return out;
 }
 V EngineSession::configurePrepared(const V& payload,zd_plugin_prepared* processors,uint32_t count) {
     require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Prepared configuration outside main thread");
     require(!pluginApplyOwner,"Nested prepared plugin configuration");
     fields(payload,{"request","plan","leaseId","sessionId"});const auto& plan=field(payload,"plan");
-    fields(plan,{"kind","sessionId","revision","sequence","previousConfiguration","sampleRate","quantum","devices"});
+    fields(plan,{"kind","sessionId","revision","sequence","previousConfiguration","sampleRate","quantum","devices","deviceGeneration","observed"});
     const auto lease=text(payload,"leaseId"),session=text(payload,"sessionId");
     require(accepted && arrangement && leases.count(lease) && accepted->session==session && session==text(plan,"sessionId")
         && accepted->revision==integer(plan,"revision") && accepted->sequence==integer(plan,"sequence"),"Stale plugin configuration owner");
     const auto candidate=AudioConfiguration::decode(field(payload,"request"));const auto& old=field(plan,"previousConfiguration");
     require(configuration.has_value()==!old.isVoid() && (!configuration || *configuration==AudioConfiguration::decode(old)),"Audio configuration changed during preparation");
+    require(decimalU64(plan,"deviceGeneration")==clock.generation.load(std::memory_order_acquire),"Audio device changed during preparation");
+    const bool observed=boolean(plan,"observed");
+    if(observed)require(observedConfiguration()==candidate,"Observed audio configuration changed during preparation");
     require(text(plan,"kind")=="plugins" && number(plan,"sampleRate",8000,768000)==candidate.sampleRate
         && integer(plan,"quantum")==uint64_t(candidate.bufferFrames),"Prepared audio format differs from request");
     const auto& planned=array(plan,"devices");require(count>0 && count<=256 && count==uint32_t(planned.size()) && processors,"Invalid prepared configuration batch");
@@ -239,7 +280,7 @@ V EngineSession::configurePrepared(const V& payload,zd_plugin_prepared* processo
         tokens.push_back(admitPlugin(lease,session,prepared.device_id,accepted->revision,processor,
             {prepared.sample_rate,prepared.quantum,prepared.input_channels,prepared.output_channels,prepared.latency_frames}));
     }
-    applyConfiguration(candidate,true,true,&replacements);return devices();
+    applyConfiguration(candidate,!observed,!observed,&replacements,observed);return devices();
 }
 V EngineSession::controlPanel() {
     auto* device=engine.getDeviceManager().deviceManager.getCurrentAudioDevice();require(device && device->hasControlPanel(),"The selected audio driver has no available control panel");require(device->showControlPanel(),"Audio driver control panel could not be opened");return devices(true);
