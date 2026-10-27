@@ -8,6 +8,46 @@ import {
 } from "./audio"
 import type { BackendDocumentRequest } from "@zoeydaw/project-core/backend"
 import { waveformRangeRequestSchema } from "@zoeydaw/project-core/waveform-range"
+import {
+  writeWaveformHeader,
+  WAVEFORM_HEADER_BYTES,
+  WAVEFORM_MAGIC,
+  WAVEFORM_VERSION,
+} from "@zoeydaw/project-core/realtime"
+
+function waveformBytes(response: {
+  kind: string
+  sampleRate: number
+  totalFrames: number
+  startFrame: number
+  frameCount: number
+  framesPerBin?: number
+  channels: (number[] | { min: number[]; max: number[] })[]
+}): ArrayBuffer {
+  const planes = response.channels.flatMap(channel =>
+    Array.isArray(channel) ? [channel] : [channel.min, channel.max]
+  )
+  const values = planes.flat()
+  const bytes = new ArrayBuffer(WAVEFORM_HEADER_BYTES + values.length * 4)
+  const view = new DataView(bytes)
+  writeWaveformHeader(view, {
+    magic: WAVEFORM_MAGIC,
+    version: WAVEFORM_VERSION,
+    headerBytes: WAVEFORM_HEADER_BYTES,
+    kind: response.kind === "samples" ? 1 : 2,
+    channels: response.channels.length,
+    valuesPerChannel: planes[0]?.length ?? 0,
+    framesPerBin: response.kind === "samples" ? 1 : (response.framesPerBin ?? 0),
+    sampleRate: response.sampleRate,
+    totalFrames: BigInt(response.totalFrames),
+    startFrame: BigInt(response.startFrame),
+    frameCount: BigInt(response.frameCount),
+    payloadBytes: values.length * 4,
+    reserved: 0,
+  })
+  values.forEach((value, index) => view.setFloat32(WAVEFORM_HEADER_BYTES + index * 4, value, true))
+  return bytes
+}
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), isTauri: vi.fn(() => true) }))
 const device = {
@@ -391,7 +431,7 @@ describe("native audio IPC boundary", () => {
         [-0.25, 0.75, -0.5, 0.125],
       ],
     }
-    vi.mocked(invoke).mockResolvedValueOnce(response)
+    vi.mocked(invoke).mockResolvedValueOnce(waveformBytes(response))
     expect(await readNativeWaveformRange(request)).toEqual(response)
     expect(invoke).toHaveBeenCalledWith("playback_waveform_range", { request })
   })
@@ -413,7 +453,7 @@ describe("native audio IPC boundary", () => {
       framesPerBin: 16,
       channels: [{ min: [-1.5, 0.25], max: [-0.25, 1.75] }],
     }
-    vi.mocked(invoke).mockResolvedValueOnce(response)
+    vi.mocked(invoke).mockResolvedValueOnce(waveformBytes(response))
     expect(await readNativeWaveformRange(request)).toEqual(response)
     for (const channels of [
       [{ min: [-1], max: [1] }],
@@ -421,7 +461,7 @@ describe("native audio IPC boundary", () => {
       [{ min: [1, -0.5], max: [-1, 0.5] }],
       [{ min: [-1, Number.NEGATIVE_INFINITY], max: [1, 0.5] }],
     ]) {
-      vi.mocked(invoke).mockResolvedValueOnce({ ...response, channels })
+      vi.mocked(invoke).mockResolvedValueOnce(waveformBytes({ ...response, channels }))
       await expect(readNativeWaveformRange(request)).rejects.toThrow()
     }
   })
@@ -442,7 +482,7 @@ describe("native audio IPC boundary", () => {
       frameCount: 2,
       channels: [[-0.5, 1.25]],
     }
-    vi.mocked(invoke).mockResolvedValueOnce(response)
+    vi.mocked(invoke).mockResolvedValueOnce(waveformBytes(response))
     expect(await readNativeWaveformRange(request)).toEqual(response)
     for (const malformed of [
       { ...response, frameCount: 3, channels: [[-0.5, 1.25, 0]] },
@@ -452,10 +492,56 @@ describe("native audio IPC boundary", () => {
       { ...response, channels: [[-0.5]] },
       { ...response, channels: [[-0.5, Number.NaN]] },
       { ...response, channels: Array.from({ length: 65 }, () => [-0.5, 1.25]) },
-      { ...response, invented: true },
       { ...response, kind: "envelope", channels: [{ min: [-0.5], max: [1.25] }] },
     ]) {
-      vi.mocked(invoke).mockResolvedValueOnce(malformed)
+      vi.mocked(invoke).mockResolvedValueOnce(waveformBytes(malformed))
+      await expect(readNativeWaveformRange(request)).rejects.toThrow()
+    }
+  })
+
+  it("rejects corrupted binary headers, truncated payloads and legacy JSON", async () => {
+    const request = {
+      path: "/float.wav",
+      startFrame: 0,
+      frameCount: 2,
+      columns: 1,
+      framesPerBin: 1,
+    }
+    const response = {
+      kind: "samples",
+      sampleRate: 48000,
+      totalFrames: 2,
+      startFrame: 0,
+      frameCount: 2,
+      channels: [[-0.5, 1.25]],
+    }
+    const valid = waveformBytes(response)
+    for (const input of [
+      response,
+      [],
+      valid.slice(0, 12),
+      valid.slice(0, -1),
+      new ArrayBuffer(valid.byteLength + 4),
+    ]) {
+      vi.mocked(invoke).mockResolvedValueOnce(input)
+      await expect(readNativeWaveformRange(request)).rejects.toThrow()
+    }
+    for (const [offset, value] of [
+      [0, 0],
+      [4, 2],
+      [6, 60],
+      [8, 3],
+      [12, 0],
+      [16, 8193],
+      [20, 2],
+      [56, 0],
+      [60, 1],
+    ]) {
+      const bytes = valid.slice(0)
+      const view = new DataView(bytes)
+      if (offset === 4 || offset === 6) view.setUint16(offset, value, true)
+      else view.setUint32(offset, value, true)
+      vi.mocked(invoke).mockResolvedValueOnce(bytes)
       await expect(readNativeWaveformRange(request)).rejects.toThrow()
     }
   })

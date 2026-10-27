@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 const { dirname, resolve } = path
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const schema = JSON.parse(await readFile(resolve(root, "protocol/realtime.json"), "utf8"))
+const waveform = JSON.parse(await readFile(resolve(root, "protocol/waveform-range.json"), "utf8"))
 const check = process.argv.includes("--check")
 const types = {
   u16: [2, "Uint16", "number", "u16", "std::uint16_t"],
@@ -52,6 +53,8 @@ inline void writeLittle(std::uint8_t* bytes, T value) noexcept {
 }
 }
 `
+const cppPrelude = cpp
+let waveformCpp = ""
 const constants = { ts: [], rust: [], cpp: [] }
 function constant(name, value) {
   constants.ts.push(`export const ${name} = ${value};\n`)
@@ -63,6 +66,11 @@ if (schema.byteOrder !== "little-endian" || schema.magic !== 0x4d44445a) {
 }
 constant("MAGIC", schema.magic)
 constant("VERSION", schema.version)
+constant("WAVEFORM_MAGIC", waveform.magic)
+constant("WAVEFORM_VERSION", waveform.version)
+constant("WAVEFORM_MAX_PAYLOAD_BYTES", waveform.maxPayloadBytes)
+for (const [name, value] of Object.entries(waveform.kinds))
+  constant(`WAVEFORM_KIND_${upper(name)}`, value)
 for (const group of [
   "frameTypes",
   "headerFlags",
@@ -75,7 +83,10 @@ for (const group of [
     constant(`${upper(group)}_${upper(name)}`, value)
   }
 }
-for (const [name, layout] of Object.entries(schema.layouts)) {
+for (const [name, layout] of Object.entries({
+  ...schema.layouts,
+  waveformHeader: waveform.layout,
+})) {
   let end = 0
   const names = new Set()
   constant(`${upper(name)}_BYTES`, layout.bytes)
@@ -114,6 +125,7 @@ for (const [name, layout] of Object.entries(schema.layouts)) {
     rust += `        bytes[${offset}..${offset + types[type][0]}].copy_from_slice(&self.${snake(field)}.to_le_bytes());\n`
   }
   rust += "        Some(())\n    }\n}\n"
+  const cppStart = cpp.length
   cpp += `struct Wire${title(name)} {\n`
   for (const [field, type] of layout.fields) cpp += `    ${types[type][4]} ${field};\n`
   cpp += `};\n[[nodiscard]] inline bool read${title(name)}(std::span<const std::uint8_t> bytes, Wire${title(name)}& value) noexcept {\n    if (bytes.size() < ${layout.bytes}) return false;\n`
@@ -123,13 +135,20 @@ for (const [name, layout] of Object.entries(schema.layouts)) {
   for (const [field, , offset] of layout.fields)
     cpp += `    detail::writeLittle(bytes.data() + ${offset}, value.${field});\n`
   cpp += "    return true;\n}\n"
+  if (name === "waveformHeader") {
+    waveformCpp =
+      cppPrelude.replace("namespace zp::realtime::wire", "namespace zp::waveform_wire") +
+      cpp.slice(cppStart)
+    cpp = cpp.slice(0, cppStart)
+  }
 }
 ts = `${banner}import { z } from "zod";\n${constants.ts.join("")}${ts.slice(banner.length)}`
 rust = rust.replace(
   "#![allow(dead_code)]\n",
   () => `#![allow(dead_code)]\n${constants.rust.join("")}`
 )
-cpp += `${constants.cpp.join("")} }\n`
+waveformCpp += `${constants.cpp.filter(value => value.includes(" WAVEFORM_")).join("")} }\n`
+cpp += `${constants.cpp.filter(value => !value.includes(" WAVEFORM_")).join("")} }\n`
 const rustWire = rust
 rust = `${banner}#![allow(dead_code)]\n`
 if (
@@ -329,6 +348,7 @@ const outputs = [
   ["crates/engine/src/realtime/protocol_generated.rs", rustWire],
   ["crates/engine/src/realtime/metadata_generated.rs", rust],
   ["crates/engine/native/runtime/realtime_protocol.generated.h", cpp],
+  ["crates/engine/native/analysis/waveform_protocol.generated.h", waveformCpp],
 ]
 await Promise.all(
   outputs.map(async ([path, content]) => {

@@ -4,7 +4,7 @@ import { jsonU64Schema } from "@zoeydaw/project-core/realtime"
 import { isMediaSource, type MediaSource } from "@zoeydaw/project-core/media"
 import {
   waveformRangeRequestSchema,
-  waveformRangeSchema,
+  decodeWaveformRange,
 } from "@zoeydaw/project-core/waveform-range"
 import type { WaveformRange, WaveformRangeRequest } from "@zoeydaw/project-core/waveform-range"
 import { pluginFaultStatusSchema } from "./plugins"
@@ -530,28 +530,7 @@ export async function readNativeWaveformRange(
   request: WaveformRangeRequest
 ): Promise<WaveformRange> {
   const valid = waveformRangeRequestSchema.parse(request)
-  const result = waveformRangeSchema.parse(
-    await command("playback_waveform_range", { request: valid })
-  )
-  const frameCount = Math.min(valid.frameCount, result.totalFrames - valid.startFrame)
-  const samples = valid.framesPerBin === 1
-  if (
-    result.startFrame !== valid.startFrame ||
-    result.frameCount !== frameCount ||
-    (result.kind === "samples") !== samples
-  ) {
-    throw new Error("Native waveform range does not match its request")
-  }
-  if (
-    result.kind === "envelope" &&
-    (result.framesPerBin !== valid.framesPerBin ||
-      result.channels.some(
-        channel => channel.min.length !== Math.ceil(frameCount / valid.framesPerBin)
-      ))
-  ) {
-    throw new Error("Native waveform envelope must match requested columns")
-  }
-  return result
+  return decodeWaveformRange(await command("playback_waveform_range", { request: valid }), valid)
 }
 export function cancelNativeWaveformRanges(): Promise<void> {
   return voidCommand("playback_waveform_range_cancel", {})

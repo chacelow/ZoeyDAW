@@ -1,5 +1,6 @@
 #include "analysis.h"
 #include "waveform_cache.h"
+#include "waveform_protocol.generated.h"
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <limits>
 namespace zp {
@@ -30,7 +31,7 @@ V waveform(const juce::String& path,uint32_t bins,const zp_waveform_cancellation
     require(!cancellation.is_cancelled(cancellation.context),"Waveform cancelled");
     juce::Array<V> values;for(float peak:peaks)values.add(peak);auto out=object();put(out,"durationSeconds",reader->lengthInSamples/reader->sampleRate);put(out,"peaks",values);return out;
 }
-V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedFrames,uint32_t columns,uint32_t framesPerBin,const zp_waveform_cancellation& cancellation) {
+void waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedFrames,uint32_t columns,uint32_t framesPerBin,const zp_waveform_cancellation& cancellation,void* context,zp_waveform_allocate allocate) {
     require(startFrame<=maxSafeFrame && requestedFrames>=1 && requestedFrames<=maxSafeFrame,"Invalid waveform frame range");
     require(columns>=1 && columns<=4096,"Waveform columns must be between 1 and 4096");
     require(framesPerBin!=0 && (framesPerBin&(framesPerBin-1))==0,"Waveform frames per bin must be a positive power of two");
@@ -93,26 +94,26 @@ V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedF
         retainWaveformData(identity,next);data=std::move(next);
     }
     require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
-    const auto& minima=data->minima;const auto& maxima=data->maxima;
-    juce::Array<V> resultChannels;
+    namespace wire=waveform_wire;
+    const auto payloadBytes=uint32_t(channels*valuesPerChannel*(samples?1:2)*sizeof(float));
+    const auto bytes=uint32_t(wire::WAVEFORM_HEADER_BYTES)+payloadBytes;
+    auto* output=allocate(context,bytes);require(output!=nullptr,"Cannot allocate waveform response");
+    wire::WireWaveformHeader header{};
+    header.magic=wire::WAVEFORM_MAGIC;header.version=wire::WAVEFORM_VERSION;header.headerBytes=wire::WAVEFORM_HEADER_BYTES;
+    header.kind=samples?wire::WAVEFORM_KIND_SAMPLES:wire::WAVEFORM_KIND_ENVELOPE;
+    header.channels=uint32_t(channels);header.valuesPerChannel=uint32_t(valuesPerChannel);header.framesPerBin=framesPerBin;
+    header.sampleRate=reader->sampleRate;header.totalFrames=totalFrames;header.startFrame=startFrame;header.frameCount=frameCount;
+    header.payloadBytes=payloadBytes;
+    require(wire::writeWaveformHeader({output,bytes},header),"Cannot encode waveform header");
+    size_t position=wire::WAVEFORM_HEADER_BYTES;
     for(size_t channel=0;channel<channels;++channel) {
-        juce::Array<V> low,high;
-        low.ensureStorageAllocated((int)valuesPerChannel);
-        if(!samples)high.ensureStorageAllocated((int)valuesPerChannel);
-        for(size_t i=0;i<valuesPerChannel;++i) {
-            low.add(std::isfinite(minima[channel][i])?minima[channel][i]:0.0f);
-            if(!samples)high.add(std::isfinite(maxima[channel][i])?maxima[channel][i]:0.0f);
+        require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
+        for(const auto* plane:{&data->minima[channel],samples?nullptr:&data->maxima[channel]}) {
+            if(!plane)continue;
+            for(float value:*plane) { wire::detail::writeLittle(output+position,value);position+=sizeof(float); }
         }
-        if(samples)resultChannels.add(low);
-        else { auto extrema=object();put(extrema,"min",low);put(extrema,"max",high);resultChannels.add(extrema); }
     }
-    auto result=object();
-    put(result,"kind",samples?"samples":"envelope");put(result,"sampleRate",reader->sampleRate);
-    put(result,"totalFrames",(juce::int64)totalFrames);put(result,"startFrame",(juce::int64)startFrame);put(result,"frameCount",(juce::int64)frameCount);
-    if(!samples)put(result,"framesPerBin",(juce::int64)framesPerBin);
-    put(result,"channels",resultChannels);
     require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
     require(WaveformFileIdentity::read(file)==identity,"Waveform source changed during decoding");
-    return result;
 }
 }

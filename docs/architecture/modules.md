@@ -78,7 +78,9 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 `analysis.rs::WaveformWindows` 拥有每个窗口的 overview/range 取消代际；两类请求各自复用窗口持有的 `Arc<AtomicU64>`，job 只保留 `WaveformTicket`，原生解码只在同步调用中借用回调。窗口 ID 由 Tauri 注入，不从 Web 请求取得。窗口销毁取消两类 job，普通 range 取消不影响 overview 或其他窗口；service 释放也取消仍被 job 持有的工作。源解码与 Web 缓存协议不变，不再使用进程全局 waveform generation。
 
-`analysis/waveform_cache.cpp` 拥有进程期的只读范围 LRU，缓存原始 samples 或各级精确 extrema，只有同级/更细且覆盖请求的数据可复用。`waveform.cpp` 保留唯一解码、细到粗合并和 JSON 构造路径；缓存锁不跨解码或处理。缓存保留的 float 载荷受 32 MiB/64 项限制，在途引用可独立存活。身份来自路径、OS file ID、大小和修改时间，不冒充每次请求的内容 hash 校验。窗口取消继续由 Rust job ticket 独占。
+`analysis/waveform_cache.cpp` 拥有进程期的只读范围 LRU，缓存原始 samples 或各级精确 extrema，只有同级/更细且覆盖请求的数据可复用。`waveform.cpp` 保留唯一解码、细到粗合并和 binary 编码路径；缓存锁不跨解码或处理。缓存保留的 float 载荷受 32 MiB/64 项限制，在途引用可独立存活。身份来自路径、OS file ID、大小和修改时间，不冒充每次请求的内容 hash 校验。窗口取消继续由 Rust job ticket 独占。
+
+`protocol/waveform-range.json` 定义 range 二进制头与 float32 载荷。既有生成器生成三端布局，C++ 波形头位于 analysis 而非 runtime。Rust job 同步借出有界输出分配回调，native 写入 Rust 持有的字节，Tauri 只包装 `ipc::Response`；Web 边界校验后恢复既有 `WaveformRange`，缓存和 Canvas 不持有 wire 状态。
 
 `runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。
 

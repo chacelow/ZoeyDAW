@@ -1,7 +1,7 @@
 import { z } from "zod"
+export { decodeWaveformRange } from "./waveform-range-wire"
 
 const counter = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
-const finite = z.number().finite()
 const binSize = z
   .number()
   .int()
@@ -26,73 +26,18 @@ export const waveformRangeRequestSchema = z
     "Waveform range must align to its source bins"
   )
 
-const waveformRangeFields = {
-  sampleRate: finite.positive(),
-  totalFrames: counter.positive(),
-  startFrame: counter,
-  frameCount: counter.positive(),
+interface WaveformRangeMetadata {
+  sampleRate: number
+  totalFrames: number
+  startFrame: number
+  frameCount: number
 }
-export const waveformRangeSchema = z
-  .discriminatedUnion("kind", [
-    z
-      .object({
-        ...waveformRangeFields,
-        kind: z.literal("samples"),
-        channels: z.array(z.array(finite).min(1).max(8192)).min(1).max(64),
-      })
-      .strict(),
-    z
-      .object({
-        ...waveformRangeFields,
-        kind: z.literal("envelope"),
-        framesPerBin: binSize,
-        channels: z
-          .array(
-            z
-              .object({
-                min: z.array(finite).min(1).max(4096),
-                max: z.array(finite).min(1).max(4096),
-              })
-              .strict()
-          )
-          .min(1)
-          .max(64),
-      })
-      .strict(),
-  ])
-  .superRefine((value, context) => {
-    if (
-      value.startFrame >= value.totalFrames ||
-      value.frameCount > value.totalFrames - value.startFrame
-    )
-      context.addIssue({ code: "custom", message: "Waveform range exceeds its source" })
-    if (
-      value.kind === "envelope" &&
-      (value.framesPerBin === 1 || value.startFrame % value.framesPerBin !== 0)
-    )
-      context.addIssue({
-        code: "custom",
-        message: "Waveform extrema must align to binary source bins",
-      })
-    for (const channel of value.channels) {
-      if (Array.isArray(channel)) {
-        if (channel.length !== value.frameCount)
-          context.addIssue({ code: "custom", message: "Waveform samples must match frameCount" })
-      } else if (
-        value.kind === "envelope" &&
-        (channel.min.length !== Math.ceil(value.frameCount / value.framesPerBin) ||
-          channel.min.length !== channel.max.length ||
-          channel.min.some((minimum, index) => minimum > channel.max[index]))
-      ) {
-        context.addIssue({
-          code: "custom",
-          message: "Waveform extrema must have paired ordered source bins",
-        })
-      }
-    }
-  })
 export type WaveformRangeRequest = z.infer<typeof waveformRangeRequestSchema>
-export type WaveformRange = z.infer<typeof waveformRangeSchema>
+export type WaveformRange = WaveformRangeMetadata &
+  (
+    | { kind: "samples"; channels: number[][] }
+    | { kind: "envelope"; framesPerBin: number; channels: { min: number[]; max: number[] }[] }
+  )
 
 export function waveformRangePlan(
   totalFrames: number,

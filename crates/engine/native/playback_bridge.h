@@ -3,6 +3,7 @@
 #include "../../plugin-abi/include/processor.h"
 #include "runtime/meter_read_abi.h"
 #include "analysis/waveform_cancellation.h"
+#include "analysis/waveform_response.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,7 +33,8 @@ int zp_pending_call_begin(zp_session* session, const char* lease_id, const char*
 void zp_pending_call_end(zp_session* session);
 void zp_audition_fence(zp_session* session, uint64_t generation);
 char* zp_waveform(const char* path, uint32_t bins, const zp_waveform_cancellation*);
-char* zp_waveform_range(const char* path, uint64_t start_frame, uint64_t frame_count, uint32_t columns, uint32_t frames_per_bin, const zp_waveform_cancellation*);
+/* Success is 1; failure is 0 with an optional zp_free-owned error. Output belongs to the caller. */
+int zp_waveform_range(const char* path, uint64_t start_frame, uint64_t frame_count, uint32_t columns, uint32_t frames_per_bin, const zp_waveform_cancellation*, void* context, zp_waveform_allocate allocate, char** error);
 char* zp_analyze_tempo(const char* path);
 #ifdef __cplusplus
 }

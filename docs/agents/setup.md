@@ -100,6 +100,8 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 `zoeydaw_playback_tests --waveform` 定向运行真实浮点 WAV 的 signed samples、精确 extrema、部分 bin、取消、层级复用、同路径替换及缓存预算检查，并输出 retained bytes/entries 与命中数。缓存只从同级或更细数据合并，不用 AudioThumbnail 的近似极值。身份检查覆盖正常文件替换及修改时间变化；不声称保留元数据的原位写入或每次源内容 SHA-256 都已验证。
 
+波形 range 已改为 `protocol/waveform-range.json` 定义的二进制响应；`pnpm check:realtime-protocol` 同时检查其生成布局。`apps/web/src/shared/native/audio.test.ts` 覆盖 signed float32、部分 bin、请求匹配、截断、非法头与旧 JSON 拒绝。原生 `--waveform` 和 Rust `analysis::tests` 使用同一 C ABI 的真实字节，不保留生产 JSON range 路径。
+
 `native_graph_publication` 使用同一 build 目录的 `zoeydaw_graph_publication_tests` target。用例在图替换的各次分配注入失败，核对原 root、采样率、缓冲尺寸与连续 PCM，并继续提交有效图验证恢复；覆盖 pooling/sharing 组合及候选格式变化。它不打开物理音频设备，也不替代活跃 Edit 的严格原子事务或完整 document audioRevision。
 
 `zoeydaw_mixer_tests --transaction-model` 使用真实 WAV 和同一 renderer clock 比较原位 Edit、独立候选和保留兼容处理资源的候选。它输出发布前、准备中、拒绝后及采用后的 PCM，记录 wrapper 重建，并验证 Utility 平滑、Delay 尾音、SDK 初始化及 reset 换代。此入口揭示事务边界，不将原位 setter、直接复制 Edit 或局部资源保留当作已完成的严格事务。

@@ -103,10 +103,24 @@ pub struct WaveformRangeJob {
 }
 
 impl WaveformRangeJob {
-    pub fn execute(self) -> Result<Value, String> {
+    pub fn execute(self) -> Result<Vec<u8>, String> {
+        unsafe extern "C" fn allocate(context: *mut c_void, bytes: u32) -> *mut u8 {
+            use crate::realtime::protocol_generated::{WAVEFORM_HEADER_BYTES, WAVEFORM_MAX_PAYLOAD_BYTES};
+            let output = unsafe { &mut *context.cast::<Vec<u8>>() };
+            let bytes = bytes as usize;
+            if !output.is_empty() || bytes < WAVEFORM_HEADER_BYTES || bytes > WAVEFORM_HEADER_BYTES + WAVEFORM_MAX_PAYLOAD_BYTES
+                || output.try_reserve_exact(bytes).is_err() { return std::ptr::null_mut(); }
+            output.resize(bytes, 0);
+            output.as_mut_ptr()
+        }
         let path = CString::new(self.request.path).map_err(|error| error.to_string())?;
         let cancellation = cancellation(&self.cancelled);
-        response(unsafe { zp_waveform_range(path.as_ptr(), self.request.start_frame, self.request.frame_count, self.request.columns, self.request.frames_per_bin, &cancellation) })
+        let mut output = Vec::<u8>::new();
+        let mut error = std::ptr::null_mut();
+        let success = unsafe { zp_waveform_range(path.as_ptr(), self.request.start_frame, self.request.frame_count, self.request.columns, self.request.frames_per_bin, &cancellation, (&mut output as *mut Vec<u8>).cast(), allocate, &mut error) };
+        if success != 1 { return Err(if error.is_null() { "Native waveform failed without an error buffer".into() } else { take_buffer(error)? }); }
+        if output.is_empty() { return Err("Native waveform returned no binary response".into()); }
+        Ok(output)
     }
 }
 
@@ -166,6 +180,15 @@ mod tests {
     impl Drop for WaveformFixture {
         fn drop(&mut self) { let _ = std::fs::remove_file(&self.0); }
     }
+    fn decoded_samples(bytes: &[u8]) -> Value {
+        use crate::realtime::protocol_generated::*;
+        let header = WireWaveformHeader::read(bytes).unwrap();
+        assert_eq!((header.magic as usize, header.version as usize, header.header_bytes as usize), (WAVEFORM_MAGIC, WAVEFORM_VERSION, WAVEFORM_HEADER_BYTES));
+        assert_eq!((header.kind as usize, header.channels, header.sample_rate, header.frames_per_bin), (WAVEFORM_KIND_SAMPLES, 1, 48000.0, 1));
+        assert_eq!((header.total_frames, header.start_frame, header.frame_count, header.values_per_channel), (8, 0, 8, 8));
+        assert_eq!(bytes.len(), WAVEFORM_HEADER_BYTES + header.payload_bytes as usize);
+        json!(bytes[WAVEFORM_HEADER_BYTES..].chunks_exact(4).map(|chunk| f32::from_le_bytes(chunk.try_into().unwrap())).collect::<Vec<_>>())
+    }
 
     #[test]
     fn independent_waveform_consumers_decode_their_own_samples() {
@@ -174,7 +197,7 @@ mod tests {
         let second = service.prepare_waveform_range("second", source.request()).unwrap();
         for job in [first, second] {
             let decoded = job.execute().expect("Another window must not cancel this decode");
-            assert_eq!(decoded["channels"][0], json!([0.5,-0.5,0.25,-0.25,0.5,-0.5,0.25,-0.25]));
+            assert_eq!(decoded_samples(&decoded), json!([0.5,-0.5,0.25,-0.25,0.5,-0.5,0.25,-0.25]));
         }
     }
 
@@ -187,7 +210,7 @@ mod tests {
         service.cancel_waveform_ranges("first").unwrap();
         assert!(range.execute().unwrap_err().contains("cancelled"));
         assert_eq!(overview.execute().unwrap()["peaks"], json!([0.5]));
-        assert_eq!(other.execute().unwrap()["channels"][0][1], json!(-0.5));
+        assert_eq!(decoded_samples(&other.execute().unwrap())[1], json!(-0.5));
 
         let overview = service.prepare_waveform("first", source.0.to_string_lossy().into_owned(), 1).unwrap();
         let range = service.prepare_waveform_range("first", source.request()).unwrap();
@@ -197,7 +220,7 @@ mod tests {
         assert!(range.execute().unwrap_err().contains("cancelled"));
         assert!(service.prepare_waveform_range("first", source.request()).is_err());
         assert!(service.prepare_waveform("first", source.0.to_string_lossy().into_owned(), 1).is_err());
-        assert_eq!(other.execute().unwrap()["channels"][0][2], json!(0.25));
+        assert_eq!(decoded_samples(&other.execute().unwrap())[2], json!(0.25));
 
         let pending = service.prepare_waveform_range("second", source.request()).unwrap();
         drop(service);
@@ -210,13 +233,13 @@ mod tests {
         let previous = service.prepare_waveform_range("first", source.request()).unwrap();
         let mut invalid = source.request();invalid.columns = 0;
         assert!(service.prepare_waveform_range("first", invalid).is_err());
-        assert_eq!(previous.execute().unwrap()["channels"][0][3], json!(-0.25));
+        assert_eq!(decoded_samples(&previous.execute().unwrap())[3], json!(-0.25));
         let previous = service.prepare_waveform_range("first", source.request()).unwrap();
         let other = service.prepare_waveform_range("second", source.request()).unwrap();
         let current = service.prepare_waveform_range("first", source.request()).unwrap();
         assert!(previous.execute().unwrap_err().contains("cancelled"));
-        assert_eq!(current.execute().unwrap()["channels"][0][4], json!(0.5));
-        assert_eq!(other.execute().unwrap()["channels"][0][5], json!(-0.5));
+        assert_eq!(decoded_samples(&current.execute().unwrap())[4], json!(0.5));
+        assert_eq!(decoded_samples(&other.execute().unwrap())[5], json!(-0.5));
     }
 
     #[test]

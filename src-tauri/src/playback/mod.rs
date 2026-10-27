@@ -246,9 +246,9 @@ pub async fn playback_waveform(window: tauri::WebviewWindow, service: State<'_, 
 }
 
 #[tauri::command]
-pub async fn playback_waveform_range(window: tauri::WebviewWindow, service: State<'_, PlaybackService>, request: WaveformRangeRequest) -> Result<Value, String> {
+pub async fn playback_waveform_range(window: tauri::WebviewWindow, service: State<'_, PlaybackService>, request: WaveformRangeRequest) -> Result<tauri::ipc::Response, String> {
     let job = service.prepare_waveform_range(window.label(), request)?;
-    tauri::async_runtime::spawn_blocking(move || job.execute()).await.map_err(|error| error.to_string())?
+    tauri::async_runtime::spawn_blocking(move || job.execute().map(tauri::ipc::Response::new)).await.map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

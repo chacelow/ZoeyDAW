@@ -92,8 +92,14 @@ void zp_audition_fence(zp_session* session,uint64_t generation) { if(session)fen
 char* zp_waveform(const char* path,uint32_t bins,const zp_waveform_cancellation* cancellation) {
     return answer([&] { zp::require(path && cancellation && cancellation->is_cancelled,"Missing waveform path or cancellation");return zp::waveform(juce::String::fromUTF8(path),bins,*cancellation); });
 }
-char* zp_waveform_range(const char* path,uint64_t startFrame,uint64_t frameCount,uint32_t columns,uint32_t framesPerBin,const zp_waveform_cancellation* cancellation) {
-    return answer([&] { zp::require(path && cancellation && cancellation->is_cancelled,"Missing waveform path or cancellation");return zp::waveformRange(juce::String::fromUTF8(path),startFrame,frameCount,columns,framesPerBin,*cancellation); });
+int zp_waveform_range(const char* path,uint64_t startFrame,uint64_t frameCount,uint32_t columns,uint32_t framesPerBin,const zp_waveform_cancellation* cancellation,void* context,zp_waveform_allocate allocate,char** error) {
+    try {
+        if(error)*error=nullptr;
+        zp::require(path && cancellation && cancellation->is_cancelled && allocate,"Missing waveform path, cancellation or allocator");
+        zp::waveformRange(juce::String::fromUTF8(path),startFrame,frameCount,columns,framesPerBin,*cancellation,context,allocate);
+        return 1;
+    }catch(const std::exception& failure) { if(error)*error=copy(failure.what());return 0; }
+    catch(...) { if(error)*error=copy("Unknown native waveform exception");return 0; }
 }
 char* zp_analyze_tempo(const char* path) { return answer([&] { zp::require(path!=nullptr,"Missing tempo path");return zp::analyzeTempo(juce::String::fromUTF8(path)); }); }
 }

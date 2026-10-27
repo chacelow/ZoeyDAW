@@ -2,6 +2,7 @@
 #include "playback_model.h"
 #include "audio_configuration.h"
 #include "device_test_support.h"
+#include "../analysis/waveform_protocol.generated.h"
 #include "transport_observation.h"
 #include "../analysis/waveform_cache.h"
 #include <juce_events/juce_events.h>
@@ -117,10 +118,37 @@ float waveformFixtureSample(int channel,int frame) {
     const float sample=cycle[frame%8];
     return channel==0?sample:-sample*.5f+.125f;
 }
+V waveformBinaryResponse(const juce::File& file,uint64_t start,uint64_t count,uint32_t columns,uint32_t framesPerBin,const zp_waveform_cancellation& cancellation) {
+    std::vector<uint8_t> bytes;
+    auto allocate=[](void* context,uint32_t size)->uint8_t* {
+        auto& output=*static_cast<std::vector<uint8_t>*>(context);output.resize(size);return output.data();
+    };
+    char* message=nullptr;
+    const bool success=zp_waveform_range(file.getFullPathName().toRawUTF8(),start,count,columns,framesPerBin,&cancellation,&bytes,allocate,&message)==1;
+    std::unique_ptr<char,decltype(&zp_free)> error(message,zp_free);
+    auto result=zp::object();zp::put(result,"ok",success);
+    if(!success) { zp::put(result,"error",error?juce::String::fromUTF8(error.get()):"Waveform failure without error buffer");return result; }
+    namespace wire=zp::waveform_wire;wire::WireWaveformHeader header{};
+    zp::require(wire::readWaveformHeader(bytes,header) && header.magic==wire::WAVEFORM_MAGIC && header.version==wire::WAVEFORM_VERSION,"Invalid waveform wire identity");
+    zp::require(header.headerBytes==wire::WAVEFORM_HEADER_BYTES && bytes.size()==header.headerBytes+header.payloadBytes && header.reserved==0,"Invalid waveform wire size");
+    const bool samples=header.kind==wire::WAVEFORM_KIND_SAMPLES;
+    zp::require(header.payloadBytes==header.channels*header.valuesPerChannel*(samples?1:2)*4,"Invalid waveform plane size");
+    size_t position=header.headerBytes;
+    auto plane=[&] { juce::Array<V> values;for(uint32_t i=0;i<header.valuesPerChannel;++i) { values.add(wire::detail::readLittle<float>(bytes.data()+position));position+=4; }return values; };
+    juce::Array<V> channels;
+    for(uint32_t channel=0;channel<header.channels;++channel) {
+        auto low=plane();
+        if(samples)channels.add(low);
+        else { auto extrema=zp::object();zp::put(extrema,"min",low);zp::put(extrema,"max",plane());channels.add(extrema); }
+    }
+    auto value=zp::object();zp::put(value,"kind",samples?"samples":"envelope");zp::put(value,"sampleRate",header.sampleRate);
+    zp::put(value,"totalFrames",(juce::int64)header.totalFrames);zp::put(value,"startFrame",(juce::int64)header.startFrame);zp::put(value,"frameCount",(juce::int64)header.frameCount);
+    if(!samples)zp::put(value,"framesPerBin",(juce::int64)header.framesPerBin);
+    zp::put(value,"channels",channels);zp::put(result,"value",value);return result;
+}
 V waveformRangeResponse(const juce::File& file,uint64_t start,uint64_t count,uint32_t columns,uint32_t framesPerBin=1,bool cancelled=false) {
     const zp_waveform_cancellation cancellation{&cancelled,[](const void* context)->int32_t { return *static_cast<const bool*>(context)?1:0; }};
-    std::unique_ptr<char,decltype(&zp_free)> encoded(zp_waveform_range(file.getFullPathName().toRawUTF8(),start,count,columns,framesPerBin,&cancellation),zp_free);
-    zp::require(encoded!=nullptr,"Missing waveform range response");return zp::parse(encoded.get());
+    return waveformBinaryResponse(file,start,count,columns,framesPerBin,cancellation);
 }
 void writeWideFloatWaveform(const juce::File& file,int channels,bool invalid=false) {
     auto stream=file.createOutputStream();zp::require(stream!=nullptr,"Cannot create multichannel waveform fixture");
@@ -209,14 +237,27 @@ void testSignedWaveformRanges() {
     verifySamples(0,8,4);
     zp::require(!(bool)waveformRangeResponse(source.getFile(),0,8,4,1,true)["ok"],"Cancelled job must not decode its source");
     const zp_waveform_cancellation active{nullptr,[](const void*)->int32_t { return 0; }};
+    {
+        char* message=nullptr;
+        const auto rejected=zp_waveform_range(source.getFile().getFullPathName().toRawUTF8(),0,8,4,1,&active,nullptr,[](void*,uint32_t)->uint8_t* { return nullptr; },&message);
+        std::unique_ptr<char,decltype(&zp_free)> error(message,zp_free);
+        zp::require(rejected==0 && error && juce::String::fromUTF8(error.get()).contains("allocate"),"Output allocation failure must reject without publishing bytes");
+        struct Partial { std::vector<uint8_t> bytes;bool cancelled=false; } partial;
+        const zp_waveform_cancellation late{&partial,[](const void* context)->int32_t { return static_cast<const Partial*>(context)->cancelled; }};
+        message=nullptr;
+        const auto cancelled=zp_waveform_range(source.getFile().getFullPathName().toRawUTF8(),0,8,4,1,&late,&partial,[](void* context,uint32_t bytes)->uint8_t* {
+            auto& output=*static_cast<Partial*>(context);output.bytes.resize(bytes);output.cancelled=true;return output.bytes.data();
+        },&message);
+        std::unique_ptr<char,decltype(&zp_free)> lateError(message,zp_free);
+        zp::require(cancelled==0 && lateError && juce::String::fromUTF8(lateError.get()).contains("cancelled"),"Cancellation after allocation must reject partial binary output");
+    }
     std::unique_ptr<char,decltype(&zp_free)> overview(zp_waveform(source.getFile().getFullPathName().toRawUTF8(),8,&active),zp_free);
     zp::require(overview && (bool)zp::parse(overview.get())["ok"],"Range cancellation must not cancel overview requests");
     const auto current=waveformRangeResponse(source.getFile(),0,8,4);
     zp::require((bool)current["ok"],"Independent active cancellation token must remain usable");
     struct DecodeCancellation { mutable uint32_t checks=0; } decoded;
     const zp_waveform_cancellation duringDecode{&decoded,[](const void* context)->int32_t { return ++static_cast<const DecodeCancellation*>(context)->checks>=3?1:0; }};
-    std::unique_ptr<char,decltype(&zp_free)> interrupted(zp_waveform_range(source.getFile().getFullPathName().toRawUTF8(),0,frames,3,8192,&duringDecode),zp_free);
-    const auto interruptedResult=zp::parse(interrupted.get());
+    const auto interruptedResult=waveformBinaryResponse(source.getFile(),0,frames,3,8192,duringDecode);
     zp::require(!(bool)interruptedResult["ok"] && interruptedResult["error"].toString().contains("cancelled") && decoded.checks==3,"Cancellation during source decoding must stop at the next block");
     for(int channels:{64,65}) {
         juce::TemporaryFile wide(".wav");writeWideFloatWaveform(wide.getFile(),channels);

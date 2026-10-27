@@ -1,0 +1,26 @@
+{
+  "magic": 1180124250,
+  "version": 1,
+  "byteOrder": "little-endian",
+  "kinds": { "samples": 1, "envelope": 2 },
+  "maxPayloadBytes": 2097152,
+  "layout": {
+    "bytes": 64,
+    "fields": [
+      ["magic", "u32", 0],
+      ["version", "u16", 4],
+      ["headerBytes", "u16", 6],
+      ["kind", "u32", 8],
+      ["channels", "u32", 12],
+      ["valuesPerChannel", "u32", 16],
+      ["framesPerBin", "u32", 20],
+      ["sampleRate", "f64", 24],
+      ["totalFrames", "u64", 32],
+      ["startFrame", "u64", 40],
+      ["frameCount", "u64", 48],
+      ["payloadBytes", "u32", 56],
+      ["reserved", "u32", 60]
+    ]
+  },
+  "payload": "Channel-major little-endian float32. Samples have one plane per channel; envelopes have minimum then maximum planes per channel. No padding or trailing bytes. Errors use command rejection, not a binary frame."
+}

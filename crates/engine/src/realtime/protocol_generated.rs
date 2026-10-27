@@ -2,6 +2,11 @@
 #![allow(dead_code)]
 pub const MAGIC: usize = 1296319578;
 pub const VERSION: usize = 2;
+pub const WAVEFORM_MAGIC: usize = 1180124250;
+pub const WAVEFORM_VERSION: usize = 1;
+pub const WAVEFORM_MAX_PAYLOAD_BYTES: usize = 2097152;
+pub const WAVEFORM_KIND_SAMPLES: usize = 1;
+pub const WAVEFORM_KIND_ENVELOPE: usize = 2;
 pub const FRAME_TYPES_LEVELS: usize = 1;
 pub const FRAME_TYPES_SPECTRUM: usize = 2;
 pub const FRAME_TYPES_LOUDNESS: usize = 3;
@@ -77,6 +82,20 @@ pub const SOURCE_SOURCE_GENERATION: usize = 32;
 pub const SOURCE_FLAGS: usize = 36;
 pub const SOURCE_POSITION_AGE_SAMPLES: usize = 40;
 pub const SOURCE_RESERVED: usize = 44;
+pub const WAVEFORM_HEADER_BYTES: usize = 64;
+pub const WAVEFORM_HEADER_MAGIC: usize = 0;
+pub const WAVEFORM_HEADER_VERSION: usize = 4;
+pub const WAVEFORM_HEADER_HEADER_BYTES: usize = 6;
+pub const WAVEFORM_HEADER_KIND: usize = 8;
+pub const WAVEFORM_HEADER_CHANNELS: usize = 12;
+pub const WAVEFORM_HEADER_VALUES_PER_CHANNEL: usize = 16;
+pub const WAVEFORM_HEADER_FRAMES_PER_BIN: usize = 20;
+pub const WAVEFORM_HEADER_SAMPLE_RATE: usize = 24;
+pub const WAVEFORM_HEADER_TOTAL_FRAMES: usize = 32;
+pub const WAVEFORM_HEADER_START_FRAME: usize = 40;
+pub const WAVEFORM_HEADER_FRAME_COUNT: usize = 48;
+pub const WAVEFORM_HEADER_PAYLOAD_BYTES: usize = 56;
+pub const WAVEFORM_HEADER_RESERVED: usize = 60;
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WireHeader {
@@ -269,6 +288,59 @@ impl WireSource {
         bytes[36..40].copy_from_slice(&self.flags.to_le_bytes());
         bytes[40..44].copy_from_slice(&self.position_age_samples.to_le_bytes());
         bytes[44..48].copy_from_slice(&self.reserved.to_le_bytes());
+        Some(())
+    }
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WireWaveformHeader {
+    pub magic: u32,
+    pub version: u16,
+    pub header_bytes: u16,
+    pub kind: u32,
+    pub channels: u32,
+    pub values_per_channel: u32,
+    pub frames_per_bin: u32,
+    pub sample_rate: f64,
+    pub total_frames: u64,
+    pub start_frame: u64,
+    pub frame_count: u64,
+    pub payload_bytes: u32,
+    pub reserved: u32,
+}
+impl WireWaveformHeader {
+    pub fn read(bytes: &[u8]) -> Option<Self> {
+        Some(Self {
+            magic: u32::from_le_bytes(bytes.get(0..4)?.try_into().ok()?),
+            version: u16::from_le_bytes(bytes.get(4..6)?.try_into().ok()?),
+            header_bytes: u16::from_le_bytes(bytes.get(6..8)?.try_into().ok()?),
+            kind: u32::from_le_bytes(bytes.get(8..12)?.try_into().ok()?),
+            channels: u32::from_le_bytes(bytes.get(12..16)?.try_into().ok()?),
+            values_per_channel: u32::from_le_bytes(bytes.get(16..20)?.try_into().ok()?),
+            frames_per_bin: u32::from_le_bytes(bytes.get(20..24)?.try_into().ok()?),
+            sample_rate: f64::from_le_bytes(bytes.get(24..32)?.try_into().ok()?),
+            total_frames: u64::from_le_bytes(bytes.get(32..40)?.try_into().ok()?),
+            start_frame: u64::from_le_bytes(bytes.get(40..48)?.try_into().ok()?),
+            frame_count: u64::from_le_bytes(bytes.get(48..56)?.try_into().ok()?),
+            payload_bytes: u32::from_le_bytes(bytes.get(56..60)?.try_into().ok()?),
+            reserved: u32::from_le_bytes(bytes.get(60..64)?.try_into().ok()?),
+        })
+    }
+    pub fn write(&self, bytes: &mut [u8]) -> Option<()> {
+        if bytes.len() < 64 { return None; }
+        bytes[0..4].copy_from_slice(&self.magic.to_le_bytes());
+        bytes[4..6].copy_from_slice(&self.version.to_le_bytes());
+        bytes[6..8].copy_from_slice(&self.header_bytes.to_le_bytes());
+        bytes[8..12].copy_from_slice(&self.kind.to_le_bytes());
+        bytes[12..16].copy_from_slice(&self.channels.to_le_bytes());
+        bytes[16..20].copy_from_slice(&self.values_per_channel.to_le_bytes());
+        bytes[20..24].copy_from_slice(&self.frames_per_bin.to_le_bytes());
+        bytes[24..32].copy_from_slice(&self.sample_rate.to_le_bytes());
+        bytes[32..40].copy_from_slice(&self.total_frames.to_le_bytes());
+        bytes[40..48].copy_from_slice(&self.start_frame.to_le_bytes());
+        bytes[48..56].copy_from_slice(&self.frame_count.to_le_bytes());
+        bytes[56..60].copy_from_slice(&self.payload_bytes.to_le_bytes());
+        bytes[60..64].copy_from_slice(&self.reserved.to_le_bytes());
         Some(())
     }
 }

@@ -2,6 +2,11 @@
 import { z } from "zod";
 export const MAGIC = 1296319578;
 export const VERSION = 2;
+export const WAVEFORM_MAGIC = 1180124250;
+export const WAVEFORM_VERSION = 1;
+export const WAVEFORM_MAX_PAYLOAD_BYTES = 2097152;
+export const WAVEFORM_KIND_SAMPLES = 1;
+export const WAVEFORM_KIND_ENVELOPE = 2;
 export const FRAME_TYPES_LEVELS = 1;
 export const FRAME_TYPES_SPECTRUM = 2;
 export const FRAME_TYPES_LOUDNESS = 3;
@@ -77,6 +82,20 @@ export const SOURCE_SOURCE_GENERATION = 32;
 export const SOURCE_FLAGS = 36;
 export const SOURCE_POSITION_AGE_SAMPLES = 40;
 export const SOURCE_RESERVED = 44;
+export const WAVEFORM_HEADER_BYTES = 64;
+export const WAVEFORM_HEADER_MAGIC = 0;
+export const WAVEFORM_HEADER_VERSION = 4;
+export const WAVEFORM_HEADER_HEADER_BYTES = 6;
+export const WAVEFORM_HEADER_KIND = 8;
+export const WAVEFORM_HEADER_CHANNELS = 12;
+export const WAVEFORM_HEADER_VALUES_PER_CHANNEL = 16;
+export const WAVEFORM_HEADER_FRAMES_PER_BIN = 20;
+export const WAVEFORM_HEADER_SAMPLE_RATE = 24;
+export const WAVEFORM_HEADER_TOTAL_FRAMES = 32;
+export const WAVEFORM_HEADER_START_FRAME = 40;
+export const WAVEFORM_HEADER_FRAME_COUNT = 48;
+export const WAVEFORM_HEADER_PAYLOAD_BYTES = 56;
+export const WAVEFORM_HEADER_RESERVED = 60;
 export interface WireHeader {
   readonly magic: number;
   readonly version: number;
@@ -253,6 +272,53 @@ export function writeSource(view: DataView, value: WireSource, offset = 0): void
   view.setUint32(offset + 36, value.flags, true);
   view.setUint32(offset + 40, value.positionAgeSamples, true);
   view.setUint32(offset + 44, value.reserved, true);
+}
+export interface WireWaveformHeader {
+  readonly magic: number;
+  readonly version: number;
+  readonly headerBytes: number;
+  readonly kind: number;
+  readonly channels: number;
+  readonly valuesPerChannel: number;
+  readonly framesPerBin: number;
+  readonly sampleRate: number;
+  readonly totalFrames: bigint;
+  readonly startFrame: bigint;
+  readonly frameCount: bigint;
+  readonly payloadBytes: number;
+  readonly reserved: number;
+}
+export function readWaveformHeader(view: DataView, offset = 0): WireWaveformHeader {
+  return {
+    magic: view.getUint32(offset + 0, true),
+    version: view.getUint16(offset + 4, true),
+    headerBytes: view.getUint16(offset + 6, true),
+    kind: view.getUint32(offset + 8, true),
+    channels: view.getUint32(offset + 12, true),
+    valuesPerChannel: view.getUint32(offset + 16, true),
+    framesPerBin: view.getUint32(offset + 20, true),
+    sampleRate: view.getFloat64(offset + 24, true),
+    totalFrames: view.getBigUint64(offset + 32, true),
+    startFrame: view.getBigUint64(offset + 40, true),
+    frameCount: view.getBigUint64(offset + 48, true),
+    payloadBytes: view.getUint32(offset + 56, true),
+    reserved: view.getUint32(offset + 60, true),
+  };
+}
+export function writeWaveformHeader(view: DataView, value: WireWaveformHeader, offset = 0): void {
+  view.setUint32(offset + 0, value.magic, true);
+  view.setUint16(offset + 4, value.version, true);
+  view.setUint16(offset + 6, value.headerBytes, true);
+  view.setUint32(offset + 8, value.kind, true);
+  view.setUint32(offset + 12, value.channels, true);
+  view.setUint32(offset + 16, value.valuesPerChannel, true);
+  view.setUint32(offset + 20, value.framesPerBin, true);
+  view.setFloat64(offset + 24, value.sampleRate, true);
+  view.setBigUint64(offset + 32, value.totalFrames, true);
+  view.setBigUint64(offset + 40, value.startFrame, true);
+  view.setBigUint64(offset + 48, value.frameCount, true);
+  view.setUint32(offset + 56, value.payloadBytes, true);
+  view.setUint32(offset + 60, value.reserved, true);
 }
 
 export const JSON_U64_MAX = "18446744073709551615";

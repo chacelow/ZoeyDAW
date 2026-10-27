@@ -18,7 +18,7 @@ extern "C" {
     pub(crate) fn zp_pending_call_end(session: *mut c_void);
     pub(crate) fn zp_audition_fence(session: *mut c_void, generation: u64);
     pub(crate) fn zp_waveform(path: *const c_char, bins: u32, cancellation: *const WaveformCancellation) -> *mut c_char;
-    pub(crate) fn zp_waveform_range(path: *const c_char, start_frame: u64, frame_count: u64, columns: u32, frames_per_bin: u32, cancellation: *const WaveformCancellation) -> *mut c_char;
+    pub(crate) fn zp_waveform_range(path: *const c_char, start_frame: u64, frame_count: u64, columns: u32, frames_per_bin: u32, cancellation: *const WaveformCancellation, context: *mut c_void, allocate: unsafe extern "C" fn(*mut c_void, u32) -> *mut u8, error: *mut *mut c_char) -> i32;
     pub(crate) fn zp_analyze_tempo(path: *const c_char) -> *mut c_char;
 }
 
