@@ -1,10 +1,8 @@
 #include "analysis.h"
-#include <atomic>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <limits>
 namespace zp {
 namespace {
-std::atomic<uint64_t> generation {0}, rangeGeneration {0};
 constexpr uint64_t maxSafeFrame = 9007199254740991ULL;
 void validateSource(const juce::AudioFormatReader& reader) {
     require(reader.lengthInSamples>0 && std::isfinite(reader.sampleRate) && reader.sampleRate>0,"Audio source is empty or invalid");
@@ -12,16 +10,15 @@ void validateSource(const juce::AudioFormatReader& reader) {
     require(reader.numChannels>=1 && reader.numChannels<=64,"Audio source must contain between 1 and 64 channels");
 }
 }
-void waveformFence(uint64_t next) { auto current=generation.load();while(current<next && !generation.compare_exchange_weak(current,next)){} }
-V waveform(const juce::String& path,uint32_t bins,uint64_t expected) {
+V waveform(const juce::String& path,uint32_t bins,const zp_waveform_cancellation& cancellation) {
     require(bins>=1 && bins<=4096,"Waveform bins must be between 1 and 4096");
-    require(expected==generation.load(),"Waveform cancelled");
+    require(!cancellation.is_cancelled(cancellation.context),"Waveform cancelled");
     juce::AudioFormatManager formats;formats.registerBasicFormats();
     std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(localFile(path)));
     require(reader!=nullptr,"Cannot decode waveform source");validateSource(*reader);
     std::vector<float> peaks(bins,0);juce::AudioBuffer<float> block((int)reader->numChannels,8192);
     for(juce::int64 position=0;position<reader->lengthInSamples;position+=block.getNumSamples()) {
-        require(expected==generation.load(),"Waveform cancelled");
+        require(!cancellation.is_cancelled(cancellation.context),"Waveform cancelled");
         int count=(int)std::min<juce::int64>(block.getNumSamples(),reader->lengthInSamples-position);
         require(reader->read(block.getArrayOfWritePointers(),block.getNumChannels(),position,count),"Audio waveform decode failed");
         for(int i=0;i<count;++i) {
@@ -29,18 +26,15 @@ V waveform(const juce::String& path,uint32_t bins,uint64_t expected) {
             for(int ch=0;ch<block.getNumChannels();++ch) { const float sample=block.getSample(ch,i);if(std::isfinite(sample))peaks[bin]=std::max(peaks[bin],std::abs(sample)); }
         }
     }
+    require(!cancellation.is_cancelled(cancellation.context),"Waveform cancelled");
     juce::Array<V> values;for(float peak:peaks)values.add(peak);auto out=object();put(out,"durationSeconds",reader->lengthInSamples/reader->sampleRate);put(out,"peaks",values);return out;
 }
-void waveformRangeFence(uint64_t next) {
-    auto current=rangeGeneration.load();
-    while(current<next && !rangeGeneration.compare_exchange_weak(current,next)){}
-}
-V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedFrames,uint32_t columns,uint32_t framesPerBin,uint64_t expected) {
+V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedFrames,uint32_t columns,uint32_t framesPerBin,const zp_waveform_cancellation& cancellation) {
     require(startFrame<=maxSafeFrame && requestedFrames>=1 && requestedFrames<=maxSafeFrame,"Invalid waveform frame range");
     require(columns>=1 && columns<=4096,"Waveform columns must be between 1 and 4096");
     require(framesPerBin!=0 && (framesPerBin&(framesPerBin-1))==0,"Waveform frames per bin must be a positive power of two");
     require(startFrame%framesPerBin==0,"Waveform range start must align to frames per bin");
-    require(expected==rangeGeneration.load(),"Waveform range cancelled");
+    require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
     juce::AudioFormatManager formats;formats.registerBasicFormats();
     std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(localFile(path)));
     require(reader!=nullptr,"Cannot decode waveform source");validateSource(*reader);
@@ -61,7 +55,7 @@ V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedF
     }
     juce::AudioBuffer<float> block((int)channels,(int)std::min<uint64_t>(8192,frameCount));
     for(uint64_t offset=0;offset<frameCount;offset+=(uint64_t)block.getNumSamples()) {
-        require(expected==rangeGeneration.load(),"Waveform range cancelled");
+        require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
         const int count=(int)std::min<uint64_t>((uint64_t)block.getNumSamples(),frameCount-offset);
         require(reader->read(block.getArrayOfWritePointers(),(int)channels,(juce::int64)(startFrame+offset),count),"Audio waveform decode failed");
         for(int i=0;i<count;++i) {
@@ -78,7 +72,7 @@ V waveformRange(const juce::String& path,uint64_t startFrame,uint64_t requestedF
             }
         }
     }
-    require(expected==rangeGeneration.load(),"Waveform range cancelled");
+    require(!cancellation.is_cancelled(cancellation.context),"Waveform range cancelled");
     juce::Array<V> resultChannels;
     for(size_t channel=0;channel<channels;++channel) {
         juce::Array<V> low,high;

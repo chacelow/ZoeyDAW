@@ -2,8 +2,9 @@ use crate::ffi::*;
 use crate::service::MAX_SAFE_INTEGER;
 use crate::PlaybackService;
 use serde_json::Value;
-use std::ffi::CString;
-use std::sync::atomic::Ordering;
+use std::ffi::{c_void, CString};
+use std::collections::HashMap;
+use std::sync::{Arc, atomic::{AtomicU64, Ordering}};
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -28,47 +29,108 @@ impl WaveformRangeRequest {
     }
 }
 
+#[derive(Default)]
+struct WindowWaveforms {
+    overview: Arc<AtomicU64>,
+    range: Arc<AtomicU64>,
+}
+#[derive(Default)]
+pub(crate) struct WaveformWindows(HashMap<String, Option<WindowWaveforms>>);
+enum WaveformKind { Overview, Range }
+struct WaveformTicket { generation: Arc<AtomicU64>, expected: u64 }
+impl WaveformWindows {
+    fn prepare(&mut self, window: &str, kind: WaveformKind) -> Result<WaveformTicket, String> {
+        if !self.0.contains_key(window) { self.0.insert(window.to_owned(), Some(WindowWaveforms::default())); }
+        let jobs = self.0.get_mut(window).and_then(Option::as_mut).ok_or("Waveform window is closed")?;
+        let generation = match kind { WaveformKind::Overview => &jobs.overview, WaveformKind::Range => &jobs.range };
+        let expected = Self::advance(generation)?;
+        Ok(WaveformTicket { generation: generation.clone(), expected })
+    }
+    fn advance(generation: &AtomicU64) -> Result<u64, String> {
+        let next = generation.load(Ordering::Relaxed).checked_add(1).filter(|value| *value < u64::MAX)
+            .ok_or("Waveform window generation limit reached")?;
+        generation.store(next, Ordering::Release);
+        Ok(next)
+    }
+    fn cancel_ranges(&mut self, window: &str) -> Result<(), String> {
+        if let Some(Some(jobs)) = self.0.get(window) { Self::advance(&jobs.range)?; }
+        Ok(())
+    }
+    fn close(&mut self, window: &str) {
+        let jobs = match self.0.get_mut(window) {
+            Some(slot) => slot.take(),
+            None => { self.0.insert(window.to_owned(), None);None }
+        };
+        if let Some(jobs) = jobs {
+            for generation in [jobs.overview, jobs.range] { generation.store(u64::MAX, Ordering::Release); }
+        }
+    }
+}
+impl Drop for WaveformWindows {
+    fn drop(&mut self) {
+        for jobs in self.0.values().flatten() {
+            for generation in [&jobs.overview, &jobs.range] { generation.store(u64::MAX, Ordering::Release); }
+        }
+    }
+}
+
+fn cancellation(ticket: &WaveformTicket) -> WaveformCancellation {
+    unsafe extern "C" fn is_cancelled(context: *const c_void) -> i32 {
+        // Native only borrows this ticket during execute; the job retains it for that call.
+        let ticket = unsafe { &*context.cast::<WaveformTicket>() };
+        i32::from(ticket.generation.load(Ordering::Acquire) != ticket.expected)
+    }
+    WaveformCancellation { context: (ticket as *const WaveformTicket).cast(), is_cancelled }
+}
+
 pub struct WaveformJob {
     path: String,
     bins: u32,
-    generation: u64,
+    cancelled: WaveformTicket,
 }
 
 impl WaveformJob {
     pub fn execute(self) -> Result<Value, String> {
         let path = CString::new(self.path).map_err(|error| error.to_string())?;
-        response(unsafe { zp_waveform(path.as_ptr(), self.bins, self.generation) })
+        let cancellation = cancellation(&self.cancelled);
+        response(unsafe { zp_waveform(path.as_ptr(), self.bins, &cancellation) })
     }
 }
 
 pub struct WaveformRangeJob {
     request: WaveformRangeRequest,
-    generation: u64,
+    cancelled: WaveformTicket,
 }
 
 impl WaveformRangeJob {
     pub fn execute(self) -> Result<Value, String> {
         let path = CString::new(self.request.path).map_err(|error| error.to_string())?;
-        response(unsafe { zp_waveform_range(path.as_ptr(), self.request.start_frame, self.request.frame_count, self.request.columns, self.request.frames_per_bin, self.generation) })
+        let cancellation = cancellation(&self.cancelled);
+        response(unsafe { zp_waveform_range(path.as_ptr(), self.request.start_frame, self.request.frame_count, self.request.columns, self.request.frames_per_bin, &cancellation) })
     }
 }
 
 impl PlaybackService {
-    pub fn prepare_waveform(&self, path: String, bins: u32) -> Result<WaveformJob, String> {
+    pub fn prepare_waveform(&self, window: &str, path: String, bins: u32) -> Result<WaveformJob, String> {
         if !(1..=4096).contains(&bins) { return Err("Waveform bins must be between 1 and 4096".into()); }
-        let generation = self.owner.waveform_generation.fetch_add(1, Ordering::AcqRel) + 1;
-        unsafe { zp_waveform_fence(generation) };
-        Ok(WaveformJob { path, bins, generation })
+        let cancelled = self.owner.waveform_windows.lock().map_err(|_| "Waveform window owner unavailable")?
+            .prepare(window, WaveformKind::Overview)?;
+        Ok(WaveformJob { path, bins, cancelled })
     }
 
-    pub fn prepare_waveform_range(&self, request: WaveformRangeRequest) -> Result<WaveformRangeJob, String> {
+    pub fn prepare_waveform_range(&self, window: &str, request: WaveformRangeRequest) -> Result<WaveformRangeJob, String> {
         request.validate()?;
-        let generation = self.owner.advance_waveform_range()?;
-        Ok(WaveformRangeJob { request, generation })
+        let cancelled = self.owner.waveform_windows.lock().map_err(|_| "Waveform window owner unavailable")?
+            .prepare(window, WaveformKind::Range)?;
+        Ok(WaveformRangeJob { request, cancelled })
     }
 
-    pub fn cancel_waveform_ranges(&self) -> Result<(), String> {
-        self.owner.advance_waveform_range()?;
+    pub fn cancel_waveform_ranges(&self, window: &str) -> Result<(), String> {
+        self.owner.waveform_windows.lock().map_err(|_| "Waveform window owner unavailable")?.cancel_ranges(window)
+    }
+
+    pub fn close_waveform_window(&self, window: &str) -> Result<(), String> {
+        self.owner.waveform_windows.lock().map_err(|_| "Waveform window owner unavailable")?.close(window);
         Ok(())
     }
 }
@@ -82,6 +144,80 @@ pub fn analyze_tempo(path: String) -> Result<Value, String> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    struct WaveformFixture(std::path::PathBuf);
+    impl WaveformFixture {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!("zoeydaw-waveform-{}-{}.wav", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+            let samples = [16384_i16, -16384, 8192, -8192, 16384, -16384, 8192, -8192];
+            let bytes = (samples.len() * 2) as u32;
+            let mut wav = Vec::new();
+            wav.extend(b"RIFF");wav.extend((36 + bytes).to_le_bytes());wav.extend(b"WAVEfmt ");
+            wav.extend(16_u32.to_le_bytes());wav.extend(1_u16.to_le_bytes());wav.extend(1_u16.to_le_bytes());
+            wav.extend(48000_u32.to_le_bytes());wav.extend(96000_u32.to_le_bytes());wav.extend(2_u16.to_le_bytes());wav.extend(16_u16.to_le_bytes());
+            wav.extend(b"data");wav.extend(bytes.to_le_bytes());
+            for sample in samples { wav.extend(sample.to_le_bytes()); }
+            std::fs::write(&path, wav).unwrap();Self(path)
+        }
+        fn request(&self) -> WaveformRangeRequest {
+            serde_json::from_value(json!({"path":self.0,"startFrame":0,"frameCount":8,"columns":8,"framesPerBin":1})).unwrap()
+        }
+    }
+    impl Drop for WaveformFixture {
+        fn drop(&mut self) { let _ = std::fs::remove_file(&self.0); }
+    }
+
+    #[test]
+    fn independent_waveform_consumers_decode_their_own_samples() {
+        let source = WaveformFixture::new();let service = PlaybackService::default();
+        let first = service.prepare_waveform_range("first", source.request()).unwrap();
+        let second = service.prepare_waveform_range("second", source.request()).unwrap();
+        for job in [first, second] {
+            let decoded = job.execute().expect("Another window must not cancel this decode");
+            assert_eq!(decoded["channels"][0], json!([0.5,-0.5,0.25,-0.25,0.5,-0.5,0.25,-0.25]));
+        }
+    }
+
+    #[test]
+    fn waveform_window_cancel_close_and_owner_drop_stop_only_owned_jobs() {
+        let source = WaveformFixture::new();let service = PlaybackService::default();
+        let overview = service.prepare_waveform("first", source.0.to_string_lossy().into_owned(), 1).unwrap();
+        let range = service.prepare_waveform_range("first", source.request()).unwrap();
+        let other = service.prepare_waveform_range("second", source.request()).unwrap();
+        service.cancel_waveform_ranges("first").unwrap();
+        assert!(range.execute().unwrap_err().contains("cancelled"));
+        assert_eq!(overview.execute().unwrap()["peaks"], json!([0.5]));
+        assert_eq!(other.execute().unwrap()["channels"][0][1], json!(-0.5));
+
+        let overview = service.prepare_waveform("first", source.0.to_string_lossy().into_owned(), 1).unwrap();
+        let range = service.prepare_waveform_range("first", source.request()).unwrap();
+        let other = service.prepare_waveform_range("second", source.request()).unwrap();
+        service.close_waveform_window("first").unwrap();
+        assert!(overview.execute().unwrap_err().contains("cancelled"));
+        assert!(range.execute().unwrap_err().contains("cancelled"));
+        assert!(service.prepare_waveform_range("first", source.request()).is_err());
+        assert!(service.prepare_waveform("first", source.0.to_string_lossy().into_owned(), 1).is_err());
+        assert_eq!(other.execute().unwrap()["channels"][0][2], json!(0.25));
+
+        let pending = service.prepare_waveform_range("second", source.request()).unwrap();
+        drop(service);
+        assert!(pending.execute().unwrap_err().contains("cancelled"));
+    }
+
+    #[test]
+    fn newer_window_demand_cancels_its_previous_job_but_invalid_input_does_not() {
+        let source = WaveformFixture::new();let service = PlaybackService::default();
+        let previous = service.prepare_waveform_range("first", source.request()).unwrap();
+        let mut invalid = source.request();invalid.columns = 0;
+        assert!(service.prepare_waveform_range("first", invalid).is_err());
+        assert_eq!(previous.execute().unwrap()["channels"][0][3], json!(-0.25));
+        let previous = service.prepare_waveform_range("first", source.request()).unwrap();
+        let other = service.prepare_waveform_range("second", source.request()).unwrap();
+        let current = service.prepare_waveform_range("first", source.request()).unwrap();
+        assert!(previous.execute().unwrap_err().contains("cancelled"));
+        assert_eq!(current.execute().unwrap()["channels"][0][4], json!(0.5));
+        assert_eq!(other.execute().unwrap()["channels"][0][5], json!(-0.5));
+    }
 
     #[test]
     fn waveform_range_validates_safe_frames_columns_and_paths() {

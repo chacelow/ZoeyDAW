@@ -15,8 +15,7 @@ pub(crate) struct Owner {
     released_leases: Mutex<HashSet<String>>,
     lease_stop_tokens: Mutex<HashMap<String, HashMap<String, LeaseSession>>>,
     audition_generation: AtomicU64,
-    pub(crate) waveform_generation: AtomicU64,
-    pub(crate) waveform_range_generation: AtomicU64,
+    pub(crate) waveform_windows: Mutex<crate::analysis::WaveformWindows>,
     pub(crate) meter_hub: Mutex<Option<Arc<crate::realtime::meter_hub::MeterHub>>>,
     pub(crate) meter_streams: Mutex<crate::realtime::streams::MeterStreams>,
 }
@@ -54,12 +53,6 @@ impl Owner {
         let sessions = self.lease_stop_tokens.lock().map_err(|_| "Playback stop lock poisoned")?;
         sessions.get(lease).and_then(|sessions| sessions.get(session)).map(|state| state.notes.clone())
             .ok_or_else(|| "Unknown playback lease/session".to_owned())
-    }
-    pub(crate) fn advance_waveform_range(&self) -> Result<u64, String> {
-        let generation = self.waveform_range_generation.fetch_update(Ordering::AcqRel, Ordering::Acquire, |current| current.checked_add(1))
-            .map_err(|_| "Waveform range generation limit reached".to_owned())? + 1;
-        unsafe { zp_waveform_range_fence(generation) };
-        Ok(generation)
     }
 
     fn reserve_audition(&self) -> Result<u64, String> {

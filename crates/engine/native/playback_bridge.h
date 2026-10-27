@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "../../plugin-abi/include/processor.h"
 #include "runtime/meter_read_abi.h"
+#include "analysis/waveform_cancellation.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,10 +31,8 @@ int zp_stop_fence_for(zp_session* session, const char* lease_id, const char* ses
 int zp_pending_call_begin(zp_session* session, const char* lease_id, const char* session_id);
 void zp_pending_call_end(zp_session* session);
 void zp_audition_fence(zp_session* session, uint64_t generation);
-void zp_waveform_fence(uint64_t generation);
-char* zp_waveform(const char* path, uint32_t bins, uint64_t generation);
-void zp_waveform_range_fence(uint64_t generation);
-char* zp_waveform_range(const char* path, uint64_t start_frame, uint64_t frame_count, uint32_t columns, uint32_t frames_per_bin, uint64_t generation);
+char* zp_waveform(const char* path, uint32_t bins, const zp_waveform_cancellation*);
+char* zp_waveform_range(const char* path, uint64_t start_frame, uint64_t frame_count, uint32_t columns, uint32_t frames_per_bin, const zp_waveform_cancellation*);
 char* zp_analyze_tempo(const char* path);
 #ifdef __cplusplus
 }

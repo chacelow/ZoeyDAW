@@ -76,6 +76,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 `crates/engine/native` 将协议模型、无设备分析与 EngineSession 分为 `model`、`analysis`、`runtime` 三个 OBJECT targets。分析不依赖 runtime，runtime 不依赖分析；根 `playback_bridge` 保留 C ABI。Tracktion/JUCE 实现只进入最终 `zoeydaw_playback` 静态库，OBJECT targets 仅继承编译配置，不链接带实现源的 vendor INTERFACE targets。
 
+`analysis.rs::WaveformWindows` 拥有每个窗口的 overview/range 取消代际；两类请求各自复用窗口持有的 `Arc<AtomicU64>`，job 只保留 `WaveformTicket`，原生解码只在同步调用中借用回调。窗口 ID 由 Tauri 注入，不从 Web 请求取得。窗口销毁取消两类 job，普通 range 取消不影响 overview 或其他窗口；service 释放也取消仍被 job 持有的工作。源解码与 Web 缓存协议不变，不再使用进程全局 waveform generation。
+
 `runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。
 
 `runtime/document_apply.cpp` 保留 `EngineSession::apply` 的协议准入、候选准备、增量应用与 accepted 发布；状态仍由同一个 EngineSession/Arrangement 持有。`engine_session.cpp` 负责 owner、生命周期与现有控制入口，事务文件不创建第二个 session、时钟或文档 Store。

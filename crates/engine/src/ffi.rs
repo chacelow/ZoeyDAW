@@ -1,6 +1,12 @@
 use std::ffi::{c_char, c_void, CStr};
 use serde_json::Value;
 
+#[repr(C)]
+pub(crate) struct WaveformCancellation {
+    pub context: *const c_void,
+    pub is_cancelled: unsafe extern "C" fn(*const c_void) -> i32,
+}
+
 extern "C" {
     pub(crate) fn zp_create(error: *mut *mut c_char) -> *mut c_void;
     pub(crate) fn zp_call(session: *mut c_void, operation: *const c_char, json: *const c_char) -> *mut c_char;
@@ -11,10 +17,8 @@ extern "C" {
     pub(crate) fn zp_pending_call_begin(session: *mut c_void, lease: *const c_char, session_id: *const c_char) -> i32;
     pub(crate) fn zp_pending_call_end(session: *mut c_void);
     pub(crate) fn zp_audition_fence(session: *mut c_void, generation: u64);
-    pub(crate) fn zp_waveform_fence(generation: u64);
-    pub(crate) fn zp_waveform(path: *const c_char, bins: u32, generation: u64) -> *mut c_char;
-    pub(crate) fn zp_waveform_range_fence(generation: u64);
-    pub(crate) fn zp_waveform_range(path: *const c_char, start_frame: u64, frame_count: u64, columns: u32, frames_per_bin: u32, generation: u64) -> *mut c_char;
+    pub(crate) fn zp_waveform(path: *const c_char, bins: u32, cancellation: *const WaveformCancellation) -> *mut c_char;
+    pub(crate) fn zp_waveform_range(path: *const c_char, start_frame: u64, frame_count: u64, columns: u32, frames_per_bin: u32, cancellation: *const WaveformCancellation) -> *mut c_char;
     pub(crate) fn zp_analyze_tempo(path: *const c_char) -> *mut c_char;
 }
 

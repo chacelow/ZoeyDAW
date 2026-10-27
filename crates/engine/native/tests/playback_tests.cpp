@@ -107,8 +107,9 @@ float waveformFixtureSample(int channel,int frame) {
     const float sample=cycle[frame%8];
     return channel==0?sample:-sample*.5f+.125f;
 }
-V waveformRangeResponse(const juce::File& file,uint64_t start,uint64_t count,uint32_t columns,uint32_t framesPerBin=1,uint64_t generation=1) {
-    std::unique_ptr<char,decltype(&zp_free)> encoded(zp_waveform_range(file.getFullPathName().toRawUTF8(),start,count,columns,framesPerBin,generation),zp_free);
+V waveformRangeResponse(const juce::File& file,uint64_t start,uint64_t count,uint32_t columns,uint32_t framesPerBin=1,bool cancelled=false) {
+    const zp_waveform_cancellation cancellation{&cancelled,[](const void* context)->int32_t { return *static_cast<const bool*>(context)?1:0; }};
+    std::unique_ptr<char,decltype(&zp_free)> encoded(zp_waveform_range(file.getFullPathName().toRawUTF8(),start,count,columns,framesPerBin,&cancellation),zp_free);
     zp::require(encoded!=nullptr,"Missing waveform range response");return zp::parse(encoded.get());
 }
 void writeWideFloatWaveform(const juce::File& file,int channels,bool invalid=false) {
@@ -134,7 +135,6 @@ void testSignedWaveformRanges() {
         zp::require(writer->writeFromAudioSampleBuffer(block,0,count),"Cannot write signed waveform fixture");
     }
     writer.reset();
-    zp_waveform_range_fence(1);
     const auto verifySamples=[&](uint64_t start,uint64_t requested,uint32_t columns) {
         const auto response=waveformRangeResponse(source.getFile(),start,requested,columns);
         zp::require((bool)response["ok"],"Signed sample decode failed: "+response["error"].toString());
@@ -187,17 +187,21 @@ void testSignedWaveformRanges() {
     zp::require(!(bool)waveformRangeResponse(source.getFile(),0,0,1)["ok"],"Empty waveform range must reject");
     zp::require(!(bool)waveformRangeResponse(source.getFile(),0,9007199254740992ULL,1)["ok"],"Unsafe waveform frame count must reject");
     for(uint32_t columns:{0U,4097U})zp::require(!(bool)waveformRangeResponse(source.getFile(),0,1,columns)["ok"],"Invalid waveform columns must reject");
-    zp_waveform_fence(700);
     verifySamples(0,8,4);
-    zp_waveform_range_fence(2);
-    zp::require(!(bool)waveformRangeResponse(source.getFile(),0,8,4)["ok"],"Range fence must cancel stale range requests");
-    std::unique_ptr<char,decltype(&zp_free)> overview(zp_waveform(source.getFile().getFullPathName().toRawUTF8(),8,700),zp_free);
+    zp::require(!(bool)waveformRangeResponse(source.getFile(),0,8,4,1,true)["ok"],"Cancelled job must not decode its source");
+    const zp_waveform_cancellation active{nullptr,[](const void*)->int32_t { return 0; }};
+    std::unique_ptr<char,decltype(&zp_free)> overview(zp_waveform(source.getFile().getFullPathName().toRawUTF8(),8,&active),zp_free);
     zp::require(overview && (bool)zp::parse(overview.get())["ok"],"Range cancellation must not cancel overview requests");
-    const auto current=waveformRangeResponse(source.getFile(),0,8,4,1,2);
-    zp::require((bool)current["ok"],"Current range generation must remain usable");
+    const auto current=waveformRangeResponse(source.getFile(),0,8,4);
+    zp::require((bool)current["ok"],"Independent active cancellation token must remain usable");
+    struct DecodeCancellation { mutable uint32_t checks=0; } decoded;
+    const zp_waveform_cancellation duringDecode{&decoded,[](const void* context)->int32_t { return ++static_cast<const DecodeCancellation*>(context)->checks>=3?1:0; }};
+    std::unique_ptr<char,decltype(&zp_free)> interrupted(zp_waveform_range(source.getFile().getFullPathName().toRawUTF8(),0,frames,3,8192,&duringDecode),zp_free);
+    const auto interruptedResult=zp::parse(interrupted.get());
+    zp::require(!(bool)interruptedResult["ok"] && interruptedResult["error"].toString().contains("cancelled") && decoded.checks==3,"Cancellation during source decoding must stop at the next block");
     for(int channels:{64,65}) {
         juce::TemporaryFile wide(".wav");writeWideFloatWaveform(wide.getFile(),channels);
-        const auto wideResponse=waveformRangeResponse(wide.getFile(),0,8,2,4,2);
+        const auto wideResponse=waveformRangeResponse(wide.getFile(),0,8,2,4);
         if(channels==65)zp::require(!(bool)wideResponse["ok"],"More than 64 source channels must reject before allocating decode buffers");
         else {
             zp::require((bool)wideResponse["ok"] && wideResponse["value"]["channels"].size()==64,"All 64 source channels must survive decoding");
@@ -208,9 +212,9 @@ void testSignedWaveformRanges() {
         }
     }
     juce::TemporaryFile invalid(".wav");writeWideFloatWaveform(invalid.getFile(),2,true);
-    zp::require(!(bool)waveformRangeResponse(invalid.getFile(),0,8,4,1,2)["ok"],"Non-finite source samples must reject rather than inventing a signed line");
-    zp::require(!(bool)waveformRangeResponse(invalid.getFile(),0,8,4,2,2)["ok"],"Non-finite envelope samples must reject rather than inventing extrema");
-    const auto oversized=waveformRangeResponse(invalid.getFile(),0,8,1,2,2);
+    zp::require(!(bool)waveformRangeResponse(invalid.getFile(),0,8,4)["ok"],"Non-finite source samples must reject rather than inventing a signed line");
+    zp::require(!(bool)waveformRangeResponse(invalid.getFile(),0,8,4,2)["ok"],"Non-finite envelope samples must reject rather than inventing extrema");
+    const auto oversized=waveformRangeResponse(invalid.getFile(),0,8,1,2);
     zp::require(!(bool)oversized["ok"] && oversized["error"].toString().contains("bin count"),"Oversized bin plans must reject before decoding non-finite PCM");
 }
 void testAudioConfigurationBoundary(zp_session* session) {

@@ -224,18 +224,18 @@ pub async fn playback_analyze_tempo(path: String) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub async fn playback_waveform(service: State<'_, PlaybackService>, path: String, bins: u32) -> Result<Value, String> {
-    let job = service.prepare_waveform(path, bins)?;
+pub async fn playback_waveform(window: tauri::WebviewWindow, service: State<'_, PlaybackService>, path: String, bins: u32) -> Result<Value, String> {
+    let job = service.prepare_waveform(window.label(), path, bins)?;
     tauri::async_runtime::spawn_blocking(move || job.execute()).await.map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub async fn playback_waveform_range(service: State<'_, PlaybackService>, request: WaveformRangeRequest) -> Result<Value, String> {
-    let job = service.prepare_waveform_range(request)?;
+pub async fn playback_waveform_range(window: tauri::WebviewWindow, service: State<'_, PlaybackService>, request: WaveformRangeRequest) -> Result<Value, String> {
+    let job = service.prepare_waveform_range(window.label(), request)?;
     tauri::async_runtime::spawn_blocking(move || job.execute()).await.map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub fn playback_waveform_range_cancel(service: State<'_, PlaybackService>) -> Result<(), String> {
-    service.cancel_waveform_ranges()
+pub fn playback_waveform_range_cancel(window: tauri::WebviewWindow, service: State<'_, PlaybackService>) -> Result<(), String> {
+    service.cancel_waveform_ranges(window.label())
 }

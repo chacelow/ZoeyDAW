@@ -89,11 +89,11 @@ int zp_stop_fence_for(zp_session* session,const char* lease,const char* owner,ui
 int zp_pending_call_begin(zp_session* session,const char* lease,const char* owner) { try { if(!session || !lease || !owner)return 0;session->owner.beginPendingCall(lease,owner);return 1; }catch(...) { return 0; } }
 void zp_pending_call_end(zp_session* session) { try { if(session)session->owner.endPendingCall(); }catch(...) {} }
 void zp_audition_fence(zp_session* session,uint64_t generation) { if(session)fence(session->owner.auditionGeneration,generation); }
-void zp_waveform_fence(uint64_t generation) { zp::waveformFence(generation); }
-char* zp_waveform(const char* path,uint32_t bins,uint64_t generation) { return answer([&] { zp::require(path!=nullptr,"Missing waveform path");return zp::waveform(juce::String::fromUTF8(path),bins,generation); }); }
-void zp_waveform_range_fence(uint64_t generation) { zp::waveformRangeFence(generation); }
-char* zp_waveform_range(const char* path,uint64_t startFrame,uint64_t frameCount,uint32_t columns,uint32_t framesPerBin,uint64_t generation) {
-    return answer([&] { zp::require(path!=nullptr,"Missing waveform path");return zp::waveformRange(juce::String::fromUTF8(path),startFrame,frameCount,columns,framesPerBin,generation); });
+char* zp_waveform(const char* path,uint32_t bins,const zp_waveform_cancellation* cancellation) {
+    return answer([&] { zp::require(path && cancellation && cancellation->is_cancelled,"Missing waveform path or cancellation");return zp::waveform(juce::String::fromUTF8(path),bins,*cancellation); });
+}
+char* zp_waveform_range(const char* path,uint64_t startFrame,uint64_t frameCount,uint32_t columns,uint32_t framesPerBin,const zp_waveform_cancellation* cancellation) {
+    return answer([&] { zp::require(path && cancellation && cancellation->is_cancelled,"Missing waveform path or cancellation");return zp::waveformRange(juce::String::fromUTF8(path),startFrame,frameCount,columns,framesPerBin,*cancellation); });
 }
 char* zp_analyze_tempo(const char* path) { return answer([&] { zp::require(path!=nullptr,"Missing tempo path");return zp::analyzeTempo(juce::String::fromUTF8(path)); }); }
 }

@@ -42,6 +42,9 @@ pub fn run() {
           if let Err(error) = service.close_meter_window(window.label()) {
             log::error!("Meter window cleanup failed: {error}");
           }
+          if let Err(error) = service.close_waveform_window(window.label()) {
+            log::error!("Waveform window cleanup failed: {error}");
+          }
         }
         if let Some(probes) = window.app_handle().try_state::<playback::realtime_probe::RealtimeProbeService>() {
           probes.close_window(window.label());
