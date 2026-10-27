@@ -110,6 +110,16 @@
   grid-template-columns: var(--project-identity-width) var(--project-routing-width) minmax(0, 1fr);
 }
 
+.project-arrangement .arrangement-track-header[data-recording]::after {
+  position: absolute;
+  z-index: 40;
+  background: var(--destructive);
+  content: "";
+  inset: 0;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
 .arrangement-track-controls {
   gap: var(--spacing-control-track-gap);
   padding-block: var(--spacing-control-track-gap);

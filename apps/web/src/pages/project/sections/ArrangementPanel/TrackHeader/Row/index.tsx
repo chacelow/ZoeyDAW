@@ -33,6 +33,7 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
     projectActions.updateTrack(track.id, patch)
   )
   const selection = useProjectState(s => s.session.selectedTrackIds)
+  const recording = useProjectState(s => s.session.recording)
   const selectionSurface = useProjectState(s => s.session.trackSelectionSurface)
   const selected = selection.includes(track.id)
   const headerSelected = selected && selectionSurface === "header"
@@ -153,6 +154,7 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
         tabIndex={0}
         data-collapsed={track.collapsed || undefined}
         data-selected={headerSelected || undefined}
+        data-recording={recording && track.kind === "audio" && track.armed ? true : undefined}
         className={cn(
           "arrangement-track-header relative grid grid-rows-[minmax(0,1fr)]",
           resizeHover && "cursor-row-resize"

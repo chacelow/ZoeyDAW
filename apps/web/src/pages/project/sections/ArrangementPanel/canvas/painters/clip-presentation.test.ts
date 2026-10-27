@@ -4,6 +4,7 @@ import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import { createMockDocument } from "@zoeydaw/project-runtime/testing"
 import { createSceneStore } from "../scene"
 import { paintClips } from "./clip"
+import { paintRecording } from "./recording"
 import { readTokens } from "../tokens"
 
 function fixture() {
@@ -145,3 +146,72 @@ it.each([31.5, 160.37, 8000.25])(
     ).toHaveLength(1)
   }
 )
+
+it("paints the growing recording with the normal card and overlays the whole recording track", () => {
+  const { store, tokens, context, rectangles, waves } = fixture()
+  const track = store.get().tracks[0]
+  tokens["--destructive"] = "recording-red"
+  const take = {
+    trackId: track.id,
+    clipId: "take",
+    startBar: 1,
+    durationBars: 1,
+    channels: [{ min: [-0.5, -0.25], max: [0.5, 0.25] }],
+  }
+  const preview = { sessionId: "session", recordingId: "recording", tracks: [take] }
+  paintRecording(context, store.get(), tokens, preview, true)
+  expect(
+    rectangles.some(
+      rect => rect.x === 0 && rect.width === 160 && rect.color === track.color && rect.height === 21
+    )
+  ).toBe(true)
+  expect(
+    rectangles.some(
+      rect =>
+        rect.x === 0 && rect.width === 900 && rect.color === "recording-red" && rect.alpha === 0.18
+    )
+  ).toBe(true)
+  expect(waves.length).toBeGreaterThan(0)
+  rectangles.length = 0
+  paintRecording(
+    context,
+    store.get(),
+    tokens,
+    { ...preview, tracks: [{ ...take, durationBars: 2 }] },
+    false
+  )
+  expect(
+    rectangles.some(
+      rect => rect.x === 0 && rect.width === 320 && rect.color === track.color && rect.height === 21
+    )
+  ).toBe(true)
+  expect(rectangles.some(rect => rect.color === "recording-red")).toBe(false)
+})
+
+it("tints each simultaneous recording track without tinting an unarmed row", () => {
+  const { store, tokens, context, rectangles } = fixture()
+  const first = store.get().tracks[0]
+  const second = { ...first, id: "second", clips: [] }
+  const third = { ...first, id: "third", clips: [] }
+  store.setMusic({ ...store.get(), tracks: [first, second, third] })
+  store.setViewport({ ...store.get().viewport, height: 600 })
+  tokens["--destructive"] = "recording-red"
+  const take = { clipId: "one", startBar: 1, durationBars: 1, channels: [] }
+  paintRecording(
+    context,
+    store.get(),
+    tokens,
+    {
+      sessionId: "session",
+      recordingId: "take",
+      tracks: [
+        { ...take, trackId: first.id },
+        { ...take, clipId: "two", trackId: second.id },
+      ],
+    },
+    true
+  )
+  expect(
+    rectangles.filter(rect => rect.color === "recording-red" && rect.width === 900)
+  ).toHaveLength(2)
+})

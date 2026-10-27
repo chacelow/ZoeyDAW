@@ -1,8 +1,16 @@
 import type { NativeRecordingPreview } from "@/shared/native/audio"
 import { cachedWaveformRanges } from "@/pages/project/adapters/backend/waveform-ranges"
-import { TRACK_TITLE_HEIGHT } from "@/pages/project/layout"
-import { arrangementBodyTop, arrangementBodyBottom, layoutTrackRows, pinnedTopFor } from "../layout"
+import {
+  arrangementBodyTop,
+  arrangementBodyBottom,
+  clipRect,
+  layoutTrackRows,
+  pinnedTopFor,
+} from "../layout"
 import { resolveColor } from "../tokens"
+import { clipVisualGeometry } from "../clip-geometry"
+import { paintClip } from "./clip"
+import type { AudioClip } from "@zoeydaw/project-core/types"
 import type { ArrangementScene } from "../scene"
 import type { TokenSet } from "../tokens"
 
@@ -10,9 +18,10 @@ export function paintRecording(
   context: CanvasRenderingContext2D,
   scene: ArrangementScene,
   tokens: TokenSet,
-  preview: NativeRecordingPreview | null
+  preview: NativeRecordingPreview | null,
+  recording: boolean
 ): void {
-  if (!preview) return
+  if (!preview && !recording) return
   const { width, height, dpr, pxPerBar, scrollX } = scene.viewport
   if (width <= 0 || height <= 0 || pxPerBar <= 0) return
   const rows = layoutTrackRows(scene)
@@ -25,7 +34,7 @@ export function paintRecording(
   context.beginPath()
   context.rect(0, arrangementBodyTop(), width, Math.max(0, bottom - arrangementBodyTop()))
   context.clip()
-  for (const take of preview.tracks) {
+  for (const take of preview?.tracks ?? []) {
     const row = rows.find(item => item.track.id === take.trackId)
     if (!row || take.durationBars <= 0) continue
     const clip = row.track.clips.find(clip => clip.id === take.clipId)
@@ -41,31 +50,49 @@ export function paintRecording(
       row.top + row.contentHeight <= arrangementBodyTop()
     )
       continue
-    const top = Math.round(row.top + 1)
-    const contentHeight = Math.max(4, row.contentHeight - 3)
-    const titleHeight = row.track.collapsed
-      ? contentHeight
-      : Math.min(TRACK_TITLE_HEIGHT, contentHeight)
+    const recordingClip: AudioClip = {
+      id: take.clipId,
+      kind: "audio",
+      startBar: take.startBar,
+      lengthBars: take.durationBars,
+      sourceId: null,
+      gainDb: 0,
+      label: row.track.name,
+    }
+    const visual = clipVisualGeometry(
+      clipRect(recordingClip, row, pxPerBar, scrollX),
+      recordingClip,
+      row.track,
+      false
+    )
+    const { top, titleHeight, bodyHeight } = visual
     context.save()
     context.beginPath()
     context.rect(
       Math.max(0, left),
       top,
       Math.max(0, Math.min(width, left + clipWidth) - Math.max(0, left)),
-      contentHeight
+      visual.height
     )
     context.clip()
-    context.fillStyle = tokens["--arrangement-automation"]
-    context.globalAlpha = 0.18
-    context.fillRect(left, top, clipWidth, contentHeight)
-    context.globalAlpha = 1
-    context.fillStyle = resolveColor(row.track.color, tokens, tokens["--primary"])
-    context.fillRect(left, top, clipWidth, titleHeight)
-    context.fillStyle = tokens["--arrangement-clip-ink"]
     context.font = "10px ui-sans-serif, system-ui, sans-serif"
     context.textBaseline = "middle"
-    context.fillText(row.track.name, left + 4, top + titleHeight / 2)
-    const bodyHeight = contentHeight - titleHeight
+    paintClip(
+      context,
+      recordingClip,
+      visual,
+      resolveColor(row.track.color, tokens, tokens["--primary"]),
+      tokens,
+      {
+        selected: false,
+        hovered: false,
+        automationMode: false,
+        ghost: false,
+      },
+      width,
+      scene
+    )
+    context.fillStyle = tokens["--arrangement-clip-ink"]
     if (bodyHeight > 0 && take.channels.length > 0) {
       const channelHeight = bodyHeight / take.channels.length
       for (const [index, channel] of take.channels.entries()) {
@@ -98,6 +125,14 @@ export function paintRecording(
       }
     }
     context.restore()
+  }
+  if (recording) {
+    context.fillStyle = tokens["--destructive"]
+    context.globalAlpha = 0.18
+    for (const row of rows) {
+      if (preview ? preview.tracks.some(take => take.trackId === row.track.id) : row.track.armed)
+        context.fillRect(0, row.top, width, row.contentHeight)
+    }
   }
   context.restore()
 }

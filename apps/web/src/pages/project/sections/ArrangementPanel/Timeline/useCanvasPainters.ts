@@ -85,7 +85,13 @@ export function useCanvasPainters(
         })
       )
         retainedRecording = null
-      paintRecording(context, scene, tokens, retainedRecording)
+      paintRecording(
+        context,
+        scene,
+        tokens,
+        retainedRecording,
+        useProjectState.getState().session.recording
+      )
       if (useProjectState.getState().workspace.automationMode) {
         paintAutomation(context, scene, {
           stroke: tokens["--arrangement-automation"],
@@ -153,7 +159,10 @@ export function useCanvasPainters(
       }
     })
     const unsubMode = useProjectState.subscribe((state, previous) => {
-      if (state.workspace.automationMode !== previous.workspace.automationMode) {
+      if (
+        state.workspace.automationMode !== previous.workspace.automationMode ||
+        state.session.recording !== previous.session.recording
+      ) {
         arrangementScheduler.invalidate(SCENE_ID)
       }
     })
