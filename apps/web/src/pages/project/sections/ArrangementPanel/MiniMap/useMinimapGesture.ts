@@ -46,7 +46,7 @@ export function useMinimapGesture(
     const node = element.current
     if (!node) return
     let wheelResidual = 0
-    const native = hasNativeCursor()
+    const native = hasNativeCursor() && !navigator.userAgent.includes("Windows")
     function end() {
       const current = anchor.current
       current?.lock.release()
@@ -242,7 +242,8 @@ export function useMinimapGesture(
                     ? current.scrollX / current.pxPerBar
                     : minimapAnchor(rect.width, x, current),
             }
-      if (hasNativeCursor()) element.current.setPointerCapture?.(event.pointerId)
+      if (hasNativeCursor() && !navigator.userAgent.includes("Windows"))
+        element.current.setPointerCapture?.(event.pointerId)
     },
     pointerMove(event: PointerEvent<HTMLDivElement>) {
       if (anchor.current) return

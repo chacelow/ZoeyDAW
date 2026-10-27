@@ -54,7 +54,7 @@ export function acquireCursorLock(
   restorePosition?: () => { x: number; y: number }
 ): CursorLock | null {
   if (cursorState.ownerToken || browserPointerLockElement()) return null
-  const native = hasNativeCursor()
+  const native = hasNativeCursor() && !navigator.userAgent.includes("Windows")
   if (!native && !element.requestPointerLock) return null
   const token = `${Date.now()}-${++cursorState.nextOwner}`
   const origin = windowCursorPosition(clientX, clientY)
@@ -125,7 +125,9 @@ export function acquireCursorLock(
       if (phase === "releasing") document.exitPointerLock()
       else phase = "locked"
     } else if (acknowledged) {
-      finish()
+      if (!native && hasNativeCursor() && phase === "releasing") {
+        void getCurrentWindow().setCursorPosition(destination).then(finish).catch(finish)
+      } else finish()
       onEnd()
     }
   }

@@ -142,6 +142,31 @@ it("releases a browser lock acknowledged after pointer release instead of retain
   Reflect.deleteProperty(document, "exitPointerLock")
 })
 
+it("uses pointer lock on Windows and restores the native cursor after release", async () => {
+  nativeWindow()
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Windows NT 10.0")
+  native.setCursorPosition.mockResolvedValue(undefined)
+  const element = document.createElement("div")
+  const request = vi.fn()
+  Object.defineProperty(element, "requestPointerLock", { configurable: true, value: request })
+  Object.defineProperty(document, "exitPointerLock", {
+    configurable: true,
+    value: () => {
+      Object.defineProperty(document, "pointerLockElement", { configurable: true, value: null })
+      document.dispatchEvent(new Event("pointerlockchange"))
+    },
+  })
+  lease = acquireCursorLock(element, 20, 30, vi.fn(), () => ({ x: 80, y: 40 }))
+  expect(request).toHaveBeenCalledOnce()
+  expect(native.invoke).not.toHaveBeenCalled()
+  Object.defineProperty(document, "pointerLockElement", { configurable: true, value: element })
+  document.dispatchEvent(new Event("pointerlockchange"))
+  expect(lease?.relative).toBe(true)
+  lease?.release()
+  await vi.waitFor(() => expect(lease?.phase).toBe("released"))
+  expect(native.setCursorPosition).toHaveBeenCalledWith(new LogicalPosition(80, 40))
+})
+
 it("uses browser lock ownership and leaves somebody else's lock untouched", () => {
   const other = document.createElement("div")
   const element = document.createElement("div")

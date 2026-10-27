@@ -266,6 +266,20 @@ it("uses browser locked mouse events without counting compatibility pointer even
   expect(cursor.release).toHaveBeenCalledTimes(1)
 })
 
+it("uses locked mouse motion in the Windows native window", () => {
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Windows NT 10.0")
+  cursor.native = true
+  cursor.relative = true
+  const { el } = mount()
+  pointer(el, "pointerdown", 80)
+  relativeMove("pointermove", 20)
+  relativeMove("mousemove", 20)
+  relativeMove("mousemove", 20)
+  expect(useProjectState.getState().workspace.scrollX).toBe(104)
+  fireEvent.mouseUp(window, { button: 0 })
+  expect(cursor.release).toHaveBeenCalledOnce()
+})
+
 it.each(["pointercancel", "blur", "unmount", "escape"])(
   "releases its native lease on %s without rolling back",
   end => {
