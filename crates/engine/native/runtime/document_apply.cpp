@@ -12,8 +12,11 @@ V EngineSession::apply(const V& v) {
     if(r.recording && (!r.playing || !configuration || configuration->inputDeviceId.isEmpty()))return result(r,false,"rejected");
     if(recording && (opening || !sameGraph(r,*accepted)))return result(r,false,"rejected");
     for(const auto& track:r.tracks)for(const auto& clip:track.clips)if(clip.kind=="audio") {
-        const double ratio=clip.settings.warp?r.bpm/clip.settings.sourceBpm:1.0;
-        require(ratio>=te::ClipConstants::speedRatioMin && ratio<=te::ClipConstants::speedRatioMax,"Tempo ratio exceeds the native time-stretcher range");
+        const auto validateRatio=[&](double bpm) {
+            const double ratio=clip.settings.warp?bpm/clip.settings.sourceBpm:1.0;
+            require(ratio>=te::ClipConstants::speedRatioMin && ratio<=te::ClipConstants::speedRatioMax,"Tempo ratio exceeds the native time-stretcher range");
+        };
+        validateRatio(r.bpm);for(const auto& section:r.tempo)validateRatio(section.bpm);
     }
     if(opening)publishPendingStopOwner({lease.toStdString(),r.session.toStdString()});
     struct ClearPending { EngineSession& owner; bool active; ~ClearPending() { if(active)owner.publishPendingStopOwner({}); } } clearPending {*this,opening};
@@ -51,24 +54,19 @@ V EngineSession::apply(const V& v) {
         stopOwner.swap(owner);
     }
     const bool seek=opening || !accepted || request.seekGeneration!=accepted->seekGeneration;
-    const bool tempoChanged=accepted && request.bpm!=accepted->bpm;
+    const bool tempoChanged=accepted && !request.sameTempo(*accepted);
     double position=request.barTime(request.seekBar);
     if(arrangement && accepted) {
         auto& previousTransport=arrangement->edit->getTransport();
         auto current=previousTransport.getPosition();
         if(previousTransport.isPlaying())if(auto* context=previousTransport.getCurrentPlaybackContext())
             current=context->getPendingPositionChange().value_or(context->getAudibleTimelineTime());
-        position=request.barTime(1+current.inSeconds()/accepted->secondsPerBar());
+        position=request.barTime(accepted->timeBar(current.inSeconds()));
     }
     if(candidate) { allNotesOff();if(arrangement)arrangement->edit->getTransport().stop(false,true);arrangement=std::move(candidate);routeOutputs(*arrangement,request); }
     else {
         te::TransportControl::ReallocationInhibitor inhibit(arrangement->edit->getTransport());
-        if(tempoChanged) {
-            auto& sequence=arrangement->edit->tempoSequence;
-            auto* setting=sequence.getTempo(0);
-            setting->set(setting->getStartBeat(),request.bpm,setting->getCurve(),false);
-            sequence.updateTempoData();
-        }
+        if(tempoChanged)updateTempo(*arrangement,request);
         for(const auto& track:request.tracks)if(!arrangement->tracks.contains(track.id)) {
             auto native=arrangement->edit->insertNewAudioTrack(te::TrackInsertPoint::getEndOfTracks(*arrangement->edit),nullptr);require(native!=nullptr,"Cannot create arrangement track");
             initialiseTrack(*arrangement,*native,track,request);
@@ -94,6 +92,7 @@ V EngineSession::apply(const V& v) {
     if(seek || replace || request.playing!=transport.isPlaying())for(const auto& [id,device]:arrangement->devices)device->reset();
     if(replace || tempoChanged || request.loopStart!=accepted->loopStart || request.loopEnd!=accepted->loopEnd)transport.setLoopRange({te::TimePosition::fromSeconds(request.barTime(request.loopStart)),te::TimePosition::fromSeconds(request.barTime(request.loopEnd))});
     if(replace || request.loop!=accepted->loop)transport.looping=request.loop;
+    if(!request.playing && transport.isPlaying())transport.stop(false,false);
     if(seek || replace) { ++transportSeeks;transport.setPosition(te::TimePosition::fromSeconds(seek?request.barTime(request.seekBar):position)); }
     else if(tempoChanged && !transport.isPlaying())transport.setPosition(te::TimePosition::fromSeconds(position));
     auto previousFence=stopToken.load(std::memory_order_acquire);while(previousFence<fence && !stopToken.compare_exchange_weak(previousFence,fence,std::memory_order_acq_rel)) {}

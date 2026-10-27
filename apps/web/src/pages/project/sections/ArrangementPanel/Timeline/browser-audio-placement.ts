@@ -1,3 +1,4 @@
+import { secondsAtBar, barAtSeconds } from "@zoeydaw/project-core/tempo-map"
 import { visibleTracks } from "@zoeydaw/project-core/types"
 import { canAcceptAudioDrop } from "@zoeydaw/project-core/audio-drop"
 import { DEFAULT_TRACK_COLOR } from "@zoeydaw/project-core/reducers"
@@ -42,8 +43,6 @@ export function browserAudioPlacement(
   )
   const top = Math.max(bodyTop, row?.top ?? emptyTop)
   const rowBottom = row ? row.top + row.contentHeight : emptyTop + DEFAULT_TRACK_HEIGHT
-  const { bpm, numerator, denominator } = scene.transport
-  const secondsPerBar = (60 * numerator * 4) / (bpm * denominator)
   return {
     startBar,
     trackId: row?.track.id,
@@ -52,7 +51,15 @@ export function browserAudioPlacement(
     width:
       source.durationSeconds === null
         ? null
-        : Math.max(2, (source.durationSeconds / secondsPerBar) * pxPerBar),
+        : Math.max(
+            2,
+            (barAtSeconds(
+              scene.transport,
+              secondsAtBar(scene.transport, startBar) + source.durationSeconds
+            ) -
+              startBar) *
+              pxPerBar
+          ),
     color: row?.track.color ?? DEFAULT_TRACK_COLOR,
     height: Math.min(bottom - top, rowBottom - top),
   }

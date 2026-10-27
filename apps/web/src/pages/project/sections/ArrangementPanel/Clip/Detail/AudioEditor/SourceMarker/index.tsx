@@ -1,6 +1,6 @@
+import { clipBarAtSourceCoordinate, projectTempoSections } from "@zoeydaw/project-core/tempo-map"
 import { useEffect, useRef } from "react"
-import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
-import { projectActions, useProjectEditGesture } from "@/pages/project/adapters"
+import { projectActions, useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
 import {
   audioLoopWindow,
   audioSourceWindow,
@@ -44,9 +44,16 @@ export function SourceMarker({
     value: number
     barsPerPixel: number
   } | null>(null)
+  const tempoTracks = useProjectState(state => state.document.tracks)
+  const timebase = {
+    bpm,
+    numerator,
+    denominator,
+    tempo: projectTempoSections(tempoTracks, { bpm, numerator, denominator }),
+  }
   const gesture = useProjectEditGesture((value: number) => {
     const baseline = active.current?.clip ?? clip
-    const { origin, rate } = clipSourceProjection(baseline, bpm)
+    const localBar = clipBarAtSourceCoordinate(baseline, timebase, value)
     if (kind === "loopStart" || kind === "loopEnd") {
       const settings = getAudioClipSettings(baseline, bpm)
       const loopEnd = settings.loopStartBars + settings.loopLengthBars
@@ -80,12 +87,9 @@ export function SourceMarker({
     const patch =
       kind === "fadeIn"
         ? {
-            fadeInBars: Math.max(
-              0,
-              Math.min(outFade.start, (value - origin) / rate) - inFade.start
-            ),
+            fadeInBars: Math.max(0, Math.min(outFade.start, localBar) - inFade.start),
           }
-        : { fadeOutBars: Math.max(0, outFade.end - Math.max(inFade.end, (value - origin) / rate)) }
+        : { fadeOutBars: Math.max(0, outFade.end - Math.max(inFade.end, localBar)) }
     projectActions.updateClip(clip.id, patch)
   })
   useEffect(() => {

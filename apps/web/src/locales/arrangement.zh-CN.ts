@@ -130,6 +130,7 @@ export default {
   automationDevice: "自动化设备",
   automationNone: "无",
   automationMixer: "混音器",
+  songTempo: "工程速度",
   addAutomationLane: "添加自动化轨道",
   removeAutomationLane: "隐藏自动化轨道",
   kind: { audio: "音频", midi: "MIDI", group: "编组", return: "返回轨道", main: "主输出" },

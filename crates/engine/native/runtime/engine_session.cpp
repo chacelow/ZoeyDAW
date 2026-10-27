@@ -142,6 +142,7 @@ void applyMixerAutomation(te::AudioTrack& track,const Track& source,const Reques
     for(const auto& lane:*source.automation.getArray()) {
         const auto& target=field(lane,"target");
         if(text(target,"kind")!="mixer")continue;
+        if(text(target,"parameter")=="tempo")continue;
         const bool isVolume=text(target,"parameter")=="volume";
         auto parameter=isVolume?volume->volParam:volume->panParam;
         for(const auto& point:array(lane,"points")) {
@@ -365,11 +366,24 @@ void EngineSession::removeUnusedTracks(Arrangement& a,const Request& next) {
         a.meterOutputs.erase(it->second);a.edit->deleteTrack(it->second);it=a.tracks.erase(it);
     }
 }
+void EngineSession::updateTempo(Arrangement& a,const Request& request) {
+    auto& sequence=a.edit->tempoSequence;
+    if(request.tempo.empty() && sequence.getNumTempos()==1) {
+        auto* setting=sequence.getTempo(0);setting->set(setting->getStartBeat(),request.bpm,setting->getCurve(),false);
+    }else {
+        auto state=sequence.getState().createCopy();
+        for(int index=state.getNumChildren();--index>=0;)if(state.getChild(index).hasType(te::IDs::TEMPO))state.removeChild(index,nullptr);
+        const auto add=[&](double bar,double bpm) { state.addChild(te::TempoSetting::create(te::BeatPosition::fromBeats((bar-1)*request.numerator),bpm,1.0f),-1,nullptr); };
+        if(request.tempo.empty())add(1,request.bpm);else for(const auto& section:request.tempo)add(section.bar,section.bpm);
+        sequence.setState(state,false);
+    }
+    sequence.updateTempoData();
+}
 std::unique_ptr<EngineSession::Arrangement> EngineSession::prepare(const Request& r) {
     ++arrangementBuilds;
     auto a=std::make_unique<Arrangement>();a->edit=te::Edit::createSingleTrackEdit(engine);require(a->edit!=nullptr,"Cannot create arrangement Edit");
     a->inputState=r;
-    a->edit->ensureNumberOfAudioTracks((int)r.tracks.size());tempo(*a->edit,r.bpm,r.numerator,r.denominator);a->edit->clickTrackEnabled=r.metronome;
+    a->edit->ensureNumberOfAudioTracks((int)r.tracks.size());tempo(*a->edit,r.bpm,r.numerator,r.denominator);updateTempo(*a,r);a->edit->clickTrackEnabled=r.metronome;
     auto tracks=te::getAudioTracks(*a->edit);
     for(size_t i=0;i<r.tracks.size();++i)initialiseTrack(*a,*tracks[(int)i],r.tracks[i],r);
     updateLauncherLayout(*a,r);
@@ -457,13 +471,14 @@ void EngineSession::updateMixer(Arrangement& a,const Request& next,const Request
         }
         for(const auto& [id,db]:t.sends)if(!old.sends.contains(id) || db!=old.sends.at(id))sends.at(id)->setGainDb((float)db);
         if(t.cueOutput!=old.cueOutput || t.cueVolume!=old.cueVolume)updateCue(a,*track,t);
-        if(t.automation!=old.automation || next.bpm!=previous.bpm)applyMixerAutomation(*track,t,next);
+        if(t.automation!=old.automation || !next.sameTempo(previous))applyMixerAutomation(*track,t,next);
     }
 }
 void EngineSession::updateTransport(const Control& next,uint64_t fence,bool seek) {
     auto& transport=arrangement->edit->getTransport();arrangement->edit->clickTrackEnabled=next.metronome;
     bindInputs(*arrangement,*accepted);
     if(seek || next.playing!=transport.isPlaying())for(const auto& [id,device]:arrangement->devices)device->reset();
+    if(!next.playing && transport.isPlaying())transport.stop(false,false);
     if(seek) { ++transportSeeks;transport.setPosition(te::TimePosition::fromSeconds(accepted->barTime(next.seekBar))); }
     auto previousFence=stopToken.load(std::memory_order_acquire);while(previousFence<fence && !stopToken.compare_exchange_weak(previousFence,fence,std::memory_order_acq_rel)) {}
     arrangementEpoch.store(fence,std::memory_order_release);arrangementAudible.store(next.playing,std::memory_order_release);

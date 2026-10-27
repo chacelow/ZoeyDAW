@@ -11,6 +11,7 @@
 #include <limits>
 #include <memory>
 void testActualSourceLoopRendering();
+void testActualTempoMapRendering();
 namespace {
 using zp::V;
 V request() {
@@ -303,6 +304,7 @@ int main(int argc,char** argv) {
         zp::ScopedAudioPreferences preferences;
         if(argc==2 && juce::String(argv[1])=="--waveform") { testSignedWaveformRanges();return 0; }
         if(argc==2 && juce::String(argv[1])=="--tempo") { testSourceTempoAnalysis();return 0; }
+        if(argc==2 && juce::String(argv[1])=="--tempo-map") { testActualTempoMapRendering();return 0; }
         testMidiVelocityBoundary();
         testV2WireBoundary();
         testSignedAudioSourceOffsets();

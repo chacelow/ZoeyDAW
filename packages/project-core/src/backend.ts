@@ -2,6 +2,7 @@ import type { AutomationLane, MidiNote, TrackKind, LauncherDocument } from "./ty
 import type { AudioClipSettings } from "./audio-editor"
 import type { Device } from "./devices"
 import type { MeterStore } from "./realtime/meter-store"
+import type { TempoSection } from "./tempo-map"
 
 export interface BackendClipBase {
   id: string
@@ -79,6 +80,7 @@ export interface BackendProject {
   bpm: number
   numerator: number
   denominator: number
+  tempo?: readonly TempoSection[]
   loop: { enabled: boolean; startBar: number; endBar: number }
   sources: readonly BackendSource[]
   tracks: readonly BackendTrack[]

@@ -1,3 +1,4 @@
+import { secondsAtBar, barAtSeconds } from "@zoeydaw/project-core/tempo-map"
 import { useLayoutEffect, useRef } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { defaultAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
@@ -44,10 +45,12 @@ export function BrowserDropOverlay({ browserDrop }: { readonly browserDrop: Brow
     const duration = waveform.media
       ? waveform.media.frames / waveform.media.sampleRate
       : source.durationSeconds
-    const secondsPerBar =
-      (60 * scene.transport.numerator * 4) / (scene.transport.bpm * scene.transport.denominator)
     const lengthBars =
-      browserDrop.clip?.lengthBars ?? (duration === null ? 0 : duration / secondsPerBar)
+      browserDrop.clip?.lengthBars ??
+      (duration === null
+        ? 0
+        : barAtSeconds(scene.transport, secondsAtBar(scene.transport, target.startBar) + duration) -
+          target.startBar)
     context.font = "10px ui-sans-serif, system-ui, sans-serif"
     context.textBaseline = "middle"
     if (lengthBars <= 0) {
@@ -72,6 +75,11 @@ export function BrowserDropOverlay({ browserDrop }: { readonly browserDrop: Brow
         ...defaultAudioClipSettings(scene.transport.bpm, { lengthBars }),
         warp: false,
         loop: false,
+        ...(duration !== null && {
+          endMarkerBars:
+            (duration * scene.transport.bpm * scene.transport.denominator) /
+            (240 * scene.transport.numerator),
+        }),
       },
     }
     const geometry = clipVisualGeometry(

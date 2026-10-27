@@ -5,6 +5,7 @@ import { I18nProvider, initI18n } from "@zoeymind/i18n"
 import { appLocales } from "@/locales"
 import { hydrateProject, projectActions, useProjectState } from "@/pages/project/adapters"
 import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
+import { normalizedAutomationValue } from "@zoeydaw/project-core/automation-curve"
 import { TransportBar } from "."
 
 describe("TransportBar", () => {
@@ -171,6 +172,34 @@ describe("TransportBar", () => {
       expect(useProjectState.getState().document.transport.denominator).toBe(expected)
       act(() => vi.advanceTimersByTime(200))
     }
+  })
+
+  it("follows Main tempo points and restores manual BPM editing when the envelope is removed", () => {
+    const target = { kind: "mixer", parameter: "tempo" } as const
+    projectActions.setAutomationTarget("main", target)
+    projectActions.setAutomationPoint("main", "main-mixer-tempo", {
+      bar: 1,
+      value: normalizedAutomationValue(target, 90),
+    })
+    projectActions.setAutomationPoint("main", "main-mixer-tempo", {
+      bar: 3,
+      value: normalizedAutomationValue(target, 180),
+    })
+    const view = render(
+      <I18nProvider>
+        <TransportBar onBack={vi.fn()} onToggleBrowser={vi.fn()} />
+      </I18nProvider>
+    )
+    const bpm = view.getByLabelText("BPM")
+    expect(view.getByText("90.00").closest("button")).toBe(bpm)
+    const baseline = useProjectState.getState().document.transport.bpm
+    fireEvent.wheel(bpm, { deltaY: -40 })
+    expect(useProjectState.getState().document.transport.bpm).toBe(baseline)
+    act(() => projectActions.setPosition({ bar: 3, beat: 1, sixteenth: 1 }))
+    expect(view.getByText("180.00").closest("button")).toBe(bpm)
+    act(() => projectActions.replaceAutomationPoints("main", "main-mixer-tempo", []))
+    fireEvent.wheel(bpm, { deltaY: -40 })
+    expect(useProjectState.getState().document.transport.bpm).toBeGreaterThan(baseline)
   })
 
   it("parses typed note values and rejects unsupported denominators without normalizing them", () => {

@@ -52,7 +52,7 @@ void EngineSession::updateDevices(Arrangement& arrangement,const Request& next,c
             }
             auto& plugin=static_cast<IsolatedDevicePlugin&>(*arrangement.devices.at(device.id));
             plugin.configure(device);
-            if(replaced || !old || old->settings!=device.settings || !oldOwner || oldOwner->id!=track.id || oldOwner->automation!=track.automation || (previous && next.bpm!=previous->bpm)) {
+            if(replaced || !old || old->settings!=device.settings || !oldOwner || oldOwner->id!=track.id || oldOwner->automation!=track.automation || (previous && !next.sameTempo(*previous))) {
                 applyCurves(plugin,track,device);
                 plugin.updateAutomation();
             }
@@ -70,7 +70,7 @@ void EngineSession::updateDevices(Arrangement& arrangement,const Request& next,c
         }
         if(!old || old->enabled!=device.enabled || old->settings!=device.settings)
             static_cast<BuiltinDevice&>(*arrangement.devices.at(device.id)).configure(device);
-        if(!old || old->settings.index()!=device.settings.index() || !oldOwner || oldOwner->id!=track.id || oldOwner->automation!=track.automation || (previous && next.bpm!=previous->bpm)) {
+        if(!old || old->settings.index()!=device.settings.index() || !oldOwner || oldOwner->id!=track.id || oldOwner->automation!=track.automation || (previous && !next.sameTempo(*previous))) {
             auto& plugin=static_cast<BuiltinDevice&>(*arrangement.devices.at(device.id));
             applyCurves(plugin,track,device);
             std::uint32_t mask=0;

@@ -1,3 +1,4 @@
+import { secondsAtBar, barAtSeconds } from "@zoeydaw/project-core/tempo-map"
 import { useId, useLayoutEffect, useMemo, useSyncExternalStore } from "react"
 import {
   browserWaveformMetadataRequest,
@@ -60,19 +61,29 @@ export function useBrowserDropWaveform(
   }, [source])
   const requests = useMemo<readonly SourceWaveformRangeRequest[]>(() => {
     if (!source || !metadata || !target) return []
-    const { bpm, numerator, denominator } = scene.transport
-    const secondsPerBar = (60 * numerator * 4) / (bpm * denominator)
     const width =
-      (metadata.totalFrames / metadata.sampleRate / secondsPerBar) * scene.viewport.pxPerBar
+      (barAtSeconds(
+        scene.transport,
+        secondsAtBar(scene.transport, target.startBar) + metadata.totalFrames / metadata.sampleRate
+      ) -
+        target.startBar) *
+      scene.viewport.pxPerBar
     const left = (target.startBar - 1) * scene.viewport.pxPerBar - scene.viewport.scrollX
     const firstPixel = Math.max(0, -left)
     const endPixel = Math.min(width, scene.viewport.width - left)
     if (width <= 0 || endPixel <= firstPixel) return []
+    const startSeconds = secondsAtBar(scene.transport, target.startBar)
+    const frameAtPixel = (pixel: number) =>
+      (secondsAtBar(scene.transport, target.startBar + pixel / scene.viewport.pxPerBar) -
+        startSeconds) *
+      metadata.sampleRate
+    const firstFrame = frameAtPixel(firstPixel)
+    const endFrame = frameAtPixel(endPixel)
     return waveformRangePlan(
       metadata.totalFrames,
-      (firstPixel / width) * metadata.totalFrames,
-      (endPixel / width) * metadata.totalFrames,
-      metadata.totalFrames / width
+      firstFrame,
+      endFrame,
+      (endFrame - firstFrame) / (endPixel - firstPixel)
     ).map(request => ({
       sourceKey: `browser/${source.path}`,
       request: { ...request, path: source.path },

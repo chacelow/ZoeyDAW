@@ -45,6 +45,7 @@ export function AutomationValueEditor() {
 
 function formatValue(target: AutomationTarget, value: number): string {
   const source = automationSourceValue(target, value)
+  if (target.kind === "mixer" && target.parameter === "tempo") return `${source.toFixed(2)} BPM`
   if (target.kind === "device") {
     const unit = automationTargetUnit(target)
     const suffix =
@@ -115,7 +116,7 @@ function ValueInput({
               : Number(trimmed)
           : target.kind === "mixer" && /^[-−]∞(?:\s*dB)?$/i.test(trimmed)
             ? -60
-            : Number(trimmed.replace(/\s*(?:dB|Hz|ms|s|%)\s*$/i, ""))
+            : Number(trimmed.replace(/\s*(?:dB|Hz|ms|BPM|s|%)\s*$/i, ""))
       if (trimmed && Number.isFinite(parsed)) {
         const source =
           target.kind === "device" && automationTargetUnit(target) === "ratioPercent"

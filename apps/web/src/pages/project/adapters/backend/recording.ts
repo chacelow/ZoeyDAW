@@ -1,6 +1,7 @@
 import { defaultAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { insertClips } from "@zoeydaw/project-core/clip-edits"
 import { createTrack } from "@zoeydaw/project-core/reducers"
+import { projectTempoSections, secondsAtBar } from "@zoeydaw/project-core/tempo-map"
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import type { AudioClip, DocumentState } from "@zoeydaw/project-core/types"
 import type { NativeRecording } from "@/shared/native/audio"
@@ -40,6 +41,10 @@ export function applyRecording(document: DocumentState, recording: NativeRecordi
     document = { ...document, tracks }
   }
   const incoming = new Map<string, AudioClip[]>()
+  const timebase = {
+    ...document.transport,
+    tempo: projectTempoSections(document.tracks, document.transport),
+  }
   for (const placement of recording.clips) {
     const track = document.tracks.find(item => item.id === placement.trackId)
     if (!track || track.kind !== "audio") {
@@ -68,7 +73,13 @@ export function applyRecording(document: DocumentState, recording: NativeRecordi
         warp: false,
         loop: false,
         startMarkerBars: placement.sourceOffsetBars,
-        endMarkerBars: placement.sourceOffsetBars + placement.durationBars,
+        endMarkerBars:
+          placement.sourceOffsetBars +
+          ((secondsAtBar(timebase, placement.startBar + placement.durationBars) -
+            secondsAtBar(timebase, placement.startBar)) *
+            recording.sourceBpm *
+            document.transport.denominator) /
+            (240 * document.transport.numerator),
       },
     }
     const clips = incoming.get(track.id) ?? []

@@ -4,13 +4,26 @@ import { Button, ControlGroup, DragPadNumber, DragPadToggle, useInfoBinding } fr
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
 import { MetronomeIcon } from "./MetronomeIcon"
+import { projectTempoSections, tempoAtBar } from "@zoeydaw/project-core/tempo-map"
+import { positionToBar } from "@zoeydaw/project-core/types"
 
 export function TempoControls() {
   const { t } = useTranslation()
   const buttonInfo = useInfoBinding({ type: "button" })
   const link = useProjectState(s => s.workspace.link)
   const metronome = useProjectState(s => s.workspace.metronome)
-  const bpm = useProjectState(s => s.document.transport.bpm)
+  const bpm = useProjectState(s =>
+    tempoAtBar(
+      {
+        ...s.document.transport,
+        tempo: projectTempoSections(s.document.tracks, s.document.transport),
+      },
+      positionToBar(s.session.position, s.document.transport.numerator)
+    )
+  )
+  const automated = useProjectState(
+    s => projectTempoSections(s.document.tracks, s.document.transport).length > 0
+  )
   const numerator = useProjectState(s => s.document.transport.numerator)
   const denominator = useProjectState(s => s.document.transport.denominator)
   const playing = useProjectState(s => s.session.playing)
@@ -36,6 +49,7 @@ export function TempoControls() {
         variant="ghost"
         size="control"
         className="bg-muted hover:bg-accent"
+        disabled={automated}
         onClick={() => {
           const now = performance.now()
           taps.current = [...taps.current.filter(time => now - time < 2500), now].slice(-5)
@@ -56,6 +70,7 @@ export function TempoControls() {
       <DragPadNumber
         value={bpm}
         {...bpmGesture}
+        readOnly={automated}
         min={20}
         max={999}
         step={0.01}

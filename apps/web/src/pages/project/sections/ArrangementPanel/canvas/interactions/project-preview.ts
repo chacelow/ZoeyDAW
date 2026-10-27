@@ -1,3 +1,4 @@
+import { projectTempoSections } from "@zoeydaw/project-core/tempo-map"
 import { arrangementViewProjection } from "@/pages/project/layout"
 import type { LoopRegion, Marker, ProjectEditToken, Track } from "@zoeydaw/project-core/types"
 import type { InteractionContext } from "./types"
@@ -24,7 +25,10 @@ export function synchronizeProjectScene(context: InteractionContext): void {
   context.scene.setMusic({
     bars: scene.bars,
     grid: scene.grid,
-    transport: state.document.transport,
+    transport: {
+      ...state.document.transport,
+      tempo: projectTempoSections(state.document.tracks, state.document.transport),
+    },
     tracks: projected.tracks,
     media: state.document.media,
     patterns: state.document.patterns,

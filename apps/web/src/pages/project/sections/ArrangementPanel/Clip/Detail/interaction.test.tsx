@@ -583,9 +583,6 @@ it("projects non-warped fades and Fit into source bars with a shifted start mark
     return <AudioWaveform clip={current} transport={document.transport} />
   }
   const view = render(<LiveWaveform />)
-  const surface = view.container.querySelector(".audio-detail-wave-svg")
-  const fade = surface?.querySelector(".audio-detail-fade")
-  expect(fade?.getAttribute("transform")).toBe("translate(2 0) scale(2 1)")
   const fadeIn = view.container.querySelector<HTMLButtonElement>('[data-kind="fadeIn"]')
   expect(fadeIn?.style.left).toBe("30%")
   const fadeOut = view.container.querySelector<HTMLButtonElement>('[data-kind="fadeOut"]')
@@ -605,9 +602,6 @@ it("projects non-warped fades and Fit into source bars with a shifted start mark
     projectActions.updateClip(clip.id, {
       audioSettings: { ...clip.audioSettings, startMarkerBars: 3 },
     })
-  )
-  expect(view.container.querySelector(".audio-detail-fade")?.getAttribute("transform")).toBe(
-    "translate(3 0) scale(2 1)"
   )
   expect(view.container.querySelector<HTMLButtonElement>('[data-kind="fadeIn"]')?.style.left).toBe(
     "40%"

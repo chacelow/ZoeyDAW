@@ -123,3 +123,36 @@ it("keeps unknown metadata honest then requests bounded visible data after metad
   unmount()
   expect(waveformRanges.releaseWaveformRangeDemand).toHaveBeenCalledExactlyOnceWith(demand[0])
 })
+
+it("loads the original-speed source window after a tempo boundary", () => {
+  const initial = arrangementScene.get()
+  arrangementScene.setMusic({
+    ...initial,
+    transport: {
+      bpm: 120,
+      numerator: 4,
+      denominator: 4,
+      tempo: [
+        { bar: 1, bpm: 120 },
+        { bar: 2, bpm: 240 },
+      ],
+    },
+  })
+  arrangementScene.setViewport({ ...initial.viewport, width: 1, pxPerBar: 96000, scrollX: 144000 })
+  publishRange({ ...samples, totalFrames: 480000, frameCount: 1, channels: [[-0.5]] }, 1)
+  renderHook(() => useBrowserDropWaveform(source, target))
+  const demand = vi.mocked(waveformRanges.setWaveformRangeDemand).mock.calls.at(-1)?.[1] ?? []
+  const detail = demand.filter(
+    ({ request }) => request.framesPerBin === 1 && request.frameCount > 1
+  )
+  expect(
+    detail.some(
+      ({ request }) =>
+        request.startFrame <= 120000 && request.startFrame + request.frameCount > 120000
+    )
+  ).toBe(true)
+  expect(
+    detail.every(({ request }) => request.startFrame > 110000 && request.startFrame < 130000)
+  ).toBe(true)
+  arrangementScene.setMusic(initial)
+})

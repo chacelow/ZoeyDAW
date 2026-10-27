@@ -156,4 +156,33 @@ describe("automation envelope edits", () => {
         .points
     ).toEqual(before)
   })
+
+  it("edits Main song tempo through the existing history without leaking a target to audio tracks", () => {
+    const target = { kind: "mixer", parameter: "tempo" } as const
+    projectActions.setAutomationTarget("main", target)
+    projectActions.setAutomationPoint("main", "main-mixer-tempo", { bar: 1, value: 0.2 })
+    expect(
+      useProjectState
+        .getState()
+        .document.tracks.find(track => track.id === "main")
+        ?.automation.find(lane => lane.target.kind === "mixer" && lane.target.parameter === "tempo")
+        ?.points[0]
+    ).toMatchObject({ bar: 1, value: 0.2 })
+    projectActions.undo()
+    expect(
+      useProjectState
+        .getState()
+        .document.tracks.find(track => track.id === "main")
+        ?.automation.some(lane => lane.target.kind === "mixer" && lane.target.parameter === "tempo")
+    ).toBe(false)
+    projectActions.redo()
+    expect(
+      useProjectState
+        .getState()
+        .document.tracks.find(track => track.id === "main")
+        ?.automation.some(lane => lane.target.kind === "mixer" && lane.target.parameter === "tempo")
+    ).toBe(true)
+    projectActions.setAutomationTarget("3-audio", target)
+    expect(useProjectState.getState().session.automationTargets["3-audio"]).not.toEqual(target)
+  })
 })

@@ -5,6 +5,7 @@ import { arrangementScene } from "./scene"
 import { useNativeWaveforms } from "@/pages/project/adapters/backend/waveforms"
 import { useWaveformRanges } from "@/pages/project/adapters/backend/waveform-ranges"
 import { useArrangementWaveformRanges } from "./waveform-ranges"
+import { projectTempoSections } from "@zoeydaw/project-core/tempo-map"
 
 /**
  * Mirror the slice of project state the canvas scene store needs.
@@ -53,6 +54,7 @@ export function useSceneSync(bars: number) {
         bpm: document.transport.bpm,
         numerator: document.transport.numerator,
         denominator: document.transport.denominator,
+        tempo: projectTempoSections(effective.tracks, document.transport),
       },
       markers: document.markers,
       loop: document.transport.loop,

@@ -34,9 +34,12 @@ V EngineSession::reclaimRecording(const V& query) {
         const auto& savedClips=array(saved,"clips");bool placed=false;
         for(const auto& clip:savedClips)if(clip["fileId"].toString()==fileId) {
             number(clip,"startBar",1,1e12);const auto length=number(clip,"durationBars",1e-12,1e12),offset=number(clip,"sourceOffsetBars",0,1e12);text(clip,"clipId");text(clip,"trackId");
-            const double available=reader->lengthInSamples/reader->sampleRate/secondsPerBar-offset;
+            const auto& targets=array(journal,"targets");const auto target=std::find_if(targets.begin(),targets.end(),[&](const V& value){return value["fileId"].toString()==fileId;});
+            const double offsetSeconds=target!=targets.end() && target->hasProperty("sourceOffsetSeconds")?number(*target,"sourceOffsetSeconds",0,1e12):offset*secondsPerBar;
+            const double durationSeconds=target!=targets.end() && target->hasProperty("durationSeconds")?number(*target,"durationSeconds",1e-12,1e12):length*secondsPerBar;
+            const double available=reader->lengthInSamples/reader->sampleRate-offsetSeconds;
             require(available>0,"Recording placement has no readable audio");
-            auto bounded=clip.clone();put(bounded,"durationBars",std::min(length,available));clips.add(bounded);placed=true;
+            auto bounded=clip.clone();put(bounded,"durationBars",std::min(durationSeconds,available)/secondsPerBar);put(bounded,"sourceOffsetBars",offsetSeconds/secondsPerBar);clips.add(bounded);placed=true;
         }
         if(!placed) {
             const auto& targets=array(journal,"targets");const auto target=std::find_if(targets.begin(),targets.end(),[&](const V& value){return value["fileId"].toString()==fileId;});
@@ -47,7 +50,8 @@ V EngineSession::reclaimRecording(const V& query) {
     }
     for(auto& clip:clips) {
         if(!bool(saved["recovery"]))put(clip,"trackId","recovery:"+id+":"+text(clip,"trackId"));
-        put(clip,"durationBars",double(clip["durationBars"])*secondsPerBar/destinationBar);
+        const auto start=number(clip,"startBar",1,1e12);
+        put(clip,"durationBars",accepted->timeBar(accepted->barTime(start)+double(clip["durationBars"])*secondsPerBar)-start);
         put(clip,"sourceOffsetBars",double(clip["sourceOffsetBars"])*secondsPerBar/destinationBar);
     }
     put(recovered.result,"sourceBpm",accepted->bpm);put(recovered.result,"secondsPerBar",destinationBar);

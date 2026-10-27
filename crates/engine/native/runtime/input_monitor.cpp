@@ -17,7 +17,7 @@ std::vector<juce::Range<double>> activeClipRanges(const Track& track, const Requ
     for (const auto& clip : track.clips)
         if (!clip.mute && clip.scene.isEmpty())
             ranges.emplace_back(request.barTime(clip.start),
-                                request.barTime(clip.start) + clip.length * request.secondsPerBar());
+                                request.barTime(clip.start+clip.length));
     std::sort(ranges.begin(), ranges.end(), [](const auto& left, const auto& right) {
         return left.getStart() < right.getStart();
     });

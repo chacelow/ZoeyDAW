@@ -170,6 +170,7 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
           ...(!routing && { gridTemplateColumns: "var(--project-identity-width) minmax(0, 1fr)" }),
         }}
         onPointerMove={event => {
+          if (event.target instanceof Node && !event.currentTarget.contains(event.target)) return
           if (resize.current) {
             moveResize(event)
             return
@@ -178,6 +179,7 @@ export const TrackHeaderRow = memo(function TrackHeaderRow({
         }}
         onPointerLeave={() => setResizeHover(false)}
         onPointerDown={event => {
+          if (event.target instanceof Node && !event.currentTarget.contains(event.target)) return
           if (event.button !== 0) {
             return
           }

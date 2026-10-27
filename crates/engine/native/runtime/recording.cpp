@@ -16,7 +16,7 @@ juce::File EngineSession::recordingFile(te::Track& track,const juce::String& ext
     auto target=object();put(target,"fileId",fileId);put(target,"trackId",owner->first);put(target,"clipId",recording->liveTracks.at(file.getFullPathName()).clipId);
     auto& transport=arrangement->edit->getTransport();auto* context=transport.getCurrentPlaybackContext();
     const auto seconds=context?context->getPendingPositionChange().value_or(context->getPosition()).inSeconds():transport.getPosition().inSeconds();
-    put(target,"startBar",1+seconds/recording->secondsPerBar);recording->journalTargets.getArray()->add(target);
+    put(target,"startBar",accepted->timeBar(seconds));put(target,"startSeconds",seconds);recording->journalTargets.getArray()->add(target);
     writeRecordingJournal(recording->result,"recording",{},recording->journalTargets);
     return file;
 }
@@ -68,7 +68,11 @@ void EngineSession::recordingFinished(te::InputDeviceInstance&,te::EditItemID ta
         const auto position=clip->getPosition();auto value=object();
         const auto live=recording->liveTracks.find(file.getFullPathName());
         put(value,"clipId",live!=recording->liveTracks.end()?live->second.clipId:juce::Uuid().toString());put(value,"fileId",(*found)["fileId"]);put(value,"trackId",owner->first);
-        put(value,"startBar",1+position.getStart().inSeconds()/recording->secondsPerBar);put(value,"durationBars",position.getLength().inSeconds()/recording->secondsPerBar);put(value,"sourceOffsetBars",position.getOffset().inSeconds()/recording->secondsPerBar);
+        const auto startBar=accepted->timeBar(position.getStart().inSeconds());
+        put(value,"startBar",startBar);put(value,"durationBars",accepted->timeBar(position.getEnd().inSeconds())-startBar);put(value,"sourceOffsetBars",position.getOffset().inSeconds()/recording->secondsPerBar);
+        for(auto& target:*recording->journalTargets.getArray())if(target["fileId"]==(*found)["fileId"]) {
+            put(target,"durationSeconds",position.getLength().inSeconds());put(target,"sourceOffsetSeconds",position.getOffset().inSeconds());
+        }
         recording->result["clips"].getArray()->add(value);
         clip->removeFromParent();
     }
@@ -108,8 +112,9 @@ V EngineSession::recordingPreview(const juce::String& lease) const {
         if(frames<=0 || thumb.getNumChannels()<=0)continue;
         const auto count=static_cast<int>(std::min<juce::int64>(frames,maxBins));
         const auto finished=std::find_if(source->result["clips"].getArray()->begin(),source->result["clips"].getArray()->end(),[&](const V& clip){return clip["clipId"].toString()==live.clipId;});
-        const double startBar=finished!=source->result["clips"].getArray()->end()?(double)(*finished)["startBar"]:1+live.thumbnail->punchInTime.inSeconds()/source->secondsPerBar;
-        const double durationBars=finished!=source->result["clips"].getArray()->end()?(double)(*finished)["durationBars"]:frames/(sampleRate*source->secondsPerBar);
+        const double startSeconds=live.thumbnail->punchInTime.inSeconds();
+        const double startBar=finished!=source->result["clips"].getArray()->end()?(double)(*finished)["startBar"]:accepted->timeBar(startSeconds);
+        const double durationBars=finished!=source->result["clips"].getArray()->end()?(double)(*finished)["durationBars"]:accepted->timeBar(startSeconds+frames/sampleRate)-startBar;
         auto track=object();put(track,"trackId",live.trackId);put(track,"clipId",live.clipId);put(track,"startBar",startBar);put(track,"durationBars",durationBars);
         juce::Array<V> channels;
         for(int channel=0;channel<thumb.getNumChannels();++channel) {

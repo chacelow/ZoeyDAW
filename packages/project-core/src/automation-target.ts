@@ -28,7 +28,9 @@ export function isAutomationTarget(
         track.kind === "group" ||
         track.kind === "return" ||
         track.kind === "main") &&
-      (value.parameter === "volume" || value.parameter === "pan") &&
+      (value.parameter === "volume" ||
+        value.parameter === "pan" ||
+        (track.kind === "main" && value.parameter === "tempo")) &&
       Object.keys(value).length === 2
     )
   }
@@ -80,7 +82,12 @@ export function resolveAutomationTarget(
 }
 
 export function automationTargetSource(track: Track, target: AutomationTarget): number {
-  if (target.kind === "mixer") return target.parameter === "volume" ? track.volumeDb : track.pan
+  if (target.kind === "mixer")
+    return target.parameter === "tempo"
+      ? 120
+      : target.parameter === "volume"
+        ? track.volumeDb
+        : track.pan
   const device = track.devices?.find(item => item.id === target.deviceId)
   const value = device && deviceParameterValue(device, target.parameter)
   if (value !== undefined) return value
@@ -90,15 +97,18 @@ export function automationTargetSource(track: Track, target: AutomationTarget): 
 }
 
 export function automationTargetBounds(target: AutomationTarget): { min: number; max: number } {
-  if (target.kind === "mixer")
+  if (target.kind === "mixer") {
+    if (target.parameter === "tempo") return { min: 20, max: 999 }
     return target.parameter === "volume" ? { min: -60, max: 6 } : { min: -1, max: 1 }
+  }
   if (isBuiltinDeviceParameter(target.parameter)) return DEVICE_PARAMETERS[target.parameter]
   if (isNativeParameterId(target.parameter)) return { min: 0, max: 1 }
   throw new Error("Unknown automation parameter")
 }
 
 export function automationTargetUnit(target: AutomationTarget): string {
-  if (target.kind === "mixer") return target.parameter === "volume" ? "db" : "pan"
+  if (target.kind === "mixer")
+    return target.parameter === "tempo" ? "bpm" : target.parameter === "volume" ? "db" : "pan"
   if (isBuiltinDeviceParameter(target.parameter)) return DEVICE_PARAMETERS[target.parameter].unit
   if (isNativeParameterId(target.parameter)) return "ratioPercent"
   throw new Error("Unknown automation parameter")

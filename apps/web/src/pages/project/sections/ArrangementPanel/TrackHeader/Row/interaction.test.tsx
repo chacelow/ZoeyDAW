@@ -287,3 +287,14 @@ it("switches track selection from the card without moving the insertion point", 
   expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
   expect(useProjectState.getState().session.insertionPoint).toEqual(insertion)
 })
+
+it("does not capture portaled automation menu items as track resize gestures", async () => {
+  projectActions.setMode("automationMode", true)
+  const view = render(<Row id="main" />)
+  fireEvent.click(view.getByLabelText("Automation device Main"))
+  const mixer = await view.findByRole("menuitem", { name: "Mixer" })
+  const event = new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0 })
+  expect(fireEvent(mixer, event)).toBe(true)
+  fireEvent.click(mixer)
+  expect(view.getByLabelText("Automation parameter Main").hasAttribute("disabled")).toBe(false)
+})

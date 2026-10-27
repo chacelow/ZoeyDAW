@@ -12,7 +12,7 @@ void EngineSession::updateMidiClips(Arrangement& a,const Request& next,const Req
         }
         auto found=a.midiClips.find(clip.id);
         if(found==a.midiClips.end()) {
-            auto native=te::insertMIDIClip(clipOwner(a,track,clip,next),clip.id,{te::TimePosition::fromSeconds(next.barTime(clip.start)),te::TimeDuration::fromSeconds(clip.length*next.secondsPerBar())});
+            auto native=te::insertMIDIClip(clipOwner(a,track,clip,next),clip.id,{te::TimePosition::fromSeconds(next.barTime(clip.start)),te::TimeDuration::fromSeconds(next.barDuration(clip.start,clip.length))});
             require(native!=nullptr,"Cannot insert MIDI clip");native->setUsesProxy(false);
             found=a.midiClips.emplace(clip.id,native.get()).first;
         }
@@ -26,9 +26,9 @@ void EngineSession::updateMidiClips(Arrangement& a,const Request& next,const Req
         const bool loopChanged=!old || old->kind!="midi" || old->data["loopBars"]!=clip.data["loopBars"];
         if(loopChanged)
             native.setLoopRangeBeats({te::BeatPosition(),te::BeatDuration::fromBeats(loopBars*next.numerator)});
-        if(loopChanged || (previous && next.bpm!=previous->bpm) || old->start!=clip.start || old->length!=clip.length || old->offset!=clip.offset) {
+        if(loopChanged || (previous && !next.sameTempo(*previous)) || old->start!=clip.start || old->length!=clip.length || old->offset!=clip.offset) {
             const double offset=std::fmod(std::fmod(clip.offset,loopBars)+loopBars,loopBars);
-            native.setPosition({.time={te::TimePosition::fromSeconds(next.barTime(clip.start)),te::TimeDuration::fromSeconds(clip.length*next.secondsPerBar())},.offset=te::TimeDuration::fromSeconds(offset*next.numerator/a.edit->tempoSequence.getBeatsPerSecondAt(te::TimePosition::fromSeconds(next.barTime(clip.start))))});
+            native.setPosition({.time={te::TimePosition::fromSeconds(next.barTime(clip.start)),te::TimeDuration::fromSeconds(next.barDuration(clip.start,clip.length))},.offset=te::TimeDuration::fromSeconds(offset*next.numerator/a.edit->tempoSequence.getBeatsPerSecondAt(te::TimePosition::fromSeconds(next.barTime(clip.start))))});
         }
         if(!old || old->mute!=clip.mute)native.setMuted(clip.mute);
     }

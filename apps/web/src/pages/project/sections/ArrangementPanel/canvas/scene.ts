@@ -1,3 +1,4 @@
+import type { TempoTimebase } from "@zoeydaw/project-core/tempo-map"
 import { DEFAULT_GRID, deriveGridPlan } from "@zoeydaw/project-core/grid"
 import type { GridPlan, GridSettings } from "@zoeydaw/project-core/grid"
 import type {
@@ -46,7 +47,7 @@ export type CanvasTargetSelection =
 export interface SceneMusic {
   bars: number
   grid: GridSettings
-  transport: { bpm: number; numerator: number; denominator: number }
+  transport: TempoTimebase
   markers: readonly Marker[]
   loop: LoopRegion
   tracks: readonly Track[]
@@ -296,6 +297,7 @@ function musicEquals(a: SceneMusic, b: SceneMusic): boolean {
     a.transport.bpm === b.transport.bpm &&
     a.transport.numerator === b.transport.numerator &&
     a.transport.denominator === b.transport.denominator &&
+    a.transport.tempo === b.transport.tempo &&
     a.markers === b.markers &&
     a.loop === b.loop &&
     a.tracks === b.tracks &&

@@ -1,3 +1,5 @@
+import { secondsAtBar, barAtSeconds, tempoAtBar } from "./tempo-map"
+import type { TempoTimebase } from "./tempo-map"
 export interface RulerTick {
   value: number
   left: number
@@ -77,14 +79,13 @@ export function musicalTicks(input: VisibleBars): RulerTick[] {
 /**
 Time ticks use actual beat duration (quarter note = 60 / BPM seconds).
 */
-export function timeTicks(
-  input: VisibleBars & { bpm: number; numerator: number; denominator: number }
-): RulerTick[] {
+export function timeTicks(input: VisibleBars & TempoTimebase): RulerTick[] {
   const range = visibleRange(input)
   if (!range || range.start >= range.end) {
     return []
   }
-  const secondsPerBar = (60 / input.bpm) * input.numerator * (4 / input.denominator)
+  const secondsPerBar =
+    (60 / tempoAtBar(input, range.start)) * input.numerator * (4 / input.denominator)
   if (!Number.isFinite(secondsPerBar) || secondsPerBar <= 0) {
     return []
   }
@@ -92,12 +93,12 @@ export function timeTicks(
   if (!Number.isFinite(pixelsPerSecond) || pixelsPerSecond <= 0) {
     return []
   }
-  const secondsSpan = (range.end - range.start) * secondsPerBar
+  const secondsSpan = secondsAtBar(input, range.end) - secondsAtBar(input, range.start)
   if (!Number.isFinite(secondsSpan)) {
     return []
   }
   const step = niceSecondsAtLeast(Math.max(64 / pixelsPerSecond, secondsSpan / (MAX_TICKS - 1)))
-  const startSeconds = (range.start - 1) * secondsPerBar
+  const startSeconds = secondsAtBar(input, range.start)
   const first = Math.ceil(startSeconds / step) * step
   const ticks: RulerTick[] = []
   for (let index = 0; index < MAX_TICKS; index++) {
@@ -105,7 +106,7 @@ export function timeTicks(
     if (!Number.isFinite(value) || (index && value <= ticks[index - 1].value)) {
       break
     }
-    const bar = 1 + value / secondsPerBar
+    const bar = barAtSeconds(input, value)
     if (!Number.isFinite(bar) || bar >= range.end) {
       break
     }

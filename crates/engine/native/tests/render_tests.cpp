@@ -147,5 +147,7 @@ void verifyWarpAlgorithms() {
         if(juce::String(mode)=="signalsmith")previous.makeCopyOf(rendered);
     }
 }
+#include "tempo_map_render_tests.h"
 }
 void testActualSourceLoopRendering() { verifyLoop(120);verifyLoop(180);verifyLoop(120,-.0625);verifyWarpAlgorithms(); }
+void testActualTempoMapRendering() { testTempoMapRendering(); }

@@ -1,9 +1,10 @@
+import { clipSourceCoordinate, projectTempoSections } from "@zoeydaw/project-core/tempo-map"
 import { useTranslation } from "@zoeymind/i18n"
 import { formatAudioMusicalValue, type AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { DEFAULT_FADE_CURVE, fadeControls, fadePath } from "@zoeydaw/project-core/fades"
 import { timeTickLabel } from "@zoeydaw/project-core/timeline-ticks"
 import type { AudioClipContent, DocumentState } from "@zoeydaw/project-core/types"
-import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
+import { useProjectState } from "@/pages/project/adapters"
 import { SourcePlayhead } from "@/pages/project/components/SourcePlayhead"
 import { SourceMarker } from "../SourceMarker"
 import type { SourceViewport } from "../useSourceViewport"
@@ -35,7 +36,8 @@ export function WaveformSurface({
   handlers: WaveformPointerHandlers
 }) {
   const { t } = useTranslation()
-  const { origin, rate } = clipSourceProjection(clip, transport.bpm)
+  const tempoTracks = useProjectState(state => state.document.tracks)
+  const timebase = { ...transport, tempo: projectTempoSections(tempoTracks, transport) }
   const inFade = fadeControls(clip, "in")
   const outFade = fadeControls(clip, "out")
   const tickStep =
@@ -145,13 +147,14 @@ export function WaveformSurface({
             preserveAspectRatio="none"
             aria-hidden
           >
-            <g transform={`translate(${origin} 0) scale(${rate} 1)`} className="audio-detail-fade">
+            <g className="audio-detail-fade">
               {(clip.fadeInBars ?? 0) > 0 && (
                 <path
                   d={fadePath(
                     "in",
-                    inFade.start,
-                    clip.fadeInBars ?? 0,
+                    clipSourceCoordinate(clip, timebase, inFade.start),
+                    clipSourceCoordinate(clip, timebase, inFade.end) -
+                      clipSourceCoordinate(clip, timebase, inFade.start),
                     clip.fadeInCurve ?? DEFAULT_FADE_CURVE,
                     clip.fadeInCurvePosition
                   )}
@@ -162,8 +165,9 @@ export function WaveformSurface({
                 <path
                   d={fadePath(
                     "out",
-                    outFade.start,
-                    clip.fadeOutBars ?? 0,
+                    clipSourceCoordinate(clip, timebase, outFade.start),
+                    clipSourceCoordinate(clip, timebase, outFade.end) -
+                      clipSourceCoordinate(clip, timebase, outFade.start),
                     clip.fadeOutCurve ?? DEFAULT_FADE_CURVE,
                     clip.fadeOutCurvePosition
                   )}
@@ -213,14 +217,14 @@ export function WaveformSurface({
           {...markerProps}
           kind="fadeIn"
           lower
-          position={origin + inFade.end * rate}
+          position={clipSourceCoordinate(clip, timebase, inFade.end)}
           label={t("detailAudio.fadeInMarker")}
         />
         <SourceMarker
           {...markerProps}
           kind="fadeOut"
           lower
-          position={origin + outFade.start * rate}
+          position={clipSourceCoordinate(clip, timebase, outFade.start)}
           label={t("detailAudio.fadeOutMarker")}
         />
       </div>

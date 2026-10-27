@@ -1,3 +1,4 @@
+import { clipSourceCoordinate } from "@zoeydaw/project-core/tempo-map"
 import { useEffect } from "react"
 import { findMediaSource } from "@zoeydaw/project-core/media"
 import { nativeClipWaveform } from "@/pages/project/adapters/backend/clip-waveform"
@@ -45,12 +46,18 @@ export function arrangementWaveformRangeRequests(
         scene.transport.denominator
       )
       if (!source || !envelope) continue
+      const coordinate = (pixel: number) => {
+        if (!clip.audioSettings?.warp && scene.transport.tempo?.length) {
+          return clipSourceCoordinate(clip, scene.transport, pixel / pxPerBar)
+        }
+        return envelope.origin + (pixel / clipWidth) * clip.lengthBars * envelope.rate
+      }
       const requestWindow = (start: number, end: number) =>
         waveformRangeRequests(
           source,
           envelope,
-          envelope.origin + (start / clipWidth) * clip.lengthBars * envelope.rate,
-          envelope.origin + (end / clipWidth) * clip.lengthBars * envelope.rate,
+          coordinate(start),
+          coordinate(end),
           end - start,
           true
         )

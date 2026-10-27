@@ -8,6 +8,7 @@ import { DEFAULT_FADE_CURVE } from "@zoeydaw/project-core/fades"
 import { resolveMediaUri } from "@zoeydaw/project-core/media"
 import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
+import { projectTempoSections } from "@zoeydaw/project-core/tempo-map"
 import type { Clip, ClipContent, DocumentState } from "@zoeydaw/project-core/types"
 
 function projectClip(authored: Clip, document: DocumentState, sourceIds: Set<string>): BackendClip
@@ -104,10 +105,12 @@ export function projectBackendDocument(document: DocumentState): BackendProject 
         }),
   }))
   const { bpm, numerator, denominator, loop } = document.transport
+  const tempo = projectTempoSections(document.tracks, document.transport)
   return {
     bpm,
     numerator,
     denominator,
+    ...(tempo.length ? { tempo } : {}),
     loop: { ...loop },
     tracks,
     ...(document.launcher.scenes.length

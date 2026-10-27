@@ -3,7 +3,7 @@
 
 namespace zp {
 void EngineSession::bindInputs(Arrangement& a,const Request& request) {
-    const bool changed=request.bpm!=a.inputState.bpm || request.numerator!=a.inputState.numerator || request.denominator!=a.inputState.denominator || request.tracks.size()!=a.inputState.tracks.size() || std::any_of(request.tracks.begin(),request.tracks.end(),[&](const Track& track) {
+    const bool changed=!request.sameTempo(a.inputState) || request.numerator!=a.inputState.numerator || request.denominator!=a.inputState.denominator || request.tracks.size()!=a.inputState.tracks.size() || std::any_of(request.tracks.begin(),request.tracks.end(),[&](const Track& track) {
         const auto old=std::find_if(a.inputState.tracks.begin(),a.inputState.tracks.end(),[&](const Track& item){return item.id==track.id;});
         if(old==a.inputState.tracks.end() || old->kind!=track.kind || old->input!=track.input || old->inputChannel!=track.inputChannel || old->monitor!=track.monitor || old->armed!=track.armed || old->clips.size()!=track.clips.size())return true;
         for(size_t index=0;index<track.clips.size();++index)if(track.clips[index].start!=old->clips[index].start || track.clips[index].length!=old->clips[index].length || track.clips[index].mute!=old->clips[index].mute || track.clips[index].scene.isEmpty()!=old->clips[index].scene.isEmpty())return true;

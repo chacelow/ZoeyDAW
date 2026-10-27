@@ -71,6 +71,10 @@ struct NoteRequest {
     int pitch = 0, velocity = 0;
     bool on = false;
 };
+struct TempoSection {
+    double bar=1,bpm=120;
+    bool operator==(const TempoSection&) const = default;
+};
 struct Request : ControlRequest {
     juce::String stage, editId;
     uint64_t baseRevision = 0, revision = 0;
@@ -81,8 +85,24 @@ struct Request : ControlRequest {
     std::vector<Track> tracks;
     std::vector<juce::String> scenes;
     juce::String launchQuantization = "bar";
+    std::vector<TempoSection> tempo;
+    bool sameTempo(const Request& other) const { return bpm==other.bpm && tempo==other.tempo; }
+    double tempoAt(double bar) const {
+        double value=tempo.empty()?bpm:tempo.front().bpm;
+        for(const auto& section:tempo) { if(section.bar>bar)break;value=section.bpm; }return value;
+    }
     double secondsPerBar() const { return quartersPerBar * 60.0 / bpm; }
-    double barTime(double bar) const { return (bar - 1.0) * secondsPerBar(); }
+    double barTime(double bar) const {
+        double position=1,seconds=0,value=tempo.empty()?bpm:tempo.front().bpm;
+        for(const auto& section:tempo) { if(section.bar>=bar)break;seconds+=(section.bar-position)*quartersPerBar*60/value;position=section.bar;value=section.bpm; }
+        return seconds+(bar-position)*quartersPerBar*60/value;
+    }
+    double timeBar(double seconds) const {
+        double position=1,elapsed=0,value=tempo.empty()?bpm:tempo.front().bpm;
+        for(const auto& section:tempo) { const auto next=elapsed+(section.bar-position)*quartersPerBar*60/value;if(next>seconds)break;elapsed=next;position=section.bar;value=section.bpm; }
+        return position+(seconds-elapsed)*value/(quartersPerBar*60);
+    }
+    double barDuration(double start,double length) const { return barTime(start+length)-barTime(start); }
 };
 Request decode(const V&);
 ControlRequest decodeControl(const V&);

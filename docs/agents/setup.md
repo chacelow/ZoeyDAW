@@ -104,6 +104,8 @@ ctest --test-dir target/windows-native-clock -C Release -R native_transport_cloc
 
 `zoeydaw_playback_tests --tempo` 定向运行源 BPM 检测回归，覆盖 metadata、短循环、切分、非节拍、三分/直分歧义，以及长源的结尾/中间变速、恒速和未知片段。长源检查只取三个分离窗口，不代替整曲分析、tempo map 或真实音乐准确率基准。
 
+`zoeydaw_playback_tests --tempo-map` 用真实 WAV PCM 验证分段速度和阶梯斜坡，覆盖原速音频、Warp 源位置推进及 Clip 结束。`zoeydaw_mixer_tests --tempo-map` 通过 Hosted IO 核对 TempoSequence、seek、loop 回绕、停止时保留音乐位置，以及跨速度边界录制的 16,384 帧精确 PCM。两者均不打开物理设备，不代替真实音乐无 click 听验。
+
 `native_graph_publication` 使用同一 build 目录的 `zoeydaw_graph_publication_tests` target。用例在图替换的各次分配注入失败，核对原 root、采样率、缓冲尺寸与连续 PCM，并继续提交有效图验证恢复；覆盖 pooling/sharing 组合及候选格式变化。它不打开物理音频设备，也不替代活跃 Edit 的严格原子事务或完整 document audioRevision。
 
 `zoeydaw_mixer_tests --transaction-model` 使用真实 WAV 和同一 renderer clock 比较原位 Edit、独立候选和保留兼容处理资源的候选。它输出发布前、准备中、拒绝后及采用后的 PCM，记录 wrapper 重建，并验证 Utility 平滑、Delay 尾音、SDK 初始化及 reset 换代。此入口揭示事务边界，不将原位 setter、直接复制 Edit 或局部资源保留当作已完成的严格事务。

@@ -1,3 +1,4 @@
+import { secondsAtBar, barAtSeconds, tempoAtBar } from "@zoeydaw/project-core/tempo-map"
 import { mockMeterLevels } from "./mock-meters"
 import { createMockMeterStream } from "./mock-meter-store"
 import { controlGenerationValue } from "../backend/connection/protocol"
@@ -46,15 +47,20 @@ export function createMockProjectBackend(): ProjectBackend {
 
   function currentBar(now: number): number {
     if (!state?.control.playing || !listeners.size) return bar
-    const barsPerSecond =
-      (state.project.bpm * state.project.denominator) / (240 * state.project.numerator)
-    return wrapBar(bar + (Math.max(0, now - timestamp) * barsPerSecond) / 1000, state)
+    return wrapBar(
+      barAtSeconds(
+        state.project,
+        secondsAtBar(state.project, bar) + Math.max(0, now - timestamp) / 1000
+      ),
+      state
+    )
   }
   function frame(now: number): BackendTelemetry | null {
     if (!state) return null
     const position = currentBar(now)
     const barsPerSecond =
-      (state.project.bpm * state.project.denominator) / (240 * state.project.numerator)
+      (tempoAtBar(state.project, position) * state.project.denominator) /
+      (240 * state.project.numerator)
     meters.publish(
       mockMeterLevels(
         {
@@ -70,12 +76,13 @@ export function createMockProjectBackend(): ProjectBackend {
       ),
       now,
       position,
-      state.project.bpm,
+      tempoAtBar(state.project, position),
       (state.project.numerator * 4) / state.project.denominator,
       state.control.playing,
       state.control.recording,
       controlGeneration,
-      revision
+      revision,
+      secondsAtBar(state.project, position)
     )
     return {
       sessionId,

@@ -14,7 +14,11 @@ const EMPTY_TARGETS: readonly AutomationTarget[] = []
 
 function targetFor(track: Track, deviceId: string, parameter: string): AutomationTarget | null {
   if (deviceId === "mixer")
-    return parameter === "volume" || parameter === "pan" ? { kind: "mixer", parameter } : null
+    return parameter === "volume" ||
+      parameter === "pan" ||
+      (track.kind === "main" && parameter === "tempo")
+      ? { kind: "mixer", parameter }
+      : null
   const device = deviceId.startsWith("device:")
     ? track.devices?.find(item => item.id === deviceId.slice("device:".length))
     : undefined
@@ -47,6 +51,9 @@ function TargetSelectors({
       ? [
           { id: "volume", label: t("arrangement.volume") },
           { id: "pan", label: t("arrangement.pan") },
+          ...(track.kind === "main"
+            ? [{ id: "tempo", label: t("arrangement.songTempo", "Song Tempo") }]
+            : []),
         ]
       : device
         ? deviceParameterKeys(device).flatMap(key => {

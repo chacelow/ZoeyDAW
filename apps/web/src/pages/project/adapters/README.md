@@ -76,6 +76,10 @@ The isolated wrapper registers Tracktion parameters and keeps an atomic authored
 
 While an authored curve exists, editor notification and commit values do not overwrite that parameter's authored manual baseline. Removing the curve restores that baseline. This is read playback, not Touch or Latch recording. Ordinary value and envelope edits retain the Edit and prepared plugin; changing the declared parameter schema requires preparation.
 
+Song Tempo is a Main-only mixer automation target in the existing normalized envelope model. Main automation points remain the only authored tempo-map owner and use the existing snapshot and history. `projectTempoSections` derives ordered bar/BPM sections for the backend and time projections; without points the constant `transport.bpm` path remains. With a tempo envelope, the Transport BPM displays the mapped position value and is read-only; TAP is disabled. Edit the Main envelope or remove its points to return to manual tempo.
+
+Tempo ramps use one step per sixteenth note, capped at 100 steps per point interval and 65,536 sections per map. These are piecewise-constant approximations, not continuous native curves. Native reuses Tracktion TempoSequence and retains Edit for tempo-only updates. Bar/time inversion, loop/seek, Clip lengths, original-speed source coordinates and recording duration use the same sections. Hosted rendering and exact recorded PCM are verified separately from Tauri gestures and physical click-free listening.
+
 ## Telemetry and native integration
 
 Production meters and transport share MeterSession and one window-bound binary stream. The native backend opens it after its project is accepted, including stopped projects without a graph, and closes it before releasing the audio lease. `native-transport.ts` owns frame subscription, transport interest, visibility and disposal through NativeTransport. `shared/native/realtime.ts` validates registry and ordered Channel batches; frames remain raw ArrayBuffer. Track, routing and Device meters read the same MeterStore. Explicit Gallery mocks produce fixture frames and no audio.

@@ -1,8 +1,10 @@
+import { clipSourceCoordinate, projectTempoSections } from "@zoeydaw/project-core/tempo-map"
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import type { AudioClipContent, MediaSource } from "@zoeydaw/project-core/types"
 
 import { clipSourceProjection } from "@/pages/project/adapters/backend/clip-waveform"
+import { useProjectState } from "@/pages/project/adapters"
 
 export interface SourceView {
   readonly start: number
@@ -28,8 +30,18 @@ export function useSourceViewport(
   denominator: number,
   source?: MediaSource
 ) {
-  const { origin, rate } = clipSourceProjection(clip, bpm)
-  const sourceEnd = origin + clip.lengthBars * rate
+  const { origin } = clipSourceProjection(clip, bpm)
+  const tempoTracks = useProjectState(state => state.document.tracks)
+  const sourceEnd = clipSourceCoordinate(
+    clip,
+    {
+      bpm,
+      numerator,
+      denominator,
+      tempo: projectTempoSections(tempoTracks, { bpm, numerator, denominator }),
+    },
+    clip.lengthBars
+  )
   const secondsPerSourceBar = ((60 / settings.sourceBpm) * numerator * 4) / denominator
   const mediaEnd =
     source && source.location.kind !== "fixture" && source.sampleRate > 0

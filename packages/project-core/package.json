@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./tempo-map": {
+      "import": "./src/tempo-map.ts",
+      "types": "./src/tempo-map.ts"
+    },
     "./clip-content": {
       "import": "./src/clip-content.ts",
       "types": "./src/clip-content.ts"

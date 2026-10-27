@@ -36,6 +36,7 @@ export interface AutomationRow {
   bottom: number
   valueTop: number
   valueHeight: number
+  tempoBpm?: number
 }
 
 export function activeAutomationRows(scene: ArrangementScene): AutomationRow[] {
@@ -78,6 +79,7 @@ export function activeAutomationRows(scene: ArrangementScene): AutomationRow[] {
       return [
         {
           track: row.track,
+          tempoBpm: scene.transport.bpm,
           lane,
           laneId: lane?.id ?? automationLaneId(row.track.id, target),
           placement,
@@ -96,7 +98,12 @@ export function automationRowValue(row: AutomationRow, bar: number): number {
   return automationValueAt(
     row.lane?.points ?? [],
     bar,
-    normalizedAutomationValue(row.target, automationTargetSource(row.track, row.target))
+    normalizedAutomationValue(
+      row.target,
+      row.target.kind === "mixer" && row.target.parameter === "tempo"
+        ? (row.tempoBpm ?? 120)
+        : automationTargetSource(row.track, row.target)
+    )
   )
 }
 

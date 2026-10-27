@@ -85,7 +85,8 @@ export function createMockMeterStream() {
     playing: boolean,
     recording: boolean,
     controlGeneration: string,
-    acceptedRevision: number
+    acceptedRevision: number,
+    timelineSeconds = ((bar - 1) * quartersPerBar * 60) / bpm
   ): void {
     const slotCount = entries.length
     const bytes = new ArrayBuffer(HEADER_BYTES + slotCount * RECORD_BYTES)
@@ -108,9 +109,7 @@ export function createMockMeterStream() {
       audioRevision: BigInt(acceptedRevision),
       subscriptionRevision: 0,
       flags: (playing ? HEADER_FLAGS_PLAYING : 0) | (recording ? HEADER_FLAGS_RECORDING : 0),
-      timelineSample: BigInt(
-        Math.max(0, Math.floor((((bar - 1) * quartersPerBar * 60) / bpm) * SAMPLE_RATE))
-      ),
+      timelineSample: BigInt(Math.max(0, Math.floor(timelineSeconds * SAMPLE_RATE))),
       timelineBeat: (bar - 1) * quartersPerBar,
       tempoBpm: bpm,
       deviceEpoch: 1,

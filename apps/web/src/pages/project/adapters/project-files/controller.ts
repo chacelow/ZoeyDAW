@@ -5,6 +5,7 @@ import { insertClips } from "@zoeydaw/project-core/clip-edits"
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import { defaultAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { canAcceptAudioDrop } from "@zoeydaw/project-core/audio-drop"
+import { projectTempoSections, secondsAtBar, barAtSeconds } from "@zoeydaw/project-core/tempo-map"
 import type { AudioClipContent, Track } from "@zoeydaw/project-core/types"
 import { withWaveformPreview } from "@zoeydaw/project-runtime/visuals"
 import { createManifest, parseExternalMedia, parseOpenedProject, parseSavedProject } from "./format"
@@ -403,9 +404,16 @@ export function createProjectFileController(
       ) {
         throw new Error("Audio placement requires a valid position and source tempo")
       }
-      const durationBars =
-        ((source.frames / source.sampleRate) * (warp ? sourceBpm : bpm)) /
-        ((60 * numerator * 4) / denominator)
+      const timebase = {
+        ...state.document.transport,
+        tempo: projectTempoSections(state.document.tracks, state.document.transport),
+      }
+      const durationBars = warp
+        ? ((source.frames / source.sampleRate) * sourceBpm) / ((60 * numerator * 4) / denominator)
+        : barAtSeconds(
+            timebase,
+            secondsAtBar(timebase, startBar) + source.frames / source.sampleRate
+          ) - startBar
       const created = createClip("audio", startBar, durationBars)
       if (created.kind !== "audio") throw new Error("Invalid audio clip constructor")
       const clip = {
@@ -418,6 +426,10 @@ export function createProjectFileController(
           sourceBpm,
           warp,
           loop: false,
+          ...(!warp && {
+            endMarkerBars:
+              ((source.frames / source.sampleRate) * sourceBpm * denominator) / (240 * numerator),
+          }),
         },
       } satisfies AudioClipContent
       const targetId = placement ? placement.trackId : state.session.selectedTrackIds[0]

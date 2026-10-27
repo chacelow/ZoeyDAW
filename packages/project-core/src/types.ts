@@ -22,7 +22,7 @@ export interface AutomationPoint {
   curve?: number
 }
 export type AutomationTarget =
-  | { kind: "mixer"; parameter: "volume" | "pan" }
+  | { kind: "mixer"; parameter: "volume" | "pan" | "tempo" }
   | { kind: "device"; deviceId: string; parameter: string }
 export interface AutomationLane {
   id: string

@@ -81,7 +81,7 @@ Request decode(const V& v) {
     require(integer(v,"protocolVersion")==2,"Unsupported protocol"); Request r;
     r.session=text(v,"sessionId"); require(r.session.isNotEmpty(),"Empty session"); r.sequence=integer(v,"sequence"); r.baseRevision=integer(v,"baseRevision"); r.revision=integer(v,"revision");r.controlGeneration=decimalU64(v,"controlGeneration");
     r.stage=text(v,"stage"); require(oneOf(r.stage,{"open","commit","preview","cancel","recover"}),"Invalid stage"); r.editId=nullable(v,"editId");
-    auto& state=field(v,"state"); fields(state,{"project","control"}); auto& p=field(state,"project"); fields(p,{"bpm","numerator","denominator","loop","sources","tracks"},{"launcher"});
+    auto& state=field(v,"state"); fields(state,{"project","control"}); auto& p=field(state,"project"); fields(p,{"bpm","numerator","denominator","loop","sources","tracks"},{"launcher","tempo"});
     if(p.hasProperty("launcher")) {
         const auto& launcher=field(p,"launcher");fields(launcher,{"scenes","quantization"});
         r.launchQuantization=text(launcher,"quantization");require(oneOf(r.launchQuantization,{"none","eightBars","fourBars","twoBars","bar","half","quarter","eighth","sixteenth"}),"Invalid launch quantization");
@@ -90,6 +90,13 @@ Request decode(const V& v) {
     }
     r.bpm=number(p,"bpm",.000001,999); r.numerator=(int)integer(p,"numerator"); r.denominator=(int)integer(p,"denominator");
     require(r.numerator>=1 && r.numerator<=32 && oneOf(juce::String(r.denominator),{"1","2","4","8","16","32"}),"Invalid time signature"); r.quartersPerBar=r.numerator*4.0/r.denominator;
+    if(p.hasProperty("tempo")) {
+        const auto& sections=array(p,"tempo");require(sections.size()<=65536,"Too many tempo sections");double previous=0;
+        for(const auto& section:sections) {
+            fields(section,{"bar","bpm"});const auto bar=number(section,"bar",1,1e12),bpm=number(section,"bpm",20,999);
+            require(bar>previous && (previous!=0 || bar==1),"Invalid tempo section order");previous=bar;r.tempo.push_back({bar,bpm});
+        }
+    }
     auto& loop=field(p,"loop"); fields(loop,{"enabled","startBar","endBar"}); r.loop=boolean(loop,"enabled"); r.loopStart=number(loop,"startBar",1,1e12); r.loopEnd=number(loop,"endBar",1,1e12); require(r.loopEnd>r.loopStart,"Invalid project loop");
     static_cast<Control&>(r)=control(field(state,"control"));
     for (auto& s:array(p,"sources")) {
@@ -137,7 +144,7 @@ Request decode(const V& v) {
         tr.automation=field(t,"automation");
         for(auto& lane:array(t,"automation")) {
             fields(lane,{"id","target","points"}); text(lane,"id"); auto& target=field(lane,"target"); auto kind=text(target,"kind");
-            if(kind=="mixer") { fields(target,{"kind","parameter"}); require(oneOf(text(target,"parameter"),{"volume","pan"}),"Invalid mixer automation"); }
+            if(kind=="mixer") { fields(target,{"kind","parameter"}); const auto parameter=text(target,"parameter");require(oneOf(parameter,{"volume","pan"}) || (tr.kind=="main" && parameter=="tempo"),"Invalid mixer automation"); }
             else {
                 require(kind=="device","Invalid automation target");fields(target,{"kind","deviceId","parameter"});
                 const auto id=text(target,"deviceId"),parameter=text(target,"parameter");
@@ -215,7 +222,7 @@ static bool equivalent(const V& a,const V& b,bool ignoreLiveClipFields=false,boo
     return a==b;
 }
 bool sameGraph(const Request& a,const Request& b,bool allowClipPlacement) {
-    if((!allowClipPlacement && a.bpm!=b.bpm) || a.numerator!=b.numerator || a.denominator!=b.denominator || (!allowClipPlacement && (a.sources.size()!=b.sources.size() || a.tracks.size()!=b.tracks.size())))return false;
+    if((!allowClipPlacement && !a.sameTempo(b)) || a.numerator!=b.numerator || a.denominator!=b.denominator || (!allowClipPlacement && (a.sources.size()!=b.sources.size() || a.tracks.size()!=b.tracks.size())))return false;
     for(const auto& [id,lhs]:a.sources) {
         const auto found=b.sources.find(id);
         if(found==b.sources.end()) { if(allowClipPlacement)continue;return false; }

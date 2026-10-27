@@ -61,8 +61,9 @@ std::optional<StoppedTransportPosition> EngineSession::stoppedTransportPosition(
     if(!arrangement || !accepted)return {};
     const auto& transport=arrangement->edit->getTransport();
     if(transport.isPlaying() || transport.isRecording())return {};
-    const auto rate=1/accepted->secondsPerBar();
-    return StoppedTransportPosition{1+transport.getPosition().inSeconds()*rate,rate};
+    const auto bar=accepted->timeBar(transport.getPosition().inSeconds());
+    const auto rate=accepted->tempoAt(bar)/(60*accepted->quartersPerBar);
+    return StoppedTransportPosition{bar,rate};
 }
 std::shared_ptr<const TransportClockState> EngineSession::acquireIdleMeter(const char* lease,const char* session,std::uint64_t owner) {
     require(juce::MessageManager::getInstance()->isThisTheMessageThread(),"Idle meter acquisition requires message thread");

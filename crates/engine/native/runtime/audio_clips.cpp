@@ -22,12 +22,12 @@ double audioSourceStart(double offset,double markerStart) {
     return offset<0?offset:std::max(offset,markerStart);
 }
 te::ClipPosition audioPosition(const Clip& clip,const Request& request) {
-    const double ratio=clip.settings.warp?request.bpm/clip.settings.sourceBpm:1.0;
+    const double ratio=clip.settings.warp?request.tempoAt(clip.start)/clip.settings.sourceBpm:1.0;
     const double sourceBar=request.quartersPerBar*60/clip.settings.sourceBpm;
     double offset=audioSourceStart(clip.offset,clip.settings.markerStart);
     if(clip.settings.loop)offset=std::fmod(std::fmod(offset-clip.settings.loopStart,clip.settings.loopLength)+clip.settings.loopLength,clip.settings.loopLength);
-    const double length=clip.length*request.secondsPerBar();
-    const double delay=std::min(length,std::max(0.0,-offset*sourceBar/ratio));
+    const double length=request.barDuration(clip.start,clip.length);
+    const double delay=clip.settings.warp?std::min(length,request.barDuration(clip.start,std::max(0.0,-offset))):std::min(length,std::max(0.0,-offset*sourceBar));
     return {.time={te::TimePosition::fromSeconds(request.barTime(clip.start)+delay),te::TimeDuration::fromSeconds(length-delay)},.offset=te::TimeDuration::fromSeconds(std::max(0.0,offset)*sourceBar/ratio)};
 }
 class Envelope final : public te::Plugin {
@@ -35,7 +35,8 @@ public:
     explicit Envelope(te::PluginCreationInfo info):Plugin(info) {}
     void configure(const Clip& c,const Request& r) {
         Parameters next;
-        next.window={r.barTime(c.start),c.length,c.offset,c.settings.markerStart,c.settings.markerEnd,r.secondsPerBar(),r.quartersPerBar*60/c.settings.sourceBpm,c.settings.warp?r.bpm/c.settings.sourceBpm:1,(double)r.numerator,c.settings.loop};
+        next.window={r.barTime(c.start),c.length,c.offset,c.settings.markerStart,c.settings.markerEnd,r.secondsPerBar(),r.quartersPerBar*60/c.settings.sourceBpm,c.settings.warp?r.tempoAt(c.start)/c.settings.sourceBpm:1,(double)r.numerator,c.settings.loop};
+        next.window.startBar=c.start;next.window.warp=c.settings.warp;
         next.fade={c.fadeIn,c.fadeOut,c.fadeInOffset,c.fadeOutOffset,c.fadeInCurve,c.fadeOutCurve,c.fadeInPosition,c.fadeOutPosition};
         parameters.publish(next);
     }
@@ -53,6 +54,11 @@ public:
         const auto& window=current.window;
         const auto& fade=current.fade;
         const double t=rc.editTime.getStart().inSeconds()-window.start;
+        const auto& sequence=edit.tempoSequence.getInternalSequence();
+        tracktion::tempo::Sequence::Position position(sequence);
+        position.set(rc.editTime.getStart());
+        const double currentBarSeconds=window.beatsPerBar*240/(position.getTempo()*position.getTimeSignature().denominator);
+        const double currentRatio=window.warp?window.sourceBarSeconds/currentBarSeconds:1;
         double bar=t/window.barSeconds;
         double source=audioSourceStart(window.offset,window.markerStart)*window.sourceBarSeconds+t*window.ratio;
         if(launcher) {
@@ -61,11 +67,16 @@ public:
                     launchOrigin=played->v.getStart();sourceElapsed=0;
                 }
                 lastLaunchEnd=played->v.getEnd();
-                bar=std::max(0.0,played->v.getLength().inBeats()/window.beatsPerBar-rc.bufferNumSamples/(rate*window.barSeconds));
+                bar=std::max(0.0,played->v.getLength().inBeats()/window.beatsPerBar-rc.bufferNumSamples/(rate*currentBarSeconds));
             }
             source=audioSourceStart(window.offset,window.markerStart)*window.sourceBarSeconds+sourceElapsed;
         }
-        for(int i=0;i<rc.bufferNumSamples;++i,bar+=1/(rate*window.barSeconds),source+=window.ratio/rate) {
+        for(int i=0;i<rc.bufferNumSamples;++i,bar+=1/(rate*currentBarSeconds),source+=currentRatio/rate) {
+            if(!launcher) {
+                position.set(te::TimePosition::fromSeconds(rc.editTime.getStart().inSeconds()+i/rate));
+                bar=position.getBeats().inBeats()/window.beatsPerBar-(window.startBar-1);
+                source=audioSourceStart(window.offset,window.markerStart)*window.sourceBarSeconds+(window.warp?bar*window.sourceBarSeconds:t+i/rate);
+            }
             double gain=1;
             if(fade.fadeIn>0)gain*=shape((bar-fade.fadeInOffset)/fade.fadeIn,fade.fadeInPosition,fade.fadeInCurve);
             if(fade.fadeOut>0)gain*=1-shape((bar-(window.length-fade.fadeOutOffset-fade.fadeOut))/fade.fadeOut,fade.fadeOutPosition,fade.fadeOutCurve);
@@ -74,7 +85,7 @@ public:
             }
             for(int ch=0;ch<rc.destBuffer->getNumChannels();++ch)rc.destBuffer->getWritePointer(ch)[rc.bufferStartSample+i]*=(float)gain;
         }
-        if(launcher)sourceElapsed+=rc.bufferNumSamples*window.ratio/rate;
+        if(launcher)sourceElapsed+=rc.bufferNumSamples*currentRatio/rate;
     }
 private:
     static double shape(double x,double position,double bend) noexcept {
@@ -85,6 +96,8 @@ private:
     struct SourceWindow {
         double start=0,length=0,offset=0,markerStart=0,markerEnd=0,barSeconds=1,sourceBarSeconds=1,ratio=1,beatsPerBar=4;
         bool loop=false;
+        double startBar=1;
+        bool warp=false;
     };
     struct Fades {
         double fadeIn=0,fadeOut=0,fadeInOffset=0,fadeOutOffset=0,fadeInCurve=0,fadeOutCurve=0,fadeInPosition=.5,fadeOutPosition=.5;
@@ -107,13 +120,13 @@ void EngineSession::insertAudioClip(Arrangement& a,te::ClipOwner& track,const Tr
     std::unique_ptr<juce::AudioFormatReader> reader(engine.getAudioFileFormatManager().readFormatManager.createReaderFor(src.file));
     if(!reader) { a.issues.add(issue("source-decode","Audio source cannot be decoded; clip is silent",src.id,t.id,c.id));return; }
     if(reader->lengthInSamples!=src.frames || reader->sampleRate!=src.rate || (int)reader->numChannels!=src.channels) { a.issues.add(issue("source-changed","Audio source metadata changed; clip is silent",src.id,t.id,c.id));return; }
-    const double ratio=c.settings.warp?r.bpm/c.settings.sourceBpm:1.0;
+    const double ratio=c.settings.warp?r.tempoAt(c.start)/c.settings.sourceBpm:1.0;
     const double authoredPitch=c.settings.transpose+c.settings.detune/100;
     require(ratio>=te::ClipConstants::speedRatioMin && ratio<=te::ClipConstants::speedRatioMax,"Tempo ratio exceeds the native time-stretcher range");
     juce::ValueTree state(te::IDs::PLUGIN);state.setProperty(te::IDs::type,"zoeydaw-source-envelope",nullptr);
     auto envelope=a.edit->getPluginCache().createNewPlugin(state);require(envelope!=nullptr,"Cannot create source envelope");
     dynamic_cast<Envelope&>(*envelope).configure(c,r);
-    auto clip=te::insertWaveClip(track,c.id,src.file,{.time={te::TimePosition::fromSeconds(r.barTime(c.start)),te::TimeDuration::fromSeconds(c.length*r.secondsPerBar())}},te::DeleteExistingClips::no);
+    auto clip=te::insertWaveClip(track,c.id,src.file,{.time={te::TimePosition::fromSeconds(r.barTime(c.start)),te::TimeDuration::fromSeconds(r.barDuration(c.start,c.length))}},te::DeleteExistingClips::no);
     require(clip!=nullptr,"Cannot schedule audio clip");
     const bool beatScheduled=c.scene.isNotEmpty();
     clip->setUsesProxy(false);clip->setAutoTempo(c.settings.warp || beatScheduled);clip->setAutoPitch(false);clip->setAutoCrossfade(false);clip->setFadeIn({});clip->setFadeOut({});clip->setGainDB((float)c.gain);clip->setMuted(c.mute);clip->setPan(0);
@@ -125,6 +138,7 @@ void EngineSession::insertAudioClip(Arrangement& a,te::ClipOwner& track,const Tr
     clip->setSpeedRatio(1.0);clip->state.setProperty(te::IDs::pitchChange,authoredPitch,nullptr);clip->setIsReversed(c.settings.reverse);
     const double sourceBar=r.quartersPerBar*60/c.settings.sourceBpm;
     if(c.settings.loop)clip->setLoopRange({te::TimePosition::fromSeconds(c.settings.loopStart*sourceBar/ratio),te::TimeDuration::fromSeconds(c.settings.loopLength*sourceBar/ratio)});else clip->setLoopRange({});
+    if(c.settings.warp && c.settings.loop)clip->setLoopRangeBeats({te::BeatPosition::fromBeats(c.settings.loopStart*r.numerator),te::BeatDuration::fromBeats(c.settings.loopLength*r.numerator)});
     clip->setPosition(audioPosition(c,r));
     if(beatScheduled)dynamic_cast<Envelope&>(*envelope).useLauncher(clip->getLaunchHandle());
     clip->getPluginList()->insertPlugin(envelope,0,nullptr);a.envelopes.emplace(c.id,envelope.get());a.audioClips.emplace(c.id,clip.get());
@@ -156,7 +170,7 @@ void EngineSession::Arrangement::jobFinished(te::RenderManager::Job& job,bool co
 }
 void EngineSession::updateEnvelopes(Arrangement& a,const Request& next,const Request& previous) {
     te::TransportControl::ReallocationInhibitor inhibit(a.edit->getTransport());
-    const bool tempoChanged=next.bpm!=previous.bpm;
+    const bool tempoChanged=!next.sameTempo(previous);
     for(size_t track=0;track<next.tracks.size();++track)for(size_t index=0;index<next.tracks[track].clips.size();++index) {
         const auto& clip=next.tracks[track].clips[index];
         if(clip.kind!="audio")continue;
@@ -191,10 +205,11 @@ void EngineSession::updateEnvelopes(Arrangement& a,const Request& next,const Req
                 native->second->state.setProperty(te::IDs::pitchChange,authoredPitch,nullptr);
             }
             if(reverseChanged || loopChanged || speedChanged) {
-                const double ratio=clip.settings.warp?next.bpm/clip.settings.sourceBpm:1.0;
+                const double ratio=clip.settings.warp?next.tempoAt(clip.start)/clip.settings.sourceBpm:1.0;
                 const double sourceBar=next.quartersPerBar*60/clip.settings.sourceBpm;
                 if(clip.settings.loop)native->second->setLoopRange({te::TimePosition::fromSeconds(clip.settings.loopStart*sourceBar/ratio),te::TimeDuration::fromSeconds(clip.settings.loopLength*sourceBar/ratio)});
                 else native->second->setLoopRange({});
+                if(clip.settings.warp && clip.settings.loop)native->second->setLoopRangeBeats({te::BeatPosition::fromBeats(clip.settings.loopStart*next.numerator),te::BeatDuration::fromBeats(clip.settings.loopLength*next.numerator)});
             }
             if(tempoChanged || reverseChanged || speedChanged || loopChanged || clip.start!=old.start || clip.length!=old.length || clip.offset!=old.offset || clip.settings.markerStart!=old.settings.markerStart) {
                 native->second->setPosition(audioPosition(clip,next));

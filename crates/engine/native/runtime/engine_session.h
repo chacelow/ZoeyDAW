@@ -197,6 +197,7 @@ private:
     void routeOutputs(Arrangement&, const Request&);
     void updateMixer(Arrangement&, const Request&, const Request&);
     void updateEnvelopes(Arrangement&, const Request&, const Request&);
+    void updateTempo(Arrangement&, const Request&);
     std::unique_ptr<Arrangement> prepare(const Request&);
     void insertAudioClip(Arrangement&, te::ClipOwner&, const Track&, const Clip&, const Request&);
     void initialiseTrack(Arrangement&, te::AudioTrack&, const Track&, const Request&);

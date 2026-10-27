@@ -130,6 +130,7 @@ export default {
   automationDevice: "Automation device",
   automationNone: "None",
   automationMixer: "Mixer",
+  songTempo: "Song Tempo",
   addAutomationLane: "Add automation lane",
   removeAutomationLane: "Hide automation lane",
   kind: { audio: "Audio", midi: "MIDI", group: "Group", return: "Return", main: "Main output" },

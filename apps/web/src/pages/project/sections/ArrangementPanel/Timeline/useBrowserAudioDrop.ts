@@ -1,3 +1,4 @@
+import { secondsAtBar, barAtSeconds } from "@zoeydaw/project-core/tempo-map"
 import { useEffect, useId, useRef, useState } from "react"
 import { projectFiles, useProjectFilesState, useProjectState } from "@/pages/project/adapters"
 import {
@@ -48,8 +49,6 @@ function projectPending(scene: ArrangementScene, pending: PendingDrop): BrowserA
     row?.top ?? dropZoneTop(scene.tracks, scene.viewport.scrollY, display)
   )
   const bottom = pinnedTopFor(scene.tracks, scene.viewport.height, display)
-  const { bpm, numerator, denominator } = scene.transport
-  const secondsPerBar = (60 * numerator * 4) / (bpm * denominator)
   return {
     ...placement,
     trackId,
@@ -67,7 +66,15 @@ function projectPending(scene: ArrangementScene, pending: PendingDrop): BrowserA
       ? Math.max(2, clip.lengthBars * scene.viewport.pxPerBar)
       : pending.source.durationSeconds === null
         ? null
-        : Math.max(2, (pending.source.durationSeconds / secondsPerBar) * scene.viewport.pxPerBar),
+        : Math.max(
+            2,
+            (barAtSeconds(
+              scene.transport,
+              secondsAtBar(scene.transport, placement.startBar) + pending.source.durationSeconds
+            ) -
+              placement.startBar) *
+              scene.viewport.pxPerBar
+          ),
   }
 }
 

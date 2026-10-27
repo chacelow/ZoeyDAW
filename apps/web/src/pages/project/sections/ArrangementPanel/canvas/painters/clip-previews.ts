@@ -1,11 +1,7 @@
+import { clipSourceCoordinate, tempoAtBar } from "@zoeydaw/project-core/tempo-map"
+import type { TempoTimebase } from "@zoeydaw/project-core/tempo-map"
 import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
-import type {
-  AudioClip,
-  Clip,
-  MidiClip,
-  MidiPattern,
-  DocumentState,
-} from "@zoeydaw/project-core/types"
+import type { AudioClip, Clip, MidiClip, MidiPattern } from "@zoeydaw/project-core/types"
 import { findMediaSource } from "@zoeydaw/project-core/media"
 import type { MediaSource } from "@zoeydaw/project-core/media"
 import { nativeClipWaveform } from "@/pages/project/adapters/backend/clip-waveform"
@@ -105,10 +101,52 @@ export function paintWaveform(
   ink: string,
   viewportWidth: number,
   media: readonly MediaSource[],
-  transport: Pick<DocumentState["transport"], "bpm" | "numerator" | "denominator">,
+  transport: TempoTimebase,
   suppliedRanges?: readonly WaveformRange[]
 ): void {
   if (height <= 0 || width <= 0) return
+  if (!clip.audioSettings?.warp && transport.tempo?.length) {
+    const visibleStart = clip.startBar + (Math.max(0, -left) * clip.lengthBars) / width
+    const visibleEnd =
+      clip.startBar + (Math.min(width, viewportWidth - left) * clip.lengthBars) / width
+    if (visibleEnd <= visibleStart) return
+    const boundaries = [
+      visibleStart,
+      ...transport.tempo
+        .map(section => section.bar)
+        .filter(bar => bar > visibleStart && bar < visibleEnd),
+      visibleEnd,
+    ]
+    for (let index = 0; index + 1 < boundaries.length; index++) {
+      const first = boundaries[index],
+        end = boundaries[index + 1]
+      const offset = clipSourceCoordinate(clip, transport, first - clip.startBar)
+      const bpm = tempoAtBar(transport, first)
+      const delta = first - clip.startBar
+      const projected = {
+        ...clip,
+        startBar: first,
+        lengthBars: end - first,
+        sourceOffsetBars: offset,
+        fadeInOffsetBars: (clip.fadeInOffsetBars ?? 0) - delta,
+        fadeOutOffsetBars: delta + end - first - clip.lengthBars + (clip.fadeOutOffsetBars ?? 0),
+      }
+      paintWaveform(
+        context,
+        projected,
+        left + (delta * width) / clip.lengthBars,
+        top,
+        (width * (end - first)) / clip.lengthBars,
+        height,
+        ink,
+        viewportWidth,
+        media,
+        { ...transport, bpm, tempo: undefined },
+        suppliedRanges
+      )
+    }
+    return
+  }
   const envelope = nativeClipWaveform(
     clip,
     media,
