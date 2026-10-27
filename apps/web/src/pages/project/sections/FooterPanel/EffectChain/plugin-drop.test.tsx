@@ -1,9 +1,19 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest"
-import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  createMockProjectBackend,
+} from "@zoeydaw/project-runtime/testing"
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
-import { hydrateProject, useProjectState } from "@/pages/project/adapters"
+import {
+  configureProjectBackend,
+  hydrateProject,
+  startProjectRuntime,
+  useProjectState,
+  whenProjectBackendIdle,
+} from "@/pages/project/adapters"
 import { BROWSER_PLUGIN_MIME, browserPluginDrag } from "@/pages/project/adapters/browser"
 import { nativePlugins } from "@/shared/native/plugins"
 import { EffectChain } from "."
@@ -40,8 +50,12 @@ const device: ExternalDevice = {
   stateRef: null,
   parameters: [],
 }
+let releaseRuntime: (() => void) | undefined
+let releaseBackend: (() => void) | undefined
 afterEach(() => {
   cleanup()
+  releaseRuntime?.()
+  releaseBackend?.()
   browserPluginDrag.clear()
   vi.restoreAllMocks()
 })
@@ -50,6 +64,10 @@ it("drops a browser instrument onto the selected MIDI device chain", async () =>
   const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
   const track = document.tracks.find(item => item.kind === "midi")!
   hydrateProject(JSON.stringify({ version: 4, document, workspace: createMockWorkspace() }))
+  releaseBackend = configureProjectBackend(createMockProjectBackend)
+  releaseRuntime = startProjectRuntime()
+  await whenProjectBackendIdle()
+  vi.spyOn(nativePlugins, "discardSeed").mockResolvedValue(undefined)
   vi.spyOn(nativePlugins, "prepareDevice").mockResolvedValue(device)
   const view = render(<EffectChain track={track} />)
   const target = view.container.querySelector("section > div")!

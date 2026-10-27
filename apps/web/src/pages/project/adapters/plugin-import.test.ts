@@ -1,9 +1,19 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
-import { createMockDocument, createMockWorkspace } from "@zoeydaw/project-runtime/testing"
+import {
+  createMockDocument,
+  createMockWorkspace,
+  createMockProjectBackend,
+} from "@zoeydaw/project-runtime/testing"
 import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import { nativePlugins } from "@/shared/native/plugins"
-import { hydrateProject, useProjectState } from "./index"
+import {
+  configureProjectBackend,
+  hydrateProject,
+  startProjectRuntime,
+  useProjectState,
+  whenProjectBackendIdle,
+} from "./index"
 import { insertBrowserPlugin } from "./plugin-import"
 import type { PluginCatalogEntry } from "@/shared/native/plugins"
 import type { ExternalDevice } from "@zoeydaw/project-core/devices"
@@ -39,13 +49,23 @@ const device: ExternalDevice = {
   parameters: [],
 }
 let midi = ""
-beforeEach(() => {
+let releaseRuntime: () => void
+let releaseBackend: () => void
+beforeEach(async () => {
   const document = createMockDocument(DEFAULT_TRACK_HEIGHT)
   midi = document.tracks.find(track => track.kind === "midi")!.id
   hydrateProject(JSON.stringify({ version: 4, document, workspace: createMockWorkspace() }))
+  releaseBackend = configureProjectBackend(createMockProjectBackend)
+  releaseRuntime = startProjectRuntime()
+  await whenProjectBackendIdle()
+  vi.spyOn(nativePlugins, "discardSeed").mockResolvedValue(undefined)
   vi.spyOn(nativePlugins, "prepareDevice").mockResolvedValue(device)
 })
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  releaseRuntime()
+  releaseBackend()
+  vi.restoreAllMocks()
+})
 
 it("inserts one instrument before existing effects and rejects another", async () => {
   const before = useProjectState.getState().document.tracks.find(track => track.id === midi)!

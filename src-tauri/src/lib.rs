@@ -84,6 +84,7 @@ pub fn run() {
       plugin_catalog::plugin_catalog_scan,
       plugin_catalog::plugin_catalog_cancel,
       playback::plugin_seed::plugin_device_seed,
+      playback::plugin_seed::plugin_device_discard_seed,
       playback::plugin_controls::plugin_device_parameters,
       playback::plugin_controls::plugin_device_snapshot,
       playback::plugin_editor::plugin_device_editor,

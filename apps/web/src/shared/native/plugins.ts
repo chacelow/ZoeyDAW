@@ -171,12 +171,20 @@ export const nativePlugins = {
   ): Promise<PluginScanReport> =>
     report.parse(await invoke("plugin_catalog_scan", { operationId, directories, audioUnits })),
   cancel: (operationId: string): Promise<void> => invoke("plugin_catalog_cancel", { operationId }),
-  prepareDevice: async (catalogId: string): Promise<ExternalDevice> => {
-    const seed: unknown = await invoke("plugin_device_seed", { catalogId })
-    if (typeof seed !== "object" || seed === null || Array.isArray(seed))
+  prepareDevice: async (catalogId: string, sessionId: string): Promise<ExternalDevice> => {
+    const id = crypto.randomUUID()
+    const seed: unknown = await invoke("plugin_device_seed", { catalogId, sessionId, deviceId: id })
+    if (typeof seed !== "object" || seed === null || Array.isArray(seed)) {
+      await invoke("plugin_device_discard_seed", { sessionId, deviceId: id })
       throw new Error("Invalid plugin seed")
-    const device = { ...seed, id: crypto.randomUUID(), enabled: true, collapsed: false }
-    if (!isDevice(device) || device.kind !== "external") throw new Error("Invalid plugin device")
+    }
+    const device = { ...seed, id, enabled: true, collapsed: false }
+    if (!isDevice(device) || device.kind !== "external") {
+      await invoke("plugin_device_discard_seed", { sessionId, deviceId: id })
+      throw new Error("Invalid plugin device")
+    }
     return device
   },
+  discardSeed: (sessionId: string, deviceId: string): Promise<void> =>
+    invoke("plugin_device_discard_seed", { sessionId, deviceId }),
 }
