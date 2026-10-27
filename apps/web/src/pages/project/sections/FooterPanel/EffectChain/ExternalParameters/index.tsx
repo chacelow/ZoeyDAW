@@ -3,7 +3,7 @@ import { Button, DragPadBar } from "@zoeymind/ui"
 import { useTranslation } from "@zoeymind/i18n"
 import {
   usePluginEditor,
-  useProjectEditGesture,
+  useAutomationGesture,
   useProjectFilesState,
   useProjectState,
   usePluginRecoveryPending,
@@ -29,23 +29,28 @@ function ExternalParameterControl({
 }) {
   const value =
     device.parameters.find(item => item.id === parameter.id)?.normalized ?? parameter.normalized
-  const gesture = useProjectEditGesture((normalized: number) => {
-    editDevices(trackId, devices =>
-      devices.map(current => {
-        if (current.id !== device.id || current.kind !== "external") return current
-        const existing = current.parameters.find(item => item.id === parameter.id)
-        if (existing?.normalized === normalized) return current
-        return {
-          ...current,
-          parameters: existing
-            ? current.parameters.map(item =>
-                item.id === parameter.id ? { ...item, normalized } : item
-              )
-            : [...current.parameters, { id: parameter.id, normalized }],
-        }
-      })
-    )
-  })
+  const gesture = useAutomationGesture(
+    trackId,
+    { kind: "device", deviceId: device.id, parameter: parameter.id },
+    (normalized: number) => {
+      editDevices(trackId, devices =>
+        devices.map(current => {
+          if (current.id !== device.id || current.kind !== "external") return current
+          const existing = current.parameters.find(item => item.id === parameter.id)
+          if (existing?.normalized === normalized) return current
+          return {
+            ...current,
+            parameters: existing
+              ? current.parameters.map(item =>
+                  item.id === parameter.id ? { ...item, normalized } : item
+                )
+              : [...current.parameters, { id: parameter.id, normalized }],
+          }
+        })
+      )
+    },
+    value
+  )
   return (
     <div className="gap-control-gap flex min-w-0 items-center justify-between">
       <span className="text-muted-foreground min-w-0 truncate" title={parameter.title}>
@@ -54,7 +59,6 @@ function ExternalParameterControl({
       <DragPadBar
         label={parameter.title}
         size="compact"
-        value={value}
         min={0}
         max={1}
         step={parameter.stepCount > 0 ? 1 / parameter.stepCount : 0.001}

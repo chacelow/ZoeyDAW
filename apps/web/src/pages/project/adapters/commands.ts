@@ -1,4 +1,5 @@
 import {
+  setAutomationRecordMode,
   beginEdit,
   endEdit,
   cancelEdit,
@@ -22,6 +23,7 @@ import { midiActions } from "./midi"
 import { launcherActions } from "./launcher"
 
 export const projectActions = {
+  setAutomationRecordMode,
   beginEdit,
   endEdit,
   cancelEdit,

@@ -11,6 +11,7 @@ export function MainLevels({ track }: { readonly track: Track }) {
   return (
     <div className="gap-control-track-gap grid min-w-0 grid-cols-2">
       <MixerLevel
+        trackId={track.id}
         label={`${t("arrangement.volume")} ${track.name}`}
         value={track.volumeDb}
         onChange={volumeDb => projectActions.updateTrack(track.id, { volumeDb })}
@@ -32,7 +33,7 @@ export function TrackLevels({
   readonly track: Track
   readonly panGesture: Pick<
     PanControlProps,
-    "onChange" | "onGestureStart" | "onGestureEnd" | "onGestureCancel"
+    "value" | "onChange" | "onGestureStart" | "onGestureEnd" | "onGestureCancel"
   >
 }) {
   const { t } = useTranslation()
@@ -40,6 +41,7 @@ export function TrackLevels({
     <div className="gap-control-track-gap grid min-w-0 grid-cols-2">
       {track.kind !== "main" && (
         <MixerLevel
+          trackId={track.id}
           label={`${t("arrangement.volume")} ${track.name}`}
           value={track.volumeDb}
           onChange={volumeDb => projectActions.updateTrack(track.id, { volumeDb })}
@@ -47,7 +49,6 @@ export function TrackLevels({
       )}
       <PanControl
         size="compact"
-        value={track.pan}
         label={`${t("arrangement.pan")} ${track.name}`}
         className="arrangement-pan-control w-full min-w-0"
         {...panGesture}

@@ -11,6 +11,7 @@ export {
 export { recoverRecording } from "./context"
 export { setProjectStorageId, serializeProject, hydrateProject } from "./snapshots"
 export { useProjectEditGesture } from "./useProjectEditGesture"
+export { useAutomationGesture } from "./useAutomationGesture"
 export { projectFiles, useProjectFilesState } from "./project-files"
 export { browserLibrary, useBrowserLibraryState } from "./browser"
 export { usePluginEditor } from "./plugin-editor"

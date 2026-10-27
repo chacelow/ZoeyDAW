@@ -1,5 +1,5 @@
 import { Keyboard, PencilSimple } from "@phosphor-icons/react"
-import { DragPadToggle } from "@zoeymind/ui"
+import { DragPadToggle, DropdownButton } from "@zoeymind/ui"
 import { useTranslation } from "@zoeymind/i18n"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
 import { effectiveDrawMode } from "@zoeydaw/project-core/interaction-mode"
@@ -9,10 +9,20 @@ export function ModeControls() {
   const { t } = useTranslation()
   const drawMode = useProjectState(effectiveDrawMode)
   const computerKeyboard = useProjectState(s => s.workspace.computerKeyboard)
+  const automationRecordMode = useProjectState(s => s.session.automationRecordMode)
   const setDrawMode = setDrawModeLatched
   const setComputerKeyboard = (value: boolean) => projectActions.setMode("computerKeyboard", value)
   return (
     <>
+      <DropdownButton
+        label={t("project.transport.automationRecordMode")}
+        value={automationRecordMode}
+        items={(["read", "touch", "latch"] as const).map(id => ({
+          id,
+          label: t(`project.transport.automationRecord.${id}`),
+        }))}
+        onChange={projectActions.setAutomationRecordMode}
+      />
       <DragPadToggle
         value={drawMode}
         onChange={setDrawMode}

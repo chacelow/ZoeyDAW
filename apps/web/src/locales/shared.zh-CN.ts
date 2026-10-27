@@ -215,6 +215,8 @@ export default {
       positionBeat: "拍",
       positionSixteenth: "分拍",
       drawMode: "绘制模式",
+      automationRecordMode: "自动化录制",
+      automationRecord: { read: "读取", touch: "Touch", latch: "Latch" },
       drawModeHint: "B 切换绘制模式；按住 B 拖画自动化或 MIDI 音符，松开恢复。",
       computerKeyboard: "电脑 MIDI 键盘",
       scaleRoot: "调性根音",

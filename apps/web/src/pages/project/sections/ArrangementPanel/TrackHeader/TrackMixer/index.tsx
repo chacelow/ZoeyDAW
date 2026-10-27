@@ -1,7 +1,7 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { TrackMeter } from "@/pages/project/sections/ArrangementPanel/canvas/TrackMeter"
 import { MidiActivity } from "@/pages/project/sections/ArrangementPanel/canvas/MidiActivity"
-import { projectActions, useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
+import { projectActions, useAutomationGesture, useProjectState } from "@/pages/project/adapters"
 import { trackControlRows } from "@/pages/project/layout"
 import { TrackActions } from "./TrackActions"
 import { MainLevels, TrackLevels } from "./TrackLevels"
@@ -10,8 +10,11 @@ import type { Track } from "@zoeydaw/project-core/types"
 
 export function TrackMixer({ track }: { readonly track: Track }) {
   const { t } = useTranslation()
-  const panGesture = useProjectEditGesture((pan: number) =>
-    projectActions.updateTrack(track.id, { pan })
+  const panGesture = useAutomationGesture(
+    track.id,
+    { kind: "mixer", parameter: "pan" },
+    (pan: number) => projectActions.updateTrack(track.id, { pan }),
+    track.pan
   )
   const tracks = useProjectState(s => s.document.tracks)
   const isMain = track.kind === "main"

@@ -240,6 +240,8 @@ export default {
       sig: "Time signature",
       scale: "Key",
       drawMode: "Draw mode",
+      automationRecordMode: "Automation recording",
+      automationRecord: { read: "Read", touch: "Touch", latch: "Latch" },
       drawModeHint:
         "B toggles drawing. Hold B while drawing automation or MIDI notes for temporary mode.",
       computerKeyboard: "Computer MIDI keyboard",

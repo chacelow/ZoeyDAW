@@ -108,6 +108,8 @@ Web 领域计算、快照校验和波形范围 schema 归 `@zoeydaw/project-core
 
 `runtime/project-runtime.ts` 保留 backend 注册、lease、revision、accepted checkpoint 和 transport 协调。该文件仍超过 400 行，因为这些入口共同维护同一连接与接受边界；编辑和录音状态不再寄存在协调器闭包。公开 exports 与消费者命令保持原样。
 
+`runtime/automation-recording.ts` 拥有 Touch/Latch take、原目标曲线、实际观测位置和发布重入保护，通过 `project-editing` 写入唯一文档。App `useAutomationGesture` 绑定控件手势与 epoch 清理；native 继续消费已有包络 DTO，不新增原生录制 owner。`transport-position.ts` 独立保存音乐位置换算，不持有后端生命周期。
+
 Session 文档规则与内容 codec 归 `@zoeydaw/project-core/launcher` 和 `./clip-content`。`runtime/project-runtime.ts` 通过原 connection FIFO 发送演奏命令并保存只读观测。`project-save-wait.ts` 只拥有保存等待的订阅与取消生命周期，不持有另一份文档或 checkpoint。App `adapters/launcher.ts` 提供 authored actions；`sections/SessionPanel` 呈现场景矩阵并选择共享 Clip 编辑器。
 
 原生 `runtime/launcher.cpp` 将场景 ID 映射到 Tracktion SceneList/ClipSlot 索引，并从同一 sync point 调度 LaunchHandle。原 Arrangement 继续持有轨道、效果器、源观测和 DeviceManager。`audio_clips.cpp` 负责片段本地播放时间中的淡变与源标记。维护的 SDK source switcher 按处理后的 handle 状态选择音频输入，不能等待主线程 mode 镜像后才停止叠加编排。状态观测复用既有 poll，不新增时钟或 Hub。

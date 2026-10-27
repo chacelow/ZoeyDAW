@@ -1,5 +1,5 @@
 import { DragPadBar } from "@zoeymind/ui"
-import { useProjectEditGesture } from "@/pages/project/adapters"
+import { useAutomationGesture } from "@/pages/project/adapters"
 import type { ReactNode } from "react"
 
 const formatDb = (db: number) => (db <= -60 ? "−∞" : db.toFixed(1))
@@ -10,19 +10,25 @@ export function MixerLevel({
   onChange,
   disabled = false,
   icon,
+  trackId,
 }: {
   readonly label: string
   readonly value: number
   readonly onChange: (value: number) => void
   readonly disabled?: boolean
   readonly icon?: ReactNode
+  readonly trackId?: string
 }) {
-  const gesture = useProjectEditGesture(onChange)
+  const gesture = useAutomationGesture(
+    trackId ?? "",
+    { kind: "mixer", parameter: "volume" },
+    onChange,
+    value
+  )
   return (
     <DragPadBar
       size="compact"
       label={label}
-      value={value}
       disabled={disabled}
       icon={icon}
       min={-60}

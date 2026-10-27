@@ -76,6 +76,10 @@ function createProjectBackend(): NativeProjectBackend {
 }
 
 export const {
+  setAutomationRecordMode,
+  beginAutomationGesture,
+  changeAutomationGesture,
+  endAutomationGesture,
   get,
   sameWorkspacePreferences,
   setPreciseTransportBar,

@@ -1,6 +1,6 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { DragPadBar } from "@zoeymind/ui"
-import { useProjectEditGesture } from "@/pages/project/adapters"
+import { useAutomationGesture } from "@/pages/project/adapters"
 import {
   DEVICE_PARAMETERS,
   deviceParameterValue,
@@ -21,11 +21,16 @@ export function ParameterControl({
   const { t, i18n } = useTranslation()
   const config = DEVICE_PARAMETERS[field]
   const value = deviceParameterValue(device, field)
-  const gesture = useProjectEditGesture((next: number) => {
-    editDevices(trackId, devices =>
-      devices.map(item => (item.id === device.id ? withDeviceParameter(item, field, next) : item))
-    )
-  })
+  const gesture = useAutomationGesture(
+    trackId,
+    { kind: "device", deviceId: device.id, parameter: field },
+    (next: number) => {
+      editDevices(trackId, devices =>
+        devices.map(item => (item.id === device.id ? withDeviceParameter(item, field, next) : item))
+      )
+    },
+    value ?? config.defaultValue
+  )
   if (value === undefined) return null
   const label = t(`detailDevices.parameters.${field}`)
   const number = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language, {
@@ -41,7 +46,6 @@ export function ParameterControl({
       <DragPadBar
         label={label}
         size="compact"
-        value={value}
         min={config.min}
         max={config.max}
         step={config.step}

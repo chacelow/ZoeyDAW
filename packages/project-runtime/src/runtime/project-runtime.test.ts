@@ -410,3 +410,27 @@ it("preserves the void recording API for existing MIDI consumers", async () => {
   await settle()
   expect(recordedIds(runtime.get().document)).toEqual(["recorded-1"])
 })
+
+it("commits Latch before save and stop and preserves a single undo entry", () => {
+  vi.useFakeTimers()
+  const { runtime } = harness({ synchronous: true })
+  runtime.session({ playing: true })
+  runtime.setAutomationRecordMode("latch")
+  vi.advanceTimersByTime(100)
+  const before = runtime.get().document
+  const token = runtime.beginAutomationGesture(
+    "3-audio",
+    { kind: "mixer", parameter: "volume" },
+    -18
+  )
+  if (!token) throw new Error("Runtime Latch did not start")
+  runtime.endAutomationGesture(token)
+  vi.advanceTimersByTime(100)
+  const capture = runtime.captureProjectSave()
+  expect(capture.document).toBe(runtime.get().document)
+  expect(capture.document).not.toBe(before)
+  runtime.session({ playing: false })
+  runtime.undo()
+  expect(runtime.get().document).toBe(before)
+  vi.useRealTimers()
+})

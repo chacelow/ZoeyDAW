@@ -17,9 +17,11 @@ import { sameWorkspacePreferences } from "./workspace-preferences"
 import { getEffectiveDocument as projectEffectiveDocument } from "./effective-document"
 import { createProjectEditing } from "./project-editing"
 import { createRecordingPublication } from "./recording-publication"
+import { createAutomationRecording } from "./automation-recording"
 import type { RecordingReceipt } from "./recording-publication"
 import { waitForSave } from "./project-save-wait"
 import { locateClip } from "@zoeydaw/project-core/clip-content"
+import { positionAtBar as projectPosition } from "./transport-position"
 import type {
   Checkpoint,
   ProjectSeed,
@@ -93,6 +95,7 @@ export function createProjectRuntime({
   let projectedProject: BackendState["project"] | null = null
 
   const get = () => store.getState()
+  const positionAtBar = (bar: number) => projectPosition(bar, get().document.transport.numerator)
   const editing = createProjectEditing({
     store,
     submit,
@@ -121,6 +124,15 @@ export function createProjectRuntime({
       else editing.document(next)
     },
   })
+  const automationRecording = createAutomationRecording({
+    store,
+    editing,
+    ready: () =>
+      isBackendRecovered &&
+      get().session.backend.error === null &&
+      Boolean(acceptedControl?.playing) &&
+      seekGeneration === acceptedControl.seekGeneration,
+  })
   const {
     snapshot,
     checkpoint,
@@ -128,7 +140,7 @@ export function createProjectRuntime({
     flags,
     document,
     workspace,
-    beginEdit,
+    beginEdit: beginDocumentEdit,
     endEdit,
     isCurrentEdit,
     cancelEdit,
@@ -233,6 +245,7 @@ export function createProjectRuntime({
     rejectionGeneration++
     isBackendRecovered = false
     checkpoints.clear()
+    automationRecording.clearAutomationRecording()
     const isWorkspaceDirty = editing.restoreAccepted(accepted)
     revision = Math.max(
       revision,
@@ -297,16 +310,11 @@ export function createProjectRuntime({
         ...(frame.playing && { position: positionAtBar(frame.clock.bar) }),
       },
     })
+    automationRecording.observeAutomation(frame)
   }
-  function positionAtBar(bar: number): ProjectState["session"]["position"] {
-    const { numerator } = get().document.transport
-    const beats = (Math.max(1, bar) - 1) * numerator
-    const whole = Math.floor(beats)
-    return {
-      bar: Math.floor(whole / numerator) + 1,
-      beat: (whole % numerator) + 1,
-      sixteenth: 1 + (beats - whole) * 4,
-    }
+  function beginEdit(owner?: string) {
+    automationRecording.finishAutomationRecording()
+    return beginDocumentEdit(owner)
   }
   function setPreciseTransportBar(bar: number): void {
     if (!Number.isFinite(bar)) {
@@ -321,6 +329,7 @@ export function createProjectRuntime({
     rejectRecordingReceipts(
       new Error("Project backend session changed before recording acceptance")
     )
+    automationRecording.finishAutomationRecording()
     editing.cancelActive()
     sessionCounter++
     stopConnection?.()
@@ -446,6 +455,7 @@ export function createProjectRuntime({
       }
 
       rejectRecordingReceipts(new Error("Project runtime disposed before recording acceptance"))
+      automationRecording.finishAutomationRecording()
       editing.cancelActive()
       sessionCounter++
       stopConnection?.()
@@ -512,6 +522,7 @@ export function createProjectRuntime({
     return isBackendRecovered
   }
   function captureProjectSave(): ProjectSaveCapture {
+    automationRecording.finishAutomationRecording()
     return {
       document: getCommittedDocument(),
       workspace: getCommittedWorkspace(),
@@ -558,6 +569,8 @@ export function createProjectRuntime({
 
   function session(patch: Partial<ProjectState["session"]>): void {
     const before = get()
+    if (patch.playing === false || patch.position !== undefined)
+      automationRecording.finishAutomationRecording()
     const was = control(before)
     if (patch.position !== undefined) {
       seekGeneration++
@@ -632,6 +645,7 @@ export function createProjectRuntime({
   }
   function hydrateState(next: ProjectSeed, reopen = true): void {
     next = { ...next, document: ensureOrdinaryTrack(next.document, defaultTrackHeight) }
+    automationRecording.clearAutomationRecording()
     rejectRecordingReceipts(new Error("Project changed before recording acceptance"))
     sessionCounter++
     stopConnection?.()
@@ -730,6 +744,10 @@ export function createProjectRuntime({
   }
 
   return {
+    setAutomationRecordMode: automationRecording.setAutomationRecordMode,
+    beginAutomationGesture: automationRecording.beginAutomationGesture,
+    changeAutomationGesture: automationRecording.changeAutomationGesture,
+    endAutomationGesture: automationRecording.endAutomationGesture,
     get,
     sameWorkspacePreferences,
     setPreciseTransportBar,

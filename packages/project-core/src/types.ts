@@ -245,6 +245,7 @@ export interface SessionState {
   editEpoch: string
   playing: boolean
   recording: boolean
+  automationRecordMode: "read" | "touch" | "latch"
   position: Position
   insertionPoint: { trackId: string | null; bar: number } | null
   selectedTrackIds: string[]

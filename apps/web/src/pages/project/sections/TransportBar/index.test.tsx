@@ -202,6 +202,24 @@ describe("TransportBar", () => {
     expect(useProjectState.getState().document.transport.bpm).toBeGreaterThan(baseline)
   })
 
+  it("selects Touch and Latch recording without starting playback or dirtying the document", async () => {
+    const view = render(
+      <I18nProvider>
+        <TransportBar onBack={vi.fn()} onToggleBrowser={vi.fn()} />
+      </I18nProvider>
+    )
+    fireEvent.click(view.getByLabelText("自动化录制"))
+    fireEvent.click(await view.findByRole("menuitem", { name: "Touch" }))
+    expect(useProjectState.getState().session.automationRecordMode).toBe("touch")
+    fireEvent.click(view.getByLabelText("自动化录制"))
+    fireEvent.click(await view.findByRole("menuitem", { name: "Latch" }))
+    expect(useProjectState.getState().session).toMatchObject({
+      automationRecordMode: "latch",
+      playing: false,
+      dirty: false,
+    })
+  })
+
   it("parses typed note values and rejects unsupported denominators without normalizing them", () => {
     const view = render(
       <I18nProvider>

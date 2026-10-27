@@ -5,6 +5,7 @@ export function initialSession(): SessionState {
     editEpoch: crypto.randomUUID(),
     playing: false,
     recording: false,
+    automationRecordMode: "read",
     position: { bar: 1, beat: 1, sixteenth: 1 },
     insertionPoint: null,
     selectedTrackIds: [],
