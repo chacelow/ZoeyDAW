@@ -1,5 +1,7 @@
 import { defaultAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { insertClips } from "@zoeydaw/project-core/clip-edits"
+import { createTrack } from "@zoeydaw/project-core/reducers"
+import { DEFAULT_TRACK_HEIGHT } from "@/pages/project/layout"
 import type { AudioClip, DocumentState } from "@zoeydaw/project-core/types"
 import type { NativeRecording } from "@/shared/native/audio"
 
@@ -20,6 +22,22 @@ export function applyRecording(document: DocumentState, recording: NativeRecordi
   // Files are recording-owned identities; their atomic insertion is the durable replay marker.
   if (recording.sources.every(source => document.media.some(item => item.id === source.id))) {
     return document
+  }
+  if (recording.recovery) {
+    const tracks = [...document.tracks]
+    for (const placement of recording.clips) {
+      if (tracks.some(track => track.id === placement.trackId)) continue
+      const track = createTrack("audio", tracks, undefined, DEFAULT_TRACK_HEIGHT)
+      track.id = placement.trackId
+      track.name =
+        recording.sources.find(source => source.id === placement.fileId)?.name ??
+        recording.recordingId
+      track.input = "none"
+      track.monitor = "off"
+      const firstBus = tracks.findIndex(item => item.kind === "return" || item.kind === "main")
+      tracks.splice(firstBus === -1 ? tracks.length : firstBus, 0, track)
+    }
+    document = { ...document, tracks }
   }
   const incoming = new Map<string, AudioClip[]>()
   for (const placement of recording.clips) {

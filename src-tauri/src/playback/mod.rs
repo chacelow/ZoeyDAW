@@ -29,6 +29,10 @@ struct ClosedRecording {
     recording_id: String,
     session_id: String,
     source_bpm: f64,
+    #[serde(rename = "secondsPerBar")]
+    _seconds_per_bar: f64,
+    #[serde(default)]
+    recovery: bool,
     files: Vec<ClosedRecordingFile>,
     clips: Vec<RecordingPlacement>,
 }
@@ -142,6 +146,7 @@ pub async fn recording_results(app: AppHandle, service: State<'_, PlaybackServic
                 "recordingId": recording.recording_id,
                 "sessionId": recording.session_id,
                 "sourceBpm": recording.source_bpm,
+                "recovery": recording.recovery,
                 "sources": sources,
                 "clips": recording.clips,
             }));
@@ -149,6 +154,17 @@ pub async fn recording_results(app: AppHandle, service: State<'_, PlaybackServic
         Ok(serde_json::json!({ "sessionId": session_id, "recordings": recordings }))
     }).await.map_err(|error| error.to_string())?
 }
+#[tauri::command]
+pub async fn recording_recovery_list(app: AppHandle, service: State<'_, PlaybackService>) -> Result<Value, String> {
+    service.recording_recovery_list(&TauriMainThread(&app)).await
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn recording_reclaim(app: AppHandle, window: tauri::WebviewWindow, service: State<'_, PlaybackService>, plugins: State<'_, plugin_devices::PluginDevices>, lease_id: String, session_id: String, recording_id: String) -> Result<(), String> {
+    plugins.require_owner(window.label(), &lease_id)?;
+    service.recording_reclaim(&TauriMainThread(&app), lease_id, session_id, recording_id).await.map(|_| ())
+}
+
 
 #[tauri::command(rename_all = "camelCase")]
 pub async fn recording_ack(app: AppHandle, service: State<'_, PlaybackService>, inspections: State<'_, RecordingInspections>, lease_id: String, session_id: String, recording_id: String, accepted_revision: u64) -> Result<(), String> {

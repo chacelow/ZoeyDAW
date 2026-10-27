@@ -8,6 +8,7 @@ export {
   whenProjectBackendIdle,
   getEffectiveDocument,
 } from "./context"
+export { recoverRecording } from "./context"
 export { setProjectStorageId, serializeProject, hydrateProject } from "./snapshots"
 export { useProjectEditGesture } from "./useProjectEditGesture"
 export { projectFiles, useProjectFilesState } from "./project-files"

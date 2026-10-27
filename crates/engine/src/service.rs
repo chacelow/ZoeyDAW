@@ -279,6 +279,14 @@ pub async fn recording_results<D: MainThreadDispatcher>(&self, main: &D, lease_i
     self.invoke(main, "recording_results", json!({"leaseId":lease_id,"sessionId":session_id})).await
 }
 
+pub async fn recording_recovery_list<D: MainThreadDispatcher>(&self, main: &D) -> Result<Value, String> {
+    self.invoke(main, "recording_recovery_list", json!({})).await
+}
+
+pub async fn recording_reclaim<D: MainThreadDispatcher>(&self, main: &D, lease_id: String, session_id: String, recording_id: String) -> Result<Value, String> {
+    self.invoke(main, "recording_reclaim", json!({"leaseId":lease_id,"sessionId":session_id,"recordingId":recording_id})).await
+}
+
 pub async fn recording_ack<D: MainThreadDispatcher>(&self, main: &D, lease_id: String, session_id: String, recording_id: String, accepted_revision: u64) -> Result<(), String> {
     if accepted_revision > MAX_SAFE_INTEGER { return Err("Invalid recording revision".into()); }
     self.invoke(main, "recording_ack", json!({"leaseId":lease_id,"sessionId":session_id,"recordingId":recording_id,"acceptedRevision":accepted_revision})).await.map(|_| ())

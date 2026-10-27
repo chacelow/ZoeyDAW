@@ -47,9 +47,14 @@ export function startProjectRuntime() {
     }
   }
 }
+const recordingRecovery: { backend: NativeProjectBackend | null } = { backend: null }
+export async function recoverRecording(recordingId: string): Promise<void> {
+  if (!recordingRecovery.backend) throw new Error("Project backend is unavailable")
+  await recordingRecovery.backend.reclaimRecording(recordingId)
+}
 function createProjectBackend(): NativeProjectBackend {
   let owner: { sessionId: string; epoch: string } | undefined
-  return createNativeProjectBackend(nativeAudio, {
+  const backend = createNativeProjectBackend(nativeAudio, {
     meters: nativeMeterPort,
     async commitRecording(recording): Promise<NativeRecordingReceipt> {
       const epoch = runtime.projectEpoch()
@@ -66,6 +71,8 @@ function createProjectBackend(): NativeProjectBackend {
       )
     },
   })
+  recordingRecovery.backend = backend
+  return backend
 }
 
 export const {

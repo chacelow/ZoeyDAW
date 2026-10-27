@@ -24,7 +24,7 @@ target_sources(zoeydaw_playback_runtime PRIVATE runtime/midi_clips.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/audio_clips.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/launcher.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/input_monitor.cpp runtime/input_routing.cpp)
-target_sources(zoeydaw_playback_runtime PRIVATE runtime/recording.cpp)
+target_sources(zoeydaw_playback_runtime PRIVATE runtime/recording.cpp runtime/recording_journal.cpp runtime/recording_recovery.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/isolated_plugin_node.cpp runtime/isolated_plugin_binding.cpp)
 target_sources(zoeydaw_playback_runtime PRIVATE runtime/isolated_device_plugin.cpp)
 add_library(zoeydaw_playback STATIC playback_bridge.cpp

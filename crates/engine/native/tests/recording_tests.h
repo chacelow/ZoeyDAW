@@ -1,3 +1,17 @@
+void testRecordingReclaimProcess(const juce::String& id) {
+    EngineSession session;auto request=fixture();put(request,"sessionId","recovery-process");
+    auto payload=object();put(payload,"request",request);put(payload,"leaseId","recovery-process-lease");put(payload,"stopToken",0);put(payload,"stopEpoch",0);
+    accepted(session.call("apply",payload),0);
+    auto claim=object();put(claim,"leaseId","recovery-process-lease");put(claim,"sessionId","recovery-process");put(claim,"recordingId",id);
+    const auto recovered=session.call("recording_reclaim",claim);
+    const auto file=juce::File(recovered["files"][0]["path"].toString());juce::AudioFormatManager formats;formats.registerBasicFormats();
+    std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(file));
+    require(reader && reader->lengthInSamples==16384,"Fresh process lost recorded file dimensions");
+    juce::AudioBuffer<float> audio(1,16384);require(reader->read(&audio,0,16384,0,true,false),"Fresh process cannot decode recorded audio");
+    for(int frame=0;frame<16384;++frame)require(std::abs(audio.getSample(0,frame)-(frame%2?.125f:-.125f))<1e-5,"Fresh process recovered different PCM");
+    std::cout<<"Fresh process reclaimed recorded identity and 16384 exact PCM frames"<<std::endl;
+}
+
 void testHostedRecording() {
     juce::TemporaryFile root;
     const auto previous=juce::SystemStats::getEnvironmentVariable("ZOEYDAW_RECORDING_PATH",{});
@@ -23,6 +37,41 @@ void testHostedRecording() {
     require(reader && reader->lengthInSamples==frames && reader->numChannels==1 && reader->sampleRate==48000,"Closed recording file dimensions mismatch");
     juce::AudioBuffer<float> captured(1,frames);require(reader->read(&captured,0,frames,0,true,false),"Closed recording unreadable");
     for(int i=0;i<frames;++i)require(std::abs(captured.getSample(0,i)-(i%2?.125f:-.125f))<1e-5,"Recording PCM differed from hosted input");
+    const auto journal=file.getParentDirectory().getChildFile("take.json");
+    require(journal.existsAsFile() && juce::JSON::parse(journal)["state"].toString()=="complete","Completed take was not journaled");
+    {
+        juce::ChildProcess child;const auto executable=juce::File::getSpecialLocation(juce::File::currentExecutableFile).getFullPathName();
+        require(child.start(juce::StringArray{executable,"--recording-reclaim",result["recordingId"].toString()}),"Cannot launch fresh recording recovery process");
+        require(child.waitForProcessToFinish(15000),"Fresh recording recovery process timed out");
+        const auto report=child.readAllProcessOutput();require(child.getExitCode()==0,"Fresh process recovery failed: "+report);std::cout<<report<<std::endl;
+    }
+    {
+        EngineSession reopened;auto reopenedRequest=fixture();put(reopenedRequest,"sessionId","recording-reopened");
+        auto reopenedPayload=object();put(reopenedPayload,"request",reopenedRequest);put(reopenedPayload,"leaseId","reopened-lease");put(reopenedPayload,"stopToken",0);put(reopenedPayload,"stopEpoch",0);accepted(reopened.call("apply",reopenedPayload),0);
+        const auto available=reopened.call("recording_recovery_list",object());
+        require(available.getArray() && available.size()==1 && available[0]["recordingId"]==result["recordingId"],"New native owner could not discover disk journal");
+        auto claim=object();put(claim,"leaseId","reopened-lease");put(claim,"sessionId","recording-reopened");put(claim,"recordingId",result["recordingId"]);
+        const auto recovered=reopened.call("recording_reclaim",claim);
+        require(recovered["files"][0]["path"]==result["files"][0]["path"] && recovered["clips"][0]["clipId"]==result["clips"][0]["clipId"],"Recovery changed original file or Clip identity");
+        require(bool(recovered["recovery"]) && recovered["clips"][0]["trackId"].toString().startsWith("recovery:"),"Recovery reused authored track instead of isolated destination");
+        require(juce::JSON::toString(reopened.call("recording_reclaim",claim))==juce::JSON::toString(recovered),"Repeated reclaim changed take identity");
+        auto saved=juce::JSON::parse(journal);auto interrupted=saved.clone();auto incomplete=interrupted["result"];put(incomplete,"clips",juce::Array<V>{});
+        require(journal.replaceWithText(juce::JSON::toString(interrupted)),"Cannot prepare interrupted take journal");
+        EngineSession interruptedOwner;accepted(interruptedOwner.call("apply",reopenedPayload),0);
+        const auto partial=interruptedOwner.call("recording_reclaim",claim);
+        require(std::abs(double(partial["clips"][0]["durationBars"])-frames/48000.0/2)<1e-9,"Interrupted recovery did not use real frames and persisted timebase");
+        auto alternate=reopenedRequest.clone();auto alternateProject=alternate["state"]["project"];put(alternateProject,"bpm",180);
+        auto alternatePayload=reopenedPayload.clone();put(alternatePayload,"request",alternate);
+        EngineSession alternateOwner;accepted(alternateOwner.call("apply",alternatePayload),0);
+        const auto faster=alternateOwner.call("recording_reclaim",claim);
+        require(std::abs(double(faster["clips"][0]["durationBars"])-frames/48000.0/(240.0/180))<1e-9,"Recovery truncated audio under a different project tempo");
+        auto invalid=interrupted.clone();auto invalidFile=invalid["result"]["files"][0];put(invalidFile,"path",file.getParentDirectory().getParentDirectory().getChildFile("outside.wav").getFullPathName());
+        require(journal.replaceWithText(juce::JSON::toString(invalid)),"Cannot prepare invalid recovery journal");
+        EngineSession invalidOwner;accepted(invalidOwner.call("apply",reopenedPayload),0);bool invalidRejected=false;
+        try { invalidOwner.call("recording_reclaim",claim); }catch(const std::exception& error) { invalidRejected=juce::String(error.what()).contains("escaped"); }
+        require(invalidRejected && file.existsAsFile(),"Invalid recovery journal was adopted or deleted original audio");
+        require(journal.replaceWithText(juce::JSON::toString(saved)),"Cannot restore completed take journal");
+    }
     MixerTestAccess::retainFailedRecording(session,result,"mixer-test","failed-take");
     MixerTestAccess::retainFailedRecording(session,result,"other-lease","other-failed-take");
     require(session.call("recording_results",query)["recordings"][0]["recordingId"]==result["recordingId"],"Reading recording results consumed uncommitted data");
@@ -44,6 +93,7 @@ void testHostedRecording() {
     put(target,"clips",juce::Array<V>{});put(project,"sources",juce::Array<V>{});next(request,4,1,2,"commit");accepted(apply(session,request),2);
     put(ack,"acceptedRevision",1);session.call("recording_ack",ack);session.call("recording_ack",ack);
     require(session.call("recording_results",query)["recordings"].getArray()->isEmpty() && file.existsAsFile(),"Recording acknowledgement did not retire metadata without deleting audio");
+    require(juce::JSON::parse(journal)["state"].toString()=="published","ACK removed durable recovery before project save");
     require(MixerTestAccess::hasRecording(session,"failed-take") && file.existsAsFile(),"Successful ACK retired failed recovery data");
     std::cout<<"Hosted recording finalized "<<frames<<" exact PCM frames and retained unpublished result"<<std::endl;
 }

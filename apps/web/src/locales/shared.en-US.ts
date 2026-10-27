@@ -69,6 +69,15 @@ export default {
       open: "Open Project…",
       collect: "Collect Media",
       import: "Import Audio…",
+      recoverRecordings: "Recover Recordings…",
+      recoveryDescription:
+        "Recover a retained take into new Audio tracks in this project. Audio files are kept. Save the project after recovery.",
+      recoveryWorking: "Reading retained recordings…",
+      recoveryEmpty: "No retained recordings are available.",
+      recoveryFiles: "{{count}} audio files",
+      recoverToProject: "Recover into this project",
+      recoveryUnavailable:
+        "Finish the current edit and wait for the project backend before recovering.",
       resolveMissing: "Resolve missing media",
       relink: "Locate matching file…",
       cancel: "Cancel",

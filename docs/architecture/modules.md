@@ -80,6 +80,8 @@ SettingsDialog 的插件页通过 `plugin_catalog_reserve` 确认窗口与 opera
 
 `runtime/audio_clips.cpp` 拥有 Audio Clip 创建、Warp、源窗口、淡变及源渲染任务处理；`runtime/meter_registry.cpp` 拥有 meter registry、图观测接线及 transport 遥测。两者保留 `EngineSession` 成员方法和同一 Arrangement 状态 owner，不创建第二份工程或播放生命周期。
 
+录音 journal 归 `runtime/recording_journal.cpp`，take 生命周期仍归同一个 `EngineSession`。`recording_recovery.cpp` 读取受限磁盘描述并验证当前 lease/session，显式重认领后复用现有结果查询、媒体检查与录音发布。ACK 将 journal 标记 published，不删除磁盘恢复记录或音频。Web backend 持有单次恢复许可，文件菜单 Dialog 只持有呈现状态；恢复的新轨由原 `applyRecording` 与 runtime 文档 owner 发布，不创建第二录音后端或文档 Store。
+
 `runtime/document_apply.cpp` 保留 `EngineSession::apply` 的协议准入、候选准备、增量应用与 accepted 发布；状态仍由同一个 EngineSession/Arrangement 持有。`engine_session.cpp` 负责 owner、生命周期与现有控制入口，事务文件不创建第二个 session、时钟或文档 Store。
 
 `BuiltinDevice` 的参数属于各自图内 wrapper；处理资源以未准备、待继承和已准备三种状态表达。兼容 sample rate/block size 的候选 wrapper 保留同一 DSP 资源，准备时不采用候选参数或清空历史，实际处理时才采用自己的参数。处理中的有效设置、enabled 与 DSP 历史归资源，旧 wrapper 释放不销毁仍被新图保留的资源。此共享只用于同一 Engine、同一个 player 串行处理的图换代，不允许并发驱动同一处理资源；格式不兼容时独立准备资源。

@@ -80,6 +80,44 @@ describe("recorded audio publication reducer", () => {
     expect(applyRecording(edited, recording)).toBe(edited)
   })
 
+  it("recovers into isolated new tracks without overwriting existing clips and replays once", () => {
+    const { document, recording, track } = fixture()
+    const occupied: AudioClip = {
+      id: "original",
+      kind: "audio",
+      sourceId: null,
+      gainDb: 0,
+      startBar: 1,
+      lengthBars: 4,
+    }
+    const original = {
+      ...document,
+      tracks: document.tracks.map(item =>
+        item.id === track.id ? { ...item, clips: [occupied] } : item
+      ),
+    }
+    const recovered = {
+      ...recording,
+      recovery: true,
+      clips: recording.clips.map(clip => ({
+        ...clip,
+        trackId: `recovery:${recording.recordingId}:${clip.trackId}`,
+      })),
+    }
+    const result = applyRecording(original, recovered)
+    expect(result.tracks.find(item => item.id === track.id)?.clips).toEqual(
+      original.tracks.find(item => item.id === track.id)?.clips
+    )
+    expect(result.tracks.find(item => item.id === recovered.clips[0]?.trackId)).toMatchObject({
+      kind: "audio",
+      input: "none",
+      monitor: "off",
+      output: "main",
+      clips: [{ id: "clip-1", sourceId: "file-1", startBar: 2, lengthBars: 0.5 }],
+    })
+    expect(applyRecording(result, recovered)).toBe(result)
+  })
+
   it("rejects missing or incompatible destinations without adding media", () => {
     const { document, track, recording } = fixture()
     const missing = { ...document, tracks: document.tracks.filter(item => item.id !== track.id) }

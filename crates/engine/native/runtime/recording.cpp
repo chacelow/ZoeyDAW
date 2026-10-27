@@ -1,4 +1,5 @@
 #include "engine_session.h"
+#include "recording_journal.h"
 #include <algorithm>
 #include <cmath>
 
@@ -7,13 +8,16 @@ juce::File EngineSession::recordingFile(te::Track& track,const juce::String& ext
     require(recording && arrangement && &track.edit==arrangement->edit.get(),"Recording has no active owner");
     const auto owner=std::find_if(arrangement->tracks.begin(),arrangement->tracks.end(),[&](const auto& item){return item.second==&track;});
     require(owner!=arrangement->tracks.end(),"Recording target is not an authored track");
-    const auto overridePath=juce::SystemStats::getEnvironmentVariable("ZOEYDAW_RECORDING_PATH",{});
-    auto root=overridePath.isEmpty()?juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("Zoeydaw/recordings"):juce::File(overridePath);
-    auto directory=root.getChildFile(recording->id);require(directory.createDirectory().wasOk(),"Cannot create recording directory");
+    auto directory=recordingRoot().getChildFile(recording->id);require(directory.createDirectory().wasOk(),"Cannot create recording directory");
     const auto fileId=juce::Uuid().toString();auto file=directory.getChildFile(fileId+extension);require(!file.exists(),"Recording destination already exists");
     auto entry=object();put(entry,"fileId",fileId);put(entry,"path",file.getFullPathName());recording->result["files"].getArray()->add(entry);
     auto thumbnail=engine.getRecordingThumbnailManager().getThumbnailFor(file);
     recording->liveTracks.emplace(file.getFullPathName(),Recording::LiveTrack{owner->first,juce::Uuid().toString(),file,thumbnail});
+    auto target=object();put(target,"fileId",fileId);put(target,"trackId",owner->first);put(target,"clipId",recording->liveTracks.at(file.getFullPathName()).clipId);
+    auto& transport=arrangement->edit->getTransport();auto* context=transport.getCurrentPlaybackContext();
+    const auto seconds=context?context->getPendingPositionChange().value_or(context->getPosition()).inSeconds():transport.getPosition().inSeconds();
+    put(target,"startBar",1+seconds/recording->secondsPerBar);recording->journalTargets.getArray()->add(target);
+    writeRecordingJournal(recording->result,"recording",{},recording->journalTargets);
     return file;
 }
 void EngineSession::startRecording(const Request& request) {
@@ -31,6 +35,8 @@ void EngineSession::startRecording(const Request& request) {
     require(armed,"No armed audio track has an enabled input");
     Recording next;next.id=juce::Uuid().toString();next.session=request.session;{ const std::lock_guard<std::mutex> lock(stopOwnerMutex);next.lease=stopOwner.first; }next.sourceBpm=request.bpm;next.secondsPerBar=request.secondsPerBar();next.sampleRate=engine.getDeviceManager().getSampleRate();next.result=object();
     put(next.result,"recordingId",next.id);put(next.result,"sessionId",next.session);put(next.result,"sourceBpm",next.sourceBpm);put(next.result,"files",juce::Array<V>{});put(next.result,"clips",juce::Array<V>{});
+    put(next.result,"secondsPerBar",next.secondsPerBar);
+    writeRecordingJournal(next.result,"recording",{},next.journalTargets);
     recording=std::move(next);
     recordingActive.store(true,std::memory_order_release);
     transport.addListener(this);
@@ -38,13 +44,13 @@ void EngineSession::startRecording(const Request& request) {
     catch(...) {
         recordingActive.store(false,std::memory_order_release);
         transport.removeListener(this);
-        if(recording) { recording->error="Native recording failed to start";closedRecordings.insert_or_assign(recording->id,std::move(*recording));recording.reset(); }
+        if(recording) { recording->error="Native recording failed to start";try { writeRecordingJournal(recording->result,"failed",recording->error,recording->journalTargets); }catch(const std::exception& error) { recording->error+="; "+juce::String(error.what()); }closedRecordings.insert_or_assign(recording->id,std::move(*recording));recording.reset(); }
         throw;
     }
     if(!transport.isRecording()) {
         recordingActive.store(false,std::memory_order_release);
         transport.removeListener(this);
-        if(recording) { recording->error="Native recording did not start";closedRecordings.insert_or_assign(recording->id,std::move(*recording));recording.reset(); }
+        if(recording) { recording->error="Native recording did not start";try { writeRecordingJournal(recording->result,"failed",recording->error,recording->journalTargets); }catch(const std::exception& error) { recording->error+="; "+juce::String(error.what()); }closedRecordings.insert_or_assign(recording->id,std::move(*recording));recording.reset(); }
         throw std::runtime_error("Native recording did not start; recovery files retained");
     }
 }
@@ -74,6 +80,8 @@ void EngineSession::recordingStopped(te::SyncPoint,bool discarded) {
     if(engine.getWaveInputRecordingThread().hasFailed())recording->error="Recording writer failed or overflowed; recovery files retained";
     if(recording->result["clips"].getArray()->isEmpty() && recording->error.isEmpty())recording->error="Recording produced no complete clips";
     if(!recording->error.isEmpty())for(const auto& file:*recording->result["files"].getArray())recording->error+="\n"+file["path"].toString();
+    try { writeRecordingJournal(recording->result,recording->error.isEmpty()?"complete":"failed",recording->error,recording->journalTargets); }
+    catch(const std::exception& error) { recording->error+="Recording journal failed: "+juce::String(error.what()); }
     closedRecordings.insert_or_assign(recording->id,std::move(*recording));recording.reset();
 }
 void EngineSession::finishRecording() {
@@ -145,6 +153,7 @@ V EngineSession::acknowledgeRecording(const V& query) {
     const auto found=closedRecordings.find(id);if(found==closedRecordings.end())return {};
     require(found->second.lease==lease && found->second.session==session && found->second.error.isEmpty(),"Recording acknowledgement mismatch");
     require(found->second.publishedRevision && revision>=*found->second.publishedRevision,"Recording not included in an accepted document");
+    writeRecordingJournal(found->second.result,"published",{},found->second.journalTargets);
     closedRecordings.erase(found);return {};
 }
 }

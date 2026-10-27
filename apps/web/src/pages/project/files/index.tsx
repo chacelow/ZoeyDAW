@@ -1,6 +1,8 @@
 import { FolderOpen, Save } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "@zoeymind/i18n"
+import { useState } from "react"
+import { RecordingRecoveryDialog } from "./RecordingRecoveryDialog"
 import {
   Button,
   DropdownMenu,
@@ -15,6 +17,7 @@ export function ProjectFileControls() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const busy = useProjectFilesState(state => state.operation.kind === "busy")
+  const [recoveryOpen, setRecoveryOpen] = useState(false)
   return (
     <>
       <Button
@@ -51,8 +54,12 @@ export function ProjectFileControls() {
           <DropdownMenuItem onClick={() => void projectFiles.importAudio()}>
             {t("project.files.import")}
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setRecoveryOpen(true)}>
+            {t("project.files.recoverRecordings")}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <RecordingRecoveryDialog open={recoveryOpen} onOpenChange={setRecoveryOpen} />
     </>
   )
 }

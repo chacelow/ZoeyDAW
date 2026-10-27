@@ -121,6 +121,8 @@ pub fn run() {
       playback::realtime_stream::playback_meter_reset,
       playback::recording_results,
       playback::recording_ack,
+      playback::recording_recovery_list,
+      playback::recording_reclaim,
       playback::playback_release,
       playback::playback_stop,
       playback::playback_audition_reserve,

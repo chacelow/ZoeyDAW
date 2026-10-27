@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { readNativeAudioStatus, type NativeRecordingResults } from "@/shared/native/audio"
+import * as nativeAudio from "@/shared/native/audio"
 import {
   createBackend,
   audioPort,
@@ -17,6 +18,32 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 describe("native recording publication", () => {
+  it("waits for recovered take publication and refuses a late reclaim after disposal", async () => {
+    const port = audioPort()
+    const claim = vi.spyOn(nativeAudio, "reclaimNativeRecording").mockResolvedValue()
+    const recovered = { ...recording, recovery: true }
+    port.recordingResults.mockResolvedValue({ sessionId: "s", recordings: [recovered] })
+    const backend = createBackend(port, {
+      commitRecording: async () => ({ sessionId: "s", revision: 3 }),
+    })
+    await backend.apply(request())
+    await backend.reclaimRecording(recording.recordingId)
+    await backend.reclaimRecording(recording.recordingId)
+    expect(port.recordingAck).toHaveBeenCalledWith(
+      expect.any(String),
+      "s",
+      recording.recordingId,
+      3
+    )
+    const pending = deferred<undefined>()
+    claim.mockReturnValueOnce(pending.promise)
+    const late = backend.reclaimRecording("late-take")
+    await vi.waitFor(() => expect(claim).toHaveBeenCalledTimes(3))
+    backend.dispose()
+    pending.resolve(undefined)
+    await expect(late).rejects.toThrow("Project changed")
+    expect(port.recordingAck).toHaveBeenCalledTimes(2)
+  })
   it("publishes recording previews only for the current session and clears them on release", async () => {
     vi.useFakeTimers()
     const port = audioPort()

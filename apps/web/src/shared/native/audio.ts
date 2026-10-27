@@ -310,6 +310,7 @@ const recordingSchema = z
     recordingId: z.string().min(1),
     sessionId: z.string().min(1),
     sourceBpm: finite.positive().max(999),
+    recovery: z.boolean().optional(),
     sources: z.array(recordingSourceSchema).min(1),
     clips: z
       .array(
@@ -489,6 +490,29 @@ export const nativeAudio: NativeAudioPort = {
     ),
   openDeviceControlPanel: async () =>
     deviceSchema.parse(await command("playback_device_control_panel")),
+}
+const recordingRecoverySchema = z
+  .object({
+    recordingId: z.string().regex(/^[0-9a-f]{32}$/),
+    state: z.enum(["recording", "complete", "failed", "published", "unreadable"]),
+    error: z.string(),
+    fileCount: counter.max(256),
+    sourceBpm: finite.positive().max(999).nullable(),
+  })
+  .strict()
+export type RecordingRecoveryEntry = z.infer<typeof recordingRecoverySchema>
+export async function listNativeRecordingRecovery(): Promise<RecordingRecoveryEntry[]> {
+  return z
+    .array(recordingRecoverySchema)
+    .max(256)
+    .parse(await command("recording_recovery_list"))
+}
+export function reclaimNativeRecording(
+  leaseId: string,
+  sessionId: string,
+  recordingId: string
+): Promise<void> {
+  return voidCommand("recording_reclaim", { leaseId, sessionId, recordingId })
 }
 const waveformQueue = { pending: Promise.resolve() }
 export function readNativeWaveform(path: string, bins = 512) {

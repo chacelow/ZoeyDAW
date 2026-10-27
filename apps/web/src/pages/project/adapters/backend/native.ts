@@ -3,6 +3,7 @@ import logger from "@zoeymind/logger"
 import {
   audioErrorMessage,
   nativeAudio,
+  reclaimNativeRecording,
   publishNativeAudioStatus,
   type NativeAudioPort,
   type NativeRecording,
@@ -27,6 +28,7 @@ import { createNativeTransport, type NativeTransport } from "./native-transport"
 
 export interface NativeProjectBackend extends ProjectBackend {
   urgentStop(): Promise<void>
+  reclaimRecording(recordingId: string): Promise<void>
 }
 
 export interface NativeRecordingReceipt {
@@ -57,6 +59,7 @@ export function createNativeProjectBackend(
   let timer: number | undefined
   let polling = false
   let recordingPoll: Promise<void> | null = null
+  const recovery = new Set<string>()
   let pollGeneration = 0
   const publishingRecordings = new Set<string>()
   const recordingReceipts = new Map<string, NativeRecordingReceipt>()
@@ -132,7 +135,7 @@ export function createNativeProjectBackend(
   }
 
   function pollRecordings(generation: number): void {
-    if (!options.commitRecording || recordingPoll) return
+    if (!options.commitRecording || recordingPoll || recovery.size > 0) return
     const recordingSession = sessionId
     recordingPoll = Promise.resolve()
       .then(() => port.recordingResults(leaseId, recordingSession))
@@ -342,6 +345,36 @@ export function createNativeProjectBackend(
   }
 
   return {
+    async reclaimRecording(recordingId) {
+      if (disposed || !leased || !sessionId || recovery.size > 0)
+        throw new Error("Project backend is unavailable")
+      const recoverySession = sessionId
+      recovery.add(recordingId)
+      try {
+        if (recordingPoll) await recordingPoll
+        await acquireSession()
+        if (!ownsRecording(recoverySession))
+          throw new Error("Project changed before recording recovery")
+        await reclaimNativeRecording(leaseId, recoverySession, recordingId)
+        if (!ownsRecording(recoverySession))
+          throw new Error("Project changed during recording recovery")
+        acknowledgedRecordings.delete(recordingId)
+        recordingReceipts.delete(recordingId)
+        const results = await port.recordingResults(leaseId, recoverySession)
+        const take = results.recordings.find(recording => recording.recordingId === recordingId)
+        if (
+          !ownsRecording(recoverySession) ||
+          results.sessionId !== recoverySession ||
+          take?.sessionId !== recoverySession
+        )
+          throw new Error("Recovered recording belongs to another project")
+        await publishRecording(take)
+        if (!acknowledgedRecordings.has(recordingId))
+          throw new Error("Recording recovery was not accepted")
+      } finally {
+        recovery.delete(recordingId)
+      }
+    },
     readMeters: () => meters?.session.store ?? null,
     urgentStop,
     control,

@@ -670,6 +670,8 @@ V EngineSession::call(const juce::String& operation,const V& v) {
     }
     if(operation=="recording_results")return recordingResults(v);
     if(operation=="recording_ack")return acknowledgeRecording(v);
+    if(operation=="recording_recovery_list") { fields(v,{});return recordingRecoveryList(); }
+    if(operation=="recording_reclaim")return reclaimRecording(v);
     if(operation=="release") { fields(v,{"leaseId"});const auto lease=text(v,"leaseId");if(leases.count(lease)) { finishRecording();allNotesOff(); }leases.erase(lease);noteSequences.erase(lease);noteCutoffs.erase(lease);heldNotes.erase(lease);std::erase_if(pluginAdmissions,[&](const auto& entry){return entry.second.lease==lease;});if(leases.empty()) { publishStopOwner({});if(arrangement)arrangement->edit->getTransport().removeListener(this);sourceObservations->current.store(nullptr);arrangement.reset();std::erase_if(sourcePlayheadGraphs,[&](const auto& item){return item.first!=preview.get();});accepted.reset();appliedSequence=0; }pluginBindings.collect();releaseDeviceIfIdle();return {}; }
     if(operation=="stop") {
         fields(v,{"leaseId","sessionId","stopToken","stopEpoch"});const auto token=integer(v,"stopToken"),epoch=integer(v,"stopEpoch");const auto lease=text(v,"leaseId");

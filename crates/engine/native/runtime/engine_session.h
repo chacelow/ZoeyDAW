@@ -135,7 +135,9 @@ private:
         juce::String id, session, lease;
         double sourceBpm=120, secondsPerBar=2, sampleRate=0;
         V result;
+        V journalTargets=juce::Array<V>();
         juce::String error;
+        bool reclaimed=false;
         std::optional<uint64_t> publishedRevision;
         struct LiveTrack {
             juce::String trackId, clipId;
@@ -155,6 +157,8 @@ private:
     V recordingPreview(const juce::String& lease) const;
     V acknowledgeRecording(const V&);
     void confirmRecordingPublication(const Request&);
+    V reclaimRecording(const V&);
+    V recordingRecoveryList();
     V apply(const V&);
     V control(const V&);
     bool validLaunch(const LaunchCommand&) const;
