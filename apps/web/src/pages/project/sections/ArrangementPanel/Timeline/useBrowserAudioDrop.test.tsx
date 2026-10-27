@@ -263,7 +263,7 @@ it("does not commit the same pending drop twice", () => {
 })
 
 it("retains the overlay while real waveform ranges are pending", async () => {
-  const prime = vi.spyOn(waveformRanges, "primeBrowserWaveformSource").mockReturnValue(false)
+  vi.spyOn(waveformRanges, "cachedWaveformRanges").mockReturnValue([])
   const loading = vi.spyOn(waveformRanges, "browserWaveformSourcePending").mockReturnValue(true)
   const pending = delayedImport()
   const { view, drag } = setup()
@@ -272,14 +272,13 @@ it("retains the overlay while real waveform ranges are pending", async () => {
   act(() => publishClip("imported"))
   paintFrame()
   expect(view.getByTestId("ghost").textContent).not.toBe("none")
-  prime.mockReturnValue(true)
+  loading.mockReturnValue(false)
   paintFrame()
   expect(view.getByTestId("ghost").textContent).toBe("none")
   expect(loading).toHaveBeenCalled()
 })
 
 it("hands off an actually painted card when waveform loading has failed", async () => {
-  vi.spyOn(waveformRanges, "primeBrowserWaveformSource").mockReturnValue(false)
   vi.spyOn(waveformRanges, "browserWaveformSourcePending").mockReturnValue(false)
   const pending = delayedImport()
   const { view, drag } = setup()

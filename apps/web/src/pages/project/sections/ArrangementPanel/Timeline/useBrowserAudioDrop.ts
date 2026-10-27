@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react"
 import { projectFiles, useProjectFilesState, useProjectState } from "@/pages/project/adapters"
 import {
   browserWaveformSourcePending,
-  primeBrowserWaveformSource,
+  cachedWaveformRanges,
   useWaveformRanges,
 } from "@/pages/project/adapters/backend/waveform-ranges"
 import {
@@ -132,7 +132,8 @@ export function useBrowserAudioDrop() {
       const clip = track?.clips.find(clip => clip.id === pending.clipId)
       if (!clip || clip.kind !== "audio") return
       const media = scene.media.find(source => source.id === clip.sourceId)
-      if (media && !primeBrowserWaveformSource(media) && browserWaveformSourcePending(media)) return
+      if (media && cachedWaveformRanges(media).length === 0 && browserWaveformSourcePending(media))
+        return
       pendingRef.current = null
       setPending(null)
       setTarget(null)

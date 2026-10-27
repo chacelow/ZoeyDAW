@@ -3,7 +3,6 @@ import { nativeAudio } from "@/shared/native/audio"
 import {
   browserWaveformMetadataRequest,
   cachedWaveformRanges,
-  primeBrowserWaveformSource,
   sourceWaveformKey,
   releaseWaveformRangeDemand,
   setWaveformRangeDemand,
@@ -142,43 +141,22 @@ describe("Browser waveform source handoff", () => {
       ]),
     })
   }
-
-  it("serves real signed Browser data on the first formal read without mutating state", () => {
+  it("does not relabel path-only Browser samples as either version of changed file content", () => {
     seedBrowserRange()
-    const entries = useWaveformRanges.getState().entries
-    const cached = cachedWaveformRanges(source)
-    expect(cached).toHaveLength(1)
-    expect(cached[0].sourceKey).toBe(sourceWaveformKey(source))
-    expect(cached[0].data).toBe(data)
-    expect(useWaveformRanges.getState().entries).toBe(entries)
+    const changed = { ...source, sha256: "b".repeat(64) }
+    expect(cachedWaveformRanges(source)).toEqual([])
+    expect(cachedWaveformRanges(changed)).toEqual([])
   })
 
-  it("promotes data by reference before releasing Browser demand", () => {
+  it("keeps fingerprinted source data separate from matching path-only preview samples", () => {
     seedBrowserRange()
-    expect(primeBrowserWaveformSource(source)).toBe(true)
-    const promoted = Array.from(useWaveformRanges.getState().entries).filter(
-      ([, entry]) => entry.kind === "ready" && entry.range.sourceKey === sourceWaveformKey(source)
-    )
-    expect(promoted).toHaveLength(1)
-    const entry = promoted[0][1]
-    expect(entry.kind === "ready" && entry.range.data).toBe(data)
-    const entries = useWaveformRanges.getState().entries
-    expect(primeBrowserWaveformSource(source)).toBe(true)
-    expect(useWaveformRanges.getState().entries).toBe(entries)
-  })
-
-  it("rejects other paths, unverified preview identities, and mismatched decode metadata", () => {
-    seedBrowserRange()
-    for (const other of [
-      { ...source, sha256: "" },
-      { ...source, frames: 96001 },
-      { ...source, sampleRate: 44100 },
-      { ...source, channels: 1 },
-      { ...source, location: { kind: "external", path: "/audio/other.wav" } } satisfies MediaSource,
-    ]) {
-      expect(primeBrowserWaveformSource(other)).toBe(false)
-      expect(cachedWaveformRanges(other)).toEqual([])
-    }
+    const sourceKey = sourceWaveformKey(source)
+    const entries = new Map(useWaveformRanges.getState().entries)
+    entries.set("verified-range", { kind: "ready", range: { sourceKey, data } })
+    useWaveformRanges.setState({ entries })
+    expect(cachedWaveformRanges(source)).toEqual([{ sourceKey, data }])
+    expect(cachedWaveformRanges({ ...source, sha256: "b".repeat(64) })).toEqual([])
+    expect(cachedWaveformRanges(source)[0].data).toBe(data)
   })
 })
 

@@ -34,8 +34,7 @@ let cancellingKey: string | null = null
 const MAX_CACHED_WAVEFORM_BYTES = 32 * 1024 * 1024
 
 function trimWaveformCache(
-  entries: ReadonlyMap<string, RangeEntry>,
-  protectedSource?: string
+  entries: ReadonlyMap<string, RangeEntry>
 ): ReadonlyMap<string, RangeEntry> {
   const payloads = new Map<WaveformRange, { bytes: number; references: number }>()
   let bytes = 0
@@ -62,8 +61,7 @@ function trimWaveformCache(
   let next: Map<string, RangeEntry> | null = null
   for (const [key, entry] of entries) {
     if ((next?.size ?? entries.size) <= 64 && bytes <= MAX_CACHED_WAVEFORM_BYTES) break
-    if (wanted.has(key) || (entry.kind === "ready" && entry.range.sourceKey === protectedSource))
-      continue
+    if (wanted.has(key)) continue
     next ??= new Map(entries)
     next.delete(key)
     const payload = entry.kind === "ready" ? payloads.get(entry.range.data) : undefined
@@ -102,50 +100,13 @@ export function browserWaveformMetadataRequest(path: string): SourceWaveformRang
   }
 }
 
-export function primeBrowserWaveformSource(source: MediaSource): boolean {
-  if (source.location.kind !== "external" || !source.sha256) return false
-  const browserKey = `browser/${source.location.path}`
-  const sourceKey = sourceWaveformKey(source)
-  const entries = useWaveformRanges.getState().entries
-  let next: Map<string, RangeEntry> | null = null
-  let ready = false
-  for (const entry of entries.values()) {
-    if (entry.kind !== "ready" || entry.range.sourceKey !== browserKey) continue
-    const data = entry.range.data
-    if (
-      data.totalFrames !== source.frames ||
-      data.sampleRate !== source.sampleRate ||
-      data.channels.length !== source.channels
-    )
-      continue
-    if (data.frameCount > 1) ready = true
-    const key = waveformRangeRequestKey({
-      sourceKey,
-      request: {
-        path: source.location.path,
-        startFrame: data.startFrame,
-        frameCount: data.frameCount,
-        framesPerBin: data.kind === "samples" ? 1 : data.framesPerBin,
-        columns:
-          data.kind === "samples" ? Math.ceil(data.frameCount / 2) : data.channels[0].min.length,
-      },
-    })
-    if (entries.get(key)?.kind === "ready") continue
-    next ??= new Map(entries)
-    next.set(key, { kind: "ready", range: { sourceKey, data } })
-  }
-  if (next) useWaveformRanges.setState({ entries: trimWaveformCache(next, sourceKey) })
-  return ready
-}
-
 export function browserWaveformSourcePending(source: MediaSource): boolean {
   if (!nativeAudio.available() || source.location.kind !== "external") return false
   const sourceKey = sourceWaveformKey(source)
-  const browserKey = `browser/${source.location.path}`
   const entries = useWaveformRanges.getState().entries
   for (const requests of demands.values()) {
     for (const [key, request] of requests) {
-      if (request.sourceKey !== sourceKey && request.sourceKey !== browserKey) continue
+      if (request.sourceKey !== sourceKey) continue
       const entry = entries.get(key)
       if (!entry || entry.kind === "loading") return true
     }
@@ -281,20 +242,10 @@ async function drainRanges(): Promise<void> {
 
 export function cachedWaveformRanges(source: MediaSource): SourceWaveformRange[] {
   const key = sourceWaveformKey(source)
-  const browserKey =
-    source.location.kind === "external" && source.sha256 ? `browser/${source.location.path}` : null
   return Array.from(useWaveformRanges.getState().entries.values())
-    .flatMap(entry => {
-      if (entry.kind !== "ready") return []
-      if (entry.range.sourceKey === key) return [entry.range]
-      const data = entry.range.data
-      return entry.range.sourceKey === browserKey &&
-        data.totalFrames === source.frames &&
-        data.sampleRate === source.sampleRate &&
-        data.channels.length === source.channels
-        ? [{ sourceKey: key, data }]
-        : []
-    })
+    .flatMap(entry =>
+      entry.kind === "ready" && entry.range.sourceKey === key ? [entry.range] : []
+    )
     .sort((left, right) => {
       const leftBins =
         left.data.kind === "samples" ? left.data.frameCount : left.data.channels[0].min.length
