@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import type { AudioClipContent, DocumentState } from "@zoeydaw/project-core/types"
-import { findMediaSource } from "@zoeydaw/project-core/media"
+import { findMediaSource, resolveMediaUri } from "@zoeydaw/project-core/media"
 import { peakEnvelopePath } from "@zoeydaw/project-core/waveform"
 import {
   signedWaveformPaths,
@@ -15,8 +15,10 @@ import {
   useWaveformRanges,
   waveformRangeRequests,
 } from "@/pages/project/adapters/backend/waveform-ranges"
+import { nativeWaveform, useNativeWaveforms } from "@/pages/project/adapters/backend/waveforms"
 import type { SourceViewport } from "../useSourceViewport"
 import type { WaveformDimensions } from "./useWaveformDimensions"
+import { detectWaveformTransients } from "./transient-detection"
 
 export interface WaveformData {
   readonly sourceName: string | undefined
@@ -27,6 +29,7 @@ export interface WaveformData {
   readonly wavePath: string
   readonly overviewPath: string
   readonly signedPaths: readonly WaveformChannelPath[]
+  readonly transients: readonly number[]
   readonly overviewSignedPaths: readonly WaveformChannelPath[]
 }
 
@@ -45,6 +48,7 @@ export function useWaveformData({
 }) {
   const source = useProjectState(state => findMediaSource(state.document.media, clip.sourceId))
   useWaveformRanges(state => state.entries)
+  const overviewEntries = useNativeWaveforms(state => state.entries)
   const peaks = source?.location.kind === "fixture" ? clip.waveformPeaks : undefined
   const gain = 10 ** (clip.gainDb / 20)
   const secondsPerBar =
@@ -107,6 +111,13 @@ export function useWaveformData({
   }, [realSource, sourceEnvelope, view.start, view.span, width, minimum, overviewSpan, clip.id])
 
   const ranges = realSource ? cachedWaveformRanges(realSource).map(range => range.data) : []
+  const overview = realSource
+    ? nativeWaveform({ ...realSource, uri: resolveMediaUri(realSource) }, overviewEntries)
+    : null
+  const transients = useMemo(
+    () => (overview ? detectWaveformTransients(overview.peaks, overview.durationSeconds) : []),
+    [overview]
+  )
   const signedPaths = realSource
     ? signedWaveformPaths(
         sourceEnvelope,
@@ -140,5 +151,6 @@ export function useWaveformData({
     overviewPath,
     signedPaths,
     overviewSignedPaths,
+    transients,
   }
 }

@@ -423,6 +423,7 @@ export function createProjectFileController(
         ...(!warp && { sourceTempo: "unknown" }),
         audioSettings: {
           ...defaultAudioClipSettings(sourceBpm, created),
+          warpMode: "signalsmith",
           sourceBpm,
           warp,
           loop: false,

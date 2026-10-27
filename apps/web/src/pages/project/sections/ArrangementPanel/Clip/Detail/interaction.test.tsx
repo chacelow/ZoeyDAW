@@ -10,6 +10,7 @@ import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import type { MediaSource } from "@zoeydaw/project-core/media"
 import type { WaveformRange } from "@zoeydaw/project-core/waveform-range"
 import * as waveformRanges from "@/pages/project/adapters/backend/waveform-ranges"
+import { useNativeWaveforms } from "@/pages/project/adapters/backend/waveforms"
 import type { RenderResult } from "@testing-library/react"
 import { resolveMidiClip } from "@zoeydaw/project-core/patterns"
 import { cancelDrawModeKey } from "@/pages/project/sections/ArrangementPanel/Timeline/drawModeKey"
@@ -90,6 +91,7 @@ afterEach(() => {
   cleanup()
   cancelDrawModeKey()
   waveformRanges.useWaveformRanges.setState({ entries: new Map() })
+  useNativeWaveforms.setState({ entries: {} })
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   Reflect.deleteProperty(HTMLElement.prototype, "setPointerCapture")
@@ -642,4 +644,112 @@ it("edits stable Warp markers through the Audio editor with undo and redo", () =
   expect(points()).toEqual([])
   act(() => projectActions.undo())
   expect(points()?.[0].targetBar).toBe(0.5)
+})
+
+it("drags a Warp marker and keeps the change undoable", () => {
+  const view = render(<AudioFixtureEditor />)
+  fireEvent.click(view.getByRole("button", { name: "detailAudio.addWarpMarker" }))
+  const handle = view.getByRole("button", { name: "detailAudio.warpMarker 1" })
+  const parent = handle.parentElement
+  if (!parent) throw new Error("Missing Warp marker ruler")
+  Object.defineProperty(parent, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({ left: 0, top: 0, width: 400, height: 20 }),
+  })
+  const point = () => {
+    const clip = useProjectState
+      .getState()
+      .document.tracks.flatMap(track => track.clips)
+      .find(item => item.id === "audio-1")
+    return clip?.kind === "audio" ? clip.audioSettings?.warpMarkers?.[0] : undefined
+  }
+  const initial = point()
+  fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 100 })
+  fireEvent.pointerMove(handle, { pointerId: 1, clientX: 120 })
+  const moved = point()
+  expect(moved?.targetBar).not.toBe(initial?.targetBar)
+  expect(moved?.sourceBar).toBe(initial?.sourceBar)
+  fireEvent.pointerUp(handle, { pointerId: 1, clientX: 120 })
+  act(() => projectActions.undo())
+  expect(point()).toEqual(initial)
+  act(() => projectActions.redo())
+  expect(point()).toEqual(moved)
+})
+
+it("turns a detected source transient into an undoable Warp marker", () => {
+  vi.spyOn(waveformRanges, "setWaveformRangeDemand").mockImplementation(() => {})
+  const source = {
+    id: "transient-source",
+    name: "attacks.wav",
+    sha256: "a".repeat(64),
+    byteLength: 102400,
+    frames: 51200,
+    sampleRate: 48000,
+    channels: 1,
+    location: { kind: "external", path: "/audio/attacks.wav" },
+  } satisfies MediaSource
+  const document = useProjectState.getState().document
+  const tracks = document.tracks.map(track => ({
+    ...track,
+    clips: track.clips.map(clip =>
+      clip.id === "audio-1" && clip.kind === "audio"
+        ? {
+            ...clip,
+            sourceId: source.id,
+            audioSettings: { ...getAudioClipSettings(clip, 120), warp: true },
+          }
+        : clip
+    ),
+  }))
+  hydrateProject(
+    JSON.stringify({
+      version: 4,
+      document: { ...document, tracks, media: [...document.media, source] },
+      workspace: useProjectState.getState().workspace,
+    })
+  )
+  const peaks = Array.from({ length: 100 }, (_, index) => (index === 10 ? 0.8 : 0))
+  useNativeWaveforms.setState({
+    entries: {
+      [`${source.id}/${source.sha256}/${source.location.path}`]: {
+        kind: "ready",
+        peaks,
+        durationSeconds: source.frames / source.sampleRate,
+      },
+    },
+  })
+  const view = render(<AudioFixtureEditor />)
+  const handle = view.getByRole("button", { name: "detailAudio.warpMarker 1" })
+  if (!handle.parentElement) throw new Error("Missing Warp marker ruler")
+  Object.defineProperty(handle.parentElement, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({ left: 0, top: 0, width: 400, height: 20 }),
+  })
+  fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 100 })
+  fireEvent.pointerMove(handle, { pointerId: 1, clientX: 120 })
+  fireEvent.pointerUp(handle, { pointerId: 1, clientX: 120 })
+  const points = () => {
+    const clip = useProjectState
+      .getState()
+      .document.tracks.flatMap(track => track.clips)
+      .find(item => item.id === "audio-1")
+    return clip?.kind === "audio" ? clip.audioSettings?.warpMarkers : undefined
+  }
+  expect(points()?.[0]?.sourceBar).toBeCloseTo(5120 / 48000 / 2)
+  expect(points()?.[0]?.targetBar).toBeGreaterThan(points()?.[0]?.sourceBar ?? 0)
+  act(() => projectActions.undo())
+  expect(points() ?? []).toEqual([])
+  const clip = useProjectState
+    .getState()
+    .document.tracks.flatMap(track => track.clips)
+    .find(item => item.id === "audio-1")
+  if (!clip || clip.kind !== "audio") throw new Error("Missing audio clip")
+  act(() =>
+    projectActions.updateClip(clip.id, {
+      audioSettings: { ...getAudioClipSettings(clip, 120), warp: false },
+    })
+  )
+  expect(
+    view.getByRole("button", { name: "detailAudio.warpMarker 1" }).hasAttribute("disabled")
+  ).toBe(true)
 })

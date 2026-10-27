@@ -286,7 +286,7 @@ it("matches source tempo on import and fixes source BPM across project tempo cha
   expect(clip).toMatchObject({
     startBar: 3,
     lengthBars: 2.5,
-    audioSettings: { sourceBpm: 120, warp: true },
+    audioSettings: { sourceBpm: 120, warp: true, warpMode: "signalsmith" },
   })
   runtime.document({
     ...runtime.get().document,

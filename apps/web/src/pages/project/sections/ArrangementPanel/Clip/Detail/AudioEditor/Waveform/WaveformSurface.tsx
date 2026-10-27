@@ -12,6 +12,7 @@ import type { AudioClipContent, DocumentState } from "@zoeydaw/project-core/type
 import { useProjectState } from "@/pages/project/adapters"
 import { SourcePlayhead } from "@/pages/project/components/SourcePlayhead"
 import { SourceMarker } from "../SourceMarker"
+import { WarpMarkerHandles } from "../WarpMarkers/WarpMarkerHandle"
 import type { SourceViewport } from "../useSourceViewport"
 import { SignedWaveform } from "./SignedWaveform"
 import type { WaveformData } from "./useWaveformData"
@@ -24,7 +25,7 @@ export function WaveformSurface({
   settings,
   view,
   dimensions: { surface, waveArea, width, waveHeight },
-  waveform: { realSource, signedPaths, wavePath, hasPeaks, secondsPerBar },
+  waveform: { realSource, signedPaths, wavePath, hasPeaks, secondsPerBar, transients },
   selection,
   handlers,
 }: {
@@ -35,7 +36,7 @@ export function WaveformSurface({
   dimensions: Pick<WaveformDimensions, "surface" | "waveArea" | "width" | "waveHeight">
   waveform: Pick<
     WaveformData,
-    "realSource" | "signedPaths" | "wavePath" | "hasPeaks" | "secondsPerBar"
+    "realSource" | "signedPaths" | "wavePath" | "hasPeaks" | "secondsPerBar" | "transients"
   >
   selection: number | null
   handlers: WaveformPointerHandlers
@@ -61,6 +62,28 @@ export function WaveformSurface({
     viewSpan: view.span,
     help: t("detailAudio.markerHelp"),
   }
+  const authored = settings.warpMarkers ?? []
+  const candidates = transients.flatMap(seconds => {
+    const sourceBar = seconds / secondsPerBar
+    if (
+      sourceBar <= 0 ||
+      authored.some(marker => Math.abs(marker.sourceBar - sourceBar) * secondsPerBar < 0.1)
+    )
+      return []
+    return [
+      {
+        id: `transient-${Math.round(seconds * 1000)}`,
+        sourceBar,
+        targetBar: settings.warp ? warpTargetBar(authored, sourceBar) : sourceBar,
+      },
+    ]
+  })
+  const markers = [
+    ...authored.map(marker =>
+      settings.warp ? marker : { ...marker, targetBar: marker.sourceBar }
+    ),
+    ...candidates,
+  ].sort((left, right) => left.sourceBar - right.sourceBar)
 
   return (
     <div
@@ -98,21 +121,21 @@ export function WaveformSurface({
           label={t("detailAudio.loopEnd")}
         />
       </div>
-      {settings.warp && settings.warpMarkers?.length ? (
+      {markers.length ? (
         <div
           role="group"
           className="h-control-compact border-border relative border-b"
           aria-label={t("detailAudio.warpMarkers")}
         >
-          {settings.warpMarkers.map((marker, index) => (
-            <span
-              key={marker.id}
-              className="border-foreground absolute h-full border-l"
-              style={{ left: `${((marker.targetBar - view.start) / view.span) * 100}%` }}
-              title={`${t("detailAudio.warpMarker")} ${index + 1}`}
-              aria-hidden
-            />
-          ))}
+          <WarpMarkerHandles
+            clip={clip}
+            bpm={transport.bpm}
+            markers={markers}
+            disabled={!settings.warp}
+            viewStart={view.start}
+            viewSpan={view.span}
+            label={t("detailAudio.warpMarker")}
+          />
         </div>
       ) : null}
       <div ref={waveArea} className="audio-detail-wave-area">
