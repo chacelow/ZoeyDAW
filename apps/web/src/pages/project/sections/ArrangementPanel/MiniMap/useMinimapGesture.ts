@@ -21,6 +21,7 @@ type Anchor = {
   lock: CursorLock
   lastX: number
   lastY: number
+  recenter: { x: number; y: number; settled: boolean } | null
   pressedFrame: { left: number; right: number }
   offset: number
   restoreFraction: number
@@ -61,6 +62,15 @@ export function useMinimapGesture(
       const pointer = "pointerId" in event
       if (pointer && current.pointerId !== event.pointerId) return
       if (native ? !pointer : current.lock.relative === pointer) return
+      if (current.recenter) {
+        const pending = current.recenter
+        if (Math.abs(event.clientX - pending.x) < 2 && Math.abs(event.clientY - pending.y) < 2) {
+          current.recenter = null
+          return
+        }
+        if (!pending.settled) return
+        current.recenter = null
+      }
       const rect = node.getBoundingClientRect()
       if (rect.width <= 0) return
       const p = latest.current
@@ -97,6 +107,25 @@ export function useMinimapGesture(
       }
       latest.current = { ...p, ...next }
       projectActions.setViewport(next)
+      if (
+        native &&
+        current.lock.phase === "locked" &&
+        (event.clientX < 32 ||
+          event.clientX > window.innerWidth - 32 ||
+          event.clientY < 32 ||
+          event.clientY > window.innerHeight - 32)
+      ) {
+        const recenter = { x: window.innerWidth / 2, y: window.innerHeight / 2, settled: false }
+        current.recenter = recenter
+        void current.lock
+          .recenter(recenter.x, recenter.y)
+          .then(() => {
+            recenter.settled = true
+          })
+          .catch(() => {
+            if (current.recenter === recenter) current.recenter = null
+          })
+      }
     }
     function up(event: globalThis.PointerEvent) {
       if (event.pointerId !== anchor.current?.pointerId) return
@@ -221,6 +250,7 @@ export function useMinimapGesture(
         lock,
         lastX: event.clientX,
         lastY: event.clientY,
+        recenter: null,
         pressedFrame: frame,
         offset: x - frame.left,
         restoreFraction: Math.max(
