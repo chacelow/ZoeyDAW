@@ -55,7 +55,7 @@ void testSignedAudioSourceOffsets() {
 }
 void testSourceTempoAnalysis() {
     const int rate=48000;
-    for(int kind=0;kind<8;++kind) {
+    for(int kind=0;kind<9;++kind) {
         const int frames=rate*(kind==4?2:10);
         juce::TemporaryFile source(".wav");auto stream=source.getFile().createOutputStream();
         zp::require(stream!=nullptr,"Cannot create tempo fixture");
@@ -77,7 +77,15 @@ void testSourceTempoAnalysis() {
                     pulseTime=10;
                     for(double onset:{0.0,.43,1.17,1.83,3.02,4.39,6.11,7.98,9.31})if(t>=onset)pulseTime=std::min(pulseTime,t-onset);
                 }
-                const double envelope=kind==1?1.0:(kind==2?std::exp(-t*60):kind==6?0.0:std::exp(-pulseTime*60));
+                double envelope=kind==1?1.0:(kind==2?std::exp(-t*60):kind==6?0.0:std::exp(-pulseTime*60));
+                if(kind==8) {
+                    envelope=0;const double phase=std::fmod(t,8.0/3);
+                    for(int beat=0;beat<4;++beat) {
+                        const double start=beat*2.0/3;
+                        if(phase>=start)envelope+=std::exp(-(phase-start)*60);
+                        if(beat%2==1 && phase>=start+2.0/9)envelope+=.55*std::exp(-(phase-start-2.0/9)*60);
+                    }
+                }
                 block.setSample(0,i,(float)(.65*std::sin(juce::MathConstants<double>::twoPi*(kind==1?440:80)*t)*envelope));
             }
             zp::require(writer->writeFromAudioSampleBuffer(block,0,count),"Cannot write tempo fixture");
@@ -96,6 +104,7 @@ void testSourceTempoAnalysis() {
             const double bpm=value["bpm"];
             zp::require(value["origin"].toString()=="analysis" && (std::abs(bpm-60)<.5 || std::abs(bpm-120)<.5),"Syncopated pattern was rejected for non-integer adjacent intervals");
         }
+        else if(kind==8)zp::require(value["origin"].toString()=="unknown" && value["bpm"].isVoid(),"Triplet/straight-grid ambiguity must not become an asserted source BPM: "+juce::JSON::toString(value));
         else zp::require(value["origin"].toString()=="unknown" && value["bpm"].isVoid(),"Nonrhythmic source fabricated a source tempo, fixture "+juce::String(kind));
     }
     juce::TemporaryFile missing(".wav");auto* encoded=zp_analyze_tempo(missing.getFile().getFullPathName().toRawUTF8());

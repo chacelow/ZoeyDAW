@@ -2,6 +2,11 @@
 
 开工先扫本文；只记录可核实的故障、原因与对应实现，不把一次性偏好写成永久规则。2026-10-14 从既有项目规范整理，日期不是原故障发生时间。
 
+## 2026-10-27 自相关周期不是已确定的源 BPM
+
+- 真实 Carota 鼓循环曾将强周期 93.32 作为已确定的源 BPM，尽管素材标注 140。不能按文件名改成 140，也不能凭完整循环长度猜倍半速。onset 对候选四分细分支持不足、对三分细分充分时保留 unknown，导入沿用已有原速路径。
+- `tempo_analysis.cpp` 使用固定栈上 phase histogram，不新增分析后端；`testSourceTempoAnalysis` 的合成节拍歧义回归复现旧输出 90.07。metadata、规则节拍与原切分回归保留。真实源身份与准确率边界见 [tempo evaluation](docs/research/warp-tempo-options-2026-10-25.md#2026-10-27-metrical-ambiguity-guard)。
+
 ## 2026-10-27 Session 不能沿用编排时刻或主线程 mode 镜像
 
 - `AudioClipBase::getActualTimeStretchMode()` 会将 auto-tempo Clip 的 disabled 提升为 SDK default。Slot 的 beat reader 需要明确的处理器；原速原调使用 rate-only 模式与匹配的速度元数据，不新增预读缓存或等待计时器。真实 PCM 对比后已删除没有必要的缓存试验。

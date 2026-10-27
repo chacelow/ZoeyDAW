@@ -34,3 +34,19 @@ Measured separately by the parent using the current analyzer source linked into 
 6. Compare the existing detector, postfilter-only prototype, aubio, `timestretch::analyze`, and Beat This! **only if** native fix fails predeclared cases and licenses/toolchains are acceptable; repeat across fixed 44.1/48-kHz mono/stereo sources and loop lengths. Expected outcomes: 120 BPM 2-s four-beat 4/4 click and syncopated variants return a candidate 120 only with defensible musical-period evidence; antiphase rhythmic stereo agrees with same source in phase; tone, one-shot, silence and sparse long silent file remain unknown; 60/120/240 ambiguity is reported, not hidden; variable 120→135 BPM does not assert a single sufficient warp map. These are **future expected outputs**, not test results or a claim every two-second loop can be inferred uniquely.
 
 **Recommendation:** keep tempo analysis at the existing native import boundary and first benchmark a phase-safe, beat-grid-based replacement for the present rigid _validation_ and short-duration gate, while retaining nullable result and explicit ambiguity. Add another implementation only if held-out licensed musical corpus demonstrates a specific gap that cannot be fixed narrowly, with build/license/MSRV and quality measured independently. Do not wire a second audio playback engine or infer first beat/downbeat/variable warp markers from one BPM number.
+
+## 2026-10-27 Metrical ambiguity guard
+
+The current analyzer already accepts the existing short-loop and syncopated fixtures. This update addresses a narrower false acceptance. SoundTouch's periodicity estimate and the energy autocorrelation can agree on a repeated accent without identifying the musical beat unit. A synthesized accented triplet fixture returned 90.07 as `analysis` before the fix, despite also supporting a different straight subdivision.
+
+The analyzer now checks selected onset phases with a fixed 64-bin circular histogram. A candidate with less than 80% straight-subdivision support but at least 80% triplet-subdivision support returns `unknown`. Tolerance includes the 10-ms energy-window resolution. Metadata still wins. The guard neither reads the filename nor converts the candidate to the file's labeled tempo, a half or double tempo, or a three-to-two alternative. It allocates no extra feature buffer and keeps the current SoundTouch detector and nullable response.
+
+The following local files were decoded through the current native analyzer. Labels describe the supplied filenames, not metadata injected into the analysis. The audio is not copied into the repository, and no redistribution right is asserted.
+
+| Source label | SHA-256 | Result after the guard |
+| --- | --- | --- |
+| Cymatics Carota Drum Loop, 140 BPM | `beeb4072d12cd3eed0c3c8965e0b34c765ae7816f5dba556d7989a9b8037f6a2` | unknown, previously accepted 93.32 |
+| Cymatics Uno Drum Loop, 95 BPM | `c8fea2a9d0cb779447adf6af9b4ed826e2e28b12040d374ac4c484337f0b106f` | 95 BPM, analysis |
+| Cymatics Americano melody, 143 BPM | `3d15c4e88601b90b74d2be407826d706fed461e3a4b116c840c431f1a64e57be` | unknown |
+
+`native_playback_protocol` verifies the new synthetic ambiguity rejection and retains metadata, steady tempo, short-loop, syncopation, one-shot, tone and silence coverage. A separate direct CLI exercised the real files above. This guard does not establish accurate 140 BPM recognition, a full music benchmark, downbeat detection or variable Warp maps. Unannotated swing and triplet performances can be conservatively rejected. UI import, save and undo acceptance remain separately tracked.

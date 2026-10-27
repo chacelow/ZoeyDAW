@@ -10,6 +10,19 @@ V tempoResult(double bpm,const char* origin) {
     auto out=object();put(out,"bpm",bpm>0?V(bpm):V());put(out,"origin",origin);return out;
 }
 bool sensible(double bpm) { return std::isfinite(bpm) && bpm>=30 && bpm<=300; }
+double gridSupport(const std::vector<double>& onsets,double bpm,int subdivisions,double resolution) {
+    constexpr size_t bins=64;std::array<size_t,bins> phases {};
+    const double frequency=bpm*subdivisions/60;
+    for(double onset:onsets)++phases[std::min(bins-1,size_t(std::fmod(onset*frequency,1.0)*bins))];
+    const double tolerance=std::min(.24,std::max(.08,resolution*frequency*2));
+    const size_t width=2*size_t(std::ceil(tolerance*bins))+1;
+    size_t count=0;for(size_t i=0;i<width;++i)count+=phases[i];
+    size_t best=count;
+    for(size_t start=1;start<bins;++start) {
+        count-=phases[start-1];count+=phases[(start+width-1)%bins];best=std::max(best,count);
+    }
+    return double(best)/onsets.size();
+}
 }
 V analyzeTempo(const juce::String& path) {
     auto file=localFile(path);require(file.existsAsFile(),"Tempo source is offline");
@@ -85,6 +98,10 @@ V analyzeTempo(const juce::String& path) {
         if(left>0 && right>0)support=std::max(support,product/std::sqrt(left*right));
     }
     if(support<.45)return tempoResult(0,"unknown");
+    const double resolution=double(window)/reader->sampleRate;
+    if(gridSupport(onsets,detected,4,resolution)<.8
+        && (gridSupport(onsets,detected,3,resolution)>=.8 || gridSupport(onsets,detected,6,resolution)>=.8))
+        return tempoResult(0,"unknown");
     return tempoResult(std::round(detected*100)/100,"analysis");
 }
 }
