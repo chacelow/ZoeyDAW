@@ -46,7 +46,9 @@ export function useAudioDeviceSettings() {
   const status = useSyncExternalStore(subscribeNativeAudioStatus, readNativeAudioStatus)
   const [operation, setOperation] = useState<DeviceOperation | "idle">("idle")
   const [error, setError] = useState<string | null>(null)
-  const [draft, setDraft] = useState<AudioDeviceConfiguration | null>(null)
+  const [draft, setDraft] = useState<AudioDeviceConfiguration | null>(() =>
+    status.device ? initialDraft(status.device) : null
+  )
   const [preview, setPreview] = useState<CapabilityPreview>({ kind: "idle" })
   const [capabilityRevision, setCapabilityRevision] = useState(0)
   const [editRevision, setEditRevision] = useState(0)
@@ -192,7 +194,11 @@ export function useAudioDeviceSettings() {
   }
 
   const capabilities =
-    preview.kind === "ready" && draft && sameDevices(preview.value, draft) ? preview.value : null
+    preview.kind === "ready" && draft && sameDevices(preview.value, draft)
+      ? preview.value
+      : device && draft && sameDevices(device.capabilities, draft)
+        ? device.capabilities
+        : null
   const choices = deviceChoices(device, draft)
   const valid = canApplyDraft(draft, capabilities, choices)
   const configurationChanged =

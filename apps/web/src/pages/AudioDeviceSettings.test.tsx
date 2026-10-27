@@ -156,6 +156,30 @@ async function configured(times: number) {
   )
 }
 
+it("shows the confirmed device immediately while discovery is pending", async () => {
+  publishNativeAudioStatus({ device: snapshot })
+  let resolveDiscovery: (value: AudioDeviceSnapshot) => void = () => {}
+  let resolveCapabilities: (value: AudioDeviceCapabilities) => void = () => {}
+  vi.mocked(nativeAudio.devices).mockReturnValue(
+    new Promise(resolve => {
+      resolveDiscovery = resolve
+    })
+  )
+  vi.mocked(nativeAudio.deviceCapabilities).mockReturnValue(
+    new Promise(resolve => {
+      resolveCapabilities = resolve
+    })
+  )
+  const view = mount()
+  expect(view.getByRole("button", { name: "Output device" }).textContent).toContain("E2")
+  expect(view.getByRole("button", { name: "Requested buffer size" }).textContent).toContain("512")
+  expect(nativeAudio.configureDevice).not.toHaveBeenCalled()
+  await act(async () => {
+    resolveDiscovery(snapshot)
+    resolveCapabilities(snapshot.capabilities)
+  })
+})
+
 it("discovers on mount and opening a device selector without an Apply or Refresh action", async () => {
   const view = mount()
   await ready(view)
