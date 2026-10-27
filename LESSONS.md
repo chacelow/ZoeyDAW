@@ -6,6 +6,7 @@
 
 - 真实 Carota 鼓循环曾将强周期 93.32 作为已确定的源 BPM，尽管素材标注 140。不能按文件名改成 140，也不能凭完整循环长度猜倍半速。onset 对候选四分细分支持不足、对三分细分充分时保留 unknown，导入沿用已有原速路径。
 - `tempo_analysis.cpp` 使用固定栈上 phase histogram，不新增分析后端；`testSourceTempoAnalysis` 的合成节拍歧义回归复现旧输出 90.07。metadata、规则节拍与原切分回归保留。真实源身份与准确率边界见 [tempo evaluation](docs/research/warp-tempo-options-2026-10-25.md#2026-10-27-metrical-ambiguity-guard)。
+- 长源只分析第一分钟曾把后段 180 BPM 的 100 秒素材接受为固定 120 BPM。`--tempo` 回归保留失败证据；现在在同一总解码预算内核对开头、中间、结尾，不把局部一致性当作完整 tempo map。取样遗漏和静音保守拒绝边界见同一 [tempo evaluation](docs/research/warp-tempo-options-2026-10-25.md#2026-10-27-long-source-consistency)。
 
 ## 2026-10-27 Session 不能沿用编排时刻或主线程 mode 镜像
 

@@ -23,20 +23,7 @@ double gridSupport(const std::vector<double>& onsets,double bpm,int subdivisions
     }
     return double(best)/onsets.size();
 }
-}
-V analyzeTempo(const juce::String& path) {
-    auto file=localFile(path);require(file.existsAsFile(),"Tempo source is offline");
-    juce::AudioFormatManager formats;formats.registerBasicFormats();
-    std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(file));
-    require(reader!=nullptr,"Tempo source format is unsupported");
-    require(reader->lengthInSamples>0 && std::isfinite(reader->sampleRate) && reader->sampleRate>=8000 && reader->sampleRate<=384000 && reader->numChannels>0,"Invalid tempo source audio format");
-    const auto& metadata=reader->metadataValues;
-    if(metadata.getValue(juce::WavAudioFormat::acidOneShot,"0")=="1")return tempoResult(0,"unknown");
-    for(auto key:{juce::WavAudioFormat::acidTempo,"tempo","bpm","BPM","TBPM"}) {
-        const double bpm=metadata.getValue(key,{}).getDoubleValue();
-        if(sensible(bpm))return tempoResult(bpm,"metadata");
-    }
-    const auto frames=std::min(reader->lengthInSamples,(juce::int64)(reader->sampleRate*60));
+V analyzeTempoWindow(juce::AudioFormatReader* reader,juce::int64 start,juce::int64 frames) {
     if(frames<reader->sampleRate*.75)return tempoResult(0,"unknown");
     const int window=std::max(1,(int)std::round(reader->sampleRate*.01));
     juce::AudioBuffer<float> block(std::min(2,(int)reader->numChannels),4096);
@@ -46,7 +33,7 @@ V analyzeTempo(const juce::String& path) {
     double sum=0;int accumulated=0;
     for(juce::int64 offset=0;offset<frames;offset+=4096) {
         const int count=(int)std::min<juce::int64>(4096,frames-offset);
-        require(reader->read(&block,0,count,offset,true,block.getNumChannels()>1),"Tempo source decode failed");
+        require(reader->read(&block,0,count,start+offset,true,block.getNumChannels()>1),"Tempo source decode failed");
         for(int i=0;i<count;++i) {
             double squared=0;float mixed=0;
             for(int ch=0;ch<block.getNumChannels();++ch) {
@@ -103,5 +90,31 @@ V analyzeTempo(const juce::String& path) {
         && (gridSupport(onsets,detected,3,resolution)>=.8 || gridSupport(onsets,detected,6,resolution)>=.8))
         return tempoResult(0,"unknown");
     return tempoResult(std::round(detected*100)/100,"analysis");
+}
+}
+V analyzeTempo(const juce::String& path) {
+    auto file=localFile(path);require(file.existsAsFile(),"Tempo source is offline");
+    juce::AudioFormatManager formats;formats.registerBasicFormats();
+    std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(file));
+    require(reader!=nullptr,"Tempo source format is unsupported");
+    require(reader->lengthInSamples>0 && std::isfinite(reader->sampleRate) && reader->sampleRate>=8000 && reader->sampleRate<=384000 && reader->numChannels>0,"Invalid tempo source audio format");
+    const auto& metadata=reader->metadataValues;
+    if(metadata.getValue(juce::WavAudioFormat::acidOneShot,"0")=="1")return tempoResult(0,"unknown");
+    for(auto key:{juce::WavAudioFormat::acidTempo,"tempo","bpm","BPM","TBPM"}) {
+        const double bpm=metadata.getValue(key,{}).getDoubleValue();
+        if(sensible(bpm))return tempoResult(bpm,"metadata");
+    }
+    const auto maximumFrames=(juce::int64)(reader->sampleRate*60);
+    if(reader->lengthInSamples<=maximumFrames)return analyzeTempoWindow(reader.get(),0,reader->lengthInSamples);
+    const auto frames=(juce::int64)(reader->sampleRate*20);
+    double first=0;
+    for(const auto start:{juce::int64(0),(reader->lengthInSamples-frames)/2,reader->lengthInSamples-frames}) {
+        const auto result=analyzeTempoWindow(reader.get(),start,frames);
+        if(result["origin"].toString()!="analysis")return tempoResult(0,"unknown");
+        const double bpm=result["bpm"];
+        if(first==0)first=bpm;
+        else if(std::abs(bpm-first)>first*.02)return tempoResult(0,"unknown");
+    }
+    return tempoResult(first,"analysis");
 }
 }

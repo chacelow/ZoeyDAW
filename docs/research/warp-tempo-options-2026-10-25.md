@@ -50,3 +50,11 @@ The following local files were decoded through the current native analyzer. Labe
 | Cymatics Americano melody, 143 BPM | `3d15c4e88601b90b74d2be407826d706fed461e3a4b116c840c431f1a64e57be` | unknown |
 
 `native_playback_protocol` verifies the new synthetic ambiguity rejection and retains metadata, steady tempo, short-loop, syncopation, one-shot, tone and silence coverage. A separate direct CLI exercised the real files above. This guard does not establish accurate 140 BPM recognition, a full music benchmark, downbeat detection or variable Warp maps. Unannotated swing and triplet performances can be conservatively rejected. UI import, save and undo acceptance remain separately tracked.
+
+## 2026-10-27 Long-source consistency
+
+The first-minute-only path accepted a synthesized 100-second WAV with 120 BPM for its first 60 seconds and 180 BPM thereafter as `{bpm:120, origin:"analysis"}`. The `--tempo` regression failed on that response before the change.
+
+For sources longer than 60 seconds, analysis now runs the same detector sequentially over three 20-second windows at the beginning, center and end. Each window owns and releases its detector and feature buffers before the next. All three must return an analyzed BPM within 2% of the first window. Otherwise the existing nullable response is `unknown`, so import retains its original-speed path. There is no half/double-tempo normalization between regions. Metadata precedence and sources of at most 60 seconds retain their previous behavior.
+
+The decoded-duration budget remains at most 60 seconds, though compressed-file seeking costs depend on the reader. Sampling can miss changes between windows, and a silent intro or outro can conservatively reject an otherwise steady song. This does not establish whole-song constancy, infer downbeats, produce Warp markers or implement a variable-tempo map. The deterministic native fixtures cover ending and middle tempo changes, steady long audio, unknown middle/end regions and authored metadata.
