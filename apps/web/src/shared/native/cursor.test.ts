@@ -89,32 +89,6 @@ it("serializes an early release after native acquisition and refuses another own
   clear()
 })
 
-it("waits for a pending native recenter before restoring the released cursor", async () => {
-  const clear = nativeWindow()
-  native.invoke.mockResolvedValue(undefined)
-  let finishMove: () => void = () => {}
-  native.setCursorPosition.mockReturnValueOnce(
-    new Promise<void>(resolve => {
-      finishMove = resolve
-    })
-  )
-  lease = acquireCursorLock(document.createElement("div"), 20, 30, vi.fn())
-  await vi.waitFor(() => expect(lease?.phase).toBe("locked"))
-  const move = lease?.recenter(100, 100)
-  await Promise.resolve()
-  lease?.release()
-  await Promise.resolve()
-  expect(native.invoke).not.toHaveBeenCalledWith("cursor_lock_release", expect.anything())
-  finishMove()
-  await move
-  await vi.waitFor(() => expect(lease?.phase).toBe("released"))
-  expect(native.invoke).toHaveBeenLastCalledWith(
-    "cursor_lock_release",
-    expect.objectContaining({ x: 20, y: 30 })
-  )
-  clear()
-})
-
 it.each(["blur", "Escape", "pagehide"])("restores the owning native cursor on %s", async event => {
   const clear = nativeWindow()
   native.invoke.mockResolvedValue(undefined)

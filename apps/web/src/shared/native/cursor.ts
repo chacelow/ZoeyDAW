@@ -33,7 +33,6 @@ export function moveWindowCursor(clientX: number, clientY: number): void | Promi
 export type CursorLock = {
   readonly phase: "acquiring" | "locked" | "releasing" | "released"
   readonly relative: boolean
-  recenter(x: number, y: number): Promise<void>
   release(): void
 }
 
@@ -64,7 +63,6 @@ export function acquireCursorLock(
   let acknowledged = false
   let browserRequestPending = !native
   let nativeStart: Promise<unknown>
-  let recentering = Promise.resolve()
 
   const removeListeners = () => {
     window.removeEventListener("blur", end)
@@ -82,7 +80,6 @@ export function acquireCursorLock(
   }
   const releaseNative = () => {
     void nativeStart
-      .then(() => recentering.catch(() => {}))
       .then(() => invoke("cursor_lock_release", { token, x: destination.x, y: destination.y }))
       .then(finish)
       .catch(finish)
@@ -96,11 +93,6 @@ export function acquireCursorLock(
         (phase === "acquiring" || phase === "locked") &&
         (native || browserPointerLockElement() === element)
       )
-    },
-    recenter(x, y) {
-      if (!native || phase !== "locked") return Promise.resolve()
-      recentering = recentering.catch(() => {}).then(() => moveWindowCursor(x, y))
-      return recentering
     },
     release() {
       if (phase === "releasing" || phase === "released") return

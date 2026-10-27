@@ -13,7 +13,6 @@ const cursor = vi.hoisted(() => ({
   native: false,
   release: vi.fn(),
   acquire: vi.fn(),
-  move: vi.fn(),
 }))
 vi.mock("@/shared/native/cursor", () => ({
   hasNativeCursor: () => cursor.native,
@@ -73,14 +72,11 @@ beforeEach(() => {
   cursor.relative = false
   cursor.native = false
   cursor.release.mockClear()
-  cursor.move.mockReset()
-  cursor.move.mockResolvedValue(undefined)
   cursor.acquire.mockImplementation(() => ({
     phase: "locked",
     get relative() {
       return cursor.relative
     },
-    recenter: cursor.move,
     release: cursor.release,
   }))
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
@@ -251,36 +247,6 @@ it("accumulates native relative motion while the physical pointer stays fixed", 
   expect(useProjectState.getState().workspace.scrollX).toBe(104)
   relativeMove("pointermove", 0, 20)
   expect(useProjectState.getState().workspace.pxPerBar).toBeCloseTo(38.3984375)
-  pointer(window, "pointerup", 80)
-  expect(cursor.release).toHaveBeenCalledTimes(1)
-})
-
-it("recenters the native cursor at the screen edge without applying the warp as motion", async () => {
-  cursor.native = true
-  cursor.relative = true
-  const { el } = mount()
-  pointer(el, "pointerdown", 80)
-  relativeMove("pointermove", 20, 0, window.innerWidth - 1, 100)
-  expect(cursor.move).toHaveBeenCalledWith(window.innerWidth / 2, window.innerHeight / 2)
-  await Promise.resolve()
-  relativeMove("pointermove", -400, 0, window.innerWidth / 2, window.innerHeight / 2)
-  relativeMove("pointermove", 20, 0, window.innerWidth / 2 + 20, window.innerHeight / 2)
-  expect(useProjectState.getState().workspace.scrollX).toBe(104)
-  pointer(window, "pointerup", 80)
-  expect(cursor.release).toHaveBeenCalledTimes(1)
-})
-
-it("continues vertical zoom after the native cursor reaches an edge", async () => {
-  cursor.native = true
-  cursor.relative = true
-  const { el } = mount()
-  pointer(el, "pointerdown", 80)
-  relativeMove("pointermove", 0, 20, 100, window.innerHeight - 1)
-  const first = useProjectState.getState().workspace.pxPerBar
-  await Promise.resolve()
-  relativeMove("pointermove", 0, -400, window.innerWidth / 2, window.innerHeight / 2)
-  relativeMove("pointermove", 0, 20, window.innerWidth / 2, window.innerHeight / 2 + 20)
-  expect(useProjectState.getState().workspace.pxPerBar).toBeGreaterThan(first)
   pointer(window, "pointerup", 80)
   expect(cursor.release).toHaveBeenCalledTimes(1)
 })
