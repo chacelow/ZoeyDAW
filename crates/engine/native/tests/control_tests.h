@@ -42,6 +42,8 @@ public:
     BusLayout getBusses() const override { return BusLayout::singlePassThrough(); }
     int getNumOutputChannelsGivenInputs(int n) override { return std::max(2,n); }
     bool takesMidiInput() override { return true; }
+    bool isSynth() override { return true; }
+    bool producesAudioWhenNoAudioInput() override { return true; }
     void initialise(const te::PluginInitialisationInfo&) override {}
     void deinitialise() override {}
     void applyToBuffer(const te::PluginRenderContext& context) override {
@@ -52,6 +54,8 @@ public:
                 received[static_cast<size_t>(count++)]={message.getNoteNumber(),message.getVelocity(),message.isNoteOn()};active=message.isNoteOn();
             }
         }
+        if(context.destBuffer && active)for(int channel=0;channel<context.destBuffer->getNumChannels();++channel)
+            for(int frame=0;frame<context.bufferNumSamples;++frame)context.destBuffer->setSample(channel,context.bufferStartSample+frame,.25f);
     }
     struct Received { int pitch=0,velocity=0;bool on=false; };
     std::array<Received,8192> received {};
@@ -63,6 +67,28 @@ public:
     MidiProbeFactory():BuiltInType("native-test-midi-probe") {}
     te::Plugin::Ptr create(te::PluginCreationInfo info) override { return te::Plugin::Ptr(new MidiProbe(info)); }
 };
+void testStoppedMidiMonitoring() {
+    EngineSession session;MixerTestAccess::initialiseHostedInput(session);
+    auto document=fixture();auto trackModel=document["state"]["project"]["tracks"][1];
+    put(trackModel,"kind","midi");put(trackModel,"monitor","auto");put(trackModel,"armed",true);
+    accepted(apply(session,document),0);
+    auto& input=MixerTestAccess::midi(session,"audio");auto& edit=*MixerTestAccess::edit(session);auto* track=MixerTestAccess::track(session,"audio");
+    edit.engine.getPluginManager().registerBuiltInType(std::make_unique<MidiProbeFactory>());
+    auto plugin=edit.getPluginCache().createNewPlugin("native-test-midi-probe",{});track->pluginList.insertPlugin(plugin,track->pluginList.indexOf(&input)+1,nullptr);
+    namespace graph=tracktion::graph;graph::PlayHead playhead;graph::PlayHeadState head(playhead);te::ProcessState state(head,edit.tempoSequence);
+    te::CreateNodeParams params{state};params.sampleRate=48000;params.blockSize=256;
+    auto node=te::createNodeForEdit(edit,params);require(node!=nullptr,"Stopped MIDI graph missing");
+    graph::NodePlayer player;player.setNode(std::move(node),48000,256);playhead.play();
+    juce::AudioBuffer<float> output(2,256);te::MidiMessageArray midi;
+    require(input.enqueue({60,100,true,0}),"Stopped MIDI note rejected");
+    playhead.setReferenceSampleRange({0,256});state.update(48000,{0,256},te::ProcessState::UpdateContinuityFlags::yes);
+    output.clear();graph::Node::ProcessContext context{256,{0,256},{graph::toBufferView(output),midi}};player.process(context);
+    require(output.getRMSLevel(0,0,256)>.01f,"Armed stopped MIDI instrument produced no output");
+    require(session.stopFenceFor("mixer-test","live-mixer-regression",1),"Stopped MIDI fence failed");
+    playhead.setReferenceSampleRange({256,512});state.update(48000,{256,512},te::ProcessState::UpdateContinuityFlags::yes);
+    output.clear();midi.clear();graph::Node::ProcessContext stopped{256,{256,512},{graph::toBufferView(output),midi}};player.process(stopped);
+    require(output.getRMSLevel(0,0,256)<1e-6f,"Stopped MIDI output survived its stop fence");
+}
 void testLiveMidiGraph() {
     EngineSession session;auto document=fixture();auto midiTrack=document["state"]["project"]["tracks"][1];put(midiTrack,"kind","midi");accepted(apply(session,document),0);
     auto& input=MixerTestAccess::midi(session,"audio");auto& edit=*MixerTestAccess::edit(session);auto* track=MixerTestAccess::track(session,"audio");

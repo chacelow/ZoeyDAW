@@ -18,9 +18,20 @@ void EngineSession::bindInputs(Arrangement& a,const Request& request) {
     auto& manager=engine.getDeviceManager();
     auto* device=manager.deviceManager.getCurrentAudioDevice();
     for(int i=a.issues.size();--i>=0;)if(a.issues[i]["code"]==V("input-monitor-unavailable"))a.issues.remove(i);
+    for(int i=a.issues.size();--i>=0;)if(a.issues[i]["code"]==V("instrument-unavailable"))a.issues.remove(i);
+    for(const auto& track:request.tracks)if(track.kind=="midi") {
+        const bool hasInstrument=std::any_of(track.devices.begin(),track.devices.end(),[](const Device& device) {
+            const auto* external=std::get_if<ExternalSettings>(&device.settings);
+            return device.enabled && external && external->role=="instrument";
+        });
+        if(!hasInstrument)a.issues.add(issue("instrument-unavailable","Live MIDI reaches the native track input, but this track has no loaded native instrument",{},track.id));
+    }
+    const bool midiAudible=std::any_of(request.tracks.begin(),request.tracks.end(),[](const Track& track) {
+        return track.kind=="midi" && (track.monitor=="in" || (track.monitor=="auto" && track.armed));
+    });
     const bool wantsInput=std::any_of(request.tracks.begin(),request.tracks.end(),[](const Track& track){return track.kind=="audio" && track.input=="external";});
     if(!device || !device->isOpen() || !wantsInput) {
-        monitoringAudible.store(false,std::memory_order_release);
+        monitoringAudible.store(device && device->isOpen() && midiAudible,std::memory_order_release);
         if(auto* context=transport.getCurrentPlaybackContext())for(auto* input:context->getAllInputs())if(!input->owner.isMidi() && !input->owner.isTrackDevice())
             for(auto target:input->getTargets()) { auto removed=input->removeTarget(target,nullptr);require(removed.wasOk(),removed.getErrorMessage()); }
         if(wantsInput)a.issues.add(issue("input-monitor-unavailable","Configure and authorize an audio input before monitoring"));
@@ -30,7 +41,7 @@ void EngineSession::bindInputs(Arrangement& a,const Request& request) {
     transport.ensureContextAllocated();
     auto* context=transport.getCurrentPlaybackContext();require(context!=nullptr,"Input monitoring requires playback context");
     te::TransportControl::ReallocationInhibitor inhibit(transport);
-    bool audible=false;
+    bool audible=midiAudible;
     for(const auto& track:request.tracks) {
         auto* native=a.tracks.at(track.id);
         te::InputDeviceInstance* selected=nullptr;

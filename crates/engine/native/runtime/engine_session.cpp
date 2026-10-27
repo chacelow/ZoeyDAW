@@ -324,7 +324,6 @@ void EngineSession::updateTrackKind(Arrangement& a,te::AudioTrack& track,const T
         auto input=a.edit->getPluginCache().createNewPlugin(pluginState("zoeydaw-live-midi-input"));
         auto* midi=dynamic_cast<LiveMidiInput*>(input.get());require(midi!=nullptr,"Cannot create live MIDI input");
         track.pluginList.insertPlugin(input,0,nullptr);a.midiInputs.emplace(t.id,midi);
-        a.issues.add(issue("instrument-unavailable","Live MIDI reaches the native track input, but this track has no loaded native instrument",{},t.id));
     } else if(t.kind!="midi" && existing!=a.midiInputs.end()) {
         existing->second->allNotesOff();te::Plugin::Ptr removed(existing->second);a.midiInputs.erase(existing);removed->deleteFromParent();
         for(auto& [lease,notes]:heldNotes)std::erase_if(notes,[&](const auto& note){return note.second.trackId==t.id;});
@@ -528,7 +527,9 @@ V EngineSession::note(const V& v,bool overrun) {
     auto& held=heldNotes[lease];const auto existing=held.find(r.noteId);
     if((r.on && existing!=held.end()) || (!r.on && existing!=held.end() && (existing->second.trackId!=r.trackId || existing->second.pitch!=r.pitch)))return noteResult(r,false,"protocol");
     if(!r.on && existing==held.end())return noteResult(r,true);
-    openDevice();arrangement->edit->getTransport().ensureContextAllocated();
+    openDevice();
+    if(!monitoringAudible.load(std::memory_order_acquire))bindInputs(*arrangement,*accepted);
+    arrangement->edit->getTransport().ensureContextAllocated();
     if(fence<stopToken.load(std::memory_order_acquire))return noteResult(r,false,"rejected");
     if(!input->second->enqueue({r.pitch,r.velocity,r.on,stopToken.load(std::memory_order_acquire)})) { noteCutoffs[lease]=std::max(noteCutoffs[lease],r.sequence);allNotesOff();return noteResult(r,false,"note-overrun"); }
     if(r.on)held.emplace(r.noteId,r);else held.erase(r.noteId);

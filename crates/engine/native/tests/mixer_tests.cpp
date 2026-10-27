@@ -429,6 +429,9 @@ int main(int argc,char** argv) {
             if(argc==2 && juce::String(argv[1])=="--tempo-map") { testHostedTempoMap();testTempoMapRecording();return 0; }
             if(argc==2 && juce::String(argv[1])=="--segmented-warp") { testSegmentedWarpSdk();return 0; }
             if(argc==2 && juce::String(argv[1])=="--midi-mute") { testRepeatedMidiMuteTransitions();return 0; }
+            if(argc==2 && juce::String(argv[1])=="--stopped-midi") { testStoppedMidiMonitoring();return 0; }
+            if(argc==2 && juce::String(argv[1])=="--live-midi") { testLiveMidiGraph();return 0; }
+            if(argc==2 && juce::String(argv[1])=="--authored-midi") { testAuthoredMidiClip();return 0; }
             if(argc==2 && juce::String(argv[1])=="--recording") { testHostedRecording();return 0; }
             if(argc==2 && juce::String(argv[1])=="--source-publication") { testSourceGraphPublication();return 0; }
             if(argc==2 && juce::String(argv[1])=="--transaction-model") { transaction_probe::run();return 0; }
