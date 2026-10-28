@@ -64,9 +64,22 @@ export function useMinimapGesture(
       const rect = node.getBoundingClientRect()
       if (rect.width <= 0) return
       const p = latest.current
-      const dx = current.lock.relative ? event.movementX : event.clientX - current.lastX
-      const dy = current.lock.relative ? event.movementY : event.clientY - current.lastY
-      if (!Number.isFinite(dx) || !Number.isFinite(dy) || (!dx && !dy)) return
+      let dx = 0
+      let dy = 0
+      if (current.lock.relative) {
+        dx = Number.isFinite(event.movementX) ? event.movementX : 0
+        dy = Number.isFinite(event.movementY) ? event.movementY : 0
+      } else {
+        const rawDx = event.clientX - current.lastX
+        const rawDy = event.clientY - current.lastY
+        if (Math.abs(rawDx) < 150) dx = rawDx
+        if (Math.abs(rawDy) < 150) dy = rawDy
+      }
+      if (!dx && !dy) {
+        current.lastX = event.clientX
+        current.lastY = event.clientY
+        return
+      }
       current.lastX += dx
       current.lastY += dy
       p.onNavigate()
@@ -82,18 +95,20 @@ export function useMinimapGesture(
           minimapEdgeZoom(rect.width, x, current.mode, current.pressedFrame, p),
           current.anchorBar
         )
-      } else if (Math.abs(dx) > Math.abs(dy)) {
+      } else if (Math.abs(dx) >= Math.abs(dy)) {
         next = minimapPan(p, p.scrollX + dx)
         current.anchorBar = Math.max(
           next.scrollX / p.pxPerBar,
           Math.min((next.scrollX + p.viewportWidth) / p.pxPerBar, current.anchorBar)
         )
-      } else {
+      } else if (dy !== 0) {
         next = minimapZoom(
           p,
           (Math.trunc(p.bars * p.pxPerBar + 1.5) * (1 + dy * 0.01)) / p.bars,
           current.anchorBar
         )
+      } else {
+        return
       }
       latest.current = { ...p, ...next }
       projectActions.setViewport(next)
@@ -242,8 +257,7 @@ export function useMinimapGesture(
                     ? current.scrollX / current.pxPerBar
                     : minimapAnchor(rect.width, x, current),
             }
-      if (hasNativeCursor() && !navigator.userAgent.includes("Windows"))
-        element.current.setPointerCapture?.(event.pointerId)
+      element.current?.setPointerCapture?.(event.pointerId)
     },
     pointerMove(event: PointerEvent<HTMLDivElement>) {
       if (anchor.current) return
