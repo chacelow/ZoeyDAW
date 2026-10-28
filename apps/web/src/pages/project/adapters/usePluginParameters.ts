@@ -17,22 +17,13 @@ const readBufferFrames = () => readNativeAudioStatus().device?.bufferFrames ?? 0
 
 export function usePluginParameters(device: ExternalDevice | undefined, enabled = true) {
   const sessionId = useProjectState(state => state.session.backend.sessionId)
-  const epoch = useProjectState(state => state.session.editEpoch)
   const phase = useProjectState(state => state.session.backend.phase)
   const deviceId = device?.id
   const catalogId = device?.plugin.catalogId
   const stateHash = device?.stateRef?.sha256
   const sampleRate = useSyncExternalStore(subscribeNativeAudioStatus, readSampleRate)
   const bufferFrames = useSyncExternalStore(subscribeNativeAudioStatus, readBufferFrames)
-  const key = JSON.stringify([
-    epoch,
-    sessionId,
-    deviceId,
-    catalogId,
-    stateHash,
-    sampleRate,
-    bufferFrames,
-  ])
+  const key = JSON.stringify([sessionId, deviceId, catalogId, stateHash, sampleRate, bufferFrames])
   const faults = useSyncExternalStore(subscribeNativeAudioStatus, readNativePluginFaults)
   const fault = faults.find(fault => fault.sessionId === sessionId && fault.deviceId === deviceId)
   const recovering = usePluginRecoveryPending(sessionId, deviceId ?? "")

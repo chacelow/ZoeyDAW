@@ -19,10 +19,7 @@ pub async fn plugin_device_seed(app: AppHandle, window: WebviewWindow, devices: 
         let selection=catalog.select(&app,&catalog_id)?;
         let device=PreparedDevice::prepare(selection,rate,quantum,None)?;
         let state=device.control.snapshot()?;
-        let parameters: Vec<_>=device.control.parameters()?.into_iter()
-            .filter(|(info,_)|info.flags.automatable && !info.flags.read_only)
-            .map(|(info,value)|json!({"id":info.id.to_string(),"normalized":value})).collect();
-        if parameters.len()>4096 { return Err("Plugin parameter capacity exceeded".into()); }
+        let parameters: Vec<Value> = Vec::new();
         let directory=app.path().app_data_dir().map_err(|error|error.to_string())?.join("plugins/state");
         let store=PluginStateStore::new(directory)?;
         let reference=store.save(&state)?;

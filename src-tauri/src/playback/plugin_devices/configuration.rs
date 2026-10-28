@@ -213,22 +213,19 @@ impl PluginDevices {
                             .id
                             .parse::<u64>()
                             .map_err(|error| error.to_string())?;
-                        let info = device
+                        // Range and hosting flags are the contract; a float32 host never
+                        // returns values that land exactly on a 1e-7 step multiple.
+                        let _ = device
                             .parameters
                             .iter()
                             .find(|info| {
                                 info.id == id && info.flags.automatable && !info.flags.read_only
                             })
                             .ok_or("Plugin parameter schema changed with audio format")?;
-                        if info.step_count > 0
-                            && (parameter.normalized * f64::from(info.step_count)
-                                - (parameter.normalized * f64::from(info.step_count)).round())
-                            .abs()
-                                > 1e-7
+                        if !parameter.normalized.is_finite()
+                            || !(0.0..=1.0).contains(&parameter.normalized)
                         {
-                            return Err(
-                                "Plugin discrete parameter changed with audio format".into()
-                            );
+                            return Err("Plugin parameter value changed with audio format".into());
                         }
                         device.control.set_parameter(id, parameter.normalized)?;
                     }

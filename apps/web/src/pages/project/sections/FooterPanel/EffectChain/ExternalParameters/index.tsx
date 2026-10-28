@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { Button, DragPadBar } from "@zoeymind/ui"
 import { useTranslation } from "@zoeymind/i18n"
 import {
@@ -9,10 +9,10 @@ import {
   usePluginRecoveryPending,
   usePluginParameters,
 } from "@/pages/project/adapters"
-import { nativePlugins } from "@/shared/native/plugins"
 import type { PluginParameter } from "@/shared/native/plugins"
 import type { ExternalDevice } from "@zoeydaw/project-core/devices"
 import { editDevices } from "../edit-devices"
+import { ParameterXYPad } from "./ParameterXYPad"
 import { readNativePluginFaults, subscribeNativeAudioStatus } from "@/shared/native/audio"
 import { PluginFaultFeedback } from "@/pages/project/plugin-recovery"
 
@@ -86,14 +86,40 @@ export function ExternalParameters({
   const recovering = usePluginRecoveryPending(sessionId, device.id)
   const faults = useSyncExternalStore(subscribeNativeAudioStatus, readNativePluginFaults)
   const fault = faults.find(fault => fault.sessionId === sessionId && fault.deviceId === device.id)
+  const [showAll, setShowAll] = useState(false)
+  const [xId, setXId] = useState<string | null>(null)
+  const [yId, setYId] = useState<string | null>(null)
   const { t } = useTranslation()
   const editor = usePluginEditor(trackId, device.id)
   const editing = editor.phase !== "closed"
-  const { parameters, error } = usePluginParameters(device, !editing)
+  const { parameters, error } = usePluginParameters(
+    device,
+    showAll || editing || device.parameters.length > 0
+  )
+  const metadata = editor.parameters ?? parameters
+  const configured = device.parameters
+    .map(value => metadata.find(parameter => parameter.id === value.id))
+    .filter((parameter): parameter is PluginParameter => parameter !== undefined)
+  const visibleParameters = showAll ? metadata.filter(parameter => !parameter.hidden) : configured
+  const updateParameter = (id: string, normalized: number) =>
+    editDevices(trackId, devices =>
+      devices.map(current => {
+        if (current.id !== device.id || current.kind !== "external") return current
+        const existing = current.parameters.find(parameter => parameter.id === id)
+        return {
+          ...current,
+          parameters: existing
+            ? current.parameters.map(parameter =>
+                parameter.id === id ? { ...parameter, normalized } : parameter
+              )
+            : [...current.parameters, { id, normalized }],
+        }
+      })
+    )
   return (
     <div className="gap-control-gap flex min-h-0 flex-col overflow-y-auto">
       {fault && <PluginFaultFeedback fault={fault} className="shrink-0" />}
-      {nativePlugins.available() && (
+      <div className="gap-control-gap flex shrink-0 flex-wrap items-center">
         <Button
           size="control"
           variant="outline"
@@ -105,13 +131,43 @@ export function ExternalParameters({
             editor.phase === "opening" ||
             editor.phase === "closing"
           }
-          onClick={() => {
-            void (editing ? editor.close() : editor.open())
-          }}
+          onClick={() => void (editing ? editor.close() : editor.open())}
         >
           {t(editing ? "detailDevices.closePluginEditor" : "detailDevices.openPluginEditor")}
         </Button>
-      )}
+        {editing && (
+          <Button
+            size="control"
+            variant={editor.configuring ? "default" : "outline"}
+            onClick={() => editor.setConfigureMode(!editor.configuring)}
+          >
+            {t(
+              editor.configuring
+                ? "detailDevices.stopConfigureParameters"
+                : "detailDevices.configureParameters"
+            )}
+          </Button>
+        )}
+        <Button size="control" variant="ghost" onClick={() => setShowAll(value => !value)}>
+          {t(showAll ? "detailDevices.hideAllParameters" : "detailDevices.showAllParameters")}
+        </Button>
+        <ParameterXYPad
+          parameters={configured}
+          xId={xId}
+          yId={yId}
+          onAxisChange={(axis, id) => (axis === "x" ? setXId(id) : setYId(id))}
+          onValueChange={updateParameter}
+          label={t("detailDevices.xyPad")}
+          noneLabel={t("detailDevices.noneParameter")}
+          xLabel={t("detailDevices.xParameter")}
+          yLabel={t("detailDevices.yParameter")}
+        />
+        {!showAll && configured.length === 0 && (
+          <span className="text-muted-foreground text-[10px]">
+            {t("detailDevices.configureHint")}
+          </span>
+        )}
+      </div>
       {editor.error && (
         <span role="alert" className="text-destructive">
           {editor.error}
@@ -122,17 +178,15 @@ export function ExternalParameters({
           {error}
         </span>
       )}
-      {(editor.parameters ?? parameters)
-        .filter(parameter => !parameter.hidden)
-        .map(parameter => (
-          <ExternalParameterControl
-            key={parameter.id}
-            trackId={trackId}
-            device={device}
-            parameter={parameter}
-            disabled={editing || recovering}
-          />
-        ))}
+      {visibleParameters.map(parameter => (
+        <ExternalParameterControl
+          key={parameter.id}
+          trackId={trackId}
+          device={device}
+          parameter={parameter}
+          disabled={editing || recovering}
+        />
+      ))}
     </div>
   )
 }

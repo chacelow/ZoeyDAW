@@ -18,7 +18,13 @@ export function TrackMixer({ track }: { readonly track: Track }) {
   )
   const tracks = useProjectState(s => s.document.tracks)
   const isMain = track.kind === "main"
-  const hasAudioOutput = track.kind !== "midi"
+  // An instrument turns a MIDI lane into a real audio source, so it earns the
+  // same volume meter as any other sounding track instead of MIDI activity.
+  const hasAudioOutput =
+    track.kind !== "midi" ||
+    (track.devices ?? []).some(
+      device => device.kind === "external" && device.plugin.role === "instrument"
+    )
   const returns = tracks.filter(item => item.kind === "return")
   const rows = trackControlRows(track)
   return (

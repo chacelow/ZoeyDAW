@@ -17,6 +17,7 @@ type EditorView = {
   phase: "closed" | "opening" | "open" | "closing"
   parameters: PluginParameter[] | null
   error: string | null
+  configuring: boolean
 }
 
 type EditorCommands = { commit: () => Promise<void>; cancel: () => Promise<void> }
@@ -29,7 +30,7 @@ export async function cancelPluginEditor(deviceId: string): Promise<void> {
 }
 
 export function createPluginEditor(trackId: string, deviceId: string, epoch: string) {
-  let view: EditorView = { phase: "closed", parameters: null, error: null }
+  let view: EditorView = { phase: "closed", parameters: null, error: null, configuring: false }
   const listeners = new Set<() => void>()
   let disposed = false
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -88,30 +89,34 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
       updateTrack(trackId, { devices })
   }
   function values(parameters: PluginParameter[]) {
-    const editable = parameters.filter(parameter => parameter.automatable && !parameter.readOnly)
-    const track = useProjectState.getState().document.tracks.find(track => track.id === trackId)
-    const automated = new Set(
-      track?.automation.flatMap(lane =>
-        lane.points.length > 0 && lane.target.kind === "device" && lane.target.deviceId === deviceId
-          ? [lane.target.parameter]
-          : []
-      )
+    const editable = new Map(
+      parameters
+        .filter(parameter => parameter.automatable && !parameter.readOnly)
+        .map(parameter => [parameter.id, parameter] as const)
     )
     write(value => {
-      const next = editable.map(({ id, normalized }) => ({
-        id,
-        normalized: automated.has(id)
-          ? (value.parameters.find(parameter => parameter.id === id)?.normalized ?? normalized)
-          : normalized,
-      }))
-      return value.parameters.length === next.length &&
-        value.parameters.every(
-          (parameter, index) =>
-            parameter.id === next[index]?.id && parameter.normalized === next[index]?.normalized
-        )
+      const next = value.parameters.map(parameter => {
+        const metadata = editable.get(parameter.id)
+        return metadata ? { ...parameter, normalized: metadata.normalized } : parameter
+      })
+      return next.every(
+        (parameter, index) =>
+          parameter.id === value.parameters[index]?.id &&
+          parameter.normalized === value.parameters[index]?.normalized
+      )
         ? value
         : { ...value, parameters: next }
     })
+  }
+  function configureParameter(id: string, parameters: PluginParameter[]) {
+    if (!view.configuring || !current()) return
+    const metadata = parameters.find(parameter => parameter.id === id)
+    if (!metadata || !metadata.automatable || metadata.readOnly) return
+    write(value =>
+      value.parameters.some(parameter => parameter.id === id)
+        ? value
+        : { ...value, parameters: [...value.parameters, { id, normalized: metadata.normalized }] }
+    )
   }
   async function finish(commit: boolean) {
     if (closing) return closing
@@ -177,7 +182,7 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
         active = null
         closing = null
         unregister()
-        publish({ phase: "closed", parameters: committedParameters })
+        publish({ phase: "closed", parameters: committedParameters, configuring: false })
       }
     })()
     return closing
@@ -199,6 +204,7 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
     }
     let parameters = response.parameters ?? view.parameters ?? []
     for (const event of response.events) {
+      if (event.kind === "begin" || event.kind === "value") configureParameter(event.id, parameters)
       if (event.kind === "value" && response.parameters === null)
         parameters = parameters.map(parameter =>
           parameter.id === event.id ? { ...parameter, normalized: event.normalized } : parameter
@@ -219,6 +225,9 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
       publish({ error: String(error) })
       void finish(false)
     })
+  }
+  function setConfigureMode(configuring: boolean) {
+    publish({ configuring })
   }
   async function open() {
     if (disposed) return
@@ -276,6 +285,7 @@ export function createPluginEditor(trackId: string, deviceId: string, epoch: str
       return opening
     },
     close: () => finish(true),
+    setConfigureMode,
     attach: () => {
       disposed = false
       return () => {

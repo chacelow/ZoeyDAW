@@ -10,5 +10,10 @@ export function usePluginEditor(trackId: string, deviceId: string) {
   )
   const view = useSyncExternalStore(editor.subscribe, editor.getSnapshot)
   useEffect(() => editor.attach(), [editor])
-  return { ...view, open: editor.open, close: editor.close }
+  return {
+    ...view,
+    open: editor.open,
+    close: editor.close,
+    setConfigureMode: editor.setConfigureMode,
+  }
 }

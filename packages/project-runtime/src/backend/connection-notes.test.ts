@@ -44,6 +44,26 @@ it("bounds independent note edges at 4096, panics on overflow, and never corrupt
   h.connection.dispose()
 })
 
+it("keeps realtime note traffic out of the document synchronization status", async () => {
+  const backend = controlled(accepted)
+  const h = harness(backend)
+  h.connection.open("note-status", state(1, 0, true))
+  const release = h.connection.start()
+  h.statuses.length = 0
+  h.connection.submitNote({
+    trackId: "midi",
+    noteId: "status-note",
+    pitch: 60,
+    velocity: 100,
+    on: true,
+  })
+  expect(h.statuses).toEqual([])
+  await h.connection.whenIdle()
+  expect(h.statuses).toEqual([])
+  release()
+  h.connection.dispose()
+})
+
 it("ignores old note rejection after reopening without panicking the new session", async () => {
   const gate = deferred<BackendNoteResult>()
   const first = controlled(accepted)

@@ -125,9 +125,27 @@ export function createBackendConnection(options: BackendConnectionOptions): Back
       Number(panickingNotes)
     )
   }
+  function documentPending(): number {
+    return (
+      queue.length +
+      Number(inFlight !== null) +
+      Number(pendingControl) +
+      Number(pendingOpen !== null)
+    )
+  }
+  let reportedStatusKey = ""
   function status(): void {
-    const count = pending()
-    const phase = error ? "error" : acceptedSequence < 0 ? "opening" : count ? "pending" : "ready"
+    const count = documentPending()
+    const phase: ProjectRuntimeStatus["phase"] = error
+      ? "error"
+      : acceptedSequence < 0
+        ? "opening"
+        : count
+          ? "pending"
+          : "ready"
+    const key = `${phase}|${sessionId}|${count}|${acceptedRevision}|${error ?? ""}`
+    if (key === reportedStatusKey) return
+    reportedStatusKey = key
     options.onStatus({ phase, sessionId, pending: count, acceptedRevision, error })
   }
   function settleIdle(): void {

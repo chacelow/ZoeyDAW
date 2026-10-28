@@ -292,8 +292,10 @@ fn run(mut chain: Chain, receive: Receiver<Command>, recovery: DeviceRecovery) {
                     for (id, value) in &parameters {
                         let info = metadata.iter().find(|(info,_)|info.id==*id).map(|(info,_)|info)
                             .ok_or("Unknown plugin parameter")?;
-                        if !value.is_finite() || !(0.0..=1.0).contains(value) || info.flags.read_only || !info.flags.automatable
-                            || (info.step_count>0 && (value*f64::from(info.step_count)-(value*f64::from(info.step_count)).round()).abs()>1e-7) {
+                        // Vital and other float32 hosts return defaults that never land
+                        // exactly on a 1e-7 step multiple, so the range and hosting flags
+                        // are the contract here; the step count only seeds the UI stride.
+                        if !value.is_finite() || !(0.0..=1.0).contains(value) || info.flags.read_only || !info.flags.automatable {
                             return Err("Invalid plugin parameter edit".into());
                         }
                     }

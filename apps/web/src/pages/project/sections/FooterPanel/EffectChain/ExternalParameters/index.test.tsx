@@ -106,6 +106,7 @@ it("resets the exact native parameter through one undoable document edit", async
   await waitFor(() =>
     expect(currentDevice().parameters).toEqual([{ id: "18446744073709551615", normalized: 0.25 }])
   )
+  fireEvent.click(view.getByRole("button", { name: "detailDevices.showAllParameters" }))
   expect(view.getByRole("button", { name: "Read only" }).hasAttribute("disabled")).toBe(true)
   act(() => projectActions.undo())
   expect(currentDevice().parameters).toEqual(device.parameters)
@@ -311,6 +312,7 @@ it("preserves the authored checkpoint when saving native editor state fails", as
   })
   const view = render(<View />)
   fireEvent.click(await view.findByRole("button", { name: "detailDevices.openPluginEditor" }))
+  fireEvent.click(await view.findByRole("button", { name: "detailDevices.configureParameters" }))
   await waitFor(() =>
     expect(currentDevice().parameters).toEqual([{ id: "18446744073709551615", normalized: 0.1 }])
   )
@@ -319,6 +321,7 @@ it("preserves the authored checkpoint when saving native editor state fails", as
   })
   expect(currentDevice()).toEqual(before)
   expect(useProjectState.getState().session.dirty).toBe(dirtyBefore)
+  fireEvent.click(view.getByRole("button", { name: "detailDevices.showAllParameters" }))
   expect(view.getByRole("button", { name: "Gain" }).textContent).toContain("75.0%")
   expect(view.getByRole("alert").textContent).toContain("Disk checkpoint failed")
 })
