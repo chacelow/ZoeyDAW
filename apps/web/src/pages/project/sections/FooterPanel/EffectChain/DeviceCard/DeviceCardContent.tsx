@@ -50,11 +50,13 @@ export function DeviceCardContent({
       className={`gap-control-gap p-control-pad-x flex min-h-0 flex-1 flex-col ${device.enabled ? "" : "opacity-50"}`}
     >
       <div className="gap-control-gap flex min-h-8 flex-1 overflow-hidden rounded-sm">
-        <ProjectMeter
-          source={{ kind: "device", deviceId: device.id, side: "in" }}
-          className="h-full w-3"
-          label={t("detailDevices.inputLevel", { device: name })}
-        />
+        {device.kind === "external" && device.plugin.role === "instrument" ? null : (
+          <ProjectMeter
+            source={{ kind: "device", deviceId: device.id, side: "in" }}
+            className="h-full w-3"
+            label={t("detailDevices.inputLevel", { device: name })}
+          />
+        )}
         <div className="min-w-0 flex-1">
           <DeviceDisplay device={device} />
         </div>

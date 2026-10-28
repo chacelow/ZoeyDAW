@@ -73,8 +73,8 @@ private:
             const auto* bytes=event.getRawData();
             if(size<2 || size>3 || bytes[0]<0x80 || bytes[0]>=0xf0) { fail(context,-3);return; }
             if(midiCount==midiInput.size()) { fail(context,-2);return; }
-            const auto sample=std::llround(event.getTimeStamp()*format.sampleRate);
-            if(sample<0 || sample>=frames) { fail(context,-3);return; }
+            const auto rawSample=std::llround(event.getTimeStamp()*format.sampleRate);
+            const auto sample=std::clamp<int64_t>(rawSample,0,frames>0?frames-1:0);
             midiInput[midiCount++]={uint32_t(sample),0,{bytes[0],bytes[1],uint8_t(size==3?bytes[2]:0)},0};
         }
         for(uint32_t channel=0;channel<format.inputChannels;++channel)
@@ -147,8 +147,8 @@ private:
             const auto size=event.getRawDataSize();
             if(size<2 || size>3) { fail(context,-3);return false; }
             if(delayedCount==delayed.size()) { fail(context,-2);return false; }
-            const auto offset=std::llround(event.getTimeStamp()*format.sampleRate);
-            if(offset<0 || offset>=context.numSamples) { fail(context,-3);return false; }
+            const auto rawOffset=std::llround(event.getTimeStamp()*format.sampleRate);
+            const auto offset=std::clamp<int64_t>(rawOffset,0,context.numSamples>0?context.numSamples-1:0);
             const auto* bytes=event.getRawData();
             delayed[(delayedRead+delayedCount)%delayed.size()]={dryPosition+uint64_t(offset)+format.latencyFrames,
                 {bytes[0],bytes[1],uint8_t(size==3?bytes[2]:0)},uint8_t(size)};

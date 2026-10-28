@@ -30,15 +30,21 @@ void EngineSession::bindInputs(Arrangement& a,const Request& request) {
         return track.kind=="midi" && (track.monitor=="in" || (track.monitor=="auto" && track.armed));
     });
     const bool wantsInput=std::any_of(request.tracks.begin(),request.tracks.end(),[](const Track& track){return track.kind=="audio" && track.input=="external";});
-    if(!device || !device->isOpen() || !wantsInput) {
-        monitoringAudible.store(device && device->isOpen() && midiAudible,std::memory_order_release);
-        if(auto* context=transport.getCurrentPlaybackContext())for(auto* input:context->getAllInputs())if(!input->owner.isMidi() && !input->owner.isTrackDevice())
-            for(auto target:input->getTargets()) { auto removed=input->removeTarget(target,nullptr);require(removed.wasOk(),removed.getErrorMessage()); }
+    if(!device || !device->isOpen()) {
+        monitoringAudible.store(false,std::memory_order_release);
         if(wantsInput)a.issues.add(issue("input-monitor-unavailable","Configure and authorize an audio input before monitoring"));
         return;
     }
-    a.edit->playInStopEnabled=true;
-    transport.ensureContextAllocated();
+    if(midiAudible || wantsInput) {
+        a.edit->playInStopEnabled=true;
+        transport.ensureContextAllocated();
+    }
+    if(!wantsInput) {
+        monitoringAudible.store(midiAudible,std::memory_order_release);
+        if(auto* context=transport.getCurrentPlaybackContext())for(auto* input:context->getAllInputs())if(!input->owner.isMidi() && !input->owner.isTrackDevice())
+            for(auto target:input->getTargets()) { auto removed=input->removeTarget(target,nullptr);require(removed.wasOk(),removed.getErrorMessage()); }
+        return;
+    }
     auto* context=transport.getCurrentPlaybackContext();require(context!=nullptr,"Input monitoring requires playback context");
     te::TransportControl::ReallocationInhibitor inhibit(transport);
     bool audible=midiAudible;

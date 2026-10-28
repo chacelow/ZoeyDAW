@@ -5,9 +5,25 @@ export function DeviceDisplay({ device }: { readonly device: Device }) {
   switch (device.kind) {
     case "external":
       return (
-        <span className="text-muted-foreground">
-          {device.plugin.vendor} {device.plugin.format}
-        </span>
+        <div className="flex h-full flex-col justify-center gap-0.5 px-1 py-0.5">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`rounded px-1 py-0.5 text-[9px] leading-none font-medium ${
+                device.plugin.role === "instrument"
+                  ? "bg-primary/20 text-primary border-primary/30 border"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {device.plugin.role === "instrument" ? "音源" : "效果器"}
+            </span>
+            <span className="text-foreground truncate text-[11px] font-semibold">
+              {device.plugin.name}
+            </span>
+          </div>
+          <span className="text-muted-foreground truncate text-[10px]">
+            {device.plugin.vendor} · {device.plugin.format.toUpperCase()}
+          </span>
+        </div>
       )
     case "utility": {
       const width = (device.width / 200) * 70
