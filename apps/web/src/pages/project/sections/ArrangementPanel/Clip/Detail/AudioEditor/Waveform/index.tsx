@@ -38,7 +38,10 @@ export function AudioWaveform({
   )
 
   return (
-    <section className="audio-detail-waveform" aria-label={t("detailAudio.waveform")}>
+    <section
+      className="gap-control-gap p-control-gap flex min-h-[var(--spacing-control-h)] min-w-0 flex-1 flex-col overflow-hidden"
+      aria-label={t("detailAudio.waveform")}
+    >
       <WaveformToolbar waveform={waveform} viewport={viewport} />
       <WaveformSurface
         clip={clip}
@@ -56,11 +59,11 @@ export function AudioWaveform({
         waveform={waveform}
         handlers={overviewHandlers}
       />
-      <div className="audio-detail-preview-status">
+      <div className="text-muted-foreground gap-control-gap flex flex-wrap text-[length:var(--text-control)]">
         <span>
           {t("detailAudio.zoom")} {(viewport.rangeSpan / viewport.view.span).toFixed(1)}×
         </span>
-        <span>
+        <span className="ml-auto">
           {t("detailAudio.selection")}:{" "}
           {selection === null
             ? "—"

@@ -23,7 +23,7 @@ export function SourceOverview({
   return (
     <div
       ref={overviewArea}
-      className="audio-detail-overview"
+      className="audio-detail-overview border-border h-control-h relative shrink-0 [cursor:ew-resize] [touch-action:none] overflow-hidden border"
       role="slider"
       tabIndex={0}
       aria-label={t("detailAudio.overview")}
@@ -33,6 +33,7 @@ export function SourceOverview({
       {...handlers}
     >
       <svg
+        className="block size-full opacity-50"
         viewBox={`0 0 ${Math.max(1, width)} ${overviewHeight}`}
         preserveAspectRatio="none"
         aria-hidden
@@ -47,12 +48,12 @@ export function SourceOverview({
             preserveAspectRatio="none"
             aria-hidden
           >
-            <path className="audio-detail-peak" d={overviewPath} />
+            <path className="audio-detail-peak fill-foreground opacity-60" d={overviewPath} />
           </svg>
         )}
       </svg>
       <div
-        className="audio-detail-overview-frame"
+        className="border-primary bg-primary/12 pointer-events-none absolute inset-y-0 border"
         style={{
           left: `${((view.start - minimum) / overviewSpan) * 100}%`,
           width: `${(view.span / overviewSpan) * 100}%`,

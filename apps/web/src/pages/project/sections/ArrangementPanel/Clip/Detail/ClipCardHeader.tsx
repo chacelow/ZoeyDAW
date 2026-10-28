@@ -26,7 +26,7 @@ export function ClipCardHeader({
     <div
       data-clip-editor-titlebar
       data-title-color={color}
-      className="clip-editor-header border-border gap-control-gap flex items-center border-b px-2 text-xs"
+      className="border-border gap-control-gap h-control-h min-h-control-h px-control-pad-x flex shrink-0 items-center border-b text-xs"
       style={{
         backgroundColor: `color-mix(in oklab, ${color}, var(--arrangement-clip-paper) var(--arrangement-clip-tint))`,
         color: "var(--arrangement-clip-ink)",
@@ -40,7 +40,7 @@ export function ClipCardHeader({
         label={`${t("arrangement.clipEnabled")} ${clipLabel(clip, media)}`}
         icon={<Power />}
         color="var(--arrangement-clip-paper)"
-        className="clip-editor-enable px-0"
+        className="border-current px-0 text-[var(--arrangement-clip-ink)]"
       />
       <ClipNameInput key={clip.id} clip={clip} title={clipLabel(clip, media)} />
       <span className="min-w-0 truncate opacity-70">

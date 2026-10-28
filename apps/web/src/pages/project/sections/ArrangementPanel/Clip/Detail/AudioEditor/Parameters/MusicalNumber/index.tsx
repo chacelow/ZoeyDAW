@@ -1,6 +1,7 @@
 import { useRef, useState } from "react"
 import { DragPadNumber } from "@zoeymind/ui"
 import { formatAudioMusicalValue, parseAudioMusicalValue } from "@zoeydaw/project-core/audio-editor"
+import { AudioControl } from "../AudioControl"
 import type { AudioMusicalValueKind } from "@zoeydaw/project-core/audio-editor"
 
 interface MusicalNumberGesture {
@@ -41,13 +42,12 @@ export function MusicalNumber({
   const bounds = useRef({ min, max })
   const validation = useRef(isValid)
   return (
-    <label
-      className="audio-detail-field"
+    <AudioControl
+      label={label}
       onFocusCapture={event => {
         if (event.target instanceof HTMLInputElement) setEditing(true)
       }}
     >
-      <span>{label}</span>
       <DragPadNumber
         size="compact"
         label={label}
@@ -89,6 +89,6 @@ export function MusicalNumber({
           setEditing(false)
         }}
       />
-    </label>
+    </AudioControl>
   )
 }

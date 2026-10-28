@@ -14,14 +14,16 @@ export function WaveformToolbar({
   const { t } = useTranslation()
   const name = sourceName || t("detailAudio.emptySource")
   return (
-    <div className="audio-detail-filebar">
-      <span className="audio-detail-file" title={name}>
+    <div className="h-control-h gap-control-gap flex min-w-0 shrink-0 items-center">
+      <span className="min-w-0 truncate" title={name}>
         {name}
       </span>
       {!realSource && (
-        <span className="audio-detail-envelope-label">{t("detailAudio.monoEnvelope")}</span>
+        <span className="text-muted-foreground shrink-0 whitespace-nowrap">
+          {t("detailAudio.monoEnvelope")}
+        </span>
       )}
-      <span className="audio-detail-zoom-actions">
+      <span className="gap-control-gap ml-auto flex shrink-0">
         <Button
           size="control-icon"
           variant="ghost"

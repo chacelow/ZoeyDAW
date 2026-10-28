@@ -122,7 +122,7 @@ export function WarpMarkerHandles({
         key={marker.id}
         type="button"
         disabled={disabled}
-        className="audio-detail-marker"
+        className="w-control-icon text-primary hover:text-foreground focus-visible:bg-primary/30 focus-visible:text-foreground absolute top-0 bottom-0 z-10 [cursor:ew-resize] [touch-action:none] border-0 bg-transparent p-0 focus-visible:outline-none"
         data-kind="warp"
         aria-label={`${label} ${index + 1}`}
         title={`${label} ${index + 1}`}
@@ -149,7 +149,7 @@ export function WarpMarkerHandles({
           }
         }}
       >
-        <span />
+        <span className="block h-full border-l border-current before:block before:w-0 before:border-t-[var(--spacing-control-icon)] before:border-r-[var(--spacing-control-icon)] before:border-r-transparent before:content-['']" />
       </button>
     )
   })

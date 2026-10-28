@@ -88,20 +88,32 @@ export function WaveformSurface({
   return (
     <div
       ref={surface}
-      className="audio-detail-source-surface"
+      data-audio-waveform-surface
+      className="audio-detail-source-surface relative flex min-h-0 flex-1 [touch-action:none] flex-col overflow-hidden bg-[color-mix(in_oklch,var(--background)_70%,var(--muted))] select-none"
       title={t("detailAudio.previewHelp")}
       {...handlers}
     >
-      <div role="group" className="audio-detail-ruler" aria-label={t("detailAudio.musicalRuler")}>
+      <div
+        role="group"
+        className="text-muted-foreground h-control-h border-border relative shrink-0 overflow-hidden border-b"
+        aria-label={t("detailAudio.musicalRuler")}
+      >
         {ticks.map(value => (
-          <span key={value} style={{ left: `${((value - view.start) / view.span) * 100}%` }}>
+          <span
+            className="pl-control-gap absolute top-0 truncate whitespace-nowrap"
+            key={value}
+            style={{ left: `${((value - view.start) / view.span) * 100}%` }}
+          >
             {formatAudioMusicalValue(value, transport.numerator, transport.denominator, "position")}
           </span>
         ))}
       </div>
-      <div className="audio-detail-loop-strip" data-loop={settings.loop}>
+      <div
+        className="border-border h-control-h relative shrink-0 overflow-hidden border-b"
+        data-loop={settings.loop}
+      >
         <div
-          className="audio-detail-loop-range"
+          className="border-primary bg-primary/45 absolute inset-y-[var(--spacing-control-gap)] border"
           style={{
             left: `${((settings.loopStartBars - view.start) / view.span) * 100}%`,
             width: `${(settings.loopLengthBars / view.span) * 100}%`,
@@ -138,9 +150,9 @@ export function WaveformSurface({
           />
         </div>
       ) : null}
-      <div ref={waveArea} className="audio-detail-wave-area">
+      <div ref={waveArea} className="relative min-h-0 flex-1 overflow-hidden">
         <svg
-          className="audio-detail-wave-svg"
+          className="audio-detail-wave-svg absolute inset-0 block size-full"
           viewBox={`0 0 ${Math.max(1, width)} ${waveHeight}`}
           preserveAspectRatio="none"
           aria-hidden
@@ -154,7 +166,7 @@ export function WaveformSurface({
           >
             {ticks.map(value => (
               <line
-                className="audio-detail-grid"
+                className="[stroke:var(--border)] [stroke-width:1]"
                 key={value}
                 x1={value}
                 x2={value}
@@ -164,7 +176,7 @@ export function WaveformSurface({
               />
             ))}
             <line
-              className="audio-detail-center"
+              className="[stroke:var(--muted-foreground)] [stroke-width:0.5] opacity-40"
               x1={view.start}
               x2={view.start + view.span}
               y1={50}
@@ -182,7 +194,7 @@ export function WaveformSurface({
               preserveAspectRatio="none"
               aria-hidden
             >
-              <path className="audio-detail-peak" d={wavePath} />
+              <path className="audio-detail-peak fill-foreground opacity-60" d={wavePath} />
             </svg>
           )}
           <svg
@@ -192,7 +204,7 @@ export function WaveformSurface({
             preserveAspectRatio="none"
             aria-hidden
           >
-            <g className="audio-detail-fade">
+            <g className="[fill:none] [stroke:var(--primary)] [stroke-width:1.5]">
               {(clip.fadeInBars ?? 0) > 0 && (
                 <path
                   d={fadePath(
@@ -222,7 +234,7 @@ export function WaveformSurface({
             </g>
             {selection !== null && (
               <line
-                className="audio-detail-selection"
+                className="[stroke:var(--primary)] [stroke-width:1]"
                 x1={selection}
                 x2={selection}
                 y1={0}
@@ -248,7 +260,7 @@ export function WaveformSurface({
           }
         />
         {(realSource ? !signedPaths.some(channel => channel.path.length > 0) : !hasPeaks) && (
-          <div className="audio-detail-empty">
+          <div className="text-muted-foreground p-control-gap pointer-events-none absolute inset-0 grid place-content-center">
             {t(clip.sourceId !== null ? "detailAudio.unknownWaveform" : "detailAudio.emptySource")}
           </div>
         )}
@@ -281,7 +293,7 @@ export function WaveformSurface({
       </div>
       <div
         role="group"
-        className="audio-detail-ruler audio-detail-time-ruler"
+        className="text-muted-foreground h-control-h border-border relative shrink-0 overflow-hidden border-t"
         aria-label={t("detailAudio.timeRuler")}
       >
         {ticks.map(value => (

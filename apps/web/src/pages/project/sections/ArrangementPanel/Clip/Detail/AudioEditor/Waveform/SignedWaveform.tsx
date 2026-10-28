@@ -7,7 +7,7 @@ export function SignedWaveform({ paths }: { readonly paths: readonly WaveformCha
       {paths.map((channel, index) => (
         <Fragment key={index}>
           <path
-            className="audio-detail-peak"
+            className="audio-detail-peak fill-foreground [stroke:none] opacity-60"
             d={channel.path}
             style={{ fill: "var(--foreground)", stroke: "none" }}
           />

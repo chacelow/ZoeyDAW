@@ -3,6 +3,7 @@ import { useTranslation } from "@zoeymind/i18n"
 import { projectActions, useProjectEditGesture } from "@/pages/project/adapters"
 import { getAudioClipSettings } from "@zoeydaw/project-core/audio-editor"
 import { sampleSettingFields } from "./fieldConfiguration"
+import { AudioControl } from "./AudioControl"
 import type { SampleSettingField } from "./fieldConfiguration"
 import type { AudioClipContent } from "@zoeydaw/project-core/types"
 
@@ -30,8 +31,7 @@ export function SampleSettingNumber({
     })
   })
   return (
-    <label className="audio-detail-field">
-      <span>{label}</span>
+    <AudioControl label={label}>
       <DragPadNumber
         size="compact"
         label={label}
@@ -47,6 +47,6 @@ export function SampleSettingNumber({
         }
         {...gesture}
       />
-    </label>
+    </AudioControl>
   )
 }

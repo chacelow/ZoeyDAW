@@ -1,5 +1,9 @@
 export default {
   title: "音频 Clip",
+  clipSection: "Clip",
+  audioSection: "Audio",
+  transform: "变换",
+  signature: "拍号",
   source: "源片段范围",
   sample: "采样",
   file: "音源引用",

@@ -25,8 +25,8 @@ function MidiNumber({
     projectActions.updateClip(clip.id, { [field]: Math.max(min, Math.min(max, next)) })
   )
   return (
-    <label className="audio-detail-field">
-      <span>{label}</span>
+    <label className="gap-control-gap flex min-w-0 flex-col">
+      <span className="text-muted-foreground min-w-0 truncate">{label}</span>
       <DragPadNumber
         size="compact"
         label={label}
@@ -42,10 +42,6 @@ function MidiNumber({
   )
 }
 
-/**
-MIDI clip settings sit in a side panel beside the piano roll, mirroring the
-audio editor. Placement, loop length and grid state are real edits.
-*/
 export function MidiParameters({
   clip,
   sourceClip = clip,
@@ -61,11 +57,16 @@ export function MidiParameters({
 }) {
   const { t } = useTranslation()
   return (
-    <aside className="audio-detail-parameters" aria-label={t("detailMidi.title")}>
+    <aside
+      className="border-border @container flex min-h-0 min-w-0 flex-col overflow-hidden border-b @lg:border-r @lg:border-b-0"
+      aria-label={t("detailMidi.title")}
+    >
       <ClipCardHeader clip={sourceClip} color={color} />
-      <div className="audio-detail-parameter-scroll">
-        <section className="audio-detail-parameter-column">
-          <h3>{t("detailMidi.placement")}</h3>
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+        <section className="gap-control-gap p-control-gap flex min-w-0 flex-col border-b @lg:grid @lg:grid-cols-2">
+          <h3 className="text-muted-foreground text-[length:var(--text-control)] font-medium">
+            {t("detailMidi.placement")}
+          </h3>
           {"startBar" in sourceClip && typeof sourceClip.startBar === "number" && (
             <MidiNumber
               field="startBar"
@@ -95,10 +96,14 @@ export function MidiParameters({
             max={512}
             step={1 / 64}
           />
-          <p className="audio-detail-help">{t("detailMidi.placementHelp")}</p>
+          <p className="text-muted-foreground mt-control-gap col-span-full text-[length:var(--text-control)] leading-relaxed">
+            {t("detailMidi.placementHelp")}
+          </p>
         </section>
-        <section className="audio-detail-parameter-column">
-          <h3>{t("detailMidi.loop")}</h3>
+        <section className="gap-control-gap p-control-gap flex min-w-0 flex-col border-b @lg:grid @lg:grid-cols-2">
+          <h3 className="text-muted-foreground text-[length:var(--text-control)] font-medium">
+            {t("detailMidi.loop")}
+          </h3>
           <MidiNumber
             field="loopBars"
             clip={clip}
@@ -108,9 +113,13 @@ export function MidiParameters({
             max={64}
             step={1 / 4}
           />
-          <p className="audio-detail-help">{t("detailMidi.sourceWindowHelp")}</p>
-          <h3>{t("detailMidi.editing")}</h3>
-          <p className="audio-detail-help">
+          <p className="text-muted-foreground mt-control-gap col-span-full text-[length:var(--text-control)] leading-relaxed">
+            {t("detailMidi.sourceWindowHelp")}
+          </p>
+          <h3 className="text-muted-foreground text-[length:var(--text-control)] font-medium">
+            {t("detailMidi.editing")}
+          </h3>
+          <p className="text-muted-foreground text-[length:var(--text-control)] leading-relaxed">
             {gridStep} · {selectedCount} {t("detailMidi.selected")}
           </p>
         </section>

@@ -1,5 +1,9 @@
 export default {
   title: "Audio Clip",
+  clipSection: "Clip",
+  audioSection: "Audio",
+  transform: "Transform",
+  signature: "Signature",
   source: "Source window",
   sample: "Sample",
   file: "Source reference",

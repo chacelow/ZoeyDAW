@@ -140,7 +140,7 @@ export function SourceMarker({
   return (
     <button
       type="button"
-      className="audio-detail-marker"
+      className={`w-control-icon text-primary absolute top-0 z-2 [cursor:ew-resize] [touch-action:none] border-0 bg-transparent p-0 ${lower ? "h-control-h bottom-auto" : "bottom-0"} ${kind === "end" || kind === "loopEnd" ? "text-right" : "text-left"} hover:text-foreground focus-visible:bg-primary/30 focus-visible:text-foreground focus-visible:outline-none`}
       data-kind={kind}
       data-lower={lower || undefined}
       aria-label={label}
@@ -175,7 +175,9 @@ export function SourceMarker({
         gesture.onGestureCancel()
       }}
     >
-      <span />
+      <span
+        className={`block h-full border-current ${lower ? "size-control-icon border-primary bg-background border" : kind === "end" || kind === "loopEnd" ? "border-r border-l-0 before:ml-auto before:border-r-0 before:border-l-[var(--spacing-control-icon)]" : "border-l before:border-t-[var(--spacing-control-icon)] before:border-r-[var(--spacing-control-icon)] before:border-r-transparent"} before:block before:w-0 before:content-['']`}
+      />
     </button>
   )
 }

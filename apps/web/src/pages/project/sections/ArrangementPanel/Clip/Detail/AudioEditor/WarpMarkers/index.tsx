@@ -58,8 +58,13 @@ export function WarpMarkers({
   const replace = (warpMarkers: readonly AudioWarpMarker[]) =>
     projectActions.updateClip(clip.id, { audioSettings: { ...settings, warpMarkers } })
   return (
-    <section className="audio-detail-parameter-column" aria-label={t("detailAudio.warpMarkers")}>
-      <h3>{t("detailAudio.warpMarkers")}</h3>
+    <section
+      className="border-border gap-control-gap p-control-gap col-span-full flex min-w-0 flex-col border-t"
+      aria-label={t("detailAudio.warpMarkers")}
+    >
+      <h3 className="text-muted-foreground text-[length:var(--text-control)] font-medium">
+        {t("detailAudio.warpMarkers")}
+      </h3>
       <Button
         size="control"
         variant="ghost"
