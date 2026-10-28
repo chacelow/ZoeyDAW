@@ -15,11 +15,19 @@ export const midiActions = {
       return
     }
     const state = get()
+    const editingClipId = state.session.editingClipId
+    const editingTrack = state.document.tracks.find(t => t.clips.some(c => c.id === editingClipId))
+    const selectedTrack = state.document.tracks.find(t =>
+      state.session.selectedTrackIds.includes(t.id)
+    )
     const notes = state.document.tracks
       .filter(
         track =>
           track.kind === "midi" &&
-          (track.monitor === "in" || (track.armed && track.monitor === "auto"))
+          (track.monitor === "in" ||
+            (track.armed && track.monitor === "auto") ||
+            track.id === editingTrack?.id ||
+            (track.id === selectedTrack?.id && track.monitor !== "off"))
       )
       .map(track => ({
         trackId: track.id,
