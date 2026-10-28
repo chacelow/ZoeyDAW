@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { useProjectState } from "@/pages/project/adapters"
-import { usesGhostInputMeter, usesLiveInputMeter } from "../TrackHeader/TrackRouting/input-levels"
+import { usesGhostInputMeter } from "../TrackHeader/TrackRouting/input-levels"
 import { readThemeStamp, readTokens } from "./tokens"
 import { createMeterPaintState, paintMeter } from "./painters/meter"
 import { arrangementScheduler } from "./scheduler"
@@ -41,7 +41,6 @@ export function TrackMeter({
     const meterState = createMeterPaintState()
     let isPeaksActive = false
     let lastGhost: boolean | null = null
-    let lastLiveInput: boolean | null = null
     let lastChannel: string | undefined
     let geometry = { width: 0, height: 0, dpr: 1 }
     let tokens = readTokens(containerElement)
@@ -82,28 +81,15 @@ export function TrackMeter({
       const project = useProjectState.getState()
       const track = project.document.tracks.find(item => item.id === trackId)
       const ghost = track ? usesGhostInputMeter(track) : false
-      const liveInput = track ? usesLiveInputMeter(track, project.session.playing) : false
       const channel = track?.inputChannel
-      if (
-        !dirty &&
-        !isPeaksActive &&
-        lastGhost === ghost &&
-        lastLiveInput === liveInput &&
-        lastChannel === channel
-      )
-        return
-      if (
-        ghost !== lastGhost ||
-        liveInput !== lastLiveInput ||
-        ((ghost || liveInput) && channel !== lastChannel)
-      ) {
+      if (!dirty && !isPeaksActive && lastGhost === ghost && lastChannel === channel) return
+      if (ghost !== lastGhost || (ghost && channel !== lastChannel)) {
         meterState.left.db = -60
         meterState.right.db = -60
         meterState.left.holdUntil = 0
         meterState.right.holdUntil = 0
       }
       lastGhost = ghost
-      lastLiveInput = liveInput
       lastChannel = channel
       dirty = false
       const started = performance.now()
@@ -120,7 +106,7 @@ export function TrackMeter({
         geometry,
         meterState,
         performance.now(),
-        ghost || liveInput
+        ghost
           ? readProjectMeterLevels({ kind: "input", channel: track?.inputChannel ?? "1" })
           : readProjectMeterLevels({ kind: "track", trackId })
       )
@@ -139,8 +125,7 @@ export function TrackMeter({
     let inputKey = ""
     const updateInputs = () => {
       const track = useProjectState.getState().document.tracks.find(item => item.id === trackId)
-      const channel =
-        track?.kind === "audio" && track.input === "external" ? (track.inputChannel ?? "1") : ""
+      const channel = track && usesGhostInputMeter(track) ? (track.inputChannel ?? "1") : ""
       if (channel === inputKey) return
       inputKey = channel
       detachInputs()
