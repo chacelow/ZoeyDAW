@@ -324,10 +324,16 @@ impl Chain {
         self.request_timing(Request::Reset).map(|_| ())
     }
 
-    /// Opens the editor of the plugin in `slot` in a window of the helper. The chain keeps
-    /// processing while it is open, and edits in it reach the processor.
+    /// Opens the plugin editor in a helper-owned window without a taskbar item of its own.
     pub fn open_editor(&mut self, slot: usize) -> Result<(), Error> {
-        self.request_done(Request::OpenEditor { slot }, self.timeouts.load)
+        self.open_editor_with_owner(slot, None)
+    }
+
+    /// Opens the plugin editor and assigns an optional native owner window.
+    ///
+    /// The owner is a Windows HWND encoded as an unsigned pointer-sized value; other platforms ignore it.
+    pub fn open_editor_with_owner(&mut self, slot: usize, owner: Option<u64>) -> Result<(), Error> {
+        self.request_done(Request::OpenEditor { slot, owner }, self.timeouts.load)
     }
 
     /// Closes the helper-owned editor window for this slot, if open.

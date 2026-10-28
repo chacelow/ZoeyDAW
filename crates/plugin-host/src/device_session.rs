@@ -31,7 +31,7 @@ enum Command {
     ReleaseEditor(u64, Reply<()>),
     EditorOpen(Reply<bool>),
     Status(Reply<Option<RealtimeStatus>>),
-    BeginEditor(u64, Vec<(u64, f64)>, Reply<()>),
+    BeginEditor(u64, Vec<(u64, f64)>, Option<u64>, Reply<()>),
     EndEditor(u64, bool, Reply<PluginState>),
     EditorEvents(u64, Reply<(bool, ParameterEventBatch)>),
     Health(Reply<DeviceHealth>),
@@ -108,7 +108,10 @@ impl DeviceControl {
         self.request(|reply|Command::Recover(expected,state,parameters,reply))
     }
     pub fn begin_editor(&self, instance: u64, parameters: Vec<(u64, f64)>) -> Result<(), String> {
-        self.request(|reply| Command::BeginEditor(instance, parameters, reply))
+        self.begin_editor_with_owner(instance, parameters, None)
+    }
+    pub fn begin_editor_with_owner(&self, instance: u64, parameters: Vec<(u64, f64)>, owner: Option<u64>) -> Result<(), String> {
+        self.request(|reply| Command::BeginEditor(instance, parameters, owner, reply))
     }
     pub fn end_editor(&self, instance: u64, commit: bool) -> Result<PluginState, String> {
         self.request(|reply| Command::EndEditor(instance, commit, reply))
@@ -283,18 +286,18 @@ fn run(mut chain: Chain, receive: Receiver<Command>, recovery: DeviceRecovery) {
                 if result.is_ok() { editor_baseline=None; }
                 let _ = reply.send(result);
             }
-            Command::BeginEditor(instance, parameters, reply) => {
+            Command::BeginEditor(instance, parameters, owner, reply) => {
                 let result = (|| {
                     recovery.require_instance(instance)?;
                     if editor_baseline.is_some() && chain.editor_open(0).map_err(|error|error.to_string())? { return Ok(()); }
                     editor_baseline = None;
                     let metadata = chain.parameters(0).map_err(|error|error.to_string())?;
                     for (id, value) in &parameters {
-                        let info = metadata.iter().find(|(info,_)|info.id==*id).map(|(info,_)|info)
-                            .ok_or("Unknown plugin parameter")?;
                         // Vital and other float32 hosts return defaults that never land
                         // exactly on a 1e-7 step multiple, so the range and hosting flags
                         // are the contract here; the step count only seeds the UI stride.
+                        let info = metadata.iter().find(|(info,_)| info.id==*id).map(|(info,_)|info)
+                            .ok_or("Unknown plugin parameter")?;
                         if !value.is_finite() || !(0.0..=1.0).contains(value) || info.flags.read_only || !info.flags.automatable {
                             return Err("Invalid plugin parameter edit".into());
                         }
@@ -302,7 +305,7 @@ fn run(mut chain: Chain, receive: Receiver<Command>, recovery: DeviceRecovery) {
                     for (id,value) in parameters { chain.set_parameter(0,id,value).map_err(|error|error.to_string())?; }
                     let baseline = chain.save_state(0,StatePurpose::Project).map_err(|error|error.to_string())?;
                     chain.take_parameter_events(0).map_err(|error|error.to_string())?;
-                    chain.open_editor(0).map_err(|error|error.to_string())?;
+                    chain.open_editor_with_owner(0, owner).map_err(|error|error.to_string())?;
                     editor_baseline = Some(baseline);
                     Ok(())
                 })();

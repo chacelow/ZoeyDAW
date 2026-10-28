@@ -31,7 +31,7 @@ mod platform {
     }
 
     impl EditorWindow {
-        pub fn open(plugin: &mut dyn HostedPlugin) -> Result<EditorWindow, Failure> {
+        pub fn open(plugin: &mut dyn HostedPlugin, _owner: Option<u64>) -> Result<EditorWindow, Failure> {
             let mtm = MainThreadMarker::new()
                 .ok_or_else(|| Failure::new(FailureKind::Host, NOT_MAIN_THREAD))?;
             let style = NSWindowStyleMask::Titled

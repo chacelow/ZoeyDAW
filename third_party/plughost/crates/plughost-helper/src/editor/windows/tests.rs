@@ -24,7 +24,7 @@ fn native_editor_scales_minimizes_closes_and_reopens() {
     )
     .unwrap();
     let original_context = unsafe { GetThreadDpiAwarenessContext() };
-    let mut editor = EditorWindow::open(&mut plugin).unwrap();
+    let mut editor = EditorWindow::open(&mut plugin, None).unwrap();
     assert_ne!(
         unsafe { AreDpiAwarenessContextsEqual(original_context, GetThreadDpiAwarenessContext()) },
         0
@@ -58,5 +58,5 @@ fn native_editor_scales_minimizes_closes_and_reopens() {
     assert_ne!(unsafe { IsWindow(hwnd) }, 0);
     drop(editor);
     assert_eq!(unsafe { IsWindow(hwnd) }, 0);
-    EditorWindow::open(&mut plugin).unwrap().close(&mut plugin);
+    EditorWindow::open(&mut plugin, None).unwrap().close(&mut plugin);
 }

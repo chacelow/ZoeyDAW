@@ -106,16 +106,17 @@ pub struct EditorWindow {
 }
 
 impl EditorWindow {
-    pub fn open(plugin: &mut dyn HostedPlugin) -> Result<Self, Failure> {
+    pub fn open(plugin: &mut dyn HostedPlugin, owner: Option<u64>) -> Result<Self, Failure> {
         let _context = DpiContext::enter();
         register().map_err(window_error)?;
         let state = Rc::new(WindowState::default());
         let title: Vec<u16> = plugin.info().name.encode_utf16().chain([0]).collect();
+        let owner = owner.map(|value| value as usize as HWND).unwrap_or(null_mut());
         // SAFETY: state has a stable allocation, owned until after DestroyWindow; title is read
         // during this call. WM_NCCREATE installs the state pointer before other messages use it.
         let hwnd = unsafe {
             CreateWindowExW(
-                0,
+                WS_EX_TOOLWINDOW,
                 CLASS,
                 title.as_ptr(),
                 STYLE,
@@ -123,7 +124,7 @@ impl EditorWindow {
                 CW_USEDEFAULT,
                 400,
                 300,
-                null_mut(),
+                owner,
                 null_mut(),
                 GetModuleHandleW(null_mut()),
                 Rc::as_ptr(&state).cast(),

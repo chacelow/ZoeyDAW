@@ -44,6 +44,10 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
     }
     let opening = matches!(&request,EditorRequest::Open { .. });
     let ending = matches!(&request,EditorRequest::Commit { .. } | EditorRequest::Cancel { .. });
+    #[cfg(windows)]
+    let owner = Some(window.hwnd().map_err(|error| error.to_string())?.0 as usize as u64);
+    #[cfg(not(windows))]
+    let owner = None;
     if opening {
         service.plugin_editor_authority(&TauriMainThread(&app),session_id.clone(),device_id.clone(),control.native_context(),generation,true).await?;
     }
@@ -53,7 +57,7 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
             EditorRequest::Open { parameters,.. } => {
                 let parameters = parameters.into_iter().map(|value|Ok((value.id.parse::<u64>().map_err(|error|error.to_string())?,value.normalized)))
                     .collect::<Result<Vec<_>,String>>()?;
-                worker.begin_editor(generation,parameters)?;
+                worker.begin_editor_with_owner(generation,parameters,owner)?;
                 Ok(json!({"kind":"opened","parameters":parameter_json(worker.parameters()?)}))
             }
             EditorRequest::Poll { .. } => {

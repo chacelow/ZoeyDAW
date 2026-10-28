@@ -272,7 +272,7 @@ impl Host {
             Request::ReprepareSlot { slot } => self.reprepare_slot(slot),
             Request::Reset => self.reset(),
             Request::Timing => self.timing(),
-            Request::OpenEditor { slot } => self.open_editor(slot),
+            Request::OpenEditor { slot, owner } => self.open_editor(slot, owner),
             Request::CloseEditor { slot } => {
                 if let Some(window) = self.editors[slot].take() {
                     window.close(self.slots[slot].as_mut());
@@ -309,7 +309,7 @@ impl Host {
         for (slot, (plugin, editor)) in self.slots.iter_mut().zip(&mut self.editors).enumerate() {
             let _call = calls.enter(Caller::Main, slot);
             match (plugin.take_editor_request(), editor.as_mut()) {
-                (Some(EditorRequest::Open), None) => match EditorWindow::open(plugin.as_mut()) {
+                (Some(EditorRequest::Open), None) => match EditorWindow::open(plugin.as_mut(), None) {
                     Ok(window) => *editor = Some(window),
                     Err(failure) => crate::record_failure(&self.diagnostics, Some(slot), &failure),
                 },
@@ -373,13 +373,13 @@ impl Host {
         call(self.slots[slot].as_mut()).unwrap_or_else(|error| rejected_or_failed(slot, &error))
     }
 
-    fn open_editor(&mut self, slot: usize) -> Response {
+    fn open_editor(&mut self, slot: usize, owner: Option<u64>) -> Response {
         let (plugin, editor) = (&mut self.slots[slot], &mut self.editors[slot]);
         if let Some(window) = editor {
             window.show(plugin.as_mut());
             return Response::Done;
         }
-        match EditorWindow::open(plugin.as_mut()) {
+        match EditorWindow::open(plugin.as_mut(), owner) {
             Ok(window) => {
                 *editor = Some(window);
                 Response::Done
@@ -577,7 +577,7 @@ impl Host {
         for (slot, &reopen) in reopen.iter().enumerate() {
             if reopen {
                 let _call = calls.enter(Caller::Main, slot);
-                match EditorWindow::open(self.slots[slot].as_mut()) {
+                match EditorWindow::open(self.slots[slot].as_mut(), None) {
                     Ok(window) => self.editors[slot] = Some(window),
                     Err(failure) => crate::record_failure(&self.diagnostics, Some(slot), &failure),
                 }

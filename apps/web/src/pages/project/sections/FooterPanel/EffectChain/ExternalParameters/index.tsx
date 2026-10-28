@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from "react"
 import { Button, DragPadBar } from "@zoeymind/ui"
+import { ExternalLink, List, SlidersHorizontal, X } from "lucide-react"
 import { useTranslation } from "@zoeymind/i18n"
 import {
   usePluginEditor,
@@ -119,10 +120,14 @@ export function ExternalParameters({
   return (
     <div className="gap-control-gap flex min-h-0 flex-col overflow-y-auto">
       {fault && <PluginFaultFeedback fault={fault} className="shrink-0" />}
-      <div className="gap-control-gap flex shrink-0 flex-wrap items-center">
+      <div className="gap-control-gap flex shrink-0 items-center">
         <Button
-          size="control"
-          variant="outline"
+          size="control-icon"
+          variant="ghost"
+          aria-label={t(
+            editing ? "detailDevices.closePluginEditor" : "detailDevices.openPluginEditor"
+          )}
+          title={t(editing ? "detailDevices.closePluginEditor" : "detailDevices.openPluginEditor")}
           disabled={
             fileBusy ||
             recovering ||
@@ -133,41 +138,44 @@ export function ExternalParameters({
           }
           onClick={() => void (editing ? editor.close() : editor.open())}
         >
-          {t(editing ? "detailDevices.closePluginEditor" : "detailDevices.openPluginEditor")}
+          {editing ? <X aria-hidden="true" /> : <ExternalLink aria-hidden="true" />}
         </Button>
         {editing && (
           <Button
             size="control"
             variant={editor.configuring ? "default" : "outline"}
+            aria-pressed={editor.configuring}
+            aria-label={t("detailDevices.configureParameters")}
+            title={t("detailDevices.configureParameters")}
             onClick={() => editor.setConfigureMode(!editor.configuring)}
           >
-            {t(
-              editor.configuring
-                ? "detailDevices.stopConfigureParameters"
-                : "detailDevices.configureParameters"
-            )}
+            <SlidersHorizontal aria-hidden="true" />
           </Button>
         )}
-        <Button size="control" variant="ghost" onClick={() => setShowAll(value => !value)}>
-          {t(showAll ? "detailDevices.hideAllParameters" : "detailDevices.showAllParameters")}
+        <Button
+          size="control-icon"
+          variant="ghost"
+          aria-pressed={showAll}
+          aria-label={t(
+            showAll ? "detailDevices.hideAllParameters" : "detailDevices.showAllParameters"
+          )}
+          title={t(showAll ? "detailDevices.hideAllParameters" : "detailDevices.showAllParameters")}
+          onClick={() => setShowAll(value => !value)}
+        >
+          <List aria-hidden="true" />
         </Button>
-        <ParameterXYPad
-          parameters={configured}
-          xId={xId}
-          yId={yId}
-          onAxisChange={(axis, id) => (axis === "x" ? setXId(id) : setYId(id))}
-          onValueChange={updateParameter}
-          label={t("detailDevices.xyPad")}
-          noneLabel={t("detailDevices.noneParameter")}
-          xLabel={t("detailDevices.xParameter")}
-          yLabel={t("detailDevices.yParameter")}
-        />
-        {!showAll && configured.length === 0 && (
-          <span className="text-muted-foreground text-[10px]">
-            {t("detailDevices.configureHint")}
-          </span>
-        )}
       </div>
+      <ParameterXYPad
+        parameters={configured}
+        xId={xId}
+        yId={yId}
+        onAxisChange={(axis, id) => (axis === "x" ? setXId(id) : setYId(id))}
+        onValueChange={updateParameter}
+        label={t("detailDevices.xyPad")}
+        noneLabel={t("detailDevices.noneParameter")}
+        xLabel={t("detailDevices.xParameter")}
+        yLabel={t("detailDevices.yParameter")}
+      />
       {editor.error && (
         <span role="alert" className="text-destructive">
           {editor.error}

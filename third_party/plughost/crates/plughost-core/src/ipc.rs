@@ -192,9 +192,10 @@ pub enum Request<'a> {
     },
     Reset,
     Timing,
-    /// Opens the plugin's editor in a window of the helper, which processes while it is open.
+    /// Opens the plugin's editor in a helper window owned by the optional host window.
     OpenEditor {
         slot: usize,
+        owner: Option<u64>,
     },
     CloseEditor {
         slot: usize,
@@ -249,7 +250,7 @@ impl Request<'_> {
             | Self::SaveState { slot, .. }
             | Self::RestoreState { slot, .. }
             | Self::LoadState { slot, .. }
-            | Self::OpenEditor { slot }
+            | Self::OpenEditor { slot, .. }
             | Self::CloseEditor { slot }
             | Self::EditorOpen { slot } => Some(*slot),
             _ => None,

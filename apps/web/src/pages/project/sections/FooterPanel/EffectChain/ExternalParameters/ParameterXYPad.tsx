@@ -45,12 +45,12 @@ export function ParameterXYPad({
     ...parameters.map(parameter => ({ id: parameter.id, label: parameter.title })),
   ]
   return (
-    <section className="gap-control-gap flex shrink-0 flex-col" aria-label={label}>
+    <section className="gap-control-gap flex w-full shrink-0 flex-col" aria-label={label}>
       <div
         ref={pad}
         role="application"
         aria-label={label}
-        className="bg-background border-border relative h-28 min-h-28 touch-none overflow-hidden rounded-sm border"
+        className="bg-background border-border relative h-28 min-h-28 w-full touch-none overflow-hidden rounded-sm border"
         onPointerDown={event => {
           if (event.button !== 0) return
           active.current = true
