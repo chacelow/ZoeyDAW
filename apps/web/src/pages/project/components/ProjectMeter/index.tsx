@@ -73,7 +73,7 @@ export function ProjectMeter({
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(to top, var(--arrangement-meter-good) 0%, var(--arrangement-meter-good) 40.9091%, var(--arrangement-meter-warn) 68.1818%, color-mix(in srgb, var(--arrangement-meter-danger) 75%, var(--arrangement-meter-warn)) 90.9091%, var(--arrangement-meter-danger) 90.9091%)",
+                "linear-gradient(to top, var(--arrangement-meter-good, var(--chart-2)) 0%, var(--arrangement-meter-good, var(--chart-2)) 40.9091%, var(--arrangement-meter-warn, light-dark(var(--chart-4), var(--chart-3))) 68.1818%, color-mix(in srgb, var(--arrangement-meter-danger, var(--destructive)) 75%, var(--arrangement-meter-warn, light-dark(var(--chart-4), var(--chart-3)))) 90.9091%, var(--arrangement-meter-danger, var(--destructive)) 90.9091%)",
               clipPath: "inset(100% 0 0 0)",
             }}
           />

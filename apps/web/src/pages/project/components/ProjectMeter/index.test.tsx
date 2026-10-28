@@ -170,6 +170,10 @@ it("paints distinct device stages from binary without an Arrangement view and re
       .clipPath
   expect(Number.parseFloat(fill("Input")?.replace("inset(", "") ?? "")).toBeCloseTo(9.09091, 4)
   expect(Number.parseFloat(fill("Output")?.replace("inset(", "") ?? "")).toBeCloseTo(27.33515, 4)
+  expect(
+    rendered.getByRole("img", { name: "Input" }).querySelector<HTMLElement>("[data-meter-fill]")
+      ?.style.background
+  ).toContain("var(--chart-2)")
   const metadataChanged = vi.fn()
   const detachMetadata = store.subscribeMetadata(metadataChanged)
   rendered.rerender(
