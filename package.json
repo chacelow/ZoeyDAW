@@ -21,7 +21,7 @@
     "check:realtime-protocol": "node scripts/generate-realtime-protocol.mjs --check && node --experimental-strip-types scripts/audio/verify-realtime-protocol.mjs",
     "test:shared": "vitest run packages/shared/src/__tests__ packages/logger/src/__tests__ packages/ui/src",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
+    "tauri:dev": "node scripts/tauri-dev.mjs",
     "tauri:build": "tauri build",
     "icon:generate": "tauri icon apps/web/src/assets/logo-framed.svg --output src-tauri/icons && node -e \"for (const path of ['src-tauri/icons/android', 'src-tauri/icons/ios', 'src-tauri/icons/64x64.png']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
     "prepare": "husky"

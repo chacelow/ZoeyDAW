@@ -48,9 +48,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 正确性、类型、无障碍与项目架构/token 作为硬门禁；预设中的 suggestion/layout 规则默认关闭，不输出建议或自动要求全仓改写，文件名约束等显式规则以根配置为准，格式由套件 formatter 统一。架构检查覆盖配置列出的层级、公共入口和可静态识别的 JSX token，不是完整依赖图或所有动态样式的证明。现有单实例服务和测试 harness 的合理模式在根配置集中声明。类型化 React props 不重复添加 PropTypes，当前 Router 版本也不按 v8 规则强行迁移。
 
-不要未经审查重跑 `ultracite init` 覆盖项目配置。升级时检查预设、peer 绑定和本地架构规则，重新执行 doctor、check、类型、测试与页面验证；不使用自动启动其他 agent 的修复参数替代本轮受控编辑。
-
-`pnpm tauri:dev` 由 Agent 主动维护；`pnpm tauri:build` 按任务需要执行本地构建。启动授权不包括 push、发布或部署：保留 workflow 文件，不上传 GitHub、不触发远程流程、不把配置存在称为 CI 已运行。
+不要未经审查重跑 `ultracite init` 覆盖项目配置。升级时检查预设、peer 绑定和本地架构规则，重新执行 doctor、check、类型、测试与页面验证；不使用自动启动其他 agent 的修复参数替代本轮受控编辑。 `pnpm tauri:dev` 由 Agent 主动维护；Windows 启动入口 `scripts/tauri-dev.mjs` 会自动补齐仓库固定的 CMake、MSVC、MSBuild 和 pnpm 路径，并强制使用可用的 `Visual Studio 17 2022` generator。只有工具安装位置不同才设置 `ZOEYDAW_VS_ROOT` 或 `ZOEYDAW_MSBUILD_ROOT`；不再要求手工设置 `CMAKE`、`CMAKE_GENERATOR` 或 PATH。`pnpm tauri:build` 按任务需要执行本地构建。启动授权不包括 push、发布或部署：保留 workflow 文件，不上传 GitHub、不触发远程流程、不把配置存在称为 CI 已运行。
 
 UI 改动必须在已有应用或 Web 页面上验证主路径，观察新截图或实际状态。单元测试通过不能代替 UI 验证；报告实际检查与限制，不把模拟电平称为真实音频。
 
