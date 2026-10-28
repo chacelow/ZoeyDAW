@@ -110,3 +110,20 @@ it.each([60, 120, 200])("projects only measured source duration at project BPM %
     })?.width
   ).toBeNull()
 })
+
+it("computes warped width during drag preview for audio files with filename BPM", () => {
+  const scene = setup()
+  const bpmSource: BrowserAudioDragSource = {
+    ...source,
+    name: "Cymatics - Bang Full Drum Loop 2 - 121 BPM.wav",
+    durationSeconds: 8,
+  }
+  const target = browserAudioPlacement(
+    scene,
+    { x: 10, y: arrangementBodyTop() + 5 },
+    true,
+    bpmSource
+  )
+  const expectedWarpedBars = (8 * 121) / 240
+  expect(target?.width).toBeCloseTo(expectedWarpedBars * scene.viewport.pxPerBar)
+})

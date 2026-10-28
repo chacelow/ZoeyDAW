@@ -18,6 +18,22 @@ export interface BrowserAudioPlacement {
   color: string
 }
 
+function parseFilenameBpm(name: string): number | null {
+  const bpmMatch = /(?:^|[_\s\-\(\[])(\d{2,3}(?:\.\d+)?)[_\s\-]*(?:bpm)(?:[_\s\-\]\).]|$)/i.exec(
+    name
+  )
+  if (bpmMatch) {
+    const val = parseFloat(bpmMatch[1])
+    if (Number.isFinite(val) && val >= 30 && val <= 300) return val
+  }
+  const prefixMatch = /(?:^|[_\s\-\(\[])(\d{2,3})[_\s\-]+[a-zA-Z]/i.exec(name)
+  if (prefixMatch) {
+    const val = parseFloat(prefixMatch[1])
+    if (Number.isFinite(val) && val >= 60 && val <= 220) return val
+  }
+  return null
+}
+
 export function browserAudioPlacement(
   scene: ArrangementScene,
   point: { x: number; y: number },
@@ -48,18 +64,24 @@ export function browserAudioPlacement(
     trackId: row?.track.id,
     left: (startBar - 1) * pxPerBar - scrollX,
     top,
-    width:
-      source.durationSeconds === null
-        ? null
-        : Math.max(
-            2,
-            (barAtSeconds(
-              scene.transport,
-              secondsAtBar(scene.transport, startBar) + source.durationSeconds
-            ) -
-              startBar) *
-              pxPerBar
-          ),
+    width: (() => {
+      if (source.durationSeconds === null) return null
+      const detectedBpm = parseFilenameBpm(source.name) ?? parseFilenameBpm(source.path)
+      if (detectedBpm !== null) {
+        const { numerator, denominator } = scene.transport
+        const warpedBars = (source.durationSeconds * detectedBpm * denominator) / (240 * numerator)
+        return Math.max(2, warpedBars * pxPerBar)
+      }
+      return Math.max(
+        2,
+        (barAtSeconds(
+          scene.transport,
+          secondsAtBar(scene.transport, startBar) + source.durationSeconds
+        ) -
+          startBar) *
+          pxPerBar
+      )
+    })(),
     color: row?.track.color ?? DEFAULT_TRACK_COLOR,
     height: Math.min(bottom - top, rowBottom - top),
   }

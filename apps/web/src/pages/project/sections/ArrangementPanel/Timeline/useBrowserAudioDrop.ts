@@ -1,4 +1,3 @@
-import { secondsAtBar, barAtSeconds } from "@zoeydaw/project-core/tempo-map"
 import { useEffect, useId, useRef, useState } from "react"
 import { projectFiles, useProjectFilesState, useProjectState } from "@/pages/project/adapters"
 import {
@@ -62,19 +61,7 @@ function projectPending(scene: ArrangementScene, pending: PendingDrop): BrowserA
       Math.min(bottom, row ? row.top + row.contentHeight : top + DEFAULT_TRACK_HEIGHT) - top
     ),
     color: row?.track.color ?? placement.color,
-    width: clip
-      ? Math.max(2, clip.lengthBars * scene.viewport.pxPerBar)
-      : pending.source.durationSeconds === null
-        ? null
-        : Math.max(
-            2,
-            (barAtSeconds(
-              scene.transport,
-              secondsAtBar(scene.transport, placement.startBar) + pending.source.durationSeconds
-            ) -
-              placement.startBar) *
-              scene.viewport.pxPerBar
-          ),
+    width: clip ? Math.max(2, clip.lengthBars * scene.viewport.pxPerBar) : placement.width,
   }
 }
 
