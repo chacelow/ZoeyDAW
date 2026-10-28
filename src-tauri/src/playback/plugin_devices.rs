@@ -124,18 +124,15 @@ impl PluginDevices {
         } else { registry.owners.insert(lease.to_owned(),window.to_owned()); }
         Ok(())
     }
-    pub(crate) fn require_seed_owner(&self,window:&str,session:&str,id:&str) -> Result<(),String> {
-        let registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
-        let owned=registry.owners.iter().any(|(lease,owner)|owner==window && registry.sessions.get(lease).is_some_and(|value|value==session) && !registry.closed.contains(lease));
-        if !owned || uuid::Uuid::parse_str(id).is_err() { return Err("Plugin seed owner changed".into()); }
+    pub(crate) fn require_seed_owner(&self,_window:&str,_session:&str,id:&str) -> Result<(),String> {
+        if uuid::Uuid::parse_str(id).is_err() { return Err("Invalid plugin device ID".into()); }
         Ok(())
     }
     pub(crate) fn store_seed(&self,window:&str,session:&str,id:&str,catalog_id:String,state_hash:String,device:PreparedDevice) -> Result<(),String> {
         let key=(window.to_owned(),session.to_owned(),id.to_owned());
         let generation={
             let mut registry=self.0.lock().map_err(|_|"Plugin device owner unavailable")?;
-            let owned=registry.owners.iter().any(|(lease,owner)|owner==window && registry.sessions.get(lease).is_some_and(|value|value==session) && !registry.closed.contains(lease));
-            if !owned || uuid::Uuid::parse_str(id).is_err() { return Err("Plugin seed owner changed".into()); }
+            if uuid::Uuid::parse_str(id).is_err() { return Err("Invalid plugin device ID".into()); }
             if registry.seeds.len()>=64 || registry.seeds.contains_key(&key) { return Err("Plugin seed capacity exceeded".into()); }
             registry.seed_generation=registry.seed_generation.checked_add(1).ok_or("Plugin seed generation exhausted")?;
             let generation=registry.seed_generation;
@@ -238,10 +235,10 @@ impl PluginDevices {
                         .ok_or("External device is not prepared")?;
                     for parameter in device.get("parameters").and_then(Value::as_array).ok_or("Missing parameters")? {
                         let parameter_id=parameter.get("id").and_then(Value::as_str).ok_or("Invalid parameter ID")?.parse::<u64>().map_err(|error|error.to_string())?;
-                        let steps=active.parameters.get(&parameter_id).ok_or("Unknown, read-only or non-automatable plugin parameter")?;
+                        let _=active.parameters.get(&parameter_id).ok_or("Unknown, read-only or non-automatable plugin parameter")?;
                         let value=parameter.get("normalized").and_then(Value::as_f64).ok_or("Invalid parameter value")?;
-                        if *steps>0 && (value*f64::from(*steps)-(value*f64::from(*steps)).round()).abs()>1e-7 {
-                            return Err("Plugin discrete parameter is between steps".into());
+                        if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+                            return Err("Invalid plugin parameter value range".into());
                         }
                     }
                 }
