@@ -41,8 +41,17 @@ export async function insertBrowserPlugin(
             ...devices.filter(d => !(d.kind === "external" && d.plugin.role === "instrument")),
           ]
         : [...devices, device]
+    const groupParent = after.document.tracks.find(
+      item => item.kind === "group" && item.childTrackIds?.includes(target.id)
+    )
     projectActions.updateTrack(trackId, {
-      ...(device.plugin.role === "instrument" && { armed: true }),
+      ...(device.plugin.role === "instrument" && {
+        armed: true,
+        ...(target.output === "none" && {
+          output: groupParent?.id ?? "main",
+          outputChannel: "1-2",
+        }),
+      }),
       devices: nextDevices,
     })
     if (!(await whenProjectBackendIdle())) throw new Error("Plugin insertion failed")
@@ -56,6 +65,8 @@ export async function insertPluginNewTrack(entry: PluginCatalogEntry): Promise<s
   projectActions.updateTrack(trackId, {
     name: entry.plugin.name,
     armed: true,
+    output: "main",
+    outputChannel: "1-2",
   })
   projectActions.selectTracks([trackId], "header")
   await insertBrowserPlugin(trackId, entry)
