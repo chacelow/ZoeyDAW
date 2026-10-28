@@ -18,7 +18,7 @@ beforeEach(() => {
   )
 })
 
-it("selects existing cards and opens Clip View only for a newly created card", () => {
+it("selects and opens existing cards and newly created cards", () => {
   const scene = createSceneStore()
   const state = useProjectState.getState()
   scene.setMusic({
@@ -55,7 +55,16 @@ it("selects existing cards and opens Clip View only for a newly created card", (
   expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
   expect(interaction.doubleClick(pointer("trager"))).toBe(true)
   expect(useProjectState.getState().session.selectedClipIds).toEqual(["trager-1"])
-  expect(useProjectState.getState().session.clipEditorRequest).toBe(0)
+  expect(useProjectState.getState().session.editingClipId).toBe("trager-1")
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(1)
+  const audioId = useProjectState
+    .getState()
+    .document.tracks.find(track => track.id === "3-audio")
+    ?.clips.find(clip => clip.kind === "audio")?.id
+  if (!audioId) throw new Error("Missing audio fixture")
+  expect(interaction.doubleClick({ ...pointer("3-audio"), x: 60, clientX: 60 })).toBe(true)
+  expect(useProjectState.getState().session.editingClipId).toBe(audioId)
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(2)
   expect(interaction.doubleClick({ ...pointer("3-audio"), x: 500, clientX: 500 })).toBe(false)
   expect(
     useProjectState.getState().document.tracks.find(track => track.id === "3-audio")!.clips
@@ -70,10 +79,10 @@ it("selects existing cards and opens Clip View only for a newly created card", (
     useProjectState.getState().document.tracks.find(track => track.id === "4-midi")!.clips[0]
   ).toMatchObject({ lengthBars: 8, loopBars: 4 })
   expect(useProjectState.getState().session.selectedClipIds).toEqual([created.id])
-  expect(useProjectState.getState().session.clipEditorRequest).toBe(1)
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(3)
   expect(interaction.keyDown(new KeyboardEvent("keydown", { key: "r", ctrlKey: true }))).toBe(true)
   expect(scene.get().targetSelection).toEqual({ kind: "clip", id: created.id, phase: "renaming" })
-  expect(useProjectState.getState().session.clipEditorRequest).toBe(1)
+  expect(useProjectState.getState().session.clipEditorRequest).toBe(3)
 })
 
 it("retains the last compatible multi-clip preview across incompatible and absent destinations", () => {

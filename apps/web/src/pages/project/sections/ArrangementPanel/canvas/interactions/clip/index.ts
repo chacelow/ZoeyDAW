@@ -194,7 +194,7 @@ export function createClipInteractions(context: InteractionContext): CanvasInter
       }
       if ("clip" in hit) {
         select([hit.clip.id])
-        scene.setTargetSelection({ kind: "clip", id: hit.clip.id, phase: "selected" })
+        actions.setEditingClip(hit.clip.id)
         isOwnedTarget = true
         return true
       }
