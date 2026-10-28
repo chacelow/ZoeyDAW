@@ -369,6 +369,22 @@ export function createProjectFileController(
     }
   }
 
+  function parseFilenameBpm(name: string): number | null {
+    const bpmMatch = /(?:^|[_\s\-\(\[])(\d{2,3}(?:\.\d+)?)[_\s\-]*(?:bpm)(?:[_\s\-\]\).]|$)/i.exec(
+      name
+    )
+    if (bpmMatch) {
+      const val = parseFloat(bpmMatch[1])
+      if (Number.isFinite(val) && val >= 30 && val <= 300) return val
+    }
+    const prefixMatch = /(?:^|[_\s\-\(\[])(\d{2,3})[_\s\-]+[a-zA-Z]/i.exec(name)
+    if (prefixMatch) {
+      const val = parseFloat(prefixMatch[1])
+      if (Number.isFinite(val) && val >= 60 && val <= 220) return val
+    }
+    return null
+  }
+
   function importAudio(placement?: ImportAudioPlacement): Promise<string | null> {
     return run("import", async ({ signal }) => {
       const { autoWarp } = getImportPreferences()
@@ -388,7 +404,10 @@ export function createProjectFileController(
         throw new Error("Finish the current edit before importing audio")
       const { bpm, numerator, denominator } = state.document.transport
       const startBar = placement?.startBar ?? state.session.insertionPoint?.bar ?? 1
-      const detectedBpm = tempo.bpm
+      const filenameBpm = autoWarp
+        ? (parseFilenameBpm(source.name) ?? parseFilenameBpm(path))
+        : null
+      const detectedBpm = tempo.bpm ?? filenameBpm
       const warp =
         detectedBpm !== null &&
         Number.isFinite(detectedBpm) &&

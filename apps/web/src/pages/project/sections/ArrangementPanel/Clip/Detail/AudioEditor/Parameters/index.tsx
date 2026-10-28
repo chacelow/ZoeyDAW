@@ -113,10 +113,18 @@ export function AudioParameters({
             size="compact"
             label={t("detailAudio.warp")}
             value={settings.warp}
-            disabled={clip.sourceTempo === "unknown"}
             labelOn={t("detailAudio.warp")}
             labelOff={t("detailAudio.warp")}
-            onChange={warp => changeSettings({ warp })}
+            onChange={warp => {
+              projectActions.updateClip(clip.id, {
+                ...(warp && { sourceTempo: undefined }),
+                audioSettings: {
+                  ...settings,
+                  warp,
+                  ...(!settings.sourceBpm || settings.sourceBpm <= 0 ? { sourceBpm: bpm } : {}),
+                },
+              })
+            }}
           />
           <DropdownButton
             size="compact"
