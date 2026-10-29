@@ -14,7 +14,7 @@ use plughost::{
 };
 use std::{
     ffi::c_void,
-    sync::{Arc, atomic::{AtomicI32, AtomicU64, AtomicUsize, Ordering}, mpsc::{self, Receiver, SyncSender}},
+    sync::{Arc, Mutex, atomic::{AtomicI32, AtomicU64, AtomicUsize, Ordering}, mpsc::{self, Receiver, SyncSender}},
     thread,
 };
 use zoeydaw_plugin_abi::{NativeBlock, OwnedNativeProcessor, PendingProcessor};
@@ -25,7 +25,6 @@ static NEXT_INSTANCE: AtomicU64 = AtomicU64::new(1);
 #[derive(Default)]
 struct NativeContext { address: AtomicUsize, status: AtomicI32 }
 enum Command {
-    Parameters(Reply<Vec<(ParameterInfo, f64)>>),
     SetParameter(u64, f64, Reply<()>),
     Snapshot(Reply<PluginState>),
     ReleaseEditor(u64, Reply<()>),
@@ -43,6 +42,7 @@ pub struct DeviceControl {
     commands: SyncSender<Command>,
     instance: Arc<AtomicU64>,
     native_context: Arc<NativeContext>,
+    parameter_values: Arc<Mutex<Vec<(ParameterInfo, f64)>>>,
 }
 
 pub struct PreparedDevice {
@@ -117,7 +117,19 @@ impl DeviceControl {
         self.request(|reply| Command::EndEditor(instance, commit, reply))
     }
     pub fn editor_events(&self, instance: u64) -> Result<(bool, ParameterEventBatch), String> {
-        self.request(|reply| Command::EditorEvents(instance, reply))
+        let result = self.request(|reply| Command::EditorEvents(instance, reply))?;
+        let (open, batch) = result;
+        if batch.events.iter().any(|event| matches!(event, ParameterEvent::Value { .. })) {
+            let mut values = self.parameter_values.lock().unwrap_or_else(|error| error.into_inner());
+            for event in &batch.events {
+                if let ParameterEvent::Value { id, normalized } = event {
+                    if let Some((_, value)) = values.iter_mut().find(|(info, _)| info.id == *id) {
+                        *value = *normalized;
+                    }
+                }
+            }
+        }
+        Ok((open, batch))
     }
     fn request<T>(&self, command: impl FnOnce(Reply<T>) -> Command) -> Result<T, String> {
         let (reply, receive) = mpsc::sync_channel(1);
@@ -132,10 +144,20 @@ impl DeviceControl {
             .map_err(|_| "Plugin control worker stopped".to_owned())?
     }
     pub fn parameters(&self) -> Result<Vec<(ParameterInfo, f64)>, String> {
-        self.request(Command::Parameters)
+        Ok(self.parameter_values.lock().unwrap_or_else(|error| error.into_inner()).clone())
     }
     pub fn set_parameter(&self, id: u64, value: f64) -> Result<(), String> {
-        self.request(|reply| Command::SetParameter(id, value, reply))
+        self.request(|reply| Command::SetParameter(id, value, reply))?;
+        if let Some((_, current)) = self
+            .parameter_values
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .iter_mut()
+            .find(|(info, _)| info.id == id)
+        {
+            *current = value;
+        }
+        Ok(())
     }
     pub fn snapshot(&self) -> Result<PluginState, String> {
         self.request(Command::Snapshot)
@@ -186,9 +208,11 @@ impl PreparedDevice {
                 }
             })
             .map_err(|error| error.to_string())?;
-        let (info, latency_frames, input_channels, monitor, audio, parameters) = prepared
+        let (info, latency_frames, input_channels, monitor, audio, parameter_values) = prepared
             .recv()
-            .map_err(|_| "Plugin preparation worker stopped".to_owned())??;
+            .map_err(|_| "Plugin control worker stopped".to_owned())??;
+        let parameters = parameter_values.iter().map(|(info, _)| info.clone()).collect();
+        let parameter_values = Arc::new(Mutex::new(parameter_values));
         Ok(Self {
             info,
             parameters,
@@ -197,14 +221,14 @@ impl PreparedDevice {
             input_channels,
             output_channels: 2,
             latency_frames,
-            control: DeviceControl { commands, instance, native_context: audio.native_context.clone() },
+            control: DeviceControl { commands, instance, native_context: audio.native_context.clone(), parameter_values },
             monitor,
             audio,
         })
     }
 }
 
-type Preparation = (PluginInfo, u32, u32, HelperMonitor, DeviceAudio, Vec<ParameterInfo>);
+type Preparation = (PluginInfo, u32, u32, HelperMonitor, DeviceAudio, Vec<(ParameterInfo, f64)>);
 fn prepare(
     selection: PluginSelection,
     sample_rate: f64,
@@ -242,7 +266,7 @@ fn prepare(
             .restore_state(0, &state, StatePurpose::Project)
             .map_err(|error| error.to_string())?;
     }
-    let parameters = chain.parameters(0).map_err(|error|error.to_string())?.into_iter().map(|(info,_)|info).collect();
+    let parameter_values = chain.parameters(0).map_err(|error|error.to_string())?;
     let endpoint = chain
         .realtime_endpoint(&RealtimeConfig::new(quantum as usize))
         .map_err(|error| error.to_string())?;
@@ -271,7 +295,7 @@ fn prepare(
                 _lifetime: lifetime,
                 native_context: Arc::new(NativeContext::default()),
             },
-            parameters,
+            parameter_values,
         ),
     ))
 }
@@ -336,9 +360,6 @@ fn run(mut chain: Chain, receive: Receiver<Command>, recovery: DeviceRecovery) {
                     Ok((open,events))
                 })();
                 let _ = reply.send(result);
-            }
-            Command::Parameters(reply) => {
-                let _ = reply.send(chain.parameters(0).map_err(|error| error.to_string()));
             }
             Command::SetParameter(id, value, reply) => {
                 let _ = reply.send(
