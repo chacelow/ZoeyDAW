@@ -26,7 +26,7 @@ The Tauri build produced both installer files before the signing error. No signi
 
 ## Runtime measurement status
 
-A valid CLI runtime benchmark was not recorded. Starting the Windows CLI binary returned `STATUS_ORDINAL_NOT_FOUND` from the host MSVC runtime loader before application code ran. The failure also affects the packaged native executable path. Build time is not used as a runtime-performance proxy, and no runtime percentage is reported without a valid sample.
+A valid CLI runtime benchmark was not recorded. Starting the Windows CLI binary returned `STATUS_ORDINAL_NOT_FOUND` from the host MSVC runtime loader before application code ran. The failure also affects the packaged native executable path. Build time is not used as a runtime-performance proxy, and no runtime percentage is reported without a valid sample. PE import inspection identified the first missing import as `api-ms-win-shcore-scaling-l1-1-1.dll`, supplying `GetDpiForMonitor` and `SetProcessDpiAwareness`. The host exports both functions from `C:\\Windows\\System32\\shcore.dll` but has no matching API-set file. A fallback was prototyped against the pinned JUCE checkout, then reverted because `scripts/audio/setup-native-engine.mjs` rejects local changes to that ignored checkout. No shim or generated-import rewrite was committed.
 
 The existing native and project checks remain separate evidence. `cargo test -p zoeydaw-project --locked` passed 30 tests. The project-core suite passed 228 tests and its typecheck passed. `pnpm check:boundaries` passed. These prove behavior and dependency contracts, not process startup latency.
 
