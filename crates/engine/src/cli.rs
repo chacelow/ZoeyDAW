@@ -189,7 +189,7 @@ fn project_identity(args: &[String], request: Option<&Value>) -> (String, String
         .windows(2)
         .find(|pair| pair[0] == "--lease")
         .map(|pair| pair[1].clone())
-        .unwrap_or_else(|| "agent-cli".into());
+        .unwrap_or_else(|| "cli".into());
     let session = args
         .windows(2)
         .find(|pair| pair[0] == "--session")
@@ -199,7 +199,7 @@ fn project_identity(args: &[String], request: Option<&Value>) -> (String, String
                 .and_then(|value| value["sessionId"].as_str())
                 .map(str::to_owned)
         })
-        .unwrap_or_else(|| "agent-cli".into());
+        .unwrap_or_else(|| "cli".into());
     (lease, session)
 }
 
