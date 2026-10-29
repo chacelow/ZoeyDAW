@@ -287,6 +287,20 @@ it("switches track selection from the card without moving the insertion point", 
   expect(useProjectState.getState().session.trackSelectionSurface).toBe("header")
   expect(useProjectState.getState().session.insertionPoint).toEqual(insertion)
 })
+it("keeps a single track on plain click and toggles additive selection with Ctrl", () => {
+  const view = render(
+    <>
+      <Row id="3-audio" />
+      <Row id="4-midi" />
+    </>
+  )
+  fireEvent.pointerDown(view.getByText("3 Audio"), { bubbles: true, button: 0 })
+  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["3-audio"])
+  fireEvent.pointerDown(view.getByText("4 MIDI"), { bubbles: true, button: 0, ctrlKey: true })
+  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["3-audio", "4-midi"])
+  fireEvent.pointerDown(view.getByText("3 Audio"), { bubbles: true, button: 0, ctrlKey: true })
+  expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
+})
 
 it("does not capture portaled automation menu items as track resize gestures", async () => {
   projectActions.setMode("automationMode", true)

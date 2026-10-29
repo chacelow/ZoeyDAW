@@ -520,6 +520,8 @@ V EngineSession::note(const V& v,bool overrun) {
     if(noteCutoffs.count(lease) && r.sequence<=noteCutoffs.at(lease))return noteResult(r,false,"rejected");
     if(noteSequences.count(lease) && r.sequence<=noteSequences.at(lease))return noteResult(r,false,"protocol");
     noteSequences[lease]=r.sequence;
+    const auto authored=std::find_if(accepted->tracks.begin(),accepted->tracks.end(),[&](const auto& track){return track.id==r.trackId;});
+    if(authored==accepted->tracks.end() || authored->kind!="midi" || !authored->armed || authored->monitor=="off")return noteResult(r,false,"rejected");
     const auto input=arrangement->midiInputs.find(r.trackId);
     if(input==arrangement->midiInputs.end())return noteResult(r,false,"rejected");
     // The current Tracktion MIDI render context accepts immediate events, not future device-sample scheduling.

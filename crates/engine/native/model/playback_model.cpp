@@ -82,7 +82,8 @@ ControlRequest decodeControl(const V& v) {
 NoteRequest decodeNote(const V& v) {
     fields(v,{"protocolVersion","sessionId","sequence","note"});require(integer(v,"protocolVersion")==2,"Unsupported protocol");
     NoteRequest r;r.session=text(v,"sessionId");require(r.session.isNotEmpty(),"Empty session");r.sequence=integer(v,"sequence");require(r.sequence>0,"Note sequence must be positive");
-    const auto& n=field(v,"note");fields(n,{"trackId","noteId","pitch","velocity","on"},{"requestedSample"});r.trackId=text(n,"trackId");r.noteId=text(n,"noteId");require(r.trackId.isNotEmpty() && r.noteId.isNotEmpty(),"Empty note identity");
+    const auto& n=field(v,"note");fields(n,{"trackId","noteId","pitch","velocity","on"},{"requestedSample","source"});r.trackId=text(n,"trackId");r.noteId=text(n,"noteId");require(r.trackId.isNotEmpty() && r.noteId.isNotEmpty(),"Empty note identity");
+    if(n.hasProperty("source")) { r.source=text(n,"source");require(r.source=="computerKeyboard" || r.source=="pianoKeyboard","Invalid MIDI note source"); }
     const auto pitch=integer(n,"pitch"),velocity=integer(n,"velocity");require(pitch<=127 && velocity<=127,"Invalid MIDI note");r.pitch=static_cast<int>(pitch);r.velocity=static_cast<int>(velocity);r.on=boolean(n,"on");if(n.hasProperty("requestedSample"))r.requestedSample=decimalU64(n,"requestedSample");return r;
 }
 Request decode(const V& v) {

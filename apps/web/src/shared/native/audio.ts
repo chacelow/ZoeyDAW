@@ -82,6 +82,7 @@ const noteRequestSchema = z
         pitch: z.number().int().min(0).max(127),
         velocity: z.number().int().min(0).max(127),
         on: z.boolean(),
+        source: z.enum(["computerKeyboard", "pianoKeyboard"]).optional(),
         requestedSample: generation.optional(),
       })
       .strict(),

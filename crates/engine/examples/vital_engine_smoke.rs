@@ -90,9 +90,9 @@ fn audio_configuration(service: &PlaybackService, queue: &MainQueue) -> Result<V
     Ok(drive(service.devices(queue), queue)??)
 }
 
-fn document(devices: Value, playing: bool, stage: &str, sequence: u64, revision: u64) -> Value {
+fn document(devices: Value, playing: bool, stage: &str, sequence: u64, revision: u64, armed: bool, monitor: &str) -> Value {
     let main = json!({"id":"main","kind":"main","output":"external","input":"none","inputChannel":null,"outputChannel":"1-2","monitor":"off","volumeDb":0,"pan":0,"mute":false,"solo":false,"armed":false,"sends":{},"returnPost":false,"cueOutput":null,"cueVolumeDb":-18,"devices":[],"clips":[],"automation":[],"childTrackIds":[]});
-    let midi = json!({"id":"vital-track","kind":"midi","output":"main","input":"none","inputChannel":null,"outputChannel":"1-2","monitor":"in","volumeDb":0,"pan":0,"mute":false,"solo":false,"armed":true,"sends":{},"returnPost":false,"cueOutput":null,"cueVolumeDb":-18,"devices":devices,"clips":[],"automation":[],"childTrackIds":[]});
+    let midi = json!({"id":"vital-track","kind":"midi","output":"main","input":"none","inputChannel":null,"outputChannel":"1-2","monitor":monitor,"volumeDb":0,"pan":0,"mute":false,"solo":false,"armed":armed,"sends":{},"returnPost":false,"cueOutput":null,"cueVolumeDb":-18,"devices":devices,"clips":[],"automation":[],"childTrackIds":[]});
     json!({"protocolVersion":2,"sessionId":"vital-cli","sequence":sequence,"baseRevision":revision.saturating_sub(1),"revision":revision,"stage":stage,"editId":null,"controlGeneration":"0","state":{"project":{"bpm":120,"numerator":4,"denominator":4,"loop":{"enabled":false,"startBar":1,"endBar":5},"sources":[],"tracks":[main,midi]},"control":{"playing":playing,"recording":false,"seekBar":1,"seekGeneration":0}}})
 }
 
@@ -111,6 +111,8 @@ fn run() -> Result<Value, String> {
         .into_iter()
         .find(|entry| entry.plugin.name == "Vital")
         .ok_or("Vital is not present in the authorized catalog")?;
+    let track_armed = !env::args().any(|argument| argument == "--unarmed");
+    let monitor = if env::args().any(|argument| argument == "--monitor=auto") { "auto" } else if env::args().any(|argument| argument == "--monitor=off") { "off" } else { "in" };
     let service = PlaybackService::default();
     let queue = MainQueue::default();
     let lease = "vital-cli".to_owned();
@@ -118,7 +120,7 @@ fn run() -> Result<Value, String> {
     service.acquire(lease.clone(), session.clone())?;
     let result = (|| {
         let devices = audio_configuration(&service, &queue)?;
-        let open = document(json!([]), false, "open", 0, 0);
+        let open = document(json!([]), false, "open", 0, 0, track_armed, monitor);
         drive(service.apply(&queue, open, lease.clone(), 0), &queue)??;
         let rate = devices["sampleRate"]
             .as_f64()
@@ -157,7 +159,7 @@ fn run() -> Result<Value, String> {
         let accepted = drive(
             service.apply_prepared(
                 &queue,
-                document(json!([device]), true, "commit", 1, 1),
+                document(json!([device]), true, "commit", 1, 1, track_armed, monitor),
                 lease.clone(),
                 0,
                 vec![processor],
@@ -165,7 +167,7 @@ fn run() -> Result<Value, String> {
             &queue,
         )??;
         let control_ack = drive(service.control(&queue, json!({"protocolVersion":2,"sessionId":session,"sequence":2,"controlGeneration":"1","control":{"playing":true,"recording":false,"seekBar":1,"seekGeneration":0}}), lease.clone(), 0), &queue)??;
-        let note_on = json!({"protocolVersion":2,"sessionId":session,"sequence":1,"note":{"trackId":"vital-track","noteId":"vital-cli-note","pitch":60,"velocity":100,"on":true}});
+        let note_on = json!({"protocolVersion":2,"sessionId":session,"sequence":1,"note":{"trackId":"vital-track","noteId":"vital-cli-note","pitch":60,"velocity":100,"on":true,"source":"computerKeyboard"}});
         let ack = drive(service.note(&queue, note_on, lease.clone(), 0), &queue)??;
         thread::sleep(Duration::from_millis(1500));
         let parameter_edit = Value::Null;
@@ -178,11 +180,16 @@ fn run() -> Result<Value, String> {
             service.native_meter_snapshot(&queue, lease.clone(), session.clone()),
             &queue,
         )??;
-        let note_off = json!({"protocolVersion":2,"sessionId":session,"sequence":2,"note":{"trackId":"vital-track","noteId":"vital-cli-note","pitch":60,"velocity":0,"on":false}});
+        let should_audible=track_armed && monitor!="off";
+        let note_accepted=ack["kind"].as_str()==Some("accepted");
+        if note_accepted!=should_audible { return Err(format!("Live MIDI gate mismatch: monitor={monitor} armed={track_armed} ack={ack}")); }
+        let meter_audible=meter["records"].as_array().is_some_and(|records|records.iter().any(|record|record["kind"].as_str()==Some("device-out") && record["rms"].as_f64().is_some_and(|value|value>0.00001)));
+        if meter_audible!=should_audible { return Err(format!("Device meter gate mismatch: monitor={monitor} armed={track_armed} meter={meter}")); }
+        let note_off = json!({"protocolVersion":2,"sessionId":session,"sequence":2,"note":{"trackId":"vital-track","noteId":"vital-cli-note","pitch":60,"velocity":0,"on":false,"source":"computerKeyboard"}});
         let off_ack = drive(service.note(&queue, note_off, lease.clone(), 0), &queue)??;
         let status = json!({"running":status.running,"callbacks":status.callbacks,"processed":status.processed,"missed":status.missed,"failures":status.failures,"late":status.late,"droppedEvents":status.dropped_events,"latency":status.latency});
         Ok(
-            json!({"catalogId":entry.catalog_id,"plugin":entry.plugin,"devices":{"state":devices["state"],"host":devices["host"],"sampleRate":devices["sampleRate"],"bufferFrames":devices["bufferFrames"]},"accepted":accepted,"controlAck":control_ack,"parameterEdit":parameter_edit,"noteAck":ack,"noteOffAck":off_ack,"vitalStatus":status,"meterReady":telemetry["meterReady"],"meter":meter,"issues":telemetry["issues"],"diagnostics":{"arrangementBuilds":diagnostics["arrangementBuilds"],"transportStarts":diagnostics["transportStarts"],"nodePlayheadPlaying":diagnostics["nodePlayheadPlaying"],"callbackCount":diagnostics["callbackCount"],"lateCallbackIntervals":diagnostics["lateCallbackIntervals"],"maxCallbackIntervalSeconds":diagnostics["maxCallbackIntervalSeconds"],"engineMeanSeconds":diagnostics["engineMeanSeconds"],"engineMaxSeconds":diagnostics["engineMaxSeconds"],"gateProcessedFrames":diagnostics["gateProcessedFrames"],"capturedFrames":diagnostics["capturedFrames"],"arrangementPlaying":diagnostics["arrangementPlaying"],"pluginProcessing":diagnostics["pluginProcessing"]}}),
+            json!({"trackArmed":track_armed,"monitor":monitor,"catalogId":entry.catalog_id,"plugin":entry.plugin,"devices":{"state":devices["state"],"host":devices["host"],"sampleRate":devices["sampleRate"],"bufferFrames":devices["bufferFrames"]},"accepted":accepted,"controlAck":control_ack,"parameterEdit":parameter_edit,"noteAck":ack,"noteOffAck":off_ack,"vitalStatus":status,"meterReady":telemetry["meterReady"],"meter":meter,"issues":telemetry["issues"],"diagnostics":{"arrangementBuilds":diagnostics["arrangementBuilds"],"transportStarts":diagnostics["transportStarts"],"nodePlayheadPlaying":diagnostics["nodePlayheadPlaying"],"callbackCount":diagnostics["callbackCount"],"lateCallbackIntervals":diagnostics["lateCallbackIntervals"],"maxCallbackIntervalSeconds":diagnostics["maxCallbackIntervalSeconds"],"engineMeanSeconds":diagnostics["engineMeanSeconds"],"engineMaxSeconds":diagnostics["engineMaxSeconds"],"gateProcessedFrames":diagnostics["gateProcessedFrames"],"capturedFrames":diagnostics["capturedFrames"],"arrangementPlaying":diagnostics["arrangementPlaying"],"pluginProcessing":diagnostics["pluginProcessing"]}}),
         )
     })();
     let _ = drive(service.release(&queue, lease), &queue);

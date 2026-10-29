@@ -119,29 +119,33 @@ it("releases the original MIDI track and note id after arm and selection change"
   expect(useProjectState.getState().session.activeMidiNotes).toEqual([])
 })
 
-it("routes monitored MIDI notes without requiring arm and excludes monitor-off tracks", async () => {
+it("routes MIDI only to armed tracks and excludes selected monitor-only tracks", async () => {
   const remote = deferredBackend()
   restore = configureProjectBackend(() => remote.backend)
-  projectActions.updateTrack("trager", { armed: true, monitor: "off" })
+  projectActions.updateTrack("trager", { armed: false, monitor: "off" })
   projectActions.updateTrack("sidechain", { armed: false, monitor: "in" })
+  projectActions.selectTracks(["sidechain"], "header")
   while (remote.pending.length) {
     remote.settle("accepted")
     await Promise.resolve()
   }
   const documentRequests = remote.requests.length
   projectActions.noteOn(82)
+  expect(remote.notes).toHaveLength(0)
+  expect(useProjectState.getState().session.activeMidiNotes).toEqual([])
+  expect(remote.requests).toHaveLength(documentRequests)
+  projectActions.updateTrack("sidechain", { armed: true, monitor: "auto" })
+  while (remote.pending.length) {
+    remote.settle("accepted")
+    await Promise.resolve()
+  }
+  projectActions.noteOn(82)
   expect(remote.notes).toHaveLength(1)
   expect(remote.notes[0].note).toMatchObject({
     trackId: "sidechain",
-    pitch: 82,
-    velocity: useProjectState.getState().session.midiVelocity,
+    source: "pianoKeyboard",
     on: true,
   })
-  projectActions.noteOff(82)
-  expect(remote.notes).toHaveLength(2)
-  expect(remote.notes[1].note).toEqual({ ...remote.notes[0].note, on: false, velocity: 0 })
-  expect(remote.requests).toHaveLength(documentRequests)
-  expect(remote.controls).toEqual([])
 })
 
 it("sends transport through narrow controls without document, revision, or history changes", async () => {

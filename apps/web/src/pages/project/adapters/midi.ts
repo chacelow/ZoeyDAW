@@ -1,11 +1,11 @@
 import { createClip, uniqueId } from "@zoeydaw/project-core/reducers"
 import { get, recordDocument, session, readRecordingBar, submitNote } from "./context"
 import type { MidiClip, MidiNote } from "@zoeydaw/project-core/types"
-import type { BackendNote } from "@zoeydaw/project-core/backend"
+import type { BackendNote, BackendNoteSource } from "@zoeydaw/project-core/backend"
 
 const heldEdges = new Map<number, { epoch: string; notes: BackendNote[] }>()
 export const midiActions = {
-  noteOn(pitch: number) {
+  noteOn(pitch: number, source: BackendNoteSource = "pianoKeyboard") {
     if (
       !Number.isInteger(pitch) ||
       pitch < 0 ||
@@ -15,27 +15,17 @@ export const midiActions = {
       return
     }
     const state = get()
-    const editingClipId = state.session.editingClipId
-    const editingTrack = state.document.tracks.find(t => t.clips.some(c => c.id === editingClipId))
-    const selectedTrack = state.document.tracks.find(t =>
-      state.session.selectedTrackIds.includes(t.id)
-    )
     const notes = state.document.tracks
-      .filter(
-        track =>
-          track.kind === "midi" &&
-          (track.monitor === "in" ||
-            (track.armed && track.monitor === "auto") ||
-            track.id === editingTrack?.id ||
-            (track.id === selectedTrack?.id && track.monitor !== "off"))
-      )
+      .filter(track => track.kind === "midi" && track.armed && track.monitor !== "off")
       .map(track => ({
         trackId: track.id,
         noteId: uniqueId("live-note"),
         pitch,
         velocity: state.session.midiVelocity,
         on: true,
+        source,
       }))
+    if (!notes.length) return
     heldEdges.set(pitch, { epoch: state.session.editEpoch, notes })
     session({ activeMidiNotes: [...state.session.activeMidiNotes, pitch] })
     for (const note of notes) submitNote(note)

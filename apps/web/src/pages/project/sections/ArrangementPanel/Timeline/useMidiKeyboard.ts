@@ -122,7 +122,7 @@ export function useMidiKeyboard(): void {
       }
       event.preventDefault()
       held.set(event.code, pitch)
-      projectActions.noteOn(pitch)
+      projectActions.noteOn(pitch, "computerKeyboard")
     }
     const keyUp = (event: KeyboardEvent) => {
       const pitch = held.get(event.code)

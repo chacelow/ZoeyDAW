@@ -70,7 +70,7 @@ struct ControlRequest : Control {
     std::optional<LaunchCommand> launch;
 };
 struct NoteRequest {
-    juce::String session, trackId, noteId;
+    juce::String session, trackId, noteId, source = "pianoKeyboard";
     uint64_t sequence = 0;
     std::optional<uint64_t> requestedSample;
     int pitch = 0, velocity = 0;

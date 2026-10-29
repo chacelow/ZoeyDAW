@@ -140,12 +140,14 @@ export interface BackendLauncherSnapshot {
     }[]
   }[]
 }
+export type BackendNoteSource = "computerKeyboard" | "pianoKeyboard"
 export interface BackendNote {
   trackId: string
   noteId: string
   pitch: number
   velocity: number
   on: boolean
+  source?: BackendNoteSource
   requestedSample?: string
 }
 export interface BackendNoteRequest {
