@@ -34,6 +34,7 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
         EditorRequest::Open { catalog_id,state_hash,.. } => devices.editor_control(window.label(),&session_id,&device_id,catalog_id,state_hash.as_deref())?,
         _ => devices.control(window.label(),&session_id,&device_id)?,
     };
+    let helper_process_id = control.health().ok().map(|health| health.helper_process_id);
     let generation = control.instance_id();let instance = generation.to_string();
     match &request {
         EditorRequest::Open { parameters,.. } if parameters.len()<=4096 => {},
@@ -43,14 +44,16 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
         _ => return Err("Stale plugin editor instance".into()),
     }
     let opening = matches!(&request,EditorRequest::Open { .. });
-    let ending = matches!(&request,EditorRequest::Commit { .. } | EditorRequest::Cancel { .. });
+    let ending = matches!(&request,EditorRequest::Commit { .. } | EditorRequest::Cancel { .. } | EditorRequest::Release { .. });
     #[cfg(windows)]
     let owner = Some(window.hwnd().map_err(|error| error.to_string())?.0 as usize as u64);
     #[cfg(not(windows))]
     let owner = None;
     if opening {
         service.plugin_editor_authority(&TauriMainThread(&app),session_id.clone(),device_id.clone(),control.native_context(),generation,true).await?;
+        if let Some(process_id) = helper_process_id { app.state::<crate::keyboard_bridge::KeyboardBridge>().set_editor_process(process_id,true)?; }
     }
+    let app_for_worker = app.clone();
     let worker = control.clone();
     let result = tauri::async_runtime::spawn_blocking(move || -> Result<Value,String> {
         match request {
@@ -77,7 +80,7 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
             }
             EditorRequest::Commit { .. } => {
                 let state = worker.end_editor(generation,true)?;
-                let directory = app.path().app_data_dir().map_err(|error|error.to_string())?.join("plugins/state");
+                let directory = app_for_worker.path().app_data_dir().map_err(|error|error.to_string())?.join("plugins/state");
                 let store = PluginStateStore::new(directory)?;
                 let reference = store.save(&state)?;
                 Ok(json!({"kind":"committed","stateRef":{"sha256":reference.sha256,"path":store.root().join(reference.path)},"parameters":parameter_json(worker.parameters()?)}))
@@ -98,6 +101,7 @@ pub async fn plugin_device_editor(app: AppHandle, window: WebviewWindow, devices
         let _ = tauri::async_runtime::spawn_blocking(move || old.end_editor(generation,false)).await;
     }
     if ending || !current || (opening && result.is_err()) {
+        if let Some(process_id) = helper_process_id { let _ = app.state::<crate::keyboard_bridge::KeyboardBridge>().set_editor_process(process_id,false); }
         let released = service.plugin_editor_authority(&TauriMainThread(window.app_handle()),session_id,device_id,control.native_context(),generation,false).await;
         if current { released?; }
     }

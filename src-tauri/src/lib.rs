@@ -12,6 +12,7 @@ mod log_config;
 mod project_storage;
 mod application_lifecycle;
 mod browser_catalog;
+mod keyboard_bridge;
 mod playback;
 mod plugin_catalog;
 
@@ -147,9 +148,11 @@ pub fn run() {
       log_config::open_log_dir,
       log_config::set_log_level,
       log_config::set_log_dir,
+      keyboard_bridge::keyboard_bridge_set_midi_mode,
       log_config::clear_logs,
     ])
     .setup(|app| {
+      app.manage(keyboard_bridge::KeyboardBridge::start(app.handle().clone())?);
       app.manage(zoeydaw_browser::BrowserCatalog::new(app.path().app_data_dir()?)?);
       if let Some(window) = app.get_webview_window("main") {
         #[cfg(target_os = "windows")]

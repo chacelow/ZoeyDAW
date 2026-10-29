@@ -1,6 +1,14 @@
+import { listen } from "@tauri-apps/api/event"
+import { invoke } from "@tauri-apps/api/core"
 import { useEffect } from "react"
 import { projectActions, useProjectState } from "@/pages/project/adapters"
 import { isEditableTarget } from "../Grid/geometry"
+type NativeEditorKeyboard = {
+  kind: "keydown" | "keyup"
+  key: string
+  code: string
+  repeat: boolean
+}
 
 export const noteKeys: Record<string, number> = {
   a: 0,
@@ -30,9 +38,33 @@ export function useMidiKeyboard(): void {
       }
       held.clear()
     }
+    let disposed = false
+    let unlisten: (() => void) | undefined
+    void listen<NativeEditorKeyboard>("native-editor-keyboard", event => {
+      window.dispatchEvent(
+        new KeyboardEvent(event.payload.kind, {
+          bubbles: true,
+          cancelable: true,
+          code: event.payload.code,
+          key: event.payload.key,
+          repeat: event.payload.repeat,
+        })
+      )
+    })
+      .then(stop => {
+        if (disposed) stop()
+        else unlisten = stop
+      })
+      .catch(() => {})
+    void invoke("keyboard_bridge_set_midi_mode", {
+      enabled: useProjectState.getState().workspace.computerKeyboard,
+    }).catch(() => {})
     const unsubscribe = useProjectState.subscribe((state, previous) => {
-      if (previous.workspace.computerKeyboard && !state.workspace.computerKeyboard) {
-        release()
+      if (previous.workspace.computerKeyboard && !state.workspace.computerKeyboard) release()
+      if (previous.workspace.computerKeyboard !== state.workspace.computerKeyboard) {
+        void invoke("keyboard_bridge_set_midi_mode", {
+          enabled: state.workspace.computerKeyboard,
+        }).catch(() => {})
       }
     })
     const keyDown = (event: KeyboardEvent) => {
@@ -105,6 +137,8 @@ export function useMidiKeyboard(): void {
     window.addEventListener("keyup", keyUp)
     window.addEventListener("blur", release)
     return () => {
+      disposed = true
+      unlisten?.()
       unsubscribe()
       release()
       window.removeEventListener("keydown", keyDown)

@@ -37,3 +37,6 @@ zoeydaw-browser = { path = "../crates/browser" }
 zoeydaw-engine = { path = "../crates/engine" }
 zoeydaw-plugin-host = { path = "../crates/plugin-host" }
 zoeydaw-plugin-abi = { path = "../crates/plugin-abi" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_System_LibraryLoader", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
