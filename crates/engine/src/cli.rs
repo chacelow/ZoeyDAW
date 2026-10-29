@@ -178,6 +178,83 @@ fn run_audio(args: &[String]) -> Result<(), String> {
     );
     Ok(())
 }
+fn project_request(args: &[String]) -> Result<Value, String> {
+    let path = value_after(args, "--request")?;
+    serde_json::from_str(&fs::read_to_string(path).map_err(|error| error.to_string())?)
+        .map_err(|error| error.to_string())
+}
+
+fn project_identity(args: &[String], request: Option<&Value>) -> (String, String) {
+    let lease = args
+        .windows(2)
+        .find(|pair| pair[0] == "--lease")
+        .map(|pair| pair[1].clone())
+        .unwrap_or_else(|| "agent-cli".into());
+    let session = args
+        .windows(2)
+        .find(|pair| pair[0] == "--session")
+        .map(|pair| pair[1].clone())
+        .or_else(|| {
+            request
+                .and_then(|value| value["sessionId"].as_str())
+                .map(str::to_owned)
+        })
+        .unwrap_or_else(|| "agent-cli".into());
+    (lease, session)
+}
+
+fn stop_token(args: &[String]) -> Result<u64, String> {
+    args.windows(2)
+        .find(|pair| pair[0] == "--stop-token")
+        .map(|pair| {
+            pair[1]
+                .parse()
+                .map_err(|error| format!("Invalid --stop-token: {error}"))
+        })
+        .unwrap_or(Ok(0))
+}
+
+fn run_project(args: &[String]) -> Result<(), String> {
+    let action = args.first().map(String::as_str).unwrap_or("status");
+    let request = if matches!(action, "apply" | "control" | "note") {
+        Some(project_request(&args[1..])?)
+    } else {
+        None
+    };
+    let (lease, session) = project_identity(args, request.as_ref());
+    let service = PlaybackService::default();
+    let queue = MainQueue::default();
+    service.acquire(lease.clone(), session.clone())?;
+    let result = (|| {
+        let stop = stop_token(args)?;
+        let value = match action {
+            "apply" => drive(
+                service.apply(&queue, request.clone().unwrap(), lease.clone(), stop),
+                &queue,
+            )??,
+            "control" => drive(
+                service.control(&queue, request.clone().unwrap(), lease.clone(), stop),
+                &queue,
+            )??,
+            "note" => drive(
+                service.note(&queue, request.clone().unwrap(), lease.clone(), stop),
+                &queue,
+            )??,
+            "status" => drive(service.telemetry(&queue, lease.clone()), &queue)??,
+            "release" => {
+                drive(service.release(&queue, lease.clone()), &queue)??;
+                json!({"released":true})
+            }
+            _ => return Err("Usage: zoeydaw project [apply|control|note|status|release]".into()),
+        };
+        println!("{}", serde_json::to_string_pretty(&json!({"command":format!("project {action}"),"leaseId":lease,"sessionId":session,"result":value})).map_err(|error| error.to_string())?);
+        Ok(())
+    })();
+    if action != "release" {
+        let _ = drive(service.release(&queue, lease), &queue);
+    }
+    result
+}
 
 pub fn run<I>(args: I) -> Result<(), String>
 where
@@ -186,6 +263,7 @@ where
     let args: Vec<String> = args.into_iter().collect();
     match args.first().map(String::as_str) {
         Some("audio") => run_audio(&args[1..]),
-        _ => Err("Usage: zoeydaw audio [devices|capabilities|configure|benchmark]".into()),
+        Some("project") => run_project(&args[1..]),
+        _ => Err("Usage: zoeydaw [audio|project] ...".into()),
     }
 }
