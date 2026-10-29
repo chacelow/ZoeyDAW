@@ -84,7 +84,7 @@ export function createTrack(
     sends: {},
     clips: [],
     heightPx,
-    monitor: "auto",
+    monitor: kind === "audio" ? "off" : "auto",
     automation: [],
     ...(kind === "group" && { childTrackIds: [], collapsed: false }),
   }

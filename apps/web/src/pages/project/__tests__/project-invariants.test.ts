@@ -68,7 +68,13 @@ describe("minimum ordinary track", () => {
     const document = initialDocument(DEFAULT_TRACK_HEIGHT)
     expect(document.tracks.map(track => track.kind)).toEqual(["audio", "main"])
     const track = ordinary(document)[0]
-    expect(track).toMatchObject({ kind: "audio", output: "main", clips: [], automation: [] })
+    expect(track).toMatchObject({
+      kind: "audio",
+      monitor: "off",
+      output: "main",
+      clips: [],
+      automation: [],
+    })
     expect(document.media).toEqual([])
     expect(document.markers).toEqual([])
   })
