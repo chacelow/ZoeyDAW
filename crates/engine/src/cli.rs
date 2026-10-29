@@ -83,6 +83,19 @@ fn devices(service: &PlaybackService, queue: &MainQueue) -> Result<Value, String
 }
 
 fn run_audio(args: &[String]) -> Result<(), String> {
+    if args.first().map(String::as_str) == Some("describe") {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "command": "audio describe",
+                "commands": ["devices", "capabilities", "configure", "benchmark"],
+                "sharedOwner": "PlaybackService",
+                "reports": ["device inventory", "capabilities", "configuration readback", "stage timings"]
+            }))
+            .map_err(|error| error.to_string())?
+        );
+        return Ok(());
+    }
     let action = args.first().map(String::as_str).unwrap_or("benchmark");
     let service = PlaybackService::default();
     let queue = MainQueue::default();
@@ -170,7 +183,7 @@ fn run_audio(args: &[String]) -> Result<(), String> {
                 "readback":readback,
             })
         }
-        _ => return Err("Usage: zoeydaw audio [devices|capabilities|configure|benchmark]".into()),
+        _ => return Err("Usage: zoeydaw audio [describe|devices|capabilities|configure|benchmark]".into()),
     };
     println!(
         "{}",
@@ -216,6 +229,28 @@ fn stop_token(args: &[String]) -> Result<u64, String> {
 
 fn run_project(args: &[String]) -> Result<(), String> {
     let action = args.first().map(String::as_str).unwrap_or("status");
+    if action == "describe" {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "command": "project describe",
+                "commands": {
+                    "apply": "full protocol v2 document state, including tracks, clips, MIDI, automation, devices, launcher, tempo, media, and external plugins",
+                    "control": "transport state, recording, seek, loop generation, and metronome",
+                    "note": "one MIDI edge with ACK or rejection",
+                    "status": "telemetry and accepted revision",
+                    "release": "resource release and lease closure",
+                    "mutate": "atomic JSON Patch persistence through project storage; use project apply to validate and adopt realtime state"
+                },
+                "stages": ["open", "preview", "commit", "cancel", "recover"],
+                "sharedOwners": ["PlaybackService", "EngineSession", "project storage"],
+                "nativeDiagnostics": ["issues", "queue", "revision", "callback", "meter", "resource release"],
+                "notInProtocol": ["rack chains", "browser indexing", "waveform cache", "recording file finalization"]
+            }))
+            .map_err(|error| error.to_string())?
+        );
+        return Ok(());
+    }
     let request = if matches!(action, "apply" | "control" | "note") {
         Some(project_request(&args[1..])?)
     } else {
@@ -245,7 +280,7 @@ fn run_project(args: &[String]) -> Result<(), String> {
                 drive(service.release(&queue, lease.clone()), &queue)??;
                 json!({"released":true})
             }
-            _ => return Err("Usage: zoeydaw project [apply|control|note|status|release]".into()),
+            _ => return Err("Usage: zoeydaw project [describe|apply|control|note|status|release]".into()),
         };
         println!("{}", serde_json::to_string_pretty(&json!({"command":format!("project {action}"),"leaseId":lease,"sessionId":session,"result":value})).map_err(|error| error.to_string())?);
         Ok(())

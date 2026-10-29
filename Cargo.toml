@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["src-tauri", "crates/media", "crates/project", "crates/browser", "crates/engine", "crates/plugin-helper", "crates/plugin-host", "crates/plugin-abi"]
+members = ["src-tauri", "crates/cli", "crates/media", "crates/project", "crates/browser", "crates/engine", "crates/plugin-helper", "crates/plugin-host", "crates/plugin-abi"]
 default-members = ["src-tauri"]
 exclude = ["scripts/audio/probes/rust", "third_party/plughost"]
 

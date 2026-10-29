@@ -248,7 +248,7 @@ describe("pure clip edit projections", () => {
     if (original.kind !== "audio") throw new Error("Fixture clip must be audio")
     const unknownClip = { ...original, sourceTempo: "unknown" as const }
     const left = clipWindow(unknownClip, original.startBar, original.startBar + 2, 120)
-    expect(left?.sourceTempo).toBeUndefined()
+    expect(left?.kind === "audio" ? left.sourceTempo : undefined).toBeUndefined()
     expect(left?.kind === "audio" && left.audioSettings?.warp).toBe(true)
   })
 })

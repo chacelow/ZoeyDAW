@@ -3,6 +3,7 @@ import { acceptsClip } from "./types"
 import { isGridSettings, isLegacyGridBars } from "./grid"
 import { MAX_AUTOMATION_CURVE, MIN_AUTOMATION_CURVE } from "./automation-curve"
 import { isDevice } from "./devices"
+import { isRack } from "./racks"
 import { fixtureMediaSource, isMediaSource, serializeMediaSource } from "./media"
 import type { MediaSource } from "./media"
 import { isMidiNotes } from "./patterns"
@@ -195,7 +196,8 @@ function isDocument(v: unknown): v is DocumentState {
           (marker.color === undefined || text(marker.color))
         )
     ) ||
-    !uniqueIds(v.markers)
+    (v.racks !== undefined &&
+      (!Array.isArray(v.racks) || !v.racks.every(isRack) || !uniqueIds(v.racks)))
   ) {
     return false
   }
@@ -225,6 +227,13 @@ function isDocument(v: unknown): v is DocumentState {
     byId.size !== v.tracks.length ||
     byId.get("main")?.kind !== "main" ||
     v.tracks.some(track => track.kind === "main" && track.id !== "main")
+  ) {
+    return false
+  }
+  if (
+    (v.racks ?? []).some(
+      rack => !byId.has(rack.ownerTrackId) || byId.get(rack.ownerTrackId)?.kind === "main"
+    )
   ) {
     return false
   }
@@ -524,6 +533,7 @@ export function parseProject(json: string): { document: DocumentState; workspace
           ...(scene.color === undefined ? {} : { color: scene.color }),
         })),
       },
+      ...(document_.racks === undefined ? {} : { racks: structuredClone(document_.racks) }),
       transport: {
         bpm: document_.transport.bpm,
         numerator: document_.transport.numerator,

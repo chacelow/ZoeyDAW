@@ -7179,6 +7179,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "zoeydaw-cli"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "zoeydaw-engine",
+ "zoeydaw-project",
+]
+
+[[package]]
 name = "zoeydaw-engine"
 version = "0.1.0"
 dependencies = [
@@ -7189,7 +7198,6 @@ dependencies = [
  "serde_json",
  "zoeydaw-plugin-abi",
  "zoeydaw-plugin-host",
- "zoeydaw-project",
 ]
 
 [[package]]

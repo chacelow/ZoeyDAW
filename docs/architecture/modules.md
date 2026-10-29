@@ -52,7 +52,7 @@ CLI adapter 放在拥有该领域的 `crates/<owner>/examples/<feature>_smoke.rs
 
 功能开发顺序固定为 `domain owner → Rust/native adapter → CLI adapter → Web adapter → UI`。先用 CLI adapter 证明功能闭环，再用 Web adapter 接线，最后用 WebUI 验收呈现和交互。性能基准优先在 CLI adapter 测量 typed/native 路径，记录 callback deadline、队列深度、PCM/meter、延迟、分配和释放结果；WebUI 测试不能替代这些证明。
 
-稳定 CLI 的入口是 `crates/engine/examples/zoeydaw_cli.rs` 和根脚本 `pnpm zoeydaw -- ...`。它提供业务动作命令和机器可读结果；`audio` 已接入设备设置，`project` 已接入 PlaybackService 的 apply、control、note、status、release、open 和 save。工程文件、轨道、Clip、MIDI、自动化和 Rack/Chain 命令必须继续扩展同一入口，不在 smoke example 中复制业务状态。
+稳定 CLI 的入口是 `crates/cli` 和根脚本 `pnpm zoeydaw -- ...`。它提供业务动作、`describe` 能力目录、`mutate` 工程 JSON Patch 和机器可读结果；`audio` 已接入设备设置，`project` 已接入 PlaybackService 的 apply、control、note、status、release、open、save 和 mutate。工程文件、轨道、Clip、MIDI、自动化和 Rack/Chain 命令必须继续扩展同一入口，不在 smoke example 中复制业务状态。
 
 Rust 核心由根 Cargo workspace 约束。`crates/media` 拥有媒体身份、完整文件指纹与解码校验；`crates/project` 拥有工程事务、取消与发布状态，并依赖 media；`crates/browser` 拥有目录扫描、索引与持久化，不解码媒体；`crates/engine` 拥有播放 lease、generation、FFI 与 native build。核心 crate 不依赖 Tauri。`src-tauri/src` 只在命令边界调度主线程或 blocking worker，并保持原 IPC 字段。
 

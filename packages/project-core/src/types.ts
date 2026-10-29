@@ -3,7 +3,8 @@ import type { GridSettings } from "./grid"
 import type { AudioClipSettings } from "./audio-editor"
 import type { Device } from "./devices"
 import type { MediaSource } from "./media"
-export type { MediaSource, MediaLocation } from "./media"
+import type { Rack } from "./racks"
+export type { Rack } from "./racks"
 
 export interface Position {
   bar: number
@@ -194,6 +195,7 @@ export interface DocumentState {
   patterns: MidiPattern[]
   markers: Marker[]
   launcher: LauncherDocument
+  racks?: Rack[]
 }
 export interface ArrangementView {
   routing: boolean

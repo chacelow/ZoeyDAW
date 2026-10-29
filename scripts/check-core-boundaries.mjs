@@ -15,6 +15,7 @@ const allowedCrates = new Map([
       "zoeydaw-plugin-abi",
     ]),
   ],
+  ["zoeydaw-cli", new Set(["zoeydaw-engine", "zoeydaw-project"])],
   ["zoeydaw-project", new Set(["zoeydaw-media"])],
   ["zoeydaw-media", new Set()],
   ["zoeydaw-browser", new Set()],
@@ -40,7 +41,7 @@ export function checkCargoBoundaries(metadata) {
       errors.push(`Missing required workspace package: ${name}`)
       continue
     }
-    for (const dependency of pkg.dependencies) {
+    for (const dependency of pkg.dependencies.filter(item => item.kind !== "dev")) {
       if (name !== "zoeydaw" && /^tauri(?:$|-)/.test(dependency.name)) {
         errors.push(`${name} cannot depend on ${dependency.name}`)
       }

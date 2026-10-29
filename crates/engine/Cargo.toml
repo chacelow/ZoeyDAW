@@ -17,4 +17,3 @@ cmake = "0.1.54"
 
 [dev-dependencies]
 zoeydaw-plugin-host = { path = "../plugin-host" }
-zoeydaw-project = { path = "../project" }

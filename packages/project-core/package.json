@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./racks": {
+      "import": "./src/racks.ts",
+      "types": "./src/racks.ts"
+    },
     "./tempo-map": {
       "import": "./src/tempo-map.ts",
       "types": "./src/tempo-map.ts"
