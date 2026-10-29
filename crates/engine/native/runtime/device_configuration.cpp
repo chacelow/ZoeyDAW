@@ -58,10 +58,12 @@ void verifyActual(juce::AudioDeviceManager& manager,const AudioConfiguration& co
 }
 void EngineSession::refreshDevices() {
     auto& manager=engine.getDeviceManager().deviceManager;deviceInventory.clear();inputInventory.clear();hostInventory.clear();
+    const auto activeHost=manager.getCurrentDeviceTypeObject()?manager.getCurrentDeviceTypeObject()->getTypeName():juce::String();
     for(auto* type:manager.getAvailableDeviceTypes()) {
-        type->scanForDevices();bool panel=false;
+        type->scanForDevices();const bool probeDevices=type->getTypeName()==activeHost;bool panel=false;
         for(bool input:{false,true})for(const auto& name:type->getDeviceNames(input)) {
-            std::unique_ptr<juce::AudioIODevice> probe(type->createDevice(type->getDeviceNames(false).contains(name)?name:juce::String(),type->getDeviceNames(true).contains(name)?name:juce::String()));
+            std::unique_ptr<juce::AudioIODevice> probe;
+            if(probeDevices)probe.reset(type->createDevice(type->getDeviceNames(false).contains(name)?name:juce::String(),type->getDeviceNames(true).contains(name)?name:juce::String()));
             auto entry=object();put(entry,"id",audioDeviceId(type->getTypeName(),name));put(entry,"name",name);put(entry,"host",type->getTypeName());
             put(entry,"inputChannels",probe?probe->getInputChannelNames().size():0);put(entry,"outputChannels",probe?probe->getOutputChannelNames().size():0);
             (input?inputInventory:deviceInventory).add(entry);panel=panel || (probe && probe->hasControlPanel());

@@ -651,7 +651,7 @@ V EngineSession::call(const juce::String& operation,const V& v) {
     }
     if(operation=="telemetry")return telemetry(v);
     if(operation=="meter_registry")return meterRegistry(v);
-    if(operation=="devices")return devices(true);
+    if(operation=="devices")return devices(false);
     if(operation=="configure")return configure(v);
     if(operation=="device_capabilities")return capabilities(v);
     if(operation=="device_control_panel")return controlPanel();

@@ -27,7 +27,7 @@ export function initialDraft(device: AudioDeviceSnapshot): AudioDeviceConfigurat
   const output =
     device.outputDevices.find(
       item => item.host === host && item.id === capabilities.outputDeviceId
-    ) ?? device.outputDevices.find(item => item.host === host && item.outputChannels > 0)
+    ) ?? device.outputDevices.find(item => item.host === host)
   const channels = defaultChannels(output?.outputChannels ?? 0)
   return {
     host,
@@ -54,6 +54,8 @@ export function fitCapabilities(
   draft: AudioDeviceConfiguration,
   capabilities: AudioDeviceCapabilities
 ): AudioDeviceConfiguration {
+  const inputChannels = defaultChannels(capabilities.inputChannelNames.length)
+  const outputChannels = defaultChannels(capabilities.outputChannelNames.length)
   return {
     ...draft,
     sampleRate: supportedValue(
@@ -66,16 +68,24 @@ export function fitCapabilities(
       capabilities.bufferSizes,
       capabilities.defaultBufferFrames
     ),
-    inputMono: draft.inputMono.filter(channel => channel < capabilities.inputChannelNames.length),
-    inputStereo: draft.inputStereo.filter(
-      channel => channel + 1 < capabilities.inputChannelNames.length
-    ),
-    outputMono: draft.outputMono.filter(
-      channel => channel < capabilities.outputChannelNames.length
-    ),
-    outputStereo: draft.outputStereo.filter(
-      channel => channel + 1 < capabilities.outputChannelNames.length
-    ),
+    inputMono:
+      draft.inputDeviceId !== null && draft.inputMono.length === 0 && draft.inputStereo.length === 0
+        ? inputChannels.mono
+        : draft.inputMono.filter(channel => channel < capabilities.inputChannelNames.length),
+    inputStereo:
+      draft.inputDeviceId !== null && draft.inputMono.length === 0 && draft.inputStereo.length === 0
+        ? inputChannels.stereo
+        : draft.inputStereo.filter(channel => channel + 1 < capabilities.inputChannelNames.length),
+    outputMono:
+      draft.outputMono.length === 0 && draft.outputStereo.length === 0
+        ? outputChannels.mono
+        : draft.outputMono.filter(channel => channel < capabilities.outputChannelNames.length),
+    outputStereo:
+      draft.outputMono.length === 0 && draft.outputStereo.length === 0
+        ? outputChannels.stereo
+        : draft.outputStereo.filter(
+            channel => channel + 1 < capabilities.outputChannelNames.length
+          ),
   }
 }
 
@@ -93,14 +103,10 @@ export function deviceChoices(
   const hosts = device?.hosts ?? []
   const host = draft?.host
   const separateInputOutput = hosts.find(item => item.id === host)?.separateInputOutput ?? false
-  const outputs =
-    device?.outputDevices.filter(item => item.host === host && item.outputChannels > 0) ?? []
+  const outputs = device?.outputDevices.filter(item => item.host === host) ?? []
   const inputs =
     device?.inputDevices.filter(
-      item =>
-        item.host === host &&
-        item.inputChannels > 0 &&
-        (separateInputOutput || item.id === draft?.outputDeviceId)
+      item => item.host === host && (separateInputOutput || item.id === draft?.outputDeviceId)
     ) ?? []
   return { hosts, inputs, outputs, separateInputOutput }
 }
@@ -138,7 +144,7 @@ export function selectHost(
   host: string,
   device: AudioDeviceSnapshot | null
 ): AudioDeviceConfiguration {
-  const output = device?.outputDevices.find(item => item.host === host && item.outputChannels > 0)
+  const output = device?.outputDevices.find(item => item.host === host)
   const channels = defaultChannels(output?.outputChannels ?? 0)
   return {
     ...draft,
