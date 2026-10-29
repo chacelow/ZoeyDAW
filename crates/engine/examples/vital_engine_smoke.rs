@@ -170,7 +170,19 @@ fn run() -> Result<Value, String> {
         let note_on = json!({"protocolVersion":2,"sessionId":session,"sequence":1,"note":{"trackId":"vital-track","noteId":"vital-cli-note","pitch":60,"velocity":100,"on":true,"source":"computerKeyboard"}});
         let ack = drive(service.note(&queue, note_on, lease.clone(), 0), &queue)??;
         thread::sleep(Duration::from_millis(1500));
-        let parameter_edit = Value::Null;
+        let parameter_edit = match control.parameters()?.into_iter().next() {
+            Some((info, before)) => {
+                let after = if before < 0.5 { 0.75 } else { 0.25 };
+                control.set_parameter(info.id, after)?;
+                thread::sleep(Duration::from_millis(250));
+                let status = control.status()?.ok_or("Vital helper returned no parameter status")?;
+                if status.failures > 0 || status.processed == 0 {
+                    return Err(format!("Vital parameter edit did not remain realtime: status={status:?}"));
+                }
+                json!({"id":info.id,"before":before,"after":after,"processed":status.processed,"failures":status.failures,"missed":status.missed})
+            }
+            None => json!({"skipped":"Vital exposed no automatable parameters"}),
+        };
         let status = control
             .status()?
             .ok_or("Vital helper returned no realtime status")?;
