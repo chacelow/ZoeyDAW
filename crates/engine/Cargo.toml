@@ -14,3 +14,6 @@ arc-swap = "=1.9.3"
 
 [build-dependencies]
 cmake = "0.1.54"
+
+[dev-dependencies]
+zoeydaw-plugin-host = { path = "../plugin-host" }

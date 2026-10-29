@@ -52,6 +52,7 @@ bool AudioConfiguration::outputEnabled(int first,int count) const {
     const auto& values=count==1?outputMono:outputStereo;
     return (count==1 || count==2) && std::find(values.begin(),values.end(),first)!=values.end();
 }
+int graphBlockSize(int deviceBufferFrames) { return juce::roundToInt(double(deviceBufferFrames) * 1.1); }
 #if !JUCE_MAC
 void requireAudioInputPermission(bool requestIfUndetermined) {
     juce::ignoreUnused(requestIfUndetermined);

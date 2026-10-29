@@ -635,7 +635,7 @@ V EngineSession::call(const juce::String& operation,const V& v) {
         auto out=object();put(out,"deviceIds",needed);
         if(!needed.isEmpty()) {
             loadConfiguration();const auto format=configuration?*configuration:defaultConfiguration();
-            put(out,"sampleRate",format.sampleRate);put(out,"quantum",format.bufferFrames);
+            put(out,"sampleRate",format.sampleRate);put(out,"quantum",graphBlockSize(format.bufferFrames));
         }
         return out;
     }
@@ -668,6 +668,7 @@ V EngineSession::call(const juce::String& operation,const V& v) {
         if(accepted)put(out,"controlGeneration",decimalU64(accepted->controlGeneration));
         put(out,"pendingNotes",pendingNotes.load(std::memory_order_acquire));
         uint64_t delivered=0,panics=0;if(arrangement)for(auto& [id,input]:arrangement->midiInputs) { delivered+=input->delivered();panics+=input->panics(); }put(out,"deliveredNoteEdges",(juce::int64)delivered);put(out,"deliveredNotePanics",(juce::int64)panics);
+        juce::Array<V> pluginProcessing;if(arrangement)for(auto& [id,plugin]:arrangement->devices)if(auto* isolated=dynamic_cast<IsolatedDevicePlugin*>(plugin.get())) { auto entry=object();put(entry,"deviceId",id);if(auto* owner=plugin->getOwnerTrack()) { put(entry,"ownerTrack",owner->itemID.toString());put(entry,"pluginIndex",owner->pluginList.indexOf(plugin.get()));put(entry,"pluginCount",owner->pluginList.size()); }put(entry,"graphFactoryCalls",(juce::int64)isolated->graphFactoryCalls());put(entry,"graphNodes",(juce::int64)isolated->graphNodes());put(entry,"observedSampleRate",isolated->observedSampleRate());put(entry,"observedBlockSize",(juce::int64)isolated->observedBlockSize());put(entry,"callbacks",(juce::int64)isolated->processingCallbacks());put(entry,"processCalls",(juce::int64)isolated->processCalls());put(entry,"formatMismatches",(juce::int64)isolated->formatMismatches());put(entry,"status",isolated->processingStatus());pluginProcessing.add(entry); }put(out,"pluginProcessing",pluginProcessing);
         if(arrangement) { auto& transport=arrangement->edit->getTransport();put(out,"arrangementPlaying",transport.isPlaying());put(out,"arrangementPositionSeconds",transport.getPosition().inSeconds());if(auto* context=transport.getCurrentPlaybackContext())if(auto* playhead=context->getNodePlayHead())put(out,"nodePlayheadPlaying",playhead->isPlaying()); }
         put(out,"gateProcessedFrames",(juce::int64)gateProcessedFrames.load());put(out,"gateClearedFrames",(juce::int64)gateClearedFrames.load());if(capture) { put(out,"capturedFrames",(juce::int64)capture->frames.load());put(out,"capturedStoppedFrames",(juce::int64)capture->stoppedFrames.load()); }
         put(out,"previewPlaying",preview && preview->getTransport().isPlaying() && previewGeneration==auditionGeneration.load());put(out,"previewGeneration",(juce::int64)previewGeneration);put(out,"previewPositionSeconds",previewPositionSeconds());put(out,"previewDurationSeconds",previewDuration);if(previewCapture)put(out,"previewCapturedFrames",(juce::int64)previewCapture->frames.load());

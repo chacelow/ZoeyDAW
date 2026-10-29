@@ -195,7 +195,7 @@ V EngineSession::configurationPlan(const AudioConfiguration& candidate) {
         const auto plugin=arrangement->devices.find(device.id);
         auto* isolated=plugin==arrangement->devices.end()?nullptr:dynamic_cast<IsolatedDevicePlugin*>(plugin->second.get());
         require(isolated!=nullptr,"External device is not prepared");
-        if(isolated->retainsFormat(candidate.sampleRate,uint32_t(candidate.bufferFrames)))continue;
+        if(isolated->retainsFormat(candidate.sampleRate,uint32_t(graphBlockSize(candidate.bufferFrames))))continue;
         require(!isolated->editorOwnsParameters(),"Close and apply plugin editors before changing audio format");
         auto item=object();put(item,"deviceId",device.id);put(item,"catalogId",settings->catalogId);put(item,"context",decimalU64(isolated->processorContext()));
         juce::Array<V> parameters;for(const auto& parameter:settings->parameters) { auto entry=object();put(entry,"id",decimalU64(parameter.id));put(entry,"normalized",parameter.normalized);parameters.add(entry); }
@@ -205,7 +205,7 @@ V EngineSession::configurationPlan(const AudioConfiguration& candidate) {
     validateConfiguration(candidate);
     put(out,"kind","plugins");put(out,"sessionId",accepted->session);put(out,"revision",juce::int64(accepted->revision));put(out,"sequence",juce::int64(accepted->sequence));
     put(out,"deviceGeneration",decimalU64(clock.generation.load(std::memory_order_acquire)));put(out,"observed",false);
-    put(out,"previousConfiguration",configuration?configuration->value():V());put(out,"sampleRate",candidate.sampleRate);put(out,"quantum",candidate.bufferFrames);put(out,"devices",devices);return out;
+    put(out,"previousConfiguration",configuration?configuration->value():V());put(out,"sampleRate",candidate.sampleRate);put(out,"quantum",graphBlockSize(candidate.bufferFrames));put(out,"devices",devices);return out;
 }
 std::optional<AudioConfiguration> EngineSession::observedConfiguration() {
     auto& manager=engine.getDeviceManager().deviceManager;auto* device=manager.getCurrentAudioDevice();
@@ -233,7 +233,7 @@ V EngineSession::deviceRecoveryPlan(const V& value) {
     if(!hardware || !hardware->isOpen() || !clock.active.load(std::memory_order_acquire))return {};
     const double rate=hardware->getCurrentSampleRate();const auto quantum=uint32_t(hardware->getCurrentBufferSizeSamples());
     const bool mismatch=std::any_of(arrangement->devices.begin(),arrangement->devices.end(),[&](const auto& entry) {
-        auto* isolated=dynamic_cast<IsolatedDevicePlugin*>(entry.second.get());return isolated && !isolated->retainsFormat(rate,quantum);
+        auto* isolated=dynamic_cast<IsolatedDevicePlugin*>(entry.second.get());return isolated && !isolated->retainsFormat(rate,graphBlockSize(quantum));
     });
     if(!mismatch)return {};
     const auto actual=observedConfiguration();if(!actual)return {};
@@ -254,7 +254,7 @@ V EngineSession::configurePrepared(const V& payload,zd_plugin_prepared* processo
     const bool observed=boolean(plan,"observed");
     if(observed)require(observedConfiguration()==candidate,"Observed audio configuration changed during preparation");
     require(text(plan,"kind")=="plugins" && number(plan,"sampleRate",8000,768000)==candidate.sampleRate
-        && integer(plan,"quantum")==uint64_t(candidate.bufferFrames),"Prepared audio format differs from request");
+        && integer(plan,"quantum")==uint64_t(graphBlockSize(candidate.bufferFrames)),"Prepared audio format differs from request");
     const auto& planned=array(plan,"devices");require(count>0 && count<=256 && count==uint32_t(planned.size()) && processors,"Invalid prepared configuration batch");
     std::vector<uint64_t> tokens;tokens.reserve(count);
     struct Cleanup {
@@ -268,11 +268,11 @@ V EngineSession::configurePrepared(const V& payload,zd_plugin_prepared* processo
         const auto entry=std::find_if(planned.begin(),planned.end(),[&](const auto& item){return text(item,"deviceId")==id;});require(entry!=planned.end(),"Unexpected prepared device");
         const auto found=arrangement->devices.find(id);auto* isolated=found==arrangement->devices.end()?nullptr:dynamic_cast<IsolatedDevicePlugin*>(found->second.get());
         require(isolated && isolated->processorContext()==decimalU64(*entry,"context") && !isolated->editorOwnsParameters(),"Plugin configuration instance changed");
-        require(prepared.sample_rate==candidate.sampleRate && prepared.quantum==uint32_t(candidate.bufferFrames),"Prepared processor format differs from device request");
+        require(prepared.sample_rate==candidate.sampleRate && prepared.quantum==uint32_t(graphBlockSize(candidate.bufferFrames)),"Prepared processor format differs from device request");
         replacements.previous.emplace_back(id,found->second);
     }
     size_t needed=0;for(const auto& [id,plugin]:arrangement->devices)if(auto* isolated=dynamic_cast<IsolatedDevicePlugin*>(plugin.get()))
-        if(!isolated->retainsFormat(candidate.sampleRate,uint32_t(candidate.bufferFrames))) { ++needed;require(ids.count(id),"Missing prepared device"); }
+        if(!isolated->retainsFormat(candidate.sampleRate,graphBlockSize(candidate.bufferFrames))) { ++needed;require(ids.count(id),"Missing prepared device"); }
     require(needed==count,"Prepared device list is stale");
     pluginApplyOwner=std::tuple{lease,session,accepted->revision};
     for(uint32_t index=0;index<count;++index) {

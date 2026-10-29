@@ -88,7 +88,7 @@ void IsolatedDevicePlugin::applyToBuffer(const tracktion::PluginRenderContext&) 
 }
 std::unique_ptr<tracktion::graph::Node> IsolatedDevicePlugin::createNode(
     std::unique_ptr<tracktion::graph::Node> source,const tracktion::CreateNodeParams& build) {
-    if(!source || build.blockSize<=0)throw std::invalid_argument("Invalid isolated plugin graph input");
+    graphNodeCreations.fetch_add(1,std::memory_order_relaxed);
     const auto channels=source->getNodeProperties().numberOfChannels;
     const auto expected=int(binding->format.inputChannels);
     if(expected>0 && channels!=expected) {
@@ -103,7 +103,7 @@ void configureIsolatedDeviceGraph(tracktion::CreateNodeParams& params) {
         const tracktion::TrackMuteState* mute,const tracktion::CreateNodeParams& build,
         std::unique_ptr<tracktion::graph::Node>& source) {
         if(auto* isolated=dynamic_cast<IsolatedDevicePlugin*>(&plugin)) {
-            source=isolated->createNode(std::move(source),build);return true;
+            isolated->recordGraphFactoryCall();source=isolated->createNode(std::move(source),build);return true;
         }
         return previous?previous(plugin,mute,build,source):false;
     };

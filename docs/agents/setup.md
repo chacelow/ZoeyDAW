@@ -80,7 +80,7 @@ cargo test -p zoeydaw-media -p zoeydaw-project -p zoeydaw-browser
 cargo test --workspace --locked
 ```
 
-`native_transport_clock` 定向运行 Hosted transport clock 与音频侧控制代际竞争用例。Windows 从已加载 MSVC x64 环境的终端运行；Hosted 路径使用 48 kHz / 256 frames，不打开物理音频设备。
+`native_transport_clock` 定向运行 Hosted transport clock 与音频侧控制代际竞争用例。Windows 从已加载 MSVC x64 环境的终端运行；Hosted 路径使用 48 kHz / 256 frames，不打开物理音频设备。 `cargo run -p zoeydaw-engine --example vital_engine_smoke` 是真实 Windows Vital 功能 adapter。它从授权 catalog 准备 Vital CLAP，自动选择可用输出设备，提交 external instrument graph，发送 note-on/off，读取 ACK、helper callback/failure/latency、Tracktion graph format、Device/Track/Main meter RMS/peak 和释放结果。它不依赖 WebUI 或桌面坐标；输出 JSON，失败返回非零退出码。该入口使用 graph quantum `round(deviceBufferFrames * 1.1)`，与 Tracktion `EditPlaybackContext` 的 max speed compensation 保持一致。
 
 ```sh
 cmake -S crates/engine/native -B target/windows-native-clock -DZOEYDAW_PLAYBACK_TESTS=ON -DZOEYDAW_PLAYBACK_SMOKE=OFF

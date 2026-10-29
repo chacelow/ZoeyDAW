@@ -113,6 +113,7 @@ Request decode(const V&);
 ControlRequest decodeControl(const V&);
 NoteRequest decodeNote(const V&);
 bool sameGraph(const Request&, const Request&, bool allowClipPlacement = false);
+bool sameDeviceGraph(const Request&, const Request&);
 V result(const Request&, bool accepted, const char* code = "rejected");
 V result(const ControlRequest&, uint64_t revision, bool accepted, const char* code = "rejected");
 V noteResult(const NoteRequest&, bool accepted, const char* code = "rejected");

@@ -39,8 +39,9 @@ public:
     const std::string deviceId;
 private:
     void prepareToPlay(const tracktion::graph::PlaybackInitialisationInfo& info) override {
+        binding->observedSampleRate.store(info.sampleRate,std::memory_order_release);binding->observedBlockSize.store(uint32_t(std::max(0,info.blockSize)),std::memory_order_release);
         formatCompatible=info.sampleRate==format.sampleRate && info.blockSize<=int(format.quantum);
-        if(!formatCompatible)return;
+        if(!formatCompatible) { binding->formatMismatches.fetch_add(1,std::memory_order_relaxed);return; }
         midiOutput.reserve(8192);midiSeed.reserve(8192);dryMidi.reserve(8192);
         if(format.inputChannels>0) {
             dry.setLatencyNumSamples(int(format.latencyFrames));
@@ -55,7 +56,7 @@ private:
         auto source=input->getProcessedOutput();
         context.buffers.midi.clear();
         if(!formatCompatible) {
-            context.buffers.audio.clear();context.buffers.midi.isAllNotesOff=true;return;
+            binding->formatMismatches.fetch_add(1,std::memory_order_relaxed);return;
         }
         if(reserveOutput) { midiSeed.swapWith(context.buffers.midi);reserveOutput=false; }
         midiOutput.clear();

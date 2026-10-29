@@ -7187,6 +7187,7 @@ dependencies = [
  "serde",
  "serde_json",
  "zoeydaw-plugin-abi",
+ "zoeydaw-plugin-host",
 ]
 
 [[package]]

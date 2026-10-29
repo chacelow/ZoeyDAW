@@ -33,6 +33,7 @@ bool IsolatedPluginBinding::setEditorAuthority(std::uintptr_t context, uint64_t 
     return true;
 }
 int32_t IsolatedPluginBinding::process(zd_plugin_block& block) noexcept {
+    callbacks.fetch_add(1,std::memory_order_relaxed);
     block.produced_count=0;
     if(const auto fault=status.load(std::memory_order_acquire);fault<0)return fault;
     if(processing.test_and_set(std::memory_order_acquire)) {
@@ -56,6 +57,7 @@ int32_t IsolatedPluginBinding::process(zd_plugin_block& block) noexcept {
         block.automation=combinedAutomation.data();block.automation_count=count+originalCount;
         pendingManualOffset+=count;
     }
+    processCalls.fetch_add(1,std::memory_order_relaxed);
     const auto result=callback.process(callback.context,&block);
     block.automation=originalAutomation;block.automation_count=originalCount;
     if(result<0) { block.produced_count=0;return latchFault(result); }

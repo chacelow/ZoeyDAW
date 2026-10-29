@@ -7,6 +7,7 @@ pub(crate) struct WaveformCancellation {
     pub is_cancelled: unsafe extern "C" fn(*const c_void) -> i32,
 }
 
+
 extern "C" {
     pub(crate) fn zp_create(error: *mut *mut c_char) -> *mut c_void;
     pub(crate) fn zp_call(session: *mut c_void, operation: *const c_char, json: *const c_char) -> *mut c_char;

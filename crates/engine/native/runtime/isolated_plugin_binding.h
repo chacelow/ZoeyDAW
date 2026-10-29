@@ -28,6 +28,11 @@ public:
     std::uintptr_t context() const noexcept { return reinterpret_cast<std::uintptr_t>(callback.context); }
     const IsolatedPluginFormat format;
     std::atomic<int32_t> status {0};
+    std::atomic<uint64_t> callbacks {0};
+    std::atomic<uint64_t> processCalls {0};
+    std::atomic<uint64_t> formatMismatches {0};
+    std::atomic<double> observedSampleRate {0};
+    std::atomic<uint32_t> observedBlockSize {0};
     std::atomic<bool> enabled {true};
     std::atomic<bool> editorActive {false};
 private:

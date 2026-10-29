@@ -230,6 +230,24 @@ static bool equivalent(const V& a,const V& b,bool ignoreLiveClipFields=false,boo
     }
     return a==b;
 }
+bool sameDeviceGraph(const Request& a,const Request& b) {
+    if(a.tracks.size()!=b.tracks.size())return false;
+    for(const auto& lhs:a.tracks) {
+        const auto found=std::find_if(b.tracks.begin(),b.tracks.end(),[&](const Track& track){return track.id==lhs.id;});
+        if(found==b.tracks.end() || lhs.kind!=found->kind || lhs.devices.size()!=found->devices.size())return false;
+        for(size_t index=0;index<lhs.devices.size();++index) {
+            const auto& left=lhs.devices[index];const auto& right=found->devices[index];
+            if(left.id!=right.id || left.settings.index()!=right.settings.index())return false;
+            if(const auto* leftExternal=std::get_if<ExternalSettings>(&left.settings)) {
+                const auto* rightExternal=std::get_if<ExternalSettings>(&right.settings);
+                if(!rightExternal || leftExternal->catalogId!=rightExternal->catalogId || leftExternal->format!=rightExternal->format
+                    || leftExternal->classId!=rightExternal->classId || leftExternal->role!=rightExternal->role
+                    || leftExternal->stateHash!=rightExternal->stateHash || leftExternal->statePath!=rightExternal->statePath)return false;
+            }
+        }
+    }
+    return true;
+}
 bool sameGraph(const Request& a,const Request& b,bool allowClipPlacement) {
     if((!allowClipPlacement && !a.sameTempo(b)) || a.numerator!=b.numerator || a.denominator!=b.denominator || (!allowClipPlacement && (a.sources.size()!=b.sources.size() || a.tracks.size()!=b.tracks.size())))return false;
     for(const auto& [id,lhs]:a.sources) {

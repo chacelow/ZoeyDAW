@@ -265,6 +265,33 @@ pub async fn all_notes_off<D: MainThreadDispatcher>(&self, main: &D, lease_id: S
 pub async fn telemetry<D: MainThreadDispatcher>(&self, main: &D, lease_id: String) -> Result<Value, String> {
     self.invoke(main, "telemetry", json!({"leaseId": lease_id})).await
 }
+pub async fn diagnostics<D: MainThreadDispatcher>(&self, main: &D) -> Result<Value, String> {
+    self.invoke(main, "diagnostics", json!({})).await
+}
+pub async fn native_meter_snapshot<D: MainThreadDispatcher>(&self, main: &D, lease_id: String, session_id: String) -> Result<Value, String> {
+    let registry_json = self.invoke(main, "meter_registry", json!({"leaseId": lease_id, "sessionId": session_id})).await?;
+    let registry: crate::realtime::native_reader::NativeMeterRegistry = serde_json::from_value(registry_json.clone()).map_err(|error| error.to_string())?;
+    let entries = registry_json["entries"].as_array().cloned().ok_or("Meter registry has no entries")?;
+    let owner = self.clone();
+    let lease_for_main = lease_id.clone();
+    let session_for_main = session_id.clone();
+    let (send, receive) = oneshot::channel();
+    main.dispatch(move || {
+        let result = (|| {
+            let mut reader = owner.acquire_meter_reader_on_main(&lease_for_main, &session_for_main, &registry)?;
+            let values = reader.read()?.to_vec();
+            let records = entries.iter().zip(values).filter_map(|(entry, publication)| {
+                let publication = publication?;
+                let epoch = publication.current.energy;
+                let rms = if epoch.frames == 0 { 0.0 } else { (epoch.sum_squares / epoch.frames as f64).sqrt() };
+                Some(json!({"slotId":entry["slotId"],"endpointId":entry["endpointId"],"ownerId":entry["ownerId"],"kind":entry["kind"],"peak":publication.current.display_peak,"rms":rms,"frames":epoch.frames,"available":publication.available}))
+            }).collect::<Vec<_>>();
+            Ok(json!({"deviceEpoch":registry.device_epoch,"generation":registry.generation,"registryRevision":registry.registry_revision,"records":records}))
+        })();
+        let _ = send.send(result);
+    }).map_err(|error| error.to_string())?;
+    receive.await.map_err(|_| "Meter snapshot request was cancelled".to_owned())?
+}
 
 pub async fn plugin_editor_authority<D: MainThreadDispatcher>(&self, main: &D, session_id: String, device_id: String, context: usize, instance: u64, active: bool) -> Result<(), String> {
     self.invoke(main, "plugin_editor_authority", json!({"sessionId":session_id,"deviceId":device_id,"context":context.to_string(),"instanceId":instance.to_string(),"active":active})).await.map(|_| ())

@@ -21,7 +21,8 @@ V EngineSession::apply(const V& v) {
     if(opening)publishPendingStopOwner({lease.toStdString(),r.session.toStdString()});
     struct ClearPending { EngineSession& owner; bool active; ~ClearPending() { if(active)owner.publishPendingStopOwner({}); } } clearPending {*this,opening};
     if(opening && fence<pendingOwnerStopEpoch.load(std::memory_order_acquire))return result(r,false,"superseded-open");
-    const bool replace=opening || !accepted || !sameGraph(r,*accepted,true);
+    const bool deviceGraphChanged=!accepted || !sameDeviceGraph(r,*accepted);
+    const bool replace=opening || !accepted || !sameGraph(r,*accepted,true) || deviceGraphChanged;
     for(const auto& track:r.tracks)for(const auto& device:track.devices)if(const auto* external=std::get_if<ExternalSettings>(&device.settings)) {
         te::Plugin* retained=nullptr;
         if(!replace && arrangement)if(const auto found=arrangement->devices.find(device.id);found!=arrangement->devices.end())retained=found->second.get();

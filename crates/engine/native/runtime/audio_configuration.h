@@ -19,4 +19,5 @@ juce::File audioConfigurationFile();
 void requireAudioInputPermission(bool requestIfUndetermined);
 struct AudioHardwareDefaults { double sampleRate; int bufferFrames; };
 std::optional<AudioHardwareDefaults> audioHardwareDefaults(const juce::String& host, const juce::String& outputName);
+int graphBlockSize(int deviceBufferFrames);
 }
