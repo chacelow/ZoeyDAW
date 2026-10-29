@@ -1,3 +1,4 @@
+import { useRef } from "react"
 import { useTranslation } from "@zoeymind/i18n"
 import { DragPadToggle } from "@zoeymind/ui"
 import { projectActions } from "@/pages/project/adapters"
@@ -10,6 +11,7 @@ export function TrackActions({
   readonly track: Track
   readonly tracks: readonly Track[]
 }) {
+  const armAdditive = useRef(false)
   const { t } = useTranslation()
   const label =
     track.kind === "return"
@@ -38,15 +40,22 @@ export function TrackActions({
         className="w-full min-w-0 px-0"
       />
       {(track.kind === "audio" || track.kind === "midi") && (
-        <DragPadToggle
-          size="compact"
-          label={`${t("arrangement.recordArm")} ${track.name}`}
-          value={track.armed}
-          onChange={armed => projectActions.updateTrack(track.id, { armed })}
-          icon={<span className="size-3/4 rounded-full bg-current" />}
-          color="var(--destructive)"
-          className="w-full min-w-0 px-0"
-        />
+        <span
+          className="contents"
+          onPointerDownCapture={event => {
+            armAdditive.current = event.ctrlKey || event.metaKey
+          }}
+        >
+          <DragPadToggle
+            size="compact"
+            label={`${t("arrangement.recordArm")} ${track.name}`}
+            value={track.armed}
+            onChange={armed => projectActions.setTrackArmed(track.id, armed, armAdditive.current)}
+            icon={<span className="size-3/4 rounded-full bg-current" />}
+            color="var(--destructive)"
+            className="w-full min-w-0 px-0"
+          />
+        </span>
       )}
       {track.kind === "group" && <span aria-hidden className="min-w-0" />}
       {track.kind === "return" && (

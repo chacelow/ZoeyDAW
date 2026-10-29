@@ -4,6 +4,18 @@ import { get, session, tracks, updateTrack } from "./context"
 
 export const trackActions = {
   updateTrack,
+  setTrackArmed(id: string, armed: boolean, additive = false) {
+    const source = get().document.tracks
+    tracks(
+      source.map(track =>
+        track.id === id
+          ? { ...track, armed }
+          : !additive && armed && (track.kind === "audio" || track.kind === "midi")
+            ? { ...track, armed: false }
+            : track
+      )
+    )
+  },
   addTrack(kind: "audio" | "midi" | "group" | "return", parentId?: string): string {
     const source = get().document.tracks
     const parent = source.find(track => track.id === parentId && track.kind === "group")

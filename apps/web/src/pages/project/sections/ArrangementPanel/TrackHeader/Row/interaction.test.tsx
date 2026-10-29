@@ -301,6 +301,24 @@ it("keeps a single track on plain click and toggles additive selection with Ctrl
   fireEvent.pointerDown(view.getByText("3 Audio"), { bubbles: true, button: 0, ctrlKey: true })
   expect(useProjectState.getState().session.selectedTrackIds).toEqual(["4-midi"])
 })
+it("uses exclusive Arm clicks and additive Ctrl Arm clicks", () => {
+  const view = render(
+    <>
+      <Row id="3-audio" />
+      <Row id="4-midi" />
+    </>
+  )
+  fireEvent.click(view.getByLabelText("Record arm 3 Audio"))
+  expect(current("3-audio").armed).toBe(true)
+  fireEvent.click(view.getByLabelText("Record arm 4 MIDI"))
+  expect(current("3-audio").armed).toBe(false)
+  expect(current("4-midi").armed).toBe(true)
+  const audioArm = view.getByLabelText("Record arm 3 Audio")
+  fireEvent.pointerDown(audioArm, { bubbles: true, button: 0, ctrlKey: true })
+  fireEvent.click(audioArm, { bubbles: true, button: 0, ctrlKey: true })
+  expect(current("3-audio").armed).toBe(true)
+  expect(current("4-midi").armed).toBe(true)
+})
 
 it("does not capture portaled automation menu items as track resize gestures", async () => {
   projectActions.setMode("automationMode", true)
