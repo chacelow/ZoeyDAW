@@ -59,7 +59,7 @@ export function useAudioDeviceSettings() {
   const capabilityGeneration = useRef({ value: 0 })
   const available = nativeAudio.available()
   const device = status.device
-  const busy = operation !== "idle"
+  const busy = operation === "panel"
   const host = draft?.host
   const inputDeviceId = draft?.inputDeviceId ?? null
   const outputDeviceId = draft?.outputDeviceId ?? null
@@ -214,17 +214,19 @@ export function useAudioDeviceSettings() {
       !draft ||
       !valid ||
       !configurationChanged ||
-      operation !== "idle" ||
+      operation === "panel" ||
       editRevision === 0 ||
       lastAttempt.current === editRevision
     )
       return
     lastAttempt.current = editRevision
     const request = draft
+    const requestRevision = draftRevision.current
     void runDeviceOperation(
       "applying",
       () => nativeAudio.configureDevice(request),
       next => {
+        if (draftRevision.current !== requestRevision) return
         if (next.state === "ready" && next.configuration) {
           setDraft(next.configuration)
           setPreview({ kind: "ready", value: next.capabilities })
@@ -233,7 +235,10 @@ export function useAudioDeviceSettings() {
           setError(next.error ?? t("audioSettings.notApplied"))
         }
       },
-      () => setDraft(device ? initialDraft(device) : null)
+      () => {
+        if (draftRevision.current === requestRevision)
+          setDraft(device ? initialDraft(device) : null)
+      }
     )
   }, [
     available,
