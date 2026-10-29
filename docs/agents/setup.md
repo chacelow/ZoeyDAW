@@ -82,7 +82,7 @@ cargo test --workspace --locked
 
 `cargo run -p zoeydaw-engine --example vital_engine_smoke --locked` 是真实 Windows Vital 功能 adapter。它从授权 catalog 准备 Vital CLAP，自动选择可用输出设备，提交 external instrument graph，发送 note-on/off，读取 ACK、helper callback/failure/latency、Tracktion graph format、Device/Track/Main meter RMS/peak 和释放结果。它不依赖 WebUI 或桌面坐标；输出 JSON，失败返回非零退出码。该入口使用 graph quantum `round(deviceBufferFrames * 1.1)`，与 Tracktion `EditPlaybackContext` 的 max speed compensation 保持一致。
 
-`cargo run -p zoeydaw-engine --example audio_settings_cli --locked -- devices|capabilities|configure|benchmark` 是音频设置 CLI adapter。它复用同一个 `PlaybackService`、主线程 dispatcher、设备 capabilities 和 configure 边界，输出机器可读 JSON。`benchmark` 分别报告 devices、capabilities、configure、readback 和 total 耗时；`configure` 读取 `--config PATH`，`capabilities` 接受 `--host HOST --output DEVICE_ID [--input DEVICE_ID]`。它不依赖 WebUI，不模拟电平，不覆盖用户配置文件。
+`pnpm zoeydaw -- audio devices|capabilities|configure|benchmark` 是稳定的 Agent CLI adapter。它复用同一个 `PlaybackService`、主线程 dispatcher、设备 capabilities 和 configure 边界，输出机器可读 JSON。`benchmark` 分别报告 devices、capabilities、configure、readback 和 total 耗时；`configure` 读取 `--config PATH`，`capabilities` 接受 `--host HOST --output DEVICE_ID [--input DEVICE_ID]`。后续工程编辑命令沿同一 `zoeydaw` 命令树扩展。底层 `vital_engine_smoke` 仍是 native 回归入口，不是面向 Agent 的工程编辑 API。
 
 ```sh
 cmake -S crates/engine/native -B target/windows-native-clock -DZOEYDAW_PLAYBACK_TESTS=ON -DZOEYDAW_PLAYBACK_SMOKE=OFF

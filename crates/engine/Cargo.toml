@@ -11,9 +11,6 @@ serde_json = "1.0"
 futures-channel = "0.3.31"
 zoeydaw-plugin-abi = { path = "../plugin-abi" }
 arc-swap = "=1.9.3"
-[[example]]
-name = "audio_settings_cli"
-path = "examples/audio_settings_cli.rs"
 
 [build-dependencies]
 cmake = "0.1.54"

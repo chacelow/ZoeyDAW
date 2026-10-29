@@ -1,13 +1,13 @@
+use crate::{MainThreadDispatcher, PlaybackService};
 use serde_json::{json, Value};
 use std::{
     collections::VecDeque,
-    env, fs,
+    fs,
     future::Future,
     sync::{Arc, Mutex},
     task::{Context, Poll, Wake, Waker},
     time::Instant,
 };
-use zoeydaw_engine::{MainThreadDispatcher, PlaybackService};
 
 #[derive(Default)]
 struct MainQueue(Mutex<VecDeque<Box<dyn FnOnce() + Send>>>);
@@ -16,7 +16,7 @@ impl MainThreadDispatcher for MainQueue {
     fn dispatch(&self, action: impl FnOnce() + Send + 'static) -> Result<(), String> {
         self.0
             .lock()
-            .map_err(|_| "Audio settings CLI main queue poisoned")?
+            .map_err(|_| "zoeydaw CLI main queue poisoned")?
             .push_back(Box::new(action));
         Ok(())
     }
@@ -27,9 +27,9 @@ impl MainQueue {
         let action = self
             .0
             .lock()
-            .map_err(|_| "Audio settings CLI main queue poisoned")?
+            .map_err(|_| "zoeydaw CLI main queue poisoned")?
             .pop_front()
-            .ok_or("Audio settings CLI main queue was empty")?;
+            .ok_or("zoeydaw CLI main queue was empty")?;
         action();
         Ok(())
     }
@@ -57,6 +57,13 @@ fn elapsed_ms(start: Instant) -> f64 {
     start.elapsed().as_secs_f64() * 1000.0
 }
 
+fn value_after<'a>(args: &'a [String], name: &str) -> Result<&'a str, String> {
+    args.windows(2)
+        .find(|pair| pair[0] == name)
+        .map(|pair| pair[1].as_str())
+        .ok_or_else(|| format!("Missing {name}"))
+}
+
 fn capabilities_request(args: &[String]) -> Result<Value, String> {
     let host = value_after(args, "--host")?.to_owned();
     let output = value_after(args, "--output")?.to_owned();
@@ -71,42 +78,26 @@ fn capabilities_request(args: &[String]) -> Result<Value, String> {
     }))
 }
 
-fn value_after<'a>(args: &'a [String], name: &str) -> Result<&'a str, String> {
-    args.windows(2)
-        .find(|pair| pair[0] == name)
-        .map(|pair| pair[1].as_str())
-        .ok_or_else(|| format!("Missing {name}"))
-}
-
 fn devices(service: &PlaybackService, queue: &MainQueue) -> Result<Value, String> {
     drive(service.devices(queue), queue)?
 }
 
-fn main() {
-    if let Err(error) = run() {
-        eprintln!("audio_settings_cli: {error}");
-        std::process::exit(1);
-    }
-}
-
-fn run() -> Result<(), String> {
-    let args: Vec<String> = env::args().skip(1).collect();
+fn run_audio(args: &[String]) -> Result<(), String> {
     let action = args.first().map(String::as_str).unwrap_or("benchmark");
     let service = PlaybackService::default();
     let queue = MainQueue::default();
     let started = Instant::now();
-
     let result = match action {
         "devices" => {
             let request_started = Instant::now();
             let value = devices(&service, &queue)?;
-            json!({"action":"devices","timingsMs":{"devices":elapsed_ms(request_started),"total":elapsed_ms(started)},"result":value})
+            json!({"command":"audio devices","timingsMs":{"devices":elapsed_ms(request_started),"total":elapsed_ms(started)},"result":value})
         }
         "capabilities" => {
             let request = capabilities_request(&args[1..])?;
             let request_started = Instant::now();
             let value = drive(service.device_capabilities(&queue, request.clone()), &queue)??;
-            json!({"action":"capabilities","request":request,"timingsMs":{"capabilities":elapsed_ms(request_started),"total":elapsed_ms(started)},"result":value})
+            json!({"command":"audio capabilities","request":request,"timingsMs":{"capabilities":elapsed_ms(request_started),"total":elapsed_ms(started)},"result":value})
         }
         "configure" => {
             let path = value_after(&args[1..], "--config")?;
@@ -117,7 +108,7 @@ fn run() -> Result<(), String> {
             let applied = drive(service.configure_device(&queue, request.clone()), &queue)??;
             let readback_started = Instant::now();
             let readback = devices(&service, &queue)?;
-            json!({"action":"configure","request":request,"timingsMs":{"configure":elapsed_ms(configure_started),"readback":elapsed_ms(readback_started),"total":elapsed_ms(started)},"result":applied,"readback":readback})
+            json!({"command":"audio configure","request":request,"timingsMs":{"configure":elapsed_ms(configure_started),"readback":elapsed_ms(readback_started),"total":elapsed_ms(started)},"result":applied,"readback":readback})
         }
         "benchmark" => {
             let discovery_started = Instant::now();
@@ -171,7 +162,7 @@ fn run() -> Result<(), String> {
                 ));
             }
             json!({
-                "action":"benchmark",
+                "command":"audio benchmark",
                 "request":config,
                 "timingsMs":{"devices":discovery_ms,"capabilities":capabilities_ms,"configure":configure_ms,"readback":readback_ms,"total":elapsed_ms(started)},
                 "assertions":{"readbackUnder250ms":true},
@@ -179,15 +170,22 @@ fn run() -> Result<(), String> {
                 "readback":readback,
             })
         }
-        _ => {
-            return Err(
-                "Usage: audio_settings_cli [devices|capabilities|configure|benchmark]".into(),
-            )
-        }
+        _ => return Err("Usage: zoeydaw audio [devices|capabilities|configure|benchmark]".into()),
     };
     println!(
         "{}",
         serde_json::to_string_pretty(&result).map_err(|error| error.to_string())?
     );
     Ok(())
+}
+
+pub fn run<I>(args: I) -> Result<(), String>
+where
+    I: IntoIterator<Item = String>,
+{
+    let args: Vec<String> = args.into_iter().collect();
+    match args.first().map(String::as_str) {
+        Some("audio") => run_audio(&args[1..]),
+        _ => Err("Usage: zoeydaw audio [devices|capabilities|configure|benchmark]".into()),
+    }
 }
