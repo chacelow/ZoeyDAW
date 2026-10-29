@@ -44,6 +44,16 @@ someModule/
 
 UI 与 hook 通过公开 selector 和命令访问业务状态；业务 runtime 通过接口使用外部 adapter。通用层不反向依赖具体页面。应用组合层可以将功能数据适配为通用组件的 props；通用组件本身不读取功能私有 Store。
 
+## 功能 CLI adapter 与原子验收
+
+每个可验证的功能实现必须有对应的 CLI 子功能，CLI 不是临时脚本而是该功能的功能 adapter 和原子验收入口。CLI adapter 放在拥有该领域的 `crates/<owner>/examples/<feature>_smoke.rs`、`crates/<owner>/src/bin/<feature>.rs` 或已有 `scripts/<domain>/` 入口中，命名必须包含业务动作，不使用泛化的 `test`、`debug` 或 `helper`。
+
+CLI adapter 与 Web adapter 共享同一请求 schema、Rust/native adapter、状态 owner、错误分类和资源生命周期。Web 只做 IPC 与界面边界映射；CLI 直接调用同一 Rust/native 边界。禁止为 CLI 复制第二套事务、队列、音频时钟、meter 或插件处理逻辑。
+
+一个 CLI 子功能必须在同一进程或明确的受控进程链中完成准备、动作、结果断言和释放，输出机器可读结果并以非零退出码表示失败。它必须能验证真实状态、PCM、MIDI、meter、ACK、延迟、队列和资源释放；不能依赖坐标点击、WebView timer、固定 sleep、模拟电平或 UI 文案。
+
+功能开发顺序固定为 `domain owner → Rust/native adapter → CLI adapter → Web adapter → UI`。先用 CLI adapter 证明功能闭环，再用 Web adapter 接线，最后用 WebUI 验收呈现和交互。性能基准优先在 CLI adapter 测量 typed/native 路径，记录 callback deadline、队列深度、PCM/meter、延迟、分配和释放结果；WebUI 测试不能替代这些证明。
+
 Rust 核心由根 Cargo workspace 约束。`crates/media` 拥有媒体身份、完整文件指纹与解码校验；`crates/project` 拥有工程事务、取消与发布状态，并依赖 media；`crates/browser` 拥有目录扫描、索引与持久化，不解码媒体；`crates/engine` 拥有播放 lease、generation、FFI 与 native build。核心 crate 不依赖 Tauri。`src-tauri/src` 只在命令边界调度主线程或 blocking worker，并保持原 IPC 字段。
 
 工程保存先注册 `SaveOperation`，再进入 worker；取消与发布共享一个原子状态。引擎通过 `MainThreadDispatcher` 创建和调用进程期保留的 native session，release 关闭资源而不在任意线程销毁 owner。声卡仍由唯一 Tracktion Engine 管理。

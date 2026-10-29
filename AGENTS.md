@@ -30,6 +30,10 @@ Web-UI DAW。React 实现界面与交互，Tauri 承载桌面壳，唯一 Trackt
 
 ## 设计与完成门槛
 
-多文件/新模块先定数据 owner、生命周期、接口、文件职责与验收，再写代码；细则见 modules。单次 plan 留在 Session，持久文档只保存契约与可复用经验。
+多文件/新模块先定数据 owner、生命周期、接口、文件职责与验收，再写代码；细则见 modules。单次 plan 留在 Session，持久文档只保存契约与可复用经验。所有可验证的业务实现必须同时提供一个不依赖 WebUI 的 CLI 子功能。CLI adapter 是该功能的原子验收入口，直接调用同一 Rust/native adapter、请求 schema 和状态 owner；不得复制一套只服务测试的业务逻辑。
+
+CLI adapter 必须完成准备、动作、结果断言和资源释放，成功输出机器可读结果，失败使用非零退出码。验证不得依赖坐标点击、WebView timer、固定 sleep 或模拟 meter。Web adapter 与 CLI adapter 只负责边界映射，核心规则、事务、队列、音频时钟和错误语义由 Rust/native owner 共享。
+
+性能验收优先走 CLI adapter 的 typed/native 路径，记录真实 callback、队列、PCM、meter、延迟和资源释放指标；WebUI 只做最后的呈现与交互验收，不作为唯一功能证明。
 
 相关类型、测试与工具链检查通过后，UI 还须在已有应用/页面上验证主路径并观察实际结果。只报告运行过的验证；不把模拟电平、接口或占位能力称为已接通的音频引擎。稳定契约变化更新对应文档，反馈错题进入 LESSONS。
