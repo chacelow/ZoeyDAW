@@ -1,5 +1,6 @@
 import { useMemo, useSyncExternalStore } from "react"
 import { useTranslation } from "@zoeymind/i18n"
+import { DEVICE_VIEW_HEIGHT } from "../detail-view"
 import type { WorkspaceController } from "./WorkspaceController"
 import { WorkspacePanel } from "./WorkspacePanels"
 import { WorkspaceHeading } from "./WorkspaceActions"
@@ -44,6 +45,7 @@ export function ProjectWorkspace({ controller }: { readonly controller: Workspac
       devices: {
         title: t("workspace.panels.devices", "Devices"),
         minimumSize: 80,
+        fixedContentHeight: DEVICE_VIEW_HEIGHT,
         render: visible => <WorkspacePanel id="devices" visible={visible} />,
       },
     }),

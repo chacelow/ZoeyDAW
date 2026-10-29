@@ -1,5 +1,5 @@
 import { CONTROL_METRICS } from "@zoeymind/ui"
-import { CLIP_VIEW_HEIGHT, CLIP_VIEW_MIN_HEIGHT, DEVICE_VIEW_HEIGHT } from "../detail-view"
+import { CLIP_VIEW_HEIGHT, CLIP_VIEW_MIN_HEIGHT } from "../detail-view"
 import type { SectionId } from "../types"
 import {
   activateTab,
@@ -96,15 +96,7 @@ export class WorkspaceController {
     )
       this.clipHeight = previousBottom.size
     const nextBottom = next.borders.bottom
-    if (nextBottom?.selected === "devices" && previousBottom?.selected !== "devices")
-      next = {
-        ...next,
-        borders: {
-          ...next.borders,
-          bottom: { ...nextBottom, size: DEVICE_VIEW_HEIGHT + dockStrip },
-        },
-      }
-    else if (nextBottom?.selected === "clip" && previousBottom?.selected !== "clip")
+    if (nextBottom?.selected === "clip" && previousBottom?.selected !== "clip")
       next = {
         ...next,
         borders: { ...next.borders, bottom: { ...nextBottom, size: this.clipHeight } },

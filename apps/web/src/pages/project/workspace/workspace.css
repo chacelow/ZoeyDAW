@@ -447,6 +447,11 @@
   cursor: row-resize;
 }
 
+.dock-border-divider-fixed {
+  cursor: default;
+  pointer-events: none;
+}
+
 .dock-content-layer {
   z-index: 5;
   overflow: hidden;

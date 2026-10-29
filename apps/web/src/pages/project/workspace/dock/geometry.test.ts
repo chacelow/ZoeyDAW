@@ -59,4 +59,27 @@ describe("dock geometry", () => {
       },
     })
   })
+
+  test("uses the selected panel's fixed content height without changing resizable panels", () => {
+    const layout: Pick<DockLayoutJSON, "borders" | "maximizedGroup"> = {
+      maximizedGroup: null,
+      borders: {
+        left: border([], null),
+        right: border([], null),
+        bottom: border(["devices"], "devices"),
+      },
+    }
+    expect(borderGeometry(layout, bounds, 20, 6, 80, 184).boxes.bottom).toEqual({
+      x: 30,
+      y: 196,
+      width: 560,
+      height: 204,
+    })
+    expect(borderGeometry(layout, bounds, 20, 6, 80).boxes.bottom).toEqual({
+      x: 30,
+      y: 280,
+      width: 560,
+      height: 120,
+    })
+  })
 })

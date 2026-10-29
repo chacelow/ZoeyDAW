@@ -6,7 +6,8 @@ export function borderGeometry(
   root: DockBounds,
   railSize: number,
   separatorWidth: number,
-  minimumSize: number
+  minimumSize: number,
+  fixedBottomContentHeight?: number
 ) {
   const railBounds = borderRailBounds(layout, root, railSize)
   const rails = {
@@ -30,7 +31,13 @@ export function borderGeometry(
   }
   const bottom = layout.borders.bottom
   if (bottom?.selected && bottom.visible !== false && bottom.type === "split")
-    sizes.bottom = Math.max(0, Math.min(bottom.size, area.height - minimumSize - separatorWidth))
+    sizes.bottom = Math.max(
+      0,
+      Math.min(
+        fixedBottomContentHeight === undefined ? bottom.size : fixedBottomContentHeight + railSize,
+        area.height - minimumSize - separatorWidth
+      )
+    )
   const line = (side: DockBorderSide) => (sizes[side] > 0 ? separatorWidth : 0)
   const main = {
     x: area.x + sizes.left + line("left"),

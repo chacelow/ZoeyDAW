@@ -239,6 +239,7 @@ export function DockBorderPanel({
   const border = layout.borders[side]
   if (!border?.selected || !asPanel(border.selected)) return null
   const selected = border.selected
+  const resizable = registry[selected].fixedContentHeight === undefined
   const vertical = side !== "bottom"
   const groupId = borderGroupId(side)
   return (
@@ -265,25 +266,31 @@ export function DockBorderPanel({
       <div
         role="separator"
         aria-orientation={vertical ? "vertical" : "horizontal"}
-        className={`dock-border-divider dock-border-divider-${side}`}
+        className={cn(
+          `dock-border-divider dock-border-divider-${side}`,
+          !resizable && "dock-border-divider-fixed"
+        )}
         data-testid={`dock-border-divider-${side}`}
-        onPointerDown={event =>
-          resize.start(
-            {
-              kind: "border",
-              side,
-              start: vertical ? event.clientX : event.clientY,
-              size: border.size,
-              minimum: registry[selected].minimumSize,
-              pointer: event.pointerId,
-            },
-            event
-          )
+        onPointerDown={
+          resizable
+            ? event =>
+                resize.start(
+                  {
+                    kind: "border",
+                    side,
+                    start: vertical ? event.clientX : event.clientY,
+                    size: border.size,
+                    minimum: registry[selected].minimumSize,
+                    pointer: event.pointerId,
+                  },
+                  event
+                )
+            : undefined
         }
-        onPointerMove={resize.move}
-        onPointerUp={resize.release}
-        onPointerCancel={resize.cancel}
-        onDoubleClick={() => resize.toggle?.(side)}
+        onPointerMove={resizable ? resize.move : undefined}
+        onPointerUp={resizable ? resize.release : undefined}
+        onPointerCancel={resizable ? resize.cancel : undefined}
+        onDoubleClick={resizable ? () => resize.toggle?.(side) : undefined}
       />
     </div>
   )

@@ -20,6 +20,7 @@ import { DockBorderPanel, DockBorderRail } from "./DockBorders"
 import { DockPanelLayers } from "./DockPanelLayers"
 import { DockDropPreview } from "./DockDropPreview"
 import {
+  asPanel,
   borderDefaultSize,
   boxStyle,
   dockStyle,
@@ -35,6 +36,7 @@ export interface DockRegistration {
   readonly title: string
   readonly render: (visible: boolean) => ReactNode
   readonly minimumSize: number
+  readonly fixedContentHeight?: number
 }
 export type DockRegistry = Readonly<Record<SectionId, DockRegistration>>
 export interface DockLabels {
@@ -150,9 +152,13 @@ export function DockLayout({ layout, registry, labels, onLayoutChange }: Props) 
     if (next) focusTab(next.active)
     else setFocusedTab(null)
   }, [layout, focusedTab])
+  const fixedBottomSize = (() => {
+    const selected = current.borders.bottom?.selected
+    return selected && asPanel(selected) ? registry[selected].fixedContentHeight : undefined
+  })()
   const { main, boxes } = useMemo(
-    () => borderGeometry(current, root, strip, gap, minimumSize),
-    [current, root]
+    () => borderGeometry(current, root, strip, gap, minimumSize, fixedBottomSize),
+    [current, fixedBottomSize, root]
   )
   const maximized = current.maximizedGroup
     ? (findGroup(current, current.maximizedGroup) ?? null)
