@@ -85,6 +85,40 @@ function SelectField({
   )
 }
 
+function TextSelectField({
+  clipId,
+  field,
+  label,
+  value,
+  options,
+}: {
+  readonly clipId: string
+  readonly field: "scaleRoot" | "scaleMode"
+  readonly label: string
+  readonly value: string
+  readonly options: readonly string[]
+}) {
+  return (
+    <label className="gap-control-gap flex min-w-0 flex-col">
+      <span className="text-muted-foreground min-w-0 truncate">{label}</span>
+      <select
+        aria-label={label}
+        className="border-border bg-input/30 text-foreground h-control-h px-control-pad-x rounded-sm border"
+        value={value}
+        onChange={event =>
+          projectActions.updateClip(clipId, { [field]: event.currentTarget.value })
+        }
+      >
+        {options.map(option => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
 function ReadonlyField({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div className="gap-control-gap flex min-w-0 flex-col">
@@ -175,9 +209,19 @@ export function ClipProperties({
           step={1}
           format={number => `${number}%`}
         />
-        <ReadonlyField
-          label={t("detailMidi.scale")}
-          value={`${clip.scaleRoot ?? document.scaleRoot} ${clip.scaleMode ?? document.scaleMode}`}
+        <TextSelectField
+          clipId={clipId}
+          field="scaleRoot"
+          label={t("detailMidi.scaleRoot")}
+          value={clip.scaleRoot ?? document.scaleRoot}
+          options={["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]}
+        />
+        <TextSelectField
+          clipId={clipId}
+          field="scaleMode"
+          label={t("detailMidi.scaleMode")}
+          value={clip.scaleMode ?? document.scaleMode}
+          options={["Major", "Minor", "Dorian", "Mixolydian", "Lydian", "Phrygian", "Locrian"]}
         />
       </div>
       <p className="text-muted-foreground text-[length:var(--text-control)] leading-relaxed">

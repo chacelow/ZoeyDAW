@@ -8,7 +8,8 @@ export default {
   length: "Length",
   signature: "Signature",
   signatureDenominator: "Denominator",
-  scale: "Scale",
+  scaleRoot: "Scale root",
+  scaleMode: "Scale mode",
   sourceOffset: "Source offset",
   placementHelp:
     "Start and length are bars and accept fractional values; source offset chooses playback origin.",
