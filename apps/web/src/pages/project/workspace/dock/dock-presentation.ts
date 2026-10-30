@@ -9,6 +9,7 @@ export const unit = CONTROL_METRICS.default["--spacing-control-track"]
 export const strip = unit * 2
 export const borderDefaultSize = unit * 20
 export const minimumSize = unit * 4
+export const borderCollapseThreshold = 96
 export const gap = 1
 export const iconById = {
   browser: FolderSearch,

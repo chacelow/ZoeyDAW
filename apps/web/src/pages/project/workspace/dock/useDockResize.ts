@@ -9,7 +9,7 @@ import {
   type DockBounds,
   type DockLayoutJSON,
 } from "./model"
-import { minimumSize, strip } from "./dock-presentation"
+import { borderCollapseThreshold, minimumSize, strip } from "./dock-presentation"
 
 type ResizePointer = { pointer: number; start: number }
 type PointerMove = Pick<globalThis.PointerEvent, "pointerId" | "clientX" | "clientY">
@@ -87,7 +87,7 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
       const delta = (horizontal ? event.clientX : event.clientY) - state.start
       if (state.kind === "collapsed") {
         setPreview(
-          state.side === "bottom" && delta < -30
+          state.side === "bottom" && delta < -borderCollapseThreshold
             ? expandCollapsedBorder(state.base, state.side)
             : state.base
         )
@@ -96,7 +96,9 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
       if (state.kind === "border") {
         if (state.side === "bottom") {
           if (state.fixed) {
-            setPreview(delta > 30 ? collapseBorderTab(state.base, "bottom") : state.base)
+            setPreview(
+              delta > borderCollapseThreshold ? collapseBorderTab(state.base, "bottom") : state.base
+            )
           } else {
             setPreview(resizeBorder(state.base, "bottom", state.size - delta))
           }
@@ -130,13 +132,13 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
       resize.current = null
       setCursor(null)
       if (state.kind === "collapsed") {
-        if (state.side === "bottom" && event.clientY - state.start < -30)
+        if (state.side === "bottom" && event.clientY - state.start < -borderCollapseThreshold)
           commit(expandCollapsedBorder(state.base, state.side))
         return
       }
       if (state.kind === "border" && state.side === "bottom") {
         const delta = event.clientY - state.start
-        if (state.fixed && delta > 30) {
+        if (state.fixed && delta > borderCollapseThreshold) {
           commit(collapseBorderTab(state.base, "bottom"))
           return
         }
