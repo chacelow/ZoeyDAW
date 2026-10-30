@@ -198,7 +198,13 @@ export function DockBorderRail({
           aria-orientation="horizontal"
           onPointerDown={event =>
             resize.start(
-              { kind: "collapsed", side, start: event.clientY, pointer: event.pointerId },
+              {
+                kind: "collapsed",
+                side,
+                start: event.clientY,
+                pointer: event.pointerId,
+                base: layout,
+              },
               event
             )
           }
@@ -299,6 +305,7 @@ export function DockBorderPanel({
               size: border.size,
               minimum: registry[selected].minimumSize,
               fixed: !resizable,
+              base: layout,
               pointer: event.pointerId,
             },
             event
