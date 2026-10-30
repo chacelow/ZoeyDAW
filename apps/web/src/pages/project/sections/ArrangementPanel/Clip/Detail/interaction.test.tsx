@@ -198,6 +198,22 @@ it("edits the shared loop through existing MIDI controls without changing placem
   expect(patternSource("pattern-linked").loopBars).toBe(1)
 })
 
+it("shows and edits shared Clip properties before MIDI-only settings", () => {
+  const view = render(<Editor />)
+  expect(view.getByText("detailMidi.clip")).toBeTruthy()
+  expect(view.getByRole("button", { name: "detailMidi.start" })).toBeTruthy()
+  expect(view.getByText("detailMidi.end")).toBeTruthy()
+  expect(view.getByRole("button", { name: "detailMidi.signature" })).toBeTruthy()
+  expect(view.getByRole("button", { name: "detailMidi.groove" })).toBeTruthy()
+  expect(view.getByRole("combobox", { name: "detailMidi.signatureDenominator" })).toBeTruthy()
+  expect(view.getByRole("spinbutton", { name: "detailMidi.loopBars" })).toBeTruthy()
+
+  fireEvent.change(view.getByRole("combobox", { name: "detailMidi.signatureDenominator" }), {
+    target: { value: "8" },
+  })
+  expect(patternClip().signatureDenominator).toBe(8)
+})
+
 it("edits one shared source rather than allocating repeat notes for a long Pattern clip", () => {
   projectActions.updateClip("pattern-test", {
     lengthBars: 4,

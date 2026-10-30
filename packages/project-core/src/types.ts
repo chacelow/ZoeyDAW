@@ -45,6 +45,11 @@ export interface ClipBase {
   Muted clips stay visible but render greyed out and contribute no audio.
   */
   mute?: boolean
+  signatureNumerator?: number
+  signatureDenominator?: number
+  groove?: number
+  scaleRoot?: string
+  scaleMode?: string
 }
 export interface AudioClip extends ClipBase {
   kind: "audio"

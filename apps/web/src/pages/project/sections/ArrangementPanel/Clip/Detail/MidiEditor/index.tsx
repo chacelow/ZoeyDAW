@@ -8,16 +8,18 @@ import { PianoKeyboard } from "./PianoKeyboard"
 import { MidiRuler } from "./MidiRuler"
 import { VelocityLane } from "./VelocityLane"
 import { isBlackKey, KEY_WIDTH, RULER_HEIGHT, VELOCITY_HEIGHT } from "./geometry"
-import type { MidiClipContent, PatternClipContent } from "@zoeydaw/project-core/types"
+import type { Clip, MidiClipContent, PatternClipContent } from "@zoeydaw/project-core/types"
 
 export function MidiEditor({
   clip,
   sourceClip = clip,
+  placementClip,
   numerator,
   color,
 }: {
   readonly clip: MidiClipContent
   readonly sourceClip?: MidiClipContent | PatternClipContent
+  readonly placementClip?: Clip
   readonly numerator: number
   readonly color: string
 }) {
@@ -36,6 +38,7 @@ export function MidiEditor({
       <MidiParameters
         clip={clip}
         sourceClip={sourceClip}
+        placementClip={placementClip}
         color={color}
         gridStep={t("detailMidi.gridStep")}
         selectedCount={editor.visibleSelection.length}

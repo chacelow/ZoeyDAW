@@ -8,15 +8,23 @@ const text = (value: unknown): value is string => typeof value === "string"
 const number = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value)
 const positive = (value: unknown): value is number => number(value) && value > 0
+const validSignature = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 32
+const validDenominator = (value: unknown): value is number =>
+  validSignature(value) && (value & (value - 1)) === 0
+const validText = (value: unknown): value is string => typeof value === "string" && value.length > 0
 function isClipData(v: unknown): v is ClipContent {
   if (
     !record(v) ||
     !text(v.id) ||
     !positive(v.lengthBars) ||
     (v.sourceOffsetBars !== undefined && !number(v.sourceOffsetBars)) ||
-    (v.label !== undefined && !text(v.label)) ||
-    (v.color !== undefined && !text(v.color)) ||
-    (v.mute !== undefined && typeof v.mute !== "boolean")
+    (v.mute !== undefined && typeof v.mute !== "boolean") ||
+    (v.signatureNumerator !== undefined && !validSignature(v.signatureNumerator)) ||
+    (v.signatureDenominator !== undefined && !validDenominator(v.signatureDenominator)) ||
+    (v.groove !== undefined && (!number(v.groove) || v.groove < 0 || v.groove > 100)) ||
+    (v.scaleRoot !== undefined && !validText(v.scaleRoot)) ||
+    (v.scaleMode !== undefined && !validText(v.scaleMode))
   ) {
     return false
   }
@@ -99,9 +107,16 @@ export function serializeClip(clip: ClipContent): ClipContent {
     ...("startBar" in clip && typeof clip.startBar === "number" ? { startBar: clip.startBar } : {}),
     lengthBars: clip.lengthBars,
     ...(clip.sourceOffsetBars !== undefined && { sourceOffsetBars: clip.sourceOffsetBars }),
-    ...(clip.label !== undefined && { label: clip.label }),
-    ...(clip.color !== undefined && { color: clip.color }),
     ...(clip.mute === true && { mute: true }),
+    ...(clip.signatureNumerator === undefined
+      ? {}
+      : { signatureNumerator: clip.signatureNumerator }),
+    ...(clip.signatureDenominator === undefined
+      ? {}
+      : { signatureDenominator: clip.signatureDenominator }),
+    ...(clip.groove === undefined ? {} : { groove: clip.groove }),
+    ...(clip.scaleRoot === undefined ? {} : { scaleRoot: clip.scaleRoot }),
+    ...(clip.scaleMode === undefined ? {} : { scaleMode: clip.scaleMode }),
   }
   switch (clip.kind) {
     case "audio": {

@@ -1,11 +1,17 @@
 export default {
   title: "MIDI clip settings",
+  clip: "Clip",
   placement: "Placement",
   start: "Start",
+  end: "End",
+  position: "Position",
   length: "Length",
+  signature: "Signature",
+  signatureDenominator: "Denominator",
+  scale: "Scale",
   sourceOffset: "Source offset",
   placementHelp:
-    "Start and length are bars and accept fractional values; the source offset chooses which source bar playback begins at.",
+    "Start and length are bars and accept fractional values; source offset chooses playback origin.",
   loop: "Loop",
   editing: "Editing",
   pianoRoll: "MIDI piano roll",

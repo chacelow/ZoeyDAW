@@ -45,6 +45,7 @@ export function ClipDetail({ clip: requestedClip }: { readonly clip: ClipContent
           key={clip.id}
           clip={resolveMidiClip(clip, patterns)}
           sourceClip={clip}
+          placementClip={location?.kind === "arrangement" ? location.clip : undefined}
           numerator={numerator}
           color={color}
         />
