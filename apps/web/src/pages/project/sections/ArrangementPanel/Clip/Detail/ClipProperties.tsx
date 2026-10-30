@@ -1,9 +1,14 @@
 import { useTranslation } from "@zoeymind/i18n"
 import { DragPadNumber } from "@zoeymind/ui"
 import { projectActions, useProjectEditGesture, useProjectState } from "@/pages/project/adapters"
-import type { Clip, PatternClipContent, MidiClipContent } from "@zoeydaw/project-core/types"
+import type {
+  AudioClipContent,
+  Clip,
+  PatternClipContent,
+  MidiClipContent,
+} from "@zoeydaw/project-core/types"
 
-type SharedClip = MidiClipContent | PatternClipContent
+type SharedClip = AudioClipContent | MidiClipContent | PatternClipContent
 
 type NumberFieldProps = {
   readonly clipId: string

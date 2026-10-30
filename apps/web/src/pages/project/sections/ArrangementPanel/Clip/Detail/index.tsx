@@ -39,7 +39,14 @@ export function ClipDetail({ clip: requestedClip }: { readonly clip: ClipContent
     >
       {/* Each editor owns its header: the clip's color and name sit at the top
           of that editor's card, not in a bar spanning the whole panel. */}
-      {clip.kind === "audio" && <AudioEditor key={clip.id} clip={clip} color={color} />}
+      {clip.kind === "audio" && (
+        <AudioEditor
+          key={clip.id}
+          clip={clip}
+          placementClip={location?.kind === "arrangement" ? location.clip : undefined}
+          color={color}
+        />
+      )}
       {clip.kind !== "audio" && (
         <MidiEditor
           key={clip.id}

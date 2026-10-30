@@ -7,9 +7,10 @@ import { LoopNumber } from "./LoopNumber"
 import { SampleSettingNumber } from "./SampleSettingNumber"
 import { AudioControl } from "./AudioControl"
 import { AudioSection } from "./AudioSection"
+import { ClipProperties } from "@/pages/project/sections/ArrangementPanel/Clip/Detail/ClipProperties"
 import { ClipCardHeader } from "@/pages/project/sections/ArrangementPanel/Clip/Detail/ClipCardHeader"
 import type { AudioClipSettings } from "@zoeydaw/project-core/audio-editor"
-import type { AudioClipContent } from "@zoeydaw/project-core/types"
+import type { AudioClipContent, Clip } from "@zoeydaw/project-core/types"
 import { WarpMarkers } from "../WarpMarkers"
 import type { AudioInspectorMode } from "../useAudioInspectorMode"
 
@@ -244,11 +245,13 @@ function TransformContent({
 export function AudioParameters({
   clip,
   color,
+  placementClip,
   bpm,
   mode,
 }: {
   readonly clip: AudioClipContent
   readonly color: string
+  readonly placementClip?: Clip
   readonly bpm: number
   readonly mode: AudioInspectorMode
 }) {
@@ -271,6 +274,7 @@ export function AudioParameters({
       {mode === "compact" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">
           <AudioSection title={t("detailAudio.clipSection")} defaultOpen>
+            <ClipProperties clip={clip} placementClip={placementClip} />
             <ClipContent clip={clip} bpm={bpm} t={t} />
           </AudioSection>
           <AudioSection title={t("detailAudio.audioSection")} defaultOpen>
@@ -289,6 +293,7 @@ export function AudioParameters({
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-2 overflow-auto">
           <div className="min-w-0 overflow-auto border-r">
+            <ClipProperties clip={clip} placementClip={placementClip} />
             <ClipContent clip={clip} bpm={bpm} t={t} />
           </div>
           <div className="min-w-0 overflow-auto">
