@@ -333,9 +333,14 @@ it("collapses and reopens the fixed Device panel from its bottom divider", () =>
   )!
   expect(divider.className).toContain("dock-border-divider-fixed")
   fireEvent.pointerDown(divider, { pointerId: 34, button: 0, clientX: 400, clientY: 500 })
-  fireEvent.pointerMove(divider, { pointerId: 34, clientX: 400, clientY: 540 })
+  expect(view.container.querySelector("[data-testid='dock']")?.getAttribute("style")).toContain(
+    "cursor: row-resize"
+  )
+  fireEvent.pointerMove(window, { pointerId: 34, clientX: 400, clientY: 540 })
   fireEvent.pointerUp(window, { pointerId: 34, clientX: 400, clientY: 540 })
-  expect(controller.layout.borders.bottom?.selected).toBeNull()
+  expect(view.container.querySelector("[data-testid='dock']")?.getAttribute("style")).not.toContain(
+    "cursor: row-resize"
+  )
   act(() => controller.show("devices"))
   expect(controller.layout.borders.bottom?.selected).toBe("devices")
 })

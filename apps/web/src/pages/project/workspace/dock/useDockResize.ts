@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type PointerEvent } from "react"
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react"
 import {
   collapseBorderTab,
   expandCollapsedBorder,
@@ -44,12 +44,14 @@ interface Options {
 }
 
 export function useDockResize({ layout, root, preview, setPreview, commit }: Options) {
+  const [cursor, setCursor] = useState<string | null>(null)
   const resize = useRef<DockResizeState | null>(null)
   const moveRef = useRef<((event: PointerMove) => void) | null>(null)
   const releaseRef = useRef<((event: PointerRelease) => void) | null>(null)
   const cancel = useCallback(() => {
     if (!resize.current) return false
     resize.current = null
+    setCursor(null)
     setPreview(null)
     return true
   }, [setPreview])
@@ -126,6 +128,7 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
       if (!resize.current || resize.current.pointer !== event.pointerId) return
       const state = resize.current
       resize.current = null
+      setCursor(null)
       if (state.kind === "collapsed") {
         if (state.side === "bottom" && event.clientY - state.start < -30)
           commit(expandCollapsedBorder(state.base, state.side))
@@ -170,10 +173,15 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
   const start = (state: DockResizeState, event: PointerEvent<HTMLElement>) => {
     if (event.button !== 0) return
     resize.current = state
+    setCursor(
+      state.kind === "split" || (state.kind === "border" && state.side !== "bottom")
+        ? "col-resize"
+        : "row-resize"
+    )
     event.currentTarget.setPointerCapture(event.pointerId)
     event.preventDefault()
   }
-  return { start, move, release, cancel, toggle }
+  return { start, move, release, cancel, toggle, cursor }
 }
 export interface DockResize {
   start: (state: DockResizeState, event: PointerEvent<HTMLElement>) => void

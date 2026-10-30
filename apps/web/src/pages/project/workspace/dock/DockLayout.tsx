@@ -190,7 +190,12 @@ export function DockLayout({ layout, registry, labels, onLayoutChange }: Props) 
     />
   )
   return (
-    <div ref={rootRef} className="project-workspace-dock" data-testid="dock" style={dockStyle}>
+    <div
+      ref={rootRef}
+      className="project-workspace-dock"
+      data-testid="dock"
+      style={{ ...dockStyle, cursor: resize.cursor ?? undefined }}
+    >
       <div className="dock-main" style={boxStyle(main, root)}>
         {maximized
           ? renderGroup(maximized, main)
