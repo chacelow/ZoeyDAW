@@ -71,11 +71,24 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
     const horizontal =
       state.kind === "split" || (state.kind === "border" && state.side !== "bottom")
     const delta = (horizontal ? event.clientX : event.clientY) - state.start
-    if (state.kind === "collapsed") return
+    if (state.kind === "collapsed") {
+      if (state.side === "bottom" && delta < -30) {
+        resize.current = null
+        setPreview(null)
+        commit(expandCollapsedBorder(layout, state.side))
+      }
+      return
+    }
     if (state.kind === "border") {
       if (state.side === "bottom") {
         if (state.fixed) {
-          setPreview(layout)
+          if (delta > 30) {
+            resize.current = null
+            setPreview(null)
+            commit(collapseBorderTab(layout, "bottom"))
+          } else {
+            setPreview(layout)
+          }
         } else {
           setPreview(resizeBorder(layout, "bottom", state.size - delta))
         }

@@ -349,15 +349,18 @@ it("reopens a collapsed bottom panel by dragging its rail edge upward", () => {
   )!
   fireEvent.pointerDown(divider, { pointerId: 36, button: 0, clientX: 400, clientY: 540 })
   fireEvent.pointerMove(divider, { pointerId: 36, clientX: 400, clientY: 580 })
-  fireEvent.pointerUp(divider, { pointerId: 36, clientX: 400, clientY: 580 })
   expect(controller.layout.borders.bottom?.selected).toBeNull()
+  expect(
+    view.container.querySelector("[data-testid='dock-collapsed-divider-bottom']")
+  ).not.toBeNull()
+  fireEvent.pointerUp(divider, { pointerId: 36, clientX: 400, clientY: 580 })
   const edge = view.container.querySelector<HTMLElement>(
     "[data-testid='dock-collapsed-divider-bottom']"
   )!
   fireEvent.pointerDown(edge, { pointerId: 37, button: 0, clientX: 400, clientY: 600 })
   fireEvent.pointerMove(edge, { pointerId: 37, clientX: 400, clientY: 560 })
-  fireEvent.pointerUp(edge, { pointerId: 37, clientX: 400, clientY: 560 })
   expect(controller.layout.borders.bottom?.selected).toBe("devices")
+  fireEvent.pointerUp(edge, { pointerId: 37, clientX: 400, clientY: 560 })
 })
 
 it("resizes the selected Clip panel vertically from its bottom divider", () => {
