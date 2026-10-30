@@ -353,9 +353,9 @@ it("reopens a collapsed bottom panel by dragging its rail edge upward", () => {
   expect(
     view.container.querySelector("[data-testid='dock-collapsed-divider-bottom']")
   ).not.toBeNull()
-  fireEvent.pointerMove(divider, { pointerId: 36, clientX: 400, clientY: 550 })
+  fireEvent.pointerMove(window, { pointerId: 36, clientX: 400, clientY: 550 })
   expect(view.container.querySelector("[data-testid='dock-content-devices']")).not.toBeNull()
-  fireEvent.pointerUp(divider, { pointerId: 36, clientX: 400, clientY: 550 })
+  fireEvent.pointerUp(window, { pointerId: 36, clientX: 400, clientY: 550 })
   expect(controller.layout.borders.bottom?.selected).toBe("devices")
 })
 

@@ -12,6 +12,7 @@ import {
 import { minimumSize, strip } from "./dock-presentation"
 
 type ResizePointer = { pointer: number; start: number }
+type PointerMove = Pick<globalThis.PointerEvent, "pointerId" | "clientX" | "clientY">
 type PointerRelease = Pick<globalThis.PointerEvent, "pointerId" | "clientY">
 export type DockResizeState = ResizePointer &
   (
@@ -44,6 +45,7 @@ interface Options {
 
 export function useDockResize({ layout, root, preview, setPreview, commit }: Options) {
   const resize = useRef<DockResizeState | null>(null)
+  const moveRef = useRef<((event: PointerMove) => void) | null>(null)
   const releaseRef = useRef<((event: PointerRelease) => void) | null>(null)
   const cancel = useCallback(() => {
     if (!resize.current) return false
@@ -74,48 +76,51 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
     }
   }, [cancel])
 
-  const move = (event: PointerEvent<HTMLElement>) => {
-    const state = resize.current
-    if (!state || event.pointerId !== state.pointer) return
-    const horizontal =
-      state.kind === "split" || (state.kind === "border" && state.side !== "bottom")
-    const delta = (horizontal ? event.clientX : event.clientY) - state.start
-    if (state.kind === "collapsed") {
-      setPreview(
-        state.side === "bottom" && delta < -30
-          ? expandCollapsedBorder(state.base, state.side)
-          : state.base
-      )
-      return
-    }
-    if (state.kind === "border") {
-      if (state.side === "bottom") {
-        if (state.fixed) {
-          setPreview(delta > 30 ? collapseBorderTab(state.base, "bottom") : state.base)
-        } else {
-          setPreview(resizeBorder(state.base, "bottom", state.size - delta))
-        }
+  const move = useCallback(
+    (event: PointerMove) => {
+      const state = resize.current
+      if (!state || event.pointerId !== state.pointer) return
+      const horizontal =
+        state.kind === "split" || (state.kind === "border" && state.side !== "bottom")
+      const delta = (horizontal ? event.clientX : event.clientY) - state.start
+      if (state.kind === "collapsed") {
+        setPreview(
+          state.side === "bottom" && delta < -30
+            ? expandCollapsedBorder(state.base, state.side)
+            : state.base
+        )
         return
       }
-      const next = Math.max(
-        state.minimum,
-        Math.min(
-          root.width - strip - minimumSize,
-          state.size + (state.side === "left" ? delta : -delta)
+      if (state.kind === "border") {
+        if (state.side === "bottom") {
+          if (state.fixed) {
+            setPreview(delta > 30 ? collapseBorderTab(state.base, "bottom") : state.base)
+          } else {
+            setPreview(resizeBorder(state.base, "bottom", state.size - delta))
+          }
+          return
+        }
+        const next = Math.max(
+          state.minimum,
+          Math.min(
+            root.width - strip - minimumSize,
+            state.size + (state.side === "left" ? delta : -delta)
+          )
         )
+        setPreview(resizeBorder(state.base, state.side, next))
+        return
+      }
+      const next = [...state.sizes]
+      const change = Math.max(
+        state.minima[state.index] - next[state.index],
+        Math.min(next[state.index + 1] - state.minima[state.index + 1], delta)
       )
-      setPreview(resizeBorder(state.base, state.side, next))
-      return
-    }
-    const next = [...state.sizes]
-    const change = Math.max(
-      state.minima[state.index] - next[state.index],
-      Math.min(next[state.index + 1] - state.minima[state.index + 1], delta)
-    )
-    next[state.index] += change
-    next[state.index + 1] -= change
-    setPreview(resizeSplit(layout, state.id, next))
-  }
+      next[state.index] += change
+      next[state.index + 1] -= change
+      setPreview(resizeSplit(layout, state.id, next))
+    },
+    [layout, root, setPreview]
+  )
   const release = useCallback(
     (event: PointerRelease) => {
       if (!resize.current || resize.current.pointer !== event.pointerId) return
@@ -140,14 +145,22 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
     [commit, preview]
   )
   useEffect(() => {
+    moveRef.current = move
     releaseRef.current = release
-  }, [release])
+  }, [move, release])
   useEffect(() => {
+    const handleWindowPointerMove = (event: globalThis.PointerEvent) => {
+      moveRef.current?.(event)
+    }
     const handleWindowPointerUp = (event: globalThis.PointerEvent) => {
       releaseRef.current?.(event)
     }
+    window.addEventListener("pointermove", handleWindowPointerMove)
     window.addEventListener("pointerup", handleWindowPointerUp)
-    return () => window.removeEventListener("pointerup", handleWindowPointerUp)
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove)
+      window.removeEventListener("pointerup", handleWindowPointerUp)
+    }
   }, [])
   const toggle = (side: DockBorderSide) => {
     if (side === "bottom") {
