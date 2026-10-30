@@ -340,6 +340,26 @@ it("collapses and reopens the fixed Device panel from its bottom divider", () =>
   expect(controller.layout.borders.bottom?.selected).toBe("devices")
 })
 
+it("reopens a collapsed bottom panel by dragging its rail edge upward", () => {
+  const controller = new WorkspaceController()
+  const view = render(<Workspace controller={controller} />)
+  act(() => controller.show("devices"))
+  const divider = view.container.querySelector<HTMLElement>(
+    "[data-testid='dock-border-divider-bottom']"
+  )!
+  fireEvent.pointerDown(divider, { pointerId: 36, button: 0, clientX: 400, clientY: 540 })
+  fireEvent.pointerMove(divider, { pointerId: 36, clientX: 400, clientY: 580 })
+  fireEvent.pointerUp(divider, { pointerId: 36, clientX: 400, clientY: 580 })
+  expect(controller.layout.borders.bottom?.selected).toBeNull()
+  const edge = view.container.querySelector<HTMLElement>(
+    "[data-testid='dock-collapsed-divider-bottom']"
+  )!
+  fireEvent.pointerDown(edge, { pointerId: 37, button: 0, clientX: 400, clientY: 600 })
+  fireEvent.pointerMove(edge, { pointerId: 37, clientX: 400, clientY: 560 })
+  fireEvent.pointerUp(edge, { pointerId: 37, clientX: 400, clientY: 560 })
+  expect(controller.layout.borders.bottom?.selected).toBe("devices")
+})
+
 it("resizes the selected Clip panel vertically from its bottom divider", () => {
   const controller = new WorkspaceController()
   const view = render(<Workspace controller={controller} />)

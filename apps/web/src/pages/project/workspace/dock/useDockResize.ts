@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, type PointerEvent } from "react"
 import {
+  collapseBorderTab,
+  expandCollapsedBorder,
   resizeBorder,
   resizeSplit,
   selectBorderTab,
@@ -21,6 +23,7 @@ export type DockResizeState = ResizePointer &
         minima: readonly number[]
       }
     | { kind: "border"; side: DockBorderSide; size: number; minimum: number; fixed?: boolean }
+    | { kind: "collapsed"; side: DockBorderSide }
   )
 
 interface Options {
@@ -65,8 +68,10 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
   const move = (event: PointerEvent<HTMLElement>) => {
     const state = resize.current
     if (!state || event.pointerId !== state.pointer) return
-    const horizontal = state.kind === "split" ? state.axis === "x" : state.side !== "bottom"
+    const horizontal =
+      state.kind === "split" || (state.kind === "border" && state.side !== "bottom")
     const delta = (horizontal ? event.clientX : event.clientY) - state.start
+    if (state.kind === "collapsed") return
     if (state.kind === "border") {
       if (state.side === "bottom") {
         if (state.fixed) {
@@ -99,10 +104,15 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
     if (!resize.current || resize.current.pointer !== event.pointerId) return
     const state = resize.current
     resize.current = null
+    if (state.kind === "collapsed") {
+      if (state.side === "bottom" && event.clientY - state.start < -30)
+        commit(expandCollapsedBorder(layout, state.side))
+      return
+    }
     if (state.kind === "border" && state.side === "bottom") {
       const delta = event.clientY - state.start
       if (state.fixed && delta > 30) {
-        commit(selectBorderTab(layout, "bottom", null))
+        commit(collapseBorderTab(layout, "bottom"))
         return
       }
       if (preview) commit(preview)

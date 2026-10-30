@@ -447,6 +447,18 @@
   cursor: row-resize;
 }
 
+.dock-collapsed-divider-bottom {
+  position: absolute;
+  z-index: 9;
+  top: -4px;
+  right: 0;
+  left: 0;
+  height: 8px;
+  cursor: row-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
 .dock-border-divider-fixed {
   cursor: row-resize;
 }

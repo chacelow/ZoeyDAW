@@ -220,6 +220,7 @@ export function DockLayout({ layout, registry, labels, onLayoutChange }: Props) 
             drag={drag}
             drop={drag.target}
             overlay={overlay}
+            resize={resize}
           />
         ) : null
       })}

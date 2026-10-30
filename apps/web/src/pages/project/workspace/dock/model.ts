@@ -24,6 +24,7 @@ export interface DockBorder {
   readonly tabs: readonly string[]
   readonly end?: readonly string[]
   readonly selected: string | null
+  readonly collapsed?: string
   readonly size: number
 }
 export type DockBorders = Readonly<Partial<Record<DockBorderSide, DockBorder>>>
@@ -80,7 +81,11 @@ export function selectBorderTab(
   for (const candidate of dockBorderSides) {
     const item = borders[candidate]
     if (item && (candidate === side || item.type === "overlay"))
-      borders[candidate] = { ...item, selected: candidate === side ? tabId : null }
+      borders[candidate] = {
+        ...item,
+        selected: candidate === side ? tabId : null,
+        collapsed: undefined,
+      }
   }
   const maximizedBorder = dockBorderSides.find(
     candidate => borderGroupId(candidate) === layout.maximizedGroup
@@ -90,6 +95,32 @@ export function selectBorderTab(
     borders,
     maximizedGroup:
       maximizedBorder && !borders[maximizedBorder]?.selected ? null : layout.maximizedGroup,
+  }
+}
+export function collapseBorderTab(layout: DockLayoutJSON, side: DockBorderSide): DockLayoutJSON {
+  const border = layout.borders[side]
+  if (!border?.selected) return layout
+  return {
+    ...layout,
+    borders: {
+      ...layout.borders,
+      [side]: { ...border, selected: null, collapsed: border.selected },
+    },
+  }
+}
+
+export function expandCollapsedBorder(
+  layout: DockLayoutJSON,
+  side: DockBorderSide
+): DockLayoutJSON {
+  const border = layout.borders[side]
+  if (!border?.collapsed || !borderTabs(border).includes(border.collapsed)) return layout
+  return {
+    ...layout,
+    borders: {
+      ...layout.borders,
+      [side]: { ...border, selected: border.collapsed, collapsed: undefined },
+    },
   }
 }
 export function resizeBorder(
@@ -175,6 +206,8 @@ function removeTabs(layout: DockLayoutJSON, ids: readonly string[]): DockLayoutJ
         tabs: border.tabs.filter(tab => !ids.includes(tab)),
         end: (border.end ?? []).filter(tab => !ids.includes(tab)),
         selected: border.selected && ids.includes(border.selected) ? null : border.selected,
+        collapsed:
+          border.collapsed && ids.includes(border.collapsed) ? undefined : border.collapsed,
       }
   }
   return updateRoot({ ...layout, borders }, node => {
@@ -519,6 +552,11 @@ export function fromJSON(value: unknown): DockLayoutJSON {
         (typeof border.selected !== "string" || ![...tabs, ...end].includes(border.selected))
       )
         return fail()
+      if (
+        border.collapsed !== undefined &&
+        (typeof border.collapsed !== "string" || ![...tabs, ...end].includes(border.collapsed))
+      )
+        return fail()
       const type = border.type ?? "split"
       if (type !== "split" && type !== "overlay") return fail()
       if (border.visible !== undefined && typeof border.visible !== "boolean") return fail()
@@ -530,6 +568,7 @@ export function fromJSON(value: unknown): DockLayoutJSON {
         hoverReveal: border.hoverReveal === true,
         size: border.size,
         selected: border.selected,
+        collapsed: border.collapsed,
         type,
       }
     }

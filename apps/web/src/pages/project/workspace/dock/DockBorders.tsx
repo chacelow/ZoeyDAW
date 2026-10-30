@@ -78,6 +78,7 @@ interface RailProps extends BorderOptionsProps {
   drag: DockDrag
   drop: DropTarget | null
   overlay: DockOverlay
+  resize: DockResize
 }
 export function DockBorderRail({
   side,
@@ -90,6 +91,7 @@ export function DockBorderRail({
   drag,
   drop,
   overlay,
+  resize,
 }: RailProps) {
   const [hovered, setHovered] = useState(false)
   const border = layout.borders[side]
@@ -188,6 +190,23 @@ export function DockBorderRail({
         })}
         {!border.end?.length && <div className="dock-rail-spacer" />}
       </div>
+      {side === "bottom" && border.collapsed && (
+        <div
+          className="dock-collapsed-divider dock-collapsed-divider-bottom"
+          data-testid="dock-collapsed-divider-bottom"
+          role="separator"
+          aria-orientation="horizontal"
+          onPointerDown={event =>
+            resize.start(
+              { kind: "collapsed", side, start: event.clientY, pointer: event.pointerId },
+              event
+            )
+          }
+          onPointerMove={resize.move}
+          onPointerUp={resize.release}
+          onPointerCancel={resize.cancel}
+        />
+      )}
       <DropdownMenu onOpenChange={overlay.menuOpen}>
         <DropdownMenuTrigger
           render={
