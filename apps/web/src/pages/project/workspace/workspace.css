@@ -448,8 +448,7 @@
 }
 
 .dock-border-divider-fixed {
-  cursor: default;
-  pointer-events: none;
+  cursor: row-resize;
 }
 
 .dock-content-layer {

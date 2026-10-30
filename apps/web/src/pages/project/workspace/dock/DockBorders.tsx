@@ -271,26 +271,24 @@ export function DockBorderPanel({
           !resizable && "dock-border-divider-fixed"
         )}
         data-testid={`dock-border-divider-${side}`}
-        onPointerDown={
-          resizable
-            ? event =>
-                resize.start(
-                  {
-                    kind: "border",
-                    side,
-                    start: vertical ? event.clientX : event.clientY,
-                    size: border.size,
-                    minimum: registry[selected].minimumSize,
-                    pointer: event.pointerId,
-                  },
-                  event
-                )
-            : undefined
+        onPointerDown={event =>
+          resize.start(
+            {
+              kind: "border",
+              side,
+              start: vertical ? event.clientX : event.clientY,
+              size: border.size,
+              minimum: registry[selected].minimumSize,
+              fixed: !resizable,
+              pointer: event.pointerId,
+            },
+            event
+          )
         }
-        onPointerMove={resizable ? resize.move : undefined}
-        onPointerUp={resizable ? resize.release : undefined}
-        onPointerCancel={resizable ? resize.cancel : undefined}
-        onDoubleClick={resizable ? () => resize.toggle?.(side) : undefined}
+        onPointerMove={resize.move}
+        onPointerUp={resize.release}
+        onPointerCancel={resize.cancel}
+        onDoubleClick={() => resize.toggle?.(side)}
       />
     </div>
   )

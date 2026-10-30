@@ -20,7 +20,7 @@ export type DockResizeState = ResizePointer &
         sizes: readonly number[]
         minima: readonly number[]
       }
-    | { kind: "border"; side: DockBorderSide; size: number; minimum: number }
+    | { kind: "border"; side: DockBorderSide; size: number; minimum: number; fixed?: boolean }
   )
 
 interface Options {
@@ -69,12 +69,10 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
     const delta = (horizontal ? event.clientX : event.clientY) - state.start
     if (state.kind === "border") {
       if (state.side === "bottom") {
-        if (delta > 30) {
-          setPreview(selectBorderTab(layout, "bottom", null))
+        if (state.fixed) {
+          setPreview(layout)
         } else {
-          setPreview(
-            layout.borders.bottom?.selected ? layout : selectBorderTab(layout, "bottom", "devices")
-          )
+          setPreview(resizeBorder(layout, "bottom", state.size - delta))
         }
         return
       }
@@ -103,13 +101,11 @@ export function useDockResize({ layout, root, preview, setPreview, commit }: Opt
     resize.current = null
     if (state.kind === "border" && state.side === "bottom") {
       const delta = event.clientY - state.start
-      if (delta > 30) {
+      if (state.fixed && delta > 30) {
         commit(selectBorderTab(layout, "bottom", null))
         return
       }
-      commit(
-        layout.borders.bottom?.selected ? layout : selectBorderTab(layout, "bottom", "devices")
-      )
+      if (preview) commit(preview)
       return
     }
     if (preview) commit(preview)

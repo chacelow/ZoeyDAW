@@ -324,6 +324,36 @@ it("commits border resize only on release and retains the content host", () => {
   expect(view.container.querySelector("[data-testid='dock-content-browser']")).toBe(host)
 })
 
+it("collapses and reopens the fixed Device panel from its bottom divider", () => {
+  const controller = new WorkspaceController()
+  const view = render(<Workspace controller={controller} />)
+  act(() => controller.show("devices"))
+  const divider = view.container.querySelector<HTMLElement>(
+    "[data-testid='dock-border-divider-bottom']"
+  )!
+  expect(divider.className).toContain("dock-border-divider-fixed")
+  fireEvent.pointerDown(divider, { pointerId: 34, button: 0, clientX: 400, clientY: 500 })
+  fireEvent.pointerMove(divider, { pointerId: 34, clientX: 400, clientY: 540 })
+  fireEvent.pointerUp(divider, { pointerId: 34, clientX: 400, clientY: 540 })
+  expect(controller.layout.borders.bottom?.selected).toBeNull()
+  act(() => controller.show("devices"))
+  expect(controller.layout.borders.bottom?.selected).toBe("devices")
+})
+
+it("resizes the selected Clip panel vertically from its bottom divider", () => {
+  const controller = new WorkspaceController()
+  const view = render(<Workspace controller={controller} />)
+  const before = controller.layout.borders.bottom!.size
+  const divider = view.container.querySelector<HTMLElement>(
+    "[data-testid='dock-border-divider-bottom']"
+  )!
+  expect(divider.className).not.toContain("dock-border-divider-fixed")
+  fireEvent.pointerDown(divider, { pointerId: 35, button: 0, clientX: 400, clientY: 500 })
+  fireEvent.pointerMove(divider, { pointerId: 35, clientX: 400, clientY: 460 })
+  fireEvent.pointerUp(divider, { pointerId: 35, clientX: 400, clientY: 460 })
+  expect(controller.layout.borders.bottom?.size).toBe(before + 40)
+})
+
 it("commits split resize without remounting the panels moved out of a border", () => {
   const controller = new WorkspaceController()
   const view = render(<Workspace controller={controller} />)
